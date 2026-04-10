@@ -1,1073 +1,259 @@
-# Agent Movement Specification - Section 3.1: Movement State Machine
+# Collision System Specification â€” Section 1: Purpose & Scope
 
-**Created:** February 9, 2026, 12:30 AM PST  
-**Version:** 1.2
-**Status:** Draft (Revised)
-**Dependencies:** Ball Physics Spec #1 (state machine pattern reference), Section 3.2 (Locomotion)
+**Purpose:** Defines the responsibilities, boundaries, and terminology for Specification #3 (Collision System) of Stage 0 Physics Foundation.
 
-**Updated:** March 4, 2026, 12:00 AM PST
+**Created:** February 15, 2026, 2:45 PM PST  
+**Revised:** March 05, 2026, audit session  
+**Version:** 1.1  
+**Status:** Draft — Revised  
+**Author:** Claude (AI) with Anton (Lead Developer)  
+**Specification:** #3 of 20 (Stage 0 Physics Foundation)  
+**Preceding Specs:** Ball Physics (#1, approved), Agent Movement (#2, in review)
 
----
-
-## v1.1 Changelog
-
-**CRITICAL FIX:**
-
-1. **Piecewise fatigue model adopted (Appendix A.6.3 resolution):** Replaced linear
-   aerobic modifier formula with piecewise model from Section 3.2.4. Changed
-   `AEROBIC_MODIFIER_FLOOR` from 0.4 to 0.70, added `AEROBIC_MODIFIER_THRESHOLD` = 0.5.
-
----
-
-
-## v1.2 Changelog (March 4, 2026)
-
-**CRITICAL FIXES:**
-
-1. **STUMBLE_SPEED_THRESHOLD corrected from 5.5 to 2.2 m/s:** Section 3.4 (authoritative for stumble mechanics) activates stumble risk above JOG_ENTER (2.2 m/s). Section 3.5 v1.2 correctly updated this value, but Section 3.1 was never updated from its original 5.5f. The comment "Set to SPRINT_EXIT" was incorrect per Section 3.4 design: stumble risk should activate during jogging, not only during sprinting.
-
-2. **STUMBLE_TURN_ANGLE deprecated:** Section 3.4 uses a fraction-based safe zone model (SAFE_FRACTION_MIN/MAX), not an absolute angle threshold. The 60-degree constant was vestigial from an earlier design. Replaced with reference to Section 3.4.4 authoritative stumble trigger model. Constant retained at 60.0f for backward compatibility but marked deprecated with redirect.
+**Changelog:**
+- v1.1 (Mar 5, 2026): Corrected hitbox radius range from "0.35–0.50m" to "0.3525–0.50m"
+  in §1.3 Terminology and §1.5.1 upstream dependency table to match Agent Movement
+  §3.5.4.3 authoritative formula (Strength 1: 0.35 + 1/20 × 0.15 = 0.3525m). No
+  structural changes.
+- v1.0 (Feb 15, 2026): Initial draft.
 
 ---
 
+## 1.1 What This System Does
 
-## 3.1 Movement State Machine
+The Collision System is the **spatial reasoning layer** for the match simulation. It executes after all entity movement updates complete each frame, detecting overlaps and computing physical responses.
 
-### 3.1.1 Design Philosophy
+**Core Responsibilities:**
 
-The agent movement state machine governs which physics formulas apply at any given moment and constrains which transitions are physically plausible. It mirrors the architectural pattern established in Ball Physics Spec #1:
+1. **Spatial Partitioning** â€” Efficiently determine which entities are near each other using a grid-based spatial hash. Achieves O(N) query performance for 22 agents + 1 ball, avoiding the O(NÂ²) cost of checking all 231 agent-agent pairs plus 22 agent-ball pairs every frame.
 
-- **Hysteresis on all speed-based transitions** Ã¢â‚¬â€ separate ENTER and EXIT thresholds prevent oscillation when an agent hovers near a speed boundary
-- **State determines physics** Ã¢â‚¬â€ each state activates a specific set of movement formulas (Section 3.2) and constraints
-- **External commands filtered through state** Ã¢â‚¬â€ higher-level systems (AI, tactical) issue movement *requests*; the state machine determines what is physically achievable from the current state
-- **Minimum dwell time** Ã¢â‚¬â€ certain states enforce a minimum duration before transition is permitted (e.g., STUMBLING requires recovery time)
+2. **Agent-Agent Collision Detection** â€” Detect when two player hitboxes overlap using circle-circle intersection tests in the XY plane (ground projection). Height (Z-axis) is ignored for Stage 0 ground-based collision.
 
-### 3.1.2 State Definitions
+3. **Agent-Ball Collision Detection** â€” Detect when a player's hitbox overlaps the ball and trigger Ball Physics' `OnCollision()` callback with contact data. The Collision System detects contact; Ball Physics handles deflection physics.
 
-```csharp
-/// <summary>
-/// Agent movement state machine states.
-/// Determines which locomotion physics are applied and what transitions are valid.
-/// 
-/// Design note: States describe PHYSICAL condition, not intent.
-/// An agent "wanting to sprint" but physically decelerating is in DECELERATING, not SPRINTING.
-/// Intent is handled by the command layer (Section 4), not the state machine.
-/// </summary>
-public enum AgentMovementState
-{
-    /// <summary>
-    /// Agent stationary, no active movement.
-    /// Physics: No locomotion forces applied. Facing direction maintained.
-    /// Entry: Speed drops below IDLE_ENTER threshold (0.1 m/s).
-    /// Typical duration: Variable (waiting for ball, set piece, etc.)
-    /// </summary>
-    IDLE,
+4. **Collision Response Physics** â€” Apply momentum transfer between colliding agents using impulse-based resolution. Compute velocity changes, position separation, and determine whether impacts cause stumble or fall states.
 
-    /// <summary>
-    /// Low-speed locomotion. Full directional freedom.
-    /// Physics: Linear acceleration, unrestricted turning.
-    /// Entry: Speed exceeds IDLE_EXIT threshold (0.3 m/s) but below JOG_ENTER.
-    /// Typical speed range: 0.3Ã¢â‚¬â€œ2.0 m/s
-    /// Real-world equivalent: Walking pace, positional adjustment.
-    /// </summary>
-    WALKING,
+5. **State Change Triggers** â€” Signal Agent Movement System when collision forces exceed thresholds, triggering STUMBLING or GROUNDED state transitions. The Collision System computes the force; Agent Movement handles the state machine transition.
 
-    /// <summary>
-    /// Medium-speed locomotion. Good directional control.
-    /// Physics: Exponential acceleration curve, moderate turning constraints.
-    /// Entry: Speed exceeds JOG_ENTER threshold (2.2 m/s).
-    /// Typical speed range: 2.0Ã¢â‚¬â€œ5.5 m/s
-    /// Real-world equivalent: Defensive jog, loose marking, recovery run.
-    /// </summary>
-    JOGGING,
+6. **Foul Detection Groundwork** â€” Package contact force data (magnitude, direction, contact type) for consumption by the future Referee System. Stage 0 collects the data; foul adjudication is deferred to Stage 1+.
 
-    /// <summary>
-    /// Maximum-effort locomotion. Reduced turning ability.
-    /// Physics: Full exponential acceleration, tight turning radius constraint.
-    /// Entry: Speed exceeds SPRINT_ENTER threshold (5.8 m/s).
-    /// Typical speed range: 5.5Ã¢â‚¬â€œ10.2 m/s
-    /// Real-world equivalent: Chasing through ball, counter-attack, pressing trigger.
-    /// Fatigue cost: Highest. Sprint duration limited by stamina.
-    /// </summary>
-    SPRINTING,
+7. **Event Publishing** â€” Generate `CollisionEvent` records for the Event System (Spec #17), enabling replay reconstruction, statistics tracking, and match analysis.
 
-    /// <summary>
-    /// Active speed reduction. Agent is braking.
-    /// Physics: Deceleration curves applied (controlled or emergency).
-    /// Entry: Movement command requests lower speed than current, AND current speed > WALK threshold.
-    /// Typical duration: 0.3Ã¢â‚¬â€œ1.5 seconds depending on initial speed and mode.
-    /// </summary>
-    DECELERATING,
+**Position in Simulation Loop:**
 
-    /// <summary>
-    /// Loss of balance during sharp maneuver or collision aftermath.
-    /// Physics: Reduced control, momentum-driven movement, no voluntary direction change.
-    /// Entry: Turn angle exceeds safe threshold at current speed, OR collision knockback.
-    /// Minimum dwell time: 300Ã¢â‚¬â€œ800ms (attribute-dependent, Balance primary).
-    /// Fatigue cost: Moderate (recovery effort).
-    /// </summary>
-    STUMBLING,
-
-    /// <summary>
-    /// Agent on the ground after fall or heavy collision.
-    /// Physics: No locomotion. Position fixed. Recovery timer active.
-    /// Entry: Collision force exceeds knockdown threshold, OR stumble at extreme speed.
-    /// Minimum dwell time: 600Ã¢â‚¬â€œ2500ms (attribute-dependent, Strength + Balance,
-    ///   modified by GroundedReason).
-    /// Note: Collision System (Spec #3) triggers this state; this spec defines recovery.
-    /// </summary>
-    GROUNDED
-}
-
-/// <summary>
-/// Reason an agent entered the GROUNDED state.
-/// Affects recovery dwell time Ã¢â‚¬â€ voluntary actions recover faster
-/// because the agent controlled their landing.
-///
-/// COLLISION: Triggered by Collision System (Spec #3). Involuntary.
-/// SLIDING_TACKLE: Triggered by Collision System (Spec #3). Voluntary.
-///   Agent chose to slide; recovery is faster (controlled landing).
-/// DIVING_HEADER: Triggered by Heading Mechanics (Spec #9). Voluntary.
-///   Agent dove for header; recovery is moderate (partial control).
-/// </summary>
-public enum GroundedReason
-{
-    COLLISION,
-    SLIDING_TACKLE,
-    DIVING_HEADER
-}
-```
-
-### 3.1.3 Speed Thresholds with Hysteresis
-
-All speed-based transitions use separate ENTER and EXIT thresholds. The gap between them is the **dead zone** Ã¢â‚¬â€ within this range, the agent remains in its current state regardless of speed.
-
-```csharp
-/// <summary>
-/// Movement state machine thresholds.
-/// All values in m/s.
-///
-/// Hysteresis rationale: Without dead zones, an agent accelerating through
-/// a boundary (e.g., 2.0 m/s walkÃ¢â€ â€™jog) would oscillate between states
-/// on consecutive frames due to floating-point jitter and acceleration
-/// curve discretization at 60Hz.
-///
-/// Dead zone width: 0.2Ã¢â‚¬â€œ0.3 m/s chosen to span ~3Ã¢â‚¬â€œ5 frames of typical
-/// acceleration, preventing oscillation while remaining imperceptible
-/// to observers.
-/// </summary>
-public static class MovementThresholds
-{
-    // ================================================================
-    // IDLE Ã¢â€ â€ WALKING
-    // ================================================================
-
-    /// <summary>Speed below which agent enters IDLE (m/s)</summary>
-    /// <remarks>
-    /// Agent must slow to near-zero before considered stationary.
-    /// Matches Ball Physics MIN_VELOCITY pattern (0.1 m/s).
-    /// </remarks>
-    public const float IDLE_ENTER = 0.1f;
-
-    /// <summary>Speed above which agent exits IDLE to WALKING (m/s)</summary>
-    /// <remarks>
-    /// Dead zone: 0.1Ã¢â‚¬â€œ0.3 m/s. Agent in IDLE stays IDLE until clearly moving.
-    /// Prevents micro-movements from triggering walking animations.
-    /// </remarks>
-    public const float IDLE_EXIT = 0.3f;
-
-    // ================================================================
-    // WALKING Ã¢â€ â€ JOGGING
-    // ================================================================
-
-    /// <summary>Speed above which agent enters JOGGING from WALKING (m/s)</summary>
-    /// <remarks>
-    /// 2.2 m/s Ã¢â€°Ë† 7.9 km/h. Real-world walk-to-jog transition occurs
-    /// at approximately 2.0Ã¢â‚¬â€œ2.5 m/s (Diedrich & Warren, 1995).
-    /// </remarks>
-    public const float JOG_ENTER = 2.2f;
-
-    /// <summary>Speed below which agent exits JOGGING to WALKING (m/s)</summary>
-    /// <remarks>
-    /// Dead zone: 1.9Ã¢â‚¬â€œ2.2 m/s (0.3 m/s gap).
-    /// Agent jogging at 2.0 m/s stays JOGGING; must drop to 1.9 to walk.
-    /// </remarks>
-    public const float JOG_EXIT = 1.9f;
-
-    // ================================================================
-    // JOGGING Ã¢â€ â€ SPRINTING
-    // ================================================================
-
-    /// <summary>Speed above which agent enters SPRINTING from JOGGING (m/s)</summary>
-    /// <remarks>
-    /// 5.8 m/s Ã¢â€°Ë† 20.9 km/h. Below professional sprint speed (~25Ã¢â‚¬â€œ36 km/h)
-    /// but above casual running. This threshold marks the point where
-    /// turning constraints become significant and fatigue cost increases.
-    /// </remarks>
-    public const float SPRINT_ENTER = 5.8f;
-
-    /// <summary>Speed below which agent exits SPRINTING to JOGGING (m/s)</summary>
-    /// <remarks>
-    /// Dead zone: 5.5Ã¢â‚¬â€œ5.8 m/s (0.3 m/s gap).
-    /// Agent sprinting at 5.6 m/s stays SPRINTING; must drop to 5.5 to jog.
-    /// </remarks>
-    public const float SPRINT_EXIT = 5.5f;
-
-    // ================================================================
-    // STUMBLE & GROUNDED RECOVERY
-    // ================================================================
-
-    /// <summary>Minimum time in STUMBLING state before recovery (seconds)</summary>
-    /// <remarks>
-    /// Base value; actual dwell time = BASE / (Balance / 20.0).
-    /// Balance 20: 300ms. Balance 10: 600ms. Balance 5: 1200ms.
-    /// Clamped to range [300, 1500]ms.
-    /// </remarks>
-    public const float STUMBLE_MIN_DWELL_BASE = 0.6f;
-
-    /// <summary>Minimum time in GROUNDED state before recovery (seconds)</summary>
-    /// <remarks>
-    /// Base value for collision knockdowns; actual dwell time varies by reason.
-    /// Collision: dwell = BASE / ((Strength + Balance) / 40.0).
-    /// Voluntary slide: dwell = BASE Ãƒâ€” 0.6 (faster recovery, controlled landing).
-    /// Diving header: dwell = BASE Ãƒâ€” 0.7 (partial control on landing).
-    ///
-    /// Collision examples at BASE = 1.0:
-    ///   Elite (S+B=40): 1.0 / 1.0 = 1.0s
-    ///   Average (S+B=24): 1.0 / 0.6 = 1.67s
-    ///   Low (S+B=10): 1.0 / 0.25 = 4.0s Ã¢â€ â€™ clamped to 2.5s
-    /// Clamped to range [0.6, 2.5]s.
-    ///
-    /// Validation: professional players typically regain feet in 0.8Ã¢â‚¬â€œ1.5s
-    /// after non-injury knockdowns. Elite values (1.0s) match this range.
-    /// </remarks>
-    public const float GROUNDED_MIN_DWELL_BASE = 1.0f;
-
-    // ================================================================
-    // STUMBLE TRIGGER THRESHOLDS
-    // ================================================================
-
-    /// <summary>
-    /// DEPRECATED v1.2: Section 3.4 uses fraction-based safe zone model
-    /// (SAFE_FRACTION_MIN/MAX = 0.55/0.85 of max turn rate), not an absolute
-    /// angle threshold. Retained for backward compatibility only.
-    /// See Section 3.4.4 for authoritative stumble trigger model.
-    /// </summary>
-    /// <remarks>
-    /// At sprint speed, attempting to turn more than 60Ã‚Â° in a single
-    /// physics frame risks loss of balance. Actual stumble probability
-    /// is modulated by Agility and Balance (Section 3.4).
-    /// Below sprint speed, sharper turns are permitted without stumble risk.
-    /// </remarks>
-    public const float STUMBLE_TURN_ANGLE = 60.0f;
-
-    /// <summary>
-    /// Speed (m/s) above which sharp turns incur stumble risk.
-    /// Set to JOG_ENTER per Section 3.4: at walking pace, players have enough
-    /// time and ground contact to recover from any direction change.
-    /// FIXED v1.2: Changed from 5.5 (SPRINT_EXIT) to 2.2 (JOG_ENTER)
-    /// to match Section 3.4 authoritative stumble mechanics.
-    /// </summary>
-    public const float STUMBLE_SPEED_THRESHOLD = 2.2f;
-
-    /// <summary>
-    /// Minimum stumble risk floor applied regardless of calculation.
-    /// Ensures elite players (Agility 20 + Balance 20) can still stumble
-    /// on extreme maneuvers (e.g., 140Ã‚Â° cut at 9.5 m/s).
-    /// 
-    /// With resistance = 1.0 for elite players, this floor means stumble
-    /// only triggers when raw stumble_risk also exceeds 1.0, which requires
-    /// approximately: speed > 9 m/s AND turnAngle > 120Ã‚Â°.
-    /// This is intentionally rare but not impossible.
-    /// </summary>
-    public const float MIN_STUMBLE_RISK = 0.03f;
-
-    // ================================================================
-    // SAFETY LIMITS
-    // ================================================================
-
-    /// <summary>Maximum agent speed under any conditions (m/s)</summary>
-    /// <remarks>
-    /// 12.0 m/s Ã¢â€°Ë† 43.2 km/h. Exceeds fastest recorded footballer sprint
-    /// (MbappÃƒÂ© ~38 km/h Ã¢â€°Ë† 10.6 m/s) by safe margin. Any speed above this
-    /// indicates a physics error. Consistent with FR-2.4 failure recovery.
-    /// </remarks>
-    public const float MAX_SPEED = 12.0f;
-
-    /// <summary>Maximum turn rate under any conditions (degrees/second)</summary>
-    /// <remarks>
-    /// 720Ã‚Â°/s = 2 full rotations per second. Only reachable at walking speed.
-    /// Sprint turn rate is much lower (~120Ã¢â‚¬â€œ180Ã‚Â°/s depending on agility).
-    /// </remarks>
-    public const float MAX_TURN_RATE = 720.0f;
-
-    /// <summary>Maximum state transitions per second before oscillation guard triggers</summary>
-    public const int MAX_TRANSITIONS_PER_SECOND = 6;
-
-    // ================================================================
-    // DUAL-ENERGY FATIGUE MODEL
-    // ================================================================
-    //
-    // Agents operate on two independent energy pools:
-    //
-    // 1. AEROBIC POOL (match fitness)
-    //    - Range: 1.0 (fresh) Ã¢â€ â€™ 0.0 (completely spent)
-    //    - Drains slowly throughout the match regardless of activity
-    //    - Drain rate scaled by Stamina attribute (high stamina = slower drain)
-    //    - Minimal recovery during play (only meaningful recovery at half-time)
-    //    - Affects: top speed, acceleration rate, turn rate (all via modifier)
-    //    - Think: "85th minute legs" Ã¢â‚¬â€ everything is slower
-    //
-    // 2. SPRINT RESERVOIR (burst capacity)
-    //    - Range: 1.0 (full) Ã¢â€ â€™ 0.0 (empty)
-    //    - Drains FAST during SPRINTING state
-    //    - RECOVERS during low-intensity states (IDLE, WALKING, slow JOGGING)
-    //    - Drain/recovery rates scaled by Stamina attribute
-    //    - Affects: ability to ENTER/MAINTAIN sprint state (hard gates below)
-    //    - Think: "anaerobic capacity" Ã¢â‚¬â€ sprint, rest, sprint again
-    //
-    // The two pools interact:
-    //    - Aerobic depletion reduces sprint reservoir recovery rate
-    //      (tired players take longer to "catch their breath")
-    //    - Formula: effective_recovery = base_recovery Ãƒâ€” aerobic_pool
-    //    - At aerobic 0.5 (half-time tired), sprint recovery is halved
-    //
-    // This spec defines the RATES and GATES.
-    // The actual pool values are maintained externally (Match Simulator)
-    // and passed into movement system each frame.
-    // Full stamina calculation formulas are in Section 3.5.
-
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Sprint Reservoir Gates Ã¢â€â‚¬Ã¢â€â‚¬
-
-    /// <summary>
-    /// Sprint reservoir level below which sprinting is physically impossible.
-    /// Agent is forced from SPRINTING Ã¢â€ â€™ JOGGING regardless of command.
-    ///
-    /// At 0.20 (20% remaining), the anaerobic system is depleted.
-    /// The agent's legs physically cannot sustain sprint-effort output.
-    /// This is the EMERGENCY CUTOFF after gradual degradation.
-    ///
-    /// Important: top speed is continuously reduced as reservoir depletes
-    /// (Section 3.2). A sprinter at reservoir 0.30 is already noticeably
-    /// slower than at 1.0. The floor is the hard gate where the body
-    /// refuses entirely Ã¢â‚¬â€ it should rarely be the first thing the player
-    /// notices. The gradual slowdown is the primary feedback mechanism.
-    ///
-    /// Recovery: at IDLE/WALKING drain rates, returns above gate in ~8-12s.
-    /// This models the real "hands on knees, catch breath" recovery window.
-    /// </summary>
-    public const float SPRINT_RESERVOIR_FLOOR = 0.20f;
-
-    /// <summary>
-    /// Sprint reservoir level required to ENTER sprint state.
-    /// Higher than FLOOR to prevent immediate re-entry after hitting the wall.
-    ///
-    /// Hysteresis: must recover to 0.35 before sprinting again.
-    /// Gap (0.35 - 0.20 = 0.15) ensures ~4-6 seconds of non-sprint recovery
-    /// before the agent can sprint again, matching real-world patterns.
-    /// </summary>
-    public const float SPRINT_RESERVOIR_REENTRY = 0.35f;
-
-    /// <summary>
-    /// Aerobic pool level below which jogging becomes unsustainable.
-    /// Agent forced to WALKING. Only triggers in extreme late-match scenarios.
-    ///
-    /// At 0.15 aerobic, the player is completely spent Ã¢â‚¬â€ think: extra time
-    /// after 120 minutes, or a player with very low Stamina attribute.
-    /// </summary>
-    public const float AEROBIC_JOG_FLOOR = 0.15f;
-
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Drain Rates (per second, at Stamina 10 baseline) Ã¢â€â‚¬Ã¢â€â‚¬
-
-    /// <summary>
-    /// Sprint reservoir drain rate while SPRINTING (per second).
-    /// At Stamina 10: reservoir drains from 1.0 to 0.0 in ~12 seconds.
-    /// At Stamina 20: ~18 seconds (elite endurance sprinter).
-    /// At Stamina 5: ~8 seconds (poor stamina).
-    ///
-    /// Formula: actual_drain = BASE_DRAIN / (stamina / 10.0)
-    /// </summary>
-    public const float SPRINT_DRAIN_RATE = 0.083f;  // 1.0 / 12s
-
-    /// <summary>
-    /// Aerobic pool drain rate (per second). Always active during match.
-    /// At Stamina 10: pool drains from 1.0 to 0.0 over ~90 minutes (5400s).
-    /// At Stamina 20: ~120 minutes (elite, stays fresh deep into extra time).
-    /// At Stamina 5: ~60 minutes (visibly fatigued by 60th minute).
-    ///
-    /// Formula: actual_drain = BASE_DRAIN / (stamina / 10.0)
-    ///
-    /// Substitution handling: a substitute entering at the 70th minute
-    /// starts with aerobic_pool = 1.0 (fresh). This is correct behavior.
-    /// The Match Simulator (not this spec) owns substitution resets and
-    /// must initialize both energy pools for incoming players.
-    /// </summary>
-    public const float AEROBIC_DRAIN_RATE = 0.000185f;  // 1.0 / 5400s
-
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Recovery Rates (per second, at Stamina 10 baseline) Ã¢â€â‚¬Ã¢â€â‚¬
-
-    /// <summary>
-    /// Sprint reservoir recovery rate while IDLE (per second).
-    /// At Stamina 10: recovers from 0.0 to 1.0 in ~20 seconds.
-    /// Modified by aerobic pool: effective = base Ãƒâ€” aerobic_pool.
-    /// Late-match (aerobic 0.5): recovery takes ~40 seconds.
-    ///
-    /// Formula: actual_recovery = BASE_RECOVERY Ãƒâ€” (stamina / 10.0) Ãƒâ€” aerobic_pool
-    /// </summary>
-    public const float SPRINT_RECOVERY_IDLE = 0.05f;  // 1.0 / 20s
-
-    /// <summary>
-    /// Sprint reservoir recovery rate while WALKING (per second).
-    /// Slightly slower than IDLE (still moving, not fully resting).
-    /// </summary>
-    public const float SPRINT_RECOVERY_WALKING = 0.04f;  // 1.0 / 25s
-
-    /// <summary>
-    /// Sprint reservoir recovery rate while JOGGING (per second).
-    /// Slow recovery Ã¢â‚¬â€ aerobic system is engaged, limited anaerobic recovery.
-    /// At Stamina 10: recovers from 0.0 to 1.0 in ~50 seconds while jogging.
-    /// </summary>
-    public const float SPRINT_RECOVERY_JOGGING = 0.02f;  // 1.0 / 50s
-
-    /// <summary>
-    /// Sprint reservoir drain/recovery while SPRINTING: drain only, no recovery.
-    /// While DECELERATING: recovery at JOGGING rate (still high effort).
-    /// While STUMBLING/GROUNDED: recovery at WALKING rate (involuntary rest).
-    /// </summary>
-
-    // Ã¢â€â‚¬Ã¢â€â‚¬ State-to-Rate Mapping Ã¢â€â‚¬Ã¢â€â‚¬
-    //
-    // State        Ã¢â€â€š Sprint Reservoir Ã¢â€â€š Aerobic Pool Ã¢â€â€š Notes
-    // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    // IDLE         Ã¢â€â€š +RECOVERY_IDLE   Ã¢â€â€š -DRAIN_RATE  Ã¢â€â€š Best recovery
-    // WALKING      Ã¢â€â€š +RECOVERY_WALK   Ã¢â€â€š -DRAIN_RATE  Ã¢â€â€š Good recovery
-    // JOGGING      Ã¢â€â€š +RECOVERY_JOG    Ã¢â€â€š -DRAIN_RATE  Ã¢â€â€š Slow recovery
-    // SPRINTING    Ã¢â€â€š -SPRINT_DRAIN    Ã¢â€â€š -DRAIN_RATE  Ã¢â€â€š Fast depletion
-    // DECELERATING Ã¢â€â€š +RECOVERY_JOG    Ã¢â€â€š -DRAIN_RATE  Ã¢â€â€š Still high effort
-    // STUMBLING    Ã¢â€â€š +RECOVERY_WALK   Ã¢â€â€š -DRAIN_RATE  Ã¢â€â€š Involuntary rest
-    // GROUNDED     Ã¢â€â€š +RECOVERY_WALK   Ã¢â€â€š -DRAIN_RATE  Ã¢â€â€š Involuntary rest
-
-    // -- Aerobic Modifier Application (v1.1: PIECEWISE MODEL) --
-
-    /// <summary>
-    /// Aerobic pool threshold below which movement penalties begin.
-    /// Above this threshold, no penalty is applied (modifier = 1.0).
-    /// CROSS-REFERENCE: Section 3.2.4 AerobicPoolToSpeedModifier() is authoritative.
-    /// </summary>
-    public const float AEROBIC_MODIFIER_THRESHOLD = 0.50f;
-
-    /// <summary>
-    /// Minimum movement modifier at complete aerobic exhaustion (pool = 0.0).
-    /// Agent retains 70% of movement capability even when completely spent.
-    /// v1.1 CHANGE: Increased from 0.4 to 0.70 per Appendix A.6.3 resolution.
-    /// 
-    /// Worked examples (piecewise model):
-    ///   Pool 1.0: modifier = 1.00 (fresh)
-    ///   Pool 0.5: modifier = 1.00 (threshold - no penalty yet)
-    ///   Pool 0.3: modifier = 0.88 (12% reduction)
-    ///   Pool 0.0: modifier = 0.70 (30% reduction - floor)
-    /// </summary>
-    public const float AEROBIC_MODIFIER_FLOOR = 0.70f;
-
-    // COLLISION FORCE SCALING
-    // ================================================================
-
-    /// <summary>
-    /// Collision force is normalized to 0.0Ã¢â‚¬â€œ1.0 by Collision System (Spec #3).
-    /// This value scales GROUNDED dwell time for collision knockdowns.
-    ///
-    /// Reference force levels (defined by Spec #3, listed here for context):
-    ///   0.0Ã¢â‚¬â€œ0.2: Light contact (shoulder nudge) Ã¢â‚¬â€ rarely causes GROUNDED
-    ///   0.2Ã¢â‚¬â€œ0.5: Medium contact (hip check, standing tackle) Ã¢â‚¬â€ may cause GROUNDED
-    ///   0.5Ã¢â‚¬â€œ0.8: Heavy contact (full sliding tackle, high-speed collision)
-    ///   0.8Ã¢â‚¬â€œ1.0: Extreme (full-speed head-on, reckless challenge)
-    ///
-    /// Dwell scaling formula:
-    ///   scaled_dwell = base_dwell Ãƒâ€” (COLLISION_DWELL_MIN + (1.0 - COLLISION_DWELL_MIN) Ãƒâ€” collisionForce)
-    ///
-    /// At force 0.0: dwell Ãƒâ€” 0.65 (light knockdown, fast recovery)
-    /// At force 0.5: dwell Ãƒâ€” 0.825
-    /// At force 1.0: dwell Ãƒâ€” 1.0 (full calculated dwell, worst case)
-    ///
-    /// This means the attribute-based dwell (Section 3.1.5) represents the
-    /// MAXIMUM recovery time for the heaviest possible collision. Lighter
-    /// collisions recover proportionally faster. The 0.65 floor ensures
-    /// that any collision forceful enough to trigger GROUNDED (determined
-    /// by Spec #3's knockdown threshold) still produces a meaningful
-    /// recovery period Ã¢â‚¬â€ if the force was truly negligible, Spec #3
-    /// should not have triggered GROUNDED in the first place.
-    /// </summary>
-    public const float COLLISION_DWELL_MIN = 0.65f;
-}
-```
-
-**Hysteresis Diagram:**
+The Collision System executes at step 5 of the 60Hz physics loop, after all movement updates are finalized:
 
 ```
-  Speed (m/s)
-    Ã¢â€â€š
- 10.2 Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬  Elite top speed (Pace 20)
-    Ã¢â€â€š
-    Ã¢â€â€š                  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-    Ã¢â€â€š                  Ã¢â€â€š       SPRINTING          Ã¢â€â€š
-    Ã¢â€â€š                  Ã¢â€â€š  (full accel, tight turn) Ã¢â€â€š
-    Ã¢â€â€š                  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
-  5.8 Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬  SPRINT_ENTER Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Ã¢â€“Â² (enter sprint)
-    Ã¢â€â€š     dead zone
-  5.5 Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬  SPRINT_EXIT  Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Ã¢â€“Â¼ (exit sprint)
-    Ã¢â€â€š                  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-    Ã¢â€â€š                  Ã¢â€â€š       JOGGING            Ã¢â€â€š
-    Ã¢â€â€š                  Ã¢â€â€š (exp accel, moderate turn)Ã¢â€â€š
-    Ã¢â€â€š                  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
-  2.2 Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬  JOG_ENTER   Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Ã¢â€“Â² (enter jog)
-    Ã¢â€â€š     dead zone
-  1.9 Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬  JOG_EXIT    Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Ã¢â€“Â¼ (exit jog)
-    Ã¢â€â€š                  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-    Ã¢â€â€š                  Ã¢â€â€š       WALKING            Ã¢â€â€š
-    Ã¢â€â€š                  Ã¢â€â€š (linear accel, free turn) Ã¢â€â€š
-    Ã¢â€â€š                  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
-  0.3 Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬  IDLE_EXIT   Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Ã¢â€“Â² (exit idle)
-    Ã¢â€â€š     dead zone
-  0.1 Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬ Ã¢â€â‚¬  IDLE_ENTER  Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Ã¢â€“Â¼ (enter idle)
-    Ã¢â€â€š                  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-  0.0                  Ã¢â€â€š         IDLE             Ã¢â€â€š
-                       Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
+Frame N:
+  1. Input processing
+  2. Tactical AI heartbeat (10Hz, every 6th frame)
+  3. Agent Movement update (all 22 agents) â† positions finalized
+  4. Ball Physics update                    â† ball position finalized
+  5. >>> COLLISION SYSTEM <<<
+     5a. Clear spatial hash from previous frame
+     5b. Insert all 22 agents + ball into spatial hash
+     5c. Broad phase: query collision pairs from spatial hash
+     5d. Narrow phase: exact intersection tests
+     5e. Collision response: compute and apply impulses
+     5f. Trigger state changes (GROUNDED, STUMBLING)
+     5g. Package collision events for Event System
+  6. Event System processing
+  7. Rendering (decoupled, may interpolate)
 ```
 
-### 3.1.4 Transition Table
-
-All valid state transitions with conditions. Invalid transitions (not listed) are rejected by the state machine.
-
-```
-Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-Ã¢â€â€š FROM         Ã¢â€â€š TO           Ã¢â€â€š CONDITION                                       Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Ã¢â€â€š IDLE         Ã¢â€â€š WALKING      Ã¢â€â€š speed > IDLE_EXIT (0.3 m/s)                     Ã¢â€â€š
-Ã¢â€â€š IDLE         Ã¢â€â€š GROUNDED     Ã¢â€â€š Collision knockdown (external trigger)          Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Ã¢â€â€š WALKING      Ã¢â€â€š IDLE         Ã¢â€â€š speed < IDLE_ENTER (0.1 m/s)                    Ã¢â€â€š
-Ã¢â€â€š WALKING      Ã¢â€â€š JOGGING      Ã¢â€â€š speed > JOG_ENTER (2.2 m/s)                    Ã¢â€â€š
-Ã¢â€â€š WALKING      Ã¢â€â€š GROUNDED     Ã¢â€â€š Collision knockdown (external trigger)          Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Ã¢â€â€š JOGGING      Ã¢â€â€š WALKING      Ã¢â€â€š speed < JOG_EXIT (1.9 m/s)                     Ã¢â€â€š
-Ã¢â€â€š JOGGING      Ã¢â€â€š SPRINTING    Ã¢â€â€š speed > SPRINT_ENTER (5.8 m/s) AND             Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š              Ã¢â€â€š sprintReservoir >= SPRINT_RESERVOIR_REENTRY     Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š              Ã¢â€â€š (0.35)                                          Ã¢â€â€š
-Ã¢â€â€š JOGGING      Ã¢â€â€š DECELERATING Ã¢â€â€š Command requests speed < current AND            Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š              Ã¢â€â€š speed > JOG_EXIT                                Ã¢â€â€š
-Ã¢â€â€š JOGGING      Ã¢â€â€š DECELERATING Ã¢â€â€š aerobicPool < AEROBIC_JOG_FLOOR (0.15)         Ã¢â€â€š
-Ã¢â€â€š JOGGING      Ã¢â€â€š GROUNDED     Ã¢â€â€š Collision knockdown (external trigger)          Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Ã¢â€â€š SPRINTING    Ã¢â€â€š JOGGING      Ã¢â€â€š speed < SPRINT_EXIT (5.5 m/s)                  Ã¢â€â€š
-Ã¢â€â€š SPRINTING    Ã¢â€â€š JOGGING      Ã¢â€â€š sprintReservoir < SPRINT_RESERVOIR_FLOOR (0.20) Ã¢â€â€š
-Ã¢â€â€š SPRINTING    Ã¢â€â€š DECELERATING Ã¢â€â€š Command requests speed < current                Ã¢â€â€š
-Ã¢â€â€š SPRINTING    Ã¢â€â€š STUMBLING    Ã¢â€â€š Turn angle > STUMBLE_TURN_ANGLE (60Ã‚Â°) AND      Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š              Ã¢â€â€š stumble check fails (Section 3.4)               Ã¢â€â€š
-Ã¢â€â€š SPRINTING    Ã¢â€â€š GROUNDED     Ã¢â€â€š Collision knockdown (external trigger)          Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Ã¢â€â€š DECELERATING Ã¢â€â€š IDLE         Ã¢â€â€š speed < IDLE_ENTER (0.1 m/s)                    Ã¢â€â€š
-Ã¢â€â€š DECELERATING Ã¢â€â€š WALKING      Ã¢â€â€š speed < JOG_EXIT AND speed > IDLE_EXIT          Ã¢â€â€š
-Ã¢â€â€š DECELERATING Ã¢â€â€š JOGGING      Ã¢â€â€š Command requests acceleration AND               Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š              Ã¢â€â€š speed > JOG_EXIT                                Ã¢â€â€š
-Ã¢â€â€š DECELERATING Ã¢â€â€š SPRINTING    Ã¢â€â€š Command requests acceleration AND               Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š              Ã¢â€â€š speed > SPRINT_ENTER                            Ã¢â€â€š
-Ã¢â€â€š DECELERATING Ã¢â€â€š STUMBLING    Ã¢â€â€š Emergency decel at speed > STUMBLE_SPEED AND   Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š              Ã¢â€â€š stumble check fails                             Ã¢â€â€š
-Ã¢â€â€š DECELERATING Ã¢â€â€š GROUNDED     Ã¢â€â€š Collision knockdown (external trigger)          Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Ã¢â€â€š STUMBLING    Ã¢â€â€š IDLE         Ã¢â€â€š Dwell time elapsed AND speed < IDLE_ENTER       Ã¢â€â€š
-Ã¢â€â€š STUMBLING    Ã¢â€â€š WALKING      Ã¢â€â€š Dwell time elapsed AND speed < JOG_EXIT         Ã¢â€â€š
-Ã¢â€â€š STUMBLING    Ã¢â€â€š JOGGING      Ã¢â€â€š Dwell time elapsed AND speed > JOG_EXIT         Ã¢â€â€š
-Ã¢â€â€š STUMBLING    Ã¢â€â€š GROUNDED     Ã¢â€â€š Speed > STUMBLE_SPEED at stumble start          Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š              Ã¢â€â€š AND secondary stumble check fails               Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Ã¢â€â€š GROUNDED     Ã¢â€â€š IDLE         Ã¢â€â€š Recovery dwell time elapsed                     Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š              Ã¢â€â€š (agent always returns to IDLE after grounded)   Ã¢â€â€š
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
-```
-
-**Forbidden Transitions (enforced):**
-- IDLE Ã¢â€ â€™ SPRINTING (must pass through WALKING Ã¢â€ â€™ JOGGING first)
-- IDLE Ã¢â€ â€™ JOGGING (must pass through WALKING first)
-- WALKING Ã¢â€ â€™ SPRINTING (must pass through JOGGING first)
-- GROUNDED Ã¢â€ â€™ any state except IDLE (must recover fully)
-- STUMBLING Ã¢â€ â€™ SPRINTING (must stabilize before sprinting again)
-- Any state Ã¢â€ â€™ STUMBLING without speed > STUMBLE_SPEED_THRESHOLD (low-speed turns never cause stumbles)
-- Any state Ã¢â€ â€™ SPRINTING when sprintReservoir < SPRINT_RESERVOIR_REENTRY (must recover)
-- JOGGING Ã¢â€ â€™ JOGGING when aerobicPool < AEROBIC_JOG_FLOOR (forced deceleration)
-
-### 3.1.5 State Transition Logic
-
-```csharp
-/// <summary>
-/// Evaluates and applies movement state transitions.
-/// Called once per physics frame (60Hz) BEFORE locomotion formulas.
-///
-/// Design: Returns new state without modifying agent directly.
-/// Caller is responsible for applying state change.
-/// Mirrors BallStateMachine pattern from Spec #1.
-/// </summary>
-public static class AgentStateMachine
-{
-    /// <summary>
-    /// Evaluates the next movement state based on current conditions.
-    /// </summary>
-    /// <param name="current">Current movement state</param>
-    /// <param name="speed">Current scalar speed (m/s)</param>
-    /// <param name="commandSpeed">Requested target speed from AI/command layer (m/s)</param>
-    /// <param name="turnAngle">Requested turn angle this frame (degrees)</param>
-    /// <param name="dwellTimer">Time spent in current state (seconds)</param>
-    /// <param name="balance">Agent Balance attribute (1Ã¢â‚¬â€œ20)</param>
-    /// <param name="agility">Agent Agility attribute (1Ã¢â‚¬â€œ20)</param>
-    /// <param name="strength">Agent Strength attribute (1Ã¢â‚¬â€œ20)</param>
-    /// <param name="sprintReservoir">Current sprint reservoir level (1.0 = full, 0.0 = empty)</param>
-    /// <param name="aerobicPool">Current aerobic pool level (1.0 = fresh, 0.0 = spent)</param>
-    /// <param name="isCollisionKnockdown">External flag from Collision System</param>
-    /// <param name="collisionForce">Normalized collision force (0.0Ã¢â‚¬â€œ1.0), only valid when isCollisionKnockdown=true</param>
-    /// <returns>New state (may be same as current if no transition)</returns>
-    public static AgentMovementState EvaluateState(
-        AgentMovementState current,
-        float speed,
-        float commandSpeed,
-        float turnAngle,
-        float dwellTimer,
-        int balance,
-        int agility,
-        int strength,
-        float sprintReservoir,
-        float aerobicPool,
-        bool isCollisionKnockdown,
-        float collisionForce = 0.0f)
-    {
-        // Ã¢â€â‚¬Ã¢â€â‚¬ Priority 1: External collision knockdown overrides everything Ã¢â€â‚¬Ã¢â€â‚¬
-        // Collision System (Spec #3) determines knockdown; we just respond.
-        if (isCollisionKnockdown && current != AgentMovementState.GROUNDED)
-        {
-            return AgentMovementState.GROUNDED;
-        }
-
-        // Ã¢â€â‚¬Ã¢â€â‚¬ Priority 2: State-specific transition evaluation Ã¢â€â‚¬Ã¢â€â‚¬
-        switch (current)
-        {
-            case AgentMovementState.IDLE:
-                return EvaluateFromIdle(speed);
-
-            case AgentMovementState.WALKING:
-                return EvaluateFromWalking(speed);
-
-            case AgentMovementState.JOGGING:
-                return EvaluateFromJogging(speed, commandSpeed, turnAngle,
-                    balance, agility, sprintReservoir, aerobicPool);
-
-            case AgentMovementState.SPRINTING:
-                return EvaluateFromSprinting(speed, commandSpeed, turnAngle,
-                    balance, agility, sprintReservoir);
-
-            case AgentMovementState.DECELERATING:
-                return EvaluateFromDecelerating(speed, commandSpeed, turnAngle,
-                    balance, agility, sprintReservoir, aerobicPool);
-
-            case AgentMovementState.STUMBLING:
-                return EvaluateFromStumbling(speed, dwellTimer, balance);
-
-            case AgentMovementState.GROUNDED:
-                return EvaluateFromGrounded(dwellTimer, balance, strength);
-
-            default:
-                // Safety: unknown state Ã¢â€ â€™ force IDLE
-                return AgentMovementState.IDLE;
-        }
-    }
-
-    // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    // Per-state evaluation methods
-    // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-    private static AgentMovementState EvaluateFromIdle(float speed)
-    {
-        if (speed > MovementThresholds.IDLE_EXIT)
-            return AgentMovementState.WALKING;
-
-        return AgentMovementState.IDLE;
-    }
-
-    private static AgentMovementState EvaluateFromWalking(float speed)
-    {
-        if (speed < MovementThresholds.IDLE_ENTER)
-            return AgentMovementState.IDLE;
-
-        if (speed > MovementThresholds.JOG_ENTER)
-            return AgentMovementState.JOGGING;
-
-        return AgentMovementState.WALKING;
-    }
-
-    private static AgentMovementState EvaluateFromJogging(
-        float speed, float commandSpeed, float turnAngle,
-        int balance, int agility, float sprintReservoir, float aerobicPool)
-    {
-        // Ã¢â€â‚¬Ã¢â€â‚¬ Aerobic exhaustion: too spent to jog Ã¢â€â‚¬Ã¢â€â‚¬
-        if (aerobicPool < MovementThresholds.AEROBIC_JOG_FLOOR)
-            return AgentMovementState.DECELERATING;
-
-        if (speed < MovementThresholds.JOG_EXIT)
-            return AgentMovementState.WALKING;
-
-        // Ã¢â€â‚¬Ã¢â€â‚¬ Sprint entry: requires sufficient sprint reservoir Ã¢â€â‚¬Ã¢â€â‚¬
-        // Uses REENTRY threshold (higher than FLOOR) to enforce recovery gap
-        if (speed > MovementThresholds.SPRINT_ENTER
-            && sprintReservoir >= MovementThresholds.SPRINT_RESERVOIR_REENTRY)
-            return AgentMovementState.SPRINTING;
-
-        if (speed > MovementThresholds.SPRINT_ENTER
-            && sprintReservoir < MovementThresholds.SPRINT_RESERVOIR_REENTRY)
-            return AgentMovementState.JOGGING;  // Block sprint entry, reservoir too low
-
-        if (commandSpeed < speed - 0.5f)  // Meaningful deceleration requested
-            return AgentMovementState.DECELERATING;
-
-        return AgentMovementState.JOGGING;
-    }
-
-    private static AgentMovementState EvaluateFromSprinting(
-        float speed, float commandSpeed, float turnAngle,
-        int balance, int agility, float sprintReservoir)
-    {
-        // Ã¢â€â‚¬Ã¢â€â‚¬ Priority 1: Sprint reservoir depleted Ã¢â€â‚¬Ã¢â€â‚¬
-        // Agent physically cannot sustain sprint effort below this threshold.
-        // This is the "hit the wall" moment Ã¢â‚¬â€ legs refuse to sprint.
-        // Uses FLOOR (lower than REENTRY) so agent squeezes out every last
-        // bit of sprint before being forced down. Re-entry requires recovering
-        // back to REENTRY threshold (see EvaluateFromJogging).
-        if (sprintReservoir < MovementThresholds.SPRINT_RESERVOIR_FLOOR)
-            return AgentMovementState.JOGGING;
-
-        if (speed < MovementThresholds.SPRINT_EXIT)
-            return AgentMovementState.JOGGING;
-
-        // Ã¢â€â‚¬Ã¢â€â‚¬ Stumble check for sharp turns at sprint speed Ã¢â€â‚¬Ã¢â€â‚¬
-        if (turnAngle > MovementThresholds.STUMBLE_TURN_ANGLE
-            && speed > MovementThresholds.STUMBLE_SPEED_THRESHOLD)
-        {
-            if (ShouldStumble(speed, turnAngle, balance, agility))
-                return AgentMovementState.STUMBLING;
-        }
-
-        if (commandSpeed < speed - 0.5f)
-            return AgentMovementState.DECELERATING;
-
-        return AgentMovementState.SPRINTING;
-    }
-
-    private static AgentMovementState EvaluateFromDecelerating(
-        float speed, float commandSpeed, float turnAngle,
-        int balance, int agility, float sprintReservoir, float aerobicPool)
-    {
-        // Settled to idle
-        if (speed < MovementThresholds.IDLE_ENTER)
-            return AgentMovementState.IDLE;
-
-        // Slowed to walking pace
-        if (speed < MovementThresholds.JOG_EXIT)
-            return AgentMovementState.WALKING;
-
-        // Re-acceleration requested (energy-gated)
-        if (commandSpeed > speed + 0.5f)
-        {
-            if (speed > MovementThresholds.SPRINT_ENTER
-                && sprintReservoir >= MovementThresholds.SPRINT_RESERVOIR_REENTRY)
-                return AgentMovementState.SPRINTING;
-            if (speed > MovementThresholds.JOG_EXIT
-                && aerobicPool >= MovementThresholds.AEROBIC_JOG_FLOOR)
-                return AgentMovementState.JOGGING;
-        }
-
-        // Emergency decel stumble check
-        if (turnAngle > MovementThresholds.STUMBLE_TURN_ANGLE
-            && speed > MovementThresholds.STUMBLE_SPEED_THRESHOLD)
-        {
-            if (ShouldStumble(speed, turnAngle, balance, agility))
-                return AgentMovementState.STUMBLING;
-        }
-
-        return AgentMovementState.DECELERATING;
-    }
-
-    private static AgentMovementState EvaluateFromStumbling(
-        float speed, float dwellTimer, int balance)
-    {
-        float requiredDwell = CalculateStumbleDwell(balance);
-
-        if (dwellTimer < requiredDwell)
-            return AgentMovementState.STUMBLING;  // Still recovering
-
-        // Recovery complete Ã¢â‚¬â€ transition based on residual speed
-        if (speed < MovementThresholds.IDLE_ENTER)
-            return AgentMovementState.IDLE;
-        if (speed < MovementThresholds.JOG_EXIT)
-            return AgentMovementState.WALKING;
-
-        return AgentMovementState.JOGGING;  // Never straight to SPRINTING
-    }
-
-    private static AgentMovementState EvaluateFromGrounded(
-        float dwellTimer, int balance, int strength)
-    {
-        float requiredDwell = CalculateGroundedDwell(balance, strength);
-
-        if (dwellTimer < requiredDwell)
-            return AgentMovementState.GROUNDED;  // Still recovering
-
-        return AgentMovementState.IDLE;  // Always return to IDLE
-    }
-
-    // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    // Helper calculations
-    // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-    /// <summary>
-    /// Determines if a sharp turn at speed causes a stumble.
-    /// 
-    /// Stumble probability increases with:
-    ///   - Higher speed (more momentum to redirect)
-    ///   - Sharper turn angle (more lateral force required)
-    /// Stumble probability decreases with:
-    ///   - Higher Agility (better body control)
-    ///   - Higher Balance (better stability)
-    ///
-    /// Formula:
-    ///   stumble_risk = (speed / MAX_SPEED) Ãƒâ€” (turnAngle / 180) Ãƒâ€” difficulty_base
-    ///   resistance   = ((agility + balance) / 40.0)
-    ///   stumble      = stumble_risk > resistance
-    ///
-    /// This is a deterministic check, NOT random. Given identical inputs,
-    /// the result is always the same (required for replay determinism).
-    /// 
-    /// Edge cases:
-    ///   - Agility 20 + Balance 20 = resistance 1.0 Ã¢â€ â€™ almost never stumbles,
-    ///     but MIN_STUMBLE_RISK (0.03) ensures extreme turns (>120Ã‚Â° at >9 m/s)
-    ///     can still cause loss of balance even for elite players.
-    ///   - Agility 1 + Balance 1 = resistance 0.05 Ã¢â€ â€™ stumbles on most
-    ///     sharp turns at speed (physically ungifted player)
-    /// </summary>
-    private static bool ShouldStumble(
-        float speed, float turnAngle, int balance, int agility)
-    {
-        float difficulty = 1.5f;  // Tunable base difficulty
-
-        float stumbleRisk = (speed / MovementThresholds.MAX_SPEED)
-                          * (turnAngle / 180.0f)
-                          * difficulty;
-
-        // Floor: even elite players have a minimum stumble risk on
-        // extreme maneuvers. Without this, Agility 20 + Balance 20
-        // would be physically immune to stumbling, which is unrealistic.
-        stumbleRisk = Mathf.Max(stumbleRisk, MovementThresholds.MIN_STUMBLE_RISK);
-
-        float resistance = (agility + balance) / 40.0f;
-
-        return stumbleRisk > resistance;
-    }
-
-    /// <summary>
-    /// Calculates minimum dwell time in STUMBLING state.
-    /// Higher Balance = faster recovery.
-    ///
-    /// Formula: dwell = BASE / (balance / 20.0)
-    /// Clamped to [0.3, 1.5] seconds.
-    ///
-    /// Examples:
-    ///   Balance 20: 0.6 / 1.0 = 0.6s Ã¢â€ â€™ clamped to 0.6s
-    ///   Balance 10: 0.6 / 0.5 = 1.2s
-    ///   Balance  5: 0.6 / 0.25 = 2.4s Ã¢â€ â€™ clamped to 1.5s
-    ///   Balance  1: 0.6 / 0.05 = 12.0s Ã¢â€ â€™ clamped to 1.5s
-    /// </summary>
-    private static float CalculateStumbleDwell(int balance)
-    {
-        float balanceFactor = Mathf.Max(balance / 20.0f, 0.05f);  // Prevent div by zero
-        float dwell = MovementThresholds.STUMBLE_MIN_DWELL_BASE / balanceFactor;
-        return Mathf.Clamp(dwell, 0.3f, 1.5f);
-    }
-
-    /// <summary>
-    /// Calculates minimum dwell time in GROUNDED state.
-    /// Varies by reason (collision vs voluntary), collision force, and attributes.
-    ///
-    /// Step 1 Ã¢â‚¬â€ Base dwell from reason:
-    ///   Collision knockdown: base = BASE
-    ///   Voluntary slide:     base = BASE Ãƒâ€” 0.6
-    ///   Diving header:       base = BASE Ãƒâ€” 0.7
-    ///
-    /// Step 2 Ã¢â‚¬â€ Attribute scaling:
-    ///   scaled = base / ((strength + balance) / 40.0)
-    ///
-    /// Step 3 Ã¢â‚¬â€ Collision force scaling (COLLISION reason only):
-    ///   final = scaled Ãƒâ€” (COLLISION_DWELL_MIN + (1.0 - COLLISION_DWELL_MIN) Ãƒâ€” collisionForce)
-    ///   At force 0.0 (light nudge): final = scaled Ãƒâ€” 0.5
-    ///   At force 0.5 (standing tackle): final = scaled Ãƒâ€” 0.75
-    ///   At force 1.0 (full-speed collision): final = scaled Ãƒâ€” 1.0
-    ///   For voluntary actions (slide, header): force scaling skipped (controlled landing)
-    ///
-    /// Clamped to [0.5, 2.5] seconds.
-    ///
-    /// Examples Ã¢â‚¬â€ Collision at force 0.8 (heavy tackle):
-    ///   forceScale = 0.65 + 0.35 Ãƒâ€” 0.8 = 0.93
-    ///   S20+B20: 1.0 / 1.0 Ãƒâ€” 0.93 = 0.93s
-    ///   S12+B12: 1.0 / 0.6 Ãƒâ€” 0.93 = 1.55s
-    ///   S5+B5:   1.0 / 0.25 Ãƒâ€” 0.93 = 3.72s Ã¢â€ â€™ clamped to 2.5s
-    ///
-    /// Examples Ã¢â‚¬â€ Collision at force 0.2 (shoulder nudge):
-    ///   forceScale = 0.65 + 0.35 Ãƒâ€” 0.2 = 0.72
-    ///   S20+B20: 1.0 / 1.0 Ãƒâ€” 0.72 = 0.72s
-    ///   S12+B12: 1.0 / 0.6 Ãƒâ€” 0.72 = 1.2s
-    ///
-    /// Examples Ã¢â‚¬â€ Voluntary sliding tackle:
-    ///   S20+B20: 0.6 / 1.0 = 0.6s (no force scaling)
-    ///   S12+B12: 0.6 / 0.6 = 1.0s
-    /// </summary>
-    private static float CalculateGroundedDwell(
-        int balance, int strength,
-        GroundedReason reason = GroundedReason.COLLISION,
-        float collisionForce = 1.0f)
-    {
-        float reasonMultiplier = reason switch
-        {
-            GroundedReason.COLLISION      => 1.0f,
-            GroundedReason.SLIDING_TACKLE => 0.6f,
-            GroundedReason.DIVING_HEADER  => 0.7f,
-            _ => 1.0f
-        };
-
-        float combinedFactor = Mathf.Max((strength + balance) / 40.0f, 0.05f);
-        float dwell = (MovementThresholds.GROUNDED_MIN_DWELL_BASE * reasonMultiplier)
-                     / combinedFactor;
-
-        // Apply collision force scaling for involuntary knockdowns only.
-        // Voluntary actions (slide, header) have controlled landings Ã¢â‚¬â€
-        // force magnitude is irrelevant to recovery time.
-        if (reason == GroundedReason.COLLISION)
-        {
-            float forceScale = MovementThresholds.COLLISION_DWELL_MIN
-                             + (1.0f - MovementThresholds.COLLISION_DWELL_MIN)
-                             * Mathf.Clamp01(collisionForce);
-            dwell *= forceScale;
-        }
-
-        return Mathf.Clamp(dwell, 0.5f, 2.5f);
-    }
-}
-```
-
-### 3.1.6 State-Dependent Physics Activation
-
-Each state activates a specific subset of locomotion formulas defined in Sections 3.2Ã¢â‚¬â€œ3.5. This table is the authoritative mapping.
-
-```
-Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-Ã¢â€â€š State        Ã¢â€â€š Accel  Ã¢â€â€š Decel  Ã¢â€â€š Turn   Ã¢â€â€šDirectionÃ¢â€â€š Fatigue  Ã¢â€â€š VoluntaryÃ¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š (3.2)  Ã¢â€â€š (3.2)  Ã¢â€â€š (3.4)  Ã¢â€â€š Mult    Ã¢â€â€š (3.5)    Ã¢â€â€š Control  Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š        Ã¢â€â€š        Ã¢â€â€š        Ã¢â€â€š (3.3)   Ã¢â€â€š          Ã¢â€â€š          Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Ã¢â€â€š IDLE         Ã¢â€â€š   Ã¢â‚¬â€    Ã¢â€â€š   Ã¢â‚¬â€    Ã¢â€â€š Free   Ã¢â€â€š   Ã¢â‚¬â€     Ã¢â€â€š Passive  Ã¢â€â€š Full     Ã¢â€â€š
-Ã¢â€â€š WALKING      Ã¢â€â€š Linear Ã¢â€â€š Linear Ã¢â€â€š Free   Ã¢â€â€š  Yes    Ã¢â€â€š Passive  Ã¢â€â€š Full     Ã¢â€â€š
-Ã¢â€â€š JOGGING      Ã¢â€â€š Exp    Ã¢â€â€š Ctrl   Ã¢â€â€šModerateÃ¢â€â€š  Yes    Ã¢â€â€š Active   Ã¢â€â€š Full     Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š        Ã¢â€â€š        Ã¢â€â€š        Ã¢â€â€š         Ã¢â€â€š Aero gateÃ¢â€â€š          Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š        Ã¢â€â€š        Ã¢â€â€š        Ã¢â€â€š         Ã¢â€â€š : 0.15   Ã¢â€â€š          Ã¢â€â€š
-Ã¢â€â€š SPRINTING    Ã¢â€â€š Exp    Ã¢â€â€š Ctrl   Ã¢â€â€š Tight  Ã¢â€â€š  Yes    Ã¢â€â€š Active+  Ã¢â€â€š Full     Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š        Ã¢â€â€š        Ã¢â€â€š        Ã¢â€â€š         Ã¢â€â€šSprint gatÃ¢â€â€š          Ã¢â€â€š
-Ã¢â€â€š              Ã¢â€â€š        Ã¢â€â€š        Ã¢â€â€š        Ã¢â€â€š         Ã¢â€â€š e: 0.20  Ã¢â€â€š          Ã¢â€â€š
-Ã¢â€â€š DECELERATING Ã¢â€â€š   Ã¢â‚¬â€    Ã¢â€â€šCtrl/EmgÃ¢â€â€š LimitedÃ¢â€â€š  Yes    Ã¢â€â€š Active   Ã¢â€â€š Partial  Ã¢â€â€š
-Ã¢â€â€š STUMBLING    Ã¢â€â€š   Ã¢â‚¬â€    Ã¢â€â€š Drag   Ã¢â€â€š  None  Ã¢â€â€š   Ã¢â‚¬â€     Ã¢â€â€šRecovery  Ã¢â€â€š None     Ã¢â€â€š
-Ã¢â€â€š GROUNDED     Ã¢â€â€š   Ã¢â‚¬â€    Ã¢â€â€š   Ã¢â‚¬â€    Ã¢â€â€š  None  Ã¢â€â€š   Ã¢â‚¬â€     Ã¢â€â€šRecovery  Ã¢â€â€š None     Ã¢â€â€š
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
-```
-
-**Key:**
-- **Accel**: Linear = constant rate; Exp = exponential curve `a(t) = a_max Ãƒâ€” (1 - e^(-kÃƒâ€”t))`
-- **Decel**: Ctrl = controlled braking; Emg = emergency braking; Drag = friction-only (no voluntary braking)
-- **Turn**: Free = unrestricted; Moderate = radius constraint; Tight = large radius constraint; Limited = reduced rate; None = momentum only
-- **Direction Mult**: Whether directional speed multipliers (forward/lateral/backward) are applied
-- **Fatigue**: Passive = minimal drain; Active = standard drain; Active+ = accelerated drain (sprint reservoir); Recovery = fatigue recovery paused; **Gate values** = state forcibly exited when respective energy pool drops below threshold (sprint reservoir for SPRINTING, aerobic pool for JOGGING)
-- **Voluntary Control**: Full = agent can change direction/speed freely; Partial = can brake but limited steering; None = physics-only (momentum carries agent)
-
-### 3.1.7 Oscillation Guard
-
-Mirrors the Ball Physics pattern for detecting state machine instability.
-
-```csharp
-/// <summary>
-/// Tracks state transitions to detect oscillation.
-/// If transitions exceed MAX_TRANSITIONS_PER_SECOND, locks current state
-/// for a cooldown period.
-///
-/// Implementation: Ring buffer of transition timestamps.
-/// Check: Count transitions in last 1.0 second window.
-/// </summary>
-public struct OscillationGuard
-{
-    private const int BUFFER_SIZE = 8;
-    private float[] _transitionTimes;  // Fixed-size, no heap alloc after init
-    private int _writeIndex;
-    private bool _isLocked;
-    private float _lockUntilTime;
-
-    /// <summary>Lock duration when oscillation detected (seconds)</summary>
-    private const float LOCK_DURATION = 0.5f;
-
-    /// <summary>
-    /// Records a state transition and checks for oscillation.
-    /// Returns true if the transition should be BLOCKED (oscillation detected).
-    /// </summary>
-    public bool RecordAndCheck(float currentTime)
-    {
-        // If currently locked, block transition
-        if (_isLocked && currentTime < _lockUntilTime)
-            return true;  // BLOCK
-
-        _isLocked = false;
-
-        // Record transition
-        _transitionTimes[_writeIndex] = currentTime;
-        _writeIndex = (_writeIndex + 1) % BUFFER_SIZE;
-
-        // Count transitions in last 1.0 second
-        int recentCount = 0;
-        for (int i = 0; i < BUFFER_SIZE; i++)
-        {
-            if (currentTime - _transitionTimes[i] < 1.0f)
-                recentCount++;
-        }
-
-        if (recentCount > MovementThresholds.MAX_TRANSITIONS_PER_SECOND)
-        {
-            _isLocked = true;
-            _lockUntilTime = currentTime + LOCK_DURATION;
-            // Log WARNING: oscillation detected for agent [ID]
-            return true;  // BLOCK
-        }
-
-        return false;  // ALLOW
-    }
-}
-```
-
-### 3.1.8 Coordinate System & Units
-
-Consistent with Ball Physics Spec #1:
-
-| Property | Axis | Unit | Notes |
-|----------|------|------|-------|
-| Position X | East-West | meters | Pitch length axis |
-| Position Y | North-South | meters | Pitch width axis |
-| Position Z | Vertical (up) | meters | 0 = ground level; agents always z Ã¢â€°Â¥ 0 |
-| Velocity | XYZ | m/s | Magnitude = scalar speed |
-| Facing direction | XY plane | unit vector | Z component always 0 for outfield players |
-| Turn angle | Ã¢â‚¬â€ | degrees | Measured in XY plane, 0Ã‚Â° = no turn, 180Ã‚Â° = reversal |
-| Time | Ã¢â‚¬â€ | seconds | Frame delta = 1/60 Ã¢â€°Ë† 0.01667s |
+This ordering ensures all entities have committed their frame's movement before collision detection runs. Collision responses modify velocities for the *next* frameâ€”they do not retroactively change current-frame positions.
 
 ---
 
-**End of Section 3.1**
+## 1.2 What Is OUT of Scope
 
-**Page Count:** ~10 pages  
-**Next Section:** Section 3.2 Ã¢â‚¬â€ Locomotion (Acceleration, Top Speed, Deceleration)
+### 1.2.1 Responsibilities Owned by Other Specifications
+
+| Responsibility | Owner Specification | Interface |
+|----------------|---------------------|-----------|
+| Ball trajectory after deflection | Ball Physics (#1) | `Ball.OnCollision()` receives contact data; Ball Physics computes new velocity |
+| Agent locomotion and state machine | Agent Movement (#2) | Collision System sends `CollisionResponse`; Agent Movement applies state transitions |
+| Ball possession transfer decision | First Touch Mechanics (#11) | Collision System detects contact; First Touch decides if possession changes |
+| Goalkeeper diving/punching collision | Goalkeeper Mechanics (#10) | Stage 0 treats goalkeeper as normal agent with `IsGoalkeeper` flag; Spec #10 defines diving/punching special cases |
+| Aerial collision (heading duels) | Heading Mechanics (#9) | Spec #9 defines aerial duel logic; Collision System provides ground-only detection in Stage 0 |
+| Foul decision and card issuance | Referee System (TBD) | Collision System provides `ContactForceData`; Referee System adjudicates |
+| Pitch boundary enforcement | Ball Physics (#1), Agent Movement (#2) | Already implemented in respective specs |
+
+### 1.2.2 Stage 1+ Deferrals
+
+| Feature | Deferral Reason | Target Stage |
+|---------|-----------------|--------------|
+| Aerial collision detection | Requires jump mechanics not yet specified | Stage 1 |
+| Slide tackle collision geometry | Requires animation-driven capsule hitboxes | Stage 1 |
+| Body part detection (foot, shin, head) | Stage 0 uses TORSO for all contacts; refinement deferred | Stage 1 |
+| Multi-body pile-ups (>2 agents) | Requires iterative constraint solver | Stage 2+ |
+| Continuous collision detection | Prevents tunneling at extreme speeds; low priority for football | Stage 2+ |
+
+### 1.2.3 Permanent Exclusions
+
+| Feature | Exclusion Rationale |
+|---------|---------------------|
+| Soft-body deformation | Visual-only effect with negligible gameplay impact; performance cost not justified |
+| Cloth physics for jerseys | Pure visual; no gameplay relevance |
+| Joint-level ragdoll during falls | Excessive complexity for Stage 0; simple GROUNDED state sufficient |
+
+---
+
+## 1.3 Terminology
+
+| Term | Definition |
+|------|------------|
+| **Hitbox** | Circular 2D collision boundary in the XY plane representing an agent's physical footprint. Radius derived from Strength attribute (0.3525–0.50m per Agent Movement §3.5.4.3). |
+| **Broad Phase** | First pass of collision detection that quickly identifies *candidate* collision pairs using spatial partitioning. Eliminates obviously non-colliding pairs without expensive math. |
+| **Narrow Phase** | Second pass that performs exact geometric intersection tests on candidate pairs from the broad phase. Computes collision manifold if overlap exists. |
+| **Collision Pair** | Two entities close enough to require narrow-phase testing. A pair may or may not actually be colliding. |
+| **Contact Manifold** | Data structure describing a collision: contact point (where entities touch), collision normal (direction of separation), and penetration depth (overlap distance in meters). |
+| **Collision Normal** | Unit vector pointing from entity A toward entity B at the contact point. Used to compute impulse direction. |
+| **Penetration Depth** | Distance (meters) that two hitboxes overlap. Used for position correction (separation). |
+| **Impulse** | Instantaneous change in momentum applied to resolve a collision. Computed from relative velocity, masses, and coefficient of restitution. Units: kgÂ·m/s. |
+| **Coefficient of Restitution (e)** | Ratio of separation speed to approach speed after collision. Range [0, 1]. Value of 0.3 used for agent-agent collisions (highly inelasticâ€”players are soft). |
+| **Spatial Hash** | Data structure that divides the pitch into a grid of cells. Each entity is inserted into the cell(s) it occupies. Queries check only nearby cells, achieving O(1) average lookup. |
+| **Minimum Translation Vector (MTV)** | Smallest displacement required to separate two overlapping entities. Computed as `normal Ã— penetration_depth`. |
+| **Deterministic RNG** | Random number generator seeded from Match seed, ensuring identical collision outcomes across replays and networked clients. Required by Master Vol 1 Â§1.3. |
+
+---
+
+## 1.4 Implementation Timeline
+
+### Stage 0 (Current â€” Weeks 3â€“4 of 20-Week Specification Phase)
+
+**Full Implementation:**
+- Grid-based spatial hash (1.0m cell size, 106Ã—69 grid covering 105mÃ—68m pitch)
+- Agent-agent circle-circle collision detection (XY plane)
+- Agent-ball collision detection with `Ball.OnCollision()` callback
+- Impulse-based collision response with momentum conservation
+- Stumble/fall determination based on impact force vs. Strength-derived thresholds
+- Same-team collision filtering (reduced momentum transfer)
+- GROUNDED agent handling (obstacle but no response generation)
+- Position separation (penetration resolution)
+- Deterministic RNG for fall/stumble probability
+- `CollisionEvent` publishing for Event System
+- `ContactForceData` packaging for future Referee System
+- Comprehensive unit and integration tests (25+ unit, 8+ integration)
+- Performance validation (<0.5ms worst case)
+
+### Stage 1 (Year 2)
+
+**Extensions:**
+- Aerial collision detection for heading duels (integrates with Spec #9)
+- Slide tackle geometry using animation-driven capsule hitboxes
+- Body part detection (FOOT, SHIN, THIGH, TORSO, HEAD) for refined `BodyPart` in `AgentBallCollisionData`
+- Goalkeeper-specific collision handling (diving saves, punching)
+- Referee System integration for foul adjudication
+
+### Stage 2+ (Year 3+)
+
+**Extensions:**
+- Iterative constraint solver for multi-body pile-ups (>2 simultaneous contacts)
+- Continuous collision detection for edge cases at extreme velocities
+- Context-aware collision responses (challenge intensity based on match state)
+
+---
+
+## 1.5 Dependency Summary
+
+### 1.5.1 Upstream Dependencies (Consumes From)
+
+| Source Spec | Interface | Data Consumed | Section Reference |
+|-------------|-----------|---------------|-------------------|
+| Ball Physics (#1) | `BallState` | Position, Velocity, Radius (0.11m) | Ball Physics Â§3.1.1 |
+| Agent Movement (#2) | `AgentPhysicalProperties` | Position, Velocity, Mass (72.5â€“100 kg), HitboxRadius (0.3525–0.50m), Strength (1â€“20), IsGrounded | Agent Movement Â§3.5.4 |
+| Agent Movement (#2) | `Agent.TeamID` | For same-team collision filtering | Agent Movement Â§3.5.1 |
+
+### 1.5.2 Downstream Dependencies (Provides To)
+
+| Target Spec | Interface | Data Provided | Section Reference |
+|-------------|-----------|---------------|-------------------|
+| Ball Physics (#1) | `Ball.OnCollision(AgentBallCollisionData)` | ContactPoint, AgentVelocity, BodyPart, AgentID, TeamID, IsGoalkeeper | Ball Physics Â§3.1.10.1 |
+| Agent Movement (#2) | `CollisionResponse` | VelocityImpulse, PositionCorrection, TriggerGrounded, TriggerStumble, GroundedDuration | Agent Movement Â§3.1.2 (state triggers) |
+| Event System (#17) | `CollisionEvent` | MatchTime, CollisionType, Entity IDs, ContactPoint, ImpactForce, FoulData | Event System (forward reference) |
+| Referee System (TBD) | `ContactForceData` | ForceMagnitude, ForceDirection, ContactType, InstigatorID, VictimID, VictimHasBall, InstigatorPlayingBall | Stage 1+ |
+
+### 1.5.3 Coordinate System
+
+Inherited from Ball Physics Specification Â§3.1.1:
+
+- **Origin (0, 0, 0):** Corner flag at home team's left defensive corner
+- **X-axis:** Along pitch length (0 to 105m), goal-to-goal direction
+- **Y-axis:** Along pitch width (0 to 68m), touchline-to-touchline
+- **Z-axis:** Vertical height (0 = ground level)
+- **Units:** All distances in meters, all velocities in m/s, all forces in Newtons
+
+Stage 0 collision detection operates in the XY plane only (2D ground projection). Z-axis is ignored for hitbox intersection; aerial collision is deferred to Stage 1.
+
+### 1.5.4 External Dependencies (Unity)
+
+**Used:**
+- `UnityEngine.Vector3` â€” 3D vector math
+- `UnityEngine.Vector2` â€” 2D vector math (collision manifold)
+- `UnityEngine.Mathf` â€” Clamp, Sqrt, Min, Max
+- `UnityEngine.Profiling.Profiler` â€” Performance instrumentation (editor/development builds only)
+
+**NOT Used:**
+- Unity Physics engine (Rigidbody, Collider, Physics.Raycast)
+- Unity NavMesh
+- Unity CharacterController
+
+All collision physics is custom implementation, consistent with Ball Physics and Agent Movement specifications.
+
+---
+
+## 1.6 Key Design Decisions
+
+### 1.6.1 Spatial Hash vs. Alternatives
+
+**Decision:** Use uniform grid spatial hash (1.0m cells).
+
+**Alternatives Considered:**
+- **Quadtree:** Better for non-uniform distributions, but 22 agents are roughly uniform across a football pitch. Quadtree's adaptive subdivision adds complexity without benefit.
+- **Bounding Volume Hierarchy (BVH):** Excellent for static geometry, but agents move every frame. Rebuilding BVH each frame negates its advantages.
+- **Brute Force O(NÂ²):** 22 agents = 231 pairs. Checking all pairs is viable but wasteful. Spatial hash reduces to ~40â€“60 checks typically.
+
+**Rationale:** Uniform grid is simplest to implement, debug, and profile. Cell size of 1.0m (>= maximum combined radius of two agents = 0.50m + 0.50m = 1.00m, per Ericson-2005 heuristic and Appendix A.1.2) ensures any two colliding agents share a cell or are in adjacent cells. The 106x69 grid (7,314 cells) fits comfortably in memory (~175 KB).
+
+### 1.6.2 2D vs. 3D Collision
+
+**Decision:** Stage 0 uses 2D collision detection (XY plane projection).
+
+**Rationale:** Ground-based football involves players running on a 2D surface. Vertical separation (jumping) is rare and handled by Heading Mechanics (Spec #9) in Stage 1. Simplifying to 2D reduces implementation complexity and avoids premature optimization for aerial scenarios not yet specified.
+
+### 1.6.3 Determinism Requirement
+
+**Decision:** Use deterministic RNG seeded from Match seed for all probabilistic outcomes (fall/stumble probability).
+
+**Rationale:** Master Vol 1 Â§1.3 mandates deterministic simulation for replay fidelity and future networked multiplayer. Using `System.Random` or Unity's `Random.Range()` without explicit seeding would break determinism. All random calls in Collision System route through a match-seeded RNG instance.
+
+### 1.6.4 Same-Team Collision Behavior
+
+**Decision:** Detect same-team collisions but apply reduced momentum transfer (30% of normal).
+
+**Rationale:** Teammates do not deliberately knock each other over. In real football, players on the same team exhibit spatial awareness and avoid hard contact. The 30% momentum scale simulates this implicit coordination.
+
+**Open Question (Requires Validation):** Should same-team collisions be capable of triggering GROUNDED state at extreme forces (e.g., accidental collision at full sprint)? Current proposal: same-team collisions can trigger STUMBLING but not GROUNDED. This prevents teammates from knocking each other down while still allowing minor balance disruption. Confirm with gameplay testing in Stage 0 implementation.
+
+---
+
+**END OF SECTION 1**
+
+---
+
+## Cross-Reference Verification Checklist
+
+| Dependency | Verified Against | Status |
+|------------|------------------|--------|
+| `BallState` struct | Ball Physics Â§3.1.1 | âœ“ Position, Velocity, Radius confirmed |
+| `AgentPhysicalProperties` struct | Agent Movement Â§3.5.4 | âœ“ All fields confirmed (Position, Velocity, Mass, HitboxRadius, Strength, IsGrounded) |
+| `BodyPart` enum | Ball Physics Â§3.1.10.1 | âœ“ Enum exists with Foot, Shin, Thigh, Torso, Head, Arm |
+| Coordinate system | Ball Physics Â§3.1.1 | âœ“ Origin, axes, units confirmed |
+| GROUNDED/STUMBLING states | Agent Movement Â§3.1.2 | âœ“ States exist in AgentMovementState enum |
+| Determinism requirement | Master Vol 1 Â§1.3 | âœ“ Referenced, seeded RNG specified |
+| Frame execution order | Agent Movement Â§4.4.1, Ball Physics Â§4.4.1 | âœ“ Collision runs after movement and ball physics |
+
+---
+
+**Next Section:** Section 2 (System Overview) â€” Architecture diagram, data flow, collision types, performance budget, failure modes.
