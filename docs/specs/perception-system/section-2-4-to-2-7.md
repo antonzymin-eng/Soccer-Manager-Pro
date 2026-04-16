@@ -9,11 +9,11 @@ for traceability.
 
 | ID | Requirement | Priority | Tests |
 |----|-------------|----------|-------|
-| FR-1 | Each agent SHALL produce exactly one `PerceptionSnapshot` per 10Hz heartbeat tick under normal operation | Mandatory | UT-CORE-001 |
+| FR-1 | Each agent SHALL produce exactly one `FilteredView` and one `PerceptionDiagnostics` per 10Hz heartbeat tick under normal operation | Mandatory | UT-CORE-001 |
 | FR-2 | The pipeline SHALL execute Steps 1–6 in order; no step may be skipped or reordered | Mandatory | UT-CORE-002 |
 | FR-3 | A forced mid-heartbeat refresh SHALL execute the full pipeline for affected agents only; unaffected agents SHALL NOT be refreshed | Mandatory | UT-CORE-003 |
 | FR-4 | The pipeline SHALL produce valid output when all 22 agents are processed in a single heartbeat | Mandatory | IT-CORE-001 |
-| FR-5 | The `PerceptionSnapshot` output SHALL be a value struct; no heap allocation SHALL occur during standard pipeline execution | Mandatory | UT-CORE-004 |
+| FR-5 | The `FilteredView` and `PerceptionDiagnostics` outputs SHALL be value structs; no heap allocation SHALL occur during standard pipeline execution | Mandatory | UT-CORE-004 |
 | FR-6 | Agent attributes and state SHALL be read once, at the start of the heartbeat pipeline, and cached for its duration | Mandatory | UT-CORE-005 |
 
 ### 2.4.2 Field of View Requirements
@@ -81,7 +81,7 @@ for traceability.
 
 | ID | Requirement | Priority | Tests |
 |----|-------------|----------|-------|
-| FR-43 | Given identical world state and identical agent attributes at tick T, all 22 agents' `PerceptionSnapshot` outputs SHALL be identical across independent runs | Mandatory | IT-DET-001 |
+| FR-43 | Given identical world state and identical agent attributes at tick T, all 22 agents' `FilteredView` outputs SHALL be identical across independent runs | Mandatory | IT-DET-001 |
 | FR-44 | The `_latencyCounters` dictionary state at tick T SHALL be identical across independent runs given identical inputs from tick 0 | Mandatory | IT-DET-002 |
 | FR-45 | No non-deterministic API SHALL be called anywhere in the perception pipeline (no `System.Random`, `DateTime.Now`, `UnityEngine.Random`) | Mandatory | UT-DET-001 |
 | FR-46 | The forced mid-heartbeat refresh mechanism SHALL be deterministic given identical trigger event sequences | Mandatory | UT-DET-002 |
@@ -157,6 +157,7 @@ Mechanics specifications.
 |---------|------|--------|---------|
 | 1.0 | February 24, 2026, 3:00 PM PST | Claude (AI) / Anton | Initial draft. Pipeline, structs, 50 functional requirements, constants table. |
 | 1.1 | February 24, 2026, 4:00 PM PST | Claude (AI) / Anton | Three issue resolutions: (1) Fixed-size embedded arrays replaced with `ReadOnlySpan<PerceivedAgent>` views into pre-allocated `PerceptionSystem` buffers — eliminates `unsafe` context requirement and preserves zero-allocation policy. (2) `PRESSURE_FOV_SCALE` constant added to §2.6 with provisional value and derivation note. (3) `WasOccludedThisTick` removed from shipped `PerceivedAgent` struct; replaced with `#if UNITY_EDITOR` companion `PerceivedAgentDebug` struct. |
+| 1.2 | April 11, 2026 | Claude (AI) / Anton | **Architectural rework — separation of filter output from filter metadata.** (1) `PerceptionSnapshot` replaced by two structs: `FilteredView` (9 fields — pure consumer output delivered to Decision Tree) and `PerceptionDiagnostics` (7 fields — filter metadata for debug/telemetry/future systems, NOT delivered to DT). (2) `PerceivedAgent` reduced from 5 fields to 4: `RecognitionLatencyRemaining` removed (always 0 in confirmed arrays; moved to editor-only `PerceivedAgentDebug`). (3) `ReadOnlySpan` + count field pattern replaced with direct `PerceivedAgent[]` arrays — count fields were redundant with `.Length` and existed only to support the Span pattern. (4) `ForcedRefreshThisTick` added to `FilteredView` (resolves XC-4.5-01 from Section 4). (5) `BlindSidePerceivedAgents` added as separate array in `FilteredView` — blind-side agents are a distinct category of knowledge from forward-arc agents. (6) `EffectiveFoVAngle`, `PressureScalar`, `BlindSideWindowActive`, `BlindSideWindowExpiry`, and `ShoulderCheckAnimData` moved to `PerceptionDiagnostics` — these describe how the filter works, not what the agent knows. (7) `BlindSideWindowExpiry` type confirmed as `float` (match time in seconds), resolving the int/float type conflict between former Section 3 and Section 4 definitions. |
 
 ---
 
@@ -166,13 +167,20 @@ Section 2 establishes three things required before Section 3 can be drafted:
 
 1. **Architecture** — The six-step perception pipeline is defined with invariants,
    forced refresh behaviour, and the system's position between world state and Decision Tree.
+   The pipeline produces two distinct outputs: `FilteredView` (consumer data) and
+   `PerceptionDiagnostics` (filter metadata).
 
-2. **Data structures** — `PerceptionSnapshot` and `PerceivedAgent` are defined as
-   implementation authority. All fields are documented with Stage 0 behaviour and
-   Stage 1 upgrade paths. Ownership and amendment rules are established.
+2. **Data structures** — `FilteredView` (9 fields), `PerceptionDiagnostics` (7 fields),
+   and `PerceivedAgent` (4 fields) are defined as implementation authority. The core
+   architectural principle is **separation of filter output from filter metadata**: the
+   Decision Tree receives only `FilteredView` — pure data about what the agent knows.
+   Filter internals (FoV angles, pressure scalars, animation stubs) live in
+   `PerceptionDiagnostics` and are never delivered to decision-making systems. All fields
+   are documented with Stage 0 behaviour and Stage 1 upgrade paths. Ownership and
+   amendment rules are established.
 
 3. **Functional requirements** — 50 SHALL-level requirements cover every pipeline step,
-   both output structs, all attribute influences, determinism, and performance contracts.
+   all output structs, all attribute influences, determinism, and performance contracts.
    Each requirement is individually testable and maps to Section 5 test cases.
 
 No mathematical detail appears in this section — that is Section 3's domain. Section 2

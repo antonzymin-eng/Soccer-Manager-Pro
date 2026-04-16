@@ -1,40 +1,51 @@
-## 3.7 PerceptionSnapshot Struct Definition
+## 3.7 Output Struct Definitions: FilteredView + PerceptionDiagnostics
 
-This section is the authoritative definition of `PerceptionSnapshot`. Any field change
-must be version-controlled through this specification. The Decision Tree consumes this
-struct; it does not modify the struct definition.
+The perception pipeline produces two distinct output structs each heartbeat, enforcing
+**separation of filter output from filter metadata**:
 
-### 3.7.1 Primary Struct
+1. **`FilteredView`** — consumer output. Contains only what the Decision Tree needs:
+   the agent's filtered knowledge of the world. Delivered to the Decision Tree each
+   heartbeat. No filter internals leak into this struct.
+2. **`PerceptionDiagnostics`** — filter metadata. Contains how the filter operated:
+   effective FoV angle, pressure scalar, shoulder check state, animation stubs. NOT
+   delivered to the Decision Tree. Available for debug tooling, telemetry, and future
+   systems (Animation System at Stage 1+).
+
+This section is the authoritative definition of both structs. Any field change must be
+version-controlled through this specification. Section 2 §2.3 defines the requirements-level
+contract; this section defines the implementation-level detail with full field documentation.
+
+### 3.7.1 FilteredView — Consumer Output
 
 ```csharp
 /// <summary>
-/// PerceptionSnapshot — authoritative output of the Perception System.
+/// FilteredView — the agent's filtered knowledge of the world at one heartbeat.
 ///
 /// Produced once per 10Hz heartbeat per agent. Passed by value to the Decision Tree.
-/// Represents the agent's complete knowledge of the world state at this tick.
-/// Contains only confirmed, filtered, latency-resolved information.
+/// Contains ONLY confirmed, filtered, latency-resolved world-state data.
+/// Does NOT contain filter metadata (FoV angles, pressure scalars, animation stubs).
 ///
 /// OWNERSHIP: Defined exclusively by Perception System Spec #7.
 /// CONSUMERS: Decision Tree Spec #8 (sole consumer at Stage 0).
 /// MODIFICATION: Any field change requires a version bump of this specification.
 /// </summary>
-struct PerceptionSnapshot
+struct FilteredView
 {
     // ── Identity and Timing ──────────────────────────────────────────────────────
 
     int     ObserverId;
-    // AgentId of the agent this snapshot describes.
+    // AgentId of the agent this view describes.
     // Set to the observing agent's AgentState.AgentId.
 
     int     FrameNumber;
-    // Heartbeat tick (10Hz counter) at which this snapshot was built.
-    // Used by Decision Tree to detect stale snapshots (should never be > 1 tick old).
+    // Heartbeat tick (10Hz counter) at which this view was built.
+    // Used by Decision Tree to detect stale views (should never be > 1 tick old).
 
-    bool    IsForceRefreshed;
-    // True if this snapshot was produced by a mid-heartbeat forced refresh (§3.8).
-    // False for all standard 10Hz heartbeat snapshots.
+    bool    ForcedRefreshThisTick;
+    // True if this view was produced by a mid-heartbeat forced refresh (§3.8).
+    // False for all standard 10Hz heartbeat views.
 
-    // ── Ball Data ────────────────────────────────────────────────────────────────
+    // ── Ball State ───────────────────────────────────────────────────────────────
 
     bool    BallVisible;
     // True if ball passed all three visibility tests (range, FoV, occlusion) this tick.
@@ -49,7 +60,7 @@ struct PerceptionSnapshot
     // 0 = ball currently visible (ground truth). Higher values = older position estimate.
     // Decision Tree should weight ball confidence inversely with this value.
 
-    // ── Visible Agents ───────────────────────────────────────────────────────────
+    // ── Visible Agents (Forward Arc) ─────────────────────────────────────────────
 
     PerceivedAgent[] VisibleTeammates;
     // All teammate agents that are: (a) within EffectiveFoV, (b) not occluded,
@@ -61,31 +72,63 @@ struct PerceptionSnapshot
     // (c) confirmed (latency counter satisfied).
     // Array length is 0..11 (max 11 opponents).
 
-    // ── Blind-Side Data ──────────────────────────────────────────────────────────
-
-    bool    BlindSideWindowActive;
-    // True during an active shoulder check window (§3.4.3).
-    // When true: BlindSidePerceivedAgents is populated.
-
-    int     BlindSideWindowExpiry;
-    // FrameNumber at which the current shoulder check window expires.
-    // Meaningless if BlindSideWindowActive = false.
+    // ── Blind-Side Agents (Shoulder Check) ───────────────────────────────────────
 
     PerceivedAgent[] BlindSidePerceivedAgents;
-    // Agents confirmed during the active shoulder check window.
-    // Empty if BlindSideWindowActive = false.
-    // Subject to same L_rec requirements as forward-arc agents (§3.4.3).
+    // Agents confirmed during an active shoulder check window (§3.4.3).
+    // Empty when no shoulder check window is active, or when window is active
+    // but no agents have been confirmed yet (L_rec not yet elapsed).
+    // Subject to same L_rec requirements as forward-arc agents.
+}
+```
 
-    // ── FoV Diagnostic ───────────────────────────────────────────────────────────
+**Field count: 9.** This struct contains pure world-state data — what the agent knows.
+Filter metadata (how the filter operated) is in `PerceptionDiagnostics` (§3.7.2).
+
+### 3.7.2 PerceptionDiagnostics — Filter Metadata
+
+```csharp
+/// <summary>
+/// PerceptionDiagnostics — filter metadata for one agent at one heartbeat.
+///
+/// Contains information about HOW the perception filter operated, NOT what the
+/// agent knows about the world. This struct is NEVER delivered to the Decision Tree.
+///
+/// CONSUMERS: Debug tooling, telemetry, balance analysis, Animation System (Stage 1+).
+/// OWNERSHIP: Perception System Specification #7. Same amendment authority as FilteredView.
+/// MODIFICATION: Adding fields to diagnostics is lower-impact than FilteredView because
+///   no decision-making system consumes this struct.
+/// </summary>
+struct PerceptionDiagnostics
+{
+    // ── Correlation Keys ─────────────────────────────────────────────────────────
+
+    int     ObserverId;
+    // Matches FilteredView.ObserverId for the same heartbeat.
+
+    int     FrameNumber;
+    // Matches FilteredView.FrameNumber for the same heartbeat.
+
+    // ── Filter State ─────────────────────────────────────────────────────────────
 
     float   EffectiveFoVAngle;
     // Actual FoV angle in degrees after Decisions modifier and pressure narrowing.
-    // Stored for Decision Tree diagnostic use and for debug tooling.
     // Range: [MIN_FOV_ANGLE, BASE_FOV_ANGLE + MAX_FOV_BONUS_ANGLE] = [120°, 170°].
+    // Useful for debug visualisation of perception cones and balance analysis.
 
     float   PressureScalar;
-    // Pressure scalar at the time of snapshot construction.
-    // Range: [0.0, 1.0]. Stored for Decision Tree use in evaluating action quality.
+    // Pressure scalar at the time of filter execution.
+    // Range: [0.0, 1.0]. Computed from opponent proximity (§3.6).
+    // Useful for balance telemetry and verifying pressure model behaviour.
+
+    // ── Shoulder Check State ─────────────────────────────────────────────────────
+
+    bool    BlindSideWindowActive;
+    // True during an active shoulder check window (§3.4.3).
+
+    float   BlindSideWindowExpiry;
+    // Match time (seconds) at which the current shoulder check window expires.
+    // Meaningless if BlindSideWindowActive = false.
 
     // ── Animation Stub ───────────────────────────────────────────────────────────
 
@@ -95,15 +138,21 @@ struct PerceptionSnapshot
 }
 ```
 
-### 3.7.2 PerceivedAgent Sub-Struct
+**Field count: 7.** None of these fields are consumed by the Decision Tree.
+
+### 3.7.3 PerceivedAgent Sub-Struct
 
 ```csharp
 /// <summary>
-/// PerceivedAgent — data for one visible agent in a PerceptionSnapshot.
+/// PerceivedAgent — data for one visible agent in a FilteredView.
 ///
-/// All fields reflect agent state at the time of snapshot construction.
+/// All fields reflect agent state at the time of view construction.
 /// At Stage 0: position and velocity are ground truth for confirmed entities.
 /// At Stage 1+: error modelling will introduce uncertainty into these values.
+///
+/// This struct contains ONLY consumer-relevant data. Diagnostic fields
+/// (latency counters, occlusion state, blind-side source) live in the
+/// editor-only PerceivedAgentDebug struct (§2.3.3).
 /// </summary>
 struct PerceivedAgent
 {
@@ -111,33 +160,29 @@ struct PerceivedAgent
     // AgentState.AgentId of the perceived agent.
 
     Vector2 PerceivedPosition;
-    // Ground-truth position at time of snapshot (Stage 0).
+    // Ground-truth position at time of view construction (Stage 0).
     // Stage 1: will include perception error based on distance and Decisions attribute.
 
     Vector2 PerceivedVelocity;
-    // Ground-truth velocity at time of snapshot (Stage 0).
+    // Ground-truth velocity at time of view construction (Stage 0).
     // Stage 1: will include direction estimation error for far agents.
 
     float   ConfidenceScore;
     // [0.0, 1.0]. At Stage 0: binary — 1.0 for confirmed, not present if unconfirmed.
     // Stage 1: continuous, degrading with distance and staleness.
-
-    bool    IsInBlindSide;
-    // True if this agent was confirmed via blind-side shoulder check window,
-    // rather than via the forward FoV pipeline.
-
-    int     LatencyCounterAtConfirmation;
-    // Latency counter value when this agent was first confirmed.
-    // Stored for diagnostic/tuning purposes. Not used by Decision Tree.
 }
 ```
 
-### 3.7.3 Debug Occlusion Record (Editor/Debug Only)
+**Field count: 4.** The `IsInBlindSide` field from v1.2 is removed — blind-side agents
+live in the separate `BlindSidePerceivedAgents` array in `FilteredView`, making the flag
+redundant. `LatencyCounterAtConfirmation` is moved to editor-only `PerceivedAgentDebug`.
+
+### 3.7.4 Debug Occlusion Record (Editor/Debug Only)
 
 ```csharp
 /// <summary>
 /// OcclusionDebugRecord — populated only when perception debug mode is active.
-/// Not part of the production PerceptionSnapshot. Excluded from all timing budgets.
+/// Not part of the production FilteredView. Excluded from all timing budgets.
 /// Used by Stage 1+ visual debug tooling to render shadow cones.
 /// </summary>
 struct OcclusionDebugRecord
@@ -180,7 +225,7 @@ ForcedRefresh(agentId, triggerEvent):
     // Step 5 override: L_rec = 0 for ALL entities in this refresh
     //   Rationale: the triggering event (ball contact, tackle) is a salient attention cue
     //   that eliminates recognition delay for the brief refresh window
-    // Result: snapshot with IsForceRefreshed = true
+    // Result: FilteredView with ForcedRefreshThisTick = true
     // Normal heartbeat schedule is NOT reset — next standard heartbeat fires on schedule
 ```
 
@@ -254,14 +299,19 @@ Subject to L_rec: must accumulate 2 ticks (same Decisions=18 formula)
 Not confirmed on first tick of check — needs second consecutive tick to confirm.
 ```
 
-**Resulting snapshot (tick 2 of scenario):**
+**Resulting FilteredView (tick 2 of scenario):**
 ```
 VisibleTeammates: [3 forward teammates]  (all confirmed from prior ticks)
 VisibleOpponents: [opponent at 70°]      (just confirmed tick 2)
 BlindSidePerceivedAgents: []             (teammate at 110° not yet confirmed)
 BallVisible: true, BallStalenessFrames: 0
+```
+
+**Resulting PerceptionDiagnostics (tick 2 of scenario):**
+```
 EffectiveFoVAngle: 167.5°
 PressureScalar: 0.05
+BlindSideWindowActive: true (if shoulder check fired this heartbeat)
 ```
 
 ---
@@ -335,15 +385,18 @@ All constants are tagged per project-wide citation methodology:
 | Half-turn L_rec reduction | 15% (×0.85) | [CROSS] | First Touch Spec #4 §3.3.2 — authoritative |
 
 **[GT] constant count:** 12 of 17 total (71%). Two constants are [DERIVED] — determined
-algebraically from other constants with no independent tuning. Three are [CROSS] — defined
-in upstream specifications. This is within expected range for a cognitive simulation system.
+algebraically from other constants with no independent tuning (`CONFIRMATION_EXPIRY_TICKS`,
+`PERIPHERAL_ARC_INNER_BOUND`). Three are [CROSS] — defined in upstream specifications
+(`PRESSURE_RADIUS`, `MIN_PRESSURE_DISTANCE`, `PRESSURE_SATURATION`), plus one cross-spec
+constant value (half-turn L_rec reduction = 15%). This is within expected range for a
+cognitive simulation system.
 
 ---
 
 ## Section 3 Summary
 
 Section 3 defines six interdependent models that together produce a complete, deterministic
-`PerceptionSnapshot` for each of the 22 agents per 10Hz heartbeat:
+`FilteredView` and `PerceptionDiagnostics` for each of the 22 agents per 10Hz heartbeat:
 
 **§3.1** — FoV geometry: BASE_FOV_ANGLE = 160°, Decisions modifier adds up to 10°,
 pressure degrades up to 30°, floor at 120°. Blind-side arc is the mathematical complement.
@@ -368,8 +421,10 @@ occlusion tests as agents. `BallStalenessFrames` tracks invisibility duration.
 **§3.6** — Pressure scalar: formula reused verbatim from First Touch Spec #4 §3.5. Single
 use: FoV narrowing only. Not applied to L_rec or shoulder check timing.
 
-**§3.7** — `PerceptionSnapshot` struct: 12 fields, value type, copied to Decision Tree each
-heartbeat. `PerceivedAgent` sub-struct defined. Debug record and animation stub defined.
+**§3.7** — Output structs: `FilteredView` (9 fields — pure consumer output, delivered to
+Decision Tree) and `PerceptionDiagnostics` (7 fields — filter metadata, NOT delivered to
+Decision Tree). `PerceivedAgent` sub-struct (4 fields). Debug record defined. Separation
+of filter output from filter metadata enforced at the struct level.
 
 **§3.8** — Forced refresh: three qualifying trigger events. Involved agents only. L_rec = 0
 on forced refresh. Standard heartbeat schedule unaffected.
@@ -377,7 +432,7 @@ on forced refresh. Standard heartbeat schedule unaffected.
 **§3.9** — Worked examples for elite midfielder (Decisions=18) and low-attribute defender
 under full press, with numerical verification throughout.
 
-**§3.10** — Constants table: 16 constants, 12 [GT], 3 [CROSS], 1 [GT]. All tagged.
+**§3.10** — Constants table: 17 constants total (12 [GT], 2 [DERIVED], 3 [CROSS]). All tagged.
 
 ---
 
