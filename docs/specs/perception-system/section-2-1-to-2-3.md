@@ -1,14 +1,18 @@
 # Perception System Specification #7 — Section 2: System Overview & Functional Requirements
 
-**File:** `Perception_System_Spec_Section_2_v1_1.md`
+**File:** `Perception_System_Spec_Section_2_v1_2.md`
 **Purpose:** Defines the complete perception pipeline architecture, the authoritative
-`PerceptionSnapshot` and `PerceivedAgent` struct definitions, all functional requirements
-governing system behaviour, and the data model that Section 3 must implement. This section
-is the bridge between the scope boundary established in Section 1 and the mathematical
-models specified in Section 3. All requirements here are testable and binding.
+`FilteredView`, `PerceptionDiagnostics`, and `PerceivedAgent` struct definitions, all
+functional requirements governing system behaviour, and the data model that Section 3
+must implement. The core architectural principle is **separation of filter output from
+filter metadata**: `FilteredView` contains only what the Decision Tree needs to know
+about the world; `PerceptionDiagnostics` contains how the filter operated, available
+for debug tooling and future systems. This section is the bridge between the scope
+boundary established in Section 1 and the mathematical models specified in Section 3.
+All requirements here are testable and binding.
 
 **Created:** February 24, 2026, 3:00 PM PST
-**Version:** 1.1
+**Version:** 1.2
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 7 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -39,10 +43,11 @@ models specified in Section 3. All requirements here are testable and binding.
   - [2.2.3 Pipeline Invariants](#223-pipeline-invariants)
   - [2.2.4 Forced Mid-Heartbeat Refresh](#224-forced-mid-heartbeat-refresh)
 - [2.3 Data Structures — Authoritative Definitions](#23-data-structures--authoritative-definitions)
-  - [2.3.1 `PerceptionSnapshot` Struct](#231-perceptionsnapshot-struct)
-  - [2.3.2 `PerceivedAgent` Struct](#232-perceivedagent-struct)
-  - [2.3.3 `PerceptionSystem` Internal State](#233-perceptionsystem-internal-state)
-  - [2.3.4 Struct Ownership and Amendment Authority](#234-struct-ownership-and-amendment-authority)
+  - [2.3.1 `FilteredView` Struct](#231-filteredview-struct)
+  - [2.3.2 `PerceptionDiagnostics` Struct](#232-perceptiondiagnostics-struct)
+  - [2.3.3 `PerceivedAgent` Struct](#233-perceivedagent-struct)
+  - [2.3.4 `PerceptionSystem` Internal State](#234-perceptionsystem-internal-state)
+  - [2.3.5 Struct Ownership and Amendment Authority](#235-struct-ownership-and-amendment-authority)
 - [2.4 Functional Requirements](#24-functional-requirements)
   - [2.4.1 Core Pipeline Requirements](#241-core-pipeline-requirements)
   - [2.4.2 Field of View Requirements](#242-field-of-view-requirements)
@@ -78,16 +83,17 @@ individual, bounded, fallible awareness that each agent actually acts upon.
 │   FoV · Occlusion · L_rec · Shoulder    │    Transforms world truth into per-agent belief
 │   check · Pressure degradation          │
 └────────────────────┬────────────────────┘
-                     │ PerceptionSnapshot (value struct, copied by value)
+                     │ FilteredView (value struct — consumer output, per heartbeat)
                      ▼
 ┌─────────────────────────────────────────┐
 │         DECISION TREE (#8)               │  ← Sole consumer; not yet specified
-│   Reads snapshot only; no world access   │    Defines its own intake contract
+│   Reads FilteredView only; no world      │    Defines its own intake contract
+│   access                                 │
 └─────────────────────────────────────────┘
 ```
 
 No downstream system — the Decision Tree or any AI module — may query world state
-directly. The `PerceptionSnapshot` is the sole source of world knowledge for agent
+directly. `FilteredView` is the sole source of world knowledge for agent
 decision-making. This is the architectural guarantee that prevents omniscient agents.
 
 ### 2.1.2 Execution Cadence
@@ -126,9 +132,9 @@ reacting. The recognition latency model (§2.2, Step 4) handles this.
 Stress narrows focus. The pressure scalar effect on FoV (KD-7, §2.4.2) handles this.
 
 The Perception System is complete when all three filters are applied and a valid
-`PerceptionSnapshot` is assembled. Section 3 provides the mathematical detail for
-each filter. This section specifies what the filters must achieve (requirements) and
-what data structures they must produce (structs).
+`FilteredView` and `PerceptionDiagnostics` are assembled. Section 3 provides the
+mathematical detail for each filter. This section specifies what the filters must
+achieve (requirements) and what data structures they must produce (structs).
 
 ---
 
@@ -138,7 +144,7 @@ what data structures they must produce (structs).
 
 The perception pipeline is a single linear pass executed once per heartbeat per agent.
 No iteration, no feedback loops, no look-ahead. Input is world state; output is
-`PerceptionSnapshot`. The pipeline is designed to be executed independently for all
+`FilteredView` + `PerceptionDiagnostics`. The pipeline is designed to be executed independently for all
 22 agents per heartbeat within the 2ms budget (§2.4.8).
 
 ```
@@ -189,12 +195,14 @@ INPUT: WorldState (BallState, AgentState[22])
                              │ Final visible entity list
                              ▼
   ┌──────────────────────────────────────────────────────────────┐
-  │  Step 6: BuildPerceptionSnapshot()                           │
-  │  Assemble output struct. Populate all fields. Stamp with     │
-  │  FrameNumber. Copy by value to Decision Tree intake.         │
+  │  Step 6: BuildFilteredView()                                 │
+  │  Assemble FilteredView and PerceptionDiagnostics. Populate   │
+  │  all fields. Stamp with FrameNumber. Copy FilteredView by    │
+  │  value to Decision Tree intake.                              │
   └──────────────────────────┴───────────────────────────────────┘
 
-OUTPUT: PerceptionSnapshot (value struct)
+OUTPUT: FilteredView (consumer output — delivered to Decision Tree)
+        PerceptionDiagnostics (filter metadata — NOT delivered to Decision Tree)
 ```
 
 ### 2.2.2 Pipeline Step Descriptions
@@ -245,12 +253,14 @@ reaches the agent's next scheduled check tick, a new window is opened
 (`BlindSideWindowActive = true`, expiry set to current tick + `SHOULDER_CHECK_DURATION`).
 Scheduling is deterministic with controlled jitter (§3.4).
 
-**Step 6 — BuildPerceptionSnapshot:**
-Assembles the output struct from all confirmed entities. Populates all fields per the
-struct definition in §2.3.1. Stamps `FrameNumber` with the current heartbeat tick.
-Updates `BallStalenessFrames` — if the ball was not confirmed visible this tick, the
-counter increments from its previous value; if visible, it resets to 0. The completed
-struct is passed by value; no reference to internal pipeline state is exposed.
+**Step 6 — BuildFilteredView:**
+Assembles `FilteredView` and `PerceptionDiagnostics` from all confirmed entities.
+Populates all fields per the struct definitions in §2.3.1 and §2.3.2. Stamps
+`FrameNumber` with the current heartbeat tick. Updates `BallStalenessFrames` — if the
+ball was not confirmed visible this tick, the counter increments from its previous
+value; if visible, it resets to 0. `FilteredView` is passed by value to the Decision
+Tree. `PerceptionDiagnostics` is retained internally for debug/telemetry consumers.
+No reference to internal pipeline state is exposed through either struct.
 
 ### 2.2.3 Pipeline Invariants
 
@@ -259,12 +269,12 @@ of any invariant is a bug, not an edge case to be handled gracefully:
 
 | # | Invariant |
 |---|-----------|
-| INV-1 | The pipeline produces exactly one `PerceptionSnapshot` per agent per heartbeat tick |
+| INV-1 | The pipeline produces exactly one `FilteredView` and one `PerceptionDiagnostics` per agent per heartbeat tick |
 | INV-2 | No entity in `VisibleTeammates` or `VisibleOpponents` was ever inside an active shadow cone at any step |
 | INV-3 | No entity enters the snapshot before its latency counter has reached `L_rec` |
 | INV-4 | The ball never appears in `VisibleTeammates` or `VisibleOpponents`; it has dedicated fields |
 | INV-5 | An observer never appears in their own `VisibleTeammates` array |
-| INV-6 | An entity with `RecognitionLatencyRemaining > 0` does not appear in the confirmed entity arrays |
+| INV-6 | An entity whose recognition latency counter has not yet reached `L_rec` does not appear in the confirmed entity arrays |
 | INV-7 | `EffectiveFoVAngle` is always ≥ `MIN_FOV_ANGLE` and ≤ `BASE_FOV_ANGLE + MAX_FOV_BONUS_ANGLE` |
 | INV-8 | `BallStalenessFrames` is 0 if and only if `BallVisible` is true in the same snapshot |
 | INV-9 | Identical inputs to every pipeline step produce identical outputs (determinism) |
@@ -300,254 +310,202 @@ Decision Tree must handle receiving a snapshot outside the normal 10Hz cadence.
 ## 2.3 Data Structures — Authoritative Definitions
 
 The structs defined in this section are the implementation authority for all downstream
-specifications that consume or reference `PerceptionSnapshot`. Changes to these
-definitions require an amendment to this section and a corresponding version increment.
-No field may be added, renamed, or removed by an implementing specification.
+specifications that consume or reference `FilteredView` or `PerceptionDiagnostics`.
+Changes to these definitions require an amendment to this section and a corresponding
+version increment. No field may be added, renamed, or removed by an implementing
+specification.
 
-### 2.3.1 `PerceptionSnapshot` Struct
+### 2.3.1 `FilteredView` Struct
 
-This is the complete output of the Perception System for one agent at one heartbeat.
-It is a value struct (KD-2). It is passed by value to the Decision Tree. No reference
-to internal Perception System state is exposed through this struct.
+`FilteredView` is the consumer-facing output of the Perception System for one agent at
+one heartbeat. It contains only what the Decision Tree needs to know about the world —
+no filter internals, no diagnostic metadata. It is a value struct (KD-2), passed by
+value to the Decision Tree each heartbeat.
 
-**Design note — agent result arrays:** Embedding variable-count entity arrays directly
-in a C# value struct presents two problems: (1) C# `fixed` arrays in structs require
-`unsafe` context and only support primitive types — `PerceivedAgent` is not primitive;
-(2) allocating per-heartbeat arrays violates the zero-allocation policy (INV-10). The
-resolution, consistent with the Collision System (#3) query result buffer pattern, is to
-maintain **pre-allocated, per-agent result arrays** inside `PerceptionSystem` at match
-initialisation. `PerceptionSnapshot` holds integer counts and read-only span accessors
-into those buffers. The underlying arrays are never reallocated at runtime. The Decision
-Tree reads results via the spans, which are valid for the duration of the heartbeat tick.
-The buffers are overwritten at the next heartbeat — the Decision Tree must not cache
-the spans across ticks.
+**Design note — direct arrays vs. ReadOnlySpan:** The v1.1 design used `ReadOnlySpan`
+views into pre-allocated `PerceptionSystem` buffers, with redundant count scalar fields.
+v1.2 replaces this with direct `PerceivedAgent[]` array fields. The count scalars are
+removed — `.Length` provides the count. Pre-allocation at match initialisation is still
+used; the arrays are never reallocated at runtime (INV-10).
 
 ```csharp
 /// <summary>
-/// The complete perception state for one agent at one heartbeat.
-/// Produced by PerceptionSystem.ComputeSnapshot(observerId, worldState).
-/// Passed by value to the Decision Tree — scalar fields are copied by value.
+/// FilteredView — the agent's filtered knowledge of the world at one heartbeat.
 ///
-/// AGENT RESULT ARRAYS: VisibleTeammates and VisibleOpponents are ReadOnlySpan<PerceivedAgent>
-/// views into pre-allocated PerceptionSystem buffers. They are valid for the current
-/// heartbeat tick only. Decision Tree must not cache or store these spans across ticks.
-/// See §2.3.3 for buffer ownership and lifetime details.
+/// Produced once per 10Hz heartbeat per agent. Passed by value to the Decision Tree.
+/// Contains ONLY confirmed, filtered, latency-resolved world-state data.
+/// Does NOT contain filter metadata (FoV angles, pressure scalars, animation stubs) —
+/// those are in PerceptionDiagnostics (§2.3.2), which is never delivered to the DT.
 ///
 /// OWNERSHIP: Perception System Specification #7 owns this struct definition.
-/// No downstream specification may alter this struct without an amendment
-/// to Perception_System_Spec_Section_2.
-///
-/// STAGE 0 NOTE: PerceivedPosition and PerceivedVelocity are exact (no error model).
-/// ConfidenceScore is binary [0 or 1]. Both are marked for Stage 1+ upgrade.
+/// CONSUMERS: Decision Tree Specification #8 (sole consumer at Stage 0).
+/// MODIFICATION: Any field change requires a version bump of this specification.
 /// </summary>
-struct PerceptionSnapshot
+struct FilteredView
 {
-    // ─── Identity & Frame Stamp ──────────────────────────────────────────────
+    // ── Identity and Timing ──────────────────────────────────────────────────────
 
-    /// <summary>
-    /// AgentId of the agent this snapshot represents the perception of.
-    /// Range: 0–21 (matches AgentState.AgentID from Agent Movement #2).
-    /// </summary>
-    int ObserverId;
+    int     ObserverId;
+    // AgentId of the agent this view describes.
+    // Set to the observing agent's AgentState.AgentId. Range: 0–21.
 
-    /// <summary>
-    /// The heartbeat tick this snapshot was computed for.
-    /// Matches the 10Hz tactical heartbeat counter (not the 60Hz physics frame counter).
-    /// For forced mid-heartbeat refreshes, this field holds the physics frame number
-    /// at the time of refresh. Decision Tree must tolerate non-standard frame stamps.
-    /// </summary>
-    int FrameNumber;
+    int     FrameNumber;
+    // Heartbeat tick (10Hz counter) at which this view was built.
+    // Used by Decision Tree to detect stale views (should never be > 1 tick old).
 
-    // ─── Ball Perception ─────────────────────────────────────────────────────
+    bool    ForcedRefreshThisTick;
+    // True if this view was produced by a mid-heartbeat forced refresh (§2.2.4).
+    // False for all standard 10Hz heartbeat views.
 
-    /// <summary>
-    /// Whether the ball is currently directly visible to this agent.
-    /// True = ball is within FoV, not occluded, within MAX_PERCEPTION_RANGE.
-    /// False = ball is outside FoV, occluded by opponent, or out of range.
-    /// See §2.2, Steps 2–3 for visibility determination.
-    /// Ball is never subject to L_rec — it is immediately confirmed when visible (OQ-2).
-    /// </summary>
-    bool BallVisible;
+    // ── Ball State ───────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// The agent's current perceived ball position.
-    /// If BallVisible is true: exact match to BallState.Position (Stage 0; no error model).
-    /// If BallVisible is false: last confirmed ball position before it left visibility.
-    ///   This is a STALE value. Decision Tree must use BallStalenessFrames to weight
-    ///   confidence in this field. Do not treat a stale position as current truth.
-    /// Units: metres. Coordinate system: matches AgentState.Position (pitch-centred).
-    /// </summary>
+    bool    BallVisible;
+    // True if ball passed all three visibility tests (range, FoV, occlusion) this tick.
+    // Ball is never subject to L_rec — it is immediately confirmed when visible (OQ-2).
+
     Vector2 BallPerceivedPosition;
+    // Last confirmed ball position. If BallVisible=true: equals ground truth this tick.
+    // If BallVisible=false: retains last confirmed position (may be stale).
+    // Never (0,0) after first ball sighting — retains last known value indefinitely.
+    // INVARIANT: BallStalenessFrames == 0 iff BallVisible == true (INV-8).
 
-    /// <summary>
-    /// Number of heartbeat ticks since the ball was last directly visible to this agent.
-    /// 0 = ball is currently visible (BallVisible is true — these are always consistent).
-    /// >0 = ball has not been visible for this many ticks; BallPerceivedPosition is stale.
-    /// Decision Tree should treat ball position confidence as inversely proportional to
-    /// this value. No maximum cap — the ball may be unseen for many ticks in edge cases.
-    /// INVARIANT: BallStalenessFrames == 0 iff BallVisible == true (INV-8).
-    /// </summary>
-    int BallStalenessFrames;
+    int     BallStalenessFrames;
+    // Number of consecutive heartbeats during which BallVisible was false.
+    // 0 = ball currently visible (ground truth). Higher values = older position estimate.
+    // Decision Tree should weight ball confidence inversely with this value.
 
-    // ─── Agent Perception ────────────────────────────────────────────────────
+    // ── Visible Agents (Forward Arc) ─────────────────────────────────────────────
 
-    /// <summary>
-    /// Read-only view of confirmed visible teammates at this heartbeat (excluding observer).
-    /// An agent is confirmed after their recognition latency counter has elapsed (§3.3).
-    ///
-    /// LIFETIME: Valid for the current heartbeat tick only. The underlying buffer is
-    /// owned by PerceptionSystem and overwritten at the next heartbeat. Decision Tree
-    /// must not store or cache this span across ticks — copy required data immediately.
-    ///
-    /// CAPACITY: Backed by a pre-allocated PerceivedAgent[10] buffer per observer.
-    ///   Allocated once at match initialisation; never reallocated at runtime (INV-10).
-    ///   Slice length = VisibleTeammateCount (0–10); unused capacity is not exposed.
-    /// </summary>
-    ReadOnlySpan<PerceivedAgent> VisibleTeammates;
+    PerceivedAgent[] VisibleTeammates;
+    // All teammate agents that are: (a) within EffectiveFoV, (b) not occluded,
+    // (c) confirmed (latency counter satisfied).
+    // Array length is 0..10 (max 10 outfield teammates + GK at Stage 0).
+    // Pre-allocated at match initialisation; never reallocated at runtime (INV-10).
 
-    /// <summary>
-    /// Number of valid entries in VisibleTeammates. Range: 0–10.
-    /// Reflects the slice length of the VisibleTeammates span.
-    /// Provided as a convenience scalar field; use either this or VisibleTeammates.Length.
-    /// </summary>
-    int VisibleTeammateCount;
+    PerceivedAgent[] VisibleOpponents;
+    // All opponent agents that are: (a) within EffectiveFoV, (b) not occluded,
+    // (c) confirmed (latency counter satisfied).
+    // Array length is 0..11 (max 11 opponents).
+    // Pre-allocated at match initialisation; never reallocated at runtime (INV-10).
 
-    /// <summary>
-    /// Read-only view of confirmed visible opponents at this heartbeat.
-    /// Occlusion is applied — opponent shadow cones may hide other opponents.
-    ///
-    /// LIFETIME: Valid for the current heartbeat tick only. Same constraints as
-    /// VisibleTeammates — do not cache across ticks.
-    ///
-    /// CAPACITY: Backed by a pre-allocated PerceivedAgent[11] buffer per observer.
-    ///   Allocated once at match initialisation; never reallocated at runtime (INV-10).
-    ///   Slice length = VisibleOpponentCount (0–11); unused capacity is not exposed.
-    /// </summary>
-    ReadOnlySpan<PerceivedAgent> VisibleOpponents;
+    // ── Blind-Side Agents (Shoulder Check) ───────────────────────────────────────
 
-    /// <summary>
-    /// Number of valid entries in VisibleOpponents. Range: 0–11.
-    /// Reflects the slice length of the VisibleOpponents span.
-    /// </summary>
-    int VisibleOpponentCount;
-
-    // ─── Perception Quality Metadata ─────────────────────────────────────────
-
-    /// <summary>
-    /// The effective field of view angle used for this snapshot, in degrees.
-    /// = BASE_FOV_ANGLE + Decisions modifier − PressureScalar reduction.
-    /// Clamped to [MIN_FOV_ANGLE, BASE_FOV_ANGLE + MAX_FOV_BONUS_ANGLE].
-    /// Exposed for Decision Tree use: a narrow EffectiveFoVAngle indicates the agent is
-    /// under significant pressure. Decision Tree may use this to qualify option confidence.
-    /// Units: degrees. Value is always positive.
-    /// </summary>
-    float EffectiveFoVAngle;
-
-    // ─── Blind-Side / Shoulder Check State ──────────────────────────────────
-
-    /// <summary>
-    /// Whether a shoulder check awareness window is currently active for this agent.
-    /// True = rear-arc entities are being processed through their own L_rec cycle;
-    ///   rear-arc entities that have confirmed will appear in VisibleTeammates/Opponents.
-    /// False = standard blind-side exclusion is active; no rear-arc entities are perceived.
-    /// Managed autonomously by Perception System (OQ-3). Decision Tree does not set this.
-    /// </summary>
-    bool BlindSideWindowActive;
-
-    /// <summary>
-    /// Match time (seconds) at which the current shoulder check window expires.
-    /// Valid only when BlindSideWindowActive is true.
-    /// When match time exceeds this value, BlindSideWindowActive becomes false
-    /// and rear-arc processing stops at the next heartbeat.
-    /// Units: match time in seconds (same reference as AgentState timestamps).
-    /// Undefined (0f) when BlindSideWindowActive is false.
-    /// </summary>
-    float BlindSideWindowExpiry;
+    PerceivedAgent[] BlindSidePerceivedAgents;
+    // Agents confirmed during an active shoulder check window (§3.4.3).
+    // Empty when no shoulder check window is active, or when window is active
+    // but no agents have been confirmed yet (L_rec not yet elapsed).
+    // Subject to same L_rec requirements as forward-arc agents.
 }
 ```
 
-**`ReadOnlySpan` compatibility note:** `ReadOnlySpan<T>` is a ref struct and cannot be
-stored on the heap or in a class field. This enforces correct usage — the Decision Tree
-cannot inadvertently cache a snapshot containing a dangling span. If the Decision Tree
-architecture (Spec #8) requires storing snapshot data across ticks for any agent, it must
-copy the required `PerceivedAgent` values into its own managed storage. This is by design.
+**Field count: 9.** This struct contains pure world-state data — what the agent knows.
+Filter metadata (how the filter operated) is in `PerceptionDiagnostics` (§2.3.2).
 
-### 2.3.2 `PerceivedAgent` Struct
+### 2.3.2 `PerceptionDiagnostics` Struct
 
-Each entry in `VisibleTeammates` and `VisibleOpponents` is a `PerceivedAgent`. This
-struct contains everything the observing agent knows about a perceived entity. At Stage 0,
-position and velocity are exact copies of world state. Stage 1 will introduce error models.
+`PerceptionDiagnostics` contains information about *how* the perception filter operated,
+not what the agent knows about the world. It is produced alongside `FilteredView` each
+heartbeat but is **never delivered to the Decision Tree**. It is available for debug
+tooling, telemetry, balance analysis, and the Animation System (Stage 1+).
 
 ```csharp
 /// <summary>
-/// The observing agent's perception of a single other agent at one heartbeat.
-/// Contains what the observer knows — not ground truth — about this agent.
+/// PerceptionDiagnostics — filter metadata for one agent at one heartbeat.
 ///
-/// STAGE 0: PerceivedPosition and PerceivedVelocity are identical to world state.
-/// ConfidenceScore is binary: 1.0f = confirmed, 0.0f = pending (pending never appears
-/// in confirmed arrays — this field is reserved for Stage 1 continuous confidence model).
+/// Contains information about HOW the perception filter operated, NOT what the
+/// agent knows about the world. This struct is NEVER delivered to the Decision Tree.
 ///
-/// Stage 1 upgrade paths:
-/// - PerceivedPosition: introduce small error scaled by Decisions attribute
-/// - PerceivedVelocity: introduce estimation error for rapidly changing velocity
-/// - ConfidenceScore: continuous [0,1] decay with distance and occlusion proximity
+/// CONSUMERS: Debug tooling, telemetry, balance analysis, Animation System (Stage 1+).
+/// OWNERSHIP: Perception System Specification #7. Same amendment authority as FilteredView.
+/// MODIFICATION: Adding fields to diagnostics is lower-impact than FilteredView because
+///   no decision-making system consumes this struct.
+/// </summary>
+struct PerceptionDiagnostics
+{
+    // ── Correlation Keys ─────────────────────────────────────────────────────────
+
+    int     ObserverId;
+    // Matches FilteredView.ObserverId for the same heartbeat.
+
+    int     FrameNumber;
+    // Matches FilteredView.FrameNumber for the same heartbeat.
+
+    // ── Filter State ─────────────────────────────────────────────────────────────
+
+    float   EffectiveFoVAngle;
+    // Actual FoV angle in degrees after Decisions modifier and pressure narrowing.
+    // Range: [MIN_FOV_ANGLE, BASE_FOV_ANGLE + MAX_FOV_BONUS_ANGLE] = [120°, 170°].
+    // Useful for debug visualisation of perception cones and balance analysis.
+
+    float   PressureScalar;
+    // Pressure scalar at the time of filter execution.
+    // Range: [0.0, 1.0]. Computed from opponent proximity (§3.6).
+    // Useful for balance telemetry and verifying pressure model behaviour.
+
+    // ── Shoulder Check State ─────────────────────────────────────────────────────
+
+    bool    BlindSideWindowActive;
+    // True during an active shoulder check window (§3.4.3).
+
+    float   BlindSideWindowExpiry;
+    // Match time (seconds) at which the current shoulder check window expires.
+    // Meaningless if BlindSideWindowActive = false.
+
+    // ── Animation Stub ───────────────────────────────────────────────────────────
+
+    ShoulderCheckAnimData ShoulderCheckAnim;
+    // Stage 1+ stub. Populated at Stage 0; no consumer until Animation System written.
+    // See §3.4.4 for struct definition.
+}
+```
+
+**Field count: 7.** None of these fields are consumed by the Decision Tree.
+
+### 2.3.3 `PerceivedAgent` Struct
+
+Each entry in `FilteredView.VisibleTeammates`, `FilteredView.VisibleOpponents`, and
+`FilteredView.BlindSidePerceivedAgents` is a `PerceivedAgent`. This struct contains
+everything the observing agent knows about a perceived entity. At Stage 0, position and
+velocity are exact copies of world state. Stage 1 will introduce error models.
+
+```csharp
+/// <summary>
+/// PerceivedAgent — data for one visible agent in a FilteredView.
+///
+/// All fields reflect agent state at the time of view construction.
+/// At Stage 0: position and velocity are ground truth for confirmed entities.
+/// At Stage 1+: error modelling will introduce uncertainty into these values.
+///
+/// This struct contains ONLY consumer-relevant data. Diagnostic fields
+/// (latency counters, occlusion state) live in the editor-only
+/// PerceivedAgentDebug struct (§2.3.4).
 /// </summary>
 struct PerceivedAgent
 {
-    // ─── Identity ────────────────────────────────────────────────────────────
+    int     AgentId;
+    // AgentState.AgentId of the perceived agent. Range: 0–21.
+    // Never equals the ObserverId from the containing FilteredView.
 
-    /// <summary>
-    /// AgentId of the perceived agent.
-    /// Matches AgentState.AgentID from Agent Movement Specification #2.
-    /// Range: 0–21. Never equals the ObserverId from the containing snapshot.
-    /// </summary>
-    int AgentId;
-
-    // ─── Perceived State ─────────────────────────────────────────────────────
-
-    /// <summary>
-    /// The observer's perceived position of this agent, in metres.
-    /// Stage 0: exact match to AgentState.Position (2D projection, Y-forward convention).
-    /// Stage 1+: will differ from true position by an attribute-scaled error term.
-    /// Decision Tree should treat this as the observer's belief, not verified ground truth.
-    /// </summary>
     Vector2 PerceivedPosition;
+    // Ground-truth position at time of view construction (Stage 0).
+    // Stage 1+: will include perception error based on distance and Decisions attribute.
+    // Decision Tree should treat this as the observer's belief, not verified ground truth.
 
-    /// <summary>
-    /// The observer's perceived velocity of this agent, in m/s.
-    /// Stage 0: exact match to AgentState.Velocity (2D projection).
-    /// Stage 1+: will incorporate estimation error for rapidly changing velocity.
-    /// Used by Decision Tree for option evaluation (passing lane prediction, pressing target).
-    /// </summary>
     Vector2 PerceivedVelocity;
+    // Ground-truth velocity at time of view construction (Stage 0).
+    // Stage 1+: will include direction estimation error for far agents.
+    // Used by Decision Tree for option evaluation (passing lane prediction, pressing target).
 
-    // ─── Confidence & Latency Metadata ───────────────────────────────────────
-
-    /// <summary>
-    /// Confidence in the perceived data for this agent. Range: [0.0, 1.0].
-    /// Stage 0: always 1.0f for any entry in the confirmed arrays (binary model).
-    ///   Entries with ConfidenceScore < 1.0 never appear in the snapshot at Stage 0.
-    /// Stage 1+: continuous decay model; Decision Tree will receive entries with
-    ///   intermediate scores representing degrading confidence in stale data.
-    /// Reserved at Stage 0 for forward compatibility — do not remove this field.
-    /// </summary>
-    float ConfidenceScore;
-
-    /// <summary>
-    /// Heartbeat ticks remaining until this agent would be fully confirmed.
-    /// Stage 0: always 0 for entries in confirmed arrays (they are already confirmed).
-    ///   Non-zero values are internal pipeline state; they never appear in the output struct.
-    /// Stage 1+: may expose partially-confirmed agents with reduced ConfidenceScore.
-    /// Reserved at Stage 0. Decision Tree must not depend on this being non-zero.
-    /// </summary>
-    int RecognitionLatencyRemaining;
+    float   ConfidenceScore;
+    // [0.0, 1.0]. At Stage 0: binary — 1.0 for confirmed, not present if unconfirmed.
+    // Stage 1: continuous, degrading with distance and staleness.
+    // Reserved at Stage 0 for forward compatibility — do not remove this field.
 }
 ```
 
-**Debug occlusion data:** The `WasOccludedThisTick` flag considered during drafting has
-been deliberately excluded from `PerceivedAgent`. Debug information must not inflate
-shipped value structs. Occlusion diagnostic data is instead written to a parallel
-`PerceivedAgentDebug` struct populated only in `#if UNITY_EDITOR` builds:
+**Field count: 4.** `RecognitionLatencyRemaining` (present in v1.1) is removed — it was
+always 0 in confirmed arrays (the only time an entry appears in `FilteredView`). It has
+been moved to the editor-only `PerceivedAgentDebug` struct alongside occlusion diagnostics:
 
 ```csharp
 // EDITOR-ONLY — never compiled into release builds.
@@ -556,20 +514,20 @@ shipped value structs. Occlusion diagnostic data is instead written to a paralle
 struct PerceivedAgentDebug
 {
     int   AgentId;
-    bool  WasOccludedThisTick;    // True if discarded by shadow cone test at Step 3
-    int   LatencyCounterAtTick;   // Raw counter value when snapshot was built
-    float ShadowConeAngle;        // Angle of occluding cone if WasOccludedThisTick = true
+    bool  WasOccludedThisTick;       // True if discarded by shadow cone test at Step 3
+    int   LatencyCounterAtConfirm;   // Raw counter value when entity confirmed
+    float ShadowConeAngle;           // Angle of occluding cone if WasOccludedThisTick = true
 }
 #endif
 ```
 
 This keeps the shipped struct minimal and the debug path non-intrusive.
 
-### 2.3.3 `PerceptionSystem` Internal State
+### 2.3.4 `PerceptionSystem` Internal State
 
 The `PerceptionSystem` class maintains persistent state across heartbeats. This state
-is not exposed through the `PerceptionSnapshot` and is not accessible to any downstream
-system. It is documented here to define the full memory footprint and clarify which
+is not exposed through `FilteredView` or `PerceptionDiagnostics` and is not accessible
+to any downstream system. It is documented here to define the full memory footprint and clarify which
 data the pipeline reads as ephemeral input versus retains across ticks.
 
 ```csharp
@@ -598,20 +556,23 @@ Memory footprint: approximately 3.7KB per match instance (462 int pairs + 44 flo
 values). This is a fixed allocation made at match initialisation; no per-heartbeat heap
 allocation occurs (INV-10).
 
-### 2.3.4 Struct Ownership and Amendment Authority
+### 2.3.5 Struct Ownership and Amendment Authority
 
-`PerceptionSnapshot` and `PerceivedAgent` are owned exclusively by Perception System
-Specification #7. The following rules govern amendment:
+`FilteredView`, `PerceptionDiagnostics`, and `PerceivedAgent` are owned exclusively by
+Perception System Specification #7. The following rules govern amendment:
 
-- **Decision Tree Specification #8** is the primary consumer. If the Decision Tree
-  requires additional fields, it must raise an amendment request against this specification.
-  The Decision Tree may not add fields unilaterally.
+- **Decision Tree Specification #8** is the primary consumer of `FilteredView`. If the
+  Decision Tree requires additional fields, it must raise an amendment request against
+  this specification. The Decision Tree may not add fields unilaterally.
+- **`PerceptionDiagnostics` amendments** carry lower risk than `FilteredView` amendments
+  because no decision-making system consumes diagnostics. However, a version increment is
+  still required.
 - **No interface struct** (`IPerceptionConsumer`, etc.) is defined in this specification.
   The Decision Tree defines its own intake pattern. This follows the project interface
   principle: write the interface only when both sides are fully specified.
 - **Goalkeeper Mechanics Specification #11** (not yet written) may require extended
-  perception fields. If so, an amendment or a `GoalkeeperPerceptionSnapshot` subtype
-  (extending this struct) should be requested before that specification's Section 3 is
+  perception fields. If so, an amendment or a `GoalkeeperFilteredView` subtype
+  (extending `FilteredView`) should be requested before that specification's Section 3 is
   drafted. At Stage 0, the goalkeeper uses the standard struct without extension.
 - Any amendment to these structs requires a version increment to this section and a
   cross-specification impact assessment before ratification.
