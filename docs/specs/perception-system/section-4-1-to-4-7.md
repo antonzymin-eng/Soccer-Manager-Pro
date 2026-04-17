@@ -1,6 +1,6 @@
 # Perception System Specification #7 — Section 4: Architecture & Integration
 
-**File:** `Perception_System_Spec_Section_4_v1_1.md`  
+**File:** `Perception_System_Spec_Section_4_v1_2.md`  
 **Purpose:** Defines the complete file/module architecture for the Perception System and
 specifies all integration contracts with upstream dependencies — Agent Movement (#2),
 Ball Physics (#1), Collision System (#3) — and the downstream output contract with
@@ -9,18 +9,18 @@ relationship. This section is the authoritative reference for boundary ownership
 Implementers must not cross these boundaries without a formal amendment to this section.
 
 **Created:** February 25, 2026, 12:00 PM PST  
-**Revised:** February 26, 2026  
-**Version:** 1.1  
+**Revised:** April 11, 2026  
+**Version:** 1.2  
 **Status:** DRAFT — Awaiting Lead Developer Review  
 **Specification Number:** 7 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
 
 **Prerequisite Sections:**
 - Section 1 v1.1 (scope, KD-1 through KD-7 locked)
-- Section 2 v1.1 (pipeline, functional requirements, struct definitions)
-- Section 3 v1.1 (all models specified: FoV, occlusion, L_rec, shoulder check, ball
-  perception, pressure scalar, `PerceptionSnapshot` struct definition, forced refresh,
-  worked examples, constants table)
+- Section 2 v1.2 (pipeline, functional requirements, FilteredView/PerceptionDiagnostics struct definitions)
+- Section 3 v1.3 (all models specified: FoV, occlusion, L_rec, shoulder check, ball
+  perception, pressure scalar, `FilteredView` and `PerceptionDiagnostics` struct definitions,
+  forced refresh, worked examples, constants table)
 
 **Open Dependency Flags:** None. All hard dependencies confirmed stable from approved
 upstream specifications.
@@ -77,7 +77,7 @@ may add files to this folder without a formal amendment to this section.
 │       _blindSideWindowExpiry (per agent). Schedules autonomous shoulder checks.
 │       Handles forced mid-heartbeat refresh for qualifying events (§4.6).
 │       Publishes PerceptionRefreshEvent stub on forced refresh.
-│       Produces one PerceptionSnapshot per agent per heartbeat.
+│       Produces one FilteredView and one PerceptionDiagnostics per agent per heartbeat.
 │
 │   FovCalculator.cs
 │       Computes effective FoV angle per agent per heartbeat (§3.1).
@@ -124,11 +124,12 @@ may add files to this folder without a formal amendment to this section.
 │       shoulder check timing.
 │       Static class. All methods are deterministic. No side effects.
 │
-│   SnapshotBuilder.cs
-│       Assembles the final PerceptionSnapshot value struct from the outputs
+│   ViewBuilder.cs
+│       Assembles FilteredView and PerceptionDiagnostics from the outputs
 │       of all prior pipeline steps (§3.7).
-│       Populates all 12 fields. Guarantees no null references in the struct.
-│       Handles empty-snapshot case (no visible entities) without error.
+│       Populates all 9 fields (FilteredView) and 7 fields (PerceptionDiagnostics).
+│       Guarantees no null references in either struct.
+│       Handles empty-view case (no visible entities) without error.
 │       Static class. Pure assembly — no computation.
 │
 │   PerceptionConstants.cs
@@ -138,12 +139,13 @@ may add files to this folder without a formal amendment to this section.
 │       Cross-spec constants are referenced by pointer, not duplicated.
 │       Frozen at Stage 0 approval — changes require spec revision and regression.
 │
-│   PerceptionSnapshot.cs
-│       PerceptionSnapshot struct definition (§3.7.1). OWNED BY THIS SPECIFICATION.
-│       PerceivedAgent sub-struct definition (§3.7.2).
-│       PerceptionDebugRecord struct definition (§3.7.3).
-│       ShoulderCheckAnimData stub definition (§3.7.4).
-│       Decision Tree consumes these structs; it does not define them.
+│   FilteredView.cs
+│       FilteredView struct definition (§3.7.1). OWNED BY THIS SPECIFICATION.
+│       PerceptionDiagnostics struct definition (§3.7.2). OWNED BY THIS SPECIFICATION.
+│       PerceivedAgent sub-struct definition (§3.7.3).
+│       OcclusionDebugRecord struct definition (§3.7.4).
+│       ShoulderCheckAnimData stub definition (§3.4.4).
+│       Decision Tree consumes FilteredView and PerceivedAgent; it does not define them.
 │
 │   PerceptionEvents.cs
 │       PerceptionRefreshEvent struct definition.
@@ -161,10 +163,11 @@ may add files to this folder without a formal amendment to this section.
         PerceptionBalanceTests.cs       — Balance tests §5.3 (3 scenarios)
 ```
 
-**Ownership rule:** `PerceptionSnapshot.cs` is defined here. Decision Tree (#8) is the
-consumer — it reads `PerceptionSnapshot` but does not define the struct. If Decision
+**Ownership rule:** `FilteredView.cs` is defined here. Decision Tree (#8) is the
+consumer — it reads `FilteredView` but does not define the struct. If Decision
 Tree requires additional fields, that amendment must originate in this specification, not
-in Decision Tree's specification.
+in Decision Tree's specification. `PerceptionDiagnostics` is owned by the same file but
+is never delivered to the Decision Tree.
 
 **Ownership rule:** `PerceptionEvents.cs` is defined here. If Event System (#17) requires
 a different publish signature at Stage 1, this specification requires a corresponding
@@ -443,10 +446,11 @@ Decision Tree Specification #8 has not yet been written. Per the project interfa
 principle: no `IDecisionTreeConsumer` or `IPerceptionPublisher` interface is defined
 in this specification. The Decision Tree owns its own intake mechanism.
 
-### 4.5.1 PerceptionSnapshot Ownership
+### 4.5.1 FilteredView and PerceptionDiagnostics Ownership
 
-`PerceptionSnapshot` is a value struct defined in `PerceptionSnapshot.cs` (§3.7.1),
-which is owned exclusively by this specification. The canonical struct definition is:
+`FilteredView` and `PerceptionDiagnostics` are value structs defined in `FilteredView.cs`
+(§3.7.1 and §3.7.2), owned exclusively by this specification. The canonical struct
+definitions are:
 
 ```csharp
 // Defined in: Perception System Specification #7, §3.7.1
@@ -454,57 +458,65 @@ which is owned exclusively by this specification. The canonical struct definitio
 // Consumer: Decision Tree Specification #8 (sole consumer at Stage 0)
 // Modification authority: This specification only
 
-public struct PerceptionSnapshot
+public struct FilteredView
 {
-    public int      ObserverId;                 // Agent this snapshot belongs to
-    public int      HeartbeatTick;              // Heartbeat tick this snapshot is valid for
-    public bool     BallVisible;                // Is ball currently in perception?
-    public Vector2  BallPerceivedPosition;      // Last confirmed ball position (stale if invisible)
-    public int      BallStalenessFrames;        // Ticks since ball last directly observed
-    public PerceivedAgent[] VisibleTeammates;   // Confirmed visible teammates (L_rec elapsed)
-    public PerceivedAgent[] VisibleOpponents;   // Confirmed visible opponents (L_rec elapsed)
-    public float    EffectiveFoVAngle;          // Actual FoV angle after pressure degradation (degrees)
-    public float    PressureScalar;             // [0–1]; stored for DT diagnostic use
-    public bool     BlindSideWindowActive;      // True if shoulder check window open
-    public float    BlindSideWindowExpiry;      // Match time (seconds) when window closes
-    public bool     ForcedRefreshThisTick;      // True if this snapshot was triggered mid-heartbeat
+    public int              ObserverId;                  // Agent this view belongs to
+    public int              FrameNumber;                 // Heartbeat tick this view is valid for
+    public bool             ForcedRefreshThisTick;       // True if triggered by forced mid-heartbeat refresh
+    public bool             BallVisible;                 // Is ball currently in perception?
+    public Vector2          BallPerceivedPosition;       // Last confirmed ball position (stale if invisible)
+    public int              BallStalenessFrames;         // Ticks since ball last directly observed
+    public PerceivedAgent[] VisibleTeammates;            // Confirmed visible teammates (L_rec elapsed)
+    public PerceivedAgent[] VisibleOpponents;            // Confirmed visible opponents (L_rec elapsed)
+    public PerceivedAgent[] BlindSidePerceivedAgents;    // Agents confirmed via shoulder check window
+}
+
+// Defined in: Perception System Specification #7, §3.7.2
+// Owned by: Perception System Specification #7
+// Consumer: Debug tooling, telemetry, Animation System (Stage 1+)
+// NOT delivered to Decision Tree
+
+public struct PerceptionDiagnostics
+{
+    public int                  ObserverId;              // Matches FilteredView.ObserverId
+    public int                  FrameNumber;             // Matches FilteredView.FrameNumber
+    public float                EffectiveFoVAngle;       // Actual FoV angle after Decisions modifier and pressure
+    public float                PressureScalar;          // [0–1]; pressure at filter execution time
+    public bool                 BlindSideWindowActive;   // True if shoulder check window open
+    public float                BlindSideWindowExpiry;   // Match time (seconds) when window closes
+    public ShoulderCheckAnimData ShoulderCheckAnim;      // Stage 1+ animation stub
 }
 ```
 
-This struct definition is the sole canonical version. The Decision Tree must not define
-its own version, alias, or wrapper of this struct. Any field addition, removal, or type
-change requires a version bump of this specification and a corresponding update to the
-Decision Tree specification's intake code.
+These struct definitions are the sole canonical versions. The Decision Tree must not
+define its own version, alias, or wrapper of `FilteredView`. Any field addition, removal,
+or type change to either struct requires a version bump of this specification and a
+corresponding update to affected downstream specifications.
 
-> **⚠ Amendment Required — Section 3 §3.7.1:** The `ForcedRefreshThisTick` field
-> (final field above) is introduced in this section and is **not present** in the
-> Section 3 §3.7.1 struct definition (Section 3 v1.1). This is an intentional
-> cross-section inconsistency flagged here for resolution. Before Section 4 can be
-> approved, Section 3 must be amended to add `ForcedRefreshThisTick` to the
-> `PerceptionSnapshot` struct definition with the following annotation:
-> `public bool ForcedRefreshThisTick; // True if this snapshot was triggered by a
-> forced mid-heartbeat refresh (§3.8). False on normal heartbeat cadence.`
-> This amendment does not affect any Section 3 formulas or models — it is a purely
-> additive struct field. Section 3 version bump to v1.2 is required. This is tracked
-> as cross-spec validation check XC-4.5-01.
+**XC-4.5-01 RESOLVED:** The former `PerceptionSnapshot` mismatch between Section 3 and
+Section 4 (field count discrepancy, naming conflicts, dual authority claim) has been
+eliminated by the architectural rework in v1.2. Section 3 §3.7.1 (v1.3) and this section
+now define identical `FilteredView` (9 fields) and `PerceptionDiagnostics` (7 fields).
 
 ### 4.5.2 Delivery Mechanism and Cadence
 
-`PerceptionSnapshot` is passed **by value** to the Decision Tree each heartbeat.
+`FilteredView` is passed **by value** to the Decision Tree each heartbeat.
+`PerceptionDiagnostics` is retained internally and is not delivered to the Decision Tree.
 No shared reference exists between the Perception System and the Decision Tree.
 Once the struct is handed off, the Decision Tree's copy is independent. The
 Perception System may immediately overwrite its working state for the next heartbeat.
 
-**Delivery cadence:** One `PerceptionSnapshot` per agent per 10Hz heartbeat tick. All
-22 agents' snapshots are assembled before any snapshot is delivered to any Decision
-Tree. The ordering of delivery is deterministic: agent 0 through agent 21 in ascending
+**Delivery cadence:** One `FilteredView` per agent per 10Hz heartbeat tick. All
+22 agents' views are assembled before any view is delivered to any Decision Tree.
+The ordering of delivery is deterministic: agent 0 through agent 21 in ascending
 `AgentId` order.
 
 **Forced refresh delivery:** If a qualifying event triggers a forced mid-heartbeat
-refresh (§4.6), the affected agents receive a new snapshot immediately. This snapshot
-is delivered outside the normal heartbeat cadence. The Decision Tree must be capable
-of receiving a snapshot at any simulation frame, not only on heartbeat ticks. This
-constraint must be documented in Decision Tree Specification #8 when written.
+refresh (§4.6), the affected agents receive a new `FilteredView` immediately. This view
+is delivered outside the normal heartbeat cadence. `FilteredView.ForcedRefreshThisTick`
+will be `true` for these out-of-schedule views. The Decision Tree must be capable of
+receiving a view at any simulation frame, not only on heartbeat ticks. This constraint
+must be documented in Decision Tree Specification #8 when written.
 
 ### 4.5.3 No Interface Defined Here
 
@@ -521,14 +533,14 @@ interface is defined here.
 
 ### 4.5.4 Amendment Authority
 
-Any change to `PerceptionSnapshot` or `PerceivedAgent` field definitions requires:
+Any change to `FilteredView`, `PerceptionDiagnostics`, or `PerceivedAgent` field definitions requires:
 1. A formal amendment to this specification (version bump, changelog entry)
 2. A corresponding notation in Decision Tree Specification #8's dependency table
 3. A cross-specification validation check added to §4.8 of this section
 
-The Decision Tree may not unilaterally modify the `PerceptionSnapshot` struct without
+The Decision Tree may not unilaterally modify the `FilteredView` struct without
 initiating an amendment through this specification. This is an ownership rule, not
-a courtesy — `PerceptionSnapshot.cs` is not within the Decision Tree's source folder.
+a courtesy — `FilteredView.cs` is not within the Decision Tree's source folder.
 
 ---
 
@@ -681,7 +693,7 @@ The complete dependency graph for the Perception System, showing direction of de
                     │      Decision Tree (#8)           │
                     │      [CONSUMER — not yet written] │
                     └──────────────────┬───────────────┘
-                                       │ PerceptionSnapshot (by value, per heartbeat)
+                                       │ FilteredView (by value, per heartbeat)
                                        │
                     ┌──────────────────▼───────────────┐
                     │     PERCEPTION SYSTEM (#7)        │

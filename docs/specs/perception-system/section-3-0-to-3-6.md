@@ -1,22 +1,23 @@
 # Perception System Specification #7 — Section 3: Core Models
 
-**File:** `Perception_System_Spec_Section_3_v1_2.md`  
+**File:** `Perception_System_Spec_Section_3_v1_3.md`  
 **Purpose:** Defines all mathematical models, data structures, and computational procedures
-governing `PerceptionSnapshot` production. This section is the implementation authority for
-the field of view model, shadow-cone occlusion, recognition latency, blind-side awareness,
-shoulder check mechanic, ball perception, pressure scalar integration, and the complete
-`PerceptionSnapshot` struct definition. All constants are audit-tagged. All formulas include
-worked examples with numerical verification.
+governing `FilteredView` and `PerceptionDiagnostics` production. This section is the
+implementation authority for the field of view model, shadow-cone occlusion, recognition
+latency, blind-side awareness, shoulder check mechanic, ball perception, pressure scalar
+integration, and the complete `FilteredView` and `PerceptionDiagnostics` struct definitions.
+All constants are audit-tagged. All formulas include worked examples with numerical
+verification.
 
 **Created:** February 24, 2026, 3:00 PM PST  
-**Version:** 1.2  
+**Version:** 1.3  
 **Status:** DRAFT — Awaiting Lead Developer Review  
 **Specification Number:** 7 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
 
 **Prerequisite Sections:**
 - Section 1 v1.1 (approved) — scope, KD-1 through KD-7 locked
-- Section 2 v1.0 (approved) — pipeline, functional requirements, preliminary struct
+- Section 2 v1.2 (approved) — pipeline, functional requirements, FilteredView/PerceptionDiagnostics struct definitions
 
 **Version History:**
 
@@ -25,6 +26,7 @@ worked examples with numerical verification.
 | 1.0 | February 24, 2026, 3:00 PM PST | Initial draft |
 | 1.1 | February 25, 2026 | Four fixes: (1) Peripheral arc boundary derived from BASE_FOV_HALF_ANGLE/2 (40°) — removes arbitrary 60° magic number. (2) Confirmation expiry reduced to 1 tick [DERIVED] — minimum sufficient to absorb single-tick boundary noise, not GT-tuned. (3) Noise changed to additive-only (+0/+1) — preserves L_MIN floor algebraically without secondary clamp. (4) Constants table updated: 12 GT, 3 CROSS, 2 DERIVED (was 12 GT, 3 CROSS, 1 GT). |
 | 1.2 | February 26, 2026 | One fix: (1) §3.3.2 — L_rec rounding convention made explicit: floor() required (Mathf.FloorToInt). Previously the formula showed a float result with no documented conversion to integer ticks. Verification table updated to show float and floored-tick columns separately. This is a clarification only — the floor convention was always implied by the integer tick system; no constant values change. |
+| 1.3 | April 11, 2026 | **Architectural rework — separation of filter output from filter metadata.** §3.7 retitled from "PerceptionSnapshot Struct Definition" to "Output Struct Definitions: FilteredView + PerceptionDiagnostics". `PerceptionSnapshot` replaced by two structs: `FilteredView` (9 fields — pure consumer output delivered to Decision Tree) and `PerceptionDiagnostics` (7 fields — filter metadata NOT delivered to DT). `PerceivedAgent` reduced from 5→4 fields: `RecognitionLatencyRemaining` moved to editor-only `PerceivedAgentDebug`. Pipeline step 6 renamed BuildFilteredView. Worked examples (§3.9) updated to show FilteredView and PerceptionDiagnostics outputs separately. Prerequisite updated to Section 2 v1.2. |
 
 **Cross-Specification Constants Consumed (read-only):**
 - First Touch Spec #4 §3.3.2: Half-turn orientation bonus = 15% L_rec reduction
@@ -43,7 +45,7 @@ worked examples with numerical verification.
 - [3.4 Blind-Side Awareness and Shoulder Check](#34-blind-side-awareness-and-shoulder-check)
 - [3.5 Ball Perception](#35-ball-perception)
 - [3.6 Pressure Scalar Integration](#36-pressure-scalar-integration)
-- [3.7 PerceptionSnapshot Struct Definition](#37-perceptionsnapshot-struct-definition)
+- [3.7 Output Struct Definitions: FilteredView + PerceptionDiagnostics](#37-output-struct-definitions-filteredview--perceptiondiagnostics)
 - [3.8 Mid-Heartbeat Forced Refresh](#38-mid-heartbeat-forced-refresh)
 - [3.9 Worked Examples](#39-worked-examples)
 - [3.10 Constants Master Table](#310-constants-master-table)
