@@ -1,7 +1,7 @@
 # Tactical Director — File Manifest
 
 **Created:** February 8, 2026, 11:15 PM PST  
-**Last Updated:** February 26, 2026, 11:30 PM PST  
+**Last Updated:** April 20, 2026  
 **Purpose:** Authoritative inventory of all project files with version tracking, status, and categorization  
 **Maintained by:** Lead Developer  
 **Update frequency:** After every file addition, removal, or version change
@@ -236,13 +236,39 @@
 
 ---
 
-## SPECIFICATIONS #8–20: NOT YET STARTED
+## SPECIFICATION #8: DECISION TREE
 
-No files created. See PROGRESS.md for schedule.
+**Overall status:** 📝 In Progress — Sections 1–9 and appendices drafted, pending lead developer review/sign-off  
+**Estimated pages:** ~55+
+
+| File | Version | Description | Status |
+|------|---------|-------------|--------|
+| `outline-part-1.md` | 1.1 | Outline context and architecture scope | Reference |
+| `outline-part-2.md` | 1.1 | Outline technical breakdown and planned Sections 4–9 content | Reference |
+| `outline-part-3.md` | 1.1 | Outline closing notes and risk summary | Reference |
+| `section-1.md` | 1.1 | Purpose, scope, key design decisions | Draft |
+| `section-2-1-to-2-2.md` | 1.1 | Pipeline and data structures | Draft |
+| `section-2-3-to-2-5.md` | 1.1 | Functional requirements, failure modes, version history | Draft |
+| `section-3-1.md` + `section-3-1-9-to-3-1-12.md` | 1.1 | Option generation | Draft |
+| `section-3-2.md` + `section-3-2-3-to-3-2-9.md` + `section-3-2-10-to-3-2-13.md` | 1.2 | Utility scoring model | Draft |
+| `section-3-3.md` + `section-3-3-7-to-3-3-12.md` | 1.0 | Action selection/composure model | Draft |
+| `section-3-4.md`, `section-3-5.md`, `section-3-6-to-3-8.md` | 1.1 | Tactical context, dispatch, intake interface, state machine, edge cases | Draft |
+| `section-4.md` | 1.0 | Architecture and integration contracts | Draft |
+| `section-5.md` | 1.0 | Test plan | Draft |
+| `section-6.md` | 1.0 | Performance analysis | Draft |
+| `section-7.md` | 1.0 | Future extensions and exclusions | Draft |
+| `section-8.md` | 1.0 | References and constant governance | Draft |
+| `appendices.md` | 1.0 | Derivations, worked examples, sensitivity notes | Draft |
+| `section-9-approval-checklist.md` | 1.0 | Approval checklist | Draft |
+
+---
+
+## SPECIFICATIONS #9–20: NOT YET STARTED
+
+See PROGRESS.md for schedule.
 
 | # | Specification | Priority | Target Week | Notes |
 |---|---------------|----------|-------------|-------|
-| 8 | Decision Tree | 2 | Week 4-5 | Both upstream producers now specified; interface may be defined. Sole consumer of PerceptionSnapshot. |
 | 9 | Fixed64 Math Library | 2 | Week 5-6 | Migration target for all float arithmetic in prior specs |
 | 10 | Heading Mechanics | 3 | Week 9 | — |
 | 11 | Goalkeeper Mechanics | 3 | Week 10 | Perception System notes goalkeeper treated as standard agent at Stage 0 |

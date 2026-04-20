@@ -56,7 +56,7 @@
 
 - **Pass Mechanics (#5):** Status changed from APPROVED to SUSPENDED on March 25, 2026 after comprehensive audit found 19 findings (5 critical). Fixes applied; pending lead developer re-review and re-sign-off.
 - **Perception System (#7):** Section 9 Approval Checklist has not been written yet. Cannot sign off without it.
-- **Decision Tree (#8):** Sections 1, 2, 3.1–3.3, and 3.4–3.8 drafted. Sections 4–9 not started.
+- **Decision Tree (#8):** Sections 1–9 and appendices are drafted. Pending lead developer review/sign-off.
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical and final.
 
 ---
