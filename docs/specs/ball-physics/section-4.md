@@ -1,8 +1,14 @@
 # Ball Physics Specification - Section 4: Implementation Details
 
 **Created:** February 4, 2026, 12:35 AM PST  
-**Version:** 1.2 (Revised)  
+**Version:** 1.3 (Revised)  
 **Status:** Draft  
+**Changes from v1.2:**
+- Mi-01-D: Removed `Bounce.COR_GRASS_DEFAULT`, `Bounce.FRICTION_GRASS_DEFAULT`,
+  `Bounce.SPIN_RETENTION_GRASS` rows from §4.3.1 tunable parameters table (constants
+  removed from §3.1.2 in v2.7 — they duplicated `SurfaceProperties` values)
+- Fixed §4.2.3 Fixed64 spec reference: Spec #8 → Spec #9
+
 **Changes from v1.1:**
 - Fixed BallState struct size: 56 bytes → 64 bytes (corrected field count; cache-line claim unchanged)
 - Added ApplyKick() and SetBallControlled() to §4.1.1 file structure (added in §3.1 v2.5)
@@ -152,7 +158,7 @@ using TacticalDirector.Core.EventSystem;  // For publishing events (Spec #17)
 
 #### 4.2.3 Optional Dependencies
 
-**Fixed64 Math Library (Spec #8):**
+**Fixed64 Math Library (Spec #9):**
 - Stage 0: Use standard floats (acceptable for prototype)
 - Stage 5+: Replace with Fixed64 for multiplayer determinism
 - Migration path defined in Section 4.7
@@ -177,8 +183,7 @@ using TacticalDirector.Core.EventSystem;  // For publishing events (Spec #17)
    - `Spin.TORQUE_COEFFICIENT`
 
 4. **Bounce** - Tunable per surface (match drop tests)
-   - `Bounce.COR_GRASS_DEFAULT`, `Bounce.FRICTION_GRASS_DEFAULT`
-   - `Bounce.SPIN_RETENTION_GRASS`, `Bounce.SPIN_TO_LINEAR_RATIO`
+   - `Bounce.SPIN_TO_LINEAR_RATIO`
 
 5. **State Machine** - Tunable (prevent oscillation)
    - `State.AIRBORNE_ENTER_THRESHOLD`, `State.AIRBORNE_EXIT_THRESHOLD`
@@ -432,7 +437,7 @@ public Vector3 CalculateMagnusForce(Vector3 velocity, Vector3 angularVelocity)
    - Test determinism after each replacement
 
 3. **Fixed64 Backend**
-   - Implement `Fixed64Math` backend (Spec #8)
+   - Implement `Fixed64Math` backend (Spec #9)
    - Switch backend via compile flag
    - Retest all integration tests
    - Verify replay determinism

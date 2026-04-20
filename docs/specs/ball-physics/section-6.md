@@ -1,8 +1,10 @@
 # Ball Physics Specification - Section 6: Performance Analysis
 
 **Created:** February 5, 2026, 10:30 AM PST  
-**Version:** 1.0  
+**Version:** 1.1  
 **Status:** Draft  
+**Changes from v1.0:**
+- AUD-006 residual B: Fixed §6.3.4 prose struct size: `60 bytes` → `64 bytes` (table at §6.3.1 was already correct)
 **Purpose:** Authoritative performance analysis for the Ball Physics System â€” computational complexity, memory budget, profiling targets, and optimization roadmap  
 **Dependencies:** Section 3.1 (Core Formulas v2.6), Section 4 (Implementation v1.2), Section 5 (Testing v1.0)
 
@@ -306,7 +308,7 @@ At ~7,000 events per match, the List will resize approximately 13 times (2^13 = 
 
 #### 6.3.4 Cache Performance
 
-**BallState struct (60 bytes):** Fits in a single L1 cache line (64 bytes typical). All fields accessed during `UpdateBallPhysics()` are in one contiguous block. This is optimal â€” no cache misses during the physics update for ball state data.
+**BallState struct (64 bytes):** Fits in a single L1 cache line (64 bytes typical). All fields accessed during `UpdateBallPhysics()` are in one contiguous block. This is optimal â€” no cache misses during the physics update for ball state data.
 
 **Constants access:** All constants are `const` (inlined at compile time) or `static readonly` (loaded once into L1 on first access, stays resident). No cache concern.
 

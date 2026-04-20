@@ -2,8 +2,11 @@
 
 **Created:** February 6, 2026, 11:15 AM PST  
 **Revised:** February 24, 2026  
-**Version:** 1.4  
+**Version:** 1.5  
 **Status:** READY FOR REVIEW  
+**Changes from v1.4:**
+- OBS-006: Added literature-vs-implementation note to §8.6.4 Rolling Friction table clarifying that
+  source µ_r values differ from gameplay-tuned implementation values (see REV-001, §3.1 v2.3)
 **Purpose:** Comprehensive bibliography of all research papers, real-world data sources, and internal documentation used to derive, validate, and implement ball physics formulas  
 **Dependencies:** Section 3.1 (Core Formulas v2.3), Section 5 (Testing v1.0), Section 6 (Performance Analysis v1.0), Master Vol 1 (Physics Core)
 
@@ -518,6 +521,8 @@ This section documents that all formulas and coefficients in Section 3.1 have be
 | Surface friction coefficient (0.60 for grass) | CARRE-2004 (adapted) | âœ… Verified |
 
 ### 8.6.4 Rolling Friction (Section 3.1.8.3)
+
+> **Literature vs. implementation note (OBS-006):** μ_r values in this table are from source literature (CARRE-2010). The implementation values in §3.1.2 differ and are gameplay-tuned to produce realistic stopping distances: GRASS_DRY 0.05→0.13, WET 0.03→0.07, LONG 0.10→0.22. See REV-001 in §3.1 v2.3 change log for rationale.
 
 | Formula Component | Source | Status |
 |---|---|---|

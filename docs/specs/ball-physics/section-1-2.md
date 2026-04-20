@@ -1,8 +1,13 @@
 # Ball Physics Specification - Sections 1 & 2
 
 **Created:** February 4, 2026, 12:15 AM PST  
-**Version:** 1.3 (Revised)  
+**Version:** 1.4 (Revised)  
 **Status:** Draft  
+**Changes from v1.3:**
+- Gap 3: Fixed Fixed64 spec number in §1.4 dependency: Spec #8 → Spec #9
+- AUD-006 residual A: Fixed BallState struct size in §2.2 PR-2: 56 bytes → 64 bytes
+- OBS-005: Added Stage 0 note to ring buffer requirement in §2.2 PR-2
+
 **Changes from v1.2:**
 - Corrected spec numbers: Pass Mechanics Spec #4 → #5, Shot Mechanics Spec #5 → #6 (per canonical numbering in PROGRESS.md)
 
@@ -59,7 +64,7 @@ The Ball Physics System simulates realistic football movement in 2.5D space (ful
 ### 1.4 Dependencies
 
 **Required (Stage 0):**
-- **Fixed64 Math Library** (Spec #8) - Optional for Stage 0, required for Stage 5+ multiplayer
+- **Fixed64 Math Library** (Spec #9) - Optional for Stage 0, required for Stage 5+ multiplayer
   - Provides deterministic fixed-point arithmetic
   - Fall back to standard floats acceptable for single-player prototype
   
@@ -123,9 +128,10 @@ The Ball Physics System simulates realistic football movement in 2.5D space (ful
 - Worst-case: Multiple force calculations + bounce = 0.5ms maximum
 
 **PR-2: Memory Usage**
-- `BallState` struct SHALL be Ã¢â€°Â¤128 bytes (current: 56 bytes)
+- `BallState` struct SHALL be Ã¢â€°Â¤128 bytes (current: 64 bytes)
 - Zero heap allocations during `UpdateBallPhysics()` call
 - Event logger SHALL use fixed-size ring buffer (bounded memory growth)
+  - **Stage 0 note:** Implementation uses `List<BallEvent>` (see §3.1.13); bounded by match duration, acceptable for single-player prototype. Ring buffer required at Stage 1+ when concurrent logging is introduced.
 - Total memory per ball: <200 bytes (state + logging overhead)
 
 **PR-3: Numerical Accuracy**
