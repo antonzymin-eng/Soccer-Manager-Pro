@@ -74,7 +74,9 @@ Section 3.1 candidate composition:
 Baseline composition total:
 `10 + 1 + 1 + 1 + 1 + 1 + 1 = 16`.
 
-Section 3.1 invariant **INV-GEN-09** sets the hard cap to **17** because the option buffer reserves one additional slot for safety/fallback handling. Tests must verify both constraints simultaneously:\n+- baseline generated composition ≤ 16 for normal branch logic,\n+- absolute buffer/invariant cap ≤ 17 under all conditions.
+Section 3.1 invariant **INV-GEN-09** sets the hard cap to **17** because the option buffer reserves one additional slot for safety/fallback handling. Tests must verify both constraints simultaneously:
+- baseline generated composition ≤ 16 for normal branch logic,
+- absolute buffer/invariant cap ≤ 17 under all conditions.
 
 ---
 
