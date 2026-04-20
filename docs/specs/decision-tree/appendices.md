@@ -62,7 +62,7 @@ Derived target:
 
 ### B.2 Option count bound verification
 
-Section 3.1 invariant max option count:
+Section 3.1 candidate composition:
 - PASS up to 10,
 - SHOOT 1,
 - DRIBBLE 1,
@@ -71,10 +71,10 @@ Section 3.1 invariant max option count:
 - PRESS 1,
 - INTERCEPT 1.
 
-Total max:
+Baseline composition total:
 `10 + 1 + 1 + 1 + 1 + 1 + 1 = 16`.
 
-If implementation stores additional fallback candidate, max can be 17 as documented by INV-GEN-09; this must be explicitly justified in tests.
+Section 3.1 invariant **INV-GEN-09** sets the hard cap to **17** because the option buffer reserves one additional slot for safety/fallback handling. Tests must verify both constraints simultaneously:\n+- baseline generated composition ≤ 16 for normal branch logic,\n+- absolute buffer/invariant cap ≤ 17 under all conditions.
 
 ---
 
