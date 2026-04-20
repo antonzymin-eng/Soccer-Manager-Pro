@@ -64,8 +64,6 @@ These conventions have caused bugs. Memorize them.
 
 **Origin:** Corner of pitch (0, 0, 0) — NOT pitch center.
 
-**KNOWN HAZARD:** Agent Movement §3.5 (Data Structures) contains a legacy comment stating "Origin at pitch center." This is WRONG. Corner-origin is authoritative. The Decision Tree spec also flags an XY vs XZ plane discrepancy between Agent Movement (XY for pitch plane) and Ball Physics (XZ). Ball Physics §1.2 is authoritative. Confirm axis usage before writing any position-related code.
-
 ### Fatigue Convention
 
 `0.0 = fully rested`, `1.0 = fully fatigued`. Any inversion is a critical error. This has been found inverted before (Pass Mechanics §2 FR-02, now fixed).
@@ -214,7 +212,6 @@ pass-mechanics/
 > **Keep this section current.** When resolving an issue, remove or update its entry here in the same commit.
 
 - **ERR-010:** Shot Mechanics §1.1 refers to Decision Tree as Spec #7 — canonical is #8. Must close before Shot Mechanics final sign-off.
-- **Coordinate axis discrepancy:** Agent Movement uses XY for pitch plane; Ball Physics uses XZ. Ball Physics is authoritative. Must reconcile before any code is written.
 - **Pass Mechanics (#5):** Approval SUSPENDED after March 25 audit (19 findings, all fixed). Awaiting lead developer re-review and re-sign-off.
 - **Pending sign-offs:** Agent Movement (#2), Shot Mechanics (#6), Perception System (#7).
 - **Decision Tree (#8):** Sections 3.3–3.8 drafted; Sections 4–9 not yet started.

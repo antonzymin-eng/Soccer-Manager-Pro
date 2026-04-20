@@ -185,7 +185,8 @@ public void UpdateBallPhysics(
             break;
             
         default:
-            // STATIONARY, CONTROLLED, OUT_OF_PLAY: No physics
+            // STATIONARY, CONTROLLED, OUT_OF_PLAY: No physics.
+            // Velocity is not cleared; callers must not read ball.Velocity when state is OUT_OF_PLAY.
             #if UNITY_EDITOR || DEVELOPMENT_BUILD
             UnityEngine.Profiling.Profiler.EndSample();
             #endif
@@ -200,11 +201,24 @@ public void UpdateBallPhysics(
     ball.Position += ball.Velocity * dt;
     
     // ================================================================
-    // STEP 4: Update spin (airborne only)
+    // STEP 4: Update spin (airborne only — aerodynamic torque model)
     // ================================================================
     if (ball.State == BallStateType.AIRBORNE)
     {
         ball.AngularVelocity = UpdateSpinDecay(ball.AngularVelocity, ball.Velocity, dt);
+    }
+    
+    // ================================================================
+    // STEP 4.5: Update spin (rolling — surface-contact friction model)
+    // ================================================================
+    // NOTE: Do NOT use UpdateSpinDecay() here. Its aerodynamic torque model
+    // (τ = -C_τ × ρ × r⁵ × |ω|²) is physically correct for airborne balls only.
+    // Rolling spin decay is dominated by surface contact friction.
+    // AngularVelocity here already reflects ApplyBounce()'s spinRetention; no
+    // additional cap beyond State.MIN_SPIN is applied by UpdateRollingSpinDecay().
+    if (ball.State == BallStateType.ROLLING)
+    {
+        ball.AngularVelocity = UpdateRollingSpinDecay(ball.AngularVelocity, dt);
     }
     
     // ================================================================
@@ -1037,6 +1051,7 @@ public void Validation_DetectsNaN_AndRecovers()
 | 2.4 | Feb 8, 2026 | AI | Updated rolling resistance coefficients (µ_r) for all surfaces; REV-001 |
 | 2.5 | Feb 21, 2026 | AI | Added §3.1.11.1/11.2 sub-labels; added ApplyKick() — ERR-006/ERR-008 resolution |
 | 2.6 | Mar 2, 2026 | AI | Fixed §3.1.14 hysteresis test positions to match v2.2+ threshold constants |
+| 2.7 | Apr 20, 2026 | AI | H-04-C: Added Step 4.5 — ROLLING spin decay via UpdateRollingSpinDecay(); C-02: Added defensive comment to default: case clarifying Velocity is not cleared for OUT_OF_PLAY |
 
 ---
 

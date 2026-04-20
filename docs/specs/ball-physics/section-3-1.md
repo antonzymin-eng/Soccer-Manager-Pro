@@ -3,8 +3,17 @@
 **Document:** Ball Physics Specification  
 **Section:** 3.1 Core Formulas  
 **Created:** February 2, 2026, 10:45 PM PST  
-**Version:** 2.6  
+**Version:** 2.7  
 **Status:** READY FOR IMPLEMENTATION — ERR-006 resolved (AM-001-001 applied)
+
+**Changes from v2.6:**
+- Gap 1: Added `[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]` source tags to all constants in §3.1.2
+- H-04-A: Added `Spin.ROLLING_SPIN_DECAY_PER_SECOND [EST]` constant to §3.1.2
+- Mi-01-A/B/C: Removed duplicate `Bounce.COR_GRASS_DEFAULT`, `Bounce.FRICTION_GRASS_DEFAULT`,
+  `Bounce.SPIN_RETENTION_GRASS` constants (identical to `SurfaceProperties.GetCoefficientOfRestitution(GRASS_DRY)`,
+  `GetFrictionCoefficient(GRASS_DRY)`, and `GetSpinRetention(GRASS_DRY)` respectively)
+- H-04-B: Added §3.1.7.2 `UpdateRollingSpinDecay()` — separate from airborne `UpdateSpinDecay()` because
+  aerodynamic torque model is physically incorrect for ground-contact spin damping
 
 **Changes from v2.5:**
 - Fixed §3.1.14 hysteresis test case: position values updated from pre-v2.2 era (z=0 ground level)
@@ -62,6 +71,8 @@
 - [3.1.5 Aerodynamic Drag](#315-aerodynamic-drag)
 - [3.1.6 Gravity](#316-gravity)
 - [3.1.7 Spin Dynamics](#317-spin-dynamics)
+  - [3.1.7.1 Combined Spin Decay (Airborne)](#3171-combined-spin-decay-airborne)
+  - [3.1.7.2 Rolling Spin Decay](#3172-rolling-spin-decay)
 - [3.1.8 Ground Interaction](#318-ground-interaction)
 - [3.1.9 Numerical Integration](#319-numerical-integration)
 - [3.1.10 Collision Systems](#3110-collision-systems)
@@ -214,13 +225,13 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class Ball
     {
-        /// <summary>Ball mass in kg (FIFA: 410-450g, using midpoint)</summary>
+        /// <summary>Ball mass in kg (FIFA: 410-450g, using midpoint) [FIXED]</summary>
         public const float MASS = 0.43f;
         
-        /// <summary>Ball radius in meters (FIFA: 68-70cm circumference)</summary>
+        /// <summary>Ball radius in meters (FIFA: 68-70cm circumference) [FIXED]</summary>
         public const float RADIUS = 0.11f;
         
-        /// <summary>Ball diameter in meters</summary>
+        /// <summary>Ball diameter in meters. Derived: 2 × RADIUS [DERIVED]</summary>
         public const float DIAMETER = 0.22f;
         
         /// <summary>Cross-sectional area in mÃ‚Â² (Ãâ‚¬rÃ‚Â²)</summary>
@@ -229,7 +240,7 @@ public static class BallPhysicsConstants
         /// <summary>
         /// Moment of inertia in kgÃ‚Â·mÃ‚Â² (hollow sphere: 2/3 mrÃ‚Â²).
         /// Note: Real football differs by ~10-20% due to internal structure.
-        /// Tune empirically if spin behavior doesn't match real footage.
+        /// Tune empirically if spin behavior doesn't match real footage. [EST]
         /// </summary>
         public const float MOMENT_OF_INERTIA = 0.00347f;
     }
@@ -254,16 +265,16 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class Drag
     {
-        /// <summary>Drag coefficient for laminar flow (Re < 200,000)</summary>
+        /// <summary>Drag coefficient for laminar flow (Re < 200,000) [GT]</summary>
         public const float COEFFICIENT_LAMINAR = 0.20f;
         
-        /// <summary>Drag coefficient in turbulent flow (Re > 400,000)</summary>
+        /// <summary>Drag coefficient in turbulent flow (Re > 400,000) [GT]</summary>
         public const float COEFFICIENT_TURBULENT = 0.10f;
         
-        /// <summary>Speed at which drag crisis begins (m/s)</summary>
+        /// <summary>Speed at which drag crisis begins (m/s) [EST]</summary>
         public const float CRISIS_SPEED_LOW = 20.0f;
         
-        /// <summary>Speed at which drag crisis ends (m/s)</summary>
+        /// <summary>Speed at which drag crisis ends (m/s) [EST]</summary>
         public const float CRISIS_SPEED_HIGH = 25.0f;
     }
     
@@ -272,16 +283,16 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class Magnus
     {
-        /// <summary>Base lift coefficient</summary>
+        /// <summary>Base lift coefficient [GT]</summary>
         public const float LIFT_COEFFICIENT_BASE = 0.1f;
         
-        /// <summary>Lift coefficient scaling factor</summary>
+        /// <summary>Lift coefficient scaling factor [GT]</summary>
         public const float LIFT_COEFFICIENT_SCALE = 0.4f;
         
-        /// <summary>Minimum spin parameter for valid calculation</summary>
+        /// <summary>Minimum spin parameter for valid calculation [GT]</summary>
         public const float MIN_SPIN_PARAMETER = 0.01f;
         
-        /// <summary>Maximum spin parameter (clamped)</summary>
+        /// <summary>Maximum spin parameter (clamped) [GT]</summary>
         public const float MAX_SPIN_PARAMETER = 1.0f;
     }
     
@@ -290,14 +301,23 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class Spin
     {
-        /// <summary>Velocity-dependent spin decay coefficient (s/m)</summary>
+        /// <summary>Velocity-dependent spin decay coefficient (s/m) [GT]</summary>
         public const float DECAY_VELOCITY_FACTOR = 0.01f;
         
-        /// <summary>Spin-rate-dependent decay coefficient (1/rad)</summary>
+        /// <summary>Spin-rate-dependent decay coefficient (1/rad) [GT]</summary>
         public const float DECAY_SPIN_FACTOR = 0.005f;
         
-        /// <summary>Aerodynamic torque coefficient</summary>
+        /// <summary>Aerodynamic torque coefficient [GT]</summary>
         public const float TORQUE_COEFFICIENT = 0.01f;
+        
+        /// <summary>
+        /// Rate at which spin decays during rolling (rad/s per second). [EST]
+        /// Ground-contact friction dominates over aerodynamic torque for rolling balls;
+        /// this constant is independent of and must NOT be confused with the airborne
+        /// aerodynamic torque model in UpdateSpinDecay().
+        /// Tune empirically to match observed spin persistence on grass.
+        /// </summary>
+        public const float ROLLING_SPIN_DECAY_PER_SECOND = 5.0f;
     }
     
     // ================================================================
@@ -307,20 +327,9 @@ public static class BallPhysicsConstants
     {
         /// <summary>
         /// Ratio of spin angular velocity that converts to linear velocity on contact.
-        /// Empirically derived: ~10% of contact point velocity transfers.
+        /// Empirically derived: ~10% of contact point velocity transfers. [EST]
         /// </summary>
         public const float SPIN_TO_LINEAR_RATIO = 0.1f;
-        
-        /// <summary>
-        /// Coefficient of restitution for grass (default).
-        /// </summary>
-        public const float COR_GRASS_DEFAULT = 0.65f;
-        
-        /// <summary>Surface friction coefficient for grass (default)</summary>
-        public const float FRICTION_GRASS_DEFAULT = 0.60f;
-        
-        /// <summary>Spin retention factor on grass bounce</summary>
-        public const float SPIN_RETENTION_GRASS = 0.80f;
     }
     
     // ================================================================
@@ -328,13 +337,13 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class Rolling
     {
-        /// <summary>Rolling resistance for dry grass</summary>
+        /// <summary>Rolling resistance for dry grass [GT]</summary>
         public const float RESISTANCE_GRASS_DRY = 0.13f;
         
-        /// <summary>Rolling resistance for wet grass (ball slides more)</summary>
+        /// <summary>Rolling resistance for wet grass (ball slides more) [GT]</summary>
         public const float RESISTANCE_GRASS_WET = 0.07f;
         
-        /// <summary>Rolling resistance for long grass</summary>
+        /// <summary>Rolling resistance for long grass [GT]</summary>
         public const float RESISTANCE_GRASS_LONG = 0.22f;
     }
     
@@ -343,27 +352,27 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class State
     {
-        /// <summary>Minimum velocity before ball considered stationary (m/s)</summary>
+        /// <summary>Minimum velocity before ball considered stationary (m/s) [GT]</summary>
         public const float MIN_VELOCITY = 0.1f;
         
-        /// <summary>Minimum spin before considered zero (rad/s)</summary>
+        /// <summary>Minimum spin before considered zero (rad/s) [GT]</summary>
         public const float MIN_SPIN = 0.1f;
         
         /// <summary>
-        /// Height threshold to ENTER airborne state (m).
+        /// Height threshold to ENTER airborne state (m). [GT]
         /// Note: Position.z is ball CENTER. Ball on ground has z = RADIUS (0.11m).
         /// This threshold (0.17m) means center is 6cm above resting position.
         /// </summary>
         public const float AIRBORNE_ENTER_THRESHOLD = 0.17f;
         
         /// <summary>
-        /// Height threshold to EXIT airborne state (m).
+        /// Height threshold to EXIT airborne state (m). [GT]
         /// Uses hysteresis: exit threshold lower than enter to prevent oscillation.
         /// At 0.13m, ball center is 2cm above resting position (RADIUS = 0.11m).
         /// </summary>
         public const float AIRBORNE_EXIT_THRESHOLD = 0.13f;
         
-        /// <summary>Vertical velocity after bounce to stay airborne (m/s)</summary>
+        /// <summary>Vertical velocity after bounce to stay airborne (m/s) [GT]</summary>
         public const float BOUNCE_VELOCITY_THRESHOLD = 0.5f;
     }
     
@@ -372,16 +381,16 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class Limits
     {
-        /// <summary>Maximum ball velocity in m/s (fastest shot ~45 m/s)</summary>
+        /// <summary>Maximum ball velocity in m/s (fastest shot ~45 m/s) [EST]</summary>
         public const float MAX_VELOCITY = 50.0f;
         
-        /// <summary>Maximum angular velocity in rad/s</summary>
+        /// <summary>Maximum angular velocity in rad/s [EST]</summary>
         public const float MAX_SPIN = 80.0f;
         
-        /// <summary>Maximum height in meters (sanity check)</summary>
+        /// <summary>Maximum height in meters (sanity check) [EST]</summary>
         public const float MAX_HEIGHT = 50.0f;
         
-        /// <summary>Buffer zone beyond pitch boundaries (m)</summary>
+        /// <summary>Buffer zone beyond pitch boundaries (m) [GT]</summary>
         public const float PITCH_BUFFER = 20.0f;
     }
     
@@ -390,16 +399,16 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class Possession
     {
-        /// <summary>Max distance for possession (m)</summary>
+        /// <summary>Max distance for possession (m) [GT]</summary>
         public const float CONTROL_RADIUS = 0.5f;
         
-        /// <summary>Max relative ball speed for control (m/s)</summary>
+        /// <summary>Max relative ball speed for control (m/s) [GT]</summary>
         public const float CONTROL_VELOCITY = 2.0f;
         
-        /// <summary>Min opponent distance for uncontested control (m)</summary>
+        /// <summary>Min opponent distance for uncontested control (m) [GT]</summary>
         public const float CHALLENGE_RADIUS = 1.0f;
         
-        /// <summary>Max ball height for ground control (m)</summary>
+        /// <summary>Max ball height for ground control (m) [GT]</summary>
         public const float CONTROL_HEIGHT = 0.5f;
     }
     
@@ -408,19 +417,19 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class Pitch
     {
-        /// <summary>Pitch length in meters</summary>
+        /// <summary>Pitch length in meters [FIXED]</summary>
         public const float LENGTH = 105.0f;
         
-        /// <summary>Pitch width in meters</summary>
+        /// <summary>Pitch width in meters [FIXED]</summary>
         public const float WIDTH = 68.0f;
         
-        /// <summary>Goal width in meters</summary>
+        /// <summary>Goal width in meters [FIXED]</summary>
         public const float GOAL_WIDTH = 7.32f;
         
-        /// <summary>Goal height (crossbar) in meters</summary>
+        /// <summary>Goal height (crossbar) in meters [FIXED]</summary>
         public const float GOAL_HEIGHT = 2.44f;
         
-        /// <summary>Goal post diameter in meters</summary>
+        /// <summary>Goal post diameter in meters [FIXED]</summary>
         public const float POST_DIAMETER = 0.12f;
     }
     
@@ -429,10 +438,10 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class GoalPost
     {
-        /// <summary>Coefficient of restitution (aluminum/steel)</summary>
+        /// <summary>Coefficient of restitution (aluminum/steel) [GT]</summary>
         public const float COEFFICIENT_OF_RESTITUTION = 0.75f;
         
-        /// <summary>Spin retention on metal surface</summary>
+        /// <summary>Spin retention on metal surface [GT]</summary>
         public const float SPIN_RETENTION = 0.40f;
     }
     
@@ -441,10 +450,10 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class Rendering
     {
-        /// <summary>Shadow offset per meter of height</summary>
+        /// <summary>Shadow offset per meter of height [GT]</summary>
         public const float SHADOW_OFFSET_FACTOR = 0.3f;
         
-        /// <summary>Ball scale increase per meter of height</summary>
+        /// <summary>Ball scale increase per meter of height [GT]</summary>
         public const float HEIGHT_SCALE_FACTOR = 0.02f;
     }
     
@@ -453,7 +462,7 @@ public static class BallPhysicsConstants
     // ================================================================
     public static class Logging
     {
-        /// <summary>Interval between position snapshots (seconds)</summary>
+        /// <summary>Interval between position snapshots (seconds) [GT]</summary>
         public const float SNAPSHOT_INTERVAL = 1.0f;
     }
 }
@@ -983,7 +992,7 @@ public Vector3 GetGravityForce()
 
 ## 3.1.7 Spin Dynamics
 
-### 3.1.7.1 Combined Spin Decay
+### 3.1.7.1 Combined Spin Decay (Airborne)
 
 ```csharp
 /// <summary>
@@ -1042,6 +1051,47 @@ public Vector3 UpdateSpinDecay(Vector3 angularVelocity, Vector3 velocity, float 
     #endif
     
     return newAngularVelocity;
+}
+```
+
+### 3.1.7.2 Rolling Spin Decay
+
+```csharp
+/// <summary>
+/// Decays angular velocity for a rolling ball using a surface-contact friction model.
+///
+/// IMPORTANT: Do NOT use UpdateSpinDecay() for rolling balls. The aerodynamic torque
+/// model in that method (τ = -C_τ × ρ × r⁵ × |ω|²) is physically correct for
+/// airborne flight only. For a rolling ball, spin decay is dominated by surface
+/// contact friction, which is better approximated by a simple linear decay rate.
+///
+/// Post-bounce entry note: the AngularVelocity value entering this method already
+/// reflects ApplyBounce()'s spinRetention multiplication. No additional cap or floor
+/// is applied here beyond State.MIN_SPIN.
+/// </summary>
+/// <param name="angularVelocity">Current angular velocity in rad/s</param>
+/// <param name="dt">Time step in seconds</param>
+/// <returns>Updated angular velocity after rolling spin decay</returns>
+public Vector3 UpdateRollingSpinDecay(Vector3 angularVelocity, float dt)
+{
+    float spinRate = angularVelocity.magnitude;
+
+    if (spinRate < BallPhysicsConstants.State.MIN_SPIN)
+    {
+        return Vector3.zero;
+    }
+
+    // Linear decay: spin reduces by a fixed rate per second.
+    // ROLLING_SPIN_DECAY_PER_SECOND [EST] captures surface contact friction;
+    // aerodynamic torque is negligible at ground-contact speeds.
+    float newSpinRate = spinRate - BallPhysicsConstants.Spin.ROLLING_SPIN_DECAY_PER_SECOND * dt;
+
+    if (newSpinRate < BallPhysicsConstants.State.MIN_SPIN)
+    {
+        return Vector3.zero;
+    }
+
+    return angularVelocity.normalized * newSpinRate;
 }
 ```
 
