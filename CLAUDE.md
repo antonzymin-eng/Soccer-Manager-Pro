@@ -1,6 +1,7 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
+> **Last Updated:** April 21, 2026
 > **Purpose:** Authoritative rules for any AI agent (Claude Code, Claude chat, etc.) working on this project. Read this file completely before every task.
 
 ---
@@ -21,7 +22,7 @@ TacticalDirector/
 ├── .claudeignore                   ← Excludes docs/planning/ from Claude Code indexing
 ├── docs/
 │   ├── planning/                   ← Master volumes, dev plan, best practices
-│   ├── specs/
+│   ├─��� specs/
 │   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status
 │   │   ├── ball-physics/           ← Spec #1
 │   │   ├── agent-movement/         ← Spec #2
@@ -42,9 +43,9 @@ TacticalDirector/
 - `PROGRESS.md` is the canonical source of truth for schedule and milestone tracking.
 - Never create files in `src/` during the specification phase.
 
-**Claude Code indexing:** `docs/planning/` contains ~85K of master volume text that adds noise when working on individual specs. A `.claudeignore` file excludes this directory from automatic indexing. If you need planning context for a task, read the specific file explicitly.
+**Claude Code indexing:** `docs/planning/` contains ~85K of master volume text that adds noise when working on individual specs. A `.claudeignore` file excludes this directory from automatic indexing.
 
-**Deferred: `src/CLAUDE.md`** — Do NOT create until coding begins (after all 20 specs are approved). At that point it should cover: C# file naming conventions, constant catalogue file locations, namespace structure, zero-allocation rules, and the Fixed64 migration path. Writing it now would produce stale guidance.
+**Deferred: `src/CLAUDE.md`** — Do NOT create until coding begins (after all 20 specs are approved). At that point it should cover: C# file naming conventions, constant catalogue file locations, Unity project structure, and build/test commands.
 
 ---
 
@@ -83,7 +84,7 @@ Constants live in their designated `.cs` constant catalogues — no magic number
 
 ### Parameter-Based Physics (No Type Enums)
 
-The Decision Tree supplies physical intent parameters (velocity, spin, angle). Physics systems translate these into vectors. There are NO `KickType`, `ShotType`, or `PassType` enums in the physics layer. This was a hard-won architectural decision (ERR-005, ERR-009).
+The Decision Tree supplies physical intent parameters (velocity, spin, angle). Physics systems translate these into vectors. There are NO `KickType`, `ShotType`, or `PassType` enums in the physics layer.
 
 ### Heartbeat Tick Rate
 
@@ -106,9 +107,9 @@ Specs use typed cross-reference IDs:
 | `EC-` | Edge case reference | EC-012 |
 | `ERR-` | Spec Error Log entry | ERR-010 |
 
-**KNOWN HAZARD — Spec Renumbering Cascades:** When any spec changes its canonical number, ALL cross-references across ALL files must be updated. This has been the single most recurring bug class in the project. Specs #7–#20 shifted during early development, leaving stale references in many files. Before writing any new cross-reference, verify the spec number against `SPEC_INDEX.md`.
+**KNOWN HAZARD — Spec Renumbering Cascades:** When any spec changes its canonical number, ALL cross-references across ALL files must be updated. This has been the single most recurring bug class in this project.
 
-**KNOWN HAZARD — Stale Spec Numbers in Old Files:** Many files written before February 2026 contain wrong spec numbers from an earlier numbering scheme. A complete old-to-correct mapping is in `SPEC_INDEX.md` under "Former Numbering." The most common stale references: First Touch cited as #11 (correct: #4), Decision Tree cited as #7 (correct: #8), Fixed64 cited as #8 (correct: #9).
+**KNOWN HAZARD — Stale Spec Numbers in Old Files:** Many files written before February 2026 contain wrong spec numbers from an earlier numbering scheme. A complete old-to-correct mapping is in `SPEC_INDEX.md` under "FORMER NUMBERING".
 
 ---
 
@@ -207,13 +208,13 @@ pass-mechanics/
 
 ---
 
-## OPEN ISSUES (as of March 26, 2026)
+## OPEN ISSUES (as of April 21, 2026)
 
 > **Keep this section current.** When resolving an issue, remove or update its entry here in the same commit.
 
 - **ERR-010:** Shot Mechanics §1.1 refers to Decision Tree as Spec #7 — canonical is #8. Must close before Shot Mechanics final sign-off.
 - **Pass Mechanics (#5):** Approval SUSPENDED after March 25 audit (19 findings, all fixed). Awaiting lead developer re-review and re-sign-off.
-- **Pending sign-offs:** Agent Movement (#2), Shot Mechanics (#6), Perception System (#7).
-- **Decision Tree (#8):** Sections 1–9 and appendices drafted; pending lead developer review/sign-off.
+- **Pending sign-offs:** Agent Movement (#2), Shot Mechanics (#6), Perception System (#7), Decision Tree (#8).
 - **Perception System (#7):** Section 9 Approval Checklist not yet written.
-- **Superseded files from old naming convention:** Must be removed during git migration — do NOT migrate these. See `MIGRATION_GUIDE.md` for complete old-to-new mapping and FILE_MANIFEST pending removal section for files to skip.
+- **Superseded files from old naming convention:** Must be removed during git migration — do NOT migrate these. See `MIGRATION_GUIDE.md` for complete old-to-new mapping and FILE_MANIFEST pending removals.
+
