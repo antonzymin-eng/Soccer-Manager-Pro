@@ -214,6 +214,6 @@ pass-mechanics/
 - **ERR-010:** Shot Mechanics §1.1 refers to Decision Tree as Spec #7 — canonical is #8. Must close before Shot Mechanics final sign-off.
 - **Pass Mechanics (#5):** Approval SUSPENDED after March 25 audit (19 findings, all fixed). Awaiting lead developer re-review and re-sign-off.
 - **Pending sign-offs:** Agent Movement (#2), Shot Mechanics (#6), Perception System (#7).
-- **Decision Tree (#8):** Sections 3.3–3.8 drafted; Sections 4–9 not yet started.
+- **Decision Tree (#8):** Sections 1–9 and appendices drafted; pending lead developer review/sign-off.
 - **Perception System (#7):** Section 9 Approval Checklist not yet written.
 - **Superseded files from old naming convention:** Must be removed during git migration — do NOT migrate these. See `MIGRATION_GUIDE.md` for complete old-to-new mapping and FILE_MANIFEST pending removal section for files to skip.
