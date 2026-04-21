@@ -1,11 +1,11 @@
 # Tactical Director: Football Management Simulation
 
-**Created:** December 30, 2025, 11:50 AM PST  
-**Last Updated:** March 24, 2026, 10:30 AM PST  
-**Project Type:** Full-scale football management simulation  
-**Development Timeline:** 10+ years, staged releases  
-**Target:** The Football Manager Killer  
-**Current Stage:** Stage 0 (Specification Phase — Week 8 of 20)
+**Created:** December 30, 2025, 11:50 AM PST
+**Last Updated:** April 21, 2026
+**Project Type:** Full-scale football management simulation
+**Development Timeline:** 10+ years, staged releases
+**Target:** The Football Manager Killer
+**Current Stage:** Stage 0 (Specification Phase — Week 12 of 20)
 
 ---
 
@@ -23,7 +23,7 @@ Build the definitive football management simulation with:
 
 ### PRIMARY AUTHORITY
 
-**[Master Development Plan v1.0](Master_Development_Plan_v1_0.md)**  
+**[Master Development Plan v1.0](Master_Development_Plan_v1_0.md)**
 The definitive 10-year roadmap. All development decisions reference this document.
 
 **What it contains:**
@@ -33,8 +33,8 @@ The definitive 10-year roadmap. All development decisions reference this documen
 - Resource requirements and timelines
 - Risk mitigation strategies
 
-**Current stage:** Stage 0 — Physics Foundation (Year 1)  
-**Current phase:** Specification Writing (Week 8 of 20)
+**Current stage:** Stage 0 — Physics Foundation (Year 1)
+**Current phase:** Specification Writing (Week 12 of 20)
 
 ---
 
@@ -42,7 +42,7 @@ The definitive 10-year roadmap. All development decisions reference this documen
 
 These four volumes describe the FULL vision. Features are implemented incrementally across stages.
 
-**[Master Volume I: Physics & Simulation Core](Master_Vol_1_Physics_Core.md)**  
+**[Master Volume I: Physics & Simulation Core](Master_Vol_1_Physics_Core.md)**
 The 10Hz heartbeat, match logic, physical environment, and tactical micro-physics.
 
 **Implementation timeline:**
@@ -52,7 +52,7 @@ The 10Hz heartbeat, match logic, physical environment, and tactical micro-physic
 
 ---
 
-**[Master Volume II: Human Systems & Behavioral Sociology](Master_Vol_2_Human_Systems.md)**  
+**[Master Volume II: Human Systems & Behavioral Sociology](Master_Vol_2_Human_Systems.md)**
 Psychology, social graphs, communication, atmosphere, and personality evolution.
 
 **Implementation timeline:**
@@ -62,7 +62,7 @@ Psychology, social graphs, communication, atmosphere, and personality evolution.
 
 ---
 
-**[Master Volume III: Club Operations & Strategic Management](Master_Vol_3_Club_Operations.md)**  
+**[Master Volume III: Club Operations & Strategic Management](Master_Vol_3_Club_Operations.md)**
 Tactical systems, recruitment, finance, governance, youth development, and training.
 
 **Implementation timeline:**
@@ -73,7 +73,7 @@ Tactical systems, recruitment, finance, governance, youth development, and train
 
 ---
 
-**[Master Volume IV: Technical Implementation & Systems Engineering](Master_Vol_4_Tech_Implementation.md)**  
+**[Master Volume IV: Technical Implementation & Systems Engineering](Master_Vol_4_Tech_Implementation.md)**
 Architecture, optimization, data ontology, tooling, modding support, and UI/UX.
 
 **Implementation timeline:**
@@ -86,7 +86,7 @@ Architecture, optimization, data ontology, tooling, modding support, and UI/UX.
 
 ### SUPPORTING DOCUMENTATION
 
-**[Development Best Practices](Development_Best_Practices.md)**  
+**[Development Best Practices](Development_Best_Practices.md)**
 Technical wisdom extracted from project analysis. Read before starting each stage.
 
 **What it contains:**
@@ -113,13 +113,13 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 
 **Goal:** Build the physics and simulation core that all future systems depend on.
 
-**Progress:** Specification Phase — Week 8 of 20  
-**Started:** February 2, 2026  
-**Estimated Completion:** July 2026  
+**Progress:** Specification Phase — Week 12 of 20
+**Started:** February 2, 2026
+**Estimated Completion:** July 2026
 **Deliverables:** 20 comprehensive specification documents
 
-**Summary:** 4 approved, 3 in review, 1 in progress, 12 not started  
-**Total specification output:** ~4.33 MB across 106 files  
+**Summary:** 3 approved, 1 suspended, 4 in review, 12 not started
+**Total specification output:** ~4.33 MB across 106 files
 **Comprehensive audits completed:** 6 of 7 finished specs
 
 ---
@@ -131,12 +131,12 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 2. 🔍 Agent Movement — **IN REVIEW** (~130 pages, 83 tests, audited)
 3. ✅ Collision System — **APPROVED** Feb 19, 2026 (~50 pages, ~70 tests, audited)
 4. ✅ First Touch Mechanics — **APPROVED** Feb 22, 2026 (~70 pages, 72 tests, audited)
-5. ✅ Pass Mechanics — **APPROVED** Feb 22, 2026 (~65 pages, 100 tests, audited)
+5. ⏸ Pass Mechanics — **SUSPENDED** (audit March 25, 2026 — 19 findings fixed; awaiting re-sign-off)
 
 **Priority 2 — Core Gameplay (Weeks 5-8):**
-6. 🔍 Shot Mechanics — **IN REVIEW** (~70 pages, 104 tests, audited)
-7. 🔍 Perception System — **IN REVIEW** (~80 pages, 92 tests, Section 9 checklist not yet written)
-8. 📝 Decision Tree — **IN PROGRESS** (Outline + Sections 1–3.3 written; ~55+ pages so far)
+6. 🔍 Shot Mechanics — **IN REVIEW** (~70 pages, 104 tests, audited; ERR-010 must be fixed before sign-off)
+7. 🔍 Perception System — **IN REVIEW** (~80 pages, 92 tests; Section 9 checklist not yet written)
+8. 🔍 Decision Tree — **IN REVIEW** (Sections 1–9 + appendices drafted; ~55+ pages; awaiting sign-off)
 9. ⏳ Fixed64 Math Library — Not started
 
 **Priority 3 — Advanced Physics (Weeks 9-12):**
@@ -160,12 +160,13 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 - ⏳ Not started
 - 📝 In progress
 - 🔍 In review
+- ⏸ Suspended
 - ✅ Approved
 - 🔒 Locked (implementation begun)
 
-**For detailed progress tracking, see:** [PROGRESS.md](PROGRESS.md)  
-**For file inventory, see:** [FILE_MANIFEST.md](FILE_MANIFEST.md)  
-**For cross-spec error tracking, see:** [Spec_Error_Log_v1_4.md](Spec_Error_Log_v1_4.md)
+**For detailed progress tracking, see:** [docs/tracking/PROGRESS.md](docs/tracking/PROGRESS.md)
+**For file inventory, see:** [docs/tracking/file-manifest.md](docs/tracking/file-manifest.md)
+**For cross-spec error tracking, see:** [docs/tracking/spec-error-log.md](docs/tracking/spec-error-log.md)
 
 ---
 
@@ -239,62 +240,48 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 
 ```
 TacticalDirector/
-├── Docs/
-│   ├── Master_Development_Plan_v1_0.md          [PRIMARY AUTHORITY]
-│   ├── Master_Vol_1_Physics_Core.md             [Design Reference]
-│   ├── Master_Vol_2_Human_Systems.md            [Design Reference]
-│   ├── Master_Vol_3_Club_Operations.md          [Design Reference]
-│   ├── Master_Vol_4_Tech_Implementation.md      [Design Reference]
-│   ├── Development_Best_Practices.md            [Supporting Docs]
-│   ├── Spec_Error_Log_v1_4.md                   [Cross-spec error tracking]
-│   └── Specifications/
-│       ├── Stage_0/                             [20 documents + tracking]
-│       │   ├── PROGRESS.md                      [Progress tracker]
-│       │   ├── FILE_MANIFEST.md                 [File inventory — 106 files]
-│       │   ├── Ball_Physics_Spec_*.md           [✅ Approved — 10 files]
-│       │   ├── Agent_Movement_Spec_*.md         [🔍 In Review — 16 files]
-│       │   ├── Collision_System_Spec_*.md       [✅ Approved — 12 files]
-│       │   ├── First_Touch_Spec_*.md            [✅ Approved — 11 files]
-│       │   ├── Pass_Mechanics_Spec_*.md         [✅ Approved — 16 files]
-│       │   ├── Shot_Mechanics_Spec_*.md         [🔍 In Review — 13 files]
-│       │   ├── Perception_System_Spec_*.md      [🔍 In Review — 12 files]
-│       │   ├── Decision_Tree_Spec_*.md          [📝 In Progress — 6 files]
-│       │   └── ...
-│       ├── Stage_1/                             [10 documents]
-│       └── ...
-│
-├── Archive/                                      [Obsolete documents]
-│   ├── Focused_Tactical_Sim_Plan.md             [Superseded by Master Plan]
-│   ├── CRITICAL_ANALYSIS_Development_Risks.md   [Extracted to Best Practices]
-│   └── Architecture_Plan_Critique.md            [Conflicts resolved in Master Plan]
-│
-└── Source/                                       [Code — not started]
-    └── [Begins after 20 specifications complete]
+├── CLAUDE.md                           [AI behavioral rules — read first]
+├── docs/
+│   ├── planning/                       [Master volumes, dev plan, best practices]
+│   ├── specs/
+│   │   ├── SPEC_INDEX.md               [Canonical spec numbering and status]
+│   │   ├── ball-physics/               [Spec #1 — APPROVED]
+│   │   ├── agent-movement/             [Spec #2 — IN REVIEW]
+│   │   ├── collision-system/           [Spec #3 — APPROVED]
+│   │   ├── first-touch/                [Spec #4 — APPROVED]
+│   │   ├── pass-mechanics/             [Spec #5 — SUSPENDED]
+│   │   ├── shot-mechanics/             [Spec #6 — IN REVIEW]
+│   │   ├── perception-system/          [Spec #7 — IN REVIEW]
+│   │   ├── decision-tree/              [Spec #8 — IN REVIEW]
+│   │   └── ...                         [Specs #9–#20 not started]
+│   └── tracking/
+│       ├── PROGRESS.md                 [Schedule and milestone tracking]
+│       ├── spec-error-log.md           [Cross-spec architectural errors]
+│       ├── fix-manifest-pass-mechanics.md [Per-audit fix tracking — Pass Mechanics #5]
+│       └── file-manifest.md            [Authoritative file inventory]
+└── src/                                [Empty until all 20 specs approved]
 ```
 
 ---
 
 ## NEXT IMMEDIATE STEPS
 
-### Week 8 (Current — Mar 24, 2026)
+### Current (Week 12 — Apr 21, 2026)
 
 **Immediate:**
-1. ⏳ Complete Decision Tree Specification #8 (Sections 4–9)
-2. ⏳ Fix ERR-010 in Shot Mechanics §1.1 (Decision Tree spec number)
-3. ⏳ Write Perception System Section 9 Approval Checklist
+1. ⏳ Write Perception System (#7) Section 9 Approval Checklist
+2. ⏳ Fix ERR-010 in Shot Mechanics §1.1 (Decision Tree spec number #7 → #8)
+3. ⏳ Lead developer sign-off: Shot Mechanics (#6)
+4. ⏳ Lead developer sign-off: Perception System (#7) — after checklist written
+5. ⏳ Lead developer sign-off: Agent Movement (#2)
+6. ⏳ Lead developer re-sign-off: Pass Mechanics (#5)
+7. ⏳ Lead developer sign-off: Decision Tree (#8)
 
-**Before moving to Priority 3:**
-4. ⏳ Lead developer sign-off on Shot Mechanics #6
-5. ⏳ Lead developer sign-off on Perception System #7
-6. ⏳ Lead developer sign-off on Agent Movement #2
-7. ⏳ Commit all approved specs to repo with git tags
-8. ⏳ Remove superseded file versions (see FILE_MANIFEST.md)
-
-### Weeks 9-10
-
-**Targets:**
-- Begin Fixed64 Math Library Specification #9
-- Begin Heading Mechanics Specification #10
+**After Priority 2 Sign-offs:**
+8. ⏳ Commit all approved specs and apply git tags
+9. ⏳ Remove superseded file versions (see docs/tracking/file-manifest.md)
+10. ⏳ Begin Fixed64 Math Library Specification (#9)
+11. ⏳ Begin Heading Mechanics Specification (#10)
 
 ---
 
@@ -325,12 +312,13 @@ These remain available in `/Archive/` for historical reference but should NOT be
 
 ### For New Team Members (Future)
 
-1. Read **Master Development Plan v1.0** (understand the roadmap)
-2. Read **Development Best Practices** (understand the process)
-3. Read Master Volumes I-IV (understand the vision)
-4. Review current stage specifications (start with Ball Physics #1)
-5. Review **Spec_Error_Log_v1_4.md** (understand cross-spec issues)
-6. Set up development environment (guide TBD)
+1. Read **CLAUDE.md** (understand AI rules and conventions)
+2. Read **Master Development Plan v1.0** (understand the roadmap)
+3. Read **Development Best Practices** (understand the process)
+4. Read Master Volumes I-IV (understand the vision)
+5. Review current stage specifications (start with Ball Physics #1)
+6. Review **docs/tracking/spec-error-log.md** (understand cross-spec issues)
+7. Set up development environment (guide TBD)
 
 ### For Current Development (Solo)
 
@@ -340,19 +328,18 @@ These remain available in `/Archive/` for historical reference but should NOT be
 4. ✅ Ball Physics Specification approved (Feb 8)
 5. ✅ Collision System Specification approved (Feb 19)
 6. ✅ First Touch Mechanics Specification approved (Feb 22)
-7. ✅ Pass Mechanics Specification approved (Feb 22)
-8. 🔍 Agent Movement, Shot Mechanics, Perception System awaiting sign-off
-9. 📝 Decision Tree in progress
-10. Follow 20-week specification schedule
-11. No coding until all 20 specs approved
+7. ⏸ Pass Mechanics Specification suspended (audit March 25 — re-sign-off pending)
+8. 🔍 Agent Movement, Shot Mechanics, Perception System, Decision Tree awaiting sign-off
+9. ⏳ Begin Fixed64 Math Library and Heading Mechanics after Priority 2 sign-offs
+10. No coding until all 20 specs approved
 
 ---
 
 ## CONTACT & COMMUNITY
 
-**Developer:** Solo developer with AI assistance  
-**Project Start:** December 29, 2025  
-**Current Phase:** Specification Writing (Week 8 of 20)
+**Developer:** Solo developer with AI assistance
+**Project Start:** December 29, 2025
+**Current Phase:** Specification Writing (Week 12 of 20)
 
 **Community Channels (To be established):**
 - Discord: TBD (Stage 1)
@@ -368,8 +355,8 @@ These remain available in `/Archive/` for historical reference but should NOT be
 
 ```bash
 # After completing each specification:
-git add Docs/Specifications/Stage_0/[SpecName].md
-git add Docs/Specifications/Stage_0/PROGRESS.md
+git add docs/specs/[spec-folder]/
+git add docs/tracking/PROGRESS.md
 git commit -m "Complete [SpecName] Specification v1.0"
 git push
 
@@ -384,9 +371,10 @@ git push --tags
 - `spec-agent-movement-v1.0-approved` — awaiting sign-off
 - `spec-collision-system-v1.0-approved` — awaiting commit
 - `spec-first-touch-v1.0-approved` — awaiting commit
-- `spec-pass-mechanics-v1.0-approved` — awaiting commit
+- `spec-pass-mechanics-v1.0-approved` — awaiting re-sign-off (suspended)
 - `spec-shot-mechanics-v1.0-approved` — awaiting sign-off
 - `spec-perception-system-v1.0-approved` — awaiting sign-off
+- `spec-decision-tree-v1.0-approved` — awaiting sign-off
 
 **Why this matters:**
 - Preserves specification history
@@ -430,17 +418,27 @@ git push --tags
 
 **v1.3 — March 24, 2026**
 - Updated to Week 8 status (was 6 weeks stale)
-- Corrected spec numbering to canonical PROGRESS.md order (First Touch #4, Pass Mechanics #5, Shot Mechanics #6, Perception System #7, Decision Tree #8)
+- Corrected spec numbering to canonical PROGRESS.md order
 - 4 approved, 3 in review, 1 in progress (was: 1 approved, 1 in review)
 - Added Decision Tree #8 as IN PROGRESS
 - Added comprehensive audit process to status notes
 - Added Key Architectural Decisions section
 - Added Spec_Error_Log reference to documentation hierarchy and project structure
-- Updated pending git tags (5 specs now awaiting commit/sign-off)
+- Updated pending git tags
 - Updated Getting Started checklist
 - Updated next steps for Week 8
 
-**Next Review:** After Priority 2 completion
+**v1.4 — April 21, 2026**
+- Updated to Week 12 status
+- Pass Mechanics (#5): APPROVED → SUSPENDED (audit March 25, 2026)
+- Decision Tree (#8): IN PROGRESS → IN REVIEW (Sections 1–9 + appendices all drafted)
+- Progress summary corrected: 3 approved, 1 suspended, 4 in review
+- Project structure updated to reflect current repo layout (docs/ paths)
+- Tracking document links corrected to docs/tracking/ paths
+- Added ⏸ SUSPENDED to status legend
+- Added Decision Tree to pending git tags
+- Updated Getting Started checklist
+- Updated next immediate steps to Week 12 actions
 
 ---
 
@@ -452,6 +450,4 @@ git push --tags
 
 **Remember:** This is a 10-year project. Quality over speed. Build it right.
 
-**Current Focus:** Complete Decision Tree Specification #8, sign off Shot Mechanics and Perception System, then begin Priority 3 specs.
-
----
+**Current Focus:** Sign off Priority 2 specs (Agent Movement, Shot Mechanics, Perception System, Decision Tree), re-sign-off Pass Mechanics, then begin Priority 3.
