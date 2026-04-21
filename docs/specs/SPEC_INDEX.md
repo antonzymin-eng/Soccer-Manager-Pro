@@ -1,6 +1,7 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
+> **Last Updated:** April 21, 2026
 > **Purpose:** Single source of truth for spec numbers, folder names, and approval status. Every cross-reference in every spec must match the numbers in this file.
 
 ---
@@ -24,7 +25,7 @@
 | 5 | Pass Mechanics | `pass-mechanics/` | 1 | SUSPENDED | — |
 | 6 | Shot Mechanics | `shot-mechanics/` | 2 | IN REVIEW | — |
 | 7 | Perception System | `perception-system/` | 2 | IN REVIEW | — |
-| 8 | Decision Tree | `decision-tree/` | 2 | IN PROGRESS | — |
+| 8 | Decision Tree | `decision-tree/` | 2 | IN REVIEW | — |
 | 9 | Fixed64 Math Library | `fixed64-math/` | 2 | NOT STARTED | — |
 | 10 | Heading Mechanics | `heading-mechanics/` | 3 | NOT STARTED | — |
 | 11 | Goalkeeper Mechanics | `goalkeeper-mechanics/` | 3 | NOT STARTED | — |
@@ -56,8 +57,8 @@
 
 - **Pass Mechanics (#5):** Status changed from APPROVED to SUSPENDED on March 25, 2026 after comprehensive audit found 19 findings (5 critical). Fixes applied; pending lead developer re-review and re-sign-off.
 - **Perception System (#7):** Section 9 Approval Checklist has not been written yet. Cannot sign off without it.
-- **Decision Tree (#8):** Sections 1–9 and appendices are drafted. Pending lead developer review/sign-off.
-- **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical and final.
+- **Decision Tree (#8):** Status updated from IN PROGRESS to IN REVIEW — Sections 1–9 and appendices are all drafted. Pending lead developer review/sign-off.
+- **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 
 ---
 
