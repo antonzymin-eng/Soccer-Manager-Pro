@@ -1,10 +1,10 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** February 26, 2026, 11:30 PM PST  
+**Last Updated:** April 21, 2026  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Timeline:** Weeks 1-20 (5 months)  
-**Current Week:** Week 4  
+**Current Week:** Week 12  
 **Started:** February 2, 2026
 
 ---
@@ -12,13 +12,15 @@
 ## PROGRESS SUMMARY
 
 **Total Specifications:** 20  
-**Completed:** 7  
-**In Review:** 1  
+**Approved:** 3  
+**Suspended:** 1  
+**In Review:** 4  
 **In Progress:** 0  
 **Not Started:** 12
 
-**Specifications approved:** Ball Physics, Collision System, First Touch, Pass Mechanics, Shot Mechanics  
-**Specifications awaiting sign-off:** Agent Movement (#2), Perception System (#7)  
+**Specifications approved:** Ball Physics (#1), Collision System (#3), First Touch (#4)  
+**Specifications suspended:** Pass Mechanics (#5) — audit March 25, 2026; fixes applied; awaiting re-review  
+**Specifications in review:** Agent Movement (#2), Shot Mechanics (#6), Perception System (#7), Decision Tree (#8)  
 **Estimated Completion:** July 2026 (20 weeks from Feb 2, 2026)
 
 ---
@@ -31,11 +33,11 @@
 | 2 | Agent Movement | ~130 | 🔍 IN REVIEW | Feb 9 | — | All sections complete, awaiting lead developer sign-off; §3.5 v1.3 (ERR-007); §8 updated to v1.4 |
 | 3 | Collision System | ~50 | ✅ APPROVED | Feb 16 | Feb 19 | All sections + appendices v1.1; approval checklist signed off |
 | 4 | First Touch Mechanics | ~70 | ✅ APPROVED | Feb 19 | Feb 22 | All sections + appendices complete; ERR-001, ERR-004 resolved; §8 updated to v1.1 |
-| 5 | Pass Mechanics | ~65 | ✅ APPROVED | Feb 19 | Feb 22 | All sections + appendices complete; ERR-006, ERR-007, ERR-008 resolved; §8 updated to v1.1 |
+| 5 | Pass Mechanics | ~65 | ⏸ SUSPENDED | Feb 19 | — | All sections + appendices complete; ERR-006, ERR-007, ERR-008 resolved. March 25, 2026 audit found 19 findings (5 critical); all fixes applied; awaiting lead developer re-review and re-sign-off |
 
-**Note:** Specs were renumbered in execution vs. original plan. First Touch completed as #4 (originally planned as #11), Pass Mechanics as #5, due to dependency priority. Collision System's original numbering (#3) preserved.
+**Note:** Specs were renumbered in execution vs. original plan. First Touch completed as #4 (originally planned as #11), Pass Mechanics as #5, due to dependency priority. Collision System's original #3 slot retained.
 
-**Priority 1 Progress:** 80% (4 approved, 1 in review)
+**Priority 1 Progress:** 60% (3 approved, 1 in review, 1 suspended)
 
 ---
 
@@ -43,12 +45,12 @@
 
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
-| 6 | Shot Mechanics | ~70 | 🔍 IN REVIEW | Feb 23 | Feb 24 | All 9 sections + appendices complete; approval checklist v1.2 drafted; awaiting lead developer sign-off. 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics. |
-| 7 | Perception System | ~80 | 🔍 IN REVIEW | Feb 24 | Feb 26 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.3 (92 tests, 1.8× min). Section 9 approval checklist not yet written. |
-| 8 | Decision Tree | 25-35 | ⏳ NOT STARTED | — | — | Week 4-5 target. Both upstream producers (Pass, Shot, Perception) now specified — interface may be defined. |
-| 9 | Fixed64 Math Library | 25-30 | ⏳ NOT STARTED | — | — | Week 5-6 target |
+| 6 | Shot Mechanics | ~70 | 🔍 IN REVIEW | Feb 23 | Feb 24 | All 9 sections + appendices complete; approval checklist v1.2; awaiting lead developer sign-off. 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. ERR-010 (Decision Tree #7→#8 ref) must be fixed before sign-off. |
+| 7 | Perception System | ~80 | 🔍 IN REVIEW | Feb 24 | Feb 26 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.3 (92 tests, 1.8× min). Section 9 Approval Checklist not yet written; required before sign-off. |
+| 8 | Decision Tree | ~55+ | 🔍 IN REVIEW | Feb 27 | — | Sections 1–9 and appendices drafted; awaiting lead developer review/sign-off. |
+| 9 | Fixed64 Math Library | 25-30 | ⏳ NOT STARTED | — | — | Week 9-10 target (delayed; blocked on Priority 2 sign-offs) |
 
-**Priority 2 Progress:** 50% (0 approved, 2 in review, 2 not started)
+**Priority 2 Progress:** 25% (0 approved, 3 in review, 1 not started)
 
 ---
 
@@ -56,7 +58,7 @@
 
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
-| 10 | Heading Mechanics | 15-18 | ⏳ NOT STARTED | — | — | Week 9 target |
+| 10 | Heading Mechanics | 15-18 | ⏳ NOT STARTED | — | — | Week 9 target (delayed; blocked on Priority 2 sign-offs) |
 | 11 | Goalkeeper Mechanics | 20-25 | ⏳ NOT STARTED | — | — | Week 10 target |
 | 12 | Positioning AI | 18-22 | ⏳ NOT STARTED | — | — | Week 12 target |
 
@@ -97,6 +99,7 @@
 | ⏳ | NOT STARTED | Specification not yet begun |
 | 📝 | IN PROGRESS | Actively writing specification |
 | 🔍 | IN REVIEW | All sections complete, awaiting approval |
+| ⏸ | SUSPENDED | Was approved or in review; audit findings require re-review before sign-off |
 | ✅ | APPROVED | Approved by lead developer, ready for implementation |
 | 🔒 | LOCKED | Implementation has begun, spec is frozen |
 
@@ -195,6 +198,42 @@
 
 ---
 
+### Weeks 5–8 (Feb 27 – Mar 26, 2026)
+
+**Completed:**
+- Decision Tree Specification (#8) — Sections 1–9 and appendices drafted (~55+ pages)
+- CLAUDE.md created (March 26) — authoritative AI behavioral rules, conventions, and cross-reference hazards documented
+- SPEC_INDEX.md created (March 26) — canonical spec registry established as single source of truth
+- Pass Mechanics (#5) comprehensive audit completed (March 25): 19 findings (5 critical), all fixes applied
+- Spec_Error_Log updated through ERR-012+; cross-spec error tracking maintained
+
+**Status Changes:**
+- Pass Mechanics (#5): APPROVED → **SUSPENDED** (March 25, 2026) — audit findings require lead developer re-review
+- Decision Tree (#8): NOT STARTED → **IN REVIEW** — all sections and appendices drafted
+
+**Still Pending (carried forward):**
+- Perception System Section 9 Approval Checklist not yet written
+- Lead developer sign-off: Agent Movement (#2), Shot Mechanics (#6), Perception System (#7), Decision Tree (#8)
+- Pass Mechanics re-sign-off after audit fix verification
+- Commit all approved specs and git tags
+
+---
+
+### Weeks 9–12 (Mar 27 – Apr 21, 2026)
+
+**Status:**
+- No new specifications started. Priority 2 sign-offs remain pending.
+- Decision Tree (#8), Agent Movement (#2), Shot Mechanics (#6), Perception System (#7) all in review awaiting lead developer action.
+- Fixed64 Math Library (#9) and Priority 3 specs blocked on Priority 2 completion.
+
+**Still Pending:**
+- Perception System Section 9 Approval Checklist
+- All Priority 2 sign-offs
+- Pass Mechanics re-sign-off
+- Begin Fixed64 Math Library (#9) once Priority 2 is resolved
+
+---
+
 ## MILESTONES
 
 | Milestone | Target Date | Status | Actual Date |
@@ -203,15 +242,15 @@
 | Agent Movement Spec Approved | Feb 15, 2026 | 🔍 IN REVIEW | — |
 | Collision System Spec Approved | Feb 22, 2026 | ✅ COMPLETE | Feb 19, 2026 |
 | First Touch Mechanics Spec Approved | Feb 22, 2026 | ✅ COMPLETE | Feb 22, 2026 |
-| Pass Mechanics Spec Approved | Feb 22, 2026 | ✅ COMPLETE | Feb 22, 2026 |
-| Priority 1 Complete (5 specs) | Feb 29, 2026 | 🔍 IN PROGRESS | — |
+| Pass Mechanics Spec Approved | Feb 22, 2026 | ⏸ SUSPENDED | — |
+| Priority 1 Complete (5 specs) | Feb 29, 2026 | ⏸ BLOCKED | — |
 | Shot Mechanics Spec Approved | Mar 7, 2026 | 🔍 IN REVIEW | — |
 | Perception System Spec Approved | Mar 7, 2026 | 🔍 IN REVIEW | — |
-| Priority 2 Complete (9 specs) | Mar 31, 2026 | ⏳ NOT STARTED | — |
+| Priority 2 Complete (9 specs) | Mar 31, 2026 | ⚠️ DELAYED | — |
 | Priority 3 Complete (12 specs) | Apr 30, 2026 | ⏳ NOT STARTED | — |
 | Priority 4 Complete (16 specs) | May 31, 2026 | ⏳ NOT STARTED | — |
 | Priority 5 Complete (20 specs) | July 5, 2026 | ⏳ NOT STARTED | — |
-| **Stage 0 Spec Phase Complete** | **July 5, 2026** | **⏳ IN PROGRESS** | **—** |
+| **Stage 0 Spec Phase Complete** | **July 5, 2026** | **⚠️ AT RISK** | **—** |
 
 ---
 
@@ -223,7 +262,7 @@
 - Test scenarios: Minimum 15 per spec (10 unit + 5 integration)
 - Review cycles: Maximum 3 per spec
 
-**Actual Metrics (as of Week 4):**
+**Actual Metrics (as of Week 12):**
 
 | Spec | Pages (est.) | Test Scenarios | Review Cycles | Template Compliance |
 |------|-------------|----------------|---------------|---------------------|
@@ -231,13 +270,14 @@
 | Agent Movement | ~130 | 83 (5.5× min) | 2 | 100% |
 | Collision System | ~50 | ~70 (4.7× min) | 2 | 100% |
 | First Touch | ~70 | 72 (4.8× min) | 2 | 100% |
-| Pass Mechanics | ~65 | 100 (6.7× min) | 3 | 100% |
+| Pass Mechanics | ~65 | 100 (6.7× min) | 3+ (audit) | 100% |
 | Shot Mechanics | ~70 | 104 (6.9× min) | 3 | 100% |
 | Perception System | ~80 | 92 (1.8× unit min) | 3 | 100% |
-| **Average** | **~74** | **80.7** | **2.3** | **100%** |
+| Decision Tree | ~55+ | TBD | 1 | TBD |
+| **Average** | **~71** | **81** | **2.4** | **100%** |
 
 **Notes:**
-- All specs significantly exceed test scenario minimums (average 4.8×)
+- All completed specs significantly exceed test scenario minimums (average 4.8×)
 - Shot Mechanics adopted parameter-based physics — no shot type enum — consistent with project pattern
 - Perception System uses 10Hz heartbeat, not 60Hz; lower minimum test count applies
 - ~45–62% gameplay-tuned constants across all specs — documented and accepted as expected
@@ -263,6 +303,7 @@
 - Wave-based fix ordering (dependency-first) prevents cascading failures during error resolution
 - Iterative numerical verification (Appendices B) consistently finds formula/test discrepancies
 - Section 9 checklist should be the last file written, not drafted concurrently with sections
+- Comprehensive post-completion audits (e.g. Pass Mechanics March 25) are valuable but costly — schedule explicitly
 
 ### Open Items (Non-Blocking)
 - ERR-002: StringIDs in Master_Vol_4 — fix at convenience
@@ -275,24 +316,24 @@
 
 ## NEXT ACTIONS
 
-**Immediate (this session):**
-1. Write Perception System Section 9 Approval Checklist
-2. Lead developer sign-off on Shot Mechanics Spec #6
-3. Lead developer sign-off on Perception System Spec #7 (after checklist written)
-4. Lead developer sign-off on Agent Movement Spec #2
+**Immediate:**
+1. Write Perception System (#7) Section 9 Approval Checklist
+2. Fix ERR-010 in Shot Mechanics §1.1 (Decision Tree spec number #7 → #8)
+3. Lead developer sign-off: Shot Mechanics (#6)
+4. Lead developer sign-off: Perception System (#7) — after checklist written
+5. Lead developer sign-off: Agent Movement (#2)
+6. Lead developer re-review and re-sign-off: Pass Mechanics (#5)
+7. Lead developer review and sign-off: Decision Tree (#8)
 
-**This Week:**
-5. Begin Decision Tree Specification #8 — outline first
-6. Commit all approved specs to repo
-7. Git tags: `spec-collision-system-v1.0-approved`, `spec-first-touch-v1.0-approved`, `spec-pass-mechanics-v1.0-approved`, `spec-shot-mechanics-v1.0-approved`, `spec-perception-system-v1.0-approved`
-8. Remove superseded file versions (see FILE_MANIFEST.md pending removal section)
-
-**Next Week:**
-9. Complete Decision Tree Specification #8
-10. Begin Fixed64 Math Library Specification #9
+**After Priority 2 Sign-offs:**
+8. Commit all approved specs to repo
+9. Git tags: `spec-collision-system-v1.0-approved`, `spec-first-touch-v1.0-approved`, `spec-pass-mechanics-v1.0-approved` (after re-sign-off), `spec-shot-mechanics-v1.0-approved`, `spec-perception-system-v1.0-approved`, `spec-decision-tree-v1.0-approved`
+10. Remove superseded file versions (see docs/tracking/file-manifest.md)
+11. Begin Fixed64 Math Library Specification (#9)
+12. Begin Heading Mechanics Specification (#10)
 
 ---
 
-**Last Updated:** February 26, 2026, 11:30 PM PST  
+**Last Updated:** April 21, 2026  
 **Updated By:** AI Assistant (Anton review)  
-**Next Review:** After Decision Tree outline approval
+**Next Review:** After Priority 2 sign-offs complete
