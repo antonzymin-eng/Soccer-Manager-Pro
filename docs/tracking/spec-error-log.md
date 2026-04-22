@@ -428,10 +428,6 @@ error (Decision Tree spec number) in Shot Mechanics §1.1 — non-blocking on ap
 
 End of Error Log v1.4**
 
-*Add new entries below this line as additional errors are identified.*
-*Each entry requires: ID, title, severity, root cause, problem detail, correct approach,
-files affected with specific sections and changes, version impact.*
-
 ---
 
 ## ERR-012: First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences)
@@ -467,7 +463,7 @@ comprehensive audit remediation).
 
 ---
 
-*End of Spec Error Log v1.5 — April 22, 2026*
+*End of Spec Error Log v1.5 — April 22, 2026. Add new entries after this line.*
 
 ---
 

@@ -204,8 +204,8 @@ These do not block approval but must be addressed before final sign-off or in th
 3. ~~Resolve PS-005 (`PRESSURE_FOV_THRESHOLD`) and SNAP-007 (`IsInBlindSide`) (Blocker 3).~~ ✅ Done
 4. ~~Update §5 prerequisite header to "Section 2 v1.2, Section 3 v1.3" (Blocker 4).~~ ✅ Done
 5. ~~Reconcile §5.17 integration test count with §5.11 actual count.~~ ✅ Done (both now 15)
-6. **Lead developer ruling required:** NB-1 — reconcile §3.10 paragraph constants count (17) with table row count (18) and `[CROSS]` count (3 vs 4); decide whether `[PHYS]` stays in legend.
-7. **Lead developer ruling required:** NB-4 — either add `[CROSS]` to the canonical tag list in `CLAUDE.md` (with definition), or replace `[CROSS]` entries with canonical tags.
+6. **Lead developer ruling required (prerequisite for sign-off):** NB-1 — reconcile §3.10 paragraph constants count (17) with table row count (18) and `[CROSS]` count (3 vs 4); decide whether `[PHYS]` stays in legend.
+7. **Lead developer ruling required (prerequisite for sign-off):** NB-4 — either add `[CROSS]` to the canonical tag list in `CLAUDE.md` (with definition), or replace `[CROSS]` entries with canonical tags. Both rulings must be resolved before sign-off because NB-1 depends on NB-4 (whether `[CROSS]` is a valid tag affects the count reconciliation in §3.10).
 8. NB-5 — confirm Agent Movement #2 status before final sign-off.
 
 ### Re-verification exit criteria

@@ -14,6 +14,10 @@
 > use the folder-based names in `docs/specs/<spec-name>/`. The **Pending Removal**
 > section in particular refers to pre-migration filename aliases that may no longer
 > exist under those names; verify against the actual repo before acting.
+>
+> **Action required:** Update this manifest to use the new folder-based naming convention
+> once the file migration is confirmed complete. Until then, treat all filenames here as
+> pre-migration legacy references.
 
 ---
 

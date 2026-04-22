@@ -985,6 +985,12 @@ Note: `IsInBlindSide` was removed from `PerceivedAgent` in §3.7.3 v1.3. The
 `BlindSidePerceivedAgents` array is the authoritative mechanism for distinguishing
 blind-side confirmations.
 
+**Test-plan note:** Transition behavior when an agent moves from the blind arc to the
+forward arc (or vice versa) during an active shoulder check window (within the 3-tick
+window, §3.4.2) is not covered by this test. A dedicated transition test should be added
+before implementation begins (tracked as test-plan gap; candidates: SNAP-007b or §5.13
+future-additions list).
+
 FR ref: §3.7.1 (BlindSidePerceivedAgents field definition), §3.4.3
 
 ---
