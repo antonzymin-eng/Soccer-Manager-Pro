@@ -79,6 +79,7 @@ Every constant in every spec MUST have exactly one of these source tags:
 | `[EST]` | Estimated | Placeholder; must be validated before implementation |
 | `[FIXED]` | Fixed / physical law | Derived from physics; never tune |
 | `[DERIVED]` | Derived from other constants | Formula must be documented; never set independently |
+| `[CROSS]` | Cross-spec constant | Defined in another approved spec; consumed read-only here; never set independently in this spec. Citation must name the authoritative spec and section. Use `[CROSS]` only when the value is copied verbatim without modification — if a formula transforms it, tag the result `[DERIVED]`. |
 
 Constants live in their designated `.cs` constant catalogues — no magic numbers in formula code.
 
@@ -167,7 +168,7 @@ pass-mechanics/
 
 ### When Writing or Editing Specs
 
-- Every constant must have a `[GT]`, `[EST]`, `[FIXED]`, or `[DERIVED]` tag.
+- Every constant must have a `[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, or `[CROSS]` tag.
 - Every formula must include units, valid input ranges, and at least one worked example.
 - Never fabricate verification values in Approval Checklists. All values must be programmatically verifiable against source files.
 - Append a version history entry to every modified file.
@@ -208,13 +209,13 @@ pass-mechanics/
 
 ---
 
-## OPEN ISSUES (as of April 21, 2026)
+## OPEN ISSUES (as of April 22, 2026)
 
 > **Keep this section current.** When resolving an issue, remove or update its entry here in the same commit.
 
-- **ERR-010:** Shot Mechanics §1.1 refers to Decision Tree as Spec #7 — canonical is #8. Must close before Shot Mechanics final sign-off.
 - **Pass Mechanics (#5):** Approval SUSPENDED after March 25 audit (19 findings, all fixed). Awaiting lead developer re-review and re-sign-off.
 - **Pending sign-offs:** Agent Movement (#2), Shot Mechanics (#6), Perception System (#7), Decision Tree (#8).
-- **Perception System (#7):** Section 9 Approval Checklist not yet written.
+- **Perception System (#7):** Approval Checklist v1.5 written and all critical blockers resolved. Status: PENDING — awaiting lead developer sign-off. Checklist is in `docs/specs/perception-system/section-9-approval-checklist.md`.
+- **Renumbering cascade outstanding:** ~49 stale spec-number references remain across Agent Movement (#2), Collision System (#3), and First Touch (#4) for Heading #9→#10, Goalkeeper #10→#11, and Fixed64 #8→#9. See `docs/tracking/fix-manifest-pass-mechanics.md` BROADER RENUMBERING ISSUE table.
 - **Superseded files from old naming convention:** Must be removed during git migration — do NOT migrate these. See `MIGRATION_GUIDE.md` for complete old-to-new mapping and FILE_MANIFEST pending removals.
 

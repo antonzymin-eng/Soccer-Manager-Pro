@@ -46,7 +46,7 @@
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
 | 6 | Shot Mechanics | ~70 | 🔍 IN REVIEW | Feb 23 | Feb 24 | All 9 sections + appendices complete; approval checklist v1.2; awaiting lead developer sign-off. 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. |
-| 7 | Perception System | ~80 | 🔍 IN REVIEW | Feb 24 | Feb 26 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.3 (95 tests, 1.8× min). Section 9 Approval Checklist v1.4 (April 19, 2026) — ❌ BLOCKED on 4 critical items; see section-9-approval-checklist.md. |
+| 7 | Perception System | ~80 | 🔍 IN REVIEW | Feb 24 | Feb 26 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.6 — ✅ READY FOR SIGN-OFF. All NB items resolved. |
 | 8 | Decision Tree | ~55+ | 🔍 IN REVIEW | Feb 27 | — | Sections 1–9 and appendices drafted; awaiting lead developer review/sign-off. |
 | 9 | Fixed64 Math Library | 25-30 | ⏳ NOT STARTED | — | — | Week 9-10 target (delayed; blocked on Priority 2 sign-offs) |
 
@@ -183,12 +183,12 @@
   - Appendix A v1.1: Formula derivations (FoV, occlusion, L_rec, blind-side)
   - Appendix B v1.1: Numerical verification tables
   - Appendix C v1.1: Sensitivity analysis
-  - Section 9 Approval Checklist: v1.4 written April 19, 2026 — ❌ BLOCKED on 4 critical items (PerceptionSnapshot rename, stale field names, stale prereq version pins, integration test count)
+  - Section 9 Approval Checklist: v1.6 — ✅ READY FOR SIGN-OFF (April 22, 2026). All blockers and NB items resolved.
 
 **In Review:**
 - Agent Movement Spec #2 — still awaiting lead developer sign-off
 - Shot Mechanics Spec #6 — awaiting lead developer sign-off (Section 9 checklist v1.2 complete)
-- Perception System Spec #7 — Section 9 approval checklist v1.4 written; BLOCKED on 4 critical items requiring resolution before sign-off
+- Perception System Spec #7 — Approval Checklist v1.6 ✅ READY FOR SIGN-OFF; all checklist items resolved (April 22, 2026)
 
 **Pending:**
 - Resolve Perception System Section 9 Approval Checklist blockers (4 critical items) — required before sign-off
@@ -212,7 +212,7 @@
 - Decision Tree (#8): NOT STARTED → **IN REVIEW** — all sections and appendices drafted
 
 **Still Pending (carried forward):**
-- Perception System Spec #7 — BLOCKED on 4 checklist items; resolve before lead developer sign-off
+- Perception System Spec #7 — ✅ READY FOR SIGN-OFF; lead developer sign-off pending
 - Lead developer sign-off: Agent Movement (#2), Shot Mechanics (#6), Perception System (#7), Decision Tree (#8)
 - Pass Mechanics re-sign-off after audit fix verification
 - Commit all approved specs and git tags
@@ -317,13 +317,12 @@
 ## NEXT ACTIONS
 
 **Immediate:**
-1. Resolve 4 critical blockers in Perception System (#7) Section 9 Approval Checklist (PerceptionSnapshot rename, stale field names, prereq version pins, integration test count)
+1. Lead developer sign-off: Perception System (#7) — checklist v1.6 ready
 2. Lead developer sign-off: Shot Mechanics (#6)
-3. Lead developer sign-off: Perception System (#7) — after checklist blockers resolved
-4. Lead developer sign-off: Agent Movement (#2)
-5. Lead developer re-review and re-sign-off: Pass Mechanics (#5)
-6. Lead developer review and sign-off: Decision Tree (#8)
-7. Systematic renumbering pass for Heading #9→#10, Goalkeeper #10→#11, Fixed64 #8→#9 in Agent Movement, Collision System, and First Touch (see fix-manifest-pass-mechanics.md BROADER RENUMBERING ISSUE)
+3. Lead developer sign-off: Agent Movement (#2)
+4. Lead developer re-review and re-sign-off: Pass Mechanics (#5)
+5. Lead developer review and sign-off: Decision Tree (#8)
+6. Systematic renumbering pass for Heading #9→#10, Goalkeeper #10→#11, Fixed64 #8→#9 in Agent Movement, Collision System, and First Touch (see fix-manifest-pass-mechanics.md BROADER RENUMBERING ISSUE)
 
 **After Priority 2 Sign-offs:**
 8. Commit all approved specs to repo

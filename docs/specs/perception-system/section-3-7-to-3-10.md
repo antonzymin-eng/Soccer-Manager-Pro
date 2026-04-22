@@ -358,10 +358,10 @@ Tactical consequence: defender is frequently blind to runs behind them.
 
 ## 3.10 Constants Master Table
 
-All constants are tagged per project-wide citation methodology:
+All constants are tagged per project-wide citation methodology (see `CLAUDE.md` Constant Tags):
 - **[GT]** — Gameplay-tuned; validated within academic plausibility range
-- **[PHYS]** — Derived from physics; not tunable without changing the physical model
-- **[CROSS]** — Defined in another specification; consumed read-only here
+- **[DERIVED]** — Derived algebraically from other constants; no independent value; formula documented
+- **[CROSS]** — Defined in another specification; consumed read-only here; authoritative spec cited
 
 | Constant | Value | Tag | Source / Rationale |
 |----------|-------|-----|--------------------|
@@ -384,12 +384,13 @@ All constants are tagged per project-wide citation methodology:
 | `PRESSURE_SATURATION` | 1.5 | [CROSS] | First Touch Spec #4 §3.5.3 — authoritative |
 | Half-turn L_rec reduction | 15% (×0.85) | [CROSS] | First Touch Spec #4 §3.3.2 — authoritative |
 
-**[GT] constant count:** 12 of 17 total (71%). Two constants are [DERIVED] — determined
+**[GT] constant count:** 12 of 18 total (67%). Two constants are [DERIVED] — determined
 algebraically from other constants with no independent tuning (`CONFIRMATION_EXPIRY_TICKS`,
-`PERIPHERAL_ARC_INNER_BOUND`). Three are [CROSS] — defined in upstream specifications
-(`PRESSURE_RADIUS`, `MIN_PRESSURE_DISTANCE`, `PRESSURE_SATURATION`), plus one cross-spec
-constant value (half-turn L_rec reduction = 15%). This is within expected range for a
-cognitive simulation system.
+`PERIPHERAL_ARC_INNER_BOUND`). Four are [CROSS] — defined in upstream specifications and
+consumed read-only: `PRESSURE_RADIUS`, `MIN_PRESSURE_DISTANCE`, `PRESSURE_SATURATION`
+(all from First Touch Spec #4 §3.5), plus the half-turn L_rec reduction value (15%,
+from First Touch Spec #4 §3.3.2). This is within expected range for a cognitive
+simulation system.
 
 ---
 
@@ -432,7 +433,7 @@ on forced refresh. Standard heartbeat schedule unaffected.
 **§3.9** — Worked examples for elite midfielder (Decisions=18) and low-attribute defender
 under full press, with numerical verification throughout.
 
-**§3.10** — Constants table: 17 constants total (12 [GT], 2 [DERIVED], 3 [CROSS]). All tagged.
+**§3.10** — Constants table: 18 constants total (12 [GT], 2 [DERIVED], 4 [CROSS]). All tagged per `CLAUDE.md` Constant Tags convention.
 
 ---
 

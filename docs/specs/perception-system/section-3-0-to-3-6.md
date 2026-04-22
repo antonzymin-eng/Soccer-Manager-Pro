@@ -10,7 +10,7 @@ All constants are audit-tagged. All formulas include worked examples with numeri
 verification.
 
 **Created:** February 24, 2026, 3:00 PM PST  
-**Version:** 1.3  
+**Version:** 1.4  
 **Status:** DRAFT — Awaiting Lead Developer Review  
 **Specification Number:** 7 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -26,7 +26,7 @@ verification.
 | 1.0 | February 24, 2026, 3:00 PM PST | Initial draft |
 | 1.1 | February 25, 2026 | Four fixes: (1) Peripheral arc boundary derived from BASE_FOV_HALF_ANGLE/2 (40°) — removes arbitrary 60° magic number. (2) Confirmation expiry reduced to 1 tick [DERIVED] — minimum sufficient to absorb single-tick boundary noise, not GT-tuned. (3) Noise changed to additive-only (+0/+1) — preserves L_MIN floor algebraically without secondary clamp. (4) Constants table updated: 12 GT, 3 CROSS, 2 DERIVED (was 12 GT, 3 CROSS, 1 GT). |
 | 1.2 | February 26, 2026 | One fix: (1) §3.3.2 — L_rec rounding convention made explicit: floor() required (Mathf.FloorToInt). Previously the formula showed a float result with no documented conversion to integer ticks. Verification table updated to show float and floored-tick columns separately. This is a clarification only — the floor convention was always implied by the integer tick system; no constant values change. |
-| 1.3 | April 11, 2026 | **Architectural rework — separation of filter output from filter metadata.** §3.7 retitled from "PerceptionSnapshot Struct Definition" to "Output Struct Definitions: FilteredView + PerceptionDiagnostics". `PerceptionSnapshot` replaced by two structs: `FilteredView` (9 fields — pure consumer output delivered to Decision Tree) and `PerceptionDiagnostics` (7 fields — filter metadata NOT delivered to DT). `PerceivedAgent` reduced from 5→4 fields: `RecognitionLatencyRemaining` moved to editor-only `PerceivedAgentDebug`. Pipeline step 6 renamed BuildFilteredView. Worked examples (§3.9) updated to show FilteredView and PerceptionDiagnostics outputs separately. Prerequisite updated to Section 2 v1.2. |
+| 1.4 | April 22, 2026 | NB-1/NB-4 fix: §3.10 legend corrected — `[PHYS]` removed (no rows used it; `[FIXED]` is the CLAUDE.md canonical equivalent); paragraph text updated to 18 constants total (12 [GT], 2 [DERIVED], 4 [CROSS]) and 4 `[CROSS]` entries — matching the actual 18-row table. Section 3 Summary §3.10 line updated to match. `[CROSS]` tag formalized in `CLAUDE.md` (Option A). | §3.7 retitled from "PerceptionSnapshot Struct Definition" to "Output Struct Definitions: FilteredView + PerceptionDiagnostics". `PerceptionSnapshot` replaced by two structs: `FilteredView` (9 fields — pure consumer output delivered to Decision Tree) and `PerceptionDiagnostics` (7 fields — filter metadata NOT delivered to DT). `PerceivedAgent` reduced from 5→4 fields: `RecognitionLatencyRemaining` moved to editor-only `PerceivedAgentDebug`. Pipeline step 6 renamed BuildFilteredView. Worked examples (§3.9) updated to show FilteredView and PerceptionDiagnostics outputs separately. Prerequisite updated to Section 2 v1.2. |
 
 **Cross-Specification Constants Consumed (read-only):**
 - First Touch Spec #4 §3.3.2: Half-turn orientation bonus = 15% L_rec reduction
