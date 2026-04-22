@@ -60,15 +60,20 @@ Pass Mechanics #5 approval is **SUSPENDED** pending:
 
 ## BROADER RENUMBERING ISSUE (Affects other specs — NOT fixed here)
 
-Three spec numbers are systematically wrong across the project. Only Pass Mechanics was fixed in this session. The following specs still contain stale numbers:
+Three spec numbers are systematically wrong across the project. Only Pass Mechanics and Shot Mechanics were fully corrected. The status below reflects verification against actual repo files (April 22, 2026).
 
-| Wrong # | Correct # | Spec | ~Remaining Instances | Affected Specs |
-|---|---|---|---|---|
-| Heading #9 | #10 | Heading Mechanics | ~23 | Agent Movement, Collision, First Touch, Shot Mechanics |
-| Goalkeeper #10 | #11 | Goalkeeper Mechanics | ~19 | Agent Movement, Collision |
-| Fixed64 #8 | #9 | Fixed64 Math Library | ~14 | Agent Movement, Ball Physics, Collision, Shot Mechanics |
+| Wrong # | Correct # | Spec | Shot Mechanics | Agent Movement | Ball Physics | Collision System | First Touch |
+|---|---|---|---|---|---|---|---|
+| Heading #9 | #10 | Heading Mechanics | ✅ Fixed (Mar 6) | ❌ Not fixed | n/a | ❌ Not fixed | ❌ Not fixed |
+| Goalkeeper #10 | #11 | Goalkeeper Mechanics | ✅ Fixed (Mar 6) | ❌ Not fixed | n/a | ❌ Not fixed | ❌ Not fixed |
+| Fixed64 #8 | #9 | Fixed64 Math Library | ✅ Fixed (Mar 6) | ❌ Not fixed | ⚠️ Partial (§4 fixed; §7 still has #8) | ❌ Not fixed | n/a |
+| Decision Tree #7 | #8 | Decision Tree | ✅ Fixed (Mar 6) | ⚠️ Partial (section-1-2 fixed; other sections still have #7) | n/a | ❌ Not fixed | ✅ Fixed (ERR-012, Mar 5) |
 
-Decision Tree #7→#8 was already fixed in Shot Mechanics (prior audit). Ball Physics and Collision System need the same correction pass for all four spec number errors.
+**Remaining work required (human-directed pass):**
+- Agent Movement: ~23 remaining stale references across sections 3.x, 4, 5, 6, 7
+- Collision System: ~13 remaining stale references across sections 2, 7, 9
+- First Touch: ~13 remaining stale references for Heading #9 and Goalkeeper #10 across outline, sections 1, 2, 3, 4, 7 (Decision Tree already fixed via ERR-012)
+- Ball Physics §7: 1 remaining stale Fixed64 #8 reference
 
 ---
 

@@ -110,7 +110,7 @@ Each constant or formula in Sections 3.1–3.8 is classified as one of:
 | Ball subject to same FoV angular test as agents | DESIGN-AUTHORITY | Pipeline consistency |
 | Ball subject to same shadow cone occlusion test | DESIGN-AUTHORITY | Pipeline consistency |
 | `BallState.Position` input | DESIGN-AUTHORITY | [BALL-PHYSICS-1] confirmed field |
-| `BallVisible` bool in PerceptionSnapshot | DESIGN-AUTHORITY | §3.7 struct definition |
+| `BallVisible` bool in `FilteredView` | DESIGN-AUTHORITY | §3.7.1 struct definition |
 | `BallStalenessFrames` counter | DESIGN-AUTHORITY | Tracks invisibility duration; no academic source needed |
 | `BallLastKnownPosition` retained when occluded | DESIGN-AUTHORITY | Design choice; Stage 1 confidence upgrade path (§7.1.2) |
 
@@ -135,21 +135,21 @@ Each constant or formula in Sections 3.1–3.8 is classified as one of:
 
 ---
 
-### 8.6.8 Audit: §3.7 PerceptionSnapshot Struct Definition
+### 8.6.8 Audit: §3.7 Output Struct Definitions (FilteredView + PerceptionDiagnostics)
 
 | Constant / Formula | Disposition | Notes |
 |---|---|---|
-| `PerceptionSnapshot` as value type (struct) | DESIGN-AUTHORITY | KD-2; [MASTER-VOL4] zero-alloc policy |
+| `FilteredView` + `PerceptionDiagnostics` as value types (structs) | DESIGN-AUTHORITY | KD-2; [MASTER-VOL4] zero-alloc policy |
 | `PerceivedAgent` sub-struct as value type | DESIGN-AUTHORITY | KD-2; project struct convention |
 | `ReadOnlySpan<PerceivedAgent>` views into pre-allocated buffers | DESIGN-AUTHORITY | §2 v1.1 fix; eliminates unsafe context; zero-allocation |
-| `BallVisible`, `BallLastKnownPosition`, `BallStalenessFrames` | DESIGN-AUTHORITY | OQ-2 design decisions |
-| `EffectiveFoVAngle` in struct | DESIGN-AUTHORITY | Decision Tree can query FoV breadth |
-| `PressureScalar` in struct | DESIGN-AUTHORITY | Decision Tree may consume pressure context |
-| `SnapshotFrame`, `IsForceRefreshed` | DESIGN-AUTHORITY | KD-4 determinism bookkeeping |
+| `BallVisible`, `BallPerceivedPosition`, `BallStalenessFrames` in `FilteredView` | DESIGN-AUTHORITY | OQ-2 design decisions |
+| `EffectiveFoVAngle` in `PerceptionDiagnostics` | DESIGN-AUTHORITY | Filter metadata; not delivered to Decision Tree |
+| `PressureScalar` in `PerceptionDiagnostics` | DESIGN-AUTHORITY | Decision Tree does not receive this directly; available to debug/telemetry |
+| `FrameNumber`, `ForcedRefreshThisTick` in `FilteredView` | DESIGN-AUTHORITY | KD-4 determinism bookkeeping; `ForcedRefreshThisTick` renamed from `IsForceRefreshed` in §3 v1.3 |
 | `ConfidenceScore` binary (0 or 1) at Stage 0 | DESIGN-AUTHORITY | Stage 1 upgrade to continuous [0,1] — §7.1.2 |
 | `PerceivedPosition` = TruePosition at Stage 0 | DESIGN-AUTHORITY | Stage 1 upgrade: position error model — §7.1.2 |
-| `ShoulderCheckAnimData` stub | DESIGN-AUTHORITY | Stage 1 hook — §7.1.1 |
-| `OcclusionDebugRecord` in `#if UNITY_EDITOR` only | DESIGN-AUTHORITY | Not in production snapshot; §7.1.6 activation |
+| `ShoulderCheckAnimData` stub in `PerceptionDiagnostics` | DESIGN-AUTHORITY | Stage 1 hook — §7.1.1 |
+| `OcclusionDebugRecord` in `#if UNITY_EDITOR` only | DESIGN-AUTHORITY | Not in production struct; §7.1.6 activation |
 | `PerceptionSystem` pre-allocated buffer pattern | DESIGN-AUTHORITY | [MASTER-VOL4] zero-alloc |
 
 **§3.7 audit status: COMPLETE. 12 items. 0 undocumented.**
@@ -165,7 +165,7 @@ Each constant or formula in Sections 3.1–3.8 is classified as one of:
 | Only directly involved agents refreshed (not all 22) | DESIGN-AUTHORITY | Performance and cognitive realism; KD-1 |
 | `L_rec = 0` on forced refresh | DESIGN-AUTHORITY | Salient-event model; ball contact is a strong attention cue |
 | Standard heartbeat schedule unaffected by forced refresh | DESIGN-AUTHORITY | KD-1 constraint |
-| `IsForceRefreshed` flag in snapshot | DESIGN-AUTHORITY | Diagnostic / Decision Tree awareness |
+| `ForcedRefreshThisTick` flag in `FilteredView` | DESIGN-AUTHORITY | Diagnostic / Decision Tree awareness; renamed from `IsForceRefreshed` in §3 v1.3 |
 | `PerceptionRefreshEvent` stub | DESIGN-AUTHORITY | Stage 1 Event System #17 hook; §7.1.8 |
 
 **§3.8 audit status: COMPLETE. 7 items. 0 undocumented.**

@@ -24,7 +24,7 @@
 | 4 | First Touch Mechanics | `first-touch/` | 1 | APPROVED | Feb 22, 2026 |
 | 5 | Pass Mechanics | `pass-mechanics/` | 1 | SUSPENDED | — |
 | 6 | Shot Mechanics | `shot-mechanics/` | 2 | IN REVIEW | — |
-| 7 | Perception System | `perception-system/` | 2 | IN REVIEW | — |
+| 7 | Perception System | `perception-system/` | 2 | APPROVED | Apr 22, 2026 |
 | 8 | Decision Tree | `decision-tree/` | 2 | IN REVIEW | — |
 | 9 | Fixed64 Math Library | `fixed64-math/` | 2 | NOT STARTED | — |
 | 10 | Heading Mechanics | `heading-mechanics/` | 3 | NOT STARTED | — |
@@ -56,7 +56,7 @@
 ## NOTES
 
 - **Pass Mechanics (#5):** Status changed from APPROVED to SUSPENDED on March 25, 2026 after comprehensive audit found 19 findings (5 critical). Fixes applied; pending lead developer re-review and re-sign-off.
-- **Perception System (#7):** Section 9 Approval Checklist has not been written yet. Cannot sign off without it.
+- **Perception System (#7):** ✅ APPROVED April 22, 2026. Section 9 Approval Checklist v1.7 signed off by lead developer. All 20 specs: 5 APPROVED, 1 SUSPENDED, 3 IN REVIEW, 11 NOT STARTED.
 - **Decision Tree (#8):** Status updated from IN PROGRESS to IN REVIEW — Sections 1–9 and appendices are all drafted. Pending lead developer review/sign-off.
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 

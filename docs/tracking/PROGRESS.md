@@ -20,7 +20,7 @@
 
 **Specifications approved:** Ball Physics (#1), Collision System (#3), First Touch (#4)  
 **Specifications suspended:** Pass Mechanics (#5) — audit March 25, 2026; fixes applied; awaiting re-review  
-**Specifications in review:** Agent Movement (#2), Shot Mechanics (#6), Perception System (#7), Decision Tree (#8)  
+**Specifications in review:** Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8)  
 **Estimated Completion:** July 2026 (20 weeks from Feb 2, 2026)
 
 ---
@@ -45,8 +45,8 @@
 
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
-| 6 | Shot Mechanics | ~70 | 🔍 IN REVIEW | Feb 23 | Feb 24 | All 9 sections + appendices complete; approval checklist v1.2; awaiting lead developer sign-off. 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. ERR-010 (Decision Tree #7→#8 ref) must be fixed before sign-off. |
-| 7 | Perception System | ~80 | 🔍 IN REVIEW | Feb 24 | Feb 26 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.3 (92 tests, 1.8× min). Section 9 Approval Checklist not yet written; required before sign-off. |
+| 6 | Shot Mechanics | ~70 | 🔍 IN REVIEW | Feb 23 | Feb 24 | All 9 sections + appendices complete; approval checklist v1.2; awaiting lead developer sign-off. 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. |
+| 7 | Perception System | ~80 | ✅ APPROVED | Feb 24 | Apr 22, 2026 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.7 — ✅ APPROVED April 22, 2026. |
 | 8 | Decision Tree | ~55+ | 🔍 IN REVIEW | Feb 27 | — | Sections 1–9 and appendices drafted; awaiting lead developer review/sign-off. |
 | 9 | Fixed64 Math Library | 25-30 | ⏳ NOT STARTED | — | — | Week 9-10 target (delayed; blocked on Priority 2 sign-offs) |
 
@@ -176,22 +176,22 @@
   - Section 2 v1.1: FR-01–FR-13; 8-step pipeline; PerceptionSnapshot struct; 10 failure modes
   - Section 3 v1.2: FoV model, shadow cone occlusion, recognition latency, blind-side awareness, shoulder check, pressure scalar, snapshot assembly, forced refresh
   - Section 4 v1.1: Architecture; PerceptionSystem.cs; output contract to Decision Tree (#8); forced refresh events
-  - Section 5 v1.3: 92 tests — 73 unit + 12 integration + 3 balance + 4 performance = 1.8× minimum (unit only); all deterministic
+  - Section 5 v1.3: 95 tests — 73 unit + 15 integration + 3 balance + 4 performance = 1.8× minimum (unit only); all deterministic
   - Section 6 v1.1: ~40,000 equiv-ops per heartbeat; <20% of 2ms budget estimated; 10Hz cadence analysis
   - Section 7 v1.1: Future extensions; per-entity fidelity variation (Stage 1); positional uncertainty deferred
   - Section 8 v1.2: References; all DOIs verified; ~62% gameplay-tuned constants documented
   - Appendix A v1.1: Formula derivations (FoV, occlusion, L_rec, blind-side)
   - Appendix B v1.1: Numerical verification tables
   - Appendix C v1.1: Sensitivity analysis
-  - Section 9 Approval Checklist: NOT YET WRITTEN — required before sign-off
+  - Section 9 Approval Checklist: v1.7 — ✅ APPROVED April 22, 2026. Lead developer signed off.
 
 **In Review:**
 - Agent Movement Spec #2 — still awaiting lead developer sign-off
 - Shot Mechanics Spec #6 — awaiting lead developer sign-off (Section 9 checklist v1.2 complete)
-- Perception System Spec #7 — Section 9 approval checklist not yet written; cannot sign off
+- Perception System Spec #7 — ✅ APPROVED April 22, 2026
 
 **Pending:**
-- Write Perception System Section 9 Approval Checklist
+- Resolve Perception System Section 9 Approval Checklist blockers (4 critical items) — required before sign-off
 - Lead developer sign-off on Agent Movement, Shot Mechanics, Perception System
 - Begin Decision Tree Specification #8 outline
 - Remove superseded file versions (see FILE_MANIFEST.md pending removal section)
@@ -212,7 +212,7 @@
 - Decision Tree (#8): NOT STARTED → **IN REVIEW** — all sections and appendices drafted
 
 **Still Pending (carried forward):**
-- Perception System Section 9 Approval Checklist not yet written
+- Perception System Spec #7 — ✅ APPROVED April 22, 2026; Section 9 Approval Checklist v1.7 signed off by lead developer
 - Lead developer sign-off: Agent Movement (#2), Shot Mechanics (#6), Perception System (#7), Decision Tree (#8)
 - Pass Mechanics re-sign-off after audit fix verification
 - Commit all approved specs and git tags
@@ -227,7 +227,7 @@
 - Fixed64 Math Library (#9) and Priority 3 specs blocked on Priority 2 completion.
 
 **Still Pending:**
-- Perception System Section 9 Approval Checklist
+- Perception System Section 9 Approval Checklist blockers resolved (critical items); sign-off by lead developer
 - All Priority 2 sign-offs
 - Pass Mechanics re-sign-off
 - Begin Fixed64 Math Library (#9) once Priority 2 is resolved
@@ -310,20 +310,19 @@
 - ERR-003: PerformanceContext violation language in Agent Movement §3.2 — fix at convenience
 - Agent Movement §3.2 and §3.7 attribute references should be verified against PlayerAttributes v1.3 before implementation
 - Ball Physics §8 v1.4: DOI corrections issued from Shot Mechanics §8 audit — verify incorporated
-- Perception System Section 9 Approval Checklist not yet written
+- Perception System Section 9 Approval Checklist v1.4 written (April 19, 2026) — BLOCKED on 4 critical items
 
 ---
 
 ## NEXT ACTIONS
 
 **Immediate:**
-1. Write Perception System (#7) Section 9 Approval Checklist
-2. Fix ERR-010 in Shot Mechanics §1.1 (Decision Tree spec number #7 → #8)
-3. Lead developer sign-off: Shot Mechanics (#6)
-4. Lead developer sign-off: Perception System (#7) — after checklist written
-5. Lead developer sign-off: Agent Movement (#2)
-6. Lead developer re-review and re-sign-off: Pass Mechanics (#5)
-7. Lead developer review and sign-off: Decision Tree (#8)
+1. ~~Lead developer sign-off: Perception System (#7) — checklist v1.6 ready~~ ✅ APPROVED April 22, 2026
+2. Lead developer sign-off: Shot Mechanics (#6)
+3. Lead developer sign-off: Agent Movement (#2)
+4. Lead developer re-review and re-sign-off: Pass Mechanics (#5)
+5. Lead developer review and sign-off: Decision Tree (#8)
+6. Systematic renumbering pass for Heading #9→#10, Goalkeeper #10→#11, Fixed64 #8→#9 in Agent Movement, Collision System, and First Touch (see fix-manifest-pass-mechanics.md BROADER RENUMBERING ISSUE)
 
 **After Priority 2 Sign-offs:**
 8. Commit all approved specs to repo

@@ -62,7 +62,7 @@ academic integrity.
   - [8.6.5 Audit: §3.4 Blind-Side Awareness and Shoulder Check](#865-audit-34-blind-side-awareness-and-shoulder-check)
   - [8.6.6 Audit: §3.5 Ball Perception](#866-audit-35-ball-perception)
   - [8.6.7 Audit: §3.6 Pressure Scalar Integration](#867-audit-36-pressure-scalar-integration)
-  - [8.6.8 Audit: §3.7 PerceptionSnapshot Struct Definition](#868-audit-37-perceptionsnapshot-struct-definition)
+  - [8.6.8 Audit: §3.7 Output Struct Definitions (FilteredView + PerceptionDiagnostics)](#868-audit-37-output-struct-definitions-filteredview--perceptiondiagnostics)
   - [8.6.9 Audit: §3.8 Mid-Heartbeat Forced Refresh](#869-audit-38-mid-heartbeat-forced-refresh)
   - [8.6.10 Summary: Audit Outcomes](#8610-summary-audit-outcomes)
 - [8.7 Cross-Reference Verification](#87-cross-reference-verification)
@@ -454,8 +454,9 @@ Volume IV: Tech Implementation.* Internal project document.
 File: `Master_Vol_4_Tech_Implementation.md`.
 
 - **Used for:**
-  - Zero heap-allocation requirement: `PerceptionSnapshot` as a value struct (KD-2) and
-    the pre-allocated buffer pattern in `PerceptionSystem` derive from this requirement.
+  - Zero heap-allocation requirement: `FilteredView` and `PerceptionDiagnostics` as value
+    structs (KD-2) and the pre-allocated buffer pattern in `PerceptionSystem` derive from
+    this requirement.
   - Event system stub pattern: `PerceptionRefreshEvent` stub in §3.8.3 follows the
     Master Vol 4 stub pattern for systems not yet written.
   - Logging policy: failure states logged at Warning level per Master Vol 4 logging standards.
@@ -575,8 +576,8 @@ https://learn.microsoft.com/en-us/dotnet/csharp/
 
 - **Used for:** Implementation language. All code structures in §4 (Architecture) are
   C# structs and classes targeting Unity's .NET Standard 2.1 compatibility profile.
-  The value-type (struct) definition of `PerceptionSnapshot` and `PerceivedAgent` is a
-  C# language decision consistent with KD-2.
+  The value-type (struct) definition of `FilteredView`, `PerceptionDiagnostics`, and
+  `PerceivedAgent` is a C# language decision consistent with KD-2.
 
 ---
 
@@ -618,7 +619,7 @@ source or authority.
 | `MIN_PRESSURE_DISTANCE` = 0.3m | [FIRST-TOUCH-4] §3.5.2 authoritative | [CROSS] |
 | `PRESSURE_SATURATION` = 1.5 | [FIRST-TOUCH-4] §3.5.3 authoritative | [CROSS] |
 | FoV narrowing only (not L_rec, not check interval) | KD-7 scope | DESIGN-AUTHORITY |
-| §3.7 `PerceptionSnapshot` as struct | KD-2; [MASTER-VOL4] zero-alloc | DESIGN-AUTHORITY |
+| §3.7 `FilteredView` + `PerceptionDiagnostics` as structs | KD-2; [MASTER-VOL4] zero-alloc | DESIGN-AUTHORITY |
 | §3.8 Forced refresh trigger events | KD-1; [MASTER-VOL1] | DESIGN-AUTHORITY |
 | L_rec = 0 on forced refresh | Salient-event model | DESIGN-AUTHORITY |
 | `MAX_PERCEPTION_RANGE` = 120m | OQ-5; full pitch diagonal | ACADEMIC-INFORMED + [GT] |

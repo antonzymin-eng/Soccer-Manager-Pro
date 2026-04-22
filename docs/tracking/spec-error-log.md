@@ -6,9 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.3
-**Updated:** February 27, 2026
-**Status:** Open — ERR-008 closed; ERR-001, ERR-002, ERR-003, ERR-004, ERR-006, ERR-007 resolved in spec files; ERR-002, ERR-003 pending convenience edits; ERR-010 added (documentation error, low priority)
+**Version:** 1.5
+**Updated:** April 22, 2026
+**Status:** ERR-001 through ERR-012 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-002 and ERR-003 remain open at convenience priority.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---
@@ -26,7 +26,9 @@ authoritative remediation backlog.
 | ERR-007 | `KickPower`, `WeakFootRating`, `Crossing` absent from `PlayerAttributes` | Critical | 1 | Closed — resolved in Agent_Movement_Spec_Section_3_5_v1_3.md |
 | ERR-008 | `BallState` has no `PossessingAgentId` field; `ApplyKick()` amendment references it incorrectly | Critical | 2 | Closed — Option B adopted; possession external to BallState; resolved in Ball_Physics_Spec_Section_3_1_v2_5.md |
 | ERR-009 | `PassThroughGround` / `PassThroughAerial` are redundant `KickType` values | Minor | 1 | Closed — resolved during audit; through passes use `PassGround`/`PassLofted` |
-| ERR-010 | Shot Mechanics §1.1 refers to Decision Tree as Spec #7 — canonical number is #8 | Minor | 1 | Open — low priority; must close before Shot Mechanics final sign-off and before DT §4 interface contracts are written |
+| ERR-010 | Shot Mechanics §1.1 refers to Decision Tree as Spec #7 — canonical number is #8 | Minor | 1 | ✅ Closed — Fixed in shot-mechanics/section-1.md v1.2 (March 6, 2026); part of comprehensive audit renumbering cascade |
+| ERR-011 | `SpatialHashGrid.Query()` ignores radius parameter — always returns fixed 3×3 neighbourhood | Major | 1 | ✅ Closed — Fixed in Collision_System_Spec_Section_3_v1_1.md (March 5, 2026) |
+| ERR-012 | First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences) | Minor | 1 | ✅ Closed — Fixed in first-touch/section-7.md v1.1 (March 5, 2026) |
 
 ---
 
@@ -410,7 +412,8 @@ cells (vs current 9). Performance impact is negligible at N=22 agents.
 | ~~2 — Fix before approval~~ | ERR-001, ERR-004 | ~~Yes~~ | ✅ Both closed in First_Touch_Spec_Section_4_v1_1.md |
 | 3 — Fix at convenience | ERR-002, ERR-003 | No | Open — minor edits to Master_Vol_4 and Agent Movement §3.2 |
 | **2 — Fix before Collision System approval** | **ERR-011** | **Yes (blocks Collision System §4 approval)** | **Closed — fixed in Collision_System_Spec_Section_3_v1_1.md (Mar 5, 2026)** |
-| 3 — Fix at convenience before Shot Mechanics final sign-off | ERR-010 | No (non-blocking on approval; must close before final sign-off and DT §4) | Open — minor text correction in Shot Mechanics §1.1 |
+| 3 — Fix at convenience before Shot Mechanics final sign-off | ERR-010 | No | ✅ Closed — fixed in shot-mechanics/section-1.md v1.2 (March 6, 2026) |
+| 3 — Fix at convenience | ERR-012 | No | ✅ Closed — fixed in first-touch/section-7.md v1.1 (March 5, 2026) |
 
 **All critical Shot Mechanics cross-spec audit defects resolved (A1–A7). ERR-011 is a
 Collision System defect with an interim workaround applied — it blocks Collision System
@@ -425,9 +428,42 @@ error (Decision Tree spec number) in Shot Mechanics §1.1 — non-blocking on ap
 
 End of Error Log v1.4**
 
-*Add new entries below this line as additional errors are identified.*
-*Each entry requires: ID, title, severity, root cause, problem detail, correct approach,
-files affected with specific sections and changes, version impact.*
+---
+
+## ERR-012: First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences)
+
+**Severity:** Minor (documentation error; no architectural impact)
+**Detected:** March 5, 2026
+**Detected During:** First Touch Specification #4 comprehensive audit
+**Root Cause:** Same as ERR-010 — First Touch Section 7 was written before the specification
+numbering was finalised. Decision Tree was tentatively #7; Perception System was subsequently
+inserted at #7, bumping Decision Tree to #8.
+
+**Problem in detail:**
+`First_Touch_Spec_Section_7_v1_0.md` references "Decision Tree Spec #7" in 5 locations:
+- §7.1.4 body text: "Decision Tree (Spec #7, Stage 1)"
+- §7.2.4 body text: "Decision Tree (Spec #7, Stage 1/2 scope)"
+- §7.2.4 dependency line: "Decision Tree Spec #7"
+- §7.6 dependency map row: "Decision Tree Spec #7 | Intent flag | Stage 1"
+- §7.6 dependency map row: "Decision Tree Spec #7 | Intent flag | Stage 2"
+
+**Correct approach:**
+Replace all 5 instances of "Spec #7" (referring to Decision Tree) with "Spec #8".
+
+**Status:** ✅ CLOSED — Fixed in `first-touch/section-7.md` (March 5, 2026, First Touch
+comprehensive audit remediation).
+
+**Files revised:**
+
+| File | Section | Change |
+|------|---------|--------|
+| `first-touch/section-7.md` (was v1.0 → v1.1) | §7.1.4, §7.2.4, §7.6 | All "Decision Tree Spec #7" → "Decision Tree Spec #8" |
+
+**Version impact:** `first-touch/section-7.md` → v1.1
+
+---
+
+*End of Spec Error Log v1.5 — April 22, 2026. Add new entries after this line.*
 
 ---
 

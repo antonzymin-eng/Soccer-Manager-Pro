@@ -1,10 +1,23 @@
 # Tactical Director — File Manifest
 
 **Created:** February 8, 2026, 11:15 PM PST  
-**Last Updated:** April 20, 2026  
+**Last Updated:** April 22, 2026  
 **Purpose:** Authoritative inventory of all project files with version tracking, status, and categorization  
 **Maintained by:** Lead Developer  
 **Update frequency:** After every file addition, removal, or version change
+
+> **⚠ NAMING CONVENTION MIGRATION NOTE (April 2026):** This manifest was originally
+> written using the flat-file naming convention (`Spec_Name_Section_N_v1_0.md`). The
+> project has since migrated to a per-spec folder structure (`spec-name/section-N.md`
+> with no version suffixes — Git tracks history). File listings in this manifest still
+> show the **pre-migration names**. When cross-referencing against actual repo files,
+> use the folder-based names in `docs/specs/<spec-name>/`. The **Pending Removal**
+> section in particular refers to pre-migration filename aliases that may no longer
+> exist under those names; verify against the actual repo before acting.
+>
+> **Action required:** Update this manifest to use the new folder-based naming convention
+> once the file migration is confirmed complete. Until then, treat all filenames here as
+> pre-migration legacy references.
 
 ---
 
@@ -209,9 +222,9 @@
 
 ## SPECIFICATION #7: PERCEPTION SYSTEM
 
-**Overall status:** 🔍 In Review — Section 9 approval checklist not yet written  
-**Approval checklist:** NOT YET WRITTEN — blocking sign-off  
-**Total test scenarios:** 92 (73 unit + 12 integration + 3 balance + 4 performance = 1.8× unit minimum)  
+**Overall status:** 🔍 In Review — Section 9 Approval Checklist written; BLOCKED on 4 critical items  
+**Approval checklist:** v1.4 (April 19, 2026) — ❌ BLOCKED; see section-9-approval-checklist.md for details  
+**Total test scenarios:** 95 (73 unit + 15 integration + 3 balance + 4 performance = 1.8× unit minimum)  
 **Estimated pages:** ~80  
 **Design note:** 10Hz tactical heartbeat (not 60Hz); sole consumer is Decision Tree (#8); ~62% gameplay-tuned constants
 
@@ -229,10 +242,10 @@
 | Perception_System_Spec_Appendix_A_v1_1.md | 1.1 | — | Formula derivations (FoV, occlusion, L_rec, blind-side) | 🔍 In Review |
 | Perception_System_Spec_Appendix_B_v1_1.md | 1.1 | — | Numerical verification tables | 🔍 In Review |
 | Perception_System_Spec_Appendix_C_v1_1.md | 1.1 | — | Sensitivity analysis | 🔍 In Review |
-| Perception_System_Spec_Section_9_Approval_Checklist_v1_0.md | — | — | **NOT YET WRITTEN** — required before sign-off | ⚠ Missing |
+| Perception_System_Spec_Section_9_Approval_Checklist_v1_4.md | 1.4 | — | **Section 9 Approval Checklist** — written April 19, 2026; BLOCKED on 4 critical items (PerceptionSnapshot rename, stale field names, prereq version pins) | ❌ BLOCKED |
 
-**Total files:** 12 (+ 1 missing)  
-**⚠ Superseded files pending removal:** Perception_System_Spec_Section_5_v1_2 and Section_3_v1_1 (filename format carries version; originals should be deleted once confirmed replaced)
+**Total files:** 13  
+**⚠ Superseded files pending removal:** pre-migration format filenames (see Pending Removal section)
 
 ---
 
@@ -296,6 +309,12 @@ See PROGRESS.md for schedule.
 | Rolling_Friction_Revision_v1_0.md | Feb 8, 2026 | Working document; changes incorporated into spec revisions |
 
 ### ⚠ Pending Removal (Superseded — Action Required)
+
+> **Note:** All filenames below use the **pre-migration flat-file naming convention**.
+> After the folder-based migration, these files live under `docs/specs/<spec-name>/`
+> with names like `section-N.md`. Verify each entry against the actual repo folder
+> structure before removing. The version numbers are tracked by Git; only verify that
+> the correct version is the live file before deleting any old revision.
 
 | File | Superseded By | Priority |
 |------|--------------|----------|
