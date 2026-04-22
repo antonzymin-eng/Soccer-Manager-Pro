@@ -7,12 +7,12 @@ Every functional requirement in Section 2 maps to at least one test case in this
 section. All expected values are derived from Section 3 formulas — no magic numbers.
 
 **Created:** February 26, 2026, 12:00 PM PST
-**Version:** 1.3
+**Version:** 1.4
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 7 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
 
-**Prerequisite Sections:** Section 1 v1.1, Section 2 v1.1, Section 3 v1.2, Section 4 v1.1
+**Prerequisite Sections:** Section 1 v1.1, Section 2 v1.2, Section 3 v1.3, Section 4 v1.1
 
 **Version History:**
 
@@ -21,7 +21,7 @@ section. All expected values are derived from Section 3 formulas — no magic nu
 | 1.0 | February 26, 2026, 12:00 PM PST | Initial draft |
 | 1.1 | February 26, 2026, 12:30 PM PST | Four fixes: (1) Performance targets corrected to match outline §6.1 authority: 2ms total/22 agents, ~90µs per agent — previous v1.0 used wrong p95/p99 values. (2) IT-FULL-001 revised to include exact computed values instead of qualitative comparison. (3) FOV-003 tolerance note added: implementer must document angle comparison method (atan2 vs dot product) as it affects exact boundary behaviour. (4) Balance tests added per outline §5.3 (previously absent). |
 | 1.2 | February 26, 2026 | Six fixes: (1) §5.2 formula header corrected — was using (Decisions−1)/19 but Section 3 authority uses Decisions/20; phantom constants PRESSURE_FOV_THRESHOLD=0.5 and PRESSURE_FOV_SCALE=40° removed entirely. (2) FOV-001 derivation corrected to D/20 formula (bonus=5.0° at D=10, not 4.737°). (3) FOV-002/003 boundary corrected — D=1 produces 160.5°/80.25° halfangle, not 160°/80°. (4) FOV-004 expected values corrected — difference is 9.5° (not 10°), D=1 produces 160.5° (not 160°). (5) FOV-006 replaced — phantom threshold test removed; replaced with correct continuous-pressure test at PS=0.5 producing EffectiveFoV=150°. (6) FOV-007 derivation corrected — was using wrong formula producing 140°; correct value is 130.5°. (7) FOV-008 expected blind-side arc corrected to 195.0° (was 195.263°). (8) LR-003 tolerance changed from ±1 tick to exact — floor rounding is deterministic per §3.3.2. |
-| 1.3 | February 26, 2026 | Coverage expansion — 17 new unit tests added across three under-tested groups: (1) Forced Refresh: FR-005 through FR-010 added — possession-change trigger, L_rec=0 override scope, 5m-radius ball-contact coverage, double-trigger deduplication, PerceptionRefreshEvent stub, uninvolved-agent isolation. (2) Snapshot Assembly: SNAP-005 through SNAP-010 added — team mutual exclusion, Stage 0 confidence score, IsInBlindSide flag, BlindSideWindowExpiry accuracy, empty blind-side array when inactive, EffectiveFoVAngle field verification. (3) Occlusion: OCC-009 through OCC-013 added — zero-distance degenerate case, MAX_PERCEPTION_RANGE boundary, multi-collinear occluder ordering, FoV boundary determinism, high-density k=10 loop stability. Grand total: 92 tests (73 unit, 12 integration, 3 balance, 4 performance). Unit multiplier: 1.8× minimum. |
+| 1.4 | April 22, 2026 | Struct name corrections following §3 v1.3 rename of `PerceptionSnapshot` to `FilteredView` + `PerceptionDiagnostics`: (1) Prereq header updated to Section 2 v1.2, Section 3 v1.3. (2) `IsForceRefreshed` renamed `ForcedRefreshThisTick` throughout FR-001–FR-010. (3) PS-005 description corrected — removed stale `PRESSURE_FOV_THRESHOLD=0.5` reference; continuous pressure reduction clarified; struct qualifier corrected to `PerceptionDiagnostics`. (4) FOV-008 assertion updated — `BlindSideArcWidth` is not a direct struct field; rewritten to verify via `PerceptionDiagnostics.EffectiveFoVAngle`. (5) All `PerceptionSnapshot.X` test assertions updated to `FilteredView.X` or `PerceptionDiagnostics.X` depending on which struct owns field X. (6) SNAP-007 rewritten — `IsInBlindSide` removed from `PerceivedAgent`; test now verifies `BlindSidePerceivedAgents` vs `VisibleOpponents` array separation. (7) FR-001 label corrected. (8) SNAP-008 and SNAP-010 §3.7 cross-refs updated from §3.7.1 to §3.7.2. |
 
 ---
 
@@ -65,7 +65,7 @@ it particularly amenable to unit testing without Unity runtime dependencies.
 | Layer | % of Suite | Target Count | Scope |
 |-------|-----------|--------------|-------|
 | Unit Tests | ~70% | ≥ 73 | Individual formulas, edge cases, boundary conditions. Edit Mode — no Unity runtime required. |
-| Integration Tests | ~25% | ≥ 12 | Cross-specification data flow; scripted 22-agent scenarios. Play Mode. |
+| Integration Tests | ~25% | ≥ 12 (actual: 15) | Cross-specification data flow; scripted 22-agent scenarios. Play Mode. |
 | Balance Tests | ~5% | 3 scenarios | Attribute-scaling validation; no dominant exploitable patterns. |
 
 **E2E tests** (memory stability, NaN propagation over 90-minute simulations) are
@@ -77,7 +77,7 @@ Play Mode with scripted movement.
 All of the following must be satisfied before Section 5 is marked PASS:
 
 - All ≥ 73 unit tests pass with zero failures.
-- All ≥ 12 integration tests pass.
+- All 15 integration tests pass.
 - All 3 balance test scenarios produce expected attribute-scaling behaviour.
 - Determinism check: bit-identical output for identical seed across two independent
   simulation runs (100 heartbeats, §5.10 DET-001).
@@ -238,8 +238,9 @@ Tolerance: ±0.01°. FR ref: FR-2.4.2-05
 Setup: Decisions = 10, PressureScalar = 0.
 Derivation: bonus = (10/20) × 10° = 5.0°. EffectiveFoV = 165.0°.
 
-Expected: BlindSideArcWidth = 360° − 165.0° = 195.0°.
-Verify `PerceptionSnapshot` field reflects this value.
+Expected: `PerceptionDiagnostics.EffectiveFoVAngle = 165.0°`. BlindSideArcWidth is not a
+direct struct field — it is derived as 360° − EffectiveFoVAngle = 195.0°. Verify via
+`PerceptionDiagnostics` in a test fixture that computes the derived value.
 
 Tolerance: ±0.01°. FR ref: FR-2.4.2-06
 
@@ -557,7 +558,8 @@ Interval = CHECK_MAX_TICKS − (CHECK_MAX_TICKS − CHECK_MIN_TICKS) × (Anticip
 
 Setup: Target at 200° offset from facing (inside blind arc). No check active.
 
-Expected: IsVisible = false. Target absent from all PerceptionSnapshot arrays.
+Expected: IsVisible = false. Target absent from all `FilteredView` arrays
+(`VisibleTeammates`, `VisibleOpponents`, `BlindSidePerceivedAgents`).
 
 FR ref: FR-2.4.5-01
 
@@ -754,12 +756,15 @@ Tolerance: Exact tick. FR ref: FR-2.4.2-04
 
 ---
 
-**PS-005 — PressureScalar stored in snapshot regardless of threshold**
+**PS-005 — PressureScalar stored in PerceptionDiagnostics regardless of magnitude**
 
-Setup: PressureScalar = 0.3 (below PRESSURE_FOV_THRESHOLD=0.5 — no FoV narrowing).
+Setup: PressureScalar = 0.3 (pressure reduction applies continuously — no threshold gate
+exists in this spec; at PS=0.3 the FoV narrowing = 0.3 × 30° = 9.0°).
 
-Expected: `PerceptionSnapshot.PressureScalar = 0.3`. Field populated even when
-threshold not crossed. Decision Tree may use it for diagnostic purposes.
+Expected: `PerceptionDiagnostics.PressureScalar = 0.3`. Field populated whenever pressure
+is non-zero. Decision Tree may consume `PressureScalar` from `PerceptionDiagnostics` for
+diagnostic purposes; the Decision Tree does NOT receive `PerceptionDiagnostics` directly
+(it is a debug/telemetry struct), but test rigs may read it to verify correct storage.
 
 Tolerance: ±0.001. FR ref: FR-2.4.2-04
 
@@ -773,8 +778,8 @@ Tolerance: ±0.001. FR ref: FR-2.4.2-04
 
 Setup: Agent A strikes ball mid-heartbeat. Agents A and B (recipient) flagged.
 
-Expected: A and B receive new PerceptionSnapshot before next standard heartbeat.
-`IsForceRefreshed = true`. Uninvolved agents C–V are NOT refreshed.
+Expected: A and B receive new `FilteredView` before next standard heartbeat.
+`ForcedRefreshThisTick = true`. Uninvolved agents C–V are NOT refreshed.
 
 Tolerance: Tick-exact. FR ref: FR-2.4.1-04
 
@@ -818,7 +823,7 @@ Tolerance: Exact. FR ref: FR-2.4.1-05
 Setup: Agent A loses possession to Agent B (non-tackle). Possession change event fires
 at tick 12.
 
-Expected: Both A and B receive forced refresh at tick 12 (`IsForceRefreshed=true`).
+Expected: Both A and B receive forced refresh at tick 12 (`ForcedRefreshThisTick=true`).
 All other agents unaffected. Confirms possession-change trigger distinct from tackle
 trigger. Both agents use full pipeline with L_rec=0 override.
 
@@ -859,7 +864,7 @@ Setup: Ball contact event and possession change event both fire at tick 22 for A
 Two simultaneous trigger conditions qualifying Agent A.
 
 Expected: Agent A receives exactly ONE new snapshot at tick 22. PerceptionSystem does
-not double-execute the pipeline for the same agent in the same tick. `IsForceRefreshed=true`.
+not double-execute the pipeline for the same agent in the same tick. `ForcedRefreshThisTick=true`.
 No duplicate snapshot entries, no double-allocation.
 
 Tolerance: Exact (pipeline execution count). FR ref: §3.8.2
@@ -879,14 +884,14 @@ FR ref: §3.8.3 (PerceptionRefreshEvent stub definition)
 
 ---
 
-**FR-010 — Forced refresh IsForceRefreshed flag never set on uninvolved agents**
+**FR-010 — Forced refresh ForcedRefreshThisTick flag never set on uninvolved agents**
 
 Setup: 22 agents. Ball contact event involves only Agent 1 and agents within 5m.
 Run 500 ticks with forced refreshes triggering at various ticks.
 
 Expected: For any agent not qualifying as an involved participant in a given forced
-refresh event, `IsForceRefreshed = false` in their snapshot at that tick. Monitor
-all 22 agent snapshot streams over 500 ticks. `IsForceRefreshed` is set only when
+refresh event, `ForcedRefreshThisTick = false` in their `FilteredView` at that tick. Monitor
+all 22 agent snapshot streams over 500 ticks. `ForcedRefreshThisTick` is set only when
 the agent independently qualifies as a named participant.
 
 Tolerance: Exact boolean across all 500 ticks × 22 agents. FR ref: FR-2.4.1-04
@@ -912,7 +917,7 @@ FR ref: FR-2.4.1-01
 
 Setup: Snapshot built at tick 47.
 
-Expected: `PerceptionSnapshot.FrameNumber = 47`.
+Expected: `FilteredView.FrameNumber = 47`.
 
 FR ref: FR-2.4.1-02
 
@@ -931,7 +936,7 @@ FR ref: FR-2.4.5-02
 
 Setup: Agent faces away from all 21 other agents. None visible. No ball visible.
 
-Expected: Valid `PerceptionSnapshot`. `VisibleTeammates.Length = 0`.
+Expected: Valid `FilteredView`. `VisibleTeammates.Length = 0`.
 `VisibleOpponents.Length = 0`. `BallVisible = false`.
 No NullReferenceException. No default-zero struct corruption.
 
@@ -964,17 +969,23 @@ Tolerance: Exact float (1.0f). FR ref: §3.7.2 (ConfidenceScore Stage 0 definiti
 
 ---
 
-**SNAP-007 — PerceivedAgent.IsInBlindSide correctly distinguishes forward vs blind-side confirmations**
+**SNAP-007 — BlindSidePerceivedAgents array correctly separates blind-side from forward-arc confirmations**
 
 Setup: Active shoulder check fires at tick T. Agent B confirmed at 200° offset during
 the window (blind-side). Agent C confirmed at 30° offset via standard FoV in same tick.
 
-Expected: Agent B `PerceivedAgent.IsInBlindSide = true`.
-Agent C `PerceivedAgent.IsInBlindSide = false`.
-`VisibleOpponents` array contains both B and C.
-`BlindSidePerceivedAgents` contains B.
+Expected: Agent B appears in `FilteredView.BlindSidePerceivedAgents`. Agent B does NOT
+appear in `FilteredView.VisibleOpponents` or `FilteredView.VisibleTeammates`.
+Agent C appears in `FilteredView.VisibleOpponents`. Agent C does NOT appear in
+`FilteredView.BlindSidePerceivedAgents`.
+The two arrays are mutually exclusive — an agent confirmed via blind-side shoulder check
+cannot simultaneously appear in the forward-arc arrays.
 
-FR ref: §3.7.2 (IsInBlindSide field definition), §3.4.3
+Note: `IsInBlindSide` was removed from `PerceivedAgent` in §3.7.3 v1.3. The
+`BlindSidePerceivedAgents` array is the authoritative mechanism for distinguishing
+blind-side confirmations.
+
+FR ref: §3.7.1 (BlindSidePerceivedAgents field definition), §3.4.3
 
 ---
 
@@ -982,11 +993,11 @@ FR ref: §3.7.2 (IsInBlindSide field definition), §3.4.3
 
 Setup: Shoulder check fires at tick 40. `SHOULDER_CHECK_DURATION = 3`.
 
-Expected: `PerceptionSnapshot.BlindSideWindowExpiry = 43` (= 40 + 3).
+Expected: `PerceptionDiagnostics.BlindSideWindowExpiry = 43` (= 40 + 3).
 `BlindSideWindowActive = true` at ticks 40, 41, 42.
 `BlindSideWindowActive = false` at tick 43.
 
-Tolerance: Exact integer. FR ref: §3.7.1 (BlindSideWindowExpiry field definition)
+Tolerance: Exact integer. FR ref: §3.7.2 (BlindSideWindowExpiry field definition)
 
 ---
 
@@ -1014,11 +1025,11 @@ Reduction = 0.4 × 30° = 12°
 EffectiveFoV = 167.5° − 12° = 155.5°
 ```
 
-Expected: `PerceptionSnapshot.EffectiveFoVAngle = 155.5°`. Field must reflect
+Expected: `PerceptionDiagnostics.EffectiveFoVAngle = 155.5°`. Field must reflect
 the post-pressure value, not the pre-pressure FoV. Implementer must not store
 the pre-pressure value in this field.
 
-Tolerance: ±0.01°. FR ref: §3.7.1 (EffectiveFoVAngle field definition)
+Tolerance: ±0.01°. FR ref: §3.7.2 (EffectiveFoVAngle in PerceptionDiagnostics)
 
 ---
 
@@ -1026,13 +1037,13 @@ Tolerance: ±0.01°. FR ref: §3.7.1 (EffectiveFoVAngle field definition)
 
 ---
 
-**DET-001 — Identical seed → bit-identical PerceptionSnapshot**
+**DET-001 — Identical seed → bit-identical FilteredView and PerceptionDiagnostics**
 
 Setup: Two independent PerceptionSystem instances, `matchSeed = 12345`. Same 22-agent
 initial state. Run 100 heartbeat ticks.
 
-Expected: Every field of every PerceptionSnapshot for every agent at every tick is
-bit-identical between instances.
+Expected: Every field of every `FilteredView` and every `PerceptionDiagnostics` for
+every agent at every tick is bit-identical between instances.
 
 Tolerance: Bit-exact. FR ref: FR-2.4.7-01
 
@@ -1054,7 +1065,7 @@ FR ref: FR-2.4.7-02
 
 Setup: Record full `AgentState[22]` + `BallState` at tick 50. Replay from this state.
 
-Expected: PerceptionSnapshot at tick 50 is bit-identical to original. Confirms all
+Expected: `FilteredView` at tick 50 is bit-identical to original. Confirms all
 inputs fully determine output (no hidden mutable static state).
 
 Tolerance: Bit-exact. FR ref: FR-2.4.7-01
@@ -1065,7 +1076,7 @@ Tolerance: Bit-exact. FR ref: FR-2.4.7-01
 
 Setup: Process 22 agents in order 0→21 vs order 21→0.
 
-Expected: Each agent's PerceptionSnapshot is bit-identical regardless of processing
+Expected: Each agent's `FilteredView` is bit-identical regardless of processing
 order. No shared mutable state is written between agents during the pipeline.
 
 Tolerance: Bit-exact. FR ref: FR-2.4.7-03

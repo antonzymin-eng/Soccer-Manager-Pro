@@ -7,7 +7,7 @@ relationships to adjacent systems, and dependency contracts required before Sect
 can be drafted.
 
 **Created:** February 24, 2026, 12:00 PM PST
-**Version:** 1.1
+**Version:** 1.2
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 7 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -49,7 +49,7 @@ can be drafted.
 This section defines the scope boundaries for Perception System Specification #7. It
 serves as the authoritative reference for:
 
-1. **What this specification owns** — Computation of `PerceptionSnapshot`: the filtered,
+1. **What this specification owns** — Computation of `FilteredView` and `PerceptionDiagnostics`: the filtered,
    latency-aware, attribute-modulated view of the world state delivered to the Decision
    Tree each heartbeat.
 2. **What other specifications own** — Decision-making logic, ball physics, agent
@@ -76,7 +76,7 @@ will ever receive. If the perception model is wrong, every downstream decision i
 on a false foundation regardless of how sophisticated the Decision Tree becomes.
 
 This specification covers only the interval from raw world state to completed
-`PerceptionSnapshot`. Everything before (simulation physics, world state maintenance)
+`FilteredView` and `PerceptionDiagnostics`. Everything before (simulation physics, world state maintenance)
 and everything after (decision logic, action selection, tactical evaluation) is owned
 by adjacent systems with defined boundary interfaces.
 
@@ -91,17 +91,19 @@ values. All variation is numerical, not classified. No `PerceptionState` enum ex
 
 ## 1.2 What This Specification Covers
 
-Perception System Specification #7 governs the computation of a `PerceptionSnapshot`
-struct for each of the 22 active agents, executed once per 10Hz tactical heartbeat.
-The snapshot represents the agent's current knowledge of the world and is the sole
-input to the Decision Tree.
+Perception System Specification #7 governs the computation of a `FilteredView` and
+`PerceptionDiagnostics` struct pair for each of the 22 active agents, executed once per
+10Hz tactical heartbeat. The `FilteredView` represents the agent's current knowledge of
+the world and is the sole input to the Decision Tree. `PerceptionDiagnostics` carries
+filter metadata (FoV angle, pressure scalar, shoulder check state) and is not delivered
+to the Decision Tree.
 
 **Specifically, this specification covers:**
 
-**`PerceptionSnapshot` struct definition.** All fields, types, and frame stamps are
-defined here. This struct is owned exclusively by this specification; the Decision Tree
-consumes it but may not modify its definition. Any amendment to the struct goes through
-this specification's version control.
+**`FilteredView` and `PerceptionDiagnostics` struct definitions.** All fields, types, and frame stamps are
+defined here. These structs are owned exclusively by this specification; the Decision Tree
+consumes `FilteredView` but may not modify its definition. Any amendment to either struct
+goes through this specification's version control.
 
 **Field of view (FoV) model.** Each agent perceives the world within a forward-facing
 angular cone. The base cone half-angle is attribute-modified by `PlayerAttributes.Decisions`
@@ -163,7 +165,7 @@ defined in Section 6.
 
 ### 1.3.1 Responsibilities Owned by Other Specifications
 
-**Decision Tree Specification #8** owns all decision-making logic. `PerceptionSnapshot`
+**Decision Tree Specification #8** owns all decision-making logic. `FilteredView`
 is delivered to the Decision Tree; what the Decision Tree does with it — which entities
 to prioritise, what tactical options to evaluate, what action to select — is entirely
 outside this specification's remit. The Perception System does not evaluate tactical
@@ -247,13 +249,14 @@ only two illustrative examples are given here to establish the concept.
 
 ---
 
-**KD-2: `PerceptionSnapshot` is a value struct, not a class.**
+**KD-2: `FilteredView` and `PerceptionDiagnostics` are value structs, not classes.**
 
 Consistent with `PassRequest`, `ShotRequest`, and `BallState` throughout the Stage 0
-specifications. Stack allocation eliminates heap pressure. The struct is copied into
-the Decision Tree intake each heartbeat; no shared reference exists. This enforces
-the read-only contract: the Decision Tree cannot modify a snapshot in a way that
-affects the Perception System's internal state.
+specifications. Stack allocation eliminates heap pressure. `FilteredView` is copied into
+the Decision Tree intake each heartbeat; no shared reference exists. `PerceptionDiagnostics`
+is written to a pre-allocated debug buffer and never delivered to the Decision Tree.
+This enforces the read-only contract: the Decision Tree cannot modify a `FilteredView`
+in a way that affects the Perception System's internal state.
 
 ---
 
@@ -359,8 +362,8 @@ Ball Physics (#1)          Agent Movement (#2)         Collision System (#3)
                      │  22 agents per tick      │
                      └─────────────────────────┘
                                   │
-                    PerceptionSnapshot (value struct)
-                    one per agent per heartbeat
+                    FilteredView + PerceptionDiagnostics (value structs)
+                    one pair per agent per heartbeat
                                   │
                                   ▼
                          Decision Tree (#8)
@@ -378,7 +381,7 @@ Perception (#7) ─── publishes (conditional) ──► PerceptionRefreshEve
 
 ### 1.5.2 What Perception Is Not Responsible For
 
-Once `PerceptionSnapshot` is delivered to the Decision Tree, Perception's responsibility
+Once `FilteredView` is delivered to the Decision Tree, Perception's responsibility
 ends for that heartbeat. It does not monitor what decisions are made from the snapshot,
 evaluate decision quality, or provide feedback on whether entities were correctly prioritised.
 
@@ -424,7 +427,7 @@ corrupt the in-flight snapshot computation.
 
 | Consumer Specification | What Perception Produces | Interface Status |
 |---|---|---|
-| Decision Tree Spec #8 | `PerceptionSnapshot` struct — Section 3 defines all fields the Decision Tree must consume | Caller contract; Decision Tree implements its own intake |
+| Decision Tree Spec #8 | `FilteredView` struct — Section 3 defines all fields the Decision Tree must consume | Caller contract; Decision Tree implements its own intake |
 | Event System Spec #17 | `PerceptionRefreshEvent` stub — published on forced mid-heartbeat refresh | Event struct only; no `IPerceptionEventConsumer` interface written here |
 | Animation System (Stage 1+) | `ShoulderCheckAnimData` stub — populated but unconsumed at Stage 0 | Stub struct defined in Section 3 |
 | Goalkeeper Mechanics Spec #11 | Goalkeeper treated as standard agent at Stage 0; spec #11 will extend or override | No interface defined until #11 is written |
@@ -437,17 +440,18 @@ corrupt the in-flight snapshot computation.
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | February 24, 2026, 12:00 PM PST | Claude (AI) / Anton | Initial draft. All OQ-1 through OQ-5 from Outline v1.1 reflected. All 7 KDs locked. |
-| 1.1 | February 24, 2026 | Claude (AI) / Anton | Four corrections: (1) First Touch §3.x placeholder resolved to §3.6. (2) Hard-coded "200°" blind arc removed from §1.2 and KD-5 — value deferred to Section 3 derivation to prevent premature locking. (3) Fixed64 Math Library corrected from Spec #8 to Spec #9 (canonical numbering per PROGRESS.md). (4) KD-1 mid-heartbeat refresh trigger list clarified as illustrative only; full enumeration deferred to Section 3. |
+| 1.2 | April 22, 2026 | Claude (AI) / Anton | Struct rename following §3 v1.3 architectural rework: `PerceptionSnapshot` replaced throughout by `FilteredView` (consumer output, 9 fields) and `PerceptionDiagnostics` (filter metadata, 7 fields). KD-2 rationale updated to reflect two-struct architecture. §1.2 `PerceptionSnapshot` struct description updated to list both structs. §1.5.1 diagram updated. §1.6.2 soft dependency table updated. Section Summary updated. |
 
 ---
 
 ## Section 1 Summary
 
-Perception System Specification #7 governs computation of `PerceptionSnapshot` — the
-filtered, latency-aware, attribute-modulated world view delivered to the Decision Tree
-each 10Hz heartbeat. It owns the FoV model, shadow-cone occlusion, recognition latency,
-blind-side awareness, shoulder check mechanic, pressure scalar effect on perception
-breadth, and the `PerceptionSnapshot` struct definition.
+Perception System Specification #7 governs computation of `FilteredView` and
+`PerceptionDiagnostics` — the filtered, latency-aware, attribute-modulated world view
+delivered to the Decision Tree each 10Hz heartbeat. It owns the FoV model, shadow-cone
+occlusion, recognition latency, blind-side awareness, shoulder check mechanic, pressure
+scalar effect on perception breadth, and the `FilteredView` / `PerceptionDiagnostics`
+struct definitions.
 
 It does not own decision-making logic, ball physics, agent locomotion, spatial hash
 infrastructure, or goalkeeper-specific perception. Named perception states do not exist

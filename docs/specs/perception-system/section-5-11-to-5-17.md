@@ -4,7 +4,7 @@ Integration tests run in Unity Play Mode with real `AgentState`, `BallState`, an
 spatial hash instances. All 22-agent scenarios use scripted (not AI-driven) movement.
 Each test verifies a cross-specification data boundary or a multi-agent scenario.
 
-**Target: ≥ 12 tests.** Group mapping per §4 boundary contracts.
+**Target: ≥ 12 tests (actual: 15).** Group mapping per §4 boundary contracts.
 
 ---
 
@@ -68,7 +68,7 @@ Tolerance: ±0.001m. FR ref: FR-2.4.6-01
 
 Ball contact event fires at tick 15 (mid-heartbeat). Involved agents: #3, #7.
 
-Expected: Agents #3 and #7 receive new snapshot at tick 15 (`IsForceRefreshed=true`).
+Expected: Agents #3 and #7 receive new `FilteredView` at tick 15 (`ForcedRefreshThisTick=true`).
 Agents #1, #2, #4–#6, #8–#22 unchanged until next standard tick 20.
 
 FR ref: FR-2.4.1-04
@@ -158,7 +158,7 @@ FR ref: FR-2.4.3-02
 
 22 agents at valid positions. Run one complete 10Hz heartbeat.
 
-Expected: 22 PerceptionSnapshots produced. None null. Each ObserverId matches
+Expected: 22 `FilteredView` structs produced (one per agent). None null. Each ObserverId matches
 the corresponding agent. No exceptions. Completes within 2ms budget.
 
 FR ref: FR-2.4.1-01, FR-2.4.8-01
@@ -285,8 +285,8 @@ per §2.3.1 v1.1 fix.
 
 54,000 heartbeats (90 sim-minutes × 10Hz). All 22 agents scripted.
 
-Expected: Zero `float.IsNaN()` or `float.IsInfinity()` in any PerceptionSnapshot
-field across all ticks for all agents. Any NaN is a hard failure.
+Expected: Zero `float.IsNaN()` or `float.IsInfinity()` in any `FilteredView` or
+`PerceptionDiagnostics` field across all ticks for all agents. Any NaN is a hard failure.
 
 ---
 
@@ -334,7 +334,7 @@ approval and are registered here to prevent future confusion.
 
 | Item | What Cannot Be Tested | When |
 |------|----------------------|------|
-| DV-1: Decision Tree consumption | Cannot verify DT uses PerceptionSnapshot fields correctly | When Spec #8 is implemented |
+| DV-1: Decision Tree consumption | Cannot verify DT uses `FilteredView` fields correctly | When Spec #8 is implemented |
 | DV-2: Teammate occlusion | No teammate shadow cone logic exists | Stage 1, per OQ-1 |
 | DV-3: Cross-platform Fixed64 determinism | Fixed64 Math Library Spec #9 not written | Stage 5+ migration |
 | DV-4: Weather range reduction | Environmental system not specified | Stage 2 |
@@ -356,13 +356,13 @@ approval and are registered here to prevent future confusion.
 | Snapshot Assembly Unit Tests | SNAP-001 to SNAP-010 | 10 |
 | Determinism Unit Tests | DET-001 to DET-004 | 4 |
 | **Unit Tests Total** | | **73** |
-| Integration Tests | IT-AM-001 to IT-FULL-006 | 12 |
+| Integration Tests | IT-AM-001 to IT-FULL-006 | 15 |
 | Balance Tests | BAL-001 to BAL-003 | 3 |
 | Performance Tests | PERF-001 to PERF-004 | 4 |
-| **Grand Total** | | **92** |
+| **Grand Total** | | **95** |
 
 Minimum requirements per outline §5.1/5.2: ≥ 40 unit + ≥ 12 integration.
-Delivered: 73 unit (1.8× minimum) + 12 integration (meets target) + 7 supplementary.
+Delivered: 73 unit (1.8× minimum) + 15 integration (exceeds target of 12) + 7 supplementary.
 
 ---
 
