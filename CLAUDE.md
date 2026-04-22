@@ -214,8 +214,8 @@ pass-mechanics/
 > **Keep this section current.** When resolving an issue, remove or update its entry here in the same commit.
 
 - **Pass Mechanics (#5):** Approval SUSPENDED after March 25 audit (19 findings, all fixed). Awaiting lead developer re-review and re-sign-off.
-- **Pending sign-offs:** Agent Movement (#2), Shot Mechanics (#6), Perception System (#7), Decision Tree (#8).
-- **Perception System (#7):** Approval Checklist v1.5 written and all critical blockers resolved. Status: PENDING — awaiting lead developer sign-off. Checklist is in `docs/specs/perception-system/section-9-approval-checklist.md`.
+- **Pending sign-offs:** Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8).
+- **Perception System (#7):** ✅ APPROVED April 22, 2026. Section 9 Approval Checklist v1.7 signed off by lead developer.
 - **Renumbering cascade outstanding:** ~49 stale spec-number references remain across Agent Movement (#2), Collision System (#3), and First Touch (#4) for Heading #9→#10, Goalkeeper #10→#11, and Fixed64 #8→#9. See `docs/tracking/fix-manifest-pass-mechanics.md` BROADER RENUMBERING ISSUE table.
 - **Superseded files from old naming convention:** Must be removed during git migration — do NOT migrate these. See `MIGRATION_GUIDE.md` for complete old-to-new mapping and FILE_MANIFEST pending removals.
 

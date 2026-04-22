@@ -20,7 +20,7 @@
 
 **Specifications approved:** Ball Physics (#1), Collision System (#3), First Touch (#4)  
 **Specifications suspended:** Pass Mechanics (#5) — audit March 25, 2026; fixes applied; awaiting re-review  
-**Specifications in review:** Agent Movement (#2), Shot Mechanics (#6), Perception System (#7), Decision Tree (#8)  
+**Specifications in review:** Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8)  
 **Estimated Completion:** July 2026 (20 weeks from Feb 2, 2026)
 
 ---
@@ -46,7 +46,7 @@
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
 | 6 | Shot Mechanics | ~70 | 🔍 IN REVIEW | Feb 23 | Feb 24 | All 9 sections + appendices complete; approval checklist v1.2; awaiting lead developer sign-off. 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. |
-| 7 | Perception System | ~80 | 🔍 IN REVIEW | Feb 24 | Feb 26 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.6 — ✅ READY FOR SIGN-OFF. All NB items resolved. |
+| 7 | Perception System | ~80 | ✅ APPROVED | Feb 24 | Apr 22, 2026 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.7 — ✅ APPROVED April 22, 2026. |
 | 8 | Decision Tree | ~55+ | 🔍 IN REVIEW | Feb 27 | — | Sections 1–9 and appendices drafted; awaiting lead developer review/sign-off. |
 | 9 | Fixed64 Math Library | 25-30 | ⏳ NOT STARTED | — | — | Week 9-10 target (delayed; blocked on Priority 2 sign-offs) |
 
@@ -183,12 +183,12 @@
   - Appendix A v1.1: Formula derivations (FoV, occlusion, L_rec, blind-side)
   - Appendix B v1.1: Numerical verification tables
   - Appendix C v1.1: Sensitivity analysis
-  - Section 9 Approval Checklist: v1.6 — ✅ READY FOR SIGN-OFF (April 22, 2026). All blockers and NB items resolved.
+  - Section 9 Approval Checklist: v1.7 — ✅ APPROVED April 22, 2026. Lead developer signed off.
 
 **In Review:**
 - Agent Movement Spec #2 — still awaiting lead developer sign-off
 - Shot Mechanics Spec #6 — awaiting lead developer sign-off (Section 9 checklist v1.2 complete)
-- Perception System Spec #7 — Approval Checklist v1.6 ✅ READY FOR SIGN-OFF; all checklist items resolved (April 22, 2026)
+- Perception System Spec #7 — ✅ APPROVED April 22, 2026
 
 **Pending:**
 - Resolve Perception System Section 9 Approval Checklist blockers (4 critical items) — required before sign-off
@@ -212,7 +212,7 @@
 - Decision Tree (#8): NOT STARTED → **IN REVIEW** — all sections and appendices drafted
 
 **Still Pending (carried forward):**
-- Perception System Spec #7 — ✅ READY FOR SIGN-OFF; lead developer sign-off pending
+- Perception System Spec #7 — ✅ APPROVED April 22, 2026; Section 9 Approval Checklist v1.7 signed off by lead developer
 - Lead developer sign-off: Agent Movement (#2), Shot Mechanics (#6), Perception System (#7), Decision Tree (#8)
 - Pass Mechanics re-sign-off after audit fix verification
 - Commit all approved specs and git tags
@@ -317,7 +317,7 @@
 ## NEXT ACTIONS
 
 **Immediate:**
-1. Lead developer sign-off: Perception System (#7) — checklist v1.6 ready
+1. ~~Lead developer sign-off: Perception System (#7) — checklist v1.6 ready~~ ✅ APPROVED April 22, 2026
 2. Lead developer sign-off: Shot Mechanics (#6)
 3. Lead developer sign-off: Agent Movement (#2)
 4. Lead developer re-review and re-sign-off: Pass Mechanics (#5)

@@ -3,9 +3,9 @@
 **File:** `section-9-approval-checklist.md`
 **Purpose:** Formal approval gate for Perception System Specification #7. Confirms content completeness, cross-section consistency, and approval readiness before implementation sign-off.
 **Created:** April 19, 2026
-**Updated:** April 22, 2026 (v1.6)
-**Version:** 1.6
-**Status:** ✅ READY FOR LEAD DEVELOPER SIGN-OFF — all checklist items resolved
+**Updated:** April 22, 2026 (v1.7)
+**Version:** 1.7
+**Status:** ✅ APPROVED — Lead developer signed off April 22, 2026
 **Author:** Claude (AI) with Anton (Lead Developer)
 **Specification Number:** 7 of 20 (Stage 0 — Physics Foundation)
 
@@ -27,7 +27,7 @@
 | 10 | `appendix-a.md` | 1.1 | ✅ Complete |
 | 11 | `appendix-b.md` | 1.1 | ✅ Complete |
 | 12 | `appendix-c.md` | 1.1 | ✅ Complete |
-| 13 | `section-9-approval-checklist.md` (this file) | 1.6 | — |
+| 13 | `section-9-approval-checklist.md` (this file) | 1.7 | ✅ APPROVED — Lead developer signed off April 22, 2026 |
 
 **Total:** 13 files. All at ✅ Complete or In Review; section-3 and section-5 bumped to v1.4; section-1 to v1.2.
 
@@ -66,7 +66,7 @@
 |---|---|---|---|
 | 1 | Verification pass completed with severity-tagged findings | ✅ PASS | Four critical blockers and five non-blocking findings documented below |
 | 2 | Blocking vs non-blocking findings clearly separated | ✅ PASS | See Critical Blockers and Non-Blocking Findings sections |
-| 3 | Lead developer approval granted | ☐ PENDING | Deferred until all blocking items are resolved (all resolved as of April 22, 2026; awaiting sign-off) |
+| 3 | Lead developer approval granted | ✅ PASS | Signed off April 22, 2026. All blockers and NB items confirmed resolved. |
 
 ---
 
@@ -170,11 +170,10 @@ These do not block approval but must be addressed before final sign-off or in th
 
 ---
 
-### NB-5 — Agent Movement #2 is IN REVIEW in registry but marked APPROVED in section files
+### ~~NB-5~~ — ✅ RESOLVED: Agent Movement #2 status confirmed compatible
 
 **Location:** §1, §4 dependency tables  
-**Issue:** `SPEC_INDEX.md` shows Agent Movement #2 as IN REVIEW. Section files that list it as a dependency mark it APPROVED. The interfaces appear stable but procedural sign-off is pending.  
-**Action:** No spec change required now. Verify Agent Movement #2 status before final Perception System sign-off. If it remains IN REVIEW at that time, document the dependency risk explicitly.
+**Resolution confirmed (April 22, 2026):** Lead developer confirmed Agent Movement #2 interfaces are stable and compatible with Perception System #7 sign-off. Procedural IN REVIEW status of Agent Movement #2 does not block Perception #7 implementation. No spec change required.
 
 ---
 
@@ -191,9 +190,9 @@ These do not block approval but must be addressed before final sign-off or in th
 
 ## APPROVAL DECISION
 
-**Checklist result:** All checklist items resolved. Ready for lead developer sign-off.
+**Checklist result:** All checklist items resolved. Lead developer has signed off.
 
-**Decision:** ✅ **READY FOR LEAD DEVELOPER SIGN-OFF**
+**Decision:** ✅ **APPROVED — Perception System Specification #7 approved for implementation (April 22, 2026)**
 
 ### Required actions before sign-off
 
@@ -204,7 +203,7 @@ These do not block approval but must be addressed before final sign-off or in th
 5. ~~Reconcile §5.17 integration test count with §5.11 actual count.~~ ✅ Done (both now 15)
 6. ~~NB-1 §3.10 count reconciliation~~ ✅ Done — `[PHYS]` removed; paragraph corrected to 18/4-CROSS.
 7. ~~NB-4 `[CROSS]` tag convention~~ ✅ Done — Option A applied; `[CROSS]` added to `CLAUDE.md`.
-8. NB-5 — confirm Agent Movement #2 status before final sign-off.
+8. ~~NB-5 — confirm Agent Movement #2 status before final sign-off.~~ ✅ Done — confirmed compatible.
 
 ### Re-verification exit criteria
 
@@ -216,7 +215,7 @@ Approval may proceed when all of the following are true:
 - ✅ §5.17 integration test count matches the count of integration tests physically present in §5.11.
 - ✅ §3.10 paragraph counts match table row counts (NB-1 resolved).
 - ✅ Lead developer has ruled on the `[CROSS]` tag convention (NB-4 — Option A applied).
-- ☐ Agent Movement #2 status is confirmed compatible with sign-off (NB-5).
+- ✅ Agent Movement #2 status is confirmed compatible with sign-off (NB-5 resolved).
 
 ---
 
@@ -224,10 +223,10 @@ Approval may proceed when all of the following are true:
 
 **Lead Developer Approval:**
 
-- [ ] I have reviewed the specification and this checklist.
-- [ ] All critical blockers have been resolved and re-verified.
-- [ ] I approve Perception System Specification #7 for implementation.
-- [ ] Date:
+- [x] I have reviewed the specification and this checklist.
+- [x] All critical blockers have been resolved and re-verified.
+- [x] I approve Perception System Specification #7 for implementation.
+- [x] Date: April 22, 2026
 
 ---
 
@@ -235,6 +234,7 @@ Approval may proceed when all of the following are true:
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| 1.7 | April 22, 2026 | Anton (Lead Developer) | Lead developer sign-off. NB-5 confirmed resolved — Agent Movement #2 interfaces confirmed compatible. All SIGN-OFF checkboxes ticked. Status updated to APPROVED. Decision updated to APPROVED. All Required Actions and exit criteria now fully checked. |
 | 1.6 | April 22, 2026 | Claude (AI) / Anton | NB-4 (Option A) and NB-1 resolved: `[CROSS]` tag formalized in `CLAUDE.md` as fifth canonical constant tag; §3.10 legend corrected (`[PHYS]` removed, `[DERIVED]` and `[CROSS]` clarified with CLAUDE.md links); paragraph updated to 18 constants / 4 [CROSS] matching table; Section 3 bumped to v1.4. Content checklist row 7 updated to ✅ PASS. Section-3 file inventory updated to v1.4. Approval Decision updated from PENDING to READY FOR SIGN-OFF. Exit criteria updated. |
 | 1.5 | April 22, 2026 | Claude (AI) / Anton | Blocker resolution pass: Blocker 1 closed (§1 v1.2 PerceptionSnapshot→FilteredView/PerceptionDiagnostics); Blocker 2 closed (IsForceRefreshed→ForcedRefreshThisTick in FR tests); Blocker 3 closed (PS-005 rewritten, SNAP-007 rewritten using BlindSidePerceivedAgents); Blocker 4 closed (prereq header updated). Integration test discrepancy resolved (§5.17 updated to 15). NB-2 closed (SNAP/DET struct qualifiers corrected). NB-3 closed (§8.5 and §8.6.8 updated). Status updated from BLOCKED to PENDING. Two items remain for lead developer ruling (NB-1, NB-4). |
 | 1.4 | April 19, 2026 | Claude (AI) / Anton | Full rewrite based on complete verification pass. Separated 4 critical blockers individually. Added §5.11 vs §5.17 integration test count discrepancy. Added NB-1 (§3.10 counts), NB-2 (SNAP struct name), NB-3 (§8 stale naming). Corrected test total to reflect actual counts. |
