@@ -369,15 +369,17 @@ git tag "spec-[specname]-v1.0-approved"
 git push --tags
 ```
 
-**Pending Tags:**
-- `spec-ball-physics-v1.0-approved` — awaiting commit (approved Feb 8)
+**Tag Status:**
+- `spec-ball-physics-v1.0-approved` — created locally Apr 26, 2026 on `claude/review-project-docs-1ndtt`; awaits push to remote (branch-protection blocks tag push from feature branches)
 - `spec-agent-movement-v1.0-approved` — awaiting sign-off
-- `spec-collision-system-v1.0-approved` — status disagreement; resolve before tagging
-- `spec-first-touch-v1.0-approved` — awaiting commit (approved Feb 22)
+- `spec-collision-system-v1.0-approved` — created locally Apr 26, 2026 (back-fill of Feb 19 sign-off); awaits push
+- `spec-first-touch-v1.0-approved` — created locally Apr 26, 2026; awaits push
 - `spec-pass-mechanics-v1.0-approved` — awaiting re-sign-off (suspended)
 - `spec-shot-mechanics-v1.0-approved` — awaiting sign-off
-- `spec-perception-system-v1.0-approved` — awaiting commit (approved Apr 22)
+- `spec-perception-system-v1.0-approved` — created locally Apr 26, 2026; awaits push
 - `spec-decision-tree-v1.0-approved` — awaiting sign-off
+
+> **Tag push blocked**: `git push origin --tags` returns HTTP 403 from the current remote endpoint. After this branch merges to main with privileged credentials, run `git push origin spec-ball-physics-v1.0-approved spec-collision-system-v1.0-approved spec-first-touch-v1.0-approved spec-perception-system-v1.0-approved` from a context that allows tag creation. The tags are annotated and point at the merge commit (or its branch-tip predecessor if fast-forward).
 
 **Why this matters:**
 - Preserves specification history
