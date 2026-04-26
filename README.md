@@ -1,11 +1,11 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** April 21, 2026
+**Last Updated:** April 26, 2026
 **Project Type:** Full-scale football management simulation
-**Development Timeline:** 10+ years, staged releases
+**Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
-**Current Stage:** Stage 0 (Specification Phase — Week 12 of 20)
+**Current Stage:** Stage 0 (Specification Phase)
 
 ---
 
@@ -113,13 +113,12 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 
 **Goal:** Build the physics and simulation core that all future systems depend on.
 
-**Progress:** Specification Phase — Week 12 of 20
+**Progress:** Specification Phase
 **Started:** February 2, 2026
-**Estimated Completion:** July 2026
 **Deliverables:** 20 comprehensive specification documents
 
-**Summary:** 3 approved, 1 suspended, 4 in review, 12 not started
-**Total specification output:** ~4.33 MB across 106 files
+**Summary (per §9 files, April 26, 2026):** 4 approved (#1, #4, #7, plus #3 per registry — see PROGRESS.md status note), 1 suspended (#5), 3 in review (#2, #6, #8), 12 not started.
+**Total specification output:** ~4.33 MB across 106 files (counts predate folder migration; see file-manifest.md)
 **Comprehensive audits completed:** 6 of 7 finished specs
 
 ---
@@ -133,9 +132,9 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 4. ✅ First Touch Mechanics — **APPROVED** Feb 22, 2026 (~70 pages, 72 tests, audited)
 5. ⏸ Pass Mechanics — **SUSPENDED** (audit March 25, 2026 — 19 findings fixed; awaiting re-sign-off)
 
-**Priority 2 — Core Gameplay (Weeks 5-8):**
+**Priority 2 — Core Gameplay:**
 6. 🔍 Shot Mechanics — **IN REVIEW** (~70 pages, 104 tests, audited; ERR-010 must be fixed before sign-off)
-7. 🔍 Perception System — **IN REVIEW** (~80 pages, 92 tests; Section 9 checklist not yet written)
+7. ✅ Perception System — **APPROVED** Apr 22, 2026 (~80 pages, 92 tests; §9 v1.7 signed off)
 8. 🔍 Decision Tree — **IN REVIEW** (Sections 1–9 + appendices drafted; ~55+ pages; awaiting sign-off)
 9. ⏳ Fixed64 Math Library — Not started
 
@@ -266,22 +265,25 @@ TacticalDirector/
 
 ## NEXT IMMEDIATE STEPS
 
-### Current (Week 12 — Apr 21, 2026)
+### Outstanding (as of April 26, 2026)
 
-**Immediate:**
-1. ⏳ Write Perception System (#7) Section 9 Approval Checklist
-2. ⏳ Fix ERR-010 in Shot Mechanics §1.1 (Decision Tree spec number #7 → #8)
-3. ⏳ Lead developer sign-off: Shot Mechanics (#6)
-4. ⏳ Lead developer sign-off: Perception System (#7) — after checklist written
-5. ⏳ Lead developer sign-off: Agent Movement (#2)
-6. ⏳ Lead developer re-sign-off: Pass Mechanics (#5)
-7. ⏳ Lead developer sign-off: Decision Tree (#8)
+**Sign-offs pending:**
+1. ⏳ Lead developer sign-off: Agent Movement (#2)
+2. ⏳ Lead developer sign-off: Shot Mechanics (#6)
+3. ⏳ Lead developer sign-off: Decision Tree (#8)
+4. ⏳ Lead developer re-sign-off: Pass Mechanics (#5)
+5. ⏳ Adjudicate Collision System (#3) status disagreement (§9 says PENDING; trackers say APPROVED)
 
-**After Priority 2 Sign-offs:**
-8. ⏳ Commit all approved specs and apply git tags
-9. ⏳ Remove superseded file versions (see docs/tracking/file-manifest.md)
-10. ⏳ Begin Fixed64 Math Library Specification (#9)
-11. ⏳ Begin Heading Mechanics Specification (#10)
+**Documentation debt:**
+6. ⏳ Rebuild `docs/tracking/spec-error-log.md` (currently stub-only; ERR-001 through ERR-008 missing)
+7. ⏳ Fix ~74 stale spec-number references in body text across approved/in-review specs
+8. ⏳ Reconcile `file-manifest.md` to post-migration folder names (currently flagged as pre-migration legacy)
+9. ⏳ Resolve dangling references in CLAUDE.md (`.claudeignore`, `MIGRATION_GUIDE.md`)
+
+**After Priority 2 sign-offs:**
+10. ⏳ Decide: tag approved specs now (with renumbering debt) vs. fix-then-tag
+11. ⏳ Begin Fixed64 Math Library Specification (#9) — also resolve scope question (Stage 0 vs. Stage 5+)
+12. ⏳ Begin Heading Mechanics Specification (#10)
 
 ---
 
@@ -326,12 +328,13 @@ These remain available in `/Archive/` for historical reference but should NOT be
 2. ✅ Best Practices documented
 3. ✅ Specification progress tracker created
 4. ✅ Ball Physics Specification approved (Feb 8)
-5. ✅ Collision System Specification approved (Feb 19)
+5. ✅ Collision System Specification recorded as approved (Feb 19) — §9 file disagreement flagged
 6. ✅ First Touch Mechanics Specification approved (Feb 22)
 7. ⏸ Pass Mechanics Specification suspended (audit March 25 — re-sign-off pending)
-8. 🔍 Agent Movement, Shot Mechanics, Perception System, Decision Tree awaiting sign-off
-9. ⏳ Begin Fixed64 Math Library and Heading Mechanics after Priority 2 sign-offs
-10. No coding until all 20 specs approved
+8. ✅ Perception System Specification approved (Apr 22)
+9. 🔍 Agent Movement, Shot Mechanics, Decision Tree awaiting sign-off
+10. ⏳ Begin Fixed64 Math Library and Heading Mechanics after Priority 2 sign-offs
+11. No coding until all 20 specs approved
 
 ---
 
@@ -339,7 +342,7 @@ These remain available in `/Archive/` for historical reference but should NOT be
 
 **Developer:** Solo developer with AI assistance
 **Project Start:** December 29, 2025
-**Current Phase:** Specification Writing (Week 12 of 20)
+**Current Phase:** Specification Writing
 
 **Community Channels (To be established):**
 - Discord: TBD (Stage 1)
@@ -367,13 +370,13 @@ git push --tags
 ```
 
 **Pending Tags:**
-- `spec-ball-physics-v1.0-approved` — awaiting commit
+- `spec-ball-physics-v1.0-approved` — awaiting commit (approved Feb 8)
 - `spec-agent-movement-v1.0-approved` — awaiting sign-off
-- `spec-collision-system-v1.0-approved` — awaiting commit
-- `spec-first-touch-v1.0-approved` — awaiting commit
+- `spec-collision-system-v1.0-approved` — status disagreement; resolve before tagging
+- `spec-first-touch-v1.0-approved` — awaiting commit (approved Feb 22)
 - `spec-pass-mechanics-v1.0-approved` — awaiting re-sign-off (suspended)
 - `spec-shot-mechanics-v1.0-approved` — awaiting sign-off
-- `spec-perception-system-v1.0-approved` — awaiting sign-off
+- `spec-perception-system-v1.0-approved` — awaiting commit (approved Apr 22)
 - `spec-decision-tree-v1.0-approved` — awaiting sign-off
 
 **Why this matters:**
@@ -439,6 +442,14 @@ git push --tags
 - Added Decision Tree to pending git tags
 - Updated Getting Started checklist
 - Updated next immediate steps to Week 12 actions
+
+**v1.5 — April 26, 2026**
+- Removed scheduling milestones (passion project, no deadline)
+- Perception System (#7) status: IN REVIEW → APPROVED (Apr 22, 2026; §9 v1.7 signed off)
+- Approval count corrected to 4 per §9-file evidence (with Collision System #3 status disagreement flagged)
+- Next Immediate Steps rewritten around outstanding sign-offs and documentation debt rather than week-12 actions
+- Added explicit reference to ~74 stale spec-number references in body text (measured)
+- Added pointer to spec-error-log.md rebuild and CLAUDE.md dangling references
 
 ---
 

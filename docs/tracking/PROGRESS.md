@@ -1,27 +1,27 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** April 21, 2026  
+**Last Updated:** April 26, 2026  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
-**Timeline:** Weeks 1-20 (5 months)  
-**Current Week:** Week 12  
-**Started:** February 2, 2026
+**Started:** February 2, 2026  
+**Note:** Scheduling milestones removed — passion project, no deadline.
 
 ---
 
 ## PROGRESS SUMMARY
 
 **Total Specifications:** 20  
-**Approved:** 3  
+**Approved:** 4 (per §9 files: #1, #4, #7; per SPEC_INDEX also #3 — see note)  
 **Suspended:** 1  
-**In Review:** 4  
+**In Review:** 3  
 **In Progress:** 0  
 **Not Started:** 12
 
-**Specifications approved:** Ball Physics (#1), Collision System (#3), First Touch (#4)  
+**Specifications approved:** Ball Physics (#1, Feb 8), First Touch (#4, Feb 22), Perception System (#7, Apr 22), Collision System (#3, Feb 19 per registry — see status disagreement below)  
 **Specifications suspended:** Pass Mechanics (#5) — audit March 25, 2026; fixes applied; awaiting re-review  
-**Specifications in review:** Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8)  
-**Estimated Completion:** July 2026 (20 weeks from Feb 2, 2026)
+**Specifications in review:** Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8)
+
+> **Status disagreement (flagged April 26, 2026):** `collision-system/section-9-approval-checklist.md` header reads "Pending Review" and its Approval Decision says "PENDING — Awaiting Agent Movement Spec #2 approval (upstream dependency)." SPEC_INDEX.md, README.md, file-manifest.md, and the table below all record APPROVED Feb 19, 2026. The §9 file was either never updated after sign-off, or external trackers approved prematurely. Awaits lead developer adjudication.
 
 ---
 
@@ -310,7 +310,7 @@
 - ERR-003: PerformanceContext violation language in Agent Movement §3.2 — fix at convenience
 - Agent Movement §3.2 and §3.7 attribute references should be verified against PlayerAttributes v1.3 before implementation
 - Ball Physics §8 v1.4: DOI corrections issued from Shot Mechanics §8 audit — verify incorporated
-- Perception System Section 9 Approval Checklist v1.4 written (April 19, 2026) — BLOCKED on 4 critical items
+- Perception System Section 9 Approval Checklist v1.7 (April 22, 2026) — ✅ APPROVED; all blockers resolved
 
 ---
 
@@ -333,6 +333,16 @@
 
 ---
 
-**Last Updated:** April 21, 2026  
+**Last Updated:** April 26, 2026  
 **Updated By:** AI Assistant (Anton review)  
 **Next Review:** After Priority 2 sign-offs complete
+
+---
+
+## CHANGELOG
+
+**April 26, 2026:**
+- Approval summary corrected to 4 approved (#1, #4, #7, plus #3 per registry); previous "3 approved" contradicted the table.
+- Perception System (#7) status updated to ✅ APPROVED Apr 22, 2026 in summary lists.
+- Collision System (#3) status disagreement flagged (§9 file says PENDING; trackers say APPROVED).
+- Scheduling milestones de-emphasized — passion project, no deadline.

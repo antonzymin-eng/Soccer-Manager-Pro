@@ -3,8 +3,8 @@
 **File:** `section-9-approval-checklist.md`  
 **Purpose:** Formal quality gate for Decision Tree Specification #8 before implementation approval.  
 **Created:** April 20, 2026  
-**Version:** 1.0  
-**Status:** DRAFT — Awaiting Lead Developer Review and checklist verification  
+**Version:** 1.1  
+**Status:** 🔍 IN REVIEW — Awaiting Lead Developer sign-off (matches §9.5 Final status; SPEC_INDEX, PROGRESS, CLAUDE.md)  
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
 
@@ -92,6 +92,7 @@
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | April 20, 2026 | Claude (AI) / Anton | Initial approval checklist draft for Decision Tree Specification #8. |
+| 1.1 | April 26, 2026 | Claude (AI) / Anton | Header status reconciled: DRAFT → IN REVIEW to match §9.5 Final status and external trackers (SPEC_INDEX.md, PROGRESS.md, CLAUDE.md). |
 
 ---
 

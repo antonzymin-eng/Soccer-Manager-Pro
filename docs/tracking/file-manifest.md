@@ -222,8 +222,8 @@
 
 ## SPECIFICATION #7: PERCEPTION SYSTEM
 
-**Overall status:** 🔍 In Review — Section 9 Approval Checklist written; BLOCKED on 4 critical items  
-**Approval checklist:** v1.4 (April 19, 2026) — ❌ BLOCKED; see section-9-approval-checklist.md for details  
+**Overall status:** ✅ Approved — April 22, 2026  
+**Approval checklist:** v1.7 (April 22, 2026) — ✅ APPROVED; lead developer signed off; see section-9-approval-checklist.md  
 **Total test scenarios:** 95 (73 unit + 15 integration + 3 balance + 4 performance = 1.8× unit minimum)  
 **Estimated pages:** ~80  
 **Design note:** 10Hz tactical heartbeat (not 60Hz); sole consumer is Decision Tree (#8); ~62% gameplay-tuned constants

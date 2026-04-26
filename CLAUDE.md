@@ -1,7 +1,7 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** April 22, 2026
+> **Last Updated:** April 26, 2026
 > **Purpose:** Authoritative rules for any AI agent (Claude Code, Claude chat, etc.) working on this project. Read this file completely before every task.
 
 ---
@@ -209,12 +209,16 @@ pass-mechanics/
 
 ---
 
-## OPEN ISSUES (as of April 22, 2026)
+## OPEN ISSUES
 
-> **Keep this section current.** When resolving an issue, remove or update its entry here in the same commit.
+> **Keep this section current.** When resolving an issue, remove or update its entry here in the same commit. Each entry includes a "since" date so staleness is visible.
 
-- **Pass Mechanics (#5):** Approval SUSPENDED after March 25 audit (19 findings, all fixed). Awaiting lead developer re-review and re-sign-off.
-- **Pending sign-offs:** Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8).
-- **Perception System (#7):** ✅ APPROVED April 22, 2026. Section 9 Approval Checklist v1.7 signed off by lead developer.
-- **Renumbering cascade outstanding:** ~49 stale spec-number references remain across Agent Movement (#2), Collision System (#3), and First Touch (#4) for Heading #9→#10, Goalkeeper #10→#11, and Fixed64 #8→#9. See `docs/tracking/fix-manifest-pass-mechanics.md` BROADER RENUMBERING ISSUE table.
-- **Superseded files from old naming convention:** Must be removed during git migration — do NOT migrate these. See `MIGRATION_GUIDE.md` for complete old-to-new mapping and FILE_MANIFEST pending removals.
+- **Pass Mechanics (#5)** — *since March 25, 2026.* Approval SUSPENDED after audit (19 findings, all fixed per `fix-manifest-pass-mechanics.md`). Awaiting lead developer re-review and re-sign-off.
+- **Pending lead developer sign-off** — *Agent Movement (#2) since Feb 15; Shot Mechanics (#6) since Feb 24; Decision Tree (#8) since Apr 20, 2026.*
+- **Perception System (#7)** — ✅ APPROVED April 22, 2026. (Tracked here only until external sources are reconciled — README.md v1.4 still shows IN REVIEW; remove this line once README is updated.)
+- **Renumbering cascade outstanding** — *measured April 26, 2026:* ~74 stale spec-number references remain in body text across approved and in-review specs (Decision Tree #7→#8, Heading #9→#10, Goalkeeper #10→#11, Fixed64 #8→#9). Per-spec body-text counts: collision-system ~28, agent-movement ~24, first-touch ~21, shot-mechanics 2, pass-mechanics 1, ball-physics 1. The fix-manifest claim that Pass Mechanics and Shot Mechanics are "fully corrected" is incomplete (`pass-mechanics/section-3-1.md:76` and `shot-mechanics/section-7-1-to-7-3.md:208` still carry stale Decision Tree #7).
+- **Collision System (#3) status disagreement** — *flagged April 26, 2026.* `collision-system/section-9-approval-checklist.md` header reads "Pending Review" with Decision "PENDING — Awaiting Agent Movement Spec #2 approval," but SPEC_INDEX.md, README.md, PROGRESS.md, and file-manifest.md all record APPROVED Feb 19, 2026. Either the §9 file was never updated post-approval or the trackers approved prematurely. Needs lead developer adjudication.
+- **Tracking-doc divergence on approval counts** — *flagged April 26, 2026.* PROGRESS.md summary line says "Approved: 3" while its own table shows 4 approved (#1, #3, #4, #7). README.md v1.4 (Apr 21) predates Perception #7 sign-off and shows IN REVIEW. file-manifest.md still shows Perception #7 as IN REVIEW BLOCKED on 4 critical items. SPEC_INDEX.md is the only source consistent with Perception §9 v1.7's APPROVED stamp.
+- **`spec-error-log.md` is incomplete** — *since at least April 22, 2026.* File contains only stub entries for ERR-009/010/011 with placeholder text. ERR-001/002/003/004/006/007/008 are cited as resolved across specs but have no entries. The "single source of truth for cross-spec errors" needs to be rebuilt from the spec audit reports that originally produced each ERR.
+- **Superseded files from old naming convention** — Tracked in `file-manifest.md` Pending Removal section; manifest itself flagged as pre-migration legacy and last-content-updated Feb 26 despite Apr 22 header. Reconcile during migration completion.
+- **Dangling references in this file** — `.claudeignore` (line 22) and `MIGRATION_GUIDE.md` (lines 208, 220) are referenced but do not exist in the repo. Either create or remove the references.
