@@ -199,7 +199,7 @@ Identical strategy to Ball Physics Spec #1 Section 4.7, adapted for Agent Moveme
 
 2. **Gradual Replacement** â€” Replace `Vector3`/`Vector2` with custom `AgentVector3`/`AgentVector2` types that use the math wrapper. Replace direct `Mathf` calls with `AgentMovementMath` calls. Test determinism after each file conversion. Agent Movement has more math operations than Ball Physics (4 subsystems vs. 1), so this migration is estimated at 2â€“3Ã— the effort.
 
-3. **Fixed64 Backend** â€” Implement `Fixed64Math` backend per Spec #8. Switch backend via compile flag. Retest all 68 unit tests, 10 integration tests, and 8 validation benchmarks. Verify replay determinism across platforms.
+3. **Fixed64 Backend** â€” Implement `Fixed64Math` backend per Spec #9. Switch backend via compile flag. Retest all 68 unit tests, 10 integration tests, and 8 validation benchmarks. Verify replay determinism across platforms.
 
 4. **Validation** â€” Compare float vs. Fixed64 agent trajectories over 100 simulated matches. Accept if positional divergence is < 1cm per agent per match. Benchmark performance difference â€” accept if < 15% overhead (slightly higher tolerance than Ball Physics' 10% due to larger computation volume).
 

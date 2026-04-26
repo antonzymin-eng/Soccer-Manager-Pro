@@ -16,8 +16,8 @@ if a conflict exists, **this section takes precedence**.
 Section 5 (v1.2), Section 6 (v1.0)
 
 **Changelog:**
-- v1.1 (March 05, 2026): C-03 audit fix — replaced all instances of “Decision Tree Spec #7”
-  with “Decision Tree Spec #8” (5 occurrences: §7.1.4, §7.2.4, §7.6 dependency map x2,
+- v1.1 (March 05, 2026): C-03 audit fix — replaced all instances of "Decision Tree Spec #7"
+  with "Decision Tree Spec #8" (5 occurrences: §7.1.4, §7.2.4, §7.6 dependency map x2,
   §7.2.4 body text). Perception System is Spec #7; Decision Tree is Spec #8 per PROGRESS.md.
 
 ---
@@ -208,7 +208,7 @@ Proposed modifiers (empirical; subject to gameplay validation):
 | FOOT      | Ã— 1.00   | Baseline; most controlled surface |
 | THIGH     | Ã— 0.85   | Less contact surface, more skill required |
 | CHEST     | Ã— 0.80   | Ball bounces; harder to control direction |
-| HEAD      | Routed to Heading Mechanics (#9); not evaluated here |
+| HEAD      | Routed to Heading Mechanics (#10); not evaluated here |
 
 **Stage 0 compatibility:** With `BodyPart` always `FOOT`, modifier is always Ã— 1.00.
 All existing tests pass unchanged.
@@ -283,7 +283,7 @@ This is primarily an Agent Movement responsibility. First Touch Mechanics:
    through to Agent Movement as a hint, not a command.
 
 **Dependency:** Agent Movement Spec #2 Â§6.1.2 (dribbling modifier activation), Decision
-Tree Spec #7 (dribbling intent classification).
+Tree Spec #8 (dribbling intent classification).
 
 ---
 
@@ -621,8 +621,8 @@ scope fundamentally changes.
 | Form as "mood" per match | Form is a rolling metric, not a single-match mood toggle | FormSystem owns form logic |
 | Stamina-driven touch degradation | Stamina is a Sprint/Endurance concern, not First Touch | Agent Movement Spec #2 |
 | Possession by proximity without contact | No physical justification; violates physics model | N/A â€” permanently excluded |
-| Heading mechanics via this system | Ball above 0.5m is Heading Mechanics' domain | Heading Mechanics Spec #9 |
-| Goalkeeper catches via this system | Catching/parrying is a distinct action model | Goalkeeper Mechanics Spec #10 |
+| Heading mechanics via this system | Ball above 0.5m is Heading Mechanics' domain | Heading Mechanics Spec #10 |
+| Goalkeeper catches via this system | Catching/parrying is a distinct action model | Goalkeeper Mechanics Spec #11 |
 
 ---
 

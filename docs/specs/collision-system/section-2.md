@@ -80,7 +80,7 @@ or adjacent spatial hash cells using circle-circle intersection in the XY plane.
 **Rationale:** Player-to-player contact is the most frequent physically contested event in a
 football match. Accurate detection is prerequisite to physically plausible response (FR-04)
 and valid foul data (FR-06). XY-plane-only detection is a deliberate Stage 0 simplification;
-aerial duels are deferred to Heading Mechanics (Spec #9).
+aerial duels are deferred to Heading Mechanics (Spec #10).
 
 **Acceptance Criteria:**
 - Collision condition: `distance_2D(p1, p2) < r1 + r2` (circle-circle overlap in XY plane only)
@@ -395,7 +395,7 @@ Standing reach (arms extended): ~ 2.20m
 Stage 0 conservative fixed value: 2.00m (all agents treated equally)
 
 Any ball centre â‰¤ 2.0m: reachable without jumping â†’ Stage 0 collision applies
-Any ball centre > 2.0m: requires aerial challenge â†’ Heading Mechanics (Spec #9)
+Any ball centre > 2.0m: requires aerial challenge â†’ Heading Mechanics (Spec #10)
 Refinement to per-agent height attribute: Stage 1
 ```
 
@@ -410,7 +410,7 @@ Responsibility handoff (collision system is detection-only):
 |------|-------|--------------|
 | Aerial Duel | 1 | Jump mechanics (Agent Movement Stage 1) |
 | Slide Tackle | 1 | Animation-driven capsule hitboxes |
-| Goalkeeper Dive | 1 | Goalkeeper Mechanics (Spec #10) |
+| Goalkeeper Dive | 1 | Goalkeeper Mechanics (Spec #11) |
 | Multi-Body Pile-Up | 2+ | Constraint solver |
 
 ---

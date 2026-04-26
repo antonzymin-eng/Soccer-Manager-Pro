@@ -632,7 +632,7 @@ Goalkeepers use the same system for foot control but have special handling for c
 ```csharp
 /// <summary>
 /// Goalkeeper first touch with feet uses normal system.
-/// Catching/parrying is handled by Goalkeeper Mechanics (#10).
+/// Catching/parrying is handled by Goalkeeper Mechanics (#11).
 /// </summary>
 // No special handling needed here - goalkeeper's Technique attribute
 // applies normally. Catching is a separate action type.

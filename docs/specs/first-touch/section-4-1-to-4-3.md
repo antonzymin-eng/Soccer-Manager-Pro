@@ -436,7 +436,7 @@ public struct FirstTouchContext
     /// Informational flag; does not alter First Touch calculation in Stage 0.
     /// Included to satisfy Critical Issue #1 (Outline §Critical Issues):
     /// goalkeeper foot control uses this system normally; catching/diving is
-    /// out of scope (Goalkeeper Mechanics Spec #10).
+    /// out of scope (Goalkeeper Mechanics Spec #11).
     ///
     /// Stage 1+: May be used to apply goalkeeper-specific attribute overrides.
     /// Source: AgentBallCollisionData.IsGoalkeeper (Collision System §4.2.6)

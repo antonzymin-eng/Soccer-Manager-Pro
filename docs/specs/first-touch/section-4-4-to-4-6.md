@@ -382,7 +382,7 @@ public static class FirstTouchConstants
 
     /// <summary>
     /// Maximum ball height (m) for First Touch evaluation eligibility.
-    /// Ball centre above this height is routed to Heading Mechanics (Spec #9).
+    /// Ball centre above this height is routed to Heading Mechanics (Spec #10).
     /// Ball centre at or below this height is processed by First Touch.
     ///
     /// Value: 0.50m ≈ approximate chest height for a crouching player.
@@ -392,7 +392,7 @@ public static class FirstTouchConstants
     /// Ball centre at 0.50m means ball surface is at 0.39m (0.50 - 0.11 RADIUS).
     ///
     /// Source: Outline Critical Issue #2 resolution; §3.4.3 height guard.
-    /// Cross-reference: Heading Mechanics Spec #9 must use the same constant.
+    /// Cross-reference: Heading Mechanics Spec #10 must use the same constant.
     /// </summary>
     public const float GROUND_CONTROL_HEIGHT = 0.50f; // m (ball centre)
 

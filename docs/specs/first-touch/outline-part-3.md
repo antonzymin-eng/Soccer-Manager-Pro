@@ -245,7 +245,7 @@ Expected distribution of touch radii in a typical match based on:
 
 ### Issue #1: Goalkeeper First Touch Scope
 
-**Question:** Does goalkeeper foot control use this system, or is ALL goalkeeper ball interaction handled by Goalkeeper Mechanics (#10)?
+**Question:** Does goalkeeper foot control use this system, or is ALL goalkeeper ball interaction handled by Goalkeeper Mechanics (#11)?
 
 **Recommendation:** Goalkeeper foot control (e.g., receiving back pass) uses First Touch system normally. Catching, punching, and diving are Goalkeeper Mechanics scope. The `IsGoalkeeper` flag in collision data is informational but doesn't change First Touch calculations for foot contact.
 

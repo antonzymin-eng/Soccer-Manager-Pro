@@ -62,8 +62,8 @@ Control_Quality = Agent_Technique / (Ball_Velocity Ã— Agent_Inertia)
 | Contact detection | Collision System (#3) | Collision detects contact; First Touch evaluates quality |
 | Pass execution (kicking the ball) | Pass Mechanics (#5) | Pass Mechanics initiates ball movement; First Touch receives it |
 | Dribbling locomotion penalties | Agent Movement (#2) Â§6.1.2 | First Touch activates dribbling state; Agent Movement applies penalties |
-| Aerial first touch (heading) | Heading Mechanics (#9) | Ball above 0.5m handled by Heading Mechanics |
-| Goalkeeper catching/parrying | Goalkeeper Mechanics (#10) | Catching is distinct from "first touch" control |
+| Aerial first touch (heading) | Heading Mechanics (#10) | Ball above 0.5m handled by Heading Mechanics |
+| Goalkeeper catching/parrying | Goalkeeper Mechanics (#11) | Catching is distinct from "first touch" control |
 
 #### 1.2.2 Stage 1+ Deferrals
 

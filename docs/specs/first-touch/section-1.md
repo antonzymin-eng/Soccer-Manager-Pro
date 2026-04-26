@@ -144,8 +144,8 @@ The following components are **in scope** for Stage 0 implementation:
 | Contact detection | Collision System (#3) | Collision detects contact and provides `AgentBallCollisionData`; First Touch evaluates quality | Collision System owns geometric intersection |
 | Pass execution (kicking) | Pass Mechanics (#5) | Pass Mechanics initiates ball motion; First Touch receives and controls | Pass Mechanics owns ball delivery |
 | Dribbling locomotion penalties | Agent Movement (#2) Â§6.1.2 | First Touch activates dribbling state; Agent Movement applies speed/turn penalties | Agent Movement owns all movement modifiers |
-| Aerial first touch (heading) | Heading Mechanics (#9) | Ball above `GROUND_CONTROL_HEIGHT` (0.5m) routed to Heading Mechanics | Heading Mechanics owns aerial ball interaction |
-| Goalkeeper catching/parrying | Goalkeeper Mechanics (#10) | Catching is distinct action with different physics model | Goalkeeper Mechanics owns all GK-specific actions |
+| Aerial first touch (heading) | Heading Mechanics (#10) | Ball above `GROUND_CONTROL_HEIGHT` (0.5m) routed to Heading Mechanics | Heading Mechanics owns aerial ball interaction |
+| Goalkeeper catching/parrying | Goalkeeper Mechanics (#11) | Catching is distinct action with different physics model | Goalkeeper Mechanics owns all GK-specific actions |
 | Foul adjudication | Referee System (#11) | First Touch provides contact data; Referee decides legality | Referee System owns rule enforcement |
 
 ### 1.3.2 Stage 1+ Deferrals

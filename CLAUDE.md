@@ -19,7 +19,6 @@
 ```
 TacticalDirector/
 ├── CLAUDE.md                       ← You are here. Read first. Always.
-├── .claudeignore                   ← Excludes docs/planning/ from Claude Code indexing
 ├── docs/
 │   ├── planning/                   ← Master volumes, dev plan, best practices
 │   ├── specs/
@@ -42,8 +41,6 @@ TacticalDirector/
 - `SPEC_INDEX.md` is the canonical source of truth for spec numbers, folder names, and approval status.
 - `PROGRESS.md` is the canonical source of truth for schedule and milestone tracking.
 - Never create files in `src/` during the specification phase.
-
-**Claude Code indexing:** `docs/planning/` contains ~85K of master volume text that adds noise when working on individual specs. A `.claudeignore` file excludes this directory from automatic indexing.
 
 **Deferred: `src/CLAUDE.md`** — Do NOT create until coding begins (after all 20 specs are approved). At that point it should cover: C# file naming conventions, constant catalogue file locations, Unity project structure, and build/test commands.
 
@@ -179,7 +176,7 @@ pass-mechanics/
 - C# with Unity 2022 LTS conventions.
 - Struct-based, zero-allocation architecture in the game loop.
 - All constants in designated constant catalogue files — no magic numbers.
-- Stage 0 uses `float`; Fixed64 migration is a Stage 5+ concern (Spec #9 will define the library).
+- **Fixed64 from Stage 0.** All deterministic game-loop arithmetic uses Fixed64 (Spec #9 defines the library). `float` is permitted only in non-deterministic code paths (rendering, debug visualization). This matches `master-development-plan.md` §6 (Fixed64.cs in Core) and §8 risk mitigation. Existing approved physics specs were drafted against `float`; their formulas must be re-verified against the Fixed64 backend during implementation (test parity is part of each spec's §5 plan).
 - Deterministic replay is a hard requirement — no `System.Random`, no `DateTime.Now` in game logic.
 - SplitMix64 for deterministic RNG. In Python tooling: omit `UL` suffix from C# constants; mask all intermediate multiplications with `& 0xFFFFFFFFFFFFFFFF`.
 
@@ -205,7 +202,6 @@ pass-mechanics/
 | `Spec_Error_Log` | `docs/tracking/spec-error-log.md` | Cross-spec architectural errors and remediation status |
 | `FIX_MANIFEST` | `docs/tracking/fix-manifest-pass-mechanics.md` | Per-audit fix tracking (Pass Mechanics #5) |
 | `FILE_MANIFEST` | `docs/tracking/file-manifest.md` | Authoritative file inventory (update after every file change) |
-| `MIGRATION_GUIDE` | repo root (temporary) | Old-to-new filename mapping for git migration. Delete after migration. |
 
 ---
 
@@ -221,4 +217,3 @@ pass-mechanics/
 - **Tracking-doc divergence on approval counts** — *flagged April 26, 2026.* PROGRESS.md summary line says "Approved: 3" while its own table shows 4 approved (#1, #3, #4, #7). README.md v1.4 (Apr 21) predates Perception #7 sign-off and shows IN REVIEW. file-manifest.md still shows Perception #7 as IN REVIEW BLOCKED on 4 critical items. SPEC_INDEX.md is the only source consistent with Perception §9 v1.7's APPROVED stamp.
 - **`spec-error-log.md` is incomplete** — *since at least April 22, 2026.* File contains only stub entries for ERR-009/010/011 with placeholder text. ERR-001/002/003/004/006/007/008 are cited as resolved across specs but have no entries. The "single source of truth for cross-spec errors" needs to be rebuilt from the spec audit reports that originally produced each ERR.
 - **Superseded files from old naming convention** — Tracked in `file-manifest.md` Pending Removal section; manifest itself flagged as pre-migration legacy and last-content-updated Feb 26 despite Apr 22 header. Reconcile during migration completion.
-- **Dangling references in this file** — `.claudeignore` (line 22) and `MIGRATION_GUIDE.md` (lines 208, 220) are referenced but do not exist in the repo. Either create or remove the references.

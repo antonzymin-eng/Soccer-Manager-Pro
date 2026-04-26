@@ -134,9 +134,9 @@ Stage 1 adds aerial collision, height-based body part detection, and goalkeeper-
 | `JumpPhase` | enum | ASCENDING, APEX, DESCENDING |
 | `JumpStartTime` | float | When jump began (for timing) |
 
-**Integration with Heading Mechanics (Spec #9):**
+**Integration with Heading Mechanics (Spec #10):**
 
-Heading Mechanics (Spec #9, Stage 0) defines aerial duel *outcomes* (who wins the header). Collision System detects the collision and provides contact data. The boundary is:
+Heading Mechanics (Spec #10, Stage 0) defines aerial duel *outcomes* (who wins the header). Collision System detects the collision and provides contact data. The boundary is:
 - **Collision System:** Detects two airborne agents within contact radius, computes collision manifold
 - **Heading Mechanics:** Determines header winner based on timing, positioning, Heading attribute; controls ball deflection
 
@@ -221,9 +221,9 @@ Ball deflection
 
 3. **Protected goalkeeper rule:** Collision response differs when goalkeeper is in "protected" state (holding ball, on ground recovering).
 
-**Integration with Goalkeeper Mechanics (Spec #10):**
+**Integration with Goalkeeper Mechanics (Spec #11):**
 
-Goalkeeper Mechanics (Spec #10, Stage 0) defines goalkeeper *behavior* (when to dive, when to catch). Collision System handles the *physics* of those actions. The boundary is:
+Goalkeeper Mechanics (Spec #11, Stage 0) defines goalkeeper *behavior* (when to dive, when to catch). Collision System handles the *physics* of those actions. The boundary is:
 - **Goalkeeper Mechanics:** Decides action (dive left, punch, catch attempt); provides pose/state
 - **Collision System:** Detects collision using appropriate geometry; applies response with goalkeeper-specific rules
 
@@ -551,7 +551,7 @@ The following features will **never** be implemented in the Collision System. Th
 | Agent locomotion | Agent Movement owns all movement before/after collision | Agent Movement Spec #2 |
 | Foul adjudication | Referee System makes foul decisions using collision data | Referee System (Stage 1+) |
 | Possession transfer | First Touch Mechanics decides when ball changes possession | First Touch Spec #11 |
-| Tactical intent | AI brain decides what agents are trying to do | Decision Tree Spec #7 |
+| Tactical intent | AI brain decides what agents are trying to do | Decision Tree Spec #8 |
 | Soft-body deformation | Complexity outweighs benefit (see 7.4.1) | N/A |
 | Ragdoll physics | Falls use state machine, not physics simulation | Agent Movement Spec #2 |
 | Clothing/hair collision | Outside project scope â€” visual-only, no gameplay impact | N/A |
@@ -726,7 +726,7 @@ Section 7.1.2 specifies placeholder height thresholds (FOOT < 0.30m, etc.). Thes
 
 Section 7.1.3 mentions goalkeeper "protected" state but does not define when protection applies.
 
-**Recommendation:** Goalkeeper Mechanics (Spec #10) must define protected state rules before Collision System can enforce them. Tentative rules:
+**Recommendation:** Goalkeeper Mechanics (Spec #11) must define protected state rules before Collision System can enforce them. Tentative rules:
 - Protected while catching ball (cannot be challenged)
 - Protected while on ground recovering (limited time, ~2s)
 - Not protected while diving (can be challenged)

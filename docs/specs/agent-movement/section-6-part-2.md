@@ -715,7 +715,7 @@ The following extensions require architectural changes beyond parameter/field ad
 | 6.3.1 Form | Master Vol 2 FormSystem | Modifier source |
 | 6.3.2 Psychology | Master Vol 2 H-Gate System | Modifier source |
 | 6.3.3 Injury | Injury System (Spec TBD) | Bidirectional data |
-| 6.4.1 Fixed64 | Fixed64 Math Library (Spec #8) | Type definitions |
+| 6.4.1 Fixed64 | Fixed64 Math Library (Spec #9) | Type definitions |
 | 6.4.2 LOD | Ball Physics (Spec #1) | Ball position for distance calc |
 
 ---

@@ -183,7 +183,7 @@ sub-systems together.
 /// Stage 0 calculation. Goalkeeper foot control (e.g. receiving a back pass)
 /// uses identical First Touch calculations to any outfield agent.
 /// Goalkeeper-specific behaviour (catching, parrying, diving) is owned by
-/// Goalkeeper Mechanics Spec #10 and does not reach this system.
+/// Goalkeeper Mechanics Spec #11 and does not reach this system.
 /// </summary>
 public FirstTouchResult EvaluateFirstTouch(FirstTouchContext ctx)
 {

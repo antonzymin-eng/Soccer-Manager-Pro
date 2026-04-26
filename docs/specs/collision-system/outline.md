@@ -722,7 +722,7 @@ Follow Ball Physics Approval Checklist format exactly.
 2. **Ball possession handoff** â€” When agent-ball collision occurs, who decides if possession transfers? Ball Physics? First Touch Mechanics? Collision System?
    - **Resolution:** Collision System detects contact and calls `Ball.OnCollision()`. Ball Physics handles deflection. First Touch Mechanics (Spec #11) handles possession transfer decision. Document this in Section 3.3.5.
 
-3. **Goalkeeper collision** â€” Outline mentions "AGENT_GOALKEEPER" collision type but defers to Stage 1. However, Goalkeeper Mechanics (Spec #10) is Stage 0.
+3. **Goalkeeper collision** â€” Outline mentions "AGENT_GOALKEEPER" collision type but defers to Stage 1. However, Goalkeeper Mechanics (Spec #11) is Stage 0.
    - **Resolution:** Stage 0 collision treats goalkeeper as normal agent with special flag. Goalkeeper-specific collision (diving, punching ball) deferred to Spec #10 to handle.
 
 4. **Determinism requirement** â€” Master Vol 1 Â§1.3 requires deterministic simulation. Collision System uses `random()` for fall/stumble probability. This breaks determinism unless seeded.

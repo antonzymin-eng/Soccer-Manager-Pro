@@ -223,7 +223,7 @@ This matches Ball Physics Spec #1's policy of custom physics with minimal Unity 
 
 #### 4.2.4 Optional Dependencies
 
-**Fixed64 Math Library (Spec #8):**
+**Fixed64 Math Library (Spec #9):**
 - Stage 0: Use standard `float` (32-bit IEEE 754). Acceptable for single-player prototype where frame-perfect determinism is not required.
 - Stage 5+: Replace with Fixed64 for multiplayer determinism. Migration path defined in Section 4.7.
 
