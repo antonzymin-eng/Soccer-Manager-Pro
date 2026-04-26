@@ -1,5 +1,9 @@
 # Spec Error Log — ERR-012 Addendum
 
+> **⚠️ HISTORICAL REFERENCE ONLY:** The ERR-012 content from this addendum has been fully merged
+> into `docs/tracking/spec-error-log.md` (canonical source of truth). This file is retained for
+> historical reference only. Do not update this file — update `spec-error-log.md` instead.
+
 **Purpose:** New error entry identified during First Touch Specification #4 comprehensive audit.
 Append this entry to `Spec_Error_Log_v1_4.md` as ERR-012 and update the Error Index table.
 
