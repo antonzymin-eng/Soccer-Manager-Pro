@@ -33,7 +33,7 @@
 
 8. **Aligned stage/year terminology (Issue #8):** All stage references now use "Stage N (Year Xâ€“Y)" format matching Master Development Plan exactly.
 
-9. **Added goalkeeper exclusion to 6.4 table (Issue #9):** Permanently Excluded Features table now includes "Goalkeeper-specific movement" with cross-reference to Spec #10.
+9. **Added goalkeeper exclusion to 6.4 table (Issue #9):** Permanently Excluded Features table now includes "Goalkeeper-specific movement" with cross-reference to Spec #11.
 
 10. **Flagged LOD distribution estimate (Issue #10):** Agent distribution (6/8/8) now marked as âš ï¸ PLACEHOLDER with note that actual distribution depends on match ball position analysis.
 

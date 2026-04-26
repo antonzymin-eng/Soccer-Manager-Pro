@@ -213,7 +213,7 @@ Both specs operate at 60Hz within the same physics loop. Key architectural paral
 - Per-agent budget: <0.05ms (50 microseconds)
 - Target: 0.7ms average for all 20 agents (measured via Unity Profiler)
 - Budget: <6% of 16.7ms frame time
-- Note: Goalkeeper movement (2 agents) budgeted separately in Spec #10
+- Note: Goalkeeper movement (2 agents) budgeted separately in Spec #11
 
 **PR-2: Memory Usage**
 - `AgentMovementState` struct SHALL be â‰¤256 bytes per agent

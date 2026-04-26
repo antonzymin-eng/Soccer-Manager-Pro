@@ -220,7 +220,7 @@ divergent outcomes across sessions, breaking replay and multiplayer consistency.
 - `BeginFrame(ulong matchSeed, int frameNumber)` called once per frame before `UpdateCollisions()`
 - Zero calls to `System.Random`, `UnityEngine.Random`, `Guid.NewGuid()`, or `DateTime.Now`
 - Identical (matchSeed, frameNumber, entity inputs) always produces identical `CollisionEvent` output
-- Stage 5+: replace minimal xorshift128+ with Fixed64 Math Library RNG (Spec #8) when available
+- Stage 5+: replace minimal xorshift128+ with Fixed64 Math Library RNG (Spec #9) when available
 
 **Failure consequence:** Replays diverge; multiplayer synchronisation is impossible.
 
@@ -346,7 +346,7 @@ Inherited from Ball Physics Spec #1 Â§3.1.1 (reproduced for reference):
 Origin (0, 0, 0): Corner flag at home team's left defensive corner.
 
 **Stage 0 simplification:** All collision tests operate in XY plane only. Z is used solely for
-the agent-ball height filter (FR-03). Full 3D collision for aerial duels deferred to Spec #9.
+the agent-ball height filter (FR-03). Full 3D collision for aerial duels deferred to Spec #10.
 
 ---
 
@@ -593,7 +593,7 @@ public void BeginFrame(ulong matchSeed, int frameNumber)
 
 /// <summary>
 /// Minimal xorshift128+ deterministic RNG for Stage 0.
-/// Replace with Fixed64 Math Library implementation at Stage 5+ (Spec #8).
+/// Replace with Fixed64 Math Library implementation at Stage 5+ (Spec #9).
 /// Reference: Vigna, S. "An experimental exploration of Marsaglia's xorshift generators." (2016)
 /// </summary>
 public struct DeterministicRNG

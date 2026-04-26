@@ -24,7 +24,7 @@
 
 5. **MovementCommand Extensibility:**
    - Current struct is minimum viable interface for Stage 0
-   - Tactical AI systems (Spec #7, #12) may extend with additional fields
+   - Tactical AI systems (Spec #8, #12) may extend with additional fields
    - Factory methods cover common patterns but are not exhaustive
    - Extensions must maintain backward compatibility with existing consumers
 

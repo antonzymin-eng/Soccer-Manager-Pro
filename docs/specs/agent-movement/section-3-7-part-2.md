@@ -55,7 +55,7 @@
 - Speed reduction monotonically non-decreasing (never getting faster as match progresses)  
 **Duration:** 90 minutes simulated time (54,000 ticks)  
 **Tolerance:** Speed reduction percentages Ã‚Â±5%  
-**Note:** This test uses a scripted activity profile, not AI-driven movement. Full AI-driven validation deferred to post-Spec #7 integration (see Section 3.7.4.3).
+**Note:** This test uses a scripted activity profile, not AI-driven movement. Full AI-driven validation deferred to post-Spec #8 integration (see Section 3.7.4.3).
 
 ---
 
@@ -234,22 +234,22 @@ These benchmarks can be validated during Stage 0 implementation without AI integ
 
 ### 3.7.4.3 Deferred Validation Benchmarks
 
-These benchmarks require AI-driven movement (Spec #7: Decision Tree, Spec #12: Positioning AI) and CANNOT be validated during Agent Movement Spec #2 implementation. They are NOT part of the Stage 0 approval criteria for this spec.
+These benchmarks require AI-driven movement (Spec #8: Decision Tree, Spec #12: Positioning AI) and CANNOT be validated during Agent Movement Spec #2 implementation. They are NOT part of the Stage 0 approval criteria for this spec.
 
 **VB-3: Total Distance Per Match** *(DEFERRED)*
 - **Metric:** Summed agent distance over 90 minutes
 - **Expected:** 9.5Ã¢â‚¬â€œ12.5 km per agent (position-dependent)
 - **Source:** [BRADLEY-2009]
-- **Prerequisite:** AI-driven movement patterns (Spec #7+)
+- **Prerequisite:** AI-driven movement patterns (Spec #8+)
 - **Preliminary proxy:** IT-MOV-003 with scripted movement provides partial coverage
-- **Target validation date:** After Spec #7 implementation
+- **Target validation date:** After Spec #8 implementation
 
 **VB-4: Sprint Distance Per Match** *(DEFERRED)*
 - **Metric:** Cumulative distance covered at >7.0 m/s
 - **Expected:** 500Ã¢â‚¬â€œ1200m per agent per match
 - **Source:** [BRADLEY-2009]
-- **Prerequisite:** AI-driven sprint decisions (Spec #7+)
-- **Target validation date:** After Spec #7 implementation
+- **Prerequisite:** AI-driven sprint decisions (Spec #8+)
+- **Target validation date:** After Spec #8 implementation
 
 ### 3.7.4.4 Visual Validation Protocol
 
@@ -484,8 +484,8 @@ Budget percentages are advisory estimates, not hard limits. Actual distribution 
 
 ### Deferred (NOT required for this spec's approval)
 
-- [ ] VB-3: Total match distance (requires AI integration, Spec #7+)
-- [ ] VB-4: Sprint distance per match (requires AI integration, Spec #7+)
+- [ ] VB-3: Total match distance (requires AI integration, Spec #8+)
+- [ ] VB-4: Sprint distance per match (requires AI integration, Spec #8+)
 
 ---
 

@@ -92,7 +92,7 @@ This section covers:
 This section does NOT cover:
 - Collision response physics (Spec #3)
 - Ball interaction edge cases (Spec #11)
-- Goalkeeper-specific edge cases (Spec #10)
+- Goalkeeper-specific edge cases (Spec #11)
 
 ---
 

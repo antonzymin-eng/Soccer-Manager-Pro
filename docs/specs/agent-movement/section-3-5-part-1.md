@@ -130,7 +130,7 @@ The `Agent` class is the primary container for all movement-related state. Each 
 /// Determinism: Uses float by default. Fixed64 support via compiler flag (Stage 5+).
 ///
 /// Design note: This class owns ONLY movement state. Ball interaction state is owned
-/// by FirstTouchController (Spec #11). Tactical state is owned by TacticalBrain (Spec #7).
+/// by FirstTouchController (Spec #11). Tactical state is owned by TacticalBrain (Spec #8).
 /// This separation prevents God Object antipattern.
 ///
 /// Stage 1 refactoring consideration: This class-based design prioritizes clarity for
@@ -160,7 +160,7 @@ public class Agent
     /// <summary>
     /// Is this agent a goalkeeper? 
     /// If true, this Agent instance should NOT be used â€” goalkeepers use
-    /// GoalkeeperController (Spec #10) which has its own movement model.
+    /// GoalkeeperController (Spec #11) which has its own movement model.
     /// This flag prevents accidental use of outfield movement for keepers.
     /// </summary>
     public readonly bool IsGoalkeeper;

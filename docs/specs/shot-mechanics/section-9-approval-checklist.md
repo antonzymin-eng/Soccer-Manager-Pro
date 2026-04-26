@@ -277,7 +277,7 @@ and must also be removed. All other files listed above are the current authorita
 | Collision System (Spec #3) | Upstream | GetAndClearTackleFlag() tackle interrupt polling during WINDUP | ✅ Approved |
 | Pass Mechanics (Spec #5) | Pattern reference | Weak foot formula structure; state machine pattern; error model multiplicative chain; event publishing struct-only principle | ✅ Approved |
 | Decision Tree (Spec #8) | Upstream (caller) | ShotRequest struct — Decision Tree instantiates; Shot Mechanics defines | ☐ Not yet written |
-| Goalkeeper Mechanics (Spec #11) | Downstream | ShotExecutedEvent consumption — no IGkResponseSystem until Spec #10 written | ☐ Not yet written |
+| Goalkeeper Mechanics (Spec #11) | Downstream | ShotExecutedEvent consumption — no IGkResponseSystem until Spec #11 written | ☐ Not yet written |
 | Event System (Spec #17) | Downstream | ShotExecutedEvent, ShotCancelledEvent publication (Stage 0: EventBusStub) | ☐ Not yet written |
 | Fixed64 Math Library (Spec #9) | Future | Stage 5+ migration; float used in Stage 0; §6.9 documents migration risks per formula | ☐ Not yet written |
 
@@ -391,7 +391,7 @@ These items were identified during review and accepted as non-blocking for Stage
 5. ✅ All 10 DOIs in §8.1 verified — complete (§8 v1.1–v1.2; cross-spec corrections issued)
 6. Revise Collision System Spec #3 Section 3 (ERR-011) before implementing pressure query
 7. Tag: `git tag "spec-shot-mechanics-v1.0-approved"`
-8. Begin Specification #7: Decision Tree (next in sequence — Priority 2)
+8. Begin Specification #8: Decision Tree (next in sequence — Priority 2)
 
 ---
 

@@ -592,7 +592,7 @@ public struct ContactForceData
     ///   - No attempt (pure physical challenge) = stricter
     /// 
     /// Stage 0: Always false (no tactical intent system yet).
-    /// Stage 1: Integration with AI intent signals from Tactical Brain (Spec #7).
+    /// Stage 1: Integration with AI intent signals from Tactical Brain (Spec #8).
     /// </summary>
     public bool InstigatorPlayingBall;
 }

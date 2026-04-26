@@ -401,7 +401,7 @@ agent.PerformanceContext.PsychologyModifier = hgate.ToMovementModifier();
 
 **Modifier range:** 0.85â€“1.05 (narrower than Form)
 - Psychology effects on raw movement are more subtle than form effects
-- Primary psychology impact is on decision-making (Spec #7), not locomotion
+- Primary psychology impact is on decision-making (Spec #8), not locomotion
 - Movement modifier captures "playing scared" or "playing with swagger"
 
 **Update frequency:** Psychology can change during a match:
@@ -652,7 +652,7 @@ The following features are **permanently excluded** from the Agent Movement spec
 | Fatigue visualization (sweat, breathing) | Rendering concern, not physics | Animation System (Stage 1) handles visual cues |
 | Age-related physical decline | Career mode feature (Stage 4+), not match physics | Attribute system can decay over seasons |
 | Real-time motion capture input | Out of scope for simulation game | Pre-recorded animation data |
-| Goalkeeper-specific movement | Different movement model (diving, shuffling) | Spec #10: Goalkeeper Mechanics |
+| Goalkeeper-specific movement | Different movement model (diving, shuffling) | Spec #11: Goalkeeper Mechanics |
 
 **Rationale for exclusions:**
 

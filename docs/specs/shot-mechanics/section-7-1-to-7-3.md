@@ -205,7 +205,7 @@ carrying distinct velocity, launch angle, and spin consequences.
 **Why Stage 1:** The three-zone model is sufficient for Stage 0's physics fidelity
 requirements. Full contact geometry requires validated biomechanical data and
 considerably more formula complexity. It is also dependent on a richer Decision Tree
-(Spec #7) that can populate the additional contact zone values.
+(Spec #8) that can populate the additional contact zone values.
 
 **Existing architectural hooks:**
 

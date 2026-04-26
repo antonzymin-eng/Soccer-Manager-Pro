@@ -18,7 +18,7 @@
 
 1. **Concrete expected values for all acceleration/speed tests** (Issue #1): UT-ACC-001 now includes exact k derivation and computed velocity at t=0.5s. All tests referencing derived values now show the full calculation chain rather than deferring to the implementer. Mirrors Ball Physics Section 5 pattern of explicit expected numbers.
 
-2. **Deferred validation clearly separated from approval-blocking criteria** (Issue #2): VB-3 and VB-4 (match distance, sprint distance) moved to new "Deferred Validation" subsection (3.7.4.3) with explicit note that they cannot be validated until AI integration (Spec #7+). Acceptance criteria (3.7.8) now only references immediately testable benchmarks.
+2. **Deferred validation clearly separated from approval-blocking criteria** (Issue #2): VB-3 and VB-4 (match distance, sprint distance) moved to new "Deferred Validation" subsection (3.7.4.3) with explicit note that they cannot be validated until AI integration (Spec #8+). Acceptance criteria (3.7.8) now only references immediately testable benchmarks.
 
 3. **Tolerance derivation appendix added** (Issue #3): New subsection 3.7.9 provides formal derivation and rationale for every tolerance value used in this section, mirroring Ball Physics Appendix D pattern.
 

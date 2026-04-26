@@ -11,7 +11,7 @@ This document defines *what* will be written, not yet *how* it will be implement
 **Specification Number:** 6 of 20 (Stage 0)
 **Estimated Effort:** ~32 hours
 **Dependencies:** Ball Physics (#1), Agent Movement (#2), Collision System (#3), Pass Mechanics (#5)
-**Downstream:** Goalkeeper Mechanics (#11) — ShotExecutedEvent struct only; no GK interface until Spec #10 written
+**Downstream:** Goalkeeper Mechanics (#11) — ShotExecutedEvent struct only; no GK interface until Spec #11 written
 
 **Change Summary (v1.2 → v1.3):**
 Comprehensive audit corrections: Specification renumbering cascade applied per PROGRESS.md

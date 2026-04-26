@@ -38,7 +38,7 @@ The Collision System is the **spatial reasoning layer** for the simulation. It a
 **Owned by other specifications:**
 - Ball physics after collision response â†’ Spec #1: Ball Physics
 - Agent locomotion before/after collision â†’ Spec #2: Agent Movement
-- Goalkeeper diving collision â†’ Spec #10: Goalkeeper Mechanics
+- Goalkeeper diving collision â†’ Spec #11: Goalkeeper Mechanics
 - Ball possession mechanics â†’ Spec #11: First Touch Mechanics
 - Referee foul decision logic â†’ Spec TBD (Stage 1+)
 - Pitch boundary enforcement â†’ Already in Specs #1 and #2
@@ -716,14 +716,14 @@ Follow Ball Physics Approval Checklist format exactly.
 
 ### Potential Issues Identified
 
-1. **Aerial collision scope ambiguity** â€” Outline defers to Stage 1, but heading mechanics (Spec #9) is Stage 0. Need to clarify: does Spec #9 own aerial collision detection, or does it delegate to Collision System?
-   - **Resolution:** Add clarification in Section 1.2 that Spec #9 (Heading Mechanics) defines aerial duel logic; Collision System only handles ground-based collision in Stage 0.
+1. **Aerial collision scope ambiguity** â€” Outline defers to Stage 1, but heading mechanics (Spec #10) is Stage 0. Need to clarify: does Spec #10 own aerial collision detection, or does it delegate to Collision System?
+   - **Resolution:** Add clarification in Section 1.2 that Spec #10 (Heading Mechanics) defines aerial duel logic; Collision System only handles ground-based collision in Stage 0.
 
 2. **Ball possession handoff** â€” When agent-ball collision occurs, who decides if possession transfers? Ball Physics? First Touch Mechanics? Collision System?
    - **Resolution:** Collision System detects contact and calls `Ball.OnCollision()`. Ball Physics handles deflection. First Touch Mechanics (Spec #11) handles possession transfer decision. Document this in Section 3.3.5.
 
 3. **Goalkeeper collision** â€” Outline mentions "AGENT_GOALKEEPER" collision type but defers to Stage 1. However, Goalkeeper Mechanics (Spec #11) is Stage 0.
-   - **Resolution:** Stage 0 collision treats goalkeeper as normal agent with special flag. Goalkeeper-specific collision (diving, punching ball) deferred to Spec #10 to handle.
+   - **Resolution:** Stage 0 collision treats goalkeeper as normal agent with special flag. Goalkeeper-specific collision (diving, punching ball) deferred to Spec #11 to handle.
 
 4. **Determinism requirement** â€” Master Vol 1 Â§1.3 requires deterministic simulation. Collision System uses `random()` for fall/stumble probability. This breaks determinism unless seeded.
    - **Resolution:** Use deterministic RNG from Match seed, not `System.Random`. Document in Section 3.3.2.
@@ -766,7 +766,7 @@ Compared to Agent Movement (~80 hours), this is significantly smaller because:
 ## NEXT STEPS
 
 1. **Review this outline** â€” Approve or request changes
-2. **Resolve aerial collision scope** â€” Confirm with Spec #9 (Heading Mechanics) ownership
+2. **Resolve aerial collision scope** â€” Confirm with Spec #10 (Heading Mechanics) ownership
 3. **Begin Section 1 & 2** â€” Foundation sections
 4. **Draft Section 3** â€” Core technical content
 5. **Complete remaining sections** â€” Iterative drafting with critique cycles

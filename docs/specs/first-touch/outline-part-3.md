@@ -107,10 +107,10 @@
 **[PASS-MECHANICS-SPEC]** Pass Mechanics Specification (#5) â€” Forward reference
 - First Touch receives passes initiated by Pass Mechanics
 
-**[HEADING-SPEC]** Heading Mechanics Specification (#9) â€” Forward reference
+**[HEADING-SPEC]** Heading Mechanics Specification (#10) â€” Forward reference
 - Aerial ball reception (>0.5m) handled by Heading Mechanics, not First Touch
 
-**[GOALKEEPER-SPEC]** Goalkeeper Mechanics Specification (#10) â€” Forward reference
+**[GOALKEEPER-SPEC]** Goalkeeper Mechanics Specification (#11) â€” Forward reference
 - Goalkeeper catching/parrying separate from First Touch foot control
 
 ### 8.3 Empirically Tuned Values

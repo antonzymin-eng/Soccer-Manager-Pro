@@ -360,7 +360,7 @@ section are consistent with the specifications they reference.
 | XC-4.3-03 | Stumble signal mechanism specified: Agent Movement subscribes to `ShotExecutedEvent.StumbleTriggered` (Mechanism C) | Agent Movement #2 §4 (pending), Shot Mechanics §4.3.3 | §4.3.3 | ✅ RESOLVED v1.3 — Mechanism C documented; cross-spec action item added to Agent Movement Spec #2 |
 | XC-4.4-01 | `PRESSURE_RADIUS_MAX` (3.0m) vs spatial hash cell size (1.0m); `Query()` radius bug workaround applied | Collision System #3, §3.1.4 | §4.4.1 | ✅ RESOLVED WITH WORKAROUND v1.3 — caller-side distance filter applied; Collision System §3.1 amendment tracked as ERR-011 |
 | XC-4.4-02 | Collision System tackle interrupt API uses `GetAndClearTackleFlag(agentId)` — single atomic call, aligned with Pass Mechanics §4.4.2 | Collision System #3 | §4.4.2 | ✅ RESOLVED v1.3 — two-call pattern replaced with `GetAndClearTackleFlag()` |
-| XC-4.5-01 | `ShotExecutedEvent` struct fields sufficient for Goalkeeper Mechanics save difficulty model | Goalkeeper Mechanics #11 | §4.5.2 | ☐ Deferred to Spec #10 |
+| XC-4.5-01 | `ShotExecutedEvent` struct fields sufficient for Goalkeeper Mechanics save difficulty model | Goalkeeper Mechanics #11 | §4.5.2 | ☐ Deferred to Spec #11 |
 | XC-4.7-01 | `EventBusStub.Publish<T>()` signature identical in Shot Mechanics and Pass Mechanics | Pass Mechanics #5, §4.6.3 | §4.7.3 | ✅ CONFIRMED v1.3 — signatures identical |
 
 **All non-deferred checks are now RESOLVED or CONFIRMED.** XC-4.5-01 is pre-blocking for

@@ -240,7 +240,7 @@ Goalkeeper Mechanics (Spec #11, Stage 0) defines goalkeeper *behavior* (when to 
 - Only 2 goalkeepers per match: negligible impact
 - Estimated: +0.005ms when goalkeeper is diving
 
-**Risk assessment:** Medium. Capsule geometry is more complex than circle; diving state must be synchronized between Goalkeeper Mechanics and Collision System. **Mitigation:** Define clear state machine interface in Spec #10 before implementing here.
+**Risk assessment:** Medium. Capsule geometry is more complex than circle; diving state must be synchronized between Goalkeeper Mechanics and Collision System. **Mitigation:** Define clear state machine interface in Spec #11 before implementing here.
 
 ---
 
@@ -661,8 +661,8 @@ When implementing extensions, the following invariants must be maintained:
 | P1 optimizations | Section 6.4.3 | SIMD, batch insertion |
 | Ball Physics Fixed64 | Spec #1, Section 7.4.1 | Parallel migration |
 | Agent Movement jump | Spec #2, Section 6 (TBD) | Jump state interface |
-| Goalkeeper Mechanics | Spec #10 | Goalkeeper state machine |
-| Heading Mechanics | Spec #9 | Aerial duel outcomes |
+| Goalkeeper Mechanics | Spec #11 | Goalkeeper state machine |
+| Heading Mechanics | Spec #10 | Aerial duel outcomes |
 | First Touch Mechanics | Spec #11 | Possession determination |
 | Master Development Plan | v1.0 | Stage timeline |
 | SI Solver | Catto (GDC 2014) | Constraint solver algorithm |
@@ -709,7 +709,7 @@ Stage 2 constraint solver requires tuning iteration count:
 
 Both Collision System and Ball Physics require Fixed64 migration. Who develops the shared `Fixed64Math` library?
 
-**Recommendation:** Fixed64Math is owned by neither spec individually. Create `Spec #8: Fixed64 Math Library` before Stage 5 implementation. Both physics specs depend on Spec #8.
+**Recommendation:** Fixed64Math is owned by neither spec individually. Create `Spec #9: Fixed64 Math Library` before Stage 5 implementation. Both physics specs depend on Spec #9.
 
 **Cross-reference:** Ball Physics Spec #1, Section 7.4.1 raises same concern.
 
