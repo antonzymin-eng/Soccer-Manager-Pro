@@ -3,7 +3,8 @@
 **Purpose:** Formal approval gate verification for Spec #2 per Stage_0_Specification_Outline_v2_0 and Development_Best_Practices  
 **Created:** February 15, 2026, 11:00 AM PST  
 **Rebuilt:** March 4, 2026, 12:00 AM PST  
-**Version:** 2.0  
+**Version:** 2.1  
+**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026  
 **Specification:** Agent Movement (Sections 1–7 + Appendices A–D)  
 **Reviewer:** Claude (AI) + Anton (Lead Developer)
 
@@ -249,11 +250,11 @@
 
 **Checklist result:** All required content/quality items PASS. All consistency audit checks PASS (verified programmatically).
 
-**Blocking items remaining:**
-- [ ] Lead developer review and sign-off
-- [ ] Files committed to repository
+**Decision:** ✅ APPROVED — Agent Movement Specification #2 is approved for implementation.
 
-**Decision:** READY FOR LEAD DEVELOPER REVIEW
+**Notes on accepted limitations:**
+- Known Limitation #5 ("Fixed64 migration exceeds budget — 5.5–7.7ms for 22 agents, Risk HIGH") was a Stage 0 concern under the prior Fixed64-from-Stage-0 architecture. Per April 26, 2026 decision, Fixed64 migration is deferred to Stage 5; the budget re-verification is now a Stage 5 deliverable, not a Stage 0 sign-off blocker.
+- Cross-spec dependency table lists Decision Tree (#8) as "In Progress"; #8 was approved April 27, 2026. Non-blocking — interface assumptions still hold.
 
 ---
 
@@ -261,10 +262,10 @@
 
 **Lead Developer Approval:**
 
-- [ ] I have reviewed the specification and this checklist
-- [ ] I have verified the internal consistency audit passes
-- [ ] I approve Agent Movement Specification #2 for implementation
-- [ ] Date: _______________
+- [x] I have reviewed the specification and this checklist
+- [x] I have verified the internal consistency audit passes
+- [x] I approve Agent Movement Specification #2 for implementation
+- [x] Date: April 27, 2026
 
 **Post-Approval Actions:**
 1. Commit all files to repo under `/Docs/Specifications/Stage_0/Agent_Movement/`
@@ -281,6 +282,7 @@
 |---------|------|--------|-------|
 | 1.0 | February 15, 2026 | Created | Initial approval checklist — contained verification errors |
 | 2.0 | March 4, 2026 | Complete rebuild | All values verified programmatically against source files |
+| 2.1 | April 27, 2026 | Lead developer sign-off | Status → APPROVED. Known Limitation #5 (Fixed64 budget HIGH risk) reclassified as Stage 5 deliverable per April 26 decision (Fixed64 migration moved to Stage 5+). Decision Tree dependency status (table line 243) noted as IN PROGRESS at audit time; non-blocking. Renumber sweep applied April 26 (commits 8d7f729 + 75e9af5): ~24 body-text substitutions; spec is otherwise unchanged from approval state. |
 
 ---
 

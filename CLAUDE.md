@@ -1,7 +1,7 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** April 26, 2026
+> **Last Updated:** April 27, 2026
 > **Purpose:** Authoritative rules for any AI agent (Claude Code, Claude chat, etc.) working on this project. Read this file completely before every task.
 
 ---
@@ -209,11 +209,10 @@ pass-mechanics/
 
 > **Keep this section current.** When resolving an issue, remove or update its entry here in the same commit. Each entry includes a "since" date so staleness is visible.
 
-- **Pass Mechanics (#5)** — *since March 25, 2026.* Approval SUSPENDED after audit (19 findings, all fixed per `fix-manifest-pass-mechanics.md`). Awaiting lead developer re-review and re-sign-off.
-- **Pending lead developer sign-off** — *Agent Movement (#2) since Feb 15; Shot Mechanics (#6) since Feb 24; Decision Tree (#8) since Apr 20, 2026.*
-- **Perception System (#7)** — ✅ APPROVED April 22, 2026. (Tracked here only until external sources are reconciled — README.md v1.4 still shows IN REVIEW; remove this line once README is updated.)
+- **Pass Mechanics (#5)** — *since March 25, 2026.* Approval SUSPENDED after audit (19 findings, all fixed per `fix-manifest-pass-mechanics.md`). Awaiting lead developer re-review and re-sign-off. Only Priority 1–2 spec still outstanding.
+- **Decision Tree (#8) draft-level quality gate** — *April 27, 2026.* Approved at draft-level rigor (lighter than Pass Mechanics #5 / Shot Mechanics #6 programmatic audit). Comprehensive audit is a candidate before implementation begins. Tracked here as a follow-up item, not a blocker.
 - **Renumbering cascade resolved** — *April 26, 2026:* Three-pass sweep applied across all specs. ~115 body-text substitutions in three commits covering Decision Tree #7→#8, Heading #9→#10, Goalkeeper #10→#11, Fixed64 #8→#9. Audit reports and changelog rows intentionally left unchanged (they document history). Verification grep on April 26, 2026 returns zero remaining stale body-text references. Re-run grep before any future tagging.
-- **Approval tags created locally, not yet pushed** — *April 26, 2026:* Annotated tags `spec-ball-physics-v1.0-approved`, `spec-collision-system-v1.0-approved`, `spec-first-touch-v1.0-approved`, `spec-perception-system-v1.0-approved` created on `claude/review-project-docs-1ndtt` HEAD. Remote returns HTTP 403 on tag push (branch-protection). Push after merge to main with privileged credentials.
+- **Approval tags created locally, not yet pushed** — *April 26–27, 2026:* Annotated tags `spec-ball-physics-v1.0-approved`, `spec-agent-movement-v1.0-approved`, `spec-collision-system-v1.0-approved`, `spec-first-touch-v1.0-approved`, `spec-shot-mechanics-v1.0-approved`, `spec-perception-system-v1.0-approved`, `spec-decision-tree-v1.0-approved` created on `claude/review-project-docs-1ndtt`. Remote returns HTTP 403 on tag push (branch-protection). Push after merge to main with privileged credentials.
 - **Fixed64 stage scope decision** — *April 26, 2026:* After review, Fixed64 migration is **Stage 5+** (not Stage 0). Stage 0 uses `float` and achieves single-machine determinism via state snapshots. Cross-platform bit-exact parity is no longer a Stage 0 quality gate — it moves to Stage 5 when multiplayer is added. CLAUDE.md "When Writing Code" rules and `master-development-plan.md` (§2.3, §8 risk mitigation, §9 metrics, Stage 0 success criteria, Stage 6 description) all updated to match. Existing approved physics specs were drafted under this Stage 5+ assumption and remain consistent — no spec content changes needed.
 - **Collision System (#3) status disagreement** — *flagged April 26, 2026.* `collision-system/section-9-approval-checklist.md` header reads "Pending Review" with Decision "PENDING — Awaiting Agent Movement Spec #2 approval," but SPEC_INDEX.md, README.md, PROGRESS.md, and file-manifest.md all record APPROVED Feb 19, 2026. Either the §9 file was never updated post-approval or the trackers approved prematurely. Needs lead developer adjudication.
 - **Tracking-doc divergence on approval counts** — *flagged April 26, 2026.* PROGRESS.md summary line says "Approved: 3" while its own table shows 4 approved (#1, #3, #4, #7). README.md v1.4 (Apr 21) predates Perception #7 sign-off and shows IN REVIEW. file-manifest.md still shows Perception #7 as IN REVIEW BLOCKED on 4 critical items. SPEC_INDEX.md is the only source consistent with Perception §9 v1.7's APPROVED stamp.

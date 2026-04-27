@@ -1,7 +1,7 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** April 26, 2026
+**Last Updated:** April 27, 2026
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
@@ -117,7 +117,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Started:** February 2, 2026
 **Deliverables:** 20 comprehensive specification documents
 
-**Summary (per §9 files, April 26, 2026):** 4 approved (#1, #4, #7, plus #3 per registry — see PROGRESS.md status note), 1 suspended (#5), 3 in review (#2, #6, #8), 12 not started.
+**Summary (April 27, 2026):** 7 approved (#1, #2, #3, #4, #6, #7, #8), 1 suspended (#5), 0 in review, 12 not started.
 **Total specification output:** ~4.33 MB across 106 files (counts predate folder migration; see file-manifest.md)
 **Comprehensive audits completed:** 6 of 7 finished specs
 
@@ -125,18 +125,18 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 
 ### Specification Writing Schedule
 
-**Priority 1 — Physics Foundation (Weeks 1-4):**
+**Priority 1 — Physics Foundation:**
 1. ✅ Ball Physics — **APPROVED** Feb 8, 2026 (~50 pages, 44 tests, audited)
-2. 🔍 Agent Movement — **IN REVIEW** (~130 pages, 83 tests, audited)
-3. ✅ Collision System — **APPROVED** Feb 19, 2026 (~50 pages, ~70 tests, audited)
+2. ✅ Agent Movement — **APPROVED** Apr 27, 2026 (~130 pages, 83 tests, audited)
+3. ✅ Collision System — **APPROVED** Feb 19, 2026 (~50 pages, ~70 tests, audited; §9 back-filled Apr 26)
 4. ✅ First Touch Mechanics — **APPROVED** Feb 22, 2026 (~70 pages, 72 tests, audited)
 5. ⏸ Pass Mechanics — **SUSPENDED** (audit March 25, 2026 — 19 findings fixed; awaiting re-sign-off)
 
 **Priority 2 — Core Gameplay:**
-6. 🔍 Shot Mechanics — **IN REVIEW** (~70 pages, 104 tests, audited; ERR-010 must be fixed before sign-off)
+6. ✅ Shot Mechanics — **APPROVED** Apr 27, 2026 (~70 pages, 104 tests, audited)
 7. ✅ Perception System — **APPROVED** Apr 22, 2026 (~80 pages, 92 tests; §9 v1.7 signed off)
-8. 🔍 Decision Tree — **IN REVIEW** (Sections 1–9 + appendices drafted; ~55+ pages; awaiting sign-off)
-9. ⏳ Fixed64 Math Library — Not started
+8. ✅ Decision Tree — **APPROVED** Apr 27, 2026 (~55+ pages, draft-level quality gate; comprehensive audit candidate before implementation)
+9. ⏳ Fixed64 Math Library — Not started (spec writing only; implementation deferred to Stage 5)
 
 **Priority 3 — Advanced Physics (Weeks 9-12):**
 10. ⏳ Heading Mechanics
@@ -267,23 +267,26 @@ TacticalDirector/
 
 ### Outstanding (as of April 26, 2026)
 
-**Sign-offs pending:**
-1. ⏳ Lead developer sign-off: Agent Movement (#2)
-2. ⏳ Lead developer sign-off: Shot Mechanics (#6)
-3. ⏳ Lead developer sign-off: Decision Tree (#8)
-4. ⏳ Lead developer re-sign-off: Pass Mechanics (#5)
-5. ⏳ Adjudicate Collision System (#3) status disagreement (§9 says PENDING; trackers say APPROVED)
+**Sign-offs:**
+1. ✅ Agent Movement (#2) — APPROVED Apr 27, 2026
+2. ✅ Shot Mechanics (#6) — APPROVED Apr 27, 2026
+3. ✅ Decision Tree (#8) — APPROVED Apr 27, 2026 (draft-level)
+4. ⏳ Pass Mechanics (#5) re-sign-off — still SUSPENDED since March 25
+5. ✅ Collision System (#3) status reconciled — §9 v2.1 back-filled Apr 26
 
 **Documentation debt:**
 6. ⏳ Rebuild `docs/tracking/spec-error-log.md` (currently stub-only; ERR-001 through ERR-008 missing)
-7. ⏳ Fix ~74 stale spec-number references in body text across approved/in-review specs
+7. ✅ Renumber sweep complete (Apr 26, ~115 body-text substitutions; zero remaining)
 8. ⏳ Reconcile `file-manifest.md` to post-migration folder names (currently flagged as pre-migration legacy)
-9. ⏳ Resolve dangling references in CLAUDE.md (`.claudeignore`, `MIGRATION_GUIDE.md`)
+9. ✅ Dangling references removed from CLAUDE.md (`.claudeignore`, `MIGRATION_GUIDE.md`)
+10. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20
 
-**After Priority 2 sign-offs:**
-10. ⏳ Decide: tag approved specs now (with renumbering debt) vs. fix-then-tag
-11. ⏳ Begin Fixed64 Math Library Specification (#9) — also resolve scope question (Stage 0 vs. Stage 5+)
-12. ⏳ Begin Heading Mechanics Specification (#10)
+**Next up:**
+11. ⏳ Push the seven approved-spec tags (blocked by branch-protection 403; needs privileged credentials)
+12. ⏳ Specify the Stage 0 snapshot-based determinism mechanism (currently asserted in CLAUDE.md but not in any spec — candidate location: Spec #16 Deterministic Simulation, or new section in #17 Event System)
+13. ⏳ Begin Fixed64 Math Library Specification (#9) — interface-only; implementation deferred to Stage 5
+14. ⏳ Begin Heading Mechanics Specification (#10)
+15. ⏳ Pass Mechanics (#5) comprehensive audit re-review and re-sign-off
 
 ---
 
@@ -327,14 +330,16 @@ These remain available in `/Archive/` for historical reference but should NOT be
 1. ✅ Master Plan understood
 2. ✅ Best Practices documented
 3. ✅ Specification progress tracker created
-4. ✅ Ball Physics Specification approved (Feb 8)
-5. ✅ Collision System Specification recorded as approved (Feb 19) — §9 file disagreement flagged
-6. ✅ First Touch Mechanics Specification approved (Feb 22)
-7. ⏸ Pass Mechanics Specification suspended (audit March 25 — re-sign-off pending)
-8. ✅ Perception System Specification approved (Apr 22)
-9. 🔍 Agent Movement, Shot Mechanics, Decision Tree awaiting sign-off
-10. ⏳ Begin Fixed64 Math Library and Heading Mechanics after Priority 2 sign-offs
-11. No coding until all 20 specs approved
+4. ✅ Ball Physics #1 approved (Feb 8)
+5. ✅ Agent Movement #2 approved (Apr 27)
+6. ✅ Collision System #3 approved (Feb 19; §9 back-filled Apr 26)
+7. ✅ First Touch Mechanics #4 approved (Feb 22)
+8. ⏸ Pass Mechanics #5 suspended (audit March 25 — re-sign-off pending)
+9. ✅ Shot Mechanics #6 approved (Apr 27)
+10. ✅ Perception System #7 approved (Apr 22)
+11. ✅ Decision Tree #8 approved (Apr 27, draft-level quality gate)
+12. ⏳ Begin Fixed64 Math Library spec (#9, interface only) and Heading Mechanics (#10) after Pass Mechanics re-sign-off
+13. No coding until all 20 specs approved
 
 ---
 
@@ -370,14 +375,14 @@ git push --tags
 ```
 
 **Tag Status:**
-- `spec-ball-physics-v1.0-approved` — created locally Apr 26, 2026 on `claude/review-project-docs-1ndtt`; awaits push to remote (branch-protection blocks tag push from feature branches)
-- `spec-agent-movement-v1.0-approved` — awaiting sign-off
+- `spec-ball-physics-v1.0-approved` — created locally Apr 26, 2026; awaits push
+- `spec-agent-movement-v1.0-approved` — created locally Apr 27, 2026; awaits push
 - `spec-collision-system-v1.0-approved` — created locally Apr 26, 2026 (back-fill of Feb 19 sign-off); awaits push
 - `spec-first-touch-v1.0-approved` — created locally Apr 26, 2026; awaits push
 - `spec-pass-mechanics-v1.0-approved` — awaiting re-sign-off (suspended)
-- `spec-shot-mechanics-v1.0-approved` — awaiting sign-off
+- `spec-shot-mechanics-v1.0-approved` — created locally Apr 27, 2026; awaits push
 - `spec-perception-system-v1.0-approved` — created locally Apr 26, 2026; awaits push
-- `spec-decision-tree-v1.0-approved` — awaiting sign-off
+- `spec-decision-tree-v1.0-approved` — created locally Apr 27, 2026 (draft-level approval); awaits push
 
 > **Tag push blocked**: `git push origin --tags` returns HTTP 403 from the current remote endpoint. After this branch merges to main with privileged credentials, run `git push origin spec-ball-physics-v1.0-approved spec-collision-system-v1.0-approved spec-first-touch-v1.0-approved spec-perception-system-v1.0-approved` from a context that allows tag creation. The tags are annotated and point at the merge commit (or its branch-tip predecessor if fast-forward).
 
@@ -452,6 +457,14 @@ git push --tags
 - Next Immediate Steps rewritten around outstanding sign-offs and documentation debt rather than week-12 actions
 - Added explicit reference to ~74 stale spec-number references in body text (measured)
 - Added pointer to spec-error-log.md rebuild and CLAUDE.md dangling references
+
+**v1.6 — April 27, 2026**
+- Lead developer sign-off pass: Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8) all APPROVED.
+- Stage 0 spec count: 7 APPROVED, 1 SUSPENDED, 0 IN REVIEW, 12 NOT STARTED.
+- Decision Tree (#8) approved at draft-level quality gate; comprehensive audit candidate before implementation.
+- Renumber sweep marked complete (Apr 26).
+- Fixed64 migration deferred to Stage 5+; Stage 0 uses float + state snapshots.
+- Pass Mechanics (#5) is the only Priority 1–2 spec still outstanding (re-sign-off after March 25 audit).
 
 ---
 

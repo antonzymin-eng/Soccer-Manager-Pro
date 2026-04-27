@@ -80,8 +80,8 @@
 
 ## SPECIFICATION #2: AGENT MOVEMENT
 
-**Overall status:** 🔍 In Review — awaiting lead developer sign-off  
-**Approval checklist:** Drafted, pending verification  
+**Overall status:** ✅ Approved — April 27, 2026  
+**Approval checklist:** Section 9 v2.1 — signed off April 27, 2026  
 **Total test scenarios:** 83 (49 functional unit + 19 edge case unit + 10 functional integration + 5 edge case integration)  
 **Estimated pages:** ~130
 
@@ -194,8 +194,8 @@
 
 ## SPECIFICATION #6: SHOT MECHANICS
 
-**Overall status:** 🔍 In Review — awaiting lead developer sign-off  
-**Approval checklist:** Section 9 v1.2 — drafted, pre-approval blockers resolved; void file removal outstanding  
+**Overall status:** ✅ Approved — April 27, 2026  
+**Approval checklist:** Section 9 v1.4 — signed off April 27, 2026 (pre-migration void-file blockers reclassified as moot under folder layout)  
 **Total test scenarios:** 104 (86 unit + 12 integration + 6 validation = 6.9× minimum) — zero blocked  
 **Estimated pages:** ~70  
 **Design note:** ShotType enum eliminated; parameter-based physics approach (consistent with project standard)
@@ -251,7 +251,8 @@
 
 ## SPECIFICATION #8: DECISION TREE
 
-**Overall status:** 📝 In Progress — Sections 1–9 and appendices drafted, pending lead developer review/sign-off  
+**Overall status:** ✅ Approved — April 27, 2026 (draft-level quality gate)  
+**Approval checklist:** Section 9 v1.2 — signed off April 27, 2026; comprehensive audit candidate before implementation  
 **Estimated pages:** ~55+
 
 | File | Version | Description | Status |

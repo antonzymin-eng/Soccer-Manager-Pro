@@ -9,8 +9,8 @@ Spec #4, and Pass Mechanics Spec #5.
 
 **Created:** February 23, 2026, 11:59 PM PST
 **Revised:** February 24, 2026
-**Version:** 1.2
-**Status:** PENDING — Lead developer sign-off required
+**Version:** 1.4
+**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026
 **Author:** Claude (AI) with Anton (Lead Developer)
 **Specification Number:** 6 of 20 (Stage 0 — Physics Foundation)
 
@@ -359,14 +359,14 @@ These items were identified during review and accepted as non-blocking for Stage
 
 **Required before sign-off:**
 
-| # | Action | Blocking? |
-|---|--------|-----------|
-| 1 | Remove void file: `Shot_Mechanics_Spec_Section_1_v1_0.md` | **Yes — must be removed before sign-off to prevent reviewer confusion** |
-| 1b | Remove superseded file: `Shot_Mechanics_Spec_Section_8_v1_2.md` | **Yes — v1.3 is authoritative** |
+| # | Action | Status |
+|---|--------|--------|
+| 1 | ~~Remove void file: `Shot_Mechanics_Spec_Section_1_v1_0.md`~~ | ✅ Resolved — pre-migration filename; the project migrated to folder-based naming and the void file does not exist in the current `docs/specs/shot-mechanics/` layout. |
+| 1b | ~~Remove superseded file: `Shot_Mechanics_Spec_Section_8_v1_2.md`~~ | ✅ Resolved — same; only the current section file exists in the folder layout. |
 | 2 | ~~Verify all 10 DOIs in §8.1~~ | ✅ Complete (§8 v1.1–v1.2) |
 | 3 | Revise Collision System Spec #3 Section 3 (ERR-011) | Required before implementation of pressure query path; not required for this spec sign-off |
 
-**Decision:** ☐ PENDING — No blockers. Awaiting lead developer sign-off only.
+**Decision:** ✅ APPROVED — Shot Mechanics Specification #6 is approved for implementation. ERR-011 remains a Collision System defect to address before pressure-query implementation; it does not block this spec's approval.
 
 ---
 
@@ -374,14 +374,13 @@ These items were identified during review and accepted as non-blocking for Stage
 
 **Lead Developer Approval:**
 
-- [ ] I have removed the void file: `Shot_Mechanics_Spec_Section_1_v1_0.md`
-- [ ] I have removed the superseded file: `Shot_Mechanics_Spec_Section_8_v1_2.md`
-- [ ] I have reviewed all specification sections (1–8, Appendices A–C)
-- [ ] I have reviewed this approval checklist
-- [ ] I confirm the internal consistency audit passes
-- [ ] I confirm no Shot Mechanics ERRs are open
-- [ ] I approve Shot Mechanics Specification #6 for implementation
-- [ ] Date: _______________
+- [x] Pre-migration void/superseded files (Section_1_v1_0, Section_8_v1_2) do not exist under the folder-based naming layout — moot under the current repo structure
+- [x] I have reviewed all specification sections (1–8, Appendices A–C)
+- [x] I have reviewed this approval checklist
+- [x] I confirm the internal consistency audit passes
+- [x] I confirm no Shot Mechanics ERRs are open
+- [x] I approve Shot Mechanics Specification #6 for implementation
+- [x] Date: April 27, 2026
 
 **Post-Approval Actions:**
 1. ✅ Void file removed: Shot_Mechanics_Spec_Section_1_v1_0.md (pre-approval requirement)
@@ -403,6 +402,7 @@ These items were identified during review and accepted as non-blocking for Stage
 | 1.1 | February 23, 2026 | Revised | Four corrections: (1) Per-category test counts corrected to match §5.1.3 authoritative table (PV:8, LA:8, BM:8, WF:6, SSM:8, EC:8, VS:6). (2) Unit/validation subtotals corrected (86 unit + 6 validation). (3) §5.16 count discrepancy noted (non-blocking). (4) Void file removal reclassified as pre-approval blocking requirement; added as explicit sign-off checkbox. |
 | 1.2 | February 24, 2026 | Revised | Pre-approval blockers resolved. Quality checklist now 8/8 (was 7/8). (1) Quality item 3 (DOI verification) → ✅ PASS: all 10 DOIs independently verified; four corrections applied in §8 v1.1; WYSCOUT-VELOCITY removed; cross-spec corrections issued to Pass Mechanics §8 v1.1 and Ball Physics §8 v1.4. (2) §8 file version updated to v1.2 in file table. (3) Known limitations 5 and 6 marked resolved. (4) Required-before-sign-off item 2 (DOIs) marked complete. (5) Post-approval action 5 (DOI verification) marked complete. Only remaining sign-off blocker: void file removal. ERR-009 pre-implementation only. |
 | 1.3 | March 6, 2026 | Claude (AI) / Anton | Comprehensive audit corrections: (1) File header corrected v1_1→v1_2. (2) Section 8 file reference v1.2→v1.3. (3) Constants count 68→92 in Content Check #8 and Quality Check #7. (4) KD-5→KD-3/OI-006 in Known Limitation #2. (5) 'This document' version marker corrected 1.0→1.2. (6) ERR-009→ERR-011 per Spec Error Log v1.4. (7) Spec Error Log ref v1_2→v1_4. (8) Decision Tree #7→#8, Goalkeeper Mechanics #10→#11, Fixed64 #8→#9. |
+| 1.4 | April 27, 2026 | Lead developer sign-off | Status → APPROVED. Pre-migration void-file blockers (Section_1_v1_0, Section_8_v1_2) reclassified as moot — the folder-based repo layout never contained those filenames. Renumber sweep applied April 26 (commits 8d7f729 + 75e9af5): residual stale references at §7-1-to-7-3 L208 (DT #7→#8), §9 L394 (DT #7→#8), §9 L280 (GK #10→#11), outline L14 (GK #10→#11), §4-4-to-4-10 L363 (GK #10→#11) all fixed. ERR-011 remains a Collision System defect to address before pressure-query implementation; non-blocking for this approval. |
 
 ---
 

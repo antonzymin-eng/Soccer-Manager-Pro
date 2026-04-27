@@ -11,17 +11,22 @@
 ## PROGRESS SUMMARY
 
 **Total Specifications:** 20  
-**Approved:** 4 (per §9 files: #1, #4, #7; per SPEC_INDEX also #3 — see note)  
+**Approved:** 7  
 **Suspended:** 1  
-**In Review:** 3  
+**In Review:** 0  
 **In Progress:** 0  
 **Not Started:** 12
 
-**Specifications approved:** Ball Physics (#1, Feb 8), First Touch (#4, Feb 22), Perception System (#7, Apr 22), Collision System (#3, Feb 19 per registry — see status disagreement below)  
-**Specifications suspended:** Pass Mechanics (#5) — audit March 25, 2026; fixes applied; awaiting re-review  
-**Specifications in review:** Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8)
+**Specifications approved:**
+- Ball Physics (#1, Feb 8, 2026)
+- Agent Movement (#2, Apr 27, 2026)
+- Collision System (#3, Feb 19, 2026 — §9 back-filled Apr 26, 2026)
+- First Touch (#4, Feb 22, 2026)
+- Shot Mechanics (#6, Apr 27, 2026)
+- Perception System (#7, Apr 22, 2026)
+- Decision Tree (#8, Apr 27, 2026 — draft-level quality gate; comprehensive audit candidate before implementation)
 
-> **Status disagreement (flagged April 26, 2026):** `collision-system/section-9-approval-checklist.md` header reads "Pending Review" and its Approval Decision says "PENDING — Awaiting Agent Movement Spec #2 approval (upstream dependency)." SPEC_INDEX.md, README.md, file-manifest.md, and the table below all record APPROVED Feb 19, 2026. The §9 file was either never updated after sign-off, or external trackers approved prematurely. Awaits lead developer adjudication.
+**Specifications suspended:** Pass Mechanics (#5) — audit March 25, 2026; fixes applied; awaiting re-review.
 
 ---
 
@@ -30,7 +35,7 @@
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
 | 1 | Ball Physics | ~50 | ✅ APPROVED | Feb 2 | Feb 8 | All sections written, reviewed, checklist signed off; §3.1 updated to v2.5 (ApplyKick, Option B possession) |
-| 2 | Agent Movement | ~130 | 🔍 IN REVIEW | Feb 9 | — | All sections complete, awaiting lead developer sign-off; §3.5 v1.3 (ERR-007); §8 updated to v1.4 |
+| 2 | Agent Movement | ~130 | ✅ APPROVED | Feb 9 | Apr 27, 2026 | All sections + appendices complete; §9 v2.1 lead-developer signed off Apr 27, 2026; §3.5 v1.4 (ERR-007); §8 v1.4 |
 | 3 | Collision System | ~50 | ✅ APPROVED | Feb 16 | Feb 19 | All sections + appendices v1.1; approval checklist signed off |
 | 4 | First Touch Mechanics | ~70 | ✅ APPROVED | Feb 19 | Feb 22 | All sections + appendices complete; ERR-001, ERR-004 resolved; §8 updated to v1.1 |
 | 5 | Pass Mechanics | ~65 | ⏸ SUSPENDED | Feb 19 | — | All sections + appendices complete; ERR-006, ERR-007, ERR-008 resolved. March 25, 2026 audit found 19 findings (5 critical); all fixes applied; awaiting lead developer re-review and re-sign-off |
@@ -45,9 +50,9 @@
 
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
-| 6 | Shot Mechanics | ~70 | 🔍 IN REVIEW | Feb 23 | Feb 24 | All 9 sections + appendices complete; approval checklist v1.2; awaiting lead developer sign-off. 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. |
+| 6 | Shot Mechanics | ~70 | ✅ APPROVED | Feb 23 | Apr 27, 2026 | All 9 sections + appendices complete; §9 v1.4 lead-developer signed off Apr 27, 2026 (pre-migration void-file blockers reclassified as moot under folder layout). 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. |
 | 7 | Perception System | ~80 | ✅ APPROVED | Feb 24 | Apr 22, 2026 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.7 — ✅ APPROVED April 22, 2026. |
-| 8 | Decision Tree | ~55+ | 🔍 IN REVIEW | Feb 27 | — | Sections 1–9 and appendices drafted; awaiting lead developer review/sign-off. |
+| 8 | Decision Tree | ~55+ | ✅ APPROVED | Feb 27 | Apr 27, 2026 | Sections 1–9 and appendices drafted; §9 v1.2 lead-developer signed off Apr 27, 2026 at draft-level quality gate. Comprehensive audit candidate before implementation. |
 | 9 | Fixed64 Math Library | 25-30 | ⏳ NOT STARTED | — | — | Week 9-10 target (delayed; blocked on Priority 2 sign-offs) |
 
 **Priority 2 Progress:** 25% (0 approved, 3 in review, 1 not started)
@@ -239,13 +244,14 @@
 | Milestone | Target Date | Status | Actual Date |
 |-----------|-------------|--------|-------------|
 | Ball Physics Spec Approved | Feb 8, 2026 | ✅ COMPLETE | Feb 8, 2026 |
-| Agent Movement Spec Approved | Feb 15, 2026 | 🔍 IN REVIEW | — |
+| Agent Movement Spec Approved | Feb 15, 2026 | ✅ COMPLETE | Apr 27, 2026 |
 | Collision System Spec Approved | Feb 22, 2026 | ✅ COMPLETE | Feb 19, 2026 |
 | First Touch Mechanics Spec Approved | Feb 22, 2026 | ✅ COMPLETE | Feb 22, 2026 |
 | Pass Mechanics Spec Approved | Feb 22, 2026 | ⏸ SUSPENDED | — |
 | Priority 1 Complete (5 specs) | Feb 29, 2026 | ⏸ BLOCKED | — |
-| Shot Mechanics Spec Approved | Mar 7, 2026 | 🔍 IN REVIEW | — |
-| Perception System Spec Approved | Mar 7, 2026 | 🔍 IN REVIEW | — |
+| Shot Mechanics Spec Approved | Mar 7, 2026 | ✅ COMPLETE | Apr 27, 2026 |
+| Perception System Spec Approved | Mar 7, 2026 | ✅ COMPLETE | Apr 22, 2026 |
+| Decision Tree Spec Approved | — | ✅ COMPLETE | Apr 27, 2026 |
 | Priority 2 Complete (9 specs) | Mar 31, 2026 | ⚠️ DELAYED | — |
 | Priority 3 Complete (12 specs) | Apr 30, 2026 | ⏳ NOT STARTED | — |
 | Priority 4 Complete (16 specs) | May 31, 2026 | ⏳ NOT STARTED | — |
@@ -317,16 +323,16 @@
 ## NEXT ACTIONS
 
 **Immediate:**
-1. ~~Lead developer sign-off: Perception System (#7) — checklist v1.6 ready~~ ✅ APPROVED April 22, 2026
-2. Lead developer sign-off: Shot Mechanics (#6)
-3. Lead developer sign-off: Agent Movement (#2)
-4. Lead developer re-review and re-sign-off: Pass Mechanics (#5)
-5. Lead developer review and sign-off: Decision Tree (#8)
-6. Systematic renumbering pass for Heading #9→#10, Goalkeeper #10→#11, Fixed64 #8→#9 in Agent Movement, Collision System, and First Touch (see fix-manifest-pass-mechanics.md BROADER RENUMBERING ISSUE)
+1. ~~Lead developer sign-off: Perception System (#7)~~ ✅ APPROVED April 22, 2026
+2. ~~Lead developer sign-off: Shot Mechanics (#6)~~ ✅ APPROVED April 27, 2026
+3. ~~Lead developer sign-off: Agent Movement (#2)~~ ✅ APPROVED April 27, 2026
+4. Lead developer re-review and re-sign-off: Pass Mechanics (#5) — still SUSPENDED
+5. ~~Lead developer review and sign-off: Decision Tree (#8)~~ ✅ APPROVED April 27, 2026 (draft-level)
+6. ~~Systematic renumbering pass~~ ✅ COMPLETE April 26, 2026 (commits 8d7f729 + 75e9af5; ~115 substitutions across three passes)
 
-**After Priority 2 Sign-offs:**
-8. Commit all approved specs to repo
-9. Git tags: `spec-collision-system-v1.0-approved`, `spec-first-touch-v1.0-approved`, `spec-pass-mechanics-v1.0-approved` (after re-sign-off), `spec-shot-mechanics-v1.0-approved`, `spec-perception-system-v1.0-approved`, `spec-decision-tree-v1.0-approved`
+**After Pass Mechanics re-sign-off:**
+7. Commit all approved specs to repo (mostly done; tags created locally)
+8. Push tags once branch-protection allows: `spec-ball-physics`, `spec-agent-movement`, `spec-collision-system`, `spec-first-touch`, `spec-shot-mechanics`, `spec-perception-system`, `spec-decision-tree` (all v1.0-approved). Pass Mechanics tag deferred until re-sign-off.
 10. Remove superseded file versions (see docs/tracking/file-manifest.md)
 11. Begin Fixed64 Math Library Specification (#9)
 12. Begin Heading Mechanics Specification (#10)
@@ -341,8 +347,14 @@
 
 ## CHANGELOG
 
+**April 27, 2026:**
+- Lead developer sign-off pass: Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8) all APPROVED. Stage 0 spec count: 7 APPROVED, 1 SUSPENDED, 0 IN REVIEW, 12 NOT STARTED.
+- Decision Tree (#8) approved at draft-level quality gate; comprehensive audit candidate before implementation.
+
 **April 26, 2026:**
 - Approval summary corrected to 4 approved (#1, #4, #7, plus #3 per registry); previous "3 approved" contradicted the table.
 - Perception System (#7) status updated to ✅ APPROVED Apr 22, 2026 in summary lists.
-- Collision System (#3) status disagreement flagged (§9 file says PENDING; trackers say APPROVED).
+- Collision System (#3) status disagreement flagged (§9 file says PENDING; trackers say APPROVED) — subsequently resolved by §9 back-fill v2.1.
 - Scheduling milestones de-emphasized — passion project, no deadline.
+- Renumber sweep complete (~115 body-text substitutions across three passes; zero remaining stale references).
+- Fixed64 migration deferred to Stage 5+ (Stage 0 uses float + state snapshots for single-machine determinism).

@@ -3,8 +3,8 @@
 **File:** `section-9-approval-checklist.md`  
 **Purpose:** Formal quality gate for Decision Tree Specification #8 before implementation approval.  
 **Created:** April 20, 2026  
-**Version:** 1.1  
-**Status:** 🔍 IN REVIEW — Awaiting Lead Developer sign-off (matches §9.5 Final status; SPEC_INDEX, PROGRESS, CLAUDE.md)  
+**Version:** 1.2  
+**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate accepted)  
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
 
@@ -82,8 +82,10 @@
 
 - **Section completeness gate:** PASS
 - **Quality gate:** PASS (draft-level)
-- **Lead developer sign-off:** ☐ PENDING
-- **Final status:** 🔍 IN REVIEW (pending sign-off)
+- **Lead developer sign-off:** ✅ April 27, 2026
+- **Final status:** ✅ APPROVED
+
+**Note on quality-gate level:** This §9 was drafted at "draft-level" rigor — a lighter audit than the programmatic verification used for #2 Agent Movement v2.0. Approval is granted at this level with the understanding that a comprehensive audit (similar to those completed for Pass Mechanics #5 and Shot Mechanics #6) is a candidate for follow-up before implementation begins.
 
 ---
 
@@ -93,6 +95,7 @@
 |---|---|---|---|
 | 1.0 | April 20, 2026 | Claude (AI) / Anton | Initial approval checklist draft for Decision Tree Specification #8. |
 | 1.1 | April 26, 2026 | Claude (AI) / Anton | Header status reconciled: DRAFT → IN REVIEW to match §9.5 Final status and external trackers (SPEC_INDEX.md, PROGRESS.md, CLAUDE.md). |
+| 1.2 | April 27, 2026 | Lead developer sign-off | Status → APPROVED at draft-level quality gate. Renumber sweep applied April 26 (commits 8d7f729 + 75e9af5): all body-text Decision Tree #7→#8 self-references resolved. A future comprehensive audit (matching the Pass Mechanics / Shot Mechanics rigor) is a candidate before implementation. |
 
 ---
 
