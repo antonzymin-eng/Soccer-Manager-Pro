@@ -203,8 +203,8 @@ Physics Step: 60Hz (every 16.7ms)
 
 **Implementation:**
 - Decouple logic from rendering
-- Deterministic simulation (Fixed64 math for networked future)
-- Replay system (save inputs, reconstruct match exactly)
+- Single-machine deterministic simulation via state snapshots; `float` arithmetic acceptable in Stage 0. (Fixed64 migration deferred to Stage 5 when cross-platform multiplayer becomes a requirement.)
+- Replay system (save inputs + periodic state snapshots; reconstruct match exactly on the same machine)
 
 ---
 
@@ -395,7 +395,7 @@ Physics Step: 60Hz (every 16.7ms)
 3. âœ… Collisions produce sensible outcomes
 4. âœ… AI makes reasonable decisions 90%+ of time
 5. âœ… Performance: 22 agents simulated in <5ms per tick
-6. âœ… Deterministic: Same seed = identical match
+6. âœ… Deterministic (single-machine): Same seed = identical match on the same machine. (Cross-platform parity deferred to Stage 5; achieved via Fixed64.)
 7. âœ… Community reaction: "This looks/feels real"
 
 **If ANY criteria fail â†’ Do not proceed to Stage 1**
@@ -978,7 +978,7 @@ First **paid commercial release**. Full single-season playable game. This become
 - Head-to-head matches online
 - Competitive seasons/leagues
 - Cross-platform play
-- Deterministic netcode (why we built Fixed64 in Stage 0)
+- Deterministic netcode (built on the Stage 5 Fixed64 migration)
 - Leaderboards, rankings
 - Esports potential
 
@@ -995,7 +995,8 @@ First **paid commercial release**. Full single-season playable game. This become
 TacticalDirector/
 â”œâ”€â”€ Core/
 â”‚   â”œâ”€â”€ GameLoop.cs              # 10Hz tactical, 60Hz render
-â”‚   â”œâ”€â”€ Fixed64.cs                # Deterministic math
+â”‚   â”œâ”€â”€ Fixed64.cs                # Deterministic math (added Stage 5)
+â”‚   â”œâ”€â”€ SnapshotManager.cs        # Single-machine determinism (Stage 0)
 â”‚   â”œâ”€â”€ EventBus.cs               # Pub/sub messaging
 â”‚   â””â”€â”€ TimeManager.cs            # Tick management
 â”‚
@@ -1186,9 +1187,9 @@ CREATE TABLE matches (
 
 **Risk:** Determinism breaks (cross-platform differences)  
 **Mitigation:**
-- Fixed64 math from Stage 0
-- Extensive cross-platform testing
-- Automated determinism tests in CI/CD
+- Stage 0–4: single-machine determinism only (state snapshots for replay/save; `float` simulation acceptable since runs are not compared across machines)
+- Stage 5: introduce Fixed64 math (Spec #9) and re-verify approved physics specs against the Fixed64 backend
+- Stage 6 (multiplayer): cross-platform bit-exact parity becomes a hard requirement; Fixed64 + extensive cross-platform testing + automated determinism tests in CI/CD
 
 **Risk:** AI makes poor decisions, breaks immersion  
 **Mitigation:**
@@ -1249,9 +1250,9 @@ CREATE TABLE matches (
 - âœ… <5ms per simulation tick (Unity Profiler)
 - âœ… 60 FPS rendering (no stutters)
 
-**Determinism:**
-- âœ… 1000 matches with same seed = identical outcomes
-- âœ… Cross-platform: Windows, Mac, Linux produce same results
+**Determinism (Stage 0):**
+- âœ… 1000 matches with same seed = identical outcomes **on the same machine** (single-machine replay/save via state snapshots)
+- ⏳ Cross-platform: Windows, Mac, Linux produce same results — **deferred to Stage 5** (requires Fixed64 migration; not a Stage 0 quality gate)
 
 ---
 

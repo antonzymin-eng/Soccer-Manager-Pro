@@ -344,7 +344,7 @@ public struct PlayerAttributes
     /// <summary>Long-range shooting ability. Used by Spec #5.</summary>
     public int LongShots;
 
-    /// <summary>Aerial ability (heading accuracy/power). Used by Spec #9.</summary>
+    /// <summary>Aerial ability (heading accuracy/power). Used by Spec #10.</summary>
     public int Heading;
 
     /// <summary>General technical skill (touch, dribbling, ball manipulation).</summary>

@@ -370,7 +370,7 @@ AGENT_BALL collision event received
          â–¼
   [1] Height Guard
        Ball.Position.y > GROUND_CONTROL_HEIGHT (0.5m)?
-           YES â†’ Route to Heading Mechanics (Spec #9); EXIT
+           YES â†’ Route to Heading Mechanics (Spec #10); EXIT
            NO  â†’ continue
          â”‚
          â–¼
@@ -462,7 +462,7 @@ All spatial values conform to Ball Physics Â§3.1.1 coordinate definitions:
 | Z | Across pitch width | Positive = right side of pitch (from Team A perspective) |
 
 **GROUND_CONTROL_HEIGHT constant:** `0.5m` in Y axis. Ball centre above this value is routed
-to Heading Mechanics (Spec #9). Ball centre at or below 0.5m is eligible for First Touch
+to Heading Mechanics (Spec #10). Ball centre at or below 0.5m is eligible for First Touch
 evaluation. This constant is defined in Section 4 and referenced by the height guard in Â§2.2.3.
 
 ---

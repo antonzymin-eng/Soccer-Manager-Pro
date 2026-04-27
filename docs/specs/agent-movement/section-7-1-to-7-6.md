@@ -299,7 +299,7 @@ Cross-references to Master Volumes and related specifications.
   - Will trigger GROUNDED state via collision response
 - **Relationship:** Agent Movement provides data contract; Collision System consumes it.
 
-**[DECISION-TREE-SPEC]** Decision Tree Specification (Spec #7)
+**[DECISION-TREE-SPEC]** Decision Tree Specification (Spec #8)
 
 - **Version:** Not yet written
 - **Sections referenced (forward):**

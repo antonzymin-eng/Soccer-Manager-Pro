@@ -107,10 +107,10 @@
 **[PASS-MECHANICS-SPEC]** Pass Mechanics Specification (#5) â€” Forward reference
 - First Touch receives passes initiated by Pass Mechanics
 
-**[HEADING-SPEC]** Heading Mechanics Specification (#9) â€” Forward reference
+**[HEADING-SPEC]** Heading Mechanics Specification (#10) â€” Forward reference
 - Aerial ball reception (>0.5m) handled by Heading Mechanics, not First Touch
 
-**[GOALKEEPER-SPEC]** Goalkeeper Mechanics Specification (#10) â€” Forward reference
+**[GOALKEEPER-SPEC]** Goalkeeper Mechanics Specification (#11) â€” Forward reference
 - Goalkeeper catching/parrying separate from First Touch foot control
 
 ### 8.3 Empirically Tuned Values
@@ -245,7 +245,7 @@ Expected distribution of touch radii in a typical match based on:
 
 ### Issue #1: Goalkeeper First Touch Scope
 
-**Question:** Does goalkeeper foot control use this system, or is ALL goalkeeper ball interaction handled by Goalkeeper Mechanics (#10)?
+**Question:** Does goalkeeper foot control use this system, or is ALL goalkeeper ball interaction handled by Goalkeeper Mechanics (#11)?
 
 **Recommendation:** Goalkeeper foot control (e.g., receiving back pass) uses First Touch system normally. Catching, punching, and diving are Goalkeeper Mechanics scope. The `IsGoalkeeper` flag in collision data is informational but doesn't change First Touch calculations for foot contact.
 

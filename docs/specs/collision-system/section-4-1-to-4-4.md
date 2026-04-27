@@ -476,7 +476,7 @@ public struct AgentBallCollisionData
     ///   - Different deflection physics for saves
     /// 
     /// Stage 0: Flag is set but not consumed (goalkeeper treated as normal agent).
-    /// Stage 1: Full goalkeeper collision handling in Goalkeeper Mechanics Spec #10.
+    /// Stage 1: Full goalkeeper collision handling in Goalkeeper Mechanics Spec #11.
     /// </summary>
     public bool IsGoalkeeper;
 }
@@ -592,7 +592,7 @@ public struct ContactForceData
     ///   - No attempt (pure physical challenge) = stricter
     /// 
     /// Stage 0: Always false (no tactical intent system yet).
-    /// Stage 1: Integration with AI intent signals from Tactical Brain (Spec #7).
+    /// Stage 1: Integration with AI intent signals from Tactical Brain (Spec #8).
     /// </summary>
     public bool InstigatorPlayingBall;
 }

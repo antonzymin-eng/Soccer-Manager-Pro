@@ -329,7 +329,7 @@ Stage 4 (Social Systems & Psychology) introduces player personality, morale, med
 1. Create `BallPhysicsMath.cs` abstraction layer
 2. Replace `Vector3` with `Vector3Math` (custom type)
 3. Replace `Mathf` with `BallPhysicsMath`
-4. Implement `Fixed64Math` backend (Spec #8)
+4. Implement `Fixed64Math` backend (Spec #9)
 
 **Performance impact (from Section 6.4.5):**
 

@@ -73,7 +73,7 @@ across a multi-dimensional surface. The discrete approach bounds test coverage t
 finite, manageable set (see §5 for test specifications).
 
 **Architectural note:** Pass Mechanics does not select the pass type. The Decision Tree
-(Spec #7) selects the appropriate type based on tactical context and provides it on the
+(Spec #8) selects the appropriate type based on tactical context and provides it on the
 `PassRequest` struct (KD-2, §1.3). This subsection only defines what each pass type
 *means* physically — not when it should be used.
 

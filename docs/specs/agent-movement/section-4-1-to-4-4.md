@@ -178,7 +178,7 @@ Agent
 | Tactical Heartbeat | 10Hz signal | Trigger for fatigue modifier refresh | Every 6th frame |
 | AI Command Layer | MovementCommand | Target position, desired state, facing mode | Every frame |
 
-Agent Movement has **no runtime dependencies on other Stage 0 specifications**. It receives commands from future AI systems (Spec #7 Tactical Brain) and provides data to downstream consumers, but executes independently. This architectural isolation matches Ball Physics Spec #1, which also operates as a self-contained system.
+Agent Movement has **no runtime dependencies on other Stage 0 specifications**. It receives commands from future AI systems (Spec #8 Tactical Brain) and provides data to downstream consumers, but executes independently. This architectural isolation matches Ball Physics Spec #1, which also operates as a self-contained system.
 
 The 60Hz physics loop and 10Hz tactical heartbeat are infrastructure services provided by the Match Simulator (Spec #17). Agent Movement does not create or manage these timers â€” it responds to them.
 
@@ -192,7 +192,7 @@ The 60Hz physics loop and 10Hz tactical heartbeat are infrastructure services pr
 | Shot Mechanics | Agent velocity, facing direction, balance | For shot power and accuracy | Spec #5 |
 | First Touch | Agent momentum, body orientation | At ball contact for control quality | Spec #11 |
 | Perception System | Facing direction, movement state | For awareness cone calculation | Spec #6 |
-| Tactical Brain | Movement state, speed, position | For decision-making inputs | Spec #7 |
+| Tactical Brain | Movement state, speed, position | For decision-making inputs | Spec #8 |
 
 The `AgentPhysicalProperties` struct (Section 3.5.4) is the primary outbound interface. It is a computed property on the Agent class, regenerated on access â€” not cached across frames. This ensures consumers always read current-frame data without stale cache risk.
 
@@ -215,7 +215,7 @@ using UnityEngine.Profiling;  // Profiler.BeginSample / EndSample
 **Explicitly NOT used:**
 - `UnityEngine.Physics` â€” all physics is custom implementation
 - `UnityEngine.CharacterController` â€” movement is custom velocity integration
-- `UnityEngine.AI.NavMesh` â€” pathfinding is handled by Tactical Brain (Spec #7)
+- `UnityEngine.AI.NavMesh` â€” pathfinding is handled by Tactical Brain (Spec #8)
 - `UnityEngine.Rigidbody` â€” no Unity physics bodies on agents
 - `UnityEngine.Collider` â€” collision detection is custom (Spec #3)
 
@@ -223,7 +223,7 @@ This matches Ball Physics Spec #1's policy of custom physics with minimal Unity 
 
 #### 4.2.4 Optional Dependencies
 
-**Fixed64 Math Library (Spec #8):**
+**Fixed64 Math Library (Spec #9):**
 - Stage 0: Use standard `float` (32-bit IEEE 754). Acceptable for single-player prototype where frame-perfect determinism is not required.
 - Stage 5+: Replace with Fixed64 for multiplayer determinism. Migration path defined in Section 4.7.
 
@@ -529,7 +529,7 @@ The Match Simulator (Spec #17) calls into Agent Movement through a single entry 
 ///   - Iterates all 22 agents in fixed index order (0â€“21)
 ///   - Executes full pipeline (Steps 1â€“12) per agent
 ///   - On 10Hz tick frames: also executes fatigue refresh (Step 13)
-///   - Skips goalkeeper agents (indices 0, 11) â€” they use Spec #10
+///   - Skips goalkeeper agents (indices 0, 11) â€” they use Spec #11
 ///
 /// Thread safety: Must be called on main simulation thread only.
 /// Determinism: Produces identical results for identical inputs.

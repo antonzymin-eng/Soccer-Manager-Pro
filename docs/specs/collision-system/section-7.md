@@ -134,9 +134,9 @@ Stage 1 adds aerial collision, height-based body part detection, and goalkeeper-
 | `JumpPhase` | enum | ASCENDING, APEX, DESCENDING |
 | `JumpStartTime` | float | When jump began (for timing) |
 
-**Integration with Heading Mechanics (Spec #9):**
+**Integration with Heading Mechanics (Spec #10):**
 
-Heading Mechanics (Spec #9, Stage 0) defines aerial duel *outcomes* (who wins the header). Collision System detects the collision and provides contact data. The boundary is:
+Heading Mechanics (Spec #10, Stage 0) defines aerial duel *outcomes* (who wins the header). Collision System detects the collision and provides contact data. The boundary is:
 - **Collision System:** Detects two airborne agents within contact radius, computes collision manifold
 - **Heading Mechanics:** Determines header winner based on timing, positioning, Heading attribute; controls ball deflection
 
@@ -221,9 +221,9 @@ Ball deflection
 
 3. **Protected goalkeeper rule:** Collision response differs when goalkeeper is in "protected" state (holding ball, on ground recovering).
 
-**Integration with Goalkeeper Mechanics (Spec #10):**
+**Integration with Goalkeeper Mechanics (Spec #11):**
 
-Goalkeeper Mechanics (Spec #10, Stage 0) defines goalkeeper *behavior* (when to dive, when to catch). Collision System handles the *physics* of those actions. The boundary is:
+Goalkeeper Mechanics (Spec #11, Stage 0) defines goalkeeper *behavior* (when to dive, when to catch). Collision System handles the *physics* of those actions. The boundary is:
 - **Goalkeeper Mechanics:** Decides action (dive left, punch, catch attempt); provides pose/state
 - **Collision System:** Detects collision using appropriate geometry; applies response with goalkeeper-specific rules
 
@@ -240,7 +240,7 @@ Goalkeeper Mechanics (Spec #10, Stage 0) defines goalkeeper *behavior* (when to 
 - Only 2 goalkeepers per match: negligible impact
 - Estimated: +0.005ms when goalkeeper is diving
 
-**Risk assessment:** Medium. Capsule geometry is more complex than circle; diving state must be synchronized between Goalkeeper Mechanics and Collision System. **Mitigation:** Define clear state machine interface in Spec #10 before implementing here.
+**Risk assessment:** Medium. Capsule geometry is more complex than circle; diving state must be synchronized between Goalkeeper Mechanics and Collision System. **Mitigation:** Define clear state machine interface in Spec #11 before implementing here.
 
 ---
 
@@ -551,7 +551,7 @@ The following features will **never** be implemented in the Collision System. Th
 | Agent locomotion | Agent Movement owns all movement before/after collision | Agent Movement Spec #2 |
 | Foul adjudication | Referee System makes foul decisions using collision data | Referee System (Stage 1+) |
 | Possession transfer | First Touch Mechanics decides when ball changes possession | First Touch Spec #11 |
-| Tactical intent | AI brain decides what agents are trying to do | Decision Tree Spec #7 |
+| Tactical intent | AI brain decides what agents are trying to do | Decision Tree Spec #8 |
 | Soft-body deformation | Complexity outweighs benefit (see 7.4.1) | N/A |
 | Ragdoll physics | Falls use state machine, not physics simulation | Agent Movement Spec #2 |
 | Clothing/hair collision | Outside project scope â€” visual-only, no gameplay impact | N/A |
@@ -661,8 +661,8 @@ When implementing extensions, the following invariants must be maintained:
 | P1 optimizations | Section 6.4.3 | SIMD, batch insertion |
 | Ball Physics Fixed64 | Spec #1, Section 7.4.1 | Parallel migration |
 | Agent Movement jump | Spec #2, Section 6 (TBD) | Jump state interface |
-| Goalkeeper Mechanics | Spec #10 | Goalkeeper state machine |
-| Heading Mechanics | Spec #9 | Aerial duel outcomes |
+| Goalkeeper Mechanics | Spec #11 | Goalkeeper state machine |
+| Heading Mechanics | Spec #10 | Aerial duel outcomes |
 | First Touch Mechanics | Spec #11 | Possession determination |
 | Master Development Plan | v1.0 | Stage timeline |
 | SI Solver | Catto (GDC 2014) | Constraint solver algorithm |
@@ -709,7 +709,7 @@ Stage 2 constraint solver requires tuning iteration count:
 
 Both Collision System and Ball Physics require Fixed64 migration. Who develops the shared `Fixed64Math` library?
 
-**Recommendation:** Fixed64Math is owned by neither spec individually. Create `Spec #8: Fixed64 Math Library` before Stage 5 implementation. Both physics specs depend on Spec #8.
+**Recommendation:** Fixed64Math is owned by neither spec individually. Create `Spec #9: Fixed64 Math Library` before Stage 5 implementation. Both physics specs depend on Spec #9.
 
 **Cross-reference:** Ball Physics Spec #1, Section 7.4.1 raises same concern.
 
@@ -726,7 +726,7 @@ Section 7.1.2 specifies placeholder height thresholds (FOOT < 0.30m, etc.). Thes
 
 Section 7.1.3 mentions goalkeeper "protected" state but does not define when protection applies.
 
-**Recommendation:** Goalkeeper Mechanics (Spec #10) must define protected state rules before Collision System can enforce them. Tentative rules:
+**Recommendation:** Goalkeeper Mechanics (Spec #11) must define protected state rules before Collision System can enforce them. Tentative rules:
 - Protected while catching ball (cannot be challenged)
 - Protected while on ground recovering (limited time, ~2s)
 - Not protected while diving (can be challenged)

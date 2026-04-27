@@ -523,7 +523,7 @@ Contact detected by Collision System
               â”‚
               â–¼
      [Height Guard: Â§2.2]
-     ball.z > 0.5m? â†’ Heading Mechanics (Spec #9)
+     ball.z > 0.5m? â†’ Heading Mechanics (Spec #10)
               â”‚ No
               â–¼
      [Control Quality: Â§3.1]

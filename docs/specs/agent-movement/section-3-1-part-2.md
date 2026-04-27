@@ -94,7 +94,7 @@ public enum AgentMovementState
 /// COLLISION: Triggered by Collision System (Spec #3). Involuntary.
 /// SLIDING_TACKLE: Triggered by Collision System (Spec #3). Voluntary.
 ///   Agent chose to slide; recovery is faster (controlled landing).
-/// DIVING_HEADER: Triggered by Heading Mechanics (Spec #9). Voluntary.
+/// DIVING_HEADER: Triggered by Heading Mechanics (Spec #10). Voluntary.
 ///   Agent dove for header; recovery is moderate (partial control).
 /// </summary>
 public enum GroundedReason

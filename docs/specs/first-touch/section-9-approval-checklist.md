@@ -247,7 +247,7 @@ The following items were identified and accepted as non-blocking:
 
 4. **Collision System interfaces pending approval** â€” FM-04 fallback in place; integration test dependencies documented. Accepted as known risk per lead developer decision.
 
-5. **Goalkeeper scope pending confirmation** â€” Spec recommends goalkeeper foot control uses First Touch system; full confirmation deferred until Goalkeeper Mechanics Spec #10 is written. Stage 0 behavior is safe (IsGoalkeeper flag informational only).
+5. **Goalkeeper scope pending confirmation** â€” Spec recommends goalkeeper foot control uses First Touch system; full confirmation deferred until Goalkeeper Mechanics Spec #11 is written. Stage 0 behavior is safe (IsGoalkeeper flag informational only).
 
 6. **FormModifier and PsychologyModifier hooks (Â§7.3.1, Â§7.3.2)** â€” Reference unwritten Master Vol 2 specs. Hooks exist as stub constants only; no activation risk in Stage 0.
 

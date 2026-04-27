@@ -58,22 +58,27 @@ Pass Mechanics #5 approval is **SUSPENDED** pending:
 3. Verify §3.3–§3.9 draft files (delivered March 7) meet quality bar — see Section_3_3_to_3_9_Audit_Report.md for 5 findings (2 Major, 2 Moderate, 1 Minor)
 4. Resolve F-A01 and F-A02: add spinMagnitudeBase/Max and WINDUP/FOLLOWTHROUGH columns to §3.1.4 master table (preferred), or correct citations in §3.4.7 and §3.8.10
 
-## BROADER RENUMBERING ISSUE (Affects other specs — NOT fixed here)
+## BROADER RENUMBERING ISSUE — RESOLVED (April 26, 2026)
 
-Three spec numbers are systematically wrong across the project. Only Pass Mechanics and Shot Mechanics were fully corrected. The status below reflects verification against actual repo files (April 22, 2026).
+Three-pass sweep completed across all spec folders. Final verification grep returns zero remaining body-text stale references for Decision Tree #7→#8, Heading #9→#10, Goalkeeper #10→#11, and Fixed64 #8→#9.
 
-| Wrong # | Correct # | Spec | Shot Mechanics | Agent Movement | Ball Physics | Collision System | First Touch |
-|---|---|---|---|---|---|---|---|
-| Heading #9 | #10 | Heading Mechanics | ✅ Fixed (Mar 6) | ❌ Not fixed | n/a | ❌ Not fixed | ❌ Not fixed |
-| Goalkeeper #10 | #11 | Goalkeeper Mechanics | ✅ Fixed (Mar 6) | ❌ Not fixed | n/a | ❌ Not fixed | ❌ Not fixed |
-| Fixed64 #8 | #9 | Fixed64 Math Library | ✅ Fixed (Mar 6) | ❌ Not fixed | ⚠️ Partial (§4 fixed; §7 still has #8) | ❌ Not fixed | n/a |
-| Decision Tree #7 | #8 | Decision Tree | ✅ Fixed (Mar 6) | ⚠️ Partial (section-1-2 fixed; other sections still have #7) | n/a | ❌ Not fixed | ✅ Fixed (ERR-012, Mar 5) |
+| Wrong # | Correct # | Spec | Shot Mechanics | Agent Movement | Ball Physics | Collision System | First Touch | Pass Mechanics |
+|---|---|---|---|---|---|---|---|---|
+| Heading #9 | #10 | Heading Mechanics | ✅ Fixed | ✅ Fixed (Apr 26) | n/a | ✅ Fixed (Apr 26) | ✅ Fixed (Apr 26) | n/a |
+| Goalkeeper #10 | #11 | Goalkeeper Mechanics | ✅ Fixed | ✅ Fixed (Apr 26) | n/a | ✅ Fixed (Apr 26) | ✅ Fixed (Apr 26) | n/a |
+| Fixed64 #8 | #9 | Fixed64 Math Library | ✅ Fixed | ✅ Fixed (Apr 26) | ✅ Fixed (Apr 26) | ✅ Fixed (Apr 26) | n/a | n/a |
+| Decision Tree #7 | #8 | Decision Tree | ✅ Fixed (residual L208) | ✅ Fixed (Apr 26) | n/a | ✅ Fixed (Apr 26) | ✅ Fixed | ✅ Fixed (residual §3.1:76) |
 
-**Remaining work required (human-directed pass):**
-- Agent Movement: ~23 remaining stale references across sections 3.x, 4, 5, 6, 7
-- Collision System: ~13 remaining stale references across sections 2, 7, 9
-- First Touch: ~13 remaining stale references for Heading #9 and Goalkeeper #10 across outline, sections 1, 2, 3, 4, 7 (Decision Tree already fixed via ERR-012)
-- Ball Physics §7: 1 remaining stale Fixed64 #8 reference
+**Sweep methodology:**
+- Pass 1 (commit `8d7f729`): Automated regex substitutions on patterns including spec name + "Spec" or "(#" — 55 substitutions across 23 files. Audit-report files and version-history rows excluded from match.
+- Pass 2 (next commit): Context-dependent fixes for bare "(Spec #N)" references — 49 substitutions across 12 files via per-line exact-string replacement.
+- Pass 3 (next commit): Remaining agent-movement context fixes — 9 substitutions; final two stragglers (`agent-movement/section-6-part-1.md:36` and `collision-system/section-7.md:712`) handled directly.
+
+**Files intentionally NOT modified:**
+- `docs/specs/*/audit-report.md` — document the historical bugs and their fix instructions; rewriting would erase the historical record.
+- `docs/tracking/spec-error-log-err012-addendum.md` — documents ERR-012 closure with original "Spec #7" wording.
+- `docs/specs/SPEC_INDEX.md` "FORMER NUMBERING" table — intentional old-to-new mapping.
+- Version-history rows of the form `| 1.x | DATE | ... #7→#8 ... |` — historical records.
 
 ---
 

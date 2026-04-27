@@ -349,7 +349,7 @@ At ~1 ns per equivalent operation on modern hardware (3 GHz, 1 FLOP/cycle): ~180
 
 #### 5.1.5 Per-Frame Total (22 Agents)
 
-All 22 agents execute the movement pipeline. Two are goalkeepers (Spec #10), but for budget purposes we conservatively assume all 22 use this spec's full pipeline.
+All 22 agents execute the movement pipeline. Two are goalkeepers (Spec #11), but for budget purposes we conservatively assume all 22 use this spec's full pipeline.
 
 **Worst case (all 22 agents SPRINTING):**
 - 22 Ã— 180 equiv ops = **3,960 equivalent operations**
@@ -359,7 +359,7 @@ This is categorically trivial. Even the absolute worst case (every agent sprinti
 
 **Why the measured time will be higher than pure compute:** Memory access latency, cache misses on first-frame agent struct reads, Unity's managed runtime overhead (C# JIT vs. native), profiler instrumentation, and GC pauses all add latency. The pure compute estimate of ~5 Âµs should be treated as a theoretical floor. Realistic measured time will be 10â€“50Ã— higher due to these factors, placing actual per-frame agent movement cost in the **0.05â€“0.25ms range** â€” still well within the 3.0ms budget.
 
-**KEY FINDING: Agent movement is not a performance bottleneck.** Expected actual cost of ~0.05â€“0.25ms against a 3.0ms budget represents **~2â€“8% utilization**. The 3.0ms allocation is extremely generous for this system. The surplus budget (~2.75â€“2.95ms) is available for reallocation to more demanding systems (AI decisions, collision detection) once those specs are written and profiled. This finding should inform budget negotiations during Spec #3 (Collision) and Spec #7 (Tactical AI) drafting.
+**KEY FINDING: Agent movement is not a performance bottleneck.** Expected actual cost of ~0.05â€“0.25ms against a 3.0ms budget represents **~2â€“8% utilization**. The 3.0ms allocation is extremely generous for this system. The surplus budget (~2.75â€“2.95ms) is available for reallocation to more demanding systems (AI decisions, collision detection) once those specs are written and profiled. This finding should inform budget negotiations during Spec #3 (Collision) and Spec #8 (Tactical AI) drafting.
 
 #### 5.1.6 Match-Level Complexity
 
@@ -595,7 +595,7 @@ Reproducing Ball Physics Section 6.2.1 budget table with agent movement's positi
 | System | Budget | % of Frame | Status |
 |---|---|---|---|
 | **Agent physics (this spec)** | **3.0ms** | **18%** | **Analyzed herein** |
-| AI decisions (22 agents) | 4.0ms | 24% | Placeholder (Spec #7, #12â€“15) |
+| AI decisions (22 agents) | 4.0ms | 24% | Placeholder (Spec #8, #12â€“15) |
 | Collision detection | 1.0ms | 6% | Placeholder (Spec #3) |
 | Ball physics | 0.5ms | 3% | Validated (Spec #1 Â§6) |
 | Event system | 0.5ms | 3% | Placeholder (Spec #17) |
@@ -613,7 +613,7 @@ Systems not yet specified will consume from the same frame budget. Known pressur
 | Future System | Spec | Budget Impact on Agent Movement |
 |---|---|---|
 | Collision System | #3 | May need some of the 3.0ms if collision response requires agent state writes |
-| Goalkeeper Mechanics | #10 | 2 agents use Spec #10 instead of this spec â€” may be cheaper or more expensive |
+| Goalkeeper Mechanics | #11 | 2 agents use Spec #11 instead of this spec â€” may be cheaper or more expensive |
 | First Touch | #11 | Momentary overhead during ball contact â€” amortized across many frames |
 | Positioning AI | #12 | Generates MovementCommands consumed by this spec â€” no direct cost here |
 

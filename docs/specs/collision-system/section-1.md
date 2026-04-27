@@ -74,8 +74,8 @@ This ordering ensures all entities have committed their frame's movement before 
 | Ball trajectory after deflection | Ball Physics (#1) | `Ball.OnCollision()` receives contact data; Ball Physics computes new velocity |
 | Agent locomotion and state machine | Agent Movement (#2) | Collision System sends `CollisionResponse`; Agent Movement applies state transitions |
 | Ball possession transfer decision | First Touch Mechanics (#11) | Collision System detects contact; First Touch decides if possession changes |
-| Goalkeeper diving/punching collision | Goalkeeper Mechanics (#10) | Stage 0 treats goalkeeper as normal agent with `IsGoalkeeper` flag; Spec #10 defines diving/punching special cases |
-| Aerial collision (heading duels) | Heading Mechanics (#9) | Spec #9 defines aerial duel logic; Collision System provides ground-only detection in Stage 0 |
+| Goalkeeper diving/punching collision | Goalkeeper Mechanics (#11) | Stage 0 treats goalkeeper as normal agent with `IsGoalkeeper` flag; Spec #11 defines diving/punching special cases |
+| Aerial collision (heading duels) | Heading Mechanics (#10) | Spec #10 defines aerial duel logic; Collision System provides ground-only detection in Stage 0 |
 | Foul decision and card issuance | Referee System (TBD) | Collision System provides `ContactForceData`; Referee System adjudicates |
 | Pitch boundary enforcement | Ball Physics (#1), Agent Movement (#2) | Already implemented in respective specs |
 
@@ -140,7 +140,7 @@ This ordering ensures all entities have committed their frame's movement before 
 ### Stage 1 (Year 2)
 
 **Extensions:**
-- Aerial collision detection for heading duels (integrates with Spec #9)
+- Aerial collision detection for heading duels (integrates with Spec #10)
 - Slide tackle geometry using animation-driven capsule hitboxes
 - Body part detection (FOOT, SHIN, THIGH, TORSO, HEAD) for refined `BodyPart` in `AgentBallCollisionData`
 - Goalkeeper-specific collision handling (diving saves, punching)
@@ -220,7 +220,7 @@ All collision physics is custom implementation, consistent with Ball Physics and
 
 **Decision:** Stage 0 uses 2D collision detection (XY plane projection).
 
-**Rationale:** Ground-based football involves players running on a 2D surface. Vertical separation (jumping) is rare and handled by Heading Mechanics (Spec #9) in Stage 1. Simplifying to 2D reduces implementation complexity and avoids premature optimization for aerial scenarios not yet specified.
+**Rationale:** Ground-based football involves players running on a 2D surface. Vertical separation (jumping) is rare and handled by Heading Mechanics (Spec #10) in Stage 1. Simplifying to 2D reduces implementation complexity and avoids premature optimization for aerial scenarios not yet specified.
 
 ### 1.6.3 Determinism Requirement
 

@@ -349,22 +349,22 @@ Cross-references to Master Volumes and related specifications.
 - **Data contract details:** See Section 4.2 for authoritative field definitions and ranges.
 - **Relationship:** Collision System consumes agent state, produces collision responses that Agent Movement applies.
 
-**[HEADING-SPEC]** Heading Mechanics Specification (Spec #9)
+**[HEADING-SPEC]** Heading Mechanics Specification (Spec #10)
 
 - **Version:** Not yet written (Stage 0, projected Weeks 11â€“12)
 - **Forward reference:**
-  - Spec #9 will own aerial duel logic
+  - Spec #10 will own aerial duel logic
   - Collision System (Stage 0) handles ground-based collision only
   - Section 1.2 documents scope boundary
-- **Relationship:** Aerial collision detection deferred to Spec #9 or Stage 1 Collision System extension.
+- **Relationship:** Aerial collision detection deferred to Spec #10 or Stage 1 Collision System extension.
 
-**[GOALKEEPER-SPEC]** Goalkeeper Mechanics Specification (Spec #10)
+**[GOALKEEPER-SPEC]** Goalkeeper Mechanics Specification (Spec #11)
 
 - **Version:** Not yet written (Stage 0, projected Weeks 13â€“14)
 - **Forward reference:**
   - Stage 0 Collision System treats goalkeeper as normal agent with `IsGoalkeeper` flag
-  - Goalkeeper-specific collision (diving, punching ball) owned by Spec #10
-- **Relationship:** Collision System provides `IsGoalkeeper` field in `AgentBallCollisionData`; Spec #10 interprets it.
+  - Goalkeeper-specific collision (diving, punching ball) owned by Spec #11
+- **Relationship:** Collision System provides `IsGoalkeeper` field in `AgentBallCollisionData`; Spec #11 interprets it.
 
 **[FIRST-TOUCH-SPEC]** First Touch Mechanics Specification (Spec #11)
 
@@ -693,7 +693,7 @@ The severity score IS directly compared to these thresholds, which means:
 - 0.5s minimum ensures fallen player is briefly vulnerable
 - 2.0s maximum prevents excessive downtime
 - Real football players recover in 0.5â€“3.0s typically
-- Goalkeeper exception (longer recovery) handled by Spec #10
+- Goalkeeper exception (longer recovery) handled by Spec #11
 
 **Audit result:** Grounded duration is gameplay-tuned within realistic range. Will be tuned during playtesting.
 

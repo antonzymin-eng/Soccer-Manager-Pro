@@ -1,7 +1,7 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** April 22, 2026
+> **Last Updated:** April 27, 2026
 > **Purpose:** Authoritative rules for any AI agent (Claude Code, Claude chat, etc.) working on this project. Read this file completely before every task.
 
 ---
@@ -19,7 +19,6 @@
 ```
 TacticalDirector/
 ├── CLAUDE.md                       ← You are here. Read first. Always.
-├── .claudeignore                   ← Excludes docs/planning/ from Claude Code indexing
 ├── docs/
 │   ├── planning/                   ← Master volumes, dev plan, best practices
 │   ├── specs/
@@ -42,8 +41,6 @@ TacticalDirector/
 - `SPEC_INDEX.md` is the canonical source of truth for spec numbers, folder names, and approval status.
 - `PROGRESS.md` is the canonical source of truth for schedule and milestone tracking.
 - Never create files in `src/` during the specification phase.
-
-**Claude Code indexing:** `docs/planning/` contains ~85K of master volume text that adds noise when working on individual specs. A `.claudeignore` file excludes this directory from automatic indexing.
 
 **Deferred: `src/CLAUDE.md`** — Do NOT create until coding begins (after all 20 specs are approved). At that point it should cover: C# file naming conventions, constant catalogue file locations, Unity project structure, and build/test commands.
 
@@ -179,7 +176,7 @@ pass-mechanics/
 - C# with Unity 2022 LTS conventions.
 - Struct-based, zero-allocation architecture in the game loop.
 - All constants in designated constant catalogue files — no magic numbers.
-- Stage 0 uses `float`; Fixed64 migration is a Stage 5+ concern (Spec #9 will define the library).
+- **Stage 0 uses `float`. Fixed64 migration is a Stage 5+ concern** (Spec #9 will define the library; existing approved physics specs are drafted against `float` and re-verified against Fixed64 only when cross-platform multiplayer becomes a requirement). Single-machine determinism (replay, save/load, debug rewind) is achieved via state snapshots, not deterministic arithmetic. Cross-platform bit-exact parity is a Stage 5 deliverable, not a Stage 0 quality gate.
 - Deterministic replay is a hard requirement — no `System.Random`, no `DateTime.Now` in game logic.
 - SplitMix64 for deterministic RNG. In Python tooling: omit `UL` suffix from C# constants; mask all intermediate multiplications with `& 0xFFFFFFFFFFFFFFFF`.
 
@@ -205,16 +202,19 @@ pass-mechanics/
 | `Spec_Error_Log` | `docs/tracking/spec-error-log.md` | Cross-spec architectural errors and remediation status |
 | `FIX_MANIFEST` | `docs/tracking/fix-manifest-pass-mechanics.md` | Per-audit fix tracking (Pass Mechanics #5) |
 | `FILE_MANIFEST` | `docs/tracking/file-manifest.md` | Authoritative file inventory (update after every file change) |
-| `MIGRATION_GUIDE` | repo root (temporary) | Old-to-new filename mapping for git migration. Delete after migration. |
 
 ---
 
-## OPEN ISSUES (as of April 22, 2026)
+## OPEN ISSUES
 
-> **Keep this section current.** When resolving an issue, remove or update its entry here in the same commit.
+> **Keep this section current.** When resolving an issue, remove or update its entry here in the same commit. Each entry includes a "since" date so staleness is visible.
 
-- **Pass Mechanics (#5):** Approval SUSPENDED after March 25 audit (19 findings, all fixed). Awaiting lead developer re-review and re-sign-off.
-- **Pending sign-offs:** Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8).
-- **Perception System (#7):** ✅ APPROVED April 22, 2026. Section 9 Approval Checklist v1.7 signed off by lead developer.
-- **Renumbering cascade outstanding:** ~49 stale spec-number references remain across Agent Movement (#2), Collision System (#3), and First Touch (#4) for Heading #9→#10, Goalkeeper #10→#11, and Fixed64 #8→#9. See `docs/tracking/fix-manifest-pass-mechanics.md` BROADER RENUMBERING ISSUE table.
-- **Superseded files from old naming convention:** Must be removed during git migration — do NOT migrate these. See `MIGRATION_GUIDE.md` for complete old-to-new mapping and FILE_MANIFEST pending removals.
+- **Pass Mechanics (#5)** — *since March 25, 2026.* Approval SUSPENDED after audit (19 findings, all fixed per `fix-manifest-pass-mechanics.md`). Awaiting lead developer re-review and re-sign-off. Only Priority 1–2 spec still outstanding.
+- **Decision Tree (#8) draft-level quality gate** — *April 27, 2026.* Approved at draft-level rigor (lighter than Pass Mechanics #5 / Shot Mechanics #6 programmatic audit). Comprehensive audit is a candidate before implementation begins. Tracked here as a follow-up item, not a blocker.
+- **Renumbering cascade resolved** — *April 26, 2026:* Three-pass sweep applied across all specs. ~115 body-text substitutions in three commits covering Decision Tree #7→#8, Heading #9→#10, Goalkeeper #10→#11, Fixed64 #8→#9. Audit reports and changelog rows intentionally left unchanged (they document history). Verification grep on April 26, 2026 returns zero remaining stale body-text references. Re-run grep before any future tagging.
+- **Approval tags created locally, not yet pushed** — *April 26–27, 2026:* Annotated tags `spec-ball-physics-v1.0-approved`, `spec-agent-movement-v1.0-approved`, `spec-collision-system-v1.0-approved`, `spec-first-touch-v1.0-approved`, `spec-shot-mechanics-v1.0-approved`, `spec-perception-system-v1.0-approved`, `spec-decision-tree-v1.0-approved` created on `claude/review-project-docs-1ndtt`. Remote returns HTTP 403 on tag push (branch-protection). Push after merge to main with privileged credentials.
+- **Fixed64 stage scope decision** — *April 26, 2026:* After review, Fixed64 migration is **Stage 5+** (not Stage 0). Stage 0 uses `float` and achieves single-machine determinism via state snapshots. Cross-platform bit-exact parity is no longer a Stage 0 quality gate — it moves to Stage 5 when multiplayer is added. CLAUDE.md "When Writing Code" rules and `master-development-plan.md` (§2.3, §8 risk mitigation, §9 metrics, Stage 0 success criteria, Stage 6 description) all updated to match. Existing approved physics specs were drafted under this Stage 5+ assumption and remain consistent — no spec content changes needed.
+- **Collision System (#3) status disagreement** — *flagged April 26, 2026.* `collision-system/section-9-approval-checklist.md` header reads "Pending Review" with Decision "PENDING — Awaiting Agent Movement Spec #2 approval," but SPEC_INDEX.md, README.md, PROGRESS.md, and file-manifest.md all record APPROVED Feb 19, 2026. Either the §9 file was never updated post-approval or the trackers approved prematurely. Needs lead developer adjudication.
+- **Tracking-doc divergence on approval counts** — *flagged April 26, 2026.* PROGRESS.md summary line says "Approved: 3" while its own table shows 4 approved (#1, #3, #4, #7). README.md v1.4 (Apr 21) predates Perception #7 sign-off and shows IN REVIEW. file-manifest.md still shows Perception #7 as IN REVIEW BLOCKED on 4 critical items. SPEC_INDEX.md is the only source consistent with Perception §9 v1.7's APPROVED stamp.
+- **`spec-error-log.md` is incomplete** — *since at least April 22, 2026.* File contains only stub entries for ERR-009/010/011 with placeholder text. ERR-001/002/003/004/006/007/008 are cited as resolved across specs but have no entries. The "single source of truth for cross-spec errors" needs to be rebuilt from the spec audit reports that originally produced each ERR.
+- **Superseded files from old naming convention** — Tracked in `file-manifest.md` Pending Removal section; manifest itself flagged as pre-migration legacy and last-content-updated Feb 26 despite Apr 22 header. Reconcile during migration completion.

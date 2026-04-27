@@ -37,8 +37,8 @@ When future extensions are implemented, the following invariants **must** be pre
 | Ball Physics Fixed64 migration | Spec #1, Section 7.4.1 | Parallel migration path |
 | Ball Physics surface extensions | Spec #1, Section 7.2.1 | Shared SurfaceType system |
 | First Touch Mechanics | Spec #11 | Dribbling state trigger |
-| Goalkeeper Mechanics | Spec #10 | Goalkeeper-specific movement (excluded from this spec) |
-| Fixed64 Math Library | Spec #8 | Type definitions for migration |
+| Goalkeeper Mechanics | Spec #11 | Goalkeeper-specific movement (excluded from this spec) |
+| Fixed64 Math Library | Spec #9 | Type definitions for migration |
 | Master Development Plan | Section 1 | Stage 0â†’1â†’2â†’...â†’6 dependency chain |
 | Master Vol 1, Section 2.2 | â€” | Kinetic profiles (heel-striker, forefoot, neutral) |
 | Master Vol 1, Section 4.1 | â€” | Pitch degradation model |
