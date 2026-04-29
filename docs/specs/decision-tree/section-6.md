@@ -4,7 +4,7 @@
 **Purpose:** Quantify computational complexity, timing budget usage, memory behavior, and scaling constraints for Decision Tree Specification #8.  
 **Created:** April 20, 2026  
 **Version:** 1.0  
-**Status:** DRAFT — Awaiting Lead Developer Review  
+**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist)  
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
 

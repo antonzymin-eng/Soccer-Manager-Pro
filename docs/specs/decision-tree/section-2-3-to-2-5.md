@@ -83,8 +83,9 @@ inputs. Any non-determinism in the DT breaks replay correctness.
 - Two DT instances initialised with the same `matchSeed` and fed identical inputs in
   identical order produce byte-identical `AgentAction` outputs across a full 90-minute
   simulated match.
-- The Composure noise formula uses `noise_seed = matchSeed XOR (agentId << 16) XOR
-  heartbeatTick` exclusively — no `System.Random`, no `UnityEngine.Random`, no
+- The Composure noise formula uses the per-option 4-input hash
+  `noise_seed = matchSeed XOR (agentId << 16) XOR heartbeatTick XOR actionTypeOrdinal`
+  (authoritative form; see §3.3) — no `System.Random`, no `UnityEngine.Random`, no
   `DateTime.Now`, no GUID.
 - Unit test UT-04 verifies determinism by running the same 10-tick sequence twice with
   the same seed and asserting `AgentAction` equality for all 22 agents.

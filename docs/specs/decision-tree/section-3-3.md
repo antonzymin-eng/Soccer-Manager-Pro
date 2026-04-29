@@ -13,7 +13,7 @@ composure-noise constants; all [GT] constants must be implemented exclusively in
 
 **Created:** March 02, 2026, 4:00 PM PST
 **Version:** 1.0
-**Status:** DRAFT — Awaiting Lead Developer Review
+**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist)
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
 
@@ -158,7 +158,8 @@ the naming ambiguity. This is a cosmetic amendment with no formula impact.
 ///   - All options have EffectiveUtility populated
 ///   - DecisionMadeEvent fields are fully determined (published in Step 6)
 ///
-/// Performance: O(N) where N = candidate count (max 7 at Stage 0; typically 3–5)
+/// Performance: O(N) where N = candidate count (baseline ≤ 16, hard cap 17 per §3.1
+///              INV-GEN-09 and Appendices §A.1; typically 3–5 in steady-state play)
 /// Memory: Zero heap allocations — all operations on stack-allocated structs
 /// </summary>
 public AgentAction SelectAction(

@@ -406,8 +406,9 @@ complete. The full six-step pipeline is specified:
 **New items logged:**
 - ERR-011: `PassRequest.AgentID` (uppercase) vs `ShotRequest.AgentId` (mixed case) —
   naming inconsistency. Non-blocking. Should be harmonised before implementation.
-- XC-3.5-10: `MovementController.SubmitCommand()` method name requires verification
-  against Agent Movement §4 before §3.5 approval.
+- XC-3.5-10: `MovementController.SubmitCommand()` — dispatch signature locked
+  (TBD-INTERFACE-001); method identifier provisional pending Agent Movement §4
+  finalisation. Non-blocking; tracked as integration item.
 
 **Constant count (this file):** 16 §3.4 tactical constants + 7 §3.5 dispatch/movement
 constants (`URGENCY_PRESSURE_SCALE`, `SPIN_INTENT_BELOW_CENTRE`, `SPIN_INTENT_OFF_CENTRE`,
