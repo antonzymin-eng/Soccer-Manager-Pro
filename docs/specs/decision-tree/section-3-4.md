@@ -15,7 +15,7 @@ cross-references to Pass Mechanics §2.4.1, Shot Mechanics §2.4.1, and Agent Mo
 
 **Created:** March 05, 2026, 12:00 PM PST  
 **Version:** 1.1  
-**Status:** DRAFT — Awaiting Lead Developer Review  
+**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist)  
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
 
@@ -39,13 +39,18 @@ cross-references to Pass Mechanics §2.4.1, Shot Mechanics §2.4.1, and Agent Mo
 - `TacticalContext` struct: this specification, §2.2.6 (authoritative definition)
 - `DecisionContext` struct: this specification, §2.2.4
 
-**Open Items (non-blocking at v1.0):**
-- `[ERR-007-PENDING]` — `KickPower`, `WeakFootRating`, `Crossing` absent from
+**Open Items (non-blocking integration tracking; not approval blockers):**
+- `[ERR-007-TRACKED]` — `KickPower`, `WeakFootRating`, `Crossing` absent from
   `PlayerAttributes` in Agent Movement §3.5.6. Amendment AM-002-001 adds them.
-  Affects §3.5.3 weak foot determination logic (noted inline).
-- `[ERR-008-PENDING]` — `PossessingAgentId` design (Option A vs B) unresolved.
+  Affects §3.5.3 weak foot determination logic (noted inline). Downgraded from
+  PENDING to TRACKED on April 29, 2026: amendment is authored and consumed
+  read-only by DT; resolution is bookkeeping in the Agent Movement spec, not a
+  contract change. Tracked in `spec-error-log.md` and CLAUDE.md Open Issues.
+- `[ERR-008-TRACKED]` — `PossessingAgentId` design (Option A vs B) unresolved.
   Does not affect Decision Tree dispatch; affects Pass Mechanics and Shot Mechanics
-  possession validation only. Referenced inline for context.
+  possession validation only. Referenced inline for context. Downgraded from PENDING
+  to TRACKED on April 29, 2026: outside DT scope; resolved in Pass/Shot specs at
+  implementation time.
 
 **Version History:**
 

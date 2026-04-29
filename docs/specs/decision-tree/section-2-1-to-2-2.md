@@ -10,7 +10,7 @@ each requirement.
 
 **Created:** March 01, 2026, 12:00 PM PST  
 **Version:** 1.1  
-**Status:** DRAFT — Awaiting Lead Developer Review  
+**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist)  
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
 
@@ -197,10 +197,14 @@ Composure noise model:
    EffectiveUtility(option) = U(option) + Noise × (1 − A_Composure)
    ```
 
-   Where `Noise` is deterministically derived from:
+   Where `Noise` is deterministically derived per option from:
    ```
-   noise_seed = matchSeed XOR (agentId << 16) XOR heartbeatTick
+   noise_seed = matchSeed XOR (agentId << 16) XOR heartbeatTick XOR actionTypeOrdinal
    ```
+   > **Superseded note:** A 3-input formulation (without `actionTypeOrdinal`) appeared
+   > in earlier drafts of this section. §3.3 supersedes it with the 4-input per-option
+   > hash above; that is the authoritative test oracle (see §3.3 "Per-option vs per-agent
+   > noise" rationale).
 
 2. The candidate with the highest `EffectiveUtility` is selected.
 

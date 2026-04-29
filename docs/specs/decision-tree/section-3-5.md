@@ -124,7 +124,7 @@ PassRequest request = new PassRequest
     // Source: Computed in GenerateOptions §3.1 per weak-foot determination rule:
     //   IsWeakFoot = (RequiredFoot(targetDirection) != AgentAttributes.PreferredFoot)
     //   Stored in AgentAction.Payload.IsWeakFoot.
-    // Note [ERR-007-PENDING]: PreferredFoot determination requires WeakFootRating
+    // Note [ERR-007-TRACKED]: PreferredFoot determination requires WeakFootRating
     //   from PlayerAttributes (AM-002-001). Temporary proxy: if WeakFootRating not
     //   available, IsWeakFoot = false (conservative — avoids phantom penalties).
     // Cross-spec note: Pass Mechanics §3.7 applies the weak foot error multiplier;
@@ -249,7 +249,7 @@ ShotRequest request = new ShotRequest
     // Type: bool
     // Source: Same determination as PASS (§3.5.2 IsWeakFoot note above).
     //   Required shooting direction relative to agent facing and preferred foot.
-    // Note [ERR-007-PENDING]: same proxy applies — false if WeakFootRating unavailable.
+    // Note [ERR-007-TRACKED]: same proxy applies — false if WeakFootRating unavailable.
     // Shot Mechanics §3.3 applies the weak-foot accuracy penalty.
     IsWeakFoot = context.SelectedAction.Payload.IsWeakFoot,
 
@@ -567,7 +567,7 @@ Each identifies a field, interface, or constant defined in another specification
 | XC-3.5-07 | `PassRequest` has no `HeightHint` field (outline §3.5.2 listed it; §2.4.1 does not define it) | Pass Mechanics §2.4.1 | §3.5.2 | ✅ Verified: No `HeightHint` field in Pass Mechanics §2.4.1. Outline §3.5.2 was preliminary and is superseded by this section. |
 | XC-3.5-08 | `PassRequest.TargetType` field exists (outline referenced it; §2.4.1 uses TargetAgentID=-1 pattern instead) | Pass Mechanics §2.4.1 | §3.5.2 target encoding | ✅ Verified: Pass Mechanics §2.4.1 uses `TargetAgentID == -1` for space-targeted passes. There is no `TargetType` enum field. Outline §3.5.1 routing table reference to `TargetType` is superseded by this section. |
 | XC-3.5-09 | `AgentMovementState.JOGGING` exists (not RUNNING or JOG) | Agent Movement §3.1 v1.2 | §3.5.4 DRIBBLE dispatch | ✅ Verified: `JOGGING` is defined at line 82 of §3.1 v1.2 |
-| XC-3.5-10 | `MovementController.SubmitCommand(int agentId, MovementCommand cmd)` is the correct interface | Agent Movement §3.5.4 / §4 | §3.5.4–3.5.8 | ⚠ Forward reference — Agent Movement §4 v1.1 documents the orchestrator command interface but the exact method name is implementation-defined. §3.5 uses `SubmitCommand()` as a placeholder. Verify method name in Agent Movement §4 before this section is approved. |
+| XC-3.5-10 | `MovementController.SubmitCommand(int agentId, MovementCommand cmd)` is the dispatch interface | Agent Movement §3.5.4 / §4 | §3.5.4–3.5.8 | 🔒 **TBD-INTERFACE-001** — Contract is locked at the signature level (`(int agentId, MovementCommand cmd) → void`, synchronous, idempotent within a tick). The method **name** `SubmitCommand` is provisional pending Agent Movement §4 finalisation. Implementers MUST NOT diverge from the locked signature; only the identifier may be renamed via a single-symbol substitution at integration time. Tracked in Open Issues as a non-blocking integration item. |
 
 **ERR-011 (new — §3.5 discovery):** `PassRequest.AgentID` uses uppercase `ID` while
 `ShotRequest.AgentId` uses mixed-case `Id`. These are different struct definitions in
