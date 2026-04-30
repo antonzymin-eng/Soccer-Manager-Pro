@@ -992,7 +992,7 @@ First **paid commercial release**. Full single-season playable game. This become
 
 **Engine Core:**
 ```
-TacticalDirector/
+Soccer-Manager-Pro/
 â”œâ”€â”€ Core/
 â”‚   â”œâ”€â”€ GameLoop.cs              # 10Hz tactical, 60Hz render
 â”‚   â”œâ”€â”€ Fixed64.cs                # Deterministic math (added Stage 5)

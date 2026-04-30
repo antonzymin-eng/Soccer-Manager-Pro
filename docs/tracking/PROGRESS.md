@@ -144,7 +144,7 @@
 - Collision System Specification (#3) — all sections, appendices, approval checklist written and approved
 - First Touch Mechanics Specification (#4) — all sections, appendices, approval checklist signed off; ERR-001, ERR-004 resolved
 - Pass Mechanics Specification (#5) — all sections, appendices, approval checklist signed off; ERR-006, ERR-007, ERR-008 resolved; V_OFFSET correction applied
-- Cross-specification error audit — Spec_Error_Log_v1_2.md; all critical errors resolved
+- Cross-specification error audit — spec-error-log.md; all critical errors resolved
 - Ball Physics §3.1 updated to v2.5 (ApplyKick, Option B possession)
 - Ball Physics §8 updated to v1.3 (cross-reference corrections); later updated to v1.4
 - Agent Movement §3.5 updated to v1.3 (KickPower, WeakFootRating, Crossing added)
@@ -154,7 +154,7 @@
 
 **Pending:**
 - Commit all approved specs to repo; git tags for Collision System, First Touch, Pass Mechanics
-- Remove superseded file versions (see FILE_MANIFEST.md)
+- Remove superseded file versions (see file-manifest.md)
 
 ---
 
@@ -199,7 +199,7 @@
 - Resolve Perception System Section 9 Approval Checklist blockers (4 critical items) — required before sign-off
 - Lead developer sign-off on Agent Movement, Shot Mechanics, Perception System
 - Begin Decision Tree Specification #8 outline
-- Remove superseded file versions (see FILE_MANIFEST.md pending removal section)
+- Remove superseded file versions (see file-manifest.md pending removal section)
 
 ---
 
@@ -210,7 +210,7 @@
 - CLAUDE.md created (March 26) — authoritative AI behavioral rules, conventions, and cross-reference hazards documented
 - SPEC_INDEX.md created (March 26) — canonical spec registry established as single source of truth
 - Pass Mechanics (#5) comprehensive audit completed (March 25): 19 findings (5 critical), all fixes applied
-- Spec_Error_Log updated through ERR-012+; cross-spec error tracking maintained
+- spec-error-log.md updated through ERR-012+; cross-spec error tracking maintained
 
 **Status Changes:**
 - Pass Mechanics (#5): APPROVED → **SUSPENDED** (March 25, 2026) — audit findings require lead developer re-review
@@ -312,7 +312,7 @@
 - Comprehensive post-completion audits (e.g. Pass Mechanics March 25) are valuable but costly — schedule explicitly
 
 ### Open Items (Non-Blocking)
-- ERR-002: StringIDs in Master_Vol_4 — fix at convenience
+- ERR-002: StringIDs in master-vol-4-tech-implementation.md — fix at convenience
 - ERR-003: PerformanceContext violation language in Agent Movement §3.2 — fix at convenience
 - Agent Movement §3.2 and §3.7 attribute references should be verified against PlayerAttributes v1.3 before implementation
 - Ball Physics §8 v1.4: DOI corrections issued from Shot Mechanics §8 audit — verify incorporated

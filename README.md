@@ -23,7 +23,7 @@ Build the definitive football management simulation with:
 
 ### PRIMARY AUTHORITY
 
-**[Master Development Plan v1.0](Master_Development_Plan_v1_0.md)**
+**[Master Development Plan v1.0](docs/planning/master-development-plan.md)**
 The definitive 10-year roadmap. All development decisions reference this document.
 
 **What it contains:**
@@ -42,7 +42,7 @@ The definitive 10-year roadmap. All development decisions reference this documen
 
 These four volumes describe the FULL vision. Features are implemented incrementally across stages.
 
-**[Master Volume I: Physics & Simulation Core](Master_Vol_1_Physics_Core.md)**
+**[Master Volume I: Physics & Simulation Core](docs/planning/master-vol-1-physics-core.md)**
 The 10Hz heartbeat, match logic, physical environment, and tactical micro-physics.
 
 **Implementation timeline:**
@@ -52,7 +52,7 @@ The 10Hz heartbeat, match logic, physical environment, and tactical micro-physic
 
 ---
 
-**[Master Volume II: Human Systems & Behavioral Sociology](Master_Vol_2_Human_Systems.md)**
+**[Master Volume II: Human Systems & Behavioral Sociology](docs/planning/master-vol-2-human-systems.md)**
 Psychology, social graphs, communication, atmosphere, and personality evolution.
 
 **Implementation timeline:**
@@ -62,7 +62,7 @@ Psychology, social graphs, communication, atmosphere, and personality evolution.
 
 ---
 
-**[Master Volume III: Club Operations & Strategic Management](Master_Vol_3_Club_Operations.md)**
+**[Master Volume III: Club Operations & Strategic Management](docs/planning/master-vol-3-club-operations.md)**
 Tactical systems, recruitment, finance, governance, youth development, and training.
 
 **Implementation timeline:**
@@ -73,7 +73,7 @@ Tactical systems, recruitment, finance, governance, youth development, and train
 
 ---
 
-**[Master Volume IV: Technical Implementation & Systems Engineering](Master_Vol_4_Tech_Implementation.md)**
+**[Master Volume IV: Technical Implementation & Systems Engineering](docs/planning/master-vol-4-tech-implementation.md)**
 Architecture, optimization, data ontology, tooling, modding support, and UI/UX.
 
 **Implementation timeline:**
@@ -86,7 +86,7 @@ Architecture, optimization, data ontology, tooling, modding support, and UI/UX.
 
 ### SUPPORTING DOCUMENTATION
 
-**[Development Best Practices](Development_Best_Practices.md)**
+**[Development Best Practices](docs/planning/development-best-practices.md)**
 Technical wisdom extracted from project analysis. Read before starting each stage.
 
 **What it contains:**
@@ -238,7 +238,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 ## PROJECT STRUCTURE
 
 ```
-TacticalDirector/
+Soccer-Manager-Pro/
 ├── CLAUDE.md                           [AI behavioral rules — read first]
 ├── docs/
 │   ├── planning/                       [Master volumes, dev plan, best practices]
@@ -300,7 +300,7 @@ The following documents have been superseded and moved to `/Archive/`:
 - **Date archived:** December 30, 2025
 
 **2. CRITICAL_ANALYSIS_Development_Risks.md**
-- **Reason:** Valid warnings extracted into Development_Best_Practices.md
+- **Reason:** Valid warnings extracted into docs/planning/development-best-practices.md
 - **Superseded by:** Development Best Practices
 - **Date archived:** February 3, 2026
 
@@ -420,7 +420,7 @@ git push --tags
 - Updated to Week 2 status
 - Ball Physics marked as APPROVED (Feb 8, 2026)
 - Agent Movement marked as IN REVIEW (~130 pages, 83 tests)
-- Added FILE_MANIFEST.md reference
+- Added file-manifest.md reference
 - Updated project structure to reflect current files
 - Changed quality gate checkboxes to unchecked (pending implementation)
 - Added pending git tags section
@@ -433,7 +433,7 @@ git push --tags
 - Added Decision Tree #8 as IN PROGRESS
 - Added comprehensive audit process to status notes
 - Added Key Architectural Decisions section
-- Added Spec_Error_Log reference to documentation hierarchy and project structure
+- Added spec-error-log.md reference to documentation hierarchy and project structure
 - Updated pending git tags
 - Updated Getting Started checklist
 - Updated next steps for Week 8
