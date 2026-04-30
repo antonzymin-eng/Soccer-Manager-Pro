@@ -30,7 +30,7 @@ This specification defines representation, arithmetic semantics, deterministic u
 
 ### Section 1 — Fixed64 Representation and Numeric Domain
 1.1 Canonical type definition: signed 64-bit **Q32.32** fixed-point representation (MUST).  
-1.2 Scaling factor: `1 << 32` and unit conversion formulae (MUST).  
+1.2 Scaling factor: `2^32` and unit conversion formulae (MUST).  
 1.3 Numeric range constants (MUST): canonical exact forms are raw = `0x8000000000000000` / `0x7FFFFFFFFFFFFFFF`; represented min = `-2^31` (`-2,147,483,648.0000000000` exactly); represented max = `(2^31) - (1 / 2^32)` (approximately `+2,147,483,647.99999999976716935635`, decimal shown rounded to 20 fractional digits); quantum/epsilon = `1 / 2^32` (approximately `0.00000000023283064365`, decimal shown rounded to 20 fractional digits).  
 1.4 Special-value policy: no NaN/Inf sentinels in runtime representation (MUST).  
 1.5 Overflow/underflow behavior hierarchy (MUST):
