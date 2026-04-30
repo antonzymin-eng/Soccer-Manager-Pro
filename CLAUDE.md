@@ -17,7 +17,7 @@
 ## REPO STRUCTURE
 
 ```
-TacticalDirector/
+Soccer-Manager-Pro/
 ├── CLAUDE.md                       ← You are here. Read first. Always.
 ├── docs/
 │   ├── planning/                   ← Master volumes, dev plan, best practices
@@ -32,7 +32,7 @@ TacticalDirector/
 │   │   ├── perception-system/      ← Spec #7
 │   │   ├── decision-tree/          ← Spec #8
 │   │   └── ...                     ← Specs #9–#20 as written
-│   └── tracking/                   ← PROGRESS.md, Spec_Error_Log, FIX_MANIFEST
+│   └── tracking/                   ← PROGRESS.md, spec-error-log.md, fix-manifest-pass-mechanics.md, file-manifest.md
 └── src/                            ← Empty until all 20 specs approved
 ```
 
@@ -199,9 +199,9 @@ pass-mechanics/
 |----------|----------|---------|
 | `SPEC_INDEX.md` | `docs/specs/SPEC_INDEX.md` | Canonical spec numbering, folder mapping, approval status |
 | `PROGRESS.md` | `docs/tracking/PROGRESS.md` | Schedule, milestones, weekly log |
-| `Spec_Error_Log` | `docs/tracking/spec-error-log.md` | Cross-spec architectural errors and remediation status |
-| `FIX_MANIFEST` | `docs/tracking/fix-manifest-pass-mechanics.md` | Per-audit fix tracking (Pass Mechanics #5) |
-| `FILE_MANIFEST` | `docs/tracking/file-manifest.md` | Authoritative file inventory (update after every file change) |
+| `spec-error-log.md` | `docs/tracking/spec-error-log.md` | Cross-spec architectural errors and remediation status |
+| `fix-manifest-pass-mechanics.md` | `docs/tracking/fix-manifest-pass-mechanics.md` | Per-audit fix tracking (Pass Mechanics #5) |
+| `file-manifest.md` | `docs/tracking/file-manifest.md` | Authoritative file inventory (update after every file change) |
 
 ---
 
