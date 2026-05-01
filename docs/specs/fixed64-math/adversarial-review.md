@@ -2,69 +2,36 @@
 
 Date: 2026-05-01  
 Reviewer mode: adversarial / implementation-risk focused
+Validation pass: 2026-05-01 against `section-1.md` … `section-8.md` and `appendices.md`
 
 ## Executive Summary
 The current draft is a useful skeleton but **not implementation-ready**. It has good directional requirements, yet it omits critical normative details required to avoid cross-platform drift and inconsistent behavior. The largest risks are: (1) underspecified rounding/tie rules at operation boundaries, (2) missing complete error-code taxonomy and precedence, (3) ambiguous checked/saturating semantics in sign-edge cases, and (4) no concrete machine-readable schemas despite requiring them.
 
-## High-Severity Findings (Release-Blocking)
+## Validation Outcome (Conclusions + Solutions)
+All **High-Severity** conclusions are validated as accurate against the current spec text. Most Medium/Low findings are also validated; one item is downgraded from contradiction to “clarification gap.” Proposed remediation phases (A/B/C) are appropriate and sufficient if made normative.
 
-### H-1: Rounding policy is declared but not bound to each API
-- **Problem:** Section 2 says APIs must declare rounding mode, but it does not provide a complete authoritative table mapping operation -> default rounding -> ties -> error behavior.
-- **Why this breaks determinism:** Two teams can implement `mul` or `div` with different tie behavior and both claim compliance.
-- **Required fix:** Add a normative matrix for all public APIs (including conversions and utility functions) with explicit tie-break semantics and signed-value examples.
+### Validation Matrix
 
-### H-2: Overflow/underflow precedence rules are incomplete
-- **Problem:** Multiple sections reference checked/saturating/unchecked modes, but there is no single precedence rule for interactions (e.g., divide-by-zero + sign + min-negate edge).
-- **Why this breaks determinism:** Implementers may choose different first-failure precedence and return different error codes/results.
-- **Required fix:** Add a single failure precedence order and a canonical operation × mode × outcome matrix with explicit expected raw outputs.
+| Finding | Validation | Evidence snapshot | Solution quality |
+|---|---|---|---|
+| H-1 Rounding policy not bound per API | **Validated** | Section 2.4 lists modes but no operation-by-operation default/tie table; Sections 2.2/2.3 say “configured/deterministic rounding” without tie examples. | **Strong** — adding a normative matrix is the correct fix. |
+| H-2 Failure precedence incomplete | **Validated** | Error behaviors are listed piecemeal (e.g., divide-by-zero, abs/negate min edge), but no global precedence order exists. | **Strong** — precedence + operation×mode matrix is necessary. |
+| H-3 Mul/div formulas underspecified | **Validated** | `wide >> 32` exists, but tie handling and signed rounding branch rules are absent. | **Strong** — deterministic pseudocode is required. |
+| H-4 Conversion ranges/grammar incomplete | **Validated** | Section 4 references boundaries and explicit rounding but omits exact numeric ranges per type and lexical grammar. | **Strong** — grammar + ranges + reject cases needed. |
+| H-5 Perf budgets unanchored | **Validated** | ns budgets exist, but no pinned host spec (CPU/governor/toolchain/OS controls/stat test). | **Strong** — benchmark protocol should be normative. |
+| M-1 Error catalog/versioning | **Validated** | Error codes named but no centralized numeric registry/stability policy. | **Strong** |
+| M-2 Unchecked lint policy underspecified | **Validated** | Lint-ban is required, but no rule IDs/scope/suppression/CI binding text. | **Strong** |
+| M-3 Utility error envelopes unquantified | **Validated** | Envelope requirement appears, but no per-function numeric limits in spec body. | **Strong** |
+| M-4 Serialization schema missing | **Validated** | Schema requirement exists, but no concrete field definitions/test vectors are provided yet. | **Strong** |
+| M-5 Signed-zero compatibility statement absent | **Validated (minor)** | Equality/order semantics are defined, but explicit “single zero encoding” statement is missing. | **Acceptable** |
+| L-1 Terminology drift | **Validated** | Mixed phrasing (`checked mode`, `Checked*`) appears across sections. | **Good cleanup** |
+| L-2 Placeholder version history | **Validated** | Sections are all v0.1 initial-draft entries. | **Good governance fix** |
+| L-3 Appendix artifacts missing | **Validated** | Appendices list intended artifacts without concrete content in-file. | **Good governance fix** |
 
-### H-3: Multiplication and division normative formulas are underspecified
-- **Problem:** `wide >> 32` is stated, but no full rule for rounding when low bits are non-zero, no behavior for negative values in tie cases, and no explicit intermediate limits.
-- **Why this breaks determinism:** Signed shifts and tie handling may differ by language/runtime abstractions.
-- **Required fix:** Specify exact integer algorithm pseudocode with branch rules for all rounding modes.
-
-### H-4: Conversion section lacks precise safe ranges and decimal parsing grammar
-- **Problem:** Section 4 references boundaries but does not provide full exact ranges or accepted text formats.
-- **Why this breaks determinism:** Parsing and conversion can diverge with locale/format differences.
-- **Required fix:** Add exact integer bounds, decimal lexical grammar, required rejection cases, and examples.
-
-### H-5: Performance budgets are not anchored to an identified benchmark host
-- **Problem:** Nanosecond targets are listed without pinned CPU, frequency policy, compiler flags, OS scheduling controls, or statistical acceptance method.
-- **Why this breaks governance:** CI pass/fail will be non-actionable and noisy.
-- **Required fix:** Define benchmark host profile and confidence/variance thresholds.
-
-## Medium-Severity Findings
-
-### M-1: Error codes are referenced but not versioned or centrally cataloged
-Need a canonical registry: symbol, numeric value, text, and stability policy.
-
-### M-2: `Unchecked*` policy says lint-ban in simulation but no lint spec exists
-Need rule identifiers, scope, suppression process, and CI enforcement points.
-
-### M-3: Utility math error envelopes are required but not quantified
-Need per-function max absolute error domains and exception buckets.
-
-### M-4: Serialization schema is described but not actually specified
-Need field-level schema, byte order test vectors, and forward/backward compatibility rules.
-
-### M-5: Comparison semantics omit signed-zero style compatibility statement
-Even though no NaN/Inf exists, explicitly state there is no alternative zero encoding and equality is raw-equality only.
-
-## Low-Severity Findings
-
-### L-1: Terminology drift across sections
-Some sections use “checked mode” vs “Checked* APIs”; standardize naming.
-
-### L-2: Version history entries are all v0.1 placeholders
-Need changelog discipline with issue/decision references.
-
-### L-3: Appendix references are promises without artifacts
-Appendices list deliverables but contain no machine-readable examples yet.
-
-## Cross-Section Contradictions / Gaps
-1. Section 1 mandates deterministic traps/errors but no runtime contract defines transport type (result enum? status+value struct?).
-2. Section 2 prohibits epsilon compare while Section 3 approximation APIs require error envelopes; no guidance on how downstream systems should assert approximate equality.
-3. Section 5 requires zero allocations but Section 7 harness artifact generation may allocate heavily; scope boundary between runtime library and harness tooling is not explicit.
+## Cross-Section Contradictions / Gaps (Validated with one adjustment)
+1. Runtime error transport contract is not yet explicit (result enum vs struct). **Validated.**
+2. No guidance connecting strict compare semantics to approximate-utility assertions in downstream tests. **Validated.**
+3. “Zero allocations” vs harness artifact generation is better framed as a **scope clarification gap** (runtime library vs testing harness), not a hard contradiction. **Adjusted severity: medium clarification issue.**
 
 ## Suggested Remediation Plan
 
