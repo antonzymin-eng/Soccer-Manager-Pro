@@ -14,6 +14,10 @@ Validation layers:
 - FR-DS-006 -> atomic save transaction failure/rollback tests.
 - FR-DS-007/008 -> divergence classifier and first-diff localization tests.
 - FR-DS-009 -> certification suite gate.
+- FR-DS-010 -> T-DS-ENV-007: EnvironmentFingerprint recorded at match start; mid-match mutation rejected.
+- FR-DS-011 -> T-DS-FAULT-008: Tier-B field without tolerance row fails with `ERR_DS_TIERB_TOLERANCE_MISSING`.
+- FR-DS-012 -> T-DS-FAULT-009: out-of-order or skipped replay lifecycle step fails deterministically.
+- FR-DS-013 -> T-DS-ENV-010: float Tier-A field without environment pinning fails classification gate.
 
 ## 5.3 Test Catalogue
 - **T-DS-ORDER-001:** same input trace => identical phase digest sequence.
@@ -22,6 +26,9 @@ Validation layers:
 - **T-DS-REPLAY-004:** randomized checkpoint replay equivalence.
 - **T-DS-SAVE-005:** corrupt/incompatible save fails deterministically.
 - **T-DS-DIFF-006:** injected faults map to correct divergence class.
+- **T-DS-ENV-007:** EnvironmentFingerprint recorded at match start; mid-match mutation triggers `ERR_DS_REPLAY_ENV_MISMATCH` on subsequent replay.
+- **T-DS-FAULT-008:** Tier-B digest-scope field with no tolerance row triggers `ERR_DS_TIERB_TOLERANCE_MISSING`; no silent epsilon substitution occurs.
+- **T-DS-FAULT-009:** Corrupted `prevSnapshotDigest` on replay load triggers `ERR_DS_DIGEST_CHAIN_BREAK` before rehydration; authoritative state is not mutated.
 
 ## 5.4 Determinism and Numerical Verification
 - Tier A fields use bitwise equality only.
@@ -85,7 +92,7 @@ Each deterministic test case MUST include the following fields:
 - `ExpectedDivergenceClass`
 - `ArtifactPaths`
 
-Digest rollup algorithm: `SHA-256(concat(phaseDigest[i] for i in canonical (tick, phaseOrdinal) order))` where `tick` is ascending and `phaseOrdinal` follows the canonical pipeline order from §3.1.2 (`Input=0, Intent=1, AI=2, Physics=3, Resolve=4, Events=5, Snapshot=6`). Full sequence stored as artifact.
+Digest rollup algorithm: `SHA-256(concat(phaseDigest[i] for i in canonical (tick, phaseOrdinal) order))` where `tick` is ascending and `phaseOrdinal` follows the canonical pipeline order from §3.1.2 (`Input=0, Intent=1, AI=2, Physics=3, Resolve=4, Events=5, Snapshot=6`). `AI_NoOp` shares ordinal `2` — it produces an empty-scope phase digest at index `2` on non-stride ticks, preserving the rollup shape. Full sequence stored as artifact.
 
 ## 5.11 Expanded Test Cards (Examples)
 ### 5.11.1 T-DS-ORDER-001
@@ -106,6 +113,27 @@ Digest rollup algorithm: `SHA-256(concat(phaseDigest[i] for i in canonical (tick
 - Pass: deterministic rejection with explicit error IDs; no partial load.
 - Fail: ambiguous or non-deterministic failure message.
 
+### 5.11.4 T-DS-ENV-007
+- FRMappings: FR-DS-010, FR-DS-012.
+- Preconditions: recording-side and replay-side runtimes with different `workerCount` or `simdFeatureLevel`.
+- Steps: (a) Record a match snapshot on runtime A (fingerprint A). (b) Attempt replay on runtime B with a different `EnvironmentFingerprint`. (c) Verify §4.2.2 step 3 fails before rehydration.
+- Pass: `ERR_DS_REPLAY_ENV_MISMATCH` returned at step 3; authoritative state unchanged from pre-load state.
+- Fail: replay proceeds past step 3 or no error is returned.
+
+### 5.11.5 T-DS-FAULT-008
+- FRMappings: FR-DS-011.
+- Preconditions: tolerance matrix contains no entry for `agents[0].analyticsScore` (a Tier-B field); field appears in digest scope.
+- Steps: attempt digest computation when the undeclared Tier-B field is in scope.
+- Pass: `ERR_DS_TIERB_TOLERANCE_MISSING` returned; no digest is produced; no fallback epsilon is applied.
+- Fail: digest computation proceeds with any assumed tolerance value.
+
+### 5.11.6 T-DS-FAULT-009
+- FRMappings: FR-DS-012.
+- Preconditions: valid snapshot at tick T exists; `prevSnapshotDigest` header field is flipped by one bit.
+- Steps: initiate replay resume from the corrupted snapshot.
+- Pass: `ERR_DS_DIGEST_CHAIN_BREAK` returned at §4.2.2 step 4; authoritative state is not rehydrated (step 5 is not reached).
+- Fail: rehydration proceeds or a non-deterministic error is emitted.
+
 ## 5.12 Certification Evidence Requirements
 Certification report MUST include:
 1. platform/build matrix,
@@ -115,4 +143,5 @@ Certification report MUST include:
 5. owner acknowledgement and disposition.
 
 ## 5.13 Version History
+- **v0.8 (May 2, 2026):** Added FR-DS-010..013 traceability rows to §5.2 (B-8). Added T-DS-ENV-007, T-DS-FAULT-008, T-DS-FAULT-009 to §5.3 catalogue and §5.11 expanded test cards (B-9). Added AI_NoOp ordinal-2 note to §5.10 (A-1).
 - **v0.6:** Added normative test card template and expanded concrete test card examples.

@@ -4,10 +4,16 @@
 ### 3.1.1 Canonical intra-phase ordering
 For every authoritative collection in each phase:
 1. primary sort key: `EntityId` ascending
-2. secondary key: subsystem deterministic ordinal
+2. secondary key: subsystem deterministic ordinal (see below)
 3. tertiary key: deterministic insertion index
 
 Unordered container iteration in authoritative paths is forbidden unless copied to a sorted buffer first.
+
+**Subsystem deterministic ordinal:** Each subsystem is assigned a compile-time integer ordinal in `Sim.Constants.Determinism.SubsystemOrdinals` (a dedicated constant catalogue file). Ordinals are contiguous, non-negative, and MUST remain stable across all builds and platforms — reordering or renumbering ordinals is a breaking change requiring a schema version bump. The ordinal is the authoritative secondary sort key; subsystem display name or registration order MUST NOT be used as a substitute.
+
+**Domain convention references:** Field paths in this spec that appear in tolerance rows or digest scope MUST observe CLAUDE.md project conventions:
+- **Fatigue:** `0.0 = fully rested`, `1.0 = fully fatigued`. Any comparator applied to fatigue fields must interpret the scale accordingly.
+- **Coordinate origin:** pitch corner `(0, 0, 0)` (not pitch center). Authoritative source: Ball Physics §1.2, Appendix C. [XC-016-001]
 
 ### 3.1.2 Canonical tick pseudocode (normative)
 The "tick" in the pseudocode below is the **physics tick** at 60 Hz (16.67 ms). The 10 Hz tactical/AI cadence is expressed by gating the `AI` phase on `tick % 6 == 0`; on non-AI ticks the AI phase is a no-op that emits an empty phase digest so phase ordering and the digest stream remain invariant.
@@ -47,28 +53,32 @@ Per decision site, authoritative code MUST either:
 - use reservation API (`Reserve`, `DrawReserved`, `Skip`) preserving global cursor parity.
 
 ## 3.2 Formulas and Worked Examples
-### 3.2.1 RNG stream derivation key
-`StreamKey = SipHash-2-4-64(matchSeedKey, subsystemId, entityId, streamVersion)`
+### 3.2.1 RNG stream derivation key (FM-016-001)
+`StreamKey = SipHash-2-4-64((k0,k1), subsystemId ∥ entityId ∥ streamVersion)`  [RNG_STREAM_HASH]
 
-The stream key identifies a *persistent* RNG stream for the lifetime of the (subsystem, entity, streamVersion) tuple within a match. It MUST NOT include per-evaluation counters; per-evaluation indexing is handled by the `RngCursor` and the `actionOrdinal` reservation index defined in §3.2.5.
+where `(k0, k1)` is the 128-bit SipHash key derived from `matchSeed` via `RNG_KDF` (see §3.2.4). The stream key identifies a *persistent* RNG stream for the lifetime of the (subsystem, entity, streamVersion) tuple within a match. It MUST NOT include per-evaluation counters; per-evaluation indexing is handled by the `RngCursor` and the `actionOrdinal` reservation index defined in §3.2.5.
 
-### 3.2.2 Phase digest construction
+### 3.2.2 Phase digest construction (FM-016-002)
 `PhaseDigest = SHA-256(SerializeCanonical(DigestVersion || Tick || PhaseId || phaseScopeFields))`
 
 `Tick` and `PhaseId` MUST be included in the preimage so that two phases with otherwise-identical scope at different ticks produce distinct digests. `DigestVersion` MUST equal `DETERMINISM_DIGEST_VERSION` (§3.4) and is included to make digests self-identifying across version migrations.
 
-### 3.2.3 Snapshot chain digest
+### 3.2.3 Snapshot chain digest (FM-016-003)
 `SnapshotDigest[T] = SHA-256(SnapshotHeader[T] || SnapshotPayload[T])`
 
 The `currentSnapshotDigest` field on the snapshot record is stored adjacent to the header but is excluded from the preimage of its own computation (see §3.9.2 for the full preimage layout).
+
+**Ring-buffer and chain verification:** The `SnapshotHeader[T]` includes a `prevSnapshotDigest` field that links to `SnapshotDigest[T-1]`. Once `SnapshotDigest[T-1]` is computed and written into `SnapshotHeader[T]`, the raw bytes of snapshot `T-1` are no longer needed to verify the chain — the stored digest value in the header is sufficient. A ring buffer that evicts old snapshot bytes is therefore compatible with chain integrity, because chain link verification at replay load time reads only the stored `prevSnapshotDigest` value from the header, not the original bytes. The ring buffer need only retain snapshot bytes long enough to complete the hash computation for the *next* snapshot's header before eviction.
 
 ### 3.2.4 Digest algorithm binding (normative)
 - `DigestVersion=1` MUST map to `SHA-256` with 32-byte (256-bit) output.
 - The SHA-256 output is treated as an opaque 32-octet string; SHA-256 has no inherent endianness and implementations MUST NOT byte-swap the digest octets.
 - All multi-byte integer fields *inside* the digest preimage (e.g. `Tick`, `PhaseId`, `DigestVersion`, `SchemaVersion`) MUST be serialized in `SNAPSHOT_PAYLOAD_ENDIANNESS` (§3.4 = `LittleEndian`).
-- `StreamKey` derivation uses SipHash-2-4 with a 128-bit key derived from `matchSeed` via `PBKDF2-HMAC-SHA256(matchSeed, "DS-RNG-KEY-v1", 1)` (deterministic key expansion).
-- `StreamKey` output width is 64-bit unsigned, encoded little-endian when serialized.
-- Per-draw values (§3.2.5) are produced by `SipHash-2-4-64(StreamKey, RngCursor + drawIndex)` with `(RngCursor + drawIndex)` encoded as a little-endian `uint64`.
+- `matchSeedKey` is derived from `matchSeed` via `HKDF-SHA256` (RFC 5869, `RNG_KDF`):
+  `matchSeedKey = HKDF-SHA256(IKM=matchSeed, salt=∅, info="DS-RNG-KEY-v1", length=RNG_KDF_OUTPUT_BYTES)`
+  The 16-octet output is split into two little-endian `uint64` values `(k0, k1)`: bytes [0..7] = `k0`, bytes [8..15] = `k1`. These form the SipHash-2-4 key. Implementations MUST NOT use PBKDF2 or any other KDF for this step.
+- `StreamKey` derivation uses `SipHash-2-4-64((k0,k1), subsystemId ∥ entityId ∥ streamVersion)` (constant `RNG_STREAM_HASH`; see §3.2.1). `StreamKey` output width is 64-bit unsigned, encoded little-endian when serialized.
+- Per-draw values (§3.2.5) are produced by `SipHash-2-4-64((k0,k1), StreamKey ∥ (RngCursor + drawIndex))` with `(RngCursor + drawIndex)` encoded as a little-endian `uint64`.
 
 Worked example (conceptual):
 - Tick 120 Physics phase serializes field scope in frozen order.
@@ -77,13 +87,19 @@ Worked example (conceptual):
 
 ## 3.2.5 actionOrdinal and RngCursor semantics
 - `actionOrdinal` is a per-stream (i.e. per-subsystem, per-entity) monotonically increasing **reservation index**. It is NOT part of the `StreamKey`.
-- `actionOrdinal` increments once per deterministic decision-site evaluation regardless of which branch is taken (this is what makes reservation branch-safe).
-- `RngCursor` is the per-stream draw counter. It advances by exactly the reservation budget of each evaluation (`Reserve(siteId, count)` advances the cursor by `count`), independent of how many `DrawReserved` calls actually consume bytes.
-- A draw is computed as `SipHash-2-4-64(StreamKey, RngCursor + drawIndex)` where `drawIndex ∈ [0, count)` and `RngCursor` is the cursor value at the start of the reservation.
+- `actionOrdinal` increments once per deterministic decision-site evaluation regardless of which branch is taken. It is auxiliary bookkeeping that records how many reservations have been made on the stream.
+- Branch-safety is provided by `RngCursor` advancing by the reservation budget (`Reserve(siteId, count)` advances the cursor by exactly `count`) regardless of how many `DrawReserved` calls actually execute. `actionOrdinal` is a corroborating counter, not the source of branch-safety; omitting `actionOrdinal` updates would not break cursor parity but would break snapshot/replay corroboration.
+- `RngCursor` is the per-stream draw counter. It advances by exactly the reservation budget of each evaluation, independent of how many `DrawReserved` calls actually consume bytes.
+- A draw is computed as `SipHash-2-4-64((k0,k1), StreamKey ∥ (RngCursor + drawIndex))` where `drawIndex ∈ [0, count)` and `RngCursor` is the cursor value at the start of the reservation.
 - After the evaluation completes, `RngCursor += count` and `actionOrdinal += 1`.
 - Both `actionOrdinal` and `RngCursor` MUST be serialized per stream in snapshot/replay state and restored on load.
 - Entity despawn retains a tombstone record `(EntityId, finalActionOrdinal, finalRngCursor)` in a despawn log keyed by `EntityId`; respawn with a new `EntityId` allocates a fresh stream with `actionOrdinal=0`, `RngCursor=0`.
-- Reuse of an `EntityId` after despawn within the same match is forbidden.
+- Reuse of an `EntityId` after despawn within the same match is forbidden. **Cross-spec normative constraint:** entity allocators in Agent Movement (#2) and the AI subsystem (Decision Tree #8) MUST guarantee `EntityId` uniqueness for the lifetime of a match; once an `EntityId` is despawned it MUST NOT be reassigned. Violation breaks stream isolation and replay parity.
+
+### 3.2.5.1 Intra-stream draw-site ordering
+A single stream `(subsystem, entity)` may be drawn from by multiple decision sites within one phase (e.g. `AI.DecidePass` and `AI.DecideShoot` both call `Reserve()` against entity 42's AI stream). The `RngCursor` outcome depends on the order in which those sites call `Reserve()`.
+
+**Normative ordering rule:** Decision sites within the same (subsystem, entity) stream MUST call `Reserve()` in **stable declaration order** — the lexicographic order of their stable site IDs as registered in the draw-site registry (§3.6.2). This order MUST be compile-time deterministic and identical across all builds and platforms. The draw-site registry is the single source of truth for this ordering; any reordering of site IDs in the registry is a breaking change requiring a `streamVersion` bump.
 
 ## 3.3 Edge Cases
 - **Mid-tick save request:** MUST be denied unless normalized to legal boundary with explicit phase marker.
@@ -105,8 +121,9 @@ Target catalogue: `Sim.Constants.Determinism`. Every constant carries one of the
 | `TIER_A_COMPARATOR` | `BitwiseEqual` | [FIXED] | Mandatory comparator for Tier A fields |
 | `TIER_B_DEFAULT_COMPARATOR` | `AbsEpsilon` | [FIXED] | Default comparator class for Tier B; no default magnitude (see §3.4.2) |
 | `LEGAL_SAVE_BOUNDARIES` | `{ EndOfSnapshot }` | [FIXED] | Only legal phase boundary for save commit |
-| `RNG_KEY_HASH` | `SipHash-2-4-64` | [FIXED] | Stream key derivation (see §3.2.1) |
-| `RNG_DRAW_HASH` | `SipHash-2-4-64` | [FIXED] | Per-cursor draw derivation (see §3.2.5) |
+| `RNG_KDF` | `HKDF-SHA256` | [FIXED] | KDF (RFC 5869) for deriving 128-bit SipHash key `(k0,k1)` from `matchSeed`; MUST NOT be substituted with PBKDF2 or any other KDF (see §3.2.4) |
+| `RNG_KDF_OUTPUT_BYTES` | `16` | [FIXED] | HKDF output length; bytes [0..7]=k0, bytes [8..15]=k1 (both little-endian uint64) |
+| `RNG_STREAM_HASH` | `SipHash-2-4-64` | [FIXED] | SipHash algorithm used for both stream key derivation (§3.2.1) and per-cursor draw values (§3.2.5) |
 | `PHASE_DIGEST_HASH` | `SHA-256` | [FIXED] | Phase digest algorithm under `DigestVersion=1` |
 | `ERR_DS_PHASE_OWNERSHIP` | `0x1601` | [FIXED] | Mutation outside owning phase WriteSet |
 | `ERR_DS_SCHEMA_INCOMPATIBLE` | `0x1602` | [FIXED] | Snapshot schema mismatch on load |
@@ -116,11 +133,13 @@ Target catalogue: `Sim.Constants.Determinism`. Every constant carries one of the
 | `ERR_DS_TIERA_NONFINITE` | `0x1606` | [FIXED] | NaN/Inf observed in Tier A field |
 | `ERR_DS_TIERB_TOLERANCE_MISSING` | `0x1607` | [FIXED] | Tier B field present in digest scope without approved tolerance row |
 | `ERR_DS_DIGEST_CHAIN_BREAK` | `0x1608` | [FIXED] | `PrevSnapshotDigest` mismatch on replay load |
+| `ERR_DS_REPLAY_BOUNDARY` | `0x1609` | [FIXED] | Replay cursor not positioned at `EndOfSnapshot[T]` before T+1 reapplication (§4.2.2 step 7) |
 
 ### 3.4.2 Tier B comparator default policy
 `TIER_B_DEFAULT_COMPARATOR` declares the comparator *class* (`AbsEpsilon`) but does NOT supply a default tolerance magnitude. A Tier B field that appears in a digest scope without a matching tolerance row in the tolerance matrix MUST fail validation with `ERR_DS_TIERB_TOLERANCE_MISSING`. Implementations MUST NOT silently substitute a fallback epsilon.
 
 ## 3.5 Version History
+- **v0.8 (May 2, 2026):** Third-pass critique fixes. (a) Replaced PBKDF2-HMAC-SHA256 with HKDF-SHA256 (RFC 5869) for `matchSeedKey` derivation; added `RNG_KDF`, `RNG_KDF_OUTPUT_BYTES` constants; renamed `RNG_KEY_HASH`/`RNG_DRAW_HASH` to `RNG_STREAM_HASH` — eliminates KDF ambiguity (A-2, A-3). (b) Added `ERR_DS_REPLAY_BOUNDARY` (0x1609) error code. (c) Added `AI_NoOp` row to §3.6.1 phase ownership table (A-1). (d) Fixed §3.6.1 Resolve row parenthetical (D-19). (e) Fixed §3.2.5 cause/effect: `RngCursor` advance is the source of branch-safety; `actionOrdinal` is auxiliary (A-5). (f) Added §3.2.5.1 intra-stream draw-site ordering rule (B-10). (g) Added EntityId no-reuse cross-spec normative constraint (D-21). (h) Clarified ring-buffer/chain-digest relationship in §3.2.3 (B-11). (i) Added subsystem ordinal assignment rule and domain convention refs (fatigue, corner origin) to §3.1.1 (D-18, B-12). (j) Added FM-016-001/002/003 formula IDs; EC-016-001..008 edge-case IDs (C-15).
 - **v0.7 (May 2, 2026):** Major adversarial-fix pass. (a) Reformulated RNG model: `StreamKey` no longer carries `actionOrdinal`; `RngCursor` advances by reservation budget; per-draw values defined as `SipHash-2-4-64(StreamKey, cursor + i)`. (b) Added `Tick`/`PhaseId`/`DigestVersion` to `PhaseDigest` preimage. (c) Removed misleading "big-endian" digest language; bound payload-integer endianness to `SNAPSHOT_PAYLOAD_ENDIANNESS`. (d) Merged §3.4 and §3.4.1 constants into one tagged catalogue with hex IDs for all errors; added `ERR_DS_TIERB_TOLERANCE_MISSING` (0x1607) and `ERR_DS_DIGEST_CHAIN_BREAK` (0x1608). (e) Added `PHYSICS_TICK_HZ`/`TACTICAL_TICK_HZ`/`AI_PHASE_STRIDE` constants and `AI_NoOp` phase pattern reconciling 60 Hz physics tick with 10 Hz tactical cadence. (f) `LEGAL_SAVE_BOUNDARIES = { EndOfSnapshot }` only. (g) §3.6.1 universal prohibitions: seed root, environment fingerprint, snapshot history are immutable for all phases.
 - **v0.4:** Added canonical tick pseudocode, explicit snapshot digest formula, and deterministic error IDs.
 - **v0.3:** Technical contracts normalized to deterministic ordering, RNG reservation, and snapshot/digest rules.
@@ -132,8 +151,9 @@ Target catalogue: `Sim.Constants.Determinism`. Every constant carries one of the
 | Input | input buffer | world physics state |
 | Intent | intent queue | snapshot bytes |
 | AI | decision buffers | physics integration buffers |
+| AI_NoOp | (none — empty WriteSet; emits empty phase digest only) | all phase-specific writes; identical prohibitions as the AI phase |
 | Physics | transforms, velocities | UI caches |
-| Resolve | conflict resolution state | intent queue (read-only at this point) |
+| Resolve | conflict resolution state | intent queue |
 | Events | event ledger | historical snapshots |
 | Snapshot | serialized bytes + digest | live gameplay intent queue |
 
@@ -194,16 +214,16 @@ All multi-byte integer fields use `SNAPSHOT_PAYLOAD_ENDIANNESS` (§3.4 = `Little
 If replayed load at identical tick produces a different digest (e.g., `0x9F21`), classification is `HardDesync` unless field set is explicitly Tier B scoped.
 
 ## 3.10 Edge-Case Decision Table
-| Case | Trigger | Required behavior | Error/Classification |
-|---|---|---|---|
-| Mid-tick save request | request during `AI`/`Physics` | deny or defer to legal boundary | `ERR_DS_SAVE_BOUNDARY` |
-| Unknown enum value on load | schema decode finds out-of-range enum | fail load deterministically | `ERR_DS_SCHEMA_INCOMPATIBLE` |
-| Missing RNG stream key | stream absent in snapshot | fail replay bootstrap | `ERR_DS_RNG_STREAM_MISSING` |
-| NaN in Tier A field | decode or runtime emission | reject snapshot/tick commit | `ERR_DS_TIERA_NONFINITE` |
-| Tier B field without tolerance row | digest scope contains B-tier path with no matching tolerance row | reject digest computation | `ERR_DS_TIERB_TOLERANCE_MISSING` |
-| Snapshot chain break on resume | `prevSnapshotDigest` does not match expected predecessor | abort replay before rehydration | `ERR_DS_DIGEST_CHAIN_BREAK` |
-| EnvironmentFingerprint mismatch | live runtime fingerprint ≠ snapshot fingerprint | abort replay before rehydration | `ERR_DS_REPLAY_ENV_MISMATCH` |
-| Authoritative write outside WriteSet | phase mutates field not in declared WriteSet | fail tick commit | `ERR_DS_PHASE_OWNERSHIP` |
+| ID | Case | Trigger | Required behavior | Error/Classification |
+|---|---|---|---|---|
+| EC-016-001 | Mid-tick save request | request during `AI`/`Physics` | deny or defer to legal boundary | `ERR_DS_SAVE_BOUNDARY` |
+| EC-016-002 | Unknown enum value on load | schema decode finds out-of-range enum | fail load deterministically | `ERR_DS_SCHEMA_INCOMPATIBLE` |
+| EC-016-003 | Missing RNG stream key | stream absent in snapshot | fail replay bootstrap | `ERR_DS_RNG_STREAM_MISSING` |
+| EC-016-004 | NaN in Tier A field | decode or runtime emission | reject snapshot/tick commit | `ERR_DS_TIERA_NONFINITE` |
+| EC-016-005 | Tier B field without tolerance row | digest scope contains B-tier path with no matching tolerance row | reject digest computation | `ERR_DS_TIERB_TOLERANCE_MISSING` |
+| EC-016-006 | Snapshot chain break on resume | `prevSnapshotDigest` does not match expected predecessor | abort replay before rehydration | `ERR_DS_DIGEST_CHAIN_BREAK` |
+| EC-016-007 | EnvironmentFingerprint mismatch | live runtime fingerprint ≠ snapshot fingerprint | abort replay before rehydration | `ERR_DS_REPLAY_ENV_MISMATCH` |
+| EC-016-008 | Authoritative write outside WriteSet | phase mutates field not in declared WriteSet | fail tick commit | `ERR_DS_PHASE_OWNERSHIP` |
 
 ## 3.11 Algorithm Pseudocode: Deterministic Merge Barrier
 ```text
@@ -222,5 +242,6 @@ function MergePhaseOutputs(jobOutputs):
 ```
 
 ## 3.12 Version History
+- **v0.8 (May 2, 2026):** Added EC-016-001..008 IDs to edge-case table.
 - **v0.7 (May 2, 2026):** Edge-case decision table extended with `ERR_DS_TIERB_TOLERANCE_MISSING`, `ERR_DS_DIGEST_CHAIN_BREAK`, `ERR_DS_REPLAY_ENV_MISMATCH`, `ERR_DS_PHASE_OWNERSHIP` rows. Snapshot digest example updated to include `EnvironmentFingerprint` in the preimage layout.
 - **v0.6:** Added numeric worked examples, edge-case decision table, and deterministic merge pseudocode.

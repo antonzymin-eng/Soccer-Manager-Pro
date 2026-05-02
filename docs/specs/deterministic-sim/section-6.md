@@ -60,7 +60,7 @@ Note: Section 6.10 phase shares are baseline without instrumentation slack; 3-10
 | Phase | CPU budget share (target) | Notes |
 |---|---|---|
 | Input + Intent | 8% | parsing and intent mapping |
-| AI | 22% | includes deterministic RNG operations |
+| AI | 22% | Budget applies to stride ticks only (every 6th tick at 10 Hz cadence). On the other 5 ticks `AI_NoOp` runs with near-zero cost. Tick-averaged AI budget ≈ 3.7% (22% / 6). Budget allocation in this table is stated *per stride tick* to size AI work correctly; the 22% figure should NOT be used as a flat per-tick budget. |
 | Physics | 34% | usually highest compute share |
 | Resolve + Events | 18% | conflict resolution + event ledger |
 | Snapshot + Digest | 18% | serialization and hash overhead |
@@ -78,4 +78,5 @@ Note: Section 6.10 phase shares are baseline without instrumentation slack; 3-10
 - retention artifact cap breach in standard mode => fail certification run.
 
 ## 6.13 Version History
+- **v0.8 (May 2, 2026):** §6.10 AI row updated to clarify that 22% is a per-stride-tick budget; tick-averaged AI budget ≈ 3.7% (A-1).
 - **v0.6:** Added phase-level budget allocation, triage procedure, and quantitative acceptance thresholds.

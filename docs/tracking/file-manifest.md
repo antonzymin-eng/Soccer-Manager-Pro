@@ -25,6 +25,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `docs/tracking/spec-error-log.md` | Cross-spec error tracking (`ERR-*`) |
 | `docs/tracking/spec-error-log-err012-addendum.md` | ERR-012 addendum details |
 | `docs/tracking/fix-manifest-pass-mechanics.md` | Pass Mechanics audit/fix closure tracking |
+| `docs/tracking/certification-platform.md` | Stage 0 host platform version pin (required before first Spec #16 certification run) |
 | `docs/tracking/file-manifest.md` | This manifest |
 
 ---
@@ -54,8 +55,9 @@ The project currently tracks written specifications in the following folders:
 6. `docs/specs/shot-mechanics/`
 7. `docs/specs/perception-system/`
 8. `docs/specs/decision-tree/`
+9. `docs/specs/deterministic-sim/` — Spec #16 (Deterministic Simulation); status: IN PROGRESS as of May 2, 2026; files: `outline.md`, `adversarial-review.md`, `section-1.md` through `section-9-approval-checklist.md`, `appendices.md`
 
-> Additional spec folders for #9–#20 will be added as writing progresses.
+> Additional spec folders for #9–#15, #17–#20 will be added as writing progresses.
 
 ---
 
