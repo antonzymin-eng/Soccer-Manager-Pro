@@ -17,6 +17,7 @@
 - Final digest algorithm upgrade path (`v1 -> v2`) and migration cadence.
 - Long-horizon replay storage tiering strategy.
 - Optional Tier B expansion process for select physics-derived analytics fields.
+- Stage 5 cross-platform activation criteria and toolchain hardening requirements.
 
 ### 7.2.1 Decision log template
 Each deferred item MUST include: context, options considered, owner, target decision milestone, and rollback plan.

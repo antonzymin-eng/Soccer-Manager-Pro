@@ -31,6 +31,8 @@ Cross-spec dependencies to validate during approval:
 - Certification and CI gates with Testing Strategy spec.
 - Overhead budgets with Performance Optimization spec.
 
+Sign-off is blocked while any row remains pending.
+
 ### 8.3.1 Audit table
 | Dependency | Verification action | Status |
 |---|---|---|
