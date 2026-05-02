@@ -37,7 +37,7 @@ Validation layers:
 | Stage 5+ Linux x64 | Release | Deterministic flags | PASS |
 | Stage 5+ macOS ARM64 | Release | Deterministic flags | PASS |
 
-Stage 0: hard desync on host platform is a release blocker. Stage 5+: hard desync on any certified platform is a blocker.
+**FR-DS-009-GATE:** Any hard desync on the Stage 0 host platform MUST block the release candidate. At Stage 5+, any hard desync on any certified platform in the matrix MUST block the release candidate.
 
 ## 5.6 Version History
 - **v0.4:** Added explicit certification matrix and release-blocking policy.

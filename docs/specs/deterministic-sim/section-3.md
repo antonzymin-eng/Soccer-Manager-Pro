@@ -43,7 +43,7 @@ Per decision site, authoritative code MUST either:
 `PhaseDigest = SHA-256(SerializeCanonical(phaseScopeFields))`
 
 ### 3.2.3 Snapshot chain digest
-`SnapshotDigest[T] = SHA-256(SnapshotHeaderWithoutCurrentDigest[T] || SnapshotPayload[T])`
+`SnapshotDigest[T] = SHA-256(SnapshotHeader[T] || SnapshotPayload[T])`
 
 
 ### 3.2.4 Digest algorithm binding (normative)
@@ -56,11 +56,12 @@ Worked example (conceptual):
 - Tick 120 Physics phase serializes field scope in frozen order.
 - Digest algorithm `v1` computes digest `D120P`.
 - Replay must reproduce identical `D120P` for Tier A parity.
+
 ## 3.2.5 actionOrdinal semantics
 - `actionOrdinal` is a per-entity, per-subsystem monotonically increasing counter across the whole match.
 - Counter increments once per deterministic decision site evaluation.
 - Counter state MUST be serialized in snapshot/replay state and restored on load.
-- Entity despawn retains ordinal tombstone; respawn with new EntityId starts at 0.
+- Entity despawn retains ordinal tombstone (final ordinal value stored in a despawn log keyed by EntityId); respawn with new EntityId starts at 0.
 
 ## 3.3 Edge Cases
 - **Mid-tick save request:** MUST be denied unless normalized to legal boundary with explicit phase marker.
@@ -78,6 +79,7 @@ Worked example (conceptual):
 - `ERR_DS_PHASE_OWNERSHIP = 0x1601`
 - `ERR_DS_SCHEMA_INCOMPATIBLE = 0x1602`
 - `ERR_DS_RNG_STREAM_MISSING = 0x1603`
+- `ERR_DS_REPLAY_ENV_MISMATCH = 0x1604`
 ### 3.4.1 Constant tags and catalogue
 Target catalogue: `Sim.Constants.Determinism`
 - `DETERMINISM_DIGEST_VERSION` [FIXED]
@@ -90,6 +92,7 @@ Target catalogue: `Sim.Constants.Determinism`
 - `ERR_DS_RNG_STREAM_MISSING` [FIXED]
 - `ERR_DS_SAVE_BOUNDARY` [FIXED]
 - `ERR_DS_TIERA_NONFINITE` [FIXED]
+- `ERR_DS_REPLAY_ENV_MISMATCH` [FIXED]
 
 ## 3.5 Version History
 - **v0.4:** Added canonical tick pseudocode, explicit snapshot digest formula, and deterministic error IDs.
@@ -149,7 +152,7 @@ Given:
 
 Digest input bytes are composed as:
 `SchemaVersion || Tick || PrevSnapshotDigest || PayloadBytes`
-(`currentSnapshotDigest` is excluded from preimage and stored adjacent after hash computation).
+(The computed `currentSnapshotDigest` is stored in the snapshot record adjacent to the header but excluded from the hash preimage.)
 
 If replayed load at identical tick produces a different digest (e.g., `0x9F21`), classification is `HardDesync` unless field set is explicitly Tier B scoped.
 
