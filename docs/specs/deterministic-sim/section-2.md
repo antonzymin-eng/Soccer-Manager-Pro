@@ -1,5 +1,22 @@
 # Deterministic Simulation Specification #16 — Section 2: System Overview
 
+## 2.0 Identifier Taxonomy
+This spec uses a single prefix family for internal traceability. Cross-spec references continue to use the CLAUDE.md taxonomy (`XC-`, `FM-`, `EC-`, `ERR-`).
+
+| Prefix | Scope | Example |
+|---|---|---|
+| `FR-DS-NNN` | Functional requirement (this spec) | `FR-DS-003` |
+| `VR-DS-NNN` | Verification requirement (this spec) | `VR-DS-001` |
+| `OPS-DS-NNN` | Operational/governance requirement | `OPS-DS-001` |
+| `T-DS-<area>-NNN` | Test card | `T-DS-ORDER-001` |
+| `GV-<area>-NNN` | Golden vector | `GV-RNG-001` |
+| `XC-NNN` | Cross-spec reference (CLAUDE.md taxonomy) | `XC-016-001` |
+| `FM-NNN` | Formula reference (CLAUDE.md taxonomy) | `FM-016-001` |
+| `EC-NNN` | Edge-case reference (CLAUDE.md taxonomy) | `EC-016-001` |
+| `ERR-NNN` | Spec Error Log entry (CLAUDE.md taxonomy) | `ERR-016-001` |
+
+The earlier `FR-DET-` / `VR-DET-` / `OPS-DET-` outline prefixes are deprecated and have been superseded by the `-DS-` family.
+
 ## 2.1 Functional Requirements
 - **FR-DS-001:** Simulation MUST execute with canonical per-tick phase order.
 - **FR-DS-002:** Authoritative intra-phase iteration MUST use deterministic key order.
@@ -32,9 +49,9 @@ Core components:
 ## 2.3 Data Structures
 - `DeterminismContext { buildHash, matchSeed, schemaVersion, digestVersion }`
 - `PhaseDigest { tick, phaseId, digest }`
-- `RngStreamKey { subsystemId, entityId, actionOrdinal, streamVersion }`
-- `RngCursor { streamKey, counter }`
-- `SnapshotHeader { schemaVersion, tick, prevSnapshotDigest }`
+- `RngStreamKey { subsystemId, entityId, streamVersion }` (persistent per-(subsystem, entity, version); see §3.2.1)
+- `RngCursor { streamKey, counter, actionOrdinal }` (per-stream draw counter and reservation index; see §3.2.5)
+- `SnapshotHeader { schemaVersion, tick, prevSnapshotDigest, environmentFingerprint }` (see §4.8 for fingerprint contents)
 - `ToleranceRow { fieldPath, tier, comparator, toleranceValue, rationale, owner, reviewDate }`
 - `ComparatorRegistry = { BitwiseEqual, AbsEpsilon, RelEpsilon }` (normative v1)
 
@@ -65,6 +82,7 @@ Core components:
 | Tier B drift | continue replay with warning | fail if out-of-bound |
 
 ## 2.5 Version History
+- **v0.7 (May 2, 2026):** Added §2.0 Identifier Taxonomy; corrected `RngStreamKey` (removed `actionOrdinal` from key) and extended `RngCursor` (added `actionOrdinal`); extended `SnapshotHeader` with `environmentFingerprint`.
 - **v0.5:** Added runtime sequence, tolerance schema, and failure recovery matrix.
 - **v0.3:** Added explicit FR set tied to refined outline and determinism governance.
 

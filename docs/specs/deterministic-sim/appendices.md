@@ -11,13 +11,15 @@ Derivation steps:
 4. Hash bytes using approved digest version.
 
 ### A.2 RNG branch-normalization rationale
-Fixed draw budget/reservation ensures branch-dependent control flow cannot alter global stream cursor parity.
+Fixed draw budget per reservation ensures branch-dependent control flow cannot alter per-stream cursor parity. The reservation budget — not the number of draws actually consumed — is what advances the cursor.
 
-Worked example:
-- Site `AI.DecidePass` reserves 3 draws.
-- Fast branch consumes 1 draw + 2 skips.
-- Slow branch consumes all 3 draws.
-- Both branches end with identical cursor advancement.
+Worked example (stream `(AI, entity=42, v1)`, initial `RngCursor=200`, `actionOrdinal=11`):
+- Site `AI.DecidePass` reserves 3 draws (`Reserve("AI.DecidePass", 3)`).
+- Fast branch: `DrawReserved(0)` then `Skip(2)`.
+- Slow branch: `DrawReserved(0..2)`.
+- Both branches end with `RngCursor=203`, `actionOrdinal=12`.
+
+See §3.2.5 for the formal cursor model and §3.7 for the full pseudocode form.
 
 ## Appendix B — Numerical Verification
 ### B.1 Comparator policy

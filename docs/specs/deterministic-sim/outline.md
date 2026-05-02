@@ -3,8 +3,8 @@
 ## 0. Document Metadata
 - **Spec ID:** 16
 - **Title:** Deterministic Simulation
-- **Status:** Draft outline (refined)
-- **Version:** 0.3
+- **Status:** Draft outline (refined); section files now superseded at v0.7 (see individual section version histories)
+- **Version:** 0.4 (May 2, 2026 — prefix unification: `FR-DET-`/`VR-DET-`/`OPS-DET-` deprecated in favor of `-DS-` family per §2.0 of section-2.md)
 - **Primary audience:** Gameplay engineering, physics engineering, AI systems, tooling, QA automation, build/release
 - **Normative keywords:** MUST, MUST NOT, SHOULD, SHOULD NOT, MAY
 
@@ -277,18 +277,18 @@ Outcome:
 ---
 
 ## 12. Requirement ID Seed Set (New)
-- `FR-DET-001`: canonical tick pipeline
-- `FR-DET-002`: intra-phase ordering keys
-- `FR-DET-003`: authoritative RNG ownership
-- `FR-DET-004`: branch-safe RNG normalization
-- `FR-DET-005`: snapshot canonical binary schema
-- `FR-DET-006`: replay reconstruction state machine
-- `FR-DET-007`: deterministic digest protocol
-- `FR-DET-008`: save/load equivalence protocol
-- `VR-DET-001`: phase digest determinism tests
-- `VR-DET-002`: checkpoint replay equivalence suite
-- `VR-DET-003`: cross-platform certification corpus
-- `OPS-DET-001`: golden trace governance workflow
+- `FR-DS-001`: canonical tick pipeline
+- `FR-DS-002`: intra-phase ordering keys
+- `FR-DS-003`: authoritative RNG ownership
+- `FR-DS-004`: branch-safe RNG normalization
+- `FR-DS-005`: snapshot canonical binary schema
+- `FR-DS-006`: replay reconstruction state machine
+- `FR-DS-007`: deterministic digest protocol
+- `FR-DS-008`: save/load equivalence protocol
+- `VR-DS-001`: phase digest determinism tests
+- `VR-DS-002`: checkpoint replay equivalence suite
+- `VR-DS-003`: cross-platform certification corpus
+- `OPS-DS-001`: golden trace governance workflow
 
 ---
 

@@ -30,16 +30,21 @@ Validation layers:
 - Certification result requires zero Tier A mismatches and zero out-of-bound Tier B mismatches.
 
 ## 5.5 Certification Matrix (minimum)
-| Platform | Build | Compiler mode | Required result |
-|---|---|---|---|
-| Stage 0 Host Platform | Release | Deterministic flags | PASS |
-| Stage 5+ Windows x64 | Release | Deterministic flags | PASS |
-| Stage 5+ Linux x64 | Release | Deterministic flags | PASS |
-| Stage 5+ macOS ARM64 | Release | Deterministic flags | PASS |
+| Stage | Platform | OS / runtime | Build | Compiler mode | Required result |
+|---|---|---|---|---|---|
+| 0 | Windows x64 (developer host) | Windows 10/11, Unity 2022 LTS, Mono/IL2CPP per project default | Release | Deterministic flags (denormals-are-zero off, fp-contract off, fma off unless platform-pinned) | PASS |
+| 5+ | Windows x64 | Windows 10/11, Unity 2022 LTS, IL2CPP | Release | Deterministic flags | PASS |
+| 5+ | Linux x64 | Ubuntu 22.04 LTS, Unity 2022 LTS, IL2CPP | Release | Deterministic flags | PASS |
+| 5+ | macOS ARM64 | macOS 13+, Unity 2022 LTS, IL2CPP | Release | Deterministic flags | PASS |
 
-**FR-DS-009-GATE:** Any hard desync on the Stage 0 host platform MUST block the release candidate. At Stage 5+, any hard desync on any certified platform in the matrix MUST block the release candidate.
+**FR-DS-009-GATE:**
+- **Stage 0:** any hard desync on the Stage 0 host platform (Windows x64, Unity 2022 LTS) MUST block the release candidate. Cross-platform parity is NOT a Stage 0 gate (per CLAUDE.md).
+- **Stage 5+:** any hard desync on any certified platform in the matrix MUST block the release candidate.
+
+The exact Stage 0 host platform tuple (OS version, Unity LTS revision, IL2CPP version, compiler flag set) MUST be pinned in `docs/tracking/certification-platform.md` before the first certification run; Section 5.5 lists the platform family but the version pin is a separate operational artifact.
 
 ## 5.6 Version History
+- **v0.7 (May 2, 2026):** Stage 0 host platform pinned (Windows x64, Unity 2022 LTS); FR-DS-009-GATE split by stage with explicit "Stage 0 cross-platform NOT a gate" note. Digest rollup ordering bound to canonical (tick, phaseOrdinal) sort.
 - **v0.4:** Added explicit certification matrix and release-blocking policy.
 - **v0.3:** Added mandatory FR traceability and certification gates.
 
@@ -80,7 +85,7 @@ Each deterministic test case MUST include the following fields:
 - `ExpectedDivergenceClass`
 - `ArtifactPaths`
 
-Digest rollup algorithm: `SHA-256(concat(phaseDigest[0..N]))` with full sequence stored as artifact.
+Digest rollup algorithm: `SHA-256(concat(phaseDigest[i] for i in canonical (tick, phaseOrdinal) order))` where `tick` is ascending and `phaseOrdinal` follows the canonical pipeline order from §3.1.2 (`Input=0, Intent=1, AI=2, Physics=3, Resolve=4, Events=5, Snapshot=6`). Full sequence stored as artifact.
 
 ## 5.11 Expanded Test Cards (Examples)
 ### 5.11.1 T-DS-ORDER-001
