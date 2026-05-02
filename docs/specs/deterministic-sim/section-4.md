@@ -18,7 +18,7 @@ Non-authoritative boundary includes UI, VFX, audio presentation layers.
 - `IDesyncAnalyzer.Compare(traceA, traceB)` MUST report first-divergence location and taxonomy.
 
 ### 4.2.1 Contract invariants
-- `RunTick` is pure relative to `(previousAuthoritativeState, authoritativeInputFrame)`.
+- `RunTick` is pure relative to `(previousAuthoritativeStateIncludingRngAndContext, authoritativeInputFrame, tickNumber)`.
 - `Serialize` MUST be byte-idempotent for equal in-memory authoritative state.
 - `ResumeFrom` MUST restore RNG cursors before applying `T+1` input.
 - `Compare` MUST return deterministic ordering for field-path differences.
@@ -63,3 +63,5 @@ Recommended module ownership:
 - Error IDs are deterministic and stable.
 - Serialization schema changes require version bump and migration note.
 - Event envelope version upgrades are backward compatible with replay reader.
+## 4.8 Replay pre-resume environment pinning
+Before resume, runtime MUST pin worker count, scheduler policy, and reduction topology fingerprint from snapshot metadata. Mismatch MUST fail deterministically with `ERR_DS_REPLAY_ENV_MISMATCH`.

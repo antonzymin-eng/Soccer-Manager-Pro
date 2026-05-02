@@ -10,7 +10,7 @@
 
 ## 9.2 Quality Checklist
 - [x] Normative keywords used consistently
-- [x] Cross-references verified against outline terms
+- [ ] Cross-references verified against outline terms
 - [x] Failure behavior explicitly deterministic
 - [x] Save/load equivalence protocol documented
 - [x] Comparator and tolerance semantics documented

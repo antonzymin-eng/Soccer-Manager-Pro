@@ -34,8 +34,9 @@ Core components:
 - `PhaseDigest { tick, phaseId, digest }`
 - `RngStreamKey { subsystemId, entityId, actionOrdinal, streamVersion }`
 - `RngCursor { streamKey, counter }`
-- `SnapshotHeader { schemaVersion, tick, prevSnapshotDigest, currentSnapshotDigest }`
+- `SnapshotHeader { schemaVersion, tick, prevSnapshotDigest }`
 - `ToleranceRow { fieldPath, tier, comparator, toleranceValue, rationale, owner, reviewDate }`
+- `ComparatorRegistry = { BitwiseEqual, AbsEpsilon, RelEpsilon }` (normative v1)
 
 ### 2.3.1 Tolerance row operational schema
 | Column | Type | Rule |

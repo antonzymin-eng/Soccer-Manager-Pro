@@ -54,6 +54,8 @@ At 60Hz:
 - standard traces should stay within capped compressed size,
 - forensic traces may exceed standard mode but MUST obey retention constraints.
 
+Note: Section 6.10 phase shares are baseline without instrumentation slack; 3-10% observability overhead is budgeted separately.
+
 ## 6.10 Phase-Level Budget Allocation (Guideline)
 | Phase | CPU budget share (target) | Notes |
 |---|---|---|

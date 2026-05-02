@@ -7,7 +7,7 @@ Deterministic guarantees in scope:
 1. **Run-to-run equivalence:** Same build hash, initial state, seed bundle, and authoritative input log MUST produce equivalent authoritative outputs.
 2. **Replay equivalence:** Replaying authoritative inputs from tick `0` or from a valid checkpoint tick MUST reproduce the same authoritative state/event sequence.
 3. **Save/load equivalence:** Loading at tick `T` then continuing simulation MUST match uninterrupted simulation from tick `T` onward.
-4. **Cross-platform certification:** Supported platform matrix MUST pass determinism certification under the defined parity policy.
+4. **Cross-platform certification:** Stage 0 requires single-platform/single-build certification only; cross-platform certification activates at Stage 5+ under the defined parity policy.
 
 ### 1.1.1 Equivalence policy by artifact
 | Artifact | Equality mode | Enforcement |
@@ -17,6 +17,9 @@ Deterministic guarantees in scope:
 | RNG cursor/counter | Tier A bitwise | replay + save/load |
 | Approved numeric fields | Tier B bounded comparator | CI tolerance gate |
 | UI/VFX/audio-only | Tier C unconstrained | non-authoritative only |
+### 1.1.2 Stage gating policy
+- Stage 0 release gate: same machine, same build, same seed/input parity.
+- Stage 5+ release gate: cross-platform parity matrix with approved Tier policy.
 
 ## 1.2 What Is Out of Scope
 Out of scope for deterministic guarantees:

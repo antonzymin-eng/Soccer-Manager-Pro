@@ -32,11 +32,12 @@ Validation layers:
 ## 5.5 Certification Matrix (minimum)
 | Platform | Build | Compiler mode | Required result |
 |---|---|---|---|
-| Windows x64 | Release | Deterministic flags | PASS |
-| Linux x64 | Release | Deterministic flags | PASS |
-| macOS ARM64 | Release | Deterministic flags | PASS |
+| Stage 0 Host Platform | Release | Deterministic flags | PASS |
+| Stage 5+ Windows x64 | Release | Deterministic flags | PASS |
+| Stage 5+ Linux x64 | Release | Deterministic flags | PASS |
+| Stage 5+ macOS ARM64 | Release | Deterministic flags | PASS |
 
-Any hard desync is a release blocker.
+**FR-DS-009-GATE:** Any hard desync on the Stage 0 host platform MUST block the release candidate. At Stage 5+, any hard desync on any certified platform in the matrix MUST block the release candidate.
 
 ## 5.6 Version History
 - **v0.4:** Added explicit certification matrix and release-blocking policy.
@@ -75,9 +76,11 @@ Each deterministic test case MUST include the following fields:
 - `InitialStateHash`
 - `SeedBundleId`
 - `InputLogId`
-- `ExpectedDigestSequence`
+- `ExpectedDigestRollup`
 - `ExpectedDivergenceClass`
 - `ArtifactPaths`
+
+Digest rollup algorithm: `SHA-256(concat(phaseDigest[0..N]))` with full sequence stored as artifact.
 
 ## 5.11 Expanded Test Cards (Examples)
 ### 5.11.1 T-DS-ORDER-001
