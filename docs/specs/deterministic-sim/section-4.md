@@ -37,7 +37,7 @@ The replay runtime MUST execute these steps in order. Each step MUST fail determ
 | 4 | Validate `prevSnapshotDigest` chain link to expected predecessor | `ERR_DS_DIGEST_CHAIN_BREAK` |
 | 5 | Rehydrate authoritative state (Tier A + Tier B fields only; Tier C excluded) | `ERR_DS_SCHEMA_INCOMPATIBLE` |
 | 6 | Restore RNG cursors and `actionOrdinal` per stream (§3.2.5); fail if any required stream is missing | `ERR_DS_RNG_STREAM_MISSING` |
-| 7 | Position at next legal phase boundary (§3.4 `LEGAL_SAVE_BOUNDARIES`) | `ERR_DS_SAVE_BOUNDARY` |
+| 7 | Verify the replay cursor is at `EndOfSnapshot[T]` (the save point). The snapshot was committed at this boundary; the cursor must be exactly here before T+1 reapplication is permitted. An off-boundary cursor indicates a corrupt or partial load. | `ERR_DS_REPLAY_BOUNDARY` |
 | 8 | Reapply authoritative input log from `T+1` | (propagates from `RunTick`) |
 
 Side-effects on non-authoritative subsystems (UI, audio, VFX, telemetry) MUST NOT be triggered during steps 1–7.
@@ -62,6 +62,7 @@ Recommended module ownership:
 - `sim/determinism/*` — digest protocol, tolerance matrix, divergence tooling.
 
 ## 4.5 Version History
+- **v0.8 (May 2, 2026):** §4.2.2 step 7 reworded to clarify cursor-at-EndOfSnapshot[T] assertion and replaced `ERR_DS_SAVE_BOUNDARY` with `ERR_DS_REPLAY_BOUNDARY` (A-4). §4.6.2 sequence diagram replaced with 8-step diagram matching normative §4.2.2 lifecycle (A-6).
 - **v0.7 (May 2, 2026):** §4.2 reframed as non-normative sketches per CLAUDE.md "interfaces only when both sides are specified" rule (consumer specs #17/#18/#19 still NOT STARTED). §4.2.1 reworded `RunTick` from "pure" to "deterministic in (state, input, tickNumber) with no ambient-state observation". Added §4.2.2 normative replay lifecycle with per-step error codes. §4.8 extended to cover *recording-side* environment pinning with full `EnvironmentFingerprint` schema.
 - **v0.4:** Added interface invariants and required authoritative event envelope fields.
 - **v0.3:** Integration contracts frozen around deterministic service interfaces.
@@ -73,10 +74,18 @@ Recommended module ownership:
 `DigestService -> SnapshotStore: CommitAtomic(header,payload,digest)`
 
 ### 4.6.2 Replay resume sequence
-`ReplayRunner -> SnapshotStore: Load(T)`
-`ReplayRunner -> SnapshotCodec: Deserialize`
-`ReplayRunner -> RngService: RestoreCursors`
-`ReplayRunner -> TickOrchestrator: ResumeAtBoundary`
+Steps correspond to the normative §4.2.2 lifecycle. Each arrow fails with the listed error code; no step proceeds on failure.
+
+```
+ReplayRunner -> SnapshotStore: Load(T)                            [step 1 — ERR_DS_SCHEMA_INCOMPATIBLE on load failure]
+ReplayRunner -> SnapshotCodec: ValidateSchemaAndDigestVersion     [step 2 — ERR_DS_SCHEMA_INCOMPATIBLE]
+ReplayRunner -> EnvService: ValidateEnvironmentFingerprint        [step 3 — ERR_DS_REPLAY_ENV_MISMATCH]
+ReplayRunner -> DigestChain: ValidatePrevSnapshotDigest           [step 4 — ERR_DS_DIGEST_CHAIN_BREAK]
+ReplayRunner -> SnapshotCodec: RehydrateAuthoritativeState        [step 5 — ERR_DS_SCHEMA_INCOMPATIBLE]
+ReplayRunner -> RngService: RestoreAllCursors                     [step 6 — ERR_DS_RNG_STREAM_MISSING]
+ReplayRunner -> ReplayRunner: AssertCursorAtEndOfSnapshot[T]      [step 7 — ERR_DS_REPLAY_BOUNDARY]
+ReplayRunner -> TickOrchestrator: ReapplyInputsFromTickT+1        [step 8 — propagates from RunTick]
+```
 
 ## 4.7 Contract Verification Checklist
 - Interface invariants are test-covered.

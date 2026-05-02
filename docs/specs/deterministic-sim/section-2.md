@@ -27,6 +27,10 @@ The earlier `FR-DET-` / `VR-DET-` / `OPS-DET-` outline prefixes are deprecated a
 - **FR-DS-007:** Divergence detection MUST classify mismatches as hard desync, soft drift, or cosmetic divergence.
 - **FR-DS-008:** Tooling MUST emit first divergent tick/phase/field and RNG cursor diffs.
 - **FR-DS-009:** Cross-platform certification suite MUST pass before release.
+- **FR-DS-010:** At match start the runtime MUST capture `EnvironmentFingerprint` (worker count, scheduler policy, reduction topology, SIMD level, float-model hash) and embed it in every snapshot header for that match; mid-match mutation of any pinned field is forbidden.
+- **FR-DS-011:** A Tier-B field present in digest scope without an approved tolerance row in the tolerance matrix MUST fail validation with `ERR_DS_TIERB_TOLERANCE_MISSING`; no silent fallback epsilon is permitted.
+- **FR-DS-012:** The replay engine MUST execute the 8-step lifecycle (§4.2.2) in strict order; each step MUST fail deterministically with its assigned error code and MUST NOT proceed to the next step on failure.
+- **FR-DS-013:** Stage-0 `float` fields classified Tier-A MUST satisfy both §1.3.1.1 conditions (pinned execution environment recorded in `EnvironmentFingerprint`, and deterministic reduction topology); fields that cannot satisfy these conditions MUST be classified Tier-B with an approved tolerance row.
 
 ## 2.2 Architecture Overview
 Core components:
@@ -82,6 +86,7 @@ Core components:
 | Tier B drift | continue replay with warning | fail if out-of-bound |
 
 ## 2.5 Version History
+- **v0.8 (May 2, 2026):** Added FR-DS-010..013: EnvironmentFingerprint recording, Tier-B tolerance enforcement, replay 8-step lifecycle, Stage-0 float Tier-A classification gate (B-8).
 - **v0.7 (May 2, 2026):** Added §2.0 Identifier Taxonomy; corrected `RngStreamKey` (removed `actionOrdinal` from key) and extended `RngCursor` (added `actionOrdinal`); extended `SnapshotHeader` with `environmentFingerprint`.
 - **v0.5:** Added runtime sequence, tolerance schema, and failure recovery matrix.
 - **v0.3:** Added explicit FR set tied to refined outline and determinism governance.

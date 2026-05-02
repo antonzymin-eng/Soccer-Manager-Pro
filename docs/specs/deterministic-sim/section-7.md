@@ -24,13 +24,16 @@ Each deferred item MUST include: context, options considered, owner, target deci
 
 ## 7.3 Permanent Exclusions
 - Any use of wall-clock entropy in authoritative simulation.
-- Platform-specific floating behavior without explicit tolerance governance.
+- Platform-specific floating behavior without explicit **governance** (tolerance or environment) — see §7.3.1 carve-out.
 - Non-deterministic container traversal in authoritative paths.
 
 ### 7.3.1 Exception policy
 There are no runtime exceptions for permanent exclusions. Any requested exception MUST be rejected or rewritten as non-authoritative Tier C behavior.
 
+**§1.3.1.1 carve-out (Stage 0 only):** The exclusion of "platform-specific floating behavior" does not prohibit Tier-A classification of `float` fields at Stage 0 when **environment governance** is applied per §1.3.1.1 — i.e., worker count, reduction topology, and SIMD level are pinned and recorded in `EnvironmentFingerprint`. This is *environment governance*, which satisfies the spirit of this exclusion for single-machine Stage 0 builds. A `float` Tier-A field that relies only on environment pinning (not tolerance rows) is compliant with §7.3 only when it satisfies both conditions in §1.3.1.1. Audit reviewers challenging a Stage 0 `float` Tier-A field under §7.3 should be directed to §1.3.1.1 for the explicit carve-out. Stage 5+ removes this carve-out by migrating to Fixed64.
+
 ## 7.4 Version History
+- **v0.8 (May 2, 2026):** §7.3 Permanent Exclusions updated with §7.3.1 carve-out acknowledging §1.3.1.1 environment governance for Stage-0 float Tier-A fields (A-7).
 - **v0.7 (May 2, 2026):** §7.2 digest upgrade item now binds explicit trigger criteria (NIST deprecation / measured CPU regression / format change) and a coexistence policy keyed on `DigestVersion` field.
 - **v0.5:** Added extension admission criteria, decision-log template, and exclusion exception policy.
 - **v0.3:** Deferred roadmap and exclusions synchronized with deterministic governance model.

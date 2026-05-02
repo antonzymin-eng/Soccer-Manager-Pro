@@ -14,8 +14,8 @@
 **Approved:** 7  
 **Suspended:** 1  
 **In Review:** 0  
-**In Progress:** 0  
-**Not Started:** 12
+**In Progress:** 1  
+**Not Started:** 11
 
 **Specifications approved:**
 - Ball Physics (#1, Feb 8, 2026)
@@ -78,9 +78,9 @@
 | 13 | Pressing AI | 18-22 | ⏳ NOT STARTED | — | — | Week 13 target |
 | 14 | Defensive AI | 18-22 | ⏳ NOT STARTED | — | — | Week 14 target |
 | 15 | Attacking AI | 18-22 | ⏳ NOT STARTED | — | — | Week 15 target |
-| 16 | Deterministic Simulation | 20-25 | ⏳ NOT STARTED | — | — | Week 16 target |
+| 16 | Deterministic Simulation | 20-25 | 📝 IN PROGRESS | May 2, 2026 | — | All 9 sections + appendices drafted; adversarial review + two fix passes complete (v0.7, v0.8); awaiting implementation-readiness gate §9.5 before IN REVIEW |
 
-**Priority 4 Progress:** 0% (0 of 4 started)
+**Priority 4 Progress:** 25% (1 of 4 in progress)
 
 ---
 
@@ -346,6 +346,9 @@
 ---
 
 ## CHANGELOG
+
+**May 2, 2026:**
+- Deterministic Simulation (#16): status updated from NOT STARTED to IN PROGRESS. All 9 sections + appendices drafted; v0.7 and v0.8 fix passes complete. v0.8 resolves 21 issues from third-pass critique (critical KDF ambiguity, mislabeled constants, AI_NoOp underdocumentation, and 18 medium/low issues). Gated at IN PROGRESS pending §9.5 implementation-readiness sign-off.
 
 **April 27, 2026:**
 - Lead developer sign-off pass: Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8) all APPROVED. Stage 0 spec count: 7 APPROVED, 1 SUSPENDED, 0 IN REVIEW, 12 NOT STARTED.
