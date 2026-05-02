@@ -31,10 +31,23 @@ Out of scope for deterministic guarantees:
 Any field initially designated out-of-scope that later influences authoritative branching MUST be reclassified into Tier A/B before release.
 
 ## 1.3 Key Design Decisions
+### 1.3.0 Snapshot vs save (terminology)
+- **Snapshot:** the per-tick authoritative-state serialization produced by the `Snapshot` phase of every tick. Used as input to phase digest and chain digest computation. Snapshots may be retained transiently (e.g. ring buffer) and need not be persisted to disk every tick.
+- **Save:** an explicit, scheduled persistence event that writes a snapshot record (header + payload + chain digest) to durable storage. A save MUST take place at a `LEGAL_SAVE_BOUNDARY` (see §3.4).
+
+The Snapshot phase always runs; saves are subscribers to it.
+
 ### 1.3.1 Determinism tiers
 - **Tier A (authoritative hard):** bitwise exact equality required.
 - **Tier B (bounded-authoritative):** deterministic epsilon policy allowed only for fields explicitly approved in tolerance matrix.
 - **Tier C (non-authoritative):** allowed to vary; MUST NOT feed authoritative state.
+
+#### 1.3.1.1 Stage 0 tier classification of `float` fields
+Per CLAUDE.md, Stage 0 uses `float` (single-precision IEEE-754). Stage 0 single-machine determinism is achieved via state snapshots, and Tier A bitwise equality on `float` fields is conditional on:
+1. **Pinned execution environment.** Worker thread count, scheduler policy, parallel reduction topology, and SIMD feature level MUST be pinned in build config and recorded in the snapshot's `EnvironmentFingerprint` (see §4.8). Both **recording and replay** sides MUST use the matching fingerprint.
+2. **Deterministic reduction.** Any parallel float reduction MUST use a fixed reduction tree shape (e.g. pairwise canonical merge) keyed on canonical sort order, not on worker completion order.
+
+If a `float` field cannot meet conditions (1) and (2), it MUST be classified Tier B with an approved tolerance row, NOT Tier A. Stage 5+ Fixed64 migration removes this conditional and promotes affected fields to unconditional Tier A.
 
 ### 1.3.2 Tier mapping policy
 - World state, gameplay state machines, event ledgers, and RNG counters are **Tier A**.
@@ -72,6 +85,7 @@ Normative integration requirement: no subsystem MAY introduce non-deterministic 
 | Desync analyzer | QA automation | first-diff localization + taxonomy |
 
 ## 1.5 Version History
+- **v0.7 (May 2, 2026):** Added §1.3.0 Snapshot vs Save terminology and §1.3.1.1 Stage 0 `float` Tier-A scope conditions (worker/topology pinning, fallback to Tier B). Aligns spec with CLAUDE.md Stage 0 (`float`, single-machine determinism via state snapshots).
 - **v0.5:** Expanded scope section with equivalence tables, release gates, and subsystem responsibility matrix.
 - **v0.3:** Draft aligned to refined post-adversarial outline; determinism tiers, replay/save-load equivalence, and cross-platform certification scope frozen.
 

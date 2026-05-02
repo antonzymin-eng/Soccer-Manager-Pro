@@ -31,15 +31,17 @@ Cross-spec dependencies to validate during approval:
 - Certification and CI gates with Testing Strategy spec.
 - Overhead budgets with Performance Optimization spec.
 
-Sign-off is blocked while any row remains pending.
+**Sequencing constraint (May 2, 2026):** Per `SPEC_INDEX.md`, all four cited dependency specs are currently `NOT STARTED` (#9 Fixed64) or `NOT STARTED` (#17 Event System, #18 Performance Optimization, #19 Testing Strategy). Final sign-off of this spec is therefore explicitly **deferred** until each named dependency reaches `IN REVIEW` or `APPROVED` and a reciprocal audit row is filed. This is not a blocker on continued authoring of #16; it is a sequencing gate at the approval step.
 
 ### 8.3.1 Audit table
-| Dependency | Verification action | Status |
-|---|---|---|
-| event-system | compare event ordering rules | pending |
-| fixed64-math | compare comparator semantics | pending |
-| testing-strategy | align certification gate wording | pending |
-| performance-optimization | align overhead thresholds | pending |
+| Dependency | SPEC_INDEX status | Verification action | Status |
+|---|---|---|---|
+| event-system (#17) | NOT STARTED | compare event ordering rules | deferred dependency |
+| fixed64-math (#9) | NOT STARTED | compare comparator semantics | deferred dependency |
+| testing-strategy (#19) | NOT STARTED | align certification gate wording | deferred dependency |
+| performance-optimization (#18) | NOT STARTED | align overhead thresholds | deferred dependency |
+
+A row transitions from `deferred dependency → pending → complete` once the upstream spec reaches `IN REVIEW` and the line-by-line comparison can be executed.
 
 ## 8.4 Constant Provenance Summary
 Constants in this spec are governance placeholders derived from outline policy and MUST be finalized during implementation design review.
@@ -48,6 +50,7 @@ Constants in this spec are governance placeholders derived from outline policy a
 Each constant MUST declare: source section, owner team, initial rationale, verification method, and last-reviewed date.
 
 ## 8.5 Version History
+- **v0.7 (May 2, 2026):** §8.3 sequencing constraint added: cited dependency specs (#9, #17, #18, #19) all currently `NOT STARTED`; audit rows reclassified as `deferred dependency`. This explicitly defers final sign-off on #16 until upstream specs reach `IN REVIEW`.
 - **v0.5:** Added citation quality rubric, audit table, and constant provenance fields.
 - **v0.3:** Initial citation audit draft aligned to refined deterministic outline.
 

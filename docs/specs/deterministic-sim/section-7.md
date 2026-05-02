@@ -14,7 +14,7 @@
 | Rollout plan | staged behind feature flag |
 
 ## 7.2 Deferred Decisions
-- Final digest algorithm upgrade path (`v1 -> v2`) and migration cadence.
+- Final digest algorithm upgrade path (`v1 → v2`) and migration cadence. Trigger criteria (any of): (a) NIST formal deprecation of SHA-256 for cryptographic use, (b) measured >10% Snapshot+Digest CPU share regression attributable to SHA-256 across two consecutive certification cycles, (c) format change requiring extended preimage that cannot be expressed under `DigestVersion=1`. Coexistence policy: `DigestVersion` field in the snapshot header lets `v1` and `v2` snapshots be distinguished at load time; replay readers MUST support the previous version for one full release cycle after promotion.
 - Long-horizon replay storage tiering strategy.
 - Optional Tier B expansion process for select physics-derived analytics fields.
 - Stage 5 cross-platform activation criteria and toolchain hardening requirements.
@@ -31,6 +31,7 @@ Each deferred item MUST include: context, options considered, owner, target deci
 There are no runtime exceptions for permanent exclusions. Any requested exception MUST be rejected or rewritten as non-authoritative Tier C behavior.
 
 ## 7.4 Version History
+- **v0.7 (May 2, 2026):** §7.2 digest upgrade item now binds explicit trigger criteria (NIST deprecation / measured CPU regression / format change) and a coexistence policy keyed on `DigestVersion` field.
 - **v0.5:** Added extension admission criteria, decision-log template, and exclusion exception policy.
 - **v0.3:** Deferred roadmap and exclusions synchronized with deterministic governance model.
 

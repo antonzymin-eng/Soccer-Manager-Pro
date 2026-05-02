@@ -23,11 +23,13 @@
 - [ ] Cross-spec audit rows marked complete
 
 ## 9.4 Decision
-- Status: `IN REVIEW`
+- Status: `IN PROGRESS` (matches `SPEC_INDEX.md`; promotion to `IN REVIEW` is gated on completing §9.5 implementation-readiness item below).
 - Recommended next gate: detailed implementation-plan review with owning teams and test harness owners.
+- Sequencing constraint: cross-spec audit rows in §8.3.1 are deferred dependencies on specs #9, #17, #18, #19 (all currently `NOT STARTED`). Final approval of #16 is blocked until those specs reach at least `IN REVIEW`.
 
 ## 9.5 Density and Operational Depth Checklist
+The first three items measure **presence** of operational artifacts. The fourth item is the actual implementation-readiness gate; the others alone are insufficient for sign-off.
 - [x] Each section contains at least one operational table or matrix
 - [x] Each core section includes at least one concrete scenario/example
 - [x] Replay/save-load/RNG policies include executable-style artifacts
-- [ ] Section-level reviewers confirm implementation readiness depth
+- [ ] Section-level reviewers confirm implementation readiness depth (gating item)
