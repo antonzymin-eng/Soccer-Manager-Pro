@@ -38,8 +38,9 @@ The first three items measure **presence** of operational artifacts. The fourth 
 1. All §4.2.2 lifecycle steps have at least one identified test card in §5.3 or §5.11.
 2. All §3.4 error codes (`ERR_DS_*`) have at least one fault-injection test case in §5.3 or §5.11.
 3. The §3.6.1 phase ownership table has been reviewed and signed off by the implementation owner for the Tick Orchestrator.
-4. The §3.4 `RNG_KDF` / `RNG_STREAM_HASH` constants have been verified correct by the Systems Engineering owner of `DeterministicRngService`.
+4. The §3.4 `RNG_KDF` / `RNG_STREAM_HASH` constants have been verified correct against the following named artifacts: (a) RFC 5869 §A.1–A.3 known-answer test vectors for HKDF-SHA256, executed against the `DeterministicRngService` implementation and committed as `docs/specs/deterministic-sim/golden-vectors/hkdf-sha256-kat.md`; (b) the SipHash-2-4 reference test vectors from Aumasson & Bernstein 2012 Appendix A, committed as `docs/specs/deterministic-sim/golden-vectors/siphash-2-4-kat.md`; (c) the `SerializeCanonical` reference corpus described in §3.2.4.1, committed as `docs/specs/deterministic-sim/golden-vectors/serialize-canonical-corpus.md`. All three artifacts MUST exist and pass before this checkbox can be checked.
 5. The tolerance matrix placeholder in §3.4 (Tier B default comparator) has a named owner team and a review-date field entry.
 
 ## 9.6 Version History
+- **v0.9 (May 3, 2026):** Third-pass critique L-L resolution. §9.5 acceptance criterion #4 now names three concrete verification artifacts (RFC 5869 HKDF-SHA256 KAT vectors, SipHash-2-4 reference vectors, `SerializeCanonical` reference corpus), each with its required path under `golden-vectors/`. The criterion is now falsifiable.
 - **v0.8 (May 2, 2026):** §9.2 cross-reference checkbox checked (FR-DET- migration verified). §9.5 measurable acceptance criteria added for the implementation-readiness gate (D-20).
