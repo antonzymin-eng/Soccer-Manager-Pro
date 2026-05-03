@@ -3,7 +3,7 @@
 ## 8.1 Source Register
 Primary internal sources:
 - Deterministic Simulation outline (`outline.md`, v0.3 refined).
-- Deterministic Simulation adversarial review (`adversarial-review.md`).
+- Deterministic Simulation consolidated critique log (`critique-log.md`; merges and supersedes the former `adversarial-review.md` and `third-pass-fix-log.md`).
 - Related system specs: event-system, testing-strategy, fixed64-math, performance-optimization.
 
 ### 8.1.1 Citation quality rubric
@@ -50,6 +50,7 @@ Constants in this spec are governance placeholders derived from outline policy a
 Each constant MUST declare: source section, owner team, initial rationale, verification method, and last-reviewed date.
 
 ## 8.5 Version History
+- **v0.9 (May 3, 2026):** §8.1 source register updated to point at the consolidated `critique-log.md` (former `adversarial-review.md` and `third-pass-fix-log.md` merged and removed in the same commit).
 - **v0.7 (May 2, 2026):** §8.3 sequencing constraint added: cited dependency specs (#9, #17, #18, #19) all currently `NOT STARTED`; audit rows reclassified as `deferred dependency`. This explicitly defers final sign-off on #16 until upstream specs reach `IN REVIEW`.
 - **v0.5:** Added citation quality rubric, audit table, and constant provenance fields.
 - **v0.3:** Initial citation audit draft aligned to refined deterministic outline.
