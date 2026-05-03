@@ -39,7 +39,7 @@ Validation layers:
 ## 5.5 Certification Matrix (minimum)
 | Stage | Platform | OS / runtime | Build | Compiler mode | Required result |
 |---|---|---|---|---|---|
-| 0 | Windows x64 (developer host) | Windows 10/11, Unity 2022 LTS, Mono/IL2CPP per project default | Release | Deterministic flags (denormals-are-zero off, fp-contract off, fma off unless platform-pinned) | PASS |
+| 0 | Windows x64 (developer host) | Windows 10/11, Unity 2022 LTS, IL2CPP (MSVC backend) | Release | Deterministic flags (see §5.5.1) | PASS |
 | 5+ | Windows x64 | Windows 10/11, Unity 2022 LTS, IL2CPP | Release | Deterministic flags | PASS |
 | 5+ | Linux x64 | Ubuntu 22.04 LTS, Unity 2022 LTS, IL2CPP | Release | Deterministic flags | PASS |
 | 5+ | macOS ARM64 | macOS 13+, Unity 2022 LTS, IL2CPP | Release | Deterministic flags | PASS |
@@ -50,7 +50,46 @@ Validation layers:
 
 The exact Stage 0 host platform tuple (OS version, Unity LTS revision, IL2CPP version, compiler flag set) MUST be pinned in `docs/tracking/certification-platform.md` before the first certification run; Section 5.5 lists the platform family but the version pin is a separate operational artifact.
 
+### 5.5.1 Deterministic compiler/runtime flag strings (normative)
+The "Deterministic flags" cell of §5.5 expands to the following concrete flag strings per backend. All flags MUST be set; partial application is a certification failure.
+
+**MSVC (Windows x64, IL2CPP MSVC backend):**
+```
+/fp:precise          # disables fast-math reordering; matches fpContractMode=0
+/fp:except-          # no FP exceptions (do not affect determinism but must be consistent)
+/Qfma-               # disable FMA contraction (override if platform-pinned and fmaEnabled=true)
+/arch:SSE2           # baseline SIMD; raise only if simdLevel pinned and recorded
+```
+Runtime MXCSR setup at process start: `_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF)`, `_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_OFF)`, `_MM_SET_ROUNDING_MODE(_MM_ROUND_NEAREST)`.
+
+**Clang / AppleClang (Stage 5+ Linux/macOS targets):**
+```
+-ffp-contract=off
+-fno-fast-math
+-fno-finite-math-only
+-mno-fma
+-msse2                # baseline; raise per simdLevel
+```
+Runtime: equivalent MXCSR/`fesetround(FE_TONEAREST)` setup.
+
+**IL2CPP-emitted C++:** the same flags MUST be propagated to IL2CPP's `il2cpp_codegen` invocation via `Il2CppNativeCodeBuilder` configuration. Unity project setting `Player → Other Settings → C++ Compiler Configuration = Release` plus `Allow Unsafe Code = false` is required. Any deviation breaks `floatModelHash` and is a `ERR_DS_REPLAY_ENV_MISMATCH` on resume.
+
+### 5.5.2 Save/load equivalence sample protocol (normative)
+`T-DS-REPLAY-004` and `T-DS-SAVE-005` are gated on the following minimum sample protocol; the test fixtures in §5.7 reference but do not bind these counts:
+
+| Parameter | Value | Rationale |
+|---|---|---|
+| Scenarios per certification run | ≥ 12 | covers smoke + standard + stress fixture classes from Appendix C.3 |
+| Save ticks per scenario | ≥ 50, drawn uniformly at random from `[60, scenarioLength-60]` | bounds avoid match-start and match-end edge cases |
+| Save-tick seed | `SipHash-2-4-64(matchSeed, "T-DS-REPLAY-004") mod 2^31` | seed is deterministic per scenario; certification report MUST log it |
+| Replay length per save | ≥ 600 ticks (10 s of physics) post-resume | long enough to surface drift past first phase |
+| Pass criterion | 100 % per-tick digest equivalence on Tier A; zero out-of-bound Tier B mismatches | no statistical tolerance — this is a deterministic gate, not a sampled probability |
+| Fail action | record first divergent (tick, phase, fieldPath); block release; do NOT retry the run with a fresh seed |
+
+The "randomized" qualifier refers to *sample selection of save ticks*, not to a probabilistic pass criterion — every selected save MUST replay bit-exact (or within bound for Tier B) for the run to pass. A sample protocol document MUST be retained as a CI artifact per §5.12.
+
 ## 5.6 Version History
+- **v0.9 (May 3, 2026):** Third-pass critique fixes. (a) L-M: §5.5.1 added — concrete MSVC and Clang flag strings, MXCSR runtime setup, IL2CPP propagation requirements; replaces the prior prose "deterministic flags" cell. (b) M-E: §5.5.2 added — normative save/load equivalence sample protocol (≥12 scenarios × ≥50 save ticks/scenario × ≥600 ticks replay; SipHash-derived save-tick seed; deterministic pass criterion, not statistical). T-DS-REPLAY-004 and T-DS-SAVE-005 are now bound to a falsifiable protocol.
 - **v0.7 (May 2, 2026):** Stage 0 host platform pinned (Windows x64, Unity 2022 LTS); FR-DS-009-GATE split by stage with explicit "Stage 0 cross-platform NOT a gate" note. Digest rollup ordering bound to canonical (tick, phaseOrdinal) sort.
 - **v0.4:** Added explicit certification matrix and release-blocking policy.
 - **v0.3:** Added mandatory FR traceability and certification gates.

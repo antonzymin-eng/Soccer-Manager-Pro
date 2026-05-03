@@ -30,6 +30,7 @@ authoritative remediation backlog.
 | ERR-011 | `SpatialHashGrid.Query()` ignores radius parameter — always returns fixed 3×3 neighbourhood | Major | 1 | ✅ Closed — Fixed in Collision_System_Spec_Section_3_v1_1.md (March 5, 2026) |
 | ERR-012 | First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences) | Minor | 1 | ✅ Closed — Fixed in first-touch/section-7.md v1.1 (March 5, 2026) |
 | ERR-016-001 | Phantom interface risk in Deterministic Simulation §4.2 | Medium | 1 | ✅ Mitigated — §4.2 reclassified as non-normative sketches in v0.7 fix pass |
+| ERR-016-002 | EntityId no-reuse cross-spec constraint not back-propagated to specs #2 and #8 | Medium | 3 | Open — filed May 3, 2026; reciprocal `XC-` references not yet added to Agent Movement (#2) or Decision Tree (#8) |
 
 ---
 
@@ -489,6 +490,47 @@ comprehensive audit remediation).
 ---
 
 *End of Spec Error Log v1.6 — May 2, 2026.*
+
+---
+
+## ERR-016-002: EntityId no-reuse cross-spec constraint not back-propagated
+
+**Severity:** Medium (consistency/discipline; latent integrity hazard if specs #2/#8 silently reuse EntityIds during a match)
+**Detected:** May 3, 2026
+**Detected During:** Deterministic Simulation Spec #16 third-pass adversarial critique (finding M-F)
+**Root Cause:** Deterministic Simulation §3.2.5 declares a normative constraint binding two already-APPROVED specs:
+
+> "entity allocators in Agent Movement (#2) and the AI subsystem (Decision Tree #8) MUST guarantee EntityId uniqueness for the lifetime of a match; once an EntityId is despawned it MUST NOT be reassigned."
+
+This is the renumbering-cascade hazard CLAUDE.md flags: a downstream spec adding a normative constraint to upstream specs after they have been approved, without filing reciprocal `XC-` cross-references in those specs. As of May 3, 2026, neither Agent Movement (#2) nor Decision Tree (#8) carries a corresponding `XC-` reference to Deterministic Simulation §3.2.5; the constraint is "floating".
+
+**Problem in detail:**
+- Agent Movement #2 was approved Apr 27, 2026.
+- Decision Tree #8 was approved Apr 27, 2026 (at draft-level rigor).
+- The EntityId no-reuse constraint is necessary for #16's RNG stream isolation and replay parity, but is unenforceable until specs #2 and #8 explicitly carry it.
+- Without back-propagation, an implementer of Agent Movement could legitimately recycle a despawned EntityId to a new agent on the same tick. This would silently break per-stream RNG cursor isolation in Deterministic Simulation, manifesting only as a hard desync at replay time.
+
+**Required fix:**
+1. Add an `XC-002-NNN` cross-reference in Agent Movement #2 §3 (entity allocator) citing Deterministic Simulation §3.2.5; declare the no-reuse constraint normatively in #2's own constants/contracts.
+2. Add an `XC-008-NNN` cross-reference in Decision Tree #8 (subsystem entity allocation, if any) likewise.
+3. File the back-propagation as a minor revision of both specs, version-bumped (no behavioral changes; constraint is consistent with how a sane allocator would behave anyway).
+4. Once both reciprocal references exist, mark this entry CLOSED.
+
+**Status:** Open — filed May 3, 2026 during third-pass adversarial critique resolution. Tracked in CLAUDE.md "Open Issues" until reciprocal references land.
+
+**Files requiring revision (when fix is applied):**
+
+| File | Section | Change |
+|---|---|---|
+| `docs/specs/agent-movement/section-3-*.md` (allocator section) | TBD | Add `XC-002-NNN` to Deterministic Simulation §3.2.5; declare no-reuse rule |
+| `docs/specs/decision-tree/section-3-*.md` | TBD | Add `XC-008-NNN` to Deterministic Simulation §3.2.5; declare no-reuse rule |
+| `docs/specs/deterministic-sim/section-3.md` §3.2.5 | post-fix | Update note from "filed for back-propagation" to "back-propagated to #2 §X and #8 §Y" |
+
+**Version impact:** Minor revision of Agent Movement #2 and Decision Tree #8.
+
+---
+
+*End of Spec Error Log v1.7 — May 3, 2026.*
 
 ---
 

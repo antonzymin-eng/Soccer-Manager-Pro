@@ -43,11 +43,13 @@ The Snapshot phase always runs; saves are subscribers to it.
 - **Tier C (non-authoritative):** allowed to vary; MUST NOT feed authoritative state.
 
 #### 1.3.1.1 Stage 0 tier classification of `float` fields
-Per CLAUDE.md, Stage 0 uses `float` (single-precision IEEE-754). Stage 0 single-machine determinism is achieved via state snapshots, and Tier A bitwise equality on `float` fields is conditional on:
-1. **Pinned execution environment.** Worker thread count, scheduler policy, parallel reduction topology, and SIMD feature level MUST be pinned in build config and recorded in the snapshot's `EnvironmentFingerprint` (see §4.8). Both **recording and replay** sides MUST use the matching fingerprint.
-2. **Deterministic reduction.** Any parallel float reduction MUST use a fixed reduction tree shape (e.g. pairwise canonical merge) keyed on canonical sort order, not on worker completion order.
+Per CLAUDE.md, Stage 0 uses `float` (single-precision IEEE-754). Stage 0 single-machine determinism is achieved via state snapshots, and Tier A bitwise equality on `float` fields is **restricted to the serial execution path** at Stage 0. The following constraints are normative:
 
-If a `float` field cannot meet conditions (1) and (2), it MUST be classified Tier B with an approved tolerance row, NOT Tier A. Stage 5+ Fixed64 migration removes this conditional and promotes affected fields to unconditional Tier A.
+1. **Serial-path-only Tier A.** A `float` field MAY be classified Tier A at Stage 0 only if every authoritative write to that field occurs on the main simulation thread without participation in any parallel reduction, parallel scan, or work-partitioned accumulation. Fields touched by parallel reductions MUST be classified Tier B at Stage 0 with an approved tolerance row. Pinning worker count and reduction topology is necessary but NOT sufficient — physical-core vs hyperthread placement, SIMD throttling, scheduler placement, and work-partition stability are not portable across boots even on the same machine, and parallel partial sums remain non-associative under canonical-key merge.
+2. **Pinned execution environment (recording side, both tiers).** Worker thread count, scheduler policy, parallel reduction topology, and SIMD feature level MUST be pinned in build config and recorded in the snapshot's `EnvironmentFingerprint` (see §4.8). Both **recording and replay** sides MUST use the matching fingerprint. This pin is required even for Tier B `float` fields because environment changes invalidate snapshot/replay parity in either tier.
+3. **Deterministic reduction (Tier B).** Any parallel float reduction feeding a Tier B field MUST use a fixed reduction tree shape (e.g. pairwise canonical merge) keyed on canonical sort order, not on worker completion order. The fixed-shape reduction makes the reduction *repeatable on the same machine under matching `EnvironmentFingerprint`*, but does NOT promote the field to Tier A.
+
+If a `float` field cannot be authored on the serial path, it MUST be classified Tier B with an approved tolerance row, NOT Tier A. Stage 5+ Fixed64 migration removes the serial-path restriction and enables unconditional Tier A for all migrated fields.
 
 ### 1.3.2 Tier mapping policy
 - World state, gameplay state machines, event ledgers, and RNG counters are **Tier A**.
@@ -85,6 +87,7 @@ Normative integration requirement: no subsystem MAY introduce non-deterministic 
 | Desync analyzer | QA automation | first-diff localization + taxonomy |
 
 ## 1.5 Version History
+- **v0.9 (May 3, 2026):** Third-pass critique H-C resolution. §1.3.1.1 reworked: Stage-0 `float` Tier-A is now restricted to **serial-path-only** fields. Pinning worker count and reduction topology is necessary but not sufficient — physical-core/HT placement, SIMD throttling, scheduler placement, and work-partition stability are not portable across boots. Fields touched by parallel reductions MUST be Tier B with an approved tolerance row at Stage 0; fixed-shape canonical-key reduction makes a field repeatable on the same machine but does NOT promote it to Tier A.
 - **v0.7 (May 2, 2026):** Added §1.3.0 Snapshot vs Save terminology and §1.3.1.1 Stage 0 `float` Tier-A scope conditions (worker/topology pinning, fallback to Tier B). Aligns spec with CLAUDE.md Stage 0 (`float`, single-machine determinism via state snapshots).
 - **v0.5:** Expanded scope section with equivalence tables, release gates, and subsystem responsibility matrix.
 - **v0.3:** Draft aligned to refined post-adversarial outline; determinism tiers, replay/save-load equivalence, and cross-platform certification scope frozen.
