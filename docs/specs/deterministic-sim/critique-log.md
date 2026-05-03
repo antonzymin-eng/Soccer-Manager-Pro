@@ -15,12 +15,14 @@
 | 2 — Full §1–§9 + appendices | 2026-05-02 | 21 (mixed severity) | 21 | 0 |
 | 3 — Third-pass adversarial | 2026-05-03 | 4 H + 6 M + 6 L + 1 cross-cutting = 17 | 16 resolved + 1 mitigated | M-F (back-propagation pending lead-dev) |
 | 4 — Fourth-pass adversarial | 2026-05-03 | 3 C + 5 M + 8 L + 3 cross-cutting = 19 | 0 (new — pending action) | All |
+| 5 — Fifth-pass adversarial | 2026-05-03 | 2 C + 2 H + 5 M + 6 L + 1 cross-cutting = 16 | 0 (new — pending action) | All |
 
 **Spec status:** `IN PROGRESS`. Promotion to `IN REVIEW` blocked on:
 1. Fourth-pass critical-tier fixes (C-1, C-2, C-3a, C-3b — see Pass 4 below).
-2. §9.5 implementation-readiness review (gating item still unchecked).
-3. §8.3 deferred dependencies (#9 Fixed64, #17 Event System, #18 Performance Optimization, #19 Testing Strategy) reaching `IN REVIEW`.
-4. Three golden-vector files named in §9.5 #4.
+2. **Fifth-pass critical-tier fixes (C-1 SnapshotDigest field-order contradiction, C-2 PhaseDigest domain-tag desync — see Pass 5 below).**
+3. §9.5 implementation-readiness review (gating item still unchecked).
+4. §8.3 deferred dependencies (#9 Fixed64, #17 Event System, #18 Performance Optimization, #19 Testing Strategy) reaching `IN REVIEW`.
+5. Three golden-vector files named in §9.5 #4.
 
 ---
 
@@ -228,6 +230,92 @@ Net: severity inflation in three "High" items reduced; two pseudo-findings withd
 
 ---
 
+## Pass 5 — Fifth-Pass Adversarial Review (2026-05-03)
+
+Reviewer mode: adversarial; targeted re-read of all section files plus outline.md and appendices.md after Pass 4 published. Self-critique pass applied before publication. Findings here are explicitly de-duplicated against Passes 1–4 (any item already raised under another ID was dropped).
+
+### Critical
+
+**C-1. §3.2.3 vs §3.9.2 disagree on `SnapshotDigest` preimage field order.**
+§3.2.3 normatively defines `SnapshotDigest[T] = SHA-256(SnapshotHeader[T] || SnapshotPayload[T])`. The schema for `SnapshotHeader` in §2.3 is `{ schemaVersion, tick, prevSnapshotDigest, environmentFingerprint }` (declared field order). §3.2.4.1 mandates "flat concatenation of fields in declared schema order; no reordering." But §3.9.2 expands the same preimage as `SchemaVersion || Tick || EnvironmentFingerprint || PrevSnapshotDigest || PayloadBytes` — `EnvironmentFingerprint` and `PrevSnapshotDigest` are **swapped relative to §2.3 declaration order**. Two normative orderings produce two different SHA-256 outputs. Tier-A bitwise parity is unattainable until one is removed and the other made canonical. **Required fix:** pick an authoritative order (recommend keeping §2.3's declared order so `prevSnapshotDigest` stays adjacent to `tick`), update the other section to match, and add the resolved order to the §3.2.4.1 worked-byte family with an exact SHA-256 expected value bound into `serialize-canonical-corpus.md`.
+
+**C-2. §3.2.2 `PhaseDigest` formula omits the §3.2.4.1 `DOMAIN_TAG` (0x10).**
+§3.2.2 (normative): `PhaseDigest = SHA-256(SerializeCanonical(DigestVersion || Tick || PhaseId || phaseScopeFields))` — no domain tag. §3.2.4.1 (Pass 3 H-A fix): "Each top-level digest preimage begins with a 1-byte `DOMAIN_TAG`" and the §3.2.4.1 worked example begins with `10`. §3.1.2 `AI_NoOp` description likewise references §3.2.4.1's tagged example. An implementer reading §3.2.2 in isolation produces a 12-byte preimage starting with `01 00 78 …` (no domain tag) — different SHA-256, broken parity. **Required fix:** update §3.2.2 (and §3.2.5 per-draw formula by analogous reasoning) to reference the `DOMAIN_TAG` requirement explicitly, OR rewrite §3.2.2 to read `SHA-256(SerializeCanonical(DOMAIN_TAG_PHASE || DigestVersion || Tick || PhaseId || phaseScopeFields))`. §3.2.4 hash-input field-widths table should also list `DOMAIN_TAG : u8 : 1`.
+
+### High
+
+**H-1. Outline `FR-DS-` numbering is permuted relative to section-2 `FR-DS-` numbering.**
+`outline.md` §12 lists `FR-DS-001..008`. `section-2.md` §2.1 lists `FR-DS-001..013`. The first three IDs match (`001` tick pipeline, `002` intra-phase ordering, `003` RNG ownership), but from `FR-DS-004` onward the semantics diverge:
+
+| ID | outline.md §12 | section-2.md §2.1 |
+|---|---|---|
+| FR-DS-004 | branch-safe RNG normalization | snapshot canonical binary layout |
+| FR-DS-005 | snapshot canonical binary schema | replay engine reconstructs deterministic state |
+| FR-DS-006 | replay reconstruction state machine | save/load atomic across authoritative domains |
+| FR-DS-007 | deterministic digest protocol | divergence detection classification |
+| FR-DS-008 | save/load equivalence protocol | tooling emits first divergent tick/phase/field |
+
+`outline.md` carries `[refined]` status and v0.4 (May 2, 2026) — it is "live" enough that downstream readers will trust its IDs. CLAUDE.md flags renumbering cascades as the project's single most-recurring bug class; this is one, internal to spec #16. **Required fix:** either (a) re-sync `outline.md` §12 to mirror section-2 §2.1's full 13-FR list with matching semantics, or (b) mark `outline.md` `SUPERSEDED — see section-2.md §2.1 for canonical FRs` and freeze it.
+
+**H-2. HKDF `info` byte encoding is undefined.**
+§3.2.4 invokes `HKDF-SHA256(IKM=matchSeed, salt=∅, info="DS-RNG-KEY-v1", length=16)`. §3.2.4.1 defines `string` encoding as `u32 byte length || NFC-normalized UTF-8 bytes`. But HKDF `info` is an opaque RFC 5869 byte string passed directly to the KDF — it is not a `SerializeCanonical`-encoded field. The spec doesn't say whether the bytes fed to HKDF are (a) the raw 13 ASCII bytes `D S - R N G - K E Y - v 1`, or (b) the §3.2.4.1 length-prefixed UTF-8 form `0D 00 00 00 44 53 2D 52 4E 47 2D 4B 45 59 2D 76 31` (17 bytes). These produce different `(k0, k1)` outputs from HKDF, which then cascade into every SipHash output (StreamKey derivation, every per-draw value, the entire RNG ledger). **Required fix:** state explicitly that HKDF `info` is the raw UTF-8 bytes of the literal with NO length prefix and NO NFC normalization (since the literal is ASCII), bind a KAT row covering this exact `info` to `hkdf-sha256-kat.md` (§9.5 #4(a)). Recommend the same explicit treatment for any other HKDF/HMAC-style parameter that escapes the canonical-serializer.
+
+### Medium
+
+**M-1. §3.2.4.1 `enum` width "frozen with `DigestVersion`" conflates two version axes.**
+"`enum` | 1 (≤256 variants) or 2 (≤65536 variants) | underlying integer value; width fixed at schema definition time and frozen with `DigestVersion`." Adding a 257th variant to a previously 1-byte enum is a *schema* change (`SchemaVersion` bump per §2.3), not necessarily a *digest algorithm* change (`DigestVersion` bump). The two are tracked as separate constants (`DETERMINISM_DIGEST_VERSION` vs `SchemaVersion`); coupling enum width to `DigestVersion` says any schema-driven enum widening also forces `DigestVersion=2` and a new replay reader. **Required fix:** rebind to `SchemaVersion`. If both bumps are intended (the digest algorithm depends on the schema), state that explicitly and rename one constant.
+
+**M-2. Tier-A `BitwiseEqual` makes `-0.0` and `+0.0` non-equal — no canonicalization rule.**
+§3.2.4.1 normalizes Tier-B NaN bit patterns to canonical quiet-NaN before serialization. Tier-A `f32`/`f64` fields are passed through as raw bit patterns. IEEE-754 `+0.0` (`0x00000000`) and `-0.0` (`0x80000000`) are arithmetically equal but bitwise distinct. Two paths producing the same arithmetic zero with different sign bits will fail Tier-A `BitwiseEqual` and be classified `HardDesync`. This is a known IEEE-754 hazard for replay-comparison codes. **Required fix:** add a Tier-A normalization step that maps `-0.0 → +0.0` before serialization for `f32`/`f64`, OR explicitly reclassify zero-producing accumulators to Tier-B with a tolerance of 0 plus zero-sign-allowed. Note in §3.3 edge-case list and add an `EC-016-*` row.
+
+**M-3. Despawn-tombstone log persistence and tier classification missing.**
+§3.2.5 requires retention of `(EntityId, finalActionOrdinal, finalRngCursor)` tombstones for every despawned entity. §3.2.5.2 says tombstones are scoped to the match and cleared at match finalization. But: (a) is the despawn log part of authoritative state? (b) does it appear in the snapshot payload? If a save occurs after despawn, replay must restore tombstones to enforce the no-reuse constraint on continued execution. (c) what is its tier? (d) what is its canonical serialization order? None specified. Without this, replay parity past any despawn-then-save sequence is undefined. **Required fix:** add `DespawnLog` to §2.3 data structures, classify Tier A, define canonical order (e.g. `EntityId` ascending), add to §3.6.1 phase-ownership table (Resolve writes? Snapshot reads only?).
+
+**M-4. "Replay cursor" in §4.2.2 step 7 is undefined.**
+§4.2.2 step 7: "Verify the replay cursor is at `EndOfSnapshot[T]`…". `ERR_DS_REPLAY_BOUNDARY` (0x1609) trips on this. §4.6.2 sequence diagram says `AssertCursorAtEndOfSnapshot[T]`. But "replay cursor" is not in §2.3 data structures, not in §3.2.5 (where `RngCursor` is), and not defined anywhere as a concept. Two implementers will model it differently. **Required fix:** either define a `ReplayCursor { tick, phaseOrdinal }` data structure in §2.3 with the legal values it can hold (one per phase boundary in the canonical pipeline), or reword step 7 in terms of an existing concept ("the most recently completed `(tick, phaseOrdinal)` is `(T, Snapshot)`").
+
+**M-5. Draw-site registry has no schema, no file location, no example.**
+§3.6.2 lists what each registry entry must contain (stable ID, owning subsystem, reserved budget, migration note), but unlike the tolerance matrix (§2.3.1 has a full per-column schema, immutability rule, and review-date discipline), the draw-site registry has no operational schema, no file path, no version contract, no example row, no review-date or owner field. The registry is the binding artifact for `ERR_DS_RNG_BUDGET_MISMATCH` (§3.4.1) and the §3.2.5.1 stable-declaration-order rule — it is more critical to per-stream determinism than the tolerance matrix is to Tier-B parity. **Required fix:** add §3.6.2.1 with the per-column schema (mirror §2.3.1 style), file location (suggest `Sim.Constants.Determinism.DrawSiteRegistry` per the constant catalogue convention), example row, immutability rule, and stream-version-bump trigger conditions.
+
+### Low
+
+**L-1. §3.10 EC-016-001 trigger description is incomplete.**
+EC-016-001 trigger: "request during `AI`/`Physics`". `LEGAL_SAVE_BOUNDARIES = { EndOfSnapshot }` means save requested during ANY of the seven non-Snapshot phases (Input, Intent, AI, AI_NoOp, Physics, Resolve, Events) is illegal. Listing only two phases is misleading. **Required fix:** rephrase trigger as "save commit attempted at any boundary other than `EndOfSnapshot`."
+
+**L-2. Cross-reference ID format inconsistency for ERR-016 entries.**
+§3.2.5 references `ERR-016-EntityId-NoReuse` (verbal suffix). CLAUDE.md Open Issues and Pass 3 references use `ERR-016-002` (numeric suffix). Two formats for the same registry. CLAUDE.md cross-reference taxonomy is `ERR-NNN`-style. **Required fix:** rename `ERR-016-EntityId-NoReuse` to `ERR-016-002` (or whatever numeric ID the spec-error-log assigns) and grep `docs/specs/deterministic-sim/` for any other verbal-suffix variants.
+
+**L-3. `outline.md` §13 "Open Questions" item 1 is stale.**
+"Stage-0 float paths: which fields remain Tier B and for how long?" was answered by §1.3.1.1 (Pass 3 H-C fix): every parallel-touched float at Stage 0 is Tier B; Tier A is restricted to serial-path fields. Outline doesn't reflect this. Compounds with H-1 above. **Required fix:** strike the question or mark it resolved in `outline.md`.
+
+**L-4. §3.2.4.1 `bool` and `optional<T>` decode-side error code unspecified.**
+"`0x00` = false, `0x01` = true; no other byte values are legal." OK on encode side. On decode, what happens when a deserializer sees `0x02..0xFF`? Probably `ERR_DS_SCHEMA_INCOMPATIBLE`, but not stated. Same for `optional<T>` tag byte and `enum` out-of-range. **Required fix:** one sentence in §3.2.4.1 binding all illegal-byte decode paths to `ERR_DS_SCHEMA_INCOMPATIBLE` (already covers `EC-016-002` for enums).
+
+**L-5. Appendix G manifest entries are not bound to FRs or test cards.**
+Pass 4 L-6 noted Appendix G is disjoint from §9.5 #4. Adding: even within Appendix G, `GV-RNG-001`/`GV-SNAP-001`/`GV-DIGEST-001` have no FR back-references (which `FR-DS-NNN` does each vector validate?) and no test-card back-references (which `T-DS-*` exercises each vector?). The §5.10 Test Card Template lists `ArtifactPaths` but doesn't pull in golden vectors as a typed field. **Required fix:** add columns `FR mapping` and `Test card(s)` to Appendix G; add a `GoldenVectors` field to the §5.10 template.
+
+**L-6. §6.10 "Snapshot + Digest 18%" mixes per-tick digest cost with scheduled save cost.**
+Same shape as Pass 4 L-5 (which addressed the AI row). PhaseDigest is computed every tick (§3.2.2). Durable saves are scheduled, not every-tick (§1.3.0 — "saves are subscribers" to the always-running Snapshot phase). Lumping the two into one budget masks where the cost actually lands: digest is steady, save spikes on save ticks. The 18% number is averaged but not labeled as such. **Required fix:** either split into two rows (`Snapshot/Digest steady-state` and `Save commit (scheduled)`), or annotate the 18% as "averaged over a save-cadence period of N ticks" with N pinned.
+
+### Cross-cutting
+
+**X-1. Outline-vs-section drift is now load-bearing.**
+H-1 (FR ID permutation) and L-3 (stale Open Question) are both symptoms. `outline.md` is dated v0.4 (2026-05-02) and labeled `Status: Draft outline (refined)`, but section files have moved to v0.9 with substantially different FR sets, terminology (`AI_NoOp`, `EnvironmentFingerprint`, `DOMAIN_TAG`, etc.), and resolved-vs-open scope. Two documents, both presented as live, contradicting each other. **Recommendation:** at next maintenance pass either freeze `outline.md` with a banner pointing to section files as canonical, or re-sync §12 / §13 to match section-2 §2.1 and the spec's resolved decisions.
+
+### Self-Review Adjustments (applied to draft before publication)
+
+| Original draft finding | Issue | Adjustment in published list |
+|---|---|---|
+| H-x §3.2.4 SipHash same-key-for-stream-and-draw is a security issue | SipHash is a PRF; reusing key with disjoint inputs is sound | Withdrawn (not a determinism bug) |
+| H-y `STRING_MAX_BYTES = 65536` with u32 length-prefix is inconsistent | Bound is a policy ceiling, not a contradiction; u32 width is for the on-wire encoding, the limit is enforced separately | Withdrawn |
+| M-z §5.5.2 `mod 2^31` introduces modulo bias on save-tick selection | Bias is functionally negligible at typical scenario lengths (hundreds–thousands of ticks vs 2³¹); not falsifiable as a parity defect | Withdrawn |
+| L-w §3.4 `PHYSICS_DT` is `[DERIVED]` but spec also pins a literal — tag/value tension | Already implicit in Pass 4 C-1 (wrong literal) and X-1 (fabricated-constant regression risk); folding here would duplicate | Withdrawn (covered by Pass 4) |
+| L-v §3.2.5 cross-spec `XC-016-001` for fatigue/coordinate refs uses CLAUDE.md format inconsistently | On re-read it does conform to CLAUDE.md `XC-NNN-` taxonomy | Withdrawn |
+
+Net Pass 5: 2 C + 2 H + 5 M + 6 L + 1 cross-cutting published. Five draft findings withdrawn during self-critique.
+
+---
+
 ## Outstanding Items (cross-pass roll-up)
 
 | Item | Source | Severity | Owner | Tracker |
@@ -248,6 +336,16 @@ Net: severity inflation in three "High" items reduced; two pseudo-findings withd
 | Revisit Tier-A scope per-field once parallel-reduction surface is implementation-known | Pass 3 H-C | Medium (deferred) | Simulation lead | §1.3.1.1 |
 | FR-DS rows for new error codes / sample protocol (optional) | Pass 3 follow-up | Low | Spec author | §2.1 |
 | §8.3 deferred dependencies (#9, #17, #18, #19) reach `IN REVIEW` | Pass 2 D-15, Pass 3 cross-cut | Structural blocker on approval | Cross-spec planning | §8.3, §9.4 |
+| Resolve §3.2.3 vs §3.9.2 `SnapshotDigest` field-order contradiction | Pass 5 C-1 | Critical | Spec author | This log |
+| Add `DOMAIN_TAG` to §3.2.2 `PhaseDigest` formula (and analogous §3.2.5 per-draw) | Pass 5 C-2 | Critical | Spec author | This log |
+| Re-sync `outline.md` §12 FR list with `section-2.md` §2.1, OR mark outline `SUPERSEDED` | Pass 5 H-1 | High | Spec author | This log |
+| Define HKDF `info` byte encoding explicitly; bind KAT row | Pass 5 H-2 | High | Spec author | This log |
+| Rebind `enum` width "frozen with" axis from `DigestVersion` to `SchemaVersion` | Pass 5 M-1 | Medium | Spec author | This log |
+| Add Tier-A `-0.0`/`+0.0` canonicalization rule | Pass 5 M-2 | Medium | Spec author | This log |
+| Specify despawn-tombstone log persistence, tier, and canonical order | Pass 5 M-3 | Medium | Spec author | This log |
+| Define `ReplayCursor` data structure (or reword §4.2.2 step 7) | Pass 5 M-4 | Medium | Spec author | This log |
+| Add §3.6.2.1 draw-site registry schema (mirror §2.3.1) | Pass 5 M-5 | Medium | Spec author | This log |
+| Six L-* hygiene items (EC trigger; ID format; stale outline; bool/optional decode error; Appendix G FR/test back-refs; §6.10 budget split) | Pass 5 L-1..L-6 | Low | Spec author | This log |
 
 ---
 
@@ -260,4 +358,5 @@ Net: severity inflation in three "High" items reduced; two pseudo-findings withd
 
 ## Version History
 
+- **v1.1 (May 3, 2026):** Appended Pass 5 (fifth-pass adversarial, 2026-05-03). Sixteen new findings (2 C + 2 H + 5 M + 6 L + 1 cross-cutting), all de-duplicated against Passes 1–4. Five draft findings withdrawn during self-review. Promotion-blocker list and Outstanding Items roll-up updated with Pass 5 entries. No section files modified.
 - **v1.0 (May 3, 2026):** Initial consolidated critique log. Merges Pass 1 (outline review, 2026-05-01), Pass 2 (full §1–§9 + appendices, 2026-05-02), and Pass 3 (third-pass adversarial, 2026-05-03) from the now-removed `adversarial-review.md` and `third-pass-fix-log.md`. Adds Pass 4 (fourth-pass adversarial, 2026-05-03) with self-review adjustments applied (3 downgrades, 1 withdrawal, 1 missed finding added).
