@@ -55,7 +55,7 @@ The project currently tracks written specifications in the following folders:
 6. `docs/specs/shot-mechanics/`
 7. `docs/specs/perception-system/`
 8. `docs/specs/decision-tree/`
-9. `docs/specs/deterministic-sim/` — Spec #16 (Deterministic Simulation); status: IN PROGRESS as of May 2, 2026; files: `outline.md`, `adversarial-review.md`, `section-1.md` through `section-9-approval-checklist.md`, `appendices.md`
+9. `docs/specs/deterministic-sim/` — Spec #16 (Deterministic Simulation); status: IN PROGRESS as of May 3, 2026; files: `outline.md`, `section-1.md` through `section-9-approval-checklist.md`, `appendices.md`, `critique-log.md` (consolidated review history; supersedes the former `adversarial-review.md` and `third-pass-fix-log.md`, both removed May 3, 2026)
 
 > Additional spec folders for #9–#15, #17–#20 will be added as writing progresses.
 
