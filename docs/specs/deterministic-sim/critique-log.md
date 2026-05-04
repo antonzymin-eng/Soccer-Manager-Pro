@@ -394,7 +394,7 @@ Self-critique of these five fixes: each is a direct in-place text correction wit
 
 Section-file version bumps: section-7 → v1.0; section-8 → v1.0. Appendices.md and section-3.md were minor edits in place (no version-history entry added beyond what already exists in section-3 §3.5; appendices.md has no version history block).
 
-### 6.4 Critique of Pass 6 Solutions (re-critique pass)
+### 6.4.1 Critique of Pass 6 Solutions (re-critique pass)
 
 A deliberate adversarial pass against the Pass 6 fixes themselves. Findings that survived:
 
@@ -426,8 +426,17 @@ All Pass 4 (C-1, C-2, C-3a, C-3b, M-1..M-5, L-1..L-7, X-1) and all Pass 5 (C-1, 
 | Add `FR-DS-014` (DespawnLog persistence) — soft documentation gap raised in Pass 6 §6.4 | Pass 6 self-critique | Low | Spec author | §2.1 |
 | Document `recordTrailer` consumer in §4.6.1.1 atomic-write contract (or remove the field) | Pass 6 self-critique | Low | Spec author | §3.9.2, §4.6.1.1 |
 | FR-DS rows for new error codes / sample protocol (optional) | Pass 3 follow-up | Low | Spec author | §2.1 |
-| §8.3 deferred dependencies (#9 Fixed64, #17 Event System, #18 Performance Optimization, #19 Testing Strategy) reach `IN REVIEW` | Pass 2 D-15, Pass 3 cross-cut | Structural blocker on approval | Cross-spec planning | §8.3, §9.4 |
-| Tag-semantics drift (`[FIXED]` used for spec-pinned design constants) — project-level CLAUDE.md decision | Pass 4 L-8 | Low | CLAUDE.md maintainer | CLAUDE.md (out-of-spec) |
+| §8.3 deferred dependencies (#9, #17, #18, #19) reach `IN REVIEW` | Pass 2 D-15, Pass 3 cross-cut | Structural blocker on approval | Cross-spec planning | §8.3, §9.4 |
+| Resolve §3.2.3 vs §3.9.2 `SnapshotDigest` field-order contradiction | Pass 5 C-1 | Critical | Spec author | This log |
+| Add `DOMAIN_TAG` to §3.2.2 `PhaseDigest` formula (and analogous §3.2.5 per-draw) | Pass 5 C-2 | Critical | Spec author | This log |
+| Re-sync `outline.md` §12 FR list with `section-2.md` §2.1, OR mark outline `SUPERSEDED` | Pass 5 H-1 | High | Spec author | This log |
+| Define HKDF `info` byte encoding explicitly; bind KAT row | Pass 5 H-2 | High | Spec author | This log |
+| Rebind `enum` width "frozen with" axis from `DigestVersion` to `SchemaVersion` | Pass 5 M-1 | Medium | Spec author | This log |
+| Add Tier-A `-0.0`/`+0.0` canonicalization rule | Pass 5 M-2 | Medium | Spec author | This log |
+| Specify despawn-tombstone log persistence, tier, and canonical order | Pass 5 M-3 | Medium | Spec author | This log |
+| Define `ReplayCursor` data structure (or reword §4.2.2 step 7) | Pass 5 M-4 | Medium | Spec author | This log |
+| Add §3.6.2.1 draw-site registry schema (mirror §2.3.1) | Pass 5 M-5 | Medium | Spec author | This log |
+| Six L-* hygiene items (EC trigger; ID format; stale outline; bool/optional decode error; Appendix G FR/test back-refs; §6.10 budget split) | Pass 5 L-1..L-6 | Low | Spec author | This log |
 
 ---
 
