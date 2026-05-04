@@ -1,12 +1,15 @@
 # Deterministic Simulation Specification #16 — Refined Outline (Post-Adversarial Pass)
 
+> **STATUS: SUPERSEDED — see `section-2.md` §2.1 for canonical FR list.**
+> As of May 4, 2026 (Pass 5 H-1), this outline is frozen as historical scaffolding. The section files (v1.0 across §1–§6 and §9) have moved past it: FR IDs from `FR-DS-004` onward, §13 Open Questions, and several §3 / §5 / §7 subsections diverge from the resolved spec. New readers MUST cross-reference the section files; this outline is retained only for traceability of how the spec evolved.
+
 ## 0. Document Metadata
 - **Spec ID:** 16
 - **Title:** Deterministic Simulation
-- **Status:** Draft outline (refined); section files now superseded at v0.7 (see individual section version histories)
-- **Version:** 0.4 (May 2, 2026 — prefix unification: `FR-DET-`/`VR-DET-`/`OPS-DET-` deprecated in favor of `-DS-` family per §2.0 of section-2.md)
+- **Status:** SUPERSEDED (frozen May 4, 2026; canonical content in section files at v1.0)
+- **Version:** 0.4 (May 2, 2026) — superseded May 4, 2026 (no further revisions; see Pass 5 H-1 fix in `critique-log.md`)
 - **Primary audience:** Gameplay engineering, physics engineering, AI systems, tooling, QA automation, build/release
-- **Normative keywords:** MUST, MUST NOT, SHOULD, SHOULD NOT, MAY
+- **Normative keywords:** MUST, MUST NOT, SHOULD, SHOULD NOT, MAY (text below is non-normative; the canonical normative content is in the section files)
 
 ---
 
@@ -276,24 +279,27 @@ Outcome:
 
 ---
 
-## 12. Requirement ID Seed Set (New)
-- `FR-DS-001`: canonical tick pipeline
-- `FR-DS-002`: intra-phase ordering keys
-- `FR-DS-003`: authoritative RNG ownership
-- `FR-DS-004`: branch-safe RNG normalization
-- `FR-DS-005`: snapshot canonical binary schema
-- `FR-DS-006`: replay reconstruction state machine
-- `FR-DS-007`: deterministic digest protocol
-- `FR-DS-008`: save/load equivalence protocol
-- `VR-DS-001`: phase digest determinism tests
-- `VR-DS-002`: checkpoint replay equivalence suite
-- `VR-DS-003`: cross-platform certification corpus
-- `OPS-DS-001`: golden trace governance workflow
+## 12. Requirement ID Seed Set (SUPERSEDED — see `section-2.md` §2.1)
+> The IDs below were a draft seed set. The canonical FR list is now `section-2.md` §2.1 (`FR-DS-001..013`). The IDs `FR-DS-004` and beyond in this seed set DO NOT match `section-2.md` §2.1 semantics — readers MUST use §2.1 as the source of truth (Pass 5 H-1). The list is retained here only for historical reference.
+
+Historical seed set (do not cite in new work):
+- ~~`FR-DS-001`: canonical tick pipeline~~ → see `section-2.md` §2.1 FR-DS-001
+- ~~`FR-DS-002`: intra-phase ordering keys~~ → see §2.1 FR-DS-002
+- ~~`FR-DS-003`: authoritative RNG ownership~~ → see §2.1 FR-DS-003
+- ~~`FR-DS-004`: branch-safe RNG normalization~~ → folded into §2.1 FR-DS-003
+- ~~`FR-DS-005`: snapshot canonical binary schema~~ → §2.1 FR-DS-004
+- ~~`FR-DS-006`: replay reconstruction state machine~~ → §2.1 FR-DS-005
+- ~~`FR-DS-007`: deterministic digest protocol~~ → integrated across §2.1 FR-DS-007/008
+- ~~`FR-DS-008`: save/load equivalence protocol~~ → §2.1 FR-DS-006
+- ~~`VR-DS-001`/`VR-DS-002`/`VR-DS-003`~~ → tracked as test cards in §5.3 / §5.11 (`T-DS-*`); VR-IDs are reserved but not yet instantiated
+- ~~`OPS-DS-001`: golden trace governance workflow~~ → tracked operationally; not yet instantiated as a formal `OPS-DS-NNN` requirement
 
 ---
 
-## 13. Open Questions (Narrowed)
-1. Stage-0 float paths: which fields remain Tier B and for how long?
-2. Fixed64 transition trigger and coexistence plan.
-3. Snapshot cadence defaults vs storage budgets.
-4. CI budget for full certification matrix frequency.
+## 13. Open Questions (SUPERSEDED — historical record)
+> All four questions below are resolved or superseded as of May 4, 2026 (Pass 5 L-3). New open items are tracked in `critique-log.md` "Outstanding Items" and `CLAUDE.md` "Open Issues".
+
+1. ~~Stage-0 float paths: which fields remain Tier B and for how long?~~ — **Resolved by `section-1.md` §1.3.1.1 (Pass 3 H-C, May 3, 2026):** every parallel-touched float at Stage 0 is Tier B; Tier A is restricted to serial-path fields. Fixed64 migration (Stage 5+) removes the restriction.
+2. ~~Fixed64 transition trigger and coexistence plan.~~ — **Deferred to Stage 5+** per CLAUDE.md "Fixed64 stage scope decision" (April 26, 2026). Defined by Spec #9 when that spec reaches IN REVIEW (§8.3 dependency).
+3. ~~Snapshot cadence defaults vs storage budgets.~~ — **Partially resolved**: `Snapshot` phase runs every tick (§1.3.0); durable `Save` cadence is scheduled (not every-tick) and bounded by §6.10 budgets; cadence default is owned by Performance Optimization #18 (§8.3 dependency).
+4. ~~CI budget for full certification matrix frequency.~~ — **Deferred to Stage 5+** per the FR-DS-009-GATE policy (§5.5); not a Stage 0 gate.

@@ -62,6 +62,7 @@ Recommended module ownership:
 - `sim/determinism/*` — digest protocol, tolerance matrix, divergence tooling.
 
 ## 4.5 Version History
+- **v1.0 (May 4, 2026):** Pass 4 / Pass 5 critique resolution. (a) Pass 4 M-3: §4.8.1 mid-match mutation now fails with `ERR_DS_ENV_MUTATION` (0x160D), distinct from replay-side `ERR_DS_REPLAY_ENV_MISMATCH`; EC-016-013 paired in §3.10. (b) Pass 4 M-4: §4.8.3 `il2cppVersion` row clarified — Mono fallback uses sentinel `"MONO"` so cross-backend replay deterministically fails; certification rejects `"MONO"` snapshots. (c) Pass 4 M-5: on-disk snapshot record layout moved to §3.9.2 (normative); §4.8 fingerprint table extended with `unicodeNormalizationVersion` row (Pass 4 L-1 binding).
 - **v0.9 (May 3, 2026):** Third-pass critique fixes. (a) M-I: §4.6.1.1 atomic-write contract bound (same-volume write-then-rename, fsync barrier, atomic rename, directory fsync, partial-save forbidden); paired with `ERR_DS_STORAGE_ATOMICITY`. (b) H-D: §4.8 `floatModelHash` row pointed to new §4.8.3 normative composition (SHA-256 over canonical 11-field tuple of compiler/runtime float-mode flags); Stage-0 required values listed; flag strings cross-referenced to §5.5.1.
 - **v0.8 (May 2, 2026):** §4.2.2 step 7 reworded to clarify cursor-at-EndOfSnapshot[T] assertion and replaced `ERR_DS_SAVE_BOUNDARY` with `ERR_DS_REPLAY_BOUNDARY` (A-4). §4.6.2 sequence diagram replaced with 8-step diagram matching normative §4.2.2 lifecycle (A-6).
 - **v0.7 (May 2, 2026):** §4.2 reframed as non-normative sketches per CLAUDE.md "interfaces only when both sides are specified" rule (consumer specs #17/#18/#19 still NOT STARTED). §4.2.1 reworded `RunTick` from "pure" to "deterministic in (state, input, tickNumber) with no ambient-state observation". Added §4.2.2 normative replay lifecycle with per-step error codes. §4.8 extended to cover *recording-side* environment pinning with full `EnvironmentFingerprint` schema.
@@ -113,9 +114,10 @@ Both recording and replay runtimes MUST pin and record the following `Environmen
 | `reductionTopology` | Canonical reduction tree identifier (see §1.3.1.1) |
 | `simdFeatureLevel` | Lowest-common-denominator SIMD level enabled in authoritative paths |
 | `floatModelHash` | SHA-256 over the canonical float-flag tuple (§4.8.3) |
+| `unicodeNormalizationVersion` | Unicode NFC table version pinned for `string` encoding (§3.2.4.1, `UNICODE_NFC_VERSION = "15.1"`). A Unicode-table upgrade between recording and replay deterministically fails replay with `ERR_DS_REPLAY_ENV_MISMATCH` instead of silently drifting digests |
 
 ### 4.8.1 Recording requirement
-At match start, the runtime MUST capture `EnvironmentFingerprint` and embed it into every snapshot header for that match. Mid-match mutation of any pinned field is forbidden and MUST fail with `ERR_DS_REPLAY_ENV_MISMATCH`.
+At match start, the runtime MUST capture `EnvironmentFingerprint` and embed it into every snapshot header for that match. Mid-match mutation of any pinned field is forbidden and MUST fail with **`ERR_DS_ENV_MUTATION`** (recording-side, 0x160D — distinct from `ERR_DS_REPLAY_ENV_MISMATCH` which is replay-side fingerprint divergence; see §3.4 and EC-016-013). Implementations MUST NOT reuse the replay-side error code for recording-side mutation.
 
 ### 4.8.2 Replay requirement
 Before resume, the replay runtime MUST compare the live `EnvironmentFingerprint` against the snapshot's recorded fingerprint. Any mismatch MUST fail deterministically with `ERR_DS_REPLAY_ENV_MISMATCH` and MUST NOT attempt fallback execution.
@@ -130,7 +132,7 @@ The tuple fields, in this exact serialization order, are:
 | 1 | `compilerToolchain` | `string` | One of `"MSVC"`, `"Clang"`, `"AppleClang"`, `"GCC"` (UTF-8) |
 | 2 | `compilerVersion` | `string` | Major.Minor.Patch as reported by the toolchain (e.g. `"19.38.33135"`) |
 | 3 | `targetTriple` | `string` | LLVM-style target triple (e.g. `"x86_64-pc-windows-msvc"`) |
-| 4 | `il2cppVersion` | `string` | Unity IL2CPP version string |
+| 4 | `il2cppVersion` | `string` | Unity IL2CPP version string. Stage-0 certification REQUIRES IL2CPP per §5.5; a non-empty value is mandatory at certification time. For editor / dev / Mono builds (replay-on-developer-machines, not certification), the sentinel value `"MONO"` MUST be used — this binds the Mono backend into the fingerprint deterministically and fails any cross-backend replay (Mono recording vs IL2CPP replay) with `ERR_DS_REPLAY_ENV_MISMATCH` instead of producing silent digest drift. Stage-0 certification runs MUST reject any snapshot whose fingerprint contains `"MONO"` as `ERR_DS_REPLAY_ENV_MISMATCH` |
 | 5 | `denormalsAreZero` | `bool` | Runtime CSR/MXCSR denormals-are-zero bit |
 | 6 | `flushToZero` | `bool` | Runtime CSR/MXCSR flush-to-zero bit |
 | 7 | `roundingMode` | `u8` | `0=NearestEven, 1=ToZero, 2=Upward, 3=Downward` |
