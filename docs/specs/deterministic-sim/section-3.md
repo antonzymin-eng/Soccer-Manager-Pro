@@ -22,6 +22,11 @@ The "tick" in the pseudocode below is the **physics tick** at 60 Hz (16.67 ms). 
 PHYSICS_TICK_HZ = 60      # [FIXED] CLAUDE.md heartbeat
 TACTICAL_TICK_HZ = 10     # [FIXED] CLAUDE.md heartbeat
 AI_PHASE_STRIDE = PHYSICS_TICK_HZ / TACTICAL_TICK_HZ   # = 6 [DERIVED]
+# Heartbeat-and-stride change policy: Any change to PHYSICS_TICK_HZ,
+# TACTICAL_TICK_HZ, or the derived AI_PHASE_STRIDE reshapes the digest rollup
+# (different ticks emit AI_NoOp vs AI). Such a change MUST trigger a
+# DETERMINISM_DIGEST_VERSION bump (§3.4) and invalidates all pre-existing
+# replay corpus and golden vectors. (Pass 4 L-7.)
 
 for tick in TickStart..TickEnd:
   BeginTick(tick)
@@ -61,14 +66,14 @@ Per decision site, authoritative code MUST either:
 where `(k0, k1)` is the 128-bit SipHash key derived from `matchSeed` via `RNG_KDF` (see §3.2.4). The stream key identifies a *persistent* RNG stream for the lifetime of the (subsystem, entity, streamVersion) tuple within a match. It MUST NOT include per-evaluation counters; per-evaluation indexing is handled by the `RngCursor` and the `actionOrdinal` reservation index defined in §3.2.5.
 
 ### 3.2.2 Phase digest construction (FM-016-002)
-`PhaseDigest = SHA-256(SerializeCanonical(DigestVersion || Tick || PhaseId || phaseScopeFields))`
+`PhaseDigest = SHA-256(SerializeCanonical(DOMAIN_TAG_PHASE || DigestVersion || Tick || PhaseId || phaseScopeFields))`
 
-`Tick` and `PhaseId` MUST be included in the preimage so that two phases with otherwise-identical scope at different ticks produce distinct digests. `DigestVersion` MUST equal `DETERMINISM_DIGEST_VERSION` (§3.4) and is included to make digests self-identifying across version migrations.
+The preimage MUST begin with the 1-byte `DOMAIN_TAG_PHASE = 0x10` (see §3.2.4.1 domain-tag table). `Tick` and `PhaseId` MUST be included so that two phases with otherwise-identical scope at different ticks produce distinct digests. `DigestVersion` MUST equal `DETERMINISM_DIGEST_VERSION` (§3.4) and is included to make digests self-identifying across version migrations. Field widths are bound in §3.4 `HASH_INPUT_FIELD_WIDTHS`; concatenation rules per §3.2.4.1.
 
 ### 3.2.3 Snapshot chain digest (FM-016-003)
-`SnapshotDigest[T] = SHA-256(SnapshotHeader[T] || SnapshotPayload[T])`
+`SnapshotDigest[T] = SHA-256(SerializeCanonical(0x12 ‖ SnapshotHeader[T]) ‖ SerializeCanonical(0x11 ‖ SnapshotPayload[T]))`
 
-The `currentSnapshotDigest` field on the snapshot record is stored adjacent to the header but is excluded from the preimage of its own computation (see §3.9.2 for the full preimage layout).
+`SnapshotHeader[T]` MUST be serialized in the schema declaration order from §2.3: `schemaVersion ‖ tick ‖ prevSnapshotDigest ‖ environmentFingerprint`. `SnapshotPayload[T]` follows the canonical schema order (§3.2.4.1). The two domain tags (`0x12` for header, `0x11` for payload — see §3.2.4.1) bind each component to its hash domain. The `currentSnapshotDigest` field is stored on the snapshot record per the §3.9.2 on-disk layout (after the payload, before the record trailer) and is excluded from the preimage of its own computation. The on-disk record byte layout is normative and is defined in §3.9.2.
 
 **Ring-buffer and chain verification:** The `SnapshotHeader[T]` includes a `prevSnapshotDigest` field that links to `SnapshotDigest[T-1]`. Once `SnapshotDigest[T-1]` is computed and written into `SnapshotHeader[T]`, the raw bytes of snapshot `T-1` are no longer needed to verify the chain — the stored digest value in the header is sufficient. A ring buffer that evicts old snapshot bytes is therefore compatible with chain integrity, because chain link verification at replay load time reads only the stored `prevSnapshotDigest` value from the header, not the original bytes. The ring buffer need only retain snapshot bytes long enough to complete the hash computation for the *next* snapshot's header before eviction.
 
@@ -77,10 +82,12 @@ The `currentSnapshotDigest` field on the snapshot record is stored adjacent to t
 - The SHA-256 output is treated as an opaque 32-octet string; SHA-256 has no inherent endianness and implementations MUST NOT byte-swap the digest octets.
 - All multi-byte integer fields *inside* the digest preimage (e.g. `Tick`, `PhaseId`, `DigestVersion`, `SchemaVersion`) MUST be serialized in `SNAPSHOT_PAYLOAD_ENDIANNESS` (§3.4 = `LittleEndian`).
 - `matchSeedKey` is derived from `matchSeed` via `HKDF-SHA256` (RFC 5869, `RNG_KDF`):
-  `matchSeedKey = HKDF-SHA256(IKM=matchSeed, salt=∅, info="DS-RNG-KEY-v1", length=RNG_KDF_OUTPUT_BYTES)`
+  `matchSeedKey = HKDF-SHA256(IKM=matchSeed, salt=NULL, info="DS-RNG-KEY-v1", length=RNG_KDF_OUTPUT_BYTES)`
   The 16-octet output is split into two little-endian `uint64` values `(k0, k1)`: bytes [0..7] = `k0`, bytes [8..15] = `k1`. These form the SipHash-2-4 key. Implementations MUST NOT use PBKDF2 or any other KDF for this step.
+  - **`salt` parameter (normative).** `salt = NULL` is interpreted per RFC 5869 §2.2: the HKDF-Extract step uses an internally-allocated string of `HashLen` (32) zero bytes. Implementations MUST pass the salt as either a null/absent value or as 32 zero bytes — both are equivalent under RFC 5869 §2.2 — but MUST NOT pass an empty-length non-null buffer if the underlying library distinguishes the two cases. A KAT row exercising this binding MUST be present in `hkdf-sha256-kat.md` (§9.5 #4(a)).
+  - **`info` parameter byte encoding (normative).** The bytes fed to HKDF-Expand are the **raw 13 ASCII bytes** of the literal `DS-RNG-KEY-v1` (`0x44 0x53 0x2D 0x52 0x4E 0x47 0x2D 0x4B 0x45 0x59 0x2D 0x76 0x31`). HKDF `info` is an opaque RFC 5869 byte string and is **NOT** wrapped in the §3.2.4.1 `string` framing (no `u32` length prefix, no NFC normalization — the literal is ASCII). The same raw-bytes rule applies to any other HKDF/HMAC parameter that escapes the canonical-serializer. A KAT row binding this exact `info` to its expected `(k0, k1)` output MUST be in `hkdf-sha256-kat.md`.
 - `StreamKey` derivation uses `SipHash-2-4-64((k0,k1), subsystemId ∥ entityId ∥ streamVersion)` (constant `RNG_STREAM_HASH`; see §3.2.1). `StreamKey` output width is 64-bit unsigned, encoded little-endian when serialized.
-- Per-draw values (§3.2.5) are produced by `SipHash-2-4-64((k0,k1), StreamKey ∥ actionOrdinal ∥ drawIndex)` with field widths bound in §3.4. Concatenation (`∥`) is byte-string concatenation in canonical schema order — NOT arithmetic addition. `actionOrdinal` (the per-evaluation reservation index, §3.2.5) provides per-evaluation domain separation so that even under a budget-arithmetic bug a draw at one decision site cannot alias a draw at a different decision site on the same stream.
+- Per-draw values (§3.2.5) are produced by `SipHash-2-4-64((k0,k1), DOMAIN_TAG_RNGDRAW ∥ StreamKey ∥ actionOrdinal ∥ drawIndex)` where `DOMAIN_TAG_RNGDRAW = 0x13` (§3.2.4.1) is included in the SipHash message to bind RNG-draw inputs to their hash domain. Field widths are bound in §3.4 `HASH_INPUT_FIELD_WIDTHS`. Concatenation (`∥`) is byte-string concatenation in canonical schema order — NOT arithmetic addition. `actionOrdinal` (the per-evaluation reservation index, §3.2.5) provides per-evaluation domain separation so that even under a budget-arithmetic bug a draw at one decision site cannot alias a draw at a different decision site on the same stream.
 
 **Hash-input field widths and concatenation rules (normative).** All hash preimages in §3.2 are byte-string concatenation of fixed-width fields in the order written. Field widths are listed in §3.4 (`HASH_INPUT_FIELD_WIDTHS`). No length prefixes, no separators, no zero padding. Implementations MUST NOT reorder, omit, or resize any field. Any width change is a `DigestVersion` bump.
 
@@ -96,18 +103,18 @@ Worked example (conceptual):
 
 | Type | Byte width | Encoding |
 |---|---|---|
-| `bool` | 1 | `0x00` = false, `0x01` = true; no other byte values are legal |
+| `bool` | 1 | `0x00` = false, `0x01` = true; no other byte values are legal. Decode of any other byte value MUST fail with `ERR_DS_SCHEMA_INCOMPATIBLE` |
 | `u8` / `i8` | 1 | unsigned / two's complement signed |
 | `u16` / `i16` | 2 | little-endian; signed = two's complement |
 | `u32` / `i32` | 4 | little-endian; signed = two's complement |
 | `u64` / `i64` | 8 | little-endian; signed = two's complement |
-| `f32` | 4 | IEEE-754 binary32 raw bit pattern, little-endian. NaN bit pattern is normalized to `0x7FC00000` (canonical quiet NaN) before serialization for Tier B fields; Tier A fields reject NaN/Inf (§3.3 / EC-016-004) |
-| `f64` | 8 | IEEE-754 binary64 raw bit pattern, little-endian. NaN normalized to `0x7FF8000000000000` for Tier B; rejected for Tier A |
-| `string` (UTF-8) | 4 + N | NFC-normalized UTF-8 bytes prefixed by `u32` byte length (NOT codepoint count). Maximum length `STRING_MAX_BYTES = 65536`; longer values fail with `ERR_DS_SCHEMA_INCOMPATIBLE` |
+| `f32` | 4 | IEEE-754 binary32 raw bit pattern, little-endian. NaN bit pattern is normalized to `0x7FC00000` (canonical quiet NaN) before serialization for Tier B fields; Tier A fields reject NaN/Inf (§3.3 / EC-016-004). Negative-zero bit pattern `0x80000000` is normalized to positive-zero `0x00000000` BEFORE serialization for **both** Tier A and Tier B (avoids spurious `BitwiseEqual` failures from arithmetically-equal zero accumulators with differing sign bits — see Pass 5 M-2) |
+| `f64` | 8 | IEEE-754 binary64 raw bit pattern, little-endian. NaN normalized to `0x7FF8000000000000` for Tier B; rejected for Tier A. Negative-zero `0x8000000000000000` normalized to `0x0000000000000000` for both tiers before serialization |
+| `string` (UTF-8) | 4 + N | NFC-normalized UTF-8 bytes prefixed by `u32` byte length (NOT codepoint count). NFC normalization MUST follow Unicode 15.1 normalization tables (`UNICODE_NFC_VERSION`, §3.4); the Unicode version is recorded in `EnvironmentFingerprint` (§4.8) so that a Unicode-table upgrade invalidates replay parity deterministically. Stage-0 authoritative strings are restricted to ASCII (`U+0000`–`U+007F`), making NFC normalization a no-op; the Unicode-version pin exists to bind future non-ASCII usage. Maximum length `STRING_MAX_BYTES = 65536`; longer values fail with `ERR_DS_SCHEMA_INCOMPATIBLE` |
 | `bytes` | 4 + N | raw bytes prefixed by `u32` byte length |
-| `array<T>` | 4 + N·sizeof(T) | element count as `u32` followed by `N` elements in canonical sort order (§3.1.1); empty array = `0x00000000` only, no terminator |
-| `optional<T>` | 1 + (0 or sizeof(T)) | `0x00` = absent (no payload follows); `0x01` = present (payload of `T` follows). No other tag byte values are legal |
-| `enum` | 1 (≤256 variants) or 2 (≤65536 variants) | underlying integer value; width fixed at schema definition time and frozen with `DigestVersion` |
+| `array<T>` | 4 + sum of element widths | element count as `u32` followed by `N` elements in canonical sort order (§3.1.1); empty array = `0x00000000` only, no terminator. For fixed-width `T`, total width = `4 + N·sizeof(T)`. For variable-width `T` (`string`, `bytes`, `optional<T>`, nested `array<T>`, struct-with-string), the total width is the sum of each element's encoded width per its row in this table; there is no per-element framing — the canonical encoding of each element is self-delimiting |
+| `optional<T>` | 1 + (0 or width(T)) | `0x00` = absent (no payload follows); `0x01` = present (payload of `T` follows). No other tag byte values are legal; decode of any other tag byte MUST fail with `ERR_DS_SCHEMA_INCOMPATIBLE` |
+| `enum` | 1 (≤256 variants) or 2 (≤65536 variants) | underlying integer value; width fixed at schema definition time and frozen with `SchemaVersion` (§2.3 — adding a 257th variant is a `SchemaVersion` bump because the on-wire width changes; `DigestVersion` only bumps if the digest *algorithm* changes). Decode of an out-of-range integer value MUST fail with `ERR_DS_SCHEMA_INCOMPATIBLE` (covered by EC-016-002) |
 | `struct` | sum of fields | flat concatenation of fields in declared schema order; no struct header, no field tag, no per-field separator |
 
 **Domain-tag fields.** Each top-level digest preimage begins with a 1-byte `DOMAIN_TAG`:
@@ -123,6 +130,7 @@ This separates hash domains and prevents cross-domain preimage collisions even u
 
 | Field | Type | Width |
 |---|---|---|
+| `DOMAIN_TAG` | u8 | 1 |
 | `DigestVersion` | u16 | 2 |
 | `Tick` | u64 | 8 |
 | `PhaseId` | u8 | 1 |
@@ -157,11 +165,25 @@ Total preimage: 12 bytes `10 01 00 78 00 00 00 00 00 00 00 03`. SHA-256 of this 
 - `actionOrdinal` increments once per deterministic decision-site evaluation regardless of which branch is taken. It is auxiliary bookkeeping that records how many reservations have been made on the stream.
 - Branch-safety is provided by `RngCursor` advancing by the reservation budget (`Reserve(siteId, count)` advances the cursor by exactly `count`) regardless of how many `DrawReserved` calls actually execute. `actionOrdinal` is a corroborating counter, not the source of branch-safety; omitting `actionOrdinal` updates would not break cursor parity but would break snapshot/replay corroboration.
 - `RngCursor` is the per-stream draw counter. It advances by exactly the reservation budget of each evaluation, independent of how many `DrawReserved` calls actually consume bytes.
-- A draw is computed as `SipHash-2-4-64((k0,k1), StreamKey ∥ actionOrdinal ∥ drawIndex)` where `drawIndex ∈ [0, count)` and `actionOrdinal` is the value at entry to the evaluation (i.e. before the post-evaluation `actionOrdinal += 1`). `RngCursor` is NOT in the SipHash input; it is bookkeeping for snapshot/replay state and corroboration only.
+- A draw is computed as `SipHash-2-4-64((k0,k1), DOMAIN_TAG_RNGDRAW ∥ StreamKey ∥ actionOrdinal ∥ drawIndex)` where `DOMAIN_TAG_RNGDRAW = 0x13` (§3.2.4.1), `drawIndex ∈ [0, count)`, and `actionOrdinal` is the value at entry to the evaluation (i.e. before the post-evaluation `actionOrdinal += 1`). `RngCursor` is NOT in the SipHash input; it is bookkeeping for snapshot/replay state and corroboration only.
 - After the evaluation completes, `RngCursor += count` and `actionOrdinal += 1`.
 - Both `actionOrdinal` and `RngCursor` MUST be serialized per stream in snapshot/replay state and restored on load.
 - Entity despawn retains a tombstone record `(EntityId, finalActionOrdinal, finalRngCursor)` in a despawn log keyed by `EntityId`; respawn with a new `EntityId` allocates a fresh stream with `actionOrdinal=0`, `RngCursor=0`.
-- Reuse of an `EntityId` after despawn within the same match is forbidden. **Cross-spec normative constraint:** entity allocators in Agent Movement (#2) and the AI subsystem (Decision Tree #8) MUST guarantee `EntityId` uniqueness for the lifetime of a match; once an `EntityId` is despawned it MUST NOT be reassigned. Violation breaks stream isolation and replay parity. This constraint is filed for back-propagation in `docs/tracking/spec-error-log.md` (ERR-016-EntityId-NoReuse) and is tracked in CLAUDE.md "Open Issues" until reciprocal `XC-` references are filed in #2 and #8.
+- Reuse of an `EntityId` after despawn within the same match is forbidden. **Cross-spec normative constraint:** entity allocators in Agent Movement (#2) and the AI subsystem (Decision Tree #8) MUST guarantee `EntityId` uniqueness for the lifetime of a match; once an `EntityId` is despawned it MUST NOT be reassigned. Violation breaks stream isolation and replay parity. This constraint is filed for back-propagation in `docs/tracking/spec-error-log.md` as **`ERR-016-002`** (the numeric-suffix form per CLAUDE.md `ERR-NNN` taxonomy; the verbal-suffix `ERR-016-EntityId-NoReuse` is deprecated and MUST NOT be used in new references) and is tracked in CLAUDE.md "Open Issues" until reciprocal `XC-` references are filed in #2 and #8.
+
+### 3.2.5.3 Despawn tombstone log (normative)
+The tombstone log enforcing the no-reuse constraint is **part of authoritative state** and Tier A. Its layout and lifecycle:
+
+| Property | Value |
+|---|---|
+| Data structure | `DespawnLog : array<DespawnEntry>` where `DespawnEntry { entityId : u32, finalActionOrdinal : u64, finalRngCursor : u64, despawnTick : u64 }` |
+| Tier | **Tier A** — bitwise equality required across replay |
+| Snapshot inclusion | Included in `SnapshotPayload` after the per-stream RNG cursor table; serialized in canonical order (`entityId` ascending) per §3.2.4.1 `array<T>` rules |
+| Phase ownership | Written by `Resolve` (which finalizes despawns); read-only in `Snapshot`; immutable in all other phases per §3.6.1 |
+| Lifecycle | Append-only within a match. Cleared at match-finalization boundary per §3.2.5.2; not carried across match boundaries |
+| Replay semantics | Restored in §4.2.2 step 5 (rehydrate authoritative state) along with all Tier A fields; absence after a save that contained tombstones is `ERR_DS_SCHEMA_INCOMPATIBLE` |
+
+A save scheduled after one or more despawns MUST include the tombstone entries in the snapshot payload; replay from that save MUST restore the tombstones before any T+1 spawn/despawn evaluation can run, otherwise the no-reuse constraint cannot be enforced under continued execution.
 
 ### 3.2.5.1 Intra-stream draw-site ordering
 A single stream `(subsystem, entity)` may be drawn from by multiple decision sites within one phase (e.g. `AI.DecidePass` and `AI.DecideShoot` both call `Reserve()` against entity 42's AI stream). The `RngCursor` outcome depends on the order in which those sites call `Reserve()`.
@@ -213,11 +235,20 @@ Target catalogue: `Sim.Constants.Determinism`. Every constant carries one of the
 | `ERR_DS_TIERB_NONFINITE` | `0x160A` | [FIXED] | NaN/Inf observed in a Tier B field outside the canonical-NaN encoding (§3.2.4.1). NOT classified as Tier B drift; treated as a hard encoding bug |
 | `ERR_DS_RNG_BUDGET_MISMATCH` | `0x160B` | [FIXED] | `Reserve(siteId, count)` called with `count` not equal to the registered budget for `siteId` in the draw-site registry (§3.6.2) |
 | `ERR_DS_STORAGE_ATOMICITY` | `0x160C` | [FIXED] | Save commit failed atomic write contract (§4.6.1.1); snapshot was not made durable as a single observable transition |
-| `PHYSICS_DT` | `0x3C8888B7` (f32 bit pattern of `1.0f / 60.0f`) | [DERIVED] | Physics tick interval. Computation rule: `(float)(1.0 / 60.0)` evaluated under round-to-nearest-even; the literal bit pattern `0x3C8888B7` is the normative reference value. Implementations MUST NOT use `0.0166666675f` literals or pre-baked constants — they MUST compute from `1.0f / (float)PHYSICS_TICK_HZ` to match the bit pattern exactly |
+| `PHYSICS_DT` | `0x3C888889` (f32 bit pattern of `1.0f / 60.0f`) | [DERIVED] | Physics tick interval. Computation rule: `(float)(1.0 / 60.0)` evaluated under round-to-nearest-even; the literal bit pattern `0x3C888889` is the normative reference value (derivation in §3.4.3). Implementations MUST NOT use `0.0166666675f` literals or pre-baked constants — they MUST compute from `1.0f / (float)PHYSICS_TICK_HZ` to match the bit pattern exactly |
 | `STRING_MAX_BYTES` | `65536` | [FIXED] | Maximum UTF-8 byte length for any `string` field in canonical serialization (§3.2.4.1) |
 | `HASH_INPUT_FIELD_WIDTHS` | (table in §3.2.4.1) | [FIXED] | Normative widths of all hash-input fields. Width changes require `DigestVersion` bump |
 | `NAN_CANONICAL_F32` | `0x7FC00000` | [FIXED] | Canonical quiet-NaN bit pattern for Tier B `f32` fields (§3.2.4.1) |
 | `NAN_CANONICAL_F64` | `0x7FF8000000000000` | [FIXED] | Canonical quiet-NaN bit pattern for Tier B `f64` fields (§3.2.4.1) |
+| `ZERO_CANONICAL_F32` | `0x00000000` | [FIXED] | Canonical zero bit pattern for Tier A and Tier B `f32` fields; `-0.0` (`0x80000000`) MUST be normalized to this value before serialization (§3.2.4.1) |
+| `ZERO_CANONICAL_F64` | `0x0000000000000000` | [FIXED] | Canonical zero bit pattern for `f64` fields; `-0.0` MUST be normalized to this value before serialization (§3.2.4.1) |
+| `ERR_DS_ENV_MUTATION` | `0x160D` | [FIXED] | Recording-side `EnvironmentFingerprint` mutated mid-match (§4.8.1). Distinct from `ERR_DS_REPLAY_ENV_MISMATCH` (0x1604) which is replay-side fingerprint divergence |
+| `UNICODE_NFC_VERSION` | `"15.1"` | [FIXED] | Unicode normalization-table version pinned for `string` NFC encoding (§3.2.4.1). Recorded in `EnvironmentFingerprint` (§4.8) so a Unicode-table upgrade triggers a deterministic `ERR_DS_REPLAY_ENV_MISMATCH` rather than a silent digest drift |
+| `DOMAIN_TAG_PHASE` | `0x10` | [FIXED] | Hash-domain tag for `PhaseDigest` preimage (§3.2.2, §3.2.4.1) |
+| `DOMAIN_TAG_SNAPSHOT_PAYLOAD` | `0x11` | [FIXED] | Hash-domain tag for `SnapshotPayload` preimage |
+| `DOMAIN_TAG_SNAPSHOT_HEADER` | `0x12` | [FIXED] | Hash-domain tag for `SnapshotHeader` preimage |
+| `DOMAIN_TAG_RNGDRAW` | `0x13` | [FIXED] | Hash-domain tag for SipHash-2-4 per-draw input (§3.2.5) |
+| `DOMAIN_TAG_ENV_FP` | `0x14` | [FIXED] | Hash-domain tag for `EnvironmentFingerprint` / `floatModelHash` preimage (§4.8.3) |
 
 ### 3.4.1 Reserve budget enforcement (normative)
 `Reserve(siteId, count)` MUST validate `count` against the budget registered for `siteId` in the draw-site registry (§3.6.2). On mismatch, `Reserve` MUST fail the tick commit with `ERR_DS_RNG_BUDGET_MISMATCH` and MUST NOT advance `RngCursor` or `actionOrdinal`. Silent acceptance of a divergent count is forbidden — it would silently break replay parity across builds.
@@ -225,7 +256,22 @@ Target catalogue: `Sim.Constants.Determinism`. Every constant carries one of the
 ### 3.4.2 Tier B comparator default policy
 `TIER_B_DEFAULT_COMPARATOR` declares the comparator *class* (`AbsEpsilon`) but does NOT supply a default tolerance magnitude. A Tier B field that appears in a digest scope without a matching tolerance row in the tolerance matrix MUST fail validation with `ERR_DS_TIERB_TOLERANCE_MISSING`. Implementations MUST NOT silently substitute a fallback epsilon.
 
+### 3.4.3 PHYSICS_DT bit-pattern derivation (normative)
+`PHYSICS_DT = (float)(1.0 / 60.0)` evaluated under round-to-nearest-even. The literal bit pattern `0x3C888889` is verified as follows:
+
+1. `1/60` in binary is the repeating fraction `1.0001000100010001000100010001…₂ × 2⁻⁶` (period 4).
+2. IEEE-754 binary32 stores 23 mantissa bits after the implicit leading 1. Pre-round 23-bit mantissa: `00010001000100010001000`.
+3. The 24th (round) bit is `1`; the trailing bits (sticky) are non-zero. Round-to-nearest-even with round=`1` and sticky non-zero rounds **up**.
+4. Post-round mantissa: `00010001000100010001001`.
+5. Biased exponent: `-6 + 127 = 121 = 01111001₂`. Sign bit: `0`.
+6. Concatenated: `0 ‖ 01111001 ‖ 00010001000100010001001` = `0011 1100 1000 1000 1000 1000 1000 1001` = `0x3C888889`.
+
+Reference verification: `python3 -c "import struct; print(hex(struct.unpack('<I', struct.pack('<f', 1.0/60.0))[0]))"` MUST print `0x3c888889`. Any literal other than `0x3C888889` is a fabricated constant and MUST be rejected at code review and at the §3.4 KAT gate (Pass 4 X-1).
+
+**Numeric-literal review gate (normative).** Every numeric literal in §3.4 MUST be cross-checked against either (a) a programmatically-generated KAT or (b) an appendix derivation before the constant is added. Visual review of hex literals is insufficient (regression class identified by Pass 4 C-1).
+
 ## 3.5 Version History
+- **v1.0 (May 4, 2026):** Fourth- and fifth-pass adversarial-critique resolution (Pass 4 + Pass 5 in `critique-log.md`). Highlights: (a) Pass 4 C-1: `PHYSICS_DT` corrected from fabricated `0x3C8888B7` to derived `0x3C888889`; §3.4.3 worked derivation added; numeric-literal review gate stated. (b) Pass 5 C-1: `SnapshotDigest` preimage field order pinned to §2.3 declaration order in §3.2.3 and §3.9.2 reworked to a normative on-disk record layout. (c) Pass 5 C-2: `DOMAIN_TAG_PHASE` (0x10) added to `PhaseDigest` formula in §3.2.2; `DOMAIN_TAG_RNGDRAW` (0x13) added to per-draw SipHash input in §3.2.4 / §3.2.5; domain-tag constants added to §3.4. (d) Pass 4 C-3a: EC-016-009..014 added to §3.10 covering `ERR_DS_REPLAY_BOUNDARY`, `ERR_DS_TIERB_NONFINITE`, `ERR_DS_RNG_BUDGET_MISMATCH`, `ERR_DS_STORAGE_ATOMICITY`, the new `ERR_DS_ENV_MUTATION` (Pass 4 M-3), and signed-zero Tier-A normalization (Pass 5 M-2). (e) Pass 4 M-2: `array<T>` width formula corrected for variable-width T. (f) Pass 4 M-3: `ERR_DS_ENV_MUTATION` (0x160D) added for recording-side fingerprint mutation. (g) Pass 4 L-1: NFC pinned to Unicode 15.1 via `UNICODE_NFC_VERSION`; Stage-0 strings restricted to ASCII; Unicode version added to `EnvironmentFingerprint` (§4.8). (h) Pass 5 H-2: HKDF `info` byte encoding pinned to raw 13 ASCII bytes (no `string` framing); `salt=NULL` semantics pinned per RFC 5869 §2.2. (i) Pass 5 M-1: `enum` width-immutability axis rebound from `DigestVersion` to `SchemaVersion`. (j) Pass 5 M-2: `-0.0` normalized to `+0.0` for both Tier A and Tier B `f32`/`f64` before serialization; `ZERO_CANONICAL_F32`/`F64` constants added. (k) Pass 5 M-3: §3.2.5.3 despawn tombstone log declared part of authoritative state, Tier A, included in `SnapshotPayload`, written by `Resolve`. (l) Pass 5 L-1: EC-016-001 trigger generalized to "any boundary other than `EndOfSnapshot`". (m) Pass 5 L-2: `ERR-016-EntityId-NoReuse` formally deprecated in favor of numeric `ERR-016-002` per CLAUDE.md taxonomy. (n) Pass 5 L-4: `bool`/`optional<T>`/`enum` decode-side error binding to `ERR_DS_SCHEMA_INCOMPATIBLE` made explicit. (o) Pass 5 M-5: §3.6.2.1 added — full draw-site registry operational schema mirroring §2.3.1 style, with stream-version-bump triggers. (p) Pass 4 L-7: `AI_PHASE_STRIDE` change call-out added below (note in §3.7-adjacent). (q) Pass 4 L-8 raised to project-level CLAUDE.md review (out-of-spec) — see Pass 6 fix-log entry in `critique-log.md`.
 - **v0.9 (May 3, 2026):** Third-pass adversarial critique resolution. (a) H-A: added §3.2.4.1 `SerializeCanonical` normative byte-level schema with primitive encoding table, domain tags, field-width registry, and worked byte example. (b) H-B: bound hash-input field widths in §3.4 (`HASH_INPUT_FIELD_WIDTHS`); changed per-draw SipHash input from `(RngCursor + drawIndex)` arithmetic addition to `(StreamKey ‖ actionOrdinal:u64 ‖ drawIndex:u32)` byte concatenation, providing per-evaluation domain separation independent of cursor budget correctness. (c) M-G: added `ERR_DS_TIERB_NONFINITE` (0x160A); Tier B `f32`/`f64` NaN normalized to canonical quiet-NaN bit patterns (`NAN_CANONICAL_F32`, `NAN_CANONICAL_F64`). (d) L-N: `Reserve(siteId, count)` budget mismatch is hard fail (`ERR_DS_RNG_BUDGET_MISMATCH`, 0x160B); §3.4.1 normative. (e) M-J: `PHYSICS_DT` constant with normative computation rule and reference bit pattern (`0x3C8888B7`). (f) L-O: `actionOrdinal` and `RngCursor` widths bound to u64. (g) M-H: §3.2.5.2 cross-match EntityId lifecycle rules (per-match namespace, tombstone scope, career-level `PersonId` mapping, RNG reset). (h) L-P: AI_NoOp digest semantics clarified (tick-sensitive, not constant). (i) M-I: `ERR_DS_STORAGE_ATOMICITY` (0x160C) added for save-commit atomicity violation (paired with §4.6.1.1 atomic-write contract).
 - **v0.8 (May 2, 2026):** Second-pass critique fixes. (a) Replaced PBKDF2-HMAC-SHA256 with HKDF-SHA256 (RFC 5869) for `matchSeedKey` derivation; added `RNG_KDF`, `RNG_KDF_OUTPUT_BYTES` constants; renamed `RNG_KEY_HASH`/`RNG_DRAW_HASH` to `RNG_STREAM_HASH` — eliminates KDF ambiguity (A-2, A-3). (b) Added `ERR_DS_REPLAY_BOUNDARY` (0x1609) error code. (c) Added `AI_NoOp` row to §3.6.1 phase ownership table (A-1). (d) Fixed §3.6.1 Resolve row parenthetical (D-19). (e) Fixed §3.2.5 cause/effect: `RngCursor` advance is the source of branch-safety; `actionOrdinal` is auxiliary (A-5). (f) Added §3.2.5.1 intra-stream draw-site ordering rule (B-10). (g) Added EntityId no-reuse cross-spec normative constraint (D-21). (h) Clarified ring-buffer/chain-digest relationship in §3.2.3 (B-11). (i) Added subsystem ordinal assignment rule and domain convention refs (fatigue, corner origin) to §3.1.1 (D-18, B-12). (j) Added FM-016-001/002/003 formula IDs; EC-016-001..008 edge-case IDs (C-15). (k) Edge-case decision table extended with `ERR_DS_TIERB_TOLERANCE_MISSING`, `ERR_DS_DIGEST_CHAIN_BREAK`, `ERR_DS_REPLAY_ENV_MISMATCH`, `ERR_DS_PHASE_OWNERSHIP` rows; snapshot digest example updated to include `EnvironmentFingerprint` (formerly §3.12).
 - **v0.7 (May 2, 2026):** Major adversarial-fix pass. (a) Reformulated RNG model: `StreamKey` no longer carries `actionOrdinal`; `RngCursor` advances by reservation budget; per-draw values defined as `SipHash-2-4-64(StreamKey, cursor + i)`. (b) Added `Tick`/`PhaseId`/`DigestVersion` to `PhaseDigest` preimage. (c) Removed misleading "big-endian" digest language; bound payload-integer endianness to `SNAPSHOT_PAYLOAD_ENDIANNESS`. (d) Merged §3.4 and §3.4.1 constants into one tagged catalogue with hex IDs for all errors; added `ERR_DS_TIERB_TOLERANCE_MISSING` (0x1607) and `ERR_DS_DIGEST_CHAIN_BREAK` (0x1608). (e) Added `PHYSICS_TICK_HZ`/`TACTICAL_TICK_HZ`/`AI_PHASE_STRIDE` constants and `AI_NoOp` phase pattern reconciling 60 Hz physics tick with 10 Hz tactical cadence. (f) `LEGAL_SAVE_BOUNDARIES = { EndOfSnapshot }` only. (g) §3.6.1 universal prohibitions: seed root, environment fingerprint, snapshot history are immutable for all phases.
@@ -241,9 +287,9 @@ Target catalogue: `Sim.Constants.Determinism`. Every constant carries one of the
 | AI | decision buffers | physics integration buffers |
 | AI_NoOp | (none — empty WriteSet; emits empty phase digest only) | all phase-specific writes; identical prohibitions as the AI phase |
 | Physics | transforms, velocities | UI caches |
-| Resolve | conflict resolution state | intent queue |
-| Events | event ledger | historical snapshots |
-| Snapshot | serialized bytes + digest | live gameplay intent queue |
+| Resolve | conflict resolution state; **`DespawnLog` append-only writes for entities finalized this tick (§3.2.5.3)** | intent queue |
+| Events | event ledger | historical snapshots; `DespawnLog` (read-only after Resolve) |
+| Snapshot | serialized bytes + digest; **`DespawnLog` is read-only — included in payload but not mutated here** | live gameplay intent queue; `DespawnLog` writes |
 
 **Universal prohibitions** (apply to ALL phases, not just where listed):
 - `RNG seed root` (`matchSeed`, derived `matchSeedKey`) is **immutable for the lifetime of a match**. No phase may write it after match start.
@@ -256,6 +302,30 @@ Each draw site MUST define:
 - owning subsystem,
 - reserved draw budget,
 - migration note for version changes.
+
+### 3.6.2.1 Draw-site registry operational schema (normative)
+The registry is the binding artifact for `ERR_DS_RNG_BUDGET_MISMATCH` (§3.4.1) and the §3.2.5.1 stable-declaration-order rule. It MUST be expressed as a constant catalogue at `Sim.Constants.Determinism.DrawSiteRegistry` (per CLAUDE.md "constants live in their designated `.cs` constant catalogues") and MUST conform to the following schema:
+
+| Column | Type | Rule |
+|---|---|---|
+| `siteId` | string | stable site identifier (e.g. `"AI.DecidePass"`); immutable once published; case-sensitive; ASCII only at Stage 0 |
+| `owningSubsystem` | enum | matches a value in `Sim.Constants.Determinism.SubsystemOrdinals` (§3.1.1); used only for traceability — does NOT enter `StreamKey` derivation, which uses the subsystem ordinal |
+| `reservedBudget` | u32 | exact `count` value that `Reserve(siteId, count)` MUST be called with; mismatch fails with `ERR_DS_RNG_BUDGET_MISMATCH` |
+| `declarationOrdinal` | u32 | compile-time-deterministic position within the registry; sets the §3.2.5.1 intra-stream call order; reordering = `streamVersion` bump |
+| `migrationNote` | string | rationale string when the row is changed (added, budget changed, declarationOrdinal changed, retired); empty for new rows |
+| `owner` | string | team alias; mandatory |
+| `reviewDate` | date (`YYYY-MM-DD`) | last review; MUST be ≤ 180 days old at certification time |
+| `streamVersionBumpRequired` | bool | `true` if this row's most-recent change required a `streamVersion` bump (any change to `reservedBudget` or `declarationOrdinal`); cleared after the bump is recorded in §7.2 / `DigestVersion` history |
+
+Example row (illustrative):
+
+| siteId | owningSubsystem | reservedBudget | declarationOrdinal | migrationNote | owner | reviewDate | streamVersionBumpRequired |
+|---|---|---|---|---|---|---|---|
+| `AI.DecidePass` | `AI` | `3` | `12` | "v1 initial" | `ai-systems` | `2026-05-04` | `false` |
+
+**Immutability rule:** `siteId`, `declarationOrdinal`, and `reservedBudget` are immutable per `streamVersion`. Any change requires a `streamVersion` bump and an update to `DETERMINISM_DIGEST_VERSION` history (§7.2). Removing a row is also a `streamVersion` bump; retired rows MUST remain in the registry as tombstones for the lifetime of the prior stream version.
+
+**Stream-version-bump triggers (normative):** any of (a) adding a new row, (b) changing any of `siteId`/`declarationOrdinal`/`reservedBudget`, (c) retiring a row, (d) reordering existing rows. Adding a new row is a bump because it changes the `actionOrdinal` numbering for any subsequent decision sites in the registry.
 
 ## 3.7 Worked Example: Branch-Safe RNG
 Decision site `Shot.SelectTargetZone` reserves 4 draws per evaluation (`Reserve("Shot.SelectTargetZone", 4)`).
@@ -289,29 +359,43 @@ Serialized canonical key stream:
 
 Any alternate ordering MUST be treated as deterministic contract violation.
 
-### 3.9.2 Snapshot digest chain example
-Given:
+### 3.9.2 Snapshot record on-disk layout (normative)
+A snapshot record on durable storage is the byte-exact concatenation, in order, of the four sections below. Implementations MUST emit and consume this layout exactly; field reordering is a `SchemaVersion` bump.
+
+```
+[ SnapshotHeader bytes              ] (variable, schema order from §2.3)
+[ SnapshotPayload bytes             ] (variable, canonical schema order)
+[ currentSnapshotDigest             ] (32 bytes, raw SHA-256 octets, opaque)
+[ recordTrailer                     ] (8 bytes: u64 LE total record size)
+```
+
+`SnapshotHeader` field-byte order is the §2.3 schema declaration order: `schemaVersion (u32) ‖ tick (u64) ‖ prevSnapshotDigest (32 bytes) ‖ environmentFingerprint (variable, §4.8)`. All multi-byte integer fields use `SNAPSHOT_PAYLOAD_ENDIANNESS` (§3.4 = `LittleEndian`). The trailing `currentSnapshotDigest` is the SHA-256 output of §3.2.3 stored as raw 32-octet opaque bytes (no endian swap). The `recordTrailer` enables atomic-write integrity checks (§4.6.1.1) without re-parsing the payload.
+
+**Worked example.** Given:
 - `PrevSnapshotDigest = 0xAA11…`
 - `SnapshotPayloadHash = 0x9F20…`
 
-Digest input bytes are composed as:
-`SchemaVersion || Tick || EnvironmentFingerprint || PrevSnapshotDigest || PayloadBytes`
-
-All multi-byte integer fields use `SNAPSHOT_PAYLOAD_ENDIANNESS` (§3.4 = `LittleEndian`). The computed `currentSnapshotDigest` is stored in the snapshot record adjacent to the header but excluded from the hash preimage.
+Digest preimage is composed per §3.2.3: `SerializeCanonical(0x12 ‖ schemaVersion ‖ tick ‖ prevSnapshotDigest ‖ environmentFingerprint) ‖ SerializeCanonical(0x11 ‖ payloadBytes)`. The computed `currentSnapshotDigest` is stored in the trailing 32-byte slot of the on-disk record.
 
 If replayed load at identical tick produces a different digest (e.g., `0x9F21`), classification is `HardDesync` unless field set is explicitly Tier B scoped.
 
 ## 3.10 Edge-Case Decision Table
 | ID | Case | Trigger | Required behavior | Error/Classification |
 |---|---|---|---|---|
-| EC-016-001 | Mid-tick save request | request during `AI`/`Physics` | deny or defer to legal boundary | `ERR_DS_SAVE_BOUNDARY` |
+| EC-016-001 | Mid-tick / off-boundary save request | save commit attempted at any boundary other than `EndOfSnapshot` (i.e. during any of `Input`, `Intent`, `AI`, `AI_NoOp`, `Physics`, `Resolve`, or `Events`) | deny or defer to legal boundary | `ERR_DS_SAVE_BOUNDARY` |
 | EC-016-002 | Unknown enum value on load | schema decode finds out-of-range enum | fail load deterministically | `ERR_DS_SCHEMA_INCOMPATIBLE` |
 | EC-016-003 | Missing RNG stream key | stream absent in snapshot | fail replay bootstrap | `ERR_DS_RNG_STREAM_MISSING` |
 | EC-016-004 | NaN in Tier A field | decode or runtime emission | reject snapshot/tick commit | `ERR_DS_TIERA_NONFINITE` |
 | EC-016-005 | Tier B field without tolerance row | digest scope contains B-tier path with no matching tolerance row | reject digest computation | `ERR_DS_TIERB_TOLERANCE_MISSING` |
 | EC-016-006 | Snapshot chain break on resume | `prevSnapshotDigest` does not match expected predecessor | abort replay before rehydration | `ERR_DS_DIGEST_CHAIN_BREAK` |
-| EC-016-007 | EnvironmentFingerprint mismatch | live runtime fingerprint ≠ snapshot fingerprint | abort replay before rehydration | `ERR_DS_REPLAY_ENV_MISMATCH` |
+| EC-016-007 | EnvironmentFingerprint mismatch (replay) | live runtime fingerprint ≠ snapshot fingerprint | abort replay before rehydration | `ERR_DS_REPLAY_ENV_MISMATCH` |
 | EC-016-008 | Authoritative write outside WriteSet | phase mutates field not in declared WriteSet | fail tick commit | `ERR_DS_PHASE_OWNERSHIP` |
+| EC-016-009 | Replay cursor off `EndOfSnapshot[T]` | step 7 of §4.2.2 finds the replay cursor not positioned at the save boundary before T+1 reapplication | abort replay before reapplying inputs | `ERR_DS_REPLAY_BOUNDARY` |
+| EC-016-010 | Tier B `f32`/`f64` non-finite outside canonical NaN | runtime emits Inf or a non-canonical NaN bit pattern in a Tier B field | reject digest computation | `ERR_DS_TIERB_NONFINITE` |
+| EC-016-011 | Reservation budget mismatch | `Reserve(siteId, count)` invoked with `count` ≠ registered budget for `siteId` (§3.6.2) | fail tick commit; do not advance `RngCursor` or `actionOrdinal` | `ERR_DS_RNG_BUDGET_MISMATCH` |
+| EC-016-012 | Save-commit atomicity failure | atomic-write contract (§4.6.1.1) violated (cross-volume rename, missing fsync, incomplete rename) | abort save; clean up temp file; prior snapshot retained | `ERR_DS_STORAGE_ATOMICITY` |
+| EC-016-013 | EnvironmentFingerprint mid-match mutation (recording side) | recording runtime mutates a pinned fingerprint field after match start | fail tick commit; do not write snapshot | `ERR_DS_ENV_MUTATION` |
+| EC-016-014 | Tier A `-0.0` vs `+0.0` desync | a Tier A `f32`/`f64` accumulator produces `-0.0` on one path and `+0.0` on another | normalize to `+0.0` per §3.2.4.1 BEFORE serialization; a residual `BitwiseEqual` failure post-normalization is a hard desync | `ERR_DS_TIERA_NONFINITE` does NOT apply (signed zero is finite); classification = `HardDesync` |
 
 ## 3.11 Algorithm Pseudocode: Deterministic Merge Barrier
 ```text

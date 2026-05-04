@@ -26,7 +26,7 @@ The earlier `FR-DET-` / `VR-DET-` / `OPS-DET-` outline prefixes are deprecated a
 - **FR-DS-006:** Save/load transaction MUST be atomic across all authoritative domains.
 - **FR-DS-007:** Divergence detection MUST classify mismatches as hard desync, soft drift, or cosmetic divergence.
 - **FR-DS-008:** Tooling MUST emit first divergent tick/phase/field and RNG cursor diffs.
-- **FR-DS-009:** Cross-platform certification suite MUST pass before release.
+- **FR-DS-009 (Stage 5+):** Cross-platform certification suite MUST pass before release. Stage gating is normative: at Stage 0 this requirement is NOT a release gate (single-machine determinism only); at Stage 5+ it becomes a blocking release gate. See `FR-DS-009-GATE` in §5.5 for the per-stage enforcement table — that gate is the operational binding of this FR.
 - **FR-DS-010:** At match start the runtime MUST capture `EnvironmentFingerprint` (worker count, scheduler policy, reduction topology, SIMD level, float-model hash) and embed it in every snapshot header for that match; mid-match mutation of any pinned field is forbidden.
 - **FR-DS-011:** A Tier-B field present in digest scope without an approved tolerance row in the tolerance matrix MUST fail validation with `ERR_DS_TIERB_TOLERANCE_MISSING`; no silent fallback epsilon is permitted.
 - **FR-DS-012:** The replay engine MUST execute the 8-step lifecycle (§4.2.2) in strict order; each step MUST fail deterministically with its assigned error code and MUST NOT proceed to the next step on failure.
@@ -56,6 +56,8 @@ Core components:
 - `RngStreamKey { subsystemId, entityId, streamVersion }` (persistent per-(subsystem, entity, version); see §3.2.1)
 - `RngCursor { streamKey, counter, actionOrdinal }` (per-stream draw counter and reservation index; see §3.2.5)
 - `SnapshotHeader { schemaVersion, tick, prevSnapshotDigest, environmentFingerprint }` (see §4.8 for fingerprint contents)
+- `DespawnLog : array<DespawnEntry>` where `DespawnEntry { entityId : u32, finalActionOrdinal : u64, finalRngCursor : u64, despawnTick : u64 }` (Tier A authoritative state; canonical sort by `entityId` ascending; see §3.2.5.3)
+- `ReplayCursor { tick : u64, phaseOrdinal : u8 }` — the replay runtime's logical position in the canonical pipeline. `phaseOrdinal` follows the §5.10 mapping (`Input=0, Intent=1, AI=2, Physics=3, Resolve=4, Events=5, Snapshot=6`). The `EndOfSnapshot[T]` boundary referenced by §4.2.2 step 7 corresponds to `ReplayCursor { tick=T, phaseOrdinal=6 }` (i.e. immediately after the `Snapshot` phase of tick `T` has committed). The replay runtime MUST advance the cursor exactly one phase boundary at a time during reapplication; no cursor value other than these phase-boundary positions is legal mid-load.
 - `ToleranceRow { fieldPath, tier, comparator, toleranceValue, rationale, owner, reviewDate }`
 - `ComparatorRegistry = { BitwiseEqual, AbsEpsilon, RelEpsilon }` (normative v1)
 
@@ -86,6 +88,7 @@ Core components:
 | Tier B drift | continue replay with warning | fail if out-of-bound |
 
 ## 2.5 Version History
+- **v1.0 (May 4, 2026):** Pass 4 / Pass 5 critique resolution. (a) Pass 4 L-3: FR-DS-009 stage-qualified ("Stage 5+") and pointed at `FR-DS-009-GATE` (§5.5) for operational binding. (b) Pass 5 M-3: `DespawnLog` and `DespawnEntry` added to §2.3 data structures, classified Tier A, canonical sort key declared. (c) Pass 5 M-4: `ReplayCursor { tick, phaseOrdinal }` data structure added with legal-value definition keyed to the §4.2.2 step 7 `EndOfSnapshot[T]` assertion. (d) Pass 4 L-2: §2.6.2 replay-lifecycle example mirrored to the 8-step §4.2.2 normative form with explicit "see §4.2.2 for normative" pointer.
 - **v0.8 (May 2, 2026):** Added FR-DS-010..013: EnvironmentFingerprint recording, Tier-B tolerance enforcement, replay 8-step lifecycle, Stage-0 float Tier-A classification gate (B-8).
 - **v0.7 (May 2, 2026):** Added §2.0 Identifier Taxonomy; corrected `RngStreamKey` (removed `actionOrdinal` from key) and extended `RngCursor` (added `actionOrdinal`); extended `SnapshotHeader` with `environmentFingerprint`.
 - **v0.5:** Added runtime sequence, tolerance schema, and failure recovery matrix.
@@ -101,11 +104,17 @@ Core components:
 6. Optional snapshot emits header + payload + digest.
 
 ### 2.6.2 Replay lifecycle with checkpoint resume
-1. Load snapshot and validate schema version.
-2. Validate digest chain against previous snapshot.
-3. Restore authoritative state + RNG cursors.
-4. Reapply input log from `T+1`.
-5. Compare phase digests and classify divergence if found.
+This subsection is illustrative; the **normative** lifecycle is §4.2.2 (8 steps with per-step error codes). The 8 steps mirrored here for cross-reference:
+1. Load snapshot bytes (`ERR_DS_SCHEMA_INCOMPATIBLE` on load failure).
+2. Validate `schemaVersion` and `digestVersion` (`ERR_DS_SCHEMA_INCOMPATIBLE`).
+3. Validate `EnvironmentFingerprint` against live runtime (`ERR_DS_REPLAY_ENV_MISMATCH`).
+4. Validate `prevSnapshotDigest` chain link (`ERR_DS_DIGEST_CHAIN_BREAK`).
+5. Rehydrate authoritative state — Tier A + Tier B; includes despawn tombstone log per §3.2.5.3 (`ERR_DS_SCHEMA_INCOMPATIBLE`).
+6. Restore RNG cursors and `actionOrdinal` per stream (`ERR_DS_RNG_STREAM_MISSING`).
+7. Verify `ReplayCursor` is at `EndOfSnapshot[T]` (`ERR_DS_REPLAY_BOUNDARY`).
+8. Reapply authoritative input log from `T+1` (propagates from `RunTick`).
+
+Side-effects on non-authoritative subsystems (UI, audio, VFX, telemetry) MUST NOT be triggered during steps 1–7. See §4.2.2 for the normative form; this section is for cross-reference only.
 
 ## 2.7 Ownership and Escalation Matrix
 | Domain | Primary owner | Backup owner | Escalation trigger |

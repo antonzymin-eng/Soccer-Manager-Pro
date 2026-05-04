@@ -94,8 +94,15 @@ Checkpoint density increases validation confidence but raises CI runtime; certif
 - Verification: `T-DS-ORDER-001` and certification corpus re-run passed
 
 ## Appendix G — Golden Vector Manifest (Starter)
-| Vector ID | Purpose | Expected result |
-|---|---|---|
-| GV-RNG-001 | branch-safe parity | identical end cursors |
-| GV-SNAP-001 | snapshot roundtrip | byte-identical payload |
-| GV-DIGEST-001 | phase digest parity | identical digest stream |
+| Vector ID | Purpose | FR mapping | Test card(s) | Artifact path | Expected result |
+|---|---|---|---|---|---|
+| GV-RNG-001 | branch-safe parity | FR-DS-003 | T-DS-RNG-002 | (stub — to be authored alongside `siphash-2-4-kat.md`) | identical end cursors across branch variants |
+| GV-SNAP-001 | snapshot roundtrip | FR-DS-004, FR-DS-006 | T-DS-SNAP-003, T-DS-SAVE-005 | (stub) | byte-identical payload across `Serialize ∘ Deserialize ∘ Serialize` |
+| GV-DIGEST-001 | phase digest parity | FR-DS-007, FR-DS-008 | T-DS-ORDER-001 | (stub) | identical digest stream from identical input log |
+| GV-HKDF-001 | RFC 5869 HKDF-SHA256 KAT (RFC §A.1–A.3) | FR-DS-003 | T-DS-RNG-002 | `docs/specs/deterministic-sim/golden-vectors/hkdf-sha256-kat.md` (§9.5 #4(a)) | every RFC vector reproduced bit-exact + `info="DS-RNG-KEY-v1"` row + `salt=NULL` row |
+| GV-SIPHASH-001 | SipHash-2-4 reference vectors (Aumasson & Bernstein 2012 App. A) | FR-DS-003 | T-DS-RNG-002 | `docs/specs/deterministic-sim/golden-vectors/siphash-2-4-kat.md` (§9.5 #4(b)) | all 64 reference vectors reproduced bit-exact |
+| GV-CANON-001 | `SerializeCanonical` reference corpus per §3.2.4.1 | FR-DS-004, FR-DS-007 | T-DS-ORDER-001, T-DS-SNAP-003 | `docs/specs/deterministic-sim/golden-vectors/serialize-canonical-corpus.md` (§9.5 #4(c)) | every (input record → expected SHA-256) tuple reproduced bit-exact, including the §3.2.4.1 12-byte `PhaseDigest` worked example, the new §3.2.3 `SnapshotDigest` worked example with declared field order, and `-0.0`/`+0.0` Tier-A normalization fixtures |
+
+The starter rows GV-RNG-001 / GV-SNAP-001 / GV-DIGEST-001 (above the line) are scenario-level vectors. The lower three rows (GV-HKDF-001 / GV-SIPHASH-001 / GV-CANON-001) are the §9.5 acceptance criterion #4 implementation-conformance corpora and are gating for promotion to IN REVIEW. (Pass 4 L-6, Pass 5 L-5.)
+
+The Test Card Template (§5.10) MUST add a `GoldenVectors : array<GV-ID>` field so test cards declare which vectors they consume; the starter mapping above is the initial population of that field.
