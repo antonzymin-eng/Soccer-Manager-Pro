@@ -2,9 +2,10 @@
 
 ## 8.1 Source Register
 Primary internal sources:
-- Deterministic Simulation outline (`outline.md`, v0.3 refined).
-- Deterministic Simulation consolidated critique log (`critique-log.md`; merges and supersedes the former `adversarial-review.md` and `third-pass-fix-log.md`).
-- Related system specs: event-system, testing-strategy, fixed64-math, performance-optimization.
+- Deterministic Simulation section files §1–§9 (canonical normative content; latest versions per each file's `Version History`).
+- Deterministic Simulation outline (`outline.md`, v0.4 — **SUPERSEDED** May 4, 2026 per Pass 5 H-1; retained as historical scaffolding only, not normative).
+- Deterministic Simulation consolidated critique log (`critique-log.md`, v1.2; merges and supersedes the former `adversarial-review.md` and `third-pass-fix-log.md`).
+- Related system specs: event-system (#17), testing-strategy (#19), fixed64-math (#9), performance-optimization (#18) — all currently `NOT STARTED` per `SPEC_INDEX.md`; see §8.3 sequencing constraint.
 
 ### 8.1.1 Citation quality rubric
 | Grade | Criteria |
@@ -50,6 +51,7 @@ Constants in this spec are governance placeholders derived from outline policy a
 Each constant MUST declare: source section, owner team, initial rationale, verification method, and last-reviewed date.
 
 ## 8.5 Version History
+- **v1.0 (May 4, 2026):** Pass 6 follow-up audit. §8.1 Source Register updated: outline reference corrected from `v0.3 refined` to `v0.4 SUPERSEDED` (matches Pass 6 H-1 freeze); section files added as primary canonical source; dependency specs annotated with their current `NOT STARTED` SPEC_INDEX status and pointer to §8.3 sequencing constraint.
 - **v0.9 (May 3, 2026):** §8.1 source register updated to point at the consolidated `critique-log.md` (former `adversarial-review.md` and `third-pass-fix-log.md` merged and removed in the same commit).
 - **v0.7 (May 2, 2026):** §8.3 sequencing constraint added: cited dependency specs (#9, #17, #18, #19) all currently `NOT STARTED`; audit rows reclassified as `deferred dependency`. This explicitly defers final sign-off on #16 until upstream specs reach `IN REVIEW`.
 - **v0.5:** Added citation quality rubric, audit table, and constant provenance fields.

@@ -57,13 +57,16 @@ At 60Hz:
 Note: Section 6.10 phase shares are baseline without instrumentation slack; 3-10% observability overhead is budgeted separately.
 
 ## 6.10 Phase-Level Budget Allocation (Guideline)
-| Phase | CPU budget share (target) | Notes |
-|---|---|---|
-| Input + Intent | 8% | parsing and intent mapping |
-| AI | 22% | Budget applies to stride ticks only (every 6th tick at 10 Hz cadence). On the other 5 ticks `AI_NoOp` runs with near-zero cost. Tick-averaged AI budget ≈ 3.7% (22% / 6). Budget allocation in this table is stated *per stride tick* to size AI work correctly; the 22% figure should NOT be used as a flat per-tick budget. |
-| Physics | 34% | usually highest compute share |
-| Resolve + Events | 18% | conflict resolution + event ledger |
-| Snapshot + Digest | 18% | serialization and hash overhead |
+**Reading rule (normative).** Each value below is a **per-phase upper bound on the indicated tick class** — NOT a flat per-tick budget. Rows that fire only on certain ticks are explicitly marked. Non-stride-tick slack (when the AI row does not consume) is left as runtime headroom and SHOULD remain idle; it MUST NOT be reallocated to other phases. (Pass 4 L-5.)
+
+| Phase | CPU budget share (target) | Tick class | Notes |
+|---|---|---|---|
+| Input + Intent | 8% | every tick | parsing and intent mapping |
+| AI | 22% | stride tick only (every 6th tick at 10 Hz) | On the other 5 ticks `AI_NoOp` runs with near-zero cost. Tick-averaged AI budget ≈ 3.7% (22% / 6). The 22% figure MUST NOT be used as a flat per-tick budget. |
+| Physics | 34% | every tick | usually highest compute share |
+| Resolve + Events | 18% | every tick | conflict resolution + event ledger |
+| Snapshot + Digest (steady state) | 12% | every tick | per-tick `PhaseDigest` computation (§3.2.2) and snapshot serialization for in-memory ring buffer; does NOT include durable-save commit |
+| Save commit (scheduled) | ≤ 6% | save-cadence ticks only | `SnapshotStore.CommitAtomic` (§4.6.1.1): fsync, atomic rename, directory fsync. Spikes on save ticks; averaged over a save cadence of `N` ticks the contribution is `6% / N`. The 18% figure previously combined this row with the steady-state row; that combined view is now an averaging artifact, not a budget. (Pass 5 L-6.) |
 
 ## 6.11 Performance Failure Triage Procedure
 1. detect budget violation in CI.
@@ -78,5 +81,6 @@ Note: Section 6.10 phase shares are baseline without instrumentation slack; 3-10
 - retention artifact cap breach in standard mode => fail certification run.
 
 ## 6.13 Version History
+- **v1.0 (May 4, 2026):** Pass 4 / Pass 5 critique. (a) Pass 4 L-5: §6.10 reading rule made explicit — values are per-phase upper bounds on the indicated tick class, not flat per-tick. Non-stride slack is idle, not reallocated. (b) Pass 5 L-6: `Snapshot + Digest 18%` split into `Snapshot + Digest (steady state) 12%` (every tick — phase digest + ring-buffer serialize) and `Save commit (scheduled) ≤ 6%` (save-cadence ticks only — atomic-write contract). The 18% combined figure was an averaging artifact masking where cost actually lands.
 - **v0.8 (May 2, 2026):** §6.10 AI row updated to clarify that 22% is a per-stride-tick budget; tick-averaged AI budget ≈ 3.7% (A-1).
 - **v0.6:** Added phase-level budget allocation, triage procedure, and quantitative acceptance thresholds.
