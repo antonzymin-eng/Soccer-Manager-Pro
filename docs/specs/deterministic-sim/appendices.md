@@ -53,11 +53,19 @@ Checkpoint density increases validation confidence but raises CI runtime; certif
 
 ## Appendix D — Replay Failure Cookbook
 ### D.1 Common failure signatures
-| Signature | Likely cause | First action |
-|---|---|---|
-| digest mismatch at first resumed tick | RNG cursor not restored | inspect cursor snapshot table |
-| snapshot load failure | schema incompatibility | verify migration matrix |
-| Tier B drift only | comparator threshold too tight | review tolerance row rationale |
+| Signature | Likely cause | First action | Error code (if any) |
+|---|---|---|---|
+| digest mismatch at first resumed tick | RNG cursor not restored | inspect cursor + `actionOrdinal` per stream | (Tier A `HardDesync`) |
+| snapshot load failure | schema incompatibility | verify migration matrix | `ERR_DS_SCHEMA_INCOMPATIBLE` |
+| Tier B drift only | comparator threshold too tight | review tolerance row rationale | (Tier B `SoftDrift`) |
+| replay aborts at step 3 of §4.2.2 | recording vs replay `EnvironmentFingerprint` mismatch (worker count, SIMD level, `floatModelHash`, `unicodeNormalizationVersion`, `il2cppVersion`) | diff fingerprints; rebuild replay host to match recording | `ERR_DS_REPLAY_ENV_MISMATCH` |
+| recording aborts mid-match | a pinned fingerprint field was mutated after match start (recording-side) | locate the writer; treat as authoritative-state corruption | `ERR_DS_ENV_MUTATION` |
+| replay aborts at step 4 of §4.2.2 | `prevSnapshotDigest` chain link broken (corruption or tampered snapshot) | re-derive chain from prior snapshot | `ERR_DS_DIGEST_CHAIN_BREAK` |
+| replay aborts at step 7 of §4.2.2 | `ReplayCursor` not at `EndOfSnapshot[T]` before T+1 reapplication (partial / corrupt load) | inspect snapshot record trailer; re-load from prior save | `ERR_DS_REPLAY_BOUNDARY` |
+| tick commit fails inside `Resolve` with budget code | `Reserve(siteId, count)` invoked with `count` ≠ registered budget in §3.6.2.1 registry | check registry row for site; align caller to registered budget | `ERR_DS_RNG_BUDGET_MISMATCH` |
+| save commit silently leaves prior snapshot intact | atomic-write contract violation (cross-volume rename, fsync skipped, etc.) | verify `SnapshotStore.CommitAtomic` substrate (§4.6.1.1) is supported | `ERR_DS_STORAGE_ATOMICITY` |
+| Tier B field rejects digest with no clear comparator | field appears in digest scope but tolerance matrix has no row for it | add tolerance row with rationale + owner + reviewDate, or reclassify | `ERR_DS_TIERB_TOLERANCE_MISSING` |
+| Tier B `f32`/`f64` field flagged "non-finite" despite finite arithmetic | non-canonical NaN bit pattern emitted; canonical NaN is `NAN_CANONICAL_F32`/`F64` | normalize NaN before serialization per §3.2.4.1 | `ERR_DS_TIERB_NONFINITE` |
 
 ### D.2 Investigator checklist
 - confirm build hash parity,
@@ -70,12 +78,20 @@ Checkpoint density increases validation confidence but raises CI runtime; certif
 ```json
 {
   "tick": 2210,
+  "phaseOrdinal": 3,
   "phase": "Physics",
   "phaseDigest": "abc123...",
-  "rngCursors": [{"stream":"AI.18", "counter": 492}],
-  "eventCount": 3
+  "rngCursors": [
+    {"stream": "AI.18", "counter": 492, "actionOrdinal": 87}
+  ],
+  "eventCount": 3,
+  "environmentFingerprintHash": "ff20...",
+  "schemaVersion": 1,
+  "digestVersion": 1
 }
 ```
+
+This example is illustrative; the canonical authoritative-state contents are §2.3 / §3.2.5 / §3.2.5.3 and the canonical digest preimages are §3.2.2 / §3.2.3 / §3.2.4.1. Each per-stream `rngCursors` row carries both `counter` (the `RngCursor`) and `actionOrdinal` per §3.2.5; trace consumers MUST read both. `phaseOrdinal` follows the §5.10 mapping (`Input=0, Intent=1, AI=2, Physics=3, Resolve=4, Events=5, Snapshot=6`) and is included alongside `phase` so trace processors can sort by `(tick, phaseOrdinal)` without parsing the human-readable phase name.
 
 ## Appendix F — Incident Postmortem Template
 ### F.1 Required sections
