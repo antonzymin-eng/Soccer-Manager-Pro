@@ -226,6 +226,38 @@ Each finding above is re-checked against the actual file text to confirm or corr
 
 ---
 
+## Resolution Log (2026-05-06)
+
+All 20 validated findings have been resolved in the same-day Pass 2 remediation commit. Mapping:
+
+| ID | Resolution | Touched files |
+|----|------------|---------------|
+| H2-1 | Mul/div pseudocode rewritten in magnitude+sign formulation; negative-operand worked examples now pass. | `section-2.md` §2.3.1, §2.3.2 |
+| H2-2 | Operator overload binding table added (operators bind to `Checked*`). | `section-2.md` §2.8 |
+| H2-3 | `sqrt` pinned to paired-bit algorithm; `sin`/`cos`/`atan2` pinned to CORDIC N=32 with normative angle table and `CORDIC_K`. | `section-3.md` §§3.1–3.2; `appendices.md` Appendix A and Appendix G |
+| H2-4 | SPEC_INDEX.md updated to `IN REVIEW`; §9 status aligned. | `SPEC_INDEX.md`; `section-9-approval-checklist.md` |
+| H2-5 | §8.1 made stage-gated (Stage 0–4 float / Stage 5+ Fixed64). | `section-8.md` §8.1 |
+| H2-6 | §9 rewritten with evidence-anchored checklist citing file paths and section numbers. | `section-9-approval-checklist.md` |
+| M2-1 | Failure behavior matrix expanded to cover Add/Sub/Mul/Div/Negate/Abs/Sqrt/Clamp/Min/Max/Fixed→Int/Float→Fixed/Parse. | `appendices.md` Appendix D |
+| M2-2 | Cross-platform float-input non-determinism warning added with permitted/forbidden call-site list. | `section-4.md` §4.2 |
+| M2-3 | Outline appendix lettering reconciled with `appendices.md`; deferred items noted. | `outline.md` |
+| M2-4 | Sign prefix rule made unambiguous (optional on parse, required on format) with round-trip-uniqueness statement. | `section-4.md` §4.5, §4.6 |
+| M2-5 | `Fixed64 -> int32` made two-step (round, then range-check) with worked-example matrix across rounding modes. | `section-4.md` §4.1 |
+| M2-6 | Six-row enumerated platform matrix (OS / arch / CPU floor / compiler / flags) with release-blocking flags. | `section-7.md` §7.1 |
+| M2-7 | Op_id mapping table and `flags:u32` bit encoding pinned. | `appendices.md` Appendix E.1 |
+| M2-8 | Typed cross-reference index (XC-/FM-/EC-/ERR-) added; reciprocals against #1, #2, #3, #8, #16 named. | `section-8.md` §8.7 |
+| M2-9 | "Equivalent host" criteria defined (microarch, clock, OS, compiler, optimization, SMT, isolation). | `section-5.md` §5.2 |
+| L2-1 | `sign(num*den)` removed; magnitude+sign formulation eliminates the literal-overflow hazard. | `section-2.md` §2.3.2 |
+| L2-3 | `expected_flags` constrained to enum of Appendix B error symbols. | `appendices.md` Appendix C |
+| L2-4 | `expected_raw` made conditional on `expected_flags` emptiness; failure sample added. | `appendices.md` Appendix C |
+| L2-5 | Version-history sections added to `appendices.md` and `section-9-approval-checklist.md`. | both files |
+| L2-6 | Saturating Add/Sub clamp side specified as "sign of true result". | `section-2.md` §2.4 |
+
+L2-2 was withdrawn at validation time (see table above) and required no remediation.
+
+Status post-fix: every High and Medium finding is closed in the spec text itself; remaining open items in `section-9-approval-checklist.md` §9.8 are downstream artifacts (golden-vector corpus, CI benchmark first-pass run, full-matrix harness digest, ownership ledger entries, reciprocal XC from #16) that require harness implementation or other specs to advance, and are not blockers on the spec text.
+
 ## Version History
 
+- v0.2 (2026-05-06): Added Resolution Log; all 20 validated findings closed in same-day Pass 2 fix commit.
 - v0.1 (2026-05-06): Initial Pass 2 critique. 21 findings filed; 20 validated; L2-2 withdrawn after re-derivation.

@@ -112,9 +112,17 @@ This specification defines representation, arithmetic semantics, deterministic u
 - Appendix artifacts are release-blocking for implementation kickoff (constants table + failure matrix + vector schema).
 
 ## Appendices
-- Appendix A — Exact constants table (Q format, min/max, epsilon, scale factors) with machine-readable source file reference.  
-- Appendix B — Error-bound derivations and approximation method notes.  
-- Appendix C — Performance benchmark templates and sample dashboards.  
-- Appendix D — Golden vector schema, generator reference, and sample records.  
-- Appendix E — Failure behavior matrix (operation × mode × outcome).  
-- Appendix F — Determinism incident report template and troubleshooting guide.
+- Appendix A — Exact constants table (Q format, min/max, epsilon, scale factors, normative trig constants, `CORDIC_K`) with machine-readable source file reference.
+- Appendix B — Error code registry (symbol, numeric code, stability policy).
+- Appendix C — Golden vector JSON schema and worked success/failure samples.
+- Appendix D — Failure behavior matrix (operation × mode × outcome), exhaustive over §2 and §4.
+- Appendix E — Determinism harness digest spec (record byte layout, hash algorithm, op_id mapping, flags-bit encoding).
+- Appendix F — Unchecked lint policy (rule ID, scope, suppression mechanism, expiry behavior).
+- Appendix G — Reference algorithm tables (CORDIC angle table, sqrt-algorithm pinning).
+- Appendix H — Version history for `appendices.md`.
+
+Note: this lettering matches `appendices.md` v0.3 exactly. Earlier outlines used different letters (B for "error-bound derivations", C for "performance templates", F for "incident report"); those slots were re-purposed during Pass 1 / Pass 2 remediation. The deferred items (error-bound derivations, perf templates, incident report) are tracked in §7.6 and §8.3 deferred dependencies.
+
+## Version History
+- v0.2 (2026-05-06): Reconciled appendix lettering with `appendices.md` v0.3 (closes Pass 2 M2-3); noted re-purposed slots and deferred items.
+- v0.1 (earlier): Initial outline.

@@ -1,7 +1,7 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** May 2, 2026
+> **Last Updated:** May 6, 2026
 > **Purpose:** Single source of truth for spec numbers, folder names, and approval status. Every cross-reference in every spec must match the numbers in this file.
 
 ---
@@ -26,7 +26,7 @@
 | 6 | Shot Mechanics | `shot-mechanics/` | 2 | APPROVED | Apr 27, 2026 |
 | 7 | Perception System | `perception-system/` | 2 | APPROVED | Apr 22, 2026 |
 | 8 | Decision Tree | `decision-tree/` | 2 | APPROVED | Apr 27, 2026 |
-| 9 | Fixed64 Math Library | `fixed64-math/` | 2 | NOT STARTED | — |
+| 9 | Fixed64 Math Library | `fixed64-math/` | 2 | IN REVIEW | — |
 | 10 | Heading Mechanics | `heading-mechanics/` | 3 | NOT STARTED | — |
 | 11 | Goalkeeper Mechanics | `goalkeeper-mechanics/` | 3 | NOT STARTED | — |
 | 12 | Positioning AI | `positioning-ai/` | 3 | NOT STARTED | — |
@@ -58,6 +58,7 @@
 - **Pass Mechanics (#5):** Status changed from APPROVED to SUSPENDED on March 25, 2026 after comprehensive audit found 19 findings (5 critical). Fixes applied; pending lead developer re-review and re-sign-off.
 - **April 27, 2026 sign-off pass:** Agent Movement (#2), Shot Mechanics (#6), and Decision Tree (#8) all approved by lead developer. Decision Tree (#8) approved at "draft-level" quality gate; comprehensive audit candidate for follow-up before implementation.
 - **May 2, 2026 status reconciliation:** Deterministic Simulation (#16) reclassified from `NOT STARTED` to `IN PROGRESS`. Section files (sections 1–9 + appendices) exist at v0.5–v0.7 but were authored ahead of formal status update. Counts now: 7 APPROVED, 1 SUSPENDED, 0 IN REVIEW, 1 IN PROGRESS, 11 NOT STARTED.
+- **May 6, 2026 status reconciliation:** Fixed64 Math Library (#9) reclassified from `NOT STARTED` to `IN REVIEW` after Pass 2 adversarial critique fixes landed. All sections (1–9 + appendices) present at v0.2–v0.3; awaiting lead developer sign-off per `fixed64-math/section-9-approval-checklist.md`. Counts now: 7 APPROVED, 1 SUSPENDED, 1 IN REVIEW, 1 IN PROGRESS, 10 NOT STARTED.
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 
 ---
