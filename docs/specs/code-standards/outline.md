@@ -1,126 +1,187 @@
-# Code Standards & Style Guide Specification #20 — Outline
+# Code Standards & Style Guide Specification #20 — High-Level Outline
 
-## Purpose
-Standardize code quality, maintainability, and review consistency across all gameplay systems.
+**Purpose:** Planning document for the Code Standards & Style Guide
+specification. Establishes scope, authority boundaries, and section structure
+before mid-level and detailed outlines are drafted. Defines *what* will be
+written, not yet *how*.
 
-## Scope
-Naming, structure, dependencies, documentation, error handling, and static-quality baselines.
-
-## Section Plan
-- Section 1 — Naming, foldering, and file-ownership conventions.
-- Section 2 — Constants governance and anti-magic-number policy.
-- Section 3 — Interface design and dependency-direction principles.
-- Section 4 — Documentation standards, version history, review checklist.
-- Section 5 — Error-handling/logging conventions and debugging hygiene.
-- Section 6 — Lint/format/static-analysis baseline requirements.
-- Section 7 — Enforcement workflows (pre-commit, CI, review gates).
-- Section 8 — Migration plan for legacy non-compliant code.
-- Section 9 — Approval checklist.
-- Appendices — Templates and exemplars.
+**Created:** May 6, 2026, 6:30 PM PST
+**Updated:** May 6, 2026, 6:30 PM PST
+**Version:** 1.0
+**Status:** DRAFT — Awaiting mid-level expansion
+**Specification Number:** 20 of 20 (Stage 0)
+**Estimated Effort:** ~14 hours (lighter than physics specs; no formula
+derivations or numerical verification)
+**Dependencies (informational, not gating):** Root `CLAUDE.md` (authoritative
+for project invariants), `docs/planning/development-best-practices.md`
+(allocation budgets and code quality patterns).
+**Downstream:** `src/CLAUDE.md` (deferred; created when coding begins),
+all Stage 1+ implementation code.
+**Adjacency note:** Has zero spec dependencies on Specs #1–#19. Codifies C#
+conventions, constant-tag rules, file naming, and dependency-direction
+principles that apply to all subsequent implementation.
 
 ---
 
-## ADVERSARIAL REVIEW — May 6, 2026
+## EXECUTIVE SUMMARY
 
-> Reviewer: AI agent (claude/review-spec-sections-JQ8jy). Scope: this outline file
-> measured against `CLAUDE.md`, the 9-section template, and adjacent specs.
-> Severity legend: **H** = blocks draft start; **M** = must resolve during draft;
-> **L** = follow-up.
+Spec #20 is the lone meta-spec in the Stage 0 set. It does not model a
+physical or AI subsystem; it codifies the **rules every Stage 1+ source file
+must obey**. Its job is to be the single, citable reference that every code
+review, every static-analysis rule, and every future `src/CLAUDE.md` entry
+points at.
 
-### Verified premises
-- Spec #20 status in `SPEC_INDEX.md`: NOT STARTED. Stage 0 has no source code
-  (CLAUDE.md: "No code exists yet").
-- CLAUDE.md defers `src/CLAUDE.md` until coding begins. Spec #20 risks
-  duplicating or contradicting that file when it is eventually written.
-- CLAUDE.md already declares: constant-tag policy
-  (`[GT]/[EST]/[FIXED]/[DERIVED]/[CROSS]`), interface design principle
-  ("only when both sides specified"), determinism rules (no `System.Random`,
-  no `DateTime.Now`, SplitMix64 for RNG, mask intermediates), Stage 0 uses
-  `float`, struct-based zero-allocation game loop.
+The spec governs:
+- C# style (naming, layout, language features in/out)
+- Constant declaration and tagging (`[GT] / [EST] / [FIXED] / [DERIVED] / [CROSS]`)
+- File and folder naming inside `src/`
+- Module dependency direction and interface design
+- Determinism rules in code (no `System.Random`, no `DateTime.Now`,
+  SplitMix64 RNG, masked intermediate multiplication)
+- Allocation discipline in the game loop (zero-alloc, struct-based)
+- Documentation conventions (file headers, version-history blocks)
+- Conformance verification (manual at Stage 0; tooling at Stage 0+1
+  transition)
 
-### Findings
+The spec **cites, never redefines**, project invariants that already live in
+root `CLAUDE.md`. This is a hard rule (see Authority Matrix in §1).
 
-1. **[H] Missing metadata header.** Same gap as siblings. Add per Shot
-   Mechanics #6 outline header.
+---
 
-2. **[H] Section plan deviates from CLAUDE.md template.** Lint baseline
-   in §6 (performance slot per template), enforcement workflows in §7
-   (future-extensions slot), migration plan in §8 (references slot). No
-   references slot. Re-map.
+## AUTHORITY MATRIX (preview — full table in §1)
 
-3. **[H] Authority overlap with `src/CLAUDE.md` and root `CLAUDE.md`.**
-   Root CLAUDE.md already authoritatively declares constant tagging,
-   interface principle, determinism rules, and Stage 0 numeric type.
-   `src/CLAUDE.md` is reserved for naming conventions, constant catalogue
-   locations, Unity project structure, build/test commands. Spec #20 must
-   declare which document is authoritative for which rule, or two
-   (eventually three) sources of truth will diverge. Recommendation: Spec
-   #20 owns C# style, file structure, dependency direction; root CLAUDE.md
-   owns project-level invariants; `src/CLAUDE.md` owns codebase-local
-   pointers.
+| Rule class                              | Authoritative source       | Spec #20 role          |
+|-----------------------------------------|----------------------------|------------------------|
+| Coordinate system, fatigue convention   | Ball Physics #1, CLAUDE.md | Cite, do not restate   |
+| Constant tags (`[GT]/[EST]/[FIXED]/[DERIVED]/[CROSS]`) | Root `CLAUDE.md`           | Cite + give code-level binding rules |
+| Interface principle (both sides specified) | Root `CLAUDE.md`           | Cite + give file-level binding rules |
+| Determinism rules (no `Random`, etc.)   | Root `CLAUDE.md`           | Cite + give lint-equivalent rules |
+| Stage 0 numeric type (`float`)          | Root `CLAUDE.md`, Spec #9  | Cite, do not restate   |
+| C# style, naming, layout                | **Spec #20**               | Authoritative          |
+| File naming inside `src/`               | **Spec #20**               | Authoritative          |
+| Folder layout inside `src/`             | **Spec #20** (high-level), `src/CLAUDE.md` (concrete paths) | Authoritative for shape; defers concrete paths to `src/CLAUDE.md` |
+| Constant catalogue file locations       | **Spec #20** (convention), `src/CLAUDE.md` (concrete paths) | Authoritative for convention; defers concrete paths to `src/CLAUDE.md` |
+| Build/test commands                     | `src/CLAUDE.md` (deferred) | Out of scope           |
 
-4. **[H] Migration plan for legacy code is vestigial at Stage 0.** §8
-   "migration plan for legacy non-compliant code" — there is no legacy
-   code. Either drop the section, or scope it to "post-Stage-0
-   incremental adoption" explicitly.
+---
 
-5. **[H] CI / pre-commit enforcement infeasible at Stage 0.** §7
-   "enforcement workflows (pre-commit, CI, review gates)" presumes
-   tooling that does not exist in spec phase. Stage 0 enforcement is
-   manual review against spec rules. Distinguish.
+## SECTION PLAN (mapped to CLAUDE.md 9-section template)
 
-6. **[H] Lint baseline cannot be empirically validated at Stage 0.**
-   §6 "lint/format/static-analysis baseline" must be derived from real
-   code. With zero source code, baselines are guesses. Either defer to
-   Stage 0+1 transition with a stub at Stage 0, or scope to "tools and
-   thresholds chosen, baseline values deferred".
+- **Section 1 — Purpose & Scope.** Authority matrix; what this spec owns;
+  what it cites; what is out of scope (build commands, IDE setup,
+  test-framework choice — those belong elsewhere); dependencies on root
+  `CLAUDE.md`.
+- **Section 2 — Functional Requirements & Conformance Model.** Numbered
+  rules (FR-CS-001 …) every file must obey; conformance levels (MUST /
+  SHOULD / MAY); failure-to-comply modes (review block, refactor required,
+  exception with sign-off).
+- **Section 3 — Technical Specification.** The substantive rules:
+  3.1 C# style (naming, layout, language features allowed/disallowed)
+  3.2 Constant declaration and tagging (binding rules, not redefining tags)
+  3.3 Allocation discipline (zero-alloc game loop, ref-passed structs,
+      LINQ exclusions, boxing avoidance)
+  3.4 Determinism in code (RNG, time sources, math intrinsics)
+  3.5 Dependency direction and interface design
+  3.6 Documentation: file header template, version-history block,
+      cross-reference comment style
+  3.7 Stage 0 numeric type (`float`) — pointer to Spec #9 for Fixed64
+- **Section 4 — Architecture & Integration.**
+  4.1 `src/` folder layout shape (one assembly per concern, dependency arrows)
+  4.2 Constant catalogue convention (one per spec + project-wide root)
+  4.3 File/module boundary rules
+  4.4 Pointer to `src/CLAUDE.md` for concrete paths once coding begins
+- **Section 5 — Conformance Verification.**
+  5.1 Stage 0 verification: manual review against this spec
+  5.2 Stage 0+1 transition: tool selection (Roslyn analyzers, .editorconfig,
+      `dotnet format`, `BannedSymbols.txt`)
+  5.3 Threshold policy (no values pinned at Stage 0; deferred to first real
+      code in Stage 1)
+  5.4 Review-time checklist
+- **Section 6 — Code Performance Rules.** *(Re-purposed from "Performance
+  Analysis" template slot.)* Allocation budgets code must obey, hot-path
+  rules, profiling hooks required in game-loop code. **Not** a performance
+  analysis of the standards themselves (which would be vacuous).
+- **Section 7 — Future Extensions.** Lint baseline values (deferred to
+  Stage 1); CI gates and pre-commit hooks (deferred); `src/CLAUDE.md`
+  scope; multiplayer-era additions (Fixed64 enforcement when Spec #9
+  activates in Stage 5+); permanent exclusions (style debates the spec
+  refuses to relitigate).
+- **Section 8 — References.** Source register: root `CLAUDE.md`,
+  `development-best-practices.md`, Microsoft C# coding conventions, Unity
+  scripting guidelines, MSDN Roslyn analyzer reference. Cross-spec
+  citation audit (this spec is cited *by*, not citing *to*, physics specs).
+  Constant provenance summary (Spec #20 declares no physical constants;
+  tags listed are governance metadata, not values).
+- **Section 9 — Approval Checklist.** Standard 4-block checklist with
+  programmatically-verifiable evidence.
+- **Appendices.**
+  - Appendix A — File header template (paste-ready C# block).
+  - Appendix B — Version-history block template.
+  - Appendix C — Exemplar pair: one struct file + one constants file
+    showing every rule applied.
+  - Appendix D — Banned/required-API list (informational at Stage 0;
+    becomes `BannedSymbols.txt` source at Stage 1).
+  - Appendix E — Glossary (only terms specific to Spec #20; physics terms
+    cited from their owning spec).
 
-7. **[M] Constant-tag policy must cite, not redefine, root CLAUDE.md.**
-   §2 "constants governance" must reference the canonical
-   `[GT]/[EST]/[FIXED]/[DERIVED]/[CROSS]` definitions in CLAUDE.md, not
-   reinvent them. Renumbering / redefinition risk per project history
-   (e.g., Pass Mechanics ERR-class bugs).
+> **Template-slot reconciliation note (§3 / §5 / §6).** The CLAUDE.md
+> 9-section template was authored for physics/AI specs. For a meta-spec,
+> several slots are re-purposed rather than dropped: §3 holds *rules* in
+> place of formulas; §5 holds *conformance verification* in place of
+> numerical test catalogues; §6 holds *performance rules code must obey*
+> in place of complexity analysis. Every section retains its slot number
+> and topic family so cross-spec readers find the expected content.
+> Justification is restated in §1.3 (Key Design Decisions) of the
+> drafted spec.
 
-8. **[M] Interface principle must cite, not redefine.** §3 "interface
-   design and dependency-direction principles" must explicitly reference
-   the CLAUDE.md "Write interfaces only when both sides are specified"
-   rule. ERR-001 / ERR-004 came from violating this.
+---
 
-9. **[M] Determinism rules absent from outline.** Code Standards must
-   surface CLAUDE.md determinism rules (no `System.Random`, no
-   `DateTime.Now`, SplitMix64, mask intermediates, no fixed64 at Stage 0)
-   as enforceable lint rules. §6 currently only names "lint baseline"
-   abstractly.
+## ADVERSARIAL REVIEW — May 6, 2026 (resolved in v1.0)
 
-10. **[M] No allocation policy.** CLAUDE.md mandates struct-based,
-    zero-allocation game loop. §2 / §6 should pre-commit allocation
-    rules (no boxing in hot paths, no LINQ in tight loops, ref-passed
-    structs over class events).
+> Reviewer: AI agent (claude/review-spec-sections-JQ8jy). Original review
+> was performed against the prior draft of this outline. All H findings
+> are now resolved; M findings carried forward as drafting commitments;
+> L findings carried forward as appendix items.
 
-11. **[M] Documentation standards in §4 must align with version-history
-    rule.** CLAUDE.md mandates "append a version history entry to every
-    modified file" and "creation date and purpose header on every new
-    file". Outline §4 names documentation but does not pre-commit these
-    rules.
+### Resolution status
 
-12. **[L] Constant catalogue file locations not declared.** CLAUDE.md
-    flags constant catalogues as deferred to `src/CLAUDE.md`. Spec #20
-    should at least name the *expected* convention (one catalogue per
-    spec, named matching the spec, plus a project-wide constants file).
+| # | Severity | Finding (abbrev.) | Resolution in v1.0 |
+|---|---------|-------------------|--------------------|
+| 1 | H | Missing metadata header | **Resolved.** Header added at top of file. |
+| 2 | H | Section plan deviates from template | **Resolved.** §6 now Code Performance Rules; §7 now Future Extensions (lint baselines deferred there); §8 now References. Migration plan dropped (see #4). Template-slot reconciliation note added. |
+| 3 | H | Authority overlap with `CLAUDE.md` / `src/CLAUDE.md` | **Resolved.** Authority Matrix added (preview above; full table belongs in §1). Spec #20 owns C# style + file structure + dependency direction; root `CLAUDE.md` owns project invariants; `src/CLAUDE.md` owns codebase-local pointers. |
+| 4 | H | Migration plan vestigial at Stage 0 | **Resolved.** §8 Migration Plan dropped. References slot restored to §8. There is no legacy code to migrate. |
+| 5 | H | CI / pre-commit infeasible at Stage 0 | **Resolved.** §5 split: Stage 0 verification is *manual review*; tooling is a Stage 0+1 transition deliverable in §5.2; concrete CI/pre-commit configurations deferred to §7 (Future Extensions). |
+| 6 | H | Lint baseline cannot be empirically validated | **Resolved.** §5.3 explicitly defers numeric thresholds to first real code. Stage 0 deliverable is *tool selection + threshold policy*, not values. |
+| 7 | M | Constant-tag policy must cite, not redefine | Carried into drafting rules for §3.2. Cite root CLAUDE.md verbatim; add only code-level binding rules (e.g., "every constant in a `[FIXED]` catalogue file must be `const`, not `static readonly`"). |
+| 8 | M | Interface principle must cite, not redefine | Carried into drafting rules for §3.5. Cite root CLAUDE.md "both sides specified" rule; add file-level rule (e.g., "do not place an `interface` definition in a folder whose consumer side is unwritten"). |
+| 9 | M | Determinism rules absent from outline | Carried into §3.4. Surface CLAUDE.md determinism rules as enforceable code rules: banned APIs (`System.Random`, `DateTime.Now`, `Stopwatch.GetTimestamp` in game logic, `Guid.NewGuid` in game logic), required APIs (SplitMix64 helper, `MatchClock` injection), masking rules for 64-bit multiplications. |
+| 10 | M | No allocation policy | Carried into §3.3 and §6. Zero-alloc game loop; no boxing in hot paths; no LINQ in tight loops; ref-passed structs over class events; no `params` in hot paths; no `string.Format` in per-frame paths. |
+| 11 | M | Documentation standards must align with version-history rule | Carried into §3.6. File header template (Appendix A) and version-history template (Appendix B) restate (with citation) the CLAUDE.md "creation date and purpose header" + "version history entry on every modified file" rules. |
+| 12 | L | Constant catalogue file locations not declared | Addressed at convention level in §4.2 (one catalogue per spec, named matching the spec, plus a project-wide constants file). Concrete paths deferred to `src/CLAUDE.md`. |
+| 13 | L | No exemplar file in appendices | Addressed in Appendix C. Pre-Stage-1 exemplar is hypothetical struct + constants file demonstrating every Spec #20 rule; serves as a starting reference for the Stage 0+1 transition. |
 
-13. **[L] No exemplar file provided in appendices yet.** Appendices
-    "templates and exemplars" — pre-Stage 1, the only exemplar can be
-    a hypothetical struct + constants file. Plan one explicitly so
-    Stage 0+1 transition has a starting reference.
+---
 
-### Recommended next steps
-- Add full metadata header.
-- Re-map Section Plan to CLAUDE.md 9-section template.
-- Add Authority Matrix declaring which rules live in root CLAUDE.md vs
-  Spec #20 vs (future) `src/CLAUDE.md`.
-- Cite (do not redefine) constant tags, interface principle, determinism
-  rules from root CLAUDE.md.
-- Scope §6 lint baseline and §7 CI workflows to Stage 0+1 transition
-  with explicit Stage 0 deliverables (tool selection + threshold
-  policy, no values).
-- Drop or rescope §8 migration plan.
+## DRAFTING DEFERRALS (recorded so they are not forgotten)
+
+- **D1 — Numeric lint thresholds.** Cyclomatic complexity, file length,
+  method length: chosen at first real-code implementation, not now.
+- **D2 — Test framework choice.** NUnit vs. Unity Test Framework vs.
+  custom: belongs to Spec #19 (Testing Strategy), not Spec #20.
+- **D3 — Build commands & IDE setup.** `src/CLAUDE.md` territory;
+  not in this spec.
+- **D4 — Fixed64 enforcement rules.** Spec #9 owns the Fixed64 library
+  itself; Spec #20 will reference Spec #9 once it reaches IN REVIEW.
+  Stage 0 enforcement: `float` only in game logic, no `double` in
+  game logic without sign-off.
+
+---
+
+## VERSION HISTORY
+
+| Version | Date           | Author      | Notes                                                                 |
+|---------|----------------|-------------|-----------------------------------------------------------------------|
+| 0.1     | (pre-May 2026) | Claude Code | Initial 9-line section list (no metadata, no review).                 |
+| 0.2     | May 6, 2026    | Claude Code | Adversarial review appended (6H / 5M / 2L findings).                  |
+| 1.0     | May 6, 2026    | Claude Code | Metadata header, Authority Matrix, re-mapped sections, all H findings resolved, M/L findings carried forward as drafting commitments. Mid-level outline begins next. |

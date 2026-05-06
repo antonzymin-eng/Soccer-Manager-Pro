@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 6, 2026  
+**Last Updated:** May 6, 2026 (Code Standards #20 outline tier added)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -69,11 +69,12 @@ All 20 spec folders now exist in `docs/specs/`. Status reflects authoritative cl
 | 17 | `docs/specs/event-system/` | NOT STARTED (scaffold only) |
 | 18 | `docs/specs/performance-optimization/` | NOT STARTED (scaffold only) |
 | 19 | `docs/specs/testing-strategy/` | NOT STARTED (scaffold only) |
-| 20 | `docs/specs/code-standards/` | NOT STARTED (scaffold only) |
+| 20 | `docs/specs/code-standards/` | OUTLINING (high/mid/detailed outlines drafted May 6, 2026; section files still scaffold) |
 
 **Notes:**
 - Deterministic Simulation (#16) files: `outline.md`, `section-1.md` through `section-9-approval-checklist.md`, `appendices.md`, `critique-log.md` (consolidated review history; supersedes the former `adversarial-review.md` and `third-pass-fix-log.md`, both removed May 3, 2026).
 - Fixed64 Math (#9) files include `adversarial-review.md` and `adversarial-critique-pass-2.md` alongside the standard section files.
+- Code Standards (#20) outline-tier files: `outline.md` (high-level v1.0), `outline-mid.md` (mid-level v1.3), `outline-detailed.md` (detailed v1.3). Section files (`section-1.md` through `section-9-approval-checklist.md`, `appendices.md`) remain skeleton scaffolds pending authoring from the detailed outline.
 
 ---
 
