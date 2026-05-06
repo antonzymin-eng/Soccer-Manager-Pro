@@ -16,7 +16,7 @@
 - Governor: `performance`; turbo variation disabled for benchmark job.
 - Isolation: dedicated runner; no co-scheduled workloads.
 
-Equivalent hosts MAY be used for local profiling, but CI gate decisions MUST use this pinned profile (or an explicitly versioned successor profile).
+Equivalent hosts MAY be used for local profiling, but CI gate decisions MUST use this pinned profile (or an explicitly versioned successor profile). An "equivalent host" for local profiling is one that satisfies **all** of the following: same x86-64 microarchitecture family or newer (Zen 4 or later); base clock within ±10% of the pinned profile after governor-locked all-core boost; the same OS major version (Ubuntu 24.04 LTS) with the kernel within the same minor series; the same compiler major.minor (clang 18.1.x); identical optimization flag set; SMT setting matched (on); a dedicated benchmark cgroup or VM with no co-scheduled tenants. Any deviation from these criteria MUST be recorded in the local-run artifact and disqualifies the run from being cited as evidence in waiver requests.
 
 ## 5.3 Allocation Policy
 - Primitive and utility operations MUST perform zero heap allocations per operation.
@@ -36,5 +36,6 @@ Equivalent hosts MAY be used for local profiling, but CI gate decisions MUST use
   3. missing environment metadata artifact.
 
 ## 5.6 Version History
+- v0.3 (2026-05-06): Defined "equivalent host" criteria for local profiling.
 - v0.2 (2026-05-01): Added pinned host profile and statistical pass/fail criteria.
 - v0.1 (2026-05-01): Initial draft aligned to outline Section 5.

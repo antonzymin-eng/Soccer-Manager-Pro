@@ -26,36 +26,74 @@ Example precedence cases:
 
 ## 2.3 Arithmetic Algorithms (Normative Pseudocode)
 
+The pseudocode below is **normative**. Implementations MUST produce bit-exact equivalent results across platforms, in particular for negative-operand corner cases. Both algorithms operate on **magnitude + sign** to avoid the floor-vs-truncate ambiguity that arises from arithmetic right-shift on signed negatives. All intermediate `int128`/`uint128` arithmetic MUST be exact (no overflow) under the documented input domain.
+
 ### 2.3.1 `CheckedMulNearestEven(a, b)`
 ```text
-wide = int128(a.raw) * int128(b.raw)
-q = wide >> 32                   // arithmetic shift
-r = abs(wide) & ((1<<32)-1)      // remainder magnitude
-half = 1<<31
-if r > half: q += sign(wide)
-if r == half and (q & 1) != 0: q += sign(wide)
-if q < INT64_MIN or q > INT64_MAX: return ERR_FIXED64_OVERFLOW
-return Fixed64(raw=int64(q))
+// Magnitude-then-sign formulation. Required because arithmetic right-shift
+// of a signed negative widened product gives a floor-divided quotient whose
+// remainder is NOT abs(wide) & ((1<<32) - 1); the two disagree whenever
+// wide is negative and the low 32 bits are non-zero.
+
+sign_neg = (a.raw < 0) XOR (b.raw < 0)            // true if result is negative
+ua = uint128(a.raw >= 0 ? int128(a.raw) : -int128(a.raw))    // |a.raw| as uint128
+ub = uint128(b.raw >= 0 ? int128(b.raw) : -int128(b.raw))    // |b.raw| as uint128
+mag  = ua * ub                                    // exact non-negative product
+q    = mag >> 32                                  // floor on unsigned == truncate
+r    = mag & ((uint128(1) << 32) - 1)             // exact remainder in [0, 2^32)
+half = uint128(1) << 31
+
+// Banker's rounding on the magnitude.
+if r > half:
+    q += 1
+else if r == half and (q & 1) != 0:
+    q += 1
+
+// Apply sign and check fit in signed 64-bit.
+if sign_neg:
+    if q > uint128(1) << 63: return ERR_FIXED64_OVERFLOW   // |result| > 2^63
+    if q == uint128(1) << 63: return Fixed64(raw=INT64_MIN) // exact INT64_MIN
+    return Fixed64(raw = -int64(q))
+else:
+    if q > uint128(INT64_MAX): return ERR_FIXED64_OVERFLOW
+    return Fixed64(raw = int64(q))
 ```
 
 ### 2.3.2 `CheckedDivNearestEven(a, b)`
 ```text
 if b.raw == 0: return ERR_FIXED64_DIV_ZERO
-num = int128(a.raw) << 32
-den = int128(b.raw)
-q = num / den                    // trunc toward zero in int math
-r = abs(num % den)
-half = abs(den) / 2
-if r > half: q += sign(num*den)
-if (abs(den) % 2 == 0) and r == half and (q & 1) != 0: q += sign(num*den)
-if q < INT64_MIN or q > INT64_MAX: return ERR_FIXED64_OVERFLOW
-return Fixed64(raw=int64(q))
+
+sign_neg = (a.raw < 0) XOR (b.raw < 0)
+num = uint128(a.raw >= 0 ? int128(a.raw) : -int128(a.raw)) << 32   // |a.raw| * 2^32
+den = uint128(b.raw >= 0 ? int128(b.raw) : -int128(b.raw))         // |b.raw|
+q   = num / den                                   // unsigned floor == truncate
+r   = num - q * den                               // exact remainder in [0, den)
+
+// Banker's rounding on the magnitude. Tie-detection requires the doubled
+// remainder to equal the denominator exactly, which is only possible when
+// den is even (so that den/2 is an integer that r can equal).
+two_r = r << 1
+if two_r > den:
+    q += 1
+else if two_r == den and (q & 1) != 0:
+    q += 1
+
+// Apply sign and check fit in signed 64-bit. INT64_MAX / -1 etc. trip here.
+if sign_neg:
+    if q > uint128(1) << 63: return ERR_FIXED64_OVERFLOW
+    if q == uint128(1) << 63: return Fixed64(raw=INT64_MIN)
+    return Fixed64(raw = -int64(q))
+else:
+    if q > uint128(INT64_MAX): return ERR_FIXED64_OVERFLOW
+    return Fixed64(raw = int64(q))
 ```
+
+Note on tie detection: comparing `two_r` to `den` (rather than `r` to `den/2`) avoids an integer-division step and removes the prior `(abs(den) % 2 == 0)` parity guard — `two_r == den` already implies `den` is even.
 
 ## 2.4 Addition/Subtraction Semantics
 - `CheckedAdd(a,b)` and `CheckedSub(a,b)` MUST detect signed 64-bit overflow before commit.
 - Overflow result MUST return deterministic error `ERR_FIXED64_OVERFLOW`.
-- `SaturatingAdd/Sub` MUST clamp to numeric min/max.
+- `SaturatingAdd/Sub` MUST clamp to `FIXED64_MAX` when the true mathematical result exceeds the representable maximum, and to `FIXED64_MIN` when it falls below the representable minimum. The clamp side is determined by the **sign of the true result**, not by the sign of either operand alone (e.g., `SaturatingSub(FIXED64_MIN, 1)` clamps to `FIXED64_MIN`).
 - `UncheckedAdd/Sub` MAY wrap per two's-complement machine behavior but is prohibited in simulation paths.
 
 ## 2.5 Unary and Helper Operations
@@ -74,6 +112,25 @@ return Fixed64(raw=int64(q))
 - Multiplication/division are deterministic approximations due to rescaling and rounding.
 - API docs MUST explicitly note non-associativity for mixed-scale chains caused by rounding points.
 
-## 2.8 Version History
+## 2.8 Operator Overload Semantics (Normative)
+
+When the implementation language provides operator overloading (the C# reference implementation MUST), each operator below MUST bind to the named `Checked*` API and inherit its rounding rule, failure precedence, and deterministic-error contract. Operator overloads MUST NOT bind to `Saturating*` or `Unchecked*` semantics; those families remain accessible only via their named methods.
+
+| Operator | Binds to | Failure transport |
+|---|---|---|
+| `a + b` | `CheckedAdd(a, b)` | throws `Fixed64ArithmeticException(ERR_FIXED64_OVERFLOW)` on overflow |
+| `a - b` | `CheckedSub(a, b)` | throws on overflow |
+| `a * b` | `CheckedMulNearestEven(a, b)` | throws on overflow |
+| `a / b` | `CheckedDivNearestEven(a, b)` | throws on `ERR_FIXED64_DIV_ZERO` or `ERR_FIXED64_OVERFLOW` |
+| `-a` | `CheckedNegate(a)` | throws on `FIXED64_MIN` |
+| `a == b` / `a != b` | raw-bit equality (§2.6) | total |
+| `a < b`, `a <= b`, `a > b`, `a >= b` | signed raw ordering (§2.6) | total |
+
+Rationale: gameplay/physics code paths overwhelmingly reach for `+ - * /` first; binding them to the safe, error-surfacing family aligns the operator surface with §1.5's "default APIs MUST map to checked behavior" rule. Per-operator escape hatches MUST be named methods (`SaturatingMul`, `UncheckedMul`, etc.) so that the lint policy in Appendix F can target unsafe call sites by symbol.
+
+The exception type `Fixed64ArithmeticException` MUST carry the failing error code from Appendix B as a stable numeric field; harnesses and golden vectors compare on the code, not the message text.
+
+## 2.9 Version History
+- v0.3 (2026-05-06): Rewrote §2.3.1 (mul) and §2.3.2 (div) using magnitude+sign formulation to eliminate negative-operand rounding bug; tightened §2.4 saturating clamp side to depend on true-result sign; added §2.8 operator overload binding table.
 - v0.2 (2026-05-01): Added normative behavior matrix, precedence order, and pseudocode for mul/div rounding.
 - v0.1 (2026-05-01): Initial draft aligned to outline Section 2.
