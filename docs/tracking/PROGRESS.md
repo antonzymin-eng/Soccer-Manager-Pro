@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** April 26, 2026  
+**Last Updated:** May 6, 2026  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -13,9 +13,9 @@
 **Total Specifications:** 20  
 **Approved:** 7  
 **Suspended:** 1  
-**In Review:** 0  
+**In Review:** 1  
 **In Progress:** 1  
-**Not Started:** 11
+**Not Started:** 10
 
 **Specifications approved:**
 - Ball Physics (#1, Feb 8, 2026)
@@ -53,9 +53,9 @@
 | 6 | Shot Mechanics | ~70 | ✅ APPROVED | Feb 23 | Apr 27, 2026 | All 9 sections + appendices complete; §9 v1.4 lead-developer signed off Apr 27, 2026 (pre-migration void-file blockers reclassified as moot under folder layout). 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. |
 | 7 | Perception System | ~80 | ✅ APPROVED | Feb 24 | Apr 22, 2026 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.7 — ✅ APPROVED April 22, 2026. |
 | 8 | Decision Tree | ~55+ | ✅ APPROVED | Feb 27 | Apr 27, 2026 | Sections 1–9 and appendices drafted; §9 v1.2 lead-developer signed off Apr 27, 2026 at draft-level quality gate. Comprehensive audit candidate before implementation. |
-| 9 | Fixed64 Math Library | 25-30 | ⏳ NOT STARTED | — | — | Week 9-10 target (delayed; blocked on Priority 2 sign-offs) |
+| 9 | Fixed64 Math Library | 25-30 | 🔍 IN REVIEW | Apr 28, 2026 | — | All sections (1–9 + appendices) drafted at v0.2–v0.3; Pass 2 adversarial critique fixes landed; awaiting lead developer sign-off per `fixed64-math/section-9-approval-checklist.md` (May 6, 2026 reclassification) |
 
-**Priority 2 Progress:** 25% (0 approved, 3 in review, 1 not started)
+**Priority 2 Progress:** 100% drafted (3 approved, 1 in review)
 
 ---
 
@@ -239,6 +239,49 @@
 
 ---
 
+### Weeks 13–14 (Apr 22 – May 4, 2026)
+
+**Completed:**
+- Perception System (#7) lead-developer sign-off (Apr 22) — §9 v1.7 APPROVED.
+- Lead-developer sign-off pass (Apr 27): Agent Movement (#2), Shot Mechanics (#6), Decision Tree (#8) all APPROVED. Decision Tree approved at draft-level quality gate; comprehensive audit a candidate before implementation.
+- Renumber sweep complete (Apr 26): ~115 body-text substitutions across three commits; zero remaining stale body-text references after verification grep.
+- Fixed64 stage-scope decision recorded (Apr 26): migration deferred to Stage 5+; Stage 0 uses `float` + state snapshots for single-machine determinism. CLAUDE.md and `master-development-plan.md` updated to match.
+- Collision System (#3) §9 v2.1 back-fill (Apr 26) reconciled status disagreement with trackers.
+- Annotated approval tags created locally for the seven approved specs; remote push blocked by branch-protection 403 — pending privileged credentials after merge to main.
+- Deterministic Simulation (#16) drafted ahead of formal status update; status reclassified `NOT STARTED` → `IN PROGRESS` on May 2.
+- Deterministic Simulation (#16): adversarial review + v0.7 and v0.8 fix passes (May 2). v0.8 resolves 21 issues from third-pass critique (critical KDF ambiguity, mislabeled constants, AI_NoOp underdocumentation, plus 18 medium/low). ERR-016-001 mitigated (phantom interface risk in §4.2 reframed as non-normative).
+- Deterministic Simulation (#16): third-pass adversarial critique resolved at v0.9 (May 3). ERR-016-002 filed (EntityId no-reuse cross-spec back-propagation pending against approved specs #2 and #8).
+- Deterministic Simulation (#16): fourth- and fifth-pass critique passes; Pass 6 resolves Pass 4/5 findings; §7/§8/appendices follow-up audit (5 fixes).
+
+**Status:**
+- Pass Mechanics (#5) remains the only outstanding Priority 1–2 spec (re-sign-off pending after Mar 25 audit fixes).
+- Fixed64 Math Library (#9) drafting commenced; all sections v0.2–v0.3 present.
+
+**Still Pending:**
+- Pass Mechanics (#5) re-sign-off.
+- ERR-016-002: reciprocal `XC-002-NNN` and `XC-008-NNN` references in Agent Movement (#2) and Decision Tree (#8).
+- Push the seven approved-spec tags after merge to main.
+
+---
+
+### Week 15 (May 5 – May 6, 2026)
+
+**Completed:**
+- Fixed64 Math Library (#9) Pass 2 adversarial critique landed; all 20 validated findings resolved.
+- Outline-level adversarial reviews of specs #11–#20 and Heading Mechanics (#10) completed.
+- Fixed64 Math Library (#9) reclassified `NOT STARTED` → `IN REVIEW` (May 6).
+
+**Status:**
+- 7 APPROVED, 1 SUSPENDED, 1 IN REVIEW, 1 IN PROGRESS, 10 NOT STARTED.
+
+**Still Pending:**
+- Pass Mechanics (#5) re-sign-off.
+- Fixed64 Math Library (#9) lead-developer sign-off.
+- Deterministic Simulation (#16) §9.5 implementation-readiness gate; three named golden-vector files (`hkdf-sha256-kat.md`, `siphash-2-4-kat.md`, `serialize-canonical-corpus.md`) not yet authored.
+- ERR-016-002 back-propagation.
+
+---
+
 ## MILESTONES
 
 | Milestone | Target Date | Status | Actual Date |
@@ -279,7 +322,7 @@
 | Pass Mechanics | ~65 | 100 (6.7× min) | 3+ (audit) | 100% |
 | Shot Mechanics | ~70 | 104 (6.9× min) | 3 | 100% |
 | Perception System | ~80 | 92 (1.8× unit min) | 3 | 100% |
-| Decision Tree | ~55+ | TBD | 1 | TBD |
+| Decision Tree | ~55+ | n/a (draft-level) | 1 | Draft-level (comprehensive audit candidate before implementation) |
 | **Average** | **~71** | **81** | **2.4** | **100%** |
 
 **Notes:**
@@ -339,13 +382,22 @@
 
 ---
 
-**Last Updated:** April 26, 2026  
-**Updated By:** AI Assistant (Anton review)  
-**Next Review:** After Priority 2 sign-offs complete
+**Last Updated:** May 6, 2026  
+**Updated By:** AI Assistant (tracking-doc reconciliation pass)  
+**Next Review:** After Pass Mechanics (#5) re-sign-off and Fixed64 Math (#9) sign-off
 
 ---
 
 ## CHANGELOG
+
+**May 6, 2026:**
+- Fixed64 Math Library (#9) reclassified `NOT STARTED` → `IN REVIEW` after Pass 2 adversarial critique fixes landed. All sections (1–9 + appendices) present at v0.2–v0.3; awaiting lead developer sign-off.
+- Summary counts updated: 7 APPROVED, 1 SUSPENDED, 1 IN REVIEW, 1 IN PROGRESS, 10 NOT STARTED.
+- Tracking-doc reconciliation pass: Priority 2 progress line corrected; Decision Tree quality-metrics row marked draft-level; Weeks 13–15 update log added.
+
+**May 3, 2026:**
+- Deterministic Simulation (#16): third-pass adversarial critique resolved at v0.9. ERR-016-002 filed (EntityId no-reuse cross-spec back-propagation against approved specs #2 and #8 pending).
+- Deterministic Simulation (#16) folder cleanup: `adversarial-review.md` and `third-pass-fix-log.md` superseded by consolidated `critique-log.md`.
 
 **May 2, 2026:**
 - Deterministic Simulation (#16): status updated from NOT STARTED to IN PROGRESS. All 9 sections + appendices drafted; v0.7 and v0.8 fix passes complete. v0.8 resolves 21 issues from third-pass critique (critical KDF ambiguity, mislabeled constants, AI_NoOp underdocumentation, and 18 medium/low issues). Gated at IN PROGRESS pending §9.5 implementation-readiness sign-off.

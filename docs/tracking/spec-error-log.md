@@ -6,9 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.6
-**Updated:** May 2, 2026
-**Status:** ERR-001 through ERR-012, ERR-016-001 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-002 and ERR-003 remain open at convenience priority.
+**Version:** 1.7
+**Updated:** May 3, 2026
+**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026 (EntityId no-reuse back-propagation to specs #2 and #8 pending). ERR-002, ERR-003, and ERR-016-002 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---

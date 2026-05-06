@@ -1,6 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
+**Last Updated:** May 6, 2026  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -45,19 +46,34 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 ## Current Specification Folders
 
-The project currently tracks written specifications in the following folders:
+All 20 spec folders now exist in `docs/specs/`. Status reflects authoritative classification in `SPEC_INDEX.md`. Folders marked NOT STARTED contain header-only scaffolding (outline + section-1…9 + appendices skeletons with no body content).
 
-1. `docs/specs/ball-physics/`
-2. `docs/specs/agent-movement/`
-3. `docs/specs/collision-system/`
-4. `docs/specs/first-touch/`
-5. `docs/specs/pass-mechanics/`
-6. `docs/specs/shot-mechanics/`
-7. `docs/specs/perception-system/`
-8. `docs/specs/decision-tree/`
-9. `docs/specs/deterministic-sim/` — Spec #16 (Deterministic Simulation); status: IN PROGRESS as of May 3, 2026; files: `outline.md`, `section-1.md` through `section-9-approval-checklist.md`, `appendices.md`, `critique-log.md` (consolidated review history; supersedes the former `adversarial-review.md` and `third-pass-fix-log.md`, both removed May 3, 2026)
+| # | Folder | Status |
+|---|--------|--------|
+| 1 | `docs/specs/ball-physics/` | APPROVED |
+| 2 | `docs/specs/agent-movement/` | APPROVED |
+| 3 | `docs/specs/collision-system/` | APPROVED |
+| 4 | `docs/specs/first-touch/` | APPROVED |
+| 5 | `docs/specs/pass-mechanics/` | SUSPENDED |
+| 6 | `docs/specs/shot-mechanics/` | APPROVED |
+| 7 | `docs/specs/perception-system/` | APPROVED |
+| 8 | `docs/specs/decision-tree/` | APPROVED (draft-level) |
+| 9 | `docs/specs/fixed64-math/` | IN REVIEW (since May 6, 2026) |
+| 10 | `docs/specs/heading-mechanics/` | NOT STARTED (scaffold only) |
+| 11 | `docs/specs/goalkeeper-mechanics/` | NOT STARTED (scaffold only) |
+| 12 | `docs/specs/positioning-ai/` | NOT STARTED (scaffold only) |
+| 13 | `docs/specs/pressing-ai/` | NOT STARTED (scaffold only) |
+| 14 | `docs/specs/defensive-ai/` | NOT STARTED (scaffold only) |
+| 15 | `docs/specs/attacking-ai/` | NOT STARTED (scaffold only) |
+| 16 | `docs/specs/deterministic-sim/` | IN PROGRESS (since May 2, 2026) |
+| 17 | `docs/specs/event-system/` | NOT STARTED (scaffold only) |
+| 18 | `docs/specs/performance-optimization/` | NOT STARTED (scaffold only) |
+| 19 | `docs/specs/testing-strategy/` | NOT STARTED (scaffold only) |
+| 20 | `docs/specs/code-standards/` | NOT STARTED (scaffold only) |
 
-> Additional spec folders for #9–#15, #17–#20 will be added as writing progresses.
+**Notes:**
+- Deterministic Simulation (#16) files: `outline.md`, `section-1.md` through `section-9-approval-checklist.md`, `appendices.md`, `critique-log.md` (consolidated review history; supersedes the former `adversarial-review.md` and `third-pass-fix-log.md`, both removed May 3, 2026).
+- Fixed64 Math (#9) files include `adversarial-review.md` and `adversarial-critique-pass-2.md` alongside the standard section files.
 
 ---
 
