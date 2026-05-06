@@ -8,7 +8,7 @@ authoritative remediation backlog.
 **Created:** February 19, 2026, 5:00 PM PST
 **Version:** 1.7
 **Updated:** May 3, 2026
-**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026 (EntityId no-reuse back-propagation to specs #2 and #8 pending). ERR-002, ERR-003, and ERR-016-002 remain open.
+**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---
@@ -30,7 +30,7 @@ authoritative remediation backlog.
 | ERR-011 | `SpatialHashGrid.Query()` ignores radius parameter — always returns fixed 3×3 neighbourhood | Major | 1 | ✅ Closed — Fixed in Collision_System_Spec_Section_3_v1_1.md (March 5, 2026) |
 | ERR-012 | First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences) | Minor | 1 | ✅ Closed — Fixed in first-touch/section-7.md v1.1 (March 5, 2026) |
 | ERR-016-001 | Phantom interface risk in Deterministic Simulation §4.2 | Medium | 1 | ✅ Mitigated — §4.2 reclassified as non-normative sketches in v0.7 fix pass |
-| ERR-016-002 | EntityId no-reuse cross-spec constraint not back-propagated to specs #2 and #8 | Medium | 3 | Open — filed May 3, 2026; reciprocal `XC-` references not yet added to Agent Movement (#2) or Decision Tree (#8) |
+| ERR-016-002 | EntityId no-reuse cross-spec constraint not back-propagated to specs #2 and #8 | Medium | 3 | Resolved (spec text) — May 6, 2026: `XC-002-001` added to Agent Movement #2 §2.5 (v1.1.1); `XC-008-001` added to Decision Tree #8 §1.7.3 (v1.1.1). Pending only: prose update in #16 §3.2.5. |
 
 ---
 
@@ -516,17 +516,21 @@ This is the renumbering-cascade hazard CLAUDE.md flags: a downstream spec adding
 3. File the back-propagation as a minor revision of both specs, version-bumped (no behavioral changes; constraint is consistent with how a sane allocator would behave anyway).
 4. Once both reciprocal references exist, mark this entry CLOSED.
 
-**Status:** Open — filed May 3, 2026 during third-pass adversarial critique resolution. Tracked in CLAUDE.md "Open Issues" until reciprocal references land.
+**Status:** RESOLVED (spec text only) — May 6, 2026. Reciprocal cross-spec constraints landed in:
+- Agent Movement #2 §2.5 as `XC-002-001` (v1.1.1, non-behavioral patch).
+- Decision Tree #8 §1.7.3 as `XC-008-001` (v1.1.1, non-behavioral patch).
 
-**Files requiring revision (when fix is applied):**
+Outstanding follow-up: update `docs/specs/deterministic-sim/section-3.md` §3.2.5 prose from "filed for back-propagation" to "back-propagated to #2 §2.5 and #8 §1.7.3". Tracked under the same ERR-016-002 entry but de-listed from CLAUDE.md "Open Issues" once that prose update is committed.
+
+**Files revised:**
 
 | File | Section | Change |
 |---|---|---|
-| `docs/specs/agent-movement/section-3-*.md` (allocator section) | TBD | Add `XC-002-NNN` to Deterministic Simulation §3.2.5; declare no-reuse rule |
-| `docs/specs/decision-tree/section-3-*.md` | TBD | Add `XC-008-NNN` to Deterministic Simulation §3.2.5; declare no-reuse rule |
-| `docs/specs/deterministic-sim/section-3.md` §3.2.5 | post-fix | Update note from "filed for back-propagation" to "back-propagated to #2 §X and #8 §Y" |
+| `docs/specs/agent-movement/section-1-2.md` | New §2.5 | `XC-002-001` (EntityId no-reuse). v1.1.1 patch. |
+| `docs/specs/decision-tree/section-1.md` | New §1.7.3 | `XC-008-001` (EntityId no-reuse). v1.1.1 patch. |
+| `docs/specs/deterministic-sim/section-3.md` §3.2.5 | post-fix prose | Pending: update "filed for back-propagation" line. |
 
-**Version impact:** Minor revision of Agent Movement #2 and Decision Tree #8.
+**Version impact:** Patch revision (v1.1 → v1.1.1) of Agent Movement #2 and Decision Tree #8 — no behavioral change; constraint formalizes existing sensible allocator behavior.
 
 ---
 

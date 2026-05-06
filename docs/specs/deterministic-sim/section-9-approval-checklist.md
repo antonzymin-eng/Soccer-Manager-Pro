@@ -23,9 +23,37 @@
 - [ ] Cross-spec audit rows marked complete
 
 ## 9.4 Decision
-- Status: `IN PROGRESS` (matches `SPEC_INDEX.md`; promotion to `IN REVIEW` is gated on completing §9.5 implementation-readiness item below).
-- Recommended next gate: detailed implementation-plan review with owning teams and test harness owners.
-- Sequencing constraint: cross-spec audit rows in §8.3.1 are deferred dependencies on specs #9, #17, #18, #19 (all currently `NOT STARTED`). Final approval of #16 is blocked until those specs reach at least `IN REVIEW`.
+
+**Two-tier approval model (introduced May 6, 2026).** Final approval of #16 was previously gated on four upstream specs (#9, #17, #18, #19) all reaching `IN REVIEW`. Three of those four (#17, #18, #19) are `NOT STARTED` and represent a multi-month wait. To prevent #16 from sitting as dead weight while its dependencies are written, approval is split into two tiers:
+
+### 9.4.1 Tier 1 — Conditional Approval (target: now)
+
+**Scope:** Self-contained spec content (sections §1–§7, §9.1, §9.2, §9.5 #1–#3, §9.5 #5).
+
+**Allows downstream work to proceed:**
+- Implementation of `DeterministicRngService` (§3.2, §3.4 constants), `SnapshotPayload` writer (§3.9.2), and the §3.6.1 phase ownership pipeline against the spec text as it stands today.
+- Test-harness development against §5 traceability blocks.
+- The two RFC-derived golden-vector files (§9.5 #4 (a) and (b)) — see §9.5 v1.1 footnote.
+
+**Stub-contract artifacts (`TBD-NORMATIVE`):** While #17, #18, #19 are unwritten, the cross-spec citations in §8.3.1 are placeholders. They are tagged `TBD-NORMATIVE` to mark that:
+- The interface contract on #16's side is fixed and will not change.
+- The downstream spec (when written) MUST conform to the contract as stated in #16, OR if a conflict is found during the downstream spec's drafting, #16 is reopened for a coordinated revision.
+- A `TBD-NORMATIVE` row in §8.3.1 carries the same enforceability as an approved cross-reference within #16, but its row in §8.3.1 is suffixed `[TBD-NORMATIVE: pending #N]` until the upstream spec lands.
+
+**Tier 1 status:** `CONDITIONAL APPROVAL — IN REVIEW` (proposed; lead-developer sign-off required to advance from `IN PROGRESS`).
+
+### 9.4.2 Tier 2 — Final Approval (target: when #9, #17, #18, #19 reach `IN REVIEW`)
+
+**Gating items not satisfied by Tier 1:**
+- §9.5 #4 (c) — `SerializeCanonical` reference corpus (`serialize-canonical-corpus.md`); requires §3.2.4.1 finalization.
+- §8.3.1 cross-spec audit rows for #9, #17, #18, #19 — re-audit each row against the actual upstream spec text and remove the `TBD-NORMATIVE` suffix.
+- §9.5 #4 (a) and (b) golden-vector files committed and CI-runnable against the implementation.
+
+**Tier 2 status:** `IN PROGRESS — gated on upstream specs`.
+
+### 9.4.3 Sequencing constraint (unchanged)
+
+Cross-spec audit rows in §8.3.1 are deferred dependencies on specs #9, #17, #18, #19. Tier 2 final approval is blocked until those specs reach at least `IN REVIEW`. Tier 1 is **not** blocked by this — see §9.4.1.
 
 ## 9.5 Density and Operational Depth Checklist
 The first three items measure **presence** of operational artifacts. The fourth item is the actual implementation-readiness gate; the others alone are insufficient for sign-off.
@@ -42,6 +70,7 @@ The first three items measure **presence** of operational artifacts. The fourth 
 5. The tolerance matrix placeholder in §3.4 (Tier B default comparator) has a named owner team and a review-date field entry.
 
 ## 9.6 Version History
+- **v1.1 (May 6, 2026):** Two-tier approval model introduced in §9.4 to unblock implementation work without waiting for the multi-month upstream-spec gate. Tier 1 (Conditional Approval) covers self-contained spec content; Tier 2 (Final Approval) waits for #9 / #17 / #18 / #19 to reach `IN REVIEW`. `TBD-NORMATIVE` tag introduced for §8.3.1 placeholder cross-spec citation rows. §9.5 #4 split into (a)/(b) RFC-derived KAT files (authorable now, not gated on Tier 2) and (c) `SerializeCanonical` reference corpus (Tier 2 gated).
 - **v1.0 (May 4, 2026):** Pass 6 verification annotations added to §9.5 #1 and §9.5 #2 (both criteria now mechanically satisfied at the spec level; §5.2 traceability block + T-DS-FAULT-010..014 binding added in section-5.md v1.0). #3 (Tick Orchestrator implementation-owner sign-off) and #4 (three golden-vector files) and #5 (tolerance-matrix owner team + review-date) remain unchecked — those are external artifacts.
 - **v0.9 (May 3, 2026):** Third-pass critique L-L resolution. §9.5 acceptance criterion #4 now names three concrete verification artifacts (RFC 5869 HKDF-SHA256 KAT vectors, SipHash-2-4 reference vectors, `SerializeCanonical` reference corpus), each with its required path under `golden-vectors/`. The criterion is now falsifiable.
 - **v0.8 (May 2, 2026):** §9.2 cross-reference checkbox checked (FR-DET- migration verified). §9.5 measurable acceptance criteria added for the implementation-readiness gate (D-20).

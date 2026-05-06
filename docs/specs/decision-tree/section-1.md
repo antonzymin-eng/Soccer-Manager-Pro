@@ -8,8 +8,9 @@ dependency contracts. This is the authoritative scope reference for the entire
 specification.
 
 **Created:** February 27, 2026, 12:00 PM PST  
-**Version:** 1.1  
-**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist)  
+**Updated:** May 6, 2026, 12:00 PM PST  
+**Version:** 1.1.1 (patch bump from 1.1; non-behavioral — added §1.7.3 reciprocal of ERR-016-002)  
+**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 is a post-approval non-behavioral patch.  
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
 
@@ -465,6 +466,18 @@ regardless of whether the accessed state is also available in the snapshot.
 | Fixed64 Math Library #9 | Migration of float arithmetic in utility scoring | Float arithmetic used at Stage 0; migration documented in Section 7 |
 | Pressing AI #13 (Stage 1) | Coordinated press state — DT will consult before scoring PRESS | Not defined at Stage 0; PRESS scored independently per agent |
 
+### 1.7.3 Cross-Spec Constraints
+
+**Added in v1.1.1 (May 6, 2026)** as the reciprocal of `ERR-016-002` (Deterministic Simulation #16 §3.2.5).
+
+| ID | Constraint | Source | Authority |
+|----|------------|--------|-----------|
+| `XC-008-001` | **EntityId no-reuse for the lifetime of a match.** When the AI subsystem (this spec) participates in entity-lifecycle events — agent despawn (red card, substitution off, injury removal) — the despawned `EntityId` MUST NOT be reassigned to any other agent within the same match. Per-match `EntityId` namespaces are independent. | Deterministic Simulation #16 §3.2.5, §3.2.5.2 | Read-only `[CROSS]` constraint. Decision Tree does not allocate IDs (Agent Movement #2 owns the allocator), but DT MUST NOT request or assume re-use of despawned IDs in any tactical/AI logic. |
+
+**Rationale:** RNG stream isolation in Deterministic Simulation #16 keys per-stream cursors on `(subsystem, EntityId, streamVersion)`. AI evaluations that referenced a despawned-then-recycled `EntityId` would silently break replay parity by sharing an RNG stream across two distinct logical agents. Tracked in `docs/tracking/spec-error-log.md` as `ERR-016-002`.
+
+**Implementation note (informative):** No formula or scoring change. Decision Tree consumers of `EntityId` (e.g., `PerceptionSnapshot.PerceivedAgents[i].EntityId`, `PassRequest.TargetAgentId`) treat IDs as opaque per-match-unique tokens; this constraint formalizes that assumption.
+
 ---
 
 ## 1.8 Version History
@@ -473,6 +486,7 @@ regardless of whether the accessed state is also available in the snapshot.
 |---|---|---|---|
 | 1.0 | February 27, 2026, 12:00 PM PST | Claude (AI) / Anton | Initial draft. All OQ-1 through OQ-5 from Outline v1.1 reflected. All 7 KDs locked. Stage 0 action set and known limitations formalised. BLK-001 noted as ERR-010 in error log. |
 | 1.1 | February 27, 2026 | Claude (AI) / Anton | Three corrections from self-critique: (1) `MatchContext.BallZone` ambiguity resolved — clarified as pre-computed by orchestrator; DT does not read `BallState` directly. (2) `PRESS_TRIGGER_DISTANCE` forward reference in §1.5 action table linked to §3.1. (3) `PlayerAttributes.Crossing` added to §1.7.1 attribute dependency list with note that it is required for cross-type PASS scoring in §3.1. |
+| 1.1.1 | May 6, 2026 | Claude (AI) / Anton | Non-behavioral patch. Added §1.7.3 Cross-Spec Constraints with `XC-008-001` (EntityId no-reuse for the lifetime of a match), the reciprocal of Deterministic Simulation #16 §3.2.5 / `ERR-016-002`. No formula, scoring, or contract change; constrains DT's treatment of despawned `EntityId` references only. |
 
 ---
 
