@@ -44,19 +44,24 @@
 
 ## APPROVAL STATUS
 
-Pass Mechanics #5 approval is **SUSPENDED** pending:
-1. Lead developer review of these fixes
-2. Re-run of §9 Approval Checklist against corrected file contents
-3. Lead developer re-sign-off
+Pass Mechanics #5 approval is **✅ APPROVED** as of **May 6, 2026**.
+
+Resolution path completed:
+1. ✅ All 19 audit findings (March 6, 2026) fixed per the FIX SUMMARY table above (March 25, 2026).
+2. ✅ §3.3–§3.9 follow-up audit findings F-A01 and F-A02 resolved May 6, 2026 via **option-3 hybrid**:
+   - **F-A01:** Added `spinBase` and `spinMax` columns to §3.1.4 Master Physical Profile Table (per-pass-type values reproduced from §3.4.7, which is now demoted to a `[CROSS]` reading aid). §3.1 v1.3.
+   - **F-A02:** Localized `WINDUP_FRAMES` and `FOLLOWTHROUGH_FRAMES` in §3.8.10 as state-machine-owned constants (not pass-type physical intrinsics; do not appear in §3.1.4). §3.7–§3.9 v1.1.
+3. ✅ Re-review packet (`pass-mechanics/re-review-packet.md`) walked top-to-bottom; all verification commands passed.
+4. ✅ Lead developer (Anton) re-sign-off May 6, 2026; §9 v1.4.
 
 ---
 
-## MANUAL ACTIONS REQUIRED (Anton)
+## MANUAL ACTIONS REQUIRED (Anton) — ALL CLOSED
 
-1. Replace the 12 project files with these corrected versions
-2. Review the APPROVAL SUSPENDED status and determine re-approval path
-3. Verify §3.3–§3.9 draft files (delivered March 7) meet quality bar — see Section_3_3_to_3_9_Audit_Report.md for 5 findings (2 Major, 2 Moderate, 1 Minor)
-4. Resolve F-A01 and F-A02: add spinMagnitudeBase/Max and WINDUP/FOLLOWTHROUGH columns to §3.1.4 master table (preferred), or correct citations in §3.4.7 and §3.8.10
+1. ✅ Project files replaced with corrected versions (March 25, 2026 sweep).
+2. ✅ APPROVAL SUSPENDED status reviewed; re-approval path executed.
+3. ✅ §3.3–§3.9 draft quality bar verified; 5 follow-up findings classified per `Section_3_3_to_3_9_Audit_Report.md`.
+4. ✅ F-A01 and F-A02 resolved via option-3 hybrid (May 6, 2026); see fix locations above.
 
 ## BROADER RENUMBERING ISSUE — RESOLVED (April 26, 2026)
 

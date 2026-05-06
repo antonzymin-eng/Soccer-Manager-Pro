@@ -175,21 +175,25 @@ Any profile failing these guards at load time produces a fatal initialisation er
 All values are `[GT]` unless otherwise noted. Cross-check against Ball Physics §3.1
 maximum velocity constants before finalising — specifically `BallPhysics.MAX_BALL_SPEED`.
 
-| PassType          | vMin  | vOffset | vMax  | angleMin | angleMax | distMin | distMax | Dominant Spin      | isAerial |
-|-------------------|-------|---------|-------|----------|----------|---------|---------|--------------------|----------|
-| Ground            | 5.0   | 8.0     | 18.0  | 2°       | 5°       | 3 m     | 30 m    | Topspin            | false    |
-| Driven            | 10.0  | 12.0    | 28.0  | 5°       | 12°      | 15 m    | 50 m    | Strong Topspin     | false    |
-| Lofted            | 8.0   | 9.0     | 22.0  | 20°      | 45°      | 20 m    | 60 m    | Backspin           | true     |
-| ThroughBall       | 6.0   | 8.5     | 20.0  | 2°       | 5°       | 10 m    | 40 m    | Topspin            | false    |
-| AerialThrough     | 8.0   | 9.0     | 22.0  | 25°      | 40°      | 20 m    | 50 m    | Backspin           | true     |
-| Cross (Flat)      | 8.0   | 10.0    | 26.0  | 8°       | 15°      | 20 m    | 45 m    | Sidespin           | false    |
-| Cross (Whipped)   | 8.0   | 10.0    | 24.0  | 15°      | 25°      | 25 m    | 50 m    | Strong Sidespin    | false    |
-| Cross (High)      | 8.0   | 10.0    | 20.0  | 25°      | 40°      | 25 m    | 50 m    | Backspin + Sidespin| true     |
-| Chip              | 5.0   | 6.0     | 14.0  | 45°      | 65°      | 3 m     | 20 m    | Backspin           | true     |
+| PassType          | vMin  | vOffset | vMax  | angleMin | angleMax | distMin | distMax | spinBase (rad/s) | spinMax (rad/s) | Dominant Spin      | isAerial |
+|-------------------|-------|---------|-------|----------|----------|---------|---------|------------------|-----------------|--------------------|----------|
+| Ground            | 5.0   | 8.0     | 18.0  | 2°       | 5°       | 3 m     | 30 m    | 8.0              | 15.0            | Topspin            | false    |
+| Driven            | 10.0  | 12.0    | 28.0  | 5°       | 12°      | 15 m    | 50 m    | 10.0             | 18.0            | Strong Topspin     | false    |
+| Lofted            | 8.0   | 9.0     | 22.0  | 20°      | 45°      | 20 m    | 60 m    | 8.0              | 15.0            | Backspin           | true     |
+| ThroughBall       | 6.0   | 8.5     | 20.0  | 2°       | 5°       | 10 m    | 40 m    | 8.0              | 15.0            | Topspin            | false    |
+| AerialThrough     | 8.0   | 9.0     | 22.0  | 25°      | 40°      | 20 m    | 50 m    | 8.0              | 15.0            | Backspin           | true     |
+| Cross (Flat)      | 8.0   | 10.0    | 26.0  | 8°       | 15°      | 20 m    | 45 m    | 15.0             | 25.0            | Sidespin           | false    |
+| Cross (Whipped)   | 8.0   | 10.0    | 24.0  | 15°      | 25°      | 25 m    | 50 m    | 18.0             | 28.0            | Strong Sidespin    | false    |
+| Cross (High)      | 8.0   | 10.0    | 20.0  | 25°      | 40°      | 25 m    | 50 m    | 12.0             | 22.0            | Backspin + Sidespin| true     |
+| Chip              | 5.0   | 6.0     | 14.0  | 45°      | 65°      | 3 m     | 20 m    | 12.0             | 20.0            | Backspin           | true     |
 
 > **Note:** `vMin` values revised in v1.1 to align with Appendix A.1.5 corrected constants.
 > `vOffset` field is new in v1.1 per Amendment AM-003-001. All vOffset values are [GT]
 > placeholder estimates requiring Ball Physics drag simulation validation before finalisation.
+> `spinBase` / `spinMax` columns added in v1.2 (May 6, 2026) — resolves audit finding F-A01.
+> Values authoritative; §3.4.7 reproduces them as a per-type derived view. All [GT]; the
+> `Cross (Whipped) spinMax = 28.0 rad/s` row remains pending Ball Physics Magnus validation
+> per cross-spec dependency XC-3.1-03.
 
 **⚠ Validation notes:**
 
@@ -616,6 +620,7 @@ data source for Pass Mechanics §3.2–§3.4. Key commitments:
 | 1.0 | February 20, 2026 | Claude (AI) / Anton | Initial draft. Seven pass type profiles. PhysicalProfile record definition. Master profile table. Five cross-spec validation checks. |
 | 1.1 | February 21, 2026 | Claude (AI) / Anton | Added `vOffset` field to PhysicalProfile record per Amendment AM-003-001. Added `vOffset` column to master profile table and hard physical bounds table. Added load-time validation guard for `vOffset`. Revised `vMin` values to align with Appendix A.1.5 corrected constants (previously some vMin values were higher than their corresponding vOffset, which would have been invalid at load-time). |
 | 1.2 | March 25, 2026 | Claude (AI) / Anton | Post-audit fixes: Decision Tree #7→#8 (C-03, 2 instances); Chip velocity prose corrected 8–16→5–14 m/s to match master table (M-02). |
+| 1.3 | May 6, 2026 | Claude (AI) / Anton | Resolves §3.3–§3.9 follow-up audit finding F-A01: added `spinBase` and `spinMax` columns to §3.1.4 Master Physical Profile Table, with per-pass-type values matching §3.4.7's reference table. §3.4.7 demoted to a `[CROSS]` reading aid pointing at §3.1.4. Non-behavioral with respect to formula code (values unchanged); resolves the dead-end citation. |
 
 ---
 

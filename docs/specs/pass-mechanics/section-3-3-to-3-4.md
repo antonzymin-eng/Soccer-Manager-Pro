@@ -594,9 +594,11 @@ All constants stored in `PassConstants.cs`.
 | `LOFTED_TOPSPIN_FRACTION` | 0.7 | [GT] | Design decision | Mild topspin for lofted/aerial types |
 | `CROSS_HIGH_MIX_FRACTION` | 0.5 | [GT] | Design decision | Equal topspin/sidespin split for high crosses |
 
-#### Per-Type Spin Constants (from §3.1.4 PhysicalProfile)
+#### Per-Type Spin Constants — `[CROSS]` view of §3.1.4 master table
 
-| Pass Type | spinMagnitudeBase (rad/s) | spinMagnitudeMax (rad/s) | Dominant Spin |
+The values below are reproduced from the §3.1.4 Master Physical Profile Table (`spinBase` and `spinMax` columns; added in §3.1 v1.2 to resolve audit finding F-A01). They are **authoritative in §3.1.4**; §3.4.7 lists them here only as a `[CROSS]` reading aid for spin-vector implementers. If the two tables ever diverge, §3.1.4 wins. The "Dominant Spin (effective)" column below adds the §3.4.5 mixing factors (Mild Topspin ×0.7 for lofted/aerial; ×0.5/×0.5 split for Cross High) which are §3.4-specific transformations and do not belong in §3.1.4.
+
+| Pass Type | spinMagnitudeBase (rad/s) `[CROSS §3.1.4]` | spinMagnitudeMax (rad/s) `[CROSS §3.1.4]` | Dominant Spin (effective, per §3.4.5) |
 |-----------|--------------------------|--------------------------|---------------|
 | Ground | 8.0 | 15.0 | Topspin |
 | Driven | 10.0 | 18.0 | Strong Topspin |
@@ -734,6 +736,7 @@ A full `PreferredFoot` enum replacing this bool is planned for Stage 1 (§7.1.4)
 | Version | Date | Author | Notes |
 |---------|------|--------|-------|
 | 1.0 | March 7, 2026, 12:00 PM PST | Claude (AI) / Anton | Initial draft. Two formula paths for launch angle (linear interpolation, apex-derived). TechniqueScale [0.5, 1.5] spin multiplier. Per-type spin axis assignment with sidespin sign convention. 4 apex height constants. 6 boundary verification checks per subsection. Full pseudocode for both subsystems. All formulas derived from Appendix A.2 and A.4. |
+| 1.1 | May 6, 2026 | Claude (AI) / Anton | Resolves §3.3–§3.9 follow-up audit finding F-A01: §3.4.7 per-type spin table demoted from authoritative source to a `[CROSS]` reading aid that mirrors §3.1.4 (the canonical owner after `spinBase`/`spinMax` columns were added there in §3.1 v1.3). Header reworded; values unchanged. |
 
 ---
 

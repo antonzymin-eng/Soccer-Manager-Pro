@@ -11,22 +11,23 @@
 ## PROGRESS SUMMARY
 
 **Total Specifications:** 20  
-**Approved:** 7  
-**Suspended:** 1  
+**Approved:** 8  
+**Suspended:** 0  
 **In Review:** 1  
 **In Progress:** 1  
 **Not Started:** 10
 
 **Specifications approved:**
 - Ball Physics (#1, Feb 8, 2026)
-- Agent Movement (#2, Apr 27, 2026)
+- Agent Movement (#2, Apr 27, 2026; §2.5 patch May 6, 2026 — `XC-002-001` EntityId no-reuse)
 - Collision System (#3, Feb 19, 2026 — §9 back-filled Apr 26, 2026)
 - First Touch (#4, Feb 22, 2026)
+- Pass Mechanics (#5, re-approved May 6, 2026 — original Feb 22 → suspended Mar 25 → re-approved after F-A01/F-A02 resolution)
 - Shot Mechanics (#6, Apr 27, 2026)
 - Perception System (#7, Apr 22, 2026)
-- Decision Tree (#8, Apr 27, 2026 — draft-level quality gate; comprehensive audit candidate before implementation)
+- Decision Tree (#8, Apr 27, 2026 — draft-level quality gate; comprehensive audit candidate before implementation; §1.7.3 patch May 6, 2026 — `XC-008-001` EntityId no-reuse)
 
-**Specifications suspended:** Pass Mechanics (#5) — audit March 25, 2026; fixes applied; awaiting re-review.
+**Specifications suspended:** None. Stage 0 Priority 1–2 spec set is complete.
 
 ---
 
@@ -38,11 +39,11 @@
 | 2 | Agent Movement | ~130 | ✅ APPROVED | Feb 9 | Apr 27, 2026 | All sections + appendices complete; §9 v2.1 lead-developer signed off Apr 27, 2026; §3.5 v1.4 (ERR-007); §8 v1.4 |
 | 3 | Collision System | ~50 | ✅ APPROVED | Feb 16 | Feb 19 | All sections + appendices v1.1; approval checklist signed off |
 | 4 | First Touch Mechanics | ~70 | ✅ APPROVED | Feb 19 | Feb 22 | All sections + appendices complete; ERR-001, ERR-004 resolved; §8 updated to v1.1 |
-| 5 | Pass Mechanics | ~65 | ⏸ SUSPENDED | Feb 19 | — | All sections + appendices complete; ERR-006, ERR-007, ERR-008 resolved. March 25, 2026 audit found 19 findings (5 critical); all fixes applied; awaiting lead developer re-review and re-sign-off |
+| 5 | Pass Mechanics | ~65 | ✅ APPROVED | Feb 19 | May 6, 2026 | All sections + appendices complete; ERR-006/007/008 resolved; 19 audit findings (Mar 6) and follow-up F-A01/F-A02 (May 6) all resolved per `re-review-packet.md`. §9 v1.4 lead-developer signed off May 6, 2026. |
 
 **Note:** Specs were renumbered in execution vs. original plan. First Touch completed as #4 (originally planned as #11), Pass Mechanics as #5, due to dependency priority. Collision System's original #3 slot retained.
 
-**Priority 1 Progress:** 60% (3 approved, 1 in review, 1 suspended)
+**Priority 1 Progress:** 100% (5 of 5 approved)
 
 ---
 
@@ -270,15 +271,20 @@
 - Fixed64 Math Library (#9) Pass 2 adversarial critique landed; all 20 validated findings resolved.
 - Outline-level adversarial reviews of specs #11–#20 and Heading Mechanics (#10) completed.
 - Fixed64 Math Library (#9) reclassified `NOT STARTED` → `IN REVIEW` (May 6).
+- **ERR-016-002 resolved at spec-text level (May 6):** `XC-002-001` added to Agent Movement #2 §2.5 (v1.1.1 patch); `XC-008-001` added to Decision Tree #8 §1.7.3 (v1.1.1 patch); Det Sim #16 §3.2.5 prose updated to point at the back-propagated references.
+- **Deterministic Simulation (#16) two-tier approval model introduced (§9 v1.1, May 6):** Tier 1 Conditional Approval covers self-contained spec content; Tier 2 Final Approval gated on #9/#17/#18/#19. `TBD-NORMATIVE` tag introduced for §8.3.1 placeholder rows.
+- **Two golden-vector files authored (May 6):** `hkdf-sha256-kat.md` (RFC 5869 A.1–A.3) and `siphash-2-4-kat.md` (Aumasson & Bernstein 2012 Appendix A 64-vector table) committed under `docs/specs/deterministic-sim/golden-vectors/`. `serialize-canonical-corpus.md` deferred to Det Sim Tier 2.
+- **Pass Mechanics (#5) re-approved (May 6):** F-A01 / F-A02 resolved via option-3 hybrid (`spinBase`/`spinMax` columns added to §3.1.4; `WINDUP_FRAMES`/`FOLLOWTHROUGH_FRAMES` localized in §3.8.10). Re-review packet (`pass-mechanics/re-review-packet.md`) walks all 19 audit findings + 7 additional fixes + 5 follow-up findings with verification commands. §9 v1.4 lead-developer signed off May 6, 2026. Status flipped SUSPENDED → APPROVED; Stage 0 Priority 1–2 spec set complete.
 
 **Status:**
-- 7 APPROVED, 1 SUSPENDED, 1 IN REVIEW, 1 IN PROGRESS, 10 NOT STARTED.
+- **8 APPROVED, 0 SUSPENDED, 1 IN REVIEW, 1 IN PROGRESS, 10 NOT STARTED.**
 
 **Still Pending:**
-- Pass Mechanics (#5) re-sign-off.
 - Fixed64 Math Library (#9) lead-developer sign-off.
-- Deterministic Simulation (#16) §9.5 implementation-readiness gate; three named golden-vector files (`hkdf-sha256-kat.md`, `siphash-2-4-kat.md`, `serialize-canonical-corpus.md`) not yet authored.
-- ERR-016-002 back-propagation.
+- Deterministic Simulation (#16) Tier 2 Final Approval — gated on #9 / #17 / #18 / #19 reaching `IN REVIEW`. Tier 1 Conditional Approval pursuable now.
+- `serialize-canonical-corpus.md` (Det Sim Tier 2 golden-vector file).
+- 7 approval tags created locally remain unpushed (HTTP 403 branch-protection); push after merge to main with squash-merge precondition check per CLAUDE.md OPEN ISSUES.
+- Stage 0 host platform pin in `tracking/certification-platform.md` (placeholder; required before first Det Sim §5.5 certification run).
 
 ---
 

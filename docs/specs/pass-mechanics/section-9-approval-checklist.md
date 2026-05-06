@@ -7,9 +7,9 @@ before implementation may proceed. Follows the approval checklist format establi
 Ball Physics Spec #1, Collision System Spec #3, and First Touch Spec #4.
 
 **Created:** February 21, 2026, 11:00 PM PST
-**Updated:** February 22, 2026
-**Version:** 1.2
-**Status:** ⚠️ APPROVAL SUSPENDED — Originally approved February 22, 2026. Post-approval audit (March 6, 2026) identified 19 findings including fabricated consistency checks. Re-verification required after all fixes applied.
+**Updated:** May 6, 2026
+**Version:** 1.4
+**Status:** ✅ **APPROVED** — Re-approved May 6, 2026. Originally approved February 22, 2026; suspended March 6, 2026 after comprehensive audit (19 findings); fixes applied March 25, 2026; §3.3–§3.9 follow-up audit findings F-A01 / F-A02 resolved May 6, 2026 (option-3 hybrid: `spinBase`/`spinMax` added to §3.1.4; `WINDUP_FRAMES`/`FOLLOWTHROUGH_FRAMES` localized in §3.8.10). Re-verification per `re-review-packet.md` complete.
 **Author:** Claude (AI) with Anton (Lead Developer)
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 
@@ -33,7 +33,7 @@ Ball Physics Spec #1, Collision System Spec #3, and First Touch Spec #4.
 | Pass_Mechanics_Spec_Section_7_v1_0.md | 1.0 | ✅ Complete | Stage 1–3+ extensions; 3 permanent exclusions; 11 architectural hooks |
 | Pass_Mechanics_Spec_Section_8_v1_2.md | 1.2 | ✅ Complete | 10 academic sources; 66 constants audited; ~55% gameplay-tuned ratio |
 | Pass_Mechanics_Spec_Appendices_v1_1.md | 1.1 | ✅ Complete | Appendix A (derivations), B (numerical verification), C (sensitivity analysis) |
-| Pass_Mechanics_Spec_Section_9_Approval_Checklist_v1_2.md | 1.2 | ⚠️ SUSPENDED | This document — approval suspended pending re-verification |
+| Pass_Mechanics_Spec_Section_9_Approval_Checklist_v1_2.md | 1.4 | ✅ APPROVED | This document — re-approved May 6, 2026 after F-A01/F-A02 resolution |
 
 **File count:** 15 of 15 required files present (3 new §3.3–§3.9 files added March 7, 2026).
 
@@ -352,7 +352,7 @@ These items were identified during review and accepted as non-blocking for Stage
 | 4 | Verify all 10 DOIs in §8.1 resolve correctly | Non-blocking for draft; required before final approval |
 | 5 | Agent Movement Spec #2 approved (upstream dependency) | Required before implementation; not required for spec sign-off |
 
-**Decision:** ✅ **APPROVED** — All 3 ERR blockers resolved. All 100 tests unblocked. Lead developer approval granted February 22, 2026.
+**Decision:** ✅ **APPROVED (re-approved May 6, 2026)** — All 3 ERR blockers resolved. All 100 tests unblocked. All 19 audit findings (March 6, 2026) resolved per `fix-manifest-pass-mechanics.md` and `re-review-packet.md`. §3.3–§3.9 follow-up audit findings F-A01 (spinBase/spinMax columns) and F-A02 (WINDUP/FOLLOWTHROUGH ownership) resolved May 6, 2026. Pass Mechanics #5 is the last Priority 1–2 spec to complete; Stage 0 spec set unblocked from this dimension.
 
 ---
 
@@ -389,6 +389,7 @@ These items were identified during review and accepted as non-blocking for Stage
 | 1.1 | February 22, 2026 | Updated | ERR-006, ERR-007, ERR-008 all closed. All 100 tests unblocked. Approval pending lead developer sign-off only. |
 | 1.2 | February 22, 2026 | **APPROVED** | Lead developer (Anton) sign-off granted. Pass Mechanics Specification #5 approved for implementation. |
 | 1.3 | March 25, 2026 | Claude (AI) / Anton | Post-audit fixes: Dual status replaced with APPROVAL SUSPENDED (C-05); Decision Tree #7→#8 (C-03, 1 instance); Pass type classification rewritten against §3.1.2 actual enum (C-02); V_OFFSET formula corrected to per-type [GT] constant (M-05); SV count 6→8, TR count 8→16 to match §5 actuals (M-04); blocked count 9→0 (ERR-007/008 resolved); audit status header updated. |
+| 1.4 | May 6, 2026 | **RE-APPROVED** | F-A01 / F-A02 resolved via option-3 hybrid (`spinBase`/`spinMax` columns added to §3.1.4 master table; `WINDUP_FRAMES`/`FOLLOWTHROUGH_FRAMES` localized in §3.8.10 as state-machine-owned constants). Re-review packet (`re-review-packet.md`) verification complete. Pass Mechanics #5 status flipped from APPROVAL SUSPENDED → APPROVED. Lead developer (Anton) sign-off granted May 6, 2026. |
 
 ---
 

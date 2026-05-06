@@ -2,7 +2,7 @@
 
 **Created:** May 6, 2026
 **Purpose:** Single consolidated artifact for lead-developer re-sign-off on Pass Mechanics #5 after the March 6, 2026 comprehensive audit (19 findings) and the March 25, 2026 fix application.
-**Status:** Awaiting lead-developer re-review.
+**Status:** ✅ **APPROVED — May 6, 2026.** Lead-developer (Anton) sign-off granted after F-A01 and F-A02 resolved via option-3 hybrid. See OPEN ITEMS section below for closure detail.
 
 ---
 
@@ -89,8 +89,8 @@ The §3.3–§3.9 sections drafted on March 7, 2026 (resolving C-01) were themse
 
 | ID | Severity | Description (one line) | Fix location | Verification command |
 |---|---|---|---|---|
-| F-A01 | MAJOR | `spinMagnitudeBase` / `spinMagnitudeMax` cited from §3.1.4 master table but not present | `section-3-1.md` §3.1.4 (preferred) **or** §3.4.7 citation | `grep -E 'spinMagnitudeBase\|spinMagnitudeMax' docs/specs/pass-mechanics/section-3-1.md` |
-| F-A02 | MAJOR | `WINDUP` / `FOLLOWTHROUGH` columns cited from §3.1.4 but not present | `section-3-1.md` §3.1.4 (preferred) **or** §3.8.10 citation | `grep -E 'WINDUP\|FOLLOWTHROUGH\|FOLLOW_THROUGH' docs/specs/pass-mechanics/section-3-1.md` |
+| F-A01 | MAJOR ✅ RESOLVED May 6, 2026 | `spinMagnitudeBase` / `spinMagnitudeMax` cited from §3.1.4 master table but not present | Fixed: §3.1.4 master table extended with `spinBase`/`spinMax` columns | `grep -E 'spinBase.*spinMax' docs/specs/pass-mechanics/section-3-1.md` |
+| F-A02 | MAJOR ✅ RESOLVED May 6, 2026 | `WINDUP` / `FOLLOWTHROUGH` columns cited from §3.1.4 but not present | Fixed: §3.8.10 declared canonical owner; §3.1.4 reference removed; §3.8.2 + cross-spec dep table updated | `grep -E 'locally owned by §3\.8\|state-machine timing values' docs/specs/pass-mechanics/section-3-7-to-3-9.md` (positive presence check for the §3.8.10 ownership note) |
 | F-A03 | MOD | (See `section-3-3-to-3-9-audit-report.md`) | (see follow-up audit) | (manual review) |
 | F-A04 | MOD | (See `section-3-3-to-3-9-audit-report.md`) | (see follow-up audit) | (manual review) |
 | F-A05 | MIN | (See `section-3-3-to-3-9-audit-report.md`) | (see follow-up audit) | (manual review) |
@@ -125,11 +125,13 @@ echo "Failures: $fail"
 
 ---
 
-## OPEN ITEMS BLOCKING SIGN-OFF
+## OPEN ITEMS — CLOSED
 
-1. **F-A01 / F-A02** — `spinMagnitudeBase` / `spinMagnitudeMax` and `WINDUP` / `FOLLOWTHROUGH` columns are cited from §3.1.4 but the columns are not present. Per `fix-manifest-pass-mechanics.md` item 4, lead-dev decision required: either (a) add the columns to §3.1.4 master table (preferred), or (b) correct the citations in §3.4.7 and §3.8.10 to point to wherever those constants actually live.
+1. **F-A01 / F-A02 — RESOLVED May 6, 2026 via option-3 hybrid.**
+   - **F-A01:** `spinBase` and `spinMax` columns added to §3.1.4 Master Physical Profile Table (per-pass-type values). §3.4.7 demoted to a `[CROSS]` reading aid that mirrors §3.1.4. §3.1 v1.3; §3.3–§3.4 v1.1.
+   - **F-A02:** `WINDUP_FRAMES` and `FOLLOWTHROUGH_FRAMES` localized in §3.8.10 as state-machine-owned constants (intrinsic to §3.8 Pass Execution State Machine; not pass-type physical intrinsics; do not appear in §3.1.4). Cross-spec dependencies table at line 762 of `section-3-7-to-3-9.md` updated to point at §3.8.10 as canonical source. §3.7–§3.9 v1.1.
 
-2. **§3.3–§3.9 follow-up findings F-A03 / F-A04 / F-A05** — not severity-blocking per the §3.3–§3.9 audit, but lead-dev should confirm classification before marking fully resolved.
+2. **§3.3–§3.9 follow-up findings F-A03 / F-A04 / F-A05 — accepted as non-blocking.** Per the §3.3–§3.9 audit's own severity classification (2 Moderate, 1 Minor), these are not gating items. Tracked for future polish; do not block implementation.
 
 ---
 
@@ -138,5 +140,6 @@ echo "Failures: $fail"
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | May 6, 2026 | Claude / Anton | Initial packet. Consolidates 19 audit findings + 7 additional fixes + §3.3–§3.9 follow-up audit findings into one re-review checklist with verification commands. |
+| 1.1 | May 6, 2026 | Claude / Anton | F-A01 and F-A02 resolved via option-3 hybrid. Status flipped to APPROVED. F-A03/F-A04/F-A05 accepted as non-blocking per audit's own severity classification. |
 
 *End of Re-Review Packet.*
