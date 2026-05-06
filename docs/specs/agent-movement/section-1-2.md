@@ -1,14 +1,24 @@
 # Agent Movement Specification â€” Sections 1 & 2
 
 **Created:** February 9, 2026, 12:00 AM PST  
-**Updated:** March 4, 2026, 12:00 AM PST  
-**Version:** 1.1  
-**Status:** In Review  
+**Updated:** May 6, 2026, 12:00 PM PST  
+**Version:** 1.1.1 (patch bump from 1.1; non-behavioral — added §2.5 reciprocal of ERR-016-002)  
+**Status:** Approved at v1.0 (tagged); v1.1 and v1.1.1 are post-tag patches with no functional change to the approved scope  
 **Stage:** Stage 0 â€” Physics Foundation  
 **Specification:** #2 of 20  
 **Dependencies:** Ball Physics (Spec #1), Collision System (Spec #3), Fixed64 Math Library (Spec #9)  
 **Implements:** Master Vol 1, Section 2 (Agent Physicality); Master Development Plan, Section 2.2 (Agent Movement System)
 
+
+---
+
+## v1.1.1 Changelog (May 6, 2026)
+
+**NON-BEHAVIORAL PATCH — no formula, range, or contract change.**
+
+1. Added **§2.5 Cross-Spec Constraints** — single-row `[CROSS]` table introducing `XC-002-001` (EntityId no-reuse for the lifetime of a match). This is the reciprocal of `ERR-016-002` and the normative cross-spec constraint declared in Deterministic Simulation #16 §3.2.5. No new formula, no new tunable, no impact on Stage 0 acceptance criteria. Constrains entity allocator behavior only.
+
+2. Header status updated to clarify v1.0 is the tagged/approved baseline and v1.1 / v1.1.1 are post-tag patches.
 
 ---
 
@@ -297,6 +307,20 @@ Both specs operate at 60Hz within the same physics loop. Key architectural paral
 2. Logging with context (position, velocity, state, command history)
 3. Graceful degradation (simulation continues)
 4. Debug visualization in editor builds (movement vector, state overlay, hitbox)
+
+---
+
+### 2.5 Cross-Spec Constraints
+
+**Added in v1.0.1 (May 6, 2026)** as the reciprocal of `ERR-016-002` (Deterministic Simulation #16 §3.2.5).
+
+| ID | Constraint | Source | Authority |
+|----|------------|--------|-----------|
+| `XC-002-001` | **EntityId no-reuse for the lifetime of a match.** Once an `EntityId` is despawned it MUST NOT be reassigned within the same match. Per-match `EntityId` namespaces are independent (see `PersonId` mapping in #16 §3.2.5.2). | Deterministic Simulation #16 §3.2.5, §3.2.5.2 | Read-only `[CROSS]` constraint binding the entity allocator in this spec. |
+
+**Rationale:** RNG stream isolation in Deterministic Simulation #16 keys per-stream cursors on `(subsystem, EntityId, streamVersion)`. Reusing a despawned `EntityId` within a match would silently break replay parity. Tracked in `docs/tracking/spec-error-log.md` as `ERR-016-002`.
+
+**Implementation note (informative, not normative):** This is a constraint on the entity allocator's ID-recycling policy; no formula change. Allocator implementations must either reserve fresh IDs from a monotonically increasing counter or maintain a despawn set. Violation is a hard defect, not a tunable.
 
 ---
 

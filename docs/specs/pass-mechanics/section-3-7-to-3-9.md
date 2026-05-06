@@ -293,7 +293,7 @@ PassExecutionState (enum)
 |-------|----------|-------------|---------------|-------|
 | IDLE | Indefinite | None | N/A | Default resting state |
 | INITIATING | 1 frame | Validation only | No | Single-frame transition |
-| WINDUP | Profile-dependent (4–15 frames at 60Hz) | None | **Yes** — tackle interrupt cancels | Timer from PhysicalProfile.WINDUP_FRAMES |
+| WINDUP | Profile-dependent (4–15 frames at 60Hz) | None | **Yes** — tackle interrupt cancels | Timer from `WINDUP_FRAMES[PassType]` (§3.8.10) |
 | CONTACT | 1 frame | Full §2.2.3 pipeline | **No** — ball is leaving foot | ApplyKick() called; events published |
 | FOLLOW_THROUGH | Profile-dependent (6–10 frames at 60Hz) | None | No | Cosmetic only; no physics |
 | COMPLETE | 1 frame | Cleanup | No | Transitions to IDLE |
@@ -538,7 +538,9 @@ public void Update(float matchTime)
 
 ### 3.8.10 Constants Reference
 
-#### Per-Type Timing Constants (from §3.1.4 PhysicalProfile)
+#### Per-Type Timing Constants (locally owned by §3.8)
+
+**Ownership note (resolves audit finding F-A02):** `WINDUP_FRAMES` and `FOLLOWTHROUGH_FRAMES` are **state-machine timing values** intrinsic to the §3.8 Pass Execution State Machine, not pass-type physical intrinsics. They are therefore **defined here and only here** — they do not appear in the §3.1.4 Master Physical Profile Table. Any prior text referring to a `PhysicalProfile.WINDUP_FRAMES` field or sourcing these from §3.1.4 was a citation error; the canonical source is the table below. Implementations should expose these as a per-PassType lookup keyed off `PassType` enum, not as fields of the `PhysicalProfile` record.
 
 | Pass Type | WINDUP_FRAMES | FOLLOWTHROUGH_FRAMES | Total (at 60Hz) |
 |-----------|--------------|---------------------|-----------------|
@@ -759,7 +761,7 @@ only. Only a tackle interrupt — a real game event — produces a cancellation 
 | `CollisionSystem.GetAndClearTackleFlag(agentId)` | Collision System §4 / XC-4.4-02 | ⚠ REQUIRED | §3.8 tackle handling |
 | `Ball.ApplyKick()` signature | Ball Physics §3.1.11.2 | ✅ Resolved (ERR-006) | None |
 | Event System (#17) stub interface | §4.6.3 | ✅ Defined (stub) | None |
-| PhysicalProfile.WINDUP_FRAMES, FOLLOWTHROUGH_FRAMES | §3.1.4 | ✅ Defined | None |
+| `WINDUP_FRAMES[PassType]`, `FOLLOWTHROUGH_FRAMES[PassType]` | §3.8.10 (locally owned; not on PhysicalProfile per F-A02 fix) | ✅ Defined | None |
 
 ---
 
@@ -779,6 +781,7 @@ only. Only a tackle interrupt — a real game event — produces a cancellation 
 | Version | Date | Author | Notes |
 |---------|------|--------|-------|
 | 1.0 | March 7, 2026, 2:00 PM PST | Claude (AI) / Anton | Initial draft. WeakFoot accuracy and power penalty models. Six-state machine with full transition table. Urgency-driven windup reduction. Two event struct definitions. All formulas derived from Appendix A.6. State machine architecture from §2.2.3 and §4.4.2. Event structs from §4.6.1. |
+| 1.1 | May 6, 2026 | Claude (AI) / Anton | Resolves §3.3–§3.9 follow-up audit finding F-A02: localized `WINDUP_FRAMES` and `FOLLOWTHROUGH_FRAMES` ownership entirely in §3.8.10 (state-machine timing values, not pass-type physical intrinsics). Removed dead-end "from §3.1.4 PhysicalProfile" citation; updated §3.8.2 state table and §3.8 cross-spec dependencies table to reference §3.8.10 as canonical source. Non-behavioral with respect to formula code (values unchanged). |
 
 ---
 
