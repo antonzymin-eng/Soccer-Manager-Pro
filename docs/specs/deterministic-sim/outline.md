@@ -303,3 +303,103 @@ Historical seed set (do not cite in new work):
 2. ~~Fixed64 transition trigger and coexistence plan.~~ — **Deferred to Stage 5+** per CLAUDE.md "Fixed64 stage scope decision" (April 26, 2026). Defined by Spec #9 when that spec reaches IN REVIEW (§8.3 dependency).
 3. ~~Snapshot cadence defaults vs storage budgets.~~ — **Partially resolved**: `Snapshot` phase runs every tick (§1.3.0); durable `Save` cadence is scheduled (not every-tick) and bounded by §6.10 budgets; cadence default is owned by Performance Optimization #18 (§8.3 dependency).
 4. ~~CI budget for full certification matrix frequency.~~ — **Deferred to Stage 5+** per the FR-DS-009-GATE policy (§5.5); not a Stage 0 gate.
+
+---
+
+## ADVERSARIAL REVIEW — May 6, 2026
+
+> Reviewer: AI agent (claude/review-spec-sections-JQ8jy). Scope: this outline file
+> as a historical/SUPERSEDED document. The §0 banner correctly redirects readers
+> to section files at v1.0; findings below are not blockers for the spec itself
+> (canonical content lives elsewhere) but flag residual ways this file can mislead
+> a reader who skims past the banner.
+>
+> Severity legend: **H** = the outline as it stands could mislead implementation;
+> **M** = should resolve when next touching this file; **L** = follow-up.
+
+### Verified premises
+- `SPEC_INDEX.md` lists Spec #16 status: IN PROGRESS (May 2, 2026 reconciliation).
+- `CLAUDE.md` "Open Issues" notes `EntityId` no-reuse cross-spec back-propagation
+  pending (`ERR-016-002`) and three golden-vector files named in §9.5 not yet
+  authored (`hkdf-sha256-kat.md`, `siphash-2-4-kat.md`, `serialize-canonical-corpus.md`).
+- `CLAUDE.md` "Fixed64 stage scope decision" (April 26, 2026) moved Fixed64 and
+  cross-platform parity to Stage 5+. Stage 0 uses `float`.
+- This outline §0 already declares SUPERSEDED with section files canonical.
+
+### Findings
+
+1. **[H] §1.2 Tier A definition contradicts Stage-0 float reality without
+   inline qualifier.** "Tier A (authoritative hard): bitwise exact equality
+   required" is correct in principle but, at Stage 0, only serial-path /
+   integer / fixed-encoding fields can satisfy it (per `section-1.md`
+   §1.3.1.1, Pass 3 H-C). The outline's §1.2 has no qualifier and a reader
+   skipping the SUPERSEDED banner could believe Tier A applies to all
+   fields including parallel-touched floats. Add a one-line qualifier
+   pointing to `section-1.md` §1.3.1.1 even in this superseded file.
+
+2. **[H] §10 cross-platform certification framed as in-scope.** "Freeze
+   supported: OS, CPU arch, compiler/runtime versions, build flags" reads
+   as a Stage 0 deliverable. Per CLAUDE.md "Fixed64 stage scope decision"
+   this is Stage 5+. The Open Questions §13 notes the deferral but §10
+   itself does not. A reader sampling §10 in isolation would over-scope.
+   Add a Stage-5+ banner at §10 head.
+
+3. **[M] §3.3 deterministic reduction topology is mandated without cost
+   accounting.** "Floating-point reductions MUST use deterministic reduction
+   topology (fixed tree shape), or be marked Tier B" imposes a non-trivial
+   implementation pattern across every parallel job. Section files have
+   moved past this (Tier B is the default at Stage 0 per `section-1.md`
+   §1.3.1.1) but the outline still states the stronger MUST. Cross-link
+   to the resolved policy.
+
+4. **[M] §12 Requirement ID Seed Set retains stale IDs with strikethrough.**
+   `~~FR-DS-004~~` etc. relies on markdown strikethrough rendering. Some
+   markdown viewers and grep-based searches do not visually de-emphasize
+   strikethrough. A future reader greps for `FR-DS-004` and finds it here
+   pointing at semantics that no longer exist (Pass 5 H-1). Recommend
+   replacing with `FR-DS-004 [SUPERSEDED]` plain text instead of (or
+   alongside) the strikethrough so plain-text search matches the warning.
+
+5. **[M] EntityId no-reuse constraint not surfaced.** Per CLAUDE.md
+   "Open Issues" (May 3, 2026), `ERR-016-002` declares a normative
+   cross-spec constraint binding APPROVED specs Agent Movement #2 and
+   Decision Tree #8 to guarantee EntityId lifetime uniqueness. The
+   outline §3.2 (intra-phase ordering) keys off `EntityId ascending`
+   but says nothing about reuse semantics. Even in a SUPERSEDED outline,
+   §3.2 should cross-link to `section-3.md` §3.2.5 / `ERR-016-002`.
+
+6. **[M] §9.5 acceptance-criterion artifacts unmentioned in outline.**
+   Three golden-vector files (`hkdf-sha256-kat.md`, `siphash-2-4-kat.md`,
+   `serialize-canonical-corpus.md`) are required per CLAUDE.md but the
+   outline §9 ("Determinism Regression Suite") names "fixed vector corpus"
+   only abstractly. Add explicit cross-link to the §9.5 acceptance criterion
+   so readers know the corpus is more than a placeholder.
+
+7. **[L] §8.2 trace channel "Snapshot digest chain" overlap with §5.2.**
+   §5.2 already mandates `PrevSnapshotDigest` / `CurrentSnapshotDigest` in
+   the snapshot record itself, so the digest chain is part of the snapshot
+   payload, not a separate trace channel. Outline reads as if they are
+   independent budget line items; this risks double-counting in the §8.2
+   storage budget calculation.
+
+8. **[L] §11 Approval Checklist does not pre-commit a Pass-Mechanics-style
+   programmatic verification rule.** Project history (ERR-005) shows
+   Approval Checklists are vulnerable to fabricated values. Outline §11
+   says "objective and evidence-backed" but does not require that each
+   checklist entry resolve to a programmatic check or a named file.
+   Section files at v1.0 likely already address this; outline should
+   cross-link if so.
+
+9. **[L] No reference to Pass 5 H-1 in `critique-log.md`.** §0 banner says
+   "see Pass 5 H-1 fix in critique-log.md" but the file does not list a
+   line/section anchor. Add an anchor for findability.
+
+### Recommended next steps
+- This outline is frozen (SUPERSEDED). Findings #1, #2 warrant inline
+  qualifier banners even in the frozen file because they are reader-trap
+  hazards. Findings #3–#9 can be cross-link additions only.
+- Do not re-version the outline; add an "Adversarial Review Notes" preamble
+  pointer at §0 if the qualifiers above are applied.
+- Findings about content (vs. signage) should be tracked against
+  `section-*.md` files at v1.0, not against this outline.
+
