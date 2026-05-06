@@ -1,7 +1,7 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** April 27, 2026
+**Last Updated:** May 6, 2026
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
@@ -117,7 +117,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Started:** February 2, 2026
 **Deliverables:** 20 comprehensive specification documents
 
-**Summary (April 27, 2026):** 7 approved (#1, #2, #3, #4, #6, #7, #8), 1 suspended (#5), 0 in review, 12 not started.
+**Summary (May 6, 2026):** 7 approved (#1, #2, #3, #4, #6, #7, #8), 1 suspended (#5), 1 in review (#9), 1 in progress (#16), 10 not started (#10–#15, #17–#20). Scaffold skeletons (outline + section-1…9 + appendices headers, no body content) exist for the 10 not-started specs.
 **Total specification output:** ~4.33 MB across 106 files (counts predate folder migration; see file-manifest.md)
 **Comprehensive audits completed:** 6 of 7 finished specs
 
@@ -136,7 +136,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 6. ✅ Shot Mechanics — **APPROVED** Apr 27, 2026 (~70 pages, 104 tests, audited)
 7. ✅ Perception System — **APPROVED** Apr 22, 2026 (~80 pages, 92 tests; §9 v1.7 signed off)
 8. ✅ Decision Tree — **APPROVED** Apr 27, 2026 (~55+ pages, draft-level quality gate; comprehensive audit candidate before implementation)
-9. ⏳ Fixed64 Math Library — Not started (spec writing only; implementation deferred to Stage 5)
+9. 🔍 Fixed64 Math Library — **IN REVIEW** (May 6, 2026; all sections drafted v0.2–v0.3; Pass 2 adversarial critique fixes landed; awaiting lead-developer sign-off. Implementation deferred to Stage 5.)
 
 **Priority 3 — Advanced Physics (Weeks 9-12):**
 10. ⏳ Heading Mechanics
@@ -147,7 +147,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 13. ⏳ Pressing AI
 14. ⏳ Defensive AI
 15. ⏳ Attacking AI
-16. ⏳ Deterministic Simulation
+16. 📝 Deterministic Simulation — **IN PROGRESS** (since May 2, 2026; sections 1–9 + appendices drafted at v0.9; gated at IN PROGRESS pending §9.5 implementation-readiness sign-off)
 
 **Priority 5 — Systems Architecture (Weeks 17-20):**
 17. ⏳ Event System
@@ -245,14 +245,16 @@ Soccer-Manager-Pro/
 │   ├── specs/
 │   │   ├── SPEC_INDEX.md               [Canonical spec numbering and status]
 │   │   ├── ball-physics/               [Spec #1 — APPROVED]
-│   │   ├── agent-movement/             [Spec #2 — IN REVIEW]
+│   │   ├── agent-movement/             [Spec #2 — APPROVED]
 │   │   ├── collision-system/           [Spec #3 — APPROVED]
 │   │   ├── first-touch/                [Spec #4 — APPROVED]
 │   │   ├── pass-mechanics/             [Spec #5 — SUSPENDED]
-│   │   ├── shot-mechanics/             [Spec #6 — IN REVIEW]
-│   │   ├── perception-system/          [Spec #7 — IN REVIEW]
-│   │   ├── decision-tree/              [Spec #8 — IN REVIEW]
-│   │   └── ...                         [Specs #9–#20 not started]
+│   │   ├── shot-mechanics/             [Spec #6 — APPROVED]
+│   │   ├── perception-system/          [Spec #7 — APPROVED]
+│   │   ├── decision-tree/              [Spec #8 — APPROVED (draft-level)]
+│   │   ├── fixed64-math/               [Spec #9 — IN REVIEW]
+│   │   ├── deterministic-sim/          [Spec #16 — IN PROGRESS]
+│   │   └── ...                         [Specs #10–#15, #17–#20 — scaffold-only, NOT STARTED]
 │   └── tracking/
 │       ├── PROGRESS.md                 [Schedule and milestone tracking]
 │       ├── spec-error-log.md           [Cross-spec architectural errors]
@@ -265,7 +267,7 @@ Soccer-Manager-Pro/
 
 ## NEXT IMMEDIATE STEPS
 
-### Outstanding (as of April 26, 2026)
+### Outstanding (as of May 6, 2026)
 
 **Sign-offs:**
 1. ✅ Agent Movement (#2) — APPROVED Apr 27, 2026
@@ -273,20 +275,21 @@ Soccer-Manager-Pro/
 3. ✅ Decision Tree (#8) — APPROVED Apr 27, 2026 (draft-level)
 4. ⏳ Pass Mechanics (#5) re-sign-off — still SUSPENDED since March 25
 5. ✅ Collision System (#3) status reconciled — §9 v2.1 back-filled Apr 26
+6. ⏳ Fixed64 Math Library (#9) — IN REVIEW since May 6; awaiting lead-developer sign-off
 
 **Documentation debt:**
-6. ⏳ Rebuild `docs/tracking/spec-error-log.md` (currently stub-only; ERR-001 through ERR-008 missing)
-7. ✅ Renumber sweep complete (Apr 26, ~115 body-text substitutions; zero remaining)
-8. ⏳ Reconcile `file-manifest.md` to post-migration folder names (currently flagged as pre-migration legacy)
-9. ✅ Dangling references removed from CLAUDE.md (`.claudeignore`, `MIGRATION_GUIDE.md`)
-10. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20
+7. ✅ `docs/tracking/spec-error-log.md` rebuilt; ERR-001 through ERR-012, ERR-016-001, ERR-016-002 all logged (May 3, 2026)
+8. ✅ Renumber sweep complete (Apr 26, ~115 body-text substitutions; zero remaining)
+9. ✅ `file-manifest.md` reconciled to post-migration folder names (May 6, 2026)
+10. ✅ Dangling references removed from CLAUDE.md (`.claudeignore`, `MIGRATION_GUIDE.md`)
+11. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20
+12. ⏳ ERR-016-002 back-propagation: reciprocal `XC-002-NNN` and `XC-008-NNN` references in approved specs #2 and #8
 
 **Next up:**
-11. ⏳ Push the seven approved-spec tags (blocked by branch-protection 403; needs privileged credentials)
-12. ⏳ Specify the Stage 0 snapshot-based determinism mechanism (currently asserted in CLAUDE.md but not in any spec — candidate location: Spec #16 Deterministic Simulation, or new section in #17 Event System)
-13. ⏳ Begin Fixed64 Math Library Specification (#9) — interface-only; implementation deferred to Stage 5
-14. ⏳ Begin Heading Mechanics Specification (#10)
-15. ⏳ Pass Mechanics (#5) comprehensive audit re-review and re-sign-off
+13. ⏳ Push the seven approved-spec tags (blocked by branch-protection 403; needs privileged credentials)
+14. ⏳ Deterministic Simulation (#16) §9.5 implementation-readiness gate; three named golden-vector files (`hkdf-sha256-kat.md`, `siphash-2-4-kat.md`, `serialize-canonical-corpus.md`) not yet authored
+15. ⏳ Begin Heading Mechanics Specification (#10)
+16. ⏳ Pass Mechanics (#5) comprehensive audit re-review and re-sign-off
 
 ---
 
@@ -338,8 +341,10 @@ These remain available in `/Archive/` for historical reference but should NOT be
 9. ✅ Shot Mechanics #6 approved (Apr 27)
 10. ✅ Perception System #7 approved (Apr 22)
 11. ✅ Decision Tree #8 approved (Apr 27, draft-level quality gate)
-12. ⏳ Begin Fixed64 Math Library spec (#9, interface only) and Heading Mechanics (#10) after Pass Mechanics re-sign-off
-13. No coding until all 20 specs approved
+12. 🔍 Fixed64 Math Library #9 in review (May 6) — awaiting lead-developer sign-off
+13. 📝 Deterministic Simulation #16 in progress (since May 2)
+14. ⏳ Begin Heading Mechanics (#10) after Pass Mechanics re-sign-off
+15. No coding until all 20 specs approved
 
 ---
 
@@ -465,6 +470,14 @@ git push --tags
 - Renumber sweep marked complete (Apr 26).
 - Fixed64 migration deferred to Stage 5+; Stage 0 uses float + state snapshots.
 - Pass Mechanics (#5) is the only Priority 1–2 spec still outstanding (re-sign-off after March 25 audit).
+
+**v1.7 — May 6, 2026**
+- Deterministic Simulation (#16) reclassified to IN PROGRESS (May 2, 2026).
+- Fixed64 Math Library (#9) reclassified to IN REVIEW (May 6, 2026) after Pass 2 adversarial critique fixes landed.
+- Stage 0 spec count: 7 APPROVED, 1 SUSPENDED, 1 IN REVIEW, 1 IN PROGRESS, 10 NOT STARTED.
+- Project Structure block updated to reflect approved sign-offs and current statuses; #9 and #16 broken out from the "..." catch-all.
+- Next Immediate Steps refreshed to May 6 reality; resolved documentation-debt items checked off (spec-error-log rebuild, file-manifest reconciliation).
+- ERR-016-002 (EntityId no-reuse cross-spec back-propagation) added to outstanding documentation debt.
 
 ---
 
