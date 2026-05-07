@@ -1,7 +1,451 @@
 # Code Standards & Style Guide Specification #20 — Appendices
 
-## Appendix A — Derivations
+**File:** `docs/specs/code-standards/appendices.md`
+**Purpose:** Paste-ready templates (A–B), exemplar source files (C), the single
+source-of-truth banned/required API list (D), and glossary (E) for Spec #20.
+Appendix D is the KD-6 single source of truth; §3.3, §3.4, §5.2, and §7.1 cite it
+by category name and must not reproduce its symbol lists.
 
-## Appendix B — Numerical Verification
+**Created:** May 7, 2026
+**Version:** 1.0
+**Status:** DRAFT
+**Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
+**Authoring spec:** `outline-detailed.md` v1.3, §APPENDICES
+**Appendix target lengths:** A ~50 lines · B ~30 lines · C ~150 lines ·
+D ~80 lines · E ~40 lines
 
-## Appendix C — Sensitivity Analysis
+---
+
+## Table of Contents
+
+- [Appendix A — File Header Template](#appendix-a--file-header-template)
+- [Appendix B — Version-History Block Template](#appendix-b--version-history-block-template)
+- [Appendix C — Exemplar Pair](#appendix-c--exemplar-pair)
+- [Appendix D — Banned & Required APIs (Single Source of Truth)](#appendix-d--banned--required-apis-single-source-of-truth)
+- [Appendix E — Glossary](#appendix-e--glossary)
+- [Appendix Version History](#appendix-version-history)
+
+---
+
+## Appendix A — File Header Template
+
+Every `.cs` file under `src/` **MUST** open with the following block (FR-CS-056,
+FR-CS-057). Copy verbatim; replace angle-bracket placeholders. Do not omit fields.
+
+```csharp
+// ============================================================================
+// File:     <path relative to repo root, e.g. src/ball-physics/BallPhysicsConstants.cs>
+// Created:  <YYYY-MM-DD>
+// Modified: <YYYY-MM-DD>   (update on every change; matches latest version-history row)
+// Author:   <name or "Claude Code / <lead-developer>">
+// Specs:    Spec #20 §3.6.2 (style & docs governance)
+//           <Spec #N §S.S — the spec this file implements, if applicable>
+// Purpose:  <One or two sentences. What this file declares and why it exists.
+//            Example: "Declares all compile-time and tunable constants for the
+//            Ball Physics subsystem (Spec #1). Consumed read-only by BallStateSystem.">
+// ============================================================================
+```
+
+**Field rules (FR-CS-057):**
+
+| Field | Rule |
+|---|---|
+| `File:` | Path from repo root. Must match actual filesystem path. |
+| `Created:` | ISO 8601 date the file was first committed. Never updated. |
+| `Modified:` | ISO 8601 date of the last change. Must match the latest row in the version-history block. |
+| `Author:` | Person or agent who authored the file. Add co-authors on the same line, comma-separated. |
+| `Specs:` | One line per specification the file is governed by or implements. Always includes `Spec #20 §3.6.2`. |
+| `Purpose:` | ≤ 2 sentences. States *what* the file declares and *why* it exists. No implementation detail. |
+
+**Populated example** (for a hypothetical `BallPhysicsConstants.cs`):
+
+```csharp
+// ============================================================================
+// File:     src/ball-physics/BallPhysicsConstants.cs
+// Created:  2026-10-01
+// Modified: 2026-10-01
+// Author:   Claude Code / Anton
+// Specs:    Spec #1 §2.1 (Ball Physics — constant definitions)
+//           Spec #20 §3.6.2 (style & docs governance)
+// Purpose:  Declares all compile-time and tunable constants for Ball Physics
+//           (Spec #1). Consumed read-only by BallStateSystem and related structs.
+// ============================================================================
+```
+
+---
+
+## Appendix B — Version-History Block Template
+
+Every `.cs` file under `src/` **MUST** end with the following region block
+(FR-CS-058, FR-CS-059). The block is always the last item in the file, after all
+type declarations. Add one row per modification; never delete rows.
+
+```csharp
+#region VersionHistory
+// Version | Date       | Author           | Change
+// --------|------------|------------------|------------------------------------------
+// 1.0     | YYYY-MM-DD | <author>         | Initial file.
+// 1.1     | YYYY-MM-DD | <author>         | <One-line description of what changed and why.>
+#endregion
+```
+
+**Column rules:**
+
+| Column | Rule |
+|---|---|
+| `Version` | Semantic version starting at `1.0`. Patch (`1.0.1`) for non-behavioural changes; minor (`1.1`) for additive changes; major (`2.0`) for breaking changes to public surface or formula. |
+| `Date` | ISO 8601 date the change was committed. |
+| `Author` | Person or agent who made the change. |
+| `Change` | One line: the *what* and *why*. Terse is fine; "Fixed typo" is not — say what was wrong and what was corrected. |
+
+**Populated example:**
+
+```csharp
+#region VersionHistory
+// Version | Date       | Author           | Change
+// --------|------------|------------------|------------------------------------------
+// 1.0     | 2026-10-01 | Claude Code/Anton | Initial constants file; BALL_RADIUS,
+//         |            |                  | DRAG_COEFFICIENT, MAX_SUBSTEPS declared.
+// 1.1     | 2026-10-15 | Anton            | Added TERMINAL_VELOCITY [EST]; tracking
+//         |            |                  | entry added to spec-error-log.md.
+#endregion
+```
+
+---
+
+## Appendix C — Exemplar Pair
+
+Two hypothetical files demonstrating every §3 rule applied simultaneously. These are
+**illustrative only** — they are not production source files and will be superseded by
+actual Stage 1 code. Every §3 rule is visible with an inline `// §N.N` pointer.
+
+Rule coverage map:
+
+| Rule area | FR-CS-### | Demonstrated in |
+|---|---|---|
+| Naming | FR-CS-001–004 | `ExemplarConstants.cs` and `ExemplarStruct.cs` |
+| File layout | FR-CS-005–007 | Both files |
+| Language features | FR-CS-009–010 | `ExemplarStruct.cs` |
+| Whitespace/braces | FR-CS-011–013 | Both files |
+| Access modifiers | FR-CS-014–015 | Both files |
+| Constant catalogue | FR-CS-016–025 | `ExemplarConstants.cs` |
+| Allocation discipline | FR-CS-026–035 | `ExemplarStruct.cs` (Update method) |
+| Determinism | FR-CS-036–045 | `ExemplarStruct.cs` (MatchClock, unchecked) |
+| Dependency direction | FR-CS-046–055 | `ExemplarStruct.cs` (struct event, no singletons) |
+| Documentation | FR-CS-056–065 | Both files (headers, XML docs, XC- comments) |
+| Performance rules | FR-CS-066–070 | `ExemplarStruct.cs` (ProfilerMarker, sealed) |
+| Numeric type | FR-CS-071–073 | `ExemplarStruct.cs` (float throughout) |
+
+---
+
+### C.1 — `ExemplarConstants.cs`
+
+```csharp
+// ============================================================================
+// File:     src/ball-physics/BallPhysicsConstants.cs
+// Created:  2026-10-01
+// Modified: 2026-10-01
+// Author:   Claude Code / Anton
+// Specs:    Spec #1 §2.1 (Ball Physics — constant definitions)
+//           Spec #20 §3.6.2 (style & docs governance)
+// Purpose:  Declares all compile-time and tunable constants for Ball Physics
+//           (Spec #1). Consumed read-only by BallStateSystem and related structs.
+// ============================================================================
+
+// §3.1.2 — using order: System → Unity → project
+using UnityEngine;
+using TacticalDirector.BallPhysics;
+
+namespace TacticalDirector.BallPhysics   // §3.1.2, §4.3 — one namespace per assembly
+{
+    /// <summary>
+    /// All constants for Ball Physics Spec #1. Organised by tag per §4.2.
+    /// </summary>
+    public static class BallPhysicsConstants   // §3.1.1 — PascalCase; §3.1.5 — explicit public
+    {
+        // ── [FIXED] ── compile-time literals; ALL_CAPS; public const ──────────
+        // §3.2.3 (FR-CS-018), §3.1.1 (FR-CS-004)
+
+        /// <summary>[FIXED] Ball radius in metres. Spec #1 §2.1.</summary>
+        public const float BALL_RADIUS = 0.11f;       // §3.2.3 — [FIXED] → public const
+
+        /// <summary>[FIXED] Aerodynamic drag coefficient (dimensionless). Spec #1 §3.2 FM-001.</summary>
+        public const float DRAG_COEFFICIENT = 0.47f;
+
+        // ── [DERIVED] ── static readonly; formula comment required ────────────
+        // §3.2.3 (FR-CS-021)
+
+        /// <summary>
+        /// [DERIVED] Ball centre height when resting on ground (m).
+        /// Formula: BALL_GROUND_HEIGHT = BALL_RADIUS. Spec #1 §2.1.
+        /// </summary>
+        public static readonly float BALL_GROUND_HEIGHT = BALL_RADIUS;  // §3.2.3
+
+        // ── [CROSS] ── read-only mirror; cite authoritative source ────────────
+        // §3.2.3 (FR-CS-022)
+
+        /// <summary>
+        /// [CROSS] Physics loop tick rate (Hz).
+        /// Authoritative source: root CLAUDE.md — "Heartbeat Tick Rate".
+        /// Never set independently in this file.
+        /// </summary>
+        public static readonly float PHYSICS_TICK_HZ = 60.0f;           // §3.2.3
+
+        // ── [GT] ── static readonly; loaded from tunable config at boot ───────
+        // §3.2.3 (FR-CS-019)
+
+        /// <summary>
+        /// [GT] Maximum drag-integration substeps per frame.
+        /// Loaded from GameplayConfig at boot; not a compile-time literal.
+        /// </summary>
+        public static readonly int MAX_SUBSTEPS = 4;   // §3.2.3 — placeholder; config-loaded
+
+        // ── [EST] ── static readonly; TODO validate; spec-error-log entry ─────
+        // §3.2.3 (FR-CS-020)
+
+        /// <summary>
+        /// [EST] Estimated terminal velocity (m/s) for a regulation football.
+        /// Must be validated against wind-tunnel data before Stage 1.
+        /// </summary>
+        public static readonly float TERMINAL_VELOCITY = 38.0f; // TODO: validate — spec-error-log entry required (FR-CS-020)
+    }
+}
+
+#region VersionHistory
+// Version | Date       | Author           | Change
+// --------|------------|------------------|------------------------------------------
+// 1.0     | 2026-10-01 | Claude Code/Anton | Initial file. All five tag types demonstrated.
+#endregion
+```
+
+---
+
+### C.2 — `ExemplarStruct.cs`
+
+```csharp
+// ============================================================================
+// File:     src/ball-physics/BallStateSystem.cs
+// Created:  2026-10-01
+// Modified: 2026-10-01
+// Author:   Claude Code / Anton
+// Specs:    Spec #1 §3.x (Ball Physics — state update system)
+//           Spec #20 §3.6.2 (style & docs governance)
+// Purpose:  Advances BallState by one physics frame. Called at 60 Hz on the
+//           physics update path; must satisfy zero-allocation budget (FR-CS-026).
+// ============================================================================
+
+// §3.1.2 — using order: System → Unity → project
+using UnityEngine;
+using UnityEngine.Profiling;
+using TacticalDirector.BallPhysics;
+using TacticalDirector.Shared;          // MatchClock lives here
+
+namespace TacticalDirector.BallPhysics  // §3.1.2, §4.3 — flat namespace; folder ≠ sub-namespace
+{
+    /// <summary>
+    /// Advances BallState on the 60 Hz physics update path.
+    /// XC-001-001: depends on BallState layout defined in Ball Physics Spec #1 §3.1.
+    /// </summary>
+    public sealed class BallStateSystem  // §3.1.1 — PascalCase; sealed = no virtual dispatch (FR-CS-068)
+    {
+        // §3.4.3 (FR-CS-042) — time injected; not DateTime.Now
+        // §3.5.5 (FR-CS-053) — no static mutable singleton
+        private readonly MatchClock _clock;   // §3.1.3 — _camelCase private field (FR-CS-003)
+
+        // §6.3 (FR-CS-070) — ProfilerMarker declared once; reused each frame (zero alloc)
+        private static readonly ProfilerMarker s_updateMarker =
+            new ProfilerMarker("BallPhysics.BallStateSystem.Update");  // naming: <Spec>.<Method>
+
+        /// <summary>
+        /// Initialises BallStateSystem. All dependencies supplied by caller;
+        /// no service-locator or ambient-context pattern (FR-CS-051, FR-CS-052).
+        /// </summary>
+        public BallStateSystem(MatchClock clock)  // §3.1.1 — PascalCase; §3.1.4 — Allman braces
+        {
+            _clock = clock;
+        }
+
+        /// <summary>
+        /// Advances ball state by one physics frame (called at 60 Hz).
+        /// Ref-passed struct: no managed allocation on call path (FR-CS-033).
+        /// FM-001: v' = v * (1 − DRAG_COEFFICIENT × dt).
+        /// </summary>
+        public void Update(ref BallState state)  // §3.3.3 — ref-passed struct (FR-CS-033)
+        {
+            using (s_updateMarker.Auto())  // §6.3 (FR-CS-070) — profiler scope wraps full method
+            {
+                // §3.7.1 (FR-CS-071) — float throughout; no double
+                float dt = _clock.DeltaTime;  // §3.4.3 (FR-CS-042) — MatchClock, not DateTime.Now
+
+                // Inner hot-path loop: no boxing, no LINQ, no virtual calls (FR-CS-027–032, FR-CS-068)
+                // §3.2.4 (FR-CS-024) — loop bounds 0 / i++ are permitted literals
+                for (int i = 0; i < BallPhysicsConstants.MAX_SUBSTEPS; i++)  // §3.2.3 — named constant
+                {
+                    ApplyDrag(ref state, dt);
+                }
+            }
+        }
+
+        // §3.1.5 (FR-CS-014) — explicit private; not implicit
+        private static void ApplyDrag(ref BallState state, float dt)
+        {
+            // FM-001: drag model — magnitude *= (1 − DRAG_COEFFICIENT × dt)
+            // §3.2.3 (FR-CS-023) — no magic number; DRAG_COEFFICIENT from catalogue
+            state.Velocity *= 1.0f - BallPhysicsConstants.DRAG_COEFFICIENT * dt;
+        }
+
+        // §3.5.4 (FR-CS-050) — upward cross-spec event dispatched as struct, not delegate
+        // §3.5.2 (FR-CS-047) — struct event flows upward from Physics to Mechanics layer
+        private static void PublishBounceEvent(in BallState state, float impactSpeed)
+        {
+            // BallBounceEvent is a struct; dispatched via pre-allocated event buffer
+            // §3.3.3 (FR-CS-033) — struct events avoid delegate allocation
+            var evt = new BallBounceEvent(state.Position, impactSpeed);
+            BallEventBus.Publish(ref evt);
+        }
+    }
+}
+
+#region VersionHistory
+// Version | Date       | Author           | Change
+// --------|------------|------------------|------------------------------------------
+// 1.0     | 2026-10-01 | Claude Code/Anton | Initial exemplar. All §3 and §6 rules demonstrated.
+#endregion
+```
+
+---
+
+## Appendix D — Banned & Required APIs (Single Source of Truth)
+
+> **KD-6 — Single source of truth.** This table is the sole authoritative list of
+> banned and required symbols for Spec #20. Sections §3.3, §3.4, §5.2, and §7.1 cite
+> categories from this table by name; they do **not** reproduce symbol lists. Any
+> addition or removal of an entry **MUST** update this table first, with a version bump
+> to this file.
+>
+> At Stage 1, the "det-banned" and "alloc-hot-path" categories become the seed for
+> `BannedSymbols.txt`. The "det-required-apis" category seeds custom Roslyn analyzer
+> rules. The "det-required-patterns" category cannot be symbol-encoded and requires
+> custom analyzer logic.
+
+---
+
+### D.1 — Category: `det-banned` (game-logic code)
+
+Symbols in this category **MUST NOT** appear in game-state assemblies (FR-CS-036–040).
+The benchmark carve-out in §3.9.5 permits `Stopwatch.GetTimestamp` exclusively in files
+marked `// benchmark-only` and excluded from the game-state assembly graph.
+
+| Symbol / construct | FR-CS-### | Root `CLAUDE.md` citation | Stage 1 analyzer ID |
+|---|---|---|---|
+| `System.Random` (constructor or static `Shared`) | FR-CS-036 | "When Writing Code" — "no `System.Random`" | `CS-DET-001` (placeholder) |
+| `System.Security.Cryptography.RandomNumberGenerator` | FR-CS-036 | "When Writing Code" — "no `System.Random`" | `CS-DET-002` (placeholder) |
+| `System.DateTime.Now` | FR-CS-037 | "When Writing Code" — "no `DateTime.Now`" | `CS-DET-003` (placeholder) |
+| `System.DateTime.UtcNow` | FR-CS-037 | "When Writing Code" — "no `DateTime.Now`" | `CS-DET-004` (placeholder) |
+| `System.Diagnostics.Stopwatch.GetTimestamp` *(game-state assemblies only; see §3.9.5)* | FR-CS-037 | "When Writing Code" — "no `DateTime.Now`" | `CS-DET-005` (placeholder) |
+| `System.Environment.TickCount` / `TickCount64` | FR-CS-037 | "When Writing Code" — "no `DateTime.Now`" | `CS-DET-006` (placeholder) |
+| `System.Guid.NewGuid()` | FR-CS-038 | "When Writing Code" — "no `DateTime.Now` in game logic" (process-unique IDs) | `CS-DET-007` (placeholder) |
+| `System.Threading.Tasks.Task.Run` | FR-CS-039 | "When Writing Code" — determinism requirement | `CS-DET-008` (placeholder) |
+| `System.Threading.Tasks.Parallel.For` | FR-CS-039 | "When Writing Code" — determinism requirement | `CS-DET-009` (placeholder) |
+| `System.Threading.Tasks.Parallel.ForEach` | FR-CS-039 | "When Writing Code" — determinism requirement | `CS-DET-010` (placeholder) |
+| `System.Linq.ParallelEnumerable.AsParallel()` | FR-CS-039 | "When Writing Code" — determinism requirement | `CS-DET-011` (placeholder) |
+| Hardware-intrinsic FMA (`System.Runtime.Intrinsics.*Fma*`) | FR-CS-040 | "When Writing Code" — float + determinism rules | `CS-DET-012` (placeholder) |
+| `dynamic` keyword in game-logic code | FR-CS-010 | "When Writing Code" — banned language feature | `CS-DET-013` (placeholder) |
+
+---
+
+### D.2 — Category: `alloc-hot-path` (per-frame / hot-path code)
+
+Constructs in this category **MUST NOT** appear in hot-path code (FR-CS-026–034).
+"Hot-path code" means any code called on the 60 Hz physics/render update path.
+
+| Symbol / construct | FR-CS-### | Notes | Stage 1 analyzer ID |
+|---|---|---|---|
+| Boxing: value type cast to `object` or to a non-`struct` `interface` | FR-CS-027 | Includes passing a struct to an `IComparable` parameter | `CS-ALLOC-001` (placeholder) |
+| LINQ-to-objects fluent chain (e.g., `.Where(…).Select(…)`, `.ToList()`) | FR-CS-028 | Any `System.Linq` operator that returns `IEnumerable<T>` or allocates | `CS-ALLOC-002` (placeholder) |
+| `params` array parameter on a hot-path method | FR-CS-029 | Declaration-site ban; callers cannot opt out | `CS-ALLOC-003` (placeholder) |
+| `string.Format(…)` | FR-CS-030 | Allocates a new string | `CS-ALLOC-004` (placeholder) |
+| String interpolation (`$"…"`) containing non-constant expressions | FR-CS-030 | Equivalent to `string.Format` at runtime | `CS-ALLOC-005` (placeholder) |
+| String concatenation (`+` with non-constant operands) | FR-CS-030 | Allocates a new string | `CS-ALLOC-006` (placeholder) |
+| Closure capturing a local variable (lambda or anonymous method) | FR-CS-031 | Compiler generates a heap-allocated display class | `CS-ALLOC-007` (placeholder) |
+| `foreach` over a non-`struct` enumerator (e.g., `List<T>`, `Dictionary<K,V>`) | FR-CS-032 | Boxes the enumerator on each loop entry | `CS-ALLOC-008` (placeholder) |
+| `System.Reflection` APIs (`Type.GetType`, `Activator.CreateInstance`, `MethodInfo.Invoke`, etc.) | FR-CS-034 | Reflection is both allocating and non-deterministic in ordering | `CS-ALLOC-009` (placeholder) |
+
+---
+
+### D.3 — Category: `det-required-apis` (game-logic code)
+
+The following APIs **MUST** be used in place of their det-banned equivalents
+(FR-CS-041–043, FR-CS-070).
+
+| API | FR-CS-### | Purpose | Root `CLAUDE.md` citation |
+|---|---|---|---|
+| `SplitMix64` (project RNG helper class/struct) | FR-CS-041 | Deterministic random-number generation seeded from `matchSeed + agentId + frameNumber` | "When Writing Code" — "SplitMix64 for deterministic RNG" |
+| `MatchClock` (injected time service) | FR-CS-042 | Deterministic simulation time; replaces all wall-clock APIs | "When Writing Code" — "no `DateTime.Now`" |
+| Project math helper (`TacticalDirector.MathHelper` or wrapper around `UnityEngine.Mathf`) | FR-CS-043 | Trig and math operations; `System.Math` requires sign-off | "When Writing Code" — determinism requirement |
+| `UnityEngine.Profiling.ProfilerMarker` | FR-CS-070 | Performance profiling marker around every system Update | `development-best-practices.md` profiling section |
+
+---
+
+### D.4 — Category: `det-required-patterns` (game-logic code)
+
+The following patterns **MUST** be applied where applicable (FR-CS-044–045). These are
+C# language constructs, not named API symbols; they cannot be encoded directly in
+`BannedSymbols.txt` and require custom analyzer logic at Stage 1.
+
+| Pattern | FR-CS-### | Application rule | Root `CLAUDE.md` citation |
+|---|---|---|---|
+| `unchecked { … }` scope around 64-bit intermediate multiplication | FR-CS-044 | Applied to every 64-bit integer multiplication in seed or hash chains in C# game-logic code; accompanied by a one-line comment citing §3.4.4 | "When Writing Code" — SplitMix64 masking |
+| `& 0xFFFFFFFFFFFFFFFF` mask on intermediate 64-bit multiplication; omit `UL` suffix | FR-CS-045 | Applied in Python (or other non-C#) tooling that mirrors `[FIXED]` / `[DERIVED]` constants | "When Writing Code" — "In Python tooling: omit `UL` suffix … mask all intermediate multiplications with `& 0xFFFFFFFFFFFFFFFF`" |
+
+---
+
+### D.5 — Footer
+
+This table is the **seed** for Stage 1 `BannedSymbols.txt` (categories `det-banned`
+and `alloc-hot-path`) and for the custom Roslyn analyzer ruleset (category
+`det-required-apis`). No other document in this repository may declare a banned or
+required API symbol without first adding it to this table and bumping this file's
+version. Violations of this rule constitute a KD-6 breach.
+
+The placeholder analyzer IDs (`CS-DET-NNN`, `CS-ALLOC-NNN`) are reserved prefixes.
+Concrete IDs will be assigned when the analyzer project is created at the Stage 0+1
+transition (§5.2, §7.1).
+
+---
+
+## Appendix E — Glossary
+
+This glossary defines only terms specific to Spec #20. Physics, AI, and simulation
+terms are defined in their owning specifications and cited here by reference rather than
+redefined.
+
+| Term | Definition |
+|---|---|
+| **Constants catalogue file** | A `.cs` file whose sole purpose is to declare named constants for one specification (or the project as a whole). Named `<SpecName>Constants.cs` or `ProjectConstants.cs`. No logic, no type declarations other than the enclosing `static class`. See §4.2. |
+| **det-banned** | The category name (Appendix D §D.1) for APIs and constructs prohibited in game-logic code because their use would break deterministic replay. References in §3.4.2 and §5.2. |
+| **det-required-apis** | The category name (Appendix D §D.3) for APIs that **MUST** be used in place of their det-banned equivalents. References in §3.4.3 and §5.2. |
+| **det-required-patterns** | The category name (Appendix D §D.4) for C# language patterns (not named API symbols) that **MUST** be applied to preserve determinism. References in §3.4.3 and §5.2. |
+| **alloc-hot-path** | The category name (Appendix D §D.2) for constructs that allocate managed memory and are prohibited in hot-path code. References in §3.3.2 and §5.2. |
+| **Exception with sign-off** | A lead-developer-recorded override permitting temporary deviation from a MUST or MUST NOT FR. Defined in §2.1 and §2.3 Mode 3. Applies to the specific use site only; expires at next refactor of the affected file. |
+| **Game-loop method** | Any method on the 60 Hz physics/render update path. Subject to the zero-allocation budget (FR-CS-026, FR-CS-066) and hot-path rules (FR-CS-027–034, FR-CS-068–069). The 10 Hz AI/tactical loop is also covered when its methods are called from within a 60 Hz frame. See root `CLAUDE.md` — "Heartbeat Tick Rate" for the authoritative loop definitions. |
+| **Game-state assembly** | A Unity Assembly Definition (`.asmdef`) that participates in the deterministic simulation. All assemblies under the Physics, Mechanics, and AI layers (§3.5.2) are game-state assemblies. Editor-only and benchmark assemblies are not. |
+| **Hot path** | Code executed on every physics or AI tick — i.e., code called 10–60 times per second during active gameplay. Boxing, LINQ, `string.Format`, closures, and reflection in hot-path code violate allocation rules. See §3.3 and §6.2. |
+| **Magic number** | A literal numeric value in formula, system, or struct code that is not referenced through a named constant in a catalogue file. Prohibited by FR-CS-023. Permitted exceptions enumerated in FR-CS-024. |
+| **Per-frame path** | Synonym for "game-loop method" used in the context of allocation rules (§3.3.2, FR-CS-030). Emphasises the repetition rate: code on this path executes every rendered frame at 60 Hz. |
+| **Phantom interface** | An `interface` definition whose consumer side is unspecified or not yet written. Prohibited by FR-CS-049; cites ERR-001 and ERR-004. See root `CLAUDE.md` — "Interface Design Principle". |
+| **Stage 0+1 transition** | The development milestone at which the first real Stage 1 source code is written. This transition activates the tooling deliverables in §5.2 and §7.1 (Roslyn analyzers, `.editorconfig`, `BannedSymbols.txt`, `src/CLAUDE.md`). |
+| **System-level Update method** | The top-level entry point of a simulation system, called once per physics or AI tick. Required to be wrapped in a `ProfilerMarker.Auto()` scope per FR-CS-070. |
+
+---
+
+## Appendix Version History
+
+| Version | Date | Author | Notes | Reviewer |
+|---|---|---|---|---|
+| 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §APPENDICES. Appendix D authored to KD-6 single-source-of-truth standard. All five appendices present. | — |
+
+---
+
+*End of Appendices — Code Standards & Style Guide Specification #20*
+*Tactical Director — Specification #20 of 20 | Stage 0: Physics Foundation*
