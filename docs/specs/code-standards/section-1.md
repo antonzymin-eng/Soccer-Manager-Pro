@@ -1,11 +1,273 @@
 # Code Standards & Style Guide Specification #20 — Section 1: Purpose & Scope
 
+**File:** `docs/specs/code-standards/section-1.md`
+**Purpose:** Defines the scope boundary, authority matrix, key design decisions, and
+dependency contracts for Spec #20. Authoritative reference for what this specification
+owns, what it cites, and what is out of scope.
+
+**Created:** May 7, 2026
+**Version:** 1.0
+**Status:** DRAFT
+**Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
+**Authoring spec:** `outline-detailed.md` v1.3, §SECTION 1
+**Subsection target lengths:** §1.1 ~40 lines · §1.2 ~30 lines · §1.3 ~80 lines ·
+§1.4 ~25 lines
+
+---
+
+## Table of Contents
+
+- [1.1 What This Specification Covers](#11-what-this-specification-covers)
+- [1.2 What Is Out of Scope](#12-what-is-out-of-scope)
+- [1.3 Key Design Decisions](#13-key-design-decisions)
+- [1.4 Dependencies and Integration Contracts](#14-dependencies-and-integration-contracts)
+- [1.5 Version History](#15-version-history)
+
+---
+
 ## 1.1 What This Specification Covers
+
+Spec #20 (Code Standards & Style Guide) is the governance specification for every
+Stage 1+ C# source file in the **Tactical Director** project. It establishes the
+enforceable rules that all implementation code must satisfy before merging — covering
+style, constant tagging at code level, allocation discipline, determinism in code,
+dependency direction, documentation conventions, and conformance verification.
+
+This specification governs the following eight areas:
+
+1. **C# style** — naming conventions, file layout, language-feature gating, whitespace
+   and braces, access modifiers.
+2. **Constant declaration and tagging** — code-level binding rules for the five tag
+   types defined in root `CLAUDE.md`; tag-to-storage-class mapping; magic-number
+   prohibition.
+3. **Allocation discipline** — zero-allocation game loop; banned allocating constructs
+   in hot paths; required allocation-free patterns.
+4. **Determinism in code** — banned non-deterministic APIs; required deterministic
+   alternatives; 64-bit multiplication semantics for both C# game logic and Python
+   tooling that mirrors C# constants.
+5. **Dependency direction and interface design** — layer order; interface placement
+   rules; anti-patterns prohibited in game-state code.
+6. **Documentation conventions** — file header template; version-history block; XML
+   doc comments; cross-reference comment style.
+7. **Conformance verification model** — RFC 2119 conformance levels; failure-to-comply
+   modes; Stage 0 manual review; Stage 0+1 tooling transition.
+8. **Code performance rules** — allocation budgets that game-loop code must achieve;
+   hot-path rules; profiling hook requirements; complexity targets.
+
+**Applicability:**
+
+- **Primary scope:** Every `.cs` file under `src/`. All rules in this specification
+  apply unless a carve-out in §3.9 explicitly covers the file's role.
+- **Secondary scope (determinism-only):** Non-`.cs` tooling — Python scripts or
+  other-language helpers — that mirrors, generates, or verifies `[FIXED]` or
+  `[DERIVED]` C# constants is bound exclusively by §3.4.4's 64-bit multiplication
+  masking rule. No other rule in this specification applies to non-`.cs` files.
+
+Rule-application carve-outs for generated code, third-party imports, editor-only
+tooling, test fixtures, and benchmark scaffolds are enumerated in §3.9.
+
+---
 
 ## 1.2 What Is Out of Scope
 
+The following areas are explicitly excluded from Spec #20. Each entry names the
+authoritative owner.
+
+| Excluded area | Authoritative owner |
+|---|---|
+| Build commands, CI server choice, IDE/editor configuration | `src/CLAUDE.md` (deferred; created when coding begins) |
+| Test framework selection (NUnit, Unity Test Framework, or custom) | Spec #19 (Testing Strategy & Framework) |
+| Fixed64 numeric library design and API surface | Spec #9 (Fixed64 Math Library) |
+| Project invariants: coordinate system, fatigue convention, heartbeat tick rates | Root `CLAUDE.md` + owning physics specs (Ball Physics #1, Agent Movement #2) |
+| UX/asset pipeline conventions | Stage 1+ specs |
+| PR-process rules: review-approval count, branch protection, required reviewers, merge strategy | Repository settings + `src/CLAUDE.md` |
+| Concrete `BannedSymbols.txt` and `.editorconfig` files | Stage 1 deliverables (§7.1); tool selection is a Stage 0+1 transition deliverable (§5.2) |
+| Non-game-state tooling: build scripts, content authoring, asset import pipelines | Out of scope, except for the determinism-only secondary-scope subset named in §1.1 |
+
+Spec #20 governs **code content**. It does not govern process, tooling configuration,
+or physical/AI system design.
+
+---
+
 ## 1.3 Key Design Decisions
+
+Six decisions were locked during outline development (outline v1.0 adversarial review,
+all H findings resolved; mid-level outline v1.1–v1.3 self-critique passes). They are
+recorded here with statement, rationale, and consequence-if-violated. Any change to a
+KD requires a version bump to this section before downstream sections are revised.
+
+### Authority Matrix
+
+The following table is the authoritative answer to any rule-ownership question across
+the Tactical Director project. Consult it before adding a rule to any document.
+
+| Rule class | Authoritative source | Spec #20 role |
+|---|---|---|
+| Coordinate system (X/Y/Z axes, corner origin) | Ball Physics Spec #1 §1.2 and Appendix C; root `CLAUDE.md` | Cite; do not restate |
+| Fatigue convention (0.0 = rested, 1.0 = fatigued) | Root `CLAUDE.md` — "Fatigue Convention" | Cite; do not restate |
+| Constant tags (`[GT]` / `[EST]` / `[FIXED]` / `[DERIVED]` / `[CROSS]`) | Root `CLAUDE.md` — "Constant Tags" | Cite tag definitions; add code-level binding rules (§3.2) |
+| Interface principle ("write interfaces only when both sides are specified") | Root `CLAUDE.md` — "Interface Design Principle" | Cite principle; add file-level placement rules (§3.5) |
+| Determinism rules (no `System.Random`, no `DateTime.Now`, SplitMix64, masking) | Root `CLAUDE.md` — "When Writing Code" | Cite rules; provide enforceable code-level formulation (§3.4) |
+| Stage 0 numeric type (`float`) | Root `CLAUDE.md` — "When Writing Code"; Spec #9 | Cite; do not restate |
+| Heartbeat tick rates (10 Hz AI loop / 60 Hz physics loop) | Root `CLAUDE.md` — "Heartbeat Tick Rate" | Cite; do not restate |
+| C# style, naming, layout | **Spec #20** | Authoritative |
+| File naming inside `src/` | **Spec #20** | Authoritative |
+| `src/` folder layout shape | **Spec #20** (shape); `src/CLAUDE.md` (concrete paths) | Authoritative for shape; defers concrete paths to `src/CLAUDE.md` |
+| Constant catalogue file locations and naming | **Spec #20** (convention); `src/CLAUDE.md` (concrete paths) | Authoritative for convention; defers concrete paths to `src/CLAUDE.md` |
+| Build/test commands | `src/CLAUDE.md` (deferred) | Out of scope |
+
+---
+
+**KD-1 — Cite-not-redefine.**
+
+*Statement:* Spec #20 cites every root `CLAUDE.md` invariant it depends on; it never
+restates, paraphrases, or redeclares those rules.
+
+*Rationale:* Project history documents how two-sources-of-truth drift produces silent
+inconsistencies (root `CLAUDE.md` — "Things That Have Gone Wrong Before": stale spec
+numbers; Pass Mechanics ERR-class audit findings). Constant-tag definitions, the fatigue
+convention, and determinism rules are the exclusive property of root `CLAUDE.md`. Any
+restatement in Spec #20 creates a maintenance hazard: when `CLAUDE.md` is updated, the
+Spec #20 copy silently diverges until a reader notices the mismatch.
+
+*Consequence-if-violated:* Silent divergence between `CLAUDE.md` and Spec #20 on (for
+example) constant-tag semantics; a future implementer citing "Spec #20 §3.2" could
+operate under different rules than one citing "CLAUDE.md", producing exactly the bug
+class documented in the Pass Mechanics audit.
+
+---
+
+**KD-2 — Authority Matrix.**
+
+*Statement:* Every rule in the Tactical Director governance space has exactly one owner;
+the Authority Matrix in §1.3 names that owner.
+
+*Rationale:* Without an explicit ownership boundary, Spec #20 risks either under-
+specifying (leaving rules implicit in prose) or over-specifying (redefining rules already
+owned by `CLAUDE.md` or a physics spec). The three-way partition — root `CLAUDE.md` for
+project invariants, Spec #20 for code-shape rules, `src/CLAUDE.md` for codebase-local
+pointers — ensures every rule has a single discoverable home and eliminates overlap.
+
+*Consequence-if-violated:* Rule conflicts at review time with no clear tie-breaker, or
+silent rule gaps that different reviewers fill inconsistently over successive PRs.
+
+---
+
+**KD-3 — Template-slot reconciliation.**
+
+*Statement:* Spec #20 uses the standard CLAUDE.md 9-section template with three slots
+re-purposed: §3 holds rules in lieu of formulas; §5 holds conformance verification in
+lieu of numerical tests; §6 holds code performance rules in lieu of complexity analysis.
+
+*Rationale:* The CLAUDE.md template was designed for physics and AI specs. Dropping
+unused slots would break the cross-spec reader expectation that a given section number
+contains a particular class of content. Re-purposing each slot to carry the closest
+meta-spec analogue preserves section-number conventions while accommodating the content
+of a meta-spec. The re-purposing is stated explicitly here so readers are not surprised.
+
+*Consequence-if-violated:* Cross-spec reviewers expecting §5 to contain numerical test
+catalogues find conformance review checklists instead, triggering uncertainty about
+whether the spec is complete.
+
+---
+
+**KD-4 — Stage 0 verification is manual review.**
+
+*Statement:* At Stage 0, conformance verification is performed by manual review against
+§2.2 FRs. No static-analysis tooling is required.
+
+*Rationale:* No source code exists at Stage 0. Empirical lint baselines (cyclomatic
+complexity, file length) cannot be established against non-existent code. Mandating CI
+gates before any code exists produces infrastructure with no calibration signal and
+arbitrary thresholds that will be violated or ignored on day one. The Stage 0+1
+transition is the correct moment to activate tooling (§5.2).
+
+*Consequence-if-violated:* Arbitrary threshold values that immediately block legitimate
+code, degrading reviewer trust in the tooling from first use.
+
+---
+
+**KD-5 — No numeric lint thresholds at Stage 0.**
+
+*Statement:* All numeric conformance thresholds — cyclomatic complexity, file length,
+method length, allocation count — are deferred to first real code (Deferral D1 in §7.5).
+
+*Rationale:* Pre-code thresholds are guesses. Tactical Director's struct-based,
+zero-allocation game loop will produce a different distribution of method lengths and
+complexity scores than a typical object-oriented Unity project. The right time to choose
+thresholds is after the first meaningful body of real code has been profiled and reviewed.
+Choosing them now would be calibrating an instrument before the measurement domain exists.
+
+*Consequence-if-violated:* Thresholds that are either too strict (blocking legitimate
+game-loop structs whose Update methods are necessarily long) or too loose (signalling
+nothing useful), both outcomes eroding reviewer confidence in the tooling.
+
+---
+
+**KD-6 — Single-source-of-truth lists.**
+
+*Statement:* Banned and required API lists live exclusively in Appendix D. Sections
+§3.3, §3.4, §5.2, and §7.1 cite Appendix D by category name or symbol; they do not
+reproduce those lists.
+
+*Rationale:* Symbol-level lists duplicated across multiple sections are the most
+persistent source of silent divergence in specification documents. When a new banned
+API is identified, updating the rule prose in §3.4 without also updating Appendix D
+(or vice versa) produces an invisible enforcement gap: the rule text forbids the symbol
+but Appendix D's `BannedSymbols.txt` seed does not include it, so the Stage 1 analyzer
+silently misses it.
+
+*Consequence-if-violated:* A banned symbol not present in Appendix D cannot generate
+a `BannedSymbols.txt` entry at Stage 1, creating a permanent gap between the written
+rule and the enforced rule.
+
+---
 
 ## 1.4 Dependencies and Integration Contracts
 
+**Upstream — substantive (binding rules cited from these documents):**
+- Root `CLAUDE.md` — constant-tag definitions, determinism rules, interface principle,
+  fatigue convention, coordinate system, heartbeat tick rates, inline-comment policy
+  ("default to writing no comments"), version-history rule, file-header rule.
+- `docs/planning/development-best-practices.md` — allocation budget values cited in
+  §3.3.4 and §6.1.
+
+**Upstream — consulted at coding-start; placeholder during spec drafting:**
+- `docs/tracking/certification-platform.md` — Unity LTS revision and C# language
+  version pin. Spec #20 references this file by path in §3.1.3 (FR-CS-008). The
+  concrete language-version value is not required for spec approval; it is required
+  before the first Stage 1 implementation commit. Activation of FR-CS-008 is gated on
+  this document resolving from placeholder status (see root `CLAUDE.md` open issue:
+  "Stage 0 host platform pin").
+
+**Downstream (every Stage 1+ source file depends on this spec):**
+- Every `.cs` file under `src/` cites Spec #20 in its file header (FR-CS-057).
+- The future `src/CLAUDE.md` will contain concrete paths and assembly definitions
+  derived from the shape conventions established in §4 of this spec.
+
+**Pointer-only references (no substantive rule dependency):**
+- Spec #9 (Fixed64 Math Library) — referenced in §3.7.4 for the Stage 5+ numeric-type
+  migration trigger only.
+- Spec #19 (Testing Strategy & Framework) — referenced in §1.2 as the owner of
+  test-framework selection only.
+
+**No spec-level dependency on Specs #1–#19 for substantive rules.** Spec #20 is
+content-independent of physics and AI specifications; it governs *how* their
+implementations are coded, not *what* they compute.
+
+**Approval independence:** This spec can be approved before any Stage 0 implementation
+begins. Activation of CI gates (§5.2, §7.2) and lint threshold values (§5.3, §7.5 D1)
+are both gated on Stage 1 first-real-code milestone, not on this spec's approval date.
+
+---
+
 ## 1.5 Version History
+
+| Version | Date | Author | Notes | Reviewer |
+|---|---|---|---|---|
+| 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 1. | — |
+
+---
+
+*End of Section 1 — Code Standards & Style Guide Specification #20*
+*Tactical Director — Specification #20 of 20 | Stage 0: Physics Foundation*
