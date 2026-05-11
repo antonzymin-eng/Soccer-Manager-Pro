@@ -30,7 +30,7 @@ file is committed to `src/`. Each deliverable cites Spec #20 as its normative so
 
 | # | Deliverable | Trigger to activate | Acceptance criterion |
 |---|---|---|---|
-| D1-artifact | Numeric lint thresholds (concrete values for FR-CS-008: line length cap, method length cap) | `docs/tracking/certification-platform.md` fully pinned (OS, Unity LTS revision, C# version) | `certification-platform.md` row for "C# language version" is non-`_TBD_`; threshold values committed to `.editorconfig` and cited in `src/CLAUDE.md` |
+| D1-artifact | Numeric lint thresholds (line-length cap, method-length cap, nesting-depth limit; resolves Deferral D1 in §7.5) | `docs/tracking/certification-platform.md` fully pinned (OS, Unity LTS revision, C# version) AND first Stage 1 module profiled. Note: this triggers a *value selection*, not the activation of FR-CS-008 itself — FR-CS-008 (language-version pin) activates when the platform document resolves; threshold values follow once profiler baselines exist. | Threshold values committed to `.editorconfig` and cited in `src/CLAUDE.md` |
 | D2-artifact | Roslyn analyzer ruleset (`.ruleset` or `.editorconfig` `[*.cs]` severity block) | First `src/` file committed | All Spec #20 Error-level FRs produce `error`-severity Roslyn diagnostics; `dotnet build` fails on any violation; Stage 1 analyzer IDs from Appendix D §D.2–§D.5 are populated |
 | D3-artifact | `BannedSymbols.txt` populated | First `src/` file committed | File contains every symbol in Appendix D categories `det-banned` (§D.1) and `alloc-hot-path` (§D.2); `Microsoft.CodeAnalysis.BannedApiAnalyzers` package referenced in all game-loop `.csproj` files |
 | D4-artifact | `.editorconfig` finalised | First `src/` file committed | Covers: indent style (4 spaces), brace style (Allman), `using` directive placement, `var` policy, namespace style (file-scoped), `sealed`-by-default suggestion; committed at repo root alongside `BannedSymbols.txt` |
@@ -84,7 +84,7 @@ here so future maintainers understand why they are absent from the current rule 
 CLAUDE.md (Open Issues — "Fixed64 stage scope decision") establishes that Fixed64
 migration is a **Stage 5+** concern. At Stage 5, when cross-platform multiplayer is added:
 
-- FR-CS-039 (`double` prohibition) will be reviewed; if Fixed64 replaces `float` on the
+- FR-CS-072 (`double` prohibition) will be reviewed; if Fixed64 replaces `float` on the
   physics path, the rule expands to cover `double` and `float` in game-state assemblies.
 - Spec #9 (the Fixed64 library spec) will publish the authoritative `Fixed64` type. Spec
   #20 §3.7 will gain a cross-reference to Spec #9 at that point.
@@ -102,14 +102,16 @@ Stage 5, cross-platform bit-exact parity becomes a hard requirement. Additions a
 point:
 
 - FMA and denormals-are-zero compiler flags locked per-platform (currently `_TBD_` in
-  `certification-platform.md`; FR-CS-040 INACTIVE status resolves here).
+  `certification-platform.md`). FR-CS-040 itself is active at Stage 0 (the default-ban
+  applies); what unblocks here is FR-CS-040's *override pathway* — the platform-pin
+  precondition that, together with lead-developer sign-off, allows FMA opt-in.
 - Platform-specific known-answer test (KAT) suites added to the merge gate.
 
 ### `unsafe` and SIMD Intrinsic Policy Revisit (Stage 2+ trigger: performance profiling)
 
-The current Stage 0 rule prohibits `unsafe` code except where Unity's job system
-explicitly requires it (FR-CS-042). SIMD intrinsics (`System.Runtime.Intrinsics`) are
-not addressed. At Stage 2, after profiler baselines exist, the policy SHOULD be revisited:
+The current Stage 0 rule prohibits `unsafe` code without lead-developer sign-off
+(FR-CS-010). SIMD intrinsics (`System.Runtime.Intrinsics`) are not addressed. At Stage 2,
+after profiler baselines exist, the policy SHOULD be revisited:
 
 - If a hot-path system cannot meet its microsecond budget without SIMD, an exception
   process (matching the format in §2.2 Exception block) is added for that system.
@@ -160,7 +162,7 @@ statement, the trigger that allows (or requires) the decision to be made, and th
 
 | ID | Decision deferred | Deferral statement | Trigger to revisit | Owner |
 |---|---|---|---|---|
-| D1 | Numeric lint thresholds (line-length cap, method-length cap, nesting-depth limit) | FR-CS-008 is INACTIVE; concrete numbers depend on the C# version and toolchain pinned in `certification-platform.md`. No placeholder values are inserted — a wrong threshold is worse than no threshold. | `docs/tracking/certification-platform.md` fully pinned (C# version, Unity LTS, compiler flags) | Lead developer + Stage 1 setup author |
+| D1 | Numeric lint thresholds (line-length cap, method-length cap, nesting-depth limit) | Thresholds are deferred per KD-5 (§1.3): no source code exists at Stage 0, so empirical baselines cannot be established. Resolution is gated on (a) FR-CS-008 activation — the C# language version pinned in `certification-platform.md` — and (b) the first Stage 1 module reaching a profiled baseline. No placeholder values are inserted — a wrong threshold is worse than no threshold. | `certification-platform.md` fully pinned (C# version, Unity LTS, compiler flags) AND first Stage 1 module profiled per §5.3 | Lead developer + Stage 1 setup author |
 | D2 | Test framework choice | Spec #19 (Testing Strategy) owns test-framework selection. Spec #20 §3.9.4 (test-fixture carve-out) is intentionally framework-agnostic to avoid a circular dependency. | Spec #19 reaches `IN REVIEW` status in `SPEC_INDEX.md` | Spec #19 author |
 | D3 | Build commands, IDE setup, assembly GUIDs | These are concrete implementation details that depend on the Unity LTS version and project directory structure chosen at Stage 1. `src/CLAUDE.md` (D5-artifact) is the home for this information; it MUST NOT be created until all 20 specs are approved. | All 20 Stage 0 specs approved | Stage 1 setup author |
 | D4 | Fixed64 enforcement rules | Stage 0 uses `float`. Fixed64 migration is Stage 5+. Spec #9 will define the Fixed64 library; Spec #20 §3.7 will gain a cross-reference at that point. See §7.3 for detail. | Spec #9 reaches `APPROVED` status | Spec #9 author → Spec #20 amendment author |
@@ -180,6 +182,7 @@ statement, the trigger that allows (or requires) the decision to be made, and th
 | Version | Date | Author | Notes | Reviewer |
 |---|---|---|---|---|
 | 1.0 | May 8, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 7 and `outline-mid.md` v1.2 §7.1–§7.5. | — |
+| 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fixes (audit finding H-02): corrected three stale FR-CS-### identifiers — §7.3 `double` cite FR-CS-039 → FR-CS-072; §7.3 `unsafe` cite FR-CS-042 → FR-CS-010; §7.3 FMA paragraph clarified that FR-CS-040 is active at Stage 0 and only its override pathway is gated on the platform pin. §7.1 D1-artifact and §7.5 D1 rewordings: D1 deferral is governed by KD-5 (no Stage 0 code to baseline against), with FR-CS-008 activation as a precondition, not the source of the threshold values themselves. | — |
 
 ---
 

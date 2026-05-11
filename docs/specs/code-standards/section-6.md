@@ -225,10 +225,12 @@ microseconds per agent per call) are deferred to Stage 1 when profiler baselines
 | O(N²) | Requires sign-off | Prohibited without explicit written sign-off from project lead citing the performance budget justification. |
 | O(N log N) | Case-by-case | Treated as O(N) for N ≤ 22; escalate if N may grow past 22. |
 
-**N = 22 bound source:** One association football match has 22 outfield players + 2 goalkeepers.
-Physics systems that iterate over all agents operate over at most 22 entities simultaneously.
-Any algorithm whose worst-case grows faster than O(N log N) for N = 22 must be justified
-in a sign-off comment citing this bound.
+**N = 22 bound source:** One association football match has 22 players on the pitch
+(11 per side × 2 sides = 22, including the two goalkeepers — there are no separate
+"outfield + GK" totals; the keepers are part of the 11). Physics systems that iterate
+over all agents operate over at most 22 entities simultaneously. Any algorithm whose
+worst-case grows faster than O(N log N) for N = 22 must be justified in a sign-off
+comment citing this bound. Substitutes are not on the pitch and are not counted in N.
 
 ### Spatial Queries
 
@@ -269,6 +271,7 @@ and supply the implementation detail that the FR row itself cannot fit.
 | Version | Date | Author | Notes | Reviewer |
 |---|---|---|---|---|
 | 1.0 | May 8, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 6 and `outline-mid.md` v1.2 §6.1–§6.5. | — |
+| 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding L-A): §6.4 "N = 22 bound source" prose corrected — original read "22 outfield players + 2 goalkeepers" (24 total), but association football is 11 per side × 2 sides = 22 with the keepers included. Wording rewritten to make this explicit; substitutes off-pitch noted as excluded from N. No change to the N = 22 numeric bound. | — |
 
 ---
 
