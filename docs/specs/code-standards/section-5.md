@@ -398,7 +398,7 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-042 | Determinism — §5.4.4 item 4 | `CS20-DET-002` | E |
 | FR-CS-043 | Determinism — §5.4.4 item 5 | `CS20-DET-003` | W |
 | FR-CS-044 | Determinism — §5.4.4 item 6 | `CS20-DET-004` | W |
-| FR-CS-045 | Determinism — §5.4.4 item 7 | Manual review (Python tooling; not C# analyzer) | – |
+| FR-CS-045 | Determinism — §5.4.4 item 7 | Manual review (Python tooling; not C# analyzer) | W (manual) |
 | FR-CS-046 | Dependencies & Interfaces — §5.4.5 item 1 | `.asmdef` reference graph check | E |
 | FR-CS-047 | Dependencies & Interfaces — §5.4.5 item 2 | `CS20-DEP-001` | E |
 | FR-CS-048 | Dependencies & Interfaces — §5.4.5 item 3 | `CS20-DEP-002` | E |
@@ -433,7 +433,10 @@ marked INACTIVE with a defined activation condition. FR-CS-009, FR-CS-024, and
 FR-CS-035 are MAY-level; no enforcement row is needed. FR-CS-045 and FR-CS-063 are
 verified by manual review because their correctness depends on cross-document matching
 (Python tooling, spec ID validity) that cannot be automated without custom tooling
-beyond the C# analyzer scope.
+beyond the C# analyzer scope. FR-CS-045 and FR-CS-063 carry severity **W (manual)** —
+the rules are MUST-level but enforcement is by reviewer eyes per PR; "W" signals
+"required-but-manual" rather than the bare "–" which previously read as "no
+enforcement."
 
 ---
 
@@ -464,6 +467,7 @@ belongs to Spec #16 and Spec #19.
 | Version | Date | Author | Notes | Reviewer |
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 5. All 73 FRs covered in §5.5 traceability table; §5.4 paste-ready checklist in seven categories; §5.2 tool-selection table with analyzer-prefix reservation. | — |
+| 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding L-B): §5.5 FR-CS-045 severity changed from `–` ("not analyzer-enforced", which read as "no enforcement") to `W (manual)` to signal "MUST-level rule, manual-review enforcement per PR" — aligned with FR-CS-063's existing `W` treatment. §5.5 footnote prose extended to explain the W-manual semantic. No change to the rule itself. | — |
 
 ---
 

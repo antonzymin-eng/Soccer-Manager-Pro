@@ -221,7 +221,7 @@ is authoritative.
 | `[EST]` | Estimated | Placeholder; must be validated before implementation |
 | `[FIXED]` | Fixed / physical law | Derived from physics; never tune |
 | `[DERIVED]` | Derived from other constants | Formula must be documented; never set independently |
-| `[CROSS]` | Cross-spec constant | Defined in another approved spec; consumed read-only here; never set independently in this spec. Citation must name the authoritative spec and section. Use `[CROSS]` only when the value is copied verbatim — if a formula transforms it, tag the result `[DERIVED]`. |
+| `[CROSS]` | Cross-spec constant | Defined in another approved spec; consumed read-only here; never set independently in this spec. Citation must name the authoritative spec and section. Use `[CROSS]` only when the value is copied verbatim without modification — if a formula transforms it, tag the result `[DERIVED]`. |
 
 *(Source: root `CLAUDE.md` — "Constant Tags", retrieved May 7, 2026.)*
 
@@ -926,6 +926,9 @@ recorded seed and the seed is logged on failure.
 *Required marker for general unit test allocation relaxation:*
 `// §3.9.4 general-unit-test — allocation rules relaxed in test body`
 
+*Required marker for property-based / fuzz tests using a non-deterministic seed source:*
+`// §3.9.4 property-based — non-deterministic seed source; SplitMix64 routes test body with recorded seed`
+
 ---
 
 ### 3.9.5 Benchmark / Micro-Perf Scaffolds
@@ -936,12 +939,18 @@ in Appendix D category "det-banned", provided:
 1. The file is explicitly marked `// benchmark-only` in its header.
 2. The file's `.asmdef` is excluded from the game-state assembly reference graph.
 3. No production game-logic code imports the benchmark assembly.
+4. The benchmark `.csproj` **MUST NOT** reference
+   `Microsoft.CodeAnalysis.BannedApiAnalyzers`. The package operates per-project at the
+   symbol level: if the benchmark project references the analyzer, the seed entries from
+   Appendix D §D.1 fire inside the benchmark assembly and the carve-out is voided.
+   Assembly-level isolation alone is insufficient; the analyzer reference must also be
+   absent from the benchmark project file.
 
 These files are not subject to the zero-allocation rule; they are measurement
 infrastructure, not gameplay code.
 
 *Required marker:* `// benchmark-only — §3.9.5: det-banned APIs permitted in this
-file; excluded from game-state assembly graph.`
+file; excluded from game-state assembly graph; BannedApiAnalyzers not referenced.`
 
 ---
 
@@ -963,6 +972,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | Version | Date | Author | Notes | Reviewer |
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 3. All eleven subsections present. Appendix D cited by category name in §3.3.2 and §3.4.2; no symbol lists duplicated. | — |
+| 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fixes: (a) §3.2.1 [CROSS] tag-table row restored to verbatim CLAUDE.md text — missing phrase "without modification" added (closes audit finding H-01); (b) §3.9.4 added required marker for property-based / fuzz tests with non-deterministic seed source (closes L-04); (c) §3.9.5 added criterion #4 requiring benchmark `.csproj` to omit the `BannedApiAnalyzers` package reference (closes M-B — assembly-level isolation alone is insufficient). | — |
 
 ---
 

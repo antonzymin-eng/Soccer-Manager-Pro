@@ -332,9 +332,18 @@ namespace TacticalDirector.BallPhysics  // §3.1.2, §4.3 — flat namespace; fo
 
 ### D.1 — Category: `det-banned` (game-logic code)
 
-Symbols in this category **MUST NOT** appear in game-state assemblies (FR-CS-036–040).
-The benchmark carve-out in §3.9.5 permits `Stopwatch.GetTimestamp` exclusively in files
-marked `// benchmark-only` and excluded from the game-state assembly graph.
+Symbols and language constructs in this category **MUST NOT** appear in game-state
+assemblies (FR-CS-010, FR-CS-036–040). The benchmark carve-out in §3.9.5 permits
+`Stopwatch.GetTimestamp` exclusively in files marked `// benchmark-only`, excluded
+from the game-state assembly graph, and built in a `.csproj` that does not reference
+`Microsoft.CodeAnalysis.BannedApiAnalyzers` (see §3.9.5 criterion 4).
+
+The category covers both *deterministic-replay* hazards (non-deterministic state,
+wall-clock time, process-unique IDs, multithreaded game-state) and *single-source
+compile-time-safety / tick-ordering* hazards (`dynamic`, `async`/`await` for game-state
+work, `unsafe` without sign-off). All such hazards share the same enforcement model
+(BannedSymbols / banned-construct analyzer) and therefore live in one source-of-truth
+table per KD-6.
 
 | Symbol / construct | FR-CS-### | Root `CLAUDE.md` citation | Stage 1 analyzer ID |
 |---|---|---|---|
@@ -351,6 +360,8 @@ marked `// benchmark-only` and excluded from the game-state assembly graph.
 | `System.Linq.ParallelEnumerable.AsParallel()` | FR-CS-039 | "When Writing Code" — determinism requirement | `CS-DET-011` (placeholder) |
 | Hardware-intrinsic FMA (`System.Runtime.Intrinsics.*Fma*`) | FR-CS-040 | "When Writing Code" — float + determinism rules | `CS-DET-012` (placeholder) |
 | `dynamic` keyword in game-logic code | FR-CS-010 | "When Writing Code" — banned language feature | `CS-DET-013` (placeholder) |
+| `async` / `await` on game-state work (any method whose continuation can run on a non-tick frame) | FR-CS-010 | "When Writing Code" — determinism requirement (deterministic tick ordering) | `CS-DET-014` (placeholder) |
+| `unsafe` blocks without recorded lead-developer sign-off in the PR description | FR-CS-010 | "When Writing Code" — banned language feature; pointer arithmetic plus undefined cross-platform behaviour | `CS-DET-015` (placeholder) |
 
 ---
 
@@ -432,7 +443,7 @@ redefined.
 | **Game-state assembly** | A Unity Assembly Definition (`.asmdef`) that participates in the deterministic simulation. All assemblies under the Physics, Mechanics, and AI layers (§3.5.2) are game-state assemblies. Editor-only and benchmark assemblies are not. |
 | **Hot path** | Code executed on every physics or AI tick — i.e., code called 10–60 times per second during active gameplay. Boxing, LINQ, `string.Format`, closures, and reflection in hot-path code violate allocation rules. See §3.3 and §6.2. |
 | **Magic number** | A literal numeric value in formula, system, or struct code that is not referenced through a named constant in a catalogue file. Prohibited by FR-CS-023. Permitted exceptions enumerated in FR-CS-024. |
-| **Per-frame path** | Synonym for "game-loop method" used in the context of allocation rules (§3.3.2, FR-CS-030). Emphasises the repetition rate: code on this path executes every rendered frame at 60 Hz. |
+| **Per-frame path** | Synonym for **game-loop method** (see that entry for the canonical loop-rate scope and rule citations). Used in the context of allocation rules (§3.3.2, FR-CS-030) when the emphasis is on per-frame repetition rather than method shape. |
 | **Phantom interface** | An `interface` definition whose consumer side is unspecified or not yet written. Prohibited by FR-CS-049; cites ERR-001 and ERR-004. See root `CLAUDE.md` — "Interface Design Principle". |
 | **Stage 0+1 transition** | The development milestone at which the first real Stage 1 source code is written. This transition activates the tooling deliverables in §5.2 and §7.1 (Roslyn analyzers, `.editorconfig`, `BannedSymbols.txt`, `src/CLAUDE.md`). |
 | **System-level Update method** | The top-level entry point of a simulation system, called once per physics or AI tick. Required to be wrapped in a `ProfilerMarker.Auto()` scope per FR-CS-070. |
@@ -444,6 +455,7 @@ redefined.
 | Version | Date | Author | Notes | Reviewer |
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §APPENDICES. Appendix D authored to KD-6 single-source-of-truth standard. All five appendices present. | — |
+| 1.1 | May 11, 2026 | Claude Code | Adversarial review fixes (audit findings H-04 demoted to M, L-03): Appendix D §D.1 expanded to include FR-CS-010's remaining banned constructs — `async`/`await` for game-state work (CS-DET-014 placeholder) and `unsafe` without sign-off (CS-DET-015 placeholder). Closes the KD-6 enforcement gap whereby FR-CS-010's rule text banned these constructs but Appendix D's BannedSymbols seed listed only `dynamic`. §D.1 header text expanded to make the dual rationale (determinism + compile-time safety) explicit. Appendix E "Per-frame path" glossary entry tightened to point to "Game-loop method" rather than restating loop-rate scope, eliminating the prior overlap. Minor version (additive — new rows, new wording; no removals or rule changes). | — |
 
 ---
 

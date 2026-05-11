@@ -142,8 +142,8 @@ deviation from a MUST or MUST NOT requirement. Format and lifecycle are defined 
 | FR-CS-041 | All random-number generation in game-logic code **MUST** use the project's `SplitMix64` helper (root `CLAUDE.md` — "When Writing Code"). See Appendix D category "det-required-apis". | MUST | §3.4.3; root `CLAUDE.md` — "When Writing Code"; Appendix D | §3.4.3 |
 | FR-CS-042 | All time values consumed by game-logic code **MUST** be sourced from the injected `MatchClock` service, not from any wall-clock API. See Appendix D category "det-required-apis". | MUST | §3.4.3; Appendix D | §3.4.3 |
 | FR-CS-043 | Trigonometric and other math operations in game-logic code **MUST** use the project-designated math helper (wrapper around `UnityEngine.Mathf` or an approved equivalent). Direct `System.Math` use in game-logic code requires lead-developer sign-off. See Appendix D category "det-required-apis". | MUST | §3.4.3; Appendix D | §3.4.3 |
-| FR-CS-044 | Where 64-bit intermediate multiplications occur in seed or hash chains in C# game-logic code, the multiplication **MUST** be wrapped in `unchecked { … }` with a one-line comment citing §3.4.4. *Applies where such multiplications exist; no violation where they do not.* | MUST | §3.4.4; root `CLAUDE.md` — "When Writing Code" | §3.4.4 |
-| FR-CS-045 | Where Python or other non-C# tooling mirrors, generates, or verifies `[FIXED]` or `[DERIVED]` C# constants and performs 64-bit intermediate multiplications, those intermediates **MUST** be masked with `& 0xFFFFFFFFFFFFFFFF` and the C# `UL` suffix **MUST** be omitted from numeric literals in that tooling. *Applies where applicable.* | MUST | §3.4.4; root `CLAUDE.md` — "When Writing Code" | §3.4.4 |
+| FR-CS-044 | Every 64-bit intermediate multiplication in a seed or hash chain in C# game-logic code **MUST** be wrapped in `unchecked { … }` with a one-line comment citing §3.4.4. (Vacuously satisfied in files that contain no such multiplication; no Mode 3 exception is required for absence.) | MUST | §3.4.4; root `CLAUDE.md` — "When Writing Code" | §3.4.4 |
+| FR-CS-045 | Every 64-bit intermediate multiplication in Python or other non-C# tooling that mirrors, generates, or verifies `[FIXED]` or `[DERIVED]` C# constants **MUST** be masked with `& 0xFFFFFFFFFFFFFFFF`, and the C# `UL` suffix **MUST** be omitted from numeric literals in that tooling. (Vacuously satisfied in tooling that performs no such mirror; no Mode 3 exception is required for absence.) | MUST | §3.4.4; root `CLAUDE.md` — "When Writing Code" | §3.4.4 |
 
 ---
 
@@ -320,6 +320,7 @@ declarations, constant catalogue layout, namespace assignments — see §4.
 | Version | Date | Author | Notes | Reviewer |
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 2. All 73 FRs authored; FR-CS-008 carries deferred-activation language; FR-CS-040 and FR-CS-072 use MUST NOT + override-condition pattern per outline-detailed.md v1.3 self-critique. | — |
+| 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding M-A): recast FR-CS-044 and FR-CS-045 footnotes from "Applies where applicable" to "Vacuously satisfied … no Mode 3 exception required for absence." Same normative content; clearer non-triggering semantics. No rule changes. | — |
 
 ---
 

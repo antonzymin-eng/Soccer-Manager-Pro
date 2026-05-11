@@ -121,14 +121,26 @@ the Tactical Director project. Consult it before adding a rule to any document.
 **KD-1 — Cite-not-redefine.**
 
 *Statement:* Spec #20 cites every root `CLAUDE.md` invariant it depends on; it never
-restates, paraphrases, or redeclares those rules.
+paraphrases or redeclares those rules. **Verbatim reproduction is permitted only with
+explicit attribution and an authoritative-source disclaimer**, and only when the cited
+table is genuinely needed at the point of use for code-author convenience (current
+single instance: the constant-tag table in §3.2.1). A reproduction that qualifies under
+this carve-out MUST include both: (a) a `(Source: root CLAUDE.md — "<section name>",
+retrieved <date>)` attribution line, and (b) a "if a discrepancy exists, root
+`CLAUDE.md` is authoritative" disclaimer. Whenever §3.2.1 is touched, the reviewer MUST
+run a literal `diff` against the corresponding `CLAUDE.md` block — a presence check is
+insufficient (audit finding H-01 demonstrated that without a diff, a one-phrase drift
+slipped through Q-01).
 
 *Rationale:* Project history documents how two-sources-of-truth drift produces silent
 inconsistencies (root `CLAUDE.md` — "Things That Have Gone Wrong Before": stale spec
 numbers; Pass Mechanics ERR-class audit findings). Constant-tag definitions, the fatigue
 convention, and determinism rules are the exclusive property of root `CLAUDE.md`. Any
 restatement in Spec #20 creates a maintenance hazard: when `CLAUDE.md` is updated, the
-Spec #20 copy silently diverges until a reader notices the mismatch.
+Spec #20 copy silently diverges until a reader notices the mismatch. The verbatim-with-
+attribution carve-out exists because the tag table is referenced often enough by
+code-authors that an indirect pointer would degrade usability; the diff-on-every-change
+discipline is what keeps the carve-out safe.
 
 *Consequence-if-violated:* Silent divergence between `CLAUDE.md` and Spec #20 on (for
 example) constant-tag semantics; a future implementer citing "Spec #20 §3.2" could
@@ -266,6 +278,7 @@ are both gated on Stage 1 first-real-code milestone, not on this spec's approval
 | Version | Date | Author | Notes | Reviewer |
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 1. | — |
+| 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding M-04): KD-1 statement softened from absolute "never restates" to "never paraphrases or redeclares; verbatim reproduction permitted only with explicit attribution + authoritative-source disclaimer + literal-diff discipline on every change." The carve-out matches the §3.2.1 actual practice (constant-tag table reproduced verbatim) and adds a diff-not-presence-check requirement directly motivated by audit finding H-01, where Q-01's presence check missed a one-phrase drift. Non-behavioural: codifies existing practice and tightens the audit method around it. | — |
 
 ---
 
