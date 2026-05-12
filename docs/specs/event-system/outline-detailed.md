@@ -413,10 +413,12 @@ public readonly struct <Name>Event
 }
 ```
 
-- Field order is normative: header (8 bytes fixed) precedes
-  payload. Header layout is identical for Tier A / B / C; the tier
-  classification is metadata on the registry row (Appendix A), not
-  a runtime byte.
+- Field order is normative: header (12 bytes fixed —
+  `eventTypeOrdinal` 1 + `payloadVersion` 1 + `_reserved` 2 +
+  `tick` 4 + `producerSubsystem` 2 + `intraPhaseDrawIndex` 2)
+  precedes payload. Header layout is identical for Tier A / B / C;
+  the tier classification is metadata on the registry row
+  (Appendix A), not a runtime byte.
 - Padding rule cites #16 §3.2.4.1 (`_reserved` is normalized to
   zero on serialize / digest).
 
@@ -473,7 +475,7 @@ EventLedgerRecord[T] = [
     records: array<EventRecord>,
 ]
 EventRecord = [
-    header (8 bytes, §2.4.1),
+    header (12 bytes, §2.4.1),
     payloadBytes: variable (canonical encoding per #16 §3.2.4.1)
 ]
 ```
@@ -567,10 +569,16 @@ EventRecord = [
     `(producingPhase, intraPhaseDrawIndex)`. Drain happens in the
     same tick's `Events` phase per #16 §3.6.1 WriteSet (the
     "event ledger" WriteSet).
-  - Tier C: writes flow directly to the cosmetic channel; no
-    queueing in the authoritative hot path. Subscribers fire
-    immediately on the publishing thread (single-threaded Stage 0
-    runtime per #16 §3.1).
+  - Tier C: writes flow directly to the cosmetic channel with
+    **immediate synchronous dispatch** — no delivery queue, no
+    ring buffer. Subscribers fire on the publishing thread (single-
+    threaded Stage 0 runtime per #16 §3.1). The only Tier C
+    storage is the per-tick **publication-count table** (one
+    counter per `eventTypeOrdinal`, reset at tick boundary) which
+    feeds the §3.6.2 deterministic drop predicate; this table is
+    not a delivery buffer and never holds payload bytes. When the
+    drop predicate fires, the publish call is a no-op (subscribers
+    are not invoked).
 - 3.2.4 Intra-tick canonical order (KD-6 mechanics):
   - Order key: `(producingPhaseIndex, subsystemOrdinal, entityId,
     eventTypeOrdinal, intraPhaseDrawIndex)`.
@@ -673,9 +681,16 @@ EventRecord = [
 - 3.5.2 Subscriber-list storage: pre-allocated `EventHandler<T>[]`
   per event type. Capacity pinned at startup; resize is a
   pre-Stage-1 design error.
-- 3.5.3 Cosmetic channel: also ring-buffered (separate buffer,
-  separate sizing — `COSMETIC_QUEUE_CAPACITY = 4096` `[GT]`)
-  because Tier C drop policy (KD-7) needs an explicit cap.
+- 3.5.3 Cosmetic channel storage: Tier C dispatch is immediate-
+  synchronous per §3.2.3 (no delivery queue). The only Tier C
+  storage is a per-tick **publication-count table** sized to the
+  ordinal-namespace width — fixed at `256` slots (one byte-wide
+  ordinal per row), each holding a `u16` counter; total ~512 bytes,
+  stack-allocatable per tick. Counter table is reset at the start
+  of every tick. The aggregate per-tick publication ceiling
+  `COSMETIC_PER_TICK_PUBLICATION_BUDGET = 4096` `[GT]` is a
+  *sanity ceiling* (sum of per-ordinal `maxPerTick` values from
+  Appendix A; §6.3 worst-case envelope), not a queue capacity.
 - 3.5.4 Banned APIs in publish path (cross-listed with Spec #20):
   - `new T[…]`, `List<T>.Add` on hot-path lists,
     `IEnumerable<T>` foreach over reference enumerator,
@@ -779,7 +794,7 @@ EventRecord = [
   | Constant | Value | Tag | Notes |
   |----------|-------|-----|-------|
   | `EVENT_QUEUE_CAPACITY` | 1024 | `[GT]` | §3.5.1 / §6.3 |
-  | `COSMETIC_QUEUE_CAPACITY` | 4096 | `[GT]` | §3.5.3 / §6.3 |
+  | `COSMETIC_PER_TICK_PUBLICATION_BUDGET` | 4096 | `[GT]` | §3.5.3 / §6.3 — aggregate publication ceiling, NOT a delivery queue (Tier C is immediate-dispatch per §3.2.3) |
   | `MAX_EVENT_DISPATCH_DEPTH` | 8 | `[GT]` | §3.2.5 |
   | `EVENT_TYPE_ORDINAL_WIDTH` | 1 byte | `[FIXED]` | §3.1.2; Stage 5+ expansion in §7.3 |
   | `PAYLOAD_VERSION_WIDTH` | 1 byte | `[FIXED]` | §3.1; §3.7 |
@@ -805,8 +820,9 @@ EventRecord = [
 - `src/event-system/EventBus.cs` — publish/subscribe entry points.
 - `src/event-system/EventLedger.cs` — Tier A/B ring buffer +
   per-tick serialisation.
-- `src/event-system/CosmeticChannel.cs` — Tier C ring buffer +
-  immediate dispatch.
+- `src/event-system/CosmeticChannel.cs` — Tier C immediate-
+  synchronous dispatch + per-tick publication-count table (no
+  delivery queue per §3.2.3 / §3.5.3).
 - `src/event-system/EventRegistry.cs` — Appendix A registry,
   generated from spec at build time (Stage 1 build step).
 - `src/event-system/EventConstants.cs` — §3.10 catalogue, generated.
@@ -978,10 +994,14 @@ Spec #17 intentionally does NOT declare:
 - Tier C worst case at 60 Hz (peak VFX):
   - Per physics tick: ≤ 32 VFX cues + ≤ 16 UI notifications.
   - Aggregate ≤ 256 / tick under stress.
-- Ring-buffer sizing: Tier A `EVENT_QUEUE_CAPACITY = 1024` (×16
+- Tier A ring-buffer sizing: `EVENT_QUEUE_CAPACITY = 1024` (×16
   safety margin over the 64 ceiling for second-order dispatch and
-  unforeseen growth). Tier C `COSMETIC_QUEUE_CAPACITY = 4096`
-  (×16 safety margin over 256).
+  unforeseen growth).
+- Tier C publication-budget sizing: Tier C has no delivery queue
+  (§3.5.3); `COSMETIC_PER_TICK_PUBLICATION_BUDGET = 4096` is the
+  aggregate per-tick publication ceiling (×16 safety margin over
+  256) — used only as a sanity bound on the sum of per-ordinal
+  `maxPerTick` rows in Appendix A.
 - Numbers are `[GT]`; revisited at Stage 0+1 against first real
   measurements (parallel to Spec #20 §5.3 numeric re-tuning).
 
