@@ -2,9 +2,12 @@
 
 **Created:** May 12, 2026
 **Last Updated:** May 12, 2026
-**Version:** 1.0
-**Status:** DRAFT — addresses all 13 findings from `outline.md`
-adversarial review (May 6, 2026); ready for section-file authoring.
+**Version:** 1.1
+**Status:** DRAFT — v1.0 addressed all 13 findings from `outline.md`
+adversarial review (May 6, 2026). v1.1 addresses all 12 findings
+(3H / 4M / 5L) from the second adversarial review (May 12, 2026); see
+the resolution map at the bottom of this file. Ready for section-file
+authoring.
 **Companion documents:** `outline.md` (high-level v1.0 + adversarial
 review).
 
@@ -42,12 +45,35 @@ once here and cited below by KD-number, never restated.
   duplicate or override it. Spec #19 **adds** non-determinism testing
   (functional correctness, property/fuzz, scenario-library tactical
   validation, coverage governance) on top.
+  - **Status caveat (May 12, 2026).** Per `SPEC_INDEX.md`, Spec #16 is
+    `IN PROGRESS`, not `APPROVED`. All §3.2, §5.7, §6.2, §3.4.3, §3.6,
+    §3.8 citations of "#16 §1.3.1", "#16 §5", "#16 §7", "#16 §8" are
+    tagged `TBD-NORMATIVE` (pattern adopted from #16 §8.3.1 per
+    CLAUDE.md OPEN ISSUES) until #16 reaches `APPROVED`. Section files
+    MUST carry the tag verbatim on every #16 citation; tag removal is a
+    §9.2 quality-checklist row and is gated on #16 approval.
+  - **Sequencing constraint (H2).** Per CLAUDE.md OPEN ISSUES, #16's
+    Tier 2 final approval is gated on `#9 / #17 / #18 / #19 reaching
+    IN REVIEW`. Spec #19 in turn binds substantively to #16 §7. The
+    resolution path is: (1) #19 reaches `IN REVIEW` with `TBD-NORMATIVE`
+    citations to #16; (2) #16 reaches Tier 2 `APPROVED`; (3) #19's
+    `TBD-NORMATIVE` tags are resolved and #19 advances to `APPROVED`.
+    `SPEC_INDEX.md` status transitions for #19 MUST follow this order.
 - **KD-3 — Boundary with Performance Optimization #18.** Spec #18 owns
   performance regression gates and budget enforcement (#18 §4 / §7).
   Spec #19 owns functional and behavioural regression gates. Both are
   inputs to a single CI orchestration policy declared in Spec #19 §6
   (which cites #18 §4 by reference). Performance numbers are never
   republished by #19.
+  - **Status caveat (May 12, 2026).** Per `SPEC_INDEX.md`, Spec #18 is
+    `NOT STARTED`. No #18 text exists to cite yet. Every #18 reference
+    in §6.2 and §6.6 is tagged `TBD-NORMATIVE` with a placeholder
+    citation; the placeholder names the section that #18 is expected
+    to expose ("#18 §4 performance regression gates"). #19 cannot
+    advance past `IN REVIEW` until #18 has at least an outline-level
+    draft in `docs/specs/performance-optimization/` that confirms the
+    cited section numbers. This precondition is a §9.3 review-checklist
+    row.
 - **KD-4 — Per-spec §5 sections remain authoritative for their own
   spec.** Spec #19 does **not** rewrite or supersede the §5 test plans
   in approved specs (#1–#8). Spec #19 publishes the *taxonomy*, *naming*,
@@ -158,8 +184,21 @@ section that codifies each:
   - Root `CLAUDE.md` (project invariants, "When Writing Code" rules).
   - Spec #16 (Deterministic Simulation) §1.3 tier classification, §5
     canonical binary layout, §7 regression suite, §8 trace channels.
-- **Upstream (consulted):** Spec #18 §4 / §7 (performance gates);
-  Spec #20 (Code Standards) §3.9.4 (test-fixture rule carve-outs).
+    **Status:** `IN PROGRESS`. All citations tagged `TBD-NORMATIVE`
+    until #16 approval (see KD-2 status caveat). Section authors MUST
+    verify exact subsection numbers against the current
+    `deterministic-sim/section-1.md` / `section-5.md` / `section-7.md`
+    at draft time — #16 has been through three adversarial passes and
+    subsection numbering may have shifted since this outline was
+    written.
+- **Upstream (consulted):** Spec #18 §4 / §7 (performance gates) —
+  **status `NOT STARTED`**, citations tagged `TBD-NORMATIVE` per KD-3
+  status caveat; Spec #20 (Code Standards) §3.9.4 (test-fixture rule
+  carve-outs).
+- **Bidirectional sequencing with #16 (H2):** #19's `IN REVIEW` status
+  is a precondition for #16's Tier 2 `APPROVED` (per CLAUDE.md OPEN
+  ISSUES); #16's `APPROVED` status is a precondition for #19's own
+  `APPROVED`. See KD-2 sequencing constraint.
 - **Downstream:**
   - Every per-spec §5 (consumes Spec #19 taxonomy).
   - `src/CLAUDE.md` (consumes test-runner / harness invocation).
@@ -263,6 +302,14 @@ Spec #19's own failure modes (in addition to §2.3):
   - End-to-end / soak ≤ 3%.
   - Determinism layer counted separately (owned by #16); not part of
     the pyramid percentages.
+  - **Bound semantics (L1).** These are *ceilings* on integration /
+    simulation / e2e and a *floor* on unit. A suite that is 100% unit
+    and 0% else satisfies the arithmetic; that outcome is intentional —
+    the pyramid contract guards against top-heavy suites, not against
+    bottom-heavy ones. Per-spec §5 sections MAY declare tighter lower
+    bounds if subsystem maturity warrants. Authors who want a balanced
+    distribution should set those lower bounds locally, not via this
+    spec.
   - Numeric thresholds revisited at Stage 1 first-real-code milestone
     against actual code (parallel to Spec #20 §5.3).
 - 3.1.3 Anti-patterns enumerated:
@@ -334,19 +381,33 @@ Spec #19's own failure modes (in addition to §2.3):
   - Property tests use FsCheck (or equivalent C# property-based
     framework) — final pin deferred to Stage 0+1 with the wider tool
     selection (§6.1).
-  - Fuzz tests use a structured fuzzing harness; no AFL-style coverage
-    fuzzing at Stage 0.
+  - Fuzz tests use a structured fuzzing harness. Coverage-guided fuzzing
+    (AFL-style) is a Stage 1+ posture decision tracked in §7.5
+    deferred-decisions list; not adopted by default.
 - 3.4.2 Seed governance (KD-7):
   - Property/fuzz seeds may be selected non-deterministically *for the
     selection step only*.
   - The executed test body MUST route through #16
     `DeterministicRngService` (`SplitMix64`) with the selected seed.
   - Selected seed is logged at start of each run.
-- 3.4.3 Failed-seed capture:
-  - Every failing seed is auto-captured to the determinism regression
-    suite (#16 §7) as a new fixed-seed regression test. This converts a
-    one-time fuzz hit into a permanent guardrail.
-  - Capture format conforms to KD-10 (canonical save format binding).
+- 3.4.3 Failed-seed capture (M1 — read-only boundary with #16 §7):
+  - Spec #19 does **not** write directly into the Spec #16 §7
+    regression suite. Per KD-2, #19 consumes #16 §7 read-only; #16 §7
+    is the sole authority for what enters its regression corpus.
+  - Mechanics: every failing fuzz / property seed is captured into a
+    Spec #19-owned holding area at
+    `tests/data/captured-seeds/<spec>/<YYYY-MM-DD>-<seed>.fixture`
+    (final path pinned at Stage 0+1). Capture format conforms to
+    KD-10 (canonical save format binding from #16 §5).
+  - Promotion path: #16 §7 SHOULD publish an "external capture hook"
+    contract that periodically (cadence TBD by #16) pulls from #19's
+    holding area into the #16 §7 regression corpus. Until that hook is
+    published in #16 §7, captured seeds remain in the #19 holding area
+    and are re-run by #19's own property/fuzz suite on every CI run —
+    a one-time fuzz hit still becomes a permanent #19-side guardrail.
+  - Cross-spec dependency: this subsection's "promotion path" is
+    `TBD-NORMATIVE` per KD-2 status caveat; resolved when #16 §7
+    publishes its external-capture-hook contract.
 - 3.4.4 Property catalogue (categorical only — full list in Appendix B):
   - Physics invariants (energy non-increase under collision, conservation
     where applicable).
@@ -380,11 +441,23 @@ Spec #19's own failure modes (in addition to §2.3):
     classification of every authoritative field referenced, and a
     pointer to the §9 approval checklist row each test verifies.
   - Schema published in Appendix C as a paste-ready template.
-- 3.5.4 Migration policy for already-APPROVED specs (KD-4):
+- 3.5.4 Migration policy for already-APPROVED specs (KD-4) and
+  acknowledged KD-6 dilution (M2):
   - Approved specs (#1–#8) are not forcibly re-opened. Their §5
     sections are surveyed against the schema; gaps are recorded in
     `docs/tracking/spec-error-log.md` as `ERR-019-NNN` rows; remediation
     happens at next natural revision of each spec.
+  - **Acknowledged dilution.** This migration policy is in tension with
+    KD-6 ("every approval-checklist row in every spec MUST resolve to a
+    file path or programmatic check"). Specs #1–#8 were approved before
+    KD-6 existed, and KD-4 explicitly forbids re-opening them. Net
+    effect: KD-6 is **unenforced retroactively** for the eight specs
+    where ERR-005-class fabrication is statistically most likely to
+    already exist. This is a *known dilution*, not a migration
+    technicality. Mitigation: the Appendix D survey enumerates every
+    unresolved row as a `ERR-019-NNN` entry so the dilution is
+    *visible* even when not *enforced*. Full enforcement reaches each
+    of #1–#8 only at that spec's next natural revision.
   - Audit table location: Appendix D.
 - 3.5.5 Anti-patterns:
   - Approval-checklist row whose "evidence" is prose without a file
@@ -395,6 +468,13 @@ Spec #19's own failure modes (in addition to §2.3):
 ### 3.6 Coverage Targets — Per-Tier Policy (FR-TS-053 … 060)
 
 - 3.6.1 Citation: tier vocabulary owned by #16 §1.3.1; not restated.
+  - **Cite-precision guard (L2).** The subsection number "§1.3.1" is
+    tagged `TBD-NORMATIVE` per KD-2 because #16 has been through three
+    adversarial passes and subsection numbering may have shifted.
+    Section §3 author MUST grep `deterministic-sim/section-1.md` for
+    the tier classification block at draft time and update the cited
+    number atomically. Same guard applies to every "§5", "§7", "§8"
+    citation of #16 in this spec.
 - 3.6.2 Targets (Stage-gated per KD-5):
   - **Tier A (authoritative hard):** ≥ 98% line, ≥ 95% branch.
   - **Tier B (bounded-authoritative):** ≥ 90% line, ≥ 80% branch.
@@ -410,6 +490,15 @@ Spec #19's own failure modes (in addition to §2.3):
     expires at next refactor of the affected file.
 
 ### 3.7 Flake Handling (FR-TS-061 … 067)
+
+> **Stage-gated per KD-5 (M4).** Every rule in §3.7 is a contract that
+> activates at the Stage 0 → Stage 1 transition. Until CI exists, there
+> is nothing to flake. The §3.7.3 "14-day auto-expiry", §3.7.4 "≥3
+> quarantines in 90 days = eviction", and §3.7.2 "CI runs every test
+> twice" rules all presume the CI integration layer enumerated in §7.2.
+> Per-FR activation status recorded in §5.2 Stage-Gated Activation
+> Table; the corresponding FR-TS-061 … 067 rows read "Activation stage:
+> Stage 0+1, criterion: CI integration layer specified per §7.2."
 
 - 3.7.1 Definition:
   - A test is "flaky" if two runs of the same revision under the same
@@ -472,6 +561,18 @@ Spec #19's own failure modes (in addition to §2.3):
   publishes (pyramid percentages, coverage targets, flake-eviction
   windows) are governance values tagged `[GT]` with rationale recorded
   inline. Section retained per template with one-line justification.
+- **KD-6 evidence artifact for governance numbers (L5).** Each `[GT]`
+  governance number's KD-6 evidence is the *citation line in this
+  spec's body text* that introduces the number — for example, the
+  pyramid percentages' evidence is `section-3.md §3.1.2`, the Tier A
+  coverage thresholds' evidence is `section-3.md §3.6.2`, the
+  flake-eviction window's evidence is `section-3.md §3.7.4`. The
+  approval-checklist auditor (§5.3) resolves these citations by
+  confirming the cited file path contains the literal number claimed.
+  No separate `tools/governance-numbers.md` file is created; the spec
+  body IS the evidence, and changes to a governance number are
+  themselves a spec revision tracked in the relevant section's
+  version-history table.
 
 ### 3.11 Version History
 
@@ -509,12 +610,21 @@ Spec #19's own failure modes (in addition to §2.3):
 ### 4.4 Interface Contracts (this spec exposes)
 
 - `IScenario` — implemented by every scenario; single `Run(seed)`
-  method.
+  method. Producer = scenario authors; consumer = `ScenarioRunner`
+  (§3.3.3). Both sides specified in this spec → permitted under
+  CLAUDE.md "Interface Design Principle".
 - `IFixtureValidator` — implemented per fixture format-version.
-- `IFlakeReporter` — implemented by the CI integration layer
-  (Stage 1+).
-- All three live in `tests/shared/` per §4.1; no game-state code may
+  Producer = fixture-format owners; consumer = `ScenarioRunner` fixture
+  load step (§3.3.4). Both sides specified.
+- Both live in `tests/shared/` per §4.1; no game-state code may
   reference them.
+- **`IFlakeReporter` is intentionally NOT declared here.** Per the
+  CLAUDE.md "Interface Design Principle" (only declare interfaces when
+  both sides are specified — ERR-001 / ERR-004 hazard), the CI
+  integration layer that would consume `IFlakeReporter` is unspecified
+  at Stage 0. The interface is deferred to §7.2 Stage 1 deliverables
+  and is declared in `src/CLAUDE.md` (or a Stage 1 CI spec) only after
+  the consumer is concretely specified.
 
 ### 4.5 CI Pipeline Topology (shape only; concrete config Stage 1+)
 
@@ -626,9 +736,15 @@ Spec #19's own failure modes (in addition to §2.3):
     breakdown consumable by §5.5 auditor).
   - Mutation testing: Stryker.NET (selection criterion: parallels
     coverage tool; deferred to Stage 1 for first activation).
-  - CI provider: deferred to `src/CLAUDE.md` (KD-3 boundary with #18
-    leaves provider choice to perf side, since perf gates are the
-    longest CI step).
+  - CI provider: deferred to `src/CLAUDE.md`. **Selection criteria
+    (L4):** (a) must support the three pipeline shapes in §4.5
+    (pre-commit, PR, nightly), (b) must support functional gate
+    composition with the #18 performance gate and the #16 §7
+    determinism gate (KD-2 / KD-3), (c) must expose pass/fail at the
+    granularity required by §6.2 gate-composition rules. No assumption
+    is made that #18 "owns" CI-provider selection; selection happens in
+    `src/CLAUDE.md` against these neutral criteria once the producer
+    specs (#16 §7, #18 §4) are concretely citable.
 
 ### 6.2 CI Pipeline Policy (boundary with #18)
 
@@ -707,9 +823,16 @@ Spec #19's own failure modes (in addition to §2.3):
 
 - Coverage dashboard (§3.6.4).
 - Flake quarantine + eviction tooling (§3.7).
+- `IFlakeReporter` interface declaration (deferred from §4.4 per
+  CLAUDE.md "Interface Design Principle" — declared in `src/CLAUDE.md`
+  or a Stage 1 CI spec once the CI integration layer is concretely
+  specified; both producer and consumer must be specified before this
+  interface is written).
 - Mutation-testing first activation (§6.1).
 - Scenario library populated index (§3.3.6).
 - Per-spec §5 schema-conformance auto-check (§5.4).
+- Appendix D approved-spec §5 survey populated (deferred from §9.2 per
+  §3.5.4 dilution policy; see M3 in adversarial-review resolution map).
 
 ### 7.3 Stage 5+ Extensions
 
@@ -736,6 +859,8 @@ Spec #19's own failure modes (in addition to §2.3):
 - D5 — LFS storage decision for fixtures (§3.8.2) — Stage 0+1.
 - D6 — Mutation-testing activation date — Stage 1.
 - D7 — Visual-regression framework selection — Stage 1+ (§3.9.3).
+- D8 — Coverage-guided (AFL-style) fuzzing adoption — Stage 1+
+  (§3.4.1).
 
 ### 7.6 Version History
 
@@ -807,8 +932,15 @@ Spec #19's own failure modes (in addition to §2.3):
   path or a check name (KD-6 self-application).
 - All cross-references (XC-/FM-/EC-/ERR-) resolve.
 - Per-spec §5 schema (Appendix C) present and complete.
-- Survey of approved specs #1–#8 §5 sections completed; gaps logged
-  as `ERR-019-NNN` per §3.5.4.
+- All `TBD-NORMATIVE`-tagged citations of #16 (KD-2) and #18 (KD-3)
+  enumerated; outstanding tags listed for the reviewer.
+- **Appendix D survey is NOT a #19-approval gate (M3).** The survey
+  of #1–#8 §5 sections is a Stage 0+1 deliverable (§7.2); for #19's
+  own approval the requirement is only that Appendix D *exists with
+  the schema and an empty / partial table*. Completing the survey
+  rows is deferred so #19's approval is not converted into an
+  eight-spec audit task. Sequencing rationale recorded in
+  PROGRESS.md alongside #19's milestone.
 
 ### 9.3 Review Checklist
 
@@ -823,6 +955,12 @@ Spec #19's own failure modes (in addition to §2.3):
 - Status block (`IN REVIEW` / `APPROVED` / `SUSPENDED` / `DEFERRED`).
 - Approval evidence: file paths to programmatically-verifiable sources
   (KD-6 self-application — every row of this checklist must comply).
+- **Evidence-artifact convention for `[GT]` governance numbers (L5).**
+  Per §3.10, each governance number's evidence is the section-file
+  citation that publishes the number (e.g., `section-3.md §3.1.2` for
+  pyramid percentages). Checklist rows pointing at `[GT]` numbers MUST
+  cite the section-file path verbatim; the §5.3 auditor confirms the
+  literal number is present at that path.
 
 ---
 
@@ -849,8 +987,12 @@ Spec #19's own failure modes (in addition to §2.3):
 - **Appendix D — Approved-Spec §5 Survey.**
   Table of #1 … #8 §5 sections rated against Appendix C schema.
   Columns: spec ID, schema-conforming Y/N, missing fields, remediation
-  ERR-019-NNN. Stage 0 deliverable; Stage 1 trigger for actual
-  per-spec revisions.
+  ERR-019-NNN. **Scope at #19 approval (M3):** Appendix D ships with
+  the schema and the table headers populated; row contents are a
+  Stage 0+1 deliverable (§7.2). The survey itself is *not* a #19
+  approval gate; KD-6 dilution remains *visible* via the empty rows
+  even before the survey is filled in. Stage 1 trigger for actual
+  per-spec revisions remains unchanged.
 
 - **Appendix E — Stage-0 Local Runbook.**
   Concrete shell-script outline for `tools/run-tests-local.sh`: pre-
@@ -869,6 +1011,7 @@ Spec #19's own failure modes (in addition to §2.3):
 | Version | Date         | Author      | Notes                                                                                                         |
 |---------|--------------|-------------|---------------------------------------------------------------------------------------------------------------|
 | 1.0     | May 12, 2026 | Claude Code | Initial detailed outline drafted from `outline.md` v1.0. Addresses all 13 findings from May 6 adversarial review. |
+| 1.1     | May 12, 2026 | Claude Code | Addresses all 12 findings (3H / 4M / 5L) from second adversarial review (May 12). Changes: KD-2 / KD-3 status caveats + `TBD-NORMATIVE` tagging (H1); §1.4 + KD-2 disclose #16↔#19 sequencing (H2); §4.4 removes `IFlakeReporter`, deferred to §7.2 (H3); §3.4.3 restructured to capture seeds into #19-owned holding area (M1); §3.5.4 acknowledges KD-6 retroactive dilution (M2); §9.2 + Appendix D down-scope survey out of #19 approval gate (M3); §3.7 explicitly Stage-gated (M4); §3.1.2 clarifies ceiling-only bound semantics (L1); §3.6.1 cite-precision guard on #16 §1.3.1 (L2); §3.4.1 drops vacuous Stage-0 disclaimer (L3); §6.1 neutral CI-provider selection criteria (L4); §3.10 + §9.4 specify `[GT]` evidence artifact (L5). No FR text changes; no new FR IDs introduced. |
 
 ---
 
@@ -892,3 +1035,20 @@ section is resolved by a specific subsection above.
 | 11 — No coverage target distinction by tier | M | KD-9; §3.6.2; §5.5 |
 | 12 — Flaky-test policy in appendix only | L | §3.7 (promoted to §3, not appendix); also referenced from §2.5 |
 | 13 — Test data ↔ canonical save format binding | L | KD-10; §3.3.4; §3.8; Appendix A |
+
+### Second adversarial review (May 12, 2026 — outline-detailed.md v1.0)
+
+| Finding | Severity | Resolved by |
+|---------|----------|-------------|
+| H1 — Forward-binds to unwritten #16 (IN PROGRESS) and #18 (NOT STARTED) | H | KD-2 status caveat; KD-3 status caveat; §1.4 upstream-status notes; `TBD-NORMATIVE` tagging mandate |
+| H2 — Circular dependency #16 ↔ #19 not acknowledged | H | KD-2 sequencing constraint; §1.4 bidirectional-sequencing note |
+| H3 — `IFlakeReporter` phantom interface (ERR-001 / ERR-004 hazard) | H | §4.4 removal + explicit rationale; §7.2 Stage 1 deliverable |
+| M1 — `IFlakeReporter`-style write-binding into #16 §7's owned suite via auto-capture | M | §3.4.3 restructured: capture into #19-owned `tests/data/captured-seeds/` holding area; promotion via #16-published external-capture-hook contract (TBD-NORMATIVE) |
+| M2 — KD-6 retroactive scope vs KD-4 grandfather creates unenforced dilution | M | §3.5.4 explicit "acknowledged dilution" paragraph; Appendix D enumerates gaps so dilution is visible even when not enforced |
+| M3 — Appendix D survey of #1–#8 converted #19 approval into 8-spec audit | M | §9.2 + Appendix D down-scope: survey-row contents are Stage 0+1 (§7.2); only the schema is a #19 approval gate |
+| M4 — §3.7 flake handling normative immediately, inconsistent with §7.2 Stage-1 gating | M | §3.7 header block: explicit Stage-gated activation per KD-5; FR-TS-061…067 rows updated in §5.2 |
+| L1 — Pyramid arithmetic under-constrained (ceilings-only) | L | §3.1.2 bound-semantics paragraph clarifies intentional ceiling-only design |
+| L2 — `#16 §1.3.1` subsection-number cite-precision risk | L | §1.4 upstream-status note; §3.6.1 cite-precision guard requiring grep verification at draft time |
+| L3 — Vacuous "no AFL fuzzing at Stage 0" disclaimer | L | §3.4.1 rephrased; tracked as D8 deferred decision in §7.5 |
+| L4 — §6.1 CI provider rationale was speculation ("perf gates are longest CI step") | L | §6.1 replaced with neutral selection criteria; no #18-ownership inference |
+| L5 — KD-6 self-application against `[GT]` governance numbers ambiguous | L | §3.10 declares spec body IS the evidence; §9.4 evidence-artifact convention names section-file citations as compliant evidence |
