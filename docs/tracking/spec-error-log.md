@@ -6,9 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.7
-**Updated:** May 3, 2026
-**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-002 and ERR-003 remain open.
+**Version:** 1.8
+**Updated:** May 12, 2026
+**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002, ERR-017-001 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4; open). ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---
@@ -31,6 +31,7 @@ authoritative remediation backlog.
 | ERR-012 | First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences) | Minor | 1 | ✅ Closed — Fixed in first-touch/section-7.md v1.1 (March 5, 2026) |
 | ERR-016-001 | Phantom interface risk in Deterministic Simulation §4.2 | Medium | 1 | ✅ Mitigated — §4.2 reclassified as non-normative sketches in v0.7 fix pass |
 | ERR-016-002 | EntityId no-reuse cross-spec constraint not back-propagated to specs #2 and #8 | Medium | 3 | Resolved (spec text) — May 6, 2026: `XC-002-001` added to Agent Movement #2 §2.5 (v1.1.1); `XC-008-001` added to Decision Tree #8 §1.7.3 (v1.1.1). Pending only: prose update in #16 §3.2.5. |
+| ERR-017-001 | `DOMAIN_TAG_EVENT_LEDGER` allocation needed in Deterministic Simulation #16 §3.4 domain-tag table | Medium | 2 | Open — filed May 12, 2026 during PASS 2 adversarial review of `event-system/outline-detailed.md`. Patch to #16 §3.4 to be submitted at #17 IN REVIEW commit. Pattern parallel to ERR-016-002 cross-spec back-prop. |
 
 ---
 
@@ -534,7 +535,39 @@ Outstanding follow-up: update `docs/specs/deterministic-sim/section-3.md` §3.2.
 
 ---
 
-*End of Spec Error Log v1.7 — May 3, 2026.*
+## ERR-017-001: `DOMAIN_TAG_EVENT_LEDGER` allocation required in Deterministic Simulation #16 §3.4
+
+**Severity:** Medium (cross-spec back-prop; latent if not landed before #17 IN REVIEW)
+**Detected:** May 12, 2026
+**Detected During:** PASS 2 adversarial review of `event-system/outline-detailed.md` v1.0 (finding 3)
+**Root Cause:** Event System #17 §3.4.2 declares the `Events`-phase digest preimage as `SerializeCanonical(DOMAIN_TAG_EVENT_LEDGER ‖ EventLedgerRecord[T])`. This domain-tag entry is normatively owned by Deterministic Simulation #16 §3.4's domain-tag table, but no allocation exists there. There is no documented mechanism by which a downstream spec registers a domain-tag need with #16; the dependency direction (#17 cites #16) makes this a chicken-and-egg.
+
+**Problem in detail:**
+- Spec #17 needs a stable numeric `DOMAIN_TAG_EVENT_LEDGER` to commit its FM-017-001 formula to.
+- Spec #16 §3.4 currently does not enumerate `EVENT_LEDGER` among its allocated domain tags.
+- Without back-prop, #17 cannot reach `APPROVED` (its `[CROSS-PENDING]` constant cannot promote to `[CROSS]`).
+- The same hazard class as ERR-016-002 (downstream spec adds normative constraint on upstream after the upstream's review pass).
+
+**Required fix:**
+1. At `event-system/outline-detailed.md` reaching IN REVIEW, file a patch to `docs/specs/deterministic-sim/section-3.md` §3.4 domain-tag table allocating `DOMAIN_TAG_EVENT_LEDGER` (next available numeric value in #16's tag-namespace).
+2. Update §3.10 constants catalogue in `event-system/outline-detailed.md` (and any drafted §3 section file) to pin the literal value and promote `[CROSS-PENDING]` → `[CROSS]` at the same beat that resolves the citation's `TBD-NORMATIVE` tag (gated on #16 reaching `APPROVED` per KD-2).
+3. Once the allocation lands in #16, mark this entry CLOSED.
+
+**Status:** OPEN — May 12, 2026. Patch deferred to #17 IN REVIEW commit. Tracked here so the allocation is not forgotten during section-file authoring.
+
+**Files requiring revision:**
+
+| File | Section | Change |
+|---|---|---|
+| `docs/specs/deterministic-sim/section-3.md` | §3.4 domain-tag table | Add `DOMAIN_TAG_EVENT_LEDGER` row with allocated numeric value |
+| `docs/specs/event-system/section-3.md` (when authored) | §3.10 constants catalogue | Pin literal value; promote `[CROSS-PENDING]` → `[CROSS]` post-#16 APPROVED |
+| `docs/specs/event-system/section-3.md` (when authored) | §3.4.2 FM-017-001 | Inline literal value in worked example (Appendix B) |
+
+**Version impact:** Patch revision of #16 once allocation lands (no behavioral change; pure namespace allocation). Spec #17 carries the dependency natively.
+
+---
+
+*End of Spec Error Log v1.8 — May 12, 2026.*
 
 ---
 

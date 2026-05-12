@@ -34,7 +34,7 @@
 | 14 | Defensive AI | `defensive-ai/` | 4 | NOT STARTED | — |
 | 15 | Attacking AI | `attacking-ai/` | 4 | NOT STARTED | — |
 | 16 | Deterministic Simulation | `deterministic-sim/` | 4 | IN PROGRESS | — |
-| 17 | Event System | `event-system/` | 5 | NOT STARTED | — |
+| 17 | Event System | `event-system/` | 5 | IN PROGRESS | Outline v1.0 + detailed outline v1.1 (May 12, 2026; PASS 2 adversarial review applied). Section files not yet authored. |
 | 18 | Performance Optimization Strategy | `performance-optimization/` | 5 | NOT STARTED | — |
 | 19 | Testing Strategy & Framework | `testing-strategy/` | 5 | IN REVIEW | — |
 | 20 | Code Standards & Style Guide | `code-standards/` | 5 | APPROVED | May 11, 2026 |
