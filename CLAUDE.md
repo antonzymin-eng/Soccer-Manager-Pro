@@ -1,7 +1,7 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** May 6, 2026
+> **Last Updated:** May 12, 2026
 > **Purpose:** Authoritative rules for any AI agent (Claude Code, Claude chat, etc.) working on this project. Read this file completely before every task.
 
 ---
@@ -209,6 +209,8 @@ pass-mechanics/
 
 > **Keep this section current.** When resolving an issue, remove or update its entry here in the same commit. Each entry includes a "since" date so staleness is visible.
 
+- **Testing Strategy & Framework (#19) — IN REVIEW** — *May 12, 2026.* Initial section-file draft authored May 12 from `outline-detailed.md` v1.1; v0.2 self-critique sweep applied same day (3 H / 6 M / 8 L findings, all resolved). Per spec §9.3.6–§9.3.8 (KD-2 sequencing), advancement to `APPROVED` is gated on three preconditions: (a) Spec #16 (Deterministic Simulation) reaching Tier 2 `APPROVED`, (b) Spec #18 (Performance Optimization Strategy) having at least an outline-level draft with §4 and §7 headers, and (c) all `TBD-NORMATIVE`-tagged citations of #16 and #18 in the #19 spec text resolved. None of (a)/(b)/(c) are currently satisfied — #16 is `IN PROGRESS`, #18 is `NOT STARTED`, and multiple `TBD-NORMATIVE` tags remain in `testing-strategy/section-3.md` and `appendices.md`. Lead-developer sign-off on `IN REVIEW → APPROVED` is therefore blocked until those preconditions clear; the May 12 sign-off request was declined for this reason and only tracking-doc updates were applied.
+- **Code Standards & Style Guide (#20) — APPROVED** — *May 11, 2026.* Section files + appendices authored May 7–8 from `outline-detailed.md` v1.3; adversarial review pass-1 applied May 11; lead-developer R-01..R-05 sign-off completed same day. `SPEC_INDEX.md` row 20 reflects `APPROVED`. §9 v1.1 APPROVED.
 - **Pass Mechanics (#5) — RESOLVED** — *re-approved May 6, 2026.* Original Feb 22 approval → suspended Mar 25 (19 audit findings, all fixed per `fix-manifest-pass-mechanics.md`) → re-approved May 6 after §3.3–§3.9 follow-up findings F-A01 / F-A02 resolved via option-3 hybrid (`spinBase`/`spinMax` columns added to §3.1.4 Master Physical Profile Table; `WINDUP_FRAMES`/`FOLLOWTHROUGH_FRAMES` localized in §3.8.10). Re-review packet at `pass-mechanics/re-review-packet.md`. Stage 0 Priority 1–2 spec set (#1–#8) is now complete.
 - **Decision Tree (#8) draft-level quality gate** — *April 27, 2026.* Approved at draft-level rigor (lighter than Pass Mechanics #5 / Shot Mechanics #6 programmatic audit). Comprehensive audit is a candidate before implementation begins. Tracked here as a follow-up item, not a blocker.
 - **Renumbering cascade resolved** — *April 26, 2026:* Three-pass sweep applied across all specs. ~115 body-text substitutions in three commits covering Decision Tree #7→#8, Heading #9→#10, Goalkeeper #10→#11, Fixed64 #8→#9. Audit reports and changelog rows intentionally left unchanged (they document history). Verification grep on April 26, 2026 returns zero remaining stale body-text references. Re-run grep before any future tagging.

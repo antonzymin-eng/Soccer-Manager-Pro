@@ -1,7 +1,7 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** May 6, 2026
+**Last Updated:** May 12, 2026
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
@@ -117,7 +117,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Started:** February 2, 2026
 **Deliverables:** 20 comprehensive specification documents
 
-**Summary (May 6, 2026):** 7 approved (#1, #2, #3, #4, #6, #7, #8), 1 suspended (#5), 1 in review (#9), 1 in progress (#16), 10 not started (#10–#15, #17–#20). Scaffold skeletons (outline + section-1…9 + appendices headers, no body content) exist for the 10 not-started specs.
+**Summary (May 12, 2026):** 9 approved (#1, #2, #3, #4, #5, #6, #7, #8, #20), 0 suspended, 2 in review (#9, #19), 1 in progress (#16), 8 not started (#10–#15, #17, #18). Scaffold skeletons (outline + section-1…9 + appendices headers, no body content) exist for the 8 not-started specs.
 **Total specification output:** ~4.33 MB across 106 files (counts predate folder migration; see file-manifest.md)
 **Comprehensive audits completed:** 6 of 7 finished specs
 
@@ -152,8 +152,8 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Priority 5 — Systems Architecture (Weeks 17-20):**
 17. ⏳ Event System
 18. ⏳ Performance Optimization Strategy
-19. ⏳ Testing Strategy & Framework
-20. ⏳ Code Standards & Style Guide
+19. 🔍 Testing Strategy & Framework — **IN REVIEW** (May 12, 2026; initial draft + v0.2 self-critique sweep applied. Approval gated by KD-2 preconditions: #16 Tier 2 APPROVED, #18 outline-level draft, all `TBD-NORMATIVE` tags resolved.)
+20. ✅ Code Standards & Style Guide — **APPROVED** May 11, 2026 (adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete)
 
 **Status Key:**
 - ⏳ Not started
@@ -254,7 +254,9 @@ Soccer-Manager-Pro/
 │   │   ├── decision-tree/              [Spec #8 — APPROVED (draft-level)]
 │   │   ├── fixed64-math/               [Spec #9 — IN REVIEW]
 │   │   ├── deterministic-sim/          [Spec #16 — IN PROGRESS]
-│   │   └── ...                         [Specs #10–#15, #17–#20 — scaffold-only, NOT STARTED]
+│   │   ├── testing-strategy/           [Spec #19 — IN REVIEW]
+│   │   ├── code-standards/             [Spec #20 — APPROVED]
+│   │   └── ...                         [Specs #10–#15, #17, #18 — scaffold-only, NOT STARTED]
 │   └── tracking/
 │       ├── PROGRESS.md                 [Schedule and milestone tracking]
 │       ├── spec-error-log.md           [Cross-spec architectural errors]
@@ -470,6 +472,12 @@ git push --tags
 - Renumber sweep marked complete (Apr 26).
 - Fixed64 migration deferred to Stage 5+; Stage 0 uses float + state snapshots.
 - Pass Mechanics (#5) is the only Priority 1–2 spec still outstanding (re-sign-off after March 25 audit).
+
+**v1.8 — May 12, 2026**
+- Code Standards & Style Guide (#20) reclassified NOT STARTED → APPROVED (May 11, 2026).
+- Testing Strategy & Framework (#19) reclassified NOT STARTED → IN REVIEW (May 12, 2026). Approval gated by KD-2 preconditions (#16 Tier 2 APPROVED, #18 outline-level draft, all `TBD-NORMATIVE` tags resolved).
+- Stage 0 spec count: **9 APPROVED, 0 SUSPENDED, 2 IN REVIEW, 1 IN PROGRESS, 8 NOT STARTED.**
+- Project Structure block updated to break out testing-strategy/ and code-standards/ folders.
 
 **v1.7 — May 6, 2026**
 - Deterministic Simulation (#16) reclassified to IN PROGRESS (May 2, 2026).

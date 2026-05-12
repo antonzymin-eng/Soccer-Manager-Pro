@@ -1,7 +1,7 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** May 6, 2026
+> **Last Updated:** May 12, 2026
 > **Purpose:** Single source of truth for spec numbers, folder names, and approval status. Every cross-reference in every spec must match the numbers in this file.
 
 ---
@@ -60,6 +60,8 @@
 - **May 2, 2026 status reconciliation:** Deterministic Simulation (#16) reclassified from `NOT STARTED` to `IN PROGRESS`. Section files (sections 1–9 + appendices) exist at v0.5–v0.7 but were authored ahead of formal status update. Counts now: 7 APPROVED, 1 SUSPENDED, 0 IN REVIEW, 1 IN PROGRESS, 11 NOT STARTED.
 - **May 6, 2026 status reconciliation:** Fixed64 Math Library (#9) reclassified from `NOT STARTED` to `IN REVIEW` after Pass 2 adversarial critique fixes landed. All sections (1–9 + appendices) present at v0.2–v0.3; awaiting lead developer sign-off per `fixed64-math/section-9-approval-checklist.md`. Counts after that change: 7 APPROVED, 1 SUSPENDED, 1 IN REVIEW, 1 IN PROGRESS, 10 NOT STARTED.
 - **May 6, 2026 (later same day) — Pass Mechanics (#5) re-approved.** F-A01 / F-A02 resolved via option-3 hybrid; lead developer sign-off granted. Counts now: **8 APPROVED, 0 SUSPENDED, 1 IN REVIEW, 1 IN PROGRESS, 10 NOT STARTED.** Stage 0 Priority 1–2 spec set is now complete (Pass Mechanics was the last suspended Priority 1–2 spec).
+- **May 11, 2026 — Code Standards & Style Guide (#20) approved.** Section files + appendices authored May 7–8 from `outline-detailed.md` v1.3; adversarial review pass-1 applied May 11; lead-developer R-01..R-05 sign-off completed. Counts: **9 APPROVED, 0 SUSPENDED, 1 IN REVIEW, 1 IN PROGRESS, 9 NOT STARTED.**
+- **May 12, 2026 — Testing Strategy & Framework (#19) reclassified `NOT STARTED` → `IN REVIEW`.** Initial section-file draft authored May 12 from `outline-detailed.md` v1.1; v0.2 self-critique sweep applied (3 H / 6 M / 8 L findings, all resolved). Per KD-2 sequencing in spec §9.3.6–§9.3.8, advancement to `APPROVED` is gated on (a) Spec #16 reaching Tier 2 `APPROVED`, (b) Spec #18 outline-level draft, and (c) all `TBD-NORMATIVE` tags resolved. Counts: **9 APPROVED, 0 SUSPENDED, 2 IN REVIEW, 1 IN PROGRESS, 8 NOT STARTED.**
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 
 ---
