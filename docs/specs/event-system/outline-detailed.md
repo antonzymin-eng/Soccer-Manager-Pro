@@ -2,10 +2,14 @@
 
 **Created:** May 12, 2026
 **Last Updated:** May 12, 2026
-**Version:** 1.0
-**Status:** DRAFT — expansion of `outline.md` v1.0. Resolves all 12
-findings (5H / 6M / 2L; numbered 1–12 in the May 6, 2026 adversarial
-review block of `outline.md`). Ready for section-file authoring.
+**Version:** 1.1
+**Status:** DRAFT — expansion of `outline.md` v1.0. v1.0 resolved all 12
+findings from the May 6 adversarial review of `outline.md`. v1.1 applies
+PASS 2 ADVERSARIAL REVIEW findings (4H / 6M / 5L; review block appended
+at end of file). All H and M findings resolved in this revision; L
+findings addressed in their respective subsections. Ready for
+section-file authoring. `SPEC_INDEX.md` row 17 advanced to `IN PROGRESS`
+atomically with this revision.
 **Companion documents:** `outline.md` (high-level v1.0 + May 6
 adversarial review).
 
@@ -66,6 +70,19 @@ stated once here and cited below by KD-number, never restated.
     ISSUES) until #16 reaches `APPROVED`. Section files MUST carry
     the tag verbatim on every #16 citation; tag removal is a §9.2
     quality-checklist row and is gated on #16 approval.
+  - **Status caveat — Spec #19 (testing).** Spec #19 is `IN REVIEW`,
+    not `APPROVED` (CLAUDE.md OPEN ISSUES). Every citation in this
+    spec of "#19 §3.1.2" (test pyramid ratios), "#19 §3.4" (property
+    tests), "#19 §3.8" (fixture governance), and "#19 §3.2 / §3.4.3"
+    (determinism-suite consumption) carries the same `TBD-NORMATIVE`
+    tag until #19 reaches `APPROVED`.
+  - **`[CROSS-PENDING]` qualifier.** CLAUDE.md `[CROSS]` requires the
+    upstream spec to be `APPROVED`. For constants imported from a
+    spec that is currently `IN PROGRESS` / `IN REVIEW`, use the
+    `[CROSS-PENDING]` qualifier paired with a `TBD-NORMATIVE` tag on
+    the citation. At upstream `APPROVED` time the qualifier is
+    rewritten to `[CROSS]` and the `TBD-NORMATIVE` tag is removed in
+    the same revision. Used by `DOMAIN_TAG_EVENT_LEDGER` in §3.10.
   - **Sequencing constraint.** Per CLAUDE.md OPEN ISSUES, #16's
     Tier 2 final approval is gated on `#9 / #17 / #18 / #19 reaching
     IN REVIEW`. Spec #17 in turn binds substantively to #16. The
@@ -88,7 +105,19 @@ stated once here and cited below by KD-number, never restated.
   - **Tier B (bounded-authoritative):** event payload is digested
     but uses #16 §3.5 Tier-B tolerance rules for any continuous
     fields. Reserved for cross-platform parity concerns; not
-    expected to populate at Stage 0 (parallel to #16 §1.3).
+    expected to populate at Stage 0 (parallel to #16 §1.3). **Why
+    `IEventB` is not a phantom interface (CLAUDE.md "Interface
+    Design Principle"):** the tier vocabulary is normatively owned
+    by #16 §1.3.1 — Spec #17 must model all three tiers because
+    omitting one would silently force Tier B traffic onto Tier A
+    paths at Stage 5+ migration time, breaking the per-tier digest
+    contract (§3.4.2). Both sides of `IEventB` are specified here:
+    the **publisher** side is the `EventBus.Publish<T> where T :
+    IEventB` overload (§3.2.1); the **consumer** side is the
+    `EventLedger` dispatcher (§4.4) and the Tier-B tolerance
+    application path declared in #16 §3.5. This satisfies the
+    "both sides specified" test even though no Stage 0 event type
+    populates Tier B.
   - **Tier C (cosmetic / observability only):** VFX, UI, telemetry,
     audio cue events. NOT digested. NOT part of `SnapshotPayload`.
     Loss is permitted; ordering across phases is permitted. Tier C
@@ -419,6 +448,16 @@ public readonly struct <Name>Event
   precedes payload. Header layout is identical for Tier A / B / C;
   the tier classification is metadata on the registry row
   (Appendix A), not a runtime byte.
+- **Canonical-vs-in-memory layout.** The §2.4.1 skeleton defines
+  the **canonical serialized** layout consumed by §3.4.2
+  `SerializeCanonical`. In-memory C# struct layout is permitted to
+  differ — `[StructLayout(LayoutKind.Sequential)]` without
+  `Pack = 1` is sufficient because the canonical form is produced
+  by the §3.4.2 serializer, which writes fields explicitly in the
+  declared order with no implicit padding. `Pack = 1` is NOT
+  required (it would impose cross-platform-suspect alignment
+  costs); the serializer is the only authoritative source of
+  on-disk and digest bytes.
 - Padding rule cites #16 §3.2.4.1 (`_reserved` is normalized to
   zero on serialize / digest).
 
@@ -430,19 +469,24 @@ field schema. Spec #17 §2.4 specifies the *shape* of registry
 rows; Appendix A holds the *table*. Initial registry rows at
 Spec #17 approval time:
 
-| Ordinal (hex) | Type | Tier | Producer phase | Owning spec | Version |
-|---------------|------|------|----------------|-------------|---------|
-| `0x01` | `ShotExecutedEvent` | A | Resolve | #6 (cited; not redefined here) | 1 |
-| `0x02` | `BallContactEvent` | A | Physics | #1 / #3 | 1 |
-| `0x03` | `BallCrossedLineEvent` | A | Physics | #1 | 1 |
-| `0x04` | `PossessionChangedEvent` | A | Resolve | #17 (default owner) | 1 |
-| `0x05` | `FoulCommittedEvent` | A | Resolve | #17 (default owner) | 1 |
-| `0x06` | `CardIssuedEvent` | A | Resolve | #17 (default owner) | 1 |
-| `0x07` | `GoalAwardedEvent` | A | Resolve | #17 (default owner) | 1 |
-| `0x08` | `SubstitutionEvent` | A | Resolve | #17 (default owner) | 1 |
-| `0x09` | `TickHeartbeatEvent` | C | Snapshot | #17 (default owner) | 1 |
-| `0x0A` | `VfxImpactCue` | C | Resolve | #17 (default owner) | 1 |
-| `0x0B` | `UiNotificationCue` | C | Resolve | #17 (default owner) | 1 |
+| Ordinal (hex) | Type | Tier | Producer phase | Owning spec | Version | First published in |
+|---------------|------|------|----------------|-------------|---------|---------------------|
+| `0x01` | `ShotExecutedEvent` | A | Resolve | #6 (cited; not redefined here) | 1 | #17 v1.0 (registry seed); payload from #6 §2.4 |
+| `0x02` | `BallContactEvent` | A | Physics | #1 / #3 | 1 | #17 v1.0 |
+| `0x03` | `BallCrossedLineEvent` | A | Physics | #1 | 1 | #17 v1.0 |
+| `0x04` | `PossessionChangedEvent` | A | Resolve | #17 (default owner) | 1 | #17 v1.0 |
+| `0x05` | `FoulCommittedEvent` | A | Resolve | #17 (default owner) | 1 | #17 v1.0 |
+| `0x06` | `CardIssuedEvent` | A | Resolve | #17 (default owner) | 1 | #17 v1.0 |
+| `0x07` | `GoalAwardedEvent` | A | Resolve | #17 (default owner) | 1 | #17 v1.0 |
+| `0x08` | `SubstitutionEvent` | A | Resolve | #17 (default owner) | 1 | #17 v1.0 |
+| `0x09` | `TickHeartbeatEvent` | C | Snapshot | #17 (default owner) | 1 | #17 v1.0 |
+| `0x0A` | `VfxImpactCue` | C | Resolve | #17 (default owner) | 1 | #17 v1.0 |
+| `0x0B` | `UiNotificationCue` | C | Resolve | #17 (default owner) | 1 | #17 v1.0 |
+
+The `First published in` column is the audit trail for deprecation
+rationale (KD-9 retains deprecated rows indefinitely). Future-spec
+appended rows must populate this column with `<spec> <version>` at
+the IN REVIEW commit that adds the row.
 
 Future specs append their event types to this table at the time
 they reach `IN REVIEW`:
@@ -528,9 +572,10 @@ EventRecord = [
   Design Principle" because both producer (publisher) and
   consumer (`EventBus` dispatcher) are specified here.
 - 3.1.4 Payload-field type whitelist:
-  - Allowed: integer primitives, `float`, `Vector3` (struct from
-    Spec #1 conventions), fixed-size struct payloads, `EntityId`
-    (per #16 §2 / #2 §2.5).
+  - Allowed: integer primitives, `float`, `Vector3` (Stage 0
+    `float`-backed struct per Ball Physics #1 §1.2; Fixed64
+    re-verification per §7.3 at Stage 5+), fixed-size struct
+    payloads, `EntityId` (per #16 §2 / #2 §2.5).
   - Forbidden: `string`, `class`, `IList<>`, any reference type,
     `UnityEngine.Object` references.
   - String-like data is represented by enum + ordinal lookup
@@ -588,6 +633,18 @@ EventRecord = [
   - `eventTypeOrdinal` per Appendix A.
   - `intraPhaseDrawIndex` parallel to #16 §3.2.5.1 RNG intra-stream
     draw index.
+  - **Counter scope (normative).** `intraPhaseDrawIndex` is a
+    `ushort` counter scoped **per-tick, per-producingPhase**. Reset
+    to zero at producing-phase entry; incremented monotonically on
+    every Tier-A / Tier-B publish call within that phase regardless
+    of producing subsystem. The (`producingPhaseIndex`,
+    `subsystemOrdinal`, `entityId`, `eventTypeOrdinal`,
+    `intraPhaseDrawIndex`) tuple is therefore unique within a tick
+    by construction, satisfying §5 property P2 (sort-key
+    total-order). Second-order publishes from inside the same-tick
+    `Events`-phase dispatch (§3.2.5) reuse the `Events`-phase
+    counter (which is itself fresh per tick), preserving the
+    invariant under BFS dispatch up to `MAX_EVENT_DISPATCH_DEPTH`.
   - Sort is performed once at `Events`-phase entry against the
     accumulated tick queue; not on every publish.
   - This ordering is the *only* permitted iteration order over
@@ -606,22 +663,30 @@ EventRecord = [
     `MAX_EVENT_DISPATCH_DEPTH = 8` `[GT]`). Exceeding bound →
     `ERR_EVT_QUEUE_OVERFLOW`.
   - Handler exceptions: Tier A/B → escalate (halt tick, write
-    crash dump per Spec #16 §X). Tier C → log + suppress.
+    crash dump per Spec #16 `[TBD-CITE: tick-fail / crash-dump
+    path; provisional anchor #16 §3.10 failure-mode table]`).
+    Tier C → log + suppress.
 
 ### 3.3 Tick-Rate Split (FR-EVT-034 … 040) — KD-5 mechanics
 
 - 3.3.1 Producing-phase / cadence map:
   | Event type (examples) | Producing phase | Cadence | Tier |
   |-----------------------|-----------------|---------|------|
-  | `BallContactEvent` | Physics | 60 Hz | A |
-  | `ShotExecutedEvent` | Resolve | 60 Hz (event-driven) | A |
-  | `BallCrossedLineEvent` | Physics | 60 Hz | A |
-  | `PressTriggeredEvent` | AI | 10 Hz (stride) | A |
-  | `MarkAssignedEvent` | AI | 10 Hz | A |
-  | `PossessionChangedEvent` | Resolve | event-driven | A |
-  | `GoalAwardedEvent` | Resolve | event-driven | A |
-  | `VfxImpactCue` | Resolve | event-driven | C |
-  | `TickHeartbeatEvent` | Snapshot | 60 Hz | C |
+  | `BallContactEvent` | Physics | 60 Hz | A | seeded |
+  | `ShotExecutedEvent` | Resolve | 60 Hz (event-driven) | A | seeded |
+  | `BallCrossedLineEvent` | Physics | 60 Hz | A | seeded |
+  | `PressTriggeredEvent` | AI | 10 Hz (stride) | A | **future — populated at #13 IN REVIEW** |
+  | `MarkAssignedEvent` | AI | 10 Hz | A | **future — populated at #14 IN REVIEW** |
+  | `PossessionChangedEvent` | Resolve | event-driven | A | seeded |
+  | `GoalAwardedEvent` | Resolve | event-driven | A | seeded |
+  | `VfxImpactCue` | Resolve | event-driven | C | seeded |
+  | `TickHeartbeatEvent` | Snapshot | 60 Hz | C | seeded |
+
+  Rightmost column: `seeded` rows are present in the §2.4.2 initial
+  registry (11 rows). `future` rows are listed as forward-looking
+  examples of the AI-phase cadence model; they are NOT part of the
+  Spec #17 v1.0 registry contract and must be appended to
+  Appendix A by their owning specs at IN REVIEW time.
 - 3.3.2 AI-stride interaction (KD-5):
   - On non-stride ticks, the `AI` phase is `AI_NoOp` (#16 §3.1.2).
     `AI_NoOp` MUST NOT publish Tier A/B events (its WriteSet is
@@ -767,10 +832,10 @@ EventRecord = [
   current pass per §3.2.5 BFS rule. Maximum nesting per §3.2.5
   constant.
 - 3.8.4 Multi-producer same-event same-tick: permitted; ordering
-  resolves by §3.2.4 sort key. Identical-key collisions broken by
-  registration order (a deterministic tiebreaker; the publishing
-  call site assigns `intraPhaseDrawIndex` from a per-phase
-  counter).
+  resolves by §3.2.4 sort key. The per-tick-per-producingPhase
+  `intraPhaseDrawIndex` counter (§3.2.4) makes the sort key unique
+  by construction — identical-key collisions cannot occur, so no
+  registration-order tiebreaker is needed.
 - 3.8.5 Empty `Events` phase: digest contribution is the canonical
   empty-array byte string per #16 §3.2.4.1 `array<T>` rules
   (`00 00 00 00` for count). Phase digest is still emitted.
@@ -796,13 +861,13 @@ EventRecord = [
   | `EVENT_QUEUE_CAPACITY` | 1024 | `[GT]` | §3.5.1 / §6.3 |
   | `COSMETIC_PER_TICK_PUBLICATION_BUDGET` | 4096 | `[GT]` | §3.5.3 / §6.3 — aggregate publication ceiling, NOT a delivery queue (Tier C is immediate-dispatch per §3.2.3) |
   | `MAX_EVENT_DISPATCH_DEPTH` | 8 | `[GT]` | §3.2.5 |
-  | `EVENT_TYPE_ORDINAL_WIDTH` | 1 byte | `[FIXED]` | §3.1.2; Stage 5+ expansion in §7.3 |
-  | `PAYLOAD_VERSION_WIDTH` | 1 byte | `[FIXED]` | §3.1; §3.7 |
-  | `DOMAIN_TAG_EVENT_LEDGER` | (TBD-NORMATIVE; allocated in #16 §3.4) | `[CROSS]` | §3.4.2 |
-  | `ERR_EVT_QUEUE_OVERFLOW` | `0x1701` | `[FIXED]` | §2.5 / §3.6.1 |
-  | `ERR_EVT_TIER_MISMATCH` | `0x1702` | `[FIXED]` | §2.5 / §3.2.5 |
-  | `ERR_EVT_ORDINAL_UNKNOWN` | `0x1703` | `[FIXED]` | §2.5 / §3.7.2 |
-  | `ERR_EVT_VERSION_INCOMPATIBLE` | `0x1704` | `[FIXED]` | §2.5 / §3.7.2 |
+  | `EVENT_TYPE_ORDINAL_WIDTH` | 1 byte | `[GT]` | §3.1.2; design decision (not a physical constant); Stage 5+ expansion in §7.3 |
+  | `PAYLOAD_VERSION_WIDTH` | 1 byte | `[GT]` | §3.1; §3.7; design decision |
+  | `DOMAIN_TAG_EVENT_LEDGER` | (TBD-NORMATIVE; allocated in #16 §3.4 at #17 IN REVIEW — see ERR-017-001) | `[CROSS-PENDING]` | §3.4.2; KD-2 qualifier — promoted to `[CROSS]` when #16 reaches `APPROVED` |
+  | `ERR_EVT_QUEUE_OVERFLOW` | `0x1701` | `[GT]` | §2.5 / §3.6.1 — error-code allocation from `0x17NN` reserved block; designer-chosen, locked at approval |
+  | `ERR_EVT_TIER_MISMATCH` | `0x1702` | `[GT]` | §2.5 / §3.2.5 |
+  | `ERR_EVT_ORDINAL_UNKNOWN` | `0x1703` | `[GT]` | §2.5 / §3.7.2 |
+  | `ERR_EVT_VERSION_INCOMPATIBLE` | `0x1704` | `[GT]` | §2.5 / §3.7.2 |
 - Error-code numeric pins (`0x17NN`) are reserved for Spec #17;
   must not collide with #16's `0x16NN` block.
 - Constants live in their designated `.cs` constant catalogues at
@@ -902,7 +967,7 @@ Spec #17 intentionally does NOT declare:
   Appendix A registry rows) and FR-EVT-055 … 060 (versioning rules —
   enforceable at Appendix A row authoring).
 
-### 5.3 Test Catalogue (target ratios per Spec #19 §3.1.2 — resolves outline finding 12)
+### 5.3 Test Catalogue (target ratios per Spec #19 §3.1.2 `TBD-NORMATIVE` per KD-2 — resolves outline finding 12)
 
 | Layer | Target count | Examples |
 |-------|--------------|----------|
@@ -994,9 +1059,11 @@ Spec #17 intentionally does NOT declare:
 - Tier C worst case at 60 Hz (peak VFX):
   - Per physics tick: ≤ 32 VFX cues + ≤ 16 UI notifications.
   - Aggregate ≤ 256 / tick under stress.
-- Tier A ring-buffer sizing: `EVENT_QUEUE_CAPACITY = 1024` (×16
-  safety margin over the 64 ceiling for second-order dispatch and
-  unforeseen growth).
+- Tier A ring-buffer sizing: `EVENT_QUEUE_CAPACITY = 1024`. Derived
+  as: 64 first-order events × `MAX_EVENT_DISPATCH_DEPTH` (8) = 512
+  worst-case BFS fanout; doubled for unforeseen growth = 1024.
+  Headroom is therefore ×2 over the dispatch-depth-bounded worst
+  case, not ×16 over the first-order ceiling alone.
 - Tier C publication-budget sizing: Tier C has no delivery queue
   (§3.5.3); `COSMETIC_PER_TICK_PUBLICATION_BUDGET = 4096` is the
   aggregate per-tick publication ceiling (×16 safety margin over
@@ -1008,7 +1075,8 @@ Spec #17 intentionally does NOT declare:
 ### 6.4 Frame-Budget Contribution (binds to #16 §6 / Spec #18 §4)
 
 - Spec #16 §6 budget table currently allocates "Resolve + Events =
-  18%" of frame budget. Spec #17 declares its share:
+  18% `TBD-NORMATIVE` per KD-2" of frame budget. Spec #17 declares
+  its share:
   - `DrainTick` ≤ 0.3 ms / frame (60 Hz target = 16.67 ms/frame).
   - `SerializeLedger` ≤ 0.2 ms / frame.
   - Combined ≤ 3% of frame budget (well within the 18%
@@ -1201,7 +1269,9 @@ Spec #17 intentionally does NOT declare:
 - Open issues logged in `CLAUDE.md` "OPEN ISSUES" if any.
 - Lead-developer sign-off captured.
 - `spec-error-log.md` updated with any cross-spec drift discovered
-  during drafting.
+  during drafting. ERR-017-001 (`DOMAIN_TAG_EVENT_LEDGER` allocation
+  back-prop into #16 §3.4) filed May 12, 2026; closure tracked at
+  #17 IN REVIEW commit.
 - `SPEC_INDEX.md` status updated atomically with sign-off.
 - KD-2 sequencing constraint satisfied (#17 reaches `IN REVIEW`
   → #16 reaches Tier 2 `APPROVED` → #17 advances to `APPROVED`).
@@ -1265,6 +1335,7 @@ Spec #17 intentionally does NOT declare:
 | Version | Date         | Author      | Notes                                                                                                         |
 |---------|--------------|-------------|---------------------------------------------------------------------------------------------------------------|
 | 1.0     | May 12, 2026 | Claude Code | Initial detailed outline drafted from `outline.md` v1.0. Addresses all 12 findings from May 6, 2026 adversarial review. Resolution map below. |
+| 1.1     | May 12, 2026 | Claude Code | PASS 2 ADVERSARIAL REVIEW applied (4H / 6M / 5L). All H and M findings resolved in-place; L findings addressed in target subsections. ERR-017-001 filed in `spec-error-log.md` for #16 §3.4 domain-tag back-prop. `SPEC_INDEX.md` row 17 advanced to `IN PROGRESS`. KD-2 expanded to cover #19 TBD-NORMATIVE and `[CROSS-PENDING]` qualifier convention. KD-3 Tier-B Interface Design Principle justification added. §3.2.4 `intraPhaseDrawIndex` counter scope pinned (per-tick-per-producingPhase). |
 
 ---
 
@@ -1287,4 +1358,129 @@ section is resolved by a specific subsection above.
 | 10 — Authoritative-vs-cosmetic distinction missing | M | KD-3 (Tier A / B / C bound to #16 §1.3.1); KD-4 (publish path separation); §3.2.1 publish-API trichotomy; §3.6 split drop policy |
 | 11 — Instrumentation budget not cited | L | KD-11 binding to #16 §8.2; §5 trace-channel registry; §6.5 per-publish instrumentation cost |
 | 12 — Test ratios unstated | L | §5.3 explicit pyramid-percentage table parallel to Spec #19 §3.1.2 |
+
+---
+
+## PASS 2 ADVERSARIAL REVIEW — May 12, 2026
+
+> Reviewer: AI agent (`claude/review-event-system-specs-WPnsN`). Scope:
+> `outline-detailed.md` v1.0 measured against `CLAUDE.md`, the 9-section
+> template, Deterministic Simulation #16 (IN PROGRESS), Spec #19 (IN
+> REVIEW), Spec #20 (APPROVED), and `SPEC_INDEX.md`.
+> Severity legend: **H** blocks section-file authoring; **M** must
+> resolve during section-file draft; **L** follow-up before §9 sign-off.
+> All findings below are resolved in v1.1 of this file.
+
+### Verified premises
+- `SPEC_INDEX.md` row 17 was `NOT STARTED` at review time; advanced to
+  `IN PROGRESS` in v1.1 atomically with this review block.
+- All 12 May 6 (PASS 1) findings demonstrably addressed in
+  `FINDINGS RESOLUTION MAP` above.
+- 12-byte header layout sums correctly (1+1+2+4+2+2 = 12 bytes).
+- Error-code `0x17NN` block does not collide with #16 `0x16NN`.
+
+### Findings (all resolved in v1.1)
+
+1. **[H] `Status: DRAFT` in header contradicted `SPEC_INDEX.md`
+   `NOT STARTED`.** Pure-tracking mismatch; same class as the
+   "fabricated checklist values" trap in CLAUDE.md. **Resolved:**
+   `SPEC_INDEX.md` row 17 advanced to `IN PROGRESS` in the same
+   revision that lands this v1.1; header status sync note added.
+
+2. **[H] Tier B was a phantom-interface surface at Stage 0.** KD-3
+   declared Tier B "not expected to populate at Stage 0" but §3.2.1 /
+   §4.2 / §6.2 referenced `IEventB` machinery throughout. Matched the
+   ERR-001/004 phantom-interface failure pattern. **Resolved:** KD-3
+   amended with explicit Interface Design Principle justification —
+   tier vocabulary is owned by #16 §1.3.1, both sides of `IEventB`
+   are specified here (publisher = `EventBus.Publish<T>` overload;
+   consumer = `EventLedger` dispatcher + #16 §3.5 Tier-B tolerance
+   application path).
+
+3. **[H] `DOMAIN_TAG_EVENT_LEDGER` allocation created a chicken-and-egg
+   with #16 §3.4.** No mechanism existed for #17 to register a
+   domain-tag need with #16. **Resolved:** ERR-017-001 filed in
+   `spec-error-log.md` parallel to the ERR-016-002 back-prop precedent
+   (`XC-002-001` / `XC-008-001` pattern); §3.10 row updated to
+   `[CROSS-PENDING]` with ERR-017-001 anchor; §9.3 references the
+   ERR row.
+
+4. **[H] `intraPhaseDrawIndex` reset / assignment semantics
+   underspecified — broke sort-key total-order property P2.** With
+   BFS second-order dispatch up to depth 8, the per-phase counter
+   scope was ambiguous and re-entrant publishes could collide.
+   **Resolved:** §3.2.4 amended with normative counter-scope
+   declaration (per-tick, per-producingPhase, reset to zero at
+   producing-phase entry, monotonic increment across all
+   subsystems within that phase); §3.8.4 simplified accordingly
+   (no registration-order tiebreaker needed — sort key is unique
+   by construction).
+
+5. **[M] §3.2.5 cited "Spec #16 §X tick-fail path" with `§X`
+   unfilled.** Same hazard as fabricated checklist values.
+   **Resolved:** replaced with explicit `[TBD-CITE]` and provisional
+   anchor (#16 §3.10 failure-mode table) per the project's
+   TBD-citation precedent.
+
+6. **[M] §6.4 cited "#16 §6 Resolve + Events = 18%" as if pinned.**
+   #16 is `IN PROGRESS`. **Resolved:** 18% tagged `TBD-NORMATIVE`
+   inline in §6.4 to match KD-2 convention.
+
+7. **[M] §3.3.1 cadence-map table conflated initial-registry events
+   with future-spec events** (`PressTriggeredEvent`,
+   `MarkAssignedEvent`). **Resolved:** added "Status" rightmost
+   column distinguishing `seeded` (in §2.4.2 v1.0 registry) from
+   `future — populated at #N IN REVIEW` rows; clarifying paragraph
+   appended.
+
+8. **[M] `[FIXED]` tag was misapplied to error codes and ordinal
+   widths in §3.10.** Per CLAUDE.md "Constant Tags",  `[FIXED]` is
+   physics-derived; error codes and protocol widths are designer-set.
+   **Resolved:** `ERR_EVT_*` and `EVENT_TYPE_ORDINAL_WIDTH` /
+   `PAYLOAD_VERSION_WIDTH` retagged `[GT]` with rationale notes.
+
+9. **[M] `[CROSS]` tag was used for `DOMAIN_TAG_EVENT_LEDGER`
+   despite #16 not being `APPROVED`.** **Resolved:** new
+   `[CROSS-PENDING]` qualifier introduced in KD-2 paired with
+   `TBD-NORMATIVE`; promotion to `[CROSS]` occurs at #16
+   `APPROVED`. §3.10 row updated.
+
+10. **[M] §5.3 test-pyramid ratios cited Spec #19 without
+    `TBD-NORMATIVE`.** #19 is `IN REVIEW`. **Resolved:** §5.3
+    heading tagged `TBD-NORMATIVE per KD-2`; KD-2 expanded with a
+    Spec #19 status caveat.
+
+11. **[L] §6.3 worst-case queue derivation omitted BFS dispatch-depth
+    fanout.** **Resolved:** derivation rewritten as `64 × 8 = 512
+    worst-case BFS fanout`, doubled to 1024; ×2 headroom over the
+    dispatch-depth-bounded worst case (not ×16 over first-order).
+
+12. **[L] §3.1.4 `Vector3` precision not pinned to Stage 0 float.**
+    **Resolved:** §3.1.4 amended to cite Ball Physics #1 §1.2 and
+    point at §7.3 for Fixed64 re-verification.
+
+13. **[L] §2.4.1 `[StructLayout(LayoutKind.Sequential)]` was ambiguous
+    between in-memory and canonical-serialization layouts.**
+    **Resolved:** §2.4.1 amended with explicit canonical-vs-in-memory
+    clarification; `Pack = 1` ruled out; §3.4.2 `SerializeCanonical`
+    is the only authoritative byte source.
+
+14. **[L] Appendix A registry schema lacked a "first-published-in"
+    audit column.** Needed for long-term deprecation traceability
+    given KD-9 retains deprecated rows indefinitely. **Resolved:**
+    column added to §2.4.2 table; 11 seed rows populated.
+
+15. **[L] No `spec-error-log.md` entry was filed for the #16 §3.4
+    domain-tag back-prop need (finding 3 above).** **Resolved:**
+    ERR-017-001 filed in `docs/tracking/spec-error-log.md` parallel
+    to ERR-016-002 precedent.
+
+### Recommended next steps
+- Section-file authoring may now proceed against this v1.1 outline.
+- During `section-3.md` drafting, re-grep #16 subsection numbers
+  against current `deterministic-sim/section-3.md` (per §3.4.5
+  cite-precision guard) — #16 is `IN PROGRESS` and section numbers
+  may have shifted.
+- At #17 IN REVIEW commit, submit the patch to #16 §3.4 domain-tag
+  table referenced by ERR-017-001.
 
