@@ -6,13 +6,20 @@
 §5 schema template, approved-spec §5 survey (schema only at #19
 approval), local runbook, and glossary.
 
+**Version History:**
+
+| Version | Date         | Author      | Notes |
+|---------|--------------|-------------|-------|
+| 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Appendices A–F populated. |
+| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §5 → §3.2.4.1 (canonical schema, A.1 / A.3 / glossary); #16 §1.3 → §1.1.1 (tier classification, A.1 / C template); #16 §4 → §4.8 (env fingerprint, A.3); #16 §7 → §5 (regression-suite glossary). L4 boundary-saturation / fatigue properties tightened to cite CLAUDE.md instead of restating values. L7 Appendix D `(reserved)` → `(to be assigned at survey time)`. |
+
 ---
 
 ## Appendix A — Scenario / Fixture Manifest Schema
 
-JSON-schema-style declaration. Binding to #16 §5 `[TBD-NORMATIVE]`
-canonical layout per KD-10. Final extension and on-disk encoding
-pinned at Stage 0+1.
+JSON-schema-style declaration. Binding to #16 §3.2.4.1
+`[TBD-NORMATIVE]` (`SerializeCanonical` normative byte-level schema)
+per KD-10. Final extension and on-disk encoding pinned at Stage 0+1.
 
 ### A.1 Scenario Manifest Entry
 
@@ -30,7 +37,7 @@ pinned at Stage 0+1.
       // ...
     ]
   },
-  "tier_classification": "A" | "B" | "C",       // per #16 §1.3 [TBD-NORMATIVE]
+  "tier_classification": "A" | "B" | "C",       // per #16 §1.1.1 [TBD-NORMATIVE]
   "fixture_refs": ["tests/data/fixtures/<path>", ...],
   "format_version": <int>,                       // validated by §3.3.4
   "provenance_edges": [                          // optional (FR-TS-074)
@@ -44,13 +51,16 @@ pinned at Stage 0+1.
 }
 ```
 
-### A.2 Root Manifest (`tests/scenarios/index.json`)
+### A.2 Root Manifest (`tests/scenarios/index.<ext>`)
+
+The `<ext>` final pin is deferred to Stage 0+1 (D1 in §7.5); the
+illustrative example below uses `.json` syntax.
 
 ```jsonc
 {
   "schema_version": 1,
   "scenarios": [
-    { "name": "...", "manifest_path": "tests/scenarios/<owning-spec>/<name>.json" },
+    { "name": "...", "manifest_path": "tests/scenarios/<owning-spec>/<name>.<ext>" },
     // ...
   ]
 }
@@ -59,7 +69,7 @@ pinned at Stage 0+1.
 ### A.3 Fixture File Header
 
 Every fixture under `tests/data/fixtures/` carries the header (binary
-layout per #16 §5 `[TBD-NORMATIVE]`):
+layout per #16 §3.2.4.1 `[TBD-NORMATIVE]`):
 
 | Offset | Field | Type | Notes |
 |--------|-------|------|-------|
@@ -68,9 +78,9 @@ layout per #16 §5 `[TBD-NORMATIVE]`):
 | 8 | spec_id | `uint32` | capturing-spec ID (FR-TS-071) |
 | 12 | seed | `uint64` | source seed (FR-TS-071) |
 | 20 | env_fingerprint_len | `uint32` | length of fingerprint string |
-| 24 | env_fingerprint | `byte[len]` | verbatim from #16 §4 [TBD-NORMATIVE] |
+| 24 | env_fingerprint | `byte[len]` | verbatim from #16 §4.8 [TBD-NORMATIVE] |
 | 24+len | capture_date | `byte[19]` | ISO-8601 YYYY-MM-DDTHH:MM:SS |
-| ... | body | `byte[]` | payload conforming to #16 §5 canonical layout |
+| ... | body | `byte[]` | payload conforming to #16 §3.2.4.1 canonical layout |
 
 ### A.4 Fixture-Migration Manifest
 
@@ -102,8 +112,8 @@ classification, expected invariant.
 | `prop_savestate_snapshot_load_idempotent` | Idempotence | #16 (consumed) | A | `Snapshot(s); Load; Snapshot(s')` ⇒ `s == s'` bitwise. |
 | `prop_agentmovement_path_idempotent` | Idempotence | #2 | A | Re-issuing the same move command at the same tick is a no-op. |
 | `prop_perception_event_aggregation_commutative` | Commutativity / associativity | #7 | B | Aggregating perception events in different orders yields equivalent observed-state hashes within tolerance row. |
-| `prop_ballphysics_boundary_saturation` | Boundary saturation | #1 | A | Ball position at X∈{0, 105}, Y∈{0, 68}, Z∈{0, 100} m produces no NaN / Infinity in subsequent step. |
-| `prop_fatigue_monotonic_no_recovery` | Monotonicity | #2 | B | Across a match, in absence of recovery events, `fatigue(t+1) ≥ fatigue(t)` (0 = rested, 1 = fatigued per CLAUDE.md). |
+| `prop_ballphysics_boundary_saturation` | Boundary saturation | #1 | A | Ball position at the X / Y / Z bounds of the CLAUDE.md coordinate convention produces no NaN / Infinity in the subsequent step. |
+| `prop_fatigue_monotonic_no_recovery` | Monotonicity | #2 | B | Across a match, in absence of recovery events, fatigue is non-decreasing per the CLAUDE.md fatigue convention. |
 | `prop_shotmechanics_intent_envelope_bounded` | Boundary saturation | #6 | A | Shot velocity intent within declared range never produces a goal-detection NaN. |
 | `prop_firsttouch_outcome_in_envelope` | Boundary saturation | #4 | A | First-touch outcome stays within the spec-declared error envelope across the full intent grid. |
 
@@ -128,7 +138,7 @@ Paste-ready Markdown template every per-spec §5 must conform to
 | Unit | <int> | |
 | Integration | <int> | |
 | Simulation | <int> | |
-| Determinism (consumed from #16 §7) | <int or "—"> | Owned by #16 |
+| Determinism (consumed from #16 §5) | <int or "—"> | Owned by #16 |
 | End-to-end / soak | <int> | |
 
 (Pyramid-contract check per Spec #19 §3.1.2.)
@@ -155,9 +165,9 @@ Paste-ready Markdown template every per-spec §5 must conform to
 
 ## 5.5 Determinism-Tier Classification of Authoritative Fields
 
-| Field | Tier | Source (#16 §1.3) |
-|-------|------|--------------------|
-| <fully-qualified-name> | <A/B/C> | #16 §1.3.<x> |
+| Field | Tier | Source (#16 §1.1.1) |
+|-------|------|---------------------|
+| <fully-qualified-name> | <A/B/C> | #16 §1.1.1 row <name> |
 
 ## 5.6 Approval-Checklist Linkage
 
@@ -210,18 +220,21 @@ Exit non-zero if `summary.blocked > 0`.
 
 | Spec ID | Spec Title | Schema-Conforming Y/N | Missing Fields | Remediation Ticket |
 |---------|------------|------------------------|----------------|---------------------|
-| #1 | Ball Physics | _TBD_ | _TBD_ | `ERR-019-001` (reserved) |
-| #2 | Agent Movement | _TBD_ | _TBD_ | `ERR-019-002` (reserved) |
-| #3 | Collision System | _TBD_ | _TBD_ | `ERR-019-003` (reserved) |
-| #4 | First Touch | _TBD_ | _TBD_ | `ERR-019-004` (reserved) |
-| #5 | Pass Mechanics | _TBD_ | _TBD_ | `ERR-019-005` (reserved) |
-| #6 | Shot Mechanics | _TBD_ | _TBD_ | `ERR-019-006` (reserved) |
-| #7 | Perception System | _TBD_ | _TBD_ | `ERR-019-007` (reserved) |
-| #8 | Decision Tree | _TBD_ | _TBD_ | `ERR-019-008` (reserved) |
+| #1 | Ball Physics | _TBD_ | _TBD_ | `ERR-019-NNN` (to be assigned at survey time) |
+| #2 | Agent Movement | _TBD_ | _TBD_ | `ERR-019-NNN` (to be assigned at survey time) |
+| #3 | Collision System | _TBD_ | _TBD_ | `ERR-019-NNN` (to be assigned at survey time) |
+| #4 | First Touch | _TBD_ | _TBD_ | `ERR-019-NNN` (to be assigned at survey time) |
+| #5 | Pass Mechanics | _TBD_ | _TBD_ | `ERR-019-NNN` (to be assigned at survey time) |
+| #6 | Shot Mechanics | _TBD_ | _TBD_ | `ERR-019-NNN` (to be assigned at survey time) |
+| #7 | Perception System | _TBD_ | _TBD_ | `ERR-019-NNN` (to be assigned at survey time) |
+| #8 | Decision Tree | _TBD_ | _TBD_ | `ERR-019-NNN` (to be assigned at survey time) |
 
-The `ERR-019-NNN` IDs are reserved to keep the `spec-error-log.md`
-namespace allocated. Population is gated on per-spec revision cycles
-per §3.5.4 (KD-4 no-forced-re-open rule).
+The `ERR-019-NNN` namespace is **not pre-reserved** in
+`spec-error-log.md`; specific `NNN` digits are allocated at survey
+time (Stage 0+1 deliverable per §7.2) so per-spec ID ordering can be
+chosen by the surveyor without colliding with unrelated `ERR-019-NNN`
+findings that may be filed in the meantime. Population is gated on
+per-spec revision cycles per §3.5.4 (KD-4 no-forced-re-open rule).
 
 ---
 
@@ -267,12 +280,12 @@ The Stage 0+1 extension adds:
 Spec #19-specific terms only. Determinism / performance terms are
 cited from #16 / #18 `[TBD-NORMATIVE]`.
 
-- **Determinism layer.** The test layer owned by #16 §7. Consumed by
+- **Determinism layer.** The test layer owned by #16 §5. Consumed by
   Spec #19 as a required layer; not redefined here.
 - **Eviction.** Permanent deletion of a test that has been quarantined
   ≥ 3 times in 90 days (§3.7.4).
 - **Fixture.** An on-disk file under `tests/data/fixtures/` consumed
-  by a scenario or unit test. Format conforms to #16 §5 (KD-10).
+  by a scenario or unit test. Format conforms to #16 §3.2.4.1 (KD-10).
 - **Flake.** A test that, on the same revision under the same
   `EnvironmentFingerprint`, produces different pass / fail outcomes
   across two runs (§3.7.1).

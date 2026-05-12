@@ -26,7 +26,7 @@ tests/<spec>/
 tests/scenarios/
 ├── <owning-spec>/    ← per-spec scenarios (KD-8)
 ├── cross-spec/       ← Spec #19-owned cross-spec scenarios
-└── index.json        ← root manifest (§3.3.6)
+└── index.<ext>       ← root manifest (§3.3.6); <ext> pinned Stage 0+1
 
 tests/data/           ← §3.8.2 storage layout
 tests/shared/         ← read-only harness utilities (NOT game-state assemblies)
@@ -54,8 +54,9 @@ tests/data/
 └── migrations/       ← format-version migration scripts (§3.8.3)
 ```
 
-Format conforms to #16 §5 `[TBD-NORMATIVE]` (KD-10). Index / manifest
-schema in Appendix A.
+Format conforms to #16 §3.2.4.1 `[TBD-NORMATIVE]` (`SerializeCanonical`
+normative byte-level schema; KD-10). Index / manifest schema in
+Appendix A.
 
 ## 4.3 Harness API Surface
 
@@ -69,13 +70,13 @@ anti-pattern list).
 interface ITestHarness {
   ScenarioResult RunScenario(string manifestPath, ulong seed);
   CoverageReport CollectCoverage();
-  DeterminismSuiteResult RunDeterminismTiers();   // delegates to #16 §7
+  DeterminismSuiteResult RunDeterminismTiers();   // delegates to #16 §5
   FlakeStatus QueryFlakeStatus(string testId);
 }
 ```
 
 - `RunDeterminismTiers()` is the single integration point through
-  which #16 §7 is invoked (FR-TS-016). Duplicate entry points are
+  which #16 §5 is invoked (FR-TS-016). Duplicate entry points are
   forbidden.
 - `CollectCoverage()` returns the per-tier breakdown consumable by
   §5.5 (FR-TS-057).
@@ -84,10 +85,10 @@ interface ITestHarness {
 ### 4.3.2 Assertion Helpers
 
 - `AssertBitwise(snapshot, golden)` — Tier A assertions; routes
-  through #16 §7 `[TBD-NORMATIVE]` bitwise comparison.
+  through #16 §5 `[TBD-NORMATIVE]` bitwise comparison.
 - `AssertWithinTolerance(actual, expected, toleranceRow)` — Tier B
-  assertions; `toleranceRow` sourced from #16's tolerance matrix
-  `[TBD-NORMATIVE]`.
+  assertions; `toleranceRow` sourced from #16 §3.4.2 (Tier B
+  comparator default policy) `[TBD-NORMATIVE]`.
 - `AssertEnvelope(actual, envelope)` — Tier C / functional-regression
   assertions; the predicate set comes from the scenario manifest
   (§3.3.2).
@@ -112,12 +113,24 @@ only when both producer and consumer are specified.
 
 ### 4.4.2 `IFixtureValidator`
 
-- **Producer:** fixture-format owners (one implementation per
-  `format_version`).
+- **Producer:** fixture-format owners. Concretely: one
+  `IFixtureValidator` implementation per `format_version`. The
+  upstream byte-level layout is owned by #16 §3.2.4.1
+  (`SerializeCanonical`) `[TBD-NORMATIVE]`.
 - **Consumer:** `ScenarioRunner` fixture-load step (§3.3.4).
 - Method: `ValidationResult Validate(byte[] fixtureBytes, int
   formatVersion)`.
-- Both sides specified → declaration permitted.
+- **Phantom-interface risk acknowledgement.** The producer's contract
+  depends on a `TBD-NORMATIVE` upstream (#16 §3.2.4.1). This is a
+  judgment call: #16 §3.2.4.1 has been through five adversarial
+  passes and is structurally stable (only subsection numbering may
+  shift), so the byte-level layout is treated as "sufficiently
+  specified" for interface-declaration purposes per the CLAUDE.md
+  Interface Design Principle. If #16 §3.2.4.1 reverts to an
+  outline-level state, this interface MUST be deferred to Stage 1
+  alongside `IFlakeReporter` (§4.4.3); that demotion is a §3.2 review
+  trigger (FR-TS-015). Compare with `IFlakeReporter`, where the
+  consumer is genuinely unspecified at Stage 0.
 
 Both interfaces live in `tests/shared/` per §4.1; no game-state code
 may reference them.
@@ -143,7 +156,7 @@ subsection declares the *shape* (FR-TS-075).
 - Exit criteria: all unit tests pass; property tests run a default of
   100 cases per property (configurable in Stage 0+1).
 - Wall-time budget: ≤ 60 seconds on the certified host (`[GT]`,
-  revisited Stage 1).
+  catalogued in §3.10; revisited Stage 1).
 
 ### 4.5.2 PR Pipeline
 
@@ -157,7 +170,7 @@ subsection declares the *shape* (FR-TS-075).
 ### 4.5.3 Nightly Pipeline
 
 - Trigger: scheduled nightly.
-- Tiers: full simulation tier + soak + #16 §7 full determinism suite
+- Tiers: full simulation tier + soak + #16 §5 full determinism suite
   `[TBD-NORMATIVE]`.
 - Exit criteria: all tiers pass; soak completes ≥ one full 90-minute
   in-game match.
@@ -169,7 +182,7 @@ trigger → load fixtures → tier → exit criteria
   │
   ├── pre-commit:  unit → property → pass/fail
   ├── PR:          unit → integration → property → scenarios → pass/fail
-  └── nightly:     simulation → soak → #16 §7 tiers → pass/fail
+  └── nightly:     simulation → soak → #16 §5 tiers → pass/fail
 ```
 
 Concrete CI provider selection is deferred to Stage 0+1 (§6.1, D4 in
@@ -192,3 +205,4 @@ in `src/CLAUDE.md` when coding begins. Spec #19 declares the *shape*;
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. `ITestHarness`, `IScenario`, `IFixtureValidator` declared; `IFlakeReporter` explicitly deferred. |
+| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 throughout; #16 §5 → §3.2.4.1 (canonical schema, §4.2); tolerance-matrix citation pinned to #16 §3.4.2 (§4.3.2). M2 `index.<ext>` notation. M3 `IFixtureValidator` phantom-interface judgment made explicit (§4.4.2). L3 §3.10 cross-reference added to pre-commit budget (§4.5.1). |

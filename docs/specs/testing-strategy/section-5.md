@@ -30,10 +30,19 @@ code committed". A subset reads "Stage 0" with criterion "applies to
 spec drafts now" — notably the KD-6 mandate FRs (FR-TS-040 … 045) and
 per-spec §5 schema FRs (FR-TS-046 … 052).
 
+> **Column semantics.** The "Stage 0 Status" column below describes
+> *current enforcement state* (`ACTIVE (Stage 0)` = enforced today;
+> `Inactive` = waiting for activation criterion). The "Activation
+> Stage" column matches the same-name column in §2.2 (the stage at
+> which the FR begins to gate merges). For procedural FRs (FR-TS-040
+> … 052), both columns read "Stage 0" because the activation criterion
+> is "applies to spec drafts now" — there is nothing further to wait
+> for.
+
 | FR Range | Stage 0 Status | Activation Stage | Activation Criterion |
 |----------|----------------|------------------|----------------------|
 | FR-TS-001 … 010 | Inactive (no code) | Stage 0+1 | First `src/` code commit |
-| FR-TS-011 … 020 | Inactive | Stage 0+1 | #16 §7 CI integration available |
+| FR-TS-011 … 020 | Inactive | Stage 0+1 | #16 §5 CI integration available |
 | FR-TS-021 … 030 | Schema only (Stage 0) | Stage 0+1 | Scenario runner implemented |
 | FR-TS-031 … 039 | Inactive | Stage 0+1 | Property framework pinned (D2) |
 | FR-TS-040 … 045 | **ACTIVE (Stage 0)** | Stage 0 | Applies to current spec drafts |
@@ -124,7 +133,7 @@ Not applicable (no code).
 ### 5.5.2 Stage 0+1
 
 - Coverage tool (D3) produces per-file report.
-- Auditor maps each file to its #16 §1.3 tier `[TBD-NORMATIVE]` and
+- Auditor maps each file to its #16 §1.1.1 tier `[TBD-NORMATIVE]` and
   applies KD-9 thresholds:
   - Tier A: ≥ 98% line, ≥ 95% branch (FR-TS-053).
   - Tier B: ≥ 90% line, ≥ 80% branch (FR-TS-054).
@@ -148,7 +157,7 @@ acknowledged degenerate (parallel to Spec #20 §5.5).
 | FR | Mechanism | Tooling | Activation | Output Artifact |
 |----|-----------|---------|------------|-----------------|
 | FR-TS-001 … 010 | Pyramid-ratio check at PR-merge | Coverage tool + custom analyzer | Stage 0+1 | CI report |
-| FR-TS-011 … 020 | Boundary review at #16 §7 change | Manual at Stage 0; CI sentinel at Stage 0+1 | Stage 0+1 | Review note in PR |
+| FR-TS-011 … 020 | Boundary review at #16 §5 change | Manual at Stage 0; CI sentinel at Stage 0+1 | Stage 0+1 | Review note in PR |
 | FR-TS-021 … 030 | Scenario runner schema check | `ScenarioRunner` load step + §5.4 auditor | Stage 0+1 | Runner exit status |
 | FR-TS-031 … 039 | Property / fuzz seed-log inspection | Property framework log + manual review | Stage 0+1 | Run log under `tests/data/run-logs/` |
 | FR-TS-040 … 045 | Checklist auditor | Manual (Stage 0) → `tools/checklist-auditor.py` (Stage 0+1) | **Stage 0** | Auditor report appended to PR description |
@@ -161,11 +170,18 @@ acknowledged degenerate (parallel to Spec #20 §5.5).
 
 ## 5.7 Determinism-Suite Consumption Verification
 
+> **Cross-reference.** §2.2 partition-table "Verification in" column
+> points to §5.7 for FR-TS-011 … 020; §5.6 traceability row for that
+> range names "Manual at Stage 0; CI sentinel at Stage 0+1" with
+> output artifact "Review note in PR." The two views are
+> complementary, not contradictory: §5.7 publishes the *contract*;
+> §5.6 publishes the *artifact*.
+
 - Spec #19 declares **no numerical determinism tests of its own**.
 - This subsection records the *consumption* contract: every CI
-  pipeline runs #16 §7's `[TBD-NORMATIVE]` full tier set; failures
+  pipeline runs #16 §5's `[TBD-NORMATIVE]` full tier set; failures
   block merge per KD-2 (FR-TS-011, FR-TS-012).
-- **Boundary review check (FR-TS-015).** Any change to #16 §7 that
+- **Boundary review check (FR-TS-015).** Any change to #16 §5 that
   touches tier names or exit criteria triggers a Spec #19 §3.2 review
   before the change can land. The reviewer:
   - Re-grep the cited subsection numbers in Spec #19 §3.2 and §3.6.1.
@@ -177,3 +193,4 @@ acknowledged degenerate (parallel to Spec #20 §5.5).
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Stage-gated activation table + traceability table populated. |
+| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5; #16 §1.3 → §1.1.1. L5 §5.6 / §5.7 cross-reference added. L6 column-semantics disambiguation added to §5.2 lead. |

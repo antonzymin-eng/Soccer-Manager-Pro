@@ -23,8 +23,8 @@ code commit). KD-5 governs.
 - Pre-commit hook script (`tools/run-tests-local.sh`) extended to
   invoke `src/`-side tests (§6.3, Appendix E).
 - Pyramid-ratio thresholds (§3.1.2) re-evaluated against actual code.
-- Scenario library populated index (`tests/scenarios/index.json`,
-  §3.3.6).
+- Scenario library populated index (`tests/scenarios/index.<ext>`,
+  §3.3.6; `<ext>` pinned at Stage 0+1 per D1).
 - Test-defect log (`tests/test-defect-log.md`) instantiated.
 
 ## 7.2 Stage 1 Deliverables
@@ -83,3 +83,4 @@ code commit). KD-5 governs.
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. D1 … D8 deferred-decision tracker populated. |
+| 0.2     | May 12, 2026 | Claude Code | Self-critique pass 2. `index.json` → `index.<ext>` with D1 cross-reference. |

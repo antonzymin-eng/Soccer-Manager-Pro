@@ -17,17 +17,30 @@ audit, and constant-provenance summary.
   (SplitMix64), banned-API list (`System.Random`, `DateTime.Now`),
   Stage 0 `float` posture.
 - **Spec #16 (Deterministic Simulation)** — `[TBD-NORMATIVE]`.
-  - §1.3 / §1.3.1 — tier classification (Tier A / B / C). Consumed by
-    KD-9 (§3.6.2) and FR-TS-029, FR-TS-050, FR-TS-060.
-  - §4 — `EnvironmentFingerprint` (FR-TS-061, FR-TS-071).
-  - §5 — canonical binary layout for golden traces and fixtures.
-    Consumed by KD-10 (§3.3.4, §3.8, §4.2, FR-TS-026, FR-TS-034,
+  - **§1.1.1** — tier classification ("Equivalence policy by
+    artifact"). Consumed by KD-9 (§3.6.2) and FR-TS-029, FR-TS-050,
+    FR-TS-060.
+  - **§3.2.4.1** — `SerializeCanonical` normative byte-level schema.
+    Consumed by KD-10 (§3.3.4, §3.8.1, §4.2, FR-TS-026, FR-TS-034,
     FR-TS-069).
-  - §7 — determinism regression suite. Consumed by KD-2 (§3.2,
+  - **§3.4.2** — Tier B comparator default policy. Consumed by
+    `AssertWithinTolerance` (§4.3.2).
+  - **§4.8** — `EnvironmentFingerprint` (environment pinning).
+    Consumed by FR-TS-061, FR-TS-071, §3.7.5 ("flaky in CI only"
+    diagnostic).
+  - **§5** — Test Strategy / Test Catalogue / Certification Matrix /
+    Detailed Test Fixture Requirements / Test Card Template
+    (regression-suite authority). Consumed by KD-2 (§3.2,
     FR-TS-011 … 020).
-  - §8 — trace channels.
-  - Status: `IN PROGRESS`. Section numbers MUST be re-grepped at next
-    revision per §3.6.1 cite-precision guard.
+  - Status: `IN PROGRESS`. Section numbers re-grepped against
+    `deterministic-sim/section-1.md`, `section-3.md`, `section-4.md`,
+    and `section-5.md` on May 12, 2026 (v0.2 sweep). Per §3.6.1
+    cite-precision guard, MUST be re-grepped at next revision.
+  - **Outline-vs-actual divergences fixed in v0.2 sweep:** v1.1 outline
+    had #16 §1.3.1 (actual: §1.1.1), #16 §5 for canonical layout
+    (actual: §3.2.4.1), #16 §7 for regression suite (actual: §5),
+    #16 §8 for "trace channels" (no such section exists in current
+    #16). All citations corrected.
 - **Spec #18 (Performance Optimization)** — `[TBD-NORMATIVE]`.
   - §4 — performance regression gates. Consumed by KD-3 (§6.2,
     FR-TS-080).
@@ -70,11 +83,12 @@ audit, and constant-provenance summary.
 - Every CLAUDE.md citation in §3 was verified against the current
   CLAUDE.md text on this spec's drafting date (May 12, 2026).
 - Every Spec #16 citation is tagged `[TBD-NORMATIVE]` per KD-2 status
-  caveat. Section numbers (e.g., #16 §1.3.1, §5, §7, §8) MUST be
+  caveat. Section numbers (#16 §1.1.1, §3.2.4.1, §3.4.2, §4.8, §5)
   re-grepped against current `deterministic-sim/section-1.md`,
-  `section-5.md`, `section-7.md` at next revision; §3.6.1
-  cite-precision guard mandates this for any author touching §3.2,
-  §3.6, §5.7.
+  `section-3.md`, `section-4.md`, and `section-5.md` on May 12, 2026
+  (v0.2 sweep); §3.6.1 cite-precision guard mandates re-grep at every
+  subsequent revision for any author touching §3.2, §3.6, §3.7, §5.7,
+  §6.2, §6.6, or this §8.
 - Every Spec #18 citation is tagged `[TBD-NORMATIVE]` per KD-3 status
   caveat. Resolution of these tags is a §9.3 precondition gated on
   #18 reaching at least outline-level draft status.
@@ -87,14 +101,15 @@ audit, and constant-provenance summary.
   Spec #19's taxonomy, naming convention, coverage-tier policy, and
   Appendix C schema.
 - **Cites:**
-  - #16 (substantive): tier classification (§3.6.1), canonical save
-    format (§3.3.4, §3.8), regression suite (§3.2), trace channels
-    (§3.8.4 fingerprint reference). `[TBD-NORMATIVE]`.
+  - #16 (substantive): tier classification §1.1.1 (§3.6.1, §8.1.1),
+    canonical schema §3.2.4.1 (§3.3.4, §3.8.1, §4.2), Tier B
+    comparator §3.4.2 (§4.3.2), `EnvironmentFingerprint` §4.8
+    (§3.7.1, §3.8.4), regression suite §5 (§3.2). `[TBD-NORMATIVE]`.
   - #18 (boundary): performance gates (§6.2, §6.6). `[TBD-NORMATIVE]`.
   - #20 (boundary): test-fixture carve-outs (§3.9.4), IoC anti-pattern
     (§4.3.1), `System.Random` ban (§3.4.5).
 - **No `[CROSS]` constants imported.** Spec #19 declares no physical
-  constants. Tier vocabulary cited from #16 §1.3.1 by reference only
+  constants. Tier vocabulary cited from #16 §1.1.1 by reference only
   (KD-1).
 
 ## 8.4 Constant Provenance Summary
@@ -121,3 +136,4 @@ checklist row).
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Source register populated; constant-provenance summary references §3.10. |
+| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 source register rebuilt against actual #16 layout: §1.1.1 (tier), §3.2.4.1 (canonical schema), §3.4.2 (Tier B comparator), §4.8 (`EnvironmentFingerprint`), §5 (regression suite). Outline-vs-actual divergences enumerated. §8.3 cite mapping updated. |

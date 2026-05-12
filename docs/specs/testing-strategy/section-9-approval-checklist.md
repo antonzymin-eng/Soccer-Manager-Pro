@@ -28,7 +28,7 @@ resolution are themselves a §2.3 nonconformance.
 | 9.1.10 | KD-8 codified | §3.3 §3.3.1 §3.3.5 | [ ] |
 | 9.1.11 | KD-9 codified | §3.6 §5.5 | [ ] |
 | 9.1.12 | KD-10 codified | §3.3.4 §3.8 §4.2 | [ ] |
-| 9.1.13 | Boundary statements with #16 §7 (KD-2) and #18 §4 / §7 (KD-3) explicit | §1.3 §1.4 §3.2 §5.7 §6.2 §6.6 | [ ] |
+| 9.1.13 | Boundary statements with #16 §5 (KD-2) and #18 §4 / §7 (KD-3) explicit | §1.3 §1.4 §3.2 §5.7 §6.2 §6.6 | [ ] |
 | 9.1.14 | All appendices A … F present | `docs/specs/testing-strategy/appendices.md` | [ ] |
 
 ## 9.2 Quality Checklist
@@ -72,10 +72,10 @@ resolution are themselves a §2.3 nonconformance.
   the §5.3 auditor confirms the literal number is present at that
   path.
 
-**Status transitions:**
+**Status transitions:** (failure-mode definitions in §2.3)
 
 | From | To | Trigger |
 |------|-----|---------|
-| `NOT STARTED` | `IN REVIEW` | Initial draft committed (May 12, 2026) |
+| `NOT STARTED` | `IN REVIEW` | Initial draft committed (May 12, 2026); per CLAUDE.md status definition this is "draft complete, awaiting lead-developer sign-off." Author-driven flip; the §9.1 / §9.2 / §9.3 rows have NOT been walked at the time of the flip. See `section-1.md §1.5` v0.1 entry. |
 | `IN REVIEW` | `APPROVED` | All §9.1 / §9.2 / §9.3 rows resolved AND §9.3.6 / §9.3.7 / §9.3.8 preconditions met (KD-2 sequencing) |
-| `APPROVED` | `SUSPENDED` | Any §9.2.6 `TBD-NORMATIVE` tag re-introduced due to upstream churn |
+| `APPROVED` | `SUSPENDED` | Per §2.3 "TBD-NORMATIVE re-introduction" failure mode: any §9.2.6 `TBD-NORMATIVE` tag re-introduced due to upstream churn |

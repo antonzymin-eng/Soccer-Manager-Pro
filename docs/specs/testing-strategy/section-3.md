@@ -24,19 +24,21 @@ test belongs to exactly one layer (FR-TS-001).
 
 1. **Unit.** Exercises a single struct or method. No heap allocation
    in the assertion body. Sub-millisecond wall-time on the certified
-   host (§1.4). No file I/O, no Unity scene, no scenario manifest.
+   host (≤ 1 ms `[GT]`, see §3.10). No file I/O, no Unity scene, no
+   scenario manifest.
 2. **Integration.** Wires two to five subsystems together without
    instantiating a Unity scene. May allocate. Wall-time budget set
    per-test, not globally; typical bound ~10 ms.
 3. **Simulation.** Invokes the full subsystem stack under a scripted
    scenario. Rendering is disabled. Loads scenario fixtures via the
    §3.3 runner.
-4. **Determinism.** Owned by Spec #16 §7 `[TBD-NORMATIVE]`. Consumed
+4. **Determinism.** Owned by Spec #16 §5 `[TBD-NORMATIVE]`. Consumed
    by Spec #19 as a required layer (KD-2). Listed here for
    completeness; mechanics are not restated.
 5. **End-to-end / soak.** Long-horizon runs (≥ one full 90-minute
-   match of in-game time). Primarily a determinism + performance
-   vehicle; functional assertions are coarse-grained.
+   match of in-game time; `90 min` `[FIXED]` per §3.10). Primarily a
+   determinism + performance vehicle; functional assertions are
+   coarse-grained.
 
 ### 3.1.2 Pyramid Contract
 
@@ -72,7 +74,7 @@ Flagged at code review; MUST NOT merge:
 - **Per-spec §5 declaring layer percentages that contradict the
   pyramid contract.** Caught by §5.4 schema-conformance auditor.
 - **End-to-end test asserting on bitwise determinism without invoking
-  the #16 §7 suite.** Determinism assertions belong in the #16-owned
+  the #16 §5 suite.** Determinism assertions belong in the #16-owned
   layer (KD-2).
 - **Property test classified as "simulation".** Property tests live
   under `tests/<spec>/properties/` regardless of the layer they target;
@@ -85,38 +87,40 @@ Flagged at code review; MUST NOT merge:
   `int_passmechanics_collision_first_touch`.
 - `sim_<scenario>` — e.g., `sim_corner_kick_set_piece`.
 - `e2e_<scenario>` — e.g., `e2e_90min_match_baseline`.
-- Determinism tests use the #16 §7 naming `[TBD-NORMATIVE]`; cited,
+- Determinism tests use the #16 §5 naming `[TBD-NORMATIVE]`; cited,
   not restated.
-- Property tests prefix with `prop_` and follow the underlying layer
-  convention: `prop_unit_<system>_<property>`.
+- Property tests use `prop_<system>_<property>` (no layer prefix; the
+  property tests in `tests/<spec>/properties/` carry the layer in the
+  folder, not in the name). Worked examples in Appendix B follow this
+  form.
 
 ## 3.2 Determinism-Suite Consumption (FR-TS-011 … 020)
 
 ### 3.2.1 Citation and Authority
 
-Spec #16 §7 `[TBD-NORMATIVE]` is the authoritative owner of the
+Spec #16 §5 `[TBD-NORMATIVE]` is the authoritative owner of the
 determinism regression suite. Spec #19 consumes the suite; KD-2
 binding.
 
-### 3.2.2 Spec #19's Obligations Toward #16 §7
+### 3.2.2 Spec #19's Obligations Toward #16 §5
 
-- Every CI pipeline declared in §6 MUST include #16 §7's regression
+- Every CI pipeline declared in §6 MUST include #16 §5's regression
   tiers in their canonical order (unit / integration / scenario /
   soak) (FR-TS-011).
 - Failures in any #16 tier block merges; Spec #19 does not soften or
   override #16's exit criteria (FR-TS-012).
 - Spec #19's own test taxonomy MUST NOT collide with #16 tier names
   (FR-TS-013); §3.1.4 already disambiguates by prefix.
-- The #16 §7 suite is invoked through a single integration point
+- The #16 §5 suite is invoked through a single integration point
   (`ITestHarness`, §4.3); duplicate entry points are forbidden
   (FR-TS-016).
 - Spec #19's functional-regression assertions layered on top of the
   determinism suite MUST be tagged so they can be disabled
   independently for bisection (FR-TS-017).
 - Spec #19 MUST NOT introduce new determinism tier categories
-  (FR-TS-018); new categories require a #16 §7 revision.
+  (FR-TS-018); new categories require a #16 §5 revision.
 
-### 3.2.3 Spec #19's Additions on Top of #16 §7
+### 3.2.3 Spec #19's Additions on Top of #16 §5
 
 - Functional / behavioural regression assertions that don't depend on
   bitwise determinism. Example: "shot-on-target rate stays within
@@ -125,11 +129,11 @@ binding.
 - Cross-spec scenario assertions (KD-8); see §3.3.
 - Property and fuzz assertions over seed corpora (§3.4). Failed seeds
   are captured into the #19-owned holding area (§3.4.3), not directly
-  into the #16 §7 corpus.
+  into the #16 §5 corpus.
 
 ### 3.2.4 Boundary Review Obligation
 
-Any change to #16 §7 that affects tier names or exit criteria triggers
+Any change to #16 §5 that affects tier names or exit criteria triggers
 a Spec #19 §3.2 review (FR-TS-015). The trigger is recorded in §1.4's
 dependency list. Boundary drift is enumerated in §2.5 failure modes.
 
@@ -155,8 +159,8 @@ the list below is normative for review):
 - `seed` — `uint64`, recorded verbatim (FR-TS-025).
 - `expected_outcome_envelope` — bounded predicate set; "implicit pass"
   is forbidden (FR-TS-030).
-- `tier_classification` — Tier A / B / C per #16 §1.3 `[TBD-NORMATIVE]`
-  (FR-TS-029).
+- `tier_classification` — Tier A / B / C per #16 §1.1.1
+  `[TBD-NORMATIVE]` (FR-TS-029).
 - `fixture_refs` — list of fixture paths under `tests/data/fixtures/`.
 - `format_version` — integer, validated by §3.3.4.
 - `provenance_edges` — optional list of upstream scenarios this scenario
@@ -183,8 +187,9 @@ ScenarioRunner.Run(manifestPath: string, seed: uint64) -> ScenarioResult
 
 ### 3.3.4 Fixture Validator (KD-10)
 
-Every fixture file is checked against #16 §5 `[TBD-NORMATIVE]` canonical
-binary layout at load time:
+Every fixture file is checked against #16 §3.2.4.1
+`[TBD-NORMATIVE]` (`SerializeCanonical` normative byte-level schema)
+at load time:
 
 - Validator is implemented as `IFixtureValidator` per format version
   (§4.4).
@@ -195,18 +200,26 @@ binary layout at load time:
 
 ### 3.3.5 Directory Layout (FR-TS-027)
 
+> **Provisional file extension.** The root-manifest filename is
+> written as `index.<ext>` throughout this spec because the final
+> extension (and therefore on-disk encoding — JSON vs. JSON5 vs.
+> binary) is pinned at Stage 0+1 (D1 in §7.5). Normative occurrences
+> are at: §3.3.5 (here), §3.3.6, §4.1, §4.5, §7.2, FR-TS-028, and
+> Appendix A.2. The illustrative example in Appendix A.2 uses `.json`
+> syntax for readability.
+
 ```
 tests/scenarios/
 ├── ball-physics/         ← per-spec, owned by #1
 ├── agent-movement/       ← per-spec, owned by #2
 ├── …                     ← one folder per owning spec
 ├── cross-spec/           ← owned by Spec #19 (KD-8)
-└── index.json            ← root manifest (FR-TS-028)
+└── index.<ext>           ← root manifest (FR-TS-028); <ext> pinned Stage 0+1
 ```
 
 ### 3.3.6 Scenario Index / Manifest (FR-TS-028)
 
-- Single root manifest at `tests/scenarios/index.json` (final extension
+- Single root manifest at `tests/scenarios/index.<ext>` (extension
   pinned at Stage 0+1 alongside the test-runner pin in §6.1).
 - Stage 0 deliverable: schema only (Appendix A).
 - Stage 1 deliverable: populated index covering every scenario in the
@@ -237,10 +250,10 @@ tests/scenarios/
   (FR-TS-033). Log location: stdout for local runs;
   `tests/data/run-logs/` for CI runs (Stage 0+1).
 
-### 3.4.3 Failed-Seed Capture (read-only boundary with #16 §7)
+### 3.4.3 Failed-Seed Capture (read-only boundary with #16 §5)
 
-Per KD-2, Spec #19 **does not** write directly into Spec #16 §7's
-regression suite. #16 §7 is the sole authority for what enters its
+Per KD-2, Spec #19 **does not** write directly into Spec #16 §5's
+regression suite. #16 §5 is the sole authority for what enters its
 regression corpus.
 
 **Capture mechanics.**
@@ -256,15 +269,15 @@ regression corpus.
 
 **Promotion path.**
 
-- #16 §7 SHOULD publish an "external capture hook" contract that
+- #16 §5 SHOULD publish an "external capture hook" contract that
   periodically (cadence TBD by #16) pulls from #19's holding area into
-  the #16 §7 regression corpus.
-- Until that hook is published in #16 §7, captured seeds remain in
+  the #16 §5 regression corpus.
+- Until that hook is published in #16 §5, captured seeds remain in
   the #19 holding area and are re-run by #19's own property / fuzz
   suite on every CI run (FR-TS-035) — a one-time fuzz hit still
   becomes a permanent #19-side guardrail.
 - Cross-spec dependency: this promotion path is `TBD-NORMATIVE` per
-  KD-2 status caveat; resolved when #16 §7 publishes its
+  KD-2 status caveat; resolved when #16 §5 publishes its
   external-capture-hook contract.
 
 ### 3.4.4 Property Catalogue (Categorical)
@@ -278,11 +291,11 @@ Full enumeration in Appendix B; categories named here:
 - **Idempotence.** Snapshot → load → snapshot = original. Tier A.
 - **Commutativity / associativity.** Parallel reductions, deterministic
   aggregations. Tier B per KD-9 (mid-tier numerical tolerance allowed).
-- **Boundary saturation.** Values at coordinate-system bounds (0 and
-  105 m on X, 0 and 68 m on Y per CLAUDE.md coordinate convention) do
-  not produce NaN / Infinity. Tier A.
-- **Monotonicity.** Fatigue (0 = rested, 1 = fatigued per CLAUDE.md)
-  is non-decreasing across a match in absence of recovery events.
+- **Boundary saturation.** Values at coordinate-system bounds (per
+  the CLAUDE.md coordinate convention) do not produce NaN /
+  Infinity. Tier A.
+- **Monotonicity.** Fatigue (per CLAUDE.md fatigue convention) is
+  non-decreasing across a match in absence of recovery events.
   Tier B.
 
 ### 3.4.5 Anti-Patterns
@@ -346,9 +359,12 @@ review time (FR-TS-052) is performed by §5.4.
 - **Acknowledged dilution.** This migration policy is in tension with
   KD-6. Specs #1–#8 were approved before KD-6 existed, and KD-4
   explicitly forbids re-opening them. Net effect: KD-6 is
-  **unenforced retroactively** for the eight specs where ERR-005-class
-  fabrication is statistically most likely to already exist. This is
-  a *known dilution*, not a migration technicality (FR-TS-045).
+  **unenforced retroactively** for the eight specs where
+  fabrication-class findings (the CLAUDE.md "fabricated checklist
+  values" hazard pattern, recorded in `spec-error-log.md` under the
+  `ERR-019-NNN` namespace once surveyed) are statistically most likely
+  to already exist. This is a *known dilution*, not a migration
+  technicality (FR-TS-045).
 - **Mitigation.** The Appendix D survey enumerates every unresolved
   row as an `ERR-019-NNN` entry so the dilution is *visible* even
   when not *enforced*. Full enforcement reaches each of #1–#8 only at
@@ -356,8 +372,9 @@ review time (FR-TS-052) is performed by §5.4.
 
 ### 3.5.5 Anti-Patterns
 
-- Approval-checklist row whose "evidence" is prose without a file path
-  or check name (the ERR-005 pattern; FR-TS-041).
+- Approval-checklist row whose "evidence" is prose without a file
+  path or check name (the CLAUDE.md "fabricated checklist values"
+  hazard; FR-TS-041).
 - Per-spec §5 declaring tests that do not exist in `src/`.
 - Coverage claim without a coverage-report artifact (Stage 0+1).
 
@@ -365,16 +382,17 @@ review time (FR-TS-052) is performed by §5.4.
 
 ### 3.6.1 Tier Vocabulary
 
-Tier vocabulary is owned by #16 §1.3.1 `[TBD-NORMATIVE]` and is not
-restated here (KD-1).
+Tier vocabulary is owned by #16 §1.1.1 ("Equivalence policy by
+artifact") `[TBD-NORMATIVE]` and is not restated here (KD-1).
 
-**Cite-precision guard.** The subsection number "§1.3.1" is tagged
-`[TBD-NORMATIVE]` per KD-2 because #16 has been through three
-adversarial passes and subsection numbering may have shifted. Any
-section-3 author MUST `grep deterministic-sim/section-1.md` for the
-tier-classification block at draft time and update the cited number
-atomically. The same guard applies to every "§5", "§7", "§8" citation
-of #16 in this spec.
+**Cite-precision guard.** The subsection number "§1.1.1" was
+re-grepped against current `deterministic-sim/section-1.md` on May
+12, 2026; the tier-classification table is at §1.1.1 (not §1.3.1 as
+the v1.1 outline had it). Any section-3 author MUST re-grep
+`deterministic-sim/section-1.md` for the tier-classification block at
+each revision and update the cited number atomically. The same guard
+applies to every #16 citation of §3.2.4.1 (canonical schema), §4.8
+(`EnvironmentFingerprint`), and §5 (regression suite) in this spec.
 
 ### 3.6.2 Targets (Stage-Gated per KD-5)
 
@@ -417,15 +435,15 @@ consumable by the §5.5 auditor (FR-TS-057).
 
 A test is **flaky** if two runs of the same revision under the same
 `EnvironmentFingerprint` produce different pass / fail outcomes. This
-is a determinism-adjacent definition cited from #16 §1.3
-`[TBD-NORMATIVE]`.
+is a determinism-adjacent definition cited from #16 §4.8
+(`EnvironmentFingerprint`) `[TBD-NORMATIVE]`.
 
 ### 3.7.2 Detection (FR-TS-062)
 
 - CI runs every test twice on the same revision.
 - Disagreement between runs → automatic quarantine.
 - A test that passes both runs but produces non-bitwise-identical
-  outputs in #16 §7 tiers is a determinism defect (§6.4.1), not a
+  outputs in #16 §5 tiers is a determinism defect (§6.4.1), not a
   flake.
 
 ### 3.7.3 Quarantine Pool (FR-TS-063, FR-TS-064)
@@ -457,7 +475,8 @@ is a determinism-adjacent definition cited from #16 §1.3
 
 ### 3.8.1 Citation
 
-KD-10 (binding to #16 §5 `[TBD-NORMATIVE]` canonical save format).
+KD-10 (binding to #16 §3.2.4.1 `[TBD-NORMATIVE]` `SerializeCanonical`
+normative byte-level schema).
 
 ### 3.8.2 Storage Layout (FR-TS-068)
 
@@ -467,7 +486,8 @@ tests/data/
 ├── golden/           ← golden outputs for replay assertions
 ├── corpora/          ← fuzz corpora (LFS-tracked, pending D5)
 ├── captured-seeds/   ← §3.4.3 holding area for fuzz / property failures
-└── run-logs/         ← Stage 0+1 CI run logs
+├── run-logs/         ← Stage 0+1 CI run logs
+└── migrations/       ← format-version migration scripts (§3.8.3)
 ```
 
 Concrete LFS / no-LFS decision is recorded at Stage 0+1 (D5).
@@ -487,7 +507,7 @@ Every captured fixture records:
 - `source_seed: uint64`.
 - `capturing_spec_id: int`.
 - `capture_date: ISO-8601`.
-- `environment_fingerprint: string` (verbatim from #16 §4
+- `environment_fingerprint: string` (verbatim from #16 §4.8
   `[TBD-NORMATIVE]`).
 - `provenance_edges: list<fixture_path>` — upstream fixtures this
   capture derives from.
@@ -547,10 +567,12 @@ rationale recorded inline at point of declaration.
 | Tier A branch coverage | ≥ 95% | `[GT]` | §3.6.2 | Same. |
 | Tier B line coverage | ≥ 90% | `[GT]` | §3.6.2 | Bounded-authoritative tier per KD-9. |
 | Tier B branch coverage | ≥ 80% | `[GT]` | §3.6.2 | Same. |
-| Unit wall-time bound | ≤ 1 ms | `[GT]` | §3.1.1 | Sub-millisecond fast-feedback bound. |
+| Unit wall-time bound | ≤ 1 ms | `[GT]` | §3.1.1, FR-TS-002 | Sub-millisecond fast-feedback bound. |
 | Quarantine auto-expiry | 14 days | `[GT]` | §3.7.3 | Two-week resolution window. |
 | Eviction quarantine count | ≥ 3 | `[GT]` | §3.7.4 | Three-strikes rule. |
 | Eviction window | 90 days | `[GT]` | §3.7.4 | Calendar-quarter window. |
+| End-to-end / soak match length | 90 min | `[FIXED]` | §3.1.1, FR-TS-006 | Laws of football; not designer-tunable. |
+| Pre-commit pipeline wall-time budget | ≤ 60 s | `[GT]` | §4.5.1 | Local-feedback budget; revisited Stage 1. |
 
 **KD-6 evidence artifact for governance numbers.** Each `[GT]`
 governance number's KD-6 evidence is the *citation line in this
@@ -570,3 +592,4 @@ version-history table (FR-TS-044).
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Rule mechanics for FR-TS-001 … 074; §3.10 governance constants table. |
+| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 (regression suite); #16 §1.3.1 → §1.1.1 (tier vocabulary, §3.6.1); #16 §5 → §3.2.4.1 (canonical schema, §3.3.4 / §3.8.1); #16 §1.3 → §4.8 (`EnvironmentFingerprint`, §3.7.1). ERR-005 misnomer corrected (§3.5.4, §3.5.5). M1 coordinate restatement tightened. M2 `index.<ext>` provisional disclosure added (§3.3.5). M4 `migrations/` row added to §3.8.2. L1 / L2 inline `[GT]` / `[FIXED]` pointers (§3.1.1). L3 / L2 §3.10 expanded with `90 min [FIXED]` and `≤ 60 s [GT]`. L4 property naming reconciled (§3.1.4). |

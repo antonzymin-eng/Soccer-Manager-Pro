@@ -38,12 +38,12 @@ the items below are tracked as deferred decisions in §7.5.
 - **CI provider.** Deferred to `src/CLAUDE.md`. **Selection criteria:**
   (a) must support the three pipeline shapes in §4.5 (pre-commit, PR,
   nightly); (b) must support functional gate composition with the #18
-  performance gate `[TBD-NORMATIVE]` and the #16 §7 determinism gate
+  performance gate `[TBD-NORMATIVE]` and the #16 §5 determinism gate
   `[TBD-NORMATIVE]` (KD-2 / KD-3); (c) must expose pass/fail at the
   granularity required by §6.2 gate-composition rules. No assumption
   is made that #18 "owns" CI-provider selection; selection happens in
   `src/CLAUDE.md` against these neutral criteria once the producer
-  specs (#16 §7, #18 §4) are concretely citable. (D4)
+  specs (#16 §5, #18 §4) are concretely citable. (D4)
 
 ## 6.2 CI Pipeline Policy (Boundary with #18)
 
@@ -53,7 +53,7 @@ the items below are tracked as deferred decisions in §7.5.
   fail.
 - **Performance regression gates** — Spec #18 §4 `[TBD-NORMATIVE]`
   authority. Budget threshold.
-- **Determinism gates** — Spec #16 §7 `[TBD-NORMATIVE]` authority.
+- **Determinism gates** — Spec #16 §5 `[TBD-NORMATIVE]` authority.
   Bitwise equality across `EnvironmentFingerprint`.
 
 All three feed a single CI orchestrator.
@@ -62,7 +62,7 @@ All three feed a single CI orchestrator.
 
 - Functional gate failure → block merge (Spec #19 authority).
 - Performance gate failure → block merge (Spec #18 authority).
-- Determinism gate failure → block merge (#16 §7 authority).
+- Determinism gate failure → block merge (#16 §5 authority).
 - **No gate is "soft."** Flake quarantine (§3.7) is the only escape
   valve and applies only to functional gates (FR-TS-077).
 
@@ -77,7 +77,7 @@ NOT republish them. Cross-listing for FR-TS-075 … FR-TS-080 in §6.6.
 |----------|-----------------|------------------|------------------|
 | Pre-commit | Yes (unit + property) | No | No |
 | PR | Yes (unit + integration + property + scenarios) | Yes (#18 §4) | Partial (#16 unit tier) |
-| Nightly | Yes (simulation + soak) | Yes (#18 §7) | Yes (#16 §7 full suite) |
+| Nightly | Yes (simulation + soak) | Yes (#18 §7) | Yes (#16 §5 full suite) |
 
 ## 6.3 Stage-0 Local-Only Runbook
 
@@ -103,13 +103,21 @@ Until CI activates, the same gate composition runs locally
 - **Test defect.** Test wrong (e.g., asserts on a wall-clock value).
   Fix test; recorded in `tests/test-defect-log.md`. Activates at
   Stage 0+1.
-- **Determinism defect.** Routed to #16 §7 process per KD-2 (FR-TS-085).
+- **Determinism defect.** Routed to #16 §5 process per KD-2 (FR-TS-085).
   Activates at Stage 0+1.
 
 Misclassified defects are themselves a procedural violation
 (FR-TS-081).
 
 ### 6.4.2 Triage Cadence (FR-TS-082)
+
+> **Stage-gated per KD-5.** "PR-blocking failures" presumes CI exists;
+> the 24-hour SLA, weekly quarantined-test review, and "next
+> spec-revision cycle" review all activate at Stage 0+1 with
+> FR-TS-082. Until CI exists, only the **spec-defect** class is in
+> scope (the others have no instances), and spec defects are reviewed
+> at the next spec-revision cycle as below. This Stage-gating is
+> recorded in §5.2 (FR-TS-082 row).
 
 - **PR-blocking failures:** investigated within 24 hours.
 - **Quarantined tests:** reviewed weekly.
@@ -159,3 +167,4 @@ tags on FR-TS-075 … FR-TS-080 are reviewed for removal.
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Slot reconciliation replaces performance-analysis template. |
+| 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 throughout. M5 §6.4.2 explicit Stage-gating header. |
