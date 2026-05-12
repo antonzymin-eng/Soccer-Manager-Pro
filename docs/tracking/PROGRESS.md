@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 6, 2026  
+**Last Updated:** May 12, 2026  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -11,11 +11,11 @@
 ## PROGRESS SUMMARY
 
 **Total Specifications:** 20  
-**Approved:** 8  
+**Approved:** 9  
 **Suspended:** 0  
-**In Review:** 1  
+**In Review:** 2  
 **In Progress:** 1  
-**Not Started:** 10
+**Not Started:** 8
 
 **Specifications approved:**
 - Ball Physics (#1, Feb 8, 2026)
@@ -26,6 +26,7 @@
 - Shot Mechanics (#6, Apr 27, 2026)
 - Perception System (#7, Apr 22, 2026)
 - Decision Tree (#8, Apr 27, 2026 — draft-level quality gate; comprehensive audit candidate before implementation; §1.7.3 patch May 6, 2026 — `XC-008-001` EntityId no-reuse)
+- Code Standards & Style Guide (#20, May 11, 2026 — adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete)
 
 **Specifications suspended:** None. Stage 0 Priority 1–2 spec set is complete.
 
@@ -91,10 +92,10 @@
 |---|---------------|-------|--------|---------|-----------|-------|
 | 17 | Event System | 15-18 | ⏳ NOT STARTED | — | — | Week 17 target |
 | 18 | Performance Optimization Strategy | 18-22 | ⏳ NOT STARTED | — | — | Week 18 target |
-| 19 | Testing Strategy & Framework | 20-25 | ⏳ NOT STARTED | — | — | Week 19 target |
-| 20 | Code Standards & Style Guide | 15-20 | ⏳ NOT STARTED | — | — | Week 20 target |
+| 19 | Testing Strategy & Framework | 20-25 | 🔍 IN REVIEW | May 12, 2026 | — | Initial section-file draft authored May 12, 2026 from `outline-detailed.md` v1.1; v0.2 self-critique sweep applied (3 H / 6 M / 8 L findings, all resolved). Per KD-2 sequencing, advancement to `APPROVED` is gated on (a) #16 reaching Tier 2 APPROVED, (b) #18 outline-level draft, and (c) all `TBD-NORMATIVE` tags resolved. |
+| 20 | Code Standards & Style Guide | 15-20 | ✅ APPROVED | May 7, 2026 | May 11, 2026 | All section files + appendices drafted from `outline-detailed.md` v1.3 (May 7–8); adversarial review pass-1 applied May 11; lead-developer R-01..R-05 sign-off complete May 11, 2026. §9 v1.1 APPROVED. |
 
-**Priority 5 Progress:** 0% (0 of 4 started)
+**Priority 5 Progress:** 25% (1 of 4 approved, 1 in review)
 
 ---
 
@@ -279,6 +280,23 @@
 **Status:**
 - **8 APPROVED, 0 SUSPENDED, 1 IN REVIEW, 1 IN PROGRESS, 10 NOT STARTED.**
 
+---
+
+### Week 16 (May 7 – May 12, 2026)
+
+**Completed:**
+- **Code Standards & Style Guide (#20) APPROVED (May 11, 2026):** Section files + appendices drafted May 7–8 from `outline-detailed.md` v1.3; adversarial review pass-1 applied May 11; lead-developer R-01..R-05 sign-off completed same day. §9 v1.1 APPROVED. SPEC_INDEX.md row 20 updated.
+- **Testing Strategy & Framework (#19) IN REVIEW (May 12, 2026):** Initial section-file draft authored May 12 from `outline-detailed.md` v1.1. v0.2 self-critique sweep applied same day; 3 H / 6 M / 8 L findings resolved. §16 section-number citations corrected (§7→§5, §1.3.1→§1.1.1, §5→§3.2.4.1; deleted §8 "trace channels"). KD-2 sequencing: advancement to `APPROVED` gated on (a) #16 Tier 2 APPROVED, (b) #18 outline-level draft, (c) all `TBD-NORMATIVE` tags resolved.
+
+**Status:**
+- **9 APPROVED, 0 SUSPENDED, 2 IN REVIEW, 1 IN PROGRESS, 8 NOT STARTED.**
+
+**Still Pending:**
+- Fixed64 Math Library (#9) lead-developer sign-off (IN REVIEW since May 6).
+- Testing Strategy (#19) approval — blocked by KD-2 preconditions (#16 Tier 2 APPROVED, #18 outline, all `TBD-NORMATIVE` tags resolved).
+- Deterministic Simulation (#16) Tier 2 Final Approval.
+- Spec #18 (Performance Optimization Strategy) outline-level draft — required to unblock #19 §9.3.6 precondition.
+
 **Still Pending:**
 - Fixed64 Math Library (#9) lead-developer sign-off.
 - Deterministic Simulation (#16) Tier 2 Final Approval — gated on #9 / #17 / #18 / #19 reaching `IN REVIEW`. Tier 1 Conditional Approval pursuable now.
@@ -395,6 +413,14 @@
 ---
 
 ## CHANGELOG
+
+**May 12, 2026:**
+- Testing Strategy & Framework (#19) reclassified `NOT STARTED` → `IN REVIEW`. Initial section-file draft authored May 12 from `outline-detailed.md` v1.1; v0.2 self-critique sweep applied (3 H / 6 M / 8 L findings, all resolved). Approval gated on KD-2 preconditions (#16 Tier 2 APPROVED, #18 outline-level draft, all `TBD-NORMATIVE` tags resolved).
+- Summary counts updated: **9 APPROVED, 0 SUSPENDED, 2 IN REVIEW, 1 IN PROGRESS, 8 NOT STARTED.**
+- Week 16 update-log entry added.
+
+**May 11, 2026:**
+- Code Standards & Style Guide (#20) reclassified `NOT STARTED` → `APPROVED`. Section files + appendices authored May 7–8 from `outline-detailed.md` v1.3; adversarial review pass-1 applied May 11; lead-developer R-01..R-05 sign-off completed.
 
 **May 6, 2026:**
 - Fixed64 Math Library (#9) reclassified `NOT STARTED` → `IN REVIEW` after Pass 2 adversarial critique fixes landed. All sections (1–9 + appendices) present at v0.2–v0.3; awaiting lead developer sign-off.
