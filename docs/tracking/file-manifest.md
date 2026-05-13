@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 13, 2026 (Event System #17 APPROVED)  
+**Last Updated:** May 13, 2026 (Performance Optimization #18 outline-detailed.md v1.0 landed — IN PROGRESS)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -67,7 +67,7 @@ All 20 spec folders now exist in `docs/specs/`. Status reflects authoritative cl
 | 15 | `docs/specs/attacking-ai/` | NOT STARTED (scaffold only) |
 | 16 | `docs/specs/deterministic-sim/` | IN PROGRESS (since May 2, 2026) |
 | 17 | `docs/specs/event-system/` | APPROVED (May 13, 2026) — 10 section files + appendices; section-files PASS 1 + PASS 2 adversarial review applied; lead-developer sign-off complete |
-| 18 | `docs/specs/performance-optimization/` | NOT STARTED (scaffold only) |
+| 18 | `docs/specs/performance-optimization/` | IN PROGRESS (May 13, 2026) — `outline.md` v1.0 + `outline-detailed.md` v1.0; section files still stubs |
 | 19 | `docs/specs/testing-strategy/` | IN REVIEW (May 12, 2026) — initial draft authored from `outline-detailed.md` v1.1 |
 | 20 | `docs/specs/code-standards/` | APPROVED (May 11, 2026) — 10 section files + appendices; adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete |
 
@@ -76,6 +76,7 @@ All 20 spec folders now exist in `docs/specs/`. Status reflects authoritative cl
 - Fixed64 Math (#9) files include `adversarial-review.md` and `adversarial-critique-pass-2.md` alongside the standard section files.
 - Code Standards (#20) outline-tier files: `outline.md` (high-level v1.0), `outline-mid.md` (mid-level v1.3), `outline-detailed.md` (detailed v1.3). Section files authored from the detailed outline May 7–8, 2026; adversarial review pass-1 applied May 11, 2026; lead-developer R-01..R-05 sign-off completed May 11, 2026. Current set: `section-1.md` v1.0.1, `section-2.md` v1.0.1, `section-3.md` v1.0.1, `section-4.md` v1.0, `section-5.md` v1.0.1, `section-6.md` v1.0.1, `section-7.md` v1.0.1, `section-8.md` v1.0, `section-9-approval-checklist.md` v1.1 (APPROVED), `appendices.md` v1.1. SPEC_INDEX.md line 40 reflects APPROVED status.
 - Testing Strategy (#19) files: `outline.md` (high-level v1.0 + first adversarial review), `outline-detailed.md` (v1.1 — second adversarial review applied), section-1 through section-9-approval-checklist, and `appendices.md`. Initial section-file draft authored May 12, 2026 from `outline-detailed.md` v1.1; v0.2 self-critique sweep applied same day (3 H / 6 M / 8 L findings, all resolved); status `IN REVIEW`. v0.2 corrected #16 section-number citations against current `deterministic-sim/` text (§7 → §5 regression suite, §1.3.1 → §1.1.1 tier classification, §5 → §3.2.4.1 canonical schema, deleted §8 "trace channels" — no such section). Per KD-2 sequencing in the spec, advancement to `APPROVED` is gated on (a) Spec #16 reaching Tier 2 `APPROVED`, (b) Spec #18 having at least an outline-level draft, and (c) all `TBD-NORMATIVE` tags resolved.
+- Performance Optimization Strategy (#18) files: `outline.md` (high-level v1.0 with embedded adversarial review of May 6, 2026), `outline-detailed.md` (v1.0 — May 13, 2026), and stub `section-1.md` through `section-9-approval-checklist.md` + `appendices.md` (headings only, no body content). Detailed outline addresses all 13 findings (6 H / 5 M / 2 L) from the May 6 adversarial review and establishes 11 cross-cutting design decisions (KD-1…KD-11). Status `IN PROGRESS`. ERR-018-001 (May 13, 2026) tracks #16 citation drift in the detailed outline ("#16 §8 trace channels", "#16 §5 canonical save format", "#16 §7 regression scenarios" — same pattern #19 v0.2 corrected May 12); bounded by KD-3 `TBD-NORMATIVE` tag policy requiring `grep` verification at section-file draft time. Advancement to `IN REVIEW` requires authoring section-file bodies from the detailed outline.
 - Event System (#17) files: `outline.md` (high-level v1.0), `outline-detailed.md` (v1.1), `section-files-critique-pass-1.md`, `section-files-critique-pass-2.md`, `section-1.md` through `section-8.md`, `section-9-approval-checklist.md`, and `appendices.md`. All section files authored May 13, 2026 from `outline-detailed.md` v1.1. Section-files PASS 1 adversarial critique (3 H / 5 M / 12 L findings) resolved in v0.2; section-files PASS 2 adversarial critique (2 H / 6 M / 7 L findings) resolved in v0.3. All section files at v0.3; lead-developer sign-off granted May 13, 2026. ERR-017-001 (`DOMAIN_TAG_EVENT_LEDGER` allocation in #16 §3.4) open pending #16 approval.
 
 ---

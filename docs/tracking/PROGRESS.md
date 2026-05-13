@@ -92,11 +92,11 @@
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
 | 17 | Event System | ~35 | ✅ APPROVED | May 13, 2026 | May 13, 2026 | All 10 section files + appendices authored May 13, 2026 from `outline-detailed.md` v1.1; section-files PASS 1 (20 findings) and PASS 2 (2 H / 6 M / 7 L findings) adversarial reviews both resolved same day; all section files at v0.3; lead-developer sign-off May 13, 2026. ERR-017-001 (`DOMAIN_TAG_EVENT_LEDGER`) open pending #16 approval. |
-| 18 | Performance Optimization Strategy | 18-22 | ⏳ NOT STARTED | — | — | Week 18 target |
+| 18 | Performance Optimization Strategy | 18-22 | 🛠 IN PROGRESS | May 13, 2026 | — | Detailed outline (`outline-detailed.md` v1.0) authored May 13, 2026 from `outline.md` v1.0 + May 6 adversarial review (6 H / 5 M / 2 L findings, all resolved). Establishes 11 cross-cutting design decisions (KD-2 per-spec §6 ratify-not-override; KD-3 boundary with #16; KD-4 boundary with #19; KD-7 Tier-C-only degradation; KD-8 10 Hz / 60 Hz loop-separation tagging; KD-6 determinism-aware profiling; KD-10 hot-path enumeration via per-spec §6 union). Section files remain stubs. ERR-018-001 (May 13): #16 §7/§5/§8 citations in outline mirror the same drift pattern #19 v0.2 corrected on May 12; outline-level inaccuracy is bounded by KD-3 `TBD-NORMATIVE` tagging policy, must be resolved at section-file draft time. **Unblocks Spec #19 KD-2 precondition (b)** — outline §4 and §7 headers both present and detailed. |
 | 19 | Testing Strategy & Framework | 20-25 | 🔍 IN REVIEW | May 12, 2026 | — | Initial section-file draft authored May 12, 2026 from `outline-detailed.md` v1.1; v0.2 self-critique sweep applied (3 H / 6 M / 8 L findings, all resolved). Per KD-2 sequencing, advancement to `APPROVED` is gated on (a) #16 reaching Tier 2 APPROVED, (b) #18 outline-level draft, and (c) all `TBD-NORMATIVE` tags resolved. |
 | 20 | Code Standards & Style Guide | 15-20 | ✅ APPROVED | May 7, 2026 | May 11, 2026 | All section files + appendices drafted from `outline-detailed.md` v1.3 (May 7–8); adversarial review pass-1 applied May 11; lead-developer R-01..R-05 sign-off complete May 11, 2026. §9 v1.1 APPROVED. |
 
-**Priority 5 Progress:** 50% (2 of 4 approved, 1 in review)
+**Priority 5 Progress:** 50% (2 of 4 approved, 1 in review, 1 in progress)
 
 ---
 
@@ -311,15 +311,17 @@
 
 **Completed:**
 - **Event System (#17) APPROVED (May 13, 2026):** Section files (section-1 through section-9-approval-checklist + appendices) authored May 13, 2026 from `outline-detailed.md` v1.1. Section-files PASS 1 adversarial critique (20 findings: 3 H / 5 M / 12 L) resolved in v0.2. Section-files PASS 2 adversarial critique (2 H / 6 M / 7 L findings) resolved in v0.3 — H-2-1 (TickHeartbeatEvent producer phase reverted to Snapshot), H-2-2 (ERR_EVT_TIER_MISMATCH removed from runtime namespace; 0x1702 slot recovered), M-2-1/M-2-2 (§2.3 prose + routing table), M-2-3 (FR-EVT-052 struct-ref carve-out), M-2-4 (IBootSubscriberRegistration phantom removed), M-2-5 (FR-EVT-046a/046b ordering), M-2-6 (PASS 3 label). All section files at v0.3. Lead-developer sign-off granted May 13, 2026. ERR-017-001 (DOMAIN_TAG_EVENT_LEDGER back-prop into #16 §3.4) remains open; [CROSS-PENDING] tag in §3.10 resolves atomically with #16 approval.
+- **Performance Optimization Strategy (#18) reclassified `NOT STARTED` → `IN PROGRESS` (May 13, 2026):** Detailed outline (`outline-detailed.md` v1.0) authored from `outline.md` v1.0 + May 6 adversarial review (6 H / 5 M / 2 L findings, all resolved). Establishes 11 cross-cutting design decisions: KD-1 cite-not-redefine, KD-2 per-spec §6 ratify-not-override authority (rejects unilateral #18 override of per-spec budgets), KD-3 boundary with #16 (#16 §7 owns determinism scenarios, #16 §8 owns trace channels per outline — see ERR-018-001), KD-4 boundary with #19 (#19 §6 owns CI orchestration / functional gates; #18 §3.5 owns perf gates), KD-5 Stage-gated activation, KD-6 determinism-aware profiling (forbids wall-clock-seeded runs), KD-7 Tier-C-only degradation (Tier A invariant under perf pressure, deterministic-replay-safe), KD-8 10 Hz / 60 Hz loop-separation tagging, KD-9 reference-platform pin via `certification-platform.md`, KD-10 hot-path enumeration via union of per-spec §6 tables (no separate authoritative list), KD-11 baseline reproducibility. Section files remain stubs; advancement to `IN REVIEW` requires authoring `section-1.md` through `section-9-approval-checklist.md` + `appendices.md` from the detailed outline. **Unblocks Spec #19 KD-2 precondition (b)** "Spec #18 having at least an outline-level draft with §4 and §7 headers" — both §4 and §7 present and detailed.
+- **ERR-018-001 filed (May 13, 2026):** `performance-optimization/outline-detailed.md` cites "#16 §8 trace channels", "#16 §5 canonical save format", and "#16 §7 regression scenarios" — same citation-drift pattern #19 v0.2 corrected on May 12 (#16 §7 actual location is §5; #16 §5 actual location is §3.2.4.1; no "§8 trace channels" section exists in #16). Outline-level inaccuracy is bounded by KD-3 `TBD-NORMATIVE` tagging policy which explicitly mandates `grep` verification at section-file draft time. Section-file authoring MUST resolve each citation; for "trace channels" specifically, MUST determine whether #16 will publish a trace-channel section, whether KD-3 needs re-anchoring, or whether Spec #18 owns the trace pipeline from scratch.
 
 **Status:**
-- **10 APPROVED, 0 SUSPENDED, 2 IN REVIEW, 1 IN PROGRESS, 7 NOT STARTED.**
+- **10 APPROVED, 0 SUSPENDED, 2 IN REVIEW, 2 IN PROGRESS, 6 NOT STARTED.**
 
 **Still Pending:**
 - Fixed64 Math Library (#9) lead-developer sign-off (IN REVIEW since May 6).
-- Deterministic Simulation (#16) Tier 2 Final Approval — #17 precondition now satisfied; #9, #18, #19 remain.
-- Testing Strategy (#19) approval — blocked by KD-2 preconditions (#16 Tier 2 APPROVED, #18 outline, all `TBD-NORMATIVE` tags resolved).
-- Spec #18 (Performance Optimization Strategy) — NOT STARTED; blocks both #19 approval and #16 Tier 2.
+- Deterministic Simulation (#16) Tier 2 Final Approval — #17 precondition now satisfied; #9, #18 (outline-only, section files pending), #19 remain.
+- Testing Strategy (#19) approval — precondition (b) cleared May 13 by #18 outline; precondition (a) (#16 Tier 2 APPROVED) and (c) (all `TBD-NORMATIVE` tags resolved) remain.
+- Spec #18 (Performance Optimization Strategy) section-file drafting — IN PROGRESS; required to (i) advance #18 toward `IN REVIEW`, (ii) resolve ERR-018-001 #16-citation drift, (iii) resolve #19's #18-side `TBD-NORMATIVE` tags.
 - Heading Mechanics (#10), Goalkeeper Mechanics (#11), Positioning AI (#12) — NOT STARTED.
 - Pressing AI (#13), Defensive AI (#14), Attacking AI (#15) — NOT STARTED.
 - 8 approval tags created locally remain unpushed (including new `spec-event-system-v1.0-approved`; HTTP 403 branch-protection); push after merge to main per CLAUDE.md OPEN ISSUES.
