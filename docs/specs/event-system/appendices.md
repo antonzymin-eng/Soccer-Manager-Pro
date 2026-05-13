@@ -2,7 +2,7 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 0.1 (initial section-file draft from `outline-detailed.md` v1.1)
+**Version:** 0.3 (PASS 2 adversarial review applied)
 **Status:** DRAFT
 
 > Appendix layout follows `outline-detailed.md` v1.1 §"APPENDICES"
@@ -56,7 +56,7 @@ rules per §2.4.2. Producer-spec ownership and tier are normative.
 | `0x06` | `CardIssuedEvent` | A | Resolve | #17 (default owner) | 1 | `recipient: EntityId; cardKind: byte; foulOrdinal: byte` | n/a | #17 v1.0 | N |
 | `0x07` | `GoalAwardedEvent` | A | Resolve | #17 (default owner) | 1 | `scorer: EntityId; assister: EntityId; scoringTeam: byte; ballPosition: Vector3` | n/a | #17 v1.0 | N |
 | `0x08` | `SubstitutionEvent` | A | Resolve | #17 (default owner) | 1 | `outgoing: EntityId; incoming: EntityId; team: byte; substitutionReason: byte` | n/a | #17 v1.0 | N |
-| `0x09` | `TickHeartbeatEvent` | C | `AI_NoOp` (typical; Tier C — informational per §A.1 note) | #17 (default owner) | 1 | (header only) | 60 / tick (rate-limited to once per tick) | #17 v1.0 | N |
+| `0x09` | `TickHeartbeatEvent` | C | `Snapshot` | #17 (default owner) | 1 | (header only) | 1 / tick | #17 v1.0 | N |
 | `0x0A` | `VfxImpactCue` | C | Resolve | #17 (default owner) | 1 | `impactPoint: Vector3; impactKind: byte; intensity: byte` | 64 / tick | #17 v1.0 | N |
 | `0x0B` | `UiNotificationCue` | C | Resolve | #17 (default owner) | 1 | `notificationKind: byte; subjectEntity: EntityId` | 32 / tick | #17 v1.0 | N |
 
@@ -256,7 +256,7 @@ code.
 | EC-017-002 | Tier A/B publish exceeds `EVENT_QUEUE_CAPACITY` within a single tick | Hard fail; tick halted; pre-fail snapshot written via `event-system.overflow` trace channel | `ERR_EVT_QUEUE_OVERFLOW` (`0x1701`) |
 | EC-017-003 | Fixture load encounters `eventTypeOrdinal` not in Appendix A | Load fails; no partial deserialisation | `ERR_EVT_ORDINAL_UNKNOWN` (`0x1703`) |
 | EC-017-004 | Fixture load encounters `payloadVersion > currentRegistryVersion` | Load fails; no partial deserialisation | `ERR_EVT_VERSION_INCOMPATIBLE` (`0x1704`) |
-| EC-017-005a | Subscriber registers with wrong tier marker constraint (authoritative code → Tier C, etc.) | Registration rejected immediately; subscriber not added | `ERR_EVT_TIER_MISMATCH` (`0x1702`) |
+| EC-017-005a | Subscriber registers with wrong tier marker constraint (authoritative code → Tier C, etc.) | Compile-time rejection via `Subscribe<T>` generic constraint + Spec #20 lint; no runtime path | *(compile-time; no runtime code; `0x1702` slot reserved)* |
 | EC-017-005b | Runtime Tier A/B register/unregister attempt after boot phase ended | Registration rejected immediately; subscriber not added | `ERR_EVT_REGISTRATION_PHASE` (`0x1705`) |
 | EC-017-006 | Second-order BFS dispatch depth exceeds `MAX_EVENT_DISPATCH_DEPTH` (8) | Hard fail; tick halted; trace channel records depth at failure | `ERR_EVT_QUEUE_OVERFLOW` (`0x1701`) |
 
@@ -269,3 +269,4 @@ Cross-references for each row land in §3.8 (mechanics) and §2.5
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial appendices draft from `outline-detailed.md` v1.1. Appendix A seeded with 11 rows + forward reference table; Appendices B / C / D / E published. Generic-template stub headings (Derivations / Numerical Verification / Sensitivity Analysis) replaced with spec-specific structure per outline. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. Appendix A `0x09` row producer phase set to `AI_NoOp` (H2). Appendix A §A.1 added column-semantics note: Tier A/B Producer phase normative, Tier C informational (L7). Renamed `producerSubsystem` → `subsystemOrdinal` in Appendix B B.2 header table (M4). Appendix E EC-017-005 split into 005a (tier-marker mismatch) and 005b (post-boot registration → `ERR_EVT_REGISTRATION_PHASE`) (L3). |
+| 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-1: Appendix A `0x09` row producer phase reverted to `Snapshot`; `maxPerTick` corrected to `1 / tick`. H-2-2: Appendix E EC-017-005a updated to compile-time / lint-only (no runtime error code; `0x1702` slot reserved). |
