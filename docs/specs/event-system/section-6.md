@@ -40,6 +40,22 @@
 All 0-byte budgets are asserted by §5.3 unit tests using an
 allocation tracker (FR-EVT-048, FR-EVT-049, FR-EVT-050).
 
+**Registration-time delegate allocation (acknowledged).** Both
+`EventBus.Subscribe<T>` (boot Tier A/B) and
+`CosmeticChannel.Subscribe<T>` (runtime Tier C) accept an
+`EventHandler<T>` delegate argument. In C#, the method-group →
+delegate conversion allocates a `Delegate` instance per
+registration. Recent compilers cache the conversion for static
+method-group targets, but the caching guarantee depends on the
+pinned compiler / runtime (D1 in §7.5; Spec #18). At boot
+registration this is off the hot path and one-time. At Tier C
+runtime registration the cost is bounded by §3.5.3 / FR-EVT-022
+("UI and VFX systems use this surface"): runtime Tier C
+`Subscribe` is expected to happen during loading screens / scene
+transitions, never inside the simulation tick. A §5.3 unit test
+asserts that `Subscribe<T>` invoked inside the tick is rejected
+or, if instrumentation-only, that its allocation is bounded.
+
 ## 6.3 Worst-Case Publish-Rate Analysis
 
 The constants in §3.10 (`EVENT_QUEUE_CAPACITY`,
@@ -59,35 +75,66 @@ analysis.
 - Aggregate per-tick physics-cadence ceiling: ≤ 16.
 
 **Per tactical tick (10 Hz; one in six ticks):**
-- AI events (one per player) — ≤ 22 (11 per side; one of each
-  type). Margin ×2 → 44 worst case.
+- AI events — assumed **≤ 1 AI event per agent per stride tick**
+  (invariant stated explicitly here; per-event-type aggregation
+  lives in subscribers per §3.3.4 anti-pattern). 11 players ×
+  2 sides = 22 first-order AI events per stride tick. Margin ×2
+  → 44 worst case.
 - Aggregate per-tactical-tick ceiling: ≤ 48 amortised over six
   ticks ≈ ≤ 8 / tick equivalent.
 
 **Aggregate per-tick first-order Tier A ceiling: ≤ 64.**
 
+**Provisional pending #13–#15 seeding.** The AI-cadence
+contribution to this ceiling depends on event types
+(`PressTriggeredEvent`, `MarkAssignedEvent`, `RunCalledEvent`)
+that §3.3.1 marks as `future — populated at #13/#14/#15
+IN REVIEW`. Until those specs land their Appendix A rows, the
+≤ 64 first-order ceiling is **provisional**. The ×2 margin
+(→ 1024 final capacity) absorbs the expected first three AI
+event types; the §6.3.4 re-tuning trigger explicitly fires at
+each of #13 / #14 / #15 reaching `IN REVIEW`, with the §3.10
+constant re-evaluated against the registry as-seeded.
+
 ### 6.3.2 BFS dispatch-depth fanout
 
 Second-order publish from inside a Tier A handler is permitted
-(§3.2.5; bounded by `MAX_EVENT_DISPATCH_DEPTH = 8`). Worst-case
-BFS fanout under the depth cap:
+(§3.2.5) and is bounded by **two** invariants together:
+
+- `MAX_EVENT_DISPATCH_DEPTH = 8` (depth cap).
+- Per-handler out-degree = 1 (FR-EVT-046a / FR-EVT-046b; a single
+  Tier A/B handler invocation may publish at most one secondary
+  Tier A/B event).
+
+With both caps in force, BFS occupancy is **additive across
+levels**, not multiplicative:
 
 ```
 WorstCaseRingBufferOccupancy
     = first-order ceiling × MAX_EVENT_DISPATCH_DEPTH
     = 64 × 8
-    = 512
+    = 512                    # each level adds at most 64 events
+                             # because out-degree-per-handler = 1
 ```
 
-Doubled for unforeseen second-order amplification:
+Without the out-degree cap, the worst case would be
+`64 × Σ_{i=0..7} k^i` for arbitrary `k`, which is unbounded in
+practical terms (e.g., `k = 2 → 64 × 255 = 16,320`). The
+FR-EVT-046a out-degree cap is the load-bearing invariant that
+keeps `EVENT_QUEUE_CAPACITY` finite.
+
+Doubled for unforeseen second-order amplification (e.g., a future
+relaxation of FR-EVT-046a to allow a small out-degree, or
+miscounting at the dispatcher):
 
 ```
 EVENT_QUEUE_CAPACITY = 512 × 2 = 1024  [GT]
 ```
 
 Headroom is therefore **×2 over the dispatch-depth-bounded
-worst case**, not ×16 over the first-order ceiling alone (resolves
-PASS 2 finding 11).
+worst case under FR-EVT-046a**, not ×16 over the first-order
+ceiling alone (resolves PASS 2 finding 11; resolves PASS 3
+finding H1).
 
 ### 6.3.3 Tier C worst case at 60 Hz
 
@@ -104,11 +151,26 @@ delivery queue (§3.5.3).
 
 ### 6.3.4 Re-tuning trigger
 
-All `[GT]` numbers are revisited at Stage 0+1 against first real
-measurements (parallel to Spec #20 §5.3 numeric re-tuning). The
-microbenchmark suite (D1) provides the measurements; updates are
-made in a new minor revision of this spec with §6.3 version-
-history entry.
+All **runtime-tunable** `[GT]` numbers (see §3.10 note —
+`EVENT_QUEUE_CAPACITY`, `COSMETIC_PER_TICK_PUBLICATION_BUDGET`,
+`MAX_EVENT_DISPATCH_DEPTH`) are revisited at the following
+triggers:
+
+- **Stage 0+1 first measurements** — against the microbenchmark
+  suite (D1; parallel to Spec #20 §5.3 numeric re-tuning).
+- **Each of #13 / #14 / #15 reaching `IN REVIEW`** — the §6.3.1
+  first-order ceiling is recomputed against the as-seeded
+  Appendix A registry (resolves L2 from the section-files PASS 1
+  critique). If the recomputed ceiling exceeds `EVENT_QUEUE_CAPACITY /
+  (MAX_EVENT_DISPATCH_DEPTH × 2)`, the constant is bumped in a
+  patch revision.
+- **Each new Tier A registry row appended by a future spec** — same
+  recompute discipline, run by the spec author at registry-row
+  authoring time.
+
+Design-fixed `[GT]` constants (per §3.10 note) are **NOT** subject
+to re-tuning. Updates land in a new minor revision of this spec
+with a §6.3 version-history entry.
 
 ## 6.4 Frame-Budget Contribution (binds to #16 §6 / Spec #18 §4)
 
@@ -153,13 +215,14 @@ deliverable.
 
 | Channel name | Tier | Producer | Verbosity default | Purpose |
 |--------------|------|----------|-------------------|---------|
-| `event-system.tier-a.publish` | A | `EventBus.Publish<IEventA>` | INFO | Per-publish header (`ordinal | tick | producer | drawIdx`). |
+| `event-system.tier-a.publish` | A | `EventBus.Publish<IEventA>` | INFO | Per-publish header (`ordinal | tick | subsystemOrdinal | drawIdx`). |
 | `event-system.tier-a.digest` | A | `DrainTick` end | DEBUG | Per-tick FM-017-001 byte count summary. |
 | `event-system.tier-b.publish` | B | `EventBus.Publish<IEventB>` | INFO | Same as Tier A; activated at Stage 5+. |
 | `event-system.tier-c.publish` | C | `CosmeticChannel` | DEBUG | Aggregated `(ordinal, count)` per tick. |
 | `event-system.tier-c.drop` | C | `CosmeticChannel` drop predicate | INFO | Per-tick drop count per ordinal (FR-EVT-045). |
 | `event-system.overflow` | — | `Publish<T>` raises `ERR_EVT_QUEUE_OVERFLOW` | ERROR | Pre-fail snapshot of ring-buffer state for crash dump. |
-| `event-system.tier-mismatch` | — | `Subscribe<T>` rejects | ERROR | Subscriber type, attempted phase, current phase. |
+| `event-system.tier-mismatch` | — | `Subscribe<T>` rejects (tier-marker mismatch) | ERROR | Subscriber type, attempted tier, registered tier. |
+| `event-system.registration-phase` | — | `Subscribe<T>` rejects (Tier A/B registration after boot) | ERROR | Subscriber type, attempted at-boot/post-boot state, current pipeline phase. |
 
 Verbosity defaults are documented at D6 (§7.5 deferred-decision
 tracker) and are pinned at Stage 0+1.
@@ -186,3 +249,4 @@ Stage 1 deliverables:
 | Version | Date         | Author      | Notes                                                                 |
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. Complexity, allocation budget, worst-case publish-rate derivation (`64 × 8 × 2 = 1024`), frame-budget contribution (≤ 0.5 ms / frame ≈ 3%), instrumentation channel registry published. Section heading order superseded the v0.0 stub. |
+| 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §6.2 added registration-time delegate-allocation acknowledgement (M7). §6.3.1 stated "≤ 1 AI event per agent per stride tick" invariant (L1) and marked AI-cadence ceiling provisional pending #13–#15 (L2). §6.3.2 BFS derivation rewritten to show additivity is load-bearing under FR-EVT-046a out-degree cap (H1). §6.3.4 re-tuning trigger expanded with explicit per-spec hooks (L2). §6.5.1 added `event-system.registration-phase` channel and renamed `producer` column to `subsystemOrdinal` (L3 / M4). |

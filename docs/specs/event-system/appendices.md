@@ -29,6 +29,21 @@ rules per §2.4.2. Producer-spec ownership and tier are normative.
 - `Deprecated` defaults to `N`. Once flipped to `Y`, the row is
   retained indefinitely (KD-9).
 
+**Column-semantics note — `Producer phase`:**
+
+- For **Tier A and Tier B** rows, `Producer phase` is **normative**
+  and feeds the §3.6.1 phase-WriteSet check + the FM-017-002 sort
+  key (component 1, `producingPhaseIndex`). A change requires a
+  registry-row update and a coordinated #16 §3.6.1 back-prop per
+  §3.7.1 (M6 of the section-files PASS 1 critique).
+- For **Tier C** rows, `Producer phase` is **informational**
+  (typical producing phase only). Tier C publish has no phase
+  restriction per §3.2.1; the column is used for telemetry
+  attribution in §6.5.1 trace channels and for documentation. A
+  change of a Tier C row's `Producer phase` does NOT require
+  back-prop into #16, because Tier C events do not appear in the
+  digest, the ledger, or any phase WriteSet.
+
 ### A.1 Active registry (Spec #17 v1.0 seed; 11 rows)
 
 | Ordinal | Type | Tier | Producer phase | Owning spec | Current version | Payload field list (canonical order, post-12-byte header) | maxPerTick (Tier C only) | First published in | Deprecated |
@@ -41,7 +56,7 @@ rules per §2.4.2. Producer-spec ownership and tier are normative.
 | `0x06` | `CardIssuedEvent` | A | Resolve | #17 (default owner) | 1 | `recipient: EntityId; cardKind: byte; foulOrdinal: byte` | n/a | #17 v1.0 | N |
 | `0x07` | `GoalAwardedEvent` | A | Resolve | #17 (default owner) | 1 | `scorer: EntityId; assister: EntityId; scoringTeam: byte; ballPosition: Vector3` | n/a | #17 v1.0 | N |
 | `0x08` | `SubstitutionEvent` | A | Resolve | #17 (default owner) | 1 | `outgoing: EntityId; incoming: EntityId; team: byte; substitutionReason: byte` | n/a | #17 v1.0 | N |
-| `0x09` | `TickHeartbeatEvent` | C | Snapshot | #17 (default owner) | 1 | (header only) | 60 / tick (rate-limited to once per tick) | #17 v1.0 | N |
+| `0x09` | `TickHeartbeatEvent` | C | `AI_NoOp` (typical; Tier C — informational per §A.1 note) | #17 (default owner) | 1 | (header only) | 60 / tick (rate-limited to once per tick) | #17 v1.0 | N |
 | `0x0A` | `VfxImpactCue` | C | Resolve | #17 (default owner) | 1 | `impactPoint: Vector3; impactKind: byte; intensity: byte` | 64 / tick | #17 v1.0 | N |
 | `0x0B` | `UiNotificationCue` | C | Resolve | #17 (default owner) | 1 | `notificationKind: byte; subjectEntity: EntityId` | 32 / tick | #17 v1.0 | N |
 
@@ -105,7 +120,7 @@ publishes one Tier A `ShotExecutedEvent` from `Resolve`;
 | `payloadVersion` (`1`) | `01` |
 | `_reserved` (canonical zero) | `00 00` |
 | `tick` (`0x00000123`) | `23 01 00 00` |
-| `producerSubsystem` (`0x0006`) | `06 00` |
+| `subsystemOrdinal` (`0x0006`) | `06 00` |
 | `intraPhaseDrawIndex` (`0x0000`) | `00 00` |
 | **Header total** | `01 01 00 00 23 01 00 00 06 00 00 00` (12 bytes) |
 
@@ -241,7 +256,8 @@ code.
 | EC-017-002 | Tier A/B publish exceeds `EVENT_QUEUE_CAPACITY` within a single tick | Hard fail; tick halted; pre-fail snapshot written via `event-system.overflow` trace channel | `ERR_EVT_QUEUE_OVERFLOW` (`0x1701`) |
 | EC-017-003 | Fixture load encounters `eventTypeOrdinal` not in Appendix A | Load fails; no partial deserialisation | `ERR_EVT_ORDINAL_UNKNOWN` (`0x1703`) |
 | EC-017-004 | Fixture load encounters `payloadVersion > currentRegistryVersion` | Load fails; no partial deserialisation | `ERR_EVT_VERSION_INCOMPATIBLE` (`0x1704`) |
-| EC-017-005 | Subscriber registers with wrong tier marker constraint, OR runtime Tier A/B register attempt post-init | Registration rejected immediately; subscriber not added | `ERR_EVT_TIER_MISMATCH` (`0x1702`) |
+| EC-017-005a | Subscriber registers with wrong tier marker constraint (authoritative code → Tier C, etc.) | Registration rejected immediately; subscriber not added | `ERR_EVT_TIER_MISMATCH` (`0x1702`) |
+| EC-017-005b | Runtime Tier A/B register/unregister attempt after boot phase ended | Registration rejected immediately; subscriber not added | `ERR_EVT_REGISTRATION_PHASE` (`0x1705`) |
 | EC-017-006 | Second-order BFS dispatch depth exceeds `MAX_EVENT_DISPATCH_DEPTH` (8) | Hard fail; tick halted; trace channel records depth at failure | `ERR_EVT_QUEUE_OVERFLOW` (`0x1701`) |
 
 Cross-references for each row land in §3.8 (mechanics) and §2.5
@@ -252,3 +268,4 @@ Cross-references for each row land in §3.8 (mechanics) and §2.5
 | Version | Date         | Author      | Notes                                                                 |
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial appendices draft from `outline-detailed.md` v1.1. Appendix A seeded with 11 rows + forward reference table; Appendices B / C / D / E published. Generic-template stub headings (Derivations / Numerical Verification / Sensitivity Analysis) replaced with spec-specific structure per outline. |
+| 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. Appendix A `0x09` row producer phase set to `AI_NoOp` (H2). Appendix A §A.1 added column-semantics note: Tier A/B Producer phase normative, Tier C informational (L7). Renamed `producerSubsystem` → `subsystemOrdinal` in Appendix B B.2 header table (M4). Appendix E EC-017-005 split into 005a (tier-marker mismatch) and 005b (post-boot registration → `ERR_EVT_REGISTRATION_PHASE`) (L3). |

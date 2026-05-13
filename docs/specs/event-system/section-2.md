@@ -59,7 +59,7 @@ traceability metadata.
 | ID | Statement | Level | Source | Verification | Activation |
 |----|-----------|-------|--------|--------------|------------|
 | FR-EVT-001 | Every event type is declared as a `readonly struct` with the §2.4.1 header layout. | MUST | KD-8; CLAUDE.md "When Writing Code" | §5.3 unit (struct-layout reflection) | Stage 0 (registry rows authorable now) |
-| FR-EVT-002 | Each event struct begins with the fixed 12-byte header (`eventTypeOrdinal` 1B + `payloadVersion` 1B + `_reserved` 2B + `tick` 4B + `producerSubsystem` 2B + `intraPhaseDrawIndex` 2B) before payload fields. | MUST | §2.4.1 | §5.3 unit | Stage 0 |
+| FR-EVT-002 | The canonical serialized layout of each event begins with the fixed 12-byte header (`eventTypeOrdinal` 1B + `payloadVersion` 1B + `_reserved` 2B + `tick` 4B + `subsystemOrdinal` 2B + `intraPhaseDrawIndex` 2B) followed by payload fields in declaration order; the in-memory C# struct uses `[StructLayout(LayoutKind.Sequential)]` without `Pack = 1`, and §3.4.2 `SerializeCanonical` is the sole authoritative source of on-disk and digest bytes. | MUST | §2.4.1; §3.4.2 | §5.3 unit (canonical-bytes golden) | Stage 0 |
 | FR-EVT-003 | `eventTypeOrdinal` values are byte-wide and globally unique across the Appendix A registry. | MUST | KD-9 | §5.3 unit (registry uniqueness scan) | Stage 0 |
 | FR-EVT-004 | `eventTypeOrdinal` values are never reused after publication, even on deprecation. | MUST | KD-9 | Spec-review (Stage 0); registry-validator (Stage 0+1) | Stage 0 |
 | FR-EVT-005 | `payloadVersion` is monotonically incremented when a field is appended; resets only when a new `eventTypeOrdinal` is minted. | MUST | KD-9 | §5.3 unit (P3 version-migration property) | Stage 0 |
@@ -67,6 +67,7 @@ traceability metadata.
 | FR-EVT-007 | Event payload fields are restricted to the §3.1.4 whitelist (integer primitives, `float`, Stage-0 `Vector3`, fixed-size struct payloads, `EntityId`). | MUST | §3.1.4 | Spec-review (Stage 0); §5.3 unit (Stage 0+1) | Stage 0 |
 | FR-EVT-008 | Reference-typed payload fields are forbidden in event structs. | MUST NOT | §3.1.4; KD-8 | Spec #20 lint (Stage 0+1) | Stage 0+1 |
 | FR-EVT-009 | Every event type in Appendix A carries exactly one tier tag (A, B, or C). | MUST | KD-3 | §5.3 unit (registry-row schema validator) | Stage 0 |
+| FR-EVT-009a | An event struct MUST implement exactly one tier-marker interface (`IEventA` XOR `IEventB` XOR `IEventC`). Implementing two markers on a single struct is forbidden because it creates ambiguous `EventBus.Publish<T>` overload resolution and silently routes through whichever overload the compiler picks. | MUST | KD-3; §4.2.1 | §5.3 unit (registry-row marker scan via reflection); Spec #20 lint | Stage 0+1 |
 | FR-EVT-010 | Tier A events MUST be published only from the `Events` phase WriteSet per #16 §3.6.1. | MUST | KD-2 / KD-4 | §5.3 unit (`ERR_DS_PHASE_OWNERSHIP` assertion at debug builds) | Stage 0+1 |
 | FR-EVT-011 | Tier A payload bytes are included in the per-tick `Events`-phase digest sub-scope (FM-017-001). | MUST | KD-3 / KD-6 | §5.3 G1 golden | Stage 0+1 |
 | FR-EVT-012 | Tier A records are serialized into the `EventLedgerRecord` block of `SnapshotPayload` (#16 §3.9.2 `TBD-NORMATIVE`). | MUST | KD-3 | §5.3 integration (snapshot round-trip) | Stage 0+1 |
@@ -78,12 +79,12 @@ traceability metadata.
 | FR-EVT-018 | `EventBus.Publish<T>` takes `in T evt` — never `T evt` by value, never `ref T evt`. | MUST | KD-8 | §5.3 unit; Spec #20 lint | Stage 0+1 |
 | FR-EVT-019 | Subscriber registration uses `delegate void EventHandler<T>(in T evt) where T : struct;` (no closures captured). | MUST | KD-8 | §5.3 unit; Spec #20 lint | Stage 0+1 |
 | FR-EVT-020 | Tier A/B subscribers MUST be registered before the first `Events` phase of the match. | MUST | §3.2.2 | §5.3 unit | Stage 0+1 |
-| FR-EVT-021 | Runtime register/unregister of Tier A/B subscribers post-init MUST raise `ERR_EVT_TIER_MISMATCH`. | MUST | §3.2.2 | §5.3 unit | Stage 0+1 |
+| FR-EVT-021 | Runtime register/unregister of Tier A/B subscribers post-init MUST raise `ERR_EVT_REGISTRATION_PHASE`. (Separate from `ERR_EVT_TIER_MISMATCH` because the violation is a lifecycle issue — registration after boot — not a tier-marker mismatch.) | MUST | §3.2.2 | §5.3 unit | Stage 0+1 |
 | FR-EVT-022 | Tier C subscribers MAY be added or removed at runtime. | MAY | §3.2.2 | §5.3 unit | Stage 0+1 |
 | FR-EVT-023 | Tier A/B writes enter the pre-allocated ring buffer; drain occurs in the same tick's `Events` phase. | MUST | §3.2.3 | §5.3 integration | Stage 0+1 |
 | FR-EVT-024 | Tier C dispatch is immediate-synchronous on the publishing thread (no delivery queue). | MUST | §3.2.3 | §5.3 unit | Stage 0+1 |
 | FR-EVT-025 | The cosmetic-channel publication-count table is reset at every tick boundary. | MUST | §3.2.3 / §3.5.3 | §5.3 unit | Stage 0+1 |
-| FR-EVT-026 | A Tier A handler exception halts the tick and writes a crash dump (#16 §3.10 failure-mode table, `[TBD-CITE]`). A Tier C handler exception is logged and suppressed. | MUST | §3.2.5 | §5.3 integration | Stage 0+1 |
+| FR-EVT-026 | A Tier A handler exception halts the tick and writes a crash dump (#16 §3.10 failure-mode table, `TBD-NORMATIVE`). A Tier C handler exception is logged and suppressed. | MUST | §3.2.5 | §5.3 integration | Stage 0+1 |
 | FR-EVT-027 | Intra-tick canonical order is the lexicographic tuple `(producingPhaseIndex, subsystemOrdinal, entityId, eventTypeOrdinal, intraPhaseDrawIndex)` (FM-017-002). | MUST | KD-6 | §5.3 P2 property | Stage 0+1 |
 | FR-EVT-028 | `intraPhaseDrawIndex` is a `ushort` counter scoped per-tick, per-producingPhase; reset to zero at producing-phase entry; incremented monotonically on every Tier A/B publish in that phase. | MUST | §3.2.4 | §5.3 unit | Stage 0+1 |
 | FR-EVT-029 | Sort over the accumulated tick queue is performed once at `Events`-phase entry, not on every publish. | MUST | §3.2.4 | §5.3 unit | Stage 0+1 |
@@ -105,6 +106,8 @@ traceability metadata.
 | FR-EVT-045 | Tier C drops are logged to the Tier C trace channel; they do NOT enter the ledger. | MUST | §3.6.2 | §5.3 unit | Stage 0+1 |
 | FR-EVT-046 | Second-order dispatch depth in a single `Events` phase MUST NOT exceed `MAX_EVENT_DISPATCH_DEPTH` (8). | MUST | §3.2.5 | §5.3 unit | Stage 0+1 |
 | FR-EVT-047 | Dispatch-depth overflow raises `ERR_EVT_QUEUE_OVERFLOW`. | MUST | §3.2.5 | §5.3 unit | Stage 0+1 |
+| FR-EVT-046a | A single Tier A/B handler invocation MUST NOT publish more than one secondary Tier A/B event (per-handler out-degree cap = 1). Required so that the §6.3.2 worst-case `EVENT_QUEUE_CAPACITY` derivation remains additive (`first-order × depth`) rather than multiplicative (`first-order × out-degree^depth`). | MUST | §3.2.5; KD-7 / KD-8 | §5.3 unit (out-degree assertion in dispatch wrapper) + Spec #20 lint (per-handler enqueue counter) | Stage 0+1 |
+| FR-EVT-046b | Out-degree-cap violation raises `ERR_EVT_QUEUE_OVERFLOW` (same code as depth-cap violation; both routes are bounded-BFS failures). | MUST | §3.2.5 | §5.3 unit | Stage 0+1 |
 | FR-EVT-048 | `EventBus.Publish<T>` allocates 0 bytes per call (verified at debug build via allocation tracker). | MUST | KD-8 / §6.2 | §5.3 unit (`Assert.AllocatedBytes(0)`) | Stage 0+1 |
 | FR-EVT-049 | `EventBus.DrainTick` allocates 0 bytes per call. | MUST | KD-8 / §6.2 | §5.3 unit | Stage 0+1 |
 | FR-EVT-050 | `EventBus.SerializeLedger(in Span<byte> dst)` allocates 0 bytes and writes into the caller-provided span. | MUST | KD-8 / §6.2 | §5.3 unit | Stage 0+1 |
@@ -185,7 +188,7 @@ public readonly struct <Name>Event
     public readonly byte   payloadVersion;      // KD-9
     public readonly ushort _reserved;           // padding; canonical zero
     public readonly uint   tick;                // physics tick at publish
-    public readonly ushort producerSubsystem;   // #16 §3.1.1 subsystemOrdinal
+    public readonly ushort subsystemOrdinal;    // #16 §3.1.1 subsystem ordinal
     public readonly ushort intraPhaseDrawIndex; // #16 §3.2.5.1 (TBD-NORMATIVE)
     // ── payload fields appended in canonical declaration order ──
 }
@@ -233,7 +236,7 @@ Initial registry rows at Spec #17 approval time (11 seeds):
 | `0x06` | `CardIssuedEvent` | A | Resolve | #17 (default owner) | 1 | #17 v1.0 |
 | `0x07` | `GoalAwardedEvent` | A | Resolve | #17 (default owner) | 1 | #17 v1.0 |
 | `0x08` | `SubstitutionEvent` | A | Resolve | #17 (default owner) | 1 | #17 v1.0 |
-| `0x09` | `TickHeartbeatEvent` | C | Snapshot | #17 (default owner) | 1 | #17 v1.0 |
+| `0x09` | `TickHeartbeatEvent` | C | `AI_NoOp` (typical; informational for Tier C) | #17 (default owner) | 1 | #17 v1.0 |
 | `0x0A` | `VfxImpactCue` | C | Resolve | #17 (default owner) | 1 | #17 v1.0 |
 | `0x0B` | `UiNotificationCue` | C | Resolve | #17 (default owner) | 1 | #17 v1.0 |
 
@@ -289,13 +292,14 @@ EventRecord = [
 
 | Code | Mnemonic | Trigger | Mechanics | Caused by FR |
 |------|----------|---------|-----------|--------------|
-| `0x1701` | `ERR_EVT_QUEUE_OVERFLOW` | Tier A/B publish past `EVENT_QUEUE_CAPACITY`, OR second-order dispatch past `MAX_EVENT_DISPATCH_DEPTH`. | §3.6.1, §3.2.5 | FR-EVT-041, FR-EVT-047 |
-| `0x1702` | `ERR_EVT_TIER_MISMATCH` | Subscriber registers against the wrong tier marker, OR runtime Tier A/B subscriber attempt post-init. | §3.2.2, §3.2.5 | FR-EVT-016, FR-EVT-021, FR-EVT-076 |
+| `0x1701` | `ERR_EVT_QUEUE_OVERFLOW` | Tier A/B publish past `EVENT_QUEUE_CAPACITY`, OR second-order dispatch past `MAX_EVENT_DISPATCH_DEPTH`, OR per-handler out-degree past 1 (FR-EVT-046a/b). | §3.6.1, §3.2.5 | FR-EVT-041, FR-EVT-047, FR-EVT-046b |
+| `0x1702` | `ERR_EVT_TIER_MISMATCH` | Subscriber registers against the wrong tier marker (e.g., authoritative code subscribing to a Tier C stream). | §3.2.2, §3.2.5 | FR-EVT-016, FR-EVT-076 |
 | `0x1703` | `ERR_EVT_ORDINAL_UNKNOWN` | Fixture load encounters an `eventTypeOrdinal` not in Appendix A. | §3.7.2 | FR-EVT-080 |
 | `0x1704` | `ERR_EVT_VERSION_INCOMPATIBLE` | Fixture load encounters a `payloadVersion` newer than the current registry row. | §3.7.2 | FR-EVT-081 |
+| `0x1705` | `ERR_EVT_REGISTRATION_PHASE` | Runtime register/unregister of a Tier A/B subscriber after the boot phase ended. | §3.2.2 | FR-EVT-021 |
 | (aliased) | `ERR_EVT_PHASE_OWNERSHIP` | Alias to #16 `ERR_DS_PHASE_OWNERSHIP`; Tier A publish from a non-`Events` phase. | §3.2.1 | FR-EVT-010, FR-EVT-082 |
 
-Numeric pins (`0x1701` … `0x1704`) are allocated from the reserved
+Numeric pins (`0x1701` … `0x1705`) are allocated from the reserved
 `0x17NN` block. They MUST NOT collide with #16's `0x16NN` block
 (checked at §9.2 quality-checklist row). Error-code values are
 recorded in §3.10 constants catalogue.
@@ -305,3 +309,4 @@ recorded in §3.10 constants catalogue.
 | Version | Date         | Author      | Notes                                                                 |
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. 82 FRs published with full conformance/source/verification/activation columns. Section heading order superseded the v0.0 stub. |
+| 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. Added FR-EVT-046a/046b (per-handler out-degree cap = 1; H1) and FR-EVT-009a (single-marker constraint; L6). Reworded FR-EVT-002 for canonical-vs-in-memory layout (M5). Renamed `producerSubsystem` → `subsystemOrdinal` in §2.4.1 (M4). Replaced `[TBD-CITE]` with `TBD-NORMATIVE` at FR-EVT-026 (M2). FR-EVT-021 retargeted at new `ERR_EVT_REGISTRATION_PHASE = 0x1705`; §2.5 grew the new error row (L3). Updated TickHeartbeatEvent registry row to `AI_NoOp` (H2). |

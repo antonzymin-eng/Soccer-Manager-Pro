@@ -77,6 +77,7 @@ Every constant in every spec MUST have exactly one of these source tags:
 | `[FIXED]` | Fixed / physical law | Derived from physics; never tune |
 | `[DERIVED]` | Derived from other constants | Formula must be documented; never set independently |
 | `[CROSS]` | Cross-spec constant | Defined in another approved spec; consumed read-only here; never set independently in this spec. Citation must name the authoritative spec and section. Use `[CROSS]` only when the value is copied verbatim without modification — if a formula transforms it, tag the result `[DERIVED]`. |
+| `[CROSS-PENDING]` | Cross-spec constant blocked on an upstream `IN PROGRESS` spec | Used when a spec consumes a constant that will be `[CROSS]` once the upstream authority spec reaches `APPROVED`, but the numeric value is not yet allocated. Citation must name the authoritative spec, section, and the `spec-error-log.md` back-prop ID tracking the allocation. Promoted to `[CROSS]` atomically with upstream approval. Use sparingly — every `[CROSS-PENDING]` tag is an outstanding cross-spec dependency that gates the consuming spec's own `APPROVED` transition. |
 
 Constants live in their designated `.cs` constant catalogues — no magic numbers in formula code.
 
