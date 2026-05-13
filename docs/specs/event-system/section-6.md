@@ -2,7 +2,7 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 0.1 (initial section-file draft from `outline-detailed.md` v1.1)
+**Version:** 0.3 (PASS 2 adversarial review applied)
 **Status:** DRAFT
 
 > **Slot reconciliation.** This section IS the CLAUDE.md 9-section
@@ -133,8 +133,8 @@ EVENT_QUEUE_CAPACITY = 512 × 2 = 1024  [GT]
 
 Headroom is therefore **×2 over the dispatch-depth-bounded
 worst case under FR-EVT-046a**, not ×16 over the first-order
-ceiling alone (resolves PASS 2 finding 11; resolves PASS 3
-finding H1).
+ceiling alone (resolves outline-detailed PASS 2 finding 11;
+resolves section-files PASS 1 finding H1).
 
 ### 6.3.3 Tier C worst case at 60 Hz
 
@@ -221,7 +221,6 @@ deliverable.
 | `event-system.tier-c.publish` | C | `CosmeticChannel` | DEBUG | Aggregated `(ordinal, count)` per tick. |
 | `event-system.tier-c.drop` | C | `CosmeticChannel` drop predicate | INFO | Per-tick drop count per ordinal (FR-EVT-045). |
 | `event-system.overflow` | — | `Publish<T>` raises `ERR_EVT_QUEUE_OVERFLOW` | ERROR | Pre-fail snapshot of ring-buffer state for crash dump. |
-| `event-system.tier-mismatch` | — | `Subscribe<T>` rejects (tier-marker mismatch) | ERROR | Subscriber type, attempted tier, registered tier. |
 | `event-system.registration-phase` | — | `Subscribe<T>` rejects (Tier A/B registration after boot) | ERROR | Subscriber type, attempted at-boot/post-boot state, current pipeline phase. |
 
 Verbosity defaults are documented at D6 (§7.5 deferred-decision
@@ -250,3 +249,4 @@ Stage 1 deliverables:
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. Complexity, allocation budget, worst-case publish-rate derivation (`64 × 8 × 2 = 1024`), frame-budget contribution (≤ 0.5 ms / frame ≈ 3%), instrumentation channel registry published. Section heading order superseded the v0.0 stub. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §6.2 added registration-time delegate-allocation acknowledgement (M7). §6.3.1 stated "≤ 1 AI event per agent per stride tick" invariant (L1) and marked AI-cadence ceiling provisional pending #13–#15 (L2). §6.3.2 BFS derivation rewritten to show additivity is load-bearing under FR-EVT-046a out-degree cap (H1). §6.3.4 re-tuning trigger expanded with explicit per-spec hooks (L2). §6.5.1 added `event-system.registration-phase` channel and renamed `producer` column to `subsystemOrdinal` (L3 / M4). |
+| 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. M-2-6: §6.3.2 pass-label corrected from "PASS 3 finding H1" to "section-files PASS 1 finding H1" (vocabulary standardisation). H-2-2: §6.5.1 `event-system.tier-mismatch` trace channel removed (tier-marker mismatch is compile-time only; no runtime trace path). |

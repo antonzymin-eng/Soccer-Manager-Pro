@@ -2,7 +2,7 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 0.1 (initial section-file draft from `outline-detailed.md` v1.1)
+**Version:** 0.3 (PASS 2 adversarial review applied)
 **Status:** DRAFT
 
 > Section heading order follows `outline-detailed.md` v1.1
@@ -64,7 +64,7 @@ PASS 1 finding 12).
 
 | Layer | Target ratio | Examples |
 |-------|--------------|----------|
-| Unit | ≥ 60% | Publish/subscribe correctness; ordinal-allocation uniqueness; struct-layout reflection check; per-publish allocation = 0 bytes assertion (`Assert.AllocatedBytes(0)`); ring-buffer capacity edge; canonical sort key (FM-017-002) total-order property; `intraPhaseDrawIndex` reset / monotonicity; Tier C drop predicate purity; second-order dispatch BFS up to depth 8; `ERR_EVT_TIER_MISMATCH` rejection at runtime register; `EVENT_QUEUE_CAPACITY` overflow → `ERR_EVT_QUEUE_OVERFLOW`. |
+| Unit | ≥ 60% | Publish/subscribe correctness; ordinal-allocation uniqueness; struct-layout reflection check; per-publish allocation = 0 bytes assertion (`Assert.AllocatedBytes(0)`); ring-buffer capacity edge; canonical sort key (FM-017-002) total-order property; `intraPhaseDrawIndex` reset / monotonicity; Tier C drop predicate purity; second-order dispatch BFS up to depth 8; tier-marker mismatch rejection via Spec #20 lint (compile-time; no runtime code); `EVENT_QUEUE_CAPACITY` overflow → `ERR_EVT_QUEUE_OVERFLOW`. |
 | Integration | ≤ 25% | EventBus + EventLedger round-trip; `Publish → DrainTick → Subscriber` end-to-end with byte-level assertion; `SerializeLedger → SnapshotPayload → load → re-deserialize` round-trip (Spec #19 §3.8 fixture format); phase-WriteSet ownership check across the `Input → … → Snapshot` pipeline; tier-mismatch rejection at registration; producing-phase `intraPhaseDrawIndex` reset behaviour across the boundary `Physics → Resolve`. |
 | Simulation | ≤ 12% | Full-match (90-min) run; verify zero allocations after warm-up (allocation tracker); verify ledger digest matches expected golden (G1); verify aggregate event count per tick ≤ §6.3 budget; verify no `ERR_EVT_QUEUE_OVERFLOW` across the run. |
 | End-to-end / soak | ≤ 3% | 1-hour soak; verify no queue-depth drift across repeated replays of the same seed; KD-7 no-drop assertion across full match (Tier A/B drop counter MUST be zero); Tier C drop counter behaviour matches FM-deterministic predicate at every tick. |
@@ -233,7 +233,7 @@ visible).
 | FR-EVT-073 | `SubscriptionToken` struct-shape unit test (no class allocation) | `tests/event-system/subscription_token_test.cs` | Stage 0+1 | Test report. |
 | FR-EVT-074 | Registration-order dispatch unit test (deterministic) | `tests/event-system/registration_order_test.cs` | Stage 0+1 | Test report. |
 | FR-EVT-075 | Re-entrant publish FIFO unit test (`intraPhaseDrawIndex` monotonic at enqueue) | `tests/event-system/reentrant_fifo_test.cs` | Stage 0+1 | Test report. |
-| FR-EVT-076 | Wrong-tier-marker registration unit test (→ `ERR_EVT_TIER_MISMATCH`) | `tests/event-system/wrong_marker_test.cs` | Stage 0+1 | Test report. |
+| FR-EVT-076 | Wrong-tier-marker registration is compile-time only; verification is Spec #20 lint (generic-constraint mismatch rule) | `tools/spec20-lint/tier-constraint.rule` | Stage 0+1 | Lint report. |
 | FR-EVT-077 | Stage 1+ replay-channel separation test (ordinary subscribers do NOT see replay) | `tests/event-system/replay_isolation_test.cs` | Stage 1+ | Stage 1+ activation log. |
 | FR-EVT-078 | Spec #20 lint (`in T evt` parameter required) | `tools/spec20-lint/in-ref-only.rule` | Stage 0+1 | Lint report. |
 
@@ -290,3 +290,4 @@ visible).
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. Pyramid ratios, P1/P2/P3 property tests, G1/G2 golden fixtures, stage-gated activation table published. Section heading order superseded the v0.0 stub. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique H3 resolution. §5.4 expanded from 6 example rows to the full FR-to-verification table — 82 base FRs + 3 added FRs (FR-EVT-046a, 046b, 009a), partitioned into §5.4.1 … §5.4.10. Every FR row has Tooling + Activation + Artifact columns populated. §9.2 Q2 evidence row updated. |
+| 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-2: §5.3 unit-layer example list replaced runtime `ERR_EVT_TIER_MISMATCH` reject with compile-time lint description; §5.4.9 FR-EVT-076 traceability row retargeted to Spec #20 lint (tier-constraint rule) and renamed test artifact. |

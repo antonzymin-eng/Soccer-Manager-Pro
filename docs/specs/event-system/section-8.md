@@ -2,7 +2,7 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 0.1 (initial section-file draft from `outline-detailed.md` v1.1)
+**Version:** 0.3 (PASS 2 adversarial review applied)
 **Status:** DRAFT
 
 > **Slot reconciliation.** This section IS the CLAUDE.md 9-section
@@ -125,7 +125,7 @@ No other `[CROSS]` constants declared at draft time.
 | `PAYLOAD_VERSION_WIDTH = 1 byte` | `[GT]` | §3.1 / §3.7 design decision. |
 | `DOMAIN_TAG_EVENT_LEDGER` | `[CROSS-PENDING]` | #16 §3.4 (back-prop via ERR-017-001). |
 | `ERR_EVT_QUEUE_OVERFLOW = 0x1701` | `[GT]` | §2.5 / §3.6.1; reserved `0x17NN` block. |
-| `ERR_EVT_TIER_MISMATCH = 0x1702` | `[GT]` | §2.5 / §3.2.5. |
+| *(reserved slot `0x1702`)* | — | Tier-marker mismatch is compile-time only (FR-EVT-016, FR-EVT-076); slot recovered at PASS 2 (H-2-2). |
 | `ERR_EVT_ORDINAL_UNKNOWN = 0x1703` | `[GT]` | §2.5 / §3.7.2. |
 | `ERR_EVT_VERSION_INCOMPATIBLE = 0x1704` | `[GT]` | §2.5 / §3.7.2. |
 | `ERR_EVT_REGISTRATION_PHASE = 0x1705` | `[GT]` (design-fixed) | §2.5 / §3.2.2; lifecycle violation, distinct from tier-mismatch. |
@@ -150,3 +150,4 @@ No other `[CROSS]` constants declared at draft time.
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. Source register, citation audit, cross-reference ID enumeration, constant provenance summary published. Section heading order superseded the v0.0 stub. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §8.1.2 updated `#16 §3.10` row to drop `[TBD-CITE]` (M2). §8.4 added `ERR_EVT_REGISTRATION_PHASE = 0x1705` row (L3) and `[GT]` tag-subclass notes (M8). §8.4 `EVENT_QUEUE_CAPACITY` rationale notes FR-EVT-046a additivity (H1). |
+| 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-2: §8.4 `ERR_EVT_TIER_MISMATCH = 0x1702` row replaced with reserved-slot note. |

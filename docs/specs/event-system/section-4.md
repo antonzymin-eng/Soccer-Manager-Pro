@@ -2,7 +2,7 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 0.1 (initial section-file draft from `outline-detailed.md` v1.1)
+**Version:** 0.3 (PASS 2 adversarial review applied)
 **Status:** DRAFT
 
 > Section heading order follows `outline-detailed.md` v1.1
@@ -114,18 +114,23 @@ boundary so downstream specs can pre-coordinate.
 | `IEventPublisher` | Phantom — only one concrete `EventBus` exists; no second implementation is foreseen. CLAUDE.md "Interface Design Principle" forbids the speculative abstraction. |
 | `ITransport` | Stage 5+ multiplayer (KD-10); no Stage 0 consumer is specified. |
 | `IEventSerializer` | The `SerializeCanonical` routine (#16 §3.2.4.1 `TBD-NORMATIVE`) is the sole serializer; no second strategy. |
+| `IBootSubscriberRegistration` | Phantom — the match-init caller side is unspecified at Stage 0. Boot code calls `EventBus.Subscribe<T>` directly per §3.2.2; no abstraction layer between match-init and `EventBus` is defined here. CLAUDE.md "Interface Design Principle": both sides must be specified. |
 
 ## 4.3 Subscriber Registration Model
 
 ### 4.3.1 Static (boot-phase) registration
 
+Boot-phase registration uses `EventBus.Subscribe<T>` directly
+(§3.2.2). Match-init code calls it once per handler before the
+first `Events` phase; no wrapper or abstraction layer is declared
+at Stage 0 (see §4.2.4 — `IBootSubscriberRegistration` is
+explicitly deferred as phantom).
+
 ```csharp
-public static class EventBus
-{
-    // Called once from match-init, before the first `Events` phase.
-    public static void RegisterStartupSubscribers(
-        IBootSubscriberRegistration boot);
-}
+// Match-init calls these before the first Events phase:
+EventBus.Subscribe<BallContactEvent>(mySystem.OnBallContact);
+EventBus.Subscribe<GoalAwardedEvent>(mySystem.OnGoalAwarded);
+// ... one call per handler; order is deterministic boot code
 ```
 
 - Boot phase happens before the first tick (and therefore before
@@ -280,3 +285,4 @@ The manifest update lands at the §9 IN REVIEW commit.
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. Five integration entry points pinned (`DrainTick`, `SerializeLedger`, `OnTickBoundary`, `RegisterStartupSubscribers`, `CosmeticChannel.Subscribe`). Section heading order superseded the v0.0 stub. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §4.2.1 added single-marker constraint bullet (L6). §4.3.3 rejection-paths table now routes post-init Tier A/B register to `ERR_EVT_REGISTRATION_PHASE` (L3). §4.4.3 / §4.4.4 added `Events` phase to the per-phase `intraPhaseDrawIndex` reset enumeration (M3). |
+| 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. M-2-4: §4.2.4 added `IBootSubscriberRegistration` as explicitly deferred phantom (CLAUDE.md "Interface Design Principle"); §4.3.1 `RegisterStartupSubscribers(IBootSubscriberRegistration)` replaced with direct `EventBus.Subscribe<T>` call pattern and explanatory prose. |

@@ -2,7 +2,7 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 0.1 (initial section-file draft from `outline-detailed.md` v1.1)
+**Version:** 0.3 (PASS 2 adversarial review applied)
 **Status:** DRAFT
 
 > This section provides the **mechanics** for every FR-EVT-### named
@@ -143,9 +143,9 @@ Lifecycle:
 - Subscriber registration for Tier A/B is permitted **only** before
   the first `Events` phase of the match (boot phase). Runtime
   registration of Tier A/B subscribers post-init raises
-  `ERR_EVT_REGISTRATION_PHASE` (FR-EVT-021) — a separate code from
-  the tier-marker mismatch case (`ERR_EVT_TIER_MISMATCH`,
-  FR-EVT-016 / FR-EVT-076) for crash-dump triage clarity.
+  `ERR_EVT_REGISTRATION_PHASE` (FR-EVT-021) — a distinct code
+  from tier-marker mismatch, which is enforced at compile time
+  only (FR-EVT-016 / FR-EVT-076; §4.3.3).
 - Tier C subscriber runtime register / unregister is permitted
   (FR-EVT-022); UI and VFX systems use this.
 - `SubscriptionToken` is a struct (no class allocation; FR-EVT-073).
@@ -289,7 +289,7 @@ A/B events within a tick; the subscriber-dispatch loop walks it
 | `SubstitutionEvent` | Resolve | event-driven | A | seeded |
 | `VfxImpactCue` | Resolve | event-driven | C | seeded |
 | `UiNotificationCue` | Resolve | event-driven | C | seeded |
-| `TickHeartbeatEvent` | `AI_NoOp` (typical; Tier C — phase informational per Appendix A §A.1 note) | 60 Hz | C | seeded |
+| `TickHeartbeatEvent` | `Snapshot` | 60 Hz | C | seeded |
 
 **Status column.** `seeded` rows are present in the §2.4.2 initial
 registry (11 rows). `future` rows are listed as forward-looking
@@ -304,12 +304,16 @@ spec ordering).
   (#16 §3.1.2 `TBD-NORMATIVE`). `AI_NoOp` MUST NOT publish Tier A
   or Tier B events (FR-EVT-037) — its WriteSet is empty per
   #16 §3.6.1 `TBD-NORMATIVE`.
-- `AI_NoOp` MAY publish a single `TickHeartbeatEvent`
-  (FR-EVT-038) only if the implementation chooses to use that
-  telemetry hook. If it does, the hook is Tier C and runs through
-  the cosmetic channel, **not** through the `AI` phase WriteSet.
-- Tier C diagnostic events from `AI_NoOp` are out-of-band by KD-4
-  and so do not violate #16's empty-WriteSet rule.
+- `TickHeartbeatEvent` is published by the `Snapshot` phase once
+  per tick (canonical producer per Appendix A row `0x09`;
+  FR-EVT-038). Because Tier C events have no phase restriction
+  (§3.2.1), any phase MAY also emit a `TickHeartbeatEvent` via the
+  cosmetic channel — for example, `AI_NoOp` may emit one on non-
+  stride ticks as a diagnostic convenience — but this is a non-
+  binding implementation choice. The canonical producer remains
+  `Snapshot`, which runs every tick.
+- Tier C events from any phase are out-of-band by KD-4 and do not
+  contribute to the phase WriteSet or the authoritative digest.
 
 ### 3.3.3 Tick-boundary determinism
 
@@ -557,7 +561,7 @@ the moment its rule statement reaches IN REVIEW status.
 | EC-017-002 | Queue exceeds `EVENT_QUEUE_CAPACITY` during a single tick | Hard fail; halt tick | FR-EVT-041 | `ERR_EVT_QUEUE_OVERFLOW` |
 | EC-017-003 | Fixture load encounters unknown `eventTypeOrdinal` | Hard fail at load | FR-EVT-080 | `ERR_EVT_ORDINAL_UNKNOWN` |
 | EC-017-004 | Fixture load encounters `payloadVersion > currentRegistryVersion` | Hard fail at load | FR-EVT-081 | `ERR_EVT_VERSION_INCOMPATIBLE` |
-| EC-017-005a | Subscriber registers with wrong tier marker (authoritative code subscribing to Tier C, etc.) | Registration rejected | FR-EVT-016, FR-EVT-076 | `ERR_EVT_TIER_MISMATCH` |
+| EC-017-005a | Subscriber registers with wrong tier marker (authoritative code subscribing to Tier C, etc.) | Compile-time rejection via `Subscribe<T>` generic constraint + Spec #20 lint; no runtime error code | FR-EVT-016, FR-EVT-076 | *(compile-time; no runtime code)* |
 | EC-017-005b | Runtime Tier A/B register/unregister attempt post-boot | Registration rejected | FR-EVT-021 | `ERR_EVT_REGISTRATION_PHASE` |
 | EC-017-006 | Second-order BFS dispatch depth exceeds `MAX_EVENT_DISPATCH_DEPTH` | Hard fail; halt tick | FR-EVT-046, FR-EVT-047 | `ERR_EVT_QUEUE_OVERFLOW` |
 
@@ -614,10 +618,10 @@ implementation time (Stage 0+1).
 | `PAYLOAD_VERSION_WIDTH` | `1 byte` (`0x00`–`0xFF`) | `[GT]` | §3.1; §3.7; design decision. |
 | `DOMAIN_TAG_EVENT_LEDGER` | `TBD-NORMATIVE` — allocated in #16 §3.4 domain-tag table at #17 IN REVIEW per ERR-017-001 | `[CROSS-PENDING]` | §3.4.2; KD-2 qualifier — promoted to `[CROSS]` when #16 reaches `APPROVED`. |
 | `ERR_EVT_QUEUE_OVERFLOW` | `0x1701` | `[GT]` | §2.5 / §3.6.1; error-code allocation from `0x17NN` reserved block; designer-chosen, locked at approval. |
-| `ERR_EVT_TIER_MISMATCH` | `0x1702` | `[GT]` | §2.5 / §3.2.5. |
+| *(reserved slot `0x1702`)* | — | — | Tier-marker mismatch is compile-time only (FR-EVT-016, FR-EVT-076); slot recovered; no runtime code allocated. |
 | `ERR_EVT_ORDINAL_UNKNOWN` | `0x1703` | `[GT]` | §2.5 / §3.7.2. |
 | `ERR_EVT_VERSION_INCOMPATIBLE` | `0x1704` | `[GT]` | §2.5 / §3.7.2. |
-| `ERR_EVT_REGISTRATION_PHASE` | `0x1705` | `[GT]` | §2.5 / §3.2.2; lifecycle violation (runtime register/unregister of Tier A/B subscribers post-boot). Separate from `ERR_EVT_TIER_MISMATCH` for crash-dump triage clarity. |
+| `ERR_EVT_REGISTRATION_PHASE` | `0x1705` | `[GT]` | §2.5 / §3.2.2; lifecycle violation (runtime register/unregister of Tier A/B subscribers post-boot). |
 
 Notes:
 
@@ -658,3 +662,4 @@ Notes:
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. FM-017-001, FM-017-002 published. EC-017-001 … 006 published. Section heading order superseded the v0.0 stub. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §3.2.4 added normative second-order publish sort-tuple attribution table (M3). §3.2.5 added per-handler out-degree cap = 1 (H1). §3.7.1 producer-phase-change row now requires #16 §3.6.1 WriteSet back-prop (M6). §3.5.4 / §3.5.2 reworded foreach + Action/Func bans (L4/L5). §3.10 added new `ERR_EVT_REGISTRATION_PHASE` row (L3) and `[GT]` tag-subclass note (M8). §3.4.5 added explicit grep pattern (L9). TickHeartbeatEvent cadence row → `AI_NoOp` (H2). §3.8 EC-017-005 split into 005a/005b (L3). Replaced `[TBD-CITE]` with `TBD-NORMATIVE` at §3.2.5 / §3.6.1 (M2). Renamed `producerSubsystem` → `subsystemOrdinal` (M4). |
+| 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-1: §3.3.1 cadence map row reverted to `Snapshot`; §3.3.2 rewritten so `Snapshot` is canonical producer and `AI_NoOp` MAY is retained as non-binding example. H-2-2: §3.2.2 "separate from ERR_EVT_TIER_MISMATCH" reworded to compile-time-only; EC-017-005a updated to compile-time/lint-only; §3.10 `ERR_EVT_TIER_MISMATCH` row replaced with reserved-slot note; `ERR_EVT_REGISTRATION_PHASE` note simplified. |

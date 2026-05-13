@@ -2,7 +2,7 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 0.1 (initial section-file draft from `outline-detailed.md` v1.1)
+**Version:** 0.3 (PASS 2 adversarial review applied)
 **Status:** DRAFT
 
 > Section-heading layout follows `outline-detailed.md` v1.1 §"SECTION 2"
@@ -74,12 +74,12 @@ traceability metadata.
 | FR-EVT-013 | Tier B events follow Tier A inclusion rules but use #16 §3.5 Tier-B tolerance for continuous fields. | MUST | KD-3 | Stage 5+ activation (no Tier B Stage 0 events) | Stage 5+ |
 | FR-EVT-014 | Tier C events are NOT included in the per-tick digest. | MUST NOT | KD-3 | §5.3 G1 golden (cosmetic delta = 0 in digest) | Stage 0+1 |
 | FR-EVT-015 | Tier C events are NOT included in `SnapshotPayload`. | MUST NOT | KD-3 | §5.3 integration | Stage 0+1 |
-| FR-EVT-016 | Authoritative gameplay code MUST NOT subscribe to Tier C streams (`ERR_EVT_TIER_MISMATCH` if attempted). | MUST NOT | KD-3 | Spec-review (Stage 0); Spec #20 lint (Stage 0+1) | Stage 0+1 |
+| FR-EVT-016 | Authoritative gameplay code MUST NOT subscribe to Tier C streams. Enforcement is at compile time via the `CosmeticChannel.Subscribe<T>` generic constraint and Spec #20 lint; no runtime error code is issued (§3.2.2 / §4.3.3). | MUST NOT | KD-3 | Spec-review (Stage 0); Spec #20 lint (Stage 0+1) | Stage 0+1 |
 | FR-EVT-017 | The publish API is the single overloaded surface `EventBus.Publish<T>(in T evt)` with `T : struct, IEventA/IEventB/IEventC`. | MUST | KD-4 / KD-8 | §5.3 unit | Stage 0+1 |
 | FR-EVT-018 | `EventBus.Publish<T>` takes `in T evt` — never `T evt` by value, never `ref T evt`. | MUST | KD-8 | §5.3 unit; Spec #20 lint | Stage 0+1 |
 | FR-EVT-019 | Subscriber registration uses `delegate void EventHandler<T>(in T evt) where T : struct;` (no closures captured). | MUST | KD-8 | §5.3 unit; Spec #20 lint | Stage 0+1 |
 | FR-EVT-020 | Tier A/B subscribers MUST be registered before the first `Events` phase of the match. | MUST | §3.2.2 | §5.3 unit | Stage 0+1 |
-| FR-EVT-021 | Runtime register/unregister of Tier A/B subscribers post-init MUST raise `ERR_EVT_REGISTRATION_PHASE`. (Separate from `ERR_EVT_TIER_MISMATCH` because the violation is a lifecycle issue — registration after boot — not a tier-marker mismatch.) | MUST | §3.2.2 | §5.3 unit | Stage 0+1 |
+| FR-EVT-021 | Runtime register/unregister of Tier A/B subscribers post-init MUST raise `ERR_EVT_REGISTRATION_PHASE`. The lifecycle violation (registration after boot) is distinct from tier-marker mismatch, which is compile-time only (FR-EVT-016 / FR-EVT-076). | MUST | §3.2.2 | §5.3 unit | Stage 0+1 |
 | FR-EVT-022 | Tier C subscribers MAY be added or removed at runtime. | MAY | §3.2.2 | §5.3 unit | Stage 0+1 |
 | FR-EVT-023 | Tier A/B writes enter the pre-allocated ring buffer; drain occurs in the same tick's `Events` phase. | MUST | §3.2.3 | §5.3 integration | Stage 0+1 |
 | FR-EVT-024 | Tier C dispatch is immediate-synchronous on the publishing thread (no delivery queue). | MUST | §3.2.3 | §5.3 unit | Stage 0+1 |
@@ -96,7 +96,7 @@ traceability metadata.
 | FR-EVT-035 | Resolve-cadence Tier A events (e.g., `ShotExecutedEvent`, `PossessionChangedEvent`, `GoalAwardedEvent`) are queued during the `Resolve` phase and flushed during the same tick's `Events` phase. | MUST | KD-5 | §5.3 integration | Stage 0+1 |
 | FR-EVT-036 | Tactical Tier A events are queued only on stride ticks (`tick % 6 == 0`) during the `AI` phase. | MUST | KD-5; #16 §3.1.2 | §5.3 integration | Stage 0+1 |
 | FR-EVT-037 | `AI_NoOp` (non-stride ticks) MUST NOT publish Tier A or Tier B events. | MUST NOT | §3.3.2 | §5.3 unit | Stage 0+1 |
-| FR-EVT-038 | `AI_NoOp` MAY publish a `TickHeartbeatEvent` (Tier C) via the cosmetic channel. | MAY | §3.3.2 | §5.3 unit | Stage 0+1 |
+| FR-EVT-038 | The `Snapshot` phase publishes `TickHeartbeatEvent` (Tier C) once per tick via the cosmetic channel (canonical producer; Appendix A row `0x09`). Any phase MAY also publish `TickHeartbeatEvent` via the cosmetic channel (e.g., `AI_NoOp` on non-stride ticks as an implementation choice); such publications are non-binding relative to the canonical `Snapshot` producer (§3.3.2). | MAY | §3.3.2 | §5.3 unit | Stage 0+1 |
 | FR-EVT-039 | Authoritative events MUST NOT cross tick boundaries — every queued entry is drained by end of same-tick `Events` phase. | MUST | §3.3.3 | §5.3 G1 golden | Stage 0+1 |
 | FR-EVT-040 | Cross-tick aggregation of Tier A counts on the publishing side is forbidden; aggregation lives in subscribers. | MUST NOT | §3.3.4 | Spec-review (Stage 0) | Stage 0 |
 | FR-EVT-041 | Tier A/B publish that would exceed `EVENT_QUEUE_CAPACITY` raises `ERR_EVT_QUEUE_OVERFLOW`. | MUST | KD-7 | §5.3 unit | Stage 0+1 |
@@ -105,14 +105,14 @@ traceability metadata.
 | FR-EVT-044 | When a Tier C drop predicate fires, subscribers are NOT invoked; the publish call becomes a no-op. | MUST | §3.2.3 | §5.3 unit | Stage 0+1 |
 | FR-EVT-045 | Tier C drops are logged to the Tier C trace channel; they do NOT enter the ledger. | MUST | §3.6.2 | §5.3 unit | Stage 0+1 |
 | FR-EVT-046 | Second-order dispatch depth in a single `Events` phase MUST NOT exceed `MAX_EVENT_DISPATCH_DEPTH` (8). | MUST | §3.2.5 | §5.3 unit | Stage 0+1 |
-| FR-EVT-047 | Dispatch-depth overflow raises `ERR_EVT_QUEUE_OVERFLOW`. | MUST | §3.2.5 | §5.3 unit | Stage 0+1 |
 | FR-EVT-046a | A single Tier A/B handler invocation MUST NOT publish more than one secondary Tier A/B event (per-handler out-degree cap = 1). Required so that the §6.3.2 worst-case `EVENT_QUEUE_CAPACITY` derivation remains additive (`first-order × depth`) rather than multiplicative (`first-order × out-degree^depth`). | MUST | §3.2.5; KD-7 / KD-8 | §5.3 unit (out-degree assertion in dispatch wrapper) + Spec #20 lint (per-handler enqueue counter) | Stage 0+1 |
 | FR-EVT-046b | Out-degree-cap violation raises `ERR_EVT_QUEUE_OVERFLOW` (same code as depth-cap violation; both routes are bounded-BFS failures). | MUST | §3.2.5 | §5.3 unit | Stage 0+1 |
+| FR-EVT-047 | Dispatch-depth overflow raises `ERR_EVT_QUEUE_OVERFLOW`. | MUST | §3.2.5 | §5.3 unit | Stage 0+1 |
 | FR-EVT-048 | `EventBus.Publish<T>` allocates 0 bytes per call (verified at debug build via allocation tracker). | MUST | KD-8 / §6.2 | §5.3 unit (`Assert.AllocatedBytes(0)`) | Stage 0+1 |
 | FR-EVT-049 | `EventBus.DrainTick` allocates 0 bytes per call. | MUST | KD-8 / §6.2 | §5.3 unit | Stage 0+1 |
 | FR-EVT-050 | `EventBus.SerializeLedger(in Span<byte> dst)` allocates 0 bytes and writes into the caller-provided span. | MUST | KD-8 / §6.2 | §5.3 unit | Stage 0+1 |
 | FR-EVT-051 | Subscriber-list storage is pre-allocated `EventHandler<T>[]` per event type with capacity pinned at startup. | MUST | KD-8 | §5.3 unit | Stage 0+1 |
-| FR-EVT-052 | The publish path MUST NOT call `new T[…]`, `List<T>.Add`, LINQ, `Action<…>`, `string.Format`, async/await, or reflection. | MUST NOT | KD-8 / §3.5.4; Spec #20 | Spec #20 lint | Stage 0+1 |
+| FR-EVT-052 | The publish path MUST NOT call `new T[…]`, `List<T>.Add`, LINQ, `Action<…>` / `Func<…>` instantiated with value-type generic arguments (custom struct-ref delegates with `in T` parameter and `where T : struct` are exempt per §3.5.4), `string.Format`, interpolated strings that emit `string.Format`, `async`/`await`, or reflection. | MUST NOT | KD-8 / §3.5.4; Spec #20 | Spec #20 lint | Stage 0+1 |
 | FR-EVT-053 | Subscriber handlers MUST NOT capture closures (compile-time check via Spec #20 lint). | MUST NOT | KD-8 | Spec #20 lint | Stage 0+1 |
 | FR-EVT-054 | The Tier C publication-count table is stack-allocatable (≤ 512 bytes, `u16[256]`). | MUST | §3.5.3 | §5.3 unit | Stage 0+1 |
 | FR-EVT-055 | Adding a payload field to an existing event appends it after all current fields and bumps `payloadVersion`. | MUST | KD-9 / §3.7.1 | Registry-validator (Stage 0); §5.3 P3 (Stage 0+1) | Stage 0 |
@@ -136,7 +136,7 @@ traceability metadata.
 | FR-EVT-073 | `Subscribe<T>` returns a `struct SubscriptionToken` opaque handle; no class allocation. | MUST | §3.2.2 | §5.3 unit | Stage 0+1 |
 | FR-EVT-074 | Subscriber dispatch order over a given event type follows registration order (deterministic). | MUST | §3.2.5 | §5.3 unit | Stage 0+1 |
 | FR-EVT-075 | Re-entrant publish from inside a Tier A/B handler enqueues a second-order event in the same tick; FIFO order is preserved by `intraPhaseDrawIndex` increment on enqueue. | MUST | §3.2.5 | §5.3 unit | Stage 0+1 |
-| FR-EVT-076 | Subscribers cannot register against the wrong tier marker (`ERR_EVT_TIER_MISMATCH`). | MUST | §2.5 | §5.3 unit | Stage 0+1 |
+| FR-EVT-076 | Subscribers cannot register against the wrong tier marker; enforcement is compile-time via the `Subscribe<T>` generic constraint and Spec #20 lint. | MUST | §3.2.2 / §4.3.3 | Spec #20 lint | Stage 0+1 |
 | FR-EVT-077 | Replay-aware subscribers opt in via the separate `IReplayEventReader` channel (Stage 1+); ordinary subscribers do NOT receive replayed events. | MUST | §3.8.1 | Stage 1+ activation | Stage 1+ |
 | FR-EVT-078 | Subscribers' handler methods MUST take `in T evt`; passing `T evt` by value is rejected by Spec #20 lint. | MUST | KD-8 | Spec #20 lint | Stage 0+1 |
 | FR-EVT-079 | All Spec #17 runtime error codes occupy the reserved `0x17NN` block and MUST NOT collide with #16's `0x16NN` block. | MUST | §3.10 | Registry-validator (Stage 0) | Stage 0 |
@@ -156,8 +156,14 @@ Top-level non-compliance routes:
   → `ERR_EVT_QUEUE_OVERFLOW` (hard fail; no drop per KD-7).
 - **Tier-mismatch subscription** — authoritative subscriber against
   a Tier C stream → spec-review failure at Stage 0; Spec #20 lint
-  failure at Stage 0+1. Runtime attempt at post-init Tier A/B
-  registration → `ERR_EVT_TIER_MISMATCH`.
+  failure at Stage 0+1. Enforcement is compile-time only via the
+  `Subscribe<T>` generic constraint; no runtime error code is
+  issued (FR-EVT-016 / FR-EVT-076 — see §3.2.2 / §4.3.3).
+- **Post-init Tier A/B registration** — runtime attempt at
+  register/unregister of a Tier A/B subscriber after boot phase
+  ended → `ERR_EVT_REGISTRATION_PHASE` (`0x1705`) per §2.5 /
+  §3.2.2; FR-EVT-021; lifecycle violation distinct from tier-marker
+  mismatch.
 - **Allocation in publish path** — Spec #20 §3.x banned-API lint
   failure at Stage 0+1.
 - **Versioning violation** — field removed without ordinal bump,
@@ -171,7 +177,8 @@ Routing table:
 |-----------|---------------------|------------------------|
 | Field type outside §3.1.4 whitelist | Spec review | Spec #20 lint |
 | Subscriber closure capture | Spec review | Spec #20 lint |
-| Tier-mismatch subscription | Spec review | Spec #20 lint + runtime `ERR_EVT_TIER_MISMATCH` |
+| Tier-mismatch subscription | Spec review | Spec #20 lint (compile-time generic constraint; no runtime code) |
+| Post-init Tier A/B registration | Spec review | Runtime `ERR_EVT_REGISTRATION_PHASE` (FR-EVT-021) |
 | Queue overflow | n/a (no code) | Runtime `ERR_EVT_QUEUE_OVERFLOW` |
 | Allocation in publish path | Spec review | Spec #20 lint + allocation-tracker test (§5.3) |
 | Registry row violates KD-9 invariants | Spec review + registry-validator | Same + fixture-load `ERR_EVT_VERSION_INCOMPATIBLE` / `ERR_EVT_ORDINAL_UNKNOWN` |
@@ -236,7 +243,7 @@ Initial registry rows at Spec #17 approval time (11 seeds):
 | `0x06` | `CardIssuedEvent` | A | Resolve | #17 (default owner) | 1 | #17 v1.0 |
 | `0x07` | `GoalAwardedEvent` | A | Resolve | #17 (default owner) | 1 | #17 v1.0 |
 | `0x08` | `SubstitutionEvent` | A | Resolve | #17 (default owner) | 1 | #17 v1.0 |
-| `0x09` | `TickHeartbeatEvent` | C | `AI_NoOp` (typical; informational for Tier C) | #17 (default owner) | 1 | #17 v1.0 |
+| `0x09` | `TickHeartbeatEvent` | C | `Snapshot` | #17 (default owner) | 1 | #17 v1.0 |
 | `0x0A` | `VfxImpactCue` | C | Resolve | #17 (default owner) | 1 | #17 v1.0 |
 | `0x0B` | `UiNotificationCue` | C | Resolve | #17 (default owner) | 1 | #17 v1.0 |
 
@@ -293,7 +300,7 @@ EventRecord = [
 | Code | Mnemonic | Trigger | Mechanics | Caused by FR |
 |------|----------|---------|-----------|--------------|
 | `0x1701` | `ERR_EVT_QUEUE_OVERFLOW` | Tier A/B publish past `EVENT_QUEUE_CAPACITY`, OR second-order dispatch past `MAX_EVENT_DISPATCH_DEPTH`, OR per-handler out-degree past 1 (FR-EVT-046a/b). | §3.6.1, §3.2.5 | FR-EVT-041, FR-EVT-047, FR-EVT-046b |
-| `0x1702` | `ERR_EVT_TIER_MISMATCH` | Subscriber registers against the wrong tier marker (e.g., authoritative code subscribing to a Tier C stream). | §3.2.2, §3.2.5 | FR-EVT-016, FR-EVT-076 |
+| `0x1702` | *(reserved — slot recovered; not allocated)* | Tier-marker mismatch is compile-time only (FR-EVT-016, FR-EVT-076); no runtime code is needed. | — | — |
 | `0x1703` | `ERR_EVT_ORDINAL_UNKNOWN` | Fixture load encounters an `eventTypeOrdinal` not in Appendix A. | §3.7.2 | FR-EVT-080 |
 | `0x1704` | `ERR_EVT_VERSION_INCOMPATIBLE` | Fixture load encounters a `payloadVersion` newer than the current registry row. | §3.7.2 | FR-EVT-081 |
 | `0x1705` | `ERR_EVT_REGISTRATION_PHASE` | Runtime register/unregister of a Tier A/B subscriber after the boot phase ended. | §3.2.2 | FR-EVT-021 |
@@ -310,3 +317,4 @@ recorded in §3.10 constants catalogue.
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. 82 FRs published with full conformance/source/verification/activation columns. Section heading order superseded the v0.0 stub. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. Added FR-EVT-046a/046b (per-handler out-degree cap = 1; H1) and FR-EVT-009a (single-marker constraint; L6). Reworded FR-EVT-002 for canonical-vs-in-memory layout (M5). Renamed `producerSubsystem` → `subsystemOrdinal` in §2.4.1 (M4). Replaced `[TBD-CITE]` with `TBD-NORMATIVE` at FR-EVT-026 (M2). FR-EVT-021 retargeted at new `ERR_EVT_REGISTRATION_PHASE = 0x1705`; §2.5 grew the new error row (L3). Updated TickHeartbeatEvent registry row to `AI_NoOp` (H2). |
+| 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-1: reverted TickHeartbeatEvent producer phase to `Snapshot` in §2.4.2 seed table; updated FR-EVT-038 to name `Snapshot` as canonical producer with `AI_NoOp` as non-binding example. H-2-2: removed `ERR_EVT_TIER_MISMATCH` runtime code; `0x1702` slot marked reserved in §2.5; FR-EVT-016 / FR-EVT-076 retargeted to compile-time / Spec #20 lint only. M-2-1/M-2-2: §2.3 prose corrected post-init lifecycle route to `ERR_EVT_REGISTRATION_PHASE`; routing table gained a "Post-init Tier A/B registration" row and corrected the "Tier-mismatch" row to lint-only. M-2-3: FR-EVT-052 reworded to carve out struct-ref delegates with `in T` parameter (§3.5.4 exempt). M-2-5: FR-EVT-046a/046b moved before FR-EVT-047 (ID-sort order). |
