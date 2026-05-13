@@ -172,3 +172,4 @@ activation (Stage 0 → 1 transition) does.
 | Version | Date         | Author      | Notes                                                                 |
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1.           |
+| 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. No content change to §1 — `[CROSS-PENDING]` qualifier mentioned in §1.4 + KD-2 is now formally sanctioned in CLAUDE.md "Constant Tags" table (M1; landed in the same revision). |

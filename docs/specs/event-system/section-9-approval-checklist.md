@@ -25,7 +25,7 @@
 | C6 | Boundary statements with #19 §3 testing governance (KD-11 / §5.5) explicit. | `section-5.md` §5.1, §5.5, §5.6. |
 | C7 | Event registry (Appendix A) populated with at least the 11 initial seed rows. | `appendices.md` Appendix A. |
 | C8 | Tier vocabulary cited from #16 §1.3.1 `TBD-NORMATIVE`; not redefined. | `section-1.md` §1.2 out-of-scope row; `section-3.md` §3.1.3. |
-| C9 | All §3 / §4 / §5 / §6 / §7 / §8 sections include a Version History sub-section. | Every section file's `§X.Y Version History`. |
+| C9 | All section files (§1 … §9 + appendices) include a Version History sub-section. | Every `section-*.md`'s `§X.Y Version History` plus `appendices.md` `Appendices Version History`. |
 | C10 | Glossary entries scoped to Spec #17-local terms only. | `section-1.md` §1.5; `appendices.md` Appendix D. |
 
 ## 9.2 Quality Checklist
@@ -33,7 +33,7 @@
 | # | Check | Evidence path / artifact |
 |---|-------|--------------------------|
 | Q1 | Cite-not-redefine rule audited (no #16 / #18 / #19 / #20 restatements; CLAUDE.md invariants are cited not paraphrased). | `section-3.md` §3.1.3 (tier); §3.2.5 (failure path); §3.3.2 (phase WriteSet); `section-4.md` §4.2 (interfaces); §4.4 (phase integration). |
-| Q2 | Every FR-EVT-### row resolves to a §5.x verification mechanism. | `section-5.md` §5.4 traceability table (full table generated at IN REVIEW commit; Stage 0 degenerate rows acknowledged per §5.4 last paragraph). |
+| Q2 | Every FR-EVT-### row resolves to a §5.x verification mechanism. | `section-5.md` §5.4 traceability table (full 82-row + FR-EVT-046a/046b/009a table at §5.4.1 … §5.4.10; Stage 0 degenerate rows visible per row's `Activation` column = `Stage 0`). |
 | Q3 | All cross-references (FM-/EC-/ERR-) resolve. | FM-017-001 (`section-3.md` §3.4.2, §3.4.3); FM-017-002 (`section-3.md` §3.2.4, §3.4.3); EC-017-001 … 006 (`section-3.md` §3.8, `appendices.md` Appendix E); ERR-017-001 (`docs/tracking/spec-error-log.md`). |
 | Q4 | All `TBD-NORMATIVE` citations of #16 (KD-2) and #19 (KD-2 §19 status caveat) enumerated for the reviewer. | `section-8.md` §8.1.2 (status column = "Yes"); §9.3 row R6. |
 | Q5 | Tier classification consistent across §2.4, §3.1.3, and Appendix A (every event has exactly one tier; every row in Appendix A has a tier column populated). | `section-2.md` §2.4.2 seed table; `appendices.md` Appendix A registry. |
@@ -91,3 +91,4 @@ When the gate transitions:
 | Version | Date         | Author      | Notes                                                                 |
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. 10 content + 14 quality + 9 review rows. Decision block records gate path. |
+| 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §9.1 C9 coverage list now includes §1 / §2 / §9 / appendices (L8). §9.2 Q2 evidence row points at the fully-authored §5.4.1 … §5.4.10 traceability table (H3). |

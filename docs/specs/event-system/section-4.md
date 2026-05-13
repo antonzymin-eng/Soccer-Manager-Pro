@@ -63,6 +63,14 @@ public interface IEventC { }   // Tier C marker — cosmetic / observability
   owned by #16 §1.3.1 `TBD-NORMATIVE`; omitting Tier B at Stage 0
   would silently push Stage 5+ Tier-B traffic onto Tier A paths
   and break the per-tier digest contract.
+- **Single-marker constraint (FR-EVT-009a).** A given event struct
+  MUST implement exactly one tier marker. Multi-marker structs
+  (`struct FooEvent : IEventA, IEventC`) are forbidden — the
+  three `Publish<T>` overloads would be ambiguous, and overload-
+  resolution behaviour could silently shift between compiler
+  versions. Spec #20 lint enforces; the §5.3 registry-validator
+  reflects each Appendix A row's struct and counts marker
+  implementations.
 
 ### 4.2.2 Delegate and token types
 
@@ -150,7 +158,7 @@ public static class CosmeticChannel
 
 | Attempt | Result |
 |---------|--------|
-| `Subscribe<T>` post-init with `T : IEventA` or `T : IEventB` | `ERR_EVT_TIER_MISMATCH` (FR-EVT-021). |
+| `Subscribe<T>` post-init with `T : IEventA` or `T : IEventB` | `ERR_EVT_REGISTRATION_PHASE` (FR-EVT-021). |
 | `Subscribe<T>` with handler that captures a closure | Spec #20 lint failure (FR-EVT-053). Detection: compile-time check on the handler delegate's target. |
 | Authoritative gameplay code calling `CosmeticChannel.Subscribe` | Spec-review failure at Stage 0; Spec #20 lint failure at Stage 0+1 (FR-EVT-016). |
 
@@ -208,7 +216,8 @@ public static void EventBus.OnTickBoundary();
   `SerializeLedger` has read the queue.
 - Resets the per-tick publication-count table (FR-EVT-025).
 - Resets the `intraPhaseDrawIndex` counter for each producing
-  phase to zero in preparation for the next tick (§3.2.4).
+  phase (including the `Events` phase used by second-order BFS
+  publishes per §3.2.4) to zero in preparation for the next tick.
 - Clears the ring buffer (zero out `count` and slot pointers; slot
   payload bytes are left in place — they will be overwritten on
   next publish).
@@ -216,20 +225,27 @@ public static void EventBus.OnTickBoundary();
 ### 4.4.4 Producing-phase publish hooks
 
 Tier A/B publishes happen **inside** producing phases (`Physics`,
-`Resolve`, `AI` on stride ticks). They are not direct calls to
-the dispatcher — they enqueue. The producing phase keeps its own
+`Resolve`, `AI` on stride ticks) **and**, for second-order BFS
+publishes, inside the `Events` phase itself. They are not direct
+calls to the dispatcher — they enqueue. Each phase keeps its own
 local `intraPhaseDrawIndex` counter (per §3.2.4 normative counter-
-scope declaration). At producing-phase entry, the counter is reset
-to zero by the phase scheduler.
+scope declaration). At phase entry, the counter is reset to zero
+by the phase scheduler — including the `Events` phase, whose
+counter is used by second-order publishes per §3.2.4 sort-tuple
+attribution.
 
 ```
-foreach producingPhase in [AI/AI_NoOp, Physics, Resolve]:
+foreach producingPhase in [AI/AI_NoOp, Physics, Resolve, Events]:
     phase.IntraPhaseDrawIndex = 0
     // ... phase body runs; each Publish<T>() inside the phase
     //     increments phase.IntraPhaseDrawIndex by 1 ...
+    // For Events phase, this counter advances when handlers
+    // publish second-order Tier A/B events under FR-EVT-046a.
 
 Events phase:
-    EventBus.DrainTick()         // sort + dispatch
+    EventBus.DrainTick()         // sort + dispatch (advances
+                                 // Events.IntraPhaseDrawIndex on
+                                 // each second-order enqueue)
 Snapshot phase:
     EventBus.SerializeLedger(...) // emit into SnapshotPayload
     EventBus.OnTickBoundary()    // reset per-tick state
@@ -263,3 +279,4 @@ The manifest update lands at the §9 IN REVIEW commit.
 | Version | Date         | Author      | Notes                                                                 |
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. Five integration entry points pinned (`DrainTick`, `SerializeLedger`, `OnTickBoundary`, `RegisterStartupSubscribers`, `CosmeticChannel.Subscribe`). Section heading order superseded the v0.0 stub. |
+| 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §4.2.1 added single-marker constraint bullet (L6). §4.3.3 rejection-paths table now routes post-init Tier A/B register to `ERR_EVT_REGISTRATION_PHASE` (L3). §4.4.3 / §4.4.4 added `Events` phase to the per-phase `intraPhaseDrawIndex` reset enumeration (M3). |

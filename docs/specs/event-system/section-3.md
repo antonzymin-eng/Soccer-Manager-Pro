@@ -22,7 +22,7 @@ and reflects each struct's field order, asserting:
 
 1. The first six fields match the header layout exactly
    (`eventTypeOrdinal: byte`, `payloadVersion: byte`,
-   `_reserved: ushort`, `tick: uint`, `producerSubsystem: ushort`,
+   `_reserved: ushort`, `tick: uint`, `subsystemOrdinal: ushort`,
    `intraPhaseDrawIndex: ushort`).
 2. The struct is decorated with
    `[StructLayout(LayoutKind.Sequential)]`.
@@ -143,7 +143,9 @@ Lifecycle:
 - Subscriber registration for Tier A/B is permitted **only** before
   the first `Events` phase of the match (boot phase). Runtime
   registration of Tier A/B subscribers post-init raises
-  `ERR_EVT_TIER_MISMATCH` (FR-EVT-021).
+  `ERR_EVT_REGISTRATION_PHASE` (FR-EVT-021) — a separate code from
+  the tier-marker mismatch case (`ERR_EVT_TIER_MISMATCH`,
+  FR-EVT-016 / FR-EVT-076) for crash-dump triage clarity.
 - Tier C subscriber runtime register / unregister is permitted
   (FR-EVT-022); UI and VFX systems use this.
 - `SubscriptionToken` is a struct (no class allocation; FR-EVT-073).
@@ -206,7 +208,26 @@ Each component:
 - Second-order publishes from inside the same-tick `Events`-phase
   dispatch (§3.2.5) reuse the **`Events`-phase** counter (itself
   fresh per tick), preserving uniqueness under BFS dispatch up to
-  `MAX_EVENT_DISPATCH_DEPTH` = 8.
+  `MAX_EVENT_DISPATCH_DEPTH` = 8 and the FR-EVT-046a per-handler
+  out-degree cap.
+
+**Sort-tuple attribution for second-order publishes (normative).**
+A Tier A/B event enqueued from inside a `DrainTick`-invoked handler
+takes its FM-017-002 sort-tuple components as follows:
+
+| Component | Value at second-order publish |
+|-----------|-------------------------------|
+| `producingPhaseIndex` | `phaseIndex(Events)` — the BFS layer happens inside `Events`-phase dispatch, NOT inherited from the original first-order publisher's phase. |
+| `subsystemOrdinal` | The currently-executing **handler's** subsystem ordinal (not the dispatcher's, and not the originating first-order publisher's). The dispatcher reads this from the handler-registration record. |
+| `entityId` | Taken from the secondary event's payload, per the unchanged §3.2.4 component definition. Handlers that aggregate over multiple entities use `EntityId.None` (sentinel; reserved per #16 §2 `TBD-NORMATIVE`); registration-order acts as the de-facto tiebreaker via the `intraPhaseDrawIndex` increment. |
+| `eventTypeOrdinal` | From the secondary event's `eventTypeOrdinal` field. |
+| `intraPhaseDrawIndex` | Next available index of the `Events`-phase counter (reset at `DrainTick` entry; see §4.4.1). |
+
+Because `producingPhaseIndex = Events` for every second-order
+publish, all second-order events sort AFTER all first-order events
+(which have lower phase indices). Within the second-order set,
+ordering resolves by `(subsystemOrdinal, entityId, eventTypeOrdinal,
+intraPhaseDrawIndex)` as usual.
 
 **Sort timing.** Sort over the accumulated tick queue is performed
 **once** at `Events`-phase entry against the in-place ring buffer;
@@ -233,11 +254,22 @@ A/B events within a tick; the subscriber-dispatch loop walks it
 - **Maximum dispatch depth** (§3.10 constant):
   `MAX_EVENT_DISPATCH_DEPTH = 8` `[GT]`. Exceeding bound →
   `ERR_EVT_QUEUE_OVERFLOW` (FR-EVT-047).
+- **Maximum per-handler out-degree = 1** (normative; FR-EVT-046a /
+  FR-EVT-046b). A single Tier A/B handler invocation MAY publish
+  **at most one** secondary Tier A/B event during its dispatch.
+  Combined with the depth bound, this makes the §6.3.2 worst-case
+  ring-buffer occupancy additive (`first-order × depth`) rather
+  than multiplicative (`first-order × out-degree^depth`). Tier C
+  publishes from inside a Tier A/B handler are NOT counted against
+  this bound (Tier C is immediate-dispatch and has its own §3.6.2
+  drop predicate). The dispatcher implements the cap by maintaining
+  a per-handler enqueue counter that is reset at each handler-
+  invocation boundary; a second secondary publish from the same
+  handler raises `ERR_EVT_QUEUE_OVERFLOW`.
 - **Handler exceptions.** Tier A/B handler throwing → escalate
-  (halt tick, write crash dump per
-  `[TBD-CITE: tick-fail / crash-dump path; provisional anchor #16
-  §3.10 failure-mode table]`). Tier C handler throwing → log +
-  suppress.
+  (halt tick, write crash dump per #16 §3.10 failure-mode table
+  `TBD-NORMATIVE`; provisional anchor for tick-fail / crash-dump
+  path). Tier C handler throwing → log + suppress.
 
 ## 3.3 Tick-Rate Split (FR-EVT-034 … 040) — KD-5 mechanics
 
@@ -257,7 +289,7 @@ A/B events within a tick; the subscriber-dispatch loop walks it
 | `SubstitutionEvent` | Resolve | event-driven | A | seeded |
 | `VfxImpactCue` | Resolve | event-driven | C | seeded |
 | `UiNotificationCue` | Resolve | event-driven | C | seeded |
-| `TickHeartbeatEvent` | Snapshot | 60 Hz | C | seeded |
+| `TickHeartbeatEvent` | `AI_NoOp` (typical; Tier C — phase informational per Appendix A §A.1 note) | 60 Hz | C | seeded |
 
 **Status column.** `seeded` rows are present in the §2.4.2 initial
 registry (11 rows). `future` rows are listed as forward-looking
@@ -345,23 +377,43 @@ may have shifted across #16's adversarial passes; the
 `TBD-NORMATIVE` tag survives the re-grep but the subsection number
 may need an update.
 
+**Reproducible grep pattern (normative for §9.2 Q11):**
+
+```
+grep -nE '#1[69] §[0-9.]+ ?(`TBD-NORMATIVE`|TBD-NORMATIVE)' \
+    docs/specs/event-system/section-*.md \
+    docs/specs/event-system/appendices.md
+```
+
+This single pattern catches both `#16 §x.x.x TBD-NORMATIVE` and
+`#19 §x.x TBD-NORMATIVE` citations. After the M2 fix (PASS 1
+critique), Spec #17 uses a single qualifier vocabulary
+(`TBD-NORMATIVE`) and the `[TBD-CITE]` form has been retired —
+the §9.2 Q11 audit grep no longer needs to OR the two patterns.
+
 ## 3.5 Zero-Allocation Hot-Loop Mechanics (FR-EVT-048 … 054) — KD-8
 
 ### 3.5.1 Ring-buffer sizing
 
 Per-tick capacity `EVENT_QUEUE_CAPACITY = 1024` slots `[GT]`. Sized
 from §6.3 worst-case publish-rate analysis (full-match 90-min sim
-with BFS dispatch-depth fanout). Derivation: 64 first-order Tier
-A/B events per tick worst case × `MAX_EVENT_DISPATCH_DEPTH` (8) =
-512 BFS fanout ceiling; ×2 headroom = 1024.
+with BFS dispatch-depth fanout under the FR-EVT-046a per-handler
+out-degree cap). Derivation: 64 first-order Tier A/B events per
+tick worst case × `MAX_EVENT_DISPATCH_DEPTH` (8) = 512 BFS fanout
+ceiling (additive across levels because each handler enqueues ≤ 1
+secondary event); ×2 headroom = 1024. The additivity is load-
+bearing — see §6.3.2.
 
 ### 3.5.2 Subscriber-list storage
 
 Pre-allocated `EventHandler<T>[]` per event type. Capacity pinned
 at startup (FR-EVT-051). Resize is a pre-Stage-1 design error.
 Subscriber-list iteration uses an indexed `for` loop over the
-pre-allocated array; no `IEnumerable`, no `foreach` over a
-reference enumerator.
+pre-allocated array; `IEnumerable<T>`-backed iteration is banned
+(see §3.5.4 wording). `foreach` over the raw `EventHandler<T>[]`
+array is permitted (compiler emits indexed access without an
+enumerator allocation); the indexed-`for` style is preferred for
+explicitness.
 
 ### 3.5.3 Cosmetic channel storage
 
@@ -384,9 +436,20 @@ no delivery queue.
 
 - `new T[…]` / `new List<T>` / any class instantiation.
 - `List<T>.Add` on hot-path lists.
-- `IEnumerable<T>` `foreach` over a reference enumerator.
-- `Action<…>` / `Func<…>` (delegate types that box value-type
-  captures).
+- `foreach` over a type that implements `IEnumerable<T>` (the
+  compiler emits an allocating `GetEnumerator()` call when the
+  target is not a fixed-size array, `Span<T>`, or a struct
+  enumerator). `foreach` over a `T[]` or `Span<T>` is permitted
+  because the compiler emits indexed access without an enumerator
+  allocation.
+- `Action<…>` / `Func<…>` instantiated with **value-type generic
+  arguments** (each invocation boxes the value-type argument).
+  **Exempt:** custom struct-ref delegates declared with an `in T`
+  parameter and `where T : struct` constraint — e.g.,
+  `delegate void EventHandler<T>(in T evt) where T : struct` (§3.2.2)
+  — these avoid boxing because the value is passed by reference and
+  the generic constraint forces a struct-only argument at the call
+  site. Spec #20 lint must distinguish the two cases.
 - LINQ (`Select`, `Where`, `OrderBy`, …).
 - `string.Format`, interpolated strings that emit `string.Format`
   calls, `string.Concat`.
@@ -411,9 +474,8 @@ pinned by Spec #18 — `NOT STARTED`).
   dispatch-depth-bounded worst case (§3.5.1).
 - Overflow is a **hard fail**: `ERR_EVT_QUEUE_OVERFLOW`
   (`0x1701`) raised by `Publish<T>`. Caller is responsible for
-  crash handling per
-  `[TBD-CITE: tick-fail path; provisional anchor #16 §3.10
-  failure-mode table]`.
+  crash handling per #16 §3.10 failure-mode table
+  (`TBD-NORMATIVE`; provisional anchor for tick-fail path).
 - Overflow MUST NOT be recovered by drop on the authoritative
   path; recovery is via simulation halt and bug fix.
 - Dispatch-depth overflow during second-order BFS dispatch is
@@ -458,7 +520,7 @@ explicitly forbidden. Drop predicates MUST be pure functions of
 | Field removal | No | Mint new `eventTypeOrdinal`; deprecate old row. |
 | Field reorder (after `APPROVED`) | No | Mint new `eventTypeOrdinal`; deprecate old row. |
 | Tier change | No | Mint new `eventTypeOrdinal`; deprecate old row. |
-| Producer phase change | Yes (registry-row update only) | Update Appendix A `Producer phase` column; no version bump. Constraint: new producer phase must still publish only Tier A/B from `Events`-phase WriteSet at drain time. |
+| Producer phase change | Yes, **with #16 §3.6.1 WriteSet back-prop** | Update Appendix A `Producer phase` column; no `payloadVersion` bump. Constraint: new producer phase must still publish only Tier A/B from `Events`-phase WriteSet at drain time. **Back-prop requirement:** the #16 §3.6.1 phase WriteSet table records which phase enqueues each Tier A/B event; a change in producer phase therefore requires a coordinated back-prop into #16 (parallel to ERR-017-001 / `DOMAIN_TAG_EVENT_LEDGER` allocation). File a new `spec-error-log.md` row at the time the change is proposed and resolve it atomically with the registry-row edit. **Replay-stability note:** producer-phase changes shift FM-017-002 sort-tuple component 1 and break G1 golden against pre-change replay corpora; the old registry row is retained per KD-9 deprecation rules so that old corpora continue to deserialise, but newly-captured goldens use the updated phase. If preserving golden-byte parity is required, treat the change as forbidden in place and mint a new ordinal under V5 (tier-change-style discipline). |
 
 ### 3.7.2 Migration semantics
 
@@ -495,7 +557,8 @@ the moment its rule statement reaches IN REVIEW status.
 | EC-017-002 | Queue exceeds `EVENT_QUEUE_CAPACITY` during a single tick | Hard fail; halt tick | FR-EVT-041 | `ERR_EVT_QUEUE_OVERFLOW` |
 | EC-017-003 | Fixture load encounters unknown `eventTypeOrdinal` | Hard fail at load | FR-EVT-080 | `ERR_EVT_ORDINAL_UNKNOWN` |
 | EC-017-004 | Fixture load encounters `payloadVersion > currentRegistryVersion` | Hard fail at load | FR-EVT-081 | `ERR_EVT_VERSION_INCOMPATIBLE` |
-| EC-017-005 | Subscriber registers with wrong tier marker, or runtime Tier A/B register post-init | Registration rejected | FR-EVT-016, FR-EVT-021, FR-EVT-076 | `ERR_EVT_TIER_MISMATCH` |
+| EC-017-005a | Subscriber registers with wrong tier marker (authoritative code subscribing to Tier C, etc.) | Registration rejected | FR-EVT-016, FR-EVT-076 | `ERR_EVT_TIER_MISMATCH` |
+| EC-017-005b | Runtime Tier A/B register/unregister attempt post-boot | Registration rejected | FR-EVT-021 | `ERR_EVT_REGISTRATION_PHASE` |
 | EC-017-006 | Second-order BFS dispatch depth exceeds `MAX_EVENT_DISPATCH_DEPTH` | Hard fail; halt tick | FR-EVT-046, FR-EVT-047 | `ERR_EVT_QUEUE_OVERFLOW` |
 
 Additional rule-application notes:
@@ -544,7 +607,7 @@ implementation time (Stage 0+1).
 
 | Constant | Value | Tag | Notes |
 |----------|-------|-----|-------|
-| `EVENT_QUEUE_CAPACITY` | `1024` | `[GT]` | §3.5.1 / §6.3; ring-buffer slot count per tick. Derivation: 64 × `MAX_EVENT_DISPATCH_DEPTH` (8) × 2 headroom = 1024. |
+| `EVENT_QUEUE_CAPACITY` | `1024` | `[GT]` | §3.5.1 / §6.3; ring-buffer slot count per tick. Derivation: 64 × `MAX_EVENT_DISPATCH_DEPTH` (8) × 2 headroom = 1024 — additive across BFS levels because FR-EVT-046a caps per-handler out-degree at 1. |
 | `COSMETIC_PER_TICK_PUBLICATION_BUDGET` | `4096` | `[GT]` | §3.5.3 / §6.3; aggregate publication ceiling, **NOT** a delivery queue (Tier C is immediate-dispatch per §3.2.3). |
 | `MAX_EVENT_DISPATCH_DEPTH` | `8` | `[GT]` | §3.2.5; BFS depth bound for second-order Tier A/B dispatch. |
 | `EVENT_TYPE_ORDINAL_WIDTH` | `1 byte` (`0x00`–`0xFF`) | `[GT]` | §3.1.2; design decision (not a physical constant). Stage 5+ expansion to 2 bytes reserved in §7.3 / D5 §7.5. |
@@ -554,6 +617,7 @@ implementation time (Stage 0+1).
 | `ERR_EVT_TIER_MISMATCH` | `0x1702` | `[GT]` | §2.5 / §3.2.5. |
 | `ERR_EVT_ORDINAL_UNKNOWN` | `0x1703` | `[GT]` | §2.5 / §3.7.2. |
 | `ERR_EVT_VERSION_INCOMPATIBLE` | `0x1704` | `[GT]` | §2.5 / §3.7.2. |
+| `ERR_EVT_REGISTRATION_PHASE` | `0x1705` | `[GT]` | §2.5 / §3.2.2; lifecycle violation (runtime register/unregister of Tier A/B subscribers post-boot). Separate from `ERR_EVT_TIER_MISMATCH` for crash-dump triage clarity. |
 
 Notes:
 
@@ -563,10 +627,34 @@ Notes:
 - All `[GT]` constants have rationale recorded in §6.3 and §3.5.1 /
   §3.5.3 / §3.2.5 as applicable.
 - One `[CROSS-PENDING]` constant; promoted to `[CROSS]` at #16
-  approval (§9.2 quality-checklist row).
+  approval (§9.2 quality-checklist row). `[CROSS-PENDING]` is the
+  CLAUDE.md "Constant Tags" tag for cross-spec constants blocked
+  on an upstream `IN PROGRESS` spec.
+- **`[GT]` tag sub-classes.** CLAUDE.md "Constant Tags" defines
+  `[GT]` as "Designer sets value; must live in tunable config".
+  Spec #17 uses `[GT]` for two sub-classes which the §6.3.4
+  re-tuning trigger distinguishes:
+  - **Runtime-tunable `[GT]`** — `EVENT_QUEUE_CAPACITY`,
+    `COSMETIC_PER_TICK_PUBLICATION_BUDGET`,
+    `MAX_EVENT_DISPATCH_DEPTH`. These are the standard
+    designer-set sizing constants; re-tuned per §6.3.4 against
+    first measurements.
+  - **Design-fixed `[GT]`** — `EVENT_TYPE_ORDINAL_WIDTH`,
+    `PAYLOAD_VERSION_WIDTH`, and the `ERR_EVT_*` numeric codes.
+    These are designer-set **at design time** but are NOT
+    runtime-tunable: changing them after publication breaks
+    replay-corpus compatibility (ordinal/version widths) or
+    crash-dump triage (error codes). The §6.3.4 re-tuning trigger
+    does NOT apply to design-fixed `[GT]` constants; their
+    rationale is recorded once (§3.10 row) and locked at
+    approval. CLAUDE.md's `[FIXED]` tag is reserved for
+    physics-law-derived values; design-fixed-but-not-physics is
+    therefore captured here as a `[GT]` sub-class rather than
+    introducing a new tag.
 
 ## 3.11 Version History
 
 | Version | Date         | Author      | Notes                                                                 |
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. FM-017-001, FM-017-002 published. EC-017-001 … 006 published. Section heading order superseded the v0.0 stub. |
+| 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §3.2.4 added normative second-order publish sort-tuple attribution table (M3). §3.2.5 added per-handler out-degree cap = 1 (H1). §3.7.1 producer-phase-change row now requires #16 §3.6.1 WriteSet back-prop (M6). §3.5.4 / §3.5.2 reworded foreach + Action/Func bans (L4/L5). §3.10 added new `ERR_EVT_REGISTRATION_PHASE` row (L3) and `[GT]` tag-subclass note (M8). §3.4.5 added explicit grep pattern (L9). TickHeartbeatEvent cadence row → `AI_NoOp` (H2). §3.8 EC-017-005 split into 005a/005b (L3). Replaced `[TBD-CITE]` with `TBD-NORMATIVE` at §3.2.5 / §3.6.1 (M2). Renamed `producerSubsystem` → `subsystemOrdinal` (M4). |

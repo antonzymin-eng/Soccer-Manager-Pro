@@ -259,8 +259,37 @@ The vocabulary doesn't cleanly cover "design-fixed but not physics-derived". `[F
 
 ---
 
+## Resolution Status (v0.2, May 13, 2026)
+
+All 20 findings (3 H / 8 M / 9 L) resolved within v0.1 → v0.2 of the
+section files. No findings deferred; no findings dropped. Map below.
+
+| Finding | Resolved in | How |
+|---------|-------------|-----|
+| H1 | §2.2 (FR-EVT-046a/046b), §3.2.5, §3.5.1, §3.10, §6.3.2, §8.4 | Added per-handler out-degree cap = 1 as a normative FR; updated BFS derivation to show additivity is load-bearing; documented the multiplicative-without-cap alternative. |
+| H2 | Appendix A `0x09` row, §2.4.2 seed table, §3.3.1 cadence map | `TickHeartbeatEvent` producer phase set to `AI_NoOp` (matches §3.3.2 normative MAY text); also clarified L7 column semantics for Tier C. |
+| H3 | §5.4 (now §5.4.1 … §5.4.10) | Authored full 82-row FR-to-verification traceability table (plus the 3 new FRs: FR-EVT-046a, FR-EVT-046b, FR-EVT-009a). §9.2 Q2 evidence updated. |
+| M1 | `CLAUDE.md` "Constant Tags" table + §3.10 note | Added `[CROSS-PENDING]` as a sixth sanctioned tag in CLAUDE.md with normative definition. |
+| M2 | §2.2 FR-EVT-026, §3.2.5, §3.6.1, §8.1.2 | Replaced all three `[TBD-CITE]` instances with `TBD-NORMATIVE`; updated §8.1.2 row. |
+| M3 | §3.2.4 (new "Sort-tuple attribution" sub-table), §4.4.3, §4.4.4 | Pinned `producingPhaseIndex = phaseIndex(Events)`, `subsystemOrdinal = handler's`, `entityId` from secondary event; added `Events` phase to per-phase counter reset list. |
+| M4 | §2.2 FR-EVT-002, §2.4.1 skeleton, §3.1.1, Appendix B B.2 header table, §6.5.1 trace channel | Renamed `producerSubsystem` → `subsystemOrdinal` everywhere. |
+| M5 | §2.2 FR-EVT-002 reworded | "The canonical serialized layout of each event begins with the fixed 12-byte header … the in-memory C# struct uses `Sequential` without `Pack = 1` … §3.4.2 `SerializeCanonical` is the sole authoritative source." |
+| M6 | §3.7.1 row "Producer phase change" | Added explicit back-prop requirement (file in `spec-error-log.md`; #16 §3.6.1 WriteSet update); added replay-stability note. |
+| M7 | §6.2 (new "Registration-time delegate allocation" paragraph) | Acknowledged delegate-instance allocation; pinned D1 (Spec #18); declared runtime-Tier-C `Subscribe` constraint (loading screens only). |
+| M8 | §3.10 notes + §8.4 notes | Documented `[GT]` tag sub-classes: runtime-tunable (subject to §6.3.4) vs design-fixed (locked at approval). |
+| L1 | §6.3.1 | Stated "≤ 1 AI event per agent per stride tick" as an explicit invariant. |
+| L2 | §6.3.1 (Provisional pending #13–#15 paragraph) + §6.3.4 re-tuning triggers | Marked AI-cadence contribution provisional; added "Each of #13 / #14 / #15 reaching IN REVIEW" trigger. |
+| L3 | §2.5 (new row), §3.2.2, §3.10, §4.3.3, §6.5.1, Appendix E (EC-017-005a/b split), §8.4 | Minted `ERR_EVT_REGISTRATION_PHASE = 0x1705`; FR-EVT-021 now points at it; `ERR_EVT_TIER_MISMATCH` retains the tier-marker-mismatch case only. |
+| L4 | §3.5.2, §3.5.4 | Reworded — `foreach` over `T[]` / `Span<T>` is permitted; only `IEnumerable<T>` `foreach` is banned. |
+| L5 | §3.5.4 | Reworded `Action<…>`/`Func<…>` ban — only value-type generic-arg instances; custom struct-ref delegates with `in T` parameter exempt. |
+| L6 | §2.2 FR-EVT-009a + §4.2.1 single-marker bullet | Forbade multi-tier-marker structs; cross-listed Spec #20 lint. |
+| L7 | Appendix A §A.1 (new "Column-semantics note" paragraph) | Tier A/B = normative, Tier C = informational for `Producer phase`. |
+| L8 | §9.1 C9 | "All section files (§1 … §9 + appendices)" — coverage list now complete. |
+| L9 | §3.4.5 (new "Reproducible grep pattern" block) | Explicit `grep -nE '#1[69] §[0-9.]+ ?...'` pattern; noted M2 collapsed the OR clause. |
+
 ## Version History
 
 | Version | Date         | Author      | Notes                                                                 |
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial adversarial critique against v0.1 section files. 3 H / 8 M / 9 L findings; resolution plan published. |
+| 0.2     | May 13, 2026 | Claude Code | All 20 findings resolved within the same day's session. Resolution map appended; section-file edits committed in the same revision. |
