@@ -1,11 +1,572 @@
 # Event System Specification #17 — Section 3: Technical Specification
 
-## 3.1 Core Models and Algorithms
+**Created:** May 13, 2026
+**Last Updated:** May 13, 2026
+**Version:** 0.1 (initial section-file draft from `outline-detailed.md` v1.1)
+**Status:** DRAFT
 
-## 3.2 Formulas and Worked Examples
+> This section provides the **mechanics** for every FR-EVT-### named
+> in §2.2. Rule statements live in §2; this section says how each rule
+> is realised. Section heading order follows `outline-detailed.md`
+> v1.1 §"SECTION 3" and supersedes the v0.0 stub layout.
 
-## 3.3 Edge Cases
+---
 
-## 3.4 Constants Catalogue
+## 3.1 Event Typed-Contract Mechanics (FR-EVT-001 … 016)
 
-## 3.5 Version History
+### 3.1.1 Struct layout enforcement
+
+Every event type MUST satisfy the §2.4.1 skeleton. Compliance is
+verified by a §5.3 contract test that walks the Appendix A registry
+and reflects each struct's field order, asserting:
+
+1. The first six fields match the header layout exactly
+   (`eventTypeOrdinal: byte`, `payloadVersion: byte`,
+   `_reserved: ushort`, `tick: uint`, `producerSubsystem: ushort`,
+   `intraPhaseDrawIndex: ushort`).
+2. The struct is decorated with
+   `[StructLayout(LayoutKind.Sequential)]`.
+3. All fields are `readonly`.
+4. No reference-typed fields are present (§3.1.4).
+
+Implementations of the §3.4.2 `SerializeCanonical` routine
+themselves walk the declared field order; any deviation between the
+in-memory struct and the registry row is caught by the §5.3 P1
+property test (publish then subscribe → identical bytes).
+
+### 3.1.2 Ordinal allocation
+
+`eventTypeOrdinal` is byte-wide (`0x00`–`0xFF`; 256 max at Stage 0).
+Assignment is **monotonic** within Spec #17 and downstream-spec
+appends:
+
+- Spec #17 v1.0 seeds ordinals `0x01`–`0x0B` (Appendix A; 11 rows).
+- `0x00` is reserved as "invalid / sentinel" and MUST NOT be
+  allocated.
+- Future specs allocate the next free ordinal at their `IN REVIEW`
+  commit and update Appendix A in the same revision. Collisions are
+  prevented by the single-table registry.
+- Stage 5+ expansion to two-byte ordinals is reserved in §7.3 and is
+  triggered per D5 (§7.5) when the registry approaches 200 rows.
+
+### 3.1.3 Tier metadata
+
+The tier tag lives on the **registry row** (Appendix A), not on the
+struct. Tier-aware APIs (`Publish`, `Subscribe`) take the tier via
+a generic constraint:
+
+```csharp
+where T : struct, IEventA   // Tier A
+where T : struct, IEventB   // Tier B
+where T : struct, IEventC   // Tier C
+```
+
+`IEventA`, `IEventB`, `IEventC` are empty marker interfaces declared
+in §4.2. Per CLAUDE.md "Interface Design Principle", marker
+interfaces are permitted because **both** sides are specified here:
+
+- Producer side: the `EventBus.Publish<T>` overload (§3.2.1).
+- Consumer side: the `EventLedger` dispatcher (§4.4) and, for
+  `IEventB`, the #16 §3.5 Tier-B tolerance application path
+  (`TBD-NORMATIVE`).
+
+Why `IEventB` is not phantom: tier vocabulary is normatively owned
+by #16 §1.3.1 `TBD-NORMATIVE` and omitting it at Stage 0 would force
+Stage 5+ Tier-B traffic onto Tier A paths, silently breaking the
+per-tier digest contract (§3.4.2). KD-3 records this rationale.
+
+### 3.1.4 Payload-field type whitelist
+
+| Allowed | Forbidden |
+|---------|-----------|
+| Integer primitives (`byte`, `sbyte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`) | `string` |
+| `float` (Stage 0 baseline; Fixed64 re-verification at Stage 5+ per §7.3) | `class` / any reference type |
+| `Vector3` — Stage 0 `float`-backed struct per Ball Physics #1 §1.2 / Appendix C (corner-origin); Fixed64 re-verification at Stage 5+ per §7.3 | `IList<T>` / `T[]` (reference) / `IEnumerable<T>` |
+| Fixed-size struct payloads (recursively whitelist-compliant) | `UnityEngine.Object` and all derived types |
+| `EntityId` per #16 §2 / #2 §2.5 (XC-002-001 EntityId no-reuse) | `decimal` (not canonical-serialization compatible) |
+| Plain enums backed by allowed integer types | `Nullable<T>` (extra padding bit) |
+
+**String-like data is represented by enum + ordinal lookup** (e.g.,
+player names are `EntityId`, not strings; competition names are
+enum ordinals).
+
+### 3.1.5 Anti-patterns (rationale rows for §5.3 unit-test design)
+
+| Anti-pattern | Why forbidden |
+|--------------|---------------|
+| Class-typed event (`public class FoulCommittedEvent`) | Violates KD-8 zero-allocation; class instantiation allocates on the GC heap, breaking FR-EVT-048. |
+| Reference-typed payload field (e.g., `string`, `List<int>`, `Player`) | Breaks #16 §3.2.4.1 canonical serialization (no canonical bytes for managed references). |
+| Tier-A event with a `Vector3` field carrying a **continuous aggregate** (e.g., team formation centroid) | Cross-platform parity hazard; classify as Tier B and use #16 §3.5 tolerance rules. |
+| Two events with semantically distinct payloads sharing one ordinal | Violates FR-EVT-003 uniqueness; replay-stability breaks. |
+
+## 3.2 Publish / Subscribe Semantics (FR-EVT-017 … 033)
+
+### 3.2.1 Publish API surface (KD-4, KD-8)
+
+```csharp
+public static class EventBus
+{
+    public static void Publish<T>(in T evt) where T : struct, IEventA;
+    public static void Publish<T>(in T evt) where T : struct, IEventB;
+    public static void Publish<T>(in T evt) where T : struct, IEventC;
+}
+```
+
+- Three overloads, statically distinguished by tier marker
+  interface. The compiler picks the path at the call site; there is
+  no runtime tier dispatch.
+- The Tier A / Tier B overloads include a **debug-build assertion**
+  that the current pipeline phase is `Events` (or, equivalently,
+  that publication is happening through the same-tick draining
+  path). Violation → `ERR_DS_PHASE_OWNERSHIP` (alias of
+  #16 §3.6.1 `TBD-NORMATIVE`; FR-EVT-082). The assertion is
+  compiled out in release builds; Spec #20 lint (Stage 0+1) catches
+  misuse statically.
+- The Tier C overload has no phase restriction. It is permitted from
+  any phase; its effects are excluded from the digest by KD-3 /
+  FR-EVT-014.
+
+### 3.2.2 Subscribe API surface
+
+```csharp
+public static SubscriptionToken Subscribe<T>(EventHandler<T> handler)
+    where T : struct, IEventA;
+// + IEventB, IEventC overloads
+
+public delegate void EventHandler<T>(in T evt) where T : struct;
+
+public readonly struct SubscriptionToken { /* opaque */ }
+```
+
+Lifecycle:
+
+- Subscriber registration for Tier A/B is permitted **only** before
+  the first `Events` phase of the match (boot phase). Runtime
+  registration of Tier A/B subscribers post-init raises
+  `ERR_EVT_TIER_MISMATCH` (FR-EVT-021).
+- Tier C subscriber runtime register / unregister is permitted
+  (FR-EVT-022); UI and VFX systems use this.
+- `SubscriptionToken` is a struct (no class allocation; FR-EVT-073).
+  `Unsubscribe(token)` is permitted for Tier C only.
+
+### 3.2.3 Queue mechanics
+
+**Tier A / B:** writes enter a pre-allocated ring buffer keyed by
+`(producingPhase, intraPhaseDrawIndex)`. Drain happens in the **same
+tick's** `Events` phase per #16 §3.6.1 `TBD-NORMATIVE` "event
+ledger" WriteSet. The ring buffer is sized at
+`EVENT_QUEUE_CAPACITY` (§3.10).
+
+**Tier C:** writes flow directly to the cosmetic channel with
+**immediate synchronous dispatch** — no delivery queue, no ring
+buffer. Subscribers fire on the publishing thread (single-threaded
+Stage 0 runtime per #16 §3.1 `TBD-NORMATIVE`). The only Tier C
+storage is the per-tick **publication-count table** (one `u16`
+counter per `eventTypeOrdinal`; 256 rows; reset at tick boundary)
+which feeds the §3.6.2 deterministic drop predicate. This table is
+not a delivery buffer and never holds payload bytes. When the drop
+predicate fires, the publish call is a no-op — subscribers are not
+invoked (FR-EVT-044).
+
+### 3.2.4 Intra-tick canonical order (KD-6 mechanics; FR-EVT-027 … 030)
+
+**Order key (FM-017-002):**
+
+```
+EventIntraTickSortKey =
+    (producingPhaseIndex,
+     subsystemOrdinal,
+     entityId,
+     eventTypeOrdinal,
+     intraPhaseDrawIndex)
+```
+
+Each component:
+
+- `producingPhaseIndex` — index into the #16 §3.1.2
+  `TBD-NORMATIVE` phase table.
+- `subsystemOrdinal` — assigned per #16 §3.1.1 `TBD-NORMATIVE`
+  ordering rules.
+- `entityId` — ascending per #16 §3.1.1 `array<T>` ordering.
+- `eventTypeOrdinal` — from Appendix A.
+- `intraPhaseDrawIndex` — counter described below; parallel to
+  #16 §3.2.5.1 `TBD-NORMATIVE` intra-stream draw index.
+
+**Counter scope (normative; resolves PASS 2 finding 4).**
+`intraPhaseDrawIndex` is a `ushort` counter scoped
+**per-tick, per-producingPhase**:
+
+- Reset to zero at producing-phase entry.
+- Incremented monotonically on every Tier A / Tier B publish call
+  within that phase regardless of producing subsystem.
+- The (`producingPhaseIndex`, `subsystemOrdinal`, `entityId`,
+  `eventTypeOrdinal`, `intraPhaseDrawIndex`) tuple is therefore
+  unique within a tick by construction, satisfying §5 property P2
+  (sort-key total order).
+- Second-order publishes from inside the same-tick `Events`-phase
+  dispatch (§3.2.5) reuse the **`Events`-phase** counter (itself
+  fresh per tick), preserving uniqueness under BFS dispatch up to
+  `MAX_EVENT_DISPATCH_DEPTH` = 8.
+
+**Sort timing.** Sort over the accumulated tick queue is performed
+**once** at `Events`-phase entry against the in-place ring buffer;
+not on every publish (FR-EVT-029). The sort routine uses a
+stackalloc'd scratch buffer sized to `EVENT_QUEUE_CAPACITY` to
+preserve KD-8 (§6.2 allocation budget).
+
+This ordering is the **only** permitted iteration order over Tier
+A/B events within a tick; the subscriber-dispatch loop walks it
+(FR-EVT-030).
+
+### 3.2.5 Subscriber lifetime (FR-EVT-073 … 078)
+
+- Subscribers registered before first `Events` phase; dispatched in
+  registration order (FR-EVT-074; deterministic given that
+  registration itself is performed by deterministic boot code).
+- **No re-entrant publish blocking.** A Tier A/B handler MAY publish
+  another Tier A/B event during dispatch; the new event is appended
+  to the same-tick queue and dispatched after the current pass per
+  §3.2.5 BFS rule (FR-EVT-075). Second-order events are processed
+  in the **same** tick before phase exit. FIFO order over the
+  second-order draws is preserved by `intraPhaseDrawIndex`
+  incrementing on each enqueue.
+- **Maximum dispatch depth** (§3.10 constant):
+  `MAX_EVENT_DISPATCH_DEPTH = 8` `[GT]`. Exceeding bound →
+  `ERR_EVT_QUEUE_OVERFLOW` (FR-EVT-047).
+- **Handler exceptions.** Tier A/B handler throwing → escalate
+  (halt tick, write crash dump per
+  `[TBD-CITE: tick-fail / crash-dump path; provisional anchor #16
+  §3.10 failure-mode table]`). Tier C handler throwing → log +
+  suppress.
+
+## 3.3 Tick-Rate Split (FR-EVT-034 … 040) — KD-5 mechanics
+
+### 3.3.1 Producing-phase / cadence map
+
+| Event type | Producing phase | Cadence | Tier | Status |
+|------------|-----------------|---------|------|--------|
+| `BallContactEvent` | Physics | 60 Hz | A | seeded |
+| `ShotExecutedEvent` | Resolve | 60 Hz (event-driven) | A | seeded |
+| `BallCrossedLineEvent` | Physics | 60 Hz | A | seeded |
+| `PressTriggeredEvent` | AI | 10 Hz (stride) | A | future — populated at #13 IN REVIEW |
+| `MarkAssignedEvent` | AI | 10 Hz (stride) | A | future — populated at #14 IN REVIEW |
+| `PossessionChangedEvent` | Resolve | event-driven | A | seeded |
+| `GoalAwardedEvent` | Resolve | event-driven | A | seeded |
+| `FoulCommittedEvent` | Resolve | event-driven | A | seeded |
+| `CardIssuedEvent` | Resolve | event-driven | A | seeded |
+| `SubstitutionEvent` | Resolve | event-driven | A | seeded |
+| `VfxImpactCue` | Resolve | event-driven | C | seeded |
+| `UiNotificationCue` | Resolve | event-driven | C | seeded |
+| `TickHeartbeatEvent` | Snapshot | 60 Hz | C | seeded |
+
+**Status column.** `seeded` rows are present in the §2.4.2 initial
+registry (11 rows). `future` rows are listed as forward-looking
+examples of the AI-phase cadence model; they are **NOT** part of
+the Spec #17 v1.0 registry contract and must be appended to
+Appendix A by their owning specs at IN REVIEW time (§3.7.4 cross-
+spec ordering).
+
+### 3.3.2 AI-stride interaction (KD-5)
+
+- On non-stride ticks, the `AI` phase is `AI_NoOp`
+  (#16 §3.1.2 `TBD-NORMATIVE`). `AI_NoOp` MUST NOT publish Tier A
+  or Tier B events (FR-EVT-037) — its WriteSet is empty per
+  #16 §3.6.1 `TBD-NORMATIVE`.
+- `AI_NoOp` MAY publish a single `TickHeartbeatEvent`
+  (FR-EVT-038) only if the implementation chooses to use that
+  telemetry hook. If it does, the hook is Tier C and runs through
+  the cosmetic channel, **not** through the `AI` phase WriteSet.
+- Tier C diagnostic events from `AI_NoOp` are out-of-band by KD-4
+  and so do not violate #16's empty-WriteSet rule.
+
+### 3.3.3 Tick-boundary determinism
+
+Authoritative events never cross tick boundaries on the
+authoritative path (FR-EVT-039). Every queue entry is drained by
+end of same-tick `Events` phase. If a handler enqueues a second-
+order event, that event is dispatched in the same tick (§3.2.5).
+
+### 3.3.4 Anti-patterns
+
+| Anti-pattern | Why forbidden |
+|--------------|---------------|
+| Publishing a Tier A event from `Physics` and expecting same-phase delivery | Tier A delivery is in `Events`, never in `Physics`. The queue holds the publication; only the dispatcher runs in `Events`. |
+| Cross-tick aggregation of Tier A counts on the publishing side | The ledger is the source of truth; aggregation lives in a subscriber, not a publisher (FR-EVT-040). |
+| Tactical-cadence publish from a non-stride `AI_NoOp` tick | FR-EVT-037 violation; raises `ERR_DS_PHASE_OWNERSHIP`. |
+
+## 3.4 Determinism Contracts & Digest (FR-EVT-027 … 033) — KD-6 mechanics
+
+### 3.4.1 Citation
+
+`#16 §3.2.2 TBD-NORMATIVE` owns the outer per-phase digest formula.
+Spec #17 declares only the **inner serialisation** of the
+`Events`-phase `phaseScopeFields`.
+
+### 3.4.2 `phaseScopeFields` layout for the `Events` phase
+
+```
+PhaseScopeFields[Events] =
+    SerializeCanonical(
+        DOMAIN_TAG_EVENT_LEDGER ‖ EventLedgerRecord
+    )
+```
+
+Where:
+
+- `DOMAIN_TAG_EVENT_LEDGER` is a new domain-tag entry to be added
+  to #16 §3.4 domain-tag table at #17 IN REVIEW. Tag is
+  `[CROSS-PENDING]` per ERR-017-001
+  (`docs/tracking/spec-error-log.md`).
+- `EventLedgerRecord` layout per §2.4.4.
+- `SerializeCanonical` is the #16 §3.2.4.1 `TBD-NORMATIVE`
+  routine; padding rules (e.g., `_reserved` normalization)
+  follow #16 §3.2.4.1 exactly.
+
+### 3.4.3 Formula identifiers
+
+- **FM-017-001** `EventLedgerDigestScope` — the §3.4.2 expression
+  above. Cited by §3.4 and re-cited by §3.2.4 (sort feeds the
+  serialization).
+- **FM-017-002** `EventIntraTickSortKey =
+  (producingPhaseIndex, subsystemOrdinal, entityId,
+  eventTypeOrdinal, intraPhaseDrawIndex)` — §3.2.4 sort key.
+
+### 3.4.4 Worked example
+
+Deferred to Appendix B (B.1 empty `Events` phase, B.2 single-event
+ledger, B.3 two-event mixed-producer ledger).
+
+### 3.4.5 Cross-spec citation guard
+
+Parallel to Spec #19 §3.6.1 cite-precision guard: every "#16 §3.x.x"
+subsection-number citation in this spec MUST be re-grepped against
+the current `deterministic-sim/section-3.md` at draft time. Numbers
+may have shifted across #16's adversarial passes; the
+`TBD-NORMATIVE` tag survives the re-grep but the subsection number
+may need an update.
+
+## 3.5 Zero-Allocation Hot-Loop Mechanics (FR-EVT-048 … 054) — KD-8
+
+### 3.5.1 Ring-buffer sizing
+
+Per-tick capacity `EVENT_QUEUE_CAPACITY = 1024` slots `[GT]`. Sized
+from §6.3 worst-case publish-rate analysis (full-match 90-min sim
+with BFS dispatch-depth fanout). Derivation: 64 first-order Tier
+A/B events per tick worst case × `MAX_EVENT_DISPATCH_DEPTH` (8) =
+512 BFS fanout ceiling; ×2 headroom = 1024.
+
+### 3.5.2 Subscriber-list storage
+
+Pre-allocated `EventHandler<T>[]` per event type. Capacity pinned
+at startup (FR-EVT-051). Resize is a pre-Stage-1 design error.
+Subscriber-list iteration uses an indexed `for` loop over the
+pre-allocated array; no `IEnumerable`, no `foreach` over a
+reference enumerator.
+
+### 3.5.3 Cosmetic channel storage
+
+Tier C dispatch is immediate-synchronous per §3.2.3 (no delivery
+queue). The only Tier C storage is a per-tick
+**publication-count table** sized to the ordinal-namespace width:
+
+- Fixed `256` slots (one byte-wide ordinal per row).
+- Each slot holds a `u16` counter.
+- Total ≈ 512 bytes — stack-allocatable per tick (FR-EVT-054).
+- Counter table is reset at the start of every tick (FR-EVT-025).
+
+The aggregate per-tick publication ceiling
+`COSMETIC_PER_TICK_PUBLICATION_BUDGET = 4096` `[GT]` is a **sanity
+ceiling** (sum of per-ordinal `maxPerTick` values from Appendix A;
+§6.3 worst-case envelope), **NOT** a queue capacity. Tier C has
+no delivery queue.
+
+### 3.5.4 Banned APIs in publish path (cross-listed with Spec #20 §3.x)
+
+- `new T[…]` / `new List<T>` / any class instantiation.
+- `List<T>.Add` on hot-path lists.
+- `IEnumerable<T>` `foreach` over a reference enumerator.
+- `Action<…>` / `Func<…>` (delegate types that box value-type
+  captures).
+- LINQ (`Select`, `Where`, `OrderBy`, …).
+- `string.Format`, interpolated strings that emit `string.Format`
+  calls, `string.Concat`.
+- `async` / `await`.
+- Reflection (`typeof(T).GetFields()`, `Activator.CreateInstance`).
+- `System.Random` (use `DeterministicRngService` per #16 §3.2.5
+  `TBD-NORMATIVE` if randomness is needed; never inside the
+  publish path itself).
+
+### 3.5.5 Verification
+
+Per-event allocation budget asserted in §5.3 unit test
+(`Assert.AllocatedBytes(0)` per publish call; FR-EVT-048).
+Allocation tracker is the Stage 0+1 microbenchmark suite (D1; tool
+pinned by Spec #18 — `NOT STARTED`).
+
+## 3.6 Queue Overflow & No-Drop Policy (FR-EVT-041 … 047) — KD-7
+
+### 3.6.1 Authoritative path (Tier A/B)
+
+- Queue is sized for §6.3 worst case + ×2 headroom over the
+  dispatch-depth-bounded worst case (§3.5.1).
+- Overflow is a **hard fail**: `ERR_EVT_QUEUE_OVERFLOW`
+  (`0x1701`) raised by `Publish<T>`. Caller is responsible for
+  crash handling per
+  `[TBD-CITE: tick-fail path; provisional anchor #16 §3.10
+  failure-mode table]`.
+- Overflow MUST NOT be recovered by drop on the authoritative
+  path; recovery is via simulation halt and bug fix.
+- Dispatch-depth overflow during second-order BFS dispatch is
+  routed to the same `ERR_EVT_QUEUE_OVERFLOW` code.
+
+### 3.6.2 Cosmetic path (Tier C)
+
+- Per-event-type publication rate cap stored on the Appendix A
+  registry row (`maxPerTick`). If exceeded, the publish call
+  deterministically **drops** the event (does not record it,
+  does not invoke subscribers).
+- **Drop predicate (FR-EVT-043):**
+
+  ```
+  drop(tick, eventTypeOrdinal) :=
+      publicationCountThisTick[eventTypeOrdinal]
+          > registry.maxPerTick(eventTypeOrdinal)
+  ```
+
+- The predicate is a **pure function** of `(tick, eventTypeOrdinal,
+  publicationCountThisTick)` — it does **NOT** read queue depth
+  (queue depth is not part of authoritative state and is replay-
+  unstable). This makes the drop decision deterministic across
+  replay.
+- Drop is logged to the Tier C trace channel; does NOT enter the
+  ledger (FR-EVT-045).
+
+### 3.6.3 Anti-pattern
+
+A "soft drop" policy that reads queue depth at publish time is
+explicitly forbidden. Drop predicates MUST be pure functions of
+`(tick, eventTypeOrdinal, publicationCountThisTick)`.
+
+## 3.7 Versioning, Migration, Deprecation (FR-EVT-055 … 060) — KD-9
+
+### 3.7.1 Registry row evolution rules
+
+| Operation | Allowed? | Mechanics |
+|-----------|----------|-----------|
+| Adding a payload field | Yes | Append at end of payload; bump `payloadVersion`; update Appendix A row; the previous version row is retained for replay-corpus compatibility (KD-9). |
+| Field width change in place | No | Mint new `eventTypeOrdinal`; deprecate old row per §3.7.3. |
+| Field removal | No | Mint new `eventTypeOrdinal`; deprecate old row. |
+| Field reorder (after `APPROVED`) | No | Mint new `eventTypeOrdinal`; deprecate old row. |
+| Tier change | No | Mint new `eventTypeOrdinal`; deprecate old row. |
+| Producer phase change | Yes (registry-row update only) | Update Appendix A `Producer phase` column; no version bump. Constraint: new producer phase must still publish only Tier A/B from `Events`-phase WriteSet at drain time. |
+
+### 3.7.2 Migration semantics
+
+- **Older version on load.** Replay corpus / fixture load
+  encounters `(eventTypeOrdinal, oldVersion)`. Replay parses
+  successfully (Appendix A retains old version rows). Subscriber
+  sees the explicit `payloadVersion` field and dispatches the
+  right shape.
+- **Newer version on load.** Replay corpus encounters
+  `(eventTypeOrdinal, versionNewerThanCurrent)`. Hard fail:
+  `ERR_EVT_VERSION_INCOMPATIBLE` (`0x1704`).
+
+### 3.7.3 Deprecation
+
+A deprecated ordinal is marked `DEPRECATED` in Appendix A but **not
+deleted**. Producers MUST NOT publish a deprecated ordinal in new
+code (FR-EVT-060); consumers MAY still subscribe for replay-corpus
+compatibility.
+
+### 3.7.4 Cross-spec ordering
+
+An event added by a downstream spec (e.g., #10
+`HeaderExecutedEvent`) is allocated its ordinal at **that spec's
+`IN REVIEW` commit**. The single-table registry in Appendix A
+prevents collision. Spec #17 does NOT pre-allocate ordinals for
+known-future events; the downstream spec authors append the row at
+the moment its rule statement reaches IN REVIEW status.
+
+## 3.8 Edge Cases
+
+| ID | Trigger | Behaviour | FR | Error code |
+|----|---------|-----------|----|------------|
+| EC-017-001 | Tier A `Publish<T>` called from a non-`Events` producing phase (raw call, bypassing queue) | Debug-build assertion fires; release path raises `ERR_DS_PHASE_OWNERSHIP` | FR-EVT-010, FR-EVT-082 | `ERR_DS_PHASE_OWNERSHIP` |
+| EC-017-002 | Queue exceeds `EVENT_QUEUE_CAPACITY` during a single tick | Hard fail; halt tick | FR-EVT-041 | `ERR_EVT_QUEUE_OVERFLOW` |
+| EC-017-003 | Fixture load encounters unknown `eventTypeOrdinal` | Hard fail at load | FR-EVT-080 | `ERR_EVT_ORDINAL_UNKNOWN` |
+| EC-017-004 | Fixture load encounters `payloadVersion > currentRegistryVersion` | Hard fail at load | FR-EVT-081 | `ERR_EVT_VERSION_INCOMPATIBLE` |
+| EC-017-005 | Subscriber registers with wrong tier marker, or runtime Tier A/B register post-init | Registration rejected | FR-EVT-016, FR-EVT-021, FR-EVT-076 | `ERR_EVT_TIER_MISMATCH` |
+| EC-017-006 | Second-order BFS dispatch depth exceeds `MAX_EVENT_DISPATCH_DEPTH` | Hard fail; halt tick | FR-EVT-046, FR-EVT-047 | `ERR_EVT_QUEUE_OVERFLOW` |
+
+Additional rule-application notes:
+
+- **3.8.1 Match-replay seeking.** When the replay system jumps to a
+  prior snapshot, the event ledger is reconstructed from the
+  per-tick `EventLedgerRecord` in `SnapshotPayload`
+  (#16 §3.2.3 `TBD-NORMATIVE`). Subscribers do NOT receive replayed
+  events by default; replay-aware subscribers opt in via the Stage
+  1+ `IReplayEventReader` channel (FR-EVT-077).
+- **3.8.2 Save mid-tick.** Forbidden by
+  #16 §3.7 `TBD-NORMATIVE`
+  (`LEGAL_SAVE_BOUNDARIES = { EndOfSnapshot }`). The event ledger
+  is always whole at save time.
+- **3.8.3 Subscriber re-entry.** A Tier A handler that publishes
+  another Tier A event during dispatch is permitted; the new event
+  is appended to the same-tick queue and dispatched after the
+  current pass per §3.2.5 BFS rule. Maximum nesting per §3.2.5
+  constant (`MAX_EVENT_DISPATCH_DEPTH = 8`).
+- **3.8.4 Multi-producer same-event same-tick.** Permitted; ordering
+  resolves by §3.2.4 sort key. The per-tick-per-producingPhase
+  `intraPhaseDrawIndex` counter (§3.2.4) makes the sort key unique
+  by construction — identical-key collisions cannot occur, so no
+  registration-order tiebreaker is needed.
+- **3.8.5 Empty `Events` phase.** Digest contribution is the
+  canonical empty-array byte string per #16 §3.2.4.1 `TBD-NORMATIVE`
+  `array<T>` rules (`00 00 00 00` for `count`). Phase digest is
+  still emitted (FR-EVT-032).
+- **3.8.6 Cross-tier handler attempt.** A class designed to handle
+  both Tier A and Tier C streams MUST register twice with two
+  different generic constraints; the dispatcher does **not**
+  implicitly fan out across tiers.
+
+## 3.9 Error Codes (cross-reference)
+
+Full numeric values, mnemonics, and triggers live in §3.10
+constants catalogue and §2.5 failure-modes table. Each error code
+cites the FR-EVT-### it catches and the §3.x rule it enforces.
+
+## 3.10 Constants Catalogue
+
+Per CLAUDE.md "Constant Tags", every numeric and identifier
+constant declared in this spec appears here with its source tag.
+Constants live in their designated `.cs` constant catalogue at
+implementation time (Stage 0+1).
+
+| Constant | Value | Tag | Notes |
+|----------|-------|-----|-------|
+| `EVENT_QUEUE_CAPACITY` | `1024` | `[GT]` | §3.5.1 / §6.3; ring-buffer slot count per tick. Derivation: 64 × `MAX_EVENT_DISPATCH_DEPTH` (8) × 2 headroom = 1024. |
+| `COSMETIC_PER_TICK_PUBLICATION_BUDGET` | `4096` | `[GT]` | §3.5.3 / §6.3; aggregate publication ceiling, **NOT** a delivery queue (Tier C is immediate-dispatch per §3.2.3). |
+| `MAX_EVENT_DISPATCH_DEPTH` | `8` | `[GT]` | §3.2.5; BFS depth bound for second-order Tier A/B dispatch. |
+| `EVENT_TYPE_ORDINAL_WIDTH` | `1 byte` (`0x00`–`0xFF`) | `[GT]` | §3.1.2; design decision (not a physical constant). Stage 5+ expansion to 2 bytes reserved in §7.3 / D5 §7.5. |
+| `PAYLOAD_VERSION_WIDTH` | `1 byte` (`0x00`–`0xFF`) | `[GT]` | §3.1; §3.7; design decision. |
+| `DOMAIN_TAG_EVENT_LEDGER` | `TBD-NORMATIVE` — allocated in #16 §3.4 domain-tag table at #17 IN REVIEW per ERR-017-001 | `[CROSS-PENDING]` | §3.4.2; KD-2 qualifier — promoted to `[CROSS]` when #16 reaches `APPROVED`. |
+| `ERR_EVT_QUEUE_OVERFLOW` | `0x1701` | `[GT]` | §2.5 / §3.6.1; error-code allocation from `0x17NN` reserved block; designer-chosen, locked at approval. |
+| `ERR_EVT_TIER_MISMATCH` | `0x1702` | `[GT]` | §2.5 / §3.2.5. |
+| `ERR_EVT_ORDINAL_UNKNOWN` | `0x1703` | `[GT]` | §2.5 / §3.7.2. |
+| `ERR_EVT_VERSION_INCOMPATIBLE` | `0x1704` | `[GT]` | §2.5 / §3.7.2. |
+
+Notes:
+
+- The `0x17NN` block is **reserved** for Spec #17. It MUST NOT
+  collide with #16's `0x16NN` block (verified at §9.2 quality-
+  checklist row).
+- All `[GT]` constants have rationale recorded in §6.3 and §3.5.1 /
+  §3.5.3 / §3.2.5 as applicable.
+- One `[CROSS-PENDING]` constant; promoted to `[CROSS]` at #16
+  approval (§9.2 quality-checklist row).
+
+## 3.11 Version History
+
+| Version | Date         | Author      | Notes                                                                 |
+|---------|--------------|-------------|-----------------------------------------------------------------------|
+| 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. FM-017-001, FM-017-002 published. EC-017-001 … 006 published. Section heading order superseded the v0.0 stub. |
