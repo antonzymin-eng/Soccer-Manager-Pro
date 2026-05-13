@@ -2,10 +2,18 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 1.0
-**Status:** DRAFT — addresses all 13 findings (6 H / 5 M / 2 L) from the
-May 6, 2026 adversarial review at the bottom of `outline.md`. Ready for
-section-file authoring.
+**Version:** 1.1
+**Status:** DRAFT — v1.0 addressed all 13 findings (6 H / 5 M / 2 L)
+from the May 6, 2026 adversarial review at the bottom of `outline.md`.
+v1.1 (May 13, 2026 — later same day) resolves `ERR-018-001` at the
+outline level by **inverting KD-3** (Spec #18 now owns the trace
+pipeline; Spec #16 retains authority over the canonical golden-trace
+*record format* and determinism-of-emission constraints only) and by
+correcting all `TBD-NORMATIVE`-marked #16 section-number citations
+against the current `deterministic-sim/` text (#16 regression suite at
+§5, not §7; canonical record format at §3.2.4.1, not §5; no "§8 trace
+channels" section exists — concept now owned by #18 per inverted KD-3).
+Ready for section-file authoring.
 **Companion documents:** `outline.md` (high-level + adversarial review).
 **Unblocks:** Spec #19 KD-2 sequencing precondition "Spec #18 has at
 least an outline-level draft with §4 and §7 headers" (per
@@ -66,29 +74,61 @@ once here and cited below by KD-number, never restated.
     total exceeds platform headroom is handled via §3.1.5 negotiation
     procedure, not by unilateral #18 override.
 
-- **KD-3 — Boundary with Deterministic Simulation #16.** Spec #16 §7
-  ("Determinism Regression Suite") is the authoritative owner of the
-  determinism regression scenarios; Spec #16 §8 ("Trace Channels") is
-  the authoritative owner of the trace-channel architecture and
-  per-verbosity-tier instrumentation costs. Spec #18 consumes both as
-  inputs: profiling sessions (§3.3) run the #16 §7 scenarios verbatim
-  for reproducibility; dashboards (§3.8) aggregate the per-tick metrics
-  surfaced by #16 §8's trace pipeline. Spec #18 does not duplicate
-  trace-channel definitions and does not add new determinism scenarios.
-  - **Status caveat (May 13, 2026).** Per `SPEC_INDEX.md`, Spec #16 is
-    `IN PROGRESS`, not `APPROVED`. All §3.3 / §3.8 / §3.5 citations of
-    "#16 §7", "#16 §8" are tagged `TBD-NORMATIVE` (pattern adopted from
-    #16 §8.3.1 per CLAUDE.md OPEN ISSUES). Section files MUST carry the
-    tag verbatim on every #16 citation; tag removal is a §9.2
-    quality-checklist row and is gated on #16 approval.
+- **KD-3 — Boundary with Deterministic Simulation #16 (inverted in v1.1).**
+  - **#16 retains authority over (substantive):**
+    (a) the **determinism regression scenarios** at `deterministic-sim/section-5.md`
+        §5 ("Testing & Validation" — includes regression suite, certification
+        matrix, expanded test cards);
+    (b) the **canonical golden-trace record format** at #16 §3.2.4.1 (binary
+        layout, field semantics, what counts as "authoritative state" worth
+        recording);
+    (c) **determinism-of-emission constraints** — every trace point inside
+        the canonical tick pipeline (#16 §3.1) MUST respect #16's determinism
+        rules (no wall-clock, no `System.Random`, no allocation on hot path).
+        #16 retains *veto authority* over trace points emitted inside the
+        tick pipeline.
+  - **Spec #18 owns (substantive):**
+    (a) the **trace pipeline architecture** — channel registry, verbosity
+        tiers, sampling rules, channel-to-sink routing;
+    (b) the **instrumentation API surface** used by `src/<spec>/` code to
+        emit trace records;
+    (c) **dashboard aggregation** — rolling averages, p99 windows, regression
+        bands, refresh cadence;
+    (d) the **profiling methodology** that consumes #16 §5 regression
+        scenarios verbatim (§3.3) for reproducible perf sessions.
+  - **Binding mechanic:** every trace record emitted via #18-owned channels
+    conforms to the canonical record format at #16 §3.2.4.1 (KD-11 binding).
+    A new #18 FR (FR-PO-058a, in the §3.8 range) enforces
+    determinism-of-emission for every trace point #18 introduces.
+  - **Rationale for inversion (recorded May 13, 2026).** v1.0 cited "#16
+    §8 trace channels" — but no §8 trace-channel section exists in #16
+    (§8 is "References & Citation Audit"). Two resolutions were possible:
+    (a) re-anchor KD-3 to whatever section #16 ends up publishing for
+    trace channels (forces #16 to grow an observability section orthogonal
+    to its determinism authority); (b) invert — Spec #18 owns the trace
+    pipeline, Spec #16 retains the determinism-critical record-format and
+    emission constraints. (b) was adopted because trace channels are an
+    observability concern, not a determinism concern; the pattern mirrors
+    KD-4 (where #19 owns the test runner / taxonomy and consumes #16's
+    regression scenarios rather than #16 owning testing). Filed as
+    `ERR-018-001` resolution in `docs/tracking/spec-error-log.md`.
+  - **Status caveat (May 13, 2026, v1.1).** Per `SPEC_INDEX.md`, Spec #16
+    is `IN PROGRESS`, not `APPROVED`. All #16 section-number citations in
+    this outline (now §1.3.1, §3.1, §3.2.4.1, §4 `EnvironmentFingerprint`,
+    §5) have been grep-verified against `deterministic-sim/section-*.md`
+    on May 13, 2026 and remain tagged `TBD-NORMATIVE` until #16 reaches
+    `APPROVED`. Section files MUST re-grep at draft time (#16 has been
+    through three adversarial passes and subsection numbering may shift
+    again) and MUST carry the `TBD-NORMATIVE` tag verbatim on every #16
+    citation; tag removal is a §9.2 quality-checklist row and is gated
+    on #16 approval.
   - **Sequencing constraint.** Per CLAUDE.md OPEN ISSUES, #16's Tier 2
     final approval is gated on `#9 / #17 / #18 / #19 reaching IN
-    REVIEW`. Spec #18 binds substantively to #16 §7 / §8 but does not
-    itself gate #16 Tier 2 once #18 reaches `IN REVIEW`. Resolution
-    path mirrors #19's: (1) #18 reaches `IN REVIEW` with
-    `TBD-NORMATIVE` citations to #16; (2) #16 reaches Tier 2
-    `APPROVED`; (3) #18's `TBD-NORMATIVE` tags resolve and #18 advances
-    to `APPROVED`.
+    REVIEW`. Spec #18 binds substantively to #16 §5 / §3.2.4.1 / §3.1
+    but does not itself gate #16 Tier 2 once #18 reaches `IN REVIEW`.
+    Resolution path mirrors #19's: (1) #18 reaches `IN REVIEW` with
+    `TBD-NORMATIVE` citations to #16; (2) #16 reaches Tier 2 `APPROVED`;
+    (3) #18's `TBD-NORMATIVE` tags resolve and #18 advances to `APPROVED`.
 
 - **KD-4 — Boundary with Testing Strategy #19.** Spec #19 §6 owns the
   CI orchestration policy and functional regression gates; Spec #18 §3.5
@@ -115,7 +155,7 @@ once here and cited below by KD-number, never restated.
   (§6.2 local runbook). Per-FR activation status tracked in §5.2.
 
 - **KD-6 — Determinism-aware profiling.** All profiling sessions MUST
-  run under #16 §7's determinism regression scenarios with explicit
+  run under #16 §5's determinism regression scenarios with explicit
   recorded seeds. Wall-clock or random-seed profiling runs are forbidden
   (they are not comparable across revisions and cannot bisect a
   regression). Seed selection at session start is permitted; the
@@ -180,7 +220,11 @@ once here and cited below by KD-number, never restated.
   exists; Stage 0 placeholder
   `docs/specs/performance-optimization/baselines/`) with the format
   declared in Appendix A. Capture cadence: per-PR delta at Stage 0+1,
-  full re-baseline at each Stage milestone.
+  full re-baseline at each Stage milestone. **Record-format binding:**
+  baseline records and golden-trace records both conform to the
+  canonical record format at #16 §3.2.4.1 (the KD-3 inversion preserves
+  #16's authority over record format; #18 only owns the pipeline that
+  emits records into that format).
 
 ---
 
@@ -200,7 +244,8 @@ once here and cited below by KD-number, never restated.
   verify → lock), performance regression gates with #16/#19 boundary
   (KD-3 / KD-4), degradation-path restrictions (KD-7), hot-path
   enumeration policy (KD-10), instrumentation/dashboard mechanics with
-  #16 §8 boundary, baseline reproducibility (KD-11).
+  trace-pipeline ownership under inverted KD-3 with record-format
+  binding to #16 §3.2.4.1, baseline reproducibility (KD-11).
 - Applicability block:
   - **Primary:** every `src/<spec>/` subsystem with a §6 budget once
     coding begins.
@@ -216,8 +261,10 @@ once here and cited below by KD-number, never restated.
 
 One-line entries with the owning document:
 
-- Determinism regression scenarios and tier classification → Spec #16 §7 / §1.3 (KD-3).
-- Trace channel architecture and per-verbosity instrumentation cost → Spec #16 §8 (KD-3).
+- Determinism regression scenarios and tier classification → Spec #16 §5 / §1.3.1 (KD-3).
+- Canonical golden-trace record format → Spec #16 §3.2.4.1 (KD-3 / KD-11).
+- Determinism-of-emission constraints / veto over tick-pipeline trace points → Spec #16 §3.1 (KD-3).
+- (Trace pipeline architecture itself is OWNED by Spec #18 per inverted KD-3 — not out of scope.)
 - Functional / behavioural regression gates → Spec #19 §3 / §6 (KD-4).
 - Test pyramid, coverage targets, flake handling → Spec #19 (KD-4).
 - Numeric correctness of physics/AI formulas → owning specs (#1–#8) §3.
@@ -236,7 +283,7 @@ that codifies each:
 |----|-------|-------------|
 | KD-1 | Cite-not-redefine | All sections |
 | KD-2 | Per-spec §6 ratify, not override | §3.1, §3.1.5 |
-| KD-3 | Boundary with #16 §7 / §8 | §3.3, §3.8, §5.7 |
+| KD-3 | Boundary with #16 (inverted: #18 owns trace pipeline; #16 owns record format §3.2.4.1 + emission constraints + regression scenarios §5) | §3.3, §3.8, §5.7 |
 | KD-4 | Boundary with #19 §6 | §3.5, §6.3 |
 | KD-5 | Stage-gated activation | §5.2, §7 |
 | KD-6 | Determinism-aware profiling | §3.3, §3.3.4 |
@@ -251,13 +298,18 @@ that codifies each:
 - **Upstream (substantive):**
   - Root `CLAUDE.md` (tick rates, zero-allocation mandate, deterministic
     replay, Stage 0 host platform pin).
-  - Spec #16 (Deterministic Simulation) §1.3 tier classification, §4
-    `EnvironmentFingerprint`, §7 regression scenarios, §8 trace
-    channels. **Status:** `IN PROGRESS`. All citations tagged
-    `TBD-NORMATIVE` until #16 approval (KD-3 status caveat). Section
-    authors MUST grep `deterministic-sim/section-*.md` for current
-    subsection numbers at draft time (#16 has been through three
-    adversarial passes and subsection numbering may have shifted).
+  - Spec #16 (Deterministic Simulation) §1.3.1 determinism tiers, §3.1
+    canonical tick pipeline (emission-veto authority), §3.2.4.1
+    canonical record format, §4 `EnvironmentFingerprint`, §5 regression
+    scenarios / test catalogue. **Status:** `IN PROGRESS`. All citations
+    tagged `TBD-NORMATIVE` until #16 approval (KD-3 status caveat).
+    Section-number citations grep-verified against `deterministic-sim/
+    section-*.md` on May 13, 2026 (v1.1 correction — v1.0 incorrectly
+    cited §7 for regression scenarios, §5 for record format, and §8
+    for "trace channels" — only §5 / §3.2.4.1 actually exist; trace
+    channels are now owned by #18 per inverted KD-3). Section-file
+    authors MUST re-grep at draft time (#16 has been through three
+    adversarial passes and subsection numbering may shift again).
 - **Upstream (consulted):**
   - Spec #19 (Testing Strategy) §6 CI orchestration, §3.7 flake
     handling. **Status:** `IN REVIEW`. Citations tagged
@@ -323,7 +375,7 @@ partition; section file fills in every numbered FR.
 | FR-PO-031 … 040 | Performance regression gates, boundary with #16 / #19 (KD-3 / KD-4) | §3.5, §6.3 |
 | FR-PO-041 … 047 | Degradation policy, Tier C only (KD-7) | §3.6 |
 | FR-PO-048 … 053 | Hot-path enumeration & zero-allocation enforcement (KD-10) | §3.7 |
-| FR-PO-054 … 062 | Instrumentation & dashboard mechanics, boundary with #16 §8 (KD-3) | §3.8 |
+| FR-PO-054 … 062 | Trace pipeline (channels, verbosity tiers, sampling), determinism-of-emission constraints, dashboard mechanics; record-format binding to #16 §3.2.4.1 per inverted KD-3 | §3.8 |
 | FR-PO-063 … 068 | Baseline reproducibility & storage (KD-11) | §3.4, §4.2 |
 | FR-PO-069 … 074 | Stage-0 manual benchmarking & local runbook (KD-5) | §6.2 |
 | FR-PO-075 … 080 | Reporting cadence & defect lifecycle | §6.4, §6.5 |
@@ -347,7 +399,7 @@ Each FR row: `ID | Statement | Level | Source citation | Verification (§5.x) | 
 - Spec #18 defines no runtime data structures used by gameplay.
 - Performance-harness data structures (`BaselineRecord`,
   `BudgetRollupEntry`, `ProfilingSessionManifest`) are declared in §4
-  and Appendix A; their on-disk encoding conforms to #16 §5 canonical
+  and Appendix A; their on-disk encoding conforms to #16 §3.2.4.1 canonical
   binary layout where applicable (KD-11).
 
 ### 2.5 Failure Modes
@@ -358,8 +410,10 @@ Spec #18's own failure modes (in addition to §2.3):
   missing platform pin) — caught by §3.4.4 baseline validator.
 - Budget-allocation total exceeds platform headroom — handled by §3.1.5
   re-allocation procedure; never silently truncated.
-- Dashboard divergence from #16 §8 trace pipeline — caught by §3.8.3
-  boundary audit.
+- Trace-record format drift from #16 §3.2.4.1 — caught by §3.8.4
+  record-format binding audit and §5.7 boundary review.
+- Unsigned tick-pipeline trace point inserted by #18 channel — caught
+  by §3.8.3 emission-veto audit and §5.7 boundary review.
 
 ### 2.6 Version History
 
@@ -440,18 +494,19 @@ Spec #18's own failure modes (in addition to §2.3):
 
 ### 3.3 Profiling Methodology — Determinism-Bound (FR-PO-016 … 023)
 
-- 3.3.1 Citation: KD-6 (determinism-aware profiling); KD-3 boundary
-  with #16 §7 (regression scenarios).
+- 3.3.1 Citation: KD-6 (determinism-aware profiling); KD-3 inverted
+  boundary with #16 §5 (regression scenarios — #16 retains authority).
 - 3.3.2 Profiling session contract:
   - Every session declares: git SHA, recorded seed, recorded
     `EnvironmentFingerprint` (from #16 §4), platform pin per KD-9,
-    scenario manifest (#16 §7 scenario ID), session start/end
+    scenario manifest (#16 §5 scenario ID), session start/end
     timestamps, hardware perf-counter snapshot.
   - Sessions missing any field are not entered into the baseline
     corpus (§3.4.4 validator rejection).
 - 3.3.3 Scenario binding:
   - Spec #18 does not author its own scenarios. Every profiling session
-    runs an #16 §7 scenario verbatim.
+    runs an #16 §5 scenario verbatim (#16 retains authority over
+    scenario definitions per inverted KD-3).
   - Cross-scenario profiling (a #19 KD-8 cross-spec scenario) is
     permitted; the manifest ID and seed are recorded the same way.
 - 3.3.4 Sampling cadence:
@@ -525,8 +580,9 @@ Spec #18's own failure modes (in addition to §2.3):
     authority, not §3.5.2 default).
 - 3.5.3 Gate composition (boundary with #16 / #19):
   - **Functional gate** (Spec #19 §6.2 authority): block on test fail.
-  - **Determinism gate** (Spec #16 §7 authority): block on bitwise
-    mismatch.
+  - **Determinism gate** (Spec #16 §5 authority): block on bitwise
+    mismatch against the canonical-record-format golden trace
+    (#16 §3.2.4.1).
   - **Performance gate** (Spec #18 §3.5.2 authority): block on
     threshold exceeded.
   - **Allocation gate** (Spec #18 §3.7 authority): block on hot-path
@@ -534,7 +590,7 @@ Spec #18's own failure modes (in addition to §2.3):
   - Gate-composition table records ownership; no gate is "soft"; flake
     quarantine (Spec #19 §3.7) applies to functional gates only —
     perf-gate flake is a determinism failure (KD-6 violation) and
-    routes to #16 §7 triage, not #19 §3.7 quarantine.
+    routes to #16 §5 triage, not #19 §3.7 quarantine.
 - 3.5.4 Stage-0 posture (KD-5):
   - Stage 0: no CI perf gate active. Performance regressions are
     surfaced via the §6.2 local runbook against synthetic harnesses
@@ -619,41 +675,86 @@ Spec #18's own failure modes (in addition to §2.3):
   - Boxing of value types in interface dispatch.
   - LINQ on hot paths (banned per Spec #20 §3 — cite).
 
-### 3.8 Instrumentation & Dashboard Mechanics (FR-PO-054 … 062)
+### 3.8 Trace Pipeline & Dashboard Mechanics (FR-PO-054 … 062)
 
-- 3.8.1 Citation: KD-3 (boundary with #16 §8); #16 §8 owns trace
-  channels; Spec #18 owns aggregated dashboards.
-- 3.8.2 Source of per-tick metrics:
-  - All per-tick metrics consumed by Spec #18 dashboards originate in
-    #16 §8 trace channels. Spec #18 does not instrument new
-    trace points.
-  - If a metric Spec #18 needs is not surfaced by #16 §8, the
-    resolution is to file a back-prop request against #16 §8 (recorded
-    in `spec-error-log.md` as `ERR-018-NNN`), not to add a parallel
-    trace pipeline.
-- 3.8.3 Dashboard architecture:
-  - Dashboards consume the canonical trace dump from #16 §8 (format
-    per #16 §5 canonical binary layout — KD-11 binding).
+> **v1.1 inversion (KD-3).** Spec #18 owns the trace pipeline (channels,
+> verbosity tiers, sampling, instrumentation API, dashboard aggregation).
+> Spec #16 retains authority over (a) the canonical record format
+> (#16 §3.2.4.1), (b) determinism-of-emission constraints for trace
+> points inside the canonical tick pipeline (#16 §3.1), and (c) the
+> regression-scenario corpus (#16 §5). v1.0's "#16 §8 trace channels"
+> citation was an artifact of inherited drift from #19 v0.1 and is
+> retracted (#16 §8 is "References & Citation Audit"; no §8
+> trace-channel section exists in #16). See `ERR-018-001`.
+
+- 3.8.1 Citation: KD-3 inverted; #16 §3.2.4.1 for record format
+  binding; #16 §3.1 for emission-veto authority over tick-pipeline
+  trace points.
+- 3.8.2 Trace pipeline architecture (#18-owned):
+  - **Channel registry:** named channels per subsystem, declared in
+    Appendix F catalogue (Stage 1 deliverable; Stage 0 declares schema).
+  - **Verbosity tiers:** `minimal` (production), `standard`
+    (development), `debug` (issue investigation), `exhaustive`
+    (golden-trace capture). Concrete tier semantics pinned at Stage
+    0+1 (§7.5 D10).
+  - **Sampling rules per tier:** every-tick (exhaustive), per-N-ticks
+    (standard/debug), event-driven only (minimal). Numerics pinned at
+    Stage 0+1.
+  - **Channel-to-sink routing:** in-memory ring buffer (default), file
+    sink (baseline-capture builds), network sink (Stage 1+ telemetry).
+  - **Instrumentation API surface:** declared in §4.3; consumed by
+    `src/<spec>/` code.
+- 3.8.3 Determinism-of-emission constraints (FR-PO-058a, new in v1.1):
+  - Every trace point emitted by a #18-owned channel MUST conform to
+    #16's determinism rules: no wall-clock-derived field, no
+    `System.Random` field, no managed allocation on hot-path tick code,
+    no field that captures `EnvironmentFingerprint`-divergent data
+    (CPU brand string, locale, etc.).
+  - **#16 veto authority:** any trace point #18 proposes to insert
+    *inside* the canonical tick pipeline (#16 §3.1) requires #16-owner
+    sign-off. Trace points emitted *outside* the tick pipeline
+    (editor-only tooling, CI harness, post-tick aggregation) do not
+    require #16 sign-off but still must conform to (a)–(d) above.
+  - Enforcement: §5.7 boundary review walks the channel registry at
+    each #18 revision and flags any registry entry that emits inside
+    #16 §3.1 without recorded #16 sign-off.
+  - Anti-pattern in §3.8.7 captures the inverse failure mode.
+- 3.8.4 Record format binding (KD-11):
+  - Trace records and baseline records both serialize to the canonical
+    binary layout at #16 §3.2.4.1.
+  - The trace pipeline does NOT define a parallel record format —
+    that authority remains with #16. #18 only chooses *which* records
+    are emitted, *when*, *into which channel*, and *how* they are
+    aggregated downstream.
+  - Drift between #18's emitted records and #16 §3.2.4.1's layout is a
+    §5.7 boundary-review-blocking finding.
+- 3.8.5 Dashboard architecture:
+  - Dashboards consume the trace records emitted by §3.8.2 channels
+    (format per §3.8.4 / #16 §3.2.4.1 binding).
   - Aggregation logic (rolling averages, p99 windows, regression
-    bands) lives entirely in Spec #18's dashboard implementation; the
-    raw trace pipeline is untouched.
-- 3.8.4 Dashboard catalogue (Stage 1 deliverable; Stage 0 declares
+    bands) lives entirely in Spec #18's dashboard implementation in
+    `tools/perf-dashboard/`.
+- 3.8.6 Dashboard catalogue (Stage 1 deliverable; Stage 0 declares
   schema in Appendix F):
   - Per-spec per-tick budget dashboard.
   - Per-PR delta dashboard.
   - Milestone-baseline trend dashboard.
   - Allocation-tracker dashboard.
-  - Flake/determinism cross-reference dashboard (joins #16 §7 flake
+  - Flake/determinism cross-reference dashboard (joins #16 §5 flake
     data with #18 §3.4.4 baseline validator output).
-- 3.8.5 Refresh cadence:
+- 3.8.7 Refresh cadence:
   - Per-PR delta: synchronous with CI run.
   - Milestone trend: weekly; nightly at Stage 1.
-- 3.8.6 Anti-patterns:
-  - Standing up a parallel trace pipeline.
+- 3.8.8 Anti-patterns:
+  - **Adding a trace point inside #16 §3.1 without #16-owner sign-off**
+    (violates emission-veto authority; §5.7 boundary block).
+  - Emitting a trace record in a non-canonical layout (violates KD-11
+    binding to #16 §3.2.4.1).
   - Embedding dashboard logic in `src/` gameplay code (dashboards live
     in `tools/` per §4.3).
-  - Reading from a trace dump without canonical-layout validation
-    (KD-11 binding).
+  - Trace channel that captures wall-clock or `EnvironmentFingerprint`-
+    divergent fields without explicit Tier C tagging (Tier A / B
+    channels MUST be determinism-clean).
 
 ### 3.9 Edge Cases
 
@@ -705,7 +806,7 @@ Spec #18's own failure modes (in addition to §2.3):
 - Convention: `tools/perf-harness/` houses Stage 0 synthetic harnesses
   (no `src/` yet); `tests/perf/` houses Stage 0+1 production benchmarks
   bound to `src/<spec>/` subsystems.
-- Within `tests/perf/<spec>/`: `scenarios/` (manifests bound to #16 §7
+- Within `tests/perf/<spec>/`: `scenarios/` (manifests bound to #16 §5
   scenario IDs), `baselines/` (per §4.2), `results/` (transient CI
   outputs).
 - Cross-spec scenarios: reuse Spec #19 KD-8 cross-spec scenarios at
@@ -723,8 +824,9 @@ Spec #18's own failure modes (in addition to §2.3):
   `docs/specs/performance-optimization/baselines/`. Migration to
   `tests/data/baselines/` is atomic with first `src/` commit; format
   is identical (no migration script needed).
-- Format conforms to #16 §5 canonical binary layout where applicable
-  (KD-11 binding).
+- Format conforms to #16 §3.2.4.1 canonical record format (KD-11
+  binding; per inverted KD-3, record format is #16-authoritative even
+  though the trace pipeline that emits records is #18-owned).
 
 ### 4.3 Profiling & Dashboard API Surface
 
@@ -855,10 +957,14 @@ Spec #18's own failure modes (in addition to §2.3):
 
 ### 5.7 Boundary-Verification (KD-3 / KD-4)
 
-- **#16 boundary check:** any change to #16 §7 (scenarios) or #16 §8
-  (trace channels) that affects scenario IDs, manifest format, or
-  trace-channel schema triggers a Spec #18 §3.3 / §3.8 review
-  (recorded in §1.4 dependency list).
+- **#16 boundary check:** any change to #16 §5 (regression scenarios),
+  #16 §3.2.4.1 (canonical record format), or #16 §3.1 (canonical tick
+  pipeline — emission-veto surface) that affects scenario IDs,
+  manifest format, record-format layout, or tick-pipeline emission
+  points triggers a Spec #18 §3.3 / §3.8 review (recorded in §1.4
+  dependency list). Walks the §3.8.2 channel registry at each #18
+  revision to flag any registry entry that emits inside #16 §3.1
+  without recorded #16-owner sign-off.
 - **#19 boundary check:** any change to #19 §6 (CI orchestration)
   that affects gate-composition or gate-ownership triggers a Spec
   #18 §3.5.3 review.
@@ -891,10 +997,10 @@ Spec #18's own failure modes (in addition to §2.3):
     counts, integratable into CI step §3.7.4).
   - Benchmark framework: BenchmarkDotNet or Unity Performance Testing
     Extension (selection criteria: statistical significance reporting
-    per §3.4.3, scenario-manifest binding per #16 §7).
+    per §3.4.3, scenario-manifest binding per #16 §5).
   - CI provider: deferred to `src/CLAUDE.md` (parallel to Spec #19
     §6.1). Selection criteria: must support the three pipeline shapes
-    in §4.5, must support gate composition with #16 §7 determinism gate
+    in §4.5, must support gate composition with #16 §5 determinism gate
     and #19 §6.2 functional gate, must expose per-step pass/fail at
     gate-composition granularity (§3.5.3).
 
@@ -917,7 +1023,7 @@ Spec #18's own failure modes (in addition to §2.3):
   composition.
 - Gate composition rule (KD-4 binding, also recorded in §3.5.3):
   - Functional gate failure (Spec #19) → block merge.
-  - Determinism gate failure (#16 §7) → block merge.
+  - Determinism gate failure (#16 §5) → block merge.
   - Performance gate failure (Spec #18) → block merge.
   - Allocation gate failure (Spec #18) → block merge.
   - No gate is "soft"; perf-gate exception requires lead-developer
@@ -1012,8 +1118,13 @@ Spec #18's own failure modes (in addition to §2.3):
 - Tier A dynamic degradation paths — never permitted (§3.6.2; KD-7).
 - "Threshold relaxation by per-PR creep" — caught by §3.5.6 absolute
   guard; never silently accepted.
-- Parallel trace pipeline outside #16 §8 — never permitted (§3.8.6
-  anti-pattern).
+- Trace record format that diverges from #16 §3.2.4.1 — never
+  permitted (§3.8.8 anti-pattern; KD-11 binding). Note: under
+  inverted KD-3, Spec #18 *owns* the trace pipeline, so "parallel
+  trace pipeline" is no longer a coherent anti-pattern — but a
+  parallel *record format* still is.
+- Trace point inside #16 §3.1 without #16-owner sign-off — never
+  permitted (§3.8.3 emission-veto authority).
 - Wall-clock-seeded profiling runs — never accepted into baseline
   corpus (§3.3.6; KD-6).
 - Per-spec §6 override by #18 — KD-2 permanent rule.
@@ -1029,6 +1140,7 @@ Spec #18's own failure modes (in addition to §2.3):
 - D7 — Engine-overhead headroom number (§3.1.4) — Stage 0+1 once Unity LTS + backend pinned.
 - D8 — §3.4.3 statistical-significance N pin — Stage 0+1.
 - D9 — §3.5.2 +5% threshold pin (may tighten/loosen after first 30 days of CI data) — Stage 1.
+- D10 — §3.8.2 verbosity-tier numeric semantics (sampling rate per tier, channel-to-sink defaults) — Stage 0+1.
 
 ### 7.6 Version History
 
@@ -1041,9 +1153,12 @@ Spec #18's own failure modes (in addition to §2.3):
 - Root `CLAUDE.md` (tick rates; zero-allocation mandate; deterministic
   replay; Stage 0 host platform pin; "Interface Design Principle";
   Fixed64 stage scope decision).
-- Spec #16 (Deterministic Simulation) — §1.3 tier classification, §4
-  `EnvironmentFingerprint`, §5 canonical save format, §7 regression
-  scenarios, §8 trace channels.
+- Spec #16 (Deterministic Simulation) — §1.3.1 determinism tiers,
+  §3.1 canonical tick pipeline (emission-veto surface), §3.2.4.1
+  canonical record format, §4 `EnvironmentFingerprint`, §5 regression
+  scenarios / test catalogue. (Note: v1.0 cited §7 / §5 / §8 — those
+  citations were inherited drift; v1.1 corrected against current
+  `deterministic-sim/section-*.md` on May 13, 2026.)
 - Spec #19 (Testing Strategy) — §3.1 taxonomy, §3.7 flake handling,
   §6 CI orchestration.
 - Spec #20 (Code Standards) — §3 zero-allocation rules,
@@ -1074,9 +1189,14 @@ Spec #18's own failure modes (in addition to §2.3):
 - Spec #18 is **cited by** Spec #19 §6 (CI orchestration boundary)
   and (downstream) every per-spec §6 once the per-spec §6 schema is
   ratified.
-- Spec #18 cites #16 (substantive: tiers, regression scenarios,
-  trace channels, save format), #19 (boundary: CI orchestration,
-  flake handling), #20 (boundary: zero-alloc rules).
+- Spec #18 cites #16 (substantive: determinism tiers, regression
+  scenarios at §5, canonical record format at §3.2.4.1, canonical
+  tick pipeline at §3.1 for emission-veto authority). **Trace
+  pipeline is now owned by Spec #18 per inverted KD-3** — #18 cites
+  #16 for record-format compatibility and emission constraints, not
+  for trace-channel architecture. Spec #18 also cites #19 (boundary:
+  CI orchestration, flake handling) and #20 (boundary: zero-alloc
+  rules).
 - No `[CROSS]` constants are imported (Spec #18 declares none).
 - Tier vocabulary cited from #16 §1.3 by reference only (KD-1).
 - Per-spec budget numbers cited by reference only (KD-2); never
@@ -1108,7 +1228,7 @@ Spec #18's own failure modes (in addition to §2.3):
 - All FR-PO-### present in §2.2 with conformance level and activation
   stage.
 - KD-1 … KD-11 each codified in at least one §3 / §5 / §6 subsection.
-- Boundary statements with #16 §7 / §8 (KD-3), #19 §6 (KD-4), and
+- Boundary statements with #16 §5 / §3.2.4.1 / §3.1 (KD-3 inverted), #19 §6 (KD-4), and
   every per-spec §6 (KD-2) explicit.
 
 ### 9.2 Quality Checklist
@@ -1164,8 +1284,9 @@ Spec #18's own failure modes (in addition to §2.3):
 - **Appendix A — Baseline Record File Format.**
   Paste-ready binary-layout / JSON-schema declaration; field names,
   types, required / optional, version-field semantics; binding to
-  #16 §5 canonical layout (KD-11). Includes profiling-session manifest
-  fields per §3.3.2.
+  #16 §3.2.4.1 canonical record format (KD-11; preserved under
+  inverted KD-3). Includes profiling-session manifest fields per
+  §3.3.2.
 
 - **Appendix B — Per-Spec §6 Schema Template.**
   Paste-ready Markdown template every per-spec §6 must conform to.
@@ -1203,7 +1324,7 @@ Spec #18's own failure modes (in addition to §2.3):
 
 - **Appendix F — Dashboard Schema Catalogue.**
   Paste-ready schema for each Stage 1 dashboard enumerated in §3.8.4.
-  Per-dashboard: data source (which #16 §8 trace channel), aggregation
+  Per-dashboard: data source (which §3.8.2 #18-owned trace channel), aggregation
   rule, refresh cadence, alert threshold (where applicable).
 
 - **Appendix G — Glossary.**
@@ -1219,6 +1340,7 @@ Spec #18's own failure modes (in addition to §2.3):
 | Version | Date         | Author      | Notes                                                                                                                                                                                         |
 |---------|--------------|-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | 1.0     | May 13, 2026 | Claude Code | Initial detailed outline drafted from `outline.md` adversarial review. Addresses all 13 findings (6 H / 5 M / 2 L). Resolution map below. Ready for section-file authoring; unblocks Spec #19 KD-3 precondition. |
+| 1.1     | May 13, 2026 | Claude Code | Resolves `ERR-018-001` at outline level. **KD-3 inverted:** Spec #18 now owns the trace pipeline (channels, verbosity tiers, sampling, instrumentation API, dashboards); Spec #16 retains authority over (a) canonical record format at §3.2.4.1, (b) regression scenarios at §5, and (c) determinism-of-emission constraints / veto authority over trace points inside #16 §3.1 canonical tick pipeline. Rationale: trace channels are an observability concern, not a determinism concern; inversion mirrors KD-4 (#19 owns testing infrastructure, consumes #16 scenarios). New FR-PO-058a enforces emission constraints. **#16 section-number citations grep-verified and corrected** against current `deterministic-sim/section-*.md` (#16 regression suite at §5, not §7; canonical record format at §3.2.4.1, not §5; determinism tiers stay at §1.3.1; "§8 trace channels" retracted — no such section exists). Updated subsections: KD-3 (full rewrite), KD-1 / KD-11 (record-format binding), §1.3 KD index table, §1.4 dependency list, §2.2 FR catalogue row for §3.8, §3.3.1–§3.3.3, §3.5.3, §3.8 (full rewrite with §3.8.3 emission constraints + §3.8.4 record-format binding), §4.2, §5.7, §6.3, §7.4 permanent exclusions, §7.5 D10, §8.1 source register, §8.3 citation audit, Appendix A. No FR-numbering shift (FR-PO-058a added in-range). Section files authored from v1.1 will not inherit ERR-018-001's drift. |
 
 ---
 
@@ -1234,7 +1356,7 @@ section is resolved by a specific subsection above.
 | 3 — Authority over per-subsystem budgets unresolved | H | KD-2 explicit: "ratify, read-only roll-up"; §3.1; §3.1.5 re-allocation procedure |
 | 4 — Fallback/degradation strategies conflict with deterministic replay | H | KD-7 explicit: Tier A forbidden, Tier B declared-at-spec-time only, Tier C only acceptable runtime surface; §3.6; §7.4 permanent exclusion |
 | 5 — Boundary with Testing Strategy #19 §5 unstated | H | KD-4 explicit: #19 owns functional gates, #18 owns perf gates; §3.5.3 gate-composition table; §6.3 |
-| 6 — Boundary with Deterministic Simulation #16 §8 unstated | H | KD-3 explicit: #16 §8 owns trace channels, #18 owns aggregated dashboards; §3.8; §5.7 boundary check |
+| 6 — Boundary with Deterministic Simulation #16 §8 unstated | H | KD-3 explicit (v1.1 inverted): Spec #18 owns the trace pipeline; Spec #16 retains authority over canonical record format (§3.2.4.1), regression scenarios (§5), and determinism-of-emission constraints / veto authority over tick-pipeline trace points (§3.1). §3.8 (full rewrite with emission-constraint subsection); §5.7 boundary check; resolves ERR-018-001. |
 | 7 — CI gates infeasible at Stage 0 | M | KD-5 explicit: Stage-gated activation; §5.2 activation table; §6.2 Stage-0 local-only runbook; Appendix E |
 | 8 — Baseline-capture ownership undefined | M | KD-11; §3.4.4 baseline validator; §4.2 storage layout; §5.4 reproducibility auditor; Appendix A format |
 | 9 — Platform target list missing | M | KD-9; §1.4 platform-pin dependency; §3.2.5; binds to `certification-platform.md` Stage 0 row |
