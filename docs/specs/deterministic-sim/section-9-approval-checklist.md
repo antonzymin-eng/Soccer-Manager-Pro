@@ -40,7 +40,7 @@
 - The downstream spec (when written) MUST conform to the contract as stated in #16, OR if a conflict is found during the downstream spec's drafting, #16 is reopened for a coordinated revision.
 - A `TBD-NORMATIVE` row in §8.3.1 carries the same enforceability as an approved cross-reference within #16, but its row in §8.3.1 is suffixed `[TBD-NORMATIVE: pending #N]` until the upstream spec lands.
 
-**Tier 1 status:** `CONDITIONAL APPROVAL — IN REVIEW` (proposed; lead-developer sign-off required to advance from `IN PROGRESS`).
+**Tier 1 status:** `CONDITIONAL APPROVAL — IN REVIEW` — **lead-developer sign-off granted May 14, 2026.** Status flipped `IN PROGRESS → IN REVIEW` in `SPEC_INDEX.md` row 16 atomically with this entry. Upstream-spec gate for Tier 2 (#9 / #17 / #18 / #19 all at `IN REVIEW` or beyond) is also cleared as of May 14, 2026, but the remaining Tier 2 items in §9.4.2 are not — see §9.4.2 for the outstanding work.
 
 ### 9.4.2 Tier 2 — Final Approval (target: when #9, #17, #18, #19 reach `IN REVIEW`)
 
@@ -49,7 +49,13 @@
 - §8.3.1 cross-spec audit rows for #9, #17, #18, #19 — re-audit each row against the actual upstream spec text and remove the `TBD-NORMATIVE` suffix.
 - §9.5 #4 (a) and (b) golden-vector files committed and CI-runnable against the implementation.
 
-**Tier 2 status:** `IN PROGRESS — gated on upstream specs`.
+**Tier 2 status:** `IN PROGRESS — upstream-spec gate cleared May 14, 2026; remaining gating items open.` Upstream-spec gate (§9.4.3) is satisfied as of May 14, 2026: #9 Fixed64 `IN REVIEW` (May 6), #17 Event System `APPROVED` (May 13, beyond gate), #18 Performance Optimization `IN REVIEW` (May 14), #19 Testing Strategy `IN REVIEW` (May 12). Three Tier 2 deliverables remain open:
+
+1. **§9.5 #4(c) — `serialize-canonical-corpus.md`**: not yet authored. `golden-vectors/` currently contains `hkdf-sha256-kat.md` and `siphash-2-4-kat.md` only. Requires §3.2.4.1 finalization plus a worked corpus of canonical serialization input/output pairs covering the byte-exact encoding contract. Owner: spec author. Estimated authoring window: 1–2 days once §3.2.4.1 is frozen.
+2. **§8.3.1 cross-spec audit rows**: all four rows (#9 / #17 / #18 / #19) currently labelled `deferred dependency` against the now-stale May 2, 2026 SPEC_INDEX snapshot. Action: line-by-line re-audit against the actual upstream spec text now that all four are at `IN REVIEW` or beyond, then strip the `[TBD-NORMATIVE: pending #N]` suffix from each row. The #17 row also resolves ERR-017-001 (`DOMAIN_TAG_EVENT_LEDGER` allocation in §3.4) atomically.
+3. **§9.5 #4(a)/(b) golden vectors CI-runnable**: the HKDF-SHA256 and SipHash-2-4 KAT files exist as authored artifacts (Tier 1), but the §9.5 #4 acceptance criterion requires them to "pass" — meaning CI-executable against `DeterministicRngService`. Blocked on `src/` existing (Stage 0 implementation), which per CLAUDE.md cannot begin until all 20 specs are `APPROVED`. **This is a chicken-and-egg dependency** that #16 Tier 2 inherits: it cannot fully close until at least the Stage 0 implementation phase opens, which itself requires #16 Tier 2 to be `APPROVED`. Recommended resolution: amend §9.5 #4 acceptance criterion to split "committed and CI-runnable" into a Tier 2 part (files committed, signatures verified by hand against the RFC vectors — possible now) and a Stage 0 part (CI integration — deferred to implementation kickoff). Flagged as a candidate §9 v1.2 revision.
+
+Additionally, §9.3 review-checklist boxes remain unchecked: open-issues log audit, QA-automation sign-off, platform-certification owner sign-off, and the cross-spec audit-rows-complete bullet (subsumed by item 2 above).
 
 ### 9.4.3 Sequencing constraint (unchanged)
 
@@ -70,6 +76,7 @@ The first three items measure **presence** of operational artifacts. The fourth 
 5. The tolerance matrix placeholder in §3.4 (Tier B default comparator) has a named owner team and a review-date field entry.
 
 ## 9.6 Version History
+- **v1.2 (May 14, 2026):** Lead-developer Tier 1 sign-off recorded in §9.4.1. SPEC_INDEX.md row 16 flipped `IN PROGRESS → IN REVIEW` atomically with this entry. §9.4.2 expanded with a per-item audit of the three outstanding Tier 2 deliverables: (1) `serialize-canonical-corpus.md` authoring task scoped; (2) §8.3.1 audit-row re-audit task scoped (notes the atomic ERR-017-001 closure); (3) §9.5 #4(a)/(b) CI-runnability chicken-and-egg dependency on `src/` flagged as a candidate §9 v1.2 acceptance-criterion revision (the recommended split: hand-verify-now / CI-integrate-at-Stage-0). Upstream-spec gate for Tier 2 (per §9.4.3) recorded as cleared: #9 IN REVIEW (May 6), #17 APPROVED (May 13), #18 IN REVIEW (May 14), #19 IN REVIEW (May 12). No formula or normative-content change.
 - **v1.1 (May 6, 2026):** Two-tier approval model introduced in §9.4 to unblock implementation work without waiting for the multi-month upstream-spec gate. Tier 1 (Conditional Approval) covers self-contained spec content; Tier 2 (Final Approval) waits for #9 / #17 / #18 / #19 to reach `IN REVIEW`. `TBD-NORMATIVE` tag introduced for §8.3.1 placeholder cross-spec citation rows. §9.5 #4 split into (a)/(b) RFC-derived KAT files (authorable now, not gated on Tier 2) and (c) `SerializeCanonical` reference corpus (Tier 2 gated).
 - **v1.0 (May 4, 2026):** Pass 6 verification annotations added to §9.5 #1 and §9.5 #2 (both criteria now mechanically satisfied at the spec level; §5.2 traceability block + T-DS-FAULT-010..014 binding added in section-5.md v1.0). #3 (Tick Orchestrator implementation-owner sign-off) and #4 (three golden-vector files) and #5 (tolerance-matrix owner team + review-date) remain unchecked — those are external artifacts.
 - **v0.9 (May 3, 2026):** Third-pass critique L-L resolution. §9.5 acceptance criterion #4 now names three concrete verification artifacts (RFC 5869 HKDF-SHA256 KAT vectors, SipHash-2-4 reference vectors, `SerializeCanonical` reference corpus), each with its required path under `golden-vectors/`. The criterion is now falsifiable.
