@@ -6,9 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.12
-**Updated:** May 14, 2026 (ERR-018-002 through ERR-018-011 resolved in v0.2 fix pass of Performance Optimization #18 section files)
-**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-011 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4; open). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026) — #18 section files advanced to IN REVIEW. ERR-002 and ERR-003 remain open.
+**Version:** 1.13
+**Updated:** May 14, 2026 (ERR-018-012 through ERR-018-018 filed and resolved in v0.3 fix pass of Performance Optimization #18 section files from PASS-2 adversarial review)
+**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4; open). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---
@@ -43,6 +43,13 @@ authoritative remediation backlog.
 | ERR-018-009 | FR-PO-070 (Stage 0 MUST) requires `tools/run-perf-local.sh` to invoke `tools/budget-auditor.py`, which is a Stage 0+1 deliverable per §7.1 — bootstrapping contradiction | Medium | 2 | ✅ Resolved — May 14, 2026 (v0.2 fix pass): FR-PO-070 stage column updated to "Stage 0 (manual) / Stage 0+1 (automated)" with qualifier note |
 | ERR-018-010 | Appendix F.1 `N=100` captures `[GT]` and Appendix F.5 1% flake-rate threshold are governance constants absent from §3.10 catalogue; F.5 threshold also untagged | Medium | 1 | ✅ Resolved — May 14, 2026 (v0.2 fix pass): §3.10 and §8.4 rows added; F.5 threshold tagged `[GT]` |
 | ERR-018-011 | `SPEC_INDEX.md` row 18 still shows `IN PROGRESS`; #18 §9.4 prematurely declares `IN REVIEW` (canonical registry contradicted per CLAUDE.md "SPEC_INDEX.md is the canonical source of truth") | Medium | 3 | ✅ Resolved — May 14, 2026 (v0.2 fix pass): SPEC_INDEX.md row 18 updated to `IN REVIEW`; CLAUDE.md and file-manifest.md updated atomically |
+| ERR-018-012 | Appendix F has two `### F.0 Channel Registry Schema` sections (lines 231 and 258) with conflicting field sets (13 fields vs 7 fields, different names — `owning_subsystem` vs `subsystem_owner`, `inside_tick_pipeline`+`sign_off_log_ref` vs `emission_veto_required`) | High | 1 | ✅ Resolved — May 14, 2026 (v0.3 fix pass): kept canonical 13-field F.0; merged in `perf.budget`/`perf.alloc`/`perf.trace` anchor rows from the duplicate as Stage 0 illustrative entries. Root cause: PR #59 + PR #60 parallel-branch merge of independent ERR-018-005 fixes |
+| ERR-018-013 | `section-3.md` §3.10 Constants Catalogue has three pairs of duplicate-constant rows: ±20% promotion tolerance (565↔572), N=100 dashboard window (566↔573), 1% flake threshold (567↔574) | High | 1 | ✅ Resolved — May 14, 2026 (v0.3 fix pass): deleted the three v0.1 rows; kept the v0.2 rows with richer rationale. Root cause: same PR #59 + PR #60 merge collision as ERR-018-012 |
+| ERR-018-014 | Seven section files (section-2 / 3 / 5 / 7 / 8 / 9 + appendices) carry duplicate v0.2 version-history rows sandwiching the v0.1 row | Medium | 7 | ✅ Resolved — May 14, 2026 (v0.3 fix pass): consolidated each pair into a single v0.2 row carrying the union of fix-list notes; v0.3 row appended below |
+| ERR-018-015 | `section-1.md` header `Last Updated: May 13, 2026` is stale vs its own v0.2 row dated May 14, 2026 (every other section file's header is May 14) | Medium | 1 | ✅ Resolved — May 14, 2026 (v0.3 fix pass): header updated to `May 14, 2026 (v0.3 PASS-2 adversarial-review fix pass)` |
+| ERR-018-016 | `section-3.md` §3.5.2 Shot Mechanics example conflates the +5% per-PR gate (vs measured pre-PR baseline) with the ±20% `[EST]`→`[GT]` promotion tolerance from §3.9.1 — invokes the +5% gate against an un-promoted spec-time anchor | Medium | 1 | ✅ Resolved — May 14, 2026 (v0.3 fix pass): example rewritten to apply ±20% promotion tolerance at first capture, then +5% (or per-spec tighter override) for subsequent per-PR captures |
+| ERR-018-017 | FR-PO-019 levels `MAY` but its statement embeds an unconditional MUST ("manifest ID and seed MUST be recorded the same way") — same structural shape as ERR-018-003 | Medium | 1 | ✅ Resolved — May 14, 2026 (v0.3 fix pass): split into FR-PO-019 (MAY: cross-scenario profiling is permitted) and FR-PO-019a (MUST: manifest ID and seed MUST be recorded per FR-PO-016) |
+| ERR-018-018 | §3.7.5 pre-specifies a C# attribute signature (`Method | Constructor` targets, `string rationale` constructor argument) at spec-time without a specified consumer — phantom-interface trap per CLAUDE.md "Interface Design Principle" (ERR-001 / ERR-004 hazard) | Medium | 1 | ✅ Resolved — May 14, 2026 (v0.3 fix pass): §3.7.5 deferred concrete C# signature to Stage 0+1 alongside §7.5 D2 alloc-tracker pin; retained governance contract (rationale, sign-off, source-level marker) which is signature-independent |
 
 ---
 
@@ -937,4 +944,101 @@ Either (a) update `SPEC_INDEX.md` row 18 and CLAUDE.md OPEN ISSUES entry to `IN 
 
 ---
 
-*End of Spec Error Log v1.12 — May 14, 2026.*
+## ERR-018-012: Appendix F has two conflicting `### F.0 Channel Registry Schema` sections
+
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.3 fix pass)
+**Severity:** High
+**Detected:** May 14, 2026
+**Detected During:** PASS-2 adversarial review (`pass-2-adversarial-review.md` H-1)
+**Root Cause:** PR #59 (`claude/fix-performance-specs-J1t5Z`, commit `14c6ba6`) and PR #60 (`claude/review-performance-specs-YHGga`, commit `dd6a87c`) both authored an Appendix F.0 channel-registry schema as fixes for `ERR-018-005`. Both PRs merged into `main` without de-duplication, leaving two `### F.0 Channel Registry Schema` sections in `appendices.md` (lines 231–256 and 258–281) with materially different field sets — 13 fields vs 7 fields, different names (`owning_subsystem` vs `subsystem_owner`, `inside_tick_pipeline` + `sign_off_log_ref` pair vs single `emission_veto_required` boolean, `record_format_version` semver vs `record_format` reference). The §5.7.1 audit hook walks `sign_off_log_ref` — present only in the first schema. The F.1–F.5 dashboards cite `perf.budget` / `perf.alloc` / `perf.trace` channel names — populated only as anchor rows in the second schema.
+
+**Resolution:** Kept the canonical 13-field F.0 (richer, supports §5.7.1 audit hook against `sign_off_log_ref`, declares `record_format_version` semver per KD-11). Merged the duplicate's `perf.budget` / `perf.alloc` / `perf.trace` example rows into the canonical schema as illustrative Stage 0 anchor entries so F.1–F.5 dashboard data-source citations resolve at draft time. Per-subsystem channels (`ai.*`, `physics.*`) remain Stage 0+1 deliverables.
+
+---
+
+## ERR-018-013: `section-3.md` §3.10 has three duplicate-constant rows
+
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.3 fix pass)
+**Severity:** High
+**Detected:** May 14, 2026
+**Detected During:** PASS-2 adversarial review (`pass-2-adversarial-review.md` H-2)
+**Root Cause:** Same PR #59 + PR #60 parallel-branch merge as ERR-018-012. Both branches resolved ERR-018-008 (±20% promotion tolerance) and ERR-018-010 (N=100 dashboard window, 1% flake threshold) by appending rows to §3.10. Merge retained both row sets:
+
+| First (v0.1) row | Duplicate (v0.2) row | Constant |
+|------------------|----------------------|----------|
+| `[EST]-baseline acceptance tolerance = ±20%` `[GT]` → §3.9.1 | `[EST]→[GT]` promotion tolerance = ±20% `[GT]` → §3.9.1 | ±20% promotion tolerance |
+| Dashboard sample window = 100 captures `[GT]` → Appendix F.1 | Per-spec p50/p99 rolling window N = 100 captures `[GT]` → Appendix F.1 | N=100 dashboard window |
+| Flake-rate alert threshold = 1% `[GT]` → Appendix F.5 | Flake-rate boundary-defect routing threshold = 1% `[GT]` → Appendix F.5 | 1% flake threshold |
+
+**Resolution:** Deleted the three v0.1 rows; kept the v0.2 rows whose rationale columns are richer. §8.4 mirror table was already correct (v0.1 §3.10 was not mirrored there) — no §8.4 change required.
+
+---
+
+## ERR-018-014: Seven section files carry duplicate v0.2 version-history rows
+
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.3 fix pass)
+**Severity:** Medium
+**Detected:** May 14, 2026
+**Detected During:** PASS-2 adversarial review (`pass-2-adversarial-review.md` M-1)
+**Root Cause:** Same PR #59 + PR #60 merge as ERR-018-012 / 013. Each branch independently authored its own v0.2 version-history row. Merge retained both, producing the pattern `v0.2 (summary) | v0.1 | v0.2 (detailed fix list)` in seven files: `section-2.md`, `section-3.md`, `section-5.md`, `section-7.md`, `section-8.md`, `section-9-approval-checklist.md`, `appendices.md`. (`section-1.md`, `section-4.md`, `section-6.md` were not affected — only one branch touched each.)
+
+**Resolution:** Consolidated each pair into a single v0.2 row carrying the union of fix-list notes — the more detailed (PR #59) text plus any uniquely-stated items from the PR #60 summary. v0.3 row appended below for this fix-pass landing.
+
+---
+
+## ERR-018-015: `section-1.md` header `Last Updated` is stale
+
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.3 fix pass)
+**Severity:** Medium
+**Detected:** May 14, 2026
+**Detected During:** PASS-2 adversarial review (`pass-2-adversarial-review.md` M-2)
+**Root Cause:** `section-1.md` line 4 still reads `**Last Updated:** May 13, 2026` despite the v0.2 row at §1.5 being dated May 14, 2026. Every other section file's header is `May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)`. The v0.2 PR for section-1 updated §1.5 but missed the header.
+
+**Resolution:** Updated header to `**Last Updated:** May 14, 2026 (v0.3 PASS-2 adversarial-review fix pass)`.
+
+---
+
+## ERR-018-016: §3.5.2 conflates +5% per-PR gate with ±20% `[EST]`→`[GT]` promotion tolerance
+
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.3 fix pass)
+**Severity:** Medium
+**Detected:** May 14, 2026
+**Detected During:** PASS-2 adversarial review (`pass-2-adversarial-review.md` M-3)
+**Root Cause:** §3.5.2 *"Per-spec overrides"* bullet says: *"For example, Shot Mechanics #6 §4.5 already declares a 0.05 ms total budget; deviations larger than 5% from the 0.017 ms estimated cite #6 §4.5 authority, not §3.5.2 default."* The +5% per-PR threshold (§3.5.2 / FR-PO-031) is defined against a **measured pre-PR baseline**. The 0.017 ms is a spec-time `[EST]` anchor, not a captured baseline. Per §3.9.1, the first Stage 0+1 capture promotes `[EST]` → `[GT]` if within ±20%; the +5% gate only activates against promoted `[GT]` baselines. The example invokes the +5% gate against an un-promoted anchor.
+
+**Resolution:** Rewrote the example to clarify the staging:
+- First Stage 0+1 capture: apply §3.9.1 ±20% promotion tolerance (gate's MAY-override surface not exercised yet — value still an `[EST]` anchor).
+- Once promoted: subsequent per-PR captures apply §3.5.2 default +5% gate against the measured baseline, or tighter per-spec override.
+
+---
+
+## ERR-018-017: FR-PO-019 levels `MAY` but embeds an unconditional MUST
+
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.3 fix pass)
+**Severity:** Medium
+**Detected:** May 14, 2026
+**Detected During:** PASS-2 adversarial review (`pass-2-adversarial-review.md` M-4)
+**Root Cause:** FR-PO-019 stated: *"Cross-scenario profiling (Spec #19 KD-8 cross-spec scenarios) is permitted; the manifest ID and seed MUST be recorded the same way."* Level column: `MAY`. RFC 2119 grammar treats the row's declared level as binding for the whole statement — a MAY-row that embeds a MUST is structurally identical to the MUST/MAY conflict PASS-1 caught as `ERR-018-003` (FR-PO-067 vs §3.4.4). Conformance auditor reading the level column would not enforce the recording requirement.
+
+**Resolution:** Split into two FRs:
+- FR-PO-019 (MAY): *"Cross-scenario profiling (Spec #19 KD-8 cross-spec scenarios) is permitted."*
+- FR-PO-019a (MUST): *"For any cross-scenario profiling session entered into the baseline corpus, the manifest ID and seed MUST be recorded per FR-PO-016."*
+
+---
+
+## ERR-018-018: §3.7.5 pre-specifies C# attribute signature without specified consumer
+
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.3 fix pass)
+**Severity:** Medium
+**Detected:** May 14, 2026
+**Detected During:** PASS-2 adversarial review (`pass-2-adversarial-review.md` M-5)
+**Root Cause:** §3.7.5 stated: *"the C# `Attribute` definition lands at first `src/` commit (targets: `Method | Constructor`; required constructor argument: `string rationale`; companion lead-developer-sign-off comment cites the `spec-error-log.md` row that authorizes the exemption)."* The attribute's C# signature is fully pinned at spec time — target enum, constructor argument, companion-comment grammar — but its consumer (the CI allocation-tracker build step that reads the attribute) is unspecified anywhere in #18 / #19 / #20. The allocation-tracker pin is §7.5 D2 / Stage 0+1. CLAUDE.md "Interface Design Principle" (ERR-001 / ERR-004 hazard): *"Write interfaces only when both sides are specified."*
+
+**Resolution:** §3.7.5 deferred the concrete C# signature to Stage 0+1 alongside §7.5 D2. Retained the signature-independent governance contract:
+- Every exemption MUST carry a rationale.
+- Every exemption MUST be authorized by lead-developer sign-off recorded in `spec-error-log.md`.
+- Every exempted call site MUST be marked at the source level so the alloc-tracker CI step can exclude it from the §3.7.4 diff.
+
+---
+
+*End of Spec Error Log v1.13 — May 14, 2026.*

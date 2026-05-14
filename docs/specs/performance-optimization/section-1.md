@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 1: Purpose & Scope
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
+**Last Updated:** May 14, 2026 (v0.3 PASS-2 adversarial-review fix pass)
 **Purpose:** Establishes what Spec #18 governs, what it excludes, the
 eleven cross-cutting key decisions (KD-1 … KD-11) that bind the rest of
 the document, the upstream / downstream contracts, and the version
@@ -207,7 +207,7 @@ status changes.
 |----|-------|-------------|
 | KD-1 | Cite-not-redefine | All sections |
 | KD-2 | Per-spec §6 ratify, not override | §3.1, §3.1.5 |
-| KD-3 | Boundary with #16 (inverted: #18 owns trace pipeline; #16 owns record format §3.2.4.1, regression scenarios §5, emission-veto over #16 §3.1.2) | §3.3, §3.8, §5.7 |
+| KD-3 | Boundary with #16 (inverted: #18 owns trace pipeline; #16 owns record format §3.2.4.1, regression scenarios §5, emission-veto over #16 §3.1.2) | §3.3, §3.8.3, §3.8.4, §5.7.1 |
 | KD-4 | Boundary with #19 §6 | §3.5, §6.3 |
 | KD-5 | Stage-gated activation | §5.2, §7 |
 | KD-6 | Determinism-aware profiling | §3.3, §3.3.4 |
@@ -299,5 +299,6 @@ except CPU architecture is currently `_TBD_` / `⏳ Not pinned`.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: L-9 #16 §3.1→§3.1.2 (§1.1 scope, §1.2 out-of-scope, §1.3 KD-3 table); L-10 #16 §4→§4.8 EnvironmentFingerprint (§1.3 KD-11). |
-| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. §1.1 / §1.2 / §1.3 / §1.4 / §1.5 authored. KD-3 inverted per outline v1.1 — Spec #18 owns trace pipeline; Spec #16 retains canonical record format (§3.2.4.1), regression scenarios (§5), and emission-veto over tick-pipeline trace points (§3.1). All #16 / #19 citations tagged `TBD-NORMATIVE` per KD-3 / KD-4 status caveats. SPEC_INDEX flip to `IN REVIEW` is **author-driven**, not review-driven: it reflects "draft complete, awaiting lead-developer sign-off" per CLAUDE.md status definition. The §9 approval-checklist rows have not been walked. |
+| 0.3     | May 14, 2026 | Claude Code | PASS-2 adversarial-review fix pass (`ERR-018-015`, `ERR-018-018` partial). Header `Last Updated` field corrected from May 13 → May 14. §1.3 codification map KD-3 row expanded from `§3.3, §3.8, §5.7` → `§3.3, §3.8.3, §3.8.4, §5.7.1` (L-4). §1.5 v0.1 row prose superseded-by note added (L-6 framing reconciliation). |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: L-9 #16 §3.1→§3.1.2 (§1.1 scope, §1.2 out-of-scope, §1.3 KD-3 table); L-10 #16 §4→§4.8 EnvironmentFingerprint (§1.3 KD-11). Status caveat: v0.1 described the IN REVIEW flip as "author-driven"; PASS-1 ERR-018-011 clarified that SPEC_INDEX.md must be updated atomically with §9.4. That atomic update landed in v0.2; the v0.1 prose below is preserved as historical record. |
+| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. §1.1 / §1.2 / §1.3 / §1.4 / §1.5 authored. KD-3 inverted per outline v1.1 — Spec #18 owns trace pipeline; Spec #16 retains canonical record format (§3.2.4.1), regression scenarios (§5), and emission-veto over tick-pipeline trace points (§3.1). All #16 / #19 citations tagged `TBD-NORMATIVE` per KD-3 / KD-4 status caveats. SPEC_INDEX flip to `IN REVIEW` is **author-driven**, not review-driven: it reflects "draft complete, awaiting lead-developer sign-off" per CLAUDE.md status definition. The §9 approval-checklist rows have not been walked. (NOTE: superseded by v0.2 status caveat — PASS-1 ERR-018-011 ruled this framing a procedural violation; SPEC_INDEX.md must be flipped atomically, not author-driven.) |

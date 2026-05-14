@@ -13,6 +13,10 @@ v0.2 surface.
 
 **Total findings:** 2 H / 5 M / 8 L = 15.
 
+**Status:** ✅ **All 15 findings resolved May 14, 2026 in v0.3 fix pass.**
+`ERR-018-012` … `ERR-018-018` filed and closed atomically with v0.3
+landing. See per-finding resolution notes inline below.
+
 ---
 
 ## Root-cause context (process finding, not a numbered defect)
@@ -34,7 +38,7 @@ authoring fresh content.
 
 ## HIGH
 
-### H-1 — Appendix F has two `### F.0 Channel Registry Schema` sections with conflicting field sets
+### H-1 — Appendix F has two `### F.0 Channel Registry Schema` sections with conflicting field sets ✅ RESOLVED (`ERR-018-012`)
 
 **Location.** `appendices.md` lines 231–256 and 258–281.
 
@@ -81,7 +85,7 @@ deliverable. Two contradictory authoritative tables in the same appendix
 section is exactly the "fabricated checklist values" / "superseded file
 references" class of bug CLAUDE.md flags.
 
-### H-2 — `section-3.md` §3.10 Constants Catalogue has three duplicate-constant rows
+### H-2 — `section-3.md` §3.10 Constants Catalogue has three duplicate-constant rows ✅ RESOLVED (`ERR-018-013`)
 
 **Location.** `section-3.md` lines 565 ↔ 572, 566 ↔ 573, 567 ↔ 574.
 
@@ -119,7 +123,7 @@ mechanically resolve which is canonical.
 
 ## MEDIUM
 
-### M-1 — Seven version-history tables carry duplicate v0.2 rows
+### M-1 — Seven version-history tables carry duplicate v0.2 rows ✅ RESOLVED (`ERR-018-014`)
 
 **Location.** `section-2.md` (lines 232, 234), `section-3.md` (593, 595),
 `section-5.md` (173, 175), `section-7.md` (93, 95), `section-8.md`
@@ -145,7 +149,7 @@ keeping the version-history row whose Notes column carries the richer
 fix-list (the detailed `ERR-018-NNN` enumeration). Or merge the two row
 texts into one.
 
-### M-2 — `section-1.md` header `Last Updated` field is stale
+### M-2 — `section-1.md` header `Last Updated` field is stale ✅ RESOLVED (`ERR-018-015`)
 
 **Location.** `section-1.md` line 4: `**Last Updated:** May 13, 2026`.
 
@@ -162,7 +166,7 @@ the only outlier.)
 `**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)`
 to match every other section file.
 
-### M-3 — `section-3.md` §3.5.2 conflates the +5% per-PR gate with the ±20% `[EST]`→`[GT]` promotion tolerance
+### M-3 — `section-3.md` §3.5.2 conflates the +5% per-PR gate with the ±20% `[EST]`→`[GT]` promotion tolerance ✅ RESOLVED (`ERR-018-016`)
 
 **Location.** `section-3.md` §3.5.2 lines 273–275 (Shot Mechanics example):
 *"For example, Shot Mechanics #6 §4.5 already declares a 0.05 ms total
@@ -189,7 +193,7 @@ rewrite to *"#6 §4.5 declares a 0.05 ms total budget against which the
 first measured baseline is checked under §3.9.1's ±20% promotion
 tolerance; subsequent per-PR captures use the +5% gate"*.
 
-### M-4 — FR-PO-019 levels `MAY` but its statement embeds a `MUST`
+### M-4 — FR-PO-019 levels `MAY` but its statement embeds a `MUST` ✅ RESOLVED (`ERR-018-017`)
 
 **Location.** `section-2.md` §2.2.3 FR-PO-019:
 *"Cross-scenario profiling (Spec #19 KD-8 cross-spec scenarios) is
@@ -215,7 +219,7 @@ Or upgrade FR-PO-019 to MUST with: *"Cross-scenario profiling sessions
 MUST record manifest ID and seed per FR-PO-016 when used; use itself is
 optional."*
 
-### M-5 — §3.7.5 pre-specifies a C# attribute signature without a specified consumer
+### M-5 — §3.7.5 pre-specifies a C# attribute signature without a specified consumer ✅ RESOLVED (`ERR-018-018`)
 
 **Location.** `section-3.md` §3.7.5 lines 393–398: *"the C# `Attribute`
 definition lands at first `src/` commit (targets: `Method | Constructor`;
@@ -250,6 +254,12 @@ specified" rule is satisfied on the spec face.
 ---
 
 ## LOW
+
+> All L-1 … L-8 ✅ RESOLVED in v0.3 fix pass (May 14, 2026). Bundled
+> under the same `ERR-018-NNN` rows where they touch the same section
+> (L-1, L-2, L-5, L-7, L-8 landed alongside `ERR-018-013`/`016`/`018` in
+> `section-3.md`; L-3 in `section-9-approval-checklist.md`; L-4, L-6 in
+> `section-1.md`; L-5 also updated `appendices.md`).
 
 ### L-1 — §3.3.4 "60 Hz physics loop produces ~17 samples per frame"
 
@@ -431,3 +441,4 @@ when the v0.3 fix pass begins.
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 1.0     | May 14, 2026 | Claude Code | PASS-2 adversarial review filed against v0.2 section files. 2 H / 5 M / 8 L = 15 findings. Root cause for H-1 / H-2 / M-1 traces to parallel-branch merge of PR #59 and PR #60. |
+| 1.1     | May 14, 2026 | Claude Code | All 15 findings marked ✅ RESOLVED — v0.3 fix pass landed same day. `ERR-018-012` … `ERR-018-018` filed and closed; spec-error-log.md updated v1.12 → v1.13; SPEC_INDEX.md changelog row appended; CLAUDE.md OPEN ISSUES entry for #18 extended; file-manifest.md row 18 updated v0.2 → v0.3. Per-finding status notes appended to each H- and M- heading. |

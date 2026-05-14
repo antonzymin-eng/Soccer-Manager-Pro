@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 5: Test Plan (Reflexive Conformance Verification)
 
 **Created:** May 13, 2026
-**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Last Updated:** May 14, 2026 (v0.3 PASS-2 adversarial-review fix pass)
 **Purpose:** Verifies Spec #18 against itself. The template's §5
 ("Test Plan") slot is reflexive for a meta-spec: this section maps
 every FR-PO-### to its conformance-verification mechanism, names the
@@ -170,6 +170,6 @@ runs at each CI invocation as the gate-ownership lookup table
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.2     | May 14, 2026 | Claude Code | PASS-1 finding resolved: L-9 §5.7 #16 §3.1→§3.1.2 canonical tick pipeline citation. |
+| 0.3     | May 14, 2026 | Claude Code | PASS-2 adversarial-review fix pass (`ERR-018-014`). Duplicate v0.2 version-history row consolidated. No content changes — §5 was clean of PASS-2 H/M findings. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §5. Reflexive verification model declared. Stage-gated activation table (KD-5) per FR range. Auditor procedures for schema-conformance (§5.3), baseline reproducibility (§5.4), loop-tag (§5.5), and boundary (§5.7) authored. Stage 0 acknowledged degenerate per parallel Spec #19 §5.1 / Spec #20 §5.1 convention. All #16 / #19 citations tagged `TBD-NORMATIVE`. |
-| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-009`). §5.2 stage-gated activation row for FR-PO-069 … 074 annotated to reflect FR-PO-070 Stage 0 manual leg vs Stage 0+1 automated leg; §5.6 FR-to-verification traceability row mirrored. |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-009`). §5.2 stage-gated activation row for FR-PO-069 … 074 annotated to reflect FR-PO-070 Stage 0 manual leg vs Stage 0+1 automated leg; §5.6 FR-to-verification traceability row mirrored. Also: §5.7 #16 §3.1→§3.1.2 canonical tick pipeline citation. |

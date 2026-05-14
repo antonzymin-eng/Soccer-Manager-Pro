@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 2: Functional Requirements & Budget Governance Model
 
 **Created:** May 13, 2026
-**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Last Updated:** May 14, 2026 (v0.3 PASS-2 adversarial-review fix pass)
 **Purpose:** Publishes the FR-PO-### functional-requirement catalogue,
 the conformance-level grammar, the failure-to-comply modes, the
 data-structure inventory (informational; Spec #18 declares no runtime
@@ -63,7 +63,8 @@ when the dashboard front-end ships.
 | FR-PO-016 | Every profiling session MUST record git SHA, recorded seed, `EnvironmentFingerprint` (per #16 §4.8 `TBD-NORMATIVE`), platform pin (per KD-9), scenario manifest ID (per #16 §5 `TBD-NORMATIVE`), session start/end timestamps, and hardware perf-counter snapshot. | MUST | KD-6 | §5.4 | Stage 0+1 |
 | FR-PO-017 | Sessions missing any field required by FR-PO-016 MUST be rejected by the §3.4.4 baseline validator. | MUST | KD-6 / KD-11 | §5.4 | Stage 0+1 |
 | FR-PO-018 | Spec #18 MUST NOT author its own perf scenarios; every profiling session runs an #16 §5 scenario verbatim (`TBD-NORMATIVE`). | MUST | KD-3 / KD-6 | §5.7 | Stage 0+1 |
-| FR-PO-019 | Cross-scenario profiling (Spec #19 KD-8 cross-spec scenarios) is permitted; the manifest ID and seed MUST be recorded the same way. | MAY | KD-6 | §5.4 | Stage 0+1 |
+| FR-PO-019 | Cross-scenario profiling (Spec #19 KD-8 cross-spec scenarios) is permitted. | MAY | KD-6 | §5.4 | Stage 0+1 |
+| FR-PO-019a | For any cross-scenario profiling session entered into the baseline corpus, the manifest ID and seed MUST be recorded per FR-PO-016. | MUST | KD-6 | §5.4 | Stage 0+1 |
 | FR-PO-020 | Wall-clock-seeded or random-seed profiling runs MUST NOT be entered into the baseline corpus. | MUST | KD-6 | §5.4 | Stage 0+1 |
 | FR-PO-021 | Profiling MUST NOT be performed in editor-mode without scripting-backend pin (Mono vs IL2CPP differences invalidate comparison). | MUST | KD-6 / KD-9 | §5.4 | Stage 0+1 |
 | FR-PO-022 | Sampling-profiler default cadence is 1 kHz wall-clock samples (`[EST]`, pinned at Stage 0+1 §7.5 D1). | SHOULD | KD-6 | §5.4 | Stage 0+1 |
@@ -229,6 +230,6 @@ the §2.3 compliance modes:
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: H-1 FR-PO-053 [HotPathAllocExempt] ownership corrected — governance identifier declared in §3.7.5, not Spec #20 §3 (ERR-018-002); M-5 FR-PO-070 stage column clarified Stage 0 manual / Stage 0+1 automated (ERR-018-009); L-10 FR-PO-016 #16 §4→§4.8 EnvironmentFingerprint citation; L-11 FR-PO-038 perf-gate flake claim softened. |
+| 0.3     | May 14, 2026 | Claude Code | PASS-2 adversarial-review fix pass (`ERR-018-014`, `ERR-018-017`). Duplicate v0.2 version-history row removed (consolidated into single row carrying union of notes — root cause: PR #59 + PR #60 parallel-branch merge). FR-PO-019 split into FR-PO-019 (MAY, permission only) + FR-PO-019a (MUST, manifest+seed recording). FR count is now 82 (FR-PO-001 … 080 + FR-PO-019a + FR-PO-058a). |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §2. FR catalogue published with 81 FRs (FR-PO-001 … 080 + FR-PO-058a per outline v1.1 emission-constraint addition). All FRs assigned source citation, verification pointer, and activation stage. `TBD-NORMATIVE` tags applied to every #16 / #19 citation. |
-| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002`, `ERR-018-009`). FR-PO-053 reworded — `[HotPathAllocExempt]` ownership relocated to Spec #18 §3.7.5 (no longer cites Spec #20 §3); source-citation column for FR-PO-053 narrowed to `KD-10` (KD-1 cite-not-redefine framing dropped for this case). FR-PO-070 split Stage 0 manual / Stage 0+1 automated to align with §7.1 tool-deliverable schedule; activation-stage column annotated `Stage 0 / Stage 0+1`. |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002`, `ERR-018-009`). FR-PO-053 reworded — `[HotPathAllocExempt]` ownership relocated to Spec #18 §3.7.5 (no longer cites Spec #20 §3); source-citation column for FR-PO-053 narrowed to `KD-10` (KD-1 cite-not-redefine framing dropped for this case). FR-PO-070 split Stage 0 manual / Stage 0+1 automated to align with §7.1 tool-deliverable schedule; activation-stage column annotated `Stage 0 / Stage 0+1`. FR-PO-016 #16 §4→§4.8 EnvironmentFingerprint citation corrected; FR-PO-038 perf-gate flake claim softened. |

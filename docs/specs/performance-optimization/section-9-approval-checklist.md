@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 9: Approval Checklist
 
 **Created:** May 13, 2026
-**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Last Updated:** May 14, 2026 (v0.3 PASS-2 adversarial-review fix pass)
 **Purpose:** Self-applicable approval checklist. Every row resolves
 to either a named, version-controlled file path or a named programmatic
 check (per Spec #19 KD-6 programmatic-verification mandate). Rows
@@ -23,8 +23,8 @@ per the §3.10 / §8.4 evidence-artifact convention.
     all present in `docs/specs/performance-optimization/`.
 - [ ] All FR-PO-### present in §2.2 with conformance level, source
       citation, verification pointer (§5.x), and activation stage.
-  - Evidence: `section-2.md §2.2` rows; 81 FRs total (FR-PO-001 …
-    FR-PO-080 + FR-PO-058a).
+  - Evidence: `section-2.md §2.2` rows; 82 FRs total (FR-PO-001 …
+    FR-PO-080 + FR-PO-019a + FR-PO-058a).
 - [ ] KD-1 … KD-11 each codified in at least one §3 / §5 / §6
       subsection.
   - Evidence: `section-1.md §1.3` codification map.
@@ -85,10 +85,11 @@ per the §3.10 / §8.4 evidence-artifact convention.
       gaps found).
   - Evidence: `docs/tracking/spec-error-log.md` rows; `ERR-018-001`
     closed atomically with this section file's landing.
-- [x] `SPEC_INDEX.md` status updated atomically with the
-      `IN PROGRESS → IN REVIEW` flip (v0.2 fix pass, May 14, 2026);
-      the `IN REVIEW → APPROVED` flip is the future atomic update with
-      lead-developer sign-off.
+- [ ] `SPEC_INDEX.md` status updated atomically with the
+      `IN PROGRESS → IN REVIEW` flip (landed v0.2 fix pass, May 14, 2026
+      — recorded here for traceability; final sign-off completes the
+      `IN REVIEW → APPROVED` flip atomically). Checkbox kept `[ ]`
+      until §9.4 sign-off lands.
   - Evidence: `docs/specs/SPEC_INDEX.md` row 18 status field (`IN
     REVIEW` as of May 14, 2026).
 - [ ] Spec #19's `TBD-NORMATIVE` tags pointing at "Spec #18 §4 / §7"
@@ -98,11 +99,12 @@ per the §3.10 / §8.4 evidence-artifact convention.
       REVIEW` is symmetric with #18 advancing toward `APPROVED`.
   - Evidence: `testing-strategy/section-1.md §1.4` bidirectional
     sequencing block; #19 reviewer note.
-- [x] `docs/tracking/file-manifest.md` updated to reflect new
-      section-file content.
-  - Evidence: `file-manifest.md` row 18 records "v0.2 (PASS-1
-    adversarial review `ERR-018-002` … `ERR-018-011` resolved May 14,
-    2026)" — moved from "stub" to "drafted at v0.2".
+- [ ] `docs/tracking/file-manifest.md` updated to reflect new
+      section-file content. Tracking-document updates land atomically
+      with the v0.x fix pass; checkbox kept `[ ]` until §9.4 sign-off.
+  - Evidence: `file-manifest.md` row 18 records "v0.3 (PASS-2
+    adversarial review `ERR-018-012` … `ERR-018-018` resolved May 14,
+    2026)" — moved from "v0.2" to "drafted at v0.3".
 
 ## 9.4 Decision
 
@@ -143,6 +145,6 @@ Resolution path (per §1.4 bidirectional sequencing):
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: M-3 §9.4.1 #19 blocker list extended with §3.3.5/§3.4.3/§3.9.5 (ERR-018-007); M-7 SPEC_INDEX.md updated atomically to IN REVIEW with this v0.2 pass (ERR-018-011). |
+| 0.3     | May 14, 2026 | Claude Code | PASS-2 adversarial-review fix pass (`ERR-018-014`, L-3). Duplicate v0.2 version-history row consolidated. §9.3 `[x]` checkboxes for SPEC_INDEX.md and file-manifest.md reverted to `[ ]` with note — convention is checkboxes flip `[x]` atomically at §9.4 lead-developer sign-off, not as pre-tracking. §9.1 FR count evidence updated 81 → 82 (FR-PO-019 split into FR-PO-019 + FR-PO-019a per `ERR-018-017`). §9.3 file-manifest evidence updated to reflect v0.3. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §9. Self-applicable checklist with KD-6 binding (every row cites file path or programmatic check). Appendix D survey scope decision recorded. `TBD-NORMATIVE` blocker list at §9.4.1 explicit for reviewer. Status flipped to `IN REVIEW` author-driven; lead-developer sign-off pending. |
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-007` / 011). §9.4.1 #19 blocker list extended to include §3.3.5, §3.4.3, §3.9.5 (now `TBD-NORMATIVE`). §9.3 atomic-update checkbox flipped `[x]` for the `IN PROGRESS → IN REVIEW` flip (now atomic with `SPEC_INDEX.md` row 18 update); §9.3 file-manifest checkbox also flipped `[x]` (manifest updated to record v0.2). `IN REVIEW → APPROVED` flip remains the future atomic update with lead-developer sign-off. |

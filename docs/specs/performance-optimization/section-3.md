@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 3: Technical Specification
 
 **Created:** May 13, 2026
-**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Last Updated:** May 14, 2026 (v0.3 PASS-2 adversarial-review fix pass)
 **Purpose:** Publishes the rule mechanics behind every FR-PO-### in §2.
 This section does not restate FR statements; each subsection cites the
 FR-PO-### range it implements and provides the *how*.
@@ -35,6 +35,10 @@ Every §6 MUST publish:
 - **Headroom multiplier** — a dimensionless factor reserved for
   variance; `[GT]` typically in the 1.2× – 1.5× range, pinned by the
   owning spec.
+- **Cross-spec budget consumption** — for each `[CROSS]` or
+  `[CROSS-PENDING]` budget value consumed from another spec's §6, cite
+  the source spec, section, and value being consumed. Required only
+  when the spec actually consumes a cross-spec budget; omitted otherwise.
 
 Schema published in **Appendix B** as a paste-ready template.
 
@@ -167,8 +171,9 @@ recorded the same way.
 
 - **Sampling-profiler default:** 1 kHz wall-clock samples — the 10 Hz
   tactical loop produces 100 samples per tick; the 60 Hz physics loop
-  produces ~17 samples per frame (~16.67 ms per frame). `[EST]`;
-  pinned to the chosen profiler at Stage 0+1 (§7.5 D1).
+  produces ≈16.67 samples per frame (1000 Hz / 60 Hz over a ~16.67 ms
+  frame window). `[EST]`; pinned to the chosen profiler at Stage 0+1
+  (§7.5 D1).
 - **Instrumented-profiler default:** full function-entry / exit tracing
   on every hot path (KD-10 union). Off by default in shipping builds;
   on by default in baseline-capture builds.
@@ -270,9 +275,13 @@ activation).
 - **Allocation regression threshold:** any non-zero allocation on a
   hot path (KD-10 union) blocks merge regardless of magnitude.
 - **Per-spec overrides:** a spec's §6 MAY declare a tighter threshold.
-  For example, Shot Mechanics #6 §4.5 already declares a 0.05 ms total
-  budget; deviations larger than 5% from the 0.017 ms estimated cite
-  #6 §4.5 authority, not §3.5.2 default.
+  Example: Shot Mechanics #6 §4.5 declares a 0.05 ms total budget with
+  a ~0.017 ms spec-time `[EST]` anchor. The first Stage 0+1 capture
+  applies the §3.9.1 ±20% promotion tolerance (the gate's MAY override
+  surface is not exercised yet — the value is still an `[EST]` anchor,
+  not a measured `[GT]` baseline). Once promoted, subsequent per-PR
+  captures apply the §3.5.2 default +5% gate against the measured
+  baseline, or a tighter override if #6 §4.5 declares one.
 
 ### 3.5.3 Gate composition (boundary with #16 / #19)
 
@@ -280,8 +289,8 @@ activation).
 |------|-----------|-----------------|
 | Functional | Spec #19 §6.2 (`TBD-NORMATIVE`) | Any functional test fails |
 | Determinism | Spec #16 §5 + §3.2.4.1 (`TBD-NORMATIVE`) | Bitwise mismatch against canonical-record-format golden trace |
-| Performance | Spec #18 §3.5.2 (this section) | §3.5.2 threshold exceeded |
-| Allocation | Spec #18 §3.7 (this section) | Non-zero allocation on hot-path entry |
+| Performance | Spec #18 §3.5.2 (this spec) | §3.5.2 threshold exceeded |
+| Allocation | Spec #18 §3.7 (this spec) | Non-zero allocation on hot-path entry |
 
 No gate is "soft". Flake quarantine (Spec #19 §3.7 `TBD-NORMATIVE`)
 applies to functional gates only — perf-gate variance exceeding the
@@ -309,8 +318,11 @@ root-cause analysis per §6.4; confirmed non-determinism routes to
 
 Independent of the per-PR delta gate, a parallel guard compares against
 the milestone baseline (last Stage milestone). Drift beyond +10%
-(`[GT]`) of the milestone baseline blocks merge regardless of how
-incremental the per-PR deltas were. Prevents budget creep.
+(`[GT]`, provisional — set conservatively at twice the §3.5.2 per-PR
+threshold; re-evaluated at Stage 0+1 against measured baseline variance
+on the same cadence as §3.5.2 / §7.5 D9) of the milestone baseline
+blocks merge regardless of how incremental the per-PR deltas were.
+Prevents budget creep.
 
 ## 3.6 Degradation Policy — Tier C Only (FR-PO-041 … 047)
 
@@ -391,11 +403,22 @@ IL2CPP build per `certification-platform.md` (FR-PO-052).
 
 Genuine one-shot allocations (e.g., scene-load buffer growth) are
 exempted via the `[HotPathAllocExempt]` attribute. Spec #18 owns the
-declaration of this attribute; per CLAUDE.md "Interface Design
-Principle" the C# `Attribute` definition lands at first `src/` commit
-(targets: `Method | Constructor`; required constructor argument:
-`string rationale`; companion lead-developer-sign-off comment cites
-the `spec-error-log.md` row that authorizes the exemption).
+governance identifier (the attribute name) and the exemption policy
+(below); the concrete C# `Attribute` signature — target enum,
+constructor argument shape, companion-comment grammar — is a Stage 0+1
+deliverable that lands at first `src/` commit alongside the allocation-
+tracker pin (§7.5 D2). Per CLAUDE.md "Interface Design Principle"
+(ERR-001 / ERR-004 hazard), the signature is not fixed at spec time
+because its consumer (the allocation-tracker CI step) is not yet
+specified.
+
+The governance contract that holds regardless of signature:
+
+- Every exemption MUST carry a rationale (one or more sentences).
+- Every exemption MUST be authorized by lead-developer sign-off recorded
+  as a row in `spec-error-log.md`.
+- Every exempted call site MUST be marked at the source level so the
+  alloc-tracker CI step can exclude it from the §3.7.4 diff.
 
 Spec #20 (`APPROVED` May 11, 2026) is not the declarer of the
 attribute; outline v1.0's "declared in Spec #20 §3" claim was an
@@ -413,7 +436,7 @@ rationale (FR-PO-053).
 - "It only allocates once at warmup": still on the hot path → still
   blocks; use the §3.7.5 exemption attribute.
 - Boxing of value types in interface dispatch.
-- LINQ on hot paths (banned per Spec #20 §3 — cite).
+- LINQ on hot paths (banned per Spec #20 §3.3 / Appendix D "alloc-hot-path" category).
 
 ## 3.8 Trace Pipeline & Dashboard Mechanics (FR-PO-054 … 062)
 
@@ -562,9 +585,6 @@ inline at the point of declaration:
 | Per-PR regression threshold = +5% | `[GT]` | §3.5.2 | Below first-Stage-1 measured variance band; tightenable at §7.5 D9 |
 | Absolute-threshold guard = +10% | `[GT]` | §3.5.6 | Twice per-PR threshold; catches creep without false-positives on legitimate stepwise growth |
 | Hot-path allocation budget = 0 bytes/tick | `[FIXED]` | §3.7.3 | Mandated by CLAUDE.md "When Writing Code: zero-allocation architecture in the game loop"; non-tunable invariant |
-| [EST]-baseline acceptance tolerance = ±20% | `[GT]` | §3.9.1 | Below this, first-run measured value promotes `[EST]` anchor to `[GT]`; above this, an `ERR-018-NNN` finding is filed |
-| Dashboard sample window = 100 captures | `[GT]` | Appendix F.1 | Window for per-spec p50/p99 aggregation; pinned at Stage 0+1 |
-| Flake-rate alert threshold = 1% | `[GT]` | Appendix F.5 | Above this, boundary-defect routing triggered per §5.7.3 |
 | Sampling-profiler default = 1 kHz | `[EST]` | §3.3.4 | Pinned to chosen profiler at Stage 0+1 (§7.5 D1) |
 | Statistical-significance N = 30 samples / 95% CI | `[EST]` | §3.4.3 | Pinned at Stage 0+1 (§7.5 D8); parallel to Spec #19 §3.4.3 |
 | Headroom multiplier (per spec) | `[GT]` | §3.1.2 | Owning-spec discretion; typical 1.2× – 1.5× |
@@ -590,6 +610,6 @@ Per-spec physical budgets cited (not republished) live in each spec's
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: H-2 §3.4.4 MAY→MUST (ERR-018-003); M-2 §3.10 [GT]→[FIXED] for 0 bytes/tick (ERR-018-006); M-3 TBD-NORMATIVE added to §3.3.5/§3.4.3/§3.9.5 (ERR-018-007); M-4 ±20% tagged [GT] in §3.9.1 + §3.10 row added (ERR-018-008); L-1 standard/debug verbosity tiers differentiated; L-4 60Hz sample count added §3.3.4; L-5 N clarified as independent runs §3.4.3; L-7 seed-selection tool stub added §3.3.2; L-8 [GT] provisional note in §3.5.2; L-9 #16 §3.1→§3.1.2 emission-veto citations; L-10 #16 §4→§4.8 EnvironmentFingerprint; L-11 perf-gate flake claim softened §3.5.3; L-12 ticket storage added §3.4.5. |
+| 0.3     | May 14, 2026 | Claude Code | PASS-2 adversarial-review fix pass (`ERR-018-013`, `ERR-018-014`, `ERR-018-016`, `ERR-018-018`, plus L-1 / L-2 / L-5 / L-7 / L-8 housekeeping). §3.10 — three duplicate-constant rows deleted (±20% promotion tolerance, N=100 dashboard window, 1% flake threshold; root cause PR #59 + PR #60 merge collision). §3.5.2 Shot Mechanics example rewritten to apply §3.9.1 ±20% promotion tolerance at first capture, then +5% gate thereafter. §3.7.5 deferred concrete C# attribute signature to Stage 0+1 (D2) per CLAUDE.md Interface Design Principle; retained signature-independent governance contract (rationale, sign-off, source-level marker). §3.1.2 schema added `Cross-spec budget consumption` field aligning with Appendix B §6.5. §3.3.4 sampling-profiler count fixed `~17` → `≈16.67`. §3.5.6 absolute-threshold guard gained "(provisional)" qualifier matching §3.5.2. §3.5.3 gate-composition table "(this section)" → "(this spec)". §3.7.6 LINQ anti-pattern "— cite" placeholder resolved to Spec #20 §3.3 / Appendix D "alloc-hot-path". Duplicate v0.2 version-history row consolidated. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §3. Eleven subsections (§3.1 … §3.11) cover budget roll-up, loop separation, profiling, optimization ladder, regression gates, degradation policy, hot-path enumeration, trace pipeline (KD-3 inverted), edge cases, governance constants. All #16 / #19 citations tagged `TBD-NORMATIVE`. |
-| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 003 / 005 / 006 / 007 / 008 / 010). §3.1.2 + §3.7.5 reworded — `[HotPathAllocExempt]` declared in #18 §3.7.5 (no longer cites Spec #20 §3); first-implementation site at first `src/` commit. §3.4.4 MAY → MUST with Stage 0 carve-out + FR-PO-068 merge-blocking link. §3.8.2 channel-registry bullet rewritten to cite **Appendix F.0** (Stage 0 schema deliverable). §3.10 — Hot-path allocation budget re-tagged `[GT]` → `[FIXED]`; ±20% promotion tolerance, N=100 rolling-window, 1% flake-rate threshold added with rationale. §3.3.5, §3.4.3, §3.9.5 gain `(TBD-NORMATIVE; #19 status IN REVIEW)` parenthetical. §3.9.1 inline `[GT]` tag on ±20%. |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 003 / 005 / 006 / 007 / 008 / 010). §3.1.2 + §3.7.5 reworded — `[HotPathAllocExempt]` declared in #18 §3.7.5 (no longer cites Spec #20 §3); first-implementation site at first `src/` commit. §3.4.4 MAY → MUST with Stage 0 carve-out + FR-PO-068 merge-blocking link. §3.8.2 channel-registry bullet rewritten to cite **Appendix F.0** (Stage 0 schema deliverable). §3.10 — Hot-path allocation budget re-tagged `[GT]` → `[FIXED]`; ±20% promotion tolerance, N=100 rolling-window, 1% flake-rate threshold added with rationale. §3.3.5, §3.4.3, §3.9.5 gain `(TBD-NORMATIVE; #19 status IN REVIEW)` parenthetical. §3.9.1 inline `[GT]` tag on ±20%. Also: standard/debug verbosity tiers differentiated; 60Hz sample count added §3.3.4; N clarified as independent runs §3.4.3; seed-selection tool stub added §3.3.2; `[GT]` provisional note in §3.5.2; #16 §3.1→§3.1.2 emission-veto citations; #16 §4→§4.8 EnvironmentFingerprint; perf-gate flake claim softened §3.5.3; ticket storage added §3.4.5. |
