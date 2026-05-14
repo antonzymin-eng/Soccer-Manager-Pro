@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 8: References & Citation Audit
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
+**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
 **Purpose:** Authoritative source register, verification notes,
 cross-spec citation audit, and constant-provenance summary. Every
 citation in §3 / §4 / §5 / §6 / §7 / Appendices resolves to a row in
@@ -68,7 +68,6 @@ All citations below tagged `TBD-NORMATIVE` per KD-4 status caveat.
 
 - §2.1 exception-with-sign-off semantics (cited by §2.1 / §3.5.5).
 - §3 zero-allocation rules (cited by §3.7, FR-PO-050 … 053).
-- §3 `[HotPathAllocExempt]` attribute (cited by §3.7.5, FR-PO-053).
 - §3.5.5 anti-pattern list (cited by §4.3.1 single-implementation
   rule).
 - §4.1 dependency-arrow rule (cited by §3.8.5 / FR-PO-060 / §4.3.4
@@ -168,11 +167,14 @@ convention is recorded inline:
 |-------|-----|------------|----------------------------|
 | Per-PR regression threshold = +5% | `[GT]` | §3.5.2 | `section-3.md §3.5.2` |
 | Absolute-threshold guard = +10% | `[GT]` | §3.5.6 | `section-3.md §3.5.6` |
-| Hot-path allocation budget = 0 bytes/tick | `[GT]` | §3.7.3 | `section-3.md §3.7.3` |
+| Hot-path allocation budget = 0 bytes/tick | `[FIXED]` | §3.7.3 | `section-3.md §3.7.3` (non-tunable per CLAUDE.md zero-allocation mandate) |
 | Sampling-profiler default = 1 kHz | `[EST]` | §3.3.4 | `section-3.md §3.3.4` |
 | Statistical-significance N = 30 samples / 95% CI | `[EST]` | §3.4.3 | `section-3.md §3.4.3` |
 | Headroom multiplier (per spec) | `[GT]` | §3.1.2 | `section-3.md §3.1.2` |
 | First-tick warmup count N | `[EST]` | §3.9.4 | `section-3.md §3.9.4` |
+| `[EST]`→`[GT]` promotion tolerance = ±20% | `[GT]` | §3.9.1 | `section-3.md §3.9.1` (rationale recorded in §3.10) |
+| Per-spec p50/p99 rolling window N = 100 captures | `[GT]` | Appendix F.1 | `appendices.md` Appendix F.1 (rationale recorded in §3.10) |
+| Flake-rate boundary-defect routing threshold = 1% | `[GT]` | Appendix F.5 | `appendices.md` Appendix F.5 (rationale recorded in §3.10) |
 
 Each evidence-artifact citation is the body-text section that
 introduces the literal number. The §5.3 / §9 auditor (or the Spec
@@ -185,3 +187,4 @@ path contains the literal number claimed. No separate
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §8. Source register, verification notes, cross-spec citation audit, and constant-provenance summary authored. Spec #16 citation drift history recorded (outline v1.0 → v1.1 correction: regression scenarios §5 not §7; record format §3.2.4.1 not §5; no §8 trace channels exist — #18 owns trace pipeline per inverted KD-3). All #16 / #19 citations tagged `TBD-NORMATIVE` per KD-3 / KD-4 status caveats. |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 006 / 008 / 010). §8.1.4 Spec #20 register entry no longer claims `[HotPathAllocExempt]` is declared in #20 §3 (ownership relocated to #18 §3.7.5). §8.4 mirror rows updated: hot-path allocation budget `[GT]` → `[FIXED]`; new rows added for ±20% promotion tolerance, N=100 rolling-window, 1% flake-rate routing threshold. |

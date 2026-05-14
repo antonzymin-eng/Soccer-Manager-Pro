@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 5: Test Plan (Reflexive Conformance Verification)
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
+**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
 **Purpose:** Verifies Spec #18 against itself. The template's §5
 ("Test Plan") slot is reflexive for a meta-spec: this section maps
 every FR-PO-### to its conformance-verification mechanism, names the
@@ -45,7 +45,7 @@ front-end ship date.
 | FR-PO-048 … 053 | Inactive | Stage 0+1 | First `src/` commit AND IL2CPP build target available |
 | FR-PO-054 … 062 | Active for trace-channel declaration (FR-PO-054); inactive for runtime emission | Stage 0+1 / Stage 1 | Channel registry schema declarable now; runtime emission needs `src/`; dashboards Stage 1 |
 | FR-PO-063 … 068 | Partial (Stage 0 placeholder location FR-PO-064) | Stage 0+1 | First `src/` commit |
-| FR-PO-069 … 074 | Active (Stage 0 manual benchmarking) | Stage 0 | Applies to today's synthetic harness work |
+| FR-PO-069 … 074 | Active (Stage 0 manual benchmarking; FR-PO-070 Stage 0 leg = manual-review equivalents of §5.3 / §5.5 auditors; FR-PO-070 Stage 0+1 leg activates the automated `tools/budget-auditor.py` invocation per §7.1) | Stage 0 / Stage 0+1 | Applies to today's synthetic harness work; FR-PO-070 automation gated on `tools/budget-auditor.py` landing per §7.1 |
 | FR-PO-075 … 080 | Active for reporting cadence (FR-PO-075); inactive for defect-class triage | Stage 0 / Stage 0+1 | Reporting cadence today; defect-class triage at first CI run |
 
 ## 5.3 Per-Spec §6 Schema-Conformance Auditor
@@ -120,7 +120,7 @@ to "manual review against §3 mechanics" — acknowledged degenerate
 | FR-PO-048 … 053 | Alloc-tracker step per §3.7.4 | None (Stage 0) → alloc-tracker | Stage 0+1 | CI status + alloc-dashboard |
 | FR-PO-054 … 062 | §5.7 trace boundary review + dashboard inspection | Manual review → `tools/perf-dashboard/` | Stage 0+1 / Stage 1 | Channel registry + dashboards |
 | FR-PO-063 … 068 | §5.4 baseline-reproducibility auditor | Manual (Stage 0) → auditor | Stage 0+1 | Auditor report |
-| FR-PO-069 … 074 | Stage-0 local runbook execution | `tools/run-perf-local.sh` | Stage 0 | Runbook output in PR description |
+| FR-PO-069 … 074 | Stage-0 local runbook execution (manual at Stage 0; automated at Stage 0+1) | `tools/run-perf-local.sh` (Stage 0 manual / Stage 0+1 automated invocation of `tools/budget-auditor.py`) | Stage 0 / 0+1 | Runbook output in PR description |
 | FR-PO-075 … 080 | Reporting-cadence compliance check | Manual review of `PROGRESS.md` / dashboard | Stage 0 / 0+1 | `PROGRESS.md` rows / dashboard panels |
 
 ## 5.7 Boundary-Verification (KD-3 / KD-4)
@@ -171,3 +171,4 @@ runs at each CI invocation as the gate-ownership lookup table
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §5. Reflexive verification model declared. Stage-gated activation table (KD-5) per FR range. Auditor procedures for schema-conformance (§5.3), baseline reproducibility (§5.4), loop-tag (§5.5), and boundary (§5.7) authored. Stage 0 acknowledged degenerate per parallel Spec #19 §5.1 / Spec #20 §5.1 convention. All #16 / #19 citations tagged `TBD-NORMATIVE`. |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-009`). §5.2 stage-gated activation row for FR-PO-069 … 074 annotated to reflect FR-PO-070 Stage 0 manual leg vs Stage 0+1 automated leg; §5.6 FR-to-verification traceability row mirrored. |

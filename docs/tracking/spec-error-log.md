@@ -6,9 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.11
-**Updated:** May 14, 2026 (ERR-018-002 through ERR-018-011 filed from PASS-1 adversarial review of Performance Optimization #18 section files v0.1; 4 H + 6 M findings)
-**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-011 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4; open). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings; deferred to v0.2 fix pass). ERR-002 and ERR-003 remain open.
+**Version:** 1.12
+**Updated:** May 14, 2026 (ERR-018-002 through ERR-018-011 resolved by Performance Optimization #18 section-file v0.2 fix pass; `SPEC_INDEX.md` row 18 flipped `IN PROGRESS → IN REVIEW` atomically)
+**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-011 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4; open). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). **ERR-018-002 through ERR-018-011 resolved May 14, 2026** by section-file v0.2 fix pass (all 10 PASS-1 adversarial-review findings closed: `[HotPathAllocExempt]` ownership relocated to #18 §3.7.5; §3.4.4 MAY → MUST with Stage 0 carve-out; §7.5 D9 re-anchored Stage 0+1; new Appendix F.0 channel-registry-schema authored; 0-byte allocation budget re-tagged `[FIXED]`; three #19 citations gain `TBD-NORMATIVE` + §9.4.1 blocker list extended; ±20% / N=100 / 1%-flake catalogued in §3.10 + §8.4; FR-PO-070 split Stage 0 manual / Stage 0+1 automated; `SPEC_INDEX.md` row 18 flipped `IN PROGRESS → IN REVIEW`). ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---
@@ -33,16 +33,16 @@ authoritative remediation backlog.
 | ERR-016-002 | EntityId no-reuse cross-spec constraint not back-propagated to specs #2 and #8 | Medium | 3 | Resolved (spec text) — May 6, 2026: `XC-002-001` added to Agent Movement #2 §2.5 (v1.1.1); `XC-008-001` added to Decision Tree #8 §1.7.3 (v1.1.1). Pending only: prose update in #16 §3.2.5. |
 | ERR-017-001 | `DOMAIN_TAG_EVENT_LEDGER` allocation needed in Deterministic Simulation #16 §3.4 domain-tag table | Medium | 2 | Open — filed May 12, 2026 during PASS 2 adversarial review of `event-system/outline-detailed.md`. Patch to #16 §3.4 to be submitted at #17 IN REVIEW commit. Pattern parallel to ERR-016-002 cross-spec back-prop. |
 | ERR-018-001 | Performance Optimization #18 `outline-detailed.md` cites Deterministic Simulation #16 sections by stale numbers / non-existent name (`#16 §7 regression scenarios`, `#16 §5 canonical save format`, `#16 §8 trace channels`) | Medium | 1 | ✅ Resolved at outline level — May 13, 2026 (same day as filing). `outline-detailed.md` v1.1 (a) inverts KD-3 (Spec #18 owns the trace pipeline; Spec #16 retains authority over canonical record format §3.2.4.1, regression scenarios §5, and determinism-of-emission constraints / veto authority over tick-pipeline trace points §3.1), and (b) corrects every `TBD-NORMATIVE`-marked #16 section-number citation against current `deterministic-sim/section-*.md`. Rationale for inversion: trace channels are an observability concern, not a determinism concern; mirrors KD-4 (#19 owns testing infrastructure, consumes #16 scenarios). New FR-PO-058a in §3.8.3 enforces determinism-of-emission for every #18-emitted trace point. Section files drafted from v1.1 will not inherit the drift. Architectural concern (re-anchor vs invert) is closed; section-file authoring still required to faithfully implement inverted KD-3 (FR-PO-058a in §3.8.3, #16-owner sign-off audit in §5.7, record-format binding in §3.8.4). |
-| ERR-018-002 | `[HotPathAllocExempt]` attribute cited in #18 as "declared in Spec #20 §3" but does not exist in `code-standards/` | High | 5 | Open — filed May 14, 2026 (PASS-1 adversarial review of #18 section files v0.1) |
-| ERR-018-003 | MUST/MAY conflict between FR-PO-067 (§2.2.9) and §3.4.4 on baseline-reproducibility re-run | High | 1 | Open — filed May 14, 2026 (PASS-1 review) |
-| ERR-018-004 | Three-way stage-of-resolution contradiction on +5% threshold: FR-PO-031 "Stage 0+1" vs §7.5 D9 "Stage 1" vs §7.1 Stage 0+1 deliverable | High | 1 | Open — filed May 14, 2026 (PASS-1 review) |
-| ERR-018-005 | Channel registry schema absent from Appendix F; §3.8.2 "Stage 0 declares schema" obligation unmet; F.1/F.2/F.4 reference `perf.budget`/`perf.alloc` channels without registry backing | High | 1 | Open — filed May 14, 2026 (PASS-1 review) |
-| ERR-018-006 | Hot-path allocation budget = 0 bytes/tick tagged `[GT]` in §3.10 instead of `[FIXED]` — not a designer-tunable value | Medium | 1 | Open — filed May 14, 2026 (PASS-1 review) |
-| ERR-018-007 | Three Spec #19 body-text citations missing `TBD-NORMATIVE` tag and absent from §9.4.1 blocker list: §3.4.3 ("per Spec #19 §3.4.3"), §3.3.5 ("parallel Spec #19 §6.1"), §3.9.5 ("Spec #19 §3.1") | Medium | 1 | Open — filed May 14, 2026 (PASS-1 review) |
-| ERR-018-008 | §3.9.1 ±20% `[EST]`→`[GT]` promotion tolerance untagged; not in §3.10 constants catalogue (CLAUDE.md requires source tag on every constant) | Medium | 1 | Open — filed May 14, 2026 (PASS-1 review) |
-| ERR-018-009 | FR-PO-070 (Stage 0 MUST) requires `tools/run-perf-local.sh` to invoke `tools/budget-auditor.py`, which is a Stage 0+1 deliverable per §7.1 — bootstrapping contradiction | Medium | 2 | Open — filed May 14, 2026 (PASS-1 review) |
-| ERR-018-010 | Appendix F.1 `N=100` captures `[GT]` and Appendix F.5 1% flake-rate threshold are governance constants absent from §3.10 catalogue; F.5 threshold also untagged | Medium | 1 | Open — filed May 14, 2026 (PASS-1 review) |
-| ERR-018-011 | `SPEC_INDEX.md` row 18 still shows `IN PROGRESS`; #18 §9.4 prematurely declares `IN REVIEW` (canonical registry contradicted per CLAUDE.md "SPEC_INDEX.md is the canonical source of truth") | Medium | 3 | Open — filed May 14, 2026 (PASS-1 review) |
+| ERR-018-002 | `[HotPathAllocExempt]` attribute cited in #18 as "declared in Spec #20 §3" but does not exist in `code-standards/` | High | 5 | ✅ Resolved — May 14, 2026 (#18 section-file v0.2): option-2 selected — attribute declaration relocated to Spec #18 §3.7.5 (first-implementation site at first `src/` commit); all five citation sites (FR-PO-053, §3.1.2, §3.7.5, §8.1.4, Appendix B) reworded; Spec #20 not touched. |
+| ERR-018-003 | MUST/MAY conflict between FR-PO-067 (§2.2.9) and §3.4.4 on baseline-reproducibility re-run | High | 1 | ✅ Resolved — May 14, 2026 (#18 section-file v0.2): §3.4.4 upgraded "MAY re-run" → "MUST re-run" with explicit "silently skipping is an FR-PO-067 violation, merge-blocking per FR-PO-068" and Stage 0 carve-out (no `src/` to re-run against; MUST activates with FR-PO-063 … 068 at Stage 0+1). |
+| ERR-018-004 | Three-way stage-of-resolution contradiction on +5% threshold: FR-PO-031 "Stage 0+1" vs §7.5 D9 "Stage 1" vs §7.1 Stage 0+1 deliverable | High | 1 | ✅ Resolved — May 14, 2026 (#18 section-file v0.2): §7.5 D9 re-anchored "Stage 1" → "Stage 0+1" with note that the rolling 30-day re-evaluation does not delay the Stage 0+1 activation; matches FR-PO-031 and §7.1. |
+| ERR-018-005 | Channel registry schema absent from Appendix F; §3.8.2 "Stage 0 declares schema" obligation unmet; F.1/F.2/F.4 reference `perf.budget`/`perf.alloc` channels without registry backing | High | 1 | ✅ Resolved — May 14, 2026 (#18 section-file v0.2): new **Appendix F.0 — Channel Registry Schema** authored before F.1 with 12 schema fields (channel name, owning subsystem, default verbosity, sampling rule, sample_n, sink routing, determinism class, inside-tick-pipeline flag, sign-off log ref, record-format version, owner, created date, version history). §3.8.2 channel-registry bullet rewritten to cite F.0 as the Stage 0 schema deliverable and F.1 … F.5 as Stage 1 populated rows. |
+| ERR-018-006 | Hot-path allocation budget = 0 bytes/tick tagged `[GT]` in §3.10 instead of `[FIXED]` — not a designer-tunable value | Medium | 1 | ✅ Resolved — May 14, 2026 (#18 section-file v0.2): §3.10 row re-tagged `[GT]` → `[FIXED]`; rationale updated to "Non-tunable architectural mandate per CLAUDE.md 'When Writing Code: zero-allocation architecture in the game loop' — not designer-settable; FR-PO-050 reinforces"; §8.4 mirror row updated to match. |
+| ERR-018-007 | Three Spec #19 body-text citations missing `TBD-NORMATIVE` tag and absent from §9.4.1 blocker list: §3.4.3 ("per Spec #19 §3.4.3"), §3.3.5 ("parallel Spec #19 §6.1"), §3.9.5 ("Spec #19 §3.1") | Medium | 1 | ✅ Resolved — May 14, 2026 (#18 section-file v0.2): `(TBD-NORMATIVE; #19 status IN REVIEW)` parenthetical added to all three citation lines in section-3.md; §9.4.1 #19 blocker list extended to include §3.3.5, §3.4.3, §3.9.5. |
+| ERR-018-008 | §3.9.1 ±20% `[EST]`→`[GT]` promotion tolerance untagged; not in §3.10 constants catalogue (CLAUDE.md requires source tag on every constant) | Medium | 1 | ✅ Resolved — May 14, 2026 (#18 section-file v0.2): inline `[GT]` tag appended at §3.9.1; new ±20% row added to §3.10 catalogue (rationale: "twice the +5% per-PR threshold; absorbs first-measurement variance"); §8.4 mirror row added. |
+| ERR-018-009 | FR-PO-070 (Stage 0 MUST) requires `tools/run-perf-local.sh` to invoke `tools/budget-auditor.py`, which is a Stage 0+1 deliverable per §7.1 — bootstrapping contradiction | Medium | 2 | ✅ Resolved — May 14, 2026 (#18 section-file v0.2): option (b) selected — FR-PO-070 split into Stage 0 (reviewer MUST execute manual-review equivalents of §5.3 / §5.5 auditors) and Stage 0+1 (`tools/run-perf-local.sh` MUST invoke automated `tools/budget-auditor.py`); §5.2 activation table row and §5.6 traceability row updated accordingly. |
+| ERR-018-010 | Appendix F.1 `N=100` captures `[GT]` and Appendix F.5 1% flake-rate threshold are governance constants absent from §3.10 catalogue; F.5 threshold also untagged | Medium | 1 | ✅ Resolved — May 14, 2026 (#18 section-file v0.2): both values added to §3.10 catalogue (N=100 rationale: "rolling-window size for per-spec budget-dashboard percentiles; tightenable once Stage 1 dashboard data confirms variance"; 1%-flake rationale: "inflection where measurement-noise hypothesis is exhausted and determinism/boundary hypothesis becomes more likely"); §8.4 mirror rows added; Appendix F.5 inline `[GT]` tag appended. |
+| ERR-018-011 | `SPEC_INDEX.md` row 18 still shows `IN PROGRESS`; #18 §9.4 prematurely declares `IN REVIEW` (canonical registry contradicted per CLAUDE.md "SPEC_INDEX.md is the canonical source of truth") | Medium | 3 | ✅ Resolved — May 14, 2026 (#18 section-file v0.2): option (a) selected — `SPEC_INDEX.md` row 18 flipped `IN PROGRESS → IN REVIEW`; CLAUDE.md OPEN ISSUES entry for #18 rewritten ("Section files remain stubs" → "Section files v0.2; PASS-1 adversarial review filed and resolved"); `file-manifest.md` row 18 + notes updated; §9.3 "atomic update" checkbox flipped `[x]` for the `IN PROGRESS → IN REVIEW` transition; `IN REVIEW → APPROVED` flip remains the future atomic update with lead-developer sign-off. |
 
 ---
 
@@ -627,6 +627,7 @@ in Shot Mechanics changelog when the edit is made.
 
 ## ERR-018-002: `[HotPathAllocExempt]` cited as declared in Spec #20 §3 but does not exist there
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; option-2 path; Spec #20 not touched).
 **Severity:** High (citation of APPROVED spec for content it does not contain — matches CLAUDE.md "fabricated checklist values" hazard class)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 adversarial review of Performance Optimization #18 section files v0.1
@@ -667,6 +668,7 @@ Option (2) has the smallest cross-spec blast radius because #20 is APPROVED and 
 
 ## ERR-018-003: MUST/MAY conflict between FR-PO-067 and §3.4.4 on baseline-reproducibility re-run
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; §3.4.4 upgraded MAY → MUST with Stage 0 carve-out).
 **Severity:** High (binding-requirement contradiction within the same spec)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review of #18 section files v0.1
@@ -696,6 +698,7 @@ Either upgrade §3.4.4 to "MUST re-run" (aligning §3 with §2's binding require
 
 ## ERR-018-004: Three-way stage-of-resolution contradiction on +5% threshold (FR-PO-031 / §7.5 D9 / §7.1)
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; §7.5 D9 re-anchored Stage 0+1 to match FR-PO-031 and §7.1).
 **Severity:** High (three locations in the same spec state three different resolution stages for the same governance number)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -725,6 +728,7 @@ Choose one canonical stage and update all three locations. Recommended: Stage 0+
 
 ## ERR-018-005: Channel registry schema absent from Appendix F; §3.8.2 "Stage 0 declares schema" obligation unmet
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; new **Appendix F.0 Channel Registry Schema** authored with 12 schema fields; §3.8.2 channel-registry bullet rewritten to cite F.0 as the Stage 0 schema deliverable).
 **Severity:** High (declared Stage 0 deliverable is missing; channel names used without registry backing)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -752,6 +756,7 @@ Author an "Appendix F.0 — Channel Registry Schema" (or "Appendix H — Channel
 
 ## ERR-018-006: Hot-path allocation budget = 0 bytes/tick tagged `[GT]` instead of `[FIXED]` in §3.10
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; §3.10 row re-tagged `[GT]` → `[FIXED]`; §8.4 mirror row updated).
 **Severity:** Medium (constant-tag misclassification; implies designer-tunability of an architectural mandate)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -774,6 +779,7 @@ Re-tag as `[FIXED]` ("invariant by project mandate") or remove from the constant
 
 ## ERR-018-007: Three Spec #19 body-text citations missing `TBD-NORMATIVE` tag
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; `TBD-NORMATIVE` added to §3.3.5, §3.4.3, §3.9.5; §9.4.1 #19 blocker list extended).
 **Severity:** Medium (KD-4 status caveat violated; §9.4.1 blocker list incomplete)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -804,6 +810,7 @@ Add `(TBD-NORMATIVE)` parenthetical to each citation and add §3.4.3, §3.3.5, �
 
 ## ERR-018-008: §3.9.1 ±20% promotion tolerance untagged and absent from constants catalogue
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; inline `[GT]` tag at §3.9.1; new ±20% row in §3.10 + §8.4 with rationale).
 **Severity:** Medium (untagged constant; CLAUDE.md requires source tag on every constant in every spec)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -827,6 +834,7 @@ Add the ±20% threshold to §3.10's table with `[GT]` tag and rationale (e.g., "
 
 ## ERR-018-009: FR-PO-070 (Stage 0 MUST) requires invoking Stage 0+1 tooling
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; option (b) — FR-PO-070 split Stage 0 manual / Stage 0+1 automated; §5.2 activation row and §5.6 traceability row updated).
 **Severity:** Medium (FR activation-stage / tooling-availability mismatch)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -853,6 +861,7 @@ Either (a) move FR-PO-070 to "Stage 0+1" activation stage in §2.2.10 — matchi
 
 ## ERR-018-010: Appendix F.1 N=100 and F.5 1% flake-rate thresholds absent from §3.10
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; both values added to §3.10 + §8.4 with rationale; Appendix F.5 inline `[GT]` tag appended).
 **Severity:** Medium (governance constants outside the declared constants catalogue; F.5 also untagged)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -881,6 +890,7 @@ Add both values to §3.10 (and §8.4 mirror) with tags and rationale. F.5's thre
 
 ## ERR-018-011: `SPEC_INDEX.md` row 18 not updated; §9.4 prematurely claims `IN REVIEW`
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; option (a) — `SPEC_INDEX.md` row 18 + CLAUDE.md OPEN ISSUES + `file-manifest.md` row 18 all flipped to `IN REVIEW` atomically; §9.3 atomic-update checkbox flipped `[x]` for the `IN PROGRESS → IN REVIEW` transition; `IN REVIEW → APPROVED` flip remains the future atomic update with lead-developer sign-off).
 **Severity:** Medium (canonical-registry contradiction; CLAUDE.md says SPEC_INDEX.md is the source of truth on status)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -907,4 +917,4 @@ Either (a) update `SPEC_INDEX.md` row 18 and CLAUDE.md OPEN ISSUES entry to `IN 
 
 ---
 
-*End of Spec Error Log v1.11 — May 14, 2026.*
+*End of Spec Error Log v1.12 — May 14, 2026.*

@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 7: Future Extensions
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
+**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
 **Purpose:** Enumerates the Stage 0+1 transition deliverables, the
 Stage 1 deliverables, the Stage 5+ extensions, the permanent
 exclusions (rules that never change posture), and the deferred-
@@ -83,7 +83,7 @@ Rules whose posture is never changed by any future stage:
 | D6 | Per-platform budget reconciliation rule under Fixed64 | Stage 5+ | Tied to Spec #9 multiplayer scope |
 | D7 | Engine-overhead headroom number (§3.1.4) | Stage 0+1 | Once Unity LTS + scripting backend pinned |
 | D8 | §3.4.3 statistical-significance N pin | Stage 0+1 | Provisional: 30 samples / 95% CI |
-| D9 | §3.5.2 +5% threshold pin (may tighten/loosen after first 30 days of CI data) | Stage 1 | Tie to first-month variance measurement |
+| D9 | §3.5.2 +5% threshold pin (initial pin at Stage 0+1 from first synthetic-harness anchor baselines; may tighten/loosen after first 30 days of CI data, but the rolling re-evaluation does not delay the Stage 0+1 activation per FR-PO-031 / §7.1) | Stage 0+1 | Tie to first-month variance measurement once Stage 0+1 CI is live |
 | D10 | §3.8.2 verbosity-tier numeric semantics (sampling rate per tier, channel-to-sink defaults) | Stage 0+1 | Pinned once instrumented-profiler chosen |
 
 ## 7.6 Version History
@@ -91,3 +91,4 @@ Rules whose posture is never changed by any future stage:
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §7. Stage 0+1 transition deliverables, Stage 1 deliverables, Stage 5+ extensions, permanent exclusions (KD-7 / KD-3 / KD-6 / KD-2 / KD-11), and deferred-decisions tracker (D1 … D10) authored. `IDashboardSink` deferral to §7.2 explicit per CLAUDE.md "Interface Design Principle". |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-004`). §7.5 D9 resolution stage re-anchored "Stage 1" → "Stage 0+1" to match FR-PO-031 + §7.1; rolling 30-day re-evaluation no longer delays the Stage 0+1 activation. |

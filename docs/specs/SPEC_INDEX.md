@@ -35,7 +35,7 @@
 | 15 | Attacking AI | `attacking-ai/` | 4 | NOT STARTED | — |
 | 16 | Deterministic Simulation | `deterministic-sim/` | 4 | IN PROGRESS | — |
 | 17 | Event System | `event-system/` | 5 | APPROVED | May 13, 2026 |
-| 18 | Performance Optimization Strategy | `performance-optimization/` | 5 | IN PROGRESS | — |
+| 18 | Performance Optimization Strategy | `performance-optimization/` | 5 | IN REVIEW | — |
 | 19 | Testing Strategy & Framework | `testing-strategy/` | 5 | IN REVIEW | — |
 | 20 | Code Standards & Style Guide | `code-standards/` | 5 | APPROVED | May 11, 2026 |
 
