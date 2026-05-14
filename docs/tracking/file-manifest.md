@@ -65,7 +65,7 @@ All 20 spec folders now exist in `docs/specs/`. Status reflects authoritative cl
 | 13 | `docs/specs/pressing-ai/` | NOT STARTED (scaffold only) |
 | 14 | `docs/specs/defensive-ai/` | NOT STARTED (scaffold only) |
 | 15 | `docs/specs/attacking-ai/` | NOT STARTED (scaffold only) |
-| 16 | `docs/specs/deterministic-sim/` | IN REVIEW (May 14, 2026) — Tier 1 Conditional Approval; lead-developer sign-off granted. Section-9 v1.2, section-8 v1.1 record the transition. Tier 2 (`APPROVED`) remains gated on §9.4.2 items (serialize-canonical-corpus.md authoring; §8.3.1 audit-row re-audit; §9.5 #4(a)/(b) CI-runnability). |
+| 16 | `docs/specs/deterministic-sim/` | IN REVIEW (May 14, 2026) — Tier 1 Conditional Approval; lead-developer sign-off granted. Section-9 v1.3, section-8 v1.1 record the transition. Tier 2 (`APPROVED`) gated on §9.4.2 items: (i) serialize-canonical-corpus.md authoring; (ii) §8.3.1 audit-row re-audit. §9.5 #4 chicken-and-egg resolved in §9 v1.3 (criterion split into spec-level + implementation-level sub-conditions). |
 | 17 | `docs/specs/event-system/` | APPROVED (May 13, 2026) — 10 section files + appendices; section-files PASS 1 + PASS 2 adversarial review applied; lead-developer sign-off complete |
 | 18 | `docs/specs/performance-optimization/` | IN REVIEW (May 14, 2026) — `outline.md` v1.0 + `outline-detailed.md` v1.1 (KD-3 inverted; ERR-018-001 resolved); section-1 through section-9-approval-checklist + appendices.md at v0.2 (PASS-1 adversarial review, 23 findings resolved, ERR-018-002..011 closed) |
 | 19 | `docs/specs/testing-strategy/` | IN REVIEW (May 12, 2026) — initial draft authored from `outline-detailed.md` v1.1 |
