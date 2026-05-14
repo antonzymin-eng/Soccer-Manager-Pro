@@ -29,7 +29,7 @@ Baseline records have two logical sections: **session manifest** (per
 |-------|------|----------|--------|
 | `git_sha` | string (40 hex) | yes | Build under measurement |
 | `seed` | uint64 | yes | KD-6 recorded seed |
-| `environment_fingerprint` | structured | yes | #16 §4 (`TBD-NORMATIVE`) |
+| `environment_fingerprint` | structured | yes | #16 §4.8 (`TBD-NORMATIVE`) |
 | `platform_pin` | structured | yes | `certification-platform.md` Stage 0 row |
 | `scenario_manifest_id` | string | yes | #16 §5 scenario ID (`TBD-NORMATIVE`) |
 | `session_start_utc` | RFC 3339 timestamp | yes | wall-clock bookkeeping only |
@@ -90,9 +90,9 @@ shape per FR-PO-002 (KD-2 / KD-8 / KD-10).
 | _routine B_ | `[LOOP-…]` | _N_ | 0 | `[GT]` |
 
 Allocation budget MUST be 0 for every hot-path entry per Spec #18 §3.7
-(KD-10). Exemptions require the `[HotPathAllocExempt]` attribute
-declared in Spec #18 §3.7.5 (first-implementation site at first
-`src/` commit) and lead-developer sign-off.
+(KD-10). Exemptions require `[HotPathAllocExempt]` per Spec #18 §3.7.5
+(governance identifier declared in §3.7.5; C# attribute definition
+deferred to Stage 0+1) with lead-developer sign-off.
 
 ### 6.3 Worst-Case Input Parameters
 
@@ -112,6 +112,7 @@ spec, cite the source spec, section, and the value being consumed.
 ### 6.6 Version History
 
 | Version | Date | Author | Notes |
+|---------|------|--------|-------|
 ```
 
 ---
@@ -254,6 +255,31 @@ status:** registry rows populated. **Audit hook:** §5.7.1 boundary
 check walks every row with `inside_tick_pipeline = true` and confirms
 `sign_off_log_ref` resolves to a present `spec-error-log.md` row.
 
+### F.0 Channel Registry Schema
+
+The channel registry (§3.8.2) declares every named trace channel.
+Each entry conforms to the following schema:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `channel_name` | string | yes | Unique identifier, e.g. `perf.budget`, `perf.alloc` |
+| `subsystem_owner` | string | yes | Spec # and section that declares the subsystem emitting this channel |
+| `verbosity_tier_min` | enum | yes | Minimum verbosity tier at which this channel emits; one of `minimal`, `standard`, `debug`, `exhaustive` |
+| `sink_targets` | list | yes | One or more of: `ring_buffer`, `file`, `network`; per §3.8.2 routing rules |
+| `emission_veto_required` | bool | yes | `true` if any trace point in this channel emits inside #16 §3.1.2 canonical tick pipeline; requires #16-owner sign-off per §3.8.3 |
+| `record_format` | reference | yes | Must cite #16 §3.2.4.1 (`TBD-NORMATIVE`) canonical record format |
+| `declared_stage` | enum | yes | `Stage 0` (schema declared; no runtime emission yet) or `Stage 0+1` / `Stage 1` (active emission) |
+
+**Stage 0 channel registry** (schema only; entries populated at Stage 0+1):
+
+| channel_name | subsystem_owner | verbosity_tier_min | sink_targets | emission_veto_required |
+|---|---|---|---|---|
+| `perf.budget` | Spec #18 §3.1 | `standard` | `ring_buffer`, `file` | false |
+| `perf.alloc` | Spec #18 §3.7 | `debug` | `ring_buffer`, `file` | false |
+| `perf.trace` | Spec #18 §3.8 | `exhaustive` | `ring_buffer`, `file` | true (tick-pipeline emission) |
+
+Additional channels declared at Stage 0+1 once subsystem implementations exist.
+
 ### F.1 Per-Spec Per-Tick Budget Dashboard
 
 - **Data source:** `perf.budget` channel; verbosity `standard` or
@@ -332,7 +358,7 @@ cited from #16; pyramid / coverage / flake terms are cited from #19.
   harness in `tools/perf-harness/` (per FR-PO-072); marked "anchor /
   Stage 0" and never cited as a gameplay baseline.
 - **Emission-veto.** Spec #16's authority over trace points emitted
-  inside the canonical tick pipeline at #16 §3.1; cited by §3.8.3
+  inside the canonical tick pipeline at #16 §3.1.2; cited by §3.8.3
   and enforced by §5.7.
 
 ---
@@ -341,5 +367,6 @@ cited from #16; pyramid / coverage / flake terms are cited from #19.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: H-1 Appendix B [HotPathAllocExempt] ownership corrected — #18 §3.7.5 not Spec #20 §3 (ERR-018-002); H-4 Appendix F.0 channel registry schema added (ERR-018-005); M-6 F.5 flake rate 1% tagged [GT] (ERR-018-010); L-6 Appendix B §6.6 table separator row added; L-9 Appendix G emission-veto entry #16 §3.1→§3.1.2; L-10 Appendix A #16 §4→§4.8 EnvironmentFingerprint. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 Appendices block. Appendix A (baseline record format with #16 §3.2.4.1 binding per KD-11), Appendix B (per-spec §6 schema paste-ready template), Appendix C (roll-up table headers + Shot Mechanics #6 row populated; remaining cells `_TBD_` per Appendix D survey scope), Appendix D (survey headers; row contents Stage 0+1 deliverable per §9.2), Appendix E (Stage-0 local-runbook shell-script outline), Appendix F (dashboard schema catalogue for §3.8.6 dashboards), Appendix G (spec-specific glossary). All #16 / #19 citations tagged `TBD-NORMATIVE`. |
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 005 / 010). Appendix B exemption clause rewritten — `[HotPathAllocExempt]` cites Spec #18 §3.7.5 (no longer cites Spec #20 §3). New **Appendix F.0 Channel Registry Schema** authored before F.1 (12 fields: channel name, owning subsystem, default verbosity, sampling rule, sample_n, sink routing, determinism class, inside-tick-pipeline flag, sign-off log ref, record-format version, owner, created date, version history); F-header rewritten to reflect F.0 Stage 0 schema deliverable + F.1 … F.5 Stage 1 populated rows. Appendix F.5 inline `[GT]` tag appended to "> 1%" flake-rate threshold. |

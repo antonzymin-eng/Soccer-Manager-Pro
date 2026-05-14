@@ -32,11 +32,11 @@ KD-3 / KD-4 status caveats.
 All citations below tagged `TBD-NORMATIVE` per KD-3 status caveat.
 
 - §1.3.1 determinism tier classification (Tier A / B / C).
-- §3.1 canonical tick pipeline (emission-veto surface for §3.8.3
+- §3.1.2 canonical tick pipeline (emission-veto surface for §3.8.3
   FR-PO-058a).
 - §3.2.4.1 canonical record format (binding for FR-PO-058 and §3.8.4
   / §4.2 / Appendix A).
-- §4 `EnvironmentFingerprint` (consumed by §3.3.2 session contract).
+- §4.8 `EnvironmentFingerprint` (consumed by §3.3.2 session contract).
 - §5 regression-scenario corpus / test catalogue (consumed by §3.3.3
   scenario binding).
 
@@ -140,10 +140,10 @@ per §1.4 caveat.
 - **Spec #18 cites:**
   - **Spec #16** (substantive): determinism tiers §1.3.1; regression
     scenarios §5; canonical record format §3.2.4.1; canonical tick
-    pipeline §3.1 (emission-veto authority); `EnvironmentFingerprint`
-    §4. **Trace pipeline is now owned by Spec #18** per inverted
-    KD-3 — #18 cites #16 for record-format compatibility and
-    emission constraints, not for trace-channel architecture.
+    pipeline §3.1.2 (emission-veto authority); `EnvironmentFingerprint`
+    §4.8. **Trace pipeline is now owned by Spec #18** per inverted
+    KD-3 — #18 cites #16 for record-format compatibility (§3.2.4.1) and
+    emission constraints (§3.1.2), not for trace-channel architecture.
   - **Spec #19** (boundary): CI orchestration §6; flake handling
     §3.7; cross-spec scenario authority KD-8.
   - **Spec #20** (boundary): zero-allocation rules §3;
@@ -167,9 +167,9 @@ convention is recorded inline:
 |-------|-----|------------|----------------------------|
 | Per-PR regression threshold = +5% | `[GT]` | §3.5.2 | `section-3.md §3.5.2` |
 | Absolute-threshold guard = +10% | `[GT]` | §3.5.6 | `section-3.md §3.5.6` |
-| Hot-path allocation budget = 0 bytes/tick | `[FIXED]` | §3.7.3 | `section-3.md §3.7.3` (non-tunable per CLAUDE.md zero-allocation mandate) |
+| Hot-path allocation budget = 0 bytes/tick | `[FIXED]` | §3.7.3 | `section-3.md §3.7.3` |
 | Sampling-profiler default = 1 kHz | `[EST]` | §3.3.4 | `section-3.md §3.3.4` |
-| Statistical-significance N = 30 samples / 95% CI | `[EST]` | §3.4.3 | `section-3.md §3.4.3` |
+| Statistical-significance N = 30 runs / 95% CI | `[EST]` | §3.4.3 | `section-3.md §3.4.3` |
 | Headroom multiplier (per spec) | `[GT]` | §3.1.2 | `section-3.md §3.1.2` |
 | First-tick warmup count N | `[EST]` | §3.9.4 | `section-3.md §3.9.4` |
 | `[EST]`→`[GT]` promotion tolerance = ±20% | `[GT]` | §3.9.1 | `section-3.md §3.9.1` (rationale recorded in §3.10) |
@@ -186,5 +186,6 @@ path contains the literal number claimed. No separate
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: M-2 §8.4 [GT]→[FIXED] for 0 bytes/tick (ERR-018-006); M-4 §8.4 ±20% row added (ERR-018-008); M-6 §8.4 N=100 and 1% rows added (ERR-018-010); L-9 §8.1.2/§8.3 #16 §3.1→§3.1.2 canonical tick pipeline; L-10 §8.1.2/§8.3 #16 §4→§4.8 EnvironmentFingerprint. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §8. Source register, verification notes, cross-spec citation audit, and constant-provenance summary authored. Spec #16 citation drift history recorded (outline v1.0 → v1.1 correction: regression scenarios §5 not §7; record format §3.2.4.1 not §5; no §8 trace channels exist — #18 owns trace pipeline per inverted KD-3). All #16 / #19 citations tagged `TBD-NORMATIVE` per KD-3 / KD-4 status caveats. |
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 006 / 008 / 010). §8.1.4 Spec #20 register entry no longer claims `[HotPathAllocExempt]` is declared in #20 §3 (ownership relocated to #18 §3.7.5). §8.4 mirror rows updated: hot-path allocation budget `[GT]` → `[FIXED]`; new rows added for ±20% promotion tolerance, N=100 rolling-window, 1% flake-rate routing threshold. |

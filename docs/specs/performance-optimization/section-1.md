@@ -50,7 +50,7 @@ authoritative copies of which live in Spec #16. Its scope is:
   sampling rules, channel-to-sink routing, instrumentation API, and
   dashboard aggregation. Every trace record conforms to the canonical
   record format at #16 §3.2.4.1; every trace point emitted inside the
-  canonical tick pipeline (#16 §3.1) requires #16-owner sign-off
+  canonical tick pipeline (#16 §3.1.2) requires #16-owner sign-off
   (emission-veto authority). See §3.8.
 - **Baseline reproducibility and storage.** Every baseline is
   reproducible from recorded git SHA, seed, `EnvironmentFingerprint`,
@@ -79,7 +79,7 @@ Each line cites the owning document.
 - **Canonical golden-trace record format** → Spec #16 §3.2.4.1 (KD-3,
   KD-11).
 - **Determinism-of-emission constraints / veto over tick-pipeline
-  trace points** → Spec #16 §3.1 (KD-3). The trace pipeline
+  trace points** → Spec #16 §3.1.2 (KD-3). The trace pipeline
   *architecture itself* is OWNED by Spec #18 per inverted KD-3 — not
   out of scope.
 - **Functional / behavioural regression gates** → Spec #19 §3 / §6
@@ -191,7 +191,7 @@ status changes.
   union), not individual entries.
 - **KD-11 — Baseline reproducibility and storage.** Every baseline is
   reproducible from (a) the recorded git SHA, (b) the recorded seed
-  (KD-6), (c) the recorded `EnvironmentFingerprint` (per #16 §4), and
+  (KD-6), (c) the recorded `EnvironmentFingerprint` (per #16 §4.8), and
   (d) the pinned platform (KD-9). Baselines live in a version-
   controlled location (`tests/data/baselines/` once `src/` exists;
   Stage 0 placeholder `docs/specs/performance-optimization/baselines/`)
@@ -207,7 +207,7 @@ status changes.
 |----|-------|-------------|
 | KD-1 | Cite-not-redefine | All sections |
 | KD-2 | Per-spec §6 ratify, not override | §3.1, §3.1.5 |
-| KD-3 | Boundary with #16 (inverted: #18 owns trace pipeline; #16 owns record format §3.2.4.1, regression scenarios §5, emission-veto over #16 §3.1) | §3.3, §3.8, §5.7 |
+| KD-3 | Boundary with #16 (inverted: #18 owns trace pipeline; #16 owns record format §3.2.4.1, regression scenarios §5, emission-veto over #16 §3.1.2) | §3.3, §3.8, §5.7 |
 | KD-4 | Boundary with #19 §6 | §3.5, §6.3 |
 | KD-5 | Stage-gated activation | §5.2, §7 |
 | KD-6 | Determinism-aware profiling | §3.3, §3.3.4 |
@@ -299,4 +299,5 @@ except CPU architecture is currently `_TBD_` / `⏳ Not pinned`.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: L-9 #16 §3.1→§3.1.2 (§1.1 scope, §1.2 out-of-scope, §1.3 KD-3 table); L-10 #16 §4→§4.8 EnvironmentFingerprint (§1.3 KD-11). |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. §1.1 / §1.2 / §1.3 / §1.4 / §1.5 authored. KD-3 inverted per outline v1.1 — Spec #18 owns trace pipeline; Spec #16 retains canonical record format (§3.2.4.1), regression scenarios (§5), and emission-veto over tick-pipeline trace points (§3.1). All #16 / #19 citations tagged `TBD-NORMATIVE` per KD-3 / KD-4 status caveats. SPEC_INDEX flip to `IN REVIEW` is **author-driven**, not review-driven: it reflects "draft complete, awaiting lead-developer sign-off" per CLAUDE.md status definition. The §9 approval-checklist rows have not been walked. |

@@ -139,8 +139,11 @@ KD-6 (determinism-aware profiling). KD-3 inverted boundary with #16 §5
 Every profiling session declares:
 
 - Git SHA of the build under measurement.
-- Recorded seed (KD-6).
-- Recorded `EnvironmentFingerprint` per #16 §4 (`TBD-NORMATIVE`).
+- Recorded seed (KD-6). Stage 0+1 sessions obtain the seed via
+  `tools/select-seed.py` (Stage 0+1 deliverable; §7.1); Stage 0
+  sessions use a manually chosen deterministic seed per Appendix E
+  runbook.
+- Recorded `EnvironmentFingerprint` per #16 §4.8 (`TBD-NORMATIVE`).
 - Platform pin per KD-9.
 - Scenario manifest ID — references an #16 §5 scenario verbatim
   (`TBD-NORMATIVE`).
@@ -163,8 +166,9 @@ recorded the same way.
 ### 3.3.4 Sampling cadence
 
 - **Sampling-profiler default:** 1 kHz wall-clock samples — the 10 Hz
-  tactical loop produces 100 samples per tick. `[EST]`; pinned to the
-  chosen profiler at Stage 0+1 (§7.5 D1).
+  tactical loop produces 100 samples per tick; the 60 Hz physics loop
+  produces ~17 samples per frame (~16.67 ms per frame). `[EST]`;
+  pinned to the chosen profiler at Stage 0+1 (§7.5 D1).
 - **Instrumented-profiler default:** full function-entry / exit tracing
   on every hot path (KD-10 union). Off by default in shipping builds;
   on by default in baseline-capture builds.
@@ -212,10 +216,12 @@ baseline evidence are blocked at review (FR-PO-025).
 
 ### 3.4.3 Statistical-significance rule
 
-Improvement claims require N samples with a non-overlapping confidence
-interval against the pre-fix baseline. N is `[GT]`, pinned at Stage
-0+1 (§7.5 D8) — provisional value 30 samples / 95% CI per Spec #19
-§3.4.3 parallel convention (`TBD-NORMATIVE`; #19 status `IN REVIEW`).
+Improvement claims require N **independent profiling runs** (not N
+within-run tick samples) with a non-overlapping 95% confidence interval
+against the pre-fix baseline, each run under a distinct recorded seed
+and the same scenario + platform pin. N is `[GT]`, pinned at Stage 0+1
+(§7.5 D8) — provisional value 30 runs / 95% CI per Spec #19 §3.4.3
+(`TBD-NORMATIVE`) parallel convention.
 
 Below-significance "improvements" are not entered into the baseline;
 they are recorded as a §6.4 "Inconclusive" defect class.
@@ -237,7 +243,9 @@ Stage 0+1.)
 
 ### 3.4.5 Optimization-ticket lifecycle
 
-Tickets reference:
+Tickets are tracked in the project issue tracker; cross-spec defects
+are additionally logged as `ERR-018-NNN` rows in `spec-error-log.md`
+(§8.1.6). Tickets reference:
 
 - The FR-PO ID of the gate they're addressing.
 - The pre-fix baseline SHA.
@@ -255,8 +263,10 @@ activation).
 ### 3.5.2 Gate threshold
 
 - **Default regression threshold:** post-PR baseline MUST be within
-  +5% (`[GT]`, §7.5 D9) of the pre-PR baseline for the same scenario,
-  seed, and platform pin, per spec, per loop.
+  +5% (`[GT]`, §7.5 D9; provisional — set conservatively ahead of
+  first CI data; re-evaluated at Stage 0+1 against measured baseline
+  variance) of the pre-PR baseline for the same scenario, seed, and
+  platform pin, per spec, per loop.
 - **Allocation regression threshold:** any non-zero allocation on a
   hot path (KD-10 union) blocks merge regardless of magnitude.
 - **Per-spec overrides:** a spec's §6 MAY declare a tighter threshold.
@@ -274,9 +284,10 @@ activation).
 | Allocation | Spec #18 §3.7 (this section) | Non-zero allocation on hot-path entry |
 
 No gate is "soft". Flake quarantine (Spec #19 §3.7 `TBD-NORMATIVE`)
-applies to functional gates only — perf-gate flake is a determinism
-failure (KD-6 violation) and routes to #16 §5 triage, not #19 §3.7
-quarantine.
+applies to functional gates only — perf-gate variance exceeding the
+§3.5.2 threshold is treated as a potential KD-6 violation, triggers
+root-cause analysis per §6.4; confirmed non-determinism routes to
+#16 §5 triage, not #19 §3.7 quarantine.
 
 ### 3.5.4 Stage-0 posture (KD-5)
 
@@ -419,7 +430,7 @@ rationale (FR-PO-053).
 
 ### 3.8.1 Citation
 
-KD-3 inverted; #16 §3.2.4.1 for record-format binding; #16 §3.1 for
+KD-3 inverted; #16 §3.2.4.1 for record-format binding; #16 §3.1.2 for
 emission-veto authority over tick-pipeline trace points.
 
 ### 3.8.2 Trace pipeline architecture (#18-owned)
@@ -439,7 +450,10 @@ emission-veto authority over tick-pipeline trace points.
   Concrete tier semantics pinned at Stage 0+1 (§7.5 D10).
 - **Sampling rules per tier** (FR-PO-056):
   - `exhaustive` — every-tick capture.
-  - `standard` / `debug` — per-N-ticks (N pinned at Stage 0+1).
+  - `debug` — per-N-ticks, dense (captures at higher rate than
+    `standard`; N pinned at Stage 0+1, §7.5 D10).
+  - `standard` — per-M-ticks, sampled (lower rate than `debug`;
+    M pinned at Stage 0+1, §7.5 D10).
   - `minimal` — event-driven only.
 - **Channel-to-sink routing.** In-memory ring buffer (default), file
   sink (baseline-capture builds), network sink (Stage 1+ telemetry).
@@ -458,7 +472,7 @@ determinism rules:
   brand string, locale, etc.).
 
 **#16 veto authority.** Any trace point #18 proposes to insert *inside*
-the canonical tick pipeline (#16 §3.1, `TBD-NORMATIVE`) requires
+the canonical tick pipeline (#16 §3.1.2, `TBD-NORMATIVE`) requires
 #16-owner sign-off. Trace points emitted *outside* the tick pipeline
 (editor-only tooling, CI harness, post-tick aggregation) do not require
 #16 sign-off but still must conform to the four constraints above.
@@ -505,7 +519,7 @@ rule).
 
 ### 3.8.8 Anti-patterns
 
-- **Adding a trace point inside #16 §3.1 without #16-owner sign-off**
+- **Adding a trace point inside #16 §3.1.2 without #16-owner sign-off**
   (violates emission-veto authority; §5.7 boundary block).
 - Emitting a trace record in a non-canonical layout (violates KD-11
   binding to #16 §3.2.4.1).
@@ -520,8 +534,8 @@ rule).
 - **3.9.1 — Spec-time perf claims** (e.g., Shot Mechanics #6 §4.5's
   "0.017 ms estimated"): treated as `[EST]` baseline anchors; the
   first Stage 0+1 baseline capture promotes the estimate to a measured
-  value tagged `[GT]` if within ±20% (`[GT]`; §3.10) of estimate, or
-  files an `ERR-018-NNN` review finding if not.
+  value tagged `[GT]` if within ±20% `[GT]` of estimate, or files an
+  `ERR-018-NNN` review finding if not.
 - **3.9.2 — Editor-only / debug-tool perf:** outside the KD-10
   hot-path union; alloc-tracker exempt; functional rules still apply.
 - **3.9.3 — Multi-platform divergence (Stage 5+):** when Stage 5
@@ -532,9 +546,10 @@ rule).
   are exempt from §3.5.2 regression gates (warmup allocations, JIT for
   Mono); N pinned at Stage 0+1.
 - **3.9.5 — Soak runs:** long-horizon profiling (≥ one full match) is
-  owned by Spec #19 §3.1 end-to-end / soak layer for *test execution*
-  (`TBD-NORMATIVE`; #19 status `IN REVIEW`); Spec #18 §3.3 governs
-  the perf-metric capture *from* those runs. Both apply, no overlap.
+  owned by Spec #19 §3.1 (`TBD-NORMATIVE`) end-to-end / soak layer
+  for *test execution*;
+  Spec #18 §3.3 governs the perf-metric capture *from* those runs.
+  Both apply, no overlap.
 
 ## 3.10 Constants Catalogue (governance metadata only)
 
@@ -546,7 +561,10 @@ inline at the point of declaration:
 |-------|-----|------------|-----------|
 | Per-PR regression threshold = +5% | `[GT]` | §3.5.2 | Below first-Stage-1 measured variance band; tightenable at §7.5 D9 |
 | Absolute-threshold guard = +10% | `[GT]` | §3.5.6 | Twice per-PR threshold; catches creep without false-positives on legitimate stepwise growth |
-| Hot-path allocation budget = 0 bytes/tick | `[FIXED]` | §3.7.3 | Non-tunable architectural mandate per CLAUDE.md "When Writing Code: zero-allocation architecture in the game loop" — not designer-settable; FR-PO-050 reinforces "MUST declare allocation budget = 0 bytes per tick" |
+| Hot-path allocation budget = 0 bytes/tick | `[FIXED]` | §3.7.3 | Mandated by CLAUDE.md "When Writing Code: zero-allocation architecture in the game loop"; non-tunable invariant |
+| [EST]-baseline acceptance tolerance = ±20% | `[GT]` | §3.9.1 | Below this, first-run measured value promotes `[EST]` anchor to `[GT]`; above this, an `ERR-018-NNN` finding is filed |
+| Dashboard sample window = 100 captures | `[GT]` | Appendix F.1 | Window for per-spec p50/p99 aggregation; pinned at Stage 0+1 |
+| Flake-rate alert threshold = 1% | `[GT]` | Appendix F.5 | Above this, boundary-defect routing triggered per §5.7.3 |
 | Sampling-profiler default = 1 kHz | `[EST]` | §3.3.4 | Pinned to chosen profiler at Stage 0+1 (§7.5 D1) |
 | Statistical-significance N = 30 samples / 95% CI | `[EST]` | §3.4.3 | Pinned at Stage 0+1 (§7.5 D8); parallel to Spec #19 §3.4.3 |
 | Headroom multiplier (per spec) | `[GT]` | §3.1.2 | Owning-spec discretion; typical 1.2× – 1.5× |
@@ -572,5 +590,6 @@ Per-spec physical budgets cited (not republished) live in each spec's
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: H-2 §3.4.4 MAY→MUST (ERR-018-003); M-2 §3.10 [GT]→[FIXED] for 0 bytes/tick (ERR-018-006); M-3 TBD-NORMATIVE added to §3.3.5/§3.4.3/§3.9.5 (ERR-018-007); M-4 ±20% tagged [GT] in §3.9.1 + §3.10 row added (ERR-018-008); L-1 standard/debug verbosity tiers differentiated; L-4 60Hz sample count added §3.3.4; L-5 N clarified as independent runs §3.4.3; L-7 seed-selection tool stub added §3.3.2; L-8 [GT] provisional note in §3.5.2; L-9 #16 §3.1→§3.1.2 emission-veto citations; L-10 #16 §4→§4.8 EnvironmentFingerprint; L-11 perf-gate flake claim softened §3.5.3; L-12 ticket storage added §3.4.5. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §3. Eleven subsections (§3.1 … §3.11) cover budget roll-up, loop separation, profiling, optimization ladder, regression gates, degradation policy, hot-path enumeration, trace pipeline (KD-3 inverted), edge cases, governance constants. All #16 / #19 citations tagged `TBD-NORMATIVE`. |
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 003 / 005 / 006 / 007 / 008 / 010). §3.1.2 + §3.7.5 reworded — `[HotPathAllocExempt]` declared in #18 §3.7.5 (no longer cites Spec #20 §3); first-implementation site at first `src/` commit. §3.4.4 MAY → MUST with Stage 0 carve-out + FR-PO-068 merge-blocking link. §3.8.2 channel-registry bullet rewritten to cite **Appendix F.0** (Stage 0 schema deliverable). §3.10 — Hot-path allocation budget re-tagged `[GT]` → `[FIXED]`; ±20% promotion tolerance, N=100 rolling-window, 1% flake-rate threshold added with rationale. §3.3.5, §3.4.3, §3.9.5 gain `(TBD-NORMATIVE; #19 status IN REVIEW)` parenthetical. §3.9.1 inline `[GT]` tag on ±20%. |
