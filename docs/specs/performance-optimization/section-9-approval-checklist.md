@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 9: Approval Checklist
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
+**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
 **Purpose:** Self-applicable approval checklist. Every row resolves
 to either a named, version-controlled file path or a named programmatic
 check (per Spec #19 KD-6 programmatic-verification mandate). Rows
@@ -85,8 +85,12 @@ per the §3.10 / §8.4 evidence-artifact convention.
       gaps found).
   - Evidence: `docs/tracking/spec-error-log.md` rows; `ERR-018-001`
     closed atomically with this section file's landing.
-- [ ] `SPEC_INDEX.md` status updated atomically with sign-off.
-  - Evidence: `docs/specs/SPEC_INDEX.md` row 18 status field.
+- [x] `SPEC_INDEX.md` status updated atomically with the
+      `IN PROGRESS → IN REVIEW` flip (v0.2 fix pass, May 14, 2026);
+      the `IN REVIEW → APPROVED` flip is the future atomic update with
+      lead-developer sign-off.
+  - Evidence: `docs/specs/SPEC_INDEX.md` row 18 status field (`IN
+    REVIEW` as of May 14, 2026).
 - [ ] Spec #19's `TBD-NORMATIVE` tags pointing at "Spec #18 §4 / §7"
       preconditions (per Spec #19 KD-3 status caveat) audited: those
       preconditions are this file set (§4 + §7 headers present) —
@@ -94,11 +98,11 @@ per the §3.10 / §8.4 evidence-artifact convention.
       REVIEW` is symmetric with #18 advancing toward `APPROVED`.
   - Evidence: `testing-strategy/section-1.md §1.4` bidirectional
     sequencing block; #19 reviewer note.
-- [ ] `docs/tracking/file-manifest.md` updated to reflect new
+- [x] `docs/tracking/file-manifest.md` updated to reflect new
       section-file content.
-  - Evidence: `file-manifest.md` rows for `performance-optimization/
-    section-1.md … section-9-approval-checklist.md` + `appendices.md`
-    moved from "stub" to "drafted".
+  - Evidence: `file-manifest.md` row 18 records "v0.2 (PASS-1
+    adversarial review `ERR-018-002` … `ERR-018-011` resolved May 14,
+    2026)" — moved from "stub" to "drafted at v0.2".
 
 ## 9.4 Decision
 
@@ -141,3 +145,4 @@ Resolution path (per §1.4 bidirectional sequencing):
 |---------|--------------|-------------|-------|
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: M-3 §9.4.1 #19 blocker list extended with §3.3.5/§3.4.3/§3.9.5 (ERR-018-007); M-7 SPEC_INDEX.md updated atomically to IN REVIEW with this v0.2 pass (ERR-018-011). |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §9. Self-applicable checklist with KD-6 binding (every row cites file path or programmatic check). Appendix D survey scope decision recorded. `TBD-NORMATIVE` blocker list at §9.4.1 explicit for reviewer. Status flipped to `IN REVIEW` author-driven; lead-developer sign-off pending. |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-007` / 011). §9.4.1 #19 blocker list extended to include §3.3.5, §3.4.3, §3.9.5 (now `TBD-NORMATIVE`). §9.3 atomic-update checkbox flipped `[x]` for the `IN PROGRESS → IN REVIEW` flip (now atomic with `SPEC_INDEX.md` row 18 update); §9.3 file-manifest checkbox also flipped `[x]` (manifest updated to record v0.2). `IN REVIEW → APPROVED` flip remains the future atomic update with lead-developer sign-off. |

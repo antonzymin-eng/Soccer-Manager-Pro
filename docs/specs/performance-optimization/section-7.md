@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 7: Future Extensions
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
+**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
 **Purpose:** Enumerates the Stage 0+1 transition deliverables, the
 Stage 1 deliverables, the Stage 5+ extensions, the permanent
 exclusions (rules that never change posture), and the deferred-
@@ -92,3 +92,4 @@ Rules whose posture is never changed by any future stage:
 |---------|--------------|-------------|-------|
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: H-3 D9 resolution stage Stage 1→Stage 0+1 (ERR-018-004); L-9 §7.4 emission-veto citation #16 §3.1→§3.1.2. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §7. Stage 0+1 transition deliverables, Stage 1 deliverables, Stage 5+ extensions, permanent exclusions (KD-7 / KD-3 / KD-6 / KD-2 / KD-11), and deferred-decisions tracker (D1 … D10) authored. `IDashboardSink` deferral to §7.2 explicit per CLAUDE.md "Interface Design Principle". |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-004`). §7.5 D9 resolution stage re-anchored "Stage 1" → "Stage 0+1" to match FR-PO-031 + §7.1; rolling 30-day re-evaluation no longer delays the Stage 0+1 activation. |

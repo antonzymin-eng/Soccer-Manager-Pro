@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 13, 2026 (Performance Optimization #18 outline-detailed.md v1.0 landed — IN PROGRESS)  
+**Last Updated:** May 14, 2026 (Performance Optimization #18 section files v0.2 — PASS-1 adversarial review `ERR-018-002` … `ERR-018-011` resolved; status flipped `IN PROGRESS → IN REVIEW`)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---

@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Appendices
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
+**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
 **Purpose:** Reference artifacts cited by §3 / §4 / §5 / §6 / §7 / §9.
 Appendix A baseline-record format binds to #16 §3.2.4.1 (KD-11);
 Appendix B is the paste-ready per-spec §6 schema; Appendix C is the
@@ -219,11 +219,41 @@ will land.
 
 ---
 
-## Appendix F — Dashboard Schema Catalogue
+## Appendix F — Trace Channel Registry & Dashboard Schema Catalogue
 
-Paste-ready schema for each Stage 1 dashboard enumerated in §3.8.6.
-Per-dashboard: data source (which §3.8.2 #18-owned trace channel),
-aggregation rule, refresh cadence, alert threshold (where applicable).
+Paste-ready schemas for the §3.8.2 trace pipeline. F.0 is the
+**channel registry schema** (Stage 0 deliverable per §3.8.2; populated
+entries are a Stage 1 deliverable). F.1 … F.5 are the **dashboard
+schemas** for §3.8.6 dashboards (Stage 1 deliverables). Every
+dashboard cites its upstream channel from the F.0 registry, so F.0
+ships before F.1 … F.5 can resolve their data-source fields.
+
+### F.0 Channel Registry Schema
+
+The channel registry is the catalogue of every named instrumentation
+channel emitted by `src/` code under the §3.8.2 trace pipeline. Each
+row in the populated Stage 1 registry conforms to this schema.
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `channel_name` | string (dotted, lower-snake — e.g., `perf.budget`) | yes | Globally unique; namespace prefix is the owning subsystem (`perf`, `ai`, `physics`, …) |
+| `owning_subsystem` | string (spec ID, e.g., `#18`, `#8`) | yes | The spec whose §6 budget this channel reports against; for #18-internal channels (`perf.*`) the owner is #18 |
+| `default_verbosity` | enum {`minimal`, `standard`, `debug`, `exhaustive`} | yes | Per §3.8.2 / FR-PO-055 |
+| `sampling_rule` | enum {`every-tick`, `per-N-ticks`, `event-driven`} | yes | Per §3.8.2 / FR-PO-056; for `per-N-ticks` the integer `sample_n` field MUST be populated |
+| `sample_n` | uint | conditional | Required iff `sampling_rule = per-N-ticks` |
+| `sink_routing` | list of enum {`ring-buffer`, `file-sink`, `network-sink`} | yes | Per §3.8.2; `network-sink` Stage 1+ only |
+| `determinism_class` | enum {`tier-a`, `tier-b`, `tier-c`} | yes | Per #16 §1.3 tier classification (`TBD-NORMATIVE`); Tier A / B channels MUST be determinism-clean per FR-PO-058a |
+| `inside_tick_pipeline` | bool | yes | If true, every channel-emission point sits inside #16 §3.1 canonical tick pipeline and requires recorded #16-owner sign-off per FR-PO-058a |
+| `sign_off_log_ref` | string (`ERR-NNN` or `spec-error-log.md` row ID) | conditional | Required iff `inside_tick_pipeline = true`; cites the row recording #16-owner sign-off |
+| `record_format_version` | semver | yes | Pinned to the #16 §3.2.4.1 canonical-record-format version active at channel-registry-row creation date |
+| `owner_contact` | string | yes | Spec-author or subsystem-owner GitHub handle / role title |
+| `created_date` | RFC 3339 date | yes | Registry-row creation date |
+| `version_history` | list of {date, semver, notes} | yes | Append-only; every channel-schema change records a row |
+
+**Stage 0 status:** schema declared (this F.0 section). **Stage 1
+status:** registry rows populated. **Audit hook:** §5.7.1 boundary
+check walks every row with `inside_tick_pipeline = true` and confirms
+`sign_off_log_ref` resolves to a present `spec-error-log.md` row.
 
 ### F.0 Channel Registry Schema
 
@@ -292,7 +322,8 @@ Additional channels declared at Stage 0+1 once subsystem implementations exist.
   #18 §3.4.4 baseline-validator output.
 - **Aggregation:** per-scenario flake rate vs perf-baseline staleness.
 - **Refresh cadence:** weekly.
-- **Alert threshold:** flake rate > 1% `[GT]` triggers boundary-defect
+- **Alert threshold:** flake rate > 1% (`[GT]`; catalogued in
+  §3.10 / §8.4; Stage 1 governance pin) triggers boundary-defect
   routing (§5.7.3).
 
 ---
@@ -338,3 +369,4 @@ cited from #16; pyramid / coverage / flake terms are cited from #19.
 |---------|--------------|-------------|-------|
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: H-1 Appendix B [HotPathAllocExempt] ownership corrected — #18 §3.7.5 not Spec #20 §3 (ERR-018-002); H-4 Appendix F.0 channel registry schema added (ERR-018-005); M-6 F.5 flake rate 1% tagged [GT] (ERR-018-010); L-6 Appendix B §6.6 table separator row added; L-9 Appendix G emission-veto entry #16 §3.1→§3.1.2; L-10 Appendix A #16 §4→§4.8 EnvironmentFingerprint. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 Appendices block. Appendix A (baseline record format with #16 §3.2.4.1 binding per KD-11), Appendix B (per-spec §6 schema paste-ready template), Appendix C (roll-up table headers + Shot Mechanics #6 row populated; remaining cells `_TBD_` per Appendix D survey scope), Appendix D (survey headers; row contents Stage 0+1 deliverable per §9.2), Appendix E (Stage-0 local-runbook shell-script outline), Appendix F (dashboard schema catalogue for §3.8.6 dashboards), Appendix G (spec-specific glossary). All #16 / #19 citations tagged `TBD-NORMATIVE`. |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 005 / 010). Appendix B exemption clause rewritten — `[HotPathAllocExempt]` cites Spec #18 §3.7.5 (no longer cites Spec #20 §3). New **Appendix F.0 Channel Registry Schema** authored before F.1 (12 fields: channel name, owning subsystem, default verbosity, sampling rule, sample_n, sink routing, determinism class, inside-tick-pipeline flag, sign-off log ref, record-format version, owner, created date, version history); F-header rewritten to reflect F.0 Stage 0 schema deliverable + F.1 … F.5 Stage 1 populated rows. Appendix F.5 inline `[GT]` tag appended to "> 1%" flake-rate threshold. |

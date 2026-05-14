@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 2: Functional Requirements & Budget Governance Model
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
+**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
 **Purpose:** Publishes the FR-PO-### functional-requirement catalogue,
 the conformance-level grammar, the failure-to-comply modes, the
 data-structure inventory (informational; Spec #18 declares no runtime
@@ -150,7 +150,7 @@ when the dashboard front-end ships.
 | ID | Statement | Level | Source | Verify | Stage |
 |----|-----------|-------|--------|--------|-------|
 | FR-PO-069 | Stage 0 manual benchmarking MUST run against synthetic harnesses in `tools/perf-harness/`; no `src/` code yet. | MUST | KD-5 | §5.1 | Stage 0 |
-| FR-PO-070 | `tools/run-perf-local.sh` (Appendix E) MUST invoke the §5.3 schema-conformance auditor and §5.5 loop-tag auditor against `docs/specs/` only. Stage 0: manual audit execution per Appendix E template. Stage 0+1: Python-tooling implementation (§7.1). | MUST | KD-5 | §5.1 | Stage 0 (manual) / Stage 0+1 (automated) |
+| FR-PO-070 | At Stage 0 the reviewer MUST execute the manual-review equivalents of the §5.3 schema-conformance and §5.5 loop-tag auditors against `docs/specs/` only (the `tools/run-perf-local.sh` script in Appendix E is the structural template for the Stage 0+1 automation; the Python implementation lands per §7.1 / D2). At Stage 0+1 activation, `tools/run-perf-local.sh` MUST invoke the automated `tools/budget-auditor.py` against `docs/specs/` only. | MUST | KD-5 | §5.1 | Stage 0 / Stage 0+1 |
 | FR-PO-071 | Local runbook output MUST be pasted into the PR description by the reviewer. | SHOULD | §6.2 | §5.1 | Stage 0 |
 | FR-PO-072 | Stage 0 anchor baselines MAY be captured against synthetic harnesses; they MUST be marked "anchor / Stage 0" and MUST NOT be cited as gameplay baselines. | MAY | KD-5 / KD-11 | §5.4 | Stage 0 |
 | FR-PO-073 | Stage 0 baselines using a synthetic harness MUST still record the FR-PO-016 session-contract fields (with `EnvironmentFingerprint` recorded as best-available before #16 §4 normative landing). | MUST | KD-6 / KD-11 | §5.4 | Stage 0 |
@@ -231,3 +231,4 @@ the §2.3 compliance modes:
 |---------|--------------|-------------|-------|
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: H-1 FR-PO-053 [HotPathAllocExempt] ownership corrected — governance identifier declared in §3.7.5, not Spec #20 §3 (ERR-018-002); M-5 FR-PO-070 stage column clarified Stage 0 manual / Stage 0+1 automated (ERR-018-009); L-10 FR-PO-016 #16 §4→§4.8 EnvironmentFingerprint citation; L-11 FR-PO-038 perf-gate flake claim softened. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §2. FR catalogue published with 81 FRs (FR-PO-001 … 080 + FR-PO-058a per outline v1.1 emission-constraint addition). All FRs assigned source citation, verification pointer, and activation stage. `TBD-NORMATIVE` tags applied to every #16 / #19 citation. |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002`, `ERR-018-009`). FR-PO-053 reworded — `[HotPathAllocExempt]` ownership relocated to Spec #18 §3.7.5 (no longer cites Spec #20 §3); source-citation column for FR-PO-053 narrowed to `KD-10` (KD-1 cite-not-redefine framing dropped for this case). FR-PO-070 split Stage 0 manual / Stage 0+1 automated to align with §7.1 tool-deliverable schedule; activation-stage column annotated `Stage 0 / Stage 0+1`. |

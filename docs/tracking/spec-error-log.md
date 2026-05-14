@@ -627,6 +627,7 @@ in Shot Mechanics changelog when the edit is made.
 
 ## ERR-018-002: `[HotPathAllocExempt]` cited as declared in Spec #20 §3 but does not exist there
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; option-2 path; Spec #20 not touched).
 **Severity:** High (citation of APPROVED spec for content it does not contain — matches CLAUDE.md "fabricated checklist values" hazard class)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 adversarial review of Performance Optimization #18 section files v0.1
@@ -669,6 +670,7 @@ Option (2) has the smallest cross-spec blast radius because #20 is APPROVED and 
 
 ## ERR-018-003: MUST/MAY conflict between FR-PO-067 and §3.4.4 on baseline-reproducibility re-run
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; §3.4.4 upgraded MAY → MUST with Stage 0 carve-out).
 **Severity:** High (binding-requirement contradiction within the same spec)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review of #18 section files v0.1
@@ -700,6 +702,7 @@ Either upgrade §3.4.4 to "MUST re-run" (aligning §3 with §2's binding require
 
 ## ERR-018-004: Three-way stage-of-resolution contradiction on +5% threshold (FR-PO-031 / §7.5 D9 / §7.1)
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; §7.5 D9 re-anchored Stage 0+1 to match FR-PO-031 and §7.1).
 **Severity:** High (three locations in the same spec state three different resolution stages for the same governance number)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -731,6 +734,7 @@ Choose one canonical stage and update all three locations. Recommended: Stage 0+
 
 ## ERR-018-005: Channel registry schema absent from Appendix F; §3.8.2 "Stage 0 declares schema" obligation unmet
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; new **Appendix F.0 Channel Registry Schema** authored with 12 schema fields; §3.8.2 channel-registry bullet rewritten to cite F.0 as the Stage 0 schema deliverable).
 **Severity:** High (declared Stage 0 deliverable is missing; channel names used without registry backing)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -760,6 +764,7 @@ Author an "Appendix F.0 — Channel Registry Schema" (or "Appendix H — Channel
 
 ## ERR-018-006: Hot-path allocation budget = 0 bytes/tick tagged `[GT]` instead of `[FIXED]` in §3.10
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; §3.10 row re-tagged `[GT]` → `[FIXED]`; §8.4 mirror row updated).
 **Severity:** Medium (constant-tag misclassification; implies designer-tunability of an architectural mandate)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -784,6 +789,7 @@ Re-tag as `[FIXED]` ("invariant by project mandate") or remove from the constant
 
 ## ERR-018-007: Three Spec #19 body-text citations missing `TBD-NORMATIVE` tag
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; `TBD-NORMATIVE` added to §3.3.5, §3.4.3, §3.9.5; §9.4.1 #19 blocker list extended).
 **Severity:** Medium (KD-4 status caveat violated; §9.4.1 blocker list incomplete)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -816,6 +822,7 @@ Add `(TBD-NORMATIVE)` parenthetical to each citation and add §3.4.3, §3.3.5, �
 
 ## ERR-018-008: §3.9.1 ±20% promotion tolerance untagged and absent from constants catalogue
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; inline `[GT]` tag at §3.9.1; new ±20% row in §3.10 + §8.4 with rationale).
 **Severity:** Medium (untagged constant; CLAUDE.md requires source tag on every constant in every spec)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -841,6 +848,7 @@ Add the ±20% threshold to §3.10's table with `[GT]` tag and rationale (e.g., "
 
 ## ERR-018-009: FR-PO-070 (Stage 0 MUST) requires invoking Stage 0+1 tooling
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; option (b) — FR-PO-070 split Stage 0 manual / Stage 0+1 automated; §5.2 activation row and §5.6 traceability row updated).
 **Severity:** Medium (FR activation-stage / tooling-availability mismatch)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -869,6 +877,7 @@ Either (a) move FR-PO-070 to "Stage 0+1" activation stage in §2.2.10 — matchi
 
 ## ERR-018-010: Appendix F.1 N=100 and F.5 1% flake-rate thresholds absent from §3.10
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; both values added to §3.10 + §8.4 with rationale; Appendix F.5 inline `[GT]` tag appended).
 **Severity:** Medium (governance constants outside the declared constants catalogue; F.5 also untagged)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
@@ -899,6 +908,7 @@ Add both values to §3.10 (and §8.4 mirror) with tags and rationale. F.5's thre
 
 ## ERR-018-011: `SPEC_INDEX.md` row 18 not updated; §9.4 prematurely claims `IN REVIEW`
 
+**Status:** ✅ Resolved — May 14, 2026 (#18 section-file v0.2; option (a) — `SPEC_INDEX.md` row 18 + CLAUDE.md OPEN ISSUES + `file-manifest.md` row 18 all flipped to `IN REVIEW` atomically; §9.3 atomic-update checkbox flipped `[x]` for the `IN PROGRESS → IN REVIEW` transition; `IN REVIEW → APPROVED` flip remains the future atomic update with lead-developer sign-off).
 **Severity:** Medium (canonical-registry contradiction; CLAUDE.md says SPEC_INDEX.md is the source of truth on status)
 **Detected:** May 14, 2026
 **Detected During:** PASS-1 review
