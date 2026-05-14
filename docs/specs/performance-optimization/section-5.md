@@ -132,7 +132,7 @@ Any change to:
 - #16 §5 (regression scenarios) — scenario IDs or manifest format.
 - #16 §3.2.4.1 (canonical record format) — field layout or version
   field.
-- #16 §3.1 (canonical tick pipeline) — emission points or
+- #16 §3.1.2 (canonical tick pipeline) — emission points or
   determinism-of-emission rules.
 
 triggers a Spec #18 §3.3 / §3.8 review (recorded in §1.4 dependency
@@ -170,4 +170,5 @@ runs at each CI invocation as the gate-ownership lookup table
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 finding resolved: L-9 §5.7 #16 §3.1→§3.1.2 canonical tick pipeline citation. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §5. Reflexive verification model declared. Stage-gated activation table (KD-5) per FR range. Auditor procedures for schema-conformance (§5.3), baseline reproducibility (§5.4), loop-tag (§5.5), and boundary (§5.7) authored. Stage 0 acknowledged degenerate per parallel Spec #19 §5.1 / Spec #20 §5.1 convention. All #16 / #19 citations tagged `TBD-NORMATIVE`. |

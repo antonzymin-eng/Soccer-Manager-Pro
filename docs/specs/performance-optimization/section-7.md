@@ -65,7 +65,7 @@ Rules whose posture is never changed by any future stage:
   - *Note:* under inverted KD-3, Spec #18 *owns* the trace pipeline,
     so "parallel trace pipeline" is no longer a coherent
     anti-pattern — but a parallel *record format* still is.
-- **Trace point inside #16 §3.1 without #16-owner sign-off** — never
+- **Trace point inside #16 §3.1.2 without #16-owner sign-off** — never
   permitted (§3.8.3 emission-veto authority).
 - **Wall-clock-seeded profiling runs** — never accepted into baseline
   corpus (§3.3.6; KD-6).
@@ -83,11 +83,12 @@ Rules whose posture is never changed by any future stage:
 | D6 | Per-platform budget reconciliation rule under Fixed64 | Stage 5+ | Tied to Spec #9 multiplayer scope |
 | D7 | Engine-overhead headroom number (§3.1.4) | Stage 0+1 | Once Unity LTS + scripting backend pinned |
 | D8 | §3.4.3 statistical-significance N pin | Stage 0+1 | Provisional: 30 samples / 95% CI |
-| D9 | §3.5.2 +5% threshold pin (may tighten/loosen after first 30 days of CI data) | Stage 1 | Tie to first-month variance measurement |
+| D9 | §3.5.2 +5% threshold pin (may tighten/loosen after first 30 days of CI data) | Stage 0+1 | Tie to first-month CI baseline variance measurement (§7.1 re-evaluation deliverable) |
 | D10 | §3.8.2 verbosity-tier numeric semantics (sampling rate per tier, channel-to-sink defaults) | Stage 0+1 | Pinned once instrumented-profiler chosen |
 
 ## 7.6 Version History
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: H-3 D9 resolution stage Stage 1→Stage 0+1 (ERR-018-004); L-9 §7.4 emission-veto citation #16 §3.1→§3.1.2. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §7. Stage 0+1 transition deliverables, Stage 1 deliverables, Stage 5+ extensions, permanent exclusions (KD-7 / KD-3 / KD-6 / KD-2 / KD-11), and deferred-decisions tracker (D1 … D10) authored. `IDashboardSink` deferral to §7.2 explicit per CLAUDE.md "Interface Design Principle". |

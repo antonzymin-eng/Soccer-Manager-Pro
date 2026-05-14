@@ -60,7 +60,7 @@ when the dashboard front-end ships.
 
 | ID | Statement | Level | Source | Verify | Stage |
 |----|-----------|-------|--------|--------|-------|
-| FR-PO-016 | Every profiling session MUST record git SHA, recorded seed, `EnvironmentFingerprint` (per #16 §4 `TBD-NORMATIVE`), platform pin (per KD-9), scenario manifest ID (per #16 §5 `TBD-NORMATIVE`), session start/end timestamps, and hardware perf-counter snapshot. | MUST | KD-6 | §5.4 | Stage 0+1 |
+| FR-PO-016 | Every profiling session MUST record git SHA, recorded seed, `EnvironmentFingerprint` (per #16 §4.8 `TBD-NORMATIVE`), platform pin (per KD-9), scenario manifest ID (per #16 §5 `TBD-NORMATIVE`), session start/end timestamps, and hardware perf-counter snapshot. | MUST | KD-6 | §5.4 | Stage 0+1 |
 | FR-PO-017 | Sessions missing any field required by FR-PO-016 MUST be rejected by the §3.4.4 baseline validator. | MUST | KD-6 / KD-11 | §5.4 | Stage 0+1 |
 | FR-PO-018 | Spec #18 MUST NOT author its own perf scenarios; every profiling session runs an #16 §5 scenario verbatim (`TBD-NORMATIVE`). | MUST | KD-3 / KD-6 | §5.7 | Stage 0+1 |
 | FR-PO-019 | Cross-scenario profiling (Spec #19 KD-8 cross-spec scenarios) is permitted; the manifest ID and seed MUST be recorded the same way. | MAY | KD-6 | §5.4 | Stage 0+1 |
@@ -92,7 +92,7 @@ when the dashboard front-end ships.
 | FR-PO-035 | The determinism gate (Spec #16 §5 + §3.2.4.1, `TBD-NORMATIVE`) MUST block on bitwise mismatch against the canonical-record-format golden trace. Out of #18's authority; declared for gate-composition completeness. | MUST | KD-3 | §5.7 | Stage 0+1 |
 | FR-PO-036 | The performance gate (this spec §3.5) MUST block on FR-PO-031 threshold exceeded. | MUST | §3.5 | §5.6 | Stage 0+1 |
 | FR-PO-037 | The allocation gate (this spec §3.7) MUST block on FR-PO-032 violation. | MUST | §3.7 | §5.6 | Stage 0+1 |
-| FR-PO-038 | No gate MAY be configured as "soft"; flake-quarantine (Spec #19 §3.7 `TBD-NORMATIVE`) applies to functional gates only — perf-gate flake is a determinism failure (KD-6 violation) and routes to #16 §5 triage. | MUST | KD-4 / KD-6 | §5.7 | Stage 0+1 |
+| FR-PO-038 | No gate MAY be configured as "soft"; flake-quarantine (Spec #19 §3.7 `TBD-NORMATIVE`) applies to functional gates only — perf-gate variance exceeding §3.5.2 threshold is treated as a potential KD-6 violation, triggers root-cause analysis per §6.4, and confirmed non-determinism routes to #16 §5 triage. | MUST | KD-4 / KD-6 | §5.7 | Stage 0+1 |
 | FR-PO-039 | An absolute-threshold guard MUST compare against the milestone baseline independently of per-PR delta. Drift beyond +10% (`[GT]`) of milestone baseline MUST block merge regardless of incremental delta history. | MUST | §3.5.6 | §5.6 | Stage 0+1 |
 | FR-PO-040 | Perf-gate exceptions MUST follow the §2.1 exception-with-sign-off procedure; silent threshold bypass is forbidden. | MUST | §2.1 / §3.5.5 | §5.7 | Stage 0+1 |
 
@@ -117,7 +117,7 @@ when the dashboard front-end ships.
 | FR-PO-050 | Every hot-path entry MUST declare allocation budget = 0 bytes per tick. | MUST | KD-10 / CLAUDE.md | §5.6 | Stage 0+1 |
 | FR-PO-051 | The per-build allocation tracker MUST diff against the FR-PO-049 union; non-zero allocations in a union method MUST block merge. | MUST | KD-10 | §5.6 | Stage 0+1 |
 | FR-PO-052 | Enforcement runs on the IL2CPP build per `certification-platform.md` Stage 0 row (`TBD` pin); editor-mode (Mono) runs are not enforcement-grade. | MUST | KD-9 / KD-10 | §5.4 | Stage 0+1 |
-| FR-PO-053 | One-shot allocations exempt via `[HotPathAllocExempt]` (declared in Spec #20 §3, cite-not-redefine per KD-1) MUST cite a rationale and require lead-developer sign-off. | MUST | KD-1 / KD-10 | §5.6 | Stage 0+1 |
+| FR-PO-053 | One-shot allocations exempt via `[HotPathAllocExempt]` (governance identifier declared in Spec #18 §3.7.5; C# attribute definition deferred to Stage 0+1 per KD-5; zero-allocation mandate cites Spec #20 §3) MUST cite a rationale and require lead-developer sign-off. | MUST | KD-10 | §5.6 | Stage 0+1 |
 
 ### 2.2.8 Trace pipeline & dashboard mechanics (FR-PO-054 … 062, KD-3 inverted)
 
@@ -150,7 +150,7 @@ when the dashboard front-end ships.
 | ID | Statement | Level | Source | Verify | Stage |
 |----|-----------|-------|--------|--------|-------|
 | FR-PO-069 | Stage 0 manual benchmarking MUST run against synthetic harnesses in `tools/perf-harness/`; no `src/` code yet. | MUST | KD-5 | §5.1 | Stage 0 |
-| FR-PO-070 | `tools/run-perf-local.sh` (Appendix E) MUST invoke the §5.3 schema-conformance auditor and §5.5 loop-tag auditor against `docs/specs/` only. | MUST | KD-5 | §5.1 | Stage 0 |
+| FR-PO-070 | `tools/run-perf-local.sh` (Appendix E) MUST invoke the §5.3 schema-conformance auditor and §5.5 loop-tag auditor against `docs/specs/` only. Stage 0: manual audit execution per Appendix E template. Stage 0+1: Python-tooling implementation (§7.1). | MUST | KD-5 | §5.1 | Stage 0 (manual) / Stage 0+1 (automated) |
 | FR-PO-071 | Local runbook output MUST be pasted into the PR description by the reviewer. | SHOULD | §6.2 | §5.1 | Stage 0 |
 | FR-PO-072 | Stage 0 anchor baselines MAY be captured against synthetic harnesses; they MUST be marked "anchor / Stage 0" and MUST NOT be cited as gameplay baselines. | MAY | KD-5 / KD-11 | §5.4 | Stage 0 |
 | FR-PO-073 | Stage 0 baselines using a synthetic harness MUST still record the FR-PO-016 session-contract fields (with `EnvironmentFingerprint` recorded as best-available before #16 §4 normative landing). | MUST | KD-6 / KD-11 | §5.4 | Stage 0 |
@@ -229,4 +229,5 @@ the §2.3 compliance modes:
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: H-1 FR-PO-053 [HotPathAllocExempt] ownership corrected — governance identifier declared in §3.7.5, not Spec #20 §3 (ERR-018-002); M-5 FR-PO-070 stage column clarified Stage 0 manual / Stage 0+1 automated (ERR-018-009); L-10 FR-PO-016 #16 §4→§4.8 EnvironmentFingerprint citation; L-11 FR-PO-038 perf-gate flake claim softened. |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §2. FR catalogue published with 81 FRs (FR-PO-001 … 080 + FR-PO-058a per outline v1.1 emission-constraint addition). All FRs assigned source citation, verification pointer, and activation stage. `TBD-NORMATIVE` tags applied to every #16 / #19 citation. |
