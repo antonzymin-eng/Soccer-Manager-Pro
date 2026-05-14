@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 3: Technical Specification
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
+**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
 **Purpose:** Publishes the rule mechanics behind every FR-PO-### in §2.
 This section does not restate FR statements; each subsection cites the
 FR-PO-### range it implements and provides the *how*.
@@ -28,7 +28,8 @@ Every §6 MUST publish:
 - **Per-tick budget by loop tag** (10 Hz / 60 Hz, per KD-8).
 - **Allocation budget** — always 0 on hot paths per KD-10; positive
   values permitted only on declared one-shot warmup paths exempted via
-  `[HotPathAllocExempt]` (cite Spec #20 §3).
+  the `[HotPathAllocExempt]` attribute (Spec #18 §3.7.5; first-
+  implementation site at first `src/` commit).
 - **Worst-case input parameters** that yield the budget (e.g., "22
   active agents, max possession contention").
 - **Headroom multiplier** — a dimensionless factor reserved for
@@ -175,7 +176,8 @@ recorded the same way.
 - **Stage 0+1:** Unity Profiler + Superluminal / Tracy (or equivalent;
   selection criteria parallel Spec #19 §6.1 — must support
   deterministic re-play, must emit per-frame breakdown, must support
-  headless / batch-mode capture for CI).
+  headless / batch-mode capture for CI) (`TBD-NORMATIVE`; #19 status
+  `IN REVIEW`).
 
 ### 3.3.6 Anti-patterns
 
@@ -213,7 +215,7 @@ baseline evidence are blocked at review (FR-PO-025).
 Improvement claims require N samples with a non-overlapping confidence
 interval against the pre-fix baseline. N is `[GT]`, pinned at Stage
 0+1 (§7.5 D8) — provisional value 30 samples / 95% CI per Spec #19
-§3.4.3 parallel convention.
+§3.4.3 parallel convention (`TBD-NORMATIVE`; #19 status `IN REVIEW`).
 
 Below-significance "improvements" are not entered into the baseline;
 they are recorded as a §6.4 "Inconclusive" defect class.
@@ -223,10 +225,15 @@ they are recorded as a §6.4 "Inconclusive" defect class.
 The baseline validator checks every captured baseline against the §3.3.2
 session contract and rejects sessions missing any field.
 
-Reproducibility check (Stage 0+1): the validator MAY re-run the
+Reproducibility check (Stage 0+1): the validator MUST re-run the
 session under the recorded seed + fingerprint + platform pin and
 confirm the captured metric matches within the §3.4.3 confidence
-interval. Mismatches mark the baseline stale per FR-PO-068.
+interval. Mismatches mark the baseline stale per FR-PO-068. Silently
+skipping the re-run is itself an FR-PO-067 violation and is
+merge-blocking per FR-PO-068. (Stage 0 carve-out per §5.4: at Stage 0
+there is no `src/` and no scenario-deterministic runtime to re-run
+against; the MUST activates with the rest of FR-PO-063 … 068 at
+Stage 0+1.)
 
 ### 3.4.5 Optimization-ticket lifecycle
 
@@ -369,15 +376,23 @@ allocation in a §3.7.2 union method. Editor-mode runs do not enforce
 (Mono GC behaviour differs from IL2CPP); enforcement requires the
 IL2CPP build per `certification-platform.md` (FR-PO-052).
 
-### 3.7.5 Exemption procedure
+### 3.7.5 Exemption procedure — `[HotPathAllocExempt]` attribute (declared here)
 
 Genuine one-shot allocations (e.g., scene-load buffer growth) are
-exempted via the `[HotPathAllocExempt]` attribute declared in Spec #20
-§3. Per KD-1 cite-not-redefine, Spec #18 does not redeclare the
-attribute; it cites Spec #20's declaration. Coordinate with the #20
-author if the attribute is not yet declared (Spec #20 status:
-`APPROVED` May 11, 2026 — attribute presence to be verified at first
-`src/` commit).
+exempted via the `[HotPathAllocExempt]` attribute. Spec #18 owns the
+declaration of this attribute; per CLAUDE.md "Interface Design
+Principle" the C# `Attribute` definition lands at first `src/` commit
+(targets: `Method | Constructor`; required constructor argument:
+`string rationale`; companion lead-developer-sign-off comment cites
+the `spec-error-log.md` row that authorizes the exemption).
+
+Spec #20 (`APPROVED` May 11, 2026) is not the declarer of the
+attribute; outline v1.0's "declared in Spec #20 §3" claim was an
+inherited citation drift (filed as `ERR-018-002`, resolved in v0.2
+by relocating ownership here). If a future Spec #20 revision adopts
+the attribute into its zero-allocation catalogue, the binding is
+`[CROSS]` from Spec #20 back into this section — not the other way
+around.
 
 Exemptions require lead-developer sign-off and a comment citing the
 rationale (FR-PO-053).
@@ -410,7 +425,12 @@ emission-veto authority over tick-pipeline trace points.
 ### 3.8.2 Trace pipeline architecture (#18-owned)
 
 - **Channel registry.** Named channels per subsystem, declared in
-  Appendix F catalogue (Stage 1 deliverable; Stage 0 declares schema).
+  the Appendix F catalogue. **Schema** (channel name, owning
+  subsystem, default verbosity, sampling rule, sink routing,
+  determinism class, tick-pipeline flag, sign-off log reference,
+  record-format version, owner, created date, version history) is
+  published in **Appendix F.0 (Stage 0 deliverable)**; **populated
+  channel rows** are a Stage 1 deliverable.
 - **Verbosity tiers** (FR-PO-055):
   - `minimal` — production / shipping builds.
   - `standard` — development.
@@ -500,8 +520,8 @@ rule).
 - **3.9.1 — Spec-time perf claims** (e.g., Shot Mechanics #6 §4.5's
   "0.017 ms estimated"): treated as `[EST]` baseline anchors; the
   first Stage 0+1 baseline capture promotes the estimate to a measured
-  value tagged `[GT]` if within ±20% of estimate, or files an
-  `ERR-018-NNN` review finding if not.
+  value tagged `[GT]` if within ±20% (`[GT]`; §3.10) of estimate, or
+  files an `ERR-018-NNN` review finding if not.
 - **3.9.2 — Editor-only / debug-tool perf:** outside the KD-10
   hot-path union; alloc-tracker exempt; functional rules still apply.
 - **3.9.3 — Multi-platform divergence (Stage 5+):** when Stage 5
@@ -512,9 +532,9 @@ rule).
   are exempt from §3.5.2 regression gates (warmup allocations, JIT for
   Mono); N pinned at Stage 0+1.
 - **3.9.5 — Soak runs:** long-horizon profiling (≥ one full match) is
-  owned by Spec #19 §3.1 end-to-end / soak layer for *test execution*;
-  Spec #18 §3.3 governs the perf-metric capture *from* those runs.
-  Both apply, no overlap.
+  owned by Spec #19 §3.1 end-to-end / soak layer for *test execution*
+  (`TBD-NORMATIVE`; #19 status `IN REVIEW`); Spec #18 §3.3 governs
+  the perf-metric capture *from* those runs. Both apply, no overlap.
 
 ## 3.10 Constants Catalogue (governance metadata only)
 
@@ -526,11 +546,14 @@ inline at the point of declaration:
 |-------|-----|------------|-----------|
 | Per-PR regression threshold = +5% | `[GT]` | §3.5.2 | Below first-Stage-1 measured variance band; tightenable at §7.5 D9 |
 | Absolute-threshold guard = +10% | `[GT]` | §3.5.6 | Twice per-PR threshold; catches creep without false-positives on legitimate stepwise growth |
-| Hot-path allocation budget = 0 bytes/tick | `[GT]` | §3.7.3 | Direct citation of CLAUDE.md "When Writing Code: zero-allocation architecture in the game loop" |
+| Hot-path allocation budget = 0 bytes/tick | `[FIXED]` | §3.7.3 | Non-tunable architectural mandate per CLAUDE.md "When Writing Code: zero-allocation architecture in the game loop" — not designer-settable; FR-PO-050 reinforces "MUST declare allocation budget = 0 bytes per tick" |
 | Sampling-profiler default = 1 kHz | `[EST]` | §3.3.4 | Pinned to chosen profiler at Stage 0+1 (§7.5 D1) |
 | Statistical-significance N = 30 samples / 95% CI | `[EST]` | §3.4.3 | Pinned at Stage 0+1 (§7.5 D8); parallel to Spec #19 §3.4.3 |
 | Headroom multiplier (per spec) | `[GT]` | §3.1.2 | Owning-spec discretion; typical 1.2× – 1.5× |
 | First-tick warmup count N | `[EST]` | §3.9.4 | Pinned at Stage 0+1 once Mono/IL2CPP warmup characteristics measured |
+| `[EST]`→`[GT]` promotion tolerance = ±20% | `[GT]` | §3.9.1 | Twice the +5% per-PR threshold; absorbs first-measurement variance when promoting a spec-time `[EST]` anchor to a measured `[GT]` baseline. Above ±20% files an `ERR-018-NNN` review finding. |
+| Per-spec p50/p99 rolling window N = 100 captures | `[GT]` | Appendix F.1 | Stage 0+1 pin; rolling-window size for per-spec budget-dashboard percentiles. Tied to first-month CI capture volume; tightenable once Stage 1 dashboard front-end data confirms variance characteristics. |
+| Flake-rate boundary-defect routing threshold = 1% | `[GT]` | Appendix F.5 | Stage 1 governance pin; flake rate above 1% on the perf-baseline-validator output routes to §5.7.3 boundary-defect class (rather than the §6.4 normal defect class). 1% chosen as the inflection where a measurement-noise hypothesis is exhausted and a determinism / boundary hypothesis becomes more likely. |
 
 **Evidence-artifact convention** (parallel to Spec #19 §3.10 L5
 convention and Spec #19 §9.4). Each `[GT]` governance number's
@@ -550,3 +573,4 @@ Per-spec physical budgets cited (not republished) live in each spec's
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §3. Eleven subsections (§3.1 … §3.11) cover budget roll-up, loop separation, profiling, optimization ladder, regression gates, degradation policy, hot-path enumeration, trace pipeline (KD-3 inverted), edge cases, governance constants. All #16 / #19 citations tagged `TBD-NORMATIVE`. |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 003 / 005 / 006 / 007 / 008 / 010). §3.1.2 + §3.7.5 reworded — `[HotPathAllocExempt]` declared in #18 §3.7.5 (no longer cites Spec #20 §3); first-implementation site at first `src/` commit. §3.4.4 MAY → MUST with Stage 0 carve-out + FR-PO-068 merge-blocking link. §3.8.2 channel-registry bullet rewritten to cite **Appendix F.0** (Stage 0 schema deliverable). §3.10 — Hot-path allocation budget re-tagged `[GT]` → `[FIXED]`; ±20% promotion tolerance, N=100 rolling-window, 1% flake-rate threshold added with rationale. §3.3.5, §3.4.3, §3.9.5 gain `(TBD-NORMATIVE; #19 status IN REVIEW)` parenthetical. §3.9.1 inline `[GT]` tag on ±20%. |
