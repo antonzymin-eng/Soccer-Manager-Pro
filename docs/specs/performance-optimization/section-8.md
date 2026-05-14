@@ -1,7 +1,7 @@
 # Performance Optimization Strategy Specification #18 — Section 8: References & Citation Audit
 
 **Created:** May 13, 2026
-**Last Updated:** May 14, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Last Updated:** May 14, 2026 (v0.3 PASS-2 adversarial-review fix pass)
 **Purpose:** Authoritative source register, verification notes,
 cross-spec citation audit, and constant-provenance summary. Every
 citation in §3 / §4 / §5 / §6 / §7 / Appendices resolves to a row in
@@ -186,6 +186,6 @@ path contains the literal number claimed. No separate
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: M-2 §8.4 [GT]→[FIXED] for 0 bytes/tick (ERR-018-006); M-4 §8.4 ±20% row added (ERR-018-008); M-6 §8.4 N=100 and 1% rows added (ERR-018-010); L-9 §8.1.2/§8.3 #16 §3.1→§3.1.2 canonical tick pipeline; L-10 §8.1.2/§8.3 #16 §4→§4.8 EnvironmentFingerprint. |
+| 0.3     | May 14, 2026 | Claude Code | PASS-2 adversarial-review fix pass (`ERR-018-014`). Duplicate v0.2 version-history row consolidated. No content changes — §8 was clean of PASS-2 H/M findings (§8.4 mirror table was already correct after v0.2 — the §3.10 duplicate rows ERR-018-013 removed were absent from §8.4). |
 | 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §8. Source register, verification notes, cross-spec citation audit, and constant-provenance summary authored. Spec #16 citation drift history recorded (outline v1.0 → v1.1 correction: regression scenarios §5 not §7; record format §3.2.4.1 not §5; no §8 trace channels exist — #18 owns trace pipeline per inverted KD-3). All #16 / #19 citations tagged `TBD-NORMATIVE` per KD-3 / KD-4 status caveats. |
-| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 006 / 008 / 010). §8.1.4 Spec #20 register entry no longer claims `[HotPathAllocExempt]` is declared in #20 §3 (ownership relocated to #18 §3.7.5). §8.4 mirror rows updated: hot-path allocation budget `[GT]` → `[FIXED]`; new rows added for ±20% promotion tolerance, N=100 rolling-window, 1% flake-rate routing threshold. |
+| 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 006 / 008 / 010). §8.1.4 Spec #20 register entry no longer claims `[HotPathAllocExempt]` is declared in #20 §3 (ownership relocated to #18 §3.7.5). §8.4 mirror rows updated: hot-path allocation budget `[GT]` → `[FIXED]`; new rows added for ±20% promotion tolerance, N=100 rolling-window, 1% flake-rate routing threshold. Also: §8.1.2/§8.3 #16 §3.1→§3.1.2 canonical tick pipeline; §8.1.2/§8.3 #16 §4→§4.8 EnvironmentFingerprint. |
