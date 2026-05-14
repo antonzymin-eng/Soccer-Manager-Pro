@@ -34,7 +34,7 @@ For SHA-256: `HashLen = 32`. `salt` defaults to `HashLen` zero bytes when not su
 | `info` (10 bytes) | `f0f1f2f3f4f5f6f7f8f9` |
 | `L` | 42 |
 | `PRK` (32 bytes) | `077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5` |
-| `OKM` (42 bytes) | `3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf340072008d5b887185865` |
+| `OKM` (42 bytes) | `3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865` |
 
 ---
 
@@ -102,3 +102,4 @@ This case verifies that the project's `RNG_KDF` binding produces the same `PRK` 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | May 6, 2026 | Initial KAT file. RFC 5869 Appendix A.1–A.3 reproduced verbatim. Project Test Case 4 stubbed pending first successful reference-implementation run. |
+| 1.1 | May 14, 2026 | **Byte-exact hand-verification pass against RFC 5869** (per #16 §9.5 #4(a) spec-level sub-condition, §9 v1.3). Finding **F-HKDF-01** filed and fixed: Test Case 1 OKM had a stray `0` nibble inserted between bytes 34–35 (`…bf 34 00 72 00 8d 5b 88 71 85 86 5` — 85 hex chars; canonical: `…bf 34 00 72 08 d5 b8 87 18 58 65` — 84 hex chars). Corrected to RFC 5869 §A.1 reference value `3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865`. Test Cases 2 and 3 OKM, all three PRK values, and all metadata (IKM/salt/info/L) verified correct against RFC 5869 §A.2 / §A.3 with no findings. Project Test Case 4 remains stubbed (no change). §9.5 #4(a) spec-level sub-condition: **SATISFIED** as of this commit. |
