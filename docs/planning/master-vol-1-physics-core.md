@@ -78,6 +78,9 @@ To simulate an entire football universe efficiently:
 **Critical for cross-platform consistency and anti-cheat:**
 
 #### Fixed-Point Mathematics
+
+> **Stage-gating clarification (added per the April 26, 2026 Fixed64 stage-scope decision):** The Fixed64 architecture below describes the **Stage 5+** end-state, when cross-platform bit-exact parity becomes a hard requirement (multiplayer). **Stage 0 uses `float` arithmetic** and achieves single-machine determinism via state snapshots; the GameLoop compilation rule banning `System.Math`/`float`/`double` activates at Stage 5. See `master-development-plan.md` §2.3 / §8 / §9 and `docs/specs/fixed64-math/` (Spec #9, IN REVIEW). Existing approved physics specs (#1–#8) are drafted against `float` and will be re-verified against Fixed64 only at Stage 5.
+
 - **Implementation:** Custom `Fixed64` struct library
 - **Structure:**
   - Wraps `Int64` (64-bit integer)
@@ -86,7 +89,7 @@ To simulate an entire football universe efficiently:
 - **Operations:** Uses bit-shifting instead of floating-point arithmetic
   - Addition, subtraction, multiplication, division
   - All physics calculations (Position, Velocity, Acceleration)
-- **Compilation Rule:** Usage of `System.Math`, `float`, or `double` inside GameLoop triggers compilation error
+- **Compilation Rule (Stage 5+):** Usage of `System.Math`, `float`, or `double` inside GameLoop triggers compilation error. (Not enforced in Stages 0–4.)
 
 #### RNG Seeding
 - **Pre-Match Generation:** `Simulation_Seed` generated at match setup

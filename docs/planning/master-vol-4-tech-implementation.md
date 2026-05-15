@@ -112,6 +112,8 @@ if (eventID == StringIDs.TACTIC_GEGENPRESS) {
 
 ### 1.3 The Fixed64 Math Library
 
+> **Stage-gating clarification (added per the April 26, 2026 Fixed64 stage-scope decision):** This section describes the **Stage 5+** end-state. **Stage 0–4 use `float` arithmetic** with single-machine determinism via state snapshots; cross-platform bit-exact parity is a Stage 5 / multiplayer concern. The bans on `System.Math`/`float`/`double` below and the static-analysis enforcement activate at Stage 5. See `master-development-plan.md` §2.3 / §8 / §9 / Stage 0 success criteria, CLAUDE.md "When Writing Code" rules, and `docs/specs/fixed64-math/` (Spec #9). Existing approved physics specs (#1–#8) and hot-data structures (`HotAgentData` etc. shown later in §2.1) are drafted against `Fixed64` to document the final architecture; Stage 0 implementations substitute `float` and are re-verified against the Fixed64 backend at Stage 5.
+
 **Deterministic cross-platform arithmetic:**
 
 #### Implementation
@@ -131,14 +133,16 @@ public struct Fixed64 {
 }
 ```
 
-**Banned:**
+**Banned (Stage 5+):**
 - `System.Math` (uses hardware floats, non-deterministic)
 - `float` type
 - `double` type
 
-**Enforcement:**
+**Enforcement (Stage 5+):**
 - Compilation error if float/double detected in GameLoop
 - Static analysis tool scans for violations
+
+(In Stages 0–4, `float` is the authorized arithmetic mode; the bans and enforcement above do not apply until the Stage 5 Fixed64 migration.)
 
 **Why:**
 - Float operations differ between Intel/AMD/ARM
