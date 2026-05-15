@@ -13,21 +13,31 @@ values land in the section files. Detailed outline records intent,
 provenance, and structural mapping only.
 
 **Created:** May 15, 2026, 11:00 PM PST
-**Version:** 1.0
+**Version:** 1.1
 **Status:** DRAFT — supersedes `outline.md` v0.1 (May 6, 2026); resolves
 all 22 findings of the May 6, 2026 adversarial review attached to that
-file.
+file; v1.1 (May 15, 2026, later same day) additionally resolves all 21
+findings of `outline-detailed-pass-1-review.md` (5 H / 9 M / 7 L) and
+the cross-cutting AM #2 jump-surface absence discovered during M-8
+verification. Two additional KDs added (KD-17 intent staleness, KD-18
+jump-kinematics ownership). KD count: 18.
 **Specification Number:** 10 of 20 (Stage 0, Priority 3)
 **Estimated Effort:** ~28 hours (section files), ~6 hours (pass-1
 adversarial critique), ~4 hours (pass-2 fix cycle).
 **Companion documents:** `outline.md` (high-level v0.1 with
 adversarial-review appendix — retained for history; do not edit).
 
-**Dependencies (all APPROVED):**
+**Dependencies (direct, all APPROVED):**
 - Ball Physics #1 (incoming `BallState`; `Ball.ApplyKick` output
   surface; coordinate-system authority).
-- Agent Movement #2 (jump kinematics; `Heading`, `Strength`,
-  `Balance` attributes; `AgentPhysicalProperties`).
+- Agent Movement #2 (`Heading`, `Strength`, `Balance` attributes via
+  `PlayerAttributes` struct at §3.5.6; `AgentMovementState` enum at
+  §3.1.2; `GroundedReason.DIVING_HEADER` at §3.1.2; XY kinematic
+  state via §3.5.1 `Agent` class). **Note:** AM #2 §3.6 explicitly
+  defers Z>0 jumping to Stage 1+; jump kinematics at Stage 0 are
+  owned by Heading #10 (see KD-18). #10 consumes #2's ground
+  kinematic state and `PlayerAttributes`; #10 produces its own
+  vertical-axis kinematics during the aerial-contact window.
 - Collision System #3 (head-ball contact resolution; contested-duel
   contact data).
 - First Touch Mechanics #4 (boundary partner — head-vs-non-head body
@@ -37,8 +47,6 @@ adversarial-review appendix — retained for history; do not edit).
 - Shot Mechanics #6 (analogous output-interface model; KD-6 body-part
   routing authority establishing that ALL head contacts route here
   regardless of height).
-- Perception System #7 (Decision Tree input provenance; not a direct
-  Heading dependency, cited for tractability).
 - Decision Tree #8 (intent parameters: header target, power intent,
   contact-point intent).
 - Deterministic Simulation #16 (RNG governance for tie-breaks;
@@ -46,6 +54,11 @@ adversarial-review appendix — retained for history; do not edit).
   `DeterministicRngService`).
 - Event System #17 (`HeaderExecutedEvent` consumer; own-goal-shaped
   trajectory adjudication).
+
+**Tractability cites (not direct dependencies; named here for context
+only, not consumed at any interface):**
+- Perception System #7 — supplies Decision Tree #8's inputs; relevant
+  upstream of #8, not #10.
 
 **Downstream (consumers; specs NOT STARTED — interface declared here,
 not negotiated):**
@@ -138,10 +151,13 @@ during drafting.
 - **KD-2 — Continuous contact-quality scalar.** Contact quality is a
   continuous scalar ∈ [0,1] derived from a signed timing offset
   (frames or ms relative to ideal-contact frame) and a 2-D contact-
-  point error (m) on the head surface. Named windows (early /
-  perfect / late) are post-computation labels emitted into
-  `HeaderExecutedEvent.contactQualityLabel` for telemetry, NEVER
-  branched on by the physics formula. **Resolves finding 3.**
+  point error (m) on the head surface. Named windows
+  (`Early` / `OnTime` / `Late` — `OnTime` deliberately chosen over
+  `Perfect` to avoid implying a quality gate, L-1 from
+  `outline-detailed-pass-1-review.md`) are post-computation labels
+  emitted into `HeaderExecutedEvent.contactQualityLabel` for
+  telemetry, NEVER branched on by the physics formula. **Resolves
+  finding 3.**
 
 - **KD-3 — Body-part discriminator inheritance.** Routing inherits
   from Shot Mechanics #6 KD-6: any ball contact whose contact body
@@ -154,12 +170,18 @@ during drafting.
 - **KD-4 — `JumpReach` is `[DERIVED]`, not a new `PlayerAttribute`.**
   No revision to APPROVED Agent Movement #2 is required. Spec #10
   defines `JumpReach = f(Strength, Balance, Heading)` with a
-  `[DERIVED]` tag (formula candidate: `JumpReach_m = base +
-  k_strength · Strength_norm + k_balance · Balance_norm`, where
-  `base` is a `[FIXED]` anatomical baseline and `k_*` are `[GT]`).
-  Worked example and sensitivity analysis live in Appendix B.
-  Reach is computed once per jump phase; not per-tick. **Resolves
-  finding 5; preserves AM #2 APPROVED status.**
+  `[DERIVED]` tag. Canonical formula (per H-2 fix from pass-1
+  review): `JumpReach_m = JUMP_REACH_BASE_M + JUMP_REACH_K_STRENGTH ·
+  Strength_norm + JUMP_REACH_K_BALANCE · Balance_norm +
+  JUMP_REACH_K_HEADING · Heading_norm`, where `JUMP_REACH_BASE_M` is
+  a `[FIXED]` anatomical baseline and `JUMP_REACH_K_*` are `[GT]`.
+  The `Heading` term captures jump-timing skill (anticipating apex
+  alignment with the ball arrival frame); a dedicated timing
+  attribute is deferred until Stage 1+ validation data warrants
+  separating reach and timing. Worked example and sensitivity
+  analysis live in Appendix B. Reach is computed once per jump
+  phase; not per-tick. **Resolves finding 5; preserves AM #2
+  APPROVED status; resolves pass-1 H-2.**
 
 - **KD-5 — Pass Mechanics #5 consumed via `BallState` only.** Spec
   #10 reads incoming `BallState.velocity` / `.spin` / `.position` at
@@ -206,11 +228,16 @@ during drafting.
   `DeterministicRngService` (Deterministic Simulation #16 §4.1)
   with registered draw-site IDs (#16 §4.5). Iteration over duel
   participants follows #16 §3.2 entity-ordering. A new `DOMAIN_TAG`
-  allocation (`DOMAIN_TAG_HEADING = 0x??`) is requested from #16
+  allocation (`DOMAIN_TAG_HEADING = 0x16`) is requested from #16
   §3.4 via a back-propagation entry filed under `ERR-010-001`
-  (created during drafting); promotion of the `[CROSS-PENDING]` tag
-  to `[CROSS]` is atomic with the back-prop landing. **Resolves
-  finding 10.**
+  (created during drafting). The allocation is a pure namespace
+  amendment to APPROVED #16 (no `DETERMINISM_DIGEST_VERSION` bump),
+  following the precedent set by Event System #17's
+  `DOMAIN_TAG_EVENT_LEDGER = 0x15` patch on May 14, 2026 (#16 §3.4
+  v1.0.1). Next free slot in #16 §3.4 catalogue is `0x16` (current
+  allocations: `0x10`..`0x15`). Promotion of the `[CROSS-PENDING]`
+  tag to `[CROSS]` is atomic with the back-prop landing. **Resolves
+  finding 10; resolves pass-1 C-2.**
 
 - **KD-11 — Constant-tag policy.** Every numeric constant published
   by Spec #10 carries exactly one of `[GT] / [EST] / [FIXED] /
@@ -230,9 +257,16 @@ during drafting.
 - **KD-13 — Set-piece headers ARE in Stage 0 scope.** The cross
   (free kick, corner) is delivered by Pass Mechanics #5; the header
   off that cross is mechanically identical to an open-play header
-  from a cross. Spec #10 covers both. Set-piece taking (the kick
-  itself) remains deferred to Stage 1+ per Shot Mechanics #6 §1.2.
-  **Resolves finding 20.**
+  from a cross because incoming spin / velocity / position are read
+  uniformly from `BallState` regardless of delivery type. Any
+  set-piece-specific in-swing / out-swing characteristics are
+  produced by #5 on the kick and propagated through `BallState`
+  before #10 sees the ball; #10 needs no set-piece-specific branch.
+  Wall presence and defender-pile geometry are handled by Collision
+  System #3 contact events, not #10. Spec #10 covers both open-play
+  and set-piece headers. Set-piece taking (the kick itself) remains
+  deferred to Stage 1+ per Shot Mechanics #6 §1.2. **Resolves
+  finding 20; resolves pass-1 M-7.**
 
 - **KD-14 — Weak-aerial-side handling deferred to Stage 1+.** No
   `WeakAerialSide` attribute is introduced at Stage 0. §7 records
@@ -252,6 +286,37 @@ during drafting.
   geometry + head angular velocity into outgoing spin. Rationale:
   spin transfer depends on contact-point and head-velocity vector
   which only #10 knows. **Resolves finding 22.**
+
+- **KD-17 — Intent-staleness re-validation policy.** `HeaderIntent`
+  is committed at the 10 Hz tactical tick (Decision Tree #8) and
+  may be 1–18 physics frames stale by predicted contact frame.
+  Policy: (a) `targetIntent` is **held fixed** after commit — the
+  player chose to head it *there*; deviation from a re-evaluated
+  ideal is what `contactQualityScalar` already captures via
+  `pointError`. (b) `predictedContactFrame` is **re-evaluated every
+  physics frame** in §3.2 until either contact occurs or the
+  attempt window closes; if the new prediction falls outside the
+  attempt window after commit, `HeaderAttemptFailedEvent` is emitted
+  with `failureCause = MistimedEarly` / `MistimedLate` per the
+  signed drift direction. (c) `powerIntent` and
+  `contactPointIntent` are held fixed (locked at commit) — Decision
+  Tree #8 does NOT re-issue these mid-attempt. **Resolves pass-1
+  M-5.**
+
+- **KD-18 — Stage 0 jump kinematics are Heading-owned.** Agent
+  Movement #2 explicitly defers Z>0 movement to Stage 1+
+  (`section-3-6-part-2.md` §3.6 comment). At Stage 0, #10 owns the
+  full vertical-axis kinematic during the aerial-contact window: it
+  derives a synthetic apex-altitude trajectory from `JumpReach` (per
+  KD-4) and a `[GT]` jump duration profile, advances head position
+  on the 60 Hz physics tick during the aerial phase, and exits back
+  to the AM #2-owned XY ground state on landing (entering
+  `GROUNDED` if a diving header was performed, per AM #2 §3.1.2
+  `GroundedReason.DIVING_HEADER`). No amendment to APPROVED #2 is
+  required at Stage 0. When AM #2 grows native Z kinematics at
+  Stage 1+, #10's synthetic jump trajectory is the natural retire
+  target; deferral logged in §7.8. **Resolves pass-1 cross-cutting
+  AM #2 jump-surface absence; preserves AM #2 APPROVED status.**
 
 ---
 
@@ -280,8 +345,10 @@ during drafting.
 **Content (one-line entries with owning document):**
 - Goal detection (own-goal or otherwise) → Event System #17 / Match
   Referee.
-- Set-piece kick delivery (the kick itself) → Spec #5 (Pass) or
-  Stage 1+ set-piece spec.
+- Set-piece kick delivery (the kick itself): at Stage 0 → Spec #5
+  (Pass) covers free kicks and corners as kick variants; at Stage
+  1+ a dedicated set-piece spec may take over. The Stage 0 routing
+  is canonical for #10's lifetime in Stage 0.
 - Goalkeeper-specific decision logic (when to punch vs. catch) →
   Goalkeeper Mechanics #11; physics layer remains #10.
 - Concussion / injury accumulation → Stage 1+ Medical spec.
@@ -291,9 +358,9 @@ during drafting.
 
 ### 1.3 Key Design Decisions
 
-**Subsection target length:** ~180 lines.
+**Subsection target length:** ~210 lines.
 
-Sixteen KDs (KD-1 … KD-16) reproduced from the KEY DESIGN DECISIONS
+Eighteen KDs (KD-1 … KD-18) reproduced from the KEY DESIGN DECISIONS
 block above, each formatted as: statement (1 sentence), rationale
 (2–3 sentences), consequence-if-violated (1 sentence). KD numbering
 is canonical for the spec and cited by FR rows in §2.
@@ -303,10 +370,30 @@ is canonical for the spec and cited by FR rows in §2.
 **Subsection target length:** ~60 lines.
 
 **Content:**
-- Upstream table (10 rows: #1, #2, #3, #4, #5, #6, #7, #8, #16, #17),
-  each row naming the consuming subsection of #10 and the
-  section-level citation in the upstream spec. Format mirrors Shot
-  Mechanics #6 §2.5.
+- Upstream table (9 rows: #1, #2, #3, #4, #5, #6, #8, #16, #17),
+  each row naming the consuming subsection of #10 and the **exact
+  verified** section-level citation in the upstream spec
+  (pinned per pass-1 M-8). Anchor cheatsheet:
+  - #1 §1.2 (coordinate origin), §3.1.11.2 (`Ball.ApplyKick`).
+  - #2 §3.1.2 (`AgentMovementState`, `GroundedReason`), §3.5.1
+    (`Agent` class, attribute exposure), §3.5.6
+    (`PlayerAttributes` struct — `Heading`, `Strength`, `Balance`
+    field declarations); no jump-kinematics anchor — #10 owns Z
+    kinematics at Stage 0 per KD-18.
+  - #3 contact-event API (specific subsection pinned during
+    `section-1.md` authoring).
+  - #4 §1.2 (boundary statement reaffirming 0.5 m threshold does
+    not apply to head contacts).
+  - #5 — `BallState`-level consumption only (no #5 subsection
+    coupling, per KD-5).
+  - #6 §1.3 KD-6 (body-part discriminator authority — exact
+    quote in `shot-mechanics/section-1.md:344`).
+  - #8 §1.7.x (intent surface — anchor pinned during drafting).
+  - #16 §3.2 (entity ordering), §3.4 (`DOMAIN_TAG` catalogue —
+    pending `0x16` allocation per KD-10), §4.1 (RNG service),
+    §4.5 (draw-site registry).
+  - #17 event publish API (specific subsection pinned during
+    drafting).
 - Downstream table (4 rows: #11, #12, #14, #15) — interface surface
   is `HeaderExecutedEvent` + `HeaderAttemptFailedEvent` only.
 - Pass Mechanics #5 amendment-insulation note (KD-5).
@@ -366,7 +453,23 @@ Anchor FRs to write first:
   kick itself is not. Source: KD-13.
 - `FR-HE-017` (SHOULD) — Iteration over contested-duel participants
   follows #16 §3.2 ordering.
-- (~18 more FRs covering specific formula behaviors, telemetry
+- `FR-HE-018` (MUST) — Intent-staleness policy per KD-17:
+  `targetIntent`, `powerIntent`, `contactPointIntent` locked at
+  commit; `predictedContactFrame` re-evaluated each physics tick.
+  Source: KD-17.
+- `FR-HE-019` (MUST) — Stage 0 jump kinematics owned by #10 per
+  KD-18. Source: KD-18.
+- `FR-HE-020` (MUST) — Telemetry label `OnTime` (not `Perfect`)
+  used for centred quality bucket. Source: KD-2 / pass-1 L-1.
+- `FR-HE-021` (MUST) — `JumpReach` includes a `Heading` term per
+  revised KD-4 formula. Source: KD-4 / pass-1 H-2.
+- `FR-HE-022` (MUST) — Asymmetric timing-tolerance windows: early
+  and late tolerances are distinct `[GT]` constants. Source: pass-1
+  H-1.
+- `FR-HE-023` (MUST) — Duel tiebreak is governed by an explicit
+  near-tie ε threshold; non-tie scores are NOT perturbed by RNG.
+  Source: pass-1 H-5.
+- (~12 more FRs covering specific formula behaviors, telemetry
   contracts, edge cases, and Stage 1+ deferrals.)
 
 ### 2.2 Data Structures
@@ -387,8 +490,9 @@ Structs to define (struct-based, zero-allocation per CLAUDE.md):
 - `HeaderExecutedEvent` — published on every contacted header.
   Fields (mirrors Shot Mechanics #6 §4.5 / `ShotExecutedEvent`):
   `agentId`, `matchTime`, `contactQualityScalar`,
-  `contactQualityLabel` (telemetry enum: Early / Perfect / Late —
-  emitted, not consumed), `contactPoint`, `incomingBallState`,
+  `contactQualityLabel` (telemetry enum: `Early` / `OnTime` /
+  `Late` — emitted, not consumed; `OnTime` chosen over `Perfect`
+  per pass-1 L-1), `contactPoint`, `incomingBallState`,
   `outgoingVelocity`, `outgoingSpin`, `contestedDuelId: int?`,
   `ownGoalShapedTrajectory: bool`, `setPieceContext: enum?`
   (OpenPlay / Corner / FreeKick — telemetry only).
@@ -416,9 +520,10 @@ recovery behavior, and telemetry tag:
   `HEAD_CONTACT_VOLUME` at all frames in attempt window.
   Recovery: `HeaderAttemptFailedEvent`.
 - F-04: Two simultaneous eligible headers (contested duel) →
-  resolved per §3.7, NOT a failure; emits both
-  `HeaderExecutedEvent` (winner) and `HeaderAttemptFailedEvent`
-  (losers with `failureCause=DisturbedInDuel`).
+  resolved per §3.7, NOT a failure; **winner-only emits
+  `HeaderExecutedEvent`; all losers emit `HeaderAttemptFailedEvent`
+  with `failureCause = DisturbedInDuel`** (wording aligned with
+  §3.7 step 4 per pass-1 L-5).
 - F-05: Decision Tree #8 supplied a `targetIntent` outside the
   pitch bounding box. Recovery: clamp to nearest in-bounds point;
   emit telemetry warning; NOT a hard failure.
@@ -436,8 +541,8 @@ Counters and gauges emitted on the trace pipeline (Performance
 Optimization #18 §3.10 channel registry — cited; channel rows
 allocated via #18 §3.10 back-prop):
 - `heading.contact.quality.scalar` (histogram).
-- `heading.contact.quality.label` (counter, 3 buckets: Early /
-  Perfect / Late).
+- `heading.contact.quality.label` (counter, 3 buckets: `Early` /
+  `OnTime` / `Late` — pass-1 L-1).
 - `heading.duel.outcome` (counter, win/loss/disturbed).
 - `heading.attempt.failed.cause` (counter, 4 buckets).
 - `heading.own_goal_shaped.flag` (counter).
@@ -454,78 +559,199 @@ Per-row constants table (mirrors Pass Mechanics #5 §3.1.4 structure
 post-F-A01 fix): one column per tunable constant, source-tag column,
 unit column, valid-range column, citation column.
 
-Constants to enumerate (~28 rows):
+**Inventory discipline (pass-1 M-1 closure):** every symbol that
+appears in §3.2–§3.8 pseudocode bodies MUST be a row in this table
+with a source tag, OR be a per-call output / local variable
+explicitly named as such in the relevant §3.X subsection. No magic
+numbers in pseudocode.
+
+Constants to enumerate (~35 rows, expanded per pass-1 M-1):
 - `HEAD_CONTACT_VOLUME_RADIUS_M` `[GT]` (0.18 m candidate).
 - `HEAD_CONTACT_VOLUME_HEIGHT_M` `[GT]`.
-- `MAX_EARLY_TOLERANCE_MS` `[GT]`.
-- `MAX_LATE_TOLERANCE_MS` `[GT]`.
-- `IDEAL_CONTACT_FRAME_OFFSET` `[DERIVED]` from jump apex (#2).
+- `MAX_EARLY_TOLERANCE_MS` `[GT]` (asymmetric timing window —
+  pass-1 H-1).
+- `MAX_LATE_TOLERANCE_MS` `[GT]` (asymmetric timing window —
+  pass-1 H-1; numerically smaller than `MAX_EARLY_TOLERANCE_MS`
+  reflecting that late headers degrade faster than early ones).
+- `EARLY_LABEL_THRESHOLD_MS` `[GT]` (telemetry-bucket boundary; NOT
+  a formula gate per KD-2).
+- `LATE_LABEL_THRESHOLD_MS` `[GT]` (telemetry-bucket boundary; NOT
+  a formula gate per KD-2).
+- `TIMING_POINT_BLEND_ALPHA` `[GT]` (the `α` in §3.4 blend;
+  `timingQuality` weight in the convex combination with
+  `pointQuality`).
+- `MIN_CONTACT_QUALITY` `[GT]` (§3.7 cutoff: duel loser below this
+  threshold emits `HeaderAttemptFailedEvent` rather than a poor-
+  quality `HeaderExecutedEvent`).
+- `FRAME_MS` `[DERIVED]` from `TICK_RATE_PHYSICS_HZ`
+  (`FRAME_MS = 1000 / TICK_RATE_PHYSICS_HZ ≈ 16.67`); formula in
+  §3.4.
 - `JUMP_REACH_BASE_M` `[FIXED]` (anatomical).
 - `JUMP_REACH_K_STRENGTH` `[GT]`.
 - `JUMP_REACH_K_BALANCE` `[GT]`.
+- `JUMP_REACH_K_HEADING` `[GT]` (added per pass-1 H-2; covers
+  jump-timing skill until a dedicated timing attribute exists).
+- `JUMP_PHASE_DURATION_MS` `[GT]` (Stage 0 jump-trajectory profile
+  duration per KD-18; total ground-to-ground aerial-phase length).
+- `JUMP_APEX_FRACTION` `[GT]` (Stage 0 apex location along the
+  jump phase as a fraction of `JUMP_PHASE_DURATION_MS`; `[GT]` not
+  `[FIXED]` because Stage 0 trajectory is synthetic per KD-18,
+  not physical).
 - `POWER_BASE_MPS` `[GT]`.
 - `POWER_K_STRENGTH` `[GT]`.
 - `POWER_K_HEADING` `[GT]`.
 - `POWER_FATIGUE_COEFF` `[GT]`.
-- `CONTACT_POINT_ERROR_SIGMA_M` `[GT]`.
-- `CONTACT_POINT_HEADING_ATTR_COEFF` `[GT]`.
-- `GLANCING_ANGLE_THRESHOLD_RAD` `[GT]` (telemetry-only; not a gate
-  per KD-1/KD-2).
-- `SPIN_TRANSFER_COEFF` `[GT]`.
-- `SPIN_TRANSFER_REVERSAL_THRESHOLD` `[GT]`.
-- `DUEL_BALANCE_WEIGHT` `[GT]`.
-- `DUEL_STRENGTH_WEIGHT` `[GT]`.
-- `DUEL_HEADING_WEIGHT` `[GT]`.
+- `CONTACT_POINT_ERROR_SIGMA_M` `[GT]` (mean point-error scale;
+  also baseline for the `pointQuality` denominator).
+- `CONTACT_POINT_NOISE_SIGMA_M` `[GT]` (added per pass-1 M-4 —
+  amplitude of the per-attempt point-error noise term injected via
+  `DRAW_SITE_CONTACT_POINT_ERROR`).
+- `TIMING_JITTER_SIGMA_MS` `[GT]` (added per pass-1 M-4 — amplitude
+  of the per-attempt timing-noise term injected via
+  `DRAW_SITE_TIMING_JITTER`).
+- `CONTACT_POINT_HEADING_ATTR_COEFF` `[GT]` (Heading-attribute
+  scaling of `CONTACT_POINT_ERROR_SIGMA_M`; higher Heading → tighter
+  point-error distribution).
+- `SPIN_TRANSFER_COEFF` `[GT]` (multiplier on derived
+  `headAngularVelocity` contribution to outgoing spin).
+- `SPIN_PRESERVATION_BASE` `[GT]` (the `spinPreservationFactor`
+  scale-factor base; the §3.6 working form is
+  `spinPreservationFactor = SPIN_PRESERVATION_BASE · (1 -
+  contactPointAxialOffset_m / SPIN_TRANSFER_REVERSAL_THRESHOLD)`,
+  with formula and worked example in Appendix A.3).
+- `SPIN_TRANSFER_REVERSAL_THRESHOLD` `[GT]` (contact-point offset
+  beyond which spin reverses).
+- `DUEL_BALANCE_WEIGHT` `[GT]` (`w_B` in §3.7).
+- `DUEL_STRENGTH_WEIGHT` `[GT]` (`w_S` in §3.7).
+- `DUEL_HEADING_WEIGHT` `[GT]` (`w_H` in §3.7).
+- `DUEL_TIEBREAK_EPSILON` `[GT]` (near-tie threshold; below this
+  score-gap the RNG perturbation is invoked — pass-1 H-5).
+- `DUEL_TIEBREAK_NOISE_AMPLITUDE` `[GT]` (RNG perturbation
+  amplitude applied only when `|scoreA - scoreB| <
+  DUEL_TIEBREAK_EPSILON` — pass-1 H-5).
 - `DUEL_DISTURBANCE_MAX` `[GT]`.
-- `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_S` `[GT]`.
+- `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_S` `[GT]` (time horizon).
+- `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_M` `[GT]` (distance
+  horizon — pass-1 L-7; flag invocation uses
+  `min(time, distance)` to handle flat headers correctly).
 - `GRAVITY_MPS2` `[CROSS]` (Ball Physics #1).
 - `PITCH_LENGTH_M` `[CROSS]` (Ball Physics #1 §1.2).
 - `PITCH_WIDTH_M` `[CROSS]` (Ball Physics #1 §1.2).
-- `DOMAIN_TAG_HEADING` `[CROSS-PENDING]` (Deterministic Simulation
-  #16 §3.4 — back-prop ERR-010-001).
+- `DOMAIN_TAG_HEADING = 0x16` `[CROSS-PENDING]` (Deterministic
+  Simulation #16 §3.4 — back-prop ERR-010-001; allocation slot
+  per #17 `0x15` precedent).
 - `TICK_RATE_TACTICAL_HZ` `[CROSS]` (CLAUDE.md).
 - `TICK_RATE_PHYSICS_HZ` `[CROSS]` (CLAUDE.md).
 
+**Removed from §3.1 in v1.1:**
+- `IDEAL_CONTACT_FRAME_OFFSET` — was `[DERIVED]` but is a per-jump
+  computed value, not a project-level constant; relocated to §3.2
+  as a per-call output of the eligibility predicate (pass-1 M-2).
+- `GLANCING_ANGLE_THRESHOLD_RAD` — no caller; dead constant
+  (pass-1 L-3). Glancing-vs-direct classification is a downstream
+  telemetry concern, not a #10 publication.
+
 ### 3.2 Eligibility Predicate
 
-**Inputs:** agent kinematic state (Agent Movement #2), `BallState`
-(Ball Physics #1), `HeaderIntent` (Decision Tree #8).
-**Output:** `bool isEligible`, `int predictedContactFrame`.
+**Inputs:** agent kinematic state (Agent Movement #2 §3.5.1),
+`BallState` (Ball Physics #1), `HeaderIntent` (Decision Tree #8),
+Stage 0 synthetic jump trajectory (#10-owned per KD-18).
+**Outputs:** `bool isEligible`, `int predictedContactFrame`,
+`int idealContactFrame` (the apex-aligned target frame against
+which `timingOffsetMs` is measured in §3.4; per-call value, not a
+constant — relocated from §3.1 per pass-1 M-2).
 
-Pseudocode covering: aerial-phase check, predicted contact body
-part = `Head`, ball trajectory intersects `HEAD_CONTACT_VOLUME`
-within attempt-window frames. Worked example: corner cross at
-8 m/s; defender jump-committed at tick T; predicted contact at
-frame T+9.
+Pseudocode covering: aerial-phase check (Stage 0 aerial-phase is
+the #10-owned synthetic jump phase per KD-18; AM #2 ground state
+must be exitable, i.e. not `GROUNDED` / `STUMBLING`), predicted
+contact body part = `Head`, ball trajectory intersects
+`HEAD_CONTACT_VOLUME` within attempt-window frames.
+
+**Intent-staleness handling (KD-17 — pass-1 M-5 closure):**
+`predictedContactFrame` is re-evaluated at every 60 Hz physics
+tick from `attemptCommittedTick` until contact or window-close.
+`targetIntent`, `powerIntent`, `contactPointIntent` are locked at
+commit and never re-issued. If the re-evaluated
+`predictedContactFrame` drifts outside the attempt window
+(`[idealContactFrame - MAX_EARLY_TOLERANCE_MS,
+idealContactFrame + MAX_LATE_TOLERANCE_MS]` converted to frames),
+the §3.9 failed-attempt pipeline is invoked with `failureCause`
+set by drift direction.
+
+Worked example: corner cross at 8 m/s; defender jump-committed at
+tick T; predicted contact at frame T+9; idealContactFrame T+9;
+re-evaluated at T+1, T+2, … to T+9; if at T+5 the ball deflects
+off a defender and re-prediction yields T+14 (outside window),
+emit `HeaderAttemptFailedEvent` with `MistimedLate`.
 
 ### 3.3 Jump Kinematics Integration
 
-`JumpReach` `[DERIVED]` formula (KD-4):
+`JumpReach` `[DERIVED]` formula (KD-4, pass-1 H-2 fix):
 ```
 JumpReach_m = JUMP_REACH_BASE_M
             + JUMP_REACH_K_STRENGTH · Strength_norm
             + JUMP_REACH_K_BALANCE  · Balance_norm
+            + JUMP_REACH_K_HEADING  · Heading_norm
 ```
 
-Coupling to Agent Movement #2 jump trajectory: jump apex frame
-computed by #2; #10 reads apex-frame `agentZ` and adds anatomical
-head-above-COM offset to determine `ballZ` reachable.
+**Stage 0 jump-trajectory ownership (KD-18):** AM #2 §3.6 does not
+publish Z>0 kinematics; Stage 0 jump trajectory is synthesized
+inside #10. Synthetic profile:
+```
+phase_t           = (currentFrame - jumpStartFrame) · FRAME_MS
+apexFrame         = jumpStartFrame + round(JUMP_PHASE_DURATION_MS
+                                            · JUMP_APEX_FRACTION / FRAME_MS)
+agentHeadZ(frame) = parabolic interpolation peaking at apexFrame
+                    with peak value JumpReach_m
+```
+At Stage 1+ when AM #2 grows native Z kinematics, this synthetic
+trajectory retires; the surface shifts to reading AM #2 apex-frame
+`agentZ` and adding the anatomical head-above-COM offset
+(deferred per §7.8).
 
-Worked example with sensitivity analysis (Appendix B).
+Worked example with sensitivity analysis (Appendix B; ablation
+includes `Heading` coefficient sweep per KD-4 / H-2).
 
 ### 3.4 Contact-Quality Scalar (KD-2)
 
+**Asymmetric timing tolerance (pass-1 H-1 fix).** Late headers
+degrade faster than early ones, so the early/late tolerances are
+separate `[GT]` constants and the formula is piecewise:
+
 ```
+timingJitterMs = TIMING_JITTER_SIGMA_MS
+                 · rng.NextGaussian(DRAW_SITE_TIMING_JITTER)
 timingOffsetMs = (actualContactFrame - idealContactFrame) · FRAME_MS
-timingQuality  = 1 - clamp01(|timingOffsetMs| / MAX_TOLERANCE_MS)
-pointError     = ||contactPointActual - contactPointIntent||
-pointQuality   = 1 - clamp01(pointError / CONTACT_POINT_ERROR_SIGMA_M)
-contactQualityScalar = α · timingQuality + (1-α) · pointQuality
+                 + timingJitterMs
+if timingOffsetMs <= 0:
+    timingQuality = 1 - clamp01(-timingOffsetMs / MAX_EARLY_TOLERANCE_MS)
+else:
+    timingQuality = 1 - clamp01( timingOffsetMs / MAX_LATE_TOLERANCE_MS)
+
+pointNoiseM    = CONTACT_POINT_NOISE_SIGMA_M
+                 · rng.NextGaussian(DRAW_SITE_CONTACT_POINT_ERROR)
+pointError     = ||contactPointActual - contactPointIntent|| + pointNoiseM
+pointQuality   = 1 - clamp01(pointError /
+                            (CONTACT_POINT_ERROR_SIGMA_M
+                             · headingAttrScale(agent)))
+contactQualityScalar = TIMING_POINT_BLEND_ALPHA · timingQuality
+                       + (1 - TIMING_POINT_BLEND_ALPHA) · pointQuality
 ```
-where `α = [GT]`. Telemetry label assignment:
-- `Early` if `timingOffsetMs < -EARLY_LABEL_THRESHOLD_MS`.
-- `Late` if `timingOffsetMs > +LATE_LABEL_THRESHOLD_MS`.
-- `Perfect` otherwise. **Labels are NEVER consumed by §3.5–§3.7.**
+
+`headingAttrScale(agent) = 1 + CONTACT_POINT_HEADING_ATTR_COEFF ·
+(Heading_norm - 0.5)` — higher Heading attribute tightens the
+point-error distribution.
+
+**RNG draw-site wiring (pass-1 M-4 closure):** the timing-jitter
+and contact-point-noise terms above are the call sites for
+`DRAW_SITE_TIMING_JITTER` and `DRAW_SITE_CONTACT_POINT_ERROR`
+declared in §4.4. Both draws are Gaussian (#16 RNG service
+provides `NextGaussian(drawSiteId)`).
+
+Telemetry label assignment (pass-1 L-1 — `Perfect` → `OnTime`):
+- `Early`  if `timingOffsetMs < -EARLY_LABEL_THRESHOLD_MS`.
+- `Late`   if `timingOffsetMs > +LATE_LABEL_THRESHOLD_MS`.
+- `OnTime` otherwise. **Labels are NEVER consumed by §3.5–§3.7.**
 
 ### 3.5 Power & Launch-Angle Generation
 
@@ -545,30 +771,77 @@ header from a 20 m corner with `PowerIntent=0.8`, contact-quality
 
 ### 3.6 Spin Transfer (KD-16)
 
+**`headAngularVelocity` derivation (pass-1 H-3 closure).** AM #2
+does not publish a head-segment angular velocity. #10 derives it
+locally from already-available data, avoiding any upstream
+amendment to APPROVED #2:
+
 ```
-outgoingSpin = SPIN_TRANSFER_COEFF · headAngularVelocity
-             + (incomingSpin · spinPreservationFactor)
-             - reversalTerm
+headAngularVelocity = neckRotationRate
+                    + finiteDifference(headOrientation,
+                                       prevFrameHeadOrientation,
+                                       FRAME_MS)
 ```
-where `spinPreservationFactor` depends on contact-point offset from
-head-rotation axis. Worked example: incoming topspin 8 rad/s,
-contact-point 0.02 m offset → outgoing backspin 3 rad/s (reversal).
+
+where `headOrientation` is computed at each frame from `agent.facing`
+(AM #2 §3.5.1) and the per-frame `contactPointIntent` aim vector;
+`neckRotationRate` is `[DERIVED]` from agent angular velocity (AM
+#2 XY-plane yaw rate via finite difference of `agent.facing`)
+projected onto the head-aim vector. This is a Stage 0 approximation;
+at Stage 1+ if AM #2 publishes a head-segment skeletal API, the
+derivation simplifies to a direct read (deferred to §7.9).
+
+```
+spinPreservationFactor = SPIN_PRESERVATION_BASE
+                       · (1 - contactPointAxialOffset_m
+                              / SPIN_TRANSFER_REVERSAL_THRESHOLD)
+reversalTerm           = max(0, -spinPreservationFactor) · incomingSpin
+                       (when contactPointAxialOffset exceeds
+                        SPIN_TRANSFER_REVERSAL_THRESHOLD,
+                        spinPreservationFactor goes negative →
+                        outgoing spin component opposes incoming)
+outgoingSpin           = SPIN_TRANSFER_COEFF · headAngularVelocity
+                       + (incomingSpin · spinPreservationFactor)
+                       - reversalTerm
+```
+
+`spinPreservationFactor` formula is closed-form (no magic
+numbers — pass-1 M-1 closure for §3.6 symbols). Worked example:
+incoming topspin 8 rad/s, contact-point axial offset 0.02 m → with
+`SPIN_PRESERVATION_BASE = 0.6` and
+`SPIN_TRANSFER_REVERSAL_THRESHOLD = 0.015 m`, factor =
+`0.6 · (1 - 0.02/0.015) = -0.2`, reversalTerm =
+`0.2 · 8 = 1.6 rad/s`, contribution =
+`(8 · -0.2) - 1.6 = -3.2 rad/s` (backspin reversal).
 
 ### 3.7 Contested Duel Resolution (KD-8)
 
 Inputs: Collision System #3 contact-event list at the candidate
 contact frame; participating agents within `HEAD_CONTACT_VOLUME`.
-Algorithm:
+
+Algorithm (pass-1 H-5 fix — tiebreak semantics now explicit and
+all constants tagged):
+
 1. Iterate participants in #16 §3.2 entity order.
-2. Compute `duelScore = w_B·Balance + w_S·Strength + w_H·Heading
-   + 0.01 · rng.NextFloat(DRAW_SITE_DUEL_TIEBREAK)` — RNG draw site
-   registered with #16 §4.5.
-3. Highest scorer wins; emits `HeaderExecutedEvent`. Losers receive
+2. Compute base score for each participant:
+   `baseScore = DUEL_BALANCE_WEIGHT  · Balance_norm
+              + DUEL_STRENGTH_WEIGHT · Strength_norm
+              + DUEL_HEADING_WEIGHT  · Heading_norm`.
+3. Rank participants by `baseScore` descending. If the gap between
+   the top two scorers is `< DUEL_TIEBREAK_EPSILON`, invoke the
+   tiebreak perturbation: each participant within
+   `DUEL_TIEBREAK_EPSILON` of the leader receives an additive
+   `DUEL_TIEBREAK_NOISE_AMPLITUDE · rng.NextFloat(
+   DRAW_SITE_DUEL_TIEBREAK)` and the ranking is recomputed. Non-tie
+   scores are NEVER perturbed.
+4. Highest scorer wins; emits `HeaderExecutedEvent`. Losers receive
    `disturbanceFactor ∈ [0, DUEL_DISTURBANCE_MAX]` applied to their
    `contactQualityScalar`; if reduced below `MIN_CONTACT_QUALITY`
-   they emit `HeaderAttemptFailedEvent` instead.
-4. Multi-way (3+) duels: winner-only emits `HeaderExecutedEvent`;
-   all losers emit failed events.
+   the loser emits `HeaderAttemptFailedEvent` instead of a poor-
+   quality executed event.
+5. **Multi-way (3+) duels: winner-only emits `HeaderExecutedEvent`;
+   all losers emit `HeaderAttemptFailedEvent`** (wording aligned
+   with §2.3 F-04 per pass-1 L-5).
 
 Worked example: two strikers + one defender contesting a corner;
 defender wins with `duelScore = 0.72` vs. strikers' 0.65, 0.61.
@@ -576,11 +849,19 @@ defender wins with `duelScore = 0.72` vs. strikers' 0.65, 0.61.
 ### 3.8 Own-Goal-Shape Flag Computation (KD-6)
 
 ```
+horizon_s = OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_S
+horizon_m = OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_M
 flag = projectTrajectory(outgoingVelocity, contactPosition,
-                          OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_S)
+                          min_horizon(horizon_s, horizon_m))
        intersects ownGoalBoundingBox(agent.team)
 ```
-Flag is published; not adjudicated.
+**Dual horizon (pass-1 L-7):** projection terminates at whichever
+of (a) `horizon_s` elapsed simulated time or (b) `horizon_m`
+travelled-distance arc-length is reached first. A flat header
+travels much further per second than a looping header, so a pure
+time horizon over-reaches on flat trajectories and under-reaches
+on loops; the distance cap binds the flat case, the time cap binds
+the loop case. Flag is published; not adjudicated.
 
 ### 3.9 Failed-Attempt Pipeline (KD-12)
 
@@ -621,18 +902,33 @@ state unchanged; `HeaderAttemptFailedEvent` published with
 
 ### 4.2 Input Interface Contracts
 
-Method signatures (consumed):
-- `BallPhysics.GetBallState(matchTime) → BallState` — Spec #1.
-- `AgentMovement.GetKinematicState(agentId, frame) →
-  KinematicState` — Spec #2.
-- `AgentMovement.GetPlayerAttributes(agentId) → PlayerAttributes`
-  — Spec #2 §3.5.6 (`Heading`, `Strength`, `Balance`).
+Method signatures (consumed). Anchor pinning per pass-1 M-8:
+- `BallPhysics.GetBallState(matchTime) → BallState` — Spec #1
+  (subsection pinned during `section-1.md` authoring of #10).
+- `Agent` class state (XY kinematic state, `facing`, attribute
+  exposure) — Spec #2 §3.5.1 (`section-3-5-part-1.md` lines
+  112–610). No `GetKinematicState(agentId, frame)` getter is
+  cited because AM #2 publishes per-agent state via the `Agent`
+  instance, not a registry getter; #10 consumes the agent reference
+  passed in by the simulation scheduler.
+- `PlayerAttributes` struct (`Heading`, `Strength`, `Balance` field
+  reads) — Spec #2 §3.5.6 (`section-3-5-part-2.md` line 230 onward;
+  `PlayerAttributes` struct declared line 259). §3.5.6 is the
+  declaration site; field reads are unqualified struct access, not
+  a getter call.
+- `AgentMovementState` enum + `GroundedReason` enum (for
+  aerial-phase exit and `DIVING_HEADER` ground re-entry) — Spec #2
+  §3.1.2 (`section-3-1-part-2.md` lines 23–105). Note: no
+  `Jumping` member exists; Stage 0 aerial phase is owned by #10
+  per KD-18 and is invisible to the AM #2 state machine.
 - `CollisionSystem.GetContactEventsAtFrame(frame) →
-  ReadOnlySpan<ContactEvent>` — Spec #3.
+  ReadOnlySpan<ContactEvent>` — Spec #3 (subsection pinned during
+  drafting).
 - `DecisionTree.GetHeaderIntent(agentId, tick) → HeaderIntent?`
-  — Spec #8.
-- `DeterministicRng.NextFloat(drawSiteId) → float` — Spec #16
-  §4.1.
+  — Spec #8 §1.7.x (subsection pinned during drafting).
+- `DeterministicRng.NextFloat(drawSiteId) → float`,
+  `DeterministicRng.NextGaussian(drawSiteId) → float` — Spec #16
+  §4.1 / §4.5.
 
 ### 4.3 Output Interface Contracts
 
@@ -645,18 +941,35 @@ Method signatures (emitted):
 ### 4.4 Determinism Compliance Surface
 
 Listing of all #10 → #16 touchpoints:
-- `DOMAIN_TAG_HEADING` allocation request (back-prop ERR-010-001).
-- Registered draw sites (3 candidates): `DRAW_SITE_DUEL_TIEBREAK`,
-  `DRAW_SITE_CONTACT_POINT_ERROR`, `DRAW_SITE_TIMING_JITTER`.
+- `DOMAIN_TAG_HEADING = 0x16` allocation request (back-prop
+  ERR-010-001; pure namespace amendment per #17 `0x15` precedent).
+- Registered draw sites (3, all wired to §3 callers per pass-1
+  M-4): `DRAW_SITE_DUEL_TIEBREAK` (§3.7 step 3 — near-tie
+  perturbation), `DRAW_SITE_CONTACT_POINT_ERROR` (§3.4 point-noise
+  Gaussian), `DRAW_SITE_TIMING_JITTER` (§3.4 timing-jitter
+  Gaussian). No phantom draw sites.
 - Entity-iteration order in §3.7.
 
 ### 4.5 Performance Compliance Surface
 
 Pre-commitments referenced from #18 §6 ratify-not-override (KD-2
-of #18):
+of #18). **Budget framing (pass-1 H-4 fix — steady-state vs. p99
+tail):**
 - 0-byte hot-path allocation budget (#18 §3.10 `[FIXED]`).
-- Per-tick cost budget candidate: ≤80 µs at 22-agent match peak
-  (`[EST]`; validated against #18 §5 baseline).
+- **Steady-state per-tick cost budget**: ≤80 µs (`[EST]`) at
+  22-agent match peak under non-duel-frame load. This is the
+  budget the per-tick path is tuned to and the value carried into
+  #18 §6 ratification.
+- **p99 duel-frame tail budget**: ≤180 µs (`[EST]`) at duel
+  frames (3-way duel with tiebreak perturbation). Justified by
+  §6.3 component-cost breakdown; carried into #18 §6 as a
+  separate p99 spike row. The 80 µs steady-state ceiling does not
+  bind at duel frames; the tail budget binds instead.
+- Both numbers are `[EST]` and not credible until
+  `certification-platform.md` Stage-0 host pin lands (lead-
+  developer task per CLAUDE.md OPEN ISSUES);
+  `FR-PO-052` Stage 0+1 perf-gate activation is gated on that
+  pin and not on #10 sign-off.
 - No `HotPathAllocExempt` attribute uses required (struct-based
   data flow).
 
@@ -707,9 +1020,11 @@ One sub-section per §3 algorithm; ~6–10 test cases each. Examples:
 
 ### 5.3 Validation Scenarios (match-feel)
 
-- 5.3.1 22-agent match peak: 10-minute simulation with ~15 headers
-  expected; verify telemetry distribution
-  (Perfect/Early/Late ratios match a designer-set target).
+- 5.3.1 22-agent match peak: 10-minute simulation with ~3 headers
+  expected (pass-1 M-3 recalibration — ~28 headers per full
+  90-minute match per published Opta / StatsBomb baselines, scaled
+  linearly); verify telemetry distribution (`OnTime` / `Early` /
+  `Late` ratios match a designer-set target).
 - 5.3.2 Corner-routine A/B: same delivery, two striker profiles
   (Heading 75 vs. 90) → measurable outcome divergence.
 - 5.3.3 Fatigue gradient: header power at fatigue=0.0 vs. 1.0 →
@@ -719,12 +1034,16 @@ One sub-section per §3 algorithm; ~6–10 test cases each. Examples:
 ### 5.4 Cross-Spec Conformance Tests
 
 - 5.4.1 No `HeaderType`/`HeaderClass` symbol exists in `src/` (grep
-  gate; KD-1).
+  gate; KD-1). This gate is #10-specific (the symbol grep targets
+  are owned here) and lives in #10's test plan.
 - 5.4.2 Every constant in `HeadingConstants.cs` has a source tag
   comment (KD-11; programmatic verification per #20 §3.4).
 - 5.4.3 Every RNG call uses `DeterministicRng.NextFloat(drawSiteId)`
-  (KD-10).
-- 5.4.4 No `System.Random` / `DateTime.Now` usage (CLAUDE.md gate).
+  or `DeterministicRng.NextGaussian(drawSiteId)` (KD-10).
+- (pass-1 M-9: former §5.4.4 "no `System.Random`/`DateTime.Now`"
+  gate **removed** — that is a project-wide CI gate owned by #19
+  §3.x / #20 §3.x, and re-asserting it here would duplicate the
+  authoritative gate and risk drift.)
 
 ---
 
@@ -734,12 +1053,19 @@ One sub-section per §3 algorithm; ~6–10 test cases each. Examples:
 
 ### 6.1 Per-Tick Budget
 
-Budget candidate: ≤80 µs per 60 Hz physics tick at 22-agent match
-peak. Justification: ≤22 simultaneous eligibility checks (one per
+**Steady-state budget**: ≤80 µs per 60 Hz physics tick at 22-agent
+match peak under non-duel-frame load.
+**p99 duel-frame tail budget**: ≤180 µs at duel-resolution frames
+(3-way duel + near-tie tiebreak invocation).
+
+Justification: ≤22 simultaneous eligibility checks (one per
 agent), ≤4 simultaneous contact resolutions (per #3 typical
 contact-event count), ≤1 contested duel resolution at p99. All
 struct-based; 0-byte hot-path allocation per #18 §3.10 (KD-11
-ratifies; does not override).
+ratifies; does not override). Component-cost decomposition lives
+in §6.3 and is the source-of-truth for both numbers (pass-1 H-4
+reconciliation: §6.1 budget rows match §6.3 component sum exactly,
+no implicit overrun).
 
 ### 6.2 Hot-Path Allocation Discipline
 
@@ -751,9 +1077,16 @@ ratifies; does not override).
 ### 6.3 Scaling Analysis
 
 - 22-agent match peak: 22 eligibility checks × per-tick frequency.
-- p99 contested duels: estimated ≤3 per match minute.
-- Estimated worst-case cost (3-way duel + tiebreaker RNG):
-  ~120 µs at the duel-resolution frame.
+- p99 contested duels: estimated ≤0.5 per match minute (~28
+  headers per full match; ~10% contested; ~45 duels per 90 min;
+  ≈0.5/min — pass-1 M-3 recalibration against Opta / StatsBomb
+  baselines, replacing the pre-fix estimate of ≤3/min which was
+  ~6× too high).
+- Estimated worst-case cost (3-way duel + near-tie tiebreak
+  invocation): ~180 µs at the duel-resolution frame (revised up
+  from ~120 µs to account for the new Gaussian noise draws in §3.4
+  and the conditional ranking re-computation in §3.7 step 3; folds
+  back into §6.1 p99 budget).
 
 ### 6.4 Profiling Compliance (KD-6 of #18)
 
@@ -789,6 +1122,23 @@ Each deferral has: ID, statement, rationale, candidate Stage.
   on `[DERIVED]` `JumpReach` proving insufficient (KD-4).
 - 7.7 Concession-time / pressure / referee-decision interaction —
   Stage 2+ match-state spec.
+- 7.8 AM #2 native Z kinematics — Stage 1+ (KD-18). When AM #2
+  publishes a vertical-axis kinematic surface, retire the
+  #10-owned synthetic jump trajectory and read apex-frame `agentZ`
+  from AM #2 instead.
+- 7.9 AM #2 head-segment skeletal API — Stage 1+ (pass-1 H-3
+  resolution). When AM #2 publishes per-segment angular velocity,
+  retire the #10-owned `headAngularVelocity` derivation in §3.6
+  and read it directly.
+- 7.10 Dedicated jump-timing attribute — Stage 1+. When validation
+  data warrants separating reach (`JumpReach`) from anticipation/
+  timing, introduce a new `PlayerAttribute` and split the `Heading`
+  term in the §3.3 formula across the two attributes.
+- 7.11 Glancing/direct telemetry classifier — Stage 1+. The dead
+  `GLANCING_ANGLE_THRESHOLD_RAD` constant removed from §3.1 in v1.1
+  (pass-1 L-3) becomes relevant when a downstream telemetry
+  classifier needs an angle threshold; not a #10 publication at
+  Stage 0.
 
 ---
 
@@ -814,23 +1164,44 @@ APIs; #20 §3.x constant-tag verification.
 
 ### 8.3 External References (Academic / Empirical)
 
-- Bull (1985) — coefficient-of-restitution for head-ball impacts
-  (with DOI).
+Pre-identified anchor set (pass-1 L-6 — six anchors named at
+outline stage so §9 audit does not surface a sparseness finding;
+DOIs verified during `section-8.md` authoring):
+
+- Bull (1985) — coefficient-of-restitution for head-ball impacts.
 - Auger & Pellegrini (2007) — head kinematics under jumping
-  contact (placeholder until DOI verified during drafting).
-- (Up to 6 references; all DOIs verified before §9 approval.)
+  contact.
+- Shewchenko, Withnall, Keown, Gittens & Dvorak (2005) — heading
+  in soccer: dynamic, mechanical, and player-perception data
+  (relevant for §3.4 timing/point error scales).
+- Naunheim, Bayly, Standeven, Neubauer, Lewis & Genin (2003) —
+  linear and angular head accelerations during heading
+  (relevant for §3.6 `headAngularVelocity` magnitudes).
+- Kirkendall & Garrett (2001) — heading in adult soccer
+  (relevant for §6.3 / §5.3.1 header-frequency baselines —
+  pass-1 M-3 recalibration source).
+- Opta / StatsBomb match-level header statistics (modern
+  empirical baseline for §5.3.1 expected-header-count target).
 
 ### 8.4 Typed Cross-References
 
-Allocated IDs (`XC-010-NNN`, `FM-010-NNN`, `EC-010-NNN`):
-- `XC-010-001` — to AM #2 §2.5 EntityId no-reuse.
-- `XC-010-002` — to Ball Physics #1 §1.2 coordinate origin.
-- `XC-010-003` — to Shot #6 KD-6 body-part routing.
-- `XC-010-004` — to First Touch #4 §1.2 0.5 m boundary
-  reaffirmation.
-- `XC-010-005` — to Determinism #16 §3.4 `DOMAIN_TAG_HEADING`.
-- `XC-010-006` — to Event System #17 own-goal adjudication.
-- `XC-010-007` — to #18 §3.10 trace channel registry.
+Allocated IDs (`XC-010-NNN`, `FM-010-NNN`, `EC-010-NNN`). Pass-1
+M-6 drop: former `XC-010-001` (AM #2 §2.5 EntityId no-reuse) was
+unmotivated — #10 consumes `agentId` only within single contact
+frames, never caches across despawn boundaries — and is removed.
+Remaining bindings renumbered:
+- `XC-010-001` — to Ball Physics #1 §1.2 coordinate origin
+  (was `-002`).
+- `XC-010-002` — to Shot #6 §1.3 KD-6 body-part routing
+  (was `-003`).
+- `XC-010-003` — to First Touch #4 §1.2 0.5 m boundary
+  reaffirmation (was `-004`).
+- `XC-010-004` — to Determinism #16 §3.4 `DOMAIN_TAG_HEADING`
+  catalogue row (was `-005`; `0x16` allocation per KD-10).
+- `XC-010-005` — to Event System #17 own-goal adjudication
+  (was `-006`).
+- `XC-010-006` — to Performance Optimization #18 §3.10 trace
+  channel registry (was `-007`).
 - `FM-010-001` — `JumpReach` (§3.3).
 - `FM-010-002` — `contactQualityScalar` (§3.4).
 - `FM-010-003` — `outgoingSpeed` (§3.5).
@@ -917,25 +1288,58 @@ illustrative; designer-authored values supersede at Stage 1+.
 `HeaderIntent`, `HeaderExecutedEvent`, `HeaderAttemptFailedEvent`,
 `ContestedDuelContext`, `OwnGoalShapedTrajectory`, etc.
 
-### Appendix E — Mapping Table to Adversarial Review Findings
+### Appendix E — Mapping Table to v0.1 Adversarial Review Findings
 
 Two-column table: finding number (1–22 from `outline.md`
 adversarial-review appendix) → resolution location in this outline
 (KD-N or section ID). Used by §9 to programmatically confirm every
 finding is addressed.
 
+### Appendix F — Mapping Table to Pass-1 Review Findings (v1.0 → v1.1)
+
+Two-column table covering the 21 findings of
+`outline-detailed-pass-1-review.md` (5 H / 9 M / 7 L) plus the
+cross-cutting AM #2 jump-surface absence:
+
+| Finding | Severity | Resolution location |
+|---------|----------|---------------------|
+| H-1 timing tolerance | HIGH | §3.4 asymmetric piecewise formula; §3.1 keeps `MAX_EARLY_TOLERANCE_MS` and `MAX_LATE_TOLERANCE_MS` as distinct `[GT]` rows |
+| H-2 JumpReach Heading term | HIGH | KD-4 revised; §3.3 formula gains `JUMP_REACH_K_HEADING · Heading_norm`; §3.1 adds `JUMP_REACH_K_HEADING` |
+| H-3 headAngularVelocity source | HIGH | §3.6 derives `headAngularVelocity` from AM #2 `agent.facing` finite-difference + projected neck rotation; no #2 amendment; §7.9 deferral for Stage 1+ direct read |
+| H-4 §6.1 vs §6.3 budget contradiction | HIGH | §6.1 split into steady-state (≤80 µs) and p99 duel-frame tail (≤180 µs); §6.3 component breakdown is source-of-truth |
+| H-5 magic `0.01` in duel tiebreak | HIGH | §3.7 step 3 rewritten using `DUEL_TIEBREAK_EPSILON` and `DUEL_TIEBREAK_NOISE_AMPLITUDE` (both `[GT]` in §3.1); non-tie scores never perturbed |
+| M-1 missing §3.1 constants | MEDIUM | §3.1 expanded from ~28 to ~35 rows; every §3.4–§3.7 symbol enumerated or tagged `[DERIVED]` |
+| M-2 IDEAL_CONTACT_FRAME_OFFSET miscategorised | MEDIUM | Removed from §3.1; relocated to §3.2 as per-call output of eligibility predicate |
+| M-3 header-count expectations off by 3–4× | MEDIUM | §6.3 (≤0.5 duels/min) and §5.3.1 (~3 headers/10 min) recalibrated against Opta / StatsBomb; cite added to §8.3 |
+| M-4 phantom draw sites | MEDIUM | §3.4 injects Gaussian noise via `DRAW_SITE_CONTACT_POINT_ERROR` and `DRAW_SITE_TIMING_JITTER`; §3.1 adds `CONTACT_POINT_NOISE_SIGMA_M`, `TIMING_JITTER_SIGMA_MS`; §4.4 marks all three draw sites as wired |
+| M-5 intent-staleness policy | MEDIUM | New KD-17; §3.2 intent-staleness handling subsection added; FR-HE-018 covers the contract |
+| M-6 XC-010-001 unmotivated | MEDIUM | XC-010-001 (EntityId no-reuse) removed; remaining cross-refs renumbered 001–006 |
+| M-7 KD-13 set-piece scope | MEDIUM | KD-13 rationale expanded — spin-on-arrival propagates through `BallState`; wall/pile geometry handled by #3; no set-piece-specific #10 branch needed |
+| M-8 AM #2 anchor pinning | MEDIUM | §1.4 dependency table now lists exact subsections (§3.5.1, §3.5.6, §3.1.2); §4.2 explains why no `GetKinematicState(agentId, frame)` getter exists |
+| M-9 §5.4.4 duplicate gate | MEDIUM | §5.4.4 removed; CI gate ownership retained at #19 / #20 |
+| L-1 `Perfect` label naming | LOW | Renamed `Perfect` → `OnTime` across KD-2, §2.2 enum, §3.4 telemetry, §5.3.1 |
+| L-2 §1.2 ambiguous "or" | LOW | Disambiguated: Stage 0 set-piece kicks routed to #5; Stage 1+ may take over |
+| L-3 dead GLANCING_ANGLE_THRESHOLD_RAD | LOW | Removed from §3.1; deferred to §7.11 as a Stage 1+ telemetry-classifier concern |
+| L-4 #7 in direct-dependency list | LOW | Moved to "Tractability cites" footnote; upstream table reduced to 9 direct deps |
+| L-5 §3.7 step 4 / F-04 wording drift | LOW | Both phrasings aligned to "winner-only emits HeaderExecutedEvent; all losers emit HeaderAttemptFailedEvent" |
+| L-6 sparse §8.3 anchors | LOW | Six anchors named at outline stage (Bull, Auger & Pellegrini, Shewchenko et al., Naunheim et al., Kirkendall & Garrett, Opta/StatsBomb) |
+| L-7 own-goal projection horizon semantics | LOW | §3.1 adds `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_M`; §3.8 uses `min(time, distance)` dual-horizon |
+| AM #2 jump-surface absence (cross-cutting) | HIGH | New KD-18; §3.3 owns synthetic jump trajectory at Stage 0; §7.8 deferral when AM #2 grows Z kinematics; no #2 amendment required |
+
 ---
 
 ## OPEN-ITEMS TRACKER
 
-Status at outline-detailed v1.0:
+Status at outline-detailed v1.1:
 
 | ID | Item | Owner | Status |
 |----|------|-------|--------|
-| OI-001 | `DOMAIN_TAG_HEADING` allocation in #16 §3.4 | back-prop ERR-010-001 | pending — to be filed when `section-3.md` lands |
+| OI-001 | `DOMAIN_TAG_HEADING = 0x16` allocation in #16 §3.4 | back-prop ERR-010-001 | pending — to be filed when `section-3.md` lands; precedent: #17 `DOMAIN_TAG_EVENT_LEDGER = 0x15` patch |
 | OI-002 | `#18 §3.10` trace channel rows for `heading.*` channels | back-prop | pending — to be filed when `section-2.md` §2.4 lands |
-| OI-003 | DOI verification for §8.3 external references | drafter | pending |
+| OI-003 | DOI verification for §8.3 external references (six anchors named in v1.1) | drafter | pending |
 | OI-004 | Goalkeeper #11 interface confirmation | post-#11 IN REVIEW | not blocking |
+| OI-005 | Pin #3 contact-event API subsection and #8 intent-surface §1.7.x exact anchor | drafter | pending — pin during `section-1.md` authoring |
+| OI-006 | `certification-platform.md` Stage-0 host pin | lead developer | not blocking #10 spec sign-off; blocks `FR-PO-052` perf-gate activation only |
 
 ---
 
@@ -944,4 +1348,5 @@ Status at outline-detailed v1.0:
 | Version | Date | Author | Notes | Reviewer |
 |---------|------|--------|-------|----------|
 | 0.1 | May 6, 2026 | initial | `outline.md` high-level; 22-finding adversarial review attached | (review applied in this doc) |
-| 1.0 | May 15, 2026 | this document | Detailed outline supersedes v0.1; 22 findings all resolved via KD-1…KD-16 + section-plan remap; dependencies fully enumerated; output interface defined; ready for section-file authoring | pending |
+| 1.0 | May 15, 2026 | this document | Detailed outline supersedes v0.1; 22 findings all resolved via KD-1…KD-16 + section-plan remap; dependencies fully enumerated; output interface defined; ready for section-file authoring | superseded by v1.1 |
+| 1.1 | May 15, 2026 (later) | this document | Resolves all 21 pass-1 adversarial review findings (5 H / 9 M / 7 L) per `outline-detailed-pass-1-review.md`; adds KD-17 (intent-staleness re-validation) and KD-18 (Stage 0 jump kinematics owned by #10 — closes AM #2 jump-surface absence discovered during M-8 verification); §3.1 expanded ~28 → ~35 rows with full M-1 inventory closure; §3.4 asymmetric timing tolerance; §3.4 noise draws wired (M-4); §3.6 `headAngularVelocity` derivation specified; §3.7 tiebreak semantics tagged and constants tagged; §3.8 dual-horizon own-goal projection; §6.1/§6.3 budget reconciled (steady-state vs. p99 tail); §1.4 / §4.2 AM #2 anchors pinned to verified subsections; XC-010-001 dropped; six §8.3 academic anchors named; Appendix F mapping table added | pending |
