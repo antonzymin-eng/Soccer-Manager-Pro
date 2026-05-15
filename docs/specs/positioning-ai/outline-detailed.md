@@ -1,13 +1,47 @@
 # Positioning AI Specification #12 — Detailed Outline
 
 **Created:** May 15, 2026
-**Last Updated:** May 15, 2026 (v1.1 — same day adversarial-review fix pass)
-**Version:** 1.1
+**Last Updated:** May 15, 2026 (v1.2 — same day Outstanding-Questions resolution pass)
+**Version:** 1.2
 **Status:** DRAFT — v1.0 resolved all 13 findings from the May 6, 2026
-review at the bottom of `outline.md`. v1.1 (same day) resolves a
+review at the bottom of `outline.md`. v1.1 (same day) resolved a
 further 13 findings (5 H / 5 M / 3 L) from the self-adversarial pass
-filed against v1.0 — `adversarial-review-v1.md` (Findings AR-V1-01 …
-AR-V1-13). Key v1.1 changes:
+— `adversarial-review-v1.md` (Findings AR-V1-01 … AR-V1-13). v1.2
+(same day) resolves the four Outstanding Outline-Phase Questions
+from v1.1's tail — see "RESOLVED OUTLINE-PHASE QUESTIONS" section
+near the bottom. Key v1.2 changes:
+  - **Q1 archetype count resolved.** `master-development-plan.md`
+    §3.2 commits to 10 formations at Stage 1 (Month 3-4 deliverable
+    `FormationSystem.cs`). Stage 0 ships 3 archetype FAMILIES
+    (4-4-2, 4-3-3, 4-2-3-1); the 10 named variants (4-4-2 Flat /
+    Diamond; 4-3-3 Attack / Holding; 4-2-3-1 Wide / Narrow;
+    3-5-2; 5-3-2; 3-4-3; 4-1-4-1) are enumerated in §7.6 as the
+    Stage 1+ expansion target. KD-7 + FR-PA-007 updated; §7.6
+    enumerates the 10 named variants per planning doc.
+  - **Q2 domain-tag block resolved.** ERR-012-001 filed in
+    `spec-error-log.md` requesting a Phase B/C block allocation
+    `0x16 … 0x1B` covering #10/#11/#12/#13/#14/#15. Lead-developer
+    ratification gate added to §9.3.
+  - **Q3 TacticalContext schema verified.** Grep'd #8 §2.2.6
+    (`decision-tree/section-2-1-to-2-2.md` L688–721). `TacticalContext`
+    is **per-agent**, not per-team — injected into each agent's
+    `DecisionContext` at #8 Step 2. The relevant field is a single
+    `Vector2 FormationSlot` (not an array of 22, not Vector3).
+    **The field set is FROZEN at Stage 0** — adding fields requires
+    a #8 specification amendment. v1.1 claims of writing a shared
+    `FormationSlot[22]` array and adding a `StableHash` field were
+    therefore both incorrect. KD-3, KD-2, §2.2 data structures, and
+    the Boundary Matrix corrected accordingly.
+  - **Q4 StableHash field DROPPED.** The hysteresis lives entirely
+    inside #12's own state (`HysteresisState.cs`); #8 reads only
+    `Vector2 FormationSlot` and does not need stability metadata
+    (it does not run hysteresis against the slot — its action loop
+    re-evaluates every tick). FR-PA-034 deleted.
+  - **Bonus: ERR-012-002 filed.** Grep against
+    `decision-tree/section-3-1.md` L716 found a stale spec ref
+    ("Formation System (Spec #14)") — current #14 is Defensive AI;
+    the Formation System is #12. ERR-012-002 requests a one-line
+    patch to #8. Key v1.1 changes:
   - **KD-3 rewritten.** Verified against `decision-tree/section-3-1.md`
     §3.1.7 and `section-3-2.md` §3.2.6: #8 owns `MOVE_TO_POSITION`
     action selection and consumes `TacticalContext.FormationSlot` —
@@ -91,51 +125,68 @@ approved spec. Cited: corner-origin coordinates (#1 §1.2); fatigue
 XC-008-001); perception schema (#7 §3.7–§3.10); decision-tree action
 schema (#8 §3.1, §3.2).
 
-### KD-2 — 10 Hz tactical, 60 Hz steering owned by #2
-Positioning AI runs on the 10 Hz tactical loop. Output is a
-`FormationSlot` (3D target point + role + lane + line membership)
-per controlled agent, written once per tick into a shared
-`TacticalContext` struct. Agent Movement #2 §3.x consumes the
-resolved `Action.TargetPosition` returned by #8 at 60 Hz steering.
-Spec #12 does NOT emit per-frame steering and does NOT write
+### KD-2 — 10 Hz tactical, 60 Hz steering owned by #2 (corrected v1.2)
+Positioning AI runs on the 10 Hz tactical loop. Output is a single
+`Vector2 formationSlot` per agent per tick. **The orchestrator copies
+this value into each agent's per-agent `TacticalContext.FormationSlot`
+at #8 Step 2** (per `decision-tree/section-2-1-to-2-2.md` L688–721).
+#12 does NOT write into a shared 22-element array (v1.1 error — there
+is no such array; `TacticalContext` is per-agent and its field set is
+frozen at Stage 0). Agent Movement #2 §3.x consumes the resolved
+`Action.TargetPosition` returned by #8 at 60 Hz steering. Spec #12
+does NOT emit per-frame steering and does NOT write
 `Action.TargetPosition` directly — that field is owned by #8 (see
 KD-3).
 
-### KD-3 — Boundary with Decision Tree #8 (rewritten v1.1; verified)
+### KD-3 — Boundary with Decision Tree #8 (rewritten v1.1; refined v1.2)
 
-**Verified facts** (grep against `decision-tree/section-3-1.md` §3.1.7
-and `section-3-2.md` §3.2.6):
+**Verified facts** (grep against `decision-tree/section-3-1.md` §3.1.7,
+`section-3-2.md` §3.2.6, and `section-2-1-to-2-2.md` §2.2.6 L688–721):
 - #8 evaluates `MOVE_TO_POSITION` for every off-ball agent on every
   10 Hz tactical tick.
 - The action's `TargetPosition` field is sourced from
-  `TacticalContext.GetFormationSlot(AgentId)` (section-3-1.md L702,
-  L707–725).
-- §3.1.7 explicitly says "Stage 1 wires the Formation Engine" —
-  Stage 0 uses hardcoded `TacticalContext` defaults.
+  `TacticalContext.FormationSlot` (`Vector2`, single field — see
+  KD-2 correction).
+- `TacticalContext` is a **per-agent** struct injected into each
+  agent's `DecisionContext` at #8 Step 2. **Its field set is FROZEN
+  at Stage 0** per #8 §2.2.6 prose: "field set is frozen at Stage 0.
+  Stage 1 may only change VALUES, not add or remove fields."
+- #8 §3.1.7.2 explicitly says "Stage 1 wires the Formation System"
+  — Stage 0 uses `TacticalContext.Stage0Default(formationSlot)`
+  factory method.
 
-**Therefore #12's Stage 0 role is to BE the Formation Engine that
-populates `TacticalContext.FormationSlot[]`.** It is an upstream
-producer of #8 inputs, NOT a competitor of #8 action selection.
+**Therefore #12's Stage 0 role is to BE the Formation System that
+produces the per-agent `Vector2 formationSlot` consumed by #8's
+TacticalContext factory.** It is an upstream producer of #8 inputs,
+NOT a competitor of #8 action selection.
 
 **Boundary at Stage 0:**
-- **#12 owns:** the `FormationSlot[22]` array inside
-  `TacticalContext` — one slot per agent per tactical tick. Each
-  slot includes the 3D target point, role tag, lane/line
-  membership, and a stability hash for #8 hysteresis use.
+- **#12 owns:** the per-agent `Vector2 formationSlot` output (one
+  per agent per tactical tick). The orchestrator calls #12 first at
+  each tick boundary, then assembles each agent's `TacticalContext`
+  by calling `TacticalContext.Stage0Default(slot)` (or a
+  successor factory) with #12's slot.
 - **#8 owns:** the per-agent action loop (PASS, SHOOT, DRIBBLE, HOLD,
   MOVE_TO_POSITION, PRESS, INTERCEPT) and the utility scoring that
   selects between them. `MOVE_TO_POSITION` reads
-  `TacticalContext.FormationSlot[AgentId].TargetPosition` verbatim.
-- **#12 → #8 coupling:** one direction, read-only,
-  `TacticalContext`-mediated. No event channel needed at Stage 0.
+  `DecisionContext.TacticalContext.FormationSlot` verbatim.
+- **#12 → #8 coupling:** one direction, read-only, via orchestrator
+  TacticalContext assembly. No event channel needed at Stage 0.
+  No #8 spec amendment needed (the existing `FormationSlot` field
+  is what we populate).
+- **#12-internal state NOT exposed to #8:** line membership, lane
+  assignment, hysteresis dwell counters, role assignment. These
+  live entirely in `src/PositioningAI/` (consumed by Stage 1+
+  #14/#15 via read-only accessors on `PositioningAI` itself —
+  NOT via `TacticalContext`).
 - **#8 → #12 coupling:** none at Stage 0. #12 does not consume #8
-  output. (At Stage 1+, when ball-carrier context biases shape, this
-  may invert — explicitly deferred.)
+  output. (At Stage 1+, when ball-carrier context biases shape,
+  this may invert — explicitly deferred.)
 
 This boundary inverts v1.0's claim. v1.0 said "#12 selects
 positional targets for off-ball agents; #8 selects actions for the
 on-ball agent." That was wrong: #8 selects actions for all 22 agents
-and reads #12's slots as input to one of those actions.
+and reads #12's slot as input to one of those actions.
 
 ### KD-4 — Boundary with Pressing AI #13
 At Stage 0, #13 is NOT STARTED and #8 §3.2.7 already provides
@@ -169,16 +220,23 @@ actions, not from a separate run system. #12 publishes baseline
 support shape only. Stage 1+ `RunIntent` displacement is declared in
 §7.x as a boundary hint, not implemented.
 
-### KD-7 — Formation data ownership
+### KD-7 — Formation data ownership (resolved v1.2)
 Formation archetypes live as `static readonly` arrays in
 `PositioningAIConstants.cs` (single catalogue per #20 §4.2
 FR-CS-025; see KD-17). Each archetype is an 11×{lateralPct,
-longPct, role, line, lane} table. **Stage 0 ships THREE archetypes**
-(4-4-2, 4-3-3, 4-2-3-1) — the most common modern shapes; additional
-shapes (3-5-2, 3-4-3, 5-3-2) are Stage 1+ deferrals. This number is
-PROVISIONAL pending grep against `docs/planning/` (see "Outstanding
-Outline-Phase Questions" below) — if planning docs commit to a
-different count, the catalogue tracks the planning-doc number.
+longPct, role, line, lane} table. **Stage 0 ships THREE archetype
+families** (4-4-2, 4-3-3, 4-2-3-1). **Stage 1 expands to TEN named
+variants** per `master-development-plan.md` §3.2 (Month 3-4
+Formation System deliverable, lines 441–449): (1) 4-4-2 Flat;
+(2) 4-4-2 Diamond; (3) 4-3-3 Attack; (4) 4-3-3 Holding;
+(5) 4-2-3-1 Wide; (6) 4-2-3-1 Narrow; (7) 3-5-2; (8) 5-3-2;
+(9) 3-4-3; (10) 4-1-4-1. §7.6 enumerates these as the Stage 1+
+expansion roadmap. The Stage 0 set was chosen because each family
+covers one structural pattern (two-striker / front-three /
+single-striker-with-AM) without committing to in-family variants
+that need tactical-instruction differentiation (overlap / hold
+inside / cut in) which is Stage 1+ work per planning doc
+"Individual Instructions" §3.2.
 
 ### KD-8 — Hysteresis pattern reuse (#2 §3.1 binding)
 Anchor selection, line membership, and lane occupation use the
@@ -187,18 +245,31 @@ define a new algorithm — it parameterises the #2 pattern. All
 hysteresis constants are `[EST]` at outline stage (resolves
 AR-V1-08) pending the section-file derivation pass.
 
-### KD-9 — Determinism binding (#16)
-All `FormationSlot[]` writes are authoritative simulation state per
-#16 §3.2 and appear in the per-tick digest at the scope #16 §6.2
-defines for tactical-AI outputs. Agent iteration uses the canonical
-EntityId sort from #16 §3.2.5. Any stochastic micro-jitter (e.g.,
+### KD-9 — Determinism binding (#16) (resolved v1.2)
+All per-agent `formationSlot` writes plus the internal hysteresis
+dwell counters are authoritative simulation state per #16 §3.2 and
+appear in the per-tick digest at the scope #16 §6.2 defines for
+tactical-AI outputs. Agent iteration uses the canonical EntityId
+sort from #16 §3.2.5. Any stochastic micro-jitter (e.g.,
 tie-breaking when two roles can fill the same slot) uses
 `DeterministicRngService` with domain tag
-`DOMAIN_TAG_POSITIONING_AI = _TBD_`. **Value allocation is NOT
-asserted by this outline** — it is requested via `ERR-012-001` in
-`spec-error-log.md` as part of a Phase B/C block-allocation policy
-covering #10/#11/#12/#13/#14/#15. Tag remains `[CROSS-PENDING]`
-until lead-developer ratification of the block.
+`DOMAIN_TAG_POSITIONING_AI = 0x16` (proposed; `[CROSS-PENDING]`
+until lead-developer ratifies the block). **Proposed Phase B/C
+block** (filed as ERR-012-001 in `spec-error-log.md`):
+
+| Spec | Domain Tag | Value |
+|---|---|---|
+| #10 Heading Mechanics | `DOMAIN_TAG_HEADING_MECHANICS` | `0x17` |
+| #11 Goalkeeper Mechanics | `DOMAIN_TAG_GOALKEEPER` | `0x18` |
+| #12 Positioning AI | `DOMAIN_TAG_POSITIONING_AI` | `0x16` |
+| #13 Pressing AI | `DOMAIN_TAG_PRESSING_AI` | `0x19` |
+| #14 Defensive AI | `DOMAIN_TAG_DEFENSIVE_AI` | `0x1A` |
+| #15 Attacking AI | `DOMAIN_TAG_ATTACKING_AI` | `0x1B` |
+
+Block is the next-available range after `0x15` (#17 Event
+System, allocated May 14 per ERR-017-001). All six values
+remain `[CROSS-PENDING]` until lead-developer ratifies the
+block and patches #16 §3.4 in a single revision.
 
 ### KD-10 — Event System binding (#17) — REWRITTEN v1.1
 v1.0 named three #17 channels (`PHASE_CHANGE`, `ACTION_INTENT`,
@@ -294,7 +365,7 @@ blocks per #20 §4.2. The v1.0 split (`PositioningConstants.cs` +
 
 | Boundary | #12 owns | Other owns | Direction | Mechanism | Stage 0? |
 |---|---|---|---|---|---|
-| #8 Decision Tree | `TacticalContext.FormationSlot[22]` | Per-agent action loop incl. `MOVE_TO_POSITION` | #8 reads #12 | Read shared `TacticalContext` struct at tick start | Yes |
+| #8 Decision Tree | Per-agent `Vector2 formationSlot` output | Per-agent action loop incl. `MOVE_TO_POSITION`; the frozen `TacticalContext` schema (#8 §2.2.6) | #8 reads #12 | Orchestrator copies #12's slot into each agent's `TacticalContext.FormationSlot` at #8 Step 2 | Yes |
 | #2 Agent Movement | (none direct — via #8 action output) | 60 Hz steering toward `Action.TargetPosition` | #2 reads #8 | #8's resolved action carries the target | Yes |
 | #7 Perception | (none — read consumer) | Filtered world model | #12 reads #7 | Snapshot read at tick start | Yes |
 | #13 Pressing | Schema slot for future `PressOverride` | Press trigger + displacement | (deferred) | Stage 1+ only | No |
@@ -356,12 +427,12 @@ sections. (Resolves AR-V1-06.)
 | FR | Subject | Conf. | Source |
 |---|---|---|---|
 | FR-PA-001 | Tactical tick rate is 10 Hz | MUST | CLAUDE.md / KD-1 |
-| FR-PA-002 | Output is one `FormationSlot` per agent per tick into shared `TacticalContext` | MUST | KD-2, KD-3 |
+| FR-PA-002 | Output is one `Vector2 formationSlot` per agent per tick; orchestrator copies into each agent's frozen `TacticalContext.FormationSlot` at #8 Step 2 | MUST | KD-2, KD-3 |
 | FR-PA-003 | Agent iteration order is EntityId-sorted ascending | MUST | #16 §3.2.5 / KD-9 |
 | FR-PA-004 | `FormationSlot[]` contributes to per-tick digest | MUST | #16 §6.2 / KD-9 |
-| FR-PA-005 | RNG calls use `DOMAIN_TAG_POSITIONING_AI` (value TBD) | MUST | #16 §3.4 / KD-9 |
+| FR-PA-005 | RNG calls use `DOMAIN_TAG_POSITIONING_AI = 0x16` (`[CROSS-PENDING]` until ERR-012-001 ratified) | MUST | #16 §3.4 / KD-9 |
 | FR-PA-006 | No allocation on hot path | MUST | #18 §3.7 |
-| FR-PA-007 | Three formation archetypes shipped at Stage 0 (4-4-2, 4-3-3, 4-2-3-1) | MUST | KD-7 |
+| FR-PA-007 | Three formation archetype families shipped at Stage 0 (4-4-2, 4-3-3, 4-2-3-1); ten named variants at Stage 1 per `master-development-plan.md` §3.2 | MUST | KD-7 |
 | FR-PA-008 | Anchor selection uses dwell-time hysteresis (binding to #2 §3.1) | MUST | KD-8 |
 | FR-PA-009 | Line-membership transitions use dead-zone hysteresis | MUST | KD-8 |
 | FR-PA-010 | Lane-occupation transitions use dead-zone hysteresis | MUST | KD-8 |
@@ -388,7 +459,7 @@ sections. (Resolves AR-V1-06.)
 | FR-PA-031 | Tactical intensity scales vertical compactness target | MUST | §3.5 |
 | FR-PA-032 | Tactical intensity default source is per-archetype `[GT]` field (no UI at Stage 0) | MUST | KD-11 / AR-V1-11 |
 | FR-PA-033 | Slot writes are clamped to pitch bounds with 0.5m touchline margin | MUST | §2.4 F5 |
-| FR-PA-034 | `FormationSlot` includes stable hash for #8 hysteresis use | MUST | KD-3 |
+| FR-PA-034 | (DELETED v1.2 — `StableHash` field DROPPED; #8 has no hysteresis on the slot. See "RESOLVED OUTLINE-PHASE QUESTIONS" Q4 below.) | — | — |
 | FR-PA-035 | Goalkeeper slot computed by dedicated formula (no line partition) | MUST | §3.3 |
 | FR-PA-036 | Substituted/red-carded agents excluded from compactness computation | MUST | §2.4 |
 | FR-PA-037 | Slot computation is pure function of (perception, ball, phase, formation, modifiers, prev hysteresis state) | MUST | §4.1 |
@@ -408,11 +479,11 @@ sections. (Resolves AR-V1-06.)
 
 | Struct | Purpose | Stage |
 |---|---|---|
-| `FormationSlot` | Per-agent slot output: target, role, lane, line, stability hash | 0 |
+| `PositioningOutput` (#12-internal) | Per-agent `Vector2 formationSlot` + `LineMembership` + `LaneAssignment` (last two are #12-internal, not exposed to #8) | 0 |
 | `FormationArchetype` | 11×5 lookup: role, lateral%, long%, line, lane | 0 |
-| `TacticalContext` | Shared with #8 — contains `FormationSlot[22]` | 0 (#8-owned struct; #12 fills the slice) |
+| `TacticalContext` (#8-owned, schema frozen Stage 0) | Per-agent struct injected at #8 Step 2; contains single `Vector2 FormationSlot` field (plus `PressingInstruction` / `PassingInstruction` / `DefensiveLineDepth` — none of those owned by #12 at Stage 0) | — (consumed only) |
 | `ContextModifierInputs` | Score diff, team-mean fatigue, tactical-intensity | 0 |
-| `HysteresisState` | Per-agent dwell counters for anchor / line / lane | 0 |
+| `HysteresisState` | Per-agent dwell counters for anchor / line / lane (digested — KD-9) | 0 |
 | `BaselineDefensiveShape` (read-only view) | Reserved name for #14 Stage 1+ consumption | 1+ |
 | `PressOverride` schema | Reserved name for #13 Stage 1+ writer | 1+ |
 | `RunIntent` schema | Reserved name for #15 Stage 1+ writer | 1+ |
@@ -527,15 +598,22 @@ src/PositioningAI/
 ### 4.3 Internal Module Contracts
 
 ### 4.4 Upstream Integration Contracts
-- Perception snapshot read (#7 §3.7).
-- `TacticalContext` write surface (#8-owned struct; #12 fills
-  `FormationSlot[]` slice at tick start, BEFORE #8's per-agent loop).
+- Perception snapshot read (#7 §3.7) at tick start.
+- Orchestrator-supplied `ContextModifierInputs` (score, team-mean
+  fatigue, tactical-intensity) at tick start.
+- #12 does NOT write into `TacticalContext` directly. The orchestrator
+  reads #12's per-agent `formationSlot` output via a stable accessor
+  (e.g., `PositioningAI.GetFormationSlot(EntityId)`) and assembles
+  each agent's `TacticalContext` per #8 §2.2.6 before invoking #8
+  Step 2.
 
 ### 4.5 Downstream Integration Contracts
-- `TacticalContext.FormationSlot[]` consumed by #8 §3.1.7 (`MOVE_TO_POSITION`)
-  and §3.2.6 (`MOVE_TO_POSITION` utility).
-- `LineMembership` / `LaneAssignment` exposed read-only for Stage 1+
-  #14 consumption.
+- Per-agent `Vector2 formationSlot` consumed by orchestrator,
+  forwarded into #8 `TacticalContext.FormationSlot` per #8 §3.1.7
+  (`MOVE_TO_POSITION`) and §3.2.6 (`MOVE_TO_POSITION` utility).
+- `LineMembership` / `LaneAssignment` exposed read-only on the #12
+  subsystem itself (NOT via `TacticalContext` — that schema is
+  frozen at Stage 0) for Stage 1+ #14 consumption.
 
 ### 4.6 Determinism & Safety Boundaries (binding to #16)
 Iteration order; RNG domain tag; digest scope; hysteresis state ARE
@@ -624,7 +702,15 @@ N/A — no per-frame work.
 ### 7.3 Stage 1+ — `PressOverride` writer layer (#13 binding slot)
 ### 7.4 Stage 1+ — `RunIntent` writer layer (#15 binding slot)
 ### 7.5 Stage 1+ — `MarkAssignment` reader layer (#14 binding slot)
-### 7.6 Stage 1+ — Additional archetypes (3-5-2, 3-4-3, 5-3-2)
+### 7.6 Stage 1+ — Ten named formation variants
+Per `master-development-plan.md` §3.2 lines 441–449
+(`FormationSystem.cs` Month 3-4 deliverable): (1) 4-4-2 Flat;
+(2) 4-4-2 Diamond; (3) 4-3-3 Attack; (4) 4-3-3 Holding;
+(5) 4-2-3-1 Wide; (6) 4-2-3-1 Narrow; (7) 3-5-2; (8) 5-3-2;
+(9) 3-4-3; (10) 4-1-4-1. Stage 0 ships three families
+(4-4-2 / 4-3-3 / 4-2-3-1) that cover the structural patterns;
+in-family variants gate on tactical-instruction infrastructure
+also deferred to Stage 1.
 ### 7.7 Stage 1+ — Mid-match formation switch
 ### 7.8 Stage 1+ — Telemetry channels (`SHAPE_TRANSITION`, `LINE_BREACH_ALERT`) via #17 back-prop
 ### 7.9 Stage 2+ — ML-tuned `[GT]` parameter fitting
@@ -639,7 +725,7 @@ N/A — no per-frame work.
 - #1 §1.2, §3.x
 - #2 §2.5 (XC-002-001), §3.1
 - #7 §3.7–§3.10
-- #8 §1.7.3 (XC-008-001), §3.1.7, §3.2.6
+- #8 §1.7.3 (XC-008-001), §2.2.6 (`TacticalContext` schema — frozen Stage 0), §3.1.7, §3.2.6
 - #16 §3.2, §3.2.5, §3.4 (ERR-012-001), §5, §6.2
 - #17 — schema citation only; no channels at Stage 0
 - #18 §3.7, §6
@@ -653,8 +739,12 @@ explains why #13/#14/#15 overrides are deferred).
 
 ### 8.3 Typed Cross-Reference IDs
 `XC-012-NNN` to be allocated at section-file draft.
-`ERR-012-001` — `DOMAIN_TAG_POSITIONING_AI` allocation request in
-#16 §3.4 (Phase B/C block).
+`ERR-012-001` — Phase B/C domain-tag block-allocation request
+(`0x16…0x1B`) in #16 §3.4. Filed in `spec-error-log.md` v1.2.
+`ERR-012-002` — stale "Formation System (Spec #14)" reference in
+#8 `section-3-1.md` L716 (current #14 is Defensive AI; the
+Formation System is #12). One-line patch request filed in
+`spec-error-log.md` v1.2.
 
 ### 8.4 Version History
 
@@ -745,27 +835,73 @@ Three full per-tick walk-throughs (4-4-2 / 4-3-3 / 4-2-3-1).
 
 ---
 
-## OUTSTANDING OUTLINE-PHASE QUESTIONS (open work, not blockers)
+## RESOLVED OUTLINE-PHASE QUESTIONS (v1.2)
 
-1. **Archetype count** — grep `docs/planning/master-development-plan.md`
-   for Stage 0 formation-set commitments. If planning docs commit to a
-   different count, update KD-7 + FR-PA-007.
-2. **`DOMAIN_TAG_POSITIONING_AI` value** — file `ERR-012-001` and
-   propose a Phase B/C block: `POSITIONING_AI = 0x16`,
-   `HEADING = 0x17`, `GOALKEEPER = 0x18`, `PRESSING = 0x19`,
-   `DEFENSIVE = 0x1A`, `ATTACKING = 0x1B`. Lead-developer ratifies.
-3. **`TacticalContext` schema** — section-file draft must read
-   `decision-tree/section-1.md` for the canonical struct definition
-   to confirm there is room to add `FormationSlot[]` without breaking
-   the #8 contract. Currently presumed but not grep-verified.
-4. **`FormationSlot.StableHash` field** — needed for #8 hysteresis
-   integration. Confirm with #8 owner at section-file draft.
+### Q1 — Archetype count
+**Resolved.** Grep against `master-development-plan.md` §3.2 lines
+441–449 found a planning-doc commitment to **10 named formations**
+as the Stage 1 `FormationSystem.cs` deliverable (Month 3-4):
+4-4-2 Flat / Diamond, 4-3-3 Attack / Holding, 4-2-3-1 Wide / Narrow,
+3-5-2, 5-3-2, 3-4-3, 4-1-4-1. Stage 0 ships **three archetype
+families** (4-4-2, 4-3-3, 4-2-3-1) — one per structural pattern.
+In-family variants gate on tactical-instruction infrastructure
+(per-position "Individual Instructions": overlap / hold / cut
+inside / etc.) which the planning doc also defers to Stage 1
+("Month 5-6: Team Instructions" + "Individual Instructions"). KD-7
+and FR-PA-007 updated. §7.6 enumerates the 10 Stage 1 variants.
+
+### Q2 — `DOMAIN_TAG_POSITIONING_AI` value
+**Resolved (pending lead-developer ratification).** ERR-012-001
+filed in `spec-error-log.md` v1.2 requesting a Phase B/C block
+allocation `0x16 … 0x1B` covering #10/#11/#12/#13/#14/#15. The
+block is contiguous with #17's `DOMAIN_TAG_EVENT_LEDGER = 0x15`
+(allocated May 14 per ERR-017-001). Specific values:
+`POSITIONING_AI = 0x16`, `HEADING = 0x17`, `GOALKEEPER = 0x18`,
+`PRESSING = 0x19`, `DEFENSIVE = 0x1A`, `ATTACKING = 0x1B`. All
+six tags remain `[CROSS-PENDING]` until lead-developer ratifies
+and patches #16 §3.4 in a single revision. KD-9 updated with the
+proposed block table.
+
+### Q3 — `TacticalContext` schema
+**Resolved by grep.** Read `decision-tree/section-2-1-to-2-2.md`
+§2.2.6 L688–721. Findings:
+- `TacticalContext` is a **per-agent** struct, NOT a shared 22-agent
+  array. v1.1's "fill the FormationSlot[22] slice" assumption was
+  wrong — there is no such array.
+- The relevant field is a single `Vector2 FormationSlot` (per-agent),
+  not a richer slot struct.
+- **The field set is FROZEN at Stage 0** per the struct's own prose:
+  "field set is frozen at Stage 0. Stage 1 may only change VALUES,
+  not add or remove fields. Any field addition requires a
+  specification amendment."
+- The struct exposes a `Stage0Default(Vector2 formationSlot)` factory
+  method (L714).
+- Therefore: #12's interface to #8 is **per-agent `Vector2
+  formationSlot` only** — the orchestrator copies the value into
+  each agent's TacticalContext at #8 Step 2. No #8 spec amendment
+  is needed. KD-2, KD-3, §2.2 data structures, §4.4, §4.5 updated.
+
+### Q4 — `FormationSlot.StableHash` field
+**Resolved: DROPPED.** Re-reading #8: `MOVE_TO_POSITION` utility
+(§3.2.6) re-scores every tick with no hysteresis on the slot value.
+The action loop is the source of stability via #8 §3 utility-score
+thresholds; it does not need a stability signal from #12. The slot
+is read as a `Vector2`, period. Adding a `StableHash` field would
+(a) require an amendment to a frozen Stage 0 schema, and (b) be
+unused on the #8 side. FR-PA-034 deleted; the data-structures table
+in §2.2 reverts to a Vector2-only output.
+
+**Side finding (bonus, ERR-012-002):**
+`decision-tree/section-3-1.md` L716 reads "Formation System (Spec
+#14) to provide live formation slot positions." Current #14 is
+Defensive AI; the Formation System is #12. Stale spec ref — one-line
+patch request filed in `spec-error-log.md`.
 
 ---
 
 ## NEXT STEPS
 
-1. Resolve the four "Outstanding Outline-Phase Questions" above.
+1. ~~Resolve the four "Outstanding Outline-Phase Questions" above.~~ ✓ Done in v1.2.
 2. Draft `section-1.md`.
 3. Draft `section-2.md` (FR table — already enumerated above).
 4. Draft `section-3.md`.
@@ -790,3 +926,4 @@ Three full per-tick walk-throughs (4-4-2 / 4-3-3 / 4-2-3-1).
 |---|---|---|---|
 | 1.0 | May 15, 2026 | AI agent (claude/positioning-ai-specs-50o0D) | Initial detailed outline. Resolves 13 findings from `outline.md` May 6 adversarial review. |
 | 1.1 | May 15, 2026 (same day) | AI agent (claude/positioning-ai-specs-50o0D) | Self-adversarial pass against v1.0 — 13 findings (5 H / 5 M / 3 L). Major v1.1 changes: KD-3 rewritten against verified #8 §3.1.7/§3.2.6 text (#12 is the Stage 0 Formation Engine that feeds `TacticalContext`, not a competitor of #8 action selection); KD-10 rewritten (fabricated #17 channels removed; no Stage 0 channels); KD-9 demoted (`DOMAIN_TAG_POSITIONING_AI = _TBD_`); KD-13..KD-17 added (compositor simplification, cost-based tie-break, named reference host, float epsilon, single catalogue per #20 FR-CS-025). 48 FRs enumerated. Hysteresis constants demoted to `[EST]`. Archetype count reduced to 3 pending planning-doc grep. |
+| 1.2 | May 15, 2026 (same day) | AI agent (claude/positioning-ai-specs-50o0D) | Outstanding-Questions resolution pass. Q1: archetype count confirmed against `master-development-plan.md` §3.2 — Stage 0 ships 3 families, Stage 1 expands to 10 named variants (§7.6 updated). Q2: ERR-012-001 filed proposing Phase B/C block `0x16…0x1B` for #10..#15; KD-9 carries the proposed table. Q3: `TacticalContext` schema grep'd against #8 §2.2.6 — discovered struct is per-agent (not a 22-element shared array) and FIELD SET IS FROZEN at Stage 0; v1.1's `FormationSlot[22]` model was wrong and was corrected in KD-2, KD-3, §2.2, §4.4, §4.5. Q4: `StableHash` field DROPPED (#8 has no hysteresis on the slot — single Vector2 read per tick suffices). FR-PA-034 deleted. Bonus side finding ERR-012-002: stale "Spec #14" ref in #8 `section-3-1.md` L716 — Formation System is #12, not #14. |
