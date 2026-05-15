@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 14, 2026 (later same day — Deterministic Simulation #16 Tier 2 APPROVED; ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` in #16 §3.4 v1.0.1; Performance Optimization #18 section files v0.3 — PASS-2 adversarial review `ERR-018-012` … `ERR-018-018` resolved; status IN REVIEW)  
+**Last Updated:** May 15, 2026 (Fixed64 Math Library #9 APPROVED — §9 v1.0 lead-developer sign-off; Event System #17 §1.0.1 patch closes ERR-017-001 #17-side residual; Priority 1–2 spec set fully complete)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -58,7 +58,7 @@ All 20 spec folders now exist in `docs/specs/`. Status reflects authoritative cl
 | 6 | `docs/specs/shot-mechanics/` | APPROVED |
 | 7 | `docs/specs/perception-system/` | APPROVED |
 | 8 | `docs/specs/decision-tree/` | APPROVED (draft-level) |
-| 9 | `docs/specs/fixed64-math/` | IN REVIEW (since May 6, 2026) |
+| 9 | `docs/specs/fixed64-math/` | APPROVED (May 15, 2026) — §9 v1.0 lead-developer sign-off; §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented comparator-glossary deferral (CLAUDE.md "Interface Design Principle"). §9.8 implementation-time deliverables (golden-vector corpus, CI bench, harness digest, owning-team ledger) remain post-APPROVED follow-ups. Implementation deferred to Stage 5 per §8.1 v0.2. |
 | 10 | `docs/specs/heading-mechanics/` | NOT STARTED (scaffold only) |
 | 11 | `docs/specs/goalkeeper-mechanics/` | NOT STARTED (scaffold only) |
 | 12 | `docs/specs/positioning-ai/` | NOT STARTED (scaffold only) |

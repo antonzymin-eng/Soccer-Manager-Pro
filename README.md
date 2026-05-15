@@ -1,7 +1,7 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** May 14, 2026 (later same day — #16 Tier 2 APPROVED; #18 IN REVIEW v0.3; ERR-017-001 closed)
+**Last Updated:** May 15, 2026 (#9 Fixed64 Math Library APPROVED; ERR-017-001 fully closed via #17 §1.0.1 patch)
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
@@ -117,7 +117,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Started:** February 2, 2026
 **Deliverables:** 20 comprehensive specification documents
 
-**Summary (May 14, 2026, later same day):** 11 approved (#1, #2, #3, #4, #5, #6, #7, #8, #16, #17, #20), 0 suspended, 3 in review (#9, #18, #19), 0 in progress, 6 not started (#10–#15). Scaffold skeletons (outline + section-1…9 + appendices headers, no body content) exist for the 6 not-started specs.
+**Summary (May 15, 2026):** 12 approved (#1, #2, #3, #4, #5, #6, #7, #8, #9, #16, #17, #20), 0 suspended, 2 in review (#18, #19), 0 in progress, 6 not started (#10–#15). Stage 0 Priority 1–2 spec set is fully complete. Scaffold skeletons (outline + section-1…9 + appendices headers, no body content) exist for the 6 not-started specs.
 **Total specification output:** ~4.33 MB across 106 files (counts predate folder migration; see file-manifest.md)
 **Comprehensive audits completed:** 6 of 7 finished specs
 
@@ -136,7 +136,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 6. ✅ Shot Mechanics — **APPROVED** Apr 27, 2026 (~70 pages, 104 tests, audited)
 7. ✅ Perception System — **APPROVED** Apr 22, 2026 (~80 pages, 92 tests; §9 v1.7 signed off)
 8. ✅ Decision Tree — **APPROVED** Apr 27, 2026 (~55+ pages, draft-level quality gate; comprehensive audit candidate before implementation)
-9. 🔍 Fixed64 Math Library — **IN REVIEW** (May 6, 2026; all sections drafted v0.2–v0.3; Pass 2 adversarial critique fixes landed; awaiting lead-developer sign-off. Implementation deferred to Stage 5.)
+9. ✅ Fixed64 Math Library — **APPROVED** May 15, 2026 (§9 v1.0 lead-developer sign-off; §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented deferral; §9.8 implementation-time deliverables remain post-APPROVED follow-ups. Implementation deferred to Stage 5 per §8.1 v0.2 stage-gating.)
 
 **Priority 3 — Advanced Physics (Weeks 9-12):**
 10. ⏳ Heading Mechanics
@@ -252,7 +252,7 @@ Soccer-Manager-Pro/
 │   │   ├── shot-mechanics/             [Spec #6 — APPROVED]
 │   │   ├── perception-system/          [Spec #7 — APPROVED]
 │   │   ├── decision-tree/              [Spec #8 — APPROVED (draft-level)]
-│   │   ├── fixed64-math/               [Spec #9 — IN REVIEW]
+│   │   ├── fixed64-math/               [Spec #9 — APPROVED]
 │   │   ├── deterministic-sim/          [Spec #16 — APPROVED]
 │   │   ├── event-system/               [Spec #17 — APPROVED]
 │   │   ├── performance-optimization/   [Spec #18 — IN REVIEW]
@@ -271,29 +271,25 @@ Soccer-Manager-Pro/
 
 ## NEXT IMMEDIATE STEPS
 
-### Outstanding (as of May 14, 2026)
+### Outstanding (as of May 15, 2026)
 
 **Sign-offs completed since project start:**
-- ✅ Specs #1, #2, #3, #4, #5, #6, #7, #8 — Priority 1–2 set complete.
+- ✅ Specs #1, #2, #3, #4, #5, #6, #7, #8, #9 — Priority 1–2 set fully complete.
 - ✅ Spec #16 — Tier 2 APPROVED May 14, 2026.
-- ✅ Specs #17, #20 — APPROVED May 13 and May 11, 2026 respectively.
+- ✅ Specs #17, #20 — APPROVED May 13 and May 11, 2026. #17 §1.0.1 patch May 15, 2026 closes ERR-017-001.
 
 **In review (awaiting lead-developer sign-off):**
-1. ⏳ Fixed64 Math Library (#9) — IN REVIEW since May 6; no blockers.
-2. ⏳ Performance Optimization Strategy (#18) — IN REVIEW (v0.3, May 14); advancement to APPROVED gated on #19 reaching APPROVED per KD-2.
-3. ⏳ Testing Strategy & Framework (#19) — IN REVIEW since May 12. KD-2 precondition (a) (#16 Tier 2 APPROVED) cleared May 14; (b) cleared May 13; (c) remaining: sweep `TBD-NORMATIVE` tags in `testing-strategy/section-3.md` + `appendices.md` against #16 final text and #18 v0.3.
-
-**Mechanical residual:**
-4. ⏳ #17 §3.10 / §3.4.2 `[CROSS-PENDING]` → `[CROSS]` promotion (`DOMAIN_TAG_EVENT_LEDGER = 0x15`) + Appendix B literal-value inlining. Closes the last #17-side step of ERR-017-001.
+1. ⏳ Performance Optimization Strategy (#18) — IN REVIEW (v0.3, May 14); advancement to APPROVED gated on #19 reaching APPROVED per KD-2.
+2. ⏳ Testing Strategy & Framework (#19) — IN REVIEW since May 12. KD-2 precondition (a) (#16 Tier 2 APPROVED) cleared May 14; (b) cleared May 13; (c) remaining: sweep `TBD-NORMATIVE` tags in `testing-strategy/section-3.md` + `appendices.md` against #16 final text and #18 v0.3.
 
 **Not started (largest remaining body of work):**
-5. ⏳ Heading Mechanics (#10), Goalkeeper Mechanics (#11), Positioning AI (#12).
-6. ⏳ Pressing AI (#13), Defensive AI (#14), Attacking AI (#15).
+3. ⏳ Heading Mechanics (#10), Goalkeeper Mechanics (#11), Positioning AI (#12).
+4. ⏳ Pressing AI (#13), Defensive AI (#14), Attacking AI (#15).
 
 **Operations / housekeeping:**
-7. ⏳ Push 8 approval tags (HTTP 403 branch-protection); run the squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`.
-8. ⏳ Stage-0 host-platform pin in `docs/tracking/certification-platform.md` (lead-developer task; blocks first `FR-DS-009-GATE` cert run, not spec approvals).
-9. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20.
+5. ⏳ Push 9 approval tags (HTTP 403 branch-protection); run the squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`. New: `spec-fixed64-math-v1.0-approved`.
+6. ⏳ Stage-0 host-platform pin in `docs/tracking/certification-platform.md` (lead-developer task; blocks first `FR-DS-009-GATE` cert run, not spec approvals).
+7. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20.
 
 ---
 
@@ -345,7 +341,7 @@ These remain available in `/Archive/` for historical reference but should NOT be
 9. ✅ Shot Mechanics #6 approved (Apr 27)
 10. ✅ Perception System #7 approved (Apr 22)
 11. ✅ Decision Tree #8 approved (Apr 27, draft-level quality gate)
-12. 🔍 Fixed64 Math Library #9 in review (since May 6) — awaiting lead-developer sign-off
+12. ✅ Fixed64 Math Library #9 — APPROVED May 15, 2026
 13. ✅ Deterministic Simulation #16 — Tier 2 APPROVED May 14
 14. ✅ Event System #17 — APPROVED May 13
 15. ✅ Code Standards #20 — APPROVED May 11
@@ -397,6 +393,7 @@ git push --tags
 - `spec-shot-mechanics-v1.0-approved` — created locally Apr 27, 2026; awaits push
 - `spec-perception-system-v1.0-approved` — created locally Apr 26, 2026; awaits push
 - `spec-decision-tree-v1.0-approved` — created locally Apr 27, 2026 (draft-level approval); awaits push
+- `spec-fixed64-math-v1.0-approved` — created locally May 15, 2026; awaits push
 
 > **Tag push blocked**: `git push origin --tags` returns HTTP 403 from the current remote endpoint. After this branch merges to main with privileged credentials, run `git push origin spec-ball-physics-v1.0-approved spec-collision-system-v1.0-approved spec-first-touch-v1.0-approved spec-perception-system-v1.0-approved` from a context that allows tag creation. The tags are annotated and point at the merge commit (or its branch-tip predecessor if fast-forward).
 
@@ -493,6 +490,11 @@ git push --tags
 - Project Structure block updated to reflect approved sign-offs and current statuses; #9 and #16 broken out from the "..." catch-all.
 - Next Immediate Steps refreshed to May 6 reality; resolved documentation-debt items checked off (spec-error-log rebuild, file-manifest reconciliation).
 - ERR-016-002 (EntityId no-reuse cross-spec back-propagation) added to outstanding documentation debt.
+
+**v2.1 — May 15, 2026**
+- Fixed64 Math Library (#9) — APPROVED. §9 v1.0 lead-developer sign-off granted; §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented comparator-glossary deferral (Interface Design Principle). Stage 0 effect: none — Fixed64 binds to Stage 5+ per §8.1 v0.2.
+- Event System (#17) §1.0.1 patch revision — `[CROSS-PENDING]` → `[CROSS]` promotion of `DOMAIN_TAG_EVENT_LEDGER` across all consuming sections + Appendix B literal-value inlining (`0x15`). ERR-017-001 FULLY RESOLVED.
+- Stage 0 spec count: **12 APPROVED, 0 SUSPENDED, 2 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.** Priority 1–2 spec set fully complete.
 
 **v2.0 — May 14, 2026 (later same day)**
 - Deterministic Simulation (#16) — Tier 2 APPROVED. §9 v1.7 sign-off; all §9.4.2 gates cleared (golden-vector files complete; §8.3.1 cross-spec re-audit complete; §9.3 sign-offs granted with Stage-0 host-platform-pin caveat); ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in #16 §3.4 v1.0.1.

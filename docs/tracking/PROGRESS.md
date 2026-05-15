@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 14, 2026 (later same day — #16 Tier 2 APPROVED; #18 IN REVIEW v0.3 PASS-2; ERR-017-001 closed atomically)  
+**Last Updated:** May 15, 2026 (#9 Fixed64 Math Library APPROVED — Priority 2 spec set complete; #17 §1.0.1 patch closes ERR-017-001 residual)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -11,9 +11,9 @@
 ## PROGRESS SUMMARY
 
 **Total Specifications:** 20  
-**Approved:** 11  
+**Approved:** 12  
 **Suspended:** 0  
-**In Review:** 3  
+**In Review:** 2  
 **In Progress:** 0  
 **Not Started:** 6
 
@@ -28,6 +28,7 @@
 - Decision Tree (#8, Apr 27, 2026 — draft-level quality gate; comprehensive audit candidate before implementation; §1.7.3 patch May 6, 2026 — `XC-008-001` EntityId no-reuse)
 - Code Standards & Style Guide (#20, May 11, 2026 — adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete)
 - Event System (#17, May 13, 2026 — section-files PASS 1 + PASS 2 adversarial review applied; lead-developer sign-off complete; all 10 section files + appendices at v0.3)
+- Fixed64 Math Library (#9, May 15, 2026 — lead-developer sign-off granted; §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented deferral)
 - Deterministic Simulation (#16, May 14, 2026 — Tier 2 APPROVED; §9 v1.7; all §9.4.2 gates cleared; §9.5 #4(a)/(b)/(c) spec-level sub-conditions SATISFIED; §8.3.1 cross-spec re-audit complete; ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1)
 
 **Specifications suspended:** None. Stage 0 Priority 1–2 spec set is complete.
@@ -57,9 +58,9 @@
 | 6 | Shot Mechanics | ~70 | ✅ APPROVED | Feb 23 | Apr 27, 2026 | All 9 sections + appendices complete; §9 v1.4 lead-developer signed off Apr 27, 2026 (pre-migration void-file blockers reclassified as moot under folder layout). 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. |
 | 7 | Perception System | ~80 | ✅ APPROVED | Feb 24 | Apr 22, 2026 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.7 — ✅ APPROVED April 22, 2026. |
 | 8 | Decision Tree | ~55+ | ✅ APPROVED | Feb 27 | Apr 27, 2026 | Sections 1–9 and appendices drafted; §9 v1.2 lead-developer signed off Apr 27, 2026 at draft-level quality gate. Comprehensive audit candidate before implementation. |
-| 9 | Fixed64 Math Library | 25-30 | 🔍 IN REVIEW | Apr 28, 2026 | — | All sections (1–9 + appendices) drafted at v0.2–v0.3; Pass 2 adversarial critique fixes landed; awaiting lead developer sign-off per `fixed64-math/section-9-approval-checklist.md` (May 6, 2026 reclassification) |
+| 9 | Fixed64 Math Library | 25-30 | ✅ APPROVED | Apr 28, 2026 | May 15, 2026 | All sections (1–9 + appendices) drafted v0.2–v0.3; Pass 2 adversarial critique fixes landed May 6; §9 v1.0 lead-developer sign-off granted May 15, 2026. §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented deferral (Interface Design Principle). Implementation deferred to Stage 5 per §8.1 v0.2 stage-gating. |
 
-**Priority 2 Progress:** 100% drafted (3 approved, 1 in review)
+**Priority 2 Progress:** 100% complete (4 of 4 approved)
 
 ---
 
@@ -340,14 +341,33 @@
 - **11 APPROVED, 0 SUSPENDED, 3 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.**
 
 **Still Pending:**
-- #17 §3.10 / §3.4.2 `[CROSS-PENDING]` → `[CROSS]` promotion + Appendix B literal-value inlining (mechanical residual from ERR-017-001).
-- Fixed64 Math Library (#9) lead-developer sign-off (IN REVIEW since May 6).
+- Fixed64 Math Library (#9) lead-developer sign-off (IN REVIEW since May 6) — *closed May 15.*
+- #17 §3.10 / §3.4.2 `[CROSS-PENDING]` → `[CROSS]` promotion + Appendix B literal-value inlining (mechanical residual from ERR-017-001) — *closed May 15.*
 - Testing Strategy (#19) approval — precondition (a) (#16 Tier 2 APPROVED) cleared May 14; (c) `TBD-NORMATIVE` tags in `testing-strategy/section-3.md` + `appendices.md` still need a sweep against #16 final text + #18 v0.3.
 - Performance Optimization (#18) advancement to APPROVED — gated on #19 reaching APPROVED per KD-2.
 - Heading Mechanics (#10), Goalkeeper Mechanics (#11), Positioning AI (#12) — NOT STARTED.
 - Pressing AI (#13), Defensive AI (#14), Attacking AI (#15) — NOT STARTED.
 - 8 approval tags created locally remain unpushed; push after merge to main per CLAUDE.md OPEN ISSUES squash-merge precondition check.
 - Stage-0 host-platform pin in `tracking/certification-platform.md` (lead-developer task; blocks first `FR-DS-009-GATE` cert run only).
+
+---
+
+### Week 17 — May 15, 2026
+
+**Completed:**
+- **Event System (#17) §1.0.1 patch (May 15, 2026):** `[CROSS-PENDING]` → `[CROSS]` promotion of `DOMAIN_TAG_EVENT_LEDGER` across §1.4 / §2.4.4 / §3.4.2 / §3.10 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D. Literal value `0x15` inlined in §3.4.2 prose, §3.10 catalogue row, Appendix B byte streams, and Appendix D glossary. ERR-017-001 FULLY RESOLVED. No behavioral change.
+- **Fixed64 Math Library (#9) APPROVED (May 15, 2026):** §9 v1.0 lead-developer sign-off granted. §9.2 engine + gameplay owner sign-offs granted (gameplay confirmed against §8.4 typed cross-references `XC-009-002`..`-005` covering #1 / #2 / #3 / #8; #6 has no Fixed64-dependent surface at Stage 0). §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 (May 14, 2026) — comparator-glossary deferral documented under CLAUDE.md "Interface Design Principle"; §6.6 forward-binding constraint preserved at Stage 5+. §9.8 implementation-time deliverables (golden-vector corpus, CI bench, harness digest, owning-team ledger) remain post-APPROVED follow-ups. Stage 0 effect: none — Fixed64 binds to Stage 5+ per §8.1 v0.2.
+
+**Status:**
+- **12 APPROVED, 0 SUSPENDED, 2 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.** Stage 0 Priority 1–2 spec set is fully complete.
+
+**Still Pending:**
+- Testing Strategy (#19) approval — KD-2 precondition (a) cleared; (c) `TBD-NORMATIVE` sweep against #16 final text + #18 v0.3 remains.
+- Performance Optimization (#18) advancement to APPROVED — gated on #19 reaching APPROVED per KD-2.
+- Heading Mechanics (#10), Goalkeeper Mechanics (#11), Positioning AI (#12) — NOT STARTED.
+- Pressing AI (#13), Defensive AI (#14), Attacking AI (#15) — NOT STARTED.
+- 9 approval tags created locally remain unpushed (+ new `spec-fixed64-math-v1.0-approved`); push after merge to main per CLAUDE.md OPEN ISSUES squash-merge precondition check.
+- Stage-0 host-platform pin in `tracking/certification-platform.md`.
 
 ---
 
@@ -451,13 +471,19 @@
 
 ---
 
-**Last Updated:** May 14, 2026 (later same day — tracking-doc reconciliation pass)  
-**Updated By:** AI Assistant (tracking-doc reconciliation pass)  
-**Next Review:** After Spec #19 APPROVED sign-off (clears #18 KD-2 gate) and Fixed64 Math (#9) sign-off
+**Last Updated:** May 15, 2026 (#9 APPROVED; #17 §1.0.1 patch closes ERR-017-001 residual)  
+**Updated By:** AI Assistant  
+**Next Review:** After Spec #19 APPROVED sign-off (clears #18 KD-2 gate)
 
 ---
 
 ## CHANGELOG
+
+**May 15, 2026:**
+- Fixed64 Math Library (#9) reclassified `IN REVIEW` → `APPROVED`. §9 v1.0 lead-developer sign-off granted; §9.2 owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented deferral.
+- Event System (#17) §1.0.1 patch revision landed: `[CROSS-PENDING]` → `[CROSS]` promotion of `DOMAIN_TAG_EVENT_LEDGER` across all consuming sections + Appendix B literal-value inlining. ERR-017-001 FULLY RESOLVED.
+- Summary counts updated: **12 APPROVED, 0 SUSPENDED, 2 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.** Priority 2 spec set fully complete.
+- Week 17 (May 15) update-log entry added.
 
 **May 14, 2026 (later same day):**
 - Deterministic Simulation (#16) reclassified `IN PROGRESS` → `IN REVIEW` (Tier 1 Conditional Approval) → `APPROVED` (Tier 2 Final Approval, §9 v1.7). All §9.4.2 gates cleared.
