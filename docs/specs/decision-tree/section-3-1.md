@@ -11,9 +11,9 @@ selected downstream. All attribute references are cross-referenced to `PlayerAtt
 as DT requirements pending Spec #20 master attribute registry.
 
 **Created:** March 01, 2026, 3:30 PM PST
-**Updated:** March 01, 2026, 5:00 PM PST
-**Version:** 1.1
-**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist)
+**Updated:** May 15, 2026 (v1.1.1 patch — ERR-012-002 stale spec ref correction)
+**Version:** 1.1.1
+**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 15, 2026) is a non-behavioral patch revision per ERR-012-002: §3.1.7.2 "Formation System (Spec #14)" → "Formation System (Positioning AI, Spec #12)". Canonical Formation System spec number is #12 per `SPEC_INDEX.md`; current #14 is Defensive AI. Single-token correction; no formula, contract, or pipeline change. Approval status preserved.
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
 
@@ -713,7 +713,7 @@ distance_to_slot  = |formation_slot − AgentPosition|
 
 **Stage 0 limitation:** Both teams use identical positional roles. The formation slot is
 a fixed anchor point, not a dynamic positioning instruction. Stage 1 wires the Formation
-System (Spec #14) to provide live formation slot positions that adjust with tactical
+System (Positioning AI, Spec #12) to provide live formation slot positions that adjust with tactical
 instructions and ball position.
 
 ### 3.1.7.3 MoveOption Construction

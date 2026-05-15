@@ -6,9 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.14
-**Updated:** May 15, 2026 (ERR-017-001 #17-side `[CROSS-PENDING]` → `[CROSS]` promotion completed in #17 §1.0.1 patch revision; literal value `0x15` inlined across §3.4.2 / §3.10 / Appendix B and the secondary references)
-**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
+**Version:** 1.16
+**Updated:** May 15, 2026 (later same day still — ERR-012-002 closed via one-line patch to #8 `section-3-1.md` v1.1.1; ERR-012-001 remains open pending lead-developer ratification)
+**Status:** ERR-001 through ERR-012, ERR-012-001 (open), ERR-012-002 (closed), ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---
@@ -29,6 +29,8 @@ authoritative remediation backlog.
 | ERR-010 | Shot Mechanics §1.1 refers to Decision Tree as Spec #7 — canonical number is #8 | Minor | 1 | ✅ Closed — Fixed in shot-mechanics/section-1.md v1.2 (March 6, 2026); part of comprehensive audit renumbering cascade |
 | ERR-011 | `SpatialHashGrid.Query()` ignores radius parameter — always returns fixed 3×3 neighbourhood | Major | 1 | ✅ Closed — Fixed in Collision_System_Spec_Section_3_v1_1.md (March 5, 2026) |
 | ERR-012 | First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences) | Minor | 1 | ✅ Closed — Fixed in first-touch/section-7.md v1.1 (March 5, 2026) |
+| ERR-012-001 | `DOMAIN_TAG_POSITIONING_AI` allocation + Phase B/C block (`0x16…0x1B`) needed in #16 §3.4 | Medium | 1 | Open — awaiting lead-developer ratification; filed May 15, 2026 from #12 outline v1.2 |
+| ERR-012-002 | Decision Tree #8 `section-3-1.md` L716 cites Formation System as "Spec #14" — current #14 is Defensive AI; Formation System is #12 | Minor | 1 | ✅ Closed — Fixed in decision-tree/section-3-1.md v1.1.1 (May 15, 2026); single-token "Spec #14" → "Positioning AI, Spec #12"; approval status preserved |
 | ERR-016-001 | Phantom interface risk in Deterministic Simulation §4.2 | Medium | 1 | ✅ Mitigated — §4.2 reclassified as non-normative sketches in v0.7 fix pass |
 | ERR-016-002 | EntityId no-reuse cross-spec constraint not back-propagated to specs #2 and #8 | Medium | 3 | Resolved (spec text) — May 6, 2026: `XC-002-001` added to Agent Movement #2 §2.5 (v1.1.1); `XC-008-001` added to Decision Tree #8 §1.7.3 (v1.1.1). Pending only: prose update in #16 §3.2.5. |
 | ERR-017-001 | `DOMAIN_TAG_EVENT_LEDGER` allocation needed in Deterministic Simulation #16 §3.4 domain-tag table | Medium | 2 | ✅ FULLY RESOLVED. (1) #16-side May 14, 2026: `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocated in #16 §3.4 (v1.0.1 patch revision); §8.3.1 #17 row promoted to `complete`. (2) #17-side May 15, 2026 (§1.0.1 patch revision): `[CROSS-PENDING]` → `[CROSS]` promotion completed across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3; Appendix B byte streams and Appendix D glossary now carry the literal value `0x15`. |
@@ -1056,4 +1058,55 @@ Either (a) update `SPEC_INDEX.md` row 18 and CLAUDE.md OPEN ISSUES entry to `IN 
 
 ---
 
-*End of Spec Error Log v1.13 — May 14, 2026.*
+## ERR-012-001: `DOMAIN_TAG_POSITIONING_AI` allocation needed in #16 §3.4 — proposed Phase B/C block-allocation policy
+
+**Status:** Open — awaiting lead-developer ratification
+**Severity:** Medium
+**Detected:** May 15, 2026
+**Detected During:** Positioning AI #12 `outline-detailed.md` v1.1 self-adversarial review (AR-V1-01); resolution proposed in v1.2.
+**Files Affected:** 1 (`deterministic-sim/section-3.md` §3.4 domain-tag table)
+
+**Root Cause:** Spec #12 Positioning AI requires a `DOMAIN_TAG_POSITIONING_AI` value to bind `DeterministicRngService` calls per #16 §3.4 / KD-9. The current §3.4 table ends at `DOMAIN_TAG_EVENT_LEDGER = 0x15` (#17, allocated May 14, 2026 per ERR-017-001). Five further Phase B/C specs (#10 Heading, #11 Goalkeeper, #13 Pressing, #14 Defensive, #15 Attacking) will each need their own tag during their own outline → section-file phases.
+
+If each spec unilaterally claims the next-available value at outline time (first-come, first-served), there is a real risk of (a) value collisions when two specs draft concurrently and (b) fragmented patch revisions to #16's APPROVED tag namespace. The cleanest pattern is a single block allocation now, gated on lead-developer sign-off, that all six specs cite as `[CROSS-PENDING]` until the patch lands.
+
+**Proposed Resolution (Phase B/C block `0x16 … 0x1B`):**
+
+| Spec | Domain Tag | Proposed Value | Notes |
+|---|---|---|---|
+| #12 Positioning AI | `DOMAIN_TAG_POSITIONING_AI` | `0x16` | Drafting NOW (#12 `outline-detailed.md` v1.2) |
+| #10 Heading Mechanics | `DOMAIN_TAG_HEADING_MECHANICS` | `0x17` | NOT STARTED |
+| #11 Goalkeeper Mechanics | `DOMAIN_TAG_GOALKEEPER` | `0x18` | NOT STARTED |
+| #13 Pressing AI | `DOMAIN_TAG_PRESSING_AI` | `0x19` | NOT STARTED |
+| #14 Defensive AI | `DOMAIN_TAG_DEFENSIVE_AI` | `0x1A` | NOT STARTED |
+| #15 Attacking AI | `DOMAIN_TAG_ATTACKING_AI` | `0x1B` | NOT STARTED |
+
+Block is contiguous with `DOMAIN_TAG_EVENT_LEDGER = 0x15` and consumes one nibble of u8 namespace. No `DETERMINISM_DIGEST_VERSION` bump required (pure namespace allocation, no preimage layout / field width / hash-input rule changes — mirrors the ERR-017-001 resolution pattern).
+
+**Patch landing site:** `deterministic-sim/section-3.md` §3.4 constants catalogue (add 6 rows in canonical numerical order). One revision, six rows; #16 §3.5 version-history row notes Phase B/C namespace allocation.
+
+**Atomic promotion mechanic:** all six specs carry the tag as `[CROSS-PENDING]` until the #16 patch revision lands. On patch merge, each spec promotes its row from `[CROSS-PENDING]` → `[CROSS]` in its own §3.10 / §3.4 / KD-9 citation site in a follow-up patch (parallel to ERR-017-001 #17-side promotion).
+
+**Sign-off required:** Lead developer (#16 owner). Once ratified, #12 outline KD-9 and FR-PA-005 promote from `[CROSS-PENDING]` to `[CROSS]` and section-file authoring proceeds with the value fixed.
+
+---
+
+## ERR-012-002: `decision-tree/section-3-1.md` L716 cites Formation System as "Spec #14" — stale spec number
+
+**Status:** ✅ Closed — Fixed May 15, 2026 in `decision-tree/section-3-1.md` v1.1.1 (single-token patch; approval status preserved)
+**Severity:** Minor
+**Detected:** May 15, 2026
+**Detected During:** Positioning AI #12 `outline-detailed.md` v1.2 Outstanding-Questions resolution pass (Q3 grep against #8).
+**Files Affected:** 1 (`decision-tree/section-3-1.md` L716)
+
+**Root Cause:** Decision Tree #8 §3.1.7.2 reads: *"Stage 1 wires the Formation System (Spec #14) to provide live formation slot positions that adjust with tactical instructions and ball position."* Current `SPEC_INDEX.md` row 14 is **Defensive AI**. The Formation System functionality is #12 Positioning AI (verified — #8 §1.4.21 and §1.7.3 already use the canonical #12 number elsewhere in #8). Stale spec number left over from an earlier numbering scheme — same regression class as ERR-010 (Shot Mechanics #6 §1.1 calling Decision Tree #7) and ERR-012 (First Touch §7 calling Decision Tree #7), both closed in the March 2026 renumbering cascade. #8 §3.1.7.2 was missed by that cascade.
+
+**Resolution:** Patch `decision-tree/section-3-1.md` L716 to read "Positioning AI (Spec #12)". One-token change in an APPROVED spec; no behavioural impact; patch-revision row in #8 §3.x version history.
+
+**Detection grep:** `grep -n "Spec #14" decision-tree/` returns only this one line in `section-3-1.md`. (`grep -n "Formation System" decision-tree/section-*.md` returns multiple "Formation System (Stage 1+)" references without spec numbers — those are correct as-is and should not be touched.)
+
+**Recommended patch landing:** alongside #16 §3.4 ERR-012-001 patch (same lead-developer revision pass), or as a standalone one-token revision.
+
+---
+
+*End of Spec Error Log v1.14 — May 15, 2026.*
