@@ -8,7 +8,7 @@ authoritative remediation backlog.
 **Created:** February 19, 2026, 5:00 PM PST
 **Version:** 1.13
 **Updated:** May 14, 2026 (ERR-018-012 through ERR-018-018 filed and resolved in v0.3 fix pass of Performance Optimization #18 section files from PASS-2 adversarial review)
-**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4; open). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
+**Status:** ERR-001 through ERR-012, ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); resolved at #16 May 14, 2026 (`DOMAIN_TAG_EVENT_LEDGER = 0x15` allocated in #16 §3.4 v1.0.1; #17-side `[CROSS-PENDING]` → `[CROSS]` promotion lands at #16 Tier 2 `APPROVED`). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---
@@ -31,7 +31,7 @@ authoritative remediation backlog.
 | ERR-012 | First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences) | Minor | 1 | ✅ Closed — Fixed in first-touch/section-7.md v1.1 (March 5, 2026) |
 | ERR-016-001 | Phantom interface risk in Deterministic Simulation §4.2 | Medium | 1 | ✅ Mitigated — §4.2 reclassified as non-normative sketches in v0.7 fix pass |
 | ERR-016-002 | EntityId no-reuse cross-spec constraint not back-propagated to specs #2 and #8 | Medium | 3 | Resolved (spec text) — May 6, 2026: `XC-002-001` added to Agent Movement #2 §2.5 (v1.1.1); `XC-008-001` added to Decision Tree #8 §1.7.3 (v1.1.1). Pending only: prose update in #16 §3.2.5. |
-| ERR-017-001 | `DOMAIN_TAG_EVENT_LEDGER` allocation needed in Deterministic Simulation #16 §3.4 domain-tag table | Medium | 2 | Open — filed May 12, 2026 during PASS 2 adversarial review of `event-system/outline-detailed.md`. Patch to #16 §3.4 to be submitted at #17 IN REVIEW commit. Pattern parallel to ERR-016-002 cross-spec back-prop. |
+| ERR-017-001 | `DOMAIN_TAG_EVENT_LEDGER` allocation needed in Deterministic Simulation #16 §3.4 domain-tag table | Medium | 2 | RESOLVED at #16 — May 14, 2026. Allocated `DOMAIN_TAG_EVENT_LEDGER = 0x15` in #16 §3.4 (v1.0.1 patch revision); §8.3.1 #17 row promoted to `complete`. #17-side `[CROSS-PENDING]` → `[CROSS]` promotion lands atomically with #16 Tier 2 `APPROVED`. |
 | ERR-018-001 | Performance Optimization #18 `outline-detailed.md` cites Deterministic Simulation #16 sections by stale numbers / non-existent name (`#16 §7 regression scenarios`, `#16 §5 canonical save format`, `#16 §8 trace channels`) | Medium | 1 | ✅ Resolved at outline level — May 13, 2026 (same day as filing). `outline-detailed.md` v1.1 (a) inverts KD-3 (Spec #18 owns the trace pipeline; Spec #16 retains authority over canonical record format §3.2.4.1, regression scenarios §5, and determinism-of-emission constraints / veto authority over tick-pipeline trace points §3.1), and (b) corrects every `TBD-NORMATIVE`-marked #16 section-number citation against current `deterministic-sim/section-*.md`. Rationale for inversion: trace channels are an observability concern, not a determinism concern; mirrors KD-4 (#19 owns testing infrastructure, consumes #16 scenarios). New FR-PO-058a in §3.8.3 enforces determinism-of-emission for every #18-emitted trace point. Section files drafted from v1.1 will not inherit the drift. Architectural concern (re-anchor vs invert) is closed; section-file authoring still required to faithfully implement inverted KD-3 (FR-PO-058a in §3.8.3, #16-owner sign-off audit in §5.7, record-format binding in §3.8.4). |
 | ERR-018-002 | `[HotPathAllocExempt]` attribute cited in #18 as "declared in Spec #20 §3" but does not exist in `code-standards/` | High | 5 | ✅ Resolved — May 14, 2026 (v0.2 fix pass): §3.7.5 declares governance identifier in #18; Spec #20 §3 cited as policy authority only; C# attribute deferred to Stage 0+1 |
 | ERR-018-003 | MUST/MAY conflict between FR-PO-067 (§2.2.9) and §3.4.4 on baseline-reproducibility re-run | High | 1 | ✅ Resolved — May 14, 2026 (v0.2 fix pass): §3.4.4 "MAY" → "MUST" |
@@ -571,17 +571,24 @@ Outstanding follow-up: update `docs/specs/deterministic-sim/section-3.md` §3.2.
 2. Update §3.10 constants catalogue in `event-system/outline-detailed.md` (and any drafted §3 section file) to pin the literal value and promote `[CROSS-PENDING]` → `[CROSS]` at the same beat that resolves the citation's `TBD-NORMATIVE` tag (gated on #16 reaching `APPROVED` per KD-2).
 3. Once the allocation lands in #16, mark this entry CLOSED.
 
-**Status:** OPEN — May 12, 2026. Patch deferred to #17 IN REVIEW commit. Tracked here so the allocation is not forgotten during section-file authoring.
+**Status:** RESOLVED at #16 — May 14, 2026. `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocated in `docs/specs/deterministic-sim/section-3.md` §3.4 (next value after `DOMAIN_TAG_ENV_FP = 0x14`); §3.5 v1.0.1 patch-revision history entry recorded; §8.3.1 #17 row promoted `pending re-audit → complete` atomically with this resolution; §8 v1.2 version-history entry recorded. The #17-side promotion (`[CROSS-PENDING]` → `[CROSS]` in #17 §3.10 / §3.4.2 + literal-value inlining in #17 Appendix B) lands at #16 Tier 2 `APPROVED` per #17 KD-2 sequencing — that is the only outstanding mechanical step, and it is not a #16-side blocker.
 
-**Files requiring revision:**
+**Files revised at #16 side:**
 
 | File | Section | Change |
 |---|---|---|
-| `docs/specs/deterministic-sim/section-3.md` | §3.4 domain-tag table | Add `DOMAIN_TAG_EVENT_LEDGER` row with allocated numeric value |
-| `docs/specs/event-system/section-3.md` (when authored) | §3.10 constants catalogue | Pin literal value; promote `[CROSS-PENDING]` → `[CROSS]` post-#16 APPROVED |
-| `docs/specs/event-system/section-3.md` (when authored) | §3.4.2 FM-017-001 | Inline literal value in worked example (Appendix B) |
+| `docs/specs/deterministic-sim/section-3.md` | §3.4 constants catalogue | Added `DOMAIN_TAG_EVENT_LEDGER = 0x15` `[FIXED]` row citing ERR-017-001 |
+| `docs/specs/deterministic-sim/section-3.md` | §3.5 version history | v1.0.1 patch-revision entry recording the allocation and rationale (no `DETERMINISM_DIGEST_VERSION` bump) |
+| `docs/specs/deterministic-sim/section-8.md` | §8.3.1 audit table + §8.5 v1.2 | #17 row promoted to `complete`; ERR-017-001 closure recorded |
 
-**Version impact:** Patch revision of #16 once allocation lands (no behavioral change; pure namespace allocation). Spec #17 carries the dependency natively.
+**Files requiring revision at #17 side (post-#16 Tier 2 `APPROVED`):**
+
+| File | Section | Change |
+|---|---|---|
+| `docs/specs/event-system/section-3.md` | §3.10 constants catalogue | Replace `TBD-NORMATIVE` with literal `0x15`; promote `[CROSS-PENDING]` → `[CROSS]` |
+| `docs/specs/event-system/appendices.md` | Appendix B FM-017-001 worked example | Inline literal `0x15` |
+
+**Version impact:** Patch revision (`v1.0` → `v1.0.1`) of #16 §3.5 — no behavioral change; pure namespace allocation (catalogue grew; no preimage layout, field width, or hash-input rule changed; no `DETERMINISM_DIGEST_VERSION` bump). Spec #17 carries the dependency natively and promotes its `[CROSS-PENDING]` row at #16 Tier 2 `APPROVED`.
 
 ---
 
