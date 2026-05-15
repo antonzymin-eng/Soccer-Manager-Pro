@@ -144,12 +144,14 @@ citations to #16; (2) #16 reaches Tier 2 `APPROVED`; (3) #17's
 `TBD-NORMATIVE` tags are resolved and #17 advances to `APPROVED`.
 `SPEC_INDEX.md` status transitions MUST follow this order.
 
-**Cross-spec constants imported:** one `[CROSS-PENDING]` entry —
-`DOMAIN_TAG_EVENT_LEDGER`, to be allocated in #16 §3.4 domain-tag
-table at #17 IN REVIEW per ERR-017-001
-(`docs/tracking/spec-error-log.md`). Tier vocabulary and pipeline
-phase names are cited (not imported as constants) from #16. No
-other `[CROSS]` constants expected in §3.10 at draft time.
+**Cross-spec constants imported:** one `[CROSS]` entry —
+`DOMAIN_TAG_EVENT_LEDGER = 0x15`, allocated in #16 §3.4 v1.0.1
+(May 14, 2026) per ERR-017-001 RESOLVED
+(`docs/tracking/spec-error-log.md`). Originally tagged
+`[CROSS-PENDING]` while #16 was `IN PROGRESS`; promoted to
+`[CROSS]` atomically with #16 Tier 2 `APPROVED`. Tier vocabulary
+and pipeline phase names are cited (not imported as constants)
+from #16. No other `[CROSS]` constants expected in §3.10.
 
 **Stage 0 host platform pin:** test execution requires the pins
 named in `docs/tracking/certification-platform.md`. Drafting Spec
@@ -173,3 +175,4 @@ activation (Stage 0 → 1 transition) does.
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1.           |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. No content change to §1 — `[CROSS-PENDING]` qualifier mentioned in §1.4 + KD-2 is now formally sanctioned in CLAUDE.md "Constant Tags" table (M1; landed in the same revision). |
+| 1.0.1   | May 15, 2026 | Claude Code | Patch revision (no behavioral change). §1.4 "Cross-spec constants imported" updated: `DOMAIN_TAG_EVENT_LEDGER` `[CROSS-PENDING]` → `[CROSS]`, literal value `0x15` inlined, ERR-017-001 marked RESOLVED. Reflects #16 §3.4 v1.0.1 allocation (May 14, 2026). |

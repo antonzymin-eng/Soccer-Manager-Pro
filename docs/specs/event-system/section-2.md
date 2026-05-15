@@ -291,9 +291,10 @@ EventRecord = [
 - Only Tier A and Tier B records appear in `EventLedgerRecord`.
 - Tier C records never appear in `SnapshotPayload` (KD-3 / FR-EVT-015).
 - The domain-tag byte for `EventLedgerRecord` preimage assignment
-  is `DOMAIN_TAG_EVENT_LEDGER` (see §3.4 / §3.10). Its numeric
-  value is **`[CROSS-PENDING]`** — allocated in #16 §3.4
-  domain-tag table at #17 IN REVIEW per ERR-017-001.
+  is `DOMAIN_TAG_EVENT_LEDGER = 0x15` (see §3.4 / §3.10),
+  allocated in #16 §3.4 v1.0.1 (May 14, 2026) per ERR-017-001
+  RESOLVED. Tag `[CROSS]` — owned by #16's namespace, consumed
+  read-only here.
 
 ## 2.5 Failure Modes
 
@@ -318,3 +319,4 @@ recorded in §3.10 constants catalogue.
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. 82 FRs published with full conformance/source/verification/activation columns. Section heading order superseded the v0.0 stub. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. Added FR-EVT-046a/046b (per-handler out-degree cap = 1; H1) and FR-EVT-009a (single-marker constraint; L6). Reworded FR-EVT-002 for canonical-vs-in-memory layout (M5). Renamed `producerSubsystem` → `subsystemOrdinal` in §2.4.1 (M4). Replaced `[TBD-CITE]` with `TBD-NORMATIVE` at FR-EVT-026 (M2). FR-EVT-021 retargeted at new `ERR_EVT_REGISTRATION_PHASE = 0x1705`; §2.5 grew the new error row (L3). Updated TickHeartbeatEvent registry row to `AI_NoOp` (H2). |
 | 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-1: reverted TickHeartbeatEvent producer phase to `Snapshot` in §2.4.2 seed table; updated FR-EVT-038 to name `Snapshot` as canonical producer with `AI_NoOp` as non-binding example. H-2-2: removed `ERR_EVT_TIER_MISMATCH` runtime code; `0x1702` slot marked reserved in §2.5; FR-EVT-016 / FR-EVT-076 retargeted to compile-time / Spec #20 lint only. M-2-1/M-2-2: §2.3 prose corrected post-init lifecycle route to `ERR_EVT_REGISTRATION_PHASE`; routing table gained a "Post-init Tier A/B registration" row and corrected the "Tier-mismatch" row to lint-only. M-2-3: FR-EVT-052 reworded to carve out struct-ref delegates with `in T` parameter (§3.5.4 exempt). M-2-5: FR-EVT-046a/046b moved before FR-EVT-047 (ID-sort order). |
+| 1.0.1   | May 15, 2026 | Claude Code | Patch revision (no behavioral change). §2.4.4 `DOMAIN_TAG_EVENT_LEDGER` `[CROSS-PENDING]` → `[CROSS]`, literal value `0x15` inlined per #16 §3.4 v1.0.1 (ERR-017-001 RESOLVED May 14, 2026). |

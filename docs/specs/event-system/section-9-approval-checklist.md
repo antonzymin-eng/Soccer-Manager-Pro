@@ -41,7 +41,7 @@
 | Q7 | Error-code numeric pins (`0x17NN`) verified against #16's `0x16NN` block for non-collision. | `section-3.md` §3.10; `section-2.md` §2.5. Verification: `grep -E '0x16[0-9A-Fa-f]{2}' docs/specs/deterministic-sim/` and confirm no overlap with `0x1701`–`0x1704`. |
 | Q8 | Spec #17 frame-budget claim (≤ 0.5 ms / frame ≈ 3%) sits within #16 §6.2 `TBD-NORMATIVE` envelope (Resolve + Events = 18%). | `section-6.md` §6.4. Tag-resolution gated on #16 approval. |
 | Q9 | KD-9 versioning rules consistently apply across §2.4.3 (rule statements), §3.7 (mechanics), and Appendix C (recipes). | `section-2.md` §2.4.3; `section-3.md` §3.7; `appendices.md` Appendix C. |
-| Q10 | All `[GT]` constants in §3.10 carry rationale; one `[CROSS-PENDING]` constant has its promotion path tracked. | `section-3.md` §3.10 + `section-6.md` §6.3 + `section-8.md` §8.4. |
+| Q10 | All `[GT]` constants in §3.10 carry rationale; the one `[CROSS]` constant (`DOMAIN_TAG_EVENT_LEDGER = 0x15`) cites its #16 §3.4 v1.0.1 allocation. | `section-3.md` §3.10 + `section-6.md` §6.3 + `section-8.md` §8.4. Promotion `[CROSS-PENDING]` → `[CROSS]` completed in #17 §1.0.1 patch (May 15, 2026) per ERR-017-001 RESOLVED. |
 | Q11 | Every `#16 §x.x.x` and `#19 §x.x` citation in this spec carries the `TBD-NORMATIVE` qualifier. | grep `'#16 §'` and `'#19 §'` over `section-*.md` and confirm `TBD-NORMATIVE` co-located. |
 | Q12 | No phantom interfaces (CLAUDE.md "Interface Design Principle"). `IEventA` / `IEventB` / `IEventC` both-sides-specified justification recorded. | `section-3.md` §3.1.3 (both-sides argument); `section-4.md` §4.2.4 (intentionally not declared). |
 | Q13 | No magic numbers in formula text — every numeric value in §3 / §6 cites §3.10 catalogue or is derived. | grep `[0-9]+` over §3 / §6; expected hits resolve to `EVENT_QUEUE_CAPACITY`, `MAX_EVENT_DISPATCH_DEPTH`, `COSMETIC_PER_TICK_PUBLICATION_BUDGET`, `0x17NN` codes. |
@@ -53,7 +53,7 @@
 |---|-------|--------------------------|
 | R1 | Open issues logged in `CLAUDE.md` OPEN ISSUES section, if any. | `CLAUDE.md` OPEN ISSUES — add #17 IN REVIEW entry at IN REVIEW commit. |
 | R2 | Lead-developer sign-off captured. | At IN REVIEW commit, record in `section-9-approval-checklist.md` Decision block (§9.4). |
-| R3 | `spec-error-log.md` updated with any cross-spec drift discovered during drafting. ERR-017-001 (`DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4) filed May 12, 2026; closure tracked at #17 IN REVIEW commit. | `docs/tracking/spec-error-log.md` ERR-017-001 row. |
+| R3 | `spec-error-log.md` updated with any cross-spec drift discovered during drafting. ERR-017-001 (`DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4) filed May 12, 2026; RESOLVED May 14, 2026 at #16 (value `0x15` allocated in #16 §3.4 v1.0.1); #17-side promotion completed in §1.0.1 patch May 15, 2026. | `docs/tracking/spec-error-log.md` ERR-017-001 row. |
 | R4 | `SPEC_INDEX.md` row 17 updated atomically with sign-off (`IN PROGRESS` → `IN REVIEW`; later `IN REVIEW` → `APPROVED` after #16 Tier 2 approval per KD-2). | `docs/specs/SPEC_INDEX.md` row 17 status column. |
 | R5 | `docs/tracking/file-manifest.md` updated with section-file entries at IN REVIEW commit. | `docs/tracking/file-manifest.md` + `section-4.md` §4.5 stub. |
 | R6 | KD-2 sequencing constraint satisfied: (1) #17 reaches `IN REVIEW` with `TBD-NORMATIVE` citations to #16; (2) #16 reaches Tier 2 `APPROVED`; (3) #17's `TBD-NORMATIVE` tags resolved and #17 advances to `APPROVED`. | `SPEC_INDEX.md` rows 16 + 17 status sequence; `section-1.md` §1.4 sequencing block. |
@@ -92,3 +92,4 @@ When the gate transitions:
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. 10 content + 14 quality + 9 review rows. Decision block records gate path. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §9.1 C9 coverage list now includes §1 / §2 / §9 / appendices (L8). §9.2 Q2 evidence row points at the fully-authored §5.4.1 … §5.4.10 traceability table (H3). |
+| 1.0.1   | May 15, 2026 | Claude Code | Patch revision (no behavioral change). §9.2 Q10 evidence updated to reflect `DOMAIN_TAG_EVENT_LEDGER = 0x15` / `[CROSS]`; §9.3 R3 evidence updated to mark ERR-017-001 RESOLVED. Reflects #16 §3.4 v1.0.1 allocation (May 14, 2026). |

@@ -94,19 +94,21 @@ Each example serializes the `EventLedgerRecord` per §3.4.2
 EventLedgerRecord)`). Bytes shown in hex; multi-byte integers
 little-endian per #16 §3.2.4.1 `TBD-NORMATIVE`.
 
-In every example below, `DT` is the symbolic `DOMAIN_TAG_EVENT_LEDGER`
-byte (numeric value `TBD-NORMATIVE` per ERR-017-001).
+In every example below, the leading `DT` byte is
+`DOMAIN_TAG_EVENT_LEDGER = 0x15` (allocated in #16 §3.4 v1.0.1
+per ERR-017-001 RESOLVED May 14, 2026; literal value inlined
+in the `phaseScopeFields` byte streams below).
 
 ### B.1 Empty `Events` phase
 
 ```
 phaseScopeFields:
-  DT
+  DT       = 15              // DOMAIN_TAG_EVENT_LEDGER (#16 §3.4 v1.0.1)
   count    = 00 00 00 00     // u32, no records
 records: (none)
 ```
 
-Total preimage = `DT 00 00 00 00` (5 bytes).
+Total preimage = `15 00 00 00 00` (5 bytes).
 
 ### B.2 Single-event ledger (`ShotExecutedEvent` only)
 
@@ -130,8 +132,8 @@ denoted `<shotPayload>` below.
 
 ```
 phaseScopeFields:
-  DT
-  count = 01 00 00 00     // u32, one record
+  DT      = 15              // DOMAIN_TAG_EVENT_LEDGER (#16 §3.4 v1.0.1)
+  count   = 01 00 00 00     // u32, one record
 record[0]:
   header  = 01 01 00 00 23 01 00 00 06 00 00 00
   payload = <shotPayload>
@@ -161,8 +163,8 @@ Physics-phase index is lower than Resolve-phase index per
 
 ```
 phaseScopeFields:
-  DT
-  count = 02 00 00 00
+  DT      = 15              // DOMAIN_TAG_EVENT_LEDGER (#16 §3.4 v1.0.1)
+  count   = 02 00 00 00
 record[0] (BallContactEvent):
   header  = 02 01 00 00 23 01 00 00 03 00 00 00
   payload = <ballContactPayload>
@@ -241,7 +243,7 @@ deprecated outright.
 | Second-order dispatch | Re-entrant Tier A/B publish from inside a handler during the same-tick `Events` phase. Bounded by `MAX_EVENT_DISPATCH_DEPTH` (§3.2.5). |
 | Tier A / B / C | Vocabulary owned by #16 §1.3.1 `TBD-NORMATIVE`. Cited (not redefined) by Spec #17. |
 | `intraPhaseDrawIndex` | `ushort` counter, scoped per-tick per-producingPhase; reset at producing-phase entry; monotonic across all subsystems within that phase (§3.2.4 normative counter scope). |
-| `DOMAIN_TAG_EVENT_LEDGER` | Single-byte domain tag prefixed to `EventLedgerRecord` before `SerializeCanonical`. Numeric value `TBD-NORMATIVE` per ERR-017-001; promoted to `[CROSS]` at #16 approval. |
+| `DOMAIN_TAG_EVENT_LEDGER` | Single-byte domain tag prefixed to `EventLedgerRecord` before `SerializeCanonical`. Numeric value `0x15`, allocated in #16 §3.4 v1.0.1 per ERR-017-001 RESOLVED May 14, 2026; `[CROSS]` constant owned by #16, consumed read-only here. |
 | Phase / digest | Vocabulary owned by #16 (not redefined here). |
 
 ## Appendix E — Failure-Mode Decision Table
@@ -270,3 +272,4 @@ Cross-references for each row land in §3.8 (mechanics) and §2.5
 | 0.1     | May 13, 2026 | Claude Code | Initial appendices draft from `outline-detailed.md` v1.1. Appendix A seeded with 11 rows + forward reference table; Appendices B / C / D / E published. Generic-template stub headings (Derivations / Numerical Verification / Sensitivity Analysis) replaced with spec-specific structure per outline. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. Appendix A `0x09` row producer phase set to `AI_NoOp` (H2). Appendix A §A.1 added column-semantics note: Tier A/B Producer phase normative, Tier C informational (L7). Renamed `producerSubsystem` → `subsystemOrdinal` in Appendix B B.2 header table (M4). Appendix E EC-017-005 split into 005a (tier-marker mismatch) and 005b (post-boot registration → `ERR_EVT_REGISTRATION_PHASE`) (L3). |
 | 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-1: Appendix A `0x09` row producer phase reverted to `Snapshot`; `maxPerTick` corrected to `1 / tick`. H-2-2: Appendix E EC-017-005a updated to compile-time / lint-only (no runtime error code; `0x1702` slot reserved). |
+| 1.0.1   | May 15, 2026 | Claude Code | Patch revision (no behavioral change). Appendix B preamble + B.1 / B.2 / B.3 byte streams inline `DOMAIN_TAG_EVENT_LEDGER = 0x15` (allocated in #16 §3.4 v1.0.1, May 14, 2026 per ERR-017-001 RESOLVED). Appendix D glossary row updated to `0x15` / `[CROSS]`. Replaces the symbolic `DT` placeholder used while #17 was drafted against `[CROSS-PENDING]`. |
