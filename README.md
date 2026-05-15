@@ -1,7 +1,7 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** May 13, 2026
+**Last Updated:** May 14, 2026 (later same day — #16 Tier 2 APPROVED; #18 IN REVIEW v0.3; ERR-017-001 closed)
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
@@ -117,7 +117,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Started:** February 2, 2026
 **Deliverables:** 20 comprehensive specification documents
 
-**Summary (May 13, 2026):** 10 approved (#1, #2, #3, #4, #5, #6, #7, #8, #17, #20), 0 suspended, 2 in review (#9, #19), 1 in progress (#16), 7 not started (#10–#15, #18). Scaffold skeletons (outline + section-1…9 + appendices headers, no body content) exist for the 7 not-started specs.
+**Summary (May 14, 2026, later same day):** 11 approved (#1, #2, #3, #4, #5, #6, #7, #8, #16, #17, #20), 0 suspended, 3 in review (#9, #18, #19), 0 in progress, 6 not started (#10–#15). Scaffold skeletons (outline + section-1…9 + appendices headers, no body content) exist for the 6 not-started specs.
 **Total specification output:** ~4.33 MB across 106 files (counts predate folder migration; see file-manifest.md)
 **Comprehensive audits completed:** 6 of 7 finished specs
 
@@ -147,11 +147,11 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 13. ⏳ Pressing AI
 14. ⏳ Defensive AI
 15. ⏳ Attacking AI
-16. 📝 Deterministic Simulation — **IN PROGRESS** (since May 2, 2026; sections 1–9 + appendices drafted at v0.9; gated at IN PROGRESS pending §9.5 implementation-readiness sign-off)
+16. ✅ Deterministic Simulation — **APPROVED** May 14, 2026 (Tier 2 Final Approval; §9 v1.7; all §9.4.2 gates cleared; golden-vector files hkdf-sha256-kat v1.1, siphash-2-4-kat v1.1, serialize-canonical-corpus v1.0; §8.3.1 cross-spec re-audit complete; ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1)
 
 **Priority 5 — Systems Architecture (Weeks 17-20):**
 17. ✅ Event System — **APPROVED** May 13, 2026 (section-files PASS 1 + PASS 2 adversarial review applied; lead-developer sign-off complete)
-18. ⏳ Performance Optimization Strategy
+18. 🔍 Performance Optimization Strategy — **IN REVIEW** (May 14, 2026; section files v0.3 after PASS-1 + PASS-2 adversarial reviews; ERR-018-002..018 all resolved; FR count 82; KD-3 inverted — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints. Advancement to APPROVED gated on #19 reaching APPROVED per KD-2.)
 19. 🔍 Testing Strategy & Framework — **IN REVIEW** (May 12, 2026; initial draft + v0.2 self-critique sweep applied. Approval gated by KD-2 preconditions: #16 Tier 2 APPROVED, #18 outline-level draft, all `TBD-NORMATIVE` tags resolved.)
 20. ✅ Code Standards & Style Guide — **APPROVED** May 11, 2026 (adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete)
 
@@ -253,11 +253,12 @@ Soccer-Manager-Pro/
 │   │   ├── perception-system/          [Spec #7 — APPROVED]
 │   │   ├── decision-tree/              [Spec #8 — APPROVED (draft-level)]
 │   │   ├── fixed64-math/               [Spec #9 — IN REVIEW]
-│   │   ├── deterministic-sim/          [Spec #16 — IN PROGRESS]
+│   │   ├── deterministic-sim/          [Spec #16 — APPROVED]
+│   │   ├── event-system/               [Spec #17 — APPROVED]
+│   │   ├── performance-optimization/   [Spec #18 — IN REVIEW]
 │   │   ├── testing-strategy/           [Spec #19 — IN REVIEW]
 │   │   ├── code-standards/             [Spec #20 — APPROVED]
-│   │   ├── event-system/               [Spec #17 — APPROVED]
-│   │   └── ...                         [Specs #10–#15, #18 — scaffold-only, NOT STARTED]
+│   │   └── ...                         [Specs #10–#15 — scaffold-only, NOT STARTED]
 │   └── tracking/
 │       ├── PROGRESS.md                 [Schedule and milestone tracking]
 │       ├── spec-error-log.md           [Cross-spec architectural errors]
@@ -270,29 +271,29 @@ Soccer-Manager-Pro/
 
 ## NEXT IMMEDIATE STEPS
 
-### Outstanding (as of May 6, 2026)
+### Outstanding (as of May 14, 2026)
 
-**Sign-offs:**
-1. ✅ Agent Movement (#2) — APPROVED Apr 27, 2026
-2. ✅ Shot Mechanics (#6) — APPROVED Apr 27, 2026
-3. ✅ Decision Tree (#8) — APPROVED Apr 27, 2026 (draft-level)
-4. ⏳ Pass Mechanics (#5) re-sign-off — still SUSPENDED since March 25
-5. ✅ Collision System (#3) status reconciled — §9 v2.1 back-filled Apr 26
-6. ⏳ Fixed64 Math Library (#9) — IN REVIEW since May 6; awaiting lead-developer sign-off
+**Sign-offs completed since project start:**
+- ✅ Specs #1, #2, #3, #4, #5, #6, #7, #8 — Priority 1–2 set complete.
+- ✅ Spec #16 — Tier 2 APPROVED May 14, 2026.
+- ✅ Specs #17, #20 — APPROVED May 13 and May 11, 2026 respectively.
 
-**Documentation debt:**
-7. ✅ `docs/tracking/spec-error-log.md` rebuilt; ERR-001 through ERR-012, ERR-016-001, ERR-016-002 all logged (May 3, 2026)
-8. ✅ Renumber sweep complete (Apr 26, ~115 body-text substitutions; zero remaining)
-9. ✅ `file-manifest.md` reconciled to post-migration folder names (May 6, 2026)
-10. ✅ Dangling references removed from CLAUDE.md (`.claudeignore`, `MIGRATION_GUIDE.md`)
-11. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20
-12. ⏳ ERR-016-002 back-propagation: reciprocal `XC-002-NNN` and `XC-008-NNN` references in approved specs #2 and #8
+**In review (awaiting lead-developer sign-off):**
+1. ⏳ Fixed64 Math Library (#9) — IN REVIEW since May 6; no blockers.
+2. ⏳ Performance Optimization Strategy (#18) — IN REVIEW (v0.3, May 14); advancement to APPROVED gated on #19 reaching APPROVED per KD-2.
+3. ⏳ Testing Strategy & Framework (#19) — IN REVIEW since May 12. KD-2 precondition (a) (#16 Tier 2 APPROVED) cleared May 14; (b) cleared May 13; (c) remaining: sweep `TBD-NORMATIVE` tags in `testing-strategy/section-3.md` + `appendices.md` against #16 final text and #18 v0.3.
 
-**Next up:**
-13. ⏳ Push the seven approved-spec tags (blocked by branch-protection 403; needs privileged credentials)
-14. ⏳ Deterministic Simulation (#16) §9.5 implementation-readiness gate; three named golden-vector files (`hkdf-sha256-kat.md`, `siphash-2-4-kat.md`, `serialize-canonical-corpus.md`) not yet authored
-15. ⏳ Begin Heading Mechanics Specification (#10)
-16. ⏳ Pass Mechanics (#5) comprehensive audit re-review and re-sign-off
+**Mechanical residual:**
+4. ⏳ #17 §3.10 / §3.4.2 `[CROSS-PENDING]` → `[CROSS]` promotion (`DOMAIN_TAG_EVENT_LEDGER = 0x15`) + Appendix B literal-value inlining. Closes the last #17-side step of ERR-017-001.
+
+**Not started (largest remaining body of work):**
+5. ⏳ Heading Mechanics (#10), Goalkeeper Mechanics (#11), Positioning AI (#12).
+6. ⏳ Pressing AI (#13), Defensive AI (#14), Attacking AI (#15).
+
+**Operations / housekeeping:**
+7. ⏳ Push 8 approval tags (HTTP 403 branch-protection); run the squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`.
+8. ⏳ Stage-0 host-platform pin in `docs/tracking/certification-platform.md` (lead-developer task; blocks first `FR-DS-009-GATE` cert run, not spec approvals).
+9. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20.
 
 ---
 
@@ -344,10 +345,14 @@ These remain available in `/Archive/` for historical reference but should NOT be
 9. ✅ Shot Mechanics #6 approved (Apr 27)
 10. ✅ Perception System #7 approved (Apr 22)
 11. ✅ Decision Tree #8 approved (Apr 27, draft-level quality gate)
-12. 🔍 Fixed64 Math Library #9 in review (May 6) — awaiting lead-developer sign-off
-13. 📝 Deterministic Simulation #16 in progress (since May 2)
-14. ⏳ Begin Heading Mechanics (#10) after Pass Mechanics re-sign-off
-15. No coding until all 20 specs approved
+12. 🔍 Fixed64 Math Library #9 in review (since May 6) — awaiting lead-developer sign-off
+13. ✅ Deterministic Simulation #16 — Tier 2 APPROVED May 14
+14. ✅ Event System #17 — APPROVED May 13
+15. ✅ Code Standards #20 — APPROVED May 11
+16. 🔍 Performance Optimization #18 in review (v0.3, May 14) — gated on #19 APPROVED per KD-2
+17. 🔍 Testing Strategy #19 in review (since May 12) — KD-2 (a)/(b) cleared; (c) `TBD-NORMATIVE` sweep remaining
+18. ⏳ Begin Heading Mechanics (#10)
+19. No coding until all 20 specs approved
 
 ---
 
@@ -488,6 +493,13 @@ git push --tags
 - Project Structure block updated to reflect approved sign-offs and current statuses; #9 and #16 broken out from the "..." catch-all.
 - Next Immediate Steps refreshed to May 6 reality; resolved documentation-debt items checked off (spec-error-log rebuild, file-manifest reconciliation).
 - ERR-016-002 (EntityId no-reuse cross-spec back-propagation) added to outstanding documentation debt.
+
+**v2.0 — May 14, 2026 (later same day)**
+- Deterministic Simulation (#16) — Tier 2 APPROVED. §9 v1.7 sign-off; all §9.4.2 gates cleared (golden-vector files complete; §8.3.1 cross-spec re-audit complete; §9.3 sign-offs granted with Stage-0 host-platform-pin caveat); ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in #16 §3.4 v1.0.1.
+- Performance Optimization Strategy (#18) — IN PROGRESS → IN REVIEW. Section files v0.1 → v0.2 → v0.3 (PASS-1 + PASS-2 adversarial reviews; ERR-018-002..018 closed; FR count 82). Advancement to APPROVED gated on #19 reaching APPROVED per KD-2.
+- Stage 0 spec count: **11 APPROVED, 0 SUSPENDED, 3 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.**
+- Project Structure block: #16 broken out as APPROVED; #18 broken out as IN REVIEW; catch-all reduced to #10–#15.
+- Next Immediate Steps fully rewritten around May 14 reality.
 
 **v1.9 — May 13, 2026**
 - Event System (#17) — APPROVED May 13, 2026. Section files authored from `outline-detailed.md` v1.1; section-files PASS 1 (3 H / 5 M / 12 L) and PASS 2 (2 H / 6 M / 7 L) adversarial critiques both resolved; all section files at v0.3; lead-developer sign-off granted.
