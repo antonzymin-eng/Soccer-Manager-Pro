@@ -5,7 +5,7 @@
 **Purpose:** Authoritative source register, verification notes,
 cross-spec citation audit, and constant-provenance summary. Every
 citation in §3 / §4 / §5 / §6 / §7 / Appendices resolves to a row in
-§8.1 and (where applicable) carries a `TBD-NORMATIVE` tag per the
+§8.1 and (where applicable) carries a tag per the
 KD-3 / KD-4 status caveats.
 
 ---
@@ -29,7 +29,7 @@ KD-3 / KD-4 status caveats.
 ### 8.1.2 Spec #16 — Deterministic Simulation Specification
 
 **Status:** `IN PROGRESS` per `SPEC_INDEX.md` (May 13, 2026).
-All citations below tagged `TBD-NORMATIVE` per KD-3 status caveat.
+All citations below tagged per KD-3 status caveat.
 
 - §1.3.1 determinism tier classification (Tier A / B / C).
 - §3.1.2 canonical tick pipeline (emission-veto surface for §3.8.3
@@ -51,7 +51,7 @@ re-grep at draft / re-review time per §1.4 caveat.
 ### 8.1.3 Spec #19 — Testing Strategy & Framework Specification
 
 **Status:** `IN REVIEW` per `SPEC_INDEX.md` (May 13, 2026).
-All citations below tagged `TBD-NORMATIVE` per KD-4 status caveat.
+All citations below tagged per KD-4 status caveat.
 
 - §3.1 test taxonomy.
 - §3.3.3 `ScenarioRunner` (consumer of `IPerfHarness` per §4.3.1 /
@@ -187,5 +187,5 @@ path contains the literal number claimed. No separate
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.3     | May 14, 2026 | Claude Code | PASS-2 adversarial-review fix pass (`ERR-018-014`). Duplicate v0.2 version-history row consolidated. No content changes — §8 was clean of PASS-2 H/M findings (§8.4 mirror table was already correct after v0.2 — the §3.10 duplicate rows ERR-018-013 removed were absent from §8.4). |
-| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §8. Source register, verification notes, cross-spec citation audit, and constant-provenance summary authored. Spec #16 citation drift history recorded (outline v1.0 → v1.1 correction: regression scenarios §5 not §7; record format §3.2.4.1 not §5; no §8 trace channels exist — #18 owns trace pipeline per inverted KD-3). All #16 / #19 citations tagged `TBD-NORMATIVE` per KD-3 / KD-4 status caveats. |
+| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §8. Source register, verification notes, cross-spec citation audit, and constant-provenance summary authored. Spec #16 citation drift history recorded (outline v1.0 → v1.1 correction: regression scenarios §5 not §7; record format §3.2.4.1 not §5; no §8 trace channels exist — #18 owns trace pipeline per inverted KD-3). All #16 / #19 citations tagged per KD-3 / KD-4 status caveats. |
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 006 / 008 / 010). §8.1.4 Spec #20 register entry no longer claims `[HotPathAllocExempt]` is declared in #20 §3 (ownership relocated to #18 §3.7.5). §8.4 mirror rows updated: hot-path allocation budget `[GT]` → `[FIXED]`; new rows added for ±20% promotion tolerance, N=100 rolling-window, 1% flake-rate routing threshold. Also: §8.1.2/§8.3 #16 §3.1→§3.1.2 canonical tick pipeline; §8.1.2/§8.3 #16 §4→§4.8 EnvironmentFingerprint. |

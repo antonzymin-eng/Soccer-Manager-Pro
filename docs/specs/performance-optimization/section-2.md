@@ -60,9 +60,9 @@ when the dashboard front-end ships.
 
 | ID | Statement | Level | Source | Verify | Stage |
 |----|-----------|-------|--------|--------|-------|
-| FR-PO-016 | Every profiling session MUST record git SHA, recorded seed, `EnvironmentFingerprint` (per #16 §4.8 `TBD-NORMATIVE`), platform pin (per KD-9), scenario manifest ID (per #16 §5 `TBD-NORMATIVE`), session start/end timestamps, and hardware perf-counter snapshot. | MUST | KD-6 | §5.4 | Stage 0+1 |
+| FR-PO-016 | Every profiling session MUST record git SHA, recorded seed, `EnvironmentFingerprint` (per #16 §4.8), platform pin (per KD-9), scenario manifest ID (per #16 §5), session start/end timestamps, and hardware perf-counter snapshot. | MUST | KD-6 | §5.4 | Stage 0+1 |
 | FR-PO-017 | Sessions missing any field required by FR-PO-016 MUST be rejected by the §3.4.4 baseline validator. | MUST | KD-6 / KD-11 | §5.4 | Stage 0+1 |
-| FR-PO-018 | Spec #18 MUST NOT author its own perf scenarios; every profiling session runs an #16 §5 scenario verbatim (`TBD-NORMATIVE`). | MUST | KD-3 / KD-6 | §5.7 | Stage 0+1 |
+| FR-PO-018 | Spec #18 MUST NOT author its own perf scenarios; every profiling session runs an #16 §5 scenario verbatim. | MUST | KD-3 / KD-6 | §5.7 | Stage 0+1 |
 | FR-PO-019 | Cross-scenario profiling (Spec #19 KD-8 cross-spec scenarios) is permitted. | MAY | KD-6 | §5.4 | Stage 0+1 |
 | FR-PO-019a | For any cross-scenario profiling session entered into the baseline corpus, the manifest ID and seed MUST be recorded per FR-PO-016. | MUST | KD-6 | §5.4 | Stage 0+1 |
 | FR-PO-020 | Wall-clock-seeded or random-seed profiling runs MUST NOT be entered into the baseline corpus. | MUST | KD-6 | §5.4 | Stage 0+1 |
@@ -89,11 +89,11 @@ when the dashboard front-end ships.
 | FR-PO-031 | Default per-PR regression threshold: post-PR baseline MUST be within +5% per spec, per loop, of the pre-PR baseline for the same scenario, seed, and platform pin. `[GT]` pinned at Stage 0+1 §7.5 D9. | MUST | §3.5.2 | §5.6 | Stage 0+1 |
 | FR-PO-032 | Any non-zero allocation on a hot-path entry (KD-10 union) MUST block merge regardless of magnitude. | MUST | KD-10 / §3.7 | §5.6 | Stage 0+1 |
 | FR-PO-033 | Per-spec §6 MAY declare a tighter threshold than FR-PO-031; tighter thresholds MUST cite the owning §6 authority. | MAY | KD-2 / §3.5.2 | §5.6 | Stage 0+1 |
-| FR-PO-034 | The functional gate (Spec #19 §6.2, `TBD-NORMATIVE`) MUST block on test fail. Out of #18's authority; declared for gate-composition completeness. | MUST | KD-4 | §5.7 | Stage 0+1 |
-| FR-PO-035 | The determinism gate (Spec #16 §5 + §3.2.4.1, `TBD-NORMATIVE`) MUST block on bitwise mismatch against the canonical-record-format golden trace. Out of #18's authority; declared for gate-composition completeness. | MUST | KD-3 | §5.7 | Stage 0+1 |
+| FR-PO-034 | The functional gate (Spec #19 §6.2,) MUST block on test fail. Out of #18's authority; declared for gate-composition completeness. | MUST | KD-4 | §5.7 | Stage 0+1 |
+| FR-PO-035 | The determinism gate (Spec #16 §5 + §3.2.4.1,) MUST block on bitwise mismatch against the canonical-record-format golden trace. Out of #18's authority; declared for gate-composition completeness. | MUST | KD-3 | §5.7 | Stage 0+1 |
 | FR-PO-036 | The performance gate (this spec §3.5) MUST block on FR-PO-031 threshold exceeded. | MUST | §3.5 | §5.6 | Stage 0+1 |
 | FR-PO-037 | The allocation gate (this spec §3.7) MUST block on FR-PO-032 violation. | MUST | §3.7 | §5.6 | Stage 0+1 |
-| FR-PO-038 | No gate MAY be configured as "soft"; flake-quarantine (Spec #19 §3.7 `TBD-NORMATIVE`) applies to functional gates only — perf-gate variance exceeding §3.5.2 threshold is treated as a potential KD-6 violation, triggers root-cause analysis per §6.4, and confirmed non-determinism routes to #16 §5 triage. | MUST | KD-4 / KD-6 | §5.7 | Stage 0+1 |
+| FR-PO-038 | No gate MAY be configured as "soft"; flake-quarantine (Spec #19 §3.7) applies to functional gates only — perf-gate variance exceeding §3.5.2 threshold is treated as a potential KD-6 violation, triggers root-cause analysis per §6.4, and confirmed non-determinism routes to #16 §5 triage. | MUST | KD-4 / KD-6 | §5.7 | Stage 0+1 |
 | FR-PO-039 | An absolute-threshold guard MUST compare against the milestone baseline independently of per-PR delta. Drift beyond +10% (`[GT]`) of milestone baseline MUST block merge regardless of incremental delta history. | MUST | §3.5.6 | §5.6 | Stage 0+1 |
 | FR-PO-040 | Perf-gate exceptions MUST follow the §2.1 exception-with-sign-off procedure; silent threshold bypass is forbidden. | MUST | §2.1 / §3.5.5 | §5.7 | Stage 0+1 |
 
@@ -128,8 +128,8 @@ when the dashboard front-end ships.
 | FR-PO-055 | Verbosity tiers MUST be `minimal`, `standard`, `debug`, `exhaustive`; numeric semantics (sampling rate per tier) pinned at Stage 0+1 (§7.5 D10). | MUST | §3.8.2 | §5.7 | Stage 0+1 |
 | FR-PO-056 | Sampling rules per tier MUST be: every-tick (exhaustive), per-N-ticks (standard / debug), event-driven only (minimal). N pinned at Stage 0+1. | MUST | §3.8.2 | §5.7 | Stage 0+1 |
 | FR-PO-057 | Channel-to-sink routing MUST include in-memory ring buffer (default), file sink (baseline-capture builds), and a Stage 1+ network sink. | SHOULD | §3.8.2 | §5.7 | Stage 0+1 |
-| FR-PO-058 | Every trace record emitted via a #18-owned channel MUST conform to the canonical record format at #16 §3.2.4.1 (`TBD-NORMATIVE`). | MUST | KD-3 / KD-11 | §5.7 | Stage 0+1 |
-| FR-PO-058a | Every trace point MUST be determinism-clean: no wall-clock-derived field, no `System.Random` field, no managed allocation on hot-path tick code, no field that captures `EnvironmentFingerprint`-divergent data (CPU brand string, locale, etc.). Trace points inside the canonical tick pipeline (#16 §3.1, `TBD-NORMATIVE`) additionally require #16-owner sign-off (emission-veto authority). | MUST | KD-3 | §5.7 | Stage 0+1 |
+| FR-PO-058 | Every trace record emitted via a #18-owned channel MUST conform to the canonical record format at #16 §3.2.4.1. | MUST | KD-3 / KD-11 | §5.7 | Stage 0+1 |
+| FR-PO-058a | Every trace point MUST be determinism-clean: no wall-clock-derived field, no `System.Random` field, no managed allocation on hot-path tick code, no field that captures `EnvironmentFingerprint`-divergent data (CPU brand string, locale, etc.). Trace points inside the canonical tick pipeline (#16 §3.1,) additionally require #16-owner sign-off (emission-veto authority). | MUST | KD-3 | §5.7 | Stage 0+1 |
 | FR-PO-059 | Dashboards MUST consume records emitted by FR-PO-054 channels in the FR-PO-058 format; dashboards MUST NOT define a parallel record format. | MUST | KD-3 / KD-11 | §5.7 | Stage 1 |
 | FR-PO-060 | Aggregation logic (rolling averages, p99 windows, regression bands) MUST live in `tools/perf-dashboard/`; gameplay code MUST NOT reference dashboard helpers. | MUST | §3.8.5 / Spec #20 §4.1 | §5.7 | Stage 1 |
 | FR-PO-061 | Dashboard refresh cadence MUST be: per-PR delta synchronous with CI run, milestone trend weekly (Stage 1: nightly). | MUST | §3.8.7 | §5.7 | Stage 1 |
@@ -141,7 +141,7 @@ when the dashboard front-end ships.
 |----|-----------|-------|--------|--------|-------|
 | FR-PO-063 | Every baseline file MUST be reproducible from recorded git SHA, seed, `EnvironmentFingerprint`, and platform pin. | MUST | KD-11 | §5.4 | Stage 0+1 |
 | FR-PO-064 | Baselines MUST live at `tests/data/baselines/<spec>/` once `src/` exists. Stage 0 placeholder location: `docs/specs/performance-optimization/baselines/`. | MUST | KD-11 | §5.4 | Stage 0 |
-| FR-PO-065 | Baseline file format MUST conform to #16 §3.2.4.1 (`TBD-NORMATIVE`) canonical record format; Appendix A schema is the paste-ready layout. | MUST | KD-3 / KD-11 | §5.7 | Stage 0+1 |
+| FR-PO-065 | Baseline file format MUST conform to #16 §3.2.4.1 canonical record format; Appendix A schema is the paste-ready layout. | MUST | KD-3 / KD-11 | §5.7 | Stage 0+1 |
 | FR-PO-066 | Capture cadence: per-PR delta at Stage 0+1; full re-baseline at each Stage milestone. | MUST | KD-11 | §5.4 | Stage 0+1 |
 | FR-PO-067 | The §5.4 baseline-reproducibility auditor MUST re-run the recorded session manifest and confirm the recaptured metric matches within §3.4.3 confidence interval. | MUST | KD-11 | §5.4 | Stage 0+1 |
 | FR-PO-068 | Baselines failing FR-PO-067 MUST be marked stale; the PR that introduced them MUST be blocked. | MUST | KD-11 | §5.4 | Stage 0+1 |
@@ -195,7 +195,7 @@ test-side / tooling-side only and are formalized in §4 and Appendix A:
 
 - `BaselineRecord` — immutable value type; serialized per Appendix A;
   on-disk encoding conforms to #16 §3.2.4.1 canonical binary layout
-  (`TBD-NORMATIVE`).
+ .
 - `BudgetRollupEntry` — read-only view onto a per-spec §6 declaration;
   recomputed at build time, never edited by hand.
 - `ProfilingSessionManifest` — captures the FR-PO-016 session-contract
@@ -231,5 +231,5 @@ the §2.3 compliance modes:
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.3     | May 14, 2026 | Claude Code | PASS-2 adversarial-review fix pass (`ERR-018-014`, `ERR-018-017`). Duplicate v0.2 version-history row removed (consolidated into single row carrying union of notes — root cause: PR #59 + PR #60 parallel-branch merge). FR-PO-019 split into FR-PO-019 (MAY, permission only) + FR-PO-019a (MUST, manifest+seed recording). FR count is now 82 (FR-PO-001 … 080 + FR-PO-019a + FR-PO-058a). |
-| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §2. FR catalogue published with 81 FRs (FR-PO-001 … 080 + FR-PO-058a per outline v1.1 emission-constraint addition). All FRs assigned source citation, verification pointer, and activation stage. `TBD-NORMATIVE` tags applied to every #16 / #19 citation. |
+| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §2. FR catalogue published with 81 FRs (FR-PO-001 … 080 + FR-PO-058a per outline v1.1 emission-constraint addition). All FRs assigned source citation, verification pointer, and activation stage. tags applied to every #16 / #19 citation. |
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002`, `ERR-018-009`). FR-PO-053 reworded — `[HotPathAllocExempt]` ownership relocated to Spec #18 §3.7.5 (no longer cites Spec #20 §3); source-citation column for FR-PO-053 narrowed to `KD-10` (KD-1 cite-not-redefine framing dropped for this case). FR-PO-070 split Stage 0 manual / Stage 0+1 automated to align with §7.1 tool-deliverable schedule; activation-stage column annotated `Stage 0 / Stage 0+1`. FR-PO-016 #16 §4→§4.8 EnvironmentFingerprint citation corrected; FR-PO-038 perf-gate flake claim softened. |

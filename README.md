@@ -1,7 +1,7 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** May 15, 2026 (later same day — #19 Testing Strategy APPROVED after `[TBD-NORMATIVE]` sweep; #9 + #19 APPROVED same day; only #18 remains IN REVIEW)
+**Last Updated:** May 15, 2026 (later same day still — #18 Performance Optimization APPROVED; #9 + #19 + #18 all APPROVED same day; Priority 5 spec set fully complete; only Priority 3+4 AI specs (#10–#15) remain)
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
@@ -117,7 +117,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Started:** February 2, 2026
 **Deliverables:** 20 comprehensive specification documents
 
-**Summary (May 15, 2026, later same day):** 13 approved (#1, #2, #3, #4, #5, #6, #7, #8, #9, #16, #17, #19, #20), 0 suspended, 1 in review (#18), 0 in progress, 6 not started (#10–#15). Stage 0 Priority 1–2 spec set is fully complete. Scaffold skeletons (outline + section-1…9 + appendices headers, no body content) exist for the 6 not-started specs.
+**Summary (May 15, 2026, later same day still):** 14 approved (#1, #2, #3, #4, #5, #6, #7, #8, #9, #16, #17, #18, #19, #20), 0 suspended, 0 in review, 0 in progress, 6 not started (#10–#15). **Priority 1, 2, 5 spec sets are fully complete; only Priority 3+4 AI specs remain.** Scaffold skeletons (outline + section-1…9 + appendices headers, no body content) exist for the 6 not-started specs.
 **Total specification output:** ~4.33 MB across 106 files (counts predate folder migration; see file-manifest.md)
 **Comprehensive audits completed:** 6 of 7 finished specs
 
@@ -151,7 +151,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 
 **Priority 5 — Systems Architecture (Weeks 17-20):**
 17. ✅ Event System — **APPROVED** May 13, 2026 (section-files PASS 1 + PASS 2 adversarial review applied; lead-developer sign-off complete)
-18. 🔍 Performance Optimization Strategy — **IN REVIEW** (May 14, 2026; section files v0.3 after PASS-1 + PASS-2 adversarial reviews; ERR-018-002..018 all resolved; FR count 82; KD-3 inverted — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints. Advancement to APPROVED gated on #19 reaching APPROVED per KD-2.)
+18. ✅ Performance Optimization Strategy — **APPROVED** May 15, 2026 (§9 v1.0 lead-developer sign-off; v1.0 `[TBD-NORMATIVE]` sweep landed across §1 / §2 / §3 / §4 / §5 / §6 / §8 / appendices against #16 APPROVED text + #19 v1.0.1 patch-revised text; KD-2 sequencing satisfied; FR count 82.)
 19. ✅ Testing Strategy & Framework — **APPROVED** May 15, 2026 (§9 v1.0 lead-developer sign-off; v1.0.1 `[TBD-NORMATIVE]` sweep landed across §1 / §3 / §4 / §5 / §6 / §8 / appendices against #16 APPROVED text + #18 v0.3; KD-2 sequencing satisfied. Clears #18's last KD-2 gate.)
 20. ✅ Code Standards & Style Guide — **APPROVED** May 11, 2026 (adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete)
 
@@ -255,7 +255,7 @@ Soccer-Manager-Pro/
 │   │   ├── fixed64-math/               [Spec #9 — APPROVED]
 │   │   ├── deterministic-sim/          [Spec #16 — APPROVED]
 │   │   ├── event-system/               [Spec #17 — APPROVED]
-│   │   ├── performance-optimization/   [Spec #18 — IN REVIEW]
+│   │   ├── performance-optimization/   [Spec #18 — APPROVED]
 │   │   ├── testing-strategy/           [Spec #19 — APPROVED]
 │   │   ├── code-standards/             [Spec #20 — APPROVED]
 │   │   └── ...                         [Specs #10–#15 — scaffold-only, NOT STARTED]
@@ -278,17 +278,16 @@ Soccer-Manager-Pro/
 - ✅ Spec #16 — Tier 2 APPROVED May 14, 2026.
 - ✅ Specs #17, #20 — APPROVED May 13 and May 11, 2026. #17 §1.0.1 patch May 15, 2026 closes ERR-017-001.
 
-**In review (awaiting lead-developer sign-off):**
-1. ⏳ Performance Optimization Strategy (#18) — IN REVIEW (v0.3, May 14). #18's last KD-2 gate ("#19 APPROVED") cleared May 15, 2026 when #19 landed. Remaining work: lead-developer sign-off plus a one-time check that #18's §3.5 / §6 / §7 references to #19 resolve cleanly against #19 v1.0.1 patch-revised text.
+**In review:** *(none — all 14 drafted specs are APPROVED).*
 
-**Not started (largest remaining body of work):**
-2. ⏳ Heading Mechanics (#10), Goalkeeper Mechanics (#11), Positioning AI (#12).
-3. ⏳ Pressing AI (#13), Defensive AI (#14), Attacking AI (#15).
+**Not started (only remaining body of spec-phase work):**
+1. ⏳ Heading Mechanics (#10), Goalkeeper Mechanics (#11), Positioning AI (#12) — Priority 3 (Advanced Physics).
+2. ⏳ Pressing AI (#13), Defensive AI (#14), Attacking AI (#15) — Priority 4 (Tactical AI).
 
 **Operations / housekeeping:**
-4. ⏳ Push 10 approval tags (HTTP 403 branch-protection); run the squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`. New: `spec-fixed64-math-v1.0-approved`, `spec-testing-strategy-v1.0-approved`.
-5. ⏳ Stage-0 host-platform pin in `docs/tracking/certification-platform.md` (lead-developer task; blocks first `FR-DS-009-GATE` cert run, not spec approvals).
-6. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20.
+3. ⏳ Push 11 approval tags (HTTP 403 branch-protection); run the squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`. New since last reconciliation: `spec-fixed64-math-v1.0-approved`, `spec-testing-strategy-v1.0-approved`, `spec-performance-optimization-v1.0-approved`.
+4. ⏳ Stage-0 host-platform pin in `docs/tracking/certification-platform.md` (lead-developer task; blocks first `FR-DS-009-GATE` cert run and `FR-PO-052` Stage 0+1 perf-gate activation, not spec approvals).
+5. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20.
 
 ---
 
@@ -344,7 +343,7 @@ These remain available in `/Archive/` for historical reference but should NOT be
 13. ✅ Deterministic Simulation #16 — Tier 2 APPROVED May 14
 14. ✅ Event System #17 — APPROVED May 13
 15. ✅ Code Standards #20 — APPROVED May 11
-16. 🔍 Performance Optimization #18 in review (v0.3, May 14) — gated on #19 APPROVED per KD-2
+16. ✅ Performance Optimization #18 — APPROVED May 15, 2026
 17. ✅ Testing Strategy #19 — APPROVED May 15, 2026
 18. ⏳ Begin Heading Mechanics (#10)
 19. No coding until all 20 specs approved
@@ -394,6 +393,7 @@ git push --tags
 - `spec-decision-tree-v1.0-approved` — created locally Apr 27, 2026 (draft-level approval); awaits push
 - `spec-fixed64-math-v1.0-approved` — created locally May 15, 2026; awaits push
 - `spec-testing-strategy-v1.0-approved` — created locally May 15, 2026; awaits push
+- `spec-performance-optimization-v1.0-approved` — created locally May 15, 2026; awaits push
 
 > **Tag push blocked**: `git push origin --tags` returns HTTP 403 from the current remote endpoint. After this branch merges to main with privileged credentials, run `git push origin spec-ball-physics-v1.0-approved spec-collision-system-v1.0-approved spec-first-touch-v1.0-approved spec-perception-system-v1.0-approved` from a context that allows tag creation. The tags are annotated and point at the merge commit (or its branch-tip predecessor if fast-forward).
 
@@ -490,6 +490,10 @@ git push --tags
 - Project Structure block updated to reflect approved sign-offs and current statuses; #9 and #16 broken out from the "..." catch-all.
 - Next Immediate Steps refreshed to May 6 reality; resolved documentation-debt items checked off (spec-error-log rebuild, file-manifest reconciliation).
 - ERR-016-002 (EntityId no-reuse cross-spec back-propagation) added to outstanding documentation debt.
+
+**v2.3 — May 15, 2026 (later same day still)**
+- Performance Optimization Strategy (#18) — APPROVED. §9 v1.0 lead-developer sign-off granted; v1.0 `[TBD-NORMATIVE]` sweep landed across §1 / §2 / §3 / §4 / §5 / §6 / §8 / appendices (60 instances) against #16 APPROVED text + #19 v1.0.1 patch-revised text. KD-2 sequencing satisfied.
+- Stage 0 spec count: **14 APPROVED, 0 SUSPENDED, 0 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.** Priority 5 spec set fully complete; only Priority 3+4 AI specs (#10–#15) remain in the spec phase.
 
 **v2.2 — May 15, 2026 (later same day)**
 - Testing Strategy & Framework (#19) — APPROVED. §9 v1.0 lead-developer sign-off granted; v1.0.1 `[TBD-NORMATIVE]` sweep landed across §1 / §3 / §4 / §5 / §6 / §8 / appendices (51 citation-qualifier instances resolved against #16's APPROVED text and #18's IN REVIEW v0.3 surface). KD-2 sequencing satisfied.

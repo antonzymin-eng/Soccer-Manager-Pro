@@ -28,7 +28,7 @@ KD-5 (Stage gating). Parallel slot reconciliation to Spec #19 §6.
   - **Benchmark framework.** BenchmarkDotNet or Unity Performance
     Testing Extension. Selection criteria: statistical-significance
     reporting per §3.4.3, scenario-manifest binding per #16 §5
-    (`TBD-NORMATIVE`). Tracked as §7.5 D3.
+   . Tracked as §7.5 D3.
   - **CI provider.** Deferred to `src/CLAUDE.md` (parallel to Spec
     #19 §6.1; tracked as §7.5 D4). Selection criteria:
     - Supports the three pipeline shapes in §4.5 (pre-commit, PR,
@@ -56,7 +56,7 @@ Until CI activates, the same gate composition runs locally:
 
 - Spec #18 declares performance regression gates (§3.5.2 threshold,
   §3.5.6 absolute guard, §3.7 alloc gate).
-- Spec #19 §6.2 (`TBD-NORMATIVE`) declares functional regression gates
+- Spec #19 §6.2 declares functional regression gates
   and orchestrates composition.
 
 **Gate composition rule** (KD-4 binding; also recorded in §3.5.3
@@ -130,4 +130,4 @@ KD-4. No functional gate rules are republished here.
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §6. Slot reconciliation explained (template's "Performance Analysis" replaced by CI Orchestration & Triage for this meta-spec — parallel to Spec #19 §6). Tooling-standards selection criteria declared for D1 / D2 / D3 / D4. Stage-0 local-only runbook pointer at §6.2; gate-composition rule at §6.3; defect classes / triage cadence / severity scale / traceability at §6.4. Reporting cadence at §6.5. All #16 / #19 citations tagged `TBD-NORMATIVE`. |
+| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §6. Slot reconciliation explained (template's "Performance Analysis" replaced by CI Orchestration & Triage for this meta-spec — parallel to Spec #19 §6). Tooling-standards selection criteria declared for D1 / D2 / D3 / D4. Stage-0 local-only runbook pointer at §6.2; gate-composition rule at §6.3; defect classes / triage cadence / severity scale / traceability at §6.4. Reporting cadence at §6.5. All #16 / #19 citations tagged. |

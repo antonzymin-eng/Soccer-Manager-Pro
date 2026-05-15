@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 15, 2026 (later same day — Testing Strategy & Framework #19 APPROVED after v1.0.1 `[TBD-NORMATIVE]` sweep; #9 + #19 APPROVED same day; only #18 remains IN REVIEW)  
+**Last Updated:** May 15, 2026 (later same day still — Performance Optimization Strategy #18 APPROVED after v1.0 `[TBD-NORMATIVE]` sweep; #9 + #19 + #18 all APPROVED same day; Priority 5 spec set fully complete; only Priority 3+4 AI specs (#10–#15) remain)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -67,7 +67,7 @@ All 20 spec folders now exist in `docs/specs/`. Status reflects authoritative cl
 | 15 | `docs/specs/attacking-ai/` | NOT STARTED (scaffold only) |
 | 16 | `docs/specs/deterministic-sim/` | APPROVED (May 14, 2026, later same day) — Tier 2 Final Approval. §9 v1.7. All §9.4.2 gates cleared: §9.5 #4(a)/(b)/(c) spec-level sub-conditions SATISFIED (golden-vector files `hkdf-sha256-kat.md` v1.1, `siphash-2-4-kat.md` v1.1, `serialize-canonical-corpus.md` v1.0); §8.3.1 cross-spec re-audit COMPLETE (§8 v1.2, all four upstream rows promoted to `complete`); §9.3 sign-offs (lead-developer Tier 2, QA-automation, platform-certification) granted, platform-certification with explicit Stage-0 host-platform-pin caveat. ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1 (no `DETERMINISM_DIGEST_VERSION` bump). |
 | 17 | `docs/specs/event-system/` | APPROVED (May 13, 2026) — 10 section files + appendices; section-files PASS 1 + PASS 2 adversarial review applied; lead-developer sign-off complete |
-| 18 | `docs/specs/performance-optimization/` | IN REVIEW (May 14, 2026, later same day) — `outline.md` v1.0 + `outline-detailed.md` v1.1 (KD-3 inverted; ERR-018-001 resolved); section-1 through section-9-approval-checklist + appendices.md at v0.3 (PASS-1 adversarial review 23 findings resolved in v0.2 + PASS-2 adversarial review 15 findings resolved in v0.3; ERR-018-002..018 all closed). FR count 82 (FR-PO-019 split into 019 MAY + 019a MUST; FR-PO-058a emission constraints). Advancement to APPROVED gated on #19 reaching APPROVED per KD-2. |
+| 18 | `docs/specs/performance-optimization/` | APPROVED (May 15, 2026, later same day still) — §9 v1.0 lead-developer sign-off. v1.0 `[TBD-NORMATIVE]` sweep landed across §1 / §2 / §3 / §4 / §5 / §6 / §8 / appendices (60 citation-qualifier instances resolved against #16 APPROVED text + #19 v1.0.1 patch-revised text). §9.4.1 blocker list all RESOLVED. KD-2 sequencing satisfied. FR count 82 (FR-PO-019 split into 019 MAY + 019a MUST; FR-PO-058a emission constraints). KD-3 inverted: #18 owns trace pipeline; #16 retains §3.2.4.1 / §3.1 / §5. |
 | 19 | `docs/specs/testing-strategy/` | APPROVED (May 15, 2026, later same day) — §9 v1.0 lead-developer sign-off; v1.0.1 `[TBD-NORMATIVE]` sweep landed across §1 / §3 / §4 / §5 / §6 / §8 / appendices against #16's APPROVED text and #18's IN REVIEW v0.3 surface (51 citation-qualifier instances resolved); KD-2 sequencing satisfied. Clears #18's last KD-2 gate. |
 | 20 | `docs/specs/code-standards/` | APPROVED (May 11, 2026) — 10 section files + appendices; adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete |
 
