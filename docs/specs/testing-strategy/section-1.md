@@ -1,7 +1,7 @@
 # Testing Strategy & Framework Specification #19 — Section 1: Purpose & Scope
 
 **Created:** May 12, 2026
-**Last Updated:** May 12, 2026
+**Last Updated:** May 15, 2026 (v1.0.1 patch: §1.4 upstream-block updated — #16 APPROVED Tier 2 May 14; #18 IN REVIEW v0.3 May 14; #19 `TBD-NORMATIVE` sweep landed)
 **Purpose:** Establishes what Spec #19 governs, what it excludes, the
 ten cross-cutting key decisions (KD-1 … KD-10) that bind the rest of
 the document, the upstream / downstream contracts, and the version
@@ -166,31 +166,33 @@ status changes.
   schema (`SerializeCanonical`), §4.8 environment pinning
   (`EnvironmentFingerprint`), §5 test strategy / fixture requirements
   / certification matrix / test card template (regression-suite
-  authority). **Status: `IN PROGRESS`.** All citations tagged
-  `TBD-NORMATIVE` per KD-2. Section authors MUST grep
-  `deterministic-sim/section-1.md`, `section-3.md`, `section-4.md`,
-  and `section-5.md` at draft time to verify exact subsection numbers
-  — #16 has been through five adversarial passes and subsection
-  numbering may shift again.
+  authority). **Status: `APPROVED` (Tier 2, May 14, 2026).** All
+  `TBD-NORMATIVE` citation tags swept and replaced with firm references
+  in #19 v1.0.1 patch (May 15, 2026); subsection numbers re-verified
+  against the now-stable `deterministic-sim/section-*.md` text.
 
 **Upstream (consulted).**
 
 - Spec #18 (Performance Optimization) §4 / §7 — performance gates.
-  **Status: `NOT STARTED`.** All citations tagged `TBD-NORMATIVE` per
-  KD-3.
+  **Status: `IN REVIEW` (section files at v0.3, May 14, 2026).** All
+  `TBD-NORMATIVE` citation tags swept in #19 v1.0.1 (May 15, 2026)
+  against #18's now-stable v0.3 surface; the cited §4 / §7 / §3.5
+  perf-gate authorities are firm.
 - Spec #20 (Code Standards) §3.9.4 — test-fixture rule carve-outs.
   **Status: `APPROVED` (May 11, 2026).**
 
-**Bidirectional sequencing with #16 (per CLAUDE.md OPEN ISSUES).**
+**Bidirectional sequencing with #16 (resolved May 15, 2026).**
 
-- #16's Tier 2 final approval is gated on `#9 / #17 / #18 / #19`
-  reaching `IN REVIEW`.
-- #16's `APPROVED` status is a precondition for #19's own `APPROVED`
-  status.
-- Resolution path: (1) #19 reaches `IN REVIEW` with `TBD-NORMATIVE`
-  citations to #16; (2) #16 reaches Tier 2 `APPROVED`; (3) #19's
-  `TBD-NORMATIVE` tags are resolved and #19 advances to `APPROVED`.
-  `SPEC_INDEX.md` status transitions for #19 MUST follow this order.
+- #16's Tier 2 final approval was gated on `#9 / #17 / #18 / #19`
+  reaching `IN REVIEW`. **Cleared:** #9 IN REVIEW May 6 (later APPROVED
+  May 15); #17 APPROVED May 13; #18 IN REVIEW May 14; #19 IN REVIEW
+  May 12.
+- #16's `APPROVED` status was a precondition for #19's own `APPROVED`
+  status. **Cleared May 14, 2026** when #16 reached Tier 2 `APPROVED`.
+- Resolution path executed: (1) #19 reached `IN REVIEW` May 12, 2026
+  with `TBD-NORMATIVE` citations to #16; (2) #16 reached Tier 2
+  `APPROVED` May 14, 2026; (3) #19's `TBD-NORMATIVE` tags swept May 15,
+  2026 (v1.0.1 patch); #19 advancement to `APPROVED` granted same day.
 
 **Downstream.**
 

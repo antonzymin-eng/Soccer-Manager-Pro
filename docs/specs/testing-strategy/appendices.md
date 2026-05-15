@@ -18,8 +18,8 @@ approval), local runbook, and glossary.
 ## Appendix A — Scenario / Fixture Manifest Schema
 
 JSON-schema-style declaration. Binding to #16 §3.2.4.1
-`[TBD-NORMATIVE]` (`SerializeCanonical` normative byte-level schema)
-per KD-10. Final extension and on-disk encoding pinned at Stage 0+1.
+(`SerializeCanonical` normative byte-level schema) per KD-10. Final
+extension and on-disk encoding pinned at Stage 0+1.
 
 ### A.1 Scenario Manifest Entry
 
@@ -37,7 +37,7 @@ per KD-10. Final extension and on-disk encoding pinned at Stage 0+1.
       // ...
     ]
   },
-  "tier_classification": "A" | "B" | "C",       // per #16 §1.1.1 [TBD-NORMATIVE]
+  "tier_classification": "A" | "B" | "C",       // per #16 §1.1.1
   "fixture_refs": ["tests/data/fixtures/<path>", ...],
   "format_version": <int>,                       // validated by §3.3.4
   "provenance_edges": [                          // optional (FR-TS-074)
@@ -69,7 +69,7 @@ illustrative example below uses `.json` syntax.
 ### A.3 Fixture File Header
 
 Every fixture under `tests/data/fixtures/` carries the header (binary
-layout per #16 §3.2.4.1 `[TBD-NORMATIVE]`):
+layout per #16 §3.2.4.1):
 
 | Offset | Field | Type | Notes |
 |--------|-------|------|-------|
@@ -78,7 +78,7 @@ layout per #16 §3.2.4.1 `[TBD-NORMATIVE]`):
 | 8 | spec_id | `uint32` | capturing-spec ID (FR-TS-071) |
 | 12 | seed | `uint64` | source seed (FR-TS-071) |
 | 20 | env_fingerprint_len | `uint32` | length of fingerprint string |
-| 24 | env_fingerprint | `byte[len]` | verbatim from #16 §4.8 [TBD-NORMATIVE] |
+| 24 | env_fingerprint | `byte[len]` | verbatim from #16 §4.8 |
 | 24+len | capture_date | `byte[19]` | ISO-8601 YYYY-MM-DDTHH:MM:SS |
 | ... | body | `byte[]` | payload conforming to #16 §3.2.4.1 canonical layout |
 
@@ -278,7 +278,7 @@ The Stage 0+1 extension adds:
 ## Appendix F — Glossary
 
 Spec #19-specific terms only. Determinism / performance terms are
-cited from #16 / #18 `[TBD-NORMATIVE]`.
+cited from #16 / #18.
 
 - **Determinism layer.** The test layer owned by #16 §5. Consumed by
   Spec #19 as a required layer; not redefined here.
