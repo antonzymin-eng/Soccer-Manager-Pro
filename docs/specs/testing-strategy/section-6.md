@@ -38,8 +38,8 @@ the items below are tracked as deferred decisions in §7.5.
 - **CI provider.** Deferred to `src/CLAUDE.md`. **Selection criteria:**
   (a) must support the three pipeline shapes in §4.5 (pre-commit, PR,
   nightly); (b) must support functional gate composition with the #18
-  performance gate `[TBD-NORMATIVE]` and the #16 §5 determinism gate
-  `[TBD-NORMATIVE]` (KD-2 / KD-3); (c) must expose pass/fail at the
+  performance gate and the #16 §5 determinism gate
+  (KD-2 / KD-3); (c) must expose pass/fail at the
   granularity required by §6.2 gate-composition rules. No assumption
   is made that #18 "owns" CI-provider selection; selection happens in
   `src/CLAUDE.md` against these neutral criteria once the producer
@@ -51,9 +51,9 @@ the items below are tracked as deferred decisions in §7.5.
 
 - **Functional regression gates** — Spec #19 authority. Test pass /
   fail.
-- **Performance regression gates** — Spec #18 §4 `[TBD-NORMATIVE]`
+- **Performance regression gates** — Spec #18 §4
   authority. Budget threshold.
-- **Determinism gates** — Spec #16 §5 `[TBD-NORMATIVE]` authority.
+- **Determinism gates** — Spec #16 §5 authority.
   Bitwise equality across `EnvironmentFingerprint`.
 
 All three feed a single CI orchestrator.
@@ -156,11 +156,14 @@ Equivalent for `spec-error-log.md` already exists with the
 
 ## 6.6 Performance-Related Cross-Listing
 
-FR-TS-075 … FR-TS-080 (CI orchestration) cite #18 §4 / §7
-`[TBD-NORMATIVE]` by reference per KD-3. No performance numbers are
-republished here. When #18 advances from `NOT STARTED` to `IN
-REVIEW`, the §1.4 dependency list is updated and the `[TBD-NORMATIVE]`
-tags on FR-TS-075 … FR-TS-080 are reviewed for removal.
+FR-TS-075 … FR-TS-080 (CI orchestration) cite #18 §4 / §7 by
+reference per KD-3. No performance numbers are republished here.
+**#18 reached `IN REVIEW` (section files at v0.3) on May 14, 2026;
+the `[TBD-NORMATIVE]` tag previously suffixing this row was swept in
+#19 v1.0.1 (May 15, 2026)** against #18's stable surface. If #18
+churn re-shifts §4 / §7 subsection numbers before #18 reaches
+`APPROVED`, file the re-introduction per §2.3 self-applied failure
+mode and flip #19 status to `SUSPENDED`.
 
 ## 6.7 Version History
 

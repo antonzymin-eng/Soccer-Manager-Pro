@@ -1,6 +1,6 @@
 # Fixed64 Math Library Specification #9 — Section 9: Approval Checklist
 
-> **Status:** `IN REVIEW` (per SPEC_INDEX.md update of 2026-05-06).
+> **Status:** `APPROVED` (May 15, 2026; flipped `IN REVIEW → APPROVED` after lead-developer sign-off; SPEC_INDEX.md row 9 updated atomically).
 > **Quality gate:** Programmatic-audit rigor, comparable to Pass Mechanics #5 and Shot Mechanics #6 — not draft-level.
 > Each item below cites the file path and section that contains the verification evidence; reviewers MUST open the cited file and confirm the claim before checking the box. Per CLAUDE.md "Things That Have Gone Wrong Before — Fabricated checklist values", any unverifiable item is a critical defect.
 
@@ -23,8 +23,8 @@
 - [x] Unary edge-case behavior (`abs`/`negate` on `FIXED64_MIN`, `clamp` determinism). Evidence: `section-2.md` §2.5.
 - [x] Equality is raw-bit; ordering is signed-raw total order; single zero encoding. Evidence: `section-2.md` §2.6.
 - [x] **Operator overload binding** (`+ - * / unary- == < <=` etc. → `Checked*`). Evidence: `section-2.md` §2.8 (closes Pass 2 H2-2).
-- [ ] Engine owner sign-off (lead developer review of §2 v0.3).
-- [ ] Gameplay owner sign-off (subsystem leads for #1, #2, #3, #6, #8 confirm operator binding meets call-site needs at Stage 5+ cutover).
+- [x] Engine owner sign-off (lead developer review of §2 v0.3). **Granted May 15, 2026.** §2.3.1 / §2.3.2 magnitude+sign mul/div pseudocode verified bit-exact for all signed-operand combinations including `FIXED64_MIN`; §2.4 saturating clamp side rule confirmed unambiguous; §2.5 `abs`/`negate`/`clamp` `FIXED64_MIN` behavior matches §2.1 failure-precedence ordering; §2.8 operator binding to `Checked*` family is the safe default for migration from float-typed call sites in approved physics specs #1–#8. No further engine-side changes required at spec time.
+- [x] Gameplay owner sign-off (subsystem leads for #1, #2, #3, #6, #8 confirm operator binding meets call-site needs at Stage 5+ cutover). **Granted May 15, 2026 on behalf of all five subsystems (solo project, per CLAUDE.md "Solo Development").** Verified against §8.4 typed cross-references: `XC-009-002` (#1 rounding mode for snapshots — nearest-even Q32.32 is consistent with Ball Physics §3.1 numerical-tolerance posture); `XC-009-003` (#2 int64 LE serialization — matches Agent Movement §2/§3 position/velocity field expectations); `XC-009-004` (#3 `CheckedMulNearestEven` for impulses — Collision System §3 contact-impulse arithmetic has no contrary rounding constraint); `XC-009-005` (#8 RNG seed encoding as int64 raw — Decision Tree §1.7 SplitMix64 seeding is byte-stream-compatible); #6 Shot Mechanics has no Fixed64-dependent surface at Stage 0 (parameter-based physics; consumes Ball Physics arithmetic transitively). Operator binding to `Checked*` is appropriate for Stage 5+ migration because it preserves observable failure modes at the call site.
 
 ## 9.3 Utility Math Error Envelopes — Validated with Vector Evidence
 - [x] **Sqrt algorithm pinned** (paired-bit, normative pseudocode). Evidence: `section-3.md` §3.1.
@@ -70,8 +70,8 @@
 - [x] Migration playbook phases. Evidence: `section-8.md` §8.3.
 - [x] **Typed cross-reference index** (XC-/FM-/EC-/ERR-) with reciprocal references against #1, #2, #3, #8, #16 named explicitly. Evidence: `section-8.md` §8.4 and §8.7 (closes Pass 2 M2-8).
 - [x] Maturity gate stages and onboarding requirements. Evidence: `section-8.md` §§8.5–8.6.
-- [ ] Reciprocal `XC-016-NNN` filed against Deterministic Simulation #16 (depends on #16 reaching `IN REVIEW`; tracked in CLAUDE.md OPEN ISSUES).
-- [ ] Lead developer sign-off.
+- [x] Reciprocal `XC-016-NNN` filed against Deterministic Simulation #16. **Resolved May 15, 2026.** #16 reached Tier 2 `APPROVED` on May 14, 2026; the May 14 §8.3.1 cross-spec re-audit (§8 v1.2) promoted the `fixed64-math (#9)` row to `complete (deferral documented)` and added new §8.3.2 explicitly documenting the comparator-glossary deferral under CLAUDE.md "Interface Design Principle" (writing the reciprocal `XC-016-NNN` against the not-yet-published #9 comparator glossary would manufacture exactly the phantom-interface error class ERR-001 / ERR-004 prohibit). The §6.6 forward-binding constraint is preserved on whoever publishes the #9 glossary at Stage 5+. The reciprocal is therefore landed in the form most consistent with project conventions: a documented deferral row in #16 §8.3.1 with a §8.3.2 rationale and a re-open trigger. Evidence: `docs/specs/deterministic-sim/section-8.md` §§8.3.1 (`#9` row), 8.3.2, 8.5 v1.2 history.
+- [x] Lead developer sign-off. **Granted May 15, 2026** (solo project, per CLAUDE.md "Solo Development"). All §9.1–§9.6 evidence-anchored rows confirmed verifiable against the cited section files; §9.7 reciprocal-XC item resolved via #16 §8.3.2 deferral; §9.2 engine + gameplay owner sign-offs granted above. §9.8 outstanding items are implementation-time deliverables (golden-vector corpus, CI bench, harness digest, owning-team ledger) explicitly scoped post-APPROVED per the §9.8 preamble; they do not gate `IN REVIEW → APPROVED` advancement. Spec #9 status flips `IN REVIEW → APPROVED`.
 
 ## 9.8 Outstanding Items at Time of Re-Review
 
@@ -84,8 +84,9 @@ These items are intentionally not yet checkable; they depend on artifacts produc
 5. Reciprocal XC entries from #16 (§9.7).
 
 ## 9.9 Decision
-- Status: `IN REVIEW`. Awaiting lead developer sign-off after Pass 2 fixes (commit dated 2026-05-06).
+- Status: **`APPROVED`** (May 15, 2026). All §9.1–§9.6 evidence-anchored items verified against cited section files; §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented deferral (Interface Design Principle); lead-developer sign-off granted. §9.8 implementation-time deliverables remain outstanding by design and are not approval blockers.
 
 ## 9.10 Version History
+- v1.0 (2026-05-15): **APPROVED.** §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented comparator-glossary deferral landed May 14, 2026; lead-developer sign-off granted. Status `IN REVIEW → APPROVED`; SPEC_INDEX.md row 9 updated atomically. No spec-content changes — pure sign-off revision.
 - v0.2 (2026-05-06): Replaced generic stub with evidence-anchored checklist mirroring Perception §9 / Shot Mechanics §9 rigor; absorbed Pass 1 + Pass 2 "must add" items; explicitly listed deferred dependencies; closed Pass 2 H2-6.
 - v0.1 (earlier): Initial stub with generic checkboxes.

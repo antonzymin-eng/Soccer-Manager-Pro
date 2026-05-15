@@ -1,17 +1,21 @@
 # Testing Strategy & Framework Specification #19 — Section 3: Technical Specification (Rule Mechanics)
 
 **Created:** May 12, 2026
-**Last Updated:** May 12, 2026
+**Last Updated:** May 15, 2026 (v1.0.1 patch: sweep — all #16 and #18 citations resolved against #16 APPROVED text and #18 v0.3 IN REVIEW text)
 **Purpose:** Mechanics of every rule named in §2.2. Each subsection
 cites the FR-TS-### IDs it implements and provides the *mechanics*; it
 does not redefine the rule statement. Section ordering mirrors the
 FR-catalogue partition in §2.2.
 
-> **`TBD-NORMATIVE` tagging.** Every citation of Spec #16 (status `IN
-> PROGRESS`) or Spec #18 (status `NOT STARTED`) is tagged
-> `[TBD-NORMATIVE]` per KD-2 / KD-3 status caveats. Tag removal is a
-> §9.2 quality-checklist row gated on the cited spec reaching
-> `APPROVED`.
+> **`TBD-NORMATIVE` tagging (resolved May 15, 2026).** Citations of Spec
+> #16 and Spec #18 were originally tagged per KD-2 /
+> KD-3 status caveats while the upstream specs were `IN PROGRESS` /
+> `NOT STARTED`. Spec #16 reached Tier 2 `APPROVED` on May 14, 2026;
+> Spec #18 reached `IN REVIEW` (section files at v0.3) on May 14, 2026.
+> All tags below have been swept and replaced with
+> firm citations to the now-stable upstream sections, satisfying
+> §9.3.8 / §9.2.6 and KD-2 precondition (c). See the §3.x version
+> history below for the sweep entry.
 
 ---
 
@@ -32,7 +36,7 @@ test belongs to exactly one layer (FR-TS-001).
 3. **Simulation.** Invokes the full subsystem stack under a scripted
    scenario. Rendering is disabled. Loads scenario fixtures via the
    §3.3 runner.
-4. **Determinism.** Owned by Spec #16 §5 `[TBD-NORMATIVE]`. Consumed
+4. **Determinism.** Owned by Spec #16 §5. Consumed
    by Spec #19 as a required layer (KD-2). Listed here for
    completeness; mechanics are not restated.
 5. **End-to-end / soak.** Long-horizon runs (≥ one full 90-minute
@@ -87,7 +91,7 @@ Flagged at code review; MUST NOT merge:
   `int_passmechanics_collision_first_touch`.
 - `sim_<scenario>` — e.g., `sim_corner_kick_set_piece`.
 - `e2e_<scenario>` — e.g., `e2e_90min_match_baseline`.
-- Determinism tests use the #16 §5 naming `[TBD-NORMATIVE]`; cited,
+- Determinism tests use the #16 §5 naming; cited,
   not restated.
 - Property tests use `prop_<system>_<property>` (no layer prefix; the
   property tests in `tests/<spec>/properties/` carry the layer in the
@@ -98,7 +102,7 @@ Flagged at code review; MUST NOT merge:
 
 ### 3.2.1 Citation and Authority
 
-Spec #16 §5 `[TBD-NORMATIVE]` is the authoritative owner of the
+Spec #16 §5 is the authoritative owner of the
 determinism regression suite. Spec #19 consumes the suite; KD-2
 binding.
 
@@ -160,7 +164,7 @@ the list below is normative for review):
 - `expected_outcome_envelope` — bounded predicate set; "implicit pass"
   is forbidden (FR-TS-030).
 - `tier_classification` — Tier A / B / C per #16 §1.1.1
-  `[TBD-NORMATIVE]` (FR-TS-029).
+  (FR-TS-029).
 - `fixture_refs` — list of fixture paths under `tests/data/fixtures/`.
 - `format_version` — integer, validated by §3.3.4.
 - `provenance_edges` — optional list of upstream scenarios this scenario
@@ -188,7 +192,7 @@ ScenarioRunner.Run(manifestPath: string, seed: uint64) -> ScenarioResult
 ### 3.3.4 Fixture Validator (KD-10)
 
 Every fixture file is checked against #16 §3.2.4.1
-`[TBD-NORMATIVE]` (`SerializeCanonical` normative byte-level schema)
+(`SerializeCanonical` normative byte-level schema)
 at load time:
 
 - Validator is implemented as `IFixtureValidator` per format version
@@ -263,7 +267,7 @@ regression corpus.
   `tests/data/captured-seeds/<spec>/<YYYY-MM-DD>-<seed>.fixture`
   (final path pinned at Stage 0+1) (FR-TS-034).
 - Capture format conforms to KD-10 (canonical save format from #16 §5
-  `[TBD-NORMATIVE]`).
+ ).
 - Each captured fixture records: source seed, capturing-spec ID,
   capture date, `EnvironmentFingerprint` at capture (FR-TS-071).
 
@@ -276,9 +280,11 @@ regression corpus.
   the #19 holding area and are re-run by #19's own property / fuzz
   suite on every CI run (FR-TS-035) — a one-time fuzz hit still
   becomes a permanent #19-side guardrail.
-- Cross-spec dependency: this promotion path is `TBD-NORMATIVE` per
-  KD-2 status caveat; resolved when #16 §5 publishes its
-  external-capture-hook contract.
+- Cross-spec dependency: the promotion path consumes #16 §5's
+  external-capture-hook surface. #16 §5 is APPROVED (Tier 2, May 14,
+  2026); if the hook contract is not yet published in §5's current
+  text, the binding re-opens for revision once #16 publishes it
+  (Stage 0+1 deliverable per #16 §7.2 Deferred Decisions).
 
 ### 3.4.4 Property Catalogue (Categorical)
 
@@ -383,7 +389,7 @@ review time (FR-TS-052) is performed by §5.4.
 ### 3.6.1 Tier Vocabulary
 
 Tier vocabulary is owned by #16 §1.1.1 ("Equivalence policy by
-artifact") `[TBD-NORMATIVE]` and is not restated here (KD-1).
+artifact") and is not restated here (KD-1).
 
 **Cite-precision guard.** The subsection number "§1.1.1" was
 re-grepped against current `deterministic-sim/section-1.md` on May
@@ -436,7 +442,7 @@ consumable by the §5.5 auditor (FR-TS-057).
 A test is **flaky** if two runs of the same revision under the same
 `EnvironmentFingerprint` produce different pass / fail outcomes. This
 is a determinism-adjacent definition cited from #16 §4.8
-(`EnvironmentFingerprint`) `[TBD-NORMATIVE]`.
+(`EnvironmentFingerprint`).
 
 ### 3.7.2 Detection (FR-TS-062)
 
@@ -467,7 +473,7 @@ is a determinism-adjacent definition cited from #16 §4.8
 
 - "Flaky in CI only." Root cause is invariably an
   `EnvironmentFingerprint` violation; investigate via #16 §4.8
-  `[TBD-NORMATIVE]`.
+ .
 - `[Retry]` attributes to mask flake.
 - Sleep-based synchronization in tests.
 
@@ -475,7 +481,7 @@ is a determinism-adjacent definition cited from #16 §4.8
 
 ### 3.8.1 Citation
 
-KD-10 (binding to #16 §3.2.4.1 `[TBD-NORMATIVE]` `SerializeCanonical`
+KD-10 (binding to #16 §3.2.4.1 `SerializeCanonical`
 normative byte-level schema).
 
 ### 3.8.2 Storage Layout (FR-TS-068)
@@ -508,7 +514,7 @@ Every captured fixture records:
 - `capturing_spec_id: int`.
 - `capture_date: ISO-8601`.
 - `environment_fingerprint: string` (verbatim from #16 §4.8
-  `[TBD-NORMATIVE]`).
+ ).
 - `provenance_edges: list<fixture_path>` — upstream fixtures this
   capture derives from.
 
@@ -533,7 +539,7 @@ Full schema and migration mechanics are in Appendix A.
 
 ### 3.9.2 Benchmark / Micro-Perf Scaffolds
 
-Outside Spec #19's scope; owned by Spec #18 `[TBD-NORMATIVE]`. Pointer
+Outside Spec #19's scope; owned by Spec #18. Pointer
 only.
 
 ### 3.9.3 Visual-Regression Tests (UI Screenshots)

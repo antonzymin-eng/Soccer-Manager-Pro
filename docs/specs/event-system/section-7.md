@@ -105,10 +105,11 @@ Pending decisions, owned tracker per item:
 | D6 | Per-event trace-channel verbosity defaults | Stage 0+1 | §6.5.1. |
 | D7 | Tier C overflow subscriber-array sizing (runtime register growth budget) | Stage 0+1 | §4.3.2 first measurements. |
 | D8 | Re-tuning of `[GT]` constants (`EVENT_QUEUE_CAPACITY`, `COSMETIC_PER_TICK_PUBLICATION_BUDGET`, `MAX_EVENT_DISPATCH_DEPTH`) | Stage 0+1 | §6.3.4 microbenchmark output. |
-| D9 | `DOMAIN_TAG_EVENT_LEDGER` numeric value | Pending #16 §3.4 patch | ERR-017-001; activates at #17 IN REVIEW. |
+| D9 | `DOMAIN_TAG_EVENT_LEDGER` numeric value | RESOLVED May 14, 2026 (`0x15`) | Allocated in #16 §3.4 v1.0.1; ERR-017-001 RESOLVED; tag promoted `[CROSS-PENDING]` → `[CROSS]` in #17 §3.10 / §3.4.2 v1.0.1. |
 
 ## 7.6 Version History
 
 | Version | Date         | Author      | Notes                                                                 |
 |---------|--------------|-------------|-----------------------------------------------------------------------|
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. Six permanent exclusions, nine deferred decisions (D1–D9) registered. Section heading order superseded the v0.0 stub. |
+| 1.0.1   | May 15, 2026 | Claude Code | Patch revision (no behavioral change). D9 marked RESOLVED with `DOMAIN_TAG_EVENT_LEDGER = 0x15` per #16 §3.4 v1.0.1 (ERR-017-001 RESOLVED May 14, 2026). |

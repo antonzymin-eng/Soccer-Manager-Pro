@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 13, 2026  
+**Last Updated:** May 15, 2026 (later same day still — #18 Performance Optimization APPROVED after `[TBD-NORMATIVE]` sweep; #9 + #19 + #18 all APPROVED same day; Priority 5 spec set fully complete)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -11,11 +11,11 @@
 ## PROGRESS SUMMARY
 
 **Total Specifications:** 20  
-**Approved:** 10  
+**Approved:** 14  
 **Suspended:** 0  
-**In Review:** 2  
-**In Progress:** 1  
-**Not Started:** 7
+**In Review:** 0  
+**In Progress:** 0  
+**Not Started:** 6
 
 **Specifications approved:**
 - Ball Physics (#1, Feb 8, 2026)
@@ -28,6 +28,10 @@
 - Decision Tree (#8, Apr 27, 2026 — draft-level quality gate; comprehensive audit candidate before implementation; §1.7.3 patch May 6, 2026 — `XC-008-001` EntityId no-reuse)
 - Code Standards & Style Guide (#20, May 11, 2026 — adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete)
 - Event System (#17, May 13, 2026 — section-files PASS 1 + PASS 2 adversarial review applied; lead-developer sign-off complete; all 10 section files + appendices at v0.3)
+- Fixed64 Math Library (#9, May 15, 2026 — lead-developer sign-off granted; §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented deferral)
+- Testing Strategy & Framework (#19, May 15, 2026 — §9 v1.0 lead-developer sign-off granted; KD-2 preconditions (a)/(b)/(c) all cleared; v1.0.1 `[TBD-NORMATIVE]` sweep against #16 final text + #18 v0.3 landed across §1 / §3 / §4 / §5 / §6 / §8 / appendices)
+- Performance Optimization Strategy (#18, May 15, 2026 — §9 v1.0 lead-developer sign-off granted; v1.0 `[TBD-NORMATIVE]` sweep landed across §1 / §2 / §3 / §4 / §5 / §6 / §8 / appendices against #16 APPROVED text + #19 v1.0.1 patch-revised text; KD-2 sequencing satisfied; §9.4.1 blocker list all RESOLVED)
+- Deterministic Simulation (#16, May 14, 2026 — Tier 2 APPROVED; §9 v1.7; all §9.4.2 gates cleared; §9.5 #4(a)/(b)/(c) spec-level sub-conditions SATISFIED; §8.3.1 cross-spec re-audit complete; ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1)
 
 **Specifications suspended:** None. Stage 0 Priority 1–2 spec set is complete.
 
@@ -56,9 +60,9 @@
 | 6 | Shot Mechanics | ~70 | ✅ APPROVED | Feb 23 | Apr 27, 2026 | All 9 sections + appendices complete; §9 v1.4 lead-developer signed off Apr 27, 2026 (pre-migration void-file blockers reclassified as moot under folder layout). 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. |
 | 7 | Perception System | ~80 | ✅ APPROVED | Feb 24 | Apr 22, 2026 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.7 — ✅ APPROVED April 22, 2026. |
 | 8 | Decision Tree | ~55+ | ✅ APPROVED | Feb 27 | Apr 27, 2026 | Sections 1–9 and appendices drafted; §9 v1.2 lead-developer signed off Apr 27, 2026 at draft-level quality gate. Comprehensive audit candidate before implementation. |
-| 9 | Fixed64 Math Library | 25-30 | 🔍 IN REVIEW | Apr 28, 2026 | — | All sections (1–9 + appendices) drafted at v0.2–v0.3; Pass 2 adversarial critique fixes landed; awaiting lead developer sign-off per `fixed64-math/section-9-approval-checklist.md` (May 6, 2026 reclassification) |
+| 9 | Fixed64 Math Library | 25-30 | ✅ APPROVED | Apr 28, 2026 | May 15, 2026 | All sections (1–9 + appendices) drafted v0.2–v0.3; Pass 2 adversarial critique fixes landed May 6; §9 v1.0 lead-developer sign-off granted May 15, 2026. §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented deferral (Interface Design Principle). Implementation deferred to Stage 5 per §8.1 v0.2 stage-gating. |
 
-**Priority 2 Progress:** 100% drafted (3 approved, 1 in review)
+**Priority 2 Progress:** 100% complete (4 of 4 approved)
 
 ---
 
@@ -81,9 +85,9 @@
 | 13 | Pressing AI | 18-22 | ⏳ NOT STARTED | — | — | Week 13 target |
 | 14 | Defensive AI | 18-22 | ⏳ NOT STARTED | — | — | Week 14 target |
 | 15 | Attacking AI | 18-22 | ⏳ NOT STARTED | — | — | Week 15 target |
-| 16 | Deterministic Simulation | 20-25 | 📝 IN PROGRESS | May 2, 2026 | — | All 9 sections + appendices drafted; adversarial review + two fix passes complete (v0.7, v0.8); awaiting implementation-readiness gate §9.5 before IN REVIEW |
+| 16 | Deterministic Simulation | 20-25 | ✅ APPROVED | May 2, 2026 | May 14, 2026 | All 9 sections + appendices complete; §9 v1.7 Tier 2 APPROVED May 14, 2026. Tier 1 (Conditional) granted earlier same day; Tier 2 cleared all §9.4.2 gates: §9.5 #4(a)/(b)/(c) spec-level SATISFIED (golden-vector files hkdf-sha256-kat v1.1, siphash-2-4-kat v1.1, serialize-canonical-corpus v1.0); §8.3.1 cross-spec re-audit complete (§8 v1.2; all four rows promoted); ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1; §9.3 sign-offs (lead-developer Tier 2, QA-automation, platform-certification) granted with Stage-0 host-platform-pin caveat. |
 
-**Priority 4 Progress:** 25% (1 of 4 in progress)
+**Priority 4 Progress:** 25% (1 of 4 approved; #16 APPROVED May 14, 2026)
 
 ---
 
@@ -92,11 +96,11 @@
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
 | 17 | Event System | ~35 | ✅ APPROVED | May 13, 2026 | May 13, 2026 | All 10 section files + appendices authored May 13, 2026 from `outline-detailed.md` v1.1; section-files PASS 1 (20 findings) and PASS 2 (2 H / 6 M / 7 L findings) adversarial reviews both resolved same day; all section files at v0.3; lead-developer sign-off May 13, 2026. ERR-017-001 (`DOMAIN_TAG_EVENT_LEDGER`) open pending #16 approval. |
-| 18 | Performance Optimization Strategy | 18-22 | 🛠 IN PROGRESS | May 13, 2026 | — | Detailed outline `outline-detailed.md` v1.0 authored May 13, 2026 from `outline.md` v1.0 + May 6 adversarial review (6 H / 5 M / 2 L findings, all resolved); v1.1 issued same day. Establishes 11 cross-cutting design decisions (KD-2 per-spec §6 ratify-not-override; **KD-3 boundary with #16 inverted in v1.1** — Spec #18 owns trace pipeline, Spec #16 retains canonical record format §3.2.4.1 + regression scenarios §5 + emission-veto §3.1; KD-4 boundary with #19; KD-7 Tier-C-only degradation; KD-8 10 Hz / 60 Hz loop-separation tagging; KD-6 determinism-aware profiling; KD-10 hot-path enumeration via per-spec §6 union). ERR-018-001 filed and resolved at outline level same day via KD-3 inversion + grep-verified #16 section-number corrections. Section files remain stubs. **Unblocks Spec #19 KD-2 precondition (b)** — outline §4 and §7 headers both present and detailed. |
-| 19 | Testing Strategy & Framework | 20-25 | 🔍 IN REVIEW | May 12, 2026 | — | Initial section-file draft authored May 12, 2026 from `outline-detailed.md` v1.1; v0.2 self-critique sweep applied (3 H / 6 M / 8 L findings, all resolved). Per KD-2 sequencing, advancement to `APPROVED` is gated on (a) #16 reaching Tier 2 APPROVED, (b) #18 outline-level draft, and (c) all `TBD-NORMATIVE` tags resolved. |
+| 18 | Performance Optimization Strategy | 18-22 | ✅ APPROVED | May 13, 2026 | May 15, 2026 | All 10 section files + appendices at v0.3 (May 14, 2026) following PASS-1 + PASS-2 adversarial reviews (ERR-018-002..018 all closed). v1.0 `[TBD-NORMATIVE]` sweep (May 15, 2026) resolved 60 citation-qualifier instances against #16 APPROVED text + #19 v1.0.1 patch-revised text. KD-2 sequencing satisfied; §9 v1.0 lead-developer sign-off granted May 15, 2026. FR count 82 (FR-PO-019 split into 019 MAY + 019a MUST; FR-PO-058a emission constraints). KD-3 inverted: #18 owns trace pipeline; #16 retains §3.2.4.1 record format + §5 regression scenarios + §3.1 emission veto. |
+| 19 | Testing Strategy & Framework | 20-25 | ✅ APPROVED | May 12, 2026 | May 15, 2026 | Initial section-file draft May 12, 2026 from `outline-detailed.md` v1.1; v0.2 self-critique sweep applied same day. v1.0.1 `[TBD-NORMATIVE]` sweep landed May 15, 2026 across §1 / §3 / §4 / §5 / §6 / §8 / appendices against #16's now-APPROVED text and #18's IN REVIEW v0.3 surface; §9 v1.0 lead-developer sign-off granted same day. KD-2 sequencing satisfied. **Downstream effect:** clears #18's last KD-2 gate for its own `IN REVIEW → APPROVED` advancement. |
 | 20 | Code Standards & Style Guide | 15-20 | ✅ APPROVED | May 7, 2026 | May 11, 2026 | All section files + appendices drafted from `outline-detailed.md` v1.3 (May 7–8); adversarial review pass-1 applied May 11; lead-developer R-01..R-05 sign-off complete May 11, 2026. §9 v1.1 APPROVED. |
 
-**Priority 5 Progress:** 50% (2 of 4 approved, 1 in review, 1 in progress)
+**Priority 5 Progress:** 100% (4 of 4 approved)
 
 ---
 
@@ -328,6 +332,73 @@
 
 ---
 
+### Week 17 — May 14, 2026
+
+**Completed:**
+- **Performance Optimization Strategy (#18) section files v0.1 → v0.2 → v0.3 (May 14, 2026):** PASS-1 adversarial review (4 H / 6 M / 13 L) resolved in v0.2 (ERR-018-002..011 closed). PASS-2 adversarial review (2 H / 5 M / 8 L; root cause traced to PR #59 + PR #60 parallel-branch merge collision on v0.2) resolved in v0.3 (ERR-018-012..018 closed). All 10 section files + appendices at v0.3. Status `IN PROGRESS` → `IN REVIEW`. FR count now 82.
+- **Deterministic Simulation (#16) `IN PROGRESS` → `IN REVIEW` (Tier 1 Conditional Approval) → `APPROVED` (Tier 2 Final Approval):** §9 v1.3 split §9.5 #4 sub-conditions into spec-level vs implementation-level; §9.5 #4(a)/(b) hand-verification (HKDF + SipHash KATs) completed; §9.5 #4(c) `serialize-canonical-corpus.md` v1.0 authored (45 entries, embedded reproducer); §8.3.1 cross-spec re-audit complete (§8 v1.2; all four rows promoted); §9.3 sign-offs granted (lead-developer Tier 2, QA-automation, platform-certification — with explicit Stage-0 host-platform-pin caveat). §9 v1.7 Tier 2 APPROVED.
+- **ERR-017-001 closed atomically with #16 Tier 2:** `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocated in #16 §3.4 v1.0.1 (next value after `DOMAIN_TAG_ENV_FP = 0x14`; pure namespace allocation, no `DETERMINISM_DIGEST_VERSION` bump). #17-side `[CROSS-PENDING]` → `[CROSS]` promotion in #17 §3.10 / §3.4.2 (plus literal-value inlining in #17 Appendix B) remains as the one residual mechanical step.
+
+**Status:**
+- **11 APPROVED, 0 SUSPENDED, 3 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.**
+
+**Still Pending:**
+- Fixed64 Math Library (#9) lead-developer sign-off (IN REVIEW since May 6) — *closed May 15.*
+- #17 §3.10 / §3.4.2 `[CROSS-PENDING]` → `[CROSS]` promotion + Appendix B literal-value inlining (mechanical residual from ERR-017-001) — *closed May 15.*
+- Testing Strategy (#19) approval — precondition (a) (#16 Tier 2 APPROVED) cleared May 14; (c) `TBD-NORMATIVE` tags in `testing-strategy/section-3.md` + `appendices.md` still need a sweep against #16 final text + #18 v0.3.
+- Performance Optimization (#18) advancement to APPROVED — gated on #19 reaching APPROVED per KD-2.
+- Heading Mechanics (#10), Goalkeeper Mechanics (#11), Positioning AI (#12) — NOT STARTED.
+- Pressing AI (#13), Defensive AI (#14), Attacking AI (#15) — NOT STARTED.
+- 8 approval tags created locally remain unpushed; push after merge to main per CLAUDE.md OPEN ISSUES squash-merge precondition check.
+- Stage-0 host-platform pin in `tracking/certification-platform.md` (lead-developer task; blocks first `FR-DS-009-GATE` cert run only).
+
+---
+
+### Week 17 — May 15, 2026
+
+**Completed:**
+- **Event System (#17) §1.0.1 patch (May 15, 2026):** `[CROSS-PENDING]` → `[CROSS]` promotion of `DOMAIN_TAG_EVENT_LEDGER` across §1.4 / §2.4.4 / §3.4.2 / §3.10 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D. Literal value `0x15` inlined in §3.4.2 prose, §3.10 catalogue row, Appendix B byte streams, and Appendix D glossary. ERR-017-001 FULLY RESOLVED. No behavioral change.
+- **Fixed64 Math Library (#9) APPROVED (May 15, 2026):** §9 v1.0 lead-developer sign-off granted. §9.2 engine + gameplay owner sign-offs granted (gameplay confirmed against §8.4 typed cross-references `XC-009-002`..`-005` covering #1 / #2 / #3 / #8; #6 has no Fixed64-dependent surface at Stage 0). §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 (May 14, 2026) — comparator-glossary deferral documented under CLAUDE.md "Interface Design Principle"; §6.6 forward-binding constraint preserved at Stage 5+. §9.8 implementation-time deliverables (golden-vector corpus, CI bench, harness digest, owning-team ledger) remain post-APPROVED follow-ups. Stage 0 effect: none — Fixed64 binds to Stage 5+ per §8.1 v0.2.
+
+**Status:**
+- **12 APPROVED, 0 SUSPENDED, 2 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.** Stage 0 Priority 1–2 spec set is fully complete.
+
+**Still Pending:**
+- Testing Strategy (#19) approval — KD-2 precondition (a) cleared; (c) `TBD-NORMATIVE` sweep against #16 final text + #18 v0.3 remains. *(Closed later same day — see next entry.)*
+- Performance Optimization (#18) advancement to APPROVED — gated on #19 reaching APPROVED per KD-2.
+
+---
+
+### Week 17 — May 15, 2026 (later same day)
+
+**Completed:**
+- **Testing Strategy & Framework (#19) APPROVED (May 15, 2026, later same day):** §9 v1.0 lead-developer sign-off granted. v1.0.1 `[TBD-NORMATIVE]` sweep landed across §1 / §3 / §4 / §5 / §6 / §8 / appendices — 51 citation-qualifier instances resolved against #16's APPROVED (Tier 2) text and #18's IN REVIEW v0.3 surface. KD-2 preconditions all cleared: (a) #16 Tier 2 APPROVED May 14, (b) #18 outline + section files v0.3 IN REVIEW May 14, (c) `[TBD-NORMATIVE]` sweep complete May 15. Remaining grep hits on the bare `TBD-NORMATIVE` token are meta-references only (sweep history, version-history entries, glossary definitions, §2.3 self-applied failure-mode descriptions, §9 grep instructions). Status `IN REVIEW → APPROVED`; SPEC_INDEX.md row 19 updated atomically.
+
+**Status:**
+- **13 APPROVED, 0 SUSPENDED, 1 IN REVIEW (#18), 0 IN PROGRESS, 6 NOT STARTED.** Priority 5 spec set is now 75% complete.
+
+**Still Pending:**
+- Performance Optimization (#18) advancement to APPROVED — KD-2 gate "#19 APPROVED" now cleared. *(Closed later same day — see next entry.)*
+
+---
+
+### Week 17 — May 15, 2026 (later same day still)
+
+**Completed:**
+- **Performance Optimization Strategy (#18) APPROVED (May 15, 2026, later same day still):** §9 v1.0 lead-developer sign-off granted. v1.0 `[TBD-NORMATIVE]` sweep landed across §1 / §2 / §3 / §4 / §5 / §6 / §8 / appendices — 60 citation-qualifier instances resolved against #16 APPROVED (Tier 2) text and #19 v1.0.1 patch-revised text. §9.4.1 blocker list all marked RESOLVED: #16 citations cleared via #16 Tier 2 APPROVED May 14; #19 citations cleared via #19 APPROVED May 15. `certification-platform.md` Stage-0 row remains `_TBD_` but is not a #18-approval blocker per KD-9 status caveat. Status `IN REVIEW → APPROVED`; SPEC_INDEX.md row 18 updated atomically.
+
+**Status:**
+- **14 APPROVED, 0 SUSPENDED, 0 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.** Priority 5 spec set is now fully complete. Stage 0 outstanding work narrows to the six Priority 3+4 AI specs (#10–#15).
+
+**Still Pending:**
+- Heading Mechanics (#10), Goalkeeper Mechanics (#11), Positioning AI (#12) — NOT STARTED.
+- Pressing AI (#13), Defensive AI (#14), Attacking AI (#15) — NOT STARTED.
+- 11 approval tags created locally remain unpushed (+ new `spec-fixed64-math-v1.0-approved`, `spec-testing-strategy-v1.0-approved`, `spec-performance-optimization-v1.0-approved`); push after merge to main per CLAUDE.md OPEN ISSUES squash-merge precondition check.
+- Stage-0 host-platform pin in `tracking/certification-platform.md` (lead-developer task; blocks first `FR-DS-009-GATE` and `FR-PO-052` Stage 0+1 activations only).
+- Fix smart-quote regression in `first-touch/section-7.md` L19–20.
+
+---
+
 ## MILESTONES
 
 | Milestone | Target Date | Status | Actual Date |
@@ -428,13 +499,34 @@
 
 ---
 
-**Last Updated:** May 6, 2026  
-**Updated By:** AI Assistant (tracking-doc reconciliation pass)  
-**Next Review:** After Pass Mechanics (#5) re-sign-off and Fixed64 Math (#9) sign-off
+**Last Updated:** May 15, 2026 (#9 APPROVED; #17 §1.0.1 patch closes ERR-017-001 residual)  
+**Updated By:** AI Assistant  
+**Next Review:** After Spec #19 APPROVED sign-off (clears #18 KD-2 gate)
 
 ---
 
 ## CHANGELOG
+
+**May 15, 2026 (later same day still):**
+- Performance Optimization Strategy (#18) reclassified `IN REVIEW` → `APPROVED`. §9 v1.0 lead-developer sign-off granted; v1.0 `[TBD-NORMATIVE]` sweep landed across §1 / §2 / §3 / §4 / §5 / §6 / §8 / appendices (60 instances) against #16 APPROVED text + #19 v1.0.1 patch-revised text; §9.4.1 blockers all RESOLVED.
+- Summary counts updated: **14 APPROVED, 0 SUSPENDED, 0 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.** Priority 5 spec set fully complete.
+
+**May 15, 2026 (later same day):**
+- Testing Strategy & Framework (#19) reclassified `IN REVIEW` → `APPROVED`. §9 v1.0 lead-developer sign-off granted; v1.0.1 `[TBD-NORMATIVE]` sweep landed across all consuming sections; KD-2 preconditions (a)/(b)/(c) all cleared. Downstream: clears #18's last KD-2 gate.
+- Summary counts updated: **13 APPROVED, 0 SUSPENDED, 1 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.**
+
+**May 15, 2026:**
+- Fixed64 Math Library (#9) reclassified `IN REVIEW` → `APPROVED`. §9 v1.0 lead-developer sign-off granted; §9.2 owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented deferral.
+- Event System (#17) §1.0.1 patch revision landed: `[CROSS-PENDING]` → `[CROSS]` promotion of `DOMAIN_TAG_EVENT_LEDGER` across all consuming sections + Appendix B literal-value inlining. ERR-017-001 FULLY RESOLVED.
+- Summary counts updated: **12 APPROVED, 0 SUSPENDED, 2 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.** Priority 2 spec set fully complete.
+- Week 17 (May 15) update-log entry added.
+
+**May 14, 2026 (later same day):**
+- Deterministic Simulation (#16) reclassified `IN PROGRESS` → `IN REVIEW` (Tier 1 Conditional Approval) → `APPROVED` (Tier 2 Final Approval, §9 v1.7). All §9.4.2 gates cleared.
+- Performance Optimization Strategy (#18) reclassified `IN PROGRESS` → `IN REVIEW`; section files at v0.3 after PASS-1 and PASS-2 adversarial reviews (ERR-018-002..018 all resolved).
+- ERR-017-001 closed atomically with #16 Tier 2 (`DOMAIN_TAG_EVENT_LEDGER = 0x15` allocated in #16 §3.4 v1.0.1).
+- Summary counts updated: **11 APPROVED, 0 SUSPENDED, 3 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.**
+- Week 17 (May 14) update-log entry added.
 
 **May 12, 2026:**
 - Testing Strategy & Framework (#19) reclassified `NOT STARTED` → `IN REVIEW`. Initial section-file draft authored May 12 from `outline-detailed.md` v1.1; v0.2 self-critique sweep applied (3 H / 6 M / 8 L findings, all resolved). Approval gated on KD-2 preconditions (#16 Tier 2 APPROVED, #18 outline-level draft, all `TBD-NORMATIVE` tags resolved).

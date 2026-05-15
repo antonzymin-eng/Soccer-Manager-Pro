@@ -349,10 +349,11 @@ PhaseScopeFields[Events] =
 
 Where:
 
-- `DOMAIN_TAG_EVENT_LEDGER` is a new domain-tag entry to be added
-  to #16 §3.4 domain-tag table at #17 IN REVIEW. Tag is
-  `[CROSS-PENDING]` per ERR-017-001
-  (`docs/tracking/spec-error-log.md`).
+- `DOMAIN_TAG_EVENT_LEDGER` = `0x15` is the domain-tag entry
+  allocated in #16 §3.4 v1.0.1 (May 14, 2026) as the next value
+  after `DOMAIN_TAG_ENV_FP = 0x14`. Tag is `[CROSS]` — owned by
+  #16's domain-tag namespace; consumed read-only here. ERR-017-001
+  RESOLVED at #16 May 14, 2026 (`docs/tracking/spec-error-log.md`).
 - `EventLedgerRecord` layout per §2.4.4.
 - `SerializeCanonical` is the #16 §3.2.4.1 `TBD-NORMATIVE`
   routine; padding rules (e.g., `_reserved` normalization)
@@ -616,7 +617,7 @@ implementation time (Stage 0+1).
 | `MAX_EVENT_DISPATCH_DEPTH` | `8` | `[GT]` | §3.2.5; BFS depth bound for second-order Tier A/B dispatch. |
 | `EVENT_TYPE_ORDINAL_WIDTH` | `1 byte` (`0x00`–`0xFF`) | `[GT]` | §3.1.2; design decision (not a physical constant). Stage 5+ expansion to 2 bytes reserved in §7.3 / D5 §7.5. |
 | `PAYLOAD_VERSION_WIDTH` | `1 byte` (`0x00`–`0xFF`) | `[GT]` | §3.1; §3.7; design decision. |
-| `DOMAIN_TAG_EVENT_LEDGER` | `TBD-NORMATIVE` — allocated in #16 §3.4 domain-tag table at #17 IN REVIEW per ERR-017-001 | `[CROSS-PENDING]` | §3.4.2; KD-2 qualifier — promoted to `[CROSS]` when #16 reaches `APPROVED`. |
+| `DOMAIN_TAG_EVENT_LEDGER` | `0x15` | `[CROSS]` | §3.4.2; allocated in #16 §3.4 v1.0.1 (next value after `DOMAIN_TAG_ENV_FP = 0x14`) per ERR-017-001 RESOLVED May 14, 2026; #16 owns the namespace, #17 consumes read-only. |
 | `ERR_EVT_QUEUE_OVERFLOW` | `0x1701` | `[GT]` | §2.5 / §3.6.1; error-code allocation from `0x17NN` reserved block; designer-chosen, locked at approval. |
 | *(reserved slot `0x1702`)* | — | — | Tier-marker mismatch is compile-time only (FR-EVT-016, FR-EVT-076); slot recovered; no runtime code allocated. |
 | `ERR_EVT_ORDINAL_UNKNOWN` | `0x1703` | `[GT]` | §2.5 / §3.7.2. |
@@ -630,10 +631,11 @@ Notes:
   checklist row).
 - All `[GT]` constants have rationale recorded in §6.3 and §3.5.1 /
   §3.5.3 / §3.2.5 as applicable.
-- One `[CROSS-PENDING]` constant; promoted to `[CROSS]` at #16
-  approval (§9.2 quality-checklist row). `[CROSS-PENDING]` is the
-  CLAUDE.md "Constant Tags" tag for cross-spec constants blocked
-  on an upstream `IN PROGRESS` spec.
+- One `[CROSS]` constant (`DOMAIN_TAG_EVENT_LEDGER = 0x15`,
+  imported from #16 §3.4 v1.0.1). Originally tagged
+  `[CROSS-PENDING]` per CLAUDE.md "Constant Tags" while #16 was
+  `IN PROGRESS`; promoted to `[CROSS]` atomically with #16 Tier 2
+  `APPROVED` on May 14, 2026 (ERR-017-001 RESOLVED).
 - **`[GT]` tag sub-classes.** CLAUDE.md "Constant Tags" defines
   `[GT]` as "Designer sets value; must live in tunable config".
   Spec #17 uses `[GT]` for two sub-classes which the §6.3.4
@@ -663,3 +665,4 @@ Notes:
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. FM-017-001, FM-017-002 published. EC-017-001 … 006 published. Section heading order superseded the v0.0 stub. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §3.2.4 added normative second-order publish sort-tuple attribution table (M3). §3.2.5 added per-handler out-degree cap = 1 (H1). §3.7.1 producer-phase-change row now requires #16 §3.6.1 WriteSet back-prop (M6). §3.5.4 / §3.5.2 reworded foreach + Action/Func bans (L4/L5). §3.10 added new `ERR_EVT_REGISTRATION_PHASE` row (L3) and `[GT]` tag-subclass note (M8). §3.4.5 added explicit grep pattern (L9). TickHeartbeatEvent cadence row → `AI_NoOp` (H2). §3.8 EC-017-005 split into 005a/005b (L3). Replaced `[TBD-CITE]` with `TBD-NORMATIVE` at §3.2.5 / §3.6.1 (M2). Renamed `producerSubsystem` → `subsystemOrdinal` (M4). |
 | 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-1: §3.3.1 cadence map row reverted to `Snapshot`; §3.3.2 rewritten so `Snapshot` is canonical producer and `AI_NoOp` MAY is retained as non-binding example. H-2-2: §3.2.2 "separate from ERR_EVT_TIER_MISMATCH" reworded to compile-time-only; EC-017-005a updated to compile-time/lint-only; §3.10 `ERR_EVT_TIER_MISMATCH` row replaced with reserved-slot note; `ERR_EVT_REGISTRATION_PHASE` note simplified. |
+| 1.0.1   | May 15, 2026 | Claude Code | Patch revision (no behavioral change). `[CROSS-PENDING]` → `[CROSS]` promotion of `DOMAIN_TAG_EVENT_LEDGER` following #16 §3.4 v1.0.1 allocation of value `0x15` (May 14, 2026). §3.4.2 prose updated to inline the literal value and re-tag; §3.10 catalogue row updated to `0x15` / `[CROSS]`; §3.10 trailing notes prose updated. ERR-017-001 RESOLVED; this revision closes the #17-side mechanical residual. |

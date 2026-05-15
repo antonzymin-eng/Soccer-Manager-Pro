@@ -133,7 +133,7 @@ Not applicable (no code).
 ### 5.5.2 Stage 0+1
 
 - Coverage tool (D3) produces per-file report.
-- Auditor maps each file to its #16 §1.1.1 tier `[TBD-NORMATIVE]` and
+- Auditor maps each file to its #16 §1.1.1 tier and
   applies KD-9 thresholds:
   - Tier A: ≥ 98% line, ≥ 95% branch (FR-TS-053).
   - Tier B: ≥ 90% line, ≥ 80% branch (FR-TS-054).
@@ -179,13 +179,15 @@ acknowledged degenerate (parallel to Spec #20 §5.5).
 
 - Spec #19 declares **no numerical determinism tests of its own**.
 - This subsection records the *consumption* contract: every CI
-  pipeline runs #16 §5's `[TBD-NORMATIVE]` full tier set; failures
+  pipeline runs #16 §5's full tier set; failures
   block merge per KD-2 (FR-TS-011, FR-TS-012).
 - **Boundary review check (FR-TS-015).** Any change to #16 §5 that
   touches tier names or exit criteria triggers a Spec #19 §3.2 review
   before the change can land. The reviewer:
   - Re-grep the cited subsection numbers in Spec #19 §3.2 and §3.6.1.
-  - Confirm `TBD-NORMATIVE` tags still align with #16's status.
+  - If upstream churn re-introduces a `TBD-NORMATIVE` tag (per §2.3
+    self-applied failure mode), file the re-introduction immediately
+    and flip #19 status to `SUSPENDED` per §9.4 state-transition table.
   - Update §1.4 dependency list if upstream section numbering shifted.
 
 ## 5.8 Version History

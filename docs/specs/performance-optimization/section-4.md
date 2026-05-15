@@ -21,7 +21,7 @@ test-side / tooling-side.
   commit per FR-PO-074.
 - **`tests/perf/<spec>/`** — per-spec benchmark directory. Subfolders:
   - `scenarios/` — manifests bound to #16 §5 scenario IDs
-    (`TBD-NORMATIVE`).
+   .
   - `baselines/` — per §4.2 layout.
   - `results/` — transient CI outputs; not version-controlled.
 - **Cross-spec scenarios** — re-use Spec #19 KD-8 cross-spec scenarios
@@ -49,7 +49,7 @@ to `src/CLAUDE.md` per §4.6 (parallel to Spec #19 §4.6).
   - Pass/fail vs §3.5.2 threshold (advisory at capture time;
     authoritative at gate-evaluation time).
 - **Record-format binding** (KD-11): the on-disk format conforms to
-  #16 §3.2.4.1 canonical record format (`TBD-NORMATIVE`). Per inverted
+  #16 §3.2.4.1 canonical record format. Per inverted
   KD-3, the record format is #16-authoritative even though the trace
   pipeline that emits records is #18-owned.
 
@@ -60,15 +60,15 @@ to `src/CLAUDE.md` per §4.6 (parallel to Spec #19 §4.6).
 Consumed by per-spec benchmark runners. **Single concrete
 implementation** — no IoC container, parallel to Spec #20 §3.5.5
 anti-pattern list and Spec #19 §4.3. Producer: Spec #18 §3.3 harness
-authors. Consumer: Spec #19 `ScenarioRunner` (Spec #19 §3.3.3,
-`TBD-NORMATIVE`). Both sides specified → permitted under CLAUDE.md
-"Interface Design Principle".
+authors. Consumer: Spec #19 `ScenarioRunner` (Spec #19 §3.3.3). Both
+sides specified → permitted under CLAUDE.md "Interface Design
+Principle".
 
 ### 4.3.2 `BaselineRecord` (value type)
 
 Immutable; serialized per Appendix A. Carries the §3.3.2 session
 manifest and captured metrics. On-disk encoding conforms to #16
-§3.2.4.1 (`TBD-NORMATIVE`).
+§3.2.4.1.
 
 ### 4.3.3 `BudgetRollupEntry` (value type)
 
@@ -160,4 +160,4 @@ Deferred items (§7.5 D1–D10) that consume `src/CLAUDE.md` slots:
 
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
-| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §4. Declares benchmark harness layout, baseline storage layout (KD-11 binding), `IPerfHarness` / `IBudgetSource` interface contracts (both sides specified per CLAUDE.md "Interface Design Principle"), `IDashboardSink` deferred to Stage 1 per CLAUDE.md ERR-001 / ERR-004 hazard, CI pipeline topology, and `src/CLAUDE.md` pointer. All #16 / #19 citations tagged `TBD-NORMATIVE`. |
+| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 §4. Declares benchmark harness layout, baseline storage layout (KD-11 binding), `IPerfHarness` / `IBudgetSource` interface contracts (both sides specified per CLAUDE.md "Interface Design Principle"), `IDashboardSink` deferred to Stage 1 per CLAUDE.md ERR-001 / ERR-004 hazard, CI pipeline topology, and `src/CLAUDE.md` pointer. All #16 / #19 citations tagged. |

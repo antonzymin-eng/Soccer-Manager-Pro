@@ -1344,7 +1344,7 @@ CREATE TABLE matches (
 
 **Week 1-20: Specification Phase**
 
-The next 5 months are dedicated to writing 30 comprehensive specification documents that will guide all development. No coding begins until these are complete and approved.
+The next ~5 months are dedicated to writing the **20 Stage-0 specifications** that gate the start of coding. The further **10 specifications (#21–#30)** listed below are written during Stage 1 implementation, not during the Stage-0 specification phase. No Stage-0 coding begins until the 20 Stage-0 specs are complete and approved. (Canonical spec numbering, folder mapping, and current approval status are tracked in `docs/specs/SPEC_INDEX.md`; this list reflects the original December 2025 ordering and contains pre-renumbering numbers — see SPEC_INDEX "FORMER NUMBERING" table for the correct mapping.)
 
 **Specification Priority Order:**
 

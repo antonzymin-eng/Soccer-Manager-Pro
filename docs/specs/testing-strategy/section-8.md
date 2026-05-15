@@ -1,7 +1,7 @@
 # Testing Strategy & Framework Specification #19 — Section 8: References & Citation Audit
 
 **Created:** May 12, 2026
-**Last Updated:** May 12, 2026
+**Last Updated:** May 15, 2026 (v1.0.1 patch: `[TBD-NORMATIVE]` sweep — #16 status flipped to `APPROVED (Tier 2)`; #18 status flipped to `IN REVIEW (v0.3)`; all citation tags resolved)
 **Purpose:** Source register, verification notes, cross-spec citation
 audit, and constant-provenance summary.
 
@@ -16,7 +16,7 @@ audit, and constant-provenance summary.
   taxonomy, Interface Design Principle. Authoritative for KD-7
   (SplitMix64), banned-API list (`System.Random`, `DateTime.Now`),
   Stage 0 `float` posture.
-- **Spec #16 (Deterministic Simulation)** — `[TBD-NORMATIVE]`.
+- **Spec #16 (Deterministic Simulation)** —.
   - **§1.1.1** — tier classification ("Equivalence policy by
     artifact"). Consumed by KD-9 (§3.6.2) and FR-TS-029, FR-TS-050,
     FR-TS-060.
@@ -32,23 +32,29 @@ audit, and constant-provenance summary.
     Detailed Test Fixture Requirements / Test Card Template
     (regression-suite authority). Consumed by KD-2 (§3.2,
     FR-TS-011 … 020).
-  - Status: `IN PROGRESS`. Section numbers re-grepped against
-    `deterministic-sim/section-1.md`, `section-3.md`, `section-4.md`,
-    and `section-5.md` on May 12, 2026 (v0.2 sweep). Per §3.6.1
-    cite-precision guard, MUST be re-grepped at next revision.
+  - Status: `APPROVED (Tier 2, May 14, 2026)`. Section numbers
+    re-grepped against `deterministic-sim/section-1.md`, `section-3.md`,
+    `section-4.md`, and `section-5.md` on May 12, 2026 (v0.2 sweep)
+    and again on May 15, 2026 (v1.0.1 `[TBD-NORMATIVE]` sweep against
+    final APPROVED text). Per §3.6.1 cite-precision guard, MUST be
+    re-grepped at next revision touching §3.2 / §3.6 / §3.7 / §5.7 /
+    §6.2 / §6.6 / §8.
   - **Outline-vs-actual divergences fixed in v0.2 sweep:** v1.1 outline
     had #16 §1.3.1 (actual: §1.1.1), #16 §5 for canonical layout
     (actual: §3.2.4.1), #16 §7 for regression suite (actual: §5),
     #16 §8 for "trace channels" (no such section exists in current
     #16). All citations corrected.
-- **Spec #18 (Performance Optimization)** — `[TBD-NORMATIVE]`.
+- **Spec #18 (Performance Optimization)** —.
   - §4 — performance regression gates. Consumed by KD-3 (§6.2,
     FR-TS-080).
   - §7 — performance budget enforcement.
-  - Status: `NOT STARTED`. All citations are placeholder names; #19
-    cannot advance past `IN REVIEW` until #18 has at least an
-    outline-level draft confirming the cited section numbers (§1.4,
-    §9.3).
+  - Status: `IN REVIEW` (section files at v0.3, May 14, 2026).
+    `outline-detailed.md` v1.1 landed May 13 and section files reached
+    v0.3 May 14 (PASS-2 adversarial review resolved). The cited §4
+    perf-regression-gate authority and §7 perf-budget-enforcement
+    authority are now stable in #18's IN REVIEW text. KD-2 precondition
+    (b) cleared; #19 v1.0.1 (May 15, 2026) `[TBD-NORMATIVE]` sweep
+    resolved all #18 citation tags.
 - **Spec #20 (Code Standards)** — APPROVED May 11, 2026.
   - §2.1 — conformance levels (consumed by §2.1).
   - §3.4.2 — `System.Random` ban (cited by FR-TS-036).
@@ -82,16 +88,19 @@ audit, and constant-provenance summary.
 
 - Every CLAUDE.md citation in §3 was verified against the current
   CLAUDE.md text on this spec's drafting date (May 12, 2026).
-- Every Spec #16 citation is tagged `[TBD-NORMATIVE]` per KD-2 status
-  caveat. Section numbers (#16 §1.1.1, §3.2.4.1, §3.4.2, §4.8, §5)
-  re-grepped against current `deterministic-sim/section-1.md`,
-  `section-3.md`, `section-4.md`, and `section-5.md` on May 12, 2026
-  (v0.2 sweep); §3.6.1 cite-precision guard mandates re-grep at every
-  subsequent revision for any author touching §3.2, §3.6, §3.7, §5.7,
-  §6.2, §6.6, or this §8.
-- Every Spec #18 citation is tagged `[TBD-NORMATIVE]` per KD-3 status
-  caveat. Resolution of these tags is a §9.3 precondition gated on
-  #18 reaching at least outline-level draft status.
+- All Spec #16 citation `[TBD-NORMATIVE]` qualifiers were swept on
+  May 15, 2026 (v1.0.1 patch) following #16 Tier 2 `APPROVED` on
+  May 14. Section numbers (#16 §1.1.1, §3.2.4.1, §3.4.2, §4.8, §5)
+  re-grepped against final `deterministic-sim/section-*.md` text;
+  §3.6.1 cite-precision guard mandates re-grep at every subsequent
+  revision for any author touching §3.2, §3.6, §3.7, §5.7, §6.2, §6.6,
+  or this §8.
+- All Spec #18 citation `[TBD-NORMATIVE]` qualifiers were swept on
+  May 15, 2026 (v1.0.1 patch) against #18's IN REVIEW v0.3 surface
+  (KD-2 precondition (b) cleared May 13). If #18 churn shifts §4 / §7
+  subsection numbers before #18 reaches `APPROVED`, file the
+  re-introduction per §2.3 self-applied failure mode and flip #19
+  status to `SUSPENDED`.
 - Every Spec #20 citation was verified against
   `code-standards/section-N.md` at draft time.
 
@@ -104,8 +113,8 @@ audit, and constant-provenance summary.
   - #16 (substantive): tier classification §1.1.1 (§3.6.1, §8.1.1),
     canonical schema §3.2.4.1 (§3.3.4, §3.8.1, §4.2), Tier B
     comparator §3.4.2 (§4.3.2), `EnvironmentFingerprint` §4.8
-    (§3.7.1, §3.8.4), regression suite §5 (§3.2). `[TBD-NORMATIVE]`.
-  - #18 (boundary): performance gates (§6.2, §6.6). `[TBD-NORMATIVE]`.
+    (§3.7.1, §3.8.4), regression suite §5 (§3.2)..
+  - #18 (boundary): performance gates (§6.2, §6.6)..
   - #20 (boundary): test-fixture carve-outs (§3.9.4), IoC anti-pattern
     (§4.3.1), `System.Random` ban (§3.4.5).
 - **No `[CROSS]` constants imported.** Spec #19 declares no physical

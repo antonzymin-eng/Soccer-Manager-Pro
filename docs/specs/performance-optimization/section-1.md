@@ -229,7 +229,7 @@ status changes.
   §3.1 canonical tick pipeline (emission-veto surface), §3.2.4.1
   canonical record format, §4 `EnvironmentFingerprint`, §5 regression
   scenarios / test catalogue. **Status: `IN PROGRESS`.** All citations
-  tagged `TBD-NORMATIVE` per KD-3. Section-number citations were
+  tagged per KD-3. Section-number citations were
   grep-verified against `deterministic-sim/section-*.md` on May 13,
   2026 (outline v1.1 correction — v1.0 had cited §7 for regression
   scenarios, §5 for record format, and §8 for "trace channels"; only
@@ -242,7 +242,7 @@ status changes.
 
 - Spec #19 (Testing Strategy & Framework) §3.7 flake handling, §6 CI
   orchestration. **Status: `IN REVIEW`.** All citations tagged
-  `TBD-NORMATIVE` per KD-4 status caveat.
+  per KD-4 status caveat.
 - Spec #20 (Code Standards & Style Guide) §3 zero-allocation rules
   and `[HotPathAllocExempt]` attribute. **Status: `APPROVED` (May 11,
   2026).**
@@ -258,10 +258,10 @@ status changes.
 - #16's Tier 2 final approval is gated on `#9 / #17 / #18 / #19`
   reaching `IN REVIEW`. #17 is already `APPROVED` (beyond the gate).
 - #16's `APPROVED` status is a precondition for #18's own `APPROVED`
-  status (so `TBD-NORMATIVE` tags can resolve).
-- Resolution path: (1) #18 reaches `IN REVIEW` with `TBD-NORMATIVE`
+  status (so tags can resolve).
+- Resolution path: (1) #18 reaches `IN REVIEW` with
   citations to #16; (2) #16 reaches Tier 2 `APPROVED`; (3) #18's
-  `TBD-NORMATIVE` tags resolve and #18 advances to `APPROVED`.
+  tags resolve and #18 advances to `APPROVED`.
   `SPEC_INDEX.md` status transitions for #18 MUST follow this order.
 
 **Bidirectional sequencing with #19.**
@@ -271,7 +271,7 @@ status changes.
   outline-level draft with §4 and §7 headers — that precondition is
   satisfied by `outline-detailed.md` v1.0 (May 13, 2026, earlier same
   day) and by this section file's existence. #18's `APPROVED` status
-  is not symmetrically gated on #19, but `TBD-NORMATIVE` tags on #19
+  is not symmetrically gated on #19, but tags on #19
   citations can only resolve once #19 is `APPROVED`.
 
 **Downstream.**
@@ -301,4 +301,4 @@ except CPU architecture is currently `_TBD_` / `⏳ Not pinned`.
 |---------|--------------|-------------|-------|
 | 0.3     | May 14, 2026 | Claude Code | PASS-2 adversarial-review fix pass (`ERR-018-015`, `ERR-018-018` partial). Header `Last Updated` field corrected from May 13 → May 14. §1.3 codification map KD-3 row expanded from `§3.3, §3.8, §5.7` → `§3.3, §3.8.3, §3.8.4, §5.7.1` (L-4). §1.5 v0.1 row prose superseded-by note added (L-6 framing reconciliation). |
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 findings resolved: L-9 #16 §3.1→§3.1.2 (§1.1 scope, §1.2 out-of-scope, §1.3 KD-3 table); L-10 #16 §4→§4.8 EnvironmentFingerprint (§1.3 KD-11). Status caveat: v0.1 described the IN REVIEW flip as "author-driven"; PASS-1 ERR-018-011 clarified that SPEC_INDEX.md must be updated atomically with §9.4. That atomic update landed in v0.2; the v0.1 prose below is preserved as historical record. |
-| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. §1.1 / §1.2 / §1.3 / §1.4 / §1.5 authored. KD-3 inverted per outline v1.1 — Spec #18 owns trace pipeline; Spec #16 retains canonical record format (§3.2.4.1), regression scenarios (§5), and emission-veto over tick-pipeline trace points (§3.1). All #16 / #19 citations tagged `TBD-NORMATIVE` per KD-3 / KD-4 status caveats. SPEC_INDEX flip to `IN REVIEW` is **author-driven**, not review-driven: it reflects "draft complete, awaiting lead-developer sign-off" per CLAUDE.md status definition. The §9 approval-checklist rows have not been walked. (NOTE: superseded by v0.2 status caveat — PASS-1 ERR-018-011 ruled this framing a procedural violation; SPEC_INDEX.md must be flipped atomically, not author-driven.) |
+| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. §1.1 / §1.2 / §1.3 / §1.4 / §1.5 authored. KD-3 inverted per outline v1.1 — Spec #18 owns trace pipeline; Spec #16 retains canonical record format (§3.2.4.1), regression scenarios (§5), and emission-veto over tick-pipeline trace points (§3.1). All #16 / #19 citations tagged per KD-3 / KD-4 status caveats. SPEC_INDEX flip to `IN REVIEW` is **author-driven**, not review-driven: it reflects "draft complete, awaiting lead-developer sign-off" per CLAUDE.md status definition. The §9 approval-checklist rows have not been walked. (NOTE: superseded by v0.2 status caveat — PASS-1 ERR-018-011 ruled this framing a procedural violation; SPEC_INDEX.md must be flipped atomically, not author-driven.) |

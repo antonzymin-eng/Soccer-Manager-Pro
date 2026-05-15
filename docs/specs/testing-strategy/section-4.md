@@ -54,7 +54,7 @@ tests/data/
 └── migrations/       ← format-version migration scripts (§3.8.3)
 ```
 
-Format conforms to #16 §3.2.4.1 `[TBD-NORMATIVE]` (`SerializeCanonical`
+Format conforms to #16 §3.2.4.1 (`SerializeCanonical`
 normative byte-level schema; KD-10). Index / manifest schema in
 Appendix A.
 
@@ -85,10 +85,10 @@ interface ITestHarness {
 ### 4.3.2 Assertion Helpers
 
 - `AssertBitwise(snapshot, golden)` — Tier A assertions; routes
-  through #16 §5 `[TBD-NORMATIVE]` bitwise comparison.
+  through #16 §5 bitwise comparison.
 - `AssertWithinTolerance(actual, expected, toleranceRow)` — Tier B
   assertions; `toleranceRow` sourced from #16 §3.4.2 (Tier B
-  comparator default policy) `[TBD-NORMATIVE]`.
+  comparator default policy).
 - `AssertEnvelope(actual, envelope)` — Tier C / functional-regression
   assertions; the predicate set comes from the scenario manifest
   (§3.3.2).
@@ -116,14 +116,16 @@ only when both producer and consumer are specified.
 - **Producer:** fixture-format owners. Concretely: one
   `IFixtureValidator` implementation per `format_version`. The
   upstream byte-level layout is owned by #16 §3.2.4.1
-  (`SerializeCanonical`) `[TBD-NORMATIVE]`.
+  (`SerializeCanonical`).
 - **Consumer:** `ScenarioRunner` fixture-load step (§3.3.4).
 - Method: `ValidationResult Validate(byte[] fixtureBytes, int
   formatVersion)`.
-- **Phantom-interface risk acknowledgement.** The producer's contract
-  depends on a `TBD-NORMATIVE` upstream (#16 §3.2.4.1). This is a
-  judgment call: #16 §3.2.4.1 has been through five adversarial
-  passes and is structurally stable (only subsection numbering may
+- **Phantom-interface risk acknowledgement (historical; resolved
+  May 14, 2026).** The producer's contract depends on #16 §3.2.4.1,
+  which was `TBD-NORMATIVE` at #19 IN REVIEW time but is now firm
+  (#16 reached Tier 2 `APPROVED` May 14, 2026). #16 §3.2.4.1 has been
+  through five adversarial passes and is structurally stable (only
+  subsection numbering may
   shift), so the byte-level layout is treated as "sufficiently
   specified" for interface-declaration purposes per the CLAUDE.md
   Interface Design Principle. If #16 §3.2.4.1 reverts to an
@@ -171,7 +173,7 @@ subsection declares the *shape* (FR-TS-075).
 
 - Trigger: scheduled nightly.
 - Tiers: full simulation tier + soak + #16 §5 full determinism suite
-  `[TBD-NORMATIVE]`.
+ .
 - Exit criteria: all tiers pass; soak completes ≥ one full 90-minute
   in-game match.
 

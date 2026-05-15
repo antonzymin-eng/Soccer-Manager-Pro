@@ -104,15 +104,15 @@ Each check is a §9.2 quality-checklist row.
 | EC-017-004 | Version newer than registry | §3.8 |
 | EC-017-005 | Cross-tier subscription | §3.8 |
 | EC-017-006 | Dispatch-depth exceeded | §3.8 |
-| ERR-017-001 | `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4 | Filed in `docs/tracking/spec-error-log.md` May 12, 2026; closure at #17 IN REVIEW. |
+| ERR-017-001 | `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4 | Filed in `docs/tracking/spec-error-log.md` May 12, 2026; RESOLVED May 14, 2026 at #16 (value `0x15` allocated in #16 §3.4 v1.0.1); #17 §3.10 / §3.4.2 / Appendix B updated in §1.0.1 patch May 15, 2026. |
 
-### 8.3.4 `[CROSS]` / `[CROSS-PENDING]` constants imported
+### 8.3.4 `[CROSS]` constants imported
 
-| Constant | From | Tag at Stage 0 | Promotion |
-|----------|------|----------------|-----------|
-| `DOMAIN_TAG_EVENT_LEDGER` | #16 §3.4 domain-tag table | `[CROSS-PENDING]` (numeric value TBD-NORMATIVE) | Promoted to `[CROSS]` when #16 reaches `APPROVED` and the back-prop tag is allocated. Tracked by ERR-017-001. |
+| Constant | From | Tag | Provenance |
+|----------|------|-----|------------|
+| `DOMAIN_TAG_EVENT_LEDGER = 0x15` | #16 §3.4 v1.0.1 domain-tag table | `[CROSS]` | Allocated May 14, 2026 as the next value after `DOMAIN_TAG_ENV_FP = 0x14` per ERR-017-001 RESOLVED. Originally `[CROSS-PENDING]` while #16 was `IN PROGRESS`; promoted atomically with #16 Tier 2 `APPROVED`. |
 
-No other `[CROSS]` constants declared at draft time.
+No other `[CROSS]` constants declared.
 
 ## 8.4 Constant Provenance Summary
 
@@ -123,7 +123,7 @@ No other `[CROSS]` constants declared at draft time.
 | `MAX_EVENT_DISPATCH_DEPTH = 8` | `[GT]` | §3.2.5 design choice; bounded BFS for re-entrant publish. |
 | `EVENT_TYPE_ORDINAL_WIDTH = 1 byte` | `[GT]` | §3.1.2 design decision; Stage 5+ expansion §7.3. |
 | `PAYLOAD_VERSION_WIDTH = 1 byte` | `[GT]` | §3.1 / §3.7 design decision. |
-| `DOMAIN_TAG_EVENT_LEDGER` | `[CROSS-PENDING]` | #16 §3.4 (back-prop via ERR-017-001). |
+| `DOMAIN_TAG_EVENT_LEDGER = 0x15` | `[CROSS]` | #16 §3.4 v1.0.1 (allocated May 14, 2026 per ERR-017-001 RESOLVED). |
 | `ERR_EVT_QUEUE_OVERFLOW = 0x1701` | `[GT]` | §2.5 / §3.6.1; reserved `0x17NN` block. |
 | *(reserved slot `0x1702`)* | — | Tier-marker mismatch is compile-time only (FR-EVT-016, FR-EVT-076); slot recovered at PASS 2 (H-2-2). |
 | `ERR_EVT_ORDINAL_UNKNOWN = 0x1703` | `[GT]` | §2.5 / §3.7.2. |
@@ -151,3 +151,4 @@ No other `[CROSS]` constants declared at draft time.
 | 0.1     | May 13, 2026 | Claude Code | Initial section-file draft from `outline-detailed.md` v1.1. Source register, citation audit, cross-reference ID enumeration, constant provenance summary published. Section heading order superseded the v0.0 stub. |
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §8.1.2 updated `#16 §3.10` row to drop `[TBD-CITE]` (M2). §8.4 added `ERR_EVT_REGISTRATION_PHASE = 0x1705` row (L3) and `[GT]` tag-subclass notes (M8). §8.4 `EVENT_QUEUE_CAPACITY` rationale notes FR-EVT-046a additivity (H1). |
 | 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-2: §8.4 `ERR_EVT_TIER_MISMATCH = 0x1702` row replaced with reserved-slot note. |
+| 1.0.1   | May 15, 2026 | Claude Code | Patch revision (no behavioral change). §8.1.4 ERR-017-001 row marked RESOLVED; §8.3.4 renamed "`[CROSS]` constants imported" and updated `DOMAIN_TAG_EVENT_LEDGER` to value `0x15` / tag `[CROSS]`; §8.4 row likewise updated. Reflects #16 §3.4 v1.0.1 allocation (May 14, 2026). |

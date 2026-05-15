@@ -14,7 +14,7 @@ dashboard schema catalogue; Appendix G is the spec-specific glossary.
 ## Appendix A — Baseline Record File Format
 
 > **Binding:** the on-disk byte layout conforms to Spec #16 §3.2.4.1
-> canonical record format (`TBD-NORMATIVE`). Per inverted KD-3, record
+> canonical record format. Per inverted KD-3, record
 > format is #16-authoritative; #18 only declares which fields the
 > baseline-capture path emits into the canonical layout.
 
@@ -29,9 +29,9 @@ Baseline records have two logical sections: **session manifest** (per
 |-------|------|----------|--------|
 | `git_sha` | string (40 hex) | yes | Build under measurement |
 | `seed` | uint64 | yes | KD-6 recorded seed |
-| `environment_fingerprint` | structured | yes | #16 §4.8 (`TBD-NORMATIVE`) |
+| `environment_fingerprint` | structured | yes | #16 §4.8 |
 | `platform_pin` | structured | yes | `certification-platform.md` Stage 0 row |
-| `scenario_manifest_id` | string | yes | #16 §5 scenario ID (`TBD-NORMATIVE`) |
+| `scenario_manifest_id` | string | yes | #16 §5 scenario ID |
 | `session_start_utc` | RFC 3339 timestamp | yes | wall-clock bookkeeping only |
 | `session_end_utc` | RFC 3339 timestamp | yes | wall-clock bookkeeping only |
 | `hardware_counters` | structured | yes | CPU model, core count, thermal state |
@@ -52,7 +52,7 @@ Baseline records have two logical sections: **session manifest** (per
 ### A.2 Versioning
 
 The record carries a `format_version` field whose semantics are
-inherited from #16 §3.2.4.1 (`TBD-NORMATIVE`). Section authors MUST
+inherited from #16 §3.2.4.1. Section authors MUST
 re-grep #16 at draft time to confirm the canonical byte layout.
 
 ### A.3 Stage 0 placeholder
@@ -242,7 +242,7 @@ row in the populated Stage 1 registry conforms to this schema.
 | `sampling_rule` | enum {`every-tick`, `per-N-ticks`, `event-driven`} | yes | Per §3.8.2 / FR-PO-056; for `per-N-ticks` the integer `sample_n` field MUST be populated |
 | `sample_n` | uint | conditional | Required iff `sampling_rule = per-N-ticks` |
 | `sink_routing` | list of enum {`ring-buffer`, `file-sink`, `network-sink`} | yes | Per §3.8.2; `network-sink` Stage 1+ only |
-| `determinism_class` | enum {`tier-a`, `tier-b`, `tier-c`} | yes | Per #16 §1.3 tier classification (`TBD-NORMATIVE`); Tier A / B channels MUST be determinism-clean per FR-PO-058a |
+| `determinism_class` | enum {`tier-a`, `tier-b`, `tier-c`} | yes | Per #16 §1.3 tier classification; Tier A / B channels MUST be determinism-clean per FR-PO-058a |
 | `inside_tick_pipeline` | bool | yes | If true, every channel-emission point sits inside #16 §3.1 canonical tick pipeline and requires recorded #16-owner sign-off per FR-PO-058a |
 | `sign_off_log_ref` | string (`ERR-NNN` or `spec-error-log.md` row ID) | conditional | Required iff `inside_tick_pipeline = true`; cites the row recording #16-owner sign-off |
 | `record_format_version` | semver | yes | Pinned to the #16 §3.2.4.1 canonical-record-format version active at channel-registry-row creation date |
@@ -310,7 +310,7 @@ channels (e.g. `ai.*`, `physics.*`) land at Stage 0+1 as each
 
 ### F.5 Flake/Determinism Cross-Reference Dashboard
 
-- **Data source:** joins #16 §5 (`TBD-NORMATIVE`) flake data with
+- **Data source:** joins #16 §5 flake data with
   #18 §3.4.4 baseline-validator output.
 - **Aggregation:** per-scenario flake rate vs perf-baseline staleness.
 - **Refresh cadence:** weekly.
@@ -360,5 +360,5 @@ cited from #16; pyramid / coverage / flake terms are cited from #19.
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.3     | May 14, 2026 | Claude Code | PASS-2 adversarial-review fix pass (`ERR-018-012`, `ERR-018-014`). Appendix F.0 de-duplicated — the second `### F.0 Channel Registry Schema` section (introduced by PR #60 merge collision) was removed; the canonical 13-field schema is retained; `perf.budget` / `perf.alloc` / `perf.trace` anchor rows from the duplicate were grafted in as Stage 0 illustrative entries so F.1 … F.5 dashboard data-source citations resolve at draft time. Duplicate v0.2 version-history row consolidated. |
-| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 Appendices block. Appendix A (baseline record format with #16 §3.2.4.1 binding per KD-11), Appendix B (per-spec §6 schema paste-ready template), Appendix C (roll-up table headers + Shot Mechanics #6 row populated; remaining cells `_TBD_` per Appendix D survey scope), Appendix D (survey headers; row contents Stage 0+1 deliverable per §9.2), Appendix E (Stage-0 local-runbook shell-script outline), Appendix F (dashboard schema catalogue for §3.8.6 dashboards), Appendix G (spec-specific glossary). All #16 / #19 citations tagged `TBD-NORMATIVE`. |
+| 0.1     | May 13, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1 Appendices block. Appendix A (baseline record format with #16 §3.2.4.1 binding per KD-11), Appendix B (per-spec §6 schema paste-ready template), Appendix C (roll-up table headers + Shot Mechanics #6 row populated; remaining cells `_TBD_` per Appendix D survey scope), Appendix D (survey headers; row contents Stage 0+1 deliverable per §9.2), Appendix E (Stage-0 local-runbook shell-script outline), Appendix F (dashboard schema catalogue for §3.8.6 dashboards), Appendix G (spec-specific glossary). All #16 / #19 citations tagged. |
 | 0.2     | May 14, 2026 | Claude Code | PASS-1 adversarial-review fix pass (`ERR-018-002` / 005 / 010). Appendix B exemption clause rewritten — `[HotPathAllocExempt]` cites Spec #18 §3.7.5 (no longer cites Spec #20 §3). New **Appendix F.0 Channel Registry Schema** authored before F.1 (13 fields: channel name, owning subsystem, default verbosity, sampling rule, sample_n, sink routing, determinism class, inside-tick-pipeline flag, sign-off log ref, record-format version, owner, created date, version history); F-header rewritten to reflect F.0 Stage 0 schema deliverable + F.1 … F.5 Stage 1 populated rows. Appendix F.5 inline `[GT]` tag appended to "> 1%" flake-rate threshold. Also: Appendix G emission-veto entry #16 §3.1→§3.1.2; Appendix A #16 §4→§4.8 EnvironmentFingerprint. |
