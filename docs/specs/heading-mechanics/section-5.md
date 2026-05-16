@@ -256,7 +256,7 @@ they are not pass/fail unit tests.
 
 10-minute simulated match segment with all 22 agents. Expected
 ~3 headers in the segment (linearly scaled from the ~28-header
-full-match baseline established by Kirkendall & Garrett 2001 and
+full-match baseline established by Kirkendall, Jordan & Garrett 2001 and
 modern Opta / StatsBomb match-level statistics, per pass-1 M-3
 recalibration; see §8.3).
 
@@ -354,3 +354,4 @@ Coverage tooling per Testing Strategy #19 §3.x.
 |---------|--------------|---------|--------------------------------------------------------|----------|
 | 0.1     | May 16, 2026 | drafter | Initial section draft from outline-detailed v1.1       | pending  |
 | 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: §5.1.5 reversal-boundary test rewritten for v0.2 H-1 single-reversal formula + Heading-direction monotonicity assertion added (H-2); §5.1.6 tiebreak test "exactly once" → "exactly N" (M-6); §5.1.7 split into Group A (F-01..F-04, failed-event) and Group B (F-05..F-07, continue-with-modification) (M-7); §5.2.6 3-way duel rewritten for v0.2 M-5 uniform loser semantics; §5.3.1 telemetry-shares framing made explicit re. systematic vs. noise components (L-6). | pending |
+| 0.3     | May 16, 2026 | drafter | APPROVAL. Citation "Kirkendall & Garrett 2001" → "Kirkendall, Jordan & Garrett 2001" (correct three-author form per verified DOI 10.2165/00007256-200131050-00006). | granted |

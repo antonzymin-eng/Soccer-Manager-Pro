@@ -22,7 +22,7 @@ require an Appendix A derivation entry before promotion to `[GT]`
 | `MIN_AGENT_SEPARATION_M_SQ` | 2.25 | m² | `[DERIVED]` | `= MIN_AGENT_SEPARATION_M²` |
 | `SPACING_EPSILON_M2` | 1e-4 | m² | `[FIXED]` | KD-16 |
 | `SPACING_EPSILON_M` | 1e-2 | m | `[DERIVED]` | `= sqrt(SPACING_EPSILON_M2)` |
-| `DOMAIN_TAG_POSITIONING_AI` | 0x16 | byte | `[CROSS-PENDING]` | #16 §3.4 via `ERR-012-001` |
+| `DOMAIN_TAG_POSITIONING_AI` | 0x17 | byte | `[CROSS-PENDING]` | #16 §3.4 via `ERR-012-001`; value shifted from 0x16 on May 16, 2026 after #10 took 0x16 via ERR-010-001 |
 | `ANCHOR_DWELL_TICKS` | 5 | tick | `[EST]` | §3.8 — Appendix A pending |
 | `LINE_HYSTERESIS_M` | 3.0 | m | `[EST]` | §3.3.2 — Appendix A pending |
 | `LINE_DWELL_TICKS` | 5 | tick | `[EST]` | §3.3.2 — Appendix A pending |

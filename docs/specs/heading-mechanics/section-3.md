@@ -60,12 +60,13 @@ flagged `TBD-VALUE` await Stage 0 calibration; values flagged
 | `DUEL_TIEBREAK_NOISE_AMPLITUDE` | `[GT]` | dimensionless | (0, 0.10] | 0.01 | RNG perturbation amplitude applied only when score gap < `DUEL_TIEBREAK_EPSILON` (pass-1 H-5). |
 | `DUEL_DISTURBANCE_MAX` | `[GT]` | dimensionless | (0, 1] | 0.50 | Maximum disturbance factor applied to a duel loser's `contactQualityScalar`. Saturates at `DUEL_DISTURBANCE_GAP_SATURATION` (see §3.7 step 4 formula). |
 | `DUEL_DISTURBANCE_GAP_SATURATION` | `[GT]` | dimensionless | (0, 1] | 0.20 | `baseScore` gap (winner − loser) at which `disturbanceFactor` saturates at `DUEL_DISTURBANCE_MAX`. Below this gap, disturbance grows linearly from 0; at or above, it is capped (v0.2 H-4). |
+| `HEADING_CONTACT_BUFFER_CAPACITY` | `[GT]` | count | [4, 32] | 16 | Pre-sized backing-array capacity for the per-frame `ICollisionEventConsumer` buffer in §4.2.1 (v0.3 OI-005). Bound derived from §6.3 worst-case 3-way duel × 2 contact-pairs × small safety margin. Allocated once at `HeadingMechanics.Initialize()`; no per-tick heap allocation. |
 | `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_S` | `[GT]` | s | (0, 5] | 1.2 | Projection time horizon for own-goal-shape flag. |
 | `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_M` | `[GT]` | m | (0, 60] | 18 | Projection distance horizon (pass-1 L-7). Flag invocation uses `min(time, distance)`. |
 | `GRAVITY_MPS2` | `[CROSS]` | m/s² | n/a | 9.81 | Ball Physics #1. |
 | `PITCH_LENGTH_M` | `[CROSS]` | m | n/a | 105 | Ball Physics #1 §1.2. |
 | `PITCH_WIDTH_M` | `[CROSS]` | m | n/a | 68 | Ball Physics #1 §1.2. |
-| `DOMAIN_TAG_HEADING` | `[CROSS-PENDING]` | byte | n/a | `0x16` (TBD-ALLOC) | Deterministic Simulation #16 §3.4 — back-prop ERR-010-001; allocation slot per #17 `0x15` precedent. Promoted to `[CROSS]` atomically with #16 §3.4 patch landing. |
+| `DOMAIN_TAG_HEADING` | `[CROSS]` | byte | n/a | `0x16` | Deterministic Simulation #16 §3.4 — ERR-010-001 RESOLVED May 16, 2026 (#16 §3.5 v1.0.2 patch). Read-only consumption; #16 owns the tag namespace. |
 | `TICK_RATE_TACTICAL_HZ` | `[CROSS]` | Hz | n/a | 10 | CLAUDE.md. |
 | `TICK_RATE_PHYSICS_HZ` | `[CROSS]` | Hz | n/a | 60 | CLAUDE.md. |
 
@@ -655,5 +656,6 @@ for evt in contactEvents:
 | Version | Date         | Author  | Notes |
 |---------|--------------|---------|-------|
 | 0.1     | May 16, 2026 | drafter | Initial section draft from outline-detailed v1.1 |
+| 0.3     | May 16, 2026 | drafter | APPROVAL. §3.1 `DOMAIN_TAG_HEADING` promoted `[CROSS-PENDING] → [CROSS]` post #16 §3.5 v1.0.2 patch (ERR-010-001 RESOLVED). New `HEADING_CONTACT_BUFFER_CAPACITY [GT]` row added for §4.2.1 collision-event consumer buffer (OI-005). |
 | 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 adversarial-review fix pass (21 findings: 5 H / 9 M / 7 L). H-1 §3.6 spin double-reversal removed; H-2 §3.4 `headingAttrScale` semantics realigned (errors divided by scale); H-3 §3.2 worked example off-by-one fixed (T+14 → T+16); H-4 §3.7 step 4 `disturbanceFactor` formula added + `DUEL_DISTURBANCE_GAP_SATURATION [GT]` row added to §3.1; H-5 §3.5 `ANGULAR_COEFF` removed (Stage 0 reflection-only launch angle, deferred to §7.12); M-2 `EligibilityPredicate` split into pure predicate + caller; M-3 `jumpStartFrame` source defined in §3.3; M-5 §3.7 step 5 2-way/3-way loser semantics aligned; M-8 frame-tolerance `ceil` rounding policy pinned in §3.2; M-9 `timingJitterMs` semantics paragraph added in §3.4; L-3 `JUMP_APEX_FRACTION` tag rationale moved to footnote. |
 

@@ -83,9 +83,14 @@ Stage 1+ expansion roadmap.
 ### 1.3.2 Pending Cross-Spec
 
 - **`ERR-012-001`** (filed in `spec-error-log.md`): Phase B/C
-  domain-tag block allocation `0x16 … 0x1B` covering #10/#11/#12/
-  #13/#14/#15 in #16 §3.4. `DOMAIN_TAG_POSITIONING_AI = 0x16` is
-  `[CROSS-PENDING]` until lead-developer ratification.
+  domain-tag block allocation. Original proposal `0x16 … 0x1B`
+  covering #10/#11/#12/#13/#14/#15 in #16 §3.4 was shifted to
+  `0x17 … 0x1C` on May 16, 2026 after #10 reached APPROVED first
+  and took `0x16` via ERR-010-001 (exactly the collision-avoidance
+  case ERR-012-001 was filed to prevent — resolved by first-to-
+  APPROVED claiming the next-available slot, per project precedent).
+  `DOMAIN_TAG_POSITIONING_AI = 0x17` is `[CROSS-PENDING]` until
+  lead-developer ratification.
 - **`ERR-012-002`** (filed in `spec-error-log.md`): stale
   "Formation System (Spec #14)" reference in
   `decision-tree/section-3-1.md` L716 — Formation System is #12;
