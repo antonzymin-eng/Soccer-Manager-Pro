@@ -59,7 +59,7 @@ All 20 spec folders now exist in `docs/specs/`. Status reflects authoritative cl
 | 7 | `docs/specs/perception-system/` | APPROVED |
 | 8 | `docs/specs/decision-tree/` | APPROVED (draft-level) |
 | 9 | `docs/specs/fixed64-math/` | APPROVED (May 15, 2026) — §9 v1.0 lead-developer sign-off; §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented comparator-glossary deferral (CLAUDE.md "Interface Design Principle"). §9.8 implementation-time deliverables (golden-vector corpus, CI bench, harness digest, owning-team ledger) remain post-APPROVED follow-ups. Implementation deferred to Stage 5 per §8.1 v0.2. |
-| 10 | `docs/specs/heading-mechanics/` | NOT STARTED (scaffold only) |
+| 10 | `docs/specs/heading-mechanics/` | APPROVED May 16, 2026 (v0.3; section files 1–9 + appendices + outline + outline-PASS-1 + section-files-PASS-1-adversarial-review; ERR-010-001 RESOLVED) |
 | 11 | `docs/specs/goalkeeper-mechanics/` | NOT STARTED (scaffold only) |
 | 12 | `docs/specs/positioning-ai/` | NOT STARTED (scaffold only) |
 | 13 | `docs/specs/pressing-ai/` | NOT STARTED (scaffold only) |

@@ -20,7 +20,7 @@ a KD in §1.5 or a downstream section in this spec.
 | FR-PA-002 | Output is one `Vector2 formationSlot` per agent per tick; orchestrator writes it directly into each agent's `TacticalContext.FormationSlot` field at #8 Step 2 (NOT via `Stage0Default()` which is a match-init-only factory — AR-S1-04). | MUST | KD-2, KD-3 |
 | FR-PA-003 | Agent iteration order during slot computation is EntityId-sorted ascending. | MUST | #16 §3.2.5 / KD-9 |
 | FR-PA-004 | Per-agent `formationSlot` values contribute to the per-tick determinism digest. | MUST | #16 §6.2 / KD-9 |
-| FR-PA-005 | RNG calls use `DOMAIN_TAG_POSITIONING_AI = 0x16` (`[CROSS-PENDING]` until `ERR-012-001` resolved). | MUST | #16 §3.4 / KD-9 |
+| FR-PA-005 | RNG calls use `DOMAIN_TAG_POSITIONING_AI = 0x17` (`[CROSS-PENDING]` until `ERR-012-001` resolved; value shifted from `0x16` on May 16, 2026 after #10 took `0x16` via ERR-010-001). | MUST | #16 §3.4 / KD-9 |
 | FR-PA-006 | No heap allocation on the per-tick hot path. | MUST | #18 §3.7 |
 | FR-PA-007 | Three formation archetype families (4-4-2, 4-3-3, 4-2-3-1) are shipped at Stage 0; ten named variants ship at Stage 1 per `master-development-plan.md` §3.2. | MUST | KD-7 |
 | FR-PA-008 | Anchor selection uses dwell-time hysteresis bound to #2 §3.1. | MUST | KD-8 |

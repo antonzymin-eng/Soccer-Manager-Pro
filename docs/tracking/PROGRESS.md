@@ -70,7 +70,7 @@
 
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
-| 10 | Heading Mechanics | 15-18 | ⏳ NOT STARTED | — | — | Week 9 target (delayed; blocked on Priority 2 sign-offs) |
+| 10 | Heading Mechanics | 15-18 | ✅ APPROVED | May 16, 2026 | May 16, 2026 | Section files v0.1 → v0.3 same day; outline PASS-1 + section-files PASS-1 cycles complete; ERR-010-001 closed via #16 §3.5 v1.0.2 patch landing `DOMAIN_TAG_HEADING = 0x16` |
 | 11 | Goalkeeper Mechanics | 20-25 | ⏳ NOT STARTED | — | — | Week 10 target |
 | 12 | Positioning AI | 18-22 | ⏳ NOT STARTED | — | — | Week 12 target |
 

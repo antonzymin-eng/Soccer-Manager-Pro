@@ -180,10 +180,15 @@ struct ContestedDuelContext {
 
 ## 2.4 Telemetry Surface
 
-The trace pipeline channel registry is owned by Performance
-Optimization #18 §3.10. Channel rows for the entries below are
-allocated via a back-prop entry filed when `section-2.md` lands
-(OI-002).
+The trace pipeline channel-registry **schema** is owned by
+Performance Optimization #18 Appendix F.0 (Stage 0 deliverable;
+populated subsystem-channel rows are explicitly Stage 0+1 per
+#18 Appendix F.0 / §3.8.2 / §7.2). The five `heading.*` rows
+below are declared here (Stage 0 spec deliverable) and populated
+into the registry at first `src/Gameplay/Heading/` commit
+(Stage 0+1 deliverable). v0.3 OI-002 closure: reframed against
+#18's actual schedule (v0.1 / v0.2 incorrectly cited #18 §3.10,
+which is the constants catalogue not the channel registry).
 
 | Channel | Type | Buckets / Notes |
 |---------|------|-----------------|
@@ -204,3 +209,4 @@ KD-6 (#18 §6.4): trace emission must not perturb game state.
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | section authoring | Initial draft from `outline-detailed.md` v1.1. FR catalogue covers FR-HE-001..035; structs and failure modes enumerated. | pending |
 | 0.2 | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: FR-HE-027 rewritten for uniform 2-way/3+ way loser semantics (M-5); F-04 row prose rewritten to match; `HeaderIntent.attemptCommittedTick` documented as consumed by §3.3 `jumpStartFrame` derivation (L-1); `HeaderContactState` adds `jumpStartFrame` field (M-3) and documents `actualContactFrame` assignment site (M-4); `contactPointIntent` head-local axis convention pinned (L-7). | pending |
+| 0.3 | May 16, 2026 | drafter | APPROVAL. §2.4 trace-pipeline ownership re-framed from non-existent "#18 §3.10 channel rows" to #18 Appendix F.0 channel-registry schema (Stage 0 schema + Stage 0+1 populated rows). OI-002 RESOLVED. | granted |

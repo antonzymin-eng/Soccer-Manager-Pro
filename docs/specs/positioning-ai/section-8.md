@@ -62,7 +62,7 @@ section.
 | `XC-012-001` | EntityId no-reuse for #12 iteration order | #2 §2.5 (XC-002-001) and #8 §1.7.3 (XC-008-001) |
 | `XC-012-002` | `TacticalContext.FormationSlot` producer-side write contract | #8 §2.2.6 |
 | `XC-012-003` | `MOVE_TO_POSITION` consumer-side read contract | #8 §3.1.7, §3.2.6 |
-| `XC-012-004` | `DOMAIN_TAG_POSITIONING_AI = 0x16` allocation request | #16 §3.4 (`ERR-012-001`) |
+| `XC-012-004` | `DOMAIN_TAG_POSITIONING_AI = 0x17` allocation request | #16 §3.4 (`ERR-012-001`; value shifted from 0x16 on May 16, 2026 after #10 took 0x16) |
 | `XC-012-005` | Per-tick digest scope contribution (`formationSlot[22]` + `HysteresisState`) | #16 §6.2 |
 | `XC-012-006` | EntityId-sorted iteration | #16 §3.2.5 |
 | `XC-012-007` | Hysteresis-pattern reuse | #2 §3.1 |

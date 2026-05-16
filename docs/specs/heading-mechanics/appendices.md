@@ -33,7 +33,7 @@ can drop.
 **Strength term.** Strength drives explosive leg extension power;
 higher Strength translates to higher vertical impulse and thus
 greater apex altitude. The coefficient is calibrated against
-Auger & Pellegrini (2007) head-kinematics data (§8.3).
+Tomczak et al. (2021) head-kinematics data (§8.3). [v0.3 OI-003: replaced v0.1 "Auger & Pellegrini (2007)" — original citation not findable in DOI registry.]
 
 **Balance term.** Balance drives takeoff posture quality and
 mid-air orientation control; a stable takeoff converts a larger
@@ -249,7 +249,7 @@ validation scenarios are measured.
 | `OwnGoalShapedTrajectory` | Boolean flag on `HeaderExecutedEvent` set when the outgoing trajectory's dual-horizon projection intersects the defending team's own goal-line bounding box (KD-6; adjudication is Event System #17) |
 | `JumpReach` | `[DERIVED]` quantity (KD-4): the vertical apex altitude of the head during the synthetic Stage 0 jump phase |
 | `DRAW_SITE_*` | Registered RNG draw sites per Deterministic Sim #16 §4.5: `DRAW_SITE_DUEL_TIEBREAK`, `DRAW_SITE_CONTACT_POINT_ERROR`, `DRAW_SITE_TIMING_JITTER` |
-| `DOMAIN_TAG_HEADING` | `[CROSS-PENDING]` `0x16` allocation in #16 §3.4 catalogue; promoted to `[CROSS]` atomic with back-prop ERR-010-001 |
+| `DOMAIN_TAG_HEADING` | `[CROSS]` `0x16` allocation in #16 §3.4 catalogue (ERR-010-001 RESOLVED May 16, 2026 via #16 §3.5 v1.0.2 patch) |
 
 ---
 
@@ -325,12 +325,12 @@ Status at section-files v0.1 (May 16, 2026):
 
 | ID | Item | Owner | Status |
 |----|------|-------|--------|
-| OI-001 | `DOMAIN_TAG_HEADING = 0x16` allocation in #16 §3.4 | back-prop ERR-010-001 | ERR-010-001 filed in `spec-error-log.md` May 16, 2026 (v0.2 M-1); #16 §3.4 allocation still pending |
-| OI-002 | #18 §3.10 trace channel rows for `heading.*` channels | back-prop | pending |
-| OI-003 | DOI verification for §8.3 external references | drafter | pending |
-| OI-004 | Goalkeeper #11 interface confirmation | post-#11 IN REVIEW | not blocking |
-| OI-005 | Pin #3 contact-event API subsection and #8 intent-surface §1.7.x exact anchor | drafter | pending — during pass-2 |
-| OI-006 | `certification-platform.md` Stage-0 host pin | lead developer | not blocking #10 sign-off |
+| OI-001 | `DOMAIN_TAG_HEADING = 0x16` allocation in #16 §3.4 | back-prop ERR-010-001 | ✅ RESOLVED May 16, 2026 — #16 §3.5 v1.0.2 patch landed; #10 §3.1 row promoted `[CROSS]`. |
+| OI-002 | `heading.*` trace channel rows | re-anchored | ✅ RESOLVED May 16, 2026 — schema-conforming rows declared in §2.4 against #18 Appendix F.0 schema; populated rows are Stage 0+1 deliverable per #18 §7.2 schedule. |
+| OI-003 | DOI verification for §8.3 external references | drafter | ✅ RESOLVED May 16, 2026 — 5/5 academic DOIs verified; 2 fabricated v0.1 references replaced. |
+| OI-004 | Goalkeeper #11 interface confirmation | post-#11 IN REVIEW | not blocking (post-approval per §9.6) |
+| OI-005 | Pin #3 / #8 / #17 anchors | drafter | ✅ RESOLVED May 16, 2026 — #3 §3.4.2 `ICollisionEventConsumer`; #8 §1.7.2 (Stage 0+1 activation per §4.6.1); #17 §3.2.1 `Publish API surface`. |
+| OI-006 | `certification-platform.md` Stage-0 host pin | lead developer | not blocking #10 sign-off (gates `FR-PO-052` only) |
 
 ---
 
@@ -372,3 +372,4 @@ May 16, 2026) to their resolution location in v0.2.
 |---------|--------------|---------|--------------------------------------------------------|----------|
 | 0.1     | May 16, 2026 | drafter | Initial appendices draft from outline-detailed v1.1    | pending  |
 | 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: Appendix A.3 rewritten for single-reversal spin formula (H-1); Appendix D glossary `ContactPointIntent` row rewritten with head-local axis convention (L-7); Appendix G OI-001 status updated for `ERR-010-001` filing (M-1); new Appendix H mapping the 21 PASS-1 findings to v0.2 resolutions. | pending |
+| 0.3     | May 16, 2026 | drafter | APPROVAL. Appendix A.1 citation "Auger & Pellegrini (2007)" → "Tomczak et al. (2021)" (OI-003 closure — original ref not findable). Appendix G all five OIs marked RESOLVED. | granted |

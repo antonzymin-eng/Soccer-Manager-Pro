@@ -252,8 +252,8 @@ APPROVED #16 (no `DETERMINISM_DIGEST_VERSION` bump), following the
 precedent set by Event System #17's `DOMAIN_TAG_EVENT_LEDGER = 0x15`
 patch on May 14, 2026 (#16 §3.4 v1.0.1). Next free slot in #16 §3.4
 catalogue is `0x16` (current allocations: `0x10`..`0x15`).
-Promotion of the `[CROSS-PENDING]` tag to `[CROSS]` is atomic with
-the back-prop landing.
+Promotion of the `[CROSS-PENDING]` tag to `[CROSS]` was completed
+May 16, 2026 atomically with the #16 §3.5 v1.0.2 patch landing.
 
 **Rationale.** Determinism is a Stage 0 hard requirement. Resolves
 v0.1 finding 10 and pass-1 C-2.
@@ -398,13 +398,13 @@ renumbering / fabricated-checklist trap class.
 |------|----------------------|-----------------|
 | Ball Physics #1 | Coordinate-system authority; `BallState` snapshot at predicted contact frame; `Ball.ApplyKick` output. | §1.2 (origin); §3.1.11.2 (`Ball.ApplyKick`). |
 | Agent Movement #2 | `Agent` class XY kinematic state and `facing`; `PlayerAttributes` (`Heading`, `Strength`, `Balance`); `AgentMovementState` enum + `GroundedReason.DIVING_HEADER`. NO jump-kinematics anchor — Z is owned by #10 at Stage 0 per KD-18. | §3.1.2 (state machine); §3.5.1 (`Agent` class); §3.5.6 (`PlayerAttributes` struct). |
-| Collision System #3 | Head-ball contact resolution; contested-duel contact data. | Contact-event API (subsection anchor TBD; pinned during pass-2 review per OI-005). |
+| Collision System #3 | Head-ball contact resolution via push-API `ICollisionEventConsumer` (KD-8). #10 implements the consumer interface and buffers events per-frame (§4.2.1). | §3.4.2 (`section-3-4.md` lines 387–445; `ICollisionEventConsumer` interface + `CollisionEvent` struct). v0.3 OI-005 closure. |
 | First Touch Mechanics #4 | Boundary partner — head-vs-non-head body-part discrimination. | §1.2 (boundary statement reaffirming 0.5 m threshold does not apply to head). |
 | Pass Mechanics #5 | Canonical cross-delivery source consumed read-only via `BallState`, not Pass-specific labels (KD-5). | No #5 subsection coupling. |
 | Shot Mechanics #6 | Analogous output-interface model; KD-6 body-part routing authority. | §1.3 KD-6. |
-| Decision Tree #8 | `HeaderIntent` (target, power, contact-point intents) at 10 Hz. | §1.7.x (intent surface — anchor TBD; pinned during pass-2 review per OI-005). |
-| Deterministic Simulation #16 | RNG service + draw-site registry; entity ordering; `DOMAIN_TAG_HEADING` allocation (back-prop ERR-010-001). | §3.2 (ordering); §3.4 (`DOMAIN_TAG` catalogue); §4.1 (RNG service); §4.5 (draw-site registry). |
-| Event System #17 | `HeaderExecutedEvent` and `HeaderAttemptFailedEvent` publication. | Event publish API (subsection anchor TBD; pinned during pass-2 review per OI-005). |
+| Decision Tree #8 | `HeaderIntent` at 10 Hz — **Stage 0+1 activation** (DT-side wiring lands atomic with #8 §7 stub promotion). | §1.7.2 row "Heading Mechanics #10 (Stage 1) — HEADER action type and dispatch interface — Not defined at Stage 0; stub placeholder in §7." v0.3 OI-005 closure: anchored to #8's existing Stage 0 deferral row; activation framing in §4.6.1. |
+| Deterministic Simulation #16 | RNG service + draw-site registry; entity ordering; `DOMAIN_TAG_HEADING = 0x16` (`[CROSS]` post May 16, 2026). | §3.2 (ordering); §3.4 (`DOMAIN_TAG_HEADING` row, `[CROSS]` post #16 §3.5 v1.0.2); §4.1 (RNG service); §4.5 (draw-site registry). ERR-010-001 RESOLVED. |
+| Event System #17 | `HeaderExecutedEvent` (Tier B) and `HeaderAttemptFailedEvent` (Tier C) publication. | §3.2.1 `Publish API surface` (`section-3.md` lines 104–127). v0.3 OI-005 closure. |
 
 **Tractability cites (not consumed at any interface — named for context only):**
 - Perception System #7 — supplies Decision Tree #8's inputs; relevant
@@ -443,3 +443,4 @@ drafting.
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | section authoring | Initial draft from `outline-detailed.md` v1.1. All eighteen KDs reproduced. Dependency tables enumerated with verified upstream anchors where pinned; remaining anchors marked TBD per OI-005. | pending |
 | 0.2 | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: KD-10 wording adjusted to reflect actual back-prop filing status (M-1) — `ERR-010-001` now filed in `spec-error-log.md` atomically with this revision. No KD set changes; KD-10's design intent unchanged. | pending |
+| 0.3 | May 16, 2026 | drafter | APPROVAL. §1.4 dependency table re-anchored to APPROVED upstream surfaces: #3 §3.4.2 `ICollisionEventConsumer`; #8 §1.7.2 Stage 0 deferral row (DT-side wiring is Stage 0+1); #16 `DOMAIN_TAG_HEADING = 0x16` row `[CROSS]` post #16 §3.5 v1.0.2 patch; #17 §3.2.1 `Publish API surface`. ERR-010-001 RESOLVED. | granted |

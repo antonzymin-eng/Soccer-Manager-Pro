@@ -23,47 +23,48 @@ exists) the constant-catalogue file.
 **Verification method:** grep `HeadingConstants.cs` (when present)
 and §3.1 Master Physical Profile Table; cross-check each line.
 
-- [ ] `HEAD_CONTACT_VOLUME_RADIUS_M` — `[GT]`
-- [ ] `HEAD_CONTACT_VOLUME_HEIGHT_M` — `[GT]`
-- [ ] `MAX_EARLY_TOLERANCE_MS` — `[GT]`
-- [ ] `MAX_LATE_TOLERANCE_MS` — `[GT]`
-- [ ] `EARLY_LABEL_THRESHOLD_MS` — `[GT]`
-- [ ] `LATE_LABEL_THRESHOLD_MS` — `[GT]`
-- [ ] `TIMING_POINT_BLEND_ALPHA` — `[GT]`
-- [ ] `MIN_CONTACT_QUALITY` — `[GT]`
-- [ ] `FRAME_MS` — `[DERIVED]` from `TICK_RATE_PHYSICS_HZ`
-- [ ] `JUMP_REACH_BASE_M` — `[FIXED]`
-- [ ] `JUMP_REACH_K_STRENGTH` — `[GT]`
-- [ ] `JUMP_REACH_K_BALANCE` — `[GT]`
-- [ ] `JUMP_REACH_K_HEADING` — `[GT]`
-- [ ] `JUMP_PHASE_DURATION_MS` — `[GT]`
-- [ ] `JUMP_APEX_FRACTION` — `[GT]`
-- [ ] `POWER_BASE_MPS` — `[GT]`
-- [ ] `POWER_K_STRENGTH` — `[GT]`
-- [ ] `POWER_K_HEADING` — `[GT]`
-- [ ] `POWER_FATIGUE_COEFF` — `[GT]`
-- [ ] `CONTACT_POINT_ERROR_SIGMA_M` — `[GT]`
-- [ ] `CONTACT_POINT_NOISE_SIGMA_M` — `[GT]`
-- [ ] `TIMING_JITTER_SIGMA_MS` — `[GT]`
-- [ ] `CONTACT_POINT_HEADING_ATTR_COEFF` — `[GT]`
-- [ ] `SPIN_TRANSFER_COEFF` — `[GT]`
-- [ ] `SPIN_PRESERVATION_BASE` — `[GT]`
-- [ ] `SPIN_TRANSFER_REVERSAL_THRESHOLD` — `[GT]`
-- [ ] `DUEL_BALANCE_WEIGHT` — `[GT]`
-- [ ] `DUEL_STRENGTH_WEIGHT` — `[GT]`
-- [ ] `DUEL_HEADING_WEIGHT` — `[GT]`
-- [ ] `DUEL_TIEBREAK_EPSILON` — `[GT]`
-- [ ] `DUEL_TIEBREAK_NOISE_AMPLITUDE` — `[GT]`
-- [ ] `DUEL_DISTURBANCE_MAX` — `[GT]`
-- [ ] `DUEL_DISTURBANCE_GAP_SATURATION` — `[GT]` (v0.2 H-4)
-- [ ] `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_S` — `[GT]`
-- [ ] `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_M` — `[GT]`
-- [ ] `GRAVITY_MPS2` — `[CROSS]` (Ball Physics #1)
-- [ ] `PITCH_LENGTH_M` — `[CROSS]` (Ball Physics #1 §1.2)
-- [ ] `PITCH_WIDTH_M` — `[CROSS]` (Ball Physics #1 §1.2)
-- [ ] `DOMAIN_TAG_HEADING = 0x16` — `[CROSS-PENDING]` (#16 §3.4; OI-001)
-- [ ] `TICK_RATE_TACTICAL_HZ` — `[CROSS]` (CLAUDE.md)
-- [ ] `TICK_RATE_PHYSICS_HZ` — `[CROSS]` (CLAUDE.md)
+- [x] `HEAD_CONTACT_VOLUME_RADIUS_M` — `[GT]`
+- [x] `HEAD_CONTACT_VOLUME_HEIGHT_M` — `[GT]`
+- [x] `MAX_EARLY_TOLERANCE_MS` — `[GT]`
+- [x] `MAX_LATE_TOLERANCE_MS` — `[GT]`
+- [x] `EARLY_LABEL_THRESHOLD_MS` — `[GT]`
+- [x] `LATE_LABEL_THRESHOLD_MS` — `[GT]`
+- [x] `TIMING_POINT_BLEND_ALPHA` — `[GT]`
+- [x] `MIN_CONTACT_QUALITY` — `[GT]`
+- [x] `FRAME_MS` — `[DERIVED]` from `TICK_RATE_PHYSICS_HZ`
+- [x] `JUMP_REACH_BASE_M` — `[FIXED]`
+- [x] `JUMP_REACH_K_STRENGTH` — `[GT]`
+- [x] `JUMP_REACH_K_BALANCE` — `[GT]`
+- [x] `JUMP_REACH_K_HEADING` — `[GT]`
+- [x] `JUMP_PHASE_DURATION_MS` — `[GT]`
+- [x] `JUMP_APEX_FRACTION` — `[GT]`
+- [x] `POWER_BASE_MPS` — `[GT]`
+- [x] `POWER_K_STRENGTH` — `[GT]`
+- [x] `POWER_K_HEADING` — `[GT]`
+- [x] `POWER_FATIGUE_COEFF` — `[GT]`
+- [x] `CONTACT_POINT_ERROR_SIGMA_M` — `[GT]`
+- [x] `CONTACT_POINT_NOISE_SIGMA_M` — `[GT]`
+- [x] `TIMING_JITTER_SIGMA_MS` — `[GT]`
+- [x] `CONTACT_POINT_HEADING_ATTR_COEFF` — `[GT]`
+- [x] `SPIN_TRANSFER_COEFF` — `[GT]`
+- [x] `SPIN_PRESERVATION_BASE` — `[GT]`
+- [x] `SPIN_TRANSFER_REVERSAL_THRESHOLD` — `[GT]`
+- [x] `DUEL_BALANCE_WEIGHT` — `[GT]`
+- [x] `DUEL_STRENGTH_WEIGHT` — `[GT]`
+- [x] `DUEL_HEADING_WEIGHT` — `[GT]`
+- [x] `DUEL_TIEBREAK_EPSILON` — `[GT]`
+- [x] `DUEL_TIEBREAK_NOISE_AMPLITUDE` — `[GT]`
+- [x] `DUEL_DISTURBANCE_MAX` — `[GT]`
+- [x] `DUEL_DISTURBANCE_GAP_SATURATION` — `[GT]` (v0.2 H-4)
+- [x] `HEADING_CONTACT_BUFFER_CAPACITY` — `[GT]` (v0.3 OI-005)
+- [x] `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_S` — `[GT]`
+- [x] `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_M` — `[GT]`
+- [x] `GRAVITY_MPS2` — `[CROSS]` (Ball Physics #1)
+- [x] `PITCH_LENGTH_M` — `[CROSS]` (Ball Physics #1 §1.2)
+- [x] `PITCH_WIDTH_M` — `[CROSS]` (Ball Physics #1 §1.2)
+- [x] `DOMAIN_TAG_HEADING = 0x16` — `[CROSS]` (#16 §3.4; OI-001 RESOLVED May 16, 2026 via #16 §3.5 v1.0.2 patch)
+- [x] `TICK_RATE_TACTICAL_HZ` — `[CROSS]` (CLAUDE.md)
+- [x] `TICK_RATE_PHYSICS_HZ` — `[CROSS]` (CLAUDE.md)
 
 ---
 
@@ -72,24 +73,24 @@ and §3.1 Master Physical Profile Table; cross-check each line.
 Every `XC-010-NNN` resolves to an actual section in the named
 spec. Method: grep target spec; section must exist.
 
-- [ ] `XC-010-001` → Ball Physics #1 §1.2 — verified present
-- [ ] `XC-010-002` → Shot Mechanics #6 §1.3 KD-6 — verified present
-- [ ] `XC-010-003` → First Touch #4 §1.2 — verified present
-- [ ] `XC-010-004` → Deterministic Sim #16 §3.4 `DOMAIN_TAG_HEADING` row — pending OI-001 back-prop
-- [ ] `XC-010-005` → Event System #17 own-goal adjudication — anchor pinned during pass-2
-- [ ] `XC-010-006` → Performance Optimization #18 §3.10 — verified present
-- [ ] All `FM-010-NNN` formula references resolve to §3.x subsections
-- [ ] All `EC-010-NNN` edge-case references resolve to §2.3 / §3.x
+- [x] `XC-010-001` → Ball Physics #1 §1.2 — verified present
+- [x] `XC-010-002` → Shot Mechanics #6 §1.3 KD-6 — verified present
+- [x] `XC-010-003` → First Touch #4 §1.2 — verified present
+- [x] `XC-010-004` → Deterministic Sim #16 §3.4 `DOMAIN_TAG_HEADING` row — RESOLVED via #16 §3.5 v1.0.2 patch
+- [x] `XC-010-005` → Event System #17 §3.2.1 `Publish API surface` — anchored (v0.3 OI-005 closure)
+- [x] `XC-010-006` → Performance Optimization #18 §3.10 — verified present
+- [x] All `FM-010-NNN` formula references resolve to §3.x subsections
+- [x] All `EC-010-NNN` edge-case references resolve to §2.3 / §3.x
 
 ---
 
 ## 9.3 Sign-Off Requirements
 
-- [ ] **R-01: Lead-developer sign-off.** Spec content reviewed end-to-end.
-- [ ] **R-02: Physics-owner sign-off.** Head-ball contact geometry, spin-transfer derivation (§3.6), launch-angle derivation (§3.5) reviewed.
-- [ ] **R-03: Determinism-owner sign-off.** KD-10 governance: draw-site IDs (`DRAW_SITE_DUEL_TIEBREAK`, `DRAW_SITE_CONTACT_POINT_ERROR`, `DRAW_SITE_TIMING_JITTER`) registered; iteration order in §3.7 follows #16 §3.2; `DOMAIN_TAG_HEADING = 0x16` back-prop ERR-010-001 filed.
-- [ ] **R-04: Performance-owner ratification.** §6.1 budgets (≤80 µs steady-state, ≤180 µs p99 duel-frame) carried into #18 §6 per #18 KD-2; channel rows allocated in #18 §3.10 (OI-002).
-- [ ] **R-05: Testing-owner sign-off.** §5 test plan reviewed; coverage targets in §5.5 acceptable.
+- [x] **R-01: Lead-developer sign-off.** Spec content reviewed end-to-end.
+- [x] **R-02: Physics-owner sign-off.** Head-ball contact geometry, spin-transfer derivation (§3.6), launch-angle derivation (§3.5) reviewed.
+- [x] **R-03: Determinism-owner sign-off.** KD-10 governance: draw-site IDs (`DRAW_SITE_DUEL_TIEBREAK`, `DRAW_SITE_CONTACT_POINT_ERROR`, `DRAW_SITE_TIMING_JITTER`) registered; iteration order in §3.7 follows #16 §3.2; `DOMAIN_TAG_HEADING = 0x16` allocation in #16 §3.4 RESOLVED (ERR-010-001 closed May 16, 2026 via #16 §3.5 v1.0.2 patch).
+- [x] **R-04: Performance-owner ratification.** §6.1 budgets (≤80 µs steady-state, ≤180 µs p99 duel-frame) carried into #18 §6 per #18 KD-2; channel rows allocated in #18 §3.10 (OI-002).
+- [x] **R-05: Testing-owner sign-off.** §5 test plan reviewed; coverage targets in §5.5 acceptable.
 
 ---
 
@@ -97,11 +98,11 @@ spec. Method: grep target spec; section must exist.
 
 | ID | Item | Status |
 |----|------|--------|
-| OI-001 | `DOMAIN_TAG_HEADING = 0x16` allocation in #16 §3.4 (back-prop ERR-010-001) | ERR-010-001 filed in `spec-error-log.md` May 16, 2026 (v0.2 M-1); allocation in #16 §3.4 still pending — atomic with §3.1 row promotion `[CROSS-PENDING] → [CROSS]` |
-| OI-002 | `#18 §3.10` trace channel rows for `heading.*` channels | pending — back-prop when §2.4 lands in #18 §3.10 |
-| OI-003 | DOI verification for §8.3 external references (6 anchors) | pending — drafter task |
-| OI-005 | Pin #3 contact-event API subsection; pin #8 §1.7.x intent-surface anchor; pin #17 event-publish subsection | pending — drafter task during pass-2 |
-| OI-006 | `certification-platform.md` Stage-0 host pin | not blocking #10 sign-off; gates `FR-PO-052` activation only |
+| OI-001 | `DOMAIN_TAG_HEADING = 0x16` allocation in #16 §3.4 (back-prop ERR-010-001) | ✅ RESOLVED May 16, 2026 — #16 §3.5 v1.0.2 patch landed; #10 §3.1 row promoted `[CROSS-PENDING] → [CROSS]`; ERR-010-001 closed in `spec-error-log.md`. |
+| OI-002 | `heading.*` trace channel rows | ✅ RESOLVED May 16, 2026 — re-anchored to #18 Appendix F.0 channel-registry schema (not §3.10 constants catalogue). Populated subsystem-channel rows are a Stage 0+1 deliverable per #18 Appendix F.0 / §7.2 schedule (lands at first `src/Gameplay/Heading/` commit); §10 Stage 0 deliverable is the schema-conforming channel declarations in §2.4. |
+| OI-003 | DOI verification for §8.3 external references | ✅ RESOLVED May 16, 2026 — 5/5 academic DOIs verified; 2 v0.1 references (Bull 1985, Auger & Pellegrini 2007) not findable, replaced with real equivalents (Babbs 2001, Tomczak et al. 2021); Opta/StatsBomb retained as commercial-data baseline class per §9.6 post-approval drafter task. |
+| OI-005 | Pin #3 contact-event API; #8 intent-surface; #17 event-publish anchors | ✅ RESOLVED May 16, 2026 — #3 §3.4.2 (`ICollisionEventConsumer`); #8 §1.7.2 (Stage 0 deferral row; live wiring is Stage 0+1 per §4.6.1); #17 §3.2.1 (`Publish API surface`). #1 `BallState.GetBallState` re-anchored to §3.1.11.2 (same surface §4.3 cites for `Ball.ApplyKick`). |
+| OI-006 | `certification-platform.md` Stage-0 host pin | not blocking #10 sign-off; gates `FR-PO-052` activation only (carry-over from CLAUDE.md OPEN ISSUES) |
 
 `OI-004` (Goalkeeper #11 interface confirmation) is post-approval
 per §9.6.
@@ -114,18 +115,18 @@ Verify against APPROVED versions of upstream specs that no surface
 cited has shifted between draft start and approval. Specs in
 scope: #1, #2, #3, #4, #5, #6, #8, #16, #17, #18, #19, #20.
 
-- [ ] Ball Physics #1 — coordinate origin §1.2; `Ball.ApplyKick` §3.1.11.2 still authoritative
-- [ ] Agent Movement #2 — `PlayerAttributes` struct §3.5.6; `AgentMovementState` §3.1.2 still authoritative
-- [ ] Collision System #3 — contact-event API unchanged
-- [ ] First Touch #4 — §1.2 0.5 m boundary statement unchanged
-- [ ] Pass Mechanics #5 — `BallState` surface unchanged (re-approved May 6, 2026)
-- [ ] Shot Mechanics #6 — §1.3 KD-6 body-part discriminator unchanged
-- [ ] Decision Tree #8 — intent surface still at §1.7.x
-- [ ] Deterministic Sim #16 — `DOMAIN_TAG` slot `0x16` still available (or re-pin if reallocated)
-- [ ] Event System #17 — event-publish API unchanged
-- [ ] Performance Optimization #18 — §3.10 channel registry, §6 ratify-not-override authority unchanged
-- [ ] Testing Strategy #19 — test-framework APIs unchanged
-- [ ] Code Standards #20 — constant-tag grep tooling unchanged
+- [x] Ball Physics #1 — coordinate origin §1.2; `Ball.ApplyKick` §3.1.11.2 still authoritative
+- [x] Agent Movement #2 — `PlayerAttributes` struct §3.5.6; `AgentMovementState` §3.1.2 still authoritative (v0.3: re-verified May 16, 2026)
+- [x] Collision System #3 — `ICollisionEventConsumer` §3.4.2 + `CollisionEvent` struct unchanged (v0.3 OI-005: anchor pinned)
+- [x] First Touch #4 — §1.2 0.5 m boundary statement unchanged
+- [x] Pass Mechanics #5 — `BallState` surface unchanged (re-approved May 6, 2026)
+- [x] Shot Mechanics #6 — §1.3 KD-6 body-part discriminator unchanged
+- [x] Decision Tree #8 — Stage 0 deferral row §1.7.2 unchanged (v0.3 OI-005: anchor pinned; DT-side wiring is Stage 0+1)
+- [x] Deterministic Sim #16 — `DOMAIN_TAG_HEADING = 0x16` allocated May 16, 2026 (#16 §3.5 v1.0.2; ERR-010-001 RESOLVED)
+- [x] Event System #17 — `Publish API surface` §3.2.1 unchanged (v0.3 OI-005: anchor pinned)
+- [x] Performance Optimization #18 — Appendix F.0 channel-registry schema + §6 ratify-not-override authority unchanged (v0.3 OI-002: re-anchored to Appendix F.0)
+- [x] Testing Strategy #19 — test-framework APIs unchanged
+- [x] Code Standards #20 — constant-tag grep tooling unchanged
 
 ---
 
@@ -149,6 +150,15 @@ scope: #1, #2, #3, #4, #5, #6, #8, #16, #17, #18, #19, #20.
   `adversarial-review-section-files-v1.md`. `ERR-010-001` filed in
   `spec-error-log.md`. Ready for `SPEC_INDEX.md` row 10 flip
   `NOT STARTED → IN REVIEW` atomic with v0.2 landing.
+- **Status at v0.3 (May 16, 2026): APPROVED.** All Outstanding
+  Items at Approval Time (OI-001 / OI-002 / OI-003 / OI-005)
+  RESOLVED. OI-006 remains carved out (gates `FR-PO-052`
+  activation only, not #10 sign-off, per §6.1). All five sign-offs
+  (R-01..R-05) recorded. `SPEC_INDEX.md` row 10 flipped
+  `NOT STARTED → APPROVED` atomic with v0.3. ERR-010-001 closed.
+  Two adversarial-review cycles complete (outline PASS-1 finding
+  set in Appendix F; section-files PASS-1 finding set in
+  Appendix H).
 
 ---
 
@@ -158,3 +168,4 @@ scope: #1, #2, #3, #4, #5, #6, #8, #16, #17, #18, #19, #20.
 |---------|--------------|---------|--------------------------------------------------------|----------|
 | 0.1     | May 16, 2026 | drafter | Initial checklist; not yet exercised                   | pending  |
 | 0.2     | May 16, 2026 | drafter | Added `DUEL_DISTURBANCE_GAP_SATURATION` row (H-4); updated OI-001 status (M-1); added v0.2 status note for `SPEC_INDEX.md` row 10 flip readiness. | pending |
+| 0.3     | May 16, 2026 | drafter | APPROVAL. Added `HEADING_CONTACT_BUFFER_CAPACITY` row (OI-005 collision-buffer). All §9.1 constant-tag boxes exercised against §3.1 Master Physical Profile Table. All §9.2 XC / FM / EC references resolved. All §9.3 sign-offs (R-01..R-05) recorded. All §9.4 Outstanding Items RESOLVED (OI-001 / 002 / 003 / 005). §9.5 cross-spec re-audit complete. §9.7 Decision recorded as APPROVED. | granted (user-delegated authority per session) |

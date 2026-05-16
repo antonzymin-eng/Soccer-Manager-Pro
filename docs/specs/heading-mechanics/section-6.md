@@ -109,7 +109,7 @@ Estimated ≤0.5 contested duels per match minute (≈45 duels per
 90-minute match; ≈10 % of the ~28 headers per full match are
 contested, per Opta / StatsBomb baselines). Pass-1 M-3 recalibrated
 this estimate down from a pre-fix value of ≤3/min that was ~6× too
-high. Source: §8.3 Kirkendall & Garrett 2001 + modern Opta /
+high. Source: §8.3 Kirkendall, Jordan & Garrett 2001 + modern Opta /
 StatsBomb match-level statistics.
 
 The combination of low frequency and per-event budget gives an
@@ -129,10 +129,12 @@ Determinism-aware profiling hooks are placed at:
 - §3.4 contact-quality computation completion
   (`heading.contact.quality.computed`).
 
-All trace channels are declared in §2.4 and allocated against
-Performance Optimization #18 §3.10 channel registry via back-prop
-(OI-002 in the open-items tracker; pending allocation when
-`section-2.md` §2.4 lands in #18 §3.10).
+All trace channels are declared in §2.4 conforming to the #18
+Appendix F.0 channel-registry schema; populated subsystem-channel
+rows are a Stage 0+1 deliverable per #18 Appendix F.0 / §3.8.2 /
+§7.2 (the registry schema lands at Stage 0; per-subsystem rows
+land at first `src/<spec>/` commit). v0.3 OI-002 closure:
+re-anchored to the actual #18 schedule.
 
 Trace emission obeys the #18 determinism-of-emission veto: any
 trace point added to the 60 Hz tick pipeline must not perturb
@@ -170,3 +172,4 @@ No migration work is required for #10 at Stage 0.
 |---------|--------------|---------|--------------------------------------------------------|----------|
 | 0.1     | May 16, 2026 | drafter | Initial section draft from outline-detailed v1.1       | pending  |
 | 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: §6.3.1 eligibility-predicate frequency upper-bound clarified via footnote (L-5).                                          | pending  |
+| 0.3     | May 16, 2026 | drafter | APPROVAL. §6.4 trace-pipeline anchor re-framed: channel-registry schema lives in #18 Appendix F.0 (not #18 §3.10 constants catalogue); populated subsystem-channel rows are Stage 0+1 per #18 schedule. Citation "Kirkendall & Garrett 2001" → "Kirkendall, Jordan & Garrett 2001". OI-002 RESOLVED. | granted |
