@@ -76,9 +76,25 @@ FM-010-003, FR-HE-011.
   sidespin, zero spin.
 - Contact-point axial-offset sweep: {-0.03, -0.015, 0, +0.015,
   +0.03} m.
-- Reversal-boundary test: at `contactPointAxialOffset =
-  SPIN_TRANSFER_REVERSAL_THRESHOLD`, `spinPreservationFactor`
-  crosses zero (worked example in §3.6).
+- Reversal-boundary test (v0.2 H-1): at `contactPointAxialOffset =
+  SPIN_TRANSFER_REVERSAL_THRESHOLD`, `spinPreservationFactor` is
+  exactly zero and the incoming-spin contribution to `outgoingSpin`
+  is exactly zero. At `contactPointAxialOffset = 2 ·
+  SPIN_TRANSFER_REVERSAL_THRESHOLD`, `spinPreservationFactor =
+  -SPIN_PRESERVATION_BASE` and the incoming-spin contribution is
+  `incomingSpin · (-SPIN_PRESERVATION_BASE)` (single reversal,
+  proportional to overshoot — verify the v0.1 double-reversal bug
+  has not regressed). Add a monotonicity assertion: the magnitude
+  of the incoming-spin contribution is linear in
+  `contactPointAxialOffset`, with no discontinuity at the
+  threshold.
+
+- Heading-attribute pointError direction (v0.2 H-2): hold
+  `||contactPointActual − contactPointIntent||` constant; sweep
+  `Heading_norm ∈ {0.0, 0.5, 1.0}`; assert `pointQuality` is
+  monotone non-decreasing in `Heading_norm` (higher-Heading
+  agents produce smaller effective `pointError` and thus higher
+  `pointQuality` for the same physical contact geometry).
 
 Verifies FM-010-004, FR-HE-015, KD-16. ~20 cases.
 
@@ -87,27 +103,54 @@ Verifies FM-010-004, FR-HE-015, KD-16. ~20 cases.
 - 2-way duel: defender vs. striker, varying `Heading × Strength ×
   Balance` profiles.
 - 3-way duel: striker + striker + defender.
-- Tiebreak-invocation count: 1000 deterministic-replay iterations
-  on a near-tie configuration (`|scoreA - scoreB| <
-  DUEL_TIEBREAK_EPSILON`) — verify `DRAW_SITE_DUEL_TIEBREAK` is
-  called exactly once per duel and never on non-tie configurations.
+- Tiebreak-invocation count (v0.2 M-6): 1000 deterministic-replay
+  iterations on near-tie configurations — verify
+  `DRAW_SITE_DUEL_TIEBREAK` is called exactly `N` times per duel,
+  where `N` is the count of participants whose `baseScore` lies
+  within `DUEL_TIEBREAK_EPSILON` of `baseScore[rank0]`. Cases:
+  2-way near-tie → `N = 2`; 3-way near-tie (all three within ε) →
+  `N = 3`; 3-way with two clustered + one outlier → `N = 2`;
+  non-tie (gap > ε) → `N = 0`.
 - Iteration-order determinism: shuffle the input order of duel
   participants; verify identical winner per #16 §3.2 entity
   ordering.
 
 Verifies FM-010-005, FR-HE-010, FR-HE-017, FR-HE-023.
 
-### 5.1.7 Failed-Attempt Emission (`HeadingMechanics.cs`)
+### 5.1.7 Failed-Attempt Emission (`HeadingMechanics.cs`) — v0.2 M-7 split
 
-One test per failure-mode F-01..F-07 from §2.3. Each test:
+Split into two groups matching the §2.3 failure-mode semantics.
+
+**Group A — F-01..F-04 (failed-event emission).** One test per
+mode. Each test:
 
 1. Construct an input scenario that triggers exactly that failure.
 2. Run the heading pipeline for one 60 Hz tick.
 3. Assert: no `Ball.ApplyKick` invocation; `BallState` unchanged
    after the tick; `HeaderAttemptFailedEvent` published with
-   `failureCause` matching the expected enum value.
+   `failureCause` matching the expected enum value (`MistimedEarly`
+   / `MistimedLate` / `PositionedPoorly` / `DisturbedInDuel`).
 
 Verifies FR-HE-006, KD-12.
+
+**Group B — F-05..F-07 (continue-with-modification semantics).**
+One test per mode, each asserting the documented non-failed
+behaviour:
+
+- F-05 (`targetIntent` outside pitch bounding box, FR-HE-029):
+  assert `targetIntent` is clamped to the nearest in-bounds
+  point; assert a warning-channel telemetry entry is emitted;
+  assert NO `HeaderAttemptFailedEvent` is published; assert the
+  attempt continues to evaluate eligibility.
+- F-06 (stale `BallState`, FR-HE-033): assert `BallState` is
+  re-queried via `BallPhysics.GetBallState(currentTime)`; assert
+  a diagnostic-channel entry is emitted; assert NO
+  `HeaderAttemptFailedEvent`; assert no extrapolation occurred.
+- F-07 (`contactPointIntent` outside head-local envelope,
+  FR-HE-030): assert the intent is clamped to the envelope edge;
+  assert the clamp delta is reflected in the `pointError`
+  component of `contactQualityScalar` via §3.4; assert NO
+  standalone telemetry channel or failed event is generated.
 
 ### 5.1.8 Own-Goal-Shape Flag (`HeadingMechanics.cs`)
 
@@ -170,9 +213,15 @@ or, if `contactQualityScalar < MIN_CONTACT_QUALITY`, emits
 ### 5.2.6 Contested 3-Way Duel
 
 Two strikers + one defender at the same contact frame. Verifies
-multi-way semantics (F-04, §3.7 step 5): winner-only emits
-`HeaderExecutedEvent`; all losers emit `HeaderAttemptFailedEvent`
-with `failureCause = DisturbedInDuel`.
+multi-way semantics under v0.2 M-5 alignment (F-04, §3.7 step 5
+uniform with step 4): winner emits full-quality
+`HeaderExecutedEvent`; each loser emits either a disturbed
+`HeaderExecutedEvent` (if `q' ≥ MIN_CONTACT_QUALITY`) or
+`HeaderAttemptFailedEvent` with `failureCause = DisturbedInDuel`
+(if `q' < MIN_CONTACT_QUALITY`). Construct two sub-scenarios:
+(a) tight 3-way (small `baseScore` gap → small disturbance →
+losers emit disturbed executed events); (b) lopsided 3-way (large
+gap → saturated disturbance → losers fail).
 
 ### 5.2.7 Mistimed Jump → Failed Attempt → No Ball State Change
 
@@ -211,7 +260,15 @@ full-match baseline established by Kirkendall & Garrett 2001 and
 modern Opta / StatsBomb match-level statistics, per pass-1 M-3
 recalibration; see §8.3).
 
-Designer-set telemetry-distribution targets (illustrative):
+Designer-set telemetry-distribution targets (illustrative; v0.2
+L-6 framing — these shares model a population that includes
+systematic mistiming from Decision Tree #8 commit-tick choice
+and from upstream perception-tick variance, not noise alone from
+`TIMING_JITTER_SIGMA_MS = 8` which would by itself put >99% of
+attempts into `OnTime`. Empirical baseline for the share split
+is a designer target pending Stage 0 calibration; no published
+academic reference for header timing-label distribution is
+currently catalogued in §8.3):
 
 | Telemetry label | Expected share |
 |-----------------|----------------|
@@ -296,3 +353,4 @@ Coverage tooling per Testing Strategy #19 §3.x.
 | Version | Date         | Author  | Notes                                                  | Reviewer |
 |---------|--------------|---------|--------------------------------------------------------|----------|
 | 0.1     | May 16, 2026 | drafter | Initial section draft from outline-detailed v1.1       | pending  |
+| 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: §5.1.5 reversal-boundary test rewritten for v0.2 H-1 single-reversal formula + Heading-direction monotonicity assertion added (H-2); §5.1.6 tiebreak test "exactly once" → "exactly N" (M-6); §5.1.7 split into Group A (F-01..F-04, failed-event) and Group B (F-05..F-07, continue-with-modification) (M-7); §5.2.6 3-way duel rewritten for v0.2 M-5 uniform loser semantics; §5.3.1 telemetry-shares framing made explicit re. systematic vs. noise components (L-6). | pending |

@@ -101,7 +101,7 @@ renumbered 001–006.
 | `XC-010-002` | Shot Mechanics #6 §1.3 KD-6 | Body-part discriminator routing authority (KD-3 of #10) |
 | `XC-010-003` | First Touch #4 §1.2 | 0.5 m height-threshold boundary reaffirmation — does NOT apply to head |
 | `XC-010-004` | Deterministic Sim #16 §3.4 | `DOMAIN_TAG_HEADING = 0x16` catalogue row (`[CROSS-PENDING]` per KD-10) |
-| `XC-010-005` | Event System #17 (subsection TBD) | Own-goal-shape trajectory adjudication |
+| `XC-010-005` | Event System #17 §3.4.2 (`EventBus.Publish` surface for `HeaderExecutedEvent`) | Own-goal-shape trajectory FLAG transport. Adjudication (whether the trajectory actually crossed the goal-line) is a future Match Referee concern; #10 publishes the flag via the existing #17 event-publish API, no Match Referee anchor is required at Stage 0 (v0.2 L-4). |
 | `XC-010-006` | Performance Optimization #18 §3.10 | Trace channel registry for `heading.*` channels |
 
 ### 8.4.2 Formula References (`FM-010-NNN`)
@@ -149,3 +149,4 @@ section-file draft completion.
 | Version | Date         | Author  | Notes                                                  | Reviewer |
 |---------|--------------|---------|--------------------------------------------------------|----------|
 | 0.1     | May 16, 2026 | drafter | Initial section draft from outline-detailed v1.1       | pending  |
+| 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: `XC-010-005` anchored to Event System #17 §3.4.2 `EventBus.Publish` surface for `HeaderExecutedEvent` transport — adjudication framed as a future Match Referee concern not requiring an anchor at Stage 0 (L-4). | pending |

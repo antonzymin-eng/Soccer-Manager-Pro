@@ -44,7 +44,7 @@ target subsection in which the conformance is realized.
 | FR-HE-024 | The contact-quality scalar formula injects Gaussian noise via two registered draw sites (`DRAW_SITE_TIMING_JITTER`, `DRAW_SITE_CONTACT_POINT_ERROR`); no phantom draw sites exist. | MUST | KD-10 (pass-1 M-4) | §3.4, §4.4 |
 | FR-HE-025 | Outgoing-velocity own-goal projection uses the dual horizon `min(time, distance)` of `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_S` and `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_M`. | MUST | KD-6 (pass-1 L-7) | §3.8 |
 | FR-HE-026 | A duel loser whose disturbance-adjusted `contactQualityScalar` falls below `MIN_CONTACT_QUALITY` emits `HeaderAttemptFailedEvent` (not a poor-quality `HeaderExecutedEvent`). | MUST | KD-8 | §3.7 |
-| FR-HE-027 | Multi-way (3+ agent) duels emit exactly one `HeaderExecutedEvent` (winner) and one `HeaderAttemptFailedEvent` per loser. | MUST | KD-8 (pass-1 L-5) | §2.3 F-04, §3.7 |
+| FR-HE-027 | Contested duels (2-way and 3+ way) emit exactly one full-quality `HeaderExecutedEvent` for the winner; each loser emits either a disturbed `HeaderExecutedEvent` (if `q' ≥ MIN_CONTACT_QUALITY`) or a `HeaderAttemptFailedEvent` (if `q' < MIN_CONTACT_QUALITY`) — semantics uniform across participant counts (v0.2 M-5). | MUST | KD-8 | §2.3 F-04, §3.7 |
 | FR-HE-028 | `HeaderAttemptFailedEvent.failureCause` is one of `MistimedEarly` / `MistimedLate` / `PositionedPoorly` / `DisturbedInDuel`. | MUST | KD-12 | §2.2, §3.9 |
 | FR-HE-029 | A `HeaderIntent` whose `targetIntent` lies outside the pitch bounding box is clamped to the nearest in-bounds point; a telemetry warning is emitted; the attempt is NOT failed on this basis alone. | MUST | KD-12 | §2.3 F-05 |
 | FR-HE-030 | The `contactPointIntent` 2-D parameter is clamped to the head-local envelope; clamping incurs a `pointError` contribution but is NOT a hard failure. | MUST | KD-2 | §2.3 F-07, §3.4 |
@@ -70,9 +70,14 @@ Source: Decision Tree #8 at the 10 Hz tactical tick.
 ```
 struct HeaderIntent {
     float    powerIntent;             // [0, 1]
-    Vector2  contactPointIntent;      // head-local coordinates (m)
+    Vector2  contactPointIntent;      // head-local coordinates (m);
+                                      // origin at head centre,
+                                      // +x = agent.facing forward,
+                                      // +y = agent-left lateral
     Vector3  targetIntent;            // corner-origin coordinates (m)
-    int      attemptCommittedTick;    // 10 Hz tick of commit
+    int      attemptCommittedTick;    // 10 Hz tactical tick of commit;
+                                      // consumed by §3.3 to derive
+                                      // jumpStartFrame (v0.2 L-1 / M-3)
 }
 ```
 
@@ -86,9 +91,14 @@ Per-frame internal structure during 60 Hz contact resolution.
 
 ```
 struct HeaderContactState {
+    int     jumpStartFrame;           // 60 Hz frame of ground exit;
+                                      // written once per attempt by §4.6
+                                      // (v0.2 M-3)
     int     predictedContactFrame;    // re-evaluated each 60 Hz tick
     int     idealContactFrame;        // per-call output of §3.2 (apex-aligned)
-    int     actualContactFrame;       // populated at contact
+    int     actualContactFrame;       // set by §4.6 on the
+                                      // currentFrame == predictedContactFrame
+                                      // branch, before §3.4 (v0.2 M-4)
     float   timingOffsetMs;           // signed; positive = late
     Vector2 contactPointError;        // 2-D head-local error (m)
     float   contactQualityScalar;     // [0, 1]
@@ -161,7 +171,7 @@ struct ContestedDuelContext {
 | F-01 | Mistimed jump — ball passed contact volume before jump apex. | `timingOffsetMs > MAX_LATE_TOLERANCE_MS` (or `< -MAX_EARLY_TOLERANCE_MS`). | `HeaderAttemptFailedEvent` per KD-12 / FR-HE-006. | `failureCause = MistimedLate` (resp. `MistimedEarly`); `heading.attempt.failed.cause` counter increment. |
 | F-02 | Jump apex below ball altitude at predicted contact frame. | `JumpReach_m < ballZ(contactFrame)`. | `HeaderAttemptFailedEvent`. | `failureCause = PositionedPoorly`. |
 | F-03 | Contact body part is `Head` but ball position is outside `HEAD_CONTACT_VOLUME` at every frame of the attempt window. | Eligibility predicate §3.2 returns `isEligible = false` for every frame. | `HeaderAttemptFailedEvent`. | `failureCause = PositionedPoorly`. |
-| F-04 | Two or more simultaneously eligible headers (contested duel). | §3.2 predicate true for ≥2 agents at overlapping candidate frames. | Resolved per §3.7. Winner-only emits `HeaderExecutedEvent`; all losers emit `HeaderAttemptFailedEvent` with `failureCause = DisturbedInDuel` (wording aligned with §3.7 step 5 per pass-1 L-5 / FR-HE-027). | `heading.duel.outcome` counter. |
+| F-04 | Two or more simultaneously eligible headers (contested duel). | §3.2 predicate true for ≥2 agents at overlapping candidate frames. | Resolved per §3.7. Winner emits full-quality `HeaderExecutedEvent`. Each loser emits either a disturbed `HeaderExecutedEvent` (if `q' ≥ MIN_CONTACT_QUALITY`) or `HeaderAttemptFailedEvent` with `failureCause = DisturbedInDuel` (if `q' < MIN_CONTACT_QUALITY`). Uniform across 2-way and 3+ way duels (v0.2 M-5 / FR-HE-027). | `heading.duel.outcome` counter. |
 | F-05 | Decision Tree #8 supplied a `targetIntent` outside the pitch bounding box. | `!pitchBoundingBox.Contains(targetIntent)`. | Clamp to nearest in-bounds point per FR-HE-029; emit telemetry warning. NOT a hard failure. | Warning channel; no `HeaderAttemptFailedEvent`. |
 | F-06 | `BallState` snapshot stale (>1 physics frame old). | `currentFrame - ballState.snapshotFrame > 1`. | Re-query Ball Physics #1; do NOT extrapolate. | Diagnostic channel; no `HeaderAttemptFailedEvent`. |
 | F-07 | `contactPointIntent` outside head-local coordinate envelope. | Distance to envelope edge > 0. | Clamp to envelope edge; the clamp delta contributes to `pointError` in §3.4 (so the quality penalty arises naturally from the formula). | No standalone telemetry beyond the existing `contactQualityScalar` histogram. |
@@ -193,3 +203,4 @@ KD-6 (#18 §6.4): trace emission must not perturb game state.
 | Version | Date | Author | Notes | Reviewer |
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | section authoring | Initial draft from `outline-detailed.md` v1.1. FR catalogue covers FR-HE-001..035; structs and failure modes enumerated. | pending |
+| 0.2 | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: FR-HE-027 rewritten for uniform 2-way/3+ way loser semantics (M-5); F-04 row prose rewritten to match; `HeaderIntent.attemptCommittedTick` documented as consumed by §3.3 `jumpStartFrame` derivation (L-1); `HeaderContactState` adds `jumpStartFrame` field (M-3) and documents `actualContactFrame` assignment site (M-4); `contactPointIntent` head-local axis convention pinned (L-7). | pending |

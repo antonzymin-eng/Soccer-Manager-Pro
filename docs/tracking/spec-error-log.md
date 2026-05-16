@@ -8,7 +8,7 @@ authoritative remediation backlog.
 **Created:** February 19, 2026, 5:00 PM PST
 **Version:** 1.16
 **Updated:** May 16, 2026 (ERR-012-003 filed as documentary anchor for `XC-012-001`..`XC-012-009` per Positioning AI #12 section-files PASS-1 adversarial review AR-S1-18)
-**Status:** ERR-001 through ERR-012, ERR-012-001 (open), ERR-012-002 (closed), ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
+**Status:** ERR-001 through ERR-012, ERR-010-001 (open, May 16, 2026), ERR-012-001 (open), ERR-012-002 (closed), ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---
@@ -602,7 +602,29 @@ Outstanding follow-up: update `docs/specs/deterministic-sim/section-3.md` §3.2.
 
 ---
 
-*End of Spec Error Log v1.8 — May 12, 2026.*
+## ERR-010-001: `DOMAIN_TAG_HEADING` allocation required in Deterministic Simulation #16 §3.4
+
+**Severity:** Medium (cross-spec back-prop; latent if not landed before #10 APPROVED)
+**Detected:** May 16, 2026
+**Detected During:** Section-files v0.1 → v0.2 PASS-1 adversarial-review fix pass (`heading-mechanics/adversarial-review-section-files-v1.md` finding M-1). v0.1 KD-10 / Appendix G / §9.4 OI-001 each claimed the entry was "created during section authoring", but `grep ERR-010 docs/tracking/spec-error-log.md` returned only the long-closed ERR-010 (Shot Mechanics renumbering; March 6, 2026). v0.2 files this row.
+**Root Cause:** Heading Mechanics #10 §3.4 + §3.7 route Gaussian and float draws through `DeterministicRngService` (Deterministic Simulation #16 §4.1) keyed on `DOMAIN_TAG_HEADING`. This domain-tag entry is normatively owned by #16 §3.4's domain-tag table, but no allocation exists there yet. Same hazard class and same resolution shape as `ERR-017-001` (Event System #17 / `DOMAIN_TAG_EVENT_LEDGER = 0x15`, closed May 15, 2026).
+
+**Problem in detail:**
+- Spec #10 needs a stable numeric `DOMAIN_TAG_HEADING` to commit its three draw-site IDs (`DRAW_SITE_DUEL_TIEBREAK`, `DRAW_SITE_CONTACT_POINT_ERROR`, `DRAW_SITE_TIMING_JITTER`) to.
+- Spec #16 §3.4 currently does not enumerate `HEADING` among its allocated domain tags.
+- Without back-prop, #10 cannot reach `APPROVED` (its `[CROSS-PENDING]` constant in §3.1 cannot promote to `[CROSS]`).
+- Next available numeric slot in #16 §3.4's tag-namespace is `0x16` (verified May 16, 2026: current allocations run `0x10`..`0x15`).
+
+**Required fix:**
+1. At `heading-mechanics/SPEC_INDEX.md` row 10 reaching `IN REVIEW`, file a patch to `docs/specs/deterministic-sim/section-3.md` §3.4 domain-tag table allocating `DOMAIN_TAG_HEADING = 0x16` (next available numeric value in #16's tag-namespace). Pure namespace allocation — no `DETERMINISM_DIGEST_VERSION` bump required, per the `ERR-017-001` precedent (#16 §3.5 v1.0.1 patch revision, May 14, 2026).
+2. Update §3.1 Master Physical Profile Table in `heading-mechanics/section-3.md` to pin the literal value `0x16` and promote `[CROSS-PENDING]` → `[CROSS]` at the same beat that #16's allocation lands.
+3. Once the allocation lands in #16, mark this entry CLOSED.
+
+**Status:** OPEN — filed May 16, 2026 atomically with Heading Mechanics #10 section files v0.2 landing. `SPEC_INDEX.md` row 10 flip `NOT STARTED → IN REVIEW` is gated on v0.2; #16 §3.4 allocation is gated on #10 reaching `IN REVIEW`.
+
+---
+
+*End of Spec Error Log v1.9 — May 16, 2026.*
 
 ---
 

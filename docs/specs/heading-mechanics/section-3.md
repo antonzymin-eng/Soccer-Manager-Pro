@@ -39,7 +39,9 @@ flagged `TBD-VALUE` await Stage 0 calibration; values flagged
 | `JUMP_REACH_K_BALANCE` | `[GT]` | m | [0.0, 0.4] | 0.10 | Sensitivity of `JumpReach` to `Balance_norm`. |
 | `JUMP_REACH_K_HEADING` | `[GT]` | m | [0.0, 0.4] | 0.12 | Sensitivity of `JumpReach` to `Heading_norm` (pass-1 H-2). Covers jump-timing skill until §7.10. |
 | `JUMP_PHASE_DURATION_MS` | `[GT]` | ms | [400, 900] | 650 | Total ground-to-ground aerial-phase length for Stage 0 synthetic trajectory (KD-18). |
-| `JUMP_APEX_FRACTION` | `[GT]` | dimensionless | (0, 1) | 0.50 | Apex location along the jump phase as a fraction of `JUMP_PHASE_DURATION_MS`. `[GT]` not `[FIXED]` because the Stage 0 trajectory is synthetic per KD-18, not physical. |
+| `JUMP_APEX_FRACTION` | `[GT]` | dimensionless | (0, 1) | 0.50 | Apex location along the jump phase as a fraction of `JUMP_PHASE_DURATION_MS`.[^apex-tag] |
+
+[^apex-tag]: Tag rationale (v0.2 L-3): `[GT]` not `[FIXED]` because the Stage 0 trajectory is synthetic per KD-18, not physical.
 | `POWER_BASE_MPS` | `[GT]` | m/s | [4, 12] | 7.0 | Baseline header outgoing speed. |
 | `POWER_K_STRENGTH` | `[GT]` | m/s | [0, 8] | 4.0 | Strength contribution to outgoing speed. |
 | `POWER_K_HEADING` | `[GT]` | m/s | [0, 8] | 5.0 | Heading-attribute contribution to outgoing speed. |
@@ -56,7 +58,8 @@ flagged `TBD-VALUE` await Stage 0 calibration; values flagged
 | `DUEL_HEADING_WEIGHT` | `[GT]` | dimensionless | [0, 1] | 0.35 | `w_H` in §3.7. Sum of three weights = 1.0 by construction. |
 | `DUEL_TIEBREAK_EPSILON` | `[GT]` | dimensionless | (0, 0.10] | 0.02 | Near-tie threshold gating RNG perturbation (pass-1 H-5). |
 | `DUEL_TIEBREAK_NOISE_AMPLITUDE` | `[GT]` | dimensionless | (0, 0.10] | 0.01 | RNG perturbation amplitude applied only when score gap < `DUEL_TIEBREAK_EPSILON` (pass-1 H-5). |
-| `DUEL_DISTURBANCE_MAX` | `[GT]` | dimensionless | (0, 1] | 0.50 | Maximum disturbance factor applied to a duel loser's `contactQualityScalar`. |
+| `DUEL_DISTURBANCE_MAX` | `[GT]` | dimensionless | (0, 1] | 0.50 | Maximum disturbance factor applied to a duel loser's `contactQualityScalar`. Saturates at `DUEL_DISTURBANCE_GAP_SATURATION` (see §3.7 step 4 formula). |
+| `DUEL_DISTURBANCE_GAP_SATURATION` | `[GT]` | dimensionless | (0, 1] | 0.20 | `baseScore` gap (winner − loser) at which `disturbanceFactor` saturates at `DUEL_DISTURBANCE_MAX`. Below this gap, disturbance grows linearly from 0; at or above, it is capped (v0.2 H-4). |
 | `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_S` | `[GT]` | s | (0, 5] | 1.2 | Projection time horizon for own-goal-shape flag. |
 | `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_M` | `[GT]` | m | (0, 60] | 18 | Projection distance horizon (pass-1 L-7). Flag invocation uses `min(time, distance)`. |
 | `GRAVITY_MPS2` | `[CROSS]` | m/s² | n/a | 9.81 | Ball Physics #1. |
@@ -84,18 +87,37 @@ flagged `TBD-VALUE` await Stage 0 calibration; values flagged
 `attemptCommittedTick`; the Stage 0 #10-owned synthetic jump
 trajectory (KD-18, §3.3).
 
-**Outputs.** `bool isEligible`, `int predictedContactFrame`,
-`int idealContactFrame` (the apex-aligned target frame against
-which `timingOffsetMs` is measured in §3.4 — a per-call output, not
-a project constant; relocated from §3.1 per pass-1 M-2).
+**Outputs.** Result struct
+`(bool isEligible, int predictedContactFrame, int idealContactFrame,
+MistimedDirection mistimedDirection)`. `idealContactFrame` is the
+apex-aligned target frame against which `timingOffsetMs` is measured
+in §3.4 — a per-call output, not a project constant (relocated from
+§3.1 per pass-1 M-2). `mistimedDirection ∈ { None, Early, Late }`
+encodes the cause when `isEligible = false` due to intent-staleness;
+the caller in §4.6 emits the failed event (v0.2 M-2 separation of
+concerns).
 
-### Pseudocode
+### Frame-Tolerance Rounding (v0.2 M-8 / H-3)
+
+```
+framesEarlyTolerance = (int) ceil(MAX_EARLY_TOLERANCE_MS / FRAME_MS)
+framesLateTolerance  = (int) ceil(MAX_LATE_TOLERANCE_MS  / FRAME_MS)
+```
+
+Rounding is `ceil` (toward looser tolerance) so that boundary
+frames remain eligible; the integer comparison in step 5 then uses
+strict `>` / `<`. With the §3.1 candidate values: `framesEarlyTolerance
+= ceil(140 / 16.67) = 9`; `framesLateTolerance = ceil(90 / 16.67)
+= 6`.
+
+### Pseudocode (pure predicate; no event side effects — v0.2 M-2)
 
 ```
 function EligibilityPredicate(agent, ball, intent, currentFrame):
     // (1) Aerial-phase check (KD-18). Stage 0 aerial phase is owned by #10.
     //     AM #2 ground state must be exitable (not GROUNDED / STUMBLING).
-    if agent.movementState in { GROUNDED, STUMBLING }: return (false, -, -)
+    if agent.movementState in { GROUNDED, STUMBLING }:
+        return (false, -, -, None)
 
     // (2) BallState freshness (F-06 / FR-HE-033).
     if currentFrame - ball.snapshotFrame > 1:
@@ -111,26 +133,30 @@ function EligibilityPredicate(agent, ball, intent, currentFrame):
         intersectBallPathWithContactVolume(ball, agent, apexFrame,
                                             HEAD_CONTACT_VOLUME_RADIUS_M,
                                             HEAD_CONTACT_VOLUME_HEIGHT_M)
-    if predictedContactFrame is None: return (false, -, idealContactFrame)
+    if predictedContactFrame is None:
+        return (false, -, idealContactFrame, None)
 
     // (4) Body-part check (KD-3). Head is unconditional for the head zone.
     if contactBodyPart(agent, predictedContactFrame) != Head:
-        return (false, predictedContactFrame, idealContactFrame)
+        return (false, predictedContactFrame, idealContactFrame, None)
 
     // (5) Intent-staleness handling (KD-17 / FR-HE-018) — pass-1 M-5.
-    framesEarlyTolerance = MAX_EARLY_TOLERANCE_MS / FRAME_MS
-    framesLateTolerance  = MAX_LATE_TOLERANCE_MS  / FRAME_MS
+    //     Per v0.2 M-2, no event emission inside the predicate;
+    //     the §4.6 caller inspects `mistimedDirection` and emits.
     if predictedContactFrame < idealContactFrame - framesEarlyTolerance:
-        emitFailedAttempt(agent, MistimedEarly); return (false, …)
+        return (false, predictedContactFrame, idealContactFrame, Early)
     if predictedContactFrame > idealContactFrame + framesLateTolerance:
-        emitFailedAttempt(agent, MistimedLate);  return (false, …)
+        return (false, predictedContactFrame, idealContactFrame, Late)
 
-    return (true, predictedContactFrame, idealContactFrame)
+    return (true, predictedContactFrame, idealContactFrame, None)
 ```
 
 `targetIntent`, `powerIntent`, and `contactPointIntent` are held
 fixed after commit (KD-17 (a), (c)). Only
-`predictedContactFrame` is re-evaluated each 60 Hz tick.
+`predictedContactFrame` is re-evaluated each 60 Hz tick. The
+§4.6 caller routes `mistimedDirection = Early/Late` into
+`emitFailedAttempt(agent, MistimedEarly/MistimedLate)` exactly
+once per tick per agent.
 
 ### Worked Example — Corner Cross
 
@@ -139,10 +165,12 @@ commits header at 10 Hz tick `T`. Initial prediction: contact at
 frame `T+9`. `idealContactFrame = T+9`. On each subsequent physics
 tick `T+1`, `T+2`, …, the predicate re-evaluates. At `T+5` the
 ball deflects off another defender (Collision System #3 contact
-event mid-flight); the re-prediction returns `T+14`, which exceeds
-`T+9 + framesLateTolerance` (= `T+9 + 5` at `MAX_LATE_TOLERANCE_MS
-= 90`). `HeaderAttemptFailedEvent { failureCause: MistimedLate }`
-is emitted.
+event mid-flight); the re-prediction returns `T+16`, which
+strictly exceeds `T+9 + framesLateTolerance` (= `T+9 + 6 = T+15`
+at `MAX_LATE_TOLERANCE_MS = 90` with `ceil` rounding per §3.2
+Frame-Tolerance Rounding). The predicate returns `(false,
+T+16, T+9, Late)`; the §4.6 caller emits
+`HeaderAttemptFailedEvent { failureCause: MistimedLate }`.
 
 ---
 
@@ -159,6 +187,30 @@ JumpReach_m = JUMP_REACH_BASE_M
 
 where `*_norm = attribute / 100` (attributes are integers in
 [0, 100] per AM #2 §3.5.6). Cited as `FM-010-001` (§8.4).
+
+### `jumpStartFrame` Source (v0.2 M-3)
+
+The synthetic jump trajectory is anchored at `jumpStartFrame`,
+the 60 Hz physics-tick index at which the agent first leaves the
+ground for the committed header. It is set deterministically as:
+
+```
+jumpStartFrame = first currentFrame >= attemptCommittedTick · 6
+                 at which:
+                   - HeaderIntent is still latched, AND
+                   - agent.movementState ∉ { GROUNDED, STUMBLING }
+                     (i.e. the agent has cleared any preceding
+                     AM #2 ground-recovery state)
+```
+
+The `· 6` factor converts the 10 Hz tactical tick index to a
+60 Hz physics frame index (`TICK_RATE_PHYSICS_HZ /
+TICK_RATE_TACTICAL_HZ = 6`). `jumpStartFrame` is populated
+on a new field of the per-attempt `HeaderContactState` (§2.2),
+written exactly once by §4.6 on the first frame the conditions
+above hold, and read by §3.3 every subsequent frame until
+landing. No AM #2 amendment is required (KD-18); the agent's
+ground exit is observed via existing `agent.movementState`.
 
 ### Stage 0 Synthetic Jump Trajectory (KD-18, FR-HE-019)
 
@@ -218,10 +270,11 @@ else:
 
 pointNoiseM       = CONTACT_POINT_NOISE_SIGMA_M
                   · rng.NextGaussian(DRAW_SITE_CONTACT_POINT_ERROR)
-pointError        = ||contactPointActual - contactPointIntent|| + pointNoiseM
-pointQuality      = 1 - clamp01(pointError /
-                               (CONTACT_POINT_ERROR_SIGMA_M
-                                · headingAttrScale(agent)))
+                  / headingAttrScale(agent)
+systematicErrorM  = ||contactPointActual - contactPointIntent||
+                  / headingAttrScale(agent)
+pointError        = systematicErrorM + pointNoiseM
+pointQuality      = 1 - clamp01(pointError / CONTACT_POINT_ERROR_SIGMA_M)
 
 contactQualityScalar = TIMING_POINT_BLEND_ALPHA · timingQuality
                      + (1 - TIMING_POINT_BLEND_ALPHA) · pointQuality
@@ -234,8 +287,19 @@ headingAttrScale(agent) = 1 + CONTACT_POINT_HEADING_ATTR_COEFF
                             · (Heading_norm - 0.5)
 ```
 
-Higher Heading attribute tightens the point-error distribution
-(centred on 0.5 → unit scale). Cited as `FM-010-002` (§8.4).
+(v0.2 H-2 fix.) Both the systematic miss `||contactPointActual −
+contactPointIntent||` and the random noise `pointNoiseM` are
+**divided** by `headingAttrScale(agent)`. Higher Heading attribute
+therefore yields a numerically smaller `pointError` for the same
+underlying physical contact geometry — i.e. high-Heading players
+produce a tighter point-error distribution, which is the stated
+intent. At `Heading_norm = 1.0`, `headingAttrScale = 1.2`, both
+error sources are scaled to ~83% of their baseline. The
+`pointQuality` denominator is the bare `CONTACT_POINT_ERROR_SIGMA_M`
+constant (no longer multiplied by `headingAttrScale`), so the
+mapping from physical error to quality is fixed across players;
+only the physical error itself varies with attribute. Cited as
+`FM-010-002` (§8.4).
 
 ### RNG Draw-Site Wiring (KD-10, FR-HE-024, pass-1 M-4)
 
@@ -243,6 +307,21 @@ Both Gaussian draws above route through #16's `NextGaussian` API
 with registered draw-site IDs `DRAW_SITE_TIMING_JITTER` and
 `DRAW_SITE_CONTACT_POINT_ERROR` (declared in §4.4). No phantom
 draw sites exist.
+
+### `timingJitterMs` Semantics (v0.2 M-9)
+
+`timingJitterMs` models **sub-frame execution noise**: per-attempt
+micro-variations in the contact instant within the
+`actualContactFrame` window that do not shift the integer frame
+index (so eligibility in §3.2 is unaffected) but do shift the
+effective contact moment continuously, affecting quality. This
+contrasts with execution noise that would push contact into the
+adjacent frame — that magnitude of variation is already modelled
+by Decision Tree #8's tactical-tick choice of commit moment and
+by the §3.2 eligibility envelope (`MAX_EARLY/LATE_TOLERANCE_MS`).
+Consequently, the jitter is applied **post-eligibility** to
+`timingOffsetMs` only, never to `predictedContactFrame` or
+`actualContactFrame`.
 
 ### Telemetry Label Assignment (KD-2, FR-HE-020, pass-1 L-1)
 
@@ -274,25 +353,31 @@ launchAngle        = headerLaunchAngle(contactPointActual,
 `outgoingSpeed` is cited as `FM-010-003` (§8.4). Fatigue follows
 CLAUDE.md convention `0 = rested, 1 = fatigued` (KD-9, FR-HE-011).
 
-### `headerLaunchAngle` Geometry
+### `headerLaunchAngle` Geometry (v0.2 H-5)
 
-Reflection-style geometry off the head contact point, modulated by
-head angular velocity:
+Stage 0 launch angle is pure reflection geometry off the head
+contact point. Head angular velocity (`ω_head` from §3.6) affects
+the **outgoing spin** (§3.6 spin transfer) but does NOT modulate
+the launch direction at Stage 0 — biomechanical data tying head
+angular velocity to launch-angle deflection is not currently
+calibrated against published references (§8.3), and introducing a
+free coefficient here would violate KD-11. A Stage 1+ refinement
+may add a `LAUNCH_ANGLE_HEAD_VELOCITY_COEFF [GT]` when validation
+data warrants (deferred to §7.12).
 
 ```
-incident         = -normalize(incomingBallVelocity)
-normal           = normalize(contactPointActual_worldspace
-                              - agent.headCentre_worldspace)
-reflectedDir     = 2 · dot(incident, normal) · normal - incident
-adjustedDir      = rotate(reflectedDir, ω_head · ANGULAR_COEFF)
-launchAngle      = asin(adjustedDir.z / ||adjustedDir||)
+incident      = -normalize(incomingBallVelocity)
+normal        = normalize(contactPointActual_worldspace
+                           - agent.headCentre_worldspace)
+reflectedDir  = 2 · dot(incident, normal) · normal - incident
+launchAngle   = asin(reflectedDir.z / ||reflectedDir||)
 ```
 
-`ω_head` is `headAngularVelocity` derived in §3.6. `ANGULAR_COEFF`
-is absorbed into the head-velocity contribution; no new constant
-is published here (covered by `SPIN_TRANSFER_COEFF` semantically;
-the geometric coupling on launch angle is implicit in
-`reflectedDir`).
+The intended launch direction (toward `targetIntent`) is realized
+by the upstream choice of `contactPointIntent`: Decision Tree #8
+selects a contact point on the head surface such that the
+reflected vector points at the target. `pointError` (§3.4)
+captures deviation from that geometric ideal.
 
 ### Worked Example
 
@@ -336,28 +421,28 @@ approximation; at Stage 1+ if AM #2 publishes a head-segment
 skeletal API, the derivation simplifies to a direct read
 (deferred to §7.9).
 
-### Spin Output
+### Spin Output (v0.2 H-1)
 
 ```
 spinPreservationFactor = SPIN_PRESERVATION_BASE
                        · (1 - contactPointAxialOffset_m
                               / SPIN_TRANSFER_REVERSAL_THRESHOLD)
 
-reversalTerm           = max(0, -spinPreservationFactor) · incomingSpin
-                         // when contactPointAxialOffset exceeds
-                         // SPIN_TRANSFER_REVERSAL_THRESHOLD,
-                         // spinPreservationFactor goes negative →
-                         // outgoing spin component opposes incoming.
-
 outgoingSpin           = SPIN_TRANSFER_COEFF · headAngularVelocity
                        + (incomingSpin · spinPreservationFactor)
-                       - reversalTerm
 ```
 
-`outgoingSpin` is cited as `FM-010-004` (§8.4). The
-`spinPreservationFactor` formula is closed-form; every symbol is
-either a §3.1 constant or a documented per-call value (M-1
-closure).
+When `contactPointAxialOffset` exceeds
+`SPIN_TRANSFER_REVERSAL_THRESHOLD`, `spinPreservationFactor` goes
+negative and the `(incomingSpin · spinPreservationFactor)` term
+already carries the sign flip — a single sign reversal proportional
+to the axial-offset overshoot. (The v0.1 formula additionally
+subtracted a `reversalTerm`, which double-counted the reversal;
+the term has been removed.)
+
+`outgoingSpin` is cited as `FM-010-004` (§8.4). The formula is
+closed-form; every symbol is either a §3.1 constant or a
+documented per-call value.
 
 ### Worked Example
 
@@ -366,9 +451,9 @@ Incoming topspin 8 rad/s; `contactPointAxialOffset = 0.02 m`;
 0.015 m`:
 
 ```
-factor       = 0.6 · (1 - 0.02 / 0.015) = 0.6 · -0.333 = -0.2
-reversalTerm = 0.2 · 8 = 1.6 rad/s
-contribution = (8 · -0.2) - 1.6 = -3.2 rad/s   (backspin reversal)
+factor                 = 0.6 · (1 - 0.02 / 0.015) = 0.6 · -0.333 = -0.2
+incomingContribution   = 8 · (-0.2) = -1.6 rad/s   (backspin reversal,
+                                                    proportional to overshoot)
 ```
 
 Adding the `SPIN_TRANSFER_COEFF · headAngularVelocity` term gives
@@ -408,18 +493,40 @@ candidate contact frame; participating agents within
    rng.NextFloat(DRAW_SITE_DUEL_TIEBREAK)`. Re-rank. Non-tie scores
    are NEVER perturbed.
 
-4. **Winner emission.** Highest scorer wins; emits
-   `HeaderExecutedEvent`. Losers receive `disturbanceFactor ∈
-   [0, DUEL_DISTURBANCE_MAX]` (scaled by `baseScore` gap), applied
-   multiplicatively to their `contactQualityScalar` (`q' = q ·
-   (1 - disturbanceFactor)`). If `q' < MIN_CONTACT_QUALITY`, the
-   loser emits `HeaderAttemptFailedEvent` instead of a poor-
-   quality `HeaderExecutedEvent` (FR-HE-026).
+4. **Winner emission and per-loser disturbance (v0.2 H-4, M-5).**
+   Highest scorer wins; emits `HeaderExecutedEvent`. For each
+   loser `i`, the `baseScore` gap (after any step-3 perturbation)
+   is `gap_i = baseScore[winner] − baseScore[i]`, and the
+   disturbance factor is:
 
-5. **Multi-way (3+) duels.** Winner-only emits
-   `HeaderExecutedEvent`; all losers emit
+   ```
+   disturbanceFactor_i = DUEL_DISTURBANCE_MAX
+                       · clamp01(gap_i / DUEL_DISTURBANCE_GAP_SATURATION)
+   ```
+
+   Disturbance grows linearly from 0 at `gap = 0` to
+   `DUEL_DISTURBANCE_MAX` at `gap ≥ DUEL_DISTURBANCE_GAP_SATURATION`,
+   then saturates. The disturbance is applied multiplicatively to
+   the loser's `contactQualityScalar`:
+
+   ```
+   q'_i = q_i · (1 - disturbanceFactor_i)
+   ```
+
+   If `q'_i < MIN_CONTACT_QUALITY`, loser `i` emits
    `HeaderAttemptFailedEvent` with `failureCause = DisturbedInDuel`
-   (wording aligned with §2.3 F-04 per pass-1 L-5, FR-HE-027).
+   (FR-HE-026). Otherwise loser `i` emits a disturbed-but-executed
+   `HeaderExecutedEvent` carrying `contactQualityScalar = q'_i`
+   and `contestedDuelId` set to the duel ID.
+
+5. **Multi-way (3+) duels (v0.2 M-5 alignment).** The semantics
+   above apply uniformly regardless of participant count: exactly
+   one winner emits a full-quality `HeaderExecutedEvent`; each
+   loser emits either a disturbed `HeaderExecutedEvent` (if `q'_i
+   ≥ MIN_CONTACT_QUALITY`) or a `HeaderAttemptFailedEvent` (if
+   `q'_i < MIN_CONTACT_QUALITY`). There is no separate "all-losers-fail"
+   3+ way path. (v0.1 step 5 had an inconsistent winner-only-emits
+   semantics for 3+ way duels; that has been removed.)
 
 ### Worked Example
 
@@ -498,7 +605,8 @@ function emitFailedAttempt(agent, cause):
 | F-01 early | `MistimedEarly` |
 | F-01 late | `MistimedLate` |
 | F-02, F-03 | `PositionedPoorly` |
-| F-04 (duel loss) | `DisturbedInDuel` |
+| F-04 (duel loser with `q' < MIN_CONTACT_QUALITY`) | `DisturbedInDuel` |
+| F-04 (duel loser with `q' ≥ MIN_CONTACT_QUALITY`) | no failed event; disturbed `HeaderExecutedEvent` emitted per §3.7 step 4 |
 | F-07 (envelope clamp) | absorbed into `pointError`; no failed event |
 
 `Ball.ApplyKick` is invoked only on successful contact (§4.3).
@@ -539,3 +647,13 @@ for evt in contactEvents:
     useContactNormal(evt.normal)
     useRelativeVelocity(evt.relativeVelocity)
 ```
+
+---
+
+## 3.11 Version History
+
+| Version | Date         | Author  | Notes |
+|---------|--------------|---------|-------|
+| 0.1     | May 16, 2026 | drafter | Initial section draft from outline-detailed v1.1 |
+| 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 adversarial-review fix pass (21 findings: 5 H / 9 M / 7 L). H-1 §3.6 spin double-reversal removed; H-2 §3.4 `headingAttrScale` semantics realigned (errors divided by scale); H-3 §3.2 worked example off-by-one fixed (T+14 → T+16); H-4 §3.7 step 4 `disturbanceFactor` formula added + `DUEL_DISTURBANCE_GAP_SATURATION [GT]` row added to §3.1; H-5 §3.5 `ANGULAR_COEFF` removed (Stage 0 reflection-only launch angle, deferred to §7.12); M-2 `EligibilityPredicate` split into pure predicate + caller; M-3 `jumpStartFrame` source defined in §3.3; M-5 §3.7 step 5 2-way/3-way loser semantics aligned; M-8 frame-tolerance `ceil` rounding policy pinned in §3.2; M-9 `timingJitterMs` semantics paragraph added in §3.4; L-3 `JUMP_APEX_FRACTION` tag rationale moved to footnote. |
+

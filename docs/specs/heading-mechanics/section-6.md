@@ -75,13 +75,22 @@ budget rows.
 
 | Component                          | Frequency       | Per-call cost (`[EST]`) | Per-frame cost (`[EST]`) |
 |------------------------------------|-----------------|-------------------------|--------------------------|
-| Eligibility predicate (§3.2)       | ≤22 / frame     | ≤2 µs                   | ≤44 µs                   |
+| Eligibility predicate (§3.2)[^elig-bound] | ≤22 / frame | ≤2 µs                   | ≤44 µs                   |
 | Jump-kinematics step (§3.3)        | ≤2 / frame      | ≤3 µs                   | ≤6 µs                    |
 | Contact-quality scalar (§3.4)      | ≤2 / frame      | ≤4 µs                   | ≤8 µs                    |
 | Power & launch-angle (§3.5)        | ≤2 / frame      | ≤3 µs                   | ≤6 µs                    |
 | Spin transfer (§3.6)               | ≤2 / frame      | ≤3 µs                   | ≤6 µs                    |
 | Own-goal-shape flag (§3.8)         | ≤2 / frame      | ≤4 µs                   | ≤8 µs                    |
 | **Steady-state total**             |                 |                         | **≈78 µs (budget ≤80)**  |
+
+[^elig-bound]: v0.2 L-5 clarification. The ≤22/frame cap is the
+upper-bound pessimism for budget framing — the §4.6 pseudocode
+gates the predicate on "agent has a HeaderIntent latched and
+aerial-phase active", which is typically 0–2 agents per frame
+during open play. The 22-cap binds the worst-case set-piece frame
+(corner / wide free kick with full box presence) and is therefore
+not the steady-state expectation; ≤44 µs is the worst-case
+budget envelope, not a per-frame average.
 
 ### 6.3.2 p99 Duel-Frame Decomposition
 
@@ -160,3 +169,4 @@ No migration work is required for #10 at Stage 0.
 | Version | Date         | Author  | Notes                                                  | Reviewer |
 |---------|--------------|---------|--------------------------------------------------------|----------|
 | 0.1     | May 16, 2026 | drafter | Initial section draft from outline-detailed v1.1       | pending  |
+| 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: §6.3.1 eligibility-predicate frequency upper-bound clarified via footnote (L-5).                                          | pending  |
