@@ -149,20 +149,39 @@ next 60 Hz physics tick. `targetIntent`, `powerIntent`, and
 ```
 Per 60 Hz physics tick:
   for each agent in #16 §3.2 entity order:
+    // jumpStartFrame initialization (v0.2 M-3): set on the
+    // first frame at or after attemptCommittedTick·6 where
+    // movementState ∉ {GROUNDED, STUMBLING}.
+    if HeaderIntent latched and contactState.jumpStartFrame is unset:
+      if currentFrame >= intent.attemptCommittedTick · 6 and
+         agent.movementState not in { GROUNDED, STUMBLING }:
+        contactState.jumpStartFrame = currentFrame
+
     if agent has a HeaderIntent latched and aerial-phase active:
-      (eligible, predictedContactFrame, idealContactFrame)
+      (eligible, predictedContactFrame, idealContactFrame,
+       mistimedDirection)
           = EligibilityPredicate(agent, ball, intent, currentFrame)
       if not eligible:
+        // v0.2 M-2: predicate is pure; caller emits the failed event.
+        if mistimedDirection == Early:
+          emitFailedAttempt(agent, MistimedEarly)
+        else if mistimedDirection == Late:
+          emitFailedAttempt(agent, MistimedLate)
         continue
       update synthetic Z trajectory (§3.3)
       if currentFrame == predictedContactFrame:
+        contactState.actualContactFrame = currentFrame   // v0.2 M-4
         accumulate into ContestedDuelContext if multi-agent
   for each ContestedDuelContext:
     DuelResolution(context)           // §3.7
     Winner: contactQualityScalar → §3.5 outgoingSpeed, §3.6 outgoingSpin
             → Ball.ApplyKick(...)
-            → publish HeaderExecutedEvent
-    Losers: emit HeaderAttemptFailedEvent (DisturbedInDuel)
+            → publish HeaderExecutedEvent (full quality)
+    Losers (v0.2 M-5 alignment, applies to 2-way and 3+ way uniformly):
+            if q' >= MIN_CONTACT_QUALITY:
+              publish disturbed HeaderExecutedEvent
+            else:
+              emit HeaderAttemptFailedEvent (DisturbedInDuel)
 ```
 
 ASCII sequence diagram:
@@ -199,3 +218,4 @@ ASCII sequence diagram:
 | Version | Date | Author | Notes | Reviewer |
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | section authoring | Initial draft from `outline-detailed.md` v1.1. File layout, interface contracts, determinism + performance compliance surfaces, tick-scheduling enumerated. Upstream anchors pinned where verified; remaining anchors marked TBD per OI-005. | pending |
+| 0.2 | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: §4.6 60 Hz pseudocode now (a) defines `jumpStartFrame` initialization (M-3), (b) emits mistimed-failed events at the caller after the pure predicate returns (M-2), (c) sets `actualContactFrame` on the contact-frame branch (M-4), (d) replaces "Losers: emit failed" with the uniform 2-way/3+ way M-5 loser semantics. | pending |

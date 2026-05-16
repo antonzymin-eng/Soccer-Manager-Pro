@@ -171,8 +171,28 @@ a label; no #10 physics-layer change is required.
 
 ---
 
-## 7.12 Version History
+## 7.12 Head-Velocity Launch-Angle Modulation — Stage 1+
+
+**Statement:** Stage 0 `headerLaunchAngle` is pure reflection
+geometry off the head contact point (§3.5). A
+`LAUNCH_ANGLE_HEAD_VELOCITY_COEFF [GT]` term coupling head angular
+velocity to launch-angle deflection may be added at Stage 1+ when
+biomechanical validation data warrants.
+
+**Rationale:** v0.2 H-5 removed an untagged `ANGULAR_COEFF` from
+the §3.5 pseudocode that violated KD-11. The geometric effect of
+head angular velocity on launch direction (as distinct from
+outgoing spin, which §3.6 already captures) is plausible but
+uncalibrated; introducing a free coefficient pre-data would force
+an `[EST]` value with no defensible upgrade path. Once validation
+data exists, the natural integration point is the §3.5
+`reflectedDir` → `adjustedDir` rotation.
+
+---
+
+## 7.13 Version History
 
 | Version | Date         | Author  | Notes                                                  | Reviewer |
 |---------|--------------|---------|--------------------------------------------------------|----------|
 | 0.1     | May 16, 2026 | drafter | Initial section draft from outline-detailed v1.1       | pending  |
+| 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: added §7.12 head-velocity launch-angle modulation deferral (H-5 rationale).                                               | pending  |

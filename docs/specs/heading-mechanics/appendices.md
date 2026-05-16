@@ -73,14 +73,13 @@ continuous at `Δt = 0` with value 1 (perfect timing). The
 piecewise function is therefore Lipschitz in `Δt` with constant
 `max(1/T_early, 1/T_late)`.
 
-### A.3 Spin-Transfer Reversal Boundary
+### A.3 Spin-Transfer Reversal Boundary (v0.2 H-1)
 
 The outgoing spin (§3.6) is:
 
 ```
 outgoingSpin = SPIN_TRANSFER_COEFF · headAngularVelocity
              + incomingSpin · spinPreservationFactor
-             - reversalTerm
 ```
 
 where
@@ -88,27 +87,33 @@ where
 ```
 spinPreservationFactor = SPIN_PRESERVATION_BASE
                        · (1 - contactPointAxialOffset / SPIN_TRANSFER_REVERSAL_THRESHOLD)
-reversalTerm           = max(0, -spinPreservationFactor) · incomingSpin
 ```
 
 At `contactPointAxialOffset = SPIN_TRANSFER_REVERSAL_THRESHOLD`,
 `spinPreservationFactor` crosses zero — at that exact offset, the
 incoming spin contribution to outgoing spin is zero. Beyond the
 threshold, `spinPreservationFactor` is negative and the
-`reversalTerm` activates, producing a partial reversal of the
-incoming spin component.
+`(incomingSpin · spinPreservationFactor)` term carries the sign
+flip directly: the incoming spin contribution to outgoing spin
+reverses with magnitude proportional to the axial-offset overshoot.
+
+(The v0.1 formulation also subtracted a `reversalTerm =
+max(0, -spinPreservationFactor) · incomingSpin`, which
+double-counted the reversal — once via the preservation term going
+negative, and a second time via the explicit subtraction. The
+`reversalTerm` has been removed in v0.2 H-1; the sign flip is
+carried exclusively by `spinPreservationFactor`.)
 
 **Worked example.** Incoming topspin 8 rad/s; axial offset 0.02 m;
 `SPIN_PRESERVATION_BASE = 0.6`; `SPIN_TRANSFER_REVERSAL_THRESHOLD =
 0.015 m`.
 
 ```
-spinPreservationFactor = 0.6 · (1 - 0.02 / 0.015) = -0.2
-reversalTerm           = 0.2 · 8 = 1.6 rad/s
-incomingSpinContribution = 8 · (-0.2) - 1.6 = -3.2 rad/s
+spinPreservationFactor   = 0.6 · (1 - 0.02 / 0.015) = -0.2
+incomingSpinContribution = 8 · (-0.2)               = -1.6 rad/s
 ```
 
-The 8 rad/s topspin becomes a 3.2 rad/s backspin in the outgoing
+The 8 rad/s topspin becomes a 1.6 rad/s backspin in the outgoing
 spin contribution (before `SPIN_TRANSFER_COEFF · headAngularVelocity`
 is added).
 
@@ -235,7 +240,7 @@ validation scenarios are measured.
 | Term | Definition |
 |------|------------|
 | `HEAD_CONTACT_VOLUME` | Cylindrical region around the agent head where ball contact is geometrically possible; radius and height are `[GT]` constants in §3.1 |
-| `ContactPointIntent` | Decision Tree #8 output specifying the intended contact location on the head surface (2-D head-local coordinates: forehead-centre / forehead-edge / temple as a continuous parameter) |
+| `ContactPointIntent` | Decision Tree #8 output specifying the intended contact location on the head surface as a 2-D `Vector2` in head-local coordinates (metres). Axis convention (v0.2 L-7): origin at the head centre; `+x` = `agent.facing` forward (toward forehead); `+y` = agent-left lateral. Distances are euclidean in metres, consistent with `CONTACT_POINT_ERROR_SIGMA_M` and `||contactPointActual − contactPointIntent||` in §3.4. |
 | `ContactQualityScalar` | Continuous scalar ∈ [0,1] derived from signed timing offset and contact-point error; the formula-gating quantity for outgoing power / direction (KD-2) |
 | `HeaderIntent` | Decision Tree #8 output struct: `powerIntent`, `contactPointIntent`, `targetIntent`, `attemptCommittedTick` |
 | `HeaderExecutedEvent` | Event published on every contacted header; carries telemetry, outgoing velocity / spin, and the `ownGoalShapedTrajectory` flag |
@@ -320,7 +325,7 @@ Status at section-files v0.1 (May 16, 2026):
 
 | ID | Item | Owner | Status |
 |----|------|-------|--------|
-| OI-001 | `DOMAIN_TAG_HEADING = 0x16` allocation in #16 §3.4 | back-prop ERR-010-001 | pending — to file when section-3 lands |
+| OI-001 | `DOMAIN_TAG_HEADING = 0x16` allocation in #16 §3.4 | back-prop ERR-010-001 | ERR-010-001 filed in `spec-error-log.md` May 16, 2026 (v0.2 M-1); #16 §3.4 allocation still pending |
 | OI-002 | #18 §3.10 trace channel rows for `heading.*` channels | back-prop | pending |
 | OI-003 | DOI verification for §8.3 external references | drafter | pending |
 | OI-004 | Goalkeeper #11 interface confirmation | post-#11 IN REVIEW | not blocking |
@@ -329,8 +334,41 @@ Status at section-files v0.1 (May 16, 2026):
 
 ---
 
+## Appendix H — Mapping Table to v0.1 Section-Files PASS-1 Review Findings
+
+Maps the 21 findings of
+`adversarial-review-section-files-v1.md` (5 H / 9 M / 7 L,
+May 16, 2026) to their resolution location in v0.2.
+
+| Finding | Severity | Resolution |
+|---------|----------|------------|
+| H-1 §3.6 spin double-reversal | HIGH | §3.6 formula simplified — `reversalTerm` removed; sign flip carried by `spinPreservationFactor` only. §3.6 worked example recomputed (−1.6 rad/s). Appendix A.3 rewritten. §5.1.5 reversal-boundary test rewritten with monotonicity assertion. |
+| H-2 §3.4 `headingAttrScale` inversion | HIGH | §3.4 formula rewritten — `headingAttrScale` now **divides** both `||contactPointActual − contactPointIntent||` (systematic miss) and `pointNoiseM` (random); `pointQuality` denominator is the bare `CONTACT_POINT_ERROR_SIGMA_M`. Higher Heading → tighter physical-error distribution → higher quality. Prose updated. §5.1.5 adds monotonicity test. |
+| H-3 §3.2 worked example off-by-one | HIGH | Re-prediction changed `T+14 → T+16`; rounding policy (`ceil`) pinned in new §3.2 "Frame-Tolerance Rounding" subsection. Closes M-8. |
+| H-4 §3.7 step 4 missing `disturbanceFactor` formula | HIGH | New `DUEL_DISTURBANCE_GAP_SATURATION [GT]` row in §3.1; explicit `disturbanceFactor_i = DUEL_DISTURBANCE_MAX · clamp01(gap_i / DUEL_DISTURBANCE_GAP_SATURATION)` formula in §3.7 step 4 + per-loser `q'_i` and FR-HE-026 branch logic. §9.1 checklist row added. Closes L-2. |
+| H-5 §3.5 `ANGULAR_COEFF` magic constant | HIGH | `ANGULAR_COEFF` removed from §3.5 pseudocode; Stage 0 `headerLaunchAngle` is pure reflection geometry. New §7.12 deferral for Stage 1+ `LAUNCH_ANGLE_HEAD_VELOCITY_COEFF`. KD-11 compliance restored. |
+| M-1 `ERR-010-001` not filed | MEDIUM | Entry filed in `docs/tracking/spec-error-log.md`. KD-10 wording in §1.3 adjusted to reflect actual filing status; Appendix G OI-001 and §9.4 OI-001 status updated. |
+| M-2 `EligibilityPredicate` side effects | MEDIUM | Predicate now returns `(bool, predictedContactFrame, idealContactFrame, mistimedDirection)`; §4.6 caller emits failed events on `mistimedDirection ∈ {Early, Late}`. |
+| M-3 `jumpStartFrame` source undefined | MEDIUM | New §3.3 "jumpStartFrame Source" subsection defines initialization rule (first frame at or after `attemptCommittedTick·6` with non-grounded state). §2.2 `HeaderContactState` adds `jumpStartFrame` field. §4.6 pseudocode shows initialization. |
+| M-4 `actualContactFrame` set nowhere | MEDIUM | §4.6 pseudocode now sets `contactState.actualContactFrame = currentFrame` on the contact-frame branch. §2.2 field comment updated. |
+| M-5 2-way vs. 3-way duel loser semantics | MEDIUM | §3.7 step 5 rewritten — uniform semantics across participant counts: winner full-quality executed event; each loser either disturbed executed event (`q' ≥ MIN_CONTACT_QUALITY`) or failed event. FR-HE-027 rewritten; §2.3 F-04 prose rewritten; §3.9 failure-cause table updated; §5.2.6 3-way test rewritten with tight + lopsided sub-scenarios. |
+| M-6 §5.1.6 tiebreak test "exactly once" | MEDIUM | Rewritten as "exactly `N` calls per duel, where `N` is the near-tie cohort size" with four enumerated cases. |
+| M-7 §5.1.7 test description vs §2.3 mismatch | MEDIUM | Split into Group A (F-01..F-04, failed-event assertion) and Group B (F-05..F-07, continue-with-modification assertions cite-mapped to FR-HE-029 / FR-HE-033 / FR-HE-030). |
+| M-8 frame-tolerance rounding unspecified | MEDIUM | Pinned `ceil` in new §3.2 "Frame-Tolerance Rounding" subsection (closes with H-3). |
+| M-9 `timingJitterMs` semantics unclear | MEDIUM | New §3.4 "`timingJitterMs` Semantics" subsection states explicitly: sub-frame execution noise applied post-eligibility to `timingOffsetMs` only; never to `predictedContactFrame` / `actualContactFrame`. |
+| L-1 `attemptCommittedTick` unused | LOW | Now documented in §2.2 struct comment as the source for §3.3 `jumpStartFrame` derivation (chains with M-3). |
+| L-2 `DUEL_DISTURBANCE_MAX` formula gap | LOW | Closed with H-4 (formula and saturation constant added in §3.7 step 4 + §3.1). |
+| L-3 `JUMP_APEX_FRACTION` tag rationale | LOW | Moved into a footnote on the §3.1 row; description column reserved for "what the constant does". |
+| L-4 `XC-010-005` anchor missing | LOW | Anchored to Event System #17 §3.4.2 `EventBus.Publish` surface (transport for `HeaderExecutedEvent`); §8.2 / §8.4 / §9.2 updated. Adjudication framed as future Match Referee concern not requiring an anchor at Stage 0. |
+| L-5 §6.3.1 eligibility upper-bound looseness | LOW | New footnote on §6.3.1 eligibility-predicate row makes the ≤22/frame cap explicit as worst-case set-piece-frame pessimism, not steady-state expectation. |
+| L-6 §5.3.1 telemetry shares unsourced | LOW | §5.3.1 framing rewritten: shares model systematic mistiming from Decision Tree #8 commit-tick choice and upstream perception variance, not noise alone; designer-target pending Stage 0 calibration; no published header timing-label distribution available. |
+| L-7 Glossary `ContactPointIntent` semantics drift | LOW | Glossary row rewritten — head-local axis convention pinned (origin at head centre; `+x` = `agent.facing` forward; `+y` = agent-left lateral; euclidean metres). §2.2 struct comment also pinned. |
+
+---
+
 ## Version History
 
 | Version | Date         | Author  | Notes                                                  | Reviewer |
 |---------|--------------|---------|--------------------------------------------------------|----------|
 | 0.1     | May 16, 2026 | drafter | Initial appendices draft from outline-detailed v1.1    | pending  |
+| 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: Appendix A.3 rewritten for single-reversal spin formula (H-1); Appendix D glossary `ContactPointIntent` row rewritten with head-local axis convention (L-7); Appendix G OI-001 status updated for `ERR-010-001` filing (M-1); new Appendix H mapping the 21 PASS-1 findings to v0.2 resolutions. | pending |

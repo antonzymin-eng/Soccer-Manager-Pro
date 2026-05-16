@@ -243,8 +243,11 @@ project's history.
 registered draw-site IDs (#16 §4.5). Iteration over contested-duel
 participants follows #16 §3.2 entity ordering. A new domain-tag
 allocation `DOMAIN_TAG_HEADING = 0x16` is requested from #16 §3.4
-via back-propagation entry `ERR-010-001` (created during section
-authoring). The allocation is a pure namespace amendment to
+via back-propagation entry `ERR-010-001` (filed in
+`docs/tracking/spec-error-log.md` as part of the v0.2 PASS-1 fix
+pass; v0.1 declared the entry as "created during section
+authoring" but the row was not present in the log — v0.2 M-1
+closure). The allocation is a pure namespace amendment to
 APPROVED #16 (no `DETERMINISM_DIGEST_VERSION` bump), following the
 precedent set by Event System #17's `DOMAIN_TAG_EVENT_LEDGER = 0x15`
 patch on May 14, 2026 (#16 §3.4 v1.0.1). Next free slot in #16 §3.4
@@ -439,3 +442,4 @@ drafting.
 | Version | Date | Author | Notes | Reviewer |
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | section authoring | Initial draft from `outline-detailed.md` v1.1. All eighteen KDs reproduced. Dependency tables enumerated with verified upstream anchors where pinned; remaining anchors marked TBD per OI-005. | pending |
+| 0.2 | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: KD-10 wording adjusted to reflect actual back-prop filing status (M-1) — `ERR-010-001` now filed in `spec-error-log.md` atomically with this revision. No KD set changes; KD-10's design intent unchanged. | pending |

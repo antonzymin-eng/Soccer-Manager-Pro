@@ -55,6 +55,7 @@ and §3.1 Master Physical Profile Table; cross-check each line.
 - [ ] `DUEL_TIEBREAK_EPSILON` — `[GT]`
 - [ ] `DUEL_TIEBREAK_NOISE_AMPLITUDE` — `[GT]`
 - [ ] `DUEL_DISTURBANCE_MAX` — `[GT]`
+- [ ] `DUEL_DISTURBANCE_GAP_SATURATION` — `[GT]` (v0.2 H-4)
 - [ ] `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_S` — `[GT]`
 - [ ] `OWN_GOAL_TRAJECTORY_PROJECTION_HORIZON_M` — `[GT]`
 - [ ] `GRAVITY_MPS2` — `[CROSS]` (Ball Physics #1)
@@ -96,7 +97,7 @@ spec. Method: grep target spec; section must exist.
 
 | ID | Item | Status |
 |----|------|--------|
-| OI-001 | `DOMAIN_TAG_HEADING = 0x16` allocation in #16 §3.4 (back-prop ERR-010-001) | pending — atomic with §3.1 row promotion `[CROSS-PENDING] → [CROSS]` |
+| OI-001 | `DOMAIN_TAG_HEADING = 0x16` allocation in #16 §3.4 (back-prop ERR-010-001) | ERR-010-001 filed in `spec-error-log.md` May 16, 2026 (v0.2 M-1); allocation in #16 §3.4 still pending — atomic with §3.1 row promotion `[CROSS-PENDING] → [CROSS]` |
 | OI-002 | `#18 §3.10` trace channel rows for `heading.*` channels | pending — back-prop when §2.4 lands in #18 §3.10 |
 | OI-003 | DOI verification for §8.3 external references (6 anchors) | pending — drafter task |
 | OI-005 | Pin #3 contact-event API subsection; pin #8 §1.7.x intent-surface anchor; pin #17 event-publish subsection | pending — drafter task during pass-2 |
@@ -142,6 +143,12 @@ scope: #1, #2, #3, #4, #5, #6, #8, #16, #17, #18, #19, #20.
   drafted from outline-detailed v1.1. Pass-1 adversarial review of
   section files pending before any `IN REVIEW` flip in
   `SPEC_INDEX.md`.
+- **Status at v0.2 (May 16, 2026):** `IN REVIEW` candidate — v0.2
+  PASS-1 fix pass landed across all section files + appendices,
+  resolving the 21 findings (5 H / 9 M / 7 L) in
+  `adversarial-review-section-files-v1.md`. `ERR-010-001` filed in
+  `spec-error-log.md`. Ready for `SPEC_INDEX.md` row 10 flip
+  `NOT STARTED → IN REVIEW` atomic with v0.2 landing.
 
 ---
 
@@ -150,3 +157,4 @@ scope: #1, #2, #3, #4, #5, #6, #8, #16, #17, #18, #19, #20.
 | Version | Date         | Author  | Notes                                                  | Reviewer |
 |---------|--------------|---------|--------------------------------------------------------|----------|
 | 0.1     | May 16, 2026 | drafter | Initial checklist; not yet exercised                   | pending  |
+| 0.2     | May 16, 2026 | drafter | Added `DUEL_DISTURBANCE_GAP_SATURATION` row (H-4); updated OI-001 status (M-1); added v0.2 status note for `SPEC_INDEX.md` row 10 flip readiness. | pending |
