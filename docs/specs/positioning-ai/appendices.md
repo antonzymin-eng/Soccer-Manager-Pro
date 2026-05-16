@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Appendices
 
 **Created:** May 15, 2026
-**Last Updated:** May 15, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.2)
-**Version:** 0.1
+**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 
 ---
@@ -63,11 +63,25 @@ Appendix D.
 
 ## Appendix B — Formation Archetype Profiles
 
-Each archetype is an 11-row table indexed by `RoleId`. All
-`longPct` and `lateralPct` values are own-attacking-orientation
-(orchestrator mirrors for the defending side). Values are
-representative; final values gate on lead-developer ratification
-under R-01.
+Each archetype is an 11-row table indexed by `RoleId`, plus the
+per-archetype `lineCutIndices = (firstMid, firstAtk)` pair feeding
+§3.3.1 (AR-S1-02). All `longPct` and `lateralPct` values are
+own-attacking-orientation (orchestrator mirrors for the defending
+side). Values are representative; final values gate on lead-
+developer ratification under R-01.
+
+Planning-doc citation: `docs/planning/master-development-plan.md`
+§3.2 lines 441–449 ("FormationSystem.cs, Month 3–4 deliverable")
+enumerates the ten Stage 1 named variants; Stage 0 ships three
+structural families (4-4-2 / 4-3-3 / 4-2-3-1) covering two-striker
+/ front-three / single-striker-with-AM patterns. See §7.6 and
+KD-7.
+
+| Archetype | `lineCutIndices` | Defense / Midfield / Attack |
+|---|---|---|
+| `FAMILY_4_4_2` | (4, 8) | 4 / 4 / 2 |
+| `FAMILY_4_3_3` | (4, 7) | 4 / 3 / 3 |
+| `FAMILY_4_2_3_1` | (4, 9) | 4 / 5 / 1 (AM in Midfield via `defaultLine` override) |
 
 ### B.1 4-4-2 Family (`FAMILY_4_4_2`)
 
@@ -188,7 +202,7 @@ applied).
 |---|---|
 | **Anchor** | Per-role pitch-relative target position from the formation archetype lookup. |
 | **Archetype** | One of three Stage 0 formation families: 4-4-2, 4-3-3, 4-2-3-1. |
-| **Compositor** | The Stage 0 simplified slot-composition pipeline (§3.7) — six sequential steps producing the per-agent `formationSlot`. |
+| **Compositor** | The Stage 0 simplified slot-composition pipeline (§3.7) — seven sequential steps (anchor / offset / context / spacing / clamp / line+lane resolve / write) producing the per-agent `formationSlot`. (AR-S1-17 step-count alignment.) |
 | **Compactness** | Pair of scalars (lateral, vertical) per phase that scale anchor spread around the centroid. |
 | **Dwell** | Tick counter that gates a hysteretic transition. |
 | **`formationSlot`** | The per-agent `Vector2` output of #12, copied into each agent's `TacticalContext.FormationSlot` at #8 Step 2. |
@@ -197,3 +211,11 @@ applied).
 | **Phase** | Local 4-value enum classifying ball/possession state for #12-internal use. |
 | **Pull factor** | `[GT]` per-role-per-phase scalar for ball-relative offset. |
 | **Reference host** | The named developer-workstation pin under KD-15 used for §6.3 budget verification until `certification-platform.md` is filled. |
+| **`SENTINEL_NO_SLOT`** | `Vector2.NegativeInfinity` value emitted in place of a slot for substituted / red-carded agents. Distinct from `NaN` so the F3 NaN guard does not rewrite it; the orchestrator skips field writes for sentinel values (AR-S1-07). |
+
+## Version History
+
+| Version | Date | Author | Summary |
+|---|---|---|---|
+| 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial appendices draft. |
+| 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-17 glossary Compositor "six → seven sequential steps"; AR-S1-02 Appendix B preamble adds per-archetype `lineCutIndices` table + planning-doc citation; AR-S1-07 `SENTINEL_NO_SLOT` added to glossary. |

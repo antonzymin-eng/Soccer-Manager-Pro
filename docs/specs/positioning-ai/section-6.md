@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 6: Performance Analysis and Budgets
 
 **Created:** May 15, 2026
-**Last Updated:** May 15, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.2)
-**Version:** 0.1
+**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 
 ---
@@ -33,12 +33,14 @@ require an Appendix A derivation entry before promotion to `[GT]`
 | `OFFSET_RANGE_Y_M` | 8.0 | m | `[EST]` | §3.2.1 — Appendix A pending |
 | `SCORE_ATK_GAIN` | 0.05 | — | `[GT]` | §3.5.1 |
 | `FATIGUE_LATERAL_RELAX` | 0.15 | — | `[GT]` | §3.5.1 |
-| `FATIGUE_LATERAL_RELAX_M` | 4.0 | m | `[GT]` | §3.5.1 |
 | `INTENSITY_VERTICAL_GAIN` | 0.20 | — | `[GT]` | §3.5.1 |
 | `SOFT_LANE_OVERLOAD_COST` | 0.5 | — | `[GT]` | §3.4.3 / §3.6.2 |
-| `GK_DEPTH_M` | 5.5 | m | `[GT]` | §3.3.3 |
-| `GK_ADVANCE_FACTOR` | 8.0 | m | `[GT]` | §3.3.3 |
-| `GK_LATERAL_FACTOR` | 2.0 | m | `[GT]` | §3.3.3 |
+| `SPACING_MAX_PASSES` | 4 | — | `[EST]` | §3.6.1 (AR-S1-06 convergence cap) |
+| `LANE_EDGES_M[6]` | {0,13.6,27.2,40.8,54.4,68} | m | `[DERIVED]` | §3.4.1 (= `i · PITCH_WIDTH_M/5` as a literal array; AR-S1-12) |
+| `GK_DEPTH_M` | 5.5 | m | `[EST]` | §3.3.3 (AR-S1-11; awaits #11 ratification) |
+| `GK_ADVANCE_FACTOR` | 8.0 | m | `[EST]` | §3.3.3 (AR-S1-11) |
+| `GK_LATERAL_FACTOR` | 2.0 | m | `[EST]` | §3.3.3 (AR-S1-11) |
+| `SENTINEL_NO_SLOT` | (−∞, −∞) | — | `[FIXED]` | §3.11 / §2.4 (AR-S1-07) |
 | `PITCH_TOUCHLINE_MARGIN_M` | 0.5 | m | `[GT]` | FR-PA-033 / FR-PA-046 |
 | `baseLateral[Phase]` table | (4 rows) | — | `[GT]` | §3.5 |
 | `baseVertical[Phase]` table | (4 rows) | — | `[GT]` | §3.5 |
@@ -60,12 +62,13 @@ heap allocations):
 | `ComputeAnchor` | 22 | O(1) lookup |
 | `ComputeBallRelativeOffset` | 22 | O(1) lookup |
 | `ApplyContextModifiers` | 22 | O(1) |
-| `ResolveLine` / `ResolveLane` | 22 + 22 | O(1) each (hysteresis is local state) |
-| `EnforceHardSpacing` (§3.6 pairwise) | 22 × 21 / 2 = 231 pairs | O(N²) — bounded N=22 |
+| `EnforceHardSpacingIterated` (§3.6 pairwise, up to `SPACING_MAX_PASSES`) | ≤ 4 × 231 = 924 pair-evaluations worst case | O(P·N²) — bounded P=4, N=22 |
+| `ResolveLine` / `ResolveLane` post-spacing (§3.7 step 6) | 22 + 22 | O(1) each |
 | `ClampToPitch` | 22 | O(1) |
 
-Aggregate per tick: ≤ ~600 small struct operations + 231 squared-
-distance pairs.
+Aggregate per tick: ≤ ~600 small struct operations + ≤ 924
+squared-distance pair-evaluations (worst case under `SPACING_MAX_
+PASSES = 4`; typical 1–2 passes → 231–462 evaluations).
 
 ## 6.3 Per-Tick Budget (Reference Host per KD-15)
 
@@ -79,7 +82,7 @@ is filled by lead developer):
 - OS: Windows 11
 - Engine: Unity 2022.3 LTS, Mono backend
 - Threading: single-threaded measurement
-- Build: Editor Profile, Release configuration
+- Build: Unity Editor playmode profiler (AR-S1-20: "Editor playmode" — not a Player build; explicit caveat that Player IL2CPP / Release perf will differ. Final certification host per `certification-platform.md` will pin a Player-build configuration.)
 
 **Caveat:** The cert-pinned budget supersedes once
 `certification-platform.md` is filled. Values may shift ±30% on the
@@ -119,3 +122,4 @@ TargetPosition` produced by #8 (which in turn reads #12's slot from
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. Constant catalogue published with all tags; outline-stage `[EST]` values flagged for Appendix A derivation. |
+| 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-08 `FATIGUE_LATERAL_RELAX_M` removed (unused by any formula); AR-S1-11 GK constants demoted `[GT]` → `[EST]`; AR-S1-12 `LANE_EDGES_M` literal array added as `[DERIVED]`; AR-S1-06 `SPACING_MAX_PASSES = 4` added; `SENTINEL_NO_SLOT` added per AR-S1-07; AR-S1-20 §6.3 build-config disambiguated to "Editor playmode profiler"; §6.2 hot-path table updated for iterated spacing + post-spacing line/lane resolve. |

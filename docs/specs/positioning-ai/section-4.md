@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 15, 2026
-**Last Updated:** May 15, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.2)
-**Version:** 0.1
+**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 
 ---
@@ -86,25 +86,42 @@ accessor:
 
 ```
 Vector2 PositioningAI.GetFormationSlot(EntityId id);
+bool    PositioningAI.IsSentinel(Vector2 slot);
 ```
 
-and assembles each agent's `TacticalContext` per #8 §2.2.6 — calling
-`TacticalContext.Stage0Default(slot)` — before invoking #8 Step 2.
-The `TacticalContext` schema (#8-owned, §2.2.6) is frozen at Stage
-0 and #12 does NOT propose any amendment to it.
+and **assigns the value into the agent's existing
+`TacticalContext.FormationSlot` field** (AR-S1-04: NOT via
+`Stage0Default()`). `TacticalContext.Stage0Default()` per #8 §2.2.6
+is a **match-initialisation factory** that ALSO seeds
+`PressingInstruction`, `PassingInstruction`, and
+`DefensiveLineDepth` to their Stage 0 defaults; invoking it per
+agent per 10 Hz tick would clobber those fields ten times per
+second, breaking the Stage 1+ writer contracts that will publish
+into those fields. The `TacticalContext` schema (#8-owned, §2.2.6)
+remains frozen at Stage 0 — #12 mutates only the `FormationSlot`
+field of an already-initialised struct.
 
 The order of operations within one tactical tick is:
 
 ```
-1. #7 Perception produces a fresh snapshot.
-2. PositioningAI.Tick(...) computes all 22 formationSlots.
-3. Orchestrator, per agent, calls TacticalContext.Stage0Default(
-       PositioningAI.GetFormationSlot(id))
-   to assemble that agent's per-agent DecisionContext.
-4. #8 Decision Tree evaluates action utilities per agent;
-   MOVE_TO_POSITION reads ctx.TacticalContext.FormationSlot.
-5. #8 emits resolved Action; #2 steers the agent at 60 Hz toward
-   Action.TargetPosition.
+PER-MATCH (init):
+  Orchestrator calls TacticalContext.Stage0Default(initialSlot)
+  once per agent at match start to seed the per-agent
+  TacticalContext struct.
+
+PER-TICK (10 Hz):
+  1. #7 Perception produces a fresh snapshot.
+  2. PositioningAI.Tick(...) computes all 22 formationSlots.
+  3. Orchestrator, per agent, executes:
+         var slot = PositioningAI.GetFormationSlot(id);
+         if (!PositioningAI.IsSentinel(slot))
+             agentContext[id].TacticalContext.FormationSlot = slot;
+     (Sentinel agents — substitutes / red cards — leave the field
+     at its prior value; AR-S1-07.)
+  4. #8 Decision Tree evaluates action utilities per agent;
+     MOVE_TO_POSITION reads ctx.TacticalContext.FormationSlot.
+  5. #8 emits resolved Action; #2 steers the agent at 60 Hz toward
+     Action.TargetPosition.
 ```
 
 ## 4.5 Downstream Integration Contracts
@@ -158,3 +175,4 @@ The following checks run during integration testing (§5.4):
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
+| 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-04 §4.4.3 rewritten: `Stage0Default()` is match-init-only per #8 §2.2.6; per-tick path is direct field write `ctx.FormationSlot = slot`; `IsSentinel(slot)` accessor added for AR-S1-07 substitute/red-card semantics. |
