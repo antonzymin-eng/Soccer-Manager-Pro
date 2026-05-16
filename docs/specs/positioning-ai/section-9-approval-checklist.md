@@ -1,9 +1,9 @@
 # Positioning AI Specification #12 — Section 9: Approval Checklist
 
 **Created:** May 15, 2026
-**Last Updated:** May 15, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.2)
-**Version:** 0.1
-**Status:** DRAFT — pending PASS-1 adversarial review and `[EST]` → `[GT]` promotion before lead-developer sign-off.
+**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass landed)
+**Version:** 0.2
+**Status:** DRAFT — PASS-1 adversarial review applied; pending `[EST]` → `[GT]` promotion (Appendix A derivations) before lead-developer sign-off.
 
 ---
 
@@ -21,7 +21,7 @@
 ## 9.2 Cross-Spec Sign-Offs Required
 
 - [ ] **#16 lead-developer ratification** of `DOMAIN_TAG_POSITIONING_AI = 0x16` allocation via `ERR-012-001` Phase B/C block (`0x16…0x1B` covering #10/#11/#12/#13/#14/#15). Until ratified, the value is `[CROSS-PENDING]`.
-- [ ] **#8 owner acknowledgement** of the producer-side write contract for `TacticalContext.FormationSlot` populated via `Stage0Default(slot)` factory at #8 Step 2 (KD-3 boundary).
+- [ ] **#8 owner acknowledgement** of the producer-side write contract for `TacticalContext.FormationSlot` populated via direct field write at #8 Step 2 (KD-3 boundary; AR-S1-04 — `Stage0Default()` remains match-init-only).
 - [ ] **#8 owner one-line patch** to fix `ERR-012-002` (stale "Spec #14" reference at `decision-tree/section-3-1.md` L716).
 
 ## 9.3 KD-Sequencing Preconditions
@@ -68,6 +68,27 @@
 | v1.2 Q2 | `DOMAIN_TAG_POSITIONING_AI` value | — | KD-9 proposed block + `ERR-012-001` filed |
 | v1.2 Q3 | `TacticalContext` schema | — | KD-2 + KD-3 corrected (per-agent struct, single `Vector2 FormationSlot`, schema FROZEN); §2.2.3 |
 | v1.2 Q4 | `StableHash` field | — | DROPPED; FR-PA-034 deleted |
+| AR-S1 (section-files) | 01. §3.5 compactness formula inverted | H | §3.5.2 rewritten `rel *= base/compactness`; §3.5.3 worked example replayed |
+| AR-S1 | 02. §3.3.1 line-partition indices off-by-one | H | Per-archetype `lineCutIndices` in Appendix B + AM `defaultLine` override for 4-2-3-1 |
+| AR-S1 | 03. §3.7 step order yields stale line/lane | H | §3.7 reordered: line/lane committed AFTER spacing+clamp (step 6); §3.11 pseudocode updated |
+| AR-S1 | 04. §4.4.3 misuses `Stage0Default()` | H | §4.4.3 rewritten: per-tick direct field write; FR-PA-002 updated |
+| AR-S1 | 05. §3.11 contradicts §3.5.2 | H | §3.5.2 now operates on `(baseSlot − centroid)`; aligns with §3.11 |
+| AR-S1 | 06. Single-pass spacing non-convergent | H | `SPACING_MAX_PASSES = 4` iteration with `POSITIONING_SPACING_NONCONVERGENT` fallback |
+| AR-S1 | 07. NaN sentinel collides with F3 | H | `SENTINEL_NO_SLOT = Vector2.NegativeInfinity` distinct from NaN; §3.11 isActive filter before NaN guard |
+| AR-S1 | 08. `FATIGUE_LATERAL_RELAX_M` unused | M | Removed from §6.1 catalogue; §1.7 citation updated |
+| AR-S1 | 09. §3.0.4 phase-hysteresis off-by-one | M | §3.0.3 specifies commit on Nth candidate tick; §3.0.4 worked example replayed |
+| AR-S1 | 10. §3.2.2 "8 m" doesn't match formula | M | Corrected to 7.2 m maximum |
+| AR-S1 | 11. GK constants `[GT]` ahead of #11 | M | Demoted to `[EST]` with #11-binding caveat |
+| AR-S1 | 12. Lane bins float-determinism risk | M | `LANE_EDGES_M[6]` literal array; explicit boundary semantics |
+| AR-S1 | 13. Centroid undefined | M | §3.5.0 added: mean of `isActive` outfield positions, GK excluded |
+| AR-S1 | 14. §3.6.4 missing post-displacement lane state | M | Worked example now records pre/post-displacement lane |
+| AR-S1 | 15. T-U-060 misses inversion | M | T-U-063 directional invariant added |
+| AR-S1 | 16. §7.8 Stage 0+1 self-contradiction | M | `SHAPE_TRANSITION` retagged Stage 1+ |
+| AR-S1 | 17. Glossary "six steps" mismatch | L | Glossary updated to "seven sequential steps" |
+| AR-S1 | 18. `XC-012-NNN` not in error log | L | `ERR-012-003` filed in `spec-error-log.md` as documentary anchor |
+| AR-S1 | 19. FR-PA-034 DELETED footnote | L | Original wording retained in §2.1 row |
+| AR-S1 | 20. §6.3 Editor + Release contradiction | L | Disambiguated to "Editor playmode profiler" with Player caveat |
+| AR-S1 | 21. `SPEC_INDEX.md` status mismatch | L | Row 12 flipped `NOT STARTED → IN REVIEW`; CLAUDE.md OPEN ISSUES entry added |
 
 ## 9.5 Lead-Developer Sign-Off Lines
 
@@ -84,12 +105,13 @@
 
 ## 9.6 Decision
 
-- Status: `DRAFT` (section files v0.1; PASS-1 adversarial review pending).
-- Next gate: flip to `IN REVIEW` after PASS-1 + v0.2 fix pass.
-- Final gate: `APPROVED` after R-01..R-05 sign-off and §9.3 preconditions all DONE.
+- Status: `IN REVIEW` (section files v0.2; PASS-1 adversarial review applied — 7 H / 9 M / 5 L all resolved per §9.4 map).
+- Next gate: lead-developer sign-off on R-01..R-05.
+- Final gate: `APPROVED` after R-01..R-05 sign-off and §9.3 preconditions all DONE (chiefly: `ERR-012-001` ratification and Appendix A derivation entries for `[EST]` constants).
 
 ## 9.7 Version History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
+| 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass landed across §1/§2/§3/§4/§5/§6/§7/§8/appendices. All 21 AR-S1 findings (7 H / 9 M / 5 L) resolved per §9.4 map. Status flipped DRAFT → IN REVIEW. |

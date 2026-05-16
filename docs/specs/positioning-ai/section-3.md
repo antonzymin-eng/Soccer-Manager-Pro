@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 15, 2026
-**Last Updated:** May 15, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.2)
-**Version:** 0.1
+**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass; AR-S1-01..21 resolved)
+**Version:** 0.2
 **Status:** DRAFT
 
 ---
@@ -41,19 +41,25 @@ transitions.
 
 ### 3.0.3 Hysteresis
 
-A candidate transition commits only if it persists for
-`PHASE_HYSTERESIS_TICKS = 3` `[EST]` consecutive ticks. While
-candidate ≠ lastPhase, `phaseDwellTicks` counts up; on a return to
-the prior phase before reaching the threshold, `phaseDwellTicks`
-resets to 0.
+A candidate transition commits on the Nth consecutive candidate
+tick, where `N = PHASE_HYSTERESIS_TICKS = 3` `[EST]`. Concretely:
+`phaseDwellTicks` counts the number of consecutive ticks the
+candidate has differed from `lastPhase`. When `phaseDwellTicks
+reaches N`, the commit fires AT THAT TICK (not the tick after).
+On a return to `lastPhase` before commit, `phaseDwellTicks` resets
+to 0.
 
 ### 3.0.4 Worked Example
 
-Tick T: own team loses possession, ball loose, `ball.vx_filtered =
-−5.2 m/s`. Candidate = `TransToDef`. If `lastPhase = InPoss` and
-`phaseDwellTicks` ∈ {1, 2}: output remains `InPoss`. At tick T+3
-with the same candidate sustained: output flips to `TransToDef`,
-`phaseDwellTicks` reset to 0.
+Tick T (first candidate tick): own team loses possession, ball
+loose, `ball.vx_filtered = −5.2 m/s`. Candidate = `TransToDef`.
+`lastPhase = InPoss`. After increment, `phaseDwellTicks = 1`;
+output remains `InPoss` (1 < 3). Tick T+1: candidate sustained,
+`phaseDwellTicks = 2`; output remains `InPoss` (2 < 3). Tick T+2:
+candidate sustained, `phaseDwellTicks = 3` — threshold met,
+commit fires: output flips to `TransToDef`, `phaseDwellTicks`
+reset to 0. (Commit on the third candidate tick, not the fourth —
+AR-S1-09.)
 
 ## 3.1 Anchor Computation
 
@@ -119,26 +125,42 @@ offset.x = 0.60 × (−0.619) × 12.0 = −4.46 m
 offset.y = 0.10 ×   0.000   × 8.0 =  0.00 m
 ```
 
-AM anchor pulls back ≈4.5 m toward own goal — consistent with the
-outline's "AM anchor pulls back 8m" intent at extremes; 4.5 m is
-the linear-interpolation value at the 20 m ball position. Full pull
-of 8 m would require ball at x = 0.
+AM anchor pulls back ≈4.5 m toward own goal at this ball position.
+The maximum AM longitudinal pull is bounded by `pullFactor[AM,
+OutOfPoss].x · OFFSET_RANGE_X_M = 0.60 · 12.0 = 7.2 m`, achieved
+at `ball.x = 0` where `basisX = −1`. (AR-S1-10: prior "8 m" was a
+stale outline value; the formula's true maximum at the catalogued
+constants is 7.2 m.)
 
 ## 3.3 Line Membership
 
 ### 3.3.1 Algorithm
 
 Outfield agents (GK excluded — FR-PA-035) are sorted ascending by
-`agent.x` (own-orientation). The stable k=3 partition cuts at
-indices 3 and 7 of the 10-agent ordering:
+`agent.x` (own-orientation). The k=3 partition cuts are
+**archetype-specific** and stored as a per-archetype
+`lineCutIndices : (int firstMid, int firstAtk)` pair on
+`FormationArchetype` (§2.2.2). Given a sorted index range `[0, 10)`:
 
-- **Defense:** indices [0..3) → 4 agents (extended back line)
-- **Midfield:** indices [3..7) → 4 agents
-- **Attack:** indices [7..10) → 3 agents
+- **Defense:** indices `[0, firstMid)` → `firstMid` agents
+- **Midfield:** indices `[firstMid, firstAtk)` → `firstAtk − firstMid` agents
+- **Attack:** indices `[firstAtk, 10)` → `10 − firstAtk` agents
 
-For other archetype shapes (4-3-3 has 4/3/3; 4-2-3-1 has 4/5/1
-after grouping AM with midfield), the cuts are archetype-specific
-`[GT]` indices, published per archetype in §3.10.
+Per-archetype values (AR-S1-02):
+
+| Archetype | `firstMid` | `firstAtk` | Defense / Midfield / Attack |
+|---|---|---|---|
+| 4-4-2 | 4 | 8 | 4 / 4 / 2 |
+| 4-3-3 | 4 | 7 | 4 / 3 / 3 |
+| 4-2-3-1 | 4 | 9 | 4 / 5 / 1 |
+
+For 4-2-3-1, the AM role (Appendix B.3, `longPct = 0.65`) is
+**not** assigned to its sorted-x bucket. Instead the archetype
+table overrides AM's `defaultLine` to `Midfield` and the line
+partition is computed after applying the role→line override
+table — Appendix B.3 column `defaultLine`. This makes the "4/5/1
+after grouping AM with midfield" partition explicit (rather than
+emergent from the sort).
 
 ### 3.3.2 Hysteresis
 
@@ -149,31 +171,53 @@ agent's longitudinal distance from the line boundary exceeds
 
 ### 3.3.3 Goalkeeper Slot
 
-The GK is excluded from the line partition. The GK slot is:
+The GK is excluded from the line partition. The GK slot at Stage 0
+is:
 
 ```
 gkSlot.x = GK_DEPTH_M  + GK_ADVANCE_FACTOR * basisX(ball.x_clamped)
 gkSlot.y = PITCH_WIDTH_M / 2 + GK_LATERAL_FACTOR * basisY(ball.y)
 ```
 
-`GK_DEPTH_M = 5.5 m` `[GT]` (rest depth from own goal-line);
-`GK_ADVANCE_FACTOR = 8.0 m` `[GT]`; `GK_LATERAL_FACTOR = 2.0 m`
-`[GT]`. Detailed GK behavior is specified in #11 Goalkeeper
-Mechanics; #12 produces only the resting baseline.
+`GK_DEPTH_M = 5.5 m` `[EST]` (rest depth from own goal-line);
+`GK_ADVANCE_FACTOR = 8.0 m` `[EST]`; `GK_LATERAL_FACTOR = 2.0 m`
+`[EST]`. **All three are `[EST]` (AR-S1-11):** the authoritative
+owner of GK baseline behavior is #11 Goalkeeper Mechanics, which is
+NOT STARTED. Per CLAUDE.md "Interface Design Principle", #12 cannot
+ratify these as `[GT]` ahead of #11 declaring its consumer contract;
+when #11 reaches `IN REVIEW`, these constants are promoted to
+`[CROSS-PENDING]` (against #11) and either ratified as `[CROSS]` or
+superseded by #11-owned values. Stage 0 ships #12's placeholder
+formula so the Phase C linear chain (§1.1) is not blocked on #11.
 
 ## 3.4 Lane Occupation
 
 ### 3.4.1 Classification
 
-Five lateral bins of width `PITCH_WIDTH_M / 5 = 13.6 m`:
+Five lateral bins. Bin edges are stored as a `static readonly`
+literal array (AR-S1-12) to avoid the `13.6f` representation
+drift `(i+1)·13.6f` would introduce:
 
-| Lane | Y range (m) |
-|---|---|
-| LW (Left Wing) | [0.0, 13.6) |
-| LH (Left Half) | [13.6, 27.2) |
-| C (Center) | [27.2, 40.8) |
-| RH (Right Half) | [40.8, 54.4) |
-| RW (Right Wing) | [54.4, 68.0] |
+```
+static readonly float[] LANE_EDGES_M =
+    { 0.0f, 13.6f, 27.2f, 40.8f, 54.4f, 68.0f };
+```
+
+Bins are inclusive-left, exclusive-right, with the final bin
+closed on the right:
+
+| Lane | Y range (m) | Edge index |
+|---|---|---|
+| LW (Left Wing) | [0.0, 13.6) | 0..1 |
+| LH (Left Half) | [13.6, 27.2) | 1..2 |
+| C (Center) | [27.2, 40.8) | 2..3 |
+| RH (Right Half) | [40.8, 54.4) | 3..4 |
+| RW (Right Wing) | [54.4, 68.0] | 4..5 |
+
+Boundary equality: `Y == 27.2f` → C (the boundary belongs to the
+higher-index bin). `Y == 68.0f` → RW (terminal-bin right edge is
+inclusive). Out-of-range values (`Y < 0` or `Y > 68.0f`) cannot
+occur post-clamp (§3.7 step 6 / FR-PA-046).
 
 ### 3.4.2 Hysteresis
 
@@ -194,41 +238,75 @@ suppress oscillation).
 
 ## 3.5 Context Modifiers
 
-### 3.5.1 Composition
+**Semantics convention (AR-S1-01):** "compactness" is a *tightness*
+scalar — **higher → tighter shape, lower → looser shape**. The
+§3.5.2 application formula divides by the scalar so that higher
+compactness yields smaller displacement from centroid. All gain
+signs and worked examples below are aligned to this convention.
 
-Compactness scalars are composed multiplicatively:
+### 3.5.0 Centroid Definition (AR-S1-13)
+
+The centroid used by §3.5.2 is the mean of `agent.position` over
+own-team outfield agents that are `isActive` (FR-PA-036 filter
+applied) at tick start. GK is excluded:
 
 ```
-lateralCompactness = baseLateral[phase]
-                     * (1 + SCORE_ATK_GAIN * clamp(scoreDiff, -3, +3))
-                     * (1 - FATIGUE_LATERAL_RELAX * teamMeanFatigue)
+N = count(agent in ownTeamOutfield where agent.isActive)
+centroid.x = (1/N) * Σ agent.position.x
+centroid.y = (1/N) * Σ agent.position.y
+```
+
+The centroid is computed once per tick at tick start, before the
+per-agent loop. Using `agent.position` (not `anchor[agent]`) makes
+the centroid game-state aware — when the whole shape has drifted
+upfield in possession, the compactness rescale operates around the
+current centroid, not the static anchor centroid.
+
+### 3.5.1 Composition
+
+Compactness scalars are composed multiplicatively. Higher values
+denote a tighter shape:
+
+```
+lateralCompactness  = baseLateral[phase]
+                      * (1 + SCORE_ATK_GAIN * clamp(scoreDiff, -3, +3))
+                      * (1 - FATIGUE_LATERAL_RELAX * teamMeanFatigue)
 
 verticalCompactness = baseVertical[phase]
                       * (1 + INTENSITY_VERTICAL_GAIN * tacticalIntensity)
 ```
 
 `baseLateral[phase]` and `baseVertical[phase]` are 4-row `[GT]`
-lookups in §3.10. Gains:
+lookups in §6.1. Gains:
 
-- `SCORE_ATK_GAIN = 0.05` `[GT]` (each goal up tightens by 5%).
-- `FATIGUE_LATERAL_RELAX = 0.15` `[GT]` (fully fatigued team relaxes
-  lateral compactness by 15%). `FATIGUE_LATERAL_RELAX_M = 4.0 m`
-  `[GT]` is the absolute lateral spread cap added by full fatigue.
-- `INTENSITY_VERTICAL_GAIN = 0.20` `[GT]`.
+- `SCORE_ATK_GAIN = 0.05` `[GT]` — each goal lead **raises**
+  compactness by 5% → shape **tightens** under §3.5.2 division.
+- `FATIGUE_LATERAL_RELAX = 0.15` `[GT]` — fully fatigued team
+  **lowers** lateral compactness by 15% → shape **loosens** under
+  §3.5.2 division.
+- `INTENSITY_VERTICAL_GAIN = 0.20` `[GT]` — higher intensity
+  raises vertical compactness → shape tightens vertically.
 
 ### 3.5.2 Application
 
-Compactness scalars rescale the spread of the anchor set around
-its centroid:
+Compactness scalars rescale the spread of the slot set around the
+centroid. The formula operates on `(baseSlot − centroid)` where
+`baseSlot = anchor + offset` from §3.1+§3.2 (AR-S1-05 alignment
+with §3.11 pseudocode):
 
 ```
-foreach (agent in ownTeamOutfield) {
-    rel = anchor[agent] - centroid
-    rel.y *= lateralCompactness  / baseLateral[phase]
-    rel.x *= verticalCompactness / baseVertical[phase]
-    anchor[agent] = centroid + rel
+foreach (agent in ownTeamOutfield where agent.isActive) {
+    rel = baseSlot[agent] - centroid
+    rel.y *= baseLateral[phase]  / lateralCompactness     // higher compactness → tighter
+    rel.x *= baseVertical[phase] / verticalCompactness    // higher compactness → tighter
+    baseSlot[agent] = centroid + rel
 }
 ```
+
+Note the **inverted ratio** relative to v0.1 (AR-S1-01): scaling
+by `base/compactness` means a compactness scalar of `1.10` reduces
+`rel` by a factor of `1/1.10 ≈ 0.909` → shape tightens by ~9.1%.
+This matches the prose intent at all sites.
 
 ### 3.5.3 Worked Example
 
@@ -239,10 +317,23 @@ Phase = `InPoss`, `baseLateral[InPoss] = 1.00`, `scoreDiff = +2`,
 lateralCompactness = 1.00 × (1 + 0.05 × 2) × (1 − 0.15 × 0.40)
                    = 1.00 × 1.10 × 0.94
                    = 1.034
+rescale factor     = baseLateral / lateralCompactness
+                   = 1.00 / 1.034
+                   = 0.9671
 ```
 
-Team is leading by 2 and moderately fatigued — net 3.4% tighter
-lateral shape.
+Team is leading by 2 and moderately fatigued. Net lateral rescale
+is `0.9671` — agents move 3.29% closer to centroid (tighter
+lateral shape). This matches §3.5.1's stated direction ("each goal
+lead tightens"; "fatigue loosens") and the AR-S1-01 fix.
+
+**Directional check (T-U-063 reference, AR-S1-15):**
+- `scoreDiff = +2, fatigue = 0` → factor `1.00 / 1.10 = 0.909`
+  (tighter than baseline).
+- `scoreDiff = 0, fatigue = 0.40` → factor `1.00 / 0.94 = 1.064`
+  (looser than baseline).
+- Combined (this example): factor `0.9671` — net tighter
+  (`SCORE_ATK_GAIN × 2 > FATIGUE_LATERAL_RELAX × 0.40`).
 
 ## 3.6 Spacing Constraints
 
@@ -252,6 +343,7 @@ lateral shape.
 MIN_AGENT_SEPARATION_M    = 1.5    [FIXED]   (from #3 collision radius)
 MIN_AGENT_SEPARATION_M_SQ = 2.25   [DERIVED] (= MIN_AGENT_SEPARATION_M^2)
 SPACING_EPSILON_M2        = 1e-4   [FIXED]   (KD-16)
+SPACING_MAX_PASSES        = 4      [EST]     (AR-S1-06 convergence cap)
 ```
 
 For every ordered pair `(i, j)` with `i.entityId < j.entityId`:
@@ -262,6 +354,16 @@ if (distSq + SPACING_EPSILON_M2 < MIN_AGENT_SEPARATION_M_SQ) {
     // violation — apply cost-based displacement (§3.6.3)
 }
 ```
+
+**Iteration to fixed point (AR-S1-06):** the pair scan is repeated
+in canonical pair order up to `SPACING_MAX_PASSES = 4` passes per
+tick. A pass that produces zero displacements terminates early. If
+all four passes produce at least one displacement, the tick emits
+the post-pass-4 state and a dev-log warning
+`POSITIONING_SPACING_NONCONVERGENT` is recorded; the slot set is
+still digested (#16 §6.2). Three-agent collisions (e.g. centroid
+pull tripling up CBs) typically converge in 2 passes; the cap
+exists to bound worst-case work, not as a normal-path target.
 
 ### 3.6.2 Soft Spacing
 
@@ -303,23 +405,56 @@ cost(A) = |(50.0, 30.0) − anchor_A|² = 0.4 m²
 cost(B) = |(50.8, 30.6) − anchor_B|² = 0.9 m²
 ```
 
-Since `cost(A) < cost(B)`, A is displaced (smaller required move).
-The pre-displacement EntityId-7 agent moves; with the v1.0
-EntityId-based rule, B would always have moved instead — KD-14
-inverts this fairness defect.
+`cost(A) < cost(B)` → A is displaced (smaller required move). The
+displacement vector is the unit vector from B to A:
+
+```
+(slot[A] − slot[B]) = (−0.8, −0.6),  ||..|| = 1.0
+unit                = (−0.8, −0.6)
+displaceMag         = sqrt(2.25) − sqrt(1.0) + 0.01
+                    = 1.5 − 1.0 + 0.01 = 0.51 m
+A.newSlot           = (50.0 + 0.51·−0.8, 30.0 + 0.51·−0.6)
+                    = (49.59, 29.69)
+```
+
+Post-displacement check: distance from B `(50.8, 30.6)` to A's new
+slot `(49.59, 29.69)` is `sqrt(1.4641 + 0.8281) = sqrt(2.2922) ≈
+1.5140 m` — just above 1.5 m, OK.
+
+**Line/lane state (AR-S1-14):** because §3.7 step 7 now resolves
+line/lane AFTER spacing displacement (AR-S1-03 fix), `lastLane[A]`
+records A's POST-displacement lane. Pre-displacement A was at
+y = 30.0 (lane C, `27.2 ≤ 30.0 < 40.8`); post-displacement A is at
+y = 29.69 (still lane C). The hysteresis-state entry committed for
+this tick is `lastLane[A] = C` and is consistent with the emitted
+`formationSlot[A] = (49.59, 29.69)`.
+
+Under the v1.0 EntityId-based rule, B would always have moved
+instead — KD-14 inverts that fairness defect.
 
 ## 3.7 Slot Composition (Stage 0)
 
-Per tick, in canonical EntityId-ascending order:
+Per tick, in canonical EntityId-ascending order. Step order revised
+in v0.2 to commit line/lane state AFTER spacing displacement
+(AR-S1-03):
 
 1. Compute baseline anchor (§3.1).
 2. Apply ball-relative offset (§3.2).
-3. Apply context modifiers (§3.5).
-4. Resolve line/lane membership with hysteresis (§3.3, §3.4).
-5. Enforce hard spacing with cost-based displacement (§3.6).
-6. Clamp to pitch bounds with 0.5 m touchline margin (FR-PA-033).
+3. Apply context modifiers (§3.5) — operates on `baseSlot −
+   centroid`, with `isActive`-filtered centroid per §3.5.0.
+4. Enforce hard spacing with cost-based displacement (§3.6),
+   iterated up to `SPACING_MAX_PASSES`.
+5. Clamp to pitch bounds with 0.5 m touchline margin (FR-PA-033).
+6. Resolve line/lane membership with hysteresis (§3.3, §3.4) —
+   classification reads the final post-displacement, post-clamp
+   slot so the digested `HysteresisState` (FR-PA-038) matches the
+   emitted slot exactly.
 7. Write `formationSlot[entityId]` into the output buffer for the
-   orchestrator to forward into #8 `TacticalContext.FormationSlot`.
+   orchestrator to forward into #8 (per §4.4.3, by writing the
+   `TacticalContext.FormationSlot` field directly).
+
+Inactive agents (substituted, red-carded) are filtered before
+step 1 and receive the `SENTINEL_NO_SLOT` value (§2.4 / AR-S1-07).
 
 No Stage 0 step performs #13 Press, #14 Mark, or #15 Run override.
 KD-13: those compositor slots are declared in §7 only.
@@ -386,35 +521,53 @@ void PositioningAITick(
     Phase candidate = ClassifyPhase(perception, ref hyst);
     Phase phase = CommitPhaseWithHysteresis(candidate, ref hyst);
 
-    // Centroid (for §3.5 rescaling)
-    Vector2 centroid = ComputeCentroid(perception, archetype);
+    // Centroid (§3.5.0 — own-team outfield, isActive filtered, GK excluded)
+    Vector2 centroid = ComputeCentroidActive(perception);
 
     // Per-agent compute, EntityId-sorted
     foreach (var id in perception.OutfieldIdsAscending) {
+        // AR-S1-07: inactive (substituted / red-carded) → SENTINEL, skip
+        if (!perception.agents[id].isActive) {
+            outSlots[id.Index] = SENTINEL_NO_SLOT;        // FR-PA-036
+            continue;
+        }
+
         Vector2 anchor   = ComputeAnchor(archetype, id);
         Vector2 offset   = ComputeBallRelativeOffset(perception.ball, id, archetype, phase);
         Vector2 baseSlot = anchor + offset;
 
+        // §3.5 context modifiers, operating on (baseSlot - centroid)
         baseSlot = ApplyContextModifiers(baseSlot, centroid, modifiers, phase);
 
-        LineMembership line = ResolveLineWithHysteresis(id, baseSlot, ref hyst);
-        LaneAssignment  lane = ResolveLaneWithHysteresis(id, baseSlot, ref hyst);
-
-        // F3 — NaN guard
-        if (float.IsNaN(baseSlot.x) || float.IsNaN(baseSlot.y))     // FR-PA-044
+        // F3 — NaN guard (FR-PA-044). SENTINEL paths exited above, so
+        // any NaN here is a genuine intermediate fault → fall back to
+        // raw anchor, not to SENTINEL.
+        if (float.IsNaN(baseSlot.x) || float.IsNaN(baseSlot.y))
             baseSlot = anchor;
 
         outSlots[id.Index] = baseSlot;
     }
 
-    // GK (§3.3.3)
+    // GK (§3.3.3) — always active at Stage 0; treated separately
     outSlots[gk.Index] = ComputeGkSlot(perception.ball);
 
-    // §3.6 hard spacing pass
-    EnforceHardSpacing(outSlots);
+    // §3.6 hard spacing — iterate to fixed point up to SPACING_MAX_PASSES
+    EnforceHardSpacingIterated(outSlots, archetype, anchors,
+                               SPACING_MAX_PASSES);
 
     // F5 — pitch-bound clamp
-    for (int i = 0; i < 22; i++) outSlots[i] = ClampToPitch(outSlots[i]);
+    for (int i = 0; i < 22; i++) {
+        if (IsSentinel(outSlots[i])) continue;             // AR-S1-07
+        outSlots[i] = ClampToPitch(outSlots[i]);
+    }
+
+    // §3.7 step 6 — resolve line/lane AFTER spacing+clamp so digested
+    // HysteresisState matches the emitted slot (AR-S1-03)
+    foreach (var id in perception.OutfieldIdsAscending) {
+        if (IsSentinel(outSlots[id.Index])) continue;
+        ResolveLineWithHysteresis(id, outSlots[id.Index], archetype, ref hyst);
+        ResolveLaneWithHysteresis(id, outSlots[id.Index], ref hyst);
+    }
 }
 ```
 
@@ -422,8 +575,16 @@ The function is pure over its inputs and the prior `HysteresisState`
 (FR-PA-037). The `ref hyst` mutation is the only side effect; the
 mutated state is itself authoritative and digested (FR-PA-038).
 
+**`SENTINEL_NO_SLOT`:** defined as `Vector2.NegativeInfinity`
+(both components `−∞`). Distinct from NaN; F3 NaN guard does not
+rewrite the sentinel. Pitch-clamp (F5) skips the sentinel. The
+orchestrator treats `IsSentinel(slot) == true` as "no slot this
+tick" and does not write into `TacticalContext.FormationSlot` for
+that agent (§4.4.3).
+
 ## 3.12 Version History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. §3.0–§3.11 published with worked examples per FR-PA-041. |
+| 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-01 §3.5 compactness formula inverted to match prose ("higher = tighter") — §3.5.2 now `rel *= base/compactness`, §3.5.3 worked example replayed; AR-S1-02 §3.3.1 per-archetype `lineCutIndices` + AM override for 4-2-3-1; AR-S1-03 §3.7 step order: line/lane resolved AFTER spacing+clamp; AR-S1-05 §3.5.2 now operates on `(baseSlot − centroid)` aligning with §3.11 pseudocode; AR-S1-06 spacing iterates up to `SPACING_MAX_PASSES = 4`; AR-S1-07 `SENTINEL_NO_SLOT = Vector2.NegativeInfinity` distinct from NaN; isActive filter added in §3.11; AR-S1-09 §3.0.3/§3.0.4 commit on the Nth (not N+1th) candidate tick; AR-S1-10 §3.2.2 "8 m" → 7.2 m corrected to formula; AR-S1-11 GK constants demoted `[GT]` → `[EST]`; AR-S1-12 lane bins declared as `LANE_EDGES_M` literal array with explicit boundary semantics; AR-S1-13 §3.5.0 centroid definition added; AR-S1-14 §3.6.4 worked example records post-displacement lane state. |

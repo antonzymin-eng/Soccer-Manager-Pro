@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 8: References and Citations
 
 **Created:** May 15, 2026
-**Last Updated:** May 15, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.2)
-**Version:** 0.1
+**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 
 ---
@@ -23,8 +23,8 @@ section.
 | #7 Perception System | §3.9 | Possession state |
 | #7 Perception System | §3.10 | Active/inactive flag for FR-PA-036 |
 | #8 Decision Tree | §1.7.3 (XC-008-001) | EntityId no-reuse |
-| #8 Decision Tree | §2.2.6 (L688–721) | `TacticalContext` schema (per-agent; field set FROZEN at Stage 0) |
-| #8 Decision Tree | §3.1.7 | `MOVE_TO_POSITION` action; `Stage0Default(slot)` factory |
+| #8 Decision Tree | §2.2.6 (L688–721) | `TacticalContext` schema (per-agent; field set FROZEN at Stage 0); `Stage0Default(Vector2)` is the **match-init-only** factory — NOT called per tick (AR-S1-04) |
+| #8 Decision Tree | §3.1.7 | `MOVE_TO_POSITION` action; per-tick orchestrator writes `ctx.FormationSlot` field directly |
 | #8 Decision Tree | §3.2.6 | `MOVE_TO_POSITION` utility scoring |
 | #16 Deterministic Simulation | §3.2 | Authoritative simulation state definition |
 | #16 Deterministic Simulation | §3.2.5 | EntityId-sorted iteration order |
@@ -75,6 +75,7 @@ section.
 |---|---|---|
 | `ERR-012-001` | Phase B/C domain-tag block allocation `0x16…0x1B` for #10/#11/#12/#13/#14/#15 in #16 §3.4 | Pending lead-developer ratification; `[CROSS-PENDING]` until promoted to `[CROSS]` atomically across all six specs |
 | `ERR-012-002` | Stale "Formation System (Spec #14)" reference at `decision-tree/section-3-1.md` L716 (current #14 is Defensive AI; Formation System is #12) | One-line patch request to #8 |
+| `ERR-012-003` | Documentary anchor for `XC-012-001`..`XC-012-009` allocation (AR-S1-18) | Filed as informational; no remediation required |
 
 ## 8.5 Citation Verification
 
@@ -100,3 +101,4 @@ that changes the cited section numbers MUST be reconciled here.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. `XC-012-001`..`XC-012-009` allocated. `ERR-012-001` and `ERR-012-002` referenced. |
+| 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-04 §8.1 #8 row clarified `Stage0Default()` is match-init-only; per-tick path is direct field write. AR-S1-18 `ERR-012-003` filed as documentary anchor for the `XC-012-NNN` allocation. |

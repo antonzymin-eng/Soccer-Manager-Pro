@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 15, 2026
-**Last Updated:** May 15, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.2)
-**Version:** 0.1
+**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 
 ---
@@ -17,7 +17,7 @@ a KD in §1.5 or a downstream section in this spec.
 | FR | Subject | Conformance | Source |
 |---|---|---|---|
 | FR-PA-001 | Positioning AI runs on the 10 Hz tactical loop. | MUST | CLAUDE.md / KD-1 |
-| FR-PA-002 | Output is one `Vector2 formationSlot` per agent per tick; orchestrator copies it into each agent's frozen `TacticalContext.FormationSlot` at #8 Step 2. | MUST | KD-2, KD-3 |
+| FR-PA-002 | Output is one `Vector2 formationSlot` per agent per tick; orchestrator writes it directly into each agent's `TacticalContext.FormationSlot` field at #8 Step 2 (NOT via `Stage0Default()` which is a match-init-only factory — AR-S1-04). | MUST | KD-2, KD-3 |
 | FR-PA-003 | Agent iteration order during slot computation is EntityId-sorted ascending. | MUST | #16 §3.2.5 / KD-9 |
 | FR-PA-004 | Per-agent `formationSlot` values contribute to the per-tick determinism digest. | MUST | #16 §6.2 / KD-9 |
 | FR-PA-005 | RNG calls use `DOMAIN_TAG_POSITIONING_AI = 0x16` (`[CROSS-PENDING]` until `ERR-012-001` resolved). | MUST | #16 §3.4 / KD-9 |
@@ -45,11 +45,11 @@ a KD in §1.5 or a downstream section in this spec.
 | FR-PA-027 | At most three agents per lane anywhere. | MUST | §3.4 |
 | FR-PA-028 | Context-modifier composition onto compactness is multiplicative. | MUST | §3.5 |
 | FR-PA-029 | Score modifier scales attacking compactness linearly. | MUST | §3.5 |
-| FR-PA-030 | Team-mean fatigue relaxes lateral compactness up to `FATIGUE_LATERAL_RELAX_M`. | MUST | §3.5 |
+| FR-PA-030 | Team-mean fatigue lowers `lateralCompactness` proportionally to `FATIGUE_LATERAL_RELAX`, looser shape under §3.5.2 application. | MUST | §3.5 |
 | FR-PA-031 | Tactical intensity scales the vertical compactness target. | MUST | §3.5 |
 | FR-PA-032 | Tactical-intensity default source is a per-archetype `[GT]` field (no UI at Stage 0). | MUST | KD-11 |
 | FR-PA-033 | All slot writes are clamped to pitch bounds with a 0.5 m touchline margin. | MUST | §2.4 F5 |
-| FR-PA-034 | *(DELETED — `StableHash` field dropped per v1.2 outline resolution. #8 has no hysteresis on the slot.)* | — | — |
+| FR-PA-034 | *(DELETED in v1.2 outline. Original wording: "Slot output carries a `StableHash` field used by #8 hysteresis." Removed because #8 has no hysteresis on the slot — see v1.2 outline Q4 resolution.)* | — | — |
 | FR-PA-035 | Goalkeeper slot is computed by a dedicated formula and is excluded from the line partition. | MUST | §3.3 |
 | FR-PA-036 | Substituted and red-carded agents are excluded from compactness computation. | MUST | §2.4 |
 | FR-PA-037 | The slot-computation function is pure: deterministic over `(perception, ball, phase, formation, modifiers, prevHysteresisState)`. | MUST | §4.1 |
@@ -108,8 +108,11 @@ TacticalContext (#8-owned) {
 ```
 
 #12 populates only the `FormationSlot` field via the orchestrator
-calling `TacticalContext.Stage0Default(slot)` (the existing #8
-factory). The other fields are not owned or read by #12 at Stage 0.
+performing a direct field write `ctx.FormationSlot = slot` per
+tick (AR-S1-04). `TacticalContext.Stage0Default()` is the #8-owned
+match-initialisation factory and is NOT invoked per tick — the
+other `TacticalContext` fields are not owned or read by #12 at
+Stage 0.
 
 ### 2.2.4 `ContextModifierInputs` (orchestrator-supplied; read-only)
 
@@ -172,14 +175,20 @@ spec reaches `IN REVIEW`.
 | F5 | Slot outside pitch bounds | `slot.x ∉ [0.5, 104.5] ‖ slot.y ∉ [0.5, 67.5]` | Clamp to bounds with 0.5 m touchline margin | §5.2 unit |
 | F6 | Phase enum corruption | Cast from arbitrary int yields invalid enum | Fall back to `InPoss` (least-aggressive shape); reset `phaseDwellTicks` to 0 | §5.2 unit |
 
-Substituted and red-carded agents (FR-PA-036) are not failure modes;
-they are filtered out of compactness computation at §3.5 input
-preparation and contribute no slot output — their `formationSlot`
-is written as `(NaN, NaN)` to the orchestrator's output buffer,
-which the orchestrator interprets as "no slot this tick".
+Substituted and red-carded agents (FR-PA-036) are not failure
+modes; they are filtered out of centroid computation (§3.5.0) and
+the per-agent loop at §3.11 step 1. Their `formationSlot` is
+written as `SENTINEL_NO_SLOT = Vector2.NegativeInfinity` to the
+orchestrator's output buffer (AR-S1-07: distinct from `NaN` so the
+F3 NaN guard cannot rewrite it). The orchestrator interprets
+`IsSentinel(slot) == true` as "no slot this tick" and does not
+write into `TacticalContext.FormationSlot` for that agent —
+preserving whatever value was last written (typically the agent's
+final on-pitch slot from before the substitution / red card).
 
 ## 2.5 Version History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. 48 FRs enumerated; FR-PA-034 marked DELETED. |
+| 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-04 FR-PA-002 rewritten: orchestrator writes `TacticalContext.FormationSlot` field directly, not via `Stage0Default()` factory; AR-S1-07 substituted/red-carded agents emit `SENTINEL_NO_SLOT = Vector2.NegativeInfinity`, not `(NaN, NaN)`; AR-S1-19 FR-PA-034 footnote retained original wording. |

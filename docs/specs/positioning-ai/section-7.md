@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 7: Future Extensions
 
 **Created:** May 15, 2026
-**Last Updated:** May 15, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.2)
-**Version:** 0.1
+**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 
 ---
@@ -98,10 +98,13 @@ pattern as `ERR-017-001`):
 
 | Channel (proposed name) | Purpose | Stage |
 |---|---|---|
-| `SHAPE_TRANSITION` | Phase transitions for debug overlay (Appendix C) | 0+1 |
+| `SHAPE_TRANSITION` | Phase transitions for debug overlay (Appendix C) | 1+ |
 | `LINE_BREACH_ALERT` | Line-membership oscillation for authoring-tool surface | 1+ |
 
-Neither channel is produced or consumed at Stage 0 (KD-10).
+Both channels are Stage 1+ (AR-S1-16: prior "Stage 0+1" labelling
+on `SHAPE_TRANSITION` was inconsistent with KD-10 "no #17 channels
+at Stage 0" and with §7's Stage 1+ deferral scope). Neither is
+produced or consumed at Stage 0.
 
 ## 7.9 Stage 2+ — ML-Tuned `[GT]` Parameter Fitting
 
@@ -129,3 +132,4 @@ bit-exact parity is deferred to Stage 5+ when Fixed64 lands.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
+| 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-16 §7.8 `SHAPE_TRANSITION` retagged Stage 1+ (was inconsistent "Stage 0+1"). |

@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 5: Test Plan
 
 **Created:** May 15, 2026
-**Last Updated:** May 15, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.2)
-**Version:** 0.1
+**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 
 ---
@@ -14,12 +14,12 @@ The test plan binds to Testing Strategy #19 §3 (test taxonomy) and
 
 | Category | Target | Source |
 |---|---|---|
-| Unit (anchor, offset, line, lane, hysteresis, spacing) | ≥40 | §3.1–§3.8 |
-| Integration (full-team shape under phase transitions) | ≥10 | §3.7 |
+| Unit (anchor, offset, line, lane, hysteresis, spacing, directional invariants) | ≥48 | §3.1–§3.8 |
+| Integration (full-team shape under phase transitions) | ≥11 | §3.7 |
 | Determinism regression | ≥6 | #16 §5 |
 | Performance | ≥3 | §6 |
 | Tactical-correctness scenarios | ≥6 | Appendix B (one per archetype × 2 phases) |
-| **Total** | **≥65** | — |
+| **Total** | **≥74** | — |
 
 ## 5.2 Unit Test List (representative)
 
@@ -45,12 +45,17 @@ The test plan binds to Testing Strategy #19 §3 (test taxonomy) and
 - **T-U-032** Line hysteresis: oscillating agent at boundary stays in original line for ≥5 ticks (`LINE_DWELL_TICKS`).
 - **T-U-033** Lane hysteresis: agent crossing boundary by < `LANE_HYSTERESIS_M` does not flip lane.
 - **T-U-034** Hard lane constraint: a 4th agent in a lane is displaced (§3.6 path).
+- **T-U-035** *(AR-S1-02 per-archetype cuts)* Defense/Midfield/Attack cardinalities match the archetype: 4-4-2 → 4/4/2, 4-3-3 → 4/3/3, 4-2-3-1 → 4/5/1 (with AM in Midfield via override).
+- **T-U-036** *(AR-S1-12 lane boundaries)* `Y == 27.2f` classifies as lane C (boundary belongs to higher-index bin); `Y == 68.0f` classifies as lane RW (terminal right edge inclusive); `Y == 13.6f − 1 ULP` classifies as LW.
+- **T-U-037** *(AR-S1-03 post-spacing lane)* Agent displaced from `Y = 30.0` to `Y = 29.6` by §3.6.3 has `lastLane` committed against the post-displacement Y (still C), not the pre-displacement Y.
 
 ### 5.2.5 Spacing (§3.6)
 - **T-U-040** Hard spacing violation at `distSq = 1.0 < 2.25` triggers displacement.
 - **T-U-041** Cost-based tie-break: agent with smaller `|slot − anchor|²` is displaced.
 - **T-U-042** EntityId terminal tie-break activates only when `|cost(i) − cost(j)| < SPACING_EPSILON_M2`.
 - **T-U-043** Float epsilon: comparison at boundary `±0.5 cm` is stable across float ULP noise.
+- **T-U-044** *(AR-S1-06 convergence)* Three-agent collision (A, B, C all within 1.0 m of a common point) resolves to all pairwise distances `≥ 1.5 m − ε` within `SPACING_MAX_PASSES = 4` passes.
+- **T-U-045** *(AR-S1-06 non-convergence path)* Pathological five-agent collision that requires `> 4` passes emits `POSITIONING_SPACING_NONCONVERGENT` dev-log warning and still produces a finite, in-bounds, digested slot set.
 
 ### 5.2.6 Failure Modes (§2.4)
 - **T-U-050** F1 stale perception: previous-tick output is reused.
@@ -64,6 +69,9 @@ The test plan binds to Testing Strategy #19 §3 (test taxonomy) and
 - **T-U-060** `scoreDiff = +2`, `fatigue = 0.4`, `InPoss` produces `lateralCompactness = 1.034 ± 0.001`.
 - **T-U-061** Fatigue convention is `0 = rested` (regression for the historical inversion bug).
 - **T-U-062** Score clamp: `scoreDiff = +5` clamps to `+3`.
+- **T-U-063** *(AR-S1-15 directional invariant)* Under `scoreDiff = +2, fatigue = 0` the team-mean `|rel.y|` over own-team active outfield strictly DECREASES vs. baseline `(0, 0)`. Reciprocal: `scoreDiff = 0, fatigue = 1` INCREASES `|rel.y|`. Vertical pair: `tacticalIntensity = 1` DECREASES `|rel.x|` vs. baseline `0`. Catches sign-inverted compactness application (AR-S1-01).
+- **T-U-064** §3.5.0 centroid is computed over `isActive` outfield only: with one substituted agent at `(0, 0)`, centroid coincides with the 10-agent active mean — not the 11-agent mean.
+- **T-U-065** Compactness rescale uses `(baseSlot − centroid)` not `(anchor − centroid)`: under non-zero ball offset, scaling factor `< 1` reduces displacement from centroid for the post-offset slot, not for the raw anchor (AR-S1-05 alignment of §3.5.2 / §3.11).
 
 ### 5.2.8 Hysteresis (§3.8)
 - **T-U-070** Anchor dwell counter increments per tick.
@@ -75,11 +83,12 @@ The test plan binds to Testing Strategy #19 §3 (test taxonomy) and
 - **T-I-001** Each archetype × each phase (3 × 4 = 12 cells) produces zero hard-spacing violations over a 100-tick window.
 - **T-I-002** Phase boundary crossings produce no oscillation over a 50-tick window across each archetype.
 - **T-I-003** Full 4-4-2 vs 4-3-3 match opening 30 seconds (300 ticks): every produced slot is finite, in-bounds.
-- **T-I-004** Substitution event: substituted agent's slot transitions to `(NaN, NaN)` on the tick following the substitution.
+- **T-I-004** Substitution event: substituted agent's slot transitions to `SENTINEL_NO_SLOT = Vector2.NegativeInfinity` (AR-S1-07; NOT `(NaN, NaN)`, which would be rewritten by the F3 NaN guard) on the tick following the substitution. Orchestrator-side: `TacticalContext.FormationSlot` for the substituted agent retains its pre-substitution value.
 - **T-I-005** Red-card: same behavior as substitution.
 - **T-I-006** F2 fallback: simulation continues without crash when archetype index is corrupted mid-match (Stage 1+ regression — Stage 0 archetype is fixed per FR-PA-039 but the fallback path must still be exercised).
 - **T-I-007** 4-3-3 archetype against centroid pull: AM offset matches §3.2.2 worked example within ±0.05 m.
-- **T-I-008** Lane overload: forcing 4 agents into one lane resolves to ≤3 within 1 tick.
+- **T-I-008** Lane overload: forcing 4 agents into one lane resolves to ≤3 within 1 tick. *(AR-S1-03: resolution uses §3.6 spacing cost-based displacement; line/lane is committed AFTER spacing, so `lastLane[]` records the post-resolution lanes.)*
+- **T-I-011** *(AR-S1-04 orchestrator contract)* Per-tick orchestrator path does NOT invoke `TacticalContext.Stage0Default()`. After 100 ticks, `PressingInstruction`, `PassingInstruction`, and `DefensiveLineDepth` retain values written by external test fixtures — not reset to Stage 0 defaults.
 - **T-I-009** Hysteresis state survives a save/restore round-trip (#16 §3.2 binding).
 - **T-I-010** Pure-function property: identical `(perception, modifiers, archetype, prevHysteresisState)` produces bit-identical output across two invocations.
 
@@ -112,3 +121,4 @@ The test plan binds to Testing Strategy #19 §3 (test taxonomy) and
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
+| 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. Added T-U-035..T-U-037 (archetype line cuts, lane boundary semantics, post-spacing lane); T-U-044/T-U-045 (spacing convergence + non-convergent fallback); T-U-063..T-U-065 (compactness directional invariants, isActive centroid, baseSlot subject); T-I-004 sentinel correction; T-I-011 orchestrator non-invocation of `Stage0Default()`. Unit target ≥48; integration target ≥11; total ≥74. |

@@ -7,7 +7,7 @@ authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
 **Version:** 1.16
-**Updated:** May 15, 2026 (later same day still — ERR-012-002 closed via one-line patch to #8 `section-3-1.md` v1.1.1; ERR-012-001 remains open pending lead-developer ratification)
+**Updated:** May 16, 2026 (ERR-012-003 filed as documentary anchor for `XC-012-001`..`XC-012-009` per Positioning AI #12 section-files PASS-1 adversarial review AR-S1-18)
 **Status:** ERR-001 through ERR-012, ERR-012-001 (open), ERR-012-002 (closed), ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
@@ -1109,4 +1109,18 @@ Block is contiguous with `DOMAIN_TAG_EVENT_LEDGER = 0x15` and consumes one nibbl
 
 ---
 
-*End of Spec Error Log v1.14 — May 15, 2026.*
+## ERR-012-003: Documentary anchor for `XC-012-001`..`XC-012-009` allocation
+
+**Status:** ✅ Closed (informational — no remediation required)
+**Severity:** Minor
+**Detected:** May 16, 2026
+**Detected During:** Positioning AI #12 section-files PASS-1 adversarial review (AR-S1-18).
+**Files Affected:** 1 (`positioning-ai/section-8.md` §8.3)
+
+**Root Cause:** AR-S1-18 noted that #9 / #16 / #17 / #19 precedent files at least a short error-log row when allocating `XC-NNN-NNN` typed cross-reference IDs, so cross-spec readers can discover them by grep. Spec #12 §8.3 allocates `XC-012-001`..`XC-012-009` at section-file v0.1 without a corresponding error-log entry.
+
+**Resolution:** This entry serves as the documentary anchor. `XC-012-NNN` are not erratum-class entries — they are typed cross-reference IDs published in `positioning-ai/section-8.md` §8.3 against approved upstreams #2, #8, #16, #18, #20. No remediation; entry exists for grep discoverability.
+
+---
+
+*End of Spec Error Log v1.15 — May 16, 2026.*

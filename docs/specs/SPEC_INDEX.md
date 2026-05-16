@@ -1,7 +1,7 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** May 15, 2026 (later same day still — #18 Performance Optimization APPROVED after `[TBD-NORMATIVE]` sweep; #9 + #19 + #18 all APPROVED same day; Priority 5 spec set now fully complete)
+> **Last Updated:** May 16, 2026 (#12 Positioning AI reclassified `NOT STARTED → IN REVIEW` after section-file PASS-1 adversarial fix pass landed; v0.2 across all section files; 21 AR-S1 findings resolved)
 > **Purpose:** Single source of truth for spec numbers, folder names, and approval status. Every cross-reference in every spec must match the numbers in this file.
 
 ---
@@ -29,7 +29,7 @@
 | 9 | Fixed64 Math Library | `fixed64-math/` | 2 | APPROVED | May 15, 2026 |
 | 10 | Heading Mechanics | `heading-mechanics/` | 3 | NOT STARTED | — |
 | 11 | Goalkeeper Mechanics | `goalkeeper-mechanics/` | 3 | NOT STARTED | — |
-| 12 | Positioning AI | `positioning-ai/` | 3 | NOT STARTED | — |
+| 12 | Positioning AI | `positioning-ai/` | 3 | IN REVIEW | — |
 | 13 | Pressing AI | `pressing-ai/` | 4 | NOT STARTED | — |
 | 14 | Defensive AI | `defensive-ai/` | 4 | NOT STARTED | — |
 | 15 | Attacking AI | `attacking-ai/` | 4 | NOT STARTED | — |

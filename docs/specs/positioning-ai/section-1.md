@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 15, 2026
-**Last Updated:** May 15, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.2)
-**Version:** 0.1
+**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
+**Version:** 0.2
 **Status:** DRAFT (section-file authoring pass)
 
 ---
@@ -16,9 +16,11 @@ consumes when scoring and resolving the `MOVE_TO_POSITION` action
 (#8 §3.1.7, §3.2.6).
 
 Decision Tree #8 §3.1.7.2 references the Formation System as "wired
-in Stage 1"; the Stage-0 path uses `TacticalContext.Stage0Default(slot)`
-to populate the same field with a hardcoded fallback. Spec #12
-promotes that source to Stage 0 because every Phase C tactical-AI
+in Stage 1"; the Stage-0 fallback path seeds `FormationSlot` via
+`TacticalContext.Stage0Default()` at match initialisation only (per
+#8 §2.2.6 — a match-init factory, not a per-tick path; see
+AR-S1-04). Spec #12 promotes the live source to Stage 0 because
+every Phase C tactical-AI
 spec (#13 Pressing, #14 Defensive, #15 Attacking) requires a
 non-hardcoded formation source to declare its own Stage 1+ boundary
 slots. Without #12 at Stage 0, the Phase C linear chain cannot
@@ -156,7 +158,7 @@ Authoritative Boundary Matrix:
   from Ball Physics #1 §1.2.
 - **Fatigue convention:** `0.0 = fully rested`, `1.0 = fully
   fatigued`. Cited from CLAUDE.md. Used by §3.5
-  `FATIGUE_LATERAL_RELAX_M`.
+  `FATIGUE_LATERAL_RELAX`.
 - **Tick rates:** 10 Hz tactical (this spec); 60 Hz physics (#1, #2,
   #3). Cited from CLAUDE.md. #12 produces no per-frame work.
 - **EntityId no-reuse:** bound from #2 §2.5 (XC-002-001) and #8
@@ -171,3 +173,4 @@ Authoritative Boundary Matrix:
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
+| 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. §1.7 fatigue-convention citation updated to `FATIGUE_LATERAL_RELAX` (AR-S1-08 removed the unused `_M` variant). |
