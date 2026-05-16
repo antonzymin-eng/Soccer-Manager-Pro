@@ -646,7 +646,30 @@ Outstanding follow-up: update `docs/specs/deterministic-sim/section-3.md` §3.2.
 
 ---
 
-*End of Spec Error Log v1.10 — May 16, 2026.*
+## ERR-011-001: `DOMAIN_TAG_GOALKEEPER` allocation required in Deterministic Simulation #16 §3.4
+
+**Severity:** Medium (cross-spec back-prop; latent if not landed before #11 APPROVED)
+**Detected:** May 16, 2026
+**Detected During:** Section-files v0.1 → v0.2 PASS-1 adversarial-review fix pass (`goalkeeper-mechanics/adversarial-review-section-files-v1.md`). Filed at the moment Goalkeeper Mechanics #11 section files v0.2 land and `SPEC_INDEX.md` row 11 flips `NOT STARTED → IN REVIEW`.
+
+**Root Cause:** Goalkeeper Mechanics #11 §3.3 / §3.5 / §3.6 route Gaussian draws through `DeterministicRngService` (Deterministic Simulation #16 §4.1) keyed on `DOMAIN_TAG_GOALKEEPER`. Same hazard class and same resolution shape as `ERR-010-001` (Heading #10 / `DOMAIN_TAG_HEADING = 0x16`, closed May 16, 2026) and `ERR-017-001` (Event System #17 / `DOMAIN_TAG_EVENT_LEDGER = 0x15`, closed May 15, 2026).
+
+**Problem in detail:**
+- Spec #11 needs a stable numeric `DOMAIN_TAG_GOALKEEPER` to commit its four draw-site IDs (`DRAW_SITE_HANDLING_NOISE`, `DRAW_SITE_HANDLING_POINT_NOISE`, `DRAW_SITE_DIVE_TIMING_JITTER`, `DRAW_SITE_CROSS_CLAIM_TIEBREAK`) to.
+- Spec #16 §3.4 currently does not enumerate `GOALKEEPER` among its allocated domain tags.
+- Without back-prop, #11 cannot reach `APPROVED` (its `[CROSS-PENDING]` constant in §3.4 cannot promote to `[CROSS]`).
+- **Collision-management policy (KD-7).** Open ERR-012-001 proposes block `0x17…0x1C` for Positioning AI #12 Phase B/C; whichever spec reaches `APPROVED` first takes `0x17`. If ERR-011-001 lands first, the #12 block re-shifts to `0x18…0x1D` (mirroring the May 16, 2026 #10 / #12 shift via ERR-010-001 vs. ERR-012-001). If ERR-012-001 lands first, `DOMAIN_TAG_GOALKEEPER` shifts to `0x1D`. The `[CROSS-PENDING]` tag accommodates either outcome.
+
+**Required fix:**
+1. At `goalkeeper-mechanics/SPEC_INDEX.md` row 11 reaching `APPROVED`, file a patch to `docs/specs/deterministic-sim/section-3.md` §3.4 domain-tag table allocating `DOMAIN_TAG_GOALKEEPER`. Numeric value depends on collision-management outcome (`0x17` or `0x1D`). Pure namespace allocation — no `DETERMINISM_DIGEST_VERSION` bump, per ERR-010-001 / ERR-017-001 precedent.
+2. Update §3.4.9 in `goalkeeper-mechanics/section-3.md` to pin the literal value and promote `[CROSS-PENDING]` → `[CROSS]` at the same beat that #16's allocation lands.
+3. Once the allocation lands in #16, mark this entry CLOSED.
+
+**Status:** Open — filed May 16, 2026; awaits lead-developer ratification post-#11 IN REVIEW transition. Tracked in #11 §9.4 as OI-001.
+
+---
+
+*End of Spec Error Log v1.11 — May 16, 2026.*
 
 ---
 
