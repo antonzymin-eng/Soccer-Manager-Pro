@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 15, 2026 (later same day still — #18 Performance Optimization APPROVED after `[TBD-NORMATIVE]` sweep; #9 + #19 + #18 all APPROVED same day; Priority 5 spec set fully complete)  
+**Last Updated:** May 17, 2026 (Defensive AI #14 `NOT STARTED → IN PROGRESS`; all 11 section files v0.1 drafted; Pressing AI #13 APPROVED same day)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -11,11 +11,11 @@
 ## PROGRESS SUMMARY
 
 **Total Specifications:** 20  
-**Approved:** 14  
+**Approved:** 16  
 **Suspended:** 0  
-**In Review:** 0  
-**In Progress:** 0  
-**Not Started:** 6
+**In Review:** 2 (#11 Goalkeeper, #12 Positioning AI)  
+**In Progress:** 1 (#14 Defensive AI)  
+**Not Started:** 1 (#15 Attacking AI)
 
 **Specifications approved:**
 - Ball Physics (#1, Feb 8, 2026)
@@ -83,11 +83,11 @@
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
 | 13 | Pressing AI | 18-22 | ⏳ NOT STARTED | — | — | Week 13 target |
-| 14 | Defensive AI | 18-22 | ⏳ NOT STARTED | — | — | Week 14 target |
+| 14 | Defensive AI | 18-22 | 📝 IN PROGRESS | May 17, 2026 | — | All 11 section files v0.1 drafted from `outline-detailed.md` v1.0; KD-5 Option B resolved; 37 FRs; 27 constants (22 [GT]); ERR-014-001..004 pre-filed; PASS-1 adversarial review pending |
 | 15 | Attacking AI | 18-22 | ⏳ NOT STARTED | — | — | Week 15 target |
 | 16 | Deterministic Simulation | 20-25 | ✅ APPROVED | May 2, 2026 | May 14, 2026 | All 9 sections + appendices complete; §9 v1.7 Tier 2 APPROVED May 14, 2026. Tier 1 (Conditional) granted earlier same day; Tier 2 cleared all §9.4.2 gates: §9.5 #4(a)/(b)/(c) spec-level SATISFIED (golden-vector files hkdf-sha256-kat v1.1, siphash-2-4-kat v1.1, serialize-canonical-corpus v1.0); §8.3.1 cross-spec re-audit complete (§8 v1.2; all four rows promoted); ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1; §9.3 sign-offs (lead-developer Tier 2, QA-automation, platform-certification) granted with Stage-0 host-platform-pin caveat. |
 
-**Priority 4 Progress:** 25% (1 of 4 approved; #16 APPROVED May 14, 2026)
+**Priority 4 Progress:** 50% (2 of 4 approved — #13 APPROVED May 17; #16 APPROVED May 14; #14 IN PROGRESS)
 
 ---
 
