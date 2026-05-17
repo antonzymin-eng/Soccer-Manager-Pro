@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -13,6 +13,18 @@ formula carries units, valid input ranges, and at least one worked
 example (FR-PR-034 / CLAUDE.md "When Writing or Editing Specs").
 
 The per-tick pseudocode is in §3.11; §3.1–§3.10 define each step.
+
+## 3.0 Preamble — Fatigue and Stamina Convention
+
+All fatigue references in §3.x use the CLAUDE.md convention:
+`0.0 = fully rested`, `1.0 = fully fatigued`. The Decision Tree
+#8 §3.1.8.1 "stamina" is a separate surface with its own scalar;
+**#13 does NOT redefine stamina as a complement or function of
+fatigue.** Where #8's stamina gate is cited (§3.3 eligibility
+constraint 1), it is consumed read-only as-is from the #8 surface
+without any unit conversion. Where #13 adds its own ceiling
+(§3.3 constraint 2, FR-PR-029), it operates on the #13 fatigue
+scalar (`0 = rested`, `1 = fatigued`).
 
 ## 3.1 Trigger Detection
 
@@ -38,13 +50,20 @@ recoverable by an alert presser.
 **Trigger origin:** the agent who attempted the touch (current
 ball-carrier as of the touch).
 
-### 3.1.2 `BACKWARD_PASS` (source: Pass Mechanics #5 §2 FR-08)
+### 3.1.2 `BACKWARD_PASS` (source: Pass Mechanics #5 §2 FR-10)
+
+The `PassAttemptEvent` payload (FR-10) contains `AgentID`,
+`PassType`, `TargetPosition`, `FrameNumber` — no velocity field.
+#13 derives pass direction from the passer's perception-snapshot
+position to the event's `TargetPosition`:
 
 ```
 e = mostRecentPassAttemptEventThisTick
+passerPosition = perception.agents[e.AgentID].position
+passDir = normalize((e.TargetPosition - passerPosition).xy)
 trigger.BACKWARD_PASS =
     (e != null)
-    AND (dot(normalize(e.passVelocity.xy), attackingDirection) < BACKWARD_PASS_THRESHOLD)
+    AND (dot(passDir, attackingDirection) < BACKWARD_PASS_THRESHOLD)
 ```
 
 `BACKWARD_PASS_THRESHOLD = -0.30 [GT]` — dimensionless dot-product
@@ -52,13 +71,12 @@ threshold; values more negative than -0.3 are clearly retreating
 passes. The `attackingDirection` unit vector is supplied by the
 orchestrator (own goal → opponent goal in pitch X).
 
-**Trigger origin:** the receiver `EntityId` named in
-`PassAttemptEvent` (or the passer if the receiver field is null —
-e.g., an aimless clearance).
+**Trigger origin:** the passer `AgentID` from the event.
 
 **Worked example.** Own team attacks `+X`; `attackingDirection =
-(+1, 0)`. Pass kick velocity `(−6.0, 3.0, 0)` m/s. Horizontal unit
-vector `(−6, 3)/||(−6,3)|| = (−0.894, 0.447)`. Dot with `(+1, 0)`
+(+1, 0)`. Passer at `(45, 30)`, `TargetPosition = (39, 33)`.
+Direction delta `(39-45, 33-30) = (−6, 3)`. Unit vector
+`(−6, 3)/||(−6,3)|| = (−0.894, 0.447)`. Dot with `(+1, 0)`
 is `−0.894`. `−0.894 < −0.30` → trigger fires.
 
 ### 3.1.3 `SIDELINE_TRAP` (source: Ball Physics #1 §1.2 + #7)
@@ -88,10 +106,9 @@ cited from Ball Physics #1 §1.2 (`XC-013-001`).
 
 ### 3.1.4 `WEAK_RECEIVER` (source: Perception #7 §3.7–§3.10)
 
-For each candidate receiver `r` in the carrier's pass range
-(visible per #7, opponent of the ball-carrier's team — wait,
-candidate receivers are **teammates** of the ball-carrier; #13 is
-the *defending* team scanning the *attacker's* options):
+Candidate receivers are **teammates of the ball-carrier**, scanned
+from the defending team's POV. `perception.visibleOpponents` from
+#13's (defending team's) POV resolves to that set.
 
 ```
 candidates = perception.visibleOpponents             // from #13's POV
@@ -120,8 +137,9 @@ press target.
 
 Triggers fire on the tick **after** the originating event is
 visible in the #7 perception snapshot. Perception filtering
-already enforces this for opponent-side events; #13 inherits the
-latency without adding its own.
+already enforces this for opponent-side events per #7 §3.7
+snapshot semantics; #13 inherits the latency without adding its
+own.
 
 ## 3.2 Trigger Debounce (Hysteresis)
 
@@ -157,10 +175,13 @@ oscillate against a brief release.
 Of all eligible agents, select the one whose post-displacement
 cost is lowest. EntityId terminal tie-break.
 
-**Eligibility (intersection of three constraints):**
+**Eligibility (intersection of five constraints):**
 
-1. Stamina ≥ `PRESS_STAMINA_MINIMUM` per #8 §3.1.8.1 (cite-not-redefine).
-2. Stamina ≤ `PRESS_FATIGUE_CEILING [GT]` (FR-PR-029; #13-added).
+1. Stamina ≥ `PRESS_STAMINA_MINIMUM` per #8 §3.1.8.1
+   (cite-not-redefine; #8's own stamina surface, consumed as-is).
+2. **Fatigue < `PRESS_FATIGUE_CEILING [GT]`** (FR-PR-029; #13-added
+   ceiling layered on top of #8's gate — the agent is *excluded* if
+   its CLAUDE.md fatigue scalar is ≥ 0.85).
 3. Within `PRESS_TRIGGER_DISTANCE` of the ball-carrier per #8
    §3.1.8.2 (cite-not-redefine; #8 uses 8.0 m).
 4. Not the goalkeeper (KD-13 / FR-PR-017).
@@ -204,20 +225,56 @@ threat-score on `r`:
 
 ```
 threatScore(r) =
-    receiverProgressionGain(r) * THREAT_PROGRESSION_W
-  + (1 - r.perceivedPressure)  * THREAT_OPEN_W
-  + (r.attribute.FirstTouch /20) * THREAT_SKILL_W
+    receiverProgressionGain(r)    * THREAT_PROGRESSION_W
+  + (1 - geometricPressureOn(r))  * THREAT_OPEN_W
+  + (r.attribute.FirstTouch / 20) * THREAT_SKILL_W
 ```
 
 `THREAT_PROGRESSION_W = 0.50 [GT]`, `THREAT_OPEN_W = 0.30 [GT]`,
-`THREAT_SKILL_W = 0.20 [GT]`. `receiverProgressionGain(r)` is the
-forward component of `(r.pos − ballCarrier.pos)` along
-`attackingDirection`, clamped to `[0, 1]` after normalising by
-half the pitch length.
+`THREAT_SKILL_W = 0.20 [GT]`.
 
-For each `r` in descending threat order, up to
-`MAX_COVER_SHADOWS [GT]` slots: pick the lowest-`coverCost` eligible
-defender not already assigned. EntityId ascending as tie-break.
+**`receiverProgressionGain(r)`** — forward distance from ball-carrier
+to `r` along the attacking direction, normalised by half the pitch
+length and clamped to [0, 1] (FR-PR-034):
+
+```
+receiverProgressionGain(r) =
+    clamp(dot(r.pos - ballCarrier.pos, attackingDirection)
+          / (PITCH_LENGTH_M * 0.5),
+          0.0, 1.0)
+```
+
+*Worked example.* Ball-carrier at `(60, 30)`, receiver `r` at
+`(72, 34)`, `attackingDirection = (+1, 0)`. `dot((12, 4), (1, 0))
+= 12 m`. `12 / 52.5 = 0.229`. `clamp(0.229, 0, 1) = 0.229`.
+
+**`geometricPressureOn(r)`** — locally computed by #13 from the
+perception snapshot; does **NOT** read `r.perceivedPressure`
+(a self-attribute of #7 §3.10, gated to the possessing team's
+internal state — not directly observable by the defending team as a
+raw scalar). #13 counts its own outfield defenders within
+`COVER_SHADOW_CANDIDATE_RADIUS_M` of `r` and normalises:
+
+```
+geometricPressureOn(r) = clamp(
+    count(d in ownTeam.outfieldDefenders
+          where ||d.pos - r.pos|| ≤ COVER_SHADOW_CANDIDATE_RADIUS_M)
+    / THREAT_PRESSURE_NORMALIZER,
+    0.0, 1.0)
+```
+
+`THREAT_PRESSURE_NORMALIZER = 3.0 [GT]` — three own-team defenders
+within radius saturates the pressure signal.
+
+**Stage 1+ note.** `r.attribute.FirstTouch` is consumed here under
+the same Q2-style perception-propagation assumption as in §3.1.4 and
+§2.3 — #7 §3.10 carries the attribute value with scouting-accuracy
+gating at Stage 1+. At Stage 0 (schema-only) this is perfect-knowledge.
+
+For each `r` in descending threat order, up to `MAX_COVER_SHADOWS [GT]`
+slots: pick the eligible defender with lowest `coverCost(d, r)`;
+break ties where `|coverCost(d1, r) - coverCost(d2, r)| <
+SPACING_EPSILON_M2` by EntityId ascending.
 
 Any unfilled slot demotes to `HOLD_SHAPE` (F4 / FR-PR-038).
 
@@ -304,9 +361,8 @@ if (role[a] == COVER_SHADOW)  fatigue[a] += STAMINA_COST_SHADOW_PER_TICK
 **Fatigue ceiling (FR-PR-029):** an agent with `fatigue[a] ≥
 PRESS_FATIGUE_CEILING = 0.85 [GT]` is excluded from press roles
 this tick. `PRESS_FATIGUE_CEILING` layers on top of #8 §3.1.8.1's
-`PRESS_STAMINA_MINIMUM = 0.20` (where stamina is the complement of
-fatigue; see CLAUDE.md fatigue convention). #13 does not redefine
-either — it cites both.
+`PRESS_STAMINA_MINIMUM = 0.20`. #13 does not redefine either — it
+cites both (see §3.0 preamble for the fatigue/stamina boundary).
 
 **Worked example.** Agent A has `fatigue = 0.84`. Selection
 proposes `PRIMARY_PRESS`. Ceiling check: `0.84 < 0.85` → eligible
@@ -348,10 +404,17 @@ if (ballX < PRESS_ZONE_X_MIN || ballX > PRESS_ZONE_X_MAX) {
 ```
 
 `PRESS_ZONE_X_MIN = 35.0 m [GT]`, `PRESS_ZONE_X_MAX = 105.0 m
-[GT]` — high-press default eligible-zone. Lower-block styles will
-shift the window at Stage 1+ via team-instruction parameters
-(§7.2). The polygon is rectangular at Stage 0; arbitrary polygons
-are Stage 1+.
+[GT]` — default pressing eligible zone. `PRESS_ZONE_X_MIN = 35.0 m`
+corresponds to a mid-block geometry for a team attacking `+X` (ball
+already in middle third); a high-press style would use ≈ 70 m. The
+`PRESS_ZONE_X_MAX = 105.0 m` bound is **intentionally a trivially-true
+upper bound**: within a live match, `ballX` never exceeds 105 m (the
+opponent's goal line — Ball Physics #1 §1.2 / `XC-013-001` flags a
+goal or goal-kick first). The clause is retained as a defensive guard
+to satisfy the two-parameter zone contract of FR-PR-031. Block styles
+will re-tune `PRESS_ZONE_X_MIN` at Stage 1+ via team-instruction
+parameters (§7.2). The zone is rectangular at Stage 0; arbitrary
+polygons are Stage 1+.
 
 **Reset (FR-PR-032):**
 
@@ -372,13 +435,19 @@ loads 12. T+13..T+24: all-`HOLD_SHAPE` regardless of new triggers
 
 ## 3.9 Anti-Chaos Invariant Enforcement (KD-16)
 
-Three invariants. Applied in order; on violation, the
-lowest-priority assignment demotes to `HOLD_SHAPE` and the check
-re-runs. After at most `MAX_COVER_SHADOWS + 1 = 3` iterations the
-set is clean (because each demotion strictly reduces the
-violating count). If a primary-press demotion is required to
-satisfy an invariant, the entire directive falls back to
-all-`HOLD_SHAPE` per F5 / FR-PR-039.
+Three invariants applied in order:
+
+- **Invariants (1) and (3)** resolve by demoting the lowest-priority
+  cover-shadow assignment to `HOLD_SHAPE` and re-running the check.
+  After at most `MAX_COVER_SHADOWS + 1 = 3` cover-shadow demotion
+  iterations the set is clean (each demotion strictly reduces the
+  violating count). If a primary-press demotion is needed for (1)
+  or (3), F5 fires.
+- **Invariant (2) backline floor** triggers **F5 immediately** on
+  violation (1 iteration). The backline-floor breach cannot be
+  resolved by cover-shadow demotion — a Defense-line agent in
+  `PRIMARY_PRESS` would require §3.3 to re-run excluding that agent,
+  which §3.9 does not do. F5 → all-`HOLD_SHAPE` for this tick.
 
 **(1) Max pressers per ball-side third (FR-PR-018):**
 
@@ -394,11 +463,11 @@ if (presserCount > MAX_PRESSERS_BALL_THIRD) violation
 **(2) Backline floor (FR-PR-019):**
 
 ```
-backlineCount = count(a where #12.line[a] == Defense
+// GetLine is Stage 1+ per #12 §4.5.1 — ERR-013-008 back-prop pending
+backlineCount = count(a where PositioningAI.GetLine(a) == Defense   // Stage 1+
                           AND positionInThird(a) == ownDefensiveThird)
-if (backlineCount < MIN_BACKLINE_AGENTS) violation
-// promotion-blocked: a Defense-line agent who would drop the count below
-// the floor cannot transition into PRIMARY_PRESS or COVER_SHADOW
+if (backlineCount < MIN_BACKLINE_AGENTS) F5-violation    // immediate F5
+// Backline-floor breach triggers F5 immediately (no cover-shadow demotion).
 ```
 
 `MIN_BACKLINE_AGENTS = 3 [GT]`.
@@ -538,3 +607,4 @@ effects and are themselves authoritative simulation state under
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. §3.0–§3.11 published with worked examples per FR-PR-034. |
+| 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H1: `#5 §2 FR-08` → `FR-10`. AR-S1-H2: §3.1.2 `BACKWARD_PASS` rewritten to use `TargetPosition - passerPosition` direction; worked example updated. AR-S1-H3: §3.0 preamble added (fatigue/stamina boundary); §3.3 eligibility constraint 2 corrected from `Stamina ≤ PRESS_FATIGUE_CEILING` → `Fatigue < PRESS_FATIGUE_CEILING`; §3.7 removed erroneous "stamina is complement of fatigue" sentence. AR-S1-H5: §3.4 cover-shadow tie-break tolerance added (`SPACING_EPSILON_M2`). AR-S1-H6: §3.4 `r.perceivedPressure` replaced with `geometricPressureOn(r)` (locally computed from own-team positions); `receiverProgressionGain` formula and worked example added; `THREAT_PRESSURE_NORMALIZER = 3.0 [GT]` introduced. AR-S1-M1: §3.8 `PRESS_ZONE_X_MAX` dead-code noted; "high-press default" label corrected. AR-S1-M4: §3.1.4 reviewer aside removed; clean statement added. AR-S1-M6: §3.9 invariant (2) F5-immediate path documented; backline-floor breach no longer mischaracterised as cover-shadow demotion. L1: §3.1.5 #7 §3.7 snapshot citation added. |

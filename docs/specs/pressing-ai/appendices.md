@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Appendices
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -47,6 +47,11 @@ to a velocity that will change on a touch.
 One card per trigger (FR-PR-009..012). Each card lists the input
 surface, threshold, debounce, worked example, and test reference.
 
+**Drift risk.** Values in these cards mirror §3.1.x prose and §6.1
+constant catalogue. Single source of truth is `PressingAIConstants.cs`
+at Stage 1+. If a threshold is re-tuned in §6.1, update the
+corresponding card here in the same commit.
+
 ### B.1 `BAD_TOUCH`
 
 | Field | Value |
@@ -63,12 +68,12 @@ surface, threshold, debounce, worked example, and test reference.
 
 | Field | Value |
 |---|---|
-| Source | Pass Mechanics #5 §2 FR-08 `PassAttemptEvent` at `CONTACT` |
-| Inputs | `passVelocity ∈ ℝ³` (kick); `attackingDirection` (orchestrator) |
-| Threshold | `dot(normalize(passVelocity.xy), attackingDirection) < BACKWARD_PASS_THRESHOLD = −0.30 [GT]` |
+| Source | Pass Mechanics #5 §2 FR-10 `PassAttemptEvent` at `CONTACT` |
+| Inputs | `e.AgentID` (passer lookup in perception); `e.TargetPosition`; `attackingDirection` (orchestrator) |
+| Threshold | `dot(normalize((e.TargetPosition − passerPosition).xy), attackingDirection) < BACKWARD_PASS_THRESHOLD = −0.30 [GT]`; `passerPosition = perception.agents[e.AgentID].position` |
 | Debounce | `TRIGGER_DWELL_TICKS = 2`; `TRIGGER_RELEASE_TICKS = 3` |
-| Trigger origin | Receiver `EntityId` (or passer if receiver is null) |
-| Worked example | kick `(−6, 3, 0)`, attackingDir `(+1, 0)` → dot = `−0.894` → fires |
+| Trigger origin | Passer `AgentID` |
+| Worked example | Passer at `(45, 30)`, `TargetPosition = (39, 33)`, attackingDir `(+1, 0)` → direction delta `(−6, 3)` → unit `(−0.894, 0.447)` → dot = `−0.894` → fires |
 | Test | T-U-002 |
 
 ### B.3 `SIDELINE_TRAP`
@@ -87,13 +92,14 @@ surface, threshold, debounce, worked example, and test reference.
 
 | Field | Value |
 |---|---|
-| Source | Perception #7 §3.7–§3.10 (visibility + attribute lookup + perceivedPressure) |
-| Inputs | `r.attribute.FirstTouch`, `r.perceivedPressure` |
+| Source | Perception #7 §3.7–§3.10 (visibility + attribute lookup) |
+| Inputs | `r.attribute.FirstTouch` (via #7 §3.10 perception propagation); `r.perceivedPressure` (#7 §3.10 — defending team reads own perception of local pressure on `r`, NOT the receiver's self-assessment) |
 | Threshold | `FirstTouch < WEAK_RECEIVER_THRESHOLD = 10 [GT]` AND `perceivedPressure ≥ WEAK_RECEIVER_PRESSURE = 0.50 [GT]` |
 | Debounce | `TRIGGER_DWELL_TICKS = 2`; `TRIGGER_RELEASE_TICKS = 3` |
 | Trigger origin | Lowest-`FirstTouch` qualifying receiver; EntityId ascending tie-break; opposing GK excluded (KD-13) |
 | Worked example | receiver `FirstTouch = 7`, `perceivedPressure = 0.65` → fires |
 | Test | T-U-004 |
+| Stage 1+ note | `r.attribute.FirstTouch` is consumed with perfect-knowledge at Stage 0 (schema-only). Stage 1+ scouting-accuracy gating applies per #7 §3.10 propagation. Same Q2-style caveat as §2.3. |
 
 ## Appendix C — Cover-Shadow Lane Geometry (Worked Examples)
 
@@ -253,3 +259,4 @@ Stage 0 placeholder. Stage 1+ debug overlays:
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial appendices draft from `outline-detailed.md` v1.0. Three worked examples in Appendix C (vertical, diagonal, horizontal) per FR-PR-034. |
+| 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H2: B.2 source `FR-08` → `FR-10`; inputs changed from `passVelocity` to passer position → TargetPosition; worked example updated; trigger origin changed to passer AgentID. AR-S1-H6: B.4 attribute-access Stage 1+ caveat added. AR-S1-L2: Appendix B preamble drift-risk note added. |

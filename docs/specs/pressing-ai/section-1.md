@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Version:** 0.2
 **Status:** DRAFT (section-file authoring pass)
 **Source:** `outline-detailed.md` v1.0 (May 16, 2026)
 
@@ -19,7 +19,7 @@ shape. The spec exists to (a) name the canonical **trigger catalog**
 KD-8), (c) enforce three measurable **anti-chaos invariants** (§3.9,
 KD-16), (d) provide **disengage and reset** logic (§3.8), and (e)
 declare the integration surface with Decision Tree #8 — where the
-runtime activation lands at **Stage 1** per #8 §1.4.21.
+runtime activation lands at **Stage 1** per #8 §1.3.2.
 
 This specification is a producer of one `PressDirective` per team per
 tick plus one `PressAssignment` per agent per tick. It does **not**
@@ -72,9 +72,9 @@ goalkeeper is always `HOLD_SHAPE` per KD-13).
 | #1 Ball Physics | §1.2 | Corner-origin coordinates; ball state schema for sideline geometry |
 | #2 Agent Movement | §2.5 (`XC-002-001`), §3.1 | EntityId no-reuse; hysteresis pattern (dwell-time + dead-zone) |
 | #4 First Touch | §3.1 (control quality `q`), §3.5 (`pressureScalar`) | `BAD_TOUCH` trigger source — `q` is the ground-truth surface (see Q2 note in §2.3) |
-| #5 Pass Mechanics | §2 FR-08 (`PassAttemptEvent` published at `CONTACT`) | `BACKWARD_PASS` trigger source: #13 dots the event-carried kick velocity against the attacking direction |
+| #5 Pass Mechanics | §2 FR-10 (`PassAttemptEvent` published at `CONTACT`) | `BACKWARD_PASS` trigger source: #13 computes pass direction from passer position (perception snapshot `agents[e.AgentID].position`) → `e.TargetPosition` and dots against the attacking direction |
 | #7 Perception System | §3.7–§3.10 | Filtered world model: agent positions, ball state, possession owner, `isActive` |
-| #8 Decision Tree | §1.4.21, §1.5, §1.7.3 (`XC-008-001`), §3.1.8 (+ §3.1.8.1, §3.1.8.2), §3.2.7 | Stage-1 binding row; PRESS utility surface this spec advises; EntityId no-reuse |
+| #8 Decision Tree | §1.3.2, §1.7.2, §1.7.3 (`XC-008-001`), §3.1.8 (+ §3.1.8.1, §3.1.8.2), §3.2.7 | Stage-1 binding row (§1.3.2 deferral prose L231–232 and table row L426; §1.7.2 soft-dependency row L467); PRESS utility surface this spec advises; EntityId no-reuse |
 | #16 Deterministic Simulation | §3.2, §3.2.5, §3.4, §5, §6.2 | EntityId iteration; domain-tag registry; per-tick digest scope |
 | #17 Event System | §3.10 (channel registry — Stage 1 back-prop) | No channels produced or consumed at Stage 0 |
 | #18 Performance | §3.7, §6 | Zero-allocation hot-path discipline; per-tick budget framework |
@@ -110,6 +110,21 @@ goalkeeper is always `HOLD_SHAPE` per KD-13).
   ERR-010-001). Whichever spec in the block reaches `APPROVED` first
   claims the next-available slot; #13 expects `0x19` per the
   current block ordering #10 / #11 / #12 / #13 / #14 / #15.
+- **`ERR-013-007`** — back-prop into #12 §4 to publish
+  `GetPhase(TeamId)` as a Stage 1 accessible (currently internal-only
+  per #12 §4.4.3; needed by #13 §3.11 KD-11 phase gate and §4.4.3).
+  Filed v0.2 fix pass (AR-S1-H4).
+- **`ERR-013-008`** — back-prop into #12 §4 to publish
+  `GetLine(EntityId)` as a Stage 1 accessor (currently Stage 1+ only
+  per #12 §4.5.1; needed by #13 §3.9 invariant (2) KD-16 backline
+  floor). Filed v0.2 fix pass (AR-S1-H4).
+
+**Renumbering note (AR-S1-M2):** `outline-detailed.md` KD-10
+originally proposed `ERR-013-001` for both the #8 back-prop AND the
+#16 domain-tag back-prop. Section-file draft split these into two
+distinct back-props and renumbered the domain-tag request to
+`ERR-013-005` to avoid collision. This split is documented here and
+in §8.4 for traceability.
 
 ### 1.3.4 Downstream (declared, not implemented)
 
@@ -168,7 +183,7 @@ Authoritative Boundary Matrix (mirrors `outline-detailed.md` v1.0):
 | #12 Positioning AI | `PressOverride` displacement consumed by orchestrator | Baseline out-of-possession `formationSlot` | Orchestrator composes; both read by #8 | Per-agent slot override pre-#8 read (#12 §7.3 reservation) | No (Stage 1) |
 | #2 Agent Movement | (none direct — via #8 action output) | 60 Hz steering toward `Action.TargetPosition` | #2 reads #8 | Same path as #12 | No |
 | #4 First Touch | (none — read consumer) | Control quality `q` / `pressureScalar` | #13 reads #4 (perception-propagated; see Q2 note in §2.3) | Snapshot field at tick start | Yes (schema only) |
-| #5 Pass Mechanics | (none — read consumer) | `PassAttemptEvent` at `CONTACT` (#5 §2 FR-08) | #13 reads #5 | Per-tick event ring read; #13 computes the directional dot-product locally | Yes (schema only) |
+| #5 Pass Mechanics | (none — read consumer) | `PassAttemptEvent` at `CONTACT` (#5 §2 FR-10) | #13 reads #5 | Per-tick event ring read; #13 computes pass direction from `e.AgentID` passer position to `e.TargetPosition` and dots locally | Yes (schema only) |
 | #7 Perception | (none — read consumer) | Filtered world model | #13 reads #7 | Snapshot read at tick start | Yes |
 | #11 Goalkeeper | (KD-13 invariant: GK never assigned press roles) | GK slot ownership | independent | KD-13 negative invariant; FR-PR-017 | n/a |
 | #14 Defensive | Pressing-role-owned agents | Cover/zonal-role-owned agents | Disjoint partition per tick | KD-5 handoff rule (Stage 1+) | No |
@@ -201,10 +216,11 @@ Authoritative Boundary Matrix (mirrors `outline-detailed.md` v1.0):
 ## 1.8 Stage-Binding Statement
 
 **Spec drafted at Stage 0; runtime activates at Stage 1.** Authoritative
-basis: Decision Tree #8 §1.4.21 ("No coordinated pressing... Stage 1
-— Pressing AI #13 introduces coordinated press triggers") and #8
-§1.5 row ("Pressing AI #13 (Stage 1) — Coordinated press state — DT
-will consult before scoring PRESS").
+basis: Decision Tree #8 §1.3.2 (Features Deferred to Stage 1+, table row
+L426: "No coordinated pressing... Stage 1 — Pressing AI #13 introduces
+coordinated press triggers") and #8 §1.7.2 (Soft Dependencies table row
+at L467: "Pressing AI #13 (Stage 1) — Coordinated press state — DT will
+consult before scoring PRESS").
 
 Stage 0 deliverable from #13 = published specification only — this
 document, the ten section files, and the appendices. **No runtime
@@ -223,3 +239,4 @@ the pattern #12 §7.3 reserves for the `PressOverride` slot.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. |
+| 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H1: `#8 §1.4.21` → `#8 §1.3.2`; `#8 §1.5` → `#8 §1.7.2` in §1.1, §1.3.1, §1.8. AR-S1-H2: `#5 §2 FR-08` → `FR-10`; `passVelocity` → direction from passer position → `TargetPosition` in §1.3.1, §1.6. AR-S1-H4: ERR-013-007 / ERR-013-008 back-prop requests filed in §1.3.3. AR-S1-M2: ERR renumbering note added to §1.3.3. |

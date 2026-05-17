@@ -1,9 +1,9 @@
 # Pressing AI Specification #13 — Section 9: Approval Checklist
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026
-**Version:** 0.1
-**Status:** DRAFT — section files v0.1 authored from `outline-detailed.md` v1.0. PASS-1 adversarial review and lead-developer sign-off pending. `SPEC_INDEX.md` row 13 remains `NOT STARTED` per outline NEXT STEPS step 14 (status flip is gated on PASS-1 review, not on section-file landing).
+**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Version:** 0.2
+**Status:** DRAFT — section files v0.2 (PASS-1 adversarial-review fix pass complete). `SPEC_INDEX.md` row 13 flipped `NOT STARTED → IN REVIEW` atomically with v0.2 landing.
 
 ---
 
@@ -33,9 +33,10 @@
 | (b) | `ERR-013-005` `DOMAIN_TAG_PRESSING_AI` allocation resolved | OPEN |
 | (c) | All `[CROSS-PENDING]` tags promoted to `[CROSS]` | OPEN — depends on (b) |
 | (d) | Hysteresis `[EST]` constants promoted to `[GT]` with derivation entries in Appendix A (`TRIGGER_DWELL_TICKS`, `TRIGGER_RELEASE_TICKS`, `ROLE_DWELL_TICKS`, `INTERCEPT_LOOKAHEAD_TICKS`) | OPEN |
-| (e) | #5 subsection for `PassAttemptEvent` grep-verified — DONE (`pass-mechanics/section-2.md` L330 / FR-08 / `CONTACT`; §8.5) | DONE |
+| (e) | #5 subsection for `PassAttemptEvent` grep-verified — DONE (`pass-mechanics/section-2.md` L330 / FR-10 / `CONTACT`; §8.5). **v0.2 correction:** FR-08 → FR-10 (Event Publishing); confirmed payload has no `passVelocity`; direction computed from positions | DONE |
 | (f) | #4 first-touch quality surface route confirmed (Q2: perception-propagated default; §2.3 note) | DONE (default preserved) |
 | (g) | Lead-developer R-01..R-05 review pass | OPEN |
+| (h) | #19 §3 test-prefix conformance grep — `T-C-` (anti-chaos) and `T-X-` (exploit-resistance) verified as enumerated or back-propped (AR-S1-L4) | OPEN — pending grep of `testing-strategy/section-3.md` |
 
 ## 9.4 Finding-to-Resolution Map
 
@@ -77,16 +78,29 @@
 - **OI-005** — #5 / #4 subsection grep finalisation (§8.5). Section-file draft greps completed May 17, 2026: `PassAttemptEvent` confirmed at `pass-mechanics/section-2.md` L330 (FR-08); first-touch `pressureScalar` confirmed at `first-touch/section-3-1-to-3-5.md` §3.5. **Q2 caveat**: First Touch publishes `q` per touch event, not per tick; the perception-propagated route in #2.3 assumes #7 §3.10 carries `lastTouch.q` forward — if section-file PASS-1 review finds #7 does NOT carry this field, OI-005 re-opens for a perception-schema patch request.
 - **OI-006** — Domain-tag allocation finalisation: `DOMAIN_TAG_PRESSING_AI = 0x19` is the current proposal under ERR-012-001's `0x17…0x1C` shifted block (post-May 16, 2026, after #10 took `0x16`). If another spec in the block reaches `APPROVED` before #13 and disrupts the ordering, `ERR-013-005` is updated with the next-available slot per the first-to-APPROVED precedent.
 
+- **OI-008** — `ERR-013-007` back-prop into #12 §4 to publish
+  `GetPhase(TeamId)` at Stage 1: non-blocking for Stage 0 spec text;
+  required before Stage 1 runtime activation (FR-PR-044 precondition
+  (a) expansion). Depends on #12 reaching `APPROVED` first.
+- **OI-009** — `ERR-013-008` back-prop into #12 §4 to publish
+  `GetLine(EntityId)` at Stage 1 (currently Stage 1+ per #12 §4.5.1):
+  non-blocking for Stage 0 spec text; required before Stage 1 runtime
+  activation so KD-16 invariant (2) can read line membership.
+- **OI-010** — #19 §3 test-prefix conformance grep (AR-S1-L4): verify
+  `T-C-` and `T-X-` against `testing-strategy/section-3.md`; bind to
+  canonical category or file one-line back-prop into #19 §3. Blocks
+  §9.3 (h) and R-05 sign-off.
+
 OI-007 (`certification-platform.md` Stage-0 host pin) is shared with #12 OI-005 / #10 OI-006 / #11 OI-008 and remains carved out at the lead-developer level — does NOT block #13 sign-off; gates first per-tick budget cert run only.
 
 ## 9.7 Decision
 
-- Status: section files v0.1 authored from `outline-detailed.md` v1.0; PASS-1 adversarial review pending. **`SPEC_INDEX.md` row 13 remains `NOT STARTED`** — the status flip to `IN REVIEW` is gated on PASS-1 adversarial review per outline NEXT STEPS step 14.
-- Next gate: PASS-1 adversarial review on section files → v0.2 fix pass → `SPEC_INDEX.md` row 13 `NOT STARTED → IN REVIEW`.
-- Final gate: `APPROVED` after R-01..R-05 sign-off and §9.3 preconditions all DONE (chiefly: `ERR-013-001` mechanism choice, `ERR-013-005` domain-tag ratification, and Appendix A derivation entries for `[EST]` constants).
+- Status: section files v0.2 (PASS-1 adversarial-review fix pass complete). **`SPEC_INDEX.md` row 13 flipped `NOT STARTED → IN REVIEW`** atomically with v0.2 landing per outline NEXT STEPS step 14. All 6 H and 7 M findings from PASS-1 adversarial review resolved. 4 L findings addressed (L1 §3.1.5 citation added; L2 Appendix B preamble note added; L3 §6.3 citation corrected; L4 §5 preamble note added with OI-010 tracking).
+- Outstanding (gates `IN REVIEW → APPROVED`): (i) `ERR-013-001` mechanism choice (OI-001); (ii) `ERR-013-005` domain-tag ratification (OI-006); (iii) Appendix A derivation entries for `[EST]` constants (OI-003); (iv) `ERR-013-007` / `ERR-013-008` #12 back-prods (OI-008 / OI-009); (v) #19 test-prefix conformance grep (OI-010); (vi) lead-developer R-01..R-05 sign-off (OI-004).
 
 ## 9.8 Version History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. |
+| 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial-review fix pass. All 6 H and 7 M findings resolved. 4 L findings addressed with OI tracking. `SPEC_INDEX.md` row 13 `NOT STARTED → IN REVIEW`. OI-008 / OI-009 / OI-010 added. §9.3 (h) precondition added for #19 prefix conformance. §9.7 decision updated. |

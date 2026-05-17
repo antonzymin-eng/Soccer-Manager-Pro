@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -90,20 +90,40 @@ re-read mid-tick (FR-PR-037 / F3). Fields consumed:
 ### 4.4.2 Pass Mechanics (#5) Event Ring
 
 `PassEventRing` is a per-tick read of `PassAttemptEvent` instances
-published at #5 `CONTACT` (FR-08). Each event carries the kick
-velocity vector. #13 reads the most-recent event whose
-`receiverTeam == opposing team` and computes the
-`BACKWARD_PASS` dot-product locally (KD-1: no upstream "backward"
-classification — #13 owns the threshold).
+published at #5 `CONTACT` (FR-10). The confirmed event payload
+(`pass-mechanics/section-2.md` FR-10 §351) is: `AgentID`,
+`PassType`, `TargetPosition`, `FrameNumber` — no velocity field.
+#13 reads the most-recent event for the opposing team's pass and
+computes the `BACKWARD_PASS` dot-product locally: pass direction is
+derived from `perception.agents[e.AgentID].position` (passer) to
+`e.TargetPosition` (KD-1: #13 owns the threshold and the direction
+derivation; no upstream "backward" classification consumed).
 
 ### 4.4.3 #12 Positioning AI Read
 
+**Stage 0 accessors** (sole published Stage 0 surfaces per #12 §4.4.3):
+
 ```
 PositioningAI.GetFormationSlot(EntityId id)    // baseline slot
-PositioningAI.GetPhase(TeamId team)            // local phase enum
-PositioningAI.GetLine(EntityId id)             // Defense | Midfield | Attack
 PositioningAI.IsSentinel(Vector2 slot)         // F6 detection
 ```
+
+**Stage 1+ accessors** — NOT exposed at Stage 0 (CLAUDE.md
+"Interface Design Principle" / #12 §4.5.1). Back-prop requests
+filed to publish these at Stage 1:
+
+```
+// ERR-013-007: back-prop into #12 §4 to publish GetPhase at Stage 1
+// PositioningAI.GetPhase(TeamId team)         // local phase enum — Stage 1+
+
+// ERR-013-008: back-prop into #12 §4 to publish GetLine at Stage 1
+// PositioningAI.GetLine(EntityId id)          // Defense | Midfield | Attack — Stage 1+
+```
+
+Because #13 runtime is itself Stage 1 (§1.8 / KD-12), these
+accessors will be available when #13 activates — but #12 must ratify
+the publications via ERR-013-007 / ERR-013-008 before #13 can treat
+them as confirmed surfaces.
 
 KD-4: #13 **biases** but does not **replace** #12's slots. The
 orchestrator composes the per-agent target for #8 by:
@@ -189,7 +209,7 @@ is published until the downstream consumer spec reaches
 | Concern | Binding | Notes |
 |---|---|---|
 | Iteration order | #16 §3.2.5 | Outfield agents iterated EntityId ascending; GK handled by KD-13 exclusion (no iteration over GK in selection loops) |
-| RNG domain tag | #16 §3.4 | `DOMAIN_TAG_PRESSING_AI = 0x19` `[CROSS-PENDING]` (`ERR-013-005`; inherits ERR-012-001 block proposal). Stage 0 §3 currently has no stochastic step — the tag is declared so Stage 1+ extensions inherit without re-litigation. |
+| RNG domain tag | #16 §3.4 | `DOMAIN_TAG_PRESSING_AI = 0x19` `[CROSS-PENDING]` (`ERR-013-005`; inherits ERR-012-001 block proposal). Stage 0 §3 currently has no stochastic step — the tag is declared **solely to lock the block slot** in the ERR-012-001 Phase B/C allocation (`0x17…0x1C`) before a Phase-C spec (#14 or #15) can claim `0x19`. This is a block-collision-avoidance reservation per the first-to-APPROVED precedent; no `DeterministicRngService` calls exist at Stage 0. The tag gains its first consumer at Stage 1+ when stochastic tie-breaking is added. |
 | Per-tick digest | #16 §6.2 | `PressDirective`, all 22 `PressAssignment`, and the full `RoleHysteresisState` + `PressTrigger` structs (FR-PR-004) |
 | Stage-0 arithmetic | CLAUDE.md "When Writing Code" | `float`; Fixed64 deferred to Stage 5+ per #9 §8.1 (§7.9) |
 | Float-comparison policy | KD-9 / KD-14 reuse | `SPACING_EPSILON_M2 = 1e-4 m²` cited from #12 §3.6.1 / KD-16 |
@@ -215,3 +235,4 @@ The following checks run during integration testing (§5.4):
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. KD-3 mechanism options A and B both preserved in §4.4.4 per OI-001. |
+| 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H2: §4.4.2 `FR-08` → `FR-10`; removed "kick velocity vector" claim; added direction-from-positions derivation. AR-S1-H4: §4.4.3 split into Stage 0 (GetFormationSlot / IsSentinel) and Stage 1+ (GetPhase / GetLine) accessor groups; ERR-013-007 / ERR-013-008 back-prop requests documented. AR-S1-M3: §4.6 RNG domain tag row updated with block-collision-avoidance rationale for the Stage-0 reservation. |
