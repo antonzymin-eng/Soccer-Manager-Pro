@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 initial draft)
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.3 — PASS-3 clean-up; Anticipation removed from §1.6 boundary matrix)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -96,7 +96,7 @@ handling (GK positioning is owned by #11 per KD-7).
 | #4 First Touch | §3.1 (control quality `q`) | Not read directly — consumed via #7 perception snapshot propagation |
 | #5 Pass Mechanics | §2 FR-10 (`PassAttemptEvent`) | Not read directly — ball state and opponent positioning consumed via #7 snapshot |
 | #6 Shot Mechanics | §2 (shot-event schema) | Boundary awareness for threat scoring near goal; consumed via #7 snapshot only |
-| #7 Perception System | §3.7–§3.10 | Filtered world model: agent positions, ball state, possession owner, attribute lookups (`FirstTouch`, `Tackling`, `Anticipation`), `isActive` |
+| #7 Perception System | §3.7–§3.10 | Filtered world model: agent positions, ball state, possession owner, attribute lookups (`FirstTouch` — threat score §3.5; `Tackling` — declared for future tackle-quality use, not consumed at Stage 0), `isActive` |
 | #8 Decision Tree | §1.3.2, §2.2.6, §3.1.7, §3.1.9 | Stage-1 binding row (§1.3.2 deferral of coordinated defensive assignment); `MarkDirective?` field in `TacticalContext` (ERR-014-001, Option B); EntityId no-reuse (`XC-008-001`) |
 | #13 Pressing AI | §2.2 (`PressAssignment`), §3.4–§3.5, §4.5, FR-PR-014, FR-PR-017 | Role partition: `HOLD_SHAPE` pool is derived by excluding `PRIMARY_PRESS` and `COVER_SHADOW` agents; GK always `HOLD_SHAPE` from #13's view (FR-PR-017) |
 | #16 Deterministic Simulation | §3.2, §3.2.5, §3.4, §5, §6.2 | EntityId iteration order; domain-tag registry; per-tick digest scope |
@@ -147,14 +147,15 @@ handling (GK positioning is owned by #11 per KD-7).
   #16 §3.4. Proposed value: `0x1A`, the next available slot in the
   Phase B/C block after `DOMAIN_TAG_PRESSING_AI = 0x19` (allocated
   May 17, 2026 via ERR-013-005). Phase B/C block layout: `0x17` = #12
-  (ERR-012-001 proposed), `0x18` = #11 (ERR-011-001 proposed),
-  `0x19` = #13 (resolved), `0x1A` = #14 (this entry), `0x1B` = #15
-  (proposed). **Status:** OPEN — `DOMAIN_TAG_DEFENSIVE_AI` is
-  `[CROSS-PENDING]` throughout this spec until ERR-014-004 is ratified
-  in #16 §3.4. If a slot conflict emerges before ERR-014-004 ratification
-  (e.g., if #11 or #12 APPROVED first with a different layout), the same
-  shift-right collision policy as the May 16, 2026 #10/#12 domain-tag
-  shift applies.
+  (ERR-012-001 proposed), `0x18` or `0x1D` = #11 (ERR-011-001 proposed
+  — whichever of #11/#12 reaches `APPROVED` first takes `0x17`/`0x18`;
+  if #12 reaches `APPROVED` first, #11 shifts to `0x1D`; this shift does
+  NOT affect #14's `0x1A` slot), `0x19` = #13 (resolved), `0x1A` = #14
+  (this entry), `0x1B` = #15 (proposed). **Status:** OPEN —
+  `DOMAIN_TAG_DEFENSIVE_AI` is `[CROSS-PENDING]` throughout this spec
+  until ERR-014-004 is ratified in #16 §3.4. If a slot conflict emerges
+  before ERR-014-004 ratification, the same shift-right collision policy
+  as the May 16, 2026 #10/#12 domain-tag shift applies.
 
 ### 1.3.4 Downstream (declared, not implemented)
 
@@ -296,3 +297,5 @@ pattern established by #13 §1.8 for Pressing AI.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6 / draft-defensive-ai) | Initial draft from `outline-detailed.md` v1.0. §1.1–§1.9 authored. Boundary matrix confirmed against `pressing-ai/section-1.md` v0.3 and `outline-detailed.md` v1.0. ERR-014-001..004 declared. KD-1..KD-19 tabulated. Coordinate and convention bindings cited. |
+| 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. M7: §1.3.3 ERR-014-004 block layout updated to reflect ERR-011-001/ERR-012-001 race — #11 occupies `0x18` or shifts to `0x1D` depending on which of #11/#12 reaches `APPROVED` first; explicitly notes that #14's `0x1A` slot is stable regardless of that race outcome. |
+| 0.3 | May 17, 2026 | AI agent | PASS-3 clean-up. §1.6 boundary matrix row for #7 Perception: removed `Anticipation` from attribute lookups (consistent with M6 fix in §2.3 and XC-014-005 — `Anticipation` is not consumed by #14 at Stage 0); retained `FirstTouch` (threat score §3.5) and `Tackling` (declared for future tackle-quality use). |

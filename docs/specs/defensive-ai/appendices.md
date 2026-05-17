@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Appendices
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 initial draft)
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; L4 resolved)
+**Version:** 0.2
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -159,7 +159,7 @@ before the ball is played forward.
 
 **Rationale:** After a coordinated step-up, the defensive line needs time to
 re-establish shape before a second trap can fire. 1,000 ms is approximately
-the time for a restart restart pass or a brief possession phase to develop.
+the time for a restart pass or a brief possession phase to develop.
 It also prevents the line from pulsing forward repeatedly in rapid succession,
 which would produce an unrealistic "conveyor belt" offside trap effect.
 
@@ -777,3 +777,4 @@ They do not affect the deterministic simulation output.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent | Initial appendices. Appendix A: 22 `[GT]` constant derivation entries (all promoted from `[EST]`; A.1–A.22). Appendix B: last-man predicate reference card with formal definitions (both team orientations) + 3 canonical test cases (single last man, EntityId tie, GK-forward exclusion). Appendix C: offside trap verification with 4 canonical cases (trap fires, ball too fast, incoherent line, active press). Appendix D: anti-chaos sensitivity analysis with high/low/default values + interaction rule + two named style profiles. Appendix E: 4 KD-18 exploit-resistance scenarios (E.1 early trap, E.2 switch through hole, E.3 last-man one-on-one, E.4 GK out of position) — tick-by-tick trace with pass criteria. Appendix F: 16-entry glossary. Appendix G: telemetry playbook (Stage 0 placeholder + Stage 1+ planned overlays + known diagnostic signals). |
+| 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. L4: Appendix A.9 typo corrected — "time for a restart restart pass" → "time for a restart pass". |
