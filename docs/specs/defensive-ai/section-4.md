@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; L3/M7 resolved)
+**Version:** 0.2
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -113,7 +113,7 @@ boundary). #14 does not re-read mid-tick. Fields consumed:
 ```
 // Confirmed in #12 §4.5.1 v0.3 (Stage 1+):
 BaselineDefensiveShapeView  PositioningAI.GetBaselineShape(TeamId team);
-LocalPhase                  PositioningAI.GetPhase(TeamId team);
+Phase                       PositioningAI.GetPhase(TeamId team);
 LineMembership              PositioningAI.GetLine(EntityId id);
 float                       PositioningAI.GetDefensiveLineDepth(TeamId team);
 ```
@@ -217,11 +217,14 @@ buffers. No additional mutable state. Used by:
 | EntityId no-reuse | #2 §2.5 (XC-002-001); #8 §1.7.3 (XC-008-001) | Inherited; no additional constraint added |
 
 The `DOMAIN_TAG_DEFENSIVE_AI = 0x1A` slot is declared within the
-ERR-012-001 Phase B/C block (`0x17…0x1C`): `0x17` (#12), `0x18` (#11),
-`0x19` (#13), `0x1A` (#14), `0x1B` (#15). At Stage 0 the tag locks the
-block slot; the first consumer call to `DeterministicRngService` occurs at
-Stage 1 when stochastic tie-breaking (identical displacement cost across
-two candidates) is implemented.
+ERR-012-001 Phase B/C block (`0x17…0x1C`): `0x17` (#12), `0x18` or `0x1D`
+(#11 — final slot depends on ERR-011-001 / ERR-012-001 race; whichever of
+#11 and #12 reaches `APPROVED` first takes `0x17` / `0x18` respectively;
+if #12 lands first, #11 shifts to `0x1D`), `0x19` (#13), `0x1A` (#14),
+`0x1B` (#15). At Stage 0 the tag locks the block slot; the first consumer
+call to `DeterministicRngService` occurs at Stage 1 when stochastic
+tie-breaking (identical displacement cost across two candidates) is
+implemented.
 
 ## 4.7 Cross-Specification Validation Checks
 
@@ -247,3 +250,4 @@ at section-file draft time.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent | Initial draft. KD-5 Option B resolved: `TacticalContext.MarkDirective?` via ERR-014-001 (mirrors #13 ERR-013-001 precedent). Q2 resolved: #3 §3.3 tackle contact surface. `TackleIntentRequest` surfaced via `DefensiveAI.GetTackleIntentRequests()` accessor. Stage 1+ file layout declared. #12 Stage 1 accessor names confirmed per ERR-013-007/008 precedent. |
+| 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. L3: §4.4.2 accessor declaration corrected `LocalPhase` → `Phase` (non-existent type; canonical enum is `Phase` from #12 §2.1). M7: §4.6 domain tag block layout updated to reflect ERR-011-001/ERR-012-001 race: #11 may occupy `0x18` or `0x1D` depending on which of #11/#12 reaches `APPROVED` first. |

@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 initial draft)
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; H2/H4/M2/M3/M6 resolved)
+**Version:** 0.2
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -94,9 +94,13 @@ readonly struct MarkAssignment
 {
     EntityId    agent;
     MarkMode    mode;              // ZONAL | MAN_MARK | INTERCEPT_RUNNER | COVER_GK_ZONE
-    EntityId?   targetEntityId;   // null for ZONAL; opponent EntityId for other modes
-    Vector2?    targetPosition;   // null for ZONAL; world position for other modes
+    EntityId?   targetEntityId;   // null for ZONAL and COVER_GK_ZONE; opponent EntityId otherwise
+    Vector2?    targetPosition;   // null for ZONAL; opponent perceived pos or zone center otherwise
     int         validThroughTick; // equals currentTick; guard against stale reads
+    bool        overriddenThisTick;  // per-tick transient flag; true when set by §3.8/§3.9
+                                     // emergency overrides; reset to false at tick start
+    bool        isManuallyAssigned;  // Stage 2+ manual assignment override;
+                                     // always false at Stage 0–1 (§7.2)
 }
 ```
 
@@ -137,13 +141,18 @@ transitions per the #2 §3.1 dwell-time pattern (KD-11).
 ```
 struct MarkHysteresisState
 {
-    MarkMode    currentMode;      // mode held since last transition
-    int         dwellCounter;     // ticks in current mode; increments each tick
+    int         dwellCounter;          // ticks remaining to retain current assignment (§3.11 pre-check)
+    MarkMode    candidateMode;         // leading candidate being evaluated for transition
+    EntityId?   candidateTargetId;     // leading candidate's opponent EntityId (null if ZONAL candidate)
+    int         holdTicks;             // consecutive ticks the leading candidate has been preferred
 }
 ```
 
-`dwellCounter` resets to zero on each mode transition. A transition to a
-new mode is permitted only when `dwellCounter >= MARK_DWELL_TICKS [GT]`.
+`dwellCounter` is set to `MARK_DWELL_TICKS` on mode transition and decrements each tick;
+the pre-check in §3.11 retains the current assignment while `dwellCounter > 0`.
+`holdTicks` accumulates when the same candidate is consistently preferred; when
+`holdTicks >= MARK_DWELL_TICKS`, the transition commits and `dwellCounter` is reset.
+Emergency overrides (`ResetHysteresis` in §3.8/§3.9) zero both counters immediately.
 
 ### 2.2.5 `OffsideLineState` (Stage 1; digested per KD-10)
 
@@ -156,14 +165,18 @@ struct OffsideLineState
     float   currentLineDepth;          // x-coordinate of current effective line (m)
     int     stepUpDwellCounter;        // ticks the step-up trigger condition has been met
     int     cooldownTicksRemaining;    // post-trap cooldown; no new trap while > 0
+    int     coverGkZoneActiveTicks;    // consecutive ticks COVER_GK_ZONE override has been active;
+                                       // resets to 0 when GK returns to zone or max reached (§3.9)
 }
 ```
 
 `currentLineDepth` is updated each tick by reading #12's `DefensiveLineDepth`
 (#14 does not compute this value). `stepUpDwellCounter` increments when the
 offside-trap trigger condition holds and resets when it clears.
-`cooldownTicksRemaining` is set to `OFFSIDE_TRAP_COOLDOWN_TICKS [GT]` when a
-trap fires and decrements each tick until zero.
+`cooldownTicksRemaining` is set to `OFFSIDE_RESET_COOLDOWN_TICKS [GT]` when a
+trap fires and decrements each tick until zero. `coverGkZoneActiveTicks` increments
+each tick the COVER_GK_ZONE override is active and resets to 0 when the GK returns
+to the expected zone or when `COVER_GK_ZONE_MAX_TICKS [GT]` is reached (§3.9.3).
 
 ### 2.2.6 `BaselineDefensiveShapeView` (Stage 1; read-only)
 
@@ -197,8 +210,8 @@ All inputs below are consumed as read-only values captured at the start of the
 | #7 Perception §3.7 | Ball velocity | `Vector3` | Magnitude used for offside-trap trigger (FR-DA-018) |
 | #7 Perception §3.9 | Possession owner | `EntityId?` | `null` for loose ball |
 | #7 Perception §3.10 | Per-agent `isActive` | `bool` | Substituted / red-carded agents excluded from pool |
-| #7 Perception §3.7–3.10 | Per-agent `FirstTouch` attribute | `float` (normalised [0,1]) | Threat-score numerator (FR-DA-017) |
-| #7 Perception §3.7–3.10 | Per-opponent `Tackling` attribute | `float` (normalised [0,1]) | Tackle intent evaluation (§3.6) |
+| #7 Perception §3.7–3.10 | Per-opponent `FirstTouch` attribute | `float` (normalised [0,1]) | Threat-score numerator (FR-DA-017); normalised as `(attr−1)/19` |
+| #7 Perception §3.7–3.10 | Per-opponent `Tackling` attribute | `float` (normalised [0,1]) | Declared for future tackle-quality use; not consumed by §3.6 algorithm at Stage 0 |
 | #12 Positioning AI (BaselineDefensiveShapeView) | Per-agent `formationSlot` | `Vector2` | Baseline anchor for displacement cost and anti-chaos check |
 | #12 Positioning AI (BaselineDefensiveShapeView) | `defensiveLineDepth` | `float` | Read-only (FR-DA-012); written to `MarkDirective.offensiveLineDepth` |
 | #12 Positioning AI (BaselineDefensiveShapeView) | Team phase enum | `Phase` | Phase gating: `IN_POSSESSION` suppresses algorithm (FR-DA-013 / KD-19) |
@@ -292,3 +305,4 @@ and F6 in #13 §2.4). No special failure mode is required because the
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6 / draft-defensive-ai) | Initial draft from `outline-detailed.md` v1.0. §2.1 (37 FRs FR-DA-001..037), §2.2 (7 structs), §2.3 (inputs table), §2.4 (F1–F5 failure modes) authored. Data structure field definitions follow `pressing-ai/section-2.md` v0.2 readonly-struct convention. |
+| 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. H2: `MarkAssignment` struct (§2.2.2) now declares `overriddenThisTick` and `isManuallyAssigned` fields that were used in §3 algorithms but absent from struct definition; `targetEntityId` comment clarified to "null for ZONAL and COVER_GK_ZONE". H4: `MarkHysteresisState` struct (§2.2.4) rewritten to four-field definition matching §3.11.2 (`dwellCounter`, `candidateMode`, `candidateTargetId`, `holdTicks`); v0.1 had only `currentMode` + `dwellCounter`. M2: `OffsideLineState` struct (§2.2.5) now declares `coverGkZoneActiveTicks` field used in §3.9.2/§3.13 but missing from struct. M3: §2.3 inputs table row "Per-agent FirstTouch" corrected to "Per-opponent FirstTouch" (#14 reads opponents, not own-team agents). M6: `Tackling` description in §2.3 clarified to "Declared for future tackle-quality use; not consumed by §3.6 algorithm at Stage 0". |

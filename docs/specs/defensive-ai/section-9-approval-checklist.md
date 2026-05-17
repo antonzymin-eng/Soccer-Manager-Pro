@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 9: Approval Checklist
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 initial draft)
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; M1/L2 resolved)
+**Version:** 0.2
 **Status:** NOT STARTED → IN REVIEW (pending §9.3 precondition resolution)
 
 ---
@@ -25,7 +25,7 @@ Each item below is verifiable against the section files in the current
 | 1 | All 14 outline.md adversarial-review findings resolved | [x] | §9.4 finding-to-resolution map |
 | 2 | All 37 FRs (FR-DA-001..037) present and numbered | [x] | `section-2.md` §2.1 |
 | 3 | All 37 FRs trace to at least one test | [x] | `section-5.md` §5.8 traceability matrix |
-| 4 | All constants carry exactly one tag ([GT], [CROSS], [CROSS-PENDING]) | [x] | `section-6.md` §6.1 (27-entry catalogue) |
+| 4 | All constants carry exactly one tag ([GT], [CROSS], [CROSS-PENDING]) | [x] | `section-6.md` §6.1 (26-entry catalogue: 22 [GT] + 4 [CROSS]/[CROSS-PENDING]) |
 | 5 | All [GT] constants have Appendix A derivation entries | [x] | `appendices.md` Appendix A (22 derivations) |
 | 6 | Stage-binding statement unambiguous: Stage 0 spec; Stage 1 runtime | [x] | `section-1.md` §1.8 |
 | 7 | Data structures defined with field-level typing (5 structs + 2 views) | [x] | `section-2.md` §2.2 (§2.2.1–§2.2.7) |
@@ -53,7 +53,7 @@ Each item below is verifiable against the section files in the current
 | 29 | Exploit-resistance corpus (KD-18): four canonical exploits T-DA-EXP-001..004 | [x] | `section-5.md` §5.6.2; `appendices.md` Appendix E |
 | 30 | Determinism regression tests T-DA-DET-001..006 declared | [x] | `section-5.md` §5.4 |
 | 31 | Anti-chaos invariant cascade tests T-DA-INV-001..003 declared | [x] | `section-5.md` §5.6.1 |
-| 32 | Glossary of terms (13-entry table) | [x] | `appendices.md` Appendix F |
+| 32 | Glossary of terms (16-entry table) | [x] | `appendices.md` Appendix F |
 | 33 | Last-man predicate reference card with 3 canonical test cases | [x] | `appendices.md` Appendix B |
 | 34 | Offside trap algorithm verification (4 canonical trigger cases) | [x] | `appendices.md` Appendix C |
 | 35 | Anti-chaos sensitivity analysis | [x] | `appendices.md` Appendix D |
@@ -117,7 +117,7 @@ review pass are resolved by the v0.1 section files:
 | 9 | Tick-rate split (10 Hz / 60 Hz) unstated | M | KD-2 + §1.7 explicit binding + §4.1 architecture statement + FR-DA-001 + §6.4 per-frame budget = N/A | `section-1.md` §1.7; `section-3.md` §3.12; `section-4.md` §4.1 |
 | 10 | Fatigue convention not pre-committed | M | KD-1 + FR-DA-008 + §1.7 explicit binding + §4.7 check 3 | `section-1.md` §1.7; `section-2.md` FR-DA-008 |
 | 11 | No event production declared | M | KD-15: `MARK_ASSIGNED` / `LINE_STEPPED` channels declared at Stage 1 via ERR-014-002/003; §7.3 | `section-7.md` §7.3; `section-8.md` §8.3 |
-| 12 | Constant-tag policy not invoked | M | KD-13 + §6.1 full 27-entry catalogue with tags + Appendix A derivations | `section-6.md` §6.1; `appendices.md` Appendix A |
+| 12 | Constant-tag policy not invoked | M | KD-13 + §6.1 full 26-entry catalogue with tags + Appendix A derivations | `section-6.md` §6.1; `appendices.md` Appendix A |
 | 13 | Chance-prevention lacks acceptance criteria | L | §5.7: Stage-0 xG surrogate (shots-in-box + avg shot distance); measurement hooks declared against #3 events | `section-5.md` §5.7 |
 | 14 | No GK interaction model | L | KD-7: defensive wall ownership (#11 FR-GK-016 confirmation); `COVER_GK_ZONE` protocol (§3.9); GK exclusion from pool (FR-DA-009) | `section-1.md` §1.5 KD-7; `section-3.md` §3.9; `section-2.md` FR-DA-009 |
 
@@ -185,3 +185,4 @@ Items below do not gate `APPROVED` but must be completed at Stage 1:
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent | Initial checklist. §9.1: 39 self-contained items — all [x] checked against actual v0.1 section files (no fabricated values). §9.2: 6 cross-spec sign-offs; 2 OPEN, 3 CONFIRMED, 1 DEFERRED. §9.3: 7 preconditions; 3 [x] done, 4 [ ] open (a, b, e, g). §9.4: all 14 outline.md findings mapped to resolutions. §9.5: R-01..R-05 sign-off lines. §9.6: 4 non-blocking post-approval follow-ups. |
+| 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. M1: §9.1 item 4 evidence corrected "27-entry" → "26-entry catalogue: 22 [GT] + 4 [CROSS]/[CROSS-PENDING]"; §9.4 item 12 corrected "27-entry" → "26-entry". L2: §9.1 item 32 evidence corrected "13-entry" → "16-entry" (Appendix F has 16 entries per actual file count). |

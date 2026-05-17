@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 5: Test Plan
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 initial draft)
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; L1 resolved)
+**Version:** 0.2
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -748,4 +748,5 @@ systems). This criterion is verifiable without a full xG model.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
-| 0.1 | May 17, 2026 | AI agent | Initial draft. 59 named unit and integration tests (T-DA-001..T-DA-071 contiguous). 6 determinism regression tests (T-DA-DET-001..006). 3 performance tests (T-DA-PERF-001..003). 3 anti-chaos invariant tests (T-DA-INV-001..003). 4 exploit-resistance tests (T-DA-EXP-001..004). xG surrogate metrics defined (§5.7). FR-to-test traceability matrix (§5.8; all 37 FRs mapped). Total named tests: ≥ 85 targets met (79 named + 6 determinism + FR-map coverage). KD-18 exploit corpus (Appendix E) referenced. |
+| 0.1 | May 17, 2026 | AI agent | Initial draft. 71 named unit and integration tests (T-DA-001..T-DA-071 contiguous). 6 determinism regression tests (T-DA-DET-001..006). 3 performance tests (T-DA-PERF-001..003). 3 anti-chaos invariant tests (T-DA-INV-001..003). 4 exploit-resistance tests (T-DA-EXP-001..004). xG surrogate metrics defined (§5.7). FR-to-test traceability matrix (§5.8; all 37 FRs mapped). Total named tests: ≥ 85 targets met (79 named + 6 determinism + FR-map coverage). KD-18 exploit corpus (Appendix E) referenced. |
+| 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. L1: §5.9 v0.1 row corrected test count from "59 named" to "71 named" (T-DA-001..T-DA-071 = 71 tests, not 59). |
