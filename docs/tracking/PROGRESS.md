@@ -399,6 +399,24 @@
 
 ---
 
+### Week 17 — May 17, 2026
+
+**Completed:**
+- **Pressing AI (#13) APPROVED (May 17, 2026):** All gate items resolved in v0.3: ERR-013-001 Option B (`TacticalContext.PressDirective?` nullable field added to #8 §2.2.6); ERR-013-004 (`"Fatigue System #13"` → `"Pressing AI #13"` in #8 §3.1.8.1); ERR-013-005 (`DOMAIN_TAG_PRESSING_AI = 0x19` allocated in #16 §3.4 v1.0.3; `[CROSS-PENDING]` → `[CROSS]`); ERR-013-007 / ERR-013-008 (`GetPhase` / `GetLine` Stage 1 accessor declarations in #12 §4.5.1); Appendix A derivations for four hysteresis `[EST]` constants promoted to `[GT]`; T-C-/T-X- test-prefix conformance table added to #19 §3.1.4; lead-developer R-01..R-05 signed. OI-002 (Stage 1 channel-registry rows) open non-blocking per §9.6. Status `IN REVIEW → APPROVED`; SPEC_INDEX.md row 13 updated atomically.
+- **Defensive AI (#14) reclassified `NOT STARTED` → `IN REVIEW` (May 17, 2026):** Section files v0.1 authored from `outline-detailed.md` v1.0; PASS-1 adversarial review (17 findings: 6 H / 7 M / 4 L) filed and resolved in v0.2 fix pass same day. Outstanding gates: ERR-014-001 (#8 §2.2.6 ratification), #12 APPROVED gate, ERR-014-002/003 Stage 1 channels, ERR-014-004 (#16 §3.4 domain-tag), lead-developer R-01..R-05.
+- **Attacking AI (#15) — `outline-detailed.md` v1.1 authored and adversarially reviewed (May 17, 2026):** `outline-detailed.md` v1.0 drafted (1420+ lines; 36 FRs FR-AT-001..036; 17 KDs; 4 roles: RUNNER/SUPPORT_BALL/HOLD_WIDTH/WEAK_SIDE; ERR-015-001..005 pre-filed; `DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS-PENDING]`). Adversarial review (`adversarial-review-outline-detailed-v1.md`) filed same day: 9 findings (3H/3M/3L). All 9 findings resolved in v1.1: H-1 `relativeAngle_rad` removed from `RunParameters` (now 3 fields); H-2 `laneAssignment.lateralBias` phantom field replaced with `formationSlot.lateralPct`-based formula; H-3 #8 §1.3.2 citation corrected (by implication); M-4 `TOUCHLINE_HOLD_Y_M` renamed `TOUCHLINE_HOLD_DIST_M` with explicit per-side formula; M-5 `rotate()` undefined — replaced with explicit `teamAttackAngle` + `depthVec + lateralVec` decomposition; M-6 SET/DECREMENT order corrected (§3.9 TransitionController now owns both); L-7 `DANGER_ZONE_CORRIDOR_HW_M` derivation replaced with traceable PENALTY_BOX_HW_M/2 derivation (10.16m); L-8 KD-8 scope clarified (`overloadFlank` LEFT/RIGHT confirmed acceptable); L-9 `laneAssignment`→`lineMembership` correction in §3.3 step 2a. §2.3 Inputs section expanded: `teamAttackAngle` added; `formationSlot.lineMembership` and `formationSlot.lateralPct` called out explicitly. Status: NOT STARTED (outline-detailed only; section files not yet begun).
+
+**Status:**
+- **16 APPROVED, 0 SUSPENDED, 3 IN REVIEW (#11 / #12 / #14), 0 IN PROGRESS, 1 NOT STARTED (#15).**
+
+**Still Pending:**
+- Goalkeeper Mechanics (#11), Positioning AI (#12), Defensive AI (#14) — outstanding gates per CLAUDE.md OPEN ISSUES.
+- Attacking AI (#15) — section files not yet begun (outline-detailed.md v1.1 complete).
+- 11 approval tags created locally remain unpushed; push after merge to main.
+- Stage-0 host-platform pin in `tracking/certification-platform.md` (lead-developer task).
+
+---
+
 ## MILESTONES
 
 | Milestone | Target Date | Status | Actual Date |
@@ -499,9 +517,9 @@
 
 ---
 
-**Last Updated:** May 15, 2026 (#9 APPROVED; #17 §1.0.1 patch closes ERR-017-001 residual)  
+**Last Updated:** May 17, 2026 (#13 APPROVED; #14 IN REVIEW; #15 outline-detailed.md v1.1 adversarial-review cycle complete)  
 **Updated By:** AI Assistant  
-**Next Review:** After Spec #19 APPROVED sign-off (clears #18 KD-2 gate)
+**Next Review:** After #11 / #12 / #14 outstanding gates resolved; #15 section files begun
 
 ---
 
