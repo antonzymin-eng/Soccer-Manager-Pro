@@ -1,7 +1,7 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** May 17, 2026 (#13 Pressing AI reclassified `NOT STARTED → IN REVIEW` after section files v0.2 PASS-1 fix pass landed; 6 H / 7 M / 4 L findings resolved; ERR-013-007 / ERR-013-008 filed for `GetPhase` / `GetLine` Stage 1 accessor back-props into #12)
+> **Last Updated:** May 17, 2026 (#13 Pressing AI advanced `IN REVIEW → APPROVED`; all gate items resolved: ERR-013-001 Option B; ERR-013-004/005/007/008; Appendix A derivations; R-01..R-05 signed; `T-C-`/`T-X-` prefix conformance; count now 16 APPROVED / 2 IN REVIEW / 2 NOT STARTED)
 > **Purpose:** Single source of truth for spec numbers, folder names, and approval status. Every cross-reference in every spec must match the numbers in this file.
 
 ---
@@ -30,7 +30,7 @@
 | 10 | Heading Mechanics | `heading-mechanics/` | 3 | APPROVED | May 16, 2026 |
 | 11 | Goalkeeper Mechanics | `goalkeeper-mechanics/` | 3 | IN REVIEW | — |
 | 12 | Positioning AI | `positioning-ai/` | 3 | IN REVIEW | — |
-| 13 | Pressing AI | `pressing-ai/` | 4 | IN REVIEW | — |
+| 13 | Pressing AI | `pressing-ai/` | 4 | APPROVED | May 17, 2026 |
 | 14 | Defensive AI | `defensive-ai/` | 4 | NOT STARTED | — |
 | 15 | Attacking AI | `attacking-ai/` | 4 | NOT STARTED | — |
 | 16 | Deterministic Simulation | `deterministic-sim/` | 4 | APPROVED | May 14, 2026 |

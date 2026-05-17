@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
-**Version:** 0.2
+**Last Updated:** May 17, 2026 (v0.3 APPROVED gate: all [EST] hysteresis tags promoted to [GT])
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -143,9 +143,9 @@ own.
 
 ## 3.2 Trigger Debounce (Hysteresis)
 
-Each trigger flag is held for `TRIGGER_DWELL_TICKS [EST]`
+Each trigger flag is held for `TRIGGER_DWELL_TICKS [GT]`
 consecutive ticks before firing the press; held for
-`TRIGGER_RELEASE_TICKS [EST]` after the upstream condition clears
+`TRIGGER_RELEASE_TICKS [GT]` after the upstream condition clears
 before considering the trigger "off". Binding to Agent Movement #2
 §3.1 (KD-9). #13 does NOT define a new algorithm — it parameterises
 the #2 pattern.
@@ -164,9 +164,9 @@ foreach (flag in TriggerFlags) {
 committedFlag[flag] = (dwellCounter[flag] >= TRIGGER_DWELL_TICKS)
 ```
 
-`TRIGGER_DWELL_TICKS = 2 [EST]` (200 ms) — long enough to filter
+`TRIGGER_DWELL_TICKS = 2 [GT]` (200 ms) — long enough to filter
 single-tick noise; short enough to feel responsive.
-`TRIGGER_RELEASE_TICKS = 3 [EST]` (300 ms) — asymmetric (longer
+`TRIGGER_RELEASE_TICKS = 3 [GT]` (300 ms) — asymmetric (longer
 release than commit) so a press, once committed, does not
 oscillate against a brief release.
 
@@ -194,7 +194,7 @@ projInterceptionPoint = ballCarrier.pos + ballCarrier.velocity * INTERCEPT_LOOKA
 cost(a) = || a.pos - projInterceptionPoint ||²
 ```
 
-`INTERCEPT_LOOKAHEAD_TICKS = 3 [EST]` (300 ms).
+`INTERCEPT_LOOKAHEAD_TICKS = 3 [GT]` (300 ms).
 `DT_TACTICAL = 0.10 s [DERIVED]` from CLAUDE.md tick rate.
 `primaryPress = argmin_a cost(a)`; EntityId ascending if `|cost(i)
 − cost(j)| < SPACING_EPSILON_M2` per KD-9 / KD-14 reuse.
@@ -315,7 +315,7 @@ diagonal, horizontal carrier+receiver geometries).
 
 A role transition for agent `a` from `lastRole[a]` to a new
 candidate role commits only after the new candidate has been
-preferred for `ROLE_DWELL_TICKS [EST]` consecutive ticks. Prevents
+preferred for `ROLE_DWELL_TICKS [GT]` consecutive ticks. Prevents
 role-thrash when two cost candidates are near-equal.
 
 ```
@@ -335,7 +335,7 @@ if (candidate == lastRole[a]) {
 }
 ```
 
-`ROLE_DWELL_TICKS = 3 [EST]` (300 ms).
+`ROLE_DWELL_TICKS = 3 [GT]` (300 ms).
 
 **Worked example.** A has `lastRole = COVER_SHADOW`; selection
 proposes `PRIMARY_PRESS` for two ticks, then back to
@@ -608,3 +608,4 @@ effects and are themselves authoritative simulation state under
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. §3.0–§3.11 published with worked examples per FR-PR-034. |
 | 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H1: `#5 §2 FR-08` → `FR-10`. AR-S1-H2: §3.1.2 `BACKWARD_PASS` rewritten to use `TargetPosition - passerPosition` direction; worked example updated. AR-S1-H3: §3.0 preamble added (fatigue/stamina boundary); §3.3 eligibility constraint 2 corrected from `Stamina ≤ PRESS_FATIGUE_CEILING` → `Fatigue < PRESS_FATIGUE_CEILING`; §3.7 removed erroneous "stamina is complement of fatigue" sentence. AR-S1-H5: §3.4 cover-shadow tie-break tolerance added (`SPACING_EPSILON_M2`). AR-S1-H6: §3.4 `r.perceivedPressure` replaced with `geometricPressureOn(r)` (locally computed from own-team positions); `receiverProgressionGain` formula and worked example added; `THREAT_PRESSURE_NORMALIZER = 3.0 [GT]` introduced. AR-S1-M1: §3.8 `PRESS_ZONE_X_MAX` dead-code noted; "high-press default" label corrected. AR-S1-M4: §3.1.4 reviewer aside removed; clean statement added. AR-S1-M6: §3.9 invariant (2) F5-immediate path documented; backline-floor breach no longer mischaracterised as cover-shadow demotion. L1: §3.1.5 #7 §3.7 snapshot citation added. |
+| 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | APPROVED gate: all `[EST]` occurrences for `TRIGGER_DWELL_TICKS`, `TRIGGER_RELEASE_TICKS`, `ROLE_DWELL_TICKS`, `INTERCEPT_LOOKAHEAD_TICKS` promoted to `[GT]` (Appendix A.1–A.4 derivations complete; §9.3 (d) precondition DONE). |

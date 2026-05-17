@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
-**Version:** 0.2
+**Last Updated:** May 17, 2026 (v0.3 APPROVED gate: KD-3 Option B resolved; ERR-013-005/007/008 resolved)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -108,22 +108,21 @@ PositioningAI.GetFormationSlot(EntityId id)    // baseline slot
 PositioningAI.IsSentinel(Vector2 slot)         // F6 detection
 ```
 
-**Stage 1+ accessors** — NOT exposed at Stage 0 (CLAUDE.md
-"Interface Design Principle" / #12 §4.5.1). Back-prop requests
-filed to publish these at Stage 1:
+**Stage 1 accessors** — NOT exposed at Stage 0 (CLAUDE.md
+"Interface Design Principle"). Back-proped into #12 §4.5.1 (v0.3
+patch) via ERR-013-007 / ERR-013-008 (resolved May 17, 2026):
 
 ```
-// ERR-013-007: back-prop into #12 §4 to publish GetPhase at Stage 1
-// PositioningAI.GetPhase(TeamId team)         // local phase enum — Stage 1+
+// Stage 1 (ERR-013-007 — confirmed in #12 §4.5.1 v0.3):
+LocalPhase     PositioningAI.GetPhase(TeamId team);
 
-// ERR-013-008: back-prop into #12 §4 to publish GetLine at Stage 1
-// PositioningAI.GetLine(EntityId id)          // Defense | Midfield | Attack — Stage 1+
+// Stage 1 (ERR-013-008 — confirmed in #12 §4.5.1 v0.3):
+LineMembership PositioningAI.GetLine(EntityId id);
 ```
 
 Because #13 runtime is itself Stage 1 (§1.8 / KD-12), these
-accessors will be available when #13 activates — but #12 must ratify
-the publications via ERR-013-007 / ERR-013-008 before #13 can treat
-them as confirmed surfaces.
+accessors will be available when #13 activates. #12 §4.5.1 v0.3
+has ratified the Stage 1 publications.
 
 KD-4: #13 **biases** but does not **replace** #12's slots. The
 orchestrator composes the per-agent target for #8 by:
@@ -135,50 +134,35 @@ orchestrator composes the per-agent target for #8 by:
 
 This is the `PressOverride` displacement layer #12 §7.3 reserves.
 
-### 4.4.4 #8 Decision Tree Coupling (KD-3 — mechanism deferred)
+### 4.4.4 #8 Decision Tree Coupling (KD-3 — Option B selected)
 
-**Two candidate mechanisms (OI-001 — section-file draft does NOT
-pre-decide; final selection gates §9 sign-off):**
+**ERR-013-001 resolved (May 17, 2026) — Option B selected:**
 
-**Option A — read-only accessor on `PressingAI`:**
-
-```
-PressAssignment PressingAI.GetAssignment(EntityId id);
-PressDirective  PressingAI.GetDirective(TeamId team);
-```
-
-#8 §3.1.8.2 (PRESS target selection) calls `GetAssignment(self)`
-during utility scoring. The `TacticalContext` schema is NOT
-touched. Advantage: zero amendment to the frozen #8 schema —
-purely additive. Disadvantage: introduces a cross-subsystem
-accessor on the per-agent hot path; the orchestrator-tier wiring
-adds one indirection.
-
-**Option B — `TacticalContext.PressDirective` field extension:**
+`TacticalContext.PressDirective?` nullable field added to #8 §2.2.6
+(decision-tree/section-2-1-to-2-2.md v1.1.1 patch). The integration
+contract at Stage 1:
 
 ```
-struct TacticalContext {
-    Vector2 FormationSlot;
-    PressingInstruction pressing;
-    PassingInstruction  passing;
-    DefensiveLineDepth  defensiveLineDepth;
-    PressDirective?     pressDirective;      // NEW (Stage 1)
-}
+// #13 (via orchestrator) writes per-tick before #8 runs:
+ctx.PressDirective = pressingAI.GetDirective(team);   // null → #8 ignores
+
+// #8 reads in PRESS utility scoring (§3.2.7):
+if (ctx.PressDirective.HasValue) { /* adjust utility */ }
 ```
 
-#8 §2.2.6 amendment ratifies the field addition. #13 (via
-orchestrator) writes the field at #8 Step 2 (parallel to #12's
-`FormationSlot` write per #12 §4.4.3 AR-S1-04). Advantage:
-single read inside #8; no cross-subsystem call. Disadvantage:
-unfreezes the `TacticalContext` schema at Stage 1 — but **#12's
-Stage-0 freeze argument does NOT apply** to #13, because #13 is
-itself a Stage-1 binding. The freeze only forbids Stage-0 writers
-from adding fields; Stage-1 writers do so via the §2.2.6
-amendment path.
+Rationale for Option B over Option A: aligns with the
+freeze-then-amend pattern (#12 used the same path for `FormationSlot`),
+avoids a read-only accessor surface on the #8 per-agent hot path
+(single struct-field read is cheaper than a cross-subsystem call),
+and enables per-team nullable semantics at Stage 0 (null = no
+active press directive; no stub accessor required). Option A's
+accessor surfaces remain available to the orchestrator via §4.5.1
+(`PressingAI.GetAssignments()` / `GetDirective(TeamId)`).
 
-**Recommendation (non-binding):** Option B is cleaner for #8's hot
-path and aligns with the #12 freeze-then-amend pattern. Final
-selection is `ERR-013-001` resolution / §9.2.
+For history: Option A was `PressAssignment PressingAI.GetAssignment(EntityId
+id); PressDirective PressingAI.GetDirective(TeamId team)` — a valid design
+but with one extra indirection on the hot path. Not chosen; preserved here
+for record only.
 
 ## 4.5 Downstream Integration Contracts
 
@@ -193,10 +177,12 @@ Used to compose the per-agent target slot for #8 (per §4.4.3) and
 to surface telemetry to #17 channels (`ERR-013-002` /
 `ERR-013-003` at Stage 1+).
 
-### 4.5.2 To #8 (via OI-001 mechanism)
+### 4.5.2 To #8 (Option B — `TacticalContext.PressDirective?`)
 
-See §4.4.4 above. Stage 0 declares both candidate surfaces; Stage
-1 ratifies one.
+See §4.4.4 above. ERR-013-001 resolved (May 17, 2026): Option B
+selected. #13 writes `TacticalContext.PressDirective?` (via
+orchestrator at Stage 1) and #8 reads it at §3.2.7 PRESS utility
+scoring.
 
 ### 4.5.3 To #14 / #15 (Stage 1+ — declared, not implemented)
 
@@ -209,7 +195,7 @@ is published until the downstream consumer spec reaches
 | Concern | Binding | Notes |
 |---|---|---|
 | Iteration order | #16 §3.2.5 | Outfield agents iterated EntityId ascending; GK handled by KD-13 exclusion (no iteration over GK in selection loops) |
-| RNG domain tag | #16 §3.4 | `DOMAIN_TAG_PRESSING_AI = 0x19` `[CROSS-PENDING]` (`ERR-013-005`; inherits ERR-012-001 block proposal). Stage 0 §3 currently has no stochastic step — the tag is declared **solely to lock the block slot** in the ERR-012-001 Phase B/C allocation (`0x17…0x1C`) before a Phase-C spec (#14 or #15) can claim `0x19`. This is a block-collision-avoidance reservation per the first-to-APPROVED precedent; no `DeterministicRngService` calls exist at Stage 0. The tag gains its first consumer at Stage 1+ when stochastic tie-breaking is added. |
+| RNG domain tag | #16 §3.4 | `DOMAIN_TAG_PRESSING_AI = 0x19` `[CROSS]` (ERR-013-005 resolved; allocated in #16 §3.4 v1.0.3). Stage 0 §3 currently has no stochastic step — the tag is declared **solely to lock the block slot** in the ERR-012-001 Phase B/C allocation (`0x17…0x1C`) before a Phase-C spec (#14 or #15) can claim `0x19`. This is a block-collision-avoidance reservation per the first-to-APPROVED precedent; no `DeterministicRngService` calls exist at Stage 0. The tag gains its first consumer at Stage 1+ when stochastic tie-breaking is added. |
 | Per-tick digest | #16 §6.2 | `PressDirective`, all 22 `PressAssignment`, and the full `RoleHysteresisState` + `PressTrigger` structs (FR-PR-004) |
 | Stage-0 arithmetic | CLAUDE.md "When Writing Code" | `float`; Fixed64 deferred to Stage 5+ per #9 §8.1 (§7.9) |
 | Float-comparison policy | KD-9 / KD-14 reuse | `SPACING_EPSILON_M2 = 1e-4 m²` cited from #12 §3.6.1 / KD-16 |
@@ -236,3 +222,4 @@ The following checks run during integration testing (§5.4):
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. KD-3 mechanism options A and B both preserved in §4.4.4 per OI-001. |
 | 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H2: §4.4.2 `FR-08` → `FR-10`; removed "kick velocity vector" claim; added direction-from-positions derivation. AR-S1-H4: §4.4.3 split into Stage 0 (GetFormationSlot / IsSentinel) and Stage 1+ (GetPhase / GetLine) accessor groups; ERR-013-007 / ERR-013-008 back-prop requests documented. AR-S1-M3: §4.6 RNG domain tag row updated with block-collision-avoidance rationale for the Stage-0 reservation. |
+| 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | APPROVED gate resolution. §4.4.3 GetPhase/GetLine promoted from back-prop-pending to confirmed Stage 1 via ERR-013-007/008 resolution (#12 §4.5.1 v0.3). §4.4.4 rewritten: KD-3 mechanism resolved (Option B — `TacticalContext.PressDirective?`); Option A preserved for record. §4.5.2 updated to reflect resolved mechanism. §4.6 `DOMAIN_TAG_PRESSING_AI` `[CROSS-PENDING]` → `[CROSS]` (ERR-013-005 resolved, #16 §3.4 v1.0.3). |

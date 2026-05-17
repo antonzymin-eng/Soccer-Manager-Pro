@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 7: Future Extensions
 
 **Created:** May 15, 2026
-**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
-**Version:** 0.2
+**Last Updated:** May 17, 2026 (v0.3 — ERR-013-001 back-prop: §7.3 PressOverride contract language updated; #13 APPROVED)
+**Version:** 0.3
 **Status:** DRAFT
 
 ---
@@ -29,11 +29,10 @@ on its own tactical-AI spec.
 
 ## 7.3 Stage 1+ — `PressOverride` Writer Layer (#13 Binding Slot)
 
-When Pressing AI #13 reaches `IN REVIEW`, it will publish a
-`PressOverride` displacement layer that mutates the per-agent
-`formationSlot` BEFORE the orchestrator forwards into
-`TacticalContext.FormationSlot`. The composition order at Stage 1+
-will be:
+Pressing AI #13 (now `APPROVED` May 17, 2026) publishes a `PressOverride`
+displacement layer at Stage 1+ that mutates the per-agent `formationSlot`
+BEFORE the orchestrator forwards into `TacticalContext.FormationSlot`.
+The composition order at Stage 1+ is:
 
 ```
 1. #12 computes baseline formationSlot (this spec).
@@ -41,8 +40,10 @@ will be:
 3. Orchestrator forwards into #8 TacticalContext.
 ```
 
-**Reserved name:** `PressOverride` (§2.2.6). NOT implemented at
-Stage 0.
+**Reserved name:** `PressOverride` (§2.2.6; #13 §7.1). NOT implemented at
+Stage 0. `PressDirective?` field added to `TacticalContext` (#8 §2.2.6
+v1.1.1) via ERR-013-001 Option B; #13 writes this field per-tick at
+Stage 1+, DT reads it to adjust PRESS utility (#8 §3.2.7).
 
 ## 7.4 Stage 1+ — `RunIntent` Writer Layer (#15 Binding Slot)
 
@@ -133,3 +134,4 @@ bit-exact parity is deferred to Stage 5+ when Fixed64 lands.
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-16 §7.8 `SHAPE_TRANSITION` retagged Stage 1+ (was inconsistent "Stage 0+1"). |
+| 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | ERR-013-001 back-prop: §7.3 updated — #13 `APPROVED`; `PressDirective?` field in #8 §2.2.6 via Option B; composition contract language made present-tense. |

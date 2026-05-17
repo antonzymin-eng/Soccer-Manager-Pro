@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
-**Version:** 0.2
+**Last Updated:** May 17, 2026 (v0.3 APPROVED gate: ERR-013-001 Option B resolved; ERR-013-005/007/008 resolved; KD-3 mechanism confirmed)
+**Version:** 0.3
 **Status:** DRAFT (section-file authoring pass)
 **Source:** `outline-detailed.md` v1.0 (May 16, 2026)
 
@@ -93,9 +93,13 @@ goalkeeper is always `HOLD_SHAPE` per KD-13).
 
 ### 1.3.3 Cross-Spec Issues Filed at Section-File Draft
 
-- **`ERR-013-001`** — back-prop into #8 §3.1.8.2 (or §2.2.6,
-  mechanism deferred per KD-3 / OI-001) adding a read of #13's
-  `PressAssignment`.
+- **`ERR-013-001`** — **Resolved (May 17, 2026).** Option B selected
+  (KD-3): `PressDirective?` nullable field added to `TacticalContext`
+  in #8 §2.2.6 (decision-tree/section-2-1-to-2-2.md v1.1.1 patch).
+  #13 writes this field per-tick at Stage 1+; DT reads it for PRESS
+  utility scoring (#8 §3.2.7). Rationale: aligns with the
+  freeze-then-amend pattern, avoids a read-only accessor surface, and
+  enables per-team nullable semantics at Stage 0 without a stub accessor.
 - **`ERR-013-002`** — `PRESS_TRIGGERED` channel registration in
   #17 §3.10 (Stage 1).
 - **`ERR-013-003`** — `PRESS_DISENGAGED` channel registration in
@@ -104,20 +108,15 @@ goalkeeper is always `HOLD_SHAPE` per KD-13).
   `decision-tree/section-3-1.md` L753 reads "Fatigue System #13",
   but #13 is **Pressing AI**; the Stage 1 Fatigue System is a
   separate (unallocated) spec. One-token patch request.
-- **`ERR-013-005`** — `DOMAIN_TAG_PRESSING_AI = 0x19` allocation in
-  #16 §3.4. Inherits the Phase B/C block proposed by ERR-012-001
-  (shifted to `0x17…0x1C` on May 16, 2026 after #10 took `0x16` via
-  ERR-010-001). Whichever spec in the block reaches `APPROVED` first
-  claims the next-available slot; #13 expects `0x19` per the
-  current block ordering #10 / #11 / #12 / #13 / #14 / #15.
-- **`ERR-013-007`** — back-prop into #12 §4 to publish
-  `GetPhase(TeamId)` as a Stage 1 accessible (currently internal-only
-  per #12 §4.4.3; needed by #13 §3.11 KD-11 phase gate and §4.4.3).
-  Filed v0.2 fix pass (AR-S1-H4).
-- **`ERR-013-008`** — back-prop into #12 §4 to publish
-  `GetLine(EntityId)` as a Stage 1 accessor (currently Stage 1+ only
-  per #12 §4.5.1; needed by #13 §3.9 invariant (2) KD-16 backline
-  floor). Filed v0.2 fix pass (AR-S1-H4).
+- **`ERR-013-005`** — **Resolved (May 17, 2026).** `DOMAIN_TAG_PRESSING_AI
+  = 0x19` allocated in #16 §3.4 v1.0.3 patch. `0x17` reserved for #12;
+  `0x18` reserved for #11. §6.1 row promoted `[CROSS-PENDING]` → `[CROSS]`
+  atomically.
+- **`ERR-013-007`** — **Resolved (May 17, 2026).** `GetPhase(TeamId)`
+  declared as Stage 1 accessor in #12 §4.5.1 v0.3 patch.
+- **`ERR-013-008`** — **Resolved (May 17, 2026).** `GetLine(EntityId)`
+  elevated to Stage 1 (from Stage 1+) and declared in #12 §4.5.1 v0.3
+  patch.
 
 **Renumbering note (AR-S1-M2):** `outline-detailed.md` KD-10
 originally proposed `ERR-013-001` for both the #8 back-prop AND the
@@ -157,7 +156,7 @@ Cross-reference to the 17 KDs catalogued in `outline-detailed.md` v1.0:
 |---|---|---|
 | KD-1 | Cite-not-redefine of CLAUDE.md and upstream-spec invariants | §1.7 |
 | KD-2 | 10 Hz tactical loop; no 60 Hz work | §1.7, §4.1 |
-| KD-3 | Boundary with Decision Tree #8 (Stage-1 runtime binding; mechanism deferred — OI-001) | §1.6, §4.4, §4.5 |
+| KD-3 | Boundary with Decision Tree #8 (Stage-1 runtime binding; mechanism resolved — Option B, `PressDirective?` field in #8 §2.2.6) | §1.6, §4.4, §4.5 |
 | KD-4 | Boundary with Positioning AI #12 — bias not replace | §1.6, §4.5 |
 | KD-5 | Boundary with Defensive AI #14 — Stage 1+ disjoint partition | §7.4 |
 | KD-6 | Boundary with Attacking AI #15 — mutually exclusive by possession phase | §1.6 |
@@ -179,7 +178,7 @@ Authoritative Boundary Matrix (mirrors `outline-detailed.md` v1.0):
 
 | Boundary | #13 owns | Counterparty owns | Direction | Mechanism | Stage 0? |
 |---|---|---|---|---|---|
-| #8 Decision Tree | `PressDirective` per team + per-agent `PressAssignment` | Per-agent action loop incl. PRESS utility scoring (#8 §3.1.8) | #8 reads #13 (at Stage 1) | Read-only accessor OR `TacticalContext.PressDirective` field extension via #8 §2.2.6 amendment — mechanism deferred (OI-001 / KD-3) | No (Stage 1 runtime) |
+| #8 Decision Tree | `PressDirective` per team + per-agent `PressAssignment` | Per-agent action loop incl. PRESS utility scoring (#8 §3.1.8) | #8 reads #13 (at Stage 1) | `TacticalContext.PressDirective?` field extension via #8 §2.2.6 (Option B selected per ERR-013-001; resolved May 17, 2026) | No (Stage 1 runtime) |
 | #12 Positioning AI | `PressOverride` displacement consumed by orchestrator | Baseline out-of-possession `formationSlot` | Orchestrator composes; both read by #8 | Per-agent slot override pre-#8 read (#12 §7.3 reservation) | No (Stage 1) |
 | #2 Agent Movement | (none direct — via #8 action output) | 60 Hz steering toward `Action.TargetPosition` | #2 reads #8 | Same path as #12 | No |
 | #4 First Touch | (none — read consumer) | Control quality `q` / `pressureScalar` | #13 reads #4 (perception-propagated; see Q2 note in §2.3) | Snapshot field at tick start | Yes (schema only) |
@@ -188,7 +187,7 @@ Authoritative Boundary Matrix (mirrors `outline-detailed.md` v1.0):
 | #11 Goalkeeper | (KD-13 invariant: GK never assigned press roles) | GK slot ownership | independent | KD-13 negative invariant; FR-PR-017 | n/a |
 | #14 Defensive | Pressing-role-owned agents | Cover/zonal-role-owned agents | Disjoint partition per tick | KD-5 handoff rule (Stage 1+) | No |
 | #15 Attacking | (mutually exclusive by possession phase) | In-possession behavior | independent | KD-6 phase gating | No |
-| #16 Determinism | `PressDirective` / `PressAssignment` / hysteresis + debounce state digest scope | Digest format; iteration rule | #13 conforms | EntityId iteration + `DOMAIN_TAG_PRESSING_AI` `[CROSS-PENDING]` | Yes (spec text) |
+| #16 Determinism | `PressDirective` / `PressAssignment` / hysteresis + debounce state digest scope | Digest format; iteration rule | #13 conforms | EntityId iteration + `DOMAIN_TAG_PRESSING_AI = 0x19` `[CROSS]` (ERR-013-005 resolved; #16 §3.4 v1.0.3) | Yes (spec text) |
 | #17 Event System | `PRESS_TRIGGERED` / `PRESS_DISENGAGED` channel definitions | Channel registry | (deferred) | `ERR-013-002` / `ERR-013-003` at Stage 1 | No (Stage 1) |
 | #18 Performance | (conformance only) | Per-tick budget framework | #13 conforms | §6 budget against named host | Yes (spec text) |
 | #19 Testing | (conformance only) | Test-framework conventions | #13 conforms | §5 plan | Yes (spec text) |
@@ -227,7 +226,7 @@ document, the ten section files, and the appendices. **No runtime
 code at Stage 0.** Stage 1 activation requires three preconditions
 (FR-PR-044):
 
-1. #8 ratifies the `ERR-013-001` amendment text (mechanism per OI-001).
+1. `ERR-013-001` resolved — `PressDirective?` field live in #8 §2.2.6 (Option B; resolved May 17, 2026).
 2. #12 reaches `APPROVED` (consumed as baseline shape source).
 3. `ERR-013-002` / `ERR-013-003` #17 channel rows land.
 
@@ -240,3 +239,4 @@ the pattern #12 §7.3 reserves for the `PressOverride` slot.
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. |
 | 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H1: `#8 §1.4.21` → `#8 §1.3.2`; `#8 §1.5` → `#8 §1.7.2` in §1.1, §1.3.1, §1.8. AR-S1-H2: `#5 §2 FR-08` → `FR-10`; `passVelocity` → direction from passer position → `TargetPosition` in §1.3.1, §1.6. AR-S1-H4: ERR-013-007 / ERR-013-008 back-prop requests filed in §1.3.3. AR-S1-M2: ERR renumbering note added to §1.3.3. |
+| 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | APPROVED gate resolution. §1.3.3 ERR-013-001 marked Resolved (Option B); §1.5 KD-3 row updated to reflect Option B selected; §1.6 boundary-matrix #8 Mechanism column updated to Option B; §1.6 #16 row `DOMAIN_TAG_PRESSING_AI` `[CROSS-PENDING]` → `[CROSS]` per ERR-013-005 resolution (#16 §3.4 v1.0.3); §1.8 precondition 1 updated to DONE. |

@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 8: References and Citations
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
-**Version:** 0.2
+**Last Updated:** May 17, 2026 (v0.3 APPROVED gate: all ERR entries updated; ERR-013-001/004/005/007/008 RESOLVED)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -81,13 +81,13 @@ sequential allocation as cited above. The full table appears in
 
 | ERR | Subject | Status |
 |---|---|---|
-| `ERR-013-001` | Back-prop into #8 §3.1.8.2 (or §2.2.6) — read of #13's `PressAssignment`; mechanism deferred (OI-001 / KD-3) | Open — filed at section-file draft (May 17, 2026); gates §9 sign-off |
+| `ERR-013-001` | `PressDirective?` field added to `TacticalContext` (#8 §2.2.6) — Option B per KD-3 | **Resolved (May 17, 2026)** — `decision-tree/section-2-1-to-2-2.md` v1.1.1 patch; nullable field null at Stage 0; #13 writes at Stage 1+ |
 | `ERR-013-002` | `PRESS_TRIGGERED` channel registration in #17 §3.10 | Open (Stage 1) — non-blocking for Stage 0 spec text |
 | `ERR-013-003` | `PRESS_DISENGAGED` channel registration in #17 §3.10 | Open (Stage 1) — non-blocking for Stage 0 spec text |
-| `ERR-013-004` | Stale "Fatigue System #13" reference at `decision-tree/section-3-1.md` L753; current #13 is Pressing AI | Open — verified present at section-file draft; one-token patch |
-| `ERR-013-005` | `DOMAIN_TAG_PRESSING_AI = 0x19` allocation in #16 §3.4 (inherits ERR-012-001 Phase B/C block) | Open — gates `[CROSS-PENDING] → [CROSS]` promotion in §6.1 |
-| `ERR-013-007` | Back-prop into #12 §4 to publish `GetPhase(TeamId)` as a Stage 1 accessor (currently internal-only per #12 §4.4.3; needed by #13 §3.11 KD-11 phase gate) | Open — filed May 17, 2026 (v0.2 fix pass, AR-S1-H4); non-blocking for Stage 0 spec text |
-| `ERR-013-008` | Back-prop into #12 §4 to publish `GetLine(EntityId)` as a Stage 1 accessor (currently Stage 1+ only per #12 §4.5.1; needed by #13 §3.9 invariant (2) KD-16 backline floor) | Open — filed May 17, 2026 (v0.2 fix pass, AR-S1-H4); non-blocking for Stage 0 spec text |
+| `ERR-013-004` | Stale "Fatigue System #13" reference at `decision-tree/section-3-1.md` L753 | **Resolved (May 17, 2026)** — one-token patch applied: "Fatigue System #13" → "Pressing AI #13" |
+| `ERR-013-005` | `DOMAIN_TAG_PRESSING_AI = 0x19` allocation in #16 §3.4 (inherits ERR-012-001 Phase B/C block) | **Resolved (May 17, 2026)** — allocated in `deterministic-sim/section-3.md` v1.0.3; §6.1 row `[CROSS-PENDING]` → `[CROSS]` atomically |
+| `ERR-013-007` | Back-prop into #12 §4 to publish `GetPhase(TeamId)` as a Stage 1 accessor | **Resolved (May 17, 2026)** — declared in `positioning-ai/section-4.md` §4.5.1 v0.3 patch |
+| `ERR-013-008` | Back-prop into #12 §4 to publish `GetLine(EntityId)` as a Stage 1 accessor (elevated from Stage 1+) | **Resolved (May 17, 2026)** — declared in `positioning-ai/section-4.md` §4.5.1 v0.3 patch; `GetLine` elevated Stage 1+ → Stage 1 |
 
 **Renumbering note (AR-S1-M2):** `outline-detailed.md` KD-10 originally allocated `ERR-013-001` for both the #8 back-prop and the #16 domain-tag back-prop. Section-file draft split these into two distinct items and renumbered the domain-tag request to `ERR-013-005` to avoid collision. This decision is documented here and in §1.3.3 for traceability.
 
@@ -125,8 +125,9 @@ Section-file draft greps performed May 17, 2026:
   the `q` computation at §3.1 line 71. #7 propagation route
   verified for the per-tick perception field; Q2 default
   (perception-propagated) preserved per outline KD-7.
-- `Fatigue System #13` — present at
-  `decision-tree/section-3-1.md` L753 → `ERR-013-004` filed.
+- `Fatigue System #13` — was present at
+  `decision-tree/section-3-1.md` L753; `ERR-013-004` filed and
+  **resolved (May 17, 2026)** — patched to "Pressing AI #13".
 
 ## 8.6 Version History
 
@@ -134,3 +135,4 @@ Section-file draft greps performed May 17, 2026:
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. `XC-013-001`..`XC-013-032` allocated. `ERR-013-001`..`ERR-013-005` filed in `spec-error-log.md`. |
 | 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H1: XC-013-013 `#8 §1.4.21` → `#8 §1.3.2`; XC-013-014 `#8 §1.5` → `#8 §1.7.2`. AR-S1-H2: XC-013-009 `FR-08` → `FR-10`; §8.5 grep claim corrected (passVelocity absent from payload). AR-S1-H4: XC-013-019 updated with ERR-013-007 note; XC-013-033 allocated for GetLine ERR-013-008 back-prop. AR-S1-M2: ERR-013-007 / ERR-013-008 rows added to §8.4; renumbering note added. |
+| 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | APPROVED gate: §8.4 ERR table — ERR-013-001/004/005/007/008 all updated to RESOLVED with resolution details. §8.5 ERR-013-004 note updated. Header bumped. |

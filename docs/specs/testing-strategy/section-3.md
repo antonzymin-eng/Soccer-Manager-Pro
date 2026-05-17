@@ -1,7 +1,7 @@
 # Testing Strategy & Framework Specification #19 — Section 3: Technical Specification (Rule Mechanics)
 
 **Created:** May 12, 2026
-**Last Updated:** May 15, 2026 (v1.0.1 patch: sweep — all #16 and #18 citations resolved against #16 APPROVED text and #18 v0.3 IN REVIEW text)
+**Last Updated:** May 17, 2026 (v1.0.2 patch: §3.1.4 spec-local test-requirement identifier table added; T-C- and T-X- from Pressing AI #13 §5 bound to Simulation layer per OI-010 / §9.3 (h))
 **Purpose:** Mechanics of every rule named in §2.2. Each subsection
 cites the FR-TS-### IDs it implements and provides the *mechanics*; it
 does not redefine the rule statement. Section ordering mirrors the
@@ -97,6 +97,28 @@ Flagged at code review; MUST NOT merge:
   property tests in `tests/<spec>/properties/` carry the layer in the
   folder, not in the name). Worked examples in Appendix B follow this
   form.
+
+**Spec-local test-requirement identifiers.** Per-spec §5 sections use
+spec-local `T-<category>-NNN` identifiers (e.g., `T-U-001`, `T-C-001`)
+as requirement references, distinct from the executable test file names
+above. These IDs name *what* must be tested; the file-name convention
+governs the *artefact*. Mapping to the five-layer taxonomy:
+
+| Prefix | Category | Layer | Notes |
+|---|---|---|---|
+| `T-U-` | Unit | Unit | — |
+| `T-I-` | Integration | Integration | — |
+| `T-S-` | Simulation (general) | Simulation | — |
+| `T-C-` | Anti-chaos (Simulation sub-category) | Simulation | Pressing AI #13 §5 / KD-16 three measurable invariants |
+| `T-X-` | Exploit-resistance (Simulation sub-category) | Simulation | Pressing AI #13 §5 / KD-17 four-exploit corpus |
+| `T-E-` | End-to-end / soak | End-to-end / soak | — |
+
+`T-C-` and `T-X-` executable test files use the `sim_<scenario>`
+file-name convention. The spec-local ID is the requirement reference;
+the file name is the artefact. Other specs MAY declare additional
+sub-category prefixes within the Simulation layer by adding rows to
+a table of this form in their own §5 preamble — no #19 amendment
+required, provided the prefix does not collide with existing entries above.
 
 ## 3.2 Determinism-Suite Consumption (FR-TS-011 … 020)
 
@@ -598,4 +620,5 @@ version-history table (FR-TS-044).
 | Version | Date         | Author      | Notes |
 |---------|--------------|-------------|-------|
 | 0.1     | May 12, 2026 | Claude Code | Initial draft from `outline-detailed.md` v1.1. Rule mechanics for FR-TS-001 … 074; §3.10 governance constants table. |
+| 1.0.2   | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | OI-010 back-prop: §3.1.4 spec-local `T-<category>-NNN` identifier table added; `T-C-` (anti-chaos) and `T-X-` (exploit-resistance) bound to Simulation layer per Pressing AI #13 §5 / KD-16 / KD-17. Resolves §9.3 (h) in #13. |
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 (regression suite); #16 §1.3.1 → §1.1.1 (tier vocabulary, §3.6.1); #16 §5 → §3.2.4.1 (canonical schema, §3.3.4 / §3.8.1); #16 §1.3 → §4.8 (`EnvironmentFingerprint`, §3.7.1). ERR-005 misnomer corrected (§3.5.4, §3.5.5). M1 coordinate restatement tightened. M2 `index.<ext>` provisional disclosure added (§3.3.5). M4 `migrations/` row added to §3.8.2. L1 / L2 inline `[GT]` / `[FIXED]` pointers (§3.1.1). L3 / L2 §3.10 expanded with `90 min [FIXED]` and `≤ 60 s [GT]`. L4 property naming reconciled (§3.1.4). |
