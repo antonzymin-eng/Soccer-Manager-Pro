@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 15, 2026 (later same day still — Performance Optimization Strategy #18 APPROVED after v1.0 `[TBD-NORMATIVE]` sweep; #9 + #19 + #18 all APPROVED same day; Priority 5 spec set fully complete; only Priority 3+4 AI specs (#10–#15) remain)  
+**Last Updated:** May 17, 2026 (Pressing AI #13 section files v0.1 / DRAFT authored from `outline-detailed.md` v1.0; ERR-013-001..005 filed in `spec-error-log.md`; `SPEC_INDEX.md` row 13 unchanged — status flip to `IN REVIEW` gated on PASS-1 adversarial review)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -62,7 +62,7 @@ All 20 spec folders now exist in `docs/specs/`. Status reflects authoritative cl
 | 10 | `docs/specs/heading-mechanics/` | APPROVED May 16, 2026 (v0.3; section files 1–9 + appendices + outline + outline-PASS-1 + section-files-PASS-1-adversarial-review; ERR-010-001 RESOLVED) |
 | 11 | `docs/specs/goalkeeper-mechanics/` | NOT STARTED (scaffold only) |
 | 12 | `docs/specs/positioning-ai/` | NOT STARTED (scaffold only) |
-| 13 | `docs/specs/pressing-ai/` | NOT STARTED (scaffold only) |
+| 13 | `docs/specs/pressing-ai/` | NOT STARTED in `SPEC_INDEX.md` (status flip gated on PASS-1 review per outline NEXT STEPS step 14). Section files v0.1 / DRAFT authored May 17, 2026 from `outline-detailed.md` v1.0: `section-1.md` … `section-9-approval-checklist.md` + `appendices.md`. 44 FRs, 17 KDs, 4 triggers (BAD_TOUCH / BACKWARD_PASS / SIDELINE_TRAP / WEAK_RECEIVER), 3 roles (PRIMARY_PRESS / COVER_SHADOW / HOLD_SHAPE), 3 anti-chaos invariants (KD-16), 4-exploit corpus (KD-17). `DOMAIN_TAG_PRESSING_AI` `[CROSS-PENDING]` inherits ERR-012-001 block (proposed `0x19`). ERR-013-001..005 filed in `spec-error-log.md` as back-prop tracking; consuming specs (#8, #16, #17) NOT yet patched. |
 | 14 | `docs/specs/defensive-ai/` | NOT STARTED (scaffold only) |
 | 15 | `docs/specs/attacking-ai/` | NOT STARTED (scaffold only) |
 | 16 | `docs/specs/deterministic-sim/` | APPROVED (May 14, 2026, later same day) — Tier 2 Final Approval. §9 v1.7. All §9.4.2 gates cleared: §9.5 #4(a)/(b)/(c) spec-level sub-conditions SATISFIED (golden-vector files `hkdf-sha256-kat.md` v1.1, `siphash-2-4-kat.md` v1.1, `serialize-canonical-corpus.md` v1.0); §8.3.1 cross-spec re-audit COMPLETE (§8 v1.2, all four upstream rows promoted to `complete`); §9.3 sign-offs (lead-developer Tier 2, QA-automation, platform-certification) granted, platform-certification with explicit Stage-0 host-platform-pin caveat. ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1 (no `DETERMINISM_DIGEST_VERSION` bump). |
