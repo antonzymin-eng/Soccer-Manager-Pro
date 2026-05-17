@@ -11,9 +11,9 @@ selected downstream. All attribute references are cross-referenced to `PlayerAtt
 as DT requirements pending Spec #20 master attribute registry.
 
 **Created:** March 01, 2026, 3:30 PM PST
-**Updated:** May 15, 2026 (v1.1.1 patch — ERR-012-002 stale spec ref correction)
-**Version:** 1.1.1
-**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 15, 2026) is a non-behavioral patch revision per ERR-012-002: §3.1.7.2 "Formation System (Spec #14)" → "Formation System (Positioning AI, Spec #12)". Canonical Formation System spec number is #12 per `SPEC_INDEX.md`; current #14 is Defensive AI. Single-token correction; no formula, contract, or pipeline change. Approval status preserved.
+**Updated:** May 17, 2026 (v1.1.2 patch — ERR-013-004: "Fatigue System #13" → "Pressing AI #13" at §3.1.8.1)
+**Version:** 1.1.2
+**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 15, 2026): ERR-012-002 stale spec ref correction (§3.1.7.2 "Spec #14" → "Positioning AI, Spec #12"). v1.1.2 (May 17, 2026): ERR-013-004 stale spec name correction (§3.1.8.1 "Fatigue System #13" → "Pressing AI #13"). Both are single-token non-behavioral patches; no formula, contract, or pipeline change. Approval status preserved.
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
 
@@ -750,7 +750,7 @@ Gate condition:
 a binary threshold derived from `AgentState.AerobicStaminaPool`. If the pool is below
 `PRESS_STAMINA_MINIMUM = 0.20 [GT]`, PRESS is not generated. The agent defaults to
 MOVE_TO_POSITION. This prevents agents from pressing indefinitely, but is cruder than
-the fatigue-weighted stamina model planned for Stage 1 (Fatigue System #13).
+the fatigue-weighted stamina model planned for Stage 1 (Pressing AI #13).
 
 ### 3.1.8.2 Press Target Selection
 
@@ -818,4 +818,13 @@ PressOption pressOption = new PressOption
 - This value feeds directly into the PRESS utility formula in §3.2.2.
 
 ---
+
+## 3.1.12 Version History
+
+| Version | Date | Author | Changes |
+|---|---|---|---|
+| 1.0 | March 01, 2026 | Claude (AI) / Anton | Initial draft. §3.1.0–§3.1.8 option generation for all 7 action types. |
+| 1.1 | March 01, 2026 | Claude (AI) / Anton | Self-critique corrections. |
+| 1.1.1 | May 15, 2026 | Claude (AI) / Anton | Non-behavioral patch per ERR-012-002: §3.1.7.2 "Formation System (Spec #14)" → "Formation System (Positioning AI, Spec #12)". Single-token correction. Approval status preserved. |
+| 1.1.2 | May 17, 2026 | Claude (AI) / Anton | Non-behavioral patch per ERR-013-004: §3.1.8.1 "Fatigue System #13" → "Pressing AI #13". Single-token correction (current Spec #13 is Pressing AI; Fatigue System is a separate Stage-1 spec with no allocated number). Approval status preserved. |
 

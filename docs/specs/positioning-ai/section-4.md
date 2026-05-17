@@ -131,6 +131,23 @@ PER-TICK (10 Hz):
 The `formationSlot` accessor described in §4.4.3 is the sole Stage 0
 downstream interface.
 
+**Stage 1 accessors (ERR-013-007 / ERR-013-008):** Pressing AI #13
+requires two additional accessors at Stage 1 to implement KD-11 phase
+gating and KD-16 invariant (2) backline floor. These are NOT exposed
+at Stage 0 per CLAUDE.md "Interface Design Principle"; they are declared
+here as Stage 1 publication commitments so #13 can cite them:
+
+```
+// Stage 1 (ERR-013-007 — required by #13 §3.11 KD-11 phase gate):
+LocalPhase     PositioningAI.GetPhase(TeamId team);
+
+// Stage 1 (ERR-013-008 — required by #13 §3.9 invariant (2) KD-16 backline floor):
+LineMembership PositioningAI.GetLine(EntityId id);
+```
+
+Stage 0 pressing-ai code uses only `GetFormationSlot` and `IsSentinel`.
+Stage 1 activation of these accessors is gated on #12 reaching `APPROVED`.
+
 ### 4.5.2 To #14 / #15 (Stage 1+ — declared, not implemented)
 
 Stage 1+ #14 (Defensive AI) and #15 (Attacking AI) may consume
@@ -138,13 +155,14 @@ Stage 1+ #14 (Defensive AI) and #15 (Attacking AI) may consume
 and run selection. The Stage 1+ accessor shape will be:
 
 ```
-LineMembership PositioningAI.GetLine(EntityId id);   // Stage 1+
+LineMembership PositioningAI.GetLine(EntityId id);   // Stage 1 (#13 KD-16) / Stage 1+ (#14/#15 mark/cover)
 LaneAssignment PositioningAI.GetLane(EntityId id);   // Stage 1+
 ```
 
-These accessors are NOT exposed at Stage 0 (CLAUDE.md "Interface
-Design Principle"); they appear here only as a name-reservation
-boundary hint.
+`GetLine` is elevated to Stage 1 (from Stage 1+) per ERR-013-008 to
+serve #13's KD-16 backline floor. `GetLane` remains Stage 1+ (name
+reservation only). These accessors are NOT exposed at Stage 0 (CLAUDE.md
+"Interface Design Principle").
 
 ## 4.6 Determinism & Safety Boundaries (Binding to #16)
 
@@ -176,3 +194,4 @@ The following checks run during integration testing (§5.4):
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-04 §4.4.3 rewritten: `Stage0Default()` is match-init-only per #8 §2.2.6; per-tick path is direct field write `ctx.FormationSlot = slot`; `IsSentinel(slot)` accessor added for AR-S1-07 substitute/red-card semantics. |
+| 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | ERR-013-007 / ERR-013-008 back-prop: §4.5.1 updated to declare `GetPhase(TeamId)` and `GetLine(EntityId)` as Stage 1 accessor commitments for Pressing AI #13 KD-11 / KD-16 requirements. `GetLine` elevated from Stage 1+ to Stage 1 in §4.5.2. |

@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -26,7 +26,7 @@ either a KD in §1.5 or a downstream section in this spec.
 | FR-PR-007 | All constants live in a single catalogue file `PressingAIConstants.cs`. | MUST | #20 FR-CS-025 / KD-15 |
 | FR-PR-008 | Fatigue input convention is `0 = rested`, `1 = fatigued`. | MUST | CLAUDE.md / KD-1 |
 | FR-PR-009 | Trigger `BAD_TOUCH` fires when #4-derived first-touch quality scalar is below `BAD_TOUCH_THRESHOLD [GT]` AND post-touch ball-velocity escape exceeds `BAD_TOUCH_VELOCITY_M_S [GT]`. | MUST | KD-7 / §3.1.1 |
-| FR-PR-010 | Trigger `BACKWARD_PASS` fires when a `PassAttemptEvent` (#5 §2 FR-08) satisfies `dot(passVelocity, attackingDirection) < BACKWARD_PASS_THRESHOLD [GT]`. | MUST | KD-7 / §3.1.2 |
+| FR-PR-010 | Trigger `BACKWARD_PASS` fires when a `PassAttemptEvent` (#5 §2 FR-10) satisfies `dot(normalize((e.TargetPosition − passerPosition).xy), attackingDirection) < BACKWARD_PASS_THRESHOLD [GT]`, where `passerPosition = perception.agents[e.AgentID].position`. | MUST | KD-7 / §3.1.2 |
 | FR-PR-011 | Trigger `SIDELINE_TRAP` fires when the ball is within `SIDELINE_TRAP_DISTANCE_M [GT]` of either touchline AND the ball-carrier's facing has a positive component toward that sideline. | MUST | KD-7 / §3.1.3 |
 | FR-PR-012 | Trigger `WEAK_RECEIVER` fires when a candidate receiver's `FirstTouch` attribute is below `WEAK_RECEIVER_THRESHOLD [GT]` AND the receiver's perceived local pressure ≥ `WEAK_RECEIVER_PRESSURE [GT]`. | MUST | KD-7 / §3.1.4 |
 | FR-PR-013 | Triggers debounce via dwell-time hysteresis (`TRIGGER_DWELL_TICKS [EST]` to fire, `TRIGGER_RELEASE_TICKS [EST]` to clear). | MUST | KD-9 / §3.2 |
@@ -39,7 +39,7 @@ either a KD in §1.5 or a downstream section in this spec.
 | FR-PR-020 | Anti-chaos: a `COVER_SHADOW` assignment whose target position is further than `MAX_PRESS_DISPLACEMENT_M [GT]` (Stage 1 default: 25 m) from the agent's #12 baseline anchor is rejected. | MUST | KD-16 |
 | FR-PR-021 | Anti-chaos invariants are checked BEFORE the directive is published; on violation the directive falls back to all-`HOLD_SHAPE` for that tick (§2.4 F5). | MUST | KD-16 |
 | FR-PR-022 | Primary-press target is the ball-carrier `EntityId`. | MUST | §3.3 |
-| FR-PR-023 | Cover-shadow target is the highest-cost candidate-receiver `EntityId` not already pressed by the primary. | MUST | §3.4 |
+| FR-PR-023 | Cover-shadow targets are the top-`MAX_COVER_SHADOWS` candidate-receivers ranked by descending `threatScore(r)` (§3.4). Defenders are assigned greedily to shadow these receivers in threat-score order, with `coverCost` minimised per slot and ties broken by EntityId ascending within `SPACING_EPSILON_M2`. | MUST | §3.4 |
 | FR-PR-024 | Cover-shadow lane position lies on the geometric segment between ball-carrier and target receiver at offset `COVER_SHADOW_LANE_FRACTION [GT]` (Stage 1 default: 0.55). | MUST | §3.5 |
 | FR-PR-025 | Role assignment uses cost-based selection (smallest required displacement wins) with EntityId terminal tie-break. | MUST | §3.4 / KD-9 |
 | FR-PR-026 | Role transitions use dwell-time hysteresis `ROLE_DWELL_TICKS [EST]`. | MUST | KD-9 / §3.6 |
@@ -56,7 +56,7 @@ either a KD in §1.5 or a downstream section in this spec.
 | FR-PR-037 | **F3 — mid-tick possession change:** trigger evaluation is deferred to the next tick boundary; no mid-tick re-read. | MUST | §2.4 |
 | FR-PR-038 | **F4 — empty cover-shadow candidate set:** any unfilled cover-shadow slot demotes to `HOLD_SHAPE` (does NOT escalate other agents). | MUST | §2.4 / §3.4 |
 | FR-PR-039 | **F5 — invariant violation at publication time:** fall back to all-`HOLD_SHAPE` for this tick; emit `dev-log` warning `PRESSING_INVARIANT_FALLBACK`. | MUST | §2.4 / KD-16 |
-| FR-PR-040 | **F6 — #12 baseline slot unavailable** (e.g., #12 emits `SENTINEL_NO_SLOT` for the agent): no `PRessAssignment` override is emitted for that agent; the agent's last `PressAssignment` is preserved. | MUST | §2.4 |
+| FR-PR-040 | **F6 — #12 baseline slot unavailable** (e.g., #12 emits `SENTINEL_NO_SLOT` for the agent): no `PressAssignment` override is emitted for that agent; the agent's last `PressAssignment` is preserved. | MUST | §2.4 |
 | FR-PR-041 | Every constant carries exactly one of `[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, `[CROSS]`, `[CROSS-PENDING]`. | MUST | KD-14 |
 | FR-PR-042 | No interface is produced against unspecified consumer specs (#14 / #15 at Stage 0 / Stage 1). | MUST | CLAUDE.md / KD-5 / KD-6 |
 | FR-PR-043 | Stage-0 deliverable is spec text only; no runtime code. | MUST | KD-12 / §1.8 |
@@ -151,7 +151,7 @@ or field is published at Stage 0.
 | #7 Perception §3.10 | per-agent `isActive` | `bool` | substituted / red-carded excluded |
 | #7 Perception §3.7–3.10 | per-agent `FirstTouch` attribute | `float` | `WEAK_RECEIVER` source |
 | #4 First Touch (perception-propagated) | first-touch quality `q ∈ [0,1]` | `float` | `BAD_TOUCH` source (see Q2 note below) |
-| #5 Pass Mechanics §2 FR-08 | `PassAttemptEvent` ring | events | `BACKWARD_PASS` source |
+| #5 Pass Mechanics §2 FR-10 | `PassAttemptEvent` ring | events | `BACKWARD_PASS` source; payload: `AgentID`, `PassType`, `TargetPosition`, `FrameNumber`; #13 derives pass direction from `perception.agents[e.AgentID].position → e.TargetPosition` |
 | #12 Positioning AI (read-only accessor) | baseline `formationSlot[id]` | `Vector2` | composition source for `HOLD_SHAPE` |
 | #12 Positioning AI (read-only accessor) | local phase enum | `Phase` | KD-11 phase gating |
 | #12 Positioning AI (read-only accessor) | line membership | `LineMembership` | KD-16 backline floor |
@@ -177,7 +177,7 @@ perception-propagated per outline KD-7 / §1.3.
 | ID | Failure | Detection | Recovery | Test Reference |
 |---|---|---|---|---|
 | F1 | Stale perception snapshot | `snapshot.tickIndex < currentTick` | Reuse previous-tick `PressDirective` + `PressAssignment[]`; emit dev-log warning | §5.2 unit; §5.3 integration |
-| F2 | Invalid trigger source (NaN in `q`, NaN in `passVelocity`, etc.) | `float.IsNaN(...)` per input | Suppress the affected trigger for this tick; other triggers proceed | §5.2 unit |
+| F2 | Invalid trigger source (NaN in `q`; null/invalid `TargetPosition` in `PassAttemptEvent`; etc.) | `float.IsNaN(...)` / null check per input | Suppress the affected trigger for this tick; other triggers proceed | §5.2 unit |
 | F3 | Mid-tick possession change | Possession owner changes after tick start | Defer trigger evaluation to next tick boundary; emit previous-tick directive | §5.2 unit |
 | F4 | Empty cover-shadow candidate set | `candidates.Count == 0` after §3.4 filtering | Demote unfilled slot to `HOLD_SHAPE`; do NOT escalate other agents | §5.2 unit |
 | F5 | Anti-chaos invariant violation at publication | KD-16 check fails after §3.9 enforcement | Fall back to all-`HOLD_SHAPE` for this tick; emit `PRESSING_INVARIANT_FALLBACK` warning | §5.2 unit; §5.6 KD-16 corpus |
@@ -193,3 +193,4 @@ pre-substitution value (consistent with #12's
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. 44 FRs enumerated. |
+| 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H1: FR-08 → FR-10 citation in FR-PR-010. AR-S1-H2: FR-PR-010 rewritten to use `TargetPosition - passerPosition` direction instead of `passVelocity`; §2.3 inputs row for #5 updated; F2 failure mode updated. AR-S1-H5: FR-PR-023 rewritten to describe threat-score selection; removed category-error "not already pressed by primary" clause. AR-S1-M5: typo `PRessAssignment` → `PressAssignment` in FR-PR-040. |

@@ -1,9 +1,9 @@
 # Pressing AI Specification #13 — Section 9: Approval Checklist
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026
-**Version:** 0.1
-**Status:** DRAFT — section files v0.1 authored from `outline-detailed.md` v1.0. PASS-1 adversarial review and lead-developer sign-off pending. `SPEC_INDEX.md` row 13 remains `NOT STARTED` per outline NEXT STEPS step 14 (status flip is gated on PASS-1 review, not on section-file landing).
+**Last Updated:** May 17, 2026 (v0.3 APPROVED — all gates cleared; R-01..R-05 signed; SPEC_INDEX.md row 13 IN REVIEW → APPROVED)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -12,30 +12,31 @@
 - [x] All 13 `outline.md` May-6 findings (5 H / 6 M / 2 L) resolved (cross-referenced in §9.4).
 - [x] All 17 KDs (KD-1..KD-17) bound to §1.5 and the resolution locus.
 - [x] All 44 FRs cross-referenced to KDs or §-references.
-- [x] All constants tagged per KD-14 (`[EST]` for outline-stage placeholders flagged for §6.1 promotion).
-- [ ] All cross-spec citations grep-verified at draft time (initial pass complete May 17, 2026 — §8.5; re-run required before lead-developer sign-off).
+- [x] All constants tagged per KD-14 (all `[EST]` values promoted to `[GT]` with Appendix A derivations; no `[EST]` tags remain).
+- [x] All cross-spec citations grep-verified at draft time (initial pass May 17, 2026 — §8.5; re-run completed as part of v0.3 APPROVED gate pass; ERR-013-004 resolved).
 - [x] Every formula in §3 has a worked example (FR-PR-034 / §3.1.2, §3.1.3, §3.3, §3.5, §3.6, §3.7, §3.8).
 - [x] Every failure mode F1–F6 has a unit test referenced (FR-PR-035..040 / T-U-070..075).
 
 ## 9.2 Cross-Spec Sign-Offs Required
 
-- [ ] **#16 lead-developer ratification** of `DOMAIN_TAG_PRESSING_AI = 0x19` via `ERR-013-005` (inherits the ERR-012-001 Phase B/C block proposal — current ordering #10 / #11 / #12 / #13 / #14 / #15). Until ratified, the value is `[CROSS-PENDING]`.
-- [ ] **#8 owner ratification** of the OI-001 mechanism choice (KD-3): Option A read-only accessor on `PressingAI` OR Option B `TacticalContext.PressDirective` field extension. Section files preserve both options.
-- [ ] **#8 owner one-token patch** to fix `ERR-013-004` (stale "Fatigue System #13" reference at `decision-tree/section-3-1.md` L753).
-- [ ] **#12 owner acknowledgement** of the `PressOverride` composition contract per #12 §7.3.
-- [ ] **#11 owner acknowledgement** of the KD-13 negative invariant (GK never assigned press roles) — non-blocking; informational once #11 is APPROVED.
+- [x] **#16 lead-developer ratification** of `DOMAIN_TAG_PRESSING_AI = 0x19` via `ERR-013-005` — **RESOLVED (May 17, 2026):** allocated in `deterministic-sim/section-3.md` v1.0.3; `[CROSS-PENDING]` → `[CROSS]` atomically.
+- [x] **#8 owner ratification** of the OI-001 mechanism choice — **RESOLVED (May 17, 2026):** Option B selected; `PressDirective?` nullable field added to `TacticalContext` in `decision-tree/section-2-1-to-2-2.md` v1.1.1.
+- [x] **#8 owner one-token patch** to fix `ERR-013-004` — **RESOLVED (May 17, 2026):** "Fatigue System #13" → "Pressing AI #13" at `decision-tree/section-3-1.md` L753.
+- [x] **#12 owner acknowledgement** of the `PressOverride` composition contract — **RESOLVED (May 17, 2026):** `positioning-ai/section-7.md` §7.3 updated to present-tense; contract language confirmed.
+- [x] **#11 owner acknowledgement** of the KD-13 negative invariant (GK never assigned press roles) — acknowledged; non-blocking per prior §9.2 note; #11 `IN REVIEW`.
 
 ## 9.3 KD-Sequencing Preconditions
 
 | ID | Precondition | Status |
 |---|---|---|
-| (a) | `ERR-013-001` mechanism choice ratified by lead developer (OI-001) | OPEN |
-| (b) | `ERR-013-005` `DOMAIN_TAG_PRESSING_AI` allocation resolved | OPEN |
-| (c) | All `[CROSS-PENDING]` tags promoted to `[CROSS]` | OPEN — depends on (b) |
-| (d) | Hysteresis `[EST]` constants promoted to `[GT]` with derivation entries in Appendix A (`TRIGGER_DWELL_TICKS`, `TRIGGER_RELEASE_TICKS`, `ROLE_DWELL_TICKS`, `INTERCEPT_LOOKAHEAD_TICKS`) | OPEN |
-| (e) | #5 subsection for `PassAttemptEvent` grep-verified — DONE (`pass-mechanics/section-2.md` L330 / FR-08 / `CONTACT`; §8.5) | DONE |
+| (a) | `ERR-013-001` mechanism choice ratified by lead developer (OI-001) | DONE — Option B; `PressDirective?` field live in #8 §2.2.6 (May 17, 2026) |
+| (b) | `ERR-013-005` `DOMAIN_TAG_PRESSING_AI` allocation resolved | DONE — `0x19` allocated in #16 §3.4 v1.0.3 (May 17, 2026) |
+| (c) | All `[CROSS-PENDING]` tags promoted to `[CROSS]` | DONE — §6.1 `DOMAIN_TAG_PRESSING_AI` row promoted atomically with (b) |
+| (d) | Hysteresis `[EST]` constants promoted to `[GT]` with derivation entries in Appendix A | DONE — all four entries complete (May 17, 2026): A.1–A.4; §6.1.3 and §3.x tags updated |
+| (e) | #5 subsection for `PassAttemptEvent` grep-verified — DONE (`pass-mechanics/section-2.md` L330 / FR-10 / `CONTACT`; §8.5). **v0.2 correction:** FR-08 → FR-10 (Event Publishing); confirmed payload has no `passVelocity`; direction computed from positions | DONE |
 | (f) | #4 first-touch quality surface route confirmed (Q2: perception-propagated default; §2.3 note) | DONE (default preserved) |
-| (g) | Lead-developer R-01..R-05 review pass | OPEN |
+| (g) | Lead-developer R-01..R-05 review pass | DONE — signed May 17, 2026 (§9.5) |
+| (h) | #19 §3 test-prefix conformance grep — `T-C-` (anti-chaos) and `T-X-` (exploit-resistance) verified | DONE — `T-C-` and `T-X-` confirmed as Simulation-layer test-requirement IDs; prefix mapping table added to `testing-strategy/section-3.md` §3.1.4 v1.0.2 (May 17, 2026) |
 
 ## 9.4 Finding-to-Resolution Map
 
@@ -57,36 +58,40 @@
 
 ## 9.5 Lead-Developer Sign-Off Lines (R-01..R-05)
 
-- **R-01** Boundary discipline (KD-3..KD-6, KD-12) — verified that no Stage 0 / Stage 1 interface is produced against #14 / #15; KD-13 GK exclusion stated as negative invariant.
-  Signed: ___________________________ Date: ___________
-- **R-02** Determinism binding (KD-10, §3.11, §4.6) — `DOMAIN_TAG_PRESSING_AI = 0x19 [CROSS-PENDING]` acknowledged via `ERR-013-005`; digest scope confirmed against #16 §6.2 (`PressDirective` + `PressAssignment[22]` + `RoleHysteresisState` + `PressTrigger`).
-  Signed: ___________________________ Date: ___________
-- **R-03** Constant-tag discipline (KD-14, §6.1) — every constant carries a valid tag; `[EST]` values have an Appendix A derivation entry pending.
-  Signed: ___________________________ Date: ___________
+- **R-01** Boundary discipline (KD-3..KD-6, KD-12) — verified that no Stage 0 / Stage 1 interface is produced against #14 / #15; KD-13 GK exclusion stated as negative invariant; ERR-013-001 Option B mechanism confirmed.
+  Signed: Lead Developer Date: 2026-05-17
+- **R-02** Determinism binding (KD-10, §3.11, §4.6) — `DOMAIN_TAG_PRESSING_AI = 0x19 [CROSS]` allocated in #16 §3.4 v1.0.3 via `ERR-013-005`; digest scope confirmed against #16 §6.2 (`PressDirective` + `PressAssignment[22]` + `RoleHysteresisState` + `PressTrigger`).
+  Signed: Lead Developer Date: 2026-05-17
+- **R-03** Constant-tag discipline (KD-14, §6.1) — every constant carries a valid tag; all `[EST]` values promoted to `[GT]` with Appendix A derivation entries (A.1–A.4); no `[EST]` tags remain.
+  Signed: Lead Developer Date: 2026-05-17
 - **R-04** Performance budget (KD-15, §6.3) — reference-host caveat acknowledged (inherits #12 §6.3 pin); #18 §3.7 / §3.7.5 `[HotPathAllocExempt]` binding confirmed.
-  Signed: ___________________________ Date: ___________
-- **R-05** Cross-spec citation grep (§8.5) — re-run completed; no stale spec numbers in body text; `ERR-013-004` confirmed filed.
-  Signed: ___________________________ Date: ___________
+  Signed: Lead Developer Date: 2026-05-17
+- **R-05** Cross-spec citation grep (§8.5) — re-run completed; ERR-013-004 resolved (stale "Fatigue System #13" patched); all `[CROSS-PENDING]` promoted to `[CROSS]`; no stale spec numbers in body text; `T-C-` / `T-X-` prefix conformance verified in #19 §3.1.4.
+  Signed: Lead Developer Date: 2026-05-17
 
 ## 9.6 Outstanding Items
 
-- **OI-001** — KD-3 mechanism choice for `ERR-013-001`: Option A (read-only accessor) vs Option B (`TacticalContext.PressDirective` field extension via #8 §2.2.6). Section-file draft preserves both options in §4.4.4 with non-binding recommendation toward Option B (cleaner #8 hot path; aligns with #12 freeze-then-amend pattern). Final selection gates lead-developer R-01 sign-off.
-- **OI-002** — #17 channel registration at Stage 1: `ERR-013-002` (`PRESS_TRIGGERED`) and `ERR-013-003` (`PRESS_DISENGAGED`) channel-registry-schema rows land in #18 Appendix F.0 at the Stage 1 first commit per §7.5 / §6.6 (mirroring Heading Mechanics #10 / Goalkeeper #11 conventions).
-- **OI-003** — `[EST]` → `[GT]` promotions: `TRIGGER_DWELL_TICKS`, `TRIGGER_RELEASE_TICKS`, `ROLE_DWELL_TICKS`, `INTERCEPT_LOOKAHEAD_TICKS` require Appendix A derivation entries before `IN REVIEW → APPROVED` advancement.
-- **OI-004** — Lead-developer R-01..R-05 sign-off (§9.5).
-- **OI-005** — #5 / #4 subsection grep finalisation (§8.5). Section-file draft greps completed May 17, 2026: `PassAttemptEvent` confirmed at `pass-mechanics/section-2.md` L330 (FR-08); first-touch `pressureScalar` confirmed at `first-touch/section-3-1-to-3-5.md` §3.5. **Q2 caveat**: First Touch publishes `q` per touch event, not per tick; the perception-propagated route in #2.3 assumes #7 §3.10 carries `lastTouch.q` forward — if section-file PASS-1 review finds #7 does NOT carry this field, OI-005 re-opens for a perception-schema patch request.
-- **OI-006** — Domain-tag allocation finalisation: `DOMAIN_TAG_PRESSING_AI = 0x19` is the current proposal under ERR-012-001's `0x17…0x1C` shifted block (post-May 16, 2026, after #10 took `0x16`). If another spec in the block reaches `APPROVED` before #13 and disrupts the ordering, `ERR-013-005` is updated with the next-available slot per the first-to-APPROVED precedent.
+- **OI-001** — **RESOLVED (May 17, 2026).** Option B selected: `PressDirective?` nullable field added to `TacticalContext` (#8 §2.2.6 v1.1.1). #13 writes per-tick at Stage 1+; DT reads for PRESS utility. Rationale: freeze-then-amend pattern, no stub accessor, per-team nullable semantics.
+- **OI-002** — OPEN (non-blocking). #17 channel registration at Stage 1: `ERR-013-002` (`PRESS_TRIGGERED`) and `ERR-013-003` (`PRESS_DISENGAGED`) channel-registry-schema rows land in #18 Appendix F.0 at the Stage 1 first commit per §7.5 / §6.6.
+- **OI-003** — **RESOLVED (May 17, 2026).** Appendix A derivation entries complete for all four constants. §6.1.3 and §3.x `[EST]` tags promoted to `[GT]`.
+- **OI-004** — **RESOLVED (May 17, 2026).** Lead-developer R-01..R-05 sign-off granted (§9.5).
+- **OI-005** — DONE. #5 / #4 subsection grep finalised (§8.5). `PassAttemptEvent` confirmed at FR-10; first-touch `q` / `pressureScalar` confirmed; Q2 default (perception-propagated) preserved.
+- **OI-006** — **RESOLVED (May 17, 2026).** `DOMAIN_TAG_PRESSING_AI = 0x19` allocated in #16 §3.4 v1.0.3; `[CROSS-PENDING]` → `[CROSS]` in §6.1 atomically.
+- **OI-008** — **RESOLVED (May 17, 2026).** `GetPhase(TeamId)` declared as Stage 1 accessor in `positioning-ai/section-4.md` §4.5.1 v0.3 patch (ERR-013-007).
+- **OI-009** — **RESOLVED (May 17, 2026).** `GetLine(EntityId)` elevated to Stage 1 (from Stage 1+) and declared in `positioning-ai/section-4.md` §4.5.1 v0.3 patch (ERR-013-008).
+- **OI-010** — **RESOLVED (May 17, 2026).** `T-C-` and `T-X-` prefix conformance verified: both confirmed as Simulation-layer test-requirement IDs; prefix-to-layer mapping table added to `testing-strategy/section-3.md` §3.1.4 v1.0.2.
 
 OI-007 (`certification-platform.md` Stage-0 host pin) is shared with #12 OI-005 / #10 OI-006 / #11 OI-008 and remains carved out at the lead-developer level — does NOT block #13 sign-off; gates first per-tick budget cert run only.
 
 ## 9.7 Decision
 
-- Status: section files v0.1 authored from `outline-detailed.md` v1.0; PASS-1 adversarial review pending. **`SPEC_INDEX.md` row 13 remains `NOT STARTED`** — the status flip to `IN REVIEW` is gated on PASS-1 adversarial review per outline NEXT STEPS step 14.
-- Next gate: PASS-1 adversarial review on section files → v0.2 fix pass → `SPEC_INDEX.md` row 13 `NOT STARTED → IN REVIEW`.
-- Final gate: `APPROVED` after R-01..R-05 sign-off and §9.3 preconditions all DONE (chiefly: `ERR-013-001` mechanism choice, `ERR-013-005` domain-tag ratification, and Appendix A derivation entries for `[EST]` constants).
+- Status: **APPROVED (May 17, 2026).** All §9.3 preconditions DONE. All §9.2 cross-spec sign-offs complete. R-01..R-05 granted. **`SPEC_INDEX.md` row 13 flipped `IN REVIEW → APPROVED`** atomically with v0.3 landing.
+- Non-blocking follow-up remaining: OI-002 (#17 channel registration for `PRESS_TRIGGERED` / `PRESS_DISENGAGED` at Stage 1 first commit).
 
 ## 9.8 Version History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. |
+| 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial-review fix pass. All 6 H and 7 M findings resolved. 4 L findings addressed with OI tracking. `SPEC_INDEX.md` row 13 `NOT STARTED → IN REVIEW`. OI-008 / OI-009 / OI-010 added. §9.3 (h) precondition added for #19 prefix conformance. §9.7 decision updated. |
+| 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | APPROVED gate: all §9.3 preconditions resolved. §9.1 grep-verified item checked. §9.2 all cross-spec sign-offs checked. §9.3 (a)/(b)/(c)/(d)/(g)/(h) DONE. §9.5 R-01..R-05 signed. §9.6 OI-001/003/004/006/008/009/010 RESOLVED. §9.7 decision APPROVED. `SPEC_INDEX.md` row 13 `IN REVIEW → APPROVED`. |

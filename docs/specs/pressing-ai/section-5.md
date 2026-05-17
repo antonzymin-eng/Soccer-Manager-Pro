@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 5: Test Plan
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
+**Version:** 0.2
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -12,6 +12,14 @@ The test plan binds to Testing Strategy #19 §3 (test taxonomy) and
 §4 (FR traceability framework). All implementation lands at
 Stage 1 alongside the runtime per KD-12; the plan itself is a
 Stage 0 deliverable.
+
+**#19 prefix conformance (AR-S1-L4 — pending).** Prefixes
+`T-U-`, `T-I-`, `T-D-`, `T-P-` are expected to match the #19 §3
+canonical taxonomy. `T-C-` (anti-chaos invariant) and `T-X-`
+(exploit-resistance) are spec-local inventions; a grep of
+`testing-strategy/section-3.md` must confirm whether these are
+enumerated or whether a one-line back-prop into #19 §3 is required.
+This verification is captured as a §9.3 precondition (see §9.3 (h)).
 
 ## 5.1 Test Counts
 
@@ -86,7 +94,11 @@ Stage 0 deliverable.
   exactly as expected over 100 ticks (10 s = +0.40).
 - **T-U-051** Ceiling: agent at `fatigue = 0.85` is excluded;
   selection re-runs (regression for the historical inversion bug —
-  `0 = rested, 1 = fatigued` per CLAUDE.md).
+  `0 = rested, 1 = fatigued` per CLAUDE.md). Directional assertions:
+  (a) agent at `fatigue = 0.84` IS eligible; (b) agent at
+  `fatigue = 0.85` is excluded; (c) agent at `fatigue = 1.0`
+  (fully fatigued) is excluded; (d) agent at `fatigue = 0.0`
+  (fully rested) IS eligible.
 
 ### 5.2.7 Disengage and Reset (§3.8)
 
@@ -182,6 +194,12 @@ Stage 0 deliverable.
   required) triggers F5 / FR-PR-039 fallback.
 - **T-C-006** Repeated F5 fallback across N ticks does NOT corrupt
   hysteresis state (regression for state leakage on fallback).
+- **T-C-007** Backline-floor breach triggers F5 immediately (1
+  iteration, not the cover-shadow demotion path): force a
+  Defense-line agent into `PRIMARY_PRESS` such that
+  `backlineCount < MIN_BACKLINE_AGENTS = 3` — directive must fall
+  back to all-`HOLD_SHAPE` in the same tick, distinct from the
+  cascading-cover-shadow path covered by T-C-004 / T-C-005.
 
 ### 5.6.2 KD-17 Exploit-Resistance Corpus (Appendix E)
 
@@ -204,3 +222,4 @@ Stage 0 deliverable.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. Unit target ≥40; integration ≥10; KD-16 ≥6; KD-17 corpus ≥4. Total ≥69. |
+| 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H3: T-U-051 extended with directional assertions (fully-rested eligible; fully-fatigued excluded). AR-S1-M6: T-C-007 added for backline-floor breach + F5 path. AR-S1-L4: §5 preamble note added for #19 prefix conformance grep (pending). |

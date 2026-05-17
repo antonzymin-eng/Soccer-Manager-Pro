@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 6: Performance Analysis and Budgets
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.3 APPROVED gate: [EST]→[GT] promotions; [CROSS-PENDING]→[CROSS] for DOMAIN_TAG_PRESSING_AI)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -23,7 +23,7 @@ require an Appendix A derivation entry before promotion to `[GT]`
 | `PITCH_WIDTH_M` | 68.0 | m | `[CROSS]` | #1 §1.2 (`XC-013-001`) |
 | `DT_TACTICAL` | 0.10 | s | `[DERIVED]` | `= 1 / 10 Hz` (CLAUDE.md) |
 | `SPACING_EPSILON_M2` | 1e-4 | m² | `[CROSS]` | #12 §3.6.1 / KD-16 (`XC-013-003`) |
-| `DOMAIN_TAG_PRESSING_AI` | 0x19 | byte | `[CROSS-PENDING]` | #16 §3.4 via `ERR-013-005` (inherits ERR-012-001 block proposal) |
+| `DOMAIN_TAG_PRESSING_AI` | 0x19 | byte | `[CROSS]` | #16 §3.4 v1.0.3 (ERR-013-005 resolved; `[CROSS-PENDING]` → `[CROSS]` atomically with #16 v1.0.3 patch) |
 
 ### 6.1.2 Trigger Thresholds (`[GT]`)
 
@@ -36,14 +36,14 @@ require an Appendix A derivation entry before promotion to `[GT]`
 | `WEAK_RECEIVER_THRESHOLD` | 10 | (1–20 attr) | `[GT]` | §3.1.4 |
 | `WEAK_RECEIVER_PRESSURE` | 0.50 | — | `[GT]` | §3.1.4 |
 
-### 6.1.3 Hysteresis (`[EST]` — promote to `[GT]` with Appendix A)
+### 6.1.3 Hysteresis (`[GT]`)
 
 | Constant | Value | Unit | Tag | Source / Reference |
 |---|---|---|---|---|
-| `TRIGGER_DWELL_TICKS` | 2 | tick (200 ms) | `[EST]` | §3.2 — Appendix A pending |
-| `TRIGGER_RELEASE_TICKS` | 3 | tick (300 ms) | `[EST]` | §3.2 — Appendix A pending |
-| `ROLE_DWELL_TICKS` | 3 | tick (300 ms) | `[EST]` | §3.6 — Appendix A pending |
-| `INTERCEPT_LOOKAHEAD_TICKS` | 3 | tick (300 ms) | `[EST]` | §3.3 — Appendix A pending |
+| `TRIGGER_DWELL_TICKS` | 2 | tick (200 ms) | `[GT]` | §3.2 — Appendix A.1 |
+| `TRIGGER_RELEASE_TICKS` | 3 | tick (300 ms) | `[GT]` | §3.2 — Appendix A.2 |
+| `ROLE_DWELL_TICKS` | 3 | tick (300 ms) | `[GT]` | §3.6 — Appendix A.3 |
+| `INTERCEPT_LOOKAHEAD_TICKS` | 3 | tick (300 ms) | `[GT]` | §3.3 — Appendix A.4 |
 
 ### 6.1.4 Role / Cover-Shadow / Threat (`[GT]`)
 
@@ -55,6 +55,7 @@ require an Appendix A derivation entry before promotion to `[GT]`
 | `THREAT_PROGRESSION_W` | 0.50 | — | `[GT]` | §3.4 |
 | `THREAT_OPEN_W` | 0.30 | — | `[GT]` | §3.4 |
 | `THREAT_SKILL_W` | 0.20 | — | `[GT]` | §3.4 |
+| `THREAT_PRESSURE_NORMALIZER` | 3.0 | — | `[GT]` | §3.4 — three own-team defenders within candidate radius saturates geometric pressure signal |
 
 ### 6.1.5 Stamina / Fatigue (`[GT]`)
 
@@ -70,8 +71,8 @@ require an Appendix A derivation entry before promotion to `[GT]`
 |---|---|---|---|---|
 | `DISENGAGE_TIMEOUT_TICKS` | 8 | tick (800 ms) | `[GT]` | §3.8 / FR-PR-030 |
 | `RESET_LATENCY_TICKS` | 12 | tick (1.2 s) | `[GT]` | §3.8 / FR-PR-032 |
-| `PRESS_ZONE_X_MIN` | 35.0 | m | `[GT]` | §3.8 / FR-PR-031 (high-press default) |
-| `PRESS_ZONE_X_MAX` | 105.0 | m | `[GT]` | §3.8 / FR-PR-031 |
+| `PRESS_ZONE_X_MIN` | 35.0 | m | `[GT]` | §3.8 / FR-PR-031 (default pressing zone — mid-block geometry; high-press style uses ≈ 70 m) |
+| `PRESS_ZONE_X_MAX` | 105.0 | m | `[GT]` | §3.8 / FR-PR-031 (intentional trivially-true upper bound — ball cannot exceed 105 m in a live match; retained as defensive guard per two-parameter zone contract) |
 
 ### 6.1.7 Anti-Chaos Invariants (`[GT]`)
 
@@ -102,7 +103,7 @@ operations, all expected `[HotPathAllocExempt]` per #18 §3.7.5
 | `SelectPrimaryPress` | 1 | O(M) where M = eligible defenders ≤ 10 |
 | `SelectCoverShadows` | 1 | O(M·R) where R = receivers within radius ≤ 11; bounded ≈ 50 pair checks |
 | `ApplyRoleHysteresis` | 22 | O(1) per agent |
-| `EnforceInvariants` | ≤ 3 iterations | O(K) per iteration where K = number of press roles |
+| `EnforceInvariants` | ≤ 3 cover-shadow demotion iterations (invariants (1) and (3)); invariant (2) backline-floor breach: 1 iteration (F5 immediate) | O(K) per iteration where K = number of press roles |
 | `AccumulateStamina` | 22 | O(1) per agent |
 | `WriteAssignments` | 22 | O(1) per agent |
 
@@ -122,7 +123,7 @@ pair-cost evaluations in the cover-shadow scan worst case.
 - Engine: Unity 2022.3 LTS, Mono backend
 - Threading: single-threaded measurement
 - Build: Unity Editor playmode profiler (not a Player build —
-  matches #12 AR-S1-20 disambiguation)
+  matches #12 §6.3 profiling host description)
 
 **Caveat:** The cert-pinned budget supersedes once
 `certification-platform.md` is filled. Values may shift ±30% on
@@ -153,7 +154,8 @@ TargetPosition` produced by #8 (which in turn reads #13's
 |---|---|---|---|
 | Per-tick wall-clock | Unity Profiler / BenchmarkDotNet | Nightly CI | T-P-001 |
 | Zero-allocation hot path | .NET allocation tracker | Per-PR CI | T-P-002 |
-| Hot-path channel registry | #18 trace pipeline (Appendix F.0 schema) | Stage 1+ automated; Stage 1 first-commit deliverable | FR-PO-070 / FR-PR-006 |
+| Hot-path channel registry — conformance to #18 Appendix F.0 schema | #18 trace pipeline (Appendix F.0 schema) | Stage 1 first-commit deliverable; Stage 1+ automated CI | FR-PO-070 |
+| Hot-path zero-allocation audit | .NET allocation tracker (FR-PR-006) | Per-PR CI | FR-PR-006 |
 | Determinism regression | #16 §5 digest harness | Nightly CI | T-D-001..T-D-006 |
 
 ## 6.7 Version History
@@ -161,3 +163,5 @@ TargetPosition` produced by #8 (which in turn reads #13's
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. Constant catalogue published with all tags; outline-stage `[EST]` values flagged for Appendix A derivation. |
+| 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H6: `THREAT_PRESSURE_NORMALIZER = 3.0 [GT]` added to §6.1.4. AR-S1-M1: §6.1.6 labels corrected (PRESS_ZONE_X_MIN: "mid-block default"; PRESS_ZONE_X_MAX: "trivially-true upper bound"). AR-S1-M6: §6.2 EnforceInvariants row clarified (≤3 for cover-shadow demotions; backline = 1 iteration / F5). AR-S1-M7: §6.6 split into two rows (channel registry / FR-PO-070 separate from zero-alloc / FR-PR-006). AR-S1-L3: §6.3 citation changed from "#12 AR-S1-20" to "#12 §6.3". |
+| 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | APPROVED gate. §6.1.3 header `[EST]` → `[GT]`; four hysteresis constants promoted with Appendix A references. §6.1.1 `DOMAIN_TAG_PRESSING_AI` `[CROSS-PENDING]` → `[CROSS]` (ERR-013-005 resolved; #16 §3.4 v1.0.3 patch). |
