@@ -539,7 +539,7 @@ produces same assignment); no assignments affected by non-corresponding agent in
 Procedure: force two candidates to produce identical threat score and cost
 (RNG tie-break required); execute with same DOMAIN_TAG_DEFENSIVE_AI seed.
 Pass criterion: same tie-break result on both runs.
-Note: `DOMAIN_TAG_DEFENSIVE_AI = 0x1A [CROSS-PENDING]` until ERR-014-004 resolved.
+Note: `DOMAIN_TAG_DEFENSIVE_AI = 0x1A [CROSS: #16 §3.4]` — ERR-014-004 resolved May 18, 2026.
 
 **T-DA-DET-006 — Anti-chaos pass terminates in ≤ 3 passes for all inputs**
 Procedure: generate 1,000 random initial assignment states; run EnforceAntiChaosInvariants.

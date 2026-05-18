@@ -169,7 +169,7 @@ reservation only). These accessors are NOT exposed at Stage 0 (CLAUDE.md
 | Concern | Binding | Notes |
 |---|---|---|
 | Iteration order | #16 §3.2.5 | Outfield agents iterated EntityId ascending; GK handled separately and is order-independent |
-| RNG domain tag | #16 §3.4 | `DOMAIN_TAG_POSITIONING_AI = 0x16` `[CROSS-PENDING]` (`ERR-012-001`) |
+| RNG domain tag | #16 §3.4 | `DOMAIN_TAG_POSITIONING_AI = 0x17` `[CROSS: #16 §3.4]` — ERR-012-001 resolved May 18, 2026 |
 | Per-tick digest | #16 §6.2 | All 22 `Vector2 formationSlot` values plus the full `HysteresisState` struct (FR-PA-038) |
 | Stage-0 arithmetic | CLAUDE.md "When Writing Code" | `float`; Fixed64 deferred to Stage 5+ per #9 §8.1 |
 | Float-comparison policy | KD-16 | Squared distance with `SPACING_EPSILON_M2 = 1e-4 m²` |
@@ -195,3 +195,4 @@ The following checks run during integration testing (§5.4):
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-04 §4.4.3 rewritten: `Stage0Default()` is match-init-only per #8 §2.2.6; per-tick path is direct field write `ctx.FormationSlot = slot`; `IsSentinel(slot)` accessor added for AR-S1-07 substitute/red-card semantics. |
 | 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | ERR-013-007 / ERR-013-008 back-prop: §4.5.1 updated to declare `GetPhase(TeamId)` and `GetLine(EntityId)` as Stage 1 accessor commitments for Pressing AI #13 KD-11 / KD-16 requirements. `GetLine` elevated from Stage 1+ to Stage 1 in §4.5.2. |
+| 0.4 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §4.6 RNG domain tag row — corrected value `0x16` → `0x17` and promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`; ERR-012-001 resolved. |

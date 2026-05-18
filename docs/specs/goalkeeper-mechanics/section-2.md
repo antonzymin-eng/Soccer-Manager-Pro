@@ -43,7 +43,7 @@ Source KDs are declared in §1.3.
 | FR-GK-023 | MUST | The `Caught` vs. `Parried` band boundary toggles between `Ball.SetPossessor` (above `CATCH_THRESHOLD`) and `Ball.ApplyKick` (between `PARRY_THRESHOLD` and `CATCH_THRESHOLD`); the `Parried` / `Deflected` / `Spilled` boundaries all resolve via `Ball.ApplyKick` and differ only in outgoing-velocity magnitude and angle. | KD-21 | §3.5 |
 | FR-GK-024 | MUST | The `OneVsOne` attribute participates in closed-form coefficients in §3.5 `attrFactor` and §3.2 `requiredReactionMs` gated on state `OneOnOne`; no alternative formula path exists for 1v1 saves. | KD-20 | §3.2 / §3.5 |
 | FR-GK-025 | MUST | Iteration over multi-attacker cross-claim duels follows #16 §3.2 entity order. | KD-7 | §3.6 |
-| FR-GK-026 | MUST | `DOMAIN_TAG_GOALKEEPER` is allocated `[CROSS-PENDING]` until #16 §3.4 ratifies the value. Promotion to `[CROSS]` is atomic with #16's back-prop landing (ERR-011-001) and #11's `IN REVIEW → APPROVED` transition. The literal value is `0x17` if ERR-011-001 lands before ERR-012-001; `0x1D` if ERR-012-001 lands first. | KD-7 | §3.4 / §4.4 / §9.4 |
+| FR-GK-026 | MUST | `DOMAIN_TAG_GOALKEEPER = 0x1D` `[CROSS: #16 §3.4]` — ERR-011-001 resolved May 18, 2026. Positioning AI #12 reached `APPROVED` first and claimed `0x17`; #11 was reallocated to `0x1D` in #16 §3.4 v1.0.5 per KD-7 first-to-`APPROVED` precedent. | KD-7 | §3.4 / §4.4 / §9.4 |
 | FR-GK-027 | MUST | State-machine transitions are deterministic; no `System.Random` or `DateTime.Now` paths exist in any GK code path. | KD-7, CLAUDE.md | §3.1 |
 | FR-GK-028 | MUST | The `GK_HOLD_MAX_TICKS` constant enforces the 6-second hand-hold rule (60 ticks at 10 Hz); tagged `[FIXED]` as a Laws-of-the-Game constant, not a designer tuning. | KD-9, §3.4 | §3.4 / §3.8 |
 | FR-GK-029 | MUST | `Ball.SetPossessor(gkId)` invocation parks the ball at the GK's hand position with zero velocity until `releaseTickEarliest` and a subsequent `DistributeIntent` are received. | KD-21 | §3.5 / §3.8 |
@@ -282,3 +282,4 @@ Stage 0+1 deliverable schedule.
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 42 FRs catalogued; data structures published; 10 failure modes catalogued; 12 telemetry channels declared | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | May 16, 2026 | pass-1 fix pass | AR-S1-M2 (FR-GK-043 forced-release added); AR-S1-M3 (FR-GK-044 `Throwing`/`Kicking` consumption added) — FR count 42 → 44 | self-pass-2 self-critique on v0.2 yields no further findings |
+| 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): FR-GK-026 updated — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`; value confirmed `0x1D`; ERR-011-001 resolved. |

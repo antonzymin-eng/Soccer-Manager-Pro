@@ -484,10 +484,12 @@ Appendix A derivations before approval):
   slot is independent of the partition).
 - **RNG domain tag:** any stochastic micro-jitter uses
   `DeterministicRngService` with domain tag
-  `DOMAIN_TAG_POSITIONING_AI = 0x16` `[CROSS-PENDING]` until
-  `ERR-012-001` is ratified. Stage 0 §3 has no current stochastic
-  step — the field is declared so Stage 1+ extensions inherit the
-  tag without re-litigation.
+  `DOMAIN_TAG_POSITIONING_AI = 0x17` `[CROSS: #16 §3.4]` —
+  ERR-012-001 resolved May 18, 2026; allocated in #16 §3.4 v1.0.5
+  (value shifted from `0x16` to `0x17` on May 16, 2026 after #10
+  claimed `0x16` via ERR-010-001). Stage 0 §3 has no current
+  stochastic step — the field is declared so Stage 1+ extensions
+  inherit the tag without re-litigation.
 - **Digest scope:** per-agent `formationSlot` and the full
   `HysteresisState` struct contribute to the per-tick digest at
   #16 §6.2 scope (tactical-AI outputs).
@@ -588,3 +590,4 @@ that agent (§4.4.3).
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. §3.0–§3.11 published with worked examples per FR-PA-041. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-01 §3.5 compactness formula inverted to match prose ("higher = tighter") — §3.5.2 now `rel *= base/compactness`, §3.5.3 worked example replayed; AR-S1-02 §3.3.1 per-archetype `lineCutIndices` + AM override for 4-2-3-1; AR-S1-03 §3.7 step order: line/lane resolved AFTER spacing+clamp; AR-S1-05 §3.5.2 now operates on `(baseSlot − centroid)` aligning with §3.11 pseudocode; AR-S1-06 spacing iterates up to `SPACING_MAX_PASSES = 4`; AR-S1-07 `SENTINEL_NO_SLOT = Vector2.NegativeInfinity` distinct from NaN; isActive filter added in §3.11; AR-S1-09 §3.0.3/§3.0.4 commit on the Nth (not N+1th) candidate tick; AR-S1-10 §3.2.2 "8 m" → 7.2 m corrected to formula; AR-S1-11 GK constants demoted `[GT]` → `[EST]`; AR-S1-12 lane bins declared as `LANE_EDGES_M` literal array with explicit boundary semantics; AR-S1-13 §3.5.0 centroid definition added; AR-S1-14 §3.6.4 worked example records post-displacement lane state. |
+| 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §3.9 RNG domain tag — corrected value `0x16` → `0x17` and promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`; ERR-012-001 resolved; value-shift history documented. |

@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Appendices
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; L4 resolved)
-**Version:** 0.2
+**Last Updated:** May 18, 2026 (v0.3 — FAIL-4 fix: Appendix F glossary `DOMAIN_TAG_DEFENSIVE_AI` entry promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -736,7 +736,7 @@ same tick that the GK out-of-zone condition is first detected. No tick lag.
 | Coverage depth | Count of HOLD_SHAPE teammates between the tackling agent and their own goal within the `COVERAGE_DEPTH_CORRIDOR_M` y-corridor (§3.6.2). |
 | Anti-chaos invariants | Three enforced constraints applied before directive publication: `MIN_BACKLINE_AGENTS` (invariant 1), `MAX_MAN_MARK_ASSIGNMENTS` (invariant 2), `MAX_MARK_DISPLACEMENT_M` (invariant 3). See §3.10 and Appendix D. |
 | Assignment hysteresis | Dwell-time mechanism (§3.11) preventing assignment thrash. A new candidate must be consistently preferred for `MARK_DWELL_TICKS` consecutive ticks before the transition commits. Emergency overrides bypass hysteresis. |
-| `DOMAIN_TAG_DEFENSIVE_AI` | RNG domain tag for stochastic tie-breaking in #14: `0x1A` `[CROSS-PENDING]` (ERR-014-004). Within the Phase B/C block `0x17–0x1C` allocated per ERR-012-001. |
+| `DOMAIN_TAG_DEFENSIVE_AI` | RNG domain tag for stochastic tie-breaking in #14: `0x1A` `[CROSS: #16 §3.4]` — ERR-014-004 resolved May 18, 2026; allocated in #16 §3.4 v1.0.5 within the Phase B/C block. |
 
 ---
 
@@ -778,3 +778,4 @@ They do not affect the deterministic simulation output.
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent | Initial appendices. Appendix A: 22 `[GT]` constant derivation entries (all promoted from `[EST]`; A.1–A.22). Appendix B: last-man predicate reference card with formal definitions (both team orientations) + 3 canonical test cases (single last man, EntityId tie, GK-forward exclusion). Appendix C: offside trap verification with 4 canonical cases (trap fires, ball too fast, incoherent line, active press). Appendix D: anti-chaos sensitivity analysis with high/low/default values + interaction rule + two named style profiles. Appendix E: 4 KD-18 exploit-resistance scenarios (E.1 early trap, E.2 switch through hole, E.3 last-man one-on-one, E.4 GK out of position) — tick-by-tick trace with pass criteria. Appendix F: 16-entry glossary. Appendix G: telemetry playbook (Stage 0 placeholder + Stage 1+ planned overlays + known diagnostic signals). |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. L4: Appendix A.9 typo corrected — "time for a restart restart pass" → "time for a restart pass". |
+| 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): Appendix F glossary entry for `DOMAIN_TAG_DEFENSIVE_AI` — `[CROSS-PENDING]` (ERR-014-004) promoted to `[CROSS: #16 §3.4]`; ERR-014-004 resolved May 18, 2026. |

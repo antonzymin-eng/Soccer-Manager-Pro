@@ -21,7 +21,7 @@ either a KD in §1.5 or a downstream section in this spec.
 | FR-PR-002 | Output is one `PressDirective` per team per tick + one `PressAssignment` per agent per tick. | MUST | KD-2 / KD-3 |
 | FR-PR-003 | Agent iteration order during assignment computation is EntityId-sorted ascending. | MUST | #16 §3.2.5 / KD-10 |
 | FR-PR-004 | `PressDirective` and `PressAssignment` values contribute to the per-tick determinism digest, alongside the trigger debounce and role hysteresis state. | MUST | #16 §6.2 / KD-10 |
-| FR-PR-005 | RNG calls use `DOMAIN_TAG_PRESSING_AI = 0x19` (`[CROSS-PENDING]` until `ERR-013-005` resolved; value inherits the ERR-012-001 Phase B/C block proposal). | MUST | #16 §3.4 / KD-10 |
+| FR-PR-005 | RNG calls use `DOMAIN_TAG_PRESSING_AI = 0x19` `[CROSS: #16 §3.4]` — ERR-013-005 resolved May 17, 2026; allocated in #16 §3.4 v1.0.3 within the ERR-012-001 Phase B/C block. | MUST | #16 §3.4 / KD-10 |
 | FR-PR-006 | No heap allocation on the per-tick hot path. | MUST | #18 §3.7 |
 | FR-PR-007 | All constants live in a single catalogue file `PressingAIConstants.cs`. | MUST | #20 FR-CS-025 / KD-15 |
 | FR-PR-008 | Fatigue input convention is `0 = rested`, `1 = fatigued`. | MUST | CLAUDE.md / KD-1 |
@@ -194,3 +194,4 @@ pre-substitution value (consistent with #12's
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. 44 FRs enumerated. |
 | 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H1: FR-08 → FR-10 citation in FR-PR-010. AR-S1-H2: FR-PR-010 rewritten to use `TargetPosition - passerPosition` direction instead of `passVelocity`; §2.3 inputs row for #5 updated; F2 failure mode updated. AR-S1-H5: FR-PR-023 rewritten to describe threat-score selection; removed category-error "not already pressed by primary" clause. AR-S1-M5: typo `PRessAssignment` → `PressAssignment` in FR-PR-040. |
+| 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): FR-PR-005 `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`; ERR-013-005 resolved. |

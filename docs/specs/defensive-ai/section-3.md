@@ -1151,7 +1151,7 @@ are not duplicated here.
 | `PITCH_LENGTH_M` | `[CROSS: #1 §1.2]` | §3.5.2 |
 | `PITCH_WIDTH_M` | `[CROSS: #1 §1.2]` | §3.9.2 |
 | `HALF_LINE_X` | `[CROSS: #1 §1.2]` | §3.7.2 |
-| `DOMAIN_TAG_DEFENSIVE_AI` | `[CROSS-PENDING]` `0x1A` | §3.13 |
+| `DOMAIN_TAG_DEFENSIVE_AI` | `[CROSS: #16 §3.4]` `0x1A` | §3.13 |
 
 ---
 
@@ -1282,8 +1282,8 @@ PublishMarkAssignments(assignments, holdShapePool.count)
 
 **Determinism note (KD-10):** All iterations are EntityId-ascending (FR-DA-003).
 Any RNG tie-breaking uses `DeterministicRngService.NextInt(DOMAIN_TAG_DEFENSIVE_AI)`
-where `DOMAIN_TAG_DEFENSIVE_AI = 0x1A [CROSS-PENDING]` pending ERR-014-004
-resolution in #16 §3.4.
+where `DOMAIN_TAG_DEFENSIVE_AI = 0x1A [CROSS: #16 §3.4]` — ERR-014-004
+resolved May 18, 2026.
 
 ---
 

@@ -21,7 +21,7 @@ in this spec.
 | FR-DA-002 | Output per tick is one `MarkDirective` per team plus one `MarkAssignment` per agent in the HOLD_SHAPE pool. | MUST | KD-2 |
 | FR-DA-003 | Agent iteration order during assignment computation is EntityId-sorted ascending. | MUST | #16 §3.2.5 / KD-10 |
 | FR-DA-004 | `MarkDirective` and `MarkAssignment` values, together with `MarkHysteresisState`, `OffsideLineState`, and `TackleIntentRequest`, contribute to the per-tick determinism digest. | MUST | #16 §6.2 / KD-10 |
-| FR-DA-005 | Any RNG calls use `DOMAIN_TAG_DEFENSIVE_AI = 0x1A` (`[CROSS-PENDING]` until ERR-014-004 is ratified in #16 §3.4). | MUST | #16 §3.4 / KD-10 |
+| FR-DA-005 | Any RNG calls use `DOMAIN_TAG_DEFENSIVE_AI = 0x1A` `[CROSS: #16 §3.4]` — ERR-014-004 resolved May 18, 2026; allocated in #16 §3.4 v1.0.5. | MUST | #16 §3.4 / KD-10 |
 | FR-DA-006 | No heap allocation on the per-tick hot path. | MUST | #18 §3.7 |
 | FR-DA-007 | All constants live in a single catalogue file `DefensiveAIConstants.cs`, organised into `#region` blocks per #20 §4.2 (FR-CS-025). | MUST | #20 FR-CS-025 / KD-14 |
 | FR-DA-008 | Fatigue input convention is `0.0 = fully rested`, `1.0 = fully fatigued`. Any inversion is a critical error. | MUST | CLAUDE.md / KD-1 |

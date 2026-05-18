@@ -10,6 +10,7 @@
 | Date | Report | Probes run | FAIL | WARN | Notes |
 |------|--------|-----------|------|------|-------|
 | 2026-05-18 | [2026-05-18-tier-a-run-1.md](2026-05-18-tier-a-run-1.md) | A-01, A-03–A-06, A-08, A-10–A-12 (manual) | 3 | 2 | Initial run. A-02/A-07/A-09/A-14–A-16 deferred; A-13 skipped (network). |
+| 2026-05-18 | [2026-05-18-tier-a-run-2.md](2026-05-18-tier-a-run-2.md) | A-02 (partial), A-03 re-run, A-07, A-09, A-14, A-15, A-16 | 2 | 1 (×147) | Run 1 FAILs confirmed fixed. New: FAIL-4 (stale CROSS-PENDING body text in #11/12/13/14; #12 wrong value), FAIL-5 (file-manifest drift). A-13 skipped (network). |
 
 ---
 
@@ -23,7 +24,8 @@
 
 | ID | Probe | Spec | Summary | Filed |
 |----|-------|------|---------|-------|
-*(all FAILs from run 1 resolved — see below)*
+| F-004 | A-03 / T-05 | #11 §1/§2/§4; #12 §1/§2/§3/§4; #13 §2; #14 §1/§2/§3/§5 | 12 stale `[CROSS-PENDING]` in body text (§6.1 catalogues are correct); #12 §3.9 and §4.6 also have wrong value `0x16` → `0x17` | 2026-05-18 |
+| F-005 | A-09 / T-17 | `docs/tracking/file-manifest.md` | 3 new tracking files (stress-test-strategy.md, stress-reports/INDEX.md, stress-reports/tier-a-run-1.md) missing; rows 11/12/14 show stale status (NOT STARTED / IN REVIEW instead of APPROVED) | 2026-05-18 |
 
 ## Resolved FAILs
 
