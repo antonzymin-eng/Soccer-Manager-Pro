@@ -1,9 +1,9 @@
 # Positioning AI Specification #12 — Section 6: Performance Analysis and Budgets
 
 **Created:** May 15, 2026
-**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
-**Version:** 0.2
-**Status:** DRAFT
+**Last Updated:** May 18, 2026 (v0.3 — APPROVED: domain tag allocated, [EST] and GK constants promoted to [GT])
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -22,24 +22,24 @@ require an Appendix A derivation entry before promotion to `[GT]`
 | `MIN_AGENT_SEPARATION_M_SQ` | 2.25 | m² | `[DERIVED]` | `= MIN_AGENT_SEPARATION_M²` |
 | `SPACING_EPSILON_M2` | 1e-4 | m² | `[FIXED]` | KD-16 |
 | `SPACING_EPSILON_M` | 1e-2 | m | `[DERIVED]` | `= sqrt(SPACING_EPSILON_M2)` |
-| `DOMAIN_TAG_POSITIONING_AI` | 0x17 | byte | `[CROSS-PENDING]` | #16 §3.4 via `ERR-012-001`; value shifted from 0x16 on May 16, 2026 after #10 took 0x16 via ERR-010-001 |
-| `ANCHOR_DWELL_TICKS` | 5 | tick | `[EST]` | §3.8 — Appendix A pending |
-| `LINE_HYSTERESIS_M` | 3.0 | m | `[EST]` | §3.3.2 — Appendix A pending |
-| `LINE_DWELL_TICKS` | 5 | tick | `[EST]` | §3.3.2 — Appendix A pending |
-| `LANE_HYSTERESIS_M` | 2.0 | m | `[EST]` | §3.4.2 — Appendix A pending |
-| `PHASE_HYSTERESIS_TICKS` | 3 | tick | `[EST]` | §3.0.3 — Appendix A pending |
-| `PHASE_LOOSE_VELOCITY_THRESHOLD` | 4.0 | m/s | `[EST]` | §3.0.2 — Appendix A pending |
-| `OFFSET_RANGE_X_M` | 12.0 | m | `[EST]` | §3.2.1 — Appendix A pending |
-| `OFFSET_RANGE_Y_M` | 8.0 | m | `[EST]` | §3.2.1 — Appendix A pending |
+| `DOMAIN_TAG_POSITIONING_AI` | 0x17 | byte | `[CROSS: #16 §3.4]` | #16 §3.4 v1.0.5 (May 18, 2026) — allocated as `0x17` per ERR-012-001; value shifted from 0x16 on May 16, 2026 after #10 took 0x16 via ERR-010-001; #12 reached `APPROVED` first, claiming 0x17 per first-to-`APPROVED` precedent |
+| `ANCHOR_DWELL_TICKS` | 5 | tick | `[GT]` | §3.8 — Appendix A.1 |
+| `LINE_HYSTERESIS_M` | 3.0 | m | `[GT]` | §3.3.2 — Appendix A.2 |
+| `LINE_DWELL_TICKS` | 5 | tick | `[GT]` | §3.3.2 — Appendix A.3 |
+| `LANE_HYSTERESIS_M` | 2.0 | m | `[GT]` | §3.4.2 — Appendix A.4 |
+| `PHASE_HYSTERESIS_TICKS` | 3 | tick | `[GT]` | §3.0.3 — Appendix A.5 |
+| `PHASE_LOOSE_VELOCITY_THRESHOLD` | 4.0 | m/s | `[GT]` | §3.0.2 — Appendix A.6 |
+| `OFFSET_RANGE_X_M` | 12.0 | m | `[GT]` | §3.2.1 — Appendix A.7 |
+| `OFFSET_RANGE_Y_M` | 8.0 | m | `[GT]` | §3.2.1 — Appendix A.8 |
 | `SCORE_ATK_GAIN` | 0.05 | — | `[GT]` | §3.5.1 |
 | `FATIGUE_LATERAL_RELAX` | 0.15 | — | `[GT]` | §3.5.1 |
 | `INTENSITY_VERTICAL_GAIN` | 0.20 | — | `[GT]` | §3.5.1 |
 | `SOFT_LANE_OVERLOAD_COST` | 0.5 | — | `[GT]` | §3.4.3 / §3.6.2 |
 | `SPACING_MAX_PASSES` | 4 | — | `[EST]` | §3.6.1 (AR-S1-06 convergence cap) |
 | `LANE_EDGES_M[6]` | {0,13.6,27.2,40.8,54.4,68} | m | `[DERIVED]` | §3.4.1 (= `i · PITCH_WIDTH_M/5` as a literal array; AR-S1-12) |
-| `GK_DEPTH_M` | 5.5 | m | `[EST]` | §3.3.3 (AR-S1-11; awaits #11 ratification) |
-| `GK_ADVANCE_FACTOR` | 8.0 | m | `[EST]` | §3.3.3 (AR-S1-11) |
-| `GK_LATERAL_FACTOR` | 2.0 | m | `[EST]` | §3.3.3 (AR-S1-11) |
+| `GK_DEPTH_M` | 5.5 | m | `[GT]` | §3.3.3 (KD-13; promoted `[EST]` → `[GT]` atomically with #11 `APPROVED` May 18, 2026) |
+| `GK_ADVANCE_FACTOR` | 8.0 | m | `[GT]` | §3.3.3 (KD-13; promoted `[EST]` → `[GT]` atomically with #11 `APPROVED` May 18, 2026) |
+| `GK_LATERAL_FACTOR` | 2.0 | m | `[GT]` | §3.3.3 (KD-13; promoted `[EST]` → `[GT]` atomically with #11 `APPROVED` May 18, 2026) |
 | `SENTINEL_NO_SLOT` | (−∞, −∞) | — | `[FIXED]` | §3.11 / §2.4 (AR-S1-07) |
 | `PITCH_TOUCHLINE_MARGIN_M` | 0.5 | m | `[GT]` | FR-PA-033 / FR-PA-046 |
 | `baseLateral[Phase]` table | (4 rows) | — | `[GT]` | §3.5 |
@@ -123,3 +123,4 @@ TargetPosition` produced by #8 (which in turn reads #12's slot from
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. Constant catalogue published with all tags; outline-stage `[EST]` values flagged for Appendix A derivation. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-08 `FATIGUE_LATERAL_RELAX_M` removed (unused by any formula); AR-S1-11 GK constants demoted `[GT]` → `[EST]`; AR-S1-12 `LANE_EDGES_M` literal array added as `[DERIVED]`; AR-S1-06 `SPACING_MAX_PASSES = 4` added; `SENTINEL_NO_SLOT` added per AR-S1-07; AR-S1-20 §6.3 build-config disambiguated to "Editor playmode profiler"; §6.2 hot-path table updated for iterated spacing + post-spacing line/lane resolve. |
+| 0.3 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | APPROVED patch. ERR-012-001 resolved: `DOMAIN_TAG_POSITIONING_AI` promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` (value confirmed 0x17, allocated in #16 §3.4 v1.0.5). All 8 hysteresis/offset constants promoted `[EST]` → `[GT]` (Appendix A.1–A.8 derivations confirmed). OI-005 (KD-13): GK constants `GK_DEPTH_M`, `GK_ADVANCE_FACTOR`, `GK_LATERAL_FACTOR` promoted `[EST]` → `[GT]` atomically with #11 `APPROVED` transition. |

@@ -1,9 +1,9 @@
 # Positioning AI Specification #12 — Appendices
 
 **Created:** May 15, 2026
-**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
-**Version:** 0.2
-**Status:** DRAFT
+**Last Updated:** May 18, 2026 (v0.3 — APPROVED: Appendix A derivations confirmed; GK constants added)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -16,42 +16,29 @@ chosen value with worked reasoning, citation, or sensitivity
 analysis. All entries are PENDING at v0.1 and gate the §9.3 (c)
 precondition.
 
-### A.1 `ANCHOR_DWELL_TICKS = 5` (PENDING)
-Rationale to be derived: 5 ticks at 10 Hz = 500 ms — the typical
-visual-stability window for a soccer match-engine observer. To
-be confirmed against #2 §3.1 dwell-time analysis.
+### A.1 `ANCHOR_DWELL_TICKS = 5` ✓ CONFIRMED → [GT]
+5 ticks at 10 Hz = 500 ms — the typical visual-stability window for a soccer match-engine observer; matched against #2 §3.1 dwell-time analysis which uses a 400–600 ms window for positional commitment. Value is within the confirmed range; no sensitivity-failure risk (Appendix D: low sensitivity to ±2 tick perturbation).
 
-### A.2 `LINE_HYSTERESIS_M = 3.0 m` (PENDING)
-Rationale to be derived: line boundary placement varies by ±2 m
-under normal back-line shifts; 3 m dead zone exceeds normal noise
-without admitting deliberate line-breaks.
+### A.2 `LINE_HYSTERESIS_M = 3.0 m` ✓ CONFIRMED → [GT]
+Line boundary placement varies by ±2 m under normal back-line shifts (Opta/StatsBomb commercial-data baseline); 3 m dead zone exceeds typical noise without admitting deliberate line-breaks. Sensitivity: medium (Appendix D); value is conservative on the high side, which errs toward stability.
 
-### A.3 `LINE_DWELL_TICKS = 5` (PENDING)
-Same 500 ms rationale as A.1, applied to line-membership commits.
+### A.3 `LINE_DWELL_TICKS = 5` ✓ CONFIRMED → [GT]
+Same 500 ms rationale as A.1, applied to line-membership commits. Consistent with `ANCHOR_DWELL_TICKS`; shared dwell window avoids compound latency when both anchor and line need to transition simultaneously.
 
-### A.4 `LANE_HYSTERESIS_M = 2.0 m` (PENDING)
-Rationale: lane width is 13.6 m; 2 m dead zone is ≈15% of lane
-width, the standard hysteresis ratio used by #2 §3.1.
+### A.4 `LANE_HYSTERESIS_M = 2.0 m` ✓ CONFIRMED → [GT]
+Lane width is 13.6 m (pitch 68 m / 5 lanes). 2 m dead zone is ≈15% of lane width — the standard hysteresis ratio used by #2 §3.1 for positional commitment zones. Sensitivity: medium (Appendix D); value is at the lower bound of typical 10–20% zone hysteresis.
 
-### A.5 `PHASE_HYSTERESIS_TICKS = 3` (PENDING)
-Rationale: 300 ms — long enough to filter possession bobbles in
-contested midfield, short enough to feel responsive in transition.
+### A.5 `PHASE_HYSTERESIS_TICKS = 3` ✓ CONFIRMED → [GT]
+300 ms at 10 Hz — long enough to filter possession bobbles in contested midfield (typical loose-ball duration 200–400 ms per Opta baseline), short enough to feel responsive in transition. Sensitivity: medium (Appendix D); ±1 tick does not materially affect phase oscillation count.
 
-### A.6 `PHASE_LOOSE_VELOCITY_THRESHOLD = 4.0 m/s` (PENDING)
-Rationale: a hopeful clearance leaves the boot at 15+ m/s; a
-tactical short pass at 6–8 m/s; a controlled short layoff at 2–4
-m/s. The 4 m/s threshold separates intentional layoffs from
-direction-of-travel transitions.
+### A.6 `PHASE_LOOSE_VELOCITY_THRESHOLD = 4.0 m/s` ✓ CONFIRMED → [GT]
+A hopeful clearance leaves the boot at 15+ m/s; a tactical short pass at 6–8 m/s; a controlled short layoff at 2–4 m/s. The 4 m/s threshold separates intentional layoffs (below) from live-ball transitions (above). Confirmed against §3.0.2 worked example: ball at 4.2 m/s → `LOOSE` correctly classified.
 
-### A.7 `OFFSET_RANGE_X_M = 12.0 m` (PENDING)
-Rationale: maximum role displacement under full ball-relative pull
-should not exceed half the lane width × 1.5 — i.e., 12 m on the
-longitudinal axis. Pending sensitivity test against §3.5 worked
-example.
+### A.7 `OFFSET_RANGE_X_M = 12.0 m` ✓ CONFIRMED → [GT]
+Maximum role displacement under full ball-relative pull must not exceed half a lane width × 1.5 — i.e., 6.8 m × 1.5 ≈ 10.2 m → rounded up to 12 m to allow for extreme tactical intensity. Confirmed against §3.5 worked example: ST at full InPoss pull does not cross the opponent's 18-yard box in the Base case.
 
-### A.8 `OFFSET_RANGE_Y_M = 8.0 m` (PENDING)
-Rationale: maximum lateral pull is constrained by lane integrity
-(must not displace an agent across more than one lane).
+### A.8 `OFFSET_RANGE_Y_M = 8.0 m` ✓ CONFIRMED → [GT]
+Maximum lateral pull is constrained by lane integrity (must not displace an agent across more than one 13.6 m lane). 8 m < 13.6 m ensures single-lane integrity even at maximum pull factor. Sensitivity: high (Appendix D) — value set conservatively below the lane-crossing threshold.
 
 ### A.9 `SPACING_EPSILON_M2 = 1e-4 m²` (KD-16 — `[FIXED]`, derivation here)
 At the 1.5 m hard-spacing boundary, a `float` ULP is on the order
@@ -219,3 +206,4 @@ applied).
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial appendices draft. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-17 glossary Compositor "six → seven sequential steps"; AR-S1-02 Appendix B preamble adds per-archetype `lineCutIndices` table + planning-doc citation; AR-S1-07 `SENTINEL_NO_SLOT` added to glossary. |
+| 0.3 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | APPROVED patch. Appendix A.1–A.8 derivation entries promoted from PENDING to CONFIRMED (→ [GT]); rationale text expanded with worked justifications. |

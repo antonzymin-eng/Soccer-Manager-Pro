@@ -1,7 +1,7 @@
 # Goalkeeper Mechanics Specification #11 — Section 8: References, Citations, DOI Verification
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.2
 **Status:** DRAFT
 **Purpose:** Catalogue project documents, upstream specs, external
 academic references with DOI verification, and the typed
@@ -45,7 +45,7 @@ emitted by Goalkeeper Mechanics #11.
 | Heading Mechanics #10 | KD-7 | GK head-contact ownership inversion | §1.1 / KD-4 |
 | Positioning AI #12 | §3.3.3 | GK baseline consumer contract (KD-13 ratification) | §3.3.0 |
 | Deterministic Simulation #16 | §3.2 | Entity iteration order | §3.6 |
-| Deterministic Simulation #16 | §3.4 | `DOMAIN_TAG` catalogue (pending `0x17` per ERR-011-001) | §3.4 / §4.4 |
+| Deterministic Simulation #16 | §3.4 | `DOMAIN_TAG_GOALKEEPER = 0x1D` allocated in v1.0.5 (May 18, 2026) — ERR-011-001 resolved | §3.4 / §4.4 |
 | Deterministic Simulation #16 | §4.1 / §4.5 | RNG service + draw-site registry | §3.3 / §3.5 / §3.6 / §4.4 |
 | Event System #17 | §3.2.1 | Publish API surface | §3.9 / §4.3 |
 | Performance Optimization #18 | §3.10 / Appendix F.0 / §6 | Hot-path budget + channel registry + ratify-not-override | §2.4 / §4.5 / §6 |
@@ -94,7 +94,7 @@ Allocated cross-reference IDs emitted by Goalkeeper Mechanics #11.
 | `XC-011-004` | Shot Mechanics #6 §4.5 | `ShotExecutedEvent` |
 | `XC-011-005` | Heading Mechanics #10 KD-7 / §3.7 | GK head-contact ownership inversion + duel mechanism for head route |
 | `XC-011-006` | Positioning AI #12 §3.3.3 | GK baseline consumer contract; ratification of three GK constants (KD-13) |
-| `XC-011-007` | Deterministic Simulation #16 §3.4 | `DOMAIN_TAG_GOALKEEPER` catalogue row (`0x17` pending per ERR-011-001) |
+| `XC-011-007` | Deterministic Simulation #16 §3.4 | `DOMAIN_TAG_GOALKEEPER = 0x1D` catalogue row — ERR-011-001 resolved May 18, 2026 |
 | `XC-011-008` | Event System #17 §3.2.1 | Publish API surface |
 | `XC-011-009` | Pass Mechanics #5 §3 | `PassIntent` consumer surface (KD-6) |
 | `XC-011-010` | Collision System #3 §3.4.2 | `ICollisionEventConsumer` pattern (KD-5) |
@@ -138,3 +138,4 @@ Allocated cross-reference IDs emitted by Goalkeeper Mechanics #11.
 | Version | Date | Author | Notes | Reviewer |
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 5 project-doc citations, 22 upstream-spec rows, 6 external academic references (2 verified DOI / 4 `[CITATION-PENDING]` per OI-003 follow-up), 32 typed cross-references (15 XC / 7 FM / 10 EC) | self-pass-1 in `adversarial-review-section-files-v1.md` |
+| 0.2 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | ERR-011-001 resolved: `DOMAIN_TAG_GOALKEEPER = 0x1D` allocated in #16 §3.4 v1.0.5 (value shifted from `0x17` to `0x1D` — #12 Positioning AI reached `APPROVED` first). §8.2 upstream-spec row and XC-011-007 updated to reflect confirmed allocation. |

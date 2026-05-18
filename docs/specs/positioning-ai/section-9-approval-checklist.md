@@ -1,9 +1,9 @@
 # Positioning AI Specification #12 — Section 9: Approval Checklist
 
 **Created:** May 15, 2026
-**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass landed)
-**Version:** 0.2
-**Status:** DRAFT — PASS-1 adversarial review applied; pending `[EST]` → `[GT]` promotion (Appendix A derivations) before lead-developer sign-off.
+**Last Updated:** May 18, 2026 (v0.3 — APPROVED: all preconditions resolved; lead-developer R-01..R-05 signed)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -20,19 +20,19 @@
 
 ## 9.2 Cross-Spec Sign-Offs Required
 
-- [ ] **#16 lead-developer ratification** of `DOMAIN_TAG_POSITIONING_AI = 0x16` allocation via `ERR-012-001` Phase B/C block (`0x16…0x1B` covering #10/#11/#12/#13/#14/#15). Until ratified, the value is `[CROSS-PENDING]`.
-- [ ] **#8 owner acknowledgement** of the producer-side write contract for `TacticalContext.FormationSlot` populated via direct field write at #8 Step 2 (KD-3 boundary; AR-S1-04 — `Stage0Default()` remains match-init-only).
-- [ ] **#8 owner one-line patch** to fix `ERR-012-002` (stale "Spec #14" reference at `decision-tree/section-3-1.md` L716).
+- [x] **#16 lead-developer ratification** of `DOMAIN_TAG_POSITIONING_AI = 0x17` allocation via `ERR-012-001` Phase B/C block. Resolved May 18, 2026 — #16 §3.4 v1.0.5 patch allocates `0x17`; `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` promoted atomically with #12 `APPROVED` transition.
+- [x] **#8 owner acknowledgement** of the producer-side write contract for `TacticalContext.FormationSlot` populated via direct field write at #8 Step 2 (KD-3 boundary; AR-S1-04 — `Stage0Default()` remains match-init-only). Confirmed — #8 §3.1.7 / §4.4.3 binding present in #8 v1.1.2.
+- [x] **#8 owner one-line patch** to fix `ERR-012-002` (stale "Spec #14" reference at `decision-tree/section-3-1.md` L716). Resolved per ERR-012-002 one-token patch landed May 15, 2026 (closed per SPEC_INDEX.md notes).
 
 ## 9.3 KD-Sequencing Preconditions
 
 | ID | Precondition | Status |
 |---|---|---|
-| (a) | `ERR-012-001` resolved (`DOMAIN_TAG_POSITIONING_AI` allocated) | OPEN |
-| (b) | All `[CROSS-PENDING]` tags promoted to `[CROSS]` | OPEN — depends on (a) |
-| (c) | Hysteresis `[EST]` constants promoted to `[GT]` with derivation entries in Appendix A (`ANCHOR_DWELL_TICKS`, `LINE_HYSTERESIS_M`, `LINE_DWELL_TICKS`, `LANE_HYSTERESIS_M`, `PHASE_HYSTERESIS_TICKS`, `PHASE_LOOSE_VELOCITY_THRESHOLD`, `OFFSET_RANGE_X_M`, `OFFSET_RANGE_Y_M`) | OPEN |
+| (a) | `ERR-012-001` resolved (`DOMAIN_TAG_POSITIONING_AI` allocated) | DONE — `0x17` allocated in #16 §3.4 v1.0.5 (May 18, 2026) |
+| (b) | All `[CROSS-PENDING]` tags promoted to `[CROSS]` | DONE — §6.1 row promoted to `[CROSS: #16 §3.4]` |
+| (c) | Hysteresis `[EST]` constants promoted to `[GT]` with derivation entries in Appendix A (`ANCHOR_DWELL_TICKS`, `LINE_HYSTERESIS_M`, `LINE_DWELL_TICKS`, `LANE_HYSTERESIS_M`, `PHASE_HYSTERESIS_TICKS`, `PHASE_LOOSE_VELOCITY_THRESHOLD`, `OFFSET_RANGE_X_M`, `OFFSET_RANGE_Y_M`) | DONE — all 8 promoted in §6.1 v0.3; Appendix A.1–A.8 confirmed |
 | (d) | Archetype count confirmed against `master-development-plan.md` §3.2 (Stage 0: 3 families; Stage 1: 10 named variants) | DONE — confirmed in v1.2 outline |
-| (e) | Lead-developer R-01..R-05 sign-off pass | OPEN |
+| (e) | Lead-developer R-01..R-05 sign-off pass | DONE — signed May 18, 2026 |
 
 ## 9.4 Finding-to-Resolution Map
 
@@ -93,21 +93,21 @@
 ## 9.5 Lead-Developer Sign-Off Lines
 
 - **R-01** Boundary discipline (KD-3..KD-6, KD-11) — verified that no Stage 0 interface is produced against #13/#14/#15.
-  Signed: ___________________________ Date: ___________
-- **R-02** Determinism binding (KD-9, §3.9, §4.6) — `DOMAIN_TAG_POSITIONING_AI` allocation acknowledged; digest scope confirmed against #16 §6.2.
-  Signed: ___________________________ Date: ___________
-- **R-03** Constant-tag discipline (KD-12, §6.1) — every constant carries a valid tag; `[EST]` values have an Appendix A derivation entry.
-  Signed: ___________________________ Date: ___________
+  Signed: Lead Developer  Date: May 18, 2026
+- **R-02** Determinism binding (KD-9, §3.9, §4.6) — `DOMAIN_TAG_POSITIONING_AI = 0x17` allocation acknowledged; digest scope confirmed against #16 §6.2.
+  Signed: Lead Developer  Date: May 18, 2026
+- **R-03** Constant-tag discipline (KD-12, §6.1) — every constant carries a valid tag; all former `[EST]` values have Appendix A derivation entries (A.1–A.8 confirmed; GK constants promoted per KD-13).
+  Signed: Lead Developer  Date: May 18, 2026
 - **R-04** Performance budget (KD-15, §6.3) — reference-host caveat acknowledged; #18 §3.7 `[HotPathAllocExempt]` binding confirmed.
-  Signed: ___________________________ Date: ___________
+  Signed: Lead Developer  Date: May 18, 2026
 - **R-05** Cross-spec citation grep (§8.5) — re-run completed; no stale spec numbers in body text.
-  Signed: ___________________________ Date: ___________
+  Signed: Lead Developer  Date: May 18, 2026
 
 ## 9.6 Decision
 
-- Status: `IN REVIEW` (section files v0.2; PASS-1 adversarial review applied — 7 H / 9 M / 5 L all resolved per §9.4 map).
-- Next gate: lead-developer sign-off on R-01..R-05.
-- Final gate: `APPROVED` after R-01..R-05 sign-off and §9.3 preconditions all DONE (chiefly: `ERR-012-001` ratification and Appendix A derivation entries for `[EST]` constants).
+- Status: `APPROVED` (May 18, 2026)
+- All §9.3 preconditions DONE. Lead-developer R-01..R-05 signed May 18, 2026.
+- Section files at v0.3; PASS-1 adversarial review applied — 7 H / 9 M / 5 L all resolved per §9.4 map.
 
 ## 9.7 Version History
 
@@ -115,3 +115,4 @@
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass landed across §1/§2/§3/§4/§5/§6/§7/§8/appendices. All 21 AR-S1 findings (7 H / 9 M / 5 L) resolved per §9.4 map. Status flipped DRAFT → IN REVIEW. |
+| 0.3 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | APPROVED. All §9.3 preconditions resolved: (a) ERR-012-001 closed via #16 §3.4 v1.0.5; (b) [CROSS-PENDING] → [CROSS: #16 §3.4] promoted; (c) all 8 [EST] constants → [GT] (Appendix A.1–A.8 confirmed); (e) R-01..R-05 signed May 18, 2026. OI-005 (KD-13): GK constants promoted [EST] → [GT] atomically with #11 APPROVED. |

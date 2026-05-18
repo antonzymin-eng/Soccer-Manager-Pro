@@ -9,7 +9,7 @@ how data flows through it, and what constitutes correct behaviour at the boundar
 each requirement.
 
 **Created:** March 01, 2026, 12:00 PM PST  
-**Updated:** May 18, 2026 (v1.1.2 patch — ERR-015-002 Option B: `AttackIntent[]?` field added to `TacticalContext` §2.2.6; ownership table row added)
+**Updated:** May 18, 2026 (v1.1.3 patch — ERR-014-001 Option B: `MarkDirective?` field added to `TacticalContext` §2.2.6; ownership table row added)
 **Version:** 1.1.1  
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 17, 2026) is a non-behavioral patch per ERR-013-001 Option B: `PressDirective?` nullable field added to §2.2.6 `TacticalContext`; `Stage0Default` factory initializes it `null`; ownership table §2.2.8 row added; "frozen at Stage 0" comment amended. Approval status preserved.  
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)  
@@ -675,7 +675,7 @@ public enum PassingStyle    { DIRECT, MIXED, SHORT }
 `TacticalContext` carries tactical instructions injected by the Formation System (Stage 1).
 At Stage 0, all fields are hardcoded to conservative defaults. The struct is fully defined
 here to prevent field additions at Stage 1 from becoming breaking changes; Stage 1 wires
-the Formation System to populate real values. The field set was frozen at Stage 0; `PressDirective` was added at Stage 0 text via ERR-013-001 (Pressing AI #13 §9 sign-off) per Option B in KD-3; `AttackIntent[]` was added at Stage 0 text via ERR-015-002 (Attacking AI #15 §9 sign-off) per Option B.
+the Formation System to populate real values. The field set was frozen at Stage 0; `PressDirective` was added at Stage 0 text via ERR-013-001 (Pressing AI #13 §9 sign-off) per Option B in KD-3; `AttackIntent[]` was added at Stage 0 text via ERR-015-002 (Attacking AI #15 §9 sign-off) per Option B; `MarkDirective` was added at Stage 0 text via ERR-014-001 (Defensive AI #14 §9 sign-off, May 18, 2026) per Option B.
 
 ```csharp
 /// <summary>
@@ -685,7 +685,8 @@ the Formation System to populate real values. The field set was frozen at Stage 
 ///
 /// IMPORTANT: The field set was frozen at Stage 0; `PressDirective` was added at Stage 0 text
 /// via ERR-013-001 (Pressing AI #13 §9 sign-off) per Option B in KD-3; `AttackIntent[]` was
-/// added via ERR-015-002 (Attacking AI #15 §9 sign-off, May 18, 2026). Stage 1 may only
+/// added via ERR-015-002 (Attacking AI #15 §9 sign-off, May 18, 2026); `MarkDirective` was
+/// added via ERR-014-001 (Defensive AI #14 §9 sign-off, May 18, 2026). Stage 1 may only
 /// change VALUES for the existing fields, not add or remove fields without a specification
 /// amendment.
 /// </summary>
@@ -731,6 +732,16 @@ public struct TacticalContext
     public AttackIntent[]?  AttackIntent;    // null at Stage 0; Stage 1+: #15 writer
 
     /// <summary>
+    /// Per-team defensive marking directive from Defensive AI #14. Null at Stage 0.
+    /// Stage 1+: Defensive AI populates each tick before the DT pipeline runs.
+    /// DT reads this field to inform INTERCEPT and MOVE_TO_POSITION scoring for
+    /// agents assigned a marking role. Nullable so that Stage 0 pipelines never
+    /// touch a Stage 1 surface. Follows PressDirective? precedent per ERR-014-001
+    /// Option B (Defensive AI #14 §9 sign-off, May 18, 2026).
+    /// </summary>
+    public MarkDirective?   MarkDirective;   // null at Stage 0; Stage 1+: #14 writer
+
+    /// <summary>
     /// Stage 0 factory method. Returns a TacticalContext with hardcoded defaults
     /// for all fields. Called by orchestrator at match initialisation.
     /// </summary>
@@ -742,6 +753,7 @@ public struct TacticalContext
         DefensiveLineDepth   = 0.5f,
         PressDirective       = null,
         AttackIntent         = null,
+        MarkDirective        = null,
     };
 }
 ```
@@ -791,6 +803,7 @@ public readonly struct DecisionMadeEvent
 | `TacticalContext` | DT Spec #8 | DT (read-only), Formation System (Stage 1 writer) | Stage 0: hardcoded. Stage 1: Formation System populates. |
 | `PressDirective` | Pressing AI #13 | DT #8 (read-only), Pressing AI #13 (Stage 1 writer) | Stage 0: null. Stage 1+: #13 writes per-tick before DT runs. Struct defined in #13 §7.1. |
 | `AttackIntent[]` | Attacking AI #15 | DT #8 (read-only), Attacking AI #15 (Stage 1 writer) | Stage 0: null. Stage 1+: #15 writes per-tick before DT runs. Array indexed by agent EntityId; RUNNER role triggers MOVE_TO_POSITION target override in §3.1.7. Struct defined in #15 §2.2.2. |
+| `MarkDirective` | Defensive AI #14 | DT #8 (read-only), Defensive AI #14 (Stage 1 writer) | Stage 0: null. Stage 1+: #14 writes per-tick before DT runs. Carries per-team marking parameters (offensive-line depth, offside-trap flag, step-up target depth, emergency flag). Struct defined in #14 §2.2.1. |
 | `DecisionMadeEvent` | DT Spec #8 | Event System #17 (Stage 2) | Stage 0: published but not consumed. |
 | `PossessionState` | DT Spec #8 | DT, orchestrator | Enum; 3 values. |
 | `MatchPhase` | DT Spec #8 | DT | Enum; 4 values at Stage 0. |
@@ -811,4 +824,5 @@ public readonly struct DecisionMadeEvent
 | 1.1 | March 01, 2026 | Claude (AI) / Anton | Self-critique corrections. TacticalContext fields clarified; `DecisionMadeEvent` stub note expanded; ownership table completed. |
 | 1.1.1 | May 17, 2026 | Claude (AI) / Anton | Non-behavioral patch. ERR-013-001 Option B: `PressDirective?` nullable field added to `TacticalContext` §2.2.6 (null at Stage 0; Stage 1+: Pressing AI #13 writer). `Stage0Default` factory initializes field to `null`. Ownership table §2.2.8 row for `PressDirective` added. "field set is frozen at Stage 0" comment amended to document ERR-013-001 amendment path. No formula, scoring, or pipeline contract change. Approval status preserved. |
 | 1.1.2 | May 18, 2026 | Claude (AI) / Anton | Non-behavioral patch. ERR-015-002 Option B: `AttackIntent[]?` nullable array field added to `TacticalContext` §2.2.6 (null at Stage 0; Stage 1+: Attacking AI #15 writer). `Stage0Default` factory initializes field to `null`. Ownership table §2.2.8 row for `AttackIntent[]` added. Struct comment updated. No formula, scoring, or pipeline contract change. Approval status preserved. |
+| 1.1.3 | May 18, 2026 | Claude (AI) / Anton | Non-behavioral patch. ERR-014-001 Option B: `MarkDirective?` nullable field added to `TacticalContext` §2.2.6 (null at Stage 0; Stage 1+: Defensive AI #14 writer). `Stage0Default` factory initializes field to `null`. Ownership table §2.2.8 row for `MarkDirective` added. Struct comment updated. No formula, scoring, or pipeline contract change. Approval status preserved. |
 
