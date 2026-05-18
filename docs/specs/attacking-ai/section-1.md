@@ -1,9 +1,9 @@
 # Attacking AI Specification #15 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.1)
-**Version:** 0.1
-**Status:** DRAFT
+**Last Updated:** May 18, 2026 (v0.4 — Run 4 fix: `ATTACK_DWELL_TICKS [EST]` → `[GT]` in §1.4 glossary; header corrected to v0.4 APPROVED)
+**Version:** 0.4
+**Status:** APPROVED
 **Source:** `outline-detailed.md` v1.1 (May 17, 2026)
 
 ---
@@ -219,7 +219,7 @@ declaration).
 | **Team-style profile** | A named cluster of constant multipliers (`POSSESSION` / `DIRECT` / `COUNTER_ATTACK`) that scale `depthOffset_m`, `runTriggerTick`, `MAX_RUNNERS`, and `SUPPORT_RADIUS_M`. The algorithm is identical across all three profiles; only the constant values change (KD-12). Not an enum anywhere in the algorithm or data structures. |
 | **Transition-hold** | A per-team tick countdown (`TransitionHoldState`) that fires when the team loses possession. During the countdown, #15 emits a frozen version of the last `AttackDirective` before ceasing; this covers the brief window while agents recover defensive shape. `TRANSITION_HOLD_TICKS [GT]` is 0 for the COUNTER_ATTACK profile. |
 | **Anti-chaos invariant** | One of three measurable constraints enforced before `AttackDirective` publication (KD-13, §3.11): (1) simultaneous RUNNER count ≤ `MAX_RUNNERS [GT]`; (2) at least `MIN_SUPPORT_AGENTS [GT]` agents in SUPPORT_BALL or HOLD_WIDTH; (3) no RUNNER `runTargetPosition` assigned beyond `OWN_HALF_RUN_BLOCK_M [GT]` past the half-line into own territory. |
-| **Assignment hysteresis** | Per-agent dwell counter (`AttackHysteresisState`) that gates role transitions. A role change is committed only after the new candidate role has been continuously preferred for `ATTACK_DWELL_TICKS [EST]` consecutive ticks, preventing role-thrash at boundary conditions (FR-AT-022, FR-AT-023). |
+| **Assignment hysteresis** | Per-agent dwell counter (`AttackHysteresisState`) that gates role transitions. A role change is committed only after the new candidate role has been continuously preferred for `ATTACK_DWELL_TICKS [GT]` consecutive ticks, preventing role-thrash at boundary conditions (FR-AT-022, FR-AT-023). |
 | **Dangerous zone** | Stage-0-feasible chance-quality surrogate metric: the region within `DANGER_ZONE_MAX_DIST_M [GT]` of the opponent goal centre AND within `DANGER_ZONE_CORRIDOR_HW_M [GT]` of the goal-centre Y. SHOOT actions inside this zone count as "dangerous-zone shots" — no xG model required (KD-10, FR-AT-034). |
 | **Final third** | The attacking team's forward 35 m of the pitch. For a team attacking the x=105 goal: x ≥ `FINAL_THIRD_X_M [DERIVED]` = `PITCH_LENGTH_M × 2/3` ≈ 70 m. For the team attacking the x=0 goal: x ≤ `PITCH_LENGTH_M / 3` ≈ 35 m. All algorithms use a normalised distance-to-opponent-goal scalar to avoid per-team branching (KD-16). |
 | **teamAttackAngle** | A match-half constant (not the ball carrier's velocity vector). `0.0 rad` for the team attacking toward x=105; `π rad` for the team attacking toward x=0. Used in §3.4 to decompose run offsets into pitch-frame vectors. |
@@ -373,3 +373,4 @@ pattern established by #13 §1.8 and #14 §1.8.
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6) | Initial draft from `outline-detailed.md` v1.1. §1.1–§1.9 authored. Boundary matrix confirmed against `defensive-ai/section-1.md` v0.3 and `outline-detailed.md` v1.1. ERR-015-001..005 declared. KD-1..KD-17 tabulated. Coordinate and convention bindings cited. Stage-binding statement mirrors #13 §1.8 and #14 §1.8 pattern. |
 | 0.3 | May 18, 2026 | AI agent (claude-sonnet-4-6) | ERR-015-006 fix: promoted 4 stale `[CROSS-PENDING]` instances in §1.4 dependency table, §1.3.3 ERR-015-001 status block, §1.6 KD-11 row, and §1.8 cross-spec compliance table to `[CROSS: #16 §3.4]`. Resolves A-03 FAIL from stress-test Tier A run 1. |
+| 0.4 | May 18, 2026 | AI agent (claude/adversarial-specs-review-H5Oen) | Run 4 fix: `ATTACK_DWELL_TICKS [EST]` → `[GT]` in §1.4 glossary entry (stale tag missed by v0.2 fix pass which swept §2/§3 but not §1). Header corrected to v0.4 APPROVED. Resolves FAIL-7 from stress-test Tier A run 4. |

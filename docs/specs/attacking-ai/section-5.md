@@ -1,9 +1,9 @@
 # Attacking AI Specification #15 — Section 5: Testing & Validation
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.1)
-**Version:** 0.1
-**Status:** DRAFT
+**Last Updated:** May 18, 2026 (v0.2 — T-AT-U-048 corrected; header corrected to APPROVED)
+**Version:** 0.2
+**Status:** APPROVED
 **Source:** `outline-detailed.md` v1.1 (May 17, 2026)
 
 ---

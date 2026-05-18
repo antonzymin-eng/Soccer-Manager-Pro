@@ -1,0 +1,111 @@
+{
+  "_meta": {
+    "created": "2026-05-18",
+    "description": "A-16 normative-constraint-audit triage state. Each entry represents one MUST/SHALL+#N hit reviewed by a human. Status: 'XC- confirmed' (constrained spec has a matching XC-/CROSS entry) or 'ERR filed' (new finding opened). Run 4 inaugural sample: 10 entries triaged from defensive-ai and attacking-ai §2.",
+    "total_warns": 147,
+    "triaged": 10,
+    "open": 137
+  },
+  "entries": [
+    {
+      "id": "a16-001",
+      "spec": "defensive-ai #14",
+      "file": "defensive-ai/section-2.md",
+      "line": 22,
+      "hit": "FR-DA-003 | Agent iteration order is EntityId-sorted ascending. | MUST | #16 §3.2.5",
+      "obligation_direction": "subject — #14 must comply with #16's ordering rule",
+      "xc_entry": "#14 §1.4 dependency table cites #16 §3.2.5 under 'EntityId iteration order'; XC-014-002 in §1.2 references same constraint",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-002",
+      "spec": "defensive-ai #14",
+      "file": "defensive-ai/section-2.md",
+      "line": 23,
+      "hit": "FR-DA-004 | MUST | #16 §6.2",
+      "obligation_direction": "subject — #14 must include state in #16 digest",
+      "xc_entry": "#14 §1.4 dependency table cites #16 §6.2 under 'per-tick digest scope'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-003",
+      "spec": "defensive-ai #14",
+      "file": "defensive-ai/section-2.md",
+      "line": 24,
+      "hit": "FR-DA-005 | RNG calls use DOMAIN_TAG_DEFENSIVE_AI = 0x1A [CROSS: #16 §3.4]. MUST | #16 §3.4",
+      "obligation_direction": "subject — #14 must use domain tag from #16 §3.4",
+      "xc_entry": "[CROSS: #16 §3.4] inline tag on the constant; #14 §1.4 cites #16 §3.4",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-004",
+      "spec": "defensive-ai #14",
+      "file": "defensive-ai/section-2.md",
+      "line": 25,
+      "hit": "FR-DA-006 | No heap allocation on hot path. MUST | #18 §3.7",
+      "obligation_direction": "subject — #14 must comply with #18 zero-alloc discipline",
+      "xc_entry": "#14 §1.4 dependency table cites #18 §3.7 under 'Zero-allocation hot-path discipline'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-005",
+      "spec": "defensive-ai #14",
+      "file": "defensive-ai/section-2.md",
+      "line": 26,
+      "hit": "FR-DA-007 | Constants in DefensiveAIConstants.cs per #20 §4.2. MUST | #20 FR-CS-025",
+      "obligation_direction": "subject — #14 must follow #20 code standards",
+      "xc_entry": "#14 §1.4 dependency table cites #20 §4.2 (FR-CS-025) under 'Single constant-catalogue file'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-006",
+      "spec": "attacking-ai #15",
+      "file": "attacking-ai/section-2.md",
+      "line": 23,
+      "hit": "FR-AT-003 | Agent iteration EntityId-sorted ascending. MUST | #16 §3.2.5",
+      "obligation_direction": "subject — #15 must comply with #16 ordering rule",
+      "xc_entry": "#15 §1.4 dependency table cites #16 §3.2.5 under 'EntityId iteration order'; XC-015-002/003 in §1.2",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-007",
+      "spec": "attacking-ai #15",
+      "file": "attacking-ai/section-2.md",
+      "line": 24,
+      "hit": "FR-AT-004 | State contributes to per-tick digest. MUST | #16 §6.2",
+      "obligation_direction": "subject — #15 must include AttackDirective etc. in #16 digest",
+      "xc_entry": "#15 §1.4 dependency table cites #16 §6.2 under 'per-tick digest scope'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-008",
+      "spec": "attacking-ai #15",
+      "file": "attacking-ai/section-2.md",
+      "line": 25,
+      "hit": "FR-AT-005 | RNG uses DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS: #16 §3.4]. MUST | #16 §3.4",
+      "obligation_direction": "subject — #15 must use domain tag from #16 §3.4",
+      "xc_entry": "[CROSS: #16 §3.4] inline; #15 §1.4 cites #16 §3.4",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-009",
+      "spec": "defensive-ai #14",
+      "file": "defensive-ai/section-2.md",
+      "line": 56,
+      "hit": "FR-DA-037 | Stage-1 activation gated on #8 ERR-014-001. MUST | KD-16 / §7",
+      "obligation_direction": "subject — #14 must not activate until #8 amendment ratified",
+      "xc_entry": "#14 §1.4 cites #8 §2.2.6 for MarkDirective? field (ERR-014-001, Option B); KD-16 is internal — no external XC needed for internal KD refs",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-010",
+      "spec": "defensive-ai #14",
+      "file": "defensive-ai/section-2.md",
+      "line": 46,
+      "hit": "FR-DA-027 | MAX_MARK_DISPLACEMENT_M agent eligibility from #12 baseline anchor. MUST | KD-17",
+      "obligation_direction": "subject — #14 reads baseline anchor from #12",
+      "xc_entry": "#14 §1.4 cites #12 §4.5.1/§4.5.2 under 'BaselineDefensiveShapeView + GetLine(EntityId)'; KD-17 is internal",
+      "status": "XC- confirmed"
+    }
+  ]
+}

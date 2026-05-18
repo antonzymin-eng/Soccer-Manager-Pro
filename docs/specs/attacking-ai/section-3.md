@@ -1,9 +1,9 @@
 # Attacking AI Specification #15 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.1)
-**Version:** 0.1
-**Status:** DRAFT
+**Last Updated:** May 18, 2026 (v0.3 — adversarial-review fix pass + ERR-015-006 fix; header corrected to APPROVED)
+**Version:** 0.3
+**Status:** APPROVED
 **Source:** `outline-detailed.md` v1.1
 
 ---
