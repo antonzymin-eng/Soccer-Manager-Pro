@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 6: Performance Analysis and Budgets
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 initial draft)
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; M1/M7 resolved)
+**Version:** 0.2
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -17,8 +17,9 @@ per FR-DA-007 / KD-14 / #20 §4.2 FR-CS-025. All `[CROSS]` constants are
 consumed read-only from their authoritative spec; #14 never redefines them.
 
 `DOMAIN_TAG_DEFENSIVE_AI = 0x1A [CROSS-PENDING]` pending ERR-014-004 resolution
-in #16 §3.4 (Phase B/C block layout: `0x17` = #12, `0x18` = #11, `0x19` = #13,
-`0x1A` = #14, `0x1B` = #15).
+in #16 §3.4 (Phase B/C block layout: `0x17` = #12, `0x18` or `0x1D` = #11
+(ERR-011-001/ERR-012-001 race — #11 position shifts to `0x1D` if #12 reaches
+`APPROVED` first), `0x19` = #13, `0x1A` = #14, `0x1B` = #15).
 
 ---
 
@@ -211,4 +212,5 @@ the `EmitAllZonal` function is an O(N_HOLD) memset — the most trivial path.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
-| 0.1 | May 17, 2026 | AI agent | Initial draft. Full 27-entry constant catalogue in §6.1 (22 [GT] + 4 [CROSS] / [CROSS-PENDING]). All [GT] constants promoted from [EST] at outline stage (Appendix A derivation record). Hot-path enumeration table in §6.2. Per-tick budget ≤ 0.12 ms against named reference host (§6.3). Memory footprint ≈ 1,840 bytes (§6.5). `REASSIGN_LATENCY_TICKS` added to catalogue (§5.6.2 exploit criterion). `GK_EXPECTED_ZONE_MIN_X` retained in catalogue for Stage 1+ zone visualisation even though it is not used in Stage 0 trigger logic. |
+| 0.1 | May 17, 2026 | AI agent | Initial draft. Full 26-entry constant catalogue in §6.1 (22 [GT] + 4 [CROSS] / [CROSS-PENDING]). All [GT] constants promoted from [EST] at outline stage (Appendix A derivation record). Hot-path enumeration table in §6.2. Per-tick budget ≤ 0.12 ms against named reference host (§6.3). Memory footprint ≈ 1,840 bytes (§6.5). `REASSIGN_LATENCY_TICKS` added to catalogue (§5.6.2 exploit criterion). `GK_EXPECTED_ZONE_MIN_X` retained in catalogue for Stage 1+ zone visualisation even though it is not used in Stage 0 trigger logic. |
+| 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. M1: §6.1 and v0.1 history row corrected "27-entry" → "26-entry" (22 GT + 4 CROSS/CROSS-PENDING = 26, not 27). M7: §6.1 domain tag block layout now reflects ERR-011-001/ERR-012-001 race — #11 occupies `0x18` or `0x1D` depending on which of #11/#12 reaches `APPROVED` first. |

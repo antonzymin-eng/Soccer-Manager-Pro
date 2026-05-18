@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 — Initial draft from `outline-detailed.md` v1.0)
-**Version:** 0.1
+**Last Updated:** May 17, 2026 (v0.3 — PASS-2 adversarial review fix pass; two new issues resolved)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -162,8 +162,8 @@ for each agent in holdShapePool (EntityId-ascending):
     if assignments[agent].overriddenThisTick:
         continue
 
-    // Step 1: Hysteresis check (§3.11)
-    if hysteresis[agent].dwellCounter > 0:
+    // Step 1: Hysteresis check (§3.11) — only for non-ZONAL modes (T-DA-054)
+    if assignments[agent].mode != MarkMode.ZONAL AND hysteresis[agent].dwellCounter > 0:
         hysteresis[agent].dwellCounter -= 1
         // Retain current assignment; do not re-evaluate
         continue
@@ -230,8 +230,11 @@ for each agent in holdShapePool (EntityId-ascending):
         continue
 
     // Step 7: Apply hysteresis gate (§3.11) before committing
-    ApplyHysteresisGate(agent, MarkAssignment { mode = bestMode, targetEntityId = bestTarget },
-                         hysteresis)
+    ApplyHysteresisGate(agent, MarkAssignment {
+                            mode           = bestMode,
+                            targetEntityId = bestTarget,
+                            targetPosition = perception.GetAgent(bestTarget).position  // §2.2.2
+                        }, hysteresis)
 ```
 
 ### 3.3.4 Anti-Chaos Post-Pass
@@ -580,6 +583,8 @@ offsideStepDepth = min(offsideStepDepth, OFFSIDE_MAX_DEPTH_M)        // safety c
 
 // Issue ZONAL assignment to all DEFENSE-line agents simultaneously (FR-DA-019)
 for each agent a with LineMembership == DEFENSE in holdShapePool:
+    if assignments[a].overriddenThisTick:   // skip last-man / GK-cover emergency overrides
+        continue
     assignments[a] = MarkAssignment {
         mode           = ZONAL,
         targetPosition = Vector2(targetX, shape.GetFormationSlot(a).y),
@@ -904,10 +909,18 @@ for pass in 1..3:   // Maximum 3 passes (FR-DA-028)
     defenseLineTotal    = count(a in holdShapePool where lineMembership[a] == DEFENSE)
     defenseLineInZonal  = count(a in holdShapePool where lineMembership[a] == DEFENSE
                                                     AND assignments[a].mode == ZONAL)
-    if defenseLineInZonal < MIN_BACKLINE_AGENTS AND defenseLineTotal > MIN_BACKLINE_AGENTS:
+    if defenseLineInZonal < MIN_BACKLINE_AGENTS AND defenseLineTotal >= MIN_BACKLINE_AGENTS:
         // Find the non-ZONAL DEFENSE-line assignment with lowest threat score (most demotion-safe)
-        demoteCandidate = argmin over {a : lineMembership[a] == DEFENSE
-                                          AND assignments[a].mode != ZONAL}:
+        // Guard: skip COVER_GK_ZONE (null targetEntityId) and emergency overrides (overriddenThisTick)
+        eligiblePool = {a : lineMembership[a] == DEFENSE
+                            AND assignments[a].mode != ZONAL
+                            AND assignments[a].targetEntityId != null
+                            AND NOT assignments[a].overriddenThisTick}
+        if eligiblePool is empty:
+            // All non-ZONAL DEFENSE agents are emergency overrides; cannot demote without
+            // removing a safety assignment. Let F4 post-loop check handle the residual.
+            break
+        demoteCandidate = argmin over eligiblePool:
             ThreatScore(perception.GetAgent(assignments[a].targetEntityId))
         assignments[demoteCandidate] = MarkAssignment {
             mode = ZONAL,
@@ -929,7 +942,8 @@ for pass in 1..3:   // Maximum 3 passes (FR-DA-028)
     // --- Invariant 3: Max displacement ---
     violation = null
     for each a in holdShapePool:
-        if assignments[a].mode != ZONAL AND assignments[a].targetPosition != null:
+        if assignments[a].mode != ZONAL AND assignments[a].targetPosition != null
+           AND NOT assignments[a].overriddenThisTick:
             displacement = distance(assignments[a].targetPosition,
                                     shape.GetFormationSlot(a))
             if displacement > MAX_MARK_DISPLACEMENT_M:
@@ -1169,6 +1183,12 @@ if phase == Phase.IN_POSSESSION:
 // Step 3: Build HOLD_SHAPE pool (§3.2)
 holdShapePool = BuildHoldShapePool(snapshot, pressDir)  // excludes GK + press roles
 
+// Step 3b: Clear per-tick transient flag for all pool slots
+// (assignments is a retained buffer; overriddenThisTick must be false-initialized each tick
+//  before Steps 4/4a set it for emergency agents — §2.2.2 "reset to false at tick start")
+for i in 0..holdShapePool.count:
+    assignments[i].overriddenThisTick = false
+
 // Step 4: Last-man predicate (§3.8) — FIRST; highest priority
 lastMan = ComputeLastManCandidate(holdShapePool, snapshot)
 if IsLastManThreat(snapshot.ballPosition, lastMan, team):
@@ -1272,3 +1292,5 @@ resolution in #16 §3.4.
 | Version | Date | Author | Summary |
 |---------|------|--------|---------|
 | 0.1 | May 17, 2026 | AI agent | Initial draft from `outline-detailed.md` v1.0. All 13 algorithm subsections populated. §3.1 phase gate with `EmitAllZonal` pseudocode. §3.2 HOLD_SHAPE pool filter with GK and press-role exclusion. §3.3 mark-mode assignment with INTERCEPT_RUNNER > MAN_MARK > ZONAL priority. §3.4 displacement cost formula (units m², worked example, valid ranges). §3.5 threat score with perceivedGoalProximity x-axis-only formula and attribute normalisation `(attr-1)/19`; Q3 resolved (attribute range [1–20] → [0,1]). §3.6 tackle intent (COMMIT/JOCKEY/HOLD) with approach-angle and coverage-depth logic; worked example. §3.7 offside trap with four trigger conditions, dwell counter, step-depth formula, two worked examples (fires / blocked). §3.8 last-man predicate with `distToOwnGoal` team-agnostic normalisation; KD-12 formal definition; two worked examples. §3.9 COVER_GK_ZONE override; Q4 resolved (GK zone expressed as distToOwnGoal scalar, team-agnostic). §3.10 anti-chaos three-invariant pass loop (max 3 passes; F4 hard fallback); worked example. §3.11 assignment hysteresis binding to #2 §3.1; dwell-counter + holdTicks state; thrash-prevention worked example. §3.12 constants index with tags. §3.13 per-tick main-loop pseudocode (9 steps). §3.14 this version history. KD-5 Option B resolved via `TacticalContext.MarkDirective?` nullable field mechanism (aligned with #13 Option B per ERR-013-001; #8 §2.2.6 amendment to be filed as ERR-014-001). |
+| 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. H1: §3.3.3 Step 1 hysteresis pre-check now guards `mode != ZONAL` to avoid suppressing ZONAL re-evaluation (T-DA-054). H6: §3.7.4 offside trap loop now skips agents with `overriddenThisTick` set, preventing overwrite of last-man/GK-cover emergency assignments. H3: §3.10.3 Invariant 1 condition corrected `> MIN_BACKLINE_AGENTS` → `>= MIN_BACKLINE_AGENTS` (was triggering unnecessary fallbacks when exactly at the minimum). H5: §3.10.3 Invariant 1 demotion candidate argmin now requires `targetEntityId != null AND NOT overriddenThisTick` to prevent null-ref on COVER_GK_ZONE assignments and respect emergency overrides. M4: §3.3.3 Step 7 `ApplyHysteresisGate` call now passes `targetPosition = perception.GetAgent(bestTarget).position` (was missing, causing null targetPosition in non-ZONAL assignments). M5: §3.10.3 Invariant 3 displacement check now skips agents with `overriddenThisTick` set. |
+| 0.3 | May 17, 2026 | AI agent | PASS-2 adversarial review fix pass. PASS-2-H1: §3.13 now includes Step 3b that explicitly resets `overriddenThisTick = false` for all pool slots before Steps 4/4a set emergency overrides — without this, stale `true` values from the previous tick would cause Step 5 to incorrectly skip non-emergency agents. PASS-2-M1: §3.10.3 Invariant 1 demotion now checks `eligiblePool is empty` before calling `argmin` — if all non-ZONAL DEFENSE-line agents have `overriddenThisTick = true`, a `break` exits the pass loop and allows the F4 post-loop check to handle the residual invariant violation, rather than crashing on an empty argmin. |
