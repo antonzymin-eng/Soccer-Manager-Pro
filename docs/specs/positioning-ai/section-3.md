@@ -1,9 +1,9 @@
 # Positioning AI Specification #12 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 15, 2026
-**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass; AR-S1-01..21 resolved)
-**Version:** 0.2
-**Status:** DRAFT
+**Last Updated:** May 18, 2026 (v0.4 — Run 3 adversarial fix pass: 11 body-text `[EST]` constants promoted to `[GT]` matching §6.1 catalogue; GK §3.3.3 stale prose updated to reflect #11 APPROVED; §3.8 table-header corrected; SPACING_MAX_PASSES promoted)
+**Version:** 0.4
+**Status:** APPROVED
 
 ---
 
@@ -35,14 +35,14 @@ candidate =
     else                              → lastPhase     (no candidate change)
 ```
 
-`V₀ = 4.0 m/s` `[EST]` (`PHASE_LOOSE_VELOCITY_THRESHOLD`). The
+`V₀ = 4.0 m/s` `[GT]` (`PHASE_LOOSE_VELOCITY_THRESHOLD` — Appendix A.6). The
 3-tick moving average filters tactical ball touches from genuine
 transitions.
 
 ### 3.0.3 Hysteresis
 
 A candidate transition commits on the Nth consecutive candidate
-tick, where `N = PHASE_HYSTERESIS_TICKS = 3` `[EST]`. Concretely:
+tick, where `N = PHASE_HYSTERESIS_TICKS = 3` `[GT]` (Appendix A.5). Concretely:
 `phaseDwellTicks` counts the number of consecutive ticks the
 candidate has differed from `lastPhase`. When `phaseDwellTicks
 reaches N`, the commit fires AT THAT TICK (not the tick after).
@@ -108,8 +108,8 @@ offset.x = pullFactor[role, phase].x * basisX(ball.x) * OFFSET_RANGE_X_M
 offset.y = pullFactor[role, phase].y * basisY(ball.y) * OFFSET_RANGE_Y_M
 ```
 
-`OFFSET_RANGE_X_M = 12.0 m` `[EST]`, `OFFSET_RANGE_Y_M = 8.0 m`
-`[EST]`. `pullFactor[role, phase]` is a `[GT]` lookup keyed on
+`OFFSET_RANGE_X_M = 12.0 m` `[GT]` (Appendix A.7), `OFFSET_RANGE_Y_M = 8.0 m`
+`[GT]` (Appendix A.8). `pullFactor[role, phase]` is a `[GT]` lookup keyed on
 `(RoleId, Phase)` — published in §3.10 catalogue.
 
 ### 3.2.2 Worked Example
@@ -166,8 +166,8 @@ emergent from the sort).
 
 A transition from `lastLine` to a new line commits only if the
 agent's longitudinal distance from the line boundary exceeds
-`LINE_HYSTERESIS_M = 3.0 m` `[EST]` and persists for
-`LINE_DWELL_TICKS = 5` `[EST]` consecutive ticks.
+`LINE_HYSTERESIS_M = 3.0 m` `[GT]` (Appendix A.2) and persists for
+`LINE_DWELL_TICKS = 5` `[GT]` (Appendix A.3) consecutive ticks.
 
 ### 3.3.3 Goalkeeper Slot
 
@@ -179,16 +179,13 @@ gkSlot.x = GK_DEPTH_M  + GK_ADVANCE_FACTOR * basisX(ball.x_clamped)
 gkSlot.y = PITCH_WIDTH_M / 2 + GK_LATERAL_FACTOR * basisY(ball.y)
 ```
 
-`GK_DEPTH_M = 5.5 m` `[EST]` (rest depth from own goal-line);
-`GK_ADVANCE_FACTOR = 8.0 m` `[EST]`; `GK_LATERAL_FACTOR = 2.0 m`
-`[EST]`. **All three are `[EST]` (AR-S1-11):** the authoritative
-owner of GK baseline behavior is #11 Goalkeeper Mechanics, which is
-NOT STARTED. Per CLAUDE.md "Interface Design Principle", #12 cannot
-ratify these as `[GT]` ahead of #11 declaring its consumer contract;
-when #11 reaches `IN REVIEW`, these constants are promoted to
-`[CROSS-PENDING]` (against #11) and either ratified as `[CROSS]` or
-superseded by #11-owned values. Stage 0 ships #12's placeholder
-formula so the Phase C linear chain (§1.1) is not blocked on #11.
+`GK_DEPTH_M = 5.5 m` `[GT]`; `GK_ADVANCE_FACTOR = 8.0 m` `[GT]`;
+`GK_LATERAL_FACTOR = 2.0 m` `[GT]`. **All three promoted to `[GT]`
+(KD-13, May 18, 2026):** Goalkeeper Mechanics #11 reached `APPROVED`
+on May 18, 2026; these constants were promoted from `[EST]` → `[GT]`
+atomically with that transition per KD-13. The v0.1 / v0.2 text
+describing them as `[EST]` pending #11 `IN REVIEW` is superseded —
+#11 is now APPROVED and these values are locked as `[GT]` in §6.1.
 
 ## 3.4 Lane Occupation
 
@@ -222,7 +219,7 @@ occur post-clamp (§3.7 step 6 / FR-PA-046).
 ### 3.4.2 Hysteresis
 
 Lane transitions commit only when the agent crosses the boundary
-plus `LANE_HYSTERESIS_M = 2.0 m` `[EST]`. Dwell time is not
+plus `LANE_HYSTERESIS_M = 2.0 m` `[GT]` (Appendix A.4). Dwell time is not
 required for lane (LANE_HYSTERESIS_M alone is sufficient to
 suppress oscillation).
 
@@ -343,7 +340,7 @@ lead tightens"; "fatigue loosens") and the AR-S1-01 fix.
 MIN_AGENT_SEPARATION_M    = 1.5    [FIXED]   (from #3 collision radius)
 MIN_AGENT_SEPARATION_M_SQ = 2.25   [DERIVED] (= MIN_AGENT_SEPARATION_M^2)
 SPACING_EPSILON_M2        = 1e-4   [FIXED]   (KD-16)
-SPACING_MAX_PASSES        = 4      [EST]     (AR-S1-06 convergence cap)
+SPACING_MAX_PASSES        = 4      [GT]      (AR-S1-06 convergence cap)
 ```
 
 For every ordered pair `(i, j)` with `i.entityId < j.entityId`:
@@ -465,8 +462,7 @@ Anchor, line, lane, and phase hysteresis all parameterise the
 dwell-time + dead-zone pattern from Agent Movement #2 §3.1. #12
 does not redefine the algorithm.
 
-Outline-stage parameters (all `[EST]`; promote to `[GT]` with
-Appendix A derivations before approval):
+Parameters (all `[GT]` per §6.1 catalogue and Appendix A.1–A.6; promoted from `[EST]` at APPROVED transition May 18, 2026):
 
 | Constant | Value | Unit | Domain |
 |---|---|---|---|
@@ -591,3 +587,4 @@ that agent (§4.4.3).
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. §3.0–§3.11 published with worked examples per FR-PA-041. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-01 §3.5 compactness formula inverted to match prose ("higher = tighter") — §3.5.2 now `rel *= base/compactness`, §3.5.3 worked example replayed; AR-S1-02 §3.3.1 per-archetype `lineCutIndices` + AM override for 4-2-3-1; AR-S1-03 §3.7 step order: line/lane resolved AFTER spacing+clamp; AR-S1-05 §3.5.2 now operates on `(baseSlot − centroid)` aligning with §3.11 pseudocode; AR-S1-06 spacing iterates up to `SPACING_MAX_PASSES = 4`; AR-S1-07 `SENTINEL_NO_SLOT = Vector2.NegativeInfinity` distinct from NaN; isActive filter added in §3.11; AR-S1-09 §3.0.3/§3.0.4 commit on the Nth (not N+1th) candidate tick; AR-S1-10 §3.2.2 "8 m" → 7.2 m corrected to formula; AR-S1-11 GK constants demoted `[GT]` → `[EST]`; AR-S1-12 lane bins declared as `LANE_EDGES_M` literal array with explicit boundary semantics; AR-S1-13 §3.5.0 centroid definition added; AR-S1-14 §3.6.4 worked example records post-displacement lane state. |
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §3.9 RNG domain tag — corrected value `0x16` → `0x17` and promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`; ERR-012-001 resolved; value-shift history documented. |
+| 0.4 | May 18, 2026 | AI agent (adversarial-specs-review-run3) | Run 3 adversarial fix pass (FAIL-6): 11 body-text `[EST]` constants promoted to `[GT]` to match §6.1 catalogue (PHASE_LOOSE_VELOCITY_THRESHOLD, PHASE_HYSTERESIS_TICKS, OFFSET_RANGE_X_M, OFFSET_RANGE_Y_M, LINE_HYSTERESIS_M, LINE_DWELL_TICKS, LANE_HYSTERESIS_M, GK_DEPTH_M, GK_ADVANCE_FACTOR, GK_LATERAL_FACTOR, SPACING_MAX_PASSES); §3.3.3 GK prose updated to reflect #11 APPROVED (May 18, 2026) and [GT] promotion; §3.8 table-header corrected from "all [EST]" to "all [GT]"; Appendix A.N citations added to formula-context inline tags. |

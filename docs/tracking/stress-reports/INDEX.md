@@ -11,6 +11,7 @@
 |------|--------|-----------|------|------|-------|
 | 2026-05-18 | [2026-05-18-tier-a-run-1.md](2026-05-18-tier-a-run-1.md) | A-01, A-03–A-06, A-08, A-10–A-12 (manual) | 3 | 2 | Initial run. A-02/A-07/A-09/A-14–A-16 deferred; A-13 skipped (network). |
 | 2026-05-18 | [2026-05-18-tier-a-run-2.md](2026-05-18-tier-a-run-2.md) | A-02 (partial), A-03 re-run, A-07, A-09, A-14, A-15, A-16 | 2 | 1 (×147) | Run 1 FAILs confirmed fixed. New: FAIL-4 (stale CROSS-PENDING body text in #11/12/13/14; #12 wrong value), FAIL-5 (file-manifest drift). A-13 skipped (network). |
+| 2026-05-18 | [2026-05-18-tier-a-run-3.md](2026-05-18-tier-a-run-3.md) | Full re-run A-01–A-12, A-14–A-16 | 1→0 | 1 (×147) | Run 2 FAILs confirmed fixed. New: FAIL-6 (A-02: 11 stale `[EST]` body-text tags in #12 §3; SPACING_MAX_PASSES in §6.1) — fixed in this pass. FIND-7/8/9/10 (stale headers + ERR-012-001 status) fixed. A-13 skipped (network). Zero open FAILs after this run. |
 
 ---
 
@@ -22,10 +23,7 @@
 
 ## Open FAILs
 
-| ID | Probe | Spec | Summary | Filed |
-|----|-------|------|---------|-------|
-| F-004 | A-03 / T-05 | #11 §1/§2/§4; #12 §1/§2/§3/§4; #13 §2; #14 §1/§2/§3/§5 | 12 stale `[CROSS-PENDING]` in body text (§6.1 catalogues are correct); #12 §3.9 and §4.6 also have wrong value `0x16` → `0x17` | 2026-05-18 |
-| F-005 | A-09 / T-17 | `docs/tracking/file-manifest.md` | 3 new tracking files (stress-test-strategy.md, stress-reports/INDEX.md, stress-reports/tier-a-run-1.md) missing; rows 11/12/14 show stale status (NOT STARTED / IN REVIEW instead of APPROVED) | 2026-05-18 |
+*(None — all FAILs resolved as of Run 3, May 18, 2026. A-16 WARN ×147 remains open pending human triage via `tools/spec-stress/reports/a16-triage.json`.)*
 
 ## Resolved FAILs
 
@@ -34,3 +32,6 @@
 | F-001 | A-06 / T-03 | Decision Tree #8 §3.2 | `PitchGeometry` class rewritten to corner-origin (0,0,0); `Vector3` constants; citation corrected to §1.2 | 2026-05-18 |
 | F-002 | A-03 / T-05 | Attacking AI #15 §1/§2/§3/§4 | 7 stale `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]` across all four body sections | 2026-05-18 |
 | F-003 | A-04 / T-08 | Deterministic Sim #16 §3.4 | `_RESERVED_0x18_` and `_RESERVED_0x1C_` placeholder rows added | 2026-05-18 |
+| F-004 | A-03 / T-05 | #11 §1/§2/§4; #12 §1/§2/§3/§4; #13 §2; #14 §1/§2/§3/§5 | 12 stale `[CROSS-PENDING]` in body text (§6.1 catalogues correct); #12 §3/§4 wrong value `0x16` → `0x17` | 2026-05-18 |
+| F-005 | A-09 / T-17 | `docs/tracking/file-manifest.md` | 3 tracking files missing; rows 11/12/14 stale status | 2026-05-18 |
+| F-006 | A-02 / T-04 | Positioning AI #12 §3 + §6.1 | 11 `[EST]` body-text tags and `SPACING_MAX_PASSES` in §6.1 not promoted to `[GT]` in v0.3 APPROVED patch | 2026-05-18 |
