@@ -6,8 +6,8 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.19
-**Updated:** May 17, 2026 (ERR-013-001/004/005/007/008 all RESOLVED: Option B `PressDirective?` in #8; stale ref patched; domain tag `0x19` allocated in #16; `GetPhase`/`GetLine` declared in #12 §4.5.1; #13 advanced to APPROVED)
+**Version:** 1.20
+**Updated:** May 18, 2026 (ERR-008-001 filed: Decision Tree #8 §3.2 `PitchGeometry` uses centered origin — A-06 FAIL; ERR-015-006 filed: Attacking AI #15 §1/§2/§3/§4 stale `[CROSS-PENDING]` after ERR-015-001 resolution — A-03 FAIL; ERR-016-003 filed: #16 §3.4 domain-tag registry silent gaps at `0x18` and `0x1C` — A-04 FAIL. All three filed from stress-test run-1 May 18, 2026.)
 **Status:** ERR-001 through ERR-012, ERR-010-001 (closed May 16, 2026), ERR-012-001 (open), ERR-012-002 (closed), ERR-016-001, ERR-016-002, ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; resolved at the spec-text level May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); only the back-propagation note in #16 §3.2.5 still pending. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
@@ -31,6 +31,9 @@ authoritative remediation backlog.
 | ERR-012 | First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences) | Minor | 1 | ✅ Closed — Fixed in first-touch/section-7.md v1.1 (March 5, 2026) |
 | ERR-012-001 | `DOMAIN_TAG_POSITIONING_AI` allocation + Phase B/C block (originally proposed `0x16…0x1B`; shifted to `0x17…0x1C` May 16, 2026 after #10 took `0x16`) needed in #16 §3.4 | Medium | 1 | Open — awaiting lead-developer ratification of the shifted block; filed May 15, 2026 from #12 outline v1.2 |
 | ERR-012-002 | Decision Tree #8 `section-3-1.md` L716 cites Formation System as "Spec #14" — current #14 is Defensive AI; Formation System is #12 | Minor | 1 | ✅ Closed — Fixed in decision-tree/section-3-1.md v1.1.1 (May 15, 2026); single-token "Spec #14" → "Positioning AI, Spec #12"; approval status preserved |
+| ERR-008-001 | Decision Tree #8 §3.2 `PitchGeometry` pseudocode class uses centered origin `(0,0) = centre of pitch` with X:−52.5–+52.5m/Y:−34–+34m — contradicts CLAUDE.md + Ball Physics #1 §1.2 corner-origin; all goal constants wrong | High | 1 | ✅ Resolved May 18, 2026 — `section-3-2.md` v1.3: class rewritten to corner-origin (0,0,0); all `Vector2` goal constants replaced with `Vector3` using correct values; citation corrected to §1.2 and Appendix C; XC-GEOM-01 verification note added |
+| ERR-015-006 | Attacking AI #15 §1/§2/§3/§4 retain 7 stale `[CROSS-PENDING]` tags on `DOMAIN_TAG_ATTACKING_AI` after ERR-015-001 declared resolved; §9 checklist falsely claims "0 `[CROSS-PENDING]` remain" | Medium | 4 | ✅ Resolved May 18, 2026 — promoted all 7 hits to `[CROSS: #16 §3.4]` in §1 (4 instances), §2 FR-AT-005, §3 constant table, §4 §4.6 prose; v0.3 version-history rows added to all four section files |
+| ERR-016-003 | Domain tag registry (#16 §3.4) silent gaps at `0x18` and `0x1C` — no `_RESERVED_0xNN_` placeholder rows; `0x18` orphaned when GK shifted to `0x1D`; `0x1C` block-end margin never documented | Medium | 1 | ✅ Resolved May 18, 2026 — `deterministic-sim/section-3.md` v1.0.6: `_RESERVED_0x18_` and `_RESERVED_0x1C_` placeholder rows added to §3.4 domain-tag table; v1.0.6 version-history row added |
 | ERR-016-001 | Phantom interface risk in Deterministic Simulation §4.2 | Medium | 1 | ✅ Mitigated — §4.2 reclassified as non-normative sketches in v0.7 fix pass |
 | ERR-016-002 | EntityId no-reuse cross-spec constraint not back-propagated to specs #2 and #8 | Medium | 3 | Resolved (spec text) — May 6, 2026: `XC-002-001` added to Agent Movement #2 §2.5 (v1.1.1); `XC-008-001` added to Decision Tree #8 §1.7.3 (v1.1.1). Pending only: prose update in #16 §3.2.5. |
 | ERR-017-001 | `DOMAIN_TAG_EVENT_LEDGER` allocation needed in Deterministic Simulation #16 §3.4 domain-tag table | Medium | 2 | ✅ FULLY RESOLVED. (1) #16-side May 14, 2026: `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocated in #16 §3.4 (v1.0.1 patch revision); §8.3.1 #17 row promoted to `complete`. (2) #17-side May 15, 2026 (§1.0.1 patch revision): `[CROSS-PENDING]` → `[CROSS]` promotion completed across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3; Appendix B byte streams and Appendix D glossary now carry the literal value `0x15`. |
@@ -1202,4 +1205,127 @@ Block is contiguous with `DOMAIN_TAG_HEADING = 0x16` and consumes one nibble of 
 
 ---
 
-*End of Spec Error Log v1.15 — May 16, 2026.*
+---
+
+## ERR-008-001: Decision Tree #8 §3.2 `PitchGeometry` class uses centered coordinate origin
+
+**Status:** Open
+**Severity:** High
+**Detected:** May 18, 2026
+**Detected During:** Stress-test Tier A run 1, probe A-06 (coordinate-convention-guard FAIL) + T-03 (inverted domain conventions).
+**Files Affected:** 1 (`decision-tree/section-3-2.md`, lines 305–350+)
+
+**Root Cause:** The `PitchGeometry` static class in Decision Tree #8 §3.2 is authored with a center-origin coordinate system — the same defect class logged in CLAUDE.md "Things That Have Gone Wrong Before" ("Wrong coordinate origin — 'Pitch center' comment in Agent Movement §3.5"). The class comment states:
+
+```
+/// Coordinate system (consistent with Ball Physics #1 §2.2 and Agent Movement #2 §2.1):
+///   Origin (0, 0) = centre of pitch
+///   X-axis: pitch length (−52.5m to +52.5m; total 105m)
+///   Y-axis: pitch width (−34m to +34m; total 68m)
+```
+
+The authoritative coordinate system (CLAUDE.md §"Coordinate System", Ball Physics #1 §1.2 and Appendix C, verified in `ball-physics/section-3-1.md` and `agent-movement/section-3-5-part-1.md`) is:
+- Origin: corner of pitch (0, 0, 0)
+- X: 0–105m (goal-to-goal)
+- Y: 0–68m (touchline-to-touchline)
+
+**Consequence — all goal position constants are wrong:**
+
+| Constant | DT §3.2 value (centered) | Correct corner-origin value |
+|----------|--------------------------|----------------------------|
+| `HOME_OPPONENT_GOAL_CENTRE` | `(52.5, 0)` | `(105.0, 34.0, 0)` |
+| `HOME_OPPONENT_GOAL_POST_L` | `(52.5, +3.66)` | `(105.0, 37.66, 0)` |
+| `HOME_OPPONENT_GOAL_POST_R` | `(52.5, −3.66)` | `(105.0, 30.34, 0)` |
+| `HOME_OWN_GOAL_CENTRE` | `(−52.5, 0)` | `(0.0, 34.0, 0)` |
+| `HOME_OWN_GOAL_POST_L` | `(−52.5, +3.66)` | `(0.0, 37.66, 0)` |
+| `HOME_OWN_GOAL_POST_R` | `(−52.5, −3.66)` | `(0.0, 30.34, 0)` |
+
+The citation "consistent with Ball Physics #1 §2.2" is also incorrect — the authoritative section per CLAUDE.md is §1.2 (not §2.2).
+
+**Resolution:**
+1. Rewrite `PitchGeometry` class in `decision-tree/section-3-2.md` to use corner-origin (0,0,0) throughout.
+2. Update `Origin` comment to `Origin (0, 0, 0) = corner of pitch (home team's left defensive corner)`.
+3. Update `X-axis` range to `0m to 105m`. Update `Y-axis` range to `0m to 68m`.
+4. Recalculate and update all `Vector2`/`Vector3` goal position constants using the correct system.
+5. Switch goal positions to `Vector3` (not `Vector2`) to match the 3D coordinate system; or add a note that Y-component = 0 (ground-level Z in the spec's convention) and Y in `Vector2` here maps to X in the global system — this requires careful thought; simpler to use `Vector3` directly to avoid axis-label confusion.
+6. Correct the citation from "§2.2" to "§1.2 and Appendix C".
+7. Append a version-history row to `section-3-2.md`.
+
+**Probe trigger:** A-06 FAIL — phrase "Origin (0, 0) = centre of pitch" is a direct origin claim. T-03 defect class (inverted coordinate convention).
+
+---
+
+## ERR-015-006: Attacking AI #15 §1/§2/§3/§4 retain stale `[CROSS-PENDING]` tags after ERR-015-001 resolution
+
+**Status:** Open
+**Severity:** Medium
+**Detected:** May 18, 2026
+**Detected During:** Stress-test Tier A run 1, probe A-03 (cross-pending-tracker FAIL) + T-05 + T-02.
+**Files Affected:** 4 (`attacking-ai/section-1.md`, `section-2.md`, `section-3.md`, `section-4.md`)
+
+**Root Cause:** ERR-015-001 was resolved on May 18, 2026 — `DOMAIN_TAG_ATTACKING_AI = 0x1B` was allocated in `deterministic-sim/section-3.md` §3.4 (v1.0.4), and the `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` promotion was applied in `section-6.md` §6.1.9 and `section-9-approval-checklist.md`. However, the same tag appears as `[CROSS-PENDING]` in four additional section files that were not part of the promotion pass. The approval checklist therefore falsely claims "0 `[CROSS-PENDING]` remain" (T-02: fabricated checklist entry).
+
+**Stale hits (all in `attacking-ai/`):**
+
+| File | Line | Stale text |
+|------|------|------------|
+| `section-1.md` | 114 | `DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS-PENDING]` in §1.4 dependency table |
+| `section-1.md` | 164 | "`[CROSS-PENDING]` throughout this spec until ERR-015-001 is ratified" in KD-11 note |
+| `section-1.md` | 245 | `0x1B [CROSS-PENDING]` in KD table column |
+| `section-1.md` | 266 | `DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS-PENDING] until ERR-015-001 ratified` in cross-spec compliance table |
+| `section-2.md` | 25 | FR-AT-005: `([CROSS-PENDING] until ERR-015-001 is ratified in #16 §3.4)` |
+| `section-3.md` | 948 | Constant reference table: `\| DOMAIN_TAG_ATTACKING_AI \| [CROSS-PENDING] \| 0x1B (ERR-015-001) \|` |
+| `section-4.md` | 206 | `DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS-PENDING] (ERR-015-001; see …)` |
+
+**Resolution:** In each location above, replace `[CROSS-PENDING]` with `[CROSS: #16 §3.4]` and update "until ERR-015-001 is ratified" clauses to "resolved May 18, 2026". Update `section-9-approval-checklist.md` §9.1 evidence row to accurately state which files were updated. Append version-history rows to each of the four section files.
+
+**Probe trigger:** A-03 FAIL — `[CROSS-PENDING]` present in approved spec body text with no matching `Status: OPEN` ERR entry (ERR-015-001 is CLOSED). T-05 (dangling tag after upstream APPROVED). T-02 (fabricated checklist claim).
+
+---
+
+## ERR-016-003: Domain tag registry (#16 §3.4) silent gaps at `0x18` and `0x1C`
+
+**Status:** Open
+**Severity:** Medium
+**Detected:** May 18, 2026
+**Detected During:** Stress-test Tier A run 1, probe A-04 (domain-tag-allocator-audit FAIL) + T-08.
+**Files Affected:** 1 (`deterministic-sim/section-3.md` §3.4 domain-tag table)
+
+**Root Cause:** The ERR-012-001 Phase B/C block originally proposed the range `0x17…0x1C` (with `0x1C` as one slot of margin). As allocations landed, `0x18` was informally noted in the v1.0.3 changelog as "reserved for #11 Goalkeeper" before Goalkeeper Mechanics was reallocated to `0x1D` (because Positioning AI reached APPROVED first and claimed `0x17`, triggering the first-to-APPROVED cascade that shifted GK from `0x17` to `0x1D`). Neither `0x18` nor `0x1C` was ever assigned or documented in the live §3.4 table as a placeholder.
+
+**A-04 requirement:** "every gap in the allocation sequence has an explicit `_RESERVED_0xNN_` placeholder row in the §3.4 table."
+
+**Actual allocation sequence:**
+```
+0x10 DOMAIN_TAG_PHASE
+0x11 DOMAIN_TAG_SNAPSHOT_PAYLOAD
+0x12 DOMAIN_TAG_SNAPSHOT_HEADER
+0x13 DOMAIN_TAG_RNGDRAW
+0x14 DOMAIN_TAG_ENV_FP
+0x15 DOMAIN_TAG_EVENT_LEDGER
+0x16 DOMAIN_TAG_HEADING
+0x17 DOMAIN_TAG_POSITIONING_AI
+[0x18 — MISSING; no row]
+0x19 DOMAIN_TAG_PRESSING_AI
+0x1A DOMAIN_TAG_DEFENSIVE_AI
+0x1B DOMAIN_TAG_ATTACKING_AI
+[0x1C — MISSING; no row]
+0x1D DOMAIN_TAG_GOALKEEPER
+```
+
+**Risk:** A developer assigning the next subsystem domain tag would search for the last-allocated value and find `0x1D`, concluding `0x1E` is next-available. The orphaned `0x18` and `0x1C` remain permanently unavailable for reuse but are not documented as such, creating a silent encoding hole.
+
+**Resolution:** Add two rows to the §3.4 domain-tag table in `deterministic-sim/section-3.md` (in numerical order between the existing rows):
+
+```
+| _RESERVED_0x18_ | 0x18 | — | Skipped. Originally informally noted in #16 §3.4 v1.0.3 changelog as a reservation for Goalkeeper Mechanics #11 (ERR-011-001). GK was subsequently reallocated to 0x1D when Positioning AI #12 reached APPROVED first and claimed 0x17 per first-to-APPROVED precedent (ERR-011-001 KD-7 policy). Value 0x18 is permanently orphaned — must not be reassigned to any subsystem without explicit ERR tracking. |
+| _RESERVED_0x1C_ | 0x1C | — | Skipped. Block-end margin value of the ERR-012-001 Phase B/C block (0x17…0x1C). Block was closed when 0x1B was allocated to Attacking AI #15 (ERR-015-001). Value 0x1C was never assigned; permanently orphaned — must not be reassigned without explicit ERR tracking. |
+```
+
+Append a v1.0.6 version-history row to `deterministic-sim/section-3.md`. No `DETERMINISM_DIGEST_VERSION` bump required (placeholder rows are namespace documentation, not preimage-layout changes).
+
+**Probe trigger:** A-04 FAIL (silent gap without placeholder row). T-08 (DOMAIN_TAG gap).
+
+---
+
+*End of Spec Error Log v1.20 — May 18, 2026.*

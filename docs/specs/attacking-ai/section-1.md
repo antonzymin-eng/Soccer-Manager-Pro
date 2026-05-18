@@ -111,7 +111,7 @@ tuned `[GT]` parameter fitting; save-game persistence; Fixed64 migration
 | #7 Perception System | §3.7–§3.10 | Filtered world model: agent positions, ball position, ball carrier `EntityId`, possession state, attribute lookups (`Pace`, `Stamina`, `Dribbling`), `isActive` flag; `PlayerRole.Goalkeeper` for GK exclusion |
 | #8 Decision Tree | §1.3.2, §2.2.6, §3.1.7 | Stage-1 binding row (§1.3.2 defers coordinated attacking movement to Stage 1+); `TacticalContext.AttackIntent[]?` field (ERR-015-002, Option B — mirrors `PressDirective?` / `MarkDirective?` precedent); EntityId no-reuse (`XC-008-001`, referenced as `XC-015-003`) |
 | #13 Pressing AI | §2.2 (`PressAssignment`), §3.4, §4.5 | Phase context: #13 is active when OUT_OF_POSSESSION; #15 is active when IN_POSSESSION — mutually exclusive via #12 phase enum. No direct data coupling within a tick. |
-| #16 Deterministic Simulation | §3.2, §3.2.5, §3.4, §5, §6.2 | EntityId iteration order; domain-tag registry (`DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS-PENDING]`); per-tick digest scope for `AttackDirective` / `AttackIntent[]` / `RunParameters` / hysteresis state / transition-hold counter |
+| #16 Deterministic Simulation | §3.2, §3.2.5, §3.4, §5, §6.2 | EntityId iteration order; domain-tag registry (`DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS: #16 §3.4]`); per-tick digest scope for `AttackDirective` / `AttackIntent[]` / `RunParameters` / hysteresis state / transition-hold counter |
 | #17 Event System | §3.10 (channel registry — Stage 1 back-prop) | No channels produced or consumed at Stage 0; `ATTACK_RUN_STARTED` / `OVERLOAD_DECLARED` deferred to ERR-015-003/004 |
 | #18 Performance | §3.7, §6 | Zero-allocation hot-path discipline; per-tick budget framework |
 | #19 Testing | §3, §4 | Test taxonomy and FR-traceability framework |
@@ -157,13 +157,11 @@ tuned `[GT]` parameter fitting; save-game persistence; Fixed64 migration
   `0x17` = #12 (ERR-012-001 proposed), `0x18` or `0x1D` = #11
   (ERR-011-001 proposed — whichever of #11/#12 reaches `APPROVED` first
   takes `0x17`/`0x18`; if #12 reaches `APPROVED` first, #11 shifts to
-  `0x1D`), `0x19` = #13 (resolved), `0x1A` = #14 (ERR-014-004 proposed),
-  `0x1B` = #15 (this entry). #15's `0x1B` slot is stable regardless of the
-  #11/#12 domain-tag race because the shift only affects the `0x17`/`0x18`
-  allocation. **Status:** OPEN — `DOMAIN_TAG_ATTACKING_AI` is
-  `[CROSS-PENDING]` throughout this spec until ERR-015-001 is ratified in
-  #16 §3.4. The same shift-right collision policy as the May 16, 2026
-  #10/#12 domain-tag shift applies if a conflict emerges before ratification.
+  `0x1D`), `0x19` = #13 (resolved), `0x1A` = #14 (resolved),
+  `0x1B` = #15 (this entry). **Status:** RESOLVED (May 18, 2026) —
+  `DOMAIN_TAG_ATTACKING_AI = 0x1B` allocated in #16 §3.4 v1.0.4
+  (ERR-015-001 closed). `[CROSS-PENDING]` promoted to
+  `[CROSS: #16 §3.4]` throughout this spec in v0.3 patch.
 
 - **`ERR-015-002`** — `TacticalContext.AttackIntent[]?` nullable field
   addition to #8 §2.2.6. **Mechanism:** Option B, mirroring the
@@ -242,7 +240,7 @@ Cross-reference to the 17 KDs catalogued in `outline-detailed.md` v1.1:
 | KD-8 | No PatternType / RunType / OverlapType enum — all movement fully described by three `RunParameters` fields; `overloadFlank` (LEFT/RIGHT) is a spatial discriminator, not a movement-pattern enum | §3.4, §2.2 |
 | KD-9 | Stage binding — spec at Stage 0; runtime at Stage 1; same pattern as #13 and #14 | §1.8, §7 |
 | KD-10 | Stage-0-feasible acceptance criteria — dangerous-zone shot surrogate (§5.7) and tactical-identity measurability via role histograms (§5.8) | §5, FR-AT-034, FR-AT-035 |
-| KD-11 | Determinism binding (#16) — EntityId-sort, RNG domain tag `0x1B [CROSS-PENDING]`, all output structs in per-tick digest | §3, §4.6 |
+| KD-11 | Determinism binding (#16) — EntityId-sort, RNG domain tag `0x1B [CROSS: #16 §3.4]`, all output structs in per-tick digest | §3, §4.6 |
 | KD-12 | Team-style profiles (POSSESSION / DIRECT / COUNTER_ATTACK) — named constant-multiplier clusters, not enums; algorithm is identical across all three | §3.10 |
 | KD-13 | Anti-chaos invariants: MAX_RUNNERS cap, MIN_SUPPORT_AGENTS floor, OWN_HALF_RUN_BLOCK_M guard — enforced POST-assignment, PRE-publication; fallback to all-default on unresolvable violation | §3.11 |
 | KD-14 | Single constant catalogue `AttackingAIConstants.cs` per #20 §4.2 | §4.2 |
@@ -263,7 +261,7 @@ Authoritative Boundary Matrix (mirrors `outline-detailed.md` v1.1):
 | #11 Goalkeeper | (none — GK unconditionally excluded from pool) | GK positioning, saves, distribution | GK excluded from pool before any computation | KD-7 exclusion rule; GK `EntityId` identified via `PlayerRole.Goalkeeper` in #7 snapshot | Yes (spec text) |
 | #2 Agent Movement | (none direct — via #8 action output) | 60 Hz steering toward `Action.TargetPosition` | #2 reads #8 | Same composition path as #12 / #13 / #14 | No |
 | #7 Perception | (none — read consumer only) | Filtered world model: agent positions, ball position, ball carrier EntityId, possession state, attributes, `isActive` | #15 reads #7 | Snapshot captured at tick start; no mid-tick re-reads | Yes (spec text) |
-| #16 Determinism | `AttackDirective` / `AttackIntent[]` / `RunParameters` / `AttackHysteresisState` / `TransitionHoldState` digest scope | Digest format + iteration rule | #15 conforms | EntityId iteration + domain-tagged RNG (`DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS-PENDING]` until ERR-015-001 ratified) | Yes (spec text) |
+| #16 Determinism | `AttackDirective` / `AttackIntent[]` / `RunParameters` / `AttackHysteresisState` / `TransitionHoldState` digest scope | Digest format + iteration rule | #15 conforms | EntityId iteration + domain-tagged RNG (`DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS: #16 §3.4]`) | Yes (spec text) |
 | #17 Event System | `ATTACK_RUN_STARTED` / `OVERLOAD_DECLARED` channel definitions | Channel registry | (deferred Stage 1) | ERR-015-003 / ERR-015-004 at Stage 1 | No (Stage 1) |
 | #18 Performance | (conformance only) | Per-tick budget framework | #15 conforms | §6 budget against named host | Yes (spec text) |
 | #19 Testing | (conformance only) | Test-framework conventions | #15 conforms | §5 plan | Yes (spec text) |
@@ -374,3 +372,4 @@ pattern established by #13 §1.8 and #14 §1.8.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6) | Initial draft from `outline-detailed.md` v1.1. §1.1–§1.9 authored. Boundary matrix confirmed against `defensive-ai/section-1.md` v0.3 and `outline-detailed.md` v1.1. ERR-015-001..005 declared. KD-1..KD-17 tabulated. Coordinate and convention bindings cited. Stage-binding statement mirrors #13 §1.8 and #14 §1.8 pattern. |
+| 0.3 | May 18, 2026 | AI agent (claude-sonnet-4-6) | ERR-015-006 fix: promoted 4 stale `[CROSS-PENDING]` instances in §1.4 dependency table, §1.3.3 ERR-015-001 status block, §1.6 KD-11 row, and §1.8 cross-spec compliance table to `[CROSS: #16 §3.4]`. Resolves A-03 FAIL from stress-test Tier A run 1. |

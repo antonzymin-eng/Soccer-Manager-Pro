@@ -12,7 +12,7 @@ formulas.
 
 **Created:** March 01, 2026, 7:00 PM PST
 **Updated:** March 02, 2026, 12:00 PM PST
-**Version:** 1.2
+**Version:** 1.3
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist)
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -304,10 +304,16 @@ know where the goals are — this is equivalent to knowing the pitch dimensions.
 /// <summary>
 /// PitchGeometry — static constants for standard football pitch geometry.
 ///
-/// Coordinate system (consistent with Ball Physics #1 §2.2 and Agent Movement #2 §2.1):
-///   Origin (0, 0) = centre of pitch
-///   X-axis: pitch length (−52.5m to +52.5m; total 105m)
-///   Y-axis: pitch width (−34m to +34m; total 68m)
+/// Coordinate system (authoritative: Ball Physics #1 §1.2 and Appendix C;
+///   consistent with Agent Movement #2 §2.1 and Deterministic Simulation #16 §3.1):
+///   Origin (0, 0, 0) = corner of pitch (home team's left defensive corner)
+///   X-axis: pitch length,  0m (home goal-line) → 105m (away goal-line)
+///   Y-axis: pitch width,   0m (near touchline) →  68m (far touchline)
+///   Z-axis: height (vertical, up); ball rests at Z = 0.11m (Ball Physics #1 §1.2)
+///
+/// Goal positions use X (goal-line) and Y (width).
+///   Home goal-line: X = 0m.   Away goal-line: X = 105m.
+///   Goal centre Y:  HALF_WIDTH_M = 34.0m (midpoint of 0–68m range).
 ///
 /// Goal positions are defined for HOME team attacking in the +X direction.
 /// Away team attacks in the −X direction.
@@ -321,53 +327,53 @@ public static class PitchGeometry
 {
     // ── Pitch Dimensions ─────────────────────────────────────────────────────────
 
-    public const float PITCH_LENGTH_M  = 105.0f;   // [FIXED] Standard UEFA pitch length
-    public const float PITCH_WIDTH_M   = 68.0f;    // [FIXED] Standard UEFA pitch width
-    public const float HALF_LENGTH_M   = 52.5f;    // [FIXED] Origin to own/opponent goal
-    public const float HALF_WIDTH_M    = 34.0f;    // [FIXED] Origin to sideline
+    public const float PITCH_LENGTH_M  = 105.0f;   // [FIXED] Standard UEFA pitch length (X-axis)
+    public const float PITCH_WIDTH_M   = 68.0f;    // [FIXED] Standard UEFA pitch width  (Y-axis)
+    public const float HALF_LENGTH_M   = 52.5f;    // [FIXED] Half pitch length; pitch midline at X = HALF_LENGTH_M
+    public const float HALF_WIDTH_M    = 34.0f;    // [FIXED] Half pitch width; goal centres at Y = HALF_WIDTH_M
 
     // ── Goal Geometry ─────────────────────────────────────────────────────────────
 
     public const float GOAL_WIDTH_M    = 7.32f;    // [FIXED] Standard goalpost separation
     public const float GOAL_HALF_WIDTH = 3.66f;    // [FIXED] Half goal width
 
-    // Home team attacks toward +X; their opponent goal is at x = +52.5m
-    public static readonly Vector2 HOME_OPPONENT_GOAL_CENTRE = new Vector2( 52.5f, 0.0f);
-    public static readonly Vector2 HOME_OPPONENT_GOAL_POST_L = new Vector2( 52.5f, +3.66f);
-    public static readonly Vector2 HOME_OPPONENT_GOAL_POST_R = new Vector2( 52.5f, -3.66f);
+    // Home team attacks toward +X.
+    // Their own goal-line is at X = 0m; opponent (away) goal-line is at X = 105m.
+    // Goal centres sit at Y = HALF_WIDTH_M = 34m (midpoint of 0–68m Y range).
+    public static readonly Vector3 HOME_OPPONENT_GOAL_CENTRE = new Vector3(PITCH_LENGTH_M, HALF_WIDTH_M, 0.0f);
+    public static readonly Vector3 HOME_OPPONENT_GOAL_POST_L = new Vector3(PITCH_LENGTH_M, HALF_WIDTH_M + GOAL_HALF_WIDTH, 0.0f);
+    public static readonly Vector3 HOME_OPPONENT_GOAL_POST_R = new Vector3(PITCH_LENGTH_M, HALF_WIDTH_M - GOAL_HALF_WIDTH, 0.0f);
 
-    public static readonly Vector2 HOME_OWN_GOAL_CENTRE      = new Vector2(-52.5f, 0.0f);
-    public static readonly Vector2 HOME_OWN_GOAL_POST_L      = new Vector2(-52.5f, +3.66f);
-    public static readonly Vector2 HOME_OWN_GOAL_POST_R      = new Vector2(-52.5f, -3.66f);
+    public static readonly Vector3 HOME_OWN_GOAL_CENTRE      = new Vector3(0.0f, HALF_WIDTH_M, 0.0f);
+    public static readonly Vector3 HOME_OWN_GOAL_POST_L      = new Vector3(0.0f, HALF_WIDTH_M + GOAL_HALF_WIDTH, 0.0f);
+    public static readonly Vector3 HOME_OWN_GOAL_POST_R      = new Vector3(0.0f, HALF_WIDTH_M - GOAL_HALF_WIDTH, 0.0f);
 
-    // Away team attacks toward −X; their opponent goal is at x = −52.5m
-    public static readonly Vector2 AWAY_OPPONENT_GOAL_CENTRE = new Vector2(-52.5f, 0.0f);
-    public static readonly Vector2 AWAY_OPPONENT_GOAL_POST_L = new Vector2(-52.5f, +3.66f);
-    public static readonly Vector2 AWAY_OPPONENT_GOAL_POST_R = new Vector2(-52.5f, -3.66f);
+    // Away team attacks toward −X.
+    // Their own goal-line is at X = 105m; opponent (home) goal-line is at X = 0m.
+    public static readonly Vector3 AWAY_OPPONENT_GOAL_CENTRE = new Vector3(0.0f,           HALF_WIDTH_M, 0.0f);
+    public static readonly Vector3 AWAY_OPPONENT_GOAL_POST_L = new Vector3(0.0f,           HALF_WIDTH_M + GOAL_HALF_WIDTH, 0.0f);
+    public static readonly Vector3 AWAY_OPPONENT_GOAL_POST_R = new Vector3(0.0f,           HALF_WIDTH_M - GOAL_HALF_WIDTH, 0.0f);
 
-    public static readonly Vector2 AWAY_OWN_GOAL_CENTRE      = new Vector2( 52.5f, 0.0f);
-    public static readonly Vector2 AWAY_OWN_GOAL_POST_L      = new Vector2( 52.5f, +3.66f);
-    public static readonly Vector2 AWAY_OWN_GOAL_POST_R      = new Vector2( 52.5f, -3.66f);
+    public static readonly Vector3 AWAY_OWN_GOAL_CENTRE      = new Vector3(PITCH_LENGTH_M, HALF_WIDTH_M, 0.0f);
+    public static readonly Vector3 AWAY_OWN_GOAL_POST_L      = new Vector3(PITCH_LENGTH_M, HALF_WIDTH_M + GOAL_HALF_WIDTH, 0.0f);
+    public static readonly Vector3 AWAY_OWN_GOAL_POST_R      = new Vector3(PITCH_LENGTH_M, HALF_WIDTH_M - GOAL_HALF_WIDTH, 0.0f);
 
     // ── Helper: Get opponent goal centre for a given team ─────────────────────────
     //
     // Called by §3.2.3 SHOOT utility. TeamId: 0 = home, 1 = away.
     //
-    public static Vector2 GetOpponentGoalCentre(int teamId) =>
+    public static Vector3 GetOpponentGoalCentre(int teamId) =>
         teamId == 0 ? HOME_OPPONENT_GOAL_CENTRE : AWAY_OPPONENT_GOAL_CENTRE;
 
-    public static Vector2 GetOpponentGoalPostL(int teamId) =>
+    public static Vector3 GetOpponentGoalPostL(int teamId) =>
         teamId == 0 ? HOME_OPPONENT_GOAL_POST_L : AWAY_OPPONENT_GOAL_POST_L;
 
-    public static Vector2 GetOpponentGoalPostR(int teamId) =>
+    public static Vector3 GetOpponentGoalPostR(int teamId) =>
         teamId == 0 ? HOME_OPPONENT_GOAL_POST_R : AWAY_OPPONENT_GOAL_POST_R;
 }
 ```
 
-**XC-NOTE:** Coordinate system must be verified consistent with Ball Physics #1 §2.2.
-If Ball Physics uses a different origin convention (e.g., corner at (0,0) rather than
-centre-pitch), these constants must be adjusted. Flagged for §9 Approval Checklist
-cross-check (XC-GEOM-01).
+**Verification (corner-origin):** `HOME_OPPONENT_GOAL_CENTRE = (105.0, 34.0, 0)` — consistent with Ball Physics #1 §3.1 "Away goal: X=105m, centered at Y=34m." `HOME_OWN_GOAL_CENTRE = (0.0, 34.0, 0)` — consistent with "Home goal: X=0, centered at Y=34m." Goal posts at Y = 34 ± 3.66 = {37.66, 30.34} — both within [0, 68]. XC-GEOM-01 resolved (ERR-008-001, May 18, 2026).
 
 ---
 
@@ -601,4 +607,12 @@ fallback behaviour.
 defence; SHOOT correctly takes over in the attacking third for capable finishers.
 
 ---
+
+### 3.2.13 Version History
+
+| Version | Date | Author | Summary |
+|---------|------|--------|---------|
+| 1.1 | March 02, 2026 | AI agent / Anton | Original approved version. Utility model for all seven action types. |
+| 1.2 | (not documented) | — | Minor updates (see file header). |
+| 1.3 | May 18, 2026 | AI agent (claude-sonnet-4-6) | ERR-008-001 fix (A-06 FAIL — coordinate system): rewrote `PitchGeometry` class from centered origin `(0,0) = centre of pitch` to authoritative corner-origin `(0,0,0) = corner of pitch` per Ball Physics #1 §1.2 and Appendix C. All goal `Vector2` constants replaced with `Vector3` constants using correct corner-origin values: `HOME_OPPONENT_GOAL_CENTRE (105, 34, 0)`, `HOME_OWN_GOAL_CENTRE (0, 34, 0)`, etc. `HALF_LENGTH_M`/`HALF_WIDTH_M` comments updated. Coordinate system comment corrected from "§2.2" to "§1.2 and Appendix C". Stale XC-NOTE (XC-GEOM-01) replaced with resolution verification. |
 

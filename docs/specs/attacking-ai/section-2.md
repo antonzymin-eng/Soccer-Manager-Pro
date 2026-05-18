@@ -22,7 +22,7 @@ carry conformance level **MUST** unless explicitly noted otherwise.
 | FR-AT-002 | Output per tick is one `AttackDirective` per possessing team plus one `AttackIntent` per agent in the off-ball movement pool. | MUST | KD-2 |
 | FR-AT-003 | Agent iteration order during pool evaluation and role assignment is EntityId-sorted ascending. | MUST | #16 §3.2.5 / KD-11 |
 | FR-AT-004 | `AttackDirective`, `AttackIntent[]`, `RunParameters`, `AttackHysteresisState`, and `TransitionHoldState` contribute to the per-tick determinism digest. | MUST | #16 §6.2 / KD-11 |
-| FR-AT-005 | Any RNG calls within #15 use `DeterministicRngService` with domain tag `DOMAIN_TAG_ATTACKING_AI = 0x1B` (`[CROSS-PENDING]` until ERR-015-001 is ratified in #16 §3.4). | MUST | #16 §3.4 / KD-11 |
+| FR-AT-005 | Any RNG calls within #15 use `DeterministicRngService` with domain tag `DOMAIN_TAG_ATTACKING_AI = 0x1B` (`[CROSS: #16 §3.4]`). | MUST | #16 §3.4 / KD-11 |
 | FR-AT-006 | The goalkeeper is unconditionally excluded from the off-ball movement pool. The GK never receives an `AttackIntent`. | MUST | KD-7 |
 | FR-AT-007 | The current ball carrier is excluded from the off-ball movement pool on every tick. | MUST | KD-3 |
 | FR-AT-008 | Phase gating: if the #12 phase for this team is `OUT_OF_POSSESSION`, emit an empty `AttackDirective` and return immediately without executing the role-assignment algorithm. | MUST | KD-5 / §3.1 |
@@ -396,4 +396,5 @@ multiple input sources are degraded.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6) | Initial draft from `outline-detailed.md` v1.1. §2.1 (36 FRs FR-AT-001..036), §2.2 (7 structs with C# field tables), §2.3 (inputs table with 17 rows), §2.4 (F1–F4 failure modes with detection, recovery, dev-log token, test reference) authored. |
+| 0.3 | May 18, 2026 | AI agent (claude-sonnet-4-6) | ERR-015-006 fix: promoted `[CROSS-PENDING]` in FR-AT-005 to `[CROSS: #16 §3.4]`. Resolves A-03 FAIL from stress-test Tier A run 1. |
 | 0.2 | May 18, 2026 | AI agent (claude-sonnet-4-6) | Adversarial-review fixes: (1) §2.2.4 AttackHysteresisState: renamed `holdTicks`→`candidateDwell`; corrected `dwellCounter` description from "countdown/decrements" to accumulator (increments); moved `prevPhase` out (belongs in TransitionHoldState, not per-agent struct); (2) §2.2.5 TransitionHoldState: renamed `ticksRemaining`→`transitionHoldTick` (matches §3.9 algorithm); replaced `holdActive bool` with `prevPhase PossessionPhase` (per-team phase tracking used in §3.13 transition detection); (3) FR-AT-022, FR-AT-023: `[EST]`→`[GT]` for ATTACK_DWELL_TICKS (promoted at section-file draft); (4) §2.2.7 BaselineShapeView XC citation updated from stale XC-015-004 (#8 §1.7.3) to XC-015-010..013 (#12 §2.2 / §4.5). |
