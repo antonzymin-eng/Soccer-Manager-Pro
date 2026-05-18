@@ -1,9 +1,9 @@
 # Defensive AI Specification #14 — Section 6: Performance Analysis and Budgets
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; M1/M7 resolved)
-**Version:** 0.2
-**Status:** DRAFT
+**Last Updated:** May 18, 2026 (v0.3 — APPROVED: DOMAIN_TAG_DEFENSIVE_AI promoted [CROSS-PENDING] → [CROSS: #16 §3.4])
+**Version:** 0.3
+**Status:** APPROVED
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
 ---
@@ -16,10 +16,9 @@ record). All `[GT]` constants live exclusively in `DefensiveAIConstants.cs`
 per FR-DA-007 / KD-14 / #20 §4.2 FR-CS-025. All `[CROSS]` constants are
 consumed read-only from their authoritative spec; #14 never redefines them.
 
-`DOMAIN_TAG_DEFENSIVE_AI = 0x1A [CROSS-PENDING]` pending ERR-014-004 resolution
-in #16 §3.4 (Phase B/C block layout: `0x17` = #12, `0x18` or `0x1D` = #11
-(ERR-011-001/ERR-012-001 race — #11 position shifts to `0x1D` if #12 reaches
-`APPROVED` first), `0x19` = #13, `0x1A` = #14, `0x1B` = #15).
+`DOMAIN_TAG_DEFENSIVE_AI = 0x1A [CROSS: #16 §3.4]` — ERR-014-004 resolved May 18, 2026.
+Allocated in #16 §3.4 v1.0.5. Phase B/C block final layout: `0x17` = #12, `0x1D` = #11
+(shifted from `0x18` — #12 reached `APPROVED` first), `0x19` = #13, `0x1A` = #14, `0x1B` = #15.
 
 ---
 
@@ -87,7 +86,7 @@ in #16 §3.4 (Phase B/C block layout: `0x17` = #12, `0x18` or `0x1D` = #11
 | `PITCH_LENGTH_M` | `[CROSS: #1 §1.2]` | 105.0 | m | Ball Physics #1 §1.2 | Denominator in `perceivedGoalProximity` formula (§3.5.2); normalises opponent x-position to [0, 1]. |
 | `HALF_LINE_X` | `[CROSS: #1 §1.2]` | 52.5 | m | Ball Physics #1 §1.2 | Offside trap trigger condition 2: ball must be in opponent half (§3.7.2). |
 | `PITCH_WIDTH_M` | `[CROSS: #1 §1.2]` | 68.0 | m | Ball Physics #1 §1.2 | `abandonedZoneCenter.y = PITCH_WIDTH_M / 2.0 = 34.0` in §3.9.2. |
-| `DOMAIN_TAG_DEFENSIVE_AI` | `[CROSS-PENDING]` `0x1A` | 0x1A | — | #16 §3.4 (ERR-014-004 pending) | RNG domain tag for any stochastic tie-breaking in this subsystem (§4.6). Promoted to `[CROSS]` atomically when #16 §3.4 v1.0.4 patch lands. |
+| `DOMAIN_TAG_DEFENSIVE_AI` | `[CROSS: #16 §3.4]` `0x1A` | 0x1A | — | #16 §3.4 v1.0.5 (ERR-014-004 resolved May 18, 2026) | RNG domain tag for any stochastic tie-breaking in this subsystem (§4.6). Promoted to `[CROSS: #16 §3.4]` atomically with #14 `APPROVED` transition May 18, 2026. |
 
 ---
 
@@ -214,3 +213,4 @@ the `EmitAllZonal` function is an O(N_HOLD) memset — the most trivial path.
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent | Initial draft. Full 26-entry constant catalogue in §6.1 (22 [GT] + 4 [CROSS] / [CROSS-PENDING]). All [GT] constants promoted from [EST] at outline stage (Appendix A derivation record). Hot-path enumeration table in §6.2. Per-tick budget ≤ 0.12 ms against named reference host (§6.3). Memory footprint ≈ 1,840 bytes (§6.5). `REASSIGN_LATENCY_TICKS` added to catalogue (§5.6.2 exploit criterion). `GK_EXPECTED_ZONE_MIN_X` retained in catalogue for Stage 1+ zone visualisation even though it is not used in Stage 0 trigger logic. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. M1: §6.1 and v0.1 history row corrected "27-entry" → "26-entry" (22 GT + 4 CROSS/CROSS-PENDING = 26, not 27). M7: §6.1 domain tag block layout now reflects ERR-011-001/ERR-012-001 race — #11 occupies `0x18` or `0x1D` depending on which of #11/#12 reaches `APPROVED` first. |
+| 0.3 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | APPROVED patch. ERR-014-004 resolved: `DOMAIN_TAG_DEFENSIVE_AI` promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` (value `0x1A` confirmed, allocated in #16 §3.4 v1.0.5). Block layout updated to final values: `0x17` = #12, `0x1D` = #11 (final value), `0x19` = #13, `0x1A` = #14, `0x1B` = #15. |

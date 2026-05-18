@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 17, 2026 (Defensive AI #14 `NOT STARTED → IN PROGRESS`; all 11 section files v0.1 drafted; Pressing AI #13 APPROVED same day)  
+**Last Updated:** May 18, 2026 (Goalkeeper Mechanics #11, Positioning AI #12, Defensive AI #14 all `IN REVIEW → APPROVED`; Stage 0 specification phase COMPLETE — all 20 specs approved)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -11,11 +11,11 @@
 ## PROGRESS SUMMARY
 
 **Total Specifications:** 20  
-**Approved:** 16  
+**Approved:** 20 ← ALL APPROVED — Stage 0 specification phase COMPLETE  
 **Suspended:** 0  
-**In Review:** 2 (#11 Goalkeeper, #12 Positioning AI)  
-**In Progress:** 1 (#14 Defensive AI)  
-**Not Started:** 1 (#15 Attacking AI)
+**In Review:** 0  
+**In Progress:** 0  
+**Not Started:** 0
 
 **Specifications approved:**
 - Ball Physics (#1, Feb 8, 2026)
@@ -32,8 +32,14 @@
 - Testing Strategy & Framework (#19, May 15, 2026 — §9 v1.0 lead-developer sign-off granted; KD-2 preconditions (a)/(b)/(c) all cleared; v1.0.1 `[TBD-NORMATIVE]` sweep against #16 final text + #18 v0.3 landed across §1 / §3 / §4 / §5 / §6 / §8 / appendices)
 - Performance Optimization Strategy (#18, May 15, 2026 — §9 v1.0 lead-developer sign-off granted; v1.0 `[TBD-NORMATIVE]` sweep landed across §1 / §2 / §3 / §4 / §5 / §6 / §8 / appendices against #16 APPROVED text + #19 v1.0.1 patch-revised text; KD-2 sequencing satisfied; §9.4.1 blocker list all RESOLVED)
 - Deterministic Simulation (#16, May 14, 2026 — Tier 2 APPROVED; §9 v1.7; all §9.4.2 gates cleared; §9.5 #4(a)/(b)/(c) spec-level sub-conditions SATISFIED; §8.3.1 cross-spec re-audit complete; ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1)
+- Heading Mechanics (#10, May 16, 2026 — PASS-1 + OI closure + R-01..R-05 sign-off same day)
+- Goalkeeper Mechanics (#11, May 18, 2026 — ERR-011-001 resolved: `DOMAIN_TAG_GOALKEEPER = 0x1D`; OI-005 KD-13 GK constants promoted in #12 §6.1; R-01..R-05 signed)
+- Positioning AI (#12, May 18, 2026 — ERR-012-001 resolved: `DOMAIN_TAG_POSITIONING_AI = 0x17`; all 8 hysteresis/offset `[EST]` → `[GT]` (Appendix A.1–A.8); GK constants promoted per KD-13; R-01..R-05 signed)
+- Pressing AI (#13, May 17, 2026 — all gate items resolved; R-01..R-05 signed)
+- Defensive AI (#14, May 18, 2026 — ERR-014-001 resolved: `MarkDirective?` in #8 §2.2.6 v1.1.3; ERR-014-004 resolved: `DOMAIN_TAG_DEFENSIVE_AI = 0x1A`; R-01..R-05 signed)
+- Attacking AI (#15, May 18, 2026 — R-01..R-05 signed; all ERR-015-NNN back-props closed)
 
-**Specifications suspended:** None. Stage 0 Priority 1–2 spec set is complete.
+**Specifications suspended:** None. ALL 20 SPECS APPROVED. Stage 0 specification phase is complete.
 
 ---
 
@@ -71,10 +77,10 @@
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
 | 10 | Heading Mechanics | 15-18 | ✅ APPROVED | May 16, 2026 | May 16, 2026 | Section files v0.1 → v0.3 same day; outline PASS-1 + section-files PASS-1 cycles complete; ERR-010-001 closed via #16 §3.5 v1.0.2 patch landing `DOMAIN_TAG_HEADING = 0x16` |
-| 11 | Goalkeeper Mechanics | 20-25 | ⏳ NOT STARTED | — | — | Week 10 target |
-| 12 | Positioning AI | 18-22 | ⏳ NOT STARTED | — | — | Week 12 target |
+| 11 | Goalkeeper Mechanics | 20-25 | ✅ APPROVED | May 16, 2026 | May 18, 2026 | Section files v0.1 (May 16) → v0.2 (May 18 APPROVED); ERR-011-001 resolved: `DOMAIN_TAG_GOALKEEPER = 0x1D` (#16 §3.4 v1.0.5); R-01..R-05 signed May 18, 2026 |
+| 12 | Positioning AI | 18-22 | ✅ APPROVED | May 15, 2026 | May 18, 2026 | Section files v0.1 (May 15) → v0.3 (May 18 APPROVED); ERR-012-001 resolved: `DOMAIN_TAG_POSITIONING_AI = 0x17`; 8 hysteresis constants `[EST]` → `[GT]`; GK constants promoted per KD-13; R-01..R-05 signed May 18, 2026 |
 
-**Priority 3 Progress:** 0% (0 of 3 started)
+**Priority 3 Progress:** 100% (3 of 3 approved)
 
 ---
 
@@ -82,12 +88,12 @@
 
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
-| 13 | Pressing AI | 18-22 | ⏳ NOT STARTED | — | — | Week 13 target |
-| 14 | Defensive AI | 18-22 | 📝 IN PROGRESS | May 17, 2026 | — | All 11 section files v0.1 drafted from `outline-detailed.md` v1.0; KD-5 Option B resolved; 37 FRs; 27 constants (22 [GT]); ERR-014-001..004 pre-filed; PASS-1 adversarial review pending |
-| 15 | Attacking AI | 18-22 | ⏳ NOT STARTED | — | — | Week 15 target |
+| 13 | Pressing AI | 18-22 | ✅ APPROVED | May 17, 2026 | May 17, 2026 | PASS-1 adversarial review + v0.2 fix pass same day; all gate items resolved; R-01..R-05 signed May 17, 2026 |
+| 14 | Defensive AI | 18-22 | ✅ APPROVED | May 17, 2026 | May 18, 2026 | Section files v0.1 (May 17) → v0.3 (May 18 APPROVED); ERR-014-001 resolved: `MarkDirective?` in #8 §2.2.6 v1.1.3; ERR-014-004 resolved: `DOMAIN_TAG_DEFENSIVE_AI = 0x1A`; R-01..R-05 signed May 18, 2026 |
+| 15 | Attacking AI | 18-22 | ✅ APPROVED | May 17, 2026 | May 18, 2026 | Section files v0.1 (May 17) → v0.2 (May 18 APPROVED); ERR-015-001/002/005 back-props closed; R-01..R-05 signed May 18, 2026 |
 | 16 | Deterministic Simulation | 20-25 | ✅ APPROVED | May 2, 2026 | May 14, 2026 | All 9 sections + appendices complete; §9 v1.7 Tier 2 APPROVED May 14, 2026. Tier 1 (Conditional) granted earlier same day; Tier 2 cleared all §9.4.2 gates: §9.5 #4(a)/(b)/(c) spec-level SATISFIED (golden-vector files hkdf-sha256-kat v1.1, siphash-2-4-kat v1.1, serialize-canonical-corpus v1.0); §8.3.1 cross-spec re-audit complete (§8 v1.2; all four rows promoted); ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1; §9.3 sign-offs (lead-developer Tier 2, QA-automation, platform-certification) granted with Stage-0 host-platform-pin caveat. |
 
-**Priority 4 Progress:** 50% (2 of 4 approved — #13 APPROVED May 17; #16 APPROVED May 14; #14 IN PROGRESS)
+**Priority 4 Progress:** 100% (4 of 4 approved)
 
 ---
 

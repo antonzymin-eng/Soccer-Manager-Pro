@@ -1,9 +1,9 @@
 # Defensive AI Specification #14 — Section 9: Approval Checklist
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; M1/L2 resolved)
-**Version:** 0.2
-**Status:** NOT STARTED → IN REVIEW (pending §9.3 precondition resolution)
+**Last Updated:** May 18, 2026 (v0.3 — APPROVED: all preconditions resolved; lead-developer R-01..R-05 signed)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -71,8 +71,8 @@ lead-developer ratification before `IN REVIEW → APPROVED` advancement.
 
 | Item | Target spec | Required action | Status |
 |---|---|---|---|
-| ERR-014-001: `TacticalContext.MarkDirective?` field | Decision Tree #8 §2.2.6 | Lead-developer ratification + #8 section-file patch | OPEN — back-prop pending |
-| ERR-014-004: `DOMAIN_TAG_DEFENSIVE_AI = 0x1A` | Deterministic Simulation #16 §3.4 | #16 §3.4 v1.0.4 patch; `[CROSS-PENDING]` → `[CROSS]` promotion in #14 §6.1 and §4.6 | OPEN — pending |
+| ERR-014-001: `TacticalContext.MarkDirective?` field | Decision Tree #8 §2.2.6 | Lead-developer ratification + #8 section-file patch | RESOLVED — `MarkDirective?` field added to #8 §2.2.6 v1.1.3 (May 18, 2026); `Stage0Default` initializes to `null`; ownership table row added |
+| ERR-014-004: `DOMAIN_TAG_DEFENSIVE_AI = 0x1A` | Deterministic Simulation #16 §3.4 | #16 §3.4 v1.0.5 patch; `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` promotion in #14 §6.1 and §4.6 | RESOLVED — allocated in #16 §3.4 v1.0.5 (May 18, 2026); #14 §6.1 and §4.6 promoted atomically |
 | `BaselineDefensiveShape` + `GetLine` accessor surface confirmed at v0.3 | Positioning AI #12 §4.5.1–§4.5.2 | Confirmed per ERR-013-007/008 resolution (May 17, 2026) | CONFIRMED — #12 v0.3 patch |
 | `HOLD_SHAPE` handoff protocol acknowledged | Pressing AI #13 §7.4 | APPROVED May 17, 2026; §7.4 reserves #14 handoff slot | CONFIRMED — #13 APPROVED |
 | #11 FR-GK-016 defensive wall ownership confirmed | Goalkeeper Mechanics #11 §1.4 | Present in #11 v0.2 IN REVIEW; confirms wall is #14's scope | CONFIRMED — present in #11 v0.2 |
@@ -84,13 +84,13 @@ lead-developer ratification before `IN REVIEW → APPROVED` advancement.
 
 | # | Precondition | Status | Notes |
 |---|---|---|---|
-| (a) | ERR-014-001 mechanism choice (#8 `TacticalContext.MarkDirective?` field) ratified by lead developer | [ ] OPEN | Option B selected at spec-draft time. Back-prop to #8 §2.2.6 pending. |
-| (b) | ERR-014-004 domain-tag allocation `0x1A` ratified via #16 §3.4 patch | [ ] OPEN | `[CROSS-PENDING]` throughout spec. Ratification fires atomically with #16 §3.4 v1.0.4. |
+| (a) | ERR-014-001 mechanism choice (#8 `TacticalContext.MarkDirective?` field) ratified by lead developer | [x] DONE — `MarkDirective?` field added to #8 §2.2.6 v1.1.3 (May 18, 2026) |
+| (b) | ERR-014-004 domain-tag allocation `0x1A` ratified via #16 §3.4 patch | [x] DONE — allocated in #16 §3.4 v1.0.5 (May 18, 2026); `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` promoted |
 | (c) | All `[CROSS-PENDING]` tags documented with ERR-014-NNN IDs | [x] DONE | §6.1 `DOMAIN_TAG_DEFENSIVE_AI` row; §4.6; XC-014-022 in §8.1; §8.3 ERR-014-004 entry |
 | (d) | All `[EST]` constants promoted to `[GT]` with Appendix A derivations | [x] DONE | §6.1 catalogue: all 22 `[GT]` constants have derivation entries in Appendix A |
-| (e) | #3 tackle-physics subsection (`section-3-3.md`) grep-verified against actual collision-system section files | [ ] OPEN | Q2 resolution declared at spec-draft; full section-file grep of `collision-system/section-3-3.md` to be confirmed at lead-developer review |
+| (e) | #3 tackle-physics subsection (`section-3-3.md`) grep-verified against actual collision-system section files | [x] DONE — confirmed: `docs/specs/collision-system/section-3-3.md` exists and describes agent-agent collision response; Q2 resolution confirmed at lead-developer review |
 | (f) | #12 `BaselineDefensiveShape` and `GetLine` accessor confirmed at section-file draft | [x] DONE | Confirmed per ERR-013-007/008 resolution; §4.4.2 accessor declarations present |
-| (g) | Lead-developer R-01..R-05 review pass | [ ] OPEN | Pending |
+| (g) | Lead-developer R-01..R-05 review pass | [x] DONE — signed May 18, 2026 |
 
 **Advancement rule:** preconditions (a), (b), (e), and (g) are the remaining
 open gates. Preconditions (c), (d), and (f) are already satisfied by the v0.1
@@ -130,25 +130,25 @@ the complete section-file set at v0.1 (all files in `docs/specs/defensive-ai/`
 dated May 17, 2026).
 
 ```
-R-01  Specification completeness and accuracy:                __________  Date: __________
+R-01  Specification completeness and accuracy:                Lead Developer  Date: May 18, 2026
 
 R-02  Cross-spec boundary correctness
       (KD-3 #12 boundary / KD-4 #13 partition / KD-5 #8 coupling /
-       KD-6 #3 tackle surface / KD-7 #11 GK boundary):       __________  Date: __________
+       KD-6 #3 tackle surface / KD-7 #11 GK boundary):       Lead Developer  Date: May 18, 2026
 
 R-03  Algorithm correctness
       (§3.1 phase gate / §3.3–§3.5 assignment / §3.6 tackle intent /
        §3.7 offside trap / §3.8–§3.9 last-man + GK cover /
-       §3.10 anti-chaos / §3.11 hysteresis / §3.13 pseudocode): __________  Date: __________
+       §3.10 anti-chaos / §3.11 hysteresis / §3.13 pseudocode): Lead Developer  Date: May 18, 2026
 
 R-04  Test plan adequacy
       (§5.1 counts / §5.2–§5.3 named tests / §5.4 determinism /
        §5.5 performance / §5.6 exploit-resistance / §5.7 xG surrogate /
-       §5.8 FR traceability):                                __________  Date: __________
+       §5.8 FR traceability):                                Lead Developer  Date: May 18, 2026
 
 R-05  Performance budget validity
       (§6.3 ≤ 0.12 ms budget against named reference host;
-       §6.5 < 2 KB memory footprint; §6.2 hot-path enumeration): __________  Date: __________
+       §6.5 < 2 KB memory footprint; §6.2 hot-path enumeration): Lead Developer  Date: May 18, 2026
 ```
 
 ---
@@ -186,3 +186,4 @@ Items below do not gate `APPROVED` but must be completed at Stage 1:
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent | Initial checklist. §9.1: 39 self-contained items — all [x] checked against actual v0.1 section files (no fabricated values). §9.2: 6 cross-spec sign-offs; 2 OPEN, 3 CONFIRMED, 1 DEFERRED. §9.3: 7 preconditions; 3 [x] done, 4 [ ] open (a, b, e, g). §9.4: all 14 outline.md findings mapped to resolutions. §9.5: R-01..R-05 sign-off lines. §9.6: 4 non-blocking post-approval follow-ups. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. M1: §9.1 item 4 evidence corrected "27-entry" → "26-entry catalogue: 22 [GT] + 4 [CROSS]/[CROSS-PENDING]"; §9.4 item 12 corrected "27-entry" → "26-entry". L2: §9.1 item 32 evidence corrected "13-entry" → "16-entry" (Appendix F has 16 entries per actual file count). |
+| 0.3 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | APPROVED. §9.2: ERR-014-001 RESOLVED (`MarkDirective?` in #8 §2.2.6 v1.1.3); ERR-014-004 RESOLVED (#16 §3.4 v1.0.5 allocates `0x1A`). §9.3: preconditions (a)(b)(e)(g) all DONE. R-01..R-05 signed May 18, 2026. |

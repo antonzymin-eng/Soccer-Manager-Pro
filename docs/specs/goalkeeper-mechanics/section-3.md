@@ -441,7 +441,7 @@ mirrors this table.
 | `PENALTY_AREA_DEPTH_M` | `[CROSS]` | m | 16.5 | Ball Physics #1 (anchor pinned during drafting) |
 | `TICK_RATE_TACTICAL_HZ` | `[CROSS]` | Hz | 10 | CLAUDE.md |
 | `TICK_RATE_PHYSICS_HZ` | `[CROSS]` | Hz | 60 | CLAUDE.md |
-| `DOMAIN_TAG_GOALKEEPER` | `[CROSS-PENDING]` | byte | `0x17` (proposed; `0x1D` if ERR-012-001 lands first) | Deterministic Simulation #16 §3.4 — back-prop entry `ERR-011-001` in `docs/tracking/spec-error-log.md` |
+| `DOMAIN_TAG_GOALKEEPER` | `[CROSS: #16 §3.4]` | byte | `0x1D` | Deterministic Simulation #16 §3.4 v1.0.5 (May 18, 2026) — ERR-011-001 resolved; value `0x1D` (shifted from proposed `0x17` because Positioning AI #12 reached `APPROVED` first on May 18, 2026, claiming `0x17` per first-to-`APPROVED` precedent) |
 
 Inventory discipline (KD-9 / FR-GK-042): every symbol that appears
 in §3.2–§3.8 pseudocode bodies is either a row above or an
