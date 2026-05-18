@@ -203,7 +203,7 @@ equal-priority decision is EntityId-ascending.
 
 **RNG:** Any stochastic tie-breaking (e.g., two agents equidistant as
 width-holder candidates) uses `DeterministicRngService` with domain tag
-`DOMAIN_TAG_ATTACKING_AI = 0x1B` `[CROSS-PENDING]` (ERR-015-001; see
+`DOMAIN_TAG_ATTACKING_AI = 0x1B` `[CROSS: #16 §3.4]` (ERR-015-001 resolved May 18, 2026; see
 §1.3.3). No `System.Random`, no `DateTime.Now`, no frame-count sources
 in the algorithm.
 
@@ -237,3 +237,4 @@ at runtime (assertion-based) to catch class-level spec violations:
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6 / draft-attacking-ai-spec) | Initial draft from `outline-detailed.md` v1.1. §4.1–§4.8 authored. Upstream/downstream integration contracts declared. ERR-015-002 Option B selected (mirrors #13/#14 precedent). GK identification via `PlayerRole.Goalkeeper` confirmed (Q4). `formationSlot.lateralPct` confirmed in #12 §2.2 (Q2). All determinism bindings cited. |
+| 0.3 | May 18, 2026 | AI agent (claude-sonnet-4-6) | ERR-015-006 fix: promoted `[CROSS-PENDING]` in §4.6 RNG description to `[CROSS: #16 §3.4]`. Resolves A-03 FAIL from stress-test Tier A run 1. |

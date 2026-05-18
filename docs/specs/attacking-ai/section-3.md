@@ -945,7 +945,7 @@ authoritative values are in §6.1.
 | `PITCH_WIDTH_M` | `[CROSS: #1 §1.2]` | 68.0 m | §3.4, §3.6, §3.7, §3.8 |
 | `HALF_LINE_X` | `[CROSS: #1 §1.2]` | 52.5 m | §3.11 |
 | `DIRECT_RUN_COUNT_DELTA` | `[GT]` | 15 | §5.8 (tactical-identity acceptance) |
-| `DOMAIN_TAG_ATTACKING_AI` | `[CROSS-PENDING]` | `0x1B` (ERR-015-001) | §3.13, §4.6 |
+| `DOMAIN_TAG_ATTACKING_AI` | `[CROSS: #16 §3.4]` | `0x1B` | §3.13, §4.6 |
 
 **Full derivations and confidence-interval evidence:** Appendix A.
 
@@ -956,4 +956,5 @@ authoritative values are in §6.1.
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | Lead developer | Initial draft from `outline-detailed.md` v1.1. All subsections §3.1–§3.14 authored. All formulas include units, valid input ranges, and worked examples per FR-AT-028 / CLAUDE.md. |
+| 0.3 | May 18, 2026 | AI agent (claude-sonnet-4-6) | ERR-015-006 fix: promoted `[CROSS-PENDING]` in §3.14 constant reference table (`DOMAIN_TAG_ATTACKING_AI` row) to `[CROSS: #16 §3.4]`. Resolves A-03 FAIL from stress-test Tier A run 1. |
 | 0.2 | May 18, 2026 | AI agent (claude-sonnet-4-6) | Adversarial-review fixes: (1) §3.3 WEAK_SIDE condition corrected — was `weakSideCount < MIN_WEAK_SIDE_AGENT_THRESHOLD` (allows up to 4 WEAK_SIDE agents), now `attackingPool.count >= MIN_WEAK_SIDE_AGENT_THRESHOLD and weakSideCount == 0` (pool-size gate, one agent); (2) §3.8 removed `overloadFlank = NONE` (NONE not defined); (3) §3.12 HysteresisEntry struct now includes `candidateRole` and `candidateDwell` fields that the algorithm uses; prevPhase moved to TransitionHoldState (per-team, not per-agent); `[EST]` → `[GT]` for ATTACK_DWELL_TICKS; (4) §3.13 `hysteresisState.prevPhase` → `transitionHoldState.prevPhase` throughout; (5) §3.14 ATTACK_DWELL_TICKS tag corrected `[EST]` → `[GT]`; (6) §3.5 max(5.0) floor description clarified. |
