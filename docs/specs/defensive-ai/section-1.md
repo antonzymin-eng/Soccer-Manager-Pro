@@ -147,15 +147,14 @@ handling (GK positioning is owned by #11 per KD-7).
   #16 §3.4. Proposed value: `0x1A`, the next available slot in the
   Phase B/C block after `DOMAIN_TAG_PRESSING_AI = 0x19` (allocated
   May 17, 2026 via ERR-013-005). Phase B/C block layout: `0x17` = #12
-  (ERR-012-001 proposed), `0x18` or `0x1D` = #11 (ERR-011-001 proposed
-  — whichever of #11/#12 reaches `APPROVED` first takes `0x17`/`0x18`;
-  if #12 reaches `APPROVED` first, #11 shifts to `0x1D`; this shift does
-  NOT affect #14's `0x1A` slot), `0x19` = #13 (resolved), `0x1A` = #14
-  (this entry), `0x1B` = #15 (proposed). **Status:** OPEN —
-  `DOMAIN_TAG_DEFENSIVE_AI` is `[CROSS-PENDING]` throughout this spec
-  until ERR-014-004 is ratified in #16 §3.4. If a slot conflict emerges
-  before ERR-014-004 ratification, the same shift-right collision policy
-  as the May 16, 2026 #10/#12 domain-tag shift applies.
+  (ERR-012-001 resolved), `0x18` = reserved (`_RESERVED_0x18_` in
+  #16 §3.4 — originally informally noted for #11 before #11 shifted to
+  `0x1D`), `0x19` = #13 (resolved), `0x1A` = #14 (this entry),
+  `0x1B` = #15 (resolved), `0x1C` = reserved (`_RESERVED_0x1C_` in
+  #16 §3.4 — block-end margin), `0x1D` = #11 (resolved, shifted from
+  `0x17` because #12 reached `APPROVED` first). **Status:** RESOLVED —
+  `DOMAIN_TAG_DEFENSIVE_AI = 0x1A` `[CROSS: #16 §3.4]`, ERR-014-004
+  resolved May 18, 2026; allocated in #16 §3.4 v1.0.5.
 
 ### 1.3.4 Downstream (declared, not implemented)
 
@@ -225,7 +224,7 @@ Authoritative Boundary Matrix (mirrors `outline-detailed.md` v1.0):
 | #2 Agent Movement | (none direct — via #8 action output) | 60 Hz steering toward `Action.TargetPosition` | #2 reads #8 | Same composition path as #12 / #13 | No |
 | #7 Perception | (none — read consumer only) | Filtered world model | #14 reads #7 | Snapshot read at tick start | Yes (spec text) |
 | #15 Attacking AI | (mutually exclusive by possession phase) | In-possession behaviour | Independent | KD-8 phase gating (§3.1 / FR-DA-013) | No |
-| #16 Determinism | `MarkDirective` / `MarkAssignment` / `MarkHysteresisState` / `OffsideLineState` / `TackleIntentRequest` digest scope | Digest format + iteration rule | #14 conforms | EntityId iteration + domain-tagged RNG (`DOMAIN_TAG_DEFENSIVE_AI = 0x1A [CROSS-PENDING]` until ERR-014-004 ratified) | Yes (spec text) |
+| #16 Determinism | `MarkDirective` / `MarkAssignment` / `MarkHysteresisState` / `OffsideLineState` / `TackleIntentRequest` digest scope | Digest format + iteration rule | #14 conforms | EntityId iteration + domain-tagged RNG (`DOMAIN_TAG_DEFENSIVE_AI = 0x1A [CROSS: #16 §3.4]` — ERR-014-004 resolved May 18, 2026) | Yes (spec text) |
 | #17 Event System | `MARK_ASSIGNED` / `LINE_STEPPED` channel definitions | Channel registry | (deferred) | ERR-014-002 / ERR-014-003 at Stage 1 | No (Stage 1) |
 | #18 Performance | (conformance only) | Per-tick budget framework | #14 conforms | §6 budget against named host | Yes (spec text) |
 | #19 Testing | (conformance only) | Test-framework conventions | #14 conforms | §5 plan | Yes (spec text) |
@@ -299,3 +298,4 @@ pattern established by #13 §1.8 for Pressing AI.
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6 / draft-defensive-ai) | Initial draft from `outline-detailed.md` v1.0. §1.1–§1.9 authored. Boundary matrix confirmed against `pressing-ai/section-1.md` v0.3 and `outline-detailed.md` v1.0. ERR-014-001..004 declared. KD-1..KD-19 tabulated. Coordinate and convention bindings cited. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. M7: §1.3.3 ERR-014-004 block layout updated to reflect ERR-011-001/ERR-012-001 race — #11 occupies `0x18` or shifts to `0x1D` depending on which of #11/#12 reaches `APPROVED` first; explicitly notes that #14's `0x1A` slot is stable regardless of that race outcome. |
 | 0.3 | May 17, 2026 | AI agent | PASS-3 clean-up. §1.6 boundary matrix row for #7 Perception: removed `Anticipation` from attribute lookups (consistent with M6 fix in §2.3 and XC-014-005 — `Anticipation` is not consumed by #14 at Stage 0); retained `FirstTouch` (threat score §3.5) and `Tackling` (declared for future tackle-quality use). |
+| 0.4 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §1.3.3 ERR-014-004 block — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`, resolved outcome documented (0x1A final, 0x18/0x1D race resolved). §1.6 #16 boundary row — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`. |

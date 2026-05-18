@@ -89,8 +89,8 @@ Stage 1+ expansion roadmap.
   and took `0x16` via ERR-010-001 (exactly the collision-avoidance
   case ERR-012-001 was filed to prevent — resolved by first-to-
   APPROVED claiming the next-available slot, per project precedent).
-  `DOMAIN_TAG_POSITIONING_AI = 0x17` is `[CROSS-PENDING]` until
-  lead-developer ratification.
+  `DOMAIN_TAG_POSITIONING_AI = 0x17` `[CROSS: #16 §3.4]` — ERR-012-001
+  resolved May 18, 2026; allocated in #16 §3.4 v1.0.5.
 - **`ERR-012-002`** (filed in `spec-error-log.md`): stale
   "Formation System (Spec #14)" reference in
   `decision-tree/section-3-1.md` L716 — Formation System is #12;
@@ -179,3 +179,4 @@ Authoritative Boundary Matrix:
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. §1.7 fatigue-convention citation updated to `FATIGUE_LATERAL_RELAX` (AR-S1-08 removed the unused `_M` variant). |
+| 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §1.3.2 ERR-012-001 block — `DOMAIN_TAG_POSITIONING_AI = 0x17 [CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`; ERR-012-001 resolved prose updated. |

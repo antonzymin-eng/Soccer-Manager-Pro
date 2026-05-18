@@ -78,16 +78,14 @@ Listing of all #11 → #16 touchpoints per KD-7:
 
 ### 4.4.1 Domain-tag allocation
 
-`DOMAIN_TAG_GOALKEEPER` allocated `[CROSS-PENDING]`. Proposed value
-`0x17`; if ERR-012-001 (#12 `DOMAIN_TAG_POSITIONING_AI` block
-`0x17…0x1C`) is ratified by lead-developer before ERR-011-001
-lands, `DOMAIN_TAG_GOALKEEPER` shifts to `0x1D` per KD-7
-collision-management policy. Back-propagation entry filed as
-`ERR-011-001` in `docs/tracking/spec-error-log.md`. Allocation is
-a pure namespace amendment to APPROVED #16 (no
-`DETERMINISM_DIGEST_VERSION` bump), following the precedent of
-ERR-010-001 (`0x16`, May 16, 2026) and ERR-017-001 (`0x15`,
-May 14, 2026).
+`DOMAIN_TAG_GOALKEEPER = 0x1D` `[CROSS: #16 §3.4]` — ERR-011-001
+resolved May 18, 2026. Positioning AI #12 reached `APPROVED` first
+and claimed `0x17` per first-to-`APPROVED` precedent (KD-7
+collision-management policy); #11 was reallocated to `0x1D` in
+#16 §3.4 v1.0.5. Allocation is a pure namespace amendment to
+APPROVED #16 (no `DETERMINISM_DIGEST_VERSION` bump), following the
+precedent of ERR-010-001 (`0x16`, May 16, 2026) and ERR-017-001
+(`0x15`, May 14, 2026).
 
 ### 4.4.2 Registered draw sites (four)
 
@@ -221,3 +219,4 @@ t   0ms │            │ #3 hand-ball contact event fires
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 11 source files declared, input/output contracts tabulated, four draw sites registered, performance budgets staged, tick-scheduling sequence diagrammed | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | May 16, 2026 | pass-1 fix pass | AR-S1-H1 (§4.5.2 steady-state budget revised to ≤40 µs) | self-pass-2 self-critique on v0.2 yields no further findings |
+| 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §4.4.1 domain-tag allocation prose updated — `DOMAIN_TAG_GOALKEEPER = 0x1D [CROSS: #16 §3.4]`; ERR-011-001 resolved; final allocation outcome documented. |

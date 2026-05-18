@@ -194,18 +194,14 @@ re-review needed.
 `DRAW_SITE_DIVE_TIMING_JITTER` (§3.3 dive launch timing jitter),
 `DRAW_SITE_CROSS_CLAIM_TIEBREAK` (§3.6 near-tie perturbation).
 Iteration order over multi-attacker scenarios follows #16 §3.2
-entity ordering. New `DOMAIN_TAG_GOALKEEPER = 0x17` requested from
-#16 §3.4 via back-propagation entry filed under `ERR-011-001`.
-
-**Collision-management policy with ERR-012-001 (open).** Positioning
-AI #12 proposes block `0x17…0x1C`; whichever spec reaches `APPROVED`
-first takes `0x17`. If #11 reaches APPROVED before #12, the #12
-block shifts to `0x18…0x1D`. If #12 lands first, #11 shifts to
-`0x1D`. The `[CROSS-PENDING]` tag accommodates either outcome. The
-allocation is a pure namespace amendment to APPROVED #16, following
-the precedent set by Heading #10's `0x16` patch (ERR-010-001) and
-Event System #17's `0x15` patch (ERR-017-001) — no
-`DETERMINISM_DIGEST_VERSION` bump.
+entity ordering. `DOMAIN_TAG_GOALKEEPER = 0x1D` `[CROSS: #16 §3.4]`
+— ERR-011-001 resolved May 18, 2026. Positioning AI #12 reached
+`APPROVED` first and claimed `0x17` per first-to-`APPROVED` precedent
+(KD-7 collision-management policy); #11 was reallocated to `0x1D`
+in #16 §3.4 v1.0.5. The allocation is a pure namespace amendment to
+APPROVED #16 (no `DETERMINISM_DIGEST_VERSION` bump), following the
+precedent set by Heading #10's `0x16` patch (ERR-010-001) and
+Event System #17's `0x15` patch (ERR-017-001).
 
 **Rationale.** Single source of randomness ensures deterministic
 replay. Domain-tag separation protects digest independence.
@@ -480,3 +476,4 @@ Code Standards #20 (§5 / §9).
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from `outline-detailed.md` v1.2; KDs 1–21 reproduced; dependency + downstream tables populated; out-of-scope catalogued | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | May 16, 2026 | pass-1 fix pass | AR-S1-M4 (#3 dependency row amended to include agent collider geometry) | self-pass-2 self-critique on v0.2 yields no further findings |
+| 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): KD-7 block updated — `DOMAIN_TAG_GOALKEEPER = 0x1D [CROSS: #16 §3.4]`; ERR-011-001 resolved; collision-management policy prose updated to reflect final allocation outcome. |
