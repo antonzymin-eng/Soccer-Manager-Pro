@@ -1,9 +1,9 @@
 # Attacking AI Specification #15 — Section 6: Performance Analysis and Budgets
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.1)
-**Version:** 0.1
-**Status:** DRAFT
+**Last Updated:** May 18, 2026 (v0.3 — lead-developer sign-off pass; `DOMAIN_TAG_ATTACKING_AI` promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`; status APPROVED)
+**Version:** 0.3
+**Status:** APPROVED
 **Source:** `outline-detailed.md` v1.1 (May 17, 2026)
 
 ---
@@ -93,7 +93,7 @@ default. Stage 1 wires real team-style selection.
 
 | Constant | Tag | Value | Purpose |
 |---|---|---|---|
-| `DOMAIN_TAG_ATTACKING_AI` | `[CROSS-PENDING]` | `0x1B` | RNG domain tag for stochastic tie-breaks in `DeterministicRngService`; pending ERR-015-001 allocation in #16 §3.4 |
+| `DOMAIN_TAG_ATTACKING_AI` | `[CROSS: #16 §3.4]` | `0x1B` | RNG domain tag for stochastic tie-breaks in `DeterministicRngService`; allocated in #16 §3.4 v1.0.4 per ERR-015-001 (May 18, 2026) |
 
 ### 6.1.10 Test Acceptance Criteria Constants
 
@@ -109,8 +109,8 @@ default. Stage 1 wires real team-style selection.
 | Category | Count | Tags |
 |---|---|---|
 | `[CROSS: #1 §1.2]` | 3 | `PITCH_LENGTH_M`, `PITCH_WIDTH_M`, `HALF_LINE_X` |
+| `[CROSS: #16 §3.4]` | 1 | `DOMAIN_TAG_ATTACKING_AI` |
 | `[DERIVED]` | 1 | `FINAL_THIRD_X_M` |
-| `[CROSS-PENDING]` | 1 | `DOMAIN_TAG_ATTACKING_AI` |
 | `[GT]` | 33 | All remaining constants |
 | `[EST]` | 0 | None (ATTACK_DWELL_TICKS promoted to `[GT]` in this draft) |
 | **Total** | **38** | — |
@@ -209,3 +209,4 @@ path (FR-AT-030 / #18 §3.7 zero-alloc rule).
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6 / draft-attacking-ai-spec) | Initial draft from `outline-detailed.md` v1.1. §6.1–§6.6 authored. 38 constants catalogued (33 `[GT]` + 3 `[CROSS]` + 1 `[DERIVED]` + 1 `[CROSS-PENDING]`); `ATTACK_DWELL_TICKS` promoted `[EST]` → `[GT]` with Appendix A derivation. Hot-path analysis and budget anchor documented. |
 | 0.2 | May 18, 2026 | AI agent (claude-sonnet-4-6) | §6.5 memory-footprint corrections: `AttackHysteresisState` corrected to 16 bytes/struct (was 8; now includes all 4 fields: currentRole, dwellCounter, candidateRole, candidateDwell); `AttackIntent` corrected to 28 bytes/struct (was 24; now includes agent EntityId 4B + RunParameters? as Nullable<T>=16B); `TransitionHoldState` corrected to 8 bytes (was 12; transitionHoldTick 4B + prevPhase 4B, no padding needed); total per-team ≈ 464 bytes. |
+| 0.3 | May 18, 2026 | AI agent (claude-sonnet-4-6) | Lead-developer sign-off pass. §6.1.9 `DOMAIN_TAG_ATTACKING_AI` promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` following ERR-015-001 resolution (domain tag `0x1B` allocated in #16 §3.4 v1.0.4). §6.1.11 count summary updated: 0 `[CROSS-PENDING]`, merged into 4 `[CROSS: #16 §3.4]` row (= 3 from #1 + 1 from #16). Status promoted to APPROVED. |

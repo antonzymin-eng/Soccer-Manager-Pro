@@ -716,6 +716,13 @@ a fixed anchor point, not a dynamic positioning instruction. Stage 1 wires the F
 System (Positioning AI, Spec #12) to provide live formation slot positions that adjust with tactical
 instructions and ball position.
 
+**Stage 1+ RUNNER override (ERR-015-002):** When `TacticalContext.AttackIntent` is
+non-null and the agent's `AttackIntent.role == RUNNER`, the `MOVE_TO_POSITION` target is
+the `runTargetPosition` derived from `AttackIntent.runParameters` (§3.4 of Attacking AI
+#15) instead of the formation slot. The formation slot remains the default for all other
+roles (SUPPORT_BALL / HOLD_WIDTH / WEAK_SIDE). This override is a Stage 1 deliverable;
+at Stage 0 `TacticalContext.AttackIntent` is always null.
+
 ### 3.1.7.3 MoveOption Construction
 
 ```csharp
@@ -824,6 +831,7 @@ PressOption pressOption = new PressOption
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | March 01, 2026 | Claude (AI) / Anton | Initial draft. §3.1.0–§3.1.8 option generation for all 7 action types. |
+| 1.1 | May 18, 2026 | Claude (AI) / Anton | Non-behavioral patch. ERR-015-002 §3.1.7 update: Stage 1+ RUNNER override note added to §3.1.7.2 — when AttackIntent.role == RUNNER, MOVE_TO_POSITION target is runTargetPosition from #15 §3.4 instead of formation slot. Stage 0 behavior unchanged (AttackIntent null). Approval status preserved. |
 | 1.1 | March 01, 2026 | Claude (AI) / Anton | Self-critique corrections. |
 | 1.1.1 | May 15, 2026 | Claude (AI) / Anton | Non-behavioral patch per ERR-012-002: §3.1.7.2 "Formation System (Spec #14)" → "Formation System (Positioning AI, Spec #12)". Single-token correction. Approval status preserved. |
 | 1.1.2 | May 17, 2026 | Claude (AI) / Anton | Non-behavioral patch per ERR-013-004: §3.1.8.1 "Fatigue System #13" → "Pressing AI #13". Single-token correction (current Spec #13 is Pressing AI; Fatigue System is a separate Stage-1 spec with no allocated number). Approval status preserved. |

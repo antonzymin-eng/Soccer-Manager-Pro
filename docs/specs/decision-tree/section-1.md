@@ -8,9 +8,9 @@ dependency contracts. This is the authoritative scope reference for the entire
 specification.
 
 **Created:** February 27, 2026, 12:00 PM PST  
-**Updated:** May 6, 2026, 12:00 PM PST  
-**Version:** 1.1.1 (patch bump from 1.1; non-behavioral — added §1.7.3 reciprocal of ERR-016-002)  
-**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 is a post-approval non-behavioral patch.  
+**Updated:** May 18, 2026  
+**Version:** 1.1.2 (patch bump from 1.1.1; non-behavioral — ERR-015-005 one-token patch: "Attacking AI (#15)" added to §1.3.2 multi-agent coordination deferral)  
+**Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 and v1.1.2 are post-approval non-behavioral patches.  
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
 
@@ -228,7 +228,7 @@ MOVE_TO_POSITION only at Stage 0. Specialist set piece AI is Stage 2+.
 **Goalkeeper decision model** — Goalkeeper Mechanics (#11) integration deferred to
 Stage 1. Goalkeeper at Stage 0 is an outfield agent with degraded action options.
 
-**Multi-agent coordination** — Positioning AI (#12), Pressing AI (#13), and
+**Multi-agent coordination** — Positioning AI (#12), Pressing AI (#13), Attacking AI (#15), and
 coordinated pressing triggers are Stage 1+. Individual agents press independently
 at Stage 0 based on proximity and utility score.
 
@@ -487,6 +487,7 @@ regardless of whether the accessed state is also available in the snapshot.
 | 1.0 | February 27, 2026, 12:00 PM PST | Claude (AI) / Anton | Initial draft. All OQ-1 through OQ-5 from Outline v1.1 reflected. All 7 KDs locked. Stage 0 action set and known limitations formalised. BLK-001 noted as ERR-010 in error log. |
 | 1.1 | February 27, 2026 | Claude (AI) / Anton | Three corrections from self-critique: (1) `MatchContext.BallZone` ambiguity resolved — clarified as pre-computed by orchestrator; DT does not read `BallState` directly. (2) `PRESS_TRIGGER_DISTANCE` forward reference in §1.5 action table linked to §3.1. (3) `PlayerAttributes.Crossing` added to §1.7.1 attribute dependency list with note that it is required for cross-type PASS scoring in §3.1. |
 | 1.1.1 | May 6, 2026 | Claude (AI) / Anton | Non-behavioral patch. Added §1.7.3 Cross-Spec Constraints with `XC-008-001` (EntityId no-reuse for the lifetime of a match), the reciprocal of Deterministic Simulation #16 §3.2.5 / `ERR-016-002`. No formula, scoring, or contract change; constrains DT's treatment of despawned `EntityId` references only. |
+| 1.1.2 | May 18, 2026 | Claude (AI) / Anton | Non-behavioral patch. ERR-015-005: "Attacking AI (#15)" added to §1.3.2 multi-agent coordination deferral paragraph alongside #12 and #13. One-token patch per ERR-012-002 / ERR-013-004 precedent. No formula, scoring, or pipeline contract change. Approval status preserved. |
 
 ---
 

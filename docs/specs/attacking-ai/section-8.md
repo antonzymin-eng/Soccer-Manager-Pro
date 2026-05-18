@@ -1,9 +1,9 @@
 # Attacking AI Specification #15 — Section 8: References & Citation Audit
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.1)
-**Version:** 0.1
-**Status:** DRAFT
+**Last Updated:** May 18, 2026 (v0.2 — lead-developer sign-off pass; ERR-015-001/002/005 CLOSED)
+**Version:** 0.2
+**Status:** APPROVED
 **Source:** `outline-detailed.md` v1.1 (May 17, 2026)
 
 ---
@@ -34,7 +34,7 @@ below. Grep-verified at section-file draft time against the cited files.
 | XC-015-017 | Defensive AI #14 | KD-8 | "#15 is in-possession; #14 is out-of-possession; mutually exclusive at team level" | §1.6, KD-6 |
 | XC-015-018 | Defensive AI #14 | §7.4 | `MarkDirective.emergencyFlag` boundary hint for Stage 1+ transition acceleration | §7.3 |
 | XC-015-019 | Deterministic Simulation #16 | §3.2, §3.2.5 | Authoritative simulation state definition; EntityId-ascending iteration rule | §4.6 |
-| XC-015-020 | Deterministic Simulation #16 | §3.4 | `DeterministicRngService` domain-tag registry; ERR-015-001 filed for `DOMAIN_TAG_ATTACKING_AI = 0x1B` allocation | §4.6, §6.1.9 |
+| XC-015-020 | Deterministic Simulation #16 | §3.4 | `DeterministicRngService` domain-tag registry; `DOMAIN_TAG_ATTACKING_AI = 0x1B` allocated in #16 §3.4 v1.0.4 (May 18, 2026); ERR-015-001 CLOSED | §4.6, §6.1.9 |
 | XC-015-021 | Deterministic Simulation #16 | §5 | Determinism regression test framework | §5.4 |
 | XC-015-022 | Deterministic Simulation #16 | §6.2 | Per-tick digest scope definition | §4.6 |
 | XC-015-023 | Event System #17 | §3.10 | Channel registry schema; ERR-015-003/004 back-prop at Stage 1 | §7.2 |
@@ -70,11 +70,11 @@ declared here so that they appear in `spec-error-log.md` tracking:
 
 | ERR-ID | Target spec | Nature | Status | Section in #15 |
 |---|---|---|---|---|
-| ERR-015-001 | #16 §3.4 | Allocate `DOMAIN_TAG_ATTACKING_AI = 0x1B` in #16 §3.4 domain-tag registry. Follows ERR-012-001 Phase B/C block (`0x1B` = #15). | **OPEN** — `[CROSS-PENDING]` until #16 §3.4 patch lands | §4.6, §6.1.9, FR-AT-005 |
-| ERR-015-002 | #8 §2.2.6, §3.1.7 | Add `TacticalContext.AttackIntent[]?` nullable field (Option B, mirrors `PressDirective?` precedent). #8 §3.1.7 `MOVE_TO_POSITION` reads `runTargetPosition` for RUNNER agents. | **OPEN** — filed, mechanism ratified in this spec; back-prop amendment text authored at Stage 1 | §4.5.1 |
+| ERR-015-001 | #16 §3.4 | Allocate `DOMAIN_TAG_ATTACKING_AI = 0x1B` in #16 §3.4 domain-tag registry. Follows ERR-012-001 Phase B/C block (`0x1B` = #15). | **CLOSED** — allocated in #16 §3.4 v1.0.4 (May 18, 2026); `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]` atomically in §6.1.9 | §4.6, §6.1.9, FR-AT-005 |
+| ERR-015-002 | #8 §2.2.6, §3.1.7 | Add `TacticalContext.AttackIntent[]?` nullable field (Option B, mirrors `PressDirective?` precedent). #8 §3.1.7 `MOVE_TO_POSITION` reads `runTargetPosition` for RUNNER agents. | **CLOSED** — `AttackIntent[]?` field added to #8 §2.2.6; Stage 1+ RUNNER override note added to #8 §3.1.7 (May 18, 2026) | §4.5.1 |
 | ERR-015-003 | #17 §3.10 | Register `ATTACK_RUN_STARTED` event channel in #17 channel registry. Stage 1 deliverable. | **OPEN** — Stage 1 deferred | §7.2 |
 | ERR-015-004 | #17 §3.10 | Register `OVERLOAD_DECLARED` event channel in #17 channel registry. Stage 1 deliverable. | **OPEN** — Stage 1 deferred | §7.2 |
-| ERR-015-005 | #8 §1.3.2 | Add "Attacking AI #15" explicitly to the multi-agent-coordination deferral paragraph alongside #12 and #13. One-token patch per ERR-012-002 / ERR-013-004 precedent. | **OPEN** — filed; back-prop text authored at Stage 1 | §1.3.1, XC-015-005 |
+| ERR-015-005 | #8 §1.3.2 | Add "Attacking AI #15" explicitly to the multi-agent-coordination deferral paragraph alongside #12 and #13. One-token patch per ERR-012-002 / ERR-013-004 precedent. | **CLOSED** — "Attacking AI (#15)" added to #8 §1.3.2 v1.1.2 (May 18, 2026) | §1.3.1, XC-015-005 |
 
 ---
 
@@ -123,3 +123,4 @@ before commit.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6 / draft-attacking-ai-spec) | Initial draft from `outline-detailed.md` v1.1. §8.1–§8.6 authored. 27 XC-015-NNN IDs assigned. ERR-015-001..005 filed. No academic references at Stage 0. |
+| 0.2 | May 18, 2026 | AI agent (claude-sonnet-4-6) | Lead-developer sign-off pass. ERR-015-001 CLOSED (domain tag `0x1B` allocated in #16 §3.4 v1.0.4). ERR-015-002 CLOSED (`AttackIntent[]?` added to #8 §2.2.6; §3.1.7 RUNNER override note added). ERR-015-005 CLOSED ("Attacking AI (#15)" added to #8 §1.3.2 v1.1.2). XC-015-020 annotation updated. ERR-015-003/004 remain OPEN (Stage 1 deferred). Status promoted to APPROVED. |

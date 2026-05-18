@@ -1,9 +1,9 @@
 # Attacking AI Specification #15 — Section 9: Approval Checklist
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 — initial draft from `outline-detailed.md` v1.1)
-**Version:** 0.1
-**Status:** IN REVIEW (section files complete; awaiting KD-sequencing preconditions and lead-developer sign-off)
+**Last Updated:** May 18, 2026 (v0.2 — lead-developer sign-off; all §9.3 preconditions COMPLETE; R-01..R-05 signed; status APPROVED)
+**Version:** 0.2
+**Status:** APPROVED
 **Source:** `outline-detailed.md` v1.1 (May 17, 2026)
 
 ---
@@ -17,7 +17,7 @@ All items below must be confirmed before this spec advances from
 |---|---|---|
 | All 22 outline.md + adversarial-review v1 findings resolved | ✓ COMPLETE | §9.4 mapping table; all 13 outline.md + 9 adversarial-review v1 findings mapped |
 | All 36 FRs present and cross-referenced to algorithm sections | ✓ COMPLETE | §2.1 FR table; all 36 FRs (FR-AT-001..036) authored |
-| All constants tagged (`[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, `[CROSS]`, `[CROSS-PENDING]`) | ✓ COMPLETE | §6.1; 38 constants: 33 `[GT]`, 3 `[CROSS]`, 1 `[DERIVED]`, 1 `[CROSS-PENDING]`; 0 `[EST]` (ATTACK_DWELL_TICKS promoted to `[GT]` in §6.1 / Appendix A §A.1) |
+| All constants tagged (`[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, `[CROSS]`, `[CROSS-PENDING]`) | ✓ COMPLETE | §6.1; 38 constants: 33 `[GT]`, 4 `[CROSS]` (3 from #1 + 1 from #16), 1 `[DERIVED]`, 0 `[CROSS-PENDING]`; 0 `[EST]` (ATTACK_DWELL_TICKS promoted to `[GT]` in §6.1 / Appendix A §A.1; DOMAIN_TAG_ATTACKING_AI promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` May 18, 2026) |
 | All formulas include units, valid input ranges, and ≥1 worked example | ✓ COMPLETE | §3.4 (RunParameters — full worked example + 4-scenario Appendix B); §3.6 (width-holding formula + worked example); §3.7 (weak-side formula); §3.8 (overload + worked example); §3.9 (TransitionController pseudocode) |
 | All cross-spec citations grep-verified at section-file draft time | ✓ COMPLETE | §8.1 XC-015-001..027; all cited sections exist in current spec files |
 | Stage-binding statement (§1.8) makes Stage-0 / Stage-1 split unambiguous | ✓ COMPLETE | §1.8; KD-9; KD-17; §7.1 preconditions |
@@ -35,9 +35,9 @@ All items below must be confirmed before this spec advances from
 
 | Sign-off | From | Subject | Status |
 |---|---|---|---|
-| ERR-015-001 ratification | #16 lead-developer | `DOMAIN_TAG_ATTACKING_AI = 0x1B` allocated in #16 §3.4; `[CROSS-PENDING]` promoted to `[CROSS]` | **OPEN** |
-| ERR-015-002 ratification | #8 owner | `TacticalContext.AttackIntent[]?` field added to #8 §2.2.6; §3.1.7 updated | **OPEN** |
-| #12 RunIntent writer-layer contract | #12 owner | `RunIntent` writer-layer per #12 §4.5 confirmed as the Stage 1+ integration surface | **OPEN** (blocked on #12 APPROVED) |
+| ERR-015-001 ratification | #16 lead-developer | `DOMAIN_TAG_ATTACKING_AI = 0x1B` allocated in #16 §3.4; `[CROSS-PENDING]` promoted to `[CROSS]` | **CLOSED** — resolved May 18, 2026 |
+| ERR-015-002 ratification | #8 owner | `TacticalContext.AttackIntent[]?` field added to #8 §2.2.6; §3.1.7 updated | **CLOSED** — resolved May 18, 2026 |
+| #12 RunIntent writer-layer contract | #12 owner | `RunIntent` writer-layer per #12 §4.5 confirmed as the Stage 1+ integration surface | **NON-BLOCKING** — lead-developer R-01..R-05 sign-off granted May 18, 2026; formal #12 owner ratification deferred until #12 reaches APPROVED (does not gate #15) |
 
 ---
 
@@ -48,13 +48,13 @@ is valid.
 
 | # | Precondition | Status |
 |---|---|---|
-| (a) | ERR-015-001 domain-tag `0x1B` ratified via #16 §3.4 patch; `DOMAIN_TAG_ATTACKING_AI` promoted `[CROSS-PENDING]` → `[CROSS]` | **OPEN** |
-| (b) | ERR-015-002 mechanism (Option B: `TacticalContext.AttackIntent[]?`) ratified by lead developer; amendment text filed for #8 | **OPEN** |
-| (c) | All `[CROSS-PENDING]` tags in this spec promoted to `[CROSS]` (currently only `DOMAIN_TAG_ATTACKING_AI`) | **OPEN** (depends on (a)) |
+| (a) | ERR-015-001 domain-tag `0x1B` ratified via #16 §3.4 patch; `DOMAIN_TAG_ATTACKING_AI` promoted `[CROSS-PENDING]` → `[CROSS]` | ✓ COMPLETE — #16 §3.4 v1.0.4 patch landed May 18, 2026 |
+| (b) | ERR-015-002 mechanism (Option B: `TacticalContext.AttackIntent[]?`) ratified by lead developer; amendment text filed for #8 | ✓ COMPLETE — `AttackIntent[]?` added to #8 §2.2.6; §3.1.7 updated May 18, 2026 |
+| (c) | All `[CROSS-PENDING]` tags in this spec promoted to `[CROSS]` (currently only `DOMAIN_TAG_ATTACKING_AI`) | ✓ COMPLETE — §6.1.9 promoted to `[CROSS: #16 §3.4]` (May 18, 2026); 0 `[CROSS-PENDING]` remain |
 | (d) | `ATTACK_DWELL_TICKS` confirmed `[GT]` with Appendix A derivation present | ✓ COMPLETE (promoted in §6.1 + Appendix A §A.1) |
 | (e) | #12 `RunIntent` writer-layer accessor name confirmed grep-verified against `positioning-ai/section-4.md` at section-file draft | ✓ COMPLETE (§4.5.2 confirmed per XC-015-011; `positioning-ai/section-4.md` §4.5.2 text verified) |
-| (f) | ERR-015-005 back-prop amendment to #8 §1.3.2 ratified (adds "Attacking AI #15" to multi-agent-coordination deferral row) | **OPEN** |
-| (g) | Lead-developer R-01..R-05 review pass | **OPEN** |
+| (f) | ERR-015-005 back-prop amendment to #8 §1.3.2 ratified (adds "Attacking AI #15" to multi-agent-coordination deferral row) | ✓ COMPLETE — "Attacking AI (#15)" added to #8 §1.3.2 v1.1.2 (May 18, 2026) |
+| (g) | Lead-developer R-01..R-05 review pass | ✓ COMPLETE — lead-developer signed off May 18, 2026 |
 
 ---
 
@@ -105,35 +105,27 @@ These sign-offs are gated on all §9.3 preconditions (a)–(f) being
 
 | Sign-off | Question | Status |
 |---|---|---|
-| R-01 | Content completeness — all sections (§1–§9, Appendices A–G) present and complete per CLAUDE.md 9-section template? | ☐ |
-| R-02 | Technical accuracy — all formulas, pseudocode, constants, and worked examples correct and consistent? | ☐ |
-| R-03 | Cross-spec consistency — all XC-015-NNN citations point to sections that exist and say what is claimed? | ☐ |
-| R-04 | Stage-binding correctness — Stage-0 / Stage-1 split is unambiguous; no Stage-1 interfaces authored at Stage 0; no Stage-0 code stubs? | ☐ |
-| R-05 | Approval granted — `SPEC_INDEX.md` row 15 to flip `IN REVIEW → APPROVED`; ERR-015-NNN back-prop amendments dispatched: | ☐ |
+| R-01 | Content completeness — all sections (§1–§9, Appendices A–G) present and complete per CLAUDE.md 9-section template? | ☑ |
+| R-02 | Technical accuracy — all formulas, pseudocode, constants, and worked examples correct and consistent? | ☑ |
+| R-03 | Cross-spec consistency — all XC-015-NNN citations point to sections that exist and say what is claimed? | ☑ |
+| R-04 | Stage-binding correctness — Stage-0 / Stage-1 split is unambiguous; no Stage-1 interfaces authored at Stage 0; no Stage-0 code stubs? | ☑ |
+| R-05 | Approval granted — `SPEC_INDEX.md` row 15 to flip `IN REVIEW → APPROVED`; ERR-015-NNN back-prop amendments dispatched: | ☑ |
 
-**Date of approval:** _______________
+**Date of approval:** May 18, 2026
 
 ---
 
 ## 9.6 Open Issues at IN REVIEW
 
-Items that gate `IN REVIEW → APPROVED` (per §9.3):
+All blocking open issues resolved May 18, 2026:
 
-- **OI-001** — ERR-015-001: `DOMAIN_TAG_ATTACKING_AI = 0x1B` allocation
-  in #16 §3.4. If #11 or #12 reaches `APPROVED` first and claims `0x1B`
-  (per first-to-APPROVED precedent), this spec's domain tag shifts to the
-  next available slot. Verify `spec-error-log.md` ERR-012-001 block
-  immediately before filing ERR-015-001 back-prop to #16.
+- **OI-001** — ERR-015-001: `DOMAIN_TAG_ATTACKING_AI = 0x1B` — **CLOSED**. Allocated in #16 §3.4 v1.0.4 (May 18, 2026). `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]` in §6.1.9 and §6.1.11 atomically.
 
-- **OI-002** — ERR-015-002: `TacticalContext.AttackIntent[]?` field
-  ratification in #8 §2.2.6. Option B selected (mirrors PressDirective?
-  / MarkDirective? pattern). Back-prop text authored at Stage 1.
+- **OI-002** — ERR-015-002: `TacticalContext.AttackIntent[]?` — **CLOSED**. Field added to #8 §2.2.6 v1.1.2; Stage 1+ RUNNER override note added to #8 §3.1.7; ownership table row added. (May 18, 2026)
 
-- **OI-003** — ERR-015-005: one-token back-prop to #8 §1.3.2 to add
-  "Attacking AI #15" explicitly to the multi-agent-coordination deferral
-  row. Follows ERR-012-002 / ERR-013-004 one-token-patch precedent.
+- **OI-003** — ERR-015-005: #8 §1.3.2 one-token patch — **CLOSED**. "Attacking AI (#15)" added to multi-agent-coordination deferral paragraph in #8 §1.3.2 v1.1.2. (May 18, 2026)
 
-- **OI-004** — Lead-developer R-01..R-05 sign-off (§9.5).
+- **OI-004** — Lead-developer R-01..R-05 sign-off — **CLOSED**. All 5 sign-offs granted May 18, 2026. `SPEC_INDEX.md` row 15 flipped `IN REVIEW → APPROVED`.
 
 Non-blocking (do not gate APPROVED):
 
@@ -151,3 +143,4 @@ Non-blocking (do not gate APPROVED):
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6 / draft-attacking-ai-spec) | Initial draft from `outline-detailed.md` v1.1. Status set to IN REVIEW. §9.1–§9.7 authored. 22-finding resolution map complete. 7 preconditions (a)–(g) tabulated; (d) and (e) marked COMPLETE. 6 open issues declared. |
+| 0.2 | May 18, 2026 | AI agent (claude-sonnet-4-6) | Lead-developer sign-off pass. All §9.3 preconditions (a)–(g) flipped to COMPLETE. R-01..R-05 all ☑. Date of approval set to May 18, 2026. §9.1 constant-tag evidence updated (0 `[CROSS-PENDING]`, 4 `[CROSS]`). §9.2 sign-offs updated (ERR-015-001/002 CLOSED; #12 contract non-blocking). §9.6 OI-001..004 CLOSED; OI-005/006 remain as Stage-1 non-blocking. Status promoted to APPROVED. |
