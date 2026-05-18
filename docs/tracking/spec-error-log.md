@@ -7,8 +7,8 @@ authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
 **Version:** 1.20
-**Updated:** May 18, 2026 (stress-test run-2 FAIL-4/FAIL-5/OBS-1 resolved: 12 stale `[CROSS-PENDING]` body-text instances promoted in #11/12/13/14 section files; file-manifest updated; ERR-016-002 FULLY CLOSED — #16 §3.2.5 back-prop prose confirmed landed May 18)
-**Status:** ERR-001 through ERR-012, ERR-010-001 (closed May 16, 2026), ERR-012-001 (closed May 18, 2026), ERR-012-002 (closed), ERR-016-001, ERR-016-002 (FULLY CLOSED May 18, 2026), ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; spec-text resolved May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); #16 §3.2.5 back-prop prose confirmed landed (OBS-1, stress-test run 2, May 18, 2026) — FULLY CLOSED. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
+**Updated:** May 18, 2026 (stress-test run-3: ERR-011-001 / ERR-012-001 / ERR-008-001 / ERR-015-006 / ERR-016-003 detailed-section Status fields updated to Resolved; ERR-012-001 summary-table row updated from Open to Resolved; all five previously had summary-table ✅ but stale body-text Status)
+**Status:** ERR-001 through ERR-012, ERR-010-001 (closed May 16, 2026), ERR-011-001 (closed May 18, 2026), ERR-012-001 (closed May 18, 2026), ERR-012-002 (closed), ERR-016-001, ERR-016-002 (FULLY CLOSED May 18, 2026), ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; spec-text resolved May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); #16 §3.2.5 back-prop prose confirmed landed (OBS-1, stress-test run 2, May 18, 2026) — FULLY CLOSED. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---
@@ -29,7 +29,7 @@ authoritative remediation backlog.
 | ERR-010 | Shot Mechanics §1.1 refers to Decision Tree as Spec #7 — canonical number is #8 | Minor | 1 | ✅ Closed — Fixed in shot-mechanics/section-1.md v1.2 (March 6, 2026); part of comprehensive audit renumbering cascade |
 | ERR-011 | `SpatialHashGrid.Query()` ignores radius parameter — always returns fixed 3×3 neighbourhood | Major | 1 | ✅ Closed — Fixed in Collision_System_Spec_Section_3_v1_1.md (March 5, 2026) |
 | ERR-012 | First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences) | Minor | 1 | ✅ Closed — Fixed in first-touch/section-7.md v1.1 (March 5, 2026) |
-| ERR-012-001 | `DOMAIN_TAG_POSITIONING_AI` allocation + Phase B/C block (originally proposed `0x16…0x1B`; shifted to `0x17…0x1C` May 16, 2026 after #10 took `0x16`) needed in #16 §3.4 | Medium | 1 | Open — awaiting lead-developer ratification of the shifted block; filed May 15, 2026 from #12 outline v1.2 |
+| ERR-012-001 | `DOMAIN_TAG_POSITIONING_AI` allocation + Phase B/C block (originally proposed `0x16…0x1B`; shifted to `0x17…0x1C` May 16, 2026 after #10 took `0x16`) needed in #16 §3.4 | Medium | 1 | ✅ Resolved May 18, 2026 — `DOMAIN_TAG_POSITIONING_AI = 0x17` allocated in #16 §3.4 v1.0.5; §6.1 `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` promoted atomically with #12 `APPROVED`; body-text instances in §1/§2/§3/§4/§8 promoted in v0.3/v0.4 fix passes |
 | ERR-012-002 | Decision Tree #8 `section-3-1.md` L716 cites Formation System as "Spec #14" — current #14 is Defensive AI; Formation System is #12 | Minor | 1 | ✅ Closed — Fixed in decision-tree/section-3-1.md v1.1.1 (May 15, 2026); single-token "Spec #14" → "Positioning AI, Spec #12"; approval status preserved |
 | ERR-008-001 | Decision Tree #8 §3.2 `PitchGeometry` pseudocode class uses centered origin `(0,0) = centre of pitch` with X:−52.5–+52.5m/Y:−34–+34m — contradicts CLAUDE.md + Ball Physics #1 §1.2 corner-origin; all goal constants wrong | High | 1 | ✅ Resolved May 18, 2026 — `section-3-2.md` v1.3: class rewritten to corner-origin (0,0,0); all `Vector2` goal constants replaced with `Vector3` using correct values; citation corrected to §1.2 and Appendix C; XC-GEOM-01 verification note added |
 | ERR-015-006 | Attacking AI #15 §1/§2/§3/§4 retain 7 stale `[CROSS-PENDING]` tags on `DOMAIN_TAG_ATTACKING_AI` after ERR-015-001 declared resolved; §9 checklist falsely claims "0 `[CROSS-PENDING]` remain" | Medium | 4 | ✅ Resolved May 18, 2026 — promoted all 7 hits to `[CROSS: #16 §3.4]` in §1 (4 instances), §2 FR-AT-005, §3 constant table, §4 §4.6 prose; v0.3 version-history rows added to all four section files |
@@ -674,7 +674,7 @@ This is the renumbering-cascade hazard CLAUDE.md flags: a downstream spec adding
 2. Update §3.4.9 in `goalkeeper-mechanics/section-3.md` to pin the literal value and promote `[CROSS-PENDING]` → `[CROSS]` at the same beat that #16's allocation lands.
 3. Once the allocation lands in #16, mark this entry CLOSED.
 
-**Status:** Open — filed May 16, 2026; awaits lead-developer ratification post-#11 IN REVIEW transition. Tracked in #11 §9.4 as OI-001.
+**Status:** ✅ Resolved May 18, 2026 — `DOMAIN_TAG_GOALKEEPER = 0x1D` allocated in #16 §3.4 v1.0.5 (Positioning AI #12 reached APPROVED first and claimed `0x17`; per KD-7 first-to-APPROVED precedent GK shifted to `0x1D`); #11 §3.4.9 `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` promoted atomically with #16 back-prop landing.
 
 ---
 
@@ -1136,7 +1136,7 @@ Either (a) update `SPEC_INDEX.md` row 18 and CLAUDE.md OPEN ISSUES entry to `IN 
 
 ## ERR-012-001: `DOMAIN_TAG_POSITIONING_AI` allocation needed in #16 §3.4 — proposed Phase B/C block-allocation policy
 
-**Status:** Open — awaiting lead-developer ratification
+**Status:** ✅ Resolved May 18, 2026 — `DOMAIN_TAG_POSITIONING_AI = 0x17` allocated in #16 §3.4 v1.0.5; #12 §6.1 `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` promoted atomically; all body-text instances in §1/§2/§3/§4/§8 promoted in v0.3/v0.4 fix passes.
 **Severity:** Medium
 **Detected:** May 15, 2026
 **Detected During:** Positioning AI #12 `outline-detailed.md` v1.1 self-adversarial review (AR-V1-01); resolution proposed in v1.2.
@@ -1208,7 +1208,7 @@ Block is contiguous with `DOMAIN_TAG_HEADING = 0x16` and consumes one nibble of 
 
 ## ERR-008-001: Decision Tree #8 §3.2 `PitchGeometry` class uses centered coordinate origin
 
-**Status:** Open
+**Status:** ✅ Resolved May 18, 2026 — `decision-tree/section-3-2.md` v1.3: class rewritten to corner-origin (0,0,0); all `Vector2` goal constants replaced with `Vector3` using correct values; citation corrected to §1.2 and Appendix C; XC-GEOM-01 verification note added.
 **Severity:** High
 **Detected:** May 18, 2026
 **Detected During:** Stress-test Tier A run 1, probe A-06 (coordinate-convention-guard FAIL) + T-03 (inverted domain conventions).
@@ -1256,7 +1256,7 @@ The citation "consistent with Ball Physics #1 §2.2" is also incorrect — the a
 
 ## ERR-015-006: Attacking AI #15 §1/§2/§3/§4 retain stale `[CROSS-PENDING]` tags after ERR-015-001 resolution
 
-**Status:** Open
+**Status:** ✅ Resolved May 18, 2026 — all 7 stale `[CROSS-PENDING]` hits promoted to `[CROSS: #16 §3.4]` in §1 (4 instances), §2 FR-AT-005, §3 constant table, §4 §4.6 prose; v0.3 version-history rows added to all four section files.
 **Severity:** Medium
 **Detected:** May 18, 2026
 **Detected During:** Stress-test Tier A run 1, probe A-03 (cross-pending-tracker FAIL) + T-05 + T-02.
@@ -1284,7 +1284,7 @@ The citation "consistent with Ball Physics #1 §2.2" is also incorrect — the a
 
 ## ERR-016-003: Domain tag registry (#16 §3.4) silent gaps at `0x18` and `0x1C`
 
-**Status:** Open
+**Status:** ✅ Resolved May 18, 2026 — `deterministic-sim/section-3.md` v1.0.6: `_RESERVED_0x18_` and `_RESERVED_0x1C_` placeholder rows added to §3.4 domain-tag table; v1.0.6 version-history row added.
 **Severity:** Medium
 **Detected:** May 18, 2026
 **Detected During:** Stress-test Tier A run 1, probe A-04 (domain-tag-allocator-audit FAIL) + T-08.

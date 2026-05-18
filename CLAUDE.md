@@ -1,7 +1,7 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** May 18, 2026 (Goalkeeper Mechanics #11 / Positioning AI #12 / Defensive AI #14 all advanced `IN REVIEW → APPROVED`; ERR-011-001/012-001/014-001/014-004 all resolved; **Stage 0 specification phase COMPLETE. Counts: 20 APPROVED, 0 IN REVIEW, 0 NOT STARTED.** Stress-test Run 2 FAIL-4/FAIL-5/OBS-1 resolved: 12 stale `[CROSS-PENDING]` body-text tags promoted across #11/12/13/14; file-manifest updated; ERR-016-002 FULLY CLOSED.)
+> **Last Updated:** May 18, 2026 (Goalkeeper Mechanics #11 / Positioning AI #12 / Defensive AI #14 all advanced `IN REVIEW → APPROVED`; ERR-011-001/012-001/014-001/014-004 all resolved; **Stage 0 specification phase COMPLETE. Counts: 20 APPROVED, 0 IN REVIEW, 0 NOT STARTED.** Stress-test Run 2 FAIL-4/FAIL-5/OBS-1 resolved: 12 stale `[CROSS-PENDING]` body-text tags promoted across #11/12/13/14; file-manifest updated; ERR-016-002 FULLY CLOSED. Stress-test Run 3 FAIL-6 resolved: 11 stale `[EST]` body-text tags in #12 §3 promoted to `[GT]` matching §6.1 catalogue; SPACING_MAX_PASSES promoted in §6.1; stale GK §3.3.3 prose updated; ERR-012-001 status corrected in spec-error-log and §8.4; event-system §9 checklist header corrected. Zero open FAILs after Run 3.)
 > **Purpose:** Authoritative rules for any AI agent (Claude Code, Claude chat, etc.) working on this project. Read this file completely before every task.
 
 ---

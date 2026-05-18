@@ -1,9 +1,9 @@
 # Event System Specification #17 — Section 9: Approval Checklist
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
-**Version:** 0.1 (initial section-file draft from `outline-detailed.md` v1.1)
-**Status:** DRAFT
+**Last Updated:** May 15, 2026 (v1.0.1 — patch: §9.2 Q10 / §9.3 R3 evidence updated; `DOMAIN_TAG_EVENT_LEDGER = 0x15` inlined; ERR-017-001 marked RESOLVED)
+**Version:** 1.0.1
+**Status:** APPROVED
 
 > Every row in this checklist cites either a file path or a check
 > name (Spec #19 KD-6 self-application — every approval-checklist

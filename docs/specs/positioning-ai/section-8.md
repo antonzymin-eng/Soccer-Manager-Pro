@@ -73,7 +73,7 @@ section.
 
 | ERR | Subject | Resolution |
 |---|---|---|
-| `ERR-012-001` | Phase B/C domain-tag block allocation `0x16…0x1B` for #10/#11/#12/#13/#14/#15 in #16 §3.4 | Pending lead-developer ratification; `[CROSS-PENDING]` until promoted to `[CROSS]` atomically across all six specs |
+| `ERR-012-001` | Phase B/C domain-tag block allocation `0x16…0x1B` for #10/#11/#12/#13/#14/#15 in #16 §3.4 | **Resolved May 18, 2026** — `DOMAIN_TAG_POSITIONING_AI = 0x17` allocated in #16 §3.4 v1.0.5; all body-text and §6.1 `[CROSS-PENDING]` instances promoted to `[CROSS: #16 §3.4]` in v0.3/v0.4 fix passes. |
 | `ERR-012-002` | Stale "Formation System (Spec #14)" reference at `decision-tree/section-3-1.md` L716 (current #14 is Defensive AI; Formation System is #12) | One-line patch request to #8 |
 | `ERR-012-003` | Documentary anchor for `XC-012-001`..`XC-012-009` allocation (AR-S1-18) | Filed as informational; no remediation required |
 
@@ -102,3 +102,4 @@ that changes the cited section numbers MUST be reconciled here.
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. `XC-012-001`..`XC-012-009` allocated. `ERR-012-001` and `ERR-012-002` referenced. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-04 §8.1 #8 row clarified `Stage0Default()` is match-init-only; per-tick path is direct field write. AR-S1-18 `ERR-012-003` filed as documentary anchor for the `XC-012-NNN` allocation. |
+| 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run3) | Run 3 fix: §8.4 ERR-012-001 resolution updated from "Pending" to "Resolved May 18, 2026". |

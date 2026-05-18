@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 18, 2026 (FAIL-5 fix: stress-test tracking files added; spec rows 11/12/14 updated to APPROVED; OBS-1: ERR-016-002 closed)  
+**Last Updated:** May 18, 2026 (Run 3: stress-reports/2026-05-18-tier-a-run-3.md added; #12 §3/§6/§8 body-text `[EST]` promotions and ERR-012-001 status fixes)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -32,6 +32,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `docs/tracking/stress-reports/INDEX.md` | Index of all stress-test run reports |
 | `docs/tracking/stress-reports/2026-05-18-tier-a-run-1.md` | Tier A Run 1 report (May 18, 2026) — 3 FAIL, 2 WARN; all 3 FAILs resolved before Run 2 |
 | `docs/tracking/stress-reports/2026-05-18-tier-a-run-2.md` | Tier A Run 2 report (May 18, 2026) — 2 FAIL, 1 WARN (×147); FAIL-4/FAIL-5 fixed in this commit; OBS-1 closed |
+| `docs/tracking/stress-reports/2026-05-18-tier-a-run-3.md` | Tier A Run 3 report (May 18, 2026) — 1 FAIL (FAIL-6: `[EST]` body-text in #12 §3 + §6.1) fixed in this pass; zero open FAILs after run |
 
 ---
 
