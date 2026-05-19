@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 19, 2026 (Run 5: A-16 triage complete — 167/167 entries, all XC- confirmed, 0 open; stress-reports/2026-05-19-tier-a-run-5.md added; a16-triage.json updated)  
+**Last Updated:** May 19, 2026 (`src/CLAUDE.md` created — coding begins; all 20 Stage 0 specs approved)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -15,6 +15,14 @@ This manifest supersedes the legacy flat-file inventory that referenced historic
 - **Canonical cross-spec issue source:** `docs/tracking/spec-error-log.md`
 
 Use this file to track the **current folder structure**, not legacy per-version filenames.
+
+---
+
+## Source Files
+
+| File | Purpose |
+|------|---------|
+| `src/CLAUDE.md` | Coding guide: C# naming, constant catalogues, Unity project structure, build/test commands. Created May 19, 2026 when coding began. |
 
 ---
 
