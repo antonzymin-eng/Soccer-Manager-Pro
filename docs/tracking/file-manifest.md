@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 18, 2026 (Run 4: stress-reports/2026-05-18-tier-a-run-4.md + tools/spec-stress/reports/a16-triage.json added; #15 §1–5 headers corrected; defensive-ai §9 checklist v0.4; FAIL-7 fixed)  
+**Last Updated:** May 19, 2026 (Run 5: A-16 triage complete — 167/167 entries, all XC- confirmed, 0 open; stress-reports/2026-05-19-tier-a-run-5.md added; a16-triage.json updated)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -34,7 +34,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `docs/tracking/stress-reports/2026-05-18-tier-a-run-2.md` | Tier A Run 2 report (May 18, 2026) — 2 FAIL, 1 WARN (×147); FAIL-4/FAIL-5 fixed in this commit; OBS-1 closed |
 | `docs/tracking/stress-reports/2026-05-18-tier-a-run-3.md` | Tier A Run 3 report (May 18, 2026) — 1 FAIL (FAIL-6: `[EST]` body-text in #12 §3 + §6.1) fixed in this pass; zero open FAILs after run |
 | `docs/tracking/stress-reports/2026-05-18-tier-a-run-4.md` | Tier A Run 4 report (May 18, 2026) — 1 FAIL (FAIL-7: `ATTACK_DWELL_TICKS [EST]` in #15 §1.4) + FIND-12 (headers) + FIND-13 (checklist evidence); all fixed; A-16 triage inaugurated (10/147) |
-| `tools/spec-stress/reports/a16-triage.json` | A-16 normative-constraint-audit triage state — 10 entries (all XC- confirmed), 137 open |
+| `docs/tracking/stress-reports/2026-05-19-tier-a-run-5.md` | Tier A Run 5 report (May 19, 2026) — A-16 triage full corpus sweep; 167/167 entries, all XC- confirmed, 0 open; 0 new FAILs |
+| `tools/spec-stress/reports/a16-triage.json` | A-16 normative-constraint-audit triage state — 167 entries (all XC- confirmed), 0 open; COMPLETE |
 
 ---
 

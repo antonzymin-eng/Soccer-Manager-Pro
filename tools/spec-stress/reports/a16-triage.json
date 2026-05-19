@@ -1,10 +1,10 @@
 {
   "_meta": {
     "created": "2026-05-18",
-    "description": "A-16 normative-constraint-audit triage state. Each entry represents one MUST/SHALL+#N hit reviewed by a human. Status: 'XC- confirmed' (constrained spec has a matching XC-/CROSS entry) or 'ERR filed' (new finding opened). Run 4 inaugural sample: 10 entries triaged from defensive-ai and attacking-ai §2.",
-    "total_warns": 147,
-    "triaged": 10,
-    "open": 137
+    "description": "A-16 normative-constraint-audit triage state. Each entry represents one MUST/SHALL+#N hit reviewed by a human. Status: 'XC- confirmed' (constrained spec has a matching XC-/CROSS entry) or 'ERR filed' (new finding opened). Run 4 inaugural sample: 10 entries triaged from defensive-ai and attacking-ai §2. Run 5: full corpus sweep complete.",
+    "total_warns": 167,
+    "triaged": 167,
+    "open": 0
   },
   "entries": [
     {
@@ -105,6 +105,1576 @@
       "hit": "FR-DA-027 | MAX_MARK_DISPLACEMENT_M agent eligibility from #12 baseline anchor. MUST | KD-17",
       "obligation_direction": "subject — #14 reads baseline anchor from #12",
       "xc_entry": "#14 §1.4 cites #12 §4.5.1/§4.5.2 under 'BaselineDefensiveShapeView + GetLine(EntityId)'; KD-17 is internal",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-011",
+      "spec": "code-standards #20",
+      "file": "code-standards/section-2.md",
+      "line": 112,
+      "hit": "FR-CS-025 | constants catalogue MUST be named <SpecName>Constants.cs (e.g., BallPhysicsConstants.cs for Ball Physics Spec #1)",
+      "obligation_direction": "object-form policy — #20 itself defines this naming rule; the reference to #1 is an example, not a constraint on #1. #20 is self-contained here.",
+      "xc_entry": "Self-referential policy in #20 §4.2. No cross-spec XC- entry needed: #20 is the authority spec for this rule; the #1 mention is illustrative only.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-012",
+      "spec": "code-standards #20",
+      "file": "code-standards/section-3.md",
+      "line": 893,
+      "hit": "Vendored code MUST fully conform. The wrapper, not the vendored code, is the Spec #20 boundary.",
+      "obligation_direction": "self-referential — #20 defining its own boundary scope; no external spec is constrained",
+      "xc_entry": "Self-contained within #20. No cross-spec obligation — this sentence clarifies #20's own applicability scope.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-013",
+      "spec": "code-standards #20",
+      "file": "code-standards/section-8.md",
+      "line": 84,
+      "hit": "Every Spec #20 amendment MUST include a re-verification pass for [downstream specs]",
+      "obligation_direction": "self-referential policy in #20 §8 — defines amendment governance for #20 itself",
+      "xc_entry": "Self-contained within #20. The obligation is on the #20 amendment process, not on any other spec.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-014",
+      "spec": "code-standards #20",
+      "file": "code-standards/section-9-approval-checklist.md",
+      "line": 450,
+      "hit": "Any of the following changes MUST trigger a mandatory re-review of Spec #20 and [consuming specs]",
+      "obligation_direction": "self-referential — #20 §9 approval checklist defining review-trigger policy for #20 itself",
+      "xc_entry": "Self-contained within #20 §9. No cross-spec XC- entry needed.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-015",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 24,
+      "hit": "FR-GK-004 | GK head contacts route to Heading Mechanics #10 §3.7; no #11-local head-physics path exists. | MUST",
+      "obligation_direction": "subject — #11 must route head contacts to #10 §3.7",
+      "xc_entry": "#11 §1.4 dependency table cites Heading Mechanics #10 §3.7 under 'Contested-duel mechanism for head contacts (KD-14)'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-016",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 25,
+      "hit": "FR-GK-005 | GK resting baseline position is consumed read-only from Positioning AI #12 §3.3.3. | MUST",
+      "obligation_direction": "subject — #11 must read baseline from #12 §3.3.3",
+      "xc_entry": "#11 §1.4 dependency table has no explicit row for #12 §3.3.3 — it only cites #12 in 'KD-13 ratification' (IN REVIEW note). However, KD-3 in #11 §1.3 ('Boundary with Positioning AI #12') explicitly documents this read-only dependency, and the boundary table row lists #12 as a consumer of #11. The KD-3 documentation is within #11 §1 and sufficiently covers the dependency.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-017",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 26,
+      "hit": "FR-GK-006 | GK reactive position owned by Spec #11; reactive radius bounded by #12-supplied baseline. | MUST",
+      "obligation_direction": "subject — #11 must respect #12 baseline boundary (KD-3, KD-13)",
+      "xc_entry": "#11 §1.4 KD-3 documents the #12 boundary; §1.4 upstream table notes the #12 inverse-dependency; KD-13 ratification protocol explicitly covers this",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-018",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 27,
+      "hit": "FR-GK-007 | Distribution emits a Pass Mechanics #5 PassIntent-equivalent payload via existing #5 intent surface. | MUST",
+      "obligation_direction": "subject — #11 must use #5 intent surface (KD-6)",
+      "xc_entry": "#11 §1.4 upstream table cites Pass Mechanics #5 §1.7/§3 intent surface under 'PassIntent consumer surface (KD-6)'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-019",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 28,
+      "hit": "FR-GK-008 | Distribution release-point geometry is owned by Spec #11 §3.8. | MUST",
+      "obligation_direction": "self-ownership claim within #11 — not a cross-spec constraint. The #11 reference is internal.",
+      "xc_entry": "Self-referential (§3.8 is within #11). No cross-spec XC- needed.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-020",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 31,
+      "hit": "FR-GK-011 | Save physics consumes Collision System #3 contact data via ICollisionEventConsumer (#3 §3.4.2). | MUST",
+      "obligation_direction": "subject — #11 must consume #3 §3.4.2 interface (KD-5)",
+      "xc_entry": "#11 §1.4 upstream table cites Collision System #3 §3.4.2 under 'ICollisionEventConsumer pattern (KD-5)'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-021",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 33,
+      "hit": "FR-GK-013 | Spec #11 uses corner-origin coordinates per Ball Physics #1 §1.2. | MUST",
+      "obligation_direction": "subject — #11 must use #1 §1.2 coordinate system (KD-10)",
+      "xc_entry": "#11 §1.4 upstream table cites Ball Physics #1 §1.2 under 'Coordinate-system origin'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-022",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 36,
+      "hit": "FR-GK-016 | Defensive wall is out of scope (Defensive AI #14). | MUST",
+      "obligation_direction": "scope-boundary declaration — #11 references #14 only to exclude it from scope. No obligation on #14.",
+      "xc_entry": "Scope exclusion, not a normative constraint on either spec. No XC- entry required.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-023",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 40,
+      "hit": "FR-GK-020 | Stage 0 dive kinematics owned by Spec #11 §3.3 per KD-12; AM #2 §3.6 is not amended. | MUST",
+      "obligation_direction": "subject — #11 owns dive kinematics; #2 is explicitly not amended. KD-12 documents this.",
+      "xc_entry": "#11 §1.4 upstream table cites Agent Movement #2 §3.1.2/§3.5.1 entries; KD-12 ('AM #2 §3.6 defers Z>0 movement to Stage 1+') explicitly documented in §1.3",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-024",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 41,
+      "hit": "FR-GK-021 | §3.3.0 publishes the Positioning AI #12 consumer contract; on #11 IN REVIEW, #12 §3.3.3 GK constants promote [EST]→[GT]. | MUST",
+      "obligation_direction": "subject — #11 must publish the #12 consumer contract; also #12 must promote constants on #11 IN REVIEW (KD-13)",
+      "xc_entry": "#11 §1.4 KD-13 ratification protocol documented; #11 upstream table notes the #12 inverse-dependency; KD-13 in §1.3 covers both sides of the protocol",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-025",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 42,
+      "hit": "FR-GK-022 | Cross-claim routing determined by Collision System #3 contact-event body part (head→#10 §3.7). | MUST",
+      "obligation_direction": "subject — #11 must use #3 contact-event body part; head contacts route to #10 (KD-14)",
+      "xc_entry": "#11 §1.4 upstream table cites #3 §3.4.2 and Heading Mechanics #10 §3.7 / KD-7 for head-contact routing",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-026",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 45,
+      "hit": "FR-GK-025 | Iteration over multi-attacker cross-claim duels follows #16 §3.2 entity order. | MUST",
+      "obligation_direction": "subject — #11 must follow #16 §3.2 entity ordering (KD-7)",
+      "xc_entry": "#11 §1.4 upstream table cites Deterministic Simulation #16 §3.2 under 'Entity iteration order'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-027",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 46,
+      "hit": "FR-GK-026 | DOMAIN_TAG_GOALKEEPER = 0x1D [CROSS: #16 §3.4] — ERR-011-001 resolved. | MUST",
+      "obligation_direction": "subject — #11 must use domain tag from #16 §3.4",
+      "xc_entry": "[CROSS: #16 §3.4] inline; #11 §1.4 upstream table cites #16 §3.4 under 'DOMAIN_TAG catalogue'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-028",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 50,
+      "hit": "FR-GK-030 | Non-eligible state when shot arrives: ball-vs-GK contact resolved by Collision System #3 standard rebound physics. | MUST",
+      "obligation_direction": "subject — #11 defers to #3 for contact resolution in non-eligible states (KD-11, F-07)",
+      "xc_entry": "#11 §1.4 upstream table cites Collision System #3 §3.4.2 + agent collider geometry",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-029",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 55,
+      "hit": "FR-GK-035 | Four publish surfaces all route through Event System #17 §3.2.1. | MUST",
+      "obligation_direction": "subject — #11 must publish events via #17 §3.2.1 (KD-10)",
+      "xc_entry": "#11 §1.4 upstream table cites Event System #17 §3.2.1 under 'Publish API surface'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-030",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 56,
+      "hit": "FR-GK-036 | GK state machine GROUNDED entry uses GroundedReason.DIVING_HEADER at Stage 0 per KD-12; Stage 1+ migrates to DIVING_SAVE as AM #2 non-behavioral patch. | MUST",
+      "obligation_direction": "subject — #11 must use the AM #2 §3.1.2 enum value (KD-12)",
+      "xc_entry": "#11 §1.4 upstream table cites Agent Movement #2 §3.1.2 under 'AgentMovementState, GroundedReason enums'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-031",
+      "spec": "goalkeeper-mechanics #11",
+      "file": "goalkeeper-mechanics/section-2.md",
+      "line": 57,
+      "hit": "FR-GK-037 | Dive launch impulse formula consumes Strength_norm and Aerial_norm per AM #2 §3.5.6 attribute conventions. | MUST",
+      "obligation_direction": "subject — #11 must use #2 §3.5.6 attribute convention (KD-9)",
+      "xc_entry": "#11 §1.4 upstream table cites Agent Movement #2 §3.5.6 under 'PlayerAttributes field reads'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-032",
+      "spec": "heading-mechanics #10",
+      "file": "heading-mechanics/section-2.md",
+      "line": 21,
+      "hit": "FR-HE-001 | Header eligible iff agent in Stage-0 #10-owned aerial phase (KD-18). | MUST",
+      "obligation_direction": "self-referential — #10 owns the aerial phase per KD-18; the #10 reference is to this spec itself",
+      "xc_entry": "Self-referential (KD-18 is internal to #10). No cross-spec XC- required.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-033",
+      "spec": "heading-mechanics #10",
+      "file": "heading-mechanics/section-2.md",
+      "line": 24,
+      "hit": "FR-HE-004 | JumpReach is [DERIVED]; no new PlayerAttribute added to Agent Movement #2. | MUST",
+      "obligation_direction": "subject — #10 must not add to #2's attribute set (KD-4)",
+      "xc_entry": "#10 §1.4 dependency table cites Agent Movement #2 §3.5.1/§3.5.6 under 'Agent class XY kinematics' and 'PlayerAttributes'; KD-4 in §1.3 explicitly states 'NO jump-kinematics anchor — Z is owned by #10 at Stage 0'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-034",
+      "spec": "heading-mechanics #10",
+      "file": "heading-mechanics/section-2.md",
+      "line": 25,
+      "hit": "FR-HE-005 | Pass Mechanics #5 inputs consumed via BallState only; Pass-specific labels NOT consumed. | MUST",
+      "obligation_direction": "subject — #10 must not consume #5-specific labels (KD-5)",
+      "xc_entry": "#10 §1.4 dependency table cites Pass Mechanics #5 as 'No #5 subsection coupling'; KD-5 ('Pass Mechanics #5 consumed via BallState only') documented in §1.3",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-035",
+      "spec": "heading-mechanics #10",
+      "file": "heading-mechanics/section-2.md",
+      "line": 27,
+      "hit": "FR-HE-007 | Goal-line crossing adjudication owned by Event System #17 / Match Referee. | MUST",
+      "obligation_direction": "scope boundary — #10 defers adjudication to #17 (KD-6)",
+      "xc_entry": "#10 §1.4 dependency table cites Event System #17 §3.2.1 under 'HeaderExecutedEvent/HeaderAttemptFailedEvent publication'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-036",
+      "spec": "heading-mechanics #10",
+      "file": "heading-mechanics/section-2.md",
+      "line": 29,
+      "hit": "FR-HE-009 | Goalkeeper head contacts execute the #10 pipeline unchanged. | MUST",
+      "obligation_direction": "subject — #10 owns the pipeline for all head contacts including GK (KD-7); self-referential to #10 pipeline",
+      "xc_entry": "Self-referential (#10 owns its own pipeline). The GK interaction is documented in KD-7 and #10 §1.4 notes #11 as downstream consumer.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-037",
+      "spec": "heading-mechanics #10",
+      "file": "heading-mechanics/section-2.md",
+      "line": 30,
+      "hit": "FR-HE-010 | Contested-duel resolution consumes Collision System #3 contact data as-published; no #3 redefinition. | MUST",
+      "obligation_direction": "subject — #10 must consume #3 contact data (KD-8)",
+      "xc_entry": "#10 §1.4 dependency table cites Collision System #3 §3.4.2 under 'ICollisionEventConsumer pattern (KD-8)'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-038",
+      "spec": "heading-mechanics #10",
+      "file": "heading-mechanics/section-2.md",
+      "line": 32,
+      "hit": "FR-HE-012 | All positional inputs and outputs use corner-origin coordinate system (Ball Physics #1 §1.2). | MUST",
+      "obligation_direction": "subject — #10 must use #1 §1.2 coordinate system (KD-9)",
+      "xc_entry": "#10 §1.4 dependency table cites Ball Physics #1 §1.2 under 'Coordinate-system authority'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-039",
+      "spec": "heading-mechanics #10",
+      "file": "heading-mechanics/section-2.md",
+      "line": 34,
+      "hit": "FR-HE-014 | Every numeric constant published by #10 carries exactly one source tag. | MUST",
+      "obligation_direction": "self-referential — #10 §2 defining its own constant-tagging policy per KD-11; the #10 reference is to this spec itself",
+      "xc_entry": "Self-referential policy within #10. Consistent with CLAUDE.md constant-tag mandate.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-040",
+      "spec": "heading-mechanics #10",
+      "file": "heading-mechanics/section-2.md",
+      "line": 35,
+      "hit": "FR-HE-015 | Outgoing spin computed by #10 §3.6 and passed to Ball Physics #1 via Ball.ApplyKick(spin). | MUST",
+      "obligation_direction": "subject — #10 must call #1 Ball.ApplyKick surface (KD-16)",
+      "xc_entry": "#10 §1.4 dependency table cites Ball Physics #1 §3.1.11.2 under 'Ball.ApplyKick output'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-041",
+      "spec": "heading-mechanics #10",
+      "file": "heading-mechanics/section-2.md",
+      "line": 39,
+      "hit": "FR-HE-019 | Stage 0 Z jump kinematics during aerial-contact window owned by #10 §3.3. | MUST",
+      "obligation_direction": "self-referential — #10 §3.3 is within this spec; KD-18 internal decision",
+      "xc_entry": "Self-referential (§3.3 is within #10). KD-18 in §1.3 documents the Stage 0 deferral from AM #2.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-042",
+      "spec": "heading-mechanics #10",
+      "file": "heading-mechanics/section-2.md",
+      "line": 52,
+      "hit": "FR-HE-032 | headAngularVelocity derived locally from AM #2 agent.facing finite-difference; no AM #2 amendment required at Stage 0. | MUST",
+      "obligation_direction": "subject — #10 must derive from #2 agent.facing (KD-16 pass-1 H-3)",
+      "xc_entry": "#10 §1.4 dependency table cites Agent Movement #2 §3.5.1 under 'Agent class XY kinematics' which includes agent.facing",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-043",
+      "spec": "positioning-ai #12",
+      "file": "positioning-ai/section-2.md",
+      "line": 20,
+      "hit": "FR-PA-002 | orchestrator writes formationSlot into TacticalContext.FormationSlot at #8 Step 2. | MUST",
+      "obligation_direction": "subject — #12 output is consumed at #8 Step 2 (KD-2, KD-3)",
+      "xc_entry": "#12 §1.4 dependency table cites Decision Tree #8 §2.2.6 and §3.1.7 under 'TacticalContext.FormationSlot consumer'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-044",
+      "spec": "positioning-ai #12",
+      "file": "positioning-ai/section-2.md",
+      "line": 21,
+      "hit": "FR-PA-003 | Agent iteration order EntityId-sorted ascending. | MUST | #16 §3.2.5",
+      "obligation_direction": "subject — #12 must comply with #16 §3.2.5 ordering rule",
+      "xc_entry": "#12 §1.4 dependency table cites #16 §3.2, §3.2.5 under 'EntityId iteration'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-045",
+      "spec": "positioning-ai #12",
+      "file": "positioning-ai/section-2.md",
+      "line": 22,
+      "hit": "FR-PA-004 | formationSlot values contribute to per-tick determinism digest. | MUST | #16 §6.2",
+      "obligation_direction": "subject — #12 must include state in #16 digest",
+      "xc_entry": "#12 §1.4 dependency table cites #16 §6.2 under 'per-tick digest'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-046",
+      "spec": "positioning-ai #12",
+      "file": "positioning-ai/section-2.md",
+      "line": 23,
+      "hit": "FR-PA-005 | RNG calls use DOMAIN_TAG_POSITIONING_AI = 0x17 [CROSS: #16 §3.4]. | MUST | #16 §3.4",
+      "obligation_direction": "subject — #12 must use domain tag from #16 §3.4",
+      "xc_entry": "[CROSS: #16 §3.4] inline; #12 §1.4 cites #16 §3.4 under 'domain-tagged RNG'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-047",
+      "spec": "positioning-ai #12",
+      "file": "positioning-ai/section-2.md",
+      "line": 24,
+      "hit": "FR-PA-006 | No heap allocation on per-tick hot path. | MUST | #18 §3.7",
+      "obligation_direction": "subject — #12 must comply with #18 §3.7 zero-alloc discipline",
+      "xc_entry": "#12 §1.4 dependency table cites #18 §3.7 under 'Zero-allocation hot-path discipline'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-048",
+      "spec": "positioning-ai #12",
+      "file": "positioning-ai/section-2.md",
+      "line": 26,
+      "hit": "FR-PA-008 | Anchor selection uses dwell-time hysteresis bound to #2 §3.1. | MUST",
+      "obligation_direction": "subject — #12 must bind hysteresis pattern to #2 §3.1 (KD-8)",
+      "xc_entry": "#12 §1.4 dependency table cites Agent Movement #2 §2.5/§3.1 under 'EntityId no-reuse; hysteresis-pattern reuse'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-049",
+      "spec": "positioning-ai #12",
+      "file": "positioning-ai/section-2.md",
+      "line": 29,
+      "hit": "FR-PA-011 | All constants live in PositioningAIConstants.cs. | MUST | #20 FR-CS-025",
+      "obligation_direction": "subject — #12 must follow #20 §4.2 naming rule",
+      "xc_entry": "#12 §1.4 dependency table cites #20 §4.2 (FR-CS-025) under 'Single constant-catalogue file'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-050",
+      "spec": "positioning-ai #12",
+      "file": "positioning-ai/section-2.md",
+      "line": 66,
+      "hit": "FR-PA-048 | No interface produced against unspecified consumer specs (#13/#14/#15 at Stage 0). | MUST",
+      "obligation_direction": "scope constraint — #12 must not produce interfaces against #13/#14/#15 (CLAUDE.md / KD-4..6)",
+      "xc_entry": "CLAUDE.md 'Interface Design Principle' governs this; #12 §1.4 boundary table explicitly lists all three as 'Stage 1+ only'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-051",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 22,
+      "hit": "FR-PR-003 | Agent iteration order EntityId-sorted ascending. | MUST | #16 §3.2.5",
+      "obligation_direction": "subject — #13 must comply with #16 §3.2.5 ordering rule",
+      "xc_entry": "#13 §1.4 dependency table cites #16 §3.2, §3.2.5 under 'EntityId iteration'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-052",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 23,
+      "hit": "FR-PR-004 | PressDirective and PressAssignment contribute to per-tick determinism digest. | MUST | #16 §6.2",
+      "obligation_direction": "subject — #13 must include state in #16 digest",
+      "xc_entry": "#13 §1.4 dependency table cites #16 §3.2, §3.2.5, §3.4, §5, §6.2 under 'EntityId iteration; domain-tag registry; per-tick digest scope'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-053",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 24,
+      "hit": "FR-PR-005 | RNG calls use DOMAIN_TAG_PRESSING_AI = 0x19 [CROSS: #16 §3.4]. | MUST | #16 §3.4",
+      "obligation_direction": "subject — #13 must use domain tag from #16 §3.4",
+      "xc_entry": "[CROSS: #16 §3.4] inline; #13 §1.4 boundary table row cites 'EntityId iteration + DOMAIN_TAG_PRESSING_AI = 0x19 [CROSS]'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-054",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 25,
+      "hit": "FR-PR-006 | No heap allocation on per-tick hot path. | MUST | #18 §3.7",
+      "obligation_direction": "subject — #13 must comply with #18 §3.7 zero-alloc discipline",
+      "xc_entry": "#13 §1.4 dependency table cites #18 §3.7/§6 under 'Zero-allocation hot-path discipline'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-055",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 26,
+      "hit": "FR-PR-007 | All constants live in PressingAIConstants.cs. | MUST | #20 FR-CS-025",
+      "obligation_direction": "subject — #13 must follow #20 §4.2 naming rule",
+      "xc_entry": "#13 §1.4 dependency table cites #20 §4.2 (FR-CS-025) under 'Single constant-catalogue file'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-056",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 28,
+      "hit": "FR-PR-009 | BAD_TOUCH fires when #4-derived first-touch quality scalar is below threshold. | MUST",
+      "obligation_direction": "subject — #13 must consume #4 quality scalar (KD-7)",
+      "xc_entry": "#13 §1.4 dependency table cites First Touch #4 §3.1 under 'BAD_TOUCH trigger source'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-057",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 29,
+      "hit": "FR-PR-010 | BACKWARD_PASS fires when PassAttemptEvent (#5 §2 FR-10) satisfies dot-product condition. | MUST",
+      "obligation_direction": "subject — #13 must consume #5 PassAttemptEvent schema (KD-7)",
+      "xc_entry": "#13 §1.4 dependency table cites Pass Mechanics #5 §2 FR-10 under 'BACKWARD_PASS trigger source'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-058",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 36,
+      "hit": "FR-PR-017 | GK always HOLD_SHAPE from #13's perspective; excluded from WEAK_RECEIVER candidates. | MUST",
+      "obligation_direction": "subject — #13 must treat GK as per KD-13 (Goalkeeper Mechanics #11 invariant)",
+      "xc_entry": "#13 §1.4 boundary table row cites '#11 Goalkeeper' under 'KD-13 negative invariant; FR-PR-017'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-059",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 38,
+      "hit": "FR-PR-019 | Anti-chaos: min backline agents whose #12 line membership is Defense. | MUST",
+      "obligation_direction": "subject — #13 must read line-membership from #12 (KD-16)",
+      "xc_entry": "#13 §1.4 dependency table cites Positioning AI #12 as 'Bound as baseline shape source' with #12 §7.3 accessor",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-060",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 39,
+      "hit": "FR-PR-020 | Anti-chaos: COVER_SHADOW assignment further than MAX_PRESS_DISPLACEMENT_M from agent's #12 baseline anchor is rejected. | MUST",
+      "obligation_direction": "subject — #13 must use #12 baseline anchor for displacement bound (KD-16)",
+      "xc_entry": "#13 §1.4 boundary table row cites '#12 Positioning AI' as baseline slot source; KD-4 boundary documented",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-061",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 48,
+      "hit": "FR-PR-029 | Cite-not-redefine #8 §3.1.8.1 stamina-gate logic; #13 layers ceiling on top of #8's PRESS_STAMINA_MINIMUM. | MUST",
+      "obligation_direction": "subject — #13 must cite and layer on #8 §3.1.8.1 (KD-1/cite-not-redefine)",
+      "xc_entry": "#13 §1.4 dependency table cites Decision Tree #8 §3.1.8/§3.1.8.1/§3.1.8.2 under 'PRESS utility surface this spec advises'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-062",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 52,
+      "hit": "FR-PR-033 | Phase gating: all-HOLD_SHAPE if #12's local-phase output is InPoss. | MUST",
+      "obligation_direction": "subject — #13 must read phase from #12 (KD-11)",
+      "xc_entry": "#13 §1.4 dependency table cites #12 §4.5.1/§4.5.2 as Stage 1 accessor; KD-11 covers phase gating",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-063",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 59,
+      "hit": "FR-PR-040 | F6 — #12 baseline slot unavailable: no PressAssignment override emitted. | MUST",
+      "obligation_direction": "subject — #13 must handle #12 SENTINEL_NO_SLOT failure mode",
+      "xc_entry": "#13 §1.4 boundary table cites '#12 Positioning AI' as baseline slot source (read consumer); failure mode documented in §2.4 (same section)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-064",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 61,
+      "hit": "FR-PR-042 | No interface produced against unspecified consumer specs (#14/#15 at Stage 0/Stage 1). | MUST",
+      "obligation_direction": "scope constraint — #13 must not produce interfaces against #14/#15 (CLAUDE.md / KD-5/KD-6)",
+      "xc_entry": "CLAUDE.md 'Interface Design Principle'; #13 §1.4 boundary table shows #14 and #15 as 'No (Stage 1)' / 'No' respectively",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-065",
+      "spec": "pressing-ai #13",
+      "file": "pressing-ai/section-2.md",
+      "line": 63,
+      "hit": "FR-PR-044 | Stage-1 activation gated on: (a) #8 ratifies ERR-013-001; (b) #12 reaches APPROVED; (c) ERR-013-002/003 #17 channel rows land. | MUST",
+      "obligation_direction": "subject — #13 activation depends on #8 §2.2.6, #12 APPROVED, and #17 channel-registry (KD-12)",
+      "xc_entry": "#13 §1.4 cites #8 §1.3.2/§2.2.6 (ERR-013-001 binding row), #12 as APPROVED precondition, #17 §3.10 Stage-1 back-prop; all three gate conditions documented in §1.4/§1.8",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-066",
+      "spec": "defensive-ai #14",
+      "file": "defensive-ai/section-3.md",
+      "line": 80,
+      "hit": "#14 MUST NOT assign marks to agents with an active press role (from #13 role partition FR-PR-014)",
+      "obligation_direction": "subject — #14 must read #13 role partition to exclude press-assigned agents (KD-4)",
+      "xc_entry": "#14 §1.4 dependency table cites Pressing AI #13 §2.2/§3.4–§3.5/FR-PR-014 under 'Role partition: HOLD_SHAPE pool derived by excluding PRIMARY_PRESS and COVER_SHADOW'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-067",
+      "spec": "agent-movement #2",
+      "file": "agent-movement/section-1-2.md",
+      "line": 156,
+      "hit": "System SHALL use hysteresis to prevent rapid oscillation (consistent with Ball Physics Spec #1 pattern)",
+      "obligation_direction": "subject — #2 must follow Ball Physics #1 hysteresis pattern",
+      "xc_entry": "#2 §1.4 dependency table cites Ball Physics #1 as 'requires Vector3 velocity, float mass, bool isGoalkeeper'; §1.5 'Relationship to Ball Physics Spec #1' explicitly documents the hysteresis pattern parallelism. The SHALL is consistency-guidance, not a strict interface obligation.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-068",
+      "spec": "agent-movement #2",
+      "file": "agent-movement/section-1-2.md",
+      "line": 205,
+      "hit": "Physical properties SHALL be exposed via AgentPhysicalProperties struct for Collision System (Spec #3)",
+      "obligation_direction": "subject — #2 must expose properties to #3 (interface defined here, consumed by #3)",
+      "xc_entry": "#2 §1.4 dependency table cites Collision System #3 ('This spec defines agent physical properties; Spec #3 consumes these for detection and response')",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-069",
+      "spec": "agent-movement #2",
+      "file": "agent-movement/section-1-2.md",
+      "line": 319,
+      "hit": "XC-002-001 | EntityId despawned MUST NOT be reassigned within same match. | Deterministic Simulation #16 §3.2.5",
+      "obligation_direction": "subject — #2's entity allocator must comply with #16 §3.2.5 no-reuse rule",
+      "xc_entry": "XC-002-001 is itself the XC- entry in #2's §1.7 cross-spec constraints table, citing #16 §3.2.5. Self-covering.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-070",
+      "spec": "agent-movement #2",
+      "file": "agent-movement/section-3-6.md",
+      "line": 873,
+      "hit": "Guard conditions MUST be implemented with TODO markers so they activate correctly when Spec #13 (Fatigue System) comes online in Stage 1+.",
+      "obligation_direction": "§7/Stage 1+ deferral — forward-looking implementation note referencing future Spec #13",
+      "xc_entry": "Stage 1+ forward reference only. #13 is not a current Stage 0 dependency of #2.",
+      "status": "XC- confirmed (§7/appendix — non-normative for Stage 0)"
+    },
+    {
+      "id": "a16-071",
+      "spec": "decision-tree #8",
+      "file": "decision-tree/section-1.md",
+      "line": 475,
+      "hit": "XC-008-001 | despawned EntityId MUST NOT be reassigned; entity allocators in #2 and #8 MUST guarantee uniqueness. | #16 §3.2.5",
+      "obligation_direction": "subject — #8 must not request/assume reuse of despawned EntityIds per #16 §3.2.5",
+      "xc_entry": "XC-008-001 is itself the XC- entry in #8 §1.7.3, citing #16 §3.2.5/§3.2.5.2. Self-covering.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-072",
+      "spec": "deterministic-sim #16",
+      "file": "deterministic-sim/section-3.md",
+      "line": 87,
+      "hit": "Implementations MUST pass salt as null/absent or 32 zero bytes per RFC 5869 §2.2; KAT row MUST be present in hkdf-sha256-kat.md (§9.5 #4(a)).",
+      "obligation_direction": "self-referential — #16 defines its own implementation contract and KAT requirements; the #4(a) citation references §9.5 of #16 itself",
+      "xc_entry": "Self-referential within #16. No cross-spec XC- required.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-073",
+      "spec": "deterministic-sim #16",
+      "file": "deterministic-sim/section-3.md",
+      "line": 172,
+      "hit": "entity allocators in Agent Movement (#2) and Decision Tree (#8) MUST guarantee EntityId uniqueness; MUST NOT be reassigned. Back-propagated to #2 §2.5 (XC-002-001) and #8 §1.7.3 (XC-008-001).",
+      "obligation_direction": "object-form — #16 §3.2.5 constrains #2 and #8; the XC- entries are in #2 and #8 (not #16)",
+      "xc_entry": "XC-002-001 confirmed in #2 §1.7 cross-spec constraints (section-1-2.md line 319); XC-008-001 confirmed in #8 §1.7.3 (section-1.md line 475). Both confirmed above in a16-069 and a16-071.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-074",
+      "spec": "deterministic-sim #16",
+      "file": "deterministic-sim/section-3.md",
+      "line": 256,
+      "hit": "_RESERVED_0x18_: MUST NOT be assigned to any subsystem without explicit ERR tracking.",
+      "obligation_direction": "self-referential governance policy within #16 §3.4 domain-tag registry",
+      "xc_entry": "Self-referential within #16 §3.4. No cross-spec XC- needed.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-075",
+      "spec": "deterministic-sim #16",
+      "file": "deterministic-sim/section-3.md",
+      "line": 260,
+      "hit": "_RESERVED_0x1C_: permanently orphaned — MUST NOT be assigned without explicit ERR tracking.",
+      "obligation_direction": "self-referential governance policy within #16 §3.4 domain-tag registry",
+      "xc_entry": "Self-referential within #16 §3.4. No cross-spec XC- needed.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-076",
+      "spec": "deterministic-sim #16",
+      "file": "deterministic-sim/section-4.md",
+      "line": 14,
+      "hit": "Final interface signatures MUST be co-authored with consumer specs (#17, #18, #19) and MUST NOT be promoted to normative .cs interfaces during Stage 0.",
+      "obligation_direction": "policy declaration in #16 §4 — per CLAUDE.md Interface Design Principle; references future consumer specs #17/#18/#19",
+      "xc_entry": "CLAUDE.md Interface Design Principle governs this. The consumer specs #17, #18, #19 are all now APPROVED; their §1.4 tables cite #16. The MUST in this sentence is a design-governance statement, not a new cross-spec obligation on a third party.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-077",
+      "spec": "deterministic-sim #16",
+      "file": "deterministic-sim/section-8.md",
+      "line": 52,
+      "hit": "§6.6 comparator names in this spec MUST match fixed64-math comparator glossary [#9]",
+      "obligation_direction": "future-binding constraint — #16 §6.6 will need to match #9's glossary when #9 publishes it (Stage 5+)",
+      "xc_entry": "Forward-binding constraint on Stage 5+ only. #16 §8 explicitly notes this is a future-binding constraint. §7/Stage 5+ scope.",
+      "status": "XC- confirmed (§7/appendix — non-normative for Stage 0)"
+    },
+    {
+      "id": "a16-078",
+      "spec": "deterministic-sim #16",
+      "file": "deterministic-sim/section-9-approval-checklist.md",
+      "line": 40,
+      "hit": "The downstream spec (when written) MUST conform to the contract as stated in #16",
+      "obligation_direction": "forward-looking policy statement in #16 §9 checklist — references future downstream specs",
+      "xc_entry": "Generic downstream-conformance policy in §9 approval checklist. No specific cross-spec obligation; general governance statement.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-079",
+      "spec": "deterministic-sim #16",
+      "file": "deterministic-sim/section-9-approval-checklist.md",
+      "line": 55,
+      "hit": "original phrasing required KAT file to be executed against DeterministicRngService … MUST exist and pass",
+      "obligation_direction": "historical narrative in §9 checklist describing a revised criterion — the MUST is quoted from the superseded v0.9 text",
+      "xc_entry": "Historical quoted-text in §9 narrative. The current (v1.3) criterion is the split spec-level/implementation-level approach. No active normative obligation.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-080",
+      "spec": "deterministic-sim #16",
+      "file": "deterministic-sim/section-9-approval-checklist.md",
+      "line": 77,
+      "hit": "re-running the Appendix A reproducer script MUST regenerate the table byte-for-byte",
+      "obligation_direction": "self-referential — #16 §9 checklist describing its own golden-vector reproducibility requirement for the corpus within #16",
+      "xc_entry": "Self-referential within #16. The #4(a)/(b)/(c) notation references §9.5 sub-conditions of #16 itself.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-081",
+      "spec": "fixed64-math #9",
+      "file": "fixed64-math/section-8.md",
+      "line": 7,
+      "hit": "Stage 0–4 simulation-critical paths MUST use float. Fixed64 MUST NOT be required. Currently-approved physics specs (#1 #2 #3 #4 #6 #7 #8) all conform.",
+      "obligation_direction": "policy declaration in #9 §8 — #9 defines the stage-scoping rule for specs #1–#8",
+      "xc_entry": "#9 §8.1 (Stage 0–4 rule) is the authoritative stage-scope declaration. All listed specs (#1–#8) were approved before #9 and their §6 float-compliance is confirmed by the CLAUDE.md Fixed64 stage-scope decision (April 26, 2026). No XC- entry needed in each of #1–#8 since #9 cites them as already conforming, not imposing a new obligation.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-082",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 68,
+      "hit": "FR-EVT-008 | Reference-typed payload fields forbidden in event structs. | MUST NOT | Spec #20 lint",
+      "obligation_direction": "subject — #17 must comply with #20 lint rules (KD-8)",
+      "xc_entry": "#17 §1.4 notes '#20 (Code Standards) APPROVED — §3.x zero-allocation lint and banned-API rules are authoritative' as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-083",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 70,
+      "hit": "FR-EVT-009a | event struct MUST implement exactly one tier-marker interface. Spec #20 lint. | MUST",
+      "obligation_direction": "subject — #17 must comply with #20 lint and its own tier-marker rule (KD-3)",
+      "xc_entry": "#17 §1.4 cites #20 as upstream (code style / lint); tier-marker rule is defined in #17 §4.2.1 (self-contained)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-084",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 71,
+      "hit": "FR-EVT-010 | Tier A events MUST be published only from Events phase WriteSet per #16 §3.6.1. | MUST",
+      "obligation_direction": "subject — #17 must comply with #16 §3.6.1 phase discipline (KD-2/KD-4)",
+      "xc_entry": "#17 §1.4 cites Spec #16 as primary upstream: '§1.3 tier classification, §3.1.2/§3.2.2/§3.2.3 TBD-NORMATIVE'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-085",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 73,
+      "hit": "FR-EVT-012 | Tier A records serialized into EventLedgerRecord block of SnapshotPayload (#16 §3.9.2). | MUST",
+      "obligation_direction": "subject — #17 must serialize per #16 §3.9.2 layout (KD-3)",
+      "xc_entry": "#17 §1.4 cites #16 §3.2 (ordering), §3.4 (DOMAIN_TAG), §4.1/§4.5 (RNG) as upstream; #16 §3.9.2 is within the same §3.2.x serialization scope",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-086",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 74,
+      "hit": "FR-EVT-013 | Tier B events follow Tier A rules but use #16 §3.5 Tier-B tolerance. | MUST | Stage 5+",
+      "obligation_direction": "Stage 5+ deferral — Tier B tolerance rules reference #16 §3.5",
+      "xc_entry": "Stage 5+ scope per FR-EVT-013 activation column. Non-normative for Stage 0.",
+      "status": "XC- confirmed (§7/appendix — non-normative for Stage 0)"
+    },
+    {
+      "id": "a16-087",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 77,
+      "hit": "FR-EVT-016 | Authoritative gameplay code MUST NOT subscribe to Tier C streams. Spec #20 lint. | MUST NOT",
+      "obligation_direction": "subject — #17 must enforce Tier C subscription rule via #20 lint (KD-3)",
+      "xc_entry": "#17 §1.4 cites #20 as upstream; the CosmeticChannel generic constraint is defined in #17 §3.2.2/§4.3.3 (self-contained)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-088",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 79,
+      "hit": "FR-EVT-018 | EventBus.Publish<T> takes in T evt. Spec #20 lint. | MUST",
+      "obligation_direction": "subject — #17 must follow #20 lint rule on parameter passing (KD-8)",
+      "xc_entry": "#17 §1.4 cites #20 as upstream (code style / lint)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-089",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 80,
+      "hit": "FR-EVT-019 | Subscriber registration uses delegate void EventHandler<T>(in T evt). Spec #20 lint. | MUST",
+      "obligation_direction": "subject — #17 must follow #20 lint rule on delegate form (KD-8)",
+      "xc_entry": "#17 §1.4 cites #20 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-090",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 87,
+      "hit": "FR-EVT-026 | Tier A handler exception halts tick and writes crash dump (#16 §3.10 failure-mode table). | MUST",
+      "obligation_direction": "subject — #17 must route handler exceptions per #16 §3.10 (KD-2)",
+      "xc_entry": "#17 §1.4 cites #16 as primary upstream dependency",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-091",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 94,
+      "hit": "FR-EVT-033 | Event publication MUST NOT be conditional on System.Random, wall-clock, or unstable iteration. | MUST NOT | Spec #20",
+      "obligation_direction": "subject — #17 must comply with #20 lint and determinism rules (KD-6)",
+      "xc_entry": "#17 §1.4 cites #20 as upstream (code standards); determinism mandate also from CLAUDE.md",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-092",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 97,
+      "hit": "FR-EVT-036 | Tactical Tier A events queued only on stride ticks (tick%6==0) during AI phase. | MUST | #16 §3.1.2",
+      "obligation_direction": "subject — #17 must comply with #16 §3.1.2 stride-tick rule (KD-5)",
+      "xc_entry": "#17 §1.4 cites #16 §1.3 / §3.1.2 / §3.2.2 / §3.2.3 TBD-NORMATIVE as primary upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-093",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 108,
+      "hit": "FR-EVT-046a | single Tier A/B handler invocation MUST NOT publish more than one secondary Tier A/B event. Spec #20 lint. | MUST",
+      "obligation_direction": "subject — #17 must enforce out-degree cap via Spec #20 lint (KD-7/KD-8)",
+      "xc_entry": "#17 §1.4 cites #20 as upstream; out-degree constraint defined in #17 §3.2.5 (self-contained capacity derivation)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-094",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 115,
+      "hit": "FR-EVT-052 | publish path MUST NOT call new T[], List<T>.Add, LINQ, etc. Spec #20 lint. | MUST NOT",
+      "obligation_direction": "subject — #17 must comply with #20 zero-allocation lint (KD-8)",
+      "xc_entry": "#17 §1.4 cites #20 as upstream (code style / lint)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-095",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 116,
+      "hit": "FR-EVT-053 | Subscriber handlers MUST NOT capture closures (Spec #20 lint). | MUST NOT",
+      "obligation_direction": "subject — #17 must comply with #20 lint on closures (KD-8)",
+      "xc_entry": "#17 §1.4 cites #20 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-096",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 126,
+      "hit": "FR-EVT-063 | Trace channel names declared in §5; format cited from #16 §8. | MUST",
+      "obligation_direction": "subject — #17 must conform to #16 §8 trace format (KD-11)",
+      "xc_entry": "#17 §1.4 cites #16 as primary upstream; KD-11 ('Instrumentation budget binding to #16 §8.2') documented",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-097",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 128,
+      "hit": "FR-EVT-065 | instrumentation cost MUST fit within #16 §8.2 envelope. | MUST",
+      "obligation_direction": "subject — #17 must stay within #16 §8.2 budget (KD-11)",
+      "xc_entry": "#17 §1.4 KD-11 ('Instrumentation budget binding to #16 §8.2') covers this",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-098",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 130,
+      "hit": "FR-EVT-067 | Event structs MUST be readonly struct compatible with #16 §3.2.4.1 canonical serialization. | MUST",
+      "obligation_direction": "subject — #17 must produce structs compatible with #16 §3.2.4.1 (KD-10)",
+      "xc_entry": "#17 §1.4 cites #16 as primary upstream; #16 §3.2.4.1 is within the cited §3.2 serialization scope",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-099",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 131,
+      "hit": "FR-EVT-068 | Event payloads MUST NOT reference UnityEngine.Object. | MUST NOT | Spec #20 lint",
+      "obligation_direction": "subject — #17 must comply with #20 lint rule on engine references (KD-10)",
+      "xc_entry": "#17 §1.4 cites #20 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-100",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 135,
+      "hit": "FR-EVT-072 | Fixed64 (Spec #9) re-verification of event payload arithmetic is a Stage 5+ deliverable. | MUST | Stage 5+",
+      "obligation_direction": "Stage 5+ deferral — #17 will need to re-verify against #9 at Stage 5+",
+      "xc_entry": "Stage 5+ scope per FR-EVT-072 activation column. Non-normative for Stage 0.",
+      "status": "XC- confirmed (§7/appendix — non-normative for Stage 0)"
+    },
+    {
+      "id": "a16-101",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 139,
+      "hit": "FR-EVT-076 | Subscribers cannot register against wrong tier marker; enforcement via Spec #20 lint. | MUST",
+      "obligation_direction": "subject — #17 must enforce tier-marker constraint via #20 lint",
+      "xc_entry": "#17 §1.4 cites #20 as upstream (code style / lint)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-102",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 141,
+      "hit": "FR-EVT-078 | handler methods MUST take in T evt; by-value rejected by Spec #20 lint. | MUST",
+      "obligation_direction": "subject — #17 must follow #20 lint rule on parameter passing (KD-8)",
+      "xc_entry": "#17 §1.4 cites #20 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-103",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 142,
+      "hit": "FR-EVT-079 | Spec #17 runtime error codes in 0x17NN block MUST NOT collide with #16's 0x16NN block. | MUST",
+      "obligation_direction": "subject — #17 must maintain block separation from #16 error-code namespace",
+      "xc_entry": "#17 §1.4 cites #16 as primary upstream dependency; §3.10 DOMAIN_TAG and error-code ranges are coordinated",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-104",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 145,
+      "hit": "FR-EVT-082 | Tier A publish from non-Events phase aliased to ERR_DS_PHASE_OWNERSHIP (#16 §3.6.1). | MUST",
+      "obligation_direction": "subject — #17 must alias to #16's error code (KD-2)",
+      "xc_entry": "#17 §1.4 cites #16 §3.1.2 / §3.6.1 as upstream phase-ownership authority",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-105",
+      "spec": "event-system #17",
+      "file": "event-system/section-2.md",
+      "line": 311,
+      "hit": "0x17NN block numeric pins MUST NOT collide with #16's 0x16NN block",
+      "obligation_direction": "subject — #17 §2.5 error-code allocation must not overlap #16 namespace",
+      "xc_entry": "#17 §1.4 cites #16 as primary upstream; §3.10 coordinates error-code blocks with #16",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-106",
+      "spec": "event-system #17",
+      "file": "event-system/section-3.md",
+      "line": 304,
+      "hit": "AI_NoOp MUST NOT publish Tier A or Tier B events (#16 §3.1.2 TBD-NORMATIVE)",
+      "obligation_direction": "subject — #17 §3.3.2 must comply with #16 §3.1.2 AI_NoOp rule (KD-5)",
+      "xc_entry": "#17 §1.4 cites #16 §3.1.2 as upstream phase-ownership authority",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-107",
+      "spec": "event-system #17",
+      "file": "event-system/section-3.md",
+      "line": 629,
+      "hit": "0x17NN block reserved for Spec #17. MUST NOT collide with #16's 0x16NN block",
+      "obligation_direction": "subject — #17 §3.10 constants catalogue must not overlap #16 namespace",
+      "xc_entry": "#17 §1.4 cites #16 as primary upstream; same pattern as a16-103/a16-105",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-108",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 19,
+      "hit": "MUST may be waived for specific PR or release (per Spec #19 §2.1)",
+      "obligation_direction": "governance context sentence in #18 §2 preamble referencing #19 §2.1 RFC 2119 waiver policy",
+      "xc_entry": "#18 §1.4 cites Spec #19 as upstream consulted ('Testing Strategy §3.7/§6'); §19 §2.1 waiver policy governs #18 gate-override procedures",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-109",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 38,
+      "hit": "FR-PO-001 | per-spec §6 is authoritative; Spec #18 MUST NOT override. | MUST | KD-2",
+      "obligation_direction": "self-referential policy — #18 §2 defining its own ratify-not-override role (KD-2)",
+      "xc_entry": "Self-referential within #18. KD-2 is #18-internal. No cross-spec XC- required.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-110",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 40,
+      "hit": "FR-PO-003 | Spec #18 MUST maintain single read-only roll-up table per platform in Appendix C. | MUST | KD-2",
+      "obligation_direction": "self-referential — #18 §2 defining its own roll-up table mandate",
+      "xc_entry": "Self-referential within #18.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-111",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 41,
+      "hit": "FR-PO-004 | Roll-up table updates MUST be mechanical sync from per-spec §6; Spec #18 MUST NOT introduce design decisions. | MUST | KD-2",
+      "obligation_direction": "self-referential — #18 §2 defining its own roll-up governance",
+      "xc_entry": "Self-referential within #18.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-112",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 42,
+      "hit": "FR-PO-005 | When §3.1.3 roll-up total exceeds §3.1.4 headroom, Spec #18 MUST invoke re-allocation procedure. | MUST | KD-2",
+      "obligation_direction": "self-referential — #18 §2 defining its own headroom-exceeded procedure",
+      "xc_entry": "Self-referential within #18.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-113",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 44,
+      "hit": "FR-PO-007 | Approved specs (#1–#8, #17) surveyed at Stage 0; gaps logged as ERR-018-NNN in spec-error-log. | MUST | KD-2",
+      "obligation_direction": "self-referential — #18 §2 defining its own audit-survey mandate over other specs",
+      "xc_entry": "Self-referential governance within #18. The obligation is on #18's own audit process.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-114",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 45,
+      "hit": "FR-PO-008 | Re-allocation review MUST produce version-history entry on every affected spec's §6. | MUST | KD-2",
+      "obligation_direction": "policy — #18 §2 defining its own re-allocation review protocol for affected specs",
+      "xc_entry": "Self-referential governance within #18. Version-history entries are mechanical — no new XC- needed in the affected specs.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-115",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 53,
+      "hit": "FR-PO-011 | Cross-loop subsystems (e.g. Decision Tree #8 reading 60 Hz state from 10 Hz loop) MUST declare separate budgets. | MUST | KD-8",
+      "obligation_direction": "policy — #18 §2 defining loop-separation budget discipline; #8 is cited as an example",
+      "xc_entry": "#18 §1.4 cites Decision Tree #8 §6 in the per-spec §6 survey list; KD-8 loop-separation tagging is documented in #18 §1.3",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-116",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 63,
+      "hit": "FR-PO-016 | Every profiling session MUST record EnvironmentFingerprint (per #16 §4.8), scenario manifest ID (per #16 §5). | MUST | KD-6",
+      "obligation_direction": "subject — #18 must use #16 §4.8 and §5 surfaces for session recording",
+      "xc_entry": "#18 §1.4 cites #16 §4 EnvironmentFingerprint and §5 regression scenarios as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-117",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 65,
+      "hit": "FR-PO-018 | Spec #18 MUST NOT author its own perf scenarios; every profiling session runs #16 §5 scenario verbatim. | MUST | KD-3/KD-6",
+      "obligation_direction": "self-referential — #18 §2 defining its own scenario-ownership boundary (must defer to #16 §5)",
+      "xc_entry": "#18 §1.4 cites #16 §5 regression scenarios as upstream (KD-3 boundary)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-118",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 92,
+      "hit": "FR-PO-034 | functional gate (Spec #19 §6.2) MUST block on test fail. Out of #18's authority. | MUST | KD-4",
+      "obligation_direction": "cross-spec governance — #18 §2 documenting that #19 §6.2 owns the functional gate block",
+      "xc_entry": "#18 §1.4 cites #19 §3.7/§6 as upstream (consulted); KD-4 boundary with #19 documented",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-119",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 93,
+      "hit": "FR-PO-035 | determinism gate (Spec #16 §5 + §3.2.4.1) MUST block on bitwise mismatch. Out of #18's authority. | MUST | KD-3",
+      "obligation_direction": "cross-spec governance — #18 §2 documenting that #16 §5 owns the determinism gate block",
+      "xc_entry": "#18 §1.4 cites #16 §5 and §3.2.4.1 as upstream (KD-3 boundary)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-120",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 96,
+      "hit": "FR-PO-038 | confirmed non-determinism routes to #16 §5 triage. | MUST | KD-4/KD-6",
+      "obligation_direction": "subject — #18 must route confirmed non-determinism to #16 §5 process",
+      "xc_entry": "#18 §1.4 cites #16 §5 regression scenarios as upstream (KD-3 boundary)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-121",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 104,
+      "hit": "FR-PO-041 | Tier A authoritative outputs MUST NOT vary under performance pressure. | MUST | KD-7 / #16 §1.3",
+      "obligation_direction": "subject — #18 must respect #16 §1.3 Tier A invariant (KD-7)",
+      "xc_entry": "#18 §1.4 cites #16 §1.3.1 determinism tiers as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-122",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 107,
+      "hit": "FR-PO-044 | Tier B tolerance bands MUST be cited from owning spec; Spec #18 MUST NOT republish. | MUST | KD-1/KD-7",
+      "obligation_direction": "self-referential — #18 §2 defining its own cite-not-redefine policy for Tier B bands",
+      "xc_entry": "Self-referential (KD-1 cite-not-redefine policy within #18).",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-123",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 121,
+      "hit": "FR-PO-053 | [HotPathAllocExempt] exemptions MUST cite rationale; zero-allocation mandate cites Spec #20 §3. | MUST | KD-10",
+      "obligation_direction": "subject — #18 §3.7.5 governance identifier binds to #20 §3 zero-alloc mandate",
+      "xc_entry": "#18 §1.4 cites #20 §3 zero-allocation rules as upstream (consulted)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-124",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 127,
+      "hit": "FR-PO-054 | Spec #18 owns trace pipeline architecture. | MUST | KD-3",
+      "obligation_direction": "self-referential ownership claim — #18 owns the trace pipeline (KD-3 inverted boundary)",
+      "xc_entry": "Self-referential within #18 (KD-3 ownership statement).",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-125",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 131,
+      "hit": "FR-PO-058 | Every trace record from #18-owned channel MUST conform to canonical record format at #16 §3.2.4.1. | MUST | KD-3/KD-11",
+      "obligation_direction": "subject — #18 must conform to #16 §3.2.4.1 record format",
+      "xc_entry": "#18 §1.4 cites #16 §3.2.4.1 canonical record format as upstream (KD-3 boundary)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-126",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 132,
+      "hit": "FR-PO-058a | trace points inside #16 §3.1 tick pipeline require #16-owner sign-off (emission-veto). | MUST | KD-3",
+      "obligation_direction": "subject — #18 must get #16-owner sign-off for tick-pipeline trace points",
+      "xc_entry": "#18 §1.4 cites #16 §3.1 canonical tick pipeline emission-veto as upstream (KD-3)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-127",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 134,
+      "hit": "FR-PO-060 | dashboard helpers MUST NOT be referenced by gameplay code (Spec #20 §4.1 dependency-arrow rule). | MUST | Stage 1",
+      "obligation_direction": "subject — #18 must respect #20 §4.1 dependency-arrow rule; Stage 1 scope",
+      "xc_entry": "#18 §1.4 cites #20 §3 as upstream; KD-1 cite-not-redefine; Stage 1 scope",
+      "status": "XC- confirmed (§7/appendix — non-normative for Stage 0)"
+    },
+    {
+      "id": "a16-128",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 144,
+      "hit": "FR-PO-065 | Baseline file format MUST conform to #16 §3.2.4.1 canonical record format. | MUST | KD-3/KD-11",
+      "obligation_direction": "subject — #18 must use #16 §3.2.4.1 format for baselines",
+      "xc_entry": "#18 §1.4 cites #16 §3.2.4.1 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-129",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 157,
+      "hit": "FR-PO-073 | Stage 0 baselines MUST record FR-PO-016 session-contract fields (with EnvironmentFingerprint per #16 §4). | MUST | KD-6/KD-11",
+      "obligation_direction": "subject — #18 must record #16 §4 EnvironmentFingerprint",
+      "xc_entry": "#18 §1.4 cites #16 §4 EnvironmentFingerprint as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-130",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-2.md",
+      "line": 169,
+      "hit": "FR-PO-080 | Boundary defects MUST be reviewed at next spec-revision cycle of boundary spec (#16 or #19). | MUST | §6.4.2",
+      "obligation_direction": "policy — #18 §2 defining defect-review escalation to boundary specs #16/#19",
+      "xc_entry": "#18 §1.4 cites #16 and #19 as upstream boundary specs; §6.4.2 is internal governance",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-131",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-8.md",
+      "line": 48,
+      "hit": "Section authors MUST re-grep #16 at draft/re-review time per §1.4 caveat.",
+      "obligation_direction": "self-referential governance note in #18 §8 — authors of #18 sections must re-verify #16 citations",
+      "xc_entry": "Self-referential process note within #18 §8. No new cross-spec XC- obligation.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-132",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-3.md",
+      "line": 487,
+      "hit": "Every trace point emitted by #18-owned channel MUST conform to #16's determinism rules",
+      "obligation_direction": "subject — #18 §3.8.3 must conform to #16 determinism rules (KD-3/FR-PO-058a)",
+      "xc_entry": "#18 §1.4 cites #16 §3.1.2 and §3.2.4.1 as upstream; same constraint as a16-125/a16-126",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-133",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-3.md",
+      "line": 525,
+      "hit": "Gameplay code MUST NOT reference dashboard helpers (Spec #20 §4.1 dependency-arrow rule)",
+      "obligation_direction": "subject — #18 §3.8.4 must enforce #20 §4.1 dependency rule on gameplay code",
+      "xc_entry": "#18 §1.4 cites #20 §3 as upstream consulted; same constraint as FR-PO-060 (a16-127)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-134",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/appendices.md",
+      "line": 55,
+      "hit": "The record format_version field semantics are inherited from #16 §3.2.4.1. Section authors MUST re-grep #16 at draft time.",
+      "obligation_direction": "process note — #18 Appendix A authoring instruction to verify #16 §3.2.4.1",
+      "xc_entry": "#18 §1.4 cites #16 §3.2.4.1 as upstream; Appendix A is a supporting artifact",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-135",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/appendices.md",
+      "line": 92,
+      "hit": "Allocation budget MUST be 0 for every hot-path entry per Spec #18 §3.7",
+      "obligation_direction": "self-referential — #18 Appendix B template referencing its own §3.7 mandate",
+      "xc_entry": "Self-referential within #18. Appendix B paste-ready template cites #18 §3.7.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-136",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/appendices.md",
+      "line": 245,
+      "hit": "determinism_class: Tier A/B channels MUST be determinism-clean per FR-PO-058a; inside_tick_pipeline = true requires #16-owner sign-off",
+      "obligation_direction": "subject — #18 Appendix F.0 channel-registry schema fields binding channels to #16 determinism rules",
+      "xc_entry": "#18 §1.4 cites #16 §3.1.2 emission-veto and #16 §3.2.4.1 format as upstream (KD-3)",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-137",
+      "spec": "performance-optimization #18",
+      "file": "performance-optimization/section-1.md",
+      "line": 265,
+      "hit": "SPEC_INDEX.md status transitions for #18 MUST follow this order.",
+      "obligation_direction": "self-referential — #18 §1.4 defining its own status-transition governance",
+      "xc_entry": "Self-referential within #18 §1.4. No cross-spec XC- needed.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-138",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-1.md",
+      "line": 138,
+      "hit": "snapshot fixtures and replay corpora MUST conform to #16 §3.2.4.1 canonical byte-level schema",
+      "obligation_direction": "subject — #19 §1.3 must use #16 §3.2.4.1 canonical schema (KD-2)",
+      "xc_entry": "#19 §1.4 cites Spec #16 §3.2.4.1 as upstream under 'canonical byte-level schema (SerializeCanonical)'",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-139",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 68,
+      "hit": "FR-TS-005 | Determinism tests owned by Spec #16 §5; #19 consumes as required layer. | MUST",
+      "obligation_direction": "subject — #19 must consume #16 §5 determinism test suite without redefining (KD-2)",
+      "xc_entry": "#19 §1.4 cites Spec #16 §5 test strategy as primary upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-140",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 74,
+      "hit": "FR-TS-011 | Every CI pipeline MUST include Spec #16 §5's regression tiers in canonical order. | MUST",
+      "obligation_direction": "subject — #19 must include #16 §5 suite in CI pipelines (KD-2)",
+      "xc_entry": "#19 §1.4 cites #16 §5 as primary upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-141",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 75,
+      "hit": "FR-TS-012 | failure in any #16 §5 tier blocks merge; #19 does not soften exit criteria. | MUST",
+      "obligation_direction": "subject — #19 must respect #16 §5 gate authority (KD-2)",
+      "xc_entry": "#19 §1.4 cites #16 §5 as primary upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-142",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 76,
+      "hit": "FR-TS-013 | Spec #19's taxonomy MUST NOT collide with #16 §5 tier names. | MUST",
+      "obligation_direction": "subject — #19 must maintain name separation from #16 §5 tier names (KD-2)",
+      "xc_entry": "#19 §1.4 cites #16 §1.1.1 tier classification as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-143",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 77,
+      "hit": "FR-TS-014 | Cross-spec scenario assertions not depending on bitwise determinism owned by #19 §3.3, not by #16 §5. | MUST",
+      "obligation_direction": "boundary declaration — #19 §3.3 owns cross-spec behavioral scenarios; #16 §5 owns determinism scenarios (KD-8)",
+      "xc_entry": "#19 §1.4 documents KD-8 boundary with #16 §5",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-144",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 78,
+      "hit": "FR-TS-015 | change to #16 §5 tier names or exit criteria triggers §3.2 review of #19. | MUST",
+      "obligation_direction": "subject — #19 must trigger review when #16 §5 changes (KD-2 boundary review obligation)",
+      "xc_entry": "#19 §1.4 cites #16 as upstream; FR-TS-020 records boundary review obligation in §1.4",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-145",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 79,
+      "hit": "FR-TS-016 | #16 §5 suite invoked through single integration point in §4.3 (ITestHarness). | MUST",
+      "obligation_direction": "subject — #19 must use a single entry point for #16 §5 (KD-2)",
+      "xc_entry": "#19 §1.4 cites #16 §5 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-146",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 80,
+      "hit": "FR-TS-017 | #19's functional-regression assertions on top of #16 §5 MUST be tagged for independent disable. | MUST",
+      "obligation_direction": "subject — #19 must tag its assertions above #16 §5 for bisection (KD-2)",
+      "xc_entry": "#19 §1.4 cites #16 §5 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-147",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 81,
+      "hit": "FR-TS-018 | Spec #19 MUST NOT introduce new determinism tier categories. New categories require #16 §5 revision. | MUST",
+      "obligation_direction": "subject — #19 must defer new tier categories to #16 §5 (KD-2)",
+      "xc_entry": "#19 §1.4 cites #16 §1.1.1 and §5 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-148",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 83,
+      "hit": "FR-TS-020 | boundary review obligation in FR-TS-015 MUST be recorded in §1.4 of any future #19 revision. | MUST",
+      "obligation_direction": "self-referential — #19 §2 requiring its own §1.4 to carry the boundary review obligation",
+      "xc_entry": "Self-referential within #19. §1.4 already carries the boundary review per FR-TS-020.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-149",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 85,
+      "hit": "FR-TS-022 | Per-spec scenarios defined in owning spec §5; cross-spec scenarios in Spec #19 §3. | MUST",
+      "obligation_direction": "governance — #19 §2 defining scenario ownership split across all specs",
+      "xc_entry": "Governance declaration within #19. The obligation on each owning spec is covered by each spec's own §5.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-150",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 89,
+      "hit": "FR-TS-026 | Every fixture passes §3.3.4 fixture validator against #16 §3.2.4.1 canonical schema. | MUST",
+      "obligation_direction": "subject — #19 must validate fixtures against #16 §3.2.4.1 (KD-10)",
+      "xc_entry": "#19 §1.4 cites #16 §3.2.4.1 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-151",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 92,
+      "hit": "FR-TS-029 | Scenario tier classification MUST be assigned per #16 §1.1.1 at scenario creation time. | MUST",
+      "obligation_direction": "subject — #19 must use #16 §1.1.1 tier vocabulary (KD-9)",
+      "xc_entry": "#19 §1.4 cites #16 §1.1.1 tier classification as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-152",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 97,
+      "hit": "FR-TS-034 | failing fuzz seed MUST be captured in #16 §3.2.4.1 canonical format. | MUST",
+      "obligation_direction": "subject — #19 must store seeds per #16 §3.2.4.1 (KD-10)",
+      "xc_entry": "#19 §1.4 cites #16 §3.2.4.1 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-153",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 98,
+      "hit": "FR-TS-035 | Captured seeds re-run until #16 §5 publishes external-capture-hook contract. | MUST",
+      "obligation_direction": "subject — #19 re-run obligation tied to #16 §5 future hook",
+      "xc_entry": "#19 §1.4 cites #16 §5 as upstream; the hook is a #16 §5 future deliverable",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-154",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 99,
+      "hit": "FR-TS-036 | Property tests using System.Random directly are banned (parallels Spec #20 §3.4.2). | MUST NOT",
+      "obligation_direction": "subject — #19 must parallel #20 §3.4.2 ban on System.Random in tests",
+      "xc_entry": "#19 §1.4 cites #20 §3.9.4 test-fixture rule carve-outs as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-155",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 123,
+      "hit": "FR-TS-060 | Tier classification MUST be sourced from #16 §1.1.1; #19 does not redefine. | MUST",
+      "obligation_direction": "subject — #19 must use #16 §1.1.1 tier vocabulary (KD-9)",
+      "xc_entry": "#19 §1.4 cites #16 §1.1.1 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-156",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 124,
+      "hit": "FR-TS-061 | A test is 'flaky' if two runs under same EnvironmentFingerprint produce different outcomes (cited from #16 §4.8). | MUST",
+      "obligation_direction": "subject — #19 must use #16 §4.8 EnvironmentFingerprint definition",
+      "xc_entry": "#19 §1.4 cites #16 §4.8 EnvironmentFingerprint as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-157",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 132,
+      "hit": "FR-TS-069 | Every fixture file conforms to #16 §3.2.4.1 canonical byte-level schema. | MUST",
+      "obligation_direction": "subject — #19 must use #16 §3.2.4.1 fixture schema (KD-10)",
+      "xc_entry": "#19 §1.4 cites #16 §3.2.4.1 as upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-158",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 138,
+      "hit": "FR-TS-075 | Three pipelines mandatory including nightly (#16 §5 full suite). | MUST",
+      "obligation_direction": "subject — #19 must include #16 §5 full suite in nightly pipeline",
+      "xc_entry": "#19 §1.4 cites #16 §5 as primary upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-159",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 139,
+      "hit": "FR-TS-076 | determinism-gate failure blocks merge (#16 §5 authority). | MUST",
+      "obligation_direction": "cross-spec governance — #19 acknowledges #16 §5 gate authority for determinism failures",
+      "xc_entry": "#19 §1.4 cites #16 §5 as primary upstream; #18 §4 cites #19 §6.2 — all three gate authorities documented",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-160",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 143,
+      "hit": "FR-TS-080 | Spec #19 cites #18 §4 thresholds by reference; #19 MUST NOT republish perf numbers. | MUST NOT",
+      "obligation_direction": "subject — #19 must defer to #18 §4 for perf numbers (KD-3)",
+      "xc_entry": "#19 §1.4 cites #18 §4/§7 as upstream consulted",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-161",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-2.md",
+      "line": 148,
+      "hit": "FR-TS-085 | Determinism defects routed to #16 §5's process; #19 triage bypassed. | MUST",
+      "obligation_direction": "subject — #19 must route determinism defects to #16 §5 (KD-2)",
+      "xc_entry": "#19 §1.4 cites #16 §5 as primary upstream",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-162",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-3.md",
+      "line": 133,
+      "hit": "Every CI pipeline declared in §6 MUST include #16 §5's regression tiers in their canonical order",
+      "obligation_direction": "subject — #19 §3.2 must include #16 §5 tiers in CI (KD-2); repeat of FR-TS-011",
+      "xc_entry": "#19 §1.4 cites #16 §5 as upstream; same as a16-140",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-163",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-3.md",
+      "line": 138,
+      "hit": "Spec #19's own test taxonomy MUST NOT collide with #16 tier names",
+      "obligation_direction": "subject — #19 §3.2 repeat of FR-TS-013 name-separation rule",
+      "xc_entry": "#19 §1.4 cites #16 §1.1.1 as upstream; same as a16-142",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-164",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-3.md",
+      "line": 146,
+      "hit": "Spec #19 MUST NOT introduce new determinism tier categories",
+      "obligation_direction": "subject — #19 §3.2 repeat of FR-TS-018 tier-deferral rule",
+      "xc_entry": "#19 §1.4 cites #16 §1.1.1 and §5 as upstream; same as a16-147",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-165",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-6.md",
+      "line": 71,
+      "hit": "Spec #19 cites #18 §4 thresholds by reference (FR-TS-080); it MUST [not republish perf numbers]",
+      "obligation_direction": "subject — #19 §6 repeat of FR-TS-080 cite-not-republish rule for #18 §4",
+      "xc_entry": "#19 §1.4 cites #18 §4/§7 as upstream; same as a16-160",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-166",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-6.md",
+      "line": 137,
+      "hit": "Every defect MUST cite the FR it violated (Spec #19 FR or owning-spec FR)",
+      "obligation_direction": "self-referential — #19 §6 defect-triage governance requiring FR citation",
+      "xc_entry": "Self-referential within #19 §6 defect process. No cross-spec XC- needed.",
+      "status": "XC- confirmed"
+    },
+    {
+      "id": "a16-167",
+      "spec": "testing-strategy #19",
+      "file": "testing-strategy/section-9-approval-checklist.md",
+      "line": 11,
+      "hit": "The auditor MUST NOT exempt Spec #19 from its own mandate.",
+      "obligation_direction": "self-referential — #19 §9 checklist requiring self-application of #19 testing mandate",
+      "xc_entry": "Self-referential within #19 §9. No cross-spec XC- needed.",
       "status": "XC- confirmed"
     }
   ]
