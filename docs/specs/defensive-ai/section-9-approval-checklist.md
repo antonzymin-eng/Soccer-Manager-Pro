@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 9: Approval Checklist
 
 **Created:** May 17, 2026
-**Last Updated:** May 18, 2026 (v0.3 — APPROVED: all preconditions resolved; lead-developer R-01..R-05 signed)
-**Version:** 0.3
+**Last Updated:** May 18, 2026 (v0.4 — Run 4 fix: §9.1 item 4 evidence updated to reflect all-[CROSS] after v0.3 APPROVED)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -25,7 +25,7 @@ Each item below is verifiable against the section files in the current
 | 1 | All 14 outline.md adversarial-review findings resolved | [x] | §9.4 finding-to-resolution map |
 | 2 | All 37 FRs (FR-DA-001..037) present and numbered | [x] | `section-2.md` §2.1 |
 | 3 | All 37 FRs trace to at least one test | [x] | `section-5.md` §5.8 traceability matrix |
-| 4 | All constants carry exactly one tag ([GT], [CROSS], [CROSS-PENDING]) | [x] | `section-6.md` §6.1 (26-entry catalogue: 22 [GT] + 4 [CROSS]/[CROSS-PENDING]) |
+| 4 | All constants carry exactly one tag ([GT], [CROSS], [CROSS-PENDING]) | [x] | `section-6.md` §6.1 (26-entry catalogue: 22 [GT] + 4 [CROSS]) — `DOMAIN_TAG_DEFENSIVE_AI` promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` at v0.3 APPROVED; zero `[CROSS-PENDING]` remain |
 | 5 | All [GT] constants have Appendix A derivation entries | [x] | `appendices.md` Appendix A (22 derivations) |
 | 6 | Stage-binding statement unambiguous: Stage 0 spec; Stage 1 runtime | [x] | `section-1.md` §1.8 |
 | 7 | Data structures defined with field-level typing (5 structs + 2 views) | [x] | `section-2.md` §2.2 (§2.2.1–§2.2.7) |
@@ -187,3 +187,4 @@ Items below do not gate `APPROVED` but must be completed at Stage 1:
 | 0.1 | May 17, 2026 | AI agent | Initial checklist. §9.1: 39 self-contained items — all [x] checked against actual v0.1 section files (no fabricated values). §9.2: 6 cross-spec sign-offs; 2 OPEN, 3 CONFIRMED, 1 DEFERRED. §9.3: 7 preconditions; 3 [x] done, 4 [ ] open (a, b, e, g). §9.4: all 14 outline.md findings mapped to resolutions. §9.5: R-01..R-05 sign-off lines. §9.6: 4 non-blocking post-approval follow-ups. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. M1: §9.1 item 4 evidence corrected "27-entry" → "26-entry catalogue: 22 [GT] + 4 [CROSS]/[CROSS-PENDING]"; §9.4 item 12 corrected "27-entry" → "26-entry". L2: §9.1 item 32 evidence corrected "13-entry" → "16-entry" (Appendix F has 16 entries per actual file count). |
 | 0.3 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | APPROVED. §9.2: ERR-014-001 RESOLVED (`MarkDirective?` in #8 §2.2.6 v1.1.3); ERR-014-004 RESOLVED (#16 §3.4 v1.0.5 allocates `0x1A`). §9.3: preconditions (a)(b)(e)(g) all DONE. R-01..R-05 signed May 18, 2026. |
+| 0.4 | May 18, 2026 | AI agent (claude/adversarial-specs-review-H5Oen) | Run 4 fix: §9.1 item 4 evidence updated — "4 [CROSS]/[CROSS-PENDING]" → "4 [CROSS]" (stale description from before ERR-014-004 closed; actual §6.1 has been all-[CROSS] since v0.3). Resolves FIND-13 from stress-test Tier A run 4. |
