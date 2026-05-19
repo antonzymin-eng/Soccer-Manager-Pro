@@ -1,7 +1,7 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** May 19, 2026 (v1.2 — adversarial review fix pass; 2H · 7M · 8L resolved)
+> **Last Updated:** May 19, 2026 (v1.3 — adversarial review fix pass; 2H · 5M · 4L resolved)
 > **Purpose:** Concrete coding rules for any AI agent or developer writing C# source code in this project. Covers file naming, constant catalogues, Unity project structure, and build/test commands. Cites Spec #20 (Code Standards & Style Guide) as the source for every convention here. Read the root `CLAUDE.md` first — this file supplements it, not replaces it.
 
 ---
@@ -37,6 +37,7 @@ src/
 │   ├── BallEventLogger.cs
 │   ├── SurfaceProperties.cs
 │   └── tests/
+│       ├── ball-physics-tests.asmdef  ← EditMode; references ball-physics.asmdef
 │       ├── BallPhysicsCoreTests.cs
 │       └── BallIntegrationTests.cs
 │
@@ -46,11 +47,13 @@ src/
 │   ├── AgentState.cs
 │   ├── AgentMovementSystem.cs
 │   └── tests/
+│       └── agent-movement-tests.asmdef  ← EditMode; references agent-movement.asmdef
 │
 ├── collision-system/                  ← Spec #3
 │   ├── collision-system.asmdef
 │   ├── CollisionSystemConstants.cs
 │   └── tests/
+│       └── collision-system-tests.asmdef  ← EditMode; references collision-system.asmdef
 │
 ├── first-touch/                       ← Spec #4
 ├── pass-mechanics/                    ← Spec #5
@@ -71,6 +74,7 @@ src/
 │   ├── TickOrchestrator.cs
 │   ├── SnapshotCodec.cs
 │   └── tests/
+│       └── deterministic-sim-tests.asmdef  ← EditMode; references deterministic-sim.asmdef
 │
 ├── event-system/                      ← Spec #17  (cross-cutting; referenced by all layers)
 │   ├── event-system.asmdef
@@ -80,6 +84,7 @@ src/
 │   ├── CosmeticChannel.cs
 │   ├── EventRegistry.cs
 │   └── tests/
+│       └── event-system-tests.asmdef  ← EditMode; references event-system.asmdef
 │
 ├── performance-optimization/          ← Spec #18  (owns trace pipeline; minimal game-loop code)
 ├── testing-strategy/                  ← Spec #19  (CI orchestration tooling; no game-loop code)
@@ -93,6 +98,12 @@ src/
 > in the tree for brevity. See each spec's `§4` (Architecture) file for the exact
 > `.asmdef` reference list. GUIDs are blocked on Unity project initialization (see
 > "WHAT IS NOT HERE YET").
+>
+> **Test assemblies:** Every `tests/` subfolder requires its own `.asmdef` with
+> `testPlatforms: [EditMode]` (or as specified per Spec #19 §7.5 D2) and a reference
+> to the parent spec's `.asmdef`. Test assemblies are excluded from production builds
+> via platform filtering. Only the expanded spec folders in the tree above show the
+> `.asmdef` entry; all `tests/` subfolders follow the same pattern.
 
 ### Assembly Layer Taxonomy
 
@@ -126,16 +137,16 @@ at runtime:
 **AI depends on Mechanics. Mechanics depends on Physics. Never the reverse.**
 
 ```
-project-constants  ←  referenced read-only by all assemblies
+project-constants  (read-only by all assemblies)
 
 Physics  ←  Mechanics  ←  AI  ←  UI
 ```
 
 `←` means "is referenced by" — `A ← B` means B depends on A (B imports from A).
 The AI assembly imports types from Mechanics, which imports types from Physics.
-A Physics assembly MUST NOT import from Mechanics or AI.
-Upward references (Physics→AI, Mechanics→AI, etc.) are prohibited by FR-CS-046 and
-enforced as build errors via `.asmdef` reference declarations.
+A Physics assembly MUST NOT import from Mechanics or AI; a Mechanics assembly MUST NOT
+import from AI. These prohibited import directions are enforced as build errors via
+`.asmdef` reference declarations (FR-CS-046).
 
 For upward event notification (e.g., a physics event consumed by AI), use a struct
 event on the event bus — no direct assembly reference (FR-CS-047).
@@ -266,7 +277,7 @@ Every constant lives in `<SpecName>Constants.cs`. No literals in formula or syst
 #region Fixed      // [FIXED]   → public const float BALL_RADIUS = 0.11f;
 #region Derived    // [DERIVED] → public static readonly float TerminalVelocity = …;
 #region Cross      // [CROSS]   → public static readonly float PhysicsTickHz = ProjectConstants.PHYSICS_TICK_HZ;
-#region GT         // [GT]      → public static readonly int MaxSubsteps = /* loader TBD — see note below */;
+#region GT         // [GT]      → public static readonly int MaxSubsteps = 8; // TODO: replace with config loader (Stage 1)
 #region EST        // [EST]     → public static readonly float LiftCoefficient = 0.35f; // TODO: validate
 ```
 
@@ -318,7 +329,7 @@ The 60 Hz physics/render path must produce **zero managed-memory allocations per
 - Struct-based events on the event bus (not `event Action<T>`)
 - `stackalloc` for transient buffers with statically bounded size
 - `ProfilerMarker.Auto()` on every system entry point (static readonly field — one-time alloc at startup)
-- **Dependency injection via constructor parameters** — pass dependencies into constructors; do not resolve them at runtime
+- **Dependency injection via constructor parameters** — see "Banned Architectural Patterns" below for the full rule and the four anti-patterns it replaces
 
 **Banned constructs on hot paths (FR-CS-027–034):**
 - `new` class objects or managed arrays
@@ -327,12 +338,12 @@ The 60 Hz physics/render path must produce **zero managed-memory allocations per
 - `params` array parameters
 - String formatting (`$"…"`, `string.Format`, `+` concatenation)
 - Closures capturing local variables
-- `foreach` over any type that does not expose a concrete struct `GetEnumerator()` at the call site — including `List<T>` or `Dictionary<K,V>` via an interface variable (the enumerator is boxed even though `Dictionary.Enumerator` is itself a struct); use arrays or `Span<T>` for hot-path iteration
+- `foreach` over any type that does not expose a concrete struct `GetEnumerator()` at the call site — including `List<T>` or `Dictionary<K,V>` via an interface variable (both `List<T>.Enumerator` and `Dictionary.Enumerator` are structs, but both are boxed when the collection variable is typed as an interface); use arrays or `Span<T>` for hot-path iteration
 - Reflection
 
-**Banned language features in all game-logic code (FR-CS-010):**
+**Banned language features in game-loop and game-state code (FR-CS-010):**
 - `dynamic` — bypasses compile-time type safety; introduces non-deterministic dispatch paths
-- `async`/`await` for game-state work — breaks deterministic tick ordering; continuations run on unpredictable frames
+- `async`/`await` in game-loop / game-state-modifying code — breaks deterministic tick ordering; continuations resume on unpredictable frames. Permitted in initialization code, editor tooling, and loading pipelines that do not touch game state.
 - `unsafe` without lead-developer sign-off recorded in the PR description
 - `try`/`catch` inside per-frame inner loops (FR-CS-069)
 - Virtual method calls inside per-frame inner loops (FR-CS-068)
@@ -345,8 +356,10 @@ The 60 Hz physics/render path must produce **zero managed-memory allocations per
 
 The required alternative to all four is **constructor injection**: pass dependencies as constructor parameters.
 
+The `ProfilerMarker` field is `private static readonly`, named per the
+`s_<EntryPointName>Marker` convention (see "Profiler Markers" section).
+
 ```csharp
-// ProfilerMarker field: private static readonly; named s_<EntryPointName>Marker
 private static readonly ProfilerMarker s_updateBallPhysicsMarker =
     new ProfilerMarker("BallPhysics.UpdateBallPhysics");
 
@@ -378,10 +391,12 @@ No `System.Random`, no `DateTime.Now`, no `Guid.NewGuid()`, no `Task.Run` or `Pa
 
 **Hardware-intrinsic FMA (FR-CS-040):** Fused multiply-add instructions can produce different results from separate multiply + add on different hardware or compiler versions. FMA intrinsics are banned unless the platform is pinned and the lead developer has signed off.
 
-**64-bit multiplication** must use `unchecked { }` with a `// §3.4.4` comment (FR-CS-044):
+**64-bit multiplication** must use `unchecked { }` with a `// Spec #16 §3.4.4` comment
+(FR-CS-044), regardless of which assembly the code lives in. The citation always refers
+to Spec #16 §3.4.4 (SplitMix64 state update) — not the local spec's §3.4.4:
 
 ```csharp
-unchecked  // §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
+unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
 {
     state += 0x9E3779B97F4A7C15UL;
 }
@@ -441,6 +456,8 @@ namespace TacticalDirector.BallPhysics
 
 Version history lives at the end of the file; rows are appended, never deleted.
 
+When a file is authored or modified by an automated agent with no named individual, use `—` in the Author field.
+
 ---
 
 ## XML DOC COMMENTS
@@ -465,7 +482,7 @@ Write a comment only when the **why** is non-obvious. Do not comment what the co
 
 ```csharp
 // COMPLIANT — hidden constraint
-unchecked  // §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
+unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
 { … }
 
 // VIOLATION — states the obvious
@@ -530,7 +547,7 @@ These items are deferred pending Unity project setup and platform pinning:
 
 | Item | Blocked on |
 |---|---|
-| `.asmdef` GUIDs | Unity project initialization |
+| `.asmdef` content (GUIDs, `allowUnsafeCode`, `autoReferenced`, `testPlatforms`, `versionDefines`) | Unity project initialization |
 | Exact Unity LTS revision | `docs/tracking/certification-platform.md` pinned |
 | `dotnet test` framework args | Stage 0+1 setup (Spec #19 §7.5 D2 — framework pin deferred to Stage 0+1) |
 | Unity batch-mode CI commands | Unity project initialization |
@@ -550,3 +567,4 @@ Update this file when those items are resolved.
 | 1.0 | 2026-05-19 | — | Initial creation. All 20 Stage 0 specs approved; coding begins. |
 | 1.1 | 2026-05-19 | — | Adversarial review v1.0 fix pass. H-1: layer taxonomy rebuilt from §3.5.2. H-2/H-3: dependency arrows corrected. H-4: Author and Purpose added to file header template. M-1: FMA ban added. M-2: dynamic/async/unsafe bans added. M-3: four architectural anti-patterns added. M-4: phantom TacticalDirector.Shared replaced. M-5: [CROSS] naming contradiction flagged. M-6: Spec #19 blocker resolved to §7.5 D2. L-1: style section added (indentation, Allman braces). L-2: project-constants.asmdef added to tree. L-3: commented-out code ban added. L-4: [EST] spec-error-log requirement added. L-5: var policy added. |
 | 1.2 | 2026-05-19 | — | Adversarial review v1.1 fix pass (2H · 7M · 8L). H-1: arrow label corrected to "is referenced by." H-2: ConfigLoader fabrication removed; [GT] loading noted as Stage 1 TBD. M-1: s_fixedUpdateMarker declaration added to game-loop example; field naming convention added. M-2: [CROSS] mirror RHS corrected to ProjectConstants.PHYSICS_TICK_HZ (ALL_CAPS). M-3: tree comment for ProjectConstants.cs: wrong tag and scope fixed. M-4: single vs multi-consumer [CROSS] routing rule documented. M-5: C# 10+ note added to `with {}` example. M-6: infrastructure assembly table added to taxonomy section. M-7: .asmdef coverage note added under tree. L-1: Last Updated header field added. L-2: ProfilerMarker field naming rule added. L-3: `using UnityEngine.Profiling;` added to profiler example. L-4: var policy semicolon fixed. L-5: owning assembly column added to determinism table. L-6: BallCollision.cs vs collision-system/ note added to tree. L-7: [CROSS] XML doc updated to cite spec+section. L-8: foreach ban reworded for technical accuracy. |
+| 1.3 | 2026-05-19 | — | Adversarial review v1.2 fix pass (2H · 5M · 4L). H-1: project-constants diagram line fixed; removed broken ← arrow (RHS was prose). H-2: // §3.4.4 → // Spec #16 §3.4.4 in Determinism Rules and Inline Comments sections. M-1: Physics→AI prohibition rewritten in prose (inconsistent arrow direction). M-2: async/await entry scoped to "game-loop / game-state-modifying"; heading updated to match. M-3: tests/ .asmdef entries added to all five expanded spec folders; .asmdef coverage note extended with test-assembly rule. M-4: foreach parenthetical covers both List<T>.Enumerator and Dictionary.Enumerator. M-5: [GT] region comment updated to match actual code pattern (= 8; // TODO:). L-1: — author placeholder documented in File Header section. L-2: .asmdef deferral entry expanded to all unresolved fields. L-3: DI bullet in required-patterns replaced with cross-reference to Banned Architectural Patterns section. L-4: ProfilerMarker naming comment moved outside game-loop code block. |
