@@ -1,6 +1,7 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
+> **Last Updated:** May 19, 2026 (v1.2 — adversarial review fix pass; 2H · 7M · 8L resolved)
 > **Purpose:** Concrete coding rules for any AI agent or developer writing C# source code in this project. Covers file naming, constant catalogues, Unity project structure, and build/test commands. Cites Spec #20 (Code Standards & Style Guide) as the source for every convention here. Read the root `CLAUDE.md` first — this file supplements it, not replaces it.
 
 ---
@@ -22,7 +23,7 @@ src/
 │
 ├── project-constants/
 │   ├── project-constants.asmdef       ← one assembly per folder (FR-CS-055)
-│   └── ProjectConstants.cs            ← [CROSS] source-of-truth for all cross-spec constants
+│   └── ProjectConstants.cs            ← source-of-truth for constants consumed by more than one spec assembly (Spec #20 §4.2)
 │
 ├── ball-physics/                      ← Spec #1
 │   ├── ball-physics.asmdef
@@ -32,7 +33,7 @@ src/
 │   ├── BallPhysicsCore.cs
 │   ├── BallStateMachine.cs
 │   ├── BallGroundInteraction.cs
-│   ├── BallCollision.cs
+│   ├── BallCollision.cs               ← ball-specific collision response; detection geometry lives in collision-system/
 │   ├── BallEventLogger.cs
 │   ├── SurfaceProperties.cs
 │   └── tests/
@@ -87,6 +88,12 @@ src/
 
 **One folder per spec. One `.asmdef` per folder. Folder names match `docs/specs/` exactly.**
 
+> **Note on `.asmdef` coverage:** Every spec folder listed above requires a
+> `.asmdef` file (e.g., `pressing-ai/pressing-ai.asmdef`). Only a subset is shown
+> in the tree for brevity. See each spec's `§4` (Architecture) file for the exact
+> `.asmdef` reference list. GUIDs are blocked on Unity project initialization (see
+> "WHAT IS NOT HERE YET").
+
 ### Assembly Layer Taxonomy
 
 The authoritative layer taxonomy is Spec #20 §3.5.2. The three layers and their
@@ -103,6 +110,17 @@ order or spec number.
 The `deterministic-sim` and `event-system` assemblies are cross-cutting foundations
 referenced by all layers (not members of any single layer).
 
+The following assemblies are **infrastructure-only** and are NOT members of any
+gameplay layer. Game-layer code (Physics / Mechanics / AI) MUST NOT import them
+at runtime:
+
+| Assembly | Role |
+|---|---|
+| `project-constants` | Constants shared across ≥ 2 spec assemblies; read-only by all |
+| `performance-optimization` | Trace pipeline only (Spec #18 KD-3); no game-loop types |
+| `testing-strategy` | CI orchestration tooling only (Spec #19); no game-loop types |
+| `code-standards` | Governance only (Spec #20); no runtime types |
+
 ### Reference Direction
 
 **AI depends on Mechanics. Mechanics depends on Physics. Never the reverse.**
@@ -113,8 +131,9 @@ project-constants  ←  referenced read-only by all assemblies
 Physics  ←  Mechanics  ←  AI  ←  UI
 ```
 
-`←` means "references." The AI assembly imports types from Mechanics, which imports
-types from Physics. A Physics assembly MUST NOT import from Mechanics or AI.
+`←` means "is referenced by" — `A ← B` means B depends on A (B imports from A).
+The AI assembly imports types from Mechanics, which imports types from Physics.
+A Physics assembly MUST NOT import from Mechanics or AI.
 Upward references (Physics→AI, Mechanics→AI, etc.) are prohibited by FR-CS-046 and
 enforced as build errors via `.asmdef` reference declarations.
 
@@ -178,7 +197,7 @@ dotnet test
 
 No Hungarian notation. No other prefix/suffix schemes (FR-CS-001/002).
 
-**`var` policy (FR-CS-013):** Use `var` only when the type is immediately obvious from the RHS. `var state = new BallState()` is clear. `var result = Compute()` is not — write the explicit type.
+**`var` policy (FR-CS-013):** Use `var` only when the type is immediately obvious from the RHS. `var state = new BallState()` is clear. `var result = Compute();` is not — write the explicit type.
 
 ---
 
@@ -246,29 +265,45 @@ Every constant lives in `<SpecName>Constants.cs`. No literals in formula or syst
 ```csharp
 #region Fixed      // [FIXED]   → public const float BALL_RADIUS = 0.11f;
 #region Derived    // [DERIVED] → public static readonly float TerminalVelocity = …;
-#region Cross      // [CROSS]   → public static readonly float PhysicsTickHz = ProjectConstants.PhysicsTickHz;
-#region GT         // [GT]      → public static readonly int MaxSubsteps = ConfigLoader.GetValue(…);
+#region Cross      // [CROSS]   → public static readonly float PhysicsTickHz = ProjectConstants.PHYSICS_TICK_HZ;
+#region GT         // [GT]      → public static readonly int MaxSubsteps = /* loader TBD — see note below */;
 #region EST        // [EST]     → public static readonly float LiftCoefficient = 0.35f; // TODO: validate
 ```
 
 Omit a region entirely if the spec has no constants with that tag. Empty regions are prohibited.
 
+**`[GT]` loading mechanism:** The exact class and method for loading `[GT]` constants from tunable config at boot (FR-CS-019) is a Stage 1 deliverable — no class named `ConfigLoader` exists in any approved spec. Until the mechanism is defined and documented in this file, use the constant's design-time default directly and mark it with `// TODO: replace with config loader`:
+
+```csharp
+#region GT
+/// <summary>[GT] Maximum physics substeps per frame. Code Standards #20 §3.2.</summary>
+public static readonly int MaxSubsteps = 8; // TODO: replace with config loader (Stage 1)
+```
+
 **`[EST]` constants:** Every `[EST]` constant requires a `spec-error-log.md` entry (FR-CS-020). The constant must be promoted to `[GT]` or `[FIXED]` before the system that consumes it is implemented.
 
-**`[CROSS]` mirrors:** A `[CROSS]` entry in a spec catalogue mirrors its value from `ProjectConstants.cs` (or the authoritative source spec) and must not diverge. Naming is PascalCase per §3.2.3. Cite the source:
+**`[CROSS]` mirrors — routing rule (Spec #20 §4.2):**
+- **Multi-consumer** (constant used by ≥ 2 spec assemblies): declare in `ProjectConstants.cs`; each consuming catalogue mirrors from there.
+- **Single-consumer** (constant used by exactly 1 spec assembly, e.g., a domain tag allocated in Spec #16 §3.4 used only by one spec): the consuming catalogue mirrors directly from the source spec's catalogue — not via `ProjectConstants.cs`.
+
+A `[CROSS]` mirror must not diverge from its source. Naming is PascalCase per §3.2.3. Cite the authoritative spec and section:
 
 ```csharp
 /// <summary>
-/// [CROSS] Physics tick rate (Hz). Source: ProjectConstants.PhysicsTickHz.
-/// Root CLAUDE.md — "Heartbeat Tick Rate": 60 Hz.
+/// [CROSS] Physics/render loop tick rate (Hz).
+/// Authoritative source: ProjectConstants.cs — PHYSICS_TICK_HZ.
+/// Ball Physics #1 §1.2 / Root CLAUDE.md "Heartbeat Tick Rate". Value: 60 Hz.
 /// </summary>
-public static readonly float PhysicsTickHz = ProjectConstants.PhysicsTickHz;
+public static readonly float PhysicsTickHz = ProjectConstants.PHYSICS_TICK_HZ;
 ```
 
 > **Note — naming discrepancy in Spec #20 §4.2:** The §4.2 worked example shows
-> `PHYSICS_TICK_HZ` (ALL_CAPS) for a `[CROSS]` mirror. This contradicts §3.2.3, which
-> is the rule-definition section and states PascalCase for `[CROSS]`. §3.2.3 is
-> authoritative. Use PascalCase for all `[CROSS]` constants.
+> `PHYSICS_TICK_HZ` (ALL_CAPS) for the `[CROSS]` *mirror* field in
+> `BallPhysicsConstants.cs`. This contradicts §3.2.3, which is the rule-definition
+> section and states PascalCase for `[CROSS]`. §3.2.3 is authoritative — use PascalCase
+> for the mirror field name. Note that the source constant in `ProjectConstants.cs` is
+> tagged `[FIXED]` and correctly uses ALL_CAPS (`PHYSICS_TICK_HZ`); the right-hand side
+> of the mirror assignment must reference that ALL_CAPS name.
 
 ---
 
@@ -292,7 +327,7 @@ The 60 Hz physics/render path must produce **zero managed-memory allocations per
 - `params` array parameters
 - String formatting (`$"…"`, `string.Format`, `+` concatenation)
 - Closures capturing local variables
-- `foreach` over non-struct enumerators (`List<T>`, `Dictionary<K,V>`)
+- `foreach` over any type that does not expose a concrete struct `GetEnumerator()` at the call site — including `List<T>` or `Dictionary<K,V>` via an interface variable (the enumerator is boxed even though `Dictionary.Enumerator` is itself a struct); use arrays or `Span<T>` for hot-path iteration
 - Reflection
 
 **Banned language features in all game-logic code (FR-CS-010):**
@@ -311,10 +346,16 @@ The 60 Hz physics/render path must produce **zero managed-memory allocations per
 The required alternative to all four is **constructor injection**: pass dependencies as constructor parameters.
 
 ```csharp
+// ProfilerMarker field: private static readonly; named s_<EntryPointName>Marker
+private static readonly ProfilerMarker s_updateBallPhysicsMarker =
+    new ProfilerMarker("BallPhysics.UpdateBallPhysics");
+
 // COMPLIANT
+// Note: `state with { … }` requires C# 10+ on readonly structs. Verify the
+// Unity LTS + backend in certification-platform.md before using this pattern.
 public static void UpdateBallPhysics(ref BallState state, float dt)
 {
-    using var _ = s_fixedUpdateMarker.Auto();
+    using var _ = s_updateBallPhysicsMarker.Auto();
     state = state with { Velocity = state.Velocity * (1f - BallPhysicsConstants.DRAG_COEFFICIENT * dt) };
 }
 
@@ -328,12 +369,12 @@ public static void UpdateBallPhysics(BallState state, float dt) { … }
 
 No `System.Random`, no `DateTime.Now`, no `Guid.NewGuid()`, no `Task.Run` or `Parallel.*`, no hardware-intrinsic FMA in game logic (FR-CS-036–040).
 
-| Need | Use |
-|---|---|
-| Random numbers | `SplitMix64` helper (FR-CS-041) |
-| Simulation time | `MatchClock` (injected) (FR-CS-042) |
-| Trigonometry / math | Project math helper (FR-CS-043) |
-| Deterministic IDs | Pre-allocated deterministic ID ranges (Spec #16 §3.2.5) |
+| Need | Use | Owning assembly |
+|---|---|---|
+| Random numbers | `SplitMix64` helper (FR-CS-041) | `deterministic-sim/` (Spec #16) |
+| Simulation time | `MatchClock` (injected) (FR-CS-042) | `deterministic-sim/` (Spec #16) |
+| Trigonometry / math | Project math helper (FR-CS-043) | `project-constants/` — exact class TBD at Stage 1 |
+| Deterministic IDs | Pre-allocated deterministic ID ranges (Spec #16 §3.2.5) | `deterministic-sim/` (Spec #16) |
 
 **Hardware-intrinsic FMA (FR-CS-040):** Fused multiply-add instructions can produce different results from separate multiply + add on different hardware or compiler versions. FMA intrinsics are banned unless the platform is pinned and the lead developer has signed off.
 
@@ -458,18 +499,22 @@ Alphabetical within each group is recommended but not enforced.
 
 Every system entry point (`FixedUpdate`, `Update`, tick method) must be wrapped in a `ProfilerMarker.Auto()`. The marker is a `private static readonly` field (allocated once at startup — zero per-frame cost) (FR-CS-070).
 
+**Field naming convention:** `s_<EntryPointName>Marker` — e.g., `s_fixedUpdateMarker` for `FixedUpdate`, `s_runTickMarker` for `RunTick`.
+
+**Marker string format:** `<SpecName>.<MethodName>` (e.g., `"BallPhysics.FixedUpdate"`, `"DeterministicSim.RunTick"`).
+
 ```csharp
-private static readonly ProfilerMarker s_marker =
+using UnityEngine.Profiling;
+
+private static readonly ProfilerMarker s_fixedUpdateMarker =
     new ProfilerMarker("BallPhysics.FixedUpdate");
 
 public void FixedUpdate(ref BallState state, float dt)
 {
-    using var _ = s_marker.Auto();
+    using var _ = s_fixedUpdateMarker.Auto();
     // …
 }
 ```
-
-Marker name format: `<SpecName>.<MethodName>` (e.g., `"BallPhysics.FixedUpdate"`, `"DeterministicSim.RunTick"`).
 
 ---
 
@@ -491,6 +536,8 @@ These items are deferred pending Unity project setup and platform pinning:
 | Unity batch-mode CI commands | Unity project initialization |
 | `.editorconfig` path and contents | Stage 1 setup |
 | C# language version pin | `certification-platform.md` pinned |
+| `[GT]` config loader class / method | Stage 1 setup — define in this file when resolved; update all `// TODO: replace with config loader` constants |
+| Project math helper class name / assembly | Stage 1 setup — update determinism table when defined |
 
 Update this file when those items are resolved.
 
@@ -502,3 +549,4 @@ Update this file when those items are resolved.
 |---|---|---|---|
 | 1.0 | 2026-05-19 | — | Initial creation. All 20 Stage 0 specs approved; coding begins. |
 | 1.1 | 2026-05-19 | — | Adversarial review v1.0 fix pass. H-1: layer taxonomy rebuilt from §3.5.2. H-2/H-3: dependency arrows corrected. H-4: Author and Purpose added to file header template. M-1: FMA ban added. M-2: dynamic/async/unsafe bans added. M-3: four architectural anti-patterns added. M-4: phantom TacticalDirector.Shared replaced. M-5: [CROSS] naming contradiction flagged. M-6: Spec #19 blocker resolved to §7.5 D2. L-1: style section added (indentation, Allman braces). L-2: project-constants.asmdef added to tree. L-3: commented-out code ban added. L-4: [EST] spec-error-log requirement added. L-5: var policy added. |
+| 1.2 | 2026-05-19 | — | Adversarial review v1.1 fix pass (2H · 7M · 8L). H-1: arrow label corrected to "is referenced by." H-2: ConfigLoader fabrication removed; [GT] loading noted as Stage 1 TBD. M-1: s_fixedUpdateMarker declaration added to game-loop example; field naming convention added. M-2: [CROSS] mirror RHS corrected to ProjectConstants.PHYSICS_TICK_HZ (ALL_CAPS). M-3: tree comment for ProjectConstants.cs: wrong tag and scope fixed. M-4: single vs multi-consumer [CROSS] routing rule documented. M-5: C# 10+ note added to `with {}` example. M-6: infrastructure assembly table added to taxonomy section. M-7: .asmdef coverage note added under tree. L-1: Last Updated header field added. L-2: ProfilerMarker field naming rule added. L-3: `using UnityEngine.Profiling;` added to profiler example. L-4: var policy semicolon fixed. L-5: owning assembly column added to determinism table. L-6: BallCollision.cs vs collision-system/ note added to tree. L-7: [CROSS] XML doc updated to cite spec+section. L-8: foreach ban reworded for technical accuracy. |
