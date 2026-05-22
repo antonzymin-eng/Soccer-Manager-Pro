@@ -153,11 +153,11 @@ catalogue file's `[CROSS]` entry cites the source:
 ```csharp
 // In BallPhysicsConstants.cs (mirror)
 /// <summary>
-/// [CROSS] Physics tick rate (Hz).
-/// Authoritative source: ProjectConstants.cs — ProjectConstants.PHYSICS_TICK_HZ.
-/// Root CLAUDE.md — "Heartbeat Tick Rate".
+/// [CROSS] Physics tick rate (Hz). PascalCase per §3.2.3 (ERR-020-001).
+/// Authoritative source: ProjectConstants.cs — PHYSICS_TICK_HZ.
+/// Ball Physics #1 §1.2 / Root CLAUDE.md "Heartbeat Tick Rate". Value: 60 Hz.
 /// </summary>
-public static readonly float PHYSICS_TICK_HZ = ProjectConstants.PHYSICS_TICK_HZ;
+public static readonly float PhysicsTickHz = ProjectConstants.PHYSICS_TICK_HZ;
 
 // In ProjectConstants.cs (source of truth)
 /// <summary>
@@ -290,6 +290,7 @@ concretises, establishing the Spec #20 ↔ `src/CLAUDE.md` cite-chain.
 | Version | Date | Author | Notes | Reviewer |
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 4. | — |
+| 1.0.1 | May 22, 2026 | — | ERR-020-001: §4.2 `[CROSS]` mirror example field name corrected `PHYSICS_TICK_HZ` (ALL_CAPS) → `PhysicsTickHz` (PascalCase) per §3.2.3 authoritative rule; XML doc updated to include spec+section citation and value per FR-CS-022. | — |
 
 ---
 
