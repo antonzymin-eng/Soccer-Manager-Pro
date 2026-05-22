@@ -1,7 +1,7 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** May 22, 2026 (v1.4 — adversarial review fix pass; 1H · 4M · 3L resolved)
+> **Last Updated:** May 22, 2026 (v1.5 — adversarial review fix pass; 1H · 1M · 5L resolved)
 > **Purpose:** Concrete coding rules for any AI agent or developer writing C# source code in this project. Covers file naming, constant catalogues, Unity project structure, and build/test commands. Cites Spec #20 (Code Standards & Style Guide) as the source for every convention here. Read the root `CLAUDE.md` first — this file supplements it, not replaces it.
 
 ---
@@ -283,7 +283,7 @@ Every constant lives in `<SpecName>Constants.cs`. No literals in formula or syst
 
 Omit a region entirely if the spec has no constants with that tag. Empty regions are prohibited.
 
-**Region name convention:** The first three region names use Title Case (`Fixed`, `Derived`, `Cross`). `GT` and `EST` match their tag names exactly since those are already two-letter acronyms. Do not use ALL_CAPS (`FIXED`) or lowercase for region names.
+**Region name convention:** The first three region names use Title Case (`Fixed`, `Derived`, `Cross`). `GT` and `EST` match their tag names exactly since those are already **all-caps abbreviations**. Do not use ALL_CAPS (`FIXED`) or lowercase for region names.
 
 **`[DERIVED]` constants:** The XML doc must include the tag, the formula, and the source constants (FR-CS-021). Substitute actual formula references (FM-NNN, §x.y) from the implementing spec:
 
@@ -315,12 +315,22 @@ public static readonly int MaxSubsteps = 8; // TODO: replace with config loader 
 A `[CROSS]` mirror must not diverge from its source. Naming is PascalCase per §3.2.3. Cite the authoritative spec and section:
 
 ```csharp
+// Multi-consumer mirror: declare in ProjectConstants.cs; each consuming catalogue mirrors from there.
 /// <summary>
 /// [CROSS] Physics/render loop tick rate (Hz).
 /// Authoritative source: ProjectConstants.cs — PHYSICS_TICK_HZ.
-/// Ball Physics #1 §1.2 / Root CLAUDE.md "Heartbeat Tick Rate". Value: 60 Hz.
+/// Ball Physics #1 §1.2. Value: 60 Hz.
 /// </summary>
 public static readonly float PhysicsTickHz = ProjectConstants.PHYSICS_TICK_HZ;
+
+// Single-consumer mirror: source spec's catalogue directly, NOT via ProjectConstants.cs
+/// <summary>
+/// [CROSS] Goalkeeper subsystem domain tag.
+/// Authoritative source: DeterministicSimConstants.DOMAIN_TAG_GOALKEEPER.
+/// Deterministic Simulation #16 §3.4. Value: 0x1D.
+/// </summary>
+public static readonly uint DomainTagGoalkeeper =
+    DeterministicSimConstants.DOMAIN_TAG_GOALKEEPER;
 ```
 
 > **Note — naming discrepancy in Spec #20 §4.2 (ERR-020-001, resolved):** The §4.2
@@ -344,7 +354,7 @@ The 60 Hz physics/render path must produce **zero managed-memory allocations per
 - Pre-allocated fixed-size buffers for temp arrays
 - Struct-based events on the event bus (not `event Action<T>`)
 - `stackalloc` with `Span<T>` for transient buffers with statically bounded size (C# 7.2+; no `unsafe` block required). The pointer form (`int* p = stackalloc int[n]`) requires `unsafe` and therefore lead-developer sign-off per FR-CS-010 — use the `Span<T>` form by default
-- `ProfilerMarker.Auto()` on every system entry point (static readonly field — one-time alloc at startup)
+- `private static readonly ProfilerMarker` field on every system class for profiling (one-time alloc at startup); call `.Auto()` at each entry point to bracket the measurement scope (FR-CS-070)
 - **Dependency injection via constructor parameters** — see "Banned Architectural Patterns" below for the full rule and the four anti-patterns it replaces
 
 **Banned constructs on hot paths (FR-CS-027–034):**
@@ -376,23 +386,29 @@ The `ProfilerMarker` field is `private static readonly`, named per the
 `s_<EntryPointName>Marker` convention (see "Profiler Markers" section).
 
 ```csharp
-// COMPLIANT — sealed instance class; ProfilerMarker field is private static readonly
+// COMPLIANT — sealed instance class; dependencies injected via constructor per FR-CS-051–054
 // Note: `state with { … }` requires C# 10+ on readonly structs. Verify the
 // Unity LTS + backend in certification-platform.md before using this pattern.
 public sealed class BallPhysicsSystem
 {
-    private static readonly ProfilerMarker s_updateBallPhysicsMarker =
-        new ProfilerMarker("BallPhysics.UpdateBallPhysics");
+    private readonly MatchClock _clock;
+    private static readonly ProfilerMarker s_updateMarker =
+        new ProfilerMarker("BallPhysics.Update");
 
-    public void UpdateBallPhysics(ref BallState state, float dt)
+    public BallPhysicsSystem(MatchClock clock)
     {
-        using var _ = s_updateBallPhysicsMarker.Auto();
+        _clock = clock;
+    }
+
+    public void Update(ref BallState state, float dt)
+    {
+        using var _ = s_updateMarker.Auto();
         state = state with { Velocity = state.Velocity * (1f - BallPhysicsConstants.DRAG_COEFFICIENT * dt) };
     }
-}
 
-// VIOLATION — copies struct by value; wastes memory bandwidth
-public void UpdateBallPhysics(BallState state, float dt) { … }
+    // VIOLATION — copies struct by value; wastes memory bandwidth
+    // public void Update(BallState state, float dt) { … }
+}
 ```
 
 ---
@@ -596,3 +612,4 @@ Update this file when those items are resolved.
 | 1.2 | 2026-05-19 | — | Adversarial review v1.1 fix pass (2H · 7M · 8L). H-1: arrow label corrected to "is referenced by." H-2: ConfigLoader fabrication removed; [GT] loading noted as Stage 1 TBD. M-1: s_fixedUpdateMarker declaration added to game-loop example; field naming convention added. M-2: [CROSS] mirror RHS corrected to ProjectConstants.PHYSICS_TICK_HZ (ALL_CAPS). M-3: tree comment for ProjectConstants.cs: wrong tag and scope fixed. M-4: single vs multi-consumer [CROSS] routing rule documented. M-5: C# 10+ note added to `with {}` example. M-6: infrastructure assembly table added to taxonomy section. M-7: .asmdef coverage note added under tree. L-1: Last Updated header field added. L-2: ProfilerMarker field naming rule added. L-3: `using UnityEngine.Profiling;` added to profiler example. L-4: var policy semicolon fixed. L-5: owning assembly column added to determinism table. L-6: BallCollision.cs vs collision-system/ note added to tree. L-7: [CROSS] XML doc updated to cite spec+section. L-8: foreach ban reworded for technical accuracy. |
 | 1.3 | 2026-05-19 | — | Adversarial review v1.2 fix pass (2H · 5M · 4L). H-1: project-constants diagram line fixed; removed broken ← arrow (RHS was prose). H-2: // §3.4.4 → // Spec #16 §3.4.4 in Determinism Rules and Inline Comments sections. M-1: Physics→AI prohibition rewritten in prose (inconsistent arrow direction). M-2: async/await entry scoped to "game-loop / game-state-modifying"; heading updated to match. M-3: tests/ .asmdef entries added to all five expanded spec folders; .asmdef coverage note extended with test-assembly rule. M-4: foreach parenthetical covers both List<T>.Enumerator and Dictionary.Enumerator. M-5: [GT] region comment updated to match actual code pattern (= 8; // TODO:). L-1: — author placeholder documented in File Header section. L-2: .asmdef deferral entry expanded to all unresolved fields. L-3: DI bullet in required-patterns replaced with cross-reference to Banned Architectural Patterns section. L-4: ProfilerMarker naming comment moved outside game-loop code block. |
 | 1.4 | 2026-05-22 | — | Adversarial review v1.3 fix pass (1H · 4M · 3L). H-1: Game-Loop COMPLIANT example rewritten as sealed instance class (public void); VIOLATION updated to match. M-1: [EST] promotion targets extended to [GT] / [FIXED] / [DERIVED] / [CROSS] with guidance for each path. M-2: Profiler Markers entry-point list changed from FixedUpdate/Update to Update/Tick/RunStep; MonoBehaviour-not-applicable note added; examples updated (FixedUpdate → Update, s_fixedUpdateMarker → s_updateMarker); WHAT IS NOT HERE YET row added for MonoBehaviour/PlayerLoop integration. M-3: Naming discrepancy note updated with ERR-020-001 reference and confirmation that §4.2 has been patched. M-4: stackalloc Span<T> vs pointer distinction added. L-1: §3.2 → §3.2.3 in [GT] XML doc. L-2: [DERIVED] worked example added; region comment shows formula instead of ellipsis. L-3: #region name convention (Title Case vs acronym) documented. |
+| 1.5 | 2026-05-22 | — | Adversarial review v1.4 fix pass (1H · 1M · 5L). H-1+M-1 (combined): Game-Loop COMPLIANT example rewritten to show constructor injection (_clock field + constructor body); method renamed Update, field renamed s_updateMarker, profiler string "BallPhysics.Update"; VIOLATION moved inside class as commented-out method. L-1: "two-letter acronyms" → "all-caps abbreviations" (EST has 3 letters). L-2: VIOLATION was orphaned outside class at file scope (invalid C#); now inside BallPhysicsSystem as commented-out member. L-3: Root CLAUDE.md "Heartbeat Tick Rate" removed from [CROSS] XML doc example (non-spec citation); Ball Physics #1 §1.2 alone is sufficient. L-4: ProfilerMarker required-patterns bullet rewritten to distinguish the field declaration (one-time alloc) from the .Auto() call at entry points. L-5: Single-consumer [CROSS] mirror example added alongside multi-consumer example. |
