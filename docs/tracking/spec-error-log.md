@@ -6,8 +6,8 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.20
-**Updated:** May 18, 2026 (stress-test run-3: ERR-011-001 / ERR-012-001 / ERR-008-001 / ERR-015-006 / ERR-016-003 detailed-section Status fields updated to Resolved; ERR-012-001 summary-table row updated from Open to Resolved; all five previously had summary-table ✅ but stale body-text Status)
+**Version:** 1.21
+**Updated:** May 22, 2026 (ERR-020-001 filed and resolved: Code Standards #20 §4.2 `[CROSS]` mirror ALL_CAPS → PascalCase; `section-4.md` v1.0.1 patched; `src/CLAUDE.md` v1.4 discrepancy note updated)
 **Status:** ERR-001 through ERR-012, ERR-010-001 (closed May 16, 2026), ERR-011-001 (closed May 18, 2026), ERR-012-001 (closed May 18, 2026), ERR-012-002 (closed), ERR-016-001, ERR-016-002 (FULLY CLOSED May 18, 2026), ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; spec-text resolved May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); #16 §3.2.5 back-prop prose confirmed landed (OBS-1, stress-test run 2, May 18, 2026) — FULLY CLOSED. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
@@ -62,6 +62,7 @@ authoritative remediation backlog.
 | ERR-013-005 | `DOMAIN_TAG_PRESSING_AI = 0x19` allocation needed in Deterministic Simulation #16 §3.4. | Medium | 1 | ✅ **Resolved May 17, 2026** — allocated in `deterministic-sim/section-3.md` v1.0.3 (`0x17` reserved for #12, `0x18` for #11, `0x19` for #13); #13 §6.1 `[CROSS-PENDING]` → `[CROSS]` atomically. |
 | ERR-013-007 | Pressing AI #13 requires `GetPhase(TeamId)` as a Stage 1 accessor on Positioning AI #12. | Medium | 2 | ✅ **Resolved May 17, 2026** — declared in `positioning-ai/section-4.md` §4.5.1 v0.3 patch as Stage 1 publication commitment. |
 | ERR-013-008 | Pressing AI #13 requires `GetLine(EntityId)` elevated from Stage 1+ to Stage 1 on Positioning AI #12. | Medium | 2 | ✅ **Resolved May 17, 2026** — declared in `positioning-ai/section-4.md` §4.5.1 v0.3 patch; `GetLine` elevated Stage 1+ → Stage 1. |
+| ERR-020-001 | Code Standards #20 §4.2 `[CROSS]` mirror example uses ALL_CAPS field name (`PHYSICS_TICK_HZ`) — contradicts §3.2.3 PascalCase rule for `[CROSS]` constants. | Minor | 2 | ✅ **Resolved May 22, 2026** — `code-standards/section-4.md` v1.0.1: mirror field renamed `PHYSICS_TICK_HZ` → `PhysicsTickHz`; XML doc updated with spec+section citation. `src/CLAUDE.md` v1.4: discrepancy note updated with ERR-020-001 reference. |
 
 ---
 
@@ -1327,4 +1328,34 @@ Append a v1.0.6 version-history row to `deterministic-sim/section-3.md`. No `DET
 
 ---
 
-*End of Spec Error Log v1.20 — May 18, 2026.*
+## ERR-020-001: Code Standards #20 §4.2 `[CROSS]` mirror example uses ALL_CAPS field name, contradicting §3.2.3 PascalCase rule
+
+**Spec:** Code Standards #20  
+**Section:** §4.2 Constant Catalogue File Convention — `ProjectConstants.cs` Cross-Spec Source of Truth  
+**Severity:** Minor  
+**Detected During:** `src/CLAUDE.md` v1.3 adversarial review (May 22, 2026), finding M-3.  
+**Status:** ✅ Resolved May 22, 2026
+
+**Problem:** The §4.2 worked example for a `[CROSS]` mirror constant in `BallPhysicsConstants.cs` used `PHYSICS_TICK_HZ` (ALL_CAPS) as the mirror field name:
+
+```csharp
+public static readonly float PHYSICS_TICK_HZ = ProjectConstants.PHYSICS_TICK_HZ;
+```
+
+Spec #20 §3.2.3 (Tag → C# Storage Class Mapping) is the authoritative naming rule and explicitly states that `[CROSS]` constants use PascalCase. The ALL_CAPS convention is reserved exclusively for `[FIXED]` (`public const`) constants. A developer reading only §4.2 would use ALL_CAPS for every `[CROSS]` mirror, producing a codebase-wide naming inconsistency.
+
+**Root Cause:** The §4.2 example was authored with the `PHYSICS_TICK_HZ` name matching the source constant in `ProjectConstants.cs` (which is correctly `[FIXED]` ALL_CAPS) rather than following the mirror field naming convention from §3.2.3.
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/code-standards/section-4.md` | §4.2 mirror example (line ~160) | `PHYSICS_TICK_HZ` → `PhysicsTickHz`; XML doc updated with spec+section citation |
+| `src/CLAUDE.md` | `[CROSS]` mirrors naming discrepancy note | Reference to ERR-020-001 added; "has been patched" noted |
+
+**Resolution:** `code-standards/section-4.md` v1.0.1 patch: mirror field renamed to `PhysicsTickHz` (PascalCase); XML doc updated to include authoritative spec and section citation (`Ball Physics #1 §1.2`) and value (`60 Hz`) per FR-CS-022. `src/CLAUDE.md` v1.4 discrepancy note updated with ERR-020-001 reference.
+
+**Rule confirmed:** The source constant in `ProjectConstants.cs` is `[FIXED]` and correctly uses ALL_CAPS (`PHYSICS_TICK_HZ`). The mirror field in any spec's constants catalogue is `[CROSS]` and uses PascalCase (`PhysicsTickHz`). The right-hand side of the mirror assignment must reference the source by its ALL_CAPS name (`= ProjectConstants.PHYSICS_TICK_HZ`).
+
+---
+
+*End of Spec Error Log v1.21 — May 22, 2026.*

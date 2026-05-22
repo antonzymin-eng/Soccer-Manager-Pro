@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 19, 2026 (`src/CLAUDE.md` created — coding begins; all 20 Stage 0 specs approved)  
+**Last Updated:** May 22, 2026 (`src/CLAUDE.md` v1.4 adversarial fix pass; `code-standards/section-4.md` v1.0.1 ERR-020-001 patch; `spec-error-log.md` v1.21)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
