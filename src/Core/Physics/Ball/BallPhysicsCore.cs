@@ -1,6 +1,15 @@
-using UnityEngine;
+// File:     src/Core/Physics/Ball/BallPhysicsCore.cs
+// Created:  2026-05-24
+// Modified: 2026-05-24
+// Author:   —
+// Spec:     Ball Physics #1, Code Standards #20
+// Purpose:  Main physics update loop and force calculations for the ball.
+//           Pure calculations — no state management, no ownership of BallState.
 
-namespace TacticalDirector.Core.Physics.Ball
+using UnityEngine;
+using UnityEngine.Profiling;
+
+namespace TacticalDirector.BallPhysics
 {
     /// <summary>
     /// Main physics update loop and force calculations for the ball.
@@ -9,6 +18,15 @@ namespace TacticalDirector.Core.Physics.Ball
     /// </summary>
     public static class BallPhysicsCore
     {
+        private static readonly ProfilerMarker s_updateMarker =
+            new ProfilerMarker("BallPhysics.Update");
+        private static readonly ProfilerMarker s_magnusMarker =
+            new ProfilerMarker("BallPhysics.Magnus");
+        private static readonly ProfilerMarker s_dragMarker =
+            new ProfilerMarker("BallPhysics.Drag");
+        private static readonly ProfilerMarker s_spinDecayMarker =
+            new ProfilerMarker("BallPhysics.SpinDecay");
+
         /// <summary>
         /// Main physics update. Called at 60 Hz by the match simulator.
         /// </summary>
@@ -20,13 +38,19 @@ namespace TacticalDirector.Core.Physics.Ball
             BallEventLogger logger,
             float matchTime)
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            UnityEngine.Profiling.Profiler.BeginSample("BallPhysics.Update");
-#endif
-            ball.LastValidPosition = ball.Position;
-            ball.LastValidVelocity = ball.Velocity;
+            using var _ = s_updateMarker.Auto();
 
-            // BOUNCING: apply impulse first, then continue to integration
+            // Only update the recovery checkpoint when the incoming state is valid.
+            // If ball.Position already contains NaN/Infinity, preserving the existing
+            // LastValidPosition is the only way ValidatePhysicsState can recover to a
+            // good state later in this same update.
+            if (!HasInvalidValues(ball))
+            {
+                ball.LastValidPosition = ball.Position;
+                ball.LastValidVelocity = ball.Velocity;
+            }
+
+            // BOUNCING: apply impulse first, then continue to integration.
             if (ball.State == BallStateType.BOUNCING)
                 BallGroundInteraction.ApplyBounce(ref ball, surface, logger, matchTime);
 
@@ -53,22 +77,19 @@ namespace TacticalDirector.Core.Physics.Ball
                 default:
                     // STATIONARY, CONTROLLED, OUT_OF_PLAY: no physics forces.
                     // Velocity not cleared; callers must not read Velocity in OUT_OF_PLAY.
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    UnityEngine.Profiling.Profiler.EndSample();
-#endif
                     return;
             }
 
-            // Semi-implicit Euler integration
+            // Semi-implicit Euler integration.
             Vector3 acceleration = netForce / BallPhysicsConstants.Ball.MASS;
             ball.Velocity += acceleration * dt;
             ball.Position += ball.Velocity * dt;
 
-            // Spin decay: aerodynamic torque model (airborne only)
+            // Spin decay: aerodynamic torque model (airborne only).
             if (ball.State == BallStateType.AIRBORNE)
                 ball.AngularVelocity = UpdateSpinDecay(ball.AngularVelocity, ball.Velocity, dt);
 
-            // Spin decay: surface-contact friction model (rolling only)
+            // Spin decay: surface-contact friction model (rolling only).
             // Do NOT use UpdateSpinDecay() here — its aerodynamic torque model is incorrect
             // for ground-contact spin damping (see §3.1.7.2).
             if (ball.State == BallStateType.ROLLING)
@@ -77,10 +98,6 @@ namespace TacticalDirector.Core.Physics.Ball
             ValidatePhysicsState(ref ball);
             ball.State = BallStateMachine.UpdateBallState(ball);
             logger?.TryLogSnapshot(ball, matchTime);
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            UnityEngine.Profiling.Profiler.EndSample();
-#endif
         }
 
         // ── FORCE CALCULATIONS ───────────────────────────────────────────────────
@@ -91,55 +108,42 @@ namespace TacticalDirector.Core.Physics.Ball
         /// </summary>
         public static Vector3 CalculateMagnusForce(Vector3 velocity, Vector3 angularVelocity)
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            UnityEngine.Profiling.Profiler.BeginSample("BallPhysics.Magnus");
-#endif
+            using var _ = s_magnusMarker.Auto();
+
             float speed    = velocity.magnitude;
             float spinRate = angularVelocity.magnitude;
 
-            if (speed    < BallPhysicsConstants.State.MIN_VELOCITY ||
-                spinRate < BallPhysicsConstants.State.MIN_SPIN)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Profiling.Profiler.EndSample();
-#endif
+            if (speed    < BallPhysicsConstants.State.MinVelocity ||
+                spinRate < BallPhysicsConstants.State.MinSpin)
                 return Vector3.zero;
-            }
 
             float spinParameter = (BallPhysicsConstants.Ball.RADIUS * spinRate) / speed;
             spinParameter = Mathf.Clamp(
                 spinParameter,
-                BallPhysicsConstants.Magnus.MIN_SPIN_PARAMETER,
-                BallPhysicsConstants.Magnus.MAX_SPIN_PARAMETER);
+                BallPhysicsConstants.Magnus.MinSpinParameter,
+                BallPhysicsConstants.Magnus.MaxSpinParameter);
 
-            float normalizedS = (spinParameter - BallPhysicsConstants.Magnus.MIN_SPIN_PARAMETER)
-                              / (BallPhysicsConstants.Magnus.MAX_SPIN_PARAMETER
-                               - BallPhysicsConstants.Magnus.MIN_SPIN_PARAMETER);
-            float C_L = BallPhysicsConstants.Magnus.LIFT_COEFFICIENT_BASE
-                      + BallPhysicsConstants.Magnus.LIFT_COEFFICIENT_SCALE * normalizedS;
+            float normalizedS = (spinParameter - BallPhysicsConstants.Magnus.MinSpinParameter)
+                              / (BallPhysicsConstants.Magnus.MaxSpinParameter
+                               - BallPhysicsConstants.Magnus.MinSpinParameter);
+            float C_L = BallPhysicsConstants.Magnus.LiftCoefficientBase
+                      + BallPhysicsConstants.Magnus.LiftCoefficientScale * normalizedS;
 
             Vector3 forceDirection = Vector3.Cross(
                 angularVelocity.normalized,
                 velocity.normalized);
 
             if (forceDirection.sqrMagnitude < 0.0001f)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Profiling.Profiler.EndSample();
-#endif
                 return Vector3.zero;
-            }
+
             forceDirection.Normalize();
 
             float forceMagnitude = 0.5f
                                  * BallPhysicsConstants.Environment.AIR_DENSITY
                                  * speed * speed
-                                 * BallPhysicsConstants.Ball.CROSS_SECTION_AREA
+                                 * BallPhysicsConstants.Ball.CrossSectionArea
                                  * C_L;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            UnityEngine.Profiling.Profiler.EndSample();
-#endif
             return forceDirection * forceMagnitude;
         }
 
@@ -149,29 +153,20 @@ namespace TacticalDirector.Core.Physics.Ball
         /// </summary>
         public static Vector3 CalculateDragForce(Vector3 relativeVelocity)
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            UnityEngine.Profiling.Profiler.BeginSample("BallPhysics.Drag");
-#endif
+            using var _ = s_dragMarker.Auto();
+
             float speed = relativeVelocity.magnitude;
 
-            if (speed < BallPhysicsConstants.State.MIN_VELOCITY)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Profiling.Profiler.EndSample();
-#endif
+            if (speed < BallPhysicsConstants.State.MinVelocity)
                 return Vector3.zero;
-            }
 
-            float C_d           = GetDragCoefficient(speed);
+            float C_d            = GetDragCoefficient(speed);
             float forceMagnitude = 0.5f
                                  * BallPhysicsConstants.Environment.AIR_DENSITY
                                  * speed * speed
                                  * C_d
-                                 * BallPhysicsConstants.Ball.CROSS_SECTION_AREA;
+                                 * BallPhysicsConstants.Ball.CrossSectionArea;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            UnityEngine.Profiling.Profiler.EndSample();
-#endif
             return -relativeVelocity.normalized * forceMagnitude;
         }
 
@@ -196,44 +191,30 @@ namespace TacticalDirector.Core.Physics.Ball
             Vector3 velocity,
             float dt)
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            UnityEngine.Profiling.Profiler.BeginSample("BallPhysics.SpinDecay");
-#endif
+            using var _ = s_spinDecayMarker.Auto();
+
             float spinRate = angularVelocity.magnitude;
             float speed    = velocity.magnitude;
 
-            if (spinRate < BallPhysicsConstants.State.MIN_SPIN)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Profiling.Profiler.EndSample();
-#endif
+            if (spinRate < BallPhysicsConstants.State.MinSpin)
                 return Vector3.zero;
-            }
 
-            float r5             = Mathf.Pow(BallPhysicsConstants.Ball.RADIUS, 5);
-            float torqueMagnitude = BallPhysicsConstants.Spin.TORQUE_COEFFICIENT
+            float r5              = Mathf.Pow(BallPhysicsConstants.Ball.RADIUS, 5);
+            float torqueMagnitude = BallPhysicsConstants.Spin.TorqueCoefficient
                                   * BallPhysicsConstants.Environment.AIR_DENSITY
                                   * r5 * spinRate * spinRate;
             Vector3 torque = -torqueMagnitude * angularVelocity.normalized;
 
-            float velocityDecay = BallPhysicsConstants.Spin.DECAY_VELOCITY_FACTOR * speed;
-            float spinDecay     = BallPhysicsConstants.Spin.DECAY_SPIN_FACTOR * spinRate;
+            float velocityDecay = BallPhysicsConstants.Spin.DecayVelocityFactor * speed;
+            float spinDecay     = BallPhysicsConstants.Spin.DecaySpinFactor * spinRate;
             float totalDecay    = velocityDecay + spinDecay;
 
             Vector3 newOmega = angularVelocity * (1f - totalDecay * dt);
-            newOmega += (torque / BallPhysicsConstants.Ball.MOMENT_OF_INERTIA) * dt;
+            newOmega += (torque / BallPhysicsConstants.Ball.MomentOfInertia) * dt;
 
-            if (newOmega.magnitude < BallPhysicsConstants.State.MIN_SPIN)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Profiling.Profiler.EndSample();
-#endif
+            if (newOmega.magnitude < BallPhysicsConstants.State.MinSpin)
                 return Vector3.zero;
-            }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            UnityEngine.Profiling.Profiler.EndSample();
-#endif
             return newOmega;
         }
 
@@ -247,13 +228,13 @@ namespace TacticalDirector.Core.Physics.Ball
         {
             float spinRate = angularVelocity.magnitude;
 
-            if (spinRate < BallPhysicsConstants.State.MIN_SPIN)
+            if (spinRate < BallPhysicsConstants.State.MinSpin)
                 return Vector3.zero;
 
             float newSpinRate = spinRate
-                              - BallPhysicsConstants.Spin.ROLLING_SPIN_DECAY_PER_SECOND * dt;
+                              - BallPhysicsConstants.Spin.RollingSpinDecayPerSecond * dt;
 
-            if (newSpinRate < BallPhysicsConstants.State.MIN_SPIN)
+            if (newSpinRate < BallPhysicsConstants.State.MinSpin)
                 return Vector3.zero;
 
             return angularVelocity.normalized * newSpinRate;
@@ -278,24 +259,24 @@ namespace TacticalDirector.Core.Physics.Ball
             }
 
             float speed = ball.Velocity.magnitude;
-            if (speed > BallPhysicsConstants.Limits.MAX_VELOCITY)
+            if (speed > BallPhysicsConstants.Limits.MaxVelocity)
             {
-                ball.Velocity = ball.Velocity.normalized * BallPhysicsConstants.Limits.MAX_VELOCITY;
+                ball.Velocity = ball.Velocity.normalized * BallPhysicsConstants.Limits.MaxVelocity;
                 Debug.LogWarning($"[BallPhysics] Velocity clamped from {speed:F1} m/s");
             }
 
             float spinRate = ball.AngularVelocity.magnitude;
-            if (spinRate > BallPhysicsConstants.Limits.MAX_SPIN)
+            if (spinRate > BallPhysicsConstants.Limits.MaxSpin)
             {
-                ball.AngularVelocity = ball.AngularVelocity.normalized * BallPhysicsConstants.Limits.MAX_SPIN;
+                ball.AngularVelocity = ball.AngularVelocity.normalized * BallPhysicsConstants.Limits.MaxSpin;
                 Debug.LogWarning($"[BallPhysics] Spin clamped from {spinRate:F1} rad/s");
             }
 
-            if (ball.Position.z > BallPhysicsConstants.Limits.MAX_HEIGHT)
+            if (ball.Position.z > BallPhysicsConstants.Limits.MaxHeight)
             {
                 ball.Position = new Vector3(
                     ball.Position.x, ball.Position.y,
-                    BallPhysicsConstants.Limits.MAX_HEIGHT);
+                    BallPhysicsConstants.Limits.MaxHeight);
                 ball.Velocity = new Vector3(
                     ball.Velocity.x, ball.Velocity.y,
                     Mathf.Min(ball.Velocity.z, 0f));
@@ -310,7 +291,7 @@ namespace TacticalDirector.Core.Physics.Ball
                     ball.Velocity = new Vector3(ball.Velocity.x, ball.Velocity.y, 0f);
             }
 
-            float buffer = BallPhysicsConstants.Limits.PITCH_BUFFER;
+            float buffer = BallPhysicsConstants.Limits.PitchBuffer;
             ball.Position = new Vector3(
                 Mathf.Clamp(ball.Position.x, -buffer, BallPhysicsConstants.Pitch.LENGTH + buffer),
                 Mathf.Clamp(ball.Position.y, -buffer, BallPhysicsConstants.Pitch.WIDTH  + buffer),
@@ -319,23 +300,20 @@ namespace TacticalDirector.Core.Physics.Ball
 
         // ── HELPERS ──────────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Returns drag coefficient using simplified linear drag-crisis interpolation.
-        /// </summary>
         private static float GetDragCoefficient(float speed)
         {
-            if (speed < BallPhysicsConstants.Drag.CRISIS_SPEED_LOW)
-                return BallPhysicsConstants.Drag.COEFFICIENT_LAMINAR;
+            if (speed < BallPhysicsConstants.Drag.CrisisSpeedLow)
+                return BallPhysicsConstants.Drag.CoefficientLaminar;
 
-            if (speed > BallPhysicsConstants.Drag.CRISIS_SPEED_HIGH)
-                return BallPhysicsConstants.Drag.COEFFICIENT_TURBULENT;
+            if (speed > BallPhysicsConstants.Drag.CrisisSpeedHigh)
+                return BallPhysicsConstants.Drag.CoefficientTurbulent;
 
-            float t = (speed - BallPhysicsConstants.Drag.CRISIS_SPEED_LOW)
-                    / (BallPhysicsConstants.Drag.CRISIS_SPEED_HIGH
-                     - BallPhysicsConstants.Drag.CRISIS_SPEED_LOW);
+            float t = (speed - BallPhysicsConstants.Drag.CrisisSpeedLow)
+                    / (BallPhysicsConstants.Drag.CrisisSpeedHigh
+                     - BallPhysicsConstants.Drag.CrisisSpeedLow);
             return Mathf.Lerp(
-                BallPhysicsConstants.Drag.COEFFICIENT_LAMINAR,
-                BallPhysicsConstants.Drag.COEFFICIENT_TURBULENT, t);
+                BallPhysicsConstants.Drag.CoefficientLaminar,
+                BallPhysicsConstants.Drag.CoefficientTurbulent, t);
         }
 
         private static bool HasInvalidValues(BallState ball)
@@ -352,3 +330,15 @@ namespace TacticalDirector.Core.Physics.Ball
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-24 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-05-24 | —      | Bug fix: LastValidPosition/LastValidVelocity now guarded by        |
+// |         |            |        | HasInvalidValues — prevents overwriting the recovery point when    |
+// |         |            |        | the incoming state already contains NaN/Infinity.                  |
+// |         |            |        | Standards fix: namespace → TacticalDirector.BallPhysics; ALL_CAPS  |
+// |         |            |        | constant refs → PascalCase; ProfilerMarker replaces #if            |
+// |         |            |        | DEVELOPMENT_BUILD Profiler.BeginSample/EndSample per FR-CS-070;    |
+// |         |            |        | file header added per FR-CS-056/057.                               |
+#endregion

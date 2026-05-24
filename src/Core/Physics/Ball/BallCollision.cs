@@ -1,10 +1,20 @@
+// File:     src/Core/Physics/Ball/BallCollision.cs
+// Created:  2026-05-24
+// Modified: 2026-05-24
+// Author:   —
+// Spec:     Ball Physics #1, Code Standards #20
+// Purpose:  Goal-post collision, boundary detection, possession evaluation, and kick
+//           application. Possession tracking is external to BallState (Option B).
+
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace TacticalDirector.Core.Physics.Ball
+namespace TacticalDirector.BallPhysics
 {
+    /// <summary>Body parts used for deflection coefficient lookup.</summary>
     public enum BodyPart { Foot, Shin, Thigh, Torso, Head, Arm }
 
+    /// <summary>Restart types awarded after the ball leaves the field of play.</summary>
     public enum RestartType { NONE, THROW_IN, GOAL_KICK, CORNER, KICKOFF }
 
     /// <summary>
@@ -23,6 +33,7 @@ namespace TacticalDirector.Core.Physics.Ball
             { BodyPart.Arm,   (0.50f, 0.30f) }
         };
 
+        /// <summary>Returns (speedRetention, spinRetention) for the given body part.</summary>
         public static (float speedRetention, float spinRetention) Get(BodyPart part)
         {
             return _coefficients.TryGetValue(part, out var coef) ? coef : (0.60f, 0.30f);
@@ -47,19 +58,21 @@ namespace TacticalDirector.Core.Physics.Ball
         {
             Vector3 normal = (contactPoint - postCenter).normalized;
 
-            float   vn      = Vector3.Dot(ball.Velocity, normal);
-            Vector3 vt      = ball.Velocity - vn * normal;
-            float   vn_after = -BallPhysicsConstants.GoalPost.COEFFICIENT_OF_RESTITUTION * vn;
+            float   vn       = Vector3.Dot(ball.Velocity, normal);
+            Vector3 vt       = ball.Velocity - vn * normal;
+            float   vn_after = -BallPhysicsConstants.GoalPost.CoefficientOfRestitution * vn;
 
             ball.Velocity        = vt + vn_after * normal;
-            ball.AngularVelocity *= BallPhysicsConstants.GoalPost.SPIN_RETENTION;
+            ball.AngularVelocity *= BallPhysicsConstants.GoalPost.SpinRetention;
 
             logger?.LogGoalPostHit(ball, contactPoint, matchTime);
         }
 
         /// <summary>
         /// Checks if the ball has left the field of play.
-        /// Ball must entirely cross the line.
+        /// Ball must entirely cross the line. Stage 0: only detects ground-level exits
+        /// (z &lt; Ball.Diameter). Goals scored at height require a dedicated goal-volume
+        /// check at Stage 1+.
         /// </summary>
         public static (bool isOut, RestartType restart) CheckBoundaries(
             BallState ball,
@@ -70,7 +83,7 @@ namespace TacticalDirector.Core.Physics.Ball
             float z = ball.Position.z;
             float r = BallPhysicsConstants.Ball.RADIUS;
 
-            bool lowEnough = z < BallPhysicsConstants.Ball.DIAMETER;
+            bool lowEnough = z < BallPhysicsConstants.Ball.Diameter;
 
             if (lowEnough && (y < -r || y > BallPhysicsConstants.Pitch.WIDTH + r))
                 return (true, RestartType.THROW_IN);
@@ -114,18 +127,18 @@ namespace TacticalDirector.Core.Physics.Ball
             Vector3 agentPosition,
             Vector3 agentVelocity)
         {
-            // XY-plane distance only; height handled by CONTROL_HEIGHT check
+            // XY-plane distance only; height handled by ControlHeight check.
             float distance = Vector3.Distance(
                 new Vector3(ball.Position.x, ball.Position.y, 0f),
                 new Vector3(agentPosition.x, agentPosition.y, 0f));
 
-            if (distance > BallPhysicsConstants.Possession.CONTROL_RADIUS)
+            if (distance > BallPhysicsConstants.Possession.ControlRadius)
                 return false;
 
-            if ((ball.Velocity - agentVelocity).magnitude > BallPhysicsConstants.Possession.CONTROL_VELOCITY)
+            if ((ball.Velocity - agentVelocity).magnitude > BallPhysicsConstants.Possession.ControlVelocity)
                 return false;
 
-            if (ball.Position.z > BallPhysicsConstants.Possession.CONTROL_HEIGHT)
+            if (ball.Position.z > BallPhysicsConstants.Possession.ControlHeight)
                 return false;
 
             return true;
@@ -145,7 +158,7 @@ namespace TacticalDirector.Core.Physics.Ball
         /// <summary>
         /// Applies a kick impulse to the ball, releasing it from CONTROLLED.
         /// POSSESSION MODEL (Option B): transitions BallState out of CONTROLLED as the signal
-        /// the agent system polls to clear its possession record. No PossessingAgentId in BallState.
+        /// the agent system polls to clear its possession record.
         /// </summary>
         public static void ApplyKick(
             ref BallState ball,
@@ -169,15 +182,15 @@ namespace TacticalDirector.Core.Physics.Ball
                 spin = Vector3.zero;
             }
 
-            if (velocity.magnitude > BallPhysicsConstants.Limits.MAX_VELOCITY)
+            if (velocity.magnitude > BallPhysicsConstants.Limits.MaxVelocity)
             {
-                velocity = velocity.normalized * BallPhysicsConstants.Limits.MAX_VELOCITY;
+                velocity = velocity.normalized * BallPhysicsConstants.Limits.MaxVelocity;
                 UnityEngine.Debug.LogWarning(
-                    $"[BallPhysics] ApplyKick: Velocity clamped to {BallPhysicsConstants.Limits.MAX_VELOCITY} m/s.");
+                    $"[BallPhysics] ApplyKick: Velocity clamped to {BallPhysicsConstants.Limits.MaxVelocity} m/s.");
             }
 
-            if (spin.magnitude > BallPhysicsConstants.Limits.MAX_SPIN)
-                spin = spin.normalized * BallPhysicsConstants.Limits.MAX_SPIN;
+            if (spin.magnitude > BallPhysicsConstants.Limits.MaxSpin)
+                spin = spin.normalized * BallPhysicsConstants.Limits.MaxSpin;
 
             ball.Velocity        = velocity;
             ball.AngularVelocity = spin;
@@ -186,7 +199,7 @@ namespace TacticalDirector.Core.Physics.Ball
 
             if (velocity.z > 0f)
                 ball.State = BallStateType.AIRBORNE;
-            else if (horizontalSpeed > BallPhysicsConstants.State.MIN_VELOCITY)
+            else if (horizontalSpeed > BallPhysicsConstants.State.MinVelocity)
                 ball.State = BallStateType.ROLLING;
             else
                 ball.State = BallStateType.STATIONARY;
@@ -206,3 +219,11 @@ namespace TacticalDirector.Core.Physics.Ball
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-24 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-05-24 | —      | Fix pass: namespace → TacticalDirector.BallPhysics; ALL_CAPS       |
+// |         |            |        | constant refs → PascalCase; Stage 0 lowEnough limitation          |
+// |         |            |        | documented in CheckBoundaries XML doc; file header per FR-CS-056.  |
+#endregion

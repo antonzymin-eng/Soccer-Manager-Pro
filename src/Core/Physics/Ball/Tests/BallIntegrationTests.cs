@@ -1,8 +1,17 @@
+// File:     src/Core/Physics/Ball/Tests/BallIntegrationTests.cs
+// Created:  2026-05-24
+// Modified: 2026-05-24
+// Author:   —
+// Spec:     Ball Physics #1, Code Standards #20
+// Purpose:  End-to-end integration tests against §3.1.14 derived validation test cases.
+//           Each test simulates a realistic scenario and verifies output within the
+//           expected range derived in the spec.
+
 using NUnit.Framework;
 using UnityEngine;
-using TacticalDirector.Core.Physics.Ball;
+using TacticalDirector.BallPhysics;
 
-namespace TacticalDirector.Core.Physics.Ball.Tests
+namespace TacticalDirector.BallPhysics.Tests
 {
     /// <summary>
     /// End-to-end integration tests against §3.1.14 derived validation test cases.
@@ -13,24 +22,24 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
     {
         private const float DT = 1f / 60f;
 
-        // ── §3.1.14: Free kick curve (1.5–3.0m lateral deviation over 25m) ───────
+        // ── §3.1.14: Free kick curve (1.5–3.0 m lateral deviation over 25 m) ────
 
         [Test]
         public void FreekickTrajectory_CurvesWithinExpectedRange()
         {
             // Right-foot free kick from (25,34): v=(22,0,6), ω=(0,0,-12)
-            // Expected: 1.5–3.0m lateral curve over 25m forward
+            // Expected: 1.5–3.0 m lateral curve over 25 m forward.
             var ball = new BallState
             {
-                State           = BallStateType.AIRBORNE,
-                Position        = new Vector3(25f, 34f, BallPhysicsConstants.Ball.RADIUS),
-                Velocity        = new Vector3(22f, 0f, 6f),
-                AngularVelocity = new Vector3(0f, 0f, -12f),
+                State             = BallStateType.AIRBORNE,
+                Position          = new Vector3(25f, 34f, BallPhysicsConstants.Ball.RADIUS),
+                Velocity          = new Vector3(22f, 0f, 6f),
+                AngularVelocity   = new Vector3(0f, 0f, -12f),
                 LastValidPosition = new Vector3(25f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(22f, 0f, 6f)
             };
 
-            float startY = ball.Position.y;
+            float startY  = ball.Position.y;
             int   maxSteps = 300;
 
             while (ball.Position.x < 50f
@@ -44,22 +53,22 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
             float lateralDeviation = Mathf.Abs(ball.Position.y - startY);
 
             Assert.That(lateralDeviation, Is.GreaterThan(1.5f),
-                $"Ball curved only {lateralDeviation:F2}m — expected >1.5m");
+                $"Ball curved only {lateralDeviation:F2} m — expected >1.5 m");
             Assert.That(lateralDeviation, Is.LessThan(3.0f),
-                $"Ball curved {lateralDeviation:F2}m — expected <3.0m");
+                $"Ball curved {lateralDeviation:F2} m — expected <3.0 m");
         }
 
-        // ── §3.1.14: Rolling distance (26–31m on dry grass at 10 m/s) ────────────
+        // ── §3.1.14: Rolling distance (26–31 m on dry grass at 10 m/s) ──────────
 
         [Test]
         public void RollingDistance_DryGrass_StopsWithinExpectedRange()
         {
             var ball = new BallState
             {
-                State           = BallStateType.ROLLING,
-                Position        = new Vector3(0f, 34f, BallPhysicsConstants.Ball.RADIUS),
-                Velocity        = new Vector3(10f, 0f, 0f),
-                AngularVelocity = Vector3.zero,
+                State             = BallStateType.ROLLING,
+                Position          = new Vector3(0f, 34f, BallPhysicsConstants.Ball.RADIUS),
+                Velocity          = new Vector3(10f, 0f, 0f),
+                AngularVelocity   = Vector3.zero,
                 LastValidPosition = new Vector3(0f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(10f, 0f, 0f)
             };
@@ -75,9 +84,9 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
             float stoppingDistance = ball.Position.x;
 
             Assert.That(stoppingDistance, Is.GreaterThan(26f),
-                $"Ball stopped at {stoppingDistance:F1}m — expected >26m");
+                $"Ball stopped at {stoppingDistance:F1} m — expected >26 m");
             Assert.That(stoppingDistance, Is.LessThan(31f),
-                $"Ball stopped at {stoppingDistance:F1}m — expected <31m");
+                $"Ball stopped at {stoppingDistance:F1} m — expected <31 m");
         }
 
         // ── Possession: ApplyKick + SetBallControlled round-trip ─────────────────
@@ -93,11 +102,11 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
 
             BallCollision.ApplyKick(
                 ref ball,
-                velocity: new Vector3(20f, 0f, 5f),
-                spin:     new Vector3(0f, 0f, -10f),
-                agentId:  0,
+                velocity:  new Vector3(20f, 0f, 5f),
+                spin:      new Vector3(0f, 0f, -10f),
+                agentId:   0,
                 matchTime: 0f,
-                logger:   null);
+                logger:    null);
 
             Assert.AreEqual(BallStateType.AIRBORNE, ball.State,
                 "Kick with positive z velocity must produce AIRBORNE state");
@@ -141,12 +150,16 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
         [Test]
         public void Boundary_BallEntersGoal_ReturnsKickoff()
         {
-            // Center of home goal: x<0, y at goal center, z<crossbar height
+            // Ball at ground level inside home goal: x < -r, y at goal centre, z < crossbar.
+            // z must be < Ball.Diameter (0.22 m) to satisfy the Stage 0 lowEnough gate.
             float goalCenterY = BallPhysicsConstants.Pitch.WIDTH / 2f;
             var ball = new BallState
             {
                 State    = BallStateType.ROLLING,
-                Position = new Vector3(-BallPhysicsConstants.Ball.RADIUS - 0.01f, goalCenterY, 0.5f),
+                Position = new Vector3(
+                    -BallPhysicsConstants.Ball.RADIUS - 0.01f,
+                    goalCenterY,
+                    BallPhysicsConstants.Ball.RADIUS),   // ground level — within lowEnough gate
                 Velocity = new Vector3(-5f, 0f, 0f)
             };
 
@@ -170,7 +183,7 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
             };
 
             Vector3 postCenter   = new Vector3(0f, 34f, 1f);
-            Vector3 contactPoint = new Vector3(0.06f, 34f, 1f); // On post surface
+            Vector3 contactPoint = new Vector3(0.06f, 34f, 1f); // On post surface.
 
             BallCollision.ApplyGoalPostCollision(ref ball, contactPoint, postCenter, null, 0f);
 
@@ -207,9 +220,9 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
             var logger = new BallEventLogger();
             var ball   = new BallState
             {
-                State    = BallStateType.BOUNCING,
-                Position = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
-                Velocity = new Vector3(5f, 0f, -4f),
+                State             = BallStateType.BOUNCING,
+                Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
+                Velocity          = new Vector3(5f, 0f, -4f),
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(5f, 0f, -4f)
             };
@@ -223,3 +236,13 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-24 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-05-24 | —      | Bug fix: Boundary_BallEntersGoal_ReturnsKickoff had z=0.5f which   |
+// |         |            |        | exceeded Ball.Diameter (0.22 m) making lowEnough=false — goal was  |
+// |         |            |        | never detected; corrected to Ball.RADIUS (ground level).           |
+// |         |            |        | Standards fix: namespace → TacticalDirector.BallPhysics.Tests;     |
+// |         |            |        | ALL_CAPS constant refs → PascalCase; file header per FR-CS-056/057. |
+#endregion

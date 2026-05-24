@@ -1,8 +1,16 @@
+// File:     src/Core/Physics/Ball/Tests/BallStateMachineTests.cs
+// Created:  2026-05-24
+// Modified: 2026-05-24
+// Author:   —
+// Spec:     Ball Physics #1, Code Standards #20
+// Purpose:  Unit tests for BallStateMachine state transitions and hysteresis.
+//           Covers Spec §3.1.3 and §3.1.14.
+
 using NUnit.Framework;
 using UnityEngine;
-using TacticalDirector.Core.Physics.Ball;
+using TacticalDirector.BallPhysics;
 
-namespace TacticalDirector.Core.Physics.Ball.Tests
+namespace TacticalDirector.BallPhysics.Tests
 {
     /// <summary>
     /// Unit tests for BallStateMachine state transitions and hysteresis.
@@ -19,7 +27,7 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
             {
                 State    = BallStateType.ROLLING,
                 Position = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
-                Velocity = new Vector3(BallPhysicsConstants.State.MIN_VELOCITY * 0.5f, 0f, 0f)
+                Velocity = new Vector3(BallPhysicsConstants.State.MinVelocity * 0.5f, 0f, 0f)
             };
 
             Assert.AreEqual(BallStateType.STATIONARY, BallStateMachine.UpdateBallState(ball));
@@ -31,7 +39,7 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
             var ball = new BallState
             {
                 State    = BallStateType.ROLLING,
-                Position = new Vector3(50f, 34f, BallPhysicsConstants.State.AIRBORNE_ENTER_THRESHOLD + 0.01f),
+                Position = new Vector3(50f, 34f, BallPhysicsConstants.State.AirborneEnterThreshold + 0.01f),
                 Velocity = new Vector3(5f, 0f, 0.5f)
             };
 
@@ -43,9 +51,9 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
         [Test]
         public void Hysteresis_Rolling_BelowEnterThreshold_StaysRolling()
         {
-            // Position is between EXIT (0.13m) and ENTER (0.17m) thresholds
-            float midBand = (BallPhysicsConstants.State.AIRBORNE_EXIT_THRESHOLD
-                           + BallPhysicsConstants.State.AIRBORNE_ENTER_THRESHOLD) / 2f;
+            // Position is between EXIT (0.13 m) and ENTER (0.17 m) thresholds.
+            float midBand = (BallPhysicsConstants.State.AirborneExitThreshold
+                           + BallPhysicsConstants.State.AirborneEnterThreshold) / 2f;
 
             var ball = new BallState
             {
@@ -61,8 +69,8 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
         [Test]
         public void Hysteresis_Airborne_AboveExitThreshold_StaysAirborne()
         {
-            float midBand = (BallPhysicsConstants.State.AIRBORNE_EXIT_THRESHOLD
-                           + BallPhysicsConstants.State.AIRBORNE_ENTER_THRESHOLD) / 2f;
+            float midBand = (BallPhysicsConstants.State.AirborneExitThreshold
+                           + BallPhysicsConstants.State.AirborneEnterThreshold) / 2f;
 
             var ball = new BallState
             {
@@ -78,7 +86,7 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
         [Test]
         public void Hysteresis_FullCycle_NoBouncing()
         {
-            // From ROLLING at 0.15m → AIRBORNE at 0.18m → back to 0.15m stays AIRBORNE
+            // From ROLLING at 0.15 m → AIRBORNE at 0.18 m → back to 0.15 m stays AIRBORNE.
             var ball = new BallState
             {
                 State    = BallStateType.ROLLING,
@@ -86,14 +94,14 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
                 Velocity = new Vector3(5f, 0f, 0.1f)
             };
 
-            // Still ROLLING below enter threshold
+            // Still ROLLING below enter threshold.
             Assert.AreEqual(BallStateType.ROLLING, BallStateMachine.UpdateBallState(ball));
 
-            // Above enter threshold → goes AIRBORNE
+            // Above enter threshold → goes AIRBORNE.
             ball.Position = new Vector3(50f, 34f, 0.18f);
             Assert.AreEqual(BallStateType.AIRBORNE, BallStateMachine.UpdateBallState(ball));
 
-            // AIRBORNE at 0.15m (between thresholds) — hysteresis keeps it AIRBORNE
+            // AIRBORNE at 0.15 m (between thresholds) — hysteresis keeps it AIRBORNE.
             ball.State    = BallStateType.AIRBORNE;
             ball.Position = new Vector3(50f, 34f, 0.15f);
             ball.Velocity = new Vector3(5f, 0f, -0.1f);
@@ -108,7 +116,7 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
             var ball = new BallState
             {
                 State    = BallStateType.AIRBORNE,
-                Position = new Vector3(50f, 34f, BallPhysicsConstants.State.AIRBORNE_EXIT_THRESHOLD - 0.01f),
+                Position = new Vector3(50f, 34f, BallPhysicsConstants.State.AirborneExitThreshold - 0.01f),
                 Velocity = new Vector3(5f, 0f, -2f)
             };
 
@@ -118,11 +126,11 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
         [Test]
         public void Airborne_BelowExitThreshold_WithUpwardVelocity_StaysAirborne()
         {
-            // Ball is rising — should not trigger BOUNCING
+            // Ball is rising — should not trigger BOUNCING.
             var ball = new BallState
             {
                 State    = BallStateType.AIRBORNE,
-                Position = new Vector3(50f, 34f, BallPhysicsConstants.State.AIRBORNE_EXIT_THRESHOLD - 0.01f),
+                Position = new Vector3(50f, 34f, BallPhysicsConstants.State.AirborneExitThreshold - 0.01f),
                 Velocity = new Vector3(5f, 0f, 2f)
             };
 
@@ -137,7 +145,7 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
             var ball = new BallState
             {
                 State    = BallStateType.BOUNCING,
-                Velocity = new Vector3(5f, 0f, BallPhysicsConstants.State.BOUNCE_VELOCITY_THRESHOLD + 0.5f)
+                Velocity = new Vector3(5f, 0f, BallPhysicsConstants.State.BounceVelocityThreshold + 0.5f)
             };
 
             Assert.AreEqual(BallStateType.AIRBORNE, BallStateMachine.UpdateBallState(ball));
@@ -149,7 +157,7 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
             var ball = new BallState
             {
                 State    = BallStateType.BOUNCING,
-                Velocity = new Vector3(5f, 0f, BallPhysicsConstants.State.BOUNCE_VELOCITY_THRESHOLD * 0.5f)
+                Velocity = new Vector3(5f, 0f, BallPhysicsConstants.State.BounceVelocityThreshold * 0.5f)
             };
 
             Assert.AreEqual(BallStateType.ROLLING, BallStateMachine.UpdateBallState(ball));
@@ -195,3 +203,10 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-24 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-05-24 | —      | Fix pass: namespace → TacticalDirector.BallPhysics.Tests; ALL_CAPS |
+// |         |            |        | constant refs → PascalCase; file header per FR-CS-056/057.         |
+#endregion

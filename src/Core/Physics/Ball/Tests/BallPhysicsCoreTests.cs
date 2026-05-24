@@ -1,8 +1,16 @@
+// File:     src/Core/Physics/Ball/Tests/BallPhysicsCoreTests.cs
+// Created:  2026-05-24
+// Modified: 2026-05-24
+// Author:   —
+// Spec:     Ball Physics #1, Code Standards #20
+// Purpose:  Unit tests for BallPhysicsCore force calculations and validation.
+//           Derived test values from Spec §3.1.14 and §5 test plan.
+
 using NUnit.Framework;
 using UnityEngine;
-using TacticalDirector.Core.Physics.Ball;
+using TacticalDirector.BallPhysics;
 
-namespace TacticalDirector.Core.Physics.Ball.Tests
+namespace TacticalDirector.BallPhysics.Tests
 {
     /// <summary>
     /// Unit tests for BallPhysicsCore force calculations and validation.
@@ -130,7 +138,7 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
         {
             Vector3 initial   = new Vector3(0f, 0f, 10f);
             Vector3 afterOneS = BallPhysicsCore.UpdateRollingSpinDecay(initial, 1f);
-            float   expected  = 10f - BallPhysicsConstants.Spin.ROLLING_SPIN_DECAY_PER_SECOND;
+            float   expected  = 10f - BallPhysicsConstants.Spin.RollingSpinDecayPerSecond;
 
             Assert.That(afterOneS.magnitude, Is.EqualTo(expected).Within(0.001f));
         }
@@ -160,16 +168,16 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
         {
             var ball = new BallState
             {
-                Position  = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
-                Velocity  = new Vector3(100f, 0f, 0f),
-                State     = BallStateType.ROLLING,
+                Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
+                Velocity          = new Vector3(100f, 0f, 0f),
+                State             = BallStateType.ROLLING,
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = Vector3.zero
             };
 
             BallPhysicsCore.ValidatePhysicsState(ref ball);
 
-            Assert.That(ball.Velocity.magnitude, Is.LessThanOrEqualTo(BallPhysicsConstants.Limits.MAX_VELOCITY));
+            Assert.That(ball.Velocity.magnitude, Is.LessThanOrEqualTo(BallPhysicsConstants.Limits.MaxVelocity));
         }
 
         [Test]
@@ -178,9 +186,9 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
             float belowGround = BallPhysicsConstants.Ball.RADIUS - 0.05f;
             var ball = new BallState
             {
-                Position  = new Vector3(50f, 34f, belowGround),
-                Velocity  = new Vector3(5f, 0f, -1f),
-                State     = BallStateType.ROLLING,
+                Position          = new Vector3(50f, 34f, belowGround),
+                Velocity          = new Vector3(5f, 0f, -1f),
+                State             = BallStateType.ROLLING,
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(5f, 0f, 0f)
             };
@@ -219,3 +227,10 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-24 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-05-24 | —      | Fix pass: namespace → TacticalDirector.BallPhysics.Tests; ALL_CAPS |
+// |         |            |        | constant refs → PascalCase; file header per FR-CS-056/057.         |
+#endregion
