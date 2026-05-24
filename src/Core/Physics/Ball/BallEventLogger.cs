@@ -1,8 +1,17 @@
+// File:     src/Core/Physics/Ball/BallEventLogger.cs
+// Created:  2026-05-24
+// Modified: 2026-05-24
+// Author:   —
+// Spec:     Ball Physics #1, Code Standards #20
+// Purpose:  Records ball events (kicks, bounces, goals, snapshots) for replay
+//           reconstruction. Stage 0: unbounded list; ring buffer at Stage 1+.
+
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace TacticalDirector.Core.Physics.Ball
+namespace TacticalDirector.BallPhysics
 {
+    /// <summary>Ball event types for replay and analytics logging.</summary>
     public enum BallEventType
     {
         POSITION_SNAPSHOT,
@@ -16,6 +25,7 @@ namespace TacticalDirector.Core.Physics.Ball
         POSSESSION_CHANGE
     }
 
+    /// <summary>Single ball event record stored by BallEventLogger.</summary>
     public struct BallEvent
     {
         public float        Timestamp;
@@ -36,9 +46,10 @@ namespace TacticalDirector.Core.Physics.Ball
         private readonly List<BallEvent> _events = new List<BallEvent>();
         private float _lastSnapshotTime = -999f;
 
+        /// <summary>Logs a position snapshot if the snapshot interval has elapsed.</summary>
         public void TryLogSnapshot(BallState ball, float matchTime)
         {
-            if (matchTime - _lastSnapshotTime >= BallPhysicsConstants.Logging.SNAPSHOT_INTERVAL)
+            if (matchTime - _lastSnapshotTime >= BallPhysicsConstants.Logging.SnapshotInterval)
             {
                 _events.Add(new BallEvent
                 {
@@ -53,6 +64,7 @@ namespace TacticalDirector.Core.Physics.Ball
             }
         }
 
+        /// <summary>Logs a ground-contact bounce event.</summary>
         public void LogBounce(
             BallState ball,
             SurfaceType surface,
@@ -72,6 +84,7 @@ namespace TacticalDirector.Core.Physics.Ball
             });
         }
 
+        /// <summary>Logs a goal post or crossbar contact event.</summary>
         public void LogGoalPostHit(BallState ball, Vector3 contactPoint, float matchTime)
         {
             _events.Add(new BallEvent
@@ -85,6 +98,7 @@ namespace TacticalDirector.Core.Physics.Ball
             });
         }
 
+        /// <summary>Logs a kick event from a specific agent.</summary>
         public void LogKick(BallState ball, int agentID, string kickType, float matchTime)
         {
             _events.Add(new BallEvent
@@ -98,6 +112,7 @@ namespace TacticalDirector.Core.Physics.Ball
             });
         }
 
+        /// <summary>Logs a goal scored event.</summary>
         public void LogGoal(BallState ball, int scorerID, int teamID, float matchTime)
         {
             _events.Add(new BallEvent
@@ -111,8 +126,10 @@ namespace TacticalDirector.Core.Physics.Ball
             });
         }
 
+        /// <summary>Returns a snapshot copy of all recorded events.</summary>
         public List<BallEvent> ExportEvents() => new List<BallEvent>(_events);
 
+        /// <summary>Clears all recorded events and resets the snapshot timer.</summary>
         public void Clear()
         {
             _events.Clear();
@@ -120,3 +137,10 @@ namespace TacticalDirector.Core.Physics.Ball
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-24 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-05-24 | —      | Fix pass: namespace → TacticalDirector.BallPhysics;                |
+// |         |            |        | SNAPSHOT_INTERVAL → SnapshotInterval; file header per FR-CS-056.   |
+#endregion

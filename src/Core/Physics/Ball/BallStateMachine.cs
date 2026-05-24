@@ -1,6 +1,14 @@
+// File:     src/Core/Physics/Ball/BallStateMachine.cs
+// Created:  2026-05-24
+// Modified: 2026-05-24
+// Author:   —
+// Spec:     Ball Physics #1, Code Standards #20
+// Purpose:  Pure state-transition logic for the ball state machine.
+//           No physics calculations; only reads BallState fields.
+
 using UnityEngine;
 
-namespace TacticalDirector.Core.Physics.Ball
+namespace TacticalDirector.BallPhysics
 {
     /// <summary>
     /// State transition logic for the ball state machine.
@@ -17,37 +25,37 @@ namespace TacticalDirector.Core.Physics.Ball
             switch (ball.State)
             {
                 case BallStateType.STATIONARY:
-                    // Transitions handled externally by kick/touch events
+                    // Transitions handled externally by kick/touch events.
                     return BallStateType.STATIONARY;
 
                 case BallStateType.ROLLING:
-                    if (ball.Velocity.magnitude < BallPhysicsConstants.State.MIN_VELOCITY)
+                    if (ball.Velocity.magnitude < BallPhysicsConstants.State.MinVelocity)
                         return BallStateType.STATIONARY;
-                    if (ball.Position.z > BallPhysicsConstants.State.AIRBORNE_ENTER_THRESHOLD)
+                    if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold)
                         return BallStateType.AIRBORNE;
                     if (IsOutOfBounds(ball.Position))
                         return BallStateType.OUT_OF_PLAY;
                     return BallStateType.ROLLING;
 
                 case BallStateType.AIRBORNE:
-                    if (ball.Position.z <= BallPhysicsConstants.State.AIRBORNE_EXIT_THRESHOLD &&
-                        ball.Velocity.z < 0)
+                    if (ball.Position.z <= BallPhysicsConstants.State.AirborneExitThreshold &&
+                        ball.Velocity.z < 0f)
                         return BallStateType.BOUNCING;
                     if (IsOutOfBounds(ball.Position))
                         return BallStateType.OUT_OF_PLAY;
                     return BallStateType.AIRBORNE;
 
                 case BallStateType.BOUNCING:
-                    if (Mathf.Abs(ball.Velocity.z) < BallPhysicsConstants.State.BOUNCE_VELOCITY_THRESHOLD)
+                    if (Mathf.Abs(ball.Velocity.z) < BallPhysicsConstants.State.BounceVelocityThreshold)
                         return BallStateType.ROLLING;
                     return BallStateType.AIRBORNE;
 
                 case BallStateType.CONTROLLED:
-                    // Transitions handled externally by agent system
+                    // Transitions handled externally by the agent system.
                     return BallStateType.CONTROLLED;
 
                 case BallStateType.OUT_OF_PLAY:
-                    // Transitions handled externally by restart system
+                    // Transitions handled externally by the restart system.
                     return BallStateType.OUT_OF_PLAY;
 
                 default:
@@ -68,3 +76,10 @@ namespace TacticalDirector.Core.Physics.Ball
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-24 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-05-24 | —      | Fix pass: namespace → TacticalDirector.BallPhysics; ALL_CAPS       |
+// |         |            |        | constant refs → PascalCase; file header per FR-CS-056/057.         |
+#endregion
