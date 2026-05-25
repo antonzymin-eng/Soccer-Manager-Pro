@@ -1,7 +1,7 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** May 18, 2026 (Goalkeeper Mechanics #11 / Positioning AI #12 / Defensive AI #14 all advanced `IN REVIEW → APPROVED`; ERR-011-001/012-001/014-001/014-004 all resolved; **Stage 0 specification phase COMPLETE. Counts: 20 APPROVED, 0 IN REVIEW, 0 NOT STARTED.** Stress-test Run 2 FAIL-4/FAIL-5/OBS-1 resolved: 12 stale `[CROSS-PENDING]` body-text tags promoted across #11/12/13/14; file-manifest updated; ERR-016-002 FULLY CLOSED. Stress-test Run 3 FAIL-6 resolved: 11 stale `[EST]` body-text tags in #12 §3 promoted to `[GT]` matching §6.1 catalogue; SPACING_MAX_PASSES promoted in §6.1; stale GK §3.3.3 prose updated; ERR-012-001 status corrected in spec-error-log and §8.4; event-system §9 checklist header corrected. Zero open FAILs after Run 3.)
+> **Last Updated:** May 25, 2026 (Agent Movement #2 adversarial review fix pass: H-1 UpdateFacing direction bug fixed; H-2 files moved to `src/agent-movement/` with correct namespace `TacticalDirector.AgentMovement`; all [GT]/[DERIVED] constant names corrected to PascalCase; OscillationGuard extracted to own file; UpdateAllAgents gains per-agent collision knockdown arrays; 11 magic literals promoted to named constants; root CLAUDE.md updated to reflect coding phase.) — Prior: May 18, 2026 (Goalkeeper Mechanics #11 / Positioning AI #12 / Defensive AI #14 all advanced `IN REVIEW → APPROVED`; ERR-011-001/012-001/014-001/014-004 all resolved; **Stage 0 specification phase COMPLETE. Counts: 20 APPROVED, 0 IN REVIEW, 0 NOT STARTED.** Stress-test Run 2 FAIL-4/FAIL-5/OBS-1 resolved: 12 stale `[CROSS-PENDING]` body-text tags promoted across #11/12/13/14; file-manifest updated; ERR-016-002 FULLY CLOSED. Stress-test Run 3 FAIL-6 resolved: 11 stale `[EST]` body-text tags in #12 §3 promoted to `[GT]` matching §6.1 catalogue; SPACING_MAX_PASSES promoted in §6.1; stale GK §3.3.3 prose updated; ERR-012-001 status corrected in spec-error-log and §8.4; event-system §9 checklist header corrected. Zero open FAILs after Run 3.)
 > **Purpose:** Authoritative rules for any AI agent (Claude Code, Claude chat, etc.) working on this project. Read this file completely before every task.
 
 ---
@@ -10,7 +10,7 @@
 
 **Tactical Director** is a football (soccer) simulation game targeting "Football Manager killer" ambitions. It follows a 10-year, 6-stage development plan. The project is solo-developed with AI assistance.
 
-**Current phase:** Stage 0 — Physics Foundation. Writing 20 formal technical specifications. **No code exists yet. No code will be written until all 20 specs are approved.**
+**Current phase:** Stage 0+1 — Implementation. All 20 formal technical specifications are APPROVED. **Coding has begun.** Ball Physics (#1) and Agent Movement (#2) have initial implementations. `src/CLAUDE.md` is the authoritative coding guide.
 
 ---
 
@@ -33,16 +33,20 @@ Soccer-Manager-Pro/
 │   │   ├── decision-tree/          ← Spec #8
 │   │   └── ...                     ← Specs #9–#20 as written
 │   └── tracking/                   ← PROGRESS.md, spec-error-log.md, fix-manifest-pass-mechanics.md, file-manifest.md
-└── src/                            ← Empty until all 20 specs approved
+└── src/                            ← Implementation (coding began May 2026)
+    ├── CLAUDE.md                   ← Coding guide (read before writing any code)
+    ├── ball-physics/               ← Spec #1 implementation (BallPhysicsCore, BallState, etc.)
+    │   └── Tests/
+    └── agent-movement/             ← Spec #2 implementation (13 files: see src/CLAUDE.md)
 ```
 
 **Rules:**
 - Each spec folder contains ONLY current-version files. No version suffixes in filenames. Git tracks history.
 - `SPEC_INDEX.md` is the canonical source of truth for spec numbers, folder names, and approval status.
 - `PROGRESS.md` is the canonical source of truth for schedule and milestone tracking.
-- Never create files in `src/` during the specification phase.
+- `src/CLAUDE.md` is the authoritative guide for all coding conventions. Read it before writing any code.
 
-**Deferred: `src/CLAUDE.md`** — Do NOT create until coding begins (after all 20 specs are approved). At that point it should cover: C# file naming conventions, constant catalogue file locations, Unity project structure, and build/test commands.
+**Note on `src/` folder structure:** Spec source code lives at `src/<spec-folder-name>/` (e.g. `src/agent-movement/`). The Ball Physics files are currently located at `src/Core/Physics/Ball/` — this is a known structural deviation from the spec-canonical `src/ball-physics/` path that will be corrected in a dedicated fix pass.
 
 ---
 

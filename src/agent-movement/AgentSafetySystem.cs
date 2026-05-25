@@ -1,13 +1,13 @@
-// File:     src/Core/Physics/Agent/AgentSafetySystem.cs
+// File:     src/agent-movement/AgentSafetySystem.cs
 // Created:  2026-05-22
-// Modified: 2026-05-22
+// Modified: 2026-05-25
 // Author:   —
 // Spec:     Agent Movement #2 §4.1.3, §4.3.1, Code Standards #20
 // Purpose:  Post-integration validation: NaN detection, speed clamp, boundary enforcement.
 
 using UnityEngine;
 
-namespace TacticalDirector.Core.Physics.Agent
+namespace TacticalDirector.AgentMovement
 {
     /// <summary>
     /// Post-integration safety checks executed every physics frame (§4.4.1 Step 10).
@@ -16,13 +16,6 @@ namespace TacticalDirector.Core.Physics.Agent
     /// </summary>
     public static class AgentSafetySystem
     {
-        /// <summary>
-        /// Pitch dimensions used for boundary enforcement. Agent Movement #2 §4.3.1.
-        /// Width matches Ball Physics #1 §1.2 coordinate system (X = length, Y = width).
-        /// </summary>
-        private static readonly float PitchLengthX = 105.0f;
-        private static readonly float PitchWidthY = 68.0f;
-
         /// <summary>
         /// Returns true when position or velocity contains NaN or Infinity.
         /// Agent Movement #2 §4.1.3.
@@ -52,15 +45,15 @@ namespace TacticalDirector.Core.Physics.Agent
         }
 
         /// <summary>
-        /// Clamps position to within pitch boundaries plus a small exterior buffer.
+        /// Clamps position to within pitch boundaries plus exterior buffer.
         /// Agents are allowed slightly outside the pitch boundary (goal area, corner flag).
         /// Agent Movement #2 §4.3.1.
         /// </summary>
         public static Vector2 ClampToPitch(Vector2 position)
         {
-            float buffer = 5.0f;
-            float x = Mathf.Clamp(position.x, -buffer, PitchLengthX + buffer);
-            float y = Mathf.Clamp(position.y, -buffer, PitchWidthY + buffer);
+            float buffer = SafetyConstants.PitchBoundaryBuffer;
+            float x = Mathf.Clamp(position.x, -buffer, SafetyConstants.PitchLengthX + buffer);
+            float y = Mathf.Clamp(position.y, -buffer, SafetyConstants.PitchWidthY + buffer);
             return new Vector2(x, y);
         }
 
@@ -92,6 +85,8 @@ namespace TacticalDirector.Core.Physics.Agent
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-22 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                                         |
+// | 1.0     | 2026-05-22 | —      | Initial implementation.                                                                       |
+// | 1.1     | 2026-05-25 | —      | H-2: namespace → TacticalDirector.AgentMovement; moved to src/agent-movement/.               |
+// |         |            |        | M-2: PitchLengthX/PitchWidthY/buffer moved from inline literals to SafetyConstants catalogue. |
 #endregion

@@ -1,18 +1,23 @@
-// File:     src/Core/Physics/Agent/AgentState.cs
+// File:     src/agent-movement/AgentState.cs
 // Created:  2026-05-22
-// Modified: 2026-05-22
+// Modified: 2026-05-25
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.1, Code Standards #20
 // Purpose:  Value-type snapshot of all agent kinematic and energy state.
 
 using UnityEngine;
 
-namespace TacticalDirector.Core.Physics.Agent
+namespace TacticalDirector.AgentMovement
 {
     /// <summary>
-    /// Immutable snapshot of a single agent's physical state at one physics frame.
-    /// All locomotion systems receive and return this struct by value.
+    /// Mutable value-type state for a single agent's physical state at one physics frame.
+    /// AgentMovementSystem.Update receives and mutates this struct by ref parameter.
     /// Agent Movement #2 §3.5.1. Target size ≤256B (§4.5.1).
+    ///
+    /// Note: Intentionally a mutable struct (not readonly struct) because the 60 Hz pipeline
+    /// mutates individual fields through a ref parameter rather than constructing new instances.
+    /// Migration to readonly struct + C# 10 with-expression is deferred pending
+    /// certification-platform.md C# version pinning (see src/CLAUDE.md WHAT IS NOT HERE YET).
     /// </summary>
     public struct AgentState
     {
@@ -23,7 +28,7 @@ namespace TacticalDirector.Core.Physics.Agent
         /// <summary>World XY velocity (m/s).</summary>
         public Vector2 Velocity;
 
-        /// <summary>Unit vector in XY plane. Z component is always 0 for outfield agents.</summary>
+        /// <summary>Unit vector in XY plane indicating which way the agent is facing.</summary>
         public Vector2 FacingDirection;
 
         // — State machine —
@@ -36,7 +41,7 @@ namespace TacticalDirector.Core.Physics.Agent
         /// <summary>Seconds spent continuously in CurrentState.</summary>
         public float TimeInState;
 
-        /// <summary>Reason for entering GROUNDED; valid only when CurrentState == GROUNDED.</summary>
+        /// <summary>Reason for entering GROUNDED; valid only when CurrentState == GROUNDED. NONE otherwise.</summary>
         public GroundedReason GroundedReason;
 
         /// <summary>Normalised collision force [0,1]; valid only when CurrentState == GROUNDED.</summary>
@@ -77,7 +82,7 @@ namespace TacticalDirector.Core.Physics.Agent
                 CurrentState = AgentMovementState.IDLE,
                 PreviousState = AgentMovementState.IDLE,
                 TimeInState = 0.0f,
-                GroundedReason = GroundedReason.COLLISION,
+                GroundedReason = GroundedReason.NONE,
                 CollisionForce = 0.0f,
                 LeanAngle = 0.0f,
                 CurrentTurnRate = 0.0f,
@@ -92,6 +97,9 @@ namespace TacticalDirector.Core.Physics.Agent
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-22 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                              |
+// | 1.0     | 2026-05-22 | —      | Initial implementation.                                                            |
+// | 1.1     | 2026-05-25 | —      | H-2: namespace → TacticalDirector.AgentMovement; moved to src/agent-movement/.    |
+// |         |            |        | L-2: XML doc clarified — mutable struct, mutation via ref, readonly deferral note. |
+// |         |            |        | L-6: GroundedReason default changed from COLLISION to NONE (sentinel).             |
 #endregion

@@ -1,6 +1,6 @@
-// File:     src/Core/Physics/Agent/AgentMovementSystem.cs
+// File:     src/agent-movement/AgentMovementSystem.cs
 // Created:  2026-05-22
-// Modified: 2026-05-22
+// Modified: 2026-05-25
 // Author:   —
 // Spec:     Agent Movement #2 §4.4, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
@@ -8,11 +8,11 @@
 using UnityEngine;
 using UnityEngine.Profiling;
 
-namespace TacticalDirector.Core.Physics.Agent
+namespace TacticalDirector.AgentMovement
 {
     /// <summary>
     /// Orchestrates the 12-step per-agent per-frame pipeline described in §4.4.1.
-    /// Injected with MatchClock for deterministic time; no static mutable state.
+    /// Injected with physics tick rate for deterministic time; no static mutable state.
     /// Agent Movement #2 §4.4.
     /// </summary>
     public sealed class AgentMovementSystem
@@ -23,14 +23,14 @@ namespace TacticalDirector.Core.Physics.Agent
         private static readonly ProfilerMarker s_updateAllAgentsMarker =
             new ProfilerMarker("AgentMovement.AllAgents");
 
-        // Injected dependencies (constructor injection per FR-CS-051).
         private readonly float _physicsHz;
 
         /// <summary>
         /// Constructs the system.
-        /// physicsHz: physics tick rate (normally 60). Injected for testability.
+        /// physicsHz: physics tick rate (normally 60 Hz). Injected for testability.
+        /// TODO: default should reference ProjectConstants.PHYSICS_TICK_HZ once Stage 1 sets up project-constants assembly.
         /// </summary>
-        public AgentMovementSystem(float physicsHz = 60.0f)
+        public AgentMovementSystem(float physicsHz = 60.0f) // TODO: replace with ProjectConstants.PHYSICS_TICK_HZ (Stage 1)
         {
             _physicsHz = physicsHz;
         }
@@ -141,8 +141,8 @@ namespace TacticalDirector.Core.Physics.Agent
                 }
 
                 case AgentMovementState.STUMBLING:
-                    // Drag-only: friction decelerates without voluntary braking.
-                    newSpeed = AgentLocomotion.ApplyDeceleration(state.Speed, 3.0f, dt);
+                    newSpeed = AgentLocomotion.ApplyDeceleration(
+                        state.Speed, MovementThresholds.StumbleDecelerationDistance, dt);
                     break;
 
                 case AgentMovementState.GROUNDED:
@@ -161,10 +161,11 @@ namespace TacticalDirector.Core.Physics.Agent
             state.FacingDirection = UpdateFacing(
                 state.FacingDirection,
                 command,
+                state.Position,
                 maxTurnRate * dt);
 
             // Step 8 — Integrate velocity (direction × new speed).
-            Vector2 desiredDir = (command.TargetPosition - state.Position);
+            Vector2 desiredDir = command.TargetPosition - state.Position;
             if (desiredDir.sqrMagnitude < 1e-6f)
             {
                 desiredDir = state.FacingDirection;
@@ -175,20 +176,30 @@ namespace TacticalDirector.Core.Physics.Agent
             // Step 9 — Integrate position.
             state.Position += state.Velocity * dt;
 
-            // Step 10 — Safety validation.
-            Vector2 pos = state.Position;
-            Vector2 vel = state.Velocity;
-            AgentSafetySystem.Validate(
-                ref pos, ref vel,
-                state.LastValidPosition, state.LastValidVelocity,
-                out bool recovered);
-            state.Position = pos;
-            state.Velocity = vel;
-
-            // Step 11 — Update caches.
-            state.Speed = state.Velocity.magnitude;
-            if (!recovered)
+            // Step 10 — Safety validation (skipped when OverrideSafetyConstraints is set by tooling).
+            if (!command.OverrideSafetyConstraints)
             {
+                Vector2 pos = state.Position;
+                Vector2 vel = state.Velocity;
+                AgentSafetySystem.Validate(
+                    ref pos, ref vel,
+                    state.LastValidPosition, state.LastValidVelocity,
+                    out bool recovered);
+                state.Position = pos;
+                state.Velocity = vel;
+
+                // Step 11 — Update caches.
+                state.Speed = state.Velocity.magnitude;
+                if (!recovered)
+                {
+                    state.LastValidPosition = state.Position;
+                    state.LastValidVelocity = state.Velocity;
+                }
+            }
+            else
+            {
+                // Step 11 (override path) — Update caches; last-valid tracks current unconditionally.
+                state.Speed = state.Velocity.magnitude;
                 state.LastValidPosition = state.Position;
                 state.LastValidVelocity = state.Velocity;
             }
@@ -199,7 +210,8 @@ namespace TacticalDirector.Core.Physics.Agent
 
         /// <summary>
         /// Advances all agents sequentially (0–21). Goalkeepers are skipped (handled by Spec #11).
-        /// Agent Movement #2 §4.4.2 / §4.4.4.
+        /// Collision knockdown signals from Spec #3 are passed per-agent via isCollisionKnockdown
+        /// and collisionForces arrays. Agent Movement #2 §4.4.2 / §4.4.4.
         /// </summary>
         public void UpdateAllAgents(
             AgentState[] states,
@@ -207,6 +219,8 @@ namespace TacticalDirector.Core.Physics.Agent
             PerformanceContext[] perfs,
             MovementCommand[] commands,
             bool[] isGoalkeeper,
+            bool[] isCollisionKnockdown,
+            float[] collisionForces,
             float dt)
         {
             using var _ = s_updateAllAgentsMarker.Auto();
@@ -218,7 +232,8 @@ namespace TacticalDirector.Core.Physics.Agent
                     continue;
                 }
 
-                Update(ref states[i], attrs[i], perfs[i], commands[i], dt);
+                Update(ref states[i], attrs[i], perfs[i], commands[i], dt,
+                       isCollisionKnockdown[i], collisionForces[i]);
             }
         }
 
@@ -237,18 +252,12 @@ namespace TacticalDirector.Core.Physics.Agent
         private static Vector2 UpdateFacing(
             Vector2 currentFacing,
             in MovementCommand command,
+            Vector2 agentPosition,
             float maxTurnDeg)
         {
-            Vector2 targetDir;
-
-            if (command.FacingMode == FacingMode.TARGET_LOCK)
-            {
-                targetDir = command.FacingTarget - Vector2.zero;
-            }
-            else
-            {
-                targetDir = command.TargetPosition - Vector2.zero;
-            }
+            Vector2 targetDir = command.FacingMode == FacingMode.TARGET_LOCK
+                ? command.FacingTarget - agentPosition
+                : command.TargetPosition - agentPosition;
 
             return AgentDirectionalMovement.RotateFacingToward(currentFacing, targetDir, maxTurnDeg);
         }
@@ -292,6 +301,16 @@ namespace TacticalDirector.Core.Physics.Agent
                     state.SprintReservoir += FatigueRates.SprintRecoveryIdle * dt;
                     state.AerobicPool += FatigueRates.AerobicRecoveryIdle * dt;
                     break;
+
+                case AgentMovementState.STUMBLING:
+                    // No fatigue update during involuntary stumble; §3.1.3 defines drain/recovery
+                    // for the five voluntary states only (IDLE, WALKING, JOGGING, SPRINTING, GROUNDED).
+                    break;
+
+                case AgentMovementState.DECELERATING:
+                    // No fatigue update during controlled braking; §3.1.3 omits DECELERATING
+                    // from the drain/recovery table — it is a transient state between locomotion modes.
+                    break;
             }
 
             state.SprintReservoir = Mathf.Clamp01(state.SprintReservoir);
@@ -301,6 +320,9 @@ namespace TacticalDirector.Core.Physics.Agent
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-22 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                                           |
+// | 1.0     | 2026-05-22 | —      | Initial implementation.                                                                         |
+// | 1.1     | 2026-05-25 | —      | Pass-1 fix: H-1 UpdateFacing direction; H-2 namespace; L-4 OverrideSafetyConstraints;          |
+// |         |            |        | M-3 UpdateAllAgents collision arrays; M-5 StumbleDecelerationDistance; L-5 fatigue comment.    |
+// | 1.2     | 2026-05-25 | —      | Pass-2 fix: L-1 STUMBLING/DECELERATING fatigue comments clarified (controlled vs involuntary).  |
 #endregion

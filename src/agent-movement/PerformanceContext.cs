@@ -1,13 +1,13 @@
-// File:     src/Core/Physics/Agent/PerformanceContext.cs
+// File:     src/agent-movement/PerformanceContext.cs
 // Created:  2026-05-22
-// Modified: 2026-05-22
+// Modified: 2026-05-25
 // Author:   —
 // Spec:     Agent Movement #2 §3.2.1–§3.2.2, Code Standards #20
 // Purpose:  Attribute gateway applying form/context/career modifiers to raw player attributes.
 
 using UnityEngine;
 
-namespace TacticalDirector.Core.Physics.Agent
+namespace TacticalDirector.AgentMovement
 {
     /// <summary>
     /// Lightweight value type that gates all attribute reads through three modifier layers:
@@ -60,6 +60,7 @@ namespace TacticalDirector.Core.Physics.Agent
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-22 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                           |
+// | 1.0     | 2026-05-22 | —      | Initial implementation.                                                         |
+// | 1.1     | 2026-05-25 | —      | H-2: namespace → TacticalDirector.AgentMovement; moved to src/agent-movement/. |
 #endregion

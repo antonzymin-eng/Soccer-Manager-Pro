@@ -1,13 +1,13 @@
-// File:     src/Core/Physics/Agent/AgentTurning.cs
+// File:     src/agent-movement/AgentTurning.cs
 // Created:  2026-05-22
-// Modified: 2026-05-22
+// Modified: 2026-05-25
 // Author:   —
 // Spec:     Agent Movement #2 §3.4, Code Standards #20
 // Purpose:  Turn rate, lean angle, and stumble probability calculations.
 
 using UnityEngine;
 
-namespace TacticalDirector.Core.Physics.Agent
+namespace TacticalDirector.AgentMovement
 {
     /// <summary>
     /// Speed-dependent turning model. Returns probabilities and rates; does not apply RNG.
@@ -17,7 +17,7 @@ namespace TacticalDirector.Core.Physics.Agent
     {
         /// <summary>
         /// Maximum turn rate (°/s) available this frame given speed and attributes.
-        /// Formula: TURN_RATE_BASE / (1 + k_turn × speed) × balance_mod × state_mod.
+        /// Formula: TURN_RATE_BASE / (1 + kTurn × speed) × balanceMod × stateMod.
         /// Agent Movement #2 §3.4.2.
         /// </summary>
         public static float CalculateMaxTurnRate(
@@ -26,13 +26,13 @@ namespace TacticalDirector.Core.Physics.Agent
             int balance,
             AgentMovementState state)
         {
-            float kTurn = TurnConstants.K_TURN_MAX
-                        - (agility - 1) * TurnConstants.K_TURN_PER_POINT;
-            kTurn = Mathf.Clamp(kTurn, TurnConstants.K_TURN_MIN, TurnConstants.K_TURN_MAX);
+            float kTurn = TurnConstants.KTurnMax
+                        - (agility - (int)PlayerAttributeConstants.AttributeMin) * TurnConstants.KTurnPerPoint;
+            kTurn = Mathf.Clamp(kTurn, TurnConstants.KTurnMin, TurnConstants.KTurnMax);
 
-            float balanceMod = TurnConstants.BALANCE_MOD_MIN
-                             + (balance - 1) * TurnConstants.BALANCE_MOD_PER_POINT;
-            balanceMod = Mathf.Clamp(balanceMod, TurnConstants.BALANCE_MOD_MIN, TurnConstants.BALANCE_MOD_MAX);
+            float balanceMod = TurnConstants.BalanceModMin
+                             + (balance - (int)PlayerAttributeConstants.AttributeMin) * TurnConstants.BalanceModPerPoint;
+            balanceMod = Mathf.Clamp(balanceMod, TurnConstants.BalanceModMin, TurnConstants.BalanceModMax);
 
             float stateMod = StateModifier(state);
 
@@ -74,7 +74,7 @@ namespace TacticalDirector.Core.Physics.Agent
         }
 
         /// <summary>
-        /// Stumble probability in [0, MAX_STUMBLE_PROB] for a requested turn that exceeds
+        /// Stumble probability in [0, MaxStumbleProb] for a requested turn that exceeds
         /// the safe fraction of max turn rate. Returns 0.0 if within safe zone.
         /// Caller (main loop §4.4.1 Step 6b) performs the actual RNG roll.
         /// Agent Movement #2 §3.4.4.
@@ -82,7 +82,7 @@ namespace TacticalDirector.Core.Physics.Agent
         public static float CalculateStumbleProbability(
             float requestedTurnDeg, float maxTurnRateDeg)
         {
-            float safeTurnDeg = maxTurnRateDeg * TurnConstants.SAFE_TURN_FRACTION;
+            float safeTurnDeg = maxTurnRateDeg * TurnConstants.SafeTurnFraction;
 
             if (requestedTurnDeg <= safeTurnDeg)
             {
@@ -93,7 +93,7 @@ namespace TacticalDirector.Core.Physics.Agent
                 (requestedTurnDeg - safeTurnDeg)
               / Mathf.Max(maxTurnRateDeg - safeTurnDeg, 1.0f));
 
-            return overshoot * TurnConstants.MAX_STUMBLE_PROB;
+            return overshoot * TurnConstants.MaxStumbleProb;
         }
 
         private static float StateModifier(AgentMovementState state)
@@ -101,7 +101,7 @@ namespace TacticalDirector.Core.Physics.Agent
             switch (state)
             {
                 case AgentMovementState.DECELERATING:
-                    return TurnConstants.DECEL_TURN_MODIFIER;
+                    return TurnConstants.DecelTurnModifier;
 
                 case AgentMovementState.STUMBLING:
                     return 0.0f;
@@ -117,6 +117,8 @@ namespace TacticalDirector.Core.Physics.Agent
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-22 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                           |
+// | 1.0     | 2026-05-22 | —      | Initial implementation.                                                         |
+// | 1.1     | 2026-05-25 | —      | Pass-1: H-2 namespace; L-1 PascalCase refs.                                      |
+// | 1.2     | 2026-05-25 | —      | Pass-3: integer 1 literals in CalculateMaxTurnRate → (int)PlayerAttributeConstants.AttributeMin. |
 #endregion
