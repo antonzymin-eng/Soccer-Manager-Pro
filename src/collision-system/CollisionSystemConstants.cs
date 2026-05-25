@@ -90,6 +90,16 @@ namespace TacticalDirector.CollisionSystem
     /// </summary>
     public static class CollisionPhysicsConstants
     {
+        #region Fixed
+
+        /// <summary>
+        /// [FIXED] Physics/render loop tick rate (Hz). Used to convert impulse (kg·m/s) to force (N): F = j × Hz.
+        /// Authoritative source: Ball Physics #1 §1.2 / root CLAUDE.md "Heartbeat Tick Rate". Value: 60 Hz.
+        /// </summary>
+        public const float PHYSICS_TICK_HZ = 60f;
+
+        #endregion
+
         #region Derived
 
         /// <summary>
@@ -132,6 +142,12 @@ namespace TacticalDirector.CollisionSystem
 
         /// <summary>[GT] Max ball Z height for ground-contact detection (m); above → aerial duel. §3.2.1 / FR-03.</summary>
         public static readonly float AgentReachHeight = 2.0f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>
+        /// [GT] Slight over-separation multiplier applied to penetration depth to prevent re-contact on the next frame. §3.3.2.
+        /// Value of 1.01 pushes entities 1% beyond exact contact surface.
+        /// </summary>
+        public static readonly float SeparationSlop = 1.01f; // TODO: replace with config loader (Stage 1)
 
         #endregion
     }

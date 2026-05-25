@@ -90,8 +90,7 @@ namespace TacticalDirector.CollisionSystem
                     -impulse.x * invM2, -impulse.y * invM2, 0f);
             }
 
-            // F = j / dt, dt = 1/60 s.
-            float impactForce = Mathf.Abs(j) * 60f;
+            float impactForce = Mathf.Abs(j) * CollisionPhysicsConstants.PHYSICS_TICK_HZ;
             result.ImpactForce = impactForce;
 
             if (a1Active)
@@ -120,8 +119,8 @@ namespace TacticalDirector.CollisionSystem
             if (manifold.PenetrationDepth <= 0f) return;
 
             float sep = manifold.PenetrationDepth <= FallThresholdConstants.MaxPenetrationDepth
-                ? manifold.PenetrationDepth * 1.01f
-                : FallThresholdConstants.MaxPenetrationDepth; // gentle correction for tunneling
+                ? manifold.PenetrationDepth * CollisionPhysicsConstants.SeparationSlop
+                : FallThresholdConstants.MaxPenetrationDepth;
 
             float invM1 = a1Active ? (1.0f / a1.Mass) : 0f;
             float invM2 = a2Active ? (1.0f / a2.Mass) : 0f;

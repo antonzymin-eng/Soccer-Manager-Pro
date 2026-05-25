@@ -238,17 +238,17 @@ namespace TacticalDirector.CollisionSystem
             _pendingPositionCorrection[id1] += response.PositionCorrection1;
             _pendingPositionCorrection[id2] += response.PositionCorrection2;
 
-            if (response.TriggerGrounded1 && !_pendingGrounded[id1])
+            if (response.TriggerGrounded1)
             {
                 _pendingGrounded[id1] = true;
-                // Keep the highest impact force if agent is hit by multiple collisions.
+                // Always keep the highest impact force across multiple same-frame collisions.
                 if (response.ImpactForce > _pendingImpactForce[id1])
                 {
                     _pendingImpactForce[id1] = response.ImpactForce;
                 }
             }
 
-            if (response.TriggerGrounded2 && !_pendingGrounded[id2])
+            if (response.TriggerGrounded2)
             {
                 _pendingGrounded[id2] = true;
                 if (response.ImpactForce > _pendingImpactForce[id2])
