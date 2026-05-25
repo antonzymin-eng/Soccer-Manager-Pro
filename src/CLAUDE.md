@@ -1,7 +1,7 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** May 22, 2026 (v1.6 — adversarial review fix pass; 0H · 1M · 2L resolved)
+> **Last Updated:** May 25, 2026 (v1.9 — tracking-doc sync: ball-physics/ tree corrected; `BallStateSystem.cs` removed, `BallStateMachineTests.cs` added, structural deviation warning added)
 > **Purpose:** Concrete coding rules for any AI agent or developer writing C# source code in this project. Covers file naming, constant catalogues, Unity project structure, and build/test commands. Cites Spec #20 (Code Standards & Style Guide) as the source for every convention here. Read the root `CLAUDE.md` first — this file supplements it, not replaces it.
 
 ---
@@ -25,11 +25,12 @@ src/
 │   ├── project-constants.asmdef       ← one assembly per folder (FR-CS-055)
 │   └── ProjectConstants.cs            ← source-of-truth for constants consumed by more than one spec assembly (Spec #20 §4.2)
 │
-├── ball-physics/                      ← Spec #1
-│   ├── ball-physics.asmdef
+├── ball-physics/                      ← Spec #1 (spec-canonical target path)
+│   │   ⚠️  STRUCTURAL DEVIATION: actual files are at src/Core/Physics/Ball/ —
+│   │       fix pass will relocate them here. See root CLAUDE.md REPO STRUCTURE note.
+│   ├── ball-physics.asmdef            ← pending Unity project init
 │   ├── BallPhysicsConstants.cs
 │   ├── BallState.cs
-│   ├── BallStateSystem.cs
 │   ├── BallPhysicsCore.cs
 │   ├── BallStateMachine.cs
 │   ├── BallGroundInteraction.cs
@@ -39,7 +40,8 @@ src/
 │   └── tests/
 │       ├── ball-physics-tests.asmdef  ← EditMode; references ball-physics.asmdef
 │       ├── BallPhysicsCoreTests.cs
-│       └── BallIntegrationTests.cs
+│       ├── BallIntegrationTests.cs
+│       └── BallStateMachineTests.cs
 │
 ├── agent-movement/                    ← Spec #2
 │   ├── agent-movement.asmdef
@@ -636,3 +638,4 @@ Update this file when those items are resolved.
 | 1.6 | 2026-05-22 | — | Adversarial review v1.5 fix pass (0H · 1M · 2L). M-1: Profiler Markers BallPhysicsSystem example gained a note "Profiler-relevant fields shown; constructor and injected dependencies follow Game-Loop Rules COMPLIANT example." L-1: commented-out VIOLATION removed from inside COMPLIANT class body (violated FR-CS-065); restored as standalone labeled snippet outside the class. L-2: private static field naming convention (s_camelCase) added to NAMING CONVENTIONS table. |
 | 1.7 | 2026-05-25 | — | Agent Movement adversarial review fix pass (M-A / L-A). M-A: agent-movement/ tree expanded to all 13 implemented files with role annotations. L-A: readonly struct deferral row added to WHAT IS NOT HERE YET; explains why AgentState is mutable pending C# version pin. |
 | 1.8 | 2026-05-25 | — | Pass-4 follow-up. Constants tree: PlayerAttributeConstants added to AgentMovementConstants.cs annotation (8 classes). |
+| 1.9 | 2026-05-25 | — | Tracking-doc sync. ball-physics/ tree: `BallStateSystem.cs` removed (never implemented); `BallStateMachineTests.cs` added (exists at `src/Core/Physics/Ball/Tests/`); structural deviation warning added (actual path is `src/Core/Physics/Ball/`, not `src/ball-physics/`). |

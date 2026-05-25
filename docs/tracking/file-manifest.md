@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 22, 2026 (`src/CLAUDE.md` v1.4 adversarial fix pass; `code-standards/section-4.md` v1.0.1 ERR-020-001 patch; `spec-error-log.md` v1.21)  
+**Last Updated:** May 25, 2026 (implementation source files added: Ball Physics 8 source + 3 test files; Agent Movement 16 source files; `src/CLAUDE.md` v1.8)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -20,9 +20,50 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 ## Source Files
 
+> **Structural deviation note:** Ball Physics code lives at `src/Core/Physics/Ball/` rather than the spec-canonical `src/ball-physics/`. This is a known deviation to be corrected in a dedicated fix pass. All other spec folders will follow the canonical `src/<spec-folder-name>/` pattern.
+
 | File | Purpose |
 |------|---------|
-| `src/CLAUDE.md` | Coding guide: C# naming, constant catalogues, Unity project structure, build/test commands. Created May 19, 2026 when coding began. |
+| `src/CLAUDE.md` | Coding guide: C# naming, constant catalogues, Unity project structure, build/test commands. Created May 19, 2026 when coding began. At v1.8 as of May 25, 2026. |
+
+### Spec #1 — Ball Physics (`src/Core/Physics/Ball/`)
+
+| File | Purpose |
+|------|---------|
+| `src/Core/Physics/Ball/BallPhysicsConstants.cs` | `[FIXED]` / `[GT]` / `[DERIVED]` / `[CROSS]` constant catalogue for Ball Physics |
+| `src/Core/Physics/Ball/BallState.cs` | Mutable value-type game state for the ball (position, velocity, spin, ground contact) |
+| `src/Core/Physics/Ball/BallPhysicsCore.cs` | Core physics calculations: gravity, drag, Magnus effect |
+| `src/Core/Physics/Ball/BallStateMachine.cs` | State machine: CONTROLLED ↔ AIRBORNE ↔ ROLLING transitions |
+| `src/Core/Physics/Ball/BallGroundInteraction.cs` | Ground friction and rolling dynamics |
+| `src/Core/Physics/Ball/BallCollision.cs` | Ball-specific collision response (detection geometry lives in `collision-system/`) |
+| `src/Core/Physics/Ball/BallEventLogger.cs` | Event/logging infrastructure for ball physics events |
+| `src/Core/Physics/Ball/SurfaceProperties.cs` | Surface-specific physics parameters (grass, artificial turf, etc.) |
+| `src/Core/Physics/Ball/Tests/BallPhysicsCoreTests.cs` | Unit tests for core physics calculations |
+| `src/Core/Physics/Ball/Tests/BallIntegrationTests.cs` | Integration tests for full ball physics pipeline |
+| `src/Core/Physics/Ball/Tests/BallStateMachineTests.cs` | Unit tests for ball state machine transitions |
+
+### Spec #2 — Agent Movement (`src/agent-movement/`)
+
+| File | Purpose |
+|------|---------|
+| `src/agent-movement/AgentMovementConstants.cs` | All movement constants: `MovementThresholds` / `FatigueRates` / `LocomotionConstants` / `DirectionalConstants` / `TurnConstants` / `OscillationGuardConstants` / `SafetyConstants` / `PlayerAttributeConstants` (8 nested classes) |
+| `src/agent-movement/AgentMovementState.cs` | Enum: `AgentMovementState` (7 locomotion states) |
+| `src/agent-movement/GroundedReason.cs` | Enum: `GroundedReason` (NONE / COLLISION / SLIDING_TACKLE / DIVING_HEADER) |
+| `src/agent-movement/FacingMode.cs` | Enum: `FacingMode` (AUTO_ALIGN / TARGET_LOCK) |
+| `src/agent-movement/DecelerationMode.cs` | Enum: `DecelerationMode` (CONTROLLED / EMERGENCY) |
+| `src/agent-movement/AgentState.cs` | Mutable value-type game state for an agent (ref-mutated, not readonly — pending C# version pin) |
+| `src/agent-movement/PlayerAttributes.cs` | Player skill ratings (1–20 scale) used by movement formulas |
+| `src/agent-movement/PerformanceContext.cs` | Performance modifier gateway (fatigue, injury, surface) |
+| `src/agent-movement/MovementCommand.cs` | Input command structure from Decision Tree / tactical layer |
+| `src/agent-movement/AgentMovementSystem.cs` | 12-step 60 Hz pipeline orchestrator |
+| `src/agent-movement/AgentStateMachine.cs` | Pure state evaluator (no side effects) |
+| `src/agent-movement/OscillationGuard.cs` | Ring-buffer anti-oscillation guard |
+| `src/agent-movement/AgentLocomotion.cs` | Acceleration / deceleration formulas |
+| `src/agent-movement/AgentTurning.cs` | Turn rate / lean angle / stumble probability |
+| `src/agent-movement/AgentDirectionalMovement.cs` | Directional multipliers / facing update |
+| `src/agent-movement/AgentSafetySystem.cs` | NaN detection / speed clamp / pitch boundary enforcement |
+
+> **Note:** No test `.cs` files exist under `src/agent-movement/tests/` yet. The `tests/` directory itself has not been created. Test files are a pending implementation task per Spec #2 §5.
 
 ---
 

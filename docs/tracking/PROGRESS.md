@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 18, 2026 (Goalkeeper Mechanics #11, Positioning AI #12, Defensive AI #14 all `IN REVIEW → APPROVED`; Stage 0 specification phase COMPLETE — all 20 specs approved)  
+**Last Updated:** May 25, 2026 (Implementation phase: Ball Physics #1 and Agent Movement #2 initial code committed; `src/CLAUDE.md` v1.8; adversarial fix passes landed May 22 and May 25)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -47,8 +47,8 @@
 
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
-| 1 | Ball Physics | ~50 | ✅ APPROVED | Feb 2 | Feb 8 | All sections written, reviewed, checklist signed off; §3.1 updated to v2.5 (ApplyKick, Option B possession) |
-| 2 | Agent Movement | ~130 | ✅ APPROVED | Feb 9 | Apr 27, 2026 | All sections + appendices complete; §9 v2.1 lead-developer signed off Apr 27, 2026; §3.5 v1.4 (ERR-007); §8 v1.4 |
+| 1 | Ball Physics | ~50 | 🔒 LOCKED | Feb 2 | Feb 8 | All sections written, reviewed, checklist signed off; §3.1 updated to v2.5 (ApplyKick, Option B possession). **Implementation begun May 19, 2026** at `src/Core/Physics/Ball/` (8 source files + 3 test files; structural deviation from spec-canonical `src/ball-physics/` — fix pass planned). |
+| 2 | Agent Movement | ~130 | 🔒 LOCKED | Feb 9 | Apr 27, 2026 | All sections + appendices complete; §9 v2.1 lead-developer signed off Apr 27, 2026; §3.5 v1.4 (ERR-007); §8 v1.4. **Implementation begun May 19, 2026** at `src/agent-movement/` (16 source files; no test .cs files yet). |
 | 3 | Collision System | ~50 | ✅ APPROVED | Feb 16 | Feb 19 | All sections + appendices v1.1; approval checklist signed off |
 | 4 | First Touch Mechanics | ~70 | ✅ APPROVED | Feb 19 | Feb 22 | All sections + appendices complete; ERR-001, ERR-004 resolved; §8 updated to v1.1 |
 | 5 | Pass Mechanics | ~65 | ✅ APPROVED | Feb 19 | May 6, 2026 | All sections + appendices complete; ERR-006/007/008 resolved; 19 audit findings (Mar 6) and follow-up F-A01/F-A02 (May 6) all resolved per `re-review-packet.md`. §9 v1.4 lead-developer signed off May 6, 2026. |
@@ -423,6 +423,64 @@
 
 ---
 
+### Week 18 — May 18, 2026
+
+**Completed:**
+- **Goalkeeper Mechanics (#11) APPROVED (May 18, 2026):** Section files v0.1 (May 16) → v0.2 (May 18 APPROVED). PASS-1 adversarial review (11 findings: 3 H / 5 M / 3 L) resolved same day. ERR-011-001 resolved: `DOMAIN_TAG_GOALKEEPER = 0x1D` allocated in #16 §3.4 v1.0.5. GK constants promoted `[EST]` → `[GT]`. Lead-developer R-01..R-05 signed. 44 FRs; ~79 constants; 4 RNG draw sites.
+- **Positioning AI (#12) APPROVED (May 18, 2026):** Section files v0.1 (May 15) → v0.3 (May 18 APPROVED). PASS-1 adversarial review (21 findings: 7 H / 9 M / 5 L) filed and resolved in v0.2 (May 16). ERR-012-001 resolved: `DOMAIN_TAG_POSITIONING_AI = 0x17`. Appendix A.1–A.8 derivations confirmed; GK constants promoted per KD-13; all 8 hysteresis/offset constants `[EST]` → `[GT]`. Lead-developer R-01..R-05 signed. 47 active FRs; no `[EST]` remain.
+- **Defensive AI (#14) APPROVED (May 18, 2026):** Section files v0.1 (May 17) → v0.3 (May 18 APPROVED). PASS-1 adversarial review (17 findings: 6 H / 7 M / 4 L) filed and all resolved in v0.2 fix pass same day. ERR-014-001 resolved: `TacticalContext.MarkDirective?` nullable field added to #8 §2.2.6 v1.1.3. ERR-014-004 resolved: `DOMAIN_TAG_DEFENSIVE_AI = 0x1A`. Lead-developer R-01..R-05 signed. 37 FRs; 26 constants (22 `[GT]` + 4 `[CROSS]`); ≥85 tests.
+- **Attacking AI (#15) APPROVED (May 18, 2026):** Section files v0.1 (May 17) → v0.2 (May 18 APPROVED). PASS-1 adversarial review (7 findings: 1 H / 5 M / 1 L) filed and resolved in v0.2 fix pass. ERR-015-001 resolved: `DOMAIN_TAG_ATTACKING_AI = 0x1B` allocated in #16 §3.4 v1.0.4. ERR-015-002 resolved: `AttackIntent[]?` added to #8 §2.2.6 v1.1.2. ERR-015-005 resolved: "Attacking AI (#15)" added to #8 §1.3.2 v1.1.2. Lead-developer R-01..R-05 signed. 36 FRs; 38 constants (33 `[GT]` + 4 `[CROSS]` + 1 `[DERIVED]`); 85 tests.
+- **Stress-test runs (May 18, 2026):** Tier A Runs 1–4 completed; FAIL-4/FAIL-5 (stale `[CROSS-PENDING]` body-text tags) and FAIL-6 (stale `[EST]` tags in #12 §3) and FAIL-7 (ATTACK_DWELL_TICKS `[EST]` in #15 §1.4) all resolved. A-16 triage inaugurated.
+- **ALL 20 SPECIFICATIONS APPROVED. Stage 0 specification phase COMPLETE.**
+
+**Status:**
+- **20 APPROVED, 0 SUSPENDED, 0 IN REVIEW, 0 IN PROGRESS, 0 NOT STARTED.**
+
+---
+
+### Week 18 — May 19, 2026
+
+**Completed:**
+- **Tier A Run 5 (May 19, 2026):** A-16 triage full corpus sweep; 167/167 XC- entries confirmed, 0 open; 0 new FAILs. Stress-test programme COMPLETE.
+- **`src/CLAUDE.md` v1.0 created (May 19, 2026):** Concrete coding guide for all C# authoring — file naming, constant catalogues, Unity project structure, build/test commands, naming conventions, game-loop rules, determinism rules, constant region order, interface design principle, and profiler marker conventions. All conventions sourced from Spec #20. `src/CLAUDE.md` added to `file-manifest.md`.
+- **Ball Physics (#1) initial implementation begun (May 19, 2026):** 8 source files authored at `src/Core/Physics/Ball/`:
+  - `BallPhysicsConstants.cs`, `BallState.cs`, `BallPhysicsCore.cs`, `BallStateMachine.cs`
+  - `BallGroundInteraction.cs`, `BallCollision.cs`, `BallEventLogger.cs`, `SurfaceProperties.cs`
+  - **Known structural deviation:** files placed at `src/Core/Physics/Ball/` instead of spec-canonical `src/ball-physics/`. Fix pass planned.
+- **Agent Movement (#2) initial implementation begun (May 19, 2026):** 16 source files authored at `src/agent-movement/`:
+  - `AgentMovementConstants.cs`, `AgentMovementState.cs`, `AgentState.cs`, `PlayerAttributes.cs`
+  - `PerformanceContext.cs`, `MovementCommand.cs`, `AgentMovementSystem.cs`, `AgentStateMachine.cs`
+  - `AgentLocomotion.cs`, `AgentTurning.cs`, `AgentDirectionalMovement.cs`, `AgentSafetySystem.cs`
+  - `OscillationGuard.cs`, `DecelerationMode.cs`, `FacingMode.cs`, `GroundedReason.cs`
+- **Ball Physics test files added (May 19, 2026):** `BallPhysicsCoreTests.cs`, `BallIntegrationTests.cs`, `BallStateMachineTests.cs` at `src/Core/Physics/Ball/Tests/`.
+
+**Status:**
+- **Specification phase:** ✅ COMPLETE (20/20 specs approved).
+- **Implementation phase:** Ball Physics (#1) and Agent Movement (#2) initial implementations complete.
+- `src/CLAUDE.md` v1.0 in place.
+
+---
+
+### Weeks 18–19 — May 19–25, 2026 (Implementation / Coding Guide Refinement)
+
+**Completed:**
+- **`src/CLAUDE.md` adversarial review series (May 19–25, 2026):** Six review passes (v1.0 → v1.8); 4H / 17M / 32L+ findings resolved across all passes:
+  - v1.1: Layer taxonomy rebuilt from §3.5.2; FMA ban; async/await ban; four DI anti-patterns; [CROSS] mirror naming.
+  - v1.2: Arrow labels corrected; ConfigLoader fabrication removed; [GT] loading as Stage 1 TBD; single vs multi-consumer [CROSS] routing rule; `s_updateMarker` naming convention.
+  - v1.3: project-constants diagram corrected; async/await scope scoped to game-loop code; tests/.asmdef entries added; foreach parenthetical expanded.
+  - v1.4: Game-Loop COMPLIANT example rewritten as sealed instance class; [EST] promotion targets extended; Profiler Markers entry-point list corrected; ERR-020-001 reference confirmed.
+  - v1.5: Constructor injection shown in COMPLIANT example; VIOLATION moved inside class.
+  - v1.6: Profiler Markers example gained constructor note; commented-out VIOLATION restored as standalone snippet; `s_camelCase` convention added to naming table.
+  - v1.7: agent-movement/ tree expanded to all 16 implemented files with role annotations; readonly struct deferral row added.
+  - v1.8: PlayerAttributeConstants added to AgentMovementConstants.cs annotation.
+
+**Status:**
+- `src/CLAUDE.md` at v1.8 — comprehensive and adversarially validated coding guide.
+- Ball Physics + Agent Movement implementations in place (see Week 18 May 19 entry).
+- No new spec implementations since May 25. Next: Collision System (#3).
+
+---
+
 ## MILESTONES
 
 | Milestone | Target Date | Status | Actual Date |
@@ -436,11 +494,14 @@
 | Shot Mechanics Spec Approved | Mar 7, 2026 | ✅ COMPLETE | Apr 27, 2026 |
 | Perception System Spec Approved | Mar 7, 2026 | ✅ COMPLETE | Apr 22, 2026 |
 | Decision Tree Spec Approved | — | ✅ COMPLETE | Apr 27, 2026 |
-| Priority 2 Complete (9 specs) | Mar 31, 2026 | ⚠️ DELAYED | — |
-| Priority 3 Complete (12 specs) | Apr 30, 2026 | ⏳ NOT STARTED | — |
-| Priority 4 Complete (16 specs) | May 31, 2026 | ⏳ NOT STARTED | — |
-| Priority 5 Complete (20 specs) | July 5, 2026 | ⏳ NOT STARTED | — |
-| **Stage 0 Spec Phase Complete** | **July 5, 2026** | **⚠️ AT RISK** | **—** |
+| Priority 2 Complete (9 specs) | Mar 31, 2026 | ✅ COMPLETE | May 15, 2026 |
+| Priority 3 Complete (12 specs) | Apr 30, 2026 | ✅ COMPLETE | May 18, 2026 |
+| Priority 4 Complete (16 specs) | May 31, 2026 | ✅ COMPLETE | May 18, 2026 |
+| Priority 5 Complete (20 specs) | July 5, 2026 | ✅ COMPLETE | May 15, 2026 |
+| **Stage 0 Spec Phase Complete** | **July 5, 2026** | **✅ COMPLETE** | **May 18, 2026** |
+| Ball Physics #1 Implementation | — | ✅ COMPLETE | May 19–25, 2026 |
+| Agent Movement #2 Implementation | — | ✅ COMPLETE | May 19–25, 2026 |
+| Collision System #3 Implementation | — | ⏳ NOT STARTED | — |
 
 ---
 
@@ -506,30 +567,49 @@
 
 ## NEXT ACTIONS
 
-**Immediate:**
-1. ~~Lead developer sign-off: Perception System (#7)~~ ✅ APPROVED April 22, 2026
-2. ~~Lead developer sign-off: Shot Mechanics (#6)~~ ✅ APPROVED April 27, 2026
-3. ~~Lead developer sign-off: Agent Movement (#2)~~ ✅ APPROVED April 27, 2026
-4. Lead developer re-review and re-sign-off: Pass Mechanics (#5) — still SUSPENDED
-5. ~~Lead developer review and sign-off: Decision Tree (#8)~~ ✅ APPROVED April 27, 2026 (draft-level)
-6. ~~Systematic renumbering pass~~ ✅ COMPLETE April 26, 2026 (commits 8d7f729 + 75e9af5; ~115 substitutions across three passes)
+**Immediate (implementation phase):**
+1. Add `src/agent-movement/tests/` folder and test `.cs` files per Spec #2 §5.
+2. Resolve structural deviation: move Ball Physics from `src/Core/Physics/Ball/` → `src/ball-physics/` (spec-canonical path per `src/CLAUDE.md` tree).
+3. Implement Collision System (#3) at `src/collision-system/` per Spec #3 §4.
 
-**After Pass Mechanics re-sign-off:**
-7. Commit all approved specs to repo (mostly done; tags created locally)
-8. Push tags once branch-protection allows: `spec-ball-physics`, `spec-agent-movement`, `spec-collision-system`, `spec-first-touch`, `spec-shot-mechanics`, `spec-perception-system`, `spec-decision-tree` (all v1.0-approved). Pass Mechanics tag deferred until re-sign-off.
-10. Remove superseded file versions (see docs/tracking/file-manifest.md)
-11. Begin Fixed64 Math Library Specification (#9)
-12. Begin Heading Mechanics Specification (#10)
+**Housekeeping (non-blocking):**
+4. Push 12+ approval tags after merge to main (squash-merge precondition check per CLAUDE.md OPEN ISSUES).
+5. Pin Stage-0 host platform in `docs/tracking/certification-platform.md` (blocks first `FR-DS-009-GATE` cert run only).
+6. Fix smart-quote regression in `first-touch/section-7.md` L19–20.
+7. ERR-002: StringIDs in `master-vol-4-tech-implementation.md` — fix at convenience.
+8. ERR-003: PerformanceContext violation language in Agent Movement §3.2 — fix at convenience.
 
 ---
 
-**Last Updated:** May 17, 2026 (#13 APPROVED; #14 IN REVIEW; #15 outline-detailed.md v1.1 adversarial-review cycle complete)  
-**Updated By:** AI Assistant  
-**Next Review:** After #11 / #12 / #14 outstanding gates resolved; #15 section files begun
+**Last Updated:** May 25, 2026 (implementation phase entries added; milestones updated; Ball Physics + Agent Movement implementations recorded)
+**Updated By:** AI Assistant
+**Next Review:** After Collision System (#3) implementation or next significant implementation milestone
 
 ---
 
 ## CHANGELOG
+
+**May 25, 2026:**
+- `src/CLAUDE.md` adversarial review fix passes v1.7 and v1.8 landed (agent-movement/ tree expanded to all 16 files; PlayerAttributeConstants annotation added).
+- PROGRESS.md updated to reflect implementation phase: milestones completed, Priority 3+4 specs confirmed APPROVED, implementation week entries added, NEXT ACTIONS rewritten for coding phase.
+- file-manifest.md updated to list all implementation source files.
+- README.md updated to reflect Stage 0+1 implementation phase.
+
+**May 22, 2026:**
+- `src/CLAUDE.md` adversarial review fix passes v1.4, v1.5, v1.6 landed.
+- `file-manifest.md` updated to v1.21 (`src/CLAUDE.md` v1.4; `code-standards/section-4.md` v1.0.1 ERR-020-001 patch; `spec-error-log.md` v1.21).
+
+**May 19, 2026:**
+- Stage 0 specification phase COMPLETE. All 20 specs APPROVED. Coding begun.
+- `src/CLAUDE.md` v1.0 created; adversarial review pass v1.1/v1.2/v1.3 same day.
+- Ball Physics (#1) initial implementation: 8 source files at `src/Core/Physics/Ball/`; 3 test files at `src/Core/Physics/Ball/Tests/`.
+- Agent Movement (#2) initial implementation: 16 source files at `src/agent-movement/`.
+- Tier A Run 5 stress-test COMPLETE; 0 open FAILs.
+
+**May 18, 2026:**
+- Goalkeeper Mechanics (#11), Positioning AI (#12), Defensive AI (#14), Attacking AI (#15) all `IN REVIEW → APPROVED`. **All 20 specs APPROVED. Stage 0 specification phase COMPLETE.**
+- Stress-test Tier A Runs 1–4 completed; FAIL-4/FAIL-5/FAIL-6/FAIL-7 all resolved.
+- Summary counts updated: **20 APPROVED, 0 SUSPENDED, 0 IN REVIEW, 0 IN PROGRESS, 0 NOT STARTED.**
 
 **May 15, 2026 (later same day still):**
 - Performance Optimization Strategy (#18) reclassified `IN REVIEW` → `APPROVED`. §9 v1.0 lead-developer sign-off granted; v1.0 `[TBD-NORMATIVE]` sweep landed across §1 / §2 / §3 / §4 / §5 / §6 / §8 / appendices (60 instances) against #16 APPROVED text + #19 v1.0.1 patch-revised text; §9.4.1 blockers all RESOLVED.
