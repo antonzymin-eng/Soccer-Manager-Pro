@@ -1,0 +1,63 @@
+// File:     src/collision-system/AgentAgentCollisionResult.cs
+// Created:  2026-05-25
+// Modified: 2026-05-25
+// Author:   —
+// Spec:     Collision System #3 §3.3.3, Code Standards #20
+// Purpose:  Internal result struct from CollisionResponse; contains both agents' outcomes.
+
+using UnityEngine;
+
+namespace TacticalDirector.CollisionSystem
+{
+    /// <summary>
+    /// Velocity impulses, position corrections, and state triggers for both agents in a
+    /// single agent-agent collision. Collision System #3 §3.3.3.
+    /// Consumed immediately after CollisionResponse.CalculateAgentAgentResponse().
+    /// </summary>
+    public struct AgentAgentCollisionResult
+    {
+        // ── Agent 1 ──────────────────────────────────────────────────────────
+
+        /// <summary>Velocity impulse for agent 1 (m/s). Added to current velocity.</summary>
+        public Vector3 VelocityImpulse1;
+
+        /// <summary>Position correction for agent 1 (m). Mass-weighted MTV share.</summary>
+        public Vector3 PositionCorrection1;
+
+        /// <summary>True if agent 1 should enter GROUNDED state.</summary>
+        public bool TriggerGrounded1;
+
+        /// <summary>True if agent 1 should enter STUMBLING state.</summary>
+        public bool TriggerStumble1;
+
+        /// <summary>GROUNDED duration for agent 1 (s). Valid only when TriggerGrounded1.</summary>
+        public float GroundedDuration1;
+
+        // ── Agent 2 ──────────────────────────────────────────────────────────
+
+        /// <summary>Velocity impulse for agent 2 (m/s).</summary>
+        public Vector3 VelocityImpulse2;
+
+        /// <summary>Position correction for agent 2 (m).</summary>
+        public Vector3 PositionCorrection2;
+
+        /// <summary>True if agent 2 should enter GROUNDED state.</summary>
+        public bool TriggerGrounded2;
+
+        /// <summary>True if agent 2 should enter STUMBLING state.</summary>
+        public bool TriggerStumble2;
+
+        /// <summary>GROUNDED duration for agent 2 (s). Valid only when TriggerGrounded2.</summary>
+        public float GroundedDuration2;
+
+        // ── Shared ───────────────────────────────────────────────────────────
+
+        /// <summary>Impact force (N) = impulse magnitude × 60 Hz. Used for foul data and fall thresholds.</summary>
+        public float ImpactForce;
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes          |
+// | 1.0     | 2026-05-25 | —      | Initial draft. |
+#endregion

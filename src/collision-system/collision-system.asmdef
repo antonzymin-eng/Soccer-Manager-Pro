@@ -1,0 +1,17 @@
+{
+    "name": "TacticalDirector.CollisionSystem",
+    "rootNamespace": "TacticalDirector.CollisionSystem",
+    "references": [
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.AgentMovement"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
