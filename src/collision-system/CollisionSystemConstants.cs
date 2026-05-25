@@ -149,6 +149,13 @@ namespace TacticalDirector.CollisionSystem
         /// </summary>
         public static readonly float SeparationSlop = 1.01f; // TODO: replace with config loader (Stage 1)
 
+        /// <summary>
+        /// [GT] Minimum squared vector magnitude below which a response (impulse or position correction) is skipped. §3.4.1.
+        /// Avoids applying negligible responses that would only introduce floating-point noise.
+        /// Effective magnitude threshold: sqrt(MinResponseSqrMagnitude) ≈ 0.01 m or m/s.
+        /// </summary>
+        public static readonly float MinResponseSqrMagnitude = 0.0001f; // TODO: replace with config loader (Stage 1)
+
         #endregion
     }
 

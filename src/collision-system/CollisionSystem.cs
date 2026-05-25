@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionSystem.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25  [v1.1]
+// Modified: 2026-05-25  [v1.2]
 // Author:   —
 // Spec:     Collision System #3 §3.4.1, §4.1.3, §4.4.4, Code Standards #20
 // Purpose:  Main collision system — orchestrates spatial hash, narrow phase, and response.
@@ -174,7 +174,7 @@ namespace TacticalDirector.CollisionSystem
             // Apply accumulated impulses and corrections to agent states.
             for (int i = 0; i < count; i++)
             {
-                if (_pendingVelocityImpulse[i].sqrMagnitude > 0.0001f)
+                if (_pendingVelocityImpulse[i].sqrMagnitude > CollisionPhysicsConstants.MinResponseSqrMagnitude)
                 {
                     ref AgentState s = ref agentStates[i];
                     s.Velocity += new Vector2(
@@ -182,7 +182,7 @@ namespace TacticalDirector.CollisionSystem
                         _pendingVelocityImpulse[i].y);
                 }
 
-                if (_pendingPositionCorrection[i].sqrMagnitude > 0.0001f)
+                if (_pendingPositionCorrection[i].sqrMagnitude > CollisionPhysicsConstants.MinResponseSqrMagnitude)
                 {
                     ref AgentState s = ref agentStates[i];
                     s.Position += new Vector2(
@@ -365,4 +365,6 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | H-2: _pendingGroundedDuration[] replaced with _pendingImpactForce[]; knockdownForceOut   |
 // |         |            |        | now stores normalised impact force via MaxCollisionForceRef (not normalised duration).   |
 // |         |            |        | ProcessAgentAgent: accumulate highest ImpactForce per agent across multiple collisions.  |
+// | 1.2     | 2026-05-25 | —      | Pass-3 fix. P3-1: 0.0001f literals replaced with                                        |
+// |         |            |        | CollisionPhysicsConstants.MinResponseSqrMagnitude (FR-CS-016).                          |
 #endregion
