@@ -27,16 +27,16 @@ namespace TacticalDirector.AgentMovement
             AgentMovementState state)
         {
             float kTurn = TurnConstants.KTurnMax
-                        - (agility - (int)PlayerAttributeConstants.AttributeMin) * TurnConstants.KTurnPerPoint;
+                        - (agility - PlayerAttributeConstants.AttributeMinInt) * TurnConstants.KTurnPerPoint;
             kTurn = Mathf.Clamp(kTurn, TurnConstants.KTurnMin, TurnConstants.KTurnMax);
 
             float balanceMod = TurnConstants.BalanceModMin
-                             + (balance - (int)PlayerAttributeConstants.AttributeMin) * TurnConstants.BalanceModPerPoint;
+                             + (balance - PlayerAttributeConstants.AttributeMinInt) * TurnConstants.BalanceModPerPoint;
             balanceMod = Mathf.Clamp(balanceMod, TurnConstants.BalanceModMin, TurnConstants.BalanceModMax);
 
             float stateMod = StateModifier(state);
 
-            float rate = TurnConstants.TURN_RATE_BASE / (1.0f + kTurn * speed)
+            float rate = TurnConstants.TURN_RATE_BASE / (TurnConstants.TURN_RATE_VELOCITY_OFFSET + kTurn * speed)
                        * balanceMod * stateMod;
 
             return Mathf.Clamp(rate, TurnConstants.TURN_RATE_FLOOR, TurnConstants.TURN_RATE_CAP);
@@ -48,7 +48,7 @@ namespace TacticalDirector.AgentMovement
         /// </summary>
         public static float MinimumTurnRadius(float speedMs, float maxTurnRateDeg)
         {
-            if (maxTurnRateDeg < 1e-4f)
+            if (maxTurnRateDeg < TurnConstants.TURN_RATE_EPSILON_DEG)
             {
                 return float.MaxValue;
             }
@@ -67,7 +67,7 @@ namespace TacticalDirector.AgentMovement
             float omegaRad = turnRateDeg * Mathf.Deg2Rad;
             float centripetalAccel = speedMs * omegaRad;
 
-            float normalizedG = centripetalAccel / Physics.gravity.magnitude;
+            float normalizedG = centripetalAccel / TurnConstants.GRAVITY_MAGNITUDE;
             float leanRad = Mathf.Atan(normalizedG);
             float leanDeg = leanRad * Mathf.Rad2Deg;
             return Mathf.Min(leanDeg, TurnConstants.MAX_LEAN_ANGLE);
@@ -91,7 +91,7 @@ namespace TacticalDirector.AgentMovement
 
             float overshoot = Mathf.Clamp01(
                 (requestedTurnDeg - safeTurnDeg)
-              / Mathf.Max(maxTurnRateDeg - safeTurnDeg, 1.0f));
+              / Mathf.Max(maxTurnRateDeg - safeTurnDeg, TurnConstants.MIN_TURN_RATE_DIVISOR));
 
             return overshoot * TurnConstants.MaxStumbleProb;
         }
@@ -121,4 +121,8 @@ namespace TacticalDirector.AgentMovement
 // | 1.0     | 2026-05-22 | —      | Initial implementation.                                                         |
 // | 1.1     | 2026-05-25 | —      | Pass-1: H-2 namespace; L-1 PascalCase refs.                                      |
 // | 1.2     | 2026-05-25 | —      | Pass-3: integer 1 literals in CalculateMaxTurnRate → (int)PlayerAttributeConstants.AttributeMin. |
+// | 1.3     | 2026-05-25 | —      | Pass-4 fix: H-5 Physics.gravity.magnitude → TurnConstants.GRAVITY_MAGNITUDE [FIXED];            |
+// |         |            |        | L-1 1e-4f → TurnConstants.TURN_RATE_EPSILON_DEG; L-2 1.0f divisor guard →                    |
+// |         |            |        | TurnConstants.MIN_TURN_RATE_DIVISOR; L-3 1.0f denominator offset →                           |
+// |         |            |        | TurnConstants.TURN_RATE_VELOCITY_OFFSET; L-4 (int)AttributeMin → AttributeMinInt.             |
 #endregion

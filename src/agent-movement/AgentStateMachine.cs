@@ -78,7 +78,7 @@ namespace TacticalDirector.AgentMovement
         public static bool ShouldStumble(float speed, float turnAngle, int balance, int agility)
         {
             float stumbleRisk = (speed / MovementThresholds.MAX_SPEED)
-                              * (turnAngle / 180.0f)  // 180.0 = full reversal in degrees [FIXED]
+                              * (turnAngle / TurnConstants.HALF_ROTATION_DEG)
                               * MovementThresholds.StumbleDifficultyFactor;
 
             stumbleRisk = Mathf.Max(stumbleRisk, MovementThresholds.MinStumbleRisk);
@@ -296,4 +296,5 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | M-1 OscillationGuard extracted.                                                               |
 // | 1.2     | 2026-05-25 | —      | Pass-2 fix: dwell clamps / reason multipliers → named constants; M-2 denominator comments.      |
 // |         |            |        | Pass-3: 20.0f/40.0f/0.05f literals → PlayerAttributeConstants.AttributeMax/PairMax/NearZeroFloor. |
+// | 1.3     | 2026-05-25 | —      | Pass-4 fix: M-3 180.0f → TurnConstants.HALF_ROTATION_DEG [FIXED].                              |
 #endregion

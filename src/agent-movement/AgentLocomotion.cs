@@ -63,7 +63,7 @@ namespace TacticalDirector.AgentMovement
             }
 
             float decelMagnitude = (currentSpeed * currentSpeed)
-                                 / (2.0f * Mathf.Max(stoppingDistanceM, LocomotionConstants.MinStoppingDistanceM));
+                                 / (LocomotionConstants.KINEMATIC_HALF * Mathf.Max(stoppingDistanceM, LocomotionConstants.MinStoppingDistanceM));
             decelMagnitude = Mathf.Min(decelMagnitude, MovementThresholds.MAX_ACCELERATION);
 
             float newSpeed = currentSpeed - decelMagnitude * dt;
@@ -117,4 +117,5 @@ namespace TacticalDirector.AgentMovement
 // | 1.1     | 2026-05-25 | —      | Pass-1 fix: H-2 namespace; L-1 PascalCase refs; M-7 ProfilerMarkers removed.       |
 // | 1.2     | 2026-05-25 | —      | Pass-2 fix: 0.1f → LocomotionConstants.MinStoppingDistanceM. Pass-3: 19.0f/1.0f attribute      |
 // |         |            |        | literals → PlayerAttributeConstants.AttributeRangeSpan / AttributeMin.                         |
+// | 1.3     | 2026-05-25 | —      | Pass-4 fix: M-4 2.0f kinematic divisor → LocomotionConstants.KINEMATIC_HALF [FIXED].           |
 #endregion

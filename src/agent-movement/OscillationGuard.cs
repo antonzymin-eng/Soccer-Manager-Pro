@@ -12,15 +12,30 @@ namespace TacticalDirector.AgentMovement
     /// Uses a fixed-size ring buffer — no heap allocations after initialisation.
     /// Agent Movement #2 §3.1.7.
     ///
+    /// IMPORTANT: Always pass by ref. Call Initialize() before first use (via AgentState.CreateAtPosition).
     /// Determinism note: currentTime passed to RecordAndCheck MUST come from MatchClock
     /// (Spec #16), never from Time.time or DateTime.Now (FR-CS-042).
     /// </summary>
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public struct OscillationGuard
     {
         private float _t0, _t1, _t2, _t3, _t4, _t5, _t6, _t7;
         private int _writeIndex;
         private bool _isLocked;
         private float _lockUntilTime;
+
+        /// <summary>
+        /// Initialises all timestamp slots to a sentinel predating any match time.
+        /// Must be called from AgentState.CreateAtPosition — C# struct zero-init sets all fields
+        /// to 0.0f, which causes false-positive lockout at match time t=0 (all 8 slots appear recent).
+        /// </summary>
+        public void Initialize()
+        {
+            _t0 = _t1 = _t2 = _t3 = _t4 = _t5 = _t6 = _t7 = float.NegativeInfinity;
+            _writeIndex = 0;
+            _isLocked = false;
+            _lockUntilTime = float.NegativeInfinity;
+        }
 
         /// <summary>
         /// Records a transition and returns true if the transition should be BLOCKED.
@@ -96,4 +111,5 @@ namespace TacticalDirector.AgentMovement
 // | 1.0     | 2026-05-25 | —      | Extracted from AgentStateMachine.cs (was M-1 violation: two public types in one file).             |
 // |         |            |        | H-4: BufferSize/LockDuration/WindowSeconds moved to OscillationGuardConstants in constants file.   |
 // |         |            |        | M-8: MatchClock determinism requirement documented in XML doc and method summary.                   |
+// | 1.1     | 2026-05-25 | —      | Pass-4 fix: H-4 Initialize() method added; [StructLayout(Sequential)] added (L-5).                |
 #endregion

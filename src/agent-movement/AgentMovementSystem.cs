@@ -21,7 +21,7 @@ namespace TacticalDirector.AgentMovement
             new ProfilerMarker("AgentMovement.Update");
 
         private static readonly ProfilerMarker s_updateAllAgentsMarker =
-            new ProfilerMarker("AgentMovement.AllAgents");
+            new ProfilerMarker("AgentMovement.UpdateAllAgents");
 
         private readonly float _physicsHz;
 
@@ -46,6 +46,7 @@ namespace TacticalDirector.AgentMovement
             in PerformanceContext perf,
             in MovementCommand command,
             float dt,
+            float currentTime,
             bool isCollisionKnockdown = false,
             float collisionForce = 0.0f)
         {
@@ -54,8 +55,11 @@ namespace TacticalDirector.AgentMovement
             // Step 1 — command is already received as parameter.
 
             // Step 2 — Evaluate new state.
-            float commandSpeed = (command.TargetPosition - state.Position).magnitude / dt;
-            Vector2 movementDir = state.Velocity.sqrMagnitude > 1e-6f
+            // commandSpeed: map the AI's desired locomotion state to an equivalent speed so the
+            // state machine can compare against current speed. Dividing distance by physics dt
+            // produces a value 60× too large relative to actual m/s thresholds (§3.1.4).
+            float commandSpeed = CommandSpeedFromDesiredState(command.DesiredState);
+            Vector2 movementDir = state.Velocity.sqrMagnitude > SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON
                 ? state.Velocity.normalized
                 : state.FacingDirection;
 
@@ -81,17 +85,25 @@ namespace TacticalDirector.AgentMovement
                 isCollisionKnockdown,
                 collisionForce);
 
-            // Step 3 — Apply transition if changed.
+            // Step 3 — Apply transition if changed. Gate through oscillation guard (§3.1.7).
             if (newState != state.CurrentState)
             {
-                state.PreviousState = state.CurrentState;
-                state.CurrentState = newState;
-                state.TimeInState = 0.0f;
-
-                if (isCollisionKnockdown && newState == AgentMovementState.GROUNDED)
+                bool blocked = state.OscillationGuard.RecordAndCheck(currentTime);
+                if (!blocked)
                 {
-                    state.GroundedReason = GroundedReason.COLLISION;
-                    state.CollisionForce = collisionForce;
+                    state.PreviousState = state.CurrentState;
+                    state.CurrentState = newState;
+                    state.TimeInState = 0.0f;
+
+                    if (isCollisionKnockdown && newState == AgentMovementState.GROUNDED)
+                    {
+                        state.GroundedReason = GroundedReason.COLLISION;
+                        state.CollisionForce = collisionForce;
+                    }
+                }
+                else
+                {
+                    state.TimeInState += dt;
                 }
             }
             else
@@ -124,7 +136,8 @@ namespace TacticalDirector.AgentMovement
                     break;
 
                 case AgentMovementState.WALKING:
-                    newSpeed = AgentLocomotion.ApplyAcceleration(state.Speed, topSpeed, kDir, dt);
+                    // Spec §3.1.6 / §3.2.4: WALKING uses linear accel/decel, not the exponential curve.
+                    newSpeed = Mathf.MoveTowards(state.Speed, topSpeed, LocomotionConstants.WALK_ACCELERATION * dt);
                     break;
 
                 case AgentMovementState.JOGGING:
@@ -162,11 +175,12 @@ namespace TacticalDirector.AgentMovement
                 state.FacingDirection,
                 command,
                 state.Position,
+                state.Velocity,
                 maxTurnRate * dt);
 
             // Step 8 — Integrate velocity (direction × new speed).
             Vector2 desiredDir = command.TargetPosition - state.Position;
-            if (desiredDir.sqrMagnitude < 1e-6f)
+            if (desiredDir.sqrMagnitude < SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON)
             {
                 desiredDir = state.FacingDirection;
             }
@@ -221,9 +235,17 @@ namespace TacticalDirector.AgentMovement
             bool[] isGoalkeeper,
             bool[] isCollisionKnockdown,
             float[] collisionForces,
-            float dt)
+            float dt,
+            float currentTime)
         {
             using var _ = s_updateAllAgentsMarker.Auto();
+
+            // All arrays must be co-sized — caller contract (§4.4.2).
+            // Debug.Assert compiles out in release builds (zero hot-path cost).
+            Debug.Assert(attrs.Length == states.Length && perfs.Length == states.Length
+                && commands.Length == states.Length && isGoalkeeper.Length == states.Length
+                && isCollisionKnockdown.Length == states.Length && collisionForces.Length == states.Length,
+                "UpdateAllAgents: all arrays must have the same length as states.");
 
             for (int i = 0; i < states.Length; i++)
             {
@@ -232,14 +254,14 @@ namespace TacticalDirector.AgentMovement
                     continue;
                 }
 
-                Update(ref states[i], attrs[i], perfs[i], commands[i], dt,
+                Update(ref states[i], attrs[i], perfs[i], commands[i], dt, currentTime,
                        isCollisionKnockdown[i], collisionForces[i]);
             }
         }
 
         private static float CalculateRequestedTurnAngle(Vector2 facing, Vector2 toTarget)
         {
-            if (toTarget.sqrMagnitude < 1e-6f)
+            if (toTarget.sqrMagnitude < SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON)
             {
                 return 0.0f;
             }
@@ -253,13 +275,48 @@ namespace TacticalDirector.AgentMovement
             Vector2 currentFacing,
             in MovementCommand command,
             Vector2 agentPosition,
+            Vector2 agentVelocity,
             float maxTurnDeg)
         {
-            Vector2 targetDir = command.FacingMode == FacingMode.TARGET_LOCK
-                ? command.FacingTarget - agentPosition
-                : command.TargetPosition - agentPosition;
+            Vector2 targetDir;
+            if (command.FacingMode == FacingMode.TARGET_LOCK)
+            {
+                targetDir = command.FacingTarget - agentPosition;
+            }
+            else
+            {
+                // AUTO_ALIGN: track actual velocity direction (§3.3.4 — "facing auto-aligns to
+                // movement velocity direction"). Fall back to target vector when nearly stopped.
+                targetDir = agentVelocity.sqrMagnitude > SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON
+                    ? agentVelocity
+                    : command.TargetPosition - agentPosition;
+            }
 
             return AgentDirectionalMovement.RotateFacingToward(currentFacing, targetDir, maxTurnDeg);
+        }
+
+        // Maps AI desired-state intent to an equivalent m/s speed for state-machine comparisons.
+        // The state machine uses commandSpeed vs current speed to decide when to decelerate or re-accelerate.
+        // We map each desired state to the upper bound of its valid speed range so that:
+        //   - JOGGING desired → commandSpeed=SprintEnter: agent in JOGGING range never triggers decel.
+        //   - WALKING desired → commandSpeed=JogEnter: jogging agent (>JogEnter) triggers decel.
+        //   - IDLE/DECELERATING desired → 0: always triggers decel from any locomotion state.
+        private static float CommandSpeedFromDesiredState(AgentMovementState desiredState)
+        {
+            switch (desiredState)
+            {
+                case AgentMovementState.SPRINTING:
+                    return MovementThresholds.MAX_SPEED;
+
+                case AgentMovementState.JOGGING:
+                    return MovementThresholds.SprintEnter;
+
+                case AgentMovementState.WALKING:
+                    return MovementThresholds.JogEnter;
+
+                default: // IDLE, DECELERATING, STUMBLING, GROUNDED — no voluntary locomotion
+                    return 0.0f;
+            }
         }
 
         private static bool IsDirectionalMultActive(AgentMovementState state)
@@ -297,19 +354,27 @@ namespace TacticalDirector.AgentMovement
                     break;
 
                 case AgentMovementState.IDLE:
-                case AgentMovementState.GROUNDED:
                     state.SprintReservoir += FatigueRates.SprintRecoveryIdle * dt;
                     state.AerobicPool += FatigueRates.AerobicRecoveryIdle * dt;
                     break;
 
+                case AgentMovementState.GROUNDED:
+                    // §3.1.3 table: GROUNDED recovers sprint at WALKING rate; aerobic recovers at WALKING rate.
+                    state.SprintReservoir += FatigueRates.SprintRecoveryWalking * dt;
+                    state.AerobicPool += FatigueRates.AerobicRecoveryWalking * dt;
+                    break;
+
                 case AgentMovementState.STUMBLING:
-                    // No fatigue update during involuntary stumble; §3.1.3 defines drain/recovery
-                    // for the five voluntary states only (IDLE, WALKING, JOGGING, SPRINTING, GROUNDED).
+                    // §3.1.3 table: STUMBLING recovers sprint at WALKING rate; aerobic drains at JOGGING rate
+                    // (agent is still moving involuntarily, so aerobic exertion continues).
+                    state.SprintReservoir += FatigueRates.SprintRecoveryWalking * dt;
+                    state.AerobicPool -= FatigueRates.AerobicDrainJogging * dt;
                     break;
 
                 case AgentMovementState.DECELERATING:
-                    // No fatigue update during controlled braking; §3.1.3 omits DECELERATING
-                    // from the drain/recovery table — it is a transient state between locomotion modes.
+                    // §3.1.3 table: DECELERATING recovers sprint at JOGGING rate; aerobic drains at JOGGING rate.
+                    state.SprintReservoir += FatigueRates.SprintRecoveryJogging * dt;
+                    state.AerobicPool -= FatigueRates.AerobicDrainJogging * dt;
                     break;
             }
 
@@ -325,4 +390,10 @@ namespace TacticalDirector.AgentMovement
 // | 1.1     | 2026-05-25 | —      | Pass-1 fix: H-1 UpdateFacing direction; H-2 namespace; L-4 OverrideSafetyConstraints;          |
 // |         |            |        | M-3 UpdateAllAgents collision arrays; M-5 StumbleDecelerationDistance; L-5 fatigue comment.    |
 // | 1.2     | 2026-05-25 | —      | Pass-2 fix: L-1 STUMBLING/DECELERATING fatigue comments clarified (controlled vs involuntary).  |
+// | 1.3     | 2026-05-25 | —      | Pass-4 fixes: H-1 WALKING → linear Mathf.MoveTowards (was exponential); H-2 commandSpeed →     |
+// |         |            |        | CommandSpeedFromDesiredState() (was dividing distance by dt, 60× too large); H-3 OscillationGuard |
+// |         |            |        | gating integrated into state transition; M-1 DECELERATING/STUMBLING fatigue updates added;      |
+// |         |            |        | M-2 IDLE/GROUNDED split (GROUNDED now uses SprintRecoveryWalking); M-5 Debug.Assert co-size    |
+// |         |            |        | guard; M-6 profiler marker string corrected; M-7 AUTO_ALIGN uses velocity direction;            |
+// |         |            |        | L-1 1e-6f → SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON.                                   |
 #endregion

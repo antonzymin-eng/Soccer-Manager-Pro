@@ -92,7 +92,7 @@ namespace TacticalDirector.AgentMovement
         /// </summary>
         public static float MovementAngleDeg(Vector2 movementDir, Vector2 facingDir)
         {
-            if (movementDir.sqrMagnitude < 1e-6f || facingDir.sqrMagnitude < 1e-6f)
+            if (movementDir.sqrMagnitude < SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON || facingDir.sqrMagnitude < SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON)
             {
                 return 0.0f;
             }
@@ -109,7 +109,7 @@ namespace TacticalDirector.AgentMovement
         public static Vector2 RotateFacingToward(
             Vector2 currentFacing, Vector2 targetFacing, float maxTurnDeg)
         {
-            if (targetFacing.sqrMagnitude < 1e-6f)
+            if (targetFacing.sqrMagnitude < SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON)
             {
                 return currentFacing;
             }
@@ -134,4 +134,5 @@ namespace TacticalDirector.AgentMovement
 // | 1.0     | 2026-05-22 | —      | Initial implementation.                                                            |
 // | 1.1     | 2026-05-25 | —      | Pass-1: H-2 namespace; L-1 PascalCase refs.                                        |
 // | 1.2     | 2026-05-25 | —      | Pass-3: 19.0f/1.0f attribute literals → PlayerAttributeConstants.AttributeRangeSpan / AttributeMin. |
+// | 1.3     | 2026-05-25 | —      | Pass-4 fix: L-1 1e-6f literals → SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON [FIXED].       |
 #endregion

@@ -162,6 +162,15 @@ namespace TacticalDirector.AgentMovement
         /// <summary>[FIXED] Maximum base top speed (m/s) at Pace attribute 20. Agent Movement #2 §3.2.4.</summary>
         public const float TOP_SPEED_MAX = 10.2f;
 
+        /// <summary>[FIXED] Walking state linear acceleration rate (m/s²). Agent Movement #2 §3.2.4.</summary>
+        public const float WALK_ACCELERATION = 2.0f;
+
+        /// <summary>[FIXED] Walking state linear deceleration rate (m/s²). Agent Movement #2 §3.2.4.</summary>
+        public const float WALK_DECELERATION = 2.5f;
+
+        /// <summary>[FIXED] Kinematic equation divisor for v²-based deceleration: a = v²/(2d). Agent Movement #2 §3.2.5.</summary>
+        public const float KINEMATIC_HALF = 2.0f;
+
         #endregion
 
         #region Derived
@@ -300,6 +309,21 @@ namespace TacticalDirector.AgentMovement
         /// <summary>[FIXED] Maximum lean angle (degrees). Agent Movement #2 §3.4.</summary>
         public const float MAX_LEAN_ANGLE = 45.0f;
 
+        /// <summary>[FIXED] Standard gravity (m/s²). ISO 80000-3:2019. Agent Movement #2 §3.4.</summary>
+        public const float GRAVITY_MAGNITUDE = 9.81f;
+
+        /// <summary>[FIXED] Degrees in a half-rotation (full reversal). Agent Movement #2 §3.4.4.</summary>
+        public const float HALF_ROTATION_DEG = 180.0f;
+
+        /// <summary>[FIXED] Dimensionless offset in the turn-rate velocity denominator. Agent Movement #2 §3.4.2.</summary>
+        public const float TURN_RATE_VELOCITY_OFFSET = 1.0f;
+
+        /// <summary>[FIXED] Minimum divisor guard (degrees) in the stumble overshoot denominator. Agent Movement #2 §3.4.4.</summary>
+        public const float MIN_TURN_RATE_DIVISOR = 1.0f;
+
+        /// <summary>[FIXED] Turn-rate near-zero guard (°/s) — values below this are treated as zero. Agent Movement #2 §3.4.3.</summary>
+        public const float TURN_RATE_EPSILON_DEG = 1e-4f;
+
         #endregion
 
         #region GT
@@ -389,6 +413,9 @@ namespace TacticalDirector.AgentMovement
         /// <summary>[FIXED] Minimum player attribute value. Agent Movement #2 §3.5.1.</summary>
         public const float AttributeMin = 1.0f;
 
+        /// <summary>[FIXED] Integer form of AttributeMin for use in integer-attribute arithmetic. Agent Movement #2 §3.5.1.</summary>
+        public const int AttributeMinInt = 1;
+
         /// <summary>[FIXED] Maximum player attribute value. Agent Movement #2 §3.5.1.</summary>
         public const float AttributeMax = 20.0f;
 
@@ -426,6 +453,13 @@ namespace TacticalDirector.AgentMovement
     /// </summary>
     public static class SafetyConstants
     {
+        #region Fixed
+
+        /// <summary>[FIXED] Squared-magnitude threshold below which a 2-D vector is treated as effectively zero. Agent Movement #2 §4.3.1.</summary>
+        public const float VELOCITY_SQR_MAGNITUDE_EPSILON = 1e-6f;
+
+        #endregion
+
         #region Cross
 
         /// <summary>
@@ -461,4 +495,8 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | reason multipliers / MinStoppingDistanceM promoted. Pass-3: PlayerAttributeConstants class added  |
 // |         |            |        | (AttributeMin, AttributeMax, AttributeRangeSpan, AttributePairMax, AttributeNearZeroFloor);       |
 // |         |            |        | all derived-constant divisors updated from 19.0f literal to PlayerAttributeConstants.AttributeRangeSpan. |
+// | 1.3     | 2026-05-25 | —      | Pass-4 fix: TurnConstants.GRAVITY_MAGNITUDE, HALF_ROTATION_DEG, TURN_RATE_VELOCITY_OFFSET,        |
+// |         |            |        | MIN_TURN_RATE_DIVISOR, TURN_RATE_EPSILON_DEG added [FIXED]. LocomotionConstants.WALK_ACCELERATION, |
+// |         |            |        | WALK_DECELERATION, KINEMATIC_HALF added [FIXED]. SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON   |
+// |         |            |        | added [FIXED]. PlayerAttributeConstants.AttributeMinInt added [FIXED].                           |
 #endregion

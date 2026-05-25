@@ -71,10 +71,14 @@ namespace TacticalDirector.AgentMovement
         /// <summary>Cached magnitude of Velocity (m/s). Recomputed each frame; do not set directly.</summary>
         public float Speed;
 
+        // — Oscillation guard —
+        /// <summary>Anti-thrash guard for state transitions. Always pass by ref; Initialize() called by CreateAtPosition. Agent Movement #2 §3.1.7.</summary>
+        public OscillationGuard OscillationGuard;
+
         /// <summary>Initialises state for an agent placed at a pitch position, fully rested.</summary>
         public static AgentState CreateAtPosition(Vector2 position, Vector2 facingDirection)
         {
-            return new AgentState
+            var state = new AgentState
             {
                 Position = position,
                 Velocity = Vector2.zero,
@@ -92,6 +96,10 @@ namespace TacticalDirector.AgentMovement
                 LastValidVelocity = Vector2.zero,
                 Speed = 0.0f
             };
+            // OscillationGuard zero-init causes false-positive lockout at t=0; Initialize() sets
+            // all timestamp slots to NegativeInfinity so no recent transitions are counted.
+            state.OscillationGuard.Initialize();
+            return state;
         }
     }
 }
@@ -102,4 +110,6 @@ namespace TacticalDirector.AgentMovement
 // | 1.1     | 2026-05-25 | —      | H-2: namespace → TacticalDirector.AgentMovement; moved to src/agent-movement/.    |
 // |         |            |        | L-2: XML doc clarified — mutable struct, mutation via ref, readonly deferral note. |
 // |         |            |        | L-6: GroundedReason default changed from COLLISION to NONE (sentinel).             |
+// | 1.2     | 2026-05-25 | —      | Pass-4 fix: H-3 OscillationGuard field added; H-4 Initialize() called in            |
+// |         |            |        | CreateAtPosition to prevent false-positive lockout at match start.                  |
 #endregion
