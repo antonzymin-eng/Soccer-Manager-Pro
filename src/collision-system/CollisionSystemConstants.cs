@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionSystemConstants.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-25  [v1.2]
 // Author:   —
 // Spec:     Collision System #3 §3.1.1, §3.3.1, §4.3.1, Code Standards #20
 // Purpose:  All constants for the collision system. No literals in formula code.
@@ -59,6 +59,20 @@ namespace TacticalDirector.CollisionSystem
         /// </summary>
         public static readonly int TotalCells = GridWidth * GridHeight; // 7,314
 
+        /// <summary>
+        /// [DERIVED] Virtual slot index used to map BALL_ENTITY_ID in CollisionPairBitfield. §3.2.4.
+        /// Formula: AgentCapacity. Agents occupy slots 0 to AgentCapacity-1; ball receives the next slot.
+        /// Source: SpatialHashConstants.AgentCapacity.
+        /// </summary>
+        public static readonly int BallVirtualIndex = 22; // must equal AgentCapacity (GT); kept literal to avoid static-field init-order dependency
+
+        /// <summary>
+        /// [DERIVED] Row size for the triangular pair-index formula in CollisionPairBitfield. §3.2.4.
+        /// Formula: BallVirtualIndex + 1 = 23. §3.2.4.
+        /// Source: SpatialHashConstants.BallVirtualIndex.
+        /// </summary>
+        public static readonly int PairFormulaRowSize = BallVirtualIndex + 1;
+
         #endregion
 
         #region Cross
@@ -72,6 +86,9 @@ namespace TacticalDirector.CollisionSystem
         #endregion
 
         #region GT
+
+        /// <summary>[GT] Number of agents per match (22 = 11 per team). §3.2.4.</summary>
+        public static readonly int AgentCapacity = 22; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Max entities per cell before warning. §4.3.1.</summary>
         public static readonly int CellDensityWarning = 8; // TODO: replace with config loader (Stage 1)
@@ -254,4 +271,7 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | literal). M-1: CollisionPhysicsConstants region order corrected to Derived→Cross→GT.    |
 // |         |            |        | M-1b: MaxCollisionForceRef [DERIVED] constant added (normalises impact force to [0,1]).  |
 // |         |            |        | H-3: AgentPhysicsSnapshotConstants class added (hitbox/mass formula constants from #2).  |
+// | 1.2     | 2026-05-25 | —      | Pass-3+4. P3-1: MinResponseSqrMagnitude [GT] added. P4-1: AgentCapacity [GT] added;      |
+// |         |            |        | BallVirtualIndex [DERIVED] and PairFormulaRowSize [DERIVED] added to SpatialHashConstants|
+// |         |            |        | to replace magic literals 22/23 in CollisionPairBitfield (FR-CS-016).                    |
 #endregion
