@@ -1,11 +1,11 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** May 15, 2026 (later same day still — #18 Performance Optimization APPROVED; #9 + #19 + #18 all APPROVED same day; Priority 5 spec set fully complete; only Priority 3+4 AI specs (#10–#15) remain)
+**Last Updated:** May 25, 2026 (implementation phase: all 20 specs APPROVED; Ball Physics #1 and Agent Movement #2 initial implementations committed to `src/`; `src/CLAUDE.md` coding guide at v1.8)
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
-**Current Stage:** Stage 0 (Specification Phase)
+**Current Stage:** Stage 0+1 — Implementation (coding begun May 19, 2026)
 
 ---
 
@@ -109,17 +109,18 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 
 ## CURRENT STATUS
 
-### Stage 0: Physics Foundation (Year 1)
+### Stage 0+1: Physics Foundation — Implementation
 
 **Goal:** Build the physics and simulation core that all future systems depend on.
 
-**Progress:** Specification Phase
-**Started:** February 2, 2026
-**Deliverables:** 20 comprehensive specification documents
+**Progress:** Implementation Phase (coding begun May 19, 2026)
+**Spec Phase Started:** February 2, 2026
+**Spec Phase Completed:** May 18, 2026 — all 20 specs APPROVED
+**Deliverables:** 20 comprehensive specification documents + initial code for Ball Physics and Agent Movement
 
-**Summary (May 15, 2026, later same day still):** 14 approved (#1, #2, #3, #4, #5, #6, #7, #8, #9, #16, #17, #18, #19, #20), 0 suspended, 0 in review, 0 in progress, 6 not started (#10–#15). **Priority 1, 2, 5 spec sets are fully complete; only Priority 3+4 AI specs remain.** Scaffold skeletons (outline + section-1…9 + appendices headers, no body content) exist for the 6 not-started specs.
-**Total specification output:** ~4.33 MB across 106 files (counts predate folder migration; see file-manifest.md)
-**Comprehensive audits completed:** 6 of 7 finished specs
+**Summary (May 25, 2026):** All 20 specs APPROVED. Stage 0 specification phase COMPLETE. Ball Physics (#1) initial implementation at `src/Core/Physics/Ball/` (8 source files + 3 test files). Agent Movement (#2) initial implementation at `src/agent-movement/` (16 source files). `src/CLAUDE.md` coding guide (v1.8) governs all C# authoring.
+**Total specification output:** ~4.33 MB across 106 files (see file-manifest.md)
+**Implementation begun:** Ball Physics #1, Agent Movement #2
 
 ---
 
@@ -138,15 +139,15 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 8. ✅ Decision Tree — **APPROVED** Apr 27, 2026 (~55+ pages, draft-level quality gate; comprehensive audit candidate before implementation)
 9. ✅ Fixed64 Math Library — **APPROVED** May 15, 2026 (§9 v1.0 lead-developer sign-off; §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented deferral; §9.8 implementation-time deliverables remain post-APPROVED follow-ups. Implementation deferred to Stage 5 per §8.1 v0.2 stage-gating.)
 
-**Priority 3 — Advanced Physics (Weeks 9-12):**
-10. ⏳ Heading Mechanics
-11. ⏳ Goalkeeper Mechanics
-12. ⏳ Positioning AI
+**Priority 3 — Advanced Physics:**
+10. ✅ Heading Mechanics — **APPROVED** May 16, 2026 (PASS-1 + OI closure + R-01..R-05 sign-off same day; ERR-010-001 resolved: `DOMAIN_TAG_HEADING = 0x16`)
+11. ✅ Goalkeeper Mechanics — **APPROVED** May 18, 2026 (ERR-011-001 resolved: `DOMAIN_TAG_GOALKEEPER = 0x1D`; 44 FRs; ~79 constants)
+12. ✅ Positioning AI — **APPROVED** May 18, 2026 (ERR-012-001 resolved: `DOMAIN_TAG_POSITIONING_AI = 0x17`; 47 active FRs; no `[EST]` remain)
 
-**Priority 4 — Tactical AI (Weeks 13-16):**
-13. ⏳ Pressing AI
-14. ⏳ Defensive AI
-15. ⏳ Attacking AI
+**Priority 4 — Tactical AI:**
+13. ✅ Pressing AI — **APPROVED** May 17, 2026 (all gate items resolved; R-01..R-05 signed; 26 constants)
+14. ✅ Defensive AI — **APPROVED** May 18, 2026 (ERR-014-001 + ERR-014-004 resolved; 37 FRs; 26 constants)
+15. ✅ Attacking AI — **APPROVED** May 18, 2026 (ERR-015-001/002/005 back-props closed; 36 FRs; 85 tests)
 16. ✅ Deterministic Simulation — **APPROVED** May 14, 2026 (Tier 2 Final Approval; §9 v1.7; all §9.4.2 gates cleared; golden-vector files hkdf-sha256-kat v1.1, siphash-2-4-kat v1.1, serialize-canonical-corpus v1.0; §8.3.1 cross-spec re-audit complete; ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1)
 
 **Priority 5 — Systems Architecture (Weeks 17-20):**
@@ -162,6 +163,8 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 - ⏸ Suspended
 - ✅ Approved
 - 🔒 Locked (implementation begun)
+
+**Locked (implementation begun):** Ball Physics #1, Agent Movement #2
 
 **For detailed progress tracking, see:** [docs/tracking/PROGRESS.md](docs/tracking/PROGRESS.md)
 **For file inventory, see:** [docs/tracking/file-manifest.md](docs/tracking/file-manifest.md)
@@ -258,36 +261,50 @@ Soccer-Manager-Pro/
 │   │   ├── performance-optimization/   [Spec #18 — APPROVED]
 │   │   ├── testing-strategy/           [Spec #19 — APPROVED]
 │   │   ├── code-standards/             [Spec #20 — APPROVED]
-│   │   └── ...                         [Specs #10–#15 — scaffold-only, NOT STARTED]
+│   │   ├── heading-mechanics/          [Spec #10 — APPROVED May 16]
+│   │   ├── goalkeeper-mechanics/       [Spec #11 — APPROVED May 18]
+│   │   ├── positioning-ai/             [Spec #12 — APPROVED May 18]
+│   │   ├── pressing-ai/               [Spec #13 — APPROVED May 17]
+│   │   ├── defensive-ai/              [Spec #14 — APPROVED May 18]
+│   │   └── attacking-ai/              [Spec #15 — APPROVED May 18]
 │   └── tracking/
 │       ├── PROGRESS.md                 [Schedule and milestone tracking]
 │       ├── spec-error-log.md           [Cross-spec architectural errors]
 │       ├── fix-manifest-pass-mechanics.md [Per-audit fix tracking — Pass Mechanics #5]
 │       └── file-manifest.md            [Authoritative file inventory]
-└── src/                                [Empty until all 20 specs approved]
+└── src/                                [Implementation — coding begun May 19, 2026]
+    ├── CLAUDE.md                       [Coding guide v1.8 — read before writing code]
+    ├── Core/Physics/Ball/              [Spec #1 — known deviation from src/ball-physics/]
+    │   ├── BallPhysicsConstants.cs
+    │   ├── BallState.cs
+    │   ├── BallPhysicsCore.cs
+    │   ├── BallStateMachine.cs
+    │   ├── BallGroundInteraction.cs
+    │   ├── BallCollision.cs
+    │   ├── BallEventLogger.cs
+    │   ├── SurfaceProperties.cs
+    │   └── Tests/  [BallPhysicsCoreTests, BallIntegrationTests, BallStateMachineTests]
+    └── agent-movement/                 [Spec #2 — 16 source files]
 ```
 
 ---
 
 ## NEXT IMMEDIATE STEPS
 
-### Outstanding (as of May 15, 2026)
+### Outstanding (as of May 25, 2026)
 
-**Sign-offs completed since project start:**
-- ✅ Specs #1, #2, #3, #4, #5, #6, #7, #8, #9 — Priority 1–2 set fully complete.
-- ✅ Spec #16 — Tier 2 APPROVED May 14, 2026.
-- ✅ Specs #17, #20 — APPROVED May 13 and May 11, 2026. #17 §1.0.1 patch May 15, 2026 closes ERR-017-001.
+**Specification phase:** ✅ COMPLETE — all 20 specs APPROVED (May 18, 2026).
 
-**In review:** *(none — all 14 drafted specs are APPROVED).*
-
-**Not started (only remaining body of spec-phase work):**
-1. ⏳ Heading Mechanics (#10), Goalkeeper Mechanics (#11), Positioning AI (#12) — Priority 3 (Advanced Physics).
-2. ⏳ Pressing AI (#13), Defensive AI (#14), Attacking AI (#15) — Priority 4 (Tactical AI).
+**Implementation phase — active frontier:**
+1. 🔒 Ball Physics (#1) — initial implementation at `src/Core/Physics/Ball/`. Next: verify all constants/formulas, complete integration tests, then proceed to Collision System (#3).
+2. 🔒 Agent Movement (#2) — initial implementation at `src/agent-movement/`. Next: add agent-movement tests/ folder + test files per Spec #2 §5.
+3. ⏳ Remaining specs (#3–#8, #10–#15, #17) — implement per spec §4 (Architecture) files in order of dependency.
+4. ⏳ Structural fix: move Ball Physics code from `src/Core/Physics/Ball/` → `src/ball-physics/` (spec-canonical path per src/CLAUDE.md tree).
 
 **Operations / housekeeping:**
-3. ⏳ Push 11 approval tags (HTTP 403 branch-protection); run the squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`. New since last reconciliation: `spec-fixed64-math-v1.0-approved`, `spec-testing-strategy-v1.0-approved`, `spec-performance-optimization-v1.0-approved`.
-4. ⏳ Stage-0 host-platform pin in `docs/tracking/certification-platform.md` (lead-developer task; blocks first `FR-DS-009-GATE` cert run and `FR-PO-052` Stage 0+1 perf-gate activation, not spec approvals).
-5. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20.
+5. ⏳ Push 12+ approval tags (HTTP 403 branch-protection); run squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`.
+6. ⏳ Stage-0 host-platform pin in `docs/tracking/certification-platform.md` (lead-developer task; blocks first `FR-DS-009-GATE` cert run and `FR-PO-052` Stage 0+1 perf-gate activation).
+7. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20.
 
 ---
 
@@ -331,22 +348,14 @@ These remain available in `/Archive/` for historical reference but should NOT be
 1. ✅ Master Plan understood
 2. ✅ Best Practices documented
 3. ✅ Specification progress tracker created
-4. ✅ Ball Physics #1 approved (Feb 8)
-5. ✅ Agent Movement #2 approved (Apr 27)
-6. ✅ Collision System #3 approved (Feb 19; §9 back-filled Apr 26)
-7. ✅ First Touch Mechanics #4 approved (Feb 22)
-8. ✅ Pass Mechanics #5 re-approved (May 6, 2026 — all audit findings resolved)
-9. ✅ Shot Mechanics #6 approved (Apr 27)
-10. ✅ Perception System #7 approved (Apr 22)
-11. ✅ Decision Tree #8 approved (Apr 27, draft-level quality gate)
-12. ✅ Fixed64 Math Library #9 — APPROVED May 15, 2026
-13. ✅ Deterministic Simulation #16 — Tier 2 APPROVED May 14
-14. ✅ Event System #17 — APPROVED May 13
-15. ✅ Code Standards #20 — APPROVED May 11
-16. ✅ Performance Optimization #18 — APPROVED May 15, 2026
-17. ✅ Testing Strategy #19 — APPROVED May 15, 2026
-18. ⏳ Begin Heading Mechanics (#10)
-19. No coding until all 20 specs approved
+4. ✅ All 20 specifications APPROVED (May 18, 2026) — spec phase COMPLETE
+5. ✅ `src/CLAUDE.md` coding guide created (May 19, 2026; v1.8)
+6. ✅ Ball Physics #1 — initial implementation at `src/Core/Physics/Ball/`
+7. ✅ Agent Movement #2 — initial implementation at `src/agent-movement/`
+8. ⏳ Add test files for Agent Movement (#2) under `src/agent-movement/tests/`
+9. ⏳ Resolve structural deviation: move Ball Physics to `src/ball-physics/`
+10. ⏳ Implement Collision System (#3) at `src/collision-system/`
+11. ⏳ Continue implementing remaining specs in dependency order
 
 ---
 
@@ -354,7 +363,7 @@ These remain available in `/Archive/` for historical reference but should NOT be
 
 **Developer:** Solo developer with AI assistance
 **Project Start:** December 29, 2025
-**Current Phase:** Specification Writing
+**Current Phase:** Implementation (Stage 0+1)
 
 **Community Channels (To be established):**
 - Discord: TBD (Stage 1)
@@ -491,6 +500,15 @@ git push --tags
 - Next Immediate Steps refreshed to May 6 reality; resolved documentation-debt items checked off (spec-error-log rebuild, file-manifest reconciliation).
 - ERR-016-002 (EntityId no-reuse cross-spec back-propagation) added to outstanding documentation debt.
 
+**v2.4 — May 25, 2026**
+- All 20 specifications APPROVED. Stage 0 specification phase COMPLETE (May 18, 2026).
+- Specs #10–#15 APPROVED May 16–18, 2026 (Heading Mechanics, Goalkeeper Mechanics, Positioning AI, Pressing AI, Defensive AI, Attacking AI).
+- Coding phase begun May 19, 2026. `src/CLAUDE.md` coding guide created; at v1.8 as of May 25.
+- Ball Physics (#1): initial implementation at `src/Core/Physics/Ball/` — 8 source files + 3 test files.
+- Agent Movement (#2): initial implementation at `src/agent-movement/` — 16 source files.
+- Known structural deviation: Ball Physics at `src/Core/Physics/Ball/` vs spec-canonical `src/ball-physics/` — fix pass planned.
+- README updated to reflect implementation phase, full spec schedule, and actual `src/` structure.
+
 **v2.3 — May 15, 2026 (later same day still)**
 - Performance Optimization Strategy (#18) — APPROVED. §9 v1.0 lead-developer sign-off granted; v1.0 `[TBD-NORMATIVE]` sweep landed across §1 / §2 / §3 / §4 / §5 / §6 / §8 / appendices (60 instances) against #16 APPROVED text + #19 v1.0.1 patch-revised text. KD-2 sequencing satisfied.
 - Stage 0 spec count: **14 APPROVED, 0 SUSPENDED, 0 IN REVIEW, 0 IN PROGRESS, 6 NOT STARTED.** Priority 5 spec set fully complete; only Priority 3+4 AI specs (#10–#15) remain in the spec phase.
@@ -530,4 +548,4 @@ git push --tags
 
 **Remember:** This is a 10-year project. Quality over speed. Build it right.
 
-**Current Focus:** Sign off Priority 2 specs (Agent Movement, Shot Mechanics, Perception System, Decision Tree), re-sign-off Pass Mechanics, then begin Priority 3.
+**Current Focus:** Implement specs #3–#20 per `src/CLAUDE.md`. Active frontier: Ball Physics (#1) + Agent Movement (#2) initial implementations complete; Collision System (#3) is next.
