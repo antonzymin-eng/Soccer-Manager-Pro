@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionSystem.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-25  [v1.1]
 // Author:   —
 // Spec:     Collision System #3 §3.4.1, §4.1.3, §4.4.4, Code Standards #20
 // Purpose:  Main collision system — orchestrates spatial hash, narrow phase, and response.
@@ -39,7 +39,7 @@ namespace TacticalDirector.CollisionSystem
         private Vector3[] _pendingPositionCorrection;
         private bool[] _pendingGrounded;
         private bool[] _pendingStumble;
-        private float[] _pendingGroundedDuration;
+        private float[] _pendingImpactForce;
 
         /// <summary>
         /// Constructs the system with pre-allocated buffers. Call once per match.
@@ -56,7 +56,7 @@ namespace TacticalDirector.CollisionSystem
             _pendingPositionCorrection = new Vector3[n];
             _pendingGrounded = new bool[n];
             _pendingStumble = new bool[n];
-            _pendingGroundedDuration = new float[n];
+            _pendingImpactForce = new float[n];
         }
 
         /// <summary>
@@ -68,7 +68,8 @@ namespace TacticalDirector.CollisionSystem
         /// <param name="agentTeamIds">Read-only team identifiers per agent.</param>
         /// <param name="agentIsGoalkeeper">Read-only goalkeeper flags per agent.</param>
         /// <param name="knockdownOut">Out: true when collision triggers GROUNDED. Consumed by AgentMovementSystem.UpdateAllAgents().</param>
-        /// <param name="knockdownForceOut">Out: normalised impact force [0,1] for GROUNDED duration. Consumed by AgentMovementSystem.</param>
+        /// <param name="knockdownForceOut">Out: normalised impact force [0,1] for GROUNDED dwell scaling. Consumed by AgentMovementSystem.</param>
+        /// <param name="stumbleOut">Out: true when collision triggers STUMBLING (not GROUNDED). Consumed by AgentMovementSystem.UpdateAllAgents().</param>
         /// <param name="ball">In/out: modified when agent-ball contact is detected.</param>
         /// <param name="matchSeed">Match-level seed for deterministic RNG.</param>
         /// <param name="frameNumber">Current frame index for per-frame RNG seeding.</param>
@@ -81,6 +82,7 @@ namespace TacticalDirector.CollisionSystem
             bool[] agentIsGoalkeeper,
             bool[] knockdownOut,
             float[] knockdownForceOut,
+            bool[] stumbleOut,
             ref BallState ball,
             ulong matchSeed,
             int frameNumber,
@@ -104,9 +106,10 @@ namespace TacticalDirector.CollisionSystem
                 _pendingPositionCorrection[i] = Vector3.zero;
                 _pendingGrounded[i] = false;
                 _pendingStumble[i] = false;
-                _pendingGroundedDuration[i] = 0f;
+                _pendingImpactForce[i] = 0f;
                 knockdownOut[i] = false;
                 knockdownForceOut[i] = 0f;
+                stumbleOut[i] = false;
             }
 
             // Phase 1 — populate spatial hash.
@@ -190,9 +193,12 @@ namespace TacticalDirector.CollisionSystem
                 if (_pendingGrounded[i])
                 {
                     knockdownOut[i] = true;
-                    // Normalise force relative to Strength-10 fall threshold (750N) for AgentMovement.
-                    knockdownForceOut[i] = Mathf.Clamp01(_pendingGroundedDuration[i] /
-                        GroundedDurationConstants.DurationMax);
+                    knockdownForceOut[i] = Mathf.Clamp01(
+                        _pendingImpactForce[i] / CollisionPhysicsConstants.MaxCollisionForceRef);
+                }
+                else if (_pendingStumble[i])
+                {
+                    stumbleOut[i] = true;
                 }
             }
 
@@ -235,13 +241,20 @@ namespace TacticalDirector.CollisionSystem
             if (response.TriggerGrounded1 && !_pendingGrounded[id1])
             {
                 _pendingGrounded[id1] = true;
-                _pendingGroundedDuration[id1] = response.GroundedDuration1;
+                // Keep the highest impact force if agent is hit by multiple collisions.
+                if (response.ImpactForce > _pendingImpactForce[id1])
+                {
+                    _pendingImpactForce[id1] = response.ImpactForce;
+                }
             }
 
             if (response.TriggerGrounded2 && !_pendingGrounded[id2])
             {
                 _pendingGrounded[id2] = true;
-                _pendingGroundedDuration[id2] = response.GroundedDuration2;
+                if (response.ImpactForce > _pendingImpactForce[id2])
+                {
+                    _pendingImpactForce[id2] = response.ImpactForce;
+                }
             }
 
             if (!_pendingGrounded[id1] && response.TriggerStumble1)
@@ -346,6 +359,10 @@ namespace TacticalDirector.CollisionSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes          |
-// | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | Version | Date       | Author | Notes                                                                                    |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                                           |
+// | 1.1     | 2026-05-25 | —      | Adversarial review fix pass. H-1: stumbleOut[] param added; _pendingStumble now surfaced.|
+// |         |            |        | H-2: _pendingGroundedDuration[] replaced with _pendingImpactForce[]; knockdownForceOut   |
+// |         |            |        | now stores normalised impact force via MaxCollisionForceRef (not normalised duration).   |
+// |         |            |        | ProcessAgentAgent: accumulate highest ImpactForce per agent across multiple collisions.  |
 #endregion
