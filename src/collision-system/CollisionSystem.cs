@@ -45,7 +45,7 @@ namespace TacticalDirector.CollisionSystem
         /// Constructs the system with pre-allocated buffers. Call once per match.
         /// </summary>
         /// <param name="agentCapacity">Number of agents (typically 22).</param>
-        public CollisionSystem(int agentCapacity = 22)
+        public CollisionSystem(int agentCapacity = 22) // default = SpatialHashConstants.AgentCapacity; literal required for default param
         {
             _spatialHash = new SpatialHashGrid();
             _processedPairs = new CollisionPairBitfield();
