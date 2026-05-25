@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionResponse.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-25  [v1.1]
 // Author:   —
 // Spec:     Collision System #3 §3.3.1–§3.3.2, FR-04, FR-05, Code Standards #20
 // Purpose:  Impulse-based collision resolution, penetration separation, fall/stumble triggers.
@@ -90,22 +90,19 @@ namespace TacticalDirector.CollisionSystem
                     -impulse.x * invM2, -impulse.y * invM2, 0f);
             }
 
-            // F = j / dt, dt = 1/60 s.
-            float impactForce = Mathf.Abs(j) * 60f;
+            float impactForce = Mathf.Abs(j) * CollisionPhysicsConstants.PHYSICS_TICK_HZ;
             result.ImpactForce = impactForce;
 
             if (a1Active)
             {
-                EvaluateFallOrStumble(a1.Strength, a1.Agility, impactForce, isSameTeam, ref rng,
-                    out result.TriggerGrounded1, out result.TriggerStumble1,
-                    out result.GroundedDuration1);
+                EvaluateFallOrStumble(a1.Strength, impactForce, isSameTeam, ref rng,
+                    out result.TriggerGrounded1, out result.TriggerStumble1);
             }
 
             if (a2Active)
             {
-                EvaluateFallOrStumble(a2.Strength, a2.Agility, impactForce, isSameTeam, ref rng,
-                    out result.TriggerGrounded2, out result.TriggerStumble2,
-                    out result.GroundedDuration2);
+                EvaluateFallOrStumble(a2.Strength, impactForce, isSameTeam, ref rng,
+                    out result.TriggerGrounded2, out result.TriggerStumble2);
             }
 
             return result;
@@ -122,8 +119,8 @@ namespace TacticalDirector.CollisionSystem
             if (manifold.PenetrationDepth <= 0f) return;
 
             float sep = manifold.PenetrationDepth <= FallThresholdConstants.MaxPenetrationDepth
-                ? manifold.PenetrationDepth * 1.01f
-                : FallThresholdConstants.MaxPenetrationDepth; // gentle correction for tunneling
+                ? manifold.PenetrationDepth * CollisionPhysicsConstants.SeparationSlop
+                : FallThresholdConstants.MaxPenetrationDepth;
 
             float invM1 = a1Active ? (1.0f / a1.Mass) : 0f;
             float invM2 = a2Active ? (1.0f / a2.Mass) : 0f;
@@ -148,17 +145,14 @@ namespace TacticalDirector.CollisionSystem
 
         private static void EvaluateFallOrStumble(
             int strength,
-            int agility,
             float impactForce,
             bool isSameTeam,
             ref DeterministicRNG rng,
             out bool triggerGrounded,
-            out bool triggerStumble,
-            out float groundedDuration)
+            out bool triggerStumble)
         {
             triggerGrounded = false;
             triggerStumble = false;
-            groundedDuration = 0f;
 
             float fallThreshold = FallThresholdConstants.FallForceBase
                 + strength * FallThresholdConstants.FallForcePerStrength;
@@ -172,9 +166,13 @@ namespace TacticalDirector.CollisionSystem
                 if (rng.NextFloat() < prob)
                 {
                     triggerGrounded = true;
-                    groundedDuration = CalcGroundedDuration(agility);
                     return;
                 }
+
+                // Fall probability check failed — force was high enough for fall zone but agent
+                // survived; treat as a stumble at maximum stumble probability (1.0).
+                triggerStumble = true;
+                return;
             }
 
             if (impactForce > stumbleThreshold && impactForce <= fallThreshold)
@@ -187,19 +185,12 @@ namespace TacticalDirector.CollisionSystem
                 }
             }
         }
-
-        private static float CalcGroundedDuration(int agility)
-        {
-            float d = GroundedDurationConstants.DurationBase
-                - agility * GroundedDurationConstants.DurationPerAgility;
-            return Mathf.Clamp(d,
-                GroundedDurationConstants.DurationMin,
-                GroundedDurationConstants.DurationMax);
-        }
     }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes          |
-// | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | Version | Date       | Author | Notes                                                                              |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                                     |
+// | 1.1     | 2026-05-25 | —      | M-3: EvaluateFallOrStumble now triggers stumble when force > fallThreshold but fall |
+// |         |            |        | probability check fails (previously no consequence for surviving high-force hit).   |
 #endregion

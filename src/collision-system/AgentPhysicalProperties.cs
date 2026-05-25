@@ -1,6 +1,6 @@
 // File:     src/collision-system/AgentPhysicalProperties.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-25  [v1.1]
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.4, Collision System #3 §2.3.2, Code Standards #20
 // Purpose:  Read-only snapshot of an agent's physical state for one collision frame.
@@ -60,8 +60,10 @@ namespace TacticalDirector.CollisionSystem
             {
                 Position = new Vector3(state.Position.x, state.Position.y, 0f),
                 Velocity = new Vector3(state.Velocity.x, state.Velocity.y, 0f),
-                HitboxRadius = 0.3525f + (strength - 1) * 0.0075f,
-                Mass = 72.5f + (strength - 1) * 1.5f,
+                HitboxRadius = AgentPhysicsSnapshotConstants.HitboxRadiusBase
+                             + (strength - 1) * AgentPhysicsSnapshotConstants.HitboxRadiusPerStrength,
+                Mass = AgentPhysicsSnapshotConstants.MassBase
+                     + (strength - 1) * AgentPhysicsSnapshotConstants.MassPerStrength,
                 Strength = strength,
                 Agility = attrs.Agility,
                 IsGrounded = state.CurrentState == AgentMovementState.GROUNDED
@@ -71,6 +73,7 @@ namespace TacticalDirector.CollisionSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes          |
-// | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | Version | Date       | Author | Notes                                                                        |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                               |
+// | 1.1     | 2026-05-25 | —      | H-3: magic literals replaced with AgentPhysicsSnapshotConstants (FR-CS-016). |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/collision-system/AgentAgentCollisionResult.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-25  [v1.1]
 // Author:   —
 // Spec:     Collision System #3 §3.3.3, Code Standards #20
 // Purpose:  Internal result struct from CollisionResponse; contains both agents' outcomes.
@@ -30,9 +30,6 @@ namespace TacticalDirector.CollisionSystem
         /// <summary>True if agent 1 should enter STUMBLING state.</summary>
         public bool TriggerStumble1;
 
-        /// <summary>GROUNDED duration for agent 1 (s). Valid only when TriggerGrounded1.</summary>
-        public float GroundedDuration1;
-
         // ── Agent 2 ──────────────────────────────────────────────────────────
 
         /// <summary>Velocity impulse for agent 2 (m/s).</summary>
@@ -47,9 +44,6 @@ namespace TacticalDirector.CollisionSystem
         /// <summary>True if agent 2 should enter STUMBLING state.</summary>
         public bool TriggerStumble2;
 
-        /// <summary>GROUNDED duration for agent 2 (s). Valid only when TriggerGrounded2.</summary>
-        public float GroundedDuration2;
-
         // ── Shared ───────────────────────────────────────────────────────────
 
         /// <summary>Impact force (N) = impulse magnitude × 60 Hz. Used for foul data and fall thresholds.</summary>
@@ -58,6 +52,7 @@ namespace TacticalDirector.CollisionSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes          |
-// | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | Version | Date       | Author | Notes                                                                                   |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                                          |
+// | 1.1     | 2026-05-25 | —      | Removed GroundedDuration1/2 (duration now computed by AgentStateMachine, not Collision). |
 #endregion

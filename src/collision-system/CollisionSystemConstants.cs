@@ -1,11 +1,12 @@
 // File:     src/collision-system/CollisionSystemConstants.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-25  [v1.2]
 // Author:   —
 // Spec:     Collision System #3 §3.1.1, §3.3.1, §4.3.1, Code Standards #20
 // Purpose:  All constants for the collision system. No literals in formula code.
 
-using UnityEngine;
+using TacticalDirector.AgentMovement;
+using TacticalDirector.BallPhysics;
 
 namespace TacticalDirector.CollisionSystem
 {
@@ -18,6 +19,13 @@ namespace TacticalDirector.CollisionSystem
 
         /// <summary>[FIXED] Minimum distance to avoid division by zero (m). §3.2.1.</summary>
         public const float MIN_DISTANCE_EPSILON = 0.0001f;
+
+        /// <summary>
+        /// [FIXED] Ball entity ID sentinel (agents use 0–21).
+        /// Convention defined in Collision System #3 §4.3.1.
+        /// Value: -1.
+        /// </summary>
+        public const int BALL_ENTITY_ID = -1;
 
         #endregion
 
@@ -51,26 +59,36 @@ namespace TacticalDirector.CollisionSystem
         /// </summary>
         public static readonly int TotalCells = GridWidth * GridHeight; // 7,314
 
+        /// <summary>
+        /// [DERIVED] Virtual slot index used to map BALL_ENTITY_ID in CollisionPairBitfield. §3.2.4.
+        /// Formula: AgentCapacity. Agents occupy slots 0 to AgentCapacity-1; ball receives the next slot.
+        /// Source: SpatialHashConstants.AgentCapacity.
+        /// </summary>
+        public static readonly int BallVirtualIndex = 22; // must equal AgentCapacity (GT); kept literal to avoid static-field init-order dependency
+
+        /// <summary>
+        /// [DERIVED] Row size for the triangular pair-index formula in CollisionPairBitfield. §3.2.4.
+        /// Formula: BallVirtualIndex + 1 = 23. §3.2.4.
+        /// Source: SpatialHashConstants.BallVirtualIndex.
+        /// </summary>
+        public static readonly int PairFormulaRowSize = BallVirtualIndex + 1;
+
         #endregion
 
         #region Cross
 
         /// <summary>
-        /// [CROSS] Ball entity ID sentinel (agents use 0–21).
-        /// Authoritative source: Collision System #3 §4.3.1 — convention owned here.
-        /// Value: -1.
-        /// </summary>
-        public const int BALL_ENTITY_ID = -1;
-
-        /// <summary>
         /// [CROSS] Ball radius (m).
-        /// Authoritative source: BallPhysicsConstants (Ball Physics #1 §2.1). Value: 0.11m.
+        /// Authoritative source: BallPhysicsConstants.Ball.RADIUS (Ball Physics #1 §2.1). Value: 0.11m.
         /// </summary>
-        public static readonly float BallRadius = 0.11f;
+        public static readonly float BallRadius = BallPhysicsConstants.Ball.RADIUS;
 
         #endregion
 
         #region GT
+
+        /// <summary>[GT] Number of agents per match (22 = 11 per team). §3.2.4.</summary>
+        public static readonly int AgentCapacity = 22; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Max entities per cell before warning. §4.3.1.</summary>
         public static readonly int CellDensityWarning = 8; // TODO: replace with config loader (Stage 1)
@@ -89,11 +107,43 @@ namespace TacticalDirector.CollisionSystem
     /// </summary>
     public static class CollisionPhysicsConstants
     {
+        #region Fixed
+
+        /// <summary>
+        /// [FIXED] Physics/render loop tick rate (Hz). Used to convert impulse (kg·m/s) to force (N): F = j × Hz.
+        /// Authoritative source: Ball Physics #1 §1.2 / root CLAUDE.md "Heartbeat Tick Rate". Value: 60 Hz.
+        /// </summary>
+        public const float PHYSICS_TICK_HZ = 60f;
+
+        #endregion
+
+        #region Derived
+
+        /// <summary>
+        /// [DERIVED] Maximum impulse magnitude (kg·m/s) — safety ceiling.
+        /// Formula: max_mass(100) × max_relative_speed(20.4) × (1 + e) / 2 × 1.5 margin ≈ 2000. §3.3.1.
+        /// Source: AgentMovement #2 §3.5.4.2 (max mass 100kg), §3.2 (sprint 10.2 m/s).
+        /// </summary>
+        public static readonly float MaxImpulseMagnitude = 2000f;
+
+        /// <summary>
+        /// [DERIVED] Reference force (N) for normalising impact force to [0,1] for AgentMovement.
+        /// Formula: FallForceBase + AttributeMax × FallForcePerStrength + FallProbabilityRange = 2000 N.
+        /// Source: FallThresholdConstants, PlayerAttributeConstants.AttributeMax.
+        /// At or above this force, collisionForce = 1.0 → maximum grounded dwell in AgentStateMachine. §3.3.1.
+        /// </summary>
+        public static readonly float MaxCollisionForceRef =
+            FallThresholdConstants.FallForceBase
+            + PlayerAttributeConstants.AttributeMax * FallThresholdConstants.FallForcePerStrength
+            + FallThresholdConstants.FallProbabilityRange;
+
+        #endregion
+
         #region Cross
 
         /// <summary>
         /// [CROSS] Ball radius (m) — mirrors SpatialHashConstants.BallRadius.
-        /// Authoritative source: Ball Physics #1 §2.1. Value: 0.11m.
+        /// Authoritative source: BallPhysicsConstants.Ball.RADIUS (Ball Physics #1 §2.1). Value: 0.11m.
         /// </summary>
         public static readonly float BallRadius = SpatialHashConstants.BallRadius;
 
@@ -110,16 +160,18 @@ namespace TacticalDirector.CollisionSystem
         /// <summary>[GT] Max ball Z height for ground-contact detection (m); above → aerial duel. §3.2.1 / FR-03.</summary>
         public static readonly float AgentReachHeight = 2.0f; // TODO: replace with config loader (Stage 1)
 
-        #endregion
-
-        #region Derived
+        /// <summary>
+        /// [GT] Slight over-separation multiplier applied to penetration depth to prevent re-contact on the next frame. §3.3.2.
+        /// Value of 1.01 pushes entities 1% beyond exact contact surface.
+        /// </summary>
+        public static readonly float SeparationSlop = 1.01f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>
-        /// [DERIVED] Maximum impulse magnitude (kg·m/s) — safety ceiling.
-        /// Formula: max_mass(100) × max_relative_speed(20.4) × (1 + e) / 2 × 1.5 margin ≈ 2000. §3.3.1.
-        /// Source: AgentMovement #2 §3.5.4.2 (max mass 100kg), §3.2 (sprint 10.2 m/s).
+        /// [GT] Minimum squared vector magnitude below which a response (impulse or position correction) is skipped. §3.4.1.
+        /// Avoids applying negligible responses that would only introduce floating-point noise.
+        /// Effective magnitude threshold: sqrt(MinResponseSqrMagnitude) ≈ 0.01 m or m/s.
         /// </summary>
-        public static readonly float MaxImpulseMagnitude = 2000f;
+        public static readonly float MinResponseSqrMagnitude = 0.0001f; // TODO: replace with config loader (Stage 1)
 
         #endregion
     }
@@ -150,28 +202,6 @@ namespace TacticalDirector.CollisionSystem
     }
 
     /// <summary>
-    /// Grounded state duration parameters. Collision System #3 §3.3.1 / FR-05.
-    /// </summary>
-    public static class GroundedDurationConstants
-    {
-        #region GT
-
-        /// <summary>[GT] Minimum grounded duration (s). §3.3.1.</summary>
-        public static readonly float DurationMin = 0.5f; // TODO: replace with config loader (Stage 1)
-
-        /// <summary>[GT] Maximum grounded duration (s). §3.3.1.</summary>
-        public static readonly float DurationMax = 2.0f; // TODO: replace with config loader (Stage 1)
-
-        /// <summary>[GT] Base grounded duration before Agility reduction (s). §3.3.1.</summary>
-        public static readonly float DurationBase = 1.2f; // TODO: replace with config loader (Stage 1)
-
-        /// <summary>[GT] Grounded duration reduction per Agility point (s/point). §3.3.1.</summary>
-        public static readonly float DurationPerAgility = 0.03f; // TODO: replace with config loader (Stage 1)
-
-        #endregion
-    }
-
-    /// <summary>
     /// Contact type classification angle thresholds. Collision System #3 §3.3.6.
     /// </summary>
     public static class ContactClassificationConstants
@@ -192,9 +222,56 @@ namespace TacticalDirector.CollisionSystem
 
         #endregion
     }
+
+    /// <summary>
+    /// Agent physical property constants derived from Agent Movement #2 §3.5.4.
+    /// Used by AgentPhysicalProperties.From() to compute hitbox radius and mass from Strength.
+    /// </summary>
+    public static class AgentPhysicsSnapshotConstants
+    {
+        #region Cross
+
+        /// <summary>
+        /// [CROSS] Base hitbox radius for Strength 1 agents (m).
+        /// Authoritative source: Agent Movement #2 §3.5.4.3.
+        /// Formula context: HitboxRadius = HitboxRadiusBase + (Strength - 1) × HitboxRadiusPerStrength.
+        /// Range: 0.3525m (Strength 1) – 0.50m (Strength 20).
+        /// </summary>
+        public static readonly float HitboxRadiusBase = 0.3525f;
+
+        /// <summary>
+        /// [CROSS] Hitbox radius increment per Strength point (m/point).
+        /// Authoritative source: Agent Movement #2 §3.5.4.3.
+        /// </summary>
+        public static readonly float HitboxRadiusPerStrength = 0.0075f;
+
+        /// <summary>
+        /// [CROSS] Base body mass for Strength 1 agents (kg).
+        /// Authoritative source: Agent Movement #2 §3.5.4.2.
+        /// Formula context: Mass = MassBase + (Strength - 1) × MassPerStrength.
+        /// Range: 72.5 kg (Strength 1) – 100.0 kg (Strength 20).
+        /// </summary>
+        public static readonly float MassBase = 72.5f;
+
+        /// <summary>
+        /// [CROSS] Body mass increment per Strength point (kg/point).
+        /// Authoritative source: Agent Movement #2 §3.5.4.2.
+        /// </summary>
+        public static readonly float MassPerStrength = 1.5f;
+
+        #endregion
+    }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes              |
-// | 1.0     | 2026-05-25 | —      | Initial draft.     |
+// | Version | Date       | Author | Notes                                                                                    |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                                           |
+// | 1.1     | 2026-05-25 | —      | Adversarial review fix pass. H-3: BALL_ENTITY_ID retag [CROSS]→[FIXED], moved to Fixed   |
+// |         |            |        | region. H-4: BallRadius references BallPhysicsConstants.Ball.RADIUS (no hardcoded        |
+// |         |            |        | literal). M-1: CollisionPhysicsConstants region order corrected to Derived→Cross→GT.    |
+// |         |            |        | M-1b: MaxCollisionForceRef [DERIVED] constant added (normalises impact force to [0,1]).  |
+// |         |            |        | H-3: AgentPhysicsSnapshotConstants class added (hitbox/mass formula constants from #2).  |
+// | 1.2     | 2026-05-25 | —      | Pass-3+4. P3-1: MinResponseSqrMagnitude [GT] added. P4-1: AgentCapacity [GT] added;      |
+// |         |            |        | BallVirtualIndex [DERIVED] and PairFormulaRowSize [DERIVED] added to SpatialHashConstants|
+// |         |            |        | to replace magic literals 22/23 in CollisionPairBitfield (FR-CS-016).                    |
 #endregion
