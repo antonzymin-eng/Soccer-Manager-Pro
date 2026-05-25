@@ -1,11 +1,11 @@
-// File:     src/Core/Physics/Agent/PlayerAttributes.cs
+// File:     src/agent-movement/PlayerAttributes.cs
 // Created:  2026-05-22
-// Modified: 2026-05-22
+// Modified: 2026-05-25
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.1, §4.5.1, Code Standards #20
 // Purpose:  Physical and technical attributes driving locomotion calculations.
 
-namespace TacticalDirector.Core.Physics.Agent
+namespace TacticalDirector.AgentMovement
 {
     /// <summary>
     /// Player attributes consumed by locomotion, turning, and fatigue systems.
@@ -48,6 +48,7 @@ namespace TacticalDirector.Core.Physics.Agent
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-22 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                           |
+// | 1.0     | 2026-05-22 | —      | Initial implementation.                                                         |
+// | 1.1     | 2026-05-25 | —      | H-2: namespace → TacticalDirector.AgentMovement; moved to src/agent-movement/. |
 #endregion

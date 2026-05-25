@@ -1,13 +1,13 @@
-// File:     src/Core/Physics/Agent/MovementCommand.cs
+// File:     src/agent-movement/MovementCommand.cs
 // Created:  2026-05-22
-// Modified: 2026-05-22
+// Modified: 2026-05-25
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.3, Code Standards #20
 // Purpose:  Command struct issued by the AI layer each tactical heartbeat (10 Hz).
 
 using UnityEngine;
 
-namespace TacticalDirector.Core.Physics.Agent
+namespace TacticalDirector.AgentMovement
 {
     /// <summary>
     /// Immutable command struct from the AI/tactical layer to the movement system.
@@ -35,7 +35,7 @@ namespace TacticalDirector.Core.Physics.Agent
         public readonly Vector2 FacingTarget;
 
         /// <summary>
-        /// When true, safety boundary clamps are bypassed (editor/replay tooling only).
+        /// When true, post-integration safety boundary clamps are bypassed (editor/replay tooling only).
         /// MUST NOT be set true in production game logic. Agent Movement #2 §3.5.3.
         /// </summary>
         public readonly bool OverrideSafetyConstraints;
@@ -107,6 +107,7 @@ namespace TacticalDirector.Core.Physics.Agent
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-22 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                           |
+// | 1.0     | 2026-05-22 | —      | Initial implementation.                                                         |
+// | 1.1     | 2026-05-25 | —      | H-2: namespace → TacticalDirector.AgentMovement; moved to src/agent-movement/. |
 #endregion

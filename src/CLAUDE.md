@@ -43,9 +43,25 @@ src/
 │
 ├── agent-movement/                    ← Spec #2
 │   ├── agent-movement.asmdef
-│   ├── AgentMovementConstants.cs
-│   ├── AgentState.cs
-│   ├── AgentMovementSystem.cs
+│   ├── AgentMovementConstants.cs      ← constants: MovementThresholds / FatigueRates /
+│   │                                  │   LocomotionConstants / DirectionalConstants /
+│   │                                  │   TurnConstants / OscillationGuardConstants /
+│   │                                  │   SafetyConstants / PlayerAttributeConstants
+│   ├── AgentMovementState.cs          ← enum: AgentMovementState (7 locomotion states)
+│   ├── GroundedReason.cs              ← enum: GroundedReason (NONE / COLLISION / SLIDING_TACKLE / DIVING_HEADER)
+│   ├── FacingMode.cs                  ← enum: FacingMode (AUTO_ALIGN / TARGET_LOCK)
+│   ├── DecelerationMode.cs            ← enum: DecelerationMode (CONTROLLED / EMERGENCY)
+│   ├── AgentState.cs                  ← mutable value-type game state (ref-mutated, not readonly)
+│   ├── PlayerAttributes.cs
+│   ├── PerformanceContext.cs
+│   ├── MovementCommand.cs
+│   ├── AgentMovementSystem.cs         ← 12-step 60 Hz pipeline orchestrator
+│   ├── AgentStateMachine.cs           ← pure state evaluator (no side effects)
+│   ├── OscillationGuard.cs            ← ring-buffer anti-oscillation guard
+│   ├── AgentLocomotion.cs             ← acceleration / deceleration formulas
+│   ├── AgentTurning.cs                ← turn rate / lean angle / stumble probability
+│   ├── AgentDirectionalMovement.cs    ← directional multipliers / facing update
+│   ├── AgentSafetySystem.cs           ← NaN detection / speed clamp / pitch boundary
 │   └── tests/
 │       └── agent-movement-tests.asmdef  ← EditMode; references agent-movement.asmdef
 │
@@ -601,6 +617,7 @@ These items are deferred pending Unity project setup and platform pinning:
 | `[GT]` config loader class / method | Stage 1 setup — define in this file when resolved; update all `// TODO: replace with config loader` constants |
 | Project math helper class name / assembly | Stage 1 setup — update determinism table when defined |
 | MonoBehaviour / PlayerLoop integration pattern | Unity project initialization — how Unity's lifecycle loop calls into struct-based game systems; until defined, system entry points are pure C# instance methods named `Update`, `Tick`, or similar |
+| `AgentState` as `readonly struct` + `with` expressions | C# language version pin in `certification-platform.md` — `with` on `readonly struct` requires C# 10+. Until pinned, `AgentState` (and equivalent game-state structs) are mutable structs mutated by `ref` parameter; migration to readonly + with is a Stage 0+1 cleanup task once the language version is locked. |
 
 Update this file when those items are resolved.
 
@@ -617,3 +634,5 @@ Update this file when those items are resolved.
 | 1.4 | 2026-05-22 | — | Adversarial review v1.3 fix pass (1H · 4M · 3L). H-1: Game-Loop COMPLIANT example rewritten as sealed instance class (public void); VIOLATION updated to match. M-1: [EST] promotion targets extended to [GT] / [FIXED] / [DERIVED] / [CROSS] with guidance for each path. M-2: Profiler Markers entry-point list changed from FixedUpdate/Update to Update/Tick/RunStep; MonoBehaviour-not-applicable note added; examples updated (FixedUpdate → Update, s_fixedUpdateMarker → s_updateMarker); WHAT IS NOT HERE YET row added for MonoBehaviour/PlayerLoop integration. M-3: Naming discrepancy note updated with ERR-020-001 reference and confirmation that §4.2 has been patched. M-4: stackalloc Span<T> vs pointer distinction added. L-1: §3.2 → §3.2.3 in [GT] XML doc. L-2: [DERIVED] worked example added; region comment shows formula instead of ellipsis. L-3: #region name convention (Title Case vs acronym) documented. |
 | 1.5 | 2026-05-22 | — | Adversarial review v1.4 fix pass (1H · 1M · 5L). H-1+M-1 (combined): Game-Loop COMPLIANT example rewritten to show constructor injection (_clock field + constructor body); method renamed Update, field renamed s_updateMarker, profiler string "BallPhysics.Update"; VIOLATION moved inside class as commented-out method. L-1: "two-letter acronyms" → "all-caps abbreviations" (EST has 3 letters). L-2: VIOLATION was orphaned outside class at file scope (invalid C#); now inside BallPhysicsSystem as commented-out member. L-3: Root CLAUDE.md "Heartbeat Tick Rate" removed from [CROSS] XML doc example (non-spec citation); Ball Physics #1 §1.2 alone is sufficient. L-4: ProfilerMarker required-patterns bullet rewritten to distinguish the field declaration (one-time alloc) from the .Auto() call at entry points. L-5: Single-consumer [CROSS] mirror example added alongside multi-consumer example. |
 | 1.6 | 2026-05-22 | — | Adversarial review v1.5 fix pass (0H · 1M · 2L). M-1: Profiler Markers BallPhysicsSystem example gained a note "Profiler-relevant fields shown; constructor and injected dependencies follow Game-Loop Rules COMPLIANT example." L-1: commented-out VIOLATION removed from inside COMPLIANT class body (violated FR-CS-065); restored as standalone labeled snippet outside the class. L-2: private static field naming convention (s_camelCase) added to NAMING CONVENTIONS table. |
+| 1.7 | 2026-05-25 | — | Agent Movement adversarial review fix pass (M-A / L-A). M-A: agent-movement/ tree expanded to all 13 implemented files with role annotations. L-A: readonly struct deferral row added to WHAT IS NOT HERE YET; explains why AgentState is mutable pending C# version pin. |
+| 1.8 | 2026-05-25 | — | Pass-4 follow-up. Constants tree: PlayerAttributeConstants added to AgentMovementConstants.cs annotation (8 classes). |

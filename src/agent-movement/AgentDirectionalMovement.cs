@@ -1,13 +1,13 @@
-// File:     src/Core/Physics/Agent/AgentDirectionalMovement.cs
+// File:     src/agent-movement/AgentDirectionalMovement.cs
 // Created:  2026-05-22
-// Modified: 2026-05-22
+// Modified: 2026-05-25
 // Author:   —
 // Spec:     Agent Movement #2 §3.3, Code Standards #20
 // Purpose:  Directional speed multipliers and facing direction updates.
 
 using UnityEngine;
 
-namespace TacticalDirector.Core.Physics.Agent
+namespace TacticalDirector.AgentMovement
 {
     /// <summary>
     /// Computes directional penalties based on the angle between movement direction
@@ -17,24 +17,24 @@ namespace TacticalDirector.Core.Physics.Agent
     {
         /// <summary>
         /// Lateral speed multiplier at a given Agility attribute level.
-        /// Formula: LATERAL_MULT_MIN + (agility - 1) × PER_POINT. Agent Movement #2 §3.3.2.
+        /// Formula: LateralMultMin + (agility - 1) × PER_POINT. Agent Movement #2 §3.3.2.
         /// </summary>
         public static float LateralMultiplier(float effectiveAgility)
         {
-            float t = Mathf.Clamp(effectiveAgility - 1.0f, 0.0f, 19.0f);
-            return DirectionalConstants.LATERAL_MULT_MIN
-                 + t * DirectionalConstants.LATERAL_MULT_PER_AGILITY_POINT;
+            float t = Mathf.Clamp(effectiveAgility - PlayerAttributeConstants.AttributeMin, 0.0f, PlayerAttributeConstants.AttributeRangeSpan);
+            return DirectionalConstants.LateralMultMin
+                 + t * DirectionalConstants.LateralMultPerAgilityPoint;
         }
 
         /// <summary>
         /// Backward speed multiplier at a given Agility attribute level.
-        /// Formula: BACKWARD_MULT_MIN + (agility - 1) × PER_POINT. Agent Movement #2 §3.3.2.
+        /// Formula: BackwardMultMin + (agility - 1) × PER_POINT. Agent Movement #2 §3.3.2.
         /// </summary>
         public static float BackwardMultiplier(float effectiveAgility)
         {
-            float t = Mathf.Clamp(effectiveAgility - 1.0f, 0.0f, 19.0f);
-            return DirectionalConstants.BACKWARD_MULT_MIN
-                 + t * DirectionalConstants.BACKWARD_MULT_PER_AGILITY_POINT;
+            float t = Mathf.Clamp(effectiveAgility - PlayerAttributeConstants.AttributeMin, 0.0f, PlayerAttributeConstants.AttributeRangeSpan);
+            return DirectionalConstants.BackwardMultMin
+                 + t * DirectionalConstants.BackwardMultPerAgilityPoint;
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace TacticalDirector.Core.Physics.Agent
         /// </summary>
         public static float MovementAngleDeg(Vector2 movementDir, Vector2 facingDir)
         {
-            if (movementDir.sqrMagnitude < 1e-6f || facingDir.sqrMagnitude < 1e-6f)
+            if (movementDir.sqrMagnitude < SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON || facingDir.sqrMagnitude < SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON)
             {
                 return 0.0f;
             }
@@ -109,7 +109,7 @@ namespace TacticalDirector.Core.Physics.Agent
         public static Vector2 RotateFacingToward(
             Vector2 currentFacing, Vector2 targetFacing, float maxTurnDeg)
         {
-            if (targetFacing.sqrMagnitude < 1e-6f)
+            if (targetFacing.sqrMagnitude < SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON)
             {
                 return currentFacing;
             }
@@ -130,6 +130,9 @@ namespace TacticalDirector.Core.Physics.Agent
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-22 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                              |
+// | 1.0     | 2026-05-22 | —      | Initial implementation.                                                            |
+// | 1.1     | 2026-05-25 | —      | Pass-1: H-2 namespace; L-1 PascalCase refs.                                        |
+// | 1.2     | 2026-05-25 | —      | Pass-3: 19.0f/1.0f attribute literals → PlayerAttributeConstants.AttributeRangeSpan / AttributeMin. |
+// | 1.3     | 2026-05-25 | —      | Pass-4 fix: L-1 1e-6f literals → SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON [FIXED].       |
 #endregion
