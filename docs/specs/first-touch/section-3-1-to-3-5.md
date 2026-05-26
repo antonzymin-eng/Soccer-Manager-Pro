@@ -6,13 +6,14 @@ State Machine, Pressure Evaluation, Body Orientation Detection, and Event Emissi
 section is the authoritative implementation reference for Stage 0.
 
 **Created:** February 17, 2026, 8:00 PM PST
-**Version:** 1.2
+**Version:** 1.3
 **Status:** Approved â€” Fixes applied (see changelog)
 **Author:** Claude (AI) with Anton (Lead Developer)
 **Specification Number:** 4 of 20 (Stage 0 Physics Foundation)
 **Prerequisites:** Section 1 (Purpose & Scope) v1.0, Section 2 (System Overview) v1.0
 
 **Changelog:**
+- v1.3 (May 26, 2026): §3.1.3 verification matrix corrected — "Average, typical pass, no pressure" expected range updated from ≈0.55–0.65 to ≈0.48–0.55. The old range was derived from an earlier formula where moveDifficulty was applied conditionally (only when agentSpeed > MOVEMENT_REFERENCE). The approved §3.1.1 formula is unconditional; for Tech=12 FT=11 ball=15 agent=2 pressure=0 the current formula yields q≈0.512, which is outside the old expected range. No formula change — matrix corrected to match authoritative §3.1.1 formula.
 - v1.2 (March 05, 2026): Comprehensive audit fixes applied:
   (1) C-02: MOVEMENT_REFERENCE derivation corrected — re-tagged as [GT] gameplay-tuned; false attribution to Agent Movement §3.5.2 removed (7.0 m/s is not defined in Agent Movement; Pace 20 max is 10.2 m/s).
   (2) M-01: §3.7 Event Emission annotated with deferral note per Section 4 v1.1 ERR-004; §3.7.2 Queue Dispatch marked as Stage 1 reference architecture.
@@ -99,8 +100,8 @@ The following spot-checks must all pass before implementation is accepted:
 |---|---|---|---|---|---|---|---|
 | Elite, slow ball, no pressure | 20 | 20 | 5.0 | 0.0 | 0.0 | No | â‰¥ 0.85 |
 | Elite, slow ball, half-turn | 20 | 20 | 5.0 | 0.0 | 0.0 | Yes | â‰¥ 0.95 (cap 1.0) |
-| Average, typical pass, no pressure | 12 | 11 | 15.0 | 2.0 | 0.0 | No | â‰ˆ 0.55â€“0.65 |
-| Average, typical pass, medium pressure | 12 | 11 | 15.0 | 2.0 | 0.5 | No | â‰ˆ 0.35â€“0.45 |
+| Average, typical pass, no pressure | 12 | 11 | 15.0 | 2.0 | 0.0 | No | â‰ˆ 0.48â€”0.55 |
+| Average, typical pass, medium pressure | 12 | 11 | 15.0 | 2.0 | 0.5 | No | â‰ˆ 0.35â€”0.45 |
 | Poor, hard shot, full pressure, sprinting | 5 | 5 | 30.0 | 7.0 | 1.0 | No | â‰¤ 0.15 |
 | Minimum possible inputs | 1 | 1 | 60.0 | 7.0 | 1.0 | No | â‰¥ 0.0 (clamp) |
 | Maximum possible inputs | 20 | 20 | 1.0 | 0.0 | 0.0 | Yes | â‰¤ 1.0 (clamp) |

@@ -116,7 +116,7 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Lower bound of the Perfect quality band; q ∈ [QualityBandPerfect, 1] → radius in [RadiusMin, RadiusPerfect]. First Touch Mechanics #4 §3.2.</summary>
         public static readonly float QualityBandPerfect = 0.85f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Lower bound of the Poor quality band; q ∈ [QualityBandPoor, QualityBandGood) → radius in [RadiusGood, RadiusPoor]. First Touch Mechanics #4 §3.2.</summary>
+        /// <summary>[GT] Lower bound of the Poor quality band; q ∈ [QualityBandPoor, ControlledThreshold) → radius in [RadiusGood, RadiusPoor]. First Touch Mechanics #4 §3.2.</summary>
         public static readonly float QualityBandPoor = 0.35f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Ball displacement radius for a CONTROLLED touch (m). First Touch Mechanics #4 §3.4.</summary>
@@ -149,7 +149,7 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Hard speed cap on any touch output ball velocity (m/s). First Touch Mechanics #4 §3.3.5.</summary>
         public static readonly float TouchMaxBallSpeed = 12.0f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Minimum blend vector magnitude before fallback activates. First Touch Mechanics #4 §3.3.2.</summary>
+        /// <summary>[FIXED] Minimum blend vector magnitude before fallback activates. Numerical stability guard — not designer-tunable. First Touch Mechanics #4 §3.3.2.</summary>
         public static readonly float BlendMinMagnitude = 0.001f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Ball speed threshold at which thunderbolt cap applies (m/s). First Touch Mechanics #4 §3.3.7.</summary>
@@ -198,4 +198,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.1     | 2026-05-26 | —      | Adversarial review fixes: M-3 BallRadius moved from Derived→Cross; H-2 QualityBandPerfect 0.75→0.85, ControlledThreshold 0.55→0.60, QualityBandPoor 0.30→0.35. |
 // | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: Added PitchLength/PitchWidth [CROSS] constants (§3.3.4); removed dead constants InterceptionQualityMin (unused, no §3.4.2 backing) and MomentumRetentionDeflection (unused, §3.3.6 does not exist in spec). |
 // | 1.3     | 2026-05-26 | —      | Adversarial review pass 3: Removed dead constants MomentumRetentionMax (no spec §3.3.5 formula backing), MaxTouchAngleError (spec uses vector blend, not angle cap), ComparisonEpsilon (BlendMinMagnitude serves the role). Fixed PitchHalfLength/PitchHalfWidth doc to correctly cite BallPhysicsConstants.Pitch const (not PitchLength readonly) to avoid static initialisation order dependency. |
+// | 1.4     | 2026-05-26 | —      | Adversarial review pass 4: Fixed QualityBandPoor doc ("QualityBandGood" → "ControlledThreshold"); changed BlendMinMagnitude tag from [GT] to [FIXED] (numerical stability guard, not designer-tunable). |
 #endregion
