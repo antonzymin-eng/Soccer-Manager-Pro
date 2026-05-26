@@ -1,6 +1,6 @@
 // File:     src/first-touch/FirstTouchConstants.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.1–§3.6, §6.1, Code Standards #20
 // Purpose:  All constants for the first-touch system. No literals in formula code.
@@ -27,14 +27,14 @@ namespace TacticalDirector.FirstTouch
 
         /// <summary>
         /// [DERIVED] Half the pitch length (m).
-        /// Formula: BallPhysicsConstants.Pitch.LENGTH × 0.5. First Touch Mechanics #4 §3.1.1.
+        /// Formula: PitchLength × 0.5. First Touch Mechanics #4 §3.1.1.
         /// Source constants: BallPhysicsConstants.Pitch.LENGTH.
         /// </summary>
         public static readonly float PitchHalfLength = BallPhysicsConstants.Pitch.LENGTH * 0.5f;
 
         /// <summary>
         /// [DERIVED] Half the pitch width (m).
-        /// Formula: BallPhysicsConstants.Pitch.WIDTH × 0.5. First Touch Mechanics #4 §3.1.1.
+        /// Formula: PitchWidth × 0.5. First Touch Mechanics #4 §3.1.1.
         /// Source constants: BallPhysicsConstants.Pitch.WIDTH.
         /// </summary>
         public static readonly float PitchHalfWidth = BallPhysicsConstants.Pitch.WIDTH * 0.5f;
@@ -42,6 +42,18 @@ namespace TacticalDirector.FirstTouch
         #endregion
 
         #region Cross
+
+        /// <summary>
+        /// [CROSS] Pitch length (m). Used for ball position clamping in §3.3.4.
+        /// Authoritative source: BallPhysicsConstants.Pitch.LENGTH. Ball Physics #1 §1.2. Value: 105.0m.
+        /// </summary>
+        public static readonly float PitchLength = BallPhysicsConstants.Pitch.LENGTH;
+
+        /// <summary>
+        /// [CROSS] Pitch width (m). Used for ball position clamping in §3.3.4.
+        /// Authoritative source: BallPhysicsConstants.Pitch.WIDTH. Ball Physics #1 §1.2. Value: 68.0m.
+        /// </summary>
+        public static readonly float PitchWidth = BallPhysicsConstants.Pitch.WIDTH;
 
         /// <summary>
         /// [CROSS] Ball radius (m), mirrored from Ball Physics for positional clamping.
@@ -137,9 +149,6 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Maximum fraction of incoming ball speed the ball can exit at. First Touch Mechanics #4 §3.3.5.</summary>
         public static readonly float MomentumRetentionMax = 0.80f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Momentum retention fraction for a deflection. First Touch Mechanics #4 §3.3.6.</summary>
-        public static readonly float MomentumRetentionDeflection = 0.50f; // TODO: replace with config loader (Stage 1)
-
         /// <summary>[GT] Hard speed cap on any touch output ball velocity (m/s). First Touch Mechanics #4 §3.3.5.</summary>
         public static readonly float TouchMaxBallSpeed = 12.0f; // TODO: replace with config loader (Stage 1)
 
@@ -160,9 +169,6 @@ namespace TacticalDirector.FirstTouch
 
         /// <summary>[GT] Radius within which an opponent can intercept (m). First Touch Mechanics #4 §3.4.2.</summary>
         public static readonly float InterceptionRadius = 2.50f; // TODO: replace with config loader (Stage 1)
-
-        /// <summary>[GT] Minimum control quality for interception attempt. First Touch Mechanics #4 §3.4.2.</summary>
-        public static readonly float InterceptionQualityMin = 0.35f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Displacement radius threshold for DEFLECTION classification (m). First Touch Mechanics #4 §3.4.2.</summary>
         public static readonly float DeflectionThreshold = 1.50f; // TODO: replace with config loader (Stage 1)
@@ -199,4 +205,5 @@ namespace TacticalDirector.FirstTouch
 // | Version | Date       | Author | Notes                                                                                                                             |
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                                                    |
 // | 1.1     | 2026-05-26 | —      | Adversarial review fixes: M-3 BallRadius moved from Derived→Cross; H-2 QualityBandPerfect 0.75→0.85, ControlledThreshold 0.55→0.60, QualityBandPoor 0.30→0.35. |
+// | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: Added PitchLength/PitchWidth [CROSS] constants (§3.3.4); removed dead constants InterceptionQualityMin (unused, no §3.4.2 backing) and MomentumRetentionDeflection (unused, §3.3.6 does not exist in spec). |
 #endregion

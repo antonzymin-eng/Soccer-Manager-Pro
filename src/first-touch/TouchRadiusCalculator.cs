@@ -1,6 +1,6 @@
 // File:     src/first-touch/TouchRadiusCalculator.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.2, Code Standards #20
 // Purpose:  Computes ball displacement radius from control quality and ball speed.

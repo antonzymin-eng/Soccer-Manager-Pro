@@ -1,6 +1,6 @@
 // File:     src/first-touch/ControlQualityCalculator.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.1, Code Standards #20
 // Purpose:  Computes control quality scalar [0,1] from attributes, ball speed, agent speed, pressure, and orientation.
@@ -17,8 +17,8 @@ namespace TacticalDirector.FirstTouch
     {
         /// <summary>
         /// Calculates control quality from all contributing factors. First Touch Mechanics #4 §3.1.
-        /// Returns a value in [0, ThunderboltQualityCap] when ballSpeed ≥ ThunderboltSpeed,
-        /// otherwise in [0, 1].
+        /// Returns a value in [0, 1]. The thunderbolt cap (§3.3.7) is a separate post-Step-8
+        /// operation applied by the caller (FirstTouchSystem), not by this method.
         /// </summary>
         /// <param name="technique">Technique attribute of the agent [1–20].</param>
         /// <param name="firstTouch">FirstTouch attribute of the agent [1–20].</param>
@@ -64,14 +64,9 @@ namespace TacticalDirector.FirstTouch
             // Step 7 — Pressure degradation: multiplicative. §3.1.1 Step 7.
             float q = rawQuality * (1.0f - pressureScalar * FirstTouchConstants.PressureWeight);
 
-            // Step 8 — Clamp to [0,1]; then apply thunderbolt cap.
-            q = Mathf.Clamp01(q);
-            if (ballSpeed >= FirstTouchConstants.ThunderboltSpeed)
-            {
-                q = Mathf.Min(q, FirstTouchConstants.ThunderboltQualityCap);
-            }
-
-            return q;
+            // Step 8 — Clamp to [0,1]. Thunderbolt cap is a separate post-Step-8 operation
+            // applied by FirstTouchSystem per §3.3.7; it does not belong inside this method.
+            return Mathf.Clamp01(q);
         }
     }
 }
@@ -80,4 +75,5 @@ namespace TacticalDirector.FirstTouch
 // | Version | Date       | Author | Notes                                                                                                                                               |
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                                                                      |
 // | 1.1     | 2026-05-26 | —      | H-1 fix: orientation bonus now multiplicative on normAttr; moveDifficulty always applied (no conditional); pressure degradation now multiplicative. |
+// | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: removed thunderbolt cap from Step 8 — spec §3.3.7 specifies it as a separate post-Step-8 operation owned by FirstTouchSystem; updated XML doc. |
 #endregion

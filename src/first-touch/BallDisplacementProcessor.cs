@@ -1,6 +1,6 @@
 // File:     src/first-touch/BallDisplacementProcessor.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.3, Code Standards #20
 // Purpose:  Computes new ball position and velocity after a touch using direction blend and momentum retention.
@@ -62,19 +62,13 @@ namespace TacticalDirector.FirstTouch
             Vector2 newPos2D = new Vector2(ctx.AgentPosition.x, ctx.AgentPosition.y)
                              + blendedDir2D * r;
 
-            // Clamp XY to pitch bounds.
-            float clampedX = Mathf.Clamp(
-                newPos2D.x,
-                0.0f,
-                FirstTouchConstants.PitchHalfLength * 2.0f);
-            float clampedY = Mathf.Clamp(
-                newPos2D.y,
-                0.0f,
-                FirstTouchConstants.PitchHalfWidth * 2.0f);
+            // Clamp XY to pitch bounds. §3.3.4: [0, PITCH_LENGTH] × [0, PITCH_WIDTH].
+            float clampedX = Mathf.Clamp(newPos2D.x, 0.0f, FirstTouchConstants.PitchLength);
+            float clampedY = Mathf.Clamp(newPos2D.y, 0.0f, FirstTouchConstants.PitchWidth);
 
             Vector3 newBallPos = new Vector3(clampedX, clampedY, FirstTouchConstants.BallRadius);
 
-            // §3.3.5 — New ball velocity: agent contribution + retained ball momentum. §3.3.5.
+            // §3.3.5 — New ball velocity: agent contribution + retained ball momentum.
             // AgentContrib = ActualDir × min(agentSpeed, DRIBBLE_MAX_SPEED); scaled by q.
             // BallRetained = ball.Velocity × (1 - q) × MOMENTUM_RETENTION; uses original direction.
             float agentSpeed = ctx.AgentVelocity.magnitude;
@@ -103,4 +97,5 @@ namespace TacticalDirector.FirstTouch
 // | Version | Date       | Author | Notes                                                                                                       |
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                              |
 // | 1.1     | 2026-05-26 | —      | H-4 fix: IncomingDir negated (approach direction per §3.3.2); H-5 fix: velocity formula adds AgentContrib. |
+// | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: replaced PitchHalfLength*2.0f and PitchHalfWidth*2.0f with PitchLength/PitchWidth constants (no magic literals); removed duplicate §3.3.5 comment reference. |
 #endregion

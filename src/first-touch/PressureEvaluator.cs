@@ -1,6 +1,6 @@
 // File:     src/first-touch/PressureEvaluator.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.5, Code Standards #20
 // Purpose:  Evaluates opponent pressure on a receiving agent's position.
