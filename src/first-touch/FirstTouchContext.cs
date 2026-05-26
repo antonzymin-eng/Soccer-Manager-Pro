@@ -1,0 +1,78 @@
+// File:     src/first-touch/FirstTouchContext.cs
+// Created:  2026-05-25
+// Modified: 2026-05-26
+// Author:   —
+// Spec:     First Touch Mechanics #4 §4.3.1, Code Standards #20
+// Purpose:  Input context struct containing all per-touch data needed by the first-touch pipeline.
+
+using UnityEngine;
+
+namespace TacticalDirector.FirstTouch
+{
+    /// <summary>
+    /// All per-touch input data consumed by EvaluateFirstTouch. First Touch Mechanics #4 §4.3.1.
+    /// Passed by value (read-only snapshot for one touch event).
+    /// </summary>
+    public struct FirstTouchContext
+    {
+        /// <summary>ID of the agent attempting the touch.</summary>
+        public int AgentID;
+
+        /// <summary>Team identifier for the receiving agent. 0 = home, 1 = away.</summary>
+        public int TeamID;
+
+        /// <summary>Technique attribute of the agent [1–20].</summary>
+        public int Technique;
+
+        /// <summary>FirstTouch attribute of the agent [1–20].</summary>
+        public int FirstTouchAttribute;
+
+        /// <summary>World position of the agent at the moment of touch (m).</summary>
+        public Vector3 AgentPosition;
+
+        /// <summary>World velocity of the agent at the moment of touch (m/s).</summary>
+        public Vector3 AgentVelocity;
+
+        /// <summary>Facing direction of the agent; unit vector in XY plane (Z = 0).</summary>
+        public Vector3 AgentFacing;
+
+        /// <summary>Intended touch direction; unit vector in XY plane (Z = 0). Defaults to AgentFacing when HasMovementTarget is false.</summary>
+        public Vector3 IntendedTouchDirection;
+
+        /// <summary>True if the agent has an active movement target at time of contact.</summary>
+        public bool HasMovementTarget;
+
+        /// <summary>World position of the ball at the moment of touch (m).</summary>
+        public Vector3 BallPosition;
+
+        /// <summary>World velocity of the ball at the moment of touch (m/s).</summary>
+        public Vector3 BallVelocity;
+
+        /// <summary>Ball height above pitch surface (ball centre Z minus Ball.RADIUS). Typically 0 for ground balls.</summary>
+        public float BallHeight;
+
+        /// <summary>True if the ball was in AIRBORNE state at contact.</summary>
+        public bool BallIsAirborne;
+
+        /// <summary>Pre-computed pressure scalar [0,1] from PressureEvaluator for this agent's position.</summary>
+        public float PressureScalar;
+
+        /// <summary>True when the nearest opponent is within PressureRadius.</summary>
+        public bool HasNearbyOpponent;
+
+        /// <summary>Distance to the nearest opponent (m); +inf when none present.</summary>
+        public float NearestOpponentDistance;
+
+        /// <summary>True when OrientationDetector determined the agent is half-turn oriented relative to ball travel. §3.6.</summary>
+        public bool IsHalfTurnOriented;
+
+        /// <summary>True if the receiving agent is a goalkeeper. Informational only at Stage 0.</summary>
+        public bool IsGoalkeeper;
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                                                                                                  |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                                                         |
+// | 1.1     | 2026-05-26 | —      | M-1 fix: Added TeamID, BallHeight, BallIsAirborne, HasMovementTarget, IsGoalkeeper; renamed FirstTouchAttr→FirstTouchAttribute, IntendedDirection→IntendedTouchDirection; AgentFacing Vector2→Vector3; IntendedTouchDirection Vector2→Vector3. |
+#endregion
