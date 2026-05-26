@@ -27,15 +27,15 @@ namespace TacticalDirector.FirstTouch
 
         /// <summary>
         /// [DERIVED] Half the pitch length (m).
-        /// Formula: PitchLength × 0.5. First Touch Mechanics #4 §3.1.1.
-        /// Source constants: BallPhysicsConstants.Pitch.LENGTH.
+        /// Formula: BallPhysicsConstants.Pitch.LENGTH × 0.5. First Touch Mechanics #4 §3.1.1.
+        /// Source constants: BallPhysicsConstants.Pitch.LENGTH (const — safe to use before PitchLength [CROSS] initialises).
         /// </summary>
         public static readonly float PitchHalfLength = BallPhysicsConstants.Pitch.LENGTH * 0.5f;
 
         /// <summary>
         /// [DERIVED] Half the pitch width (m).
-        /// Formula: PitchWidth × 0.5. First Touch Mechanics #4 §3.1.1.
-        /// Source constants: BallPhysicsConstants.Pitch.WIDTH.
+        /// Formula: BallPhysicsConstants.Pitch.WIDTH × 0.5. First Touch Mechanics #4 §3.1.1.
+        /// Source constants: BallPhysicsConstants.Pitch.WIDTH (const — safe to use before PitchWidth [CROSS] initialises).
         /// </summary>
         public static readonly float PitchHalfWidth = BallPhysicsConstants.Pitch.WIDTH * 0.5f;
 
@@ -146,14 +146,8 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Fraction of incoming ball momentum retained during a general touch. First Touch Mechanics #4 §3.3.5.</summary>
         public static readonly float MomentumRetentionContact = 0.5f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Maximum fraction of incoming ball speed the ball can exit at. First Touch Mechanics #4 §3.3.5.</summary>
-        public static readonly float MomentumRetentionMax = 0.80f; // TODO: replace with config loader (Stage 1)
-
         /// <summary>[GT] Hard speed cap on any touch output ball velocity (m/s). First Touch Mechanics #4 §3.3.5.</summary>
         public static readonly float TouchMaxBallSpeed = 12.0f; // TODO: replace with config loader (Stage 1)
-
-        /// <summary>[GT] Maximum angular error in touch direction (degrees). First Touch Mechanics #4 §3.3.</summary>
-        public static readonly float MaxTouchAngleError = 45.0f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Minimum blend vector magnitude before fallback activates. First Touch Mechanics #4 §3.3.2.</summary>
         public static readonly float BlendMinMagnitude = 0.001f; // TODO: replace with config loader (Stage 1)
@@ -194,9 +188,6 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Ball displacement radius beyond which dribble attach is broken (m). First Touch Mechanics #4 §3.4.4.</summary>
         public static readonly float DribbleDetachRadius = 1.50f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Metre-scale epsilon for floating-point comparisons. First Touch Mechanics #4.</summary>
-        public static readonly float ComparisonEpsilon = 0.0001f; // TODO: replace with config loader (Stage 1)
-
         #endregion
     }
 }
@@ -206,4 +197,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                                                    |
 // | 1.1     | 2026-05-26 | —      | Adversarial review fixes: M-3 BallRadius moved from Derived→Cross; H-2 QualityBandPerfect 0.75→0.85, ControlledThreshold 0.55→0.60, QualityBandPoor 0.30→0.35. |
 // | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: Added PitchLength/PitchWidth [CROSS] constants (§3.3.4); removed dead constants InterceptionQualityMin (unused, no §3.4.2 backing) and MomentumRetentionDeflection (unused, §3.3.6 does not exist in spec). |
+// | 1.3     | 2026-05-26 | —      | Adversarial review pass 3: Removed dead constants MomentumRetentionMax (no spec §3.3.5 formula backing), MaxTouchAngleError (spec uses vector blend, not angle cap), ComparisonEpsilon (BlendMinMagnitude serves the role). Fixed PitchHalfLength/PitchHalfWidth doc to correctly cite BallPhysicsConstants.Pitch const (not PitchLength readonly) to avoid static initialisation order dependency. |
 #endregion
