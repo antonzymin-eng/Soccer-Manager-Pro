@@ -90,7 +90,7 @@ namespace TacticalDirector.PassMechanics
             aimPoint.y = Mathf.Clamp(aimPoint.y, 0f, PassMechanicsConstants.PitchWidth);
 
             if (!Mathf.Approximately(aimPoint.x, original.x) || !Mathf.Approximately(aimPoint.y, original.y))
-                Debug.Log($"[TargetResolver] Aim point clamped to pitch bounds: original={original}, clamped={aimPoint}");
+                Debug.LogWarning($"[TargetResolver] Aim point clamped to pitch bounds: original={original}, clamped={aimPoint}");
 
             return aimPoint;
         }
@@ -161,6 +161,7 @@ namespace TacticalDirector.PassMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                  |
-// | 1.0     | 2026-05-26 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-26 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-05-26 | —      | L6: ClampToPitchBounds log level Debug.Log → Debug.LogWarning.    |
 #endregion

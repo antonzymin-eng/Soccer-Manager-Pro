@@ -80,7 +80,7 @@ namespace TacticalDirector.PassMechanics
 
             if (IsAerialFormula(passType, crossSubType))
             {
-                float apexH = GetApexHeight(passType, crossSubType);
+                float apexH = GetApexHeight(passType);
                 // θ = atan(4H / D) — §3.3.4
                 float atanArg = (4.0f * apexH) / D;
                 theta = Mathf.Atan(atanArg) * Mathf.Rad2Deg;
@@ -214,7 +214,7 @@ namespace TacticalDirector.PassMechanics
                 || passType == PassType.Chip;
         }
 
-        private static float GetApexHeight(PassType passType, CrossSubType crossSubType)
+        private static float GetApexHeight(PassType passType)
         {
             if (passType == PassType.Cross)
                 return PassMechanicsConstants.ApexHeightCrossHigh;
@@ -233,6 +233,7 @@ namespace TacticalDirector.PassMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                  |
-// | 1.0     | 2026-05-26 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                   |
+// | 1.0     | 2026-05-26 | —      | Initial implementation.                                                 |
+// | 1.1     | 2026-05-26 | —      | M4: Removed unused crossSubType param from private GetApexHeight().     |
 #endregion

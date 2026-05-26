@@ -1,0 +1,35 @@
+// File:     src/pass-mechanics/EventBusStub.cs
+// Created:  2026-05-26
+// Modified: 2026-05-26
+// Author:   —
+// Spec:     Pass Mechanics #5 §4.6.3, Code Standards #20
+// Purpose:  Stage 0 no-op event bus stub. Replace — do not remove — at Stage 1
+//           with real Event System #17 (§4.6.3).
+
+using UnityEngine;
+
+namespace TacticalDirector.PassMechanics
+{
+    /// <summary>
+    /// Stage 0 no-op event bus. Accepts struct events and discards them.
+    /// Replace — do not remove — at Stage 1 with real Event System #17 (§4.6.3).
+    /// </summary>
+    public static class EventBusStub
+    {
+        /// <summary>
+        /// Accepts any struct event. In DEVELOPMENT_BUILD logs the type name.
+        /// In all other builds compiles to a no-op.
+        /// </summary>
+        public static void Publish<T>(T evt) where T : struct
+        {
+#if DEVELOPMENT_BUILD
+            Debug.Log($"[EventBus STUB] {typeof(T).Name}");
+#endif
+        }
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                           |
+// | 1.0     | 2026-05-26 | —      | Extracted from PassEvents.cs per one-type-per-file rule (H4).  |
+#endregion

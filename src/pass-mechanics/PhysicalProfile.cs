@@ -3,8 +3,9 @@
 // Modified: 2026-05-26
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.1.3, Code Standards #20
-// Purpose:  Immutable physical profile record per pass type. Loaded at initialisation
-//           from PassTypeProfiles; never modified at runtime. Internal to this assembly.
+// Purpose:  PhysicalProfile struct: immutable physical bounds record per pass type.
+//           Loaded at initialisation from PassTypeProfiles; never modified at runtime.
+//           SpinType moved to its own file (L5 fix).
 
 namespace TacticalDirector.PassMechanics
 {
@@ -42,7 +43,7 @@ namespace TacticalDirector.PassMechanics
         /// <summary>[GT] Maximum spin magnitude (rad/s) at Technique = 20. §3.1.4 master table.</summary>
         public float SpinMagnitudeMax;
 
-        /// <summary>Dominant spin direction for this pass type. Used by PassVelocityCalculator §3.4.</summary>
+        /// <summary>Dominant spin direction for this pass type. Metadata mirroring §3.1.4 table.</summary>
         public SpinType DominantSpin;
 
         /// <summary>True if pass type has a significant aerial phase.</summary>
@@ -51,27 +52,10 @@ namespace TacticalDirector.PassMechanics
         /// <summary>True if ball is targeted at a space position rather than an agent.</summary>
         public bool IsSpaceTargeted;
     }
-
-    /// <summary>
-    /// Dominant spin direction classification. Drives spin axis assignment in §3.4.5.
-    /// </summary>
-    internal enum SpinType
-    {
-        /// <summary>Forward rolling spin — Ground, Driven, ThroughBall, Lofted, AerialThrough.</summary>
-        Topspin,
-
-        /// <summary>Reverse rolling spin — Chip. Checks ball on landing.</summary>
-        Backspin,
-
-        /// <summary>Horizontal axis spin causing inswing/outswing — Cross Flat, Cross Whipped.</summary>
-        Sidespin,
-
-        /// <summary>Combined backspin + sidespin — Cross High.</summary>
-        Mixed
-    }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                  |
-// | 1.0     | 2026-05-26 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                    |
+// | 1.0     | 2026-05-26 | —      | Initial implementation.                                  |
+// | 1.1     | 2026-05-26 | —      | L5: SpinType moved to SpinType.cs (one-type-per-file).   |
 #endregion
