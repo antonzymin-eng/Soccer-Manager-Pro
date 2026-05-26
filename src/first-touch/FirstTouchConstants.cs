@@ -1,6 +1,6 @@
 // File:     src/first-touch/FirstTouchConstants.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.1–§3.6, §6.1, Code Standards #20
 // Purpose:  All constants for the first-touch system. No literals in formula code.
@@ -28,20 +28,32 @@ namespace TacticalDirector.FirstTouch
         /// <summary>
         /// [DERIVED] Half the pitch length (m).
         /// Formula: BallPhysicsConstants.Pitch.LENGTH × 0.5. First Touch Mechanics #4 §3.1.1.
-        /// Source constants: BallPhysicsConstants.Pitch.LENGTH.
+        /// Source constants: BallPhysicsConstants.Pitch.LENGTH (const — safe to use before PitchLength [CROSS] initialises).
         /// </summary>
         public static readonly float PitchHalfLength = BallPhysicsConstants.Pitch.LENGTH * 0.5f;
 
         /// <summary>
         /// [DERIVED] Half the pitch width (m).
         /// Formula: BallPhysicsConstants.Pitch.WIDTH × 0.5. First Touch Mechanics #4 §3.1.1.
-        /// Source constants: BallPhysicsConstants.Pitch.WIDTH.
+        /// Source constants: BallPhysicsConstants.Pitch.WIDTH (const — safe to use before PitchWidth [CROSS] initialises).
         /// </summary>
         public static readonly float PitchHalfWidth = BallPhysicsConstants.Pitch.WIDTH * 0.5f;
 
         #endregion
 
         #region Cross
+
+        /// <summary>
+        /// [CROSS] Pitch length (m). Used for ball position clamping in §3.3.4.
+        /// Authoritative source: BallPhysicsConstants.Pitch.LENGTH. Ball Physics #1 §1.2. Value: 105.0m.
+        /// </summary>
+        public static readonly float PitchLength = BallPhysicsConstants.Pitch.LENGTH;
+
+        /// <summary>
+        /// [CROSS] Pitch width (m). Used for ball position clamping in §3.3.4.
+        /// Authoritative source: BallPhysicsConstants.Pitch.WIDTH. Ball Physics #1 §1.2. Value: 68.0m.
+        /// </summary>
+        public static readonly float PitchWidth = BallPhysicsConstants.Pitch.WIDTH;
 
         /// <summary>
         /// [CROSS] Ball radius (m), mirrored from Ball Physics for positional clamping.
@@ -104,7 +116,7 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Lower bound of the Perfect quality band; q ∈ [QualityBandPerfect, 1] → radius in [RadiusMin, RadiusPerfect]. First Touch Mechanics #4 §3.2.</summary>
         public static readonly float QualityBandPerfect = 0.85f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Lower bound of the Poor quality band; q ∈ [QualityBandPoor, QualityBandGood) → radius in [RadiusGood, RadiusPoor]. First Touch Mechanics #4 §3.2.</summary>
+        /// <summary>[GT] Lower bound of the Poor quality band; q ∈ [QualityBandPoor, ControlledThreshold) → radius in [RadiusGood, RadiusPoor]. First Touch Mechanics #4 §3.2.</summary>
         public static readonly float QualityBandPoor = 0.35f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Ball displacement radius for a CONTROLLED touch (m). First Touch Mechanics #4 §3.4.</summary>
@@ -134,19 +146,10 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Fraction of incoming ball momentum retained during a general touch. First Touch Mechanics #4 §3.3.5.</summary>
         public static readonly float MomentumRetentionContact = 0.5f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Maximum fraction of incoming ball speed the ball can exit at. First Touch Mechanics #4 §3.3.5.</summary>
-        public static readonly float MomentumRetentionMax = 0.80f; // TODO: replace with config loader (Stage 1)
-
-        /// <summary>[GT] Momentum retention fraction for a deflection. First Touch Mechanics #4 §3.3.6.</summary>
-        public static readonly float MomentumRetentionDeflection = 0.50f; // TODO: replace with config loader (Stage 1)
-
         /// <summary>[GT] Hard speed cap on any touch output ball velocity (m/s). First Touch Mechanics #4 §3.3.5.</summary>
         public static readonly float TouchMaxBallSpeed = 12.0f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Maximum angular error in touch direction (degrees). First Touch Mechanics #4 §3.3.</summary>
-        public static readonly float MaxTouchAngleError = 45.0f; // TODO: replace with config loader (Stage 1)
-
-        /// <summary>[GT] Minimum blend vector magnitude before fallback activates. First Touch Mechanics #4 §3.3.2.</summary>
+        /// <summary>[FIXED] Minimum blend vector magnitude before fallback activates. Numerical stability guard — not designer-tunable. First Touch Mechanics #4 §3.3.2.</summary>
         public static readonly float BlendMinMagnitude = 0.001f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Ball speed threshold at which thunderbolt cap applies (m/s). First Touch Mechanics #4 §3.3.7.</summary>
@@ -160,9 +163,6 @@ namespace TacticalDirector.FirstTouch
 
         /// <summary>[GT] Radius within which an opponent can intercept (m). First Touch Mechanics #4 §3.4.2.</summary>
         public static readonly float InterceptionRadius = 2.50f; // TODO: replace with config loader (Stage 1)
-
-        /// <summary>[GT] Minimum control quality for interception attempt. First Touch Mechanics #4 §3.4.2.</summary>
-        public static readonly float InterceptionQualityMin = 0.35f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Displacement radius threshold for DEFLECTION classification (m). First Touch Mechanics #4 §3.4.2.</summary>
         public static readonly float DeflectionThreshold = 1.50f; // TODO: replace with config loader (Stage 1)
@@ -188,9 +188,6 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Ball displacement radius beyond which dribble attach is broken (m). First Touch Mechanics #4 §3.4.4.</summary>
         public static readonly float DribbleDetachRadius = 1.50f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Metre-scale epsilon for floating-point comparisons. First Touch Mechanics #4.</summary>
-        public static readonly float ComparisonEpsilon = 0.0001f; // TODO: replace with config loader (Stage 1)
-
         #endregion
     }
 }
@@ -199,4 +196,7 @@ namespace TacticalDirector.FirstTouch
 // | Version | Date       | Author | Notes                                                                                                                             |
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                                                    |
 // | 1.1     | 2026-05-26 | —      | Adversarial review fixes: M-3 BallRadius moved from Derived→Cross; H-2 QualityBandPerfect 0.75→0.85, ControlledThreshold 0.55→0.60, QualityBandPoor 0.30→0.35. |
+// | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: Added PitchLength/PitchWidth [CROSS] constants (§3.3.4); removed dead constants InterceptionQualityMin (unused, no §3.4.2 backing) and MomentumRetentionDeflection (unused, §3.3.6 does not exist in spec). |
+// | 1.3     | 2026-05-26 | —      | Adversarial review pass 3: Removed dead constants MomentumRetentionMax (no spec §3.3.5 formula backing), MaxTouchAngleError (spec uses vector blend, not angle cap), ComparisonEpsilon (BlendMinMagnitude serves the role). Fixed PitchHalfLength/PitchHalfWidth doc to correctly cite BallPhysicsConstants.Pitch const (not PitchLength readonly) to avoid static initialisation order dependency. |
+// | 1.4     | 2026-05-26 | —      | Adversarial review pass 4: Fixed QualityBandPoor doc ("QualityBandGood" → "ControlledThreshold"); changed BlendMinMagnitude tag from [GT] to [FIXED] (numerical stability guard, not designer-tunable). |
 #endregion

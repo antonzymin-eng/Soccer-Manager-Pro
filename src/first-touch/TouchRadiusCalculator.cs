@@ -1,6 +1,6 @@
 // File:     src/first-touch/TouchRadiusCalculator.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.2, Code Standards #20
 // Purpose:  Computes ball displacement radius from control quality and ball speed.
@@ -18,7 +18,8 @@ namespace TacticalDirector.FirstTouch
     {
         /// <summary>
         /// Calculates displacement radius for a touch. First Touch Mechanics #4 §3.2.
-        /// Returns a value in [RadiusMin, RadiusHeavy + velocity modifier].
+        /// Returns a value in [RadiusMin, RadiusHeavy]; the velocity modifier can inflate the
+        /// base radius but a hard cap at RadiusHeavy is always applied (§3.2.3).
         /// </summary>
         /// <param name="q">Control quality scalar [0,1] from ControlQualityCalculator.</param>
         /// <param name="ballSpeed">Speed of the incoming ball (m/s), used for velocity modifier §3.2.3.</param>

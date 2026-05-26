@@ -1,6 +1,6 @@
 // File:     src/first-touch/OrientationDetector.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.6, Code Standards #20
 // Purpose:  Detects whether an agent is half-turn oriented relative to the incoming ball direction.

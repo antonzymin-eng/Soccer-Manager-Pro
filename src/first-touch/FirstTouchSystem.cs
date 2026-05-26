@@ -66,9 +66,9 @@ namespace TacticalDirector.FirstTouch
                 context.PressureScalar,
                 orientationBonus);
 
-            // Step 4 — Thunderbolt cap (also applied inside ControlQualityCalculator;
-            // confirmed here to protect callers that pass a pre-built q).
-            if (ballSpeed >= FirstTouchConstants.ThunderboltSpeed)
+            // Step 4 — Thunderbolt cap: separate post-Step-8 operation per §3.3.7.
+            // Spec uses strict greater-than: ballSpeed > THUNDERBOLT_SPEED.
+            if (ballSpeed > FirstTouchConstants.ThunderboltSpeed)
             {
                 q = Mathf.Min(q, FirstTouchConstants.ThunderboltQualityCap);
             }
@@ -150,4 +150,5 @@ namespace TacticalDirector.FirstTouch
 // | Version | Date       | Author | Notes                                                                                                     |
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                            |
 // | 1.1     | 2026-05-26 | —      | Updated field names (FirstTouchAttribute, TouchRadius, PossessionOutcome); populate new diagnostic fields. |
+// | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: Step 4 thunderbolt check changed >= to > per spec §3.3.7 appendix B.5; removed misleading "pre-built q" comment. |
 #endregion
