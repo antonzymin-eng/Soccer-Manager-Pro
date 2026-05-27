@@ -1,7 +1,7 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** May 25, 2026 (v1.9 — tracking-doc sync: ball-physics/ tree corrected; `BallStateSystem.cs` removed, `BallStateMachineTests.cs` added, structural deviation warning added)
+> **Last Updated:** May 27, 2026 (v1.10 — tree expanded: collision-system/ 18 files, first-touch/ 15 files, pass-mechanics/ 22 files; agent-movement/ tests updated to show AgentMovementTests.cs)
 > **Purpose:** Concrete coding rules for any AI agent or developer writing C# source code in this project. Covers file naming, constant catalogues, Unity project structure, and build/test commands. Cites Spec #20 (Code Standards & Style Guide) as the source for every convention here. Read the root `CLAUDE.md` first — this file supplements it, not replaces it.
 
 ---
@@ -65,16 +65,72 @@ src/
 │   ├── AgentDirectionalMovement.cs    ← directional multipliers / facing update
 │   ├── AgentSafetySystem.cs           ← NaN detection / speed clamp / pitch boundary
 │   └── tests/
-│       └── agent-movement-tests.asmdef  ← EditMode; references agent-movement.asmdef
+│       ├── agent-movement-tests.asmdef  ← EditMode; references agent-movement.asmdef
+│       └── AgentMovementTests.cs
 │
 ├── collision-system/                  ← Spec #3
 │   ├── collision-system.asmdef
 │   ├── CollisionSystemConstants.cs
+│   ├── CollisionDetection.cs          ← broad-phase and narrow-phase detection
+│   ├── SpatialHashGrid.cs             ← spatial hash grid for broad-phase queries
+│   ├── CollisionManifold.cs           ← contact manifold (depth, normal, point)
+│   ├── CollisionEvent.cs              ← struct event published on confirmed collision
+│   ├── CollisionResponse.cs           ← impulse-based response calculations
+│   ├── CollisionSystem.cs             ← 60 Hz pipeline orchestrator
+│   ├── CollisionPairBitfield.cs       ← processed-pair tracking (no double-processing)
+│   ├── AgentAgentCollisionResult.cs   ← result struct for agent–agent resolution
+│   ├── AgentBallCollisionData.cs      ← data struct for agent–ball contact
+│   ├── AgentPhysicalProperties.cs     ← mass, radius, restitution per agent
+│   ├── BallCollisionHandler.cs        ← ball-specific collision response
+│   ├── ContactForceData.cs            ← contact force magnitude and direction
+│   ├── ContactType.cs                 ← enum: SLIDE / SHOULDER / BLOCK / FOUL
+│   ├── ContactTypeClassifier.cs       ← classifies manifold into ContactType
+│   ├── CollisionType.cs               ← enum: AGENT_AGENT / AGENT_BALL / AGENT_POST / AGENT_BOUNDARY
+│   ├── DeterministicRNG.cs            ← SplitMix64 wrapper for foul/stumble rolls
+│   ├── ICollisionEventConsumer.cs     ← interface for systems consuming collision events (Spec #3 §3.4.2)
 │   └── tests/
 │       └── collision-system-tests.asmdef  ← EditMode; references collision-system.asmdef
 │
 ├── first-touch/                       ← Spec #4
+│   ├── FirstTouchConstants.cs
+│   ├── FirstTouchContext.cs           ← input: incoming ball state, agent state, env
+│   ├── FirstTouchResult.cs            ← output: displaced ball state + possession outcome
+│   ├── TouchResult.cs                 ← intermediate touch quality evaluation result
+│   ├── FirstTouchSystem.cs            ← main orchestrator
+│   ├── BallDisplacementProcessor.cs   ← post-touch ball displacement vector
+│   ├── ControlQualityCalculator.cs    ← control quality score (0–1) from attributes + context
+│   ├── OrientationDetector.cs         ← body orientation relative to incoming ball
+│   ├── PossessionStateMachine.cs      ← LOOSE → CONTROLLED → POSSESSED transitions
+│   ├── PressureEvaluator.cs           ← nearby-defender pressure scalar
+│   ├── PressureResult.cs              ← pressure evaluation output
+│   ├── TouchRadiusCalculator.cs       ← acceptance radius for touch attempt
+│   ├── IAgentMovementSystem.cs        ← read-only query boundary to Agent Movement (#2)
+│   ├── IBallPhysicsSystem.cs          ← read-only query boundary to Ball Physics (#1)
+│   └── IFirstTouchSystem.cs           ← public interface for First Touch consumers
+│
 ├── pass-mechanics/                    ← Spec #5
+│   ├── PassMechanicsConstants.cs
+│   ├── PassRequest.cs                 ← input: passer, target, requested pass type
+│   ├── PassResult.cs                  ← output: ball velocity applied + outcome
+│   ├── PassAttemptEvent.cs            ← struct event on pass initiation
+│   ├── PassCancelledEvent.cs          ← struct event on pass cancellation
+│   ├── PassEvents.cs                  ← all pass event type definitions
+│   ├── PassExecutor.cs                ← main orchestrator: full pass pipeline
+│   ├── PassVelocityCalculator.cs      ← launch velocity from profile + attributes
+│   ├── PassErrorCalculator.cs         ← direction / speed deviation error model
+│   ├── PassTargetResolver.cs          ← resolves intended target position
+│   ├── PassTypeProfiles.cs            ← PhysicalProfile factory per PassType
+│   ├── PhysicalProfile.cs             ← struct: speed range, spin, launch angle per type
+│   ├── PassType.cs                    ← enum: GROUND / DRIVEN / LOB / CHIP / CROSS
+│   ├── CrossSubType.cs                ← enum: LOW / DRIVEN / FLOATED / CUTBACK
+│   ├── SpinType.cs                    ← enum: TOPSPIN / BACKSPIN / SIDESPIN / NONE
+│   ├── PassOutcome.cs                 ← enum/struct: ACCURATE / MISPLACED / INTERCEPTED / OUT
+│   ├── PassAgentAttributes.cs         ← agent skill attributes consumed by pass system
+│   ├── PassAgentState.cs              ← agent state consumed by pass system
+│   ├── IPassAgentQuery.cs             ← interface: query agent attributes and state
+│   ├── IPassBallSystem.cs             ← interface: apply kick velocity to ball
+│   ├── IPassCollisionQuery.cs         ← interface: interception queries into Collision System
+│   └── EventBusStub.cs                ← stub pending Event System #17 wiring (Stage 1)
 ├── shot-mechanics/                    ← Spec #6
 ├── perception-system/                 ← Spec #7
 ├── decision-tree/                     ← Spec #8
@@ -639,3 +695,4 @@ Update this file when those items are resolved.
 | 1.7 | 2026-05-25 | — | Agent Movement adversarial review fix pass (M-A / L-A). M-A: agent-movement/ tree expanded to all 13 implemented files with role annotations. L-A: readonly struct deferral row added to WHAT IS NOT HERE YET; explains why AgentState is mutable pending C# version pin. |
 | 1.8 | 2026-05-25 | — | Pass-4 follow-up. Constants tree: PlayerAttributeConstants added to AgentMovementConstants.cs annotation (8 classes). |
 | 1.9 | 2026-05-25 | — | Tracking-doc sync. ball-physics/ tree: `BallStateSystem.cs` removed (never implemented); `BallStateMachineTests.cs` added (exists at `src/Core/Physics/Ball/Tests/`); structural deviation warning added (actual path is `src/Core/Physics/Ball/`, not `src/ball-physics/`). |
+| 1.10 | 2026-05-27 | — | Tree expanded for Collision System (#3) 18 files with role annotations; First Touch (#4) 15 files with role annotations; Pass Mechanics (#5) 22 files with role annotations. agent-movement/ tests updated: `AgentMovementTests.cs` added (from AR-2/AR-3 pass May 27). |
