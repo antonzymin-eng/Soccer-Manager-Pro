@@ -15,7 +15,7 @@ namespace TacticalDirector.PassMechanics
     /// Computes the deterministic pass error angle and direction, and weak foot
     /// modifiers. All methods are pure functions. Pass Mechanics #5 §3.5, §3.7.
     /// </summary>
-    public static class PassErrorCalculator
+    internal static class PassErrorCalculator
     {
         // ── §3.5 — Error Angle ──────────────────────────────────────────────────────
 
@@ -74,8 +74,8 @@ namespace TacticalDirector.PassMechanics
 
             if (float.IsNaN(errorAngle))
             {
-                Debug.LogError("[PassError] FM-04: ErrorAngle is NaN. Returning 0.");
-                return 0f;
+                Debug.LogError("[PassError] FM-04: ErrorAngle is NaN. Returning MinErrorAngle.");
+                return PassMechanicsConstants.MinErrorAngle;
             }
 
             return errorAngle;
@@ -147,4 +147,7 @@ namespace TacticalDirector.PassMechanics
 // | 1.0     | 2026-05-26 | —      | Initial implementation.                                                   |
 // | 1.1     | 2026-05-26 | —      | H2: unchecked block added to ComputeErrorDirection hash for intentional   |
 // |         |            |        |     32-bit wrap-around (coding guide determinism rule).                   |
+// | 1.2     | 2026-05-27 | —      | AR-1 M-1: class changed public → internal (implementation detail).        |
+// |         |            |        | AR-1 L-1: NaN fallback returns MinErrorAngle (0.1°) instead of 0f;       |
+// |         |            |        |     0f violated the clamp contract [MinErrorAngle, MaxErrorAngle].        |
 #endregion

@@ -114,17 +114,17 @@ src/
 │   ├── PassResult.cs                  ← output: ball velocity applied + outcome
 │   ├── PassAttemptEvent.cs            ← struct event on pass initiation
 │   ├── PassCancelledEvent.cs          ← struct event on pass cancellation
-│   ├── PassEvents.cs                  ← all pass event type definitions
+│   ├── CancelReason.cs                ← enum: TackleInterrupt (reason pass was cancelled)
 │   ├── PassExecutor.cs                ← main orchestrator: full pass pipeline
 │   ├── PassVelocityCalculator.cs      ← launch velocity from profile + attributes
 │   ├── PassErrorCalculator.cs         ← direction / speed deviation error model
 │   ├── PassTargetResolver.cs          ← resolves intended target position
 │   ├── PassTypeProfiles.cs            ← PhysicalProfile factory per PassType
 │   ├── PhysicalProfile.cs             ← struct: speed range, spin, launch angle per type
-│   ├── PassType.cs                    ← enum: GROUND / DRIVEN / LOB / CHIP / CROSS
-│   ├── CrossSubType.cs                ← enum: LOW / DRIVEN / FLOATED / CUTBACK
-│   ├── SpinType.cs                    ← enum: TOPSPIN / BACKSPIN / SIDESPIN / NONE
-│   ├── PassOutcome.cs                 ← enum/struct: ACCURATE / MISPLACED / INTERCEPTED / OUT
+│   ├── PassType.cs                    ← enum: Ground / Driven / Lofted / ThroughBall / AerialThrough / Cross / Chip
+│   ├── CrossSubType.cs                ← enum: Flat / Whipped / High
+│   ├── SpinType.cs                    ← enum: Topspin / Backspin / Sidespin / Mixed
+│   ├── PassOutcome.cs                 ← enum: Initiated / Completed / Cancelled / Invalid
 │   ├── PassAgentAttributes.cs         ← agent skill attributes consumed by pass system
 │   ├── PassAgentState.cs              ← agent state consumed by pass system
 │   ├── IPassAgentQuery.cs             ← interface: query agent attributes and state
@@ -696,3 +696,4 @@ Update this file when those items are resolved.
 | 1.8 | 2026-05-25 | — | Pass-4 follow-up. Constants tree: PlayerAttributeConstants added to AgentMovementConstants.cs annotation (8 classes). |
 | 1.9 | 2026-05-25 | — | Tracking-doc sync. ball-physics/ tree: `BallStateSystem.cs` removed (never implemented); `BallStateMachineTests.cs` added (exists at `src/Core/Physics/Ball/Tests/`); structural deviation warning added (actual path is `src/Core/Physics/Ball/`, not `src/ball-physics/`). |
 | 1.10 | 2026-05-27 | — | Tree expanded for Collision System (#3) 18 files with role annotations; First Touch (#4) 15 files with role annotations; Pass Mechanics (#5) 22 files with role annotations. agent-movement/ tests updated: `AgentMovementTests.cs` added (from AR-2/AR-3 pass May 27). |
+| 1.11 | 2026-05-27 | — | AR-1 pass-mechanics adversarial review fix pass. L-2: corrected stale enum value descriptions for PassType.cs / CrossSubType.cs / SpinType.cs / PassOutcome.cs. M-3: PassEvents.cs renamed to CancelReason.cs in tree. |

@@ -117,8 +117,8 @@ namespace TacticalDirector.PassMechanics
         /// <param name="ball">Current ball state for possession check.</param>
         /// <returns>
         /// PassResult with Outcome=Invalid for synchronous rejection.
-        /// PassResult with Outcome=Completed and ContactFrame=0 means pass started;
-        /// the real result is in LastResult once IsIdle is true.
+        /// PassResult with Outcome=Initiated means windup has begun;
+        /// poll IsIdle and read LastResult to obtain the final outcome.
         /// </returns>
         public PassResult Execute(in PassRequest request, ref BallState ball)
         {
@@ -218,12 +218,11 @@ namespace TacticalDirector.PassMechanics
 
             _state = PassExecutionState.Windup;
 
-            // Return a sentinel indicating pass started successfully
             return new PassResult
             {
-                Outcome   = PassOutcome.Completed,
-                PassType  = request.PassType,
-                AimPoint  = _aimPoint,
+                Outcome      = PassOutcome.Initiated,
+                PassType     = request.PassType,
+                AimPoint     = _aimPoint,
                 LeadDistance = _leadDistance
             };
         }
@@ -247,7 +246,7 @@ namespace TacticalDirector.PassMechanics
                     break;
 
                 case PassExecutionState.Windup:
-                    UpdateWindup(matchTime);
+                    UpdateWindup(matchTime, frameNumber);
                     break;
 
                 case PassExecutionState.Contact:
@@ -268,7 +267,7 @@ namespace TacticalDirector.PassMechanics
 
         // ── WINDUP State ─────────────────────────────────────────────────────────────
 
-        private void UpdateWindup(float matchTime)
+        private void UpdateWindup(float matchTime, int frameNumber)
         {
             // Poll tackle interrupt first — §3.8.5
             if (_collisionQuery.GetAndClearTackleFlag(_request.AgentId))
@@ -285,7 +284,7 @@ namespace TacticalDirector.PassMechanics
                     TeamId       = _request.TeamId,
                     CancelReason = CancelReason.TackleInterrupt,
                     PassType     = _request.PassType,
-                    Frame        = _request.FrameNumber,
+                    Frame        = frameNumber,
                     MatchTime    = matchTime
                 });
 
@@ -450,4 +449,8 @@ namespace TacticalDirector.PassMechanics
 // | 1.0     | 2026-05-26 | —      | Initial implementation.                                                      |
 // | 1.1     | 2026-05-26 | —      | H1: Idle guard added to Execute() (prevent in-progress overwrite).           |
 // |         |            |        |     M3: Update() gains frameNumber param; ContactFrame/Frame set accurately. |
+// | 1.2     | 2026-05-27 | —      | AR-1 H-2: Execute() sentinel changed Completed → Initiated (Completed       |
+// |         |            |        |     semantics are "ball kicked"; Initiated is "windup started").             |
+// |         |            |        | AR-1 H-3: UpdateWindup gains frameNumber param; PassCancelledEvent.Frame     |
+// |         |            |        |     now records cancellation frame, not initiation frame (§3.9.3).          |
 #endregion

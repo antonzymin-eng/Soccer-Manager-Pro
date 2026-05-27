@@ -1,12 +1,10 @@
-// File:     src/pass-mechanics/PassEvents.cs
+// File:     src/pass-mechanics/CancelReason.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.9.3, §4.6.1, Code Standards #20
 // Purpose:  CancelReason enum: reason a pass was cancelled before Ball.ApplyKick().
-//           Note: filename should be CancelReason.cs per FR-CS naming rule; rename
-//           when tooling supports it. PassAttemptEvent, PassCancelledEvent, and
-//           EventBusStub were split to their own files (H4 fix).
+//           PassAttemptEvent, PassCancelledEvent, and EventBusStub are in their own files.
 
 namespace TacticalDirector.PassMechanics
 {
@@ -26,5 +24,7 @@ namespace TacticalDirector.PassMechanics
 // | Version | Date       | Author | Notes                                                                      |
 // | 1.0     | 2026-05-26 | —      | Initial implementation (combined with PassAttemptEvent et al.).            |
 // | 1.1     | 2026-05-26 | —      | H4: PassAttemptEvent, PassCancelledEvent, EventBusStub split to own files. |
-// |         |            |        |     File now contains CancelReason only. TODO: rename to CancelReason.cs. |
+// |         |            |        |     File contained CancelReason only; rename was deferred.                 |
+// | 1.2     | 2026-05-27 | —      | AR-1 M-3: file renamed PassEvents.cs → CancelReason.cs (FR-CS §4.1:      |
+// |         |            |        |     filename must match contained type name).                              |
 #endregion

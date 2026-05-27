@@ -15,7 +15,7 @@ namespace TacticalDirector.PassMechanics
     /// O(1) lookup of <see cref="PhysicalProfile"/> per pass type. All profile values
     /// are [GT] from §3.1.4 master table. Pass Mechanics #5 §3.1.3, §3.1.12.
     /// </summary>
-    public static class PassTypeProfiles
+    internal static class PassTypeProfiles
     {
         /// <summary>
         /// Returns the <see cref="PhysicalProfile"/> for the given pass type and cross
@@ -202,4 +202,6 @@ namespace TacticalDirector.PassMechanics
 // | 1.0     | 2026-05-26 | —      | Initial implementation.                                                 |
 // | 1.1     | 2026-05-26 | —      | M1/M2: Lofted and AerialThrough DominantSpin corrected Backspin →      |
 // |         |            |        |     Topspin to match SpinType enum doc and PassVelocityCalculator.      |
+// | 1.2     | 2026-05-27 | —      | AR-1 H-1: class changed public → internal; CS0050 compile error        |
+// |         |            |        |     (public GetProfile() returning internal PhysicalProfile).           |
 #endregion

@@ -15,7 +15,7 @@ namespace TacticalDirector.PassMechanics
     /// Resolves pass aim points and applies deterministic error to the kick direction.
     /// Pure static — no state, no side effects. Pass Mechanics #5 §3.6.
     /// </summary>
-    public static class PassTargetResolver
+    internal static class PassTargetResolver
     {
         // ── §3.6.3 / §3.6.4 — Aim Point Resolution ──────────────────────────────────
 
@@ -89,8 +89,10 @@ namespace TacticalDirector.PassMechanics
             aimPoint.x = Mathf.Clamp(aimPoint.x, 0f, PassMechanicsConstants.PitchLength);
             aimPoint.y = Mathf.Clamp(aimPoint.y, 0f, PassMechanicsConstants.PitchWidth);
 
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
             if (!Mathf.Approximately(aimPoint.x, original.x) || !Mathf.Approximately(aimPoint.y, original.y))
                 Debug.LogWarning($"[TargetResolver] Aim point clamped to pitch bounds: original={original}, clamped={aimPoint}");
+#endif
 
             return aimPoint;
         }
@@ -133,7 +135,9 @@ namespace TacticalDirector.PassMechanics
 
             if (dir2d.sqrMagnitude < 0.0001f)
             {
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
                 Debug.LogWarning("[TargetResolver] Passer and aim point are nearly coincident. Using +X as fallback.");
+#endif
                 return Vector3.right;
             }
 
@@ -164,4 +168,7 @@ namespace TacticalDirector.PassMechanics
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-05-26 | —      | Initial implementation.                                            |
 // | 1.1     | 2026-05-26 | —      | L6: ClampToPitchBounds log level Debug.Log → Debug.LogWarning.    |
+// | 1.2     | 2026-05-27 | —      | AR-1 M-1: class changed public → internal (implementation detail). |
+// |         |            |        | AR-1 M-2: diagnostic Debug.LogWarning calls guarded by             |
+// |         |            |        |     #if DEVELOPMENT_BUILD || UNITY_EDITOR (FR-CS-027-034).         |
 #endregion
