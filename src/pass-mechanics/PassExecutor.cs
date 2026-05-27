@@ -223,7 +223,8 @@ namespace TacticalDirector.PassMechanics
                 Outcome      = PassOutcome.Initiated,
                 PassType     = request.PassType,
                 AimPoint     = _aimPoint,
-                LeadDistance = _leadDistance
+                LeadDistance = _leadDistance,
+                ContactFrame = -1
             };
         }
 
@@ -274,8 +275,9 @@ namespace TacticalDirector.PassMechanics
             {
                 _lastResult = new PassResult
                 {
-                    Outcome  = PassOutcome.Cancelled,
-                    PassType = _request.PassType
+                    Outcome      = PassOutcome.Cancelled,
+                    PassType     = _request.PassType,
+                    ContactFrame = -1
                 };
 
                 EventBusStub.Publish(new PassCancelledEvent
@@ -338,7 +340,7 @@ namespace TacticalDirector.PassMechanics
             if (float.IsNaN(finalVelocity.x) || float.IsNaN(finalVelocity.y) || float.IsNaN(finalVelocity.z))
             {
                 Debug.LogError($"[PassExecutor] FM-04: NaN in finalVelocity. Pass cancelled. Agent={_request.AgentId}");
-                _lastResult = new PassResult { Outcome = PassOutcome.Cancelled, PassType = _request.PassType };
+                _lastResult = new PassResult { Outcome = PassOutcome.Cancelled, PassType = _request.PassType, ContactFrame = -1 };
                 _state = PassExecutionState.Idle;
                 return;
             }
@@ -347,7 +349,7 @@ namespace TacticalDirector.PassMechanics
             if (!_ballSystem.IsBallPossessedBy(_request.AgentId))
             {
                 Debug.LogError($"[PassExecutor] FM-08: Agent {_request.AgentId} lost possession before CONTACT. Race condition.");
-                _lastResult = new PassResult { Outcome = PassOutcome.Cancelled, PassType = _request.PassType };
+                _lastResult = new PassResult { Outcome = PassOutcome.Cancelled, PassType = _request.PassType, ContactFrame = -1 };
                 _state = PassExecutionState.Idle;
                 return;
             }
@@ -439,7 +441,7 @@ namespace TacticalDirector.PassMechanics
 
         private static PassResult MakeInvalidResult(PassType passType)
         {
-            return new PassResult { Outcome = PassOutcome.Invalid, PassType = passType };
+            return new PassResult { Outcome = PassOutcome.Invalid, PassType = passType, ContactFrame = -1 };
         }
     }
 }
@@ -453,4 +455,6 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     semantics are "ball kicked"; Initiated is "windup started").             |
 // |         |            |        | AR-1 H-3: UpdateWindup gains frameNumber param; PassCancelledEvent.Frame     |
 // |         |            |        |     now records cancellation frame, not initiation frame (§3.9.3).          |
+// |         |            |        | AR-1 round-2 L-A: all non-Completed PassResult paths set ContactFrame=-1    |
+// |         |            |        |     (previously 0, ambiguous with frame 0 at start of match).               |
 #endregion
