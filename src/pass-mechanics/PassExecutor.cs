@@ -168,6 +168,14 @@ namespace TacticalDirector.PassMechanics
             _request = request;
             _profile = PassTypeProfiles.GetProfile(request.PassType, effectiveSubType);
 
+            // ── FM-11: Player-targeted pass must have a valid target agent ────────────
+            if (!_profile.IsSpaceTargeted && request.TargetAgentId == PassMechanicsConstants.AGENT_ID_NONE)
+            {
+                Debug.LogError($"[PassExecutor] FM-11: Player-targeted pass type {request.PassType} has TargetAgentId=-1. Frame={request.FrameNumber}");
+                _lastResult = MakeInvalidResult(request.PassType);
+                return _lastResult;
+            }
+
             // ── Read agent attributes and state ──────────────────────────────────────
             PassAgentAttributes attrs = _agentQuery.GetAttributes(request.AgentId);
             PassAgentState agentState = _agentQuery.GetState(request.AgentId);
@@ -404,14 +412,7 @@ namespace TacticalDirector.PassMechanics
             if (!prof.IsSpaceTargeted)
             {
                 // Player-targeted: aim at current receiver position — §3.6.3
-                if (request.TargetAgentId == PassMechanicsConstants.AGENT_ID_NONE)
-                {
-                    // FM-11: no valid target for player-targeted pass type
-                    Debug.LogError($"[PassExecutor] FM-11: Player-targeted pass type {request.PassType} has TargetAgentId=-1.");
-                    return PassTargetResolver.ResolvePlayerTargetedAimPoint(
-                        passerPosition + Vector2.right * request.IntendedDistance);
-                }
-
+                // TargetAgentId != -1 guaranteed by FM-11 check in Execute()
                 PassAgentState receiverState = _agentQuery.GetState(request.TargetAgentId);
                 return PassTargetResolver.ResolvePlayerTargetedAimPoint(receiverState.Position);
             }
@@ -458,4 +459,7 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     cache block; ExecuteContact uses cached value instead of recomputing.   |
 // |         |            |        | AR-1 round-3 M-C: removed unused CrossSubType param from ResolveAimPoint;  |
 // |         |            |        |     PassAttemptEvent.CrossSubType uses _cachedEffectiveSubType.             |
+// | 1.4     | 2026-05-27 | —      | AR-1 round-4 M-A: FM-11 check moved from ResolveAimPoint to Execute();    |
+// |         |            |        |     player-targeted pass with TargetAgentId=-1 now returns Invalid (was    |
+// |         |            |        |     logging error but returning Initiated with fallback aim point).         |
 #endregion

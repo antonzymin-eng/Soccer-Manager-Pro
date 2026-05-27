@@ -176,7 +176,7 @@ namespace TacticalDirector.PassMechanics
                         IsSpaceTargeted  = true
                     };
 
-                default: // Flat
+                case CrossSubType.Flat:
                     return new PhysicalProfile
                     {
                         VMin             = 8.0f,
@@ -192,6 +192,10 @@ namespace TacticalDirector.PassMechanics
                         IsAerial         = false,
                         IsSpaceTargeted  = true
                     };
+
+                default:
+                    Debug.LogError($"[PassTypeProfiles] FM-01: Unknown CrossSubType={subType} for PassType.Cross. Returning Flat profile as safe default.");
+                    return GetCrossProfile(CrossSubType.Flat);
             }
         }
     }
@@ -204,4 +208,7 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     Topspin to match SpinType enum doc and PassVelocityCalculator.      |
 // | 1.2     | 2026-05-27 | —      | AR-1 H-1: class changed public → internal; CS0050 compile error        |
 // |         |            |        |     (public GetProfile() returning internal PhysicalProfile).           |
+// | 1.3     | 2026-05-27 | —      | AR-1 round-4 L-A: GetCrossProfile gains explicit CrossSubType.Flat      |
+// |         |            |        |     case; default now logs FM-01 for unknown CrossSubType values         |
+// |         |            |        |     (consistent with GetProfile FM-01 pattern).                         |
 #endregion
