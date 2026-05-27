@@ -1,6 +1,6 @@
 // File:     src/agent-movement/OscillationGuard.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.7, Code Standards #20
 // Purpose:  Ring-buffer guard that detects rapid state oscillation and enforces a lock-out period.
@@ -100,7 +100,7 @@ namespace TacticalDirector.AgentMovement
                 case 5: return _t5;
                 case 6: return _t6;
                 case 7: return _t7;
-                default: return 0.0f;
+                default: return float.NegativeInfinity;
             }
         }
     }
@@ -112,4 +112,7 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | H-4: BufferSize/LockDuration/WindowSeconds moved to OscillationGuardConstants in constants file.   |
 // |         |            |        | M-8: MatchClock determinism requirement documented in XML doc and method summary.                   |
 // | 1.1     | 2026-05-25 | —      | Pass-4 fix: H-4 Initialize() method added; [StructLayout(Sequential)] added (L-5).                |
+// | 1.2     | 2026-05-26 | —      | AR-2 fix: L-1 ReadTime default return changed from 0.0f to float.NegativeInfinity for          |
+// |         |            |        | consistency with Initialize() sentinel; prevents false recent-transition count if                |
+// |         |            |        | BufferSize is increased without updating the switch cases.                                     |
 #endregion

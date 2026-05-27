@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentDirectionalMovement.cs
 // Created:  2026-05-22
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     Agent Movement #2 §3.3, Code Standards #20
 // Purpose:  Directional speed multipliers and facing direction updates.
@@ -47,19 +47,26 @@ namespace TacticalDirector.AgentMovement
             float lat = LateralMultiplier(effectiveAgility);
             float bwd = BackwardMultiplier(effectiveAgility);
 
-            float fwdMax = DirectionalConstants.FORWARD_ZONE_MAX;
+            float hys      = DirectionalConstants.ZONE_HYSTERESIS;
+            float fwdMax   = DirectionalConstants.FORWARD_ZONE_MAX;
             float latStart = DirectionalConstants.LATERAL_ZONE_START;
-            float latEnd = DirectionalConstants.LATERAL_ZONE_END;
+            float latEnd   = DirectionalConstants.LATERAL_ZONE_END;
             float bwdStart = DirectionalConstants.BACKWARD_ZONE_START;
 
-            if (angleDeg <= fwdMax)
+            // Hysteresis extends the pure-forward zone and compresses the backward-blend entry,
+            // reducing frame-to-frame multiplier flicker near boundary angles.
+            float fwdBlendStart = fwdMax + hys;   // 33°: pure forward up to here
+            float bwdBlendEnd   = bwdStart - hys; // 87°: pure backward begins here
+
+            if (angleDeg <= fwdBlendStart)
             {
                 return 1.0f;
             }
 
             if (angleDeg <= latStart)
             {
-                float t = (angleDeg - fwdMax) / (latStart - fwdMax);
+                float width = latStart - fwdBlendStart;
+                float t = width > 0.0f ? (angleDeg - fwdBlendStart) / width : 1.0f;
                 return Mathf.Lerp(1.0f, lat, t);
             }
 
@@ -68,9 +75,10 @@ namespace TacticalDirector.AgentMovement
                 return lat;
             }
 
-            if (angleDeg <= bwdStart)
+            if (angleDeg <= bwdBlendEnd)
             {
-                float t = (angleDeg - latEnd) / (bwdStart - latEnd);
+                float width = bwdBlendEnd - latEnd;
+                float t = width > 0.0f ? (angleDeg - latEnd) / width : 1.0f;
                 return Mathf.Lerp(lat, bwd, t);
             }
 
@@ -135,4 +143,8 @@ namespace TacticalDirector.AgentMovement
 // | 1.1     | 2026-05-25 | —      | Pass-1: H-2 namespace; L-1 PascalCase refs.                                        |
 // | 1.2     | 2026-05-25 | —      | Pass-3: 19.0f/1.0f attribute literals → PlayerAttributeConstants.AttributeRangeSpan / AttributeMin. |
 // | 1.3     | 2026-05-25 | —      | Pass-4 fix: L-1 1e-6f literals → SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON [FIXED].       |
+// | 1.4     | 2026-05-26 | —      | AR-2 fix: M-1 ZONE_HYSTERESIS consumed in CalculateDirectionalMultiplier; extends              |
+// |         |            |        | pure-forward zone by 3° and compresses backward-blend entry by 3°, reducing boundary          |
+// |         |            |        | flicker. Degenerate-blend guards (width > 0 check) prevent division by zero if                 |
+// |         |            |        | zone constants are adjusted.                                                                   |
 #endregion

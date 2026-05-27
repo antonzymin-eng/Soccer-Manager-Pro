@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentState.cs
 // Created:  2026-05-22
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.1, Code Standards #20
 // Purpose:  Value-type snapshot of all agent kinematic and energy state.
@@ -82,7 +82,9 @@ namespace TacticalDirector.AgentMovement
             {
                 Position = position,
                 Velocity = Vector2.zero,
-                FacingDirection = facingDirection.normalized,
+                FacingDirection = facingDirection.sqrMagnitude > SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON
+                    ? facingDirection.normalized
+                    : Vector2.up,
                 CurrentState = AgentMovementState.IDLE,
                 PreviousState = AgentMovementState.IDLE,
                 TimeInState = 0.0f,
@@ -112,4 +114,6 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | L-6: GroundedReason default changed from COLLISION to NONE (sentinel).             |
 // | 1.2     | 2026-05-25 | —      | Pass-4 fix: H-3 OscillationGuard field added; H-4 Initialize() called in            |
 // |         |            |        | CreateAtPosition to prevent false-positive lockout at match start.                  |
+// | 1.3     | 2026-05-26 | —      | AR-2 fix: M-5 zero-vector guard on facingDirection in CreateAtPosition; falls back   |
+// |         |            |        | to Vector2.up to prevent downstream NaN/zero-facing corruption.                     |
 #endregion
