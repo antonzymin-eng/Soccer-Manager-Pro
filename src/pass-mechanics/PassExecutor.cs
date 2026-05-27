@@ -115,13 +115,12 @@ namespace TacticalDirector.PassMechanics
         /// IsIdle is true, then read LastResult. Pass Mechanics #5 §3.8.4.
         /// </summary>
         /// <param name="request">Pass request from Decision Tree #8.</param>
-        /// <param name="ball">Current ball state for possession check.</param>
         /// <returns>
         /// PassResult with Outcome=Invalid for synchronous rejection.
         /// PassResult with Outcome=Initiated means windup has begun;
         /// poll IsIdle and read LastResult to obtain the final outcome.
         /// </returns>
-        public PassResult Execute(in PassRequest request, ref BallState ball)
+        public PassResult Execute(in PassRequest request)
         {
             using var _ = s_executeMarker.Auto();
 
@@ -462,4 +461,6 @@ namespace TacticalDirector.PassMechanics
 // | 1.4     | 2026-05-27 | —      | AR-1 round-4 M-A: FM-11 check moved from ResolveAimPoint to Execute();    |
 // |         |            |        |     player-targeted pass with TargetAgentId=-1 now returns Invalid (was    |
 // |         |            |        |     logging error but returning Initiated with fallback aim point).         |
+// | 1.5     | 2026-05-27 | —      | AR-1 round-5 M-B: removed unused ref BallState ball param from Execute(); |
+// |         |            |        |     possession check uses _ballSystem, not BallState directly.            |
 #endregion
