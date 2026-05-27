@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassErrorCalculator.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.5, §3.7, Code Standards #20
 // Purpose:  Pure static calculator for the multiplicative error chain (§3.5),

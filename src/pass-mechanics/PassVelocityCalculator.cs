@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassVelocityCalculator.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.2, §3.3, §3.4, Code Standards #20
 // Purpose:  Pure static calculator for kick speed (§3.2), launch angle (§3.3),

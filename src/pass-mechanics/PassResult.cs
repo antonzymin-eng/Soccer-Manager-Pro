@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassResult.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §2.4.2, Code Standards #20
 // Purpose:  Output struct returned by PassExecutor. Contains full execution record

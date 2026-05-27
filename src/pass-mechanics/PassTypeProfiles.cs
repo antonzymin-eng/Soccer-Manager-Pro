@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassTypeProfiles.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.1.3, §3.1.4, Code Standards #20
 // Purpose:  Static profile lookup returning a PhysicalProfile for each (PassType,

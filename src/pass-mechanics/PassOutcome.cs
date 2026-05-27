@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassOutcome.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §2.4.2, Code Standards #20
 // Purpose:  PassOutcome enum: result classification of a pass execution attempt.

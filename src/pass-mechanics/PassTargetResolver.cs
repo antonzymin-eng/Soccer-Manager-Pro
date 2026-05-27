@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassTargetResolver.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.6, Code Standards #20
 // Purpose:  Pure static resolver for aim points, through-ball lead projection,

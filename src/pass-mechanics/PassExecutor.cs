@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassExecutor.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.8, §3.9, §4.1, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the six-state pass execution state
@@ -67,6 +67,7 @@ namespace TacticalDirector.PassMechanics
         private float _cachedBodyAngleDeg;
         private bool  _cachedIsWeakFoot;
         private int   _cachedWeakFootRating;
+        private CrossSubType _cachedEffectiveSubType; // cross: actual sub-type; all others: Flat
         private Vector2 _passerPosition; // for pressure re-query at CONTACT
 
         // ── Windup / Follow-Through Timers ───────────────────────────────────────────
@@ -192,19 +193,20 @@ namespace TacticalDirector.PassMechanics
                 request.PassType, effectiveSubType, attrs.Technique, request.IsWeakFoot, _profile);
 
             // ── §3.6 — Target resolution and aim point ───────────────────────────────
-            _aimPoint = ResolveAimPoint(request, effectiveSubType, agentState.Position, out _leadDistance);
+            _aimPoint = ResolveAimPoint(request, agentState.Position, out _leadDistance);
             _aimPoint = PassTargetResolver.ClampToPitchBounds(_aimPoint);
 
             // ── Base kick direction (pre-error) ──────────────────────────────────────
             _baseKickDirection = PassTargetResolver.ComputeKickDirection(agentState.Position, _aimPoint);
 
             // ── Cache error-chain inputs ──────────────────────────────────────────────
-            _cachedPassing       = attrs.Passing;
-            _cachedFatigue       = attrs.Fatigue;
-            _cachedBodyAngleDeg  = PassTargetResolver.ComputeBodyAngle(agentState.FacingDirection, _baseKickDirection);
-            _cachedIsWeakFoot    = request.IsWeakFoot;
-            _cachedWeakFootRating = attrs.WeakFootRating;
-            _passerPosition      = agentState.Position;
+            _cachedPassing            = attrs.Passing;
+            _cachedFatigue            = attrs.Fatigue;
+            _cachedBodyAngleDeg       = PassTargetResolver.ComputeBodyAngle(agentState.FacingDirection, _baseKickDirection);
+            _cachedIsWeakFoot         = request.IsWeakFoot;
+            _cachedWeakFootRating     = attrs.WeakFootRating;
+            _cachedEffectiveSubType   = effectiveSubType;
+            _passerPosition           = agentState.Position;
 
             // ── §3.8.8 — Windup duration ─────────────────────────────────────────────
             int baseWindup  = PassMechanicsConstants.GetWindupFrames(request.PassType, effectiveSubType);
@@ -307,13 +309,9 @@ namespace TacticalDirector.PassMechanics
             float pressureScalar = _collisionQuery.ComputePressureScalar(_passerPosition, _request.TeamId);
 
             // Step 2: Recompute error angle with fresh pressure — §3.8.6
-            CrossSubType effectiveSubType = (_request.PassType == PassType.Cross)
-                ? _request.CrossSubType
-                : CrossSubType.Flat;
-
             float errorAngleDeg = PassErrorCalculator.ComputeErrorAngle(
                 _request.PassType,
-                effectiveSubType,
+                _cachedEffectiveSubType,
                 _cachedPassing,
                 pressureScalar,
                 _cachedFatigue,
@@ -377,7 +375,7 @@ namespace TacticalDirector.PassMechanics
                 AgentId       = _request.AgentId,
                 TeamId        = _request.TeamId,
                 PassType      = _request.PassType,
-                CrossSubType  = effectiveSubType,
+                CrossSubType  = _cachedEffectiveSubType,
                 TargetPosition = _aimPoint,
                 FinalVelocity = finalVelocity,
                 FinalSpin     = _spinVector,
@@ -397,7 +395,6 @@ namespace TacticalDirector.PassMechanics
 
         private Vector3 ResolveAimPoint(
             in PassRequest request,
-            CrossSubType effectiveSubType,
             Vector2 passerPosition,
             out float leadDistance)
         {
@@ -457,4 +454,8 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     now records cancellation frame, not initiation frame (§3.9.3).          |
 // |         |            |        | AR-1 round-2 L-A: all non-Completed PassResult paths set ContactFrame=-1    |
 // |         |            |        |     (previously 0, ambiguous with frame 0 at start of match).               |
+// | 1.3     | 2026-05-27 | —      | AR-1 round-3 L-C: added _cachedEffectiveSubType field; set in Execute()    |
+// |         |            |        |     cache block; ExecuteContact uses cached value instead of recomputing.   |
+// |         |            |        | AR-1 round-3 M-C: removed unused CrossSubType param from ResolveAimPoint;  |
+// |         |            |        |     PassAttemptEvent.CrossSubType uses _cachedEffectiveSubType.             |
 #endregion

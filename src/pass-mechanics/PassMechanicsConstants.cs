@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassMechanicsConstants.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.2.9, §3.3.7, §3.4.7, §3.5.9, §3.6.9, §3.7.6,
 //           §3.8.10, Code Standards #20
