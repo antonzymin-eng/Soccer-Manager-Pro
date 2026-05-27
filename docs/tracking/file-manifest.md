@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 25, 2026 (implementation source files added: Ball Physics 8 source + 3 test files; Agent Movement 16 source files; `src/CLAUDE.md` v1.8)  
+**Last Updated:** May 27, 2026 (Collision System #3, First Touch #4, Pass Mechanics #5 source files added; Agent Movement #2 tests added; `src/CLAUDE.md` v1.9)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -24,7 +24,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 | File | Purpose |
 |------|---------|
-| `src/CLAUDE.md` | Coding guide: C# naming, constant catalogues, Unity project structure, build/test commands. Created May 19, 2026 when coding began. At v1.8 as of May 25, 2026. |
+| `src/CLAUDE.md` | Coding guide: C# naming, constant catalogues, Unity project structure, build/test commands. Created May 19, 2026 when coding began. At v1.9 as of May 25, 2026. |
 
 ### Spec #1 — Ball Physics (`src/Core/Physics/Ball/`)
 
@@ -63,7 +63,80 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/agent-movement/AgentDirectionalMovement.cs` | Directional multipliers / facing update |
 | `src/agent-movement/AgentSafetySystem.cs` | NaN detection / speed clamp / pitch boundary enforcement |
 
-> **Note:** No test `.cs` files exist under `src/agent-movement/tests/` yet. The `tests/` directory itself has not been created. Test files are a pending implementation task per Spec #2 §5.
+| `src/agent-movement/Tests/AgentMovementTests.cs` | Unit tests for agent movement system (added May 27, 2026 in AR-2/AR-3 pass) |
+| `src/agent-movement/Tests/agent-movement-tests.asmdef` | Test assembly definition (EditMode; references agent-movement.asmdef) |
+
+### Spec #3 — Collision System (`src/collision-system/`)
+
+| File | Purpose |
+|------|---------|
+| `src/collision-system/CollisionSystemConstants.cs` | All constant catalogue: `[FIXED]` / `[GT]` / `[DERIVED]` / `[CROSS]` constants for the collision system |
+| `src/collision-system/CollisionDetection.cs` | Broad-phase and narrow-phase collision detection logic |
+| `src/collision-system/SpatialHashGrid.cs` | Spatial hash grid for broad-phase agent and ball proximity queries |
+| `src/collision-system/CollisionManifold.cs` | Contact manifold: penetration depth, contact normal, contact point |
+| `src/collision-system/CollisionEvent.cs` | Struct event published to the event bus on confirmed collision |
+| `src/collision-system/CollisionResponse.cs` | Impulse-based collision response calculations |
+| `src/collision-system/CollisionSystem.cs` | Main orchestrator: 60 Hz pipeline for all agent–agent and agent–ball collisions |
+| `src/collision-system/CollisionPairBitfield.cs` | Bitfield tracking already-processed pairs within a tick (prevents double-processing) |
+| `src/collision-system/AgentAgentCollisionResult.cs` | Result struct for an agent–agent collision resolution |
+| `src/collision-system/AgentBallCollisionData.cs` | Data struct describing an agent–ball contact |
+| `src/collision-system/AgentPhysicalProperties.cs` | Physical properties (mass, radius, restitution) per agent |
+| `src/collision-system/BallCollisionHandler.cs` | Ball-specific collision response (delegates geometry to `ball-physics/BallCollision.cs`) |
+| `src/collision-system/ContactForceData.cs` | Contact force magnitude and direction for logging/events |
+| `src/collision-system/ContactType.cs` | Enum: contact classification (SLIDE, SHOULDER, BLOCK, FOUL) |
+| `src/collision-system/ContactTypeClassifier.cs` | Classifies a collision manifold into a `ContactType` |
+| `src/collision-system/CollisionType.cs` | Enum: collision kind (AGENT_AGENT, AGENT_BALL, AGENT_POST, AGENT_BOUNDARY) |
+| `src/collision-system/DeterministicRNG.cs` | Thin wrapper around SplitMix64 for foul-roll and stumble-roll RNG draws |
+| `src/collision-system/ICollisionEventConsumer.cs` | Interface for systems that consume collision events (Spec #3 §3.4.2 consumer pattern) |
+| `src/collision-system/collision-system.asmdef` | Assembly definition for the collision-system assembly |
+| `src/collision-system/tests/collision-system-tests.asmdef` | Test assembly definition (EditMode; references collision-system.asmdef) |
+
+### Spec #4 — First Touch Mechanics (`src/first-touch/`)
+
+| File | Purpose |
+|------|---------|
+| `src/first-touch/FirstTouchConstants.cs` | All constant catalogue for First Touch |
+| `src/first-touch/FirstTouchContext.cs` | Input context struct: incoming ball state, agent state, env conditions |
+| `src/first-touch/FirstTouchResult.cs` | Final output struct: displaced ball state + possession outcome |
+| `src/first-touch/TouchResult.cs` | Intermediate result of touch quality evaluation |
+| `src/first-touch/FirstTouchSystem.cs` | Main orchestrator: entry point for a first-touch resolution |
+| `src/first-touch/BallDisplacementProcessor.cs` | Computes post-touch ball displacement vector from error and control quality |
+| `src/first-touch/ControlQualityCalculator.cs` | Calculates control quality score (0–1) from player attributes and context |
+| `src/first-touch/OrientationDetector.cs` | Detects player body orientation relative to the incoming ball direction |
+| `src/first-touch/PossessionStateMachine.cs` | Manages possession state transitions (LOOSE → CONTROLLED → POSSESSED) |
+| `src/first-touch/PressureEvaluator.cs` | Evaluates nearby-defender pressure scalar from agent positions |
+| `src/first-touch/PressureResult.cs` | Pressure evaluation output struct |
+| `src/first-touch/TouchRadiusCalculator.cs` | Computes the acceptance radius for a first-touch attempt |
+| `src/first-touch/IAgentMovementSystem.cs` | Interface boundary to Agent Movement (#2) (read-only query surface) |
+| `src/first-touch/IBallPhysicsSystem.cs` | Interface boundary to Ball Physics (#1) (read-only query surface) |
+| `src/first-touch/IFirstTouchSystem.cs` | Public interface for consumers of the First Touch system |
+
+### Spec #5 — Pass Mechanics (`src/pass-mechanics/`)
+
+| File | Purpose |
+|------|---------|
+| `src/pass-mechanics/PassMechanicsConstants.cs` | All constant catalogue: physical profiles, error model, timing constants |
+| `src/pass-mechanics/PassRequest.cs` | Input struct: passer, target agent/position, requested pass type |
+| `src/pass-mechanics/PassResult.cs` | Output struct: actual ball velocity applied + outcome classification |
+| `src/pass-mechanics/PassAttemptEvent.cs` | Struct event published when a pass is initiated |
+| `src/pass-mechanics/PassCancelledEvent.cs` | Struct event published when a pass is cancelled |
+| `src/pass-mechanics/PassEvents.cs` | All pass-related event type definitions |
+| `src/pass-mechanics/PassExecutor.cs` | Main orchestrator: executes the full pass pipeline |
+| `src/pass-mechanics/PassVelocityCalculator.cs` | Calculates launch velocity from physical profile and player attributes |
+| `src/pass-mechanics/PassErrorCalculator.cs` | Error / accuracy model: direction and speed deviation |
+| `src/pass-mechanics/PassTargetResolver.cs` | Resolves intended target position from agent reference |
+| `src/pass-mechanics/PassTypeProfiles.cs` | Factory: returns the `PhysicalProfile` for a given `PassType` |
+| `src/pass-mechanics/PhysicalProfile.cs` | Struct: physical parameters (speed range, spin, launch angle) per pass type |
+| `src/pass-mechanics/PassType.cs` | Enum: GROUND, DRIVEN, LOB, CHIP, CROSS |
+| `src/pass-mechanics/CrossSubType.cs` | Enum: cross sub-type (LOW, DRIVEN, FLOATED, CUTBACK) |
+| `src/pass-mechanics/SpinType.cs` | Enum: spin type (TOPSPIN, BACKSPIN, SIDESPIN, NONE) |
+| `src/pass-mechanics/PassOutcome.cs` | Enum/struct: outcome classification (ACCURATE, MISPLACED, INTERCEPTED, OUT) |
+| `src/pass-mechanics/PassAgentAttributes.cs` | Agent skill attributes consumed by the pass system (passing, vision, weak-foot) |
+| `src/pass-mechanics/PassAgentState.cs` | Agent state consumed by the pass system (fatigue, stamina, body orientation) |
+| `src/pass-mechanics/IPassAgentQuery.cs` | Interface to query agent attributes and state |
+| `src/pass-mechanics/IPassBallSystem.cs` | Interface to Ball Physics (#1) for applying kick velocity |
+| `src/pass-mechanics/IPassCollisionQuery.cs` | Interface to Collision System (#3) for interception queries |
+| `src/pass-mechanics/EventBusStub.cs` | Stub for event bus integration (pending Event System #17 wiring at Stage 1) |
 
 ---
 

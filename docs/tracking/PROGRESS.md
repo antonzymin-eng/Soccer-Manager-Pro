@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 25, 2026 (Implementation phase: Ball Physics #1 and Agent Movement #2 initial code committed; `src/CLAUDE.md` v1.8; adversarial fix passes landed May 22 and May 25)  
+**Last Updated:** May 27, 2026 (Implementation phase: Collision System #3, First Touch #4, and Pass Mechanics #5 coded and reviewed May 25–26; Agent Movement #2 AR-2/AR-3 + tests landed May 27; milestones and next-actions updated)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -49,9 +49,9 @@
 |---|---------------|-------|--------|---------|-----------|-------|
 | 1 | Ball Physics | ~50 | 🔒 LOCKED | Feb 2 | Feb 8 | All sections written, reviewed, checklist signed off; §3.1 updated to v2.5 (ApplyKick, Option B possession). **Implementation begun May 19, 2026** at `src/Core/Physics/Ball/` (8 source files + 3 test files; structural deviation from spec-canonical `src/ball-physics/` — fix pass planned). |
 | 2 | Agent Movement | ~130 | 🔒 LOCKED | Feb 9 | Apr 27, 2026 | All sections + appendices complete; §9 v2.1 lead-developer signed off Apr 27, 2026; §3.5 v1.4 (ERR-007); §8 v1.4. **Implementation begun May 19, 2026** at `src/agent-movement/` (16 source files; no test .cs files yet). |
-| 3 | Collision System | ~50 | ✅ APPROVED | Feb 16 | Feb 19 | All sections + appendices v1.1; approval checklist signed off |
-| 4 | First Touch Mechanics | ~70 | ✅ APPROVED | Feb 19 | Feb 22 | All sections + appendices complete; ERR-001, ERR-004 resolved; §8 updated to v1.1 |
-| 5 | Pass Mechanics | ~65 | ✅ APPROVED | Feb 19 | May 6, 2026 | All sections + appendices complete; ERR-006/007/008 resolved; 19 audit findings (Mar 6) and follow-up F-A01/F-A02 (May 6) all resolved per `re-review-packet.md`. §9 v1.4 lead-developer signed off May 6, 2026. |
+| 3 | Collision System | ~50 | 🔒 LOCKED | Feb 16 | Feb 19 | All sections + appendices v1.1; approval checklist signed off. **Implementation begun May 25, 2026** at `src/collision-system/` (18 source files; adversarial review passes 1–5 same day). |
+| 4 | First Touch Mechanics | ~70 | 🔒 LOCKED | Feb 19 | Feb 22 | All sections + appendices complete; ERR-001, ERR-004 resolved; §8 updated to v1.1. **Implementation begun May 25–26, 2026** at `src/first-touch/` (15 source files; adversarial review passes 1–4). |
+| 5 | Pass Mechanics | ~65 | 🔒 LOCKED | Feb 19 | May 6, 2026 | All sections + appendices complete; ERR-006/007/008 resolved; 19 audit findings (Mar 6) and follow-up F-A01/F-A02 (May 6) all resolved per `re-review-packet.md`. §9 v1.4 lead-developer signed off May 6, 2026. **Implementation begun May 26, 2026** at `src/pass-mechanics/` (22 source files; adversarial review pass 3 same day). |
 
 **Note:** Specs were renumbered in execution vs. original plan. First Touch completed as #4 (originally planned as #11), Pass Mechanics as #5, due to dependency priority. Collision System's original #3 slot retained.
 
@@ -475,9 +475,23 @@
   - v1.8: PlayerAttributeConstants added to AgentMovementConstants.cs annotation.
 
 **Status:**
-- `src/CLAUDE.md` at v1.8 — comprehensive and adversarially validated coding guide.
-- Ball Physics + Agent Movement implementations in place (see Week 18 May 19 entry).
-- No new spec implementations since May 25. Next: Collision System (#3).
+- `src/CLAUDE.md` at v1.9 — comprehensive and adversarially validated coding guide.
+- Ball Physics (#1), Agent Movement (#2), Collision System (#3), First Touch (#4), and Pass Mechanics (#5) implementations in place and adversarially reviewed.
+- Agent Movement (#2) AR-2/AR-3 (12 findings fixed) and tests committed May 27. Next: Shot Mechanics (#6).
+
+---
+
+### Weeks 19-20 — May 25-27, 2026 (Implementation Continues)
+
+**Completed:**
+- **Collision System (#3) initial implementation (May 25, 2026):** 18 source files authored at `src/collision-system/`: `CollisionSystemConstants.cs`, `CollisionDetection.cs`, `SpatialHashGrid.cs`, `CollisionManifold.cs`, `CollisionEvent.cs`, `CollisionResponse.cs`, `CollisionSystem.cs`, `CollisionPairBitfield.cs`, `AgentAgentCollisionResult.cs`, `AgentBallCollisionData.cs`, `AgentPhysicalProperties.cs`, `BallCollisionHandler.cs`, `ContactForceData.cs`, `ContactType.cs`, `ContactTypeClassifier.cs`, `CollisionType.cs`, `DeterministicRNG.cs`, `ICollisionEventConsumer.cs`. Assembly definition and `tests/collision-system-tests.asmdef` included. **Adversarial review passes 1–5 same day:** pass 1 (7 bugs resolved), pass 2 (3 additional issues), pass 3 (0.0001f literals → `MinResponseSqrMagnitude`), pass 4 (magic 22/23 capacity literals promoted), pass 5 (agentCapacity default param annotated).
+- **First Touch Mechanics (#4) initial implementation (May 25–26, 2026):** 15 source files authored at `src/first-touch/`: `FirstTouchConstants.cs`, `FirstTouchContext.cs`, `FirstTouchResult.cs`, `TouchResult.cs`, `FirstTouchSystem.cs`, `BallDisplacementProcessor.cs`, `ControlQualityCalculator.cs`, `OrientationDetector.cs`, `PossessionStateMachine.cs`, `PressureEvaluator.cs`, `PressureResult.cs`, `TouchRadiusCalculator.cs`, `IAgentMovementSystem.cs`, `IBallPhysicsSystem.cs`, `IFirstTouchSystem.cs`. **Adversarial review passes 1–4 (May 26):** pass 1 (initial); pass 2 (4 bugs + 3 housekeeping); pass 3 (4 constant issues); pass 4 (doc fixes and stale spec matrix correction).
+- **Pass Mechanics (#5) initial implementation (May 26, 2026):** 22 source files authored at `src/pass-mechanics/`: `PassMechanicsConstants.cs`, `PassRequest.cs`, `PassResult.cs`, `PassAttemptEvent.cs`, `PassCancelledEvent.cs`, `PassEvents.cs`, `PassExecutor.cs`, `PassVelocityCalculator.cs`, `PassErrorCalculator.cs`, `PassTargetResolver.cs`, `PassTypeProfiles.cs`, `PhysicalProfile.cs`, `PassType.cs`, `CrossSubType.cs`, `SpinType.cs`, `PassOutcome.cs`, `PassAgentAttributes.cs`, `PassAgentState.cs`, `IPassAgentQuery.cs`, `IPassBallSystem.cs`, `IPassCollisionQuery.cs`, `EventBusStub.cs`. **Adversarial review pass 3 same day** (file splits and formula fixes).
+- **Agent Movement (#2) adversarial review AR-2/AR-3 (May 27, 2026):** 12 findings fixed. Tests committed: `AgentMovementTests.cs` + `agent-movement-tests.asmdef` at `src/agent-movement/Tests/`.
+
+**Status:**
+- **Specification phase:** ✅ COMPLETE (20/20 specs approved).
+- **Implementation phase:** Specs #1–#5 all have initial implementations and adversarial review passes. Last coded: Pass Mechanics (#5). Last reviewed: Agent Movement (#2).
 
 ---
 
@@ -501,7 +515,10 @@
 | **Stage 0 Spec Phase Complete** | **July 5, 2026** | **✅ COMPLETE** | **May 18, 2026** |
 | Ball Physics #1 Implementation | — | ✅ COMPLETE | May 19–25, 2026 |
 | Agent Movement #2 Implementation | — | ✅ COMPLETE | May 19–25, 2026 |
-| Collision System #3 Implementation | — | ⏳ NOT STARTED | — |
+| Collision System #3 Implementation | — | ✅ COMPLETE | May 25, 2026 |
+| First Touch #4 Implementation | — | ✅ COMPLETE | May 25–26, 2026 |
+| Pass Mechanics #5 Implementation | — | ✅ COMPLETE | May 26, 2026 |
+| Shot Mechanics #6 Implementation | — | ⏳ NOT STARTED | — |
 
 ---
 
@@ -568,9 +585,9 @@
 ## NEXT ACTIONS
 
 **Immediate (implementation phase):**
-1. Add `src/agent-movement/tests/` folder and test `.cs` files per Spec #2 §5.
-2. Resolve structural deviation: move Ball Physics from `src/Core/Physics/Ball/` → `src/ball-physics/` (spec-canonical path per `src/CLAUDE.md` tree).
-3. Implement Collision System (#3) at `src/collision-system/` per Spec #3 §4.
+1. Implement Shot Mechanics (#6) at `src/shot-mechanics/` per Spec #6 §4.
+2. Add adversarial review passes for Pass Mechanics (#5) pass-mechanics implementation (passes 1–2 appear to have been bundled with initial implementation; verify all findings resolved).
+3. Resolve structural deviation: move Ball Physics from `src/Core/Physics/Ball/` → `src/ball-physics/` (spec-canonical path per `src/CLAUDE.md` tree).
 
 **Housekeeping (non-blocking):**
 4. Push 12+ approval tags after merge to main (squash-merge precondition check per CLAUDE.md OPEN ISSUES).
@@ -581,13 +598,18 @@
 
 ---
 
-**Last Updated:** May 25, 2026 (implementation phase entries added; milestones updated; Ball Physics + Agent Movement implementations recorded)
+**Last Updated:** May 27, 2026 (Collision System #3 / First Touch #4 / Pass Mechanics #5 implementations and adversarial reviews recorded; Agent Movement #2 AR-2/AR-3 + tests recorded; milestones and next-actions updated)
 **Updated By:** AI Assistant
-**Next Review:** After Collision System (#3) implementation or next significant implementation milestone
+**Next Review:** After Shot Mechanics (#6) implementation or next significant implementation milestone
 
 ---
 
 ## CHANGELOG
+
+**May 27, 2026:**
+- Collision System (#3), First Touch (#4), Pass Mechanics (#5) implementations added (weekly log entry, milestones, Priority 1 table notes, NEXT ACTIONS updated).
+- Agent Movement (#2) AR-2/AR-3 + tests (AgentMovementTests.cs) recorded.
+- PROGRESS.md Last Updated, status note, and NEXT ACTIONS all updated to reflect current implementation state.
 
 **May 25, 2026:**
 - `src/CLAUDE.md` adversarial review fix passes v1.7 and v1.8 landed (agent-movement/ tree expanded to all 16 files; PlayerAttributeConstants annotation added).
