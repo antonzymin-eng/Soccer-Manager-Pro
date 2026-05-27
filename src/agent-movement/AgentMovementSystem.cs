@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementSystem.cs
 // Created:  2026-05-22
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     Agent Movement #2 §4.4, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
@@ -52,6 +52,10 @@ namespace TacticalDirector.AgentMovement
         {
             using var _ = s_updateMarker.Auto();
 
+            // Sanity-check dt against the expected physics frame duration in debug builds.
+            Debug.Assert(dt > 0.0f && dt <= 2.0f / _physicsHz,
+                "AgentMovementSystem.Update: dt outside expected range for physicsHz.");
+
             // Step 1 — command is already received as parameter.
 
             // Step 2 — Evaluate new state.
@@ -83,7 +87,8 @@ namespace TacticalDirector.AgentMovement
                 state.SprintReservoir,
                 state.AerobicPool,
                 isCollisionKnockdown,
-                collisionForce);
+                collisionForce,
+                state.GroundedReason);
 
             // Step 3 — Apply transition if changed. Gate through oscillation guard (§3.1.7).
             if (newState != state.CurrentState)
@@ -99,6 +104,13 @@ namespace TacticalDirector.AgentMovement
                     {
                         state.GroundedReason = GroundedReason.COLLISION;
                         state.CollisionForce = collisionForce;
+                    }
+                    else if (state.PreviousState == AgentMovementState.GROUNDED)
+                    {
+                        // Exiting GROUNDED: restore the sentinel so the field's invariant
+                        // ("NONE when CurrentState != GROUNDED") holds for the rest of the match.
+                        state.GroundedReason = GroundedReason.NONE;
+                        state.CollisionForce = 0.0f;
                     }
                 }
                 else
@@ -136,9 +148,14 @@ namespace TacticalDirector.AgentMovement
                     break;
 
                 case AgentMovementState.WALKING:
-                    // Spec §3.1.6 / §3.2.4: WALKING uses linear accel/decel, not the exponential curve.
-                    newSpeed = Mathf.MoveTowards(state.Speed, topSpeed, LocomotionConstants.WALK_ACCELERATION * dt);
+                {
+                    // §3.1.6 / §3.2.4: WALKING uses linear accel/decel (separate rates), not the exponential curve.
+                    float walkRate = state.Speed > topSpeed
+                        ? LocomotionConstants.WALK_DECELERATION
+                        : LocomotionConstants.WALK_ACCELERATION;
+                    newSpeed = Mathf.MoveTowards(state.Speed, topSpeed, walkRate * dt);
                     break;
+                }
 
                 case AgentMovementState.JOGGING:
                 case AgentMovementState.SPRINTING:
@@ -396,4 +413,13 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | M-2 IDLE/GROUNDED split (GROUNDED now uses SprintRecoveryWalking); M-5 Debug.Assert co-size    |
 // |         |            |        | guard; M-6 profiler marker string corrected; M-7 AUTO_ALIGN uses velocity direction;            |
 // |         |            |        | L-1 1e-6f → SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON.                                   |
+// | 1.4     | 2026-05-26 | —      | AR-2 fix: H-3 Debug.Assert added in Update() consuming _physicsHz for dt range validation.     |
+// |         |            |        | H-1 state.GroundedReason passed to EvaluateState so EvaluateFromGrounded receives actual        |
+// |         |            |        | entry reason and collision force (reason multipliers and force scaling now live).               |
+// | 1.5     | 2026-05-26 | —      | AR-2 fix (continued): M-3 WALKING case now uses WALK_DECELERATION when speed > topSpeed and    |
+// |         |            |        | WALK_ACCELERATION when accelerating, matching §3.2.4 separate-rate intent (was using only       |
+// |         |            |        | WALK_ACCELERATION for both directions). WALK_DECELERATION constant is now live.                |
+// | 1.6     | 2026-05-26 | —      | AR-3 fix: R3-M-1 state.GroundedReason / CollisionForce reset to NONE/0 when leaving GROUNDED.  |
+// |         |            |        | Restores field invariant "GroundedReason == NONE when CurrentState != GROUNDED" documented in   |
+// |         |            |        | AgentState. Without this, reason/force fields retained stale COLLISION values indefinitely.     |
 #endregion

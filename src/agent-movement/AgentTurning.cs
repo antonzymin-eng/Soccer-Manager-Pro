@@ -1,17 +1,18 @@
 // File:     src/agent-movement/AgentTurning.cs
 // Created:  2026-05-22
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     Agent Movement #2 §3.4, Code Standards #20
-// Purpose:  Turn rate, lean angle, and stumble probability calculations.
+// Purpose:  Turn rate and lean angle calculations. All static, no side effects.
 
 using UnityEngine;
 
 namespace TacticalDirector.AgentMovement
 {
     /// <summary>
-    /// Speed-dependent turning model. Returns probabilities and rates; does not apply RNG.
-    /// The main loop owns any RNG roll for stumble (§4.4.1 Step 6b). Agent Movement #2 §3.4.
+    /// Speed-dependent turning model. Returns rates and animation outputs; no RNG.
+    /// Stumble decisions are made deterministically by AgentStateMachine.ShouldStumble.
+    /// Agent Movement #2 §3.4.
     /// </summary>
     public static class AgentTurning
     {
@@ -73,29 +74,6 @@ namespace TacticalDirector.AgentMovement
             return Mathf.Min(leanDeg, TurnConstants.MAX_LEAN_ANGLE);
         }
 
-        /// <summary>
-        /// Stumble probability in [0, MaxStumbleProb] for a requested turn that exceeds
-        /// the safe fraction of max turn rate. Returns 0.0 if within safe zone.
-        /// Caller (main loop §4.4.1 Step 6b) performs the actual RNG roll.
-        /// Agent Movement #2 §3.4.4.
-        /// </summary>
-        public static float CalculateStumbleProbability(
-            float requestedTurnDeg, float maxTurnRateDeg)
-        {
-            float safeTurnDeg = maxTurnRateDeg * TurnConstants.SafeTurnFraction;
-
-            if (requestedTurnDeg <= safeTurnDeg)
-            {
-                return 0.0f;
-            }
-
-            float overshoot = Mathf.Clamp01(
-                (requestedTurnDeg - safeTurnDeg)
-              / Mathf.Max(maxTurnRateDeg - safeTurnDeg, TurnConstants.MIN_TURN_RATE_DIVISOR));
-
-            return overshoot * TurnConstants.MaxStumbleProb;
-        }
-
         private static float StateModifier(AgentMovementState state)
         {
             switch (state)
@@ -125,4 +103,7 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | L-1 1e-4f → TurnConstants.TURN_RATE_EPSILON_DEG; L-2 1.0f divisor guard →                    |
 // |         |            |        | TurnConstants.MIN_TURN_RATE_DIVISOR; L-3 1.0f denominator offset →                           |
 // |         |            |        | TurnConstants.TURN_RATE_VELOCITY_OFFSET; L-4 (int)AttributeMin → AttributeMinInt.             |
+// | 1.4     | 2026-05-26 | —      | AR-2 fix: H-2 CalculateStumbleProbability removed (dead code; system uses                       |
+// |         |            |        | AgentStateMachine.ShouldStumble deterministically; no RNG roll existed at Step 6b).            |
+// |         |            |        | Class summary updated to remove incorrect RNG-roll reference.                                   |
 #endregion

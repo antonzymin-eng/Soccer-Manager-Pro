@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementConstants.cs
 // Created:  2026-05-22
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     Agent Movement #2 §3.1–§3.4, §4.1.3, §4.3.1, Code Standards #20
 // Purpose:  All constants for the agent movement system. No literals in formula code.
@@ -212,7 +212,7 @@ namespace TacticalDirector.AgentMovement
 
         #endregion
 
-        #region DerivedFromGT
+        #region Derived
 
         // [DERIVED] from [GT] sources; declared after GT to ensure correct C# static field initialization order.
 
@@ -267,7 +267,7 @@ namespace TacticalDirector.AgentMovement
 
         #endregion
 
-        #region DerivedFromGT
+        #region Derived
 
         // [DERIVED] from [GT] sources; declared after GT to ensure correct C# static field initialization order.
 
@@ -343,15 +343,23 @@ namespace TacticalDirector.AgentMovement
         /// <summary>[GT] Turn rate scale in DECELERATING state (fraction of normal). Agent Movement #2 §3.4.2.</summary>
         public static readonly float DecelTurnModifier = 0.60f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Safe fraction of max turn rate below which stumble risk is zero. Agent Movement #2 §3.4.4.</summary>
+        /// <summary>
+        /// [GT] Safe fraction of max turn rate below which stumble risk is zero. Agent Movement #2 §3.4.4.
+        /// Reserved for Stage 1+ probabilistic stumble (SplitMix64 required). Currently unused;
+        /// Stage 0 uses the deterministic AgentStateMachine.ShouldStumble formula instead.
+        /// </summary>
         public static readonly float SafeTurnFraction = 0.70f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Maximum stumble probability at full overshoot. Agent Movement #2 §3.4.4.</summary>
+        /// <summary>
+        /// [GT] Maximum stumble probability at full overshoot. Agent Movement #2 §3.4.4.
+        /// Reserved for Stage 1+ probabilistic stumble (SplitMix64 required). Currently unused;
+        /// Stage 0 uses the deterministic AgentStateMachine.ShouldStumble formula instead.
+        /// </summary>
         public static readonly float MaxStumbleProb = 0.30f; // TODO: replace with config loader (Stage 1)
 
         #endregion
 
-        #region DerivedFromGT
+        #region Derived
 
         // [DERIVED] from [GT] sources; declared after GT to ensure correct C# static field initialization order.
 
@@ -437,12 +445,12 @@ namespace TacticalDirector.AgentMovement
         /// </summary>
         public static readonly float AttributePairMax = 2.0f * AttributeMax;
 
-        #endregion
-
-        #region GT
-
-        /// <summary>[GT] Near-zero floor applied to attribute-derived denominators to prevent divide-by-zero. Agent Movement #2 §3.1.5.</summary>
-        public static readonly float AttributeNearZeroFloor = 0.05f; // TODO: replace with config loader (Stage 1)
+        /// <summary>
+        /// [DERIVED] Near-zero floor applied to attribute-derived denominators to prevent divide-by-zero.
+        /// Formula: AttributeMin / AttributeMax. Agent Movement #2 §3.1.5.
+        /// Source constants: PlayerAttributeConstants.AttributeMin, PlayerAttributeConstants.AttributeMax.
+        /// </summary>
+        public static readonly float AttributeNearZeroFloor = AttributeMin / AttributeMax;
 
         #endregion
     }
@@ -499,4 +507,9 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | MIN_TURN_RATE_DIVISOR, TURN_RATE_EPSILON_DEG added [FIXED]. LocomotionConstants.WALK_ACCELERATION, |
 // |         |            |        | WALK_DECELERATION, KINEMATIC_HALF added [FIXED]. SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON   |
 // |         |            |        | added [FIXED]. PlayerAttributeConstants.AttributeMinInt added [FIXED].                           |
+// | 1.4     | 2026-05-26 | —      | AR-2 fix: M-4 three #region DerivedFromGT renamed to #region Derived (non-standard name).       |
+// |         |            |        | M-3 AttributeNearZeroFloor promoted [GT]→[DERIVED] (formula: AttributeMin/AttributeMax);         |
+// |         |            |        | GT region removed (empty). Modified date updated.                                              |
+// | 1.5     | 2026-05-26 | —      | AR-2 fix (continued): M-2 SafeTurnFraction/MaxStumbleProb XML doc updated to note they are       |
+// |         |            |        | reserved for Stage 1+ probabilistic stumble; unused at Stage 0 (deterministic ShouldStumble).   |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentStateMachine.cs
 // Created:  2026-05-22
-// Modified: 2026-05-25
+// Modified: 2026-05-26
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.4–§3.1.7, Code Standards #20
 // Purpose:  Pure state evaluation for movement state transitions. No side effects.
@@ -21,6 +21,7 @@ namespace TacticalDirector.AgentMovement
         /// Evaluates the next movement state from current conditions.
         /// Returns the new state; caller applies the transition to the Agent.
         /// Collision knockdown has highest priority and overrides all other logic.
+        /// groundedReason and collisionForce are only meaningful when current == GROUNDED.
         /// Agent Movement #2 §3.1.5.
         /// </summary>
         public static AgentMovementState EvaluateState(
@@ -35,7 +36,8 @@ namespace TacticalDirector.AgentMovement
             float sprintReservoir,
             float aerobicPool,
             bool isCollisionKnockdown,
-            float collisionForce = 0.0f)
+            float collisionForce = 0.0f,
+            GroundedReason groundedReason = GroundedReason.NONE)
         {
             if (isCollisionKnockdown && current != AgentMovementState.GROUNDED)
             {
@@ -48,7 +50,7 @@ namespace TacticalDirector.AgentMovement
                     return EvaluateFromIdle(speed);
 
                 case AgentMovementState.WALKING:
-                    return EvaluateFromWalking(speed);
+                    return EvaluateFromWalking(speed, commandSpeed);
 
                 case AgentMovementState.JOGGING:
                     return EvaluateFromJogging(speed, commandSpeed, sprintReservoir, aerobicPool);
@@ -63,7 +65,7 @@ namespace TacticalDirector.AgentMovement
                     return EvaluateFromStumbling(speed, dwellTimer, balance);
 
                 case AgentMovementState.GROUNDED:
-                    return EvaluateFromGrounded(dwellTimer, balance, strength);
+                    return EvaluateFromGrounded(dwellTimer, balance, strength, groundedReason, collisionForce);
 
                 default:
                     return AgentMovementState.IDLE;
@@ -83,7 +85,7 @@ namespace TacticalDirector.AgentMovement
 
             stumbleRisk = Mathf.Max(stumbleRisk, MovementThresholds.MinStumbleRisk);
 
-            float resistance = (agility + balance) / PlayerAttributeConstants.AttributePairMax;
+            float resistance = (float)(agility + balance) / PlayerAttributeConstants.AttributePairMax;
 
             return stumbleRisk > resistance;
         }
@@ -98,7 +100,7 @@ namespace TacticalDirector.AgentMovement
             return AgentMovementState.IDLE;
         }
 
-        private static AgentMovementState EvaluateFromWalking(float speed)
+        private static AgentMovementState EvaluateFromWalking(float speed, float commandSpeed)
         {
             if (speed < MovementThresholds.IdleEnter)
             {
@@ -108,6 +110,12 @@ namespace TacticalDirector.AgentMovement
             if (speed > MovementThresholds.JogEnter)
             {
                 return AgentMovementState.JOGGING;
+            }
+
+            // Respect deceleration intent from AI (e.g., STOP command with commandSpeed=0).
+            if (commandSpeed < speed - MovementThresholds.CommandSpeedHysteresis)
+            {
+                return AgentMovementState.DECELERATING;
             }
 
             return AgentMovementState.WALKING;
@@ -231,9 +239,13 @@ namespace TacticalDirector.AgentMovement
         }
 
         private static AgentMovementState EvaluateFromGrounded(
-            float dwellTimer, int balance, int strength)
+            float dwellTimer,
+            int balance,
+            int strength,
+            GroundedReason groundedReason,
+            float collisionForce)
         {
-            float requiredDwell = CalculateGroundedDwell(balance, strength);
+            float requiredDwell = CalculateGroundedDwell(balance, strength, groundedReason, collisionForce);
 
             if (dwellTimer < requiredDwell)
             {
@@ -249,13 +261,15 @@ namespace TacticalDirector.AgentMovement
         /// </summary>
         public static float CalculateStumbleDwell(int balance)
         {
-            float balanceFactor = Mathf.Max(balance / PlayerAttributeConstants.AttributeMax, PlayerAttributeConstants.AttributeNearZeroFloor);
+            float balanceFactor = Mathf.Max(
+                (float)balance / PlayerAttributeConstants.AttributeMax,
+                PlayerAttributeConstants.AttributeNearZeroFloor);
             float dwell = MovementThresholds.StumbleMinDwellBase / balanceFactor;
             return Mathf.Clamp(dwell, MovementThresholds.StumbleDwellClampMin, MovementThresholds.StumbleDwellClampMax);
         }
 
         /// <summary>
-        /// Minimum dwell in GROUNDED. Scaled by strength + balance and collision force.
+        /// Minimum dwell in GROUNDED. Scaled by strength + balance, collision force, and entry reason.
         /// Clamped [0.5, 2.5]s. Agent Movement #2 §3.1.5.
         /// </summary>
         public static float CalculateGroundedDwell(
@@ -272,7 +286,9 @@ namespace TacticalDirector.AgentMovement
                 _ => 1.0f
             };
 
-            float combinedFactor = Mathf.Max((strength + balance) / PlayerAttributeConstants.AttributePairMax, PlayerAttributeConstants.AttributeNearZeroFloor);
+            float combinedFactor = Mathf.Max(
+                (float)(strength + balance) / PlayerAttributeConstants.AttributePairMax,
+                PlayerAttributeConstants.AttributeNearZeroFloor);
             float dwell = (MovementThresholds.GroundedMinDwellBase * reasonMultiplier)
                          / combinedFactor;
 
@@ -297,4 +313,12 @@ namespace TacticalDirector.AgentMovement
 // | 1.2     | 2026-05-25 | —      | Pass-2 fix: dwell clamps / reason multipliers → named constants; M-2 denominator comments.      |
 // |         |            |        | Pass-3: 20.0f/40.0f/0.05f literals → PlayerAttributeConstants.AttributeMax/PairMax/NearZeroFloor. |
 // | 1.3     | 2026-05-25 | —      | Pass-4 fix: M-3 180.0f → TurnConstants.HALF_ROTATION_DEG [FIXED].                              |
+// | 1.4     | 2026-05-26 | —      | AR-2 fix: H-1 groundedReason+collisionForce propagated through EvaluateState →                 |
+// |         |            |        | EvaluateFromGrounded → CalculateGroundedDwell (reason multipliers and force scaling now         |
+// |         |            |        | reachable from live code path). M-2 commandSpeed decel check added to EvaluateFromWalking      |
+// |         |            |        | so STOP/slow commands are respected without escalating to JOGGING. L-2 explicit (float)         |
+// |         |            |        | cast added in CalculateStumbleDwell and CalculateGroundedDwell int/float division.              |
+// | 1.5     | 2026-05-26 | —      | AR-2 fix (continued): explicit (float) cast added in ShouldStumble for                          |
+// |         |            |        | (agility + balance) / AttributePairMax (int/float division). Consistent with L-2 casts        |
+// |         |            |        | applied in CalculateStumbleDwell and CalculateGroundedDwell.                                    |
 #endregion
