@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassExecutor.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.8, §3.9, §4.1, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the six-state pass execution state
@@ -67,6 +67,7 @@ namespace TacticalDirector.PassMechanics
         private float _cachedBodyAngleDeg;
         private bool  _cachedIsWeakFoot;
         private int   _cachedWeakFootRating;
+        private CrossSubType _cachedEffectiveSubType; // cross: actual sub-type; all others: Flat
         private Vector2 _passerPosition; // for pressure re-query at CONTACT
 
         // ── Windup / Follow-Through Timers ───────────────────────────────────────────
@@ -114,13 +115,12 @@ namespace TacticalDirector.PassMechanics
         /// IsIdle is true, then read LastResult. Pass Mechanics #5 §3.8.4.
         /// </summary>
         /// <param name="request">Pass request from Decision Tree #8.</param>
-        /// <param name="ball">Current ball state for possession check.</param>
         /// <returns>
         /// PassResult with Outcome=Invalid for synchronous rejection.
-        /// PassResult with Outcome=Completed and ContactFrame=0 means pass started;
-        /// the real result is in LastResult once IsIdle is true.
+        /// PassResult with Outcome=Initiated means windup has begun;
+        /// poll IsIdle and read LastResult to obtain the final outcome.
         /// </returns>
-        public PassResult Execute(in PassRequest request, ref BallState ball)
+        public PassResult Execute(in PassRequest request)
         {
             using var _ = s_executeMarker.Auto();
 
@@ -167,6 +167,14 @@ namespace TacticalDirector.PassMechanics
             _request = request;
             _profile = PassTypeProfiles.GetProfile(request.PassType, effectiveSubType);
 
+            // ── FM-11: Player-targeted pass must have a valid target agent ────────────
+            if (!_profile.IsSpaceTargeted && request.TargetAgentId == PassMechanicsConstants.AGENT_ID_NONE)
+            {
+                Debug.LogError($"[PassExecutor] FM-11: Player-targeted pass type {request.PassType} has TargetAgentId=-1. Frame={request.FrameNumber}");
+                _lastResult = MakeInvalidResult(request.PassType);
+                return _lastResult;
+            }
+
             // ── Read agent attributes and state ──────────────────────────────────────
             PassAgentAttributes attrs = _agentQuery.GetAttributes(request.AgentId);
             PassAgentState agentState = _agentQuery.GetState(request.AgentId);
@@ -192,19 +200,20 @@ namespace TacticalDirector.PassMechanics
                 request.PassType, effectiveSubType, attrs.Technique, request.IsWeakFoot, _profile);
 
             // ── §3.6 — Target resolution and aim point ───────────────────────────────
-            _aimPoint = ResolveAimPoint(request, effectiveSubType, agentState.Position, out _leadDistance);
+            _aimPoint = ResolveAimPoint(request, agentState.Position, out _leadDistance);
             _aimPoint = PassTargetResolver.ClampToPitchBounds(_aimPoint);
 
             // ── Base kick direction (pre-error) ──────────────────────────────────────
             _baseKickDirection = PassTargetResolver.ComputeKickDirection(agentState.Position, _aimPoint);
 
             // ── Cache error-chain inputs ──────────────────────────────────────────────
-            _cachedPassing       = attrs.Passing;
-            _cachedFatigue       = attrs.Fatigue;
-            _cachedBodyAngleDeg  = PassTargetResolver.ComputeBodyAngle(agentState.FacingDirection, _baseKickDirection);
-            _cachedIsWeakFoot    = request.IsWeakFoot;
-            _cachedWeakFootRating = attrs.WeakFootRating;
-            _passerPosition      = agentState.Position;
+            _cachedPassing            = attrs.Passing;
+            _cachedFatigue            = attrs.Fatigue;
+            _cachedBodyAngleDeg       = PassTargetResolver.ComputeBodyAngle(agentState.FacingDirection, _baseKickDirection);
+            _cachedIsWeakFoot         = request.IsWeakFoot;
+            _cachedWeakFootRating     = attrs.WeakFootRating;
+            _cachedEffectiveSubType   = effectiveSubType;
+            _passerPosition           = agentState.Position;
 
             // ── §3.8.8 — Windup duration ─────────────────────────────────────────────
             int baseWindup  = PassMechanicsConstants.GetWindupFrames(request.PassType, effectiveSubType);
@@ -218,13 +227,13 @@ namespace TacticalDirector.PassMechanics
 
             _state = PassExecutionState.Windup;
 
-            // Return a sentinel indicating pass started successfully
             return new PassResult
             {
-                Outcome   = PassOutcome.Completed,
-                PassType  = request.PassType,
-                AimPoint  = _aimPoint,
-                LeadDistance = _leadDistance
+                Outcome      = PassOutcome.Initiated,
+                PassType     = request.PassType,
+                AimPoint     = _aimPoint,
+                LeadDistance = _leadDistance,
+                ContactFrame = -1
             };
         }
 
@@ -247,7 +256,7 @@ namespace TacticalDirector.PassMechanics
                     break;
 
                 case PassExecutionState.Windup:
-                    UpdateWindup(matchTime);
+                    UpdateWindup(matchTime, frameNumber);
                     break;
 
                 case PassExecutionState.Contact:
@@ -268,15 +277,16 @@ namespace TacticalDirector.PassMechanics
 
         // ── WINDUP State ─────────────────────────────────────────────────────────────
 
-        private void UpdateWindup(float matchTime)
+        private void UpdateWindup(float matchTime, int frameNumber)
         {
             // Poll tackle interrupt first — §3.8.5
             if (_collisionQuery.GetAndClearTackleFlag(_request.AgentId))
             {
                 _lastResult = new PassResult
                 {
-                    Outcome  = PassOutcome.Cancelled,
-                    PassType = _request.PassType
+                    Outcome      = PassOutcome.Cancelled,
+                    PassType     = _request.PassType,
+                    ContactFrame = -1
                 };
 
                 EventBusStub.Publish(new PassCancelledEvent
@@ -285,7 +295,7 @@ namespace TacticalDirector.PassMechanics
                     TeamId       = _request.TeamId,
                     CancelReason = CancelReason.TackleInterrupt,
                     PassType     = _request.PassType,
-                    Frame        = _request.FrameNumber,
+                    Frame        = frameNumber,
                     MatchTime    = matchTime
                 });
 
@@ -306,13 +316,9 @@ namespace TacticalDirector.PassMechanics
             float pressureScalar = _collisionQuery.ComputePressureScalar(_passerPosition, _request.TeamId);
 
             // Step 2: Recompute error angle with fresh pressure — §3.8.6
-            CrossSubType effectiveSubType = (_request.PassType == PassType.Cross)
-                ? _request.CrossSubType
-                : CrossSubType.Flat;
-
             float errorAngleDeg = PassErrorCalculator.ComputeErrorAngle(
                 _request.PassType,
-                effectiveSubType,
+                _cachedEffectiveSubType,
                 _cachedPassing,
                 pressureScalar,
                 _cachedFatigue,
@@ -339,7 +345,7 @@ namespace TacticalDirector.PassMechanics
             if (float.IsNaN(finalVelocity.x) || float.IsNaN(finalVelocity.y) || float.IsNaN(finalVelocity.z))
             {
                 Debug.LogError($"[PassExecutor] FM-04: NaN in finalVelocity. Pass cancelled. Agent={_request.AgentId}");
-                _lastResult = new PassResult { Outcome = PassOutcome.Cancelled, PassType = _request.PassType };
+                _lastResult = new PassResult { Outcome = PassOutcome.Cancelled, PassType = _request.PassType, ContactFrame = -1 };
                 _state = PassExecutionState.Idle;
                 return;
             }
@@ -348,7 +354,7 @@ namespace TacticalDirector.PassMechanics
             if (!_ballSystem.IsBallPossessedBy(_request.AgentId))
             {
                 Debug.LogError($"[PassExecutor] FM-08: Agent {_request.AgentId} lost possession before CONTACT. Race condition.");
-                _lastResult = new PassResult { Outcome = PassOutcome.Cancelled, PassType = _request.PassType };
+                _lastResult = new PassResult { Outcome = PassOutcome.Cancelled, PassType = _request.PassType, ContactFrame = -1 };
                 _state = PassExecutionState.Idle;
                 return;
             }
@@ -376,7 +382,7 @@ namespace TacticalDirector.PassMechanics
                 AgentId       = _request.AgentId,
                 TeamId        = _request.TeamId,
                 PassType      = _request.PassType,
-                CrossSubType  = effectiveSubType,
+                CrossSubType  = _cachedEffectiveSubType,
                 TargetPosition = _aimPoint,
                 FinalVelocity = finalVelocity,
                 FinalSpin     = _spinVector,
@@ -396,7 +402,6 @@ namespace TacticalDirector.PassMechanics
 
         private Vector3 ResolveAimPoint(
             in PassRequest request,
-            CrossSubType effectiveSubType,
             Vector2 passerPosition,
             out float leadDistance)
         {
@@ -406,14 +411,7 @@ namespace TacticalDirector.PassMechanics
             if (!prof.IsSpaceTargeted)
             {
                 // Player-targeted: aim at current receiver position — §3.6.3
-                if (request.TargetAgentId == PassMechanicsConstants.AGENT_ID_NONE)
-                {
-                    // FM-11: no valid target for player-targeted pass type
-                    Debug.LogError($"[PassExecutor] FM-11: Player-targeted pass type {request.PassType} has TargetAgentId=-1.");
-                    return PassTargetResolver.ResolvePlayerTargetedAimPoint(
-                        passerPosition + Vector2.right * request.IntendedDistance);
-                }
-
+                // TargetAgentId != -1 guaranteed by FM-11 check in Execute()
                 PassAgentState receiverState = _agentQuery.GetState(request.TargetAgentId);
                 return PassTargetResolver.ResolvePlayerTargetedAimPoint(receiverState.Position);
             }
@@ -440,7 +438,7 @@ namespace TacticalDirector.PassMechanics
 
         private static PassResult MakeInvalidResult(PassType passType)
         {
-            return new PassResult { Outcome = PassOutcome.Invalid, PassType = passType };
+            return new PassResult { Outcome = PassOutcome.Invalid, PassType = passType, ContactFrame = -1 };
         }
     }
 }
@@ -450,4 +448,19 @@ namespace TacticalDirector.PassMechanics
 // | 1.0     | 2026-05-26 | —      | Initial implementation.                                                      |
 // | 1.1     | 2026-05-26 | —      | H1: Idle guard added to Execute() (prevent in-progress overwrite).           |
 // |         |            |        |     M3: Update() gains frameNumber param; ContactFrame/Frame set accurately. |
+// | 1.2     | 2026-05-27 | —      | AR-1 H-2: Execute() sentinel changed Completed → Initiated (Completed       |
+// |         |            |        |     semantics are "ball kicked"; Initiated is "windup started").             |
+// |         |            |        | AR-1 H-3: UpdateWindup gains frameNumber param; PassCancelledEvent.Frame     |
+// |         |            |        |     now records cancellation frame, not initiation frame (§3.9.3).          |
+// |         |            |        | AR-1 round-2 L-A: all non-Completed PassResult paths set ContactFrame=-1    |
+// |         |            |        |     (previously 0, ambiguous with frame 0 at start of match).               |
+// | 1.3     | 2026-05-27 | —      | AR-1 round-3 L-C: added _cachedEffectiveSubType field; set in Execute()    |
+// |         |            |        |     cache block; ExecuteContact uses cached value instead of recomputing.   |
+// |         |            |        | AR-1 round-3 M-C: removed unused CrossSubType param from ResolveAimPoint;  |
+// |         |            |        |     PassAttemptEvent.CrossSubType uses _cachedEffectiveSubType.             |
+// | 1.4     | 2026-05-27 | —      | AR-1 round-4 M-A: FM-11 check moved from ResolveAimPoint to Execute();    |
+// |         |            |        |     player-targeted pass with TargetAgentId=-1 now returns Invalid (was    |
+// |         |            |        |     logging error but returning Initiated with fallback aim point).         |
+// | 1.5     | 2026-05-27 | —      | AR-1 round-5 M-B: removed unused ref BallState ball param from Execute(); |
+// |         |            |        |     possession check uses _ballSystem, not BallState directly.            |
 #endregion

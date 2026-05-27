@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassResult.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §2.4.2, Code Standards #20
 // Purpose:  Output struct returned by PassExecutor. Contains full execution record
@@ -46,7 +46,7 @@ namespace TacticalDirector.PassMechanics
 
         /// <summary>
         /// Simulation frame on which Ball.ApplyKick() was called.
-        /// Used for replay synchronisation. Zero if not Completed.
+        /// Used for replay synchronisation. -1 if Outcome != Completed.
         /// </summary>
         public int ContactFrame;
 
@@ -56,6 +56,8 @@ namespace TacticalDirector.PassMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                  |
-// | 1.0     | 2026-05-26 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-26 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-05-27 | —      | AR-1 round-2 L-A: ContactFrame doc corrected to -1 sentinel        |
+// |         |            |        |     (0 was ambiguous with frame 0; -1 unambiguously means none).   |
 #endregion

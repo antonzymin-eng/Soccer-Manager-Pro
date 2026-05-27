@@ -1,11 +1,13 @@
 // File:     src/pass-mechanics/PassMechanicsConstants.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.2.9, §3.3.7, §3.4.7, §3.5.9, §3.6.9, §3.7.6,
 //           §3.8.10, Code Standards #20
 // Purpose:  All constants for the pass mechanics system. No literals in formula code.
 //           Region order: Fixed → Derived → Cross → GT → EST.
+
+using UnityEngine;
 
 using TacticalDirector.BallPhysics;
 
@@ -182,7 +184,9 @@ namespace TacticalDirector.PassMechanics
                 case PassType.Cross:
                     return (crossSubType == CrossSubType.Whipped) ? 3.0f : 2.5f;
                 case PassType.Chip:         return 2.5f;
-                default:                    return 2.0f;
+                default:
+                    Debug.LogError($"[PassMechanics] FM-01: GetBaseError called for unknown PassType={passType}. Returning 2.0°.");
+                    return 2.0f;
             }
         }
 
@@ -205,7 +209,9 @@ namespace TacticalDirector.PassMechanics
                 case PassType.Cross:
                     return (crossSubType == CrossSubType.High) ? 14 : 12;
                 case PassType.Chip:         return 10;
-                default:                    return 10;
+                default:
+                    Debug.LogError($"[PassMechanics] FM-01: GetWindupFrames called for unknown PassType={passType}. Returning 10.");
+                    return 10;
             }
         }
 
@@ -225,13 +231,18 @@ namespace TacticalDirector.PassMechanics
                 case PassType.Cross:
                     return (crossSubType == CrossSubType.High) ? 10 : 8;
                 case PassType.Chip:         return 8;
-                default:                    return 8;
+                default:
+                    Debug.LogError($"[PassMechanics] FM-01: GetFollowThroughFrames called for unknown PassType={passType}. Returning 8.");
+                    return 8;
             }
         }
     }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                  |
-// | 1.0     | 2026-05-26 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                   |
+// | 1.0     | 2026-05-26 | —      | Initial implementation.                                                 |
+// | 1.1     | 2026-05-27 | —      | AR-1 round-2 M-A: added using UnityEngine; GetBaseError, GetWindupFrames, |
+// |         |            |        |     GetFollowThroughFrames default cases now log FM-01 errors (consistent |
+// |         |            |        |     with PassTypeProfiles.GetProfile and PassVelocityCalculator defaults). |
 #endregion

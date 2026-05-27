@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassVelocityCalculator.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-27
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.2, §3.3, §3.4, Code Standards #20
 // Purpose:  Pure static calculator for kick speed (§3.2), launch angle (§3.3),
@@ -16,7 +16,7 @@ namespace TacticalDirector.PassMechanics
     /// Computes kick speed, launch angle, spin vector, and kick velocity Vector3.
     /// Pure calculations — no state, no side effects. Pass Mechanics #5 §3.2–3.4.
     /// </summary>
-    public static class PassVelocityCalculator
+    internal static class PassVelocityCalculator
     {
         // ── §3.2 — Kick Speed ───────────────────────────────────────────────────────
 
@@ -51,9 +51,10 @@ namespace TacticalDirector.PassMechanics
 
             float kickSpeed = Mathf.Clamp(vUnclamped, profile.VMin, profile.VMax);
 
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
             if (kickSpeed <= profile.VMin + 0.001f)
                 Debug.Log($"[PassVelocity] kickSpeed clamped to vMin ({profile.VMin:F2}). K={K:F1}, D={D:F1}, Fatigue={fatigue:F2}");
-
+#endif
             return kickSpeed;
         }
 
@@ -93,9 +94,10 @@ namespace TacticalDirector.PassMechanics
 
             float clamped = Mathf.Clamp(theta, profile.AngleMin, profile.AngleMax);
 
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
             if (!Mathf.Approximately(theta, clamped))
                 Debug.Log($"[LaunchAngle] Clamped for {passType}: computed={theta:F1}° → clamped={clamped:F1}°");
-
+#endif
             return clamped;
         }
 
@@ -204,7 +206,7 @@ namespace TacticalDirector.PassMechanics
         /// Returns true if the apex-derived angle formula applies (§3.3.4).
         /// Applies to: Lofted, AerialThrough, Cross (High), Chip.
         /// </summary>
-        public static bool IsAerialFormula(PassType passType, CrossSubType crossSubType)
+        internal static bool IsAerialFormula(PassType passType, CrossSubType crossSubType)
         {
             if (passType == PassType.Cross)
                 return crossSubType == CrossSubType.High;
@@ -236,4 +238,8 @@ namespace TacticalDirector.PassMechanics
 // | Version | Date       | Author | Notes                                                                   |
 // | 1.0     | 2026-05-26 | —      | Initial implementation.                                                 |
 // | 1.1     | 2026-05-26 | —      | M4: Removed unused crossSubType param from private GetApexHeight().     |
+// | 1.2     | 2026-05-27 | —      | AR-1 H-1: class changed public → internal; CS0050/CS0051 compile error  |
+// |         |            |        |     (public methods exposing internal PhysicalProfile type).            |
+// |         |            |        | AR-1 M-2: diagnostic Debug.Log calls guarded by                         |
+// |         |            |        |     #if DEVELOPMENT_BUILD || UNITY_EDITOR (FR-CS-027-034).             |
 #endregion
