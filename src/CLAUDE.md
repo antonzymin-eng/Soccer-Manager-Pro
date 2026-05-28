@@ -132,6 +132,36 @@ src/
 │   ├── IPassCollisionQuery.cs         ← interface: interception queries into Collision System
 │   └── EventBusStub.cs                ← stub pending Event System #17 wiring (Stage 1)
 ├── shot-mechanics/                    ← Spec #6
+│   ├── ShotMechanicsConstants.cs      ← all GT/Fixed/Cross constants (velocity, angle, spin, error, body, weak-foot, timing)
+│   ├── ContactZone.cs                 ← enum: Centre / BelowCentre / OffCentre
+│   ├── ShotOutcome.cs                 ← enum: Completed / Cancelled / Invalid / Initiated
+│   ├── ShotCancelReason.cs            ← enum: TackleInterrupt
+│   ├── ShotRequest.cs                 ← input struct from Decision Tree to ShotExecutor
+│   ├── ShotResult.cs                  ← output struct returned by ShotExecutor
+│   ├── ShotAgentAttributes.cs         ← agent attribute snapshot (Finishing, LongShots, etc.)
+│   ├── ShotAgentState.cs              ← agent physical state snapshot (position, velocity, etc.)
+│   ├── ShotExecutedEvent.cs           ← struct event published at CONTACT completion
+│   ├── ShotCancelledEvent.cs          ← struct event published on WINDUP tackle interrupt
+│   ├── ShotAnimationData.cs           ← struct event stub for animation system (Stage 1+)
+│   ├── BodyMechanicsResult.cs         ← output struct from BodyMechanicsEvaluator
+│   ├── GoalGeometry.cs                ← value struct: goal width/height/line/posts/crossbar
+│   ├── IShotVelocityCalculator.cs     ← interface for EC-008 NaN injection seam only
+│   ├── IShotBallSystem.cs             ← interface: possession check + ApplyKick
+│   ├── IShotAgentQuery.cs             ← interface: read agent attributes and state
+│   ├── IShotCollisionQuery.cs         ← interface: tackle flag poll + pressure scalar
+│   ├── GoalGeometryProvider.cs        ← static goal geometry access + test override seam (SP-009)
+│   ├── ShotVelocityCalculator.cs      ← §3.2 velocity formula; singleton; implements IShotVelocityCalculator
+│   ├── ShotLaunchAngleCalculator.cs   ← §3.3 launch angle formula; pure static
+│   ├── ShotSpinCalculator.cs          ← §3.4 spin vector assembly; pure static
+│   ├── ShotPlacementResolver.cs       ← §3.5 goal-relative placement → world-space aim direction
+│   ├── BodyMechanicsEvaluator.cs      ← §3.7 body mechanics score (run-up, plant, velocity, lean)
+│   ├── WeakFootPenaltyApplier.cs      ← §3.8 weak-foot error/velocity multipliers
+│   ├── ShotErrorCalculator.cs         ← §3.6 deterministic angular error (magnitude + direction)
+│   ├── ShotEventEmitter.cs            ← publishes ShotExecutedEvent / ShotCancelledEvent / ShotAnimationData
+│   ├── EventBusStub.cs                ← Stage 0 no-op event bus; replace at Stage 1 with Event System #17
+│   ├── ShotExecutor.cs                ← sealed orchestrator: 5-state machine (Idle/Windup/Contact/FollowThrough/Complete)
+│   └── Tests/
+│       └── NaNVelocityStub.cs         ← #if UNITY_EDITOR||DEVELOPMENT_BUILD; returns NaN for EC-008 FM-05 test
 ├── perception-system/                 ← Spec #7
 ├── decision-tree/                     ← Spec #8
 ├── fixed64-math/                      ← Spec #9  (Stage 5+; no runtime code at Stage 0)
@@ -697,3 +727,4 @@ Update this file when those items are resolved.
 | 1.9 | 2026-05-25 | — | Tracking-doc sync. ball-physics/ tree: `BallStateSystem.cs` removed (never implemented); `BallStateMachineTests.cs` added (exists at `src/Core/Physics/Ball/Tests/`); structural deviation warning added (actual path is `src/Core/Physics/Ball/`, not `src/ball-physics/`). |
 | 1.10 | 2026-05-27 | — | Tree expanded for Collision System (#3) 18 files with role annotations; First Touch (#4) 15 files with role annotations; Pass Mechanics (#5) 22 files with role annotations. agent-movement/ tests updated: `AgentMovementTests.cs` added (from AR-2/AR-3 pass May 27). |
 | 1.11 | 2026-05-27 | — | AR-1 pass-mechanics adversarial review fix pass. L-2: corrected stale enum value descriptions for PassType.cs / CrossSubType.cs / SpinType.cs / PassOutcome.cs. M-3: PassEvents.cs renamed to CancelReason.cs in tree. |
+| 1.12 | 2026-05-28 | — | Shot Mechanics (#6) tree expanded: 27 files + Tests/NaNVelocityStub.cs. AR-1 fix pass applied (H-1: BodyMechanicsResult extracted; H-2: GoalGeometry extracted; H-3: underscore GT constants renamed to PascalCase; M-1: unused AdvanceWindup param removed; M-2/M-3/M-4: magic literals promoted to constants). |
