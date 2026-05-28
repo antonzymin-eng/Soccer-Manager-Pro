@@ -86,7 +86,7 @@ namespace TacticalDirector.HeadingMechanics
             }
 
             float u = (float)offset / totalPhaseFrames;
-            return jumpReachM * HeadingMechanicsConstants.ParabolaAmplitude * u * (1.0f - u);
+            return jumpReachM * HeadingMechanicsConstants.PARABOLA_AMPLITUDE * u * (1.0f - u);
         }
 
         // ── Private helpers ──────────────────────────────────────────────────────────
@@ -104,5 +104,5 @@ namespace TacticalDirector.HeadingMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                          |
-// | 1.1     | 2026-05-28 | —      | AR-1 M-2: 4.0f literal → ParabolaAmplitude constant.             |
+// | 1.1     | 2026-05-28 | —      | AR-1 M-2: 4.0f literal → PARABOLA_AMPLITUDE constant.             |
 #endregion

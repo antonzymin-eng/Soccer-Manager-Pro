@@ -158,11 +158,11 @@ namespace TacticalDirector.HeadingMechanics
             int currentFrame,
             int apexFrame)
         {
-            float frameS = HeadingMechanicsConstants.FrameMs / 1000.0f;
+            float frameS = HeadingMechanicsConstants.FrameS;
             float radius = HeadingMechanicsConstants.HeadContactVolumeRadiusM;
             float radiusSq = radius * radius;
 
-            // Search ±(framesEarlyTolerance + framesLateTolerance) around apexFrame.
+            // Search forward from currentFrame to apexFrame + FramesLateTolerance.
             int windowStart = currentFrame;
             int windowEnd   = apexFrame + HeadingMechanicsConstants.FramesLateTolerance;
 
@@ -189,13 +189,13 @@ namespace TacticalDirector.HeadingMechanics
                 ball.Position.x + ball.Velocity.x * dt,
                 ball.Position.y + ball.Velocity.y * dt,
                 ball.Position.z + ball.Velocity.z * dt
-                    - 0.5f * HeadingMechanicsConstants.GravityMps2 * dt * dt);
+                    - HeadingMechanicsConstants.KINEMATIC_HALF_COEFF * HeadingMechanicsConstants.GravityMps2 * dt * dt);
         }
 
         /// <summary>Predicts ball Z at a specific frame offset for the head-height check in step 4.</summary>
         private static float PredictBallZ(BallState ball, int targetFrame, int currentFrame)
         {
-            float dt = (targetFrame - currentFrame) * HeadingMechanicsConstants.FrameMs / 1000.0f;
+            float dt = (targetFrame - currentFrame) * HeadingMechanicsConstants.FrameS;
             return ball.Position.z + ball.Velocity.z * dt
                    - 0.5f * HeadingMechanicsConstants.GravityMps2 * dt * dt;
         }
@@ -204,5 +204,8 @@ namespace TacticalDirector.HeadingMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                                         |
+// | 1.1     | 2026-05-28 | —      | AR-2 H-3: corrected misleading comment in FindContactFrame (now describes        |
+// |         |            |        | forward-only window correctly). M-2: FrameMs/1000.0f → FrameS (×2).            |
+// |         |            |        | M-6: 0.5f*GravityMps2 → KINEMATIC_HALF_COEFF*GravityMps2 (×2).                 |
 #endregion

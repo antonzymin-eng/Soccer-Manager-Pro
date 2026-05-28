@@ -100,7 +100,7 @@ namespace TacticalDirector.HeadingMechanics
                 HeadingMechanicsConstants.ATTR_MAX)
                 / HeadingMechanicsConstants.ATTR_MAX;
 
-            return 1.0f + HeadingMechanicsConstants.ContactPointHeadingAttrCoeff * (headingNorm - HeadingMechanicsConstants.AttributeNormMidpoint);
+            return 1.0f + HeadingMechanicsConstants.ContactPointHeadingAttrCoeff * (headingNorm - HeadingMechanicsConstants.ATTRIBUTE_NORM_MIDPOINT);
         }
 
         // ── Private helpers ──────────────────────────────────────────────────────────
@@ -131,5 +131,5 @@ namespace TacticalDirector.HeadingMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                    |
-// | 1.1     | 2026-05-28 | —      | AR-1 M-3: 0.5f literal → AttributeNormMidpoint. L-4: XML added to Clamp01. |
+// | 1.1     | 2026-05-28 | —      | AR-1 M-3: 0.5f literal → ATTRIBUTE_NORM_MIDPOINT. L-4: XML added to Clamp01. |
 #endregion

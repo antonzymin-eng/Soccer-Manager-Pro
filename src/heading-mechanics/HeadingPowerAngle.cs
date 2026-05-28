@@ -85,7 +85,7 @@ namespace TacticalDirector.HeadingMechanics
             Vector3 headCentre_worldspace,
             Vector3 incomingBallVelocity)
         {
-            if (incomingBallVelocity.sqrMagnitude < HeadingMechanicsConstants.DegeneracyEpsilonSq)
+            if (incomingBallVelocity.sqrMagnitude < HeadingMechanicsConstants.DEGENERACY_EPSILON_SQ)
             {
                 return Vector3.forward;
             }
@@ -93,16 +93,16 @@ namespace TacticalDirector.HeadingMechanics
             Vector3 incident = -incomingBallVelocity.normalized;
 
             Vector3 surfaceDelta = contactPointActual_worldspace - headCentre_worldspace;
-            if (surfaceDelta.sqrMagnitude < HeadingMechanicsConstants.SurfaceNormalEpsilonSq)
+            if (surfaceDelta.sqrMagnitude < HeadingMechanicsConstants.SURFACE_NORMAL_EPSILON_SQ)
             {
                 return incident;
             }
 
             Vector3 normal      = surfaceDelta.normalized;
             float   dotProduct  = Vector3.Dot(incident, normal);
-            Vector3 reflected   = 2.0f * dotProduct * normal - incident;
+            Vector3 reflected   = HeadingMechanicsConstants.REFLECTION_FORMULA_COEFF * dotProduct * normal - incident;
 
-            if (reflected.sqrMagnitude < HeadingMechanicsConstants.SurfaceNormalEpsilonSq)
+            if (reflected.sqrMagnitude < HeadingMechanicsConstants.SURFACE_NORMAL_EPSILON_SQ)
             {
                 return incident;
             }
@@ -127,14 +127,14 @@ namespace TacticalDirector.HeadingMechanics
         {
             float horizonS = HeadingMechanicsConstants.OwnGoalProjectionHorizonS;
             float horizonM = HeadingMechanicsConstants.OwnGoalProjectionHorizonM;
-            float stepS    = HeadingMechanicsConstants.FrameMs / 1000.0f;
+            float stepS    = HeadingMechanicsConstants.FrameS;
 
             // Goal bounding box for the agent's own goal.
             float goalX          = teamId == 0
                 ? 0.0f
                 : HeadingMechanicsConstants.PitchLengthM;
             float goalHalfWidth  = HeadingMechanicsConstants.GoalHalfWidthM;
-            float pitchCentreY   = HeadingMechanicsConstants.PitchWidthM * 0.5f;
+            float pitchCentreY   = HeadingMechanicsConstants.PitchCentreYM;
             float goalYMin       = pitchCentreY - goalHalfWidth;
             float goalYMax       = pitchCentreY + goalHalfWidth;
             float goalZMax       = HeadingMechanicsConstants.GoalHeightM;
@@ -176,7 +176,7 @@ namespace TacticalDirector.HeadingMechanics
                 origin.x + velocity.x * t,
                 origin.y + velocity.y * t,
                 origin.z + velocity.z * t
-                    - 0.5f * HeadingMechanicsConstants.GravityMps2 * t * t);
+                    - HeadingMechanicsConstants.KINEMATIC_HALF_COEFF * HeadingMechanicsConstants.GravityMps2 * t * t);
         }
 
         private static float NormAttr(int attribute)
@@ -193,5 +193,7 @@ namespace TacticalDirector.HeadingMechanics
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                                  |
 // | 1.1     | 2026-05-28 | —      | AR-1 M-4: GoalWidthM*0.5f → GoalHalfWidthM. M-5: local const GoalDepthM → constant.    |
-// |         |            |        | L-1: 1e-6f → DegeneracyEpsilonSq. L-2: 1e-8f → SurfaceNormalEpsilonSq (×2).          |
+// |         |            |        | L-1: 1e-6f → DEGENERACY_EPSILON_SQ. L-2: 1e-8f → SURFACE_NORMAL_EPSILON_SQ (×2).          |
+// | 1.2     | 2026-05-28 | —      | AR-2 M-2: FrameMs/1000.0f → FrameS. M-3: PitchWidthM*0.5f → PitchCentreYM.     |
+// |         |            |        | M-4: 2.0f*dot*normal → REFLECTION_FORMULA_COEFF. M-6: 0.5f*g → KINEMATIC_HALF_COEFF. |
 #endregion

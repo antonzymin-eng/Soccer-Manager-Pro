@@ -15,8 +15,9 @@ namespace TacticalDirector.HeadingMechanics
     public static class EventBusStub
     {
         /// <summary>
-        /// Accepts any struct event. In DEVELOPMENT_BUILD or UNITY_EDITOR logs the type name.
-        /// In all other builds compiles to a no-op.
+        /// Accepts any struct event and discards it.
+        /// Stage 0 no-op: compiles to nothing in all build configurations.
+        /// Replace with Event System #17 at Stage 1 (§4.3).
         /// </summary>
         public static void Publish<T>(in T evt) where T : struct
         {
@@ -30,4 +31,5 @@ namespace TacticalDirector.HeadingMechanics
 // | Version | Date       | Author | Notes                                                                    |
 // | 1.0     | 2026-05-28 | —      | Initial implementation. Pattern reused from Shot Mechanics EventBusStub.         |
 // | 1.1     | 2026-05-28 | —      | AR-1 H-4: removed Debug.Log string interpolation (allocates on hot path FR-CS-031). |
+// | 1.2     | 2026-05-28 | —      | AR-3 L-1: corrected stale XML doc on Publish<T> — no longer logs in any build.       |
 #endregion

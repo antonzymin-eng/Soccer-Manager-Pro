@@ -11,6 +11,7 @@ using UnityEngine.Profiling;
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
+using TacticalDirector.CollisionSystem;
 
 namespace TacticalDirector.HeadingMechanics
 {
@@ -67,6 +68,12 @@ namespace TacticalDirector.HeadingMechanics
         }
 
         // ── Public API ───────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Exposes the internal ICollisionEventConsumer so Collision System #3 can push
+        /// AGENT_BALL events into the duel resolution buffer each frame (§4.2.1 / KD-8).
+        /// </summary>
+        public ICollisionEventConsumer CollisionConsumer => _duelResolution;
 
         /// <summary>
         /// Commits a HeaderIntent for an agent (called from the 10 Hz tactical loop).
@@ -192,6 +199,10 @@ namespace TacticalDirector.HeadingMechanics
                     out BallState freshBall);
 
                 // Update snapshot frame if ball was re-queried.
+                if (currentFrame - _ballSnapshotFrames[agentId] > 1)
+                {
+                    _telemetry.WarnBallStateStale(agentId);
+                }
                 currentBall                   = freshBall;
                 _ballSnapshotFrames[agentId]  = currentFrame;
 
@@ -260,9 +271,6 @@ namespace TacticalDirector.HeadingMechanics
                     // Register with duel resolution (always; uncontested agents will be solo-resolved).
                     float baseScore = HeadingDuelResolution.ComputeBaseScore(attrs);
                     _duelResolution.RegisterDuelCandidate(agentId, currentMatchTime, baseScore);
-
-                    // Stash for use in Pass 2.
-                    _contactStates[agentId] = contactState;
                 }
 
                 // Do not update PrevFrameFacingDirection on the contact frame; Pass 2 needs the
@@ -523,4 +531,7 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | call sites updated so ComputeClosestApproach receives real agent positions.      |
 // | 1.2     | 2026-05-28 | —      | AR-2 M: PrevFrameFacingDirection no longer overwritten on the contact frame;      |
 // |         |            |        | fixes zero headAngularVelocity in spin finite-difference (§3.6 FR-HE-032).       |
+// | 1.3     | 2026-05-28 | —      | AR-2 H-2: CollisionConsumer property + using CollisionSystem added.               |
+// |         |            |        | AR-2 M-5: WarnBallStateStale telemetry call added on stale BallState snapshot.   |
+// |         |            |        | AR-2 L-3: Redundant self-assignment _contactStates[agentId]=contactState removed. |
 #endregion

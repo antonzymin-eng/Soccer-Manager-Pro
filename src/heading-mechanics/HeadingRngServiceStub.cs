@@ -48,9 +48,9 @@ namespace TacticalDirector.HeadingMechanics
             // Box-Muller: two uniform samples → one standard-normal sample.
             float u1 = NextFloat(drawSiteId);
             float u2 = NextFloat(drawSiteId);
-            if (u1 < HeadingMechanicsConstants.RngGuardEpsilon)
+            if (u1 < HeadingMechanicsConstants.RNG_GUARD_EPSILON)
             {
-                u1 = HeadingMechanicsConstants.RngGuardEpsilon;
+                u1 = HeadingMechanicsConstants.RNG_GUARD_EPSILON;
             }
             return Mathf.Sqrt(-2.0f * Mathf.Log(u1)) * Mathf.Cos(2.0f * Mathf.PI * u2);
         }
@@ -72,5 +72,5 @@ namespace TacticalDirector.HeadingMechanics
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                         |
 // | 1.1     | 2026-05-28 | —      | AR-1 H-3: SplitMix64 corrected — raw counter in _state (incremented each call); |
 // |         |            |        | Mix() produces output only; constructor stores seed directly, no initial step.  |
-// |         |            |        | Box-Muller guard uses RngGuardEpsilon constant (was 1e-7f literal).             |
+// |         |            |        | Box-Muller guard uses RNG_GUARD_EPSILON constant (was 1e-7f literal).             |
 #endregion

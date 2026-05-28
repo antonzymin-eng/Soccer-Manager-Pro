@@ -40,19 +40,28 @@ namespace TacticalDirector.HeadingMechanics
         public const float ATTR_MIN = 1.0f;
 
         /// <summary>[FIXED] Coefficient in the standard parabolic arc formula 4u(1−u) giving peak = 1 at u = 0.5. §3.3 KD-18.</summary>
-        public const float ParabolaAmplitude = 4.0f;
+        public const float PARABOLA_AMPLITUDE = 4.0f;
 
         /// <summary>[FIXED] Midpoint of the normalised attribute range [0, 1]. Used in headingAttrScale formula §3.4.</summary>
-        public const float AttributeNormMidpoint = 0.5f;
+        public const float ATTRIBUTE_NORM_MIDPOINT = 0.5f;
 
         /// <summary>[FIXED] Squared-magnitude epsilon for degenerate-vector guards (avoids division by zero). §3.5 / §3.6.</summary>
-        public const float DegeneracyEpsilonSq = 1e-6f;
+        public const float DEGENERACY_EPSILON_SQ = 1e-6f;
 
         /// <summary>[FIXED] Minimum value of u1 in the Box-Muller transform, guarding against log(0). HeadingRngServiceStub.</summary>
-        public const float RngGuardEpsilon = 1e-7f;
+        public const float RNG_GUARD_EPSILON = 1e-7f;
 
         /// <summary>[FIXED] Squared-magnitude epsilon for degenerate-surface-normal and degenerate-reflection guards. §3.5.</summary>
-        public const float SurfaceNormalEpsilonSq = 1e-8f;
+        public const float SURFACE_NORMAL_EPSILON_SQ = 1e-8f;
+
+        /// <summary>[FIXED] Milliseconds per second. Unit-conversion coefficient for ms ↔ s throughout §3.2–§3.8.</summary>
+        public const float MS_PER_SECOND = 1000.0f;
+
+        /// <summary>[FIXED] Coefficient in the standard reflection formula r = 2(n·d)n − d. §3.5 FM-010-003.</summary>
+        public const float REFLECTION_FORMULA_COEFF = 2.0f;
+
+        /// <summary>[FIXED] Half-coefficient in the kinematic equation s = v₀t + ½at². §3.3 KD-18 / §3.8.</summary>
+        public const float KINEMATIC_HALF_COEFF = 0.5f;
 
         #endregion
 
@@ -60,10 +69,17 @@ namespace TacticalDirector.HeadingMechanics
 
         /// <summary>
         /// [DERIVED] Physics frame duration in milliseconds.
-        /// Formula: 1000 / TickRatePhysicsHz. Heading Mechanics #10 §3.1 / FM-010 (§3.2).
-        /// Source constants: HeadingMechanicsConstants.TickRatePhysicsHz (const — always available).
+        /// Formula: MS_PER_SECOND / TickRatePhysicsHz. Heading Mechanics #10 §3.1 / FM-010 (§3.2).
+        /// Source constants: MS_PER_SECOND (Fixed const), TickRatePhysicsHz (Cross const — always available).
         /// </summary>
-        public static readonly float FrameMs = 1000.0f / TickRatePhysicsHz;
+        public static readonly float FrameMs = MS_PER_SECOND / TickRatePhysicsHz;
+
+        /// <summary>
+        /// [DERIVED] Physics frame duration in seconds.
+        /// Formula: FrameMs / MS_PER_SECOND. Heading Mechanics #10 §3.1.
+        /// Source constants: FrameMs (Derived), MS_PER_SECOND (Fixed const — always available).
+        /// </summary>
+        public static readonly float FrameS = FrameMs / MS_PER_SECOND;
 
         /// <summary>
         /// [DERIVED] Number of 60 Hz physics frames per 10 Hz tactical tick.
@@ -79,6 +95,13 @@ namespace TacticalDirector.HeadingMechanics
         /// Source constants: BallPhysicsConstants.Pitch.GOAL_WIDTH (const — always available).
         /// </summary>
         public static readonly float GoalHalfWidthM = BallPhysicsConstants.Pitch.GOAL_WIDTH * 0.5f;
+
+        /// <summary>
+        /// [DERIVED] Y coordinate of pitch centre (m). Centrepoint for own-goal bounding box in §3.8.
+        /// Formula: BallPhysicsConstants.Pitch.WIDTH × 0.5. Ball Physics #1 §1.2.
+        /// Source constants: BallPhysicsConstants.Pitch.WIDTH (const — always available).
+        /// </summary>
+        public static readonly float PitchCentreYM = BallPhysicsConstants.Pitch.WIDTH * 0.5f;
 
         #endregion
 
@@ -263,6 +286,9 @@ namespace TacticalDirector.HeadingMechanics
         /// <summary>[GT] Heading weight w_H in §3.7 base-score formula FM-010-005. Sum of three weights = 1.0. §3.1.</summary>
         public static readonly float DuelHeadingWeight = 0.35f; // TODO: replace with config loader (Stage 1)
 
+        /// <summary>[GT] Match-time tolerance (s) for grouping two contact events into the same contested duel. §3.7.</summary>
+        public static readonly float DuelFrameMatchToleranceS = 0.001f; // TODO: replace with config loader (Stage 1)
+
         /// <summary>[GT] Near-tie threshold gating RNG perturbation. Non-tie scores are NEVER perturbed. FR-HE-023 / pass-1 H-5. §3.1.</summary>
         public static readonly float DuelTiebreakEpsilon = 0.02f; // TODO: replace with config loader (Stage 1)
 
@@ -321,9 +347,12 @@ namespace TacticalDirector.HeadingMechanics
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                                    |
 // | 1.1     | 2026-05-28 | —      | AR-1 fix pass: M-1 circular init resolved (TickRatePhysicsHz/TickRateTacticalHz → const    |
 // |         |            |        | float; FramesEarlyTolerance/FramesLateTolerance moved to GT after MaxEarly/Late);          |
-// |         |            |        | M-2 ParabolaAmplitude [FIXED] added; M-3 AttributeNormMidpoint [FIXED] added;             |
+// |         |            |        | M-2 PARABOLA_AMPLITUDE [FIXED] added; M-3 ATTRIBUTE_NORM_MIDPOINT [FIXED] added;             |
 // |         |            |        | M-4/M-5 GoalHalfWidthM [DERIVED] + OwnGoalBoundingBoxDepthM [GT] added;                   |
-// |         |            |        | L-1/L-2 DegeneracyEpsilonSq [FIXED] added; L-3 RngGuardEpsilon [FIXED] added.             |
-// | 1.2     | 2026-05-28 | —      | AR-1 fix pass (cont.): SurfaceNormalEpsilonSq [FIXED] added for 1e-8f surface-normal       |
-// |         |            |        | degenerate guards in HeadingPowerAngle.cs.                                                 |
+// |         |            |        | L-1/L-2 DEGENERACY_EPSILON_SQ [FIXED] added; L-3 RNG_GUARD_EPSILON [FIXED] added.             |
+// | 1.2     | 2026-05-28 | —      | AR-1 fix pass (cont.): SURFACE_NORMAL_EPSILON_SQ [FIXED] added (1e-8f guards).             |
+// | 1.3     | 2026-05-28 | —      | AR-2 H-1: 5 [FIXED] constants renamed PascalCase → ALL_CAPS. AR-2 M-1:                    |
+// |         |            |        | DuelFrameMatchToleranceS [GT] added. AR-2 M-2: MS_PER_SECOND [FIXED], FrameS [DERIVED];  |
+// |         |            |        | FrameMs formula uses MS_PER_SECOND. AR-2 M-3: PitchCentreYM [DERIVED].                  |
+// |         |            |        | AR-2 M-4: REFLECTION_FORMULA_COEFF [FIXED]. AR-2 M-6: KINEMATIC_HALF_COEFF [FIXED].     |
 #endregion

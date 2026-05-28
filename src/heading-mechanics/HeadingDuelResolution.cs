@@ -190,10 +190,9 @@ namespace TacticalDirector.HeadingMechanics
         private int FindOrCreateDuel(float contactFrameMatchTime)
         {
             // Search existing duels for this match-time window using stored float match times directly.
-            const float FrameMatchTolerance = 0.001f; // sub-millisecond — same physics frame
             for (int i = 0; i < _duelCount; i++)
             {
-                if (Mathf.Abs(_duelMatchTimes[i] - contactFrameMatchTime) < FrameMatchTolerance)
+                if (Mathf.Abs(_duelMatchTimes[i] - contactFrameMatchTime) < HeadingMechanicsConstants.DuelFrameMatchToleranceS)
                 {
                     return i;
                 }
@@ -211,7 +210,7 @@ namespace TacticalDirector.HeadingMechanics
             _duelMatchTimes[newDuelIndex] = contactFrameMatchTime;
             _duelBuffer[newDuelIndex] = new ContestedDuelContext
             {
-                DuelId           = Mathf.RoundToInt(contactFrameMatchTime * 1000.0f),
+                DuelId           = Mathf.RoundToInt(contactFrameMatchTime * HeadingMechanicsConstants.MS_PER_SECOND),
                 ParticipantCount = 0,
                 WinnerAgentId    = ContestedDuelContext.UnresolvedWinnerId,
                 BufferStartIndex = startSlot
@@ -313,4 +312,6 @@ namespace TacticalDirector.HeadingMechanics
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                         |
 // | 1.1     | 2026-05-28 | —      | AR-1 H-2: add _duelMatchTimes[] array; FindOrCreateDuel compares stored float    |
 // |         |            |        | match times directly, eliminating lossy int round-trip via DuelId.             |
+// | 1.2     | 2026-05-28 | —      | AR-2 M-1: local 0.001f tolerance → DuelFrameMatchToleranceS constant.           |
+// |         |            |        | AR-2 M-2: * 1000.0f literal → MS_PER_SECOND constant in DuelId assignment.      |
 #endregion
