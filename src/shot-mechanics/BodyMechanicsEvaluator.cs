@@ -117,6 +117,8 @@ namespace TacticalDirector.ShotMechanics
         /// </summary>
         private static float ComputeLeanScore(float speed)
         {
+            // Stage 0: LeanTolerance == BodyLeanMaxDeg (both 20°), so leanDeg ≤ LeanTolerance always → always 1.0.
+            // WeightLean (0.25) is a dead-weight contributor at Stage 0; activates when §4.3.2 native lean is wired. §3.7.6.
             float leanDeg = ShotLaunchAngleCalculator.DeriveBodyLeanAngle(speed);
             return Mathf.Clamp01(1.0f - Mathf.Max(0, leanDeg - ShotMechanicsConstants.LeanTolerance)
                                         / ShotMechanicsConstants.LeanTolerance);
@@ -128,6 +130,8 @@ namespace TacticalDirector.ShotMechanics
 // | Version | Date       | Author | Notes                                                            |
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                          |
 // | 1.1     | 2026-05-28 | —      | H-1: BodyMechanicsResult extracted to BodyMechanicsResult.cs.    |
-// | 1.2     | 2026-05-28 | —      | M-2: ComputeRunUpScore formula fixed: was 0 at 1× tolerance;     |
-// |         |            |        |   now full score within tolerance, 0 at 2× (matches §3.7.3).   |
+// | 1.2     | 2026-05-28 | —      | M-2: ComputeRunUpScore formula fixed: was 0 at 1× tolerance;              |
+// |         |            |        |   now full score within tolerance, 0 at 2× (matches §3.7.3).          |
+// | 1.3     | 2026-05-28 | —      | L-1: ComputeLeanScore: comment documents Stage 0 always-1.0 behaviour     |
+// |         |            |        |   (LeanTolerance == BodyLeanMaxDeg == 20°) and dead-weight WeightLean.  |
 #endregion

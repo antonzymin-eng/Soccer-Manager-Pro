@@ -1,10 +1,10 @@
 // File:     src/shot-mechanics/ShotMechanicsConstants.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-05-28
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.2–§3.9, §6.1, Code Standards #20
 // Purpose:  All constants for the shot mechanics system. No magic literals in formula code.
-//           Region order: Fixed → Cross → GT.
+//           Region order: Fixed → Derived → Cross → GT.
 
 using UnityEngine;
 
@@ -207,6 +207,14 @@ namespace TacticalDirector.ShotMechanics
         /// <summary>[GT] Spatial hash query radius for pressure detection (metres). §4.4.1.</summary>
         public static readonly float PressureRadiusMax = 3.0f; // TODO: replace with config loader (Stage 1)
 
+        /// <summary>[GT] Horizontal error clamp margin as fraction of goal width. §3.6.9.
+        /// Clamps post-error Y to [LeftPostY - GoalWidth × this, RightPostY + GoalWidth × this].</summary>
+        public static readonly float PlacementErrorHClampFraction = 0.5f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Vertical error clamp ceiling as fraction of goal height. §3.6.9.
+        /// Clamps post-error Z to [0, GoalHeight × this].</summary>
+        public static readonly float PlacementErrorVClampFraction = 1.5f; // TODO: replace with config loader (Stage 1)
+
         // ── §3.7 Body Mechanics ─────────────────────────────────────────────────────
 
         /// <summary>[GT] Ideal run-up approach angle relative to goal line (degrees). §3.7.3.</summary>
@@ -262,8 +270,9 @@ namespace TacticalDirector.ShotMechanics
         /// <summary>[GT] Maximum WeakFootRating value (no penalty at this rating). §3.8.3, §3.8.4.</summary>
         public static readonly int WeakFootRatingMax = 5; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Effective WeakFootRating range (WeakFootRatingMax - 1). §3.8.3, §3.8.4.</summary>
-        public static readonly int WeakFootRatingRange = 4; // TODO: replace with config loader (Stage 1)
+        /// <summary>[DERIVED] Effective WeakFootRating range. Formula: WeakFootRatingMax - 1. §3.8.3, §3.8.4.
+        /// Placed here (after WeakFootRatingMax) to satisfy C# static-readonly init order; semantically Derived.</summary>
+        public static readonly int WeakFootRatingRange = WeakFootRatingMax - 1;
 
         // ── §3.3.6 Body Lean (Stage 0 approximation) ───────────────────────────────
 
@@ -359,4 +368,8 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        |   M-2: Added BodyLeanMaxDeg, BodyLeanMaxSpeed GT constants.                                  |
 // |         |            |        |   M-3: Added WeakFootRatingMax, WeakFootRatingRange GT constants.                            |
 // | 1.2     | 2026-05-28 | —      | M-5: Added Derived region with GoalCentreU/GoalCentreV (replaces 0.5f magic literals).        |
+// | 1.3     | 2026-05-28 | —      | M-6: WeakFootRatingRange [GT]→[DERIVED]; value literal 4 → WeakFootRatingMax - 1.            |
+// |         |            |        |   Header Purpose comment updated: region order Fixed→Cross→GT → Fixed→Derived→Cross→GT.  |
+// | 1.4     | 2026-05-28 | —      | M-7: Added PlacementErrorHClampFraction/VClampFraction (replaces 0.5f/1.5f in             |
+// |         |            |        |   ShotPlacementResolver.ApplyErrorOffset). §3.6.9.                                     |
 #endregion

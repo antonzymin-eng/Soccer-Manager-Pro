@@ -18,7 +18,7 @@ namespace TacticalDirector.ShotMechanics
         /// <summary>
         /// Computes error cone multiplier for weak-foot shots.
         /// Returns 1.0 (no penalty) when IsWeakFoot=false or WeakFootRating=5.
-        /// At WeakFootRating=1: multiplier = 1 + SHOT_WF_BASE_ERROR_PENALTY = 1.60.
+        /// At WeakFootRating=1: multiplier = 1 + WeakFootBaseErrorPenalty = 1.60.
         /// Shot Mechanics #6 §3.8.3.
         /// </summary>
         public static float ComputeErrorMultiplier(bool isWeakFoot, int weakFootRating)
@@ -34,7 +34,7 @@ namespace TacticalDirector.ShotMechanics
         /// <summary>
         /// Computes velocity multiplier for weak-foot shots.
         /// Returns 1.0 (no penalty) when IsWeakFoot=false or WeakFootRating=5.
-        /// At WeakFootRating=1: multiplier = 1 - SHOT_WF_VELOCITY_PENALTY = 0.80.
+        /// At WeakFootRating=1: multiplier = 1 - WeakFootVelocityPenalty = 0.80.
         /// Shot Mechanics #6 §3.8.4.
         /// </summary>
         public static float ComputeVelocityMultiplier(bool isWeakFoot, int weakFootRating)
@@ -52,5 +52,7 @@ namespace TacticalDirector.ShotMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                                       |
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                                     |
-// | 1.1     | 2026-05-28 | —      | M-3: Bare integer literals 5/4 replaced with WeakFootRatingMax/RatingRange. |
+// | 1.1     | 2026-05-28 | —      | M-3: Bare integer literals 5/4 replaced with WeakFootRatingMax/RatingRange.  |
+// | 1.2     | 2026-05-28 | —      | L-1: XML doc constant refs corrected: SHOT_WF_BASE_ERROR_PENALTY→           |
+// |         |            |        |   WeakFootBaseErrorPenalty; SHOT_WF_VELOCITY_PENALTY→WeakFootVelocityPenalty. |
 #endregion

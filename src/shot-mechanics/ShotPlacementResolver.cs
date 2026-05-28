@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotPlacementResolver.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-05-28
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.5, Code Standards #20
 // Purpose:  Translates goal-relative PlacementTarget (u, v) into a world-space aim
@@ -70,11 +70,11 @@ namespace TacticalDirector.ShotMechanics
 
             // Apply error offset in goal space: u → Y axis, v → Z axis
             float newTargetY = Mathf.Clamp(baseTarget.y + errorOffset.x * goal.GoalWidth,
-                                           goal.LeftPostY  - goal.GoalWidth * 0.5f,
-                                           goal.RightPostY + goal.GoalWidth * 0.5f);
+                                           goal.LeftPostY  - goal.GoalWidth  * ShotMechanicsConstants.PlacementErrorHClampFraction,
+                                           goal.RightPostY + goal.GoalWidth  * ShotMechanicsConstants.PlacementErrorHClampFraction);
             float newTargetZ = Mathf.Clamp(baseTarget.z + errorOffset.y * goal.GoalHeight,
                                            0.0f,
-                                           goal.GoalHeight * 1.5f);
+                                           goal.GoalHeight * ShotMechanicsConstants.PlacementErrorVClampFraction);
 
             var   adjustedTarget = new Vector3(goal.GoalLineX, newTargetY, newTargetZ);
             Vector3 delta = adjustedTarget - shooterPosition;
@@ -88,6 +88,8 @@ namespace TacticalDirector.ShotMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                       |
-// | 1.1     | 2026-05-28 | —      | M-4: Z clamp lower bound -goal.GoalHeight→0.0f in             |
-// |         |            |        |   ApplyErrorOffset (negative Z aim is below ground).          |
+// | 1.1     | 2026-05-28 | —      | M-4: Z clamp lower bound -goal.GoalHeight→0.0f in               |
+// |         |            |        |   ApplyErrorOffset (negative Z aim is below ground).            |
+// | 1.2     | 2026-05-28 | —      | M-5: Magic literals 0.5f/1.5f in ApplyErrorOffset replaced with |
+// |         |            |        |   PlacementErrorHClampFraction/VClampFraction constants.        |
 #endregion

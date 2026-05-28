@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotExecutor.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-05-28
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.9, §4.1, §4.2, §4.3, §4.4, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the five-state shot execution state machine:
@@ -395,11 +395,13 @@ namespace TacticalDirector.ShotMechanics
             }
 
             // FM-03: Re-check possession immediately before ApplyKick — §4.2.4.
-            // Possession lost after WINDUP is a game event; publish ShotCancelledEvent per §4.7.1.
+            // No ShotCancelledEvent published: §4.7.1 restricts that event to WINDUP tackle
+            // interrupts. FM-03 is CONTACT-phase possession loss; ShotCancelReason has no
+            // PossessionLost value at Stage 0. Stage 1 TODO: add ShotCancelReason.PossessionLost
+            // and publish the event here.
             if (!_ballSystem.IsBallPossessedBy(_request.AgentId))
             {
                 Debug.LogError($"[ShotExecutor] FM-03: Agent {_request.AgentId} lost possession before CONTACT.");
-                ShotEventEmitter.PublishShotCancelled(in _request, frameNumber);
                 _lastResult = new ShotResult { Outcome = ShotOutcome.Cancelled, ContactFrame = -1 };
                 _state = ShotExecutionState.Idle;
                 return;
@@ -466,8 +468,10 @@ namespace TacticalDirector.ShotMechanics
 // | Version | Date       | Author | Notes                                                                            |
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                                          |
 // | 1.1     | 2026-05-28 | —      | M-1: Removed unused matchTime param from AdvanceWindup. L-1: var→Vector3 explicit. |
-// | 1.2     | 2026-05-28 | —      | H-2: FM-03 (possession lost at CONTACT) now publishes ShotCancelledEvent (§4.7.1). |
-// |         |            |        |   H-3: FM-04 (NaN velocity) outcome changed Cancelled→Invalid (programming error).  |
-// |         |            |        |   M-1: File header/XML corrected seven-state→five-state (enum has 5 values).        |
-// |         |            |        |   M-5: Hardcoded 0.5f/0.5f for goal centre replaced with GoalCentreU/GoalCentreV.  |
+// | 1.2     | 2026-05-28 | —      | H-2: FM-03 possession-loss: §4.7.1 restricts ShotCancelledEvent to WINDUP          |
+// |         |            |        |   tackle interrupts; no ShotCancelReason.PossessionLost at Stage 0.                |
+// |         |            |        |   AR-1 incorrectly added PublishShotCancelled; reverted. Comment + Stage 1 TODO    |
+// |         |            |        |   added. H-3: FM-04 (NaN velocity) outcome Cancelled→Invalid (programming error).  |
+// |         |            |        |   M-1: Header/XML corrected seven-state→five-state.                                |
+// |         |            |        |   M-5: Hardcoded 0.5f/0.5f replaced with GoalCentreU/GoalCentreV.                 |
 #endregion
