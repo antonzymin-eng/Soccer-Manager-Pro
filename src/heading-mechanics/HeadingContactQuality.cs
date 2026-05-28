@@ -100,7 +100,7 @@ namespace TacticalDirector.HeadingMechanics
                 HeadingMechanicsConstants.ATTR_MAX)
                 / HeadingMechanicsConstants.ATTR_MAX;
 
-            return 1.0f + HeadingMechanicsConstants.ContactPointHeadingAttrCoeff * (headingNorm - 0.5f);
+            return 1.0f + HeadingMechanicsConstants.ContactPointHeadingAttrCoeff * (headingNorm - HeadingMechanicsConstants.AttributeNormMidpoint);
         }
 
         // ── Private helpers ──────────────────────────────────────────────────────────
@@ -120,6 +120,7 @@ namespace TacticalDirector.HeadingMechanics
             return ContactQualityLabel.OnTime;
         }
 
+        /// <summary>Clamps v to [0, 1].</summary>
         private static float Clamp01(float v)
         {
             return v < 0.0f ? 0.0f : v > 1.0f ? 1.0f : v;
@@ -129,5 +130,6 @@ namespace TacticalDirector.HeadingMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                                    |
+// | 1.1     | 2026-05-28 | —      | AR-1 M-3: 0.5f literal → AttributeNormMidpoint. L-4: XML added to Clamp01. |
 #endregion

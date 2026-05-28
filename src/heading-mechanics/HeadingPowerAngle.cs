@@ -85,7 +85,7 @@ namespace TacticalDirector.HeadingMechanics
             Vector3 headCentre_worldspace,
             Vector3 incomingBallVelocity)
         {
-            if (incomingBallVelocity.sqrMagnitude < 1e-6f)
+            if (incomingBallVelocity.sqrMagnitude < HeadingMechanicsConstants.DegeneracyEpsilonSq)
             {
                 return Vector3.forward;
             }
@@ -93,7 +93,7 @@ namespace TacticalDirector.HeadingMechanics
             Vector3 incident = -incomingBallVelocity.normalized;
 
             Vector3 surfaceDelta = contactPointActual_worldspace - headCentre_worldspace;
-            if (surfaceDelta.sqrMagnitude < 1e-8f)
+            if (surfaceDelta.sqrMagnitude < HeadingMechanicsConstants.SurfaceNormalEpsilonSq)
             {
                 return incident;
             }
@@ -102,7 +102,7 @@ namespace TacticalDirector.HeadingMechanics
             float   dotProduct  = Vector3.Dot(incident, normal);
             Vector3 reflected   = 2.0f * dotProduct * normal - incident;
 
-            if (reflected.sqrMagnitude < 1e-8f)
+            if (reflected.sqrMagnitude < HeadingMechanicsConstants.SurfaceNormalEpsilonSq)
             {
                 return incident;
             }
@@ -133,16 +133,14 @@ namespace TacticalDirector.HeadingMechanics
             float goalX          = teamId == 0
                 ? 0.0f
                 : HeadingMechanicsConstants.PitchLengthM;
-            float goalHalfWidth  = HeadingMechanicsConstants.GoalWidthM * 0.5f;
+            float goalHalfWidth  = HeadingMechanicsConstants.GoalHalfWidthM;
             float pitchCentreY   = HeadingMechanicsConstants.PitchWidthM * 0.5f;
             float goalYMin       = pitchCentreY - goalHalfWidth;
             float goalYMax       = pitchCentreY + goalHalfWidth;
             float goalZMax       = HeadingMechanicsConstants.GoalHeightM;
 
-            // Small tolerance on the X axis to avoid floating-point misses.
-            const float GoalDepthM = 0.5f;
-            float goalXMin = goalX - GoalDepthM;
-            float goalXMax = goalX + GoalDepthM;
+            float goalXMin = goalX - HeadingMechanicsConstants.OwnGoalBoundingBoxDepthM;
+            float goalXMax = goalX + HeadingMechanicsConstants.OwnGoalBoundingBoxDepthM;
 
             float arcLength = 0.0f;
             Vector3 prev    = contactPosition;
@@ -193,5 +191,7 @@ namespace TacticalDirector.HeadingMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                                                  |
+// | 1.1     | 2026-05-28 | —      | AR-1 M-4: GoalWidthM*0.5f → GoalHalfWidthM. M-5: local const GoalDepthM → constant.    |
+// |         |            |        | L-1: 1e-6f → DegeneracyEpsilonSq. L-2: 1e-8f → SurfaceNormalEpsilonSq (×2).          |
 #endregion

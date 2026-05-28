@@ -34,6 +34,7 @@ namespace TacticalDirector.HeadingMechanics
 
         // Duel context buffer (up to MaxSimultaneousDuels duels per frame).
         private readonly ContestedDuelContext[] _duelBuffer;
+        private readonly float[]               _duelMatchTimes;
         private int _duelCount;
 
         // ── Profiler Markers ─────────────────────────────────────────────────────────
@@ -59,6 +60,7 @@ namespace TacticalDirector.HeadingMechanics
             _participantBaseScores          = new float[maxPartic];
             _participantDisturbanceFactors  = new float[maxPartic];
             _duelBuffer                     = new ContestedDuelContext[maxDuels];
+            _duelMatchTimes                 = new float[maxDuels];
         }
 
         // ── ICollisionEventConsumer ──────────────────────────────────────────────────
@@ -187,16 +189,11 @@ namespace TacticalDirector.HeadingMechanics
 
         private int FindOrCreateDuel(float contactFrameMatchTime)
         {
-            // Search existing duels for this match-time window.
+            // Search existing duels for this match-time window using stored float match times directly.
             const float FrameMatchTolerance = 0.001f; // sub-millisecond — same physics frame
             for (int i = 0; i < _duelCount; i++)
             {
-                // Duels are keyed by the contactFrameMatchTime stored in DuelId (we reuse the float as id).
-                // Here we use the buffer start as proxy; match by stored base score of first participant at that time.
-                // Simple approximation: compare stored contact time via slot-0 score ordering is unreliable.
-                // Instead, embed match time in duel context via a float field we track separately.
-                // We encode duelId as the frame-time integer cast for collision.
-                if (Mathf.Abs(_duelBuffer[i].DuelId * 0.001f - contactFrameMatchTime) < FrameMatchTolerance)
+                if (Mathf.Abs(_duelMatchTimes[i] - contactFrameMatchTime) < FrameMatchTolerance)
                 {
                     return i;
                 }
@@ -211,6 +208,7 @@ namespace TacticalDirector.HeadingMechanics
             int newDuelIndex = _duelCount++;
             int startSlot    = newDuelIndex * HeadingMechanicsConstants.MaxDuelParticipants;
 
+            _duelMatchTimes[newDuelIndex] = contactFrameMatchTime;
             _duelBuffer[newDuelIndex] = new ContestedDuelContext
             {
                 DuelId           = Mathf.RoundToInt(contactFrameMatchTime * 1000.0f),
@@ -312,5 +310,7 @@ namespace TacticalDirector.HeadingMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                                         |
+// | 1.1     | 2026-05-28 | —      | AR-1 H-2: add _duelMatchTimes[] array; FindOrCreateDuel compares stored float    |
+// |         |            |        | match times directly, eliminating lossy int round-trip via DuelId.             |
 #endregion

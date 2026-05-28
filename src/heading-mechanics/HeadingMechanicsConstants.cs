@@ -5,6 +5,13 @@
 // Spec:     Heading Mechanics #10 §3.1, KD-11, FR-HE-014, Code Standards #20
 // Purpose:  All numeric constants for the heading mechanics system. No magic literals in formula files.
 //           Region order: Fixed → Derived → Cross → GT.
+//           NOTE: TickRatePhysicsHz and TickRateTacticalHz are declared const float in Cross to prevent
+//           C# static-field init ordering issues in Derived (const fields are available at compile time,
+//           independent of declaration order).
+//           NOTE: FramesEarlyTolerance and FramesLateTolerance are placed at the START of the GT region
+//           (before other GT constants) because they depend on GT constants MaxEarlyToleranceMs and
+//           MaxLateToleranceMs and on Derived constant FrameMs. C# initialises static readonly fields in
+//           declaration order; placing them after their dependencies in GT ensures correct evaluation.
 
 using UnityEngine;
 
@@ -32,6 +39,21 @@ namespace TacticalDirector.HeadingMechanics
         /// <summary>[FIXED] Minimum attribute floor for normalisation clamping. §3.3.</summary>
         public const float ATTR_MIN = 1.0f;
 
+        /// <summary>[FIXED] Coefficient in the standard parabolic arc formula 4u(1−u) giving peak = 1 at u = 0.5. §3.3 KD-18.</summary>
+        public const float ParabolaAmplitude = 4.0f;
+
+        /// <summary>[FIXED] Midpoint of the normalised attribute range [0, 1]. Used in headingAttrScale formula §3.4.</summary>
+        public const float AttributeNormMidpoint = 0.5f;
+
+        /// <summary>[FIXED] Squared-magnitude epsilon for degenerate-vector guards (avoids division by zero). §3.5 / §3.6.</summary>
+        public const float DegeneracyEpsilonSq = 1e-6f;
+
+        /// <summary>[FIXED] Minimum value of u1 in the Box-Muller transform, guarding against log(0). HeadingRngServiceStub.</summary>
+        public const float RngGuardEpsilon = 1e-7f;
+
+        /// <summary>[FIXED] Squared-magnitude epsilon for degenerate-surface-normal and degenerate-reflection guards. §3.5.</summary>
+        public const float SurfaceNormalEpsilonSq = 1e-8f;
+
         #endregion
 
         #region Derived
@@ -39,33 +61,24 @@ namespace TacticalDirector.HeadingMechanics
         /// <summary>
         /// [DERIVED] Physics frame duration in milliseconds.
         /// Formula: 1000 / TickRatePhysicsHz. Heading Mechanics #10 §3.1 / FM-010 (§3.2).
-        /// Source constants: HeadingMechanicsConstants.TickRatePhysicsHz.
+        /// Source constants: HeadingMechanicsConstants.TickRatePhysicsHz (const — always available).
         /// </summary>
         public static readonly float FrameMs = 1000.0f / TickRatePhysicsHz;
 
         /// <summary>
         /// [DERIVED] Number of 60 Hz physics frames per 10 Hz tactical tick.
         /// Formula: TickRatePhysicsHz / TickRateTacticalHz. Heading Mechanics #10 §3.3.
-        /// Source constants: TickRatePhysicsHz, TickRateTacticalHz.
+        /// Source constants: TickRatePhysicsHz, TickRateTacticalHz (both const — always available).
         /// </summary>
         public static readonly int FramesPerTacticalTick =
             (int)(TickRatePhysicsHz / TickRateTacticalHz);
 
         /// <summary>
-        /// [DERIVED] Early-tolerance window in 60 Hz frames (ceil, toward looser tolerance).
-        /// Formula: ceil(MaxEarlyToleranceMs / FrameMs). Heading Mechanics #10 §3.2.
-        /// Source constants: MaxEarlyToleranceMs, FrameMs.
+        /// [DERIVED] Half the FIFA goal width (m). Used for own-goal bounding box computation (§3.8).
+        /// Formula: BallPhysicsConstants.Pitch.GOAL_WIDTH × 0.5. Ball Physics #1 §1.2.
+        /// Source constants: BallPhysicsConstants.Pitch.GOAL_WIDTH (const — always available).
         /// </summary>
-        public static readonly int FramesEarlyTolerance =
-            Mathf.CeilToInt(MaxEarlyToleranceMs / FrameMs);
-
-        /// <summary>
-        /// [DERIVED] Late-tolerance window in 60 Hz frames (ceil, toward looser tolerance).
-        /// Formula: ceil(MaxLateToleranceMs / FrameMs). Heading Mechanics #10 §3.2.
-        /// Source constants: MaxLateToleranceMs, FrameMs.
-        /// </summary>
-        public static readonly int FramesLateTolerance =
-            Mathf.CeilToInt(MaxLateToleranceMs / FrameMs);
+        public static readonly float GoalHalfWidthM = BallPhysicsConstants.Pitch.GOAL_WIDTH * 0.5f;
 
         #endregion
 
@@ -116,18 +129,20 @@ namespace TacticalDirector.HeadingMechanics
         public static readonly uint DomainTagHeading = 0x16; // TODO: mirror from DeterministicSimConstants
 
         /// <summary>
-        /// [CROSS] Physics/render loop tick rate (Hz).
+        /// [CROSS] Physics/render loop tick rate (Hz). Declared const float (not static readonly) so
+        /// Derived-region constants (FrameMs, FramesPerTacticalTick) that reference it evaluate correctly
+        /// regardless of C# static-field declaration order.
         /// Authoritative source: CLAUDE.md Heartbeat Tick Rate.
         /// Value: 60 Hz. TODO: mirror from ProjectConstants.TickRatePhysicsHz when that file is created.
         /// </summary>
-        public static readonly float TickRatePhysicsHz = 60.0f; // TODO: mirror from ProjectConstants
+        public const float TickRatePhysicsHz = 60.0f; // TODO: mirror from ProjectConstants
 
         /// <summary>
-        /// [CROSS] Tactical AI loop tick rate (Hz).
+        /// [CROSS] Tactical AI loop tick rate (Hz). Declared const float for same reason as TickRatePhysicsHz above.
         /// Authoritative source: CLAUDE.md Heartbeat Tick Rate.
         /// Value: 10 Hz. TODO: mirror from ProjectConstants.TickRateTacticalHz when that file is created.
         /// </summary>
-        public static readonly float TickRateTacticalHz = 10.0f; // TODO: mirror from ProjectConstants
+        public const float TickRateTacticalHz = 10.0f; // TODO: mirror from ProjectConstants
 
         #endregion
 
@@ -146,6 +161,28 @@ namespace TacticalDirector.HeadingMechanics
 
         /// <summary>[GT] Latest allowable signed timing offset (ms). Numerically smaller than MaxEarlyToleranceMs — late headers degrade faster. FR-HE-022 / pass-1 H-1. §3.1.</summary>
         public static readonly float MaxLateToleranceMs = 90.0f; // TODO: replace with config loader (Stage 1)
+
+        // [DERIVED] — placed here (after MaxEarlyToleranceMs/MaxLateToleranceMs) because C# static-field
+        // initialisation is declaration-order dependent and these depend on GT values above and on FrameMs [Derived].
+        // The XML tags remain [DERIVED]; only the placement in the GT region is an implementation concession.
+
+        /// <summary>
+        /// [DERIVED] Early-tolerance window in 60 Hz frames (ceil, toward looser tolerance).
+        /// Formula: ceil(MaxEarlyToleranceMs / FrameMs). Heading Mechanics #10 §3.2.
+        /// Source constants: MaxEarlyToleranceMs (GT, above), FrameMs (Derived).
+        /// Placed in GT region to ensure correct C# static-init ordering.
+        /// </summary>
+        public static readonly int FramesEarlyTolerance =
+            Mathf.CeilToInt(MaxEarlyToleranceMs / FrameMs);
+
+        /// <summary>
+        /// [DERIVED] Late-tolerance window in 60 Hz frames (ceil, toward looser tolerance).
+        /// Formula: ceil(MaxLateToleranceMs / FrameMs). Heading Mechanics #10 §3.2.
+        /// Source constants: MaxLateToleranceMs (GT, above), FrameMs (Derived).
+        /// Placed in GT region to ensure correct C# static-init ordering.
+        /// </summary>
+        public static readonly int FramesLateTolerance =
+            Mathf.CeilToInt(MaxLateToleranceMs / FrameMs);
 
         // ── §3.3 Jump Kinematics ─────────────────────────────────────────────────────
 
@@ -246,6 +283,9 @@ namespace TacticalDirector.HeadingMechanics
         /// <summary>[GT] Projection distance horizon for own-goal-shape flag (m). pass-1 L-7. §3.1.</summary>
         public static readonly float OwnGoalProjectionHorizonM = 18.0f; // TODO: replace with config loader (Stage 1)
 
+        /// <summary>[GT] X-axis depth (m) of the own-goal bounding box used in the §3.8 intersection test. §3.8.</summary>
+        public static readonly float OwnGoalBoundingBoxDepthM = 0.5f; // TODO: replace with config loader (Stage 1)
+
         // ── §4.2.1 Buffer / Draw Sites ───────────────────────────────────────────────
 
         /// <summary>[GT] Pre-allocated collision-event buffer capacity for ICollisionEventConsumer (§4.2.1).
@@ -277,6 +317,13 @@ namespace TacticalDirector.HeadingMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                                      |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                                                    |
+// | 1.1     | 2026-05-28 | —      | AR-1 fix pass: M-1 circular init resolved (TickRatePhysicsHz/TickRateTacticalHz → const    |
+// |         |            |        | float; FramesEarlyTolerance/FramesLateTolerance moved to GT after MaxEarly/Late);          |
+// |         |            |        | M-2 ParabolaAmplitude [FIXED] added; M-3 AttributeNormMidpoint [FIXED] added;             |
+// |         |            |        | M-4/M-5 GoalHalfWidthM [DERIVED] + OwnGoalBoundingBoxDepthM [GT] added;                   |
+// |         |            |        | L-1/L-2 DegeneracyEpsilonSq [FIXED] added; L-3 RngGuardEpsilon [FIXED] added.             |
+// | 1.2     | 2026-05-28 | —      | AR-1 fix pass (cont.): SurfaceNormalEpsilonSq [FIXED] added for 1e-8f surface-normal       |
+// |         |            |        | degenerate guards in HeadingPowerAngle.cs.                                                 |
 #endregion

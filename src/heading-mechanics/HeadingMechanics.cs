@@ -204,7 +204,7 @@ namespace TacticalDirector.HeadingMechanics
                             ? FailureCause.MistimedEarly
                             : FailureCause.MistimedLate;
 
-                        EmitFailedAttempt(agentId, cause, currentBall, currentMatchTime, contactState.TimingOffsetMs);
+                        EmitFailedAttempt(agentId, cause, currentBall, currentMatchTime, contactState.TimingOffsetMs, agentStates);
                         _intentActive[agentId] = false;
                     }
                     else if (eligibility.PredictedContactFrame < 0)
@@ -212,7 +212,7 @@ namespace TacticalDirector.HeadingMechanics
                         // Ball never enters contact volume — PositionedPoorly if past apex.
                         if (currentFrame > eligibility.IdealContactFrame)
                         {
-                            EmitFailedAttempt(agentId, FailureCause.PositionedPoorly, currentBall, currentMatchTime, 0.0f);
+                            EmitFailedAttempt(agentId, FailureCause.PositionedPoorly, currentBall, currentMatchTime, 0.0f, agentStates);
                             _intentActive[agentId] = false;
                         }
                     }
@@ -265,7 +265,12 @@ namespace TacticalDirector.HeadingMechanics
                     _contactStates[agentId] = contactState;
                 }
 
-                contactState.PrevFrameFacingDirection = agentState.FacingDirection;
+                // Do not update PrevFrameFacingDirection on the contact frame; Pass 2 needs the
+                // previous frame's value for DeriveHeadAngularVelocity finite-difference (§3.6 FR-HE-032).
+                if (currentFrame != eligibility.PredictedContactFrame)
+                {
+                    contactState.PrevFrameFacingDirection = agentState.FacingDirection;
+                }
             }
 
             // Pass 2: resolve duels and emit events.
@@ -331,7 +336,7 @@ namespace TacticalDirector.HeadingMechanics
                 if (!isWinner && effectiveQuality < HeadingMechanicsConstants.MinContactQuality)
                 {
                     // FR-HE-026: loser below threshold emits failed event.
-                    EmitFailedAttempt(agentId, FailureCause.DisturbedInDuel, currentBall, currentMatchTime, contactState.TimingOffsetMs);
+                    EmitFailedAttempt(agentId, FailureCause.DisturbedInDuel, currentBall, currentMatchTime, contactState.TimingOffsetMs, agentStates);
                     _telemetry.RecordDuelOutcome(false, false);
                     _intentActive[agentId] = false;
                     continue;
@@ -407,9 +412,10 @@ namespace TacticalDirector.HeadingMechanics
             FailureCause cause,
             BallState ball,
             float matchTime,
-            float timingOffsetMs)
+            float timingOffsetMs,
+            AgentState[] agentStates)
         {
-            float missDistance = ComputeClosestApproach(ball, agentStates: null, agentId: agentId);
+            float missDistance = ComputeClosestApproach(ball, agentStates, agentId);
 
             HeaderAttemptFailedEvent evt = new HeaderAttemptFailedEvent
             {
@@ -512,5 +518,9 @@ namespace TacticalDirector.HeadingMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                                         |
+// | 1.1     | 2026-05-28 | —      | AR-1 H-1: EmitFailedAttempt gains AgentState[] agentStates parameter; all three  |
+// |         |            |        | call sites updated so ComputeClosestApproach receives real agent positions.      |
+// | 1.2     | 2026-05-28 | —      | AR-2 M: PrevFrameFacingDirection no longer overwritten on the contact frame;      |
+// |         |            |        | fixes zero headAngularVelocity in spin finite-difference (§3.6 FR-HE-032).       |
 #endregion

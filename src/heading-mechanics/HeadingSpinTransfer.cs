@@ -57,7 +57,8 @@ namespace TacticalDirector.HeadingMechanics
         /// <param name="prevFacingDir">Facing direction previous frame (unit XY vector).</param>
         public static Vector3 DeriveHeadAngularVelocity(Vector2 currentFacingDir, Vector2 prevFacingDir)
         {
-            if (currentFacingDir.sqrMagnitude < 1e-6f || prevFacingDir.sqrMagnitude < 1e-6f)
+            if (currentFacingDir.sqrMagnitude < HeadingMechanicsConstants.DegeneracyEpsilonSq ||
+                prevFacingDir.sqrMagnitude < HeadingMechanicsConstants.DegeneracyEpsilonSq)
             {
                 return Vector3.zero;
             }
@@ -79,5 +80,6 @@ namespace TacticalDirector.HeadingMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                              |
+// | 1.1     | 2026-05-28 | —      | AR-1: 1e-6f literals → DegeneracyEpsilonSq constant.                |
 #endregion

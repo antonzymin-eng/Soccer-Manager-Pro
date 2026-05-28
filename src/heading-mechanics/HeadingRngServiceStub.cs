@@ -19,6 +19,8 @@ namespace TacticalDirector.HeadingMechanics
     /// </summary>
     public sealed class HeadingRngServiceStub : IHeadingRngService
     {
+        // Raw SplitMix64 counter: incremented by the golden-ratio constant each call.
+        // The counter is never stored in mixed form — mixing produces output only.
         private ulong _state;
 
         /// <summary>
@@ -27,19 +29,17 @@ namespace TacticalDirector.HeadingMechanics
         /// <param name="seed">Deterministic seed (e.g. matchSeed XOR frameNumber).</param>
         public HeadingRngServiceStub(ulong seed)
         {
-            _state = SplitMix64Step(seed);
-            if (_state == 0)
-            {
-                _state = 0x853C49E6748FEA9BUL;
-            }
+            _state = seed;
         }
 
         /// <inheritdoc/>
         public float NextFloat(int drawSiteId)
         {
-            ulong raw = SplitMix64Step(_state);
-            _state = raw;
-            return (raw >> 40) * (1.0f / (1UL << 24));
+            unchecked // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
+            {
+                _state += 0x9E3779B97F4A7C15UL;
+            }
+            return (Mix(_state) >> 40) * (1.0f / (1UL << 24));
         }
 
         /// <inheritdoc/>
@@ -48,19 +48,17 @@ namespace TacticalDirector.HeadingMechanics
             // Box-Muller: two uniform samples → one standard-normal sample.
             float u1 = NextFloat(drawSiteId);
             float u2 = NextFloat(drawSiteId);
-            // Guard against log(0).
-            if (u1 < 1e-7f)
+            if (u1 < HeadingMechanicsConstants.RngGuardEpsilon)
             {
-                u1 = 1e-7f;
+                u1 = HeadingMechanicsConstants.RngGuardEpsilon;
             }
             return Mathf.Sqrt(-2.0f * Mathf.Log(u1)) * Mathf.Cos(2.0f * Mathf.PI * u2);
         }
 
-        private static ulong SplitMix64Step(ulong x)
+        private static ulong Mix(ulong x)
         {
             unchecked // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
             {
-                x += 0x9E3779B97F4A7C15UL;
                 x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9UL;
                 x = (x ^ (x >> 27)) * 0x94D049BB133111EBUL;
                 return x ^ (x >> 31);
@@ -71,5 +69,8 @@ namespace TacticalDirector.HeadingMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                                         |
+// | 1.1     | 2026-05-28 | —      | AR-1 H-3: SplitMix64 corrected — raw counter in _state (incremented each call); |
+// |         |            |        | Mix() produces output only; constructor stores seed directly, no initial step.  |
+// |         |            |        | Box-Muller guard uses RngGuardEpsilon constant (was 1e-7f literal).             |
 #endregion

@@ -5,8 +5,6 @@
 // Spec:     Heading Mechanics #10 §4.3, Event System #17 §3.2.1, Code Standards #20
 // Purpose:  Stage 0 no-op event bus stub. Replace — do not remove — at Stage 1 with Event System #17.
 
-using UnityEngine;
-
 namespace TacticalDirector.HeadingMechanics
 {
     /// <summary>
@@ -22,14 +20,14 @@ namespace TacticalDirector.HeadingMechanics
         /// </summary>
         public static void Publish<T>(in T evt) where T : struct
         {
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
-            Debug.Log($"[EventBus STUB] {typeof(T).Name}");
-#endif
+            // Stage 0 no-op. Logging removed: string interpolation allocates on the hot path (FR-CS-031).
+            // Replace with Event System #17 at Stage 1 (§4.3).
         }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                                    |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. Pattern reused from Shot Mechanics EventBusStub. |
+// | 1.0     | 2026-05-28 | —      | Initial implementation. Pattern reused from Shot Mechanics EventBusStub.         |
+// | 1.1     | 2026-05-28 | —      | AR-1 H-4: removed Debug.Log string interpolation (allocates on hot path FR-CS-031). |
 #endregion
