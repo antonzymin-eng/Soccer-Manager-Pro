@@ -68,8 +68,8 @@ namespace TacticalDirector.ShotMechanics
         private static float ComputeRunUpScore(Vector3 agentVelocity, Vector3 toGoalDirection)
         {
             float speed = agentVelocity.magnitude;
-            if (speed < 0.1f)
-                return 0.5f; // stationary: neutral score
+            if (speed < ShotMechanicsConstants.StationarySpeedThreshold)
+                return ShotMechanicsConstants.StationaryRunUpScore; // stationary: neutral score
 
             Vector3 velDir           = agentVelocity / speed;
             float   approachAngleDeg = Vector3.Angle(velDir, toGoalDirection);
@@ -134,4 +134,6 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        |   now full score within tolerance, 0 at 2× (matches §3.7.3).          |
 // | 1.3     | 2026-05-28 | —      | L-1: ComputeLeanScore: comment documents Stage 0 always-1.0 behaviour     |
 // |         |            |        |   (LeanTolerance == BodyLeanMaxDeg == 20°) and dead-weight WeightLean.  |
+// | 1.4     | 2026-05-28 | —      | L-2: 0.1f stationary threshold → StationarySpeedThreshold constant.        |
+// | 1.5     | 2026-05-28 | —      | L-3: 0.5f stationary neutral run-up score → StationaryRunUpScore constant.  |
 #endregion

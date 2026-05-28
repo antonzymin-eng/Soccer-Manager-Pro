@@ -38,7 +38,7 @@ namespace TacticalDirector.ShotMechanics
             Vector3 delta = targetPoint - shooterPosition;
             float   mag   = delta.magnitude;
 
-            if (mag < 1e-4f)
+            if (mag < ShotMechanicsConstants.AimDirectionEpsilon)
             {
                 Debug.LogWarning("[ShotMechanics] §3.5: shooter is at the goal line — using forward direction.");
                 return Vector3.forward;
@@ -63,10 +63,10 @@ namespace TacticalDirector.ShotMechanics
             GoalGeometry goal = GoalGeometryProvider.Get();
 
             // Recover approximate intended (u, v) from base aim direction and reproject with error
-            float dist = Mathf.Max(goal.GoalLineX - shooterPosition.x, 0.1f);
+            float dist = Mathf.Max(goal.GoalLineX - shooterPosition.x, ShotMechanicsConstants.GoalLineDistanceFloor);
 
             // Compute approximate u, v from base direction
-            Vector3 baseTarget = shooterPosition + baseAimDirection * (dist / Mathf.Max(baseAimDirection.x, 0.001f));
+            Vector3 baseTarget = shooterPosition + baseAimDirection * (dist / Mathf.Max(baseAimDirection.x, ShotMechanicsConstants.AimDirectionComponentEpsilon));
 
             // Apply error offset in goal space: u → Y axis, v → Z axis
             float newTargetY = Mathf.Clamp(baseTarget.y + errorOffset.x * goal.GoalWidth,
@@ -80,7 +80,7 @@ namespace TacticalDirector.ShotMechanics
             Vector3 delta = adjustedTarget - shooterPosition;
             float   mag   = delta.magnitude;
 
-            return (mag < 1e-4f) ? baseAimDirection : delta / mag;
+            return (mag < ShotMechanicsConstants.AimDirectionEpsilon) ? baseAimDirection : delta / mag;
         }
     }
 }
@@ -90,6 +90,9 @@ namespace TacticalDirector.ShotMechanics
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                       |
 // | 1.1     | 2026-05-28 | —      | M-4: Z clamp lower bound -goal.GoalHeight→0.0f in               |
 // |         |            |        |   ApplyErrorOffset (negative Z aim is below ground).            |
-// | 1.2     | 2026-05-28 | —      | M-5: Magic literals 0.5f/1.5f in ApplyErrorOffset replaced with |
-// |         |            |        |   PlacementErrorHClampFraction/VClampFraction constants.        |
+// | 1.2     | 2026-05-28 | —      | M-5: Magic literals 0.5f/1.5f in ApplyErrorOffset replaced with      |
+// |         |            |        |   PlacementErrorHClampFraction/VClampFraction constants.             |
+// | 1.3     | 2026-05-28 | —      | L-1: 1e-4f epsilon literals (×2) → AimDirectionEpsilon constant.      |
+// | 1.4     | 2026-05-28 | —      | L-2: 0.1f/0.001f magic literals in ApplyErrorOffset → GoalLineDistanceFloor/  |
+// |         |            |        |   AimDirectionComponentEpsilon constants.                                  |
 #endregion
