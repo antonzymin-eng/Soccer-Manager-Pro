@@ -1,10 +1,10 @@
 // File:     src/shot-mechanics/ShotMechanicsConstants.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-05-28
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.2–§3.9, §6.1, Code Standards #20
 // Purpose:  All constants for the shot mechanics system. No magic literals in formula code.
-//           Region order: Fixed → Cross → GT.
+//           Region order: Fixed → Derived → Cross → GT (EST region omitted — no estimated constants).
 
 using UnityEngine;
 
@@ -35,6 +35,20 @@ namespace TacticalDirector.ShotMechanics
 
         /// <summary>[FIXED] FIFA regulation goal height (ground to underside of crossbar, metres). §3.5.</summary>
         public const float GOAL_HEIGHT = 2.44f;
+
+        #endregion
+
+        #region Derived
+
+        /// <summary>[DERIVED] Goal-relative U coordinate of goal centre (midpoint of [0, 1] horizontal range).
+        /// Formula: 0.5 = midpoint of the [0, 1] unit interval. §3.5, §3.7.
+        /// Source constants: none (value is the mathematical midpoint of the unit interval).</summary>
+        public static readonly float GoalCentreU = 0.5f;
+
+        /// <summary>[DERIVED] Goal-relative V coordinate of goal centre (midpoint of [0, 1] vertical range).
+        /// Formula: 0.5 = midpoint of the [0, 1] unit interval. §3.5, §3.7.
+        /// Source constants: none (value is the mathematical midpoint of the unit interval).</summary>
+        public static readonly float GoalCentreV = 0.5f;
 
         #endregion
 
@@ -195,7 +209,37 @@ namespace TacticalDirector.ShotMechanics
         /// <summary>[GT] Spatial hash query radius for pressure detection (metres). §4.4.1.</summary>
         public static readonly float PressureRadiusMax = 3.0f; // TODO: replace with config loader (Stage 1)
 
+        /// <summary>[GT] Match seed supplied to deterministic error direction hash. §3.6.9, KD-4.
+        /// Stage 0: 0 (single-machine; no match context). Stage 1: wire from MatchContext.MatchSeed.
+        /// Not a designer-tunable parameter — used only as a determinism seed.</summary>
+        public static readonly int ErrorDirectionMatchSeed = 0; // TODO: wire from MatchContext.MatchSeed at Stage 1
+
+        /// <summary>[GT] Horizontal error clamp margin as fraction of goal width. §3.6.9.
+        /// Clamps post-error Y to [LeftPostY - GoalWidth × this, RightPostY + GoalWidth × this].</summary>
+        public static readonly float PlacementErrorHClampFraction = 0.5f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Vertical error clamp ceiling as fraction of goal height. §3.6.9.
+        /// Clamps post-error Z to [0, GoalHeight × this].</summary>
+        public static readonly float PlacementErrorVClampFraction = 1.5f; // TODO: replace with config loader (Stage 1)
+
+        // ── §3.5 Placement ──────────────────────────────────────────────────────────
+
+        /// <summary>[GT] Epsilon for aim-direction magnitude check; guards against shooter-at-goal-line singularity (metres). §3.5.</summary>
+        public static readonly float AimDirectionEpsilon = 1e-4f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Epsilon for aim-direction X-component clamp in ApplyErrorOffset (dimensionless). Prevents degenerate division when aim is nearly perpendicular to goal line. §3.5.</summary>
+        public static readonly float AimDirectionComponentEpsilon = 0.001f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Minimum effective distance to goal line used in ApplyErrorOffset (metres). Guards against shooter-at-or-past-goal-line degenerate case. §3.5.</summary>
+        public static readonly float GoalLineDistanceFloor = 0.1f; // TODO: replace with config loader (Stage 1)
+
         // ── §3.7 Body Mechanics ─────────────────────────────────────────────────────
+
+        /// <summary>[GT] Speed threshold below which agent is considered stationary for run-up scoring (m/s). §3.7.3.</summary>
+        public static readonly float StationarySpeedThreshold = 0.1f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Run-up score returned for stationary agent (speed &lt; StationarySpeedThreshold). Neutral centre value [0, 1]. §3.7.3.</summary>
+        public static readonly float StationaryRunUpScore = 0.5f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Ideal run-up approach angle relative to goal line (degrees). §3.7.3.</summary>
         public static readonly float IdealRunUpAngle = 37.5f; // TODO: replace with config loader (Stage 1)
@@ -250,8 +294,11 @@ namespace TacticalDirector.ShotMechanics
         /// <summary>[GT] Maximum WeakFootRating value (no penalty at this rating). §3.8.3, §3.8.4.</summary>
         public static readonly int WeakFootRatingMax = 5; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Effective WeakFootRating range (WeakFootRatingMax - 1). §3.8.3, §3.8.4.</summary>
-        public static readonly int WeakFootRatingRange = 4; // TODO: replace with config loader (Stage 1)
+        /// <summary>[DERIVED] Effective WeakFootRating range [1, 4]. Formula: WeakFootRatingMax - 1. §3.8.3, §3.8.4.
+        /// Source constants: ShotMechanicsConstants.WeakFootRatingMax.
+        /// Invariant: must remain > 0 (WeakFootPenaltyApplier divides by this value; WeakFootRatingMax must be ≥ 2).
+        /// Placed in GT region after WeakFootRatingMax to satisfy C# static-readonly init order; semantically Derived.</summary>
+        public static readonly int WeakFootRatingRange = WeakFootRatingMax - 1;
 
         // ── §3.3.6 Body Lean (Stage 0 approximation) ───────────────────────────────
 
@@ -346,4 +393,16 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        |   V_AbsoluteMin→VAbsoluteMin, V_AbsoluteMax→VAbsoluteMax, D_Mid→DMid, D_Scale→DScale).        |
 // |         |            |        |   M-2: Added BodyLeanMaxDeg, BodyLeanMaxSpeed GT constants.                                  |
 // |         |            |        |   M-3: Added WeakFootRatingMax, WeakFootRatingRange GT constants.                            |
+// | 1.2     | 2026-05-28 | —      | M-5: Added Derived region with GoalCentreU/GoalCentreV (replaces 0.5f magic literals).        |
+// | 1.3     | 2026-05-28 | —      | M-6: WeakFootRatingRange [GT]→[DERIVED]; value literal 4 → WeakFootRatingMax - 1.            |
+// |         |            |        |   Header Purpose comment updated: region order Fixed→Cross→GT → Fixed→Derived→Cross→GT.  |
+// | 1.4     | 2026-05-28 | —      | M-7: Added PlacementErrorHClampFraction/VClampFraction (replaces 0.5f/1.5f in             |
+// |         |            |        |   ShotPlacementResolver.ApplyErrorOffset). §3.6.9.                                     |
+// | 1.5     | 2026-05-28 | —      | M-8: WeakFootRatingRange XML doc: added Source constants field (FR-CS-021).               |
+// |         |            |        |   L-1: Added AimDirectionEpsilon (1e-4f) and StationarySpeedThreshold (0.1f) GT         |
+// |         |            |        |   constants (replaces magic literals in ShotPlacementResolver/BodyMechanicsEvaluator). |
+// | 1.6     | 2026-05-28 | —      | GoalCentreU/V XML: added "Source constants: none" clarification (FR-CS-021).              |
+// |         |            |        |   Header: added "(EST omitted)" note. WeakFootRatingRange: invariant (>0) note added.   |
+// |         |            |        |   Added: AimDirectionComponentEpsilon (0.001f), GoalLineDistanceFloor (0.1f),           |
+// |         |            |        |   ErrorDirectionMatchSeed (0), StationaryRunUpScore (0.5f) GT constants.               |
 #endregion

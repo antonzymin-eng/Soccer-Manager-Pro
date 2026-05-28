@@ -1,10 +1,10 @@
 // File:     src/shot-mechanics/ShotExecutor.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-05-28
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.9, §4.1, §4.2, §4.3, §4.4, Code Standards #20
-// Purpose:  Sealed instance orchestrator for the seven-state shot execution state machine:
-//           IDLE → INITIATING → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE (±STUMBLING).
+// Purpose:  Sealed instance orchestrator for the five-state shot execution state machine:
+//           IDLE → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE (±STUMBLING flag on result).
 //           Validates ShotRequest, coordinates sub-system calls, calls Ball.ApplyKick() at
 //           CONTACT exactly once, publishes events. Dependencies constructor-injected (FR-CS-051–054).
 
@@ -16,8 +16,9 @@ using TacticalDirector.BallPhysics;
 namespace TacticalDirector.ShotMechanics
 {
     /// <summary>
-    /// Orchestrates shot execution across the seven-state lifecycle.
-    /// IDLE → INITIATING → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE (optional STUMBLING branch).
+    /// Orchestrates shot execution across the five-state lifecycle.
+    /// IDLE → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE. INITIATING is synchronous in Execute();
+    /// STUMBLING is a flag on the result, not a distinct state.
     /// Shot Mechanics #6 §3.9, §4.1.
     /// </summary>
     public sealed class ShotExecutor
@@ -59,7 +60,7 @@ namespace TacticalDirector.ShotMechanics
         private Vector3      _intendedAimDirection;
         private BodyMechanicsResult _bodyMechanics;
         private float        _weakFootErrorMultiplier;
-        private int          _windupFrames; // total windup duration, for animation data
+        private int          _windupFrames; // total windup duration (frames); copied to animation data at CONTACT, immutable after INITIATING
 
         // Cached agent state inputs (frozen at INITIATING for determinism; NFR-07)
         private Vector3 _cachedAgentPosition;
@@ -103,7 +104,7 @@ namespace TacticalDirector.ShotMechanics
             _ballSystem          = ballSystem;
             _agentQuery          = agentQuery;
             _collisionQuery      = collisionQuery;
-            _velocityCalculator  = velocityCalculator ?? ShotVelocityCalculator.Instance;
+            _velocityCalculator  = velocityCalculator ?? ShotVelocityCalculator.Instance; // EC-008 tests inject NaNVelocityStub; production uses singleton
         }
 
         // ── Execute — INITIATING State ───────────────────────────────────────────────
@@ -202,11 +203,22 @@ namespace TacticalDirector.ShotMechanics
             // ── Read attributes (captured and frozen; NFR-07) ─────────────────────────
             ShotAgentAttributes attrs = _agentQuery.GetAttributes(request.AgentId);
 
+            // ── §3.1 VR-09: Fatigue range ─────────────────────────────────────────────
+            if (attrs.Fatigue < 0.0f || attrs.Fatigue > 1.0f)
+            {
+                Debug.LogWarning($"[ShotExecutor] VR-09: Fatigue={attrs.Fatigue} out of [0, 1]. Agent={request.AgentId}");
+                _lastResult = MakeInvalidResult();
+                return _lastResult;
+            }
+
             _request = request;
 
             // ── §3.7 — Body mechanics (evaluated before velocity; BMS feeds CQM) ───────
+            // Body mechanics scores "approaching" posture toward goal centre (general readiness),
+            // not toward the specific PlacementTarget. §3.7: BMS measures stance quality, not aim fidelity.
             Vector3 toGoalDir = ShotPlacementResolver.ComputeAimDirection(
-                new Vector2(0.5f, 0.5f), agentState.Position); // centre of goal for BMS
+                new Vector2(ShotMechanicsConstants.GoalCentreU, ShotMechanicsConstants.GoalCentreV),
+                agentState.Position);
             _bodyMechanics = BodyMechanicsEvaluator.Evaluate(
                 agentState.Velocity,
                 agentState.Position,
@@ -364,7 +376,7 @@ namespace TacticalDirector.ShotMechanics
 
             // §3.6.9: Deterministic error direction
             Vector2 errorDir    = ShotErrorCalculator.ComputeErrorDirection(
-                0, _request.AgentId, _request.FrameNumber); // matchSeed=0 at Stage 0 (§1.6)
+                ShotMechanicsConstants.ErrorDirectionMatchSeed, _request.AgentId, _request.FrameNumber);
             Vector2 errorOffset = ShotErrorCalculator.ComputeErrorOffset(errorMag, errorDir);
 
             // §3.6.9: Apply error to aim direction
@@ -382,16 +394,22 @@ namespace TacticalDirector.ShotMechanics
                 aimXY.y * horizontalSpd,
                 verticalSpd);
 
-            // FM-04: Guard against NaN in velocity before calling ApplyKick
+            // FM-04: Guard against NaN in assembled finalVelocity (direction × speed encoding).
+            // Detects formula/arithmetic errors in lines above — not bad input (FM-05 catches NaN from
+            // velocity calculator earlier). Programming error → Invalid outcome, no event.
             if (float.IsNaN(finalVelocity.x) || float.IsNaN(finalVelocity.y) || float.IsNaN(finalVelocity.z))
             {
-                Debug.LogError($"[ShotExecutor] FM-04: NaN in finalVelocity. Shot cancelled. Agent={_request.AgentId}");
-                _lastResult = new ShotResult { Outcome = ShotOutcome.Cancelled, ContactFrame = -1 };
+                Debug.LogError($"[ShotExecutor] FM-04: NaN in finalVelocity. Shot invalid. Agent={_request.AgentId}");
+                _lastResult = new ShotResult { Outcome = ShotOutcome.Invalid, ContactFrame = -1 };
                 _state = ShotExecutionState.Idle;
                 return;
             }
 
-            // FM-03: Re-check possession immediately before ApplyKick — §4.2.4
+            // FM-03: Re-check possession immediately before ApplyKick — §4.2.4.
+            // ShotEventEmitter.PublishShotCancelled() is NOT called here.
+            // §4.7.1 permanently restricts ShotCancelledEvent to WINDUP tackle interrupts only.
+            // FM-03 is CONTACT-phase possession loss; ShotCancelReason must NOT get PossessionLost.
+            // Stage 1: if notification is needed, add a separate PossessionLostEvent channel.
             if (!_ballSystem.IsBallPossessedBy(_request.AgentId))
             {
                 Debug.LogError($"[ShotExecutor] FM-03: Agent {_request.AgentId} lost possession before CONTACT.");
@@ -461,4 +479,19 @@ namespace TacticalDirector.ShotMechanics
 // | Version | Date       | Author | Notes                                                                            |
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                                          |
 // | 1.1     | 2026-05-28 | —      | M-1: Removed unused matchTime param from AdvanceWindup. L-1: var→Vector3 explicit. |
+// | 1.2     | 2026-05-28 | —      | H-2: FM-03 possession-loss: §4.7.1 restricts ShotCancelledEvent to WINDUP          |
+// |         |            |        |   tackle interrupts; no ShotCancelReason.PossessionLost at Stage 0.                |
+// |         |            |        |   AR-1 incorrectly added PublishShotCancelled; reverted. Comment + Stage 1 TODO    |
+// |         |            |        |   added. H-3: FM-04 (NaN velocity) outcome Cancelled→Invalid (programming error).  |
+// |         |            |        |   M-1: Header/XML corrected seven-state→five-state.                                |
+// |         |            |        |   M-5: Hardcoded 0.5f/0.5f replaced with GoalCentreU/GoalCentreV.                 |
+// | 1.3     | 2026-05-28 | —      | M-1: FM-03 TODO rephrased: §4.7.1 permanently bans ShotCancelledEvent for FM-03;    |
+// |         |            |        |   Stage 1 must use a separate PossessionLostEvent channel.                         |
+// |         |            |        |   M-2: FM-04 comment clarified: detects formula errors in velocity assembly,       |
+// |         |            |        |   not input validation (FM-05 covers velocity-calculator NaN earlier).             |
+// |         |            |        |   L-1: Body mechanics comment: explains why goal centre, not PlacementTarget.      |
+// |         |            |        |   L-2: _windupFrames and velocityCalculator field comments improved.               |
+// | 1.4     | 2026-05-28 | —      | M-1: VR-09: Fatigue [0,1] range validation added (out-of-range = Invalid).          |
+// |         |            |        |   M-2: matchSeed literal 0 → ErrorDirectionMatchSeed constant.                     |
+// |         |            |        |   M-3: FM-03 comment: explicit "PublishShotCancelled NOT called here".             |
 #endregion

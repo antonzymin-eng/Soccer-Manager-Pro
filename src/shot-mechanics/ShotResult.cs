@@ -46,7 +46,7 @@ namespace TacticalDirector.ShotMechanics
         /// <summary>Power penalty scalar applied [≥ 1.0]. Exposed for post-shot analysis. §3.6 (FR-03).</summary>
         public float PowerPenaltyApplied;
 
-        /// <summary>Kick speed (m/s) before direction encoding [V_FLOOR, V_CEILING]. §3.2.</summary>
+        /// <summary>Kick speed (m/s) before direction encoding [VFloor, VCeiling]. §3.2.</summary>
         public float KickSpeed;
 
         /// <summary>Launch angle (degrees) used. Exposed for trajectory debugging. §3.3.</summary>
@@ -65,5 +65,6 @@ namespace TacticalDirector.ShotMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-27 | —      | Initial implementation. |
+// | 1.0     | 2026-05-27 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-05-28 | —      | L-1: XML doc KickSpeed: V_FLOOR/V_CEILING→VFloor/VCeiling.         |
 #endregion
