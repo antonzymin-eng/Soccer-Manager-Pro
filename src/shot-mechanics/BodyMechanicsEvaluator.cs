@@ -71,10 +71,12 @@ namespace TacticalDirector.ShotMechanics
             if (speed < 0.1f)
                 return 0.5f; // stationary: neutral score
 
-            Vector3 velDir    = agentVelocity / speed;
+            Vector3 velDir           = agentVelocity / speed;
             float   approachAngleDeg = Vector3.Angle(velDir, toGoalDirection);
-            float   deviation = Mathf.Abs(approachAngleDeg - ShotMechanicsConstants.IdealRunUpAngle);
-            return Mathf.Clamp01(1.0f - deviation / ShotMechanicsConstants.RunUpTolerance);
+            float   deviation        = Mathf.Abs(approachAngleDeg - ShotMechanicsConstants.IdealRunUpAngle);
+            // Full score within tolerance; linear ramp to 0 at 2× tolerance. §3.7.3.
+            return Mathf.Clamp01(1.0f - Mathf.Max(0.0f, deviation - ShotMechanicsConstants.RunUpTolerance)
+                                          / ShotMechanicsConstants.RunUpTolerance);
         }
 
         /// <summary>
@@ -126,4 +128,6 @@ namespace TacticalDirector.ShotMechanics
 // | Version | Date       | Author | Notes                                                            |
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                          |
 // | 1.1     | 2026-05-28 | —      | H-1: BodyMechanicsResult extracted to BodyMechanicsResult.cs.    |
+// | 1.2     | 2026-05-28 | —      | M-2: ComputeRunUpScore formula fixed: was 0 at 1× tolerance;     |
+// |         |            |        |   now full score within tolerance, 0 at 2× (matches §3.7.3).   |
 #endregion

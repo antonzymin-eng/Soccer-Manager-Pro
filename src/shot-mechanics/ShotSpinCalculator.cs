@@ -48,18 +48,15 @@ namespace TacticalDirector.ShotMechanics
             float sidespinMag  = sidespinBase * spinIntent * techScale;
 
             // §3.4 — Assemble spin vector in agent-local frame, then rotate to world space.
-            // Topspin = forward rotation axis (right of facing direction in XY, upward component).
-            // Backspin = opposite of topspin.
-            // Sidespin = upward axis (Z), sign from right-of-facing.
-            // At Stage 0: simplified world-space rotation using facing direction.
-            Vector3 forward = new Vector3(facingDirectionXY.x, facingDirectionXY.y, 0.0f);
-            Vector3 right   = new Vector3(facingDirectionXY.y, -facingDirectionXY.x, 0.0f); // perp in XY
-            Vector3 up      = Vector3.up;
+            // Ball Physics uses F = C_L * (ω × v) for Magnus force (BallPhysicsCore.CalculateMagnusForce).
+            // For a ball moving in +X: F_z = (ω × v)_z = -ω_y * vx.
+            // Topspin (ball dips, F_z < 0): need ω_y > 0 → axis = left = 90° CCW from facing in XY.
+            // Backspin (ball floats, F_z > 0): inverse of topspin → ω_y < 0 → automatically correct.
+            Vector3 left = new Vector3(-facingDirectionXY.y, facingDirectionXY.x, 0.0f); // 90° CCW in XY
+            Vector3 up   = Vector3.up;
 
-            // Net topspin component: rotation axis = right × forward cross, pointing right
-            // Net backspin: inverse of topspin
             float netForwardSpin = topspinMag - backspinMag;
-            Vector3 spinVector   = right * netForwardSpin + up * sidespinMag;
+            Vector3 spinVector   = left * netForwardSpin + up * sidespinMag;
 
             // §3.4.10 — Clamp spin magnitude to SpinAbsoluteMax (80 rad/s, matches Ball Physics MAX_SPIN)
             float magnitude = spinVector.magnitude;
@@ -127,4 +124,7 @@ namespace TacticalDirector.ShotMechanics
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                        |
 // | 1.1     | 2026-05-28 | —      | M-4: Bare literal 1 replaced with ATTR_MIN in TechniqueScale.  |
+// | 1.2     | 2026-05-28 | —      | H-1: Topspin/backspin axis corrected from right (90° CW) to    |
+// |         |            |        |   left (90° CCW). Ball Physics uses ω×v for Magnus force;       |
+// |         |            |        |   right vector produced upward force for topspin (wrong).       |
 #endregion

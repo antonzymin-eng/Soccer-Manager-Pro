@@ -38,6 +38,18 @@ namespace TacticalDirector.ShotMechanics
 
         #endregion
 
+        #region Derived
+
+        /// <summary>[DERIVED] Goal-relative U coordinate of goal centre (midpoint of [0, 1] horizontal range).
+        /// Formula: 0.5 = midpoint of PlacementTarget.x range [0, 1]. §3.5, §3.7.</summary>
+        public static readonly float GoalCentreU = 0.5f;
+
+        /// <summary>[DERIVED] Goal-relative V coordinate of goal centre (midpoint of [0, 1] vertical range).
+        /// Formula: 0.5 = midpoint of PlacementTarget.y range [0, 1]. §3.5, §3.7.</summary>
+        public static readonly float GoalCentreV = 0.5f;
+
+        #endregion
+
         #region Cross
 
         /// <summary>
@@ -346,4 +358,5 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        |   V_AbsoluteMin→VAbsoluteMin, V_AbsoluteMax→VAbsoluteMax, D_Mid→DMid, D_Scale→DScale).        |
 // |         |            |        |   M-2: Added BodyLeanMaxDeg, BodyLeanMaxSpeed GT constants.                                  |
 // |         |            |        |   M-3: Added WeakFootRatingMax, WeakFootRatingRange GT constants.                            |
+// | 1.2     | 2026-05-28 | —      | M-5: Added Derived region with GoalCentreU/GoalCentreV (replaces 0.5f magic literals).        |
 #endregion

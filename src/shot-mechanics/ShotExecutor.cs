@@ -3,8 +3,8 @@
 // Modified: 2026-05-27
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.9, §4.1, §4.2, §4.3, §4.4, Code Standards #20
-// Purpose:  Sealed instance orchestrator for the seven-state shot execution state machine:
-//           IDLE → INITIATING → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE (±STUMBLING).
+// Purpose:  Sealed instance orchestrator for the five-state shot execution state machine:
+//           IDLE → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE (±STUMBLING flag on result).
 //           Validates ShotRequest, coordinates sub-system calls, calls Ball.ApplyKick() at
 //           CONTACT exactly once, publishes events. Dependencies constructor-injected (FR-CS-051–054).
 
@@ -16,8 +16,9 @@ using TacticalDirector.BallPhysics;
 namespace TacticalDirector.ShotMechanics
 {
     /// <summary>
-    /// Orchestrates shot execution across the seven-state lifecycle.
-    /// IDLE → INITIATING → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE (optional STUMBLING branch).
+    /// Orchestrates shot execution across the five-state lifecycle.
+    /// IDLE → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE. INITIATING is synchronous in Execute();
+    /// STUMBLING is a flag on the result, not a distinct state.
     /// Shot Mechanics #6 §3.9, §4.1.
     /// </summary>
     public sealed class ShotExecutor
@@ -206,7 +207,8 @@ namespace TacticalDirector.ShotMechanics
 
             // ── §3.7 — Body mechanics (evaluated before velocity; BMS feeds CQM) ───────
             Vector3 toGoalDir = ShotPlacementResolver.ComputeAimDirection(
-                new Vector2(0.5f, 0.5f), agentState.Position); // centre of goal for BMS
+                new Vector2(ShotMechanicsConstants.GoalCentreU, ShotMechanicsConstants.GoalCentreV),
+                agentState.Position); // goal centre for body mechanics scoring (§3.7)
             _bodyMechanics = BodyMechanicsEvaluator.Evaluate(
                 agentState.Velocity,
                 agentState.Position,
@@ -382,19 +384,22 @@ namespace TacticalDirector.ShotMechanics
                 aimXY.y * horizontalSpd,
                 verticalSpd);
 
-            // FM-04: Guard against NaN in velocity before calling ApplyKick
+            // FM-04: Guard against NaN in velocity before calling ApplyKick.
+            // This is a programming error (not a game event), so outcome is Invalid — no ShotCancelledEvent.
             if (float.IsNaN(finalVelocity.x) || float.IsNaN(finalVelocity.y) || float.IsNaN(finalVelocity.z))
             {
-                Debug.LogError($"[ShotExecutor] FM-04: NaN in finalVelocity. Shot cancelled. Agent={_request.AgentId}");
-                _lastResult = new ShotResult { Outcome = ShotOutcome.Cancelled, ContactFrame = -1 };
+                Debug.LogError($"[ShotExecutor] FM-04: NaN in finalVelocity. Shot invalid. Agent={_request.AgentId}");
+                _lastResult = new ShotResult { Outcome = ShotOutcome.Invalid, ContactFrame = -1 };
                 _state = ShotExecutionState.Idle;
                 return;
             }
 
-            // FM-03: Re-check possession immediately before ApplyKick — §4.2.4
+            // FM-03: Re-check possession immediately before ApplyKick — §4.2.4.
+            // Possession lost after WINDUP is a game event; publish ShotCancelledEvent per §4.7.1.
             if (!_ballSystem.IsBallPossessedBy(_request.AgentId))
             {
                 Debug.LogError($"[ShotExecutor] FM-03: Agent {_request.AgentId} lost possession before CONTACT.");
+                ShotEventEmitter.PublishShotCancelled(in _request, frameNumber);
                 _lastResult = new ShotResult { Outcome = ShotOutcome.Cancelled, ContactFrame = -1 };
                 _state = ShotExecutionState.Idle;
                 return;
@@ -461,4 +466,8 @@ namespace TacticalDirector.ShotMechanics
 // | Version | Date       | Author | Notes                                                                            |
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                                          |
 // | 1.1     | 2026-05-28 | —      | M-1: Removed unused matchTime param from AdvanceWindup. L-1: var→Vector3 explicit. |
+// | 1.2     | 2026-05-28 | —      | H-2: FM-03 (possession lost at CONTACT) now publishes ShotCancelledEvent (§4.7.1). |
+// |         |            |        |   H-3: FM-04 (NaN velocity) outcome changed Cancelled→Invalid (programming error).  |
+// |         |            |        |   M-1: File header/XML corrected seven-state→five-state (enum has 5 values).        |
+// |         |            |        |   M-5: Hardcoded 0.5f/0.5f for goal centre replaced with GoalCentreU/GoalCentreV.  |
 #endregion

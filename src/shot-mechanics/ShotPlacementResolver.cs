@@ -73,7 +73,7 @@ namespace TacticalDirector.ShotMechanics
                                            goal.LeftPostY  - goal.GoalWidth * 0.5f,
                                            goal.RightPostY + goal.GoalWidth * 0.5f);
             float newTargetZ = Mathf.Clamp(baseTarget.z + errorOffset.y * goal.GoalHeight,
-                                           -goal.GoalHeight,
+                                           0.0f,
                                            goal.GoalHeight * 1.5f);
 
             var   adjustedTarget = new Vector3(goal.GoalLineX, newTargetY, newTargetZ);
@@ -87,5 +87,7 @@ namespace TacticalDirector.ShotMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-27 | —      | Initial implementation. |
+// | 1.0     | 2026-05-27 | —      | Initial implementation.                                       |
+// | 1.1     | 2026-05-28 | —      | M-4: Z clamp lower bound -goal.GoalHeight→0.0f in             |
+// |         |            |        |   ApplyErrorOffset (negative Z aim is below ground).          |
 #endregion

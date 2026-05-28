@@ -110,10 +110,9 @@ namespace TacticalDirector.ShotMechanics
         /// </summary>
         public static Vector2 ComputeErrorOffset(float errorMagnitudeDeg, Vector2 errorDirection)
         {
-            // Scale degrees to goal-relative displacement.
-            // At 20m, 1° error ≈ 0.35m; goal width = 7.32m, so 1°/20m ≈ 0.048 goal-width units.
-            // §3.6 uses errorMagnitudeDeg as an angular value; here we map to [0,1]² goal space.
-            float scale = errorMagnitudeDeg * 0.0175f; // ~1/57.3 rad per degree, then goal-relative scale
+            // Scale degrees to goal-relative displacement. §3.6.9.
+            // Mathf.Deg2Rad (= π/180 ≈ 0.01745) converts angular error to radian measure used as UV scale.
+            float scale = errorMagnitudeDeg * Mathf.Deg2Rad;
             return errorDirection * scale;
         }
     }
@@ -123,4 +122,5 @@ namespace TacticalDirector.ShotMechanics
 // | Version | Date       | Author | Notes                                                         |
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                       |
 // | 1.1     | 2026-05-28 | —      | H-3: Updated D_Mid→DMid, D_Scale→DScale constant references.  |
+// | 1.2     | 2026-05-28 | —      | M-3: Magic literal 0.0175f replaced with Mathf.Deg2Rad.        |
 #endregion
