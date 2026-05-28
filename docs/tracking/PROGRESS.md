@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 27, 2026 (Implementation phase: Collision System #3, First Touch #4, and Pass Mechanics #5 coded and reviewed May 25–26; Agent Movement #2 AR-2/AR-3 + tests landed May 27; milestones and next-actions updated)  
+**Last Updated:** May 28, 2026 (Implementation phase: Heading Mechanics #10 implementation 25 files — coded and AR-clean May 28; Goalkeeper Mechanics #11 implementation 36 files — coded and AR-clean (AR-1: 5H+1M, AR-2: 2M) May 28; milestones and next-actions updated)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -76,8 +76,8 @@
 
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
-| 10 | Heading Mechanics | 15-18 | ✅ APPROVED | May 16, 2026 | May 16, 2026 | Section files v0.1 → v0.3 same day; outline PASS-1 + section-files PASS-1 cycles complete; ERR-010-001 closed via #16 §3.5 v1.0.2 patch landing `DOMAIN_TAG_HEADING = 0x16` |
-| 11 | Goalkeeper Mechanics | 20-25 | ✅ APPROVED | May 16, 2026 | May 18, 2026 | Section files v0.1 (May 16) → v0.2 (May 18 APPROVED); ERR-011-001 resolved: `DOMAIN_TAG_GOALKEEPER = 0x1D` (#16 §3.4 v1.0.5); R-01..R-05 signed May 18, 2026 |
+| 10 | Heading Mechanics | 15-18 | ✅ APPROVED | May 16, 2026 | May 16, 2026 | Section files v0.1 → v0.3 same day; outline PASS-1 + section-files PASS-1 cycles complete; ERR-010-001 closed via #16 §3.5 v1.0.2 patch landing `DOMAIN_TAG_HEADING = 0x16`. **Implementation begun May 28, 2026** at `src/heading-mechanics/` (25 source files; AR-1 + AR-2 adversarial review clean). |
+| 11 | Goalkeeper Mechanics | 20-25 | ✅ APPROVED | May 16, 2026 | May 18, 2026 | Section files v0.1 (May 16) → v0.2 (May 18 APPROVED); ERR-011-001 resolved: `DOMAIN_TAG_GOALKEEPER = 0x1D` (#16 §3.4 v1.0.5); R-01..R-05 signed May 18, 2026. **Implementation begun May 28, 2026** at `src/goalkeeper-mechanics/` (36 source files; AR-1: 5H+1M fixed; AR-2: 2M fixed; AR-3 clean). |
 | 12 | Positioning AI | 18-22 | ✅ APPROVED | May 15, 2026 | May 18, 2026 | Section files v0.1 (May 15) → v0.3 (May 18 APPROVED); ERR-012-001 resolved: `DOMAIN_TAG_POSITIONING_AI = 0x17`; 8 hysteresis constants `[EST]` → `[GT]`; GK constants promoted per KD-13; R-01..R-05 signed May 18, 2026 |
 
 **Priority 3 Progress:** 100% (3 of 3 approved)
