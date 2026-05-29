@@ -1,0 +1,174 @@
+// File:     src/decision-tree/UtilityWeights.cs
+// Created:  2026-05-29
+// Modified: 2026-05-29
+// Author:   —
+// Spec:     Decision Tree #8 §3.2.11, Code Standards #20
+// Purpose:  Authoritative constant catalogue for the utility scoring model.
+//           All 58 utility constants (§3.2.11) reside here and nowhere else.
+//           No other file may define utility scoring constants (§3.2.1.6).
+
+namespace TacticalDirector.DecisionTree
+{
+    /// <summary>
+    /// All gameplay-tunable and estimated constants for the Decision Tree utility model.
+    /// No constant in this file may be referenced inline in code — access via this class.
+    /// Decision Tree #8 §3.2.11.
+    /// </summary>
+    public static class UtilityWeights
+    {
+        // ── Universal ──────────────────────────────────────────────────────────────
+
+        /// <summary>[DERIVED] Minimum scored utility after clamping. Guarantees every option has positive appeal. Decision Tree #8 §3.2.1.5.</summary>
+        public const float UTILITY_FLOOR   = 0.01f;
+
+        /// <summary>[DERIVED] Maximum scored utility after clamping. Perfect conditions cap. Decision Tree #8 §3.2.1.5.</summary>
+        public const float UTILITY_CEILING = 1.00f;
+
+        // ── Zone Modifiers ─────────────────────────────────────────────────────────
+
+        public const float PASS_ZONE_DEF   = 1.05f;  // [GT] pass urgency in own third
+        public const float PASS_ZONE_MID   = 1.00f;  // [GT] neutral baseline
+        public const float PASS_ZONE_ATT   = 0.90f;  // [GT] passing less dominant in attack
+
+        public const float SHOOT_ZONE_ATT      = 1.00f;  // [GT] full baseline in attacking third
+        public const float SHOOT_ZONE_MID_LONG = 0.55f;  // [GT] long shot midfield modifier
+        public const float SHOOT_ZONE_MID_SHORT = 0.05f; // [GT] near-suppression for no long shot
+        public const float SHOOT_ZONE_DEF      = 0.10f;  // [GT] strong discouragement from own half
+
+        public const float DRIBBLE_ZONE_DEF = 0.70f; // [GT] dangerous in own third
+        public const float DRIBBLE_ZONE_MID = 1.00f; // [GT] neutral
+        public const float DRIBBLE_ZONE_ATT = 1.10f; // [GT] mildly encouraged in attack
+
+        public const float HOLD_ZONE_DEF   = 1.25f;  // [GT] safe in own third
+        public const float HOLD_ZONE_MID   = 1.00f;  // [GT] neutral
+        public const float HOLD_ZONE_ATT   = 0.80f;  // [GT] waste of attacking opportunity
+
+        public const float MOVE_ZONE_DEF   = 1.00f;  // positional duty unchanged by zone
+        public const float MOVE_ZONE_MID   = 1.00f;
+        public const float MOVE_ZONE_ATT   = 1.00f;
+
+        public const float PRESS_ZONE_DEF  = 0.80f;  // [GT] pressing from deep exposes space
+        public const float PRESS_ZONE_MID  = 1.00f;  // [GT] neutral
+        public const float PRESS_ZONE_ATT  = 1.20f;  // [GT] high press encouraged in attack
+
+        public const float INTERCEPT_ZONE_DEF = 1.10f; // [GT] most valuable defensively
+        public const float INTERCEPT_ZONE_MID = 1.00f; // [GT] neutral
+        public const float INTERCEPT_ZONE_ATT = 0.90f; // [GT] in attack, seek creation not chase
+
+        // ── Base Utility Nominals ───────────────────────────────────────────────────
+
+        public const float U_BASE_PASS      = 0.60f;  // [GT] primary positive action
+        public const float U_BASE_SHOOT     = 0.85f;  // [GT] highest ceiling; zone-gated
+        public const float U_BASE_DRIBBLE   = 0.45f;  // [GT] creative outlet; deliberately secondary
+        public const float U_BASE_HOLD      = 0.28f;  // [GT] fallback; must be lowest baseline
+        public const float U_BASE_MOVE      = 0.40f;  // [GT] positional duty; moderate urgency
+        public const float U_BASE_PRESS     = 0.50f;  // [GT] active defence; moderate baseline
+        public const float U_BASE_INTERCEPT = 0.55f;  // [GT] best active defensive action
+
+        // ── Attribute Exponents ─────────────────────────────────────────────────────
+
+        public const float PASS_VISION_EXP      = 0.30f;  // [GT] lane quality reading
+        public const float PASS_TECHNIQUE_EXP   = 0.40f;  // [GT] passing execution accuracy
+        public const float SHOOT_FINISHING_EXP  = 0.50f;  // [GT] shot execution; steeper curve
+        public const float SHOOT_COMPOSURE_EXP  = 0.30f;  // [EST] discrete-event composure; Beilock & Carr (2001)
+        public const float DRIBBLE_DRIBBLING_EXP = 0.40f; // [GT] core dribbling skill
+        public const float DRIBBLE_AGILITY_EXP  = 0.30f;  // [GT] directional change speed
+        public const float HOLD_COMPOSURE_EXP   = 0.50f;  // [GT] sustained-state composure gate
+        public const float MOVE_POSITIONING_EXP = 0.40f;  // [GT] positional commitment
+        public const float MOVE_WORKRATE_EXP    = 0.30f;  // [GT] running effort
+        public const float PRESS_AGGRESSION_EXP = 0.30f;  // [GT] pressing intent
+        public const float PRESS_WORKRATE_EXP   = 0.30f;  // [GT] pressing engine
+        public const float PRESS_STAMINA_EXP    = 0.20f;  // [GT] capacity to press
+        public const float INTERCEPT_ANTICIPATION_EXP = 0.50f; // [EST] interceptive timing; Müller & Abernethy (2006)
+        public const float INTERCEPT_PACE_EXP   = 0.30f;  // [GT] speed to intercept point
+
+        // ── Risk Penalty Coefficients ───────────────────────────────────────────────
+
+        public const float PASS_RISK_COEFF      = 0.30f;  // [GT] passing risk under pressure
+        public const float SHOOT_RISK_COEFF     = 0.40f;  // [GT] shot blocked = possession lost
+        public const float DRIBBLE_RISK_COEFF   = 0.35f;  // [GT] dribble tackle = possession lost
+        public const float INTERCEPT_PRESSURE_COEFF = 0.20f; // [GT] pressure reduces intercept read
+        public const float HOLD_PRESSURE_COEFF  = 0.50f;  // [GT] pressure reduces HOLD appeal
+
+        // ── Context Score Thresholds and Distances ──────────────────────────────────
+
+        public const float LONG_SHOT_THRESHOLD  = 0.75f;  // [GT] shifted LongShots for midfield shot
+        public const float GOAL_OPENING_MIN     = 0.05f;  // [GT] minimum goal opening score floor
+        public const float BLOCKER_RADIUS_M     = 0.50f;  // [GT] outfield player body width in shot lane
+        public const float GK_BLOCKER_RADIUS_M  = 1.50f;  // [GT] goalkeeper effective blocking radius
+        public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] distance from goal line to classify as GK
+        public const float GOAL_MIN_SHOT_DIST   = 1.00f;  // [GT] minimum dist to count as blocker
+
+        public const float MOVE_URGENCY_DIST_M  = 15.0f;  // [GT] full urgency distance for MOVE
+        public const float MOVE_DIST_MIN        = 0.10f;  // [GT] minimum distance modifier floor
+        public const float MOVE_PRESS_SUPPRESSION_DIST   = 6.0f;  // [GT] proximity threshold for MOVE suppression
+        public const float MOVE_PRESS_SUPPRESSION_FACTOR = 0.60f; // [GT] multiplier applied to MOVE when opponent is close
+
+        // ── Phase Modifiers ─────────────────────────────────────────────────────────
+
+        public const float MOVE_PHASE_OWN_TEAM  = 0.70f;  // [GT] delay repositioning in possession
+        public const float MOVE_PHASE_OPPONENT  = 1.25f;  // [GT] urgent to recover shape without ball
+        public const float MOVE_PHASE_CONTESTED = 1.00f;  // [DERIVED] neutral baseline
+
+        // ── Tactical Pressing Modifiers ─────────────────────────────────────────────
+
+        public const float PRESS_TACTICAL_HIGH   = 1.40f; // [GT] high press instruction
+        public const float PRESS_TACTICAL_MEDIUM = 1.00f; // Stage 0 default for all agents
+        public const float PRESS_TACTICAL_LOW    = 0.60f; // [GT] low press instruction
+
+        // ── Option Generation Constants ─────────────────────────────────────────────
+        // Constants referenced in §3.1; catalogued here per §3.2.1.6.
+
+        public const float PASS_LANE_WIDTH_HALF    = 0.8f;  // [GT] half-width of pass lane corridor (m)
+        public const float PASS_LANE_DIVISOR       = 3.0f;  // [GT] interceptors in lane → score=0
+        public const float MIN_PASS_LANE_SCORE     = 0.05f; // [GT] adjusted lane score floor
+        public const float GOAL_DIR_MIN_MODIFIER   = 0.5f;  // [GT] backward-pass direction penalty floor
+
+        public const float SHORT_PASS_MAX_DISTANCE  = 15.0f; // [GT] m; §3.1.3.4
+        public const float MEDIUM_PASS_MAX_DISTANCE = 30.0f; // [GT] m; §3.1.3.4
+        public const float CROSS_ANGLE_THRESHOLD    = 60.0f; // [GT] degrees; §3.1.3.4
+        public const float THROUGH_BALL_VEL_THRESHOLD = 1.0f; // [GT] m/s; §3.1.3.4
+
+        public const float MIN_GOAL_VISIBILITY     = 0.05f; // [GT] minimum goal visibility for SHOOT
+        public const float BASE_SHOOT_RANGE        = 20.0f; // [GT] m; §3.1.4.2
+        public const float LONGSHOT_RANGE_BONUS    = 15.0f; // [GT] m; §3.1.4.2
+
+        public const float MIN_DRIBBLE_SPACE       = 0.10f; // [GT] minimum space score to generate DRIBBLE
+        public const float DRIBBLE_THREAT_RADIUS   = 2.0f;  // [GT] m; opponent proximity for space scoring
+        public const float DRIBBLE_LOOKAHEAD_M     = 5.0f;  // [GT] m; look-ahead target distance
+
+        public const float PRESS_TRIGGER_DISTANCE  = 8.0f;  // [GT] m; maximum distance for PRESS generation
+        public const float PRESS_STAMINA_MINIMUM   = 0.20f; // [GT] AerobicPool threshold for PRESS gate
+
+        public const float INTERCEPT_MIN_BALL_SPEED = 1.0f; // [GT] m/s; ball must be moving for INTERCEPT
+        public const float MAX_INTERCEPT_TIME      = 1.5f;  // [GT] s; maximum look-ahead for intercept geometry
+        public const float DRAG_APPROX             = 0.3f;  // [CROSS — Ball Physics #1 §3.x] drag deceleration coefficient s⁻¹
+
+        public const float URGENCY_PRESSURE_SCALE  = 1.0f;  // [GT] maps PressureScalar to PassRequest.Urgency
+
+        // ── Option Generation: Derived Geometry ─────────────────────────────────
+        // Constants used in OptionGenerator formula code per §3.2.1.6.
+
+        /// <summary>[DERIVED] Half-angle of each 8-sector DRIBBLE space scan sector. 360°/8/2 = 22.5°.</summary>
+        public const float DRIBBLE_SECTOR_HALF_ANGLE = 22.5f;
+
+        /// <summary>[GT] Fraction of lane endpoint excluded from interceptor projection (prevents endpoint artifacts).</summary>
+        public const float PASS_LANE_ENDPOINT_MARGIN = 0.05f;
+
+        // ── Agent Speed Cross-Reference ──────────────────────────────────────────
+        // [CROSS — Agent Movement #2 §3.2.4]
+
+        /// <summary>[CROSS — Agent Movement #2 §3.2.4] Minimum agent speed at Pace=1 (m/s).</summary>
+        public const float AGENT_SPEED_MIN_MPS = 7.5f;
+
+        /// <summary>[CROSS — Agent Movement #2 §3.2.4] Maximum agent speed at Pace=20 (m/s).</summary>
+        public const float AGENT_SPEED_MAX_MPS = 10.2f;
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                                           |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                                         |
+// | 1.1     | 2026-05-29 | —      | AR-1 L-1/L-3: Add DRIBBLE_SECTOR_HALF_ANGLE, PASS_LANE_ENDPOINT_MARGIN,        |
+// |         |            |        |   AGENT_SPEED_MIN/MAX_MPS; XML docs on UTILITY_FLOOR/CEILING.                  |
+#endregion

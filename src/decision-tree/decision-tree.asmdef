@@ -1,0 +1,20 @@
+{
+    "name": "TacticalDirector.DecisionTree",
+    "rootNamespace": "TacticalDirector.DecisionTree",
+    "references": [
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.PerceptionSystem",
+        "TacticalDirector.PassMechanics",
+        "TacticalDirector.ShotMechanics",
+        "TacticalDirector.CollisionSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,7 +1,7 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** May 29, 2026 (v1.15 — perception-system/ 14 files tree expanded + AR-2 3L fixes noted; v1.14 goalkeeper-mechanics/ 36 files; v1.13 heading-mechanics/ 25 files)
+> **Last Updated:** May 29, 2026 (v1.16 — decision-tree/ 36 files tree expanded + AR-1 2H+3M+4L fixes noted; v1.15 perception-system/ 14 files + AR-2 3L fixes noted; v1.14 goalkeeper-mechanics/ 36 files; v1.13 heading-mechanics/ 25 files)
 > **Purpose:** Concrete coding rules for any AI agent or developer writing C# source code in this project. Covers file naming, constant catalogues, Unity project structure, and build/test commands. Cites Spec #20 (Code Standards & Style Guide) as the source for every convention here. Read the root `CLAUDE.md` first — this file supplements it, not replaces it.
 
 ---
@@ -179,6 +179,45 @@ src/
 │   ├── PerceptionSystem.cs            ← 10Hz orchestrator; 7-step pipeline for all 22 agents; forced-refresh handler (§3.0–§3.8, §4.1, §4.6)
 │   └── Tests/                         ← (empty — unit tests deferred to Stage 0+1)
 ├── decision-tree/                     ← Spec #8
+│   ├── decision-tree.asmdef           ← AI layer; references agent-movement, perception-system, pass-mechanics, shot-mechanics
+│   ├── AssemblyInfo.cs                ← [assembly: InternalsVisibleTo("TacticalDirector.DecisionTree.Tests")]
+│   ├── DecisionTree.cs                ← public sealed class: 6-step pipeline orchestrator + state machine (§3.6, §3.7, §4.1)
+│   ├── DecisionTreeStateMachine.cs    ← pure state evaluator: IDLE/EVALUATING/EXECUTING/INTERRUPTED transitions (§3.7.2)
+│   ├── SnapshotValidator.cs           ← Step 1: validates FilteredView — phase gate, agent identity, ball state (§3.1.1)
+│   ├── DecisionContextAssembler.cs    ← Step 2: assembles DecisionContext from all pipeline inputs (§2.2.4, §3.1.1)
+│   ├── OptionGenerator.cs             ← Step 3: generates all eligible ActionOption candidates — possession + off-ball branches (§3.1)
+│   ├── UtilityScorer.cs               ← Step 4: scores ActionOptions with §3.2 formulas (zone×AM×context×tact×risk)
+│   ├── TacticalModifierResolver.cs    ← Step 4 helper: resolves tactical multipliers per action type (§3.4)
+│   ├── ActionSelector.cs              ← Step 5: composure noise injection + highest-EffectiveUtility winner (§3.3)
+│   ├── ActionDispatcher.cs            ← Step 6: routes selected action to movement controller or physics executor (§3.5)
+│   ├── DecisionContext.cs             ← internal struct: all assembled pipeline inputs for one agent-tick (§2.2.4)
+│   ├── ActionOption.cs                ← internal struct: one scored candidate with type-specific context fields (§3.1.0)
+│   ├── AgentAction.cs                 ← public readonly struct: pipeline output (type, target, pass/shot params, utility) (§2.2.3)
+│   ├── DecisionMadeEvent.cs           ← struct event: published after each decision; EventBusStub no-op at Stage 0 (§2.2.7)
+│   ├── DtAgentAttributes.cs           ← struct: all DT-consumed player attributes [1–20] raw + CreateDefault factory (§3.1)
+│   ├── MatchContext.cs                ← struct: authoritative match state per heartbeat (score, possession, ball, zone) (§2.2.5)
+│   ├── TacticalContext.cs             ← struct: pressing mode, passing style, formation slots; Stage0Default factory (§2.2.6)
+│   ├── DecisionTreeConstants.cs       ← constants: capacity limits / timing budgets / pipeline invariants (§4.2, §3.7)
+│   ├── UtilityWeights.cs              ← constants: all 58+ utility scoring constants (§3.2.11)
+│   ├── ComposureWeights.cs            ← constants: NOISE_MAX / COMPOSURE_SUPPRESSION / TIEBREAK_EPSILON (§3.3.3–3.3.5)
+│   ├── TacticalWeights.cs             ← constants: tactical multipliers for all action types (§3.4)
+│   ├── PitchGeometry.cs               ← static helpers: field zone classification, goal post positions, centre (§3.1.1)
+│   ├── IDtMovementController.cs       ← public interface: dispatch boundary to Agent Movement #2 XC-3.5-10 (§3.5)
+│   ├── EventBusStub.cs                ← Stage 0 no-op event bus; replace at Stage 1 with Event System #17 wiring
+│   ├── ActionType.cs                  ← enum: PASS/SHOOT/DRIBBLE/HOLD/MOVE_TO_POSITION/PRESS/INTERCEPT (ordinals are hash inputs)
+│   ├── DtState.cs                     ← enum: IDLE / EVALUATING / EXECUTING / INTERRUPTED (§3.7.1)
+│   ├── FieldZone.cs                   ← enum: DEFENSIVE / MIDFIELD / ATTACKING — zone boundaries for utility modifiers (§2.2.5)
+│   ├── MatchPhase.cs                  ← enum: OPEN_PLAY / SET_PIECE_HOME / SET_PIECE_AWAY / KICK_OFF (§2.2.5)
+│   ├── PassingStyle.cs                ← enum: DIRECT / MIXED / SHORT — team passing instruction (§2.2.6)
+│   ├── PressingMode.cs                ← enum: HIGH / MEDIUM / LOW — team pressing instruction (§2.2.6)
+│   ├── PossessionState.cs             ← enum: HOME_TEAM / AWAY_TEAM / CONTESTED (§2.2.5)
+│   └── Tests/
+│       ├── decision-tree-tests.asmdef ← EditMode; references decision-tree.asmdef
+│       ├── OptionGeneratorTests.cs    ← UT-01..UT-07: OptionGenerator generation gates and candidate logic
+│       ├── UtilityScorerTests.cs      ← UT-08..UT-09: UtilityScorer per-action-type utility formulas
+│       ├── ActionSelectorTests.cs     ← UT-10..UT-15: ActionSelector composure noise injection + winner selection
+│       ├── DispatcherTests.cs         ← UT-16..UT-23: ActionDispatcher movement routing (HOLD/DRIBBLE/MOVE/PRESS/INTERCEPT)
+│       └── DecisionTreeIntegrationTests.cs ← UT-24..UT-32: full pipeline state machine + output (public API only)
 ├── fixed64-math/                      ← Spec #9  (Stage 5+; no runtime code at Stage 0)
 ├── heading-mechanics/                 ← Spec #10
 │   ├── heading-mechanics.asmdef
@@ -807,3 +846,4 @@ Update this file when those items are resolved.
 | 1.13 | 2026-05-28 | — | Heading Mechanics (#10) tree expanded: 25 files with role annotations (heading-mechanics.asmdef + 23 .cs files). |
 | 1.14 | 2026-05-28 | — | Goalkeeper Mechanics (#11) tree expanded: 36 files with role annotations (goalkeeper-mechanics.asmdef + 35 .cs files). AR-1 (5H+1M) + AR-2 (2M) review cycles completed; all findings fixed. |
 | 1.15 | 2026-05-29 | — | Perception System (#7) tree expanded: 14 files with role annotations (perception-system.asmdef + 13 .cs files). AR-1 (3M+3L) review cycle completed; all findings fixed. |
+| 1.16 | 2026-05-29 | — | Decision Tree (#8) tree expanded: 36 files with role annotations (35 .cs files + 1 asmdef). AR-1 (2H+3M+4L) review cycle completed; all findings fixed: H-1 AssemblyInfo.cs InternalsVisibleTo; H-2 SplitMix64 unchecked{}; H-3 DecisionContextAssembler possession classification bug; M-1 ScoreMove possession source; M-2 OptionGenerator using directive; M-3 DtAgentAttributes.Stamina doc; L-1 magic numbers → named constants; L-2 AttributeNormMin XML doc; L-3 UTILITY_FLOOR/CEILING XML docs; L-4 CrossSubType tautological ternary. AR-2 full sweep: no new findings. |

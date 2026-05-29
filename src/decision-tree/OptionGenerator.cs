@@ -1,0 +1,556 @@
+// File:     src/decision-tree/OptionGenerator.cs
+// Created:  2026-05-29
+// Modified: 2026-05-29
+// Author:   —
+// Spec:     Decision Tree #8 §3.1, Code Standards #20
+// Purpose:  Step 3 of the 6-step pipeline. Generates all eligible ActionOption
+//           candidates from DecisionContext. Pure function: no side effects, zero heap
+//           allocation (writes into caller-provided fixed-size array). §3.1.0.
+
+using System;
+using UnityEngine;
+using TacticalDirector.AgentMovement;
+using TacticalDirector.PerceptionSystem;
+using TacticalDirector.PassMechanics;
+using TacticalDirector.ShotMechanics;
+
+namespace TacticalDirector.DecisionTree
+{
+    /// <summary>
+    /// Step 3: generates all eligible ActionOption candidates for one agent at one heartbeat.
+    /// Pure, deterministic, side-effect-free. Writes into a caller-provided fixed array.
+    /// Decision Tree #8 §3.1.
+    /// </summary>
+    internal static class OptionGenerator
+    {
+        /// <summary>
+        /// Generates all eligible options and writes them into optionBuffer[0..count-1].
+        /// Returns the number of options written. Maximum is DecisionTreeConstants.MaxOptions.
+        /// §3.1.0, §3.1.2.
+        /// </summary>
+        internal static int GenerateOptions(
+            in DecisionContext ctx,
+            ActionOption[] optionBuffer)
+        {
+            int count = 0;
+
+            if (ctx.AgentHasBall)
+                count = GeneratePossessionBranch(in ctx, optionBuffer, count);
+            else
+                count = GenerateOffBallBranch(in ctx, optionBuffer, count);
+
+            return count;
+        }
+
+        // ── Possession Branch (§3.1.2) ─────────────────────────────────────────
+
+        private static int GeneratePossessionBranch(
+            in DecisionContext ctx,
+            ActionOption[] buf,
+            int count)
+        {
+            count = GeneratePassCandidates(in ctx, buf, count);  // §3.1.3
+            count = GenerateShootCandidate(in ctx, buf, count);  // §3.1.4
+            count = GenerateDribbleCandidate(in ctx, buf, count); // §3.1.5
+            count = GenerateHoldCandidate(in ctx, buf, count);    // §3.1.6
+            return count;
+        }
+
+        // ── Off-Ball Branch (§3.1.2) ───────────────────────────────────────────
+
+        private static int GenerateOffBallBranch(
+            in DecisionContext ctx,
+            ActionOption[] buf,
+            int count)
+        {
+            count = GenerateMoveCandidate(in ctx, buf, count);      // §3.1.7
+            count = GeneratePressCandidate(in ctx, buf, count);     // §3.1.8
+            count = GenerateInterceptCandidate(in ctx, buf, count); // §3.1.9
+            return count;
+        }
+
+        // ── §3.1.3 PASS ────────────────────────────────────────────────────────
+
+        private static int GeneratePassCandidates(
+            in DecisionContext ctx,
+            ActionOption[] buf,
+            int count)
+        {
+            FilteredView snap = ctx.Snapshot;
+
+            // Gate (§3.1.3.1)
+            if (!ctx.AgentHasBall) return count;
+            if (snap.VisibleTeammatesCount == 0) return count;
+            if (ctx.MatchContext.Phase != MatchPhase.OPEN_PLAY) return count;
+
+            // Decisions attribute candidate cap (§3.1.3.6)
+            int decisionsCap = Mathf.FloorToInt(2.0f + ctx.A_Decisions * 8.0f);
+            int totalTeammates = snap.VisibleTeammatesCount;
+
+            // Sort by proximity if cap applies (§3.1.3.6: closest first)
+            // Stage 0: iterate in array order; full sort deferred to Stage 1 optimisation.
+            int maxCandidates = Mathf.Min(totalTeammates, decisionsCap);
+
+            Vector2 goalDir = (ctx.OpponentGoalCentre - ctx.AgentPosition).normalized;
+            float urgency = Mathf.Clamp01(ctx.PressureScalar * TacticalWeights.UrgencyPressureScale);
+
+            for (int i = 0; i < maxCandidates && count < buf.Length; i++)
+            {
+                PerceivedAgent tm = snap.VisibleTeammates[i];
+
+                // Pass lane viability (§3.1.3.3)
+                int interceptorCount = CountInterceptors(in ctx, tm.PerceivedPosition);
+                float passLaneScore = Mathf.Clamp01(1.0f - interceptorCount / UtilityWeights.PASS_LANE_DIVISOR);
+
+                // Goal-direction modifier (§3.1.3.5)
+                Vector2 passDir = (tm.PerceivedPosition - ctx.AgentPosition).normalized;
+                float cosine = Vector2.Dot(passDir, goalDir);
+                float goalDirMod = UtilityWeights.GOAL_DIR_MIN_MODIFIER
+                    + ((cosine + 1.0f) / 2.0f) * (1.0f - UtilityWeights.GOAL_DIR_MIN_MODIFIER);
+                float adjustedScore = passLaneScore * goalDirMod;
+
+                if (adjustedScore < UtilityWeights.MIN_PASS_LANE_SCORE) continue;
+
+                float dist = Vector2.Distance(ctx.AgentPosition, tm.PerceivedPosition);
+                PassType passType = DerivePassType(dist, passDir, ctx.AgentFacingDirection,
+                    ctx.A_Crossing, tm.PerceivedVelocity, goalDir, ctx.AgentPosition);
+                CrossSubType crossSub = CrossSubType.Flat; // Stage 0: always Flat; Whipped/High derived at Stage 1
+
+                buf[count++] = new ActionOption
+                {
+                    Type                  = ActionType.PASS,
+                    TargetAgentId         = tm.AgentId,
+                    TargetPosition        = tm.PerceivedPosition,
+                    PassLaneScore         = passLaneScore,
+                    AdjustedPassLaneScore = adjustedScore,
+                    GoalDirectionCosine   = cosine,
+                    DerivedPassType       = passType,
+                    DerivedCrossSubType   = crossSub,
+                    IntendedDistance      = dist,
+                    Urgency               = urgency,
+                    IsWeakFoot            = false  // ERR-007-TRACKED: WeakFootRating absent; conservative default
+                };
+            }
+
+            return count;
+        }
+
+        private static int CountInterceptors(in DecisionContext ctx, Vector2 targetPos)
+        {
+            Vector2 laneVec = targetPos - ctx.AgentPosition;
+            float laneLen2  = laneVec.sqrMagnitude;
+            int interceptors = 0;
+
+            FilteredView snap = ctx.Snapshot;
+            for (int i = 0; i < snap.VisibleOpponentsCount; i++)
+            {
+                Vector2 oPos = snap.VisibleOpponents[i].PerceivedPosition;
+                float tProj  = laneLen2 > 0.0001f
+                    ? Vector2.Dot(oPos - ctx.AgentPosition, laneVec) / laneLen2
+                    : 0.0f;
+                float tClamped  = Mathf.Clamp01(tProj);
+                Vector2 closest = ctx.AgentPosition + tClamped * laneVec;
+                float perpDist  = Vector2.Distance(oPos, closest);
+
+                if (perpDist < UtilityWeights.PASS_LANE_WIDTH_HALF
+                    && tClamped > UtilityWeights.PASS_LANE_ENDPOINT_MARGIN
+                    && tClamped < 1.0f - UtilityWeights.PASS_LANE_ENDPOINT_MARGIN)
+                {
+                    interceptors++;
+                }
+            }
+
+            return interceptors;
+        }
+
+        private static PassType DerivePassType(
+            float dist,
+            Vector2 passDir,
+            Vector2 agentFacing,
+            float aCrossing,
+            Vector2 tmVelocity,
+            Vector2 goalDir,
+            Vector2 agentPos)
+        {
+            if (dist <= UtilityWeights.SHORT_PASS_MAX_DISTANCE)
+                return PassType.Ground;
+
+            if (dist <= UtilityWeights.MEDIUM_PASS_MAX_DISTANCE)
+            {
+                float velTowardGoal = Vector2.Dot(tmVelocity, goalDir);
+                return velTowardGoal > UtilityWeights.THROUGH_BALL_VEL_THRESHOLD
+                    ? PassType.ThroughBall
+                    : PassType.Ground;
+            }
+
+            // Long range: check cross angle
+            float angleFromFwd = Vector2.Angle(agentFacing, passDir);
+            if (angleFromFwd > UtilityWeights.CROSS_ANGLE_THRESHOLD)
+                return PassType.Cross;
+
+            return PassType.Lofted;
+        }
+
+        // ── §3.1.4 SHOOT ────────────────────────────────────────────────────────
+
+        private static int GenerateShootCandidate(
+            in DecisionContext ctx,
+            ActionOption[] buf,
+            int count)
+        {
+            if (count >= buf.Length) return count;
+
+            // Gate (§3.1.4.1)
+            if (!ctx.AgentHasBall) return count;
+            if (!ctx.Snapshot.BallVisible) return count;
+            if (ctx.MatchContext.Phase != MatchPhase.OPEN_PLAY) return count;
+
+            float distToGoal = Vector2.Distance(ctx.AgentPosition, ctx.OpponentGoalCentre);
+
+            // Range gate (§3.1.4.2)
+            float shootingRange = UtilityWeights.BASE_SHOOT_RANGE + ctx.A_LongShots * UtilityWeights.LONGSHOT_RANGE_BONUS;
+            if (distToGoal > shootingRange) return count;
+
+            // Goal visibility (§3.1.4.3)
+            float goalOpeningScore = ComputeGoalOpeningScore(in ctx, distToGoal);
+            if (goalOpeningScore < UtilityWeights.MIN_GOAL_VISIBILITY) return count;
+
+            // PowerIntent (§3.5.3): clamp(GoalOpeningScore × A_Finishing, 0.1, 1.0)
+            float powerIntent = Mathf.Clamp(goalOpeningScore * ctx.A_Finishing, 0.1f, 1.0f);
+
+            // PlacementTarget: aim toward far post based on agent position relative to goal centre
+            float agentGoalRelY = ctx.AgentPosition.y - ctx.OpponentGoalCentre.y;
+            float u = agentGoalRelY >= 0.0f
+                ? TacticalWeights.PlacementCornerOffset                        // aim low side
+                : 1.0f - TacticalWeights.PlacementCornerOffset;                // aim high side
+            float v = 0.5f; // mid-height default
+            Vector2 placement = new Vector2(u, v);
+
+            buf[count++] = new ActionOption
+            {
+                Type               = ActionType.SHOOT,
+                TargetAgentId      = -1,
+                TargetPosition     = ctx.OpponentGoalCentre,
+                GoalOpeningScore   = goalOpeningScore,
+                PowerIntent        = powerIntent,
+                DerivedContactZone = ContactZone.Centre,
+                SpinIntent         = 0.0f,
+                PlacementTarget    = placement,
+                DistanceToGoal     = distToGoal
+            };
+
+            return count;
+        }
+
+        private static float ComputeGoalOpeningScore(in DecisionContext ctx, float distToGoal)
+        {
+            Vector2 agentPos  = ctx.AgentPosition;
+            Vector2 goalPostL = ctx.OpponentGoalPostL;
+            Vector2 goalPostR = ctx.OpponentGoalPostR;
+
+            float totalArc   = AngularSpan(agentPos, goalPostL, goalPostR);
+            if (totalArc <= 0.0f) return 0.0f;
+
+            float blockedArc = 0.0f;
+            FilteredView snap = ctx.Snapshot;
+            for (int i = 0; i < snap.VisibleOpponentsCount; i++)
+            {
+                Vector2 oPos = snap.VisibleOpponents[i].PerceivedPosition;
+
+                // Only opponents between agent and goal (§3.1.4.3 IsInShotPath)
+                if (!IsInShotPath(agentPos, ctx.OpponentGoalCentre, oPos,
+                    distToGoal, UtilityWeights.GOAL_MIN_SHOT_DIST)) continue;
+
+                float dist = Vector2.Distance(agentPos, oPos);
+                bool isGk  = Vector2.Distance(oPos, ctx.OpponentGoalCentre)
+                             < UtilityWeights.GK_PROXIMITY_TO_GOAL;
+                float radius = isGk ? UtilityWeights.GK_BLOCKER_RADIUS_M
+                                    : UtilityWeights.BLOCKER_RADIUS_M;
+
+                if (dist < 0.001f) continue;
+                float occlusionAngle = 2.0f * Mathf.Atan2(radius, dist) * Mathf.Rad2Deg;
+                blockedArc += occlusionAngle;
+            }
+
+            float unblocked = Mathf.Max(totalArc - blockedArc, 0.0f);
+            return Mathf.Clamp01(unblocked / totalArc);
+        }
+
+        private static float AngularSpan(Vector2 origin, Vector2 a, Vector2 b)
+        {
+            Vector2 dirA = (a - origin).normalized;
+            Vector2 dirB = (b - origin).normalized;
+            return Mathf.Acos(Mathf.Clamp(Vector2.Dot(dirA, dirB), -1.0f, 1.0f)) * Mathf.Rad2Deg;
+        }
+
+        private static bool IsInShotPath(Vector2 agentPos, Vector2 goalCentre,
+            Vector2 oppPos, float distToGoal, float minDist)
+        {
+            Vector2 shotDir = (goalCentre - agentPos).normalized;
+            float proj = Vector2.Dot(oppPos - agentPos, shotDir);
+            return proj > minDist && proj < distToGoal;
+        }
+
+        // ── §3.1.5 DRIBBLE ──────────────────────────────────────────────────────
+
+        private static int GenerateDribbleCandidate(
+            in DecisionContext ctx,
+            ActionOption[] buf,
+            int count)
+        {
+            if (count >= buf.Length) return count;
+
+            // Gate (§3.1.5.1)
+            if (!ctx.AgentHasBall) return count;
+            if (!ctx.Snapshot.BallVisible) return count;
+            if (ctx.AgentState.CurrentState == AgentMovementState.GROUNDED) return count;
+            if (ctx.MatchContext.Phase != MatchPhase.OPEN_PLAY) return count;
+
+            // 8-sector space scan (§3.1.5.2)
+            float bestSpace = 0.0f;
+            Vector2 bestDir = ctx.AgentFacingDirection;
+
+            for (int s = 0; s < 8; s++)
+            {
+                float angleDeg = s * 45.0f;
+                Vector2 sectorDir = RotateVector(ctx.AgentFacingDirection, angleDeg);
+
+                float spaceInSector = 1.0f;
+                FilteredView snap = ctx.Snapshot;
+                for (int i = 0; i < snap.VisibleOpponentsCount; i++)
+                {
+                    Vector2 oDir = snap.VisibleOpponents[i].PerceivedPosition - ctx.AgentPosition;
+                    float oAngle = Vector2.Angle(sectorDir, oDir);
+                    if (oAngle < UtilityWeights.DRIBBLE_SECTOR_HALF_ANGLE)
+                    {
+                        float oDist = oDir.magnitude;
+                        float sectorSpace = Mathf.Clamp01(oDist / UtilityWeights.DRIBBLE_THREAT_RADIUS);
+                        if (sectorSpace < spaceInSector) spaceInSector = sectorSpace;
+                    }
+                }
+
+                if (spaceInSector > bestSpace)
+                {
+                    bestSpace = spaceInSector;
+                    bestDir   = sectorDir;
+                }
+            }
+
+            if (bestSpace < UtilityWeights.MIN_DRIBBLE_SPACE) return count;
+
+            Vector2 dribbleTarget = ctx.AgentPosition + bestDir * UtilityWeights.DRIBBLE_LOOKAHEAD_M;
+
+            buf[count++] = new ActionOption
+            {
+                Type               = ActionType.DRIBBLE,
+                TargetAgentId      = -1,
+                TargetPosition     = dribbleTarget,
+                SpaceScore         = bestSpace,
+                BestDribbleDirection = bestDir
+            };
+
+            return count;
+        }
+
+        private static Vector2 RotateVector(Vector2 v, float angleDeg)
+        {
+            float rad = angleDeg * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(rad);
+            float sin = Mathf.Sin(rad);
+            return new Vector2(v.x * cos - v.y * sin, v.x * sin + v.y * cos);
+        }
+
+        // ── §3.1.6 HOLD ─────────────────────────────────────────────────────────
+
+        private static int GenerateHoldCandidate(
+            in DecisionContext ctx,
+            ActionOption[] buf,
+            int count)
+        {
+            if (count >= buf.Length) return count;
+            if (!ctx.AgentHasBall) return count;
+
+            // HOLD is always generated in the possession branch (no gate conditions)
+            buf[count++] = new ActionOption
+            {
+                Type          = ActionType.HOLD,
+                TargetAgentId = -1,
+                TargetPosition = ctx.AgentPosition
+            };
+
+            return count;
+        }
+
+        // ── §3.1.7 MOVE_TO_POSITION ─────────────────────────────────────────────
+
+        private static int GenerateMoveCandidate(
+            in DecisionContext ctx,
+            ActionOption[] buf,
+            int count)
+        {
+            if (count >= buf.Length) return count;
+            if (ctx.AgentHasBall) return count;
+
+            // MOVE_TO_POSITION is always generated in the off-ball branch (no gate conditions)
+            Vector2 formationSlot = ctx.TacticalContext.GetAdjustedFormationSlot(ctx.AgentId);
+            float distToSlot = Vector2.Distance(ctx.AgentPosition, formationSlot);
+
+            buf[count++] = new ActionOption
+            {
+                Type           = ActionType.MOVE_TO_POSITION,
+                TargetAgentId  = -1,
+                TargetPosition = formationSlot,
+                DistanceToSlot = distToSlot
+            };
+
+            return count;
+        }
+
+        // ── §3.1.8 PRESS ────────────────────────────────────────────────────────
+
+        private static int GeneratePressCandidate(
+            in DecisionContext ctx,
+            ActionOption[] buf,
+            int count)
+        {
+            if (count >= buf.Length) return count;
+
+            // Gate (§3.1.8.1)
+            if (ctx.AgentHasBall) return count;
+            if (ctx.Snapshot.VisibleOpponentsCount == 0) return count;
+            if (!ctx.StaminaAvailable) return count;
+            if (ctx.MatchContext.Phase != MatchPhase.OPEN_PLAY) return count;
+
+            // Press target selection (§3.1.8.2)
+            int pressTargetId   = -1;
+            Vector2 pressTargetPos = Vector2.zero;
+            float bestDist = float.MaxValue;
+
+            FilteredView snap = ctx.Snapshot;
+            int possessorId   = ctx.MatchContext.PossessingAgentId;
+
+            // Priority 1: ball carrier within range
+            for (int i = 0; i < snap.VisibleOpponentsCount; i++)
+            {
+                PerceivedAgent opp = snap.VisibleOpponents[i];
+                if (opp.AgentId != possessorId) continue;
+                float dist = Vector2.Distance(ctx.AgentPosition, opp.PerceivedPosition);
+                if (dist <= UtilityWeights.PRESS_TRIGGER_DISTANCE)
+                {
+                    pressTargetId  = opp.AgentId;
+                    pressTargetPos = opp.PerceivedPosition;
+                    bestDist       = dist;
+                    break;
+                }
+            }
+
+            // Priority 2: nearest opponent within range
+            if (pressTargetId == -1)
+            {
+                for (int i = 0; i < snap.VisibleOpponentsCount; i++)
+                {
+                    PerceivedAgent opp = snap.VisibleOpponents[i];
+                    float dist = Vector2.Distance(ctx.AgentPosition, opp.PerceivedPosition);
+                    if (dist <= UtilityWeights.PRESS_TRIGGER_DISTANCE && dist < bestDist)
+                    {
+                        bestDist       = dist;
+                        pressTargetId  = opp.AgentId;
+                        pressTargetPos = opp.PerceivedPosition;
+                    }
+                }
+            }
+
+            if (pressTargetId == -1) return count; // Gate 3: no valid target
+
+            float proximity = Mathf.Clamp01(1.0f - bestDist / UtilityWeights.PRESS_TRIGGER_DISTANCE);
+
+            buf[count++] = new ActionOption
+            {
+                Type           = ActionType.PRESS,
+                TargetAgentId  = pressTargetId,
+                TargetPosition = pressTargetPos,
+                ProximityScore = proximity
+            };
+
+            return count;
+        }
+
+        // ── §3.1.9 INTERCEPT ────────────────────────────────────────────────────
+
+        private static int GenerateInterceptCandidate(
+            in DecisionContext ctx,
+            ActionOption[] buf,
+            int count)
+        {
+            if (count >= buf.Length) return count;
+
+            // Gate (§3.1.9.1)
+            if (ctx.AgentHasBall) return count;
+            if (!ctx.Snapshot.BallVisible) return count;
+            if (ctx.Snapshot.BallStalenessFrames != 0) return count;
+            if (ctx.MatchContext.Phase != MatchPhase.OPEN_PLAY) return count;
+
+            Vector3 ballVel3 = ctx.MatchContext.BallVelocity;
+            float ballSpeed  = new Vector2(ballVel3.x, ballVel3.y).magnitude;
+            if (ballSpeed < UtilityWeights.INTERCEPT_MIN_BALL_SPEED) return count;
+
+            // Intercept geometry (§3.1.9.2)
+            Vector2 ballPos  = ctx.Snapshot.BallPerceivedPosition;
+            Vector2 ballDir  = new Vector2(ballVel3.x, ballVel3.y).normalized;
+            float agentSpeed = AgentMaxSpeed(ctx.A_Pace);
+
+            float bestTime  = float.MaxValue;
+            Vector2 bestPt  = Vector2.zero;
+
+            for (int step = 1; step <= DecisionTreeConstants.InterceptStepCount; step++)
+            {
+                float t = step * DecisionTreeConstants.InterceptStepSeconds;
+                float decay      = Mathf.Exp(-UtilityWeights.DRAG_APPROX * t);
+                float disp       = (ballSpeed / UtilityWeights.DRAG_APPROX) * (1.0f - decay);
+                Vector2 projBall = ballPos + ballDir * disp;
+
+                float travelDist = Vector2.Distance(projBall, ctx.AgentPosition);
+                float travelTime = travelDist / Mathf.Max(agentSpeed, 0.01f);
+
+                if (travelTime <= t && t < bestTime)
+                {
+                    bestTime = t;
+                    bestPt   = projBall;
+                }
+            }
+
+            if (bestTime > UtilityWeights.MAX_INTERCEPT_TIME) return count; // Gate 5
+
+            float feasibility = Mathf.Clamp01(1.0f - bestTime / UtilityWeights.MAX_INTERCEPT_TIME);
+            if (feasibility <= 0.0f) return count;
+
+            buf[count++] = new ActionOption
+            {
+                Type                      = ActionType.INTERCEPT,
+                TargetAgentId             = -1,
+                TargetPosition            = bestPt,
+                InterceptFeasibilityScore = feasibility,
+                TimeToIntercept           = bestTime
+            };
+
+            return count;
+        }
+
+        // Returns approximate agent max speed (m/s) from normalised Pace attribute.
+        // [CROSS — Agent Movement #2 §3.2.4]: Pace=1 → AGENT_SPEED_MIN_MPS, Pace=20 → AGENT_SPEED_MAX_MPS.
+        private static float AgentMaxSpeed(float aNormPace)
+        {
+            return UtilityWeights.AGENT_SPEED_MIN_MPS
+                + aNormPace * (UtilityWeights.AGENT_SPEED_MAX_MPS - UtilityWeights.AGENT_SPEED_MIN_MPS);
+        }
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                                           |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                                         |
+// | 1.1     | 2026-05-29 | —      | AR-1 M-2: Add using TacticalDirector.AgentMovement.                            |
+// |         |            |        |   L-1: Replace magic numbers with named constants (DRIBBLE_SECTOR_HALF_ANGLE,  |
+// |         |            |        |   PASS_LANE_ENDPOINT_MARGIN, InterceptStepSeconds/Count, AGENT_SPEED_*).       |
+// |         |            |        |   L-4: CrossSubType ternary (always Flat) simplified to direct assignment.      |
+#endregion

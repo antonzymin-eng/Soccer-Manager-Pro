@@ -1,0 +1,26 @@
+{
+    "name": "TacticalDirector.DecisionTree.Tests",
+    "rootNamespace": "TacticalDirector.DecisionTree.Tests",
+    "references": [
+        "TacticalDirector.DecisionTree",
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.PerceptionSystem",
+        "TacticalDirector.PassMechanics",
+        "TacticalDirector.ShotMechanics",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
