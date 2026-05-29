@@ -377,6 +377,35 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/defensive-ai/InvariantEnforcer.cs` | Pure static: Enforce() 3 anti-chaos invariants (§3.10); 3-pass demotion loop; AreAllSatisfied() post-loop check; F4 hard-fallback detection |
 | `src/defensive-ai/DefensiveAITick.cs` | Sealed class: 10 Hz orchestrator; 9-step §3.13 pipeline; pre-allocated buffers; GetMarkDirective/GetAssignment/GetTackleIntentRequests public API |
 
+### `src/attacking-ai/` — Spec #15 (24 files: 23 .cs + 1 asmdef)
+
+| File | Description |
+|------|-------------|
+| `src/attacking-ai/attacking-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai, pressing-ai) |
+| `src/attacking-ai/AttackingAIConstants.cs` | Single constant catalogue: GT/Derived/Cross constants (run-params bounds, support radius, width, weak-side, overload, invariants, hysteresis, test criteria, angle epsilon) |
+| `src/attacking-ai/AttackRole.cs` | Enum: HoldWidth / SupportBall / Runner / WeakSide (byte; FR-AT-012) |
+| `src/attacking-ai/Flank.cs` | Enum: Left / Right — overload lateral discriminator (§3.8) |
+| `src/attacking-ai/RunParameters.cs` | Readonly struct: DepthOffsetM / LateralOffsetM / RunTriggerTick — exactly 3 fields (FR-AT-011) |
+| `src/attacking-ai/AttackHysteresisState.cs` | Struct: per-agent dwell state (CurrentRole, DwellCounter, CandidateRole, CandidateDwell) |
+| `src/attacking-ai/TransitionHoldState.cs` | Struct: per-team possession-loss countdown + PrevPhase |
+| `src/attacking-ai/AttackDirective.cs` | Readonly struct: team-level tick output (TeamId, OverloadActive, OverloadFlank, TransitionHoldTick); static Empty |
+| `src/attacking-ai/AttackIntent.cs` | Readonly struct: per-agent tick output (AgentEntityId, Role, RunParameters?, ValidThroughTick) |
+| `src/attacking-ai/StyleProfile.cs` | Readonly struct: 5 profile multipliers + static factories Possession/Direct/Counter |
+| `src/attacking-ai/AttackIntentSnapshot.cs` | Readonly struct: read-only zero-copy view over tick output (Directive, Intents[], IntentCount, TickIndex) |
+| `src/attacking-ai/AttackingAgentSnapshot.cs` | Readonly struct: per-agent tick input (EntityId, TeamId, Position, BaselineSlot, Line, IsGoalkeeper, HasBall, IsActive, Pace, Stamina, Dribbling) |
+| `src/attacking-ai/AttackingSnapshot.cs` | Sealed class: pre-allocated tick input container (TickIndex, AttackingTeamId, BallPosition, BallCarrierEntityId, BallCarrierPosition, TeamAttackAngle, Agents[22]) |
+| `src/attacking-ai/AttackPoolEntry.cs` | Internal struct: per-agent scratch entry during pipeline (EntityId, Position, LateralPct, Line, AssignedRole, HasRunParams, run-param fields, RunTargetPosition, TargetPosition) |
+| `src/attacking-ai/AttackingPoolBuilder.cs` | Pure static: Build() filters snapshot→pool, EntityId-ascending insertion sort; −1 on F2 sentinel |
+| `src/attacking-ai/AttackHysteresis.cs` | Pure static: IsStable() / Update() (with CandidateDwell reset on current-role re-preference) / Reset() — increment-based dwell |
+| `src/attacking-ai/SupportHeuristic.cs` | Pure static: IsWithinSupportRadius() / ComputeEffectiveRadius() — floor = MinEffectiveRadiusM |
+| `src/attacking-ai/RoleAssigner.cs` | Pure static: Assign() two-pass (pass 1 counts stable, pass 2 evaluates non-stable); GenerateRunParams() §3.4 with Mathf.RoundToInt |
+| `src/attacking-ai/WidthHolder.cs` | Pure static: Enforce() near-touchline width-holding; skips near-side HoldWidth+WeakSide in promotion loop |
+| `src/attacking-ai/WeakSideController.cs` | Pure static: EnsureWeakSide() post-check; selects max-|Y-ballY| non-RUNNER agent |
+| `src/attacking-ai/OverloadDetector.cs` | Pure static: Evaluate() counts non-WEAK_SIDE agents in Y-corridor; fires at ≥OverloadCount |
+| `src/attacking-ai/TransitionController.cs` | Pure static: Evaluate() SET-then-DECREMENT transition hold; COUNTER (0 ticks) → instant empty |
+| `src/attacking-ai/InvariantEnforcer.cs` | Pure static: Apply() 3 anti-chaos invariants (max runners, min support, no own-half runs); ApplyFallback() all-HoldWidth |
+| `src/attacking-ai/AttackingAITick.cs` | Sealed class: 10 Hz orchestrator; §3.13 pipeline; pre-allocated zero-alloc buffers; LastDirective/GetIntent/GetSnapshot public API |
+
 ---
 
 ## Tracking Documents
