@@ -1,7 +1,7 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** May 28, 2026 (v1.14 — goalkeeper-mechanics/ 36 files tree expanded; v1.13 heading-mechanics/ 25 files tree expanded)
+> **Last Updated:** May 29, 2026 (v1.15 — perception-system/ 14 files tree expanded; v1.14 goalkeeper-mechanics/ 36 files; v1.13 heading-mechanics/ 25 files)
 > **Purpose:** Concrete coding rules for any AI agent or developer writing C# source code in this project. Covers file naming, constant catalogues, Unity project structure, and build/test commands. Cites Spec #20 (Code Standards & Style Guide) as the source for every convention here. Read the root `CLAUDE.md` first — this file supplements it, not replaces it.
 
 ---
@@ -163,6 +163,21 @@ src/
 │   └── Tests/
 │       └── NaNVelocityStub.cs         ← #if UNITY_EDITOR||DEVELOPMENT_BUILD; returns NaN for EC-008 FM-05 test
 ├── perception-system/                 ← Spec #7
+│   ├── perception-system.asmdef
+│   ├── PerceptionConstants.cs         ← all GT/Fixed/Derived/Cross constants (§3.10); 18 spec constants + sizing constants
+│   ├── PerceptionAgentAttributes.cs   ← struct: Decisions/Anticipation/TeamId/IsHalfTurned snapshot (§4.2.2)
+│   ├── FilteredView.cs                ← FilteredView, PerceptionDiagnostics, PerceivedAgent, ShoulderCheckAnimData, OcclusionDebugRecord, PerceivedAgentDebug
+│   ├── PerceptionEvents.cs            ← PerceptionRefreshEvent struct + RefreshTrigger enum (§4.6.3)
+│   ├── EventBusStub.cs                ← Stage 0 no-op event bus; replace at Stage 1 with Event System #17
+│   ├── FovCalculator.cs               ← FoV formula (§3.1) + angular candidacy test + blind-side/peripheral arc predicates
+│   ├── OcclusionFilter.cs             ← shadow cone geometry (§3.2.3) + opponent occlusion test; Stage 0: opponents only (OQ-1)
+│   ├── PressureEvaluator.cs           ← PressureScalar formula (§3.6); reused verbatim from First Touch #4 §3.5
+│   ├── BallPerceptionEvaluator.cs     ← ball range/FoV/occlusion tests + BallStalenessFrames tracking (§3.5); no L_rec (OQ-2)
+│   ├── RecognitionLatencyTracker.cs   ← per-(observer,target) latency counters, L_rec formula, half-turn bonus, Wang/Jenkins deterministic hash (§3.3)
+│   ├── ShoulderCheckScheduler.cs      ← autonomous shoulder check scheduling + window management + blind-side entity L_rec (§3.4)
+│   ├── ViewBuilder.cs                 ← pure field-assembly step: sets scalar/count fields on pre-allocated FilteredView + PerceptionDiagnostics (§3.7)
+│   ├── PerceptionSystem.cs            ← 10Hz orchestrator; 7-step pipeline for all 22 agents; forced-refresh handler (§3.0–§3.8, §4.1, §4.6)
+│   └── Tests/                         ← (empty — unit tests deferred to Stage 0+1)
 ├── decision-tree/                     ← Spec #8
 ├── fixed64-math/                      ← Spec #9  (Stage 5+; no runtime code at Stage 0)
 ├── heading-mechanics/                 ← Spec #10
@@ -791,3 +806,4 @@ Update this file when those items are resolved.
 | 1.12 | 2026-05-28 | — | Shot Mechanics (#6) tree expanded: 27 files + Tests/NaNVelocityStub.cs. AR-1 fix pass applied (H-1: BodyMechanicsResult extracted; H-2: GoalGeometry extracted; H-3: underscore GT constants renamed to PascalCase; M-1: unused AdvanceWindup param removed; M-2/M-3/M-4: magic literals promoted to constants). |
 | 1.13 | 2026-05-28 | — | Heading Mechanics (#10) tree expanded: 25 files with role annotations (heading-mechanics.asmdef + 23 .cs files). |
 | 1.14 | 2026-05-28 | — | Goalkeeper Mechanics (#11) tree expanded: 36 files with role annotations (goalkeeper-mechanics.asmdef + 35 .cs files). AR-1 (5H+1M) + AR-2 (2M) review cycles completed; all findings fixed. |
+| 1.15 | 2026-05-29 | — | Perception System (#7) tree expanded: 14 files with role annotations (perception-system.asmdef + 13 .cs files). AR-1 (3M+3L) review cycle completed; all findings fixed. |

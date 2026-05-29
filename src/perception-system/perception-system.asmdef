@@ -1,0 +1,19 @@
+{
+    "name": "TacticalDirector.PerceptionSystem",
+    "rootNamespace": "TacticalDirector.PerceptionSystem",
+    "references": [
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.CollisionSystem",
+        "TacticalDirector.FirstTouch"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

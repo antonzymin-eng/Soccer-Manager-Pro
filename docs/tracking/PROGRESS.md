@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 28, 2026 (Implementation phase: Heading Mechanics #10 implementation 25 files — coded and AR-clean May 28; Goalkeeper Mechanics #11 implementation 36 files — coded and AR-clean (AR-1: 5H+1M, AR-2: 2M) May 28; milestones and next-actions updated)  
+**Last Updated:** May 29, 2026 (Implementation phase: Perception System #7 implementation 14 files — coded and AR-clean (AR-1: 3M+3L all fixed) May 29; milestones and next-actions updated. Prior: Heading Mechanics #10 25 files + Goalkeeper Mechanics #11 36 files coded and AR-clean May 28.)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -64,7 +64,7 @@
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
 | 6 | Shot Mechanics | ~70 | ✅ APPROVED | Feb 23 | Apr 27, 2026 | All 9 sections + appendices complete; §9 v1.4 lead-developer signed off Apr 27, 2026 (pre-migration void-file blockers reclassified as moot under folder layout). 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. |
-| 7 | Perception System | ~80 | ✅ APPROVED | Feb 24 | Apr 22, 2026 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.7 — ✅ APPROVED April 22, 2026. |
+| 7 | Perception System | ~80 | ✅ APPROVED | Feb 24 | Apr 22, 2026 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.7 — ✅ APPROVED April 22, 2026. **Implementation begun May 29, 2026** at `src/perception-system/` (14 source files: perception-system.asmdef + 13 .cs files; AR-1 review 3M+3L all fixed). |
 | 8 | Decision Tree | ~55+ | ✅ APPROVED | Feb 27 | Apr 27, 2026 | Sections 1–9 and appendices drafted; §9 v1.2 lead-developer signed off Apr 27, 2026 at draft-level quality gate. Comprehensive audit candidate before implementation. |
 | 9 | Fixed64 Math Library | 25-30 | ✅ APPROVED | Apr 28, 2026 | May 15, 2026 | All sections (1–9 + appendices) drafted v0.2–v0.3; Pass 2 adversarial critique fixes landed May 6; §9 v1.0 lead-developer sign-off granted May 15, 2026. §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented deferral (Interface Design Principle). Implementation deferred to Stage 5 per §8.1 v0.2 stage-gating. |
 

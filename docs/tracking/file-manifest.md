@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 28, 2026 (Goalkeeper Mechanics #11 source files added — 36 files, AR-1/AR-2 clean; Heading Mechanics #10 source files added — 25 files; `src/CLAUDE.md` v1.14)  
+**Last Updated:** May 29, 2026 (Perception System #7 source files added — 14 files, AR-1 clean; `src/CLAUDE.md` v1.15; Prior: Goalkeeper Mechanics #11 36 files + Heading Mechanics #10 25 files May 28)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -242,6 +242,25 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/goalkeeper-mechanics/GoalkeeperTelemetry.cs` | Stage 0 stub; emits §2.4 gk.* trace-pipeline channels at Stage 0+1 (12 channels) |
 | `src/goalkeeper-mechanics/EventBusStub.cs` | Stage 0 no-op event bus; replace at Stage 1 with Event System #17 |
 | `src/goalkeeper-mechanics/GoalkeeperMechanics.cs` | Main 10 Hz + 60 Hz orchestrator: state machine, dive kinematics, handling quality, cross-claim duels, rush, distribution; constructor-injected |
+
+### Perception System (#7) — 14 files
+
+| File | Role |
+|------|------|
+| `src/perception-system/perception-system.asmdef` | Assembly definition (AI layer; references AgentMovement, BallPhysics, CollisionSystem, FirstTouch) |
+| `src/perception-system/PerceptionConstants.cs` | All GT/Fixed/Derived/Cross constants (§3.10): 18 spec constants + system-sizing constants |
+| `src/perception-system/PerceptionAgentAttributes.cs` | Struct: Decisions, Anticipation, TeamId, IsHalfTurned snapshot (§4.2.2) |
+| `src/perception-system/FilteredView.cs` | FilteredView, PerceptionDiagnostics, PerceivedAgent, ShoulderCheckAnimData, OcclusionDebugRecord, PerceivedAgentDebug struct definitions (§3.7) |
+| `src/perception-system/PerceptionEvents.cs` | PerceptionRefreshEvent struct + RefreshTrigger enum (§4.6.3) |
+| `src/perception-system/EventBusStub.cs` | Stage 0 no-op event bus stub; replace at Stage 1 with Event System #17 |
+| `src/perception-system/FovCalculator.cs` | FoV formula (§3.1) + angular candidacy test + blind-side and peripheral arc predicates; static, no side effects |
+| `src/perception-system/OcclusionFilter.cs` | Shadow cone geometry (§3.2.3) + opponent occlusion test; Stage 0: opponents only (OQ-1); static, no side effects |
+| `src/perception-system/PressureEvaluator.cs` | PressureScalar formula (§3.6); reused verbatim from First Touch #4 §3.5; static, no side effects |
+| `src/perception-system/BallPerceptionEvaluator.cs` | Ball range/FoV/occlusion tests + BallStalenessFrames tracking (§3.5); no L_rec (OQ-2); static, no side effects |
+| `src/perception-system/RecognitionLatencyTracker.cs` | Per-(observer,target) latency counters, L_rec formula, half-turn peripheral bonus, Wang/Jenkins deterministic hash (§3.3); INV-10 pre-allocated int[22×22] arrays |
+| `src/perception-system/ShoulderCheckScheduler.cs` | Autonomous shoulder check scheduling, window management, blind-side entity L_rec (§3.4); INV-10 pre-allocated arrays |
+| `src/perception-system/ViewBuilder.cs` | Pure field-assembly step: sets scalar/count fields on pre-allocated FilteredView + PerceptionDiagnostics without overwriting PerceivedAgent[] references (§3.7); static, no computation |
+| `src/perception-system/PerceptionSystem.cs` | 10Hz orchestrator; 7-step pipeline for all 22 agents; forced-refresh handler; zero heap allocation on hot path (§3.0–§3.8, §4.1, §4.6) |
 
 ---
 
