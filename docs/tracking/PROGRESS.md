@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 29, 2026 (Implementation phase: Pressing AI #13 coded — 21 files (20 .cs + 1 asmdef), AR-1: 3H+1M+1L fixed; AR-2 clean. Prior same day: Positioning AI #12 — 20 files, AR-1+AR-2+AR-3 clean; Decision Tree #8 36 files + AR-1 + AR-2 clean; Perception System #7 14 files + AR-1 + AR-2 clean. Prior May 28: Heading Mechanics #10 + Goalkeeper Mechanics #11 coded.)  
+**Last Updated:** May 29, 2026 (Implementation phase: Defensive AI #14 coded — 19 files (18 .cs + 1 asmdef), AR-1: 2H+1M fixed; AR-2 clean. Prior same day: Pressing AI #13 coded — 21 files, AR-1: 3H+1M+1L; AR-2 clean; Positioning AI #12 — 20 files, AR-1+AR-2+AR-3 clean; Decision Tree #8 36 files + AR-1 + AR-2 clean; Perception System #7 14 files + AR-1 + AR-2 clean. Prior May 28: Heading Mechanics #10 + Goalkeeper Mechanics #11 coded.)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -89,7 +89,7 @@
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
 | 13 | Pressing AI | 18-22 | ✅ APPROVED | May 17, 2026 | May 17, 2026 | PASS-1 adversarial review + v0.2 fix pass same day; all gate items resolved; R-01..R-05 signed May 17, 2026. **Implementation complete May 29, 2026** at `src/pressing-ai/` (21 files: 20 .cs + 1 asmdef; AR-1: 3H+1M+1L fixed; AR-2 clean). |
-| 14 | Defensive AI | 18-22 | ✅ APPROVED | May 17, 2026 | May 18, 2026 | Section files v0.1 (May 17) → v0.3 (May 18 APPROVED); ERR-014-001 resolved: `MarkDirective?` in #8 §2.2.6 v1.1.3; ERR-014-004 resolved: `DOMAIN_TAG_DEFENSIVE_AI = 0x1A`; R-01..R-05 signed May 18, 2026 |
+| 14 | Defensive AI | 18-22 | ✅ APPROVED | May 17, 2026 | May 18, 2026 | Section files v0.1 (May 17) → v0.3 (May 18 APPROVED); ERR-014-001 resolved: `MarkDirective?` in #8 §2.2.6 v1.1.3; ERR-014-004 resolved: `DOMAIN_TAG_DEFENSIVE_AI = 0x1A`; R-01..R-05 signed May 18, 2026. **Implementation complete May 29, 2026** at `src/defensive-ai/` (19 files: 18 .cs + 1 asmdef; AR-1: 2H+1M fixed; AR-2 clean). |
 | 15 | Attacking AI | 18-22 | ✅ APPROVED | May 17, 2026 | May 18, 2026 | Section files v0.1 (May 17) → v0.2 (May 18 APPROVED); ERR-015-001/002/005 back-props closed; R-01..R-05 signed May 18, 2026 |
 | 16 | Deterministic Simulation | 20-25 | ✅ APPROVED | May 2, 2026 | May 14, 2026 | All 9 sections + appendices complete; §9 v1.7 Tier 2 APPROVED May 14, 2026. Tier 1 (Conditional) granted earlier same day; Tier 2 cleared all §9.4.2 gates: §9.5 #4(a)/(b)/(c) spec-level SATISFIED (golden-vector files hkdf-sha256-kat v1.1, siphash-2-4-kat v1.1, serialize-canonical-corpus v1.0); §8.3.1 cross-spec re-audit complete (§8 v1.2; all four rows promoted); ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1; §9.3 sign-offs (lead-developer Tier 2, QA-automation, platform-certification) granted with Stage-0 host-platform-pin caveat. |
 
