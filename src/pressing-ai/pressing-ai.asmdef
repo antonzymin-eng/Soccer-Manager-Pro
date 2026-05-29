@@ -1,0 +1,14 @@
+{
+    "name": "TacticalDirector.PressingAI",
+    "rootNamespace": "TacticalDirector.PressingAI",
+    "references": ["TacticalDirector.PositioningAI", "TacticalDirector.PassMechanics"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
