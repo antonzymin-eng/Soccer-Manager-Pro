@@ -1,0 +1,123 @@
+// File:     src/decision-tree/DecisionContext.cs
+// Created:  2026-05-29
+// Modified: 2026-05-29
+// Author:   —
+// Spec:     Decision Tree #8 §2.2.4, §3.1.1, Code Standards #20
+// Purpose:  Internal struct aggregating all inputs for one agent's pipeline execution.
+//           Assembled by DecisionContextAssembler from FilteredView + MatchContext +
+//           TacticalContext + DtAgentAttributes + AgentState. Internal to the assembly.
+
+using UnityEngine;
+using TacticalDirector.AgentMovement;
+using TacticalDirector.PerceptionSystem;
+
+namespace TacticalDirector.DecisionTree
+{
+    /// <summary>
+    /// All inputs needed to run the full 6-step pipeline for one agent.
+    /// Assembled once per heartbeat per agent by DecisionContextAssembler (Step 2).
+    /// Internal: not exposed outside the decision-tree assembly.
+    /// Decision Tree #8 §2.2.4.
+    /// </summary>
+    internal struct DecisionContext
+    {
+        // ── Snapshot ──────────────────────────────────────────────────────────
+
+        /// <summary>Perception output for this agent at this heartbeat. §3.6.</summary>
+        public FilteredView Snapshot;
+
+        // ── Identity ──────────────────────────────────────────────────────────
+
+        /// <summary>AgentId of the agent being evaluated [0–21].</summary>
+        public int AgentId;
+
+        /// <summary>10Hz heartbeat tick at which this context was assembled.</summary>
+        public int CurrentFrame;
+
+        /// <summary>Team identifier: 0 = home, 1 = away.</summary>
+        public int AgentTeamId;
+
+        // ── Possession Flags ──────────────────────────────────────────────────
+
+        /// <summary>True when MatchContext.PossessingAgentId == AgentId. §3.1.1.2.</summary>
+        public bool AgentHasBall;
+
+        /// <summary>
+        /// Possession state from this agent's team perspective.
+        /// OWN_TEAM | OPPONENT | CONTESTED. §3.1.1.2.
+        /// </summary>
+        public PossessionState PossessedByTeam;
+
+        // ── Stamina Gate ──────────────────────────────────────────────────────
+
+        /// <summary>
+        /// True when AerobicStaminaPool > PRESS_STAMINA_MINIMUM.
+        /// Stage 0 binary gate for PRESS eligibility (§3.1.8.1).
+        /// </summary>
+        public bool StaminaAvailable;
+
+        // ── Agent Physical State ──────────────────────────────────────────────
+
+        /// <summary>Full kinematic and energy state. §3.5.6 coordinate convention applies.</summary>
+        public AgentState AgentState;
+
+        /// <summary>XY position extracted from AgentState.Position for convenience.</summary>
+        public Vector2 AgentPosition;
+
+        /// <summary>Unit facing direction extracted from AgentState.FacingDirection.</summary>
+        public Vector2 AgentFacingDirection;
+
+        // ── Attributes (normalised [0,1]) ─────────────────────────────────────
+        // A_X = (X_raw − 1) / 19. Pre-normalised by DecisionContextAssembler.
+
+        public float A_Vision;
+        public float A_Passing;
+        public float A_Finishing;
+        public float A_Dribbling;
+        public float A_LongShots;
+        public float A_Composure;
+        public float A_Decisions;
+        public float A_Anticipation;
+        public float A_Pace;
+        public float A_Agility;
+        public float A_WorkRate;
+        public float A_Stamina;
+        public float A_Aggression;
+        public float A_Positioning;
+        public float A_Crossing;
+
+        // ── Match Context ─────────────────────────────────────────────────────
+
+        public MatchContext MatchContext;
+
+        // ── Tactical Context ──────────────────────────────────────────────────
+
+        public TacticalContext TacticalContext;
+
+        // ── Pressure ─────────────────────────────────────────────────────────
+
+        /// <summary>Pressure scalar [0,1] from PerceptionDiagnostics (Perception #7 §3.6).</summary>
+        public float PressureScalar;
+
+        // ── Determinism Seed ──────────────────────────────────────────────────
+
+        /// <summary>Per-match seed for SplitMix64 composure noise (§3.3.3). Set once per match.</summary>
+        public ulong MatchSeed;
+
+        // ── Geometry ─────────────────────────────────────────────────────────
+
+        /// <summary>Opponent goal centre for this agent's team. Cached from PitchGeometry (§3.2.1.4).</summary>
+        public Vector2 OpponentGoalCentre;
+
+        /// <summary>Left goal post of opponent goal (lower Y).</summary>
+        public Vector2 OpponentGoalPostL;
+
+        /// <summary>Right goal post of opponent goal (higher Y).</summary>
+        public Vector2 OpponentGoalPostR;
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                   |
+// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+#endregion
