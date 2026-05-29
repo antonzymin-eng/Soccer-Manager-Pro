@@ -161,6 +161,8 @@ namespace TacticalDirector.PressingAI
                 ref readonly PressingAgentSnapshot a = ref snapshot.Agents[i];
                 if (a.TeamId != pressingTeamId)
                     continue;
+                if (!a.IsActive)
+                    continue;
                 if (a.IsGoalkeeper)
                     continue;
                 if (a.Line != LineId.Defense)
@@ -257,4 +259,5 @@ namespace TacticalDirector.PressingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-05-29 | —      | AR-1 H-1: added IsActive guard in EnforceMinBackline. |
 #endregion

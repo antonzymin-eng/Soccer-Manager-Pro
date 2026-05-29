@@ -56,6 +56,8 @@ namespace TacticalDirector.PressingAI
                 ref readonly PressingAgentSnapshot a = ref snapshot.Agents[i];
                 if (a.EntityId == carrierId)
                 {
+                    if (!a.IsActive)
+                        break;
                     carrierPos   = a.Position;
                     carrierFound = true;
                     break;
@@ -80,8 +82,10 @@ namespace TacticalDirector.PressingAI
             {
                 ref readonly PressingAgentSnapshot r = ref snapshot.Agents[i];
 
-                // Opponents only, not carrier, not GK.
+                // Opponents only, not carrier, not GK, not inactive.
                 if (r.TeamId == pressingTeamId)
+                    continue;
+                if (!r.IsActive)
                     continue;
                 if (r.EntityId == carrierId || r.IsGoalkeeper)
                     continue;
@@ -139,8 +143,10 @@ namespace TacticalDirector.PressingAI
                 {
                     ref readonly PressingAgentSnapshot d = ref snapshot.Agents[i];
 
-                    // Own-team, not GK, not primary presser.
+                    // Own-team, not GK, not primary presser, not inactive.
                     if (d.TeamId != pressingTeamId)
+                        continue;
+                    if (!d.IsActive)
                         continue;
                     if (d.IsGoalkeeper)
                         continue;
@@ -246,4 +252,5 @@ namespace TacticalDirector.PressingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-05-29 | —      | AR-1 H-1: added IsActive guards in carrier search, receiver loop, and defender loop. |
 #endregion

@@ -42,12 +42,19 @@ namespace TacticalDirector.PressingAI
             float triggerDistSq = PressingAIConstants.PressTriggerDistanceM
                                 * PressingAIConstants.PressTriggerDistanceM;
 
+            // Eligibility constraint 3 (§3.3 / #8 §3.1.8.2): distance is from ball-carrier.
+            Vector2 carrierPos = GetCarrierPosition(snapshot);
+
             for (int i = 0; i < snapshot.Agents.Length; i++)
             {
                 ref readonly PressingAgentSnapshot a = ref snapshot.Agents[i];
 
                 // Only own pressing team.
                 if (a.TeamId != snapshot.PressingTeamId)
+                    continue;
+
+                // Eligibility: active agent only.
+                if (!a.IsActive)
                     continue;
 
                 // Eligibility: not goalkeeper.
@@ -58,13 +65,16 @@ namespace TacticalDirector.PressingAI
                 if (a.Fatigue >= PressingAIConstants.PressFatigueCeiling)
                     continue;
 
-                // Eligibility: within PressTriggerDistanceM² of projected interception point.
+                // Eligibility: within PressTriggerDistanceM of ball-carrier (#8 §3.1.8.2).
+                float cDx = a.Position.x - carrierPos.x;
+                float cDy = a.Position.y - carrierPos.y;
+                if (cDx * cDx + cDy * cDy > triggerDistSq)
+                    continue;
+
+                // Cost: minimize distance to projected interception point (§3.3 cost function).
                 float dx   = a.Position.x - projectedInterceptionPoint.x;
                 float dy   = a.Position.y - projectedInterceptionPoint.y;
                 float cost = dx * dx + dy * dy;
-
-                if (cost > triggerDistSq)
-                    continue;
 
                 // Select minimum cost; EntityId ascending tie-break within epsilon.
                 if (bestId < 0
@@ -97,11 +107,30 @@ namespace TacticalDirector.PressingAI
                 ref readonly PressingAgentSnapshot a = ref snapshot.Agents[i];
                 if (a.EntityId != carrierId)
                     continue;
+                if (!a.IsActive)
+                    break;
 
                 float dt = PressingAIConstants.InterceptLookaheadTicks * PressingAIConstants.DT_TACTICAL;
                 return new Vector2(
                     a.Position.x + a.Velocity.x * dt,
                     a.Position.y + a.Velocity.y * dt);
+            }
+
+            return new Vector2(snapshot.BallPosition.x, snapshot.BallPosition.y);
+        }
+
+        /// <summary>Returns the ball-carrier's current position; falls back to ball position when carrier is unavailable.</summary>
+        private static Vector2 GetCarrierPosition(PressingSnapshot snapshot)
+        {
+            int carrierId = snapshot.BallCarrierEntityId;
+            if (carrierId < 0)
+                return new Vector2(snapshot.BallPosition.x, snapshot.BallPosition.y);
+
+            for (int i = 0; i < snapshot.Agents.Length; i++)
+            {
+                ref readonly PressingAgentSnapshot a = ref snapshot.Agents[i];
+                if (a.EntityId == carrierId && a.IsActive)
+                    return a.Position;
             }
 
             return new Vector2(snapshot.BallPosition.x, snapshot.BallPosition.y);
@@ -112,4 +141,5 @@ namespace TacticalDirector.PressingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-05-29 | —      | AR-1 H-3: eligibility distance now checks ball-carrier position per §3.3/#8 §3.1.8.2; cost unchanged (interception point). AR-1 H-1: added IsActive guard. Added GetCarrierPosition helper. |
 #endregion

@@ -65,6 +65,13 @@ namespace TacticalDirector.PressingAI
         public bool HasBall;
 
         /// <summary>
+        /// True when this agent is active (on the pitch).
+        /// False for substituted or red-carded agents; these are excluded from all
+        /// eligibility and counting loops. §4.4.1 (sources: #7 §3.10 isActive field).
+        /// </summary>
+        public bool IsActive;
+
+        /// <summary>
         /// Positioning AI formation slot (world-space X, Y).
         /// Used by InvariantEnforcer (§3.9) to check MaxPressDisplacementM for shadow assignments.
         /// </summary>
@@ -81,4 +88,5 @@ namespace TacticalDirector.PressingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-05-29 | —      | AR-1 H-1: added IsActive field (§4.4.1 / #7 §3.10). |
 #endregion

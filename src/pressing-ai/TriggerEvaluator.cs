@@ -73,6 +73,8 @@ namespace TacticalDirector.PressingAI
                 ref readonly PressingAgentSnapshot a = ref snapshot.Agents[i];
                 if (a.EntityId != carrierId)
                     continue;
+                if (!a.IsActive)
+                    return false;
 
                 return a.LastTouchQuality < PressingAIConstants.BadTouchThreshold
                     && a.PostTouchBallSpeed > PressingAIConstants.BadTouchVelocityMS;
@@ -93,6 +95,8 @@ namespace TacticalDirector.PressingAI
                 ref readonly PressingAgentSnapshot a = ref snapshot.Agents[i];
                 if (a.EntityId == evt.AgentId)
                 {
+                    if (!a.IsActive)
+                        break;
                     passerPos = a.Position;
                     found     = true;
                     break;
@@ -107,7 +111,7 @@ namespace TacticalDirector.PressingAI
                 evt.TargetPosition.y - passerPos.y);
 
             float len = toTarget.magnitude;
-            if (len < PressingAIConstants.SpacingEpsilonM2)
+            if (len * len < PressingAIConstants.SpacingEpsilonM2)
                 return false;
 
             Vector2 passDir = toTarget / len;
@@ -141,6 +145,8 @@ namespace TacticalDirector.PressingAI
                 ref readonly PressingAgentSnapshot a = ref snapshot.Agents[i];
                 if (a.EntityId != carrierId)
                     continue;
+                if (!a.IsActive)
+                    return false;
 
                 float dot = Vector2.Dot(a.Facing, sidelineDir);
                 return dot > 0f;
@@ -171,11 +177,13 @@ namespace TacticalDirector.PressingAI
             float radiusSq = PressingAIConstants.CoverShadowCandidateRadiusM
                            * PressingAIConstants.CoverShadowCandidateRadiusM;
 
-            // Check each opponent receiver (not carrier, not GK).
+            // Check each opponent receiver (not carrier, not GK, not inactive).
             for (int i = 0; i < snapshot.Agents.Length; i++)
             {
                 ref readonly PressingAgentSnapshot r = ref snapshot.Agents[i];
                 if (r.TeamId == pressingTeamId)
+                    continue;
+                if (!r.IsActive)
                     continue;
                 if (r.EntityId == carrierId || r.EntityId == opposingGkId)
                     continue;
@@ -211,6 +219,8 @@ namespace TacticalDirector.PressingAI
             {
                 ref readonly PressingAgentSnapshot d = ref snapshot.Agents[i];
                 if (d.TeamId != pressingTeamId)
+                    continue;
+                if (!d.IsActive)
                     continue;
                 if (d.IsGoalkeeper)
                     continue;
@@ -253,4 +263,5 @@ namespace TacticalDirector.PressingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-05-29 | —      | AR-1 H-2: fixed unit mismatch in EvaluateBackwardPass (len*len vs len). AR-1 H-1: added IsActive guards in BadTouch, BackwardPass, SidelineTrap, WeakReceiver, ComputeGeometricPressure. |
 #endregion

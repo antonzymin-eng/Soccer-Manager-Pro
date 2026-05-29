@@ -14,7 +14,7 @@ namespace TacticalDirector.PressingAI
     /// heap allocation on the hot path. Pressing AI #13 §3.2.
     ///
     /// Lifecycle: construct once per team at match start; mutate in place via
-    /// TriggerEvaluator.UpdateDebounce() each tick.
+    /// TriggerEvaluator.Evaluate() each tick.
     /// </summary>
     public struct PressTrigger
     {
@@ -64,4 +64,5 @@ namespace TacticalDirector.PressingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-05-29 | —      | AR-1 L-1: corrected doc comment: UpdateDebounce → Evaluate. |
 #endregion

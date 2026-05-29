@@ -11,6 +11,7 @@ using UnityEngine;
 using Unity.Profiling;
 
 using TacticalDirector.PassMechanics;
+using TacticalDirector.PositioningAI;
 
 namespace TacticalDirector.PressingAI
 {
@@ -104,8 +105,8 @@ namespace TacticalDirector.PressingAI
             }
 
             // Phase gate (§3.11 step 0): if own team is InPoss, no pressing.
-            TacticalDirector.PositioningAI.Phase phase = _posAI.GetPhase();
-            if (phase == TacticalDirector.PositioningAI.Phase.InPoss)
+            Phase phase = _posAI.GetPhase();
+            if (phase == Phase.InPoss)
             {
                 SetAllHoldShape(snapshot);
                 _lastDirective     = PressDirective.Inactive;
@@ -228,6 +229,8 @@ namespace TacticalDirector.PressingAI
                 ref readonly PressingAgentSnapshot a = ref snapshot.Agents[i];
                 if (a.TeamId != pressingTeamId)
                     continue;
+                if (!a.IsActive)
+                    continue;
 
                 int idx = _assignmentCount++;
                 _assignments[idx] = new PressAssignment
@@ -257,6 +260,8 @@ namespace TacticalDirector.PressingAI
             {
                 ref readonly PressingAgentSnapshot a = ref snapshot.Agents[i];
                 if (a.TeamId != pressingTeamId)
+                    continue;
+                if (!a.IsActive)
                     continue;
 
                 // Determine candidate role for this agent from the directive.
@@ -308,4 +313,5 @@ namespace TacticalDirector.PressingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-05-29 | —      | AR-1 M-1: added using TacticalDirector.PositioningAI; simplified Phase references. AR-1 H-1: added IsActive guards in SetAllHoldShape and BuildAssignments. |
 #endregion
