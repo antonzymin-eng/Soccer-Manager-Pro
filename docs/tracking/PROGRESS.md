@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 29, 2026 (Implementation phase: Positioning AI #12 coded — 20 files (19 .cs + 1 asmdef), AR-1: 2H+4M+1L fixed; AR-2: 2M+3L fixed; AR-3 clean. Prior same day: Decision Tree #8 36 files + AR-1 + AR-2 clean; Perception System #7 14 files + AR-1 + AR-2 clean. Prior: Heading Mechanics #10 + Goalkeeper Mechanics #11 coded May 28.)  
+**Last Updated:** May 29, 2026 (Implementation phase: Pressing AI #13 coded — 21 files (20 .cs + 1 asmdef), AR-1: 3H+1M+1L fixed; AR-2 clean. Prior same day: Positioning AI #12 — 20 files, AR-1+AR-2+AR-3 clean; Decision Tree #8 36 files + AR-1 + AR-2 clean; Perception System #7 14 files + AR-1 + AR-2 clean. Prior May 28: Heading Mechanics #10 + Goalkeeper Mechanics #11 coded.)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -88,7 +88,7 @@
 
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
-| 13 | Pressing AI | 18-22 | ✅ APPROVED | May 17, 2026 | May 17, 2026 | PASS-1 adversarial review + v0.2 fix pass same day; all gate items resolved; R-01..R-05 signed May 17, 2026 |
+| 13 | Pressing AI | 18-22 | ✅ APPROVED | May 17, 2026 | May 17, 2026 | PASS-1 adversarial review + v0.2 fix pass same day; all gate items resolved; R-01..R-05 signed May 17, 2026. **Implementation complete May 29, 2026** at `src/pressing-ai/` (21 files: 20 .cs + 1 asmdef; AR-1: 3H+1M+1L fixed; AR-2 clean). |
 | 14 | Defensive AI | 18-22 | ✅ APPROVED | May 17, 2026 | May 18, 2026 | Section files v0.1 (May 17) → v0.3 (May 18 APPROVED); ERR-014-001 resolved: `MarkDirective?` in #8 §2.2.6 v1.1.3; ERR-014-004 resolved: `DOMAIN_TAG_DEFENSIVE_AI = 0x1A`; R-01..R-05 signed May 18, 2026 |
 | 15 | Attacking AI | 18-22 | ✅ APPROVED | May 17, 2026 | May 18, 2026 | Section files v0.1 (May 17) → v0.2 (May 18 APPROVED); ERR-015-001/002/005 back-props closed; R-01..R-05 signed May 18, 2026 |
 | 16 | Deterministic Simulation | 20-25 | ✅ APPROVED | May 2, 2026 | May 14, 2026 | All 9 sections + appendices complete; §9 v1.7 Tier 2 APPROVED May 14, 2026. Tier 1 (Conditional) granted earlier same day; Tier 2 cleared all §9.4.2 gates: §9.5 #4(a)/(b)/(c) spec-level SATISFIED (golden-vector files hkdf-sha256-kat v1.1, siphash-2-4-kat v1.1, serialize-canonical-corpus v1.0); §8.3.1 cross-spec re-audit complete (§8 v1.2; all four rows promoted); ERR-017-001 closed atomically via `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocation in §3.4 v1.0.1; §9.3 sign-offs (lead-developer Tier 2, QA-automation, platform-certification) granted with Stage-0 host-platform-pin caveat. |
@@ -505,10 +505,11 @@
 - **`src/first-touch/FirstTouchConstants.cs` updated (May 29, 2026):** `HalfTurnLRecReduction = 0.85f` added to GT region to satisfy Perception System [CROSS] tag contract (AR-1 M-3 fix).
 - **Decision Tree (#8) initial implementation (May 29, 2026):** 36 files (35 .cs + 1 asmdef) authored at `src/decision-tree/`. AR-1 adversarial review: 2H+3M+4L all fixed (H-1: AssemblyInfo.cs InternalsVisibleTo; H-2: SplitMix64 unchecked{}; H-3: DecisionContextAssembler possession bug; M-1/M-2/M-3 various; L-1..L-4 constants/docs). AR-2 full sweep clean.
 - **Positioning AI (#12) initial implementation (May 29, 2026):** 20 files (19 .cs + 1 asmdef) authored at `src/positioning-ai/`. AR-1 adversarial review: 2H+4M+1L all fixed (H-1: zero-alloc entityIdArr violation; H-2: squad-size validation; M-1..M-4: LANE_DWELL_TICKS, agent state guard, F1 dev-log, RoleId alignment test; L-1: using directive). AR-2 full sweep: 2M+3L fixed (M-1: dead `_entityIdMap` field; M-2: LaneEdgesM literal→PITCH_WIDTH_M; M-3: VersionHistory regions all files; L-1: LANE_DWELL_TICKS lane block; L-2: test header). AR-3 full sweep clean.
+- **Pressing AI (#13) initial implementation (May 29, 2026):** 21 files (20 .cs + 1 asmdef) authored at `src/pressing-ai/`. AR-1 adversarial review: 3H+1M+1L all fixed (H-1: `IsActive` field added to `PressingAgentSnapshot` + guards in 6 files; H-2: unit mismatch `TriggerEvaluator` — `len` vs `len²` vs `SpacingEpsilonM2`; H-3: `PrimaryPressSelector` eligibility uses ball-carrier not interception point per §3.3/#8 §3.1.8.2; M-1: missing `using TacticalDirector.PositioningAI` in `PressingAITick`; L-1: `PressTrigger` doc comment stale method name). AR-2 full sweep clean.
 
 **Status:**
 - **Specification phase:** ✅ COMPLETE (20/20 specs approved).
-- **Implementation phase:** Specs #1–#8 + #10 + #11 + #12 all have initial implementations and adversarial review passes. Last coded + AR-clean: Positioning AI (#12). Next: Pressing AI (#13) or Defensive AI (#14).
+- **Implementation phase:** Specs #1–#8 + #10 + #11 + #12 + #13 all have initial implementations and adversarial review passes. Last coded + AR-clean: Pressing AI (#13). Next: Defensive AI (#14).
 
 ---
 
@@ -541,6 +542,7 @@
 | Perception System #7 Implementation | — | ✅ COMPLETE | May 29, 2026 |
 | Decision Tree #8 Implementation | — | ✅ COMPLETE | May 29, 2026 |
 | Positioning AI #12 Implementation | — | ✅ COMPLETE | May 29, 2026 |
+| Pressing AI #13 Implementation | — | ✅ COMPLETE | May 29, 2026 |
 
 ---
 
@@ -607,7 +609,7 @@
 ## NEXT ACTIONS
 
 **Immediate (implementation phase):**
-1. Implement Pressing AI (#13) at `src/pressing-ai/` per Spec #13 §4. (#1–#8, #10–#12 all complete.)
+1. Implement Defensive AI (#14) at `src/defensive-ai/` per Spec #14 §4. (#1–#8, #10–#13 all complete.)
 2. Add adversarial review passes for Pass Mechanics (#5) implementation (passes 1–2 appear to have been bundled with initial implementation; verify all findings resolved).
 3. Resolve structural deviation: move Ball Physics from `src/Core/Physics/Ball/` → `src/ball-physics/` (spec-canonical path per `src/CLAUDE.md` tree).
 
