@@ -1,0 +1,16 @@
+{
+    "name": "TacticalDirector.PositioningAI.Tests",
+    "rootNamespace": "TacticalDirector.PositioningAI.Tests",
+    "references": [
+        "TacticalDirector.PositioningAI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
