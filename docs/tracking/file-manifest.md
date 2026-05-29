@@ -353,6 +353,30 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/pressing-ai/InvariantEnforcer.cs` | Pure static: Enforce() three anti-chaos invariants (MaxPressersBallThird, MinBacklineAgents, MaxPressDisplacementM) |
 | `src/pressing-ai/PressingAITick.cs` | Sealed class: 10 Hz orchestrator; 8-step pipeline; pre-allocated buffers; zero-alloc hot path |
 
+### `src/defensive-ai/` — Spec #14 (19 files: 18 .cs + 1 asmdef)
+
+| File | Role |
+|------|------|
+| `src/defensive-ai/defensive-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai, pressing-ai) |
+| `src/defensive-ai/DefensiveAIConstants.cs` | Single constant catalogue: 22 [GT] + 4 [CROSS] constants (assignment, hysteresis, offside-trap, tackle, anti-chaos, GK-zone bounds) |
+| `src/defensive-ai/MarkMode.cs` | Enum: Zonal / ManMark / InterceptRunner / CoverGkZone (byte; FR-DA-011) |
+| `src/defensive-ai/TackleMode.cs` | Enum: Hold / Jockey / Commit (byte) |
+| `src/defensive-ai/MarkDirective.cs` | Struct: team-level tick output (TeamId, OffensiveLineDepth, OffsideTrapActive, StepUpTargetDepth, EmergencyFlag); Inactive() factory |
+| `src/defensive-ai/MarkAssignment.cs` | Struct: per-agent assignment (Mode, TargetEntityId, TargetPosition, ValidThroughTick, OverriddenThisTick, IsManuallyAssigned); MakeZonal() factory |
+| `src/defensive-ai/TackleIntentRequest.cs` | Struct: per-agent tackle intent (AgentEntityId, Mode, TargetEntityId, ApproachAngle, CoverageDepth) |
+| `src/defensive-ai/MarkHysteresisState.cs` | Struct: per-agent dwell-lock state (DwellCounter, CandidateMode, CandidateTargetEntityId, HoldTicks); Default() factory |
+| `src/defensive-ai/OffsideLineState.cs` | Struct: per-team offside state (CurrentLineDepth, StepUpDwellCounter, CooldownTicksRemaining, CoverGkZoneActiveTicks); Default() factory |
+| `src/defensive-ai/DefensiveAgentSnapshot.cs` | Struct: per-agent tick input (EntityId, TeamId, Position, Velocity, IsActive, IsGoalkeeper, HasBall, BaselineSlot, Line, PressRole, PerceivedFirstTouch) |
+| `src/defensive-ai/DefensiveSnapshot.cs` | Sealed class: tick input container (TickIndex, DefensiveTeamId, BallPosition, BallVelocity, TeamPhase, DefensiveLineDepth, GkEntityId, GkPosition, Agents[22], HasActivePrimaryPress) |
+| `src/defensive-ai/HoldShapePoolFilter.cs` | Pure static: BuildPool() filters GK + PrimaryPress/CoverShadow; SnapshotIndexOf(); IndexOf() |
+| `src/defensive-ai/LastManDetector.cs` | Pure static: Evaluate() last-man predicate (§3.8) + COVER_GK_ZONE trigger (§3.9); DefendsX0/DistToOwnGoal/DisplacementCost/ComputeAbandonedZoneCenter helpers; LastManResult struct |
+| `src/defensive-ai/MarkHysteresis.cs` | Pure static: PreCheck() dwell-lock gate; ApplyGate() transition accumulator; Reset() for emergency overrides |
+| `src/defensive-ai/MarkAssigner.cs` | Pure static: Assign() regular assignment loop (§3.3); ThreatScore() (§3.5); SelectBestCandidate(); IsBetter() tie-break comparator |
+| `src/defensive-ai/TackleIntentEvaluator.cs` | Pure static: Evaluate() tackle intent (§3.6); ComputeCoverageDepth(); SelectMode() |
+| `src/defensive-ai/OffsideTrapController.cs` | Pure static: Update() dwell counter + fire trigger (§3.7); ExecuteStepUp(); ComputeDefenseLineSpread() |
+| `src/defensive-ai/InvariantEnforcer.cs` | Pure static: Enforce() 3 anti-chaos invariants (§3.10); 3-pass demotion loop; AreAllSatisfied() post-loop check; F4 hard-fallback detection |
+| `src/defensive-ai/DefensiveAITick.cs` | Sealed class: 10 Hz orchestrator; 9-step §3.13 pipeline; pre-allocated buffers; GetMarkDirective/GetAssignment/GetTackleIntentRequests public API |
+
 ---
 
 ## Tracking Documents
