@@ -1,7 +1,7 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** May 28, 2026 (implementation phase: Heading Mechanics #10 coded — 25 files; Goalkeeper Mechanics #11 coded — 36 files, AR-1/AR-2 clean; `src/CLAUDE.md` coding guide at v1.14)
+**Last Updated:** May 29, 2026 (implementation phase: Perception System #7 coded — 14 files, AR-1 clean (3M+3L findings fixed); `src/CLAUDE.md` coding guide at v1.15. Prior May 28: Heading Mechanics #10 25 files + Goalkeeper Mechanics #11 36 files, AR-1/AR-2 clean.)
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer

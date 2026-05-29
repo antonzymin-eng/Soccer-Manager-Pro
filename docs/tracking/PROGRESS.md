@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 28, 2026 (Implementation phase: Heading Mechanics #10 implementation 25 files — coded and AR-clean May 28; Goalkeeper Mechanics #11 implementation 36 files — coded and AR-clean (AR-1: 5H+1M, AR-2: 2M) May 28; milestones and next-actions updated)  
+**Last Updated:** May 29, 2026 (Implementation phase: Perception System #7 AR-2 complete (3L fixed) — implementation fully AR-clean (AR-1: 3M+3L + AR-2: 3L). Prior same day: initial 14 files coded + AR-1 clean. Prior: Heading Mechanics #10 25 files + Goalkeeper Mechanics #11 36 files coded and AR-clean May 28; Shot Mechanics #6 27 files coded + AR-1 clean May 28.)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -64,7 +64,7 @@
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
 | 6 | Shot Mechanics | ~70 | ✅ APPROVED | Feb 23 | Apr 27, 2026 | All 9 sections + appendices complete; §9 v1.4 lead-developer signed off Apr 27, 2026 (pre-migration void-file blockers reclassified as moot under folder layout). 104 tests (6.9× min). ShotType enum eliminated; parameter-based physics approach. |
-| 7 | Perception System | ~80 | ✅ APPROVED | Feb 24 | Apr 22, 2026 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.7 — ✅ APPROVED April 22, 2026. |
+| 7 | Perception System | ~80 | ✅ APPROVED | Feb 24 | Apr 22, 2026 | All 8 sections + 3 appendices complete; §8 v1.2 DOI verified; §5 v1.4 (95 tests, 1.8× min). Section 9 Approval Checklist v1.7 — ✅ APPROVED April 22, 2026. **Implementation complete May 29, 2026** at `src/perception-system/` (14 source files; AR-1: 3M+3L all fixed; AR-2: 3L all fixed). |
 | 8 | Decision Tree | ~55+ | ✅ APPROVED | Feb 27 | Apr 27, 2026 | Sections 1–9 and appendices drafted; §9 v1.2 lead-developer signed off Apr 27, 2026 at draft-level quality gate. Comprehensive audit candidate before implementation. |
 | 9 | Fixed64 Math Library | 25-30 | ✅ APPROVED | Apr 28, 2026 | May 15, 2026 | All sections (1–9 + appendices) drafted v0.2–v0.3; Pass 2 adversarial critique fixes landed May 6; §9 v1.0 lead-developer sign-off granted May 15, 2026. §9.2 engine + gameplay owner sign-offs granted; §9.7 reciprocal `XC-016-NNN` resolved via #16 §8.3.2 documented deferral (Interface Design Principle). Implementation deferred to Stage 5 per §8.1 v0.2 stage-gating. |
 
@@ -495,6 +495,21 @@
 
 ---
 
+### Weeks 20-21 — May 28-29, 2026 (Implementation Continues)
+
+**Completed:**
+- **Shot Mechanics (#6) initial implementation (May 28, 2026):** 27 source files authored at `src/shot-mechanics/`. Adversarial review AR-1 pass applied same day.
+- **Heading Mechanics (#10) initial implementation (May 28, 2026):** 25 source files authored at `src/heading-mechanics/`. Adversarial review AR-1 + AR-2 passes applied same day — both clean at completion.
+- **Goalkeeper Mechanics (#11) initial implementation (May 28, 2026):** 36 source files authored at `src/goalkeeper-mechanics/`. Adversarial review AR-1 (5H+1M fixed), AR-2 (2M fixed), AR-3 (clean) applied same day.
+- **Perception System (#7) initial implementation (May 29, 2026):** 14 source files authored at `src/perception-system/` (perception-system.asmdef + 13 .cs files). AR-1 adversarial review: 3M+3L all fixed (M-1: candidate dedup; M-2: AnyEntityConfirmed update; M-3: HalfTurnLRecReduction [CROSS] contract; L-4: dead ternary; L-5: comment; L-6: Key() style). AR-2 adversarial review (full sweep all 14 files): 3L all fixed (L-1: unused `prevBallVisible` parameter removed; L-2: `HandleForcedRefresh` + `agentHasPossession` length guards added; L-3: DeterministicHash uint literal promotion fixed to true 32-bit int wrapping). No M or H findings in AR-2.
+- **`src/first-touch/FirstTouchConstants.cs` updated (May 29, 2026):** `HalfTurnLRecReduction = 0.85f` added to GT region to satisfy Perception System [CROSS] tag contract (AR-1 M-3 fix).
+
+**Status:**
+- **Specification phase:** ✅ COMPLETE (20/20 specs approved).
+- **Implementation phase:** Specs #1–#7 + #10 + #11 all have initial implementations and adversarial review passes. Last coded + AR-clean: Perception System (#7). Next: Decision Tree (#8).
+
+---
+
 ## MILESTONES
 
 | Milestone | Target Date | Status | Actual Date |
@@ -518,7 +533,10 @@
 | Collision System #3 Implementation | — | ✅ COMPLETE | May 25, 2026 |
 | First Touch #4 Implementation | — | ✅ COMPLETE | May 25–26, 2026 |
 | Pass Mechanics #5 Implementation | — | ✅ COMPLETE | May 26, 2026 |
-| Shot Mechanics #6 Implementation | — | ⏳ NOT STARTED | — |
+| Shot Mechanics #6 Implementation | — | ✅ COMPLETE | May 28, 2026 |
+| Heading Mechanics #10 Implementation | — | ✅ COMPLETE | May 28, 2026 |
+| Goalkeeper Mechanics #11 Implementation | — | ✅ COMPLETE | May 28, 2026 |
+| Perception System #7 Implementation | — | ✅ COMPLETE | May 29, 2026 |
 
 ---
 
@@ -585,8 +603,8 @@
 ## NEXT ACTIONS
 
 **Immediate (implementation phase):**
-1. Implement Shot Mechanics (#6) at `src/shot-mechanics/` per Spec #6 §4.
-2. Add adversarial review passes for Pass Mechanics (#5) pass-mechanics implementation (passes 1–2 appear to have been bundled with initial implementation; verify all findings resolved).
+1. Implement Decision Tree (#8) at `src/decision-tree/` per Spec #8 §4. (Shot Mechanics #6, Heading #10, Goalkeeper #11, Perception System #7 all complete.)
+2. Add adversarial review passes for Pass Mechanics (#5) implementation (passes 1–2 appear to have been bundled with initial implementation; verify all findings resolved).
 3. Resolve structural deviation: move Ball Physics from `src/Core/Physics/Ball/` → `src/ball-physics/` (spec-canonical path per `src/CLAUDE.md` tree).
 
 **Housekeeping (non-blocking):**
@@ -598,13 +616,19 @@
 
 ---
 
-**Last Updated:** May 27, 2026 (Collision System #3 / First Touch #4 / Pass Mechanics #5 implementations and adversarial reviews recorded; Agent Movement #2 AR-2/AR-3 + tests recorded; milestones and next-actions updated)
+**Last Updated:** May 29, 2026 (Perception System #7 AR-2 3L fixes applied; Week 20-21 weekly log added for Shot Mechanics #6 / Heading #10 / Goalkeeper #11 / Perception #7 implementations; milestones + next-actions updated)
 **Updated By:** AI Assistant
-**Next Review:** After Shot Mechanics (#6) implementation or next significant implementation milestone
+**Next Review:** After Decision Tree (#8) implementation or next significant implementation milestone
 
 ---
 
 ## CHANGELOG
+
+**May 29, 2026:**
+- Perception System (#7) AR-2 adversarial review complete: 3L findings fixed (L-1: unused prevBallVisible param; L-2: HandleForcedRefresh + agentHasPossession length guards; L-3: DeterministicHash 32-bit wrapping).
+- Week 20-21 weekly log entry added (Shot Mechanics #6 / Heading #10 / Goalkeeper #11 / Perception #7 implementations).
+- Milestone rows added: #6, #10, #11, #7 implementations all COMPLETE.
+- NEXT ACTIONS updated: Decision Tree (#8) as next implementation target.
 
 **May 27, 2026:**
 - Collision System (#3), First Touch (#4), Pass Mechanics (#5) implementations added (weekly log entry, milestones, Priority 1 table notes, NEXT ACTIONS updated).

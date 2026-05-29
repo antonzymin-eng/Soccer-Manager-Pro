@@ -188,6 +188,9 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Ball displacement radius beyond which dribble attach is broken (m). First Touch Mechanics #4 §3.4.4.</summary>
         public static readonly float DribbleDetachRadius = 1.50f; // TODO: replace with config loader (Stage 1)
 
+        /// <summary>[GT] L_rec multiplier applied when agent is in half-turn stance and the target entity falls in the peripheral arc (40°–80°). Value = 1 − 0.15 (15% reduction matches HalfTurnBonus). First Touch Mechanics #4 §3.3.2. Consumed by Perception System #7 §3.3.3.</summary>
+        public static readonly float HalfTurnLRecReduction = 0.85f; // TODO: replace with config loader (Stage 1)
+
         #endregion
     }
 }
@@ -195,6 +198,7 @@ namespace TacticalDirector.FirstTouch
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                                                                                             |
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                                                    |
+// | 1.1     | 2026-05-28 | —      | AR-1 fix: added HalfTurnLRecReduction constant (GT, 0.85f) to satisfy Perception System #7 §3.3.3 CROSS-tag contract.             |
 // | 1.1     | 2026-05-26 | —      | Adversarial review fixes: M-3 BallRadius moved from Derived→Cross; H-2 QualityBandPerfect 0.75→0.85, ControlledThreshold 0.55→0.60, QualityBandPoor 0.30→0.35. |
 // | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: Added PitchLength/PitchWidth [CROSS] constants (§3.3.4); removed dead constants InterceptionQualityMin (unused, no §3.4.2 backing) and MomentumRetentionDeflection (unused, §3.3.6 does not exist in spec). |
 // | 1.3     | 2026-05-26 | —      | Adversarial review pass 3: Removed dead constants MomentumRetentionMax (no spec §3.3.5 formula backing), MaxTouchAngleError (spec uses vector blend, not angle cap), ComparisonEpsilon (BlendMinMagnitude serves the role). Fixed PitchHalfLength/PitchHalfWidth doc to correctly cite BallPhysicsConstants.Pitch const (not PitchLength readonly) to avoid static initialisation order dependency. |
