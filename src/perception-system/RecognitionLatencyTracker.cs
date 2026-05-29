@@ -226,10 +226,12 @@ namespace TacticalDirector.PerceptionSystem
         /// </summary>
         public static int DeterministicHash(int a, int b, int c)
         {
-            // Wang/Jenkins integer hash — avalanche property, no allocations
+            // Wang/Jenkins integer hash — avalanche property, no allocations.
+            // Large decimal literals cast to int in unchecked context: ensures 32-bit wrapping
+            // multiplication rather than long-promotion that would occur with bare uint literals.
             unchecked // deliberate integer wrap-around; not an overflow bug
             {
-                int h = a * 2246822519 + b * 2654435761 + c * 1013904223;
+                int h = a * unchecked((int)2246822519u) + b * unchecked((int)2654435761u) + c * 1013904223;
                 h ^= h >> 16;
                 h *= unchecked((int)0x45d9f3b);
                 h ^= h >> 16;
@@ -247,5 +249,6 @@ namespace TacticalDirector.PerceptionSystem
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                  |
-// | 1.1     | 2026-05-28 | —      | AR-1 fix L-6: ProcessVisible uses Key() helper (style consistency fix). |
+// | 1.1     | 2026-05-28 | —      | AR-1 fix L-6: ProcessVisible uses Key() helper (style consistency fix).                    |
+// | 1.2     | 2026-05-29 | —      | AR-2 fix L-3: DeterministicHash literals cast to unchecked int for true 32-bit wrapping. |
 #endregion

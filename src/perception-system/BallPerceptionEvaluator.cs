@@ -37,7 +37,6 @@ namespace TacticalDirector.PerceptionSystem
         /// <param name="agentAttrs">Full agent attributes array indexed 0–21.</param>
         /// <param name="candidateIds">Nearby entity IDs from spatial hash query (range: MAX_PERCEPTION_RANGE).</param>
         /// <param name="candidateCount">Number of valid entries in candidateIds.</param>
-        /// <param name="prevBallVisible">Ball visibility state from the previous heartbeat.</param>
         /// <param name="prevPerceivedPosition">Last confirmed ball position from the previous heartbeat.</param>
         /// <param name="prevStalenessFrames">Staleness counter from the previous heartbeat.</param>
         /// <param name="ballVisible">Output: true if ball is visible this tick.</param>
@@ -53,7 +52,6 @@ namespace TacticalDirector.PerceptionSystem
             PerceptionAgentAttributes[] agentAttrs,
             int[] candidateIds,
             int candidateCount,
-            bool prevBallVisible,
             Vector2 prevPerceivedPosition,
             int prevStalenessFrames,
             out bool ballVisible,
@@ -95,5 +93,6 @@ namespace TacticalDirector.PerceptionSystem
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                               |
-// | 1.1     | 2026-05-28 | —      | AR-1 fix L-4: removed dead-code ternary in invisible-ball else branch. |
+// | 1.1     | 2026-05-28 | —      | AR-1 fix L-4: removed dead-code ternary in invisible-ball else branch.  |
+// | 1.2     | 2026-05-29 | —      | AR-2 fix L-1: removed unused prevBallVisible parameter (dead after L-4). |
 #endregion

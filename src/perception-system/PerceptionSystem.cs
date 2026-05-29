@@ -159,6 +159,12 @@ namespace TacticalDirector.PerceptionSystem
                 return;
             }
 
+            if (agentHasPossession != null && agentHasPossession.Length != PerceptionConstants.MaxAgents)
+            {
+                Debug.LogError("[PerceptionSystem] agentHasPossession wrong length — heartbeat skipped.");
+                return;
+            }
+
             for (int agentId = 0; agentId < PerceptionConstants.MaxAgents; agentId++)
             {
                 RunAgentPipeline(
@@ -185,7 +191,8 @@ namespace TacticalDirector.PerceptionSystem
         {
             using var _ = s_forcedRefreshMarker.Auto();
 
-            if (agentStates == null || agentAttrs == null) return;
+            if (agentStates == null || agentStates.Length != PerceptionConstants.MaxAgents) return;
+            if (agentAttrs  == null || agentAttrs.Length  != PerceptionConstants.MaxAgents) return;
 
             if (evt.PrimaryAgentId >= 0 && evt.PrimaryAgentId < PerceptionConstants.MaxAgents)
             {
@@ -402,7 +409,7 @@ namespace TacticalDirector.PerceptionSystem
             BallPerceptionEvaluator.Evaluate(
                 observerPos, facingDir, attrs.TeamId, effectiveFoVHalfAngle,
                 ballState, agentStates, agentAttrs, _candidateIds, _candidateCount,
-                _ballVisiblePrev[agentId], _ballPerceivedPositionPrev[agentId],
+                _ballPerceivedPositionPrev[agentId],
                 _ballStalenessFramesPrev[agentId],
                 out bool ballVisible,
                 out Vector2 perceivedBallPos,
@@ -432,5 +439,6 @@ namespace TacticalDirector.PerceptionSystem
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                                                                  |
-// | 1.1     | 2026-05-28 | —      | AR-1 fix M-1: added _candidateVisited dedup to prevent latency counter multi-increment from spatial hash cell overlap. |
+// | 1.1     | 2026-05-28 | —      | AR-1 fix M-1: added _candidateVisited dedup to prevent latency counter multi-increment from spatial hash cell overlap.                                    |
+// | 1.2     | 2026-05-29 | —      | AR-2 fixes L-1/L-2: removed prevBallVisible argument (dead param); added length guards to HandleForcedRefresh; added agentHasPossession length guard. |
 #endregion

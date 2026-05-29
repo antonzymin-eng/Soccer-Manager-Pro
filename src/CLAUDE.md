@@ -1,7 +1,7 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** May 29, 2026 (v1.15 — perception-system/ 14 files tree expanded; v1.14 goalkeeper-mechanics/ 36 files; v1.13 heading-mechanics/ 25 files)
+> **Last Updated:** May 29, 2026 (v1.15 — perception-system/ 14 files tree expanded + AR-2 3L fixes noted; v1.14 goalkeeper-mechanics/ 36 files; v1.13 heading-mechanics/ 25 files)
 > **Purpose:** Concrete coding rules for any AI agent or developer writing C# source code in this project. Covers file naming, constant catalogues, Unity project structure, and build/test commands. Cites Spec #20 (Code Standards & Style Guide) as the source for every convention here. Read the root `CLAUDE.md` first — this file supplements it, not replaces it.
 
 ---
