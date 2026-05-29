@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 29, 2026 (Perception System #7 AR-2: 3 files updated to v1.2 — BallPerceptionEvaluator, PerceptionSystem, RecognitionLatencyTracker; Prior same day: 14 files initial + AR-1 clean; `src/CLAUDE.md` v1.15)  
+**Last Updated:** May 29, 2026 (Pressing AI #13: 21 src files added (20 .cs + 1 asmdef); `src/CLAUDE.md` v1.18. Prior same day: Positioning AI #12 20 files; Decision Tree #8 36 files; Perception System #7 14 files + AR-1/AR-2 clean.)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -331,6 +331,27 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/positioning-ai/PositioningAITick.cs` | Sealed class: 10 Hz orchestrator; zero-alloc hot path; F1 stale detection; GetFormationSlot/GetLine/GetLane/GetPhase |
 | `src/positioning-ai/Tests/positioning-ai-tests.asmdef` | Test assembly (EditMode; references positioning-ai.asmdef) |
 | `src/positioning-ai/Tests/PositioningAITests.cs` | T-U-001..021 (unit) + T-D-001..002 (determinism) + T-I-001..004 (integration) + T-P-001 (perf) + T-T-001 (tactical) |
+| `src/pressing-ai/pressing-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai, pass-mechanics) |
+| `src/pressing-ai/PressingAIConstants.cs` | Single constant catalogue: trigger distances/durations, cover-shadow geometry, stamina costs, pitch constants (GT/Fixed/Derived/Cross regions) |
+| `src/pressing-ai/TriggerFlags.cs` | [Flags] enum: None / BadTouch / BackwardPass / SidelineTrap / WeakReceiver (byte) |
+| `src/pressing-ai/PressRole.cs` | Enum: HoldShape / PrimaryPress / CoverShadow (byte) |
+| `src/pressing-ai/CoverShadow.cs` | Struct: DefenderId, ReceiverId, TargetPosition |
+| `src/pressing-ai/PressDirective.cs` | Struct: per-tick output (PrimaryPresserId, PrimaryTargetPosition, Shadow0, Shadow1, CoverShadowCount, ActiveTriggers); static Inactive; IsActive property |
+| `src/pressing-ai/PressAssignment.cs` | Struct: per-agent output (EntityId, Role, TargetPosition) |
+| `src/pressing-ai/PressTrigger.cs` | Struct: 8 dwell/release counters (4 dwell + 4 release; zero allocation, no arrays) |
+| `src/pressing-ai/RoleHysteresisState.cs` | Sealed class: LastRole[], RoleDwell[] arrays; Reset() |
+| `src/pressing-ai/PressingAgentSnapshot.cs` | Struct: per-agent tick input (EntityId, TeamId, Position, BaselineSlot, Fatigue, FirstTouchAttribute, Line, IsGoalkeeper, HasBall, IsActive) |
+| `src/pressing-ai/PressingSnapshot.cs` | Sealed class: tick input container (TickIndex, BallPosition, BallVelocity, BallCarrierEntityId, AttackingDirection, PossessionTeamId, PressingTeamId, Agents[22]) |
+| `src/pressing-ai/PassEventRing.cs` | Sealed class: ring buffer for BackwardPass trigger (Push, TryGetLatest, Clear) |
+| `src/pressing-ai/PositioningAIView.cs` | Readonly struct: facade over PositioningAITick (GetFormationSlot, GetLine, GetPhase, IsSentinelSlot) |
+| `src/pressing-ai/TriggerEvaluator.cs` | Pure static: Evaluate() debounce pipeline for 4 triggers + ComputeGeometricPressure helper |
+| `src/pressing-ai/PrimaryPressSelector.cs` | Pure static: Select() best presser by cost; ComputeInterceptionPoint(); GetCarrierPosition() helper |
+| `src/pressing-ai/CoverShadowSelector.cs` | Pure static: Select() up to 2 cover shadows; threat score + greedy defender assignment |
+| `src/pressing-ai/RoleHysteresis.cs` | Pure static: Commit() dwell guard; ForceAllHoldShape() |
+| `src/pressing-ai/StaminaAccumulator.cs` | Pure static: Apply() per-role fatigue cost; ApplyAll() batch apply |
+| `src/pressing-ai/DisengageResolver.cs` | Pure static: Evaluate() disengage conditions (zone exit + timeout); IsInCooldown() |
+| `src/pressing-ai/InvariantEnforcer.cs` | Pure static: Enforce() three anti-chaos invariants (MaxPressersBallThird, MinBacklineAgents, MaxPressDisplacementM) |
+| `src/pressing-ai/PressingAITick.cs` | Sealed class: 10 Hz orchestrator; 8-step pipeline; pre-allocated buffers; zero-alloc hot path |
 
 ---
 
