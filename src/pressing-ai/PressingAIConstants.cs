@@ -35,6 +35,27 @@ namespace TacticalDirector.PressingAI
         /// </summary>
         public const float DT_TACTICAL = 0.10f;
 
+        /// <summary>
+        /// [DERIVED] Half of PITCH_LENGTH_M; used in threat-score progression-gain normalisation.
+        /// Formula: PITCH_LENGTH_M * 0.5. §3.4 threat-score formula. Value: 52.5 m.
+        /// Source constants: PITCH_LENGTH_M.
+        /// </summary>
+        public const float PITCH_HALF_LENGTH_M = PITCH_LENGTH_M * 0.5f;
+
+        /// <summary>
+        /// [DERIVED] One-third of PITCH_LENGTH_M; used by InvariantEnforcer pitch-third boundary.
+        /// Formula: PITCH_LENGTH_M / 3.0. §3.9 invariant (1)/(2). Value: 35.0 m.
+        /// Source constants: PITCH_LENGTH_M.
+        /// </summary>
+        public const float PITCH_THIRD_M = PITCH_LENGTH_M / 3f;
+
+        /// <summary>
+        /// [DERIVED] Maximum value of the FirstTouch agent attribute (1–20 scale).
+        /// Used to normalise FirstTouchAttribute in threat-score skill term: attribute / ATTRIBUTE_SCALE_MAX.
+        /// §3.4 threat-score formula. Spec #13 §2.1. Value: 20.
+        /// </summary>
+        public const float ATTRIBUTE_SCALE_MAX = 20f;
+
         #endregion
 
         #region Cross
@@ -175,6 +196,7 @@ namespace TacticalDirector.PressingAI
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                                       |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                                                     |
+// | 1.1     | 2026-05-29 | —      | Added PITCH_HALF_LENGTH_M, PITCH_THIRD_M, ATTRIBUTE_SCALE_MAX to Derived region.            |
 #endregion
