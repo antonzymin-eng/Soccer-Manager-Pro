@@ -1,0 +1,68 @@
+// File:     src/attacking-ai/AttackingSnapshot.cs
+// Created:  2026-05-29
+// Modified: 2026-05-29
+// Author:   —
+// Spec:     Attacking AI #15 §2.3, §3.13, Code Standards #20
+// Purpose:  Pre-allocated tick input container for one 10 Hz attacking-AI evaluation.
+//           Sealed class; Agents array is allocated once at construction (FR-AT-030 zero-alloc).
+
+using UnityEngine;
+
+using TacticalDirector.PressingAI;
+
+namespace TacticalDirector.AttackingAI
+{
+    /// <summary>
+    /// Tick input container for one 10 Hz attacking-AI evaluation. Constructed once per
+    /// team per match; orchestrator writes fields before every Tick() call.
+    /// Pre-allocated <see cref="Agents"/> array ensures zero heap allocation on the hot path.
+    /// Attacking AI #15 §2.3 / §3.13.
+    /// </summary>
+    public sealed class AttackingSnapshot
+    {
+        /// <summary>Monotonically increasing tick index (≥ 0). Used for F1 stale detection.</summary>
+        public int   TickIndex           { get; set; }
+
+        /// <summary>EntityId of the team running the attacking AI this tick.</summary>
+        public int   AttackingTeamId     { get; set; }
+
+        /// <summary>Ball position (X, Y) in metres at tick start. #7 §3.7.</summary>
+        public Vector2 BallPosition      { get; set; }
+
+        /// <summary>
+        /// EntityId of the current ball carrier. −1 when the ball is loose (no possessor).
+        /// A value of −1 is treated as OUT_OF_POSSESSION (FR-AT-007 / §2.3 note).
+        /// </summary>
+        public int   BallCarrierEntityId { get; set; }
+
+        /// <summary>
+        /// Ball carrier's pitch position (X, Y) in metres. Valid only when
+        /// <see cref="BallCarrierEntityId"/> ≥ 0. Used for run-target origin (§3.4) and
+        /// HOLD_WIDTH / WEAK_SIDE target X (§3.6 / §3.7).
+        /// </summary>
+        public Vector2 BallCarrierPosition { get; set; }
+
+        /// <summary>
+        /// Attack direction for this half: 0.0 rad = team attacking x=105 goal;
+        /// π rad = team attacking x=0 goal. Match-half constant (§2.3 / §3.4).
+        /// </summary>
+        public float TeamAttackAngle     { get; set; }
+
+        /// <summary>
+        /// Pre-allocated per-agent snapshot array. Capacity = SQUAD_SIZE.
+        /// Orchestrator writes active agent data before each Tick() call.
+        /// </summary>
+        public AttackingAgentSnapshot[] Agents { get; }
+
+        /// <summary>Constructs the snapshot with a pre-allocated Agents array.</summary>
+        public AttackingSnapshot()
+        {
+            Agents = new AttackingAgentSnapshot[PressingAIConstants.SQUAD_SIZE];
+        }
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                   |
+// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+#endregion

@@ -349,6 +349,30 @@ src/
 │   ├── InvariantEnforcer.cs           ← pure static: Enforce() 3 anti-chaos invariants (§3.10); 3-pass demotion loop; F4 hard-fallback detection
 │   └── DefensiveAITick.cs             ← sealed class: 10 Hz orchestrator; 9-step §3.13 pipeline; pre-allocated buffers; GetMarkDirective/GetAssignment/GetTackleIntentRequests
 ├── attacking-ai/                      ← Spec #15
+│   ├── attacking-ai.asmdef            ← Mechanics layer; references positioning-ai, pressing-ai
+│   ├── AttackingAIConstants.cs        ← single constant catalogue: pool/role/run-params/support/width/weak-side/overload/invariant/hysteresis/test constants (GT/Derived/Cross regions)
+│   ├── AttackRole.cs                  ← enum: HoldWidth / SupportBall / Runner / WeakSide (FR-AT-012)
+│   ├── Flank.cs                       ← enum: Left / Right — overload lateral discriminator (§3.8)
+│   ├── RunParameters.cs               ← readonly struct: DepthOffsetM / LateralOffsetM / RunTriggerTick (FR-AT-011; exactly 3 fields)
+│   ├── AttackHysteresisState.cs       ← struct: per-agent dwell state (CurrentRole, DwellCounter, CandidateRole, CandidateDwell)
+│   ├── TransitionHoldState.cs         ← struct: per-team possession-loss countdown + PrevPhase
+│   ├── AttackDirective.cs             ← readonly struct: team-level tick output (TeamId, OverloadActive, OverloadFlank, TransitionHoldTick)
+│   ├── AttackIntent.cs                ← readonly struct: per-agent tick output (AgentEntityId, Role, RunParameters?, ValidThroughTick)
+│   ├── StyleProfile.cs                ← readonly struct: 5 profile multipliers; static factories Possession/Direct/Counter
+│   ├── AttackIntentSnapshot.cs        ← readonly struct: read-only zero-copy view over tick output (Directive, Intents[], IntentCount, TickIndex)
+│   ├── AttackingAgentSnapshot.cs      ← readonly struct: per-agent tick input (EntityId, TeamId, Position, BaselineSlot, Line, IsGoalkeeper, HasBall, IsActive, Pace, Stamina, Dribbling)
+│   ├── AttackingSnapshot.cs           ← sealed class: pre-allocated tick input container (TickIndex, AttackingTeamId, BallPosition, BallCarrierEntityId, BallCarrierPosition, TeamAttackAngle, Agents[22])
+│   ├── AttackPoolEntry.cs             ← internal struct: per-agent scratch entry during pipeline (EntityId, Position, LateralPct, Line, AssignedRole, HasRunParams, run-param fields, RunTargetPosition, TargetPosition)
+│   ├── AttackingPoolBuilder.cs        ← pure static: Build() filters snapshot → pool, EntityId-ascending insertion sort; returns −1 on F2 sentinel
+│   ├── AttackHysteresis.cs            ← pure static: IsStable() / Update() / Reset() — increment-based dwell (CandidateDwell resets on current-role re-preference)
+│   ├── SupportHeuristic.cs            ← pure static: IsWithinSupportRadius() / ComputeEffectiveRadius() — floored at MinEffectiveRadiusM
+│   ├── RoleAssigner.cs                ← pure static: Assign() two-pass role assignment (pass 1 counts stable roles; pass 2 evaluates non-stable); GenerateRunParams() §3.4
+│   ├── WidthHolder.cs                 ← pure static: Enforce() near-touchline width-holding; promotes non-RUNNER agents to HOLD_WIDTH
+│   ├── WeakSideController.cs          ← pure static: EnsureWeakSide() post-check; selects max-deviation non-RUNNER for far-side coverage
+│   ├── OverloadDetector.cs            ← pure static: Evaluate() counts non-WEAK_SIDE agents in Y-corridor; fires at ≥ OverloadCount
+│   ├── TransitionController.cs        ← pure static: Evaluate() SET-then-DECREMENT transition hold; COUNTER profile (0 ticks) → instant empty
+│   ├── InvariantEnforcer.cs           ← pure static: Apply() 3 anti-chaos invariants (max runners, min support, no own-half runs); fallback all→HoldWidth
+│   └── AttackingAITick.cs             ← sealed class: 10 Hz orchestrator; §3.13 pipeline (phase gate→pool→roles→width→weak-side→overload→invariants→publish); pre-allocated zero-alloc buffers
 │
 ├── deterministic-sim/                 ← Spec #16  (cross-cutting; referenced by all layers)
 │   ├── deterministic-sim.asmdef
@@ -913,3 +937,4 @@ Update this file when those items are resolved.
 | 1.17 | 2026-05-29 | — | Positioning AI (#12) tree expanded: 20 files (19 .cs + 1 asmdef) with role annotations. AR-1 (2H+4M+1L) + AR-2 (2M+3L) + AR-3 clean review cycles completed. Key fixes: H-1 entityIdArr zero-alloc (SlotComposer parameter + PositioningAITick field); H-2 squad-size validation; M-1 LANE_DWELL_TICKS constant; M-2 dead _entityIdMap removed; M-3 LaneEdgesM literals → PITCH_WIDTH_M fractions; M-4 dead `slots` variable in ShapeAnalyzer; VersionHistory regions all 20 files. |
 | 1.18 | 2026-05-29 | — | Pressing AI (#13) tree expanded: 21 files (20 .cs + 1 asmdef) with role annotations. AR-1 (3H+1M+1L) + AR-2 clean review cycles completed. Key fixes: H-1 IsActive field added to PressingAgentSnapshot + guards in 5 files (TriggerEvaluator, PrimaryPressSelector, CoverShadowSelector, InvariantEnforcer, PressingAITick); H-2 unit mismatch in TriggerEvaluator.EvaluateBackwardPass (len→len*len vs SpacingEpsilonM2); H-3 PrimaryPressSelector eligibility uses carrier position not interception point; M-1 PressingAITick missing using TacticalDirector.PositioningAI; L-1 PressTrigger stale doc comment UpdateDebounce→Evaluate. |
 | 1.19 | 2026-05-29 | — | Defensive AI (#14) tree expanded: 19 files (18 .cs + 1 asmdef) with role annotations. AR-1 (2H+1M) + AR-2 clean review cycles completed. Key fixes: H-1 DefensiveAIConstants.SQUAD_SIZE corrected from literal 22 to mirror PressingAIConstants.SQUAD_SIZE (true [CROSS] reference); H-2 MarkAssigner.Assign now refreshes ValidThroughTick during PreCheck dwell lock (external consumers saw stale tick on retained assignments); M-1 LastManDetector.Evaluate guards GkEntityId < 0 before GK-zone distance check (Vector2.zero gave false COVER_GK_ZONE trigger for x=105-defending teams with no GK). |
+| 1.20 | 2026-05-29 | — | Attacking AI (#15) tree expanded: 24 files (23 .cs + 1 asmdef) with role annotations. AR-1 (2H+4M) + AR-2 (0H+0M+2L) + AR-3 (1L) review cycles completed; AR-3 clean. Key fixes: H-1 MinEffectiveRadiusM moved from SupportHeuristic local const to AttackingAIConstants catalogue (FR-CS-016); H-2 magic literals 5.0/40.0/±34.0 in GenerateRunParams promoted to MinRunDepthM/MaxRunDepthM/MaxLateralOffsetM constants; M-1 AttackHysteresis.Update resets CandidateDwell when current role re-preferred (prevented premature transitions on interrupted evaluation windows); M-2 WidthHolder promotion loop now skips near-side WeakSide agents (already counted, must not re-promote); M-3 Math.Round(double) → Mathf.RoundToInt in GenerateRunParams; M-4 dead firstLossThisTick branch removed from AttackingAITick; L-1/L-2 doc updates; AR-3 L-1 AttackAngleEpsilon (0.01f) extracted to catalogue. |
