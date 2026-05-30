@@ -1,7 +1,7 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** May 29, 2026 (implementation phase: Deterministic Simulation #16 coded — 23 files (21 .cs + 2 asmdef), AR-1 4H+4M, AR-2 1L, AR-3 1L, AR-3 clean; `src/CLAUDE.md` coding guide at v1.21. Prior same day: Attacking AI #15 — 24 files, AR-1 2H+4M, AR-2 2L, AR-3 clean; Defensive AI #14 — 19 files; Pressing AI #13 — 21 files; Positioning AI #12 — 20 files. Prior May 28: Heading Mechanics #10 + Goalkeeper Mechanics #11 coded.)
+**Last Updated:** May 30, 2026 (implementation phase: Event System #17 coded — 20 files (18 .cs + 2 asmdef), AR-1 3H+3M+2L, AR-2 1L, AR-3 clean; `src/CLAUDE.md` coding guide at v1.22. Prior May 29: Deterministic Simulation #16 — 23 files, AR-1 4H+4M, AR-2 1L, AR-3 clean; Attacking AI #15 — 24 files; Defensive AI #14 — 19 files; Pressing AI #13 — 21 files. Prior May 28: Heading Mechanics #10 (complete, 25 files) + Goalkeeper Mechanics #11 (complete, 36 files).)
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
