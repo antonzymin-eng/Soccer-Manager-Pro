@@ -46,7 +46,7 @@ Soccer-Manager-Pro/
 - `PROGRESS.md` is the canonical source of truth for schedule and milestone tracking.
 - `src/CLAUDE.md` is the authoritative guide for all coding conventions. Read it before writing any code.
 
-**Note on `src/` folder structure:** Spec source code lives at `src/<spec-folder-name>/` (e.g. `src/agent-movement/`). The Ball Physics files are currently located at `src/Core/Physics/Ball/` — this is a known structural deviation from the spec-canonical `src/ball-physics/` path that will be corrected in a dedicated fix pass.
+**Note on `src/` folder structure:** Spec source code lives at `src/<spec-folder-name>/` (e.g. `src/agent-movement/`). All spec folders now match this convention — the Ball Physics structural deviation (`src/Core/Physics/Ball/`) was corrected May 30, 2026 (see src/CLAUDE.md v1.23).
 
 ---
 

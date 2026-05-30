@@ -1,24 +1,42 @@
 // File:     src/goalkeeper-mechanics/SaveAttemptedEvent.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-05-30
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §2.2.4, §4.3, Event System #17 §3.2.1, Code Standards #20
-// Purpose:  Struct event published on every save attempt (successful or failed).
-//           Published via EventBusStub.Publish<SaveAttemptedEvent> at §3.5 resolution.
+// Purpose:  Tier A event published on every save attempt (successful or failed). Ordinal 0x14.
+
+using System.Runtime.InteropServices;
 
 using UnityEngine;
 
 using TacticalDirector.BallPhysics;
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.GoalkeeperMechanics
 {
     /// <summary>
     /// Published when a GK save attempt is resolved (any outcome, including Missed).
-    /// Consumers: telemetry, Positioning AI #12, Decision Tree #8 (for next intent).
-    /// Goalkeeper Mechanics #11 §2.2.4 / §4.3.
+    /// Tier A: included in the per-tick digest. Ordinal 0x14.
+    /// Goalkeeper Mechanics #11 §2.2.4 / §4.3 / Event System #17 Appendix A.
     /// </summary>
-    public struct SaveAttemptedEvent
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SaveAttemptedEvent : IEventA
     {
+        // ── 12-byte header (§2.4.1) — set by EventBus.Publish at enqueue time ────────
+        /// <summary>Event type ordinal from Appendix A. Set by EventBus; do not set manually.</summary>
+        public byte   eventTypeOrdinal;
+        /// <summary>Payload schema version. Set by EventBus.</summary>
+        public byte   payloadVersion;
+        /// <summary>Reserved padding; canonical zero. Set by EventBus.</summary>
+        public ushort _reserved;
+        /// <summary>Physics tick at publish time. Set by EventBus.</summary>
+        public uint   tick;
+        /// <summary>Producing subsystem ordinal (#16 §3.1.1). Set by EventBus.</summary>
+        public ushort subsystemOrdinal;
+        /// <summary>Per-tick per-phase draw index (FM-017-002). Set by EventBus.</summary>
+        public ushort intraPhaseDrawIndex;
+
+        // ── Payload fields ────────────────────────────────────────────────────────────
         /// <summary>Unique GK agent ID. Matches the AM #2 agentId. §2.2.4.</summary>
         public int AgentId;
 
@@ -58,6 +76,8 @@ namespace TacticalDirector.GoalkeeperMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                         |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                       |
+// | 1.1     | 2026-05-30 | —      | Stage 1: added IEventA, [StructLayout(Sequential)], 12-byte   |
+// |         |            |        | header fields. Ordinal 0x14. Event System #17 §3.2.1 wiring.  |
 #endregion

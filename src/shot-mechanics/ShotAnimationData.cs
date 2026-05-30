@@ -1,21 +1,25 @@
 // File:     src/shot-mechanics/ShotAnimationData.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-05-30
 // Author:   —
-// Spec:     Shot Mechanics #6 §2.4.4, Code Standards #20
-// Purpose:  Stage 0 stub struct populated by ShotExecutor at CONTACT state.
-//           Not consumed by any Stage 0 system. Reserved for Animation System (Stage 1+).
-//           Must not be removed during Stage 0 implementation. §2.4.4.
+// Spec:     Shot Mechanics #6 §2.4.4, Event System #17 §3.2.1, Code Standards #20
+// Purpose:  Tier C cosmetic event struct populated by ShotExecutor at CONTACT state.
+//           Ordinal 0x0F; immediate dispatch via CosmeticChannel. Animation System
+//           (Stage 1+) subscribes to event bus for this struct. §2.4.4.
+
+using System.Runtime.InteropServices;
+
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.ShotMechanics
 {
     /// <summary>
-    /// Animation data stub populated at CONTACT state. Unconsumed at Stage 0.
-    /// Animation System (Stage 1+) subscribes to event bus for this struct.
-    /// Shot Mechanics populates and publishes it; Animation System owns consumption.
-    /// Shot Mechanics #6 §2.4.4.
+    /// Animation data published at CONTACT state via CosmeticChannel (Tier C; no digest entry).
+    /// Ordinal 0x0F. Animation System (Stage 1+) subscribes to event bus for this struct.
+    /// Shot Mechanics #6 §2.4.4 / Event System #17 Appendix A.
     /// </summary>
-    public struct ShotAnimationData
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ShotAnimationData : IEventC
     {
         /// <summary>Agent who took the shot.</summary>
         public int AgentId;
@@ -38,6 +42,8 @@ namespace TacticalDirector.ShotMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-27 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                         |
+// | 1.0     | 2026-05-27 | —      | Initial implementation.                                       |
+// | 1.1     | 2026-05-30 | —      | Stage 1: added IEventC, [StructLayout(Sequential)].           |
+// |         |            |        | Ordinal 0x0F. Event System #17 §3.2.1 wiring.                 |
 #endregion

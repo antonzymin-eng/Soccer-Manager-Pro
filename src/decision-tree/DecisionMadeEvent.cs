@@ -1,19 +1,24 @@
 // File:     src/decision-tree/DecisionMadeEvent.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-05-30
 // Author:   —
-// Spec:     Decision Tree #8 §2.2.7, Code Standards #20
-// Purpose:  Event struct published after each successful decision. Stage 0: consumed
-//           by EventBusStub (no-op). Stage 1+: wired to Event System #17.
+// Spec:     Decision Tree #8 §2.2.7, Event System #17 §3.2.1, Code Standards #20
+// Purpose:  Tier C telemetry event published after each agent decision. Ordinal 0x11.
+//           Immediate dispatch via CosmeticChannel; excluded from determinism digest. §2.2.7.
+
+using System.Runtime.InteropServices;
+
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.DecisionTree
 {
     /// <summary>
     /// Published by ActionSelector after each agent decision.
-    /// Stage 0: consumed by EventBusStub (no-op). Stage 1+: wired to Event System #17.
-    /// Decision Tree #8 §2.2.7.
+    /// Tier C: immediate dispatch via CosmeticChannel; excluded from digest. Ordinal 0x11.
+    /// Decision Tree #8 §2.2.7 / Event System #17 Appendix A.
     /// </summary>
-    public readonly struct DecisionMadeEvent
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct DecisionMadeEvent : IEventC
     {
         /// <summary>AgentId of the deciding agent.</summary>
         public readonly int AgentId;
@@ -57,6 +62,8 @@ namespace TacticalDirector.DecisionTree
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                            |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                          |
+// | 1.1     | 2026-05-30 | —      | Stage 1: added IEventC, [StructLayout(Sequential)].              |
+// |         |            |        | Ordinal 0x11. Event System #17 §3.2.1 wiring.                   |
 #endregion

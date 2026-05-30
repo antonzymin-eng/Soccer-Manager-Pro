@@ -1,29 +1,29 @@
 // File:     src/decision-tree/EventBusStub.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-05-30
 // Author:   —
-// Spec:     Decision Tree #8 §4.5, Event System #17 §7.2, Code Standards #20
-// Purpose:  Stage 0 no-op event bus. Replace at Stage 1 with Event System #17 wiring.
-//           Provides the same API surface so callers need no changes at Stage 1.
+// Spec:     Decision Tree #8 §4.5, Event System #17 §3.2.1, Code Standards #20
+// Purpose:  Thin forwarding wrapper over EventBus. Replaces the Stage 0 no-op stub.
+//           Kept internal (single event type, internal callers only).
+
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.DecisionTree
 {
     /// <summary>
-    /// Stage 0 no-op event bus. Accepts DecisionMadeEvent and discards it.
-    /// Stage 1+: replace with Event System #17 wiring (channel dt.decision_made).
+    /// Forwards DecisionMadeEvent to the real Event System #17 EventBus (Tier C).
     /// Decision Tree #8 §4.5.
     /// </summary>
     internal static class EventBusStub
     {
-        /// <summary>Stage 0: no-op. Stage 1+: publish to Event System #17 channel dt.decision_made.</summary>
+        /// <summary>Publishes DecisionMadeEvent to CosmeticChannel (Tier C, channel dt.decision_made).</summary>
         internal static void Publish(in DecisionMadeEvent evt)
-        {
-            // no-op at Stage 0
-        }
+            => EventBus.Publish(in evt);
     }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                         |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                       |
+// | 1.1     | 2026-05-30 | —      | Stage 1: replaced no-op with EventBus.Publish forwarding.     |
 #endregion

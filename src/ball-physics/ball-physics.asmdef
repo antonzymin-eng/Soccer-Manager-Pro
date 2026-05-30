@@ -1,11 +1,8 @@
 {
-    "name": "TacticalDirector.HeadingMechanics",
-    "rootNamespace": "TacticalDirector.HeadingMechanics",
+    "name": "TacticalDirector.BallPhysics",
+    "rootNamespace": "TacticalDirector.BallPhysics",
     "references": [
-        "TacticalDirector.BallPhysics",
-        "TacticalDirector.AgentMovement",
-        "TacticalDirector.CollisionSystem",
-        "TacticalDirector.EventSystem"
+        "TacticalDirector.DeterministicSim"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

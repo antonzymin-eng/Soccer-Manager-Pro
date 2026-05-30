@@ -1,22 +1,43 @@
 // File:     src/shot-mechanics/ShotExecutedEvent.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-05-30
 // Author:   —
-// Spec:     Shot Mechanics #6 §2.4.3, §4.5.2, Code Standards #20
+// Spec:     Shot Mechanics #6 §2.4.3, §4.5.2, Event System #17 §3.2.1, Code Standards #20
 // Purpose:  Struct event published at CONTACT state completion (Ball.ApplyKick() called).
-//           Authoritative definition per §4.5.2. No ShotType field (KD-3).
+//           Tier A event; ordinal 0x01 (pre-reserved in EventRegistry Appendix A). No ShotType field (KD-3).
+
+using System.Runtime.InteropServices;
 
 using UnityEngine;
+
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.ShotMechanics
 {
     /// <summary>
     /// Published to the event bus at CONTACT state completion, after Ball.ApplyKick() is called.
-    /// Consumed by Goalkeeper Mechanics (#11, Stage 1) and Statistics Engine (Stage 1+).
+    /// Tier A: included in the per-tick digest (FR-EVT-011/012). Ordinal 0x01 (pre-reserved).
     /// No ShotType field — physical vectors carry all information needed. §2.4.3, §4.5.2, KD-3.
+    /// Shot Mechanics #6 §2.4.3 / Event System #17 Appendix A.
     /// </summary>
-    public struct ShotExecutedEvent
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ShotExecutedEvent : IEventA
     {
+        // ── 12-byte header (§2.4.1) — set by EventBus.Publish at enqueue time ────────
+        /// <summary>Event type ordinal from Appendix A. Set by EventBus; do not set manually.</summary>
+        public byte   eventTypeOrdinal;
+        /// <summary>Payload schema version. Set by EventBus.</summary>
+        public byte   payloadVersion;
+        /// <summary>Reserved padding; canonical zero. Set by EventBus.</summary>
+        public ushort _reserved;
+        /// <summary>Physics tick at publish time. Set by EventBus.</summary>
+        public uint   tick;
+        /// <summary>Producing subsystem ordinal (#16 §3.1.1). Set by EventBus.</summary>
+        public ushort subsystemOrdinal;
+        /// <summary>Per-tick per-phase draw index (FM-017-002). Set by EventBus.</summary>
+        public ushort intraPhaseDrawIndex;
+
+        // ── Payload fields ────────────────────────────────────────────────────────────
         /// <summary>Agent who took the shot. Identifies shooter for GK target tracking.</summary>
         public int ShootingAgentId;
 
@@ -71,6 +92,8 @@ namespace TacticalDirector.ShotMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-27 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                         |
+// | 1.0     | 2026-05-27 | —      | Initial implementation.                                       |
+// | 1.1     | 2026-05-30 | —      | Stage 1: added IEventA, [StructLayout(Sequential)], 12-byte   |
+// |         |            |        | header fields. Ordinal 0x01. Event System #17 §3.2.1 wiring.  |
 #endregion

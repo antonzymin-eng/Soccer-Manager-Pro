@@ -5,7 +5,8 @@
         "TacticalDirector.AgentMovement",
         "TacticalDirector.BallPhysics",
         "TacticalDirector.CollisionSystem",
-        "TacticalDirector.FirstTouch"
+        "TacticalDirector.FirstTouch",
+        "TacticalDirector.EventSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

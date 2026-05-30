@@ -1,7 +1,7 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** May 30, 2026 (v1.22 — event-system/ 20 files tree expanded + AR-1 3H+3M+2L, AR-2 1L fix cycles complete, AR-3 clean; v1.21 deterministic-sim/ 23 files; v1.20 attacking-ai/ 24 files; v1.19 defensive-ai/ 19 files)
+> **Last Updated:** May 30, 2026 (v1.23 — Stage 1 event-bus wiring: 6 EventBusStub.cs wired to EventBus, 6 EventBusRegistrar.cs added, 4 asmdef files gained EventSystem reference, event structs IEventA/B/C-tagged with 12-byte headers on Tier A/B, EventRegistry rows 0x0C–0x17 added; performance-optimization/ created (4 files); ball-physics/ relocated to spec-canonical path; v1.22 event-system/ 20 files + AR-1 3H+3M+2L, AR-2 1L, AR-3 clean)
 > **Purpose:** Concrete coding rules for any AI agent or developer writing C# source code in this project. Covers file naming, constant catalogues, Unity project structure, and build/test commands. Cites Spec #20 (Code Standards & Style Guide) as the source for every convention here. Read the root `CLAUDE.md` first — this file supplements it, not replaces it.
 
 ---
@@ -25,10 +25,8 @@ src/
 │   ├── project-constants.asmdef       ← one assembly per folder (FR-CS-055)
 │   └── ProjectConstants.cs            ← source-of-truth for constants consumed by more than one spec assembly (Spec #20 §4.2)
 │
-├── ball-physics/                      ← Spec #1 (spec-canonical target path)
-│   │   ⚠️  STRUCTURAL DEVIATION: actual files are at src/Core/Physics/Ball/ —
-│   │       fix pass will relocate them here. See root CLAUDE.md REPO STRUCTURE note.
-│   ├── ball-physics.asmdef            ← pending Unity project init
+├── ball-physics/                      ← Spec #1
+│   ├── ball-physics.asmdef            ← references TacticalDirector.DeterministicSim; autoReferenced true
 │   ├── BallPhysicsConstants.cs
 │   ├── BallState.cs
 │   ├── BallPhysicsCore.cs
@@ -130,7 +128,8 @@ src/
 │   ├── IPassAgentQuery.cs             ← interface: query agent attributes and state
 │   ├── IPassBallSystem.cs             ← interface: apply kick velocity to ball
 │   ├── IPassCollisionQuery.cs         ← interface: interception queries into Collision System
-│   └── EventBusStub.cs                ← stub pending Event System #17 wiring (Stage 1)
+│   ├── EventBusStub.cs                ← wired to EventBus.Publish; 3-tier generic IEventA/B/C overloads
+│   └── EventBusRegistrar.cs           ← boot-time RegisterExternalRow<T>() for PassAttemptEvent (0x0C) + PassCancelledEvent (0x0D)
 ├── shot-mechanics/                    ← Spec #6
 │   ├── ShotMechanicsConstants.cs      ← all GT/Fixed/Cross constants (velocity, angle, spin, error, body, weak-foot, timing)
 │   ├── ContactZone.cs                 ← enum: Centre / BelowCentre / OffCentre
@@ -158,7 +157,8 @@ src/
 │   ├── WeakFootPenaltyApplier.cs      ← §3.8 weak-foot error/velocity multipliers
 │   ├── ShotErrorCalculator.cs         ← §3.6 deterministic angular error (magnitude + direction)
 │   ├── ShotEventEmitter.cs            ← publishes ShotExecutedEvent / ShotCancelledEvent / ShotAnimationData
-│   ├── EventBusStub.cs                ← Stage 0 no-op event bus; replace at Stage 1 with Event System #17
+│   ├── EventBusStub.cs                ← wired to EventBus.Publish; 3-tier generic IEventA/B/C overloads
+│   ├── EventBusRegistrar.cs           ← boot-time RegisterExternalRow<T>() for ShotExecutedEvent (0x01) + ShotCancelledEvent (0x0E) + ShotAnimationData (0x0F)
 │   ├── ShotExecutor.cs                ← sealed orchestrator: 5-state machine (Idle/Windup/Contact/FollowThrough/Complete)
 │   └── Tests/
 │       └── NaNVelocityStub.cs         ← #if UNITY_EDITOR||DEVELOPMENT_BUILD; returns NaN for EC-008 FM-05 test
@@ -168,7 +168,8 @@ src/
 │   ├── PerceptionAgentAttributes.cs   ← struct: Decisions/Anticipation/TeamId/IsHalfTurned snapshot (§4.2.2)
 │   ├── FilteredView.cs                ← FilteredView, PerceptionDiagnostics, PerceivedAgent, ShoulderCheckAnimData, OcclusionDebugRecord, PerceivedAgentDebug
 │   ├── PerceptionEvents.cs            ← PerceptionRefreshEvent struct + RefreshTrigger enum (§4.6.3)
-│   ├── EventBusStub.cs                ← Stage 0 no-op event bus; replace at Stage 1 with Event System #17
+│   ├── EventBusStub.cs                ← wired to EventBus.Publish; 3-tier generic IEventA/B/C overloads
+│   ├── EventBusRegistrar.cs           ← boot-time RegisterExternalRow<T>() for PerceptionRefreshEvent (0x10)
 │   ├── FovCalculator.cs               ← FoV formula (§3.1) + angular candidacy test + blind-side/peripheral arc predicates
 │   ├── OcclusionFilter.cs             ← shadow cone geometry (§3.2.3) + opponent occlusion test; Stage 0: opponents only (OQ-1)
 │   ├── PressureEvaluator.cs           ← PressureScalar formula (§3.6); reused verbatim from First Touch #4 §3.5
@@ -193,7 +194,7 @@ src/
 │   ├── DecisionContext.cs             ← internal struct: all assembled pipeline inputs for one agent-tick (§2.2.4)
 │   ├── ActionOption.cs                ← internal struct: one scored candidate with type-specific context fields (§3.1.0)
 │   ├── AgentAction.cs                 ← public readonly struct: pipeline output (type, target, pass/shot params, utility) (§2.2.3)
-│   ├── DecisionMadeEvent.cs           ← struct event: published after each decision; EventBusStub no-op at Stage 0 (§2.2.7)
+│   ├── DecisionMadeEvent.cs           ← struct event: published after each decision; IEventC (Tier C); wired via EventBusStub (§2.2.7)
 │   ├── DtAgentAttributes.cs           ← struct: all DT-consumed player attributes [1–20] raw + CreateDefault factory (§3.1)
 │   ├── MatchContext.cs                ← struct: authoritative match state per heartbeat (score, possession, ball, zone) (§2.2.5)
 │   ├── TacticalContext.cs             ← struct: pressing mode, passing style, formation slots; Stage0Default factory (§2.2.6)
@@ -203,7 +204,8 @@ src/
 │   ├── TacticalWeights.cs             ← constants: tactical multipliers for all action types (§3.4)
 │   ├── PitchGeometry.cs               ← static helpers: field zone classification, goal post positions, centre (§3.1.1)
 │   ├── IDtMovementController.cs       ← public interface: dispatch boundary to Agent Movement #2 XC-3.5-10 (§3.5)
-│   ├── EventBusStub.cs                ← Stage 0 no-op event bus; replace at Stage 1 with Event System #17 wiring
+│   ├── EventBusStub.cs                ← wired to EventBus.Publish (internal; single-sig for DecisionMadeEvent)
+│   ├── EventBusRegistrar.cs           ← boot-time RegisterExternalRow<T>() for DecisionMadeEvent (0x11)
 │   ├── ActionType.cs                  ← enum: PASS/SHOOT/DRIBBLE/HOLD/MOVE_TO_POSITION/PRESS/INTERCEPT (ordinals are hash inputs)
 │   ├── DtState.cs                     ← enum: IDLE / EVALUATING / EXECUTING / INTERRUPTED (§3.7.1)
 │   ├── FieldZone.cs                   ← enum: DEFENSIVE / MIDFIELD / ATTACKING — zone boundaries for utility modifiers (§2.2.5)
@@ -236,7 +238,8 @@ src/
 │   ├── IHeadingBallSystem.cs          ← interface: GetBallState + ApplyKick
 │   ├── IHeadingRngService.cs          ← interface: NextFloat + NextGaussian
 │   ├── HeadingRngServiceStub.cs       ← Stage 0 SplitMix64 stub; replace at Stage 1 with #16 wiring
-│   ├── EventBusStub.cs                ← Stage 0 no-op event bus; replace at Stage 1 with Event System #17
+│   ├── EventBusStub.cs                ← wired to EventBus.Publish; 3-tier generic IEventA/B/C overloads
+│   ├── EventBusRegistrar.cs           ← boot-time RegisterExternalRow<T>() for HeaderExecutedEvent (0x12 Tier B) + HeaderAttemptFailedEvent (0x13 Tier C)
 │   ├── HeadingEligibility.cs          ← pure eligibility predicate (§3.2); no side effects
 │   ├── HeadingJumpKinematics.cs       ← FM-010-001 JumpReach + Stage 0 synthetic parabolic Z (KD-18)
 │   ├── HeadingContactQuality.cs       ← FM-010-002 contact-quality scalar (asymmetric timing + point error)
@@ -280,7 +283,8 @@ src/
 │   ├── GoalkeeperRushDispatch.cs      ← §3.7 rush launch impulse + per-frame update; pure static
 │   ├── GoalkeeperDistribution.cs      ← §3.8 release-point geometry, windup, accuracy, F-05/F-09 target validation; pure static
 │   ├── GoalkeeperTelemetry.cs         ← Stage 0 stub; emits §2.4 gk.* trace-pipeline channels (12 channels)
-│   ├── EventBusStub.cs                ← Stage 0 no-op event bus; replace at Stage 1 with Event System #17
+│   ├── EventBusStub.cs                ← wired to EventBus.Publish; 3-tier generic IEventA/B/C overloads
+│   ├── EventBusRegistrar.cs           ← boot-time RegisterExternalRow<T>() for SaveAttemptedEvent (0x14) + BallClaimedEvent (0x15) + DistributionExecutedEvent (0x16) + GoalkeeperRushEvent (0x17)
 │   └── GoalkeeperMechanics.cs         ← 10 Hz + 60 Hz orchestrator; constructor-injected; sealed
 ├── positioning-ai/                    ← Spec #12
 │   ├── positioning-ai.asmdef
@@ -424,6 +428,10 @@ src/
 │       └── event-system-tests.asmdef  ← EditMode; references TacticalDirector.EventSystem; autoReferenced false
 │
 ├── performance-optimization/          ← Spec #18  (owns trace pipeline; minimal game-loop code)
+│   ├── performance-optimization.asmdef  ← autoReferenced false; game-layer assemblies MUST NOT import
+│   ├── HotPathAllocExemptAttribute.cs   ← §3.7.5 governance attribute; Justification (required) + SignOffRef (optional) properties
+│   ├── TraceChannel.cs                  ← F.0 schema enums (ChannelVerbosity / ChannelSamplingRule / ChannelDeterminismClass) + TraceChannelDescriptor sealed class + TraceChannelRegistry Stage 0 anchor rows (perf.budget / perf.alloc / perf.trace)
+│   └── PerformanceOptimizationConstants.cs  ← GT: PerPrRegressionFraction / AbsoluteDriftFraction / BaselineSampleCount / MaxFlakeRate / HeadroomMultiplierMin / HeadroomMultiplierMax; Fixed: HotPathAllocBudgetBytes=0
 ├── testing-strategy/                  ← Spec #19  (CI orchestration tooling; no game-loop code)
 └── code-standards/                    ← Spec #20  (governance only; no runtime code)
 ```
@@ -971,3 +979,4 @@ Update this file when those items are resolved.
 | 1.20 | 2026-05-29 | — | Attacking AI (#15) tree expanded: 24 files (23 .cs + 1 asmdef) with role annotations. AR-1 (2H+4M) + AR-2 (0H+0M+2L) + AR-3 (1L) review cycles completed; AR-3 clean. Key fixes: H-1 MinEffectiveRadiusM moved from SupportHeuristic local const to AttackingAIConstants catalogue (FR-CS-016); H-2 magic literals 5.0/40.0/±34.0 in GenerateRunParams promoted to MinRunDepthM/MaxRunDepthM/MaxLateralOffsetM constants; M-1 AttackHysteresis.Update resets CandidateDwell when current role re-preferred (prevented premature transitions on interrupted evaluation windows); M-2 WidthHolder promotion loop now skips near-side WeakSide agents (already counted, must not re-promote); M-3 Math.Round(double) → Mathf.RoundToInt in GenerateRunParams; M-4 dead firstLossThisTick branch removed from AttackingAITick; L-1/L-2 doc updates; AR-3 L-1 AttackAngleEpsilon (0.01f) extracted to catalogue. |
 | 1.21 | 2026-05-29 | — | Deterministic Simulation (#16) tree expanded: 23 files (21 .cs + 2 asmdef) with role annotations. AR-1 (4H+4M) + AR-2 (1L) + AR-3 (1L) review cycles completed; AR-3 clean. Key fixes: H-1/H-2 FloatUintUnion explicit-layout struct in CanonicalSerializer (zero-alloc SingleToUInt32Bits/UInt32BitsToSingle); H-3 stackalloc Span<byte>[21] in DeterministicRngService.ComputeDrawValue + SipHash24_64 ReadOnlySpan<byte> signature; H-4 PhaseId enum corrected (AI_NoOp ordinal removed; Events=5 added; Physics=3, Resolve=4, Snapshot=6); M-1 AI_PHASE_STRIDE const→static readonly; M-2 File.Move(overwrite:true) in SaveManager; M-3 one-canonical-NaN→SoftDrift in DivergenceDetector; AR-2 L-1 T-DS-FAULT-014 comment "phase 3 (AI)"→"phase 3 (Physics)"; AR-3 L-1 empty for-loop → comment stub in ReplayEngine step 6. |
 | 1.22 | 2026-05-30 | — | Event System (#17) tree expanded: 20 files (18 .cs + 2 asmdef) with role annotations. AR-1 (3H+3M+2L) + AR-2 (1L) + AR-3 clean review cycles completed. Key fixes: H-1 drop predicate corrected `>` → `>=` maxPerTick (off-by-one allowed MaxPerTick+1 publishes per tick); H-2 HandlerSecondaryPublishCount reset moved inside per-handler loop (was per-slot, violating FR-EVT-046a per-invocation semantics); H-3 InDrainDispatch flag wrapped in try/finally (handler exception left flag stuck true corrupting subsequent ticks); M-1 AddHandler bounds check added (0x1701 overflow error); M-2 debug phase assertion added (#if UNITY_EDITOR\|\|DEVELOPMENT_BUILD in EventBus.Publish<IEventA>); AR-2 L-1 AddHandler error code corrected to 0x1701 (was 0x1705); L-1 CardIssuedEvent.FoulOrdinal doc corrected (byte cannot hold -1; now says 0xFF); L-2 TickHeartbeatEvent comment corrected (CLR min size 1 byte, not zero). |
+| 1.23 | 2026-05-30 | — | Stage 1 event-bus wiring + ball-physics relocation + performance-optimization scaffold. (1) EventBus wired in 6 specs: PassAttemptEvent/PassCancelledEvent (Tier A 0x0C/0x0D), ShotExecutedEvent/ShotCancelledEvent (Tier A 0x01/0x0E), ShotAnimationData (Tier C 0x0F), PerceptionRefreshEvent (Tier C 0x10), DecisionMadeEvent (Tier C 0x11), HeaderExecutedEvent (Tier B 0x12), HeaderAttemptFailedEvent (Tier C 0x13), SaveAttemptedEvent/BallClaimedEvent/DistributionExecutedEvent (Tier A 0x14–0x16), GoalkeeperRushEvent (Tier C 0x17); IEventA/B/C marker interfaces added to all structs; Tier A/B structs gained 12-byte header fields per §3.4 layout. (2) 6 EventBusStub.cs files replaced no-op with 3-tier generic EventBus.Publish forwarding (decision-tree keeps internal single-sig overload). (3) 6 EventBusRegistrar.cs files added with boot-time RegisterExternalRow<T>() calls. (4) EventRegistry.cs 0x0C–0x17 placeholder rows added. (5) 4 .asmdef files gained TacticalDirector.EventSystem reference (heading-mechanics, goalkeeper-mechanics, perception-system, decision-tree). (6) ball-physics/ relocated from src/Core/Physics/Ball/ to src/ball-physics/ via git mv; ball-physics.asmdef + ball-physics-tests.asmdef added; deviation warning removed. (7) performance-optimization/ created: performance-optimization.asmdef (autoReferenced false), HotPathAllocExemptAttribute.cs, TraceChannel.cs (F.0 schema + Stage 0 anchor rows), PerformanceOptimizationConstants.cs. Tree annotations + EventBusStub/EventBusRegistrar annotations updated throughout. |
