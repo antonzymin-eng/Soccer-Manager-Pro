@@ -1,0 +1,18 @@
+{
+    "name": "TacticalDirector.EventSystem.Tests",
+    "rootNamespace": "TacticalDirector.EventSystem",
+    "references": [
+        "TacticalDirector.EventSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

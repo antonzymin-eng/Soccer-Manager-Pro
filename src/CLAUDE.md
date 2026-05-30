@@ -1,7 +1,7 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** May 29, 2026 (v1.21 — deterministic-sim/ 23 files tree expanded + AR-1 4H+4M, AR-2 1L, AR-3 1L fix cycles complete; v1.20 attacking-ai/ 24 files; v1.19 defensive-ai/ 19 files; v1.18 pressing-ai/ 21 files; v1.17 positioning-ai/ 20 files)
+> **Last Updated:** May 30, 2026 (v1.22 — event-system/ 20 files tree expanded + AR-1 3H+3M+2L, AR-2 1L fix cycles complete, AR-3 clean; v1.21 deterministic-sim/ 23 files; v1.20 attacking-ai/ 24 files; v1.19 defensive-ai/ 19 files)
 > **Purpose:** Concrete coding rules for any AI agent or developer writing C# source code in this project. Covers file naming, constant catalogues, Unity project structure, and build/test commands. Cites Spec #20 (Code Standards & Style Guide) as the source for every convention here. Read the root `CLAUDE.md` first — this file supplements it, not replaces it.
 
 ---
@@ -401,14 +401,27 @@ src/
 │       └── DeterministicSimTests.cs   ← HKDF RFC 5869 KAT; SipHash-2-4 ref vectors 0–7; canonical serialization (bool/u32/u64/-0.0/DT bits); T-DS-ORDER-001 MatchClock; T-DS-RNG-002 branch cursor parity; T-DS-SNAP-003 u64 round-trip; T-DS-FAULT-009..014; AI stride; DespawnLog
 │
 ├── event-system/                      ← Spec #17  (cross-cutting; referenced by all layers)
-│   ├── event-system.asmdef
-│   ├── EventSystemConstants.cs
-│   ├── EventBus.cs
-│   ├── EventLedger.cs
-│   ├── CosmeticChannel.cs
-│   ├── EventRegistry.cs
+│   ├── event-system.asmdef            ← references TacticalDirector.DeterministicSim; autoReferenced true
+│   ├── EventSystemConstants.cs        ← all [GT]/[CROSS] constants: queue/dispatch/handler/slot capacities + error codes + DomainTagEventLedger
+│   ├── IEventA.cs                     ← marker interface: Tier A (authoritative, digest-included)
+│   ├── IEventB.cs                     ← marker interface: Tier B (bounded-authoritative; Stage 5+ only)
+│   ├── IEventC.cs                     ← marker interface: Tier C (cosmetic; immediate-dispatch; excluded from digest)
+│   ├── EventHandler.cs                ← delegate: void EventHandler<T>(in T evt) where T : struct
+│   ├── SubscriptionToken.cs           ← readonly struct: EventTypeOrdinal + SubscriberIndex; zero allocation (FR-EVT-073)
+│   ├── EventRegistry.cs               ← Appendix A registry: 11 seeded rows; RegisterRow<T>/RegisterRowRaw/RegisterExternalRow; EventOrdinalCache<T> O(1) lookup
+│   ├── EventLedger.cs                 ← ring buffer + typed dispatch; EventSlotMeta (FM-017-002 sort key); EventTypeDispatchBase/EventTypeDispatcher<T>; DrainTick BFS; InsertionSort; SerializeLedger; Subscribe
+│   ├── CosmeticChannel.cs             ← Tier C immediate-dispatch; per-ordinal pub-count table; >= maxPerTick drop predicate (FR-EVT-043); stackalloc span dispatch (zero-alloc FR-EVT-048)
+│   ├── EventBus.cs                    ← public static API: BeginTick/BeginPhase/DrainTick/SerializeLedger/OnTickBoundary; Publish/Subscribe overloads per tier; debug phase assertion #if UNITY_EDITOR||DEVELOPMENT_BUILD
+│   ├── PossessionChangedEvent.cs      ← Tier A 0x04: PreviousHolder/NewHolder/Reason
+│   ├── FoulCommittedEvent.cs          ← Tier A 0x05: Offender/Victim/Location(Vector3)/FoulKind
+│   ├── CardIssuedEvent.cs             ← Tier A 0x06: Recipient/CardKind/FoulOrdinal(0xFF=procedural)
+│   ├── GoalAwardedEvent.cs            ← Tier A 0x07: Scorer/Assister/ScoringTeam/BallPosition(Vector3)
+│   ├── SubstitutionEvent.cs           ← Tier A 0x08: Outgoing/Incoming/Team/SubstitutionReason
+│   ├── TickHeartbeatEvent.cs          ← Tier C 0x09: empty payload; MaxPerTick=1; CLR min size 1 byte
+│   ├── VfxImpactCue.cs                ← Tier C 0x0A: ImpactPoint(Vector3)/ImpactKind/Intensity; MaxPerTick=64
+│   ├── UiNotificationCue.cs           ← Tier C 0x0B: NotificationKind/SubjectEntity; MaxPerTick=32
 │   └── tests/
-│       └── event-system-tests.asmdef  ← EditMode; references event-system.asmdef
+│       └── event-system-tests.asmdef  ← EditMode; references TacticalDirector.EventSystem; autoReferenced false
 │
 ├── performance-optimization/          ← Spec #18  (owns trace pipeline; minimal game-loop code)
 ├── testing-strategy/                  ← Spec #19  (CI orchestration tooling; no game-loop code)
@@ -957,3 +970,4 @@ Update this file when those items are resolved.
 | 1.19 | 2026-05-29 | — | Defensive AI (#14) tree expanded: 19 files (18 .cs + 1 asmdef) with role annotations. AR-1 (2H+1M) + AR-2 clean review cycles completed. Key fixes: H-1 DefensiveAIConstants.SQUAD_SIZE corrected from literal 22 to mirror PressingAIConstants.SQUAD_SIZE (true [CROSS] reference); H-2 MarkAssigner.Assign now refreshes ValidThroughTick during PreCheck dwell lock (external consumers saw stale tick on retained assignments); M-1 LastManDetector.Evaluate guards GkEntityId < 0 before GK-zone distance check (Vector2.zero gave false COVER_GK_ZONE trigger for x=105-defending teams with no GK). |
 | 1.20 | 2026-05-29 | — | Attacking AI (#15) tree expanded: 24 files (23 .cs + 1 asmdef) with role annotations. AR-1 (2H+4M) + AR-2 (0H+0M+2L) + AR-3 (1L) review cycles completed; AR-3 clean. Key fixes: H-1 MinEffectiveRadiusM moved from SupportHeuristic local const to AttackingAIConstants catalogue (FR-CS-016); H-2 magic literals 5.0/40.0/±34.0 in GenerateRunParams promoted to MinRunDepthM/MaxRunDepthM/MaxLateralOffsetM constants; M-1 AttackHysteresis.Update resets CandidateDwell when current role re-preferred (prevented premature transitions on interrupted evaluation windows); M-2 WidthHolder promotion loop now skips near-side WeakSide agents (already counted, must not re-promote); M-3 Math.Round(double) → Mathf.RoundToInt in GenerateRunParams; M-4 dead firstLossThisTick branch removed from AttackingAITick; L-1/L-2 doc updates; AR-3 L-1 AttackAngleEpsilon (0.01f) extracted to catalogue. |
 | 1.21 | 2026-05-29 | — | Deterministic Simulation (#16) tree expanded: 23 files (21 .cs + 2 asmdef) with role annotations. AR-1 (4H+4M) + AR-2 (1L) + AR-3 (1L) review cycles completed; AR-3 clean. Key fixes: H-1/H-2 FloatUintUnion explicit-layout struct in CanonicalSerializer (zero-alloc SingleToUInt32Bits/UInt32BitsToSingle); H-3 stackalloc Span<byte>[21] in DeterministicRngService.ComputeDrawValue + SipHash24_64 ReadOnlySpan<byte> signature; H-4 PhaseId enum corrected (AI_NoOp ordinal removed; Events=5 added; Physics=3, Resolve=4, Snapshot=6); M-1 AI_PHASE_STRIDE const→static readonly; M-2 File.Move(overwrite:true) in SaveManager; M-3 one-canonical-NaN→SoftDrift in DivergenceDetector; AR-2 L-1 T-DS-FAULT-014 comment "phase 3 (AI)"→"phase 3 (Physics)"; AR-3 L-1 empty for-loop → comment stub in ReplayEngine step 6. |
+| 1.22 | 2026-05-30 | — | Event System (#17) tree expanded: 20 files (18 .cs + 2 asmdef) with role annotations. AR-1 (3H+3M+2L) + AR-2 (1L) + AR-3 clean review cycles completed. Key fixes: H-1 drop predicate corrected `>` → `>=` maxPerTick (off-by-one allowed MaxPerTick+1 publishes per tick); H-2 HandlerSecondaryPublishCount reset moved inside per-handler loop (was per-slot, violating FR-EVT-046a per-invocation semantics); H-3 InDrainDispatch flag wrapped in try/finally (handler exception left flag stuck true corrupting subsequent ticks); M-1 AddHandler bounds check added (0x1701 overflow error); M-2 debug phase assertion added (#if UNITY_EDITOR\|\|DEVELOPMENT_BUILD in EventBus.Publish<IEventA>); AR-2 L-1 AddHandler error code corrected to 0x1701 (was 0x1705); L-1 CardIssuedEvent.FoulOrdinal doc corrected (byte cannot hold -1; now says 0xFF); L-2 TickHeartbeatEvent comment corrected (CLR min size 1 byte, not zero). |

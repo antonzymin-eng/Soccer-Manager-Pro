@@ -1,0 +1,323 @@
+// File:     src/event-system/EventLedger.cs
+// Created:  2026-05-30
+// Modified: 2026-05-30
+// Author:   —
+// Spec:     Event System #17 §3.2.3, §3.2.4, §3.2.5, §3.4.2, §4.4, Code Standards #20
+// Purpose:  Tier A/B ring buffer, typed dispatch infrastructure, and per-tick serialization.
+//           Internal — all public API goes through EventBus.
+//           Stage 0 notes:
+//             - EntityId in sort key is always 0 (entity resolution is Stage 1).
+//             - SerializeLedger writes raw struct bytes (including padding); strict
+//               canonical no-padding form (FR-EVT-006) is Stage 0+1.
+//             - Virtual dispatch in EventTypeDispatcher is an accepted Stage 0 compromise
+//               against FR-CS-068; a Stage 1 optimization will replace with function pointers.
+
+using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
+using TacticalDirector.DeterministicSim;
+
+namespace TacticalDirector.EventSystem
+{
+    // ── Sort key metadata stored per ring-buffer slot ────────────────────────────────
+
+    internal struct EventSlotMeta
+    {
+        internal byte   ProducingPhaseIndex;
+        internal ushort SubsystemOrdinal;
+        internal int    EntityId;            // always 0 at Stage 0; §3.2.4 TODO Stage 1
+        internal byte   EventTypeOrdinal;
+        internal ushort IntraPhaseDrawIndex;
+        internal int    StructSize;          // sizeof(T); used by SerializeLedger
+
+        internal int CompareKey(in EventSlotMeta other)
+        {
+            int cmp = ProducingPhaseIndex.CompareTo(other.ProducingPhaseIndex);
+            if (cmp != 0) return cmp;
+            cmp = SubsystemOrdinal.CompareTo(other.SubsystemOrdinal);
+            if (cmp != 0) return cmp;
+            cmp = EntityId.CompareTo(other.EntityId);
+            if (cmp != 0) return cmp;
+            cmp = EventTypeOrdinal.CompareTo(other.EventTypeOrdinal);
+            if (cmp != 0) return cmp;
+            return IntraPhaseDrawIndex.CompareTo(other.IntraPhaseDrawIndex);
+        }
+    }
+
+    // ── Typed-dispatch abstract base and generic sealed subclass ─────────────────────
+    // Stage 0 note: virtual dispatch violates FR-CS-068 in the per-event inner loop.
+    // Accepted Stage 0 compromise (spec §3.2.5 BFS needs type-erased dispatch).
+    // Stage 1 will replace with managed function pointers (delegate* <...>) or
+    // source-generated switch tables to eliminate the virtual call.
+
+    internal abstract class EventTypeDispatchBase
+    {
+        internal int HandlerCount;
+        internal abstract void Dispatch(byte[] buffer, int slotOffset, int structSize);
+        internal abstract void Dispatch(ReadOnlySpan<byte> slotBytes, int structSize);
+        internal abstract void RemoveHandler(ushort index);
+    }
+
+    internal sealed class EventTypeDispatcher<T> : EventTypeDispatchBase
+        where T : struct
+    {
+        private readonly EventHandler<T>[] _handlers;
+
+        internal EventTypeDispatcher(int capacity)
+        {
+            _handlers = new EventHandler<T>[capacity];
+        }
+
+        internal void AddHandler(EventHandler<T> handler)
+        {
+            if (HandlerCount >= _handlers.Length)
+                throw new InvalidOperationException(
+                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): subscriber handler capacity exceeded. " +
+                    "Increase MaxHandlersPerEventType or MaxTierCHandlersPerType.");
+            _handlers[HandlerCount++] = handler;
+        }
+
+        internal override void RemoveHandler(ushort index)
+        {
+            if (index < HandlerCount)
+                _handlers[index] = null; // null-slot skipped in Dispatch; count not decremented
+        }
+
+        internal override void Dispatch(byte[] buffer, int slotOffset, int structSize)
+        {
+            Dispatch(new ReadOnlySpan<byte>(buffer, slotOffset, structSize), structSize);
+        }
+
+        internal override void Dispatch(ReadOnlySpan<byte> slotBytes, int structSize)
+        {
+            T evt = MemoryMarshal.Read<T>(slotBytes.Slice(0, structSize));
+            for (int i = 0; i < HandlerCount; i++)
+            {
+                if (_handlers[i] != null)
+                {
+                    // Reset per-handler (FR-EVT-046a): each handler invocation gets its own
+                    // out-degree budget of exactly 1 secondary Tier A/B publish.
+                    EventLedger.HandlerSecondaryPublishCount = 0;
+                    _handlers[i](in evt);
+                }
+            }
+        }
+    }
+
+    // ── Ring buffer and phase draw index state ────────────────────────────────────────
+
+    /// <summary>
+    /// Internal ring buffer for Tier A/B events. Owns storage, dispatch table,
+    /// DrainTick, and SerializeLedger. Access only via EventBus.
+    /// Event System #17 §3.2.3 / §3.4.2 / §4.4.
+    /// </summary>
+    internal static class EventLedger
+    {
+        // Pre-allocated ring buffer: EventQueueCapacity × MaxEventSlotBytes bytes.
+        internal static readonly byte[] PayloadBuffer =
+            new byte[EventSystemConstants.EventQueueCapacity * EventSystemConstants.MaxEventSlotBytes];
+
+        // Per-slot metadata (sort key + struct size).
+        internal static readonly EventSlotMeta[] SlotMeta =
+            new EventSlotMeta[EventSystemConstants.EventQueueCapacity];
+
+        // Per-phase intraPhaseDrawIndex counters. Index by PhaseId ordinal (0–6).
+        internal static readonly ushort[] PhaseDrawIndices = new ushort[7];
+
+        // Type-erased dispatch table indexed by eventTypeOrdinal (0x00–0xFF).
+        internal static readonly EventTypeDispatchBase[] Dispatchers =
+            new EventTypeDispatchBase[256];
+
+        // Current count of slots written this tick.
+        internal static int QueueCount;
+
+        // Current pipeline phase (set by EventBus.BeginPhase).
+        internal static PhaseId CurrentPhase;
+
+        // Current tick (set by EventBus.BeginTick).
+        internal static uint CurrentTick;
+
+        // Boot phase complete flag. True after first DrainTick call.
+        internal static bool BootPhaseComplete;
+
+        // Out-degree tracking during DrainTick (FR-EVT-046a).
+        internal static bool InDrainDispatch;
+        internal static int  HandlerSecondaryPublishCount; // reset per-handler invocation
+
+        // ── Sort scratch buffer (reused each DrainTick call) ─────────────────────────
+
+        // Not stackalloc'd here because DrainTick does it per-call to stay zero-alloc
+        // and avoid pinning the buffer across GC safepoints.
+
+        // ── Phase reset ──────────────────────────────────────────────────────────────
+
+        internal static void BeginPhase(PhaseId phase)
+        {
+            CurrentPhase = phase;
+            PhaseDrawIndices[(byte)phase] = 0;
+        }
+
+        // ── DrainTick: sort + BFS dispatch ───────────────────────────────────────────
+
+        internal static void DrainTick()
+        {
+            BootPhaseComplete = true; // first drain marks boot phase complete
+
+            Span<int> sortBuf = stackalloc int[EventSystemConstants.EventQueueCapacity];
+
+            int batchStart = 0;
+            int depth      = 0;
+
+            while (batchStart < QueueCount)
+            {
+                if (depth >= EventSystemConstants.MaxEventDispatchDepth)
+                    throw new InvalidOperationException(
+                        "ERR_EVT_QUEUE_OVERFLOW (0x1701): BFS dispatch depth exceeded " +
+                        EventSystemConstants.MaxEventDispatchDepth);
+
+                int batchEnd  = QueueCount; // snapshot before dispatch (handlers may append)
+                int batchSize = batchEnd - batchStart;
+
+                // Populate sort indices for this batch.
+                for (int i = 0; i < batchSize; i++)
+                    sortBuf[i] = batchStart + i;
+
+                // Insertion sort by FM-017-002 key. O(n²) is acceptable at Stage 0
+                // (typical batch sizes are ≪ EventQueueCapacity).
+                InsertionSort(sortBuf.Slice(0, batchSize));
+
+                // Dispatch in canonical sort order.
+                InDrainDispatch = true;
+                try
+                {
+                    for (int i = 0; i < batchSize; i++)
+                    {
+                        int slotIndex = sortBuf[i];
+                        ref EventSlotMeta meta = ref SlotMeta[slotIndex];
+                        EventTypeDispatchBase dispatcher = Dispatchers[meta.EventTypeOrdinal];
+                        if (dispatcher == null)
+                            continue; // no subscribers for this event type; still ledgered
+
+                        dispatcher.Dispatch(
+                            PayloadBuffer,
+                            slotIndex * EventSystemConstants.MaxEventSlotBytes,
+                            meta.StructSize);
+                    }
+                }
+                finally
+                {
+                    // Always clear re-entrant flag so subsequent ticks are not affected if
+                    // a handler throws. try/finally is permitted outside inner loops (FR-CS-069).
+                    InDrainDispatch = false;
+                }
+
+                batchStart = batchEnd;
+                depth++;
+            }
+        }
+
+        private static void InsertionSort(Span<int> indices)
+        {
+            for (int i = 1; i < indices.Length; i++)
+            {
+                int key = indices[i];
+                int j   = i - 1;
+                while (j >= 0 && SlotMeta[indices[j]].CompareKey(in SlotMeta[key]) > 0)
+                {
+                    indices[j + 1] = indices[j];
+                    j--;
+                }
+                indices[j + 1] = key;
+            }
+        }
+
+        // ── SerializeLedger: emit EventLedgerRecord bytes into caller span ───────────
+
+        internal static int SerializeLedger(Span<byte> dst)
+        {
+            // FM-017-001: PhaseScopeFields[Events] = SerializeCanonical(
+            //     DOMAIN_TAG_EVENT_LEDGER ‖ EventLedgerRecord)
+            //
+            // Stage 0 note: writes raw struct bytes (with padding) per slot.
+            // FR-EVT-006 (no implicit padding) is Stage 0+1; the canonical serializer
+            // (§3.4.2) will strip padding in future passes. The domain tag and count
+            // header are always correct.
+
+            int offset = 0;
+
+            // Domain tag (1 byte).
+            dst[offset++] = EventSystemConstants.DomainTagEventLedger;
+
+            // Count (u32 LE) — only Tier A and Tier B records (FR-EVT-012).
+            int countOffset = offset;
+            offset += 4; // reserve count field; will fill after counting
+            uint count = 0;
+
+            for (int slotIndex = 0; slotIndex < QueueCount; slotIndex++)
+            {
+                ref EventSlotMeta meta = ref SlotMeta[slotIndex];
+                byte tier = EventRegistry.GetTier(meta.EventTypeOrdinal);
+                if (tier != 0 && tier != 1) // 0=A, 1=B; skip Tier C
+                    continue;
+
+                int slotOffset = slotIndex * EventSystemConstants.MaxEventSlotBytes;
+                int bytesToCopy = meta.StructSize;
+
+                if (offset + bytesToCopy > dst.Length)
+                    throw new ArgumentException(
+                        "SerializeLedger: destination span too small for event record.");
+
+                new ReadOnlySpan<byte>(PayloadBuffer, slotOffset, bytesToCopy)
+                    .CopyTo(dst.Slice(offset, bytesToCopy));
+                offset += bytesToCopy;
+                count++;
+            }
+
+            // Fill in count field (u32 LE).
+            dst[countOffset]     = (byte)count;
+            dst[countOffset + 1] = (byte)(count >> 8);
+            dst[countOffset + 2] = (byte)(count >> 16);
+            dst[countOffset + 3] = (byte)(count >> 24);
+
+            return offset;
+        }
+
+        // ── OnTickBoundary: reset per-tick state ─────────────────────────────────────
+
+        internal static void OnTickBoundary()
+        {
+            QueueCount = 0;
+            for (int i = 0; i < PhaseDrawIndices.Length; i++)
+                PhaseDrawIndices[i] = 0;
+            // Payload bytes intentionally left in place; overwritten on next publish.
+        }
+
+        // ── Subscribe: add handler to dispatcher (called by EventBus) ────────────────
+
+        internal static SubscriptionToken Subscribe<T>(
+            EventHandler<T> handler, byte ordinal, int maxHandlers)
+            where T : struct
+        {
+            if (Dispatchers[ordinal] == null)
+                Dispatchers[ordinal] = new EventTypeDispatcher<T>(maxHandlers);
+
+            var typed = (EventTypeDispatcher<T>)Dispatchers[ordinal];
+            ushort idx = (ushort)typed.HandlerCount;
+            typed.AddHandler(handler);
+            return new SubscriptionToken(ordinal, idx);
+        }
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                                |
+// | 1.0     | 2026-05-30 | —      | Initial implementation.                                              |
+// | 1.1     | 2026-05-30 | —      | Added Dispatch(ReadOnlySpan<byte>, int) overload; eliminated         |
+// |         |            |        | ToArray() allocation path in CosmeticChannel.                        |
+// | 1.2     | 2026-05-30 | —      | AR-1 H-2: HandlerSecondaryPublishCount reset moved inside            |
+// |         |            |        | per-handler loop (FR-EVT-046a per-invocation semantics).             |
+// |         |            |        | AR-1 H-3: InDrainDispatch wrapped in try/finally to prevent          |
+// |         |            |        | flag corruption on handler exception.                                |
+// |         |            |        | AR-1 M-1: bounds check added to AddHandler.                          |
+#endregion
