@@ -37,6 +37,18 @@ namespace TacticalDirector.EventSystem
         internal static void Publish<T>(in T evt) where T : struct, IEventC
         {
             byte ordinal     = EventOrdinalCache<T>.Ordinal;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // Zero-ordinal guard (AR-1 fix): ordinal 0 means EventBusRegistrar.Initialize() has
+            // not been called for this type. Without this check, GetMaxPerTick(0)=0 causes the
+            // drop predicate (s_pubCounts[0] >= 0) to fire immediately, silently dropping every
+            // event of this type for the entire session (FR-EVT-020).
+            UnityEngine.Debug.Assert(ordinal != 0,
+                "CosmeticChannel.Publish: " + typeof(T).Name +
+                " published before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
+                "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
+#endif
+
             ushort maxPerTick = EventRegistry.GetMaxPerTick(ordinal);
             ushort count     = s_pubCounts[ordinal];
 
@@ -79,6 +91,18 @@ namespace TacticalDirector.EventSystem
             where T : struct, IEventC
         {
             byte ordinal = EventOrdinalCache<T>.Ordinal;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // Zero-ordinal guard (AR-1 fix): if Initialize() has not been called, the handler
+            // would be stored in s_dispatchers[0]. After Initialize() the correct ordinal is used
+            // for dispatch, leaving the handler permanently orphaned and the SubscriptionToken
+            // pointing at the wrong slot (FR-EVT-020).
+            UnityEngine.Debug.Assert(ordinal != 0,
+                "CosmeticChannel.Subscribe: " + typeof(T).Name +
+                " subscribed before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
+                "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
+#endif
+
             if (s_dispatchers[ordinal] == null)
                 s_dispatchers[ordinal] = new EventTypeDispatcher<T>(
                     EventSystemConstants.MaxTierCHandlersPerType);
@@ -120,4 +144,6 @@ namespace TacticalDirector.EventSystem
 // | 1.1     | 2026-05-30 | —      | Fixed ToArray() GC allocation in Publish<T>; added span overload.      |
 // | 1.2     | 2026-05-30 | —      | AR-1 H-1: drop predicate corrected from > to >= maxPerTick             |
 // |         |            |        | so maxPerTick=N allows exactly N publishes before drop.                |
+// | 1.3     | 2026-05-30 | —      | AR-1 fix: added zero-ordinal guards in Publish<T> and Subscribe<T>    |
+// |         |            |        | (debug builds) — catches Tier C use before EventBusRegistrar.Init().  |
 #endregion

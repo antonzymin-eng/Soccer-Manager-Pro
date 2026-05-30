@@ -172,6 +172,17 @@ namespace TacticalDirector.EventSystem
         {
             byte ordinal = EventOrdinalCache<T>.Ordinal;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // Zero-ordinal guard (AR-1 fix): ordinal 0 is the unset CLR default for EventOrdinalCache<T>.
+            // It means the owning spec's EventBusRegistrar.Initialize() has not been called yet.
+            // Without this check the event would be stored under ordinal 0, silently corrupting
+            // the tick digest and bypassing all correctly-registered subscribers (FR-EVT-020).
+            UnityEngine.Debug.Assert(ordinal != 0,
+                "EventBus.PublishAuthoritative: " + typeof(T).Name +
+                " published before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
+                "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
+#endif
+
             if (EventLedger.QueueCount >= EventSystemConstants.EventQueueCapacity)
                 throw new InvalidOperationException(
                     "ERR_EVT_QUEUE_OVERFLOW (0x1701): ring buffer full. " +
@@ -252,4 +263,6 @@ namespace TacticalDirector.EventSystem
 // | 1.0     | 2026-05-30 | —      | Initial implementation.                                              |
 // | 1.1     | 2026-05-30 | —      | AR-1 M-2: added #if UNITY_EDITOR||DEVELOPMENT_BUILD phase assertion  |
 // |         |            |        | to Publish<T>(IEventA) as documented in the method XML doc.          |
+// | 1.2     | 2026-05-30 | —      | AR-1 fix: added zero-ordinal guard in PublishAuthoritative (debug    |
+// |         |            |        | builds) — catches Tier A/B publish before EventBusRegistrar.Init().  |
 #endregion
