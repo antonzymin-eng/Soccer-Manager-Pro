@@ -180,8 +180,15 @@ namespace TacticalDirector.EventSystem
         /// <summary>Returns sizeof(T) for the event struct registered at ordinal. §3.5.1.</summary>
         internal static int GetStructSize(byte ordinal) => s_rows[ordinal].StructSize;
 
-        /// <summary>Returns true if the ordinal has a registered row in Appendix A. FR-EVT-080.</summary>
-        public static bool IsRegistered(byte ordinal) => s_rows[ordinal].IsRegistered;
+        /// <summary>
+        /// Returns true if the ordinal has a fully initialised registry row: row exists AND struct
+        /// size is known (i.e., the owning spec's EventBusRegistrar.Initialize() has been called).
+        /// Returns false for placeholder rows seeded via RegisterRowRaw with structSize=0 (FR-EVT-003).
+        /// Do NOT use as a pre-condition for Subscribe&lt;T&gt; without also calling Initialize() first.
+        /// FR-EVT-080.
+        /// </summary>
+        public static bool IsRegistered(byte ordinal) =>
+            s_rows[ordinal].IsRegistered && s_rows[ordinal].StructSize > 0;
 
         // ── External registration (Stage 1+ downstream specs) ────────────────────────
 
@@ -219,4 +226,8 @@ namespace TacticalDirector.EventSystem
 // | 1.2     | 2026-05-30 | —      | AR-2 fix: GoalkeeperRushEvent placeholder (0x17) maxPerTick 2→8.  |
 // |         |            |        | InFlight fires each physics frame at 60Hz; a rush completing       |
 // |         |            |        | within one 100ms tick = Launched + InFlight×≤5 + terminal = ≤7.  |
+// | 1.3     | 2026-05-30 | —      | AR-3 fix: IsRegistered now requires StructSize > 0 so placeholder  |
+// |         |            |        | rows (RegisterRowRaw structSize=0) return false until Initialize() |
+// |         |            |        | is called — prevents IsRegistered from being a misleading boot-   |
+// |         |            |        | readiness predicate that contradicts the Subscribe<T> ordinal guard.|
 #endregion

@@ -63,8 +63,22 @@ namespace TacticalDirector.EventSystem
                 return; // no subscribers
 
             int structSize = EventRegistry.GetStructSize(ordinal);
+
+            // AR-3 fix: promote the structSize <= 0 guard from silent drop to throw — silent data
+            // loss is worse than an exception for a registration error (AR-1 open finding).
             if (structSize <= 0)
-                return; // ordinal registered via RegisterRowRaw without struct size (external spec)
+                throw new InvalidOperationException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier C struct size is 0 for ordinal 0x" +
+                    ordinal.ToString("X2") + ". Call EventBusRegistrar.Initialize() before publishing.");
+
+            // AR-3 fix: upper-bound guard — stackSlot is MaxEventSlotBytes bytes; Slice(0, structSize)
+            // throws ArgumentOutOfRangeException if structSize > MaxEventSlotBytes (FR-EVT-048 / §3.5.1).
+            if (structSize > EventSystemConstants.MaxEventSlotBytes)
+                throw new InvalidOperationException(
+                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): Tier C struct size " + structSize +
+                    " bytes exceeds MaxEventSlotBytes " + EventSystemConstants.MaxEventSlotBytes +
+                    " for ordinal 0x" + ordinal.ToString("X2") +
+                    ". Increase MaxEventSlotBytes or reduce struct size (§3.5.1).");
 
             // Dispatch immediately (no queue). Writes struct to a stack-allocated slot
             // so MemoryMarshal.Read<T> can reconstruct the typed value.
@@ -144,4 +158,8 @@ namespace TacticalDirector.EventSystem
 // | 1.4     | 2026-05-30 | —      | AR-2 fix: guards promoted from debug-only Debug.Assert to             |
 // |         |            |        | unconditional if/throw — eliminates eager string alloc on hot path    |
 // |         |            |        | (FR-EVT-048) and catches errors in release builds (FR-EVT-020).       |
+// | 1.5     | 2026-05-30 | —      | AR-3 fix: structSize <= 0 guard changed from silent return to throw   |
+// |         |            |        | (silent data-loss worse than exception for registration error);       |
+// |         |            |        | added upper-bound guard structSize > MaxEventSlotBytes (prevents       |
+// |         |            |        | ArgumentOutOfRangeException from stackSlot.Slice on oversized structs).|
 #endregion
