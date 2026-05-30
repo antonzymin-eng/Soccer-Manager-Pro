@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** May 30, 2026 (Stage 1 kick-off: EventBus wired in 6 specs (6 EventBusRegistrar.cs + 6 EventBusStub.cs updated + 4 asmdef refs + 10 event structs tagged IEventA/B/C); performance-optimization/ scaffold (4 files: Appendix F.0 Stage 0 deliverables); ball-physics/ relocated from src/Core/Physics/Ball/ to spec-canonical src/ball-physics/. Prior same day: Event System #17 coded — 20 files (18 .cs + 2 asmdef), AR-1: 3H+3M+2L; AR-2: 1L; AR-3 clean.)  
+**Last Updated:** May 30, 2026 (Stage 1 wiring AR-1 complete: 3H fixed (zero-ordinal guard added to EventBus.PublishAuthoritative + CosmeticChannel.Publish + CosmeticChannel.Subscribe; EventBus.cs v1.2 + CosmeticChannel.cs v1.3); 1M+1L open. AR-2 in progress. Prior same day: Stage 1 kick-off: EventBus wired in 6 specs (6 EventBusRegistrar.cs + 6 EventBusStub.cs updated + 4 asmdef refs + 10 event structs tagged IEventA/B/C); performance-optimization/ scaffold (4 files: Appendix F.0 Stage 0 deliverables); ball-physics/ relocated from src/Core/Physics/Ball/ to spec-canonical src/ball-physics/. Event System #17 coded — 20 files (18 .cs + 2 asmdef), AR-1: 3H+3M+2L; AR-2: 1L; AR-3 clean.)  
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -101,7 +101,7 @@
 
 | # | Specification | Pages | Status | Started | Completed | Notes |
 |---|---------------|-------|--------|---------|-----------|-------|
-| 17 | Event System | ~35 | 🔒 LOCKED | May 13, 2026 | May 13, 2026 | All 10 section files + appendices at v0.3; section-files PASS 1+2 adversarial reviews resolved; lead-developer sign-off May 13, 2026. ERR-017-001 fully resolved May 15, 2026. **Implementation complete May 30, 2026** at `src/event-system/` (20 files: 18 .cs + 2 asmdef; AR-1: 3H+3M+2L fixed; AR-2: 1L fixed; AR-3 clean). Key: ring buffer + BFS dispatch + Appendix A event structs + Tier C immediate dispatch. **Stage 1 wiring complete May 30, 2026**: EventRegistry rows 0x0C–0x17 seeded; 6 consuming specs wired via EventBusRegistrar.cs. |
+| 17 | Event System | ~35 | 🔒 LOCKED | May 13, 2026 | May 13, 2026 | All 10 section files + appendices at v0.3; section-files PASS 1+2 adversarial reviews resolved; lead-developer sign-off May 13, 2026. ERR-017-001 fully resolved May 15, 2026. **Implementation complete May 30, 2026** at `src/event-system/` (20 files: 18 .cs + 2 asmdef; AR-1: 3H+3M+2L fixed; AR-2: 1L fixed; AR-3 clean). Key: ring buffer + BFS dispatch + Appendix A event structs + Tier C immediate dispatch. **Stage 1 wiring complete May 30, 2026**: EventRegistry rows 0x0C–0x17 seeded; 6 consuming specs wired via EventBusRegistrar.cs. **Stage 1 wiring AR-1 complete May 30, 2026**: 5 findings (3H+1M+1L); 3H fixed — zero-ordinal guard added to EventBus.PublishAuthoritative, CosmeticChannel.Publish, CosmeticChannel.Subscribe (EventBus.cs v1.2, CosmeticChannel.cs v1.3); 1M open (IsRegistered inconsistency), 1L open (dead structSize guard). AR-2 in progress. |
 | 18 | Performance Optimization Strategy | 18-22 | 🔒 LOCKED | May 13, 2026 | May 15, 2026 | All 10 section files + appendices at v0.3 (May 14, 2026) following PASS-1 + PASS-2 adversarial reviews (ERR-018-002..018 all closed). v1.0 `[TBD-NORMATIVE]` sweep (May 15, 2026) resolved 60 citation-qualifier instances against #16 APPROVED text + #19 v1.0.1 patch-revised text. KD-2 sequencing satisfied; §9 v1.0 lead-developer sign-off granted May 15, 2026. FR count 82 (FR-PO-019 split into 019 MAY + 019a MUST; FR-PO-058a emission constraints). KD-3 inverted: #18 owns trace pipeline; #16 retains §3.2.4.1 record format + §5 regression scenarios + §3.1 emission veto. **Stage 0 scaffold complete May 30, 2026** at `src/performance-optimization/` (4 files: asmdef + HotPathAllocExemptAttribute + TraceChannel F.0 schema + PerformanceOptimizationConstants). |
 | 19 | Testing Strategy & Framework | 20-25 | ✅ APPROVED | May 12, 2026 | May 15, 2026 | Initial section-file draft May 12, 2026 from `outline-detailed.md` v1.1; v0.2 self-critique sweep applied same day. v1.0.1 `[TBD-NORMATIVE]` sweep landed May 15, 2026 across §1 / §3 / §4 / §5 / §6 / §8 / appendices against #16's now-APPROVED text and #18's IN REVIEW v0.3 surface; §9 v1.0 lead-developer sign-off granted same day. KD-2 sequencing satisfied. **Downstream effect:** clears #18's last KD-2 gate for its own `IN REVIEW → APPROVED` advancement. |
 | 20 | Code Standards & Style Guide | 15-20 | ✅ APPROVED | May 7, 2026 | May 11, 2026 | All section files + appendices drafted from `outline-detailed.md` v1.3 (May 7–8); adversarial review pass-1 applied May 11; lead-developer R-01..R-05 sign-off complete May 11, 2026. §9 v1.1 APPROVED. |
@@ -627,15 +627,16 @@
 
 ---
 
-**Last Updated:** May 30, 2026 (Stage 1 kick-off: event-bus wiring complete, performance-optimization scaffold, ball-physics relocation)
+**Last Updated:** May 30, 2026 (Stage 1 wiring AR-1 complete + AR-1 3H fix committed; AR-2 in progress)
 **Updated By:** AI Assistant
-**Next Review:** After AR-1 adversarial review of Stage 1 wiring batch
+**Next Review:** After AR-2 adversarial review of Stage 1 wiring batch
 
 ---
 
 ## CHANGELOG
 
 **May 30, 2026:**
+- Stage 1 wiring AR-1 adversarial review complete: 5 findings (3H+1M+1L). 3H fixed in EventBus.cs (v1.2) and CosmeticChannel.cs (v1.3) — zero-ordinal guard added to PublishAuthoritative, CosmeticChannel.Publish, CosmeticChannel.Subscribe (debug builds only; FR-EVT-048 preserved). 1M open (IsRegistered true for placeholder rows while ordinal cache is 0). 1L open (dead structSize guard in CosmeticChannel.Publish).
 - Event System (#17) Stage 1 wiring complete: 6 EventBusRegistrar.cs files added (ordinals 0x0C–0x17); 6 EventBusStub.cs files wired to EventBus.Publish; 10 event structs tagged IEventA/B/C with 12-byte headers on Tier A/B; EventRegistry 0x0C–0x17 placeholder rows added; 4 asmdef files gained TacticalDirector.EventSystem reference (heading-mechanics, goalkeeper-mechanics, perception-system, decision-tree).
 - Performance Optimization (#18) Stage 0 scaffold added: `src/performance-optimization/` with 4 files (asmdef, HotPathAllocExemptAttribute.cs, TraceChannel.cs F.0 schema, PerformanceOptimizationConstants.cs). Spec #18 status updated from APPROVED → LOCKED.
 - Ball Physics (#1) relocated from `src/Core/Physics/Ball/` to spec-canonical `src/ball-physics/` via `git mv`; `ball-physics.asmdef` + `ball-physics-tests.asmdef` added; deviation note removed from CLAUDE.md + src/CLAUDE.md + file-manifest.md.

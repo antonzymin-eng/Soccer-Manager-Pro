@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 30, 2026 (Stage 1 wiring + ball-physics relocation + performance-optimization scaffold. Event System #17: 20 files added. Ball Physics relocated `src/Core/Physics/Ball/` → `src/ball-physics/`; 2 asmdef files added. 6 EventBusRegistrar.cs files added; 6 EventBusStub.cs updated; 4 asmdef files gained EventSystem ref; 10 event structs tagged IEventA/B/C. Performance Optimization #18: 4 files added. `src/CLAUDE.md` v1.23. PassEvents.cs → CancelReason.cs corrected.)  
+**Last Updated:** May 30, 2026 (Stage 1 wiring AR-1 fix: EventBus.cs → v1.2, CosmeticChannel.cs → v1.3 (zero-ordinal guards in PublishAuthoritative + Publish + Subscribe). Prior same day: Stage 1 wiring + ball-physics relocation + performance-optimization scaffold. Event System #17: 20 files added. Ball Physics relocated `src/Core/Physics/Ball/` → `src/ball-physics/`; 2 asmdef files added. 6 EventBusRegistrar.cs files added; 6 EventBusStub.cs updated; 4 asmdef files gained EventSystem ref; 10 event structs tagged IEventA/B/C. Performance Optimization #18: 4 files added. `src/CLAUDE.md` v1.23. PassEvents.cs → CancelReason.cs corrected.)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -461,8 +461,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/event-system/SubscriptionToken.cs` | Readonly struct: EventTypeOrdinal + SubscriberIndex; zero allocation (FR-EVT-073) |
 | `src/event-system/EventRegistry.cs` | Appendix A registry: 11 seeded rows (0x01–0x0B) + placeholder rows 0x0C–0x17 (updated by owning spec's EventBusRegistrar.Initialize()); RegisterRow<T> / RegisterRowRaw / RegisterExternalRow<T>; EventOrdinalCache<T> O(1) static-field lookup |
 | `src/event-system/EventLedger.cs` | Ring buffer + typed BFS dispatch; EventSlotMeta (FM-017-002 sort key); EventTypeDispatchBase / EventTypeDispatcher<T>; DrainTick; InsertionSort; SerializeLedger; Subscribe |
-| `src/event-system/CosmeticChannel.cs` | Tier C immediate dispatch: per-ordinal pub-count table; ≥ maxPerTick drop predicate (AR-1 H-1: `>` → `>=`); stackalloc span dispatch (zero-alloc FR-EVT-048) |
-| `src/event-system/EventBus.cs` | Public static API: BeginTick / BeginPhase / DrainTick / SerializeLedger / OnTickBoundary; Publish / Subscribe overloads per tier; debug phase assertion `#if UNITY_EDITOR\|\|DEVELOPMENT_BUILD` (AR-1 M-2) |
+| `src/event-system/CosmeticChannel.cs` | Tier C immediate dispatch: per-ordinal pub-count table; ≥ maxPerTick drop predicate (AR-1 H-1: `>` → `>=`); stackalloc span dispatch (zero-alloc FR-EVT-048). v1.3: Stage 1 wiring AR-1 fix — zero-ordinal guard in Publish<T> + Subscribe<T> (`#if UNITY_EDITOR\|\|DEVELOPMENT_BUILD`) |
+| `src/event-system/EventBus.cs` | Public static API: BeginTick / BeginPhase / DrainTick / SerializeLedger / OnTickBoundary; Publish / Subscribe overloads per tier; debug phase assertion `#if UNITY_EDITOR\|\|DEVELOPMENT_BUILD` (AR-1 M-2). v1.2: Stage 1 wiring AR-1 fix — zero-ordinal guard in PublishAuthoritative (`#if UNITY_EDITOR\|\|DEVELOPMENT_BUILD`) |
 | `src/event-system/PossessionChangedEvent.cs` | Tier A 0x04: PreviousHolder / NewHolder / Reason |
 | `src/event-system/FoulCommittedEvent.cs` | Tier A 0x05: Offender / Victim / Location (Vector3) / FoulKind |
 | `src/event-system/CardIssuedEvent.cs` | Tier A 0x06: Recipient / CardKind / FoulOrdinal (byte; 0xFF = procedural) |
