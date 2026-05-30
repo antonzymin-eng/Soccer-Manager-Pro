@@ -6,6 +6,7 @@
 // Purpose:  Registers Perception System event types with EventRegistry at boot time.
 //           Call Initialize() before the first EventBus.Publish call in the match lifecycle.
 
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.PerceptionSystem
@@ -22,17 +23,17 @@ namespace TacticalDirector.PerceptionSystem
         /// </summary>
         public static void Initialize()
         {
-            // 40 = SubsystemOrdinals.PerceptionSystem (Deterministic Simulation #16 §3.1.1)
-            // 2  = PhaseId.AI (Deterministic Simulation #16 §3.x)
-            // tier 2 = Tier C (Event System #17 §3.1.3)
             EventRegistry.RegisterExternalRow<PerceptionRefreshEvent>(
                 ordinal: 0x10, tier: 2, version: 1,
-                subsystemOrdinal: 40, maxPerTick: 5, producerPhaseIndex: 2);
+                subsystemOrdinal: SubsystemOrdinals.PerceptionSystem, maxPerTick: 5,
+                producerPhaseIndex: (byte)PhaseId.AI);
         }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-30 | —      | Initial implementation. |
+// | 1.0     | 2026-05-30 | —      | Initial implementation.                                                    |
+// | 1.1     | 2026-05-30 | —      | AR-2 fix: replaced raw int literals with SubsystemOrdinals.PerceptionSystem |
+// |         |            |        | and (byte)PhaseId.AI — prevents silent mismatch on enum reorder.           |
 #endregion

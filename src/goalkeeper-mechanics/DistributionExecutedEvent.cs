@@ -48,8 +48,8 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>Actual world-space release point (gkPosition + Vector3(0, 0, releaseHeight)). §3.8.1.</summary>
         public Vector3 ReleasePoint;
 
-        /// <summary>Optional intended receiver agent ID. Null if targeting a zone. §3.8.2.</summary>
-        public int? TargetReceiverId;
+        /// <summary>Intended receiver agent ID; -1 when targeting a zone rather than a specific player. §3.8.2.</summary>
+        public int TargetReceiverId;
 
         /// <summary>World-space target point from the DistributeIntent. §3.8.1.</summary>
         public Vector3 TargetPoint;
@@ -67,4 +67,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                       |
 // | 1.1     | 2026-05-30 | —      | Stage 1: added IEventA, [StructLayout(Sequential)], 12-byte   |
 // |         |            |        | header fields. Ordinal 0x16. Event System #17 §3.2.1 wiring.  |
+// | 1.2     | 2026-05-30 | —      | AR-2 fix: int? TargetReceiverId → int (sentinel -1 for zone).  |
+// |         |            |        | Nullable<int> has non-deterministic padding bytes in null case  |
+// |         |            |        | when copied via MemoryMarshal.Write (determinism violation).    |
 #endregion

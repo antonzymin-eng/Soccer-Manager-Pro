@@ -7,6 +7,7 @@
 //           Call Initialize() before the first EventBus.Publish call in the match lifecycle.
 //           Updates struct-size entries that EventRegistry seeded with size=0 (FR-EVT-003).
 
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.PassMechanics
@@ -24,20 +25,22 @@ namespace TacticalDirector.PassMechanics
         /// </summary>
         public static void Initialize()
         {
-            // 4 = SubsystemOrdinals.PassMechanics (Deterministic Simulation #16 §3.1.1)
-            // 4 = PhaseId.Resolve (Deterministic Simulation #16 §3.x)
             EventRegistry.RegisterExternalRow<PassAttemptEvent>(
                 ordinal: 0x0C, tier: 0, version: 1,
-                subsystemOrdinal: 4, maxPerTick: 0, producerPhaseIndex: 4);
+                subsystemOrdinal: SubsystemOrdinals.PassMechanics, maxPerTick: 0,
+                producerPhaseIndex: (byte)PhaseId.Resolve);
 
             EventRegistry.RegisterExternalRow<PassCancelledEvent>(
                 ordinal: 0x0D, tier: 0, version: 1,
-                subsystemOrdinal: 4, maxPerTick: 0, producerPhaseIndex: 4);
+                subsystemOrdinal: SubsystemOrdinals.PassMechanics, maxPerTick: 0,
+                producerPhaseIndex: (byte)PhaseId.Resolve);
         }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-30 | —      | Initial implementation. |
+// | 1.0     | 2026-05-30 | —      | Initial implementation.                                               |
+// | 1.1     | 2026-05-30 | —      | AR-2 fix: replaced raw int literals with SubsystemOrdinals.PassMechanics |
+// |         |            |        | and (byte)PhaseId.Resolve — prevents silent mismatch on enum reorder.    |
 #endregion

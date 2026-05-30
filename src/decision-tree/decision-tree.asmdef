@@ -6,6 +6,8 @@
         "TacticalDirector.PerceptionSystem",
         "TacticalDirector.PassMechanics",
         "TacticalDirector.ShotMechanics",
+        "TacticalDirector.HeadingMechanics",
+        "TacticalDirector.GoalkeeperMechanics",
         "TacticalDirector.CollisionSystem",
         "TacticalDirector.EventSystem"
     ],

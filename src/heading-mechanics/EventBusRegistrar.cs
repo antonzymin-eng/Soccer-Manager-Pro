@@ -6,6 +6,7 @@
 // Purpose:  Registers Heading Mechanics event types with EventRegistry at boot time.
 //           Call Initialize() before the first EventBus.Publish call in the match lifecycle.
 
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.HeadingMechanics
@@ -22,21 +23,22 @@ namespace TacticalDirector.HeadingMechanics
         /// </summary>
         public static void Initialize()
         {
-            // 6 = SubsystemOrdinals.HeadingMechanics (Deterministic Simulation #16 §3.1.1)
-            // 3 = PhaseId.Physics (Deterministic Simulation #16 §3.x)
-            // tier 1 = Tier B; tier 2 = Tier C (Event System #17 §3.1.3)
             EventRegistry.RegisterExternalRow<HeaderExecutedEvent>(
                 ordinal: 0x12, tier: 1, version: 1,
-                subsystemOrdinal: 6, maxPerTick: 0, producerPhaseIndex: 3);
+                subsystemOrdinal: SubsystemOrdinals.HeadingMechanics, maxPerTick: 0,
+                producerPhaseIndex: (byte)PhaseId.Physics);
 
             EventRegistry.RegisterExternalRow<HeaderAttemptFailedEvent>(
                 ordinal: 0x13, tier: 2, version: 1,
-                subsystemOrdinal: 6, maxPerTick: 4, producerPhaseIndex: 3);
+                subsystemOrdinal: SubsystemOrdinals.HeadingMechanics, maxPerTick: 4,
+                producerPhaseIndex: (byte)PhaseId.Physics);
         }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-30 | —      | Initial implementation. |
+// | 1.0     | 2026-05-30 | —      | Initial implementation.                                                  |
+// | 1.1     | 2026-05-30 | —      | AR-2 fix: replaced raw int literals with SubsystemOrdinals.HeadingMechanics |
+// |         |            |        | and (byte)PhaseId.Physics — prevents silent mismatch on enum reorder.    |
 #endregion

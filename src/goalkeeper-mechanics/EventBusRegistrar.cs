@@ -6,6 +6,7 @@
 // Purpose:  Registers Goalkeeper Mechanics event types with EventRegistry at boot time.
 //           Call Initialize() before the first EventBus.Publish call in the match lifecycle.
 
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.GoalkeeperMechanics
@@ -23,30 +24,34 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// </summary>
         public static void Initialize()
         {
-            // 7 = SubsystemOrdinals.GoalkeeperMechanics (Deterministic Simulation #16 §3.1.1)
-            // 3 = PhaseId.Physics; 4 = PhaseId.Resolve (Deterministic Simulation #16 §3.x)
-            // tier 0 = Tier A; tier 2 = Tier C (Event System #17 §3.1.3)
             EventRegistry.RegisterExternalRow<SaveAttemptedEvent>(
                 ordinal: 0x14, tier: 0, version: 1,
-                subsystemOrdinal: 7, maxPerTick: 0, producerPhaseIndex: 3);
+                subsystemOrdinal: SubsystemOrdinals.GoalkeeperMechanics, maxPerTick: 0,
+                producerPhaseIndex: (byte)PhaseId.Physics);
 
             EventRegistry.RegisterExternalRow<BallClaimedEvent>(
                 ordinal: 0x15, tier: 0, version: 1,
-                subsystemOrdinal: 7, maxPerTick: 0, producerPhaseIndex: 3);
+                subsystemOrdinal: SubsystemOrdinals.GoalkeeperMechanics, maxPerTick: 0,
+                producerPhaseIndex: (byte)PhaseId.Physics);
 
             EventRegistry.RegisterExternalRow<DistributionExecutedEvent>(
                 ordinal: 0x16, tier: 0, version: 1,
-                subsystemOrdinal: 7, maxPerTick: 0, producerPhaseIndex: 4);
+                subsystemOrdinal: SubsystemOrdinals.GoalkeeperMechanics, maxPerTick: 0,
+                producerPhaseIndex: (byte)PhaseId.Resolve);
 
-            // maxPerTick=2: rush can fire Launched + Reached/Aborted in adjacent frames
+            // maxPerTick=8: Launched + InFlight (≤5 frames at 60Hz within one 100ms tick) + Reached/Aborted
             EventRegistry.RegisterExternalRow<GoalkeeperRushEvent>(
                 ordinal: 0x17, tier: 2, version: 1,
-                subsystemOrdinal: 7, maxPerTick: 2, producerPhaseIndex: 3);
+                subsystemOrdinal: SubsystemOrdinals.GoalkeeperMechanics, maxPerTick: 8,
+                producerPhaseIndex: (byte)PhaseId.Physics);
         }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-30 | —      | Initial implementation. |
+// | 1.0     | 2026-05-30 | —      | Initial implementation.                                                   |
+// | 1.1     | 2026-05-30 | —      | AR-2 fix: replaced raw int literals with SubsystemOrdinals/PhaseId typed  |
+// |         |            |        | constants; GoalkeeperRushEvent maxPerTick 2→8 (InFlight fires each        |
+// |         |            |        | physics frame at 60Hz: Launched + ≤5 InFlight + terminal = ≤7).          |
 #endregion

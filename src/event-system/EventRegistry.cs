@@ -127,7 +127,7 @@ namespace TacticalDirector.EventSystem
                 maxPerTick: 0, producerPhaseIndex: (byte)PhaseId.Resolve, structSize: 0);
             RegisterRowRaw(0x17, tier: 2, version: 1,
                 subsystemOrdinal: SubsystemOrdinals.GoalkeeperMechanics,
-                maxPerTick: 2, producerPhaseIndex: (byte)PhaseId.Physics, structSize: 0);
+                maxPerTick: 8, producerPhaseIndex: (byte)PhaseId.Physics, structSize: 0);
         }
 
         private static void RegisterRow<T>(byte ordinal, byte tier, byte version,
@@ -216,4 +216,7 @@ namespace TacticalDirector.EventSystem
 // | 1.0     | 2026-05-30 | —      | Initial implementation.                                            |
 // | 1.1     | 2026-05-30 | —      | Stage 1: added placeholder rows 0x0C–0x17 for downstream spec      |
 // |         |            |        | events. structSize=0; updated by EventBusRegistrar.Initialize().  |
+// | 1.2     | 2026-05-30 | —      | AR-2 fix: GoalkeeperRushEvent placeholder (0x17) maxPerTick 2→8.  |
+// |         |            |        | InFlight fires each physics frame at 60Hz; a rush completing       |
+// |         |            |        | within one 100ms tick = Launched + InFlight×≤5 + terminal = ≤7.  |
 #endregion

@@ -6,6 +6,7 @@
 // Purpose:  Registers Decision Tree event types with EventRegistry at boot time.
 //           Call Initialize() before the first EventBus.Publish call in the match lifecycle.
 
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.DecisionTree
@@ -22,18 +23,18 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public static void Initialize()
         {
-            // 41 = SubsystemOrdinals.DecisionTree (Deterministic Simulation #16 §3.1.1)
-            // 2  = PhaseId.AI (Deterministic Simulation #16 §3.x)
-            // tier 2 = Tier C (Event System #17 §3.1.3)
             // maxPerTick=22: one per active agent per 10 Hz tick (22-agent squad ceiling)
             EventRegistry.RegisterExternalRow<DecisionMadeEvent>(
                 ordinal: 0x11, tier: 2, version: 1,
-                subsystemOrdinal: 41, maxPerTick: 22, producerPhaseIndex: 2);
+                subsystemOrdinal: SubsystemOrdinals.DecisionTree, maxPerTick: 22,
+                producerPhaseIndex: (byte)PhaseId.AI);
         }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-30 | —      | Initial implementation. |
+// | 1.0     | 2026-05-30 | —      | Initial implementation.                                               |
+// | 1.1     | 2026-05-30 | —      | AR-2 fix: replaced raw int literals with SubsystemOrdinals.DecisionTree |
+// |         |            |        | and (byte)PhaseId.AI — prevents silent mismatch on enum reorder.        |
 #endregion

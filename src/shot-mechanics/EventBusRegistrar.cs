@@ -6,6 +6,7 @@
 // Purpose:  Registers Shot Mechanics event types with EventRegistry at boot time.
 //           Call Initialize() before the first EventBus.Publish call in the match lifecycle.
 
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.ShotMechanics
@@ -23,25 +24,27 @@ namespace TacticalDirector.ShotMechanics
         /// </summary>
         public static void Initialize()
         {
-            // 5 = SubsystemOrdinals.ShotMechanics (Deterministic Simulation #16 §3.1.1)
-            // 4 = PhaseId.Resolve (Deterministic Simulation #16 §3.x)
-            // tier 0 = Tier A; tier 2 = Tier C (Event System #17 §3.1.3)
             EventRegistry.RegisterExternalRow<ShotExecutedEvent>(
                 ordinal: 0x01, tier: 0, version: 1,
-                subsystemOrdinal: 5, maxPerTick: 0, producerPhaseIndex: 4);
+                subsystemOrdinal: SubsystemOrdinals.ShotMechanics, maxPerTick: 0,
+                producerPhaseIndex: (byte)PhaseId.Resolve);
 
             EventRegistry.RegisterExternalRow<ShotCancelledEvent>(
                 ordinal: 0x0E, tier: 0, version: 1,
-                subsystemOrdinal: 5, maxPerTick: 0, producerPhaseIndex: 4);
+                subsystemOrdinal: SubsystemOrdinals.ShotMechanics, maxPerTick: 0,
+                producerPhaseIndex: (byte)PhaseId.Resolve);
 
             EventRegistry.RegisterExternalRow<ShotAnimationData>(
                 ordinal: 0x0F, tier: 2, version: 1,
-                subsystemOrdinal: 5, maxPerTick: 2, producerPhaseIndex: 4);
+                subsystemOrdinal: SubsystemOrdinals.ShotMechanics, maxPerTick: 2,
+                producerPhaseIndex: (byte)PhaseId.Resolve);
         }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-30 | —      | Initial implementation. |
+// | 1.0     | 2026-05-30 | —      | Initial implementation.                                               |
+// | 1.1     | 2026-05-30 | —      | AR-2 fix: replaced raw int literals with SubsystemOrdinals.ShotMechanics |
+// |         |            |        | and (byte)PhaseId.Resolve — prevents silent mismatch on enum reorder.    |
 #endregion

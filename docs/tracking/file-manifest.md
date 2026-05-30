@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** May 30, 2026 (Stage 1 wiring AR-1 fix: EventBus.cs → v1.2, CosmeticChannel.cs → v1.3 (zero-ordinal guards in PublishAuthoritative + Publish + Subscribe). Prior same day: Stage 1 wiring + ball-physics relocation + performance-optimization scaffold. Event System #17: 20 files added. Ball Physics relocated `src/Core/Physics/Ball/` → `src/ball-physics/`; 2 asmdef files added. 6 EventBusRegistrar.cs files added; 6 EventBusStub.cs updated; 4 asmdef files gained EventSystem ref; 10 event structs tagged IEventA/B/C. Performance Optimization #18: 4 files added. `src/CLAUDE.md` v1.23. PassEvents.cs → CancelReason.cs corrected.)  
+**Last Updated:** May 30, 2026 (Stage 1 wiring AR-2 complete: EventSystemConstants.cs → v1.1 (MaxEventSlotBytes 128→160; ErrEvtUnregisteredOrdinal added); EventBus.cs → v1.3 (unconditional if/throw guards in PublishAuthoritative + Subscribe<IEventA/B>); CosmeticChannel.cs → v1.4 (guards promoted from debug-only to unconditional); EventRegistry.cs → v1.2 (GoalkeeperRushEvent maxPerTick 2→8); DistributionExecutedEvent.cs → v1.2 (int? → int sentinel); all 6 EventBusRegistrar.cs → v1.1 (raw ints → typed constants); decision-tree.asmdef (added HeadingMechanics + GoalkeeperMechanics refs). Prior same day: AR-1 fix: EventBus.cs → v1.2, CosmeticChannel.cs → v1.3. Stage 1 wiring batch. Event System #17: 20 files.)  
 **Purpose:** Canonical inventory aligned with the current folder-based spec layout in `docs/specs/`.
 
 ---
@@ -233,7 +233,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/goalkeeper-mechanics/GoalkeeperPositioningContract.cs` | Struct: KD-13 consumer contract — holds gkBaselineSlot + reactive-radius bounds logic |
 | `src/goalkeeper-mechanics/SaveAttemptedEvent.cs` | Tier A struct event (IEventA; ordinal 0x14; 12-byte header): published on every save attempt; includes telemetry labels |
 | `src/goalkeeper-mechanics/BallClaimedEvent.cs` | Tier A struct event (IEventA; ordinal 0x15; 12-byte header): published on Caught save; includes releaseTickEarliest (6-second rule) |
-| `src/goalkeeper-mechanics/DistributionExecutedEvent.cs` | Tier A struct event (IEventA; ordinal 0x16; 12-byte header): published when distribution passIntent is emitted to Pass Mechanics #5 |
+| `src/goalkeeper-mechanics/DistributionExecutedEvent.cs` | Tier A struct event (IEventA; ordinal 0x16; 12-byte header): published when distribution passIntent is emitted to Pass Mechanics #5. v1.2: AR-2 fix — int? TargetReceiverId → int (sentinel -1); nullable padding bytes are non-deterministic in null case. |
 | `src/goalkeeper-mechanics/GoalkeeperRushEvent.cs` | Tier C struct event (IEventC; ordinal 0x17): published on rush launch, update, and abort |
 | `src/goalkeeper-mechanics/IGoalkeeperBallSystem.cs` | Interface: GetBallState + ApplyKick + SetPossessor |
 | `src/goalkeeper-mechanics/IGoalkeeperRngService.cs` | Interface: NextFloat + NextGaussian (4 registered draw sites) |
@@ -273,7 +273,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 | File | Description |
 |------|-------------|
-| `src/decision-tree/decision-tree.asmdef` | Assembly definition (AI layer; references agent-movement, perception-system, pass-mechanics, shot-mechanics, event-system; added event-system ref May 30, 2026) |
+| `src/decision-tree/decision-tree.asmdef` | Assembly definition (AI layer; references agent-movement, perception-system, pass-mechanics, shot-mechanics, heading-mechanics, goalkeeper-mechanics, collision-system, event-system; AR-2 fix May 30, 2026 added heading-mechanics + goalkeeper-mechanics refs) |
 | `src/decision-tree/AssemblyInfo.cs` | [assembly: InternalsVisibleTo("TacticalDirector.DecisionTree.Tests")] |
 | `src/decision-tree/DecisionTree.cs` | Public sealed class: 6-step pipeline orchestrator + state machine (§3.6, §3.7, §4.1) |
 | `src/decision-tree/DecisionTreeStateMachine.cs` | Pure state evaluator: IDLE/EVALUATING/EXECUTING/INTERRUPTED transitions (§3.7.2) |
@@ -453,16 +453,16 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | File | Purpose |
 |------|---------|
 | `src/event-system/event-system.asmdef` | Assembly definition (references TacticalDirector.DeterministicSim; autoReferenced true) |
-| `src/event-system/EventSystemConstants.cs` | All [GT]/[CROSS] constants: queue/dispatch/handler/slot capacities + error codes (0x1701–0x1703) + DomainTagEventLedger (0x15) |
+| `src/event-system/EventSystemConstants.cs` | All [GT]/[CROSS] constants: queue/dispatch/handler/slot capacities + error codes (0x1701–0x1706) + DomainTagEventLedger (0x15). v1.1: AR-2 fix — MaxEventSlotBytes 128→160; ErrEvtUnregisteredOrdinal (0x1706) added. |
 | `src/event-system/IEventA.cs` | Marker interface: Tier A (authoritative, ring-buffered, digest-included) |
 | `src/event-system/IEventB.cs` | Marker interface: Tier B (bounded-authoritative; Stage 5+ tolerance path) |
 | `src/event-system/IEventC.cs` | Marker interface: Tier C (cosmetic; immediate CosmeticChannel dispatch; excluded from digest) |
 | `src/event-system/EventHandler.cs` | Delegate: `void EventHandler<T>(in T evt) where T : struct` |
 | `src/event-system/SubscriptionToken.cs` | Readonly struct: EventTypeOrdinal + SubscriberIndex; zero allocation (FR-EVT-073) |
-| `src/event-system/EventRegistry.cs` | Appendix A registry: 11 seeded rows (0x01–0x0B) + placeholder rows 0x0C–0x17 (updated by owning spec's EventBusRegistrar.Initialize()); RegisterRow<T> / RegisterRowRaw / RegisterExternalRow<T>; EventOrdinalCache<T> O(1) static-field lookup |
+| `src/event-system/EventRegistry.cs` | Appendix A registry: 11 seeded rows (0x01–0x0B) + placeholder rows 0x0C–0x17 (updated by owning spec's EventBusRegistrar.Initialize()); RegisterRow<T> / RegisterRowRaw / RegisterExternalRow<T>; EventOrdinalCache<T> O(1) static-field lookup. v1.2: AR-2 fix — GoalkeeperRushEvent placeholder (0x17) maxPerTick 2→8. |
 | `src/event-system/EventLedger.cs` | Ring buffer + typed BFS dispatch; EventSlotMeta (FM-017-002 sort key); EventTypeDispatchBase / EventTypeDispatcher<T>; DrainTick; InsertionSort; SerializeLedger; Subscribe |
-| `src/event-system/CosmeticChannel.cs` | Tier C immediate dispatch: per-ordinal pub-count table; ≥ maxPerTick drop predicate (AR-1 H-1: `>` → `>=`); stackalloc span dispatch (zero-alloc FR-EVT-048). v1.3: Stage 1 wiring AR-1 fix — zero-ordinal guard in Publish<T> + Subscribe<T> (`#if UNITY_EDITOR\|\|DEVELOPMENT_BUILD`) |
-| `src/event-system/EventBus.cs` | Public static API: BeginTick / BeginPhase / DrainTick / SerializeLedger / OnTickBoundary; Publish / Subscribe overloads per tier; debug phase assertion `#if UNITY_EDITOR\|\|DEVELOPMENT_BUILD` (AR-1 M-2). v1.2: Stage 1 wiring AR-1 fix — zero-ordinal guard in PublishAuthoritative (`#if UNITY_EDITOR\|\|DEVELOPMENT_BUILD`) |
+| `src/event-system/CosmeticChannel.cs` | Tier C immediate dispatch: per-ordinal pub-count table; ≥ maxPerTick drop predicate; stackalloc span dispatch (zero-alloc FR-EVT-048). v1.4: AR-2 fix — guards promoted from debug-only Debug.Assert to unconditional if/throw in Publish<T> + Subscribe<T> (FR-EVT-048 hot-path alloc + release build coverage). |
+| `src/event-system/EventBus.cs` | Public static API: BeginTick / BeginPhase / DrainTick / SerializeLedger / OnTickBoundary; Publish / Subscribe overloads per tier. v1.3: AR-2 fix — unconditional if/throw guard in PublishAuthoritative (replaces debug-only assert); same guard added to Subscribe<IEventA/B> (FR-EVT-020). |
 | `src/event-system/PossessionChangedEvent.cs` | Tier A 0x04: PreviousHolder / NewHolder / Reason |
 | `src/event-system/FoulCommittedEvent.cs` | Tier A 0x05: Offender / Victim / Location (Vector3) / FoulKind |
 | `src/event-system/CardIssuedEvent.cs` | Tier A 0x06: Recipient / CardKind / FoulOrdinal (byte; 0xFF = procedural) |

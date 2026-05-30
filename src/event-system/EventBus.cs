@@ -138,6 +138,11 @@ namespace TacticalDirector.EventSystem
         {
             EnforceBootPhase();
             byte ordinal = EventOrdinalCache<T>.Ordinal;
+            if (ordinal == 0)
+                throw new InvalidOperationException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    " subscribed before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
+                    "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
             return EventLedger.Subscribe<T>(handler, ordinal,
                 EventSystemConstants.MaxHandlersPerEventType);
         }
@@ -152,6 +157,11 @@ namespace TacticalDirector.EventSystem
         {
             EnforceBootPhase();
             byte ordinal = EventOrdinalCache<T>.Ordinal;
+            if (ordinal == 0)
+                throw new InvalidOperationException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    " subscribed before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
+                    "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
             return EventLedger.Subscribe<T>(handler, ordinal,
                 EventSystemConstants.MaxHandlersPerEventType);
         }
@@ -172,16 +182,14 @@ namespace TacticalDirector.EventSystem
         {
             byte ordinal = EventOrdinalCache<T>.Ordinal;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            // Zero-ordinal guard (AR-1 fix): ordinal 0 is the unset CLR default for EventOrdinalCache<T>.
-            // It means the owning spec's EventBusRegistrar.Initialize() has not been called yet.
-            // Without this check the event would be stored under ordinal 0, silently corrupting
-            // the tick digest and bypassing all correctly-registered subscribers (FR-EVT-020).
-            UnityEngine.Debug.Assert(ordinal != 0,
-                "EventBus.PublishAuthoritative: " + typeof(T).Name +
-                " published before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
-                "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
-#endif
+            // Zero-ordinal guard (AR-2 fix: replaces debug-only Debug.Assert to eliminate eager string
+            // allocation on the hot path — C# evaluates Assert arguments eagerly even when the condition
+            // is true. Unconditional throw catches the error in release builds too. FR-EVT-020).
+            if (ordinal == 0)
+                throw new InvalidOperationException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    " published before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
+                    "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
 
             if (EventLedger.QueueCount >= EventSystemConstants.EventQueueCapacity)
                 throw new InvalidOperationException(
@@ -265,4 +273,7 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | to Publish<T>(IEventA) as documented in the method XML doc.          |
 // | 1.2     | 2026-05-30 | —      | AR-1 fix: added zero-ordinal guard in PublishAuthoritative (debug    |
 // |         |            |        | builds) — catches Tier A/B publish before EventBusRegistrar.Init().  |
+// | 1.3     | 2026-05-30 | —      | AR-2 fix: zero-ordinal guard in PublishAuthoritative promoted to      |
+// |         |            |        | unconditional if/throw (eliminates eager string alloc on hot path,    |
+// |         |            |        | FR-EVT-048). Same guard added to Subscribe<IEventA/B> (FR-EVT-020).  |
 #endregion
