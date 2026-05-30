@@ -1,7 +1,7 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** May 29, 2026 (implementation phase: Attacking AI #15 coded — 24 files (23 .cs + 1 asmdef), AR-1 2H+4M, AR-2 2L, AR-3 clean; `src/CLAUDE.md` coding guide at v1.20. Prior same day: Defensive AI #14 — 19 files, AR-1 2H+1M, AR-2 clean; Pressing AI #13 — 21 files, AR-1 3H+1M+1L, AR-2 clean; Positioning AI #12 — 20 files, AR-1+AR-2+AR-3 clean. Prior May 28: Heading Mechanics #10 + Goalkeeper Mechanics #11 coded.)
+**Last Updated:** May 29, 2026 (implementation phase: Deterministic Simulation #16 coded — 23 files (21 .cs + 2 asmdef), AR-1 4H+4M, AR-2 1L, AR-3 1L, AR-3 clean; `src/CLAUDE.md` coding guide at v1.21. Prior same day: Attacking AI #15 — 24 files, AR-1 2H+4M, AR-2 2L, AR-3 clean; Defensive AI #14 — 19 files; Pressing AI #13 — 21 files; Positioning AI #12 — 20 files. Prior May 28: Heading Mechanics #10 + Goalkeeper Mechanics #11 coded.)
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
@@ -118,9 +118,9 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Spec Phase Completed:** May 18, 2026 — all 20 specs APPROVED
 **Deliverables:** 20 comprehensive specification documents + initial code for Ball Physics and Agent Movement
 
-**Summary (May 29, 2026):** All 20 specs APPROVED. Stage 0 specification phase COMPLETE. Active implementations (AR-clean): Ball Physics (#1), Agent Movement (#2), Collision System (#3), First Touch (#4), Pass Mechanics (#5), Shot Mechanics (#6), Perception System (#7) (14 files), Decision Tree (#8) (36 files), Heading Mechanics (#10) (25 files), Goalkeeper Mechanics (#11) (36 files), Positioning AI (#12) (20 files), Pressing AI (#13) (21 files), Defensive AI (#14) (19 files), Attacking AI (#15) (24 files). `src/CLAUDE.md` coding guide (v1.20) governs all C# authoring.
+**Summary (May 29, 2026):** All 20 specs APPROVED. Stage 0 specification phase COMPLETE. Active implementations (AR-clean): Ball Physics (#1), Agent Movement (#2), Collision System (#3), First Touch (#4), Pass Mechanics (#5), Shot Mechanics (#6), Perception System (#7) (14 files), Decision Tree (#8) (36 files), Heading Mechanics (#10) (25 files), Goalkeeper Mechanics (#11) (36 files), Positioning AI (#12) (20 files), Pressing AI (#13) (21 files), Defensive AI (#14) (19 files), Attacking AI (#15) (24 files), Deterministic Simulation (#16) (23 files). `src/CLAUDE.md` coding guide (v1.21) governs all C# authoring.
 **Total specification output:** ~4.33 MB across 106 files (see file-manifest.md)
-**Implementation active:** #1–#8, #10–#15 (15 of 20 specs implemented)
+**Implementation active:** #1–#8, #10–#16 (16 of 20 specs implemented)
 
 ---
 
@@ -164,7 +164,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 - ✅ Approved
 - 🔒 Locked (implementation begun)
 
-**Locked (implementation begun):** Ball Physics #1, Agent Movement #2, Collision System #3, First Touch #4, Pass Mechanics #5, Shot Mechanics #6, Perception System #7, Decision Tree #8, Heading Mechanics #10, Goalkeeper Mechanics #11, Positioning AI #12, Pressing AI #13, Defensive AI #14, Attacking AI #15
+**Locked (implementation begun):** Ball Physics #1, Agent Movement #2, Collision System #3, First Touch #4, Pass Mechanics #5, Shot Mechanics #6, Perception System #7, Decision Tree #8, Heading Mechanics #10, Goalkeeper Mechanics #11, Positioning AI #12, Pressing AI #13, Defensive AI #14, Attacking AI #15, Deterministic Simulation #16
 
 **For detailed progress tracking, see:** [docs/tracking/PROGRESS.md](docs/tracking/PROGRESS.md)
 **For file inventory, see:** [docs/tracking/file-manifest.md](docs/tracking/file-manifest.md)
@@ -307,7 +307,8 @@ Soccer-Manager-Pro/
 9. 🔒 Pressing AI (#13) — 21 files coded and AR-clean (May 29). AR-1: 3H+1M+1L fixed; AR-2: clean.
 10. 🔒 Defensive AI (#14) — 19 files (18 .cs + 1 asmdef) coded and AR-clean (May 29). AR-1: 2H+1M fixed; AR-2: clean.
 11. 🔒 Attacking AI (#15) — 24 files (23 .cs + 1 asmdef) coded and AR-clean (May 29). AR-1: 2H+4M fixed; AR-2: 2L fixed; AR-3: clean.
-12. ⏳ Structural fix: move Ball Physics from `src/Core/Physics/Ball/` → `src/ball-physics/` (spec-canonical path).
+12. 🔒 Deterministic Simulation (#16) — 23 files (21 .cs + 2 asmdef) coded and AR-clean (May 29). AR-1: 4H+4M fixed; AR-2: 1L fixed; AR-3: 1L fixed; AR-3 clean.
+13. ⏳ Structural fix: move Ball Physics from `src/Core/Physics/Ball/` → `src/ball-physics/` (spec-canonical path).
 
 **Operations / housekeeping:**
 5. ⏳ Push 12+ approval tags (HTTP 403 branch-protection); run squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`.
@@ -366,7 +367,11 @@ These remain available in `/Archive/` for historical reference but should NOT be
 11. ✅ Perception System (#7) — 14 source files, coded and AR-clean (May 29)
 12. ✅ Decision Tree (#8) — 36 files, coded and AR-clean (May 29)
 13. ✅ Positioning AI (#12) — 20 files, coded and AR-clean (May 29)
-14. ⏳ Resolve structural deviation: move Ball Physics to `src/ball-physics/`
+14. ✅ Pressing AI (#13) — 21 files, coded and AR-clean (May 29)
+15. ✅ Defensive AI (#14) — 19 files, coded and AR-clean (May 29)
+16. ✅ Attacking AI (#15) — 24 files, coded and AR-clean (May 29)
+17. ✅ Deterministic Simulation (#16) — 23 files (21 .cs + 2 asmdef), coded and AR-clean (May 29)
+18. ⏳ Resolve structural deviation: move Ball Physics to `src/ball-physics/`
 
 ---
 

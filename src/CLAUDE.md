@@ -1,7 +1,7 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** May 29, 2026 (v1.17 — positioning-ai/ 20 files tree expanded + AR-1+AR-2+AR-3 fix cycles noted; v1.16 decision-tree/ 36 files + AR-1 2H+3M+4L fixes; v1.15 perception-system/ 14 files; v1.14 goalkeeper-mechanics/ 36 files; v1.13 heading-mechanics/ 25 files)
+> **Last Updated:** May 29, 2026 (v1.21 — deterministic-sim/ 23 files tree expanded + AR-1 4H+4M, AR-2 1L, AR-3 1L fix cycles complete; v1.20 attacking-ai/ 24 files; v1.19 defensive-ai/ 19 files; v1.18 pressing-ai/ 21 files; v1.17 positioning-ai/ 20 files)
 > **Purpose:** Concrete coding rules for any AI agent or developer writing C# source code in this project. Covers file naming, constant catalogues, Unity project structure, and build/test commands. Cites Spec #20 (Code Standards & Style Guide) as the source for every convention here. Read the root `CLAUDE.md` first — this file supplements it, not replaces it.
 
 ---
@@ -375,12 +375,30 @@ src/
 │   └── AttackingAITick.cs             ← sealed class: 10 Hz orchestrator; §3.13 pipeline (phase gate→pool→roles→width→weak-side→overload→invariants→publish); pre-allocated zero-alloc buffers
 │
 ├── deterministic-sim/                 ← Spec #16  (cross-cutting; referenced by all layers)
-│   ├── deterministic-sim.asmdef
-│   ├── DeterministicSimConstants.cs
-│   ├── TickOrchestrator.cs
-│   ├── SnapshotCodec.cs
+│   ├── deterministic-sim.asmdef       ← no references (all layers reference this; it references none)
+│   ├── DeterministicSimConstants.cs   ← all [FIXED]/[DERIVED]/[GT] constants: tick rates, error codes, domain tags, field widths, RNG params, digest versions
+│   ├── PhaseId.cs                     ← enum: Input=0 / Intent=1 / AI=2 / Physics=3 / Resolve=4 / Events=5 / Snapshot=6 (AR-1 H-4: AI_NoOp removed; Events added)
+│   ├── DeterminismTier.cs             ← enum: TierA=0 / TierB=1 / TierC=2 (byte)
+│   ├── DivergenceClass.cs             ← enum: None / HardDesync / SoftDrift / Cosmetic (byte)
+│   ├── SubsystemOrdinals.cs           ← compile-time const ints: BallPhysics=0..GoalkeeperMechanics=7 (Physics 0–19), PositioningAI=20..AttackingAI=23 (Mechanics 20–39), PerceptionSystem=40, DecisionTree=41 (AI 40–59), EventSystem=60
+│   ├── ReplayCursor.cs                ← readonly struct: Tick (ulong), PhaseOrdinal (byte), IsAtEndOfSnapshot property, EndOfSnapshot(tick) factory
+│   ├── DespawnEntry.cs                ← readonly struct: EntityId, FinalActionOrdinal, FinalRngCursor, DespawnTick (all fields; Tier A tombstone)
+│   ├── DespawnLog.cs                  ← pre-allocated tombstone list: Append / ContainsEntity / GetEntry / Clear; capacity = MaxDespawnEntries
+│   ├── EnvironmentFingerprint.cs      ← sealed class: 6 readonly fields + Lock() + ValidateAgainst() → ERR_DS_REPLAY_ENV_MISMATCH + CreateStage0Dev() factory
+│   ├── RngStreamState.cs              ← mutable struct: StreamKey/RngCursor/ActionOrdinal (ulong), BudgetRemaining/DeclaredBudget/DrawIndex (int), SiteId (string), StreamVersion (ushort), SubsystemOrdinal, EntityId; ClearReservation()
+│   ├── MatchClock.cs                  ← sealed class: CurrentTick / CurrentTacticalTick / CurrentMatchTimeMs / IsAiStrideTick; Advance() / RestoreFromSnapshot(tick) — no System.DateTime (FR-CS-042)
+│   ├── DeterministicRngService.cs     ← sealed class: HKDF-SHA256 key derivation + SipHash-2-4-64 per-draw hash; RegisterStream / Reserve / DrawReserved / CloseReservation / Skip / RestoreStream; zero-allocation hot path (stackalloc Span<byte>)
+│   ├── CanonicalSerializer.cs         ← static class: §3.2.4.1 Write/Read for all wire types; FloatUintUnion explicit-layout struct (AR-1 H-1/H-2: no BitConverter allocs); −0.0→+0.0 normalization; Tier B NaN→0x7FC00000
+│   ├── SnapshotHeader.cs              ← sealed class: SchemaVersion / DigestVersion / Tick / PrevSnapshotDigest[32] / CurrentSnapshotDigest[32] / Fingerprint / Cursor; Initialize()
+│   ├── SnapshotPayload.cs             ← sealed class: pre-allocated PayloadBytes[MaxSnapshotBytes] / BytesWritten / Reset()
+│   ├── SnapshotCodec.cs               ← sealed class: Encode() SHA-256 + digest chain; ValidateHeader() / ValidatePrevDigest() / CommitLoadedDigest(); _prevDigest[32] chain state
+│   ├── ReplayEngine.cs                ← sealed class: PrepareReplay() steps 1–7 of §4.2.2; step 6 Stage 0 stub (in-memory RNG state preserved); step 8 delegated to TickOrchestrator
+│   ├── SaveManager.cs                 ← sealed class: CommitAtomic() §4.6.1.1 five-step atomic save (temp→fsync→rename-overwrite→dir-fsync); File.Move(overwrite:true) (AR-1 M-2)
+│   ├── TickOrchestrator.cs            ← sealed class: RunTick() 7-phase 60 Hz pipeline; AI stride-gated on IsAiStrideTick; System.Action callbacks per phase; 9 ProfilerMarkers; zero-alloc hot path
+│   ├── DivergenceDetector.cs          ← static class: CompareDigests / CompareTierAFloat / CompareTierBFloat (AR-1 M-3: one-NaN→SoftDrift) / CompareTierAInt / CompareTierAUlong / Worst()
 │   └── tests/
-│       └── deterministic-sim-tests.asmdef  ← EditMode; references deterministic-sim.asmdef
+│       ├── deterministic-sim-tests.asmdef  ← EditMode; references deterministic-sim.asmdef
+│       └── DeterministicSimTests.cs   ← HKDF RFC 5869 KAT; SipHash-2-4 ref vectors 0–7; canonical serialization (bool/u32/u64/-0.0/DT bits); T-DS-ORDER-001 MatchClock; T-DS-RNG-002 branch cursor parity; T-DS-SNAP-003 u64 round-trip; T-DS-FAULT-009..014; AI stride; DespawnLog
 │
 ├── event-system/                      ← Spec #17  (cross-cutting; referenced by all layers)
 │   ├── event-system.asmdef
@@ -938,3 +956,4 @@ Update this file when those items are resolved.
 | 1.18 | 2026-05-29 | — | Pressing AI (#13) tree expanded: 21 files (20 .cs + 1 asmdef) with role annotations. AR-1 (3H+1M+1L) + AR-2 clean review cycles completed. Key fixes: H-1 IsActive field added to PressingAgentSnapshot + guards in 5 files (TriggerEvaluator, PrimaryPressSelector, CoverShadowSelector, InvariantEnforcer, PressingAITick); H-2 unit mismatch in TriggerEvaluator.EvaluateBackwardPass (len→len*len vs SpacingEpsilonM2); H-3 PrimaryPressSelector eligibility uses carrier position not interception point; M-1 PressingAITick missing using TacticalDirector.PositioningAI; L-1 PressTrigger stale doc comment UpdateDebounce→Evaluate. |
 | 1.19 | 2026-05-29 | — | Defensive AI (#14) tree expanded: 19 files (18 .cs + 1 asmdef) with role annotations. AR-1 (2H+1M) + AR-2 clean review cycles completed. Key fixes: H-1 DefensiveAIConstants.SQUAD_SIZE corrected from literal 22 to mirror PressingAIConstants.SQUAD_SIZE (true [CROSS] reference); H-2 MarkAssigner.Assign now refreshes ValidThroughTick during PreCheck dwell lock (external consumers saw stale tick on retained assignments); M-1 LastManDetector.Evaluate guards GkEntityId < 0 before GK-zone distance check (Vector2.zero gave false COVER_GK_ZONE trigger for x=105-defending teams with no GK). |
 | 1.20 | 2026-05-29 | — | Attacking AI (#15) tree expanded: 24 files (23 .cs + 1 asmdef) with role annotations. AR-1 (2H+4M) + AR-2 (0H+0M+2L) + AR-3 (1L) review cycles completed; AR-3 clean. Key fixes: H-1 MinEffectiveRadiusM moved from SupportHeuristic local const to AttackingAIConstants catalogue (FR-CS-016); H-2 magic literals 5.0/40.0/±34.0 in GenerateRunParams promoted to MinRunDepthM/MaxRunDepthM/MaxLateralOffsetM constants; M-1 AttackHysteresis.Update resets CandidateDwell when current role re-preferred (prevented premature transitions on interrupted evaluation windows); M-2 WidthHolder promotion loop now skips near-side WeakSide agents (already counted, must not re-promote); M-3 Math.Round(double) → Mathf.RoundToInt in GenerateRunParams; M-4 dead firstLossThisTick branch removed from AttackingAITick; L-1/L-2 doc updates; AR-3 L-1 AttackAngleEpsilon (0.01f) extracted to catalogue. |
+| 1.21 | 2026-05-29 | — | Deterministic Simulation (#16) tree expanded: 23 files (21 .cs + 2 asmdef) with role annotations. AR-1 (4H+4M) + AR-2 (1L) + AR-3 (1L) review cycles completed; AR-3 clean. Key fixes: H-1/H-2 FloatUintUnion explicit-layout struct in CanonicalSerializer (zero-alloc SingleToUInt32Bits/UInt32BitsToSingle); H-3 stackalloc Span<byte>[21] in DeterministicRngService.ComputeDrawValue + SipHash24_64 ReadOnlySpan<byte> signature; H-4 PhaseId enum corrected (AI_NoOp ordinal removed; Events=5 added; Physics=3, Resolve=4, Snapshot=6); M-1 AI_PHASE_STRIDE const→static readonly; M-2 File.Move(overwrite:true) in SaveManager; M-3 one-canonical-NaN→SoftDrift in DivergenceDetector; AR-2 L-1 T-DS-FAULT-014 comment "phase 3 (AI)"→"phase 3 (Physics)"; AR-3 L-1 empty for-loop → comment stub in ReplayEngine step 6. |
