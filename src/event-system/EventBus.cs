@@ -1,6 +1,6 @@
 // File:     src/event-system/EventBus.cs
 // Created:  2026-05-30
-// Modified: 2026-05-30
+// Modified: 2026-05-31
 // Author:   —
 // Spec:     Event System #17 §3.2.1, §3.2.2, §4.4, Code Standards #20
 // Purpose:  Public static event bus. Publish/Subscribe entry points plus DrainTick,
@@ -138,6 +138,11 @@ namespace TacticalDirector.EventSystem
         {
             EnforceBootPhase();
             byte ordinal = EventOrdinalCache<T>.Ordinal;
+            if (ordinal == 0)
+                throw new InvalidOperationException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    " subscribed before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
+                    "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
             return EventLedger.Subscribe<T>(handler, ordinal,
                 EventSystemConstants.MaxHandlersPerEventType);
         }
@@ -152,6 +157,11 @@ namespace TacticalDirector.EventSystem
         {
             EnforceBootPhase();
             byte ordinal = EventOrdinalCache<T>.Ordinal;
+            if (ordinal == 0)
+                throw new InvalidOperationException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    " subscribed before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
+                    "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
             return EventLedger.Subscribe<T>(handler, ordinal,
                 EventSystemConstants.MaxHandlersPerEventType);
         }
@@ -171,6 +181,15 @@ namespace TacticalDirector.EventSystem
         private static void PublishAuthoritative<T>(in T evt) where T : struct
         {
             byte ordinal = EventOrdinalCache<T>.Ordinal;
+
+            // Zero-ordinal guard (AR-2 fix: replaces debug-only Debug.Assert to eliminate eager string
+            // allocation on the hot path — C# evaluates Assert arguments eagerly even when the condition
+            // is true. Unconditional throw catches the error in release builds too. FR-EVT-020).
+            if (ordinal == 0)
+                throw new InvalidOperationException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    " published before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
+                    "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
 
             if (EventLedger.QueueCount >= EventSystemConstants.EventQueueCapacity)
                 throw new InvalidOperationException(
@@ -193,11 +212,30 @@ namespace TacticalDirector.EventSystem
             // Copy struct bytes to ring buffer slot (no GC allocation — value copy on stack).
             T copy = evt;
             int structSize = EventRegistry.GetStructSize(ordinal);
+
+            // AR-4 fix: guard promoted from silent fallback to throw. The original
+            // "Fallback via Unsafe.SizeOf<T> for RegisterRowRaw types" comment was
+            // misleading — RegisterRowRaw types have ordinal=0 (EventOrdinalCache is never
+            // set by RegisterRowRaw), so they are caught by the ordinal==0 guard above.
+            // Any type reaching here with ordinal!=0 was registered via RegisterRow<T>,
+            // which always stores Unsafe.SizeOf<T>() > 0. structSize<=0 is unreachable;
+            // promoting to throw makes the invariant explicit (consistent with AR-3 in
+            // CosmeticChannel.Publish).
             if (structSize <= 0)
-            {
-                // Fallback: estimate via Unsafe.SizeOf<T>() for types registered via RegisterRowRaw.
-                structSize = Unsafe.SizeOf<T>();
-            }
+                throw new InvalidOperationException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): struct size is 0 for ordinal 0x" +
+                    ordinal.ToString("X2") + ". Call EventBusRegistrar.Initialize() before publishing.");
+
+            // AR-4 fix: upper-bound guard (symmetric with AR-3 fix in CosmeticChannel.Publish).
+            // Without this guard, a struct > MaxEventSlotBytes bytes would overflow the ring-buffer
+            // slot and corrupt adjacent slots silently (MemoryMarshal.Write's Span constructor only
+            // throws when slotOffset+structSize > PayloadBuffer.Length, not when > MaxEventSlotBytes).
+            if (structSize > EventSystemConstants.MaxEventSlotBytes)
+                throw new InvalidOperationException(
+                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): Tier A/B struct size " + structSize +
+                    " bytes exceeds MaxEventSlotBytes " + EventSystemConstants.MaxEventSlotBytes +
+                    " for ordinal 0x" + ordinal.ToString("X2") +
+                    ". Increase MaxEventSlotBytes or reduce struct size (§3.5.1).");
 
             MemoryMarshal.Write(
                 new Span<byte>(EventLedger.PayloadBuffer, slotOffset, structSize),
@@ -252,4 +290,21 @@ namespace TacticalDirector.EventSystem
 // | 1.0     | 2026-05-30 | —      | Initial implementation.                                              |
 // | 1.1     | 2026-05-30 | —      | AR-1 M-2: added #if UNITY_EDITOR||DEVELOPMENT_BUILD phase assertion  |
 // |         |            |        | to Publish<T>(IEventA) as documented in the method XML doc.          |
+// | 1.2     | 2026-05-30 | —      | AR-1 fix: added zero-ordinal guard in PublishAuthoritative (debug    |
+// |         |            |        | builds) — catches Tier A/B publish before EventBusRegistrar.Init().  |
+// | 1.3     | 2026-05-30 | —      | AR-2 fix: zero-ordinal guard in PublishAuthoritative promoted to      |
+// |         |            |        | unconditional if/throw (eliminates eager string alloc on hot path,    |
+// |         |            |        | FR-EVT-048). Same guard added to Subscribe<IEventA/B> (FR-EVT-020).  |
+// | 1.4     | 2026-05-31 | —      | AR-4 L-1: structSize<=0 fallback in PublishAuthoritative promoted     |
+// |         |            |        | from silent Unsafe.SizeOf<T>() fallback to unconditional throw.      |
+// |         |            |        | Fallback was dead code: ordinal!=0 guard guarantees structSize>0      |
+// |         |            |        | (only RegisterRow<T> sets EventOrdinalCache, always with sizeof>0).   |
+// |         |            |        | Misleading "RegisterRowRaw" comment removed; throw is consistent with  |
+// |         |            |        | the AR-3 pattern applied to CosmeticChannel.Publish (FR-EVT-020).     |
+// |         |            |        | AR-4 M-1: added upper-bound structSize > MaxEventSlotBytes guard to   |
+// |         |            |        | PublishAuthoritative (Tier A/B path); AR-3 added the symmetric guard  |
+// |         |            |        | to CosmeticChannel.Publish but omitted it here. Without the guard a   |
+// |         |            |        | Tier A/B struct exceeding MaxEventSlotBytes would silently overflow    |
+// |         |            |        | the ring-buffer slot into adjacent slots instead of throwing a         |
+// |         |            |        | diagnostic ERR_EVT_QUEUE_OVERFLOW (0x1701) error (§3.5.1).            |
 #endregion

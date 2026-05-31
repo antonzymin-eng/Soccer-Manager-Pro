@@ -1,6 +1,6 @@
 // File:     src/event-system/EventLedger.cs
 // Created:  2026-05-30
-// Modified: 2026-05-30
+// Modified: 2026-05-31
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.2.4, §3.2.5, §3.4.2, §4.4, Code Standards #20
 // Purpose:  Tier A/B ring buffer, typed dispatch infrastructure, and per-tick serialization.
@@ -38,8 +38,6 @@ namespace TacticalDirector.EventSystem
             cmp = SubsystemOrdinal.CompareTo(other.SubsystemOrdinal);
             if (cmp != 0) return cmp;
             cmp = EntityId.CompareTo(other.EntityId);
-            if (cmp != 0) return cmp;
-            cmp = EventTypeOrdinal.CompareTo(other.EventTypeOrdinal);
             if (cmp != 0) return cmp;
             return IntraPhaseDrawIndex.CompareTo(other.IntraPhaseDrawIndex);
         }
@@ -241,8 +239,15 @@ namespace TacticalDirector.EventSystem
             //
             // Stage 0 note: writes raw struct bytes (with padding) per slot.
             // FR-EVT-006 (no implicit padding) is Stage 0+1; the canonical serializer
-            // (§3.4.2) will strip padding in future passes. The domain tag and count
-            // header are always correct.
+            // (§3.4.2) will strip padding in future passes. The domain tag, count header,
+            // and FM-017-002 canonical sort order are always correct.
+            //
+            // AR-4 fix: sort Tier A/B slot indices by FM-017-002 key before emitting.
+            // SerializeLedger previously iterated slots in raw insertion order, making
+            // the digest bytes publication-order-dependent and contradicting the XML doc
+            // claim and EventBus.SerializeLedger XML doc ("FM-017-002 order").
+            // Uses the same InsertionSort as DrainTick; stackalloc cost is identical
+            // to the DrainTick sort budget (FR-EVT-049/050).
 
             int offset = 0;
 
@@ -254,13 +259,21 @@ namespace TacticalDirector.EventSystem
             offset += 4; // reserve count field; will fill after counting
             uint count = 0;
 
-            for (int slotIndex = 0; slotIndex < QueueCount; slotIndex++)
+            // Build sorted index list for Tier A/B slots only, then sort by FM-017-002 key.
+            Span<int> sortBuf = stackalloc int[EventSystemConstants.EventQueueCapacity];
+            int sortCount = 0;
+            for (int s = 0; s < QueueCount; s++)
             {
-                ref EventSlotMeta meta = ref SlotMeta[slotIndex];
-                byte tier = EventRegistry.GetTier(meta.EventTypeOrdinal);
-                if (tier != 0 && tier != 1) // 0=A, 1=B; skip Tier C
-                    continue;
+                byte tier = EventRegistry.GetTier(SlotMeta[s].EventTypeOrdinal);
+                if (tier == 0 || tier == 1) // 0=A, 1=B
+                    sortBuf[sortCount++] = s;
+            }
+            InsertionSort(sortBuf.Slice(0, sortCount));
 
+            for (int i = 0; i < sortCount; i++)
+            {
+                int slotIndex = sortBuf[i];
+                ref EventSlotMeta meta = ref SlotMeta[slotIndex];
                 int slotOffset = slotIndex * EventSystemConstants.MaxEventSlotBytes;
                 int bytesToCopy = meta.StructSize;
 
@@ -320,4 +333,12 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | AR-1 H-3: InDrainDispatch wrapped in try/finally to prevent          |
 // |         |            |        | flag corruption on handler exception.                                |
 // |         |            |        | AR-1 M-1: bounds check added to AddHandler.                          |
+// | 1.3     | 2026-05-31 | —      | AR-4 H-1: EventTypeOrdinal removed from CompareKey — it was the 4th |
+// |         |            |        | key between EntityId and IntraPhaseDrawIndex, violating FM-017-002   |
+// |         |            |        | canonical order (ProducingPhaseIndex, SubsystemOrdinal, EntityId,    |
+// |         |            |        | IntraPhaseDrawIndex). Fix: drop the EventTypeOrdinal comparison.      |
+// |         |            |        | AR-4 H-2: SerializeLedger now sorts Tier A/B slot indices by         |
+// |         |            |        | FM-017-002 key before emitting (was insertion order, making digest    |
+// |         |            |        | bytes publication-order-dependent and contradicting the EventBus XML  |
+// |         |            |        | doc "FM-017-002 order" claim). Uses same stackalloc InsertionSort.    |
 #endregion

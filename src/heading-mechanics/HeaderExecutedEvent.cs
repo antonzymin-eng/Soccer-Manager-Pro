@@ -1,24 +1,42 @@
 // File:     src/heading-mechanics/HeaderExecutedEvent.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-05-30
 // Author:   —
-// Spec:     Heading Mechanics #10 §2.2, §4.3, KD-2, KD-6, KD-13, Code Standards #20
-// Purpose:  Tier-B event published on every successfully contacted header (including disturbed losers).
+// Spec:     Heading Mechanics #10 §2.2, §4.3, KD-2, KD-6, KD-13, Event System #17 §3.2.1, Code Standards #20
+// Purpose:  Tier B event published on every successfully contacted header. Ordinal 0x12.
+
+using System.Runtime.InteropServices;
 
 using UnityEngine;
 
 using TacticalDirector.BallPhysics;
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.HeadingMechanics
 {
     /// <summary>
     /// Published on every successfully contacted header (winner and disturbed-but-executed losers).
-    /// Tier B event: included in the determinism digest (outgoing velocity / spin modify BallState).
-    /// Implements IEventB per Event System #17 §3.2.1 (wired at Stage 1).
-    /// Heading Mechanics #10 §2.2 / §4.3.
+    /// Tier B: included in the determinism digest (outgoing velocity / spin modify BallState). Ordinal 0x12.
+    /// Heading Mechanics #10 §2.2 / §4.3 / Event System #17 §3.2.1.
     /// </summary>
-    public struct HeaderExecutedEvent
+    [StructLayout(LayoutKind.Sequential)]
+    public struct HeaderExecutedEvent : IEventB
     {
+        // ── 12-byte header (§2.4.1) — set by EventBus.Publish at enqueue time ────────
+        /// <summary>Event type ordinal from Appendix A. Set by EventBus; do not set manually.</summary>
+        public byte   eventTypeOrdinal;
+        /// <summary>Payload schema version. Set by EventBus.</summary>
+        public byte   payloadVersion;
+        /// <summary>Reserved padding; canonical zero. Set by EventBus.</summary>
+        public ushort _reserved;
+        /// <summary>Physics tick at publish time. Set by EventBus.</summary>
+        public uint   tick;
+        /// <summary>Producing subsystem ordinal (#16 §3.1.1). Set by EventBus.</summary>
+        public ushort subsystemOrdinal;
+        /// <summary>Per-tick per-phase draw index (FM-017-002). Set by EventBus.</summary>
+        public ushort intraPhaseDrawIndex;
+
+        // ── Payload fields ────────────────────────────────────────────────────────────
         /// <summary>Agent that made the header contact.</summary>
         public int AgentId;
 
@@ -67,6 +85,8 @@ namespace TacticalDirector.HeadingMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                         |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                       |
+// | 1.1     | 2026-05-30 | —      | Stage 1: added IEventB, [StructLayout(Sequential)], 12-byte   |
+// |         |            |        | header fields. Ordinal 0x12. Event System #17 §3.2.1 wiring.  |
 #endregion

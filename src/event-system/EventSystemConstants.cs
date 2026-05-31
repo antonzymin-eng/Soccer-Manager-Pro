@@ -1,6 +1,6 @@
 // File:     src/event-system/EventSystemConstants.cs
 // Created:  2026-05-30
-// Modified: 2026-05-30
+// Modified: 2026-05-31
 // Author:   —
 // Spec:     Event System #17 §3.10, Code Standards #20
 // Purpose:  All constants for the event system. Region order: GT → Cross.
@@ -40,8 +40,9 @@ namespace TacticalDirector.EventSystem
         public static readonly int MaxTierCHandlersPerType = 64; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Maximum bytes per ring-buffer slot (12-byte header + up to MaxEventSlotBytes-12 bytes payload).
-        /// Sized to exceed the largest seeded event (BallContactEvent ≈ 45 bytes). §3.5.1.</summary>
-        public static readonly int MaxEventSlotBytes = 128; // TODO: replace with config loader (Stage 1)
+        /// Sized to accommodate the largest registered event struct: HeaderExecutedEvent and DecisionMadeEvent (136 bytes each).
+        /// AR-2 H-1/H-3: was 128 — caused ring-buffer overrun and stackalloc slice crash. §3.5.1.</summary>
+        public static readonly int MaxEventSlotBytes = 160; // TODO: replace with config loader (Stage 1)
 
         // ── Design-fixed [GT] — locked at approval; NOT runtime-tunable per §3.10 sub-class note ────
 
@@ -72,6 +73,15 @@ namespace TacticalDirector.EventSystem
         /// <summary>[GT] Runtime register/unregister of Tier A/B subscriber after boot phase ended. §2.5 / §3.2.2. EC-017-005b.</summary>
         public const ushort ErrEvtRegistrationPhase = 0x1705;
 
+        /// <summary>[GT] Publish or subscribe before the owning spec's EventBusRegistrar.Initialize() was called —
+        /// EventOrdinalCache&lt;T&gt;.Ordinal is still 0 (CLR default). §2.5 / FR-EVT-020. AR-2 M-1.</summary>
+        public const ushort ErrEvtUnregisteredOrdinal = 0x1706;
+
+        /// <summary>[GT] Ordinal collision: two distinct IEventC types mapped to the same ordinal via
+        /// erroneous RegisterExternalRow calls. Thrown by CosmeticChannel.Subscribe when the existing
+        /// dispatcher at s_dispatchers[ordinal] is typed for a different event type. AR-4 L.</summary>
+        public const ushort ErrEvtOrdinalCollision = 0x1707;
+
         #endregion
 
         #region Cross
@@ -88,6 +98,14 @@ namespace TacticalDirector.EventSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-30 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                      |
+// | 1.0     | 2026-05-30 | —      | Initial implementation.                                                    |
+// | 1.1     | 2026-05-30 | —      | AR-2 fix: MaxEventSlotBytes 128→160 (AR-2 H-1/H-3: HeaderExecutedEvent     |
+// |         |            |        | 136 bytes + DecisionMadeEvent 136 bytes exceeded 128-byte slot, causing     |
+// |         |            |        | ring-buffer overrun and CosmeticChannel stackalloc slice crash).            |
+// |         |            |        | Added ErrEvtUnregisteredOrdinal (0x1706) for AR-2 M-1 unregistered-ordinal |
+// |         |            |        | throws in EventBus and CosmeticChannel.                                     |
+// | 1.2     | 2026-05-31 | —      | AR-4 L: added ErrEvtOrdinalCollision (0x1707) for CosmeticChannel.         |
+// |         |            |        | Subscribe diagnostic when two IEventC types share an ordinal (erroneous    |
+// |         |            |        | duplicate RegisterExternalRow calls) — replaces hard InvalidCastException.  |
 #endregion

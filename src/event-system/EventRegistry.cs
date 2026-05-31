@@ -1,6 +1,6 @@
 // File:     src/event-system/EventRegistry.cs
 // Created:  2026-05-30
-// Modified: 2026-05-30
+// Modified: 2026-05-30  (v1.1 — Stage 1 placeholder rows added)
 // Author:   —
 // Spec:     Event System #17 §2.4.2, Appendix A, Code Standards #20
 // Purpose:  Compile-time Appendix A registry. Maps event type ordinals to tier, version,
@@ -83,6 +83,51 @@ namespace TacticalDirector.EventSystem
             RegisterRow<UiNotificationCue>(0x0B, tier: 2, version: 1,
                 subsystemOrdinal: SubsystemOrdinals.EventSystem,
                 maxPerTick: 32, producerPhaseIndex: (byte)PhaseId.Resolve);
+
+            // ── Stage 1 placeholder rows — structSize=0; updated by owning spec's
+            //    EventBusRegistrar.Initialize() call before first publish. FR-EVT-003.
+            // Pass Mechanics #5 Tier A events:
+            RegisterRowRaw(0x0C, tier: 0, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.PassMechanics,
+                maxPerTick: 0, producerPhaseIndex: (byte)PhaseId.Resolve, structSize: 0);
+            RegisterRowRaw(0x0D, tier: 0, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.PassMechanics,
+                maxPerTick: 0, producerPhaseIndex: (byte)PhaseId.Resolve, structSize: 0);
+            // Shot Mechanics #6 Tier A/C events:
+            RegisterRowRaw(0x0E, tier: 0, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.ShotMechanics,
+                maxPerTick: 0, producerPhaseIndex: (byte)PhaseId.Resolve, structSize: 0);
+            RegisterRowRaw(0x0F, tier: 2, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.ShotMechanics,
+                maxPerTick: 2, producerPhaseIndex: (byte)PhaseId.Resolve, structSize: 0);
+            // Perception System #7 Tier C event:
+            RegisterRowRaw(0x10, tier: 2, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.PerceptionSystem,
+                maxPerTick: 5, producerPhaseIndex: (byte)PhaseId.AI, structSize: 0);
+            // Decision Tree #8 Tier C event:
+            RegisterRowRaw(0x11, tier: 2, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.DecisionTree,
+                maxPerTick: 22, producerPhaseIndex: (byte)PhaseId.AI, structSize: 0);
+            // Heading Mechanics #10 Tier B / Tier C events:
+            RegisterRowRaw(0x12, tier: 1, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.HeadingMechanics,
+                maxPerTick: 0, producerPhaseIndex: (byte)PhaseId.Physics, structSize: 0);
+            RegisterRowRaw(0x13, tier: 2, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.HeadingMechanics,
+                maxPerTick: 4, producerPhaseIndex: (byte)PhaseId.Physics, structSize: 0);
+            // Goalkeeper Mechanics #11 Tier A / Tier C events:
+            RegisterRowRaw(0x14, tier: 0, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.GoalkeeperMechanics,
+                maxPerTick: 0, producerPhaseIndex: (byte)PhaseId.Physics, structSize: 0);
+            RegisterRowRaw(0x15, tier: 0, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.GoalkeeperMechanics,
+                maxPerTick: 0, producerPhaseIndex: (byte)PhaseId.Physics, structSize: 0);
+            RegisterRowRaw(0x16, tier: 0, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.GoalkeeperMechanics,
+                maxPerTick: 0, producerPhaseIndex: (byte)PhaseId.Resolve, structSize: 0);
+            RegisterRowRaw(0x17, tier: 2, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.GoalkeeperMechanics,
+                maxPerTick: 8, producerPhaseIndex: (byte)PhaseId.Physics, structSize: 0);
         }
 
         private static void RegisterRow<T>(byte ordinal, byte tier, byte version,
@@ -135,8 +180,15 @@ namespace TacticalDirector.EventSystem
         /// <summary>Returns sizeof(T) for the event struct registered at ordinal. §3.5.1.</summary>
         internal static int GetStructSize(byte ordinal) => s_rows[ordinal].StructSize;
 
-        /// <summary>Returns true if the ordinal has a registered row in Appendix A. FR-EVT-080.</summary>
-        public static bool IsRegistered(byte ordinal) => s_rows[ordinal].IsRegistered;
+        /// <summary>
+        /// Returns true if the ordinal has a fully initialised registry row: row exists AND struct
+        /// size is known (i.e., the owning spec's EventBusRegistrar.Initialize() has been called).
+        /// Returns false for placeholder rows seeded via RegisterRowRaw with structSize=0 (FR-EVT-003).
+        /// Do NOT use as a pre-condition for Subscribe&lt;T&gt; without also calling Initialize() first.
+        /// FR-EVT-080.
+        /// </summary>
+        public static bool IsRegistered(byte ordinal) =>
+            s_rows[ordinal].IsRegistered && s_rows[ordinal].StructSize > 0;
 
         // ── External registration (Stage 1+ downstream specs) ────────────────────────
 
@@ -167,6 +219,15 @@ namespace TacticalDirector.EventSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-30 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-30 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-05-30 | —      | Stage 1: added placeholder rows 0x0C–0x17 for downstream spec      |
+// |         |            |        | events. structSize=0; updated by EventBusRegistrar.Initialize().  |
+// | 1.2     | 2026-05-30 | —      | AR-2 fix: GoalkeeperRushEvent placeholder (0x17) maxPerTick 2→8.  |
+// |         |            |        | InFlight fires each physics frame at 60Hz; a rush completing       |
+// |         |            |        | within one 100ms tick = Launched + InFlight×≤5 + terminal = ≤7.  |
+// | 1.3     | 2026-05-30 | —      | AR-3 fix: IsRegistered now requires StructSize > 0 so placeholder  |
+// |         |            |        | rows (RegisterRowRaw structSize=0) return false until Initialize() |
+// |         |            |        | is called — prevents IsRegistered from being a misleading boot-   |
+// |         |            |        | readiness predicate that contradicts the Subscribe<T> ordinal guard.|
 #endregion

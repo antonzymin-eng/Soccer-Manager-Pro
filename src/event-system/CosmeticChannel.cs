@@ -1,6 +1,6 @@
 // File:     src/event-system/CosmeticChannel.cs
 // Created:  2026-05-30
-// Modified: 2026-05-30
+// Modified: 2026-05-31
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.5.3, §3.6.2, §4.3.2, Code Standards #20
 // Purpose:  Tier C immediate-synchronous dispatch with deterministic drop predicate.
@@ -37,6 +37,16 @@ namespace TacticalDirector.EventSystem
         internal static void Publish<T>(in T evt) where T : struct, IEventC
         {
             byte ordinal     = EventOrdinalCache<T>.Ordinal;
+
+            // Zero-ordinal guard (AR-2 fix: replaces debug-only Debug.Assert — C# evaluates Assert
+            // arguments eagerly, causing string alloc on every Tier C publish. Unconditional throw
+            // also catches the error in release builds. FR-EVT-020 / FR-EVT-048).
+            if (ordinal == 0)
+                throw new InvalidOperationException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    " published before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
+                    "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
+
             ushort maxPerTick = EventRegistry.GetMaxPerTick(ordinal);
             ushort count     = s_pubCounts[ordinal];
 
@@ -53,8 +63,22 @@ namespace TacticalDirector.EventSystem
                 return; // no subscribers
 
             int structSize = EventRegistry.GetStructSize(ordinal);
+
+            // AR-3 fix: promote the structSize <= 0 guard from silent drop to throw — silent data
+            // loss is worse than an exception for a registration error (AR-1 open finding).
             if (structSize <= 0)
-                return; // ordinal registered via RegisterRowRaw without struct size (external spec)
+                throw new InvalidOperationException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier C struct size is 0 for ordinal 0x" +
+                    ordinal.ToString("X2") + ". Call EventBusRegistrar.Initialize() before publishing.");
+
+            // AR-3 fix: upper-bound guard — stackSlot is MaxEventSlotBytes bytes; Slice(0, structSize)
+            // throws ArgumentOutOfRangeException if structSize > MaxEventSlotBytes (FR-EVT-048 / §3.5.1).
+            if (structSize > EventSystemConstants.MaxEventSlotBytes)
+                throw new InvalidOperationException(
+                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): Tier C struct size " + structSize +
+                    " bytes exceeds MaxEventSlotBytes " + EventSystemConstants.MaxEventSlotBytes +
+                    " for ordinal 0x" + ordinal.ToString("X2") +
+                    ". Increase MaxEventSlotBytes or reduce struct size (§3.5.1).");
 
             // Dispatch immediately (no queue). Writes struct to a stack-allocated slot
             // so MemoryMarshal.Read<T> can reconstruct the typed value.
@@ -79,11 +103,31 @@ namespace TacticalDirector.EventSystem
             where T : struct, IEventC
         {
             byte ordinal = EventOrdinalCache<T>.Ordinal;
+
+            // Zero-ordinal guard (AR-2 fix: replaces debug-only Debug.Assert — handler would be
+            // stored at slot 0 and orphaned once Initialize() runs with the real ordinal. FR-EVT-020).
+            if (ordinal == 0)
+                throw new InvalidOperationException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    " subscribed before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
+                    "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
+
             if (s_dispatchers[ordinal] == null)
                 s_dispatchers[ordinal] = new EventTypeDispatcher<T>(
                     EventSystemConstants.MaxTierCHandlersPerType);
 
-            var typed = (EventTypeDispatcher<T>)s_dispatchers[ordinal];
+            // AR-4 fix: use 'as' instead of hard cast so an ordinal collision (two different
+            // IEventC types registered to the same ordinal via erroneous RegisterExternalRow
+            // calls) throws a diagnostic InvalidOperationException rather than a generic
+            // InvalidCastException with no ordinal context.
+            var typed = s_dispatchers[ordinal] as EventTypeDispatcher<T>;
+            if (typed == null)
+                throw new InvalidOperationException(
+                    "ERR_EVT_ORDINAL_COLLISION (0x1707): ordinal 0x" + ordinal.ToString("X2") +
+                    " is already bound to a different Tier C event type. " +
+                    typeof(T).Name + " and the existing type share the same ordinal — " +
+                    "check for duplicate ordinal in RegisterExternalRow calls.");
+
             ushort idx = (ushort)typed.HandlerCount;
             typed.AddHandler(handler);
             return new SubscriptionToken(ordinal, idx);
@@ -120,4 +164,18 @@ namespace TacticalDirector.EventSystem
 // | 1.1     | 2026-05-30 | —      | Fixed ToArray() GC allocation in Publish<T>; added span overload.      |
 // | 1.2     | 2026-05-30 | —      | AR-1 H-1: drop predicate corrected from > to >= maxPerTick             |
 // |         |            |        | so maxPerTick=N allows exactly N publishes before drop.                |
+// | 1.3     | 2026-05-30 | —      | AR-1 fix: added zero-ordinal guards in Publish<T> and Subscribe<T>    |
+// |         |            |        | (debug builds) — catches Tier C use before EventBusRegistrar.Init().  |
+// | 1.4     | 2026-05-30 | —      | AR-2 fix: guards promoted from debug-only Debug.Assert to             |
+// |         |            |        | unconditional if/throw — eliminates eager string alloc on hot path    |
+// |         |            |        | (FR-EVT-048) and catches errors in release builds (FR-EVT-020).       |
+// | 1.5     | 2026-05-30 | —      | AR-3 fix: structSize <= 0 guard changed from silent return to throw   |
+// |         |            |        | (silent data-loss worse than exception for registration error);       |
+// |         |            |        | added upper-bound guard structSize > MaxEventSlotBytes (prevents       |
+// |         |            |        | ArgumentOutOfRangeException from stackSlot.Slice on oversized structs).|
+// | 1.6     | 2026-05-31 | —      | AR-4 L: Subscribe<T> dispatcher cast replaced from hard              |
+// |         |            |        | (EventTypeDispatcher<T>) to 'as' + null-check: emits diagnostic        |
+// |         |            |        | ERR_EVT_ORDINAL_COLLISION (0x1707) when two IEventC types share        |
+// |         |            |        | the same ordinal via erroneous RegisterExternalRow calls, rather       |
+// |         |            |        | than an opaque InvalidCastException with no ordinal context.           |
 #endregion

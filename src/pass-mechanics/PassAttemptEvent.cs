@@ -1,22 +1,42 @@
 // File:     src/pass-mechanics/PassAttemptEvent.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-05-30
 // Author:   —
-// Spec:     Pass Mechanics #5 §3.9.2, Code Standards #20
+// Spec:     Pass Mechanics #5 §3.9.2, Event System #17 §3.2.1, Code Standards #20
 // Purpose:  PassAttemptEvent struct: published at CONTACT immediately after
-//           Ball.ApplyKick() succeeds. ~100 bytes, all value types.
+//           Ball.ApplyKick() succeeds. Tier A event; ordinal 0x0C. All value types.
+
+using System.Runtime.InteropServices;
 
 using UnityEngine;
+
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.PassMechanics
 {
     /// <summary>
     /// Published at CONTACT state immediately after Ball.ApplyKick() succeeds.
-    /// ~100 bytes, all value types — no heap allocation. Pass Mechanics #5 §3.9.2.
-    /// Consumed by Statistics Engine (Stage 1) and Replay System (Stage 1).
+    /// Tier A: included in the per-tick digest (FR-EVT-011/012). Ordinal 0x0C.
+    /// Pass Mechanics #5 §3.9.2 / Event System #17 Appendix A.
     /// </summary>
-    public struct PassAttemptEvent
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PassAttemptEvent : IEventA
     {
+        // ── 12-byte header (§2.4.1) — set by EventBus.Publish at enqueue time ────────
+        /// <summary>Event type ordinal from Appendix A. Set by EventBus; do not set manually.</summary>
+        public byte   eventTypeOrdinal;
+        /// <summary>Payload schema version. Set by EventBus.</summary>
+        public byte   payloadVersion;
+        /// <summary>Reserved padding; canonical zero. Set by EventBus.</summary>
+        public ushort _reserved;
+        /// <summary>Physics tick at publish time. Set by EventBus.</summary>
+        public uint   tick;
+        /// <summary>Producing subsystem ordinal (#16 §3.1.1). Set by EventBus.</summary>
+        public ushort subsystemOrdinal;
+        /// <summary>Per-tick per-phase draw index (FM-017-002). Set by EventBus.</summary>
+        public ushort intraPhaseDrawIndex;
+
+        // ── Payload fields ────────────────────────────────────────────────────────────
         /// <summary>ID of the passing agent.</summary>
         public int AgentId;
 
@@ -64,4 +84,6 @@ namespace TacticalDirector.PassMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                            |
 // | 1.0     | 2026-05-26 | —      | Extracted from PassEvents.cs per one-type-per-file rule (H4).   |
+// | 1.1     | 2026-05-30 | —      | Stage 1: added IEventA, [StructLayout(Sequential)], 12-byte      |
+// |         |            |        | header fields. Ordinal 0x0C. Event System #17 §3.2.1 wiring.    |
 #endregion

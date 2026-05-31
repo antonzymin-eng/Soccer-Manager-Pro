@@ -1,21 +1,26 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperRushEvent.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-05-30
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §2.2.4, §3.7, §4.3, Event System #17 §3.2.1, Code Standards #20
-// Purpose:  Struct event published at each lifecycle phase of a GK rush (Launched / InFlight /
-//           Reached / Aborted). Published by GoalkeeperRushDispatch.
+// Purpose:  Tier C event published at each lifecycle phase of a GK rush. Ordinal 0x17.
+//           Immediate dispatch via CosmeticChannel; excluded from digest (animation/telemetry only).
+
+using System.Runtime.InteropServices;
 
 using UnityEngine;
+
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.GoalkeeperMechanics
 {
     /// <summary>
     /// Published at each lifecycle phase change of a GK rush / sweep.
-    /// The Aborted phase includes an AbortReason. §3.7 / KD-15.
-    /// Goalkeeper Mechanics #11 §2.2.4 / §3.7.
+    /// Tier C: cosmetic/telemetry; excluded from digest. Ordinal 0x17.
+    /// Goalkeeper Mechanics #11 §2.2.4 / §3.7 / Event System #17 Appendix A.
     /// </summary>
-    public struct GoalkeeperRushEvent
+    [StructLayout(LayoutKind.Sequential)]
+    public struct GoalkeeperRushEvent : IEventC
     {
         /// <summary>Unique GK agent ID. §2.2.4.</summary>
         public int AgentId;
@@ -41,6 +46,8 @@ namespace TacticalDirector.GoalkeeperMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                         |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                       |
+// | 1.1     | 2026-05-30 | —      | Stage 1: added IEventC, [StructLayout(Sequential)].           |
+// |         |            |        | Ordinal 0x17. Event System #17 §3.2.1 wiring.                 |
 #endregion

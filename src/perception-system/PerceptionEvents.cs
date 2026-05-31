@@ -1,11 +1,14 @@
 // File:     src/perception-system/PerceptionEvents.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-05-30
 // Author:   —
-// Spec:     Perception System #7 §3.8.3, §4.6.3, Code Standards #20
+// Spec:     Perception System #7 §3.8.3, §4.6.3, Event System #17 §3.2.1, Code Standards #20
 // Purpose:  PerceptionRefreshEvent struct and RefreshTrigger enum.
-//           Stage 0: published to EventBusStub (no-op).
-//           Stage 1: published to Event System #17.
+//           Tier C event; ordinal 0x10; immediate dispatch via CosmeticChannel. §4.6.3.
+
+using System.Runtime.InteropServices;
+
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.PerceptionSystem
 {
@@ -25,14 +28,12 @@ namespace TacticalDirector.PerceptionSystem
     }
 
     /// <summary>
-    /// PerceptionRefreshEvent — published when a forced mid-heartbeat refresh occurs.
-    ///
-    /// Stage 0: received via direct method call on PerceptionSystem instance.
-    /// Stage 1: consumed via Event System (#17) subscription.
-    ///
-    /// Perception System #7 §4.6.3.
+    /// Published when a forced mid-heartbeat perception refresh occurs.
+    /// Tier C: immediate dispatch via CosmeticChannel; excluded from digest. Ordinal 0x10.
+    /// Perception System #7 §4.6.3 / Event System #17 Appendix A.
     /// </summary>
-    public struct PerceptionRefreshEvent
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PerceptionRefreshEvent : IEventC
     {
         /// <summary>Cause of the forced refresh. §4.6.3.</summary>
         public RefreshTrigger Trigger;
@@ -55,6 +56,8 @@ namespace TacticalDirector.PerceptionSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                            |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                          |
+// | 1.1     | 2026-05-30 | —      | Stage 1: added IEventC, [StructLayout(Sequential)] to            |
+// |         |            |        | PerceptionRefreshEvent. Ordinal 0x10. Event System #17 wiring.   |
 #endregion
