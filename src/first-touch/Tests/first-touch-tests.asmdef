@@ -1,9 +1,10 @@
 {
-    "name": "TacticalDirector.EventSystem.Tests",
-    "rootNamespace": "TacticalDirector.EventSystem.Tests",
+    "name": "TacticalDirector.FirstTouch.Tests",
+    "rootNamespace": "TacticalDirector.FirstTouch.Tests",
     "references": [
-        "TacticalDirector.EventSystem",
-        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.FirstTouch",
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.AgentMovement",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

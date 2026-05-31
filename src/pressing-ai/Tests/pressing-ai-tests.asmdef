@@ -1,22 +1,19 @@
 {
-    "name": "TacticalDirector.CollisionSystem.Tests",
-    "rootNamespace": "TacticalDirector.CollisionSystem.Tests",
+    "name": "TacticalDirector.PressingAI.Tests",
+    "rootNamespace": "TacticalDirector.PressingAI.Tests",
     "references": [
-        "TacticalDirector.CollisionSystem",
-        "TacticalDirector.BallPhysics",
+        "TacticalDirector.PressingAI",
+        "TacticalDirector.PositioningAI",
         "TacticalDirector.AgentMovement",
+        "TacticalDirector.PerceptionSystem",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": ["Editor"],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
-    "precompiledReferences": [
-        "nunit.framework.dll"
-    ],
+    "precompiledReferences": ["nunit.framework.dll"],
     "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [],
