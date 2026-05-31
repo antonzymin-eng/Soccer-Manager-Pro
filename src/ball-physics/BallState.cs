@@ -1,10 +1,12 @@
 // File:     src/Core/Physics/Ball/BallState.cs
 // Created:  2026-05-24
-// Modified: 2026-05-24
+// Modified: 2026-05-31
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Ball state struct and state-machine enum. Passed by ref throughout
 //           the physics pipeline; never allocated on the heap per frame.
+
+using System.Runtime.InteropServices;
 
 using UnityEngine;
 
@@ -29,6 +31,7 @@ namespace TacticalDirector.BallPhysics
     /// WARNING: Struct fields default to zero. Use CreateAtPosition() to ensure valid
     /// initialisation, especially for LastValidPosition.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public struct BallState
     {
         public Vector3 Position;            // (x, y, z) in metres
@@ -69,4 +72,9 @@ namespace TacticalDirector.BallPhysics
 // | 1.0     | 2026-05-24 | —      | Initial implementation.                                            |
 // | 1.1     | 2026-05-24 | —      | Fix pass: namespace → TacticalDirector.BallPhysics; file header    |
 // |         |            |        | added per FR-CS-056/057.                                           |
+// | 1.2     | 2026-05-31 | —      | AR-4 L: added [StructLayout(LayoutKind.Sequential)] — BallState    |
+// |         |            |        | is embedded via MemoryMarshal.Write inside HeaderExecutedEvent and  |
+// |         |            |        | SaveAttemptedEvent (both explicitly Sequential). Explicit attribute  |
+// |         |            |        | pins the CLR layout contract; default-Sequential is correct today   |
+// |         |            |        | but the annotation is required when the struct is blittable-treated.|
 #endregion

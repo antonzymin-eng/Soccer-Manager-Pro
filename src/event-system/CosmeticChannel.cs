@@ -1,6 +1,6 @@
 // File:     src/event-system/CosmeticChannel.cs
 // Created:  2026-05-30
-// Modified: 2026-05-30
+// Modified: 2026-05-31
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.5.3, §3.6.2, §4.3.2, Code Standards #20
 // Purpose:  Tier C immediate-synchronous dispatch with deterministic drop predicate.
@@ -116,7 +116,18 @@ namespace TacticalDirector.EventSystem
                 s_dispatchers[ordinal] = new EventTypeDispatcher<T>(
                     EventSystemConstants.MaxTierCHandlersPerType);
 
-            var typed = (EventTypeDispatcher<T>)s_dispatchers[ordinal];
+            // AR-4 fix: use 'as' instead of hard cast so an ordinal collision (two different
+            // IEventC types registered to the same ordinal via erroneous RegisterExternalRow
+            // calls) throws a diagnostic InvalidOperationException rather than a generic
+            // InvalidCastException with no ordinal context.
+            var typed = s_dispatchers[ordinal] as EventTypeDispatcher<T>;
+            if (typed == null)
+                throw new InvalidOperationException(
+                    "ERR_EVT_ORDINAL_COLLISION (0x1707): ordinal 0x" + ordinal.ToString("X2") +
+                    " is already bound to a different Tier C event type. " +
+                    typeof(T).Name + " and the existing type share the same ordinal — " +
+                    "check for duplicate ordinal in RegisterExternalRow calls.");
+
             ushort idx = (ushort)typed.HandlerCount;
             typed.AddHandler(handler);
             return new SubscriptionToken(ordinal, idx);
@@ -162,4 +173,9 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | (silent data-loss worse than exception for registration error);       |
 // |         |            |        | added upper-bound guard structSize > MaxEventSlotBytes (prevents       |
 // |         |            |        | ArgumentOutOfRangeException from stackSlot.Slice on oversized structs).|
+// | 1.6     | 2026-05-31 | —      | AR-4 L: Subscribe<T> dispatcher cast replaced from hard              |
+// |         |            |        | (EventTypeDispatcher<T>) to 'as' + null-check: emits diagnostic        |
+// |         |            |        | ERR_EVT_ORDINAL_COLLISION (0x1707) when two IEventC types share        |
+// |         |            |        | the same ordinal via erroneous RegisterExternalRow calls, rather       |
+// |         |            |        | than an opaque InvalidCastException with no ordinal context.           |
 #endregion

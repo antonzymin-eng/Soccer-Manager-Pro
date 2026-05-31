@@ -1,6 +1,6 @@
 // File:     src/event-system/EventSystemConstants.cs
 // Created:  2026-05-30
-// Modified: 2026-05-30
+// Modified: 2026-05-31
 // Author:   —
 // Spec:     Event System #17 §3.10, Code Standards #20
 // Purpose:  All constants for the event system. Region order: GT → Cross.
@@ -77,6 +77,11 @@ namespace TacticalDirector.EventSystem
         /// EventOrdinalCache&lt;T&gt;.Ordinal is still 0 (CLR default). §2.5 / FR-EVT-020. AR-2 M-1.</summary>
         public const ushort ErrEvtUnregisteredOrdinal = 0x1706;
 
+        /// <summary>[GT] Ordinal collision: two distinct IEventC types mapped to the same ordinal via
+        /// erroneous RegisterExternalRow calls. Thrown by CosmeticChannel.Subscribe when the existing
+        /// dispatcher at s_dispatchers[ordinal] is typed for a different event type. AR-4 L.</summary>
+        public const ushort ErrEvtOrdinalCollision = 0x1707;
+
         #endregion
 
         #region Cross
@@ -100,4 +105,7 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | ring-buffer overrun and CosmeticChannel stackalloc slice crash).            |
 // |         |            |        | Added ErrEvtUnregisteredOrdinal (0x1706) for AR-2 M-1 unregistered-ordinal |
 // |         |            |        | throws in EventBus and CosmeticChannel.                                     |
+// | 1.2     | 2026-05-31 | —      | AR-4 L: added ErrEvtOrdinalCollision (0x1707) for CosmeticChannel.         |
+// |         |            |        | Subscribe diagnostic when two IEventC types share an ordinal (erroneous    |
+// |         |            |        | duplicate RegisterExternalRow calls) — replaces hard InvalidCastException.  |
 #endregion
