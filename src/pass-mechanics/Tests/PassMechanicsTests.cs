@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/Tests/PassMechanicsTests.cs
 // Created:  2026-05-31
-// Modified: 2026-05-31
+// Modified: 2026-06-01
 // Author:   —
 // Spec:     Pass Mechanics #5 §5, Code Standards #20
 // Purpose:  NUnit unit tests for Pass Mechanics subsystems: pass type profiles (PT),
@@ -1464,7 +1464,104 @@ namespace TacticalDirector.PassMechanics.Tests
     }
 }
 
+    // ════════════════════════════════════════════════════════════════════════════
+    // §5.11 Integration Tests (IT-)
+    // ════════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Integration tests for Pass Mechanics #5 §5.11. Require mocked/wired instances
+    /// of BallPhysics #1, AgentMovement #2, CollisionSystem #3, and EventBus #17.
+    /// </summary>
+    internal sealed class PassMechanicsIntegrationTests
+    {
+        /// <summary>IT-001: Ground pass — ApplyKick called with non-zero velocity. §5.11.</summary>
+        [Test]
+        public void GroundPass_ApplyKick_CalledWithNonZeroVelocity()
+        {
+            Assert.Ignore("Stage 0+1: requires IPassBallSystem mock wired to PassExecutor — IT-001");
+        }
+
+        /// <summary>IT-002: Lofted pass — ApplyKick velocity Y component positive. §5.11.</summary>
+        [Test]
+        public void LoftedPass_ApplyKick_VelocityYPositive()
+        {
+            Assert.Ignore("Stage 0+1: requires IPassBallSystem mock — IT-002");
+        }
+
+        /// <summary>IT-003: Chip pass — ApplyKick velocity Y component large (steep angle). §5.11.</summary>
+        [Test]
+        public void ChipPass_ApplyKick_VelocityYLarge()
+        {
+            Assert.Ignore("Stage 0+1: requires IPassBallSystem mock — IT-003");
+        }
+
+        /// <summary>IT-004 [ERR-008-BLOCKED]: ApplyKick clears passer possession. §5.11.</summary>
+        [Test]
+        public void ApplyKick_ClearsPossession_PostPass()
+        {
+            Assert.Ignore("Stage 0+1 [ERR-008-BLOCKED]: requires BallState.PossessingAgentId API — IT-004");
+        }
+
+        /// <summary>IT-005: Agent attributes read correctly from AgentState. §5.11.</summary>
+        [Test]
+        public void AgentAttributes_ReadCorrectlyFromAgentState()
+        {
+            Assert.Ignore("Stage 0+1: requires IPassAgentQuery mock wired — IT-005");
+        }
+
+        /// <summary>IT-006: Fatigue from AgentState propagates to error calculation. §5.11.</summary>
+        [Test]
+        public void Fatigue_PropagatesFromAgentStateToErrorCalculation()
+        {
+            Assert.Ignore("Stage 0+1: requires IPassAgentQuery mock with Fatigue=0.9 — IT-006");
+        }
+
+        /// <summary>IT-007: Tackle interrupt from CollisionSystem cancels pass. §5.11.</summary>
+        [Test]
+        public void TackleInterrupt_FromCollision_CancelsPass()
+        {
+            Assert.Ignore("Stage 0+1: requires IPassCollisionQuery mock with tackle flag — IT-007");
+        }
+
+        /// <summary>IT-008: PassAttemptEvent published on CONTACT. §5.11.</summary>
+        [Test]
+        public void PassAttemptEvent_PublishedOnContact()
+        {
+            Assert.Ignore("Stage 0+1: requires EventBus wired via EventBusStub — IT-008");
+        }
+
+        /// <summary>IT-009: PassCompletedEvent published on FOLLOW_THROUGH completion. §5.11.</summary>
+        [Test]
+        public void PassCompletedEvent_PublishedOnFollowThroughCompletion()
+        {
+            Assert.Ignore("Stage 0+1: requires EventBus wired — IT-009");
+        }
+
+        /// <summary>IT-010: PassCancelledEvent published on tackle interrupt, not PassAttemptEvent. §5.11.</summary>
+        [Test]
+        public void TackleInterrupt_PublishesCancelledNotAttempt()
+        {
+            Assert.Ignore("Stage 0+1: requires EventBus + IPassCollisionQuery wired — IT-010");
+        }
+
+        /// <summary>IT-011: Full pass cycle IDLE→COMPLETE with correct event order. §5.11.</summary>
+        [Test]
+        public void FullPassCycle_IdleToComplete_CorrectEventOrder()
+        {
+            Assert.Ignore("Stage 0+1: requires all interfaces mocked and EventBus wired — IT-011");
+        }
+
+        /// <summary>IT-012: Replay determinism — two identical passes produce identical results. §5.11.</summary>
+        [Test]
+        public void ReplayDeterminism_IdenticalPassesProduceIdenticalResults()
+        {
+            Assert.Ignore("Stage 0+1: requires Deterministic Simulation #16 digest comparison — IT-012 CRITICAL");
+        }
+    }
+}
+
 #region VersionHistory
 // | Version | Date       | Author | Notes                          |
 // | 1.0     | 2026-05-31 | —      | Initial implementation. 50 tests across PT/PV/LA/SV/PE/WF/EC/TR/PSM/VS. |
+// | 1.1     | 2026-06-01 | —      | Add §5.11 integration test stubs IT-001..012 (all Assert.Ignore Stage 0+1). |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/collision-system/tests/CollisionSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-05-31
+// Modified: 2026-06-01
 // Author:   —
 // Spec:     Collision System #3 §5.2, §5.3, Code Standards #20
 // Purpose:  Unit tests for SpatialHashGrid, CollisionDetection, CollisionResponse,
@@ -689,7 +689,83 @@ namespace TacticalDirector.CollisionSystem.Tests
     }
 }
 
+    // ════════════════════════════════════════════════════════════════════════════
+    // §5.3 Integration Tests
+    // ════════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Integration tests for Collision System #3 §5.3.
+    /// All require Play Mode with AgentMovement, BallPhysics, and EventBus wired.
+    /// </summary>
+    internal sealed class CollisionSystemIntegrationTests
+    {
+        /// <summary>Integration_TwoAgentsApproach_BothBounceBack. §5.3.</summary>
+        [Test]
+        public void TwoAgentsApproach_BothBounceBack()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with full CollisionSystem.Tick — §5.3");
+        }
+
+        /// <summary>Integration_SprintingHitsStationary_StationaryKnockedBack. §5.3.</summary>
+        [Test]
+        public void SprintingHitsStationary_StationaryKnockedBack()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with AgentMovement #2 wired — §5.3");
+        }
+
+        /// <summary>Integration_AgentHitsBall_BallOnCollisionCalled. §5.3.</summary>
+        [Test]
+        public void AgentHitsBall_BallCollisionHandlerCalled()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with BallPhysics #1 wired — §5.3");
+        }
+
+        /// <summary>Integration_ThreeAgentsCluster_AllProcessedNoLoop. §5.3.</summary>
+        [Test]
+        public void ThreeAgentsCluster_AllProcessedNoInfiniteLoop()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode 3-agent scenario — §5.3");
+        }
+
+        /// <summary>Integration_GroundedObstacle_RunnerStumbles. §5.3.</summary>
+        [Test]
+        public void GroundedObstacle_RunnerStumbles()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode stumble/grounded logic — §5.3");
+        }
+
+        /// <summary>Integration_FullMatch90Minutes_NoCrashNoNaN. §5.3.</summary>
+        [Test]
+        public void FullMatch90Minutes_NoCrashNoNaN()
+        {
+            Assert.Ignore("Stage 0+1: requires full 90-minute match simulation — §5.3");
+        }
+
+        /// <summary>Integration_CornerKickClustering_PerformanceUnder500us. §5.3.</summary>
+        [Test]
+        public void CornerKickClustering_PerformanceUnder500us()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with Profiler — §5.3");
+        }
+
+        /// <summary>Integration_SameTeamCollision_ReducedMomentumNoFall. §5.3.</summary>
+        [Test]
+        public void SameTeamCollision_ReducedMomentumNoFall()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with team-ID filtering — §5.3");
+        }
+
+        /// <summary>CrossSystem_CollisionTriggersAgentMovementState. §5.3.</summary>
+        [Test]
+        public void CrossSystem_CollisionTriggersAgentMovementStateChange()
+        {
+            Assert.Ignore("Stage 0+1: requires AgentMovement #2 and CollisionSystem #3 both wired — §5.3");
+        }
+    }
+}
+
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-31 | —      | Initial implementation. |
+// | 1.1     | 2026-06-01 | —      | Add §5.3 integration test stubs (9 tests; all Assert.Ignore Stage 0+1). |
 #endregion

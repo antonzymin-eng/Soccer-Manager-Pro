@@ -1,6 +1,6 @@
 // File:     src/first-touch/Tests/FirstTouchTests.cs
 // Created:  2026-05-31
-// Modified: 2026-05-31
+// Modified: 2026-06-01
 // Author:   —
 // Spec:     First Touch #4 §5
 // Purpose:  NUnit unit tests covering CQ, TR, PR, OR, PO, EC, BD, and VS categories from §5.2–§5.10.
@@ -1809,7 +1809,76 @@ namespace TacticalDirector.FirstTouch.Tests
     }
 }
 
+    // ════════════════════════════════════════════════════════════════════════════
+    // §5.9 Integration Tests (IT)
+    // ════════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Integration tests for First Touch #4 §5.9. Require Play Mode with
+    /// CollisionSystem #3, AgentMovement #2, BallPhysics #1, and EventBus wired.
+    /// </summary>
+    internal sealed class FirstTouchIntegrationTests
+    {
+        /// <summary>IT-001: Collision→FirstTouch→BallPhysics complete pipeline. §5.9.</summary>
+        [Test]
+        public void CollisionToFirstTouchToBallPhysics_CompletePipeline()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with CollisionSystem #3 + BallPhysics #1 wired — IT-001");
+        }
+
+        /// <summary>IT-002: Controlled outcome — AgentMovement receives dribbling modifier. §5.9.</summary>
+        [Test]
+        public void ControlledOutcome_AgentMovementReceivesDribblingModifier()
+        {
+            Assert.Ignore("Stage 0+1: requires AgentMovement #2 wired — IT-002");
+        }
+
+        /// <summary>IT-003: Possession change updates team possession state. §5.9.</summary>
+        [Test]
+        public void PossessionChange_UpdatesTeamPossessionState()
+        {
+            Assert.Ignore("Stage 0+1: requires EventBus PossessionChangedEvent wired — IT-003");
+        }
+
+        /// <summary>IT-004: EventEmission — FirstTouchEvent published on each contact. §5.9.</summary>
+        [Test]
+        public void EventEmission_FirstTouchEventPublishedOnContact()
+        {
+            Assert.Ignore("Stage 0+1: requires EventBus + EventBusRegistrar wired — IT-004");
+        }
+
+        /// <summary>IT-005: Replay determinism — identical match state produces identical results. §5.9.</summary>
+        [Test]
+        public void ReplayDeterminism_IdenticalMatchStateProducesIdenticalResults()
+        {
+            Assert.Ignore("Stage 0+1: requires Deterministic Simulation #16 digest comparison — IT-005");
+        }
+
+        /// <summary>IT-006: Goalkeeper foot control processed normally. §5.9.</summary>
+        [Test]
+        public void GoalkeeperFootControl_ProcessedNormally()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with Goalkeeper Mechanics #11 wired — IT-006");
+        }
+
+        /// <summary>IT-007: Pressure query from SpatialHash returns correct opponents. §5.9.</summary>
+        [Test]
+        public void PressureQueryFromSpatialHash_ReturnsCorrectOpponents()
+        {
+            Assert.Ignore("Stage 0+1: requires SpatialHashGrid wired into PressureEvaluator — IT-007");
+        }
+
+        /// <summary>IT-008: Consecutive touches — one-two pass — both evaluate correctly. §5.9.</summary>
+        [Test]
+        public void ConsecutiveTouches_OneTwoPass_BothEvaluateCorrectly()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode multi-tick scenario — IT-008");
+        }
+    }
+}
+
 #region VersionHistory
 // | Version | Date       | Author | Notes                                       |
 // | 1.0     | 2026-05-31 | —      | Initial creation. 52 tests across CQ/TR/PR/OR/PO/EC/BD/VS/invariant categories. |
+// | 1.1     | 2026-06-01 | —      | Add §5.9 integration test stubs IT-001..008 (all Assert.Ignore Stage 0+1). |
 #endregion
