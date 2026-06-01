@@ -1678,6 +1678,218 @@ namespace TacticalDirector.DefensiveAI.Tests
                 "IndexOf must return -1 when EntityId is not in pool.");
         }
     }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // §5.3 Integration / §5.4 Determinism / §5.5 Performance / §5.6 Anti-Chaos
+    // ────────────────────────────────────────────────────────────────────────────
+
+    [TestFixture]
+    internal sealed class DefensiveAIIntegrationTests
+    {
+        // ── §5.3 Integration ──────────────────────────────────────────────────────
+
+        /// <summary>T-DA-060: Full-team press + defend scenario; #13/#14 partition disjoint across 10 ticks. §5.3.</summary>
+        [Test]
+        public void Integration_T_DA_060_PressAndDefendPartitionDisjointAcrossTenTicks()
+        {
+            Assert.Ignore("Stage 0+1: requires PressingAI + DefensiveAI wired into TickOrchestrator — activate when both #13 and #14 are live in the full pipeline");
+        }
+
+        /// <summary>T-DA-061: Phase transition IN_POSSESSION → OUT_OF_POSSESSION → IN_POSSESSION; hysteresis preserved; no data leakage. §5.3.</summary>
+        [Test]
+        public void Integration_T_DA_061_PhaseTransitionCycleWithHysteresisPreservation()
+        {
+            Assert.Ignore("Stage 0+1: requires live PositioningAI phase input across 3 ticks — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-062: TRANSITION phase possession turnover; INTERCEPT_RUNNER assignment within one qualifying tick. §5.3.</summary>
+        [Test]
+        public void Integration_T_DA_062_TransitionPhasePossessionTurnoverInterceptRunner()
+        {
+            Assert.Ignore("Stage 0+1: requires live phase-change injection — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-063: Offside trap; 4-defender backline advances simultaneously; Y-coordinates individual. §5.3 / FR-DA-019.</summary>
+        [Test]
+        public void Integration_T_DA_063_OffsideTrapFourDefenderBacklineAdvancesSimultaneously()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-tick dwell + DEFENSE-line position data — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-064: Emergency scenario: last-man threatened + GK out of position; both overrides issued same tick. §5.3 / FR-DA-022.</summary>
+        [Test]
+        public void Integration_T_DA_064_EmergencyLastManAndGkOutOfPositionSameTick()
+        {
+            Assert.Ignore("Stage 0+1: requires full 22-agent snapshot with engineered emergency state — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-065: Anti-chaos cascade MAX_MAN_MARK_ASSIGNMENTS exceeded; resolves within 3 passes. §5.3 / KD-17.</summary>
+        [Test]
+        public void Integration_T_DA_065_AntiChaosCascadeResolvesWithinThreePasses()
+        {
+            Assert.Ignore("Stage 0+1: requires engineered over-assignment scenario — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-066: Determinism — same fixed inputs produce bit-identical MarkAssignment[], MarkDirective, TackleIntentRequest[] across two runs. §5.3.</summary>
+        [Test]
+        public void Integration_T_DA_066_IdenticalInputsProduceBitIdenticalOutput()
+        {
+            Assert.Ignore("Stage 0+1: requires full pipeline invocation with a fixed snapshot — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-067: Assign-then-suppress: opponent exits radius mid-dwell; assignment retained for remaining dwell; ZONAL on tick 5. §5.3 / FR-DA-015.</summary>
+        [Test]
+        public void Integration_T_DA_067_AssignThenSuppressOpponentExitsRadiusMidDwell()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-tick dwell injection — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-068: GK re-enters zone; COVER_GK_ZONE released; cover agent reverts to ZONAL. §5.3.</summary>
+        [Test]
+        public void Integration_T_DA_068_GkReentryReleaseCoverGkZone()
+        {
+            Assert.Ignore("Stage 0+1: requires GK position tracking across ticks — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-069: Post-trap cooldown; dwell counter cannot trigger re-fire during cooldownTicksRemaining > 0. §5.3.</summary>
+        [Test]
+        public void Integration_T_DA_069_PostTrapCooldownBlocksRefire()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-tick cooldown tracking — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-070: Full 90-minute match; pool sizes always consistent with #13 role partition (|PRIMARY_PRESS|+|COVER_SHADOW|+|HOLD_SHAPE|==10). §5.3 / FR-DA-009.</summary>
+        [Test]
+        public void Integration_T_DA_070_NinetyMinMatchPoolSizesConsistentWithPressingPartition()
+        {
+            Assert.Ignore("Stage 0+1: requires full match simulation with #13 press-role data — activate when both #13 and #14 are wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-071: #12 phase change latency — phase change on tick T takes effect immediately on tick T (no 1-tick lag). §5.3 / FR-DA-013.</summary>
+        [Test]
+        public void Integration_T_DA_071_PhaseChangeTakesEffectImmediately()
+        {
+            Assert.Ignore("Stage 0+1: requires live PositioningAI phase input — activate when DefensiveAITick reads phase in same tick as #12 update");
+        }
+
+        // ── §5.4 Determinism Regression ───────────────────────────────────────────
+
+        /// <summary>T-DA-DET-001: 90-minute replay; bit-identical per-tick digest (MarkDirective × 2, MarkAssignment[] × 22, hysteresis × 22, OffsideLineState × 2, TackleIntentRequest[] × 20). §5.4.</summary>
+        [Test]
+        public void Determinism_T_DA_DET_001_NinetyMinReplayBitIdenticalPerTickDigests()
+        {
+            Assert.Ignore("Stage 0+1: requires reference-host replay harness and #16 §5 digest comparison — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-DET-002: Two independent simulations with identical initial state; first 1,000 ticks produce identical sequences. §5.4.</summary>
+        [Test]
+        public void Determinism_T_DA_DET_002_TwoIndependentSimsIdenticalInitialStateFirstThousandTicks()
+        {
+            Assert.Ignore("Stage 0+1: requires two fresh simulation instances — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-DET-003: Mid-match snapshot resume; ticks 5001–6000 bit-identical vs. continuous run. §5.4.</summary>
+        [Test]
+        public void Determinism_T_DA_DET_003_MidMatchSnapshotResumeDigestContinuity()
+        {
+            Assert.Ignore("Stage 0+1: requires Spec #16 SnapshotCodec mid-match serialisation — activate when DeterministicSim snapshot round-trip is verified");
+        }
+
+        /// <summary>T-DA-DET-004: EntityId iteration-order determinism; swapped EntityIds in pool produce predictably permuted output. §5.4.</summary>
+        [Test]
+        public void Determinism_T_DA_DET_004_EntityIdIterationOrderDeterminism()
+        {
+            Assert.Ignore("Stage 0+1: requires full pipeline with controllable EntityId ordering — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-DET-005: RNG reproducibility via DOMAIN_TAG_DEFENSIVE_AI seed; forced tie-break produces same result on both runs. §5.4.</summary>
+        [Test]
+        public void Determinism_T_DA_DET_005_RngReproducibilityViaDomainTagDefensiveAI()
+        {
+            Assert.Ignore("Stage 0+1: requires #16 DeterministicRngService wired into DefensiveAITick — activate when DOMAIN_TAG_DEFENSIVE_AI (0x1A) RNG draws are live");
+        }
+
+        /// <summary>T-DA-DET-006: Anti-chaos pass terminates in ≤ 3 passes for 1,000 random initial assignment states; no infinite loop. §5.4.</summary>
+        [Test]
+        public void Determinism_T_DA_DET_006_AntiChaosTerminatesInThreePassesForAllInputs()
+        {
+            Assert.Ignore("Stage 0+1: requires 1,000-iteration randomised anti-chaos harness — activate when DefensiveAITick is wired into TickOrchestrator and InvariantEnforcer iteration count is observable");
+        }
+
+        // ── §5.5 Performance Validation ───────────────────────────────────────────
+
+        /// <summary>T-DA-PERF-001: Worst-case per-tick ≤ 0.12 ms on reference host (§6.3); 10 HOLD_SHAPE agents × 10 candidates; 100 reps, discard top 5%. §5.5.</summary>
+        [Test]
+        public void Performance_T_DA_PERF_001_WorstCasePerTickWithinBudget()
+        {
+            Assert.Ignore("Stage 0+1: requires reference host (Ryzen 7 5800X) and Unity Stopwatch micro-benchmark harness — activate when certification-platform.md Stage-0 host pin is confirmed");
+        }
+
+        /// <summary>T-DA-PERF-002: Zero heap allocations per tick; Unity Memory Profiler; 10 consecutive ticks; zero GC.Alloc from src/DefensiveAI/. §5.5 / FR-DA-006.</summary>
+        [Test]
+        public void Performance_T_DA_PERF_002_ZeroHeapAllocationsPerTick()
+        {
+            Assert.Ignore("Stage 0+1: requires Unity Memory Profiler with Allocation Tracking — activate when DefensiveAITick is wired into TickOrchestrator and #18 §3.7 gate is active");
+        }
+
+        /// <summary>T-DA-PERF-003: Anti-chaos worst-case ≤ 0.02 ms for 3-pass invariant enforcement; within 0.12 ms total budget. §5.5.</summary>
+        [Test]
+        public void Performance_T_DA_PERF_003_AntiChaosWorstCaseWithinBudget()
+        {
+            Assert.Ignore("Stage 0+1: requires reference host and isolated InvariantEnforcer micro-benchmark — activate when certification-platform.md Stage-0 host pin is confirmed");
+        }
+
+        // ── §5.6 Anti-Chaos / Exploit-Resistance (KD-17, KD-18) ─────────────────
+
+        /// <summary>T-DA-INV-001: MIN_BACKLINE_AGENTS violated → demotion restores backline ≤ 2 passes. §5.6.1 / FR-DA-025.</summary>
+        [Test]
+        public void AntiChaos_T_DA_INV_001_MinBacklineAgentsViolationDemotionRestoresBackline()
+        {
+            Assert.Ignore("Stage 0+1: requires full 22-agent pipeline with engineered backline-depletion — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-INV-002: MAX_MAN_MARK_ASSIGNMENTS exceeded → lowest-threat demoted to ZONAL. §5.6.1 / FR-DA-026.</summary>
+        [Test]
+        public void AntiChaos_T_DA_INV_002_MaxManMarkExceededLowestThreatDemoted()
+        {
+            Assert.Ignore("Stage 0+1: requires engineered over-assignment scenario — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-INV-003: MAX_MARK_DISPLACEMENT_M exceeded → over-displaced assignment demoted to ZONAL. §5.6.1 / FR-DA-027.</summary>
+        [Test]
+        public void AntiChaos_T_DA_INV_003_MaxMarkDisplacementExceededOverDisplacedDemoted()
+        {
+            Assert.Ignore("Stage 0+1: requires engineered displacement-exceeding assignment — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-EXP-001: EXPLOIT_OFFSIDE_TRAP_SPRUNG_EARLY — step-up does not fire until dwellCounter = OFFSIDE_TRAP_DWELL_TICKS = 3. §5.6.2 / KD-18.</summary>
+        [Test]
+        public void AntiChaos_T_DA_EXP_001_OffsideTrapNotSpringEarlyOnRunnerStart()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-tick dwell sequence with concurrent INTERCEPT_RUNNER — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-EXP-002: EXPLOIT_SWITCH_THROUGH_HOLE — ball switch to unguarded channel; cover agent updates targetPosition within REASSIGN_LATENCY_TICKS = 2. §5.6.2 / KD-18.</summary>
+        [Test]
+        public void AntiChaos_T_DA_EXP_002_BallSwitchToUnguardedChannelCoveredWithinLatency()
+        {
+            Assert.Ignore("Stage 0+1: requires live ball-switch detection and multi-tick scenario — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-EXP-003: EXPLOIT_LAST_MAN_ONE_ON_ONE — last-man tackle intent is JOCKEY or HOLD, never COMMIT when coverageDepth = 0. §5.6.2 / KD-18.</summary>
+        [Test]
+        public void AntiChaos_T_DA_EXP_003_LastManOneOnOneTackleIntentNotCommit()
+        {
+            Assert.Ignore("Stage 0+1: requires full 22-agent pipeline with engineered last-man 1v1 scenario — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-DA-EXP-004: EXPLOIT_GK_OUT_OF_POSITION — COVER_GK_ZONE issued same tick GK out-of-zone is first detected; no latency gap. §5.6.2 / KD-18.</summary>
+        [Test]
+        public void AntiChaos_T_DA_EXP_004_GkOutOfPositionCoverAssignedSameTick()
+        {
+            Assert.Ignore("Stage 0+1: requires live GK position tracking — activate when DefensiveAITick is wired into TickOrchestrator");
+        }
+    }
 }
 
 #region VersionHistory
@@ -1685,4 +1897,8 @@ namespace TacticalDirector.DefensiveAI.Tests
 // | 1.0     | 2026-05-31 | —      | Initial implementation. 25 unit tests covering T-DA-001..054 pool filter, threat score, |
 // |         |            |        |   mark assignment, tackle intent, offside trap, last-man detection, COVER_GK_ZONE,       |
 // |         |            |        |   anti-chaos invariants, hysteresis, and geometry helpers. No integration or perf tests. |
+// | 1.1     | 2026-06-01 | —      | Added DefensiveAIIntegrationTests class with 27 stubs: T-DA-060..071 (§5.3 integration), |
+// |         |            |        |   T-DA-DET-001..006 (§5.4 determinism), T-DA-PERF-001..003 (§5.5 performance),          |
+// |         |            |        |   T-DA-INV-001..003 + T-DA-EXP-001..004 (§5.6 anti-chaos/exploit-resistance).          |
+// |         |            |        |   All stubs use Assert.Ignore with Stage 0+1 activation conditions.                     |
 #endregion
