@@ -25,6 +25,8 @@ namespace TacticalDirector.ShotMechanics
         public static void Initialize()
         {
             // Tier A: ShotExecuted/ShotCancelled are authoritative events (digest-included).
+            // maxPerTick: 0 is the unbounded-sentinel — Tier A drop predicate (>=maxPerTick)
+            // never fires for 0, so authoritative shots are never dropped under load.
             EventRegistry.RegisterExternalRow<ShotExecutedEvent>(
                 ordinal: 0x01, tier: (byte)DeterminismTier.TierA, version: 1,
                 subsystemOrdinal: SubsystemOrdinals.ShotMechanics, maxPerTick: 0,
@@ -57,4 +59,5 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        | named consts. M-2: maxPerTick=2 for ShotAnimationData now cited to      |
 // |         |            |        | #6 §4.7.3 with rationale comment. L-1: aligned narrative with code.     |
 // |         |            |        | Added DeterministicSim asmdef reference to shot-mechanics.asmdef.       |
+// | 1.3     | 2026-06-01 | —      | AR-3 L-1: document Tier A maxPerTick=0 unbounded-sentinel semantics.    |
 #endregion
