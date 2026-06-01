@@ -939,6 +939,125 @@ namespace TacticalDirector.HeadingMechanics.Tests
             }
         }
     }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // §5.2 Integration / §5.3 Validation / §5.4 Conformance
+    // ────────────────────────────────────────────────────────────────────────────
+
+    [TestFixture]
+    internal sealed class HeadingMechanicsIntegrationTests
+    {
+        // ── §5.2 Integration ──────────────────────────────────────────────────────
+
+        /// <summary>T-HE-I-001: Open-play header from a Pass Mechanics #5 cross; verifies KD-5 (no CrossDelivery label read). §5.2.1.</summary>
+        [Test]
+        public void Integration_T_HE_I_001_OpenPlayHeaderFromCrossProducesOutgoingVelocity()
+        {
+            Assert.Ignore("Stage 0+1: requires Pass Mechanics #5 cross delivery and 22-agent match tick loop — activate when HeadingMechanics is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-HE-I-002: Corner-kick header (set-piece pathway, KD-13); verifies same pipeline as open-play cross (no set-piece-specific branch). §5.2.2 / FR-HE-016.</summary>
+        [Test]
+        public void Integration_T_HE_I_002_CornerKickHeaderRoutesIdenticallyToOpenPlay()
+        {
+            Assert.Ignore("Stage 0+1: requires Pass Mechanics #5 set-piece delivery — activate when HeadingMechanics is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-HE-I-003: Free-kick header (far-post delivery, downward volley); same KD-13 pathway. §5.2.3.</summary>
+        [Test]
+        public void Integration_T_HE_I_003_FreeKickHeaderFarPostDownwardVolley()
+        {
+            Assert.Ignore("Stage 0+1: requires Pass Mechanics #5 wide free-kick delivery — activate when HeadingMechanics is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-HE-I-004: GK headed clearance executes #10 pipeline; no GK-specific physics branch (KD-7, FR-HE-009). §5.2.4.</summary>
+        [Test]
+        public void Integration_T_HE_I_004_GoalkeeperHeadedClearanceUsesStandardPipeline()
+        {
+            Assert.Ignore("Stage 0+1: requires Goalkeeper Mechanics #11 integration — activate when HeadingMechanics is wired into TickOrchestrator alongside GoalkeeperMechanics");
+        }
+
+        /// <summary>T-HE-I-005: Contested 2-way duel (defender vs. striker); winner emits HeaderExecutedEvent, loser emits disturbed or failed event. §5.2.5.</summary>
+        [Test]
+        public void Integration_T_HE_I_005_Contested2WayDuelWinnerAndLoserEmitCorrectEvents()
+        {
+            Assert.Ignore("Stage 0+1: requires full duel pipeline with two simultaneous header commits — activate when HeadingMechanics is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-HE-I-006: Contested 3-way duel (two strikers + defender); sub-scenario (a) tight gap → losers emit disturbed executed; (b) lopsided → losers fail. §5.2.6.</summary>
+        [Test]
+        public void Integration_T_HE_I_006_Contested3WayDuelTightAndLopsidedSubScenarios()
+        {
+            Assert.Ignore("Stage 0+1: requires three simultaneous header commits — activate when HeadingMechanics is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-HE-I-007: Mistimed jump → F-01 failure; KD-17 intent re-validation; ball trajectory unchanged. §5.2.7.</summary>
+        [Test]
+        public void Integration_T_HE_I_007_MistimedJumpEmitsFailedEventAndLeavesBalUnchanged()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-tick heading pipeline with intent staleness re-validation — activate when HeadingMechanics is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-HE-I-008: Own-goal-shape flag → HeaderExecutedEvent published with ownGoalShapedTrajectory=true; mock Event System confirms adjudication is its responsibility. §5.2.8.</summary>
+        [Test]
+        public void Integration_T_HE_I_008_OwnGoalShapeFlagPublishedToEventSystem()
+        {
+            Assert.Ignore("Stage 0+1: requires Event System #17 mock subscriber — activate when EventBus HeaderExecutedEvent (0x12) subscription is available in test harness");
+        }
+
+        /// <summary>T-HE-I-009: Deterministic replay — 1000-tick scenario, 12 headers, 2 duels, 1 near-tie tiebreak; three runs produce byte-identical HeaderExecutedEvent sequences. §5.2.9 / FR-HE-008.</summary>
+        [Test]
+        public void Integration_T_HE_I_009_DeterministicReplay1000TickByteIdentical()
+        {
+            Assert.Ignore("Stage 0+1: requires #16 SnapshotCodec and replay harness — activate when DeterministicSim snapshot round-trip is verified and HeadingMechanics is wired into TickOrchestrator");
+        }
+
+        // ── §5.3 Validation Scenarios ─────────────────────────────────────────────
+
+        /// <summary>T-HE-V-001: 22-agent 10-minute match segment; ~3 headers expected; timing-label distribution OnTime≈55%, Early≈20%, Late≈25%. §5.3.1.</summary>
+        [Test]
+        public void Validation_T_HE_V_001_22AgentMatchSegmentHeaderFrequencyAndTimingDistribution()
+        {
+            Assert.Ignore("Stage 0+1: requires 22-agent match simulation — activate when HeadingMechanics is wired into TickOrchestrator and telemetry pipeline is live");
+        }
+
+        /// <summary>T-HE-V-002: Corner A/B sensitivity — Heading 75 vs. 90; measurable outcome divergence in pointError, contactQualityScalar, outgoingSpeed. §5.3.2 / KD-4.</summary>
+        [Test]
+        public void Validation_T_HE_V_002_CornerABHeadingAttributeSensitivity()
+        {
+            Assert.Ignore("Stage 0+1: requires identical-seed corner delivery with two striker attribute profiles — activate when HeadingMechanics is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-HE-V-003: Fatigue gradient — fatigue=0 vs 1; ~12% reduction in mean outgoingSpeed at full fatigue. §5.3.3 / KD-9.</summary>
+        [Test]
+        public void Validation_T_HE_V_003_FatigueGradientReducesOutgoingSpeedByTwelvePercent()
+        {
+            Assert.Ignore("Stage 0+1: requires identical-seed delivery with two fatigue states — activate when HeadingMechanics is wired into TickOrchestrator and fatigue input is live");
+        }
+
+        // ── §5.4 Cross-Spec Conformance ───────────────────────────────────────────
+
+        /// <summary>T-HE-C-001: grep -r 'HeaderType|HeaderClass|HeaderStyle' src/ returns zero matches (KD-1, FR-HE-003). §5.4.1.</summary>
+        [Test]
+        public void Conformance_T_HE_C_001_NoHeaderTypeSymbolInSrc()
+        {
+            Assert.Ignore("Stage 0+1: CI-time grep gate — activate when heading-mechanics assembly is included in the CI pipeline grep lint checks");
+        }
+
+        /// <summary>T-HE-C-002: Every constant in HeadingMechanicsConstants.cs has a valid source-tag comment (KD-11, FR-HE-014). §5.4.2.</summary>
+        [Test]
+        public void Conformance_T_HE_C_002_ConstantTagVerification()
+        {
+            Assert.Ignore("Stage 0+1: CI-time constant-tag grep gate — activate when #20 §3.x constant-tag lint is wired into CI pipeline");
+        }
+
+        /// <summary>T-HE-C-003: Every RNG call in heading-mechanics/ uses DeterministicRng draw-site API; no System.Random or Random.Range (KD-10, FR-HE-008). §5.4.3.</summary>
+        [Test]
+        public void Conformance_T_HE_C_003_RngRoutingDisciplineNoSystemRandom()
+        {
+            Assert.Ignore("Stage 0+1: CI-time RNG routing grep gate — activate when #16 DeterministicRngService is wired into HeadingMechanics and CI lint checks are live");
+        }
+    }
 }
 
 #region VersionHistory
@@ -950,4 +1069,8 @@ namespace TacticalDirector.HeadingMechanics.Tests
 // |         |            |        | HeadingSpinTransferTests (§5.1.5, 6 tests),                       |
 // |         |            |        | HeadingDuelResolutionTests (§5.1.6, 8 tests),                     |
 // |         |            |        | HeadingJumpKinematicsParabolaTests (§5.1.2 extra, 4 tests).       |
+// | 1.1     | 2026-06-01 | —      | Added HeadingMechanicsIntegrationTests class with 15 stubs:        |
+// |         |            |        | T-HE-I-001..009 (§5.2 integration), T-HE-V-001..003 (§5.3         |
+// |         |            |        | validation), T-HE-C-001..003 (§5.4 conformance). All stubs use    |
+// |         |            |        | Assert.Ignore with Stage 0+1 activation conditions.               |
 #endregion

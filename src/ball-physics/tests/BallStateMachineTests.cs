@@ -201,6 +201,18 @@ namespace TacticalDirector.BallPhysics.Tests
             var ball = new BallState { State = BallStateType.OUT_OF_PLAY };
             Assert.AreEqual(BallStateType.OUT_OF_PLAY, BallStateMachine.UpdateBallState(ball));
         }
+
+        // ── UT-STM-008 ───────────────────────────────────────────────────────────
+
+        [Test]
+        public void OutOfBounds_BallPartiallyOverLine_StillInPlay()
+        {
+            // Spec §5.2.4 UT-STM-008: ball must ENTIRELY cross — center y must be < -RADIUS.
+            // y = -0.05 is negative but |y| < RADIUS (0.11), so ball has not fully crossed.
+            Vector3 pos = new Vector3(52f, -0.05f, 0f);
+            Assert.IsFalse(BallStateMachine.IsOutOfBounds(pos),
+                "Ball centre at y=-0.05 has not fully crossed the touchline (RADIUS=0.11)");
+        }
     }
 }
 
@@ -209,4 +221,6 @@ namespace TacticalDirector.BallPhysics.Tests
 // | 1.0     | 2026-05-24 | —      | Initial implementation.                                            |
 // | 1.1     | 2026-05-24 | —      | Fix pass: namespace → TacticalDirector.BallPhysics.Tests; ALL_CAPS |
 // |         |            |        | constant refs → PascalCase; file header per FR-CS-056/057.         |
+// | 1.2     | 2026-06-01 | —      | Add UT-STM-008: ball partially over touchline still in play         |
+// |         |            |        | (spec §5.2.4 — centre must clear by full RADIUS).                  |
 #endregion

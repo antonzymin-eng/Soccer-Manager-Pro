@@ -1,6 +1,6 @@
 // File:     src/perception-system/Tests/PerceptionSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-05-31
+// Modified: 2026-06-01
 // Author:   —
 // Spec:     Perception System #7 §5, Code Standards #20
 // Purpose:  Unit tests for Perception System. FOV, OCC, LR, SC, BP test groups.
@@ -1231,9 +1231,131 @@ namespace TacticalDirector.PerceptionSystem.Tests
                 "PERIPHERAL_ARC_INNER_BOUND must be 40° with default BASE_FOV_HALF_ANGLE=80°");
         }
     }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // §5.11 Integration Tests (Play Mode; require full 22-agent match simulation)
+    // ────────────────────────────────────────────────────────────────────────────
+
+    [TestFixture]
+    internal sealed class PerceptionSystemIntegrationTests
+    {
+        // ── §5.11.1 AgentState → Perception (AM #2 boundary) ─────────────────────
+
+        /// <summary>IT-AM-001: FoV orientation follows AgentState.FacingDirection. §5.11.1.</summary>
+        [Test]
+        public void FovOrientation_FollowsAgentStateFacingDirection()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode 22-agent simulation with AgentMovement #2 wired — IT-AM-001");
+        }
+
+        /// <summary>IT-AM-002: FoV recomputed fresh each heartbeat from current FacingDirection. §5.11.1.</summary>
+        [Test]
+        public void Fov_RecomputedFreshEachHeartbeat()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode 22-agent simulation — IT-AM-002");
+        }
+
+        /// <summary>IT-AM-003: Decisions attribute read correctly from PlayerAttributes. §5.11.1.</summary>
+        [Test]
+        public void DecisionsAttribute_ReadCorrectlyFromPlayerAttributes()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with PlayerAttributes injection — IT-AM-003");
+        }
+
+        /// <summary>IT-AM-004: Anticipation attribute read correctly for shoulder check interval. §5.11.1.</summary>
+        [Test]
+        public void AnticipationAttribute_ReadCorrectlyForShoulderCheckInterval()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with PlayerAttributes injection — IT-AM-004");
+        }
+
+        // ── §5.11.2 BallState → Perception (Ball Physics #1 boundary) ────────────
+
+        /// <summary>IT-BP-001: BallState.Position 3D → 2D projection. §5.11.2.</summary>
+        [Test]
+        public void BallPosition_3DTo2DProjection_Correct()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with BallPhysics #1 wired — IT-BP-001");
+        }
+
+        /// <summary>IT-BP-002: Ball contact forced refresh reaches correct agents only. §5.11.2.</summary>
+        [Test]
+        public void BallContactForcedRefresh_ReachesCorrectAgentsOnly()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with EventBus BallContactEvent — IT-BP-002");
+        }
+
+        // ── §5.11.3 Spatial Hash → Perception (Collision System #3 boundary) ──────
+
+        /// <summary>IT-CS-001: QueryRadius returns correct candidate count (self excluded). §5.11.3.</summary>
+        [Test]
+        public void QueryRadius_ReturnsCorrectCandidateCount_SelfExcluded()
+        {
+            Assert.Ignore("Stage 0+1: requires SpatialHashGrid wired into PerceptionSystem.Tick — IT-CS-001");
+        }
+
+        /// <summary>IT-CS-002: Pressure query uses distinct 3.0m radius call. §5.11.3.</summary>
+        [Test]
+        public void PressureQuery_UsesDistinct3mRadiusCall()
+        {
+            Assert.Ignore("Stage 0+1: requires SpatialHashGrid wired — IT-CS-002");
+        }
+
+        /// <summary>IT-CS-003: Perception never writes to spatial hash (read-only contract). §5.11.3.</summary>
+        [Test]
+        public void Perception_NeverWritesToSpatialHash()
+        {
+            Assert.Ignore("Stage 0+1: requires SpatialHashGrid wired; verifies no writes during Perception.Tick — IT-CS-003");
+        }
+
+        // ── §5.11.4 Multi-Agent and Long-Duration Scenarios ───────────────────────
+
+        /// <summary>IT-FULL-001: Elite midfielder vs novice defender — exact measurable differences. §5.11.4.</summary>
+        [Test]
+        public void EliteMidfielder_VsNoviceDefender_MeasurableFovDifference()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode 22-agent scenario with scripted agent attributes — IT-FULL-001");
+        }
+
+        /// <summary>IT-FULL-002: Awareness builds over first several ticks (match cold-start). §5.11.4.</summary>
+        [Test]
+        public void Awareness_BuildsOverFirstTicks_ColdStart()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode multi-tick simulation — IT-FULL-002");
+        }
+
+        /// <summary>IT-FULL-003: Agent behind wall of opponents — correctly perception-isolated. §5.11.4.</summary>
+        [Test]
+        public void AgentBehindOpponentWall_IsPerceptionIsolated()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode with OcclusionFilter wired into full pipeline — IT-FULL-003");
+        }
+
+        /// <summary>IT-FULL-004: 22-agent full heartbeat — all snapshots produced, zero nulls. §5.11.4.</summary>
+        [Test]
+        public void FullHeartbeat_22Agents_AllSnapshotsProducedNoNulls()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode PerceptionSystem.Tick with all 22 agents — IT-FULL-004");
+        }
+
+        /// <summary>IT-FULL-005: L_rec tracking does not leak memory over extended simulation. §5.11.4.</summary>
+        [Test]
+        public void LrecTracking_NoMemoryLeakOverExtendedSimulation()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode memory profiler over ≥ 100 ticks — IT-FULL-005");
+        }
+
+        /// <summary>IT-FULL-006: Determinism — 100 heartbeats, identical inputs → byte-identical snapshots. §5.11.4.</summary>
+        [Test]
+        public void Determinism_100Heartbeats_IdenticalInputsProduceBytIdenticalSnapshots()
+        {
+            Assert.Ignore("Stage 0+1: requires Play Mode + Deterministic Simulation #16 digest comparison — IT-FULL-006");
+        }
+    }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-31 | —      | Initial implementation. FOV-001..008, OCC-001..007+009, LR-001..008, SC-002..005+008, BP-001..006, SNAP-006+010 + constants. 31 tests total. |
+// | 1.1     | 2026-06-01 | —      | Add §5.11 integration test stubs IT-AM-001..004, IT-BP-001..002, IT-CS-001..003, IT-FULL-001..006 (15 stubs; Stage 0+1 Assert.Ignore). |
 #endregion

@@ -1503,6 +1503,204 @@ namespace TacticalDirector.PressingAI.Tests
                 "IsActive must be true when PrimaryPresserId >= 0.");
         }
     }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // §5.3 Integration / §5.4 Determinism / §5.5 Performance / §5.6 Anti-Chaos
+    // ────────────────────────────────────────────────────────────────────────────
+
+    [TestFixture]
+    internal sealed class PressingAIIntegrationTests
+    {
+        // ── §5.3 Integration ──────────────────────────────────────────────────────
+
+        /// <summary>T-I-001: Each trigger × OutOfPoss phase produces a valid, active directive. §5.3.</summary>
+        [Test]
+        public void Integration_T_I_001_EachTriggerOutOfPossProducesActiveDirective()
+        {
+            Assert.Ignore("Stage 0+1: requires full 22-agent match simulation — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-I-002: Phase boundary OutOfPoss → InPoss immediately empties the directive (FR-PR-033). §5.3.</summary>
+        [Test]
+        public void Integration_T_I_002_InPossPhaseBoundaryEmptiesDirective()
+        {
+            Assert.Ignore("Stage 0+1: requires phase input from PositioningAI — activate when PressingAITick reads live phase transitions from PositioningAITick");
+        }
+
+        /// <summary>T-I-003: Possession turnover InPoss → TransToDef → OutOfPoss produces correct per-tick directive evolution. §5.3.</summary>
+        [Test]
+        public void Integration_T_I_003_PossessionTurnoverSequenceProducesCorrectEvolution()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-tick phase-change injection — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-I-004: Disengage round-trip over 50-tick window: trigger → press → timeout → disengage → reset → trigger again. §5.3.</summary>
+        [Test]
+        public void Integration_T_I_004_DisengageRoundTripOver50Ticks()
+        {
+            Assert.Ignore("Stage 0+1: requires full tick-loop driving PressingAITick — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-I-005: Substitution event — substituted agent's PressAssignment is preserved at last value (F6). §5.3.</summary>
+        [Test]
+        public void Integration_T_I_005_SubstitutionPreservesLastPressAssignment()
+        {
+            Assert.Ignore("Stage 0+1: requires SubstitutionEvent from event bus — activate when EventBus SubstitutionEvent (0x08) is wired into PressingAITick");
+        }
+
+        /// <summary>T-I-006: Two triggers fire simultaneously (BAD_TOUCH + SIDELINE_TRAP) — primary-press and cover-shadow assigned; trigger origin tie-break is EntityId ascending. §5.3.</summary>
+        [Test]
+        public void Integration_T_I_006_SimultaneousTriggersTieBreakByEntityId()
+        {
+            Assert.Ignore("Stage 0+1: requires simultaneous trigger injection into the full pipeline — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-I-007: Three-agent eligibility tie under cost + SpacingEpsilonM2 window resolves deterministically by EntityId. §5.3.</summary>
+        [Test]
+        public void Integration_T_I_007_ThreeAgentCostTieResolvesDeteterministicallyByEntityId()
+        {
+            Assert.Ignore("Stage 0+1: requires full agent-pool injection into PrimaryPressSelector with tied costs — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-I-008: F5 invariant fallback after forced MaxPressDisplacementM violation by cover-shadow assignment past 25 m. §5.3.</summary>
+        [Test]
+        public void Integration_T_I_008_F5FallbackOnMaxDisplacementViolation()
+        {
+            Assert.Ignore("Stage 0+1: requires engineered cover-shadow assignment exceeding 25 m displacement — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-I-009: Hysteresis state survives a save/restore round-trip (#16 §3.2 binding). §5.3.</summary>
+        [Test]
+        public void Integration_T_I_009_HysteresisStateSurvivesSaveRestoreRoundTrip()
+        {
+            Assert.Ignore("Stage 0+1: requires Spec #16 SnapshotCodec round-trip — activate when DeterministicSim SnapshotCodec is wired and PressingAITick exposes snapshot serialisation");
+        }
+
+        /// <summary>T-I-010: Pure-function property — identical inputs produce bit-identical output across two invocations. §5.3.</summary>
+        [Test]
+        public void Integration_T_I_010_IdenticalInputsProduceBitIdenticalOutput()
+        {
+            Assert.Ignore("Stage 0+1: requires full pipeline invocation with a fixed snapshot — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        // ── §5.4 Determinism Regression ───────────────────────────────────────────
+
+        /// <summary>T-D-001: 90-min match replay on reference host produces bit-identical per-tick digest over two runs (same seed). §5.4.</summary>
+        [Test]
+        public void Determinism_T_D_001_NinetyMinReplayBitIdenticalDigests()
+        {
+            Assert.Ignore("Stage 0+1: requires reference-host replay harness and DeterministicSim digest comparison — activate when PressingAITick is wired into TickOrchestrator and #16 §5 regression suite is available");
+        }
+
+        /// <summary>T-D-002: EntityId-permuted input produces identical post-iteration state (#16 §3.2.5 binding). §5.4.</summary>
+        [Test]
+        public void Determinism_T_D_002_EntityIdPermutedInputProducesIdenticalState()
+        {
+            Assert.Ignore("Stage 0+1: requires #16 §3.2.5 EntityId-ascending iteration guarantee and full pipeline — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-D-003: RoleHysteresisState + PressTrigger digest contributions are non-empty for every tick a press fires. §5.4.</summary>
+        [Test]
+        public void Determinism_T_D_003_HysteresisAndTriggerDigestContributionsNonEmpty()
+        {
+            Assert.Ignore("Stage 0+1: requires EventLedger digest emission from PressingAITick — activate when #16 SerializeLedger path includes Pressing AI state contributions");
+        }
+
+        /// <summary>T-D-004: Cross-run digest stability — 10 consecutive 90-minute runs produce the same final-tick digest. §5.4.</summary>
+        [Test]
+        public void Determinism_T_D_004_TenConsecutiveRunsProduceSameFinalDigest()
+        {
+            Assert.Ignore("Stage 0+1: requires reference-host replay harness — activate when PressingAITick is wired into TickOrchestrator and #16 §5 regression suite is available");
+        }
+
+        /// <summary>T-D-005: Save/load mid-press — post-load tick 1 digest matches pre-save tick (N+1) digest. §5.4.</summary>
+        [Test]
+        public void Determinism_T_D_005_SaveLoadMidPressDigestContinuity()
+        {
+            Assert.Ignore("Stage 0+1: requires Spec #16 SnapshotCodec mid-press serialisation — activate when DeterministicSim snapshot round-trip is verified and PressingAITick state is included in the snapshot payload");
+        }
+
+        /// <summary>T-D-006: RNG domain-tag isolation — removing DOMAIN_TAG_PRESSING_AI calls from another spec's stream leaves #13's stream unchanged. §5.4.</summary>
+        [Test]
+        public void Determinism_T_D_006_DomainTagIsolationPreservesStream()
+        {
+            Assert.Ignore("Stage 0+1: regression for stochastic Stage 1+ press steps — activate when DOMAIN_TAG_PRESSING_AI RNG draws are introduced in PressingAITick");
+        }
+
+        // ── §5.5 Performance Validation ───────────────────────────────────────────
+
+        /// <summary>T-P-001: Per-tick wall-clock ≤ 0.10 ms on the named reference host (§6.3). §5.5.</summary>
+        [Test]
+        public void Performance_T_P_001_PerTickWallClockWithinBudget()
+        {
+            Assert.Ignore("Stage 0+1: requires reference host (Ryzen 7 5800X) and Unity Stopwatch micro-benchmark harness — activate when certification-platform.md Stage-0 host pin is confirmed");
+        }
+
+        /// <summary>T-P-002: Zero heap allocations on the hot path under .NET allocation tracker (FR-PR-006, #18 §3.7). §5.5.</summary>
+        [Test]
+        public void Performance_T_P_002_ZeroHeapAllocationsOnHotPath()
+        {
+            Assert.Ignore("Stage 0+1: requires Unity Memory Profiler with Allocation Tracking — activate when PressingAITick is wired into TickOrchestrator and #18 §3.7 allocation-tracking gate is active");
+        }
+
+        /// <summary>T-P-003: Cover-shadow candidate scan bounded by CoverShadowCandidateRadiusM costs ≤ 0.03 ms. §5.5.</summary>
+        [Test]
+        public void Performance_T_P_003_CoverShadowCandidateScanWithinCostBudget()
+        {
+            Assert.Ignore("Stage 0+1: requires reference host and isolated CoverShadowSelector micro-benchmark — activate when certification-platform.md Stage-0 host pin is confirmed");
+        }
+
+        // ── §5.6 Anti-Chaos Invariants (KD-16) ───────────────────────────────────
+
+        /// <summary>T-C-001: Forcing 4 simultaneous press candidates into the ball-side third → 1 demotes to HoldShape (count = 3). §5.6.1 / KD-16.</summary>
+        [Test]
+        public void AntiChaos_T_C_001_FourCandidatesInBallThirdOneDemotes()
+        {
+            Assert.Ignore("Stage 0+1: requires full 22-agent pipeline with engineered over-count scenario — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-C-002: Forcing a Defense-line agent into PRIMARY_PRESS that would drop MinBacklineAgents below 3 → promotion blocked. §5.6.1 / KD-16.</summary>
+        [Test]
+        public void AntiChaos_T_C_002_BacklineFloorBlocksPrimaryPressPromotion()
+        {
+            Assert.Ignore("Stage 0+1: requires full 22-agent pipeline with engineered backline-depletion scenario — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-C-003: Forcing a cover-shadow target > 25 m from baseline → rejected, demoted to HoldShape. §5.6.1 / KD-16.</summary>
+        [Test]
+        public void AntiChaos_T_C_003_CoverShadowBeyond25mRejectedAndDemoted()
+        {
+            Assert.Ignore("Stage 0+1: requires engineered cover-shadow assignment exceeding MaxPressDisplacementM — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-C-004: Cascading violations (1+2+3 simultaneously) resolve to a clean directive within 3 demotion iterations. §5.6.1 / KD-16.</summary>
+        [Test]
+        public void AntiChaos_T_C_004_CascadingViolationsResolveInThreeIterations()
+        {
+            Assert.Ignore("Stage 0+1: requires engineered compound invariant violation scenario — activate when PressingAITick is wired into TickOrchestrator and InvariantEnforcer iteration telemetry is observable");
+        }
+
+        /// <summary>T-C-005: Unresolvable cascade (primary-press demotion required) triggers F5 / FR-PR-039 fallback. §5.6.1 / KD-16.</summary>
+        [Test]
+        public void AntiChaos_T_C_005_UnresolvableCascadeTriggersF5Fallback()
+        {
+            Assert.Ignore("Stage 0+1: requires engineered structurally-unresolvable invariant violation — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-C-006: Repeated F5 fallback across N ticks does NOT corrupt hysteresis state (regression for state leakage on fallback). §5.6.1 / KD-16.</summary>
+        [Test]
+        public void AntiChaos_T_C_006_RepeatedF5FallbackDoesNotCorruptHysteresisState()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-tick F5-triggering scenario with hysteresis state inspection — activate when PressingAITick is wired into TickOrchestrator");
+        }
+
+        /// <summary>T-C-007: Backline-floor breach triggers F5 immediately (1 iteration, not the cover-shadow demotion path). §5.6.1 / AR-S1-M6.</summary>
+        [Test]
+        public void AntiChaos_T_C_007_BacklineBreachTriggersF5InOneIteration()
+        {
+            Assert.Ignore("Stage 0+1: requires engineered Defense-line agent forced into PRIMARY_PRESS with backlineCount < MinBacklineAgents = 3 — activate when PressingAITick is wired into TickOrchestrator and InvariantEnforcer iteration telemetry is observable");
+        }
+    }
 }
 
 #region VersionHistory
@@ -1510,4 +1708,7 @@ namespace TacticalDirector.PressingAI.Tests
 // | 1.0     | 2026-05-31 | —      | Initial implementation. 25 unit tests covering T-U-001–T-U-075 trigger conditions,           |
 // |         |            |        | debounce, primary-press selection, cover-shadow selection, role hysteresis, stamina,          |
 // |         |            |        | disengage/reset, failure modes, geometric pressure, and directive invariants.                 |
+// | 1.1     | 2026-06-01 | —      | Added PressingAIIntegrationTests class with 26 stubs: T-I-001..010 (§5.3 integration),       |
+// |         |            |        | T-D-001..006 (§5.4 determinism), T-P-001..003 (§5.5 performance), T-C-001..007 (§5.6        |
+// |         |            |        | anti-chaos including AR-S1-M6 T-C-007). All stubs use Assert.Ignore with Stage 0+1 conditions.|
 #endregion

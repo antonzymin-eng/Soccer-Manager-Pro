@@ -1431,10 +1431,296 @@ namespace TacticalDirector.AttackingAI.Tests
     }
 }
 
+    // ════════════════════════════════════════════════════════════════════════════
+    // §5.2 Anti-chaos order test (T-AT-U-046) — orchestrator-level ordering check
+    // ════════════════════════════════════════════════════════════════════════════
+
+    [TestFixture]
+    internal sealed class AttackingAIAntiChaosOrderTests
+    {
+        /// <summary>
+        /// T-AT-U-046: Anti-chaos enforcer runs after role assignment and before publish.
+        /// Inject a MAX_RUNNERS violation at assignment time; observe that the enforcer
+        /// resolves it before AttackIntentSnapshot is built.
+        /// Requires a full AttackingAITick pipeline — stub until Stage 1 infrastructure.
+        /// </summary>
+        [Test]
+        public void InvariantEnforcer_RunsAfterAssignmentBeforePublish()
+        {
+            Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline including " +
+                          "publish phase to verify ordering — activate when " +
+                          "AttackingAITick integration tests are wired at Stage 1 (FR-AT-021).");
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // §5.3 Integration Test Catalogue (T-AT-I-001..012)
+    // §5.4 Determinism and Numerical Verification (T-AT-D-001..006)
+    // §5.5 Performance Validation (T-AT-P-001..003)
+    // ════════════════════════════════════════════════════════════════════════════
+
+    [TestFixture]
+    internal sealed class AttackingAIIntegrationTests
+    {
+        /// <summary>
+        /// T-AT-I-001: 9-agent IN_POSSESSION, POSSESSION profile.
+        /// ≤ 1 RUNNER, ≥ 1 SUPPORT_BALL, ≥ 2 HOLD_WIDTH, ≥ 1 WEAK_SIDE (pool ≥ 4); all invariants satisfied.
+        /// </summary>
+        [Test]
+        public void Integration_9AgentInPossession_PossessionProfile_InvariantsSatisfied()
+        {
+            Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline with " +
+                          "perception snapshot wiring — activate when Stage 1 simulation " +
+                          "runtime is available (§5.3 T-AT-I-001).");
+        }
+
+        /// <summary>
+        /// T-AT-I-002: 9-agent IN_POSSESSION, DIRECT profile.
+        /// ≤ 3 RUNNERS; depthOffset_m ≈ 21m; all invariants satisfied.
+        /// </summary>
+        [Test]
+        public void Integration_9AgentInPossession_DirectProfile_MaxThreeRunners()
+        {
+            Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline — " +
+                          "activate when Stage 1 simulation runtime is available (§5.3 T-AT-I-002).");
+        }
+
+        /// <summary>
+        /// T-AT-I-003: 9-agent IN_POSSESSION, COUNTER_ATTACK profile.
+        /// ≤ 4 RUNNERS; fastest timing; TRANSITION_HOLD_TICKS = 0 confirmed.
+        /// </summary>
+        [Test]
+        public void Integration_9AgentInPossession_CounterAttackProfile_FastestTiming()
+        {
+            Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline — " +
+                          "activate when Stage 1 simulation runtime is available (§5.3 T-AT-I-003).");
+        }
+
+        /// <summary>
+        /// T-AT-I-004: Possession → TRANSITION → OUT_OF_POSSESSION over 15 ticks.
+        /// Ticks 1–4: normal output; tick 5: SET+decrement; ticks 5–9: frozen; tick 10+: empty.
+        /// </summary>
+        [Test]
+        public void Integration_PossessionToTransitionToOutOfPossession_15Ticks()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-tick AttackingAITick driver with " +
+                          "phase injection — activate when Stage 1 simulation runtime is available " +
+                          "(§5.3 T-AT-I-004 / FR-AT-009).");
+        }
+
+        /// <summary>
+        /// T-AT-I-005: Overload declared on correct flank.
+        /// Ball at y=52; 3 non-WEAK_SIDE agents within 20m of y=52 → overloadActive=true, overloadFlank=RIGHT.
+        /// </summary>
+        [Test]
+        public void Integration_OverloadDeclared_CorrectFlank()
+        {
+            Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline — " +
+                          "activate when Stage 1 simulation runtime is available (§5.3 T-AT-I-005).");
+        }
+
+        /// <summary>
+        /// T-AT-I-006: Overload not declared when WEAK_SIDE agent is excluded from corridor count.
+        /// 3 agents in corridor, 1 is WEAK_SIDE → count = 2; overloadActive=false.
+        /// </summary>
+        [Test]
+        public void Integration_OverloadNotDeclared_WeakSideExcluded()
+        {
+            Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline — " +
+                          "activate when Stage 1 simulation runtime is available (§5.3 T-AT-I-006).");
+        }
+
+        /// <summary>
+        /// T-AT-I-007: Anti-chaos combination resolved.
+        /// 4 RUNNER candidates; after MAX_RUNNERS demotion, MIN_SUPPORT still violated →
+        /// cascade resolves in ≤ 3 iterations; or all-default if unresolvable.
+        /// </summary>
+        [Test]
+        public void Integration_AntiChaosCombination_Resolved()
+        {
+            Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline — " +
+                          "activate when Stage 1 simulation runtime is available (§5.3 T-AT-I-007).");
+        }
+
+        /// <summary>
+        /// T-AT-I-008: All agents with DEFENSE lineMembership → zero RUNNER assignments;
+        /// MIN_SUPPORT_AGENTS still satisfied.
+        /// </summary>
+        [Test]
+        public void Integration_AllDefenseLineMembership_ZeroRunners()
+        {
+            Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline — " +
+                          "activate when Stage 1 simulation runtime is available (§5.3 T-AT-I-008).");
+        }
+
+        /// <summary>
+        /// T-AT-I-009: Hysteresis over 10-tick run.
+        /// Agent alternates SUPPORT_BALL-eligible every other tick → role stable for
+        /// ATTACK_DWELL_TICKS; oscillation suppressed.
+        /// </summary>
+        [Test]
+        public void Integration_Hysteresis_OscillationSuppressedOver10Ticks()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-tick AttackingAITick driver — " +
+                          "activate when Stage 1 simulation runtime is available (§5.3 T-AT-I-009).");
+        }
+
+        /// <summary>
+        /// T-AT-I-010: OUT_OF_POSSESSION skips all computation for 5 ticks →
+        /// 5 empty directives; no role assignment performed.
+        /// </summary>
+        [Test]
+        public void Integration_OutOfPossession_SkipsAllComputation_5Ticks()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-tick AttackingAITick driver — " +
+                          "activate when Stage 1 simulation runtime is available (§5.3 T-AT-I-010).");
+        }
+
+        /// <summary>
+        /// T-AT-I-011: Profile depthOffset verified across all 3 profiles.
+        /// Same agent, same ball position: POSSESSION ≈ 12m; DIRECT ≈ 21m; COUNTER ≈ 24m.
+        /// </summary>
+        [Test]
+        public void Integration_DepthOffset_VerifiedAcrossAllThreeProfiles()
+        {
+            Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline — " +
+                          "activate when Stage 1 simulation runtime is available (§5.3 T-AT-I-011).");
+        }
+
+        /// <summary>
+        /// T-AT-I-012: Width-holding both sides.
+        /// Ball at y=60: nearTouchlineY=64m; ball at y=8: nearTouchlineY=4m.
+        /// </summary>
+        [Test]
+        public void Integration_WidthHolding_BothSides()
+        {
+            Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline — " +
+                          "activate when Stage 1 simulation runtime is available (§5.3 T-AT-I-012).");
+        }
+
+        // ════════════════════════════════════════════════════════════════════════
+        // §5.4 Determinism and Numerical Verification (T-AT-D-001..006)
+        // ════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// T-AT-D-001: 90-minute replay — bit-identical digest.
+        /// Replay tick-for-tick; compare AttackDirective + AttackIntent[] +
+        /// AttackHysteresisState[] + TransitionHoldState. Exact match required.
+        /// </summary>
+        [Test]
+        public void Determinism_90MinuteReplay_BitIdenticalDigest()
+        {
+            Assert.Ignore("Stage 0+1: requires #16 replay infrastructure and full 90-minute " +
+                          "match simulation — activate when deterministic replay is wired " +
+                          "(§5.4 T-AT-D-001 / #16 §5).");
+        }
+
+        /// <summary>
+        /// T-AT-D-002: EntityId iteration order stability.
+        /// Fixed pool; assignment order is identical across multiple independent runs.
+        /// </summary>
+        [Test]
+        public void Determinism_EntityIdIterationOrder_StableAcrossRuns()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-run deterministic driver — " +
+                          "activate when Stage 1 simulation runtime is available (§5.4 T-AT-D-002).");
+        }
+
+        /// <summary>
+        /// T-AT-D-003: RNG domain tag isolation.
+        /// Two matches; DOMAIN_TAG_ATTACKING_AI tagged correctly; no cross-domain bleed.
+        /// </summary>
+        [Test]
+        public void Determinism_RngDomainTagIsolation_NoCrossDomainBleed()
+        {
+            Assert.Ignore("Stage 0+1: requires #16 DeterministicRngService with " +
+                          "DOMAIN_TAG_ATTACKING_AI wired — activate when Stage 1 RNG " +
+                          "integration is complete (§5.4 T-AT-D-003).");
+        }
+
+        /// <summary>
+        /// T-AT-D-004: Hysteresis state digest round-trip.
+        /// Serialize/deserialize AttackHysteresisState[]; resume tick → identical output after restore.
+        /// </summary>
+        [Test]
+        public void Determinism_HysteresisStateDigest_RoundTrip()
+        {
+            Assert.Ignore("Stage 0+1: requires #16 SnapshotCodec serialization of " +
+                          "AttackHysteresisState[] — activate when Stage 1 snapshot " +
+                          "integration is complete (§5.4 T-AT-D-004).");
+        }
+
+        /// <summary>
+        /// T-AT-D-005: TransitionHoldState round-trip.
+        /// Serialize/deserialize; resume transition → countdown continues correctly.
+        /// </summary>
+        [Test]
+        public void Determinism_TransitionHoldState_RoundTrip()
+        {
+            Assert.Ignore("Stage 0+1: requires #16 SnapshotCodec serialization of " +
+                          "TransitionHoldState — activate when Stage 1 snapshot " +
+                          "integration is complete (§5.4 T-AT-D-005).");
+        }
+
+        /// <summary>
+        /// T-AT-D-006: Invariant demotion determinism.
+        /// Same violation; run 1000 times → identical demotion order every run.
+        /// </summary>
+        [Test]
+        public void Determinism_InvariantDemotion_IdenticalOrderAcross1000Runs()
+        {
+            Assert.Ignore("Stage 0+1: requires multi-run deterministic driver — " +
+                          "activate when Stage 1 simulation runtime is available (§5.4 T-AT-D-006).");
+        }
+
+        // ════════════════════════════════════════════════════════════════════════
+        // §5.5 Performance Validation (T-AT-P-001..003)
+        // ════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// T-AT-P-001: Per-tick time with 9 off-ball agents, POSSESSION profile.
+        /// Budget: ≤ 0.10 ms on reference host per §6.3.
+        /// </summary>
+        [Test]
+        public void Performance_PerTick_9Agents_PossessionProfile_Under0_1ms()
+        {
+            Assert.Ignore("Stage 0+1: requires reference host certification platform pinned in " +
+                          "docs/tracking/certification-platform.md — activate when Stage 0+1 " +
+                          "perf-gate infrastructure is ready (§5.5 T-AT-P-001).");
+        }
+
+        /// <summary>
+        /// T-AT-P-002: Per-tick time with 10 agents, COUNTER_ATTACK profile (max pool + max RUNNER candidates).
+        /// Budget: ≤ 0.10 ms on reference host per §6.3.
+        /// </summary>
+        [Test]
+        public void Performance_PerTick_10Agents_CounterAttackProfile_Under0_1ms()
+        {
+            Assert.Ignore("Stage 0+1: requires reference host certification platform pinned in " +
+                          "docs/tracking/certification-platform.md — activate when Stage 0+1 " +
+                          "perf-gate infrastructure is ready (§5.5 T-AT-P-002).");
+        }
+
+        /// <summary>
+        /// T-AT-P-003: Per-tick time, anti-chaos worst case (3 invariant-pass iterations, all-default path).
+        /// Budget: ≤ 0.10 ms on reference host per §6.3.
+        /// </summary>
+        [Test]
+        public void Performance_PerTick_AntiChaosWorstCase_Under0_1ms()
+        {
+            Assert.Ignore("Stage 0+1: requires reference host certification platform pinned in " +
+                          "docs/tracking/certification-platform.md — activate when Stage 0+1 " +
+                          "perf-gate infrastructure is ready (§5.5 T-AT-P-003).");
+        }
+    }
+
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                                              |
 // | 1.0     | 2026-05-31 | —      | Initial implementation. ≥ 20 T-AT-U unit tests covering T-AT-U-001..048 per §5.2. |
 //           |            |        | Covers: pool construction, role assignment, run-param clamps, support heuristic,     |
 //           |            |        | width-holding, weak-side, overload detection, invariant enforcement, hysteresis,      |
 //           |            |        | transition controller, constants catalogue, style profiles, struct field counts.       |
+// | 1.1     | 2026-06-01 | —      | Add §5.3 integration stubs (T-AT-I-001..012), §5.4 determinism stubs               |
+//           |            |        | (T-AT-D-001..006), §5.5 performance stubs (T-AT-P-001..003), and T-AT-U-046         |
+//           |            |        | anti-chaos order stub. All stubs use Assert.Ignore per §5.1.1.                       |
 #endregion

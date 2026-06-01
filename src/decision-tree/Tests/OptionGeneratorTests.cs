@@ -1,10 +1,11 @@
 // File:     src/decision-tree/Tests/OptionGeneratorTests.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-01
 // Author:   —
-// Spec:     Decision Tree #8 §5 (UT-01 through UT-04), Code Standards #20
+// Spec:     Decision Tree #8 §5 (UT-OG-01 through UT-OG-07), Code Standards #20
 // Purpose:  Unit tests for OptionGenerator. Verifies all 7 action type gates,
-//           PASS candidate cap, and option set invariants (§3.1.10).
+//           PASS candidate cap, stale-snapshot INTERCEPT rejection, pitch-bounds
+//           invariant, and option set invariants (§3.1.10).
 
 using NUnit.Framework;
 using UnityEngine;
@@ -119,6 +120,66 @@ namespace TacticalDirector.DecisionTree.Tests
                 if (Buffer[i].Type == ActionType.PASS) passCount++;
 
             Assert.LessOrEqual(passCount, 2, "Decisions=1 should cap PASS candidates at 2");
+        }
+
+        // ── UT-OG-04: INTERCEPT not generated when ball snapshot is stale ─────
+
+        [Test]
+        public void InterceptNotGenerated_WhenBallSnapshotStale()
+        {
+            DecisionContext ctx = BuildOffBallContext();
+            ctx.Snapshot.BallStalenessFrames = 1;
+            ctx.Snapshot.BallVisible = true;
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+            for (int i = 0; i < count; i++)
+                Assert.AreNotEqual(ActionType.INTERCEPT, Buffer[i].Type,
+                    "INTERCEPT must not be generated when BallStalenessFrames > 0");
+        }
+
+        // ── UT-OG-06: All TargetPositions within pitch bounds ─────────────────
+
+        [Test]
+        public void AllTargetPositions_WithinPitchBounds()
+        {
+            DecisionContext ctx = BuildPossessionContext();
+            ctx.Snapshot.VisibleTeammatesCount = 3;
+            ctx.Snapshot.VisibleTeammates = new PerceivedAgent[10];
+            ctx.Snapshot.VisibleTeammates[0] = new PerceivedAgent
+            {
+                AgentId = 20,
+                PerceivedPosition = new Vector2(30.0f, 20.0f),
+                PerceivedVelocity = Vector2.zero,
+                ConfidenceScore = 1.0f
+            };
+            ctx.Snapshot.VisibleTeammates[1] = new PerceivedAgent
+            {
+                AgentId = 21,
+                PerceivedPosition = new Vector2(70.0f, 50.0f),
+                PerceivedVelocity = Vector2.zero,
+                ConfidenceScore = 1.0f
+            };
+            ctx.Snapshot.VisibleTeammates[2] = new PerceivedAgent
+            {
+                AgentId = 22,
+                PerceivedPosition = new Vector2(90.0f, 34.0f),
+                PerceivedVelocity = Vector2.zero,
+                ConfidenceScore = 1.0f
+            };
+
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 tp = Buffer[i].TargetPosition;
+                Assert.GreaterOrEqual(tp.x, 0.0f,
+                    $"Option {i} ({Buffer[i].Type}) TargetPosition.x below pitch min (0)");
+                Assert.LessOrEqual(tp.x, 105.0f,
+                    $"Option {i} ({Buffer[i].Type}) TargetPosition.x above pitch max (105)");
+                Assert.GreaterOrEqual(tp.y, 0.0f,
+                    $"Option {i} ({Buffer[i].Type}) TargetPosition.y below pitch min (0)");
+                Assert.LessOrEqual(tp.y, 68.0f,
+                    $"Option {i} ({Buffer[i].Type}) TargetPosition.y above pitch max (68)");
+            }
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
@@ -236,6 +297,9 @@ namespace TacticalDirector.DecisionTree.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                     |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                                   |
+// | 1.1     | 2026-06-01 | —      | Added UT-OG-04 (INTERCEPT rejected when BallStalenessFrames > 0) and     |
+// |         |            |        |   UT-OG-06 (all TargetPositions within pitch bounds). Decision Tree #8    |
+// |         |            |        |   §5 spec requirements.                                                   |
 #endregion

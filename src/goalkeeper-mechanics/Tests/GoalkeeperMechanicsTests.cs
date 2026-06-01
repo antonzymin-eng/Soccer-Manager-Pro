@@ -1196,9 +1196,322 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
             Assert.Less(coeffLow, coeffHigh, "Higher Throwing attribute should produce a higher throw accuracy coefficient.");
         }
     }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // §5.1.9  Failed-save emission
+    // ════════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// T-5.1.9.x  SaveAttemptedEvent.FailureCause emission tests.
+    /// Verifies that the correct FailureCause enum value is set for each failure
+    /// condition (§2.3 F-01..F-04 + DisturbedInDuel).
+    /// Goalkeeper Mechanics #11 §3.9 / §5.1.9.
+    /// </summary>
+    [TestFixture]
+    internal class FailedSaveEmissionTests
+    {
+        // ── T-5.1.9.1  MissedContact — ball well outside reach ────────────────
+
+        /// <summary>
+        /// T-5.1.9.1: Ball position well outside reach envelope →
+        /// SaveAttemptedEvent.FailureCause == MissedContact.
+        /// Goalkeeper Mechanics #11 §2.3 F-01 / §3.9.
+        /// </summary>
+        [Test]
+        public void FailureCause_MissedContact_BallOutsideReach()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when GoalkeeperMechanics.ProcessSaveAttempt is wired");
+        }
+
+        // ── T-5.1.9.2  MistimedDive — dive launched too early ─────────────────
+
+        /// <summary>
+        /// T-5.1.9.2: Dive launched before ShotExecutedEvent reaction window has elapsed →
+        /// SaveAttemptedEvent.FailureCause == MistimedDive.
+        /// Goalkeeper Mechanics #11 §2.3 F-03 / §3.2.
+        /// </summary>
+        [Test]
+        public void FailureCause_MistimedDive_DiveStartedTooEarly()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when GoalkeeperMechanics.ProcessSaveAttempt is wired");
+        }
+
+        // ── T-5.1.9.3  WrongDirection — dive in wrong direction ───────────────
+
+        /// <summary>
+        /// T-5.1.9.3: Dive direction opposite to ball trajectory →
+        /// SaveAttemptedEvent.FailureCause == WrongDirection.
+        /// Goalkeeper Mechanics #11 §2.3 F-02.
+        /// </summary>
+        [Test]
+        public void FailureCause_WrongDirection_DiveInWrongDirection()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when GoalkeeperMechanics.ProcessSaveAttempt is wired");
+        }
+
+        // ── T-5.1.9.4  OutOfReach — ball inside save volume but outside reach ─
+
+        /// <summary>
+        /// T-5.1.9.4: Ball is within save volume but outside the GK reach envelope at contact frame →
+        /// SaveAttemptedEvent.FailureCause == OutOfReach.
+        /// Goalkeeper Mechanics #11 §2.3 F-04.
+        /// </summary>
+        [Test]
+        public void FailureCause_OutOfReach_BallBeyondReachEnvelope()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when GoalkeeperMechanics.ProcessSaveAttempt is wired");
+        }
+
+        // ── T-5.1.9.5  DisturbedInDuel — duel disturbance above threshold ─────
+
+        /// <summary>
+        /// T-5.1.9.5: Cross-claim duel loser with disturbanceFactor above threshold →
+        /// SaveAttemptedEvent.FailureCause == DisturbedInDuel.
+        /// Goalkeeper Mechanics #11 §3.6 / §3.5.
+        /// </summary>
+        [Test]
+        public void FailureCause_DisturbedInDuel_DuelDisturbanceAboveThreshold()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when GoalkeeperMechanics.ProcessSaveAttempt is wired");
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // §5.2  Integration test stubs
+    // ════════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// T-GK-I-001..011  Integration test stubs. Each test is an Assert.Ignore placeholder
+    /// pending full match-simulation infrastructure. Goalkeeper Mechanics #11 §5.2.
+    /// </summary>
+    [TestFixture]
+    internal class IntegrationTestStubs
+    {
+        /// <summary>T-GK-I-001: Open-play save from a Shot Mechanics #6 shot (ShotExecutedEvent). §5.2.1.</summary>
+        [Test]
+        public void T_GK_I_001_OpenPlaySave()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when GoalkeeperMechanics is wired to Shot Mechanics #6 ShotExecutedEvent");
+        }
+
+        /// <summary>T-GK-I-002: Free-kick save (set-piece pathway, KD-19). §5.2.2.</summary>
+        [Test]
+        public void T_GK_I_002_FreeKickSave()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when set-piece pipeline is wired");
+        }
+
+        /// <summary>T-GK-I-003: Penalty save from 11 m; GK in Set state; reaction window at early-tolerance edge. §5.2.3.</summary>
+        [Test]
+        public void T_GK_I_003_PenaltySave()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when penalty shot pipeline is wired");
+        }
+
+        /// <summary>T-GK-I-004: Corner cross-claim — hand-contact path (§3.6 hand route). §5.2.4.</summary>
+        [Test]
+        public void T_GK_I_004_CornerCrossClaimHandPath()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when cross-claim duel is wired to event bus");
+        }
+
+        /// <summary>T-GK-I-005: Corner cross-claim — head-contact path routes to Heading #10 (KD-14 / FR-GK-004 / FR-GK-022). §5.2.5.</summary>
+        [Test]
+        public void T_GK_I_005_CornerCrossClaimHeadPath()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when head-contact routing to Heading Mechanics #10 is wired");
+        }
+
+        /// <summary>T-GK-I-006: 1v1 confrontation (OneOnOne state; OneVsOne attribute effects per KD-20). §5.2.6.</summary>
+        [Test]
+        public void T_GK_I_006_OneVsOneConfrontation()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when OneOnOne state pipeline is wired");
+        }
+
+        /// <summary>T-GK-I-007: Mistimed dive → failed save → no ball state change (FR-GK-009). §5.2.7.</summary>
+        [Test]
+        public void T_GK_I_007_MistimedDiveNoBallChange()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when GoalkeeperMechanics.ProcessSaveAttempt is wired");
+        }
+
+        /// <summary>T-GK-I-008: GK rush + abort on ball interception (KD-15). §5.2.8.</summary>
+        [Test]
+        public void T_GK_I_008_RushAbortOnInterception()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when rush-abort pipeline is wired to BallSystem");
+        }
+
+        /// <summary>T-GK-I-009: Save + distribution full cycle: ShotExecutedEvent to DistributionExecutedEvent;
+        /// Pass Mechanics #5 receives valid PassIntent via ConsumePassIntent. §5.2.9.</summary>
+        [Test]
+        public void T_GK_I_009_SaveAndDistributionCycle()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when distribution-to-pass-mechanics pipeline is wired");
+        }
+
+        /// <summary>T-GK-I-010: Deterministic replay — 1000-tick scenario producing identical SaveAttemptedEvent
+        /// and DistributionExecutedEvent sequences across 10 runs with the same RNG seed. §5.2.10.</summary>
+        [Test]
+        public void T_GK_I_010_DeterministicReplay()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when deterministic RNG wiring to DeterministicSimulation #16 is complete");
+        }
+
+        /// <summary>T-GK-I-011: Positioning AI #12 baseline-slot ratification: GK reads baseline from
+        /// PositioningAI.GetGKBaselineSlot and applies KD-13 reactive radius correctly. §5.2.11.</summary>
+        [Test]
+        public void T_GK_I_011_PositioningBaselineSlotRatification()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when PositioningAI #12 GetGKBaselineSlot is wired");
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // §5.3  Validation scenario stubs
+    // ════════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// T-GK-V-001..004  Validation scenario stubs (match-feel). Each test is an Assert.Ignore
+    /// placeholder pending full match simulation. Goalkeeper Mechanics #11 §5.3.
+    /// </summary>
+    [TestFixture]
+    internal class ValidationScenarioStubs
+    {
+        /// <summary>T-GK-V-001: 22-agent 90-minute simulation; verify handling-label distribution
+        /// matches designer-set target band. §5.3.1.</summary>
+        [Test]
+        public void T_GK_V_001_MatchPeakHandlingLabelDistribution()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full 22-agent match simulation — activate when Stage 0+1 match loop is operational");
+        }
+
+        /// <summary>T-GK-V-002: Reflex A/B — same shot trajectory, two GK profiles
+        /// (Reflexes_norm 0.60 vs 0.90); measurable reactionWindowAchieved divergence >= 0.20. §5.3.2.</summary>
+        [Test]
+        public void T_GK_V_002_ReflexABDivergence()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when reaction pipeline is wired end-to-end");
+        }
+
+        /// <summary>T-GK-V-003: Fatigue gradient — peakHandZ at fatigue 0.0 vs 1.0;
+        /// reach reduction approximately DIVE_FATIGUE_PEAK_Z_COEFF / DIVE_PEAK_Z_BASE_M (~17%). §5.3.3.</summary>
+        [Test]
+        public void T_GK_V_003_FatigueGradient()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when full dive-kinematics fatigue path is exercised end-to-end");
+        }
+
+        /// <summary>T-GK-V-004: 1v1 conversion rate — striker through-ball into 1v1;
+        /// verify save rate approximately 70% (conversion ~30%) per Opta 1v1 baseline class. §5.3.4.</summary>
+        [Test]
+        public void T_GK_V_004_OneVsOneConversionRate()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation — activate when OneOnOne state pipeline is fully wired and stat collection is operational");
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // §5.4  Cross-spec conformance stubs
+    // ════════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// T-GK-C-001..007  Cross-spec conformance stubs. Each test is an Assert.Ignore placeholder
+    /// pending CI tooling setup. Goalkeeper Mechanics #11 §5.4.
+    /// </summary>
+    [TestFixture]
+    internal class ConformanceGateStubs
+    {
+        /// <summary>T-GK-C-001: Grep gate — no SaveType / SaveClass / SaveOutcome symbol in src/ (KD-1 / FR-GK-003). §5.4.1.</summary>
+        [Test]
+        public void T_GK_C_001_NoSaveTypeSymbol()
+        {
+            Assert.Ignore(
+                "Stage 0+1: grep gate — activate when CI grep tooling is wired (Testing Strategy #19)");
+        }
+
+        /// <summary>T-GK-C-002: Every constant in GoalkeeperConstants.cs has a source-tag comment
+        /// in {[GT],[EST],[FIXED],[DERIVED],[CROSS],[CROSS-PENDING]} (KD-9 / FR-GK-015). §5.4.2.</summary>
+        [Test]
+        public void T_GK_C_002_ConstantTagVerification()
+        {
+            Assert.Ignore(
+                "Stage 0+1: programmatic constant-tag verification — activate when Code Standards #20 §3 tooling is wired");
+        }
+
+        /// <summary>T-GK-C-003: Every RNG call uses DeterministicRng.NextFloat or NextGaussian with drawSiteId
+        /// and DOMAIN_TAG_GOALKEEPER (KD-7 / FR-GK-010). §5.4.3.</summary>
+        [Test]
+        public void T_GK_C_003_RngRoutingDiscipline()
+        {
+            Assert.Ignore(
+                "Stage 0+1: grep gate against System.Random and Random.Range — activate when CI grep tooling is wired");
+        }
+
+        /// <summary>T-GK-C-004: Positioning AI #12 GK constant promotion atomic with #11 IN REVIEW:
+        /// GK constants carry [GT]; positioning-ai/section-6.md rows agree (KD-13). §5.4.4.</summary>
+        [Test]
+        public void T_GK_C_004_PositioningAiConstantPromotion()
+        {
+            Assert.Ignore(
+                "Stage 0+1: scripted gate — activate when Positioning AI #12 constants are verified at commit-time of status flip");
+        }
+
+        /// <summary>T-GK-C-005: No System.Random / DateTime.Now paths in any goalkeeper src/ file
+        /// (CLAUDE.md / FR-GK-027). §5.4.5.</summary>
+        [Test]
+        public void T_GK_C_005_NoSystemRandom()
+        {
+            Assert.Ignore(
+                "Stage 0+1: grep gate — activate when CI grep tooling is wired (Testing Strategy #19)");
+        }
+
+        /// <summary>T-GK-C-006: Every XC-011-NNN cross-reference resolves to a specific section
+        /// in the named upstream spec (§9.2). §5.4.6.</summary>
+        [Test]
+        public void T_GK_C_006_CrossReferenceResolution()
+        {
+            Assert.Ignore(
+                "Stage 0+1: scripted cross-reference resolution gate — activate when spec-tooling for XC-NNN resolution is wired");
+        }
+
+        /// <summary>T-GK-C-007: Iteration order in §3.6.3 cross-claim duel is exactly #16 §3.2 entity order;
+        /// same seed → same winner across 1000 runs. §5.4.7.</summary>
+        [Test]
+        public void T_GK_C_007_CrossClaimDuelIterationOrder()
+        {
+            Assert.Ignore(
+                "Stage 0+1: requires full match simulation with Deterministic Simulation #16 entity-order wiring — activate when duel entity ordering is validated");
+        }
+    }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-05-31 | —      | Initial implementation. 25+ unit tests covering §5.1.1–§5.1.8.   |
+// | 1.1     | 2026-06-01 | —      | Added §5.1.9 failure-cause stubs (5 tests); §5.2 integration       |
+// |         |            |        | stubs T-GK-I-001..011; §5.3 validation stubs T-GK-V-001..004;     |
+// |         |            |        | §5.4 conformance stubs T-GK-C-001..007. All Assert.Ignore pending  |
+// |         |            |        | full match-simulation infrastructure (Stage 0+1).                   |
 #endregion

@@ -1,5 +1,6 @@
 // File:     src/shot-mechanics/Tests/ShotMechanicsTests.cs
 // Created:  2026-05-31
+// Modified: 2026-06-01
 // Author:   —
 // Spec:     Shot Mechanics #6 §5
 // Purpose:  NUnit Edit-Mode unit tests covering PV (parameter validation), SV (velocity model),
@@ -1224,7 +1225,104 @@ namespace TacticalDirector.ShotMechanics.Tests
     }
 }
 
+    // ════════════════════════════════════════════════════════════════════════════
+    // §5.12 Integration Tests (IT-)
+    // ════════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Integration tests for Shot Mechanics #6 §5.12. All require ShotExecutor wired to
+    /// IShotBallSystem, IShotAgentQuery, IShotCollisionQuery, and EventBus at Stage 0+1.
+    /// </summary>
+    internal sealed class ShotMechanicsIntegrationTests
+    {
+        /// <summary>IT-001: Ball Physics Interface — ApplyKick called with valid arguments. §5.12.</summary>
+        [Test]
+        public void BallPhysicsInterface_ApplyKick_CalledWithValidArguments()
+        {
+            Assert.Ignore("Stage 0+1: requires IShotBallSystem mock wired to ShotExecutor — IT-001");
+        }
+
+        /// <summary>IT-002: Agent Movement Interface — AgentPhysicalProperties frozen at INITIATING. §5.12.</summary>
+        [Test]
+        public void AgentMovementInterface_AgentProperties_FrozenAtInitiating()
+        {
+            Assert.Ignore("Stage 0+1: requires IShotAgentQuery mock wired — IT-002");
+        }
+
+        /// <summary>IT-003: Collision System Interface — tackle interrupt during WINDUP cancels shot. §5.12.</summary>
+        [Test]
+        public void CollisionInterface_TackleInterruptDuringWindup_CancelsShot()
+        {
+            Assert.Ignore("Stage 0+1: requires IShotCollisionQuery mock returning tackle flag — IT-003");
+        }
+
+        /// <summary>IT-004: Collision System Interface — tackle interrupt during CONTACT does not cancel. §5.12.</summary>
+        [Test]
+        public void CollisionInterface_TackleInterruptDuringContact_DoesNotCancel()
+        {
+            Assert.Ignore("Stage 0+1: requires IShotCollisionQuery mock — IT-004");
+        }
+
+        /// <summary>IT-005: Event System Interface — ShotExecutedEvent published with complete payload. §5.12.</summary>
+        [Test]
+        public void EventInterface_ShotExecutedEvent_PublishedWithCompletePayload()
+        {
+            Assert.Ignore("Stage 0+1: requires EventBus wired to ShotEventEmitter — IT-005");
+        }
+
+        /// <summary>IT-006: Event System Interface — ShotCancelledEvent published on tackle, not ShotExecutedEvent. §5.12.</summary>
+        [Test]
+        public void EventInterface_TackleCancelled_PublishesCancelledNotExecuted()
+        {
+            Assert.Ignore("Stage 0+1: requires EventBus wired to ShotEventEmitter — IT-006");
+        }
+
+        /// <summary>IT-007: End-to-End — top-corner placement produces correct aim direction. §5.12.</summary>
+        [Test]
+        public void EndToEnd_TopCornerPlacement_ProducesCorrectAimDirection()
+        {
+            Assert.Ignore("Stage 0+1: requires full ShotExecutor pipeline with IShotBallSystem — IT-007");
+        }
+
+        /// <summary>IT-008: End-to-End — chip shot profile produces elevated launch angle. §5.12.</summary>
+        [Test]
+        public void EndToEnd_ChipShotProfile_ProducesElevatedLaunchAngle()
+        {
+            Assert.Ignore("Stage 0+1: requires full ShotExecutor pipeline — IT-008");
+        }
+
+        /// <summary>IT-009: End-to-End — driven shot profile produces low launch angle and high speed. §5.12.</summary>
+        [Test]
+        public void EndToEnd_DrivenShotProfile_ProducesLowAngleAndHighSpeed()
+        {
+            Assert.Ignore("Stage 0+1: requires full ShotExecutor pipeline — IT-009");
+        }
+
+        /// <summary>IT-010: End-to-End — weak foot shot produces higher error and lower speed than strong foot. §5.12.</summary>
+        [Test]
+        public void EndToEnd_WeakFootShot_HigherErrorAndLowerSpeedThanStrongFoot()
+        {
+            Assert.Ignore("Stage 0+1: requires full ShotExecutor with IShotAgentQuery — IT-010");
+        }
+
+        /// <summary>IT-011: ShotAnimationData stub populated on completion, not published. §5.12.</summary>
+        [Test]
+        public void ShotAnimationData_PopulatedOnCompletion_NotPublished()
+        {
+            Assert.Ignore("Stage 0+1: requires full ShotExecutor pipeline; ShotAnimationData is Stage 1+ — IT-011");
+        }
+
+        /// <summary>IT-012 CRITICAL: Determinism regression — identical inputs produce identical outputs. §5.12.</summary>
+        [Test]
+        public void CriticalDeterminism_IdenticalInputs_ProduceIdenticalOutputs()
+        {
+            Assert.Ignore("Stage 0+1: requires Deterministic Simulation #16 digest comparison — IT-012 CRITICAL");
+        }
+    }
+}
+
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-31 | —      | Initial implementation. |
+// | 1.1     | 2026-06-01 | —      | Add §5.12 integration test stubs IT-001..012 (all Assert.Ignore; Stage 0+1). |
 #endregion
