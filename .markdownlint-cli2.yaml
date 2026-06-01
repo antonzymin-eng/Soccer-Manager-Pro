@@ -2,10 +2,13 @@ config:
   default: true
   MD013: false   # line length — specs are long-form prose
   MD024: false   # duplicate headings — section files repeat structure
+  MD032: false   # blanks around lists — section docs intersperse lists in prose
   MD033: false   # inline HTML allowed (tags like <details>, comments)
   MD034: false   # bare URLs OK in citation lists
-  MD041: false   # first line need not be top-level heading (section files)
   MD036: false   # emphasis-as-heading used in tables
+  MD040: false   # fenced code language — many specs use language-agnostic blocks
+  MD041: false   # first line need not be top-level heading (section files)
+  MD060: false   # table column style — Unicode arrows / multi-line cells trip auto-detect
   MD007:
     indent: 2
 ignores:

@@ -224,7 +224,9 @@ namespace TacticalDirector.ShotMechanics
 
         // ── §3.5 Placement ──────────────────────────────────────────────────────────
 
-        /// <summary>[GT] Epsilon for aim-direction magnitude check; guards against shooter-at-goal-line singularity (metres). §3.5.</summary>
+        /// <summary>[GT] Epsilon for aim-direction magnitude (metres). Compared against
+        /// squared magnitude (effective threshold 1e-8) in ShotExecutor FM-04a and
+        /// ShotPlacementResolver; guards against shooter-at-goal-line singularity. §3.5.</summary>
         public static readonly float AimDirectionEpsilon = 1e-4f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Epsilon for aim-direction X-component clamp in ApplyErrorOffset (dimensionless). Prevents degenerate division when aim is nearly perpendicular to goal line. §3.5.</summary>
@@ -405,4 +407,6 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        |   Header: added "(EST omitted)" note. WeakFootRatingRange: invariant (>0) note added.   |
 // |         |            |        |   Added: AimDirectionComponentEpsilon (0.001f), GoalLineDistanceFloor (0.1f),           |
 // |         |            |        |   ErrorDirectionMatchSeed (0), StationaryRunUpScore (0.5f) GT constants.               |
+// | 1.7     | 2026-06-01 | —      | AR-3 L-2: AimDirectionEpsilon XML doc notes squared-magnitude comparison (effective       |
+// |         |            |        |   1e-8) to prevent future re-scaling errors.                                            |
 #endregion

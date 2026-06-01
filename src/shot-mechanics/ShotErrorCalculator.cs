@@ -88,13 +88,21 @@ namespace TacticalDirector.ShotMechanics
         /// </summary>
         public static Vector2 ComputeErrorDirection(int matchSeed, int agentId, int frameNumber)
         {
-            // Deterministic hash per KD-4. Using xorshift-mix combining three seeds.
-            // This must not use System.Random — determinism is a hard requirement (NFR-01).
+            // Deterministic hash per KD-4. Pure-static 32-bit mix combining three
+            // seeds; chosen over DeterministicRngService.DrawReserved() because this
+            // calculator is a pure-static utility consumed without constructor
+            // injection (Stage 1 RNG-service wiring tracked in the spec-error-log
+            // entry for §3.6.9). Multipliers 0x9E3779B1 and 0x85EBCA77 are
+            // well-known 32-bit avalanche multipliers from the Wang/Jenkins
+            // integer-hash lineage (also used by Murmur3 finalizer family); they
+            // are NOT the Knuth-Fibonacci ⌊2^32·φ⌋ value (which is 0x9E3779B9).
+            // Final mix 0x45D9F3B7 is the canonical SplitMix32 constant. NFR-01:
+            // no System.Random.
             uint h = unchecked((uint)matchSeed
                                ^ ((uint)agentId   * 2654435761u)
                                ^ ((uint)frameNumber * 2246822519u));
 
-            // SplitMix64-style final mix (32-bit variant)
+            // SplitMix32 final mix
             h ^= h >> 16;
             h = unchecked(h * 0x45d9f3b7u);
             h ^= h >> 16;
@@ -123,4 +131,10 @@ namespace TacticalDirector.ShotMechanics
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                       |
 // | 1.1     | 2026-05-28 | —      | H-3: Updated D_Mid→DMid, D_Scale→DScale constant references.  |
 // | 1.2     | 2026-05-28 | —      | M-3: Magic literal 0.0175f replaced with Mathf.Deg2Rad.        |
+// | 1.3     | 2026-06-01 | —      | AR-2 M-3: documented multiplier provenance + SplitMix32 final  |
+// |         |            |        |   mix rationale; pure-static utility justification for not     |
+// |         |            |        |   consuming DeterministicRngService.DrawReserved().            |
+// | 1.4     | 2026-06-01 | —      | AR-3 M-1: corrected provenance — multipliers are Wang/Jenkins  |
+// |         |            |        |   avalanche constants (0x9E3779B1, 0x85EBCA77), NOT Knuth-     |
+// |         |            |        |   Fibonacci ⌊2^32·φ⌋ (which would be 0x9E3779B9).               |
 #endregion
