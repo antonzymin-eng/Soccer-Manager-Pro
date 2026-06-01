@@ -26,7 +26,7 @@ namespace TacticalDirector.ShotMechanics
         /// <summary>
         /// World-space X coordinate of the goal line (pitch X axis, goal-to-goal direction).
         /// Attacking-right goal: X = PitchLength (105m). Attacking-left goal: X = 0m.
-        /// NOTE: Spec §4.1.1 names this field GoalLineZ; implementation uses GoalLineX to match
+        /// NOTE: Spec #6 v0.1 §4.1.1 (pre-implementation draft) names this field GoalLineZ; implementation uses GoalLineX to match
         /// the authoritative coordinate system (CLAUDE.md: X = goal-to-goal).
         /// </summary>
         public float GoalLineX;
@@ -34,20 +34,20 @@ namespace TacticalDirector.ShotMechanics
         /// <summary>
         /// World-space Y coordinate of the left post (pitch Y axis, touchline direction).
         /// From the attacker's perspective facing the goal. §4.1.1.
-        /// NOTE: Spec §4.1.1 names this field LeftPostX; implementation uses LeftPostY to match
+        /// NOTE: Spec #6 v0.1 §4.1.1 (pre-implementation draft) names this field LeftPostX; implementation uses LeftPostY to match
         /// the authoritative coordinate system (CLAUDE.md: Y = touchline-to-touchline).
         /// </summary>
         public float LeftPostY;
 
         /// <summary>
         /// World-space Y coordinate of the right post.
-        /// NOTE: Spec §4.1.1 names this field RightPostX; see LeftPostY note.
+        /// NOTE: Spec #6 v0.1 §4.1.1 (pre-implementation draft) names this field RightPostX; see LeftPostY note.
         /// </summary>
         public float RightPostY;
 
         /// <summary>
         /// World-space Z coordinate of the crossbar underside (pitch Z axis = height).
-        /// NOTE: Spec §4.1.1 names this field CrossbarY; implementation uses CrossbarZ.
+        /// NOTE: Spec #6 v0.1 §4.1.1 (pre-implementation draft) names this field CrossbarY; implementation uses CrossbarZ.
         /// </summary>
         public float CrossbarZ;
     }
@@ -56,4 +56,5 @@ namespace TacticalDirector.ShotMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                                        |
 // | 1.0     | 2026-05-28 | —      | Extracted from GoalGeometryProvider.cs (H-2). |
+// | 1.1     | 2026-06-01 | —      | AR-2 L-2: cite spec version (v0.1) in axis-rename notes.    |
 #endregion

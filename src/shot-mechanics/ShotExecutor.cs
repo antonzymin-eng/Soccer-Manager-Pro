@@ -4,7 +4,7 @@
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.9, §4.1, §4.2, §4.3, §4.4, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the five-state shot execution state machine:
-//           IDLE → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE (±STUMBLING flag on result).
+//           IDLE → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE (StumbleTriggered boolean on result).
 //           Validates ShotRequest, coordinates sub-system calls, calls Ball.ApplyKick() at
 //           CONTACT exactly once, publishes events. Dependencies constructor-injected (FR-CS-051–054).
 
@@ -18,7 +18,7 @@ namespace TacticalDirector.ShotMechanics
     /// <summary>
     /// Orchestrates shot execution across the five-state lifecycle.
     /// IDLE → WINDUP → CONTACT → FOLLOW_THROUGH → COMPLETE. INITIATING is synchronous in Execute();
-    /// STUMBLING is a flag on the result, not a distinct state.
+    /// StumbleTriggered is a boolean flag on the result, not a distinct state.
     /// Shot Mechanics #6 §3.9, §4.1.
     /// </summary>
     public sealed class ShotExecutor
@@ -387,8 +387,21 @@ namespace TacticalDirector.ShotMechanics
             float   launchRad     = _launchAngleDeg * Mathf.Deg2Rad;
             float   horizontalSpd = _kickSpeed * Mathf.Cos(launchRad);
             float   verticalSpd   = _kickSpeed * Mathf.Sin(launchRad);
-            // Encode launch angle into Z while preserving XY direction from finalDirection
-            Vector2 aimXY         = new Vector2(finalDirection.x, finalDirection.y).normalized;
+            // Encode launch angle into Z while preserving XY direction from finalDirection.
+            // FM-04a: Guard against degenerate (near-zero) XY magnitude before normalize —
+            // happens only if shooter is exactly on the goal line (ApplyErrorOffset returned a
+            // delta with ~zero XY). Route through Invalid outcome rather than producing NaN
+            // and relying on the FM-04 post-hoc trap below.
+            Vector2 aimXY2 = new Vector2(finalDirection.x, finalDirection.y);
+            if (aimXY2.sqrMagnitude < ShotMechanicsConstants.AimDirectionEpsilon
+                                       * ShotMechanicsConstants.AimDirectionEpsilon)
+            {
+                Debug.LogError($"[ShotExecutor] FM-04a: degenerate XY aim (shooter on goal line). Shot invalid. Agent={_request.AgentId}");
+                _lastResult = new ShotResult { Outcome = ShotOutcome.Invalid, ContactFrame = -1 };
+                _state = ShotExecutionState.Idle;
+                return;
+            }
+            Vector2 aimXY = aimXY2.normalized;
             Vector3 finalVelocity = new Vector3(
                 aimXY.x * horizontalSpd,
                 aimXY.y * horizontalSpd,
@@ -494,4 +507,7 @@ namespace TacticalDirector.ShotMechanics
 // | 1.4     | 2026-05-28 | —      | M-1: VR-09: Fatigue [0,1] range validation added (out-of-range = Invalid).          |
 // |         |            |        |   M-2: matchSeed literal 0 → ErrorDirectionMatchSeed constant.                     |
 // |         |            |        |   M-3: FM-03 comment: explicit "PublishShotCancelled NOT called here".             |
+// | 1.5     | 2026-06-01 | —      | AR-2 H-1: explicit FM-04a guard against degenerate XY aim before normalize         |
+// |         |            |        |   (routes to Invalid outcome rather than relying on FM-04 post-hoc NaN trap).      |
+// |         |            |        |   L-3: header doc — "±STUMBLING flag"→"StumbleTriggered boolean" (clarity).        |
 #endregion

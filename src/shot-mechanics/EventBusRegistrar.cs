@@ -24,18 +24,24 @@ namespace TacticalDirector.ShotMechanics
         /// </summary>
         public static void Initialize()
         {
+            // Tier A: ShotExecuted/ShotCancelled are authoritative events (digest-included).
             EventRegistry.RegisterExternalRow<ShotExecutedEvent>(
-                ordinal: 0x01, tier: 0, version: 1,
+                ordinal: 0x01, tier: (byte)DeterminismTier.TierA, version: 1,
                 subsystemOrdinal: SubsystemOrdinals.ShotMechanics, maxPerTick: 0,
                 producerPhaseIndex: (byte)PhaseId.Resolve);
 
             EventRegistry.RegisterExternalRow<ShotCancelledEvent>(
-                ordinal: 0x0E, tier: 0, version: 1,
+                ordinal: 0x0E, tier: (byte)DeterminismTier.TierA, version: 1,
                 subsystemOrdinal: SubsystemOrdinals.ShotMechanics, maxPerTick: 0,
                 producerPhaseIndex: (byte)PhaseId.Resolve);
 
+            // Tier C: animation cue. maxPerTick=2 bounds the single-shot CONTACT emission
+            // (one ShotAnimationData per CONTACT + one safety headroom slot per FR-EVT-043
+            // drop-predicate semantics); a single ShotExecutor cannot publish more in one
+            // tick because CONTACT is reached at most once per state-machine pass. Shot
+            // Mechanics #6 §4.7.3.
             EventRegistry.RegisterExternalRow<ShotAnimationData>(
-                ordinal: 0x0F, tier: 2, version: 1,
+                ordinal: 0x0F, tier: (byte)DeterminismTier.TierC, version: 1,
                 subsystemOrdinal: SubsystemOrdinals.ShotMechanics, maxPerTick: 2,
                 producerPhaseIndex: (byte)PhaseId.Resolve);
         }
@@ -47,4 +53,8 @@ namespace TacticalDirector.ShotMechanics
 // | 1.0     | 2026-05-30 | —      | Initial implementation.                                               |
 // | 1.1     | 2026-05-30 | —      | AR-2 fix: replaced raw int literals with SubsystemOrdinals.ShotMechanics |
 // |         |            |        | and (byte)PhaseId.Resolve — prevents silent mismatch on enum reorder.    |
+// | 1.2     | 2026-06-01 | —      | AR-2 (Shot Mechanics) M-1: tier ordinals 0/0/2 → (byte)DeterminismTier.* |
+// |         |            |        | named consts. M-2: maxPerTick=2 for ShotAnimationData now cited to      |
+// |         |            |        | #6 §4.7.3 with rationale comment. L-1: aligned narrative with code.     |
+// |         |            |        | Added DeterministicSim asmdef reference to shot-mechanics.asmdef.       |
 #endregion
