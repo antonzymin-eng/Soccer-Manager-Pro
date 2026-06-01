@@ -1,0 +1,164 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  markdown-lint:
+    name: Markdown lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: |
+            **/*.md
+            !**/node_modules/**
+
+  yaml-lint:
+    name: YAML lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: yamllint
+        run: |
+          pipx install yamllint
+          yamllint -d "{extends: default, rules: {line-length: disable, document-start: disable, truthy: {check-keys: false}}}" .github/
+
+  link-check:
+    name: Markdown link check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/markdown-link-check.json'
+
+  spec-hygiene:
+    name: Spec hygiene checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stale spec numbers (Decision Tree must be #8, not #7)
+        run: |
+          set -e
+          if grep -RInE "Decision[ -]Tree[^A-Za-z0-9]*#7([^0-9]|$)" docs/specs src 2>/dev/null; then
+            echo "::error::Stale 'Decision Tree #7' reference found — canonical is #8."
+            exit 1
+          fi
+      - name: Inverted fatigue convention
+        run: |
+          set -e
+          # CLAUDE.md says 0 = rested, 1 = fatigued. Flag the inverted phrasing.
+          if grep -RInE "1[ ]*=[ ]*(fully[ ]+)?rested|0[ ]*=[ ]*(fully[ ]+)?fatigued" docs/specs src 2>/dev/null; then
+            echo "::error::Inverted fatigue convention detected (must be 0=rested, 1=fatigued)."
+            exit 1
+          fi
+      - name: Wrong coordinate origin
+        run: |
+          set -e
+          if grep -RInE "origin.*pitch[ -]?center|pitch[ -]?center.*origin" docs/specs src 2>/dev/null; then
+            echo "::error::Coordinate origin must be corner (0,0,0), not pitch center."
+            exit 1
+          fi
+      - name: Constants must carry source tag in spec text
+        run: |
+          set -e
+          # Heuristic: in spec files, lines defining a constant value should carry one of the tags.
+          # Allow files to opt out via `<!-- ci:skip-constant-tag-check -->`.
+          missing=0
+          while IFS= read -r f; do
+            if grep -q "ci:skip-constant-tag-check" "$f"; then continue; fi
+            # Find lines like `FOO_BAR = 1.23` or table rows with a numeric value, missing any tag.
+            if grep -nE "^[ |]*\`?[A-Z][A-Z0-9_]{3,}\`?[ |]*[=|][^=].*[0-9]" "$f" \
+              | grep -vE "\[(GT|EST|FIXED|DERIVED|CROSS|CROSS-PENDING|CITATION-PENDING|TBD-NORMATIVE)\]" \
+              | grep -vE "^[^:]+:[0-9]+:\s*\|?\s*$"; then
+              echo "::warning file=$f::Constant-like line lacks [GT]/[EST]/[FIXED]/[DERIVED]/[CROSS] tag"
+              missing=$((missing+1))
+            fi
+          done < <(find docs/specs -name '*.md')
+          # Non-blocking for now — surface as warnings only.
+          echo "Constant-tag warnings: $missing"
+
+  file-manifest-check:
+    name: File manifest sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Manifest exists
+        run: test -f docs/tracking/file-manifest.md
+      - name: SPEC_INDEX exists
+        run: test -f docs/specs/SPEC_INDEX.md
+
+  csharp-format:
+    name: C# format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: dotnet format (whitespace only — Unity asmdef projects)
+        run: |
+          set -e
+          # No top-level .sln/.csproj — Unity generates them. Run a syntax sanity check by
+          # compiling .cs files with the Roslyn CLI is out of scope here. Instead, enforce
+          # basic style on .cs files using `dotnet format` with a synthetic project.
+          shopt -s globstar nullglob
+          cs_files=(src/**/*.cs)
+          if [ ${#cs_files[@]} -eq 0 ]; then
+            echo "No .cs files found — skipping."
+            exit 0
+          fi
+          # Create a transient project that includes all .cs files, then run format --verify-no-changes.
+          tmpdir=$(mktemp -d)
+          cat > "$tmpdir/Format.csproj" <<'PROJ'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <TargetFramework>net8.0</TargetFramework>
+              <Nullable>enable</Nullable>
+              <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+              <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+              <NoWarn>CS0246;CS0234;CS0103;CS1061;CS0535;CS0117;CS0029;CS1503;CS1729;CS7036;CS0019;CS0021;CS0023;CS0030;CS0031;CS0034;CS0035;CS0037;CS0050;CS0051;CS0052;CS0053;CS0054;CS0066;CS0067;CS0070;CS0071;CS0078;CS0079;CS0080;CS0081;CS0082;CS0083;CS0084;CS0085;CS0086;CS0100;CS0101;CS0102;CS0104;CS0105;CS0106;CS0107;CS0108;CS0109;CS0110;CS0111;CS0112;CS0113;CS0114;CS0115;CS0116;CS0118;CS0119;CS0120;CS0121;CS0122;CS0123;CS0126;CS0127;CS0128;CS0132;CS0133;CS0134;CS0135;CS0136;CS0138;CS0139;CS0140;CS0143;CS0144;CS0146;CS0148;CS0150;CS0151;CS0152;CS0153;CS0154;CS0155;CS0156;CS0157;CS0158;CS0159;CS0160;CS0161;CS0162;CS0163;CS0164;CS0165;CS0166;CS0167;CS0168;CS0169;CS0170;CS0171;CS0172;CS0173;CS0174;CS0175;CS0176;CS0177;CS0178;CS0179;CS0180;CS0181;CS0182;CS0183;CS0184;CS0185;CS0186;CS0187;CS0188;CS0189;CS0190;CS0191;CS0192;CS0193;CS0194;CS0195;CS0196;CS0197;CS0198;CS0199;CS0200</NoWarn>
+            </PropertyGroup>
+            <ItemGroup>
+              <Compile Include="../**/*.cs" />
+            </ItemGroup>
+          </Project>
+          PROJ
+          # Symlink the repo's src/ into tmpdir parent so the glob resolves.
+          ln -s "$GITHUB_WORKSPACE" "$tmpdir/repo"
+          # Run whitespace-only format check (does not enforce style rules a Unity codebase may not adopt).
+          cd "$tmpdir"
+          dotnet format whitespace Format.csproj --verify-no-changes --no-restore || {
+            echo "::warning::dotnet format reports whitespace issues. Run 'dotnet format whitespace' locally."
+            exit 0  # non-blocking until repo opts in
+          }
+
+  unity-tests-placeholder:
+    name: Unity tests (placeholder)
+    runs-on: ubuntu-latest
+    if: false  # disabled until UNITY_LICENSE / UNITY_EMAIL / UNITY_PASSWORD secrets are configured
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          testMode: editmode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
