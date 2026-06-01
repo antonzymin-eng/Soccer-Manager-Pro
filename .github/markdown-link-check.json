@@ -1,0 +1,10 @@
+{
+  "ignorePatterns": [
+    { "pattern": "^https://doi.org/" },
+    { "pattern": "^https://github.com/.*/issues/" }
+  ],
+  "timeout": "20s",
+  "retryOn429": true,
+  "retryCount": 3,
+  "aliveStatusCodes": [200, 206, 301, 302, 308, 403, 429]
+}

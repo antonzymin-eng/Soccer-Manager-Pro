@@ -1,0 +1,13 @@
+config:
+  default: true
+  MD013: false   # line length — specs are long-form prose
+  MD024: false   # duplicate headings — section files repeat structure
+  MD033: false   # inline HTML allowed (tags like <details>, comments)
+  MD034: false   # bare URLs OK in citation lists
+  MD041: false   # first line need not be top-level heading (section files)
+  MD036: false   # emphasis-as-heading used in tables
+  MD007:
+    indent: 2
+ignores:
+  - node_modules/
+  - .git/
