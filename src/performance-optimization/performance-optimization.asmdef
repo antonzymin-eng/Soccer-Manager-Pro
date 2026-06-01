@@ -1,7 +1,9 @@
 {
     "name": "TacticalDirector.PerformanceOptimization",
     "rootNamespace": "TacticalDirector.PerformanceOptimization",
-    "references": [],
+    "references": [
+        "TacticalDirector.DeterministicSim"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
