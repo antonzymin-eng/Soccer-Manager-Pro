@@ -439,7 +439,133 @@ namespace TacticalDirector.DeterministicSim
     }
 }
 
+    /// <summary>
+    /// Save/load equivalence tests for the §4.6.1.1 atomic save contract.
+    /// Tests T-DS-004..008 per §5.3 / §5.5.2 sample protocol.
+    /// </summary>
+    [TestFixture]
+    public sealed class DeterministicSimSaveLoadTests
+    {
+        // ══════════════════════════════════════════════════════════════════════════════
+        // T-DS-REPLAY-004 / T-DS-004: save/load equivalence
+        // ══════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// T-DS-004: SnapshotCodec.Encode → SaveManager.CommitAtomic → SaveManager.Load →
+        /// SnapshotCodec.ValidateHeader → digest matches.
+        /// Stub: SaveManager.Load exists but requires a real filesystem and well-formed header;
+        /// activate with a temp-directory fixture at Stage 1.
+        /// §5.3 T-DS-REPLAY-004 / §5.5.2.
+        /// </summary>
+        [Test]
+        public void SaveLoad_Encode_CommitAtomic_Load_ValidateHeader_DigestMatches()
+        {
+            Assert.Ignore("Stage 0+1: requires temp-directory fixture and full SnapshotPayload " +
+                          "serialization — activate when Stage 1 CI infrastructure supports " +
+                          "file I/O in EditMode tests (§5.3 T-DS-REPLAY-004 / §5.5.2).");
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // T-DS-005: save/load with mid-tick snapshot (SaveAtomicMidTick)
+        // ══════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// T-DS-005: Save/load with a mid-tick snapshot (SaveAtomicMidTick).
+        /// Stub: SaveManager has no SaveAtomicMidTick method at Stage 0 — activate when
+        /// the mid-tick save overload is added in Stage 1.
+        /// §5.3 T-DS-SNAP-003 / §5.5.2.
+        /// </summary>
+        [Test]
+        public void SaveLoad_MidTickSnapshot_SaveAndLoad()
+        {
+            Assert.Ignore("Stage 0+1: SaveManager.SaveAtomicMidTick does not exist at Stage 0 — " +
+                          "activate when the mid-tick save overload is added at Stage 1 " +
+                          "(§5.3 T-DS-005 / §4.6.1).");
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // T-DS-006: two consecutive saves — second overwrite does not corrupt first digest
+        // ══════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// T-DS-006: Two consecutive saves at tick T and tick T+1.
+        /// The second CommitAtomic (overwrite) must not leave a partial or corrupted file
+        /// at the first tick's path, and each snapshot's digest chain must be independently valid.
+        /// Stub: requires temp-directory fixture at Stage 1.
+        /// §5.3 / §4.6.1.1 atomic-write contract (overwrite:true).
+        /// </summary>
+        [Test]
+        public void SaveLoad_ConsecutiveSaves_SecondOverwriteDoesNotCorruptFirstDigest()
+        {
+            Assert.Ignore("Stage 0+1: requires temp-directory fixture and multi-tick " +
+                          "SnapshotPayload serialization — activate when Stage 1 CI " +
+                          "infrastructure supports file I/O in EditMode tests (§5.3 T-DS-006).");
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // T-DS-007: ValidateHeader rejects tampered digest
+        // ══════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// T-DS-007: After CommitAtomic, flip one bit in the persisted CurrentSnapshotDigest field,
+        /// reload the file via SaveManager.Load into a fresh SnapshotHeader, and call
+        /// SnapshotCodec.ValidateHeader — it must return ERR_DS_SCHEMA_INCOMPATIBLE or
+        /// the subsequent ValidatePrevDigest must return ERR_DS_DIGEST_CHAIN_BREAK.
+        /// Stub: requires temp-directory fixture and structured header re-read at Stage 1.
+        /// §5.3 / §5.11.6 (T-DS-FAULT-009 variant).
+        /// </summary>
+        [Test]
+        public void SaveLoad_ValidateHeader_RejectsTamperedDigest()
+        {
+            Assert.Ignore("Stage 0+1: requires temp-directory fixture and structured header " +
+                          "binary re-read to flip a digest byte — activate when Stage 1 CI " +
+                          "infrastructure supports file I/O in EditMode tests (§5.3 T-DS-007).");
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // T-DS-008: ReplayEngine.PrepareReplay steps 1–7 complete without exception
+        // ══════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// T-DS-008: ReplayEngine.PrepareReplay steps 1–7 complete without exception on a
+        /// well-formed snapshot. Verifies the full happy path: ValidateHeader → ValidateAgainst
+        /// (same fingerprint) → ValidatePrevDigest (first snapshot, all-zero prev) →
+        /// payload non-empty → cursor at EndOfSnapshot.
+        /// Uses DeterministicSimConstants for all constant references.
+        /// §5.3 / §4.2.2.
+        /// </summary>
+        [Test]
+        public void ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero()
+        {
+            var codec = new SnapshotCodec();
+            EnvironmentFingerprint fingerprint = EnvironmentFingerprint.CreateStage0Dev();
+
+            var rng   = new DeterministicRngService(0xABCDEF0123456789UL);
+            var clock = new MatchClock(0UL);
+            var engine = new ReplayEngine(codec, rng, clock, fingerprint);
+
+            var header = new SnapshotHeader();
+            // Initialize sets Cursor = EndOfSnapshot(tick) — step 7 already satisfied.
+            header.Initialize(1UL, null, fingerprint);
+
+            var payload = new SnapshotPayload();
+            // Write one non-zero byte so step 5 (BytesWritten > 0) passes.
+            payload.PayloadBytes[0] = 0x01;
+            payload.BytesWritten    = 1;
+
+            // Encode so CurrentSnapshotDigest is computed and _prevDigest chain is seeded.
+            codec.Encode(header, payload);
+
+            ushort err = engine.PrepareReplay(header, payload);
+            Assert.AreEqual(0, err,
+                "T-DS-008: PrepareReplay must return 0 on a well-formed snapshot (§4.2.2 steps 1–7).");
+        }
+    }
+
 #region VersionHistory
-// | Version | Date       | Author | Notes                                                     |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. All §5 test card IDs mapped.      |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-29 | —      | Initial implementation. All §5 test card IDs mapped.             |
+// | 1.1     | 2026-06-01 | —      | Add DeterministicSimSaveLoadTests: T-DS-004..007 stubs with       |
+//           |            |        | Assert.Ignore (file I/O requires Stage 1 CI), T-DS-008 concrete   |
+//           |            |        | ReplayEngine.PrepareReplay happy-path test (no file I/O needed).   |
 #endregion
