@@ -473,16 +473,42 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/event-system/UiNotificationCue.cs` | Tier C 0x0B: NotificationKind / SubjectEntity; MaxPerTick=32 |
 | `src/event-system/tests/event-system-tests.asmdef` | Test assembly (EditMode; references TacticalDirector.EventSystem; autoReferenced false) |
 
-### `src/performance-optimization/` — Spec #18 (4 files: 3 .cs + 1 asmdef)
+### `src/performance-optimization/` — Spec #18 (17 files: 16 .cs + 1 asmdef)
 
-> Infrastructure-only assembly (Spec #18 Appendix F.0 Stage 0 deliverables). autoReferenced false — game-layer assemblies (Physics / Mechanics / AI) MUST NOT import this assembly at runtime (src/CLAUDE.md layer taxonomy). Added May 30, 2026.
+> Infrastructure-only assembly (Spec #18). autoReferenced false; references TacticalDirector.DeterministicSim (for EnvironmentFingerprint #16 §4.8). Game-layer assemblies (Physics / Mechanics / AI) MUST NOT import this assembly at runtime. Scaffold added May 30, 2026; promoted to real implementation June 1, 2026.
 
 | File | Purpose |
 |------|---------|
-| `src/performance-optimization/performance-optimization.asmdef` | Assembly definition (no references; autoReferenced false) |
-| `src/performance-optimization/HotPathAllocExemptAttribute.cs` | Governance attribute (Spec #18 §3.7.5): `[HotPathAllocExempt(justification)]` with optional `SignOffRef` property; `AttributeTargets.Method\|Class\|Struct`; `Inherited=false; AllowMultiple=false` |
-| `src/performance-optimization/TraceChannel.cs` | F.0 channel-registry schema: `ChannelVerbosity` enum (Minimal/Standard/Debug/Exhaustive); `ChannelSamplingRule` enum (EveryTick/PerNTicks/EventDriven); `ChannelDeterminismClass` enum (TierA/TierB/TierC); `TraceChannelDescriptor` sealed class (11-field schema); `TraceChannelRegistry` static class with Stage 0 anchor rows: `PerfBudget` (perf.budget, EveryTick, TierC), `PerfAlloc` (perf.alloc, PerNTicks/N=1, TierC), `PerfTrace` (perf.trace, EveryTick, TierC, insideTickPipeline=true) |
-| `src/performance-optimization/PerformanceOptimizationConstants.cs` | GT: PerPrRegressionFraction=0.05f / AbsoluteDriftFraction=0.10f / BaselineSampleCount=100 / MaxFlakeRate=0.01f / HeadroomMultiplierMin=1.2f / HeadroomMultiplierMax=1.5f; Fixed: HotPathAllocBudgetBytes=0 |
+| `src/performance-optimization/performance-optimization.asmdef` | Assembly definition; references TacticalDirector.DeterministicSim; autoReferenced false |
+| `src/performance-optimization/HotPathAllocExemptAttribute.cs` | Governance attribute (§3.7.5): `[HotPathAllocExempt(justification)]` with optional `SignOffRef`; `AttributeTargets.Method\|Class\|Struct`; `Inherited=false; AllowMultiple=false` |
+| `src/performance-optimization/TraceChannel.cs` | F.0 channel-registry schema: `ChannelVerbosity` (Minimal/Standard/Debug/Exhaustive); `ChannelSamplingRule` (EveryTick/PerNTicks/EventDriven); `ChannelDeterminismClass` (TierA/TierB/TierC); `TraceChannelDescriptor` sealed class (11-field); `TraceChannelRegistry` with Stage 0 anchor rows: PerfBudget / PerfAlloc / PerfTrace |
+| `src/performance-optimization/PerformanceOptimizationConstants.cs` | v1.1 — Fixed: HotPathAllocBudgetBytes=0 / LOOP_TAG_TACTICAL_10HZ / LOOP_TAG_PHYSICS_60HZ; GT: PerPrRegressionFraction=0.05 / AbsoluteDriftFraction=0.10 / BaselineSampleCount=100 / MaxFlakeRate=0.01 / HeadroomMultiplierMin=1.2 / HeadroomMultiplierMax=1.5 / PromotionToleranceFraction=0.20 / ReproducibilityToleranceFraction=0.20; EST: SamplerDefaultHz=1000 / StatisticalSignificanceN=30 / FirstTickWarmupCount=0 |
+| `src/performance-optimization/LoopTag.cs` | enum: TacticalTenHz / PhysicsSixtyHz — loop discriminator per KD-8 / §3.2.2; on-disk string keys are LOOP_TAG_* constants |
+| `src/performance-optimization/BaselinePassFail.cs` | enum: Pass / Fail / Advisory — capture-time pass/fail verdict per Appendix A (advisory at capture; authoritative at CI gate time) |
+| `src/performance-optimization/HardwareCounterSnapshot.cs` | readonly struct: CpuModel / CoreCount / ThermalState — §3.3.2 session manifest hardware field |
+| `src/performance-optimization/SessionManifest.cs` | sealed class: all §3.3.2 required fields (GitSha / Seed / EnvironmentFingerprint #16 §4.8 / PlatformPin / ScenarioManifestId / SessionStartUtc / SessionEndUtc / HardwareCounters / HarnessVersion); `IsComplete()` validator used by §3.4.4 baseline validator |
+| `src/performance-optimization/BaselineRecord.cs` | sealed class: SessionManifest + Loop + P50Ms + P99Ms + PerMethodAllocBytes + PassFail + ThresholdCited — immutable baseline record per Appendix A / §4.3.2 |
+| `src/performance-optimization/BudgetRollupEntry.cs` | readonly struct: SpecId / SubroutineName / Loop / BudgetMs / AllocBudgetBytes / Citation — one row in the §3.1.3 Appendix C roll-up table; produced by IBudgetSource |
+| `src/performance-optimization/HotPathEntry.cs` | readonly struct: SpecId / MethodName / Loop / BudgetMs / HasAllocExemption — one entry in the §3.7.2 hot-path union set (materialised into tools/hot-path-union.json at Stage 0+1) |
+| `src/performance-optimization/IPerfHarness.cs` | interface: BeginSession(manifest) / RecordTickSample(declared, actualMs, allocBytes) / FinalizeSession() → BaselineRecord; both producer (§3.3 harness) and consumer (#19 ScenarioRunner) specified per §4.3.1 / §4.4 |
+| `src/performance-optimization/IBudgetSource.cs` | interface: SpecId property + GetEntries() → BudgetRollupEntry[]; both producer (per-spec §6 extractor) and consumer (budget-auditor.py) specified per §4.4 |
+| `src/performance-optimization/RegressionResult.cs` | readonly struct: PerPrPassed / AbsoluteDriftPassed / DeltaFraction / MilestoneDriftFraction / AllPassed — output of RegressionGate.Evaluate (FR-PO-031) |
+| `src/performance-optimization/RegressionGate.cs` | static class: PassesPerPrCheck(baselineMs, currentMs) / PassesAbsoluteDriftCheck(milestoneMs, currentMs) / Evaluate(baseline, current, milestoneMs) → RegressionResult; implements FR-PO-031 §3.5.2 + §3.5.6 |
+| `src/performance-optimization/ReproducibilityResult.cs` | readonly struct: IsReproducible / OriginalP50Ms / RecapturedP50Ms / AbsDeltaFraction / ScenarioMatched / SeedMatched — output of BaselineReproducibilityAuditor.Validate (FR-PO-067) |
+| `src/performance-optimization/BaselineReproducibilityAuditor.cs` | sealed class: Validate(original, recaptured) → ReproducibilityResult; implements §3.4.4 / §5.4 / FR-PO-067 reproducibility check; Stage 0 carve-out per §3.4.4 (MUST activates at Stage 0+1) |
+
+### `tools/` — Stage 0 perf-gate tooling (Spec #18 Appendix E / FR-PO-070)
+
+> Added June 1, 2026. All tools are Stage 0 deliverables per Appendix E. Stage 0+1 upgrades the harness from manual Stopwatch to automated benchmark per §3.3.5.
+
+| File | Purpose |
+|------|---------|
+| `tools/run-perf-local.sh` | Stage 0 local pre-commit perf-gate runbook (Appendix E / FR-PO-070): runs budget-auditor.py schema + loop-tag passes, then invokes perf-harness/run.sh for anchor baselines; reviewer pastes output into PR description (FR-PO-071) |
+| `tools/budget-auditor.py` | §5.3 schema-conformance auditor + §5.5 loop-tag auditor (FR-PO-070): walks every approved spec §6 against Appendix B template; reports missing sections and untagged ms values as ERR-018-NNN candidates; `--mode schema\|loop-tag\|all` |
+| `tools/select-seed.py` | KD-6 deterministic seed selector: Stage 0 returns fixed dev seed; Stage 0+1 derives seed from git SHA + scenario ID via SHA-256 (8-byte truncation) |
+| `tools/perf-harness/run.sh` | Stage 0 synthetic harness runner: parses scenario manifest, captures Stage 0 Stopwatch stub metrics, writes JSON baseline record under `docs/specs/performance-optimization/baselines/` per Appendix A §A.3 |
+| `tools/perf-harness/scenarios/anchor-baseline.manifest.json` | Stage 0 anchor scenario manifest: PERF-ANCHOR-S0-001; validates JSON projection schema end-to-end; no gameplay code exercised |
+| `docs/specs/performance-optimization/baselines/.gitkeep` | Stage 0 baseline storage root (Appendix A §A.3): JSON records land at baselines/\<spec-N\>/\<scenario\>-\<seed\>-\<sha8\>.json; migrates to tests/data/baselines/ at first src/ commit (FR-PO-074) |
 
 ---
 

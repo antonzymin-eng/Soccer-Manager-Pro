@@ -1,0 +1,8 @@
+# Stage 0 baseline storage — Spec #18 Appendix A §A.3
+#
+# JSON baseline records live here during Stage 0:
+#   baselines/<spec-N>/<scenario-id>-<seed>-<git-sha-8>.json
+#
+# Migration to tests/data/baselines/<spec>/ happens atomically with the
+# first src/ commit per FR-PO-074 (no migration script needed; JSON
+# round-trips to the binary canonical layout via #16 §3.2.4.1 serialiser).

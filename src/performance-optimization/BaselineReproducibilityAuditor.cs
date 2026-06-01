@@ -1,0 +1,68 @@
+// File:     src/performance-optimization/BaselineReproducibilityAuditor.cs
+// Created:  2026-06-01
+// Modified: 2026-06-01
+// Author:   —
+// Spec:     Performance Optimization Strategy #18 §3.4.4, §5.4, FR-PO-067, Code Standards #20
+// Purpose:  Implements the FR-PO-067 baseline-reproducibility auditor.
+//           Re-run validation: confirms a recaptured baseline matches the original within
+//           ReproducibilityToleranceFraction. Silently skipping the re-run is
+//           an FR-PO-067 violation and is merge-blocking per FR-PO-068.
+//           Stage 0 carve-out: no src/ runtime yet; the MUST activates at Stage 0+1.
+
+namespace TacticalDirector.PerformanceOptimization
+{
+    /// <summary>
+    /// Validates that a re-captured baseline record reproduces the original within the
+    /// §3.4.3 confidence interval. Implements FR-PO-067 §5.4 reproducibility auditor.
+    /// Stage 0 carve-out per §3.4.4: the MUST constraint activates at Stage 0+1 when a
+    /// deterministic runtime exists to re-run against.
+    /// Performance Optimization Strategy #18 §3.4.4 / §5.4 / FR-PO-067.
+    /// </summary>
+    public sealed class BaselineReproducibilityAuditor
+    {
+        /// <summary>
+        /// Validates that the recaptured baseline reproduces the original within
+        /// <see cref="PerformanceOptimizationConstants.ReproducibilityToleranceFraction"/>.
+        /// Both records must share the same scenario manifest ID and seed (KD-6).
+        /// Mismatches mark the original baseline stale; stale baselines are merge-blocking
+        /// per FR-PO-068.
+        /// </summary>
+        /// <param name="original">Original baseline record from the corpus.</param>
+        /// <param name="recaptured">
+        /// Baseline captured by re-running the same session manifest (same seed +
+        /// EnvironmentFingerprint + platform pin + scenario ID).
+        /// </param>
+        public ReproducibilityResult Validate(BaselineRecord original, BaselineRecord recaptured)
+        {
+            bool scenarioMatched = original.Manifest.ScenarioManifestId
+                == recaptured.Manifest.ScenarioManifestId;
+
+            bool seedMatched = original.Manifest.Seed == recaptured.Manifest.Seed;
+
+            float origP50      = original.P50Ms;
+            float recapturedP50 = recaptured.P50Ms;
+
+            float absDelta = origP50 > 0f
+                ? System.Math.Abs(recapturedP50 - origP50) / origP50
+                : 0f;
+
+            bool withinTolerance = absDelta
+                <= PerformanceOptimizationConstants.ReproducibilityToleranceFraction;
+
+            bool isReproducible = scenarioMatched && seedMatched && withinTolerance;
+
+            return new ReproducibilityResult(
+                isReproducible,
+                origP50,
+                recapturedP50,
+                absDelta,
+                scenarioMatched,
+                seedMatched);
+        }
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                   |
+// | 1.0     | 2026-06-01 | —      | Initial implementation. |
+#endregion

@@ -1,0 +1,18 @@
+{
+  "_comment": "Stage 0 anchor scenario manifest. Per Spec #18 §4.1 / Appendix E.",
+  "_note": "Subsystem-specific scenarios reference Deterministic Simulation #16 §5 scenario IDs.",
+
+  "scenario_manifest_id": "PERF-ANCHOR-S0-001",
+  "spec_id": "#18",
+  "description": "Stage 0 anchor baseline. No src/ gameplay code; validates JSON projection schema end-to-end.",
+  "loop_tag": "LOOP-TACTICAL-10HZ",
+  "warmup_ticks": 0,
+  "measurement_ticks": 100,
+  "seed_policy": "tools/select-seed.py",
+  "platform_pin_required": false,
+  "activation_stage": "Stage 0",
+  "determinism_scenario_ref": "TBD — references a Deterministic Simulation #16 §5 scenario ID at Stage 0+1",
+  "version_history": [
+    { "version": "1.0", "date": "2026-06-01", "notes": "Initial anchor scenario for Stage 0 harness validation." }
+  ]
+}
