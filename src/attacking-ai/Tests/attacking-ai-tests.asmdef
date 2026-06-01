@@ -1,0 +1,22 @@
+{
+    "name": "TacticalDirector.AttackingAI.Tests",
+    "rootNamespace": "TacticalDirector.AttackingAI.Tests",
+    "references": [
+        "TacticalDirector.AttackingAI",
+        "TacticalDirector.PositioningAI",
+        "TacticalDirector.PressingAI",
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.PerceptionSystem",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

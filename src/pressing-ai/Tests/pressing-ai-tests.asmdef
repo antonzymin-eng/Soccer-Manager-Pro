@@ -1,0 +1,22 @@
+{
+    "name": "TacticalDirector.PressingAI.Tests",
+    "rootNamespace": "TacticalDirector.PressingAI.Tests",
+    "references": [
+        "TacticalDirector.PressingAI",
+        "TacticalDirector.PositioningAI",
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.PerceptionSystem",
+        "TacticalDirector.PassMechanics",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

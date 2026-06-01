@@ -1,22 +1,20 @@
 {
-    "name": "TacticalDirector.CollisionSystem.Tests",
-    "rootNamespace": "TacticalDirector.CollisionSystem.Tests",
+    "name": "TacticalDirector.HeadingMechanics.Tests",
+    "rootNamespace": "TacticalDirector.HeadingMechanics.Tests",
     "references": [
-        "TacticalDirector.CollisionSystem",
+        "TacticalDirector.HeadingMechanics",
         "TacticalDirector.BallPhysics",
         "TacticalDirector.AgentMovement",
+        "TacticalDirector.CollisionSystem",
+        "TacticalDirector.EventSystem",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": ["Editor"],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
-    "precompiledReferences": [
-        "nunit.framework.dll"
-    ],
+    "precompiledReferences": ["nunit.framework.dll"],
     "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [],

@@ -1,0 +1,19 @@
+{
+    "name": "TacticalDirector.FirstTouch",
+    "rootNamespace": "TacticalDirector.FirstTouch",
+    "references": [
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.CollisionSystem",
+        "TacticalDirector.EventSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
