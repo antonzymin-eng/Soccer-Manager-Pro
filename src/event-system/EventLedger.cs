@@ -67,13 +67,30 @@ namespace TacticalDirector.EventSystem
             _handlers = new EventHandler<T>[capacity];
         }
 
-        internal void AddHandler(EventHandler<T> handler)
+        /// <summary>
+        /// Adds <paramref name="handler"/> to the dispatcher and returns the slot index it
+        /// occupies. AR-7 M-1: scans for a null slot left by a prior RemoveHandler before
+        /// appending at HandlerCount. Without slot reuse Tier C subscribe/unsubscribe cycling
+        /// (FR-EVT-022) exhausts MaxTierCHandlersPerType after that many cycles even when the
+        /// net subscriber count is 0.
+        /// </summary>
+        internal ushort AddHandler(EventHandler<T> handler)
         {
+            for (int i = 0; i < HandlerCount; i++)
+            {
+                if (_handlers[i] == null)
+                {
+                    _handlers[i] = handler;
+                    return (ushort)i;
+                }
+            }
             if (HandlerCount >= _handlers.Length)
                 throw new InvalidOperationException(
                     "ERR_EVT_QUEUE_OVERFLOW (0x1701): subscriber handler capacity exceeded. " +
                     "Increase MaxHandlersPerEventType or MaxTierCHandlersPerType.");
+            ushort idx = (ushort)HandlerCount;
             _handlers[HandlerCount++] = handler;
+            return idx;
         }
 
         internal override void RemoveHandler(ushort index)
@@ -330,8 +347,9 @@ namespace TacticalDirector.EventSystem
                     typeof(T).Name + " and the existing type share the same ordinal — " +
                     "check for duplicate ordinal in RegisterExternalRow calls.");
 
-            ushort idx = (ushort)typed.HandlerCount;
-            typed.AddHandler(handler);
+            // AR-7 M-1: use the index returned by AddHandler (may reuse a null slot from a
+            // prior RemoveHandler) rather than the pre-add HandlerCount value.
+            ushort idx = typed.AddHandler(handler);
             return new SubscriptionToken(ordinal, idx);
         }
     }
@@ -364,4 +382,12 @@ namespace TacticalDirector.EventSystem
 // | 1.5     | 2026-06-02 | —      | AR-6 L-1: SerializeLedger tier filter replaced magic literals       |
 // |         |            |        | tier==0 / tier==1 with (byte)DeterminismTier.TierA / .TierB per     |
 // |         |            |        | FR-CS-016 (no magic literals; enum from #16 §3.2 owns the ordinals). |
+// | 1.6     | 2026-06-02 | —      | AR-7 M-1: EventTypeDispatcher<T>.AddHandler now scans for and       |
+// |         |            |        | reuses null slots left by RemoveHandler before appending at         |
+// |         |            |        | HandlerCount. Returns the actual slot index so SubscriptionToken    |
+// |         |            |        | points at the occupied slot. Without slot reuse, Tier C runtime     |
+// |         |            |        | subscribe/unsubscribe cycling (FR-EVT-022) exhausted                 |
+// |         |            |        | MaxTierCHandlersPerType after that many cycles even when the net    |
+// |         |            |        | subscriber count was 0. EventLedger.Subscribe updated to consume    |
+// |         |            |        | AddHandler's return value instead of reading HandlerCount before.   |
 #endregion

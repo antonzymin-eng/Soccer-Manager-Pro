@@ -109,10 +109,21 @@ namespace TacticalDirector.EventSystem
         /// <summary>
         /// Enqueues a Tier B event into the ring buffer. Behaves identically to Tier A
         /// at Stage 0; Tier B tolerance-path activation is Stage 5+ (§3.1.3 / KD-3).
+        /// Debug builds assert the current phase is a valid Tier B producer phase.
         /// Allocates 0 bytes (FR-EVT-048). §3.2.1.
         /// </summary>
         public static void Publish<T>(in T evt) where T : struct, IEventB
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // AR-7 L-1: symmetric to the Tier A debug assertion added in AR-1 M-2.
+            // Both tiers route through PublishAuthoritative and both have producer-phase
+            // metadata in the registry; the asymmetry would have masked Stage 5+ Tier B
+            // wiring mistakes (producer publishes from the wrong phase).
+            byte dbgOrdinal = EventOrdinalCache<T>.Ordinal;
+            UnityEngine.Debug.Assert(
+                (byte)EventLedger.CurrentPhase == EventRegistry.GetProducerPhaseIndex(dbgOrdinal),
+                "EventBus.Publish<T>: Tier B event published from incorrect producer phase.");
+#endif
             PublishAuthoritative(in evt);
         }
 
@@ -323,4 +334,11 @@ namespace TacticalDirector.EventSystem
 // | 1.5.1   | 2026-06-02 | —      | AR-6 M-1: header Modified date refreshed to match the latest         |
 // |         |            |        | version-history row (FR-CS-057). AR-5 added the v1.5 row but left    |
 // |         |            |        | the Modified header at 2026-05-31. No code change in this revision.  |
+// | 1.6     | 2026-06-02 | —      | AR-7 L-1: added #if UNITY_EDITOR||DEVELOPMENT_BUILD producer-phase   |
+// |         |            |        | assertion to Publish<T>(in T evt) where T : struct, IEventB —       |
+// |         |            |        | symmetric to the AR-1 M-2 assertion on the Tier A overload. Both    |
+// |         |            |        | tiers route through PublishAuthoritative and both have producer-     |
+// |         |            |        | phase metadata in the registry; the asymmetry would have masked     |
+// |         |            |        | Stage 5+ Tier B wiring mistakes (producer publishes from the wrong   |
+// |         |            |        | phase). Debug-only — stripped from release builds (FR-EVT-048).     |
 #endregion
