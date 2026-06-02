@@ -44,9 +44,13 @@ namespace TacticalDirector.TestingStrategy
         /// and non-empty per AR-2 M-1 (parallel to <see cref="GoldenVectorResult"/> +
         /// <see cref="DeterminismTierResult"/> invariant guards).
         /// </summary>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="name"/>, <paramref name="sourcePath"/>, or
+        /// <paramref name="citation"/> is null.
+        /// </exception>
         /// <exception cref="ArgumentException">
         /// Thrown when <paramref name="name"/>, <paramref name="sourcePath"/>, or
-        /// <paramref name="citation"/> is null or empty.
+        /// <paramref name="citation"/> is empty.
         /// </exception>
         public GoldenVectorEntry(
             GoldenVectorKind kind,
@@ -54,17 +58,29 @@ namespace TacticalDirector.TestingStrategy
             string sourcePath,
             string citation)
         {
-            if (string.IsNullOrEmpty(name))
+            if (name == null)
             {
-                throw new ArgumentException("name must be non-empty", nameof(name));
+                throw new ArgumentNullException(nameof(name));
             }
-            if (string.IsNullOrEmpty(sourcePath))
+            if (name.Length == 0)
             {
-                throw new ArgumentException("sourcePath must be non-empty", nameof(sourcePath));
+                throw new ArgumentException("must be non-empty", nameof(name));
             }
-            if (string.IsNullOrEmpty(citation))
+            if (sourcePath == null)
             {
-                throw new ArgumentException("citation must be non-empty", nameof(citation));
+                throw new ArgumentNullException(nameof(sourcePath));
+            }
+            if (sourcePath.Length == 0)
+            {
+                throw new ArgumentException("must be non-empty", nameof(sourcePath));
+            }
+            if (citation == null)
+            {
+                throw new ArgumentNullException(nameof(citation));
+            }
+            if (citation.Length == 0)
+            {
+                throw new ArgumentException("must be non-empty", nameof(citation));
             }
 
             Kind       = kind;
@@ -83,4 +99,7 @@ namespace TacticalDirector.TestingStrategy
 // | 1.2     | 2026-06-02 | —      | AR-2 M-1: constructor enforces non-empty name / sourcePath /       |
 // |         |            |        | citation (parallel to GoldenVectorResult / DeterminismTierResult   |
 // |         |            |        | invariant guards). AR-2 L-6: XML doc notes default-value bypass.   |
+// | 1.3     | 2026-06-02 | —      | AR-3 L-1: null-vs-empty checks split — ArgumentNullException for  |
+// |         |            |        | null, ArgumentException for empty (idiomatic .NET BCL convention; |
+// |         |            |        | parallels the AR-2 L-3 range-vs-relation split).                   |
 #endregion

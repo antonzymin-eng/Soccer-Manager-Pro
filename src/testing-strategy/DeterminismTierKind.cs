@@ -37,8 +37,10 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
+// | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-06-02 | —      | Initial implementation.                                            |
-// | 1.1     | 2026-06-02 | —      | AR-2 L-5: maintainer note added about atomic update of            |
-// |         |            |        | DeterminismGate.s_canonicalTierOrder when a new member is added.  |
+// | 1.1     | 2026-06-02 | —      | AR-2 L-5: maintainer note added about atomic update of             |
+// |         |            |        | DeterminismGate.s_canonicalTierOrder when a new member is added.   |
+// | 1.2     | 2026-06-02 | —      | AR-3 L-3: VersionHistory header row widened to match body-row      |
+// |         |            |        | column widths (was inconsistent with the rest of the scaffold).    |
 #endregion

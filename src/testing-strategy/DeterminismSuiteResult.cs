@@ -9,6 +9,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace TacticalDirector.TestingStrategy
 {
@@ -62,8 +63,18 @@ namespace TacticalDirector.TestingStrategy
                 throw new ArgumentNullException(nameof(goldenVectorResults));
             }
 
-            TierResults         = tierResults;
-            GoldenVectorResults = goldenVectorResults;
+            // Re-wrap inputs that are not already a ReadOnlyCollection<T> so a caller
+            // passing a raw T[] cast to IReadOnlyList<T> cannot later downcast the
+            // exposed property back to a mutable array. The wrap-at-the-producer
+            // pattern in DeterminismGate.RunTiers + GoldenVectorRunner.RunAll already
+            // hits the only Stage 0 caller; this guard closes the leak for external
+            // direct constructions (AR-3 L-4).
+            TierResults = tierResults is ReadOnlyCollection<DeterminismTierResult>
+                ? tierResults
+                : new ReadOnlyCollection<DeterminismTierResult>(new List<DeterminismTierResult>(tierResults));
+            GoldenVectorResults = goldenVectorResults is ReadOnlyCollection<GoldenVectorResult>
+                ? goldenVectorResults
+                : new ReadOnlyCollection<GoldenVectorResult>(new List<GoldenVectorResult>(goldenVectorResults));
 
             // Fail-closed on empty input: a suite with no tiers or no corpora cannot pass
             // FR-DS-009-GATE even if every present element passed. AR-1 M-3.
@@ -95,4 +106,7 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | (AllPassed=false); previously empty input silently passed the gate. |
 // |         |            |        | AR-1 L-4: constructor null-checks both list arguments with explicit |
 // |         |            |        | ArgumentNullException instead of letting .Count NRE.                |
+// | 1.2     | 2026-06-02 | —      | AR-3 L-4: constructor re-wraps input lists in ReadOnlyCollection<T> |
+// |         |            |        | unless already wrapped, closing the AR-2 L-1 contract leak for     |
+// |         |            |        | external direct constructions that bypass DeterminismGate.RunTiers. |
 #endregion

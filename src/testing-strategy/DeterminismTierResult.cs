@@ -52,8 +52,11 @@ namespace TacticalDirector.TestingStrategy
         /// <c>(passed=false, executed=0, failed=0)</c> shape is reserved for the
         /// Stage 0 deferred-status path emitted by <see cref="DeterminismGate.RunTiers"/>.
         /// </summary>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="diagnostic"/> is null.
+        /// </exception>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="diagnostic"/> is null/empty or when the pass
+        /// Thrown when <paramref name="diagnostic"/> is empty or when the pass
         /// invariant is violated.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">
@@ -68,9 +71,13 @@ namespace TacticalDirector.TestingStrategy
             int testsFailed,
             string diagnostic)
         {
-            if (string.IsNullOrEmpty(diagnostic))
+            if (diagnostic == null)
             {
-                throw new ArgumentException("diagnostic must be non-empty", nameof(diagnostic));
+                throw new ArgumentNullException(nameof(diagnostic));
+            }
+            if (diagnostic.Length == 0)
+            {
+                throw new ArgumentException("must be non-empty", nameof(diagnostic));
             }
             if (testsExecuted < 0)
             {
@@ -113,4 +120,6 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | invariant and the null/empty diagnostic check stay ArgumentExc-   |
 // |         |            |        | eption (not range issues). AR-2 L-6: XML doc notes default-value  |
 // |         |            |        | bypass.                                                            |
+// | 1.3     | 2026-06-02 | —      | AR-3 L-1: diagnostic null-vs-empty split — ArgumentNullException  |
+// |         |            |        | for null, ArgumentException for empty (idiomatic .NET BCL).       |
 #endregion

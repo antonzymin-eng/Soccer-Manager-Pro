@@ -71,8 +71,11 @@ namespace TacticalDirector.TestingStrategy
         /// </summary>
         public static DeterminismSuiteResult RunTiers()
         {
-            DeterminismTierResult[] tierResults = new DeterminismTierResult[s_canonicalTierOrder.Count];
-            for (int i = 0; i < s_canonicalTierOrder.Count; i++)
+            // Cache .Count once — interface-property access (post-AR-2 retype to IReadOnlyList)
+            // is cheaper to read once than to re-dispatch per loop iteration (AR-3 L-2).
+            int tierCount = s_canonicalTierOrder.Count;
+            DeterminismTierResult[] tierResults = new DeterminismTierResult[tierCount];
+            for (int i = 0; i < tierCount; i++)
             {
                 tierResults[i] = new DeterminismTierResult(
                     s_canonicalTierOrder[i],
@@ -110,4 +113,7 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | AR-2 L-1 parallel: tierResults array wrapped in ReadOnlyCollection|
 // |         |            |        | before construction of DeterminismSuiteResult so its surface       |
 // |         |            |        | cannot be cast back to DeterminismTierResult[].                    |
+// | 1.3     | 2026-06-02 | —      | AR-3 L-2: RunTiers caches s_canonicalTierOrder.Count once instead |
+// |         |            |        | of dispatching the interface property twice per call (alloc-size  |
+// |         |            |        | + loop bound). Clarity nit; no perf concern at the CI scale.       |
 #endregion
