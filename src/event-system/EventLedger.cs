@@ -1,6 +1,6 @@
 // File:     src/event-system/EventLedger.cs
 // Created:  2026-05-30
-// Modified: 2026-05-31
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.2.4, §3.2.5, §3.4.2, §4.4, Code Standards #20
 // Purpose:  Tier A/B ring buffer, typed dispatch infrastructure, and per-tick serialization.
@@ -67,13 +67,30 @@ namespace TacticalDirector.EventSystem
             _handlers = new EventHandler<T>[capacity];
         }
 
-        internal void AddHandler(EventHandler<T> handler)
+        /// <summary>
+        /// Adds <paramref name="handler"/> to the dispatcher and returns the slot index it
+        /// occupies. AR-7 M-1: scans for a null slot left by a prior RemoveHandler before
+        /// appending at HandlerCount. Without slot reuse Tier C subscribe/unsubscribe cycling
+        /// (FR-EVT-022) exhausts MaxTierCHandlersPerType after that many cycles even when the
+        /// net subscriber count is 0.
+        /// </summary>
+        internal ushort AddHandler(EventHandler<T> handler)
         {
+            for (int i = 0; i < HandlerCount; i++)
+            {
+                if (_handlers[i] == null)
+                {
+                    _handlers[i] = handler;
+                    return (ushort)i;
+                }
+            }
             if (HandlerCount >= _handlers.Length)
                 throw new InvalidOperationException(
                     "ERR_EVT_QUEUE_OVERFLOW (0x1701): subscriber handler capacity exceeded. " +
                     "Increase MaxHandlersPerEventType or MaxTierCHandlersPerType.");
+            ushort idx = (ushort)HandlerCount;
             _handlers[HandlerCount++] = handler;
+            return idx;
         }
 
         internal override void RemoveHandler(ushort index)
@@ -262,10 +279,12 @@ namespace TacticalDirector.EventSystem
             // Build sorted index list for Tier A/B slots only, then sort by FM-017-002 key.
             Span<int> sortBuf = stackalloc int[EventSystemConstants.EventQueueCapacity];
             int sortCount = 0;
+            // AR-6 L-1: tier comparison uses DeterminismTier enum values rather than the
+            // magic literals 0/1 (FR-CS-016). #16 §3.2 owns the enum and its byte ordinals.
             for (int s = 0; s < QueueCount; s++)
             {
                 byte tier = EventRegistry.GetTier(SlotMeta[s].EventTypeOrdinal);
-                if (tier == 0 || tier == 1) // 0=A, 1=B
+                if (tier == (byte)DeterminismTier.TierA || tier == (byte)DeterminismTier.TierB)
                     sortBuf[sortCount++] = s;
             }
             InsertionSort(sortBuf.Slice(0, sortCount));
@@ -315,9 +334,22 @@ namespace TacticalDirector.EventSystem
             if (Dispatchers[ordinal] == null)
                 Dispatchers[ordinal] = new EventTypeDispatcher<T>(maxHandlers);
 
-            var typed = (EventTypeDispatcher<T>)Dispatchers[ordinal];
-            ushort idx = (ushort)typed.HandlerCount;
-            typed.AddHandler(handler);
+            // AR-5 M-2: symmetric to AR-4 L fix in CosmeticChannel.Subscribe. If two
+            // distinct IEventA/B types share an ordinal via duplicate RegisterExternalRow
+            // calls (a real Stage 1 boot-wiring risk), hard-cast threw an opaque
+            // InvalidCastException with no ordinal context. 'as' + null-check emits
+            // the same ERR_EVT_ORDINAL_COLLISION (0x1707) diagnostic used by Tier C.
+            var typed = Dispatchers[ordinal] as EventTypeDispatcher<T>;
+            if (typed == null)
+                throw new InvalidOperationException(
+                    "ERR_EVT_ORDINAL_COLLISION (0x1707): ordinal 0x" + ordinal.ToString("X2") +
+                    " is already bound to a different Tier A/B event type. " +
+                    typeof(T).Name + " and the existing type share the same ordinal — " +
+                    "check for duplicate ordinal in RegisterExternalRow calls.");
+
+            // AR-7 M-1: use the index returned by AddHandler (may reuse a null slot from a
+            // prior RemoveHandler) rather than the pre-add HandlerCount value.
+            ushort idx = typed.AddHandler(handler);
             return new SubscriptionToken(ordinal, idx);
         }
     }
@@ -341,4 +373,21 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | FM-017-002 key before emitting (was insertion order, making digest    |
 // |         |            |        | bytes publication-order-dependent and contradicting the EventBus XML  |
 // |         |            |        | doc "FM-017-002 order" claim). Uses same stackalloc InsertionSort.    |
+// | 1.4     | 2026-06-02 | —      | AR-5 M-2: Subscribe<T> dispatcher cast replaced from hard            |
+// |         |            |        | (EventTypeDispatcher<T>) to 'as' + null-check — symmetric to AR-4 L  |
+// |         |            |        | fix in CosmeticChannel.Subscribe (Tier C). Emits diagnostic          |
+// |         |            |        | ERR_EVT_ORDINAL_COLLISION (0x1707) when two IEventA/B types share    |
+// |         |            |        | an ordinal via erroneous RegisterExternalRow calls, instead of an    |
+// |         |            |        | opaque InvalidCastException with no ordinal context.                 |
+// | 1.5     | 2026-06-02 | —      | AR-6 L-1: SerializeLedger tier filter replaced magic literals       |
+// |         |            |        | tier==0 / tier==1 with (byte)DeterminismTier.TierA / .TierB per     |
+// |         |            |        | FR-CS-016 (no magic literals; enum from #16 §3.2 owns the ordinals). |
+// | 1.6     | 2026-06-02 | —      | AR-7 M-1: EventTypeDispatcher<T>.AddHandler now scans for and       |
+// |         |            |        | reuses null slots left by RemoveHandler before appending at         |
+// |         |            |        | HandlerCount. Returns the actual slot index so SubscriptionToken    |
+// |         |            |        | points at the occupied slot. Without slot reuse, Tier C runtime     |
+// |         |            |        | subscribe/unsubscribe cycling (FR-EVT-022) exhausted                 |
+// |         |            |        | MaxTierCHandlersPerType after that many cycles even when the net    |
+// |         |            |        | subscriber count was 0. EventLedger.Subscribe updated to consume    |
+// |         |            |        | AddHandler's return value instead of reading HandlerCount before.   |
 #endregion

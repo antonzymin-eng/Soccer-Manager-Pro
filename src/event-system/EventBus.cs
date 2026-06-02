@@ -1,6 +1,6 @@
 // File:     src/event-system/EventBus.cs
 // Created:  2026-05-30
-// Modified: 2026-05-31
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Event System #17 §3.2.1, §3.2.2, §4.4, Code Standards #20
 // Purpose:  Public static event bus. Publish/Subscribe entry points plus DrainTick,
@@ -109,10 +109,21 @@ namespace TacticalDirector.EventSystem
         /// <summary>
         /// Enqueues a Tier B event into the ring buffer. Behaves identically to Tier A
         /// at Stage 0; Tier B tolerance-path activation is Stage 5+ (§3.1.3 / KD-3).
+        /// Debug builds assert the current phase is a valid Tier B producer phase.
         /// Allocates 0 bytes (FR-EVT-048). §3.2.1.
         /// </summary>
         public static void Publish<T>(in T evt) where T : struct, IEventB
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // AR-7 L-1: symmetric to the Tier A debug assertion added in AR-1 M-2.
+            // Both tiers route through PublishAuthoritative and both have producer-phase
+            // metadata in the registry; the asymmetry would have masked Stage 5+ Tier B
+            // wiring mistakes (producer publishes from the wrong phase).
+            byte dbgOrdinal = EventOrdinalCache<T>.Ordinal;
+            UnityEngine.Debug.Assert(
+                (byte)EventLedger.CurrentPhase == EventRegistry.GetProducerPhaseIndex(dbgOrdinal),
+                "EventBus.Publish<T>: Tier B event published from incorrect producer phase.");
+#endif
             PublishAuthoritative(in evt);
         }
 
@@ -206,11 +217,11 @@ namespace TacticalDirector.EventSystem
                         "ERR_EVT_QUEUE_OVERFLOW (0x1701): per-handler Tier A/B out-degree > 1 (FR-EVT-046a).");
             }
 
-            int slotIndex  = EventLedger.QueueCount++;
-            int slotOffset = slotIndex * EventSystemConstants.MaxEventSlotBytes;
-
-            // Copy struct bytes to ring buffer slot (no GC allocation — value copy on stack).
-            T copy = evt;
+            // AR-5 M-1: structSize validation must precede QueueCount reservation. If a guard
+            // throws after QueueCount++ has run, the slot is reserved but PayloadBuffer/SlotMeta
+            // never populated; subsequent Publish writes to slotIndex+1 leaving slot N with
+            // EventTypeOrdinal=0 (CLR default), which SerializeLedger classifies as Tier A and
+            // emits as a zero-byte record, corrupting the canonical digest.
             int structSize = EventRegistry.GetStructSize(ordinal);
 
             // AR-4 fix: guard promoted from silent fallback to throw. The original
@@ -236,6 +247,12 @@ namespace TacticalDirector.EventSystem
                     " bytes exceeds MaxEventSlotBytes " + EventSystemConstants.MaxEventSlotBytes +
                     " for ordinal 0x" + ordinal.ToString("X2") +
                     ". Increase MaxEventSlotBytes or reduce struct size (§3.5.1).");
+
+            int slotIndex  = EventLedger.QueueCount++;
+            int slotOffset = slotIndex * EventSystemConstants.MaxEventSlotBytes;
+
+            // Copy struct bytes to ring buffer slot (no GC allocation — value copy on stack).
+            T copy = evt;
 
             MemoryMarshal.Write(
                 new Span<byte>(EventLedger.PayloadBuffer, slotOffset, structSize),
@@ -307,4 +324,21 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | Tier A/B struct exceeding MaxEventSlotBytes would silently overflow    |
 // |         |            |        | the ring-buffer slot into adjacent slots instead of throwing a         |
 // |         |            |        | diagnostic ERR_EVT_QUEUE_OVERFLOW (0x1701) error (§3.5.1).            |
+// | 1.5     | 2026-06-02 | —      | AR-5 M-1: structSize guards reordered to precede QueueCount++         |
+// |         |            |        | reservation. If a guard threw after QueueCount++ (oversized or zero   |
+// |         |            |        | struct size — both are registration errors but recoverable in some    |
+// |         |            |        | hosts), the slot was reserved but PayloadBuffer/SlotMeta never        |
+// |         |            |        | populated; subsequent Publish wrote to slotIndex+1, leaving slot N    |
+// |         |            |        | with EventTypeOrdinal=0 which SerializeLedger classifies as Tier A    |
+// |         |            |        | and emits as a zero-byte record, corrupting the canonical digest.    |
+// | 1.5.1   | 2026-06-02 | —      | AR-6 M-1: header Modified date refreshed to match the latest         |
+// |         |            |        | version-history row (FR-CS-057). AR-5 added the v1.5 row but left    |
+// |         |            |        | the Modified header at 2026-05-31. No code change in this revision.  |
+// | 1.6     | 2026-06-02 | —      | AR-7 L-1: added #if UNITY_EDITOR||DEVELOPMENT_BUILD producer-phase   |
+// |         |            |        | assertion to Publish<T>(in T evt) where T : struct, IEventB —       |
+// |         |            |        | symmetric to the AR-1 M-2 assertion on the Tier A overload. Both    |
+// |         |            |        | tiers route through PublishAuthoritative and both have producer-     |
+// |         |            |        | phase metadata in the registry; the asymmetry would have masked     |
+// |         |            |        | Stage 5+ Tier B wiring mistakes (producer publishes from the wrong   |
+// |         |            |        | phase). Debug-only — stripped from release builds (FR-EVT-048).     |
 #endregion

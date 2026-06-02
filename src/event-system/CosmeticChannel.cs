@@ -1,6 +1,6 @@
 // File:     src/event-system/CosmeticChannel.cs
 // Created:  2026-05-30
-// Modified: 2026-05-31
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.5.3, §3.6.2, §4.3.2, Code Standards #20
 // Purpose:  Tier C immediate-synchronous dispatch with deterministic drop predicate.
@@ -128,8 +128,11 @@ namespace TacticalDirector.EventSystem
                     typeof(T).Name + " and the existing type share the same ordinal — " +
                     "check for duplicate ordinal in RegisterExternalRow calls.");
 
-            ushort idx = (ushort)typed.HandlerCount;
-            typed.AddHandler(handler);
+            // AR-7 M-1: use the index returned by AddHandler (may reuse a null slot from a
+            // prior Unsubscribe) rather than the pre-add HandlerCount value. This is the Tier C
+            // hot path for the exhaustion bug — FR-EVT-022 explicitly permits Tier C runtime
+            // subscribe/unsubscribe, and without slot reuse the handler array fills with nulls.
+            ushort idx = typed.AddHandler(handler);
             return new SubscriptionToken(ordinal, idx);
         }
 
@@ -178,4 +181,8 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | ERR_EVT_ORDINAL_COLLISION (0x1707) when two IEventC types share        |
 // |         |            |        | the same ordinal via erroneous RegisterExternalRow calls, rather       |
 // |         |            |        | than an opaque InvalidCastException with no ordinal context.           |
+// | 1.7     | 2026-06-02 | —      | AR-7 M-1: Subscribe<T> now consumes the slot index returned by       |
+// |         |            |        | AddHandler (which AR-7 M-1 changed to scan-and-reuse null slots)      |
+// |         |            |        | rather than reading HandlerCount before the call. Closes the Tier C  |
+// |         |            |        | exhaustion path under FR-EVT-022 subscribe/unsubscribe cycling.       |
 #endregion
