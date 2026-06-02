@@ -42,12 +42,19 @@ namespace TacticalDirector.PerformanceOptimization
         /// Checks whether the cumulative drift from the milestone baseline falls within
         /// the <see cref="PerformanceOptimizationConstants.AbsoluteDriftFraction"/> guard.
         /// Returns true when <c>(currentMs − milestoneMs) / milestoneMs ≤ threshold</c>.
-        /// Degenerate milestones (<c>milestoneMs ≤ 0</c> or NaN) fail-closed per AR-1 M-2.
+        /// <c>float.NaN milestoneMs</c> is the canonical "no milestone available, skip"
+        /// signal and returns true; any other non-positive value is degenerate and
+        /// fails closed.
         /// </summary>
         /// <param name="milestoneMs">p50 captured at the last Stage milestone baseline.</param>
         /// <param name="currentMs">Current p50 in milliseconds.</param>
         public static bool PassesAbsoluteDriftCheck(float milestoneMs, float currentMs)
         {
+            if (float.IsNaN(milestoneMs))
+            {
+                return true;
+            }
+
             if (!(milestoneMs > 0f))
             {
                 return false;
@@ -82,19 +89,15 @@ namespace TacticalDirector.PerformanceOptimization
                 : float.NaN;
 
             float milestoneDrift;
-            bool absoluteDriftPassed;
+            bool absoluteDriftPassed = PassesAbsoluteDriftCheck(milestoneMs, currentP50);
 
-            if (float.IsNaN(milestoneMs))
+            if (float.IsNaN(milestoneMs) || !(milestoneMs > 0f))
             {
-                milestoneDrift      = float.NaN;
-                absoluteDriftPassed = true;
+                milestoneDrift = float.NaN;
             }
             else
             {
-                absoluteDriftPassed = PassesAbsoluteDriftCheck(milestoneMs, currentP50);
-                milestoneDrift      = milestoneMs > 0f
-                    ? (currentP50 - milestoneMs) / milestoneMs
-                    : float.NaN;
+                milestoneDrift = (currentP50 - milestoneMs) / milestoneMs;
             }
 
             return new RegressionResult(
@@ -112,4 +115,7 @@ namespace TacticalDirector.PerformanceOptimization
 // | 1.1     | 2026-06-02 | —      | AR-1 M-2: degenerate baseline/milestone (≤0 or NaN) now fail-closed |
 // |         |            |        | instead of pass-open. AR-1 M-1: Evaluate now reuses PassesPerPrCheck |
 // |         |            |        | and PassesAbsoluteDriftCheck rather than duplicating the formula.   |
+// | 1.2     | 2026-06-02 | —      | AR-2 M-1: PassesAbsoluteDriftCheck NaN milestone now returns true   |
+// |         |            |        | (skip-drift signal), matching Evaluate's documented semantics.      |
+// |         |            |        | Evaluate delegates drift verdict entirely to the helper.            |
 #endregion

@@ -65,6 +65,12 @@ namespace TacticalDirector.PerformanceOptimization
         /// </summary>
         public string CreatedDate { get; }
 
+        /// <summary>
+        /// Initialises a descriptor for one Appendix F.0 registry row.
+        /// Enforces the two structural F.0 invariants: (i) <c>SamplingRule = PerNTicks ⇒
+        /// SampleN &gt; 0</c>; (ii) <c>InsideTickPipeline ⇒ SignOffLogRef non-empty</c>.
+        /// Violations throw <see cref="ArgumentException"/>.
+        /// </summary>
         public TraceChannelDescriptor(
             string channelName,
             string owningSubsystem,
@@ -83,6 +89,14 @@ namespace TacticalDirector.PerformanceOptimization
                 throw new ArgumentException(
                     "SampleN must be > 0 when SamplingRule = PerNTicks (Appendix F.0).",
                     nameof(sampleN));
+            }
+
+            if (insideTickPipeline && string.IsNullOrEmpty(signOffLogRef))
+            {
+                throw new ArgumentException(
+                    "SignOffLogRef must be non-empty when InsideTickPipeline is true "
+                    + "(Appendix F.0; FR-PO-058a #16-owner sign-off required).",
+                    nameof(signOffLogRef));
             }
 
             ChannelName         = channelName;
@@ -105,4 +119,7 @@ namespace TacticalDirector.PerformanceOptimization
 // | 1.0     | 2026-05-30 | —      | Initial implementation in TraceChannel.cs.                          |
 // | 1.1     | 2026-06-02 | —      | AR-1 H-1: extracted from TraceChannel.cs (one public type per file).|
 // |         |            |        | AR-1 L-1: constructor enforces SamplingRule/SampleN invariant.      |
+// | 1.2     | 2026-06-02 | —      | AR-2 M-2: constructor gained XML <summary> (FR-CS-060).             |
+// |         |            |        | AR-2 L-2: constructor enforces InsideTickPipeline ⇒ SignOffLogRef   |
+// |         |            |        | non-empty invariant (symmetric to AR-1 L-1).                        |
 #endregion
