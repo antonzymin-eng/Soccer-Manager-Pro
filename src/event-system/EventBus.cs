@@ -206,11 +206,11 @@ namespace TacticalDirector.EventSystem
                         "ERR_EVT_QUEUE_OVERFLOW (0x1701): per-handler Tier A/B out-degree > 1 (FR-EVT-046a).");
             }
 
-            int slotIndex  = EventLedger.QueueCount++;
-            int slotOffset = slotIndex * EventSystemConstants.MaxEventSlotBytes;
-
-            // Copy struct bytes to ring buffer slot (no GC allocation — value copy on stack).
-            T copy = evt;
+            // AR-5 M-1: structSize validation must precede QueueCount reservation. If a guard
+            // throws after QueueCount++ has run, the slot is reserved but PayloadBuffer/SlotMeta
+            // never populated; subsequent Publish writes to slotIndex+1 leaving slot N with
+            // EventTypeOrdinal=0 (CLR default), which SerializeLedger classifies as Tier A and
+            // emits as a zero-byte record, corrupting the canonical digest.
             int structSize = EventRegistry.GetStructSize(ordinal);
 
             // AR-4 fix: guard promoted from silent fallback to throw. The original
@@ -236,6 +236,12 @@ namespace TacticalDirector.EventSystem
                     " bytes exceeds MaxEventSlotBytes " + EventSystemConstants.MaxEventSlotBytes +
                     " for ordinal 0x" + ordinal.ToString("X2") +
                     ". Increase MaxEventSlotBytes or reduce struct size (§3.5.1).");
+
+            int slotIndex  = EventLedger.QueueCount++;
+            int slotOffset = slotIndex * EventSystemConstants.MaxEventSlotBytes;
+
+            // Copy struct bytes to ring buffer slot (no GC allocation — value copy on stack).
+            T copy = evt;
 
             MemoryMarshal.Write(
                 new Span<byte>(EventLedger.PayloadBuffer, slotOffset, structSize),
@@ -307,4 +313,11 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | Tier A/B struct exceeding MaxEventSlotBytes would silently overflow    |
 // |         |            |        | the ring-buffer slot into adjacent slots instead of throwing a         |
 // |         |            |        | diagnostic ERR_EVT_QUEUE_OVERFLOW (0x1701) error (§3.5.1).            |
+// | 1.5     | 2026-06-02 | —      | AR-5 M-1: structSize guards reordered to precede QueueCount++         |
+// |         |            |        | reservation. If a guard threw after QueueCount++ (oversized or zero   |
+// |         |            |        | struct size — both are registration errors but recoverable in some    |
+// |         |            |        | hosts), the slot was reserved but PayloadBuffer/SlotMeta never        |
+// |         |            |        | populated; subsequent Publish wrote to slotIndex+1, leaving slot N    |
+// |         |            |        | with EventTypeOrdinal=0 which SerializeLedger classifies as Tier A    |
+// |         |            |        | and emits as a zero-byte record, corrupting the canonical digest.    |
 #endregion

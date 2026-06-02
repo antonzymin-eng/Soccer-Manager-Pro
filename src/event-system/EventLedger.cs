@@ -315,7 +315,19 @@ namespace TacticalDirector.EventSystem
             if (Dispatchers[ordinal] == null)
                 Dispatchers[ordinal] = new EventTypeDispatcher<T>(maxHandlers);
 
-            var typed = (EventTypeDispatcher<T>)Dispatchers[ordinal];
+            // AR-5 M-2: symmetric to AR-4 L fix in CosmeticChannel.Subscribe. If two
+            // distinct IEventA/B types share an ordinal via duplicate RegisterExternalRow
+            // calls (a real Stage 1 boot-wiring risk), hard-cast threw an opaque
+            // InvalidCastException with no ordinal context. 'as' + null-check emits
+            // the same ERR_EVT_ORDINAL_COLLISION (0x1707) diagnostic used by Tier C.
+            var typed = Dispatchers[ordinal] as EventTypeDispatcher<T>;
+            if (typed == null)
+                throw new InvalidOperationException(
+                    "ERR_EVT_ORDINAL_COLLISION (0x1707): ordinal 0x" + ordinal.ToString("X2") +
+                    " is already bound to a different Tier A/B event type. " +
+                    typeof(T).Name + " and the existing type share the same ordinal — " +
+                    "check for duplicate ordinal in RegisterExternalRow calls.");
+
             ushort idx = (ushort)typed.HandlerCount;
             typed.AddHandler(handler);
             return new SubscriptionToken(ordinal, idx);
@@ -341,4 +353,10 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | FM-017-002 key before emitting (was insertion order, making digest    |
 // |         |            |        | bytes publication-order-dependent and contradicting the EventBus XML  |
 // |         |            |        | doc "FM-017-002 order" claim). Uses same stackalloc InsertionSort.    |
+// | 1.4     | 2026-06-02 | —      | AR-5 M-2: Subscribe<T> dispatcher cast replaced from hard            |
+// |         |            |        | (EventTypeDispatcher<T>) to 'as' + null-check — symmetric to AR-4 L  |
+// |         |            |        | fix in CosmeticChannel.Subscribe (Tier C). Emits diagnostic          |
+// |         |            |        | ERR_EVT_ORDINAL_COLLISION (0x1707) when two IEventA/B types share    |
+// |         |            |        | an ordinal via erroneous RegisterExternalRow calls, instead of an    |
+// |         |            |        | opaque InvalidCastException with no ordinal context.                 |
 #endregion
