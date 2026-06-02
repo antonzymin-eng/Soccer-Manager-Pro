@@ -1,6 +1,6 @@
-// File:     src/Core/Physics/Ball/Tests/BallIntegrationTests.cs
+// File:     src/ball-physics/tests/BallIntegrationTests.cs
 // Created:  2026-05-24
-// Modified: 2026-05-24
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  End-to-end integration tests against §3.1.14 derived validation test cases.
@@ -27,11 +27,9 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void FreekickTrajectory_CurvesWithinExpectedRange()
         {
-            // Right-foot free kick from (25,34): v=(22,0,6), ω=(0,0,-12)
-            // Expected: 1.5–3.0 m lateral curve over 25 m forward.
             var ball = new BallState
             {
-                State             = BallStateType.AIRBORNE,
+                State             = BallStateType.Airborne,
                 Position          = new Vector3(25f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(22f, 0f, 6f),
                 AngularVelocity   = new Vector3(0f, 0f, -12f),
@@ -47,7 +45,7 @@ namespace TacticalDirector.BallPhysics.Tests
                 && maxSteps-- > 0)
             {
                 BallPhysicsCore.UpdateBallPhysics(
-                    ref ball, DT, SurfaceType.GRASS_DRY, Vector3.zero, null, 0f);
+                    ref ball, DT, SurfaceType.GrassDry, Vector3.zero, null, 0f);
             }
 
             float lateralDeviation = Mathf.Abs(ball.Position.y - startY);
@@ -65,7 +63,7 @@ namespace TacticalDirector.BallPhysics.Tests
         {
             var ball = new BallState
             {
-                State             = BallStateType.ROLLING,
+                State             = BallStateType.Rolling,
                 Position          = new Vector3(0f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(10f, 0f, 0f),
                 AngularVelocity   = Vector3.zero,
@@ -73,12 +71,12 @@ namespace TacticalDirector.BallPhysics.Tests
                 LastValidVelocity = new Vector3(10f, 0f, 0f)
             };
 
-            int maxSteps = 60 * 15; // 15 seconds max
+            int maxSteps = 60 * 15;
 
-            while (ball.State == BallStateType.ROLLING && maxSteps-- > 0)
+            while (ball.State == BallStateType.Rolling && maxSteps-- > 0)
             {
                 BallPhysicsCore.UpdateBallPhysics(
-                    ref ball, DT, SurfaceType.GRASS_DRY, Vector3.zero, null, 0f);
+                    ref ball, DT, SurfaceType.GrassDry, Vector3.zero, null, 0f);
             }
 
             float stoppingDistance = ball.Position.x;
@@ -97,10 +95,10 @@ namespace TacticalDirector.BallPhysics.Tests
             var ball = BallState.CreateAtPosition(new Vector3(52.5f, 34f, BallPhysicsConstants.Ball.RADIUS));
 
             BallCollision.SetBallControlled(ref ball);
-            Assert.AreEqual(BallStateType.CONTROLLED, ball.State);
+            Assert.AreEqual(BallStateType.Controlled, ball.State);
             Assert.AreEqual(Vector3.zero, ball.Velocity);
 
-            BallCollision.ApplyKick(
+            KickResult kick = BallCollision.ApplyKick(
                 ref ball,
                 velocity:  new Vector3(20f, 0f, 5f),
                 spin:      new Vector3(0f, 0f, -10f),
@@ -108,8 +106,9 @@ namespace TacticalDirector.BallPhysics.Tests
                 matchTime: 0f,
                 logger:    null);
 
-            Assert.AreEqual(BallStateType.AIRBORNE, ball.State,
-                "Kick with positive z velocity must produce AIRBORNE state");
+            Assert.AreEqual(KickResult.Applied, kick);
+            Assert.AreEqual(BallStateType.Airborne, ball.State,
+                "Kick with positive z velocity must produce Airborne state");
             Assert.That(ball.Velocity.magnitude, Is.GreaterThan(0f));
         }
 
@@ -119,14 +118,46 @@ namespace TacticalDirector.BallPhysics.Tests
             var ball = BallState.CreateAtPosition(new Vector3(52.5f, 34f, BallPhysicsConstants.Ball.RADIUS));
             BallCollision.SetBallControlled(ref ball);
 
-            BallCollision.ApplyKick(
+            KickResult kick = BallCollision.ApplyKick(
                 ref ball,
                 velocity:  new Vector3(10f, 0f, 0f),
                 spin:      Vector3.zero,
                 agentId:   1,
                 matchTime: 0f);
 
-            Assert.AreEqual(BallStateType.ROLLING, ball.State);
+            Assert.AreEqual(KickResult.Applied, kick);
+            Assert.AreEqual(BallStateType.Rolling, ball.State);
+        }
+
+        // ── AR-1 M-5: kick rejection feedback ─────────────────────────────────────
+
+        [Test]
+        public void Possession_NaNKick_RejectedWithFeedback_BallStateUnchanged()
+        {
+            // Suppress the Debug.LogError that ApplyKick emits on rejection so this
+            // test does not fail under NUnit's "log error fails test" default.
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Error,
+                new System.Text.RegularExpressions.Regex(@"\[BallPhysics\] ApplyKick: Invalid velocity"));
+
+            var ball = BallState.CreateAtPosition(new Vector3(52.5f, 34f, BallPhysicsConstants.Ball.RADIUS));
+            BallCollision.SetBallControlled(ref ball);
+
+            Vector3 stateBeforeVelocity = ball.Velocity;
+            BallStateType stateBefore   = ball.State;
+
+            KickResult kick = BallCollision.ApplyKick(
+                ref ball,
+                velocity:  new Vector3(float.NaN, 0f, 0f),
+                spin:      Vector3.zero,
+                agentId:   2,
+                matchTime: 0f);
+
+            Assert.AreEqual(KickResult.RejectedNonFiniteVelocity, kick);
+            Assert.AreEqual(stateBefore, ball.State,
+                "Rejected kick must not transition ball out of Controlled");
+            Assert.AreEqual(stateBeforeVelocity, ball.Velocity,
+                "Rejected kick must not mutate Velocity");
         }
 
         // ── Boundary detection ───────────────────────────────────────────────────
@@ -136,7 +167,7 @@ namespace TacticalDirector.BallPhysics.Tests
         {
             var ball = new BallState
             {
-                State    = BallStateType.ROLLING,
+                State    = BallStateType.Rolling,
                 Position = new Vector3(52f, -BallPhysicsConstants.Ball.RADIUS - 0.01f, 0f),
                 Velocity = new Vector3(5f, -2f, 0f)
             };
@@ -144,29 +175,27 @@ namespace TacticalDirector.BallPhysics.Tests
             var (isOut, restart) = BallCollision.CheckBoundaries(ball, lastTouchTeamID: 0);
 
             Assert.IsTrue(isOut);
-            Assert.AreEqual(RestartType.THROW_IN, restart);
+            Assert.AreEqual(RestartType.ThrowIn, restart);
         }
 
         [Test]
         public void Boundary_BallEntersGoal_ReturnsKickoff()
         {
-            // Ball at ground level inside home goal: x < -r, y at goal centre, z < crossbar.
-            // z must be < Ball.Diameter (0.22 m) to satisfy the Stage 0 lowEnough gate.
             float goalCenterY = BallPhysicsConstants.Pitch.WIDTH / 2f;
             var ball = new BallState
             {
-                State    = BallStateType.ROLLING,
+                State    = BallStateType.Rolling,
                 Position = new Vector3(
                     -BallPhysicsConstants.Ball.RADIUS - 0.01f,
                     goalCenterY,
-                    BallPhysicsConstants.Ball.RADIUS),   // ground level — within lowEnough gate
+                    BallPhysicsConstants.Ball.RADIUS),
                 Velocity = new Vector3(-5f, 0f, 0f)
             };
 
             var (isOut, restart) = BallCollision.CheckBoundaries(ball, lastTouchTeamID: 1);
 
             Assert.IsTrue(isOut);
-            Assert.AreEqual(RestartType.KICKOFF, restart);
+            Assert.AreEqual(RestartType.KickOff, restart);
         }
 
         // ── Goal post collision ───────────────────────────────────────────────────
@@ -179,11 +208,11 @@ namespace TacticalDirector.BallPhysics.Tests
                 Position        = new Vector3(0f, 34f, 1f),
                 Velocity        = new Vector3(-15f, 0f, 0f),
                 AngularVelocity = Vector3.zero,
-                State           = BallStateType.AIRBORNE
+                State           = BallStateType.Airborne
             };
 
             Vector3 postCenter   = new Vector3(0f, 34f, 1f);
-            Vector3 contactPoint = new Vector3(0.06f, 34f, 1f); // On post surface.
+            Vector3 contactPoint = new Vector3(0.06f, 34f, 1f);
 
             BallCollision.ApplyGoalPostCollision(ref ball, contactPoint, postCenter, null, 0f);
 
@@ -196,9 +225,13 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void FullUpdate_NaNInput_RecoversWithoutException()
         {
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Error,
+                new System.Text.RegularExpressions.Regex(@"\[BallPhysics\] NaN/Infinity detected"));
+
             var ball = new BallState
             {
-                State             = BallStateType.AIRBORNE,
+                State             = BallStateType.Airborne,
                 Position          = new Vector3(float.NaN, 34f, 5f),
                 Velocity          = new Vector3(20f, 0f, 2f),
                 AngularVelocity   = Vector3.zero,
@@ -207,7 +240,7 @@ namespace TacticalDirector.BallPhysics.Tests
             };
 
             Assert.DoesNotThrow(() =>
-                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GRASS_DRY, Vector3.zero, null, 0f));
+                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GrassDry, Vector3.zero, null, 0f));
 
             Assert.IsFalse(float.IsNaN(ball.Position.x), "Position must not be NaN after recovery");
         }
@@ -220,19 +253,21 @@ namespace TacticalDirector.BallPhysics.Tests
             var logger = new BallEventLogger();
             var ball   = new BallState
             {
-                State             = BallStateType.BOUNCING,
+                State             = BallStateType.Bouncing,
                 Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(5f, 0f, -4f),
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(5f, 0f, -4f)
             };
 
-            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GRASS_DRY, logger, 10f);
+            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GrassDry, logger, 10f);
 
             System.Collections.Generic.List<BallEvent> events = logger.ExportEvents();
             Assert.AreEqual(1, events.Count);
-            Assert.AreEqual(BallEventType.BOUNCE, events[0].Type);
+            Assert.AreEqual(BallEventType.Bounce, events[0].Type);
             Assert.AreEqual(10f, events[0].Timestamp, 0.001f);
+            Assert.AreEqual(SurfaceType.GrassDry, events[0].Surface,
+                "Typed Surface field must be populated (AR-1 H-1 zero-alloc refactor)");
         }
 
         // ── IT-TRJ-002 ────────────────────────────────────────────────────────────
@@ -240,12 +275,10 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void LongBall_DecaysRealistically()
         {
-            // v=(25,0,8) AIRBORNE from (0,34,RADIUS).
-            // Expected: peak height 4–6 m, flight time 1.8–2.2 s, landing speed < 25 m/s.
             float radius = BallPhysicsConstants.Ball.RADIUS;
             var ball = new BallState
             {
-                State             = BallStateType.AIRBORNE,
+                State             = BallStateType.Airborne,
                 Position          = new Vector3(0f, 34f, radius),
                 Velocity          = new Vector3(25f, 0f, 8f),
                 AngularVelocity   = Vector3.zero,
@@ -262,7 +295,7 @@ namespace TacticalDirector.BallPhysics.Tests
                 if (ball.Position.z > peakHeight)
                     peakHeight = ball.Position.z;
 
-                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GRASS_DRY, Vector3.zero, null, 0f);
+                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GrassDry, Vector3.zero, null, 0f);
                 steps++;
             }
 
@@ -281,11 +314,10 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void BouncingBall_SettlesWithinReasonableTime()
         {
-            // Drop from 5 m: impact speed ≈ 9.90 m/s.
             float radius = BallPhysicsConstants.Ball.RADIUS;
             var ball = new BallState
             {
-                State             = BallStateType.BOUNCING,
+                State             = BallStateType.Bouncing,
                 Position          = new Vector3(52.5f, 34f, 5f + radius),
                 Velocity          = new Vector3(0f, 0f, -9.9f),
                 AngularVelocity   = Vector3.zero,
@@ -299,7 +331,7 @@ namespace TacticalDirector.BallPhysics.Tests
 
             for (int i = 0; i < maxSteps; i++)
             {
-                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GRASS_DRY, Vector3.zero, null, 0f);
+                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GrassDry, Vector3.zero, null, 0f);
 
                 if (ball.State != prevState)
                 {
@@ -307,11 +339,11 @@ namespace TacticalDirector.BallPhysics.Tests
                     prevState = ball.State;
                 }
 
-                if (ball.State == BallStateType.STATIONARY || ball.State == BallStateType.ROLLING)
+                if (ball.State == BallStateType.Stationary || ball.State == BallStateType.Rolling)
                     break;
             }
 
-            Assert.That(ball.State == BallStateType.STATIONARY || ball.State == BallStateType.ROLLING,
+            Assert.That(ball.State == BallStateType.Stationary || ball.State == BallStateType.Rolling,
                 $"Ball should settle within {maxSteps} steps; actual state: {ball.State}");
             Assert.That(transitionCount, Is.LessThan(60),
                 $"Too many state transitions ({transitionCount}) — ball should not oscillate excessively");
@@ -322,11 +354,10 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void BouncingBall_LosesEnergyMonotonically()
         {
-            // Drop from 2 m: impact speed ≈ 6.26 m/s. Each bounce peak must be lower.
             float radius = BallPhysicsConstants.Ball.RADIUS;
             var ball = new BallState
             {
-                State             = BallStateType.BOUNCING,
+                State             = BallStateType.Bouncing,
                 Position          = new Vector3(52.5f, 34f, 2f + radius),
                 Velocity          = new Vector3(0f, 0f, -6.26f),
                 AngularVelocity   = Vector3.zero,
@@ -343,11 +374,11 @@ namespace TacticalDirector.BallPhysics.Tests
 
             for (int i = 0; i < maxSteps && bouncesSeen < 3; i++)
             {
-                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GRASS_DRY, Vector3.zero, null, 0f);
+                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GrassDry, Vector3.zero, null, 0f);
 
                 bool risingNow = ball.Velocity.z > 0f;
 
-                if (risingPrev && !risingNow && ball.State == BallStateType.AIRBORNE)
+                if (risingPrev && !risingNow && ball.State == BallStateType.Airborne)
                 {
                     bouncesSeen++;
                     if      (bouncesSeen == 1) h1 = ball.Position.z;
@@ -379,17 +410,17 @@ namespace TacticalDirector.BallPhysics.Tests
 
             for (int i = 0; i < 600; i++)
             {
-                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GRASS_DRY, Vector3.zero, null, 0f);
+                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GrassDry, Vector3.zero, null, 0f);
 
-                if (ball.State == BallStateType.AIRBORNE) seenAirborne = true;
-                if (ball.State == BallStateType.BOUNCING || ball.State == BallStateType.ROLLING) seenGround = true;
+                if (ball.State == BallStateType.Airborne) seenAirborne = true;
+                if (ball.State == BallStateType.Bouncing || ball.State == BallStateType.Rolling) seenGround = true;
 
-                if (ball.State == BallStateType.STATIONARY || ball.State == BallStateType.ROLLING)
+                if (ball.State == BallStateType.Stationary || ball.State == BallStateType.Rolling)
                     break;
             }
 
-            Assert.IsTrue(seenAirborne, "Kick should produce AIRBORNE state");
-            Assert.IsTrue(seenGround,   "Ball should reach BOUNCING or ROLLING after AIRBORNE");
+            Assert.IsTrue(seenAirborne, "Kick should produce Airborne state");
+            Assert.IsTrue(seenGround,   "Ball should reach Bouncing or Rolling after Airborne");
         }
 
         // ── IT-STS-002 ────────────────────────────────────────────────────────────
@@ -409,9 +440,9 @@ namespace TacticalDirector.BallPhysics.Tests
 
             for (int i = 0; i < 360; i++)
             {
-                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GRASS_DRY, Vector3.zero, null, 0f);
+                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GrassDry, Vector3.zero, null, 0f);
 
-                if (ball.State == BallStateType.BOUNCING)
+                if (ball.State == BallStateType.Bouncing)
                 {
                     bounced = true;
                     bouncingStreak++;
@@ -427,8 +458,8 @@ namespace TacticalDirector.BallPhysics.Tests
                 }
             }
 
-            Assert.IsTrue(bounced,           "Chip pass should produce at least one BOUNCING state");
-            Assert.IsFalse(deadlockDetected, "Ball must not remain stuck in BOUNCING for > 10 consecutive frames");
+            Assert.IsTrue(bounced,           "Chip pass should produce at least one Bouncing state");
+            Assert.IsFalse(deadlockDetected, "Ball must not remain stuck in Bouncing for > 10 consecutive frames");
         }
 
         // ── IT-COL-002 ────────────────────────────────────────────────────────────
@@ -442,7 +473,7 @@ namespace TacticalDirector.BallPhysics.Tests
                 Position        = new Vector3(105f, 34f, goalHeight),
                 Velocity        = new Vector3(10f, 0f, 5f),
                 AngularVelocity = Vector3.zero,
-                State           = BallStateType.AIRBORNE
+                State           = BallStateType.Airborne
             };
 
             Vector3 postCenter   = new Vector3(105f, 34f, goalHeight);
@@ -475,14 +506,16 @@ namespace TacticalDirector.BallPhysics.Tests
             bool hasKickEvent = false;
             for (int i = 0; i < kickEvents.Count; i++)
             {
-                if (kickEvents[i].Type == BallEventType.KICK)
+                if (kickEvents[i].Type == BallEventType.Kick)
                 {
                     hasKickEvent = true;
+                    Assert.AreEqual(BallStateType.Airborne, kickEvents[i].ResultingState,
+                        "Typed ResultingState field must be populated (AR-1 H-1)");
                     break;
                 }
             }
 
-            Assert.IsTrue(hasKickEvent, "A KICK event must be recorded by the logger");
+            Assert.IsTrue(hasKickEvent, "A Kick event must be recorded by the logger");
         }
     }
 }
@@ -499,4 +532,13 @@ namespace TacticalDirector.BallPhysics.Tests
 // |         |            |        | IT-MBC-002, IT-STS-001, IT-STS-002, IT-COL-002, IT-LOG-001.        |
 // |         |            |        | Fix EventLogger_LogsBounce_EventIsRecorded: var → explicit          |
 // |         |            |        | List<BallEvent> type per FR-CS-013.                                 |
+// | 1.3     | 2026-06-02 | —      | AR-1 fixes. H-2: file header path corrected to src/ball-physics/.  |
+// |         |            |        | M-4: BallStateType / SurfaceType / RestartType members renamed     |
+// |         |            |        | PascalCase across all test inputs. M-5: new                        |
+// |         |            |        | Possession_NaNKick_RejectedWithFeedback test locks ApplyKick's     |
+// |         |            |        | KickResult return contract. H-1 follow-on: EventLogger tests now   |
+// |         |            |        | also assert the typed Surface / ResultingState fields so the       |
+// |         |            |        | zero-alloc refactor is covered. LogAssert.Expect added on the two  |
+// |         |            |        | tests that intentionally exercise NaN-error paths so NUnit's       |
+// |         |            |        | "log error fails test" default does not break them.                |
 #endregion

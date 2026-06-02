@@ -1,6 +1,6 @@
-// File:     src/Core/Physics/Ball/BallGroundInteraction.cs
+// File:     src/ball-physics/BallGroundInteraction.cs
 // Created:  2026-05-24
-// Modified: 2026-05-24
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Impulse-based ground bounce and rolling-friction force calculations.
@@ -82,7 +82,7 @@ namespace TacticalDirector.BallPhysics
 
         /// <summary>
         /// Calculates rolling friction deceleration force.
-        /// Only applied when ball state is ROLLING.
+        /// Only applied when ball state is Rolling.
         /// </summary>
         public static Vector3 CalculateRollingFriction(Vector3 velocity, SurfaceType surface)
         {
@@ -107,4 +107,6 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | constant refs → PascalCase; ProfilerMarker replaces #if            |
 // |         |            |        | DEVELOPMENT_BUILD Profiler.BeginSample/EndSample per FR-CS-070;    |
 // |         |            |        | file header added per FR-CS-056/057.                               |
+// | 1.2     | 2026-06-02 | —      | AR-1 fixes. H-2: file header path corrected to src/ball-physics/.  |
+// |         |            |        | M-4 follow-on: doc updated to Rolling (PascalCase enum member).    |
 #endregion

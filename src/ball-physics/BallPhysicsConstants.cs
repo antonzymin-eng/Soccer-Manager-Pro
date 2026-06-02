@@ -1,6 +1,6 @@
-// File:     src/Core/Physics/Ball/BallPhysicsConstants.cs
+// File:     src/ball-physics/BallPhysicsConstants.cs
 // Created:  2026-05-24
-// Modified: 2026-05-24
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  All tunable and physical constants for ball physics simulation.
@@ -288,4 +288,5 @@ namespace TacticalDirector.BallPhysics
 // | 1.2     | 2026-05-24 | —      | Add Rolling.ResistanceArtificial/Frozen; add SurfaceCoR, SurfaceFriction,   |
 // |         |            |        | SurfaceSpinRetention nested classes for all 5 surface types per spec §3.1.2  |
 // |         |            |        | surface properties table. Eliminates FR-CS-016 literals in SurfaceProperties.|
+// | 1.3     | 2026-06-02 | —      | AR-1 H-2: file header path corrected to src/ball-physics/.                  |
 #endregion
