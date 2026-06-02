@@ -106,8 +106,9 @@ namespace TacticalDirector.PerformanceOptimization
 
         /// <summary>
         /// Returns true if all required fields are non-null and non-empty, including the
-        /// embedded <see cref="HardwareCounterSnapshot"/> string fields. Default-constructed
-        /// hardware snapshots (null CpuModel / ThermalState) fail the check per §3.3.2.
+        /// embedded <see cref="HardwareCounterSnapshot"/> string fields and a positive
+        /// <c>CoreCount</c>. Default-constructed hardware snapshots (null CpuModel /
+        /// ThermalState, zero CoreCount) fail the check per §3.3.2.
         /// The §3.4.4 baseline validator calls this before entering a baseline into the corpus.
         /// </summary>
         public bool IsComplete()
@@ -120,7 +121,8 @@ namespace TacticalDirector.PerformanceOptimization
                 && !string.IsNullOrEmpty(SessionEndUtc)
                 && !string.IsNullOrEmpty(HarnessVersion)
                 && !string.IsNullOrEmpty(HardwareCounters.CpuModel)
-                && !string.IsNullOrEmpty(HardwareCounters.ThermalState);
+                && !string.IsNullOrEmpty(HardwareCounters.ThermalState)
+                && HardwareCounters.CoreCount > 0;
         }
     }
 }
@@ -131,4 +133,7 @@ namespace TacticalDirector.PerformanceOptimization
 // | 1.1     | 2026-06-02 | —      | AR-2 L-1: IsComplete now also validates HardwareCounters.CpuModel  |
 // |         |            |        | and HardwareCounters.ThermalState; default-struct slip-through     |
 // |         |            |        | closed.                                                            |
+// | 1.2     | 2026-06-02 | —      | PR #129 Codex P2: IsComplete also requires HardwareCounters.Core-  |
+// |         |            |        | Count > 0 — completes the §3.3.2 hardware-snapshot triple (CPU     |
+// |         |            |        | model, core count, thermal state).                                 |
 #endregion
