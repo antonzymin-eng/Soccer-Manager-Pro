@@ -28,56 +28,57 @@ namespace TacticalDirector.TestingStrategy
         #region GT
         /// <summary>
         /// [GT] Unit-tier minimum fraction of total test count (0.60 = 60%).
-        /// Floor in the pyramid contract per §3.1.2. Revisited Stage 1 against actual code.
+        /// Floor in the pyramid contract per §3.1.2. Stage-gated per KD-5 (activates at
+        /// Stage 0+1); revisited Stage 1 against actual code.
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly float UnitPyramidFloorFraction = 0.60f;
 
         /// <summary>
         /// [GT] Integration-tier maximum fraction of total test count (0.25 = 25%).
-        /// Ceiling in the pyramid contract per §3.1.2.
+        /// Ceiling in the pyramid contract per §3.1.2. Stage-gated per KD-5.
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly float IntegrationPyramidCeilingFraction = 0.25f;
 
         /// <summary>
         /// [GT] Simulation-tier maximum fraction of total test count (0.12 = 12%).
-        /// Ceiling in the pyramid contract per §3.1.2.
+        /// Ceiling in the pyramid contract per §3.1.2. Stage-gated per KD-5.
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly float SimulationPyramidCeilingFraction = 0.12f;
 
         /// <summary>
         /// [GT] End-to-end / soak-tier maximum fraction of total test count (0.03 = 3%).
-        /// Ceiling in the pyramid contract per §3.1.2.
+        /// Ceiling in the pyramid contract per §3.1.2. Stage-gated per KD-5.
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly float EndToEndPyramidCeilingFraction = 0.03f;
 
         /// <summary>
         /// [GT] Tier A authoritative-hard line coverage minimum (0.98 = 98%).
-        /// Per KD-9 / §3.6.2 / FR-TS-053.
+        /// Per KD-9 / §3.6.2 / FR-TS-053. Stage-gated per KD-5.
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly float TierALineCoverageMin = 0.98f;
 
         /// <summary>
         /// [GT] Tier A authoritative-hard branch coverage minimum (0.95 = 95%).
-        /// Per KD-9 / §3.6.2 / FR-TS-053.
+        /// Per KD-9 / §3.6.2 / FR-TS-053. Stage-gated per KD-5.
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly float TierABranchCoverageMin = 0.95f;
 
         /// <summary>
         /// [GT] Tier B bounded-authoritative line coverage minimum (0.90 = 90%).
-        /// Per KD-9 / §3.6.2 / FR-TS-054.
+        /// Per KD-9 / §3.6.2 / FR-TS-054. Stage-gated per KD-5.
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly float TierBLineCoverageMin = 0.90f;
 
         /// <summary>
         /// [GT] Tier B bounded-authoritative branch coverage minimum (0.80 = 80%).
-        /// Per KD-9 / §3.6.2 / FR-TS-054.
+        /// Per KD-9 / §3.6.2 / FR-TS-054. Stage-gated per KD-5.
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly float TierBBranchCoverageMin = 0.80f;
@@ -123,6 +124,9 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-02 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-02 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-02 | —      | AR-1 L-5: KD-5 "Stage-gated" annotation added to pyramid bound +   |
+// |         |            |        | per-tier coverage XML docs (KD-5 governs activation; existing      |
+// |         |            |        | KD-9 cite covers tier policy). Documentation-only change.          |
 #endregion

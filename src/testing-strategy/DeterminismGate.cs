@@ -29,10 +29,29 @@ namespace TacticalDirector.TestingStrategy
     /// </summary>
     public static class DeterminismGate
     {
+        /// <summary>
+        /// [FIXED] Stage 0 deferred-status diagnostic embedded in every tier result
+        /// emitted by <see cref="RunTiers"/> until the §7.5 D1 test-runner pin lands.
+        /// Names the upstream authority (<c>TacticalDirector.DeterministicSim.Tests</c>)
+        /// and the FR-TS-012 merge-block consumption path during the deferral window.
+        /// </summary>
         private const string Stage0DeferredDiagnostic =
             "Stage 0: tier bodies live in TacticalDirector.DeterministicSim.Tests; " +
             "this gate becomes authoritative once the §7.5 D1 test-runner pin lands. " +
             "FR-TS-012 merge-block consumes the test-assembly results until then.";
+
+        /// <summary>
+        /// [FIXED] Canonical #16 §5 tier order (Unit → Integration → Scenario → Soak)
+        /// consumed by <see cref="RunTiers"/> per FR-TS-011. Pre-allocated once so
+        /// repeated CI invocations do not re-allocate.
+        /// </summary>
+        private static readonly DeterminismTierKind[] s_canonicalTierOrder =
+        {
+            DeterminismTierKind.Unit,
+            DeterminismTierKind.Integration,
+            DeterminismTierKind.Scenario,
+            DeterminismTierKind.Soak,
+        };
 
         /// <summary>
         /// Runs every #16 §5 tier in canonical order plus the golden-vector corpus and
@@ -43,19 +62,11 @@ namespace TacticalDirector.TestingStrategy
         /// </summary>
         public static DeterminismSuiteResult RunTiers()
         {
-            DeterminismTierKind[] order =
-            {
-                DeterminismTierKind.Unit,
-                DeterminismTierKind.Integration,
-                DeterminismTierKind.Scenario,
-                DeterminismTierKind.Soak,
-            };
-
-            DeterminismTierResult[] tierResults = new DeterminismTierResult[order.Length];
-            for (int i = 0; i < order.Length; i++)
+            DeterminismTierResult[] tierResults = new DeterminismTierResult[s_canonicalTierOrder.Length];
+            for (int i = 0; i < s_canonicalTierOrder.Length; i++)
             {
                 tierResults[i] = new DeterminismTierResult(
-                    order[i],
+                    s_canonicalTierOrder[i],
                     passed: false,
                     testsExecuted: 0,
                     testsFailed: 0,
@@ -71,6 +82,9 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-02 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-02 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-02 | —      | AR-1 M-2: Stage0DeferredDiagnostic private const gained XML        |
+// |         |            |        | <summary> per FR-CS-061. AR-1 L-6: tier order array promoted from  |
+// |         |            |        | per-call local to private static readonly s_canonicalTierOrder.    |
 #endregion

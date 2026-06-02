@@ -7,6 +7,8 @@
 //           block merges per KD-2 / FR-TS-012; Spec #19 does not soften #16's
 //           exit criteria.
 
+using System;
+
 namespace TacticalDirector.TestingStrategy
 {
     /// <summary>
@@ -37,8 +39,18 @@ namespace TacticalDirector.TestingStrategy
         public string Diagnostic { get; }
 
         /// <summary>
-        /// Initialises a tier result. <paramref name="diagnostic"/> MUST be non-empty.
+        /// Initialises a tier result. Enforces per AR-1 L-2/L-3:
+        /// <paramref name="diagnostic"/> MUST be non-empty, counts MUST satisfy
+        /// <c>0 ≤ testsFailed ≤ testsExecuted</c>, and
+        /// <c>passed == (testsExecuted &gt; 0 &amp;&amp; testsFailed == 0)</c> — a tier
+        /// can only pass when at least one test executed and none failed. The
+        /// <c>(passed=false, executed=0, failed=0)</c> shape is reserved for the
+        /// Stage 0 deferred-status path emitted by <see cref="DeterminismGate.RunTiers"/>.
         /// </summary>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="diagnostic"/> is null/empty, when counts are
+        /// negative or inconsistent, or when the pass invariant is violated.
+        /// </exception>
         public DeterminismTierResult(
             DeterminismTierKind tier,
             bool passed,
@@ -46,6 +58,28 @@ namespace TacticalDirector.TestingStrategy
             int testsFailed,
             string diagnostic)
         {
+            if (string.IsNullOrEmpty(diagnostic))
+            {
+                throw new ArgumentException("diagnostic must be non-empty", nameof(diagnostic));
+            }
+            if (testsExecuted < 0)
+            {
+                throw new ArgumentException("must be non-negative", nameof(testsExecuted));
+            }
+            if (testsFailed < 0 || testsFailed > testsExecuted)
+            {
+                throw new ArgumentException(
+                    "must be non-negative and ≤ testsExecuted",
+                    nameof(testsFailed));
+            }
+            bool expectedPassed = testsExecuted > 0 && testsFailed == 0;
+            if (passed != expectedPassed)
+            {
+                throw new ArgumentException(
+                    "passed must equal (testsExecuted > 0 && testsFailed == 0)",
+                    nameof(passed));
+            }
+
             Tier          = tier;
             Passed        = passed;
             TestsExecuted = testsExecuted;
@@ -56,6 +90,8 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-02 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-02 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-02 | —      | AR-1 L-2/L-3 parallel: constructor enforces non-empty diagnostic,  |
+// |         |            |        | 0 ≤ testsFailed ≤ testsExecuted, and passed == (testsFailed == 0). |
 #endregion

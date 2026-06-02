@@ -23,17 +23,18 @@ namespace TacticalDirector.TestingStrategy
         /// <summary>Kind discriminator — selects the reference algorithm to execute.</summary>
         public GoldenVectorKind Kind { get; }
 
+        /// <summary>Human-readable corpus name (matches the markdown title).</summary>
+        public string Name { get; }
+
         /// <summary>Repo-relative path to the markdown corpus file under <c>docs/specs/deterministic-sim/golden-vectors/</c>.</summary>
         public string SourcePath { get; }
 
         /// <summary>Authoritative citation in #16 for the algorithm under test.</summary>
         public string Citation { get; }
 
-        /// <summary>Human-readable corpus name (matches the markdown title).</summary>
-        public string Name { get; }
-
         /// <summary>
-        /// Initialises one catalogue entry. All fields are required and copied verbatim.
+        /// Initialises one catalogue entry. Parameter order matches property declaration
+        /// order (Kind / Name / SourcePath / Citation). All fields are required and copied verbatim.
         /// </summary>
         public GoldenVectorEntry(
             GoldenVectorKind kind,
@@ -50,6 +51,8 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-02 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-02 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-02 | —      | AR-1 L-1: property declaration order reordered to                  |
+// |         |            |        | Kind / Name / SourcePath / Citation, matching constructor params.  |
 #endregion

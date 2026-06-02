@@ -32,9 +32,19 @@ namespace TacticalDirector.TestingStrategy
     /// </summary>
     public static class GoldenVectorRunner
     {
+        /// <summary>
+        /// [FIXED] Repo-relative root of the #16 §9.5 #4 golden-vector corpora.
+        /// Catalogue entries concatenate corpus file names onto this prefix.
+        /// </summary>
         private const string GoldenVectorRootRelPath =
             "docs/specs/deterministic-sim/golden-vectors/";
 
+        /// <summary>
+        /// [FIXED] Stage 0 deferred-status diagnostic emitted by <see cref="Run"/>
+        /// until the §7.5 D1 test-runner pin lands. Names the upstream authority
+        /// (<c>TacticalDirector.DeterministicSim.Tests</c>) and explains the
+        /// FR-DS-009-GATE consumption path during the deferral window.
+        /// </summary>
         private const string Stage0DeferredDiagnostic =
             "Stage 0: KAT execution lives in TacticalDirector.DeterministicSim.Tests; " +
             "this runner becomes authoritative once the §7.5 D1 test-runner pin lands. " +
@@ -106,6 +116,9 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-02 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-02 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-02 | —      | AR-1 M-1: GoldenVectorRootRelPath + Stage0DeferredDiagnostic       |
+// |         |            |        | private consts gained XML <summary> docs per FR-CS-061             |
+// |         |            |        | (every constant, any access level, requires summary).             |
 #endregion

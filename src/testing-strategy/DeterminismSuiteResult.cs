@@ -7,6 +7,7 @@
 //           verbatim by ITestHarness.RunDeterminismTiers per FR-TS-016 (single
 //           integration point through which #16 §5 is invoked).
 
+using System;
 using System.Collections.Generic;
 
 namespace TacticalDirector.TestingStrategy
@@ -15,7 +16,8 @@ namespace TacticalDirector.TestingStrategy
     /// Aggregated result for one invocation of <see cref="DeterminismGate.RunTiers"/>.
     /// Carries per-tier outcomes plus the golden-vector run (a precondition of #16 §5.5
     /// per FR-DS-009-GATE). The CI gate consumes <see cref="AllPassed"/> as the
-    /// merge-block signal per FR-TS-012.
+    /// merge-block signal per FR-TS-012. Empty inputs fail closed (<see cref="AllPassed"/>
+    /// is false) so a degenerate caller cannot silently green-light the gate.
     /// Testing Strategy &amp; Framework #19 §3.2 / §4.3.1 / KD-2.
     /// </summary>
     public sealed class DeterminismSuiteResult
@@ -32,38 +34,52 @@ namespace TacticalDirector.TestingStrategy
         /// </summary>
         public IReadOnlyList<GoldenVectorResult> GoldenVectorResults { get; }
 
-        /// <summary>True only if every tier passed and every golden-vector corpus passed.</summary>
+        /// <summary>
+        /// True only if both lists are non-empty AND every tier passed AND every
+        /// golden-vector corpus passed. Empty input fails closed per AR-1 M-3.
+        /// </summary>
         public bool AllPassed { get; }
 
         /// <summary>
-        /// Initialises an aggregated suite result. <see cref="AllPassed"/> is computed
-        /// from the union of tier and golden-vector outcomes.
+        /// Initialises an aggregated suite result. Both arguments MUST be non-null;
+        /// <see cref="ArgumentNullException"/> is thrown otherwise. Empty lists are
+        /// permitted but cause <see cref="AllPassed"/> to be false (fail-closed
+        /// semantics — an empty suite cannot pass FR-DS-009-GATE).
         /// </summary>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="tierResults"/> or <paramref name="goldenVectorResults"/> is null.
+        /// </exception>
         public DeterminismSuiteResult(
             IReadOnlyList<DeterminismTierResult> tierResults,
             IReadOnlyList<GoldenVectorResult> goldenVectorResults)
         {
+            if (tierResults == null)
+            {
+                throw new ArgumentNullException(nameof(tierResults));
+            }
+            if (goldenVectorResults == null)
+            {
+                throw new ArgumentNullException(nameof(goldenVectorResults));
+            }
+
             TierResults         = tierResults;
             GoldenVectorResults = goldenVectorResults;
 
-            bool allPassed = true;
-            for (int i = 0; i < tierResults.Count; i++)
+            // Fail-closed on empty input: a suite with no tiers or no corpora cannot pass
+            // FR-DS-009-GATE even if every present element passed. AR-1 M-3.
+            bool allPassed = tierResults.Count > 0 && goldenVectorResults.Count > 0;
+            for (int i = 0; allPassed && i < tierResults.Count; i++)
             {
                 if (!tierResults[i].Passed)
                 {
                     allPassed = false;
-                    break;
                 }
             }
-            if (allPassed)
+            for (int i = 0; allPassed && i < goldenVectorResults.Count; i++)
             {
-                for (int i = 0; i < goldenVectorResults.Count; i++)
+                if (!goldenVectorResults[i].Passed)
                 {
-                    if (!goldenVectorResults[i].Passed)
-                    {
-                        allPassed = false;
-                        break;
-                    }
+                    allPassed = false;
                 }
             }
 
@@ -73,6 +89,10 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-02 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-02 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-02 | —      | AR-1 M-3: empty tier or golden-vector lists now fail closed         |
+// |         |            |        | (AllPassed=false); previously empty input silently passed the gate. |
+// |         |            |        | AR-1 L-4: constructor null-checks both list arguments with explicit |
+// |         |            |        | ArgumentNullException instead of letting .Count NRE.                |
 #endregion
