@@ -1,0 +1,17 @@
+{
+    "name": "TacticalDirector.TestingStrategy",
+    "rootNamespace": "TacticalDirector.TestingStrategy",
+    "references": [
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.PerformanceOptimization"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
