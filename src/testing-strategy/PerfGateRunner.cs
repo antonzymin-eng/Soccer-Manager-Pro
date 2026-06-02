@@ -31,6 +31,16 @@ namespace TacticalDirector.TestingStrategy
         /// optional milestone drift bound. Returns a structured report ready for CI
         /// dashboard rendering. Both <paramref name="baseline"/> and <paramref name="current"/>
         /// MUST be non-null; <see cref="ArgumentNullException"/> is thrown otherwise.
+        ///
+        /// Per FR-PO-031, the +5% gate is defined only for the same scenario, seed,
+        /// platform pin, and loop. The runner rejects mismatched metadata via
+        /// <see cref="ArgumentException"/> before delegating to
+        /// <see cref="RegressionGate.Evaluate"/> — a P50-only comparison across
+        /// different scenarios produces a meaningless verdict and could silently
+        /// green-light a regression. Manifest fields are validated only when both
+        /// records carry a non-null <see cref="BaselineRecord.Manifest"/>; pairs
+        /// with a missing manifest fall back to the AR-1 H-1 malformed-record
+        /// diagnostic path. PR #132 Codex P2.
         /// </summary>
         /// <param name="specId">Spec ID whose §6 budget row produced the records.</param>
         /// <param name="loopTag">
@@ -46,6 +56,11 @@ namespace TacticalDirector.TestingStrategy
         /// <exception cref="ArgumentNullException">
         /// Thrown when <paramref name="baseline"/> or <paramref name="current"/> is null.
         /// </exception>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="baseline"/> and <paramref name="current"/> disagree on
+        /// <see cref="BaselineRecord.Loop"/>, <see cref="SessionManifest.ScenarioManifestId"/>,
+        /// <see cref="SessionManifest.Seed"/>, or <see cref="SessionManifest.PlatformPin"/>.
+        /// </exception>
         public static PerfGateReport Run(
             int specId,
             string loopTag,
@@ -60,6 +75,55 @@ namespace TacticalDirector.TestingStrategy
             if (current == null)
             {
                 throw new ArgumentNullException(nameof(current));
+            }
+
+            // PR #132 Codex P2: FR-PO-031 defines the +5% gate only for the same
+            // scenario, seed, platform pin, and loop. RegressionGate.Evaluate compares
+            // only P50Ms, so mismatched metadata would silently produce a meaningless
+            // verdict (potentially a false-pass). Fail closed via ArgumentException so
+            // the CI gate surfaces the mismatch.
+            if (baseline.Loop != current.Loop)
+            {
+                throw new ArgumentException(
+                    "Loop mismatch: baseline=" + baseline.Loop + " vs current=" + current.Loop
+                        + ". FR-PO-031 requires matching loop tags.",
+                    nameof(current));
+            }
+
+            SessionManifest baselineManifest = baseline.Manifest;
+            SessionManifest currentManifest = current.Manifest;
+            if (baselineManifest != null && currentManifest != null)
+            {
+                if (!string.Equals(
+                        baselineManifest.ScenarioManifestId,
+                        currentManifest.ScenarioManifestId,
+                        StringComparison.Ordinal))
+                {
+                    throw new ArgumentException(
+                        "Scenario mismatch: baseline=" + baselineManifest.ScenarioManifestId
+                            + " vs current=" + currentManifest.ScenarioManifestId
+                            + ". FR-PO-031 requires matching scenarios.",
+                        nameof(current));
+                }
+                if (baselineManifest.Seed != currentManifest.Seed)
+                {
+                    throw new ArgumentException(
+                        "Seed mismatch: baseline=" + baselineManifest.Seed
+                            + " vs current=" + currentManifest.Seed
+                            + ". FR-PO-031 requires matching seeds.",
+                        nameof(current));
+                }
+                if (!string.Equals(
+                        baselineManifest.PlatformPin,
+                        currentManifest.PlatformPin,
+                        StringComparison.Ordinal))
+                {
+                    throw new ArgumentException(
+                        "Platform pin mismatch: baseline=" + baselineManifest.PlatformPin
+                            + " vs current=" + currentManifest.PlatformPin
+                            + ". FR-PO-031 requires matching platform pins.",
+                        nameof(current));
+                }
             }
 
             RegressionResult regression = RegressionGate.Evaluate(baseline, current, milestoneMs);
@@ -83,4 +147,12 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | NPEs first on null current). Explicit ArgumentNullException guards |
 // |         |            |        | on baseline + current; inner Manifest?. kept for malformed-record  |
 // |         |            |        | diagnostic only.                                                    |
+// | 1.2     | 2026-06-02 | —      | PR #132 Codex P2: reject mismatched perf baselines before          |
+// |         |            |        | evaluating. FR-PO-031 defines the +5% gate only for the same       |
+// |         |            |        | scenario, seed, platform pin, and loop; RegressionGate.Evaluate    |
+// |         |            |        | compares only P50Ms and would silently green-light a mismatched   |
+// |         |            |        | pair. Run now throws ArgumentException on Loop / ScenarioManifest- |
+// |         |            |        | Id / Seed / PlatformPin mismatch (Manifest checks gated on both   |
+// |         |            |        | manifests being non-null — preserves the AR-1 H-1 missing-mani-   |
+// |         |            |        | fest tolerance).                                                   |
 #endregion
