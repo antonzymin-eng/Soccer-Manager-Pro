@@ -42,14 +42,17 @@ namespace TacticalDirector.TestingStrategy
         public bool AllPassed => Regression.AllPassed;
 
         /// <summary>
-        /// Initialises a report. <paramref name="loopTag"/> SHOULD be one of the
-        /// #18 <c>LOOP_TAG_*</c> string constants; the runner does not enforce that
-        /// invariant so dashboards may render unknown loop tags as <c>UNKNOWN</c>.
-        /// Both <paramref name="loopTag"/> and <paramref name="scenarioManifestId"/>
-        /// MUST be non-null per AR-3 M-1 (parallel to the AR-1/AR-2 invariant push on
-        /// the other result/entry types). The empty string is permitted for both —
-        /// <see cref="PerfGateRunner.Run"/> deliberately uses <see cref="string.Empty"/>
-        /// as the missing-manifest sentinel.
+        /// Initialises a report. Both <paramref name="loopTag"/> and
+        /// <paramref name="scenarioManifestId"/> MUST be non-null per AR-3 M-1
+        /// (parallel to the AR-1/AR-2 invariant push on the other result/entry types).
+        /// Empty strings are permitted but with different rationales (AR-5 L-2):
+        /// empty <paramref name="loopTag"/> is technically allowed because the runner
+        /// does not enforce the <c>LOOP_TAG_*</c> allowlist per the existing "SHOULD"
+        /// contract (dashboards may render unknown loop tags as <c>UNKNOWN</c>);
+        /// empty <paramref name="scenarioManifestId"/> is the missing-manifest sentinel
+        /// produced by <see cref="PerfGateRunner.Run"/> when <c>current.Manifest</c>
+        /// is null (the verdict is already computed at that point — only the rendered
+        /// diagnostic is affected).
         /// </summary>
         /// <exception cref="ArgumentNullException">
         /// Thrown when <paramref name="loopTag"/> or <paramref name="scenarioManifestId"/> is null.
@@ -85,4 +88,8 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | invariant push on the other result/entry types). Empty strings    |
 // |         |            |        | remain valid — PerfGateRunner.Run uses string.Empty as the         |
 // |         |            |        | missing-manifest sentinel.                                         |
+// | 1.2     | 2026-06-02 | —      | AR-5 L-2: XML doc on the constructor split the empty-string       |
+// |         |            |        | rationale per parameter — empty loopTag is "SHOULD" advisory,    |
+// |         |            |        | empty scenarioManifestId is the missing-manifest sentinel produced|
+// |         |            |        | by PerfGateRunner.Run when current.Manifest is null. Doc-only.    |
 #endregion

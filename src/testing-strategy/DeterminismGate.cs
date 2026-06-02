@@ -10,6 +10,7 @@
 //           Aggregates the golden-vector corpus run (FR-DS-009-GATE precondition)
 //           with the four §5 tier outcomes into one DeterminismSuiteResult.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
@@ -71,11 +72,13 @@ namespace TacticalDirector.TestingStrategy
         /// </summary>
         public static DeterminismSuiteResult RunTiers()
         {
-            // Cache .Count once and snapshot the canonical order into a local array — this
-            // collapses the per-iteration interface-property dispatch (AR-4 L-1) and gives
-            // the loop body four cheap array reads instead of four virtual calls.
+            // Cache .Count once and snapshot the canonical order into a stackalloc Span<T> —
+            // this collapses the per-iteration interface-property dispatch (AR-4 L-1) without
+            // the heap allocation the AR-4 fix introduced (AR-5 L-1). The Span pattern matches
+            // the deterministic-sim CanonicalSerializer convention (src/CLAUDE.md v1.21 AR-1
+            // H-3); no unsafe block required.
             int tierCount = s_canonicalTierOrder.Count;
-            DeterminismTierKind[] order = new DeterminismTierKind[tierCount];
+            Span<DeterminismTierKind> order = stackalloc DeterminismTierKind[tierCount];
             for (int i = 0; i < tierCount; i++)
             {
                 order[i] = s_canonicalTierOrder[i];
@@ -129,4 +132,9 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | order snapshotted into a local DeterminismTierKind[] once per call|
 // |         |            |        | so the loop body indexes a plain array instead of re-dispatching  |
 // |         |            |        | the IReadOnlyList<T> indexer (AR-4 L-1).                           |
+// | 1.5     | 2026-06-02 | —      | AR-5 L-1: order snapshot promoted from heap DeterminismTierKind[] |
+// |         |            |        | to stackalloc Span<DeterminismTierKind>, eliminating the per-call |
+// |         |            |        | heap allocation while preserving the AR-4 L-1 dispatch-elimination|
+// |         |            |        | benefit. Matches the deterministic-sim CanonicalSerializer Span    |
+// |         |            |        | pattern (src/CLAUDE.md v1.21 AR-1 H-3); no unsafe block required.  |
 #endregion
