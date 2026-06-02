@@ -16,6 +16,11 @@ namespace TacticalDirector.TestingStrategy
     /// test counts, and a diagnostic string used by the CI gate. Aggregated into
     /// <see cref="DeterminismSuiteResult"/>.
     /// Testing Strategy &amp; Framework #19 §3.2 / KD-2 / FR-TS-012.
+    /// Note: <c>default(DeterminismTierResult)</c> bypasses the constructor's invariant
+    /// checks (C# struct default-value semantics — <see cref="Diagnostic"/> will be null).
+    /// All call sites that originate results (<see cref="DeterminismGate.RunTiers"/>)
+    /// MUST use the public constructor; consumers SHOULD treat default-valued results
+    /// as malformed. AR-2 L-6.
     /// </summary>
     public readonly struct DeterminismTierResult
     {
@@ -48,8 +53,13 @@ namespace TacticalDirector.TestingStrategy
         /// Stage 0 deferred-status path emitted by <see cref="DeterminismGate.RunTiers"/>.
         /// </summary>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="diagnostic"/> is null/empty, when counts are
-        /// negative or inconsistent, or when the pass invariant is violated.
+        /// Thrown when <paramref name="diagnostic"/> is null/empty or when the pass
+        /// invariant is violated.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when <paramref name="testsExecuted"/> or <paramref name="testsFailed"/>
+        /// is negative, or when <paramref name="testsFailed"/> exceeds
+        /// <paramref name="testsExecuted"/>.
         /// </exception>
         public DeterminismTierResult(
             DeterminismTierKind tier,
@@ -64,13 +74,17 @@ namespace TacticalDirector.TestingStrategy
             }
             if (testsExecuted < 0)
             {
-                throw new ArgumentException("must be non-negative", nameof(testsExecuted));
+                throw new ArgumentOutOfRangeException(
+                    nameof(testsExecuted),
+                    testsExecuted,
+                    "must be non-negative");
             }
             if (testsFailed < 0 || testsFailed > testsExecuted)
             {
-                throw new ArgumentException(
-                    "must be non-negative and ≤ testsExecuted",
-                    nameof(testsFailed));
+                throw new ArgumentOutOfRangeException(
+                    nameof(testsFailed),
+                    testsFailed,
+                    "must be non-negative and ≤ testsExecuted");
             }
             bool expectedPassed = testsExecuted > 0 && testsFailed == 0;
             if (passed != expectedPassed)
@@ -94,4 +108,9 @@ namespace TacticalDirector.TestingStrategy
 // | 1.0     | 2026-06-02 | —      | Initial implementation.                                            |
 // | 1.1     | 2026-06-02 | —      | AR-1 L-2/L-3 parallel: constructor enforces non-empty diagnostic,  |
 // |         |            |        | 0 ≤ testsFailed ≤ testsExecuted, and passed == (testsFailed == 0). |
+// | 1.2     | 2026-06-02 | —      | AR-2 L-3: range violations (negative counts, testsFailed >        |
+// |         |            |        | testsExecuted) now throw ArgumentOutOfRangeException; the pass    |
+// |         |            |        | invariant and the null/empty diagnostic check stay ArgumentExc-   |
+// |         |            |        | eption (not range issues). AR-2 L-6: XML doc notes default-value  |
+// |         |            |        | bypass.                                                            |
 #endregion

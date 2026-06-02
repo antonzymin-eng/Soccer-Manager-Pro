@@ -14,6 +14,11 @@ namespace TacticalDirector.TestingStrategy
     /// Spec #19 consumes this order; new tier categories require a #16 §5 revision (FR-TS-018).
     /// Ordinals match the canonical sequence: Unit → Integration → Scenario → Soak.
     /// Testing Strategy &amp; Framework #19 §3.2.2 / Deterministic Simulation #16 §5.
+    ///
+    /// MAINTAINER NOTE (AR-2 L-5): if a new member is added here (after a #16 §5
+    /// revision lifts FR-TS-018), <see cref="DeterminismGate.RunTiers"/>'s
+    /// <c>s_canonicalTierOrder</c> list MUST be extended atomically in the same commit
+    /// — a missed entry there would silently exclude the new tier from the gate.
     /// </summary>
     public enum DeterminismTierKind : byte
     {
@@ -33,5 +38,7 @@ namespace TacticalDirector.TestingStrategy
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-02 | —      | Initial implementation. |
+// | 1.0     | 2026-06-02 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-02 | —      | AR-2 L-5: maintainer note added about atomic update of            |
+// |         |            |        | DeterminismGate.s_canonicalTierOrder when a new member is added.  |
 #endregion

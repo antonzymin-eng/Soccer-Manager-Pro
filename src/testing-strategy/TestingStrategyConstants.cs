@@ -85,14 +85,14 @@ namespace TacticalDirector.TestingStrategy
 
         /// <summary>
         /// [GT] Unit-tier wall-time budget in milliseconds (1 ms).
-        /// Sub-millisecond fast-feedback bound per §3.1.1 / FR-TS-002 / §3.10.
+        /// Sub-millisecond fast-feedback bound per §3.1.1 / FR-TS-002 / §3.10. Stage-gated per KD-5.
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly float UnitWallTimeBoundMs = 1.0f;
 
         /// <summary>
         /// [GT] Pre-commit pipeline wall-time budget in seconds (60 s).
-        /// Local-feedback budget per §4.5.1 / §3.10.
+        /// Local-feedback budget per §4.5.1 / §3.10. Stage-gated per KD-5.
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly float PreCommitWallTimeBoundSeconds = 60.0f;
@@ -100,7 +100,7 @@ namespace TacticalDirector.TestingStrategy
         /// <summary>
         /// [GT] Quarantine auto-expiry window in days (14 days).
         /// After this window, the test MUST be fixed or deleted; permanent quarantine forbidden.
-        /// §3.7.3 / FR-TS-063 / FR-TS-064.
+        /// §3.7.3 / FR-TS-063 / FR-TS-064. Stage-gated per KD-5 (§3.7 preamble).
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly int QuarantineExpiryDays = 14;
@@ -108,14 +108,14 @@ namespace TacticalDirector.TestingStrategy
         /// <summary>
         /// [GT] Eviction quarantine-count threshold (3 strikes).
         /// A test quarantined this many times in <see cref="EvictionWindowDays"/> is deleted.
-        /// §3.7.4 / FR-TS-065.
+        /// §3.7.4 / FR-TS-065. Stage-gated per KD-5 (§3.7 preamble).
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly int EvictionQuarantineCount = 3;
 
         /// <summary>
         /// [GT] Eviction observation window in days (90 days = one calendar quarter).
-        /// §3.7.4 / FR-TS-065.
+        /// §3.7.4 / FR-TS-065. Stage-gated per KD-5 (§3.7 preamble).
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly int EvictionWindowDays = 90;
@@ -129,4 +129,8 @@ namespace TacticalDirector.TestingStrategy
 // | 1.1     | 2026-06-02 | —      | AR-1 L-5: KD-5 "Stage-gated" annotation added to pyramid bound +   |
 // |         |            |        | per-tier coverage XML docs (KD-5 governs activation; existing      |
 // |         |            |        | KD-9 cite covers tier policy). Documentation-only change.          |
+// | 1.2     | 2026-06-02 | —      | AR-2 L-4: KD-5 "Stage-gated" annotation extended to the remaining |
+// |         |            |        | GT rows skipped by AR-1 L-5 — UnitWallTimeBoundMs, PreCommitWall- |
+// |         |            |        | TimeBoundSeconds, and the §3.7 quarantine + eviction triple       |
+// |         |            |        | (which §3.7 preamble explicitly tags Stage-gated per KD-5).        |
 #endregion

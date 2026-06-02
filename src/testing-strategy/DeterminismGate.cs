@@ -11,6 +11,7 @@
 //           with the four §5 tier outcomes into one DeterminismSuiteResult.
 
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace TacticalDirector.TestingStrategy
 {
@@ -42,16 +43,24 @@ namespace TacticalDirector.TestingStrategy
 
         /// <summary>
         /// [FIXED] Canonical #16 §5 tier order (Unit → Integration → Scenario → Soak)
-        /// consumed by <see cref="RunTiers"/> per FR-TS-011. Pre-allocated once so
-        /// repeated CI invocations do not re-allocate.
+        /// consumed by <see cref="RunTiers"/> per FR-TS-011. Pre-allocated once and
+        /// exposed as <see cref="IReadOnlyList{T}"/> via <see cref="ReadOnlyCollection{T}"/>
+        /// so the wrapper denies element-level mutation (AR-2 L-2).
+        ///
+        /// MAINTAINER NOTE (AR-2 L-5): if <see cref="DeterminismTierKind"/> gains a new
+        /// member, this list MUST be extended atomically in the same commit — FR-TS-018
+        /// forbids #19 introducing new determinism tier categories without a #16 §5
+        /// revision, but a missed entry here would silently exclude the new tier from
+        /// <see cref="RunTiers"/> and the gate would report a stale <see cref="DeterminismSuiteResult.AllPassed"/>.
         /// </summary>
-        private static readonly DeterminismTierKind[] s_canonicalTierOrder =
-        {
-            DeterminismTierKind.Unit,
-            DeterminismTierKind.Integration,
-            DeterminismTierKind.Scenario,
-            DeterminismTierKind.Soak,
-        };
+        private static readonly IReadOnlyList<DeterminismTierKind> s_canonicalTierOrder =
+            new ReadOnlyCollection<DeterminismTierKind>(new[]
+            {
+                DeterminismTierKind.Unit,
+                DeterminismTierKind.Integration,
+                DeterminismTierKind.Scenario,
+                DeterminismTierKind.Soak,
+            });
 
         /// <summary>
         /// Runs every #16 §5 tier in canonical order plus the golden-vector corpus and
@@ -62,8 +71,8 @@ namespace TacticalDirector.TestingStrategy
         /// </summary>
         public static DeterminismSuiteResult RunTiers()
         {
-            DeterminismTierResult[] tierResults = new DeterminismTierResult[s_canonicalTierOrder.Length];
-            for (int i = 0; i < s_canonicalTierOrder.Length; i++)
+            DeterminismTierResult[] tierResults = new DeterminismTierResult[s_canonicalTierOrder.Count];
+            for (int i = 0; i < s_canonicalTierOrder.Count; i++)
             {
                 tierResults[i] = new DeterminismTierResult(
                     s_canonicalTierOrder[i],
@@ -76,7 +85,13 @@ namespace TacticalDirector.TestingStrategy
             IReadOnlyList<GoldenVectorResult> goldenVectorResults =
                 GoldenVectorRunner.RunAll();
 
-            return new DeterminismSuiteResult(tierResults, goldenVectorResults);
+            // Wrap the local tierResults array via ReadOnlyCollection<T> so the
+            // DeterminismSuiteResult.TierResults surface cannot be downcast back to
+            // a mutable DeterminismTierResult[] (AR-2 L-1 parallel; GoldenVectorRunner.RunAll
+            // already returns a wrapped collection).
+            return new DeterminismSuiteResult(
+                new ReadOnlyCollection<DeterminismTierResult>(tierResults),
+                goldenVectorResults);
         }
     }
 }
@@ -87,4 +102,12 @@ namespace TacticalDirector.TestingStrategy
 // | 1.1     | 2026-06-02 | —      | AR-1 M-2: Stage0DeferredDiagnostic private const gained XML        |
 // |         |            |        | <summary> per FR-CS-061. AR-1 L-6: tier order array promoted from  |
 // |         |            |        | per-call local to private static readonly s_canonicalTierOrder.    |
+// | 1.2     | 2026-06-02 | —      | AR-2 L-2: s_canonicalTierOrder wrapped in ReadOnlyCollection<T>    |
+// |         |            |        | (typed IReadOnlyList<DeterminismTierKind>) so elements are no     |
+// |         |            |        | longer reassignable through the field reference. AR-2 L-5:         |
+// |         |            |        | maintainer note added next to the order list reminding contribs   |
+// |         |            |        | to extend atomically when DeterminismTierKind gains a new member. |
+// |         |            |        | AR-2 L-1 parallel: tierResults array wrapped in ReadOnlyCollection|
+// |         |            |        | before construction of DeterminismSuiteResult so its surface       |
+// |         |            |        | cannot be cast back to DeterminismTierResult[].                    |
 #endregion

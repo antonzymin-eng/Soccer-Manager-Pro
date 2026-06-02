@@ -13,6 +13,7 @@
 //           DeterministicRngService / CanonicalSerializer directly.
 
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace TacticalDirector.TestingStrategy
 {
@@ -54,10 +55,12 @@ namespace TacticalDirector.TestingStrategy
         /// Returns the catalogue of golden-vector corpora pinned by #16 §9.5 #4 (a/b/c).
         /// The list is materialised on every call (CI tooling, not a hot path);
         /// allocate-and-return is acceptable here per Spec #19 §1.0 (no game-loop code).
+        /// Wrapped via <see cref="ReadOnlyCollection{T}"/> so callers cannot cast back to
+        /// a mutable <c>GoldenVectorEntry[]</c> (AR-2 L-1).
         /// </summary>
         public static IReadOnlyList<GoldenVectorEntry> Catalogue()
         {
-            return new GoldenVectorEntry[]
+            GoldenVectorEntry[] entries = new GoldenVectorEntry[]
             {
                 new GoldenVectorEntry(
                     GoldenVectorKind.HkdfSha256Kat,
@@ -77,6 +80,7 @@ namespace TacticalDirector.TestingStrategy
                     GoldenVectorRootRelPath + "serialize-canonical-corpus.md",
                     "Deterministic Simulation #16 §3.2.4.1 primitive encoding table"),
             };
+            return new ReadOnlyCollection<GoldenVectorEntry>(entries);
         }
 
         /// <summary>
@@ -100,7 +104,8 @@ namespace TacticalDirector.TestingStrategy
         /// <summary>
         /// Runs every catalogue entry and returns the aggregated results. Used by the
         /// CI determinism gate to drive FR-DS-009-GATE: any non-passing result blocks
-        /// the gate per #16 §5.5.
+        /// the gate per #16 §5.5. Wrapped via <see cref="ReadOnlyCollection{T}"/> so
+        /// callers cannot cast back to a mutable <c>GoldenVectorResult[]</c> (AR-2 L-1).
         /// </summary>
         public static IReadOnlyList<GoldenVectorResult> RunAll()
         {
@@ -110,7 +115,7 @@ namespace TacticalDirector.TestingStrategy
             {
                 results[i] = Run(entries[i]);
             }
-            return results;
+            return new ReadOnlyCollection<GoldenVectorResult>(results);
         }
     }
 }
@@ -121,4 +126,7 @@ namespace TacticalDirector.TestingStrategy
 // | 1.1     | 2026-06-02 | —      | AR-1 M-1: GoldenVectorRootRelPath + Stage0DeferredDiagnostic       |
 // |         |            |        | private consts gained XML <summary> docs per FR-CS-061             |
 // |         |            |        | (every constant, any access level, requires summary).             |
+// | 1.2     | 2026-06-02 | —      | AR-2 L-1: Catalogue() + RunAll() wrap their backing arrays in     |
+// |         |            |        | ReadOnlyCollection<T> so callers cannot cast IReadOnlyList<T>     |
+// |         |            |        | back to a mutable T[] and corrupt the read-only contract.         |
 #endregion

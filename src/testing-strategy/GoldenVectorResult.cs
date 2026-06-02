@@ -17,6 +17,12 @@ namespace TacticalDirector.TestingStrategy
     /// the number of vectors exercised, and a diagnostic string used by the CI
     /// gate (FR-DS-009-GATE).
     /// Testing Strategy &amp; Framework #19 §3.8 / Deterministic Simulation #16 §5.5.
+    /// Note: <c>default(GoldenVectorResult)</c> bypasses the constructor's invariant
+    /// checks (C# struct default-value semantics — <see cref="Diagnostic"/> will be null,
+    /// <see cref="Entry"/> will be a default-valued <see cref="GoldenVectorEntry"/>).
+    /// All call sites that originate results (<see cref="GoldenVectorRunner.Run"/>) MUST
+    /// use the public constructor; consumers SHOULD treat default-valued results as
+    /// malformed. AR-2 L-6.
     /// </summary>
     public readonly struct GoldenVectorResult
     {
@@ -49,8 +55,13 @@ namespace TacticalDirector.TestingStrategy
         /// deferred-status path emitted by <see cref="GoldenVectorRunner.Run"/>.
         /// </summary>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="diagnostic"/> is null/empty, when counts are
-        /// negative or inconsistent, or when the pass invariant is violated.
+        /// Thrown when <paramref name="diagnostic"/> is null/empty or when the pass
+        /// invariant is violated.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when <paramref name="vectorsExecuted"/> or <paramref name="vectorsFailed"/>
+        /// is negative, or when <paramref name="vectorsFailed"/> exceeds
+        /// <paramref name="vectorsExecuted"/>.
         /// </exception>
         public GoldenVectorResult(
             GoldenVectorEntry entry,
@@ -65,13 +76,17 @@ namespace TacticalDirector.TestingStrategy
             }
             if (vectorsExecuted < 0)
             {
-                throw new ArgumentException("must be non-negative", nameof(vectorsExecuted));
+                throw new ArgumentOutOfRangeException(
+                    nameof(vectorsExecuted),
+                    vectorsExecuted,
+                    "must be non-negative");
             }
             if (vectorsFailed < 0 || vectorsFailed > vectorsExecuted)
             {
-                throw new ArgumentException(
-                    "must be non-negative and ≤ vectorsExecuted",
-                    nameof(vectorsFailed));
+                throw new ArgumentOutOfRangeException(
+                    nameof(vectorsFailed),
+                    vectorsFailed,
+                    "must be non-negative and ≤ vectorsExecuted");
             }
             bool expectedPassed = vectorsExecuted > 0 && vectorsFailed == 0;
             if (passed != expectedPassed)
@@ -97,4 +112,9 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | enforces passed == (vectorsFailed == 0) and 0 ≤ vectorsFailed ≤   |
 // |         |            |        | vectorsExecuted so malformed callers can no longer publish        |
 // |         |            |        | inconsistent records.                                              |
+// | 1.2     | 2026-06-02 | —      | AR-2 L-3: range violations (negative counts, vectorsFailed >      |
+// |         |            |        | vectorsExecuted) now throw ArgumentOutOfRangeException; the pass  |
+// |         |            |        | invariant and the null/empty diagnostic check stay ArgumentExc-   |
+// |         |            |        | eption (not range issues). AR-2 L-6: XML doc notes default-value  |
+// |         |            |        | bypass.                                                            |
 #endregion
