@@ -1,6 +1,6 @@
 // File:     src/event-system/EventBus.cs
 // Created:  2026-05-30
-// Modified: 2026-05-31
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Event System #17 §3.2.1, §3.2.2, §4.4, Code Standards #20
 // Purpose:  Public static event bus. Publish/Subscribe entry points plus DrainTick,
@@ -320,4 +320,7 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | populated; subsequent Publish wrote to slotIndex+1, leaving slot N    |
 // |         |            |        | with EventTypeOrdinal=0 which SerializeLedger classifies as Tier A    |
 // |         |            |        | and emits as a zero-byte record, corrupting the canonical digest.    |
+// | 1.5.1   | 2026-06-02 | —      | AR-6 M-1: header Modified date refreshed to match the latest         |
+// |         |            |        | version-history row (FR-CS-057). AR-5 added the v1.5 row but left    |
+// |         |            |        | the Modified header at 2026-05-31. No code change in this revision.  |
 #endregion

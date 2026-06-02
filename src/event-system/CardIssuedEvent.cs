@@ -1,6 +1,6 @@
 // File:     src/event-system/CardIssuedEvent.cs
 // Created:  2026-05-30
-// Modified: 2026-05-30
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Event System #17 §2.4.1, Appendix A row 0x06, Code Standards #20
 // Purpose:  Tier A event published when a yellow or red card is issued in the Resolve phase.
@@ -72,4 +72,7 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | §2.4.1 — a byte field could not represent draw indices > 254.         |
 // |         |            |        | Sentinel updated 0xFF → 0xFFFF. No call sites exist yet (Stage 0       |
 // |         |            |        | wiring not implemented), so widening is non-breaking.                 |
+// | 1.2.1   | 2026-06-02 | —      | AR-6 M-1: header Modified date refreshed to match the latest          |
+// |         |            |        | version-history row (FR-CS-057). AR-5 added the v1.2 row but left     |
+// |         |            |        | the Modified header at 2026-05-30. No code change in this revision.   |
 #endregion

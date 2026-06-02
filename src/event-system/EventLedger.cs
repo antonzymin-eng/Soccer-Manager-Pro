@@ -1,6 +1,6 @@
 // File:     src/event-system/EventLedger.cs
 // Created:  2026-05-30
-// Modified: 2026-05-31
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.2.4, §3.2.5, §3.4.2, §4.4, Code Standards #20
 // Purpose:  Tier A/B ring buffer, typed dispatch infrastructure, and per-tick serialization.
@@ -262,10 +262,12 @@ namespace TacticalDirector.EventSystem
             // Build sorted index list for Tier A/B slots only, then sort by FM-017-002 key.
             Span<int> sortBuf = stackalloc int[EventSystemConstants.EventQueueCapacity];
             int sortCount = 0;
+            // AR-6 L-1: tier comparison uses DeterminismTier enum values rather than the
+            // magic literals 0/1 (FR-CS-016). #16 §3.2 owns the enum and its byte ordinals.
             for (int s = 0; s < QueueCount; s++)
             {
                 byte tier = EventRegistry.GetTier(SlotMeta[s].EventTypeOrdinal);
-                if (tier == 0 || tier == 1) // 0=A, 1=B
+                if (tier == (byte)DeterminismTier.TierA || tier == (byte)DeterminismTier.TierB)
                     sortBuf[sortCount++] = s;
             }
             InsertionSort(sortBuf.Slice(0, sortCount));
@@ -359,4 +361,7 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | ERR_EVT_ORDINAL_COLLISION (0x1707) when two IEventA/B types share    |
 // |         |            |        | an ordinal via erroneous RegisterExternalRow calls, instead of an    |
 // |         |            |        | opaque InvalidCastException with no ordinal context.                 |
+// | 1.5     | 2026-06-02 | —      | AR-6 L-1: SerializeLedger tier filter replaced magic literals       |
+// |         |            |        | tier==0 / tier==1 with (byte)DeterminismTier.TierA / .TierB per     |
+// |         |            |        | FR-CS-016 (no magic literals; enum from #16 §3.2 owns the ordinals). |
 #endregion

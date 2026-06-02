@@ -418,7 +418,7 @@ src/
 │   ├── EventBus.cs                    ← public static API: BeginTick/BeginPhase/DrainTick/SerializeLedger/OnTickBoundary; Publish/Subscribe overloads per tier; debug phase assertion #if UNITY_EDITOR||DEVELOPMENT_BUILD
 │   ├── PossessionChangedEvent.cs      ← Tier A 0x04: PreviousHolder/NewHolder/Reason
 │   ├── FoulCommittedEvent.cs          ← Tier A 0x05: Offender/Victim/Location(Vector3)/FoulKind
-│   ├── CardIssuedEvent.cs             ← Tier A 0x06: Recipient/CardKind/FoulOrdinal(0xFF=procedural)
+│   ├── CardIssuedEvent.cs             ← Tier A 0x06: Recipient/CardKind/FoulOrdinal(ushort; 0xFFFF=procedural)
 │   ├── GoalAwardedEvent.cs            ← Tier A 0x07: Scorer/Assister/ScoringTeam/BallPosition(Vector3)
 │   ├── SubstitutionEvent.cs           ← Tier A 0x08: Outgoing/Incoming/Team/SubstitutionReason
 │   ├── TickHeartbeatEvent.cs          ← Tier C 0x09: empty payload; MaxPerTick=1; CLR min size 1 byte
