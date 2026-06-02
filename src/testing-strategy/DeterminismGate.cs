@@ -71,14 +71,21 @@ namespace TacticalDirector.TestingStrategy
         /// </summary>
         public static DeterminismSuiteResult RunTiers()
         {
-            // Cache .Count once — interface-property access (post-AR-2 retype to IReadOnlyList)
-            // is cheaper to read once than to re-dispatch per loop iteration (AR-3 L-2).
+            // Cache .Count once and snapshot the canonical order into a local array — this
+            // collapses the per-iteration interface-property dispatch (AR-4 L-1) and gives
+            // the loop body four cheap array reads instead of four virtual calls.
             int tierCount = s_canonicalTierOrder.Count;
+            DeterminismTierKind[] order = new DeterminismTierKind[tierCount];
+            for (int i = 0; i < tierCount; i++)
+            {
+                order[i] = s_canonicalTierOrder[i];
+            }
+
             DeterminismTierResult[] tierResults = new DeterminismTierResult[tierCount];
             for (int i = 0; i < tierCount; i++)
             {
                 tierResults[i] = new DeterminismTierResult(
-                    s_canonicalTierOrder[i],
+                    order[i],
                     passed: false,
                     testsExecuted: 0,
                     testsFailed: 0,
@@ -88,13 +95,12 @@ namespace TacticalDirector.TestingStrategy
             IReadOnlyList<GoldenVectorResult> goldenVectorResults =
                 GoldenVectorRunner.RunAll();
 
-            // Wrap the local tierResults array via ReadOnlyCollection<T> so the
-            // DeterminismSuiteResult.TierResults surface cannot be downcast back to
-            // a mutable DeterminismTierResult[] (AR-2 L-1 parallel; GoldenVectorRunner.RunAll
-            // already returns a wrapped collection).
-            return new DeterminismSuiteResult(
-                new ReadOnlyCollection<DeterminismTierResult>(tierResults),
-                goldenVectorResults);
+            // Pass the raw tierResults array to DeterminismSuiteResult — the suite always
+            // copies its inputs (AR-4 M-1), so the AR-2 L-1 producer-side wrap here would
+            // only cause a double-copy. The suite's defensive copy is the authoritative
+            // boundary that closes the read-only contract for any caller, internal or
+            // external.
+            return new DeterminismSuiteResult(tierResults, goldenVectorResults);
         }
     }
 }
@@ -116,4 +122,11 @@ namespace TacticalDirector.TestingStrategy
 // | 1.3     | 2026-06-02 | —      | AR-3 L-2: RunTiers caches s_canonicalTierOrder.Count once instead |
 // |         |            |        | of dispatching the interface property twice per call (alloc-size  |
 // |         |            |        | + loop bound). Clarity nit; no perf concern at the CI scale.       |
+// | 1.4     | 2026-06-02 | —      | AR-4 M-1 / AR-4 L-1: tierResults pass-through now hands the raw   |
+// |         |            |        | array to DeterminismSuiteResult — the suite always copies inputs  |
+// |         |            |        | (AR-4 M-1), so the AR-2 L-1 producer-side wrap was redundant and  |
+// |         |            |        | created a double-copy with the L-4 suite re-wrap. Canonical tier  |
+// |         |            |        | order snapshotted into a local DeterminismTierKind[] once per call|
+// |         |            |        | so the loop body indexes a plain array instead of re-dispatching  |
+// |         |            |        | the IReadOnlyList<T> indexer (AR-4 L-1).                           |
 #endregion

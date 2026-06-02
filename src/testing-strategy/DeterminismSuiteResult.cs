@@ -63,32 +63,41 @@ namespace TacticalDirector.TestingStrategy
                 throw new ArgumentNullException(nameof(goldenVectorResults));
             }
 
-            // Re-wrap inputs that are not already a ReadOnlyCollection<T> so a caller
-            // passing a raw T[] cast to IReadOnlyList<T> cannot later downcast the
-            // exposed property back to a mutable array. The wrap-at-the-producer
-            // pattern in DeterminismGate.RunTiers + GoldenVectorRunner.RunAll already
-            // hits the only Stage 0 caller; this guard closes the leak for external
-            // direct constructions (AR-3 L-4).
-            TierResults = tierResults is ReadOnlyCollection<DeterminismTierResult>
-                ? tierResults
-                : new ReadOnlyCollection<DeterminismTierResult>(new List<DeterminismTierResult>(tierResults));
-            GoldenVectorResults = goldenVectorResults is ReadOnlyCollection<GoldenVectorResult>
-                ? goldenVectorResults
-                : new ReadOnlyCollection<GoldenVectorResult>(new List<GoldenVectorResult>(goldenVectorResults));
+            // Always copy on construction (AR-4 M-1). The previous AR-3 L-4 fast path
+            // ("skip wrap if already ReadOnlyCollection<T>") did NOT achieve defensive
+            // copy: ReadOnlyCollection<T> wraps an IList<T>, and a caller retaining the
+            // underlying list could mutate it post-construction and have the change
+            // appear through TierResults. Always-copy at the suite boundary supersedes
+            // the AR-2 L-1 producer-side wrap (now reverted in DeterminismGate.RunTiers
+            // since it created a double-copy with this defensive copy).
+            DeterminismTierResult[] tierCopy = new DeterminismTierResult[tierResults.Count];
+            for (int i = 0; i < tierCopy.Length; i++)
+            {
+                tierCopy[i] = tierResults[i];
+            }
+            GoldenVectorResult[] goldenCopy = new GoldenVectorResult[goldenVectorResults.Count];
+            for (int i = 0; i < goldenCopy.Length; i++)
+            {
+                goldenCopy[i] = goldenVectorResults[i];
+            }
+            TierResults         = new ReadOnlyCollection<DeterminismTierResult>(tierCopy);
+            GoldenVectorResults = new ReadOnlyCollection<GoldenVectorResult>(goldenCopy);
 
             // Fail-closed on empty input: a suite with no tiers or no corpora cannot pass
             // FR-DS-009-GATE even if every present element passed. AR-1 M-3.
-            bool allPassed = tierResults.Count > 0 && goldenVectorResults.Count > 0;
-            for (int i = 0; allPassed && i < tierResults.Count; i++)
+            // Iterate over the copied arrays so the pass-loop and the locked AllPassed
+            // are computed against the same snapshot the property surface exposes.
+            bool allPassed = tierCopy.Length > 0 && goldenCopy.Length > 0;
+            for (int i = 0; allPassed && i < tierCopy.Length; i++)
             {
-                if (!tierResults[i].Passed)
+                if (!tierCopy[i].Passed)
                 {
                     allPassed = false;
                 }
             }
-            for (int i = 0; allPassed && i < goldenVectorResults.Count; i++)
+            for (int i = 0; allPassed && i < goldenCopy.Length; i++)
             {
-                if (!goldenVectorResults[i].Passed)
+                if (!goldenCopy[i].Passed)
                 {
                     allPassed = false;
                 }
@@ -109,4 +118,12 @@ namespace TacticalDirector.TestingStrategy
 // | 1.2     | 2026-06-02 | —      | AR-3 L-4: constructor re-wraps input lists in ReadOnlyCollection<T> |
 // |         |            |        | unless already wrapped, closing the AR-2 L-1 contract leak for     |
 // |         |            |        | external direct constructions that bypass DeterminismGate.RunTiers. |
+// | 1.3     | 2026-06-02 | —      | AR-4 M-1: drop the AR-3 L-4 fast-path bypass (skip wrap if already |
+// |         |            |        | ReadOnlyCollection<T>) — it did not achieve defensive copy because |
+// |         |            |        | the wrapped IList<T> could still be mutated through a retained     |
+// |         |            |        | caller reference. Constructor now always copies inputs into fresh  |
+// |         |            |        | arrays before wrapping. Pass-loop iterates the copied arrays so   |
+// |         |            |        | the AllPassed verdict and the property surface are computed       |
+// |         |            |        | against the same snapshot. Supersedes the AR-2 L-1 producer-side  |
+// |         |            |        | wrap in DeterminismGate.RunTiers (reverted in DeterminismGate v1.4).|
 #endregion
