@@ -1,6 +1,6 @@
 // File:     src/performance-optimization/SessionManifest.cs
 // Created:  2026-06-01
-// Modified: 2026-06-01
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.3.2, Appendix A, Code Standards #20
 // Purpose:  Immutable session manifest capturing all §3.3.2 required fields.
@@ -105,7 +105,9 @@ namespace TacticalDirector.PerformanceOptimization
         }
 
         /// <summary>
-        /// Returns true if all required fields are non-null and non-empty.
+        /// Returns true if all required fields are non-null and non-empty, including the
+        /// embedded <see cref="HardwareCounterSnapshot"/> string fields. Default-constructed
+        /// hardware snapshots (null CpuModel / ThermalState) fail the check per §3.3.2.
         /// The §3.4.4 baseline validator calls this before entering a baseline into the corpus.
         /// </summary>
         public bool IsComplete()
@@ -116,12 +118,17 @@ namespace TacticalDirector.PerformanceOptimization
                 && !string.IsNullOrEmpty(ScenarioManifestId)
                 && !string.IsNullOrEmpty(SessionStartUtc)
                 && !string.IsNullOrEmpty(SessionEndUtc)
-                && !string.IsNullOrEmpty(HarnessVersion);
+                && !string.IsNullOrEmpty(HarnessVersion)
+                && !string.IsNullOrEmpty(HardwareCounters.CpuModel)
+                && !string.IsNullOrEmpty(HardwareCounters.ThermalState);
         }
     }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-01 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-01 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-02 | —      | AR-2 L-1: IsComplete now also validates HardwareCounters.CpuModel  |
+// |         |            |        | and HardwareCounters.ThermalState; default-struct slip-through     |
+// |         |            |        | closed.                                                            |
 #endregion

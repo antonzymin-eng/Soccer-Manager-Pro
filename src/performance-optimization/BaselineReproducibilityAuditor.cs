@@ -1,6 +1,6 @@
 // File:     src/performance-optimization/BaselineReproducibilityAuditor.cs
 // Created:  2026-06-01
-// Modified: 2026-06-01
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.4.4, §5.4, FR-PO-067, Code Standards #20
 // Purpose:  Implements the FR-PO-067 baseline-reproducibility auditor.
@@ -18,7 +18,7 @@ namespace TacticalDirector.PerformanceOptimization
     /// deterministic runtime exists to re-run against.
     /// Performance Optimization Strategy #18 §3.4.4 / §5.4 / FR-PO-067.
     /// </summary>
-    public sealed class BaselineReproducibilityAuditor
+    public static class BaselineReproducibilityAuditor
     {
         /// <summary>
         /// Validates that the recaptured baseline reproduces the original within
@@ -26,28 +26,30 @@ namespace TacticalDirector.PerformanceOptimization
         /// Both records must share the same scenario manifest ID and seed (KD-6).
         /// Mismatches mark the original baseline stale; stale baselines are merge-blocking
         /// per FR-PO-068.
+        /// Degenerate originals (<c>origP50 ≤ 0</c> or NaN) fail-closed per AR-1 M-3.
         /// </summary>
         /// <param name="original">Original baseline record from the corpus.</param>
         /// <param name="recaptured">
         /// Baseline captured by re-running the same session manifest (same seed +
         /// EnvironmentFingerprint + platform pin + scenario ID).
         /// </param>
-        public ReproducibilityResult Validate(BaselineRecord original, BaselineRecord recaptured)
+        public static ReproducibilityResult Validate(BaselineRecord original, BaselineRecord recaptured)
         {
             bool scenarioMatched = original.Manifest.ScenarioManifestId
                 == recaptured.Manifest.ScenarioManifestId;
 
             bool seedMatched = original.Manifest.Seed == recaptured.Manifest.Seed;
 
-            float origP50      = original.P50Ms;
+            float origP50       = original.P50Ms;
             float recapturedP50 = recaptured.P50Ms;
 
-            float absDelta = origP50 > 0f
+            bool originalIsUsable = origP50 > 0f;
+            float absDelta = originalIsUsable
                 ? System.Math.Abs(recapturedP50 - origP50) / origP50
-                : 0f;
+                : float.NaN;
 
-            bool withinTolerance = absDelta
-                <= PerformanceOptimizationConstants.ReproducibilityToleranceFraction;
+            bool withinTolerance = originalIsUsable
+                && absDelta <= PerformanceOptimizationConstants.ReproducibilityToleranceFraction;
 
             bool isReproducible = scenarioMatched && seedMatched && withinTolerance;
 
@@ -63,6 +65,9 @@ namespace TacticalDirector.PerformanceOptimization
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-01 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-01 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-02 | —      | AR-1 L-2: sealed class → static class (stateless validator).        |
+// |         |            |        | AR-1 M-3: degenerate origP50 (≤0 or NaN) fails closed instead of    |
+// |         |            |        | silently passing as reproducible.                                   |
 #endregion

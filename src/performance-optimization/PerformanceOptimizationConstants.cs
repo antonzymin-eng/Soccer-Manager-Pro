@@ -1,6 +1,6 @@
 // File:     src/performance-optimization/PerformanceOptimizationConstants.cs
 // Created:  2026-05-30
-// Modified: 2026-06-01
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.10, §8.4, Appendix B, Code Standards #20
 // Purpose:  Constant catalogue for Spec #18 governance constants.
@@ -22,7 +22,7 @@ namespace TacticalDirector.PerformanceOptimization
         /// Any non-zero managed allocation on a listed hot-path entry is a build failure.
         /// §3.7.3 / FR-PO-032 / FR-CS-066.
         /// </summary>
-        public const int HotPathAllocBudgetBytes = 0;
+        public const int HOT_PATH_ALLOC_BUDGET_BYTES = 0;
 
         /// <summary>
         /// [FIXED] On-disk loop-tag string for the 10 Hz tactical heartbeat loop.
@@ -84,7 +84,6 @@ namespace TacticalDirector.PerformanceOptimization
         /// [GT] [EST]→[GT] promotion tolerance fraction (±20% = 0.20).
         /// First Stage 0+1 baseline capture promotes a spec-time [EST] anchor to [GT]
         /// if within ±20% of the estimate; files an ERR-018-NNN finding if not. §3.9.1.
-        /// Also used as the reproducibility confidence-interval tolerance in §3.4.4 / FR-PO-067.
         /// // TODO: replace with config loader (Stage 1)
         /// </summary>
         public static readonly float PromotionToleranceFraction = 0.20f;
@@ -132,4 +131,10 @@ namespace TacticalDirector.PerformanceOptimization
 // |         |            |        | faultHz, StatisticalSignificanceN, FirstTickWarmupCount     |
 // |         |            |        | (§3.3.4 / §3.4.3 / §3.9.4). Region order corrected to      |
 // |         |            |        | Fixed → GT → EST per src/CLAUDE.md most-immutable-first.   |
+// | 1.2     | 2026-06-02 | —      | AR-1 H-2: HotPathAllocBudgetBytes → HOT_PATH_ALLOC_BUDGET_ |
+// |         |            |        | BYTES (FIXED constants are ALL_CAPS per FR-CS-001).        |
+// |         |            |        | AR-1 L-4: removed stale "Also used as the reproducibility  |
+// |         |            |        | confidence-interval tolerance" sentence from Promotion-    |
+// |         |            |        | ToleranceFraction; auditor consumes ReproducibilityToler-  |
+// |         |            |        | anceFraction instead.                                       |
 #endregion

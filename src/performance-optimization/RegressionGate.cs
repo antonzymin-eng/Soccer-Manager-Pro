@@ -1,6 +1,6 @@
 // File:     src/performance-optimization/RegressionGate.cs
 // Created:  2026-06-01
-// Modified: 2026-06-01
+// Modified: 2026-06-02
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.5.2, §3.5.6, FR-PO-031, Code Standards #20
 // Purpose:  Implements the FR-PO-031 per-PR regression threshold (+5%) and the §3.5.6
@@ -23,14 +23,15 @@ namespace TacticalDirector.PerformanceOptimization
         /// <see cref="PerformanceOptimizationConstants.PerPrRegressionFraction"/> threshold.
         /// Returns true (no regression) when <c>(currentMs − baselineMs) / baselineMs ≤ threshold</c>.
         /// Improvements (negative delta) always return true.
+        /// Degenerate baselines (<c>baselineMs ≤ 0</c> or NaN) fail-closed per AR-1 M-2.
         /// </summary>
         /// <param name="baselineMs">Pre-PR p50 in milliseconds.</param>
         /// <param name="currentMs">Post-PR p50 in milliseconds.</param>
         public static bool PassesPerPrCheck(float baselineMs, float currentMs)
         {
-            if (baselineMs <= 0f)
+            if (!(baselineMs > 0f))
             {
-                return true;
+                return false;
             }
 
             float delta = (currentMs - baselineMs) / baselineMs;
@@ -41,14 +42,22 @@ namespace TacticalDirector.PerformanceOptimization
         /// Checks whether the cumulative drift from the milestone baseline falls within
         /// the <see cref="PerformanceOptimizationConstants.AbsoluteDriftFraction"/> guard.
         /// Returns true when <c>(currentMs − milestoneMs) / milestoneMs ≤ threshold</c>.
+        /// <c>float.NaN milestoneMs</c> is the canonical "no milestone available, skip"
+        /// signal and returns true; any other non-positive value is degenerate and
+        /// fails closed.
         /// </summary>
         /// <param name="milestoneMs">p50 captured at the last Stage milestone baseline.</param>
         /// <param name="currentMs">Current p50 in milliseconds.</param>
         public static bool PassesAbsoluteDriftCheck(float milestoneMs, float currentMs)
         {
-            if (milestoneMs <= 0f)
+            if (float.IsNaN(milestoneMs))
             {
                 return true;
+            }
+
+            if (!(milestoneMs > 0f))
+            {
+                return false;
             }
 
             float drift = (currentMs - milestoneMs) / milestoneMs;
@@ -62,8 +71,8 @@ namespace TacticalDirector.PerformanceOptimization
         /// <param name="baseline">Pre-PR baseline record (same scenario + seed + platform pin).</param>
         /// <param name="current">Post-PR baseline record to compare against.</param>
         /// <param name="milestoneMs">
-        /// p50 from the last Stage milestone baseline; supply float.NaN when unavailable.
-        /// When NaN the absolute-drift check returns true (not enough data to guard).
+        /// p50 from the last Stage milestone baseline; supply <c>float.NaN</c> to skip the drift check
+        /// when no milestone is available (returns true). Any other non-positive value fails closed.
         /// </param>
         public static RegressionResult Evaluate(
             BaselineRecord baseline,
@@ -73,21 +82,22 @@ namespace TacticalDirector.PerformanceOptimization
             float baselineP50 = baseline.P50Ms;
             float currentP50  = current.P50Ms;
 
+            bool perPrPassed = PassesPerPrCheck(baselineP50, currentP50);
+
             float deltaFraction = baselineP50 > 0f
                 ? (currentP50 - baselineP50) / baselineP50
-                : 0f;
+                : float.NaN;
 
-            bool perPrPassed = deltaFraction
-                <= PerformanceOptimizationConstants.PerPrRegressionFraction;
+            float milestoneDrift;
+            bool absoluteDriftPassed = PassesAbsoluteDriftCheck(milestoneMs, currentP50);
 
-            float milestoneDrift = float.NaN;
-            bool absoluteDriftPassed = true;
-
-            if (!float.IsNaN(milestoneMs) && milestoneMs > 0f)
+            if (float.IsNaN(milestoneMs) || !(milestoneMs > 0f))
             {
-                milestoneDrift      = (currentP50 - milestoneMs) / milestoneMs;
-                absoluteDriftPassed = milestoneDrift
-                    <= PerformanceOptimizationConstants.AbsoluteDriftFraction;
+                milestoneDrift = float.NaN;
+            }
+            else
+            {
+                milestoneDrift = (currentP50 - milestoneMs) / milestoneMs;
             }
 
             return new RegressionResult(
@@ -100,6 +110,12 @@ namespace TacticalDirector.PerformanceOptimization
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-01 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-01 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-02 | —      | AR-1 M-2: degenerate baseline/milestone (≤0 or NaN) now fail-closed |
+// |         |            |        | instead of pass-open. AR-1 M-1: Evaluate now reuses PassesPerPrCheck |
+// |         |            |        | and PassesAbsoluteDriftCheck rather than duplicating the formula.   |
+// | 1.2     | 2026-06-02 | —      | AR-2 M-1: PassesAbsoluteDriftCheck NaN milestone now returns true   |
+// |         |            |        | (skip-drift signal), matching Evaluate's documented semantics.      |
+// |         |            |        | Evaluate delegates drift verdict entirely to the helper.            |
 #endregion
