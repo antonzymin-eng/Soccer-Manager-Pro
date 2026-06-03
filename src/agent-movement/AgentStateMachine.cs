@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentStateMachine.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03 (AR-8 fix pass)
+// Modified: 2026-06-03 (AR-9 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.4–§3.1.7, Code Standards #20
 // Purpose:  Pure state evaluation for movement state transitions. No side effects.
@@ -306,13 +306,15 @@ namespace TacticalDirector.AgentMovement
 
         /// <summary>
         /// Minimum dwell in GROUNDED. Scaled by strength + balance, collision force, and entry reason.
+        /// `collisionForce` is the cached entry-force (`state.CollisionForce`), not this-frame's
+        /// incoming impulse — the caller in EvaluateState forwards the cached value per AR-9 M-1.
         /// Clamped [0.5, 2.5]s. Agent Movement #2 §3.1.5.
         /// </summary>
         public static float CalculateGroundedDwell(
             int balance,
             int strength,
-            GroundedReason reason = GroundedReason.COLLISION,
-            float collisionForce = 1.0f)
+            GroundedReason reason,
+            float collisionForce)
         {
             float reasonMultiplier = reason switch
             {
@@ -370,4 +372,9 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | leaves all int attribute fields at 0, which propagated negative `(attr - AttributeMinInt)`    |
 // |         |            |        | factors into downstream formulas; downstream range-clamps defensively but the upstream        |
 // |         |            |        | contract violation was previously silent.                                                      |
+// | 1.9     | 2026-06-03 | —      | AR-9 fix: L-2 CalculateGroundedDwell parameter defaults (reason / collisionForce) dropped —   |
+// |         |            |        | EvaluateFromGrounded is the only caller and always supplies explicit values. The `1.0f`       |
+// |         |            |        | default for collisionForce was also misleading after the AR-9 M-1 contract change             |
+// |         |            |        | (parameter is now the cached entry-force, not this-frame's impulse). XML doc updated to       |
+// |         |            |        | name the new contract.                                                                         |
 #endregion

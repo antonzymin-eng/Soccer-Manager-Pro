@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementSystem.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03 (AR-8 fix pass)
+// Modified: 2026-06-03 (AR-9 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §4.4, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
@@ -98,7 +98,15 @@ namespace TacticalDirector.AgentMovement
                 state.SprintReservoir,
                 state.AerobicPool,
                 isCollisionKnockdown,
-                collisionForce,
+                // Pass the cached entry-force (set on initial knockdown, refreshed on second
+                // hit per AR-5 M-2) instead of the incoming this-frame collisionForce. The
+                // incoming value is 0 on every dwell frame after entry (collision is a
+                // one-frame impulse from Spec #3); using it would shrink the perceived dwell
+                // 35% for a max-force hit and release the agent prematurely. On the entry
+                // frame the cached value is still 0 but EvaluateState short-circuits on
+                // isCollisionKnockdown before reaching EvaluateFromGrounded, so the
+                // pre-cache-write value is unused.
+                state.CollisionForce,
                 state.GroundedReason);
 
             // Step 3 — Apply transition if changed. Gate through oscillation guard (§3.1.7).
@@ -571,4 +579,11 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | (was recomputing the same `isCollisionKnockdown && newState == GROUNDED` predicate).         |
 // |         |            |        | L-2 CollisionForce cache writes wrapped in Mathf.Clamp01 — enforces the AgentState.cs        |
 // |         |            |        | [0, 1] doc contract for downstream debug/animation consumers that read the raw cached value. |
+// | 1.12    | 2026-06-03 | —      | AR-9 fix: M-1 EvaluateState now receives state.CollisionForce (cached entry-force) for the   |
+// |         |            |        | GROUNDED dwell calculation instead of the incoming this-frame collisionForce. The incoming    |
+// |         |            |        | value is 0 on every dwell frame after entry (collision is a one-frame impulse from Spec #3); |
+// |         |            |        | passing it shrank the perceived dwell ~35% for a max-force hit (force=1.0 entry → forceScale  |
+// |         |            |        | dropped to CollisionDwellMin=0.65 on frame 1 and beyond), releasing the agent prematurely.   |
+// |         |            |        | The cached state.CollisionForce (set on entry, refreshed on second-hit per AR-5 M-2) is the  |
+// |         |            |        | value the §3.1.5 dwell formula was designed to consume.                                       |
 #endregion

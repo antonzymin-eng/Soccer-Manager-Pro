@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentSafetySystem.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03
+// Modified: 2026-06-03 (AR-9 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §4.1.3, §4.3.1, Code Standards #20
 // Purpose:  Post-integration validation: NaN detection, speed clamp, facing sanity, boundary enforcement.
@@ -25,12 +25,11 @@ namespace TacticalDirector.AgentMovement
         /// </summary>
         public static bool HasInvalidValues(Vector2 position, Vector2 velocity, Vector2 facing)
         {
-            if (float.IsNaN(position.x) || float.IsNaN(position.y)
-                || float.IsNaN(velocity.x) || float.IsNaN(velocity.y)
-                || float.IsNaN(facing.x) || float.IsNaN(facing.y)
-                || float.IsInfinity(position.x) || float.IsInfinity(position.y)
-                || float.IsInfinity(velocity.x) || float.IsInfinity(velocity.y)
-                || float.IsInfinity(facing.x) || float.IsInfinity(facing.y))
+            // float.IsFinite covers both NaN and ±Infinity (.NET Standard 2.1; Unity 2022 LTS).
+            // Halves the call count of the prior explicit IsNaN || IsInfinity chain.
+            if (!float.IsFinite(position.x) || !float.IsFinite(position.y)
+                || !float.IsFinite(velocity.x) || !float.IsFinite(velocity.y)
+                || !float.IsFinite(facing.x) || !float.IsFinite(facing.y))
             {
                 return true;
             }
@@ -106,4 +105,7 @@ namespace TacticalDirector.AgentMovement
 // | 1.2     | 2026-06-03 | —      | AR-4 fix: M-5 HasInvalidValues / Validate now include FacingDirection in NaN/Inf detection    |
 // |         |            |        | and zero-vector check; recovery snaps facing to lastValidFacing. Closes the silent NaN-       |
 // |         |            |        | propagation path through MovementAngleDeg / RotateFacingToward on corrupted facing input.    |
+// | 1.3     | 2026-06-03 | —      | AR-9 fix: L-1 HasInvalidValues uses `!float.IsFinite(x)` (six checks) instead of the prior    |
+// |         |            |        | `IsNaN(x) || IsInfinity(x)` chain (twelve checks). Semantics identical (.NET Standard 2.1 /   |
+// |         |            |        | Unity 2022 LTS). Cleanup only.                                                                  |
 #endregion
