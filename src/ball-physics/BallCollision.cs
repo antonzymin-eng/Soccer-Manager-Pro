@@ -1,64 +1,15 @@
 // File:     src/ball-physics/BallCollision.cs
 // Created:  2026-05-24
-// Modified: 2026-06-02
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Goal-post collision, boundary detection, possession evaluation, and kick
 //           application. Possession tracking is external to BallState (Option B).
 
-using System.Collections.Generic;
-
 using UnityEngine;
 
 namespace TacticalDirector.BallPhysics
 {
-    /// <summary>Body parts used for deflection coefficient lookup.</summary>
-    public enum BodyPart { Foot, Shin, Thigh, Torso, Head, Arm }
-
-    /// <summary>Restart types awarded after the ball leaves the field of play.</summary>
-    public enum RestartType { None, ThrowIn, GoalKick, Corner, KickOff }
-
-    /// <summary>Outcome of <see cref="BallCollision.ApplyKick"/>.</summary>
-    public enum KickResult
-    {
-        /// <summary>Kick applied successfully.</summary>
-        Applied,
-        /// <summary>Velocity contained NaN or Infinity; kick was rejected and ball state unchanged.</summary>
-        RejectedNonFiniteVelocity
-    }
-
-    /// <summary>
-    /// Speed and spin retention coefficients per body part for deflection calculations.
-    /// </summary>
-    public static class BodyPartCoefficients
-    {
-        private static readonly Dictionary<BodyPart, (float speedRetention, float spinRetention)> s_coefficients
-            = new Dictionary<BodyPart, (float, float)>
-        {
-            { BodyPart.Foot,  (0.75f, 0.30f) },
-            { BodyPart.Shin,  (0.65f, 0.20f) },
-            { BodyPart.Thigh, (0.60f, 0.40f) },
-            { BodyPart.Torso, (0.55f, 0.50f) },
-            { BodyPart.Head,  (0.70f, 0.10f) },
-            { BodyPart.Arm,   (0.50f, 0.30f) }
-        };
-
-        /// <summary>
-        /// Returns (speedRetention, spinRetention) for the given body part.
-        /// Throws <see cref="System.ArgumentOutOfRangeException"/> for unknown enum values
-        /// (e.g. <c>default(BodyPart)</c> from a cast-from-int caller) so programming errors
-        /// surface immediately instead of being masked by a silent default.
-        /// </summary>
-        public static (float speedRetention, float spinRetention) Get(BodyPart part)
-        {
-            if (s_coefficients.TryGetValue(part, out var coef))
-                return coef;
-
-            throw new System.ArgumentOutOfRangeException(
-                nameof(part), part, "Unknown BodyPart — extend BodyPartCoefficients when adding a new body part.");
-        }
-    }
-
     /// <summary>
     /// Collision detection, boundary checks, possession evaluation, and kick application.
     /// Possession tracking is EXTERNAL to BallState (Option B design — see §3.1.11).
@@ -113,29 +64,26 @@ namespace TacticalDirector.BallPhysics
             if (lowEnough && (y < -r || y > BallPhysicsConstants.Pitch.WIDTH + r))
                 return (true, RestartType.ThrowIn);
 
+            // Home goal (x &lt; −r): the Y/Z gates are identical to the away goal because
+            // both goal mouths are centred at WIDTH/2 and capped at GOAL_HEIGHT; the X
+            // half-space is what distinguishes them and the caller already verified it.
             if (lowEnough && x < -r)
             {
-                if (IsInHomeGoal(ball.Position))
+                if (IsBetweenPostsUnderCrossbar(ball.Position))
                     return (true, RestartType.KickOff);
                 return (true, lastTouchTeamID == 0 ? RestartType.Corner : RestartType.GoalKick);
             }
 
+            // Away goal (x &gt; LENGTH + r): see comment on home-goal branch above.
             if (lowEnough && x > BallPhysicsConstants.Pitch.LENGTH + r)
             {
-                if (IsInAwayGoal(ball.Position))
+                if (IsBetweenPostsUnderCrossbar(ball.Position))
                     return (true, RestartType.KickOff);
                 return (true, lastTouchTeamID == 1 ? RestartType.Corner : RestartType.GoalKick);
             }
 
             return (false, RestartType.None);
         }
-
-        // Home goal: x in [-r, 0]. Y/Z checks are identical to the away goal (centred
-        // at WIDTH/2, under crossbar). Caller must have already verified x < -r.
-        private static bool IsInHomeGoal(Vector3 position) => IsBetweenPostsUnderCrossbar(position);
-
-        // Away goal: x in [LENGTH, LENGTH+r]. Caller must have already verified x > LENGTH+r.
-        private static bool IsInAwayGoal(Vector3 position) => IsBetweenPostsUnderCrossbar(position);
 
         private static bool IsBetweenPostsUnderCrossbar(Vector3 position)
         {
@@ -205,14 +153,14 @@ namespace TacticalDirector.BallPhysics
         {
             if (!IsFiniteVector(velocity))
             {
-                UnityEngine.Debug.LogError(
+                Debug.LogError(
                     $"[BallPhysics] ApplyKick: Invalid velocity {velocity} from agent {agentId}. Kick rejected.");
                 return KickResult.RejectedNonFiniteVelocity;
             }
 
             if (!IsFiniteVector(spin))
             {
-                UnityEngine.Debug.LogWarning(
+                Debug.LogWarning(
                     $"[BallPhysics] ApplyKick: Invalid spin {spin} from agent {agentId}. Spin zeroed.");
                 spin = Vector3.zero;
             }
@@ -220,7 +168,7 @@ namespace TacticalDirector.BallPhysics
             if (velocity.magnitude > BallPhysicsConstants.Limits.MaxVelocity)
             {
                 velocity = velocity.normalized * BallPhysicsConstants.Limits.MaxVelocity;
-                UnityEngine.Debug.LogWarning(
+                Debug.LogWarning(
                     $"[BallPhysics] ApplyKick: Velocity clamped to {BallPhysicsConstants.Limits.MaxVelocity} m/s.");
             }
 
@@ -230,7 +178,7 @@ namespace TacticalDirector.BallPhysics
             ball.Velocity        = velocity;
             ball.AngularVelocity = spin;
 
-            float horizontalSpeed = new UnityEngine.Vector2(velocity.x, velocity.y).magnitude;
+            float horizontalSpeed = new Vector2(velocity.x, velocity.y).magnitude;
 
             if (velocity.z > 0f)
                 ball.State = BallStateType.Airborne;
@@ -260,21 +208,17 @@ namespace TacticalDirector.BallPhysics
 // | 1.1     | 2026-05-24 | —      | Fix pass: namespace → TacticalDirector.BallPhysics; ALL_CAPS       |
 // |         |            |        | constant refs → PascalCase; Stage 0 lowEnough limitation          |
 // |         |            |        | documented in CheckBoundaries XML doc; file header per FR-CS-056.  |
-// | 1.2     | 2026-06-02 | —      | AR-1 fixes. H-2: file header path corrected to src/ball-physics/.  |
-// |         |            |        | M-1: using order System → UnityEngine (FR-CS-006). M-2:            |
-// |         |            |        | _coefficients → s_coefficients (FR-CS-002 private-static naming).  |
-// |         |            |        | M-3: dead isHomeGoal parameter on IsInGoal removed — replaced with |
-// |         |            |        | two single-purpose IsInHomeGoal / IsInAwayGoal wrappers that share |
-// |         |            |        | IsBetweenPostsUnderCrossbar; both goals have identical Y/Z gates   |
-// |         |            |        | and the caller already validates X. M-4: BallStateType / RestartType|
-// |         |            |        | members renamed to PascalCase. M-5: ApplyKick now returns           |
-// |         |            |        | KickResult so callers can detect non-finite-velocity rejection      |
-// |         |            |        | instead of relying on void + Debug.LogError. L-2: CheckBoundaries  |
-// |         |            |        | XML doc records corner-region precedence (touchline check wins on  |
-// |         |            |        | simultaneous goal+touch crossing); references the corresponding    |
-// |         |            |        | BallStateMachine.IsOutOfBounds z-gate alignment. L-4:              |
-// |         |            |        | BodyPartCoefficients.Get throws ArgumentOutOfRangeException for    |
-// |         |            |        | unknown enum values instead of silently returning a default tuple. |
-// |         |            |        | LogKick now passes ball.State (post-transition) as the typed       |
-// |         |            |        | resultingState arg (no string interpolation; see BallEventLogger). |
+// | 1.2     | 2026-06-02 | —      | AR-1 fixes. H-2: file header path corrected. M-1: using order      |
+// |         |            |        | System → UnityEngine. M-2: _coefficients → s_coefficients. M-3:    |
+// |         |            |        | dead isHomeGoal parameter removed. M-4: enum members PascalCase.   |
+// |         |            |        | M-5: ApplyKick → KickResult. L-2: corner-precedence doc. L-4:      |
+// |         |            |        | BodyPartCoefficients.Get throws on unknown enum values.            |
+// | 1.3     | 2026-06-03 | —      | AR-2 fixes. L-1: IsInHomeGoal / IsInAwayGoal wrappers folded —    |
+// |         |            |        | CheckBoundaries now calls IsBetweenPostsUnderCrossbar directly     |
+// |         |            |        | with inline home-goal / away-goal comments; the two zero-info      |
+// |         |            |        | wrappers are gone. L-2: BodyPart, RestartType, KickResult, and     |
+// |         |            |        | BodyPartCoefficients extracted to their own files per src/CLAUDE.md|
+// |         |            |        | FILE NAMING. Unused System.Collections.Generic using removed and   |
+// |         |            |        | the UnityEngine. prefix dropped from Debug / Vector2 (already in   |
+// |         |            |        | scope via the single UnityEngine using).                           |
 #endregion

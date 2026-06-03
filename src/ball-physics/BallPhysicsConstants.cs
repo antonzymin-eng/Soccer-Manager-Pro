@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallPhysicsConstants.cs
 // Created:  2026-05-24
-// Modified: 2026-06-02
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  All tunable and physical constants for ball physics simulation.
@@ -229,7 +229,15 @@ namespace TacticalDirector.BallPhysics
             /// <summary>[GT] Min opponent distance for uncontested control (m). Ball Physics #1 §3.1.2.</summary>
             public static readonly float ChallengeRadius = 1.0f; // TODO: replace with config loader (Stage 1)
 
-            /// <summary>[GT] Max ball height for ground control (m). Ball Physics #1 §3.1.2.</summary>
+            /// <summary>
+            /// [GT] Max ball height for ground control (m). Ball Physics #1 §3.1.2.
+            /// CROSS-SPEC DRIFT WARNING: <c>FirstTouchConstants.GroundControlHeight</c>
+            /// declares the same physical concept at the same value (0.50 m) as a parallel
+            /// [GT]. Per Spec #20 §4.2 routing, one of the two specs must be the authority
+            /// and the other must mirror via [CROSS]. Routing decision is deferred to a
+            /// cross-spec pass; until it lands, designers MUST tune both values together
+            /// or accept silent drift between possession and first-touch acceptance.
+            /// </summary>
             public static readonly float ControlHeight = 0.5f; // TODO: replace with config loader (Stage 1)
         }
 
@@ -289,4 +297,7 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | SurfaceSpinRetention nested classes for all 5 surface types per spec §3.1.2  |
 // |         |            |        | surface properties table. Eliminates FR-CS-016 literals in SurfaceProperties.|
 // | 1.3     | 2026-06-02 | —      | AR-1 H-2: file header path corrected to src/ball-physics/.                  |
+// | 1.4     | 2026-06-03 | —      | AR-2 L-5: Possession.ControlHeight XML doc gains cross-spec drift warning   |
+// |         |            |        | flagging the parallel FirstTouchConstants.GroundControlHeight declaration   |
+// |         |            |        | (Spec #20 §4.2 routing deferred to cross-spec pass).                        |
 #endregion

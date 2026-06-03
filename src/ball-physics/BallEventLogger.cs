@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallEventLogger.cs
 // Created:  2026-05-24
-// Modified: 2026-06-02
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Records ball events (kicks, bounces, goals, snapshots) for replay
@@ -12,24 +12,42 @@ using UnityEngine;
 
 namespace TacticalDirector.BallPhysics
 {
-    /// <summary>Ball event types for replay and analytics logging.</summary>
+    /// <summary>
+    /// Ball event types for replay and analytics logging.
+    /// One enum member per <c>BallEventLogger.Log*</c> producer — additions to this
+    /// enum MUST land atomically with the producing Log method, otherwise consumers
+    /// (replay, analytics) silently receive a default-valued struct. Stage 1+
+    /// expansions (Header, Deflection, OutOfPlay, PossessionChange) are deferred
+    /// until their owning subsystems wire the producers.
+    /// </summary>
     public enum BallEventType
     {
         PositionSnapshot,
         Kick,
-        Header,
         Bounce,
-        Deflection,
         GoalPostHit,
-        OutOfPlay,
-        Goal,
-        PossessionChange
+        Goal
     }
 
     /// <summary>
     /// Single ball event record stored by BallEventLogger.
     /// Detail fields are typed (no Detail string) so logging stays zero-alloc on the
-    /// 60 Hz hot path; only fields relevant to the event Type carry meaningful values.
+    /// 60 Hz hot path. Consumers MUST switch on <see cref="Type"/> before reading any
+    /// detail field — the unused fields default to typed zero (e.g. a Goal event
+    /// carries <c>Surface == SurfaceType.GrassDry</c> and
+    /// <c>ResultingState == BallStateType.Stationary</c> only because struct fields
+    /// default to zero, not because those values are semantically meaningful).
+    ///
+    /// Per-Type validity map (header fields Timestamp / Type / Position / Velocity /
+    /// AngularVelocity / AgentID are always populated):
+    /// <list type="bullet">
+    /// <item><c>PositionSnapshot</c> — no detail fields (header only). AgentID = −1.</item>
+    /// <item><c>Kick</c> — <see cref="ResultingState"/>. AgentID = kicker.</item>
+    /// <item><c>Bounce</c> — <see cref="Surface"/>, <see cref="RestitutionUsed"/>,
+    ///   <see cref="VnBefore"/>, <see cref="VnAfter"/>. AgentID = −1.</item>
+    /// <item><c>GoalPostHit</c> — <see cref="ContactPoint"/>. AgentID = −1.</item>
+    /// <item><c>Goal</c> — <see cref="TeamID"/>. AgentID = scorer.</item>
+    /// </list>
     /// </summary>
     public struct BallEvent
     {
@@ -59,17 +77,17 @@ namespace TacticalDirector.BallPhysics
     /// </summary>
     public sealed class BallEventLogger
     {
-        // -1f is "never snapshotted" — first call always emits, since (matchTime + 1f) >= SnapshotInterval.
-        private const float NeverSnapshotted = -1f;
-
+        // float.NegativeInfinity is the "never snapshotted" sentinel — for the first
+        // call (matchTime − NegativeInfinity == +Infinity) the difference check alone
+        // always emits, regardless of how SnapshotInterval is tuned in future. No
+        // float equality, no magic literal.
         private readonly List<BallEvent> _events = new List<BallEvent>();
-        private float _lastSnapshotTime = NeverSnapshotted;
+        private float _lastSnapshotTime = float.NegativeInfinity;
 
         /// <summary>Logs a position snapshot if the snapshot interval has elapsed.</summary>
         public void TryLogSnapshot(BallState ball, float matchTime)
         {
-            if (_lastSnapshotTime == NeverSnapshotted
-                || matchTime - _lastSnapshotTime >= BallPhysicsConstants.Logging.SnapshotInterval)
+            if (matchTime - _lastSnapshotTime >= BallPhysicsConstants.Logging.SnapshotInterval)
             {
                 _events.Add(new BallEvent
                 {
@@ -168,7 +186,7 @@ namespace TacticalDirector.BallPhysics
         public void Clear()
         {
             _events.Clear();
-            _lastSnapshotTime = NeverSnapshotted;
+            _lastSnapshotTime = float.NegativeInfinity;
         }
 
         /// <summary>
@@ -187,7 +205,10 @@ namespace TacticalDirector.BallPhysics
                 BallEventType.GoalPostHit =>
                     $"Contact:({evt.ContactPoint.x:F1},{evt.ContactPoint.y:F1},{evt.ContactPoint.z:F1})",
                 BallEventType.Goal => $"Team:{evt.TeamID}",
-                _ => string.Empty
+                BallEventType.PositionSnapshot => string.Empty,
+                _ => throw new System.ArgumentOutOfRangeException(
+                        nameof(evt), evt.Type,
+                        "Unknown BallEventType — extend FormatDetail and the producer Log* method atomically.")
             };
         }
     }
@@ -211,4 +232,17 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | magic literal replaced with the NeverSnapshotted = -1f named const |
 // |         |            |        | and an explicit "first call always emits" sentinel check.          |
 // |         |            |        | L-3: ExportEvents XML doc warns about per-call List allocation.    |
+// | 1.3     | 2026-06-03 | —      | AR-2 fixes. M-1: _lastSnapshotTime initialised to                   |
+// |         |            |        | float.NegativeInfinity instead of the NeverSnapshotted = -1f       |
+// |         |            |        | sentinel + equality branch — the difference check alone now emits   |
+// |         |            |        | the first snapshot (matchTime − NegativeInfinity == +Infinity) and  |
+// |         |            |        | survives any future SnapshotInterval tuning. L-3: dead BallEventType|
+// |         |            |        | members Header / Deflection / OutOfPlay / PossessionChange dropped  |
+// |         |            |        | (no producer in BallEventLogger); enum doc explains Stage 1+        |
+// |         |            |        | re-addition requires atomic producer + consumer wiring. L-4:        |
+// |         |            |        | BallEvent XML doc gains a per-Type validity map listing which       |
+// |         |            |        | detail fields each event type populates; consumers MUST switch on   |
+// |         |            |        | Type before reading detail fields. FormatDetail default arm now    |
+// |         |            |        | throws ArgumentOutOfRangeException (consistent with the closed      |
+// |         |            |        | enum), and PositionSnapshot now has an explicit empty-string arm.   |
 #endregion

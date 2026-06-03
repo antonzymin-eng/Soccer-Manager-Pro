@@ -1,6 +1,6 @@
 // File:     src/ball-physics/tests/BallPhysicsCoreTests.cs
 // Created:  2026-05-24
-// Modified: 2026-06-02
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Unit tests for BallPhysicsCore force calculations and validation.
@@ -146,6 +146,10 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Validation_DetectsNaN_AndRecovers()
         {
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Error,
+                new System.Text.RegularExpressions.Regex(@"\[BallPhysics\] NaN/Infinity detected"));
+
             var ball = new BallState
             {
                 Position          = new Vector3(float.NaN, 34f, 0f),
@@ -408,6 +412,10 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Validation_DetectsInfinity_AndRecovers()
         {
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Error,
+                new System.Text.RegularExpressions.Regex(@"\[BallPhysics\] NaN/Infinity detected"));
+
             var ball = new BallState
             {
                 Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
@@ -491,4 +499,10 @@ namespace TacticalDirector.BallPhysics.Tests
 // | 1.3     | 2026-06-02 | —      | AR-1 fixes. H-2: file header path corrected to src/ball-physics/.  |
 // |         |            |        | M-4: BallStateType / SurfaceType enum members renamed PascalCase   |
 // |         |            |        | across all test inputs and assertions.                             |
+// | 1.4     | 2026-06-03 | —      | AR-2 M-2: LogAssert.Expect added to                                |
+// |         |            |        | Validation_DetectsNaN_AndRecovers and                              |
+// |         |            |        | Validation_DetectsInfinity_AndRecovers so the recovery-path        |
+// |         |            |        | Debug.LogError emitted by ValidatePhysicsState does not fail the   |
+// |         |            |        | Unity NUnit runner (parallels the AR-1 H-1 follow-on already       |
+// |         |            |        | applied on the two integration-test counterparts).                 |
 #endregion
