@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentStateMachine.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03
+// Modified: 2026-06-03 (AR-5 / AR-6 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.4–§3.1.7, Code Standards #20
 // Purpose:  Pure state evaluation for movement state transitions. No side effects.
@@ -39,7 +39,14 @@ namespace TacticalDirector.AgentMovement
             float collisionForce = 0.0f,
             GroundedReason groundedReason = GroundedReason.NONE)
         {
-            if (isCollisionKnockdown && current != AgentMovementState.GROUNDED)
+            // Knockdown signal unconditionally forces GROUNDED. The prior `current != GROUNDED`
+            // guard created a Case-2 gap: when the GROUNDED dwell expired on the same frame a
+            // fresh collision arrived, EvaluateFromGrounded returned IDLE, the transition cleared
+            // GroundedReason/CollisionForce, and only the NEXT frame re-grounded the agent —
+            // leaving a single IDLE frame in the middle of a continuous knockdown sequence. The
+            // System Step 3 newState==current==GROUNDED branch now refreshes the entry state
+            // (AR-5 M-2 fix in AgentMovementSystem.cs).
+            if (isCollisionKnockdown)
             {
                 return AgentMovementState.GROUNDED;
             }
@@ -339,4 +346,8 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | still demands active deceleration; closes the WALKING↔DECELERATING flap that previously       |
 // |         |            |        | relied on OscillationGuard as a structural fallback. M-3 EvaluateFromSprinting gains an        |
 // |         |            |        | aerobicPool < AerobicJogFloor gate symmetric with EvaluateFromJogging.                         |
+// | 1.7     | 2026-06-03 | —      | AR-5 M-2 / AR-6 follow-up: collision-knockdown short-circuit no longer gated on                |
+// |         |            |        | `current != GROUNDED`. With the guard, a fresh collision that arrived on the same frame the    |
+// |         |            |        | prior GROUNDED dwell expired produced a one-frame IDLE flicker before re-grounding. System    |
+// |         |            |        | Step 3 newState==current==GROUNDED branch now handles the refresh side.                       |
 #endregion

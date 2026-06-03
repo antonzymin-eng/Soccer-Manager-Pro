@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementSystem.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03
+// Modified: 2026-06-03 (AR-5 / AR-6 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §4.4, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
@@ -57,6 +57,12 @@ namespace TacticalDirector.AgentMovement
             Debug.Assert(dt > 0.0f && dt <= 1.5f / _physicsHz,
                 "AgentMovementSystem.Update: dt outside expected range for physicsHz (>1.5× frame).");
 
+            // currentTime must come from MatchClock (Spec #16 §3.2.3). NaN or negative inputs
+            // silently break OscillationGuard window math (NaN < WindowSeconds is false, so the
+            // guard becomes a no-op). Caught at the boundary instead.
+            Debug.Assert(!float.IsNaN(currentTime) && currentTime >= 0.0f,
+                "AgentMovementSystem.Update: currentTime must be finite and non-negative (MatchClock contract).");
+
             // Step 1 — command is already received as parameter.
 
             // Step 2 — Evaluate new state. commandSpeed maps the AI's desired locomotion state to
@@ -91,9 +97,16 @@ namespace TacticalDirector.AgentMovement
                 state.GroundedReason);
 
             // Step 3 — Apply transition if changed. Gate through oscillation guard (§3.1.7).
+            // Collision-driven GROUNDED transitions bypass the guard: an external knockdown
+            // impulse is not state-machine flapping, and blocking it would keep the agent in
+            // motion for LockDuration after a collision. The guard timestamp is also not
+            // recorded for the bypass case so the history reflects normal-flow flapping only.
+            bool isCollisionTransition =
+                isCollisionKnockdown && newState == AgentMovementState.GROUNDED;
             if (newState != state.CurrentState)
             {
-                bool blocked = state.OscillationGuard.RecordAndCheck(currentTime);
+                bool blocked = !isCollisionTransition
+                    && state.OscillationGuard.RecordAndCheck(currentTime);
                 if (!blocked)
                 {
                     state.PreviousState = state.CurrentState;
@@ -120,7 +133,20 @@ namespace TacticalDirector.AgentMovement
             }
             else
             {
-                state.TimeInState += dt;
+                // A fresh collision impulse while already GROUNDED re-captures the entry
+                // reason/force and resets the dwell timer so the second hit extends recovery.
+                // Without this, the dwell continues against the first hit's CollisionForce only
+                // and the second impulse is silently dropped (§3.1.5).
+                if (isCollisionKnockdown && state.CurrentState == AgentMovementState.GROUNDED)
+                {
+                    state.GroundedReason = GroundedReason.COLLISION;
+                    state.CollisionForce = collisionForce;
+                    state.TimeInState = 0.0f;
+                }
+                else
+                {
+                    state.TimeInState += dt;
+                }
             }
 
             // Step 4–5 — Acceleration / deceleration with directional penalty.
@@ -241,11 +267,20 @@ namespace TacticalDirector.AgentMovement
             }
             else
             {
-                // Step 11 (override path) — Update caches; last-valid tracks current unconditionally.
+                // Step 11 (override path) — Update caches, but only when values are finite and
+                // facing is non-degenerate. Override mode is tooling-only (replay scrubber /
+                // editor injection); a tool that injects NaN/Inf and then disables override on
+                // the next frame would otherwise poison LastValid* permanently — Validate would
+                // restore NaN values, repeat the corruption next frame, and the agent would be
+                // stuck. Skipping the cache write preserves the last clean snapshot.
                 state.Speed = state.Velocity.magnitude;
-                state.LastValidPosition = state.Position;
-                state.LastValidVelocity = state.Velocity;
-                state.LastValidFacing = state.FacingDirection;
+                if (!AgentSafetySystem.HasInvalidValues(
+                        state.Position, state.Velocity, state.FacingDirection))
+                {
+                    state.LastValidPosition = state.Position;
+                    state.LastValidVelocity = state.Velocity;
+                    state.LastValidFacing = state.FacingDirection;
+                }
             }
 
             // Step 12 — Fatigue update.
@@ -269,6 +304,14 @@ namespace TacticalDirector.AgentMovement
             float currentTime)
         {
             using var _ = s_updateAllAgentsMarker.Auto();
+
+            // No array may be null — caller contract (§4.4.2). Checked separately from the length
+            // assert below so the diagnostic identifies the missing array instead of an opaque NRE
+            // when the length-check expression dereferences a null .Length.
+            Debug.Assert(
+                states != null && attrs != null && perfs != null && commands != null
+                && isGoalkeeper != null && isCollisionKnockdown != null && collisionForces != null,
+                "UpdateAllAgents: no array argument may be null.");
 
             // All arrays must be co-sized — caller contract (§4.4.2).
             // Debug.Assert compiles out in release builds (zero hot-path cost).
@@ -472,4 +515,16 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | sign from facing rotation. M-5 Validate signature gains facing in/out + LastValidFacing.       |
 // |         |            |        | L-3 isCollisionKnockdown / collisionForce are required parameters. L-4 dt assert tightened     |
 // |         |            |        | from 2.0/physicsHz to 1.5/physicsHz. L-2 stale "60× too large" comment removed.                |
+// | 1.8     | 2026-06-03 | —      | AR-5 fix: M-1 override-path Step 11 cache write now skipped when current values are            |
+// |         |            |        | invalid (HasInvalidValues check) — prevents tooling-injected NaN/Inf from poisoning            |
+// |         |            |        | LastValid* and trapping the agent in a permanent recovery loop. M-2 second-hit collision      |
+// |         |            |        | while already GROUNDED now refreshes GroundedReason / CollisionForce and resets TimeInState   |
+// |         |            |        | so the new impulse extends recovery (was silently dropped). L-2 added null-array guard in     |
+// |         |            |        | UpdateAllAgents (precedes length assert). L-5 added MatchClock contract assert on             |
+// |         |            |        | currentTime (finite + non-negative).                                                            |
+// | 1.9     | 2026-06-03 | —      | AR-6 fix: M-2 OscillationGuard bypassed for collision-driven GROUNDED transitions (was        |
+// |         |            |        | blocking legitimate knockdowns for LockDuration after a flap-triggered lock). Pairs with      |
+// |         |            |        | AgentStateMachine v1.7 — knockdown short-circuit now unconditional, so newState==GROUNDED     |
+// |         |            |        | reliably reaches Step 3. L-1 inner else block reorganised to skip the redundant               |
+// |         |            |        | `state.TimeInState += dt` immediately followed by `= 0.0f` on refresh.                         |
 #endregion

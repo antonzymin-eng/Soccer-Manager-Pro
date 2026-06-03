@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementConstants.cs
 // Created:  2026-05-22
-// Modified: 2026-05-26
+// Modified: 2026-06-03 (AR-5 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1–§3.4, §4.1.3, §4.3.1, Code Standards #20
 // Purpose:  All constants for the agent movement system. No literals in formula code.
@@ -473,12 +473,16 @@ namespace TacticalDirector.AgentMovement
         /// <summary>
         /// [CROSS] Pitch length along the X axis (metres).
         /// Authoritative source: Ball Physics #1 §1.2 coordinate system. Value: 105 m.
+        /// TODO: route via ProjectConstants once the project-constants assembly lands (Stage 1)
+        /// so the value is shared across spec assemblies instead of duplicated as a literal.
         /// </summary>
         public static readonly float PitchLengthX = 105.0f;
 
         /// <summary>
         /// [CROSS] Pitch width along the Y axis (metres).
         /// Authoritative source: Ball Physics #1 §1.2 coordinate system. Value: 68 m.
+        /// TODO: route via ProjectConstants once the project-constants assembly lands (Stage 1)
+        /// so the value is shared across spec assemblies instead of duplicated as a literal.
         /// </summary>
         public static readonly float PitchWidthY = 68.0f;
 
@@ -512,4 +516,6 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | GT region removed (empty). Modified date updated.                                              |
 // | 1.5     | 2026-05-26 | —      | AR-2 fix (continued): M-2 SafeTurnFraction/MaxStumbleProb XML doc updated to note they are       |
 // |         |            |        | reserved for Stage 1+ probabilistic stumble; unused at Stage 0 (deterministic ShouldStumble).   |
+// | 1.6     | 2026-06-03 | —      | AR-5 fix: L-3 [CROSS] PitchLengthX / PitchWidthY XML docs gained TODO noting the Stage 1        |
+// |         |            |        | ProjectConstants routing so the literal duplication of Ball Physics #1 §1.2 values is tracked. |
 #endregion
