@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallPhysicsCore.cs
 // Created:  2026-05-24
-// Modified: 2026-06-03 (AR-4 fix pass)
+// Modified: 2026-06-03 (AR-6 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Main physics update loop and force calculations for the ball.
@@ -387,4 +387,8 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | symmetry with the three sibling clamp emits (which DO interpolate)|
 // |         |            |        | so the four ValidatePhysicsState diagnostic emits have a uniform  |
 // |         |            |        | UNITY_EDITOR || DEVELOPMENT_BUILD surface.                         |
+// | 1.3.2   | 2026-06-03 | —      | AR-6 L-2: file header Modified annotation refreshed               |
+// |         |            |        | "(AR-4 fix pass)" → "(AR-6 fix pass)" so a reader scanning headers |
+// |         |            |        | for the latest-pass anchor lands on the correct review row. Date   |
+// |         |            |        | unchanged (still 2026-06-03). Doc-only.                            |
 #endregion
