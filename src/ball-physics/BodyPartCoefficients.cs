@@ -1,5 +1,6 @@
 // File:     src/ball-physics/BodyPartCoefficients.cs
 // Created:  2026-06-03
+// Modified: 2026-06-03 (AR-4 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Speed and spin retention coefficients per body part for deflection
@@ -16,7 +17,7 @@ namespace TacticalDirector.BallPhysics
     /// </summary>
     public static class BodyPartCoefficients
     {
-        private static readonly Dictionary<BodyPart, (float speedRetention, float spinRetention)> s_coefficients
+        private static readonly IReadOnlyDictionary<BodyPart, (float speedRetention, float spinRetention)> s_coefficients
             = new Dictionary<BodyPart, (float, float)>
         {
             { BodyPart.Foot,  (BallPhysicsConstants.BodyPartRetention.FootSpeed,  BallPhysicsConstants.BodyPartRetention.FootSpin)  },
@@ -54,4 +55,9 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | replaced with references to the new                                |
 // |         |            |        | BallPhysicsConstants.BodyPartRetention catalogue block             |
 // |         |            |        | (FR-CS-016 — no magic numbers in ball-physics assembly).           |
+// | 1.2     | 2026-06-03 | —      | AR-4 L-3: s_coefficients field retyped Dictionary<…> →             |
+// |         |            |        | IReadOnlyDictionary<…> (backed by the same Dictionary instance) so |
+// |         |            |        | future code added inside BodyPartCoefficients cannot mutate the    |
+// |         |            |        | lookup contents through the field reference; matches the AR-2 /   |
+// |         |            |        | Testing Strategy IReadOnlyList<T> pattern.                         |
 #endregion

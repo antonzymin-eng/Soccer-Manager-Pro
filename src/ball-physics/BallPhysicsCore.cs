@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallPhysicsCore.cs
 // Created:  2026-05-24
-// Modified: 2026-06-02
+// Modified: 2026-06-03 (AR-4 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Main physics update loop and force calculations for the ball.
@@ -264,7 +264,12 @@ namespace TacticalDirector.BallPhysics
         {
             if (HasInvalidValues(ball))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                // Diagnostic — string interpolation is permitted under FR-CS-031's
+                // editor/development-build carve-out (same pattern as ApplyKick and
+                // event-system EventBus debug assertions).
                 Debug.LogError("[BallPhysics] NaN/Infinity detected — recovering to last valid state.");
+#endif
                 ball.Position        = ball.LastValidPosition;
                 ball.Velocity        = ball.LastValidVelocity;
                 ball.AngularVelocity = Vector3.zero;
@@ -276,14 +281,18 @@ namespace TacticalDirector.BallPhysics
             if (speed > BallPhysicsConstants.Limits.MaxVelocity)
             {
                 ball.Velocity = ball.Velocity.normalized * BallPhysicsConstants.Limits.MaxVelocity;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning($"[BallPhysics] Velocity clamped from {speed:F1} m/s");
+#endif
             }
 
             float spinRate = ball.AngularVelocity.magnitude;
             if (spinRate > BallPhysicsConstants.Limits.MaxSpin)
             {
                 ball.AngularVelocity = ball.AngularVelocity.normalized * BallPhysicsConstants.Limits.MaxSpin;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning($"[BallPhysics] Spin clamped from {spinRate:F1} rad/s");
+#endif
             }
 
             if (ball.Position.z > BallPhysicsConstants.Limits.MaxHeight)
@@ -294,7 +303,9 @@ namespace TacticalDirector.BallPhysics
                 ball.Velocity = new Vector3(
                     ball.Velocity.x, ball.Velocity.y,
                     Mathf.Min(ball.Velocity.z, 0f));
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning("[BallPhysics] Height clamped — possible instability");
+#endif
             }
 
             float groundLevel = BallPhysicsConstants.Ball.RADIUS;
@@ -363,4 +374,11 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | comment in UpdateBallPhysics now states explicitly that            |
 // |         |            |        | ValidatePhysicsState is skipped for Stationary/Controlled/OutOfPlay|
 // |         |            |        | and points to the caller-side validation responsibility.           |
+// | 1.3     | 2026-06-03 | —      | AR-4 M-1: the four Debug.LogError / Debug.LogWarning emit blocks  |
+// |         |            |        | in ValidatePhysicsState (NaN-recovery, velocity clamp, spin       |
+// |         |            |        | clamp, height clamp) gated behind #if UNITY_EDITOR ||              |
+// |         |            |        | DEVELOPMENT_BUILD — same FR-CS-031 carve-out pattern AR-3 L-3      |
+// |         |            |        | applied to BallCollision.ApplyKick. ValidatePhysicsState runs at   |
+// |         |            |        | 60 Hz inside UpdateBallPhysics so the gating concern is stronger   |
+// |         |            |        | here than for once-per-kick emits.                                 |
 #endregion

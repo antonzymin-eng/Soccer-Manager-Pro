@@ -1,6 +1,6 @@
 // File:     src/ball-physics/SurfaceProperties.cs
 // Created:  2026-05-24
-// Modified: 2026-06-02
+// Modified: 2026-06-03 (AR-4 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Returns per-surface coefficients (restitution, friction, rolling resistance,
@@ -8,7 +8,15 @@
 
 namespace TacticalDirector.BallPhysics
 {
-    /// <summary>Surface types supported by the Stage 0 physics model.</summary>
+    /// <summary>
+    /// Surface types supported by the Stage 0 physics model.
+    /// ORDINAL STABILITY: future additions MUST be appended at the end of the enum.
+    /// SurfaceType is embedded in <c>BallEvent.Surface</c> (Bounce events) and is
+    /// stored in any persisted match config; inserting a new surface in the middle
+    /// shifts the ordinals of later members and breaks both replay logs and the
+    /// SurfaceProperties switch statements (which key off the named member, but a
+    /// caller passing a serialised int would silently land on the wrong surface).
+    /// </summary>
     public enum SurfaceType
     {
         GrassDry,
@@ -101,4 +109,9 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | expressions now throw ArgumentOutOfRangeException for unknown enum  |
 // |         |            |        | values instead of silently returning GrassDry — fails fast on stale|
 // |         |            |        | cast-from-int callers.                                              |
+// | 1.4     | 2026-06-03 | —      | AR-4 L-1: SurfaceType XML doc gains an explicit ORDINAL STABILITY  |
+// |         |            |        | paragraph parallel to BallEventType / BallStateType — SurfaceType  |
+// |         |            |        | is embedded in BallEvent.Surface (Bounce events) and is stored in   |
+// |         |            |        | persisted match config; insertions break replay logs and any        |
+// |         |            |        | int-keyed deserialiser.                                             |
 #endregion

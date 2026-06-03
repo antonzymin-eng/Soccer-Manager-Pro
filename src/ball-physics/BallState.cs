@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallState.cs
 // Created:  2026-05-24
-// Modified: 2026-06-02
+// Modified: 2026-06-03 (AR-4 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Ball state struct and state-machine enum. Passed by ref throughout
@@ -14,6 +14,13 @@ namespace TacticalDirector.BallPhysics
 {
     /// <summary>
     /// Ball state machine states. Determines which physics forces are applied each frame.
+    /// ORDINAL STABILITY: future additions MUST be appended at the end of the enum.
+    /// BallStateType is embedded in <see cref="BallState.State"/> and in
+    /// <c>BallEvent.ResultingState</c>; inserting a new member in the middle shifts
+    /// the ordinals of every later member and breaks any analytics pipeline or
+    /// serialised state stream (replay, save/load) that keys off the int value.
+    /// FR-DS-009 digest compatibility inherits this hazard once state crosses a save
+    /// boundary.
     /// </summary>
     public enum BallStateType
     {
@@ -85,4 +92,9 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | (FR-CS-001 / Spec #20 §3.2.3). L-5: XML doc records cross-spec     |
 // |         |            |        | MemoryMarshal.Write consumers (heading-mechanics, goalkeeper-       |
 // |         |            |        | mechanics) so layout changes propagate intentionally.               |
+// | 1.4     | 2026-06-03 | —      | AR-4 L-1: BallStateType XML doc gains an explicit ORDINAL          |
+// |         |            |        | STABILITY paragraph parallel to the AR-3 L-2 paragraph on          |
+// |         |            |        | BallEventType — BallStateType is embedded in BallState.State and   |
+// |         |            |        | BallEvent.ResultingState; insertions in the middle of the enum     |
+// |         |            |        | shift ordinals and break replay / save / analytics consumers.      |
 #endregion

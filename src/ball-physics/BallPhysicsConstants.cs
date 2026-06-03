@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallPhysicsConstants.cs
 // Created:  2026-05-24
-// Modified: 2026-06-03
+// Modified: 2026-06-03 (AR-4 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  All tunable and physical constants for ball physics simulation.
@@ -281,34 +281,34 @@ namespace TacticalDirector.BallPhysics
 
         public static class BodyPartRetention
         {
-            /// <summary>[GT] Foot speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Foot speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float FootSpeed  = 0.75f; // TODO: replace with config loader (Stage 1)
-            /// <summary>[GT] Foot spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Foot spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float FootSpin   = 0.30f; // TODO: replace with config loader (Stage 1)
 
-            /// <summary>[GT] Shin speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Shin speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float ShinSpeed  = 0.65f; // TODO: replace with config loader (Stage 1)
-            /// <summary>[GT] Shin spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Shin spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float ShinSpin   = 0.20f; // TODO: replace with config loader (Stage 1)
 
-            /// <summary>[GT] Thigh speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Thigh speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float ThighSpeed = 0.60f; // TODO: replace with config loader (Stage 1)
-            /// <summary>[GT] Thigh spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Thigh spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float ThighSpin  = 0.40f; // TODO: replace with config loader (Stage 1)
 
-            /// <summary>[GT] Torso speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Torso speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float TorsoSpeed = 0.55f; // TODO: replace with config loader (Stage 1)
-            /// <summary>[GT] Torso spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Torso spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float TorsoSpin  = 0.50f; // TODO: replace with config loader (Stage 1)
 
-            /// <summary>[GT] Head speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Head speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float HeadSpeed  = 0.70f; // TODO: replace with config loader (Stage 1)
-            /// <summary>[GT] Head spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Head spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float HeadSpin   = 0.10f; // TODO: replace with config loader (Stage 1)
 
-            /// <summary>[GT] Arm speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Arm speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float ArmSpeed   = 0.50f; // TODO: replace with config loader (Stage 1)
-            /// <summary>[GT] Arm spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            /// <summary>[GT] Arm spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
             public static readonly float ArmSpin    = 0.30f; // TODO: replace with config loader (Stage 1)
         }
 
@@ -341,4 +341,7 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | L-5: Possession.ControlHeight XML doc now back-references the root          |
 // |         |            |        | CLAUDE.md OPEN ISSUES entry tracking the cross-spec routing decision so     |
 // |         |            |        | the deferral has a discoverable anchor.                                     |
+// | 1.6     | 2026-06-03 | —      | AR-4 L-4: BodyPartRetention XML docs use "factor" instead of "multiplier"   |
+// |         |            |        | for terminology consistency with the consuming BodyPartCoefficients class   |
+// |         |            |        | (which already uses retention / coefficient / factor vocabulary).           |
 #endregion
