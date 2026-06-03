@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentStateMachine.cs
 // Created:  2026-05-22
-// Modified: 2026-05-26
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.4–§3.1.7, Code Standards #20
 // Purpose:  Pure state evaluation for movement state transitions. No side effects.
@@ -56,7 +56,7 @@ namespace TacticalDirector.AgentMovement
                     return EvaluateFromJogging(speed, commandSpeed, sprintReservoir, aerobicPool);
 
                 case AgentMovementState.SPRINTING:
-                    return EvaluateFromSprinting(speed, commandSpeed, turnAngle, balance, agility, sprintReservoir);
+                    return EvaluateFromSprinting(speed, commandSpeed, turnAngle, balance, agility, sprintReservoir, aerobicPool);
 
                 case AgentMovementState.DECELERATING:
                     return EvaluateFromDecelerating(speed, commandSpeed, turnAngle, balance, agility, sprintReservoir, aerobicPool);
@@ -150,9 +150,16 @@ namespace TacticalDirector.AgentMovement
 
         private static AgentMovementState EvaluateFromSprinting(
             float speed, float commandSpeed, float turnAngle,
-            int balance, int agility, float sprintReservoir)
+            int balance, int agility, float sprintReservoir, float aerobicPool)
         {
             if (sprintReservoir < MovementThresholds.SprintReservoirFloor)
+            {
+                return AgentMovementState.JOGGING;
+            }
+
+            // Aerobic floor mirrors EvaluateFromJogging's gate — an exhausted player cannot keep
+            // sprinting indefinitely on a recently-refilled anaerobic reservoir.
+            if (aerobicPool < MovementThresholds.AerobicJogFloor)
             {
                 return AgentMovementState.JOGGING;
             }
@@ -186,7 +193,14 @@ namespace TacticalDirector.AgentMovement
                 return AgentMovementState.IDLE;
             }
 
-            if (speed < MovementThresholds.JogExit)
+            // Fall through to WALKING only when the AI's command intent is consistent with walking
+            // (commandSpeed ≥ current speed within hysteresis, i.e. caller no longer demanding
+            // active deceleration). Otherwise WALKING would immediately re-evaluate to DECELERATING
+            // on the next frame and the pair would flap until OscillationGuard clamps it.
+            bool commandPermitsWalking =
+                commandSpeed >= speed - MovementThresholds.CommandSpeedHysteresis;
+
+            if (speed < MovementThresholds.JogExit && commandPermitsWalking)
             {
                 return AgentMovementState.WALKING;
             }
@@ -321,4 +335,8 @@ namespace TacticalDirector.AgentMovement
 // | 1.5     | 2026-05-26 | —      | AR-2 fix (continued): explicit (float) cast added in ShouldStumble for                          |
 // |         |            |        | (agility + balance) / AttributePairMax (int/float division). Consistent with L-2 casts        |
 // |         |            |        | applied in CalculateStumbleDwell and CalculateGroundedDwell.                                    |
+// | 1.6     | 2026-06-03 | —      | AR-4 fix: M-1 EvaluateFromDecelerating no longer auto-falls to WALKING when commandSpeed       |
+// |         |            |        | still demands active deceleration; closes the WALKING↔DECELERATING flap that previously       |
+// |         |            |        | relied on OscillationGuard as a structural fallback. M-3 EvaluateFromSprinting gains an        |
+// |         |            |        | aerobicPool < AerobicJogFloor gate symmetric with EvaluateFromJogging.                         |
 #endregion

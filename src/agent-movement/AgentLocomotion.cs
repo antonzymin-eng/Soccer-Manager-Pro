@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentLocomotion.cs
 // Created:  2026-05-22
-// Modified: 2026-05-25
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Agent Movement #2 §3.2, Code Standards #20
 // Purpose:  Acceleration, top speed, and deceleration calculations. All static, no side effects.
@@ -51,8 +51,10 @@ namespace TacticalDirector.AgentMovement
 
         /// <summary>
         /// Applies proportional deceleration (velocity-squared braking) for one physics frame.
-        /// Stopping distance d determines decel magnitude: a = v² / (2d).
-        /// Agent Movement #2 §3.2.5.
+        /// Stopping distance d determines the requested decel magnitude via a = v² / (2d),
+        /// but the result is capped at MovementThresholds.MAX_ACCELERATION (m/s²). When v²/(2d)
+        /// exceeds the cap, the agent overshoots the requested stopping distance — this is the
+        /// documented physical limit on safe deceleration. Agent Movement #2 §3.2.5, §4.3.1.
         /// </summary>
         public static float ApplyDeceleration(
             float currentSpeed, float stoppingDistanceM, float dt)
@@ -118,4 +120,6 @@ namespace TacticalDirector.AgentMovement
 // | 1.2     | 2026-05-25 | —      | Pass-2 fix: 0.1f → LocomotionConstants.MinStoppingDistanceM. Pass-3: 19.0f/1.0f attribute      |
 // |         |            |        | literals → PlayerAttributeConstants.AttributeRangeSpan / AttributeMin.                         |
 // | 1.3     | 2026-05-25 | —      | Pass-4 fix: M-4 2.0f kinematic divisor → LocomotionConstants.KINEMATIC_HALF [FIXED].           |
+// | 1.4     | 2026-06-03 | —      | AR-4 fix: M-7 ApplyDeceleration XML doc now explicitly states the MAX_ACCELERATION cap and    |
+// |         |            |        | that overshoot is possible when v²/(2d) exceeds the cap.                                       |
 #endregion

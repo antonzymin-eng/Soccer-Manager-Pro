@@ -1,6 +1,6 @@
 // File:     src/agent-movement/OscillationGuard.cs
 // Created:  2026-05-25
-// Modified: 2026-05-26
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.7, Code Standards #20
 // Purpose:  Ring-buffer guard that detects rapid state oscillation and enforces a lock-out period.
@@ -67,6 +67,11 @@ namespace TacticalDirector.AgentMovement
             {
                 _isLocked = true;
                 _lockUntilTime = currentTime + OscillationGuardConstants.LockDuration;
+                // Reset the ring buffer on lock entry. Without this, pre-lock timestamps remain
+                // within WindowSeconds after unlock and the guard re-locks on the next transition,
+                // producing indefinite lockout when underlying inputs still favour the same flap.
+                _t0 = _t1 = _t2 = _t3 = _t4 = _t5 = _t6 = _t7 = float.NegativeInfinity;
+                _writeIndex = 0;
                 return true;
             }
 
@@ -115,4 +120,7 @@ namespace TacticalDirector.AgentMovement
 // | 1.2     | 2026-05-26 | —      | AR-2 fix: L-1 ReadTime default return changed from 0.0f to float.NegativeInfinity for          |
 // |         |            |        | consistency with Initialize() sentinel; prevents false recent-transition count if                |
 // |         |            |        | BufferSize is increased without updating the switch cases.                                     |
+// | 1.3     | 2026-06-03 | —      | AR-4 fix: M-2 ring buffer reset to NegativeInfinity on lock entry. Closes the indefinite-      |
+// |         |            |        | lockout corner case where pre-lock timestamps remained within WindowSeconds after the          |
+// |         |            |        | LockDuration expired and the guard re-locked on the very next transition.                      |
 #endregion

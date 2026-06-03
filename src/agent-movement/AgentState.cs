@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentState.cs
 // Created:  2026-05-22
-// Modified: 2026-05-26
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.1, Code Standards #20
 // Purpose:  Value-type snapshot of all agent kinematic and energy state.
@@ -48,10 +48,11 @@ namespace TacticalDirector.AgentMovement
         public float CollisionForce;
 
         // — Turning —
-        /// <summary>Current lean angle output for animation (degrees). §3.4.</summary>
+        /// <summary>Signed lean angle output for animation (degrees, ±MAX_LEAN_ANGLE). §3.4.
+        /// Sign follows Unity XY signed-rotation convention (positive = counter-clockwise).</summary>
         public float LeanAngle;
 
-        /// <summary>Current achieved turn rate (°/s).</summary>
+        /// <summary>Actual achieved turn rate this frame (°/s), |signedAngle|/dt. §3.4.</summary>
         public float CurrentTurnRate;
 
         // — Dual-energy fatigue —
@@ -68,6 +69,9 @@ namespace TacticalDirector.AgentMovement
         /// <summary>Last velocity known to be valid.</summary>
         public Vector2 LastValidVelocity;
 
+        /// <summary>Last facing direction known to be valid (normalised). Recovered alongside position/velocity on safety failure.</summary>
+        public Vector2 LastValidFacing;
+
         /// <summary>Cached magnitude of Velocity (m/s). Recomputed each frame; do not set directly.</summary>
         public float Speed;
 
@@ -78,13 +82,14 @@ namespace TacticalDirector.AgentMovement
         /// <summary>Initialises state for an agent placed at a pitch position, fully rested.</summary>
         public static AgentState CreateAtPosition(Vector2 position, Vector2 facingDirection)
         {
+            Vector2 normalisedFacing = facingDirection.sqrMagnitude > SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON
+                ? facingDirection.normalized
+                : Vector2.up;
             var state = new AgentState
             {
                 Position = position,
                 Velocity = Vector2.zero,
-                FacingDirection = facingDirection.sqrMagnitude > SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON
-                    ? facingDirection.normalized
-                    : Vector2.up,
+                FacingDirection = normalisedFacing,
                 CurrentState = AgentMovementState.IDLE,
                 PreviousState = AgentMovementState.IDLE,
                 TimeInState = 0.0f,
@@ -96,6 +101,7 @@ namespace TacticalDirector.AgentMovement
                 SprintReservoir = 1.0f,
                 LastValidPosition = position,
                 LastValidVelocity = Vector2.zero,
+                LastValidFacing = normalisedFacing,
                 Speed = 0.0f
             };
             // OscillationGuard zero-init causes false-positive lockout at t=0; Initialize() sets
@@ -116,4 +122,7 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | CreateAtPosition to prevent false-positive lockout at match start.                  |
 // | 1.3     | 2026-05-26 | —      | AR-2 fix: M-5 zero-vector guard on facingDirection in CreateAtPosition; falls back   |
 // |         |            |        | to Vector2.up to prevent downstream NaN/zero-facing corruption.                     |
+// | 1.4     | 2026-06-03 | —      | AR-4 fix: M-5 LastValidFacing field added; CreateAtPosition seeds it from the         |
+// |         |            |        | normalised facing argument. Consumed by AgentSafetySystem.Validate on recovery.      |
+// |         |            |        | H-4/L-1 docs on LeanAngle / CurrentTurnRate updated for signed/achieved semantics.    |
 #endregion
