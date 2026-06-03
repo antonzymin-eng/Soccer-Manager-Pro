@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementConstants.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03 (AR-5 fix pass)
+// Modified: 2026-06-03 (AR-7 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1–§3.4, §4.1.3, §4.3.1, Code Standards #20
 // Purpose:  All constants for the agent movement system. No literals in formula code.
@@ -427,6 +427,9 @@ namespace TacticalDirector.AgentMovement
         /// <summary>[FIXED] Maximum player attribute value. Agent Movement #2 §3.5.1.</summary>
         public const float AttributeMax = 20.0f;
 
+        /// <summary>[FIXED] Integer form of AttributeMax for use in integer-attribute arithmetic (parallel to AttributeMinInt). Agent Movement #2 §3.5.1.</summary>
+        public const int AttributeMaxInt = 20;
+
         #endregion
 
         #region Derived
@@ -518,4 +521,7 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | reserved for Stage 1+ probabilistic stumble; unused at Stage 0 (deterministic ShouldStumble).   |
 // | 1.6     | 2026-06-03 | —      | AR-5 fix: L-3 [CROSS] PitchLengthX / PitchWidthY XML docs gained TODO noting the Stage 1        |
 // |         |            |        | ProjectConstants routing so the literal duplication of Ball Physics #1 §1.2 values is tracked. |
+// | 1.7     | 2026-06-03 | —      | AR-7 fix: L-1 PlayerAttributeConstants.AttributeMaxInt = 20 added in parallel to               |
+// |         |            |        | AttributeMinInt. Consumed by PerformanceContext.EvaluateAttribute assert so the L-4           |
+// |         |            |        | bounds check reads as integer-domain instead of round-tripping (int) casts on float consts.   |
 #endregion

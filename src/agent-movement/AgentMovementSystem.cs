@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementSystem.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03 (AR-5 / AR-6 fix pass)
+// Modified: 2026-06-03 (AR-7 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §4.4, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
@@ -101,10 +101,10 @@ namespace TacticalDirector.AgentMovement
             // impulse is not state-machine flapping, and blocking it would keep the agent in
             // motion for LockDuration after a collision. The guard timestamp is also not
             // recorded for the bypass case so the history reflects normal-flow flapping only.
-            bool isCollisionTransition =
-                isCollisionKnockdown && newState == AgentMovementState.GROUNDED;
             if (newState != state.CurrentState)
             {
+                bool isCollisionTransition =
+                    isCollisionKnockdown && newState == AgentMovementState.GROUNDED;
                 bool blocked = !isCollisionTransition
                     && state.OscillationGuard.RecordAndCheck(currentTime);
                 if (!blocked)
@@ -117,6 +117,14 @@ namespace TacticalDirector.AgentMovement
                     {
                         state.GroundedReason = GroundedReason.COLLISION;
                         state.CollisionForce = collisionForce;
+
+                        // A collision is a structural break in normal locomotion; any prior
+                        // flap-history is irrelevant. Reset the guard so the post-recovery
+                        // GROUNDED→IDLE transition is not blocked by a stale lock that was
+                        // engaged before the collision arrived. Without this, a designer who
+                        // tunes LockDuration above GroundedDwellClampMin silently extends
+                        // collision recovery by the remaining lock window.
+                        state.OscillationGuard.Initialize();
                     }
                     else if (state.PreviousState == AgentMovementState.GROUNDED)
                     {
@@ -136,7 +144,12 @@ namespace TacticalDirector.AgentMovement
                 // A fresh collision impulse while already GROUNDED re-captures the entry
                 // reason/force and resets the dwell timer so the second hit extends recovery.
                 // Without this, the dwell continues against the first hit's CollisionForce only
-                // and the second impulse is silently dropped (§3.1.5).
+                // and the second impulse is silently dropped (§3.1.5). The
+                // `state.CurrentState == GROUNDED` clause is technically implied by
+                // `isCollisionKnockdown` (the AR-6 M-1 unconditional short-circuit in
+                // EvaluateState forces newState=GROUNDED on knockdown, and we are in the
+                // newState==current branch) but kept as a belt-and-braces against future
+                // EvaluateState changes.
                 if (isCollisionKnockdown && state.CurrentState == AgentMovementState.GROUNDED)
                 {
                     state.GroundedReason = GroundedReason.COLLISION;
@@ -267,20 +280,24 @@ namespace TacticalDirector.AgentMovement
             }
             else
             {
-                // Step 11 (override path) — Update caches, but only when values are finite and
-                // facing is non-degenerate. Override mode is tooling-only (replay scrubber /
-                // editor injection); a tool that injects NaN/Inf and then disables override on
-                // the next frame would otherwise poison LastValid* permanently — Validate would
-                // restore NaN values, repeat the corruption next frame, and the agent would be
-                // stuck. Skipping the cache write preserves the last clean snapshot.
-                state.Speed = state.Velocity.magnitude;
+                // Step 11 (override path) — Update caches and Speed, but only when values are
+                // finite and facing is non-degenerate. Override mode is tooling-only (replay
+                // scrubber / editor injection); a tool that injects NaN/Inf and then disables
+                // override on the next frame would otherwise poison LastValid* permanently —
+                // Validate would restore NaN values, repeat the corruption next frame, and the
+                // agent would be stuck. Speed is gated on the same validity check so a NaN
+                // velocity does not propagate a NaN Speed into the next frame's state-machine
+                // evaluation (where comparisons against NaN silently return false and produce
+                // arbitrary transitions).
                 if (!AgentSafetySystem.HasInvalidValues(
                         state.Position, state.Velocity, state.FacingDirection))
                 {
+                    state.Speed = state.Velocity.magnitude;
                     state.LastValidPosition = state.Position;
                     state.LastValidVelocity = state.Velocity;
                     state.LastValidFacing = state.FacingDirection;
                 }
+                // else: preserve prior frame's Speed / LastValid* so neither NaN propagates.
             }
 
             // Step 12 — Fatigue update.
@@ -527,4 +544,13 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | AgentStateMachine v1.7 — knockdown short-circuit now unconditional, so newState==GROUNDED     |
 // |         |            |        | reliably reaches Step 3. L-1 inner else block reorganised to skip the redundant               |
 // |         |            |        | `state.TimeInState += dt` immediately followed by `= 0.0f` on refresh.                         |
+// | 1.10    | 2026-06-03 | —      | AR-7 fix: M-1 Step 3 collision-bypass branch now calls state.OscillationGuard.Initialize()    |
+// |         |            |        | to wipe any pre-existing flap-lock — a collision is a structural break and prior flap         |
+// |         |            |        | history is irrelevant; without the reset a designer who tunes LockDuration above             |
+// |         |            |        | GroundedDwellClampMin silently extends collision recovery by the remaining lock window.       |
+// |         |            |        | M-2 override-path Step 11 `state.Speed = Velocity.magnitude` moved inside the                |
+// |         |            |        | HasInvalidValues check — when tooling injects NaN/Inf, Speed is no longer poisoned and       |
+// |         |            |        | does not propagate NaN into the next frame's state-machine evaluation. L-2 isCollisionTrans- |
+// |         |            |        | ition declaration scope tightened (moved inside the outer if). L-3 inner-else GROUNDED       |
+// |         |            |        | check retained as belt-and-braces with comment naming the AR-6 M-1 invariant dependency.    |
 #endregion
