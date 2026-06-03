@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementSystem.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03 (AR-7 fix pass)
+// Modified: 2026-06-03 (AR-8 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §4.4, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
@@ -32,6 +32,11 @@ namespace TacticalDirector.AgentMovement
         /// </summary>
         public AgentMovementSystem(float physicsHz = 60.0f) // TODO: replace with ProjectConstants.PHYSICS_TICK_HZ (Stage 1)
         {
+            // physicsHz must be finite and positive — 0 / NaN / negative would silently disable
+            // the dt-fidelity assert in Update (1.5f / 0 = +Infinity, 1.5f / NaN = NaN, etc.)
+            // and let stalled-loop frames through the gate. Caught once at construction.
+            Debug.Assert(physicsHz > 0.0f && !float.IsNaN(physicsHz),
+                "AgentMovementSystem: physicsHz must be finite and positive.");
             _physicsHz = physicsHz;
         }
 
@@ -113,10 +118,14 @@ namespace TacticalDirector.AgentMovement
                     state.CurrentState = newState;
                     state.TimeInState = 0.0f;
 
-                    if (isCollisionKnockdown && newState == AgentMovementState.GROUNDED)
+                    if (isCollisionTransition)
                     {
                         state.GroundedReason = GroundedReason.COLLISION;
-                        state.CollisionForce = collisionForce;
+                        // Clamp01 enforces the [0, 1] doc contract on CollisionForce
+                        // (AgentState.cs §3.5.1) — downstream CalculateGroundedDwell already
+                        // clamps defensively, but cache consumers (animation, debug) read the
+                        // raw cached value and would see out-of-range input otherwise.
+                        state.CollisionForce = Mathf.Clamp01(collisionForce);
 
                         // A collision is a structural break in normal locomotion; any prior
                         // flap-history is irrelevant. Reset the guard so the post-recovery
@@ -153,7 +162,10 @@ namespace TacticalDirector.AgentMovement
                 if (isCollisionKnockdown && state.CurrentState == AgentMovementState.GROUNDED)
                 {
                     state.GroundedReason = GroundedReason.COLLISION;
-                    state.CollisionForce = collisionForce;
+                    // Clamp01 mirrors the cache write in the outer transition branch — keeps
+                    // CollisionForce ∈ [0, 1] regardless of whether the second hit lands during
+                    // a state transition or while already GROUNDED.
+                    state.CollisionForce = Mathf.Clamp01(collisionForce);
                     state.TimeInState = 0.0f;
                 }
                 else
@@ -553,4 +565,10 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | does not propagate NaN into the next frame's state-machine evaluation. L-2 isCollisionTrans- |
 // |         |            |        | ition declaration scope tightened (moved inside the outer if). L-3 inner-else GROUNDED       |
 // |         |            |        | check retained as belt-and-braces with comment naming the AR-6 M-1 invariant dependency.    |
+// | 1.11    | 2026-06-03 | —      | AR-8 fix: M-1 ctor asserts physicsHz finite and positive — 0 / NaN / negative would silently |
+// |         |            |        | disable the dt-fidelity assert in Update (1.5/0 = +Inf, 1.5/NaN = NaN) and let stalled-loop  |
+// |         |            |        | frames through the gate. L-1 Step 3 transition branch reuses the isCollisionTransition local |
+// |         |            |        | (was recomputing the same `isCollisionKnockdown && newState == GROUNDED` predicate).         |
+// |         |            |        | L-2 CollisionForce cache writes wrapped in Mathf.Clamp01 — enforces the AgentState.cs        |
+// |         |            |        | [0, 1] doc contract for downstream debug/animation consumers that read the raw cached value. |
 #endregion

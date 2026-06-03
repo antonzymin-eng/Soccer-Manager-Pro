@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentStateMachine.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03 (AR-5 / AR-6 fix pass)
+// Modified: 2026-06-03 (AR-8 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.4–§3.1.7, Code Standards #20
 // Purpose:  Pure state evaluation for movement state transitions. No side effects.
@@ -39,6 +39,21 @@ namespace TacticalDirector.AgentMovement
             float collisionForce = 0.0f,
             GroundedReason groundedReason = GroundedReason.NONE)
         {
+            // Boundary assert mirroring PerformanceContext.EvaluateAttribute (AR-7 L-1):
+            // raw player attributes are integers in [1, 20] per Spec #2 §3.5.1. `default(PlayerAttributes)`
+            // leaves all fields at 0, which would propagate negative `(attr - AttributeMinInt)` factors
+            // into downstream formulas — they range-clamp defensively, but the assert catches the
+            // upstream contract violation in development builds.
+            Debug.Assert(balance >= PlayerAttributeConstants.AttributeMinInt
+                         && balance <= PlayerAttributeConstants.AttributeMaxInt,
+                "EvaluateState: balance must be in [1, 20] per Spec #2 §3.5.1.");
+            Debug.Assert(agility >= PlayerAttributeConstants.AttributeMinInt
+                         && agility <= PlayerAttributeConstants.AttributeMaxInt,
+                "EvaluateState: agility must be in [1, 20] per Spec #2 §3.5.1.");
+            Debug.Assert(strength >= PlayerAttributeConstants.AttributeMinInt
+                         && strength <= PlayerAttributeConstants.AttributeMaxInt,
+                "EvaluateState: strength must be in [1, 20] per Spec #2 §3.5.1.");
+
             // Knockdown signal unconditionally forces GROUNDED. The prior `current != GROUNDED`
             // guard created a Case-2 gap: when the GROUNDED dwell expired on the same frame a
             // fresh collision arrived, EvaluateFromGrounded returned IDLE, the transition cleared
@@ -350,4 +365,9 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | `current != GROUNDED`. With the guard, a fresh collision that arrived on the same frame the    |
 // |         |            |        | prior GROUNDED dwell expired produced a one-frame IDLE flicker before re-grounding. System    |
 // |         |            |        | Step 3 newState==current==GROUNDED branch now handles the refresh side.                       |
+// | 1.8     | 2026-06-03 | —      | AR-8 fix: L-3 EvaluateState asserts balance / agility / strength ∈ [1, 20] mirroring the      |
+// |         |            |        | PerformanceContext.EvaluateAttribute boundary assert (AR-7 L-1). default(PlayerAttributes)    |
+// |         |            |        | leaves all int attribute fields at 0, which propagated negative `(attr - AttributeMinInt)`    |
+// |         |            |        | factors into downstream formulas; downstream range-clamps defensively but the upstream        |
+// |         |            |        | contract violation was previously silent.                                                      |
 #endregion
