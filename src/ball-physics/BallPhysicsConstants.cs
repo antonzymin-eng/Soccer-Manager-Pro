@@ -233,10 +233,12 @@ namespace TacticalDirector.BallPhysics
             /// [GT] Max ball height for ground control (m). Ball Physics #1 §3.1.2.
             /// CROSS-SPEC DRIFT WARNING: <c>FirstTouchConstants.GroundControlHeight</c>
             /// declares the same physical concept at the same value (0.50 m) as a parallel
-            /// [GT]. Per Spec #20 §4.2 routing, one of the two specs must be the authority
-            /// and the other must mirror via [CROSS]. Routing decision is deferred to a
-            /// cross-spec pass; until it lands, designers MUST tune both values together
-            /// or accept silent drift between possession and first-touch acceptance.
+            /// [GT]. Per Spec #20 §4.2 routing one of the two specs must be the authority
+            /// and the other must mirror via [CROSS]. Routing decision tracked in the root
+            /// CLAUDE.md OPEN ISSUES entry "Possession.ControlHeight ↔ GroundControlHeight
+            /// cross-spec routing" (since June 3, 2026). Until that lands, designers MUST
+            /// tune both values together or accept silent drift between possession and
+            /// first-touch acceptance.
             /// </summary>
             public static readonly float ControlHeight = 0.5f; // TODO: replace with config loader (Stage 1)
         }
@@ -277,6 +279,39 @@ namespace TacticalDirector.BallPhysics
             public static readonly float HeightScaleFactor = 0.02f; // TODO: replace with config loader (Stage 1)
         }
 
+        public static class BodyPartRetention
+        {
+            /// <summary>[GT] Foot speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float FootSpeed  = 0.75f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Foot spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float FootSpin   = 0.30f; // TODO: replace with config loader (Stage 1)
+
+            /// <summary>[GT] Shin speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ShinSpeed  = 0.65f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Shin spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ShinSpin   = 0.20f; // TODO: replace with config loader (Stage 1)
+
+            /// <summary>[GT] Thigh speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ThighSpeed = 0.60f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Thigh spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ThighSpin  = 0.40f; // TODO: replace with config loader (Stage 1)
+
+            /// <summary>[GT] Torso speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float TorsoSpeed = 0.55f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Torso spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float TorsoSpin  = 0.50f; // TODO: replace with config loader (Stage 1)
+
+            /// <summary>[GT] Head speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float HeadSpeed  = 0.70f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Head spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float HeadSpin   = 0.10f; // TODO: replace with config loader (Stage 1)
+
+            /// <summary>[GT] Arm speed-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ArmSpeed   = 0.50f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Arm spin-retention multiplier on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ArmSpin    = 0.30f; // TODO: replace with config loader (Stage 1)
+        }
+
         public static class Logging
         {
             /// <summary>[GT] Interval between position snapshots (seconds). Ball Physics #1 §3.1.2.</summary>
@@ -300,4 +335,10 @@ namespace TacticalDirector.BallPhysics
 // | 1.4     | 2026-06-03 | —      | AR-2 L-5: Possession.ControlHeight XML doc gains cross-spec drift warning   |
 // |         |            |        | flagging the parallel FirstTouchConstants.GroundControlHeight declaration   |
 // |         |            |        | (Spec #20 §4.2 routing deferred to cross-spec pass).                        |
+// | 1.5     | 2026-06-03 | —      | AR-3 fixes. M-1: new BodyPartRetention nested class catalogues the 12       |
+// |         |            |        | per-body-part (speedRetention, spinRetention) constants previously inline   |
+// |         |            |        | in BodyPartCoefficients.cs (FR-CS-016 — no magic numbers in ball-physics).  |
+// |         |            |        | L-5: Possession.ControlHeight XML doc now back-references the root          |
+// |         |            |        | CLAUDE.md OPEN ISSUES entry tracking the cross-spec routing decision so     |
+// |         |            |        | the deferral has a discoverable anchor.                                     |
 #endregion

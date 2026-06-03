@@ -19,12 +19,12 @@ namespace TacticalDirector.BallPhysics
         private static readonly Dictionary<BodyPart, (float speedRetention, float spinRetention)> s_coefficients
             = new Dictionary<BodyPart, (float, float)>
         {
-            { BodyPart.Foot,  (0.75f, 0.30f) },
-            { BodyPart.Shin,  (0.65f, 0.20f) },
-            { BodyPart.Thigh, (0.60f, 0.40f) },
-            { BodyPart.Torso, (0.55f, 0.50f) },
-            { BodyPart.Head,  (0.70f, 0.10f) },
-            { BodyPart.Arm,   (0.50f, 0.30f) }
+            { BodyPart.Foot,  (BallPhysicsConstants.BodyPartRetention.FootSpeed,  BallPhysicsConstants.BodyPartRetention.FootSpin)  },
+            { BodyPart.Shin,  (BallPhysicsConstants.BodyPartRetention.ShinSpeed,  BallPhysicsConstants.BodyPartRetention.ShinSpin)  },
+            { BodyPart.Thigh, (BallPhysicsConstants.BodyPartRetention.ThighSpeed, BallPhysicsConstants.BodyPartRetention.ThighSpin) },
+            { BodyPart.Torso, (BallPhysicsConstants.BodyPartRetention.TorsoSpeed, BallPhysicsConstants.BodyPartRetention.TorsoSpin) },
+            { BodyPart.Head,  (BallPhysicsConstants.BodyPartRetention.HeadSpeed,  BallPhysicsConstants.BodyPartRetention.HeadSpin)  },
+            { BodyPart.Arm,   (BallPhysicsConstants.BodyPartRetention.ArmSpeed,   BallPhysicsConstants.BodyPartRetention.ArmSpin)   }
         };
 
         /// <summary>
@@ -50,4 +50,8 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | (one public type per file, src/CLAUDE.md FILE NAMING). Retains the |
 // |         |            |        | AR-1 M-2 (s_coefficients naming) and AR-1 L-4 (throw on unknown)   |
 // |         |            |        | fixes verbatim.                                                    |
+// | 1.1     | 2026-06-03 | —      | AR-3 M-1: 12 inline (speedRetention, spinRetention) literals       |
+// |         |            |        | replaced with references to the new                                |
+// |         |            |        | BallPhysicsConstants.BodyPartRetention catalogue block             |
+// |         |            |        | (FR-CS-016 — no magic numbers in ball-physics assembly).           |
 #endregion

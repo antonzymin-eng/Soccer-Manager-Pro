@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallCollision.cs
 // Created:  2026-05-24
-// Modified: 2026-06-03
+// Modified: 2026-06-03 (AR-3 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Goal-post collision, boundary detection, possession evaluation, and kick
@@ -64,7 +64,7 @@ namespace TacticalDirector.BallPhysics
             if (lowEnough && (y < -r || y > BallPhysicsConstants.Pitch.WIDTH + r))
                 return (true, RestartType.ThrowIn);
 
-            // Home goal (x &lt; −r): the Y/Z gates are identical to the away goal because
+            // Home goal (x < −r): the Y/Z gates are identical to the away goal because
             // both goal mouths are centred at WIDTH/2 and capped at GOAL_HEIGHT; the X
             // half-space is what distinguishes them and the caller already verified it.
             if (lowEnough && x < -r)
@@ -74,7 +74,7 @@ namespace TacticalDirector.BallPhysics
                 return (true, lastTouchTeamID == 0 ? RestartType.Corner : RestartType.GoalKick);
             }
 
-            // Away goal (x &gt; LENGTH + r): see comment on home-goal branch above.
+            // Away goal (x > LENGTH + r): see comment on home-goal branch above.
             if (lowEnough && x > BallPhysicsConstants.Pitch.LENGTH + r)
             {
                 if (IsBetweenPostsUnderCrossbar(ball.Position))
@@ -153,27 +153,42 @@ namespace TacticalDirector.BallPhysics
         {
             if (!IsFiniteVector(velocity))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                // Diagnostic — string interpolation is permitted under FR-CS-031's
+                // editor/development-build carve-out (same pattern as event-system
+                // EventBus debug assertions).
                 Debug.LogError(
                     $"[BallPhysics] ApplyKick: Invalid velocity {velocity} from agent {agentId}. Kick rejected.");
+#endif
                 return KickResult.RejectedNonFiniteVelocity;
             }
 
             if (!IsFiniteVector(spin))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning(
                     $"[BallPhysics] ApplyKick: Invalid spin {spin} from agent {agentId}. Spin zeroed.");
+#endif
                 spin = Vector3.zero;
             }
 
             if (velocity.magnitude > BallPhysicsConstants.Limits.MaxVelocity)
             {
                 velocity = velocity.normalized * BallPhysicsConstants.Limits.MaxVelocity;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning(
                     $"[BallPhysics] ApplyKick: Velocity clamped to {BallPhysicsConstants.Limits.MaxVelocity} m/s.");
+#endif
             }
 
             if (spin.magnitude > BallPhysicsConstants.Limits.MaxSpin)
+            {
                 spin = spin.normalized * BallPhysicsConstants.Limits.MaxSpin;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning(
+                    $"[BallPhysics] ApplyKick: Spin clamped to {BallPhysicsConstants.Limits.MaxSpin} rad/s.");
+#endif
+            }
 
             ball.Velocity        = velocity;
             ball.AngularVelocity = spin;
@@ -221,4 +236,14 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | FILE NAMING. Unused System.Collections.Generic using removed and   |
 // |         |            |        | the UnityEngine. prefix dropped from Debug / Vector2 (already in   |
 // |         |            |        | scope via the single UnityEngine using).                           |
+// | 1.4     | 2026-06-03 | —      | AR-3 fixes. L-1: &lt; / &gt; XML entity escapes inside the two      |
+// |         |            |        | // line comments at the home-goal / away-goal branches replaced   |
+// |         |            |        | with raw < / > (the comments are plain source, not XML doc).      |
+// |         |            |        | L-3: the four Debug.LogError / Debug.LogWarning emit blocks in    |
+// |         |            |        | ApplyKick gated behind #if UNITY_EDITOR || DEVELOPMENT_BUILD —    |
+// |         |            |        | mirrors the event-system EventBus debug-assertion pattern. Both   |
+// |         |            |        | the return path (KickResult.RejectedNonFiniteVelocity) and the    |
+// |         |            |        | functional clamping stay outside the gates. L-4: parallel         |
+// |         |            |        | Debug.LogWarning added for spin clamping so the two symmetric     |
+// |         |            |        | clamp operations now have symmetric diagnostics.                  |
 #endregion
