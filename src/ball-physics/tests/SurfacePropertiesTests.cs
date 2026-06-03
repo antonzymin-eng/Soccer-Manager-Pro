@@ -1,5 +1,6 @@
 // File:     src/ball-physics/tests/SurfacePropertiesTests.cs
 // Created:  2026-06-03
+// Modified: 2026-06-03 (AR-5 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Unit tests for the four SurfaceProperties.Get* methods — locks the AR-1
@@ -122,6 +123,29 @@ namespace TacticalDirector.BallPhysics.Tests
                 () => SurfaceProperties.GetSpinRetention(UnknownSurface),
                 "GetSpinRetention MUST fail fast on unknown SurfaceType (AR-1 L-4).");
         }
+
+        // ── Catalogue coverage (AR-5 L-2) ────────────────────────────────────────
+
+        [Test]
+        public void EveryDeclaredSurfaceType_HasEntryInAllFourLookups()
+        {
+            // Future-proofing: enumerate every declared SurfaceType and assert that
+            // all four SurfaceProperties.Get* methods accept it without throwing.
+            // Catches the case where a new enum member is added without updating one
+            // (or more) of the four switch expressions — the hardcoded round-trip
+            // tests above would silently miss the gap.
+            foreach (SurfaceType surface in Enum.GetValues(typeof(SurfaceType)))
+            {
+                Assert.DoesNotThrow(() => SurfaceProperties.GetCoefficientOfRestitution(surface),
+                    $"SurfaceType.{surface} has no GetCoefficientOfRestitution arm — extend SurfaceCoR + the switch atomically.");
+                Assert.DoesNotThrow(() => SurfaceProperties.GetFrictionCoefficient(surface),
+                    $"SurfaceType.{surface} has no GetFrictionCoefficient arm — extend SurfaceFriction + the switch atomically.");
+                Assert.DoesNotThrow(() => SurfaceProperties.GetRollingResistance(surface),
+                    $"SurfaceType.{surface} has no GetRollingResistance arm — extend Rolling + the switch atomically.");
+                Assert.DoesNotThrow(() => SurfaceProperties.GetSpinRetention(surface),
+                    $"SurfaceType.{surface} has no GetSpinRetention arm — extend SurfaceSpinRetention + the switch atomically.");
+            }
+        }
     }
 }
 
@@ -131,4 +155,9 @@ namespace TacticalDirector.BallPhysics.Tests
 // |         |            |        | unknown contracts on all four SurfaceProperties.Get* methods plus  |
 // |         |            |        | the round-trip into the SurfaceCoR / SurfaceFriction / Rolling /   |
 // |         |            |        | SurfaceSpinRetention catalogues.                                   |
+// | 1.1     | 2026-06-03 | —      | AR-5 fixes. M-1: file header Modified field added (FR-CS-056).    |
+// |         |            |        | L-2: new EveryDeclaredSurfaceType_HasEntryInAllFourLookups test   |
+// |         |            |        | iterates Enum.GetValues(typeof(SurfaceType)) so a future enum     |
+// |         |            |        | extension without atomic updates to all four switch arms fails    |
+// |         |            |        | the test suite immediately.                                        |
 #endregion

@@ -1,5 +1,6 @@
 // File:     src/ball-physics/tests/BodyPartCoefficientsTests.cs
 // Created:  2026-06-03
+// Modified: 2026-06-03 (AR-5 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Unit tests for BodyPartCoefficients.Get — locks the AR-1 L-4 throw-on-
@@ -56,6 +57,21 @@ namespace TacticalDirector.BallPhysics.Tests
                 () => BodyPartCoefficients.Get(unknown),
                 "BodyPartCoefficients.Get MUST fail fast on unknown enum values (AR-1 L-4).");
         }
+
+        [Test]
+        public void Get_EveryDeclaredBodyPart_HasCatalogueEntry()
+        {
+            // Future-proofing: enumerate every declared BodyPart and assert the
+            // catalogue has an entry. Catches the case where a new enum member is
+            // added without a matching BodyPartCoefficients dictionary row — the
+            // hardcoded round-trip test above would silently miss this gap.
+            foreach (BodyPart part in Enum.GetValues(typeof(BodyPart)))
+            {
+                Assert.DoesNotThrow(
+                    () => BodyPartCoefficients.Get(part),
+                    $"BodyPart.{part} has no entry in BodyPartCoefficients catalogue — extend BodyPartRetention + BodyPartCoefficients atomically.");
+            }
+        }
     }
 }
 
@@ -64,4 +80,8 @@ namespace TacticalDirector.BallPhysics.Tests
 // | 1.0     | 2026-06-03 | —      | Initial implementation. AR-4 L-2: closes the test-coverage gap on |
 // |         |            |        | the AR-1 L-4 throw-on-unknown contract and the AR-3 M-1            |
 // |         |            |        | BodyPartRetention catalogue round-trip.                            |
+// | 1.1     | 2026-06-03 | —      | AR-5 fixes. M-1: file header Modified field added (FR-CS-056).    |
+// |         |            |        | L-2: new Get_EveryDeclaredBodyPart_HasCatalogueEntry test iterates |
+// |         |            |        | Enum.GetValues(typeof(BodyPart)) so a future enum extension        |
+// |         |            |        | without a matching catalogue row fails the test suite immediately. |
 #endregion

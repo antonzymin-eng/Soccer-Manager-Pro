@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallEventLogger.cs
 // Created:  2026-05-24
-// Modified: 2026-06-03 (AR-3 fix pass)
+// Modified: 2026-06-03 (AR-5 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Records ball events (kicks, bounces, goals, snapshots) for replay
@@ -24,6 +24,11 @@ namespace TacticalDirector.BallPhysics
     /// it, breaking analytics pipelines (Stage 1+) and any serialised event stream
     /// that keys off the int value. FR-DS-009 digest compatibility inherits this
     /// hazard once event logs cross a save boundary.
+    /// HISTORICAL NOTE: ordinals were renumbered atomically with the AR-2 L-3 drop
+    /// of four unused members (Header / Deflection / OutOfPlay / PossessionChange);
+    /// pre-AR-2 serialised event streams are NOT compatible with the current
+    /// ordinals. The APPEND-only rule above applies from AR-3 L-2 forward; Stage 0
+    /// has no persisted event log so the AR-2 renumbering had no consumer impact.
     /// </summary>
     public enum BallEventType
     {
@@ -255,4 +260,10 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | members at the end (inserting shifts ordinals and breaks Stage     |
 // |         |            |        | 1+ analytics + FR-DS-009 digest compatibility on serialised event   |
 // |         |            |        | streams).                                                          |
+// | 1.5     | 2026-06-03 | —      | AR-5 L-3: BallEventType XML doc gains a HISTORICAL NOTE clarifying|
+// |         |            |        | that the AR-2 L-3 drop of four unused members RENUMBERED the       |
+// |         |            |        | remaining ordinals (Bounce 3→2, GoalPostHit 5→3, Goal 7→4) before  |
+// |         |            |        | the APPEND-only rule was established in AR-3 L-2. Stage 0 has no   |
+// |         |            |        | persisted log so the renumbering had no consumer impact; the note  |
+// |         |            |        | warns any archaeologist who tries to replay pre-AR-2 event streams.|
 #endregion

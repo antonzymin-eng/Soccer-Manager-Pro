@@ -381,4 +381,10 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | applied to BallCollision.ApplyKick. ValidatePhysicsState runs at   |
 // |         |            |        | 60 Hz inside UpdateBallPhysics so the gating concern is stronger   |
 // |         |            |        | here than for once-per-kick emits.                                 |
+// | 1.3.1   | 2026-06-03 | —      | AR-5 L-4 doc clarification: the NaN-recovery LogError emit is a   |
+// |         |            |        | plain string literal (no $"…" interpolation), so it does NOT      |
+// |         |            |        | violate FR-CS-031 directly — it was gated in 1.3 for surface      |
+// |         |            |        | symmetry with the three sibling clamp emits (which DO interpolate)|
+// |         |            |        | so the four ValidatePhysicsState diagnostic emits have a uniform  |
+// |         |            |        | UNITY_EDITOR || DEVELOPMENT_BUILD surface.                         |
 #endregion
