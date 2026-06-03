@@ -1,6 +1,6 @@
-// File:     src/Core/Physics/Ball/BallPhysicsConstants.cs
+// File:     src/ball-physics/BallPhysicsConstants.cs
 // Created:  2026-05-24
-// Modified: 2026-05-24
+// Modified: 2026-06-03 (AR-4 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  All tunable and physical constants for ball physics simulation.
@@ -229,7 +229,17 @@ namespace TacticalDirector.BallPhysics
             /// <summary>[GT] Min opponent distance for uncontested control (m). Ball Physics #1 §3.1.2.</summary>
             public static readonly float ChallengeRadius = 1.0f; // TODO: replace with config loader (Stage 1)
 
-            /// <summary>[GT] Max ball height for ground control (m). Ball Physics #1 §3.1.2.</summary>
+            /// <summary>
+            /// [GT] Max ball height for ground control (m). Ball Physics #1 §3.1.2.
+            /// CROSS-SPEC DRIFT WARNING: <c>FirstTouchConstants.GroundControlHeight</c>
+            /// declares the same physical concept at the same value (0.50 m) as a parallel
+            /// [GT]. Per Spec #20 §4.2 routing one of the two specs must be the authority
+            /// and the other must mirror via [CROSS]. Routing decision tracked in the root
+            /// CLAUDE.md OPEN ISSUES entry "Possession.ControlHeight ↔ GroundControlHeight
+            /// cross-spec routing" (since June 3, 2026). Until that lands, designers MUST
+            /// tune both values together or accept silent drift between possession and
+            /// first-touch acceptance.
+            /// </summary>
             public static readonly float ControlHeight = 0.5f; // TODO: replace with config loader (Stage 1)
         }
 
@@ -269,6 +279,39 @@ namespace TacticalDirector.BallPhysics
             public static readonly float HeightScaleFactor = 0.02f; // TODO: replace with config loader (Stage 1)
         }
 
+        public static class BodyPartRetention
+        {
+            /// <summary>[GT] Foot speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float FootSpeed  = 0.75f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Foot spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float FootSpin   = 0.30f; // TODO: replace with config loader (Stage 1)
+
+            /// <summary>[GT] Shin speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ShinSpeed  = 0.65f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Shin spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ShinSpin   = 0.20f; // TODO: replace with config loader (Stage 1)
+
+            /// <summary>[GT] Thigh speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ThighSpeed = 0.60f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Thigh spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ThighSpin  = 0.40f; // TODO: replace with config loader (Stage 1)
+
+            /// <summary>[GT] Torso speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float TorsoSpeed = 0.55f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Torso spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float TorsoSpin  = 0.50f; // TODO: replace with config loader (Stage 1)
+
+            /// <summary>[GT] Head speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float HeadSpeed  = 0.70f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Head spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float HeadSpin   = 0.10f; // TODO: replace with config loader (Stage 1)
+
+            /// <summary>[GT] Arm speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ArmSpeed   = 0.50f; // TODO: replace with config loader (Stage 1)
+            /// <summary>[GT] Arm spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
+            public static readonly float ArmSpin    = 0.30f; // TODO: replace with config loader (Stage 1)
+        }
+
         public static class Logging
         {
             /// <summary>[GT] Interval between position snapshots (seconds). Ball Physics #1 §3.1.2.</summary>
@@ -288,4 +331,17 @@ namespace TacticalDirector.BallPhysics
 // | 1.2     | 2026-05-24 | —      | Add Rolling.ResistanceArtificial/Frozen; add SurfaceCoR, SurfaceFriction,   |
 // |         |            |        | SurfaceSpinRetention nested classes for all 5 surface types per spec §3.1.2  |
 // |         |            |        | surface properties table. Eliminates FR-CS-016 literals in SurfaceProperties.|
+// | 1.3     | 2026-06-02 | —      | AR-1 H-2: file header path corrected to src/ball-physics/.                  |
+// | 1.4     | 2026-06-03 | —      | AR-2 L-5: Possession.ControlHeight XML doc gains cross-spec drift warning   |
+// |         |            |        | flagging the parallel FirstTouchConstants.GroundControlHeight declaration   |
+// |         |            |        | (Spec #20 §4.2 routing deferred to cross-spec pass).                        |
+// | 1.5     | 2026-06-03 | —      | AR-3 fixes. M-1: new BodyPartRetention nested class catalogues the 12       |
+// |         |            |        | per-body-part (speedRetention, spinRetention) constants previously inline   |
+// |         |            |        | in BodyPartCoefficients.cs (FR-CS-016 — no magic numbers in ball-physics).  |
+// |         |            |        | L-5: Possession.ControlHeight XML doc now back-references the root          |
+// |         |            |        | CLAUDE.md OPEN ISSUES entry tracking the cross-spec routing decision so     |
+// |         |            |        | the deferral has a discoverable anchor.                                     |
+// | 1.6     | 2026-06-03 | —      | AR-4 L-4: BodyPartRetention XML docs use "factor" instead of "multiplier"   |
+// |         |            |        | for terminology consistency with the consuming BodyPartCoefficients class   |
+// |         |            |        | (which already uses retention / coefficient / factor vocabulary).           |
 #endregion

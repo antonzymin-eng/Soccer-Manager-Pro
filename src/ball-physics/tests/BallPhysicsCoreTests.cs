@@ -1,6 +1,6 @@
-// File:     src/Core/Physics/Ball/Tests/BallPhysicsCoreTests.cs
+// File:     src/ball-physics/tests/BallPhysicsCoreTests.cs
 // Created:  2026-05-24
-// Modified: 2026-05-24
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Unit tests for BallPhysicsCore force calculations and validation.
@@ -43,7 +43,6 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void MagnusForce_ParallelSpinAndVelocity_ReturnsZero()
         {
-            // ω parallel to v (both in +X) → cross product = 0
             Vector3 force = BallPhysicsCore.CalculateMagnusForce(
                 velocity:        new Vector3(20f, 0f, 0f),
                 angularVelocity: new Vector3(12f, 0f, 0f));
@@ -54,7 +53,6 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void MagnusForce_Sidespin_CurvesLaterally()
         {
-            // ω_z < 0 (CW from above), v in +X → force in -Y
             Vector3 force = BallPhysicsCore.CalculateMagnusForce(
                 velocity:        new Vector3(22f, 0f, 0f),
                 angularVelocity: new Vector3(0f, 0f, -12f));
@@ -148,19 +146,23 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Validation_DetectsNaN_AndRecovers()
         {
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Error,
+                new System.Text.RegularExpressions.Regex(@"\[BallPhysics\] NaN/Infinity detected"));
+
             var ball = new BallState
             {
                 Position          = new Vector3(float.NaN, 34f, 0f),
                 Velocity          = new Vector3(10f, 0f, 0f),
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(5f, 0f, 0f),
-                State             = BallStateType.ROLLING
+                State             = BallStateType.Rolling
             };
 
             BallPhysicsCore.ValidatePhysicsState(ref ball);
 
             Assert.AreEqual(50f, ball.Position.x, "Should recover to last valid X");
-            Assert.AreEqual(BallStateType.STATIONARY, ball.State);
+            Assert.AreEqual(BallStateType.Stationary, ball.State);
         }
 
         [Test]
@@ -170,7 +172,7 @@ namespace TacticalDirector.BallPhysics.Tests
             {
                 Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(100f, 0f, 0f),
-                State             = BallStateType.ROLLING,
+                State             = BallStateType.Rolling,
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = Vector3.zero
             };
@@ -188,7 +190,7 @@ namespace TacticalDirector.BallPhysics.Tests
             {
                 Position          = new Vector3(50f, 34f, belowGround),
                 Velocity          = new Vector3(5f, 0f, -1f),
-                State             = BallStateType.ROLLING,
+                State             = BallStateType.Rolling,
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(5f, 0f, 0f)
             };
@@ -203,7 +205,6 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Bounce_DryGrass_ReturnsExpectedHeight()
         {
-            // 2m drop: impact velocity v = sqrt(2gh) = 6.26 m/s → rebound 0.80–0.90m
             float groundLevel = BallPhysicsConstants.Ball.RADIUS;
 
             var ball = new BallState
@@ -211,14 +212,13 @@ namespace TacticalDirector.BallPhysics.Tests
                 Position          = new Vector3(50f, 34f, groundLevel),
                 Velocity          = new Vector3(0f, 0f, -6.26f),
                 AngularVelocity   = Vector3.zero,
-                State             = BallStateType.BOUNCING,
+                State             = BallStateType.Bouncing,
                 LastValidPosition = new Vector3(50f, 34f, groundLevel),
                 LastValidVelocity = new Vector3(0f, 0f, -6.26f)
             };
 
-            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GRASS_DRY, null, 0f);
+            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GrassDry, null, 0f);
 
-            // h = vz² / (2g)
             float reboundHeight = ball.Velocity.z * ball.Velocity.z
                                 / (2f * BallPhysicsConstants.Environment.GRAVITY);
 
@@ -231,8 +231,6 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void MagnusForce_Topspin_ProducesDownwardForce()
         {
-            // ω_y < 0 (topspin), v in +X.
-            // ω̂ × v̂ = (0,-1,0) × (1,0,0) = (0*0-0*0, 0*1-(-1)*0, (-1)*0-0*1) = (0,0,-1) → downward.
             Vector3 force = BallPhysicsCore.CalculateMagnusForce(
                 velocity:        new Vector3(20f, 0f, 0f),
                 angularVelocity: new Vector3(0f, -10f, 0f));
@@ -247,7 +245,6 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void MagnusForce_HighSpinParameter_ClampsLiftCoefficient()
         {
-            // S = r*omega/v = 0.11*50/5 = 1.1 > MaxSpinParameter(1.0) → clamp must not produce NaN/Inf.
             Vector3 force = BallPhysicsCore.CalculateMagnusForce(
                 velocity:        new Vector3(5f, 0f, 0f),
                 angularVelocity: new Vector3(0f, 0f, 50f));
@@ -265,8 +262,6 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void DragForce_ScalesWithVelocitySquared()
         {
-            // At v=10 m/s Cd=0.20 (laminar). At v=20 m/s crisis t=0 so Cd=0.20 also.
-            // Ratio should be (20/10)^2 = 4 since same Cd at the crisis boundary.
             Vector3 slow = BallPhysicsCore.CalculateDragForce(new Vector3(10f, 0f, 0f));
             Vector3 fast = BallPhysicsCore.CalculateDragForce(new Vector3(20f, 0f, 0f));
 
@@ -281,8 +276,6 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void DragForce_LowerAtTurbulentSpeed_ThanExpectedFromSquareAlone()
         {
-            // At 15 m/s: laminar, Cd=0.20. At 30 m/s: turbulent, Cd=0.10.
-            // Pure v² at same Cd → ratio 4. With Cd halved → ratio ≈ 0.5 × 4 = 2.0.
             Vector3 f15 = BallPhysicsCore.CalculateDragForce(new Vector3(15f, 0f, 0f));
             Vector3 f30 = BallPhysicsCore.CalculateDragForce(new Vector3(30f, 0f, 0f));
 
@@ -297,18 +290,17 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Bounce_Topspin_KicksForward()
         {
-            // ω_y < 0 = topspin; friction impulse transfers spin to linear forward velocity.
             var ball = new BallState
             {
                 Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(5f, 0f, -3f),
                 AngularVelocity   = new Vector3(0f, -10f, 0f),
-                State             = BallStateType.BOUNCING,
+                State             = BallStateType.Bouncing,
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(5f, 0f, -3f)
             };
 
-            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GRASS_DRY, null, 0f);
+            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GrassDry, null, 0f);
 
             Assert.That(ball.Velocity.x, Is.GreaterThan(5.0f),
                 "Topspin must increase forward velocity after bounce");
@@ -319,18 +311,17 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Bounce_Backspin_Bites()
         {
-            // ω_y > 0 = backspin; friction impulse opposes forward motion.
             var ball = new BallState
             {
                 Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(8f, 0f, -3f),
                 AngularVelocity   = new Vector3(0f, 10f, 0f),
-                State             = BallStateType.BOUNCING,
+                State             = BallStateType.Bouncing,
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(8f, 0f, -3f)
             };
 
-            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GRASS_DRY, null, 0f);
+            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GrassDry, null, 0f);
 
             Assert.That(ball.Velocity.x, Is.LessThan(8.0f),
                 "Backspin must reduce forward velocity after bounce");
@@ -346,12 +337,12 @@ namespace TacticalDirector.BallPhysics.Tests
                 Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(5f, 0f, -4f),
                 AngularVelocity   = Vector3.zero,
-                State             = BallStateType.BOUNCING,
+                State             = BallStateType.Bouncing,
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(5f, 0f, -4f)
             };
 
-            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GRASS_DRY, null, 0f);
+            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GrassDry, null, 0f);
 
             Assert.AreEqual(BallPhysicsConstants.Ball.RADIUS, ball.Position.z,
                 "ApplyBounce must clamp position.z to Ball.RADIUS exactly");
@@ -362,19 +353,17 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Bounce_SpinRetentionApplied()
         {
-            // SpinRetention for GRASS_DRY = 0.80. Friction also modifies omega slightly,
-            // so tolerance is ±0.5 rad/s around the raw-retention value of 8.0.
             var ball = new BallState
             {
                 Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(0f, 0f, -4f),
                 AngularVelocity   = new Vector3(0f, 10f, 0f),
-                State             = BallStateType.BOUNCING,
+                State             = BallStateType.Bouncing,
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(0f, 0f, -4f)
             };
 
-            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GRASS_DRY, null, 0f);
+            BallGroundInteraction.ApplyBounce(ref ball, SurfaceType.GrassDry, null, 0f);
 
             float expectedRetained = 10f * BallPhysicsConstants.SurfaceSpinRetention.GrassDry;
             Assert.That(ball.AngularVelocity.magnitude,
@@ -387,19 +376,18 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Bounce_WetGrass_HigherRebound_ThanDryGrass()
         {
-            // Wet CoR=0.70 > dry CoR=0.65 → higher post-bounce vz.
             float groundLevel = BallPhysicsConstants.Ball.RADIUS;
             var ballDry = new BallState
             {
                 Position          = new Vector3(50f, 34f, groundLevel),
                 Velocity          = new Vector3(0f, 0f, -6.26f),
                 AngularVelocity   = Vector3.zero,
-                State             = BallStateType.BOUNCING,
+                State             = BallStateType.Bouncing,
                 LastValidPosition = new Vector3(50f, 34f, groundLevel),
                 LastValidVelocity = new Vector3(0f, 0f, -6.26f)
             };
 
-            BallGroundInteraction.ApplyBounce(ref ballDry, SurfaceType.GRASS_DRY, null, 0f);
+            BallGroundInteraction.ApplyBounce(ref ballDry, SurfaceType.GrassDry, null, 0f);
             float reboundDry = ballDry.Velocity.z;
 
             var ballWet = new BallState
@@ -407,12 +395,12 @@ namespace TacticalDirector.BallPhysics.Tests
                 Position          = new Vector3(50f, 34f, groundLevel),
                 Velocity          = new Vector3(0f, 0f, -6.26f),
                 AngularVelocity   = Vector3.zero,
-                State             = BallStateType.BOUNCING,
+                State             = BallStateType.Bouncing,
                 LastValidPosition = new Vector3(50f, 34f, groundLevel),
                 LastValidVelocity = new Vector3(0f, 0f, -6.26f)
             };
 
-            BallGroundInteraction.ApplyBounce(ref ballWet, SurfaceType.GRASS_WET, null, 0f);
+            BallGroundInteraction.ApplyBounce(ref ballWet, SurfaceType.GrassWet, null, 0f);
             float reboundWet = ballWet.Velocity.z;
 
             Assert.That(reboundWet, Is.GreaterThan(reboundDry),
@@ -424,20 +412,24 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Validation_DetectsInfinity_AndRecovers()
         {
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Error,
+                new System.Text.RegularExpressions.Regex(@"\[BallPhysics\] NaN/Infinity detected"));
+
             var ball = new BallState
             {
                 Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(float.PositiveInfinity, 0f, 0f),
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = Vector3.zero,
-                State             = BallStateType.ROLLING
+                State             = BallStateType.Rolling
             };
 
             BallPhysicsCore.ValidatePhysicsState(ref ball);
 
             Assert.IsFalse(float.IsInfinity(ball.Velocity.x),
                 "ValidatePhysicsState must eliminate infinite velocity");
-            Assert.AreEqual(BallStateType.STATIONARY, ball.State);
+            Assert.AreEqual(BallStateType.Stationary, ball.State);
         }
 
         // ── UT-VAL-004 ────────────────────────────────────────────────────────────
@@ -452,7 +444,7 @@ namespace TacticalDirector.BallPhysics.Tests
                 AngularVelocity   = new Vector3(0f, 100f, 0f),
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = Vector3.zero,
-                State             = BallStateType.ROLLING
+                State             = BallStateType.Rolling
             };
 
             BallPhysicsCore.ValidatePhysicsState(ref ball);
@@ -467,8 +459,6 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void SpinDecay_FasterAtHigherVelocity()
         {
-            // totalDecay = DecayVelocityFactor*v + DecaySpinFactor*spinRate
-            // Higher ball velocity → larger totalDecay → more spin lost per frame.
             Vector3 initial = new Vector3(0f, 0f, 20f);
             float   dt      = 1f / 60f;
 
@@ -487,7 +477,6 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void SpinDecay_ZeroBelowThreshold()
         {
-            // Spin magnitude 0.05 < MinSpin(0.1) → must return zero immediately.
             Vector3 result = BallPhysicsCore.UpdateSpinDecay(
                 angularVelocity: new Vector3(0f, 0.05f, 0f),
                 velocity:        new Vector3(5f, 0f, 0f),
@@ -507,4 +496,13 @@ namespace TacticalDirector.BallPhysics.Tests
 // | 1.2     | 2026-06-01 | —      | Add 13 missing spec §5 unit tests: UT-MAG-004/005, UT-DRG-002/003, |
 // |         |            |        | UT-BNC-002/003/004/005/006, UT-VAL-002/004, UT-SPN-002/003.        |
 // |         |            |        | Bug fix: UT-MAG-003 comment corrected (ω parallel to v in +X).     |
+// | 1.3     | 2026-06-02 | —      | AR-1 fixes. H-2: file header path corrected to src/ball-physics/.  |
+// |         |            |        | M-4: BallStateType / SurfaceType enum members renamed PascalCase   |
+// |         |            |        | across all test inputs and assertions.                             |
+// | 1.4     | 2026-06-03 | —      | AR-2 M-2: LogAssert.Expect added to                                |
+// |         |            |        | Validation_DetectsNaN_AndRecovers and                              |
+// |         |            |        | Validation_DetectsInfinity_AndRecovers so the recovery-path        |
+// |         |            |        | Debug.LogError emitted by ValidatePhysicsState does not fail the   |
+// |         |            |        | Unity NUnit runner (parallels the AR-1 H-1 follow-on already       |
+// |         |            |        | applied on the two integration-test counterparts).                 |
 #endregion

@@ -1,6 +1,6 @@
-// File:     src/Core/Physics/Ball/BallPhysicsCore.cs
+// File:     src/ball-physics/BallPhysicsCore.cs
 // Created:  2026-05-24
-// Modified: 2026-05-24
+// Modified: 2026-06-03 (AR-4 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Main physics update loop and force calculations for the ball.
@@ -50,8 +50,8 @@ namespace TacticalDirector.BallPhysics
                 ball.LastValidVelocity = ball.Velocity;
             }
 
-            // BOUNCING: apply impulse first, then continue to integration.
-            if (ball.State == BallStateType.BOUNCING)
+            // Bouncing: apply impulse first, then continue to integration.
+            if (ball.State == BallStateType.Bouncing)
                 BallGroundInteraction.ApplyBounce(ref ball, surface, logger, matchTime);
 
             Vector3 netForce         = Vector3.zero;
@@ -59,24 +59,29 @@ namespace TacticalDirector.BallPhysics
 
             switch (ball.State)
             {
-                case BallStateType.AIRBORNE:
+                case BallStateType.Airborne:
                     netForce = GetGravityForce()
                              + CalculateDragForce(relativeVelocity)
                              + CalculateMagnusForce(relativeVelocity, ball.AngularVelocity);
                     break;
 
-                case BallStateType.ROLLING:
+                case BallStateType.Rolling:
                     netForce = CalculateDragForce(relativeVelocity)
                              + BallGroundInteraction.CalculateRollingFriction(ball.Velocity, surface);
                     break;
 
-                case BallStateType.BOUNCING:
+                case BallStateType.Bouncing:
                     netForce = CalculateDragForce(relativeVelocity);
                     break;
 
                 default:
-                    // STATIONARY, CONTROLLED, OUT_OF_PLAY: no physics forces.
-                    // Velocity not cleared; callers must not read Velocity in OUT_OF_PLAY.
+                    // Stationary, Controlled, OutOfPlay: no physics forces applied.
+                    // ValidatePhysicsState is ALSO skipped on this branch — these states are
+                    // either externally managed (Controlled, OutOfPlay) or already at rest
+                    // (Stationary). External callers that mutate Position/Velocity while in
+                    // these states must invoke ValidatePhysicsState themselves before the
+                    // next UpdateBallPhysics call. Velocity is not cleared; callers must not
+                    // read Velocity while in OutOfPlay.
                     return;
             }
 
@@ -86,13 +91,13 @@ namespace TacticalDirector.BallPhysics
             ball.Position += ball.Velocity * dt;
 
             // Spin decay: aerodynamic torque model (airborne only).
-            if (ball.State == BallStateType.AIRBORNE)
+            if (ball.State == BallStateType.Airborne)
                 ball.AngularVelocity = UpdateSpinDecay(ball.AngularVelocity, ball.Velocity, dt);
 
             // Spin decay: surface-contact friction model (rolling only).
             // Do NOT use UpdateSpinDecay() here — its aerodynamic torque model is incorrect
             // for ground-contact spin damping (see §3.1.7.2).
-            if (ball.State == BallStateType.ROLLING)
+            if (ball.State == BallStateType.Rolling)
                 ball.AngularVelocity = UpdateRollingSpinDecay(ball.AngularVelocity, dt);
 
             ValidatePhysicsState(ref ball);
@@ -171,7 +176,7 @@ namespace TacticalDirector.BallPhysics
         }
 
         /// <summary>
-        /// Returns gravitational force. Only applied when AIRBORNE.
+        /// Returns gravitational force. Only applied when Airborne.
         /// </summary>
         public static Vector3 GetGravityForce()
         {
@@ -183,8 +188,17 @@ namespace TacticalDirector.BallPhysics
         // ── SPIN DYNAMICS ────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Decays angular velocity for an airborne ball using the aerodynamic torque model.
+        /// Decays angular velocity for an airborne ball using a hybrid two-term model.
         /// AIRBORNE ONLY. Do NOT call for rolling balls — use UpdateRollingSpinDecay().
+        /// Both terms operate per integration step (semi-implicit Euler):
+        ///   (1) Linear multiplicative decay (1 − totalDecay·dt) is an empirical fast-
+        ///       relaxation term capturing boundary-layer slip and small-scale shedding
+        ///       not modelled by classical aerodynamic torque alone (§3.1.7.1 calibration
+        ///       to long-flight spin-half-life measurements).
+        ///   (2) Aerodynamic torque −T·ω̂ uses the textbook ½·ρ·r⁵·ω² form (§3.1.7.2)
+        ///       integrated through the moment of inertia.
+        /// Decoupling them keeps the empirical calibration usable while the analytical
+        /// torque scales correctly with air density and ball radius.
         /// </summary>
         public static Vector3 UpdateSpinDecay(
             Vector3 angularVelocity,
@@ -250,11 +264,16 @@ namespace TacticalDirector.BallPhysics
         {
             if (HasInvalidValues(ball))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                // Diagnostic — string interpolation is permitted under FR-CS-031's
+                // editor/development-build carve-out (same pattern as ApplyKick and
+                // event-system EventBus debug assertions).
                 Debug.LogError("[BallPhysics] NaN/Infinity detected — recovering to last valid state.");
+#endif
                 ball.Position        = ball.LastValidPosition;
                 ball.Velocity        = ball.LastValidVelocity;
                 ball.AngularVelocity = Vector3.zero;
-                ball.State           = BallStateType.STATIONARY;
+                ball.State           = BallStateType.Stationary;
                 return;
             }
 
@@ -262,14 +281,18 @@ namespace TacticalDirector.BallPhysics
             if (speed > BallPhysicsConstants.Limits.MaxVelocity)
             {
                 ball.Velocity = ball.Velocity.normalized * BallPhysicsConstants.Limits.MaxVelocity;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning($"[BallPhysics] Velocity clamped from {speed:F1} m/s");
+#endif
             }
 
             float spinRate = ball.AngularVelocity.magnitude;
             if (spinRate > BallPhysicsConstants.Limits.MaxSpin)
             {
                 ball.AngularVelocity = ball.AngularVelocity.normalized * BallPhysicsConstants.Limits.MaxSpin;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning($"[BallPhysics] Spin clamped from {spinRate:F1} rad/s");
+#endif
             }
 
             if (ball.Position.z > BallPhysicsConstants.Limits.MaxHeight)
@@ -280,11 +303,13 @@ namespace TacticalDirector.BallPhysics
                 ball.Velocity = new Vector3(
                     ball.Velocity.x, ball.Velocity.y,
                     Mathf.Min(ball.Velocity.z, 0f));
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning("[BallPhysics] Height clamped — possible instability");
+#endif
             }
 
             float groundLevel = BallPhysicsConstants.Ball.RADIUS;
-            if (ball.Position.z < groundLevel && ball.State != BallStateType.OUT_OF_PLAY)
+            if (ball.Position.z < groundLevel && ball.State != BallStateType.OutOfPlay)
             {
                 ball.Position = new Vector3(ball.Position.x, ball.Position.y, groundLevel);
                 if (ball.Velocity.z < 0f)
@@ -341,4 +366,25 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | constant refs → PascalCase; ProfilerMarker replaces #if            |
 // |         |            |        | DEVELOPMENT_BUILD Profiler.BeginSample/EndSample per FR-CS-070;    |
 // |         |            |        | file header added per FR-CS-056/057.                               |
+// | 1.2     | 2026-06-02 | —      | AR-1 fixes. H-2: file header path corrected to src/ball-physics/.  |
+// |         |            |        | M-4: BallStateType members renamed to PascalCase. L-1:             |
+// |         |            |        | UpdateSpinDecay XML doc records the rationale for the hybrid       |
+// |         |            |        | empirical-linear + analytical-aerodynamic-torque decay (§3.1.7.1   |
+// |         |            |        | calibration term vs §3.1.7.2 textbook torque). L-6: default-branch |
+// |         |            |        | comment in UpdateBallPhysics now states explicitly that            |
+// |         |            |        | ValidatePhysicsState is skipped for Stationary/Controlled/OutOfPlay|
+// |         |            |        | and points to the caller-side validation responsibility.           |
+// | 1.3     | 2026-06-03 | —      | AR-4 M-1: the four Debug.LogError / Debug.LogWarning emit blocks  |
+// |         |            |        | in ValidatePhysicsState (NaN-recovery, velocity clamp, spin       |
+// |         |            |        | clamp, height clamp) gated behind #if UNITY_EDITOR ||              |
+// |         |            |        | DEVELOPMENT_BUILD — same FR-CS-031 carve-out pattern AR-3 L-3      |
+// |         |            |        | applied to BallCollision.ApplyKick. ValidatePhysicsState runs at   |
+// |         |            |        | 60 Hz inside UpdateBallPhysics so the gating concern is stronger   |
+// |         |            |        | here than for once-per-kick emits.                                 |
+// | 1.3.1   | 2026-06-03 | —      | AR-5 L-4 doc clarification: the NaN-recovery LogError emit is a   |
+// |         |            |        | plain string literal (no $"…" interpolation), so it does NOT      |
+// |         |            |        | violate FR-CS-031 directly — it was gated in 1.3 for surface      |
+// |         |            |        | symmetry with the three sibling clamp emits (which DO interpolate)|
+// |         |            |        | so the four ValidatePhysicsState diagnostic emits have a uniform  |
+// |         |            |        | UNITY_EDITOR || DEVELOPMENT_BUILD surface.                         |
 #endregion

@@ -1,6 +1,6 @@
-// File:     src/Core/Physics/Ball/SurfaceProperties.cs
+// File:     src/ball-physics/SurfaceProperties.cs
 // Created:  2026-05-24
-// Modified: 2026-05-24
+// Modified: 2026-06-03 (AR-4 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Returns per-surface coefficients (restitution, friction, rolling resistance,
@@ -8,14 +8,22 @@
 
 namespace TacticalDirector.BallPhysics
 {
-    /// <summary>Surface types supported by the Stage 0 physics model.</summary>
+    /// <summary>
+    /// Surface types supported by the Stage 0 physics model.
+    /// ORDINAL STABILITY: future additions MUST be appended at the end of the enum.
+    /// SurfaceType is embedded in <c>BallEvent.Surface</c> (Bounce events) and is
+    /// stored in any persisted match config; inserting a new surface in the middle
+    /// shifts the ordinals of later members and breaks both replay logs and the
+    /// SurfaceProperties switch statements (which key off the named member, but a
+    /// caller passing a serialised int would silently land on the wrong surface).
+    /// </summary>
     public enum SurfaceType
     {
-        GRASS_DRY,
-        GRASS_WET,
-        GRASS_LONG,
-        ARTIFICIAL,
-        FROZEN
+        GrassDry,
+        GrassWet,
+        GrassLong,
+        Artificial,
+        Frozen
     }
 
     /// <summary>
@@ -29,12 +37,13 @@ namespace TacticalDirector.BallPhysics
         {
             return surface switch
             {
-                SurfaceType.GRASS_DRY  => BallPhysicsConstants.SurfaceCoR.GrassDry,
-                SurfaceType.GRASS_WET  => BallPhysicsConstants.SurfaceCoR.GrassWet,
-                SurfaceType.GRASS_LONG => BallPhysicsConstants.SurfaceCoR.GrassLong,
-                SurfaceType.ARTIFICIAL => BallPhysicsConstants.SurfaceCoR.Artificial,
-                SurfaceType.FROZEN     => BallPhysicsConstants.SurfaceCoR.Frozen,
-                _                      => BallPhysicsConstants.SurfaceCoR.GrassDry
+                SurfaceType.GrassDry   => BallPhysicsConstants.SurfaceCoR.GrassDry,
+                SurfaceType.GrassWet   => BallPhysicsConstants.SurfaceCoR.GrassWet,
+                SurfaceType.GrassLong  => BallPhysicsConstants.SurfaceCoR.GrassLong,
+                SurfaceType.Artificial => BallPhysicsConstants.SurfaceCoR.Artificial,
+                SurfaceType.Frozen     => BallPhysicsConstants.SurfaceCoR.Frozen,
+                _ => throw new System.ArgumentOutOfRangeException(
+                        nameof(surface), surface, "Unknown SurfaceType — extend SurfaceProperties when adding a new surface.")
             };
         }
 
@@ -43,12 +52,13 @@ namespace TacticalDirector.BallPhysics
         {
             return surface switch
             {
-                SurfaceType.GRASS_DRY  => BallPhysicsConstants.SurfaceFriction.GrassDry,
-                SurfaceType.GRASS_WET  => BallPhysicsConstants.SurfaceFriction.GrassWet,
-                SurfaceType.GRASS_LONG => BallPhysicsConstants.SurfaceFriction.GrassLong,
-                SurfaceType.ARTIFICIAL => BallPhysicsConstants.SurfaceFriction.Artificial,
-                SurfaceType.FROZEN     => BallPhysicsConstants.SurfaceFriction.Frozen,
-                _                      => BallPhysicsConstants.SurfaceFriction.GrassDry
+                SurfaceType.GrassDry   => BallPhysicsConstants.SurfaceFriction.GrassDry,
+                SurfaceType.GrassWet   => BallPhysicsConstants.SurfaceFriction.GrassWet,
+                SurfaceType.GrassLong  => BallPhysicsConstants.SurfaceFriction.GrassLong,
+                SurfaceType.Artificial => BallPhysicsConstants.SurfaceFriction.Artificial,
+                SurfaceType.Frozen     => BallPhysicsConstants.SurfaceFriction.Frozen,
+                _ => throw new System.ArgumentOutOfRangeException(
+                        nameof(surface), surface, "Unknown SurfaceType — extend SurfaceProperties when adding a new surface.")
             };
         }
 
@@ -57,12 +67,13 @@ namespace TacticalDirector.BallPhysics
         {
             return surface switch
             {
-                SurfaceType.GRASS_DRY  => BallPhysicsConstants.Rolling.ResistanceGrassDry,
-                SurfaceType.GRASS_WET  => BallPhysicsConstants.Rolling.ResistanceGrassWet,
-                SurfaceType.GRASS_LONG => BallPhysicsConstants.Rolling.ResistanceGrassLong,
-                SurfaceType.ARTIFICIAL => BallPhysicsConstants.Rolling.ResistanceArtificial,
-                SurfaceType.FROZEN     => BallPhysicsConstants.Rolling.ResistanceFrozen,
-                _                      => BallPhysicsConstants.Rolling.ResistanceGrassDry
+                SurfaceType.GrassDry   => BallPhysicsConstants.Rolling.ResistanceGrassDry,
+                SurfaceType.GrassWet   => BallPhysicsConstants.Rolling.ResistanceGrassWet,
+                SurfaceType.GrassLong  => BallPhysicsConstants.Rolling.ResistanceGrassLong,
+                SurfaceType.Artificial => BallPhysicsConstants.Rolling.ResistanceArtificial,
+                SurfaceType.Frozen     => BallPhysicsConstants.Rolling.ResistanceFrozen,
+                _ => throw new System.ArgumentOutOfRangeException(
+                        nameof(surface), surface, "Unknown SurfaceType — extend SurfaceProperties when adding a new surface.")
             };
         }
 
@@ -71,12 +82,13 @@ namespace TacticalDirector.BallPhysics
         {
             return surface switch
             {
-                SurfaceType.GRASS_DRY  => BallPhysicsConstants.SurfaceSpinRetention.GrassDry,
-                SurfaceType.GRASS_WET  => BallPhysicsConstants.SurfaceSpinRetention.GrassWet,
-                SurfaceType.GRASS_LONG => BallPhysicsConstants.SurfaceSpinRetention.GrassLong,
-                SurfaceType.ARTIFICIAL => BallPhysicsConstants.SurfaceSpinRetention.Artificial,
-                SurfaceType.FROZEN     => BallPhysicsConstants.SurfaceSpinRetention.Frozen,
-                _                      => BallPhysicsConstants.SurfaceSpinRetention.GrassDry
+                SurfaceType.GrassDry   => BallPhysicsConstants.SurfaceSpinRetention.GrassDry,
+                SurfaceType.GrassWet   => BallPhysicsConstants.SurfaceSpinRetention.GrassWet,
+                SurfaceType.GrassLong  => BallPhysicsConstants.SurfaceSpinRetention.GrassLong,
+                SurfaceType.Artificial => BallPhysicsConstants.SurfaceSpinRetention.Artificial,
+                SurfaceType.Frozen     => BallPhysicsConstants.SurfaceSpinRetention.Frozen,
+                _ => throw new System.ArgumentOutOfRangeException(
+                        nameof(surface), surface, "Unknown SurfaceType — extend SurfaceProperties when adding a new surface.")
             };
         }
     }
@@ -92,4 +104,14 @@ namespace TacticalDirector.BallPhysics
 // | 1.2     | 2026-05-24 | —      | All literal surface coefficients replaced by named constants        |
 // |         |            |        | (SurfaceCoR, SurfaceFriction, SurfaceSpinRetention, Rolling) per   |
 // |         |            |        | FR-CS-016 (no literals in formula/system files).                   |
+// | 1.3     | 2026-06-02 | —      | AR-1 fixes. H-2: file header path corrected to src/ball-physics/.  |
+// |         |            |        | M-4: SurfaceType members renamed to PascalCase. L-4 parallel: switch|
+// |         |            |        | expressions now throw ArgumentOutOfRangeException for unknown enum  |
+// |         |            |        | values instead of silently returning GrassDry — fails fast on stale|
+// |         |            |        | cast-from-int callers.                                              |
+// | 1.4     | 2026-06-03 | —      | AR-4 L-1: SurfaceType XML doc gains an explicit ORDINAL STABILITY  |
+// |         |            |        | paragraph parallel to BallEventType / BallStateType — SurfaceType  |
+// |         |            |        | is embedded in BallEvent.Surface (Bounce events) and is stored in   |
+// |         |            |        | persisted match config; insertions break replay logs and any        |
+// |         |            |        | int-keyed deserialiser.                                             |
 #endregion
