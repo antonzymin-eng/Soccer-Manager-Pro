@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementSystem.cs
 // Created:  2026-05-22
-// Modified: 2026-05-26
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Agent Movement #2 §4.4, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
@@ -47,21 +47,21 @@ namespace TacticalDirector.AgentMovement
             in MovementCommand command,
             float dt,
             float currentTime,
-            bool isCollisionKnockdown = false,
-            float collisionForce = 0.0f)
+            bool isCollisionKnockdown,
+            float collisionForce)
         {
             using var _ = s_updateMarker.Auto();
 
-            // Sanity-check dt against the expected physics frame duration in debug builds.
-            Debug.Assert(dt > 0.0f && dt <= 2.0f / _physicsHz,
-                "AgentMovementSystem.Update: dt outside expected range for physicsHz.");
+            // dt should be ≤ 1.5× expected frame duration. Beyond that, the upstream loop has
+            // stalled and per-frame integration loses fidelity; treat as a configuration bug.
+            Debug.Assert(dt > 0.0f && dt <= 1.5f / _physicsHz,
+                "AgentMovementSystem.Update: dt outside expected range for physicsHz (>1.5× frame).");
 
             // Step 1 — command is already received as parameter.
 
-            // Step 2 — Evaluate new state.
-            // commandSpeed: map the AI's desired locomotion state to an equivalent speed so the
-            // state machine can compare against current speed. Dividing distance by physics dt
-            // produces a value 60× too large relative to actual m/s thresholds (§3.1.4).
+            // Step 2 — Evaluate new state. commandSpeed maps the AI's desired locomotion state to
+            // a threshold-equivalent speed in m/s so the state machine can compare against the
+            // agent's current speed directly (§3.1.4).
             float commandSpeed = CommandSpeedFromDesiredState(command.DesiredState);
             Vector2 movementDir = state.Velocity.sqrMagnitude > SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON
                 ? state.Velocity.normalized
@@ -180,29 +180,38 @@ namespace TacticalDirector.AgentMovement
                     break;
             }
 
-            // Step 6 — Turn rate and lean angle.
+            // Step 6 — Turn rate (max available this frame). Lean angle is computed in Step 7
+            // from the actually-achieved rotation so its magnitude reflects real centripetal load.
             float maxTurnRate = AgentTurning.CalculateMaxTurnRate(
                 state.Speed, attrs.Agility, attrs.Balance, state.CurrentState);
 
-            state.LeanAngle = AgentTurning.CalculateLeanAngle(state.Speed, maxTurnRate);
-            state.CurrentTurnRate = maxTurnRate;
-
-            // Step 7 — Facing direction update.
+            // Step 7 — Facing direction update; capture signed angle actually applied for lean
+            // sign and achieved turn-rate cache.
             state.FacingDirection = UpdateFacing(
                 state.FacingDirection,
                 command,
                 state.Position,
                 state.Velocity,
-                maxTurnRate * dt);
+                maxTurnRate * dt,
+                out float signedFacingAngle);
 
-            // Step 8 — Integrate velocity (direction × new speed).
-            Vector2 desiredDir = command.TargetPosition - state.Position;
-            if (desiredDir.sqrMagnitude < SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON)
-            {
-                desiredDir = state.FacingDirection;
-            }
+            float signedTurnRate = dt > 0.0f ? signedFacingAngle / dt : 0.0f;
+            state.CurrentTurnRate = Mathf.Abs(signedTurnRate);
+            state.LeanAngle = AgentTurning.CalculateLeanAngle(state.Speed, signedTurnRate);
 
-            state.Velocity = desiredDir.normalized * newSpeed;
+            // Step 8 — Integrate velocity with rate-limited direction rotation (momentum-respecting).
+            // Voluntary states (WALKING / JOGGING / SPRINTING / DECELERATING with steering intent)
+            // rotate velocity toward command.TargetPosition at maxTurnRate. Non-voluntary states
+            // (STUMBLING / GROUNDED) and explicit stop intent (DesiredState == IDLE) maintain
+            // current velocity direction so momentum is preserved instead of teleported.
+            bool voluntarySteering = IsVoluntarySteeringActive(state.CurrentState, command.DesiredState);
+            Vector2 velocityTarget = voluntarySteering
+                ? command.TargetPosition - state.Position
+                : state.Velocity;
+            float velocityMaxTurnDeg = voluntarySteering ? maxTurnRate * dt : 0.0f;
+
+            state.Velocity = AgentDirectionalMovement.RotateVelocityToward(
+                state.Velocity, velocityTarget, newSpeed, velocityMaxTurnDeg);
 
             // Step 9 — Integrate position.
             state.Position += state.Velocity * dt;
@@ -212,12 +221,14 @@ namespace TacticalDirector.AgentMovement
             {
                 Vector2 pos = state.Position;
                 Vector2 vel = state.Velocity;
+                Vector2 facing = state.FacingDirection;
                 AgentSafetySystem.Validate(
-                    ref pos, ref vel,
-                    state.LastValidPosition, state.LastValidVelocity,
+                    ref pos, ref vel, ref facing,
+                    state.LastValidPosition, state.LastValidVelocity, state.LastValidFacing,
                     out bool recovered);
                 state.Position = pos;
                 state.Velocity = vel;
+                state.FacingDirection = facing;
 
                 // Step 11 — Update caches.
                 state.Speed = state.Velocity.magnitude;
@@ -225,6 +236,7 @@ namespace TacticalDirector.AgentMovement
                 {
                     state.LastValidPosition = state.Position;
                     state.LastValidVelocity = state.Velocity;
+                    state.LastValidFacing = state.FacingDirection;
                 }
             }
             else
@@ -233,6 +245,7 @@ namespace TacticalDirector.AgentMovement
                 state.Speed = state.Velocity.magnitude;
                 state.LastValidPosition = state.Position;
                 state.LastValidVelocity = state.Velocity;
+                state.LastValidFacing = state.FacingDirection;
             }
 
             // Step 12 — Fatigue update.
@@ -293,7 +306,8 @@ namespace TacticalDirector.AgentMovement
             in MovementCommand command,
             Vector2 agentPosition,
             Vector2 agentVelocity,
-            float maxTurnDeg)
+            float maxTurnDeg,
+            out float signedAngleApplied)
         {
             Vector2 targetDir;
             if (command.FacingMode == FacingMode.TARGET_LOCK)
@@ -309,7 +323,8 @@ namespace TacticalDirector.AgentMovement
                     : command.TargetPosition - agentPosition;
             }
 
-            return AgentDirectionalMovement.RotateFacingToward(currentFacing, targetDir, maxTurnDeg);
+            return AgentDirectionalMovement.RotateFacingToward(
+                currentFacing, targetDir, maxTurnDeg, out signedAngleApplied);
         }
 
         // Maps AI desired-state intent to an equivalent m/s speed for state-machine comparisons.
@@ -349,6 +364,32 @@ namespace TacticalDirector.AgentMovement
                 default:
                     return false;
             }
+        }
+
+        // Voluntary steering is permitted only when the current state allows it AND the AI's
+        // desired locomotion intent is itself a moving state. STUMBLING / GROUNDED are always
+        // non-voluntary by §3.1.2 (momentum-only / knocked down). A DesiredState of IDLE means
+        // "stop here" — the AI has no directional preference, so velocity decays along the
+        // existing momentum vector rather than reversing toward a stale captured TargetPosition.
+        private static bool IsVoluntarySteeringActive(
+            AgentMovementState current, AgentMovementState desired)
+        {
+            switch (current)
+            {
+                case AgentMovementState.STUMBLING:
+                case AgentMovementState.GROUNDED:
+                    return false;
+            }
+
+            switch (desired)
+            {
+                case AgentMovementState.IDLE:
+                case AgentMovementState.STUMBLING:
+                case AgentMovementState.GROUNDED:
+                    return false;
+            }
+
+            return true;
         }
 
         private static void UpdateFatigue(ref AgentState state, float dt)
@@ -422,4 +463,13 @@ namespace TacticalDirector.AgentMovement
 // | 1.6     | 2026-05-26 | —      | AR-3 fix: R3-M-1 state.GroundedReason / CollisionForce reset to NONE/0 when leaving GROUNDED.  |
 // |         |            |        | Restores field invariant "GroundedReason == NONE when CurrentState != GROUNDED" documented in   |
 // |         |            |        | AgentState. Without this, reason/force fields retained stale COLLISION values indefinitely.     |
+// | 1.7     | 2026-06-03 | —      | AR-4 fix: H-1/H-2/H-3/M-6 Step 8 now uses AgentDirectionalMovement.RotateVelocityToward with    |
+// |         |            |        | a rate-limited rotation (≤ maxTurnRate*dt). Voluntary steering only in WALKING/JOGGING/         |
+// |         |            |        | SPRINTING/DECELERATING current states and only when DesiredState is itself moving. STUMBLING   |
+// |         |            |        | / GROUNDED / DesiredState==IDLE fall through to momentum-direction; closes the                 |
+// |         |            |        | momentum-teleport defect and the Stop-command stale-target reversal. H-4 CurrentTurnRate is    |
+// |         |            |        | now the actually-achieved rate (|signedAngle|/dt) not max-possible. L-1 LeanAngle carries     |
+// |         |            |        | sign from facing rotation. M-5 Validate signature gains facing in/out + LastValidFacing.       |
+// |         |            |        | L-3 isCollisionKnockdown / collisionForce are required parameters. L-4 dt assert tightened     |
+// |         |            |        | from 2.0/physicsHz to 1.5/physicsHz. L-2 stale "60× too large" comment removed.                |
 #endregion

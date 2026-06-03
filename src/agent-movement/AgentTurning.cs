@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentTurning.cs
 // Created:  2026-05-22
-// Modified: 2026-05-26
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Agent Movement #2 §3.4, Code Standards #20
 // Purpose:  Turn rate and lean angle calculations. All static, no side effects.
@@ -59,19 +59,21 @@ namespace TacticalDirector.AgentMovement
         }
 
         /// <summary>
-        /// Lean angle (degrees) as a read-only output for animation.
-        /// Proportional to centripetal acceleration, capped at MAX_LEAN_ANGLE.
+        /// Signed lean angle (degrees) as a read-only output for animation.
+        /// Proportional to centripetal acceleration, magnitude clamped to MAX_LEAN_ANGLE.
+        /// Sign of signedTurnRateDeg is preserved so left/right turn lean can be distinguished
+        /// downstream (positive = counter-clockwise rotation in Unity XY plane).
         /// Agent Movement #2 §3.4.
         /// </summary>
-        public static float CalculateLeanAngle(float speedMs, float turnRateDeg)
+        public static float CalculateLeanAngle(float speedMs, float signedTurnRateDeg)
         {
-            float omegaRad = turnRateDeg * Mathf.Deg2Rad;
+            float omegaRad = signedTurnRateDeg * Mathf.Deg2Rad;
             float centripetalAccel = speedMs * omegaRad;
 
             float normalizedG = centripetalAccel / TurnConstants.GRAVITY_MAGNITUDE;
             float leanRad = Mathf.Atan(normalizedG);
             float leanDeg = leanRad * Mathf.Rad2Deg;
-            return Mathf.Min(leanDeg, TurnConstants.MAX_LEAN_ANGLE);
+            return Mathf.Clamp(leanDeg, -TurnConstants.MAX_LEAN_ANGLE, TurnConstants.MAX_LEAN_ANGLE);
         }
 
         private static float StateModifier(AgentMovementState state)
@@ -106,4 +108,6 @@ namespace TacticalDirector.AgentMovement
 // | 1.4     | 2026-05-26 | —      | AR-2 fix: H-2 CalculateStumbleProbability removed (dead code; system uses                       |
 // |         |            |        | AgentStateMachine.ShouldStumble deterministically; no RNG roll existed at Step 6b).            |
 // |         |            |        | Class summary updated to remove incorrect RNG-roll reference.                                   |
+// | 1.5     | 2026-06-03 | —      | AR-4 fix: L-1 CalculateLeanAngle accepts signed turn rate; returns signed lean clamped to       |
+// |         |            |        | ±MAX_LEAN_ANGLE so animation can distinguish left vs right lean direction.                     |
 #endregion

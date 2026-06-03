@@ -1,9 +1,9 @@
 // File:     src/agent-movement/AgentDirectionalMovement.cs
 // Created:  2026-05-22
-// Modified: 2026-05-26
+// Modified: 2026-06-03
 // Author:   —
 // Spec:     Agent Movement #2 §3.3, Code Standards #20
-// Purpose:  Directional speed multipliers and facing direction updates.
+// Purpose:  Directional speed multipliers, facing direction updates, and velocity-direction rotation.
 
 using UnityEngine;
 
@@ -113,18 +113,22 @@ namespace TacticalDirector.AgentMovement
         /// <summary>
         /// Rotates the facing direction toward the target direction by at most maxTurnDeg degrees.
         /// Uses signed angle to pick the shortest rotation path. Agent Movement #2 §3.3.4.
+        /// signedAngleApplied: the signed rotation actually applied this call (degrees). Caller
+        /// uses |value|/dt as the achieved turn rate and the sign for left/right lean direction.
         /// </summary>
         public static Vector2 RotateFacingToward(
-            Vector2 currentFacing, Vector2 targetFacing, float maxTurnDeg)
+            Vector2 currentFacing, Vector2 targetFacing, float maxTurnDeg, out float signedAngleApplied)
         {
             if (targetFacing.sqrMagnitude < SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON)
             {
+                signedAngleApplied = 0.0f;
                 return currentFacing;
             }
 
             Vector2 target = targetFacing.normalized;
             float signedAngle = Vector2.SignedAngle(currentFacing, target);
             float clampedAngle = Mathf.Clamp(signedAngle, -maxTurnDeg, maxTurnDeg);
+            signedAngleApplied = clampedAngle;
 
             float rad = clampedAngle * Mathf.Deg2Rad;
             float cos = Mathf.Cos(rad);
@@ -133,6 +137,56 @@ namespace TacticalDirector.AgentMovement
             return new Vector2(
                 currentFacing.x * cos - currentFacing.y * sin,
                 currentFacing.x * sin + currentFacing.y * cos).normalized;
+        }
+
+        /// <summary>
+        /// Rotates velocity direction toward targetDirection at the same rate cap as facing, then
+        /// rescales to newSpeed. Momentum-respecting: prevents instantaneous velocity-direction
+        /// changes that the prior implementation produced by assigning targetDir × newSpeed each
+        /// frame. Agent Movement #2 §3.3.4, §4.4.1 step 8.
+        ///
+        /// From rest (|currentVelocity|² &lt; epsilon): jump-starts in targetDirection × newSpeed.
+        /// Zero/degenerate target: returns currentDirection × newSpeed (maintains momentum).
+        /// Caller is responsible for passing maxTurnDeg = 0 when steering is non-voluntary
+        /// (STUMBLING / GROUNDED / IDLE-stop) — this function performs no state-machine carve-out.
+        /// </summary>
+        public static Vector2 RotateVelocityToward(
+            Vector2 currentVelocity, Vector2 targetDirection, float newSpeed, float maxTurnDeg)
+        {
+            if (newSpeed <= MovementThresholds.MIN_VELOCITY_MAGNITUDE)
+            {
+                return Vector2.zero;
+            }
+
+            bool hasCurrentDir = currentVelocity.sqrMagnitude >= SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON;
+            bool hasTargetDir = targetDirection.sqrMagnitude >= SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON;
+
+            if (!hasCurrentDir)
+            {
+                Vector2 startDir = hasTargetDir ? targetDirection.normalized : Vector2.up;
+                return startDir * newSpeed;
+            }
+
+            Vector2 currentDir = currentVelocity.normalized;
+
+            if (!hasTargetDir || maxTurnDeg <= 0.0f)
+            {
+                return currentDir * newSpeed;
+            }
+
+            Vector2 targetDir = targetDirection.normalized;
+            float signedAngle = Vector2.SignedAngle(currentDir, targetDir);
+            float clampedAngle = Mathf.Clamp(signedAngle, -maxTurnDeg, maxTurnDeg);
+
+            float rad = clampedAngle * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(rad);
+            float sin = Mathf.Sin(rad);
+
+            Vector2 newDir = new Vector2(
+                currentDir.x * cos - currentDir.y * sin,
+                currentDir.x * sin + currentDir.y * cos).normalized;
+
+            return newDir * newSpeed;
         }
     }
 }
@@ -147,4 +201,8 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | pure-forward zone by 3° and compresses backward-blend entry by 3°, reducing boundary          |
 // |         |            |        | flicker. Degenerate-blend guards (width > 0 check) prevent division by zero if                 |
 // |         |            |        | zone constants are adjusted.                                                                   |
+// | 1.5     | 2026-06-03 | —      | AR-4 fix: H-2/H-3 RotateVelocityToward added (rate-limited velocity-direction rotation,        |
+// |         |            |        | analogous to RotateFacingToward). Closes the momentum-instability defect in System Step 8.    |
+// |         |            |        | H-4/L-1 RotateFacingToward gained out signedAngleApplied so caller computes achieved turn     |
+// |         |            |        | rate and signed lean direction.                                                                |
 #endregion
