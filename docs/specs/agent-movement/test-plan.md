@@ -39,12 +39,17 @@ next to its sibling assertions rather than at the end of the file.
 
 | Block | Range | File under test |
 |---|---|---|
-| Dwell-formula unit tests | T-AM-001..009 | `AgentStateMachine.CalculateGroundedDwell` |
-| Pipeline collision integration | T-AM-010..029 | `AgentMovementSystem.Update` (Step 3) |
-| Safety-override integration | T-AM-030..039 | `AgentMovementSystem.Update` (Step 10/11) |
-| OscillationGuard | T-AM-040..049 | `OscillationGuard.RecordAndCheck` |
-| State-machine pure logic | T-AM-050..069 | `AgentStateMachine.EvaluateFromX` |
-| Future (locomotion, turning, fatigue) | T-AM-070..099 | reserved |
+| Dwell-formula unit tests | T-AM-001..009 | `AgentStateMachine.CalculateGroundedDwell` + `.CalculateStumbleDwell` |
+| Pipeline collision integration | T-AM-010..018 | `AgentMovementSystem.Update` (Step 3) |
+| Stumble-decision unit tests | T-AM-019..023 | `AgentStateMachine.ShouldStumble` |
+| Safety-override integration | T-AM-030..033 | `AgentMovementSystem.Update` (Step 10/11) |
+| Safety-system unit tests | T-AM-034..039 | `AgentSafetySystem` (`HasInvalidValues` / `ClampVelocity` / `ClampToPitch` / `Validate`) |
+| OscillationGuard unit tests | T-AM-040..047 | `OscillationGuard.RecordAndCheck` |
+| PerformanceContext unit tests | T-AM-050..052 | `PerformanceContext.EvaluateAttribute` |
+| Locomotion formula tests | T-AM-070..083 | `AgentLocomotion` (`CalculateBaseTopSpeed` / `CalculateBaseAccelK` / `ApplyAcceleration` / `ApplyDeceleration` / `CalculateStoppingDistance` / `CalculateAerobicModifier`) |
+| Directional formula tests | T-AM-084..099 | `AgentDirectionalMovement` (`LateralMultiplier` / `BackwardMultiplier` / `CalculateDirectionalMultiplier` / `ApplyDirectionalToAccelK` / `MovementAngleDeg` / `RotateFacingToward`) |
+| Turning formula tests | T-AM-100..107 | `AgentTurning` (`CalculateMaxTurnRate` / `MinimumTurnRadius` / `CalculateLeanAngle`) |
+| Future (locomotion integration, fatigue, etc.) | T-AM-108..149 | reserved |
 
 ---
 
@@ -63,6 +68,9 @@ hazard. Detailed assertion code lives in the test source — this table is the i
 | T-AM-004 | AR-2 L-2 | Min attrs (balance=1, strength=1) → dwell clamped at `GroundedDwellClampMax` | Prevents float division explosion when attribute denom approaches zero. |
 | T-AM-005 | — | Max attrs (balance=20, strength=20) → dwell clamped at `GroundedDwellClampMin` | Prevents elite players being effectively immune to grounding. |
 | T-AM-006 | AR-8 L-2 | `collisionForce` > 1.0 forwarded to formula → `Clamp01` floors `forceScale` at 1.0 | Cache writes also clamp (see T-AM-014); defence-in-depth. |
+| T-AM-007 | — | `CalculateStumbleDwell(balance=10)` → ~1.2 s (within `[StumbleDwellClampMin, StumbleDwellClampMax]`) | Spec §3.1.5 stumble dwell formula default-attr anchor. |
+| T-AM-008 | — | `CalculateStumbleDwell(balance=1)` → clamped at `StumbleDwellClampMax` (1.5 s) | Lower-attribute saturation. |
+| T-AM-009 | — | `CalculateStumbleDwell(balance=20)` → ≥ `StumbleDwellClampMin`, < default-attrs dwell | Elite players recover faster but not instantly. |
 
 ### 3.2 Pipeline collision integration — `AgentMovementSystem.Update` Step 3
 
@@ -95,6 +103,92 @@ hazard. Detailed assertion code lives in the test source — this table is the i
 | T-AM-041 | — | 7 transitions across 0.6 s (> `MaxTransitionsPerSecond`) → 7th call returns `true` (locked) | Lock activation; consumed by T-AM-016 setup. |
 | T-AM-042 | AR-4 M-2 | After lock fires, a transition during the lock window returns `true` | Lock window enforcement. |
 | T-AM-043 | AR-4 M-2 | After `LockDuration` elapses and ring buffer was reset on lock entry, the next transition returns `false` (no indefinite re-lock) | Closes the AR-4 M-2 indefinite-lockout corner case — pre-lock timestamps could keep `recentCount > 6` after the lock window expired without the ring-buffer reset. |
+| T-AM-044 | — | 6 transitions inside the window followed by one transition `> WindowSeconds` later → not blocked | Sliding-window expiry; verifies stale timestamps drop out of `recentCount`. |
+| T-AM-045 | — | Buffer wrap: 9 transitions in slow succession (well-spaced) → `_writeIndex` wraps cleanly via `% BufferSize` | Ring-buffer modular arithmetic; would surface an off-by-one in the wrap step. |
+| T-AM-046 | — | Sparse pattern: 6 transitions inside the window then 6 more outside → no false lock | Verifies the rolling count is current-time-relative, not lifetime-cumulative. |
+| T-AM-047 | — | Re-`Initialize()` after lock → guard fully reset, next transition succeeds | The supported way for tooling / collision-bypass to wipe a locked guard. |
+
+### 3.5 Stumble-decision unit tests — `AgentStateMachine.ShouldStumble`
+
+| ID | AR anchor | Scenario | Regression hazard |
+|---|---|---|---|
+| T-AM-019 | — | Low speed (= `StumbleSpeedThreshold`) + 90° turn + default attrs → `false` (`MinStumbleRisk` floor < resistance) | Floor only — not a stumble trigger. |
+| T-AM-020 | — | Max speed + 180° turn + min attrs (agility=1, balance=1) → `true` | Worst case; verifies risk reaches above the resistance ceiling. |
+| T-AM-021 | — | Moderate stress (speed=8, turn=120°): min attrs stumble; elite attrs resist | Attribute axis must discriminate at moderate stress. Note: at peak stress (speed=12, turn=180°) `stumbleRisk = 1.5` exceeds even max resistance (`1.0`), so elites are deliberately NOT immune at peak stress per §3.1.5. |
+| T-AM-022 | — | Determinism: same inputs → same output (no RNG path) | Locks the §3.4.4 "stumble decision is deterministic at Stage 0" contract. |
+| T-AM-023 | — | Zero turn angle → only `MinStumbleRisk` applies; result depends solely on attribute resistance | Risk-floor reachability across the attribute range. |
+
+### 3.6 Safety-system unit tests — `AgentSafetySystem`
+
+| ID | AR anchor | Scenario | Regression hazard |
+|---|---|---|---|
+| T-AM-034 | AR-4 M-5 | `HasInvalidValues` returns `true` for NaN position, Inf velocity, or zero facing | The three input categories the safety gate must catch. |
+| T-AM-035 | AR-4 M-5 | `HasInvalidValues` returns `false` for fully valid inputs | Verifies the gate is not stuck closed. |
+| T-AM-036 | — | `ClampVelocity` leaves below-clamp velocities unchanged | No false clamping on safe values. |
+| T-AM-037 | — | `ClampVelocity` rescales above-clamp velocities to `MAX_SPEED_CLAMP` and preserves direction | Direction preservation is the §4.3.1 contract. |
+| T-AM-038 | — | `ClampToPitch` keeps in-bounds positions unchanged; rescales out-of-bounds to `[−buffer, dim + buffer]` | The pitch boundary contract. |
+| T-AM-039 | AR-4 M-5 | `Validate` happy-path leaves inputs untouched and reports `wasRecovered = false` | Sanity gate on the no-NaN path. |
+
+### 3.7 PerformanceContext unit tests — `PerformanceContext.EvaluateAttribute`
+
+| ID | AR anchor | Scenario | Regression hazard |
+|---|---|---|---|
+| T-AM-050 | — | Neutral context (all modifiers = 1.0) × any raw attribute → raw value (no scaling) | The §3.2.2 identity for unmodified attributes. |
+| T-AM-051 | — | Partial-modifier context × raw attribute → raw × (form × context × career) | The multiplication chain itself. |
+| T-AM-052 | — | Out-of-range modifier inputs to `Create` are `Clamp01`-bounded by the constructor | Defence against ill-formed caller data. |
+
+### 3.8 Locomotion formula tests — `AgentLocomotion`
+
+| ID | AR anchor | Scenario | Regression hazard |
+|---|---|---|---|
+| T-AM-070 | — | `CalculateBaseTopSpeed(pace=1)` → `TOP_SPEED_MIN` (7.5 m/s) | Spec §3.2.4 lower anchor. |
+| T-AM-071 | — | `CalculateBaseTopSpeed(pace=20)` → `TOP_SPEED_MAX` (10.2 m/s) | Spec §3.2.4 upper anchor. |
+| T-AM-072 | — | `CalculateBaseTopSpeed(pace<1 or pace>20)` → clamped at min/max | Out-of-range input does not extrapolate. |
+| T-AM-073 | — | `CalculateBaseAccelK(accel=1)` → `AccelKMin`; `(accel=20)` → `AccelKMax` | Spec §3.2.3 endpoints. |
+| T-AM-074 | — | `ApplyAcceleration(at top speed)` → unchanged (`decay × topSpeed + decay × topSpeed = topSpeed`) | Steady-state fixed point. |
+| T-AM-075 | — | `ApplyAcceleration(from rest, k>0, dt>0)` → strictly between 0 and `topSpeed`; converges as `dt → ∞` | Exponential interp monotonicity. |
+| T-AM-076 | — | `ApplyAcceleration` output clamped at `MAX_SPEED_CLAMP` | Spec §4.3.1 safety cap. |
+| T-AM-077 | — | `ApplyDeceleration(currentSpeed < MIN_VELOCITY_MAGNITUDE)` → 0 | Early-return contract. |
+| T-AM-078 | — | `ApplyDeceleration(small stoppingDistance)` → capped at `MAX_ACCELERATION × dt` decrement | Acceleration ceiling caps decel demand. |
+| T-AM-079 | — | `ApplyDeceleration(normal stopping distance)` → reduces speed by `v²/(2d) × dt` | Spec §3.2.5 kinematic. |
+| T-AM-080 | — | `CalculateStoppingDistance(CONTROLLED, pace=1)` → `ControlledDecelDistMin`; `(pace=20)` → `ControlledDecelDistMax` | Controlled-mode endpoints. |
+| T-AM-081 | — | `CalculateStoppingDistance(EMERGENCY, pace=1)` → `EmergencyDecelDistMin`; `(pace=20)` → `EmergencyDecelDistMax` | Emergency-mode endpoints. |
+| T-AM-082 | — | `CalculateAerobicModifier(pool ≥ AerobicModifierThreshold)` → 1.0 | Piecewise above-threshold branch. |
+| T-AM-083 | — | `CalculateAerobicModifier(pool = 0)` → `AerobicModifierFloor`; midpoint → linear interp | Piecewise below-threshold branch. |
+
+### 3.9 Directional formula tests — `AgentDirectionalMovement`
+
+| ID | AR anchor | Scenario | Regression hazard |
+|---|---|---|---|
+| T-AM-084 | — | `LateralMultiplier(agility=1)` → `LateralMultMin`; `(agility=20)` → `LateralMultMax` | Spec §3.3.2 endpoints. |
+| T-AM-085 | — | `BackwardMultiplier(agility=1)` → `BackwardMultMin`; `(agility=20)` → `BackwardMultMax` | Spec §3.3.2 endpoints. |
+| T-AM-086 | — | `CalculateDirectionalMultiplier(angle ≤ 33°)` → 1.0 (forward + hysteresis) | Forward zone with hysteresis. |
+| T-AM-087 | — | `CalculateDirectionalMultiplier(40 ≤ angle ≤ 80)` → lateral multiplier | Lateral zone. |
+| T-AM-088 | — | `CalculateDirectionalMultiplier(angle ≥ 90)` → backward multiplier | Backward zone. |
+| T-AM-089 | — | `CalculateDirectionalMultiplier(33 < angle < 40)` → strictly between 1.0 and lateral | Forward-lateral blend region. |
+| T-AM-090 | — | `CalculateDirectionalMultiplier(80 < angle < 87)` → strictly between lateral and backward | Lateral-backward blend region. |
+| T-AM-091 | — | `ApplyDirectionalToAccelK(kBase, mult=1.0)` → `kBase` | Identity at unit multiplier. |
+| T-AM-092 | — | `ApplyDirectionalToAccelK(kBase, mult=0.5)` → `kBase × sqrt(0.5)` | Spec §3.3.5 sqrt scaling. |
+| T-AM-093 | — | `ApplyDirectionalToAccelK(kBase, mult<0)` → `0` (clamped, no NaN from `sqrt`) | Defensive clamp. |
+| T-AM-094 | — | `MovementAngleDeg(same direction)` → 0 | Identity. |
+| T-AM-095 | — | `MovementAngleDeg(orthogonal)` → 90 | Quadrant anchor. |
+| T-AM-096 | — | `MovementAngleDeg(opposite)` → 180 | Max angle. |
+| T-AM-097 | — | `MovementAngleDeg(zero input vector)` → 0 (degenerate guard) | Zero-vector contract. |
+| T-AM-098 | — | `RotateFacingToward(targetFacing = zero)` → currentFacing unchanged, `signedAngleApplied = 0` | Degenerate-target carve-out. |
+| T-AM-099 | — | `RotateFacingToward(large requested angle, small maxTurnDeg)` → `signedAngleApplied` clamped to ±`maxTurnDeg` | Rate-limit enforcement. |
+
+### 3.10 Turning formula tests — `AgentTurning`
+
+| ID | AR anchor | Scenario | Regression hazard |
+|---|---|---|---|
+| T-AM-100 | — | `CalculateMaxTurnRate(speed=0, default attrs, IDLE)` → `≈ TURN_RATE_BASE × balanceMod` (clamped at `TURN_RATE_CAP`) | Zero-speed anchor — `1/(1+0)` denominator. |
+| T-AM-101 | — | `CalculateMaxTurnRate(high speed)` strictly less than zero-speed rate | Speed-dependent reduction. |
+| T-AM-102 | — | `CalculateMaxTurnRate(extreme speed)` → clamped at `TURN_RATE_FLOOR` | Lower-clamp contract. |
+| T-AM-103 | — | `CalculateMaxTurnRate(GROUNDED)` → `TURN_RATE_FLOOR` (stateMod = 0 → rate = 0 → clamped up to floor) | GROUNDED can still rotate ≥ floor (clamp survives the StateModifier-0 multiply). |
+| T-AM-104 | — | `MinimumTurnRadius(maxTurnRateDeg < TURN_RATE_EPSILON_DEG)` → `float.MaxValue` | Divide-by-zero guard. |
+| T-AM-105 | — | `MinimumTurnRadius(normal)` → `v / (ω × Deg2Rad)` | Kinematic formula. |
+| T-AM-106 | — | `CalculateLeanAngle(any speed, signedTurnRate = 0)` → 0 | Identity. |
+| T-AM-107 | — | `CalculateLeanAngle(extreme centripetal)` → clamped at ±`MAX_LEAN_ANGLE` (sign preserved) | Lean clamp + sign-preservation contract. |
 
 ---
 
@@ -103,15 +197,21 @@ hazard. Detailed assertion code lives in the test source — this table is the i
 The following surfaces are **deliberately not covered** by this roster. Each line
 records the reason and the issue that opens coverage:
 
-- **Locomotion acceleration / deceleration formulas (§3.2.3–§3.2.5).** No AR finding
-  has produced a bug here; coverage opens when the first AR-N reports a locomotion
-  defect or when Stage 1 lands the §5.5 Test Plan.
-- **Turn-rate / lean-angle formulas (§3.4).** Same rationale.
-- **Fatigue accumulation (§3.1.3 table).** AR review has not flagged a fatigue
-  regression. Coverage opens with the first dual-energy spec edit.
 - **`UpdateAllAgents` goalkeeper-skip / array-length validation.** Currently asserted
   via `Debug.Assert` in dev builds (AR-5 L-2 / AR-8 M-1). Promote to NUnit coverage
   when the §5.5 Test Plan defines the assert-vs-test boundary.
+- **Fatigue accumulation (§3.1.3 table).** Per-state drain/recovery rates land at
+  Stage 1+ alongside the §6.2 weather and §6.3 form modifiers. Stage 0 numbers are
+  placeholder GT and a regression-anchored test would just re-codify the
+  placeholders. Coverage opens with the first dual-energy spec edit.
+- **`AgentStateMachine.EvaluateFromX` private branches.** Each branch is reachable
+  only through `EvaluateState`; integration coverage (T-AM-010..018) exercises the
+  GROUNDED branch and a planned T-AM-108..149 expansion would exercise the IDLE /
+  WALKING / JOGGING / SPRINTING / DECELERATING / STUMBLING transitions through
+  `Update`. Carved out here because each scenario needs full pipeline plumbing.
+- **`RotateVelocityToward` both-degenerate fallback.** The branch is `Debug.Assert(false, …)`
+  by design — testing it would require `LogAssert.Expect` and would lock in a
+  contract that explicitly says "unreachable in normal flow". Out of scope.
 - **Cross-spec collision integration (Collision System #3 producing the
   `isCollisionKnockdown` signal).** Owned by Spec #3's test plan, not here.
 
@@ -140,3 +240,4 @@ records the reason and the issue that opens coverage:
 | Version | Date       | Author | Notes                                                                                                |
 |---------|------------|--------|------------------------------------------------------------------------------------------------------|
 | 0.1     | 2026-06-04 | —      | Initial regression-anchored roster (T-AM-001..018, 030..033, 040..043). Locks AR-3 R3-M-1, AR-4 M-2, AR-4 M-5, AR-5 M-1, AR-5 M-2, AR-6 M-1, AR-6 M-2, AR-7 M-1, AR-7 M-2, AR-8 L-2, AR-9 M-1. |
+| 0.2     | 2026-06-04 | —      | Pure-function coverage expansion. New IDs T-AM-019..023 (ShouldStumble), T-AM-034..039 (AgentSafetySystem unit), T-AM-044..047 (OscillationGuard edge cases), T-AM-050..052 (PerformanceContext), T-AM-070..083 (AgentLocomotion), T-AM-084..099 (AgentDirectionalMovement), T-AM-100..107 (AgentTurning). Non-coverage section rewritten — locomotion / turning / directional dropped from the carve-out (now covered); EvaluateFromX private-branch carve-out, fatigue table, UpdateAllAgents asserts, and the RotateVelocityToward both-degenerate `Debug.Assert(false)` branch remain explicitly non-covered. |
