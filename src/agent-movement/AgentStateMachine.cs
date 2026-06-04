@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentStateMachine.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03
+// Modified: 2026-06-03 (AR-9 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.4–§3.1.7, Code Standards #20
 // Purpose:  Pure state evaluation for movement state transitions. No side effects.
@@ -39,7 +39,29 @@ namespace TacticalDirector.AgentMovement
             float collisionForce = 0.0f,
             GroundedReason groundedReason = GroundedReason.NONE)
         {
-            if (isCollisionKnockdown && current != AgentMovementState.GROUNDED)
+            // Boundary assert mirroring PerformanceContext.EvaluateAttribute (AR-7 L-1):
+            // raw player attributes are integers in [1, 20] per Spec #2 §3.5.1. `default(PlayerAttributes)`
+            // leaves all fields at 0, which would propagate negative `(attr - AttributeMinInt)` factors
+            // into downstream formulas — they range-clamp defensively, but the assert catches the
+            // upstream contract violation in development builds.
+            Debug.Assert(balance >= PlayerAttributeConstants.AttributeMinInt
+                         && balance <= PlayerAttributeConstants.AttributeMaxInt,
+                "EvaluateState: balance must be in [1, 20] per Spec #2 §3.5.1.");
+            Debug.Assert(agility >= PlayerAttributeConstants.AttributeMinInt
+                         && agility <= PlayerAttributeConstants.AttributeMaxInt,
+                "EvaluateState: agility must be in [1, 20] per Spec #2 §3.5.1.");
+            Debug.Assert(strength >= PlayerAttributeConstants.AttributeMinInt
+                         && strength <= PlayerAttributeConstants.AttributeMaxInt,
+                "EvaluateState: strength must be in [1, 20] per Spec #2 §3.5.1.");
+
+            // Knockdown signal unconditionally forces GROUNDED. The prior `current != GROUNDED`
+            // guard created a Case-2 gap: when the GROUNDED dwell expired on the same frame a
+            // fresh collision arrived, EvaluateFromGrounded returned IDLE, the transition cleared
+            // GroundedReason/CollisionForce, and only the NEXT frame re-grounded the agent —
+            // leaving a single IDLE frame in the middle of a continuous knockdown sequence. The
+            // System Step 3 newState==current==GROUNDED branch now refreshes the entry state
+            // (AR-5 M-2 fix in AgentMovementSystem.cs).
+            if (isCollisionKnockdown)
             {
                 return AgentMovementState.GROUNDED;
             }
@@ -284,13 +306,15 @@ namespace TacticalDirector.AgentMovement
 
         /// <summary>
         /// Minimum dwell in GROUNDED. Scaled by strength + balance, collision force, and entry reason.
+        /// `collisionForce` is the cached entry-force (`state.CollisionForce`), not this-frame's
+        /// incoming impulse — the caller in EvaluateState forwards the cached value per AR-9 M-1.
         /// Clamped [0.5, 2.5]s. Agent Movement #2 §3.1.5.
         /// </summary>
         public static float CalculateGroundedDwell(
             int balance,
             int strength,
-            GroundedReason reason = GroundedReason.COLLISION,
-            float collisionForce = 1.0f)
+            GroundedReason reason,
+            float collisionForce)
         {
             float reasonMultiplier = reason switch
             {
@@ -339,4 +363,18 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | still demands active deceleration; closes the WALKING↔DECELERATING flap that previously       |
 // |         |            |        | relied on OscillationGuard as a structural fallback. M-3 EvaluateFromSprinting gains an        |
 // |         |            |        | aerobicPool < AerobicJogFloor gate symmetric with EvaluateFromJogging.                         |
+// | 1.7     | 2026-06-03 | —      | AR-5 M-2 / AR-6 follow-up: collision-knockdown short-circuit no longer gated on                |
+// |         |            |        | `current != GROUNDED`. With the guard, a fresh collision that arrived on the same frame the    |
+// |         |            |        | prior GROUNDED dwell expired produced a one-frame IDLE flicker before re-grounding. System    |
+// |         |            |        | Step 3 newState==current==GROUNDED branch now handles the refresh side.                       |
+// | 1.8     | 2026-06-03 | —      | AR-8 fix: L-3 EvaluateState asserts balance / agility / strength ∈ [1, 20] mirroring the      |
+// |         |            |        | PerformanceContext.EvaluateAttribute boundary assert (AR-7 L-1). default(PlayerAttributes)    |
+// |         |            |        | leaves all int attribute fields at 0, which propagated negative `(attr - AttributeMinInt)`    |
+// |         |            |        | factors into downstream formulas; downstream range-clamps defensively but the upstream        |
+// |         |            |        | contract violation was previously silent.                                                      |
+// | 1.9     | 2026-06-03 | —      | AR-9 fix: L-2 CalculateGroundedDwell parameter defaults (reason / collisionForce) dropped —   |
+// |         |            |        | EvaluateFromGrounded is the only caller and always supplies explicit values. The `1.0f`       |
+// |         |            |        | default for collisionForce was also misleading after the AR-9 M-1 contract change             |
+// |         |            |        | (parameter is now the cached entry-force, not this-frame's impulse). XML doc updated to       |
+// |         |            |        | name the new contract.                                                                         |
 #endregion

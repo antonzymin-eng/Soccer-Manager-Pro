@@ -1,6 +1,6 @@
 // File:     src/agent-movement/PerformanceContext.cs
 // Created:  2026-05-22
-// Modified: 2026-05-25
+// Modified: 2026-06-03 (AR-7 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.2.1–§3.2.2, Code Standards #20
 // Purpose:  Attribute gateway applying form/context/career modifiers to raw player attributes.
@@ -53,6 +53,14 @@ namespace TacticalDirector.AgentMovement
         /// </summary>
         public float EvaluateAttribute(int rawAttribute)
         {
+            // Spec #2 §3.5.1 pins raw player attributes to integer [1, 20]. Out-of-range input
+            // is a caller-side programmer error (e.g., default(PlayerAttributes) leaves fields
+            // at 0 and would propagate degenerate effective values into clamped formulas);
+            // catch in development builds instead of silently absorbing it.
+            Debug.Assert(rawAttribute >= PlayerAttributeConstants.AttributeMinInt
+                         && rawAttribute <= PlayerAttributeConstants.AttributeMaxInt,
+                "PerformanceContext.EvaluateAttribute: rawAttribute must be in [1, 20] per Spec #2 §3.5.1.");
+
             float combined = FormModifier * ContextModifier * CareerModifier;
             return rawAttribute * combined;
         }
@@ -63,4 +71,10 @@ namespace TacticalDirector.AgentMovement
 // | Version | Date       | Author | Notes                                                                           |
 // | 1.0     | 2026-05-22 | —      | Initial implementation.                                                         |
 // | 1.1     | 2026-05-25 | —      | H-2: namespace → TacticalDirector.AgentMovement; moved to src/agent-movement/. |
+// | 1.2     | 2026-06-03 | —      | AR-5 fix: L-4 EvaluateAttribute asserts rawAttribute in [1, 20] (Spec #2 §3.5.1). Default-     |
+// |         |            |        | initialised PlayerAttributes (all zeros) or other out-of-range inputs propagated degenerate    |
+// |         |            |        | effective values into clamped locomotion formulas; the assert catches it in dev builds.        |
+// | 1.3     | 2026-06-03 | —      | AR-7 fix: L-1 assert now uses canonical PlayerAttributeConstants.AttributeMinInt /             |
+// |         |            |        | AttributeMaxInt (newly added) instead of (int)AttributeMin / (int)AttributeMax casts —        |
+// |         |            |        | symmetric with the existing AttributeMinInt pattern at AgentTurning call sites.                |
 #endregion

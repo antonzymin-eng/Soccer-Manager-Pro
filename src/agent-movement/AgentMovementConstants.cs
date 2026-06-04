@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementConstants.cs
 // Created:  2026-05-22
-// Modified: 2026-05-26
+// Modified: 2026-06-03 (AR-7 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1–§3.4, §4.1.3, §4.3.1, Code Standards #20
 // Purpose:  All constants for the agent movement system. No literals in formula code.
@@ -427,6 +427,9 @@ namespace TacticalDirector.AgentMovement
         /// <summary>[FIXED] Maximum player attribute value. Agent Movement #2 §3.5.1.</summary>
         public const float AttributeMax = 20.0f;
 
+        /// <summary>[FIXED] Integer form of AttributeMax for use in integer-attribute arithmetic (parallel to AttributeMinInt). Agent Movement #2 §3.5.1.</summary>
+        public const int AttributeMaxInt = 20;
+
         #endregion
 
         #region Derived
@@ -473,12 +476,16 @@ namespace TacticalDirector.AgentMovement
         /// <summary>
         /// [CROSS] Pitch length along the X axis (metres).
         /// Authoritative source: Ball Physics #1 §1.2 coordinate system. Value: 105 m.
+        /// TODO: route via ProjectConstants once the project-constants assembly lands (Stage 1)
+        /// so the value is shared across spec assemblies instead of duplicated as a literal.
         /// </summary>
         public static readonly float PitchLengthX = 105.0f;
 
         /// <summary>
         /// [CROSS] Pitch width along the Y axis (metres).
         /// Authoritative source: Ball Physics #1 §1.2 coordinate system. Value: 68 m.
+        /// TODO: route via ProjectConstants once the project-constants assembly lands (Stage 1)
+        /// so the value is shared across spec assemblies instead of duplicated as a literal.
         /// </summary>
         public static readonly float PitchWidthY = 68.0f;
 
@@ -512,4 +519,9 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | GT region removed (empty). Modified date updated.                                              |
 // | 1.5     | 2026-05-26 | —      | AR-2 fix (continued): M-2 SafeTurnFraction/MaxStumbleProb XML doc updated to note they are       |
 // |         |            |        | reserved for Stage 1+ probabilistic stumble; unused at Stage 0 (deterministic ShouldStumble).   |
+// | 1.6     | 2026-06-03 | —      | AR-5 fix: L-3 [CROSS] PitchLengthX / PitchWidthY XML docs gained TODO noting the Stage 1        |
+// |         |            |        | ProjectConstants routing so the literal duplication of Ball Physics #1 §1.2 values is tracked. |
+// | 1.7     | 2026-06-03 | —      | AR-7 fix: L-1 PlayerAttributeConstants.AttributeMaxInt = 20 added in parallel to               |
+// |         |            |        | AttributeMinInt. Consumed by PerformanceContext.EvaluateAttribute assert so the L-4           |
+// |         |            |        | bounds check reads as integer-domain instead of round-tripping (int) casts on float consts.   |
 #endregion

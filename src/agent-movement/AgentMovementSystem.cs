@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementSystem.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03
+// Modified: 2026-06-03 (AR-9 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §4.4, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
@@ -32,6 +32,11 @@ namespace TacticalDirector.AgentMovement
         /// </summary>
         public AgentMovementSystem(float physicsHz = 60.0f) // TODO: replace with ProjectConstants.PHYSICS_TICK_HZ (Stage 1)
         {
+            // physicsHz must be finite and positive — 0 / NaN / negative would silently disable
+            // the dt-fidelity assert in Update (1.5f / 0 = +Infinity, 1.5f / NaN = NaN, etc.)
+            // and let stalled-loop frames through the gate. Caught once at construction.
+            Debug.Assert(physicsHz > 0.0f && !float.IsNaN(physicsHz),
+                "AgentMovementSystem: physicsHz must be finite and positive.");
             _physicsHz = physicsHz;
         }
 
@@ -56,6 +61,12 @@ namespace TacticalDirector.AgentMovement
             // stalled and per-frame integration loses fidelity; treat as a configuration bug.
             Debug.Assert(dt > 0.0f && dt <= 1.5f / _physicsHz,
                 "AgentMovementSystem.Update: dt outside expected range for physicsHz (>1.5× frame).");
+
+            // currentTime must come from MatchClock (Spec #16 §3.2.3). NaN or negative inputs
+            // silently break OscillationGuard window math (NaN < WindowSeconds is false, so the
+            // guard becomes a no-op). Caught at the boundary instead.
+            Debug.Assert(!float.IsNaN(currentTime) && currentTime >= 0.0f,
+                "AgentMovementSystem.Update: currentTime must be finite and non-negative (MatchClock contract).");
 
             // Step 1 — command is already received as parameter.
 
@@ -87,23 +98,50 @@ namespace TacticalDirector.AgentMovement
                 state.SprintReservoir,
                 state.AerobicPool,
                 isCollisionKnockdown,
-                collisionForce,
+                // Pass the cached entry-force (set on initial knockdown, refreshed on second
+                // hit per AR-5 M-2) instead of the incoming this-frame collisionForce. The
+                // incoming value is 0 on every dwell frame after entry (collision is a
+                // one-frame impulse from Spec #3); using it would shrink the perceived dwell
+                // 35% for a max-force hit and release the agent prematurely. On the entry
+                // frame the cached value is still 0 but EvaluateState short-circuits on
+                // isCollisionKnockdown before reaching EvaluateFromGrounded, so the
+                // pre-cache-write value is unused.
+                state.CollisionForce,
                 state.GroundedReason);
 
             // Step 3 — Apply transition if changed. Gate through oscillation guard (§3.1.7).
+            // Collision-driven GROUNDED transitions bypass the guard: an external knockdown
+            // impulse is not state-machine flapping, and blocking it would keep the agent in
+            // motion for LockDuration after a collision. The guard timestamp is also not
+            // recorded for the bypass case so the history reflects normal-flow flapping only.
             if (newState != state.CurrentState)
             {
-                bool blocked = state.OscillationGuard.RecordAndCheck(currentTime);
+                bool isCollisionTransition =
+                    isCollisionKnockdown && newState == AgentMovementState.GROUNDED;
+                bool blocked = !isCollisionTransition
+                    && state.OscillationGuard.RecordAndCheck(currentTime);
                 if (!blocked)
                 {
                     state.PreviousState = state.CurrentState;
                     state.CurrentState = newState;
                     state.TimeInState = 0.0f;
 
-                    if (isCollisionKnockdown && newState == AgentMovementState.GROUNDED)
+                    if (isCollisionTransition)
                     {
                         state.GroundedReason = GroundedReason.COLLISION;
-                        state.CollisionForce = collisionForce;
+                        // Clamp01 enforces the [0, 1] doc contract on CollisionForce
+                        // (AgentState.cs §3.5.1) — downstream CalculateGroundedDwell already
+                        // clamps defensively, but cache consumers (animation, debug) read the
+                        // raw cached value and would see out-of-range input otherwise.
+                        state.CollisionForce = Mathf.Clamp01(collisionForce);
+
+                        // A collision is a structural break in normal locomotion; any prior
+                        // flap-history is irrelevant. Reset the guard so the post-recovery
+                        // GROUNDED→IDLE transition is not blocked by a stale lock that was
+                        // engaged before the collision arrived. Without this, a designer who
+                        // tunes LockDuration above GroundedDwellClampMin silently extends
+                        // collision recovery by the remaining lock window.
+                        state.OscillationGuard.Initialize();
                     }
                     else if (state.PreviousState == AgentMovementState.GROUNDED)
                     {
@@ -120,7 +158,28 @@ namespace TacticalDirector.AgentMovement
             }
             else
             {
-                state.TimeInState += dt;
+                // A fresh collision impulse while already GROUNDED re-captures the entry
+                // reason/force and resets the dwell timer so the second hit extends recovery.
+                // Without this, the dwell continues against the first hit's CollisionForce only
+                // and the second impulse is silently dropped (§3.1.5). The
+                // `state.CurrentState == GROUNDED` clause is technically implied by
+                // `isCollisionKnockdown` (the AR-6 M-1 unconditional short-circuit in
+                // EvaluateState forces newState=GROUNDED on knockdown, and we are in the
+                // newState==current branch) but kept as a belt-and-braces against future
+                // EvaluateState changes.
+                if (isCollisionKnockdown && state.CurrentState == AgentMovementState.GROUNDED)
+                {
+                    state.GroundedReason = GroundedReason.COLLISION;
+                    // Clamp01 mirrors the cache write in the outer transition branch — keeps
+                    // CollisionForce ∈ [0, 1] regardless of whether the second hit lands during
+                    // a state transition or while already GROUNDED.
+                    state.CollisionForce = Mathf.Clamp01(collisionForce);
+                    state.TimeInState = 0.0f;
+                }
+                else
+                {
+                    state.TimeInState += dt;
+                }
             }
 
             // Step 4–5 — Acceleration / deceleration with directional penalty.
@@ -241,11 +300,24 @@ namespace TacticalDirector.AgentMovement
             }
             else
             {
-                // Step 11 (override path) — Update caches; last-valid tracks current unconditionally.
-                state.Speed = state.Velocity.magnitude;
-                state.LastValidPosition = state.Position;
-                state.LastValidVelocity = state.Velocity;
-                state.LastValidFacing = state.FacingDirection;
+                // Step 11 (override path) — Update caches and Speed, but only when values are
+                // finite and facing is non-degenerate. Override mode is tooling-only (replay
+                // scrubber / editor injection); a tool that injects NaN/Inf and then disables
+                // override on the next frame would otherwise poison LastValid* permanently —
+                // Validate would restore NaN values, repeat the corruption next frame, and the
+                // agent would be stuck. Speed is gated on the same validity check so a NaN
+                // velocity does not propagate a NaN Speed into the next frame's state-machine
+                // evaluation (where comparisons against NaN silently return false and produce
+                // arbitrary transitions).
+                if (!AgentSafetySystem.HasInvalidValues(
+                        state.Position, state.Velocity, state.FacingDirection))
+                {
+                    state.Speed = state.Velocity.magnitude;
+                    state.LastValidPosition = state.Position;
+                    state.LastValidVelocity = state.Velocity;
+                    state.LastValidFacing = state.FacingDirection;
+                }
+                // else: preserve prior frame's Speed / LastValid* so neither NaN propagates.
             }
 
             // Step 12 — Fatigue update.
@@ -269,6 +341,14 @@ namespace TacticalDirector.AgentMovement
             float currentTime)
         {
             using var _ = s_updateAllAgentsMarker.Auto();
+
+            // No array may be null — caller contract (§4.4.2). Checked separately from the length
+            // assert below so the diagnostic identifies the missing array instead of an opaque NRE
+            // when the length-check expression dereferences a null .Length.
+            Debug.Assert(
+                states != null && attrs != null && perfs != null && commands != null
+                && isGoalkeeper != null && isCollisionKnockdown != null && collisionForces != null,
+                "UpdateAllAgents: no array argument may be null.");
 
             // All arrays must be co-sized — caller contract (§4.4.2).
             // Debug.Assert compiles out in release builds (zero hot-path cost).
@@ -472,4 +552,38 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | sign from facing rotation. M-5 Validate signature gains facing in/out + LastValidFacing.       |
 // |         |            |        | L-3 isCollisionKnockdown / collisionForce are required parameters. L-4 dt assert tightened     |
 // |         |            |        | from 2.0/physicsHz to 1.5/physicsHz. L-2 stale "60× too large" comment removed.                |
+// | 1.8     | 2026-06-03 | —      | AR-5 fix: M-1 override-path Step 11 cache write now skipped when current values are            |
+// |         |            |        | invalid (HasInvalidValues check) — prevents tooling-injected NaN/Inf from poisoning            |
+// |         |            |        | LastValid* and trapping the agent in a permanent recovery loop. M-2 second-hit collision      |
+// |         |            |        | while already GROUNDED now refreshes GroundedReason / CollisionForce and resets TimeInState   |
+// |         |            |        | so the new impulse extends recovery (was silently dropped). L-2 added null-array guard in     |
+// |         |            |        | UpdateAllAgents (precedes length assert). L-5 added MatchClock contract assert on             |
+// |         |            |        | currentTime (finite + non-negative).                                                            |
+// | 1.9     | 2026-06-03 | —      | AR-6 fix: M-2 OscillationGuard bypassed for collision-driven GROUNDED transitions (was        |
+// |         |            |        | blocking legitimate knockdowns for LockDuration after a flap-triggered lock). Pairs with      |
+// |         |            |        | AgentStateMachine v1.7 — knockdown short-circuit now unconditional, so newState==GROUNDED     |
+// |         |            |        | reliably reaches Step 3. L-1 inner else block reorganised to skip the redundant               |
+// |         |            |        | `state.TimeInState += dt` immediately followed by `= 0.0f` on refresh.                         |
+// | 1.10    | 2026-06-03 | —      | AR-7 fix: M-1 Step 3 collision-bypass branch now calls state.OscillationGuard.Initialize()    |
+// |         |            |        | to wipe any pre-existing flap-lock — a collision is a structural break and prior flap         |
+// |         |            |        | history is irrelevant; without the reset a designer who tunes LockDuration above             |
+// |         |            |        | GroundedDwellClampMin silently extends collision recovery by the remaining lock window.       |
+// |         |            |        | M-2 override-path Step 11 `state.Speed = Velocity.magnitude` moved inside the                |
+// |         |            |        | HasInvalidValues check — when tooling injects NaN/Inf, Speed is no longer poisoned and       |
+// |         |            |        | does not propagate NaN into the next frame's state-machine evaluation. L-2 isCollisionTrans- |
+// |         |            |        | ition declaration scope tightened (moved inside the outer if). L-3 inner-else GROUNDED       |
+// |         |            |        | check retained as belt-and-braces with comment naming the AR-6 M-1 invariant dependency.    |
+// | 1.11    | 2026-06-03 | —      | AR-8 fix: M-1 ctor asserts physicsHz finite and positive — 0 / NaN / negative would silently |
+// |         |            |        | disable the dt-fidelity assert in Update (1.5/0 = +Inf, 1.5/NaN = NaN) and let stalled-loop  |
+// |         |            |        | frames through the gate. L-1 Step 3 transition branch reuses the isCollisionTransition local |
+// |         |            |        | (was recomputing the same `isCollisionKnockdown && newState == GROUNDED` predicate).         |
+// |         |            |        | L-2 CollisionForce cache writes wrapped in Mathf.Clamp01 — enforces the AgentState.cs        |
+// |         |            |        | [0, 1] doc contract for downstream debug/animation consumers that read the raw cached value. |
+// | 1.12    | 2026-06-03 | —      | AR-9 fix: M-1 EvaluateState now receives state.CollisionForce (cached entry-force) for the   |
+// |         |            |        | GROUNDED dwell calculation instead of the incoming this-frame collisionForce. The incoming    |
+// |         |            |        | value is 0 on every dwell frame after entry (collision is a one-frame impulse from Spec #3); |
+// |         |            |        | passing it shrank the perceived dwell ~35% for a max-force hit (force=1.0 entry → forceScale  |
+// |         |            |        | dropped to CollisionDwellMin=0.65 on frame 1 and beyond), releasing the agent prematurely.   |
+// |         |            |        | The cached state.CollisionForce (set on entry, refreshed on second-hit per AR-5 M-2) is the  |
+// |         |            |        | value the §3.1.5 dwell formula was designed to consume.                                       |
 #endregion

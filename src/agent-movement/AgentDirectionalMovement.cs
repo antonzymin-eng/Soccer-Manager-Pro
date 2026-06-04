@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentDirectionalMovement.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03
+// Modified: 2026-06-03 (AR-5 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.3, Code Standards #20
 // Purpose:  Directional speed multipliers, facing direction updates, and velocity-direction rotation.
@@ -163,8 +163,18 @@ namespace TacticalDirector.AgentMovement
 
             if (!hasCurrentDir)
             {
-                Vector2 startDir = hasTargetDir ? targetDirection.normalized : Vector2.up;
-                return startDir * newSpeed;
+                if (!hasTargetDir)
+                {
+                    // Unreachable in normal flow: Step 4-5 produces newSpeed ≤ MIN_VELOCITY_MAGNITUDE
+                    // when both velocity and target directions are degenerate, so the early
+                    // newSpeed-too-small return above fires first. If we land here a contract has
+                    // been broken upstream — fail-safe to zero rather than picking an arbitrary
+                    // axis (prior implementation chose Vector2.up, which would snap the agent +Y).
+                    Debug.Assert(false,
+                        "RotateVelocityToward: both currentVelocity and targetDirection are degenerate but newSpeed > MIN_VELOCITY_MAGNITUDE.");
+                    return Vector2.zero;
+                }
+                return targetDirection.normalized * newSpeed;
             }
 
             Vector2 currentDir = currentVelocity.normalized;
@@ -205,4 +215,8 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | analogous to RotateFacingToward). Closes the momentum-instability defect in System Step 8.    |
 // |         |            |        | H-4/L-1 RotateFacingToward gained out signedAngleApplied so caller computes achieved turn     |
 // |         |            |        | rate and signed lean direction.                                                                |
+// | 1.6     | 2026-06-03 | —      | AR-5 fix: L-1 RotateVelocityToward both-degenerate fallback returns Vector2.zero with         |
+// |         |            |        | Debug.Assert instead of Vector2.up — the +Y axis snap was arbitrary and not derivable from   |
+// |         |            |        | any input. The branch is unreachable in normal flow (Step 4-5 produces ~0 newSpeed when both  |
+// |         |            |        | directions are degenerate); assert traps the contract violation in development builds.        |
 #endregion
