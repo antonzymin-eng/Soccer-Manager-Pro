@@ -1,7 +1,8 @@
 {
   "ignorePatterns": [
     { "pattern": "^https://doi.org/" },
-    { "pattern": "^https://github.com/.*/issues/" }
+    { "pattern": "^https://github.com/.*/issues/" },
+    { "pattern": "^https://www\\.fifa\\.com/" }
   ],
   "timeout": "20s",
   "retryOn429": true,
