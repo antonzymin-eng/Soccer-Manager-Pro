@@ -260,7 +260,7 @@ namespace TacticalDirector.CollisionSystem
             // Publish events.
             for (int i = 0; i < _eventCount; i++)
             {
-                eventConsumer?.OnCollisionEvent(_eventBuffer[i]);
+                eventConsumer?.OnCollisionEvent(in _eventBuffer[i]);
             }
         }
 
@@ -277,9 +277,6 @@ namespace TacticalDirector.CollisionSystem
             {
                 return;
             }
-
-            manifold.Entity1ID = id1;
-            manifold.Entity2ID = id2;
 
             bool sameTeam = teamIds[id1] == teamIds[id2];
 
@@ -437,4 +434,7 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | per-agent input/output array (attrs/teams/gk/knockdown/knockdownForce/stumble) is >=    |
 // |         |            |        | count before iterating; oversize agentStates previously IOOR'd on _snapshotValid[i]     |
 // |         |            |        | with an opaque diagnostic. Now throws ArgumentException naming all mismatched lengths.  |
+// | 1.5     | 2026-06-05 | —      | AR-3 follow-through. M-1: OnCollisionEvent call site adopts `in` modifier; matches      |
+// |         |            |        | the updated ICollisionEventConsumer signature (zero-copy publish).                      |
+// |         |            |        | L-2: ProcessAgentAgent no longer writes manifold.Entity1ID/Entity2ID (fields removed).  |
 #endregion

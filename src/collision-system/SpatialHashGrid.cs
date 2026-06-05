@@ -74,6 +74,11 @@ namespace TacticalDirector.CollisionSystem
                 return;
             }
 
+            // Defensive: negative or non-finite radius silently degrades to center-cell-only
+            // insert (left/right/bottom/top predicates all evaluate false).
+            Debug.Assert(radius >= 0f && float.IsFinite(radius),
+                "SpatialHashGrid.Insert radius must be finite and non-negative.");
+
             float cs = SpatialHashConstants.CellSize;
             int cx = CellX(position.x);
             int cy = CellY(position.y);
@@ -176,4 +181,6 @@ namespace TacticalDirector.CollisionSystem
 // | 1.1     | 2026-06-05 | —      | AR-1 M-3. Insert position validity check widened to !float.IsFinite on x/y/z (was        |
 // |         |            |        | IsNaN on x/y only). Closes NaN-z propagation into CollisionEvent.ContactPoint via        |
 // |         |            |        | CheckAgentBallCollision (NaN > AgentReachHeight returns false, bypassing the gate).      |
+// | 1.2     | 2026-06-05 | —      | AR-3 L-3. Insert gains Debug.Assert(radius >= 0 && IsFinite) — negative or non-finite    |
+// |         |            |        | radius silently degraded to center-cell-only insert.                                     |
 #endregion

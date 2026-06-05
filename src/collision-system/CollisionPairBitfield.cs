@@ -1,9 +1,11 @@
 // File:     src/collision-system/CollisionPairBitfield.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25  [v1.1]
+// Modified: 2026-06-05  [v1.2]
 // Author:   —
 // Spec:     Collision System #3 §3.2.4, Code Standards #20
 // Purpose:  Zero-alloc bitfield for deduplicating collision pairs each frame.
+
+using UnityEngine;
 
 namespace TacticalDirector.CollisionSystem
 {
@@ -61,6 +63,12 @@ namespace TacticalDirector.CollisionSystem
 
         private bool GetBit(int index)
         {
+            // Max reachable index for 22 agents + 1 ball = 252 (pair (21, BALL)). C# shift
+            // operators silently mask shift count modulo 64 — an out-of-range index would
+            // alias onto the wrong bit in _bits3. Fail fast in development builds.
+            Debug.Assert(index >= 0 && index < 256,
+                "CollisionPairBitfield index out of range; pair-formula regression suspected.");
+
             if (index < 64)  return (_bits0 & (1UL << index))        != 0;
             if (index < 128) return (_bits1 & (1UL << (index - 64))) != 0;
             if (index < 192) return (_bits2 & (1UL << (index - 128))) != 0;
@@ -69,6 +77,9 @@ namespace TacticalDirector.CollisionSystem
 
         private void SetBit(int index)
         {
+            Debug.Assert(index >= 0 && index < 256,
+                "CollisionPairBitfield index out of range; pair-formula regression suspected.");
+
             if      (index < 64)  _bits0 |= (1UL << index);
             else if (index < 128) _bits1 |= (1UL << (index - 64));
             else if (index < 192) _bits2 |= (1UL << (index - 128));
@@ -82,4 +93,7 @@ namespace TacticalDirector.CollisionSystem
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                               |
 // | 1.1     | 2026-05-25 | —      | Pass-4 fix. P4-1: 22 and 23 literals replaced with                           |
 // |         |            |        | SpatialHashConstants.BallVirtualIndex / PairFormulaRowSize (FR-CS-016).      |
+// | 1.2     | 2026-06-05 | —      | AR-3 L-1. GetBit / SetBit gain Debug.Assert(index in [0, 256)) — C# shift   |
+// |         |            |        | masks shift count mod 64, so an out-of-range index would silently corrupt   |
+// |         |            |        | _bits3 instead of throwing.                                                 |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/heading-mechanics/HeadingDuelResolution.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-05
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.7, §4.2.1, KD-8, KD-10, FR-HE-010, FR-HE-017, FR-HE-023,
 //           FR-HE-026, FR-HE-027, Code Standards #20
@@ -69,7 +69,7 @@ namespace TacticalDirector.HeadingMechanics
         /// Called by Collision System #3 per confirmed collision each frame.
         /// Buffers AGENT_BALL events within the current physics-frame window. §4.2.1.
         /// </summary>
-        public void OnCollisionEvent(CollisionEvent evt)
+        public void OnCollisionEvent(in CollisionEvent evt)
         {
             if (evt.Type != CollisionType.AGENT_BALL)
             {
@@ -314,4 +314,6 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | match times directly, eliminating lossy int round-trip via DuelId.             |
 // | 1.2     | 2026-05-28 | —      | AR-2 M-1: local 0.001f tolerance → DuelFrameMatchToleranceS constant.           |
 // |         |            |        | AR-2 M-2: * 1000.0f literal → MS_PER_SECOND constant in DuelId assignment.      |
+// | 1.3     | 2026-06-05 | —      | Collision-system AR-3 M-1 follow-through. OnCollisionEvent signature gains `in` |
+// |         |            |        | parameter modifier to match the updated ICollisionEventConsumer contract.       |
 #endregion

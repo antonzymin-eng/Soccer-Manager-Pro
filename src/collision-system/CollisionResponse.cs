@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionResponse.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25  [v1.1]
+// Modified: 2026-06-05  [v1.2]
 // Author:   —
 // Spec:     Collision System #3 §3.3.1–§3.3.2, FR-04, FR-05, Code Standards #20
 // Purpose:  Impulse-based collision resolution, penetration separation, fall/stumble triggers.
@@ -65,6 +65,9 @@ namespace TacticalDirector.CollisionSystem
                 return result;
             }
 
+            // vRel <= 0 (early-return at line above), e > 0, invMSum > 0 → j >= 0 always.
+            // SameTeamMomentumScale > 0, so the scaled value stays non-negative.
+            // Upper clamp is therefore the only meaningful bound.
             float j = -(1f + e) * vRel / invMSum;
 
             if (isSameTeam)
@@ -72,9 +75,7 @@ namespace TacticalDirector.CollisionSystem
                 j *= CollisionPhysicsConstants.SameTeamMomentumScale;
             }
 
-            j = Mathf.Clamp(j,
-                -CollisionPhysicsConstants.MaxImpulseMagnitude,
-                 CollisionPhysicsConstants.MaxImpulseMagnitude);
+            j = Mathf.Min(j, CollisionPhysicsConstants.MaxImpulseMagnitude);
 
             Vector2 impulse = j * manifold.Normal;
 
@@ -193,4 +194,6 @@ namespace TacticalDirector.CollisionSystem
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                     |
 // | 1.1     | 2026-05-25 | —      | M-3: EvaluateFallOrStumble now triggers stumble when force > fallThreshold but fall |
 // |         |            |        | probability check fails (previously no consequence for surviving high-force hit).   |
+// | 1.2     | 2026-06-05 | —      | AR-3 L-4. Impulse magnitude clamp simplified Mathf.Clamp(±M) → Mathf.Min(j, M).     |
+// |         |            |        | j >= 0 invariant documented inline (guaranteed by vRel <= 0 early-return upstream). |
 #endregion
