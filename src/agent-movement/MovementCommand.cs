@@ -1,6 +1,6 @@
 // File:     src/agent-movement/MovementCommand.cs
 // Created:  2026-05-22
-// Modified: 2026-05-25
+// Modified: 2026-06-04
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.3, Code Standards #20
 // Purpose:  Command struct issued by the AI layer each tactical heartbeat (10 Hz).
@@ -103,6 +103,25 @@ namespace TacticalDirector.AgentMovement
                 watchTarget,
                 false);
         }
+
+        /// <summary>
+        /// TOOLING-ONLY factory that constructs a command with OverrideSafetyConstraints=true,
+        /// for regression tests of the Step 11 override-path cache-write guard
+        /// (T-AM-030..032, AR-5 M-1 / AR-7 M-2). MUST NOT be called from production game logic —
+        /// disabling safety validation in a match would let a single NaN poison every downstream
+        /// frame. `internal` access is granted to TacticalDirector.AgentMovement.Tests via
+        /// InternalsVisibleTo in AssemblyInfo.cs.
+        /// </summary>
+        internal static MovementCommand ToolingOverrideOnly_NaNInjection(Vector2 target)
+        {
+            return new MovementCommand(
+                target,
+                AgentMovementState.IDLE,
+                DecelerationMode.CONTROLLED,
+                FacingMode.AUTO_ALIGN,
+                target,
+                true);
+        }
     }
 }
 
@@ -110,4 +129,7 @@ namespace TacticalDirector.AgentMovement
 // | Version | Date       | Author | Notes                                                                           |
 // | 1.0     | 2026-05-22 | —      | Initial implementation.                                                         |
 // | 1.1     | 2026-05-25 | —      | H-2: namespace → TacticalDirector.AgentMovement; moved to src/agent-movement/. |
+// | 1.2     | 2026-06-04 | —      | Test-plan landing: internal ToolingOverrideOnly_NaNInjection factory added for      |
+// |         |            |        | T-AM-030..032 (AR-5 M-1 / AR-7 M-2) regression-test seam. Production game logic    |
+// |         |            |        | MUST NOT call this factory — it disables Step 10 safety validation.                |
 #endregion
