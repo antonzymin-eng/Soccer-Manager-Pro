@@ -1,6 +1,6 @@
 // File:     src/collision-system/ContactTypeClassifier.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-06-05  [v1.1]
 // Author:   —
 // Spec:     Collision System #3 §3.3.6, FR-06, Code Standards #20
 // Purpose:  Velocity-heuristic contact classification for foul detection groundwork.
@@ -41,19 +41,23 @@ namespace TacticalDirector.CollisionSystem
             var vv = new Vector2(victim.Velocity.x, victim.Velocity.y);
             float speedV = vv.magnitude;
 
-            if (speedV > minSpeed)
+            if (speedV <= minSpeed)
             {
-                Vector2 victimDir = vv / speedV;
-                float facingDot = Vector2.Dot(approachDir, victimDir);
-                if (facingDot > ContactClassificationConstants.ShoulderDotThreshold)
-                {
-                    return ContactType.SHOULDER_TO_SHOULDER;
-                }
+                return ContactType.SIDE_IMPACT;
+            }
+
+            // victimDir computed once and shared by both predicates; the behind-test
+            // applies a stricter speed gate (MinVictimSpeedBehind > MinSpeedForClassification).
+            Vector2 victimDir = vv / speedV;
+
+            float facingDot = Vector2.Dot(approachDir, victimDir);
+            if (facingDot > ContactClassificationConstants.ShoulderDotThreshold)
+            {
+                return ContactType.SHOULDER_TO_SHOULDER;
             }
 
             if (speedV > ContactClassificationConstants.MinVictimSpeedBehind)
             {
-                Vector2 victimDir = vv / speedV;
                 float behindDot = Vector2.Dot(-normal, victimDir);
                 if (behindDot > ContactClassificationConstants.BehindDotThreshold)
                 {
@@ -101,6 +105,10 @@ namespace TacticalDirector.CollisionSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes          |
-// | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | Version | Date       | Author | Notes                                                                          |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                                 |
+// | 1.1     | 2026-06-05 | —      | AR-4 L-1. Classify() hoists victimDir = vv / speedV out of both inner branches |
+// |         |            |        | (was computed twice with identical inputs). Early-return on speedV <= minSpeed |
+// |         |            |        | for symmetry with the speedI check above; behind-branch keeps its stricter     |
+// |         |            |        | MinVictimSpeedBehind gate.                                                     |
 #endregion

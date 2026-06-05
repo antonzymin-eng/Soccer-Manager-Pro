@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionResponse.cs
 // Created:  2026-05-25
-// Modified: 2026-06-05  [v1.2]
+// Modified: 2026-06-05  [v1.3]
 // Author:   —
 // Spec:     Collision System #3 §3.3.1–§3.3.2, FR-04, FR-05, Code Standards #20
 // Purpose:  Impulse-based collision resolution, penetration separation, fall/stumble triggers.
@@ -119,9 +119,14 @@ namespace TacticalDirector.CollisionSystem
         {
             if (manifold.PenetrationDepth <= 0f) return;
 
-            float sep = manifold.PenetrationDepth <= FallThresholdConstants.MaxPenetrationDepth
-                ? manifold.PenetrationDepth * CollisionPhysicsConstants.SeparationSlop
-                : FallThresholdConstants.MaxPenetrationDepth;
+            // Monotonic clamp: apply slop first, then cap. The previous form
+            // (PD <= MaxPD ? PD*Slop : MaxPD) silently dropped the slop on the
+            // cap branch, so a 0.495m overlap separated by 0.500m while a 1.0m
+            // overlap separated by only 0.500m — severely-overlapping pairs
+            // received LESS slop and were prone to re-collide next frame.
+            float sep = Mathf.Min(
+                manifold.PenetrationDepth * CollisionPhysicsConstants.SeparationSlop,
+                FallThresholdConstants.MaxPenetrationDepth);
 
             float invM1 = a1Active ? (1.0f / a1.Mass) : 0f;
             float invM2 = a2Active ? (1.0f / a2.Mass) : 0f;
@@ -196,4 +201,8 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | probability check fails (previously no consequence for surviving high-force hit).   |
 // | 1.2     | 2026-06-05 | —      | AR-3 L-4. Impulse magnitude clamp simplified Mathf.Clamp(±M) → Mathf.Min(j, M).     |
 // |         |            |        | j >= 0 invariant documented inline (guaranteed by vRel <= 0 early-return upstream). |
+// | 1.3     | 2026-06-05 | —      | AR-4 M-3. ApplySeparation sep clamp made monotonic — was                            |
+// |         |            |        | `PD <= MaxPD ? PD*Slop : MaxPD` (silently dropped slop on cap branch); now          |
+// |         |            |        | `Mathf.Min(PD*Slop, MaxPD)`. Severely-overlapping pairs no longer receive less      |
+// |         |            |        | separation than mildly-overlapping pairs.                                           |
 #endregion

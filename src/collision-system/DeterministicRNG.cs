@@ -1,10 +1,11 @@
 // File:     src/collision-system/DeterministicRNG.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-06-05  [v1.1]
 // Author:   —
 // Spec:     Collision System #3 §2.6.4, FR-08, Code Standards #20
 // Purpose:  xorshift128+ RNG seeded per-frame from match seed + frame number.
-//           Stage 5+: replace with Fixed64 Math Library RNG (Spec #9).
+//           Stage 1+: replace with Spec #16 §3.2.3 DeterministicRngService
+//           (HKDF-SHA256 + SipHash-2-4-64; canonical deterministic-RNG authority).
 
 namespace TacticalDirector.CollisionSystem
 {
@@ -19,6 +20,11 @@ namespace TacticalDirector.CollisionSystem
         private ulong _state0;
         private ulong _state1;
 
+        /// <summary>
+        /// Initialises the xorshift128+ state from a single 64-bit seed via two SplitMix64
+        /// rounds. Falls back to the Vigna reference recovery vector if both state words
+        /// derive to zero (an all-zero state is the xorshift128+ fixed point).
+        /// </summary>
         /// <param name="seed">Per-frame seed. Use matchSeed ^ frameNumber ^ (frameNumber &lt;&lt; 32).</param>
         public DeterministicRNG(ulong seed)
         {
@@ -58,6 +64,10 @@ namespace TacticalDirector.CollisionSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes          |
-// | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                     |
+// | 1.1     | 2026-06-05 | —      | AR-4 fix pass. M-1: Stage 5+ migration target corrected — was      |
+// |         |            |        | "Spec #9 (Fixed64 Math)", canonical deterministic-RNG authority is |
+// |         |            |        | Spec #16 §3.2.3 DeterministicRngService. M-2: constructor gains    |
+// |         |            |        | XML <summary> per FR-CS-060.                                       |
 #endregion
