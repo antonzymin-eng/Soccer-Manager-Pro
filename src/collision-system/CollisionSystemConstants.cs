@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionSystemConstants.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25  [v1.2]
+// Modified: 2026-06-05  [v1.3]
 // Author:   —
 // Spec:     Collision System #3 §3.1.1, §3.3.1, §4.3.1, Code Standards #20
 // Purpose:  All constants for the collision system. No literals in formula code.
@@ -112,6 +112,9 @@ namespace TacticalDirector.CollisionSystem
         /// <summary>
         /// [FIXED] Physics/render loop tick rate (Hz). Used to convert impulse (kg·m/s) to force (N): F = j × Hz.
         /// Authoritative source: Ball Physics #1 §1.2 / root CLAUDE.md "Heartbeat Tick Rate". Value: 60 Hz.
+        /// TODO: re-route as [CROSS] mirror to ProjectConstants.PHYSICS_TICK_HZ once that catalogue lands
+        /// (Stage 1 deferral — multi-consumer constant; deterministic-sim and collision-system both declare
+        /// locally today). Tracked in root CLAUDE.md OPEN ISSUES "PHYSICS_TICK_HZ multi-consumer mirror".
         /// </summary>
         public const float PHYSICS_TICK_HZ = 60f;
 
@@ -142,10 +145,15 @@ namespace TacticalDirector.CollisionSystem
         #region Cross
 
         /// <summary>
-        /// [CROSS] Ball radius (m) — mirrors SpatialHashConstants.BallRadius.
+        /// [CROSS] Ball radius (m).
         /// Authoritative source: BallPhysicsConstants.Ball.RADIUS (Ball Physics #1 §2.1). Value: 0.11m.
+        /// Mirrors the authoritative source directly per Spec #20 §4.2 (no chained mirror via
+        /// SpatialHashConstants.BallRadius).
+        /// Note: SpatialHashConstants.BallRadius also mirrors the same authoritative source — both
+        /// are kept as convenience accessors for their respective consumer site (broad phase vs.
+        /// narrow phase) and cannot drift because they share the same single source of truth.
         /// </summary>
-        public static readonly float BallRadius = SpatialHashConstants.BallRadius;
+        public static readonly float BallRadius = BallPhysicsConstants.Ball.RADIUS;
 
         #endregion
 
@@ -274,4 +282,10 @@ namespace TacticalDirector.CollisionSystem
 // | 1.2     | 2026-05-25 | —      | Pass-3+4. P3-1: MinResponseSqrMagnitude [GT] added. P4-1: AgentCapacity [GT] added;      |
 // |         |            |        | BallVirtualIndex [DERIVED] and PairFormulaRowSize [DERIVED] added to SpatialHashConstants|
 // |         |            |        | to replace magic literals 22/23 in CollisionPairBitfield (FR-CS-016).                    |
+// | 1.3     | 2026-06-05 | —      | AR-1 fix pass. L-1: PHYSICS_TICK_HZ gains Stage-1 ProjectConstants migration TODO note. |
+// |         |            |        | L-2: CollisionPhysicsConstants.BallRadius re-routed to mirror BallPhysicsConstants.Ball  |
+// |         |            |        | .RADIUS directly (was chained via SpatialHashConstants.BallRadius); Spec #20 §4.2.       |
+// | 1.4     | 2026-06-05 | —      | AR-2 L-2. CollisionPhysicsConstants.BallRadius XML doc notes both it and                |
+// |         |            |        | SpatialHashConstants.BallRadius are convenience accessors over the same authoritative   |
+// |         |            |        | source (so a future reader does not consolidate one into the other).                    |
 #endregion

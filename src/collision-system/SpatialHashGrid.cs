@@ -1,6 +1,6 @@
 // File:     src/collision-system/SpatialHashGrid.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-06-05  [v1.1]
 // Author:   —
 // Spec:     Collision System #3 §3.1.2, FR-01, Code Standards #20
 // Purpose:  Uniform grid spatial hash — O(N) insert, O(1) avg query. Broad phase only.
@@ -69,7 +69,7 @@ namespace TacticalDirector.CollisionSystem
         {
             using var _ = s_insertMarker.Auto();
 
-            if (float.IsNaN(position.x) || float.IsNaN(position.y))
+            if (!float.IsFinite(position.x) || !float.IsFinite(position.y) || !float.IsFinite(position.z))
             {
                 return;
             }
@@ -171,6 +171,9 @@ namespace TacticalDirector.CollisionSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes          |
-// | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | Version | Date       | Author | Notes                                                                                    |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                                           |
+// | 1.1     | 2026-06-05 | —      | AR-1 M-3. Insert position validity check widened to !float.IsFinite on x/y/z (was        |
+// |         |            |        | IsNaN on x/y only). Closes NaN-z propagation into CollisionEvent.ContactPoint via        |
+// |         |            |        | CheckAgentBallCollision (NaN > AgentReachHeight returns false, bypassing the gate).      |
 #endregion
