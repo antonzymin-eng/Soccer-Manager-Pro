@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassVelocityCalculator.cs
 // Created:  2026-05-26
-// Modified: 2026-05-27
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.2, §3.3, §3.4, Code Standards #20
 // Purpose:  Pure static calculator for kick speed (§3.2), launch angle (§3.3),
@@ -47,7 +47,8 @@ namespace TacticalDirector.PassMechanics
             float vBase = profile.VOffset + powerScale * (profile.VMax - profile.VOffset);
 
             float fatigueModifier = 1.0f - (Mathf.Clamp01(fatigue) * PassMechanicsConstants.FatiguePowerReduction);
-            float vUnclamped = vBase * fatigueModifier * Mathf.Clamp(weakFootPowerPenalty, 0.5f, 1.0f);
+            float vUnclamped = vBase * fatigueModifier
+                * Mathf.Clamp(weakFootPowerPenalty, PassMechanicsConstants.WeakFootPowerFloorMin, 1.0f);
 
             float kickSpeed = Mathf.Clamp(vUnclamped, profile.VMin, profile.VMax);
 
@@ -242,4 +243,6 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     (public methods exposing internal PhysicalProfile type).            |
 // |         |            |        | AR-1 M-2: diagnostic Debug.Log calls guarded by                         |
 // |         |            |        |     #if DEVELOPMENT_BUILD || UNITY_EDITOR (FR-CS-027-034).             |
+// | 1.3     | 2026-06-06 | —      | AR-2 L-4: 0.5f magic floor on weakFootPowerPenalty clamp replaced       |
+// |         |            |        |     with PassMechanicsConstants.WeakFootPowerFloorMin (FR-CS-016).      |
 #endregion

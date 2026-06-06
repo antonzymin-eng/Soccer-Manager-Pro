@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassErrorCalculator.cs
 // Created:  2026-05-26
-// Modified: 2026-05-27
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.5, §3.7, Code Standards #20
 // Purpose:  Pure static calculator for the multiplicative error chain (§3.5),
@@ -74,7 +74,9 @@ namespace TacticalDirector.PassMechanics
 
             if (float.IsNaN(errorAngle))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError("[PassError] FM-04: ErrorAngle is NaN. Returning MinErrorAngle.");
+#endif
                 return PassMechanicsConstants.MinErrorAngle;
             }
 
@@ -84,26 +86,44 @@ namespace TacticalDirector.PassMechanics
         // ── §3.5.7 — Error Direction ────────────────────────────────────────────────
 
         /// <summary>
-        /// Computes a deterministic error-direction angle [0, 2π) using a prime-XOR
-        /// hash of (agentId, frameNumber, passTypeIndex). Identical inputs always
-        /// produce identical output — replay-safe. No System.Random. §3.5.7.
+        /// Computes a deterministic error-direction signed fraction in [-1, +1] using a
+        /// SplitMix64-style mixer over (agentId, frameNumber, passTypeIndex). Identical
+        /// inputs always produce identical output — replay-safe. No System.Random.
+        ///
+        /// The output is the rotation FRACTION applied to errorAngleDeg by
+        /// <see cref="PassTargetResolver.ApplyErrorToDirection"/>; mapping to a uniform
+        /// signed scalar (rather than an angle on [0, 2π) that is then composed through
+        /// sin()) preserves uniform distribution of the final deflection.
+        /// §3.5.7.
         /// </summary>
         /// <param name="agentId">Unique ID of the passing agent.</param>
         /// <param name="frameNumber">Simulation frame from PassRequest.</param>
         /// <param name="passTypeIndex">PassType cast to int.</param>
-        /// <returns>Error rotation angle in radians [0, 2π).</returns>
+        /// <returns>Signed fraction in [-1, +1] — uniform distribution.</returns>
         public static float ComputeErrorDirection(int agentId, int frameNumber, int passTypeIndex)
         {
-            int hashInput;
-            unchecked  // intentional 32-bit wrap-around; deterministic hash mixing per §3.5.7
+            // SplitMix64-style avalanche mixer (Stafford variant) for hash quality.
+            // Spec #16 §3.4.4 owns the canonical 64-bit avalanche constants; reused here
+            // because routing through DeterministicRngService would require wiring a
+            // service handle through the executor (deferred to Stage 1).
+            ulong h;
+            unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug.
             {
-                hashInput = agentId        * 73856093
-                          ^ frameNumber    * 19349663
-                          ^ passTypeIndex  * 83492791;
+                h = ((ulong)(uint)agentId) * 0x9E3779B97F4A7C15UL;
+                h ^= ((ulong)(uint)frameNumber) * 0xBF58476D1CE4E5B9UL;
+                h ^= ((ulong)(uint)passTypeIndex) * 0x94D049BB133111EBUL;
+                h ^= h >> 30;
+                h *= 0xBF58476D1CE4E5B9UL;
+                h ^= h >> 27;
+                h *= 0x94D049BB133111EBUL;
+                h ^= h >> 31;
             }
 
-            float normalised = (float)(hashInput & 0x7FFFFFFF) / (float)0x7FFFFFFF;
-            return normalised * Mathf.PI * 2.0f;
+            // Take the top 24 bits as the uniform random word (avalanche-cleanest end);
+            // map to [0, 1) then to the signed fraction [-1, +1).
+            uint top24 = (uint)(h >> 40) & 0x00FFFFFFu;
+            float normalised = (float)top24 / (float)0x01000000u;
+            return (normalised * 2.0f) - 1.0f;
         }
 
         // ── §3.7 — Weak Foot Modifiers ──────────────────────────────────────────────
@@ -148,6 +168,20 @@ namespace TacticalDirector.PassMechanics
 // | 1.1     | 2026-05-26 | —      | H2: unchecked block added to ComputeErrorDirection hash for intentional   |
 // |         |            |        |     32-bit wrap-around (coding guide determinism rule).                   |
 // | 1.2     | 2026-05-27 | —      | AR-1 M-1: class changed public → internal (implementation detail).        |
-// |         |            |        | AR-1 L-1: NaN fallback returns MinErrorAngle (0.1°) instead of 0f;       |
+// |         |            |        | AR-1 L-1: NaN fallback returns MinErrorAngle (0.1°) instead of 0f;        |
 // |         |            |        |     0f violated the clamp contract [MinErrorAngle, MaxErrorAngle].        |
+// | 1.3     | 2026-06-06 | —      | AR-2 M-1: ComputeErrorDirection replaced prime-XOR mixer with             |
+// |         |            |        |     SplitMix64-style avalanche (Spec #16 §3.4.4 constants); 64-bit ulong  |
+// |         |            |        |     state eliminates 32-bit collision modes on close (agentId, frame)     |
+// |         |            |        |     pairs that the prior `h * P1 ^ h * P2 ^ h * P3` form was susceptible   |
+// |         |            |        |     to.                                                                   |
+// |         |            |        | AR-2 M-2: return type semantics changed [0, 2π) radians → [-1, +1] signed |
+// |         |            |        |     fraction so the deflection magnitude distributes UNIFORMLY across     |
+// |         |            |        |     [-errorAngle, +errorAngle]. Previous return mapped uniform [0,2π) to  |
+// |         |            |        |     rotation degrees via sin(), which produced a non-uniform Arcsine      |
+// |         |            |        |     distribution heavily weighted near ±errorAngle (sin'(±π/2) → 0).      |
+// |         |            |        |     PassTargetResolver.ApplyErrorToDirection signature follows.            |
+// |         |            |        | AR-2 L-13: NaN diagnostic Debug.LogError gated by                         |
+// |         |            |        |     #if UNITY_EDITOR || DEVELOPMENT_BUILD (FR-CS-031 hot-path carve-out;   |
+// |         |            |        |     restores symmetry with sibling files' build-guard pattern).            |
 #endregion

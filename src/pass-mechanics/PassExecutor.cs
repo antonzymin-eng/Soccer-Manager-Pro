@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassExecutor.cs
 // Created:  2026-05-26
-// Modified: 2026-05-27
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.8, §3.9, §4.1, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the six-state pass execution state
@@ -141,7 +141,10 @@ namespace TacticalDirector.PassMechanics
             }
 
             // ── FM-01: PassType validation ───────────────────────────────────────────
-            if ((int)request.PassType < 0 || (int)request.PassType > (int)PassType.Chip)
+            // Explicit-switch validity check (no Enum.IsDefined — reflection is banned
+            // per FR-CS-027–034). Maintainers MUST add a new case here when appending
+            // a member to the PassType enum, or FM-01 will close it as Invalid.
+            if (!IsValidPassType(request.PassType))
             {
                 Debug.LogError($"[PassExecutor] FM-01: Invalid PassType={request.PassType}. Frame={request.FrameNumber}");
                 _lastResult = MakeInvalidResult(request.PassType);
@@ -200,6 +203,12 @@ namespace TacticalDirector.PassMechanics
                 request.PassType, effectiveSubType, attrs.Technique, request.IsWeakFoot, _profile);
 
             // ── §3.6 — Target resolution and aim point ───────────────────────────────
+            // Note: ResolveAimPoint runs BEFORE the cache block below — its only
+            // PassRequest reads are TargetAgentId / TargetPosition (request-locals), so
+            // it does not depend on _cached* fields. If a future extension consumes
+            // cached values, move the cache block ABOVE this call (X-1 trap).
+            // §3.6.5 Stage-0 lead projection uses receiver position-at-windup-start;
+            // staleness across WINDUP frames is a Stage 1 upgrade (KD-4, §7.1).
             _aimPoint = ResolveAimPoint(request, agentState.Position, out _leadDistance);
             _aimPoint = PassTargetResolver.ClampToPitchBounds(_aimPoint);
 
@@ -282,24 +291,7 @@ namespace TacticalDirector.PassMechanics
             // Poll tackle interrupt first — §3.8.5
             if (_collisionQuery.GetAndClearTackleFlag(_request.AgentId))
             {
-                _lastResult = new PassResult
-                {
-                    Outcome      = PassOutcome.Cancelled,
-                    PassType     = _request.PassType,
-                    ContactFrame = -1
-                };
-
-                EventBusStub.Publish(new PassCancelledEvent
-                {
-                    AgentId      = _request.AgentId,
-                    TeamId       = _request.TeamId,
-                    CancelReason = CancelReason.TackleInterrupt,
-                    PassType     = _request.PassType,
-                    Frame        = frameNumber,
-                    MatchTime    = matchTime
-                });
-
-                _state = PassExecutionState.Idle;
+                EmitCancelAtContact(matchTime, frameNumber, CancelReason.TackleInterrupt);
                 return;
             }
 
@@ -328,14 +320,15 @@ namespace TacticalDirector.PassMechanics
                 _cachedWeakFootRating);
 
             // Step 3: Compute deterministic error direction — §3.5.7
-            float errorDirectionRad = PassErrorCalculator.ComputeErrorDirection(
+            // Returns a signed fraction in [-1, +1] (uniform distribution).
+            float errorDirectionFraction = PassErrorCalculator.ComputeErrorDirection(
                 _request.AgentId,
                 _request.FrameNumber,
                 (int)_request.PassType);
 
             // Step 4: Apply error to kick direction — §3.6.7
             Vector3 finalKickDirection = PassTargetResolver.ApplyErrorToDirection(
-                _baseKickDirection, errorAngleDeg, errorDirectionRad);
+                _baseKickDirection, errorAngleDeg, errorDirectionFraction);
 
             // Step 5: Construct final velocity Vector3 — §3.3.6
             Vector3 finalVelocity = PassVelocityCalculator.ConstructKickVelocity(
@@ -345,8 +338,7 @@ namespace TacticalDirector.PassMechanics
             if (float.IsNaN(finalVelocity.x) || float.IsNaN(finalVelocity.y) || float.IsNaN(finalVelocity.z))
             {
                 Debug.LogError($"[PassExecutor] FM-04: NaN in finalVelocity. Pass cancelled. Agent={_request.AgentId}");
-                _lastResult = new PassResult { Outcome = PassOutcome.Cancelled, PassType = _request.PassType, ContactFrame = -1 };
-                _state = PassExecutionState.Idle;
+                EmitCancelAtContact(matchTime, frameNumber, CancelReason.InvalidVelocity);
                 return;
             }
 
@@ -354,8 +346,7 @@ namespace TacticalDirector.PassMechanics
             if (!_ballSystem.IsBallPossessedBy(_request.AgentId))
             {
                 Debug.LogError($"[PassExecutor] FM-08: Agent {_request.AgentId} lost possession before CONTACT. Race condition.");
-                _lastResult = new PassResult { Outcome = PassOutcome.Cancelled, PassType = _request.PassType, ContactFrame = -1 };
-                _state = PassExecutionState.Idle;
+                EmitCancelAtContact(matchTime, frameNumber, CancelReason.PossessionLost);
                 return;
             }
 
@@ -440,6 +431,50 @@ namespace TacticalDirector.PassMechanics
         {
             return new PassResult { Outcome = PassOutcome.Invalid, PassType = passType, ContactFrame = -1 };
         }
+
+        // Explicit-switch validity predicate — reflection-free (FR-CS-027–034).
+        // MAINTAINERS: when appending a new PassType member, ADD a new case here in the
+        // same commit. Coverage mirrors PassTypeProfiles.GetProfile / GetBaseError.
+        private static bool IsValidPassType(PassType passType)
+        {
+            switch (passType)
+            {
+                case PassType.Ground:
+                case PassType.Driven:
+                case PassType.Lofted:
+                case PassType.ThroughBall:
+                case PassType.AerialThrough:
+                case PassType.Cross:
+                case PassType.Chip:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        // Shared cancellation path: sets _lastResult, publishes PassCancelledEvent, returns to Idle.
+        // Used by both WINDUP tackle interrupt (§3.8.5) and CONTACT-time FM-04/FM-08 cancels (§3.9.3).
+        private void EmitCancelAtContact(float matchTime, int frameNumber, CancelReason reason)
+        {
+            _lastResult = new PassResult
+            {
+                Outcome      = PassOutcome.Cancelled,
+                PassType     = _request.PassType,
+                ContactFrame = -1
+            };
+
+            EventBusStub.Publish(new PassCancelledEvent
+            {
+                AgentId   = _request.AgentId,
+                TeamId    = _request.TeamId,
+                Reason    = reason,
+                PassType  = _request.PassType,
+                Frame     = frameNumber,
+                MatchTime = matchTime
+            });
+
+            _state = PassExecutionState.Idle;
+        }
     }
 }
 
@@ -463,4 +498,20 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     logging error but returning Initiated with fallback aim point).         |
 // | 1.5     | 2026-05-27 | —      | AR-1 round-5 M-B: removed unused ref BallState ball param from Execute(); |
 // |         |            |        |     possession check uses _ballSystem, not BallState directly.            |
+// | 1.6     | 2026-06-06 | —      | AR-2 H-1/H-2: ExecuteContact FM-04 (NaN velocity) and FM-08 (lost          |
+// |         |            |        |     possession) silent-cancel paths now publish PassCancelledEvent via the |
+// |         |            |        |     new EmitCancelAtContact helper using CancelReason.InvalidVelocity /     |
+// |         |            |        |     PossessionLost respectively. WINDUP TackleInterrupt path migrated to   |
+// |         |            |        |     the same helper. §3.9.3 telemetry surface now complete.                |
+// |         |            |        | AR-2 M-2: callsite renamed errorDirectionRad → errorDirectionFraction to   |
+// |         |            |        |     match PassErrorCalculator's new [-1, +1] uniform-fraction contract.    |
+// |         |            |        | AR-2 L-6: FM-01 PassType validation replaced the `> (int)PassType.Chip`    |
+// |         |            |        |     upper-bound check with an explicit-switch IsValidPassType helper       |
+// |         |            |        |     (reflection-free; FR-CS-027–034 compliant). Future enum appends now    |
+// |         |            |        |     fail-closed until a case is added, prompting the maintainer.           |
+// |         |            |        | AR-2 L-7: explanatory comment added documenting ResolveAimPoint vs cache-  |
+// |         |            |        |     block ordering invariant (no _cached* read; safe today).               |
+// |         |            |        | AR-2 X-1: Stage-0 receiver-position staleness across WINDUP frames noted   |
+// |         |            |        |     at the resolution site (KD-4 / §7.1 upgrade point).                    |
+// |         |            |        |     PassCancelledEvent.CancelReason field renamed to .Reason (L-8 follow). |
 #endregion

@@ -32,7 +32,11 @@ namespace TacticalDirector.PassMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                           |
-// | 1.0     | 2026-05-26 | —      | Extracted from PassEvents.cs per one-type-per-file rule (H4).  |
-// | 1.1     | 2026-05-27 | —      | AR-1 round-5 L-B: DEVELOPMENT_BUILD || UNITY_EDITOR guard.      |
-// | 1.2     | 2026-05-30 | —      | Stage 1: replaced no-op with three-tier forwarding to EventBus. |
+// | 1.0     | 2026-05-26 | —      | Extracted from PassEvents.cs per one-type-per-file rule (H4).         |
+// | 1.1     | 2026-05-27 | —      | AR-1 round-5 L-B: DEVELOPMENT_BUILD || UNITY_EDITOR guard added on    |
+// |         |            |        |     the no-op stub's log emit; reverted in v1.2 when the no-op was    |
+// |         |            |        |     replaced by the real EventBus forwarding (no log emit remains).   |
+// | 1.2     | 2026-05-30 | —      | Stage 1: replaced no-op with three-tier forwarding to EventBus.       |
+// | 1.3     | 2026-06-06 | —      | AR-2 L-5: clarified history note above (v1.1 guard does not exist     |
+// |         |            |        |     after v1.2 forwarding landed). No code change.                    |
 #endregion

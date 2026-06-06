@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassAttemptEvent.cs
 // Created:  2026-05-26
-// Modified: 2026-05-30
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.9.2, Event System #17 §3.2.1, Code Standards #20
 // Purpose:  PassAttemptEvent struct: published at CONTACT immediately after
@@ -24,17 +24,17 @@ namespace TacticalDirector.PassMechanics
     {
         // ── 12-byte header (§2.4.1) — set by EventBus.Publish at enqueue time ────────
         /// <summary>Event type ordinal from Appendix A. Set by EventBus; do not set manually.</summary>
-        public byte   eventTypeOrdinal;
+        public byte   EventTypeOrdinal;
         /// <summary>Payload schema version. Set by EventBus.</summary>
-        public byte   payloadVersion;
+        public byte   PayloadVersion;
         /// <summary>Reserved padding; canonical zero. Set by EventBus.</summary>
-        public ushort _reserved;
+        public ushort Reserved;
         /// <summary>Physics tick at publish time. Set by EventBus.</summary>
-        public uint   tick;
+        public uint   Tick;
         /// <summary>Producing subsystem ordinal (#16 §3.1.1). Set by EventBus.</summary>
-        public ushort subsystemOrdinal;
+        public ushort SubsystemOrdinal;
         /// <summary>Per-tick per-phase draw index (FM-017-002). Set by EventBus.</summary>
-        public ushort intraPhaseDrawIndex;
+        public ushort IntraPhaseDrawIndex;
 
         // ── Payload fields ────────────────────────────────────────────────────────────
         /// <summary>ID of the passing agent.</summary>
@@ -83,7 +83,14 @@ namespace TacticalDirector.PassMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                            |
-// | 1.0     | 2026-05-26 | —      | Extracted from PassEvents.cs per one-type-per-file rule (H4).   |
+// | 1.0     | 2026-05-26 | —      | Extracted from PassEvents.cs per one-type-per-file rule (H4).    |
 // | 1.1     | 2026-05-30 | —      | Stage 1: added IEventA, [StructLayout(Sequential)], 12-byte      |
 // |         |            |        | header fields. Ordinal 0x0C. Event System #17 §3.2.1 wiring.    |
+// | 1.2     | 2026-06-06 | —      | AR-2 M-6: 12-byte header public fields renamed camelCase →       |
+// |         |            |        |     PascalCase per FR-CS-001 (eventTypeOrdinal→EventTypeOrdinal, |
+// |         |            |        |     payloadVersion→PayloadVersion, _reserved→Reserved, tick→Tick,|
+// |         |            |        |     subsystemOrdinal→SubsystemOrdinal,                            |
+// |         |            |        |     intraPhaseDrawIndex→IntraPhaseDrawIndex).                     |
+// |         |            |        |     [StructLayout(Sequential)] preserves binary layout — wire    |
+// |         |            |        |     digest unchanged; consumers reading by name see PascalCase.   |
 #endregion

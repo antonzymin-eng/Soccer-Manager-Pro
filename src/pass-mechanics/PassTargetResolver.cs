@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassTargetResolver.cs
 // Created:  2026-05-26
-// Modified: 2026-05-27
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.6, Code Standards #20
 // Purpose:  Pure static resolver for aim points, through-ball lead projection,
@@ -101,25 +101,39 @@ namespace TacticalDirector.PassMechanics
 
         /// <summary>
         /// Applies the deterministic error rotation to the kick direction.
-        /// Rotates kickDirection by errorAngleDeg × sin(errorDirectionRad) in the
+        /// Rotates kickDirection by (errorAngleDeg × errorDirectionFraction) in the
         /// horizontal plane (XY) around the Z axis (vertical in Z-up coordinate system).
-        /// The spec note in §3.6.7 permits implementation variation; this form is
-        /// deterministic and produces the correct mean angular deviation. §3.6.7.
+        /// errorDirectionFraction is the [-1, +1] signed fraction from §3.5.7 — its
+        /// uniform distribution carries through to a uniform distribution of final
+        /// deflection in [-errorAngleDeg, +errorAngleDeg]. §3.6.7.
+        ///
+        /// Implementation note: a direct 2D sin/cos rotation in XY replaces the prior
+        /// Quaternion.Euler form (AR-2 L-2 cleanup) — same semantics, fewer ops.
         /// </summary>
         /// <param name="kickDirection">Normalised horizontal direction (Z must be 0).</param>
         /// <param name="errorAngleDeg">Error magnitude in degrees from §3.5.</param>
-        /// <param name="errorDirectionRad">Hash-determined error direction [0, 2π) from §3.5.7.</param>
+        /// <param name="errorDirectionFraction">Hash-determined signed fraction in [-1, +1] from §3.5.7.</param>
         /// <returns>Normalised kick direction after error applied.</returns>
         public static Vector3 ApplyErrorToDirection(
             Vector3 kickDirection,
             float errorAngleDeg,
-            float errorDirectionRad)
+            float errorDirectionFraction)
         {
-            // Rotate around Z axis (vertical in Z-up) by errorAngleDeg * sin(errorDirectionRad)
-            // degrees. sin maps [0,2π) to [-1,+1], distributing error direction uniformly.
-            float rotDeg = Mathf.Sin(errorDirectionRad) * errorAngleDeg;
-            Quaternion errorRotation = Quaternion.Euler(0f, 0f, rotDeg);
-            return (errorRotation * kickDirection).normalized;
+            float rotDeg = errorDirectionFraction * errorAngleDeg;
+            float rotRad = rotDeg * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(rotRad);
+            float sin = Mathf.Sin(rotRad);
+
+            // 2D rotation about Z axis (Z-up): (x', y') = (x*cos - y*sin, x*sin + y*cos).
+            float rx = kickDirection.x * cos - kickDirection.y * sin;
+            float ry = kickDirection.x * sin + kickDirection.y * cos;
+
+            Vector2 rotated = new Vector2(rx, ry);
+            if (rotated.sqrMagnitude < 0.0001f)
+                return Vector3.right;
+
+            rotated.Normalize();
+            return new Vector3(rotated.x, rotated.y, 0f);
         }
 
         // ── Derived Helpers ──────────────────────────────────────────────────────────
@@ -171,4 +185,10 @@ namespace TacticalDirector.PassMechanics
 // | 1.2     | 2026-05-27 | —      | AR-1 M-1: class changed public → internal (implementation detail). |
 // |         |            |        | AR-1 M-2: diagnostic Debug.LogWarning calls guarded by             |
 // |         |            |        |     #if DEVELOPMENT_BUILD || UNITY_EDITOR (FR-CS-027-034).         |
+// | 1.3     | 2026-06-06 | —      | AR-2 L-2: ApplyErrorToDirection replaced Quaternion.Euler with     |
+// |         |            |        |     direct 2D sin/cos rotation around Z (Z-up); fewer ops, same    |
+// |         |            |        |     semantics; degenerate-output safety fallback added.            |
+// |         |            |        | AR-2 M-2: param renamed errorDirectionRad → errorDirectionFraction |
+// |         |            |        |     to match PassErrorCalculator.ComputeErrorDirection's new [-1,+1]|
+// |         |            |        |     uniform contract; sin() compose-on-rotation removed.            |
 #endregion

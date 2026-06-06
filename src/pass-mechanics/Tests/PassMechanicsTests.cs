@@ -1092,9 +1092,9 @@ namespace TacticalDirector.PassMechanics.Tests
             Assert.AreEqual(dir2, dir3, "EC-009: ComputeErrorDirection must be deterministic (calls 2 and 3).");
         }
 
-        /// <summary>EC-010: Error direction is within [0, 2π).</summary>
+        /// <summary>EC-010: Error direction is a signed fraction in [-1, +1) (§3.5.7 contract).</summary>
         [Test]
-        public void EC010_ErrorDirection_WithinTwoPiRange()
+        public void EC010_ErrorDirection_WithinSignedUnitRange()
         {
             int[] agentIds    = new int[] { 0, 1, 7, 42, 999 };
             int[] frames      = new int[] { 0, 1, 60, 3600 };
@@ -1107,10 +1107,10 @@ namespace TacticalDirector.PassMechanics.Tests
                     foreach (int passIdx in passIndices)
                     {
                         float dir = PassErrorCalculator.ComputeErrorDirection(agentId, frame, passIdx);
-                        Assert.GreaterOrEqual(dir, 0.0f,
-                            $"EC-010: Direction for agent={agentId} frame={frame} passIdx={passIdx} must be >= 0.");
-                        Assert.Less(dir, Mathf.PI * 2.0f,
-                            $"EC-010: Direction for agent={agentId} frame={frame} passIdx={passIdx} must be < 2π.");
+                        Assert.GreaterOrEqual(dir, -1.0f,
+                            $"EC-010: Direction for agent={agentId} frame={frame} passIdx={passIdx} must be >= -1.");
+                        Assert.Less(dir, 1.0f,
+                            $"EC-010: Direction for agent={agentId} frame={frame} passIdx={passIdx} must be < +1.");
                     }
                 }
             }
