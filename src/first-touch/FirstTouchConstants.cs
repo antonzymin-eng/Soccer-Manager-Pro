@@ -24,6 +24,9 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[FIXED] Minimum vector magnitude before numerical fallback activates. Numerical stability guard — not designer-tunable. First Touch Mechanics #4 §3.3.2.</summary>
         public const float BLEND_MIN_MAGNITUDE = 0.001f;
 
+        /// <summary>[FIXED] Square of BLEND_MIN_MAGNITUDE; cached to avoid repeated multiplications in sqrMagnitude predicates. First Touch Mechanics #4 §3.3.2.</summary>
+        public const float BLEND_MIN_MAGNITUDE_SQ = BLEND_MIN_MAGNITUDE * BLEND_MIN_MAGNITUDE;
+
         #endregion
 
         #region Derived
@@ -204,4 +207,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.4     | 2026-05-26 | —      | Adversarial review pass 4: Fixed QualityBandPoor doc ("QualityBandGood" → "ControlledThreshold"); changed BlendMinMagnitude tag from [GT] to [FIXED] (numerical stability guard, not designer-tunable). |
 // | 1.4.1   | 2026-05-28 | —      | AR-1 fix: added HalfTurnLRecReduction constant (GT, 0.85f) to satisfy Perception System #7 §3.3.3 CROSS-tag contract. (Renumbered from duplicate 1.1 in v1.5 audit.) |
 // | 1.5     | 2026-06-06 | —      | AR-5 M-2: BlendMinMagnitude relocated from end-of-GT region to #region Fixed, renamed BLEND_MIN_MAGNITUDE (ALL_CAPS per FR-CS-001 for [FIXED]), retyped `static readonly` → `const` to match AGENT_ID_NONE, stale "TODO: replace with config loader" comment dropped (FIXED is not designer-tunable). L-1: duplicate v1.1 row reconciled — earlier May-28 HalfTurnLRecReduction addition retroactively renumbered v1.4.1 to restore monotonic ordering. |
+// | 1.6     | 2026-06-06 | —      | AR-6 L-1: added BLEND_MIN_MAGNITUDE_SQ compile-time const so callers (BallDisplacementProcessor, OrientationDetector, PossessionStateMachine) consume a single cached square instead of recomputing the product across 6 call sites. |
 #endregion

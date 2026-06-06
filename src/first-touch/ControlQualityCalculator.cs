@@ -1,6 +1,6 @@
 // File:     src/first-touch/ControlQualityCalculator.cs
 // Created:  2026-05-25
-// Modified: 2026-05-26
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.1, Code Standards #20
 // Purpose:  Computes control quality scalar [0,1] from attributes, ball speed, agent speed, pressure, and orientation.
@@ -26,21 +26,23 @@ namespace TacticalDirector.FirstTouch
         /// <param name="agentSpeed">Speed of the receiving agent (m/s).</param>
         /// <param name="pressureScalar">Pre-computed pressure scalar [0,1].</param>
         /// <param name="orientationBonus">Bonus value from OrientationDetector (HalfTurnBonus or 0).</param>
+        /// <param name="weightedAttr">Out: TechniqueWeight × technique + FirstTouchWeight × firstTouch after AttrMinGuard floor; surfaced for the FirstTouchResult.EffectiveAttribute diagnostic without forcing the caller to recompute.</param>
         internal static float Calculate(
             int technique,
             int firstTouch,
             float ballSpeed,
             float agentSpeed,
             float pressureScalar,
-            float orientationBonus)
+            float orientationBonus,
+            out float weightedAttr)
         {
             // Step 1 — Guard attribute floor.
-            technique = Mathf.Max(technique, FirstTouchConstants.AttrMinGuard);
-            firstTouch = Mathf.Max(firstTouch, FirstTouchConstants.AttrMinGuard);
+            int techGuarded = Mathf.Max(technique, FirstTouchConstants.AttrMinGuard);
+            int firstGuarded = Mathf.Max(firstTouch, FirstTouchConstants.AttrMinGuard);
 
             // Step 2 — Weighted attribute blend, normalised to [0,1]. §3.1.1 Steps 1–2.
-            float weightedAttr = FirstTouchConstants.TechniqueWeight * technique
-                               + FirstTouchConstants.FirstTouchWeight * firstTouch;
+            weightedAttr = FirstTouchConstants.TechniqueWeight * techGuarded
+                         + FirstTouchConstants.FirstTouchWeight * firstGuarded;
             float normAttr = weightedAttr / FirstTouchConstants.AttrMax;
 
             // Step 3 — Orientation bonus: multiplicative boost on the normalised attribute. §3.1.1 Step 3.
@@ -76,4 +78,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                                                                      |
 // | 1.1     | 2026-05-26 | —      | H-1 fix: orientation bonus now multiplicative on normAttr; moveDifficulty always applied (no conditional); pressure degradation now multiplicative. |
 // | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: removed thunderbolt cap from Step 8 — spec §3.3.7 specifies it as a separate post-Step-8 operation owned by FirstTouchSystem; updated XML doc. |
+// | 1.3     | 2026-06-06 | —      | AR-6 L-3: out float weightedAttr added so FirstTouchSystem's EffectiveAttribute diagnostic no longer recomputes the Step-2 weighted blend. AR-6 L-5: input ints copied to techGuarded/firstGuarded locals instead of mutating method parameters. |
 #endregion

@@ -32,23 +32,22 @@ namespace TacticalDirector.FirstTouch
             // High q → touches go where intended; low q → ball continues along original path.
             // IncomingDir is where the ball came FROM (negated velocity). §3.3.2.
             Vector2 ballVelXY = new Vector2(ctx.BallVelocity.x, ctx.BallVelocity.y);
-            float blendThreshSq = FirstTouchConstants.BLEND_MIN_MAGNITUDE * FirstTouchConstants.BLEND_MIN_MAGNITUDE;
             Vector2 agentFacingXY = new Vector2(ctx.AgentFacing.x, ctx.AgentFacing.y);
-            Vector2 incomingDir = ballVelXY.sqrMagnitude > blendThreshSq
+            Vector2 incomingDir = ballVelXY.sqrMagnitude > FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ
                 ? new Vector2(-ballVelXY.x, -ballVelXY.y).normalized
                 : agentFacingXY;
 
             Vector2 intendedDirXY = new Vector2(ctx.IntendedTouchDirection.x, ctx.IntendedTouchDirection.y);
-            Vector2 intendedDir = intendedDirXY.sqrMagnitude > blendThreshSq
+            Vector2 intendedDir = intendedDirXY.sqrMagnitude > FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ
                 ? intendedDirXY.normalized
                 : incomingDir;
 
             Vector2 blendedDir2D = Vector2.Lerp(incomingDir, intendedDir, q);
 
             // Fallback: if blended direction is near-zero, use agent facing.
-            if (blendedDir2D.sqrMagnitude < blendThreshSq)
+            if (blendedDir2D.sqrMagnitude < FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ)
             {
-                blendedDir2D = agentFacingXY.sqrMagnitude > blendThreshSq
+                blendedDir2D = agentFacingXY.sqrMagnitude > FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ
                     ? agentFacingXY.normalized
                     : Vector2.right;
             }
@@ -99,4 +98,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.1     | 2026-05-26 | —      | H-4 fix: IncomingDir negated (approach direction per §3.3.2); H-5 fix: velocity formula adds AgentContrib. |
 // | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: replaced PitchHalfLength*2.0f and PitchHalfWidth*2.0f with PitchLength/PitchWidth constants (no magic literals); removed duplicate §3.3.5 comment reference. |
 // | 1.3     | 2026-06-06 | —      | AR-5 M-2 follow-on: BlendMinMagnitude → BLEND_MIN_MAGNITUDE (ALL_CAPS [FIXED] rename in FirstTouchConstants). |
+// | 1.4     | 2026-06-06 | —      | AR-6 L-1: blendThreshSq local dropped; three sqrMagnitude predicates now read BLEND_MIN_MAGNITUDE_SQ directly from FirstTouchConstants. |
 #endregion

@@ -24,7 +24,7 @@ namespace TacticalDirector.FirstTouch
         /// <param name="ballVelocityXY">XY component of the ball's velocity (m/s); magnitude may be non-unit.</param>
         internal static bool IsHalfTurnOriented(Vector2 agentFacing, Vector2 ballVelocityXY)
         {
-            if (ballVelocityXY.sqrMagnitude < FirstTouchConstants.BLEND_MIN_MAGNITUDE * FirstTouchConstants.BLEND_MIN_MAGNITUDE)
+            if (ballVelocityXY.sqrMagnitude < FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ)
             {
                 return false;
             }
@@ -47,4 +47,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                           |
 // | 1.1     | 2026-05-26 | —      | H-8 fix: ball velocity negated to obtain approach direction per §3.6.2.   |
 // | 1.2     | 2026-06-06 | —      | AR-5 M-2 follow-on: BlendMinMagnitude → BLEND_MIN_MAGNITUDE (ALL_CAPS [FIXED] rename in FirstTouchConstants). |
+// | 1.3     | 2026-06-06 | —      | AR-6 L-1: sqrMagnitude predicate reads BLEND_MIN_MAGNITUDE_SQ instead of recomputing the product inline. |
 #endregion

@@ -72,8 +72,8 @@ namespace TacticalDirector.FirstTouch
             Vector2 newXY = new Vector2(newVel.x, newVel.y);
             Vector2 origXY = new Vector2(originalVel.x, originalVel.y);
 
-            float blendThreshSq = FirstTouchConstants.BLEND_MIN_MAGNITUDE * FirstTouchConstants.BLEND_MIN_MAGNITUDE;
-            if (newXY.sqrMagnitude < blendThreshSq || origXY.sqrMagnitude < blendThreshSq)
+            if (newXY.sqrMagnitude < FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ
+                || origXY.sqrMagnitude < FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ)
             {
                 return 0.0f;
             }
@@ -87,4 +87,5 @@ namespace TacticalDirector.FirstTouch
 // | Version | Date       | Author | Notes                                                                                                                                                                |
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                                                                                       |
 // | 1.1     | 2026-06-06 | —      | AR-5 M-1: TouchResult enum members renamed PascalCase (Controlled/LooseBall/Deflection/Interception). L-2: BlendMinMagnitude² cached in local. L-4: TODO replaced with ERR-004-002 anchor. M-2 follow-on: BlendMinMagnitude → BLEND_MIN_MAGNITUDE. |
+// | 1.2     | 2026-06-06 | —      | AR-6 L-1: AR-5 L-2 local-cache superseded by FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ — predicate now reads the catalogue compile-time const directly. |
 #endregion
