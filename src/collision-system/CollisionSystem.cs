@@ -1,11 +1,12 @@
 // File:     src/collision-system/CollisionSystem.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25  [v1.2]
+// Modified: 2026-06-05  [v1.3]
 // Author:   —
 // Spec:     Collision System #3 §3.4.1, §4.1.3, §4.4.4, Code Standards #20
 // Purpose:  Main collision system — orchestrates spatial hash, narrow phase, and response.
 //           Call UpdateCollisions() once per 60 Hz frame after Agent Movement and Ball Physics.
 
+using System;
 using System.Collections.Generic;
 
 using UnityEngine;
@@ -35,18 +36,42 @@ namespace TacticalDirector.CollisionSystem
 
         // Parallel output arrays — caller allocates once and passes each frame.
         // Indexed by agent index (0–21).
-        private Vector3[] _pendingVelocityImpulse;
-        private Vector3[] _pendingPositionCorrection;
-        private bool[] _pendingGrounded;
-        private bool[] _pendingStumble;
-        private float[] _pendingImpactForce;
+        private readonly Vector3[] _pendingVelocityImpulse;
+        private readonly Vector3[] _pendingPositionCorrection;
+        private readonly bool[] _pendingGrounded;
+        private readonly bool[] _pendingStumble;
+        private readonly float[] _pendingImpactForce;
+
+        // Per-frame agent physical snapshot cache — populated once per frame in the insert pass
+        // and reused by the broad-phase and narrow-phase loops (avoids 3× recomputation per agent).
+        private readonly AgentPhysicalProperties[] _snapshots;
+        private readonly bool[] _snapshotValid;
 
         /// <summary>
         /// Constructs the system with pre-allocated buffers. Call once per match.
         /// </summary>
-        /// <param name="agentCapacity">Number of agents (typically 22).</param>
+        /// <param name="agentCapacity">Number of agents. MUST equal SpatialHashConstants.AgentCapacity —
+        /// the CollisionPairBitfield virtual-slot layout (ball mapped to BallVirtualIndex = AgentCapacity)
+        /// and the 256-bit bitfield budget assume this binding.</param>
+        /// <exception cref="ArgumentException">Thrown when agentCapacity does not match the bitfield slot layout.</exception>
         public CollisionSystem(int agentCapacity = 22) // default = SpatialHashConstants.AgentCapacity; literal required for default param
         {
+            if (agentCapacity != SpatialHashConstants.AgentCapacity)
+            {
+                throw new ArgumentException(
+                    $"agentCapacity ({agentCapacity}) must equal SpatialHashConstants.AgentCapacity " +
+                    $"({SpatialHashConstants.AgentCapacity}); CollisionPairBitfield slot layout is wired " +
+                    $"to BallVirtualIndex = AgentCapacity.",
+                    nameof(agentCapacity));
+            }
+            if (SpatialHashConstants.BallVirtualIndex != SpatialHashConstants.AgentCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"SpatialHashConstants invariant violated: BallVirtualIndex " +
+                    $"({SpatialHashConstants.BallVirtualIndex}) must equal AgentCapacity " +
+                    $"({SpatialHashConstants.AgentCapacity}). See CollisionPairBitfield pair-index formula.");
+            }
+
             _spatialHash = new SpatialHashGrid();
             _processedPairs = new CollisionPairBitfield();
             _eventBuffer = new CollisionEvent[SpatialHashConstants.MaxCollisionPairs];
@@ -57,6 +82,8 @@ namespace TacticalDirector.CollisionSystem
             _pendingGrounded = new bool[n];
             _pendingStumble = new bool[n];
             _pendingImpactForce = new float[n];
+            _snapshots = new AgentPhysicalProperties[n];
+            _snapshotValid = new bool[n];
         }
 
         /// <summary>
@@ -93,6 +120,26 @@ namespace TacticalDirector.CollisionSystem
 
             int count = agentStates.Length;
 
+            // AR-2 M-1/L-1: validate all per-agent input/output array lengths against the
+            // ctor-fixed buffer capacity. The ctor guarantees _snapshots.Length == AgentCapacity;
+            // an oversize agentStates would otherwise IOOR on _snapshotValid[i] with an opaque
+            // diagnostic before the broad phase runs.
+            if (count > _snapshots.Length
+                || agentAttrs.Length < count
+                || agentTeamIds.Length < count
+                || agentIsGoalkeeper.Length < count
+                || knockdownOut.Length < count
+                || knockdownForceOut.Length < count
+                || stumbleOut.Length < count)
+            {
+                throw new ArgumentException(
+                    $"Per-agent array length mismatch. count={count}; capacity={_snapshots.Length}; " +
+                    $"attrs={agentAttrs.Length}; teams={agentTeamIds.Length}; " +
+                    $"gk={agentIsGoalkeeper.Length}; knockdown={knockdownOut.Length}; " +
+                    $"knockdownForce={knockdownForceOut.Length}; stumble={stumbleOut.Length}.",
+                    nameof(agentStates));
+            }
+
             // Frame seed: XOR match seed with frame index in both halves for better distribution.
             ulong frameSeed = matchSeed ^ (ulong)frameNumber ^ ((ulong)frameNumber << 32);
             _rng = new DeterministicRNG(frameSeed);
@@ -107,22 +154,31 @@ namespace TacticalDirector.CollisionSystem
                 _pendingGrounded[i] = false;
                 _pendingStumble[i] = false;
                 _pendingImpactForce[i] = 0f;
+                _snapshotValid[i] = false;
                 knockdownOut[i] = false;
                 knockdownForceOut[i] = 0f;
                 stumbleOut[i] = false;
             }
 
-            // Phase 1 — populate spatial hash.
+            // Phase 1 — populate spatial hash and snapshot cache (single pass).
             _spatialHash.Clear();
 
             for (int i = 0; i < count; i++)
             {
-                var snap = AgentPhysicalProperties.From(in agentStates[i], in agentAttrs[i]);
+                AgentPhysicalProperties snap =
+                    AgentPhysicalProperties.From(in agentStates[i], in agentAttrs[i]);
                 if (IsInvalidPosition(snap.Position)) continue;
+
+                _snapshots[i] = snap;
+                _snapshotValid[i] = true;
                 _spatialHash.Insert(i, snap.Position, snap.HitboxRadius);
             }
 
-            if (!IsInvalidPosition(ball.Position))
+            // Ball only contributes to the broad phase when it is within agent-reach height —
+            // a high aerial ball cannot collide with any ground agent (CheckAgentBallCollision
+            // would reject the narrow-phase test anyway; skipping insert avoids wasted query work).
+            if (!IsInvalidPosition(ball.Position)
+                && ball.Position.z <= CollisionPhysicsConstants.AgentReachHeight)
             {
                 _spatialHash.Insert(SpatialHashConstants.BALL_ENTITY_ID, ball.Position,
                     SpatialHashConstants.BallRadius);
@@ -130,12 +186,13 @@ namespace TacticalDirector.CollisionSystem
 
             // Phases 2/3/4 — broad phase query, narrow phase, response.
             int pairs = 0;
+            bool pairLimitExceeded = false;
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < count && !pairLimitExceeded; i++)
             {
-                var snapI = AgentPhysicalProperties.From(in agentStates[i], in agentAttrs[i]);
-                if (IsInvalidPosition(snapI.Position)) continue;
+                if (!_snapshotValid[i]) continue;
 
+                AgentPhysicalProperties snapI = _snapshots[i];
                 List<int> nearby = _spatialHash.Query(snapI.Position, snapI.HitboxRadius);
 
                 for (int k = 0; k < nearby.Count; k++)
@@ -154,22 +211,20 @@ namespace TacticalDirector.CollisionSystem
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                         Debug.LogWarning($"[CollisionSystem] MaxCollisionPairs ({SpatialHashConstants.MaxCollisionPairs}) exceeded");
 #endif
-                        goto PublishEvents;
+                        pairLimitExceeded = true;
+                        break;
                     }
 
                     if (j == SpatialHashConstants.BALL_ENTITY_ID)
                     {
-                        ProcessAgentBall(agentStates, agentAttrs, agentTeamIds,
-                            agentIsGoalkeeper, i, ref ball, matchTime);
+                        ProcessAgentBall(agentTeamIds, agentIsGoalkeeper, i, ref ball, matchTime);
                     }
                     else
                     {
-                        ProcessAgentAgent(agentStates, agentAttrs, agentTeamIds, i, j, matchTime);
+                        ProcessAgentAgent(agentTeamIds, i, j, matchTime);
                     }
                 }
             }
-
-            PublishEvents:
 
             // Apply accumulated impulses and corrections to agent states.
             for (int i = 0; i < count; i++)
@@ -205,28 +260,23 @@ namespace TacticalDirector.CollisionSystem
             // Publish events.
             for (int i = 0; i < _eventCount; i++)
             {
-                eventConsumer?.OnCollisionEvent(_eventBuffer[i]);
+                eventConsumer?.OnCollisionEvent(in _eventBuffer[i]);
             }
         }
 
         private void ProcessAgentAgent(
-            AgentState[] states,
-            PlayerAttributes[] attrs,
             int[] teamIds,
             int id1,
             int id2,
             float matchTime)
         {
-            var snap1 = AgentPhysicalProperties.From(in states[id1], in attrs[id1]);
-            var snap2 = AgentPhysicalProperties.From(in states[id2], in attrs[id2]);
+            AgentPhysicalProperties snap1 = _snapshots[id1];
+            AgentPhysicalProperties snap2 = _snapshots[id2];
 
             if (!CollisionDetection.CheckAgentAgentCollision(in snap1, in snap2, out CollisionManifold manifold))
             {
                 return;
             }
-
-            manifold.Entity1ID = id1;
-            manifold.Entity2ID = id2;
 
             bool sameTeam = teamIds[id1] == teamIds[id2];
 
@@ -295,26 +345,26 @@ namespace TacticalDirector.CollisionSystem
         }
 
         private void ProcessAgentBall(
-            AgentState[] states,
-            PlayerAttributes[] attrs,
             int[] teamIds,
             bool[] isGoalkeeper,
             int agentId,
             ref BallState ball,
             float matchTime)
         {
-            var snap = AgentPhysicalProperties.From(in states[agentId], in attrs[agentId]);
+            AgentPhysicalProperties snap = _snapshots[agentId];
 
             if (!CollisionDetection.CheckAgentBallCollision(in snap, in ball, out Vector3 contactPoint))
             {
                 return;
             }
 
+            // BodyPart hardcoded to Torso at Stage 0 — body-part classification is deferred until
+            // BallCollisionHandler.OnAgentCollision is wired to BallPhysics.BallCollision.ApplyAgentContact
+            // (see BallCollisionHandler.cs TODO; Collision System #3 §3.4.3 / Stage 0+1).
             var data = new AgentBallCollisionData
             {
                 ContactPoint = contactPoint,
-                AgentVelocity = new Vector3(states[agentId].Velocity.x,
-                                            states[agentId].Velocity.y, 0f),
+                AgentVelocity = snap.Velocity,
                 BodyPart = BallPhysics.BodyPart.Torso,
                 AgentID = agentId,
                 TeamID = teamIds[agentId],
@@ -337,12 +387,17 @@ namespace TacticalDirector.CollisionSystem
         {
             if (_eventCount >= SpatialHashConstants.MaxCollisionPairs) return;
 
+            // Sort so Entity1ID <= Entity2ID (BALL_ENTITY_ID = -1 sorts first); CollisionEvent
+            // XML doc binds consumers to this ordering invariant.
+            int lo = e1 <= e2 ? e1 : e2;
+            int hi = e1 <= e2 ? e2 : e1;
+
             _eventBuffer[_eventCount++] = new CollisionEvent
             {
                 MatchTime = matchTime,
                 Type = type,
-                Entity1ID = e1,
-                Entity2ID = e2,
+                Entity1ID = lo,
+                Entity2ID = hi,
                 ContactPoint = contactPoint,
                 ImpactForce = impactForce,
                 FoulData = foulData
@@ -351,9 +406,7 @@ namespace TacticalDirector.CollisionSystem
 
         private static bool IsInvalidPosition(Vector3 p)
         {
-            return float.IsNaN(p.x) || float.IsInfinity(p.x)
-                || float.IsNaN(p.y) || float.IsInfinity(p.y)
-                || float.IsNaN(p.z) || float.IsInfinity(p.z);
+            return !float.IsFinite(p.x) || !float.IsFinite(p.y) || !float.IsFinite(p.z);
         }
     }
 }
@@ -367,4 +420,21 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | ProcessAgentAgent: accumulate highest ImpactForce per agent across multiple collisions.  |
 // | 1.2     | 2026-05-25 | —      | Pass-3 fix. P3-1: 0.0001f literals replaced with                                        |
 // |         |            |        | CollisionPhysicsConstants.MinResponseSqrMagnitude (FR-CS-016).                          |
+// | 1.3     | 2026-06-05 | —      | AR-1 fix pass. H-1: ctor validates agentCapacity == SpatialHashConstants.AgentCapacity  |
+// |         |            |        | (throws ArgumentException) and BallVirtualIndex == AgentCapacity invariant (L-6).       |
+// |         |            |        | M-1: AgentPhysicalProperties[] snapshot cache populated once per frame; ProcessAgent*   |
+// |         |            |        | read cached snapshots instead of recomputing per pair.                                  |
+// |         |            |        | M-2: ball insert gated on ball.Position.z <= AgentReachHeight (aerial ball skips broad  |
+// |         |            |        | phase since narrow phase would reject it).                                              |
+// |         |            |        | L-3: RecordEvent sorts (e1, e2) so Entity1ID <= Entity2ID matches XML doc.              |
+// |         |            |        | L-4: goto PublishEvents replaced with pairLimitExceeded bool + outer-loop guard.        |
+// |         |            |        | L-5: ProcessAgentBall gains Stage 0 deferral comment beside hardcoded BodyPart.Torso.   |
+// |         |            |        | IsInvalidPosition rewritten with !float.IsFinite (parity with SpatialHashGrid M-3).     |
+// | 1.4     | 2026-06-05 | —      | AR-2 fix pass. M-1/L-1: UpdateCollisions validates count <= _snapshots.Length and every |
+// |         |            |        | per-agent input/output array (attrs/teams/gk/knockdown/knockdownForce/stumble) is >=    |
+// |         |            |        | count before iterating; oversize agentStates previously IOOR'd on _snapshotValid[i]     |
+// |         |            |        | with an opaque diagnostic. Now throws ArgumentException naming all mismatched lengths.  |
+// | 1.5     | 2026-06-05 | —      | AR-3 follow-through. M-1: OnCollisionEvent call site adopts `in` modifier; matches      |
+// |         |            |        | the updated ICollisionEventConsumer signature (zero-copy publish).                      |
+// |         |            |        | L-2: ProcessAgentAgent no longer writes manifold.Entity1ID/Entity2ID (fields removed).  |
 #endregion

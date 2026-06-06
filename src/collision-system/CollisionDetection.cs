@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionDetection.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-06-05  [v1.1]
 // Author:   —
 // Spec:     Collision System #3 §3.2.1, §3.2.2, FR-02, FR-03, Code Standards #20
 // Purpose:  Pure geometric narrow-phase tests. Static, side-effect free.
@@ -63,9 +63,7 @@ namespace TacticalDirector.CollisionSystem
             {
                 Normal = normal,
                 ContactPoint = contact,
-                PenetrationDepth = penetration,
-                Entity1ID = -1,
-                Entity2ID = -1
+                PenetrationDepth = penetration
             };
 
             return true;
@@ -126,6 +124,8 @@ namespace TacticalDirector.CollisionSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes          |
-// | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | Version | Date       | Author | Notes                                                                          |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                                 |
+// | 1.1     | 2026-06-05 | —      | AR-3 L-2 follow-through. CheckAgentAgentCollision no longer initialises        |
+// |         |            |        | manifold.Entity1ID/Entity2ID (fields removed from CollisionManifold).          |
 #endregion

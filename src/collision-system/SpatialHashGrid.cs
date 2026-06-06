@@ -1,6 +1,6 @@
 // File:     src/collision-system/SpatialHashGrid.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-06-05  [v1.3]
 // Author:   —
 // Spec:     Collision System #3 §3.1.2, FR-01, Code Standards #20
 // Purpose:  Uniform grid spatial hash — O(N) insert, O(1) avg query. Broad phase only.
@@ -69,10 +69,15 @@ namespace TacticalDirector.CollisionSystem
         {
             using var _ = s_insertMarker.Auto();
 
-            if (float.IsNaN(position.x) || float.IsNaN(position.y))
+            if (!float.IsFinite(position.x) || !float.IsFinite(position.y) || !float.IsFinite(position.z))
             {
                 return;
             }
+
+            // Defensive: negative or non-finite radius silently degrades to center-cell-only
+            // insert (left/right/bottom/top predicates all evaluate false).
+            Debug.Assert(radius >= 0f && float.IsFinite(radius),
+                "SpatialHashGrid.Insert radius must be finite and non-negative.");
 
             float cs = SpatialHashConstants.CellSize;
             int cx = CellX(position.x);
@@ -100,8 +105,9 @@ namespace TacticalDirector.CollisionSystem
 
         /// <summary>
         /// Returns all entity IDs in the neighbourhood of cells covering query radius.
-        /// Returns the internal reuse buffer — copy if needed beyond the next query.
-        /// O(E) where E = entities in queried cells.
+        /// Returns the internal reuse buffer — DO NOT MUTATE; copy if needed beyond the
+        /// next Query call (the buffer is cleared at the next Query). O(E) where E =
+        /// entities in queried cells.
         /// </summary>
         public List<int> Query(Vector3 position, float radius)
         {
@@ -171,6 +177,13 @@ namespace TacticalDirector.CollisionSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes          |
-// | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | Version | Date       | Author | Notes                                                                                    |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                                           |
+// | 1.1     | 2026-06-05 | —      | AR-1 M-3. Insert position validity check widened to !float.IsFinite on x/y/z (was        |
+// |         |            |        | IsNaN on x/y only). Closes NaN-z propagation into CollisionEvent.ContactPoint via        |
+// |         |            |        | CheckAgentBallCollision (NaN > AgentReachHeight returns false, bypassing the gate).      |
+// | 1.2     | 2026-06-05 | —      | AR-3 L-3. Insert gains Debug.Assert(radius >= 0 && IsFinite) — negative or non-finite    |
+// |         |            |        | radius silently degraded to center-cell-only insert.                                     |
+// | 1.3     | 2026-06-05 | —      | AR-6 L-3. Query XML doc explicitly forbids mutating the returned buffer (was implicit    |
+// |         |            |        | from "copy if needed beyond next query").                                                |
 #endregion

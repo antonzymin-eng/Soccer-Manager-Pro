@@ -1,6 +1,6 @@
 // File:     src/collision-system/AgentPhysicalProperties.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25  [v1.1]
+// Modified: 2026-06-05  [v1.2]
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.4, Collision System #3 §2.3.2, Code Standards #20
 // Purpose:  Read-only snapshot of an agent's physical state for one collision frame.
@@ -20,10 +20,11 @@ namespace TacticalDirector.CollisionSystem
     /// </summary>
     public struct AgentPhysicalProperties
     {
-        /// <summary>World position (m). Z = 0 for ground-based agents. Ball Physics #1 §1.2.</summary>
+        /// <summary>World position (m). Z = 0 at Stage 0 (From() unconditionally sets z = 0;
+        /// aerial geometry deferred to Stage 1+ jump kinematics). Ball Physics #1 §1.2.</summary>
         public Vector3 Position;
 
-        /// <summary>World velocity (m/s). Z = 0 at Stage 0.</summary>
+        /// <summary>World velocity (m/s). Z = 0 at Stage 0 (From() unconditionally sets z = 0).</summary>
         public Vector3 Velocity;
 
         /// <summary>
@@ -76,4 +77,6 @@ namespace TacticalDirector.CollisionSystem
 // | Version | Date       | Author | Notes                                                                        |
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                               |
 // | 1.1     | 2026-05-25 | —      | H-3: magic literals replaced with AgentPhysicsSnapshotConstants (FR-CS-016). |
+// | 1.2     | 2026-06-05 | —      | AR-5 L-2. Position / Velocity XML docs reworded to match From() — Z is      |
+// |         |            |        | unconditionally 0 at Stage 0, not "0 for ground-based agents".              |
 #endregion

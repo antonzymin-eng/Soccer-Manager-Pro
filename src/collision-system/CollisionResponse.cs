@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionResponse.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25  [v1.1]
+// Modified: 2026-06-05  [v1.4]
 // Author:   —
 // Spec:     Collision System #3 §3.3.1–§3.3.2, FR-04, FR-05, Code Standards #20
 // Purpose:  Impulse-based collision resolution, penetration separation, fall/stumble triggers.
@@ -65,6 +65,9 @@ namespace TacticalDirector.CollisionSystem
                 return result;
             }
 
+            // vRel <= 0 (early-return at line above), e > 0, invMSum > 0 → j >= 0 always.
+            // SameTeamMomentumScale > 0, so the scaled value stays non-negative.
+            // Upper clamp is therefore the only meaningful bound.
             float j = -(1f + e) * vRel / invMSum;
 
             if (isSameTeam)
@@ -72,9 +75,7 @@ namespace TacticalDirector.CollisionSystem
                 j *= CollisionPhysicsConstants.SameTeamMomentumScale;
             }
 
-            j = Mathf.Clamp(j,
-                -CollisionPhysicsConstants.MaxImpulseMagnitude,
-                 CollisionPhysicsConstants.MaxImpulseMagnitude);
+            j = Mathf.Min(j, CollisionPhysicsConstants.MaxImpulseMagnitude);
 
             Vector2 impulse = j * manifold.Normal;
 
@@ -90,7 +91,9 @@ namespace TacticalDirector.CollisionSystem
                     -impulse.x * invM2, -impulse.y * invM2, 0f);
             }
 
-            float impactForce = Mathf.Abs(j) * CollisionPhysicsConstants.PHYSICS_TICK_HZ;
+            // j is non-negative by the invariant documented above (vRel <= 0 early-return),
+            // so Mathf.Abs is redundant — direct multiply is correct and faster.
+            float impactForce = j * CollisionPhysicsConstants.PHYSICS_TICK_HZ;
             result.ImpactForce = impactForce;
 
             if (a1Active)
@@ -118,9 +121,14 @@ namespace TacticalDirector.CollisionSystem
         {
             if (manifold.PenetrationDepth <= 0f) return;
 
-            float sep = manifold.PenetrationDepth <= FallThresholdConstants.MaxPenetrationDepth
-                ? manifold.PenetrationDepth * CollisionPhysicsConstants.SeparationSlop
-                : FallThresholdConstants.MaxPenetrationDepth;
+            // Monotonic clamp: apply slop first, then cap. The previous form
+            // (PD <= MaxPD ? PD*Slop : MaxPD) silently dropped the slop on the
+            // cap branch, so a 0.495m overlap separated by 0.500m while a 1.0m
+            // overlap separated by only 0.500m — severely-overlapping pairs
+            // received LESS slop and were prone to re-collide next frame.
+            float sep = Mathf.Min(
+                manifold.PenetrationDepth * CollisionPhysicsConstants.SeparationSlop,
+                FallThresholdConstants.MaxPenetrationDepth);
 
             float invM1 = a1Active ? (1.0f / a1.Mass) : 0f;
             float invM2 = a2Active ? (1.0f / a2.Mass) : 0f;
@@ -193,4 +201,12 @@ namespace TacticalDirector.CollisionSystem
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                     |
 // | 1.1     | 2026-05-25 | —      | M-3: EvaluateFallOrStumble now triggers stumble when force > fallThreshold but fall |
 // |         |            |        | probability check fails (previously no consequence for surviving high-force hit).   |
+// | 1.2     | 2026-06-05 | —      | AR-3 L-4. Impulse magnitude clamp simplified Mathf.Clamp(±M) → Mathf.Min(j, M).     |
+// |         |            |        | j >= 0 invariant documented inline (guaranteed by vRel <= 0 early-return upstream). |
+// | 1.3     | 2026-06-05 | —      | AR-4 M-3. ApplySeparation sep clamp made monotonic — was                            |
+// |         |            |        | `PD <= MaxPD ? PD*Slop : MaxPD` (silently dropped slop on cap branch); now          |
+// |         |            |        | `Mathf.Min(PD*Slop, MaxPD)`. Severely-overlapping pairs no longer receive less      |
+// |         |            |        | separation than mildly-overlapping pairs.                                           |
+// | 1.4     | 2026-06-05 | —      | AR-5 L-3. impactForce = Mathf.Abs(j) * PHYSICS_TICK_HZ simplified to                |
+// |         |            |        | j * PHYSICS_TICK_HZ — j is non-negative by the AR-3 L-4 invariant.                 |
 #endregion
