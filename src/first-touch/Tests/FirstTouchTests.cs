@@ -1,6 +1,6 @@
 // File:     src/first-touch/Tests/FirstTouchTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-01
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     First Touch #4 §5
 // Purpose:  NUnit unit tests covering CQ, TR, PR, OR, PO, EC, BD, and VS categories from §5.2–§5.10.
@@ -1025,7 +1025,7 @@ namespace TacticalDirector.FirstTouch.Tests
 
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
-            Assert.AreEqual(TouchResult.CONTROLLED, result.PossessionOutcome,
+            Assert.AreEqual(TouchResult.Controlled, result.PossessionOutcome,
                 "PO-001: Good quality with no opponent must yield CONTROLLED.");
             Assert.IsTrue(result.TriggeredDribblingState,
                 "PO-001: CONTROLLED must trigger dribbling state.");
@@ -1049,7 +1049,7 @@ namespace TacticalDirector.FirstTouch.Tests
             // Pre-verify r is in the expected range.
             Assert.GreaterOrEqual(result.TouchRadius, 0.60f, "PO-002 pre-check: r must be ≥ 0.60m.");
             Assert.Less(result.TouchRadius, 1.20f, "PO-002 pre-check: r must be < 1.20m.");
-            Assert.AreEqual(TouchResult.LOOSE_BALL, result.PossessionOutcome,
+            Assert.AreEqual(TouchResult.LooseBall, result.PossessionOutcome,
                 "PO-002: r in [0.60m, 1.20m) with no opponent must yield LOOSE_BALL.");
         }
 
@@ -1069,7 +1069,7 @@ namespace TacticalDirector.FirstTouch.Tests
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
             Assert.GreaterOrEqual(result.TouchRadius, 1.20f, "PO-003 pre-check: r must be ≥ 1.20m.");
-            Assert.AreEqual(TouchResult.INTERCEPTION, result.PossessionOutcome,
+            Assert.AreEqual(TouchResult.Interception, result.PossessionOutcome,
                 "PO-003: r ≥ 1.20m with opponent in 2.50m radius must yield INTERCEPTION.");
         }
 
@@ -1093,9 +1093,9 @@ namespace TacticalDirector.FirstTouch.Tests
 
             // May yield DEFLECTION or LOOSE_BALL depending on exact r and alignment.
             // Just assert it's not INTERCEPTION (no opponent present) and not CONTROLLED (r too large).
-            Assert.AreNotEqual(TouchResult.INTERCEPTION, result.PossessionOutcome,
+            Assert.AreNotEqual(TouchResult.Interception, result.PossessionOutcome,
                 "PO-004: No opponent → cannot be INTERCEPTION.");
-            Assert.AreNotEqual(TouchResult.CONTROLLED, result.PossessionOutcome,
+            Assert.AreNotEqual(TouchResult.Controlled, result.PossessionOutcome,
                 "PO-004: Very poor touch must not yield CONTROLLED.");
         }
 
@@ -1116,9 +1116,9 @@ namespace TacticalDirector.FirstTouch.Tests
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
             // Redirected ball cannot have alignment ≥ 0.70 → not DEFLECTION.
-            Assert.AreNotEqual(TouchResult.DEFLECTION, result.PossessionOutcome,
+            Assert.AreNotEqual(TouchResult.Deflection, result.PossessionOutcome,
                 "PO-005: Low momentum alignment (90° redirect) must not yield DEFLECTION.");
-            Assert.AreNotEqual(TouchResult.INTERCEPTION, result.PossessionOutcome,
+            Assert.AreNotEqual(TouchResult.Interception, result.PossessionOutcome,
                 "PO-005: No opponent → cannot be INTERCEPTION.");
         }
 
@@ -1139,7 +1139,7 @@ namespace TacticalDirector.FirstTouch.Tests
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
             Assert.GreaterOrEqual(result.TouchRadius, 1.20f, "PO-006 pre-check: r must be ≥ 1.20m.");
-            Assert.AreEqual(TouchResult.INTERCEPTION, result.PossessionOutcome,
+            Assert.AreEqual(TouchResult.Interception, result.PossessionOutcome,
                 "PO-006: INTERCEPTION must take priority over DEFLECTION.");
         }
 
@@ -1156,7 +1156,7 @@ namespace TacticalDirector.FirstTouch.Tests
 
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
-            Assert.AreNotEqual(TouchResult.INTERCEPTION, result.PossessionOutcome,
+            Assert.AreNotEqual(TouchResult.Interception, result.PossessionOutcome,
                 "PO-007: Opponent at 2.51m (outside InterceptionRadius) must not trigger INTERCEPTION.");
         }
 
@@ -1174,7 +1174,7 @@ namespace TacticalDirector.FirstTouch.Tests
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
             _system.ApplyTouchResult(result, ctx);
 
-            Assert.AreEqual(TouchResult.CONTROLLED, result.PossessionOutcome,
+            Assert.AreEqual(TouchResult.Controlled, result.PossessionOutcome,
                 "PO-008 pre-check: scenario must yield CONTROLLED.");
             Assert.IsTrue(result.TriggeredDribblingState, "PO-008: TriggeredDribblingState must be true.");
             Assert.AreEqual(7, _agentMov.LastAgentID, "PO-008: SetDribblingState must be called with AgentID=7.");
@@ -1340,7 +1340,7 @@ namespace TacticalDirector.FirstTouch.Tests
 
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
-            if (result.PossessionOutcome != TouchResult.CONTROLLED)
+            if (result.PossessionOutcome != TouchResult.Controlled)
             {
                 Assert.AreEqual(FirstTouchConstants.AGENT_ID_NONE, result.PossessingAgentID,
                     "EC-008: Non-CONTROLLED outcome must set PossessingAgentID to AGENT_ID_NONE.");
@@ -1594,7 +1594,7 @@ namespace TacticalDirector.FirstTouch.Tests
                 "VS-001: Elite midfielder q should be ≈ 0.929.");
             Assert.AreEqual(0.428f, result.TouchRadius, 0.05f,
                 "VS-001: Touch radius should be ≈ 0.428m.");
-            Assert.AreEqual(TouchResult.CONTROLLED, result.PossessionOutcome,
+            Assert.AreEqual(TouchResult.Controlled, result.PossessionOutcome,
                 "VS-001: Elite midfielder in space should yield CONTROLLED.");
             Assert.IsTrue(result.TriggeredDribblingState, "VS-001: CONTROLLED must trigger dribbling.");
         }
@@ -1622,7 +1622,7 @@ namespace TacticalDirector.FirstTouch.Tests
                 "VS-002: Target striker q should be ≈ 0.379.");
             Assert.AreEqual(1.262f, result.TouchRadius, 0.05f,
                 "VS-002: Touch radius should be ≈ 1.262m.");
-            Assert.AreEqual(TouchResult.INTERCEPTION, result.PossessionOutcome,
+            Assert.AreEqual(TouchResult.Interception, result.PossessionOutcome,
                 "VS-002: Defender exploits heavy touch → INTERCEPTION.");
         }
 
@@ -1650,7 +1650,7 @@ namespace TacticalDirector.FirstTouch.Tests
                 "VS-003: Defensive midfielder q should be ≈ 0.604.");
             Assert.AreEqual(0.615f, result.TouchRadius, 0.03f,
                 "VS-003: Touch radius should be ≈ 0.615m.");
-            Assert.AreEqual(TouchResult.LOOSE_BALL, result.PossessionOutcome,
+            Assert.AreEqual(TouchResult.LooseBall, result.PossessionOutcome,
                 "VS-003: Contested ball just beyond controlled range → LOOSE_BALL.");
         }
     }

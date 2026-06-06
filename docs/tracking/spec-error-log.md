@@ -1358,4 +1358,32 @@ Spec #20 §3.2.3 (Tag → C# Storage Class Mapping) is the authoritative naming 
 
 ---
 
-*End of Spec Error Log v1.21 — May 22, 2026.*
+## ERR-004-002: `FirstTouchContext` does not expose the nearest opponent's agent ID — `PossessionStateMachine` cannot resolve `InterceptingAgentID` on INTERCEPTION outcome
+
+**Spec:** First Touch Mechanics #4
+**Section:** §3.4.2 (priority-ordered outcome state machine), §4.3.1 (FirstTouchContext fields), §4.3.2 (FirstTouchResult fields)
+**Severity:** Minor (Stage 0 carve-out; documented placeholder behaviour)
+**Detected During:** `src/first-touch/` AR-5 adversarial review (June 6, 2026), finding L-4.
+**Status:** 🟡 Open — placeholder behaviour in place; spec revision deferred
+
+**Problem:** `PossessionStateMachine.Determine` (Priority 1 — INTERCEPTION branch) returns `(TouchResult.Interception, AGENT_ID_NONE, AGENT_ID_NONE)` because `FirstTouchContext` exposes only `HasNearbyOpponent` (bool) + `NearestOpponentDistance` (float) — there is no field carrying the nearest opponent's entity ID. The third tuple element of the return value is supposed to be `InterceptingAgentID`, but the data needed to populate it is not in the context. Result: the `FirstTouchResult.InterceptingAgentID` field surfaced to callers is `AGENT_ID_NONE = -1` on every INTERCEPTION outcome, which is indistinguishable from "no interception" downstream — Stage 1+ consumers that route possession to the intercepting opponent have no way to identify the receiving agent.
+
+**Root Cause:** First Touch #4 §3.4.2 specifies the outcome classification logic but §4.3.1 omits a `NearestOpponentEntityId` field from `FirstTouchContext`. The omission was discovered post-implementation when `PossessionStateMachine` was wired up. The implementation placed an inline `// TODO: spec gap …` comment at the INTERCEPTION return; the AR-5 review found the gap was untracked in the error log.
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `src/first-touch/PossessionStateMachine.cs` | Priority 1 INTERCEPTION return (~line 40) | Inline `TODO:` comment replaced with `ERR-004-002` anchor |
+| `docs/specs/first-touch/section-4.md` (pending) | §4.3.1 FirstTouchContext field list | Add `NearestOpponentEntityId : int` field (or equivalent) |
+| `src/first-touch/FirstTouchContext.cs` (pending) | Field declarations after `NearestOpponentDistance` | Add the field once §4.3.1 is patched |
+| `src/first-touch/FirstTouchSystem.cs` (pending) | EvaluateFirstTouch wiring | Forward the ID into `PossessionStateMachine.Determine` |
+
+**Resolution (proposed):** Add `int NearestOpponentEntityId` (sentinel `AGENT_ID_NONE` when `!HasNearbyOpponent`) to `FirstTouchContext` in a coordinated §4.3.1 patch. Caller (currently the integration boundary in `FirstTouchSystem`) populates it from the same scan that produces `NearestOpponentDistance` — typically the `PressureEvaluator` result. `PossessionStateMachine.Determine` then uses it for the INTERCEPTION return tuple. No formula change; pure data-flow gap closure.
+
+**Stage 0 carve-out:** Until §4.3.1 is patched, INTERCEPTION outcomes carry `InterceptingAgentID = AGENT_ID_NONE`. Stage 0 has no downstream consumer that routes on this field (FirstTouchSystem.ApplyTouchResult only consumes `PossessingAgentID`); the gap blocks Stage 1+ AI-routed interception handoffs but not the Stage 0 test surface.
+
+**Probe trigger:** AR-5 L-4 (June 6, 2026).
+
+---
+
+*End of Spec Error Log v1.22 — June 6, 2026.*

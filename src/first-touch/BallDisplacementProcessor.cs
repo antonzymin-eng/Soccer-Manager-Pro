@@ -1,6 +1,6 @@
 // File:     src/first-touch/BallDisplacementProcessor.cs
 // Created:  2026-05-25
-// Modified: 2026-05-26
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.3, Code Standards #20
 // Purpose:  Computes new ball position and velocity after a touch using direction blend and momentum retention.
@@ -32,7 +32,7 @@ namespace TacticalDirector.FirstTouch
             // High q → touches go where intended; low q → ball continues along original path.
             // IncomingDir is where the ball came FROM (negated velocity). §3.3.2.
             Vector2 ballVelXY = new Vector2(ctx.BallVelocity.x, ctx.BallVelocity.y);
-            float blendThreshSq = FirstTouchConstants.BlendMinMagnitude * FirstTouchConstants.BlendMinMagnitude;
+            float blendThreshSq = FirstTouchConstants.BLEND_MIN_MAGNITUDE * FirstTouchConstants.BLEND_MIN_MAGNITUDE;
             Vector2 agentFacingXY = new Vector2(ctx.AgentFacing.x, ctx.AgentFacing.y);
             Vector2 incomingDir = ballVelXY.sqrMagnitude > blendThreshSq
                 ? new Vector2(-ballVelXY.x, -ballVelXY.y).normalized
@@ -98,4 +98,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                              |
 // | 1.1     | 2026-05-26 | —      | H-4 fix: IncomingDir negated (approach direction per §3.3.2); H-5 fix: velocity formula adds AgentContrib. |
 // | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: replaced PitchHalfLength*2.0f and PitchHalfWidth*2.0f with PitchLength/PitchWidth constants (no magic literals); removed duplicate §3.3.5 comment reference. |
+// | 1.3     | 2026-06-06 | —      | AR-5 M-2 follow-on: BlendMinMagnitude → BLEND_MIN_MAGNITUDE (ALL_CAPS [FIXED] rename in FirstTouchConstants). |
 #endregion
