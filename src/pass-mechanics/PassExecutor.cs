@@ -456,9 +456,10 @@ namespace TacticalDirector.PassMechanics
         // Used by WINDUP tackle interrupt (§3.8.5), CONTACT-time FM-04 (NaN velocity), and
         // CONTACT-time FM-08 (lost possession) — all paths terminating before Ball.ApplyKick().
         // PRECONDITION: _request has been populated by Execute()'s cache block. Synchronous
-        // FM-01 rejections in Execute() return Invalid via MakeInvalidResult BEFORE _request
-        // is assigned, so they must NOT route through this helper — otherwise the event would
-        // publish default(PassType)=Ground instead of the actually-requested type.
+        // Execute()-level Invalid rejections — FM-01 (unknown PassType), FM-07 (distance ≤ 0),
+        // FM-11 (player-targeted with TargetAgentId=-1) — return via MakeInvalidResult BEFORE
+        // _request is assigned, so they must NOT route through this helper; otherwise the
+        // event would publish default(PassType)=Ground instead of the actually-requested type.
         private void EmitPassCancelled(float matchTime, int frameNumber, CancelReason reason)
         {
             _lastResult = new PassResult
@@ -526,4 +527,7 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     _request dependency. Synchronous FM-01 / FM-07 / FM-11 rejections in   |
 // |         |            |        |     Execute() return Invalid via MakeInvalidResult BEFORE _request is     |
 // |         |            |        |     assigned and MUST NOT route through this helper.                      |
+// | 1.9     | 2026-06-06 | —      | AR-5 L-1: PRECONDITION comment expanded — FM-01 (unknown PassType) /     |
+// |         |            |        |     FM-07 (distance ≤ 0) / FM-11 (player-targeted with TargetAgentId=-1)   |
+// |         |            |        |     spelled out so the reader does not need to grep for them.            |
 #endregion

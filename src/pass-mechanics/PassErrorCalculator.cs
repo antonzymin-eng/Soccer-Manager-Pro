@@ -105,18 +105,19 @@ namespace TacticalDirector.PassMechanics
             // SplitMix64 Stafford-variant 13 finalizer (Mix13) over a non-zero-salted
             // (agentId, frameNumber, passTypeIndex) tuple. The 0x9E3779B97F4A7C15 golden-ratio
             // seed (used as the canonical SplitMix64 state-update gamma in Spec #16 §3.4.4)
-            // is added to agentId BEFORE the first multiply so the (0, 0, 0) input cannot
-            // land on the mixer's fixed point (every step on h=0 stays 0, defeating avalanche).
-            // Subsequent inputs are XOR-folded (not ADD) so distinct (frameNumber, passTypeIndex)
-            // pairs cannot alias via shared product space — i.e. (f=k*P2, p=0) and (f=0, p=k*P1)
-            // produce orthogonal contributions.
-            // The 0xBF58476D1CE4E5B9 / 0x94D049BB133111EB constants below are the Stafford
-            // Mix13 finalizer multipliers — not the same as the Spec #16 §3.4.4 state-update
-            // constant, but a well-known SplitMix64 derivative used for hash quality.
+            // is added BEFORE the first multiply so the (0, 0, 0) input cannot land on the
+            // mixer's fixed point (every step on h=0 stays 0, defeating avalanche).
+            // Each input is multiplied by a DISTINCT prime before XOR-folding so adjacent
+            // (agentId, frame, passIdx) inputs cannot alias via shared product space, and
+            // no input shares the seed's value directly.
+            // The 0xC2B2AE3D27D4EB4F constant is the xxHash64 prime; the 0xBF58476D1CE4E5B9
+            // and 0x94D049BB133111EB constants are the Stafford Mix13 finalizer multipliers
+            // — not the same as the Spec #16 §3.4.4 state-update constant, but well-known
+            // SplitMix64-family derivatives used for hash quality.
             ulong h;
             unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug.
             {
-                h = 0x9E3779B97F4A7C15UL + (ulong)(uint)agentId;
+                h = 0x9E3779B97F4A7C15UL + ((ulong)(uint)agentId) * 0xC2B2AE3D27D4EB4FUL;
                 h ^= ((ulong)(uint)frameNumber) * 0xBF58476D1CE4E5B9UL;
                 h ^= ((ulong)(uint)passTypeIndex) * 0x94D049BB133111EBUL;
                 h ^= h >> 30;
@@ -197,7 +198,13 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     finalizer naming; explicit note that 0xBF584... / 0x94D04... are NOT  |
 // |         |            |        |     the Spec #16 §3.4.4 state-update constant.                            |
 // | 1.5     | 2026-06-06 | —      | AR-4 M-1: restored XOR-combinator orthogonality between frameNumber and  |
-// |         |            |        |     passTypeIndex contributions (AR-3 had folded both into a single ADD). |
-// |         |            |        |     Form is now (seed + agentId) XOR (frame * P1) XOR (passIdx * P2),    |
-// |         |            |        |     eliminating the (a=0, f=k*P2, p=0) / (a=0, f=0, p=k*P1) aliasing.    |
+// |         |            |        |     passTypeIndex contributions (AR-3 had folded all three inputs into a |
+// |         |            |        |     single ADD). Form is now (seed + agentId) XOR (frame*P1) XOR         |
+// |         |            |        |     (passIdx*P2), eliminating the (a=0, f=k*P2, p=0) / (a=0, f=0,        |
+// |         |            |        |     p=k*P1) aliasing.                                                    |
+// | 1.6     | 2026-06-06 | —      | AR-5 M-1: agentId now multiplied by the xxHash64 prime                  |
+// |         |            |        |     0xC2B2AE3D27D4EB4F before the seed addition so adjacent agentIds    |
+// |         |            |        |     within the same frame produce divergent pre-finalizer values rather |
+// |         |            |        |     than differing by 1 in the low bits (Stafford-13 still recovers but |
+// |         |            |        |     the multiplier-spread input is strictly better hash quality).        |
 #endregion

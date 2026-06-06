@@ -30,7 +30,9 @@ namespace TacticalDirector.PassMechanics
         /// <summary>Payload schema version. Set by EventBus.</summary>
         public byte   PayloadVersion;
         /// <summary>Reserved padding; publishers MUST leave at default zero — canonical
-        /// serialisation assumes zero and EventBus does not write this slot.</summary>
+        /// serialisation assumes zero and EventBus does not write this slot. Callers using
+        /// object-initializer syntax (`new PassCancelledEvent { … }`) are compliant by default
+        /// since the field is unmentioned and stays at its struct default.</summary>
         public ushort Reserved;
         /// <summary>Physics tick at publish time. Set by EventBus.</summary>
         public uint   Tick;
@@ -75,4 +77,6 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     (AR-2 H-1 / H-2).                                           |
 // | 1.3     | 2026-06-06 | —      | AR-3 L-8: Reserved XML doc corrected (parallel to PassAttempt    |
 // |         |            |        |     v1.3) — publishers leave at zero; EventBus does not write.    |
+// | 1.4     | 2026-06-06 | —      | AR-5 L-4: Reserved doc adds object-initializer-compliance note  |
+// |         |            |        |     (parallel to PassAttemptEvent v1.4).                         |
 #endregion
