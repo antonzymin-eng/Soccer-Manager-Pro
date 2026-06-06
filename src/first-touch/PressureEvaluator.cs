@@ -1,6 +1,6 @@
 // File:     src/first-touch/PressureEvaluator.cs
 // Created:  2026-05-25
-// Modified: 2026-05-26
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.5, Code Standards #20
 // Purpose:  Evaluates opponent pressure on a receiving agent's position.
@@ -31,15 +31,19 @@ namespace TacticalDirector.FirstTouch
             float nearestDistance = float.PositiveInfinity;
             bool hasNearby = false;
 
+            float pressureRadiusSq = FirstTouchConstants.PressureRadius * FirstTouchConstants.PressureRadius;
+
             for (int i = 0; i < opponentPositions.Length; i++)
             {
-                float dist = Vector2.Distance(agentPositionXY, opponentPositions[i]);
+                Vector2 delta = opponentPositions[i] - agentPositionXY;
+                float distSq = delta.sqrMagnitude;
 
-                if (dist > FirstTouchConstants.PressureRadius)
+                if (distSq > pressureRadiusSq)
                 {
                     continue;
                 }
 
+                float dist = Mathf.Sqrt(distSq);
                 hasNearby = true;
 
                 if (dist < nearestDistance)
@@ -70,4 +74,5 @@ namespace TacticalDirector.FirstTouch
 // | Version | Date       | Author | Notes                                                                                             |
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                    |
 // | 1.1     | 2026-05-26 | —      | H-6/H-7 fix: contribution formula corrected to (MIN/dist)²; normalisation corrected to /Saturation. |
+// | 1.2     | 2026-06-06 | —      | AR-5 L-3: squared-distance gate against PressureRadius² before sqrt — Vector2.Distance only computed for opponents inside the radius. |
 #endregion

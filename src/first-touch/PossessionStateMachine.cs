@@ -1,6 +1,6 @@
 // File:     src/first-touch/PossessionStateMachine.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.4.2, Code Standards #20
 // Purpose:  Priority-ordered state machine that classifies a touch into INTERCEPTION, DEFLECTION, LOOSE_BALL, or CONTROLLED.
@@ -37,10 +37,10 @@ namespace TacticalDirector.FirstTouch
                 && ctx.HasNearbyOpponent
                 && ctx.NearestOpponentDistance <= FirstTouchConstants.InterceptionRadius)
             {
-                // TODO: spec gap — FirstTouchContext does not expose the nearest opponent's agent ID.
-                // InterceptingAgentID cannot be resolved here without that data; set to AGENT_ID_NONE
-                // as a placeholder. Tracked for resolution in a future spec revision.
-                return (TouchResult.INTERCEPTION, FirstTouchConstants.AGENT_ID_NONE, FirstTouchConstants.AGENT_ID_NONE);
+                // Spec gap (ERR-004-002): FirstTouchContext does not expose the nearest opponent's
+                // agent ID. InterceptingAgentID cannot be resolved here without that data; set to
+                // AGENT_ID_NONE as a placeholder. Tracked in spec-error-log.md.
+                return (TouchResult.Interception, FirstTouchConstants.AGENT_ID_NONE, FirstTouchConstants.AGENT_ID_NONE);
             }
 
             // Priority 2 — DEFLECTION: sharp touch retaining momentum in original direction.
@@ -49,18 +49,18 @@ namespace TacticalDirector.FirstTouch
                 float momentumAlignment = ComputeMomentumAlignment(newBallVel, originalBallVel);
                 if (momentumAlignment >= FirstTouchConstants.DeflectionAlignmentMin)
                 {
-                    return (TouchResult.DEFLECTION, FirstTouchConstants.AGENT_ID_NONE, FirstTouchConstants.AGENT_ID_NONE);
+                    return (TouchResult.Deflection, FirstTouchConstants.AGENT_ID_NONE, FirstTouchConstants.AGENT_ID_NONE);
                 }
             }
 
             // Priority 3 — LOOSE_BALL: ball displaced beyond controlled range.
             if (r >= FirstTouchConstants.LooseBallThreshold)
             {
-                return (TouchResult.LOOSE_BALL, FirstTouchConstants.AGENT_ID_NONE, FirstTouchConstants.AGENT_ID_NONE);
+                return (TouchResult.LooseBall, FirstTouchConstants.AGENT_ID_NONE, FirstTouchConstants.AGENT_ID_NONE);
             }
 
             // Priority 4 — CONTROLLED: default outcome.
-            return (TouchResult.CONTROLLED, ctx.AgentID, FirstTouchConstants.AGENT_ID_NONE);
+            return (TouchResult.Controlled, ctx.AgentID, FirstTouchConstants.AGENT_ID_NONE);
         }
 
         /// <summary>
@@ -72,8 +72,8 @@ namespace TacticalDirector.FirstTouch
             Vector2 newXY = new Vector2(newVel.x, newVel.y);
             Vector2 origXY = new Vector2(originalVel.x, originalVel.y);
 
-            if (newXY.sqrMagnitude < FirstTouchConstants.BlendMinMagnitude * FirstTouchConstants.BlendMinMagnitude
-                || origXY.sqrMagnitude < FirstTouchConstants.BlendMinMagnitude * FirstTouchConstants.BlendMinMagnitude)
+            if (newXY.sqrMagnitude < FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ
+                || origXY.sqrMagnitude < FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ)
             {
                 return 0.0f;
             }
@@ -84,6 +84,8 @@ namespace TacticalDirector.FirstTouch
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes          |
-// | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | Version | Date       | Author | Notes                                                                                                                                                                |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                                                                                       |
+// | 1.1     | 2026-06-06 | —      | AR-5 M-1: TouchResult enum members renamed PascalCase (Controlled/LooseBall/Deflection/Interception). L-2: BlendMinMagnitude² cached in local. L-4: TODO replaced with ERR-004-002 anchor. M-2 follow-on: BlendMinMagnitude → BLEND_MIN_MAGNITUDE. |
+// | 1.2     | 2026-06-06 | —      | AR-6 L-1: AR-5 L-2 local-cache superseded by FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ — predicate now reads the catalogue compile-time const directly. |
 #endregion

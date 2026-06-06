@@ -1,9 +1,11 @@
 // File:     src/first-touch/FirstTouchSystem.cs
 // Created:  2026-05-25
-// Modified: 2026-05-26
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     First Touch Mechanics #4 §4.4, §4.5, Code Standards #20
 // Purpose:  Orchestrates the first-touch evaluation and application pipeline.
+
+using System;
 
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -34,8 +36,8 @@ namespace TacticalDirector.FirstTouch
         /// <param name="agentMovement">Agent movement system for writing dribbling state after touch.</param>
         public FirstTouchSystem(IBallPhysicsSystem ballPhysics, IAgentMovementSystem agentMovement)
         {
-            _ballPhysics = ballPhysics;
-            _agentMovement = agentMovement;
+            _ballPhysics = ballPhysics ?? throw new ArgumentNullException(nameof(ballPhysics));
+            _agentMovement = agentMovement ?? throw new ArgumentNullException(nameof(agentMovement));
         }
 
         /// <summary>
@@ -57,14 +59,15 @@ namespace TacticalDirector.FirstTouch
             float ballSpeed = context.BallVelocity.magnitude;
             float agentSpeed = context.AgentVelocity.magnitude;
 
-            // Step 3 — Control quality.
+            // Step 3 — Control quality. weightedAttr surfaced for Step 8 diagnostic.
             float q = ControlQualityCalculator.Calculate(
                 context.Technique,
                 context.FirstTouchAttribute,
                 ballSpeed,
                 agentSpeed,
                 context.PressureScalar,
-                orientationBonus);
+                orientationBonus,
+                out float weightedAttr);
 
             // Step 4 — Thunderbolt cap: separate post-Step-8 operation per §3.3.7.
             // Spec uses strict greater-than: ballSpeed > THUNDERBOLT_SPEED.
@@ -84,8 +87,6 @@ namespace TacticalDirector.FirstTouch
                 q, r, newBallVel, context.BallVelocity, context);
 
             // Step 8 — Diagnostic: EffectiveAttribute = WeightedAttr × OrientationMult × PressureMult.
-            float weightedAttr = FirstTouchConstants.TechniqueWeight * Mathf.Max(context.Technique, FirstTouchConstants.AttrMinGuard)
-                               + FirstTouchConstants.FirstTouchWeight * Mathf.Max(context.FirstTouchAttribute, FirstTouchConstants.AttrMinGuard);
             float effectiveAttribute = weightedAttr
                 * (1.0f + orientationBonus)
                 * (1.0f - context.PressureScalar * FirstTouchConstants.PressureWeight);
@@ -100,7 +101,7 @@ namespace TacticalDirector.FirstTouch
                 NewBallVelocity       = newBallVel,
                 PossessingAgentID     = possessingId,
                 InterceptingAgentID   = interceptingId,
-                TriggeredDribblingState = outcome == TouchResult.CONTROLLED,
+                TriggeredDribblingState = outcome == TouchResult.Controlled,
                 IncomingBallSpeed     = ballSpeed,
                 EffectiveAttribute    = effectiveAttribute
             };
@@ -151,4 +152,6 @@ namespace TacticalDirector.FirstTouch
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                            |
 // | 1.1     | 2026-05-26 | —      | Updated field names (FirstTouchAttribute, TouchRadius, PossessionOutcome); populate new diagnostic fields. |
 // | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: Step 4 thunderbolt check changed >= to > per spec §3.3.7 appendix B.5; removed misleading "pre-built q" comment. |
+// | 1.3     | 2026-06-06 | —      | AR-5 M-1: TouchResult.CONTROLLED → TouchResult.Controlled (enum PascalCase rename). M-3: constructor null-guards on _ballPhysics / _agentMovement with explicit ArgumentNullException + nameof; using System added. |
+// | 1.4     | 2026-06-06 | —      | AR-6 L-3: Step 8 EffectiveAttribute now reads weightedAttr from ControlQualityCalculator.Calculate's new out parameter instead of recomputing TechniqueWeight × Max(tech) + FirstTouchWeight × Max(first). |
 #endregion
