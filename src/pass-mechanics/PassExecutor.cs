@@ -291,7 +291,7 @@ namespace TacticalDirector.PassMechanics
             // Poll tackle interrupt first — §3.8.5
             if (_collisionQuery.GetAndClearTackleFlag(_request.AgentId))
             {
-                EmitCancelAtContact(matchTime, frameNumber, CancelReason.TackleInterrupt);
+                EmitPassCancelled(matchTime, frameNumber, CancelReason.TackleInterrupt);
                 return;
             }
 
@@ -338,7 +338,7 @@ namespace TacticalDirector.PassMechanics
             if (float.IsNaN(finalVelocity.x) || float.IsNaN(finalVelocity.y) || float.IsNaN(finalVelocity.z))
             {
                 Debug.LogError($"[PassExecutor] FM-04: NaN in finalVelocity. Pass cancelled. Agent={_request.AgentId}");
-                EmitCancelAtContact(matchTime, frameNumber, CancelReason.InvalidVelocity);
+                EmitPassCancelled(matchTime, frameNumber, CancelReason.InvalidVelocity);
                 return;
             }
 
@@ -346,7 +346,7 @@ namespace TacticalDirector.PassMechanics
             if (!_ballSystem.IsBallPossessedBy(_request.AgentId))
             {
                 Debug.LogError($"[PassExecutor] FM-08: Agent {_request.AgentId} lost possession before CONTACT. Race condition.");
-                EmitCancelAtContact(matchTime, frameNumber, CancelReason.PossessionLost);
+                EmitPassCancelled(matchTime, frameNumber, CancelReason.PossessionLost);
                 return;
             }
 
@@ -453,8 +453,9 @@ namespace TacticalDirector.PassMechanics
         }
 
         // Shared cancellation path: sets _lastResult, publishes PassCancelledEvent, returns to Idle.
-        // Used by both WINDUP tackle interrupt (§3.8.5) and CONTACT-time FM-04/FM-08 cancels (§3.9.3).
-        private void EmitCancelAtContact(float matchTime, int frameNumber, CancelReason reason)
+        // Used by WINDUP tackle interrupt (§3.8.5), CONTACT-time FM-04 (NaN velocity), and
+        // CONTACT-time FM-08 (lost possession) — all paths terminating before Ball.ApplyKick().
+        private void EmitPassCancelled(float matchTime, int frameNumber, CancelReason reason)
         {
             _lastResult = new PassResult
             {
@@ -500,7 +501,7 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     possession check uses _ballSystem, not BallState directly.            |
 // | 1.6     | 2026-06-06 | —      | AR-2 H-1/H-2: ExecuteContact FM-04 (NaN velocity) and FM-08 (lost          |
 // |         |            |        |     possession) silent-cancel paths now publish PassCancelledEvent via the |
-// |         |            |        |     new EmitCancelAtContact helper using CancelReason.InvalidVelocity /     |
+// |         |            |        |     new EmitPassCancelled helper using CancelReason.InvalidVelocity /     |
 // |         |            |        |     PossessionLost respectively. WINDUP TackleInterrupt path migrated to   |
 // |         |            |        |     the same helper. §3.9.3 telemetry surface now complete.                |
 // |         |            |        | AR-2 M-2: callsite renamed errorDirectionRad → errorDirectionFraction to   |
@@ -514,4 +515,7 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | AR-2 X-1: Stage-0 receiver-position staleness across WINDUP frames noted   |
 // |         |            |        |     at the resolution site (KD-4 / §7.1 upgrade point).                    |
 // |         |            |        |     PassCancelledEvent.CancelReason field renamed to .Reason (L-8 follow). |
+// | 1.7     | 2026-06-06 | —      | AR-3 L-6: helper renamed EmitCancelAtContact → EmitPassCancelled (the   |
+// |         |            |        |     prior name was misleading after WINDUP tackle-interrupt migrated to    |
+// |         |            |        |     the same helper — not at CONTACT).                                    |
 #endregion

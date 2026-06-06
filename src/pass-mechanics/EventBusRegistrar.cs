@@ -46,15 +46,6 @@ namespace TacticalDirector.PassMechanics
 
             s_registered = true;
         }
-
-        /// <summary>
-        /// Resets the idempotency guard. Test-only seam — production code MUST NOT call this.
-        /// Callers are responsible for ensuring EventRegistry rows are torn down before re-Initialize.
-        /// </summary>
-        internal static void ResetForTesting()
-        {
-            s_registered = false;
-        }
     }
 }
 
@@ -66,5 +57,7 @@ namespace TacticalDirector.PassMechanics
 // | 1.2     | 2026-06-06 | —      | AR-2 M-5: idempotency guard s_registered added. Duplicate Initialize()  |
 // |         |            |        |     calls (replay/scene reload/editor domain reload) no longer collide  |
 // |         |            |        |     with the already-registered ordinals (ERR_EVT_ORDINAL_COLLISION).   |
-// |         |            |        |     ResetForTesting seam added for the test boundary.                   |
+// | 1.3     | 2026-06-06 | —      | AR-3 M-1/L-4: dropped the ResetForTesting seam — it was internal but    |
+// |         |            |        |     unreachable (no InternalsVisibleTo on this assembly) and tests       |
+// |         |            |        |     should mock at the EventRegistry boundary, not poke this guard.     |
 #endregion

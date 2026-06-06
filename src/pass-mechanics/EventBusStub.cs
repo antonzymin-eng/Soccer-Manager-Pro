@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/EventBusStub.cs
 // Created:  2026-05-26
-// Modified: 2026-05-30
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     Pass Mechanics #5 §4.6.3, Event System #17 §3.2.1, Code Standards #20
 // Purpose:  Thin forwarding wrapper over EventBus. Replaces the Stage 0 no-op stub.
@@ -39,4 +39,6 @@ namespace TacticalDirector.PassMechanics
 // | 1.2     | 2026-05-30 | —      | Stage 1: replaced no-op with three-tier forwarding to EventBus.       |
 // | 1.3     | 2026-06-06 | —      | AR-2 L-5: clarified history note above (v1.1 guard does not exist     |
 // |         |            |        |     after v1.2 forwarding landed). No code change.                    |
+// | 1.4     | 2026-06-06 | —      | AR-3 L-10: file-header Modified date bumped 2026-05-30 → 2026-06-06  |
+// |         |            |        |     to match the latest version-history row (FR-CS-057).             |
 #endregion

@@ -260,9 +260,11 @@ namespace TacticalDirector.PassMechanics
         /// Returns the BASE_ERROR (degrees) for the given pass type. §3.5.4.
         /// BASE_ERROR is the error an exactly average passer (Passing=10) produces at neutral conditions.
         /// All values are [GT]; sourced from the named constants in the GT region.
-        /// On unknown PassType (cast-from-int caller) returns <see cref="MaxErrorAngle"/> so the
-        /// resulting pass is maximally inaccurate and the fault is trivially identifiable in logs —
-        /// no overlap with a legitimate per-type BASE_ERROR value.
+        /// On unknown PassType (cast-from-int caller) the gated FM-01 LogError is the fault
+        /// surface — the returned value is <see cref="BaseErrorDriven"/> (mid-range) so the
+        /// error chain remains numerically well-formed and downstream clamping behaves normally.
+        /// A "sentinel" base value would multiply through the chain and clamp identically to
+        /// the legitimate worst case, defeating identification (AR-3 M-3).
         /// </summary>
         public static float GetBaseError(PassType passType, CrossSubType crossSubType = CrossSubType.Flat)
         {
@@ -278,9 +280,9 @@ namespace TacticalDirector.PassMechanics
                 case PassType.Chip:          return BaseErrorChip;
                 default:
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    Debug.LogError($"[PassMechanics] FM-01: GetBaseError called for unknown PassType={passType}. Returning MaxErrorAngle sentinel.");
+                    Debug.LogError($"[PassMechanics] FM-01: GetBaseError called for unknown PassType={passType}. Returning BaseErrorDriven mid-range default.");
 #endif
-                    return MaxErrorAngle;
+                    return BaseErrorDriven;
             }
         }
 
@@ -351,8 +353,16 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     PassVelocityCalculator.ComputeKickSpeed).                              |
 // |         |            |        | AR-2 L-9: GetBaseError unknown-type fallback changed 2.0f → MaxErrorAngle  |
 // |         |            |        |     (out-of-band sentinel; no collision with legitimate per-type value).    |
+// |         |            |        |     AR-3 M-3 reverts: MaxErrorAngle clamps to the same range as the         |
+// |         |            |        |     legitimate worst case so the sentinel was unobservable. Fallback now    |
+// |         |            |        |     returns BaseErrorDriven (mid-range) and the gated FM-01 LogError is     |
+// |         |            |        |     the sole fault surface.                                                |
 // |         |            |        | AR-2 L-10: PitchLength/Width Cross XML docs gained Stage 1 ProjectConstants |
 // |         |            |        |     routing TODO (parallels Agent Movement v1.40 AR-5 L-3).                 |
 // |         |            |        | AR-2 L-13: FM-01 Debug.LogError emits gated by                               |
 // |         |            |        |     #if UNITY_EDITOR || DEVELOPMENT_BUILD (FR-CS-031 hot-path carve-out).    |
+// | 1.3     | 2026-06-06 | —      | AR-3 M-3: GetBaseError unknown-type fallback reverted MaxErrorAngle →       |
+// |         |            |        |     BaseErrorDriven. MaxErrorAngle was unobservable — the chain's            |
+// |         |            |        |     output clamp masks the sentinel against legitimate worst-case error.    |
+// |         |            |        |     Mid-range value + gated LogError is now the sole fault surface.         |
 #endregion

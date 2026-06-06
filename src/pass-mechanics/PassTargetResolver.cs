@@ -129,6 +129,15 @@ namespace TacticalDirector.PassMechanics
             float ry = kickDirection.x * sin + kickDirection.y * cos;
 
             Vector2 rotated = new Vector2(rx, ry);
+
+            // Degenerate case: rotation preserves magnitude, so this can only fire if the
+            // caller passed a non-unit kickDirection (ComputeKickDirection guarantees a
+            // unit vector via the same-coincident-point fallback). Trap in dev builds; in
+            // production fall back to +X so the executor cannot publish NaN downstream.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Assert(rotated.sqrMagnitude >= 0.0001f,
+                "[TargetResolver] ApplyErrorToDirection rotated to near-zero magnitude — caller passed a non-unit kickDirection (contract violation).");
+#endif
             if (rotated.sqrMagnitude < 0.0001f)
                 return Vector3.right;
 
@@ -191,4 +200,7 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | AR-2 M-2: param renamed errorDirectionRad → errorDirectionFraction |
 // |         |            |        |     to match PassErrorCalculator.ComputeErrorDirection's new [-1,+1]|
 // |         |            |        |     uniform contract; sin() compose-on-rotation removed.            |
+// | 1.4     | 2026-06-06 | —      | AR-3 L-7: ApplyErrorToDirection degenerate-output branch traps in  |
+// |         |            |        |     dev builds via Debug.Assert (caller-contract violation); the    |
+// |         |            |        |     production +X fallback retained as NaN suppression.             |
 #endregion

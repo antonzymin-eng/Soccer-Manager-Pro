@@ -102,16 +102,21 @@ namespace TacticalDirector.PassMechanics
         /// <returns>Signed fraction in [-1, +1] — uniform distribution.</returns>
         public static float ComputeErrorDirection(int agentId, int frameNumber, int passTypeIndex)
         {
-            // SplitMix64-style avalanche mixer (Stafford variant) for hash quality.
-            // Spec #16 §3.4.4 owns the canonical 64-bit avalanche constants; reused here
-            // because routing through DeterministicRngService would require wiring a
-            // service handle through the executor (deferred to Stage 1).
+            // SplitMix64 Stafford-variant 13 finalizer (Mix13) over a non-zero-salted
+            // (agentId, frameNumber, passTypeIndex) tuple. The 0x9E3779B97F4A7C15 golden-ratio
+            // seed (used as the canonical SplitMix64 state-update gamma in Spec #16 §3.4.4)
+            // is added BEFORE the first multiply so the (0, 0, 0) input cannot land on the
+            // mixer's fixed point (every step on h=0 stays 0, defeating avalanche).
+            // The 0xBF58476D1CE4E5B9 / 0x94D049BB133111EB constants below are the Stafford
+            // Mix13 finalizer multipliers — not the same as the Spec #16 §3.4.4 state-update
+            // constant, but a well-known SplitMix64 derivative used for hash quality.
             ulong h;
             unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug.
             {
-                h = ((ulong)(uint)agentId) * 0x9E3779B97F4A7C15UL;
-                h ^= ((ulong)(uint)frameNumber) * 0xBF58476D1CE4E5B9UL;
-                h ^= ((ulong)(uint)passTypeIndex) * 0x94D049BB133111EBUL;
+                h = 0x9E3779B97F4A7C15UL
+                    + ((ulong)(uint)agentId)
+                    + ((ulong)(uint)frameNumber * 0xBF58476D1CE4E5B9UL)
+                    + ((ulong)(uint)passTypeIndex * 0x94D049BB133111EBUL);
                 h ^= h >> 30;
                 h *= 0xBF58476D1CE4E5B9UL;
                 h ^= h >> 27;
@@ -184,4 +189,9 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | AR-2 L-13: NaN diagnostic Debug.LogError gated by                         |
 // |         |            |        |     #if UNITY_EDITOR || DEVELOPMENT_BUILD (FR-CS-031 hot-path carve-out;   |
 // |         |            |        |     restores symmetry with sibling files' build-guard pattern).            |
+// | 1.4     | 2026-06-06 | —      | AR-3 M-2: SplitMix64 mixer now adds 0x9E3779B97F4A7C15 seed BEFORE the    |
+// |         |            |        |     first multiply so the (0, 0, 0) input no longer lands on the mixer's |
+// |         |            |        |     fixed point. AR-3 L-1: inline comment corrected to Stafford "Mix13"   |
+// |         |            |        |     finalizer naming; explicit note that 0xBF584... / 0x94D04... are NOT  |
+// |         |            |        |     the Spec #16 §3.4.4 state-update constant.                            |
 #endregion

@@ -29,7 +29,8 @@ namespace TacticalDirector.PassMechanics
         public byte   EventTypeOrdinal;
         /// <summary>Payload schema version. Set by EventBus.</summary>
         public byte   PayloadVersion;
-        /// <summary>Reserved padding; canonical zero. Set by EventBus.</summary>
+        /// <summary>Reserved padding; publishers MUST leave at default zero — canonical
+        /// serialisation assumes zero and EventBus does not write this slot.</summary>
         public ushort Reserved;
         /// <summary>Physics tick at publish time. Set by EventBus.</summary>
         public uint   Tick;
@@ -72,4 +73,6 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | XML doc expanded to cover the new TackleInterrupt /              |
 // |         |            |        |     PossessionLost / InvalidVelocity cancellation surface         |
 // |         |            |        |     (AR-2 H-1 / H-2).                                           |
+// | 1.3     | 2026-06-06 | —      | AR-3 L-8: Reserved XML doc corrected (parallel to PassAttempt    |
+// |         |            |        |     v1.3) — publishers leave at zero; EventBus does not write.    |
 #endregion

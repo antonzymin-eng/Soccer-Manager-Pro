@@ -12,9 +12,9 @@ namespace TacticalDirector.PassMechanics
     /// Reason a pass was cancelled before Ball.ApplyKick() was called.
     /// Pass Mechanics #5 §3.9.3, §4.6.1.
     ///
-    /// ORDINAL STABILITY: members are serialised into PassCancelledEvent payloads
-    /// (Tier A digest input per FR-DS-009). New members MUST be APPENDED — never
-    /// inserted in the middle — to preserve replay/save/analytics compatibility.
+    /// ORDINAL STABILITY: the enum's backing int ordinal lands in PassCancelledEvent
+    /// payloads (Tier A digest input per FR-DS-009). New members MUST be APPENDED —
+    /// never inserted in the middle — to preserve replay/save/analytics compatibility.
     /// </summary>
     public enum CancelReason
     {
@@ -48,4 +48,6 @@ namespace TacticalDirector.PassMechanics
 // | 1.3     | 2026-06-06 | —      | AR-2 H-1/H-2: PossessionLost (FM-08) and InvalidVelocity (FM-04) members   |
 // |         |            |        |     appended so the executor's silent-cancel paths emit telemetry.         |
 // |         |            |        |     Explicit ordinals + ORDINAL STABILITY paragraph added (Tier A digest). |
+// | 1.4     | 2026-06-06 | —      | AR-3 L-2: ORDINAL STABILITY paragraph tightened — the enum's backing int   |
+// |         |            |        |     ordinal (not the member name) is what lands in the digest.             |
 #endregion
