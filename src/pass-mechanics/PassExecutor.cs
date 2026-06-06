@@ -455,6 +455,10 @@ namespace TacticalDirector.PassMechanics
         // Shared cancellation path: sets _lastResult, publishes PassCancelledEvent, returns to Idle.
         // Used by WINDUP tackle interrupt (§3.8.5), CONTACT-time FM-04 (NaN velocity), and
         // CONTACT-time FM-08 (lost possession) — all paths terminating before Ball.ApplyKick().
+        // PRECONDITION: _request has been populated by Execute()'s cache block. Synchronous
+        // FM-01 rejections in Execute() return Invalid via MakeInvalidResult BEFORE _request
+        // is assigned, so they must NOT route through this helper — otherwise the event would
+        // publish default(PassType)=Ground instead of the actually-requested type.
         private void EmitPassCancelled(float matchTime, int frameNumber, CancelReason reason)
         {
             _lastResult = new PassResult
@@ -518,4 +522,8 @@ namespace TacticalDirector.PassMechanics
 // | 1.7     | 2026-06-06 | —      | AR-3 L-6: helper renamed EmitCancelAtContact → EmitPassCancelled (the   |
 // |         |            |        |     prior name was misleading after WINDUP tackle-interrupt migrated to    |
 // |         |            |        |     the same helper — not at CONTACT).                                    |
+// | 1.8     | 2026-06-06 | —      | AR-4 L-2: EmitPassCancelled gains PRECONDITION comment naming the         |
+// |         |            |        |     _request dependency. Synchronous FM-01 / FM-07 / FM-11 rejections in   |
+// |         |            |        |     Execute() return Invalid via MakeInvalidResult BEFORE _request is     |
+// |         |            |        |     assigned and MUST NOT route through this helper.                      |
 #endregion

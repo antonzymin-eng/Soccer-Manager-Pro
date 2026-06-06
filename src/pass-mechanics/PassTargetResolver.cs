@@ -136,7 +136,7 @@ namespace TacticalDirector.PassMechanics
             // production fall back to +X so the executor cannot publish NaN downstream.
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Assert(rotated.sqrMagnitude >= 0.0001f,
-                "[TargetResolver] ApplyErrorToDirection rotated to near-zero magnitude — caller passed a non-unit kickDirection (contract violation).");
+                "[TargetResolver] ApplyErrorToDirection rotated to near-zero magnitude — caller contract violation (kickDirection MUST be a non-zero unit vector with Z=0).");
 #endif
             if (rotated.sqrMagnitude < 0.0001f)
                 return Vector3.right;
@@ -203,4 +203,7 @@ namespace TacticalDirector.PassMechanics
 // | 1.4     | 2026-06-06 | —      | AR-3 L-7: ApplyErrorToDirection degenerate-output branch traps in  |
 // |         |            |        |     dev builds via Debug.Assert (caller-contract violation); the    |
 // |         |            |        |     production +X fallback retained as NaN suppression.             |
+// | 1.5     | 2026-06-06 | —      | AR-4 L-5: Debug.Assert message generalised — names the           |
+// |         |            |        |     non-zero-unit-vector contract rather than only the non-unit     |
+// |         |            |        |     case (Vector3.zero also fires the branch).                     |
 #endregion
