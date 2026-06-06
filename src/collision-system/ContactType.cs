@@ -1,6 +1,6 @@
 // File:     src/collision-system/ContactType.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-06-05  [v1.1]
 // Author:   —
 // Spec:     Collision System #3 §3.3.5, §4.2.5, Code Standards #20
 // Purpose:  Physical contact classification for foul detection groundwork.
@@ -10,6 +10,13 @@ namespace TacticalDirector.CollisionSystem
     /// <summary>
     /// Physical contact classification used by the Referee System (Stage 1+).
     /// Collision System #3 §3.3.5.
+    /// <para>
+    /// ORDINAL STABILITY: members are APPEND-only. ContactType is embedded in
+    /// ContactForceData.Type (carried on CollisionEvent.FoulData published via
+    /// ICollisionEventConsumer); inserting a new member in the middle shifts all
+    /// subsequent ordinals and breaks replay parity, analytics pipelines, and
+    /// FR-DS-009 digest compatibility. New members MUST be appended.
+    /// </para>
     /// </summary>
     public enum ContactType
     {
@@ -31,6 +38,8 @@ namespace TacticalDirector.CollisionSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes          |
-// | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | Version | Date       | Author | Notes                                                                            |
+// | 1.0     | 2026-05-25 | —      | Initial draft.                                                                   |
+// | 1.1     | 2026-06-05 | —      | AR-5 L-1. ORDINAL STABILITY paragraph added — enum is embedded in                |
+// |         |            |        | ContactForceData.Type carried on CollisionEvent.FoulData; APPEND-only contract.  |
 #endregion

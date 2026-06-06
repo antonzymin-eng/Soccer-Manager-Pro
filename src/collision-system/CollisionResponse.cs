@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionResponse.cs
 // Created:  2026-05-25
-// Modified: 2026-06-05  [v1.3]
+// Modified: 2026-06-05  [v1.4]
 // Author:   —
 // Spec:     Collision System #3 §3.3.1–§3.3.2, FR-04, FR-05, Code Standards #20
 // Purpose:  Impulse-based collision resolution, penetration separation, fall/stumble triggers.
@@ -91,7 +91,9 @@ namespace TacticalDirector.CollisionSystem
                     -impulse.x * invM2, -impulse.y * invM2, 0f);
             }
 
-            float impactForce = Mathf.Abs(j) * CollisionPhysicsConstants.PHYSICS_TICK_HZ;
+            // j is non-negative by the invariant documented above (vRel <= 0 early-return),
+            // so Mathf.Abs is redundant — direct multiply is correct and faster.
+            float impactForce = j * CollisionPhysicsConstants.PHYSICS_TICK_HZ;
             result.ImpactForce = impactForce;
 
             if (a1Active)
@@ -205,4 +207,6 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | `PD <= MaxPD ? PD*Slop : MaxPD` (silently dropped slop on cap branch); now          |
 // |         |            |        | `Mathf.Min(PD*Slop, MaxPD)`. Severely-overlapping pairs no longer receive less      |
 // |         |            |        | separation than mildly-overlapping pairs.                                           |
+// | 1.4     | 2026-06-05 | —      | AR-5 L-3. impactForce = Mathf.Abs(j) * PHYSICS_TICK_HZ simplified to                |
+// |         |            |        | j * PHYSICS_TICK_HZ — j is non-negative by the AR-3 L-4 invariant.                 |
 #endregion
