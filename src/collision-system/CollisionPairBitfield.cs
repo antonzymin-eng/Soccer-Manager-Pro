@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionPairBitfield.cs
 // Created:  2026-05-25
-// Modified: 2026-06-05  [v1.2]
+// Modified: 2026-06-05  [v1.3]
 // Author:   —
 // Spec:     Collision System #3 §3.2.4, Code Standards #20
 // Purpose:  Zero-alloc bitfield for deduplicating collision pairs each frame.
@@ -44,6 +44,12 @@ namespace TacticalDirector.CollisionSystem
 
         private static int GetPairIndex(int lowId, int highId)
         {
+            // Self-pairs are nonsensical and produce a triangular-index collision
+            // (e.g. pair (22, 22) computes to 252, the same bit as pair (21, BALL)).
+            // Caller invariant — outer loop already skips j == i.
+            Debug.Assert(lowId != highId,
+                "CollisionPairBitfield: self-pair is not addressable; triangular formula collapses.");
+
             int mappedLow = (lowId == SpatialHashConstants.BALL_ENTITY_ID)
                 ? SpatialHashConstants.BallVirtualIndex : lowId;
             int mappedHigh = (highId == SpatialHashConstants.BALL_ENTITY_ID)
@@ -96,4 +102,7 @@ namespace TacticalDirector.CollisionSystem
 // | 1.2     | 2026-06-05 | —      | AR-3 L-1. GetBit / SetBit gain Debug.Assert(index in [0, 256)) — C# shift   |
 // |         |            |        | masks shift count mod 64, so an out-of-range index would silently corrupt   |
 // |         |            |        | _bits3 instead of throwing.                                                 |
+// | 1.3     | 2026-06-05 | —      | AR-6 L-1. GetPairIndex gains Debug.Assert(lowId != highId) — self-pairs    |
+// |         |            |        | produce a triangular-index collision (e.g. (22,22) → 252 collides with     |
+// |         |            |        | (21, BALL)). Outer loop already skips j == i; defensive trap for misuse.   |
 #endregion
