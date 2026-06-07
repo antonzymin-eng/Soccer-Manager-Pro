@@ -1,6 +1,6 @@
 // File:     src/performance-optimization/RegressionResult.cs
 // Created:  2026-06-01
-// Modified: 2026-06-01
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.5.2, §3.5.6, FR-PO-031, Code Standards #20
 // Purpose:  Result returned by RegressionGate.Evaluate(). Carries per-PR and absolute-drift
@@ -37,7 +37,10 @@ namespace TacticalDirector.PerformanceOptimization
         /// <summary>
         /// Absolute drift from the milestone baseline: (currentMs − milestoneMs) / milestoneMs.
         /// Compared against <see cref="PerformanceOptimizationConstants.AbsoluteDriftFraction"/>.
-        /// Float.NaN when no milestone baseline is available.
+        /// Sentinels (AR-3 L-2):
+        ///   <c>float.NaN</c>              — no milestone baseline available (drift check skipped).
+        ///   <c>float.PositiveInfinity</c> — milestone was degenerate (≤ 0); gate fails closed.
+        ///   Finite value                  — real signed drift fraction.
         /// </summary>
         public float MilestoneDriftFraction { get; }
 
@@ -62,6 +65,9 @@ namespace TacticalDirector.PerformanceOptimization
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-01 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-01 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-07 | —      | AR-3 L-2: MilestoneDriftFraction XML doc records the new ternary    |
+// |         |            |        | sentinel scheme set by RegressionGate.Evaluate (NaN = skipped;      |
+// |         |            |        | +Infinity = degenerate milestone; finite = real drift).             |
 #endregion

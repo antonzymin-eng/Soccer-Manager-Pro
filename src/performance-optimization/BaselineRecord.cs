@@ -1,6 +1,6 @@
 // File:     src/performance-optimization/BaselineRecord.cs
 // Created:  2026-06-01
-// Modified: 2026-06-01
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §4.3.2, Appendix A, Code Standards #20
 // Purpose:  Immutable baseline record: session manifest + captured metrics per Appendix A.
@@ -8,6 +8,7 @@
 //           Produced by IPerfHarness.FinalizeSession(); stored under
 //           docs/specs/performance-optimization/baselines/ at Stage 0.
 
+using System;
 using System.Collections.Generic;
 
 namespace TacticalDirector.PerformanceOptimization
@@ -37,7 +38,10 @@ namespace TacticalDirector.PerformanceOptimization
         /// <summary>
         /// Per-method managed allocation totals in bytes per tick.
         /// Every hot-path entry MUST report 0; non-zero values trigger alloc-gate failure.
-        /// Tooling-side managed dictionary; not on the game hot path.
+        /// The MUST is enforced by <c>tools/budget-auditor.py</c> at the §5.3 schema-
+        /// conformance step — this struct intentionally carries the raw dictionary so the
+        /// auditor can attribute the diff to the offending entry name. Tooling-side
+        /// managed dictionary; not on the game hot path.
         /// </summary>
         public IReadOnlyDictionary<string, ulong> PerMethodAllocBytes { get; }
 
@@ -55,6 +59,10 @@ namespace TacticalDirector.PerformanceOptimization
 
         /// <summary>
         /// Initialises a baseline record from a completed profiling session.
+        /// Enforces reference-non-null invariants on <paramref name="manifest"/>,
+        /// <paramref name="perMethodAllocBytes"/>, and <paramref name="thresholdCited"/>,
+        /// plus finite-and-non-negative invariants on <paramref name="p50Ms"/> and
+        /// <paramref name="p99Ms"/>. Degenerate records cannot enter the corpus.
         /// </summary>
         public BaselineRecord(
             SessionManifest manifest,
@@ -65,6 +73,42 @@ namespace TacticalDirector.PerformanceOptimization
             BaselinePassFail passFailAtCapture,
             string thresholdCited)
         {
+            if (manifest == null)
+            {
+                throw new ArgumentNullException(nameof(manifest));
+            }
+
+            if (perMethodAllocBytes == null)
+            {
+                throw new ArgumentNullException(nameof(perMethodAllocBytes));
+            }
+
+            if (thresholdCited == null)
+            {
+                throw new ArgumentNullException(nameof(thresholdCited));
+            }
+
+            if (thresholdCited.Length == 0)
+            {
+                throw new ArgumentException(
+                    "thresholdCited must name an FR-PO-### identifier or per-spec §6 anchor.",
+                    nameof(thresholdCited));
+            }
+
+            if (!float.IsFinite(p50Ms) || p50Ms < 0f)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(p50Ms), p50Ms,
+                    "p50Ms must be finite and non-negative.");
+            }
+
+            if (!float.IsFinite(p99Ms) || p99Ms < 0f)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(p99Ms), p99Ms,
+                    "p99Ms must be finite and non-negative.");
+            }
+
             Manifest             = manifest;
             Loop                 = loop;
             P50Ms                = p50Ms;
@@ -77,6 +121,10 @@ namespace TacticalDirector.PerformanceOptimization
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-01 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-01 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-07 | —      | AR-3 M-2: constructor enforces non-null manifest /                  |
+// |         |            |        | perMethodAllocBytes / thresholdCited (non-empty) and finite,        |
+// |         |            |        | non-negative p50Ms / p99Ms. Closes upstream NPE hazards in          |
+// |         |            |        | RegressionGate.Evaluate / BaselineReproducibilityAuditor.Validate.  |
 #endregion

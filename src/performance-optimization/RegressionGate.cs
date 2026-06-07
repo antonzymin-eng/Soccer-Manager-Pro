@@ -1,11 +1,13 @@
 // File:     src/performance-optimization/RegressionGate.cs
 // Created:  2026-06-01
-// Modified: 2026-06-02
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.5.2, §3.5.6, FR-PO-031, Code Standards #20
 // Purpose:  Implements the FR-PO-031 per-PR regression threshold (+5%) and the §3.5.6
 //           absolute milestone-drift guard (+10%). Used by the Stage 0+1 CI perf gate;
 //           callable manually via tools/run-perf-local.sh at Stage 0.
+
+using System;
 
 namespace TacticalDirector.PerformanceOptimization
 {
@@ -24,12 +26,19 @@ namespace TacticalDirector.PerformanceOptimization
         /// Returns true (no regression) when <c>(currentMs − baselineMs) / baselineMs ≤ threshold</c>.
         /// Improvements (negative delta) always return true.
         /// Degenerate baselines (<c>baselineMs ≤ 0</c> or NaN) fail-closed per AR-1 M-2.
+        /// Non-finite or negative <paramref name="currentMs"/> values fail-closed per AR-3 L-3
+        /// (a measurement cannot be -∞ / +∞ / NaN / negative; treat as a corrupted sample).
         /// </summary>
         /// <param name="baselineMs">Pre-PR p50 in milliseconds.</param>
         /// <param name="currentMs">Post-PR p50 in milliseconds.</param>
         public static bool PassesPerPrCheck(float baselineMs, float currentMs)
         {
             if (!(baselineMs > 0f))
+            {
+                return false;
+            }
+
+            if (!float.IsFinite(currentMs) || currentMs < 0f)
             {
                 return false;
             }
@@ -44,7 +53,8 @@ namespace TacticalDirector.PerformanceOptimization
         /// Returns true when <c>(currentMs − milestoneMs) / milestoneMs ≤ threshold</c>.
         /// <c>float.NaN milestoneMs</c> is the canonical "no milestone available, skip"
         /// signal and returns true; any other non-positive value is degenerate and
-        /// fails closed.
+        /// fails closed. Non-finite or negative <paramref name="currentMs"/> fail-closed
+        /// per AR-3 L-3.
         /// </summary>
         /// <param name="milestoneMs">p50 captured at the last Stage milestone baseline.</param>
         /// <param name="currentMs">Current p50 in milliseconds.</param>
@@ -56,6 +66,11 @@ namespace TacticalDirector.PerformanceOptimization
             }
 
             if (!(milestoneMs > 0f))
+            {
+                return false;
+            }
+
+            if (!float.IsFinite(currentMs) || currentMs < 0f)
             {
                 return false;
             }
@@ -79,6 +94,16 @@ namespace TacticalDirector.PerformanceOptimization
             BaselineRecord current,
             float milestoneMs)
         {
+            if (baseline == null)
+            {
+                throw new ArgumentNullException(nameof(baseline));
+            }
+
+            if (current == null)
+            {
+                throw new ArgumentNullException(nameof(current));
+            }
+
             float baselineP50 = baseline.P50Ms;
             float currentP50  = current.P50Ms;
 
@@ -88,12 +113,21 @@ namespace TacticalDirector.PerformanceOptimization
                 ? (currentP50 - baselineP50) / baselineP50
                 : float.NaN;
 
-            float milestoneDrift;
             bool absoluteDriftPassed = PassesAbsoluteDriftCheck(milestoneMs, currentP50);
 
-            if (float.IsNaN(milestoneMs) || !(milestoneMs > 0f))
+            // AR-3 L-2: distinguish the three milestone shapes in MilestoneDriftFraction:
+            //   NaN          → skipped (milestoneMs = NaN, the documented skip-drift signal)
+            //   +Infinity    → fail-closed sentinel (milestoneMs ≤ 0; auditor cannot compute
+            //                  a meaningful drift but the gate verdict already failed)
+            //   finite value → real signed drift fraction
+            float milestoneDrift;
+            if (float.IsNaN(milestoneMs))
             {
                 milestoneDrift = float.NaN;
+            }
+            else if (!(milestoneMs > 0f))
+            {
+                milestoneDrift = float.PositiveInfinity;
             }
             else
             {
@@ -118,4 +152,11 @@ namespace TacticalDirector.PerformanceOptimization
 // | 1.2     | 2026-06-02 | —      | AR-2 M-1: PassesAbsoluteDriftCheck NaN milestone now returns true   |
 // |         |            |        | (skip-drift signal), matching Evaluate's documented semantics.      |
 // |         |            |        | Evaluate delegates drift verdict entirely to the helper.            |
+// | 1.3     | 2026-06-07 | —      | AR-3 L-2: Evaluate reports skipped-drift (NaN) vs degenerate-       |
+// |         |            |        | milestone (+Infinity) distinctly in MilestoneDriftFraction so CI    |
+// |         |            |        | reporters can disambiguate the two failure modes without inspecting |
+// |         |            |        | milestoneMs separately. AR-3 L-3: PassesPerPrCheck +                |
+// |         |            |        | PassesAbsoluteDriftCheck fail-closed on non-finite or negative      |
+// |         |            |        | currentMs. AR-3 (general): Evaluate now explicitly null-checks      |
+// |         |            |        | baseline / current (symmetric to PerfGateRunner.Run).               |
 #endregion

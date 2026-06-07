@@ -1,6 +1,6 @@
 // File:     src/performance-optimization/SessionManifest.cs
 // Created:  2026-06-01
-// Modified: 2026-06-02
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.3.2, Appendix A, Code Standards #20
 // Purpose:  Immutable session manifest capturing all §3.3.2 required fields.
@@ -20,7 +20,9 @@ namespace TacticalDirector.PerformanceOptimization
     public sealed class SessionManifest
     {
         /// <summary>
-        /// 40-hex-character git SHA of the build under measurement.
+        /// Git SHA of the build under measurement. Stage 0+1 harness writes the full
+        /// 40-hex form; <see cref="IsComplete"/> only enforces non-empty (format
+        /// validation deferred to the Stage 0+1 harness ingestion path).
         /// Required. Appendix A.
         /// </summary>
         public string GitSha { get; }
@@ -52,14 +54,17 @@ namespace TacticalDirector.PerformanceOptimization
         public string ScenarioManifestId { get; }
 
         /// <summary>
-        /// RFC 3339 wall-clock timestamp of session start. Used for run bookkeeping only;
-        /// never used for in-game state per §3.3.2 / FR-CS-042.
+        /// Wall-clock timestamp of session start (RFC 3339 form written by the harness).
+        /// Used for run bookkeeping only; never used for in-game state per §3.3.2 / FR-CS-042.
+        /// <see cref="IsComplete"/> only enforces non-empty (RFC 3339 format validation
+        /// deferred to the Stage 0+1 harness ingestion path).
         /// Required. Appendix A.
         /// </summary>
         public string SessionStartUtc { get; }
 
         /// <summary>
-        /// RFC 3339 wall-clock timestamp of session end.
+        /// Wall-clock timestamp of session end (RFC 3339 form written by the harness).
+        /// Format validation deferred to the Stage 0+1 harness ingestion path.
         /// Required. Appendix A.
         /// </summary>
         public string SessionEndUtc { get; }
@@ -136,4 +141,8 @@ namespace TacticalDirector.PerformanceOptimization
 // | 1.2     | 2026-06-02 | —      | PR #129 Codex P2: IsComplete also requires HardwareCounters.Core-  |
 // |         |            |        | Count > 0 — completes the §3.3.2 hardware-snapshot triple (CPU     |
 // |         |            |        | model, core count, thermal state).                                 |
+// | 1.3     | 2026-06-07 | —      | AR-3 L-1: XML docs on GitSha / SessionStartUtc / SessionEndUtc no   |
+// |         |            |        | longer overpromise format validation that IsComplete does not       |
+// |         |            |        | perform — 40-hex / RFC 3339 enforcement is explicitly deferred to   |
+// |         |            |        | the Stage 0+1 harness ingestion path. Doc-only.                     |
 #endregion
