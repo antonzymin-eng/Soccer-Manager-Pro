@@ -1,6 +1,6 @@
 // File:     src/event-system/EventLedger.cs
 // Created:  2026-05-30
-// Modified: 2026-06-02
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.2.4, §3.2.5, §3.4.2, §4.4, Code Standards #20
 // Purpose:  Tier A/B ring buffer, typed dispatch infrastructure, and per-tick serialization.
@@ -323,6 +323,16 @@ namespace TacticalDirector.EventSystem
             for (int i = 0; i < PhaseDrawIndices.Length; i++)
                 PhaseDrawIndices[i] = 0;
             // Payload bytes intentionally left in place; overwritten on next publish.
+
+            // AR-8 M-2: reset lifecycle state to fail-fast sentinels so a stale Publish
+            // between OnTickBoundary and the next BeginTick/BeginPhase trips an
+            // IndexOutOfRangeException on PhaseDrawIndices[0xFF] in PublishAuthoritative
+            // and (in dev builds) misses the producer-phase assert with the sentinel
+            // phase value. CurrentTick=uint.MaxValue makes a stale publish's tick header
+            // visibly bogus if the bounds check is somehow bypassed. BeginTick /
+            // BeginPhase overwrite both fields before the next valid publish.
+            CurrentPhase = (PhaseId)0xFF;
+            CurrentTick  = uint.MaxValue;
         }
 
         // ── Subscribe: add handler to dispatcher (called by EventBus) ────────────────
@@ -390,4 +400,13 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | MaxTierCHandlersPerType after that many cycles even when the net    |
 // |         |            |        | subscriber count was 0. EventLedger.Subscribe updated to consume    |
 // |         |            |        | AddHandler's return value instead of reading HandlerCount before.   |
+// | 1.7     | 2026-06-07 | —      | AR-8 M-2: OnTickBoundary now resets CurrentPhase to (PhaseId)0xFF   |
+// |         |            |        | and CurrentTick to uint.MaxValue. A stale Publish between          |
+// |         |            |        | OnTickBoundary and the next BeginTick/BeginPhase previously       |
+// |         |            |        | recorded the prior tick's tick number and last phase into the      |
+// |         |            |        | ring buffer — silently corrupting the next tick's canonical        |
+// |         |            |        | digest. With the sentinels, PhaseDrawIndices[0xFF] now throws       |
+// |         |            |        | IndexOutOfRangeException in release builds and the producer-phase  |
+// |         |            |        | assert fires in dev builds. BeginTick / BeginPhase overwrite both  |
+// |         |            |        | fields atomically before the next valid publish.                    |
 #endregion
