@@ -1,6 +1,6 @@
 // File:     src/event-system/CosmeticChannel.cs
 // Created:  2026-05-30
-// Modified: 2026-06-02
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.5.3, §3.6.2, §4.3.2, Code Standards #20
 // Purpose:  Tier C immediate-synchronous dispatch with deterministic drop predicate.
@@ -158,6 +158,20 @@ namespace TacticalDirector.EventSystem
         {
             Array.Clear(s_pubCounts, 0, s_pubCounts.Length);
         }
+
+        // ── Test-only reset ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// AR-9 L-1: clears <c>s_dispatchers</c> and <c>s_pubCounts</c> so unit tests start
+        /// from a clean Tier C state. Production code MUST NOT call this — Tier C
+        /// subscribers are expected to outlive a tick. Exposed via InternalsVisibleTo to
+        /// TacticalDirector.EventSystem.Tests only.
+        /// </summary>
+        internal static void ResetForTests()
+        {
+            Array.Clear(s_dispatchers, 0, s_dispatchers.Length);
+            Array.Clear(s_pubCounts, 0, s_pubCounts.Length);
+        }
     }
 }
 
@@ -185,4 +199,8 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | AddHandler (which AR-7 M-1 changed to scan-and-reuse null slots)      |
 // |         |            |        | rather than reading HandlerCount before the call. Closes the Tier C  |
 // |         |            |        | exhaustion path under FR-EVT-022 subscribe/unsubscribe cycling.       |
+// | 1.8     | 2026-06-07 | —      | AR-9 L-1: added internal ResetForTests() that clears s_dispatchers   |
+// |         |            |        | + s_pubCounts. EventTestHelper.ResetLedger previously only cleared   |
+// |         |            |        | pub counts, so Tier C subscribers leaked across tests and would     |
+// |         |            |        | eventually exhaust MaxTierCHandlersPerType (64).                     |
 #endregion

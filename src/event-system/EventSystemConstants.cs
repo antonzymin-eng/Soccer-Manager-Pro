@@ -1,6 +1,6 @@
 // File:     src/event-system/EventSystemConstants.cs
 // Created:  2026-05-30
-// Modified: 2026-05-31
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Event System #17 §3.10, Code Standards #20
 // Purpose:  All constants for the event system. Region order: GT → Cross.
@@ -56,6 +56,14 @@ namespace TacticalDirector.EventSystem
         /// 1+1+2+4+2+2 = eventTypeOrdinal+payloadVersion+_reserved+tick+subsystemOrdinal+intraPhaseDrawIndex.</summary>
         public const int EventHeaderBytes = 12;
 
+        /// <summary>[FIXED] Compile-time upper bound on the per-tick sort-index stackalloc used
+        /// by EventLedger.DrainTick and EventLedger.SerializeLedger. AR-9 M-1: caps the worst-case
+        /// stack footprint at 8 KB (2048 ints × 4 bytes) so a future Stage 1 config-loader bump
+        /// of EventQueueCapacity cannot quietly grow the stackalloc into StackOverflowException
+        /// territory inside the tick pipeline. EventLedger's static constructor enforces
+        /// EventQueueCapacity &lt;= MAX_QUEUE_SORT_INTS at boot. §3.5.1 / FR-EVT-049/050.</summary>
+        public const int MAX_QUEUE_SORT_INTS = 2048;
+
         // ── Error codes — design-fixed [GT]; 0x17NN reserved block; must NOT collide with #16's 0x16NN ──
 
         /// <summary>[GT] Tier A/B ring-buffer overflow, OR BFS dispatch depth exceeded, OR per-handler out-degree exceeded.
@@ -108,4 +116,8 @@ namespace TacticalDirector.EventSystem
 // | 1.2     | 2026-05-31 | —      | AR-4 L: added ErrEvtOrdinalCollision (0x1707) for CosmeticChannel.         |
 // |         |            |        | Subscribe diagnostic when two IEventC types share an ordinal (erroneous    |
 // |         |            |        | duplicate RegisterExternalRow calls) — replaces hard InvalidCastException.  |
+// | 1.3     | 2026-06-07 | —      | AR-9 M-1: added MAX_QUEUE_SORT_INTS = 2048 compile-time const. Caps the   |
+// |         |            |        | stackalloc footprint of EventLedger.DrainTick / SerializeLedger so a       |
+// |         |            |        | Stage 1 config-loader bump of EventQueueCapacity cannot grow the           |
+// |         |            |        | stackalloc into StackOverflowException range inside the tick pipeline.    |
 #endregion

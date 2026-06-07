@@ -160,6 +160,23 @@ namespace TacticalDirector.EventSystem
         internal static bool InDrainDispatch;
         internal static int  HandlerSecondaryPublishCount; // reset per-handler invocation
 
+        // AR-9 M-1: boot-time invariant — EventQueueCapacity is runtime-tunable [GT] (Stage 1
+        // config loader); the per-tick sort-index stackalloc in DrainTick/SerializeLedger is
+        // capped at MAX_QUEUE_SORT_INTS to bound the stack footprint. If a future config bump
+        // pushes EventQueueCapacity past the cap, the sort buffer could not cover all queued
+        // slots — fail fast at boot rather than silently truncating canonical order.
+        static EventLedger()
+        {
+            if (EventSystemConstants.EventQueueCapacity > EventSystemConstants.MAX_QUEUE_SORT_INTS)
+                throw new InvalidOperationException(
+                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): EventQueueCapacity (" +
+                    EventSystemConstants.EventQueueCapacity +
+                    ") exceeds MAX_QUEUE_SORT_INTS (" +
+                    EventSystemConstants.MAX_QUEUE_SORT_INTS +
+                    "). Either raise MAX_QUEUE_SORT_INTS (and audit stack footprint, ~4 bytes " +
+                    "× MAX_QUEUE_SORT_INTS × 2 concurrent calls) or lower EventQueueCapacity.");
+        }
+
         // ── Sort scratch buffer (reused each DrainTick call) ─────────────────────────
 
         // Not stackalloc'd here because DrainTick does it per-call to stay zero-alloc
@@ -179,7 +196,10 @@ namespace TacticalDirector.EventSystem
         {
             BootPhaseComplete = true; // first drain marks boot phase complete
 
-            Span<int> sortBuf = stackalloc int[EventSystemConstants.EventQueueCapacity];
+            // AR-9 M-1: stackalloc capped at compile-time MAX_QUEUE_SORT_INTS (8 KB);
+            // static-ctor invariant guarantees EventQueueCapacity <= MAX_QUEUE_SORT_INTS,
+            // so the buffer always covers QueueCount.
+            Span<int> sortBuf = stackalloc int[EventSystemConstants.MAX_QUEUE_SORT_INTS];
 
             int batchStart = 0;
             int depth      = 0;
@@ -277,7 +297,8 @@ namespace TacticalDirector.EventSystem
             uint count = 0;
 
             // Build sorted index list for Tier A/B slots only, then sort by FM-017-002 key.
-            Span<int> sortBuf = stackalloc int[EventSystemConstants.EventQueueCapacity];
+            // AR-9 M-1: stackalloc capped at compile-time MAX_QUEUE_SORT_INTS.
+            Span<int> sortBuf = stackalloc int[EventSystemConstants.MAX_QUEUE_SORT_INTS];
             int sortCount = 0;
             // AR-6 L-1: tier comparison uses DeterminismTier enum values rather than the
             // magic literals 0/1 (FR-CS-016). #16 §3.2 owns the enum and its byte ordinals.
@@ -400,6 +421,11 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | MaxTierCHandlersPerType after that many cycles even when the net    |
 // |         |            |        | subscriber count was 0. EventLedger.Subscribe updated to consume    |
 // |         |            |        | AddHandler's return value instead of reading HandlerCount before.   |
+// | 1.8     | 2026-06-07 | —      | AR-9 M-1: DrainTick + SerializeLedger stackallocs switched from     |
+// |         |            |        | runtime-sized EventQueueCapacity to compile-time MAX_QUEUE_SORT_INTS|
+// |         |            |        | (= 2048; 8 KB stack). New static ctor asserts EventQueueCapacity <=|
+// |         |            |        | MAX_QUEUE_SORT_INTS at boot so a Stage 1 config-loader bump fails  |
+// |         |            |        | fast instead of risking StackOverflowException mid-pipeline.       |
 // | 1.7     | 2026-06-07 | —      | AR-8 M-2: OnTickBoundary now resets CurrentPhase to (PhaseId)0xFF   |
 // |         |            |        | and CurrentTick to uint.MaxValue. A stale Publish between          |
 // |         |            |        | OnTickBoundary and the next BeginTick/BeginPhase previously       |

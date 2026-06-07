@@ -1,6 +1,6 @@
 // File:     src/event-system/tests/EventSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-05-31
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Event System #17 §5, Code Standards #20
 // Purpose:  Unit tests for Event System. Tests Stage-0 activation criteria.
@@ -63,8 +63,10 @@ namespace TacticalDirector.EventSystem.Tests
             // Clear dispatcher table (removes all subscribers registered in previous tests).
             Array.Clear(EventLedger.Dispatchers, 0, EventLedger.Dispatchers.Length);
 
-            // Reset CosmeticChannel publication counts via the public boundary.
-            CosmeticChannel.ResetPublicationCounts();
+            // AR-9 L-1: clear Tier C dispatcher table too — ResetPublicationCounts only
+            // zeroes the per-ordinal count table; subscribers from prior tests would
+            // otherwise persist and eventually exhaust MaxTierCHandlersPerType.
+            CosmeticChannel.ResetForTests();
 
             // Note: EventOrdinalCache<T>.Ordinal and the EventRegistry s_rows table are
             // static-constructor-populated and intentionally NOT cleared between tests —
@@ -1124,6 +1126,9 @@ namespace TacticalDirector.EventSystem.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-31 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                |
+// | 1.0     | 2026-05-31 | —      | Initial implementation.                              |
+// | 1.1     | 2026-06-07 | —      | AR-9 L-1: EventTestHelper.ResetLedger now calls      |
+// |         |            |        | CosmeticChannel.ResetForTests() to clear Tier C      |
+// |         |            |        | dispatcher table between tests (prevents leakage).   |
 #endregion
