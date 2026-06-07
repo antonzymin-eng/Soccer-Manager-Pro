@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassErrorCalculator.cs
 // Created:  2026-05-26
-// Modified: 2026-05-27
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.5, §3.7, Code Standards #20
 // Purpose:  Pure static calculator for the multiplicative error chain (§3.5),
@@ -74,7 +74,9 @@ namespace TacticalDirector.PassMechanics
 
             if (float.IsNaN(errorAngle))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError("[PassError] FM-04: ErrorAngle is NaN. Returning MinErrorAngle.");
+#endif
                 return PassMechanicsConstants.MinErrorAngle;
             }
 
@@ -84,26 +86,52 @@ namespace TacticalDirector.PassMechanics
         // ── §3.5.7 — Error Direction ────────────────────────────────────────────────
 
         /// <summary>
-        /// Computes a deterministic error-direction angle [0, 2π) using a prime-XOR
-        /// hash of (agentId, frameNumber, passTypeIndex). Identical inputs always
-        /// produce identical output — replay-safe. No System.Random. §3.5.7.
+        /// Computes a deterministic error-direction signed fraction in [-1, +1] using a
+        /// SplitMix64-style mixer over (agentId, frameNumber, passTypeIndex). Identical
+        /// inputs always produce identical output — replay-safe. No System.Random.
+        ///
+        /// The output is the rotation FRACTION applied to errorAngleDeg by
+        /// <see cref="PassTargetResolver.ApplyErrorToDirection"/>; mapping to a uniform
+        /// signed scalar (rather than an angle on [0, 2π) that is then composed through
+        /// sin()) preserves uniform distribution of the final deflection.
+        /// §3.5.7.
         /// </summary>
         /// <param name="agentId">Unique ID of the passing agent.</param>
         /// <param name="frameNumber">Simulation frame from PassRequest.</param>
         /// <param name="passTypeIndex">PassType cast to int.</param>
-        /// <returns>Error rotation angle in radians [0, 2π).</returns>
+        /// <returns>Signed fraction in [-1, +1] — uniform distribution.</returns>
         public static float ComputeErrorDirection(int agentId, int frameNumber, int passTypeIndex)
         {
-            int hashInput;
-            unchecked  // intentional 32-bit wrap-around; deterministic hash mixing per §3.5.7
+            // SplitMix64 Stafford-variant 13 finalizer (Mix13) over a non-zero-salted
+            // (agentId, frameNumber, passTypeIndex) tuple. The 0x9E3779B97F4A7C15 golden-ratio
+            // seed (used as the canonical SplitMix64 state-update gamma in Spec #16 §3.4.4)
+            // is added BEFORE the first multiply so the (0, 0, 0) input cannot land on the
+            // mixer's fixed point (every step on h=0 stays 0, defeating avalanche).
+            // Each input is multiplied by a DISTINCT prime before XOR-folding so adjacent
+            // (agentId, frame, passIdx) inputs cannot alias via shared product space, and
+            // no input shares the seed's value directly.
+            // The 0xC2B2AE3D27D4EB4F constant is the xxHash64 prime; the 0xBF58476D1CE4E5B9
+            // and 0x94D049BB133111EB constants are the Stafford Mix13 finalizer multipliers
+            // — not the same as the Spec #16 §3.4.4 state-update constant, but well-known
+            // SplitMix64-family derivatives used for hash quality.
+            ulong h;
+            unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug.
             {
-                hashInput = agentId        * 73856093
-                          ^ frameNumber    * 19349663
-                          ^ passTypeIndex  * 83492791;
+                h = 0x9E3779B97F4A7C15UL + ((ulong)(uint)agentId) * 0xC2B2AE3D27D4EB4FUL;
+                h ^= ((ulong)(uint)frameNumber) * 0xBF58476D1CE4E5B9UL;
+                h ^= ((ulong)(uint)passTypeIndex) * 0x94D049BB133111EBUL;
+                h ^= h >> 30;
+                h *= 0xBF58476D1CE4E5B9UL;
+                h ^= h >> 27;
+                h *= 0x94D049BB133111EBUL;
+                h ^= h >> 31;
             }
 
-            float normalised = (float)(hashInput & 0x7FFFFFFF) / (float)0x7FFFFFFF;
-            return normalised * Mathf.PI * 2.0f;
+            // Take the top 24 bits as the uniform random word (avalanche-cleanest end);
+            // map to [0, 1) then to the signed fraction [-1, +1).
+            uint top24 = (uint)(h >> 40) & 0x00FFFFFFu;
+            float normalised = (float)top24 / (float)0x01000000u;
+            return (normalised * 2.0f) - 1.0f;
         }
 
         // ── §3.7 — Weak Foot Modifiers ──────────────────────────────────────────────
@@ -148,6 +176,35 @@ namespace TacticalDirector.PassMechanics
 // | 1.1     | 2026-05-26 | —      | H2: unchecked block added to ComputeErrorDirection hash for intentional   |
 // |         |            |        |     32-bit wrap-around (coding guide determinism rule).                   |
 // | 1.2     | 2026-05-27 | —      | AR-1 M-1: class changed public → internal (implementation detail).        |
-// |         |            |        | AR-1 L-1: NaN fallback returns MinErrorAngle (0.1°) instead of 0f;       |
+// |         |            |        | AR-1 L-1: NaN fallback returns MinErrorAngle (0.1°) instead of 0f;        |
 // |         |            |        |     0f violated the clamp contract [MinErrorAngle, MaxErrorAngle].        |
+// | 1.3     | 2026-06-06 | —      | AR-2 M-1: ComputeErrorDirection replaced prime-XOR mixer with             |
+// |         |            |        |     SplitMix64-style avalanche (Spec #16 §3.4.4 constants); 64-bit ulong  |
+// |         |            |        |     state eliminates 32-bit collision modes on close (agentId, frame)     |
+// |         |            |        |     pairs that the prior `h * P1 ^ h * P2 ^ h * P3` form was susceptible   |
+// |         |            |        |     to.                                                                   |
+// |         |            |        | AR-2 M-2: return type semantics changed [0, 2π) radians → [-1, +1] signed |
+// |         |            |        |     fraction so the deflection magnitude distributes UNIFORMLY across     |
+// |         |            |        |     [-errorAngle, +errorAngle]. Previous return mapped uniform [0,2π) to  |
+// |         |            |        |     rotation degrees via sin(), which produced a non-uniform Arcsine      |
+// |         |            |        |     distribution heavily weighted near ±errorAngle (sin'(±π/2) → 0).      |
+// |         |            |        |     PassTargetResolver.ApplyErrorToDirection signature follows.            |
+// |         |            |        | AR-2 L-13: NaN diagnostic Debug.LogError gated by                         |
+// |         |            |        |     #if UNITY_EDITOR || DEVELOPMENT_BUILD (FR-CS-031 hot-path carve-out;   |
+// |         |            |        |     restores symmetry with sibling files' build-guard pattern).            |
+// | 1.4     | 2026-06-06 | —      | AR-3 M-2: SplitMix64 mixer now adds 0x9E3779B97F4A7C15 seed BEFORE the    |
+// |         |            |        |     first multiply so the (0, 0, 0) input no longer lands on the mixer's |
+// |         |            |        |     fixed point. AR-3 L-1: inline comment corrected to Stafford "Mix13"   |
+// |         |            |        |     finalizer naming; explicit note that 0xBF584... / 0x94D04... are NOT  |
+// |         |            |        |     the Spec #16 §3.4.4 state-update constant.                            |
+// | 1.5     | 2026-06-06 | —      | AR-4 M-1: restored XOR-combinator orthogonality between frameNumber and  |
+// |         |            |        |     passTypeIndex contributions (AR-3 had folded all three inputs into a |
+// |         |            |        |     single ADD). Form is now (seed + agentId) XOR (frame*P1) XOR         |
+// |         |            |        |     (passIdx*P2), eliminating the (a=0, f=k*P2, p=0) / (a=0, f=0,        |
+// |         |            |        |     p=k*P1) aliasing.                                                    |
+// | 1.6     | 2026-06-06 | —      | AR-5 M-1: agentId now multiplied by the xxHash64 prime                  |
+// |         |            |        |     0xC2B2AE3D27D4EB4F before the seed addition so adjacent agentIds    |
+// |         |            |        |     within the same frame produce divergent pre-finalizer values rather |
+// |         |            |        |     than differing by 1 in the low bits (Stafford-13 still recovers but |
+// |         |            |        |     the multiplier-spread input is strictly better hash quality).        |
 #endregion

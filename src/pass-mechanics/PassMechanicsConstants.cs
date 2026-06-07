@@ -1,11 +1,11 @@
 // File:     src/pass-mechanics/PassMechanicsConstants.cs
 // Created:  2026-05-26
-// Modified: 2026-05-27
+// Modified: 2026-06-06
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.2.9, §3.3.7, §3.4.7, §3.5.9, §3.6.9, §3.7.6,
 //           §3.8.10, Code Standards #20
 // Purpose:  All constants for the pass mechanics system. No literals in formula code.
-//           Region order: Fixed → Derived → Cross → GT → EST.
+//           Region order: Fixed → Cross → GT.
 
 using UnityEngine;
 
@@ -46,6 +46,9 @@ namespace TacticalDirector.PassMechanics
         /// [CROSS] Pitch length (metres). Ball moves from X=0 to X=105 (goal-to-goal).
         /// Authoritative source: BallPhysicsConstants.Pitch.LENGTH. Ball Physics #1 §1.2.
         /// Value: 105.0m.
+        /// TODO: route via ProjectConstants once Stage 1 multi-consumer routing pass lands
+        ///       (Spec #20 §4.2; parallel duplications: AgentMovement SafetyConstants.PitchLengthX,
+        ///       Decision Tree PitchGeometry, Defensive AI DefensiveAIConstants).
         /// </summary>
         public static readonly float PitchLength = BallPhysicsConstants.Pitch.LENGTH;
 
@@ -53,6 +56,8 @@ namespace TacticalDirector.PassMechanics
         /// [CROSS] Pitch width (metres). Ball moves from Y=0 to Y=68 (touchline-to-touchline).
         /// Authoritative source: BallPhysicsConstants.Pitch.WIDTH. Ball Physics #1 §1.2.
         /// Value: 68.0m.
+        /// TODO: route via ProjectConstants once Stage 1 multi-consumer routing pass lands
+        ///       (Spec #20 §4.2; parallels SafetyConstants.PitchWidthY et al.).
         /// </summary>
         public static readonly float PitchWidth = BallPhysicsConstants.Pitch.WIDTH;
 
@@ -67,6 +72,11 @@ namespace TacticalDirector.PassMechanics
         /// <summary>[GT] Fatigue-induced velocity reduction coefficient. §3.2.5, [ALI-2011] direction.
         /// At Fatigue=1.0, velocity is reduced by this fraction. Tune in [0.10, 0.30].</summary>
         public static readonly float FatiguePowerReduction = 0.20f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Defensive floor for the weakFootPowerPenalty argument to ComputeKickSpeed.
+        /// Caller contract is [0.85, 1.0]; this clamp guards against malformed input that would
+        /// push velocity into a numerically invalid regime. §3.7.4.</summary>
+        public static readonly float WeakFootPowerFloorMin = 0.5f; // TODO: replace with config loader (Stage 1)
 
         // §3.3 — Launch Angle (Apex Heights)
 
@@ -129,6 +139,33 @@ namespace TacticalDirector.PassMechanics
         /// At 18° on 20m: miss ~6.5m lateral (≈ penalty area width).</summary>
         public static readonly float MaxErrorAngle = 18.0f; // TODO: replace with config loader (Stage 1)
 
+        // §3.5.4 — BASE_ERROR per PassType (degrees)
+        // Values are the error an exactly-average passer (Passing=10) produces at neutral conditions.
+
+        /// <summary>[GT] BASE_ERROR for Ground passes (degrees). §3.5.4.</summary>
+        public static readonly float BaseErrorGround = 1.5f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] BASE_ERROR for Driven passes (degrees). §3.5.4.</summary>
+        public static readonly float BaseErrorDriven = 2.0f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] BASE_ERROR for Lofted passes (degrees). §3.5.4.</summary>
+        public static readonly float BaseErrorLofted = 3.0f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] BASE_ERROR for ThroughBall passes (degrees). §3.5.4.</summary>
+        public static readonly float BaseErrorThroughBall = 2.0f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] BASE_ERROR for AerialThrough passes (degrees). §3.5.4.</summary>
+        public static readonly float BaseErrorAerialThrough = 3.5f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] BASE_ERROR for Cross.Flat / Cross.High passes (degrees). §3.5.4.</summary>
+        public static readonly float BaseErrorCrossFlat = 2.5f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] BASE_ERROR for Cross.Whipped passes (degrees). §3.5.4.</summary>
+        public static readonly float BaseErrorCrossWhipped = 3.0f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] BASE_ERROR for Chip passes (degrees). §3.5.4.</summary>
+        public static readonly float BaseErrorChip = 2.5f; // TODO: replace with config loader (Stage 1)
+
         // §3.5.6 — Pressure Scalar
 
         /// <summary>[GT] Spatial hash query radius for pressure detection (metres). §3.5.6.</summary>
@@ -163,6 +200,58 @@ namespace TacticalDirector.PassMechanics
         /// At Urgency=1.0, windup is halved: windupFrames × (1 - Urgency × 0.5).</summary>
         public static readonly float UrgencyWindupReduction = 0.50f; // TODO: replace with config loader (Stage 1)
 
+        // §3.8.10 — Per-Type Windup Frames at Urgency=0
+
+        /// <summary>[GT] Windup frames for Ground passes at Urgency=0. §3.8.10.</summary>
+        public static readonly int WindupFramesGround = 8; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Windup frames for Driven passes at Urgency=0. §3.8.10.</summary>
+        public static readonly int WindupFramesDriven = 12; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Windup frames for Lofted passes at Urgency=0. §3.8.10.</summary>
+        public static readonly int WindupFramesLofted = 15; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Windup frames for ThroughBall passes at Urgency=0. §3.8.10.</summary>
+        public static readonly int WindupFramesThroughBall = 8; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Windup frames for AerialThrough passes at Urgency=0. §3.8.10.</summary>
+        public static readonly int WindupFramesAerialThrough = 14; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Windup frames for Cross.Flat / Cross.Whipped passes at Urgency=0. §3.8.10.</summary>
+        public static readonly int WindupFramesCrossFlat = 12; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Windup frames for Cross.High passes at Urgency=0. §3.8.10.</summary>
+        public static readonly int WindupFramesCrossHigh = 14; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Windup frames for Chip passes at Urgency=0. §3.8.10.</summary>
+        public static readonly int WindupFramesChip = 10; // TODO: replace with config loader (Stage 1)
+
+        // §3.8.10 — Per-Type Follow-Through Frames
+
+        /// <summary>[GT] Follow-through frames for Ground passes. §3.8.10.</summary>
+        public static readonly int FollowThroughFramesGround = 6; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Follow-through frames for Driven passes. §3.8.10.</summary>
+        public static readonly int FollowThroughFramesDriven = 8; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Follow-through frames for Lofted passes. §3.8.10.</summary>
+        public static readonly int FollowThroughFramesLofted = 10; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Follow-through frames for ThroughBall passes. §3.8.10.</summary>
+        public static readonly int FollowThroughFramesThroughBall = 6; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Follow-through frames for AerialThrough passes. §3.8.10.</summary>
+        public static readonly int FollowThroughFramesAerialThrough = 10; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Follow-through frames for Cross.Flat / Cross.Whipped passes. §3.8.10.</summary>
+        public static readonly int FollowThroughFramesCrossFlat = 8; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Follow-through frames for Cross.High passes. §3.8.10.</summary>
+        public static readonly int FollowThroughFramesCrossHigh = 10; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>[GT] Follow-through frames for Chip passes. §3.8.10.</summary>
+        public static readonly int FollowThroughFramesChip = 8; // TODO: replace with config loader (Stage 1)
+
         #endregion
 
         // ── BASE ERROR PER PASS TYPE ──────────────────────────────────────────────
@@ -170,23 +259,30 @@ namespace TacticalDirector.PassMechanics
         /// <summary>
         /// Returns the BASE_ERROR (degrees) for the given pass type. §3.5.4.
         /// BASE_ERROR is the error an exactly average passer (Passing=10) produces at neutral conditions.
-        /// All values are [GT].
+        /// All values are [GT]; sourced from the named constants in the GT region.
+        /// On unknown PassType (cast-from-int caller) the gated FM-01 LogError is the fault
+        /// surface — the returned value is <see cref="BaseErrorDriven"/> (mid-range) so the
+        /// error chain remains numerically well-formed and downstream clamping behaves normally.
+        /// A "sentinel" base value would multiply through the chain and clamp identically to
+        /// the legitimate worst case, defeating identification (AR-3 M-3).
         /// </summary>
         public static float GetBaseError(PassType passType, CrossSubType crossSubType = CrossSubType.Flat)
         {
             switch (passType)
             {
-                case PassType.Ground:       return 1.5f;
-                case PassType.Driven:       return 2.0f;
-                case PassType.Lofted:       return 3.0f;
-                case PassType.ThroughBall:  return 2.0f;
-                case PassType.AerialThrough: return 3.5f;
+                case PassType.Ground:        return BaseErrorGround;
+                case PassType.Driven:        return BaseErrorDriven;
+                case PassType.Lofted:        return BaseErrorLofted;
+                case PassType.ThroughBall:   return BaseErrorThroughBall;
+                case PassType.AerialThrough: return BaseErrorAerialThrough;
                 case PassType.Cross:
-                    return (crossSubType == CrossSubType.Whipped) ? 3.0f : 2.5f;
-                case PassType.Chip:         return 2.5f;
+                    return (crossSubType == CrossSubType.Whipped) ? BaseErrorCrossWhipped : BaseErrorCrossFlat;
+                case PassType.Chip:          return BaseErrorChip;
                 default:
-                    Debug.LogError($"[PassMechanics] FM-01: GetBaseError called for unknown PassType={passType}. Returning 2.0°.");
-                    return 2.0f;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    Debug.LogError($"[PassMechanics] FM-01: GetBaseError called for unknown PassType={passType}. Returning BaseErrorDriven mid-range default.");
+#endif
+                    return BaseErrorDriven;
             }
         }
 
@@ -195,54 +291,78 @@ namespace TacticalDirector.PassMechanics
         /// <summary>
         /// Returns WINDUP_FRAMES at Urgency=0 for the given pass type. §3.8.10.
         /// These are state-machine timing values; they do NOT live on PhysicalProfile (F-A02).
-        /// All values are [GT].
+        /// All values are [GT]; sourced from the named constants in the GT region.
+        /// Unknown PassType returns <see cref="WindupFramesDriven"/> as a defensive default
+        /// (mid-range duration); FM-01 diagnostic is emitted in development builds.
         /// </summary>
         public static int GetWindupFrames(PassType passType, CrossSubType crossSubType = CrossSubType.Flat)
         {
             switch (passType)
             {
-                case PassType.Ground:       return 8;
-                case PassType.Driven:       return 12;
-                case PassType.Lofted:       return 15;
-                case PassType.ThroughBall:  return 8;
-                case PassType.AerialThrough: return 14;
+                case PassType.Ground:        return WindupFramesGround;
+                case PassType.Driven:        return WindupFramesDriven;
+                case PassType.Lofted:        return WindupFramesLofted;
+                case PassType.ThroughBall:   return WindupFramesThroughBall;
+                case PassType.AerialThrough: return WindupFramesAerialThrough;
                 case PassType.Cross:
-                    return (crossSubType == CrossSubType.High) ? 14 : 12;
-                case PassType.Chip:         return 10;
+                    return (crossSubType == CrossSubType.High) ? WindupFramesCrossHigh : WindupFramesCrossFlat;
+                case PassType.Chip:          return WindupFramesChip;
                 default:
-                    Debug.LogError($"[PassMechanics] FM-01: GetWindupFrames called for unknown PassType={passType}. Returning 10.");
-                    return 10;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    Debug.LogError($"[PassMechanics] FM-01: GetWindupFrames called for unknown PassType={passType}. Returning WindupFramesDriven.");
+#endif
+                    return WindupFramesDriven;
             }
         }
 
         /// <summary>
         /// Returns FOLLOWTHROUGH_FRAMES for the given pass type. §3.8.10.
-        /// All values are [GT].
+        /// All values are [GT]; sourced from the named constants in the GT region.
         /// </summary>
         public static int GetFollowThroughFrames(PassType passType, CrossSubType crossSubType = CrossSubType.Flat)
         {
             switch (passType)
             {
-                case PassType.Ground:       return 6;
-                case PassType.Driven:       return 8;
-                case PassType.Lofted:       return 10;
-                case PassType.ThroughBall:  return 6;
-                case PassType.AerialThrough: return 10;
+                case PassType.Ground:        return FollowThroughFramesGround;
+                case PassType.Driven:        return FollowThroughFramesDriven;
+                case PassType.Lofted:        return FollowThroughFramesLofted;
+                case PassType.ThroughBall:   return FollowThroughFramesThroughBall;
+                case PassType.AerialThrough: return FollowThroughFramesAerialThrough;
                 case PassType.Cross:
-                    return (crossSubType == CrossSubType.High) ? 10 : 8;
-                case PassType.Chip:         return 8;
+                    return (crossSubType == CrossSubType.High) ? FollowThroughFramesCrossHigh : FollowThroughFramesCrossFlat;
+                case PassType.Chip:          return FollowThroughFramesChip;
                 default:
-                    Debug.LogError($"[PassMechanics] FM-01: GetFollowThroughFrames called for unknown PassType={passType}. Returning 8.");
-                    return 8;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    Debug.LogError($"[PassMechanics] FM-01: GetFollowThroughFrames called for unknown PassType={passType}. Returning FollowThroughFramesDriven.");
+#endif
+                    return FollowThroughFramesDriven;
             }
         }
     }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                                                                   |
-// | 1.0     | 2026-05-26 | —      | Initial implementation.                                                 |
-// | 1.1     | 2026-05-27 | —      | AR-1 round-2 M-A: added using UnityEngine; GetBaseError, GetWindupFrames, |
-// |         |            |        |     GetFollowThroughFrames default cases now log FM-01 errors (consistent |
-// |         |            |        |     with PassTypeProfiles.GetProfile and PassVelocityCalculator defaults). |
+// | Version | Date       | Author | Notes                                                                       |
+// | 1.0     | 2026-05-26 | —      | Initial implementation.                                                     |
+// | 1.1     | 2026-05-27 | —      | AR-1 round-2 M-A: added using UnityEngine; GetBaseError, GetWindupFrames,   |
+// |         |            |        |     GetFollowThroughFrames default cases now log FM-01 errors (consistent   |
+// |         |            |        |     with PassTypeProfiles.GetProfile and PassVelocityCalculator defaults).  |
+// | 1.2     | 2026-06-06 | —      | AR-2 M-4: switch-arm literals promoted to named GT constants                |
+// |         |            |        |     (BaseError*/WindupFrames*/FollowThroughFrames* — 24 new constants).     |
+// |         |            |        | AR-2 L-4: WeakFootPowerFloorMin added (replaces 0.5f magic floor in        |
+// |         |            |        |     PassVelocityCalculator.ComputeKickSpeed).                              |
+// |         |            |        | AR-2 L-9: GetBaseError unknown-type fallback changed 2.0f → MaxErrorAngle  |
+// |         |            |        |     (out-of-band sentinel; no collision with legitimate per-type value).    |
+// |         |            |        |     AR-3 M-3 reverts: MaxErrorAngle clamps to the same range as the         |
+// |         |            |        |     legitimate worst case so the sentinel was unobservable. Fallback now    |
+// |         |            |        |     returns BaseErrorDriven (mid-range) and the gated FM-01 LogError is     |
+// |         |            |        |     the sole fault surface.                                                |
+// |         |            |        | AR-2 L-10: PitchLength/Width Cross XML docs gained Stage 1 ProjectConstants |
+// |         |            |        |     routing TODO (parallels Agent Movement v1.40 AR-5 L-3).                 |
+// |         |            |        | AR-2 L-13: FM-01 Debug.LogError emits gated by                               |
+// |         |            |        |     #if UNITY_EDITOR || DEVELOPMENT_BUILD (FR-CS-031 hot-path carve-out).    |
+// | 1.3     | 2026-06-06 | —      | AR-3 M-3: GetBaseError unknown-type fallback reverted MaxErrorAngle →       |
+// |         |            |        |     BaseErrorDriven. MaxErrorAngle was unobservable — the chain's            |
+// |         |            |        |     output clamp masks the sentinel against legitimate worst-case error.    |
+// |         |            |        |     Mid-range value + gated LogError is now the sole fault surface.         |
 #endregion
