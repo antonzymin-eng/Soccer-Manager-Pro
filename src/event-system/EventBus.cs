@@ -1,6 +1,6 @@
 // File:     src/event-system/EventBus.cs
 // Created:  2026-05-30
-// Modified: 2026-06-02
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Event System #17 §3.2.1, §3.2.2, §4.4, Code Standards #20
 // Purpose:  Public static event bus. Publish/Subscribe entry points plus DrainTick,
@@ -248,6 +248,22 @@ namespace TacticalDirector.EventSystem
                     " for ordinal 0x" + ordinal.ToString("X2") +
                     ". Increase MaxEventSlotBytes or reduce struct size (§3.5.1).");
 
+            // AR-10 M-1: phase validity guard must precede QueueCount reservation. The AR-8 M-2
+            // sentinel CurrentPhase = (PhaseId)0xFF is the intended fail-fast trip for a stale
+            // Publish between OnTickBoundary and BeginPhase, BUT the implicit IndexOutOfRangeException
+            // at PhaseDrawIndices[0xFF] below (line ~263) fires AFTER QueueCount++ has run, leaving
+            // the reserved slot un-populated. A release-build host that catches the IORE and
+            // continues would then have subsequent Publish writes skip slot N (EventTypeOrdinal=0,
+            // SerializeLedger classifies as Tier A zero-byte record, canonical digest corrupted) —
+            // exactly the AR-5 M-1 hazard. Guard before reservation so the throw is recoverable
+            // and parallel with the structSize / depth / overflow guards above.
+            byte phaseIdxCheck = (byte)EventLedger.CurrentPhase;
+            if (phaseIdxCheck >= EventLedger.PhaseDrawIndices.Length)
+                throw new InvalidOperationException(
+                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): Publish<T> called with invalid CurrentPhase 0x" +
+                    phaseIdxCheck.ToString("X2") + " (likely a stale publish between OnTickBoundary " +
+                    "and the next BeginPhase). AR-8 M-2 sentinel — call BeginTick + BeginPhase first.");
+
             int slotIndex  = EventLedger.QueueCount++;
             int slotOffset = slotIndex * EventSystemConstants.MaxEventSlotBytes;
 
@@ -341,4 +357,15 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | phase metadata in the registry; the asymmetry would have masked     |
 // |         |            |        | Stage 5+ Tier B wiring mistakes (producer publishes from the wrong   |
 // |         |            |        | phase). Debug-only — stripped from release builds (FR-EVT-048).     |
+// | 1.7     | 2026-06-07 | —      | AR-10 M-1: phase validity guard added to PublishAuthoritative      |
+// |         |            |        | before the QueueCount++ slot reservation. The AR-8 M-2 sentinel    |
+// |         |            |        | CurrentPhase = (PhaseId)0xFF intentionally trips a stale Publish   |
+// |         |            |        | between OnTickBoundary and the next BeginPhase, but the implicit  |
+// |         |            |        | IndexOutOfRangeException at PhaseDrawIndices[0xFF] fired AFTER     |
+// |         |            |        | QueueCount++ ran — a release-build host that caught the IORE and  |
+// |         |            |        | continued would corrupt the canonical digest exactly as in the    |
+// |         |            |        | AR-5 M-1 hazard (unpopulated slot, ordinal=0, classified Tier A   |
+// |         |            |        | by SerializeLedger). Guard before reservation so the throw is     |
+// |         |            |        | recoverable and parallel with the structSize / depth / overflow   |
+// |         |            |        | guards. Header date refreshed 2026-06-02 → 2026-06-07.            |
 #endregion
