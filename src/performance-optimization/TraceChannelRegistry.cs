@@ -30,7 +30,7 @@ namespace TacticalDirector.PerformanceOptimization
             determinismClass:    ChannelDeterminismClass.TierC,
             insideTickPipeline:  false,
             signOffLogRef:       null,
-            recordFormatVersion: "per #16 §3.2.4.1 active version",
+            recordFormatVersion: PerformanceOptimizationConstants.RECORD_FORMAT_VERSION_STAGE0_PENDING,
             ownerContact:        "Spec #18 author",
             createdDate:         "2026-05-14");
 
@@ -47,7 +47,7 @@ namespace TacticalDirector.PerformanceOptimization
             determinismClass:    ChannelDeterminismClass.TierC,
             insideTickPipeline:  false,
             signOffLogRef:       null,
-            recordFormatVersion: "per #16 §3.2.4.1 active version",
+            recordFormatVersion: PerformanceOptimizationConstants.RECORD_FORMAT_VERSION_STAGE0_PENDING,
             ownerContact:        "Spec #18 author",
             createdDate:         "2026-05-14");
 
@@ -68,7 +68,7 @@ namespace TacticalDirector.PerformanceOptimization
             determinismClass:    ChannelDeterminismClass.TierC,
             insideTickPipeline:  false,
             signOffLogRef:       null,
-            recordFormatVersion: "per #16 §3.2.4.1 active version",
+            recordFormatVersion: PerformanceOptimizationConstants.RECORD_FORMAT_VERSION_STAGE0_PENDING,
             ownerContact:        "Spec #18 author",
             createdDate:         "2026-05-14");
     }
@@ -83,4 +83,9 @@ namespace TacticalDirector.PerformanceOptimization
 // |         |            |        | a real ERR-018-NNN row exist. The prior literal placeholder         |
 // |         |            |        | satisfied the AR-2 L-2 invariant cosmetically while bypassing      |
 // |         |            |        | FR-PO-058a governance.                                              |
+// | 1.3     | 2026-06-07 | —      | AR-4 L-2: three identical "per #16 §3.2.4.1 active version"        |
+// |         |            |        | descriptive-prose placeholders replaced with a reference to the    |
+// |         |            |        | new PerformanceOptimizationConstants.RECORD_FORMAT_VERSION_         |
+// |         |            |        | STAGE0_PENDING sentinel so the unpinned-version deferral is        |
+// |         |            |        | discoverable from one place.                                        |
 #endregion
