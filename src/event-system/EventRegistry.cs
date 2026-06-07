@@ -1,6 +1,6 @@
 // File:     src/event-system/EventRegistry.cs
 // Created:  2026-05-30
-// Modified: 2026-05-30  (v1.1 — Stage 1 placeholder rows added)
+// Modified: 2026-06-07  (v1.4 — AR-8 M-1 registration collision + L-1 Tier A/B header-size guards)
 // Author:   —
 // Spec:     Event System #17 §2.4.2, Appendix A, Code Standards #20
 // Purpose:  Compile-time Appendix A registry. Maps event type ordinals to tier, version,
@@ -135,6 +135,21 @@ namespace TacticalDirector.EventSystem
             where T : struct
         {
             int structSize = Unsafe.SizeOf<T>();
+
+            // AR-8 L-1: Tier A/B structs must embed the canonical 12-byte header (§2.4.1).
+            // A struct smaller than EventHeaderBytes would let EventBus.PublishAuthoritative
+            // overwrite the header into bytes past the struct's footprint in the slot region
+            // (still inside MaxEventSlotBytes), then SerializeLedger would copy only the
+            // truncated structSize back — corrupting the canonical record bytes and the
+            // FR-DS-009 digest. Tier C is exempt (no header / not in digest).
+            if ((tier == (byte)DeterminismTier.TierA || tier == (byte)DeterminismTier.TierB)
+                && structSize < EventSystemConstants.EventHeaderBytes)
+                throw new ArgumentException(
+                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier A/B struct " + typeof(T).Name +
+                    " sizeof " + structSize + " bytes is smaller than EventHeaderBytes " +
+                    EventSystemConstants.EventHeaderBytes + " — Tier A/B structs MUST embed the " +
+                    "canonical 12-byte header per §2.4.1.", nameof(T));
+
             RegisterRowRaw(ordinal, tier, version, subsystemOrdinal,
                 maxPerTick, producerPhaseIndex, structSize);
             EventOrdinalCache<T>.Ordinal = ordinal;
@@ -143,6 +158,24 @@ namespace TacticalDirector.EventSystem
         private static void RegisterRowRaw(byte ordinal, byte tier, byte version,
             int subsystemOrdinal, ushort maxPerTick, byte producerPhaseIndex, int structSize)
         {
+            // AR-8 M-1: detect collision against a fully-initialised row (structSize > 0).
+            // Placeholder rows seeded with structSize=0 (Stage 1 RegisterExternalRow targets)
+            // are intentionally overwritable. A non-placeholder row being overwritten means
+            // two RegisterExternalRow calls claim the same ordinal — silently redirecting
+            // dispatch metadata to the wrong struct/phase/tier. The Subscribe-time guard in
+            // EventLedger / CosmeticChannel only fires after a subscriber happens to attach,
+            // so registration-time collisions could go undetected for an entire boot.
+            if (s_rows[ordinal].IsRegistered && s_rows[ordinal].StructSize > 0)
+                throw new InvalidOperationException(
+                    "ERR_EVT_ORDINAL_COLLISION (0x1707): ordinal 0x" + ordinal.ToString("X2") +
+                    " is already fully registered (subsystem 0x" +
+                    s_rows[ordinal].SubsystemOrdinal.ToString("X4") + ", tier " +
+                    s_rows[ordinal].Tier + ", structSize " + s_rows[ordinal].StructSize +
+                    "). Incoming registration: subsystem 0x" +
+                    ((ushort)subsystemOrdinal).ToString("X4") + ", tier " + tier +
+                    ", structSize " + structSize + ". Check for duplicate ordinal in " +
+                    "RegisterExternalRow calls.");
+
             s_rows[ordinal] = new RegistryRow
             {
                 Ordinal           = ordinal,
@@ -230,4 +263,13 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | rows (RegisterRowRaw structSize=0) return false until Initialize() |
 // |         |            |        | is called — prevents IsRegistered from being a misleading boot-   |
 // |         |            |        | readiness predicate that contradicts the Subscribe<T> ordinal guard.|
+// | 1.4     | 2026-06-07 | —      | AR-8 M-1: RegisterRowRaw now throws ERR_EVT_ORDINAL_COLLISION       |
+// |         |            |        | (0x1707) when targeting an already-fully-initialised row (existing  |
+// |         |            |        | StructSize > 0). Placeholder rows (structSize=0) remain overwrit-  |
+// |         |            |        | able per FR-EVT-003. Closes the registration-time collision path   |
+// |         |            |        | that the Subscribe-time cast guard could not detect until the      |
+// |         |            |        | first subscriber attached.                                         |
+// |         |            |        | AR-8 L-1: RegisterRow<T> asserts sizeof(T) >= EventHeaderBytes (12) |
+// |         |            |        | for Tier A/B types per §2.4.1 canonical header layout. Tier C is   |
+// |         |            |        | exempt (immediate-dispatch; excluded from canonical digest).        |
 #endregion
