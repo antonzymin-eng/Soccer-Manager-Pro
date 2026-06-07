@@ -7,6 +7,8 @@
 //           Sessions missing any field are rejected by the §3.4.4 baseline validator.
 //           Binds to EnvironmentFingerprint from Deterministic Simulation #16 §4.8.
 
+using System;
+
 using TacticalDirector.DeterministicSim;
 
 namespace TacticalDirector.PerformanceOptimization
@@ -98,6 +100,41 @@ namespace TacticalDirector.PerformanceOptimization
             HardwareCounterSnapshot hardwareCounters,
             string harnessVersion)
         {
+            if (gitSha == null)
+            {
+                throw new ArgumentNullException(nameof(gitSha));
+            }
+
+            if (environmentFingerprint == null)
+            {
+                throw new ArgumentNullException(nameof(environmentFingerprint));
+            }
+
+            if (platformPin == null)
+            {
+                throw new ArgumentNullException(nameof(platformPin));
+            }
+
+            if (scenarioManifestId == null)
+            {
+                throw new ArgumentNullException(nameof(scenarioManifestId));
+            }
+
+            if (sessionStartUtc == null)
+            {
+                throw new ArgumentNullException(nameof(sessionStartUtc));
+            }
+
+            if (sessionEndUtc == null)
+            {
+                throw new ArgumentNullException(nameof(sessionEndUtc));
+            }
+
+            if (harnessVersion == null)
+            {
+                throw new ArgumentNullException(nameof(harnessVersion));
+            }
+
             GitSha                 = gitSha;
             Seed                   = seed;
             EnvironmentFingerprint = environmentFingerprint;
@@ -145,4 +182,11 @@ namespace TacticalDirector.PerformanceOptimization
 // |         |            |        | longer overpromise format validation that IsComplete does not       |
 // |         |            |        | perform — 40-hex / RFC 3339 enforcement is explicitly deferred to   |
 // |         |            |        | the Stage 0+1 harness ingestion path. Doc-only.                     |
+// | 1.4     | 2026-06-07 | —      | AR-3 full-surface M-1: constructor enforces non-null on every       |
+// |         |            |        | string and reference parameter (GitSha / EnvironmentFingerprint /  |
+// |         |            |        | PlatformPin / ScenarioManifestId / SessionStartUtc / SessionEndUtc /|
+// |         |            |        | HarnessVersion). Closes the AR-3 M-2 cascade gap — BaselineRecord  |
+// |         |            |        | rejected null manifest but did NOT recursively validate manifest    |
+// |         |            |        | fields. Without this, BaselineReproducibilityAuditor silently       |
+// |         |            |        | matched null == null on ScenarioManifestId.                        |
 #endregion

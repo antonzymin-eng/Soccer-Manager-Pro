@@ -29,10 +29,18 @@ namespace TacticalDirector.PerformanceOptimization
         /// <summary>Which simulation loop this record was captured against (KD-8).</summary>
         public LoopTag Loop { get; }
 
-        /// <summary>Median per-tick / per-frame budget consumption in milliseconds.</summary>
+        /// <summary>
+        /// Median per-tick / per-frame budget consumption in milliseconds.
+        /// Ctor invariant accepts <c>≥ 0</c> for diagnostic logging of degenerate runs,
+        /// but <see cref="RegressionGate"/> and <see cref="BaselineReproducibilityAuditor"/>
+        /// treat <c>0</c> as degenerate (strict <c>&gt; 0f</c>) and fail-closed downstream.
+        /// </summary>
         public float P50Ms { get; }
 
-        /// <summary>99th-percentile per-tick / per-frame budget consumption in milliseconds.</summary>
+        /// <summary>
+        /// 99th-percentile per-tick / per-frame budget consumption in milliseconds.
+        /// Same asymmetry as <see cref="P50Ms"/>: ctor accepts <c>≥ 0</c>; gates reject <c>0</c>.
+        /// </summary>
         public float P99Ms { get; }
 
         /// <summary>
@@ -127,4 +135,7 @@ namespace TacticalDirector.PerformanceOptimization
 // |         |            |        | perMethodAllocBytes / thresholdCited (non-empty) and finite,        |
 // |         |            |        | non-negative p50Ms / p99Ms. Closes upstream NPE hazards in          |
 // |         |            |        | RegressionGate.Evaluate / BaselineReproducibilityAuditor.Validate.  |
+// | 1.2     | 2026-06-07 | —      | AR-3 full-surface L-3: XML docs on P50Ms / P99Ms record the         |
+// |         |            |        | intentional asymmetry — ctor admits ≥ 0 for diagnostic logging,    |
+// |         |            |        | gates reject 0 as degenerate. Doc-only.                             |
 #endregion
