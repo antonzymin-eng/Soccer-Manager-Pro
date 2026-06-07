@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementSystem.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03 (AR-9 fix pass)
+// Modified: 2026-06-07 (AR-10 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §4.4, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
@@ -62,10 +62,12 @@ namespace TacticalDirector.AgentMovement
             Debug.Assert(dt > 0.0f && dt <= 1.5f / _physicsHz,
                 "AgentMovementSystem.Update: dt outside expected range for physicsHz (>1.5× frame).");
 
-            // currentTime must come from MatchClock (Spec #16 §3.2.3). NaN or negative inputs
-            // silently break OscillationGuard window math (NaN < WindowSeconds is false, so the
-            // guard becomes a no-op). Caught at the boundary instead.
-            Debug.Assert(!float.IsNaN(currentTime) && currentTime >= 0.0f,
+            // currentTime must come from MatchClock (Spec #16 §3.2.3). NaN, ±Infinity, or
+            // negative inputs silently break OscillationGuard window math (NaN comparisons
+            // are always false, +Infinity makes the window unconditionally include every
+            // historical slot, -Infinity flips the comparison). `float.IsFinite` catches
+            // NaN and both infinities in a single call.
+            Debug.Assert(float.IsFinite(currentTime) && currentTime >= 0.0f,
                 "AgentMovementSystem.Update: currentTime must be finite and non-negative (MatchClock contract).");
 
             // Step 1 — command is already received as parameter.
@@ -129,11 +131,12 @@ namespace TacticalDirector.AgentMovement
                     if (isCollisionTransition)
                     {
                         state.GroundedReason = GroundedReason.COLLISION;
-                        // Clamp01 enforces the [0, 1] doc contract on CollisionForce
-                        // (AgentState.cs §3.5.1) — downstream CalculateGroundedDwell already
-                        // clamps defensively, but cache consumers (animation, debug) read the
-                        // raw cached value and would see out-of-range input otherwise.
-                        state.CollisionForce = Mathf.Clamp01(collisionForce);
+                        // SanitiseCollisionForce enforces the [0, 1] doc contract on
+                        // CollisionForce (AgentState.cs §3.5.1) AND filters out NaN —
+                        // raw Mathf.Clamp01(NaN) returns NaN (both `<0` and `>1`
+                        // comparisons against NaN are false), which would poison
+                        // downstream CalculateGroundedDwell and cache consumers.
+                        state.CollisionForce = SanitiseCollisionForce(collisionForce);
 
                         // A collision is a structural break in normal locomotion; any prior
                         // flap-history is irrelevant. Reset the guard so the post-recovery
@@ -170,10 +173,11 @@ namespace TacticalDirector.AgentMovement
                 if (isCollisionKnockdown && state.CurrentState == AgentMovementState.GROUNDED)
                 {
                     state.GroundedReason = GroundedReason.COLLISION;
-                    // Clamp01 mirrors the cache write in the outer transition branch — keeps
-                    // CollisionForce ∈ [0, 1] regardless of whether the second hit lands during
-                    // a state transition or while already GROUNDED.
-                    state.CollisionForce = Mathf.Clamp01(collisionForce);
+                    // SanitiseCollisionForce mirrors the cache write in the outer transition
+                    // branch — keeps CollisionForce ∈ [0, 1] and rejects NaN regardless of
+                    // whether the second hit lands during a state transition or while already
+                    // GROUNDED.
+                    state.CollisionForce = SanitiseCollisionForce(collisionForce);
                     state.TimeInState = 0.0f;
                 }
                 else
@@ -472,6 +476,23 @@ namespace TacticalDirector.AgentMovement
             return true;
         }
 
+        // Clamps collisionForce to [0, 1] AND maps NaN → 0. Plain Mathf.Clamp01(NaN) returns
+        // NaN (Unity's implementation is `value < 0 ? 0 : value > 1 ? 1 : value`; both halves
+        // of the ternary are false for NaN, so NaN passes through). A poisoned cache propagates
+        // through CalculateGroundedDwell (`forceScale = … + … * Clamp01(NaN) = NaN`, then
+        // `dwell *= NaN = NaN`, then `Mathf.Clamp(NaN, min, max) = NaN`), so the
+        // `dwellTimer < requiredDwell` gate returns false on the next frame and the agent
+        // releases prematurely. Treating NaN as 0 force degrades to the minimum-impulse path
+        // (forceScale = CollisionDwellMin) which is the safe-recovery default.
+        private static float SanitiseCollisionForce(float collisionForce)
+        {
+            if (!float.IsFinite(collisionForce))
+            {
+                return 0.0f;
+            }
+            return Mathf.Clamp01(collisionForce);
+        }
+
         private static void UpdateFatigue(ref AgentState state, float dt)
         {
             switch (state.CurrentState)
@@ -586,4 +607,15 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | dropped to CollisionDwellMin=0.65 on frame 1 and beyond), releasing the agent prematurely.   |
 // |         |            |        | The cached state.CollisionForce (set on entry, refreshed on second-hit per AR-5 M-2) is the  |
 // |         |            |        | value the §3.1.5 dwell formula was designed to consume.                                       |
+// | 1.13    | 2026-06-07 | —      | AR-10 fix: M-1 NaN-typed collisionForce input would poison state.CollisionForce via the     |
+// |         |            |        | AR-8 L-2 Mathf.Clamp01 wrap (Unity's Clamp01 is `<0 ? 0 : >1 ? 1 : value` and both halves    |
+// |         |            |        | of the ternary are false for NaN, so NaN passes through). The poisoned cache propagates      |
+// |         |            |        | into CalculateGroundedDwell on the next frame, turns the entire formula into NaN, and       |
+// |         |            |        | flips the `dwellTimer < requiredDwell` gate to false → agent releases one frame after a     |
+// |         |            |        | NaN-force hit instead of recovering. New private static SanitiseCollisionForce maps NaN /  |
+// |         |            |        | ±Infinity → 0 (safe-recovery minimum-impulse default) before Clamp01; consumed at both the |
+// |         |            |        | outer-transition and inner-else cache-write sites. L-1 currentTime assert tightened from   |
+// |         |            |        | `!IsNaN && >= 0` to `float.IsFinite && >= 0` — the prior gate let +Infinity through, which |
+// |         |            |        | makes the OscillationGuard `currentTime - ReadTime(i) < WindowSeconds` math evaluate true   |
+// |         |            |        | for every historical slot. `IsFinite` catches NaN and both infinities in one call.         |
 #endregion
