@@ -1,12 +1,14 @@
 // File:     src/performance-optimization/HotPathEntry.cs
 // Created:  2026-06-01
-// Modified: 2026-06-01
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.7.2, Code Standards #20
 // Purpose:  Represents a single entry in the hot-path union set (§3.7.2).
 //           The union is the set of all per-spec §6 budget-table entries; it is
 //           materialised at build time into tools/hot-path-union.json by
 //           tools/budget-auditor.py (Stage 0+1 deliverable).
+
+using System;
 
 namespace TacticalDirector.PerformanceOptimization
 {
@@ -46,6 +48,33 @@ namespace TacticalDirector.PerformanceOptimization
             float budgetMs,
             bool hasAllocExemption)
         {
+            if (specId == null)
+            {
+                throw new ArgumentNullException(nameof(specId));
+            }
+
+            if (specId.Length == 0)
+            {
+                throw new ArgumentException("specId must be non-empty.", nameof(specId));
+            }
+
+            if (methodName == null)
+            {
+                throw new ArgumentNullException(nameof(methodName));
+            }
+
+            if (methodName.Length == 0)
+            {
+                throw new ArgumentException("methodName must be non-empty.", nameof(methodName));
+            }
+
+            if (!float.IsFinite(budgetMs) || budgetMs < 0f)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(budgetMs), budgetMs,
+                    "budgetMs must be finite and non-negative.");
+            }
+
             SpecId            = specId;
             MethodName        = methodName;
             Loop              = loop;
@@ -56,6 +85,9 @@ namespace TacticalDirector.PerformanceOptimization
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-01 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-01 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-07 | —      | AR-3 full-surface M-3: constructor enforces non-null + non-empty   |
+// |         |            |        | specId / methodName and finite, non-negative budgetMs. Parallel to |
+// |         |            |        | BudgetRollupEntry hardening.                                       |
 #endregion

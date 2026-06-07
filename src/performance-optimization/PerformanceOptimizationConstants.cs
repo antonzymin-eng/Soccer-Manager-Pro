@@ -1,6 +1,6 @@
 // File:     src/performance-optimization/PerformanceOptimizationConstants.cs
 // Created:  2026-05-30
-// Modified: 2026-06-02
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.10, §8.4, Appendix B, Code Standards #20
 // Purpose:  Constant catalogue for Spec #18 governance constants.
@@ -35,6 +35,17 @@ namespace TacticalDirector.PerformanceOptimization
         /// Used in §6 budget tables and baseline-record JSON projections. §3.2.2.
         /// </summary>
         public const string LOOP_TAG_PHYSICS_60HZ = "LOOP-PHYSICS-60HZ";
+
+        /// <summary>
+        /// [FIXED] Stage 0 sentinel value for <see cref="TraceChannelDescriptor.RecordFormatVersion"/>
+        /// on anchor rows created before #16 §3.2.4.1 publishes a concrete schema-version string.
+        /// AR-4 L-2: introduced to remove three identical descriptive-prose placeholders previously
+        /// inlined in <see cref="TraceChannelRegistry"/> (PerfBudget / PerfAlloc / PerfTrace), each
+        /// satisfying the F.0 non-empty invariant cosmetically while masking the unpinned format
+        /// version. Replaced with a concrete value (e.g., "1.0") when #16 §3.2.4.1 is pinned.
+        /// </summary>
+        public const string RECORD_FORMAT_VERSION_STAGE0_PENDING =
+            "STAGE0-PENDING (pin to #16 §3.2.4.1 active version when published)";
         #endregion
 
         #region GT
@@ -137,4 +148,8 @@ namespace TacticalDirector.PerformanceOptimization
 // |         |            |        | confidence-interval tolerance" sentence from Promotion-    |
 // |         |            |        | ToleranceFraction; auditor consumes ReproducibilityToler-  |
 // |         |            |        | anceFraction instead.                                       |
+// | 1.3     | 2026-06-07 | —      | AR-4 L-2: RECORD_FORMAT_VERSION_STAGE0_PENDING [FIXED]     |
+// |         |            |        | sentinel constant added. Replaces three identical          |
+// |         |            |        | descriptive-prose placeholders in TraceChannelRegistry     |
+// |         |            |        | so the unpinned-schema-version deferral is discoverable.   |
 #endregion

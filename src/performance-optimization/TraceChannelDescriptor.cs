@@ -1,6 +1,6 @@
 // File:     src/performance-optimization/TraceChannelDescriptor.cs
 // Created:  2026-05-30
-// Modified: 2026-06-02
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.8.2, Appendix F.0, Code Standards #20
 // Purpose:  Schema-conforming descriptor for a single trace channel.
@@ -84,6 +84,56 @@ namespace TacticalDirector.PerformanceOptimization
             string ownerContact,
             string createdDate)
         {
+            if (channelName == null)
+            {
+                throw new ArgumentNullException(nameof(channelName));
+            }
+
+            if (channelName.Length == 0)
+            {
+                throw new ArgumentException("channelName must be non-empty (F.0).", nameof(channelName));
+            }
+
+            if (owningSubsystem == null)
+            {
+                throw new ArgumentNullException(nameof(owningSubsystem));
+            }
+
+            if (owningSubsystem.Length == 0)
+            {
+                throw new ArgumentException("owningSubsystem must be non-empty (F.0).", nameof(owningSubsystem));
+            }
+
+            if (recordFormatVersion == null)
+            {
+                throw new ArgumentNullException(nameof(recordFormatVersion));
+            }
+
+            if (recordFormatVersion.Length == 0)
+            {
+                throw new ArgumentException("recordFormatVersion must be non-empty (F.0).", nameof(recordFormatVersion));
+            }
+
+            if (ownerContact == null)
+            {
+                throw new ArgumentNullException(nameof(ownerContact));
+            }
+
+            if (ownerContact.Length == 0)
+            {
+                throw new ArgumentException("ownerContact must be non-empty (F.0).", nameof(ownerContact));
+            }
+
+            if (createdDate == null)
+            {
+                throw new ArgumentNullException(nameof(createdDate));
+            }
+
+            if (createdDate.Length == 0)
+            {
+                throw new ArgumentException("createdDate must be non-empty (F.0).", nameof(createdDate));
+            }
+
             if (samplingRule == ChannelSamplingRule.PerNTicks && sampleN == 0u)
             {
                 throw new ArgumentException(
@@ -122,4 +172,9 @@ namespace TacticalDirector.PerformanceOptimization
 // | 1.2     | 2026-06-02 | —      | AR-2 M-2: constructor gained XML <summary> (FR-CS-060).             |
 // |         |            |        | AR-2 L-2: constructor enforces InsideTickPipeline ⇒ SignOffLogRef   |
 // |         |            |        | non-empty invariant (symmetric to AR-1 L-1).                        |
+// | 1.3     | 2026-06-07 | —      | AR-3 full-surface L-2: constructor null-checks the five always-     |
+// |         |            |        | required F.0 string parameters (channelName / owningSubsystem /     |
+// |         |            |        | recordFormatVersion / ownerContact / createdDate). signOffLogRef    |
+// |         |            |        | remains null-permitted when InsideTickPipeline is false (the AR-3  |
+// |         |            |        | M-3 PerfTrace path relies on this).                                 |
 #endregion

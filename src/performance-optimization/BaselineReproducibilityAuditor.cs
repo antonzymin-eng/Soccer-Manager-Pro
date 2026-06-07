@@ -1,6 +1,6 @@
 // File:     src/performance-optimization/BaselineReproducibilityAuditor.cs
 // Created:  2026-06-01
-// Modified: 2026-06-02
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.4.4, §5.4, FR-PO-067, Code Standards #20
 // Purpose:  Implements the FR-PO-067 baseline-reproducibility auditor.
@@ -8,6 +8,8 @@
 //           ReproducibilityToleranceFraction. Silently skipping the re-run is
 //           an FR-PO-067 violation and is merge-blocking per FR-PO-068.
 //           Stage 0 carve-out: no src/ runtime yet; the MUST activates at Stage 0+1.
+
+using System;
 
 namespace TacticalDirector.PerformanceOptimization
 {
@@ -35,6 +37,16 @@ namespace TacticalDirector.PerformanceOptimization
         /// </param>
         public static ReproducibilityResult Validate(BaselineRecord original, BaselineRecord recaptured)
         {
+            if (original == null)
+            {
+                throw new ArgumentNullException(nameof(original));
+            }
+
+            if (recaptured == null)
+            {
+                throw new ArgumentNullException(nameof(recaptured));
+            }
+
             bool scenarioMatched = original.Manifest.ScenarioManifestId
                 == recaptured.Manifest.ScenarioManifestId;
 
@@ -70,4 +82,9 @@ namespace TacticalDirector.PerformanceOptimization
 // | 1.1     | 2026-06-02 | —      | AR-1 L-2: sealed class → static class (stateless validator).        |
 // |         |            |        | AR-1 M-3: degenerate origP50 (≤0 or NaN) fails closed instead of    |
 // |         |            |        | silently passing as reproducible.                                   |
+// | 1.2     | 2026-06-07 | —      | AR-3 M-1: Validate now explicitly null-checks original / recaptured |
+// |         |            |        | with ArgumentNullException (symmetric to PerfGateRunner.Run). The   |
+// |         |            |        | BaselineRecord ctor now enforces non-null Manifest (AR-3 M-2), so   |
+// |         |            |        | the Manifest dereferences below are NRE-free once both record args  |
+// |         |            |        | are non-null.                                                       |
 #endregion
