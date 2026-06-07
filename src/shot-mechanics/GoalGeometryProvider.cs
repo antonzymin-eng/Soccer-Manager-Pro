@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/GoalGeometryProvider.cs
 // Created:  2026-05-27
-// Modified: 2026-05-28
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Shot Mechanics #6 §4.1.1, Code Standards #20
 // Purpose:  Single access point for goal geometry constants. Returns ShotMechanicsConstants
@@ -38,13 +38,17 @@ namespace TacticalDirector.ShotMechanics
             float goalWidth   = ShotMechanicsConstants.GOAL_WIDTH;
             float goalHeight  = ShotMechanicsConstants.GOAL_HEIGHT;
 
+            // Goal posts are centred on the pitch Y axis: midpoint = pitchWidth / 2.
+            // GoalCentreU (= 0.5) is the goal-relative midpoint constant from §3.5 — re-used
+            // here as the dimensionless "half" multiplier so this site has no magic literal
+            // (FR-CS-016). Semantically identical to a dedicated [DERIVED] `Half` constant.
             return new GoalGeometry
             {
                 GoalWidth  = goalWidth,
                 GoalHeight = goalHeight,
                 GoalLineX  = pitchLength,
-                LeftPostY  = (pitchWidth - goalWidth) * 0.5f,
-                RightPostY = (pitchWidth + goalWidth) * 0.5f,
+                LeftPostY  = (pitchWidth - goalWidth) * ShotMechanicsConstants.GoalCentreU,
+                RightPostY = (pitchWidth + goalWidth) * ShotMechanicsConstants.GoalCentreU,
                 CrossbarZ  = goalHeight
             };
         }
@@ -78,4 +82,6 @@ namespace TacticalDirector.ShotMechanics
 // | 1.0     | 2026-05-27 | —      | Initial implementation. Field naming corrected vs spec §4.1.1 to match  |
 // |         |            |        |     authoritative coordinate system (X=length, Y=width, Z=height).      |
 // | 1.1     | 2026-05-28 | —      | H-2: GoalGeometry struct extracted to GoalGeometry.cs.                   |
+// | 1.2     | 2026-06-07 | —      | AR-4 L-1: 0.5f magic literals in goal-post midpoint replaced with        |
+// |         |            |        |   ShotMechanicsConstants.GoalCentreU (FR-CS-016).                        |
 #endregion

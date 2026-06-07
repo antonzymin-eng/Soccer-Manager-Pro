@@ -1,13 +1,12 @@
 // File:     src/shot-mechanics/ShotEventEmitter.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.10, §4.7, Code Standards #20
 // Purpose:  Constructs and publishes ShotExecutedEvent at CONTACT state completion
-//           and ShotCancelledEvent on WINDUP tackle interrupt. Stage 0: publishes via
-//           EventBusStub (no-op). Must not publish events for Invalid outcomes. §3.10.
-
-using UnityEngine;
+//           and ShotCancelledEvent on WINDUP tackle interrupt. Stage 1 (post #17 wiring):
+//           publishes via EventBusStub → EventBus.Publish. Must not publish events for
+//           Invalid outcomes. §3.10.
 
 namespace TacticalDirector.ShotMechanics
 {
@@ -85,6 +84,10 @@ namespace TacticalDirector.ShotMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-27 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                       |
+// | 1.0     | 2026-05-27 | —      | Initial implementation.                                     |
+// | 1.1     | 2026-06-07 | —      | AR-4 L-2: removed unused `using UnityEngine;` directive     |
+// |         |            |        |   (no Unity types referenced after Stage 0 stub→stub-wiring |
+// |         |            |        |   migration). Purpose header updated to reflect Stage 1     |
+// |         |            |        |   wiring instead of stale "Stage 0 no-op" wording.          |
 #endregion
