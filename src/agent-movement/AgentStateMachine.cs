@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentStateMachine.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03 (AR-9 fix pass)
+// Modified: 2026-06-07 (AR-11 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.4–§3.1.7, Code Standards #20
 // Purpose:  Pure state evaluation for movement state transitions. No side effects.
@@ -36,8 +36,8 @@ namespace TacticalDirector.AgentMovement
             float sprintReservoir,
             float aerobicPool,
             bool isCollisionKnockdown,
-            float collisionForce = 0.0f,
-            GroundedReason groundedReason = GroundedReason.NONE)
+            float collisionForce,
+            GroundedReason groundedReason)
         {
             // Boundary assert mirroring PerformanceContext.EvaluateAttribute (AR-7 L-1):
             // raw player attributes are integers in [1, 20] per Spec #2 §3.5.1. `default(PlayerAttributes)`
@@ -377,4 +377,9 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | default for collisionForce was also misleading after the AR-9 M-1 contract change             |
 // |         |            |        | (parameter is now the cached entry-force, not this-frame's impulse). XML doc updated to       |
 // |         |            |        | name the new contract.                                                                         |
+// | 1.10    | 2026-06-07 | —      | AR-11 fix: L-1 EvaluateState parameter defaults (collisionForce=0.0f /                       |
+// |         |            |        | groundedReason=NONE) dropped, parallel to AR-9 L-2 on CalculateGroundedDwell.                |
+// |         |            |        | AgentMovementSystem.Update is the only caller and always supplies the cached                 |
+// |         |            |        | state.CollisionForce + state.GroundedReason explicitly. Defaults were also misleading        |
+// |         |            |        | after the AR-9 M-1 contract change (cached entry-force, not this-frame impulse).             |
 #endregion
