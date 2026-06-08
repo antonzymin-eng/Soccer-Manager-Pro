@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassErrorCalculator.cs
 // Created:  2026-05-26
-// Modified: 2026-06-06
+// Modified: 2026-06-08
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.5, §3.7, Code Standards #20
 // Purpose:  Pure static calculator for the multiplicative error chain (§3.5),
@@ -86,7 +86,7 @@ namespace TacticalDirector.PassMechanics
         // ── §3.5.7 — Error Direction ────────────────────────────────────────────────
 
         /// <summary>
-        /// Computes a deterministic error-direction signed fraction in [-1, +1] using a
+        /// Computes a deterministic error-direction signed fraction in [-1, +1) using a
         /// SplitMix64-style mixer over (agentId, frameNumber, passTypeIndex). Identical
         /// inputs always produce identical output — replay-safe. No System.Random.
         ///
@@ -99,7 +99,8 @@ namespace TacticalDirector.PassMechanics
         /// <param name="agentId">Unique ID of the passing agent.</param>
         /// <param name="frameNumber">Simulation frame from PassRequest.</param>
         /// <param name="passTypeIndex">PassType cast to int.</param>
-        /// <returns>Signed fraction in [-1, +1] — uniform distribution.</returns>
+        /// <returns>Signed fraction in [-1, +1) — uniform distribution. Upper bound is open
+        /// because the 24-bit mantissa quantisation never produces normalised == 1.0f.</returns>
         public static float ComputeErrorDirection(int agentId, int frameNumber, int passTypeIndex)
         {
             // SplitMix64 Stafford-variant 13 finalizer (Mix13) over a non-zero-salted
@@ -107,30 +108,40 @@ namespace TacticalDirector.PassMechanics
             // seed (used as the canonical SplitMix64 state-update gamma in Spec #16 §3.4.4)
             // is added BEFORE the first multiply so the (0, 0, 0) input cannot land on the
             // mixer's fixed point (every step on h=0 stays 0, defeating avalanche).
-            // Each input is multiplied by a DISTINCT prime before XOR-folding so adjacent
-            // (agentId, frame, passIdx) inputs cannot alias via shared product space, and
-            // no input shares the seed's value directly.
-            // The 0xC2B2AE3D27D4EB4F constant is the xxHash64 prime; the 0xBF58476D1CE4E5B9
-            // and 0x94D049BB133111EB constants are the Stafford Mix13 finalizer multipliers
-            // — not the same as the Spec #16 §3.4.4 state-update constant, but well-known
-            // SplitMix64-family derivatives used for hash quality.
+            //
+            // agentId is folded ADDITIVELY into the seed (seed + agentId * P), while
+            // frameNumber and passTypeIndex are folded via XOR after distinct prime
+            // multiplications. The asymmetry is intentional (AR-5 M-1): the additive
+            // path on agentId guarantees a unique pre-finalizer base for adjacent
+            // agents within the same frame even before avalanche kicks in.
+            //
+            // Each input multiplier is an xxHash64 family prime (PRIME64_2 / PRIME64_3 /
+            // PRIME64_5). The finalizer multipliers 0xBF58476D1CE4E5B9 and
+            // 0x94D049BB133111EB are the Stafford Mix13 constants. Input-mix primes are
+            // kept DISJOINT from the finalizer primes (AR-6 M-1) so the finalizer cannot
+            // partially undo input-mix structure on adjacent (frame, passIdx) tuples by
+            // multiplying through the same prime twice. None of the input-mix primes
+            // are the Spec #16 §3.4.4 state-update gamma.
             ulong h;
             unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug.
             {
-                h = 0x9E3779B97F4A7C15UL + ((ulong)(uint)agentId) * 0xC2B2AE3D27D4EB4FUL;
-                h ^= ((ulong)(uint)frameNumber) * 0xBF58476D1CE4E5B9UL;
-                h ^= ((ulong)(uint)passTypeIndex) * 0x94D049BB133111EBUL;
+                h  = 0x9E3779B97F4A7C15UL + ((ulong)(uint)agentId)        * 0xC2B2AE3D27D4EB4FUL; // xxHash64 PRIME64_2
+                h ^= ((ulong)(uint)frameNumber)    * 0x165667B19E3779F9UL;                         // xxHash64 PRIME64_3
+                h ^= ((ulong)(uint)passTypeIndex)  * 0x27D4EB2F165667C5UL;                         // xxHash64 PRIME64_5
                 h ^= h >> 30;
-                h *= 0xBF58476D1CE4E5B9UL;
+                h *= 0xBF58476D1CE4E5B9UL;                                                         // Stafford Mix13 #1
                 h ^= h >> 27;
-                h *= 0x94D049BB133111EBUL;
+                h *= 0x94D049BB133111EBUL;                                                         // Stafford Mix13 #2
                 h ^= h >> 31;
             }
 
             // Take the top 24 bits as the uniform random word (avalanche-cleanest end);
-            // map to [0, 1) then to the signed fraction [-1, +1).
-            uint top24 = (uint)(h >> 40) & 0x00FFFFFFu;
-            float normalised = (float)top24 / (float)0x01000000u;
+            // the 24-bit window matches float mantissa precision so the divisor is exactly
+            // representable and the [0, 1) → [-1, +1) mapping introduces no rounding bias.
+            const uint  Mantissa24Mask  = 0x00FFFFFFu;   // 2^24 − 1
+            const float Mantissa24Scale = 16777216.0f;   // 2^24, exactly representable in float
+            uint  top24      = (uint)(h >> 40) & Mantissa24Mask;
+            float normalised = (float)top24 / Mantissa24Scale;
             return (normalised * 2.0f) - 1.0f;
         }
 
@@ -207,4 +218,24 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     within the same frame produce divergent pre-finalizer values rather |
 // |         |            |        |     than differing by 1 in the low bits (Stafford-13 still recovers but |
 // |         |            |        |     the multiplier-spread input is strictly better hash quality).        |
+// | 1.7     | 2026-06-08 | —      | AR-6 fix pass (1M+3L; completes the AR-5 cycle-stop punt).               |
+// |         |            |        | M-1: input-mix primes for frameNumber / passTypeIndex replaced with     |
+// |         |            |        |     xxHash64 PRIME64_3 (0x165667B19E3779F9) and PRIME64_5               |
+// |         |            |        |     (0x27D4EB2F165667C5). AR-5 fixed the same hazard for agentId but   |
+// |         |            |        |     left the other two axes multiplying by the SAME primes the         |
+// |         |            |        |     Stafford Mix13 finalizer then multiplies through again              |
+// |         |            |        |     (0xBF58476D1CE4E5B9 / 0x94D049BB133111EB). With the prime reuse,    |
+// |         |            |        |     adjacent (frame, passIdx) tuples at a fixed agentId let the         |
+// |         |            |        |     finalizer partially undo input-mix structure it was designed       |
+// |         |            |        |     against uniform input. Input-mix primes are now disjoint from      |
+// |         |            |        |     finalizer primes on all three axes.                                |
+// |         |            |        | L-1: <returns> + <summary> upper bound corrected [-1, +1] → [-1, +1).  |
+// |         |            |        |     EC-010 enforces Assert.Less(dir, 1.0f) — the implementation       |
+// |         |            |        |     produces top24 < 2^24, so normalised < 1.0f. Doc-only.            |
+// |         |            |        | L-2: inline comment block rewritten to call out the additive vs XOR    |
+// |         |            |        |     asymmetry on agentId (AR-5 M-1 intent) and to record the AR-6      |
+// |         |            |        |     input-mix / finalizer prime disjointness invariant.                |
+// |         |            |        | L-3: bit-extraction literals 0x00FFFFFFu / 0x01000000u promoted to     |
+// |         |            |        |     named local consts Mantissa24Mask / Mantissa24Scale; comment        |
+// |         |            |        |     records that the 24-bit window matches float mantissa precision.    |
 #endregion
