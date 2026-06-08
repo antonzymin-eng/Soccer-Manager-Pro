@@ -1,15 +1,16 @@
 // File:     src/event-system/tests/EventBusWiringSmokeTests.cs
 // Created:  2026-06-08
-// Modified: 2026-06-08
+// Modified: 2026-06-08 (AR-1 fix pass)
 // Author:   —
 // Spec:     Event System #17 §4.4, Deterministic Simulation #16 §5, Code Standards #20
-// Purpose:  Boot-time wiring smoke test for the 6-spec EventBusRegistrar chain.
+// Purpose:  Boot-time wiring smoke test for the EventBusRegistrar chain across specs.
 //           Drives boot → publish-one-per-spec → DrainTick → SerializeLedger and asserts
 //           the SHA-256 digest of the serialized Tier A/B ledger is stable across runs.
-//           Catches silent regressions in ordinal allocation, producer-phase wiring,
-//           subsystem-ordinal embedding, and struct-size registration before they reach
-//           a running Unity process. Stage 0 covers 5 of 6 registrars; Agent Movement
-//           (#2) is a [CROSS-PENDING] slot pending the AM-side EventBusRegistrar.
+//           Catches silent regressions in ordinal allocation, version byte, producer-phase
+//           wiring, subsystem-ordinal embedding, struct-size registration, and canonical
+//           byte layout before they reach a running Unity process. Stage 0 covers the 6
+//           currently-wired registrars; Agent Movement (#2) is a [CROSS-PENDING] slot
+//           pending the AM-side EventBusRegistrar (then 7 total).
 
 using System;
 using System.Security.Cryptography;
@@ -39,13 +40,15 @@ namespace TacticalDirector.EventSystem.Tests
     /// event per spec from the correct producer phase, drains the ledger, serializes it,
     /// and pins the SHA-256 of the serialized bytes as a golden value.
     ///
-    /// Stage 0 surface (5 of 6 registrars wired):
+    /// Stage 0 surface (6 currently-wired registrars; 7 once AM #2 lands):
     ///   - PassMechanics       (0x0C, 0x0D — Tier A — Resolve)
     ///   - ShotMechanics       (0x01, 0x0E — Tier A — Resolve)
     ///   - HeadingMechanics    (0x12       — Tier B — Physics)
     ///   - GoalkeeperMechanics (0x14, 0x15 — Tier A — Physics; 0x16 — Tier A — Resolve)
-    ///   - PerceptionSystem    (0x10 Tier C registered; not queued — wiring still asserted)
-    ///   - DecisionTree        (0x11 Tier C registered; not queued — wiring still asserted)
+    ///   - PerceptionSystem    (0x10 Tier C — registry row updated by Initialize(); the
+    ///                          CosmeticChannel routing path is NOT exercised here)
+    ///   - DecisionTree        (0x11 Tier C — registry row updated by Initialize(); the
+    ///                          CosmeticChannel routing path is NOT exercised here)
     ///
     /// [CROSS-PENDING] Agent Movement (#2) — once AM lands its own EventBusRegistrar,
     ///   add its Initialize() call below at the BOOT step and append its Tier A
@@ -57,12 +60,6 @@ namespace TacticalDirector.EventSystem.Tests
     {
         [SetUp]
         public void SetUp()
-        {
-            EventTestHelper.ResetLedger();
-        }
-
-        [TearDown]
-        public void TearDown()
         {
             EventTestHelper.ResetLedger();
         }
@@ -88,7 +85,9 @@ namespace TacticalDirector.EventSystem.Tests
             GkRegistrar.Initialize();
             // TODO [CROSS-PENDING #2]: AgentMovementRegistrar.Initialize();
 
-            EventLedger.BootPhaseComplete = true;
+            // No BootPhaseComplete=true here: EventBus.Publish (Tier A/B) does not check
+            // the flag — only Subscribe does, and this smoke test does not subscribe.
+            // EventLedger.DrainTick will auto-set the flag on first call (EventLedger.cs).
 
             // ── TICK 42: PUBLISH ────────────────────────────────────────────────────
             // Fixed tick chosen so the embedded header bytes (offset 4..7) are
@@ -144,15 +143,6 @@ namespace TacticalDirector.EventSystem.Tests
                 digest = sha.ComputeHash(buf, 0, n);
             }
 
-            // Pin the golden digest here once the 6th (AM) registrar lands and the
-            // bytes have been observed running in CI. Until then we only assert the
-            // shape (non-zero length, non-zero digest) and print the current value
-            // so a reviewer can adopt it.
-            //
-            // To pin: replace the placeholder below with the hex string printed by
-            // the diagnostic line, and switch the StringAssert to Assert.AreEqual.
-            const string GoldenDigestPlaceholder = "TBD-AFTER-AM-#2-REGISTRAR-LANDS";
-
             string actualHex = ToHex(digest);
             TestContext.Out.WriteLine(
                 "[SMOKE-EVT-WIRING-001] tick={0} bytes={1} sha256={2}",
@@ -161,9 +151,15 @@ namespace TacticalDirector.EventSystem.Tests
             Assert.IsFalse(IsAllZero(digest),
                 "SHA-256 digest of serialized ledger is all-zero — SerializeLedger likely wrote nothing.");
 
-            // Once pinned: Assert.AreEqual(GoldenDigest, actualHex, ...).
-            Assert.That(GoldenDigestPlaceholder, Is.EqualTo("TBD-AFTER-AM-#2-REGISTRAR-LANDS"),
-                "Golden digest placeholder must be updated atomically with the AM-side registrar.");
+            // Pin the golden digest once AM #2's EventBusRegistrar lands and CI has
+            // observed the stable hex. To pin: delete the Inconclusive line and replace
+            // with Assert.AreEqual(<observed-hex>, actualHex, "wiring regression …").
+            // Inconclusive is used (not Pass) so CI surfaces the unfilled pin instead of
+            // false-positive green — AR-1 H-1 fix replacing a tautological string compare
+            // that always passed regardless of actualHex.
+            Assert.Inconclusive(
+                "Golden digest not yet pinned. Observed sha256=" + actualHex +
+                " — pin atomically with the AM #2 registrar landing.");
 
             EventBus.OnTickBoundary();
         }
@@ -187,9 +183,25 @@ namespace TacticalDirector.EventSystem.Tests
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                                 |
-// | 0.1     | 2026-06-08 | —      | Initial skeleton. Boot→publish→drain→digest smoke test across the 5  |
-// |         |            |        | currently-wired registrars (Pass / Shot / Perception / Decision /    |
+// | 0.1     | 2026-06-08 | —      | Initial skeleton. Boot→publish→drain→digest smoke test across the    |
+// |         |            |        | 6 currently-wired registrars (Pass / Shot / Perception / Decision /  |
 // |         |            |        | Heading / Goalkeeper). Agent Movement (#2) carved out as             |
 // |         |            |        | [CROSS-PENDING]; golden digest pinned on the same commit that lands  |
 // |         |            |        | the AM-side EventBusRegistrar.                                       |
+// | 0.2     | 2026-06-08 | —      | AR-1 fix pass: 1H + 1M + 4L. H-1: tautological Assert.That on        |
+// |         |            |        | placeholder const replaced with Assert.Inconclusive carrying the     |
+// |         |            |        | observed hex — the prior compare-constant-to-its-own-literal always  |
+// |         |            |        | passed regardless of actualHex, so the skeleton was silently green-  |
+// |         |            |        | lighting any digest. Inconclusive surfaces the unfilled pin to CI.   |
+// |         |            |        | M-1: removed dead EventLedger.BootPhaseComplete=true assignment —    |
+// |         |            |        | Publish (Tier A/B) does not check the flag (only Subscribe does);    |
+// |         |            |        | DrainTick auto-sets it on first call anyway. L-1: registrar count   |
+// |         |            |        | corrected (6 currently wired, 7 once AM #2 lands; previously said   |
+// |         |            |        | "5 of 6" while listing 6). L-2: Tier C entries reworded — only the  |
+// |         |            |        | registry-row update is exercised; CosmeticChannel routing is not.   |
+// |         |            |        | L-3: dropped redundant [TearDown] (SetUp already resets at start of |
+// |         |            |        | next test; no parallel fixtures in this assembly). L-4: regression- |
+// |         |            |        | surface enumeration in the file header + fixture XML doc now lists  |
+// |         |            |        | `version` byte (header offset 1) alongside ordinal / phase / subsys |
+// |         |            |        | / struct-size / canonical byte layout.                              |
 #endregion
