@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassTypeProfiles.cs
 // Created:  2026-05-26
-// Modified: 2026-05-27
+// Modified: 2026-06-08
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.1.3, §3.1.4, Code Standards #20
 // Purpose:  Static profile lookup returning a PhysicalProfile for each (PassType,
@@ -133,7 +133,9 @@ namespace TacticalDirector.PassMechanics
                     };
 
                 default:
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                     Debug.LogError($"[PassTypeProfiles] FM-01: No PhysicalProfile for PassType={passType}. Returning Ground profile as safe default.");
+#endif
                     return GetProfile(PassType.Ground);
             }
         }
@@ -194,7 +196,9 @@ namespace TacticalDirector.PassMechanics
                     };
 
                 default:
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                     Debug.LogError($"[PassTypeProfiles] FM-01: Unknown CrossSubType={subType} for PassType.Cross. Returning Flat profile as safe default.");
+#endif
                     return GetCrossProfile(CrossSubType.Flat);
             }
         }
@@ -211,4 +215,9 @@ namespace TacticalDirector.PassMechanics
 // | 1.3     | 2026-05-27 | —      | AR-1 round-4 L-A: GetCrossProfile gains explicit CrossSubType.Flat      |
 // |         |            |        |     case; default now logs FM-01 for unknown CrossSubType values         |
 // |         |            |        |     (consistent with GetProfile FM-01 pattern).                         |
+// | 1.4     | 2026-06-08 | —      | AR-7 M-1: both FM-01 Debug.LogError emits ($"…" interpolation) gated     |
+// |         |            |        |     behind #if UNITY_EDITOR || DEVELOPMENT_BUILD (FR-CS-031). Parallel  |
+// |         |            |        |     to PassMechanicsConstants v1.2 AR-2 L-13 and PassExecutor v1.10 AR-7 |
+// |         |            |        |     M-1. Production builds no longer emit string-interpolated diagnostics |
+// |         |            |        |     from the cold-path fallback arms.                                   |
 #endregion

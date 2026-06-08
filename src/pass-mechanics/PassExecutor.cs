@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassExecutor.cs
 // Created:  2026-05-26
-// Modified: 2026-06-06
+// Modified: 2026-06-08
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.8, §3.9, §4.1, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the six-state pass execution state
@@ -127,7 +127,9 @@ namespace TacticalDirector.PassMechanics
             // ── Guard: reject if already executing a pass ────────────────────────────
             if (_state != PassExecutionState.Idle)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError($"[PassExecutor] Execute() called while pass is in progress (state={_state}). Agent={request.AgentId}. Frame={request.FrameNumber}");
+#endif
                 _lastResult = MakeInvalidResult(request.PassType);
                 return _lastResult;
             }
@@ -135,7 +137,9 @@ namespace TacticalDirector.PassMechanics
             // ── FM-01: Possession check ──────────────────────────────────────────────
             if (!_ballSystem.IsBallPossessedBy(request.AgentId))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning($"[PassExecutor] FM-01: Agent {request.AgentId} does not have possession. Frame={request.FrameNumber}");
+#endif
                 _lastResult = MakeInvalidResult(request.PassType);
                 return _lastResult;
             }
@@ -146,7 +150,9 @@ namespace TacticalDirector.PassMechanics
             // a member to the PassType enum, or FM-01 will close it as Invalid.
             if (!IsValidPassType(request.PassType))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError($"[PassExecutor] FM-01: Invalid PassType={request.PassType}. Frame={request.FrameNumber}");
+#endif
                 _lastResult = MakeInvalidResult(request.PassType);
                 return _lastResult;
             }
@@ -154,14 +160,20 @@ namespace TacticalDirector.PassMechanics
             // ── FM-07: Distance validation ───────────────────────────────────────────
             if (request.IntendedDistance <= 0f)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError($"[PassExecutor] FM-07: IntendedDistance={request.IntendedDistance} ≤ 0. Frame={request.FrameNumber}");
+#endif
                 _lastResult = MakeInvalidResult(request.PassType);
                 return _lastResult;
             }
 
             // ── Profile lookup ───────────────────────────────────────────────────────
             if (request.PassType != PassType.Cross && request.CrossSubType != CrossSubType.Flat)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning($"[PassExecutor] CrossSubType={request.CrossSubType} ignored for non-Cross PassType={request.PassType}.");
+#endif
+            }
 
             CrossSubType effectiveSubType = (request.PassType == PassType.Cross)
                 ? request.CrossSubType
@@ -173,7 +185,9 @@ namespace TacticalDirector.PassMechanics
             // ── FM-11: Player-targeted pass must have a valid target agent ────────────
             if (!_profile.IsSpaceTargeted && request.TargetAgentId == PassMechanicsConstants.AGENT_ID_NONE)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError($"[PassExecutor] FM-11: Player-targeted pass type {request.PassType} has TargetAgentId=-1. Frame={request.FrameNumber}");
+#endif
                 _lastResult = MakeInvalidResult(request.PassType);
                 return _lastResult;
             }
@@ -320,7 +334,8 @@ namespace TacticalDirector.PassMechanics
                 _cachedWeakFootRating);
 
             // Step 3: Compute deterministic error direction — §3.5.7
-            // Returns a signed fraction in [-1, +1] (uniform distribution).
+            // Returns a signed fraction in [-1, +1) (uniform distribution; upper bound
+            // is open because the 24-bit mantissa quantisation never yields +1.0f).
             float errorDirectionFraction = PassErrorCalculator.ComputeErrorDirection(
                 _request.AgentId,
                 _request.FrameNumber,
@@ -337,7 +352,9 @@ namespace TacticalDirector.PassMechanics
             // FM-04: Guard against NaN in velocity
             if (float.IsNaN(finalVelocity.x) || float.IsNaN(finalVelocity.y) || float.IsNaN(finalVelocity.z))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError($"[PassExecutor] FM-04: NaN in finalVelocity. Pass cancelled. Agent={_request.AgentId}");
+#endif
                 EmitPassCancelled(matchTime, frameNumber, CancelReason.InvalidVelocity);
                 return;
             }
@@ -345,7 +362,9 @@ namespace TacticalDirector.PassMechanics
             // FM-08: Re-check possession before ApplyKick — §4.2.4
             if (!_ballSystem.IsBallPossessedBy(_request.AgentId))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError($"[PassExecutor] FM-08: Agent {_request.AgentId} lost possession before CONTACT. Race condition.");
+#endif
                 EmitPassCancelled(matchTime, frameNumber, CancelReason.PossessionLost);
                 return;
             }
@@ -530,4 +549,14 @@ namespace TacticalDirector.PassMechanics
 // | 1.9     | 2026-06-06 | —      | AR-5 L-1: PRECONDITION comment expanded — FM-01 (unknown PassType) /     |
 // |         |            |        |     FM-07 (distance ≤ 0) / FM-11 (player-targeted with TargetAgentId=-1)   |
 // |         |            |        |     spelled out so the reader does not need to grep for them.            |
+// | 1.10    | 2026-06-08 | —      | AR-7 M-1: all 8 Debug.LogError / Debug.LogWarning emits with $"…"        |
+// |         |            |        |     interpolation gated behind #if UNITY_EDITOR || DEVELOPMENT_BUILD     |
+// |         |            |        |     (FR-CS-031 hot-path carve-out). Brings the file in line with the     |
+// |         |            |        |     precedent set by PassMechanicsConstants v1.2 AR-2 L-13. Emits        |
+// |         |            |        |     cover: Idle-guard, FM-01 possession check, FM-01 PassType validity,  |
+// |         |            |        |     FM-07 distance validity, CrossSubType ignore warning, FM-11 player-  |
+// |         |            |        |     targeted no-receiver, FM-04 NaN velocity, FM-08 lost possession.    |
+// |         |            |        | AR-7 L-1: ExecuteContact Step 3 callsite comment corrected               |
+// |         |            |        |     [-1, +1] → [-1, +1) to match the PassErrorCalculator AR-6 L-1       |
+// |         |            |        |     producer-side correction (24-bit mantissa never yields +1.0f).      |
 #endregion

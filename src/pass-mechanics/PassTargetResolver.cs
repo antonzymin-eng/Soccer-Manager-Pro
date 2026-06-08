@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassTargetResolver.cs
 // Created:  2026-05-26
-// Modified: 2026-06-06
+// Modified: 2026-06-08
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.6, Code Standards #20
 // Purpose:  Pure static resolver for aim points, through-ball lead projection,
@@ -103,16 +103,17 @@ namespace TacticalDirector.PassMechanics
         /// Applies the deterministic error rotation to the kick direction.
         /// Rotates kickDirection by (errorAngleDeg × errorDirectionFraction) in the
         /// horizontal plane (XY) around the Z axis (vertical in Z-up coordinate system).
-        /// errorDirectionFraction is the [-1, +1] signed fraction from §3.5.7 — its
+        /// errorDirectionFraction is the [-1, +1) signed fraction from §3.5.7 — its
         /// uniform distribution carries through to a uniform distribution of final
-        /// deflection in [-errorAngleDeg, +errorAngleDeg]. §3.6.7.
+        /// deflection in [-errorAngleDeg, +errorAngleDeg). §3.6.7.
         ///
         /// Implementation note: a direct 2D sin/cos rotation in XY replaces the prior
         /// Quaternion.Euler form (AR-2 L-2 cleanup) — same semantics, fewer ops.
         /// </summary>
         /// <param name="kickDirection">Normalised horizontal direction (Z must be 0).</param>
         /// <param name="errorAngleDeg">Error magnitude in degrees from §3.5.</param>
-        /// <param name="errorDirectionFraction">Hash-determined signed fraction in [-1, +1] from §3.5.7.</param>
+        /// <param name="errorDirectionFraction">Hash-determined signed fraction in [-1, +1) from §3.5.7;
+        /// upper bound is open because the 24-bit mantissa quantisation never yields +1.0f.</param>
         /// <returns>Normalised kick direction after error applied.</returns>
         public static Vector3 ApplyErrorToDirection(
             Vector3 kickDirection,
@@ -206,4 +207,9 @@ namespace TacticalDirector.PassMechanics
 // | 1.5     | 2026-06-06 | —      | AR-4 L-5: Debug.Assert message generalised — names the           |
 // |         |            |        |     non-zero-unit-vector contract rather than only the non-unit     |
 // |         |            |        |     case (Vector3.zero also fires the branch).                     |
+// | 1.6     | 2026-06-08 | —      | AR-7 L-1: ApplyErrorToDirection <summary> and <param> updated to    |
+// |         |            |        |     match the PassErrorCalculator AR-6 L-1 producer-side correction |
+// |         |            |        |     of the error-fraction range — [-1, +1] → [-1, +1) (24-bit      |
+// |         |            |        |     mantissa never produces +1.0f); deflection range mirrored to    |
+// |         |            |        |     [-errorAngleDeg, +errorAngleDeg).                                |
 #endregion
