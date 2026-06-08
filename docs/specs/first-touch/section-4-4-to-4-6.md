@@ -381,20 +381,27 @@ public static class FirstTouchConstants
     // ================================================================
 
     /// <summary>
-    /// Maximum ball height (m) for First Touch evaluation eligibility.
+    /// [CROSS] Maximum ball height (m) for First Touch evaluation eligibility.
     /// Ball centre above this height is routed to Heading Mechanics (Spec #10).
     /// Ball centre at or below this height is processed by First Touch.
     ///
-    /// Value: 0.50m ≈ approximate chest height for a crouching player.
-    /// Represents the boundary between ground control and aerial mechanics.
+    /// Authoritative source: <c>BallPhysicsConstants.Possession.ControlHeight</c>
+    /// (Ball Physics #1 §3.1.11). Value: 0.50m ≈ approximate chest height for a
+    /// crouching player; boundary between ground control and aerial mechanics.
     ///
     /// CRITICAL: This is ball CENTRE height, not contact point height.
     /// Ball centre at 0.50m means ball surface is at 0.39m (0.50 - 0.11 RADIUS).
     ///
+    /// Routing rule (Spec #20 §4.2 single-consumer mirror): Ball Physics #1 is the
+    /// authority because ControlHeight is a physical possession-geometry constant
+    /// living next to the three sibling thresholds (ControlRadius / ControlVelocity /
+    /// ChallengeRadius). First Touch §3.4.3 consumes it as a routing guard. Heading
+    /// Mechanics Spec #10 must mirror from the same authority.
+    ///
     /// Source: Outline Critical Issue #2 resolution; §3.4.3 height guard.
-    /// Cross-reference: Heading Mechanics Spec #10 must use the same constant.
     /// </summary>
-    public const float GROUND_CONTROL_HEIGHT = 0.50f; // m (ball centre)
+    public static readonly float GroundControlHeight =
+        BallPhysicsConstants.Possession.ControlHeight; // m (ball centre)
 
     // ================================================================
     // SENTINEL / UTILITY

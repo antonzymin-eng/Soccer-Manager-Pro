@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallPhysicsConstants.cs
 // Created:  2026-05-24
-// Modified: 2026-06-03 (AR-4 fix pass)
+// Modified: 2026-06-08 (cross-spec routing close-out)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  All tunable and physical constants for ball physics simulation.
@@ -230,15 +230,12 @@ namespace TacticalDirector.BallPhysics
             public static readonly float ChallengeRadius = 1.0f; // TODO: replace with config loader (Stage 1)
 
             /// <summary>
-            /// [GT] Max ball height for ground control (m). Ball Physics #1 §3.1.2.
-            /// CROSS-SPEC DRIFT WARNING: <c>FirstTouchConstants.GroundControlHeight</c>
-            /// declares the same physical concept at the same value (0.50 m) as a parallel
-            /// [GT]. Per Spec #20 §4.2 routing one of the two specs must be the authority
-            /// and the other must mirror via [CROSS]. Routing decision tracked in the root
-            /// CLAUDE.md OPEN ISSUES entry "Possession.ControlHeight ↔ GroundControlHeight
-            /// cross-spec routing" (since June 3, 2026). Until that lands, designers MUST
-            /// tune both values together or accept silent drift between possession and
-            /// first-touch acceptance.
+            /// [GT] Max ball height for ground control (m). Ball Physics #1 §3.1.2 / §3.1.11.
+            /// AUTHORITY: this constant is the single source of truth for the ground-control
+            /// height threshold across the simulation. <c>FirstTouchConstants.GroundControlHeight</c>
+            /// mirrors this value via [CROSS] (Spec #20 §4.2 single-consumer routing) so that
+            /// the First Touch §3.4.3 aerial-ball routing guard cannot silently drift from the
+            /// Ball Physics §3.1.11 possession height gate. Tune here only.
             /// </summary>
             public static readonly float ControlHeight = 0.5f; // TODO: replace with config loader (Stage 1)
         }
@@ -344,4 +341,11 @@ namespace TacticalDirector.BallPhysics
 // | 1.6     | 2026-06-03 | —      | AR-4 L-4: BodyPartRetention XML docs use "factor" instead of "multiplier"   |
 // |         |            |        | for terminology consistency with the consuming BodyPartCoefficients class   |
 // |         |            |        | (which already uses retention / coefficient / factor vocabulary).           |
+// | 1.7     | 2026-06-08 | —      | Cross-spec routing close-out (Spec #20 §4.2): Possession.ControlHeight is   |
+// |         |            |        | now the declared AUTHORITY for the ground-control height threshold; XML    |
+// |         |            |        | drift warning replaced with an authority/consumer pointer naming           |
+// |         |            |        | FirstTouchConstants.GroundControlHeight as the single-consumer [CROSS]     |
+// |         |            |        | mirror. Closes the long-standing CLAUDE.md OPEN ISSUE                      |
+// |         |            |        | "Possession.ControlHeight ↔ GroundControlHeight cross-spec routing"        |
+// |         |            |        | (since 2026-06-03). No value change; tune-here-only governance.            |
 #endregion
