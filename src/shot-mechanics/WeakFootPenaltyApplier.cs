@@ -1,11 +1,13 @@
 // File:     src/shot-mechanics/WeakFootPenaltyApplier.cs
 // Created:  2026-05-27
-// Modified: 2026-05-28
+// Modified: 2026-06-07
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.8, Code Standards #20
 // Purpose:  Applies weak foot error multiplier and velocity penalty when IsWeakFoot=true.
 //           Formula reuses Pass Mechanics §3.7 structure (§4.1, direct reuse note).
 //           Pure static calculation; no side effects.
+
+using UnityEngine;
 
 namespace TacticalDirector.ShotMechanics
 {
@@ -30,7 +32,7 @@ namespace TacticalDirector.ShotMechanics
             // If WeakFootRatingMax is ever reduced to < 2, this division is unsafe and returns 1.0.
             if (ShotMechanicsConstants.WeakFootRatingRange <= 0)
             {
-                UnityEngine.Debug.LogError("[ShotMechanics] WeakFootRatingRange ≤ 0 — check ShotMechanicsConstants.WeakFootRatingMax.");
+                Debug.LogError("[ShotMechanics] WeakFootRatingRange ≤ 0 — check ShotMechanicsConstants.WeakFootRatingMax.");
                 return 1.0f;
             }
 
@@ -53,7 +55,7 @@ namespace TacticalDirector.ShotMechanics
             // Same invariant guard as ComputeErrorMultiplier.
             if (ShotMechanicsConstants.WeakFootRatingRange <= 0)
             {
-                UnityEngine.Debug.LogError("[ShotMechanics] WeakFootRatingRange ≤ 0 — check ShotMechanicsConstants.WeakFootRatingMax.");
+                Debug.LogError("[ShotMechanics] WeakFootRatingRange ≤ 0 — check ShotMechanicsConstants.WeakFootRatingMax.");
                 return 1.0f;
             }
 
@@ -72,4 +74,7 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        |   WeakFootBaseErrorPenalty; SHOT_WF_VELOCITY_PENALTY→WeakFootVelocityPenalty.     |
 // | 1.3     | 2026-05-28 | —      | H-1: Added WeakFootRatingRange ≤ 0 guard in both methods (defensive against       |
 // |         |            |        |   divide-by-zero if WeakFootRatingMax is ever reduced to < 2).                    |
+// | 1.4     | 2026-06-07 | —      | AR-4 L-3: added `using UnityEngine;` directive and dropped the                    |
+// |         |            |        |   fully-qualified `UnityEngine.Debug` prefix on both LogError emits — matches     |
+// |         |            |        |   the project-wide style (FR-CS-006) used by every other shot-mechanics file.    |
 #endregion

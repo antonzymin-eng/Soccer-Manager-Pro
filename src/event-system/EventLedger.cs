@@ -288,6 +288,17 @@ namespace TacticalDirector.EventSystem
 
             int offset = 0;
 
+            // AR-10 L-2: defensive bound check before writing the 5-byte fixed header
+            // (1-byte domain tag + 4-byte LE count). Without this, a too-small dst
+            // threw an opaque IndexOutOfRangeException at dst[0] / dst[countOffset+3]
+            // rather than the diagnostic ArgumentException the payload-copy path
+            // emits below. Symmetric with the per-record bound check at line ~320.
+            const int FixedHeaderBytes = 5; // 1-byte domain tag + 4-byte LE count
+            if (dst.Length < FixedHeaderBytes)
+                throw new ArgumentException(
+                    "SerializeLedger: destination span too small for fixed 5-byte header " +
+                    "(domain tag + u32 LE count). dst.Length=" + dst.Length);
+
             // Domain tag (1 byte).
             dst[offset++] = EventSystemConstants.DomainTagEventLedger;
 
@@ -421,11 +432,6 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | MaxTierCHandlersPerType after that many cycles even when the net    |
 // |         |            |        | subscriber count was 0. EventLedger.Subscribe updated to consume    |
 // |         |            |        | AddHandler's return value instead of reading HandlerCount before.   |
-// | 1.8     | 2026-06-07 | —      | AR-9 M-1: DrainTick + SerializeLedger stackallocs switched from     |
-// |         |            |        | runtime-sized EventQueueCapacity to compile-time MAX_QUEUE_SORT_INTS|
-// |         |            |        | (= 2048; 8 KB stack). New static ctor asserts EventQueueCapacity <=|
-// |         |            |        | MAX_QUEUE_SORT_INTS at boot so a Stage 1 config-loader bump fails  |
-// |         |            |        | fast instead of risking StackOverflowException mid-pipeline.       |
 // | 1.7     | 2026-06-07 | —      | AR-8 M-2: OnTickBoundary now resets CurrentPhase to (PhaseId)0xFF   |
 // |         |            |        | and CurrentTick to uint.MaxValue. A stale Publish between          |
 // |         |            |        | OnTickBoundary and the next BeginTick/BeginPhase previously       |
@@ -435,4 +441,17 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | IndexOutOfRangeException in release builds and the producer-phase  |
 // |         |            |        | assert fires in dev builds. BeginTick / BeginPhase overwrite both  |
 // |         |            |        | fields atomically before the next valid publish.                    |
+// | 1.8     | 2026-06-07 | —      | AR-9 M-1: DrainTick + SerializeLedger stackallocs switched from     |
+// |         |            |        | runtime-sized EventQueueCapacity to compile-time MAX_QUEUE_SORT_INTS|
+// |         |            |        | (= 2048; 8 KB stack). New static ctor asserts EventQueueCapacity <=|
+// |         |            |        | MAX_QUEUE_SORT_INTS at boot so a Stage 1 config-loader bump fails  |
+// |         |            |        | fast instead of risking StackOverflowException mid-pipeline.       |
+// | 1.9     | 2026-06-07 | —      | AR-10 L-1: VersionHistory rows reordered — v1.7 (AR-8 M-2) and     |
+// |         |            |        | v1.8 (AR-9 M-1) were appended in reverse chronological order in    |
+// |         |            |        | the AR-9 pass, violating FR-CS-057 append-only ordering. No code   |
+// |         |            |        | change. AR-10 L-2: SerializeLedger now validates dst.Length >= 5  |
+// |         |            |        | (1-byte domain tag + 4-byte LE count header) before writing the   |
+// |         |            |        | header; previously a too-small dst threw an opaque                |
+// |         |            |        | IndexOutOfRangeException at dst[0] / dst[countOffset+3] rather    |
+// |         |            |        | than the diagnostic ArgumentException the payload-copy path emits.|
 #endregion

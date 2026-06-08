@@ -1,9 +1,11 @@
 // File:     src/agent-movement/OscillationGuard.cs
 // Created:  2026-05-25
-// Modified: 2026-06-03
+// Modified: 2026-06-07 (AR-11 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.7, Code Standards #20
 // Purpose:  Ring-buffer guard that detects rapid state oscillation and enforces a lock-out period.
+
+using UnityEngine;
 
 namespace TacticalDirector.AgentMovement
 {
@@ -90,6 +92,15 @@ namespace TacticalDirector.AgentMovement
                 case 5: _t5 = value; break;
                 case 6: _t6 = value; break;
                 case 7: _t7 = value; break;
+                // AR-11 L-2: assert on out-of-range write so a future BufferSize bump
+                // beyond the 8 hardcoded slots fails fast in dev builds rather than
+                // silently dropping writes (ReadTime's default arm already returns
+                // NegativeInfinity, so without this the asymmetry would corrupt
+                // recent-transition counting).
+                default:
+                    Debug.Assert(false,
+                        "OscillationGuard.WriteTime: index out of range — BufferSize bumped beyond hardcoded 8 slots without updating switch arms.");
+                    break;
             }
         }
 
@@ -123,4 +134,8 @@ namespace TacticalDirector.AgentMovement
 // | 1.3     | 2026-06-03 | —      | AR-4 fix: M-2 ring buffer reset to NegativeInfinity on lock entry. Closes the indefinite-      |
 // |         |            |        | lockout corner case where pre-lock timestamps remained within WindowSeconds after the          |
 // |         |            |        | LockDuration expired and the guard re-locked on the very next transition.                      |
+// | 1.4     | 2026-06-07 | —      | AR-11 fix: L-2 WriteTime gains a Debug.Assert(false) default arm parallel to ReadTime's       |
+// |         |            |        | NegativeInfinity default. A future BufferSize bump beyond the 8 hardcoded switch arms          |
+// |         |            |        | would silently drop writes while ReadTime treats unreached slots as -Infinity, corrupting      |
+// |         |            |        | the recent-transition count. Fails fast in dev builds instead. `using UnityEngine;` added.    |
 #endregion

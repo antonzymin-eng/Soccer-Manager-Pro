@@ -1,7 +1,7 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** May 30, 2026 (implementation phase: Event System #17 coded — 20 files (18 .cs + 2 asmdef), AR-1 3H+3M+2L, AR-2 1L, AR-3 clean; `src/CLAUDE.md` coding guide at v1.22. Prior May 29: Deterministic Simulation #16 — 23 files, AR-1 4H+4M, AR-2 1L, AR-3 clean; Attacking AI #15 — 24 files; Defensive AI #14 — 19 files; Pressing AI #13 — 21 files. Prior May 28: Heading Mechanics #10 (complete, 25 files) + Goalkeeper Mechanics #11 (complete, 36 files).)
+**Last Updated:** June 7, 2026 (AR-hardening sweep complete across all 18 coded sections; every section's last adversarial review now yields no findings or L-only findings, with one explicit cycle-stop at Pass Mechanics #5 AR-5. Implementation phase well underway: 350+ source files across 17 spec assemblies + Testing Strategy CI tooling. New test scaffolding for Ball Physics (3 new test files) and Agent Movement (77 NUnit tests across 11 fixtures). See `docs/tracking/PROGRESS.md` for per-spec AR-round tallies. Prior May 30: Event System #17 coded — 20 files (18 .cs + 2 asmdef).)
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
@@ -33,8 +33,8 @@ The definitive 10-year roadmap. All development decisions reference this documen
 - Resource requirements and timelines
 - Risk mitigation strategies
 
-**Current stage:** Stage 0 — Physics Foundation (Year 1)
-**Current phase:** Specification Writing (Week 12 of 20)
+**Current stage:** Stage 0 / Stage 0+1 — Physics Foundation (Year 1)
+**Current phase:** Implementation + AR-hardening (Stage 0 specs all APPROVED May 18, 2026; coding began May 19, 2026; AR-hardening sweep complete June 7, 2026)
 
 ---
 

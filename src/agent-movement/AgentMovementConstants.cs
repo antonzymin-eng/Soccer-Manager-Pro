@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementConstants.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03 (AR-7 fix pass)
+// Modified: 2026-06-07 (AR-10 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1–§3.4, §4.1.3, §4.3.1, Code Standards #20
 // Purpose:  All constants for the agent movement system. No literals in formula code.
@@ -318,9 +318,6 @@ namespace TacticalDirector.AgentMovement
         /// <summary>[FIXED] Dimensionless offset in the turn-rate velocity denominator. Agent Movement #2 §3.4.2.</summary>
         public const float TURN_RATE_VELOCITY_OFFSET = 1.0f;
 
-        /// <summary>[FIXED] Minimum divisor guard (degrees) in the stumble overshoot denominator. Agent Movement #2 §3.4.4.</summary>
-        public const float MIN_TURN_RATE_DIVISOR = 1.0f;
-
         /// <summary>[FIXED] Turn-rate near-zero guard (°/s) — values below this are treated as zero. Agent Movement #2 §3.4.3.</summary>
         public const float TURN_RATE_EPSILON_DEG = 1e-4f;
 
@@ -524,4 +521,9 @@ namespace TacticalDirector.AgentMovement
 // | 1.7     | 2026-06-03 | —      | AR-7 fix: L-1 PlayerAttributeConstants.AttributeMaxInt = 20 added in parallel to               |
 // |         |            |        | AttributeMinInt. Consumed by PerformanceContext.EvaluateAttribute assert so the L-4           |
 // |         |            |        | bounds check reads as integer-domain instead of round-tripping (int) casts on float consts.   |
+// | 1.8     | 2026-06-07 | —      | AR-10 fix: L-2 dead TurnConstants.MIN_TURN_RATE_DIVISOR removed. The constant was declared    |
+// |         |            |        | for AR-2 H-2's removed CalculateStumbleProbability (AgentTurning.cs v1.4) and has had no      |
+// |         |            |        | live consumer since; grep over src/ confirms only the constants catalogue declaration and a   |
+// |         |            |        | historical version-history mention referenced it. Constants without consumers are dead-code   |
+// |         |            |        | per Spec #20 §3.10 hygiene and bloat the [GT] migration list when Stage 1 config-loader lands.|
 #endregion
