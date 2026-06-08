@@ -201,6 +201,9 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | AR-2 M-2: param renamed errorDirectionRad → errorDirectionFraction |
 // |         |            |        |     to match PassErrorCalculator.ComputeErrorDirection's new [-1,+1]|
 // |         |            |        |     uniform contract; sin() compose-on-rotation removed.            |
+// |         |            |        |     (AR-8 L-3 forward-reference: the "[-1, +1]" characterisation   |
+// |         |            |        |      above is the AR-2-era contract; AR-6 L-1 corrected it to       |
+// |         |            |        |      [-1, +1) — 24-bit mantissa never produces +1.0f.)             |
 // | 1.4     | 2026-06-06 | —      | AR-3 L-7: ApplyErrorToDirection degenerate-output branch traps in  |
 // |         |            |        |     dev builds via Debug.Assert (caller-contract violation); the    |
 // |         |            |        |     production +X fallback retained as NaN suppression.             |
@@ -212,4 +215,8 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     of the error-fraction range — [-1, +1] → [-1, +1) (24-bit      |
 // |         |            |        |     mantissa never produces +1.0f); deflection range mirrored to    |
 // |         |            |        |     [-errorAngleDeg, +errorAngleDeg).                                |
+// | 1.7     | 2026-06-08 | —      | AR-8 L-3: forward-reference note inserted next to the AR-2 M-2     |
+// |         |            |        |     v1.3 history row — the "[-1, +1]" characterisation there is    |
+// |         |            |        |     the AR-2-era contract, superseded by AR-6 L-1. Historical row  |
+// |         |            |        |     preserved verbatim.                                            |
 #endregion

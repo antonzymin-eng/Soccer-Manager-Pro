@@ -168,12 +168,10 @@ namespace TacticalDirector.PassMechanics
             }
 
             // ── Profile lookup ───────────────────────────────────────────────────────
-            if (request.PassType != PassType.Cross && request.CrossSubType != CrossSubType.Flat)
-            {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (request.PassType != PassType.Cross && request.CrossSubType != CrossSubType.Flat)
                 Debug.LogWarning($"[PassExecutor] CrossSubType={request.CrossSubType} ignored for non-Cross PassType={request.PassType}.");
 #endif
-            }
 
             CrossSubType effectiveSubType = (request.PassType == PassType.Cross)
                 ? request.CrossSubType
@@ -386,6 +384,15 @@ namespace TacticalDirector.PassMechanics
                 ContactMatchTime = matchTime
             };
 
+            // State transition must precede Publish: if EventBusStub.Publish throws
+            // (queue overflow / registry mismatch), the ball has already been kicked
+            // (Step 6) and _state must not stay in Contact — otherwise next frame's
+            // Update re-enters ExecuteContact and calls ApplyKick a second time.
+            // The FM-08 possession re-check would normally catch the re-entry path,
+            // but defensive ordering removes the dependence on that recovery seam.
+            // AR-8 L-2.
+            _state = PassExecutionState.FollowThrough;
+
             // Step 8: Publish PassAttemptEvent — §3.9.2
             EventBusStub.Publish(new PassAttemptEvent
             {
@@ -404,8 +411,6 @@ namespace TacticalDirector.PassMechanics
                 Frame         = frameNumber,
                 MatchTime     = matchTime
             });
-
-            _state = PassExecutionState.FollowThrough;
         }
 
         // ── Aim Point Resolution ──────────────────────────────────────────────────────
@@ -523,6 +528,9 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     logging error but returning Initiated with fallback aim point).         |
 // | 1.5     | 2026-05-27 | —      | AR-1 round-5 M-B: removed unused ref BallState ball param from Execute(); |
 // |         |            |        |     possession check uses _ballSystem, not BallState directly.            |
+// |         |            |        | (AR-8 L-3 forward-reference: the "[-1, +1]" characterisation in the      |
+// |         |            |        |  AR-2 M-2 line below was superseded by AR-6 L-1 — the contract is        |
+// |         |            |        |  actually [-1, +1) because the 24-bit mantissa never produces +1.0f.)    |
 // | 1.6     | 2026-06-06 | —      | AR-2 H-1/H-2: ExecuteContact FM-04 (NaN velocity) and FM-08 (lost          |
 // |         |            |        |     possession) silent-cancel paths now publish PassCancelledEvent via the |
 // |         |            |        |     new EmitPassCancelled helper using CancelReason.InvalidVelocity /     |
@@ -559,4 +567,21 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | AR-7 L-1: ExecuteContact Step 3 callsite comment corrected               |
 // |         |            |        |     [-1, +1] → [-1, +1) to match the PassErrorCalculator AR-6 L-1       |
 // |         |            |        |     producer-side correction (24-bit mantissa never yields +1.0f).      |
+// | 1.11    | 2026-06-08 | —      | AR-8 fix pass (0M + 3L).                                                |
+// |         |            |        | L-1: CrossSubType-ignore warning gate hoisted from if-body to wrap      |
+// |         |            |        |     the entire if-statement — the diagnostic has no functional follow-  |
+// |         |            |        |     up, so production builds no longer carry an empty `if (cond) { }`   |
+// |         |            |        |     stylistic artifact. (The other 7 AR-7-gated emits MUST keep the    |
+// |         |            |        |     body-gate form because their if-bodies contain _lastResult / return.)|
+// |         |            |        | L-2: ExecuteContact state transition (_state = FollowThrough) hoisted   |
+// |         |            |        |     above Step 8 EventBusStub.Publish. If Publish throws (queue          |
+// |         |            |        |     overflow / registry mismatch), the ball was already kicked at Step  |
+// |         |            |        |     6 and the executor must not stay in Contact — re-entry next frame  |
+// |         |            |        |     would re-run ApplyKick. The FM-08 possession recheck currently      |
+// |         |            |        |     guards against the re-entry double-kick, but defensive ordering     |
+// |         |            |        |     removes the dependence on that recovery seam.                       |
+// |         |            |        | L-3: forward-reference note inserted above the AR-2 M-2 v1.6 history    |
+// |         |            |        |     row — the "[-1, +1]" characterisation there is the AR-2-era       |
+// |         |            |        |     contract, superseded by AR-6 L-1 to [-1, +1). The AR-2 row remains  |
+// |         |            |        |     verbatim to preserve historical record.                            |
 #endregion
