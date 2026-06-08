@@ -1,6 +1,6 @@
 // File:     src/first-touch/FirstTouchConstants.cs
 // Created:  2026-05-25
-// Modified: 2026-06-06
+// Modified: 2026-06-08
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.1–§3.6, §6.1, Code Standards #20
 // Purpose:  All constants for the first-touch system. No literals in formula code.
@@ -72,6 +72,13 @@ namespace TacticalDirector.FirstTouch
         /// Authoritative source: PlayerAttributeConstants.AttributeMax. Agent Movement #2 §3.5.1. Value: 20.
         /// </summary>
         public static readonly float AttrMax = PlayerAttributeConstants.AttributeMax;
+
+        /// <summary>
+        /// [CROSS] Maximum ball-centre height (m) for ground control / First Touch eligibility.
+        /// Ball above this height is routed to Heading Mechanics (#10); ball at or below is processed by First Touch §3.4.3.
+        /// Authoritative source: BallPhysicsConstants.Possession.ControlHeight. Ball Physics #1 §3.1.11. Value: 0.50m.
+        /// </summary>
+        public static readonly float GroundControlHeight = BallPhysicsConstants.Possession.ControlHeight;
 
         #endregion
 
@@ -185,9 +192,6 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Saturation value above which pressure is clamped to 1. First Touch Mechanics #4 §3.5.3.</summary>
         public static readonly float PressureSaturation = 1.5f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Ball height threshold below which touch is treated as a ground touch (m). First Touch Mechanics #4 §3.4.3.</summary>
-        public static readonly float GroundControlHeight = 0.50f; // TODO: replace with config loader (Stage 1)
-
         /// <summary>[GT] Ball displacement radius beyond which dribble attach is broken (m). First Touch Mechanics #4 §3.4.4.</summary>
         public static readonly float DribbleDetachRadius = 1.50f; // TODO: replace with config loader (Stage 1)
 
@@ -208,4 +212,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.4.1   | 2026-05-28 | —      | AR-1 fix: added HalfTurnLRecReduction constant (GT, 0.85f) to satisfy Perception System #7 §3.3.3 CROSS-tag contract. (Renumbered from duplicate 1.1 in v1.5 audit.) |
 // | 1.5     | 2026-06-06 | —      | AR-5 M-2: BlendMinMagnitude relocated from end-of-GT region to #region Fixed, renamed BLEND_MIN_MAGNITUDE (ALL_CAPS per FR-CS-001 for [FIXED]), retyped `static readonly` → `const` to match AGENT_ID_NONE, stale "TODO: replace with config loader" comment dropped (FIXED is not designer-tunable). L-1: duplicate v1.1 row reconciled — earlier May-28 HalfTurnLRecReduction addition retroactively renumbered v1.4.1 to restore monotonic ordering. |
 // | 1.6     | 2026-06-06 | —      | AR-6 L-1: added BLEND_MIN_MAGNITUDE_SQ compile-time const so callers (BallDisplacementProcessor, OrientationDetector, PossessionStateMachine) consume a single cached square instead of recomputing the product across 6 call sites. |
+// | 1.7     | 2026-06-08 | —      | Cross-spec routing close-out (Spec #20 §4.2): GroundControlHeight relocated from #region GT to #region Cross, retagged [CROSS], and now mirrors BallPhysicsConstants.Possession.ControlHeight (Ball Physics #1 §3.1.11) verbatim. Closes the long-standing CLAUDE.md OPEN ISSUE "Possession.ControlHeight ↔ GroundControlHeight cross-spec routing" (since 2026-06-03). Ball Physics #1 is the authority because ControlHeight is a physical possession-geometry constant living next to the three sibling thresholds (ControlRadius / ControlVelocity / ChallengeRadius); First Touch's §3.4.3 use is a routing guard, not an authority claim. Designers now tune the single Ball Physics value; mirror tracks automatically. |
 #endregion
