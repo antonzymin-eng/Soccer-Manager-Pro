@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/EventBusRegistrar.cs
 // Created:  2026-05-30
-// Modified: 2026-06-06
+// Modified: 2026-06-08
 // Author:   —
 // Spec:     Pass Mechanics #5 §4.6.3, Event System #17 §3.7.4, Code Standards #20
 // Purpose:  Registers Pass Mechanics event types with EventRegistry at boot time.
@@ -57,7 +57,14 @@ namespace TacticalDirector.PassMechanics
 // | 1.2     | 2026-06-06 | —      | AR-2 M-5: idempotency guard s_registered added. Duplicate Initialize()  |
 // |         |            |        |     calls (replay/scene reload/editor domain reload) no longer collide  |
 // |         |            |        |     with the already-registered ordinals (ERR_EVT_ORDINAL_COLLISION).   |
-// | 1.3     | 2026-06-06 | —      | AR-3 M-1/L-4: dropped the ResetForTesting seam — it was internal but    |
-// |         |            |        |     unreachable (no InternalsVisibleTo on this assembly) and tests       |
-// |         |            |        |     should mock at the EventRegistry boundary, not poke this guard.     |
+// | 1.3     | 2026-06-06 | —      | AR-3 M-1/L-4: dropped the ResetForTesting seam — tests should mock at   |
+// |         |            |        |     the EventRegistry boundary, not poke this guard. (The original AR-3 |
+// |         |            |        |     row also cited "no InternalsVisibleTo on this assembly" but that    |
+// |         |            |        |     premise was already stale at AR-3 time: AssemblyInfo.cs was created |
+// |         |            |        |     2026-06-01 with [InternalsVisibleTo("TacticalDirector.PassMechanics |
+// |         |            |        |     .Tests")]. The boundary-mocking sub-rationale is the authoritative   |
+// |         |            |        |     one; reachability was never the gating concern. Corrected AR-7 L-2.)|
+// | 1.4     | 2026-06-08 | —      | AR-7 L-2: stale "no InternalsVisibleTo" claim in the AR-3 history row   |
+// |         |            |        |     above corrected. No code change — the decision to drop the seam     |
+// |         |            |        |     stands on the mock-at-EventRegistry-boundary rationale alone.       |
 #endregion

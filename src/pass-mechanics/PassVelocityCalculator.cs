@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassVelocityCalculator.cs
 // Created:  2026-05-26
-// Modified: 2026-06-06
+// Modified: 2026-06-08
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.2, §3.3, §3.4, Code Standards #20
 // Purpose:  Pure static calculator for kick speed (§3.2), launch angle (§3.3),
@@ -172,7 +172,9 @@ namespace TacticalDirector.PassMechanics
                     }
 
                 default:
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                     Debug.LogError($"[SpinVector] Unexpected PassType: {passType}");
+#endif
                     return Vector3.zero;
             }
         }
@@ -228,7 +230,9 @@ namespace TacticalDirector.PassMechanics
                 case PassType.Chip:         return PassMechanicsConstants.ApexHeightChip;
                 case PassType.AerialThrough: return PassMechanicsConstants.ApexHeightAerialThrough;
                 default:
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                     Debug.LogError($"[LaunchAngle] GetApexHeight called for non-aerial type {passType}");
+#endif
                     return PassMechanicsConstants.ApexHeightLofted;
             }
         }
@@ -245,4 +249,10 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     #if DEVELOPMENT_BUILD || UNITY_EDITOR (FR-CS-027-034).             |
 // | 1.3     | 2026-06-06 | —      | AR-2 L-4: 0.5f magic floor on weakFootPowerPenalty clamp replaced       |
 // |         |            |        |     with PassMechanicsConstants.WeakFootPowerFloorMin (FR-CS-016).      |
+// | 1.4     | 2026-06-08 | —      | AR-7 M-1: the two remaining ungated Debug.LogError emits with $"…"      |
+// |         |            |        |     interpolation (ComputeSpinVector default arm, GetApexHeight default |
+// |         |            |        |     arm) gated behind #if UNITY_EDITOR || DEVELOPMENT_BUILD (FR-CS-031). |
+// |         |            |        |     The two Debug.Log calls at lines 57 and 100 were already gated by   |
+// |         |            |        |     AR-1 M-2; this completes file-wide compliance with the AR-2 L-13    |
+// |         |            |        |     precedent set in PassMechanicsConstants.                            |
 #endregion
