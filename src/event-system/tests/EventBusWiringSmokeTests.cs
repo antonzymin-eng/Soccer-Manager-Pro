@@ -1,6 +1,6 @@
 // File:     src/event-system/tests/EventBusWiringSmokeTests.cs
 // Created:  2026-06-08
-// Modified: 2026-06-08 (AR-2 fix pass)
+// Modified: 2026-06-08 (AR-3 fix pass — cycle-stop, L-only)
 // Author:   —
 // Spec:     Event System #17 §4.4, Deterministic Simulation #16 §5, Code Standards #20
 // Purpose:  Boot-time wiring smoke test for the EventBusRegistrar chain across specs.
@@ -38,19 +38,24 @@ namespace TacticalDirector.EventSystem.Tests
 {
     /// <summary>
     /// SMOKE-EVT-WIRING-001: end-to-end boot wiring across all registered specs.
-    /// Exercises every EventBusRegistrar.Initialize() call site, publishes one Tier A/B
-    /// event per spec from the correct producer phase, drains the ledger, serializes it,
-    /// and pins the SHA-256 of the serialized bytes as a golden value.
+    /// Calls every EventBusRegistrar.Initialize(), then — for each spec that has a
+    /// Tier A or Tier B event — publishes one of those events from the correct
+    /// producer phase, drains the ledger, serializes it, and pins the SHA-256 of
+    /// the serialized bytes as a golden value. Tier-C-only specs (Perception,
+    /// Decision Tree) are exercised by Initialize() only; their events bypass the
+    /// ledger entirely (immediate-dispatch CosmeticChannel) so they cannot
+    /// contribute to the digest.
     ///
     /// Stage 0 surface (6 currently-wired registrars; 7 once AM #2 lands):
-    ///   - PassMechanics       (0x0C, 0x0D — Tier A — Resolve)
-    ///   - ShotMechanics       (0x01, 0x0E — Tier A — Resolve)
-    ///   - HeadingMechanics    (0x12       — Tier B — Physics)
-    ///   - GoalkeeperMechanics (0x14, 0x15 — Tier A — Physics; 0x16 — Tier A — Resolve)
-    ///   - PerceptionSystem    (0x10 Tier C — registry row updated by Initialize(); the
-    ///                          CosmeticChannel routing path is NOT exercised here)
-    ///   - DecisionTree        (0x11 Tier C — registry row updated by Initialize(); the
-    ///                          CosmeticChannel routing path is NOT exercised here)
+    ///   - PassMechanics       (0x0C, 0x0D — Tier A — Resolve)          publish + digest
+    ///   - ShotMechanics       (0x01, 0x0E — Tier A — Resolve)          publish + digest
+    ///   - HeadingMechanics    (0x12       — Tier B — Physics)          publish + digest
+    ///   - GoalkeeperMechanics (0x14, 0x15 — Tier A — Physics;
+    ///                          0x16       — Tier A — Resolve)          publish + digest
+    ///   - PerceptionSystem    (0x10 Tier C — Initialize() only;
+    ///                          CosmeticChannel routing NOT exercised)
+    ///   - DecisionTree        (0x11 Tier C — Initialize() only;
+    ///                          CosmeticChannel routing NOT exercised)
     ///
     /// [CROSS-PENDING] Agent Movement (#2) — once AM lands its own EventBusRegistrar,
     ///   add its Initialize() call below at the BOOT step and append its Tier A
@@ -226,4 +231,16 @@ namespace TacticalDirector.EventSystem.Tests
 // |         |            |        | steps including the exact line range to delete; "delete the        |
 // |         |            |        | Inconclusive line" was ambiguous for a 3-line call + preceding     |
 // |         |            |        | comment block.                                                     |
+// | 0.4     | 2026-06-08 | —      | AR-3 fix pass: 0H + 0M + 2L (cycle-stop). L-1: fixture-doc top-    |
+// |         |            |        | line claim "publishes one Tier A/B event per spec" rewritten —     |
+// |         |            |        | only 4 of 6 specs have a Tier A/B event; Tier-C-only specs         |
+// |         |            |        | (Perception, Decision Tree) bypass the ledger via immediate-       |
+// |         |            |        | dispatch CosmeticChannel and cannot contribute to the digest, so   |
+// |         |            |        | they are exercised by Initialize() alone. Per-spec bullet list     |
+// |         |            |        | annotated with "publish + digest" vs "Initialize() only" so the    |
+// |         |            |        | per-spec scope is unambiguous from the summary alone. L-2          |
+// |         |            |        | (tracking-doc sync gap — src/CLAUDE.md tree row + file-manifest    |
+// |         |            |        | not refreshed with the new EventBusWiringSmokeTests.cs file or the |
+// |         |            |        | 6-spec asmdef-ref additions): out of scope for the test file's     |
+// |         |            |        | own correctness — flagged as a separate follow-up commit.          |
 #endregion
