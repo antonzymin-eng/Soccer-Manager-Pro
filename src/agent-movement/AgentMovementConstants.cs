@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementConstants.cs
 // Created:  2026-05-22
-// Modified: 2026-06-07 (AR-10 fix pass)
+// Modified: 2026-06-09 (AR-12 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1–§3.4, §4.1.3, §4.3.1, Code Standards #20
 // Purpose:  All constants for the agent movement system. No literals in formula code.
@@ -209,6 +209,17 @@ namespace TacticalDirector.AgentMovement
 
         /// <summary>[GT] Minimum stopping distance guard to prevent division by near-zero (m). Agent Movement #2 §3.2.5.</summary>
         public static readonly float MinStoppingDistanceM = 0.1f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>
+        /// [GT] Minimum deceleration magnitude floor (m/s²) applied in ApplyDeceleration.
+        /// Without a floor, recomputing a = v²/(2d) each frame against the FIXED total
+        /// stopping distance produces hyperbolic (Zeno) decay — v(t) = v₀/(1 + v₀t/2d)
+        /// never reaches the IdleEnter threshold in bounded time (~78 s and ~8× the
+        /// requested stopping distance from 6 m/s with d = 4 m). Matches
+        /// WALK_DECELERATION so low-speed stops feel like the walking brake.
+        /// Agent Movement #2 §3.2.5.
+        /// </summary>
+        public static readonly float MinDecelerationFloor = 2.5f; // TODO: replace with config loader (Stage 1)
 
         #endregion
 
@@ -526,4 +537,7 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | live consumer since; grep over src/ confirms only the constants catalogue declaration and a   |
 // |         |            |        | historical version-history mention referenced it. Constants without consumers are dead-code   |
 // |         |            |        | per Spec #20 §3.10 hygiene and bloat the [GT] migration list when Stage 1 config-loader lands.|
+// | 1.9     | 2026-06-09 | —      | AR-12 fix: H-3 LocomotionConstants.MinDecelerationFloor [GT] added — consumed by              |
+// |         |            |        | AgentLocomotion.ApplyDeceleration to terminate the hyperbolic (Zeno) braking profile in       |
+// |         |            |        | bounded time. Value matches WALK_DECELERATION (2.5 m/s²).                                     |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/agent-movement/MovementCommand.cs
 // Created:  2026-05-22
-// Modified: 2026-06-04
+// Modified: 2026-06-09 (AR-12 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.3, Code Standards #20
 // Purpose:  Command struct issued by the AI layer each tactical heartbeat (10 Hz).
@@ -54,6 +54,22 @@ namespace TacticalDirector.AgentMovement
             FacingMode = facingMode;
             FacingTarget = facingTarget;
             OverrideSafetyConstraints = overrideSafety;
+        }
+
+        /// <summary>
+        /// Walk to position — low-intensity repositioning that stays below the jogging band.
+        /// The commandSpeed mapping caps the integration target at JogEnter, so the agent
+        /// settles at walking pace without promoting to JOGGING (AR-12 H-2 companion).
+        /// </summary>
+        public static MovementCommand WalkTo(Vector2 target)
+        {
+            return new MovementCommand(
+                target,
+                AgentMovementState.WALKING,
+                DecelerationMode.CONTROLLED,
+                FacingMode.AUTO_ALIGN,
+                target,
+                false);
         }
 
         /// <summary>Move to position at whatever speed the state machine allows.</summary>
@@ -132,4 +148,7 @@ namespace TacticalDirector.AgentMovement
 // | 1.2     | 2026-06-04 | —      | Test-plan landing: internal ToolingOverrideOnly_NaNInjection factory added for      |
 // |         |            |        | T-AM-030..032 (AR-5 M-1 / AR-7 M-2) regression-test seam. Production game logic    |
 // |         |            |        | MUST NOT call this factory — it disables Step 10 safety validation.                |
+// | 1.3     | 2026-06-09 | —      | AR-12 follow-up: WalkTo factory added — the AI layer previously had no way to       |
+// |         |            |        | request the WALKING band (MoveTo=JOGGING, SprintUrgent=SPRINTING, Stop=IDLE).       |
+// |         |            |        | Consumed by T-AM-113 walk-band closed-loop regression test.                         |
 #endregion

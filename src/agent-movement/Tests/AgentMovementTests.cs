@@ -1,8 +1,9 @@
 // File:     src/agent-movement/Tests/AgentMovementTests.cs
 // Created:  2026-05-26
-// Modified: 2026-06-04
+// Modified: 2026-06-09 (AR-12 fix pass)
 // Author:   —
-// Spec:     Agent Movement #2 test-plan.md (T-AM-001..018, T-AM-030..033, T-AM-040..043),
+// Spec:     Agent Movement #2 test-plan.md (T-AM-001..018, T-AM-030..033, T-AM-040..043,
+//           T-AM-110..115),
 //           Code Standards #20
 // Purpose:  Regression-anchored test roster for Spec #2. Every test ID below maps to a
 //           specific adversarial-review (AR) finding documented in src/CLAUDE.md AR-3..AR-9.
@@ -596,6 +597,178 @@ namespace TacticalDirector.AgentMovement.Tests
                 + "AR-4 M-2 reset the ring buffer on lock entry to close the indefinite-re-lock loop.");
         }
     }
+
+    // ── T-AM-110..113: closed-loop locomotion integration (AR-12 H-1 / H-2 / H-3) ──
+
+    /// <summary>
+    /// Closed-loop pipeline tests: drive the real 12-step pipeline from a command for whole
+    /// simulated seconds and assert the macroscopic outcome (launch / band-respect / stop).
+    /// These are the tests the AR-12 H-1/H-2/H-3 family would have failed — every prior test
+    /// either exercised a pure function or injected mid-flight state.
+    /// </summary>
+    [TestFixture]
+    internal sealed class AgentMovementSystemClosedLoopTests
+    {
+        private const float PhysicsHz = 60.0f;
+        private const float Dt = 1.0f / 60.0f;
+        private static readonly Vector2 StartPos = new Vector2(20.0f, 34.0f);
+
+        private static float RunFrames(
+            AgentMovementSystem sys, ref AgentState state, in MovementCommand cmd,
+            int frames, float startTime, System.Action<AgentState> perFrame = null)
+        {
+            var (attrs, perf) = (PlayerAttributes.CreateDefault(), PerformanceContext.CreateNeutral());
+            float t = startTime;
+            for (int i = 0; i < frames; i++)
+            {
+                sys.Update(ref state, attrs, perf, cmd, Dt, t,
+                    isCollisionKnockdown: false, collisionForce: 0.0f);
+                t += Dt;
+                perFrame?.Invoke(state);
+            }
+            return t;
+        }
+
+        // T-AM-110 (PRIMARY AR-12 H-1 lock): an agent created at rest and given MoveTo must
+        // launch — pre-fix the IDLE branch only decayed speed while EvaluateFromIdle required
+        // speed > IdleExit, deadlocking every agent at speed 0 forever.
+        [Test]
+        public void Update_FromRest_MoveToCommand_LaunchesAndReachesJogging()
+        {
+            var sys = new AgentMovementSystem(PhysicsHz);
+            AgentState state = AgentState.CreateAtPosition(StartPos, Vector2.right);
+            MovementCommand cmd = MovementCommand.MoveTo(new Vector2(67.5f, 34.0f)); // 47.5 m, +X
+
+            RunFrames(sys, ref state, cmd, frames: 180, startTime: 0.0f); // 3 s
+
+            Assert.AreEqual(AgentMovementState.JOGGING, state.CurrentState,
+                "3 s after a MoveTo from rest the agent must be jogging (pre-AR-12 H-1: stuck IDLE at speed 0).");
+            Assert.That(state.Speed, Is.GreaterThan(MovementThresholds.JogEnter));
+            Assert.That(state.Position.x, Is.GreaterThan(StartPos.x + 5.0f),
+                "The agent must have actually travelled toward the target.");
+        }
+
+        // T-AM-111 (PRIMARY AR-12 H-2 lock): a JOGGING command must never promote to
+        // SPRINTING — pre-fix topSpeed ignored commandSpeed, the agent accelerated through
+        // SprintEnter, drained the sprint reservoir, and flap-cycled via DECELERATING.
+        [Test]
+        public void Update_MoveToCommand_NeverPromotesToSprinting()
+        {
+            var sys = new AgentMovementSystem(PhysicsHz);
+            AgentState state = AgentState.CreateAtPosition(StartPos, Vector2.right);
+            MovementCommand cmd = MovementCommand.MoveTo(new Vector2(67.5f, 34.0f));
+
+            bool everSprinted = false;
+            bool everDecelerated = false;
+            RunFrames(sys, ref state, cmd, frames: 480, startTime: 0.0f, s => // 8 s
+            {
+                everSprinted |= s.CurrentState == AgentMovementState.SPRINTING;
+                everDecelerated |= s.CurrentState == AgentMovementState.DECELERATING;
+            });
+
+            Assert.IsFalse(everSprinted,
+                "A jog command must never enter SPRINTING (pre-AR-12 H-2: auto-promotion at SprintEnter).");
+            Assert.IsFalse(everDecelerated,
+                "A jog command at steady state must not flap through DECELERATING.");
+            Assert.That(state.Speed, Is.LessThanOrEqualTo(MovementThresholds.SprintEnter + 0.001f),
+                "Speed must respect the commanded band ceiling.");
+        }
+
+        // T-AM-112 (PRIMARY AR-12 H-3 lock): a Stop command from jogging speed must reach
+        // IDLE within bounded time and distance — pre-fix the Zeno deceleration tail took
+        // ~78 s and ~32 m before crossing IdleEnter.
+        [Test]
+        public void Update_StopCommand_FromJoggingSpeed_StopsWithinBoundedTimeAndDistance()
+        {
+            var sys = new AgentMovementSystem(PhysicsHz);
+            AgentState state = AgentState.CreateAtPosition(StartPos, Vector2.right);
+            state.CurrentState = AgentMovementState.JOGGING;
+            state.Velocity = new Vector2(5.5f, 0.0f);
+            state.Speed = 5.5f;
+            state.LastValidVelocity = state.Velocity;
+            MovementCommand cmd = MovementCommand.Stop(state.Position);
+
+            RunFrames(sys, ref state, cmd, frames: 180, startTime: 0.0f); // 3 s
+
+            Assert.AreEqual(AgentMovementState.IDLE, state.CurrentState,
+                "3 s after a Stop from 5.5 m/s the agent must be IDLE (pre-AR-12 H-3: ~78 s Zeno tail).");
+            Assert.That(Vector2.Distance(state.Position, StartPos), Is.LessThan(8.0f),
+                "Stopping distance must be bounded (pre-AR-12 H-3: ~32 m of coasting).");
+        }
+
+        // T-AM-113 (AR-12 H-2 walking band): a WalkTo command settles in WALKING at the
+        // JogEnter ceiling and never escalates — pre-fix it flapped WALKING→JOGGING→DECELERATING.
+        [Test]
+        public void Update_WalkToCommand_SettlesInWalkingBand_NoEscalation()
+        {
+            var sys = new AgentMovementSystem(PhysicsHz);
+            AgentState state = AgentState.CreateAtPosition(StartPos, Vector2.right);
+            MovementCommand cmd = MovementCommand.WalkTo(new Vector2(67.5f, 34.0f));
+
+            bool everAboveWalking = false;
+            RunFrames(sys, ref state, cmd, frames: 300, startTime: 0.0f, s => // 5 s
+            {
+                everAboveWalking |= s.CurrentState == AgentMovementState.JOGGING
+                                 || s.CurrentState == AgentMovementState.SPRINTING
+                                 || s.CurrentState == AgentMovementState.DECELERATING;
+            });
+
+            Assert.IsFalse(everAboveWalking,
+                "A walk command must never escalate above the walking band (pre-AR-12 H-2 flap).");
+            Assert.AreEqual(AgentMovementState.WALKING, state.CurrentState);
+            Assert.That(state.Speed, Is.LessThanOrEqualTo(MovementThresholds.JogEnter + 0.001f));
+            Assert.That(state.Speed, Is.GreaterThan(MovementThresholds.IdleExit),
+                "The agent must actually be walking, not crawling near the IDLE boundary.");
+        }
+
+        // T-AM-114 (AR-13 M-1): an aerobically exhausted agent given a jog command settles
+        // in the walking band — pre-fix the state machine refused JOGGING on the aerobic
+        // gate while the un-degraded commandSpeed kept pushing speed through JogEnter,
+        // flapping WALKING→JOGGING→DECELERATING at ~3 Hz until the OscillationGuard locked.
+        [Test]
+        public void Update_ExhaustedAgent_MoveToCommand_SettlesInWalkingBand_NoFlap()
+        {
+            var sys = new AgentMovementSystem(PhysicsHz);
+            AgentState state = AgentState.CreateAtPosition(StartPos, Vector2.right);
+            state.AerobicPool = 0.05f; // below AerobicJogFloor (0.15)
+            MovementCommand cmd = MovementCommand.MoveTo(new Vector2(67.5f, 34.0f));
+
+            bool everAboveWalking = false;
+            RunFrames(sys, ref state, cmd, frames: 300, startTime: 0.0f, s => // 5 s
+            {
+                everAboveWalking |= s.CurrentState == AgentMovementState.JOGGING
+                                 || s.CurrentState == AgentMovementState.SPRINTING
+                                 || s.CurrentState == AgentMovementState.DECELERATING;
+            });
+
+            Assert.IsFalse(everAboveWalking,
+                "An exhausted agent's jog command must degrade to the walking band, not flap "
+                + "through JOGGING/DECELERATING (AR-13 M-1).");
+            Assert.AreEqual(AgentMovementState.WALKING, state.CurrentState);
+            Assert.That(state.Speed, Is.LessThanOrEqualTo(MovementThresholds.JogEnter + 0.001f));
+        }
+
+        // T-AM-115 (AR-13 M-2): the Decision Tree HOLD action (StrafeWhileWatching with
+        // target == current position, desired JOGGING) must keep a resting agent at rest —
+        // without the movement-intent offset gate, the AR-12 H-1 launch path fed newSpeed > 0
+        // into Step 8 with a degenerate target, tripping RotateVelocityToward's
+        // both-degenerate Debug.Assert every frame.
+        [Test]
+        public void Update_HoldCommandAtOwnPosition_StaysIdleAtRest()
+        {
+            var sys = new AgentMovementSystem(PhysicsHz);
+            AgentState state = AgentState.CreateAtPosition(StartPos, Vector2.right);
+            Vector2 ballPos = new Vector2(40.0f, 34.0f);
+            MovementCommand cmd = MovementCommand.StrafeWhileWatching(StartPos, ballPos);
+
+            RunFrames(sys, ref state, cmd, frames: 120, startTime: 0.0f); // 2 s
+
+            Assert.AreEqual(AgentMovementState.IDLE, state.CurrentState,
+                "HOLD at own position must not launch the agent (AR-13 M-2).");
+            Assert.AreEqual(0.0f, state.Speed, 0.0001f);
+            Assert.AreEqual(StartPos, state.Position);
+        }
+    }
 }
 
 #region VersionHistory
@@ -604,4 +777,10 @@ namespace TacticalDirector.AgentMovement.Tests
 // | 2.0     | 2026-06-04 | —      | Replace placeholder with the regression-anchored T-AM-001..018, T-AM-030..033,    |
 // |         |            |        | T-AM-040..043 roster. Test plan and ID convention live in                          |
 // |         |            |        | docs/specs/agent-movement/test-plan.md v0.1.                                       |
+// | 2.1     | 2026-06-09 | —      | AR-12 fix pass: new AgentMovementSystemClosedLoopTests fixture (T-AM-110..113) —   |
+// |         |            |        | launch-from-rest (H-1), jog-command band respect (H-2), bounded stop (H-3),        |
+// |         |            |        | walk-band stability (H-2/WalkTo). First whole-seconds closed-loop coverage; every  |
+// |         |            |        | prior test exercised a pure function or injected mid-flight state.                 |
+// | 2.2     | 2026-06-09 | —      | AR-13 fix pass: T-AM-114 added — exhausted-agent command degradation (M-1);        |
+// |         |            |        | T-AM-115 added — HOLD-at-own-position stays at rest (M-2 movement-intent gate).    |
 #endregion

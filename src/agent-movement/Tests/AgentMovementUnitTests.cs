@@ -1,9 +1,9 @@
 // File:     src/agent-movement/Tests/AgentMovementUnitTests.cs
 // Created:  2026-06-04
-// Modified: 2026-06-04
+// Modified: 2026-06-09 (AR-12 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 test-plan.md (T-AM-007..009 / T-AM-019..023 / T-AM-034..039 /
-//           T-AM-044..047 / T-AM-050..052 / T-AM-070..107), Code Standards #20
+//           T-AM-044..047 / T-AM-050..052 / T-AM-070..109), Code Standards #20
 // Purpose:  Pure-function unit coverage for the Agent Movement assembly. Sibling to
 //           AgentMovementTests.cs (which holds the regression-anchored integration roster).
 //           Each [TestFixture] targets a single source file; test IDs are catalogued in
@@ -488,18 +488,57 @@ namespace TacticalDirector.AgentMovement.Tests
         }
 
         // T-AM-079: normal-demand decel reduces speed by v²/(2d) × dt
+        // (AR-12 H-3 re-derivation: v chosen so v²/(2d) sits strictly between
+        // MinDecelerationFloor and MAX_ACCELERATION — the kinematic term governs.)
         [Test]
         public void ApplyDeceleration_NormalDemand_UsesKinematicFormula()
         {
-            // At v=4 with d=4 (above MinStoppingDistance): raw decel = 16/8 = 2 m/s² (< 8 cap).
-            float v0 = 4.0f;
+            // At v=6 with d=4 (above MinStoppingDistance): raw decel = 36/8 = 4.5 m/s²
+            // (floor 2.5 < 4.5 < cap 8).
+            float v0 = 6.0f;
             float d = 4.0f;
-            float expectedDecel = (v0 * v0) / (LocomotionConstants.KINEMATIC_HALF * d); // 2.0
+            float expectedDecel = (v0 * v0) / (LocomotionConstants.KINEMATIC_HALF * d); // 4.5
             float expectedSpeed = v0 - expectedDecel * Dt;
 
             float result = AgentLocomotion.ApplyDeceleration(v0, d, Dt);
 
             Assert.AreEqual(expectedSpeed, result, Tolerance);
+        }
+
+        // T-AM-108 (AR-12 H-3): low-speed decel floored at MinDecelerationFloor —
+        // without the floor, v²/(2d) recomputed each frame against the fixed total d is
+        // hyperbolic decay that never reaches IdleEnter in bounded time (Zeno braking).
+        [Test]
+        public void ApplyDeceleration_LowSpeed_FlooredAtMinDeceleration()
+        {
+            // At v=0.4 with d=4: raw decel = 0.16/8 = 0.02 m/s² — far below the floor.
+            float v0 = 0.4f;
+            float expectedSpeed = v0 - LocomotionConstants.MinDecelerationFloor * Dt;
+
+            float result = AgentLocomotion.ApplyDeceleration(v0, 4.0f, Dt);
+
+            Assert.AreEqual(expectedSpeed, result, Tolerance,
+                "Low-speed braking must use the MinDecelerationFloor, not the decayed kinematic term.");
+        }
+
+        // T-AM-109 (AR-12 H-3): stop terminates in bounded time — from 6 m/s with d=4,
+        // iterating ApplyDeceleration must cross IdleEnter (0.1 m/s) within 3 simulated
+        // seconds. Pre-fix this took ~78 s (hyperbolic tail).
+        [Test]
+        public void ApplyDeceleration_IteratedStop_TerminatesWithinBoundedTime()
+        {
+            float v = 6.0f;
+            int frames = 0;
+            const int maxFrames = 180; // 3 s at 60 Hz
+
+            while (v >= MovementThresholds.IdleEnter && frames < maxFrames)
+            {
+                v = AgentLocomotion.ApplyDeceleration(v, 4.0f, Dt);
+                frames++;
+            }
+
+            Assert.That(v, Is.LessThan(MovementThresholds.IdleEnter),
+                "Deceleration from 6 m/s must reach the IdleEnter threshold within 3 s.");
         }
 
         // T-AM-080: controlled-mode stopping-distance endpoints
@@ -875,4 +914,7 @@ namespace TacticalDirector.AgentMovement.Tests
 // |         |            |        | AgentSafetySystemUnit / OscillationGuardEdge / PerformanceContextUnit /            |
 // |         |            |        | AgentLocomotionUnit / AgentDirectionalMovementUnit / AgentTurningUnit). IDs        |
 // |         |            |        | catalogued in docs/specs/agent-movement/test-plan.md v0.2.                         |
+// | 1.1     | 2026-06-09 | —      | AR-12 fix pass: T-AM-079 re-derived for the H-3 MinDecelerationFloor (v=4→v=6 so   |
+// |         |            |        | the kinematic term sits strictly between floor and cap). New T-AM-108 (low-speed   |
+// |         |            |        | floor) + T-AM-109 (iterated stop terminates within 3 s — pre-fix took ~78 s).      |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentMovementSystem.cs
 // Created:  2026-05-22
-// Modified: 2026-06-07 (AR-10 fix pass)
+// Modified: 2026-06-09 (AR-12 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §4.4, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
@@ -76,6 +76,21 @@ namespace TacticalDirector.AgentMovement
             // a threshold-equivalent speed in m/s so the state machine can compare against the
             // agent's current speed directly (§3.1.4).
             float commandSpeed = CommandSpeedFromDesiredState(command.DesiredState);
+
+            // Aerobic exhaustion degrades command intent (AR-13 M-1). Below AerobicJogFloor
+            // the state machine refuses JOGGING/SPRINTING, so an above-walking commandSpeed
+            // would push speed through JogEnter and flap WALKING→JOGGING→DECELERATING at
+            // ~3 Hz until the OscillationGuard locks. Clamping intent to the walking band
+            // the agent can sustain keeps both the state machine (Step 2) and the speed
+            // integrator (Step 4–5 topSpeed cap) consistent. Pool recovery near the floor
+            // produces a slow walk/jog alternation on pool timescales (seconds) — accepted
+            // as exhausted-player behaviour, and far below the guard's transitions-per-
+            // second threshold.
+            if (state.AerobicPool < MovementThresholds.AerobicJogFloor)
+            {
+                commandSpeed = Mathf.Min(commandSpeed, MovementThresholds.JogEnter);
+            }
+
             Vector2 movementDir = state.Velocity.sqrMagnitude > SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON
                 ? state.Velocity.normalized
                 : state.FacingDirection;
@@ -84,9 +99,20 @@ namespace TacticalDirector.AgentMovement
                 movementDir,
                 state.FacingDirection);
 
+            Vector2 commandOffset = command.TargetPosition - state.Position;
+
+            // Movement intent requires BOTH a moving commandSpeed and a non-degenerate target
+            // offset (AR-13 M-2). The Decision Tree's HOLD action issues StrafeWhileWatching
+            // with TargetPosition == current position (desired JOGGING, facing-locked on the
+            // ball) — without the offset gate, the H-1 launch path would feed newSpeed > 0
+            // into Step 8 with a degenerate target from rest, tripping RotateVelocityToward's
+            // both-degenerate Debug.Assert every frame while the agent (correctly) holds still.
+            bool hasMovementIntent = commandSpeed > 0.0f
+                && commandOffset.sqrMagnitude > SafetyConstants.VELOCITY_SQR_MAGNITUDE_EPSILON;
+
             float turnAngleRequested = CalculateRequestedTurnAngle(
                 state.FacingDirection,
-                command.TargetPosition - state.Position);
+                commandOffset);
 
             AgentMovementState newState = AgentStateMachine.EvaluateState(
                 state.CurrentState,
@@ -199,6 +225,16 @@ namespace TacticalDirector.AgentMovement
                            * directionalMult
                            * AgentLocomotion.CalculateAerobicModifier(state.AerobicPool);
 
+            // Command intent caps the integration target (AR-12 H-2). Without the cap every
+            // moving agent accelerated toward its pace-derived ceiling (~7.5–10.2 m/s),
+            // overshot its commanded band, and the state machine promoted it — a JOGGING
+            // command crossed SprintEnter into SPRINTING (draining the reservoir), a WALKING
+            // command crossed JogEnter, and both flap-cycled through DECELERATING
+            // indefinitely. The exponential/linear approaches never exceed topSpeed (see
+            // ApplyAcceleration asymptote ceiling), so the strict band-promotion comparisons
+            // (speed > JogEnter / SprintEnter) stay false unless the AI requested the band.
+            topSpeed = Mathf.Min(topSpeed, commandSpeed);
+
             float kBase = AgentLocomotion.CalculateBaseAccelK(effectiveAccel);
             float kDir = AgentDirectionalMovement.ApplyDirectionalToAccelK(kBase, directionalMult);
 
@@ -207,7 +243,16 @@ namespace TacticalDirector.AgentMovement
             switch (state.CurrentState)
             {
                 case AgentMovementState.IDLE:
-                    newSpeed = Mathf.MoveTowards(state.Speed, 0.0f, MovementThresholds.MAX_ACCELERATION * dt);
+                    // Launch path (AR-12 H-1): the state machine exits IDLE only on
+                    // speed > IdleExit, but this branch previously only decayed speed toward
+                    // zero — an agent at rest given a moving command could never start moving
+                    // (newSpeed stayed 0, Step 8 zeroed velocity, EvaluateFromIdle never
+                    // fired). With movement intent (moving commandSpeed AND a non-degenerate
+                    // target offset — AR-13 M-2), accelerate at the walking rate until the
+                    // IDLE→WALKING transition takes over; otherwise decay as before.
+                    newSpeed = hasMovementIntent
+                        ? Mathf.MoveTowards(state.Speed, topSpeed, LocomotionConstants.WALK_ACCELERATION * dt)
+                        : Mathf.MoveTowards(state.Speed, 0.0f, MovementThresholds.MAX_ACCELERATION * dt);
                     break;
 
                 case AgentMovementState.WALKING:
@@ -243,13 +288,17 @@ namespace TacticalDirector.AgentMovement
                     break;
             }
 
-            // Step 6 — Turn rate (max available this frame). Lean angle is computed in Step 7
-            // from the actually-achieved rotation so its magnitude reflects real centripetal load.
+            // Step 6 — Turn rate (max available this frame). Lean angle is computed in Step 8
+            // from the velocity-direction rotation actually applied, so its magnitude reflects
+            // real path curvature (centripetal load), not facing rotation.
             float maxTurnRate = AgentTurning.CalculateMaxTurnRate(
                 state.Speed, attrs.Agility, attrs.Balance, state.CurrentState);
 
-            // Step 7 — Facing direction update; capture signed angle actually applied for lean
-            // sign and achieved turn-rate cache.
+            // Step 7 — Facing direction update; capture signed angle actually applied for the
+            // achieved turn-rate cache. NOTE (AR-12 L-3): AUTO_ALIGN tracks the pre-Step-8
+            // velocity, so facing lags the velocity it aligns to by exactly one frame at 60 Hz.
+            // The §4.4.1 step order (facing before velocity integration) is preserved
+            // deliberately; the lag is bounded and invisible at frame rate.
             state.FacingDirection = UpdateFacing(
                 state.FacingDirection,
                 command,
@@ -260,7 +309,6 @@ namespace TacticalDirector.AgentMovement
 
             float signedTurnRate = dt > 0.0f ? signedFacingAngle / dt : 0.0f;
             state.CurrentTurnRate = Mathf.Abs(signedTurnRate);
-            state.LeanAngle = AgentTurning.CalculateLeanAngle(state.Speed, signedTurnRate);
 
             // Step 8 — Integrate velocity with rate-limited direction rotation (momentum-respecting).
             // Voluntary states (WALKING / JOGGING / SPRINTING / DECELERATING with steering intent)
@@ -274,7 +322,16 @@ namespace TacticalDirector.AgentMovement
             float velocityMaxTurnDeg = voluntarySteering ? maxTurnRate * dt : 0.0f;
 
             state.Velocity = AgentDirectionalMovement.RotateVelocityToward(
-                state.Velocity, velocityTarget, newSpeed, velocityMaxTurnDeg);
+                state.Velocity, velocityTarget, newSpeed, velocityMaxTurnDeg,
+                out float velocitySignedAngle);
+
+            // Lean reflects actual path curvature (AR-12 M-1): centripetal load comes from
+            // the velocity-direction rotation applied here in Step 8, not the facing rotation
+            // in Step 7 — a TARGET_LOCK strafe curves the path while facing holds (lean was
+            // ~0 when it should peak), and an in-place facing pivot at residual speed showed
+            // phantom lean. The jump-start / maintain-momentum paths report 0 → lean 0.
+            float velocityTurnRate = dt > 0.0f ? velocitySignedAngle / dt : 0.0f;
+            state.LeanAngle = AgentTurning.CalculateLeanAngle(newSpeed, velocityTurnRate);
 
             // Step 9 — Integrate position.
             state.Position += state.Velocity * dt;
@@ -618,4 +675,21 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | `!IsNaN && >= 0` to `float.IsFinite && >= 0` — the prior gate let +Infinity through, which |
 // |         |            |        | makes the OscillationGuard `currentTime - ReadTime(i) < WindowSeconds` math evaluate true   |
 // |         |            |        | for every historical slot. `IsFinite` catches NaN and both infinities in one call.         |
+// | 1.14    | 2026-06-09 | —      | AR-12 fix: H-1 IDLE locomotion branch accelerates (walk rate) toward the command-capped     |
+// |         |            |        | topSpeed when commandSpeed > 0 — previously it only decayed toward 0 while EvaluateFromIdle |
+// |         |            |        | required speed > IdleExit, so an agent at rest given any moving command was deadlocked at   |
+// |         |            |        | speed 0 forever. H-2 topSpeed = min(topSpeed, commandSpeed) — command intent now caps the   |
+// |         |            |        | integration target; jog commands no longer auto-promote to SPRINTING (reservoir drain) and  |
+// |         |            |        | walk commands no longer flap WALKING→JOGGING→DECELERATING. M-1 LeanAngle computed from the  |
+// |         |            |        | Step 8 velocity-direction rotation (path curvature) at newSpeed instead of the Step 7       |
+// |         |            |        | facing rotation; CurrentTurnRate remains the achieved facing rate. L-3 one-frame AUTO_ALIGN |
+// |         |            |        | facing-vs-velocity lag documented as deliberate §4.4.1 ordering.                            |
+// | 1.15    | 2026-06-09 | —      | AR-13 fix: M-1 commandSpeed clamped to JogEnter when AerobicPool < AerobicJogFloor —        |
+// |         |            |        | found on the AR-12 re-review: the H-2 cap left an exhausted agent with a jog/sprint command |
+// |         |            |        | flapping WALKING→JOGGING→DECELERATING at ~3 Hz (state machine refuses JOGGING on the       |
+// |         |            |        | aerobic gate while the un-degraded commandSpeed kept pushing speed through JogEnter).      |
+// |         |            |        | M-2 IDLE launch gated on hasMovementIntent (commandSpeed > 0 AND non-degenerate target     |
+// |         |            |        | offset) — the Decision Tree HOLD action (StrafeWhileWatching with target == current        |
+// |         |            |        | position, desired JOGGING) would otherwise feed newSpeed > 0 into Step 8 with a degenerate |
+// |         |            |        | target from rest, tripping RotateVelocityToward's both-degenerate assert every frame.      |
 #endregion
