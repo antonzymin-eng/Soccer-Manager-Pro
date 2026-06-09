@@ -1,6 +1,6 @@
 // File:     src/ball-physics/tests/BallIntegrationTests.cs
 // Created:  2026-05-24
-// Modified: 2026-06-02
+// Modified: 2026-06-09 (AR-7 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  End-to-end integration tests against §3.1.14 derived validation test cases.
@@ -290,7 +290,11 @@ namespace TacticalDirector.BallPhysics.Tests
             int   steps      = 0;
             int   maxSteps   = 600;
 
-            while (ball.Position.z >= radius && steps < maxSteps)
+            // AR-7 M-4: loop on the state machine, not on z >= radius — the ground
+            // clamp pins z at exactly RADIUS so the old condition never went false
+            // and the loop always ran to maxSteps (flightTime was unconditionally
+            // 10 s; the 1.8–2.2 s window could never pass).
+            while (ball.State == BallStateType.Airborne && steps < maxSteps)
             {
                 if (ball.Position.z > peakHeight)
                     peakHeight = ball.Position.z;
@@ -301,12 +305,53 @@ namespace TacticalDirector.BallPhysics.Tests
 
             float flightTime = steps * DT;
 
-            Assert.That(peakHeight, Is.InRange(4f, 6f),
-                $"Peak height {peakHeight:F2} m outside expected 4–6 m window");
-            Assert.That(flightTime, Is.InRange(1.8f, 2.2f),
-                $"Flight time {flightTime:F2} s outside expected 1.8–2.2 s window");
+            // AR-7 M-4: windows re-derived from the actual model. Vacuum apex for
+            // vz = 8 m/s is 3.26 m and drag only lowers it — the old 4–6 m / 1.8–2.2 s
+            // windows were unreachable for this launch. Numerical mirror of the fixed
+            // physics gives peak 3.07 m, flight 1.57 s, landing speed 20.1 m/s.
+            Assert.That(peakHeight, Is.InRange(2.6f, 3.4f),
+                $"Peak height {peakHeight:F2} m outside expected 2.6–3.4 m window");
+            Assert.That(flightTime, Is.InRange(1.3f, 1.8f),
+                $"Flight time {flightTime:F2} s outside expected 1.3–1.8 s window");
             Assert.That(ball.Velocity.magnitude, Is.LessThan(25f),
                 "Drag must reduce landing speed below launch speed");
+        }
+
+        // ── AR-7 H-2 regression: no Airborne hover deadlock ──────────────────────
+
+        [Test]
+        public void Airborne_FastDescent_Bounces_NoHoverDeadlock()
+        {
+            // A descent fast enough to step from above AirborneExitThreshold (0.13 m)
+            // to below ground (0.11 m) in one 60 Hz frame (|vz| > ~1.2 m/s) used to be
+            // trapped forever: the ground clamp zeroed Velocity.z before the state
+            // machine could see vz < 0, so Airborne → Bouncing never fired and the
+            // ball glided at z = RADIUS under drag alone (AR-7 H-2).
+            float radius = BallPhysicsConstants.Ball.RADIUS;
+            var ball = new BallState
+            {
+                State             = BallStateType.Airborne,
+                Position          = new Vector3(50f, 34f, 1f),
+                Velocity          = new Vector3(5f, 0f, -6f),
+                AngularVelocity   = Vector3.zero,
+                LastValidPosition = new Vector3(50f, 34f, 1f),
+                LastValidVelocity = new Vector3(5f, 0f, -6f)
+            };
+
+            bool sawBouncing = false;
+            for (int i = 0; i < 240; i++)
+            {
+                BallPhysicsCore.UpdateBallPhysics(ref ball, DT, SurfaceType.GrassDry, Vector3.zero, null, 0f);
+                if (ball.State == BallStateType.Bouncing)
+                    sawBouncing = true;
+                if (ball.State == BallStateType.Rolling || ball.State == BallStateType.Stationary)
+                    break;
+            }
+
+            Assert.IsTrue(sawBouncing, "Fast descent must enter Bouncing (no hover deadlock)");
+            Assert.That(ball.State,
+                Is.EqualTo(BallStateType.Rolling).Or.EqualTo(BallStateType.Stationary),
+                $"Ball must ground out within 4 s; actual state: {ball.State}");
         }
 
         // ── IT-MBC-001 ────────────────────────────────────────────────────────────
@@ -541,4 +586,11 @@ namespace TacticalDirector.BallPhysics.Tests
 // |         |            |        | zero-alloc refactor is covered. LogAssert.Expect added on the two  |
 // |         |            |        | tests that intentionally exercise NaN-error paths so NUnit's       |
 // |         |            |        | "log error fails test" default does not break them.                |
+// | 1.4     | 2026-06-09 | —      | AR-7 fixes. M-4: LongBall_DecaysRealistically loop condition       |
+// |         |            |        | z >= RADIUS → State == Airborne (clamp pins z at RADIUS so the old |
+// |         |            |        | loop always hit maxSteps) and windows re-derived from the model    |
+// |         |            |        | (peak 2.6–3.4 m, flight 1.3–1.8 s; old 4–6 m / 1.8–2.2 s exceeded  |
+// |         |            |        | the vacuum ceiling for vz = 8). H-2 regression: new                |
+// |         |            |        | Airborne_FastDescent_Bounces_NoHoverDeadlock locks the ground-     |
+// |         |            |        | clamp / state-machine ordering fix in BallPhysicsCore.             |
 #endregion

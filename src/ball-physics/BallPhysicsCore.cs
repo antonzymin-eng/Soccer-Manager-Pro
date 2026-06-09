@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallPhysicsCore.cs
 // Created:  2026-05-24
-// Modified: 2026-06-03 (AR-6 fix pass)
+// Modified: 2026-06-09 (AR-7 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Main physics update loop and force calculations for the ball.
@@ -71,7 +71,11 @@ namespace TacticalDirector.BallPhysics
                     break;
 
                 case BallStateType.Bouncing:
-                    netForce = CalculateDragForce(relativeVelocity);
+                    // ApplyBounce already reflected Velocity.z upward; gravity applies
+                    // to the post-bounce sub-frame like any other airborne instant
+                    // (AR-7 M-3 — omitting it dropped one tick of -g·dt vs Airborne).
+                    netForce = GetGravityForce()
+                             + CalculateDragForce(relativeVelocity);
                     break;
 
                 default:
@@ -138,7 +142,7 @@ namespace TacticalDirector.BallPhysics
                 angularVelocity.normalized,
                 velocity.normalized);
 
-            if (forceDirection.sqrMagnitude < 0.0001f)
+            if (forceDirection.sqrMagnitude < BallPhysicsConstants.Magnus.MinForceDirectionSqMagnitude)
                 return Vector3.zero;
 
             forceDirection.Normalize();
@@ -312,7 +316,14 @@ namespace TacticalDirector.BallPhysics
             if (ball.Position.z < groundLevel && ball.State != BallStateType.OutOfPlay)
             {
                 ball.Position = new Vector3(ball.Position.x, ball.Position.y, groundLevel);
-                if (ball.Velocity.z < 0f)
+                // Airborne keeps its downward Velocity.z: BallStateMachine.UpdateBallState
+                // runs AFTER this clamp and the Airborne → Bouncing transition requires
+                // Velocity.z < 0. Zeroing it here trapped any descent fast enough to step
+                // from above AirborneExitThreshold to below ground in one frame (>~1.2 m/s
+                // at 60 Hz) in a permanent Airborne hover at ground level (AR-7 H-2);
+                // ApplyBounce consumes the preserved Velocity.z on the next frame.
+                // Non-airborne states still get the resting-contact zeroing.
+                if (ball.Velocity.z < 0f && ball.State != BallStateType.Airborne)
                     ball.Velocity = new Vector3(ball.Velocity.x, ball.Velocity.y, 0f);
             }
 
@@ -341,7 +352,7 @@ namespace TacticalDirector.BallPhysics
                 BallPhysicsConstants.Drag.CoefficientTurbulent, t);
         }
 
-        private static bool HasInvalidValues(BallState ball)
+        private static bool HasInvalidValues(in BallState ball)
         {
             return float.IsNaN(ball.Position.x)        || float.IsInfinity(ball.Position.x)
                 || float.IsNaN(ball.Position.y)        || float.IsInfinity(ball.Position.y)
@@ -391,4 +402,14 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | "(AR-4 fix pass)" → "(AR-6 fix pass)" so a reader scanning headers |
 // |         |            |        | for the latest-pass anchor lands on the correct review row. Date   |
 // |         |            |        | unchanged (still 2026-06-03). Doc-only.                            |
+// | 1.4     | 2026-06-09 | —      | AR-7 fixes. H-2: ValidatePhysicsState ground clamp no longer zeroes|
+// |         |            |        | negative Velocity.z for Airborne — the clamp runs before           |
+// |         |            |        | UpdateBallState and the Airborne→Bouncing transition needs vz < 0; |
+// |         |            |        | fast descents that skipped the 2 cm exit window were trapped in a  |
+// |         |            |        | permanent ground-level hover (no bounce, no roll, drag-only glide).|
+// |         |            |        | M-3: Bouncing integration branch gains gravity (was drag-only —    |
+// |         |            |        | one missing -g·dt tick per bounce). L-1: Magnus 0.0001f degeneracy |
+// |         |            |        | literal → Magnus.MinForceDirectionSqMagnitude (FR-CS-016). L-3:    |
+// |         |            |        | HasInvalidValues takes `in BallState` (64-byte struct was copied   |
+// |         |            |        | by value twice per 60 Hz tick).                                    |
 #endregion

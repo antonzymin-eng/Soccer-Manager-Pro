@@ -1,6 +1,6 @@
 // File:     src/ball-physics/tests/BallPhysicsCoreTests.cs
 // Created:  2026-05-24
-// Modified: 2026-06-03
+// Modified: 2026-06-09 (AR-7 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Unit tests for BallPhysicsCore force calculations and validation.
@@ -231,9 +231,12 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void MagnusForce_Topspin_ProducesDownwardForce()
         {
+            // Topspin for +X motion is +Y angular velocity (forward-rolling convention:
+            // contact-point velocity ω × (-r·ẑ) opposes v). ω̂ × v̂ = ŷ × x̂ = -ẑ → downward.
+            // AR-7 M-2: the original (0, -10, 0) was backspin and produced UPWARD force.
             Vector3 force = BallPhysicsCore.CalculateMagnusForce(
                 velocity:        new Vector3(20f, 0f, 0f),
-                angularVelocity: new Vector3(0f, -10f, 0f));
+                angularVelocity: new Vector3(0f, 10f, 0f));
 
             Assert.That(force.z, Is.LessThan(-0.5f),           "Topspin must produce downward Z force");
             Assert.That(Mathf.Abs(force.x), Is.LessThan(0.1f), "No significant X component");
@@ -290,11 +293,15 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Bounce_Topspin_KicksForward()
         {
+            // Forward kick requires the contact point to move BACKWARD: ω·r > v_x, i.e.
+            // ω_y > 5/0.11 ≈ 45.5 rad/s. AR-7 M-2: the original (0, -10, 0) was backspin
+            // (and sub-rolling magnitude) — friction decelerated the ball instead.
+            // Expected with ω_y = 60: v_x ≈ 5.64 m/s (stick impulse, coupling divisor 2.5).
             var ball = new BallState
             {
                 Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(5f, 0f, -3f),
-                AngularVelocity   = new Vector3(0f, -10f, 0f),
+                AngularVelocity   = new Vector3(0f, 60f, 0f),
                 State             = BallStateType.Bouncing,
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(5f, 0f, -3f)
@@ -311,11 +318,14 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Bounce_Backspin_Bites()
         {
+            // Backspin for +X motion is -Y angular velocity (AR-7 M-2: original (0, 10, 0)
+            // was topspin). Contact slip 8 + 30·0.11 = 11.3 m/s forward → friction is
+            // μ-capped; expected v_x ≈ 5.03 m/s.
             var ball = new BallState
             {
                 Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(8f, 0f, -3f),
-                AngularVelocity   = new Vector3(0f, 10f, 0f),
+                AngularVelocity   = new Vector3(0f, -30f, 0f),
                 State             = BallStateType.Bouncing,
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(8f, 0f, -3f)
@@ -353,11 +363,16 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void Bounce_SpinRetentionApplied()
         {
+            // Spin about the ground normal (+Z) produces zero contact-point slip, so
+            // friction torque does not touch it and the surface retention factor is the
+            // only effect — isolating the quantity under test (AR-7 M-2: the original
+            // (0, 10, 0) Y-axis spin also took an ~6 rad/s friction-impulse reduction,
+            // making the 10 × 0.8 expectation unreachable).
             var ball = new BallState
             {
                 Position          = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 Velocity          = new Vector3(0f, 0f, -4f),
-                AngularVelocity   = new Vector3(0f, 10f, 0f),
+                AngularVelocity   = new Vector3(0f, 0f, 10f),
                 State             = BallStateType.Bouncing,
                 LastValidPosition = new Vector3(50f, 34f, BallPhysicsConstants.Ball.RADIUS),
                 LastValidVelocity = new Vector3(0f, 0f, -4f)
@@ -505,4 +520,11 @@ namespace TacticalDirector.BallPhysics.Tests
 // |         |            |        | Debug.LogError emitted by ValidatePhysicsState does not fail the   |
 // |         |            |        | Unity NUnit runner (parallels the AR-1 H-1 follow-on already       |
 // |         |            |        | applied on the two integration-test counterparts).                 |
+// | 1.5     | 2026-06-09 | —      | AR-7 M-2: spin-sign convention corrected in four tests. Topspin    |
+// |         |            |        | for +X motion is +Y angular velocity; the suite had it inverted.   |
+// |         |            |        | MagnusForce_Topspin: (0,-10,0)→(0,10,0). Bounce_Topspin: ω_y=60    |
+// |         |            |        | (must exceed v/r≈45.5 for forward kick). Bounce_Backspin: ω_y=-30. |
+// |         |            |        | Bounce_SpinRetentionApplied: spin moved to the +Z normal axis so   |
+// |         |            |        | friction torque cannot contaminate the retention measurement.      |
+// |         |            |        | Expectations verified by numerical mirror of the fixed physics.    |
 #endregion
