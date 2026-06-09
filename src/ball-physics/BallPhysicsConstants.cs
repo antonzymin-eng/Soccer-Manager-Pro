@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallPhysicsConstants.cs
 // Created:  2026-05-24
-// Modified: 2026-06-08 (cross-spec routing close-out)
+// Modified: 2026-06-09 (AR-7 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  All tunable and physical constants for ball physics simulation.
@@ -12,6 +12,12 @@ namespace TacticalDirector.BallPhysics
     /// Physical constants for ball physics simulation.
     /// All values in SI units (metres, kilograms, seconds).
     /// Tags: [GT]=Gameplay-Tuned, [EST]=Estimated, [FIXED]=Physical law, [DERIVED]=Computed.
+    /// LAYOUT NOTE: this catalogue predates the src/CLAUDE.md per-tag #region convention
+    /// and groups constants by physical domain (nested classes) with per-constant tags
+    /// instead. The nested-class names are the public API (e.g. Ball.MASS is consumed
+    /// cross-assembly, Possession.ControlHeight is mirrored by FirstTouchConstants), so
+    /// a tag-region restructure would be a breaking rename across consumers — the
+    /// domain-class layout is retained as a documented deviation (AR-7 L-2).
     /// </summary>
     public static class BallPhysicsConstants
     {
@@ -30,8 +36,12 @@ namespace TacticalDirector.BallPhysics
             public static readonly float CrossSectionArea = UnityEngine.Mathf.PI * RADIUS * RADIUS;
 
             /// <summary>
-            /// [EST] Moment of inertia in kg·m² (hollow sphere: 2/3 mr²).
-            /// Real football differs ~10–20% due to internal structure. Ball Physics #1 §3.1.2.
+            /// [DERIVED] Moment of inertia in kg·m² (hollow-sphere model). Formula: (2/3) × MASS × RADIUS².
+            /// Source constants: Ball.MASS, Ball.RADIUS. Ball Physics #1 §3.1.2.
+            /// Model caveat: a real football differs ~10–20% from the ideal hollow sphere due to
+            /// internal structure; validating the hollow-sphere model against measured data is a
+            /// Stage 1 task. (Retagged [EST] → [DERIVED] in AR-7 L-2 — the value is a documented
+            /// formula over [FIXED] inputs, not an independent estimate; FR-CS-021.)
             /// </summary>
             public static readonly float MomentOfInertia = (2f / 3f) * MASS * RADIUS * RADIUS;
         }
@@ -76,6 +86,13 @@ namespace TacticalDirector.BallPhysics
 
             /// <summary>[GT] Maximum spin parameter (clamped). Ball Physics #1 §3.1.2.</summary>
             public static readonly float MaxSpinParameter = 1.0f; // TODO: replace with config loader (Stage 1)
+
+            /// <summary>
+            /// [GT] Squared-magnitude threshold below which the ω̂ × v̂ cross product is
+            /// treated as degenerate (spin near-parallel to velocity) and Magnus force is
+            /// zeroed. Ball Physics #1 §3.1.5.
+            /// </summary>
+            public static readonly float MinForceDirectionSqMagnitude = 0.0001f; // TODO: replace with config loader (Stage 1)
         }
 
         public static class Spin
@@ -104,6 +121,23 @@ namespace TacticalDirector.BallPhysics
             /// Empirically derived: ~10% of contact point velocity transfers. Ball Physics #1 §3.1.2.
             /// </summary>
             public static readonly float SpinToLinearRatio = 0.1f;
+
+            /// <summary>
+            /// [DERIVED] Rotational-coupling divisor for the bounce friction stick impulse.
+            /// Formula: 1 + (MASS × RADIUS²) / MomentOfInertia (= 2.5 for the 2/3·m·r² hollow
+            /// sphere). Source constants: Ball.MASS, Ball.RADIUS, Ball.MomentOfInertia.
+            /// Ball Physics #1 §3.1.8 / ERR-001-002. Friction changes both tangential velocity
+            /// and spin, so the impulse that zeroes contact-point slip is m·|v_contact| divided
+            /// by this factor — the undivided form over-corrects and reverses the slip.
+            /// </summary>
+            public static readonly float StickImpulseCouplingDivisor =
+                1f + (Ball.MASS * Ball.RADIUS * Ball.RADIUS) / Ball.MomentOfInertia;
+
+            /// <summary>
+            /// [GT] Minimum contact-point slip speed (m/s) for the bounce friction impulse to
+            /// apply; below this the contact is treated as non-sliding. Ball Physics #1 §3.1.8.
+            /// </summary>
+            public static readonly float MinContactSpeed = 0.01f; // TODO: replace with config loader (Stage 1)
         }
 
         public static class Rolling
@@ -348,4 +382,11 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | mirror. Closes the long-standing CLAUDE.md OPEN ISSUE                      |
 // |         |            |        | "Possession.ControlHeight ↔ GroundControlHeight cross-spec routing"        |
 // |         |            |        | (since 2026-06-03). No value change; tune-here-only governance.            |
+// | 1.8     | 2026-06-09 | —      | AR-7 fixes. M-1/L-1: new Bounce.StickImpulseCouplingDivisor [DERIVED]       |
+// |         |            |        | (1 + m·r²/I; ERR-001-002), Bounce.MinContactSpeed [GT] (was 0.01f literal   |
+// |         |            |        | in BallGroundInteraction), Magnus.MinForceDirectionSqMagnitude [GT] (was    |
+// |         |            |        | 0.0001f literal in BallPhysicsCore) — FR-CS-016. L-2: Ball.MomentOfInertia  |
+// |         |            |        | retagged [EST] → [DERIVED] (documented formula over [FIXED] inputs per      |
+// |         |            |        | FR-CS-021; hollow-sphere model caveat retained); class doc gains LAYOUT     |
+// |         |            |        | NOTE recording the domain-class-vs-tag-region deviation as intentional.     |
 #endregion

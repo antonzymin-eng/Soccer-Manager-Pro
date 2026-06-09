@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallGroundInteraction.cs
 // Created:  2026-05-24
-// Modified: 2026-06-02
+// Modified: 2026-06-09 (AR-7 fix pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Impulse-based ground bounce and rolling-friction force calculations.
@@ -21,8 +21,12 @@ namespace TacticalDirector.BallPhysics
 
         /// <summary>
         /// Handles ball bounce on ground contact using impulse-based contact mechanics.
-        /// Ground normal is always UP for regulation football pitches
+        /// Ground normal is always UP (+Z) for regulation football pitches
         /// (FIFA allows max 1% slope for drainage — negligible).
+        /// PRECONDITIONS: caller is the Bouncing branch of UpdateBallPhysics — the state
+        /// machine guarantees Velocity.z &lt; 0 on entry (restitution would amplify an
+        /// upward Velocity.z) and ground proximity (Position.z is snapped to RADIUS
+        /// unconditionally; invoking this on a high airborne ball teleports it down).
         /// </summary>
         public static void ApplyBounce(
             ref BallState ball,
@@ -32,7 +36,10 @@ namespace TacticalDirector.BallPhysics
         {
             using var _ = s_bounceMarker.Auto();
 
-            Vector3 normal = Vector3.up;
+            // +Z is up in this project (Ball Physics #1 §1.2 / Appendix C).
+            // Unity's Vector3.up is +Y — the touchline axis here — and using it
+            // reflected lateral velocity instead of vertical (AR-7 H-1 / ERR-001-001).
+            Vector3 normal = new Vector3(0f, 0f, 1f);
 
             float e             = SurfaceProperties.GetCoefficientOfRestitution(surface);
             float mu            = SurfaceProperties.GetFrictionCoefficient(surface);
@@ -60,9 +67,14 @@ namespace TacticalDirector.BallPhysics
             float   J_t_max = mu * J_n;
             Vector3 vt_after = vt;
 
-            if (contactVelocity.magnitude > 0.01f)
+            if (contactVelocity.magnitude > BallPhysicsConstants.Bounce.MinContactSpeed)
             {
-                float   J_t_required   = m * contactVelocity.magnitude;
+                // Friction changes both v_t and ω, so the impulse that zeroes
+                // contact-point slip is m·|v_contact| / (1 + m·r²/I) — the undivided
+                // form would reverse the slip by ~150% for a hollow sphere
+                // (AR-7 M-1 / ERR-001-002).
+                float   J_t_required   = m * contactVelocity.magnitude
+                                       / BallPhysicsConstants.Bounce.StickImpulseCouplingDivisor;
                 float   J_t            = Mathf.Min(J_t_max, J_t_required);
                 Vector3 frictionDir    = -contactVelocity.normalized;
                 Vector3 frictionImpulse = frictionDir * J_t;
@@ -109,4 +121,14 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | file header added per FR-CS-056/057.                               |
 // | 1.2     | 2026-06-02 | —      | AR-1 fixes. H-2: file header path corrected to src/ball-physics/.  |
 // |         |            |        | M-4 follow-on: doc updated to Rolling (PascalCase enum member).    |
+// | 1.3     | 2026-06-09 | —      | AR-7 fixes. H-1: bounce normal Vector3.up (Unity +Y) → (0,0,1) —   |
+// |         |            |        | project is Z-up; restitution/friction acted on the touchline axis  |
+// |         |            |        | and a vertically falling ball never rebounded (ERR-001-001; spec    |
+// |         |            |        | §3.1.8.1 pseudocode patched in the same commit). M-1: friction     |
+// |         |            |        | stick impulse divided by StickImpulseCouplingDivisor (1 + m·r²/I)  |
+// |         |            |        | (ERR-001-002). L-1: 0.01f slip threshold → Bounce.MinContactSpeed. |
+// | 1.3.1   | 2026-06-09 | —      | AR-8 L-1: ApplyBounce XML doc records its preconditions (entry     |
+// |         |            |        | Velocity.z < 0 and ground proximity, both guaranteed by the state  |
+// |         |            |        | machine; the unconditional Position.z = RADIUS snap makes direct   |
+// |         |            |        | mid-air invocation a caller error). Doc-only.                      |
 #endregion

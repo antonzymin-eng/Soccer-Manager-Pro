@@ -14,8 +14,10 @@ public void ApplyBounce(ref BallState ball, SurfaceType surface, BallEventLogger
     UnityEngine.Profiling.Profiler.BeginSample("BallPhysics.Bounce");
     #endif
     
-    // Ground normal is always UP for flat pitch
-    Vector3 normal = Vector3.up;
+    // Ground normal is always UP for flat pitch.
+    // ERR-001-001: "up" is +Z in this project (§1.2 / Appendix C) — do NOT use
+    // Unity's Vector3.up, which is +Y (the touchline axis here).
+    Vector3 normal = new Vector3(0f, 0f, 1f);
     
     // Get surface properties
     float e = SurfaceProperties.GetCoefficientOfRestitution(surface);
@@ -59,8 +61,14 @@ public void ApplyBounce(ref BallState ball, SurfaceType surface, BallEventLogger
     
     if (contactSpeed > 0.01f)
     {
-        // Impulse required to stop contact point sliding
-        float J_t_required = m * contactSpeed;
+        // Impulse required to stop contact point sliding.
+        // ERR-001-002: friction changes both v_t and omega, so the stick impulse is
+        // m * v_contact / (1 + m*r^2/I) — for the hollow sphere (I = 2/3 m r^2) the
+        // divisor is 2.5. The undivided form m * v_contact over-corrects and reverses
+        // the slip by ~150%. Divisor is catalogued as
+        // BallPhysicsConstants.Bounce.StickImpulseCouplingDivisor [DERIVED].
+        float J_t_required = m * contactSpeed
+                           / BallPhysicsConstants.Bounce.StickImpulseCouplingDivisor;
         
         // Apply lesser of required and maximum
         float J_t = Mathf.Min(J_t_max, J_t_required);
@@ -1052,6 +1060,7 @@ public void Validation_DetectsNaN_AndRecovers()
 | 2.5 | Feb 21, 2026 | AI | Added §3.1.11.1/11.2 sub-labels; added ApplyKick() — ERR-006/ERR-008 resolution |
 | 2.6 | Mar 2, 2026 | AI | Fixed §3.1.14 hysteresis test positions to match v2.2+ threshold constants |
 | 2.7 | Apr 20, 2026 | AI | H-04-C: Added Step 4.5 — ROLLING spin decay via UpdateRollingSpinDecay(); C-02: Added defensive comment to default: case clarifying Velocity is not cleared for OUT_OF_PLAY |
+| 2.8 | Jun 9, 2026 | AI | ERR-001-001: §3.1.8.1 bounce normal Vector3.up (Unity +Y) → new Vector3(0,0,1) — pseudocode contradicted the §1.2 Z-up coordinate system and Appendix B's "vertical" v_n definition. ERR-001-002: J_t_required gains the rotational-coupling divisor (1 + m·r²/I = 2.5). Both errors were faithfully implemented in src/ball-physics and fixed there in the same commit (AR-7 H-1 / M-1). |
 
 ---
 

@@ -6,7 +6,7 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.21
+**Version:** 1.23
 **Updated:** May 22, 2026 (ERR-020-001 filed and resolved: Code Standards #20 §4.2 `[CROSS]` mirror ALL_CAPS → PascalCase; `section-4.md` v1.0.1 patched; `src/CLAUDE.md` v1.4 discrepancy note updated)
 **Status:** ERR-001 through ERR-012, ERR-010-001 (closed May 16, 2026), ERR-011-001 (closed May 18, 2026), ERR-012-001 (closed May 18, 2026), ERR-012-002 (closed), ERR-016-001, ERR-016-002 (FULLY CLOSED May 18, 2026), ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; spec-text resolved May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); #16 §3.2.5 back-prop prose confirmed landed (OBS-1, stress-test run 2, May 18, 2026) — FULLY CLOSED. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
@@ -1386,4 +1386,46 @@ Spec #20 §3.2.3 (Tag → C# Storage Class Mapping) is the authoritative naming 
 
 ---
 
-*End of Spec Error Log v1.22 — June 6, 2026.*
+## ERR-001-001: Ball Physics #1 §3.1.8.1 bounce pseudocode uses Unity Y-up `Vector3.up` as the ground normal in a Z-up coordinate system
+
+**Spec:** Ball Physics #1
+**Section:** §3.1.8.1 (Impulse-Based Bounce); contradicts §1.2 / Appendix C (Z = height) and Appendix B ("v_n ... vertical for a flat pitch")
+**Severity:** Critical
+**Detected During:** `src/ball-physics/` AR-7 adversarial review (June 9, 2026), finding H-1.
+**Status:** ✅ Closed — spec and implementation patched June 9, 2026
+
+**Problem:** The §3.1.8.1 pseudocode sets `Vector3 normal = Vector3.up;`. Unity's `Vector3.up` is `(0, 1, 0)` — the touchline (Y) axis in this project's corner-origin Z-up coordinate system. `BallGroundInteraction.ApplyBounce` implemented the line faithfully, so restitution and friction were computed against the lateral velocity component: a vertically falling ball had `v_n = v_y = 0`, zero restitution impulse, zero friction budget (`J_n = 0`), and never rebounded. Every other surface in the assembly (gravity `-Z`, height gates `.z`, the bounce's own `Position.z = RADIUS` write) is Z-up. Undetectable by the test suite because the Unity project is not yet initialized (tests have never executed).
+
+**Resolution:** Spec §3.1.8.1 pseudocode patched to `new Vector3(0f, 0f, 1f)` with an inline ERR-001-001 warning (changelog row 2.8); `BallGroundInteraction.cs` v1.3 fixed identically (AR-7 H-1). Unit/integration expectations re-verified by a numerical mirror of the corrected model.
+
+---
+
+## ERR-001-002: Ball Physics #1 §3.1.8.1 friction stick impulse omits the rotational-coupling divisor
+
+**Spec:** Ball Physics #1
+**Section:** §3.1.8.1 STEP 4 (tangential friction impulse)
+**Severity:** Major
+**Detected During:** `src/ball-physics/` AR-7 adversarial review (June 9, 2026), finding M-1.
+**Status:** ✅ Closed — spec and implementation patched June 9, 2026
+
+**Problem:** `J_t_required = m * contactSpeed` is the impulse that zeroes contact-point slip for a non-rotating body. For a sphere the friction impulse also changes ω, so the contact-point velocity changes by `(1 + m·r²/I)` per unit of tangential Δv — for the hollow-sphere model (I = ⅔·m·r²) the factor is 2.5. When the μ·J_n cap is not binding, the applied impulse therefore reversed the slip by ~150% instead of zeroing it, injecting spurious tangential velocity and spin at every gripping bounce.
+
+**Resolution:** Stick impulse divided by the catalogued `[DERIVED]` constant `BallPhysicsConstants.Bounce.StickImpulseCouplingDivisor = 1 + (MASS × RADIUS²) / MomentOfInertia` in both the spec pseudocode (changelog row 2.8) and `BallGroundInteraction.cs` v1.3 (AR-7 M-1).
+
+---
+
+## ERR-001-003: Ball Physics #1 — seven `[EST]` constants lack the FR-CS-020 validation log entries
+
+**Spec:** Ball Physics #1 / Code Standards #20 (FR-CS-020)
+**Section:** `src/ball-physics/BallPhysicsConstants.cs` — `Drag.CrisisSpeedLow` (20.0 m/s), `Drag.CrisisSpeedHigh` (25.0 m/s), `Spin.RollingSpinDecayPerSecond` (5.0 rad/s²), `Bounce.SpinToLinearRatio` (0.1), `Limits.MaxVelocity` (50 m/s), `Limits.MaxSpin` (80 rad/s), `Limits.MaxHeight` (50 m)
+**Severity:** Minor (documentation-governance gap; values plausible, none validated)
+**Detected During:** `src/ball-physics/` AR-8 adversarial review (June 9, 2026), finding L-2.
+**Status:** 🟡 Open — this entry IS the required FR-CS-020 record; per-constant validation (promotion to `[GT]`/`[DERIVED]`/`[FIXED]`) is a Stage 1 tuning task
+
+**Problem:** FR-CS-020 requires every `[EST]` constant to carry a `spec-error-log.md` entry tracking its validation path; the seven constants above had none. (An eighth, `Ball.MomentOfInertia`, was retagged `[EST]` → `[DERIVED]` in AR-7 L-2 — it is a documented formula over `[FIXED]` inputs, not an estimate.)
+
+**Validation paths:** `CrisisSpeedLow/High` — literature check against Asai et al. (2007) drag-crisis Reynolds range; `RollingSpinDecayPerSecond` and `SpinToLinearRatio` — empirical tuning against rolling/bounce footage at Stage 1; `Limits.*` — sanity ceilings (fastest recorded shot ≈ 45 m/s) that promote to `[GT]` once gameplay tuning begins.
+
+---
+
+*End of Spec Error Log v1.23 — June 9, 2026.*
