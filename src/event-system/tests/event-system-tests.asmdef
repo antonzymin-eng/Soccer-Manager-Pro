@@ -4,6 +4,12 @@
     "references": [
         "TacticalDirector.EventSystem",
         "TacticalDirector.DeterministicSim",
+        "TacticalDirector.PassMechanics",
+        "TacticalDirector.ShotMechanics",
+        "TacticalDirector.PerceptionSystem",
+        "TacticalDirector.DecisionTree",
+        "TacticalDirector.HeadingMechanics",
+        "TacticalDirector.GoalkeeperMechanics",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
