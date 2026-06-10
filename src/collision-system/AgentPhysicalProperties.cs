@@ -1,6 +1,6 @@
 // File:     src/collision-system/AgentPhysicalProperties.cs
 // Created:  2026-05-25
-// Modified: 2026-06-05  [v1.2]
+// Modified: 2026-06-10  [v1.3]
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.4, Collision System #3 §2.3.2, Code Standards #20
 // Purpose:  Read-only snapshot of an agent's physical state for one collision frame.
@@ -44,7 +44,12 @@ namespace TacticalDirector.CollisionSystem
         /// <summary>Strength attribute [1–20]. Collision System #3 §3.3.1 fall threshold.</summary>
         public int Strength;
 
-        /// <summary>Agility attribute [1–20]. Grounded duration calculation. §3.3.1.</summary>
+        /// <summary>
+        /// Agility attribute [1–20]. Snapshot parity with Collision System #3 §2.3.2.
+        /// NOT consumed by the Stage 0 collision pipeline — GROUNDED dwell is computed by
+        /// AgentStateMachine (Agent Movement #2) from the normalised knockdownForceOut, not here
+        /// (see AgentAgentCollisionResult v1.1: GroundedDuration fields removed).
+        /// </summary>
         public int Agility;
 
         /// <summary>True when agent is in GROUNDED state; treated as static obstacle. FR-02.</summary>
@@ -79,4 +84,7 @@ namespace TacticalDirector.CollisionSystem
 // | 1.1     | 2026-05-25 | —      | H-3: magic literals replaced with AgentPhysicsSnapshotConstants (FR-CS-016). |
 // | 1.2     | 2026-06-05 | —      | AR-5 L-2. Position / Velocity XML docs reworded to match From() — Z is      |
 // |         |            |        | unconditionally 0 at Stage 0, not "0 for ground-based agents".              |
+// | 1.3     | 2026-06-10 | —      | AR-9 L-1. Agility doc corrected — field is unconsumed by the Stage 0       |
+// |         |            |        | collision pipeline (dwell lives in AgentStateMachine #2); old "Grounded     |
+// |         |            |        | duration calculation" pointer invited re-wiring a removed responsibility.   |
 #endregion

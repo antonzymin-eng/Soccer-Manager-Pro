@@ -33,6 +33,19 @@ public static class CollisionResponseConstants
     public const float COEFFICIENT_OF_RESTITUTION = 0.3f;
     
     /// <summary>
+    /// [GT] Physical contact duration for an agent-agent collision (s).
+    /// Converts impulse to average contact force: F = j / CONTACT_DURATION_S.
+    /// 
+    /// Value: 0.15 s (biomechanics shoulder-charge contact time ~0.1-0.3 s)
+    /// 
+    /// ERR-003-001 (June 10, 2026): added with the F = j * 60f -> F = j / CONTACT_DURATION_S
+    /// correction in the Step 6 pseudocode below; the fall/stumble thresholds in this
+    /// catalogue are literature-calibrated sustained forces and require this conversion.
+    /// Implementation: CollisionPhysicsConstants.ContactDurationS (PascalCase per Spec #20).
+    /// </summary>
+    public const float CONTACT_DURATION_S = 0.15f;
+    
+    /// <summary>
     /// Momentum scale for same-team collisions.
     /// 
     /// Value: 0.3 (teammates don't knock each other hard)
@@ -201,8 +214,13 @@ public static class CollisionResponse
         // Component along collision normal
         float vRel = Vector2.Dot(relativeVelocity, manifold.Normal);
         
-        // If agents are separating, no impulse needed
-        if (vRel > 0)
+        // ERR-003-005 (June 10, 2026): with the manifold normal pointing a1 -> a2,
+        // vRel = (v1 - v2) . n > 0 means a1 closes on a2 -- APPROACHING. The original gate
+        // (`if (vRel > 0) ... return` labelled "separating") was inverted: real closing
+        // collisions produced separation only (no impulse, no fall/stumble) while
+        // already-separating overlapped pairs had their velocities reversed back inward.
+        // If agents are separating or grazing, no impulse needed
+        if (vRel <= 0)
         {
             // Still need to resolve penetration
             CalculateSeparation(in a1, in a2, in manifold, a1Active, a2Active, ref result);
@@ -226,8 +244,8 @@ public static class CollisionResponse
             return result;
         }
         
-        // Impulse magnitude
-        float j = -(1f + e) * vRel / invMassSum;
+        // Impulse magnitude -- positive by the vRel > 0 invariant above (ERR-003-005)
+        float j = (1f + e) * vRel / invMassSum;
         
         // Apply same-team reduction
         if (isSameTeam)
@@ -247,17 +265,19 @@ public static class CollisionResponse
         
         if (a1Active)
         {
+            // ERR-003-005: a1 recoils AGAINST the a1 -> a2 normal
             result.VelocityImpulse1 = new Vector3(
-                impulse.x * invMass1,
-                impulse.y * invMass1,
+                -impulse.x * invMass1,
+                -impulse.y * invMass1,
                 0f); // No Z component for ground collision
         }
         
         if (a2Active)
         {
+            // ERR-003-005: a2 is pushed ALONG the a1 -> a2 normal
             result.VelocityImpulse2 = new Vector3(
-                -impulse.x * invMass2,
-                -impulse.y * invMass2,
+                impulse.x * invMass2,
+                impulse.y * invMass2,
                 0f);
         }
         
@@ -272,8 +292,12 @@ public static class CollisionResponse
         // ============================================================
         
         // Impact force (used for fall/stumble determination)
-        // F = j / dt where dt = 1/60 s
-        float impactForce = Mathf.Abs(j) * 60f; // Convert impulse to force
+        // ERR-003-001 (June 10, 2026): F = j / CONTACT_DURATION_S, the average force over the
+        // physical contact window ([GT] 0.15 s; biomechanics contact time ~0.1-0.3 s). The
+        // original F = j * 60f assumed the whole impulse acts within one 16.7 ms frame,
+        // inflating force ~10x against the literature-calibrated thresholds below and putting
+        // the entire stochastic fall/stumble band under walking pace.
+        float impactForce = Mathf.Abs(j) / CollisionResponseConstants.CONTACT_DURATION_S;
         
         result.ImpactForce = impactForce;
         
@@ -400,10 +424,14 @@ public static class CollisionResponse
         }
         
         // Check stumble condition
-        if (impactForce > stumbleThreshold && impactForce <= fallThreshold)
+        // ERR-003-003 (June 10, 2026): no upper force gate, probability clamped to 1 instead.
+        // The original `&& impactForce <= fallThreshold` made same-team contacts ABOVE
+        // fallThreshold (which skip the opposing-team-only fall branch) consequence-free
+        // while softer same-team hits could stumble.
+        if (impactForce > stumbleThreshold)
         {
-            float stumbleProbability = (impactForce - stumbleThreshold) / 
-                                       (fallThreshold - stumbleThreshold);
+            float stumbleProbability = Mathf.Clamp01((impactForce - stumbleThreshold) / 
+                                       (fallThreshold - stumbleThreshold));
             
             float roll = rng.NextFloat();
             if (roll < stumbleProbability)
@@ -684,6 +712,28 @@ public static class ContactTypeClassifier
         Vector2 victimVel = new Vector2(victim.Velocity.x, victim.Velocity.y);
         float victimSpeed = victimVel.magnitude;
         
+        // From-behind is tested BEFORE shoulder-to-shoulder (ERR-003-006, June 10, 2026):
+        // a chase-down also has parallel velocities, so the velocity-only shoulder predicate
+        // shadowed every from-behind contact when evaluated first. The discriminator is the
+        // contact normal -- back-on contact has victimDir aligned with the instigator->victim
+        // normal; side-by-side contact has them perpendicular.
+        //
+        // From-behind: victim moving AWAY from the instigator, i.e. victim velocity aligned
+        // with the instigator->victim collisionNormal. ERR-003-002 (June 10, 2026): the
+        // original Dot(-collisionNormal, victimDir) detected the opposite (head-on) geometry
+        // and only fired through a cancelling sign error at the Â§3.4 call site.
+        // This is a simplification â€” proper implementation needs facing direction
+        if (approachAngle > 0.5f && victimSpeed > 1.0f)
+        {
+            Vector2 victimDir = victimVel / victimSpeed;
+            float behindDot = Vector2.Dot(collisionNormal, victimDir);
+            
+            if (behindDot > 0.5f)
+            {
+                return ContactType.FROM_BEHIND;
+            }
+        }
+        
         if (victimSpeed > 0.1f)
         {
             Vector2 victimDir = victimVel / victimSpeed;
@@ -693,19 +743,6 @@ public static class ContactTypeClassifier
             if (facingDot > 0.7f)
             {
                 return ContactType.SHOULDER_TO_SHOULDER;
-            }
-        }
-        
-        // If approaching from opposite side of victim's movement, likely from behind
-        // This is a simplification â€” proper implementation needs facing direction
-        if (approachAngle > 0.5f && victimSpeed > 1.0f)
-        {
-            Vector2 victimDir = victimVel / victimSpeed;
-            float behindDot = Vector2.Dot(-collisionNormal, victimDir);
-            
-            if (behindDot > 0.5f)
-            {
-                return ContactType.FROM_BEHIND;
             }
         }
         

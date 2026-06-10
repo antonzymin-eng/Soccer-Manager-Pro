@@ -1,6 +1,6 @@
 // File:     src/collision-system/tests/CollisionSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-01
+// Modified: 2026-06-10  [v1.3]
 // Author:   —
 // Spec:     Collision System #3 §5.2, §5.3, Code Standards #20
 // Purpose:  Unit tests for SpatialHashGrid, CollisionDetection, CollisionResponse,
@@ -221,15 +221,15 @@ namespace TacticalDirector.CollisionSystem.Tests
     internal class CollisionResponseTests
     {
         // CR-001: equal-mass head-on → velocities reverse.
-        // Code applies impulse when vRel = dot(v1-v2, n) < 0.
-        // Setup: a1 right of a2, both moving outward (passed-through state).
-        // Normal = (a2-a1)/dist = (-1, 0); vRel = dot((10,0),(-1,0)) = -10 → impulse.
-        // j = 1.3*10/(2/85) ≈ 552.5; Δv = 6.5 m/s each → ±1.5 m/s final.
+        // Impulse applies when vRel = dot(v1-v2, n) > 0 (n = a1→a2; approaching; ERR-003-005).
+        // Setup: a1 left of a2, both moving toward each other.
+        // Normal = (a2-a1)/dist = (+1, 0); vRel = dot((10,0),(+1,0)) = +10 → impulse.
+        // j = 1.3*10/(2/85) ≈ 552.5; Δv = 6.5 m/s each → ∓1.5 m/s final (reversed).
         [Test]
         public void Response_EqualMassHeadOn_VelocitiesReverse()
         {
-            var a1 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3( 5f, 0f, 0f), 85f, 0.40f, 10, false);
-            var a2 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(-5f, 0f, 0f), 85f, 0.40f, 10, false);
+            var a1 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3( 5f, 0f, 0f), 85f, 0.40f, 10, false);
+            var a2 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(-5f, 0f, 0f), 85f, 0.40f, 10, false);
 
             bool hit = CollisionDetection.CheckAgentAgentCollision(in a1, in a2, out CollisionManifold m);
             Assert.IsTrue(hit, "CR-001: agents must overlap for response test");
@@ -245,12 +245,12 @@ namespace TacticalDirector.CollisionSystem.Tests
         }
 
         // CR-002: heavy (100 kg) hits stationary light (72.5 kg).
-        // a1=heavy right of a2=light so normal=(-1,0); vRel = dot((8,0),(-1,0)) = -8 → impulse.
+        // a1=heavy left of a2=light, moving right: normal=(+1,0); vRel = dot((8,0),(+1,0)) = +8 → impulse.
         [Test]
         public void Response_HeavyHitsLight_HeavyBarelySlows()
         {
-            var a1 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(8f, 0f, 0f), 100f, 0.40f, 20, false);
-            var a2 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(0f, 0f, 0f),  72.5f, 0.35f, 1, false);
+            var a1 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(8f, 0f, 0f), 100f, 0.40f, 20, false);
+            var a2 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(0f, 0f, 0f),  72.5f, 0.35f, 1, false);
 
             bool hit = CollisionDetection.CheckAgentAgentCollision(in a1, in a2, out CollisionManifold m);
             Assert.IsTrue(hit, "CR-002: overlap required");
@@ -270,8 +270,8 @@ namespace TacticalDirector.CollisionSystem.Tests
         [Test]
         public void Response_SameTeam_ReducedMomentum()
         {
-            var a1 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3( 5f, 0f, 0f), 85f, 0.40f, 10, false);
-            var a2 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(-5f, 0f, 0f), 85f, 0.40f, 10, false);
+            var a1 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3( 5f, 0f, 0f), 85f, 0.40f, 10, false);
+            var a2 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(-5f, 0f, 0f), 85f, 0.40f, 10, false);
 
             bool hit = CollisionDetection.CheckAgentAgentCollision(in a1, in a2, out CollisionManifold m);
             Assert.IsTrue(hit);
@@ -355,10 +355,10 @@ namespace TacticalDirector.CollisionSystem.Tests
         public void FallLogic_ForceBelowStumbleThreshold_NoStateChange()
         {
             // Strength 10: fallThreshold = 500 + 10×50 = 1000 N; stumbleThreshold = 500 N.
-            // Target impactForce ≈ 330 N < 500 N.
-            // With equal mass (85 kg): |vRel| ≈ 0.1 m/s → |j| ≈ 5.5 kg·m/s → F ≈ 330 N.
-            var a1 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3( 0.05f, 0f, 0f), 85f, 0.40f, 10);
-            var a2 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(-0.05f, 0f, 0f), 85f, 0.40f, 10);
+            // F = j / ContactDurationS (0.15 s); equal mass (85 kg): j = 1.3·vRel·42.5 → F ≈ 368·vRel.
+            // Target impactForce ≈ 330 N < 500 N → vRel ≈ 0.9 m/s.
+            var a1 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3( 0.45f, 0f, 0f), 85f, 0.40f, 10);
+            var a2 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(-0.45f, 0f, 0f), 85f, 0.40f, 10);
 
             CollisionDetection.CheckAgentAgentCollision(in a1, in a2, out CollisionManifold m);
             var rng = new DeterministicRNG(12345UL);
@@ -373,9 +373,9 @@ namespace TacticalDirector.CollisionSystem.Tests
         public void FallLogic_ForceAtStumbleThreshold_StumbleProbabilityPositive()
         {
             // Strength 10: stumble zone = 500..1000 N. Target: ~760 N → prob ≈ 0.52.
-            // |vRel| ≈ 0.23 m/s to achieve ~750 N.
-            var a1 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3( 0.115f, 0f, 0f), 85f, 0.40f, 10);
-            var a2 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(-0.115f, 0f, 0f), 85f, 0.40f, 10);
+            // F ≈ 368·vRel → vRel ≈ 2.06 m/s for ~759 N.
+            var a1 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3( 1.03f, 0f, 0f), 85f, 0.40f, 10);
+            var a2 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(-1.03f, 0f, 0f), 85f, 0.40f, 10);
 
             CollisionDetection.CheckAgentAgentCollision(in a1, in a2, out CollisionManifold m);
 
@@ -395,10 +395,10 @@ namespace TacticalDirector.CollisionSystem.Tests
         [Test]
         public void FallLogic_ForceAtFallThreshold_FallProbabilityPositive()
         {
-            // Strength 10: fallThreshold = 1000 N. Target ≈ 1250 N → prob = 0.5.
-            // |vRel| ≈ 0.38 m/s.
-            var a1 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3( 0.19f, 0f, 0f), 85f, 0.40f, 10);
-            var a2 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(-0.19f, 0f, 0f), 85f, 0.40f, 10);
+            // Strength 10: fallThreshold = 1000 N. Target ≈ 1250 N → prob ≈ 0.5.
+            // F ≈ 368·vRel → vRel ≈ 3.4 m/s (a genuine two-way running contact).
+            var a1 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3( 1.7f, 0f, 0f), 85f, 0.40f, 10);
+            var a2 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(-1.7f, 0f, 0f), 85f, 0.40f, 10);
 
             CollisionDetection.CheckAgentAgentCollision(in a1, in a2, out CollisionManifold m);
 
@@ -420,13 +420,14 @@ namespace TacticalDirector.CollisionSystem.Tests
         [Test]
         public void FallLogic_Strength20RequiresMoreForceThanStrength1()
         {
-            // Strength 1: fallThreshold = 500 + 1×50 = 550 N. P(fall at 1000 N) = 0.9.
-            // Strength 20: fallThreshold = 500 + 20×50 = 1500 N. P(fall at 1000 N) = 0.
-            var aStr1a = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3( 0.30f, 0f, 0f), 85f, 0.40f, 1);
-            var aStr1b = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(-0.30f, 0f, 0f), 85f, 0.40f, 1);
+            // Strength 1: fallThreshold = 500 + 1×50 = 550 N. P(fall at ~1000 N) ≈ 0.9.
+            // Strength 20: fallThreshold = 500 + 20×50 = 1500 N. P(fall at ~1000 N) = 0.
+            // F ≈ 368·vRel → vRel ≈ 2.72 m/s for ~1002 N.
+            var aStr1a = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3( 1.36f, 0f, 0f), 85f, 0.40f, 1);
+            var aStr1b = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(-1.36f, 0f, 0f), 85f, 0.40f, 1);
 
-            var aStr20a = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3( 0.30f, 0f, 0f), 85f, 0.40f, 20);
-            var aStr20b = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(-0.30f, 0f, 0f), 85f, 0.40f, 20);
+            var aStr20a = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3( 1.36f, 0f, 0f), 85f, 0.40f, 20);
+            var aStr20b = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(-1.36f, 0f, 0f), 85f, 0.40f, 20);
 
             CollisionDetection.CheckAgentAgentCollision(in aStr1a,  in aStr1b,  out CollisionManifold m1);
             CollisionDetection.CheckAgentAgentCollision(in aStr20a, in aStr20b, out CollisionManifold m20);
@@ -451,10 +452,10 @@ namespace TacticalDirector.CollisionSystem.Tests
         [Test]
         public void FallLogic_GroundedTriggered_WhenForceExceedsFallThreshold()
         {
-            // Very high force (> 1500 N for Strength 20) to ensure near-certain fall.
-            // Use Strength 1 (threshold 550 N) with high velocity.
-            var a1 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(1.5f, 0f, 0f), 85f, 0.40f, 1);
-            var a2 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(-1.5f, 0f, 0f), 85f, 0.40f, 1);
+            // Strength 1 (threshold 550 N): vRel = 3.0 m/s → F ≈ 1105 N; excess 555 N over the
+            // 500 N probability range → P(fall) clamps to 1.0 (near-certain fall).
+            var a1 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(1.5f, 0f, 0f), 85f, 0.40f, 1);
+            var a2 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(-1.5f, 0f, 0f), 85f, 0.40f, 1);
 
             CollisionDetection.CheckAgentAgentCollision(in a1, in a2, out CollisionManifold m);
 
@@ -550,7 +551,7 @@ namespace TacticalDirector.CollisionSystem.Tests
             };
             var runner = new AgentPhysicalProperties
             {
-                Position = new Vector3(50.6f, 34f, 0f), Velocity = new Vector3(5f, 0f, 0f),
+                Position = new Vector3(50.6f, 34f, 0f), Velocity = new Vector3(-5f, 0f, 0f),
                 HitboxRadius = 0.40f, Mass = 85f, Strength = 10, IsGrounded = false
             };
 
@@ -582,8 +583,9 @@ namespace TacticalDirector.CollisionSystem.Tests
         [Test]
         public void Determinism_SameSeed_IdenticalOutcomes()
         {
-            var a1 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3( 0.19f, 0f, 0f), 85f, 0.40f, 10);
-            var a2 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(-0.19f, 0f, 0f), 85f, 0.40f, 10);
+            // vRel = 3.4 m/s → F ≈ 1252 N → P(fall) ≈ 0.5 (stochastic band; outcome seed-driven).
+            var a1 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3( 1.7f, 0f, 0f), 85f, 0.40f, 10);
+            var a2 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(-1.7f, 0f, 0f), 85f, 0.40f, 10);
 
             CollisionDetection.CheckAgentAgentCollision(in a1, in a2, out CollisionManifold m);
 
@@ -610,8 +612,9 @@ namespace TacticalDirector.CollisionSystem.Tests
         [Test]
         public void Determinism_DifferentSeeds_DifferentOutcomes()
         {
-            var a1 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3( 0.19f, 0f, 0f), 85f, 0.40f, 10);
-            var a2 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3(-0.19f, 0f, 0f), 85f, 0.40f, 10);
+            // vRel = 3.4 m/s → P(fall) ≈ 0.5, so different seed streams must diverge.
+            var a1 = MakeAgent(new Vector3(50.0f, 34f, 0f), new Vector3( 1.7f, 0f, 0f), 85f, 0.40f, 10);
+            var a2 = MakeAgent(new Vector3(50.7f, 34f, 0f), new Vector3(-1.7f, 0f, 0f), 85f, 0.40f, 10);
 
             CollisionDetection.CheckAgentAgentCollision(in a1, in a2, out CollisionManifold m);
 
@@ -687,7 +690,6 @@ namespace TacticalDirector.CollisionSystem.Tests
                 Strength = strength, Agility = strength
             };
     }
-}
 
     // ════════════════════════════════════════════════════════════════════════════
     // §5.3 Integration Tests
@@ -768,4 +770,17 @@ namespace TacticalDirector.CollisionSystem.Tests
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-31 | —      | Initial implementation. |
 // | 1.1     | 2026-06-01 | —      | Add §5.3 integration test stubs (9 tests; all Assert.Ignore Stage 0+1). |
+// | 1.2     | 2026-06-10 | —      | AR-7 H-1 follow-through (ERR-003-001): FL-001..005 + DT-001..002 closing speeds |
+// |         |            |        | re-derived for F = j / ContactDurationS (≈368·vRel for the 85 kg pair) — the old |
+// |         |            |        | 0.1–0.46 m/s band encoded the inflated j × 60 Hz scale and made the calibration |
+// |         |            |        | defect invisible to the suite. Expected probabilities unchanged by design.      |
+// | 1.3     | 2026-06-10 | —      | AR-8 H-1 follow-through (ERR-003-005): CR-001..003 / FL-001..005 / DT-001..002 |
+// |         |            |        | / EC-004 setups flipped from outward ("passed-through") to genuinely           |
+// |         |            |        | approaching velocities — the suite previously encoded the inverted gate (the   |
+// |         |            |        | CR-001 comment rationalised separating agents as the impulse case). CR-001     |
+// |         |            |        | post-collision expectations unchanged (a1 now starts at the left, +5 → −1.5).  |
+// |         |            |        | AR-8 L-1: stray namespace-closing brace before the §5.3 integration section    |
+// |         |            |        | removed — the namespace closed at the determinism fixture, leaving the         |
+// |         |            |        | integration class at file scope and an unbalanced `}` at EOF (file could not   |
+// |         |            |        | have compiled; latent because the Unity project is not yet initialised).       |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionSystemConstants.cs
 // Created:  2026-05-25
-// Modified: 2026-06-05  [v1.3]
+// Modified: 2026-06-10  [v1.6]
 // Author:   —
 // Spec:     Collision System #3 §3.1.1, §3.3.1, §4.3.1, Code Standards #20
 // Purpose:  All constants for the collision system. No literals in formula code.
@@ -96,7 +96,12 @@ namespace TacticalDirector.CollisionSystem
         /// <summary>[GT] Max collision pairs processed per frame. §4.3.1 Safety.</summary>
         public static readonly int MaxCollisionPairs = 50; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Max loop iterations; prevents infinite loops from corrupt state. §4.3.1 Safety.</summary>
+        /// <summary>
+        /// [GT] Max loop iterations; prevents infinite loops from corrupt state. §4.3.1 Safety.
+        /// Stage 0: declared per the §4.3.1 catalogue but NOT consumed — the current pipeline has
+        /// no iterative solver (single-pass response; pair dedupe bounds the broad phase). Wire to
+        /// the first iterative loop that lands, or retire with a §4.3.1 spec patch at Stage 1.
+        /// </summary>
         public static readonly int MaxIterations = 1000; // TODO: replace with config loader (Stage 1)
 
         #endregion
@@ -107,19 +112,6 @@ namespace TacticalDirector.CollisionSystem
     /// </summary>
     public static class CollisionPhysicsConstants
     {
-        #region Fixed
-
-        /// <summary>
-        /// [FIXED] Physics/render loop tick rate (Hz). Used to convert impulse (kg·m/s) to force (N): F = j × Hz.
-        /// Authoritative source: Ball Physics #1 §1.2 / root CLAUDE.md "Heartbeat Tick Rate". Value: 60 Hz.
-        /// TODO: re-route as [CROSS] mirror to ProjectConstants.PHYSICS_TICK_HZ once that catalogue lands
-        /// (Stage 1 deferral — multi-consumer constant; deterministic-sim and collision-system both declare
-        /// locally today). Tracked in root CLAUDE.md OPEN ISSUES "PHYSICS_TICK_HZ multi-consumer mirror".
-        /// </summary>
-        public const float PHYSICS_TICK_HZ = 60f;
-
-        #endregion
-
         #region Derived
 
         /// <summary>
@@ -158,6 +150,15 @@ namespace TacticalDirector.CollisionSystem
         #endregion
 
         #region GT
+
+        /// <summary>
+        /// [GT] Physical contact duration for an agent-agent collision (s); converts impulse to
+        /// average contact force: F = j / ContactDurationS. Biomechanics shoulder-charge contact
+        /// time is ~0.1–0.3 s. Replaces the spec's original F = j × 60 Hz single-frame conversion,
+        /// which inflated forces ~10× and put the entire stochastic fall/stumble band below
+        /// walking pace (ERR-003-001; spec §3.3 patched June 10, 2026).
+        /// </summary>
+        public static readonly float ContactDurationS = 0.15f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Coefficient of restitution for agent-agent collision (0=inelastic, 1=elastic). §3.3.1.</summary>
         public static readonly float CoefficientOfRestitution = 0.3f; // TODO: replace with config loader (Stage 1)
@@ -288,4 +289,10 @@ namespace TacticalDirector.CollisionSystem
 // | 1.4     | 2026-06-05 | —      | AR-2 L-2. CollisionPhysicsConstants.BallRadius XML doc notes both it and                |
 // |         |            |        | SpatialHashConstants.BallRadius are convenience accessors over the same authoritative   |
 // |         |            |        | source (so a future reader does not consolidate one into the other).                    |
+// | 1.5     | 2026-06-10 | —      | AR-7 H-1 (ERR-003-001). PHYSICS_TICK_HZ removed (sole consumer was the F = j × 60 Hz   |
+// |         |            |        | conversion in CollisionResponse); ContactDurationS [GT] (0.15 s) added — force is now   |
+// |         |            |        | F = j / ContactDurationS so the literature-based fall/stumble thresholds (500–1500 N)   |
+// |         |            |        | line up with realistic closing speeds instead of saturating below walking pace.         |
+// | 1.6     | 2026-06-10 | —      | AR-10 L-1. MaxIterations doc-noted as declared-but-unconsumed at Stage 0 (no iterative  |
+// |         |            |        | solver exists; pair dedupe bounds the broad phase) — wire or retire at Stage 1.         |
 #endregion
