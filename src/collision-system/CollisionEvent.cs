@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionEvent.cs
 // Created:  2026-05-25
-// Modified: 2026-06-10  [v1.2]
+// Modified: 2026-06-10  [v1.3]
 // Author:   —
 // Spec:     Collision System #3 §3.4.2, §4.2.3, FR-07, Code Standards #20
 // Purpose:  Per-collision event record published to the Event System each frame.
@@ -34,7 +34,9 @@ namespace TacticalDirector.CollisionSystem
 
         /// <summary>
         /// Contact point in world 3-D coordinates.
-        /// Stage 0: Z = 0 (all ground-level). Stage 1+: Z from aerial geometry.
+        /// AGENT_AGENT: Z = 0 at Stage 0 (agents are ground-level). AGENT_BALL: Z = ball
+        /// height at contact (up to CollisionPhysicsConstants.AgentReachHeight) — set by
+        /// CollisionDetection.CheckAgentBallCollision. Stage 1+: agent Z from aerial geometry.
         /// </summary>
         public Vector3 ContactPoint;
 
@@ -59,4 +61,6 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | Entity1ID <= Entity2ID via sort in CollisionSystem.RecordEvent.             |
 // | 1.2     | 2026-06-10 | —      | AR-7 H-1 follow-through. ImpactForce doc: F = impulse × 60 Hz → F = impulse |
 // |         |            |        | / ContactDurationS (ERR-003-001).                                           |
+// | 1.3     | 2026-06-10 | —      | AR-9 L-2. ContactPoint doc corrected — "Stage 0: Z = 0" was wrong for       |
+// |         |            |        | AGENT_BALL events, which carry the ball's contact height (≤ 2.0 m).         |
 #endregion
