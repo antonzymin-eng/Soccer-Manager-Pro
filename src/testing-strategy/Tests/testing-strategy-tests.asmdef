@@ -3,7 +3,10 @@
     "rootNamespace": "TacticalDirector.TestingStrategy.Tests",
     "references": [
         "TacticalDirector.TestingStrategy",
-        "TacticalDirector.DeterministicSim"
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.PassMechanics",
+        "TacticalDirector.EventSystem"
     ],
     "includePlatforms": [
         "Editor"

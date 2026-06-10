@@ -2,7 +2,8 @@
     "name": "TacticalDirector.BallPhysics.Tests",
     "rootNamespace": "TacticalDirector.BallPhysics",
     "references": [
-        "TacticalDirector.BallPhysics"
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.TestingStrategy"
     ],
     "includePlatforms": [
         "Editor"
