@@ -58,10 +58,20 @@ namespace TacticalDirector.TestingStrategy
         /// </summary>
         public void CheckInRange(string predicateId, float value, float minInclusive, float maxInclusive)
         {
+            // AR-2 L-1: a NaN bound is a harness-authoring error, not a scenario
+            // outcome — NaN comparisons are false, so it would slip past the min>max
+            // guard and masquerade as a failing predicate.
+            if (float.IsNaN(minInclusive) || float.IsNaN(maxInclusive))
+            {
+                throw new ArgumentException(
+                    "in_range bounds must not be NaN for predicate '" + predicateId + "'.",
+                    nameof(minInclusive));
+            }
             if (minInclusive > maxInclusive)
             {
                 throw new ArgumentException(
-                    "minInclusive=" + minInclusive + " exceeds maxInclusive=" + maxInclusive
+                    "minInclusive=" + minInclusive.ToString(CultureInfo.InvariantCulture)
+                        + " exceeds maxInclusive=" + maxInclusive.ToString(CultureInfo.InvariantCulture)
                         + " for predicate '" + predicateId + "'.",
                     nameof(minInclusive));
             }
@@ -126,4 +136,7 @@ namespace TacticalDirector.TestingStrategy
 // | 1.0     | 2026-06-10 | —      | Initial implementation.                                            |
 // | 1.1     | 2026-06-10 | —      | AR-1 M-3: SanitizeValue flattens CR/LF in predicate IDs + details  |
 // |         |            |        | before they enter the line-oriented key=value diagnostics.         |
+// | 1.2     | 2026-06-10 | —      | AR-2: L-1 NaN in_range bounds now throw (authoring error, not a    |
+// |         |            |        | scenario outcome); L-2 min>max exception message switched to       |
+// |         |            |        | InvariantCulture float formatting.                                 |
 #endregion

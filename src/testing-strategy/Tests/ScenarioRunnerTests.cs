@@ -217,6 +217,19 @@ namespace TacticalDirector.TestingStrategy.Tests
                 "NaN must fail an in_range predicate, never silently pass (§3.4.4 boundary saturation).");
         }
 
+        // AR-2 L-1: a NaN range bound is harness misuse and must throw, not record a
+        // failing predicate (NaN comparisons slip past the min>max guard).
+        [Test]
+        public void Envelope_NaNRangeBound_ThrowsArgumentException()
+        {
+            var envelope = new ScenarioEnvelope();
+
+            Assert.Throws<ArgumentException>(
+                () => envelope.CheckInRange("nan-bound", 0.0f, float.NaN, 1.0f));
+            Assert.Throws<ArgumentException>(
+                () => envelope.CheckInRange("nan-bound", 0.0f, 0.0f, float.NaN));
+        }
+
         // AR-1 M-3: a newline in a predicate detail must not corrupt the line-oriented
         // key=value diagnostics encoding.
         [Test]
@@ -322,4 +335,5 @@ namespace TacticalDirector.TestingStrategy.Tests
 // |         |            |        | manifest coherence; M-2 non-empty fixture_refs refusal; M-3        |
 // |         |            |        | newline flattening + exception_stack line; M-4 duplicate-name      |
 // |         |            |        | rejection, path↔name coherence, cross-spec ≥2 owning-spec arity.   |
+// | 1.2     | 2026-06-10 | —      | AR-2 L-1 lock (+1 test, 19 total): NaN in_range bound throws.      |
 #endregion
