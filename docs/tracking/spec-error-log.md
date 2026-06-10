@@ -6,9 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.23
+**Version:** 1.24
 **Updated:** May 22, 2026 (ERR-020-001 filed and resolved: Code Standards #20 §4.2 `[CROSS]` mirror ALL_CAPS → PascalCase; `section-4.md` v1.0.1 patched; `src/CLAUDE.md` v1.4 discrepancy note updated)
-**Status:** ERR-001 through ERR-012, ERR-010-001 (closed May 16, 2026), ERR-011-001 (closed May 18, 2026), ERR-012-001 (closed May 18, 2026), ERR-012-002 (closed), ERR-016-001, ERR-016-002 (FULLY CLOSED May 18, 2026), ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; spec-text resolved May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); #16 §3.2.5 back-prop prose confirmed landed (OBS-1, stress-test run 2, May 18, 2026) — FULLY CLOSED. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open.
+**Status:** ERR-001 through ERR-012, ERR-010-001 (closed May 16, 2026), ERR-011-001 (closed May 18, 2026), ERR-012-001 (closed May 18, 2026), ERR-012-002 (closed), ERR-016-001, ERR-016-002 (FULLY CLOSED May 18, 2026), ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; spec-text resolved May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); #16 §3.2.5 back-prop prose confirmed landed (OBS-1, stress-test run 2, May 18, 2026) — FULLY CLOSED. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open. ERR-003-001 through ERR-003-004 added June 10, 2026 (Collision System #3 implementation AR-7 adversarial review — force-conversion calibration, FROM_BEHIND normal convention, same-team stumble gap, candidate-counted pair valve); ERR-003-005 and ERR-003-006 added same day from the AR-8 follow-up sweep (inverted approach gate in §3.3 impulse response; FROM_BEHIND shadowed by the shoulder predicate); all six spec-and-code patched and CLOSED June 10, 2026.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---
@@ -1386,6 +1386,91 @@ Spec #20 §3.2.3 (Tag → C# Storage Class Mapping) is the authoritative naming 
 
 ---
 
+## ERR-003-001: Collision System #3 §3.3 impulse-to-force conversion F = j × 60 Hz inflates contact force ~10× against literature-calibrated thresholds
+
+**Spec:** Collision System #3
+**Section:** §3.3 Step 6 (impact force); contradicts the §3.3.1 threshold derivations (FALL_FORCE_BASE 500 N, FALL_FORCE_PER_STRENGTH 50 N, FALL_PROBABILITY_RANGE 500 N — sustained-force literature values)
+**Severity:** Critical
+**Detected During:** `src/collision-system/` AR-7 adversarial review (June 10, 2026), finding H-1.
+**Status:** ✅ Closed — spec and implementation patched June 10, 2026
+
+**Problem:** `F = Mathf.Abs(j) * 60f` assumes the whole collision impulse acts within one 16.7 ms frame. For an 85 kg equal pair, F ≈ 3315 × vRel (N), so the entire stochastic fall/stumble band (500–1500 N) spanned closing speeds of 0.15–0.6 m/s — below walking pace. Every real contact (jog ≈ 4 m/s closing → 13 kN) was a guaranteed knockdown roll, the failed roll guaranteed a stumble, and `knockdownForceOut` saturated at 1.0 (MaxCollisionForceRef = 2000 N at vRel ≈ 0.6 m/s). The test suite encoded the same scale (FL-002 asserted likely-stumble at vRel = 0.23 m/s), so the calibration defect was invisible to it.
+
+**Resolution:** New `[GT]` `CONTACT_DURATION_S = 0.15 s` (biomechanics contact time ~0.1–0.3 s) added to the §3.3 catalogue; conversion patched to `F = j / CONTACT_DURATION_S` in spec pseudocode and `CollisionResponse.cs` v1.5 (`CollisionPhysicsConstants.ContactDurationS`; `PHYSICS_TICK_HZ` removed — that conversion was its sole consumer). Stochastic band now spans vRel ≈ 1.4–5.4 m/s. FL-001..005 / DT-001..002 closing speeds re-derived (tests v1.2).
+
+---
+
+## ERR-003-002: Collision System #3 §3.3/§3.4 FROM_BEHIND classification — normal convention sign-inverted on two surfaces
+
+**Spec:** Collision System #3
+**Section:** §3.3 `ClassifyContactType` (behindDot formula) and §3.4 `ProcessAgentAgentCollision` (Classify call site + `ForceDirection`)
+**Severity:** Major
+**Detected During:** `src/collision-system/` AR-7 adversarial review (June 10, 2026), finding M-1.
+**Status:** ✅ Closed — spec and implementation patched June 10, 2026
+
+**Problem:** Both `Classify` and `ContactForceData.ForceDirection` are documented against an instigator→victim normal, but the §3.4 call site always passed `manifold.Normal` (entity1→entity2) unflipped — sign-inverted whenever the instigator is the second agent. Compounding it, the §3.3 formula `Dot(-collisionNormal, victimDir) > 0.5` detects a victim moving TOWARD the instigator (head-on), not a fleeing victim; with a doc-correct normal FROM_BEHIND could never fire. Net behaviour: FROM_BEHIND fired only when the second agent instigated, via two cancelling sign errors; identical geometry with the first agent instigating yielded SIDE_IMPACT.
+
+**Resolution:** §3.3 formula corrected to `Dot(collisionNormal, victimDir)` (victim fleeing along instigator→victim normal); §3.4 call site computes `instigatorToVictim = instigatorIdx == 0 ? manifold.Normal : -manifold.Normal` and feeds it to both `Classify` and `ForceDirection`. Implementation: `ContactTypeClassifier.cs` v1.2 + `CollisionSystem.cs` v1.6. Stage 0 consumers do not act on FoulData (Referee is Stage 1+), but the event stream is replay/analytics surface.
+
+---
+
+## ERR-003-003: Collision System #3 §3.3 same-team contacts above fallThreshold escape both fall and stumble branches
+
+**Spec:** Collision System #3
+**Section:** §3.3 `DetermineFallOrStumble` (stumble condition)
+**Severity:** Major
+**Detected During:** `src/collision-system/` AR-7 adversarial review (June 10, 2026), finding M-2.
+**Status:** ✅ Closed — spec and implementation patched June 10, 2026
+
+**Problem:** The fall branch requires `!isSameTeam`; the stumble branch required `impactForce <= fallThreshold`. A same-team impact above fallThreshold matched neither — the hardest same-team collisions were consequence-free while moderate ones could stumble (non-monotonic).
+
+**Resolution:** Upper gate dropped; stumble probability clamped to 1 (`Clamp01`). Opposing-team forces above fallThreshold still return from the fall branch first, so its behaviour is unchanged. Spec pseudocode + `CollisionResponse.cs` v1.5.
+
+---
+
+## ERR-003-004: Collision System #3 §3.4 MAX_COLLISION_PAIRS_PER_FRAME valve counts broad-phase candidates and aborts the whole frame
+
+**Spec:** Collision System #3
+**Section:** §3.4 `UpdateCollisions` pair loop; §8 sizing rationale ("~10–20 pairs in practice") counted colliding pairs, not candidates
+**Severity:** Major
+**Detected During:** `src/collision-system/` AR-7 adversarial review (June 10, 2026), finding M-3.
+**Status:** ✅ Closed — spec and implementation patched June 10, 2026
+
+**Problem:** The valve charged the 50-pair budget per broad-phase candidate (3×3-cell neighbour after dedupe) and on exceedance aborted all remaining processing including agent-ball. A goalmouth scramble (~15 clustered agents) generates 100+ unique candidates, so the valve fired in exactly the scenarios where collisions matter, deterministically but silently dropping response for the higher-indexed roster half. Candidate iteration needs no valve — it is already bounded at 253 pairs by the dedupe bitfield.
+
+**Resolution:** `ProcessAgentAgent` / `ProcessAgentBall` return narrow-phase confirmation; the valve counts confirmed collisions only (cap = event-buffer capacity, so the buffer cannot overflow). Spec pseudocode + `CollisionSystem.cs` v1.6.
+
+---
+
+## ERR-003-005: Collision System #3 §3.3 impulse response — approach/separation gate inverted for the a1→a2 normal convention
+
+**Spec:** Collision System #3
+**Section:** §3.3 Step 2 (relative velocity gate) and Step 4 (impulse application signs); §3.2 defines the manifold normal as pointing from Entity1 toward Entity2
+**Severity:** Critical
+**Detected During:** `src/collision-system/` AR-8 adversarial review (June 10, 2026), finding H-1.
+**Status:** ✅ Closed — spec and implementation patched June 10, 2026
+
+**Problem:** With n pointing a1→a2, `vRel = (v1 − v2)·n > 0` means a1 closes on a2 — approaching. The pseudocode gated `if (vRel > 0) → separation only` (labelled "separating") and computed `j = −(1+e)·vRel/Σ(1/m)` with `Δv1 = +j·n/m1`. Net behaviour: genuine closing collisions produced penetration separation only — no momentum exchange, no ImpactForce, and `DetermineFallOrStumble` was unreachable for real contacts — while overlapped pairs already moving apart received a velocity-reversing impulse back toward re-collision (energy injection). The unit suite encoded the inversion: CR-001 set both agents moving outward and rationalised it as a "passed-through state".
+
+**Resolution:** Gate corrected to `vRel <= 0 → separation only`; `j = +(1+e)·vRel/Σ(1/m)` (preserving the j > 0 invariant the AR-3/AR-5 simplifications rely on); application signs corrected to `Δv1 = −j·n/m1`, `Δv2 = +j·n/m2`. Restitution verified: equal-mass head-on at ±5 m/s, e = 0.3 → ∓1.5 m/s with separation speed = e·closing speed. Spec §3.3 pseudocode + `CollisionResponse.cs` v1.6; CR-001..003 / FL-001..005 / DT-001..002 / EC-004 setups flipped to approaching geometry (tests v1.3).
+
+---
+
+## ERR-003-006: Collision System #3 §3.3 contact classification — FROM_BEHIND shadowed by the velocity-only shoulder predicate
+
+**Spec:** Collision System #3
+**Section:** §3.3 `ClassifyContactType` branch order
+**Severity:** Major
+**Detected During:** `src/collision-system/` AR-8 adversarial review (June 10, 2026), finding M-1.
+**Status:** ✅ Closed — spec and implementation patched June 10, 2026
+
+**Problem:** A chase-down (instigator catching a fleeing victim) has parallel velocities, so the shoulder predicate `Dot(approachDir, victimDir) > 0.7` — which tests velocity alignment only, with no contact geometry — classified every from-behind contact as SHOULDER_TO_SHOULDER before the from-behind test ran. Latent until ERR-003-002 made the from-behind geometry test correct; the two defects together meant FROM_BEHIND was effectively unreachable for its canonical geometry.
+
+**Resolution:** FROM_BEHIND evaluated before SHOULDER_TO_SHOULDER; the contact normal is the discriminator (back-on contact: victimDir ∥ instigator→victim normal; side-by-side: perpendicular, falls through to the shoulder test). Spec §3.3 pseudocode + `ContactTypeClassifier.cs` v1.3.
+
+---
+
+
 ## ERR-001-001: Ball Physics #1 §3.1.8.1 bounce pseudocode uses Unity Y-up `Vector3.up` as the ground normal in a Z-up coordinate system
 
 **Spec:** Ball Physics #1
@@ -1428,4 +1513,4 @@ Spec #20 §3.2.3 (Tag → C# Storage Class Mapping) is the authoritative naming 
 
 ---
 
-*End of Spec Error Log v1.23 — June 9, 2026.*
+*End of Spec Error Log v1.24 — June 10, 2026.*

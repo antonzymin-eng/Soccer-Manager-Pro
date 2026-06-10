@@ -1,6 +1,6 @@
 // File:     src/collision-system/ContactTypeClassifier.cs
 // Created:  2026-05-25
-// Modified: 2026-06-05  [v1.1]
+// Modified: 2026-06-10  [v1.3]
 // Author:   —
 // Spec:     Collision System #3 §3.3.6, FR-06, Code Standards #20
 // Purpose:  Velocity-heuristic contact classification for foul detection groundwork.
@@ -50,19 +50,27 @@ namespace TacticalDirector.CollisionSystem
             // applies a stricter speed gate (MinVictimSpeedBehind > MinSpeedForClassification).
             Vector2 victimDir = vv / speedV;
 
-            float facingDot = Vector2.Dot(approachDir, victimDir);
-            if (facingDot > ContactClassificationConstants.ShoulderDotThreshold)
-            {
-                return ContactType.SHOULDER_TO_SHOULDER;
-            }
-
+            // From-behind is tested BEFORE shoulder-to-shoulder (ERR-003-006): a chase-down
+            // has parallel velocities too, so the shoulder predicate (velocity alignment
+            // alone, no contact geometry) shadowed every from-behind contact when evaluated
+            // first. The discriminator is the normal — back-on contact has victimDir aligned
+            // with the instigator→victim normal; side-by-side contact has them perpendicular.
+            // The original formula used Dot(-normal, victimDir), which detected the opposite
+            // (head-on) geometry and only ever fired through a cancelling sign error at the
+            // call site (ERR-003-002).
             if (speedV > ContactClassificationConstants.MinVictimSpeedBehind)
             {
-                float behindDot = Vector2.Dot(-normal, victimDir);
+                float behindDot = Vector2.Dot(normal, victimDir);
                 if (behindDot > ContactClassificationConstants.BehindDotThreshold)
                 {
                     return ContactType.FROM_BEHIND;
                 }
+            }
+
+            float facingDot = Vector2.Dot(approachDir, victimDir);
+            if (facingDot > ContactClassificationConstants.ShoulderDotThreshold)
+            {
+                return ContactType.SHOULDER_TO_SHOULDER;
             }
 
             return ContactType.SIDE_IMPACT;
@@ -111,4 +119,13 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | (was computed twice with identical inputs). Early-return on speedV <= minSpeed |
 // |         |            |        | for symmetry with the speedI check above; behind-branch keeps its stricter     |
 // |         |            |        | MinVictimSpeedBehind gate.                                                     |
+// | 1.2     | 2026-06-10 | —      | AR-7 M-1 (ERR-003-002). behindDot = Dot(-normal, victimDir) → Dot(normal,      |
+// |         |            |        | victimDir). With the documented instigator→victim normal, the negated form     |
+// |         |            |        | scored a fleeing victim ≈ −1 and never detected from-behind; spec §3.3         |
+// |         |            |        | pseudocode patched in the same commit. Pairs with CollisionSystem v1.6, which  |
+// |         |            |        | now flips manifold.Normal when the instigator is the second agent.             |
+// | 1.3     | 2026-06-10 | —      | AR-8 M-1 (ERR-003-006). FROM_BEHIND test hoisted above SHOULDER_TO_SHOULDER —  |
+// |         |            |        | a chase-down also has parallel velocities, so the velocity-only shoulder       |
+// |         |            |        | predicate shadowed every from-behind contact once the v1.2 sign fix made the   |
+// |         |            |        | geometry test reachable. Normal-vs-victimDir is the discriminator.             |
 #endregion

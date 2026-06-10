@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionEvent.cs
 // Created:  2026-05-25
-// Modified: 2026-06-05  [v1.1]
+// Modified: 2026-06-10  [v1.2]
 // Author:   —
 // Spec:     Collision System #3 §3.4.2, §4.2.3, FR-07, Code Standards #20
 // Purpose:  Per-collision event record published to the Event System each frame.
@@ -39,7 +39,7 @@ namespace TacticalDirector.CollisionSystem
         public Vector3 ContactPoint;
 
         /// <summary>
-        /// Impact force (N). F = impulse × 60 Hz.
+        /// Impact force (N). F = impulse / CollisionPhysicsConstants.ContactDurationS (ERR-003-001).
         /// Zero for AGENT_BALL collisions (ball mass not relevant here).
         /// </summary>
         public float ImpactForce;
@@ -57,4 +57,6 @@ namespace TacticalDirector.CollisionSystem
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                              |
 // | 1.1     | 2026-06-05 | —      | AR-1 L-3. Entity1ID / Entity2ID XML doc clarified — producer now enforces   |
 // |         |            |        | Entity1ID <= Entity2ID via sort in CollisionSystem.RecordEvent.             |
+// | 1.2     | 2026-06-10 | —      | AR-7 H-1 follow-through. ImpactForce doc: F = impulse × 60 Hz → F = impulse |
+// |         |            |        | / ContactDurationS (ERR-003-001).                                           |
 #endregion

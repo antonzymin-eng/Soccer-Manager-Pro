@@ -180,24 +180,31 @@ public class CollisionSystem
                 if (_processedPairs.IsSet(lowId, highId)) continue;
                 _processedPairs.Set(lowId, highId);
                 
-                // Check collision pair limit
-                if (++pairsProcessed > SpatialHashConstants.MAX_COLLISION_PAIRS_PER_FRAME)
-                {
-                    #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    Debug.LogWarning($"[Collision] Exceeded MAX_COLLISION_PAIRS_PER_FRAME ({pairsProcessed})");
-                    #endif
-                    return;
-                }
-                
+                // ERR-003-004 (June 10, 2026): the safety valve counts CONFIRMED collisions
+                // (Process* return true on narrow-phase confirmation), not broad-phase
+                // candidates. Candidate iteration is already bounded by the 253-pair dedupe
+                // bitfield, and clustered set pieces produce 100+ candidates -- the original
+                // candidate-counted valve aborted the frame and silently dropped collision
+                // response for the remaining roster.
+                bool collisionConfirmed;
                 if (j == SpatialHashConstants.BALL_ENTITY_ID)
                 {
                     // Agent-ball collision
-                    ProcessAgentBallCollision(agents[i], i, ref ball, matchTime);
+                    collisionConfirmed = ProcessAgentBallCollision(agents[i], i, ref ball, matchTime);
                 }
                 else
                 {
                     // Agent-agent collision
-                    ProcessAgentAgentCollision(agents, i, j, matchTime);
+                    collisionConfirmed = ProcessAgentAgentCollision(agents, i, j, matchTime);
+                }
+
+                if (collisionConfirmed &&
+                    ++pairsProcessed >= SpatialHashConstants.MAX_COLLISION_PAIRS_PER_FRAME)
+                {
+                    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    Debug.LogWarning($"[Collision] MAX_COLLISION_PAIRS_PER_FRAME ({pairsProcessed}) reached");
+                    #endif
+                    return;
                 }
             }
         }
@@ -207,7 +214,8 @@ public class CollisionSystem
     // AGENT-AGENT COLLISION
     // ================================================================
     
-    private void ProcessAgentAgentCollision(Agent[] agents, int id1, int id2, float matchTime)
+    // ERR-003-004: returns true when the narrow phase confirmed a collision (feeds the valve)
+    private bool ProcessAgentAgentCollision(Agent[] agents, int id1, int id2, float matchTime)
     {
         #if UNITY_EDITOR || DEVELOPMENT_BUILD
         using var _ = CollisionProfiler.NarrowPhaseMarker.Auto();
@@ -219,7 +227,7 @@ public class CollisionSystem
         // Narrow phase: exact intersection test
         if (!CollisionDetection.CheckAgentAgentCollision(in props1, in props2, out var manifold))
         {
-            return; // No collision
+            return false; // No collision
         }
         
         manifold.Entity1ID = id1;
@@ -252,14 +260,20 @@ public class CollisionSystem
             int instigatorId = (instigatorIdx == 0) ? id1 : id2;
             int victimId = (instigatorIdx == 0) ? id2 : id1;
             
+            // ERR-003-002 (June 10, 2026): manifold.Normal points props1 -> props2, but
+            // ForceDirection and Classify are documented instigator -> victim. Flip when the
+            // instigator is props2 -- the original unflipped form sign-inverted both surfaces
+            // for half the pairs.
+            Vector2 instigatorToVictim = (instigatorIdx == 0) ? manifold.Normal : -manifold.Normal;
+            
             var foulData = new ContactForceData
             {
                 ForceMagnitude = response.ImpactForce,
-                ForceDirection = new Vector3(manifold.Normal.x, manifold.Normal.y, 0),
+                ForceDirection = new Vector3(instigatorToVictim.x, instigatorToVictim.y, 0),
                 Type = ContactTypeClassifier.Classify(
                     instigatorIdx == 0 ? in props1 : in props2,
                     instigatorIdx == 0 ? in props2 : in props1,
-                    manifold.Normal),
+                    instigatorToVictim),
                 InstigatorAgentID = instigatorId,
                 VictimAgentID = victimId,
                 VictimHasBall = false, // TODO: Query possession system
@@ -271,20 +285,23 @@ public class CollisionSystem
                 new Vector3(manifold.ContactPoint.x, manifold.ContactPoint.y, 0),
                 response.ImpactForce, foulData);
         }
+        
+        return true;
     }
     
     // ================================================================
     // AGENT-BALL COLLISION
     // ================================================================
     
-    private void ProcessAgentBallCollision(Agent agent, int agentId, ref BallState ball, float matchTime)
+    // ERR-003-004: returns true when the narrow phase confirmed agent-ball contact
+    private bool ProcessAgentBallCollision(Agent agent, int agentId, ref BallState ball, float matchTime)
     {
         var props = agent.PhysicalProperties;
         
         // Narrow phase: exact intersection test
         if (!CollisionDetection.CheckAgentBallCollision(in props, in ball, out var contactPoint))
         {
-            return; // No collision
+            return false; // No collision
         }
         
         // Package collision data for Ball Physics
@@ -304,6 +321,8 @@ public class CollisionSystem
         // Record collision event (no foul data for agent-ball)
         RecordCollisionEvent(matchTime, CollisionType.AGENT_BALL, agentId,
             SpatialHashConstants.BALL_ENTITY_ID, contactPoint, 0f, default);
+        
+        return true;
     }
     
     // ================================================================

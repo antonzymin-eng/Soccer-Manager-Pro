@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionResponse.cs
 // Created:  2026-05-25
-// Modified: 2026-06-05  [v1.4]
+// Modified: 2026-06-10  [v1.6]
 // Author:   —
 // Spec:     Collision System #3 §3.3.1–§3.3.2, FR-04, FR-05, Code Standards #20
 // Purpose:  Impulse-based collision resolution, penetration separation, fall/stumble triggers.
@@ -12,7 +12,8 @@ namespace TacticalDirector.CollisionSystem
     /// <summary>
     /// Computes collision response for agent-agent contacts. Static and pure.
     /// Collision System #3 §3.3.2.
-    /// Δv₁ = (j / m₁) × n,  Δv₂ = -(j / m₂) × n,  j = -(1+e)·vRel / (1/m₁ + 1/m₂).
+    /// With n pointing a1 → a2 and vRel = (v1 − v2)·n (&gt; 0 = approaching):
+    /// j = (1+e)·vRel / (1/m₁ + 1/m₂),  Δv₁ = -(j / m₁) × n,  Δv₂ = +(j / m₂) × n.
     /// </summary>
     public static class CollisionResponse
     {
@@ -42,16 +43,21 @@ namespace TacticalDirector.CollisionSystem
                 return result;
             }
 
-            // Relative closing velocity along collision normal (2D projection).
+            // Relative velocity along the collision normal (2D projection). Normal points
+            // a1 → a2, so vRel = (v1 − v2)·n > 0 means a1 closes on a2 — APPROACHING.
+            // ERR-003-005: the original gate read `vRel > 0 → separating, return`, which is
+            // inverted for this normal convention — real closing collisions produced
+            // separation only (no impulse, no fall/stumble), while already-separating
+            // overlapped pairs had their velocities reversed back toward re-collision.
             var v1 = new Vector2(a1.Velocity.x, a1.Velocity.y);
             var v2 = new Vector2(a2.Velocity.x, a2.Velocity.y);
             float vRel = Vector2.Dot(v1 - v2, manifold.Normal);
 
             ApplySeparation(in a1, in a2, in manifold, a1Active, a2Active, ref result);
 
-            if (vRel > 0f)
+            if (vRel <= 0f)
             {
-                // Agents already separating — resolve penetration only.
+                // Separating or grazing — resolve penetration only.
                 return result;
             }
 
@@ -65,10 +71,10 @@ namespace TacticalDirector.CollisionSystem
                 return result;
             }
 
-            // vRel <= 0 (early-return at line above), e > 0, invMSum > 0 → j >= 0 always.
-            // SameTeamMomentumScale > 0, so the scaled value stays non-negative.
+            // vRel > 0 (early-return above), e > 0, invMSum > 0 → j > 0 always.
+            // SameTeamMomentumScale > 0, so the scaled value stays positive.
             // Upper clamp is therefore the only meaningful bound.
-            float j = -(1f + e) * vRel / invMSum;
+            float j = (1f + e) * vRel / invMSum;
 
             if (isSameTeam)
             {
@@ -77,23 +83,26 @@ namespace TacticalDirector.CollisionSystem
 
             j = Mathf.Min(j, CollisionPhysicsConstants.MaxImpulseMagnitude);
 
+            // a1 recoils against the a1 → a2 normal; a2 is pushed along it.
             Vector2 impulse = j * manifold.Normal;
 
             if (a1Active)
             {
                 result.VelocityImpulse1 = new Vector3(
-                    impulse.x * invM1, impulse.y * invM1, 0f);
+                    -impulse.x * invM1, -impulse.y * invM1, 0f);
             }
 
             if (a2Active)
             {
                 result.VelocityImpulse2 = new Vector3(
-                    -impulse.x * invM2, -impulse.y * invM2, 0f);
+                    impulse.x * invM2, impulse.y * invM2, 0f);
             }
 
-            // j is non-negative by the invariant documented above (vRel <= 0 early-return),
-            // so Mathf.Abs is redundant — direct multiply is correct and faster.
-            float impactForce = j * CollisionPhysicsConstants.PHYSICS_TICK_HZ;
+            // j is non-negative by the invariant documented above (vRel <= 0 early-return).
+            // Average contact force over the physical contact window (ERR-003-001) — NOT over a
+            // single 16.7 ms frame, which inflated forces ~10× against the literature-calibrated
+            // fall/stumble thresholds below.
+            float impactForce = j / CollisionPhysicsConstants.ContactDurationS;
             result.ImpactForce = impactForce;
 
             if (a1Active)
@@ -183,9 +192,13 @@ namespace TacticalDirector.CollisionSystem
                 return;
             }
 
-            if (impactForce > stumbleThreshold && impactForce <= fallThreshold)
+            // Clamp01 keeps the branch monotonic for same-team contacts above fallThreshold
+            // (the fall branch is opposing-team only) — previously such hits escaped both
+            // branches and the hardest same-team collisions were consequence-free (ERR-003-003).
+            if (impactForce > stumbleThreshold)
             {
-                float prob = (impactForce - stumbleThreshold) / (fallThreshold - stumbleThreshold);
+                float prob = Mathf.Clamp01(
+                    (impactForce - stumbleThreshold) / (fallThreshold - stumbleThreshold));
 
                 if (rng.NextFloat() < prob)
                 {
@@ -209,4 +222,16 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | separation than mildly-overlapping pairs.                                           |
 // | 1.4     | 2026-06-05 | —      | AR-5 L-3. impactForce = Mathf.Abs(j) * PHYSICS_TICK_HZ simplified to                |
 // |         |            |        | j * PHYSICS_TICK_HZ — j is non-negative by the AR-3 L-4 invariant.                 |
+// | 1.5     | 2026-06-10 | —      | AR-7 H-1 (ERR-003-001): impactForce = j / ContactDurationS — the j × 60 Hz form    |
+// |         |            |        | assumed the whole impulse acts in one frame, inflating force ~10× and making every |
+// |         |            |        | opposing contact above ~0.5 m/s closing speed a guaranteed knockdown.              |
+// |         |            |        | AR-7 M-2 (ERR-003-003): stumble branch drops the `<= fallThreshold` gate and       |
+// |         |            |        | clamps prob to 1 — same-team hits above fallThreshold no longer escape both        |
+// |         |            |        | branches (hardest same-team collisions were consequence-free).                     |
+// | 1.6     | 2026-06-10 | —      | AR-8 H-1 (ERR-003-005): approach gate un-inverted. With the a1→a2 normal,          |
+// |         |            |        | vRel = (v1−v2)·n > 0 is APPROACHING; the old `vRel > 0 → return` gave real closing |
+// |         |            |        | collisions separation-only (no impulse, no fall/stumble — EvaluateFallOrStumble    |
+// |         |            |        | was unreachable for genuine contacts) and reversed separating pairs back inward.   |
+// |         |            |        | j = +(1+e)·vRel/invMSum (j > 0 invariant preserved); Δv1 = −j·n/m1, Δv2 = +j·n/m2. |
+// |         |            |        | Spec §3.3 Step 2/Step 4 pseudocode carried the same inversion; patched same commit.|
 #endregion

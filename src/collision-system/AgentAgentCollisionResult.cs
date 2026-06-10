@@ -1,6 +1,6 @@
 // File:     src/collision-system/AgentAgentCollisionResult.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25  [v1.1]
+// Modified: 2026-06-10  [v1.2]
 // Author:   —
 // Spec:     Collision System #3 §3.3.3, Code Standards #20
 // Purpose:  Internal result struct from CollisionResponse; contains both agents' outcomes.
@@ -46,7 +46,7 @@ namespace TacticalDirector.CollisionSystem
 
         // ── Shared ───────────────────────────────────────────────────────────
 
-        /// <summary>Impact force (N) = impulse magnitude × 60 Hz. Used for foul data and fall thresholds.</summary>
+        /// <summary>Impact force (N) = impulse / ContactDurationS (ERR-003-001). Used for foul data and fall thresholds.</summary>
         public float ImpactForce;
     }
 }
@@ -55,4 +55,5 @@ namespace TacticalDirector.CollisionSystem
 // | Version | Date       | Author | Notes                                                                                   |
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                          |
 // | 1.1     | 2026-05-25 | —      | Removed GroundedDuration1/2 (duration now computed by AgentStateMachine, not Collision). |
+// | 1.2     | 2026-06-10 | —      | AR-7 H-1 follow-through: ImpactForce doc force-conversion formula updated (ERR-003-001). |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionSystem.cs
 // Created:  2026-05-25
-// Modified: 2026-06-05  [v1.3]
+// Modified: 2026-06-10  [v1.6]
 // Author:   —
 // Spec:     Collision System #3 §3.4.1, §4.1.3, §4.4.4, Code Standards #20
 // Purpose:  Main collision system — orchestrates spatial hash, narrow phase, and response.
@@ -167,7 +167,20 @@ namespace TacticalDirector.CollisionSystem
             {
                 AgentPhysicalProperties snap =
                     AgentPhysicalProperties.From(in agentStates[i], in agentAttrs[i]);
-                if (IsInvalidPosition(snap.Position)) continue;
+                if (IsInvalidVector(snap.Position)) continue;
+
+                // Non-finite velocity is sanitised to zero rather than skipping the agent —
+                // positions are valid, so penetration separation must still run. Without this
+                // gate a NaN velocity flowed into vRel → j → ImpactForce and published NaN
+                // into the CollisionEvent stream (impulse application was saved only by
+                // NaN comparisons evaluating false).
+                if (IsInvalidVector(snap.Velocity))
+                {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    Debug.LogWarning($"[CollisionSystem] Non-finite velocity for agent {i} sanitised to zero");
+#endif
+                    snap.Velocity = Vector3.zero;
+                }
 
                 _snapshots[i] = snap;
                 _snapshotValid[i] = true;
@@ -177,7 +190,7 @@ namespace TacticalDirector.CollisionSystem
             // Ball only contributes to the broad phase when it is within agent-reach height —
             // a high aerial ball cannot collide with any ground agent (CheckAgentBallCollision
             // would reject the narrow-phase test anyway; skipping insert avoids wasted query work).
-            if (!IsInvalidPosition(ball.Position)
+            if (!IsInvalidVector(ball.Position)
                 && ball.Position.z <= CollisionPhysicsConstants.AgentReachHeight)
             {
                 _spatialHash.Insert(SpatialHashConstants.BALL_ENTITY_ID, ball.Position,
@@ -185,10 +198,15 @@ namespace TacticalDirector.CollisionSystem
             }
 
             // Phases 2/3/4 — broad phase query, narrow phase, response.
-            int pairs = 0;
-            bool pairLimitExceeded = false;
+            // The MaxCollisionPairs safety valve counts CONFIRMED collisions, not broad-phase
+            // candidates (ERR-003-004): candidate-pair iteration is already bounded by the
+            // 253-pair dedupe bitfield, while a goalmouth scramble (~15 clustered agents)
+            // produces 100+ candidates and the old candidate-counted valve silently dropped
+            // collision response for the higher-indexed half of the roster.
+            int confirmed = 0;
+            bool pairLimitReached = false;
 
-            for (int i = 0; i < count && !pairLimitExceeded; i++)
+            for (int i = 0; i < count && !pairLimitReached; i++)
             {
                 if (!_snapshotValid[i]) continue;
 
@@ -206,22 +224,17 @@ namespace TacticalDirector.CollisionSystem
                     if (_processedPairs.IsSet(lo, hi)) continue;
                     _processedPairs.Set(lo, hi);
 
-                    if (++pairs > SpatialHashConstants.MaxCollisionPairs)
+                    bool collided = j == SpatialHashConstants.BALL_ENTITY_ID
+                        ? ProcessAgentBall(agentTeamIds, agentIsGoalkeeper, i, ref ball, matchTime)
+                        : ProcessAgentAgent(agentTeamIds, i, j, matchTime);
+
+                    if (collided && ++confirmed >= SpatialHashConstants.MaxCollisionPairs)
                     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                        Debug.LogWarning($"[CollisionSystem] MaxCollisionPairs ({SpatialHashConstants.MaxCollisionPairs}) exceeded");
+                        Debug.LogWarning($"[CollisionSystem] MaxCollisionPairs ({SpatialHashConstants.MaxCollisionPairs}) reached; remaining pairs skipped this frame");
 #endif
-                        pairLimitExceeded = true;
+                        pairLimitReached = true;
                         break;
-                    }
-
-                    if (j == SpatialHashConstants.BALL_ENTITY_ID)
-                    {
-                        ProcessAgentBall(agentTeamIds, agentIsGoalkeeper, i, ref ball, matchTime);
-                    }
-                    else
-                    {
-                        ProcessAgentAgent(agentTeamIds, i, j, matchTime);
                     }
                 }
             }
@@ -264,7 +277,11 @@ namespace TacticalDirector.CollisionSystem
             }
         }
 
-        private void ProcessAgentAgent(
+        /// <returns>True when a collision was confirmed and processed (counts toward the
+        /// MaxCollisionPairs valve); false when the narrow phase rejected the pair or both
+        /// agents are grounded (no response, no event — a chronically overlapped grounded
+        /// pair must not emit 60 zero-force events per second against the event budget).</returns>
+        private bool ProcessAgentAgent(
             int[] teamIds,
             int id1,
             int id2,
@@ -275,7 +292,12 @@ namespace TacticalDirector.CollisionSystem
 
             if (!CollisionDetection.CheckAgentAgentCollision(in snap1, in snap2, out CollisionManifold manifold))
             {
-                return;
+                return false;
+            }
+
+            if (snap1.IsGrounded && snap2.IsGrounded)
+            {
+                return false;
             }
 
             bool sameTeam = teamIds[id1] == teamIds[id2];
@@ -327,12 +349,17 @@ namespace TacticalDirector.CollisionSystem
             var foulSnapInstigator = instigatorIdx == 0 ? snap1 : snap2;
             var foulSnapVictim     = instigatorIdx == 0 ? snap2 : snap1;
 
+            // manifold.Normal points snap1 → snap2; ForceDirection and Classify are both
+            // documented instigator → victim, so flip when the instigator is snap2
+            // (ERR-003-002 — the unflipped form sign-inverted both surfaces for half the pairs).
+            Vector2 instigatorToVictim = instigatorIdx == 0 ? manifold.Normal : -manifold.Normal;
+
             var foulData = new ContactForceData
             {
                 ForceMagnitude = response.ImpactForce,
-                ForceDirection = new Vector3(manifold.Normal.x, manifold.Normal.y, 0f),
+                ForceDirection = new Vector3(instigatorToVictim.x, instigatorToVictim.y, 0f),
                 Type = ContactTypeClassifier.Classify(
-                    in foulSnapInstigator, in foulSnapVictim, manifold.Normal),
+                    in foulSnapInstigator, in foulSnapVictim, instigatorToVictim),
                 InstigatorAgentID = instigatorId,
                 VictimAgentID = victimId,
                 VictimHasBall = false,
@@ -342,9 +369,12 @@ namespace TacticalDirector.CollisionSystem
             RecordEvent(matchTime, CollisionType.AGENT_AGENT, id1, id2,
                 new Vector3(manifold.ContactPoint.x, manifold.ContactPoint.y, 0f),
                 response.ImpactForce, foulData);
+
+            return true;
         }
 
-        private void ProcessAgentBall(
+        /// <returns>True when agent-ball contact was confirmed and routed to Ball Physics.</returns>
+        private bool ProcessAgentBall(
             int[] teamIds,
             bool[] isGoalkeeper,
             int agentId,
@@ -355,7 +385,7 @@ namespace TacticalDirector.CollisionSystem
 
             if (!CollisionDetection.CheckAgentBallCollision(in snap, in ball, out Vector3 contactPoint))
             {
-                return;
+                return false;
             }
 
             // BodyPart hardcoded to Torso at Stage 0 — body-part classification is deferred until
@@ -375,6 +405,8 @@ namespace TacticalDirector.CollisionSystem
 
             RecordEvent(matchTime, CollisionType.AGENT_BALL, agentId,
                 SpatialHashConstants.BALL_ENTITY_ID, contactPoint, 0f, default);
+
+            return true;
         }
 
         private void RecordEvent(
@@ -385,7 +417,15 @@ namespace TacticalDirector.CollisionSystem
             float impactForce,
             ContactForceData foulData)
         {
-            if (_eventCount >= SpatialHashConstants.MaxCollisionPairs) return;
+            // Defensive only — the confirmed-collision valve in UpdateCollisions caps
+            // processing at MaxCollisionPairs, so the buffer cannot overflow via that path.
+            if (_eventCount >= SpatialHashConstants.MaxCollisionPairs)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning("[CollisionSystem] Event buffer full; collision event dropped");
+#endif
+                return;
+            }
 
             // Sort so Entity1ID <= Entity2ID (BALL_ENTITY_ID = -1 sorts first); CollisionEvent
             // XML doc binds consumers to this ordering invariant.
@@ -404,9 +444,9 @@ namespace TacticalDirector.CollisionSystem
             };
         }
 
-        private static bool IsInvalidPosition(Vector3 p)
+        private static bool IsInvalidVector(Vector3 v)
         {
-            return !float.IsFinite(p.x) || !float.IsFinite(p.y) || !float.IsFinite(p.z);
+            return !float.IsFinite(v.x) || !float.IsFinite(v.y) || !float.IsFinite(v.z);
         }
     }
 }
@@ -437,4 +477,13 @@ namespace TacticalDirector.CollisionSystem
 // | 1.5     | 2026-06-05 | —      | AR-3 follow-through. M-1: OnCollisionEvent call site adopts `in` modifier; matches      |
 // |         |            |        | the updated ICollisionEventConsumer signature (zero-copy publish).                      |
 // |         |            |        | L-2: ProcessAgentAgent no longer writes manifold.Entity1ID/Entity2ID (fields removed).  |
+// | 1.6     | 2026-06-10 | —      | AR-7 fix pass. M-1 (ERR-003-002): ForceDirection + Classify normal flipped to           |
+// |         |            |        | instigator→victim when instigatorIdx == 1 (was always manifold.Normal = snap1→snap2).   |
+// |         |            |        | M-3 (ERR-003-004): MaxCollisionPairs valve counts narrow-phase CONFIRMED collisions     |
+// |         |            |        | (ProcessAgentAgent/ProcessAgentBall return bool), not broad-phase candidates — crowded  |
+// |         |            |        | set pieces no longer silently drop response for half the roster.                        |
+// |         |            |        | L-1: snapshot pass sanitises non-finite velocity to zero with dev-build warning (NaN    |
+// |         |            |        | previously published into CollisionEvent.ImpactForce). L-2: both-grounded overlaps no   |
+// |         |            |        | longer record zero-force events every frame; RecordEvent buffer-full drop gains a       |
+// |         |            |        | dev-build warning. IsInvalidPosition renamed IsInvalidVector (now also gates velocity). |
 #endregion

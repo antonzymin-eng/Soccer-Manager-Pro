@@ -1,6 +1,6 @@
 // File:     src/collision-system/SpatialHashGrid.cs
 // Created:  2026-05-25
-// Modified: 2026-06-05  [v1.3]
+// Modified: 2026-06-10  [v1.4]
 // Author:   —
 // Spec:     Collision System #3 §3.1.2, FR-01, Code Standards #20
 // Purpose:  Uniform grid spatial hash — O(N) insert, O(1) avg query. Broad phase only.
@@ -164,13 +164,15 @@ namespace TacticalDirector.CollisionSystem
 
         private static int CellX(float worldX)
         {
-            return Mathf.Clamp((int)(worldX / SpatialHashConstants.CellSize),
+            // FloorToInt, not cast-truncation: (int) truncates toward zero, which made cell 0
+            // double-width for slightly-negative (off-pitch) coordinates.
+            return Mathf.Clamp(Mathf.FloorToInt(worldX / SpatialHashConstants.CellSize),
                 0, SpatialHashConstants.GridWidth - 1);
         }
 
         private static int CellY(float worldY)
         {
-            return Mathf.Clamp((int)(worldY / SpatialHashConstants.CellSize),
+            return Mathf.Clamp(Mathf.FloorToInt(worldY / SpatialHashConstants.CellSize),
                 0, SpatialHashConstants.GridHeight - 1);
         }
     }
@@ -186,4 +188,6 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | radius silently degraded to center-cell-only insert.                                     |
 // | 1.3     | 2026-06-05 | —      | AR-6 L-3. Query XML doc explicitly forbids mutating the returned buffer (was implicit    |
 // |         |            |        | from "copy if needed beyond next query").                                                |
+// | 1.4     | 2026-06-10 | —      | AR-7 L-3. CellX/CellY cast-truncation → Mathf.FloorToInt — (int) truncates toward zero, |
+// |         |            |        | making cell 0 cover [-1, 1) for slightly-negative off-pitch coordinates.                 |
 #endregion
