@@ -2,7 +2,8 @@
     "name": "TacticalDirector.AgentMovement.Tests",
     "rootNamespace": "TacticalDirector.AgentMovement.Tests",
     "references": [
-        "TacticalDirector.AgentMovement"
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.TestingStrategy"
     ],
     "includePlatforms": [
         "Editor"

@@ -1,9 +1,12 @@
 {
-    "name": "TacticalDirector.BallPhysics.Tests",
-    "rootNamespace": "TacticalDirector.BallPhysics",
+    "name": "TacticalDirector.TestingStrategy.Tests",
+    "rootNamespace": "TacticalDirector.TestingStrategy.Tests",
     "references": [
+        "TacticalDirector.TestingStrategy",
+        "TacticalDirector.DeterministicSim",
         "TacticalDirector.BallPhysics",
-        "TacticalDirector.TestingStrategy"
+        "TacticalDirector.PassMechanics",
+        "TacticalDirector.EventSystem"
     ],
     "includePlatforms": [
         "Editor"
