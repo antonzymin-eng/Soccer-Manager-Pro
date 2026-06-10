@@ -205,6 +205,14 @@ First whole-seconds closed-loop coverage: every pre-AR-12 test exercised a pure
 function or injected mid-flight state, which is exactly why H-1/H-2/H-3 survived
 eleven AR rounds.
 
+> **Harness (since 2026-06-10).** T-AM-110..115 execute through the Spec #19
+> `ScenarioRunner` (§3.3.3) as its first per-spec closed-loop scenario corpus —
+> Simulation layer per #19 §3.1.1. Scenario bodies + Appendix A.1 manifests:
+> `src/agent-movement/Tests/AgentMovementScenarios.cs`; executable `sim_<scenario>`
+> tests (#19 §3.1.4): `src/agent-movement/Tests/AgentMovementScenarioTests.cs`.
+> Assertions are unchanged in substance, re-expressed as expected-outcome-envelope
+> predicates (FR-TS-030). Requirement IDs below are unchanged.
+
 | ID | AR anchor | Scenario | Regression hazard |
 |---|---|---|---|
 | T-AM-110 | AR-12 H-1 | `CreateAtPosition` + `MoveTo`, 3 s → JOGGING, speed > JogEnter, position advanced | **PRIMARY H-1 lock.** Pre-fix the IDLE branch only decayed speed while `EvaluateFromIdle` required speed > IdleExit — every agent at rest was deadlocked at speed 0 forever. |
@@ -267,3 +275,4 @@ records the reason and the issue that opens coverage:
 | 0.1     | 2026-06-04 | —      | Initial regression-anchored roster (T-AM-001..018, 030..033, 040..043). Locks AR-3 R3-M-1, AR-4 M-2, AR-4 M-5, AR-5 M-1, AR-5 M-2, AR-6 M-1, AR-6 M-2, AR-7 M-1, AR-7 M-2, AR-8 L-2, AR-9 M-1. |
 | 0.2     | 2026-06-04 | —      | Pure-function coverage expansion. New IDs T-AM-019..023 (ShouldStumble), T-AM-034..039 (AgentSafetySystem unit), T-AM-044..047 (OscillationGuard edge cases), T-AM-050..052 (PerformanceContext), T-AM-070..083 (AgentLocomotion), T-AM-084..099 (AgentDirectionalMovement), T-AM-100..107 (AgentTurning). Non-coverage section rewritten — locomotion / turning / directional dropped from the carve-out (now covered); EvaluateFromX private-branch carve-out, fatigue table, UpdateAllAgents asserts, and the RotateVelocityToward both-degenerate `Debug.Assert(false)` branch remain explicitly non-covered. |
 | 0.3     | 2026-06-09 | —      | AR-12/AR-13 fix-pass coverage. New IDs T-AM-108..109 (ApplyDeceleration MinDecelerationFloor unit + bounded-termination) and T-AM-110..115 (closed-loop pipeline: launch-from-rest H-1, jog band-respect H-2, bounded stop H-3, WalkTo walk-band stability, AR-13 M-1 exhausted-agent command degradation, AR-13 M-2 HOLD-at-own-position rest). T-AM-079 re-derived (v=4→v=6) for the deceleration floor. §4 EvaluateFromX carve-out narrowed to SPRINTING/STUMBLING pipeline transitions. |
+| 0.4     | 2026-06-10 | —      | T-AM-110..115 migrated onto the Spec #19 `ScenarioRunner` (Stage 0 closed-loop scenario harness pulled forward from the Stage 0+1 schedule after the Ball Physics AR-7 / Agent Movement AR-12 / AR-13 pattern — three specs where H/M-class closed-loop defects were encoded by pure-function suites). The fixture `AgentMovementSystemClosedLoopTests` was removed from `AgentMovementTests.cs` (v2.3); bodies + manifests now live in `AgentMovementScenarios.cs`, executable `sim_<scenario>` tests in `AgentMovementScenarioTests.cs`. IDs retained; assertions unchanged in substance (envelope predicates per #19 FR-TS-030). §3.12 harness note added. |
