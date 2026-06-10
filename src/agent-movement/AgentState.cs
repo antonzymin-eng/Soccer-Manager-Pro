@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentState.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03
+// Modified: 2026-06-09 (AR-12 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.1, Code Standards #20
 // Purpose:  Value-type snapshot of all agent kinematic and energy state.
@@ -35,7 +35,11 @@ namespace TacticalDirector.AgentMovement
         /// <summary>Current locomotion state. Agent Movement #2 §3.1.2.</summary>
         public AgentMovementState CurrentState;
 
-        /// <summary>State from the previous frame.</summary>
+        /// <summary>
+        /// Last distinct state before the most recent applied transition. Written only when a
+        /// transition is applied (Step 3) — NOT refreshed every frame, so during a long dwell
+        /// this holds the state the agent came from, not literally last frame's state.
+        /// </summary>
         public AgentMovementState PreviousState;
 
         /// <summary>Seconds spent continuously in CurrentState.</summary>
@@ -125,4 +129,6 @@ namespace TacticalDirector.AgentMovement
 // | 1.4     | 2026-06-03 | —      | AR-4 fix: M-5 LastValidFacing field added; CreateAtPosition seeds it from the         |
 // |         |            |        | normalised facing argument. Consumed by AgentSafetySystem.Validate on recovery.      |
 // |         |            |        | H-4/L-1 docs on LeanAngle / CurrentTurnRate updated for signed/achieved semantics.    |
+// | 1.5     | 2026-06-09 | —      | AR-12 fix: L-2 PreviousState doc corrected — field holds the last DISTINCT state      |
+// |         |            |        | (written only on applied transitions), not literally last frame's state.              |
 #endregion

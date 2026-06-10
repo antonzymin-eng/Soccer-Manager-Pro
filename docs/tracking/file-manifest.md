@@ -64,8 +64,10 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/agent-movement/AgentTurning.cs` | Turn rate / lean angle / stumble probability |
 | `src/agent-movement/AgentDirectionalMovement.cs` | Directional multipliers / facing update |
 | `src/agent-movement/AgentSafetySystem.cs` | NaN detection / speed clamp / pitch boundary enforcement |
-
-| `src/agent-movement/Tests/AgentMovementTests.cs` | Unit tests for agent movement system (added May 27, 2026 in AR-2/AR-3 pass) |
+| `src/agent-movement/agent-movement.asmdef` | Assembly definition (no references; autoReferenced true) |
+| `src/agent-movement/AssemblyInfo.cs` | `[InternalsVisibleTo("TacticalDirector.AgentMovement.Tests")]` (added June 4, 2026 for T-AM-030..032 seam) |
+| `src/agent-movement/Tests/AgentMovementTests.cs` | Regression-anchored integration roster T-AM-001..018 / 030..033 / 040..043 + closed-loop locomotion fixture T-AM-110..115 (AR-12/AR-13 fix pass, June 9, 2026) |
+| `src/agent-movement/Tests/AgentMovementUnitTests.cs` | Pure-function unit coverage T-AM-007..009 / 019..023 / 034..039 / 044..047 / 050..052 / 070..109 (T-AM-108..109 added in AR-12 fix pass, June 9, 2026) |
 | `src/agent-movement/Tests/agent-movement-tests.asmdef` | Test assembly definition (EditMode; references agent-movement.asmdef) |
 
 ### Spec #3 — Collision System (`src/collision-system/`)

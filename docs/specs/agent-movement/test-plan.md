@@ -49,7 +49,9 @@ next to its sibling assertions rather than at the end of the file.
 | Locomotion formula tests | T-AM-070..083 | `AgentLocomotion` (`CalculateBaseTopSpeed` / `CalculateBaseAccelK` / `ApplyAcceleration` / `ApplyDeceleration` / `CalculateStoppingDistance` / `CalculateAerobicModifier`) |
 | Directional formula tests | T-AM-084..099 | `AgentDirectionalMovement` (`LateralMultiplier` / `BackwardMultiplier` / `CalculateDirectionalMultiplier` / `ApplyDirectionalToAccelK` / `MovementAngleDeg` / `RotateFacingToward`) |
 | Turning formula tests | T-AM-100..107 | `AgentTurning` (`CalculateMaxTurnRate` / `MinimumTurnRadius` / `CalculateLeanAngle`) |
-| Future (locomotion integration, fatigue, etc.) | T-AM-108..149 | reserved |
+| Deceleration-floor unit tests | T-AM-108..109 | `AgentLocomotion.ApplyDeceleration` (AR-12 H-3) |
+| Closed-loop locomotion integration | T-AM-110..115 | `AgentMovementSystem.Update` full pipeline (AR-12 H-1/H-2/H-3, AR-13 M-1/M-2) |
+| Future (fatigue, etc.) | T-AM-116..149 | reserved |
 
 ---
 
@@ -190,6 +192,28 @@ hazard. Detailed assertion code lives in the test source — this table is the i
 | T-AM-106 | — | `CalculateLeanAngle(any speed, signedTurnRate = 0)` → 0 | Identity. |
 | T-AM-107 | — | `CalculateLeanAngle(extreme centripetal)` → clamped at ±`MAX_LEAN_ANGLE` (sign preserved) | Lean clamp + sign-preservation contract. |
 
+### 3.11 Deceleration-floor unit tests — `AgentLocomotion.ApplyDeceleration` (AR-12 H-3)
+
+| ID | AR anchor | Scenario | Regression hazard |
+|---|---|---|---|
+| T-AM-108 | AR-12 H-3 | `ApplyDeceleration(v=0.4, d=4)` → decrement uses `MinDecelerationFloor` (raw v²/2d = 0.02 m/s² is below the floor) | Without the floor, low-speed braking is hyperbolic (Zeno) and never terminates. |
+| T-AM-109 | AR-12 H-3 | Iterated stop from 6 m/s with d=4 crosses `IdleEnter` within 3 simulated seconds | Pre-fix this took ~78 s; bounds the whole braking profile, not one frame. |
+
+### 3.12 Closed-loop locomotion integration — `AgentMovementSystem.Update` (AR-12)
+
+First whole-seconds closed-loop coverage: every pre-AR-12 test exercised a pure
+function or injected mid-flight state, which is exactly why H-1/H-2/H-3 survived
+eleven AR rounds.
+
+| ID | AR anchor | Scenario | Regression hazard |
+|---|---|---|---|
+| T-AM-110 | AR-12 H-1 | `CreateAtPosition` + `MoveTo`, 3 s → JOGGING, speed > JogEnter, position advanced | **PRIMARY H-1 lock.** Pre-fix the IDLE branch only decayed speed while `EvaluateFromIdle` required speed > IdleExit — every agent at rest was deadlocked at speed 0 forever. |
+| T-AM-111 | AR-12 H-2 | `MoveTo` (jog intent), 8 s → never SPRINTING, never DECELERATING, speed ≤ SprintEnter | **PRIMARY H-2 lock.** Pre-fix topSpeed ignored commandSpeed: jog commands auto-promoted to SPRINTING (reservoir drain) and flap-cycled via DECELERATING. |
+| T-AM-112 | AR-12 H-3 | JOGGING at 5.5 m/s + `Stop`, 3 s → IDLE, total travel < 8 m | **PRIMARY H-3 lock (pipeline level).** Pre-fix Zeno braking: ~78 s and ~32 m before IdleEnter. |
+| T-AM-113 | AR-12 H-2 | `WalkTo` from rest, 5 s → settles WALKING at the JogEnter ceiling; never escalates above the walking band | Locks the new `WalkTo` factory + walk-band stability (pre-fix WALKING→JOGGING→DECELERATING flap). |
+| T-AM-114 | AR-13 M-1 | `AerobicPool=0.05` + `MoveTo`, 5 s → settles WALKING; never JOGGING/SPRINTING/DECELERATING | Exhausted-agent command degradation — without the commandSpeed clamp the aerobic gate flaps WALKING→JOGGING→DECELERATING at ~3 Hz until the guard locks. |
+| T-AM-115 | AR-13 M-2 | `StrafeWhileWatching(ownPosition, ball)` (DT HOLD shape) from rest, 2 s → stays IDLE at speed 0, position unchanged | Without the movement-intent offset gate, the H-1 launch path feeds newSpeed > 0 into Step 8 with a degenerate target, tripping the both-degenerate assert every frame. |
+
 ---
 
 ## 4. NON-COVERAGE (NAMED)
@@ -205,10 +229,11 @@ records the reason and the issue that opens coverage:
   placeholder GT and a regression-anchored test would just re-codify the
   placeholders. Coverage opens with the first dual-energy spec edit.
 - **`AgentStateMachine.EvaluateFromX` private branches.** Each branch is reachable
-  only through `EvaluateState`; integration coverage (T-AM-010..018) exercises the
-  GROUNDED branch and a planned T-AM-108..149 expansion would exercise the IDLE /
-  WALKING / JOGGING / SPRINTING / DECELERATING / STUMBLING transitions through
-  `Update`. Carved out here because each scenario needs full pipeline plumbing.
+  only through `EvaluateState`; integration coverage exercises the GROUNDED branch
+  (T-AM-010..018) and, since AR-12, the IDLE / WALKING / JOGGING / DECELERATING
+  launch-and-stop transitions (T-AM-110..113). SPRINTING entry/exit and STUMBLING
+  remain uncovered at pipeline level — coverage opens with a future expansion in
+  the reserved T-AM-114..149 block.
 - **`RotateVelocityToward` both-degenerate fallback.** The branch is `Debug.Assert(false, …)`
   by design — testing it would require `LogAssert.Expect` and would lock in a
   contract that explicitly says "unreachable in normal flow". Out of scope.
@@ -241,3 +266,4 @@ records the reason and the issue that opens coverage:
 |---------|------------|--------|------------------------------------------------------------------------------------------------------|
 | 0.1     | 2026-06-04 | —      | Initial regression-anchored roster (T-AM-001..018, 030..033, 040..043). Locks AR-3 R3-M-1, AR-4 M-2, AR-4 M-5, AR-5 M-1, AR-5 M-2, AR-6 M-1, AR-6 M-2, AR-7 M-1, AR-7 M-2, AR-8 L-2, AR-9 M-1. |
 | 0.2     | 2026-06-04 | —      | Pure-function coverage expansion. New IDs T-AM-019..023 (ShouldStumble), T-AM-034..039 (AgentSafetySystem unit), T-AM-044..047 (OscillationGuard edge cases), T-AM-050..052 (PerformanceContext), T-AM-070..083 (AgentLocomotion), T-AM-084..099 (AgentDirectionalMovement), T-AM-100..107 (AgentTurning). Non-coverage section rewritten — locomotion / turning / directional dropped from the carve-out (now covered); EvaluateFromX private-branch carve-out, fatigue table, UpdateAllAgents asserts, and the RotateVelocityToward both-degenerate `Debug.Assert(false)` branch remain explicitly non-covered. |
+| 0.3     | 2026-06-09 | —      | AR-12/AR-13 fix-pass coverage. New IDs T-AM-108..109 (ApplyDeceleration MinDecelerationFloor unit + bounded-termination) and T-AM-110..115 (closed-loop pipeline: launch-from-rest H-1, jog band-respect H-2, bounded stop H-3, WalkTo walk-band stability, AR-13 M-1 exhausted-agent command degradation, AR-13 M-2 HOLD-at-own-position rest). T-AM-079 re-derived (v=4→v=6) for the deceleration floor. §4 EvaluateFromX carve-out narrowed to SPRINTING/STUMBLING pipeline transitions. |

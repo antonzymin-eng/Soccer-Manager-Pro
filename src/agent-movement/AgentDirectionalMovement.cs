@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentDirectionalMovement.cs
 // Created:  2026-05-22
-// Modified: 2026-06-03 (AR-5 fix pass)
+// Modified: 2026-06-09 (AR-12 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.3, Code Standards #20
 // Purpose:  Directional speed multipliers, facing direction updates, and velocity-direction rotation.
@@ -153,6 +153,22 @@ namespace TacticalDirector.AgentMovement
         public static Vector2 RotateVelocityToward(
             Vector2 currentVelocity, Vector2 targetDirection, float newSpeed, float maxTurnDeg)
         {
+            return RotateVelocityToward(currentVelocity, targetDirection, newSpeed, maxTurnDeg, out _);
+        }
+
+        /// <summary>
+        /// Overload of <see cref="RotateVelocityToward(Vector2, Vector2, float, float)"/> that
+        /// reports the signed rotation actually applied to the velocity DIRECTION this call
+        /// (degrees). Caller uses value/dt as the path-curvature turn rate for lean-angle
+        /// computation (AR-12 M-1). The jump-start-from-rest and maintain-momentum paths
+        /// report 0 — no continuous rotation occurred.
+        /// </summary>
+        public static Vector2 RotateVelocityToward(
+            Vector2 currentVelocity, Vector2 targetDirection, float newSpeed, float maxTurnDeg,
+            out float signedAngleApplied)
+        {
+            signedAngleApplied = 0.0f;
+
             if (newSpeed <= MovementThresholds.MIN_VELOCITY_MAGNITUDE)
             {
                 return Vector2.zero;
@@ -187,6 +203,7 @@ namespace TacticalDirector.AgentMovement
             Vector2 targetDir = targetDirection.normalized;
             float signedAngle = Vector2.SignedAngle(currentDir, targetDir);
             float clampedAngle = Mathf.Clamp(signedAngle, -maxTurnDeg, maxTurnDeg);
+            signedAngleApplied = clampedAngle;
 
             float rad = clampedAngle * Mathf.Deg2Rad;
             float cos = Mathf.Cos(rad);
@@ -219,4 +236,8 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | Debug.Assert instead of Vector2.up — the +Y axis snap was arbitrary and not derivable from   |
 // |         |            |        | any input. The branch is unreachable in normal flow (Step 4-5 produces ~0 newSpeed when both  |
 // |         |            |        | directions are degenerate); assert traps the contract violation in development builds.        |
+// | 1.7     | 2026-06-09 | —      | AR-12 fix: M-1 RotateVelocityToward gains an `out float signedAngleApplied` overload          |
+// |         |            |        | (4-arg form delegates with discard). Caller (System Step 8) consumes the velocity-direction   |
+// |         |            |        | rotation for lean-angle path curvature instead of the facing rotation. Jump-start and        |
+// |         |            |        | maintain-momentum paths report 0.                                                              |
 #endregion
