@@ -1,9 +1,9 @@
 {
-    "name": "TacticalDirector.AgentMovement.Tests",
-    "rootNamespace": "TacticalDirector.AgentMovement.Tests",
+    "name": "TacticalDirector.TestingStrategy.Tests",
+    "rootNamespace": "TacticalDirector.TestingStrategy.Tests",
     "references": [
-        "TacticalDirector.AgentMovement",
-        "TacticalDirector.TestingStrategy"
+        "TacticalDirector.TestingStrategy",
+        "TacticalDirector.DeterministicSim"
     ],
     "includePlatforms": [
         "Editor"

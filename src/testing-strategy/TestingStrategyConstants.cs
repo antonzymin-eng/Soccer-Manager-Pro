@@ -1,6 +1,6 @@
 // File:     src/testing-strategy/TestingStrategyConstants.cs
 // Created:  2026-06-02
-// Modified: 2026-06-02
+// Modified: 2026-06-10
 // Author:   —
 // Spec:     Testing Strategy & Framework #19 §3.10, Code Standards #20
 // Purpose:  Constant catalogue for Spec #19 governance constants (pyramid bounds,
@@ -23,6 +23,14 @@ namespace TacticalDirector.TestingStrategy
         /// Not designer-tunable. §3.1.1 / §3.10 / FR-TS-006.
         /// </summary>
         public const int MATCH_LENGTH_MINUTES = 90;
+
+        /// <summary>
+        /// [FIXED] Scenario-manifest schema version accepted by <see cref="ScenarioRunner"/>
+        /// (§3.3.2 format_version / §3.3.4 / FR-TS-070). A schema-protocol version, not a
+        /// tunable: bumps are paired with a migration script per §3.8.3 and the validator
+        /// rejects unknown versions — no silent migration.
+        /// </summary>
+        public const int SCENARIO_MANIFEST_FORMAT_VERSION = 1;
         #endregion
 
         #region GT
@@ -133,4 +141,6 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | GT rows skipped by AR-1 L-5 — UnitWallTimeBoundMs, PreCommitWall- |
 // |         |            |        | TimeBoundSeconds, and the §3.7 quarantine + eviction triple       |
 // |         |            |        | (which §3.7 preamble explicitly tags Stage-gated per KD-5).        |
+// | 1.3     | 2026-06-10 | —      | SCENARIO_MANIFEST_FORMAT_VERSION = 1 added for the Stage 0        |
+// |         |            |        | ScenarioRunner (§3.3.2 / FR-TS-070 unknown-version rejection).     |
 #endregion
