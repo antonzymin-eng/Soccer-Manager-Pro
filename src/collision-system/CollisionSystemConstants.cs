@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionSystemConstants.cs
 // Created:  2026-05-25
-// Modified: 2026-06-10  [v1.5]
+// Modified: 2026-06-10  [v1.6]
 // Author:   —
 // Spec:     Collision System #3 §3.1.1, §3.3.1, §4.3.1, Code Standards #20
 // Purpose:  All constants for the collision system. No literals in formula code.
@@ -96,7 +96,12 @@ namespace TacticalDirector.CollisionSystem
         /// <summary>[GT] Max collision pairs processed per frame. §4.3.1 Safety.</summary>
         public static readonly int MaxCollisionPairs = 50; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Max loop iterations; prevents infinite loops from corrupt state. §4.3.1 Safety.</summary>
+        /// <summary>
+        /// [GT] Max loop iterations; prevents infinite loops from corrupt state. §4.3.1 Safety.
+        /// Stage 0: declared per the §4.3.1 catalogue but NOT consumed — the current pipeline has
+        /// no iterative solver (single-pass response; pair dedupe bounds the broad phase). Wire to
+        /// the first iterative loop that lands, or retire with a §4.3.1 spec patch at Stage 1.
+        /// </summary>
         public static readonly int MaxIterations = 1000; // TODO: replace with config loader (Stage 1)
 
         #endregion
@@ -288,4 +293,6 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | conversion in CollisionResponse); ContactDurationS [GT] (0.15 s) added — force is now   |
 // |         |            |        | F = j / ContactDurationS so the literature-based fall/stumble thresholds (500–1500 N)   |
 // |         |            |        | line up with realistic closing speeds instead of saturating below walking pace.         |
+// | 1.6     | 2026-06-10 | —      | AR-10 L-1. MaxIterations doc-noted as declared-but-unconsumed at Stage 0 (no iterative  |
+// |         |            |        | solver exists; pair dedupe bounds the broad phase) — wire or retire at Stage 1.         |
 #endregion
