@@ -86,8 +86,28 @@ namespace TacticalDirector.TestingStrategy
             _predicateCount++;
             if (!passed)
             {
-                _failureLines.Add("failed predicate=" + predicateId + " " + detail);
+                _failureLines.Add(
+                    "failed predicate=" + SanitizeValue(predicateId) + " " + SanitizeValue(detail));
             }
+        }
+
+        /// <summary>
+        /// Flattens CR/LF out of a diagnostics value. The §3.3.3 diagnostics contract
+        /// is line-oriented key=value; an unescaped newline in a predicate detail or
+        /// exception message would corrupt the encoding for every downstream parser
+        /// (AR-1 M-3).
+        /// </summary>
+        internal static string SanitizeValue(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+            if (value.IndexOf('\n') < 0 && value.IndexOf('\r') < 0)
+            {
+                return value;
+            }
+            return value.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
         }
 
         /// <summary>Appends one diagnostics line per failed predicate, in recording order.</summary>
@@ -102,6 +122,8 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-10 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-10 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-10 | —      | AR-1 M-3: SanitizeValue flattens CR/LF in predicate IDs + details  |
+// |         |            |        | before they enter the line-oriented key=value diagnostics.         |
 #endregion

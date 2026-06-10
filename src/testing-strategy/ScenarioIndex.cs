@@ -17,42 +17,13 @@ using System.Collections.Generic;
 namespace TacticalDirector.TestingStrategy
 {
     /// <summary>
-    /// One index row: logical manifest path + manifest + executable scenario. The
-    /// manifest travels here rather than on <see cref="IScenario"/> so the §4.4.1
-    /// interface keeps its single-method contract.
-    /// Testing Strategy &amp; Framework #19 §3.3.6 / FR-TS-028.
-    /// </summary>
-    public sealed class ScenarioIndexEntry
-    {
-        /// <summary>Logical manifest path per §3.3.5 layout, e.g.
-        /// "tests/scenarios/agent-movement/launch-from-rest". Extension-free at Stage 0
-        /// (on-disk encoding pinned at Stage 0+1, D1).</summary>
-        public string ManifestPath { get; }
-
-        /// <summary>Manifest entry per Appendix A.1.</summary>
-        public ScenarioManifest Manifest { get; }
-
-        /// <summary>Executable scenario registered under this entry.</summary>
-        public IScenario Scenario { get; }
-
-        public ScenarioIndexEntry(string manifestPath, ScenarioManifest manifest, IScenario scenario)
-        {
-            if (string.IsNullOrEmpty(manifestPath))
-            {
-                throw new ArgumentException("Manifest path must be non-empty.", nameof(manifestPath));
-            }
-
-            ManifestPath = manifestPath;
-            Manifest     = manifest ?? throw new ArgumentNullException(nameof(manifest));
-            Scenario     = scenario ?? throw new ArgumentNullException(nameof(scenario));
-        }
-    }
-
-    /// <summary>
-    /// Immutable scenario index per §3.3.6 (FR-TS-028). Duplicate manifest paths are
-    /// rejected at construction (A.1: name unique within manifest); lookup is ordinal.
-    /// Immutability keeps <see cref="ScenarioRunner"/> free of mutable global state
-    /// (hermeticity per §3.3.3).
+    /// Immutable scenario index per §3.3.6 (FR-TS-028). Both duplicate manifest paths
+    /// and duplicate scenario names are rejected at construction — A.1 requires the
+    /// scenario <c>name</c> to be unique within the manifest, and the path is the
+    /// lookup key, so each must be unique independently (AR-1 M-4: path uniqueness is
+    /// not a proxy for name uniqueness). Lookup is ordinal. Immutability keeps
+    /// <see cref="ScenarioRunner"/> free of mutable global state (hermeticity per
+    /// §3.3.3).
     /// Testing Strategy &amp; Framework #19 §3.3.6 / FR-TS-028.
     /// </summary>
     public sealed class ScenarioIndex
@@ -70,6 +41,7 @@ namespace TacticalDirector.TestingStrategy
             }
 
             _entries = new Dictionary<string, ScenarioIndexEntry>(entries.Length, StringComparer.Ordinal);
+            var names = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < entries.Length; i++)
             {
                 ScenarioIndexEntry entry = entries[i];
@@ -80,7 +52,13 @@ namespace TacticalDirector.TestingStrategy
                 if (_entries.ContainsKey(entry.ManifestPath))
                 {
                     throw new ArgumentException(
-                        "Duplicate manifest path '" + entry.ManifestPath
+                        "Duplicate manifest path '" + entry.ManifestPath + "' (§3.3.6 lookup key).",
+                        nameof(entries));
+                }
+                if (!names.Add(entry.Manifest.Name))
+                {
+                    throw new ArgumentException(
+                        "Duplicate scenario name '" + entry.Manifest.Name
                             + "' (A.1: name unique within manifest).",
                         nameof(entries));
                 }
@@ -97,6 +75,10 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-10 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-10 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-10 | —      | AR-1: M-4 duplicate scenario names now rejected (A.1 name          |
+// |         |            |        | uniqueness was claimed by the v1.0 doc but only path uniqueness    |
+// |         |            |        | was enforced); L-4 ScenarioIndexEntry extracted to its own file    |
+// |         |            |        | per FILE NAMING precedent.                                         |
 #endregion

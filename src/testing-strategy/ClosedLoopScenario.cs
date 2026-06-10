@@ -34,6 +34,10 @@ namespace TacticalDirector.TestingStrategy
         private readonly ScenarioManifest _manifest;
         private readonly ScenarioBody _body;
 
+        /// <summary>The manifest this scenario executes under. Consumed by
+        /// <see cref="ScenarioIndexEntry"/>'s AR-1 M-1 coherence guard.</summary>
+        internal ScenarioManifest Manifest => _manifest;
+
         public ClosedLoopScenario(ScenarioManifest manifest, ScenarioBody body)
         {
             _manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
@@ -52,13 +56,20 @@ namespace TacticalDirector.TestingStrategy
             var context  = new ScenarioContext(_manifest, seed, rng, envelope);
 
             string exceptionLine = null;
+            string exceptionStackLine = null;
             try
             {
                 _body(context);
             }
             catch (Exception ex)
             {
-                exceptionLine = "exception=" + ex.GetType().Name + " message=" + ex.Message;
+                // AR-1 M-3: message + stack are flattened to single lines so they cannot
+                // corrupt the line-oriented diagnostics; the stack is kept because a
+                // thrown closed-loop body is otherwise nearly undiagnosable.
+                exceptionLine = "exception=" + ex.GetType().Name
+                    + " message=" + ScenarioEnvelope.SanitizeValue(ex.Message);
+                exceptionStackLine = "exception_stack="
+                    + ScenarioEnvelope.SanitizeValue(ex.StackTrace ?? string.Empty);
             }
 
             stopwatch.Stop();
@@ -75,6 +86,7 @@ namespace TacticalDirector.TestingStrategy
             if (exceptionLine != null)
             {
                 diagnostics.Append('\n').Append(exceptionLine);
+                diagnostics.Append('\n').Append(exceptionStackLine);
             }
             if (implicitPass)
             {
@@ -97,6 +109,10 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-10 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-10 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-10 | —      | AR-1: M-1 internal Manifest property exposed for the               |
+// |         |            |        | ScenarioIndexEntry coherence guard; M-3 exception message          |
+// |         |            |        | sanitized + exception_stack diagnostics line added (a thrown body  |
+// |         |            |        | previously dropped the stack trace).                               |
 #endregion

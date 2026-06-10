@@ -20,6 +20,9 @@ namespace TacticalDirector.TestingStrategy
     /// §3.3.3 — no state survives between invocations), drives the real subsystem loop,
     /// and records ≥ 1 envelope predicate (FR-TS-030). Bodies MUST draw randomness only
     /// from <see cref="ScenarioContext.Rng"/> (FR-TS-036; no System.Random).
+    /// Co-located with <see cref="ScenarioContext"/> deliberately: the delegate is the
+    /// signature over its sole parameter type, not an independent surface (AR-1 L-4
+    /// considered and kept; contrast ScenarioIndexEntry, which was split out).
     /// </summary>
     public delegate void ScenarioBody(ScenarioContext context);
 
@@ -60,6 +63,8 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-10 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-10 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-10 | —      | AR-1 L-4: ScenarioBody co-location rationale documented (delegate  |
+// |         |            |        | kept with its sole parameter type). Documentation-only change.     |
 #endregion

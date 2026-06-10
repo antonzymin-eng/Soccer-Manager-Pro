@@ -22,20 +22,24 @@ namespace TacticalDirector.TestingStrategy.Tests
 
         private static ScenarioManifest CreateManifest(
             string name = "contract-probe",
-            int formatVersion = TestingStrategyConstants.SCENARIO_MANIFEST_FORMAT_VERSION)
+            int formatVersion = TestingStrategyConstants.SCENARIO_MANIFEST_FORMAT_VERSION,
+            string[] fixtureRefs = null,
+            int[] owningSpecIds = null)
         {
             return new ScenarioManifest(
                 name,
-                owningSpecIds: new[] { 19 },
+                owningSpecIds: owningSpecIds ?? new[] { 19 },
                 seed: 7UL,
                 tierClassification: TestTier.TierB,
-                fixtureRefs: Array.Empty<string>(),
+                fixtureRefs: fixtureRefs ?? Array.Empty<string>(),
                 formatVersion: formatVersion);
         }
 
-        private static ScenarioRunner CreateRunner(ScenarioManifest manifest, ScenarioBody body)
+        private static ScenarioRunner CreateRunner(
+            ScenarioManifest manifest, ScenarioBody body, string manifestPath = Path)
         {
-            var entry = new ScenarioIndexEntry(Path, manifest, new ClosedLoopScenario(manifest, body));
+            var entry = new ScenarioIndexEntry(
+                manifestPath, manifest, new ClosedLoopScenario(manifest, body));
             return new ScenarioRunner(new ScenarioIndex(new[] { entry }));
         }
 
@@ -95,7 +99,79 @@ namespace TacticalDirector.TestingStrategy.Tests
 
             Assert.Throws<ArgumentException>(
                 () => new ScenarioIndex(new[] { entryA, entryB }),
-                "A.1 requires names unique within the manifest.");
+                "The manifest path is the index lookup key and must be unique.");
+        }
+
+        // AR-1 M-4: path uniqueness is not a proxy for A.1 name uniqueness.
+        [Test]
+        public void Index_DuplicateScenarioNameUnderDistinctPaths_ThrowsArgumentException()
+        {
+            ScenarioManifest manifestA = CreateManifest(owningSpecIds: new[] { 19, 2 });
+            ScenarioManifest manifestB = CreateManifest();
+            var entryA = new ScenarioIndexEntry(
+                "tests/scenarios/cross-spec/contract-probe", manifestA,
+                new ClosedLoopScenario(manifestA, c => c.Envelope.CheckTrue("p", true, "")));
+            var entryB = new ScenarioIndexEntry(
+                Path, manifestB,
+                new ClosedLoopScenario(manifestB, c => c.Envelope.CheckTrue("q", true, "")));
+
+            Assert.Throws<ArgumentException>(
+                () => new ScenarioIndex(new[] { entryA, entryB }),
+                "A.1 requires the scenario name to be unique within the manifest, "
+                    + "independent of the lookup path.");
+        }
+
+        // AR-1 M-1: a ClosedLoopScenario registered under a different manifest instance
+        // than the one it executes would pass load-time validation against a manifest
+        // the run never uses.
+        [Test]
+        public void Entry_ClosedLoopScenarioUnderDifferentManifest_ThrowsArgumentException()
+        {
+            ScenarioManifest registered = CreateManifest();
+            ScenarioManifest executed = CreateManifest(name: "other-probe");
+            var scenario = new ClosedLoopScenario(executed, c => c.Envelope.CheckTrue("p", true, ""));
+
+            Assert.Throws<ArgumentException>(
+                () => new ScenarioIndexEntry(Path, registered, scenario),
+                "Load-time validation must run against the manifest the scenario executes (AR-1 M-1).");
+        }
+
+        // AR-1 M-4: §3.3.5 layout — the index key terminates in the manifest name.
+        [Test]
+        public void Run_ManifestPathNotEndingInScenarioName_ThrowsArgumentException()
+        {
+            ScenarioRunner runner = CreateRunner(
+                CreateManifest(name: "other-name"), c => c.Envelope.CheckTrue("p", true, ""));
+
+            Assert.Throws<ArgumentException>(
+                () => runner.Run(Path, 1UL),
+                "The path a scenario is selected by must agree with the name its "
+                    + "diagnostics report (§3.3.5).");
+        }
+
+        // AR-1 M-4: A.1 — cross-spec scenarios declare ≥ 2 owning specs.
+        [Test]
+        public void Run_CrossSpecPathWithSingleOwningSpec_ThrowsArgumentException()
+        {
+            const string CrossPath = "tests/scenarios/cross-spec/contract-probe";
+            ScenarioRunner runner = CreateRunner(
+                CreateManifest(), c => c.Envelope.CheckTrue("p", true, ""), CrossPath);
+
+            Assert.Throws<ArgumentException>(() => runner.Run(CrossPath, 1UL));
+        }
+
+        // AR-1 M-2: the Stage 0 runner has no fixture loader; silently ignoring
+        // fixture_refs is the §3.3.4-forbidden silent acceptance.
+        [Test]
+        public void Run_NonEmptyFixtureRefs_ThrowsArgumentException()
+        {
+            ScenarioRunner runner = CreateRunner(
+                CreateManifest(fixtureRefs: new[] { "tests/data/fixtures/probe.fixture" }),
+                c => c.Envelope.CheckTrue("p", true, ""));
+
+            Assert.Throws<ArgumentException>(
+                () => runner.Run(Path, 1UL),
+                "Fixture-backed scenarios must be refused until the Stage 0+1 KD-10 loader lands.");
         }
 
         // ── Envelope semantics (FR-TS-030 + failure diagnostics) ──
@@ -141,8 +217,23 @@ namespace TacticalDirector.TestingStrategy.Tests
                 "NaN must fail an in_range predicate, never silently pass (§3.4.4 boundary saturation).");
         }
 
+        // AR-1 M-3: a newline in a predicate detail must not corrupt the line-oriented
+        // key=value diagnostics encoding.
         [Test]
-        public void Run_BodyThrows_FailsWithExceptionDiagnostic()
+        public void Run_FailureDetailContainingNewline_IsFlattenedInDiagnostics()
+        {
+            ScenarioRunner runner = CreateRunner(CreateManifest(), c =>
+                c.Envelope.CheckTrue("newline-detail", false, "line1\nline2"));
+
+            ScenarioResult result = runner.Run(Path, 1UL);
+
+            Assert.AreEqual(ScenarioStatus.Failed, result.Status);
+            StringAssert.Contains("line1 line2", result.Diagnostics);
+            StringAssert.DoesNotContain("line1\nline2", result.Diagnostics);
+        }
+
+        [Test]
+        public void Run_BodyThrows_FailsWithExceptionAndStackDiagnostics()
         {
             ScenarioRunner runner = CreateRunner(CreateManifest(), c =>
             {
@@ -154,6 +245,8 @@ namespace TacticalDirector.TestingStrategy.Tests
 
             Assert.AreEqual(ScenarioStatus.Failed, result.Status);
             StringAssert.Contains("exception=InvalidOperationException", result.Diagnostics);
+            StringAssert.Contains("exception_stack=", result.Diagnostics,
+                "A thrown closed-loop body is nearly undiagnosable without the stack (AR-1 M-3).");
         }
 
         // ── Passing path + result shape (§3.3.3) ──
@@ -223,6 +316,10 @@ namespace TacticalDirector.TestingStrategy.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-10 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-10 | —      | Initial implementation (12 contract tests).                        |
+// | 1.1     | 2026-06-10 | —      | AR-1 fix-pass locks (+6 tests, 18 total): M-1 entry/scenario       |
+// |         |            |        | manifest coherence; M-2 non-empty fixture_refs refusal; M-3        |
+// |         |            |        | newline flattening + exception_stack line; M-4 duplicate-name      |
+// |         |            |        | rejection, path↔name coherence, cross-spec ≥2 owning-spec arity.   |
 #endregion

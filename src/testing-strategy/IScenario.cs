@@ -19,9 +19,12 @@ namespace TacticalDirector.TestingStrategy
     public interface IScenario
     {
         /// <summary>
-        /// Runs the scenario under <paramref name="seed"/> (passed verbatim to
-        /// DeterministicRngService before any subsystem initialisation; KD-7) and
-        /// returns the structured §3.3.3 result. Implementations MUST be hermetic:
+        /// Runs the scenario under <paramref name="seed"/> and returns the structured
+        /// §3.3.3 result. KD-7 is an <b>implementation obligation</b>, not a runner
+        /// guarantee (AR-1 L-5): implementations MUST seed DeterministicRngService
+        /// with the verbatim seed before initialising any subsystem —
+        /// <see cref="ClosedLoopScenario"/> does this; custom implementations accept
+        /// the same obligation by contract. Implementations MUST also be hermetic:
         /// no state survives between invocations (FR-TS-023).
         /// </summary>
         ScenarioResult Run(ulong seed);
@@ -29,6 +32,9 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-10 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-10 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-10 | —      | AR-1 L-5: Run doc clarified — KD-7 seeding is an implementation    |
+// |         |            |        | obligation, not a runner guarantee (the v1.0 wording read as the   |
+// |         |            |        | latter). Documentation-only change.                                |
 #endregion

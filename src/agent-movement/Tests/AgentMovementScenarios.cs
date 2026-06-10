@@ -15,6 +15,7 @@
 //           exercised a pure function or injected mid-flight state.
 
 using System;
+using System.Globalization;
 
 using TacticalDirector.TestingStrategy;
 
@@ -106,10 +107,12 @@ namespace TacticalDirector.AgentMovement.Tests
                 "final-state-jogging", (int)state.CurrentState, (int)AgentMovementState.JOGGING);
             context.Envelope.CheckTrue(
                 "speed-above-jog-enter", state.Speed > MovementThresholds.JogEnter,
-                "speed=" + state.Speed + " jogEnter=" + MovementThresholds.JogEnter);
+                "speed=" + state.Speed.ToString(CultureInfo.InvariantCulture)
+                    + " jogEnter=" + MovementThresholds.JogEnter.ToString(CultureInfo.InvariantCulture));
             context.Envelope.CheckTrue(
                 "travelled-toward-target", state.Position.x > StartPos.x + 5.0f,
-                "x=" + state.Position.x + " startX=" + StartPos.x);
+                "x=" + state.Position.x.ToString(CultureInfo.InvariantCulture)
+                    + " startX=" + StartPos.x.ToString(CultureInfo.InvariantCulture));
         }
 
         // T-AM-111 (PRIMARY AR-12 H-2 lock): a jog command must never promote to SPRINTING —
@@ -155,9 +158,11 @@ namespace TacticalDirector.AgentMovement.Tests
 
             context.Envelope.CheckEquals(
                 "final-state-idle", (int)state.CurrentState, (int)AgentMovementState.IDLE);
+            float stoppingDistance = Vector2.Distance(state.Position, StartPos);
             context.Envelope.CheckTrue(
-                "stopping-distance-bounded", Vector2.Distance(state.Position, StartPos) < 8.0f,
-                "distance=" + Vector2.Distance(state.Position, StartPos) + " bound=8.0 (pre-AR-12 H-3: ~32 m)");
+                "stopping-distance-bounded", stoppingDistance < 8.0f,
+                "distance=" + stoppingDistance.ToString(CultureInfo.InvariantCulture)
+                    + " bound=8.0 (pre-AR-12 H-3: ~32 m)");
         }
 
         // T-AM-113 (AR-12 H-2 walking band): a WalkTo command settles in WALKING at the
@@ -185,7 +190,8 @@ namespace TacticalDirector.AgentMovement.Tests
                 0.0f, MovementThresholds.JogEnter + 0.001f);
             context.Envelope.CheckTrue(
                 "speed-above-idle-exit", state.Speed > MovementThresholds.IdleExit,
-                "the agent must actually be walking, not crawling near the IDLE boundary; speed=" + state.Speed);
+                "the agent must actually be walking, not crawling near the IDLE boundary; speed="
+                    + state.Speed.ToString(CultureInfo.InvariantCulture));
         }
 
         // T-AM-114 (AR-13 M-1): an aerobically exhausted agent given a jog command settles
@@ -233,8 +239,16 @@ namespace TacticalDirector.AgentMovement.Tests
             context.Envelope.CheckEquals(
                 "final-state-idle", (int)state.CurrentState, (int)AgentMovementState.IDLE);
             context.Envelope.CheckInRange("speed-at-rest", state.Speed, -0.0001f, 0.0001f);
-            context.Envelope.CheckTrue("position-unchanged", state.Position == StartPos,
-                "position=" + state.Position + " start=" + StartPos);
+            // AR-1 L-3: exact component equality — the original fixture asserted
+            // Assert.AreEqual(Vector2), which is exact; Vector2.operator== is
+            // approximate (~1e-5) and would silently weaken the rest-at-rest lock.
+            bool positionUnchanged =
+                state.Position.x == StartPos.x && state.Position.y == StartPos.y;
+            context.Envelope.CheckTrue("position-unchanged", positionUnchanged,
+                "position=(" + state.Position.x.ToString(CultureInfo.InvariantCulture)
+                    + ", " + state.Position.y.ToString(CultureInfo.InvariantCulture)
+                    + ") start=(" + StartPos.x.ToString(CultureInfo.InvariantCulture)
+                    + ", " + StartPos.y.ToString(CultureInfo.InvariantCulture) + ")");
         }
     }
 }
@@ -245,4 +259,9 @@ namespace TacticalDirector.AgentMovement.Tests
 // |         |            |        | (AgentMovementTests.cs v2.1/v2.2) onto the #19 ScenarioRunner as   |
 // |         |            |        | its first per-spec closed-loop fixture corpus. Assertions are      |
 // |         |            |        | unchanged in substance, re-expressed as envelope predicates.       |
+// | 1.1     | 2026-06-10 | —      | AR-1: L-2 detail strings switched to InvariantCulture (float       |
+// |         |            |        | ToString is culture-sensitive; harness diagnostics are invariant); |
+// |         |            |        | L-3 T-AM-115 position-unchanged restored to exact component        |
+// |         |            |        | equality (v1.0 used approximate Vector2.operator==, weakening the  |
+// |         |            |        | original Assert.AreEqual exactness).                               |
 #endregion

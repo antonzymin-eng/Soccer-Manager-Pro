@@ -20,6 +20,10 @@ namespace TacticalDirector.TestingStrategy
     /// <para><b>Diagnostics encoding (Stage 0 provisional).</b> Newline-separated
     /// <c>key=value</c> lines (e.g. <c>scenario=launch-from-rest</c>,
     /// <c>predicates_failed=1</c>, one <c>failed ...</c> line per failed predicate).
+    /// Values are CR/LF-sanitized before emission (AR-1 M-3). A <c>Failed</c> status
+    /// with <c>predicates_failed=0</c> carries its cause on a dedicated line:
+    /// <c>exception=...</c> (+ <c>exception_stack=...</c>) for a thrown body, or
+    /// <c>implicit_pass_forbidden=FR-TS-030</c> for a zero-predicate body.
     /// The final machine-readable encoding is pinned at Stage 0+1 alongside the D1
     /// manifest-encoding pin (§7.5); consumers MUST NOT parse beyond line-oriented
     /// <c>key=value</c> until then.</para>
@@ -60,6 +64,9 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-10 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-10 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-10 | —      | AR-1 M-3 doc: diagnostics values are CR/LF-sanitized; Failed with  |
+// |         |            |        | predicates_failed=0 documented as exception / implicit-pass with   |
+// |         |            |        | dedicated cause lines. Documentation-only change.                  |
 #endregion

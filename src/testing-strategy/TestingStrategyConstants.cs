@@ -31,6 +31,14 @@ namespace TacticalDirector.TestingStrategy
         /// rejects unknown versions — no silent migration.
         /// </summary>
         public const int SCENARIO_MANIFEST_FORMAT_VERSION = 1;
+
+        /// <summary>
+        /// [FIXED] §3.3.5 directory-layout prefix for cross-spec scenarios (owned by
+        /// Spec #19 per KD-8). Manifest paths under this prefix MUST declare ≥ 2
+        /// owning specs (A.1); enforced by <see cref="ScenarioRunner"/> at load time.
+        /// A layout constant, not a tunable.
+        /// </summary>
+        public const string SCENARIO_PATH_CROSS_SPEC_PREFIX = "tests/scenarios/cross-spec/";
         #endregion
 
         #region GT
@@ -143,4 +151,6 @@ namespace TacticalDirector.TestingStrategy
 // |         |            |        | (which §3.7 preamble explicitly tags Stage-gated per KD-5).        |
 // | 1.3     | 2026-06-10 | —      | SCENARIO_MANIFEST_FORMAT_VERSION = 1 added for the Stage 0        |
 // |         |            |        | ScenarioRunner (§3.3.2 / FR-TS-070 unknown-version rejection).     |
+// | 1.4     | 2026-06-10 | —      | AR-1 M-4: SCENARIO_PATH_CROSS_SPEC_PREFIX [FIXED] added (§3.3.5   |
+// |         |            |        | layout; backs the cross-spec ≥2 owning-spec arity check).          |
 #endregion

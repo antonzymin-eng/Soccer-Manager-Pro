@@ -13,6 +13,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace TacticalDirector.TestingStrategy
 {
@@ -33,12 +34,14 @@ namespace TacticalDirector.TestingStrategy
     {
         private readonly int[] _owningSpecIds;
         private readonly string[] _fixtureRefs;
+        private readonly ReadOnlyCollection<int> _owningSpecIdsView;
+        private readonly ReadOnlyCollection<string> _fixtureRefsView;
 
         /// <summary>Scenario name; kebab-case, unique within the index (A.1).</summary>
         public string Name { get; }
 
         /// <summary>Owning spec numbers; ≥ 1 entry (per-spec) or ≥ 2 (cross-spec) per A.1.</summary>
-        public IReadOnlyList<int> OwningSpecIds => _owningSpecIds;
+        public IReadOnlyList<int> OwningSpecIds => _owningSpecIdsView;
 
         /// <summary>Canonical recorded seed, verbatim per FR-TS-025. The runner's caller-supplied
         /// seed is authoritative for a given run (enables seed sweeps); this field records the
@@ -49,8 +52,10 @@ namespace TacticalDirector.TestingStrategy
         public TestTier TierClassification { get; }
 
         /// <summary>Fixture paths under tests/data/fixtures/. Stage 0: empty when the initial
-        /// state is constructed in code; populated once #16 §3.2.4.1 fixture files land (KD-10).</summary>
-        public IReadOnlyList<string> FixtureRefs => _fixtureRefs;
+        /// state is constructed in code; populated once #16 §3.2.4.1 fixture files land (KD-10).
+        /// The Stage 0 runner refuses non-empty fixture_refs (no fixture loader exists yet;
+        /// §3.3.4 forbids silent acceptance — AR-1 M-2).</summary>
+        public IReadOnlyList<string> FixtureRefs => _fixtureRefsView;
 
         /// <summary>Manifest schema version, validated by the runner per §3.3.4 / FR-TS-070.</summary>
         public int FormatVersion { get; }
@@ -79,6 +84,12 @@ namespace TacticalDirector.TestingStrategy
 
             _owningSpecIds = (int[])owningSpecIds.Clone();
             _fixtureRefs   = (string[])fixtureRefs.Clone();
+
+            // AR-1 L-1: ReadOnlyCollection wrappers — exposing the cloned arrays as
+            // IReadOnlyList would still let a consumer cast back to the mutable array
+            // (parallels Performance Optimization #18 AR-1 L-3 on IBudgetSource).
+            _owningSpecIdsView = Array.AsReadOnly(_owningSpecIds);
+            _fixtureRefsView   = Array.AsReadOnly(_fixtureRefs);
         }
 
         /// <summary>
@@ -151,6 +162,10 @@ namespace TacticalDirector.TestingStrategy
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-06-10 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-10 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-10 | —      | AR-1 L-1: OwningSpecIds / FixtureRefs now backed by                |
+// |         |            |        | ReadOnlyCollection wrappers (raw arrays were castable + mutable    |
+// |         |            |        | through the IReadOnlyList surface); M-2 FixtureRefs doc notes the  |
+// |         |            |        | Stage 0 refusal of non-empty refs.                                 |
 #endregion
