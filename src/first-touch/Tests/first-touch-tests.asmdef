@@ -5,6 +5,7 @@
         "TacticalDirector.FirstTouch",
         "TacticalDirector.BallPhysics",
         "TacticalDirector.AgentMovement",
+        "TacticalDirector.TestingStrategy",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

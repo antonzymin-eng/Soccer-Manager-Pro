@@ -124,6 +124,9 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/first-touch/first-touch.asmdef` | Assembly definition (references BallPhysics, AgentMovement, CollisionSystem) |
 | `src/first-touch/Tests/first-touch-tests.asmdef` | EditMode test assembly definition |
 | `src/first-touch/Tests/FirstTouchTests.cs` | CQ/TR/PR/OR/PO/EC/BD/VS + invariant suite + IT-001..008 stubs (v1.2 AR-7 re-derivation) |
+| `src/first-touch/AssemblyInfo.cs` | [InternalsVisibleTo("TacticalDirector.FirstTouch.Tests")] for the scenario corpus |
+| `src/first-touch/Tests/FirstTouchScenarios.cs` | Closed-loop scenario corpus on the #19 ScenarioRunner: heavy-touch-runs-on (ERR-004-003 lock) + interception-chain-anchors-at-displaced-ball (ERR-004-004 / §3.4.5 lock) |
+| `src/first-touch/Tests/FirstTouchScenarioTests.cs` | sim_<scenario> Simulation-layer tests running the corpus through ScenarioRunner |
 
 ### Spec #5 — Pass Mechanics (`src/pass-mechanics/`)
 
