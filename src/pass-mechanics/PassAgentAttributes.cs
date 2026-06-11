@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassAgentAttributes.cs
 // Created:  2026-05-26
-// Modified: 2026-05-26
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Pass Mechanics #5 §4.3.1, Code Standards #20
 // Purpose:  PassAgentAttributes struct: Pass Mechanics' snapshot of agent attributes
@@ -37,6 +37,9 @@ namespace TacticalDirector.PassMechanics
         /// <summary>
         /// Cross accuracy attribute [1–20]. Agent Movement §3.5.6.
         /// [TEMPORARY-PROXY-ERR-007] Mirrors Passing until ERR-007 resolved.
+        /// NOTE (AR-9 L-3): declared-but-unconsumed at Stage 0 — no calculator reads it
+        /// (cross accuracy currently flows through Passing in the §3.5 error chain).
+        /// Retained for the ERR-007 attribute split.
         /// </summary>
         public float Crossing;
 
@@ -48,4 +51,6 @@ namespace TacticalDirector.PassMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-05-26 | —      | Extracted from IPassAgentQuery.cs per one-type-per-file rule (H5). |
+// | 1.1     | 2026-06-11 | —      | AR-9 L-3 (doc-only): Crossing noted as declared-but-unconsumed at  |
+// |         |            |        |     Stage 0; retained for the ERR-007 attribute split.             |
 #endregion

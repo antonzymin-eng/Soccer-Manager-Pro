@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassTargetResolver.cs
 // Created:  2026-05-26
-// Modified: 2026-06-08
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.6, Code Standards #20
 // Purpose:  Pure static resolver for aim points, through-ball lead projection,
@@ -47,6 +47,12 @@ namespace TacticalDirector.PassMechanics
         /// Computes the through-ball aim point using linear receiver projection.
         /// Stage 0 simplification — ignores receiver acceleration, ball deceleration,
         /// and non-linear receiver paths (KD-4, §7.1 Stage 1 upgrade point).
+        /// SPEC-DEVIATION NOTE (AR-9 L-5): the kickSpeed argument was computed by §3.2
+        /// from the request's IntendedDistance BEFORE this lead projection extends the
+        /// aim point — led passes are therefore systematically underhit relative to the
+        /// actual passer→aim distance. Adjacent to but not covered by the KD-4 note;
+        /// re-deriving speed from the projected distance is part of the same §7.1
+        /// Stage 1 upgrade.
         /// §3.6.5.
         /// </summary>
         /// <param name="passerPosition">XY position of the passing agent.</param>
@@ -219,4 +225,9 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     v1.3 history row — the "[-1, +1]" characterisation there is    |
 // |         |            |        |     the AR-2-era contract, superseded by AR-6 L-1. Historical row  |
 // |         |            |        |     preserved verbatim.                                            |
+// | 1.8     | 2026-06-11 | —      | AR-9 L-5 (doc-only): SPEC-DEVIATION NOTE on                        |
+// |         |            |        |     ComputeThroughBallAimPoint — kickSpeed is derived from         |
+// |         |            |        |     IntendedDistance before the lead projection extends the aim    |
+// |         |            |        |     point, so led passes underhit the actual passer→aim distance;  |
+// |         |            |        |     speed re-derivation joins the KD-4 / §7.1 Stage 1 upgrade.     |
 #endregion
