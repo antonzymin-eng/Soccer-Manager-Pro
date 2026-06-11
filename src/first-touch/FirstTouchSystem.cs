@@ -107,7 +107,10 @@ namespace TacticalDirector.FirstTouch
             // Step 7.5 — §3.4.5: on INTERCEPTION the ball travels toward the intercepting
             // opponent (not zero) so the Frame N+1 contact chain can occur. Speed preserved
             // from the §3.3.5 model; direction re-anchored at the displaced ball position.
-            // Opponent data is valid here: the INTERCEPTION branch gates on it.
+            // Opponent data is valid here: the INTERCEPTION branch gates on it. If the
+            // opponent is coincident with the displaced ball (degenerate direction), the
+            // §3.3.5 displacement velocity is kept as-is — the interceptor is already at
+            // the ball, so the Frame N+1 contact fires regardless of direction (AR-9 L-2).
             if (outcome == TouchResult.Interception)
             {
                 Vector2 toOpponent = context.NearestOpponentPositionXY
@@ -205,4 +208,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.4     | 2026-06-06 | —      | AR-6 L-3: Step 8 EffectiveAttribute now reads weightedAttr from ControlQualityCalculator.Calculate's new out parameter instead of recomputing TechniqueWeight × Max(tech) + FirstTouchWeight × Max(first). |
 // | 1.5     | 2026-06-10 | —      | AR-7 M-1 follow-on: Determine call site updated (q/originalBallVel dropped, newBallPos added — interception is ball-anchored per §3.4.2 / ERR-004-004). AR-7 M-3: new Step 7.5 implements the §3.4.5 INTERCEPTION velocity redirect toward the intercepting opponent (speed preserved, Z = 0) — previously the redirect was specified but never implemented. |
 // | 1.6     | 2026-06-10 | —      | AR-8 M-1: Step 0 sanitise gate — non-finite BallVelocity / AgentVelocity / AgentFacing / IntendedTouchDirection components map to 0 before model math. Mathf.Clamp01 does not filter NaN, so NaN ball velocity previously flowed magnitude → velDifficulty → ControlQuality → result (EC-001 encoded the no-NaN contract but could not pass). Parallels AM AR-10 / CS AR-7 sanitise gates. |
+// | 1.7     | 2026-06-10 | —      | AR-9 L-2 (doc-only): Step 7.5 comment documents the coincident-opponent degenerate branch — displacement velocity kept as-is; interceptor already at the ball so the §3.4.5 Frame N+1 chain fires regardless. |
 #endregion

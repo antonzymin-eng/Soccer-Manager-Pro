@@ -62,7 +62,9 @@ namespace TacticalDirector.FirstTouch
         /// NearestOpponentPositionXY (ERR-004-004), not this agent-anchored flag.</summary>
         public bool HasNearbyOpponent;
 
-        /// <summary>Distance from the agent to the nearest opponent over ALL opponents (m); +inf when none present. Validity gate for NearestOpponentPositionXY.</summary>
+        /// <summary>Distance from the agent to the nearest opponent over ALL opponents (m); +inf when none present. Validity gate for NearestOpponentPositionXY.
+        /// DEFAULT-VALUE BYPASS (AR-9 L-1): a default-constructed context carries 0 here — finite, i.e. "opponent present at (0,0)".
+        /// Producers MUST populate this pair from PressureEvaluator (or set +inf explicitly); treat default-valued contexts as malformed.</summary>
         public float NearestOpponentDistance;
 
         /// <summary>XY world position of the nearest opponent (m). Only meaningful when NearestOpponentDistance is finite.
@@ -82,4 +84,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                                                         |
 // | 1.1     | 2026-05-26 | —      | M-1 fix: Added TeamID, BallHeight, BallIsAirborne, HasMovementTarget, IsGoalkeeper; renamed FirstTouchAttr→FirstTouchAttribute, IntendedDirection→IntendedTouchDirection; AgentFacing Vector2→Vector3; IntendedTouchDirection Vector2→Vector3. |
 // | 1.2     | 2026-06-10 | —      | AR-7 M-1 (ERR-004-004): NearestOpponentPositionXY added (validity gated on finite NearestOpponentDistance); HasNearbyOpponent doc-noted as informational (interception gate is ball-anchored); NearestOpponentDistance doc updated to global-nearest semantics. |
+// | 1.3     | 2026-06-10 | —      | AR-9 L-1 (doc-only): default-value bypass note on NearestOpponentDistance — struct default 0 is finite and reads as an opponent at (0,0); producers must populate the pair or set +inf (parallels #19 AR-2 L-6 default-bypass notes). |
 #endregion
