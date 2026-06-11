@@ -1,6 +1,6 @@
 // File:     src/first-touch/Tests/FirstTouchTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-06
+// Modified: 2026-06-10
 // Author:   —
 // Spec:     First Touch #4 §5
 // Purpose:  NUnit unit tests covering CQ, TR, PR, OR, PO, EC, BD, and VS categories from §5.2–§5.10.
@@ -75,7 +75,8 @@ namespace TacticalDirector.FirstTouch.Tests
                 BallIsAirborne         = false,
                 PressureScalar         = 0.0f,
                 HasNearbyOpponent      = false,
-                NearestOpponentDistance = float.PositiveInfinity,
+                NearestOpponentDistance = float.PositiveInfinity, // +inf ⇒ NearestOpponentPositionXY is invalid (no opponent).
+                NearestOpponentPositionXY = Vector2.zero,
                 IsHalfTurnOriented     = false,
                 IsGoalkeeper           = false
             };
@@ -1064,13 +1065,22 @@ namespace TacticalDirector.FirstTouch.Tests
             ctx.AgentVelocity = new Vector3(3.0f, 0.0f, 0.0f);
             ctx.PressureScalar = 0.30f;
             ctx.HasNearbyOpponent = true;
-            ctx.NearestOpponentDistance = 2.0f; // 2.0m < 2.50m interception radius.
+            // Mirror: q=0.1087, r=2.0 (capped), blendedDir=(-1,0) → ball displaced to (50.5, 34).
+            // Opponent at (50, 34): 2.5m from agent, 0.5m from the DISPLACED BALL (§3.4.2 anchor).
+            ctx.NearestOpponentDistance = 2.5f;
+            ctx.NearestOpponentPositionXY = new Vector2(50.0f, 34.0f);
 
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
             Assert.GreaterOrEqual(result.TouchRadius, 1.20f, "PO-003 pre-check: r must be ≥ 1.20m.");
             Assert.AreEqual(TouchResult.Interception, result.PossessionOutcome,
-                "PO-003: r ≥ 1.20m with opponent in 2.50m radius must yield INTERCEPTION.");
+                "PO-003: r ≥ 1.20m with opponent within 2.50m of the displaced ball must yield INTERCEPTION.");
+            // §3.4.5 (AR-7 M-3): on INTERCEPTION the ball velocity is redirected toward the
+            // intercepting opponent. Opponent sits -X of the displaced ball → velocity stays -X.
+            Assert.Less(result.NewBallVelocity.x, 0.0f,
+                "PO-003: §3.4.5 redirect must point the ball toward the intercepting opponent (-X).");
+            Assert.AreEqual(0.0f, result.NewBallVelocity.y, 0.001f,
+                "PO-003: §3.4.5 redirect has no Y component for an opponent on the displacement axis.");
         }
 
         /// <summary>PO-004: Very heavy touch, momentum aligned, no opponent → DEFLECTION.</summary>
@@ -1099,25 +1109,30 @@ namespace TacticalDirector.FirstTouch.Tests
                 "PO-004: Very poor touch must not yield CONTROLLED.");
         }
 
-        /// <summary>PO-005: r ≥ 1.50m but low momentum alignment → LOOSE_BALL, not DEFLECTION.</summary>
+        /// <summary>PO-005: 90° redirect intent cannot defeat momentum retention — heavy touch still DEFLECTION (ERR-004-005).</summary>
         [Test]
-        public void Possession_HeavyTouch_LowMomentumAlignment_NoOpponent_ReturnsLooseBall()
+        public void Possession_HeavyTouch_PerpendicularIntent_StillReturnsDeflection()
         {
-            // Force r ≥ 1.50m but redirect ball 90° → alignment ≈ 0.
+            // ERR-004-005: the original expectation (90° intent ⇒ alignment < 0.70 ⇒ LOOSE_BALL)
+            // is unreachable through the public pipeline. Heavy-touch r ≥ 1.50m requires small q,
+            // and at small q the §3.3.5 velocity is dominated by BallRetained = +v·(1-q)·0.5
+            // (here ≈ (-11, 0) vs an agent contribution of 0 at rest) → alignment ≈ 1.0 ≥ 0.70.
+            // Mirror: q=0.12, r=2.0 (capped). The test now locks the actual model behaviour;
+            // the alignment gate itself is retained per spec §3.4.2.
             FirstTouchContext ctx = ContextFactory.MakeDefault();
             ctx.Technique = 4; ctx.FirstTouchAttribute = 4;
-            ctx.BallVelocity = new Vector3(-25.0f, 0.0f, 0.0f);  // ball from right
+            ctx.BallVelocity = new Vector3(-25.0f, 0.0f, 0.0f);  // travelling -X
             ctx.AgentVelocity = Vector3.zero; ctx.PressureScalar = 0.0f;
-            // Agent wants to redirect ball 90° (perpendicular to original direction).
+            // Agent intends a 90° redirect (perpendicular to travel).
             ctx.IntendedTouchDirection = new Vector3(0.0f, 1.0f, 0.0f);
             ctx.AgentFacing = new Vector3(0.0f, 1.0f, 0.0f);
             ctx.HasNearbyOpponent = false; ctx.NearestOpponentDistance = float.PositiveInfinity;
 
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
-            // Redirected ball cannot have alignment ≥ 0.70 → not DEFLECTION.
-            Assert.AreNotEqual(TouchResult.Deflection, result.PossessionOutcome,
-                "PO-005: Low momentum alignment (90° redirect) must not yield DEFLECTION.");
+            Assert.GreaterOrEqual(result.TouchRadius, 1.50f, "PO-005 pre-check: r must be ≥ 1.50m.");
+            Assert.AreEqual(TouchResult.Deflection, result.PossessionOutcome,
+                "PO-005: Retained momentum dominates at heavy-touch q → DEFLECTION despite the 90° intent (ERR-004-005).");
             Assert.AreNotEqual(TouchResult.Interception, result.PossessionOutcome,
                 "PO-005: No opponent → cannot be INTERCEPTION.");
         }
@@ -1134,7 +1149,10 @@ namespace TacticalDirector.FirstTouch.Tests
             ctx.IntendedTouchDirection = new Vector3(-1.0f, 0.0f, 0.0f); // momentum retained
             ctx.AgentFacing = new Vector3(-1.0f, 0.0f, 0.0f);
             ctx.HasNearbyOpponent = true;
-            ctx.NearestOpponentDistance = 2.0f; // within interception radius.
+            // Mirror: q=0.0804, r=2.0, blendedDir=(-1,0) → ball displaced to (50.5, 34).
+            // Opponent at (50, 34): 0.5m from the displaced ball → within the 2.50m radius.
+            ctx.NearestOpponentDistance = 2.5f;
+            ctx.NearestOpponentPositionXY = new Vector2(50.0f, 34.0f);
 
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
@@ -1143,7 +1161,7 @@ namespace TacticalDirector.FirstTouch.Tests
                 "PO-006: INTERCEPTION must take priority over DEFLECTION.");
         }
 
-        /// <summary>PO-007: Opponent just outside interception radius (2.51m) → no INTERCEPTION.</summary>
+        /// <summary>PO-007: Opponent just outside the 2.50m radius of the DISPLACED BALL → no INTERCEPTION.</summary>
         [Test]
         public void Possession_OpponentBeyondInterceptionRadius_DoesNotTriggerInterception()
         {
@@ -1152,12 +1170,16 @@ namespace TacticalDirector.FirstTouch.Tests
             ctx.BallVelocity = new Vector3(-25.0f, 0.0f, 0.0f);
             ctx.AgentVelocity = new Vector3(3.0f, 0.0f, 0.0f); ctx.PressureScalar = 0.30f;
             ctx.HasNearbyOpponent = true;
-            ctx.NearestOpponentDistance = 2.51f; // Just outside InterceptionRadius (2.50m).
+            // Mirror: q=0.1087, r=2.0, blendedDir=(-1,0) → ball displaced to (50.5, 34).
+            // Opponent at (50.5, 36.55): 2.55m from the displaced ball — just outside 2.50m.
+            // (Agent-anchored distance is 3.24m; the §3.4.2 gate anchors at the ball, ERR-004-004.)
+            ctx.NearestOpponentDistance = 3.24f;
+            ctx.NearestOpponentPositionXY = new Vector2(50.5f, 36.55f);
 
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
             Assert.AreNotEqual(TouchResult.Interception, result.PossessionOutcome,
-                "PO-007: Opponent at 2.51m (outside InterceptionRadius) must not trigger INTERCEPTION.");
+                "PO-007: Opponent 2.55m from the displaced ball (outside InterceptionRadius) must not trigger INTERCEPTION.");
         }
 
         /// <summary>PO-008: CONTROLLED outcome triggers SetDribblingState(agentID, true) exactly once.</summary>
@@ -1385,13 +1407,17 @@ namespace TacticalDirector.FirstTouch.Tests
                 "BD-001: At q=1.0 with intended direction +X, new ball position must be right of agent.");
         }
 
-        /// <summary>BD-002: q≈0.0 → actual direction matches incoming ball direction.</summary>
+        /// <summary>BD-002: q≈0.0 → actual direction matches the ball's travel direction (ERR-004-003 lock).</summary>
         [Test]
         public void BallDisplacement_ZeroQuality_ActualDirectionMatchesIncoming()
         {
             // Worst possible player, very fast ball, high pressure → q near 0.
-            // Ball comes from right (-X velocity). Agent wants ball left (+Y intended).
-            // At q=0, the blend weight on intended=0, so ball should go in incoming direction.
+            // Ball travels in -X (arriving from the +X side). Agent wants ball toward +Y.
+            // At q≈0 the blend weight on intended ≈ 0, so the ball continues ALONG its
+            // travel path (-X) — the §3.3.2 heavy-touch error attractor. The pre-AR-7
+            // negation (ERR-004-003) displaced the ball back toward the passer (+X),
+            // against its own §3.3.5 retained momentum; this test locks the corrected sign.
+            // Mirror: q = 0.0100, blendedDir ≈ (-0.99995, 0.0100), r = 2.0 (capped).
             FirstTouchContext ctx = ContextFactory.MakeDefault();
             ctx.Technique = 1; ctx.FirstTouchAttribute = 1;
             ctx.BallVelocity = new Vector3(-30.0f, 0.0f, 0.0f); // ball from right
@@ -1404,55 +1430,54 @@ namespace TacticalDirector.FirstTouch.Tests
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
             Assert.Less(result.ControlQuality, 0.05f, "BD-002 pre-check: q must be near 0.");
-            // At near-zero q, ball should travel roughly in the incoming (-X) direction → X decreases.
-            // The incoming dir is -X so the displacement should be predominantly in -X.
+            // At near-zero q the ball continues along its travel direction (-X) → X decreases.
             float dx = result.NewBallPosition.x - ctx.AgentPosition.x;
             float dy = result.NewBallPosition.y - ctx.AgentPosition.y;
             Assert.Less(dx, 0.0f, "BD-002: Near-zero quality should produce predominantly -X displacement.");
             Assert.Less(Mathf.Abs(dy), Mathf.Abs(dx),
-                "BD-002: |dy| should be less than |dx|, confirming incoming direction dominates.");
+                "BD-002: |dy| should be less than |dx|, confirming travel direction dominates.");
         }
 
         /// <summary>BD-003: q=0.5, perpendicular directions → actual direction at ≈45° (equidistant blend).</summary>
         [Test]
         public void BallDisplacement_MidQuality_ActualDirectionIsBlendedBetweenBoth()
         {
-            // Hand-calc: q=0.5, ErrorWeight=0.5.
-            // IntendedDir=(1,0), IncomingDir=(0,1)[ball from -Y, approach=+Y].
-            // blended=(0.5,0.5), normalised=(0.707,0.707). Displacement at 45° between both.
+            // Mirror: q=0.5 exactly (attr 10/10 → norm 0.5; ballSpeed 15 → velDiff 1; agent at rest).
+            // IntendedDir=(1,0); IncomingDir = TRAVEL direction = (0,-1) (ball moving -Y).
+            // blended = 0.5·(0,-1) + 0.5·(1,0) = (0.5,-0.5) → normalised (0.707,-0.707).
+            // r = 0.84 m (Poor band t=0.6). Displacement at 45° between travel and intent.
             FirstTouchContext ctx = ContextFactory.MakeDefault();
             ctx.Technique = 10; ctx.FirstTouchAttribute = 10;
-            ctx.BallVelocity = new Vector3(0.0f, -15.0f, 0.0f); // ball from +Y side → incomingDir=+Y
+            ctx.BallVelocity = new Vector3(0.0f, -15.0f, 0.0f); // travelling -Y
             ctx.AgentVelocity = Vector3.zero; ctx.PressureScalar = 0.0f;
             ctx.AgentPosition = new Vector3(52.5f, 34.0f, 0.0f);
             ctx.IntendedTouchDirection = new Vector3(1.0f, 0.0f, 0.0f); // agent wants +X
 
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
-            // At q≈0.5, the blend should place the ball NE of the agent (both dx and dy positive).
             float dx = result.NewBallPosition.x - ctx.AgentPosition.x;
             float dy = result.NewBallPosition.y - ctx.AgentPosition.y;
 
-            // At q≈0.5 blend: blended = 0.5*(0,1) + 0.5*(1,0) = (0.5,0.5) normalised to (0.707,0.707).
-            // So both dx and dy should be positive.
-            Assert.Greater(dx, 0.0f, "BD-003: At q≈0.5, displacement should have positive X component.");
-            Assert.Greater(dy, 0.0f, "BD-003: At q≈0.5, displacement should have positive Y component.");
-            // They should be approximately equal (45° blend).
-            Assert.AreEqual(dx, dy, dx * 0.30f,
-                "BD-003: At q≈0.5, X and Y displacement components should be approximately equal (±30%).");
+            Assert.Greater(dx, 0.0f, "BD-003: At q≈0.5, displacement should have positive X component (intent).");
+            Assert.Less(dy, 0.0f, "BD-003: At q≈0.5, displacement should have negative Y component (travel).");
+            // Components should be approximately equal in magnitude (45° blend).
+            Assert.AreEqual(dx, Mathf.Abs(dy), dx * 0.30f,
+                "BD-003: At q≈0.5, |dx| and |dy| should be approximately equal (±30%).");
         }
 
-        /// <summary>BD-004: Anti-parallel directions at q=0.5 → fallback to incoming direction (no NaN).</summary>
+        /// <summary>BD-004: Anti-parallel directions at q=0.5 → §3.3.2 fallback to incoming (travel) direction; no NaN.</summary>
         [Test]
         public void BallDisplacement_NearZeroBlendMagnitude_FallsBackToIncomingDir()
         {
-            // IntendedDir=(1,0), IncomingDir=(-1,0) → blended at q=0.5 = (0,0) → fallback to IncomingDir.
+            // Agent plays the ball back the way it came: IntendedDir=(1,0) against travel (-1,0)
+            // at q=0.5 → blended = (0,0) → §3.3.2 fallback to IncomingDir (AR-7 M-2: spec
+            // mandates the ball follows its original path; was agentFacing before the fix).
             FirstTouchContext ctx = ContextFactory.MakeDefault();
             ctx.Technique = 10; ctx.FirstTouchAttribute = 10;
-            ctx.BallVelocity = new Vector3(15.0f, 0.0f, 0.0f); // ball from -X side → incomingDir = -X
+            ctx.BallVelocity = new Vector3(-15.0f, 0.0f, 0.0f); // travelling -X
             ctx.AgentVelocity = Vector3.zero; ctx.PressureScalar = 0.0f;
             ctx.AgentPosition = new Vector3(52.5f, 34.0f, 0.0f);
-            ctx.IntendedTouchDirection = new Vector3(1.0f, 0.0f, 0.0f); // agent wants +X (anti-parallel to incoming)
+            ctx.IntendedTouchDirection = new Vector3(1.0f, 0.0f, 0.0f); // anti-parallel to travel
             ctx.AgentFacing = new Vector3(1.0f, 0.0f, 0.0f);
 
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
@@ -1460,6 +1485,9 @@ namespace TacticalDirector.FirstTouch.Tests
             Assert.IsFalse(float.IsNaN(result.NewBallPosition.x), "BD-004: No NaN in NewBallPosition.x.");
             Assert.IsFalse(float.IsNaN(result.NewBallPosition.y), "BD-004: No NaN in NewBallPosition.y.");
             Assert.IsFalse(float.IsNaN(result.NewBallVelocity.x), "BD-004: No NaN in NewBallVelocity.x.");
+            // Fallback is the travel direction (-X), not agent facing (+X): ball runs on past the agent.
+            Assert.Less(result.NewBallPosition.x, ctx.AgentPosition.x,
+                "BD-004: Degenerate blend must fall back to the travel direction per §3.3.2.");
         }
 
         /// <summary>BD-005: Touch output ball speed hard-capped at 12.0 m/s.</summary>
@@ -1506,7 +1534,8 @@ namespace TacticalDirector.FirstTouch.Tests
         [Test]
         public void BallDisplacement_PitchBoundaryEnforcement_XAxisClamped()
         {
-            // Hand-calc: agent at X=1.0, intended = -X, r ≈ 1.10m → newX = 1.0 - 1.10 = -0.10 → clamped to 0.
+            // Mirror: q=0.45 (attr 9/9), intended = travel = (-1,0) → blended (-1,0), r=0.96m
+            // → newX = 1.0 - 0.96 = 0.04; assertion is the ≥ 0 clamp contract, not the exact value.
             FirstTouchContext ctx = ContextFactory.MakeDefault();
             ctx.Technique = 9; ctx.FirstTouchAttribute = 9;
             ctx.BallVelocity = new Vector3(-15.0f, 0.0f, 0.0f);
@@ -1525,7 +1554,8 @@ namespace TacticalDirector.FirstTouch.Tests
         [Test]
         public void BallDisplacement_PitchBoundaryEnforcement_YAxisClamped()
         {
-            // Hand-calc: agent at Y=67.5, intended = +Y, r ≈ 0.90m → newY = 68.40 → clamped to 68.0.
+            // Mirror: q=0.435 (attr 9/8), blended = lerp((-1,0),(0,1),0.435) → (-0.79,0.61) after
+            // normalise, r=0.996m → newY = 67.5 + 0.61 = 68.11 → clamped to 68.0.
             FirstTouchContext ctx = ContextFactory.MakeDefault();
             ctx.Technique = 9; ctx.FirstTouchAttribute = 8;
             ctx.BallVelocity = new Vector3(-15.0f, 0.0f, 0.0f);
@@ -1572,13 +1602,15 @@ namespace TacticalDirector.FirstTouch.Tests
             _system = sys;
         }
 
-        /// <summary>VS-001: Elite creative midfielder, standard pass in half-turn — q≈0.929, r≈0.428m, CONTROLLED.</summary>
+        /// <summary>VS-001: Elite creative midfielder, standard pass in half-turn — q≈0.929, r≈0.195m, CONTROLLED.</summary>
         [Test]
         public void ValidationScenario_VS001_EliteCreativeMidfielder_StandardPassInSpace()
         {
-            // Hand-calc from §5.10 VS-001:
+            // Hand-calc from §5.10 VS-001 (v1.1, ERR-004-006 re-derivation):
             // Tech=18, FT=19, ballSpeed=14, agentSpeed=3.0, halfTurn, no pressure.
-            // q≈0.929 (Perfect band), r≈0.428m ≤ 0.60m → CONTROLLED.
+            // q≈0.929 (Perfect band); §3.2.3 velocity modifier is EXCESS-only so 14 m/s < 15 m/s
+            // reference → mod = 1.0 → r = r_base ≈ 0.195m ≤ 0.60m → CONTROLLED.
+            // (The pre-v1.1 §5.10 value 0.428m came from a non-§3.2.3 additive modifier.)
             FirstTouchContext ctx = ContextFactory.MakeDefault();
             ctx.Technique = 18; ctx.FirstTouchAttribute = 19;
             ctx.BallVelocity = new Vector3(-14.0f, 0.0f, 0.0f);
@@ -1592,8 +1624,8 @@ namespace TacticalDirector.FirstTouch.Tests
 
             Assert.AreEqual(0.929f, result.ControlQuality, 0.03f,
                 "VS-001: Elite midfielder q should be ≈ 0.929.");
-            Assert.AreEqual(0.428f, result.TouchRadius, 0.05f,
-                "VS-001: Touch radius should be ≈ 0.428m.");
+            Assert.AreEqual(0.195f, result.TouchRadius, 0.02f,
+                "VS-001: Touch radius should be ≈ 0.195m (§3.2.3 excess-only modifier; ERR-004-006).");
             Assert.AreEqual(TouchResult.Controlled, result.PossessionOutcome,
                 "VS-001: Elite midfielder in space should yield CONTROLLED.");
             Assert.IsTrue(result.TriggeredDribblingState, "VS-001: CONTROLLED must trigger dribbling.");
@@ -1614,7 +1646,11 @@ namespace TacticalDirector.FirstTouch.Tests
             ctx.PressureScalar = pressureScalar;
             ctx.IsHalfTurnOriented = false;
             ctx.HasNearbyOpponent = true;
+            // §5.10 narrative: nearest defender 1.5m from the striker → opponent at (51.0, 34.0).
+            // Mirror: r≈1.263, blendedDir=(-1,0) → ball displaced to (51.24, 34); defender is
+            // 0.24m from the displaced ball → INTERCEPTION per the §3.4.2 ball-anchored gate.
             ctx.NearestOpponentDistance = 1.5f;
+            ctx.NearestOpponentPositionXY = new Vector2(51.0f, 34.0f);
 
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
@@ -1642,7 +1678,10 @@ namespace TacticalDirector.FirstTouch.Tests
             ctx.IsHalfTurnOriented = true;
             ctx.AgentFacing = new Vector3(0.707f, 0.707f, 0.0f);
             ctx.HasNearbyOpponent = true;
+            // Presser 0.8m from the agent at (51.7, 34). r≈0.615 < 1.20m so the interception
+            // gate never fires regardless of proximity → LOOSE_BALL.
             ctx.NearestOpponentDistance = 0.8f;
+            ctx.NearestOpponentPositionXY = new Vector2(51.7f, 34.0f);
 
             FirstTouchResult result = _system.EvaluateFirstTouch(ctx);
 
@@ -1807,7 +1846,6 @@ namespace TacticalDirector.FirstTouch.Tests
             }
         }
     }
-}
 
     // ════════════════════════════════════════════════════════════════════════════
     // §5.9 Integration Tests (IT)
@@ -1817,6 +1855,7 @@ namespace TacticalDirector.FirstTouch.Tests
     /// Integration tests for First Touch #4 §5.9. Require Play Mode with
     /// CollisionSystem #3, AgentMovement #2, BallPhysics #1, and EventBus wired.
     /// </summary>
+    [TestFixture]
     internal sealed class FirstTouchIntegrationTests
     {
         /// <summary>IT-001: Collision→FirstTouch→BallPhysics complete pipeline. §5.9.</summary>
@@ -1881,4 +1920,5 @@ namespace TacticalDirector.FirstTouch.Tests
 // | Version | Date       | Author | Notes                                       |
 // | 1.0     | 2026-05-31 | —      | Initial creation. 52 tests across CQ/TR/PR/OR/PO/EC/BD/VS/invariant categories. |
 // | 1.1     | 2026-06-01 | —      | Add §5.9 integration test stubs IT-001..008 (all Assert.Ignore Stage 0+1). |
+// | 1.2     | 2026-06-10 | —      | AR-7 fix pass. STRUCTURAL: v1.1 closed the namespace before FirstTouchIntegrationTests and left an unmatched trailing brace (170 '{' vs 171 '}') — the file has NEVER compiled; namespace close moved to EOF, [TestFixture] added. The suite also encoded BOTH direction-blend sign conventions at once (BD-002 travel-direction vs BD-003/BD-004 negated — mutually unsatisfiable, further proof of zero executions). Re-derived against the ERR-004-003-corrected model via numerical mirror: BD-003 (dy now negative), BD-004 (ball velocity flipped to keep the anti-parallel degenerate case; locks the §3.3.2 IncomingDir fallback), BD-002 comments (assertions were already travel-direction and now pass). PO-003/PO-006/PO-007/VS-002/VS-003 gained NearestOpponentPositionXY with ball-anchored placements (ERR-004-004); PO-003 locks the §3.4.5 interception velocity redirect (AR-7 M-3). PO-005 re-derived to DEFLECTION — the low-alignment LOOSE_BALL expectation is unreachable through the public pipeline (ERR-004-005). BD-007/BD-008 stale hand-calc comments corrected. ContextFactory default NearestOpponentPositionXY documented. |
 #endregion

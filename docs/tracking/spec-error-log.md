@@ -6,9 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.24
+**Version:** 1.25
 **Updated:** May 22, 2026 (ERR-020-001 filed and resolved: Code Standards #20 §4.2 `[CROSS]` mirror ALL_CAPS → PascalCase; `section-4.md` v1.0.1 patched; `src/CLAUDE.md` v1.4 discrepancy note updated)
-**Status:** ERR-001 through ERR-012, ERR-010-001 (closed May 16, 2026), ERR-011-001 (closed May 18, 2026), ERR-012-001 (closed May 18, 2026), ERR-012-002 (closed), ERR-016-001, ERR-016-002 (FULLY CLOSED May 18, 2026), ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; spec-text resolved May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); #16 §3.2.5 back-prop prose confirmed landed (OBS-1, stress-test run 2, May 18, 2026) — FULLY CLOSED. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open. ERR-003-001 through ERR-003-004 added June 10, 2026 (Collision System #3 implementation AR-7 adversarial review — force-conversion calibration, FROM_BEHIND normal convention, same-team stumble gap, candidate-counted pair valve); ERR-003-005 and ERR-003-006 added same day from the AR-8 follow-up sweep (inverted approach gate in §3.3 impulse response; FROM_BEHIND shadowed by the shoulder predicate); all six spec-and-code patched and CLOSED June 10, 2026.
+**Status:** ERR-001 through ERR-012, ERR-010-001 (closed May 16, 2026), ERR-011-001 (closed May 18, 2026), ERR-012-001 (closed May 18, 2026), ERR-012-002 (closed), ERR-016-001, ERR-016-002 (FULLY CLOSED May 18, 2026), ERR-017-001, ERR-018-001 through ERR-018-018 logged. ERR-010 closed (March 6, 2026). ERR-012 appended from addendum (April 22, 2026). ERR-016-001 added May 2, 2026 (phantom interface mitigation in Deterministic Simulation §4.2). ERR-016-002 added May 3, 2026; spec-text resolved May 6, 2026 (`XC-002-001` in #2 §2.5; `XC-008-001` in #8 §1.7.3); #16 §3.2.5 back-prop prose confirmed landed (OBS-1, stress-test run 2, May 18, 2026) — FULLY CLOSED. ERR-017-001 added May 12, 2026 (Event System #17 PASS 2 review — `DOMAIN_TAG_EVENT_LEDGER` allocation back-prop into #16 §3.4); fully resolved May 15, 2026 — #16-side allocation landed May 14, 2026 (`0x15` in #16 §3.4 v1.0.1) and #17-side `[CROSS-PENDING]` → `[CROSS]` promotion landed in #17 §1.0.1 patch revision May 15, 2026 (literal value inlined across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3 / Appendix B / Appendix D). ERR-018-001 added May 13, 2026 and resolved same day at outline level (Performance Optimization #18 `outline-detailed.md` v1.1 inverts KD-3 — #18 owns trace pipeline, #16 retains record format / regression scenarios / emission constraints; section-number citations corrected). ERR-018-002 through ERR-018-011 added May 14, 2026 from PASS-1 adversarial review of #18 section files v0.1 (4 H + 6 M findings); all resolved in v0.2 fix pass (May 14, 2026). ERR-018-012 through ERR-018-018 added May 14, 2026 from PASS-2 adversarial review of #18 section files v0.2 (2 H + 5 M findings tracing primarily to PR #59 + PR #60 parallel-branch merge collisions); all resolved in v0.3 fix pass (May 14, 2026) — #18 section files at v0.3. ERR-002 and ERR-003 remain open. ERR-003-001 through ERR-003-004 added June 10, 2026 (Collision System #3 implementation AR-7 adversarial review — force-conversion calibration, FROM_BEHIND normal convention, same-team stumble gap, candidate-counted pair valve); ERR-003-005 and ERR-003-006 added same day from the AR-8 follow-up sweep (inverted approach gate in §3.3 impulse response; FROM_BEHIND shadowed by the shoulder predicate); all six spec-and-code patched and CLOSED June 10, 2026. ERR-004-003 through ERR-004-005 added June 10, 2026 (First Touch #4 implementation AR-7 adversarial review — §3.3.2 IncomingDir sign inversion, agent-anchored interception proximity, vacuous DEFLECTION alignment gate); ERR-004-003 and ERR-004-004 spec-and-code patched and CLOSED same day; ERR-004-005 documented-open (model observation, gate retained per spec). ERR-004-006 added June 10, 2026 (AR-8 follow-up sweep — §5.10 VS-001 hand-calc used an additive below-reference velocity modifier contradicting normative §3.2.3) — spec and test patched and CLOSED same day.
 **Raised During:** Pass Mechanics Spec #5 pre-Section 3 cross-spec audit; Decision Tree Spec #8 BLK-001
 
 ---
@@ -1513,4 +1513,60 @@ Spec #20 §3.2.3 (Tag → C# Storage Class Mapping) is the authoritative naming 
 
 ---
 
-*End of Spec Error Log v1.24 — June 10, 2026.*
+## ERR-004-003: First Touch #4 §3.3.2 direction blend negates ball velocity — heavy touches displaced against their own retained momentum
+
+**Spec:** First Touch Mechanics #4
+**Section:** §3.3.2 (Angular Error Model pseudocode); contradicts §3.3.2's own intent prose and §3.3.5 (BallRetained)
+**Severity:** Critical
+**Detected During:** `src/first-touch/` AR-7 adversarial review (June 10, 2026), finding H-1.
+**Status:** ✅ Closed — spec and implementation patched June 10, 2026
+
+**Problem:** The §3.3.2 pseudocode set `IncomingDir = Normalise(Vector2(-ball.Velocity.x, -ball.Velocity.y))` ("the direction the ball came FROM"). The same subsection states the intended q=0 behaviour four times — "ball goes entirely along incoming direction (no control)", "fallback to IncomingDir — ball follows original path, which is the correct heavy-touch behaviour", and the design rationale "a poorly executed touch deflects the ball further along its original path" — and §3.3.5 retains momentum along `+ball.Velocity`. `BallDisplacementProcessor.cs` implemented the negation faithfully (its v1.1 "H-4 fix" cited the pseudocode line), so a heavy touch teleported the ball up to 2.0 m back toward the passer while its velocity pointed forward — the ball then travelled back through the receiving agent. The test suite ENCODED both conventions simultaneously (BD-002 asserts travel-direction; BD-003/BD-004 assert the negation) — mutually unsatisfiable, and undetected because the suite has never compiled (see FirstTouchTests.cs v1.2 structural note).
+
+**Resolution:** Spec §3.3.2 pseudocode patched to `Normalise(Vector2(ball.Velocity.x, ball.Velocity.y))` with an inline ERR-004-003 warning (changelog v1.4); `BallDisplacementProcessor.cs` v1.5 fixed identically and the degenerate-blend fallback aligned to the spec's IncomingDir mandate (AR-7 M-2). Test expectations re-derived from a numerical mirror of the corrected model. NOTE: `OrientationDetector` negates velocity CORRECTLY (facing-vs-approach comparison) and is untouched.
+
+---
+
+## ERR-004-004: First Touch #4 §3.4.2 interception proximity implemented agent-anchored instead of ball-anchored
+
+**Spec:** First Touch Mechanics #4 / implementation drift
+**Section:** §3.4.2 (Determination Logic — `SpatialQuery(newBallPosition, INTERCEPTION_RADIUS)`)
+**Severity:** Major
+**Detected During:** `src/first-touch/` AR-7 adversarial review (June 10, 2026), finding M-1.
+**Status:** ✅ Closed — implementation patched June 10, 2026 (Stage 0 single-candidate approximation documented; full SpatialQuery + interceptor ID land with ERR-004-002)
+
+**Problem:** §3.4.2 anchors the INTERCEPTION opponent query at `newBallPosition`. `PossessionStateMachine` tested `ctx.NearestOpponentDistance` — computed by `PressureEvaluator` around the AGENT and truncated at PressureRadius (3.0 m). With displacement up to RadiusHeavy (2.0 m) against the 2.5 m interception radius, the anchor error reached 80 % of the radius, and an opponent 2.5–3.0 m from the displaced ball but > 3.0 m from the agent read +∞ (invisible). Interceptions both spuriously fired and spuriously missed. The §3.4.5 interception velocity redirect ("Ball velocity set toward intercepting opponent (not zero)") was additionally unimplemented — INTERCEPTION outcomes kept the generic displacement velocity, breaking the Frame N+1 contact chain.
+
+**Resolution:** `PressureEvaluator` v1.3 tracks the global nearest opponent (no radius truncation) and emits `NearestOpponentPositionXY`; `FirstTouchContext` v1.2 / `PressureResult` v1.1 carry it; `PossessionStateMachine` v1.3 measures `|opponent − newBallPosition| ≤ INTERCEPTION_RADIUS`; `FirstTouchSystem` v1.5 Step 7.5 implements the §3.4.5 velocity redirect (speed preserved). Residual Stage 0 approximation: only the single nearest-to-agent opponent is a candidate — the full multi-candidate `SpatialQuery` arrives with the ERR-004-002 context surface (same query returns the interceptor ID).
+
+---
+
+## ERR-004-005: First Touch #4 §3.4.2 DEFLECTION alignment gate is effectively vacuous through the public pipeline
+
+**Spec:** First Touch Mechanics #4
+**Section:** §3.4.2 (DEFLECTION momentum-alignment condition) interacting with §3.1 (q model) and §3.3.5 (velocity model)
+**Severity:** Minor (model observation; no incorrect code — gate retained per spec)
+**Detected During:** `src/first-touch/` AR-7 adversarial review (June 10, 2026), filed with the fix pass.
+**Status:** 🟡 Open — documented; revisit when §3.3.5 gains Stage 1 loft/contact modelling
+
+**Problem:** DEFLECTION requires `r ≥ 1.50 m` AND `alignment ≥ 0.70`. Reaching r ≥ 1.50 m requires small q (heavy band), and at small q the §3.3.5 velocity is dominated by `BallRetained = +v·(1−q)·0.5` (agent contribution ≤ DRIBBLE_MAX_SPEED·q ≈ 1.1 m/s vs retention ≥ ~8 m/s for the ball speeds that produce heavy touches), so alignment ≈ 1.0 always. Consequently every non-intercepted touch at r ≥ 1.50 m classifies DEFLECTION, and the low-alignment LOOSE_BALL escape is unreachable for physically producible inputs. Original test PO-005 encoded the unreachable expectation (90° intent ⇒ LOOSE_BALL) and could never pass.
+
+**Resolution path:** Gate retained verbatim per §3.4.2 (it is cheap and becomes meaningful if Stage 1 contact modelling lets the agent contribution scale). PO-005 re-derived to lock the actual behaviour with an ERR-004-005 anchor; branch comment added in `PossessionStateMachine.cs` v1.3. Designer-facing implication: LOOSE_BALL occupies exactly r ∈ [0.60, 1.50) ∪ non-aligned degenerates.
+
+---
+
+## ERR-004-006: First Touch #4 §5.10 VS-001 hand-calc applies the velocity modifier additively and below reference speed, contradicting normative §3.2.3
+
+**Spec:** First Touch Mechanics #4
+**Section:** §5.10 VS-001 (validation scenario hand-calc + expected outputs); contradicts §3.2.3 (Velocity Modifier)
+**Severity:** Major (test-encoded wrong expectation; no code defect — implementation matches §3.2.3)
+**Detected During:** `src/first-touch/` AR-8 follow-up sweep (June 10, 2026), via full-pipeline numerical mirror.
+**Status:** ✅ Closed — spec §5.10 and test VS-001 patched June 10, 2026
+
+**Problem:** §3.2.3 defines the velocity modifier as multiplicative on the EXCESS above VELOCITY_REFERENCE (`r = r_base × (1 + Max(0, speed − 15)/15 × 0.25)`), so a 14 m/s ball gets no modifier. The §5 v1.2 changelog (Feb 22, 2026) "corrected" VS-001 from r = 0.195 m to r = 0.428 m by ADDING `(14/15) × 0.25 = 0.233 m` — an additive modifier applied below reference speed, a formula that exists nowhere in §3.2.3 (and whose Appendix B verification inherited the same arithmetic). `FirstTouchTests.cs` VS-001 encoded the 0.428 m expectation; against the §3.2.3-conformant `TouchRadiusCalculator` the actual radius is 0.195 m, so the test could never pass. Undetected because the suite has never compiled (FirstTouchTests.cs v1.2 structural note).
+
+**Resolution:** §5.10 hand-calc and expected outputs re-derived per §3.2.3 (r ≈ 0.195 m; outcome CONTROLLED unaffected) in `section-5-7-to-5-13.md` v1.1 with a §5 changelog row in `section-5-1-to-5-6.md` v1.4; test VS-001 expectation updated to 0.195 ± 0.02 m. The original v1.1→v1.2 flip-flop (0.195 → 0.428 → 0.195) is preserved in both changelogs.
+
+---
+
+*End of Spec Error Log v1.25 — June 10, 2026.*

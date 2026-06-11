@@ -121,6 +121,9 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/first-touch/IAgentMovementSystem.cs` | Interface boundary to Agent Movement (#2) (read-only query surface) |
 | `src/first-touch/IBallPhysicsSystem.cs` | Interface boundary to Ball Physics (#1) (read-only query surface) |
 | `src/first-touch/IFirstTouchSystem.cs` | Public interface for consumers of the First Touch system |
+| `src/first-touch/first-touch.asmdef` | Assembly definition (references BallPhysics, AgentMovement, CollisionSystem) |
+| `src/first-touch/Tests/first-touch-tests.asmdef` | EditMode test assembly definition |
+| `src/first-touch/Tests/FirstTouchTests.cs` | CQ/TR/PR/OR/PO/EC/BD/VS + invariant suite + IT-001..008 stubs (v1.2 AR-7 re-derivation) |
 
 ### Spec #5 — Pass Mechanics (`src/pass-mechanics/`)
 

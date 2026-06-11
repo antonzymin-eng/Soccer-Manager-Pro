@@ -520,14 +520,18 @@ Step 6: RawQuality = 1.052 / (0.933 Ã— 1.214) = 1.052 / 1.132 = 0.929
 Step 7: q = 0.929 Ã— 1.0 = 0.929
 Step 8: q = Clamp(0.929, 0, 1) = 0.929
 Touch radius (Perfect band): t = (0.929 - 0.85) / 0.15 = 0.527 â†’ r_base = Lerp(0.30, 0.10, 0.527) = 0.195m
-Velocity modifier: (14.0 / 15.0) x 0.25 = 0.933 x 0.25 = 0.233m
-r = r_base + modifier = 0.195 + 0.233 = 0.428m
-Outcome: r = 0.428m <= 0.60m â†’ CONTROLLED
+Velocity modifier (§3.2.3, multiplicative, EXCESS-only): VelocityExcess = Max(0, 14.0 - 15.0) = 0
+VelocityMod = 1.0 + (0 / 15.0) x 0.25 = 1.0 â†’ no modifier below VELOCITY_REFERENCE
+r = r_base x 1.0 = 0.195m
+// ERR-004-006: the v1.0/v1.2 hand-calc applied the modifier ADDITIVELY and below
+// reference speed (0.195 + 0.933x0.25 = 0.428m), contradicting the normative §3.2.3
+// formula (multiplicative on excess above 15 m/s only). Corrected June 10, 2026.
+Outcome: r = 0.195m <= 0.60m â†’ CONTROLLED
 ```
 
 **Expected outputs:**
 - q â‰ˆ 0.929 (Â±0.03) â†’ Perfect band
-- r â‰ˆ 0.428m (±0.02m)
+- r â‰ˆ 0.195m (±0.02m)  (ERR-004-006: was 0.428m via a non-§3.2.3 additive modifier)
 - outcome = CONTROLLED
 - dribbling state activated: true
 
@@ -814,5 +818,5 @@ the tests.
 **End of Section 5**
 
 **Page Count:** ~28 pages
-**Version:** 1.0
+**Version:** 1.1 (June 10, 2026 — ERR-004-006: VS-001 radius hand-calc re-derived against the normative §3.2.3 multiplicative excess-only velocity modifier; r 0.428m → 0.195m)
 **Next Section:** Section 6 â€” Performance Analysis

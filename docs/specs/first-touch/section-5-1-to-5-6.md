@@ -16,6 +16,7 @@ implementation sign-off.
 **Prerequisites:** Section 1 (v1.0), Section 2 (v1.0), Section 3 (v1.1), Section 4 (v1.1)
 
 **Changelog:**
+- v1.4 (June 10, 2026): ERR-004-006 — §5.10 VS-001 radius hand-calc re-derived: the v1.2 “correction” introduced an additive velocity modifier applied below reference speed (r = 0.195 + 0.233 = 0.428m), contradicting the normative §3.2.3 formula (multiplicative on excess above 15 m/s only → no modifier at 14 m/s; r = 0.195m). Outcome (CONTROLLED) unaffected. See section-5-7-to-5-13.md v1.1 and spec-error-log.md ERR-004-006.
 - v1.3 (March 25, 2026): MOD-04 audit fix — subsection numbering normalised.
   §5.10.x subsections renumbered to §5.11.x (under §5.11 Acceptance Criteria Summary);
   §5.11.x subsections renumbered to §5.12.x (under §5.12 Test Execution Plan).

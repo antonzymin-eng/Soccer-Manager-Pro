@@ -1,6 +1,6 @@
 // File:     src/first-touch/BallDisplacementProcessor.cs
 // Created:  2026-05-25
-// Modified: 2026-06-06
+// Modified: 2026-06-10
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.3, Code Standards #20
 // Purpose:  Computes new ball position and velocity after a touch using direction blend and momentum retention.
@@ -29,13 +29,20 @@ namespace TacticalDirector.FirstTouch
             float r)
         {
             // §3.3.2 — Direction blend: blend intended direction with incoming ball direction.
-            // High q → touches go where intended; low q → ball continues along original path.
-            // IncomingDir is where the ball came FROM (negated velocity). §3.3.2.
+            // High q → touches go where intended; low q → ball continues along its original
+            // travel path (the §3.3.2 "error attractor": a poorly executed touch deflects the
+            // ball FURTHER ALONG its original path). ERR-004-003: IncomingDir is the ball's
+            // TRAVEL direction (+velocity) — the pre-AR-7 negation displaced a heavy touch
+            // back toward the passer while §3.3.5 BallRetained kept the momentum forward.
+            // (Contrast OrientationDetector, where negating velocity IS correct: it compares
+            // facing against the approach direction.)
             Vector2 ballVelXY = new Vector2(ctx.BallVelocity.x, ctx.BallVelocity.y);
             Vector2 agentFacingXY = new Vector2(ctx.AgentFacing.x, ctx.AgentFacing.y);
             Vector2 incomingDir = ballVelXY.sqrMagnitude > FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ
-                ? new Vector2(-ballVelXY.x, -ballVelXY.y).normalized
-                : agentFacingXY;
+                ? ballVelXY.normalized
+                : (agentFacingXY.sqrMagnitude > FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ
+                    ? agentFacingXY.normalized
+                    : Vector2.right);
 
             Vector2 intendedDirXY = new Vector2(ctx.IntendedTouchDirection.x, ctx.IntendedTouchDirection.y);
             Vector2 intendedDir = intendedDirXY.sqrMagnitude > FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ
@@ -44,17 +51,13 @@ namespace TacticalDirector.FirstTouch
 
             Vector2 blendedDir2D = Vector2.Lerp(incomingDir, intendedDir, q);
 
-            // Fallback: if blended direction is near-zero, use agent facing.
-            if (blendedDir2D.sqrMagnitude < FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ)
-            {
-                blendedDir2D = agentFacingXY.sqrMagnitude > FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ
-                    ? agentFacingXY.normalized
-                    : Vector2.right;
-            }
-            else
-            {
-                blendedDir2D = blendedDir2D.normalized;
-            }
+            // §3.3.2 SAFETY fallback (AR-7 M-2): when intended and incoming are nearly opposite
+            // (e.g. playing the ball back the way it came at q ≈ 0.5) the blend degenerates to
+            // near-zero. Spec mandates fallback to IncomingDir — ball follows its original path,
+            // the correct heavy-touch behaviour. incomingDir is unit-length by construction.
+            blendedDir2D = blendedDir2D.sqrMagnitude < FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ
+                ? incomingDir
+                : blendedDir2D.normalized;
 
             // §3.3.4 — New ball position: agent position + displacement radius in blended direction.
             // Z is set to BallRadius so the ball rests on the ground.
@@ -99,4 +102,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: replaced PitchHalfLength*2.0f and PitchHalfWidth*2.0f with PitchLength/PitchWidth constants (no magic literals); removed duplicate §3.3.5 comment reference. |
 // | 1.3     | 2026-06-06 | —      | AR-5 M-2 follow-on: BlendMinMagnitude → BLEND_MIN_MAGNITUDE (ALL_CAPS [FIXED] rename in FirstTouchConstants). |
 // | 1.4     | 2026-06-06 | —      | AR-6 L-1: blendThreshSq local dropped; three sqrMagnitude predicates now read BLEND_MIN_MAGNITUDE_SQ directly from FirstTouchConstants. |
+// | 1.5     | 2026-06-10 | —      | AR-7 H-1 (ERR-004-003): IncomingDir un-negated — now the ball's TRAVEL direction (+velocity), matching §3.3.2 intent prose and §3.3.5 momentum retention; the v1.1 "H-4 fix" negation displaced heavy touches back toward the passer against their own retained momentum. Spec §3.3.2 pseudocode patched in the same commit. AR-7 M-2: degenerate-blend fallback now IncomingDir per §3.3.2 (was agentFacing/Vector2.right deviation); incomingDir made unconditionally unit-length (agentFacing → Vector2.right chain hoisted into its construction). |
 #endregion
