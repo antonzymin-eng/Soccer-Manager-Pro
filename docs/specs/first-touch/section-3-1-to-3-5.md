@@ -6,13 +6,14 @@ State Machine, Pressure Evaluation, Body Orientation Detection, and Event Emissi
 section is the authoritative implementation reference for Stage 0.
 
 **Created:** February 17, 2026, 8:00 PM PST
-**Version:** 1.3
+**Version:** 1.4
 **Status:** Approved â€” Fixes applied (see changelog)
 **Author:** Claude (AI) with Anton (Lead Developer)
 **Specification Number:** 4 of 20 (Stage 0 Physics Foundation)
 **Prerequisites:** Section 1 (Purpose & Scope) v1.0, Section 2 (System Overview) v1.0
 
 **Changelog:**
+- v1.4 (June 10, 2026): ERR-004-003 — §3.3.2 pseudocode sign error corrected: `IncomingDir` is the ball's TRAVEL direction (`Normalise(+ball.Velocity.xy)`), not its negation. The negated form contradicted four intent statements in the same subsection and the §3.3.5 momentum-retention term, producing displacement opposed to retained velocity for every heavy touch. Patched atomically with `BallDisplacementProcessor.cs` v1.5 (src AR-7 H-1). See `spec-error-log.md` ERR-004-003.
 - v1.3 (May 26, 2026): §3.1.3 verification matrix corrected — "Average, typical pass, no pressure" expected range updated from ≈0.55–0.65 to ≈0.48–0.55. The old range was derived from an earlier formula where moveDifficulty was applied conditionally (only when agentSpeed > MOVEMENT_REFERENCE). The approved §3.1.1 formula is unconditional; for Tech=12 FT=11 ball=15 agent=2 pressure=0 the current formula yields q≈0.512, which is outside the old expected range. No formula change — matrix corrected to match authoritative §3.1.1 formula.
 - v1.2 (March 05, 2026): Comprehensive audit fixes applied:
   (1) C-02: MOVEMENT_REFERENCE derivation corrected — re-tagged as [GT] gameplay-tuned; false attribution to Agent Movement §3.5.2 removed (7.0 m/s is not defined in Agent Movement; Pace 20 max is 10.2 m/s).
@@ -348,8 +349,15 @@ incoming direction and the agent's intended direction, weighted by (1 - q).
 
 ```
 // Incoming ball direction (XY plane)
-IncomingDir   = Normalise(Vector2(-ball.Velocity.x, -ball.Velocity.y))
-// Negated: the direction the ball came FROM, not where it is going
+IncomingDir   = Normalise(Vector2(ball.Velocity.x, ball.Velocity.y))
+// TRAVEL direction: where the ball is going (ERR-004-003). v1.0–v1.3 negated this
+// vector ("the direction the ball came FROM"), contradicting this section's own
+// intent statements ("at q = 0.0 the ball goes entirely along incoming direction",
+// "fallback ... ball follows original path", design rationale "deflects the ball
+// further along its original path") and §3.3.5 BallRetained = +ball.Velocity ×
+// (1-q) × MOMENTUM_RETENTION: a q=0 touch displaced the ball up to 2.0 m back
+// toward the passer while its retained momentum pointed forward. Corrected
+// June 10, 2026 atomically with BallDisplacementProcessor.cs v1.5.
 
 // Angular error: how far the ball's actual path deviates from intended
 // At q = 1.0: no error, ball goes exactly where intended

@@ -1,6 +1,6 @@
 // File:     src/first-touch/FirstTouchConstants.cs
 // Created:  2026-05-25
-// Modified: 2026-06-08
+// Modified: 2026-06-10
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.1–§3.6, §6.1, Code Standards #20
 // Purpose:  All constants for the first-touch system. No literals in formula code.
@@ -11,8 +11,8 @@ using TacticalDirector.BallPhysics;
 namespace TacticalDirector.FirstTouch
 {
     /// <summary>
-    /// All tunable, derived, cross-spec, and physical constants for First Touch Mechanics.
-    /// Region order: Fixed → Derived → Cross → GT. First Touch Mechanics #4 §6.1.
+    /// All tunable, cross-spec, and physical constants for First Touch Mechanics.
+    /// Region order: Fixed → Cross → GT. First Touch Mechanics #4 §6.1.
     /// </summary>
     public static class FirstTouchConstants
     {
@@ -26,24 +26,6 @@ namespace TacticalDirector.FirstTouch
 
         /// <summary>[FIXED] Square of BLEND_MIN_MAGNITUDE; cached to avoid repeated multiplications in sqrMagnitude predicates. First Touch Mechanics #4 §3.3.2.</summary>
         public const float BLEND_MIN_MAGNITUDE_SQ = BLEND_MIN_MAGNITUDE * BLEND_MIN_MAGNITUDE;
-
-        #endregion
-
-        #region Derived
-
-        /// <summary>
-        /// [DERIVED] Half the pitch length (m).
-        /// Formula: BallPhysicsConstants.Pitch.LENGTH × 0.5. First Touch Mechanics #4 §3.1.1.
-        /// Source constants: BallPhysicsConstants.Pitch.LENGTH (const — safe to use before PitchLength [CROSS] initialises).
-        /// </summary>
-        public static readonly float PitchHalfLength = BallPhysicsConstants.Pitch.LENGTH * 0.5f;
-
-        /// <summary>
-        /// [DERIVED] Half the pitch width (m).
-        /// Formula: BallPhysicsConstants.Pitch.WIDTH × 0.5. First Touch Mechanics #4 §3.1.1.
-        /// Source constants: BallPhysicsConstants.Pitch.WIDTH (const — safe to use before PitchWidth [CROSS] initialises).
-        /// </summary>
-        public static readonly float PitchHalfWidth = BallPhysicsConstants.Pitch.WIDTH * 0.5f;
 
         #endregion
 
@@ -123,7 +105,7 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Weight of pressure in final control quality formula. First Touch Mechanics #4 §3.1 Step 7.</summary>
         public static readonly float PressureWeight = 0.40f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Lower bound of the Good quality band; q ∈ [ControlledThreshold, QualityBandPerfect) → radius in [RadiusPerfect, RadiusGood]. Also the threshold above which outcome is CONTROLLED. First Touch Mechanics #4 §3.2, §3.4.</summary>
+        /// <summary>[GT] Lower bound of the Good quality band; q ∈ [ControlledThreshold, QualityBandPerfect) → radius in [RadiusPerfect, RadiusGood]. NOTE: the §3.4.2 CONTROLLED outcome is classified on displacement radius r (see LooseBallThreshold), not on q — the §3.2.3 velocity modifier can push r past 0.60 m even at q above this threshold. First Touch Mechanics #4 §3.2, §3.4.</summary>
         public static readonly float ControlledThreshold = 0.60f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Lower bound of the Perfect quality band; q ∈ [QualityBandPerfect, 1] → radius in [RadiusMin, RadiusPerfect]. First Touch Mechanics #4 §3.2.</summary>
@@ -132,7 +114,9 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Lower bound of the Poor quality band; q ∈ [QualityBandPoor, ControlledThreshold) → radius in [RadiusGood, RadiusPoor]. First Touch Mechanics #4 §3.2.</summary>
         public static readonly float QualityBandPoor = 0.35f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Ball displacement radius for a CONTROLLED touch (m). First Touch Mechanics #4 §3.4.</summary>
+        /// <summary>[GT] Ball displacement radius for a CONTROLLED touch (m). First Touch Mechanics #4 §3.4 / appendix B.
+        /// STAGE 0 NOTE (AR-7 L-2): declared-but-unconsumed — the §3.4.2 classifier consumes LooseBallThreshold
+        /// (same value, named for the classification role); retained for the §4.4 contract surface. Tune the two together.</summary>
         public static readonly float ControlledRadius = 0.60f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Displacement radius band for a perfect touch (m). First Touch Mechanics #4 §3.2.</summary>
@@ -192,7 +176,9 @@ namespace TacticalDirector.FirstTouch
         /// <summary>[GT] Saturation value above which pressure is clamped to 1. First Touch Mechanics #4 §3.5.3.</summary>
         public static readonly float PressureSaturation = 1.5f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Ball displacement radius beyond which dribble attach is broken (m). First Touch Mechanics #4 §3.4.4.</summary>
+        /// <summary>[GT] Ball displacement radius beyond which dribble attach is broken (m). First Touch Mechanics #4 §3.4.4.
+        /// STAGE 0 NOTE (AR-7 L-2): declared-but-unconsumed — the §3.4.4 dribble-detach monitor runs in the
+        /// possession-update loop, which is a Stage 0+1 deliverable; this catalogue row is its landing site.</summary>
         public static readonly float DribbleDetachRadius = 1.50f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] L_rec multiplier applied when agent is in half-turn stance and the target entity falls in the peripheral arc (40°–80°). Value = 1 − 0.15 (15% reduction matches HalfTurnBonus). First Touch Mechanics #4 §3.3.2. Consumed by Perception System #7 §3.3.3.</summary>
@@ -213,4 +199,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.5     | 2026-06-06 | —      | AR-5 M-2: BlendMinMagnitude relocated from end-of-GT region to #region Fixed, renamed BLEND_MIN_MAGNITUDE (ALL_CAPS per FR-CS-001 for [FIXED]), retyped `static readonly` → `const` to match AGENT_ID_NONE, stale "TODO: replace with config loader" comment dropped (FIXED is not designer-tunable). L-1: duplicate v1.1 row reconciled — earlier May-28 HalfTurnLRecReduction addition retroactively renumbered v1.4.1 to restore monotonic ordering. |
 // | 1.6     | 2026-06-06 | —      | AR-6 L-1: added BLEND_MIN_MAGNITUDE_SQ compile-time const so callers (BallDisplacementProcessor, OrientationDetector, PossessionStateMachine) consume a single cached square instead of recomputing the product across 6 call sites. |
 // | 1.7     | 2026-06-08 | —      | Cross-spec routing close-out (Spec #20 §4.2): GroundControlHeight relocated from #region GT to #region Cross, retagged [CROSS], and now mirrors BallPhysicsConstants.Possession.ControlHeight (Ball Physics #1 §3.1.11) verbatim. Closes the long-standing CLAUDE.md OPEN ISSUE "Possession.ControlHeight ↔ GroundControlHeight cross-spec routing" (since 2026-06-03). Ball Physics #1 is the authority because ControlHeight is a physical possession-geometry constant living next to the three sibling thresholds (ControlRadius / ControlVelocity / ChallengeRadius); First Touch's §3.4.3 use is a routing guard, not an authority claim. Designers now tune the single Ball Physics value; mirror tracks automatically. |
+// | 1.8     | 2026-06-10 | —      | AR-7 L-1: ControlledThreshold doc no longer claims to be the CONTROLLED outcome gate (classification is r-based per §3.4.2; the velocity modifier breaks the q↔r coincidence). AR-7 L-2: dead [DERIVED] PitchHalfLength / PitchHalfWidth removed (orphaned since BallDisplacementProcessor v1.2 switched to PitchLength / PitchWidth; #region Derived dropped — empty regions prohibited); spec-backed ControlledRadius + DribbleDetachRadius doc-noted declared-but-unconsumed at Stage 0 per Collision AR-10 MaxIterations precedent. |
 #endregion

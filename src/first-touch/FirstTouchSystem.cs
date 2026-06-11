@@ -1,6 +1,6 @@
 // File:     src/first-touch/FirstTouchSystem.cs
 // Created:  2026-05-25
-// Modified: 2026-06-06
+// Modified: 2026-06-10
 // Author:   —
 // Spec:     First Touch Mechanics #4 §4.4, §4.5, Code Standards #20
 // Purpose:  Orchestrates the first-touch evaluation and application pipeline.
@@ -50,6 +50,24 @@ namespace TacticalDirector.FirstTouch
         {
             using var _ = s_evaluateMarker.Auto();
 
+            // Step 0 — Sanitise gate (AR-8 M-1 / EC-001): non-finite velocity and direction
+            // components map to zero before any model math. Mathf.Clamp01 does NOT filter NaN,
+            // so a NaN BallVelocity would otherwise flow through velDifficulty into
+            // ControlQuality and the result struct (parallels Agent Movement AR-10
+            // SanitiseCollisionForce and Collision System AR-7 snapshot-gate sanitise).
+            // Zeroed vectors route through the existing degenerate-input fallbacks.
+            // Recovery choice: zero + the §3.1 VelocityMin guard, NOT the EC-001 row's
+            // suggested VELOCITY_REFERENCE substitution — one consistent recovery must
+            // serve BOTH the q path and the §3.3.5 momentum-retention path, and
+            // manufacturing 15 m/s of phantom incoming momentum from corrupt data is
+            // worse than treating it as at-rest. §2.6.1 FM-01 (clamp-and-continue) is
+            // the normative failure-mode rule; the EC-001 sentence is advisory.
+            // `context` is a by-value copy; the caller's struct is untouched.
+            context.BallVelocity = SanitiseVector(context.BallVelocity);
+            context.AgentVelocity = SanitiseVector(context.AgentVelocity);
+            context.AgentFacing = SanitiseVector(context.AgentFacing);
+            context.IntendedTouchDirection = SanitiseVector(context.IntendedTouchDirection);
+
             // Step 1 — Orientation bonus.
             float orientationBonus = context.IsHalfTurnOriented
                 ? FirstTouchConstants.HalfTurnBonus
@@ -82,9 +100,31 @@ namespace TacticalDirector.FirstTouch
             // Step 6 — New ball position and velocity.
             (Vector3 newBallPos, Vector3 newBallVel) = BallDisplacementProcessor.Compute(context, q, r);
 
-            // Step 7 — Possession outcome.
+            // Step 7 — Possession outcome (classified on r and the displaced ball position).
             (TouchResult outcome, int possessingId, int interceptingId) = PossessionStateMachine.Determine(
-                q, r, newBallVel, context.BallVelocity, context);
+                r, newBallPos, newBallVel, context);
+
+            // Step 7.5 — §3.4.5: on INTERCEPTION the ball travels toward the intercepting
+            // opponent (not zero) so the Frame N+1 contact chain can occur. Speed preserved
+            // from the §3.3.5 model; direction re-anchored at the displaced ball position.
+            // Opponent data is valid here: the INTERCEPTION branch gates on it. If the
+            // opponent is coincident with the displaced ball (degenerate direction), the
+            // §3.3.5 displacement velocity is kept as-is — the interceptor is already at
+            // the ball, so the Frame N+1 contact fires regardless of direction (AR-9 L-2).
+            if (outcome == TouchResult.Interception)
+            {
+                Vector2 toOpponent = context.NearestOpponentPositionXY
+                                   - new Vector2(newBallPos.x, newBallPos.y);
+                if (toOpponent.sqrMagnitude > FirstTouchConstants.BLEND_MIN_MAGNITUDE_SQ)
+                {
+                    float interceptSpeed = newBallVel.magnitude;
+                    Vector2 toOpponentDir = toOpponent.normalized;
+                    newBallVel = new Vector3(
+                        toOpponentDir.x * interceptSpeed,
+                        toOpponentDir.y * interceptSpeed,
+                        0.0f);
+                }
+            }
 
             // Step 8 — Diagnostic: EffectiveAttribute = WeightedAttr × OrientationMult × PressureMult.
             float effectiveAttribute = weightedAttr
@@ -105,6 +145,18 @@ namespace TacticalDirector.FirstTouch
                 IncomingBallSpeed     = ballSpeed,
                 EffectiveAttribute    = effectiveAttribute
             };
+        }
+
+        /// <summary>
+        /// Maps non-finite (NaN / ±Inf) vector components to zero. AR-8 M-1 / EC-001 input gate.
+        /// </summary>
+        /// <param name="v">Vector to sanitise.</param>
+        private static Vector3 SanitiseVector(Vector3 v)
+        {
+            return new Vector3(
+                float.IsFinite(v.x) ? v.x : 0.0f,
+                float.IsFinite(v.y) ? v.y : 0.0f,
+                float.IsFinite(v.z) ? v.z : 0.0f);
         }
 
         /// <summary>
@@ -154,4 +206,7 @@ namespace TacticalDirector.FirstTouch
 // | 1.2     | 2026-05-26 | —      | Adversarial review pass 2: Step 4 thunderbolt check changed >= to > per spec §3.3.7 appendix B.5; removed misleading "pre-built q" comment. |
 // | 1.3     | 2026-06-06 | —      | AR-5 M-1: TouchResult.CONTROLLED → TouchResult.Controlled (enum PascalCase rename). M-3: constructor null-guards on _ballPhysics / _agentMovement with explicit ArgumentNullException + nameof; using System added. |
 // | 1.4     | 2026-06-06 | —      | AR-6 L-3: Step 8 EffectiveAttribute now reads weightedAttr from ControlQualityCalculator.Calculate's new out parameter instead of recomputing TechniqueWeight × Max(tech) + FirstTouchWeight × Max(first). |
+// | 1.5     | 2026-06-10 | —      | AR-7 M-1 follow-on: Determine call site updated (q/originalBallVel dropped, newBallPos added — interception is ball-anchored per §3.4.2 / ERR-004-004). AR-7 M-3: new Step 7.5 implements the §3.4.5 INTERCEPTION velocity redirect toward the intercepting opponent (speed preserved, Z = 0) — previously the redirect was specified but never implemented. |
+// | 1.6     | 2026-06-10 | —      | AR-8 M-1: Step 0 sanitise gate — non-finite BallVelocity / AgentVelocity / AgentFacing / IntendedTouchDirection components map to 0 before model math. Mathf.Clamp01 does not filter NaN, so NaN ball velocity previously flowed magnitude → velDifficulty → ControlQuality → result (EC-001 encoded the no-NaN contract but could not pass). Parallels AM AR-10 / CS AR-7 sanitise gates. |
+// | 1.7     | 2026-06-10 | —      | AR-9 L-2 (doc-only): Step 7.5 comment documents the coincident-opponent degenerate branch — displacement velocity kept as-is; interceptor already at the ball so the §3.4.5 Frame N+1 chain fires regardless. |
 #endregion

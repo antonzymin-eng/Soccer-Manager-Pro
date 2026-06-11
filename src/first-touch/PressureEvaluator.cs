@@ -1,6 +1,6 @@
 // File:     src/first-touch/PressureEvaluator.cs
 // Created:  2026-05-25
-// Modified: 2026-06-06
+// Modified: 2026-06-10
 // Author:   —
 // Spec:     First Touch Mechanics #4 §3.5, Code Standards #20
 // Purpose:  Evaluates opponent pressure on a receiving agent's position.
@@ -28,7 +28,8 @@ namespace TacticalDirector.FirstTouch
             ReadOnlySpan<Vector2> opponentPositions)
         {
             float totalPressure = 0.0f;
-            float nearestDistance = float.PositiveInfinity;
+            float nearestDistanceSq = float.PositiveInfinity;
+            int nearestIndex = -1;
             bool hasNearby = false;
 
             float pressureRadiusSq = FirstTouchConstants.PressureRadius * FirstTouchConstants.PressureRadius;
@@ -38,6 +39,17 @@ namespace TacticalDirector.FirstTouch
                 Vector2 delta = opponentPositions[i] - agentPositionXY;
                 float distSq = delta.sqrMagnitude;
 
+                // Nearest-opponent tracking is GLOBAL (not gated on PressureRadius): the
+                // §3.4.2 interception check consumes the nearest opponent against the
+                // DISPLACED ball position, which can sit up to RadiusHeavy (2.0 m) from
+                // the agent — a radius-truncated nearest would hide valid interceptors
+                // (ERR-004-004). Squared-distance compare; single sqrt after the loop.
+                if (distSq < nearestDistanceSq)
+                {
+                    nearestDistanceSq = distSq;
+                    nearestIndex = i;
+                }
+
                 if (distSq > pressureRadiusSq)
                 {
                     continue;
@@ -45,11 +57,6 @@ namespace TacticalDirector.FirstTouch
 
                 float dist = Mathf.Sqrt(distSq);
                 hasNearby = true;
-
-                if (dist < nearestDistance)
-                {
-                    nearestDistance = dist;
-                }
 
                 // §3.5.2 — normalised inverse-square: contribution = (MIN/dist)²; guard caps at 1.0.
                 float guardedDist = Mathf.Max(dist, FirstTouchConstants.MinPressureDistance);
@@ -64,7 +71,12 @@ namespace TacticalDirector.FirstTouch
             {
                 PressureScalar = pressureScalar,
                 HasNearbyOpponent = hasNearby,
-                NearestOpponentDistance = nearestDistance
+                NearestOpponentDistance = nearestIndex >= 0
+                    ? Mathf.Sqrt(nearestDistanceSq)
+                    : float.PositiveInfinity,
+                NearestOpponentPositionXY = nearestIndex >= 0
+                    ? opponentPositions[nearestIndex]
+                    : Vector2.zero
             };
         }
     }
@@ -75,4 +87,5 @@ namespace TacticalDirector.FirstTouch
 // | 1.0     | 2026-05-25 | —      | Initial draft.                                                                                    |
 // | 1.1     | 2026-05-26 | —      | H-6/H-7 fix: contribution formula corrected to (MIN/dist)²; normalisation corrected to /Saturation. |
 // | 1.2     | 2026-06-06 | —      | AR-5 L-3: squared-distance gate against PressureRadius² before sqrt — Vector2.Distance only computed for opponents inside the radius. |
+// | 1.3     | 2026-06-10 | —      | AR-7 M-1 (ERR-004-004): nearest-opponent tracking lifted above the PressureRadius gate (global nearest over the span; squared-distance compare, one sqrt post-loop) and NearestOpponentPositionXY added to the result so the §3.4.2 interception check can anchor at the displaced ball position. Pressure contributions remain PressureRadius-gated per §3.5.1. |
 #endregion
