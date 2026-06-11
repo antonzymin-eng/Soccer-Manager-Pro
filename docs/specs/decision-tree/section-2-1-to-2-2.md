@@ -638,6 +638,17 @@ public readonly struct MatchContext
     /// Derived from BallState.Position by the orchestrator before the DT pipeline runs.
     /// The DT reads this field only — it does not read BallState directly.
     ///
+    /// ERR-008-002 (June 11, 2026 audit): this field is HOME-TEAM-PERSPECTIVE. The
+    /// zone thresholds below are defined "from own goal line", which a single shared
+    /// field cannot satisfy for both teams — and the away mirror is not expressible
+    /// by flipping the enum value (the home cut points {35, 65} mirror to away cut
+    /// points {40, 70}). NORMATIVE CONSUMPTION: DecisionContextAssembler derives the
+    /// team-relative zone per agent from MatchContext.BallPosition.x (an approved
+    /// public-match-state read per §1.3.1 / §3.5.5) via
+    /// PitchGeometry.ComputeFieldZone(posX, teamId); utility scoring (§3.2.1.3) reads
+    /// the derived DecisionContext.BallZone, never this field. This field remains as
+    /// the orchestrator's home-perspective diagnostic value.
+    ///
     /// Zone thresholds (from own goal line, standard 105m pitch): [GT]
     ///   DEFENSIVE:  0m – 35m   (own third)
     ///   MIDFIELD:   35m – 65m  (middle third)

@@ -38,7 +38,7 @@ namespace TacticalDirector.DecisionTree.Tests
             // Expected ≈ 0.60 × 1.0 × 0.913 × 0.884 × 0.5 × 1.0 ≈ 0.242
             // Tolerance ±0.05 (accounts for exact lane/goal-direction modifier values).
             DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
-            ctx.MatchContext.BallZone = FieldZone.MIDFIELD;
+            ctx.BallZone = FieldZone.MIDFIELD;
 
             Buffer[0] = MakePass(0.5f, 0.5f, 15.0f);
             UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
@@ -117,7 +117,7 @@ namespace TacticalDirector.DecisionTree.Tests
         public void ShootDominates_InAttackingThird_OpenGoal()
         {
             DecisionContext ctx = BuildContext(0.8f, 0.8f, 0.0f);
-            ctx.MatchContext.BallZone = FieldZone.ATTACKING;
+            ctx.BallZone = FieldZone.ATTACKING;
 
             Buffer[0] = MakePass(0.8f, 0.8f, 10.0f);
             Buffer[1] = MakeShoot(1.0f, 10.0f);
@@ -140,7 +140,7 @@ namespace TacticalDirector.DecisionTree.Tests
         public void PassDominates_InDefensiveThird_ClearLane()
         {
             DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
-            ctx.MatchContext.BallZone = FieldZone.DEFENSIVE;
+            ctx.BallZone = FieldZone.DEFENSIVE;
 
             Buffer[0] = MakePass(1.0f, 1.0f, 15.0f);
             Buffer[1] = MakeDribble(0.5f);
@@ -185,7 +185,7 @@ namespace TacticalDirector.DecisionTree.Tests
         {
             // Worst case: max pressure, minimum composure
             DecisionContext ctx = BuildContext(0.0f, 0.0f, 1.0f);
-            ctx.MatchContext.BallZone = FieldZone.ATTACKING;
+            ctx.BallZone = FieldZone.ATTACKING;
 
             Buffer[0] = MakeHold();
             UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
@@ -241,6 +241,7 @@ namespace TacticalDirector.DecisionTree.Tests
                 A_Positioning   = 0.5f,
                 A_Crossing      = 0.5f,
                 MatchContext    = mc,
+                BallZone        = FieldZone.MIDFIELD,   // scorer reads the team-relative ctx field (AR-2 H-2)
                 TacticalContext = tc,
                 PressureScalar  = pressure,
                 MatchSeed       = 0xABCDUL,
@@ -324,6 +325,8 @@ namespace TacticalDirector.DecisionTree.Tests
                 A_Positioning        = 0.5f,
                 A_Crossing           = 0.5f,
                 MatchContext         = mc,
+                BallZone             = FieldZone.MIDFIELD,
+                OpponentHasBall      = true,   // home agent (team 0), AWAY_TEAM possesses
                 TacticalContext      = tc,
                 PressureScalar       = 0.0f,
                 MatchSeed            = 0xABCDUL,
@@ -332,6 +335,82 @@ namespace TacticalDirector.DecisionTree.Tests
                 OpponentGoalPostL    = new Vector2(105f, 30.34f),
                 OpponentGoalPostR    = new Vector2(105f, 37.66f)
             };
+        }
+
+        // ── AR-2 M-1 lock: §3.4.6 press urgency follows OPPONENT possession ──
+
+        [Test]
+        public void PressUrgency_AppliesOnlyUnderOpponentPossession()
+        {
+            // Same context, urgency flag flipped: the ratio must equal
+            // PressUrgencyFactor exactly (all other terms identical).
+            DecisionContext ctxOpp = BuildOffBallContext(PressingMode.MEDIUM);
+            ctxOpp.OpponentHasBall = true;
+            DecisionContext ctxOwn = BuildOffBallContext(PressingMode.MEDIUM);
+            ctxOwn.OpponentHasBall = false;   // own-team (or contested) possession
+
+            Buffer[0] = MakePress(0.8f);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctxOpp);
+            float pressOpp = Buffer[0].BaseUtility;
+
+            Buffer[0] = MakePress(0.8f);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctxOwn);
+            float pressOwn = Buffer[0].BaseUtility;
+
+            Assert.AreEqual(TacticalWeights.PressUrgencyFactor, pressOpp / pressOwn, 1e-4f,
+                "§3.4.6 urgency must multiply PRESS only under opponent possession " +
+                "(AR-2 M-1: was keyed to the absolute AWAY_TEAM literal)");
+        }
+
+        // ── AR-2 M-4 lock: midfield long-shot gate uses the SHIFTED form ──────
+
+        [Test]
+        public void ShootMidfield_LongShotsRaw12_GetsLongModifier()
+        {
+            // Raw LongShots = 12 → A = 11/19 ≈ 0.579 → shifted ≈ 0.789 > 0.75 ⇒ the
+            // 0.55 midfield modifier applies (§3.2.3.4: effective threshold raw ≥ 11).
+            // Under the pre-fix raw-form comparison (0.579 < 0.75) the shot was
+            // suppressed to SHOOT_ZONE_MID_SHORT = 0.05.
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            ctx.BallZone   = FieldZone.MIDFIELD;
+            ctx.A_LongShots = 11.0f / 19.0f;
+
+            Buffer[0] = MakeShoot(0.7f, 28.0f);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float withLong = Buffer[0].BaseUtility;
+
+            ctx.A_LongShots = 0.0f;   // raw 1 → shifted 0.5 < 0.75 ⇒ suppressed
+            Buffer[0] = MakeShoot(0.7f, 28.0f);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float withoutLong = Buffer[0].BaseUtility;
+
+            float expectedRatio = UtilityWeights.SHOOT_ZONE_MID_LONG / UtilityWeights.SHOOT_ZONE_MID_SHORT;
+            Assert.AreEqual(expectedRatio, withLong / withoutLong, expectedRatio * 0.01f,
+                "Midfield long-shot gate must compare the shifted attribute form (§3.2.3.1)");
+        }
+
+        // ── AR-2 M-3 lock: SHOOT risk driven by (1 − GoalOpeningScore) ─────────
+
+        [Test]
+        public void ShootRisk_ScalesWithBlockedGoal_NotFinishing()
+        {
+            // At opening = 1.0 the §3.2.3.1 risk term is zero regardless of pressure;
+            // pre-fix the (1 − A_Finishing) form produced a nonzero penalty here.
+            DecisionContext ctxP0 = BuildContext(0.5f, 0.2f, 0.0f);
+            ctxP0.BallZone = FieldZone.ATTACKING;
+            DecisionContext ctxP1 = BuildContext(0.5f, 0.2f, 1.0f);
+            ctxP1.BallZone = FieldZone.ATTACKING;
+
+            Buffer[0] = MakeShoot(1.0f, 12.0f);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctxP0);
+            float openNoPressure = Buffer[0].BaseUtility;
+
+            Buffer[0] = MakeShoot(1.0f, 12.0f);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctxP1);
+            float openMaxPressure = Buffer[0].BaseUtility;
+
+            Assert.AreEqual(openNoPressure, openMaxPressure, 1e-5f,
+                "With a fully open goal, RiskPenalty_SHOOT = (1−1.0)×P×coeff = 0 at any pressure (§3.2.3.1)");
         }
     }
 }
@@ -342,4 +421,8 @@ namespace TacticalDirector.DecisionTree.Tests
 // | 1.1     | 2026-06-01 | —      | Added UT-US-01 (PASS formula baseline, bounded output) and UT-US-03 (PRESS   |
 // |         |            |        |   utility higher under HIGH pressing; ratio check ≈ 1.40). Decision Tree #8  |
 // |         |            |        |   §5 spec requirements. Added MakePress helper and BuildOffBallContext helper. |
+// | 1.2     | 2026-06-11 | —      | Audit AR-2: zone writes moved to ctx.BallZone (scorer input after H-2);        |
+// |         |            |        |   helpers seed BallZone/OpponentHasBall; new locks — M-1 press urgency under   |
+// |         |            |        |   opponent possession, M-4 shifted-form midfield gate (raw 12 passes),         |
+// |         |            |        |   M-3 SHOOT risk zero at full goal opening.                                    |
 #endregion

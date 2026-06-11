@@ -19,6 +19,19 @@ namespace TacticalDirector.DecisionTree.Tests
     [TestFixture]
     internal class DecisionTreeIntegrationTests
     {
+        // AR-2 M-11: ReceiveSnapshot publishes DecisionMadeEvent (Tier C) on every
+        // successful evaluation, and CosmeticChannel.Publish THROWS
+        // ERR_EVT_UNREGISTERED_ORDINAL for an unbooted registry — so the fixture must
+        // boot it. Initialize() is idempotent (s_registered guard, v1.2), making this
+        // safe alongside EventBusWiringSmokeTests in the same test process. The
+        // pre-audit suite lacked this boot and would have thrown on first run — it
+        // was never caught because the assembly never compiled (H-1).
+        [OneTimeSetUp]
+        public void BootEventRegistry()
+        {
+            EventBusRegistrar.Initialize();
+        }
+
         // ── Stub movement controller (public interface) ───────────────────────
 
         private sealed class RecordingController : IDtMovementController
@@ -173,7 +186,156 @@ namespace TacticalDirector.DecisionTree.Tests
             Assert.DoesNotThrow(() => dt.SetMatchSeed(0xDEADBEEFCAFEBABEUL));
         }
 
+        // ── UT-33 (AR-2 H-3 lock): HOLD selection lands in IDLE (§3.7.2 row 3) ─
+
+        [Test]
+        public void HoldSelected_TransitionsToIdle_NotExecuting()
+        {
+            // On-ball, GROUNDED (no DRIBBLE), no teammates (no PASS), out of shooting
+            // range (no SHOOT) → HOLD is the only candidate. §3.7.2 row 3: HOLD
+            // engages no execution system and lands in IDLE. Pre-fix the machine
+            // returned EXECUTING for every selection.
+            RecordingController mc = new RecordingController();
+            DecisionTree dt = new DecisionTree(0, mc, 0xABCDUL);
+
+            ReceiveOnBallSnapshot(dt, frameNumber: 1, withTeammate: false,
+                grounded: true, agentX: 20f);
+
+            Assert.AreEqual(ActionType.HOLD, dt.LastAction.Type,
+                "Scenario must isolate HOLD as the only candidate");
+            Assert.AreEqual(DtState.IDLE, dt.State,
+                "HOLD dispatch must land in IDLE (§3.7.2 row 3), not EXECUTING");
+            Assert.AreEqual(1, mc.CallCount,
+                "HOLD still routes its movement command (§3.5.5)");
+        }
+
+        // ── UT-34 (AR-2 H-3 lock): PASS holds EXECUTING between heartbeats ─────
+
+        [Test]
+        public void PassInFlight_NotReevaluated_UntilForcedRefresh()
+        {
+            // §3.7.2: once PASS is dispatched, the DT stays in EXECUTING and the
+            // pipeline is NOT re-entered on the normal heartbeat cadence; §3.6.3: a
+            // forced refresh re-evaluates but suppresses re-dispatch when the fresh
+            // selection has the same ActionType. Pre-fix the full pipeline re-ran and
+            // re-dispatched every heartbeat mid-windup.
+            RecordingController mc = new RecordingController();
+            DecisionTree dt = new DecisionTree(0, mc, 0xABCDUL);   // null executors: PASS dispatch dropped, state flow unaffected
+
+            ReceiveOnBallSnapshot(dt, frameNumber: 1, withTeammate: true,
+                grounded: false, agentX: 52f);
+
+            Assert.AreEqual(ActionType.PASS, dt.LastAction.Type,
+                "Scenario must select PASS (clear forward lane dominates)");
+            Assert.AreEqual(DtState.EXECUTING, dt.State);
+            Assert.AreEqual(1, dt.LastAction.HeartbeatTick);
+
+            // Normal heartbeat: pipeline must be skipped entirely.
+            ReceiveOnBallSnapshot(dt, frameNumber: 2, withTeammate: true,
+                grounded: false, agentX: 52f);
+            Assert.AreEqual(DtState.EXECUTING, dt.State,
+                "PASS in flight: normal heartbeat must not re-evaluate (§3.7.2)");
+            Assert.AreEqual(1, dt.LastAction.HeartbeatTick,
+                "LastAction must be untouched by a skipped heartbeat");
+
+            // Forced refresh with unchanged conditions: re-evaluates, selects PASS
+            // again → same-type re-dispatch suppression (§3.6.3).
+            ReceiveOnBallSnapshot(dt, frameNumber: 3, withTeammate: true,
+                grounded: false, agentX: 52f, forcedRefresh: true);
+            Assert.AreEqual(DtState.EXECUTING, dt.State,
+                "Same-ActionType forced refresh continues the in-flight execution (§3.6.3)");
+            Assert.AreEqual(1, dt.LastAction.HeartbeatTick,
+                "Same-type suppression must not replace the in-flight action record");
+
+            // Completion signal returns the agent to IDLE (§3.7.2 row 4).
+            dt.NotifyActionComplete();
+            Assert.AreEqual(DtState.IDLE, dt.State);
+        }
+
+        // ── UT-35 (AR-2 H-3 lock): invalid snapshot preserves EXECUTING ────────
+
+        [Test]
+        public void InvalidSnapshot_DoesNotStompExecutingState()
+        {
+            RecordingController mc = new RecordingController();
+            DecisionTree dt = new DecisionTree(0, mc, 0xABCDUL);
+
+            ReceiveMinimalOffBallSnapshot(dt, agentId: 0, frameNumber: 1);
+            Assert.AreEqual(DtState.EXECUTING, dt.State);
+
+            // Malformed snapshot (wrong ObserverId) aborts the tick only.
+            FilteredView badSnap = new FilteredView
+            {
+                ObserverId               = 99,
+                FrameNumber              = 2,
+                VisibleTeammates         = new PerceivedAgent[0],
+                VisibleOpponents         = new PerceivedAgent[0],
+                BlindSidePerceivedAgents = new PerceivedAgent[0]
+            };
+            dt.ReceiveSnapshot(badSnap, BuildMatchContext(possessingAgentId: 15),
+                TacticalContext.Stage0Default(new Vector2(50f, 34f)),
+                DtAgentAttributes.CreateDefault(teamId: 0),
+                BuildAgentState(new Vector2(52f, 34f)), pressureScalar: 0.0f);
+
+            Assert.AreEqual(DtState.EXECUTING, dt.State,
+                "A malformed snapshot must abort the tick, not destroy the in-flight EXECUTING record (AR-2 H-3)");
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────
+
+        private static void ReceiveOnBallSnapshot(
+            DecisionTree dt,
+            int frameNumber,
+            bool withTeammate,
+            bool grounded,
+            float agentX,
+            bool forcedRefresh = false)
+        {
+            Vector2 agentPos = new Vector2(agentX, 34f);
+            var teammates = withTeammate
+                ? new[] { new PerceivedAgent
+                    {
+                        AgentId = 4,
+                        PerceivedPosition = agentPos + new Vector2(8f, 0f),   // clear forward lane
+                        PerceivedVelocity = Vector2.zero,
+                        ConfidenceScore = 1.0f
+                    } }
+                : new PerceivedAgent[0];
+
+            FilteredView snap = new FilteredView
+            {
+                ObserverId               = 0,
+                FrameNumber              = frameNumber,
+                ForcedRefreshThisTick    = forcedRefresh,
+                BallVisible              = true,
+                BallPerceivedPosition    = agentPos,
+                BallStalenessFrames      = 0,
+                VisibleTeammates         = teammates,
+                VisibleTeammatesCount    = teammates.Length,
+                VisibleOpponents         = new PerceivedAgent[0],
+                VisibleOpponentsCount    = 0,
+                BlindSidePerceivedAgents = new PerceivedAgent[0],
+                BlindSidePerceivedAgentsCount = 0
+            };
+
+            MatchContext mc2 = new MatchContext
+            {
+                Possession         = PossessionState.HOME_TEAM,
+                PossessingAgentId  = 0,                       // this agent has the ball
+                Phase              = MatchPhase.OPEN_PLAY,
+                BallPosition       = agentPos,
+                BallZone           = PitchGeometry.ComputeFieldZone(agentPos.x)
+            };
+
+            AgentState state = BuildAgentState(agentPos);
+            if (grounded) state.CurrentState = AgentMovementState.GROUNDED;
+
+            dt.ReceiveSnapshot(snap, mc2,
+                TacticalContext.Stage0Default(new Vector2(50f, 34f)),
+                DtAgentAttributes.CreateDefault(teamId: 0),
+                state, pressureScalar: 0.0f);
+        }
+
 
         private static void ReceiveMinimalOffBallSnapshot(
             DecisionTree dt,
@@ -239,4 +401,8 @@ namespace TacticalDirector.DecisionTree.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-11 | —      | Audit AR-2 H-3 locks: UT-33 HOLD→IDLE (§3.7.2 row 3); UT-34 PASS holds        |
+// |         |            |        |   EXECUTING across heartbeats with §3.6.3 forced-refresh same-type            |
+// |         |            |        |   suppression; UT-35 malformed snapshot preserves EXECUTING. New               |
+// |         |            |        |   ReceiveOnBallSnapshot helper (possession-branch scenarios).                  |
 #endregion

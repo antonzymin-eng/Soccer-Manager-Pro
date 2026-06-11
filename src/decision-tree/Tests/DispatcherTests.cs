@@ -6,11 +6,14 @@
 // Purpose:  Unit tests for ActionDispatcher movement routing. Verifies that HOLD,
 //           DRIBBLE, MOVE (far/mid/near), PRESS, and INTERCEPT produce the correct
 //           MovementCommand DesiredState and FacingMode per §3.5.4–3.5.8.
-//           PASS and SHOOT are excluded: they call static PassExecutor/ShotExecutor
-//           which depend on physics systems unavailable in unit-test context.
+//           PASS and SHOOT are excluded: their PassExecutor/ShotExecutor instances
+//           depend on physics-system seams unavailable in unit-test context (null is
+//           passed; the dispatcher drops the request and logs the wiring failure).
 
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using TacticalDirector.AgentMovement;
 using TacticalDirector.PerceptionSystem;
 
@@ -46,7 +49,7 @@ namespace TacticalDirector.DecisionTree.Tests
             AgentAction action = new AgentAction(
                 0, ActionType.HOLD, -1, Vector2.zero, default, default, 0.3f, 1);
 
-            ActionDispatcher.Dispatch(action, in ctx, mc);
+            ActionDispatcher.Dispatch(action, in ctx, mc, null, null);
 
             Assert.AreEqual(1, mc.CallCount, "Dispatcher must call SubmitCommand exactly once for HOLD");
             Assert.AreEqual(FacingMode.TARGET_LOCK, mc.LastCommand.FacingMode,
@@ -67,7 +70,7 @@ namespace TacticalDirector.DecisionTree.Tests
             AgentAction action = new AgentAction(
                 0, ActionType.DRIBBLE, -1, dribbleTarget, default, default, 0.5f, 1);
 
-            ActionDispatcher.Dispatch(action, in ctx, mc);
+            ActionDispatcher.Dispatch(action, in ctx, mc, null, null);
 
             Assert.AreEqual(AgentMovementState.JOGGING, mc.LastCommand.DesiredState,
                 "DRIBBLE must request JOGGING state (MoveTo)");
@@ -87,7 +90,7 @@ namespace TacticalDirector.DecisionTree.Tests
             AgentAction action = new AgentAction(
                 0, ActionType.MOVE_TO_POSITION, -1, target, default, default, 0.4f, 1);
 
-            ActionDispatcher.Dispatch(action, in ctx, mc);
+            ActionDispatcher.Dispatch(action, in ctx, mc, null, null);
 
             Assert.AreEqual(AgentMovementState.SPRINTING, mc.LastCommand.DesiredState,
                 "MOVE target ≥ 15m must dispatch SprintUrgent (SPRINTING)");
@@ -105,17 +108,20 @@ namespace TacticalDirector.DecisionTree.Tests
             AgentAction action = new AgentAction(
                 0, ActionType.MOVE_TO_POSITION, -1, target, default, default, 0.4f, 1);
 
-            ActionDispatcher.Dispatch(action, in ctx, mc);
+            ActionDispatcher.Dispatch(action, in ctx, mc, null, null);
 
             Assert.AreEqual(AgentMovementState.JOGGING, mc.LastCommand.DesiredState,
                 "MOVE target 6–14m must dispatch MoveTo (JOGGING)");
         }
 
-        // ── UT-20: MOVE near (< 6m) → Stop (IDLE) ────────────────────────────
+        // ── UT-20: MOVE near (< 6m) → WalkTo (WALKING) per §3.5.6 ─────────────
 
         [Test]
-        public void Move_NearTarget_DispatchesStop()
+        public void Move_NearTarget_DispatchesWalkTo()
         {
+            // AR-2 M-5 re-derivation: §3.5.6 near band is WALKING toward the slot
+            // ("minor adjustment"). The pre-fix expectation (Stop/IDLE) encoded the
+            // deviation — agents within 6 m never closed the residual offset.
             RecordingController mc  = new RecordingController();
             Vector2 agentPos        = new Vector2(52f, 34f);
             Vector2 target          = new Vector2(52.5f, 34f); // 0.5m — below 6m jog threshold
@@ -123,10 +129,12 @@ namespace TacticalDirector.DecisionTree.Tests
             AgentAction action = new AgentAction(
                 0, ActionType.MOVE_TO_POSITION, -1, target, default, default, 0.4f, 1);
 
-            ActionDispatcher.Dispatch(action, in ctx, mc);
+            ActionDispatcher.Dispatch(action, in ctx, mc, null, null);
 
-            Assert.AreEqual(AgentMovementState.IDLE, mc.LastCommand.DesiredState,
-                "MOVE target < 6m must dispatch Stop (IDLE) — agent is already on slot");
+            Assert.AreEqual(AgentMovementState.WALKING, mc.LastCommand.DesiredState,
+                "MOVE target < 6m must dispatch WalkTo (WALKING toward slot, §3.5.6)");
+            Assert.AreEqual(target, mc.LastCommand.TargetPosition,
+                "Near-band MOVE must still target the slot, not the current position");
         }
 
         // ── UT-21: PRESS → SprintUrgent (SPRINTING) ──────────────────────────
@@ -141,12 +149,18 @@ namespace TacticalDirector.DecisionTree.Tests
             AgentAction action = new AgentAction(
                 0, ActionType.PRESS, 15, pressTarget, default, default, 0.5f, 1);
 
-            ActionDispatcher.Dispatch(action, in ctx, mc);
+            ActionDispatcher.Dispatch(action, in ctx, mc, null, null);
 
             Assert.AreEqual(AgentMovementState.SPRINTING, mc.LastCommand.DesiredState,
-                "PRESS must dispatch SprintUrgent (SPRINTING)");
+                "PRESS must dispatch SPRINTING (§3.5.7)");
             Assert.AreEqual(pressTarget, mc.LastCommand.TargetPosition,
-                "PRESS SprintUrgent target must match action TargetPosition");
+                "PRESS target must match action TargetPosition");
+            Assert.AreEqual(DecelerationMode.EMERGENCY, mc.LastCommand.DecelerationMode,
+                "PRESS must use EMERGENCY braking (§3.5.7 / UT-DP-04; AR-2 M-5)");
+            Assert.AreEqual(FacingMode.TARGET_LOCK, mc.LastCommand.FacingMode,
+                "PRESS must TARGET_LOCK on the press target (§3.5.7 / UT-DP-04; AR-2 M-5)");
+            Assert.AreEqual(pressTarget, mc.LastCommand.FacingTarget,
+                "PRESS facing target must be the pressed opponent (§3.5.7)");
         }
 
         // ── UT-22: INTERCEPT → SprintUrgent (SPRINTING) ──────────────────────
@@ -161,10 +175,40 @@ namespace TacticalDirector.DecisionTree.Tests
             AgentAction action = new AgentAction(
                 0, ActionType.INTERCEPT, -1, interceptPoint, default, default, 0.5f, 1);
 
-            ActionDispatcher.Dispatch(action, in ctx, mc);
+            ActionDispatcher.Dispatch(action, in ctx, mc, null, null);
 
             Assert.AreEqual(AgentMovementState.SPRINTING, mc.LastCommand.DesiredState,
-                "INTERCEPT must dispatch SprintUrgent (SPRINTING)");
+                "INTERCEPT must dispatch SPRINTING (§3.5.8)");
+            Assert.AreEqual(DecelerationMode.CONTROLLED, mc.LastCommand.DecelerationMode,
+                "INTERCEPT must use CONTROLLED braking — protects first-touch quality (§3.5.8)");
+            Assert.AreEqual(FacingMode.TARGET_LOCK, mc.LastCommand.FacingMode,
+                "INTERCEPT must TARGET_LOCK (§3.5.8; AR-2 M-5)");
+            Assert.AreEqual(new Vector2(60f, 34f), mc.LastCommand.FacingTarget,
+                "INTERCEPT must watch the BALL during the run, not the intercept point (§3.5.8)");
+        }
+
+        // ── FM-DT-14: unknown ActionType → HOLD-safe command (§3.5.9) ─────────
+
+        [Test]
+        public void UnknownActionType_DispatchesHoldSafeCommand()
+        {
+            RecordingController mc  = new RecordingController();
+            DecisionContext ctx = BuildContext(
+                agentPos: new Vector2(52f, 34f), ballPos: new Vector2(55f, 34f));
+            AgentAction action = new AgentAction(
+                0, (ActionType)99, -1, Vector2.zero, default, default, 0.1f, 1);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            LogAssert.Expect(LogType.Error, new Regex("FM-DT-14"));
+#endif
+            ActionDispatcher.Dispatch(action, in ctx, mc, null, null);
+
+            Assert.AreEqual(1, mc.CallCount,
+                "FM-DT-14 must produce a HOLD-safe command, not silently drop the agent (§3.5.9)");
+            Assert.AreEqual(FacingMode.TARGET_LOCK, mc.LastCommand.FacingMode,
+                "FM-DT-14 HOLD-safe command watches the ball");
+            Assert.AreEqual(new Vector2(52f, 34f), mc.LastCommand.TargetPosition,
+                "FM-DT-14 HOLD-safe command holds at the agent's own position");
         }
 
         // ── UT-23: Dispatcher routes correct AgentId ──────────────────────────
@@ -178,7 +222,7 @@ namespace TacticalDirector.DecisionTree.Tests
             AgentAction action = new AgentAction(
                 9, ActionType.HOLD, -1, Vector2.zero, default, default, 0.3f, 1);
 
-            ActionDispatcher.Dispatch(action, in ctx, mc);
+            ActionDispatcher.Dispatch(action, in ctx, mc, null, null);
 
             Assert.AreEqual(9, mc.LastAgentId,
                 "Dispatcher must pass action.AgentId to SubmitCommand");
@@ -247,4 +291,10 @@ namespace TacticalDirector.DecisionTree.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-11 | —      | Audit AR-2: Dispatch signature gains executor instances (H-1; null in unit    |
+// |         |            |        |   context). M-5 re-derivations — UT-20 near-band MOVE expects WALKING toward  |
+// |         |            |        |   the slot (was Stop/IDLE, encoding the deviation); UT-21 asserts the full     |
+// |         |            |        |   §3.5.7 PRESS profile (EMERGENCY + TARGET_LOCK); UT-22 asserts the §3.5.8     |
+// |         |            |        |   INTERCEPT profile (CONTROLLED + ball-watching TARGET_LOCK). New FM-DT-14     |
+// |         |            |        |   unknown-type HOLD-safe lock (§3.5.9).                                        |
 #endregion

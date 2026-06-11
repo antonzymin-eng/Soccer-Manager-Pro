@@ -170,6 +170,18 @@ Pass Mechanics, the DT is in EXECUTING until the execution system signals comple
 (or the DT receives an interrupt). The DT does not re-evaluate during PASS execution
 unless a forced refresh arrives.
 
+> **Stage 0 deviation note (ERR-008-008, June 11, 2026 audit):** row 5 lists only HOLD
+> and MOVE_TO_POSITION as continuous, leaving DRIBBLE/PRESS/INTERCEPT implicitly
+> EXECUTING until a completion signal — but no Stage 0 execution system emits
+> completion for movement-routed actions (Agent Movement #2 consumes commands without
+> acknowledgement), which would freeze an agent after its first movement dispatch. The
+> Stage 0 implementation therefore treats ALL movement-routed actions
+> (DRIBBLE/MOVE/PRESS/INTERCEPT, plus HOLD) as continuous; only PASS and SHOOT hold
+> EXECUTING between heartbeats. Additionally, no DT→executor cancel entry point exists
+> at Stage 0 — on a forced-refresh action change the executor self-cancels via its own
+> guards (Pass #5 FM-08 possession recheck / §3.8.5 tackle flag). Revisit when a
+> movement completion signal lands (Stage 1).
+
 ---
 
 ### 3.7.3 Transition Invariants
@@ -248,7 +260,9 @@ foreseeable conditions. Each must be handled without requiring external interven
 > (possession-available actions that do not require a visible target). PASS and SHOOT
 > are not generated (no teammates / goal not viable). DRIBBLE utility depends on
 > `SpaceScore`; HOLD utility is always generated at `BaseUtility = 0.25`. The agent
-> dribbles if space exists, holds if under pressure.
+> dribbles if space exists, holds if under pressure. (HOLD nominal is 0.28 per
+> §3.2.5.1 — the 0.25 cited in this file pre-dates the §3.2.5.1 raise; June 11, 2026
+> audit.)
 >
 > This is not a failure mode. A striker isolated at the back with no open passing option
 > should hold or dribble. The utility model produces this outcome without special handling.
@@ -340,8 +354,9 @@ foreseeable conditions. Each must be handled without requiring external interven
 
 > Condition: Lowest possible Composure attribute (1/20); PressureScalar `P = 1.0`.
 >
-> Expected behaviour: `ComposureNoiseBound` reaches its maximum (NOISE_MAX = 0.20,
-> §3.3.4). `EffectiveUtility` values are significantly perturbed from `ScoredUtility`.
+> Expected behaviour: `ComposureNoiseBound` reaches its maximum (NOISE_MAX = 0.15 —
+> §3.3.4.3 is the authority and explicitly reduced the outline's 0.20; the 0.20
+> formerly cited here was the stale outline value; June 11, 2026 audit). `EffectiveUtility` values are significantly perturbed from `ScoredUtility`.
 > The agent may select a suboptimal action — for example, SHOOT from a low-probability
 > position instead of PASS to an unmarked teammate.
 >
@@ -410,11 +425,13 @@ complete. The full six-step pipeline is specified:
   (TBD-INTERFACE-001); method identifier provisional pending Agent Movement §4
   finalisation. Non-blocking; tracked as integration item.
 
-**Constant count (this file):** 16 §3.4 tactical constants + 7 §3.5 dispatch/movement
+**Constant count (this file):** 16 §3.4 tactical constants + 6 §3.5 dispatch/movement
 constants (`URGENCY_PRESSURE_SCALE`, `SPIN_INTENT_BELOW_CENTRE`, `SPIN_INTENT_OFF_CENTRE`,
-`PLACEMENT_CORNER_OFFSET`, `MOVE_SPRINT_THRESHOLD`, `MOVE_JOG_THRESHOLD`, and
-`PRESS_URGENCY_FACTOR` already counted in §3.4) = **23 new [GT] constants**, all in
-`TacticalWeights.cs` or `UtilityWeights.cs` as indicated in §3.4.7.
+`PLACEMENT_CORNER_OFFSET`, `MOVE_SPRINT_THRESHOLD`, `MOVE_JOG_THRESHOLD`) =
+**22 new [GT] constants** (ERR-008-010: the v1.1 count of 23 double-counted
+`PRESS_URGENCY_FACTOR`, which belongs to the 16 §3.4 tacticals), all in
+`TacticalWeights.cs` (§3.2.7.2's claim that pressing modifiers live in
+`UtilityWeights.cs` is superseded by §3.4.7's "exclusively in TacticalWeights.cs").
 
 **Next:** Section 4 — Architecture and Integration.
 

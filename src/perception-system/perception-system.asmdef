@@ -6,7 +6,8 @@
         "TacticalDirector.BallPhysics",
         "TacticalDirector.CollisionSystem",
         "TacticalDirector.FirstTouch",
-        "TacticalDirector.EventSystem"
+        "TacticalDirector.EventSystem",
+        "TacticalDirector.DeterministicSim"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

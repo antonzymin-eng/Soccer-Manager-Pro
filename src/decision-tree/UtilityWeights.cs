@@ -43,9 +43,9 @@ namespace TacticalDirector.DecisionTree
         public const float HOLD_ZONE_MID   = 1.00f;  // [GT] neutral
         public const float HOLD_ZONE_ATT   = 0.80f;  // [GT] waste of attacking opportunity
 
-        public const float MOVE_ZONE_DEF   = 1.00f;  // positional duty unchanged by zone
-        public const float MOVE_ZONE_MID   = 1.00f;
-        public const float MOVE_ZONE_ATT   = 1.00f;
+        public const float MOVE_ZONE_DEF   = 1.00f;  // [GT] positional duty unchanged by zone (§3.2.1.3)
+        public const float MOVE_ZONE_MID   = 1.00f;  // [GT]
+        public const float MOVE_ZONE_ATT   = 1.00f;  // [GT]
 
         public const float PRESS_ZONE_DEF  = 0.80f;  // [GT] pressing from deep exposes space
         public const float PRESS_ZONE_MID  = 1.00f;  // [GT] neutral
@@ -92,7 +92,13 @@ namespace TacticalDirector.DecisionTree
 
         // ── Context Score Thresholds and Distances ──────────────────────────────────
 
-        public const float LONG_SHOT_THRESHOLD  = 0.75f;  // [GT] shifted LongShots for midfield shot
+        /// <summary>
+        /// [GT] Midfield long-shot viability threshold. Compared against the SHIFTED
+        /// attribute form (0.5 + A_LongShots × 0.5) per §3.2.3.1 — effective raw
+        /// LongShots ≥ 11 (§3.2.3.4 derives this explicitly; comparing the raw
+        /// normalised A against 0.75 — the AR-2 M-4 defect — required raw ≥ 16).
+        /// </summary>
+        public const float LONG_SHOT_THRESHOLD  = 0.75f;
         public const float GOAL_OPENING_MIN     = 0.05f;  // [GT] minimum goal opening score floor
         public const float BLOCKER_RADIUS_M     = 0.50f;  // [GT] outfield player body width in shot lane
         public const float GK_BLOCKER_RADIUS_M  = 1.50f;  // [GT] goalkeeper effective blocking radius
@@ -111,10 +117,12 @@ namespace TacticalDirector.DecisionTree
         public const float MOVE_PHASE_CONTESTED = 1.00f;  // [DERIVED] neutral baseline
 
         // ── Tactical Pressing Modifiers ─────────────────────────────────────────────
-
-        public const float PRESS_TACTICAL_HIGH   = 1.40f; // [GT] high press instruction
-        public const float PRESS_TACTICAL_MEDIUM = 1.00f; // Stage 0 default for all agents
-        public const float PRESS_TACTICAL_LOW    = 0.60f; // [GT] low press instruction
+        // AR-2 L: the tactical pressing multipliers live EXCLUSIVELY in
+        // TacticalWeights.cs (§3.4.7 "All tactical constants reside exclusively in
+        // TacticalWeights.cs"): PressingHighPressMod / PressingLowPressMod et al.
+        // The PRESS_TACTICAL_HIGH/MEDIUM/LOW duplicates previously declared here were
+        // never consumed and were a parallel-surface drift hazard (a designer tuning
+        // one copy would silently miss the live one) — removed.
 
         // ── Option Generation Constants ─────────────────────────────────────────────
         // Constants referenced in §3.1; catalogued here per §3.2.1.6.
@@ -142,9 +150,20 @@ namespace TacticalDirector.DecisionTree
 
         public const float INTERCEPT_MIN_BALL_SPEED = 1.0f; // [GT] m/s; ball must be moving for INTERCEPT
         public const float MAX_INTERCEPT_TIME      = 1.5f;  // [GT] s; maximum look-ahead for intercept geometry
-        public const float DRAG_APPROX             = 0.3f;  // [CROSS — Ball Physics #1 §3.x] drag deceleration coefficient s⁻¹
+        /// <summary>
+        /// [EST] First-order drag decay coefficient (s⁻¹) for the §3.1.9.2 intercept
+        /// trajectory approximation: v(t) = v₀·e^(−kt). Retagged from [CROSS] (AR-2 L /
+        /// ERR-008-009): Ball Physics #1 models QUADRATIC drag (½ρC_dAv²) and declares
+        /// no 0.3 s⁻¹ constant — this value is a DT-side approximation calibrated
+        /// against #1's worked examples (~26% speed loss over 1 s), not a verbatim
+        /// copy, so [CROSS] violated the tag rules. Error bounds: §3.1.9.2 (≤6.9% at
+        /// 30 m/s over 1.5 s). Stage 1: replace with BallPhysics.ProjectPosition(t).
+        /// </summary>
+        public const float DRAG_APPROX             = 0.3f;
 
-        public const float URGENCY_PRESSURE_SCALE  = 1.0f;  // [GT] maps PressureScalar to PassRequest.Urgency
+        // URGENCY_PRESSURE_SCALE: lives in TacticalWeights.UrgencyPressureScale (the
+        // consumed surface; §3.4.7). The unconsumed duplicate previously declared
+        // here is removed (AR-2 L parallel-surface drift hazard).
 
         // ── Option Generation: Derived Geometry ─────────────────────────────────
         // Constants used in OptionGenerator formula code per §3.2.1.6.
@@ -171,4 +190,10 @@ namespace TacticalDirector.DecisionTree
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                                         |
 // | 1.1     | 2026-05-29 | —      | AR-1 L-1/L-3: Add DRIBBLE_SECTOR_HALF_ANGLE, PASS_LANE_ENDPOINT_MARGIN,        |
 // |         |            |        |   AGENT_SPEED_MIN/MAX_MPS; XML docs on UTILITY_FLOOR/CEILING.                  |
+// | 1.2     | 2026-06-11 | —      | Audit AR-2: L removed unconsumed duplicates of TacticalWeights constants       |
+// |         |            |        |   (PRESS_TACTICAL_HIGH/MEDIUM/LOW, URGENCY_PRESSURE_SCALE — parallel-surface   |
+// |         |            |        |   drift hazard); DRAG_APPROX retagged [CROSS]→[EST] with derivation note       |
+// |         |            |        |   (ERR-008-009); LONG_SHOT_THRESHOLD doc states the shifted-form comparison    |
+// |         |            |        |   (M-4 companion); MOVE_ZONE_* gain [GT] tags (now consumed via               |
+// |         |            |        |   GetZoneModifier).                                                            |
 #endregion

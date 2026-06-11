@@ -86,51 +86,90 @@ namespace TacticalDirector.DecisionTree
             // Decisions attribute candidate cap (§3.1.3.6)
             int decisionsCap = Mathf.FloorToInt(2.0f + ctx.A_Decisions * 8.0f);
             int totalTeammates = snap.VisibleTeammatesCount;
-
-            // Sort by proximity if cap applies (§3.1.3.6: closest first)
-            // Stage 0: iterate in array order; full sort deferred to Stage 1 optimisation.
             int maxCandidates = Mathf.Min(totalTeammates, decisionsCap);
 
             Vector2 goalDir = (ctx.OpponentGoalCentre - ctx.AgentPosition).normalized;
             float urgency = Mathf.Clamp01(ctx.PressureScalar * TacticalWeights.UrgencyPressureScale);
 
-            for (int i = 0; i < maxCandidates && count < buf.Length; i++)
+            if (maxCandidates >= totalTeammates)
             {
-                PerceivedAgent tm = snap.VisibleTeammates[i];
-
-                // Pass lane viability (§3.1.3.3)
-                int interceptorCount = CountInterceptors(in ctx, tm.PerceivedPosition);
-                float passLaneScore = Mathf.Clamp01(1.0f - interceptorCount / UtilityWeights.PASS_LANE_DIVISOR);
-
-                // Goal-direction modifier (§3.1.3.5)
-                Vector2 passDir = (tm.PerceivedPosition - ctx.AgentPosition).normalized;
-                float cosine = Vector2.Dot(passDir, goalDir);
-                float goalDirMod = UtilityWeights.GOAL_DIR_MIN_MODIFIER
-                    + ((cosine + 1.0f) / 2.0f) * (1.0f - UtilityWeights.GOAL_DIR_MIN_MODIFIER);
-                float adjustedScore = passLaneScore * goalDirMod;
-
-                if (adjustedScore < UtilityWeights.MIN_PASS_LANE_SCORE) continue;
-
-                float dist = Vector2.Distance(ctx.AgentPosition, tm.PerceivedPosition);
-                PassType passType = DerivePassType(dist, passDir, ctx.AgentFacingDirection,
-                    ctx.A_Crossing, tm.PerceivedVelocity, goalDir, ctx.AgentPosition);
-                CrossSubType crossSub = CrossSubType.Flat; // Stage 0: always Flat; Whipped/High derived at Stage 1
-
-                buf[count++] = new ActionOption
-                {
-                    Type                  = ActionType.PASS,
-                    TargetAgentId         = tm.AgentId,
-                    TargetPosition        = tm.PerceivedPosition,
-                    PassLaneScore         = passLaneScore,
-                    AdjustedPassLaneScore = adjustedScore,
-                    GoalDirectionCosine   = cosine,
-                    DerivedPassType       = passType,
-                    DerivedCrossSubType   = crossSub,
-                    IntendedDistance      = dist,
-                    Urgency               = urgency,
-                    IsWeakFoot            = false  // ERR-007-TRACKED: WeakFootRating absent; conservative default
-                };
+                // Cap non-binding: snapshot order (§3.1.3.2 — order has no scoring
+                // significance when every visible teammate is evaluated).
+                for (int i = 0; i < totalTeammates && count < buf.Length; i++)
+                    count = TryAddPassCandidate(in ctx, snap.VisibleTeammates[i],
+                        goalDir, urgency, buf, count);
             }
+            else
+            {
+                // §3.1.3.6: when the cap binds, teammates are evaluated in PROXIMITY
+                // order (closest first) — a cognitive scope limit, not a scoring
+                // decision. AR-2 M-9: the previous form iterated in snapshot order,
+                // so low-Decisions agents dropped teammates by array position rather
+                // than distance. Selection scan is O(cap × N) with N ≤ 21; stackalloc
+                // marks keep the hot path zero-heap-allocation (INV-10).
+                Span<bool> taken = stackalloc bool[totalTeammates];
+                for (int k = 0; k < maxCandidates && count < buf.Length; k++)
+                {
+                    int   bestIdx = -1;
+                    float bestSqr = float.MaxValue;
+                    for (int i = 0; i < totalTeammates; i++)
+                    {
+                        if (taken[i]) continue;
+                        float sqr = (snap.VisibleTeammates[i].PerceivedPosition
+                                     - ctx.AgentPosition).sqrMagnitude;
+                        if (sqr < bestSqr) { bestSqr = sqr; bestIdx = i; }
+                    }
+                    if (bestIdx < 0) break;
+                    taken[bestIdx] = true;
+                    count = TryAddPassCandidate(in ctx, snap.VisibleTeammates[bestIdx],
+                        goalDir, urgency, buf, count);
+                }
+            }
+
+            return count;
+        }
+
+        // One teammate → zero or one PASS candidate (§3.1.3.2–§3.1.3.5).
+        private static int TryAddPassCandidate(
+            in DecisionContext ctx,
+            PerceivedAgent tm,
+            Vector2 goalDir,
+            float urgency,
+            ActionOption[] buf,
+            int count)
+        {
+            // Pass lane viability (§3.1.3.3)
+            int interceptorCount = CountInterceptors(in ctx, tm.PerceivedPosition);
+            float passLaneScore = Mathf.Clamp01(1.0f - interceptorCount / UtilityWeights.PASS_LANE_DIVISOR);
+
+            // Goal-direction modifier (§3.1.3.5)
+            Vector2 passDir = (tm.PerceivedPosition - ctx.AgentPosition).normalized;
+            float cosine = Vector2.Dot(passDir, goalDir);
+            float goalDirMod = UtilityWeights.GOAL_DIR_MIN_MODIFIER
+                + ((cosine + 1.0f) / 2.0f) * (1.0f - UtilityWeights.GOAL_DIR_MIN_MODIFIER);
+            float adjustedScore = passLaneScore * goalDirMod;
+
+            if (adjustedScore < UtilityWeights.MIN_PASS_LANE_SCORE) return count;
+
+            float dist = Vector2.Distance(ctx.AgentPosition, tm.PerceivedPosition);
+            PassType passType = DerivePassType(dist, passDir, ctx.AgentFacingDirection,
+                tm.PerceivedVelocity, goalDir);
+            CrossSubType crossSub = CrossSubType.Flat; // Stage 0: always Flat; Whipped/High derived at Stage 1
+
+            buf[count++] = new ActionOption
+            {
+                Type                  = ActionType.PASS,
+                TargetAgentId         = tm.AgentId,
+                TargetPosition        = tm.PerceivedPosition,
+                PassLaneScore         = passLaneScore,
+                AdjustedPassLaneScore = adjustedScore,
+                GoalDirectionCosine   = cosine,
+                DerivedPassType       = passType,
+                DerivedCrossSubType   = crossSub,
+                IntendedDistance      = dist,
+                Urgency               = urgency,
+                IsWeakFoot            = false  // ERR-007-TRACKED: WeakFootRating absent; conservative default
+            };
 
             return count;
         }
@@ -163,14 +202,20 @@ namespace TacticalDirector.DecisionTree
             return interceptors;
         }
 
+        // SPEC-DEVIATION NOTE (Stage 0, AR-2 L): §3.1.3.4 additionally gates CROSS on
+        // the agent being in a wide channel ("AgentPosition.x in WIDE_ZONE" — the spec
+        // text says x, but wide channels are touchline-relative, i.e. the Y axis;
+        // ERR-008-006). WIDE_ZONE is not declared in any §3 constant table, so the
+        // Stage 0 implementation classifies CROSS from range + facing angle alone and
+        // the Crossing attribute is not yet consumed here (DtAgentAttributes.Crossing
+        // doc-noted declared-but-unconsumed). The dead aCrossing/agentPos parameters
+        // this note replaces were the vestige of that unimplemented gate.
         private static PassType DerivePassType(
             float dist,
             Vector2 passDir,
             Vector2 agentFacing,
-            float aCrossing,
             Vector2 tmVelocity,
-            Vector2 goalDir,
-            Vector2 agentPos)
+            Vector2 goalDir)
         {
             if (dist <= UtilityWeights.SHORT_PASS_MAX_DISTANCE)
                 return PassType.Ground;
@@ -244,12 +289,21 @@ namespace TacticalDirector.DecisionTree
 
         private static float ComputeGoalOpeningScore(in DecisionContext ctx, float distToGoal)
         {
+            // Tolerance for the §3.2.3.2 step 4 wedge-containment test (degrees).
+            // Absorbs float error in the two-angle sum; well below any meaningful
+            // occlusion width. Named local const per the project magic-number rule.
+            const float ArcOverlapToleranceDeg = 0.01f;
+
             Vector2 agentPos  = ctx.AgentPosition;
             Vector2 goalPostL = ctx.OpponentGoalPostL;
             Vector2 goalPostR = ctx.OpponentGoalPostR;
 
             float totalArc   = AngularSpan(agentPos, goalPostL, goalPostR);
-            if (totalArc <= 0.0f) return 0.0f;
+            if (totalArc <= 0.0f) return 0.0f;   // degenerate: agent on the goal line
+
+            Vector2 dirL = (goalPostL - agentPos).normalized;
+            Vector2 dirR = (goalPostR - agentPos).normalized;
+            float goalLineX = goalPostL.x;
 
             float blockedArc = 0.0f;
             FilteredView snap = ctx.Snapshot;
@@ -262,18 +316,37 @@ namespace TacticalDirector.DecisionTree
                     distToGoal, UtilityWeights.GOAL_MIN_SHOT_DIST)) continue;
 
                 float dist = Vector2.Distance(agentPos, oPos);
-                bool isGk  = Vector2.Distance(oPos, ctx.OpponentGoalCentre)
-                             < UtilityWeights.GK_PROXIMITY_TO_GOAL;
+                if (dist < 0.001f) continue;
+
+                // §3.2.3.2 step 4 overlap test: count an opponent only when its
+                // angular centre lies within the goal arc [angleR, angleL]. The
+                // opponent direction is inside the wedge iff its angles to the two
+                // post directions sum to the wedge span. AR-2 M-7: previously every
+                // opponent in the shot corridor contributed occlusion even when its
+                // angular centre was outside the goal arc (over-blocking from wide).
+                Vector2 dirO = (oPos - agentPos) / dist;
+                if (Vector2.Angle(dirL, dirO) + Vector2.Angle(dirR, dirO)
+                    > totalArc + ArcOverlapToleranceDeg) continue;
+
+                // §3.2.3.2 step 3 GK heuristic: distance to the GOAL LINE (X axis) —
+                // not to the goal centre, which misclassified a goal-line keeper
+                // positioned wide of centre as a 0.5 m outfield blocker (AR-2 M-7).
+                bool isGk = Mathf.Abs(oPos.x - goalLineX)
+                            <= UtilityWeights.GK_PROXIMITY_TO_GOAL;
                 float radius = isGk ? UtilityWeights.GK_BLOCKER_RADIUS_M
                                     : UtilityWeights.BLOCKER_RADIUS_M;
 
-                if (dist < 0.001f) continue;
                 float occlusionAngle = 2.0f * Mathf.Atan2(radius, dist) * Mathf.Rad2Deg;
-                blockedArc += occlusionAngle;
+                blockedArc += Mathf.Min(occlusionAngle, totalArc);   // step 3 per-opponent clamp
             }
 
-            float unblocked = Mathf.Max(totalArc - blockedArc, 0.0f);
-            return Mathf.Clamp01(unblocked / totalArc);
+            blockedArc = Mathf.Min(blockedArc, totalArc);            // step 4 sum clamp
+            float score = (totalArc - blockedArc) / totalArc;
+
+            // §3.2.3.2 step 5: floor at GOAL_OPENING_MIN ("a tiny gap always exists").
+            // With the floor inside the derivation, the §3.1.4.1 gate (4) rejects only
+            // the degenerate zero-arc case — as the spec intends.
+            return Mathf.Clamp(score, UtilityWeights.GOAL_OPENING_MIN, 1.0f);
         }
 
         private static float AngularSpan(Vector2 origin, Vector2 a, Vector2 b)
@@ -338,7 +411,12 @@ namespace TacticalDirector.DecisionTree
 
             if (bestSpace < UtilityWeights.MIN_DRIBBLE_SPACE) return count;
 
-            Vector2 dribbleTarget = ctx.AgentPosition + bestDir * UtilityWeights.DRIBBLE_LOOKAHEAD_M;
+            // INV-GEN-06 (§3.1.10): TargetPosition stays within pitch bounds — the
+            // 5 m look-ahead from a touchline-adjacent carrier can otherwise leave
+            // the pitch (AR-2 L). The direction intent is preserved; only the
+            // indicator point is clamped.
+            Vector2 dribbleTarget = PitchGeometry.ClampToPitch(
+                ctx.AgentPosition + bestDir * UtilityWeights.DRIBBLE_LOOKAHEAD_M);
 
             buf[count++] = new ActionOption
             {
@@ -392,7 +470,10 @@ namespace TacticalDirector.DecisionTree
             if (ctx.AgentHasBall) return count;
 
             // MOVE_TO_POSITION is always generated in the off-ball branch (no gate conditions)
-            Vector2 formationSlot = ctx.TacticalContext.GetAdjustedFormationSlot(ctx.AgentId);
+            // §3.4.5 depth adjustment is team-signed along X (AR-2 M-2); INV-GEN-06
+            // clamp keeps an extreme-depth slot on the pitch.
+            Vector2 formationSlot = PitchGeometry.ClampToPitch(
+                ctx.TacticalContext.GetAdjustedFormationSlot(ctx.AgentId, ctx.AgentTeamId));
             float distToSlot = Vector2.Distance(ctx.AgentPosition, formationSlot);
 
             buf[count++] = new ActionOption
@@ -516,6 +597,7 @@ namespace TacticalDirector.DecisionTree
                 {
                     bestTime = t;
                     bestPt   = projBall;
+                    break;   // t ascends monotonically — first feasible t is minimal
                 }
             }
 
@@ -528,7 +610,9 @@ namespace TacticalDirector.DecisionTree
             {
                 Type                      = ActionType.INTERCEPT,
                 TargetAgentId             = -1,
-                TargetPosition            = bestPt,
+                // INV-GEN-06: a projected intercept point beyond the boundary means
+                // the ball is leaving play — intercept at the boundary (AR-2 L).
+                TargetPosition            = PitchGeometry.ClampToPitch(bestPt),
                 InterceptFeasibilityScore = feasibility,
                 TimeToIntercept           = bestTime
             };
@@ -553,4 +637,12 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   L-1: Replace magic numbers with named constants (DRIBBLE_SECTOR_HALF_ANGLE,  |
 // |         |            |        |   PASS_LANE_ENDPOINT_MARGIN, InterceptStepSeconds/Count, AGENT_SPEED_*).       |
 // |         |            |        |   L-4: CrossSubType ternary (always Flat) simplified to direct assignment.      |
+// | 1.2     | 2026-06-11 | —      | Audit AR-2: M-9 §3.1.3.6 proximity-ordered cap (closest-first when the          |
+// |         |            |        |   Decisions cap binds; stackalloc marks, zero heap); M-7 ComputeGoalOpening-    |
+// |         |            |        |   Score gains the §3.2.3.2 step-4 angular-overlap test, per-opponent clamp,     |
+// |         |            |        |   goal-line (not goal-centre) GK heuristic, and the step-5 GOAL_OPENING_MIN     |
+// |         |            |        |   floor; M-2 MOVE slot uses team-signed GetAdjustedFormationSlot(agentId,       |
+// |         |            |        |   teamId); L INV-GEN-06 ClampToPitch on dribble/intercept/move targets; L dead  |
+// |         |            |        |   DerivePassType params dropped with §3.1.3.4 WIDE_ZONE deviation note; L       |
+// |         |            |        |   intercept scan breaks at first feasible t.                                    |
 #endregion

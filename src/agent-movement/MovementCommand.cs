@@ -108,6 +108,41 @@ namespace TacticalDirector.AgentMovement
                 false);
         }
 
+        /// <summary>
+        /// Sprint toward a target while keeping facing locked on it, with EMERGENCY
+        /// braking. Decision Tree #8 §3.5.7 PRESS dispatch profile: a pressing agent
+        /// keeps eyes on the ball carrier and accepts stumble risk for a fast stop
+        /// when the ball is played away. (WalkTo / AR-13 precedent: factory added
+        /// because the DT dispatch layer cannot otherwise express this profile.)
+        /// </summary>
+        public static MovementCommand PressSprint(Vector2 target)
+        {
+            return new MovementCommand(
+                target,
+                AgentMovementState.SPRINTING,
+                DecelerationMode.EMERGENCY,
+                FacingMode.TARGET_LOCK,
+                target,
+                false);
+        }
+
+        /// <summary>
+        /// Sprint toward a point while watching a separate target (e.g. the ball),
+        /// with CONTROLLED braking. Decision Tree #8 §3.5.8 INTERCEPT dispatch
+        /// profile: controlled stop protects first-touch quality at the intercept
+        /// point; TARGET_LOCK keeps the ball in view during the run.
+        /// </summary>
+        public static MovementCommand SprintWhileWatching(Vector2 target, Vector2 watchTarget)
+        {
+            return new MovementCommand(
+                target,
+                AgentMovementState.SPRINTING,
+                DecelerationMode.CONTROLLED,
+                FacingMode.TARGET_LOCK,
+                watchTarget,
+                false);
+        }
+
         /// <summary>Jockey laterally while keeping facing locked on a target (e.g. a ball carrier).</summary>
         public static MovementCommand StrafeWhileWatching(Vector2 target, Vector2 watchTarget)
         {
@@ -151,4 +186,8 @@ namespace TacticalDirector.AgentMovement
 // | 1.3     | 2026-06-09 | —      | AR-12 follow-up: WalkTo factory added — the AI layer previously had no way to       |
 // |         |            |        | request the WALKING band (MoveTo=JOGGING, SprintUrgent=SPRINTING, Stop=IDLE).       |
 // |         |            |        | Consumed by T-AM-113 walk-band closed-loop regression test.                         |
+// | 1.4     | 2026-06-11 | —      | DT #8 audit AR-2 M-5 follow-up (WalkTo precedent): PressSprint                      |
+// |         |            |        | (SPRINTING/EMERGENCY/TARGET_LOCK, DT §3.5.7) and SprintWhileWatching                |
+// |         |            |        | (SPRINTING/CONTROLLED/TARGET_LOCK, DT §3.5.8) factories — the DT dispatch          |
+// |         |            |        | profiles for PRESS and INTERCEPT were not expressible with the existing set.        |
 #endregion

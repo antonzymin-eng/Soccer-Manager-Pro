@@ -73,6 +73,11 @@ namespace TacticalDirector.DecisionTree
                 {
                     bestIdx  = i;
                     bestUtil = optionBuffer[i].EffectiveUtility;
+                    // §3.3 pseudocode: a strictly better candidate resets the tie flag —
+                    // INV-SEL-07 requires TiebreakerApplied to describe the WINNER, not
+                    // any candidate seen earlier in the scan (AR-2 L: flag previously
+                    // latched true even after a clear-margin winner emerged).
+                    tiebreakerApplied = false;
                 }
                 else if (Mathf.Abs(diff) <= ComposureWeights.TIEBREAK_EPSILON)
                 {
@@ -180,4 +185,6 @@ namespace TacticalDirector.DecisionTree
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                            |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-2: SplitMix64 wrapped in unchecked{} per FR-CS-044.        |
+// | 1.2     | 2026-06-11 | —      | Audit AR-2 L: tiebreakerApplied resets on a strict improvement per |
+// |         |            |        |   the §3.3 selection pseudocode (INV-SEL-07 winner semantics).     |
 #endregion

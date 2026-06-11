@@ -514,8 +514,11 @@ lane check as §3.1.3.3 but targets the goal rather than a teammate.
 ```
 // Goal is modelled as a line segment: left_post to right_post
 // Standard goal width: 7.32m → each post is 3.66m from centre
-goal_left  = MatchContext.OpponentGoalCentre + Vector2(−3.66, 0)
-goal_right = MatchContext.OpponentGoalCentre + Vector2(+3.66, 0)
+goal_left  = MatchContext.OpponentGoalCentre + Vector2(0, −3.66)
+goal_right = MatchContext.OpponentGoalCentre + Vector2(0, +3.66)
+// ERR-008-011 (June 11, 2026 audit): v1.1 offset the posts along X — the goal line
+// runs along Y at fixed X (Ball Physics #1 §1.2 corner-origin; §3.2.1.4 PitchGeometry
+// has the correct Y ± 3.66 form, which the implementation uses).
 
 // Compute angular width of unobstructed goal from agent's position
 total_goal_arc    = AngularSpan(goal_left, goal_right, AgentPosition)    // degrees

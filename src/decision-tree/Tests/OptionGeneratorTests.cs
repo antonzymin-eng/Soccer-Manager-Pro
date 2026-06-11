@@ -122,6 +122,64 @@ namespace TacticalDirector.DecisionTree.Tests
             Assert.LessOrEqual(passCount, 2, "Decisions=1 should cap PASS candidates at 2");
         }
 
+        // ── AR-2 M-9 lock: a binding Decisions cap selects by PROXIMITY ───────
+
+        [Test]
+        public void DecisionsCap_BindsByProximity_NotSnapshotOrder()
+        {
+            // §3.1.3.6: when the cap binds, teammates are evaluated closest-first.
+            // The two NEAREST teammates sit at snapshot indices 3 and 4 — the pre-fix
+            // snapshot-order iteration would have picked indices 0 and 1 instead.
+            DecisionContext ctx = BuildPossessionContext();
+            ctx.A_Decisions = 0.0f;  // Decisions=1 → cap = 2
+            ctx.Snapshot.VisibleTeammatesCount = 5;
+            float[] xOffsets = { 20.0f, 18.0f, 16.0f, 4.0f, 6.0f };  // metres ahead of agent
+            for (int i = 0; i < 5; i++)
+                ctx.Snapshot.VisibleTeammates[i] = new PerceivedAgent
+                {
+                    AgentId = 10 + i,
+                    PerceivedPosition = new Vector2(52.0f + xOffsets[i], 34.0f),
+                    PerceivedVelocity = Vector2.zero,
+                    ConfidenceScore = 1.0f
+                };
+
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+
+            int passCount = 0;
+            bool sawNearest = false, sawSecondNearest = false;
+            for (int i = 0; i < count; i++)
+            {
+                if (Buffer[i].Type != ActionType.PASS) continue;
+                passCount++;
+                if (Buffer[i].TargetAgentId == 13) sawNearest       = true;  // 4m — index 3
+                if (Buffer[i].TargetAgentId == 14) sawSecondNearest = true;  // 6m — index 4
+            }
+
+            Assert.AreEqual(2, passCount, "Decisions=1 caps PASS candidates at 2");
+            Assert.IsTrue(sawNearest && sawSecondNearest,
+                "A binding cap must select the CLOSEST teammates (§3.1.3.6), not snapshot order");
+        }
+
+        // ── AR-2 L lock: INV-GEN-06 dribble look-ahead clamped to pitch ───────
+
+        [Test]
+        public void DribbleTarget_NearTouchline_ClampedToPitchBounds()
+        {
+            DecisionContext ctx = BuildPossessionContext();
+            ctx.AgentPosition = new Vector2(103.0f, 66.5f);          // near corner
+            ctx.AgentState.Position = ctx.AgentPosition;
+            ctx.AgentFacingDirection = new Vector2(1f, 1f).normalized; // 5m look-ahead exits pitch
+
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+            for (int i = 0; i < count; i++)
+            {
+                if (Buffer[i].Type != ActionType.DRIBBLE) continue;
+                Vector2 tp = Buffer[i].TargetPosition;
+                Assert.LessOrEqual(tp.x, 105.0f, "INV-GEN-06: dribble target x within pitch");
+                Assert.LessOrEqual(tp.y, 68.0f,  "INV-GEN-06: dribble target y within pitch");
+            }
+        }
+
         // ── UT-OG-04: INTERCEPT not generated when ball snapshot is stale ─────
 
         [Test]
@@ -302,4 +360,6 @@ namespace TacticalDirector.DecisionTree.Tests
 // | 1.1     | 2026-06-01 | —      | Added UT-OG-04 (INTERCEPT rejected when BallStalenessFrames > 0) and     |
 // |         |            |        |   UT-OG-06 (all TargetPositions within pitch bounds). Decision Tree #8    |
 // |         |            |        |   §5 spec requirements.                                                   |
+// | 1.2     | 2026-06-11 | —      | Audit AR-2: M-9 proximity-cap lock (binding Decisions cap selects        |
+// |         |            |        |   closest-first per §3.1.3.6); INV-GEN-06 dribble-clamp lock.             |
 #endregion

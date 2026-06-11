@@ -56,6 +56,23 @@ namespace TacticalDirector.DecisionTree
                     : PossessionState.AWAY_TEAM;
             }
 
+            // §3.1.1.2 / §3.4.6: perspective form of possession. True only when the
+            // OPPOSING team possesses (CONTESTED is neither). AR-2 M-1: the §3.4.6
+            // press-urgency gate previously compared PossessedByTeam == AWAY_TEAM,
+            // which is "opponent" only for home agents.
+            bool opponentHasBall =
+                (possessedByTeam == PossessionState.HOME_TEAM && teamId == 1) ||
+                (possessedByTeam == PossessionState.AWAY_TEAM && teamId == 0);
+
+            // ── Team-relative ball zone (§3.2.1.3) ───────────────────────────────
+            // Zones are defined "from own goal line", so the away team's zone must be
+            // recomputed from BallPosition.x — NOT taken from the shared
+            // home-perspective MatchContext.BallZone (AR-2 H-2: away zone modifiers
+            // were inverted; mirroring the enum is also wrong because the home cut
+            // points {35, 65} mirror to {40, 70}).
+            FieldZone ballZone = PitchGeometry.ComputeFieldZone(
+                matchContext.BallPosition.x, teamId);
+
             // ── Stamina gate (§3.1.8.1) ───────────────────────────────────────────
             bool staminaAvailable = agentState.AerobicPool > UtilityWeights.PRESS_STAMINA_MINIMUM;
 
@@ -76,6 +93,8 @@ namespace TacticalDirector.DecisionTree
                 AgentTeamId       = teamId,
                 AgentHasBall      = agentHasBall,
                 PossessedByTeam   = possessedByTeam,
+                OpponentHasBall   = opponentHasBall,
+                BallZone          = ballZone,
                 StaminaAvailable  = staminaAvailable,
 
                 AgentState        = agentState,
@@ -118,4 +137,7 @@ namespace TacticalDirector.DecisionTree
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                                         |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-3: Fix possession bug — was using agent/possessor same-team check;       |
 // |         |            |        |   now correctly sets HOME_TEAM/AWAY_TEAM based on possessor's team ID.          |
+// | 1.2     | 2026-06-11 | —      | Audit AR-2: H-2 team-relative BallZone computed from BallPosition.x per         |
+// |         |            |        |   §3.2.1.3 ("from own goal line"); M-1 OpponentHasBall derived flag for the     |
+// |         |            |        |   §3.4.6 press-urgency gate.                                                    |
 #endregion

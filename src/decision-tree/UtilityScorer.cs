@@ -54,7 +54,7 @@ namespace TacticalDirector.DecisionTree
 
         private static float ScorePass(ref ActionOption opt, in DecisionContext ctx)
         {
-            float zoneM = GetZoneModifier(opt.Type, ctx.MatchContext.BallZone);
+            float zoneM = GetZoneModifier(opt.Type, ctx.BallZone);
 
             // Shifted attribute form: (0.5 + A × 0.5)^exp
             float visionFactor    = Mathf.Pow(0.5f + ctx.A_Vision  * 0.5f, UtilityWeights.PASS_VISION_EXP);
@@ -68,7 +68,7 @@ namespace TacticalDirector.DecisionTree
 
             float baseU = UtilityWeights.U_BASE_PASS * zoneM;
             float tactM = TacticalModifierResolver.Resolve(
-                ActionType.PASS, in ctx.TacticalContext, ctx.PossessedByTeam, opt.IntendedDistance);
+                ActionType.PASS, in ctx.TacticalContext, ctx.OpponentHasBall, opt.IntendedDistance);
 
             return baseU * am * contextM * tactM * (1.0f - risk);
         }
@@ -79,15 +79,19 @@ namespace TacticalDirector.DecisionTree
         {
             // Zone modifier: midfield depends on LongShots attribute
             float zoneM;
-            FieldZone zone = ctx.MatchContext.BallZone;
+            FieldZone zone = ctx.BallZone;
             if (zone == FieldZone.ATTACKING)
             {
                 zoneM = UtilityWeights.SHOOT_ZONE_ATT;
             }
             else if (zone == FieldZone.MIDFIELD)
             {
-                // Long-shot capable agents can fire from midfield (§3.2.3)
-                zoneM = ctx.A_LongShots >= UtilityWeights.LONG_SHOT_THRESHOLD
+                // Long-shot capable agents can fire from midfield (§3.2.3.1).
+                // AR-2 M-4: the gate compares the SHIFTED form (0.5 + A × 0.5) against
+                // LONG_SHOT_THRESHOLD = 0.75 — effective raw LongShots ≥ 11 (§3.2.3.4
+                // explicitly derives this and rejects the raw-form reading, which
+                // required raw ≥ 16 and suppressed midfield shots for raw 11–15).
+                zoneM = (0.5f + ctx.A_LongShots * 0.5f) > UtilityWeights.LONG_SHOT_THRESHOLD
                     ? UtilityWeights.SHOOT_ZONE_MID_LONG
                     : UtilityWeights.SHOOT_ZONE_MID_SHORT;
             }
@@ -100,14 +104,19 @@ namespace TacticalDirector.DecisionTree
             float composureFactor = Mathf.Pow(0.5f + ctx.A_Composure * 0.5f, UtilityWeights.SHOOT_COMPOSURE_EXP);
             float am = finishFactor * composureFactor;
 
+            // GoalOpeningScore is floored at GOAL_OPENING_MIN inside
+            // ComputeGoalOpeningScore (§3.2.3.2 step 5); defensive re-floor retained
+            // for direct-injection test paths.
             float goalOpeningScore = Mathf.Max(opt.GoalOpeningScore, UtilityWeights.GOAL_OPENING_MIN);
 
+            // AR-2 M-3: §3.2.3.1 RiskPenalty_SHOOT = (1 − GoalOpeningScore) × P × coeff
+            // (a blocked shot is the risk driver). Previous form used (1 − A_Finishing).
             float p    = ctx.PressureScalar;
-            float risk = p * (1.0f - ctx.A_Finishing) * UtilityWeights.SHOOT_RISK_COEFF;
+            float risk = (1.0f - goalOpeningScore) * p * UtilityWeights.SHOOT_RISK_COEFF;
 
             float baseU = UtilityWeights.U_BASE_SHOOT * zoneM;
             float tactM = TacticalModifierResolver.Resolve(
-                ActionType.SHOOT, in ctx.TacticalContext, ctx.PossessedByTeam, 0.0f);
+                ActionType.SHOOT, in ctx.TacticalContext, ctx.OpponentHasBall, 0.0f);
 
             return baseU * am * goalOpeningScore * tactM * (1.0f - risk);
         }
@@ -116,7 +125,7 @@ namespace TacticalDirector.DecisionTree
 
         private static float ScoreDribble(ref ActionOption opt, in DecisionContext ctx)
         {
-            float zoneM = GetZoneModifier(ActionType.DRIBBLE, ctx.MatchContext.BallZone);
+            float zoneM = GetZoneModifier(ActionType.DRIBBLE, ctx.BallZone);
 
             // Raw attribute form (no 0.5 shift per §3.2.4 design note)
             float dribblingFactor = Mathf.Pow(ctx.A_Dribbling, UtilityWeights.DRIBBLE_DRIBBLING_EXP);
@@ -130,7 +139,7 @@ namespace TacticalDirector.DecisionTree
 
             float baseU = UtilityWeights.U_BASE_DRIBBLE * zoneM;
             float tactM = TacticalModifierResolver.Resolve(
-                ActionType.DRIBBLE, in ctx.TacticalContext, ctx.PossessedByTeam, 0.0f);
+                ActionType.DRIBBLE, in ctx.TacticalContext, ctx.OpponentHasBall, 0.0f);
 
             return baseU * am * contextM * tactM * (1.0f - risk);
         }
@@ -139,7 +148,7 @@ namespace TacticalDirector.DecisionTree
 
         private static float ScoreHold(ref ActionOption opt, in DecisionContext ctx)
         {
-            float zoneM = GetZoneModifier(ActionType.HOLD, ctx.MatchContext.BallZone);
+            float zoneM = GetZoneModifier(ActionType.HOLD, ctx.BallZone);
 
             float composureFactor = Mathf.Pow(0.5f + ctx.A_Composure * 0.5f, UtilityWeights.HOLD_COMPOSURE_EXP);
 
@@ -148,7 +157,7 @@ namespace TacticalDirector.DecisionTree
 
             float baseU = UtilityWeights.U_BASE_HOLD * zoneM;
             float tactM = TacticalModifierResolver.Resolve(
-                ActionType.HOLD, in ctx.TacticalContext, ctx.PossessedByTeam, 0.0f);
+                ActionType.HOLD, in ctx.TacticalContext, ctx.OpponentHasBall, 0.0f);
 
             return baseU * composureFactor * tactM * (1.0f - risk);
         }
@@ -157,8 +166,9 @@ namespace TacticalDirector.DecisionTree
 
         private static float ScoreMove(ref ActionOption opt, in DecisionContext ctx)
         {
-            // Zone modifier: uniform (all 1.0)
-            float zoneM = 1.0f;
+            // Zone modifier: uniform 1.0 at Stage 0 (§3.2.1.3 MOVE row) — read from
+            // the catalogue so the MOVE_ZONE_* constants are the single live surface.
+            float zoneM = GetZoneModifier(ActionType.MOVE_TO_POSITION, ctx.BallZone);
 
             float positioningFactor = Mathf.Pow(0.5f + ctx.A_Positioning * 0.5f, UtilityWeights.MOVE_POSITIONING_EXP);
             float workRateFactor    = Mathf.Pow(0.5f + ctx.A_WorkRate    * 0.5f, UtilityWeights.MOVE_WORKRATE_EXP);
@@ -177,7 +187,7 @@ namespace TacticalDirector.DecisionTree
 
             float baseU = UtilityWeights.U_BASE_MOVE * zoneM;
             float tactM = TacticalModifierResolver.Resolve(
-                ActionType.MOVE_TO_POSITION, in ctx.TacticalContext, ctx.PossessedByTeam, 0.0f);
+                ActionType.MOVE_TO_POSITION, in ctx.TacticalContext, ctx.OpponentHasBall, 0.0f);
 
             return baseU * am * distM * phaseM * pressM * tactM;
         }
@@ -212,9 +222,9 @@ namespace TacticalDirector.DecisionTree
 
         private static float ScorePress(ref ActionOption opt, in DecisionContext ctx)
         {
-            float zoneM = GetZoneModifier(ActionType.PRESS, ctx.MatchContext.BallZone);
+            float zoneM = GetZoneModifier(ActionType.PRESS, ctx.BallZone);
 
-            // Shifted form for Aggression/WorkRate; Stamina: raw * exponent (spec §3.2.7 says "shifted")
+            // §3.2.7.1: all three attributes use the shifted form (0.5 + A × 0.5)
             float aggressionFactor = Mathf.Pow(0.5f + ctx.A_Aggression * 0.5f, UtilityWeights.PRESS_AGGRESSION_EXP);
             float workRateFactor   = Mathf.Pow(0.5f + ctx.A_WorkRate   * 0.5f, UtilityWeights.PRESS_WORKRATE_EXP);
             float staminaFactor    = Mathf.Pow(0.5f + ctx.A_Stamina    * 0.5f, UtilityWeights.PRESS_STAMINA_EXP);
@@ -224,7 +234,7 @@ namespace TacticalDirector.DecisionTree
 
             // Tactical pressing modifier (§3.2.7 / §3.4.3)
             float tactM = TacticalModifierResolver.Resolve(
-                ActionType.PRESS, in ctx.TacticalContext, ctx.PossessedByTeam, 0.0f);
+                ActionType.PRESS, in ctx.TacticalContext, ctx.OpponentHasBall, 0.0f);
 
             float baseU = UtilityWeights.U_BASE_PRESS * zoneM;
             return baseU * am * contextM * tactM;
@@ -234,7 +244,7 @@ namespace TacticalDirector.DecisionTree
 
         private static float ScoreIntercept(ref ActionOption opt, in DecisionContext ctx)
         {
-            float zoneM = GetZoneModifier(ActionType.INTERCEPT, ctx.MatchContext.BallZone);
+            float zoneM = GetZoneModifier(ActionType.INTERCEPT, ctx.BallZone);
 
             // Anticipation: raw form (§3.2.8 — no 0.5 shift for Anticipation)
             // Pace: shifted form
@@ -244,12 +254,15 @@ namespace TacticalDirector.DecisionTree
 
             float contextM = opt.InterceptFeasibilityScore;
 
+            // AR-2 M-6: §3.2.8.1 pressure term is (1 − P × INTERCEPT_PRESSURE_COEFF),
+            // independent of Anticipation. The previous (1 − A_Anticipation) factor is
+            // not in the spec formula.
             float p    = ctx.PressureScalar;
-            float risk = p * (1.0f - ctx.A_Anticipation) * UtilityWeights.INTERCEPT_PRESSURE_COEFF;
+            float risk = p * UtilityWeights.INTERCEPT_PRESSURE_COEFF;
 
             float baseU = UtilityWeights.U_BASE_INTERCEPT * zoneM;
             float tactM = TacticalModifierResolver.Resolve(
-                ActionType.INTERCEPT, in ctx.TacticalContext, ctx.PossessedByTeam, 0.0f);
+                ActionType.INTERCEPT, in ctx.TacticalContext, ctx.OpponentHasBall, 0.0f);
 
             return baseU * am * contextM * tactM * (1.0f - risk);
         }
@@ -285,7 +298,12 @@ namespace TacticalDirector.DecisionTree
                          : zone == FieldZone.ATTACKING ? UtilityWeights.INTERCEPT_ZONE_ATT
                          : UtilityWeights.INTERCEPT_ZONE_MID;
 
-                default: // SHOOT handled separately; MOVE is always 1.0
+                case ActionType.MOVE_TO_POSITION:
+                    return zone == FieldZone.DEFENSIVE ? UtilityWeights.MOVE_ZONE_DEF
+                         : zone == FieldZone.ATTACKING ? UtilityWeights.MOVE_ZONE_ATT
+                         : UtilityWeights.MOVE_ZONE_MID;
+
+                default: // SHOOT zone modifier handled in ScoreShoot (LongShots-conditional)
                     return 1.0f;
             }
         }
@@ -297,4 +315,10 @@ namespace TacticalDirector.DecisionTree
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                                         |
 // | 1.1     | 2026-05-29 | —      | AR-1 M-1: ScoreMove uses ctx.PossessedByTeam (handles CONTESTED) instead of    |
 // |         |            |        |   ctx.MatchContext.Possession.                                                  |
+// | 1.2     | 2026-06-11 | —      | Audit AR-2: H-2 all zone reads moved to team-relative ctx.BallZone; M-1        |
+// |         |            |        |   TacticalModifierResolver calls pass ctx.OpponentHasBall; M-3 SHOOT risk uses |
+// |         |            |        |   (1 − GoalOpeningScore) per §3.2.3.1; M-4 midfield long-shot gate compares    |
+// |         |            |        |   the shifted attribute form (raw ≥ 11 per §3.2.3.4); M-6 INTERCEPT pressure   |
+// |         |            |        |   term drops the non-spec (1 − A_Anticipation) factor; L MOVE zone modifier    |
+// |         |            |        |   read from MOVE_ZONE_* catalogue entries.                                      |
 #endregion

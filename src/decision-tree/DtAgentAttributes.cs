@@ -45,7 +45,14 @@ namespace TacticalDirector.DecisionTree
         /// <summary>Long-range shooting intent. Extends shooting range and midfield shoot modifier (§3.1.4.2).</summary>
         public int LongShots;
 
-        /// <summary>Crossing quality. Used in pass type derivation (§3.1.3.4).</summary>
+        /// <summary>
+        /// Crossing quality. DECLARED-BUT-UNCONSUMED at Stage 0 (AR-2 L; CS AR-10 /
+        /// PM AR-9 L-3 precedent): §3.1.3.4's CROSS gate also requires the WIDE_ZONE
+        /// channel test, which has no declared constant — until that gate lands, pass
+        /// type derivation classifies CROSS from range + facing angle alone and does
+        /// not read this attribute (see OptionGenerator.DerivePassType note).
+        /// Normalised into DecisionContext.A_Crossing for forward compatibility.
+        /// </summary>
         public int Crossing;
 
         // ── Mental: Composure & Anticipation ─────────────────────────────────
@@ -116,4 +123,6 @@ namespace TacticalDirector.DecisionTree
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                                  |
 // | 1.1     | 2026-05-29 | —      | AR-1 M-3: Fix Stamina doc — it is int [1-20], not [0,1]; PRESS gate     |
 // |         |            |        |   uses AgentState.AerobicPool, not this attribute.                       |
+// | 1.2     | 2026-06-11 | —      | Audit AR-2 L: Crossing doc-noted declared-but-unconsumed (§3.1.3.4       |
+// |         |            |        |   WIDE_ZONE cross gate not implementable at Stage 0; ERR-008-006).       |
 #endregion

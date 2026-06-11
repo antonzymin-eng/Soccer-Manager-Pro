@@ -61,13 +61,27 @@ namespace TacticalDirector.DecisionTree
         /// <summary>[DERIVED] Number of intercept time steps. MAX_INTERCEPT_TIME / InterceptStepSeconds = 15.</summary>
         public const int InterceptStepCount = 15;
 
-        // ── Warning Codes ─────────────────────────────────────────────────────
+        // ── Failure-Mode Codes ────────────────────────────────────────────────
+        // NOTE: the spec double-allocated "FM-DT-09" to two unrelated failure modes
+        // (§3.1.1.3 possession-uncertainty warning AND §3.5.9 unknown-ActionType).
+        // ERR-008-007 keeps FM-DT-09 for §3.1.1.3 and renumbers the §3.5.9 dispatch
+        // failure to FM-DT-14 (next free ID after FM-DT-13); §3.5.9 patched in the
+        // same commit.
 
-        /// <summary>AgentHasBall=true but BallVisible=false — unexpected state (§3.1.1.3).</summary>
+        /// <summary>FM-DT-09 (§3.1.1.3): AgentHasBall=true but BallVisible=false — implausible but non-fatal.</summary>
         public const string WarnFmDt09 = "FM-DT-09";
 
-        /// <summary>Dispatch invoked on a snapshot with ForcedRefreshThisTick=true. Informational.</summary>
+        /// <summary>FM-DT-10 (§3.5.9): PASS dispatch with IntendedDistance ≤ 0 / non-finite; recomputed fallback.</summary>
         public const string WarnFmDt10 = "FM-DT-10";
+
+        /// <summary>FM-DT-11 (§3.5.9): SHOOT dispatch with DistanceToGoal ≤ 0 / non-finite; recomputed fallback.</summary>
+        public const string WarnFmDt11 = "FM-DT-11";
+
+        /// <summary>FM-DT-12 (§3.5.9): SHOOT PlacementTarget component out of [0,1]; clamped (non-finite → 0.5).</summary>
+        public const string WarnFmDt12 = "FM-DT-12";
+
+        /// <summary>FM-DT-14 (§3.5.9, renumbered per ERR-008-007): unknown ActionType at dispatch; HOLD-safe command issued.</summary>
+        public const string WarnFmDt14 = "FM-DT-14";
     }
 }
 
@@ -76,4 +90,8 @@ namespace TacticalDirector.DecisionTree
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                                         |
 // | 1.1     | 2026-05-29 | —      | AR-1 L-1/L-2: Add InterceptStepSeconds/Count constants; XML doc on              |
 // |         |            |        |   AttributeNormMin.                                                             |
+// | 1.2     | 2026-06-11 | —      | Audit AR-2 M-10: failure-mode codes aligned to §3.5.9 — WarnFmDt10 doc was a    |
+// |         |            |        |   nonexistent "forced-refresh dispatch" notion; FM-DT-11/12 added for the new   |
+// |         |            |        |   pre-dispatch assertions; FM-DT-14 allocated for unknown-ActionType            |
+// |         |            |        |   (FM-DT-09 double-allocation resolved per ERR-008-007).                        |
 #endregion

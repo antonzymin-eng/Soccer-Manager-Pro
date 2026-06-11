@@ -84,14 +84,22 @@ namespace TacticalDirector.DecisionTree
         public Vector2 GetFormationSlot(int agentId) => _formationSlot;
 
         /// <summary>
-        /// Formation slot adjusted for DefensiveLineDepth offset.
-        /// Returns _formationSlot.y ± (DefensiveLineDepth − 0.5) × DEFENSIVE_LINE_DEPTH_RANGE.
-        /// §3.4.5.
+        /// Formation slot adjusted for DefensiveLineDepth (§3.4.5: shifts the slot
+        /// "upfield or downfield" — pitch depth). Pitch depth is the X axis
+        /// (goal-to-goal, 0–105 m; Ball Physics #1 §1.2); Y is touchline-to-touchline.
+        /// A higher line advances toward the OPPONENT goal, so the shift sign is
+        /// team-dependent: home (+X), away (−X).
+        /// AR-2 M-2: previous form shifted _formationSlot.y (sideways toward a
+        /// touchline) with no team sign — latent at Stage 0 (depth fixed at 0.5 ⇒
+        /// zero offset) but wrong the moment Stage 1 tactical instructions go live.
+        /// The §3.4.5 spec pseudocode carried the same Y-axis error and is patched in
+        /// the same commit (ERR-008-003).
         /// </summary>
-        public Vector2 GetAdjustedFormationSlot(int agentId)
+        public Vector2 GetAdjustedFormationSlot(int agentId, int teamId)
         {
-            float yAdjust = (DefensiveLineDepth - 0.5f) * TacticalWeights.DefensiveLineDepthRange;
-            return new Vector2(_formationSlot.x, _formationSlot.y + yAdjust);
+            float xAdjust = (DefensiveLineDepth - 0.5f) * TacticalWeights.DefensiveLineDepthRange;
+            if (teamId == 1) xAdjust = -xAdjust;   // away attacks toward x = 0
+            return new Vector2(_formationSlot.x + xAdjust, _formationSlot.y);
         }
     }
 }
@@ -99,4 +107,7 @@ namespace TacticalDirector.DecisionTree
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-11 | —      | Audit AR-2 M-2: GetAdjustedFormationSlot shifts X (pitch depth, team-signed) |
+// |         |            |        |   instead of Y (touchline axis); signature gains teamId. Latent at Stage 0   |
+// |         |            |        |   (depth pinned 0.5). Spec §3.4.5 pseudocode patched same commit.             |
 #endregion
