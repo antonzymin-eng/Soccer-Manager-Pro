@@ -1,15 +1,19 @@
 // File:     src/pass-mechanics/Tests/PassMechanicsTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-01
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Pass Mechanics #5 §5, Code Standards #20
 // Purpose:  NUnit unit tests for Pass Mechanics subsystems: pass type profiles (PT),
 //           kick velocity model (PV), launch angle derivation (LA), spin vector (SV),
 //           pass error model (PE), weak foot penalty (WF), and edge cases (EC).
 
+using System.Text.RegularExpressions;
+
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
+using TacticalDirector.BallPhysics;
 using TacticalDirector.PassMechanics;
 
 namespace TacticalDirector.PassMechanics.Tests
@@ -1462,7 +1466,10 @@ namespace TacticalDirector.PassMechanics.Tests
             Assert.LessOrEqual(error, 4.5f,    "VS-006: Youth-level error must be <= 4.5°.");
         }
     }
-}
+    // AR-9 H-1: the namespace-closing brace that stood here (since v1.1 appended the
+    // IT- fixture AFTER it) made the file uncompilable — one stray '}' at EOF (CS1022)
+    // and the IT- fixture stranded in the global namespace. The namespace now closes
+    // at end-of-file; everything below is back inside TacticalDirector.PassMechanics.Tests.
 
     // ════════════════════════════════════════════════════════════════════════════
     // §5.11 Integration Tests (IT-)
@@ -1472,6 +1479,7 @@ namespace TacticalDirector.PassMechanics.Tests
     /// Integration tests for Pass Mechanics #5 §5.11. Require mocked/wired instances
     /// of BallPhysics #1, AgentMovement #2, CollisionSystem #3, and EventBus #17.
     /// </summary>
+    [TestFixture]
     internal sealed class PassMechanicsIntegrationTests
     {
         /// <summary>IT-001: Ground pass — ApplyKick called with non-zero velocity. §5.11.</summary>
@@ -1558,10 +1566,178 @@ namespace TacticalDirector.PassMechanics.Tests
             Assert.Ignore("Stage 0+1: requires Deterministic Simulation #16 digest comparison — IT-012 CRITICAL");
         }
     }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // AR-9 Executor Guard Regression Tests (PX-)
+    // ════════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// AR-9 regression locks for PassExecutor guard behaviour: M-1 (rejected Execute
+    /// must not stomp LastResult), M-2 (FM-07 rejects non-finite distance), M-3
+    /// (stale tackle flag drained at INITIATING). All scenarios terminate before any
+    /// EventBusStub.Publish path is reached, so no #17 boot wiring is required —
+    /// closed-loop CONTACT/publish coverage lives in the cross-spec scenario corpus
+    /// (testing-strategy/Tests/CrossSpecScenarios.cs).
+    /// </summary>
+    [TestFixture]
+    internal sealed class PassExecutorGuardTests
+    {
+        private const int PasserId   = 7;
+        private const int ReceiverId = 9;
+
+        private sealed class StubBallSystem : IPassBallSystem
+        {
+            public bool Possessed = true;
+            public int  ApplyKickCalls;
+
+            public bool IsBallPossessedBy(int agentId) => Possessed;
+
+            public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
+            {
+                ApplyKickCalls++;
+            }
+        }
+
+        private sealed class StubAgentQuery : IPassAgentQuery
+        {
+            public PassAgentState PasserState = new PassAgentState
+            {
+                Position        = new Vector2(30f, 34f),
+                Velocity        = Vector2.zero,
+                FacingDirection = new Vector2(1f, 0f)
+            };
+
+            public PassAgentState ReceiverState = new PassAgentState
+            {
+                Position        = new Vector2(45f, 34f),
+                Velocity        = Vector2.zero,
+                FacingDirection = new Vector2(-1f, 0f)
+            };
+
+            public PassAgentAttributes GetAttributes(int agentId) => new PassAgentAttributes
+            {
+                Passing = 10f, Technique = 10f, KickPower = 10f,
+                WeakFootRating = 3, Crossing = 10f, Fatigue = 0f
+            };
+
+            public PassAgentState GetState(int agentId)
+                => agentId == PasserId ? PasserState : ReceiverState;
+        }
+
+        private sealed class StubCollisionQuery : IPassCollisionQuery
+        {
+            public bool  TackleFlag;
+            public float Pressure;
+
+            public bool GetAndClearTackleFlag(int agentId)
+            {
+                bool value = TackleFlag;
+                TackleFlag = false;
+                return value;
+            }
+
+            public float ComputePressureScalar(Vector2 passerPosition, int passerTeamId) => Pressure;
+        }
+
+        private static PassRequest MakeValidRequest() => new PassRequest
+        {
+            AgentId          = PasserId,
+            PassType         = PassType.Ground,
+            CrossSubType     = CrossSubType.Flat,
+            TargetAgentId    = ReceiverId,
+            TargetPosition   = Vector3.zero,
+            IntendedDistance = 15f,
+            Urgency          = 0f,
+            IsWeakFoot       = false,
+            TeamId           = 0,
+            FrameNumber      = 100
+        };
+
+        /// <summary>PX-001 (AR-9 M-1): Execute() while a pass is in flight is rejected
+        /// WITHOUT writing LastResult — the in-flight pass owns that slot.</summary>
+        [Test]
+        public void PX001_ExecuteWhileInProgress_RejectsWithoutStompingLastResult()
+        {
+            PassExecutor exec = new PassExecutor(new StubBallSystem(), new StubAgentQuery(), new StubCollisionQuery());
+
+            PassResult first = exec.Execute(MakeValidRequest());
+            Assert.AreEqual(PassOutcome.Initiated, first.Outcome, "PX-001 precondition: first Execute must initiate.");
+
+            LogAssert.Expect(LogType.Error, new Regex("in progress"));
+            PassResult second = exec.Execute(MakeValidRequest());
+
+            Assert.AreEqual(PassOutcome.Invalid, second.Outcome,
+                "PX-001: in-progress Execute must reject with Invalid via the return value.");
+            Assert.AreEqual(PassOutcome.None, exec.LastResult.Outcome,
+                "PX-001: rejected Execute must NOT write LastResult (AR-9 M-1 stomp regression).");
+        }
+
+        /// <summary>PX-002 (AR-9 M-2): NaN IntendedDistance is rejected by FM-07 —
+        /// the pre-fix `d &lt;= 0f` gate was false for NaN, and Mathf.Max ordering then
+        /// silently sanitised the request to a 0.001 m pass with no diagnostic.</summary>
+        [Test]
+        public void PX002_NaNIntendedDistance_RejectedByFm07()
+        {
+            PassExecutor exec = new PassExecutor(new StubBallSystem(), new StubAgentQuery(), new StubCollisionQuery());
+            PassRequest req = MakeValidRequest();
+            req.IntendedDistance = float.NaN;
+
+            LogAssert.Expect(LogType.Error, new Regex("FM-07"));
+            PassResult result = exec.Execute(req);
+
+            Assert.AreEqual(PassOutcome.Invalid, result.Outcome, "PX-002: NaN distance must be Invalid.");
+            Assert.IsTrue(exec.IsIdle, "PX-002: executor must remain Idle after FM-07 rejection.");
+        }
+
+        /// <summary>PX-003 (AR-9 M-2): +Infinity IntendedDistance is rejected by FM-07
+        /// (passes the negated comparison; caught by the explicit IsInfinity clause).</summary>
+        [Test]
+        public void PX003_InfiniteIntendedDistance_RejectedByFm07()
+        {
+            PassExecutor exec = new PassExecutor(new StubBallSystem(), new StubAgentQuery(), new StubCollisionQuery());
+            PassRequest req = MakeValidRequest();
+            req.IntendedDistance = float.PositiveInfinity;
+
+            LogAssert.Expect(LogType.Error, new Regex("FM-07"));
+            PassResult result = exec.Execute(req);
+
+            Assert.AreEqual(PassOutcome.Invalid, result.Outcome, "PX-003: +Inf distance must be Invalid.");
+        }
+
+        /// <summary>PX-004 (AR-9 M-3): a tackle flag left over from BEFORE the pass began
+        /// (set during FollowThrough/Idle of a prior cycle, or while not in possession) is
+        /// drained at INITIATING and must not cancel the new pass on its first WINDUP frame.</summary>
+        [Test]
+        public void PX004_StaleTackleFlag_DrainedAtInitiating_WindupNotCancelled()
+        {
+            StubCollisionQuery collision = new StubCollisionQuery { TackleFlag = true }; // stale, pre-pass
+            PassExecutor exec = new PassExecutor(new StubBallSystem(), new StubAgentQuery(), collision);
+
+            PassResult result = exec.Execute(MakeValidRequest());
+            Assert.AreEqual(PassOutcome.Initiated, result.Outcome, "PX-004 precondition: Execute must initiate.");
+
+            BallState ball = default;
+            exec.Update(1.0f, 101, ref ball); // first WINDUP frame — polls the (now drained) flag
+
+            Assert.IsFalse(exec.IsIdle,
+                "PX-004: stale pre-pass tackle flag must not cancel the new pass (AR-9 M-3).");
+            Assert.AreNotEqual(PassOutcome.Cancelled, exec.LastResult.Outcome,
+                "PX-004: no PassCancelledEvent path may fire from the drained stale flag.");
+        }
+    }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                          |
 // | 1.0     | 2026-05-31 | —      | Initial implementation. 50 tests across PT/PV/LA/SV/PE/WF/EC/TR/PSM/VS. |
 // | 1.1     | 2026-06-01 | —      | Add §5.11 integration test stubs IT-001..012 (all Assert.Ignore Stage 0+1). |
+// | 1.2     | 2026-06-11 | —      | AR-9 H-1: file has NEVER compiled since v1.1 — the namespace was closed     |
+// |         |            |        |     BEFORE the appended IT- fixture, leaving a stray '}' at EOF (CS1022)    |
+// |         |            |        |     and the fixture stranded in the global namespace (identical defect      |
+// |         |            |        |     class to First Touch ERR-004 / FirstTouchTests v1.1). Namespace now     |
+// |         |            |        |     closes at EOF; [TestFixture] added to PassMechanicsIntegrationTests.    |
+// |         |            |        | New PassExecutorGuardTests fixture (PX-001..004) locks the AR-9 executor    |
+// |         |            |        |     fixes: M-1 LastResult stomp, M-2 FM-07 NaN/+Inf distance gate, M-3      |
+// |         |            |        |     stale-tackle-flag drain at INITIATING. Stub seams only — no EventBus    |
+// |         |            |        |     publish path reached; usings gain Regex / TestTools / BallPhysics.      |
 #endregion

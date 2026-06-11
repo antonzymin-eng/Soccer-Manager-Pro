@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassExecutor.cs
 // Created:  2026-05-26
-// Modified: 2026-06-08
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.8, §3.9, §4.1, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the six-state pass execution state
@@ -68,7 +68,6 @@ namespace TacticalDirector.PassMechanics
         private bool  _cachedIsWeakFoot;
         private int   _cachedWeakFootRating;
         private CrossSubType _cachedEffectiveSubType; // cross: actual sub-type; all others: Flat
-        private Vector2 _passerPosition; // for pressure re-query at CONTACT
 
         // ── Windup / Follow-Through Timers ───────────────────────────────────────────
 
@@ -130,8 +129,12 @@ namespace TacticalDirector.PassMechanics
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError($"[PassExecutor] Execute() called while pass is in progress (state={_state}). Agent={request.AgentId}. Frame={request.FrameNumber}");
 #endif
-                _lastResult = MakeInvalidResult(request.PassType);
-                return _lastResult;
+                // AR-9 M-1: do NOT write _lastResult here. A pass is in flight and owns
+                // that slot — in FollowThrough/Complete it already holds the committed
+                // Completed record (ContactFrame is replay-sync data), and nothing would
+                // rewrite it before IsIdle turns true. The rejection is reported to the
+                // offending caller via the return value only.
+                return MakeInvalidResult(request.PassType);
             }
 
             // ── FM-01: Possession check ──────────────────────────────────────────────
@@ -158,10 +161,15 @@ namespace TacticalDirector.PassMechanics
             }
 
             // ── FM-07: Distance validation ───────────────────────────────────────────
-            if (request.IntendedDistance <= 0f)
+            // Negated-comparison form: NaN fails (d > 0) so non-finite distance is
+            // rejected here rather than slipping past `d <= 0f` (NaN compares false on
+            // both sides) and being silently sanitised to a 0.001 m pass downstream by
+            // Mathf.Max argument ordering in ComputeKickSpeed. AR-9 M-2; parallels the
+            // First Touch AR-8 M-1 / Agent Movement AR-10 NaN-gate pattern.
+            if (!(request.IntendedDistance > 0f) || float.IsInfinity(request.IntendedDistance))
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogError($"[PassExecutor] FM-07: IntendedDistance={request.IntendedDistance} ≤ 0. Frame={request.FrameNumber}");
+                Debug.LogError($"[PassExecutor] FM-07: IntendedDistance={request.IntendedDistance} is not a positive finite value. Frame={request.FrameNumber}");
 #endif
                 _lastResult = MakeInvalidResult(request.PassType);
                 return _lastResult;
@@ -234,7 +242,6 @@ namespace TacticalDirector.PassMechanics
             _cachedIsWeakFoot         = request.IsWeakFoot;
             _cachedWeakFootRating     = attrs.WeakFootRating;
             _cachedEffectiveSubType   = effectiveSubType;
-            _passerPosition           = agentState.Position;
 
             // ── §3.8.8 — Windup duration ─────────────────────────────────────────────
             int baseWindup  = PassMechanicsConstants.GetWindupFrames(request.PassType, effectiveSubType);
@@ -245,6 +252,14 @@ namespace TacticalDirector.PassMechanics
 
             _followThroughFramesRemaining = PassMechanicsConstants.GetFollowThroughFrames(
                 request.PassType, effectiveSubType);
+
+            // §3.8.5 flag freshness (AR-9 M-3): the tackle flag is cleared only by
+            // polling, and polling happens only during WINDUP frames — so a flag set
+            // during FollowThrough/Idle (possibly while this agent did not even have
+            // possession) would survive until now and spuriously cancel THIS pass on
+            // its first WINDUP frame. Drain and discard it so WINDUP polls observe
+            // only tackles registered after the pass began.
+            _collisionQuery.GetAndClearTackleFlag(request.AgentId);
 
             _state = PassExecutionState.Windup;
 
@@ -316,8 +331,13 @@ namespace TacticalDirector.PassMechanics
 
         private void ExecuteContact(float matchTime, int frameNumber, ref BallState ball)
         {
-            // Step 1: Re-sample pressure at CONTACT — §3.8.6, §4.4.1
-            float pressureScalar = _collisionQuery.ComputePressureScalar(_passerPosition, _request.TeamId);
+            // Step 1: Re-sample pressure at CONTACT — §3.8.6, §4.4.1.
+            // Position is re-queried fresh (AR-9 L-1): §3.8.6's intent is contact-time
+            // pressure, and the INITIATING-time position is up to ~15 frames stale for
+            // a pass on the run. Body angle stays INITIATING-cached by design — only
+            // pressure is specified for CONTACT re-sampling.
+            Vector2 passerPositionNow = _agentQuery.GetState(_request.AgentId).Position;
+            float pressureScalar = _collisionQuery.ComputePressureScalar(passerPositionNow, _request.TeamId);
 
             // Step 2: Recompute error angle with fresh pressure — §3.8.6
             float errorAngleDeg = PassErrorCalculator.ComputeErrorAngle(
@@ -584,4 +604,24 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     row — the "[-1, +1]" characterisation there is the AR-2-era       |
 // |         |            |        |     contract, superseded by AR-6 L-1 to [-1, +1). The AR-2 row remains  |
 // |         |            |        |     verbatim to preserve historical record.                            |
+// | 1.12    | 2026-06-11 | —      | AR-9 fix pass (1H+3M+5L across the spec; this file: 3M+1L).             |
+// |         |            |        | M-1: Idle-guard rejection no longer writes _lastResult — an Execute()   |
+// |         |            |        |     during FollowThrough/Complete previously destroyed the committed    |
+// |         |            |        |     Completed record (ContactFrame replay-sync data) and surfaced       |
+// |         |            |        |     Invalid at the next IsIdle. Rejection now reported via return only. |
+// |         |            |        | M-2: FM-07 gate rewritten `d <= 0f` → `!(d > 0f) || IsInfinity(d)` so   |
+// |         |            |        |     NaN/±Inf distance is rejected instead of slipping the gate (NaN     |
+// |         |            |        |     compares false) and being silently sanitised to a 0.001 m pass by   |
+// |         |            |        |     Mathf.Max ordering in ComputeKickSpeed (project NaN-gate pattern).  |
+// |         |            |        | M-3: stale tackle flag drained (discarded) at INITIATING just before   |
+// |         |            |        |     the WINDUP transition — the flag is cleared only by polling and     |
+// |         |            |        |     polling happens only in WINDUP, so a tackle registered during       |
+// |         |            |        |     FollowThrough/Idle (even while not in possession) would otherwise   |
+// |         |            |        |     cancel the NEXT pass on its first WINDUP frame (§3.8.5 freshness).  |
+// |         |            |        | L-1: CONTACT pressure re-sample now queries the passer position fresh  |
+// |         |            |        |     via _agentQuery instead of the INITIATING-cached _passerPosition    |
+// |         |            |        |     (field removed) — §3.8.6 contact-time pressure intent; position    |
+// |         |            |        |     was up to ~15 frames stale for a pass on the run.                   |
+// |         |            |        | AR-10 L-1 (same commit): FM-07 log wording "≤ 0" → "not a positive     |
+// |         |            |        |     finite value" to match the widened M-2 gate.                        |
 #endregion

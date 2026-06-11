@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassErrorCalculator.cs
 // Created:  2026-05-26
-// Modified: 2026-06-08
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.5, §3.7, Code Standards #20
 // Purpose:  Pure static calculator for the multiplicative error chain (§3.5),
@@ -75,9 +75,13 @@ namespace TacticalDirector.PassMechanics
             if (float.IsNaN(errorAngle))
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogError("[PassError] FM-04: ErrorAngle is NaN. Returning MinErrorAngle.");
+                Debug.LogError("[PassError] FM-04: ErrorAngle is NaN. Returning MaxErrorAngle (fail-closed).");
 #endif
-                return PassMechanicsConstants.MinErrorAngle;
+                // AR-9 L-2: fail CLOSED. The previous MinErrorAngle fallback meant a
+                // corrupted input (NaN urgency/pressure/fatigue) produced the most
+                // accurate pass possible (0.1° laser). Max keeps the clamp contract
+                // (AR-1 L-1) while making the fault the worst legitimate outcome.
+                return PassMechanicsConstants.MaxErrorAngle;
             }
 
             return errorAngle;
@@ -238,4 +242,9 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | L-3: bit-extraction literals 0x00FFFFFFu / 0x01000000u promoted to     |
 // |         |            |        |     named local consts Mantissa24Mask / Mantissa24Scale; comment        |
 // |         |            |        |     records that the 24-bit window matches float mantissa precision.    |
+// | 1.8     | 2026-06-11 | —      | AR-9 L-2: ComputeErrorAngle NaN fallback flipped MinErrorAngle →       |
+// |         |            |        |     MaxErrorAngle (fail-closed). The AR-1 L-1 choice satisfied the      |
+// |         |            |        |     clamp contract but failed OPEN — a NaN anywhere in the modifier     |
+// |         |            |        |     chain yielded the most accurate possible pass (0.1°). Max keeps     |
+// |         |            |        |     the clamp contract and makes the fault the worst legal outcome.     |
 #endregion
