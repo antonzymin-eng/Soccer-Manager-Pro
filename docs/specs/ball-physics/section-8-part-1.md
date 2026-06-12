@@ -213,7 +213,7 @@ Academic sources for ball aerodynamics, spin mechanics, bounce physics, and roll
 **[WITKIN-2001]** Witkin, A., & Baraff, D. (2001). "Physically Based Modeling: Principles and Practice." *SIGGRAPH Course Notes*.
 
 - **Access:** Open Access (available via CMU and multiple university websites)
-- **URL:** https://web.archive.org/web/2024*/http://www.cs.cmu.edu/~baraff/sigcourse/ (Wayback Machine snapshot of the Carnegie Mellon archive; original CMU URL `http://www.cs.cmu.edu/~baraff/sigcourse/` may be intermittently unreachable from CI runners)
+- **URL:** https://web.archive.org/web/2024/http://www.cs.cmu.edu/~baraff/sigcourse/ (Wayback Machine year-redirect to the nearest 2024 snapshot of the Carnegie Mellon archive; original CMU URL `http://www.cs.cmu.edu/~baraff/sigcourse/` may be intermittently unreachable from CI runners. The previous `web/2024*/` wildcard form was a Wayback search page, not a fetchable resource, and failed the CI link check with status 0 — corrected June 11, 2026.)
 - **Used for:** General physics simulation architecture, collision response (Section 3.1.10)
 - **Key findings:** Impulse-based collision resolution for game physics
 - **Validation:** Industry-standard reference for game physics

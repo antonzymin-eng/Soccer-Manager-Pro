@@ -1,6 +1,7 @@
 {
   "ignorePatterns": [
     { "pattern": "^https://doi.org/" },
+    { "pattern": "^https://web\\.archive\\.org/" },
     { "pattern": "^https://github.com/.*/issues/" },
     { "pattern": "^https://www\\.fifa\\.com/" }
   ],
