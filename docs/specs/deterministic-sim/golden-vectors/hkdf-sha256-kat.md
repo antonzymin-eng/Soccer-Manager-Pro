@@ -68,18 +68,20 @@ For SHA-256: `HashLen = 32`. `salt` defaults to `HashLen` zero bytes when not su
 
 ## Project-Specific Test Case 4 — `RNG_KDF` invocation pattern
 
-This case verifies that the project's `RNG_KDF` binding produces the same `PRK` as a direct HKDF-Extract call.
+This case verifies that the project's `RNG_KDF` binding produces the same `PRK` as a direct HKDF-Extract call, and binds the §3.2.4 normative `info` literal to its expected `(k0, k1)` as §3.2.4 mandates ("A KAT row binding this exact `info` to its expected `(k0, k1)` output MUST be in `hkdf-sha256-kat.md`").
 
 | Field | Value |
 |-------|-------|
-| `IKM` | `matchSeed` as 32-byte little-endian bit pattern (test fixture: `aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55`) |
-| `salt` | `NULL` per §3.2.4 → 32 zero bytes |
-| `info` | raw ASCII bytes `SMP-RNG-MATCH` (13 bytes) `534d502d524e472d4d41544348` (per #16 §3.2.4 Pass 5 H-2 fix) |
-| `L` | 32 (one HashLen output → `matchSeedKey`) |
-| Expected `PRK` | (to be computed by reference implementation; test harness MUST log and pin on first green run) |
-| Expected `OKM` | (to be computed by reference implementation; test harness MUST log and pin on first green run) |
+| `IKM` (8 bytes) | `matchSeed` (u64) as little-endian bytes. Fixture: `matchSeed = 0xAA55AA55AA55AA55` → `55aa55aa55aa55aa` |
+| `salt` | `NULL` per §3.2.4 → 32 zero bytes (RFC 5869 §2.2 default) |
+| `info` (13 bytes) | raw ASCII bytes `DS-RNG-KEY-v1` = `44532d524e472d4b45592d7631` (§3.2.4 normative; no §3.2.4.1 string framing) |
+| `L` | 16 (= `RNG_KDF_OUTPUT_BYTES`; bytes [0..7] = k0, bytes [8..15] = k1, both little-endian u64) |
+| `PRK` (32 bytes) | `d178986b5af973f6269098e66000584a9132b0e078c11ef78c1c257d146b550f` |
+| `OKM` (16 bytes) | `4ac332779efad0bb91ca9765ef9e40a0` |
+| `k0` | `0xBBD0FA9E7732C34A` (little-endian load of OKM[0..7]) |
+| `k1` | `0xA0409EEF6597CA91` (little-endian load of OKM[8..15]) |
 
-**Project Test Case 4 status:** Stub. Pin the expected PRK/OKM hex on the first successful test run against the reference implementation; commit the pinned values in this file in a follow-up edit. Once pinned, any change to `info` byte encoding or `salt` semantics MUST trigger a `DETERMINISM_DIGEST_VERSION` bump (per §3.4 numeric-literal review gate) and re-pin.
+**Project Test Case 4 status:** PINNED (June 12, 2026). Pinned by the C# KAT suite (`HkdfSha256KatTests.Hkdf_ProjectCase4_RngKdfInvocationPattern_Pinned`) and cross-derived by an independent Python RFC 5869 mirror (same reproducer convention as `serialize-canonical-corpus.md` Appendix A). **v1.0 stub corrections (F-HKDF-02):** the stub's `info` literal `SMP-RNG-MATCH` contradicted the §3.2.4 normative text as approved (`DS-RNG-KEY-v1`, with its 13 ASCII bytes listed explicitly in §3.2.4); the stub's `L = 32` contradicted `RNG_KDF_OUTPUT_BYTES = 16` (§3.4); the stub's 32-byte IKM contradicted the u64 `matchSeed` consumed verbatim by `DeterministicRngService(ulong matchSeed)` (KD-7). All three corrected before pinning — no pinned value ever changed. From this commit on, any change to `info` byte encoding, `salt` semantics, IKM width, or `L` MUST trigger a `DETERMINISM_DIGEST_VERSION` bump (per §3.4 numeric-literal review gate) and re-pin. The derived `(k0, k1)` feed the project-specific case in `siphash-2-4-kat.md`.
 
 ---
 
@@ -87,7 +89,7 @@ This case verifies that the project's `RNG_KDF` binding produces the same `PRK` 
 
 1. Test runner: `Sim.Tests.Determinism.Rng.HkdfSha256KatTests`.
 2. For each of cases 1–3, supply `IKM`, `salt`, `info`, `L` exactly as shown; assert `PRK` (intermediate) and `OKM` (final) match byte-for-byte.
-3. For case 4, supply project-specific `info` bytes; assert against pinned values once they exist.
+3. For case 4, supply the project-specific `info` bytes (`DS-RNG-KEY-v1`); assert `PRK`, `OKM`, and the derived `(k0, k1)` against the pinned values above.
 4. On any mismatch: emit `ERR_DS_KAT_FAILURE` (TBD: allocate from §3.4 error-code range), abort certification run, fail CI.
 
 ---
@@ -102,4 +104,5 @@ This case verifies that the project's `RNG_KDF` binding produces the same `PRK` 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | May 6, 2026 | Initial KAT file. RFC 5869 Appendix A.1–A.3 reproduced verbatim. Project Test Case 4 stubbed pending first successful reference-implementation run. |
+| 1.2 | June 12, 2026 | **Project Test Case 4 PINNED** (F-HKDF-02): v1.0 stub carried three input errors corrected before pinning — `info` `SMP-RNG-MATCH` → §3.2.4 normative `DS-RNG-KEY-v1`; `L` 32 → 16 (= `RNG_KDF_OUTPUT_BYTES`, §3.4); IKM 32-byte pattern → 8-byte LE u64 `matchSeed` (KD-7 / `DeterministicRngService(ulong)` ctor). Pinned PRK/OKM/(k0,k1) derived by the C# KAT suite (`src/deterministic-sim/tests/HkdfSha256KatTests.cs`) and an independent Python RFC 5869 mirror. Implementation note: the C# `HkdfSha256` was simultaneously upgraded from T(1)-only Expand (L ≤ 32 — structurally incapable of reproducing Test Cases 1–2 at L=42/82) to full RFC 5869 §2.3 multi-block Expand; all three RFC cases now assert PRK + full OKM byte-exact. |
 | 1.1 | May 14, 2026 | **Byte-exact hand-verification pass against RFC 5869** (per #16 §9.5 #4(a) spec-level sub-condition, §9 v1.3). Finding **F-HKDF-01** filed and fixed: Test Case 1 OKM had a stray `0` nibble inserted between bytes 34–35 (`…bf 34 00 72 00 8d 5b 88 71 85 86 5` — 85 hex chars; canonical: `…bf 34 00 72 08 d5 b8 87 18 58 65` — 84 hex chars). Corrected to RFC 5869 §A.1 reference value `3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865`. Test Cases 2 and 3 OKM, all three PRK values, and all metadata (IKM/salt/info/L) verified correct against RFC 5869 §A.2 / §A.3 with no findings. Project Test Case 4 remains stubbed (no change). §9.5 #4(a) spec-level sub-condition: **SATISFIED** as of this commit. |

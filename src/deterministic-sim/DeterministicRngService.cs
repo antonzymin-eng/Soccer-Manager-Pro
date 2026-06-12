@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/DeterministicRngService.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29 (AR-1 H-3: ComputeDrawValue uses stackalloc Span<byte>; SipHash accepts ReadOnlySpan)
+// Modified: 2026-06-12 (golden-vector pass: full RFC 5869 multi-block Expand; HkdfExtract/HkdfExpand split)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.2.1, §3.2.5, §3.2.5.1, §3.4, Code Standards #20
 // Purpose:  Deterministic RNG service using HKDF-SHA256 key derivation and SipHash-2-4-64 stream hashing.
@@ -176,32 +176,68 @@ namespace TacticalDirector.DeterministicSim
         }
 
         /// <summary>
-        /// HKDF-SHA256 per RFC 5869.
-        /// Implements Extract (HMAC-SHA256 over salt ‖ ikm) then Expand (T(1) block only; L ≤ 32).
-        /// §3.2.1 / Appendix A golden vectors (hkdf-sha256-kat.md).
+        /// HKDF-SHA256 per RFC 5869: Extract then full multi-block Expand.
+        /// KAT-fix: the pre-1.2 form emitted T(1) only (L ≤ 32), so it could not reproduce the
+        /// RFC 5869 §A.1/§A.2 reference outputs (L = 42 / 82) and was unverifiable against the
+        /// golden vectors. Construction-time only — heap allocation permitted (not hot path).
+        /// §3.2.1 / golden vectors (hkdf-sha256-kat.md).
         /// </summary>
         internal static byte[] HkdfSha256(byte[] ikm, byte[] salt, byte[] info, int outputBytes)
         {
-            // Extract: PRK = HMAC-SHA256(salt, IKM)
-            byte[] prk;
+            byte[] prk = HkdfExtract(ikm, salt);
+            return HkdfExpand(prk, info, outputBytes);
+        }
+
+        /// <summary>
+        /// HKDF-Extract per RFC 5869 §2.2: PRK = HMAC-SHA256(salt, IKM).
+        /// Exposed separately so the KAT suite can assert the intermediate PRK byte-exact
+        /// (hkdf-sha256-kat.md lists PRK for every test case).
+        /// </summary>
+        internal static byte[] HkdfExtract(byte[] ikm, byte[] salt)
+        {
             using (HMACSHA256 hmac = new HMACSHA256(salt))
             {
-                prk = hmac.ComputeHash(ikm);
+                return hmac.ComputeHash(ikm);
             }
+        }
 
-            // Expand T(1) = HMAC-SHA256(PRK, info ‖ 0x01) — sufficient for L ≤ 32 bytes
-            byte[] t1Input = new byte[info.Length + 1];
-            Array.Copy(info, 0, t1Input, 0, info.Length);
-            t1Input[info.Length] = 0x01;
-
-            byte[] t1;
-            using (HMACSHA256 hmac = new HMACSHA256(prk))
+        /// <summary>
+        /// HKDF-Expand per RFC 5869 §2.3:
+        /// T(n) = HMAC-SHA256(PRK, T(n-1) ‖ info ‖ byte(n)), OKM = first L bytes of T(1) ‖ T(2) ‖ …
+        /// Supports the full RFC range L ≤ 255 × 32.
+        /// </summary>
+        internal static byte[] HkdfExpand(byte[] prk, byte[] info, int outputBytes)
+        {
+            const int hashLen = DeterministicSimConstants.SHA256_BYTES;
+            if (outputBytes <= 0 || outputBytes > 255 * hashLen)
             {
-                t1 = hmac.ComputeHash(t1Input);
+                throw new ArgumentOutOfRangeException(nameof(outputBytes),
+                    outputBytes, "RFC 5869 §2.3 bounds: 0 < L <= 255 * HashLen.");
             }
 
             byte[] output = new byte[outputBytes];
-            Array.Copy(t1, 0, output, 0, outputBytes);
+            byte[] t      = new byte[0]; // T(0) = empty string
+            int written   = 0;
+            byte counter  = 1;
+
+            using (HMACSHA256 hmac = new HMACSHA256(prk))
+            {
+                while (written < outputBytes)
+                {
+                    byte[] block = new byte[t.Length + info.Length + 1];
+                    Array.Copy(t, 0, block, 0, t.Length);
+                    Array.Copy(info, 0, block, t.Length, info.Length);
+                    block[t.Length + info.Length] = counter;
+
+                    t = hmac.ComputeHash(block);
+
+                    int copy = Math.Min(hashLen, outputBytes - written);
+                    Array.Copy(t, 0, output, written, copy);
+                    written += copy;
+                    counter++;
+                }
+            }
+
             return output;
         }
 
@@ -390,4 +426,9 @@ namespace TacticalDirector.DeterministicSim
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                              |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-3: ComputeDrawValue uses stackalloc Span<byte>; SipHash24_64  |
 // |         |            |        | signature changed to ReadOnlySpan<byte>; Span write helpers added.   |
+// | 1.2     | 2026-06-12 | —      | Golden-vector pass: HKDF Expand was T(1)-only (L ≤ 32) and could NOT |
+// |         |            |        | reproduce RFC 5869 §A.1/§A.2 (L=42/82) — full multi-block Expand per |
+// |         |            |        | §2.3 implemented; HkdfExtract/HkdfExpand split out so the KAT suite  |
+// |         |            |        | asserts PRK byte-exact. No behaviour change for L ≤ 32 (production   |
+// |         |            |        | path uses RNG_KDF_OUTPUT_BYTES = 16; T(1) prefix is identical).      |
 #endregion

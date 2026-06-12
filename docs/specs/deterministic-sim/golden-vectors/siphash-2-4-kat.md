@@ -106,12 +106,13 @@ This case verifies the project's `RNG_STREAM_HASH` binding (per #16 §3.2.4) has
 
 | Field | Value |
 |-------|-------|
-| `(k0, k1)` | derived from `matchSeedKey` via `RNG_KDF` (see `hkdf-sha256-kat.md` Test Case 4) |
-| Input bytes | `0x13 || StreamKey(16 bytes) || actionOrdinal(u64 LE) || drawIndex(u32 LE)` per §3.4 `HASH_INPUT_FIELD_WIDTHS` |
-| Test fixture | `StreamKey = 0x00..0x0f`, `actionOrdinal = 1`, `drawIndex = 0` |
-| Expected output | (to be computed by reference implementation; pin on first green run) |
+| `(k0, k1)` | derived from `matchSeed = 0xAA55AA55AA55AA55` via `RNG_KDF` (`hkdf-sha256-kat.md` Test Case 4, pinned): `k0 = 0xBBD0FA9E7732C34A`, `k1 = 0xA0409EEF6597CA91` |
+| Input bytes | `0x13 || StreamKey(u64 LE) || actionOrdinal(u64 LE) || drawIndex(u32 LE)` per §3.4 `HASH_INPUT_FIELD_WIDTHS` — 1+8+8+4 = 21 bytes |
+| Test fixture | `StreamKey = 0x0102030405060708`, `actionOrdinal = 1`, `drawIndex = 0` (identical to `serialize-canonical-corpus.md` entry D-03) |
+| Preimage (21 bytes) | `130807060504030201010000000000000000000000` |
+| Expected output | `0x9E847C2A31BDDB4E` (little-endian bytes `4edbbd312a7c849e`) |
 
-**Project case status:** Stub. Pin the expected 64-bit hex on the first successful test run; commit the pinned value in a follow-up edit. Any change to field widths, domain tag, or concatenation order MUST trigger `DETERMINISM_DIGEST_VERSION` bump and re-pin.
+**Project case status:** PINNED (June 12, 2026). Pinned by the C# KAT suite (`SipHash24KatTests.SipHash24_ProjectDrawPreimage_Pinned`) and cross-derived by an independent Python SipHash-2-4 mirror. **v1.0 stub correction:** the stub stated `StreamKey(16 bytes)` with fixture `0x00..0x0f`, contradicting the very §3.4 `HASH_INPUT_FIELD_WIDTHS` table it cited (`StreamKey = u64`, 8 bytes; also §3.2.4 "`StreamKey` output width is 64-bit unsigned") — corrected to u64 before pinning, and the fixture re-anchored to the corpus D-03 preimage so the two files lock the same 21 bytes. Any change to field widths, domain tag, or concatenation order MUST trigger `DETERMINISM_DIGEST_VERSION` bump and re-pin.
 
 ---
 
@@ -119,7 +120,7 @@ This case verifies the project's `RNG_STREAM_HASH` binding (per #16 §3.2.4) has
 
 1. Test runner: `Sim.Tests.Determinism.Rng.SipHash24KatTests`.
 2. For each `i` in 0..63, build the message `(0x00, 0x01, ..., 0x(i-1))`, invoke `SipHash-2-4-64(k0=0x0706050403020100, k1=0x0f0e0d0c0b0a0908, message)`, assert the 8-byte little-endian output equals the table row for `i`.
-3. For the project-specific case, build the input per §3.2.4 byte schema; assert against pinned value once it exists.
+3. For the project-specific case, build the 21-byte input per §3.2.4 / §3.4 byte schema; assert against the pinned value `0x9E847C2A31BDDB4E`.
 4. On any mismatch: emit `ERR_DS_KAT_FAILURE`, abort certification run, fail CI.
 
 ---
@@ -135,4 +136,5 @@ This case verifies the project's `RNG_STREAM_HASH` binding (per #16 §3.2.4) has
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | May 6, 2026 | Initial KAT file. 64-entry reference table reproduced from Aumasson & Bernstein 2012 Appendix A. Project-specific case stubbed pending first successful reference-implementation run. |
+| 1.2 | June 12, 2026 | **Project-specific case PINNED**: v1.0 stub's `StreamKey(16 bytes)` corrected to u64 per the §3.4 `HASH_INPUT_FIELD_WIDTHS` table the stub itself cited; fixture re-anchored to the `serialize-canonical-corpus.md` D-03 preimage (`StreamKey = 0x0102030405060708`, `actionOrdinal = 1`, `drawIndex = 0`); `(k0, k1)` taken from the simultaneously pinned `hkdf-sha256-kat.md` Test Case 4. Output `0x9E847C2A31BDDB4E` pinned by the C# KAT suite (`src/deterministic-sim/tests/SipHash24KatTests.cs`, which also executes all 64 reference vectors — the prior in-repo suite covered only vectors 0–7) and an independent Python mirror. |
 | 1.1 | May 14, 2026 | **Byte-exact hand-verification pass against Aumasson & Bernstein 2012 Appendix A** and the `veorq/SipHash` reference `vectors.h` (per #16 §9.5 #4(b) spec-level sub-condition, §9 v1.3). All 64 output rows match byte-for-byte; metadata (16-byte key `000102…0f`; `k0 = 0x0706050403020100`, `k1 = 0x0f0e0d0c0b0a0908` via little-endian load; SipHash-2-4 round counts c=2 / d=4; 64-bit little-endian output convention; increasing-length input `0x00, 0x01, …, 0x(i-1)`) all correct. No findings; no content changes required. Project-specific case remains stubbed (no change). §9.5 #4(b) spec-level sub-condition: **SATISFIED** as of this commit. |
