@@ -31,7 +31,7 @@ applicable, and **remove the quarantine line in the same commit**.
    CI run, so a quarantined test that *starts passing* is visible in the log —
    harvest those promptly.
 
-## Open quarantine entries (30) — by suite
+## Open quarantine entries — by suite
 
 ### Ball Physics #1 (1)
 
@@ -44,15 +44,6 @@ applicable, and **remove the quarantine line in the same commit**.
 | Test | First-run failure | Hypothesis |
 |---|---|---|
 | `SpatialHash_TwoAgentsFar_QueryReturnsOnlySelf` | SH-003: distant agent must not appear in query | Broad-phase query radius vs test distance; check 3×3 window proof (AR-10) against the test's cell geometry. |
-
-### First Touch #4 (4)
-
-| Test | First-run failure | Hypothesis |
-|---|---|---|
-| `ControlQuality_AllFourVerificationMatrixScenarios_PassSimultaneously` | CQ-012 Scenario 2 lower bound | §5 verification-matrix hand-calcs vs implementation; ERR-004-006 (additive-vs-multiplicative modifier) family — matrix may need re-derivation. |
-| `TouchRadius_GoodPoorBoundary_IsContinuous` | TR-004: continuity at Good/Poor boundary | Piecewise touch-radius formula has a step at the band boundary, or the test's continuity tolerance is wrong. §3.2.3. |
-| `TouchRadius_PoorHeavyBoundary_IsContinuous` | TR-007: continuity at Poor/Heavy boundary | Same family as TR-004. |
-| `TouchRadius_VelocityModifier_IncreasesRadiusForFastBall` | TR-009: 30 m/s should scale radius by ≈ 1.25 | Velocity-modifier formula/constant vs test's expected scale factor. |
 
 ### Pass Mechanics #5 (3)
 
@@ -120,7 +111,16 @@ applicable, and **remove the quarantine line in the same commit**.
 
 ## Resolved
 
-*(none yet — entries move here with the commit hash that fixed them)*
+### First Touch #4 (4/4) — resolved June 12, 2026 (all TEST-DEFECT; production matches normative §3)
+
+| Test | Verdict | Adjudication |
+|---|---|---|
+| `ControlQuality_AllFourVerificationMatrixScenarios_PassSimultaneously` | TEST-DEFECT (stale spec copy) | §5.2 CQ-012 Scenario 2 band 0.55–0.65 predated the unconditional §3.1.1 Step-5 movement difficulty; the normative §3.1.3 matrix row was corrected to ≈0.48–0.55 on 2026-05-26 (section-3-1-to-3-5.md v1.3) but the §5.2 copy never synced (parallel-surface drift, ERR-004-006 family). Hand-calc: WA = 0.7×12 + 0.3×11 = 11.7 → NormAttr 0.585; VelDiff = 15/15 = 1.0; MoveDiff = 1 + (2/7)×0.5 = 1.142857 → q = 0.511875 — exactly what production returns. Spec §5.2 synced (section-5-1-to-5-6.md v1.5); test rebanded. |
+| `TouchRadius_GoodPoorBoundary_IsContinuous` | TEST-DEFECT (probe mis-construction) | §5.3 TR-004 prescribes DIRECT q probes (0.6001/0.5999). The pipeline form (attrs Tech=FT=12, agent 0.05 vs 0.20 m/s) put BOTH probes inside the Poor band (q ≈ 0.59786/0.59155 — MoveDiff ≥ 1 keeps q strictly below 0.60) and measured Poor-band slope (dr/dq = −2.4 m over Δq ≈ 0.00632 → 0.01516 m), not a discontinuity. Hand-calc at the true boundary: r(0.6001) = 0.59988 m, r(0.5999) = 0.60024 m, gap 0.00036 m — continuous. Rewritten to internal TouchRadiusCalculator probes + shared-boundary asserts (0.60 m). |
+| `TouchRadius_PoorHeavyBoundary_IsContinuous` | TEST-DEFECT (probe mis-construction) | Same family: pipeline probes landed at q ≈ 0.19845/0.19184 — deep inside the Heavy band, nowhere near 0.35 — and measured Heavy-band slope amplified by the 20 m/s velocity modifier (×1.08333) → 0.01638 m. Hand-calc at the boundary: r(0.3501) = 1.19976 m, r(0.3499) = 1.20023 m, gap 0.00047 m — continuous. Rewritten to direct probes + shared-boundary asserts (1.20 m). |
+| `TouchRadius_VelocityModifier_IncreasesRadiusForFastBall` | TEST-DEFECT (q not held constant) | §5.3 TR-009 holds q = 0.72 constant (r = 0.456 m at 15 m/s; ×1.25 → 0.570 m at 30 m/s). The pipeline form let §3.1.1 Step-4 velocity difficulty halve q at 30 m/s (0.735 → 0.3675, different band), so r30 = r_base(q30)×1.25 ≠ r15×1.25 (observed 1.643 vs expected 0.5475). Rewritten to the spec's direct probe; production formula verified: VelMod = 1 + (15/15)×0.25 = 1.25. |
+
+Files: `src/first-touch/Tests/FirstTouchTests.cs` v1.3, `docs/specs/first-touch/section-5-1-to-5-6.md` v1.5. Suite: 71 passed / 0 failed / 8 skipped; cross-spec scenario suite (testing-strategy) re-run green.
 
 ## Version History
 

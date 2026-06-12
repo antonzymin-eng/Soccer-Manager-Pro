@@ -1,12 +1,14 @@
 // File:     src/first-touch/Tests/FirstTouchTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-10
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     First Touch #4 §5
 // Purpose:  NUnit unit tests covering CQ, TR, PR, OR, PO, EC, BD, and VS categories from §5.2–§5.10.
-//           All internal calculators (ControlQualityCalculator, TouchRadiusCalculator, etc.) are
-//           exercised through the public FirstTouchSystem.EvaluateFirstTouch API because the test
-//           assembly is separate from TacticalDirector.FirstTouch.
+//           Internal calculators are exercised through the public FirstTouchSystem.EvaluateFirstTouch
+//           API where the §5 row drives the full pipeline; the §5.3 rows that prescribe DIRECT q
+//           inputs to CalculateTouchRadius (TR-004 / TR-007 / TR-009) call the internal
+//           TouchRadiusCalculator via InternalsVisibleTo (AssemblyInfo.cs, 2026-06-10) — q cannot
+//           be held constant through the pipeline because ballSpeed feeds §3.1 Step 4 and §3.3.7.
 
 using System;
 using System.Collections.Generic;
@@ -356,14 +358,20 @@ namespace TacticalDirector.FirstTouch.Tests
             float qElite = _system.EvaluateFirstTouch(elite).ControlQuality;
             Assert.GreaterOrEqual(qElite, 0.85f, "CQ-012 Scenario 1: elite should be ≥ 0.85.");
 
-            // Scenario 2: Average, typical, no pressure → q ∈ [0.55, 0.65]
+            // Scenario 2: Average, typical, no pressure → q ∈ [0.48, 0.55] (§3.1.3 matrix, v1.3).
+            // Hand-calc (§3.1.1): WA = 0.7×12 + 0.3×11 = 11.7 → NormAttr = 0.585;
+            // VelDiff = 15/15 = 1.0; MoveDiff = 1 + (2/7)×0.5 = 1.142857 (Step 5 is unconditional)
+            // → q = 0.585 / 1.142857 = 0.511875. The old [0.55, 0.65] band predated the
+            // unconditional movement difficulty and was corrected in §3.1.3 on 2026-05-26 (v1.3);
+            // the stale §5.2 CQ-012 copy of the matrix was synced in section-5-1-to-5-6.md v1.5
+            // (parallel-surface drift, ERR-004-006 family — dotnet-CI quarantine adjudication).
             FirstTouchContext avg = ContextFactory.MakeDefault();
             avg.Technique = 12; avg.FirstTouchAttribute = 11;
             avg.BallVelocity = new Vector3(-15.0f, 0.0f, 0.0f);
             avg.AgentVelocity = new Vector3(2.0f, 0.0f, 0.0f); avg.PressureScalar = 0.0f;
             float qAvg = _system.EvaluateFirstTouch(avg).ControlQuality;
-            Assert.GreaterOrEqual(qAvg, 0.55f, "CQ-012 Scenario 2 lower bound.");
-            Assert.LessOrEqual(qAvg, 0.65f, "CQ-012 Scenario 2 upper bound.");
+            Assert.GreaterOrEqual(qAvg, 0.48f, "CQ-012 Scenario 2 lower bound.");
+            Assert.LessOrEqual(qAvg, 0.55f, "CQ-012 Scenario 2 upper bound.");
 
             // Scenario 3: Average, typical, medium pressure → q ∈ [0.35, 0.45]
             FirstTouchContext avgPress = avg;
@@ -461,21 +469,23 @@ namespace TacticalDirector.FirstTouch.Tests
         [Test]
         public void TouchRadius_GoodPoorBoundary_IsContinuous()
         {
-            // Two very close q values bracketing 0.60.
-            FirstTouchContext ctxAbove = ContextFactory.MakeDefault();
-            ctxAbove.Technique = 12; ctxAbove.FirstTouchAttribute = 12;
-            ctxAbove.BallVelocity = new Vector3(-15.0f, 0.0f, 0.0f);
-            ctxAbove.AgentVelocity = new Vector3(0.05f, 0.0f, 0.0f); // tiny movement to push just above/below boundary
-            ctxAbove.PressureScalar = 0.0f;
+            // §5.3 TR-004 prescribes DIRECT q inputs (q=0.6001 / q=0.5999, ballSpeed=15.0).
+            // The pre-v1.3 pipeline form (Tech=FT=12 → NormAttr exactly 0.60, agent 0.05 vs
+            // 0.20 m/s) could never bracket the boundary: MoveDiff ≥ 1 keeps q strictly below
+            // 0.60, so BOTH probes landed inside the Poor band (q ≈ 0.59786 / 0.59155) and the
+            // assert measured the Poor-band slope (dr/dq = −2.4 m) over Δq ≈ 0.00632
+            // → a 0.01516 m "step" that is NOT a discontinuity (dotnet-CI quarantine adjudication).
+            // Hand-calc (§3.2.2): r(0.6001) = Lerp(0.60, 0.30, 0.0004) = 0.59988 m;
+            //                     r(0.5999) = Lerp(1.20, 0.60, 0.9996) = 0.60024 m; gap 0.00036 m.
+            float rGood = TouchRadiusCalculator.Calculate(0.6001f, 15.0f);
+            float rPoor = TouchRadiusCalculator.Calculate(0.5999f, 15.0f);
 
-            FirstTouchContext ctxBelow = ctxAbove;
-            ctxBelow.AgentVelocity = new Vector3(0.20f, 0.0f, 0.0f);
-
-            float rAbove = _system.EvaluateFirstTouch(ctxAbove).TouchRadius;
-            float rBelow = _system.EvaluateFirstTouch(ctxBelow).TouchRadius;
-
-            Assert.AreEqual(rAbove, rBelow, 0.01f,
+            Assert.AreEqual(rGood, rPoor, 0.01f,
                 "TR-004: Touch radius must be continuous at the Good/Poor boundary.");
+            Assert.AreEqual(0.60f, rGood, 0.005f,
+                "TR-004: Good-band limit at q → 0.60+ must approach the shared boundary value 0.60m.");
+            Assert.AreEqual(0.60f, rPoor, 0.005f,
+                "TR-004: Poor-band limit at q → 0.60− must approach the shared boundary value 0.60m.");
         }
 
         /// <summary>TR-005: Poor band at q≈0.475 → r ≈ 0.90m.</summary>
@@ -517,20 +527,23 @@ namespace TacticalDirector.FirstTouch.Tests
         [Test]
         public void TouchRadius_PoorHeavyBoundary_IsContinuous()
         {
-            FirstTouchContext ctxAbove = ContextFactory.MakeDefault();
-            ctxAbove.Technique = 6; ctxAbove.FirstTouchAttribute = 7;
-            ctxAbove.BallVelocity = new Vector3(-20.0f, 0.0f, 0.0f);
-            ctxAbove.AgentVelocity = new Vector3(2.0f, 0.0f, 0.0f);
-            ctxAbove.PressureScalar = 0.10f;
+            // §5.3 TR-007 prescribes DIRECT q inputs (q=0.3501 / q=0.3499, ballSpeed=15.0).
+            // The pre-v1.3 pipeline form (Tech=6/FT=7, ball 20 m/s, agent 2 m/s, pressure 0.10
+            // vs 0.18) produced q ≈ 0.19845 / 0.19184 — BOTH deep inside the Heavy band, nowhere
+            // near 0.35 — and measured the Heavy-band slope (−0.8/0.35 ≈ −2.286 m) over
+            // Δq ≈ 0.00662, amplified by the 20 m/s velocity modifier (×1.08333)
+            // → a 0.01638 m "step" that is NOT a discontinuity (dotnet-CI quarantine adjudication).
+            // Hand-calc (§3.2.2): r(0.3501) = Lerp(1.20, 0.60, 0.0004)    = 1.19976 m;
+            //                     r(0.3499) = Lerp(2.00, 1.20, 0.999714) = 1.20023 m; gap 0.00047 m.
+            float rPoor  = TouchRadiusCalculator.Calculate(0.3501f, 15.0f);
+            float rHeavy = TouchRadiusCalculator.Calculate(0.3499f, 15.0f);
 
-            FirstTouchContext ctxBelow = ctxAbove;
-            ctxBelow.PressureScalar = 0.18f;
-
-            float rAbove = _system.EvaluateFirstTouch(ctxAbove).TouchRadius;
-            float rBelow = _system.EvaluateFirstTouch(ctxBelow).TouchRadius;
-
-            Assert.AreEqual(rAbove, rBelow, 0.01f,
+            Assert.AreEqual(rPoor, rHeavy, 0.01f,
                 "TR-007: Touch radius must be continuous at the Poor/Heavy boundary.");
+            Assert.AreEqual(1.20f, rPoor, 0.005f,
+                "TR-007: Poor-band limit at q → 0.35+ must approach the shared boundary value 1.20m.");
+            Assert.AreEqual(1.20f, rHeavy, 0.005f,
+                "TR-007: Heavy-band limit at q → 0.35− must approach the shared boundary value 1.20m.");
         }
 
         /// <summary>TR-008: Monotonicity — r is strictly non-increasing as q increases across [0,1].</summary>
@@ -581,25 +594,23 @@ namespace TacticalDirector.FirstTouch.Tests
         [Test]
         public void TouchRadius_VelocityModifier_IncreasesRadiusForFastBall()
         {
-            // Both tests target good-band q. Use same attributes but different ball speeds.
-            // At 15 m/s: r_base = Lerp(0.60,0.30,t), VelMod=1.0.
-            // At 30 m/s: VelExcess=15, VelMod=1+(15/15)*0.25=1.25; r_adjusted = r_base * 1.25.
-            FirstTouchContext ctx15 = ContextFactory.MakeDefault();
-            ctx15.Technique = 15; ctx15.FirstTouchAttribute = 14;
-            ctx15.BallVelocity = new Vector3(-15.0f, 0.0f, 0.0f);
-            ctx15.AgentVelocity = Vector3.zero; ctx15.PressureScalar = 0.0f;
+            // §5.3 TR-009 prescribes DIRECT q inputs ("identical quality", q=0.72 held constant,
+            // ballSpeed 15 vs 30). The previous pipeline form (same attributes, different ball
+            // speeds) could never satisfy the ×1.25 ratio: at 30 m/s the §3.1.1 Step-4 velocity
+            // difficulty halves q (0.735 → 0.3675), moving r_base to a different band, so
+            // r30 = r_base(q30) × 1.25 ≠ r_base(q15) × 1.25 (dotnet-CI quarantine adjudication).
+            // Hand-calc (§5.3): q=0.72 Good band → t = (0.72−0.60)/0.25 = 0.48
+            //   → r_base = Lerp(0.60, 0.30, 0.48) = 0.456 m; VelMod(15) = 1.0 → r = 0.456 m;
+            //   VelExcess(30) = 15 → VelMod = 1 + (15/15)×0.25 = 1.25 → r = 0.570 m.
+            float r15 = TouchRadiusCalculator.Calculate(0.72f, 15.0f);
+            float r30 = TouchRadiusCalculator.Calculate(0.72f, 30.0f);
 
-            FirstTouchContext ctx30 = ctx15;
-            ctx30.BallVelocity = new Vector3(-30.0f, 0.0f, 0.0f);
-
-            float r15 = _system.EvaluateFirstTouch(ctx15).TouchRadius;
-            float r30 = _system.EvaluateFirstTouch(ctx30).TouchRadius;
-
+            Assert.AreEqual(0.456f, r15, 0.01f,
+                "TR-009 Inputs A: q=0.72 at reference speed must give r ≈ 0.456m (VelMod = 1.0).");
+            Assert.AreEqual(0.570f, r30, 0.01f,
+                "TR-009 Inputs B: q=0.72 at 30 m/s must give r ≈ 0.570m (VelMod = 1.25).");
             Assert.Greater(r30, r15,
                 "TR-009: A ball at 30 m/s should produce a larger touch radius than 15 m/s.");
-            // The ratio of the base radii should be ≈ 1.25 (velocity modifier).
-            Assert.AreEqual(r15 * 1.25f, r30, 0.015f,
-                "TR-009: Velocity modifier at 30 m/s should scale radius by ≈ 1.25.");
         }
 
         /// <summary>TR-010: Extreme ball speed (60 m/s) with poor quality → radius hard-capped at 2.0m.</summary>
@@ -1921,4 +1932,5 @@ namespace TacticalDirector.FirstTouch.Tests
 // | 1.0     | 2026-05-31 | —      | Initial creation. 52 tests across CQ/TR/PR/OR/PO/EC/BD/VS/invariant categories. |
 // | 1.1     | 2026-06-01 | —      | Add §5.9 integration test stubs IT-001..008 (all Assert.Ignore Stage 0+1). |
 // | 1.2     | 2026-06-10 | —      | AR-7 fix pass. STRUCTURAL: v1.1 closed the namespace before FirstTouchIntegrationTests and left an unmatched trailing brace (170 '{' vs 171 '}') — the file has NEVER compiled; namespace close moved to EOF, [TestFixture] added. The suite also encoded BOTH direction-blend sign conventions at once (BD-002 travel-direction vs BD-003/BD-004 negated — mutually unsatisfiable, further proof of zero executions). Re-derived against the ERR-004-003-corrected model via numerical mirror: BD-003 (dy now negative), BD-004 (ball velocity flipped to keep the anti-parallel degenerate case; locks the §3.3.2 IncomingDir fallback), BD-002 comments (assertions were already travel-direction and now pass). PO-003/PO-006/PO-007/VS-002/VS-003 gained NearestOpponentPositionXY with ball-anchored placements (ERR-004-004); PO-003 locks the §3.4.5 interception velocity redirect (AR-7 M-3). PO-005 re-derived to DEFLECTION — the low-alignment LOOSE_BALL expectation is unreachable through the public pipeline (ERR-004-005). BD-007/BD-008 stale hand-calc comments corrected. ContextFactory default NearestOpponentPositionXY documented. |
+// | 1.3     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication (4 tests, all TEST-DEFECT — production touch-radius/CQ models match the normative §3): CQ-012 Scenario 2 band synced to the §3.1.3 v1.3 matrix (0.55–0.65 → 0.48–0.55; q = 0.585/1.142857 ≈ 0.512 — the §5.2 copy of the matrix had drifted from the 2026-05-26 normative correction; section-5-1-to-5-6.md v1.5). TR-004/TR-007 rewritten to the §5.3 prescribed DIRECT q probes (0.6001/0.5999 and 0.3501/0.3499 at ballSpeed 15) — the pipeline forms landed BOTH probes inside one band and measured band slope (−2.4 m/q over Δq≈0.006), not discontinuity; shared-boundary-value asserts added (0.60 m / 1.20 m). TR-009 rewritten to the §5.3 direct probe (q=0.72 held constant, 15 vs 30 m/s → 0.456/0.570 m) — the pipeline form let Step-4 velocity difficulty halve q at 30 m/s, so the ×1.25 ratio was unsatisfiable. |
 #endregion
