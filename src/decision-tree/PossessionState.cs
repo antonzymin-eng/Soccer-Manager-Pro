@@ -3,8 +3,10 @@
 // Modified: 2026-05-29
 // Author:   —
 // Spec:     Decision Tree #8 §2.2.5, Code Standards #20
-// Purpose:  Enum describing which team has possession from the perspective of a
-//           given agent (HOME_TEAM / AWAY_TEAM / CONTESTED).
+// Purpose:  Enum describing which team has possession in ABSOLUTE terms
+//           (HOME_TEAM / AWAY_TEAM / CONTESTED) per §2.2.5. The §3.1.1.2 perspective
+//           form (own team vs opponent) is derived per agent — see
+//           DecisionContext.OpponentHasBall (AR-2 M-1).
 
 namespace TacticalDirector.DecisionTree
 {
@@ -23,4 +25,6 @@ namespace TacticalDirector.DecisionTree
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-11 | —      | Audit AR-2 L: header doc corrected — values are absolute (§2.2.5), not       |
+// |         |            |        |   agent-perspective; the perspective claim fed the M-1 §3.4.6 defect.         |
 #endregion

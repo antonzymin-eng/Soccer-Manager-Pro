@@ -21,10 +21,17 @@ namespace TacticalDirector.DecisionTree
         /// TacticalContext and possession state. Always ≥ neutral for at least one mode.
         /// §3.4.2.
         /// </summary>
+        /// <param name="opponentHasBall">
+        /// DecisionContext.OpponentHasBall — true when the team OPPOSING the evaluated
+        /// agent possesses (§3.1.1.2 perspective form). AR-2 M-1: this gate previously
+        /// compared the absolute enum against AWAY_TEAM, which is "opponent" only for
+        /// home agents — away agents received press urgency while their OWN team
+        /// possessed and never while defending.
+        /// </param>
         internal static float Resolve(
             ActionType type,
             in TacticalContext ctx,
-            PossessionState possessedByTeam,
+            bool opponentHasBall,
             float intendedPassDistanceM)
         {
             float mod = 1.0f;
@@ -32,8 +39,8 @@ namespace TacticalDirector.DecisionTree
             mod *= ResolvePressingMode(type, ctx.Pressing);
             mod *= ResolvePassingStyle(type, ctx.Passing, intendedPassDistanceM);
 
-            // Possession-phase PRESS urgency (§3.4.6)
-            if (type == ActionType.PRESS && possessedByTeam == PossessionState.AWAY_TEAM)
+            // Possession-phase PRESS urgency (§3.4.6): applies under OPPONENT possession.
+            if (type == ActionType.PRESS && opponentHasBall)
                 mod *= TacticalWeights.PressUrgencyFactor;
 
             return mod;
@@ -110,4 +117,7 @@ namespace TacticalDirector.DecisionTree
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-11 | —      | Audit AR-2 M-1: §3.4.6 press urgency now keyed to OpponentHasBall            |
+// |         |            |        |   (perspective form) instead of the absolute AWAY_TEAM literal, which        |
+// |         |            |        |   inverted the urgency boost for away-team agents.                            |
 #endregion

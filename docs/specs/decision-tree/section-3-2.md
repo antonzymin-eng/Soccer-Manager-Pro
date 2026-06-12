@@ -261,10 +261,18 @@ The agent's own zone is defined relative to their attacking direction:
 - `MIDFIELD`: 35m – 65m
 - `ATTACKING`: 65m – 105m
 
-**Note:** These zones are ball-zone derived (`MatchContext.BallZone`), not agent-zone
-derived. The ball's zone determines the tactical context, not the agent's current
-position. An agent who is physically in the attacking third while the ball is in midfield
-operates under midfield zone modifiers.
+**Note:** These zones are ball-zone derived, not agent-zone derived. The ball's zone
+determines the tactical context, not the agent's current position. An agent who is
+physically in the attacking third while the ball is in midfield operates under midfield
+zone modifiers.
+
+**ERR-008-002 (June 11, 2026 audit):** because the zones are defined relative to each
+team's own goal line, the zone consumed here is the TEAM-RELATIVE
+`DecisionContext.BallZone` derived per agent by the assembler from
+`MatchContext.BallPosition.x` (`PitchGeometry.ComputeFieldZone(posX, teamId)`), NOT the
+shared home-perspective `MatchContext.BallZone` field — consuming the shared field
+inverted every zone modifier for the away team (away shots in range received the 0.10
+DEFENSIVE modifier instead of 1.00). See §2.2.5 field note.
 
 **Zone Modifier Table:**
 
@@ -614,5 +622,6 @@ defence; SHOOT correctly takes over in the attacking third for capable finishers
 |---------|------|--------|---------|
 | 1.1 | March 02, 2026 | AI agent / Anton | Original approved version. Utility model for all seven action types. |
 | 1.2 | (not documented) | — | Minor updates (see file header). |
+| 1.4 | June 11, 2026 | AI agent (audit AR-2) | ERR-008-002: §3.2.1.3 consumption note — zone modifiers read the team-relative `DecisionContext.BallZone` derived from `BallPosition.x`, not the shared home-perspective `MatchContext.BallZone` (away-team modifiers were inverted). |
 | 1.3 | May 18, 2026 | AI agent (claude-sonnet-4-6) | ERR-008-001 fix (A-06 FAIL — coordinate system): rewrote `PitchGeometry` class from centered origin `(0,0) = centre of pitch` to authoritative corner-origin `(0,0,0) = corner of pitch` per Ball Physics #1 §1.2 and Appendix C. All goal `Vector2` constants replaced with `Vector3` constants using correct corner-origin values: `HOME_OPPONENT_GOAL_CENTRE (105, 34, 0)`, `HOME_OWN_GOAL_CENTRE (0, 34, 0)`, etc. `HALF_LENGTH_M`/`HALF_WIDTH_M` comments updated. Coordinate system comment corrected from "§2.2" to "§1.2 and Appendix C". Stale XC-NOTE (XC-GEOM-01) replaced with resolution verification. |
 

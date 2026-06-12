@@ -42,12 +42,14 @@ ball_position  = PerceptionSnapshot.BallPerceivedPosition   // current position 
 ball_speed     = |MatchContext.BallVelocity|                 // scalar speed (m/s)
 ball_direction = Normalise(MatchContext.BallVelocity)        // unit direction vector
 
-// Drag constant (from Ball Physics #1 §3.x — reused read-only)
-// Ball Physics uses C_d × rho × A / (2m) as the drag deceleration coefficient.
-// At Stage 0, approximate with DRAG_APPROX = 0.3 s^-1 [CROSS — from Ball Physics #1]
-// This gives a ~26% speed reduction over 1.0s, consistent with
-// typical pass deceleration observed in Ball Physics §3 worked examples.
-DRAG_APPROX = 0.3   // s^-1  [CROSS — Ball Physics #1 §3.x drag formula]
+// Drag coefficient for the first-order approximation v(t) = v0·e^(−kt).
+// Ball Physics #1 models QUADRATIC drag (½ρC_dAv²) and declares no 0.3 s⁻¹
+// constant — this value is a DT-side calibration against #1's worked examples
+// (~26% speed reduction over 1.0s), NOT a verbatim copy, so the [CROSS] tag
+// violated the tag rules ("only when the value is copied verbatim").
+// Retagged [EST] per ERR-008-009 (June 11, 2026 audit); validate against
+// BallPhysics.ProjectPosition(t) when that API lands (Stage 1).
+DRAG_APPROX = 0.3   // s^-1  [EST — calibrated against Ball Physics #1 worked examples]
 
 // Agent data
 agent_position  = AgentPosition

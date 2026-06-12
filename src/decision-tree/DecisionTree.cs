@@ -1,8 +1,8 @@
 // File:     src/decision-tree/DecisionTree.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-11 (audit AR-2 fix pass)
 // Author:   —
-// Spec:     Decision Tree #8 §2.1.2, §3.6, §4.1–4.3, Code Standards #20
+// Spec:     Decision Tree #8 §2.1.2, §3.6, §3.7, §4.1–4.3, Code Standards #20
 // Purpose:  Orchestrator-facing entry point. Runs the 6-step pipeline for one agent
 //           per ReceiveSnapshot() call. Zero heap allocation on the hot path.
 //           One instance per simulation agent (AgentId 0–21). §4.1.
@@ -11,6 +11,8 @@ using UnityEngine;
 using Unity.Profiling;
 using TacticalDirector.AgentMovement;
 using TacticalDirector.PerceptionSystem;
+using TacticalDirector.PassMechanics;
+using TacticalDirector.ShotMechanics;
 
 namespace TacticalDirector.DecisionTree
 {
@@ -32,17 +34,36 @@ namespace TacticalDirector.DecisionTree
         // ── State ──────────────────────────────────────────────────────────────
         private DtState _state = DtState.IDLE;
         private AgentAction _lastAction;
+        private bool _hasDispatchedAction;   // §3.7.2 "DispatchedActionType" record
 
         // ── Dependencies (constructor-injected) ───────────────────────────────
         private readonly IDtMovementController _movementController;
+        private readonly PassExecutor _passExecutor;
+        private readonly ShotExecutor _shotExecutor;
         private readonly int _agentId;
         private ulong _matchSeed;
 
-        public DecisionTree(int agentId, IDtMovementController movementController, ulong matchSeed)
+        /// <summary>
+        /// Creates the per-agent Decision Tree. The executors are this agent's
+        /// PassExecutor / ShotExecutor instances (Pass #5 §4.1 / Shot #6 §4.1 — both
+        /// are per-agent stateful windup machines). They may be null in unit-test or
+        /// bootstrap contexts where PASS/SHOOT will never be dispatched or where a
+        /// dropped dispatch is acceptable; ActionDispatcher logs the wiring failure.
+        /// AR-2 H-1: the previous revision invoked the executors statically, which
+        /// never compiled.
+        /// </summary>
+        public DecisionTree(
+            int agentId,
+            IDtMovementController movementController,
+            ulong matchSeed,
+            PassExecutor passExecutor = null,
+            ShotExecutor shotExecutor = null)
         {
             _agentId            = agentId;
             _movementController = movementController;
             _matchSeed          = matchSeed;
+            _passExecutor       = passExecutor;
+            _shotExecutor       = shotExecutor;
         }
 
         // ── Public API ─────────────────────────────────────────────────────────
@@ -57,6 +78,10 @@ namespace TacticalDirector.DecisionTree
         /// Entry point called by the simulation orchestrator each heartbeat.
         /// Passes by value to satisfy §3.6.4 snapshot lifetime constraint.
         /// Steps: Validate → Assemble → Generate → Score → Select → Dispatch. §3.6.
+        /// While a PASS/SHOOT is in flight (EXECUTING), the pipeline is skipped on
+        /// the normal heartbeat cadence and re-entered only on forced refresh
+        /// (§3.6.3 / §3.7.2); movement actions are continuous and re-evaluate every
+        /// heartbeat (Stage 0 deviation note in DecisionTreeStateMachine).
         /// </summary>
         public void ReceiveSnapshot(
             FilteredView snapshot,
@@ -70,13 +95,25 @@ namespace TacticalDirector.DecisionTree
 
             // ── Step 1: Validate (§3.6) ───────────────────────────────────────
             bool valid = SnapshotValidator.Validate(in snapshot, _agentId);
-            _state = DecisionTreeStateMachine.OnSnapshotReceived(_state, in snapshot, valid);
+
+            DtState prior = _state;
+            _state = DecisionTreeStateMachine.OnSnapshotReceived(
+                _state, in snapshot, valid, _lastAction.Type, _hasDispatchedAction);
 
             if (!valid)
                 return;
 
             if (_state != DtState.EVALUATING)
-                return;
+                return;   // PASS/SHOOT in flight; §3.7.2 — no re-evaluation this tick
+
+            // §3.6.3: a forced refresh that re-enters the pipeline over an in-flight
+            // PASS/SHOOT compares the fresh selection with the in-flight action and
+            // re-dispatches only when the ActionType differs.
+            bool inFlightExecutionAction =
+                prior == DtState.EXECUTING
+                && _hasDispatchedAction
+                && !DecisionTreeStateMachine.IsContinuousAction(_lastAction.Type)
+                && snapshot.ForcedRefreshThisTick;
 
             // ── Step 2: Assemble context (§2.2.4) ────────────────────────────
             DecisionContext ctx = DecisionContextAssembler.Assemble(
@@ -84,8 +121,11 @@ namespace TacticalDirector.DecisionTree
                 attributes, agentState, pressureScalar, _matchSeed);
 
             // §3.1.1.3: AgentHasBall=true + BallVisible=false is physically implausible
+            // (FM-DT-09 — warning only; world state is authoritative).
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (ctx.AgentHasBall && !snapshot.BallVisible)
                 Debug.LogWarning($"[DT] {DecisionTreeConstants.WarnFmDt09} agent {_agentId}");
+#endif
 
             // ── Step 3: Generate options (§3.1) ───────────────────────────────
             int optionCount = OptionGenerator.GenerateOptions(in ctx, _optionBuffer);
@@ -99,27 +139,45 @@ namespace TacticalDirector.DecisionTree
                 out bool tiebreakerApplied,
                 out bool fallbackToHold);
 
-            _lastAction = selected;
-            _state = DecisionTreeStateMachine.OnEvaluationComplete(_state);
+            // §3.6.3 same-type suppression: identical ActionType to the in-flight
+            // action — continue execution; no re-dispatch, no duplicate event.
+            if (inFlightExecutionAction && selected.Type == _lastAction.Type)
+            {
+                _state = DtState.EXECUTING;
+                return;
+            }
+            // Differing type over an in-flight PASS/SHOOT: §3.7.2 row 7
+            // (EXECUTING → INTERRUPTED → new dispatch). The INTERRUPTED hop is
+            // internal to this call. Stage 0 has no DT→executor cancel entry point —
+            // the executor self-cancels via its own possession recheck / tackle-flag
+            // paths (Pass #5 FM-08, §3.8.5); documented under ERR-008-008.
 
-            // ── Publish event (Stage 0: no-op) ────────────────────────────────
+            _lastAction = selected;
+            _hasDispatchedAction = true;
+            _state = DecisionTreeStateMachine.OnEvaluationComplete(DtState.EVALUATING, selected.Type);
+
+            // ── Publish event (Tier C, ordinal 0x11) ──────────────────────────
             EventBusStub.Publish(new DecisionMadeEvent(
                 _agentId, selected, selected.UtilityScore,
                 optionCount, ctx.CurrentFrame,
                 tiebreakerApplied, fallbackToHold));
 
             // ── Step 6: Dispatch (§3.5) ───────────────────────────────────────
-            ActionDispatcher.Dispatch(selected, in ctx, _movementController);
+            ActionDispatcher.Dispatch(selected, in ctx, _movementController,
+                _passExecutor, _shotExecutor);
         }
 
         /// <summary>
         /// Signals an interrupt (tackle/collision) to the state machine.
         /// Called by the simulation orchestrator when an execution system signals failure.
-        /// §3.7.
+        /// Only an in-flight action can be interrupted (§3.7.2 row 6). §3.7.
         /// </summary>
         public void NotifyInterrupt()
         {
-            _state = DecisionTreeStateMachine.OnInterrupt(_state);
+            DtState next = DecisionTreeStateMachine.OnInterrupt(_state);
+            if (next == DtState.INTERRUPTED)
+                _hasDispatchedAction = false;   // §3.7.2 row 8: clear DispatchedActionType
+            _state = next;
         }
 
         /// <summary>
@@ -128,7 +186,10 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public void NotifyActionComplete()
         {
-            _state = DecisionTreeStateMachine.OnActionComplete(_state);
+            DtState next = DecisionTreeStateMachine.OnActionComplete(_state);
+            if (next == DtState.IDLE && _state == DtState.EXECUTING)
+                _hasDispatchedAction = false;   // §3.7.2 row 4: clear DispatchedActionType
+            _state = next;
         }
 
         /// <summary>Updates the per-match seed (called when a new match begins).</summary>
@@ -142,4 +203,11 @@ namespace TacticalDirector.DecisionTree
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-11 | —      | Audit AR-2 fix pass. H-1: PassExecutor/ShotExecutor instances injected via    |
+// |         |            |        |   constructor (optional; null tolerated for tests) and threaded to            |
+// |         |            |        |   ActionDispatcher — the static calls had never compiled. H-3: §3.7.2/§3.6.3  |
+// |         |            |        |   semantics — PASS/SHOOT hold EXECUTING across heartbeats (pipeline skipped), |
+// |         |            |        |   forced refresh re-evaluates with same-ActionType re-dispatch suppression;   |
+// |         |            |        |   HOLD lands in IDLE; _hasDispatchedAction tracks the §3.7.2                  |
+// |         |            |        |   DispatchedActionType record. M-10: §3.1.1.3 warning now FR-CS-031 gated.    |
 #endregion

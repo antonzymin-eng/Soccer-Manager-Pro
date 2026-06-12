@@ -43,10 +43,22 @@ namespace TacticalDirector.DecisionTree
         public bool AgentHasBall;
 
         /// <summary>
-        /// Possession state from this agent's team perspective.
-        /// OWN_TEAM | OPPONENT | CONTESTED. §3.1.1.2.
+        /// Absolute possession state: HOME_TEAM | AWAY_TEAM | CONTESTED (§2.2.5 enum).
+        /// NOTE: §3.1.1.2 describes possession in perspective terms (OWN_TEAM /
+        /// OPPONENT); the published §2.2.5 enum is absolute. Consumers needing the
+        /// perspective form use <see cref="OpponentHasBall"/> — comparing this field
+        /// against a literal team value is the AR-2 M-1 defect class (the §3.4.6
+        /// press-urgency gate was keyed to AWAY_TEAM, inverting it for away agents).
         /// </summary>
         public PossessionState PossessedByTeam;
+
+        /// <summary>
+        /// True when the OPPOSING team (relative to AgentTeamId) possesses the ball.
+        /// False for own-team possession and for CONTESTED. Derived by
+        /// DecisionContextAssembler from PossessedByTeam + AgentTeamId; this is the
+        /// §3.1.1.2 "OPPONENT" perspective value and the §3.4.6 press-urgency input.
+        /// </summary>
+        public bool OpponentHasBall;
 
         // ── Stamina Gate ──────────────────────────────────────────────────────
 
@@ -90,6 +102,15 @@ namespace TacticalDirector.DecisionTree
 
         public MatchContext MatchContext;
 
+        /// <summary>
+        /// Team-relative ball zone (§3.2.1.3: "from own goal line"). Computed by
+        /// DecisionContextAssembler from MatchContext.BallPosition.x via
+        /// PitchGeometry.ComputeFieldZone(posX, teamId). UtilityScorer MUST read this
+        /// field, NOT MatchContext.BallZone (which is the orchestrator's
+        /// home-perspective value and is inverted for away agents — AR-2 H-2).
+        /// </summary>
+        public FieldZone BallZone;
+
         // ── Tactical Context ──────────────────────────────────────────────────
 
         public TacticalContext TacticalContext;
@@ -120,4 +141,8 @@ namespace TacticalDirector.DecisionTree
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-11 | —      | Audit AR-2: H-2 team-relative BallZone field (scorer input; replaces direct |
+// |         |            |        |   MatchContext.BallZone reads); M-1 OpponentHasBall derived flag (§3.4.6     |
+// |         |            |        |   press urgency); PossessedByTeam doc corrected to absolute §2.2.5 enum      |
+// |         |            |        |   semantics (was claiming OWN_TEAM/OPPONENT perspective values).             |
 #endregion

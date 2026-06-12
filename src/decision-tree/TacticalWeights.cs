@@ -4,13 +4,15 @@
 // Author:   —
 // Spec:     Decision Tree #8 §3.4.7, Code Standards #20
 // Purpose:  All tactical context modifier constants (§3.4) and dispatch constants (§3.5).
-//           23 constants total: 16 tactical + 7 dispatch/movement. All [GT].
+//           22 constants total: 16 tactical + 6 dispatch/movement. All [GT].
+//           (AR-2 L: the spec §3.4.7 table claims 23 but lists 22 rows — the v1.1
+//           change note counted PRESS_URGENCY_FACTOR in both groups; ERR-008-010.)
 
 namespace TacticalDirector.DecisionTree
 {
     /// <summary>
     /// Tactical and dispatch constants for TacticalModifierResolver and ActionDispatcher.
-    /// All 23 §3.4–3.5 constants reside here. Decision Tree #8 §3.4.7.
+    /// All 22 §3.4–3.5 constants reside here. Decision Tree #8 §3.4.7.
     /// </summary>
     public static class TacticalWeights
     {
@@ -56,4 +58,6 @@ namespace TacticalDirector.DecisionTree
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-11 | —      | Audit AR-2 L: constant tally corrected 23 → 22 (16 tactical + 6 dispatch);  |
+// |         |            |        |   the spec §3.4.7 22-row table claiming 23 is filed as ERR-008-010.          |
 #endregion

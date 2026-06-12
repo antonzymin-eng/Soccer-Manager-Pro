@@ -57,6 +57,7 @@ cross-references to Pass Mechanics §2.4.1, Shot Mechanics §2.4.1, and Agent Mo
 | Version | Date | Changes |
 |---|---|---|
 | 1.0 | March 05, 2026 | Initial draft — §3.4 through §3.8 complete |
+| 1.2 | June 11, 2026 | Audit AR-2 patches: ERR-008-003 (§3.4.5 line-depth pseudocode — Y axis → team-signed X axis), ERR-008-004 (§3.4.2 PassingStyle DRIBBLE cell 0.9 → 1.0 per §3.4.4 prose + §3.4.7 catalogue), ERR-008-005 (§3.4.6 `PossessionState.OPPONENT` — nonexistent enum member → derived OpponentHasBall wording), ERR-008-010 (constant tally 23 → 22). |
 | 1.1 | March 05, 2026 | Four post-critique fixes: (1) Added football rationale for DRIBBLE suppression under PressingMode.HIGH (§3.4.3). (2) Replaced `FormationSlot.ToVector3()` with explicit `new Vector3(slot.x, 0f, slot.y)` constructor; added coordinate axis convention note (§3.5.6). (3) Added 7 missing constants to §3.4.7 table: `URGENCY_PRESSURE_SCALE`, `SPIN_INTENT_BELOW_CENTRE`, `SPIN_INTENT_OFF_CENTRE`, `PLACEMENT_CORNER_OFFSET`, `MOVE_SPRINT_THRESHOLD`, `MOVE_JOG_THRESHOLD`; corrected constant count from 19 to 23. (4) Replaced duplicate freestanding `const` declarations in §3.5.6 with a reference table pointing to §3.4.7. |
 
 ---
@@ -158,8 +159,15 @@ instruction is active. Unlisted action-instruction combinations use a multiplier
 | PASS (long-range ≥ 20m) | 1.3 [GT] | 1.0 | 0.6 [GT] |
 | PASS (short-range < 20m) | 0.9 [GT] | 1.0 | 1.3 [GT] |
 | HOLD | 0.7 [GT] | 1.0 | 1.2 [GT] |
-| DRIBBLE | 0.9 [GT] | 1.0 | 1.0 |
+| DRIBBLE | 1.0 | 1.0 | 1.0 |
 | SHOOT | 1.0 | 1.0 | 1.0 |
+
+> **ERR-008-004 (June 11, 2026 audit):** the v1.0/v1.1 table carried `DRIBBLE 0.9 [GT]`
+> under DIRECT, contradicting both the §3.4.4 prose ("The DRIBBLE modifier remains
+> neutral under all three styles at Stage 0") and the §3.4.7 catalogue (which declares
+> no PassingStyle DRIBBLE constant). The prose and catalogue are authoritative; the
+> table cell is corrected to 1.0. (The PressingMode DRIBBLE modifier 0.9 above is
+> unaffected.)
 
 Long/short range classification uses the same distance metric as `GenerateOptions()`
 §3.1 pass candidate generation — `IntendedDistance` derived from
@@ -249,13 +257,25 @@ position. A lower `DefensiveLineDepth` pulls slots toward the agent's own goal, 
 deep defensive compactness the dominant movement directive.
 
 ```
-// Formation slot vertical adjustment (applied in GenerateOptions §3.1, not here)
+// Formation slot pitch-depth adjustment (applied in GenerateOptions §3.1, not here)
+// Pitch depth is the X axis (goal-to-goal, 0–105 m; Ball Physics #1 §1.2) — Y is
+// touchline-to-touchline. A higher line advances toward the OPPONENT goal, so the
+// shift sign is team-dependent: home (+X), away (−X).
 // DefensiveLineDepth = 0.0 → formation slot at 20% pitch depth (deepest line)
 // DefensiveLineDepth = 0.5 → formation slot at 50% pitch depth (MEDIUM default)
 // DefensiveLineDepth = 1.0 → formation slot at 80% pitch depth (highest line)
-adjustedSlotY = baseSlotY + (DefensiveLineDepth - 0.5f) × DEFENSIVE_LINE_DEPTH_RANGE;
+depthShift    = (DefensiveLineDepth - 0.5f) × DEFENSIVE_LINE_DEPTH_RANGE;
+adjustedSlotX = baseSlotX + (teamId == HOME ? +depthShift : -depthShift);
 // DEFENSIVE_LINE_DEPTH_RANGE = 30.0m [GT] — full displacement range at extremes ±15m
 ```
+
+> **ERR-008-003 (June 11, 2026 audit):** the v1.0/v1.1 pseudocode adjusted
+> `adjustedSlotY = baseSlotY + …` — in the authoritative corner-origin coordinate
+> system (Ball Physics #1 §1.2) Y is the touchline axis, so the "vertical" line-depth
+> shift moved players SIDEWAYS, and the formula carried no team sign. The
+> implementation copied the Y form verbatim (latent at Stage 0 — depth pinned at 0.5);
+> both surfaces corrected in the same commit (TacticalContext.cs v1.1). This is the
+> CLAUDE.md "wrong coordinate axis from spec" known-hazard class.
 
 `DEFENSIVE_LINE_DEPTH_RANGE = 30.0f` [GT]. Controls: the total pitch-depth range
 over which the defensive line can be shifted. Effect of increasing: more dramatic
@@ -270,7 +290,10 @@ apply possession-phase modifiers as a separate layer — they are already embedd
 `BaseUtility` values and `ContextMultiplier` (§3.2). However, `TacticalContext` provides
 one additional possession-conditional modifier:
 
-When `DecisionContext.PossessionState == PossessionState.OPPONENT`:
+When the team OPPOSING the evaluated agent possesses the ball (the published §2.2.5
+enum is absolute — HOME_TEAM/AWAY_TEAM/CONTESTED; the perspective form is the derived
+`DecisionContext.OpponentHasBall` flag per §3.1.1.2 — there is no
+`PossessionState.OPPONENT` member, ERR-008-005):
 - `PRESS` `TacticalModifier` is multiplied by an additional `PRESS_URGENCY_FACTOR = 1.2f`
   [GT] on top of the `PressingMode` multiplier.
 - This is additive urgency: under opponent possession, all pressing instructions shift
@@ -320,7 +343,9 @@ lists every constant defined in this section.
 | `MOVE_SPRINT_THRESHOLD` | 15.0m | [GT] | Distance above which agent sprints to formation slot (§3.5.6) |
 | `MOVE_JOG_THRESHOLD` | 6.0m | [GT] | Distance above which agent jogs to formation slot (§3.5.6) |
 
-**Total §3.4–3.5 constants: 23 [GT].** (16 tactical + 7 dispatch/movement)  
+**Total §3.4–3.5 constants: 22 [GT].** (16 tactical + 6 dispatch/movement — the v1.1
+note counted `PRESS_URGENCY_FACTOR` in both groups; the table above lists 22 rows.
+ERR-008-010, June 11, 2026 audit.)  
 All constants reside in `TacticalWeights.cs` (§3.4 constants) or `UtilityWeights.cs`
 (§3.5 constants), as noted in the defining subsection.
 

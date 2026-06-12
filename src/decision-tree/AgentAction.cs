@@ -5,8 +5,9 @@
 // Spec:     Decision Tree #8 §2.2.2, Code Standards #20
 // Purpose:  The selected action output of the Decision Tree pipeline. Readonly struct
 //           passed by value to ActionDispatcher and published in DecisionMadeEvent.
-//           PassParams/ShotParams carry pre-populated request structs; AgentId and
-//           FrameNumber are filled by ActionDispatcher at dispatch time (§3.5.2/3).
+//           PassParams/ShotParams carry pre-populated request structs; TeamId and
+//           FrameNumber are finalised by ActionDispatcher at dispatch time (§3.5.2/3;
+//           AgentId is set at SelectAction time).
 
 using UnityEngine;
 using TacticalDirector.PassMechanics;
@@ -35,13 +36,13 @@ namespace TacticalDirector.DecisionTree
 
         /// <summary>
         /// Pre-populated pass request (valid when Type == PASS).
-        /// ActionDispatcher fills AgentId and FrameNumber before calling PassExecutor (§3.5.2).
+        /// ActionDispatcher finalises TeamId and FrameNumber before calling PassExecutor (§3.5.2).
         /// </summary>
         public readonly PassRequest PassParams;
 
         /// <summary>
         /// Pre-populated shot request (valid when Type == SHOOT).
-        /// ActionDispatcher fills AgentId and FrameNumber before calling ShotExecutor (§3.5.3).
+        /// ActionDispatcher finalises TeamId and FrameNumber before calling ShotExecutor (§3.5.3).
         /// </summary>
         public readonly ShotRequest ShotParams;
 
@@ -83,4 +84,6 @@ namespace TacticalDirector.DecisionTree
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-11 | —      | Audit AR-2 L: docs corrected — the dispatcher finalises TeamId/FrameNumber;  |
+// |         |            |        |   AgentId is already set at SelectAction time.                                |
 #endregion

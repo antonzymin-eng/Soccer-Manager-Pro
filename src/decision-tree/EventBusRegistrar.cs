@@ -18,16 +18,29 @@ namespace TacticalDirector.DecisionTree
     /// </summary>
     public static class EventBusRegistrar
     {
+        private static bool s_registered;
+
         /// <summary>
         /// Registers DecisionMadeEvent (0x11) with EventRegistry.
+        /// Idempotent: subsequent calls are no-ops (PM EventBusRegistrar v1.2 / AR-2 M-5
+        /// precedent). Audit M-11 (June 11, 2026): without the guard, a second
+        /// Initialize() — e.g. EventBusWiringSmokeTests booting in the same test
+        /// process as DecisionTreeIntegrationTests — threw ERR_EVT_ORDINAL_COLLISION;
+        /// the smoke test's "registrars carry an s_registered guard" assumption held
+        /// only for pass-mechanics.
         /// </summary>
         public static void Initialize()
         {
+            if (s_registered)
+                return;
+
             // maxPerTick=22: one per active agent per 10 Hz tick (22-agent squad ceiling)
             EventRegistry.RegisterExternalRow<DecisionMadeEvent>(
                 ordinal: 0x11, tier: 2, version: 1,
                 subsystemOrdinal: SubsystemOrdinals.DecisionTree, maxPerTick: 22,
                 producerPhaseIndex: (byte)PhaseId.AI);
+
+            s_registered = true;
         }
     }
 }
@@ -37,4 +50,8 @@ namespace TacticalDirector.DecisionTree
 // | 1.0     | 2026-05-30 | —      | Initial implementation.                                               |
 // | 1.1     | 2026-05-30 | —      | AR-2 fix: replaced raw int literals with SubsystemOrdinals.DecisionTree |
 // |         |            |        | and (byte)PhaseId.AI — prevents silent mismatch on enum reorder.        |
+// | 1.2     | 2026-06-11 | —      | Audit AR-2 M-11: s_registered idempotency guard (PM v1.2 precedent) —   |
+// |         |            |        | double Initialize() threw ERR_EVT_ORDINAL_COLLISION; the integration    |
+// |         |            |        | tests must boot the registry (Tier C publish throws for unregistered    |
+// |         |            |        | ordinals), so the guard is load-bearing, not cosmetic.                  |
 #endregion

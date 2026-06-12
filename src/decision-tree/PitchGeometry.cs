@@ -90,10 +90,44 @@ namespace TacticalDirector.DecisionTree
             if (posX >= AttackingZoneMinX) return FieldZone.ATTACKING;
             return FieldZone.MIDFIELD;
         }
+
+        /// <summary>
+        /// Compute the team-relative FieldZone for a ball position x-coordinate.
+        /// §3.2.1.3 / §2.2.5 define zones as distance from the agent's OWN goal line
+        /// ("DEFENSIVE: 0–35m from own goal line"), so the classification mirrors for
+        /// the away team (own goal line at x = 105). Note the home zone boundaries
+        /// {35, 65} mirror to away cut points {40, 70} — mirroring the enum value of a
+        /// home-perspective zone is NOT equivalent (it misclassifies the 35–40 m and
+        /// 65–70 m bands); the zone must be recomputed from the position per team.
+        /// AR-2 H-2 (audit June 11, 2026): the shared home-perspective
+        /// MatchContext.BallZone was previously consumed for both teams, inverting
+        /// every zone modifier for away agents (away shots in range scored
+        /// SHOOT_ZONE_DEF = 0.10 instead of SHOOT_ZONE_ATT = 1.00).
+        /// </summary>
+        public static FieldZone ComputeFieldZone(float posX, int teamId)
+            => teamId == 0
+                ? ComputeFieldZone(posX)
+                : ComputeFieldZone(PitchLengthM - posX);
+
+        /// <summary>
+        /// Clamps a world-space XY position to pitch bounds [0,105]×[0,68].
+        /// Used by OptionGenerator to enforce INV-GEN-06 (§3.1.10) on generated
+        /// TargetPosition values (dribble look-ahead, intercept projection,
+        /// depth-adjusted formation slots can otherwise leave the pitch).
+        /// </summary>
+        public static Vector2 ClampToPitch(Vector2 p)
+            => new Vector2(
+                Mathf.Clamp(p.x, 0.0f, PitchLengthM),
+                Mathf.Clamp(p.y, 0.0f, PitchWidthM));
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-11 | —      | Audit AR-2 H-2: team-relative ComputeFieldZone(posX, teamId) overload —    |
+// |         |            |        |   §3.2.1.3 zones are "from own goal line"; the home-perspective zone was    |
+// |         |            |        |   previously consumed by both teams (away modifiers inverted). Enum         |
+// |         |            |        |   mirroring is not exact (35/65 mirror to 40/70), hence recompute-per-team. |
+// |         |            |        |   L: ClampToPitch helper for INV-GEN-06 TargetPosition bounds.              |
 #endregion
