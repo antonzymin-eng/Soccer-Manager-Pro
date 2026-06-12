@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/Tests/DefensiveAITests.cs
 // Created:  2026-05-31
-// Modified: 2026-05-31
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Defensive AI #14 §5, Code Standards #20
 // Purpose:  Unit tests for Defensive AI. T-DA unit tests from §5.
@@ -355,9 +355,19 @@ namespace TacticalDirector.DefensiveAI.Tests
                 MarkHysteresisState.Default(),
             };
 
-            MarkAssigner.Assign(snapshot, pool, poolCount: 1, currentTick: 1,
-                                assignments, hysteresis);
+            // §3.11.3: a non-ZONAL candidate commits only after being consistently
+            // preferred for MARK_DWELL_TICKS consecutive ticks — even from the initial
+            // ZONAL state. A single Assign call publishes nothing (dotnet-CI quarantine
+            // adjudication: the original single-call form asserted against the §3.3.3
+            // Step 7 gate the spec requires).
+            for (int tick = 1; tick <= DefensiveAIConstants.MarkDwellTicks; tick++)
+            {
+                MarkAssigner.Assign(snapshot, pool, poolCount: 1, currentTick: tick,
+                                    assignments, hysteresis);
+            }
 
+            Assert.AreEqual(MarkMode.ManMark, assignments[0].Mode,
+                "Equidistant in-radius opponents must produce MAN_MARK after the dwell.");
             Assert.AreEqual(201, assignments[0].TargetEntityId,
                 "EntityId 201 (lower) must win the tie-break per FR-DA-014.");
         }
@@ -388,7 +398,12 @@ namespace TacticalDirector.DefensiveAI.Tests
                 MarkHysteresisState.Default(),
             };
 
-            MarkAssigner.Assign(snapToward, pool, 1, 1, assignToward, hystToward);
+            // §3.11.3 dwell: non-ZONAL commits need MARK_DWELL_TICKS consecutive
+            // preferences (dotnet-CI quarantine adjudication — see T-DA-012 note).
+            for (int tick = 1; tick <= DefensiveAIConstants.MarkDwellTicks; tick++)
+            {
+                MarkAssigner.Assign(snapToward, pool, 1, tick, assignToward, hystToward);
+            }
 
             Assert.AreEqual(MarkMode.InterceptRunner, assignToward[0].Mode,
                 "Opponent running toward own goal must qualify as INTERCEPT_RUNNER.");
@@ -411,7 +426,10 @@ namespace TacticalDirector.DefensiveAI.Tests
                 MarkHysteresisState.Default(),
             };
 
-            MarkAssigner.Assign(snapAway, pool, 1, 1, assignAway, hystAway);
+            for (int tick = 1; tick <= DefensiveAIConstants.MarkDwellTicks; tick++)
+            {
+                MarkAssigner.Assign(snapAway, pool, 1, tick, assignAway, hystAway);
+            }
 
             Assert.AreNotEqual(MarkMode.InterceptRunner, assignAway[0].Mode,
                 "Opponent running away from own goal must NOT be INTERCEPT_RUNNER.");
@@ -980,12 +998,20 @@ namespace TacticalDirector.DefensiveAI.Tests
                 0.001f, "StepUpTargetDepth must be capped at OffsideMaxDepthM.");
         }
 
-        /// <summary>T-DA-034 — Step depth is max of (currentLineDepth+step, shape.DefensiveLineDepth).</summary>
+        /// <summary>T-DA-034 — Step depth derives from the §2.2.5 per-tick #12 mirror, not injected state.</summary>
         [Test]
         public void T_DA_034_StepDepthMaxWithShapeLineDepth()
         {
-            // currentLineDepth = 35.0; step = 3.0 → raw = 38.0.
-            // DefensiveLineDepth (#12 target) = 40.0 → max(38.0, 40.0) = 40.0.
+            // §2.2.5: "currentLineDepth is updated each tick by reading #12's
+            // DefensiveLineDepth (#14 does not compute this value)". The injected
+            // CurrentLineDepth = 35 below is therefore overwritten by the mirror (40)
+            // before §3.7.4 runs, and the spec answer is 40 + OFFSIDE_STEP_SIZE_M = 43
+            // — the §3.7.4 max(currentLineDepth+step, shape.DefensiveLineDepth) arm is
+            // unreachable while §2.2.5 keeps the two operands identical (step > 0).
+            // The original expectation 40.0 modelled currentLineDepth as the ACTUAL
+            // (possibly shallower) line, contradicting §2.2.5 (dotnet-CI quarantine
+            // adjudication). This form locks the mirror: a divergent injected value
+            // must NOT leak into the step computation.
             float lineDepth      = 35.0f;
             float shapeLineDepth = 40.0f;
 
@@ -1006,8 +1032,9 @@ namespace TacticalDirector.DefensiveAI.Tests
             }
 
             Assert.IsTrue(directive.OffsideTrapActive, "Trap must have fired.");
-            Assert.AreEqual(shapeLineDepth, directive.StepUpTargetDepth, 0.001f,
-                "StepUpTargetDepth must equal max(lineDepth+step, shapeLineDepth) = 40.0.");
+            Assert.AreEqual(shapeLineDepth + DefensiveAIConstants.OffsideStepSizeM,
+                directive.StepUpTargetDepth, 0.001f,
+                "StepUpTargetDepth must equal mirrored #12 line + OFFSIDE_STEP_SIZE_M = 43.0 (§2.2.5 + §3.7.4).");
         }
     }
 
@@ -1905,4 +1932,13 @@ namespace TacticalDirector.DefensiveAI.Tests
 // |         |            |        | non-public test methods at runtime ('Method is not public'), so all 51 non-skipped tests |
 // |         |            |        | in this suite FAILED on their first-ever execution; under Unity's NUnit runner the suite |
 // |         |            |        | would fail identically. All [Test] methods promoted to public; bodies unchanged.         |
+// | 1.3     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication (3 TEST-DEFECT + 1 companion to the MarkAssigner       |
+// |         |            |        | v1.2 PRODUCTION fix): T-DA-012 / T-DA-016 single Assign calls asserted against the       |
+// |         |            |        | §3.3.3 Step 7 / §3.11.3 dwell gate (non-ZONAL commits need MARK_DWELL_TICKS = 4          |
+// |         |            |        | consecutive preferences, even from the initial ZONAL state) — rewritten as dwell loops.  |
+// |         |            |        | T-DA-034 expectation 40.0 re-derived to 43.0: §2.2.5 mirrors currentLineDepth from #12   |
+// |         |            |        | DefensiveLineDepth every tick, so the injected 35.0 cannot reach §3.7.4 and the          |
+// |         |            |        | max(line+step, shape) arm is unreachable; the test now LOCKS the mirror semantics.       |
+// |         |            |        | T-DA-011 unchanged — fixed by MarkAssigner v1.2 (ZONAL bypasses the gate per §3.3.3      |
+// |         |            |        | Step 6).                                                                                 |
 #endregion

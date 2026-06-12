@@ -78,15 +78,6 @@ applicable, and **remove the quarantine line in the same commit**.
 |---|---|---|
 | `CoverShadow_AssignsHigherThreatReceiverFirst` | First shadow must cover the higher-threat receiver | Threat-ranking order vs greedy assignment in CoverShadowSelector §3.x. |
 
-### Defensive AI #14 (4)
-
-| Test | First-run failure | Hypothesis |
-|---|---|---|
-| `T_DA_011_NoCandidatesProducesZonal` | ZONAL assignment must have TargetEntityId = -1 | `MakeZonal` factory or assigner default leaves a stale/0 id. |
-| `T_DA_012_TieBreakEntityIdAscending` | EntityId 201 (lower) must win tie-break per FR-DA-014 | `IsBetter()` tie-break comparison direction. |
-| `T_DA_016_InterceptRunnerDirectionCheck` | Runner toward own goal must qualify INTERCEPT_RUNNER | Direction predicate sign — home/away asymmetry family (DT AR-2 root cause: all worked examples home-team). |
-| `T_DA_034_StepDepthMaxWithShapeLineDepth` | StepUpTargetDepth must equal max(lineDepth+step, shapeLineDepth) = 40.0 | OffsideTrapController max() arm order/operand. |
-
 ### Heading Mechanics #10 (2)
 
 | Test | First-run failure | Hypothesis |
@@ -101,6 +92,17 @@ applicable, and **remove the quarantine line in the same commit**.
 | `ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero` | T-DS-008: PrepareReplay must return 0; returned 5640 (0x1608) | PrepareReplay step validation rejects the fixture's "well-formed" snapshot — either a validation step the fixture doesn't satisfy (fixture defect) or a step mis-ordered in ReplayEngine. Error code 0x1608 names the step; adjudicate against §4.2.2. |
 
 ## Resolved
+
+### Defensive AI #14 (4/4) — resolved June 12, 2026 (1 PRODUCTION-DEFECT + 3 TEST-DEFECT)
+
+| Test | Verdict | Adjudication |
+|---|---|---|
+| `T_DA_011_NoCandidatesProducesZonal` | PRODUCTION-DEFECT | §3.3.3 Step 6 commits a ZONAL fallback DIRECTLY (`assignments[agent] = …; continue`) — only non-ZONAL candidates route through the Step 7 hysteresis gate. `MarkAssigner.Assign` routed ZONAL through `ApplyGate`, so the `MakeZonal` candidate (target −1) was dwell-held against the default-constructed record (target 0) and no valid ZONAL record ever published. ZONAL now bypasses the gate per spec (hysteresis untouched on the bypass path, matching the Step 6 pseudocode). `MarkAssigner.cs` v1.2. |
+| `T_DA_012_TieBreakEntityIdAscending` | TEST-DEFECT (dwell ignored) | The FR-DA-014 tie-break itself is correct in `IsBetter()` (terminal `newId < curId`). The test's single `Assign` call asserted against §3.3.3 Step 7 / §3.11.3: a non-ZONAL candidate commits only after MARK_DWELL_TICKS = 4 consecutive preferences — even from the initial ZONAL state (the §3.11.6 worked example starts from an already-locked assignment; the algorithm text makes no first-assignment exception). Rewritten as a 4-tick dwell loop; 201 wins as specified. |
+| `T_DA_016_InterceptRunnerDirectionCheck` | TEST-DEFECT (dwell ignored) | No direction-sign defect: the own-goal direction predicate (`dot(velNorm, defendsX0 ? (−1,0) : (+1,0)) > 0`) is team-relative and correct. Same single-call-vs-dwell defect as T-DA-012; rewritten as dwell loops for both the toward and away arms. |
+| `T_DA_034_StepDepthMaxWithShapeLineDepth` | TEST-DEFECT (counter-spec state model) | §2.2.5: "currentLineDepth is updated each tick by reading #12's DefensiveLineDepth (#14 does not compute this value)" — the test's injected `CurrentLineDepth = 35` is legitimately overwritten by the mirror (40) before §3.7.4 runs, so the spec answer is 40 + OFFSIDE_STEP_SIZE_M = **43.0**, exactly what production returned. The §3.7.4 `max(currentLineDepth+step, shape.DefensiveLineDepth)` arm is unreachable while §2.2.5 keeps both operands identical (step > 0) — noted in the test as a locked vacuity; the test now asserts the mirror semantics (divergent injected state must NOT leak into the step). |
+
+Files: `src/defensive-ai/MarkAssigner.cs` v1.2, `src/defensive-ai/Tests/DefensiveAITests.cs` v1.3. Suite: 51 passed / 0 failed / 28 skipped.
 
 ### Perception System #7 (4/4) — resolved June 12, 2026 (1 PRODUCTION-DEFECT root cause fixing 2 tests; 2 TEST-DEFECT)
 
