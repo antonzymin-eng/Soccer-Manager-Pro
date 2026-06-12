@@ -15,16 +15,13 @@ namespace TacticalDirector.GoalkeeperMechanics
     /// </summary>
     public static class EventBusStub
     {
-        /// <summary>Publishes a Tier A event. Enqueued for Events-phase delivery. §3.2.1.</summary>
-        public static void Publish<T>(in T evt) where T : struct, IEventA
-            => EventBus.Publish(in evt);
-
-        /// <summary>Publishes a Tier B event. Enqueued for Events-phase delivery. §3.2.1.</summary>
-        public static void Publish<T>(in T evt) where T : struct, IEventB
-            => EventBus.Publish(in evt);
-
-        /// <summary>Publishes a Tier C cosmetic event. Immediate dispatch via CosmeticChannel. §3.2.1.</summary>
-        public static void Publish<T>(in T evt) where T : struct, IEventC
+        /// <summary>
+        /// Publishes an event. Tier routing (A/B Events-phase enqueue vs C immediate
+        /// CosmeticChannel dispatch) is resolved by EventBus from the event's tier marker
+        /// (ERR-017-002 single-method dispatch — C# forbids constraint-only overloads,
+        /// CS0111). §3.2.1.
+        /// </summary>
+        public static void Publish<T>(in T evt) where T : struct
             => EventBus.Publish(in evt);
     }
 }
@@ -33,4 +30,9 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation. |
 // | 1.1     | 2026-05-30 | —      | Stage 1: replaced no-op with three-tier forwarding to EventBus. |
+// | 1.2     | 2026-06-12 | —      | ERR-017-002: three constraint-only Publish overloads (CS0111 -  |
+// |         |            |        | constraints are not part of a method signature; never compiled) |
+// |         |            |        | merged into one where T : struct forwarder; tier routing now    |
+// |         |            |        | resolved inside EventBus via cached marker dispatch. Call sites |
+// |         |            |        | unchanged.                                                      |
 #endregion

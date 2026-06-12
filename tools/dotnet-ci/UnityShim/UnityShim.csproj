@@ -1,0 +1,22 @@
+<!--
+  File:     tools/dotnet-ci/UnityShim/UnityShim.csproj
+  Created:  2026-06-12
+  Purpose:  Minimal UnityEngine API shim so the entire src/ tree compiles and
+            runs under plain `dotnet test` on the Linux CI smoke gate.
+            NON-CERTIFYING: the determinism certification platform remains the
+            pinned Windows 11 / Unity 2022.3.62f1 / Mono tuple in
+            docs/tracking/certification-platform.md. This shim exists to catch
+            dead-code / never-compiled defect classes (CS1022 et al.) and to
+            execute the NUnit suites, not to certify bit-exact behavior.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>UnityShim</AssemblyName>
+    <RootNamespace>UnityEngine</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Deterministic>true</Deterministic>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+</Project>

@@ -7,7 +7,7 @@
 // Purpose:  ICollisionEventConsumer implementation, per-frame buffer, and duel-score resolution.
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 using TacticalDirector.CollisionSystem;
 
@@ -316,4 +316,8 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | AR-2 M-2: * 1000.0f literal → MS_PER_SECOND constant in DuelId assignment.      |
 // | 1.3     | 2026-06-05 | —      | Collision-system AR-3 M-1 follow-through. OnCollisionEvent signature gains `in` |
 // |         |            |        | parameter modifier to match the updated ICollisionEventConsumer contract.       |
+// | 1.4     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling -> Unity.Profiling.     |
+// |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246  |
+// |         |            |        | under Unity and the Linux compile gate alike, so this assembly could not have   |
+// |         |            |        | compiled in-engine. No functional change.                                       |
 #endregion

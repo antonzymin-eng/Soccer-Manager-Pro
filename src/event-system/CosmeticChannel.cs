@@ -34,7 +34,13 @@ namespace TacticalDirector.EventSystem
         /// <c>maxPerTick</c>, the publish is silently dropped (no subscriber invocation).
         /// Allocates 0 bytes (FR-EVT-048).
         /// </summary>
-        internal static void Publish<T>(in T evt) where T : struct, IEventC
+        /// <remarks>
+        /// ERR-017-002: constraint relaxed from <c>struct, IEventC</c> to <c>struct</c> —
+        /// this internal entry is reached only through EventBus's single-method tier
+        /// dispatch, which enforces the FR-EVT-009a exactly-one-marker contract before
+        /// routing Tier C here. The public Subscribe surface keeps the IEventC constraint.
+        /// </remarks>
+        internal static void Publish<T>(in T evt) where T : struct
         {
             byte ordinal     = EventOrdinalCache<T>.Ordinal;
 
@@ -102,6 +108,20 @@ namespace TacticalDirector.EventSystem
         public static SubscriptionToken Subscribe<T>(EventHandler<T> handler)
             where T : struct, IEventC
         {
+            return SubscribeFromBus(handler);
+        }
+
+        /// <summary>
+        /// Internal Tier C subscribe seam for EventBus's single-method tier dispatch
+        /// (ERR-017-002). EventBus validates the FR-EVT-009a exactly-one-marker contract
+        /// before routing here, so this entry carries no compile-time IEventC constraint;
+        /// the public <see cref="Subscribe{T}"/> surface keeps it. Same body and
+        /// semantics as the pre-ERR-017-002 Subscribe. §3.2.2 / §4.3.2.
+        /// </summary>
+        internal static SubscriptionToken SubscribeFromBus<T>(EventHandler<T> handler)
+            where T : struct
+        {
+            EventRegistry.EnsureInitialized();
             byte ordinal = EventOrdinalCache<T>.Ordinal;
 
             // Zero-ordinal guard (AR-2 fix: replaces debug-only Debug.Assert — handler would be
@@ -203,4 +223,10 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | + s_pubCounts. EventTestHelper.ResetLedger previously only cleared   |
 // |         |            |        | pub counts, so Tier C subscribers leaked across tests and would     |
 // |         |            |        | eventually exhaust MaxTierCHandlersPerType (64).                     |
+// | 1.9     | 2026-06-12 | —      | ERR-017-002: internal Publish<T> constraint relaxed struct,IEventC   |
+// |         |            |        | -> struct (EventBus single-method tier dispatch enforces FR-EVT-009a |
+// |         |            |        | before routing here); public Subscribe<T> keeps the IEventC          |
+// |         |            |        | constraint and now delegates to new internal SubscribeFromBus<T>     |
+// |         |            |        | (where T : struct) carrying the original body - the seam EventBus's  |
+// |         |            |        | unified Subscribe routes Tier C through.                             |
 #endregion

@@ -12,7 +12,7 @@
 using System.Collections.Generic;
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
@@ -441,4 +441,6 @@ namespace TacticalDirector.PerceptionSystem
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                                                                  |
 // | 1.1     | 2026-05-28 | —      | AR-1 fix M-1: added _candidateVisited dedup to prevent latency counter multi-increment from spatial hash cell overlap.                                    |
 // | 1.2     | 2026-05-29 | —      | AR-2 fixes L-1/L-2: removed prevBallVisible argument (dead param); added length guards to HandleForcedRefresh; added agentHasPossession length guard. |
+// | 1.3     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling -> Unity.Profiling. ProfilerMarker's actual namespace is Unity.Profiling; the old using was   |
+// |         |            |        | CS0246 under Unity and the Linux compile gate alike, so this assembly could not have compiled in-engine. No functional change.                        |
 #endregion

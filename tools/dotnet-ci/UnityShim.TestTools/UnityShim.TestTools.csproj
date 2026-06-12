@@ -1,0 +1,22 @@
+<!--
+  File:     tools/dotnet-ci/UnityShim.TestTools/UnityShim.TestTools.csproj
+  Created:  2026-06-12
+  Purpose:  UnityEngine.TestTools shim (LogAssert + per-test verification hook)
+            for the non-certifying Linux compile/test gate. Split from UnityShim
+            so production assemblies never gain a transitive NUnit reference.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>UnityShim.TestTools</AssemblyName>
+    <RootNamespace>UnityEngine.TestTools</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Deterministic>true</Deterministic>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../UnityShim/UnityShim.csproj" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+  </ItemGroup>
+</Project>

@@ -6,6 +6,8 @@
 // Purpose:  Pure static class: scores candidate receivers by threat, assigns own-team
 //           defenders greedily to shadow lanes up to MaxCoverShadows.
 
+using System;
+
 using UnityEngine;
 
 namespace TacticalDirector.PressingAI
@@ -253,4 +255,7 @@ namespace TacticalDirector.PressingAI
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-1: added IsActive guards in carrier search, receiver loop, and defender loop. |
+// | 1.2     | 2026-06-12 | —      | Build fix (dotnet CI gate): missing 'using System;' - Span<T> (stackalloc scratch,   |
+// |         |            |        | lines ~77-78) is System namespace, so the file was CS0246 under Unity and the Linux  |
+// |         |            |        | gate alike. Using added per FR-CS-006 ordering; no functional change.                |
 #endregion

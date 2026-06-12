@@ -8,7 +8,7 @@
 using System.Collections.Generic;
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 namespace TacticalDirector.CollisionSystem
 {
@@ -190,4 +190,8 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | from "copy if needed beyond next query").                                                |
 // | 1.4     | 2026-06-10 | —      | AR-7 L-3. CellX/CellY cast-truncation → Mathf.FloorToInt — (int) truncates toward zero, |
 // |         |            |        | making cell 0 cover [-1, 1) for slightly-negative off-pitch coordinates.                 |
+// | 1.5     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling -> Unity.Profiling.             |
+// |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246 under    |
+// |         |            |        | Unity and the Linux compile gate alike, so this assembly could not have compiled        |
+// |         |            |        | in-engine. No functional change.                                                        |
 #endregion

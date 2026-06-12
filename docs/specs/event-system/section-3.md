@@ -106,32 +106,42 @@ enum ordinals).
 ```csharp
 public static class EventBus
 {
-    public static void Publish<T>(in T evt) where T : struct, IEventA;
-    public static void Publish<T>(in T evt) where T : struct, IEventB;
-    public static void Publish<T>(in T evt) where T : struct, IEventC;
+    // ERR-017-002: ONE method — NOT three constraint-only overloads. C# does
+    // not permit overloading on generic constraints alone (CS0111), so the
+    // originally specified triple could never compile. Tier routing happens
+    // at the entry point via a per-closed-type cached marker flag
+    // (EventTierCache<T>: type-initialisation reflection only; the JIT folds
+    // the flags to constants — zero steady-state dispatch cost).
+    public static void Publish<T>(in T evt) where T : struct;
 }
 ```
 
-- Three overloads, statically distinguished by tier marker
-  interface. The compiler picks the path at the call site; there is
-  no runtime tier dispatch.
-- The Tier A / Tier B overloads include a **debug-build assertion**
+- One method; the event's tier is resolved from its tier marker
+  interface (IEventA / IEventB / IEventC) through cached
+  per-closed-type flags. `T` MUST implement **exactly one** tier
+  marker (FR-EVT-009a); zero or multiple markers raise a tier
+  contract violation at the entry point. *(ERR-017-002: supersedes
+  the v1.0 "three overloads, compiler picks the path" design, which
+  was illegal C#.)*
+- The Tier A / Tier B path includes a **debug-build assertion**
   that the current pipeline phase is `Events` (or, equivalently,
   that publication is happening through the same-tick draining
   path). Violation → `ERR_DS_PHASE_OWNERSHIP` (alias of
   #16 §3.6.1 `TBD-NORMATIVE`; FR-EVT-082). The assertion is
   compiled out in release builds; Spec #20 lint (Stage 0+1) catches
   misuse statically.
-- The Tier C overload has no phase restriction. It is permitted from
+- The Tier C path has no phase restriction. It is permitted from
   any phase; its effects are excluded from the digest by KD-3 /
   FR-EVT-014.
 
 ### 3.2.2 Subscribe API surface
 
 ```csharp
+// ERR-017-002: one method (constraint-only overloads are CS0111); tier routing
+// as in §3.2.1. Tier C routes to CosmeticChannel.SubscribeFromBus (internal
+// seam); the public CosmeticChannel.Subscribe keeps its IEventC constraint.
 public static SubscriptionToken Subscribe<T>(EventHandler<T> handler)
-    where T : struct, IEventA;
-// + IEventB, IEventC overloads
+    where T : struct;
 
 public delegate void EventHandler<T>(in T evt) where T : struct;
 
@@ -144,8 +154,11 @@ Lifecycle:
   the first `Events` phase of the match (boot phase). Runtime
   registration of Tier A/B subscribers post-init raises
   `ERR_EVT_REGISTRATION_PHASE` (FR-EVT-021) — a distinct code
-  from tier-marker mismatch, which is enforced at compile time
-  only (FR-EVT-016 / FR-EVT-076; §4.3.3).
+  from tier-marker mismatch. *(ERR-017-002 note: with the
+  single-method surface, the exactly-one-marker contract
+  (FR-EVT-009a) is enforced at the EventBus entry point at runtime;
+  the caller-identity concern of FR-EVT-016 / FR-EVT-076 remains a
+  Spec #20 lint matter — §4.3.3.)*
 - Tier C subscriber runtime register / unregister is permitted
   (FR-EVT-022); UI and VFX systems use this.
 - `SubscriptionToken` is a struct (no class allocation; FR-EVT-073).
@@ -666,3 +679,4 @@ Notes:
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. §3.2.4 added normative second-order publish sort-tuple attribution table (M3). §3.2.5 added per-handler out-degree cap = 1 (H1). §3.7.1 producer-phase-change row now requires #16 §3.6.1 WriteSet back-prop (M6). §3.5.4 / §3.5.2 reworded foreach + Action/Func bans (L4/L5). §3.10 added new `ERR_EVT_REGISTRATION_PHASE` row (L3) and `[GT]` tag-subclass note (M8). §3.4.5 added explicit grep pattern (L9). TickHeartbeatEvent cadence row → `AI_NoOp` (H2). §3.8 EC-017-005 split into 005a/005b (L3). Replaced `[TBD-CITE]` with `TBD-NORMATIVE` at §3.2.5 / §3.6.1 (M2). Renamed `producerSubsystem` → `subsystemOrdinal` (M4). |
 | 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-1: §3.3.1 cadence map row reverted to `Snapshot`; §3.3.2 rewritten so `Snapshot` is canonical producer and `AI_NoOp` MAY is retained as non-binding example. H-2-2: §3.2.2 "separate from ERR_EVT_TIER_MISMATCH" reworded to compile-time-only; EC-017-005a updated to compile-time/lint-only; §3.10 `ERR_EVT_TIER_MISMATCH` row replaced with reserved-slot note; `ERR_EVT_REGISTRATION_PHASE` note simplified. |
 | 1.0.1   | May 15, 2026 | Claude Code | Patch revision (no behavioral change). `[CROSS-PENDING]` → `[CROSS]` promotion of `DOMAIN_TAG_EVENT_LEDGER` following #16 §3.4 v1.0.1 allocation of value `0x15` (May 14, 2026). §3.4.2 prose updated to inline the literal value and re-tag; §3.10 catalogue row updated to `0x15` / `[CROSS]`; §3.10 trailing notes prose updated. ERR-017-001 RESOLVED; this revision closes the #17-side mechanical residual. |
+| 1.0.2   | June 12, 2026 | Claude Code | ERR-017-002 patch (behavioral surface unchanged at call sites). §3.2.1 / §3.2.2 Publish/Subscribe API corrected from three constraint-only overloads to ONE method with cached tier-marker dispatch — C# forbids overloading on generic constraints alone (CS0111), so the v1.0 surface could never compile; the implementation (`EventBus.cs` v1.9, `EventTierCache.cs` v1.0, `CosmeticChannel.cs` v1.9, five spec `EventBusStub.cs` files) was patched in the same commit. Exactly-one-marker contract (FR-EVT-009a) now enforced at the entry point at runtime; §3.2.2 compile-time-mismatch note re-anchored accordingly. Found by the first-ever compile of the assembly on the dotnet CI gate (tools/dotnet-ci). |

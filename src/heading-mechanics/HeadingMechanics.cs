@@ -7,7 +7,7 @@
 //           contact resolution, duel dispatch, event publication, and failed-attempt handling.
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
@@ -534,4 +534,8 @@ namespace TacticalDirector.HeadingMechanics
 // | 1.3     | 2026-05-28 | —      | AR-2 H-2: CollisionConsumer property + using CollisionSystem added.               |
 // |         |            |        | AR-2 M-5: WarnBallStateStale telemetry call added on stale BallState snapshot.   |
 // |         |            |        | AR-2 L-3: Redundant self-assignment _contactStates[agentId]=contactState removed. |
+// | 1.4     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling -> Unity.Profiling.       |
+// |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246    |
+// |         |            |        | under Unity and the Linux compile gate alike, so this assembly could not have     |
+// |         |            |        | compiled in-engine. No functional change.                                         |
 #endregion

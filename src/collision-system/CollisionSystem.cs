@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
@@ -486,4 +486,8 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | previously published into CollisionEvent.ImpactForce). L-2: both-grounded overlaps no   |
 // |         |            |        | longer record zero-force events every frame; RecordEvent buffer-full drop gains a       |
 // |         |            |        | dev-build warning. IsInvalidPosition renamed IsInvalidVector (now also gates velocity). |
+// | 1.7     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling -> Unity.Profiling.             |
+// |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246 under    |
+// |         |            |        | Unity and the Linux compile gate alike, so this assembly could not have compiled        |
+// |         |            |        | in-engine. No functional change.                                                        |
 #endregion

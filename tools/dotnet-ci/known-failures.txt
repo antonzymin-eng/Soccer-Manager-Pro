@@ -1,0 +1,46 @@
+# tools/dotnet-ci/known-failures.txt
+# Created: 2026-06-12
+#
+# Quarantine ledger (machine-readable) for the non-certifying Linux compile/test
+# gate. Each line is a test METHOD name excluded from the blocking `dotnet test`
+# run via FullyQualifiedName!~<name>. These 30 tests failed on the FIRST-EVER
+# execution of the project's suites (2026-06-12) and encode genuine open
+# model/expectation questions that need per-spec AR-style derivation — they are
+# NOT flaky and NOT shim artifacts. Details, error messages, and suspected
+# defect classes: docs/tracking/dotnet-ci-quarantine.md.
+#
+# Rules:
+#  - REMOVE a line in the same commit that fixes its test (the gate then
+#    enforces it forever).
+#  - NEVER add a line without a matching entry in the tracking doc.
+#  - Any test failure NOT in this list fails the gate.
+BM002_NinetyDegreeRunUp_ReducesScore
+ComputeHeadZ_AtApex_EqualsJumpReach
+Constants_DerivedFovValues_AreCorrect
+ContextModifier_ScoreDiff_ExpandsLateralSpread
+ControlQuality_AllFourVerificationMatrixScenarios_PassSimultaneously
+CoverShadow_AssignsHigherThreatReceiverFirst
+CrossbarCollision_DeflectsVelocityDownward
+FailureMode_F3_NaNBallPosition_SlotsRemainFinite
+Integration_OutOfPoss_NarrowerLateralSpread_Than_InPoss
+LR001_ProcessVisible_ConfirmsAfterLrecTicks
+OCC005_MinShadowFloor_NotActive_At2m
+OwnGoalFlag_TrajectoryTowardOwnGoal_ReturnsTrue
+PV003_Lofted_MidAttributes_40m_VelocityInRange
+PeripheralArc_Boundaries_AreCorrect
+ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero
+SN003_OffCentre_ProducesNonZeroSidespin
+SN004_HigherTechnique_IncreasesSpinMagnitude
+SpatialHash_TwoAgentsFar_QueryReturnsOnlySelf
+T_DA_011_NoCandidatesProducesZonal
+T_DA_012_TieBreakEntityIdAscending
+T_DA_016_InterceptRunnerDirectionCheck
+T_DA_034_StepDepthMaxWithShapeLineDepth
+TacticalCorrectness_4231_TransToAtk_AMAdvances_RelativeTo_OutOfPoss
+TacticalCorrectness_OutOfPoss_DefensiveLineCompact
+TacticalCorrectness_TransToDef_NarrowerLateralSpread
+TouchRadius_GoodPoorBoundary_IsContinuous
+TouchRadius_PoorHeavyBoundary_IsContinuous
+TouchRadius_VelocityModifier_IncreasesRadiusForFastBall
+VS001_EliteShortGroundPass_OutputsInRange
+VS003_ChipOverDefensiveLine_OutputsInRange

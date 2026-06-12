@@ -9,7 +9,7 @@
 
 using System;
 using System.IO;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 namespace TacticalDirector.DeterministicSim
 {
@@ -71,9 +71,17 @@ namespace TacticalDirector.DeterministicSim
                 }
 
                 // Step 3: atomic rename (replace existing if present).
-                // overwrite:true uses MoveFileEx(MOVEFILE_REPLACE_EXISTING) on Windows; requires .NET Core 3.1+.
-                // AR-1 M-2: without overwrite:true, File.Move throws IOException if destPath already exists.
-                File.Move(tempPath, destPath, overwrite: true);
+                // ERR-017-002-adjacent build fix (dotnet CI gate): File.Move(string, string, bool)
+                // is .NET Core 3.0+ ONLY — it does not exist in netstandard2.1, Unity 2022.3's
+                // API surface, so the AR-1 M-2 form could never have compiled in-engine.
+                // File.Replace IS in netstandard2.1 and performs the same atomic
+                // replace-existing rename (ReplaceFile on Windows); plain File.Move covers the
+                // first-save case where destPath does not yet exist. AR-1 M-2 intent preserved:
+                // an existing destPath no longer throws IOException.
+                if (File.Exists(destPath))
+                    File.Replace(tempPath, destPath, destinationBackupFileName: null);
+                else
+                    File.Move(tempPath, destPath);
 
                 // Step 4: directory fsync is omitted on Windows (FAT/NTFS handle it via rename semantics).
                 // On Linux/macOS this would require P/Invoke to fsync the directory fd.
@@ -166,4 +174,14 @@ namespace TacticalDirector.DeterministicSim
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                                    |
 // | 1.1     | 2026-05-29 | —      | AR-1 M-2: File.Move uses overwrite:true to replace existing snapshots.    |
 // |         |            |        | M-2b note: EnvironmentFingerprint not serialized to disk (Stage 0 stub).  |
+// | 1.2     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling ->                |
+// |         |            |        | Unity.Profiling. ProfilerMarker's actual namespace is Unity.Profiling;    |
+// |         |            |        | the old using was CS0246 under Unity and the Linux compile gate alike, so |
+// |         |            |        | this assembly could not have compiled in-engine. No functional change.    |
+// | 1.3     | 2026-06-12 | —      | Build fix (dotnet CI gate): File.Move(string,string,bool) is .NET Core    |
+// |         |            |        | 3.0+ only - absent from netstandard2.1 (Unity 2022.3 API surface), so the |
+// |         |            |        | AR-1 M-2 overwrite:true form never compiled in-engine. Replaced with      |
+// |         |            |        | File.Exists ? File.Replace(temp,dest,null) : File.Move(temp,dest) -       |
+// |         |            |        | File.Replace is netstandard2.1 and atomically replaces (ReplaceFile);     |
+// |         |            |        | AR-1 M-2 intent (no IOException on existing dest) preserved.              |
 #endregion

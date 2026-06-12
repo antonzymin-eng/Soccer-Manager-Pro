@@ -193,6 +193,22 @@ namespace TacticalDirector.EventSystem
 
         /// <summary>O(1) ordinal lookup for type T. Returns 0x00 (invalid sentinel) if T is not
         /// registered; callers should treat 0x00 as a registry error.</summary>
+        /// <summary>
+        /// Forces the EventRegistry static constructor (Appendix A seeded rows) to run.
+        /// EventOrdinalCache&lt;T&gt; is a separate static-generic type, so reading
+        /// EventOrdinalCache&lt;T&gt;.Ordinal does NOT trigger this type's initializer —
+        /// a Subscribe/Publish of a #17-owned seeded event before anything else touched
+        /// EventRegistry saw ordinal 0 and threw ERR_EVT_UNREGISTERED_ORDINAL
+        /// (initialization-order fragility surfaced by the first-ever suite execution on
+        /// the dotnet CI gate; Unity's runner exhibits the identical order). EventBus
+        /// entry points call this before consulting the ordinal cache. The body is empty:
+        /// invoking any static member runs the cctor exactly once; afterwards the call is
+        /// an inlined no-op (FR-EVT-048 zero-alloc unaffected).
+        /// </summary>
+        internal static void EnsureInitialized()
+        {
+        }
+
         internal static byte GetOrdinal<T>() where T : struct => EventOrdinalCache<T>.Ordinal;
 
         /// <summary>Returns the tier byte (0=A, 1=B, 2=C) for the given ordinal. §2.4.2.</summary>
@@ -272,4 +288,11 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | AR-8 L-1: RegisterRow<T> asserts sizeof(T) >= EventHeaderBytes (12) |
 // |         |            |        | for Tier A/B types per §2.4.1 canonical header layout. Tier C is   |
 // |         |            |        | exempt (immediate-dispatch; excluded from canonical digest).        |
+// | 1.5     | 2026-06-12 | —      | Dotnet CI gate fix (first-ever suite execution): new internal no-op |
+// |         |            |        | EnsureInitialized() - EventOrdinalCache<T> is a separate            |
+// |         |            |        | static-generic type, so reading its Ordinal does not trigger this   |
+// |         |            |        | type's seeded-row cctor; a Subscribe/Publish of a #17-owned event   |
+// |         |            |        | before anything touched EventRegistry threw                         |
+// |         |            |        | ERR_EVT_UNREGISTERED_ORDINAL. EventBus entry points now force the   |
+// |         |            |        | cctor.                                                              |
 #endregion

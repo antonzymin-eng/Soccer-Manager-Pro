@@ -1,7 +1,7 @@
 # Certification Platform Pin
 
 **Created:** May 2, 2026
-**Last Updated:** June 7, 2026 (Stage 0 host platform pinned — closes the standing OPEN ISSUE that blocked `FR-DS-009-GATE` Stage 0 activation across #16 §5.5, #18 FR-PO-052 perf-gate, #19 §7.5 D1 test-runner pin, #18 §3.9.4 IL2CPP/Mono warmup measurement, and the four downstream `[EST]` constants that depend on the measured warmup characteristic. Pin set: Windows 11, Unity 2022 LTS revision **2022.3.62f1** (default Stage 0; revise if a later patch release supersedes before first cert run), Mono backend (IL2CPP migrates at Stage 5+), x64, SSE4.2 SIMD baseline, 1 worker thread (single-threaded — multi-threading is a Stage 5+ concern), deterministic compiler flags per row 5.)
+**Last Updated:** June 12, 2026 (v1.2 — non-certifying Linux compile/test gate note added; pin unchanged). Prior: June 7, 2026 (Stage 0 host platform pinned — closes the standing OPEN ISSUE that blocked `FR-DS-009-GATE` Stage 0 activation across #16 §5.5, #18 FR-PO-052 perf-gate, #19 §7.5 D1 test-runner pin, #18 §3.9.4 IL2CPP/Mono warmup measurement, and the four downstream `[EST]` constants that depend on the measured warmup characteristic. Pin set: Windows 11, Unity 2022 LTS revision **2022.3.62f1** (default Stage 0; revise if a later patch release supersedes before first cert run), Mono backend (IL2CPP migrates at Stage 5+), x64, SSE4.2 SIMD baseline, 1 worker thread (single-threaded — multi-threading is a Stage 5+ concern), deterministic compiler flags per row 5.)
 **Purpose:** Records the exact Stage 0 host platform tuple for deterministic simulation certification runs, as required by Spec #16 §5.5.
 
 ---
@@ -73,6 +73,21 @@ A PR updating this file requires sign-off from the Platform Certification owner 
 
 ---
 
+## Relationship to the Linux compile/test gate (non-certifying)
+
+The CI job `dotnet-compile-test` (`tools/dotnet-ci/run-gate.sh`, added June 12,
+2026) compiles the entire `src/` tree and executes every NUnit suite on
+ubuntu-latest under .NET 8 with a UnityEngine shim. **That gate is explicitly
+NON-CERTIFYING**: it is a smoke gate for the never-compiled / dead-test-suite
+defect class and for test execution, not a determinism certification. No digest,
+perf number, or replay produced on the Linux gate is authoritative.
+`FR-DS-009-GATE`, `FR-PO-052`, golden-digest pins, and all bit-exactness claims
+are certified ONLY on the pinned tuple above. The two coexist by design: the
+Linux gate answers "does it compile and do the tests pass," this pin answers
+"are the bits exactly right."
+
+---
+
 ## Version History
 
 | Version | Date       | Author | Notes                                                                        |
@@ -80,3 +95,5 @@ A PR updating this file requires sign-off from the Platform Certification owner 
 | 1.1     | 2026-06-07 | —      | Stage 0 pin landed: Windows 11 / Unity 2022.3.62f1 / Mono / x64 / SSE4.2 /   |
 |         |            |        | 1 worker / deterministic flags per row 5. Closes the standing OPEN ISSUE     |
 |         |            |        | blocking FR-DS-009-GATE. Downstream unblockers documented per row.            |
+| 1.2     | 2026-06-12 | —      | Non-certifying-gate note added: the new Linux dotnet compile/test CI gate     |
+|         |            |        | (tools/dotnet-ci) is a smoke gate only; certification stays on this pin.      |
