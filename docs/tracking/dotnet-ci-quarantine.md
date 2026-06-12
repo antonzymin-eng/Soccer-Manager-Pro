@@ -61,15 +61,6 @@ applicable, and **remove the quarantine line in the same commit**.
 | `SN003_OffCentre_ProducesNonZeroSidespin` | SN-003: OffCentre contact must produce non-zero sidespin (Z) | Sidespin output is 0.0 — §3.4.5 sidespin path likely never engages (dead branch or wrong axis); SN-004 corroborates. |
 | `SN004_HigherTechnique_IncreasesSpinMagnitude` | SN-004: Technique=18 must out-spin Technique=5 | Same root cause as SN-003 (sidespin identically 0). |
 
-### Perception System #7 (4)
-
-| Test | First-run failure | Hypothesis |
-|---|---|---|
-| `Constants_DerivedFovValues_AreCorrect` | BASE_FOV_HALF_ANGLE must equal BASE_FOV_ANGLE / 2 | A `[DERIVED]` constant is not equal to its documented formula — catalogue drift; trivial to adjudicate against §3.10. |
-| `PeripheralArc_Boundaries_AreCorrect` | 40.0° must be exactly at inner bound — inclusive | Arc-boundary inclusivity (`<` vs `<=`) in FovCalculator vs §3.1. |
-| `OCC005_MinShadowFloor_NotActive_At2m` | OCC-005: arcsin(0.4/2)≈11.31° expected (±0.15°) | Shadow-cone min-floor activation distance vs §3.2.3 derivation. |
-| `LR001_ProcessVisible_ConfirmsAfterLrecTicks` | LR-001 (D=20, L_rec=1): confirm on first ProcessVisible call | Off-by-one in latency-counter confirm (counts from 0 vs 1) vs §3.3. |
-
 ### Positioning AI #12 (6)
 
 | Test | First-run failure | Hypothesis |
@@ -110,6 +101,17 @@ applicable, and **remove the quarantine line in the same commit**.
 | `ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero` | T-DS-008: PrepareReplay must return 0; returned 5640 (0x1608) | PrepareReplay step validation rejects the fixture's "well-formed" snapshot — either a validation step the fixture doesn't satisfy (fixture defect) or a step mis-ordered in ReplayEngine. Error code 0x1608 names the step; adjudicate against §4.2.2. |
 
 ## Resolved
+
+### Perception System #7 (4/4) — resolved June 12, 2026 (1 PRODUCTION-DEFECT root cause fixing 2 tests; 2 TEST-DEFECT)
+
+| Test | Verdict | Adjudication |
+|---|---|---|
+| `Constants_DerivedFovValues_AreCorrect` | PRODUCTION-DEFECT (static-init order) | `BASE_FOV_HALF_ANGLE` ([DERIVED]) and `PERIPHERAL_ARC_INNER_BOUND` ([DERIVED]) are declared in the `#region Derived` block, which the FR-CS catalogue layout places textually BEFORE their `[GT]` source `BASE_FOV_ANGLE`; C# initialises static fields in textual order, so both readonly fields captured 0. Same defect class as the June-12 EventRegistry static-init finding. Converted to expression-bodied properties (evaluation deferred past static init); values unchanged (80° / 40°). `PerceptionConstants.cs` v1.2. |
+| `PeripheralArc_Boundaries_AreCorrect` | (fixed by the same root cause) | The arc inner bound read 0°, so 40° was never "at the inner bound". FovCalculator's `>=`/`<=` inclusivity matches §3.3.3 ([40°, 80°] closed interval); no code change beyond the constants fix. |
+| `OCC005_MinShadowFloor_NotActive_At2m` | TEST-DEFECT (trig mis-derivation) | Spec §A.4 / Appendix B mandate θ = arcsin(r/d): arcsin(0.4/2.0) = 11.537° (both appendix worked examples print 11.54°/11.537°). The test's 11.31° is arctan(0.2) — tangent used where the tangent-line geometry derives a sine. Production returned 11.536959° — exactly the spec value. Expectation corrected to 11.537° ± 0.05. |
+| `LR001_ProcessVisible_ConfirmsAfterLrecTicks` | TEST-DEFECT (noise term ignored) | §3.3.4: L_rec_final = Min(L_rec_base + noise, L_MAX) with deterministic additive noise ∈ {0, +1} = DeterministicHash(obs, tgt, frame) % 2. At D=20, L_rec_base = 1 but for (0, 1, frame 0) the hash is odd → L_rec_final = 2, and the spec REQUIRES the first call to return false. Test asserted unconditional first-call confirmation. Rewritten to derive L_rec_final via ComputeLRec and assert confirmation exactly at the L_rec-th tick (false strictly before). |
+
+Files: `src/perception-system/PerceptionConstants.cs` v1.2, `src/perception-system/Tests/PerceptionSystemTests.cs` v1.2. Suite: 46 passed / 0 failed / 15 skipped. Cross-suite note: the constants were 0 at runtime for ALL consumers — FovCalculator peripheral/blind-side predicates effectively classified everything ≥ 0° separation as outside the peripheral arc; downstream pressing-ai/decision-tree suites re-verified in the full gate run.
 
 ### First Touch #4 (4/4) — resolved June 12, 2026 (all TEST-DEFECT; production matches normative §3)
 
