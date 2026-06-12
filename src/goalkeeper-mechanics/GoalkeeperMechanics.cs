@@ -7,7 +7,7 @@
 //           handling quality, cross-claim duels, rush dispatch, and distribution. Constructor-injected.
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
@@ -600,7 +600,9 @@ namespace TacticalDirector.GoalkeeperMechanics
                         MatchTimeMs      = currentMatchTimeMs,
                         DeliveryKind     = distIntent.DeliveryKind,
                         ReleasePoint     = releasePoint,
-                        TargetReceiverId = distIntent.TargetReceiverId,
+                        // DistributeIntent.TargetReceiverId is int? (null = zone-targeted);
+                        // the event field is int with sentinel -1 for zone (v1.2 AR-2 row).
+                        TargetReceiverId = distIntent.TargetReceiverId ?? -1,
                         TargetPoint      = distIntent.TargetPoint,
                         EmittedPowerIntent = emittedPower,
                         WindupMs         = windupMs
@@ -700,4 +702,15 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                            |
 // | 1.1     | 2026-05-28 | —      | AR-1: H-5 _rushLaunchMps set in CommitRushIntent; M-2 intent clear. |
+// | 1.2     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling ->          |
+// |         |            |        | Unity.Profiling. ProfilerMarker's actual namespace is               |
+// |         |            |        | Unity.Profiling; the old using was CS0246 under Unity and the Linux |
+// |         |            |        | compile gate alike, so this assembly could not have compiled        |
+// |         |            |        | in-engine. No functional change.                                    |
+// | 1.3     | 2026-06-12 | —      | Build fix (dotnet CI gate):                                         |
+// |         |            |        | DistributionExecutedEvent.TargetReceiverId assignment passed        |
+// |         |            |        | DistributeIntent.TargetReceiverId (int?) into the int event field - |
+// |         |            |        | CS0266 everywhere; assembly never compiled. Now coalesces null ->   |
+// |         |            |        | -1, the zone-target sentinel the event field documented in its v1.2 |
+// |         |            |        | AR-2 row. No behaviour change for receiver-targeted distributions.  |
 #endregion

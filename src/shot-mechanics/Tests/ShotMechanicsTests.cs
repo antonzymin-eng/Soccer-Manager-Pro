@@ -1223,7 +1223,6 @@ namespace TacticalDirector.ShotMechanics.Tests
         }
 #endif
     }
-}
 
     // ════════════════════════════════════════════════════════════════════════════
     // §5.12 Integration Tests (IT-)
@@ -1233,6 +1232,7 @@ namespace TacticalDirector.ShotMechanics.Tests
     /// Integration tests for Shot Mechanics #6 §5.12. All require ShotExecutor wired to
     /// IShotBallSystem, IShotAgentQuery, IShotCollisionQuery, and EventBus at Stage 0+1.
     /// </summary>
+    [TestFixture]
     internal sealed class ShotMechanicsIntegrationTests
     {
         /// <summary>IT-001: Ball Physics Interface — ApplyKick called with valid arguments. §5.12.</summary>
@@ -1325,4 +1325,10 @@ namespace TacticalDirector.ShotMechanics.Tests
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-31 | —      | Initial implementation. |
 // | 1.1     | 2026-06-01 | —      | Add §5.12 integration test stubs IT-001..012 (all Assert.Ignore; Stage 0+1). |
+// | 1.2     | 2026-06-12 | —      | Build fix (dotnet CI gate): the namespace was closed BEFORE the appended SS  |
+// |         |            |        | 5.12 ShotMechanicsIntegrationTests fixture, leaving the fixture stranded in  |
+// |         |            |        | the global namespace and a stray } at EOF (CS1022) - the suite NEVER         |
+// |         |            |        | compiled; identical defect class to First Touch ERR-004 and Pass Mechanics   |
+// |         |            |        | AR-9 H-1 (sixth instance). Namespace now closes at EOF; [TestFixture] added  |
+// |         |            |        | to the IT- fixture per the PM precedent.                                     |
 #endregion

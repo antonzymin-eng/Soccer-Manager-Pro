@@ -6,7 +6,7 @@
 // Purpose:  8-step replay lifecycle orchestrator per §4.2.2. Each step must succeed before the next
 //           begins; failure at any step returns the canonical error code and halts execution.
 
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 namespace TacticalDirector.DeterministicSim
 {
@@ -126,4 +126,9 @@ namespace TacticalDirector.DeterministicSim
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                           |
 // | 1.1     | 2026-05-29 | —      | AR-3 L-1: replaced empty for-loop (CS0642) with comment-only stub. |
+// | 1.2     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling ->         |
+// |         |            |        | Unity.Profiling. ProfilerMarker's actual namespace is              |
+// |         |            |        | Unity.Profiling; the old using was CS0246 under Unity and the      |
+// |         |            |        | Linux compile gate alike, so this assembly could not have compiled |
+// |         |            |        | in-engine. No functional change.                                   |
 #endregion

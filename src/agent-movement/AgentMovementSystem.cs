@@ -6,7 +6,7 @@
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 namespace TacticalDirector.AgentMovement
 {
@@ -692,4 +692,8 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | offset) — the Decision Tree HOLD action (StrafeWhileWatching with target == current        |
 // |         |            |        | position, desired JOGGING) would otherwise feed newSpeed > 0 into Step 8 with a degenerate |
 // |         |            |        | target from rest, tripping RotateVelocityToward's both-degenerate assert every frame.      |
+// | 1.16    | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling -> Unity.Profiling.                 |
+// |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246 under Unity  |
+// |         |            |        | and the Linux compile gate alike, so this assembly could not have compiled in-engine. No    |
+// |         |            |        | functional change.                                                                          |
 #endregion

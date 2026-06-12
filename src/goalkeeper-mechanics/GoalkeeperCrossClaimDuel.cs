@@ -7,7 +7,7 @@
 //           Accepts pre-allocated participant buffers; zero heap allocation on hot path.
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 namespace TacticalDirector.GoalkeeperMechanics
 {
@@ -273,4 +273,18 @@ namespace TacticalDirector.GoalkeeperMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.1     | 2026-06-12 | —      | Build fix (dotnet CI    |
+// |         |            |        | gate): using            |
+// |         |            |        | UnityEngine.Profiling   |
+// |         |            |        | -> Unity.Profiling.     |
+// |         |            |        | ProfilerMarker's actual |
+// |         |            |        | namespace is            |
+// |         |            |        | Unity.Profiling; the    |
+// |         |            |        | old using was CS0246    |
+// |         |            |        | under Unity and the     |
+// |         |            |        | Linux compile gate      |
+// |         |            |        | alike, so this assembly |
+// |         |            |        | could not have compiled |
+// |         |            |        | in-engine. No           |
+// |         |            |        | functional change.      |
 #endregion

@@ -14,7 +14,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 using TacticalDirector.DeterministicSim;
 
@@ -86,67 +86,70 @@ namespace TacticalDirector.EventSystem
             CosmeticChannel.ResetPublicationCounts();
         }
 
-        // ── Publish (Tier A) ─────────────────────────────────────────────────────────
+        // ── Publish (all tiers — single method, cached marker dispatch) ──────────────
 
         /// <summary>
-        /// Enqueues a Tier A event into the ring buffer for delivery during this tick's
-        /// Events phase. Debug builds assert the current phase is a valid Tier A producer phase.
-        /// Allocates 0 bytes (FR-EVT-048). §3.2.1 / §3.2.3.
+        /// Publishes an event. Tier routing is resolved from the event's tier marker
+        /// (IEventA / IEventB / IEventC) via <see cref="EventTierCache{T}"/> — C# forbids
+        /// overloading on generic constraints alone (CS0111; ERR-017-002), so the §3.2.1
+        /// three-overload surface is implemented as one method with cached-flag dispatch
+        /// (boot-time type-init only; the JIT folds the flags to constants — zero
+        /// steady-state cost). Tier A/B: enqueued for Events-phase delivery; debug builds
+        /// assert the current phase is the registered producer phase. Tier C: immediate
+        /// dispatch via CosmeticChannel with the deterministic drop predicate (§3.6.2).
+        /// Throws if <typeparamref name="T"/> does not implement exactly one tier marker
+        /// (FR-EVT-009a). Allocates 0 bytes (FR-EVT-048). §3.2.1 / §3.2.3.
         /// </summary>
-        public static void Publish<T>(in T evt) where T : struct, IEventA
+        public static void Publish<T>(in T evt) where T : struct
         {
+            EventRegistry.EnsureInitialized();
+
+            if (!EventTierCache<T>.IsValid)
+                ThrowTierContractViolation(typeof(T));
+
+            if (EventTierCache<T>.IsTierC)
+            {
+                CosmeticChannel.Publish(in evt);
+                return;
+            }
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            // Debug-only producer-phase assertion (§3.2.1): verify the call comes from the
-            // registered producer phase. Stripped from release builds (FR-EVT-048 zero-alloc).
+            // Debug-only producer-phase assertion (§3.2.1; AR-1 M-2 Tier A, AR-7 L-1 Tier B):
+            // verify the call comes from the registered producer phase. Stripped from
+            // release builds (FR-EVT-048 zero-alloc). Both message arms are constant
+            // string literals — no allocation from the eager argument evaluation.
             byte dbgOrdinal = EventOrdinalCache<T>.Ordinal;
             UnityEngine.Debug.Assert(
                 (byte)EventLedger.CurrentPhase == EventRegistry.GetProducerPhaseIndex(dbgOrdinal),
-                "EventBus.Publish<T>: Tier A event published from incorrect producer phase.");
+                EventTierCache<T>.IsTierB
+                    ? "EventBus.Publish<T>: Tier B event published from incorrect producer phase."
+                    : "EventBus.Publish<T>: Tier A event published from incorrect producer phase.");
 #endif
             PublishAuthoritative(in evt);
         }
 
-        /// <summary>
-        /// Enqueues a Tier B event into the ring buffer. Behaves identically to Tier A
-        /// at Stage 0; Tier B tolerance-path activation is Stage 5+ (§3.1.3 / KD-3).
-        /// Debug builds assert the current phase is a valid Tier B producer phase.
-        /// Allocates 0 bytes (FR-EVT-048). §3.2.1.
-        /// </summary>
-        public static void Publish<T>(in T evt) where T : struct, IEventB
-        {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            // AR-7 L-1: symmetric to the Tier A debug assertion added in AR-1 M-2.
-            // Both tiers route through PublishAuthoritative and both have producer-phase
-            // metadata in the registry; the asymmetry would have masked Stage 5+ Tier B
-            // wiring mistakes (producer publishes from the wrong phase).
-            byte dbgOrdinal = EventOrdinalCache<T>.Ordinal;
-            UnityEngine.Debug.Assert(
-                (byte)EventLedger.CurrentPhase == EventRegistry.GetProducerPhaseIndex(dbgOrdinal),
-                "EventBus.Publish<T>: Tier B event published from incorrect producer phase.");
-#endif
-            PublishAuthoritative(in evt);
-        }
+        // ── Subscribe (all tiers — single method, cached marker dispatch) ────────────
 
         /// <summary>
-        /// Immediately dispatches a Tier C event via CosmeticChannel (no queue, no digest).
-        /// Applies the deterministic drop predicate (§3.6.2). Allocates 0 bytes (FR-EVT-048).
-        /// </summary>
-        public static void Publish<T>(in T evt) where T : struct, IEventC
-        {
-            CosmeticChannel.Publish(in evt);
-        }
-
-        // ── Subscribe (Tier A) ────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// Registers a Tier A subscriber. MUST be called before the first Events phase
-        /// (boot phase; FR-EVT-020). Raises ERR_EVT_REGISTRATION_PHASE if called after boot.
-        /// Returns an opaque <see cref="SubscriptionToken"/> (no class allocation; FR-EVT-073).
-        /// §3.2.2 / §4.3.1.
+        /// Registers a subscriber. Tier routing as in <see cref="Publish{T}"/>
+        /// (ERR-017-002 single-method dispatch). Tier A/B: MUST be called before the
+        /// first Events phase (boot phase; FR-EVT-020) — raises ERR_EVT_REGISTRATION_PHASE
+        /// after boot. No Tier B events are registered at Stage 0 (Stage 5+ consumers).
+        /// Tier C: delegates to CosmeticChannel; permitted at any time during match
+        /// (FR-EVT-022). Returns an opaque <see cref="SubscriptionToken"/> (no class
+        /// allocation; FR-EVT-073). §3.2.2 / §4.3.1 / §4.3.2.
         /// </summary>
         public static SubscriptionToken Subscribe<T>(EventHandler<T> handler)
-            where T : struct, IEventA
+            where T : struct
         {
+            EventRegistry.EnsureInitialized();
+
+            if (!EventTierCache<T>.IsValid)
+                ThrowTierContractViolation(typeof(T));
+
+            if (EventTierCache<T>.IsTierC)
+                return CosmeticChannel.SubscribeFromBus(handler);
+
             EnforceBootPhase();
             byte ordinal = EventOrdinalCache<T>.Ordinal;
             if (ordinal == 0)
@@ -158,33 +161,14 @@ namespace TacticalDirector.EventSystem
                 EventSystemConstants.MaxHandlersPerEventType);
         }
 
-        /// <summary>
-        /// Registers a Tier B subscriber. Boot-phase restriction applies (FR-EVT-020).
-        /// No Tier B events are registered at Stage 0; declared for Stage 5+ consumers.
-        /// §3.2.2.
-        /// </summary>
-        public static SubscriptionToken Subscribe<T>(EventHandler<T> handler)
-            where T : struct, IEventB
-        {
-            EnforceBootPhase();
-            byte ordinal = EventOrdinalCache<T>.Ordinal;
-            if (ordinal == 0)
-                throw new InvalidOperationException(
-                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
-                    " subscribed before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
-                    "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
-            return EventLedger.Subscribe<T>(handler, ordinal,
-                EventSystemConstants.MaxHandlersPerEventType);
-        }
+        // ── Tier-contract guard ───────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Registers a Tier C subscriber. Delegates to CosmeticChannel.Subscribe.
-        /// Permitted at any time during match (FR-EVT-022). §3.2.2 / §4.3.2.
-        /// </summary>
-        public static SubscriptionToken Subscribe<T>(EventHandler<T> handler)
-            where T : struct, IEventC
+        private static void ThrowTierContractViolation(Type eventType)
         {
-            return CosmeticChannel.Subscribe(handler);
+            throw new InvalidOperationException(
+                "EventBus tier contract violation (FR-EVT-009a / ERR-017-002): " +
+                eventType.Name + " must implement exactly one of IEventA / IEventB / " +
+                "IEventC to flow through EventBus.Publish/Subscribe.");
         }
 
         // ── Internal publish helper ───────────────────────────────────────────────────
@@ -368,4 +352,25 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | by SerializeLedger). Guard before reservation so the throw is     |
 // |         |            |        | recoverable and parallel with the structSize / depth / overflow   |
 // |         |            |        | guards. Header date refreshed 2026-06-02 → 2026-06-07.            |
+// | 1.8     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling ->         |
+// |         |            |        | Unity.Profiling. ProfilerMarker's actual namespace is              |
+// |         |            |        | Unity.Profiling; the old using was CS0246 under Unity and the      |
+// |         |            |        | Linux compile gate alike, so this assembly could not have compiled |
+// |         |            |        | in-engine. No functional change.                                   |
+// | 1.9     | 2026-06-12 | —      | ERR-017-002 (H, dotnet CI gate): the three Publish<T> and three    |
+// |         |            |        | Subscribe<T> overloads differed ONLY by generic constraint         |
+// |         |            |        | (IEventA/IEventB/IEventC) — constraints are not part of a method   |
+// |         |            |        | signature, so this was CS0111 under every C# compiler incl. Unity; |
+// |         |            |        | the assembly never compiled. Spec §3.2.1/§3.2.2 specified the      |
+// |         |            |        | illegal surface and is patched in the same commit. Replaced with   |
+// |         |            |        | ONE Publish + ONE Subscribe (where T : struct) routing on new      |
+// |         |            |        | EventTierCache<T> cached marker flags (boot-time type-init only;   |
+// |         |            |        | JIT-folds to constants; zero steady-state cost, FR-EVT-048).       |
+// |         |            |        | Exactly-one-marker contract enforced at entry (FR-EVT-009a);       |
+// |         |            |        | violation throws via ThrowTierContractViolation. Tier C subscribe  |
+// |         |            |        | routes through new internal CosmeticChannel.SubscribeFromBus seam  |
+// |         |            |        | (public IEventC-constrained Subscribe surface unchanged). All call |
+// |         |            |        | sites (EventBus.Publish(in evt) / Subscribe(handler)) compile      |
+// |         |            |        | unchanged — dispatch moved from overload resolution to runtime     |
+// |         |            |        | cached flags with identical per-tier behaviour.                    |
 #endregion

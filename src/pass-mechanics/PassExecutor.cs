@@ -9,7 +9,7 @@
 //           constructor-injected (FR-CS-051–054).
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 using TacticalDirector.BallPhysics;
 
@@ -624,4 +624,9 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     was up to ~15 frames stale for a pass on the run.                   |
 // |         |            |        | AR-10 L-1 (same commit): FM-07 log wording "≤ 0" → "not a positive     |
 // |         |            |        |     finite value" to match the widened M-2 gate.                        |
+// | 1.13    | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling ->              |
+// |         |            |        | Unity.Profiling. ProfilerMarker's actual namespace is Unity.Profiling;  |
+// |         |            |        | the old using was CS0246 under Unity and the Linux compile gate alike,  |
+// |         |            |        | so this assembly could not have compiled in-engine. No functional       |
+// |         |            |        | change.                                                                 |
 #endregion

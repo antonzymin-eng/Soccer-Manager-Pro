@@ -92,17 +92,17 @@ namespace TacticalDirector.EventSystem.Tests
         {
             // FR-EVT-079: every error code MUST reside in the 0x1700..0x17FF range.
             // §2.5 / §3.10.
-            Assert.That(EventSystemConstants.ErrEvtQueueOverflow,       Is.InRange<ushort>(0x1700, 0x17FF),
+            Assert.That(EventSystemConstants.ErrEvtQueueOverflow,       Is.InRange((ushort)0x1700, (ushort)0x17FF),
                 "ErrEvtQueueOverflow must be in 0x17NN block");
-            Assert.That(EventSystemConstants.ErrEvtOrdinalUnknown,      Is.InRange<ushort>(0x1700, 0x17FF),
+            Assert.That(EventSystemConstants.ErrEvtOrdinalUnknown,      Is.InRange((ushort)0x1700, (ushort)0x17FF),
                 "ErrEvtOrdinalUnknown must be in 0x17NN block");
-            Assert.That(EventSystemConstants.ErrEvtVersionIncompatible,  Is.InRange<ushort>(0x1700, 0x17FF),
+            Assert.That(EventSystemConstants.ErrEvtVersionIncompatible,  Is.InRange((ushort)0x1700, (ushort)0x17FF),
                 "ErrEvtVersionIncompatible must be in 0x17NN block");
-            Assert.That(EventSystemConstants.ErrEvtRegistrationPhase,   Is.InRange<ushort>(0x1700, 0x17FF),
+            Assert.That(EventSystemConstants.ErrEvtRegistrationPhase,   Is.InRange((ushort)0x1700, (ushort)0x17FF),
                 "ErrEvtRegistrationPhase must be in 0x17NN block");
-            Assert.That(EventSystemConstants.ErrEvtUnregisteredOrdinal, Is.InRange<ushort>(0x1700, 0x17FF),
+            Assert.That(EventSystemConstants.ErrEvtUnregisteredOrdinal, Is.InRange((ushort)0x1700, (ushort)0x17FF),
                 "ErrEvtUnregisteredOrdinal must be in 0x17NN block");
-            Assert.That(EventSystemConstants.ErrEvtOrdinalCollision,    Is.InRange<ushort>(0x1700, 0x17FF),
+            Assert.That(EventSystemConstants.ErrEvtOrdinalCollision,    Is.InRange((ushort)0x1700, (ushort)0x17FF),
                 "ErrEvtOrdinalCollision must be in 0x17NN block");
         }
 
@@ -290,13 +290,18 @@ namespace TacticalDirector.EventSystem.Tests
         [Test]
         public void IsRegistered_ReturnsFalse_ForPlaceholderRows()
         {
-            // Placeholder rows (ordinals 0x0C..0x17) have structSize=0 until
+            // Placeholder rows have structSize=0 until the owning spec's
             // EventBusRegistrar.Initialize() is called. IsRegistered must return false.
             // FR-EVT-080 / EventRegistry v1.3 fix.
-            Assert.IsFalse(EventRegistry.IsRegistered(0x0C),
-                "Placeholder ordinal 0x0C must not be IsRegistered until Initialize() is called");
-            Assert.IsFalse(EventRegistry.IsRegistered(0x0D),
-                "Placeholder ordinal 0x0D must not be IsRegistered until Initialize() is called");
+            // Probe 0x02/0x03 (BallContactEvent / BallCrossedLineEvent — owners #3/#1
+            // have no registrar wired yet), NOT 0x0C/0x0D: EventBusWiringSmokeTests runs
+            // earlier in this assembly (NUnit fixture-name order) and legitimately
+            // registers the pass-mechanics rows, so asserting on 0x0C/0x0D was
+            // order-dependent and failed on the first-ever suite execution.
+            Assert.IsFalse(EventRegistry.IsRegistered(0x02),
+                "Placeholder ordinal 0x02 must not be IsRegistered until Initialize() is called");
+            Assert.IsFalse(EventRegistry.IsRegistered(0x03),
+                "Placeholder ordinal 0x03 must not be IsRegistered until Initialize() is called");
         }
 
         [Test]
@@ -1131,4 +1136,17 @@ namespace TacticalDirector.EventSystem.Tests
 // | 1.1     | 2026-06-07 | —      | AR-9 L-1: EventTestHelper.ResetLedger now calls      |
 // |         |            |        | CosmeticChannel.ResetForTests() to clear Tier C      |
 // |         |            |        | dispatcher table between tests (prevents leakage).   |
+// | 1.2     | 2026-06-12 | —      | Build fix (dotnet CI gate): Is.InRange<ushort> -     |
+// |         |            |        | NUnit 3 has no generic InRange (CS0308 under Unity's |
+// |         |            |        | NUnit fork and the Linux gate alike; the suite never |
+// |         |            |        | compiled). Replaced with the non-generic constraint  |
+// |         |            |        | and explicit ushort casts; assertion substance       |
+// |         |            |        | unchanged.                                           |
+// | 1.3     | 2026-06-12 | —      | Dotnet CI gate fix:                                  |
+// |         |            |        | IsRegistered_ReturnsFalse_ForPlaceholderRows probes  |
+// |         |            |        | 0x02/0x03 instead of 0x0C/0x0D -                     |
+// |         |            |        | EventBusWiringSmokeTests runs earlier in NUnit       |
+// |         |            |        | fixture-name order and legitimately registers the    |
+// |         |            |        | pass-mechanics rows, so the old assertion was        |
+// |         |            |        | order-dependent. Same FR-EVT-080 contract.           |
 #endregion

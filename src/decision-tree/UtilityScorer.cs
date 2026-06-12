@@ -8,6 +8,8 @@
 
 using UnityEngine;
 
+using TacticalDirector.PerceptionSystem;
+
 namespace TacticalDirector.DecisionTree
 {
     /// <summary>
@@ -321,4 +323,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   the shifted attribute form (raw ≥ 11 per §3.2.3.4); M-6 INTERCEPT pressure   |
 // |         |            |        |   term drops the non-spec (1 − A_Anticipation) factor; L MOVE zone modifier    |
 // |         |            |        |   read from MOVE_ZONE_* catalogue entries.                                      |
+// | 1.3     | 2026-06-12 | —      | Build fix (dotnet CI gate): missing 'using TacticalDirector.PerceptionSystem;' |
+// |         |            |        | - FilteredView (ctx.Snapshot local, ScoreMove SS 3.2) was CS0246, so the       |
+// |         |            |        | decision-tree assembly STILL did not compile after the June 11 AR-2 H-1        |
+// |         |            |        | asmdef/static-call fixes. No functional change.                                |
 #endregion

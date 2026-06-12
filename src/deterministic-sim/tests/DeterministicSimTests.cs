@@ -70,10 +70,16 @@ namespace TacticalDirector.DeterministicSim
                 0x74f839c593dc67fdUL, // msg = [00]
                 0x0d6c8009d9a94f5aUL, // msg = [00 01]
                 0x85676696d7fb7e2dUL, // msg = [00 01 02]
-                0xcf2621a301b87c15UL, // msg = [00 01 02 03]
-                0x5ce0c6ae7588e869UL, // msg = [00 01 02 03 04]
-                0x407ecb3584f474f9UL, // msg = [00 01 02 03 04 05]
-                0x3e2e3e9ea2db8c73UL, // msg = [00 01 02 03 04 05 06]
+                // Vectors 4-7 corrected on the first-ever suite execution (dotnet CI
+                // gate): the original literals matched NO published source — vectors 0-3
+                // were correct, 4-7 fabricated. Values below re-derived from an
+                // independent Python mirror of the Aumasson & Bernstein reference
+                // implementation and byte-identical to siphash-2-4-kat.md rows 4-7
+                // (which SipHash24KatTests already locks for all 64 lengths).
+                0xcf2794e0277187b7UL, // msg = [00 01 02 03]
+                0x18765564cd99a68dUL, // msg = [00 01 02 03 04]
+                0xcbc9466e58fee3ceUL, // msg = [00 01 02 03 04 05]
+                0xab0200f58b01d137UL, // msg = [00 01 02 03 04 05 06]
             };
 
             for (int i = 0; i < expected.Length; i++)
@@ -569,6 +575,13 @@ namespace TacticalDirector.DeterministicSim
 //           |            |        | Assert.Ignore (file I/O requires Stage 1 CI), T-DS-008 concrete   |
 //           |            |        | ReplayEngine.PrepareReplay happy-path test (no file I/O needed).   |
 // | 1.2     | 2026-06-12 | —      | Golden-vector pass compile fixes: v1.1 closed the namespace BEFORE |
+// | 1.3     | 2026-06-12 | —      | Dotnet CI gate fix (first-ever execution):                         |
+// |         |            |        | SipHash24_ReferenceVectors_ByteExact vectors 4-7 were fabricated   |
+// |         |            |        | (matched no published source; 0-3 correct) - the assert loop died  |
+// |         |            |        | at vector 4. Corrected from an independent Python mirror of the    |
+// |         |            |        | reference implementation; byte-identical to siphash-2-4-kat.md     |
+// |         |            |        | rows 4-7, which SipHash24KatTests locks for all 64 lengths.        |
+// |         |            |        | Production SipHash24_64 was CORRECT; test data was wrong.          |
 //           |            |        | the appended save/load fixture, stranding it in the global         |
 //           |            |        | namespace with unresolvable type refs (CS0246) — identical defect  |
 //           |            |        | class to First Touch ERR-004 / Pass Mechanics AR-9 H-1; namespace  |

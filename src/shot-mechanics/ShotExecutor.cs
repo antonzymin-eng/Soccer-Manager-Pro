@@ -9,7 +9,7 @@
 //           CONTACT exactly once, publishes events. Dependencies constructor-injected (FR-CS-051–054).
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 using TacticalDirector.BallPhysics;
 
@@ -475,11 +475,11 @@ namespace TacticalDirector.ShotMechanics
         {
             switch (state)
             {
-                case AgentMovement.AgentMovementState.Idle:
-                case AgentMovement.AgentMovementState.Walking:
-                case AgentMovement.AgentMovementState.Jogging:
-                case AgentMovement.AgentMovementState.Sprinting:
-                case AgentMovement.AgentMovementState.Decelerating:
+                case AgentMovement.AgentMovementState.IDLE:
+                case AgentMovement.AgentMovementState.WALKING:
+                case AgentMovement.AgentMovementState.JOGGING:
+                case AgentMovement.AgentMovementState.SPRINTING:
+                case AgentMovement.AgentMovementState.DECELERATING:
                     return true;
                 default:
                     return false;
@@ -510,4 +510,13 @@ namespace TacticalDirector.ShotMechanics
 // | 1.5     | 2026-06-01 | —      | AR-2 H-1: explicit FM-04a guard against degenerate XY aim before normalize         |
 // |         |            |        |   (routes to Invalid outcome rather than relying on FM-04 post-hoc NaN trap).      |
 // |         |            |        |   L-3: header doc — "±STUMBLING flag"→"StumbleTriggered boolean" (clarity).        |
+// | 1.6     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling -> Unity.Profiling.        |
+// |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246     |
+// |         |            |        | under Unity and the Linux compile gate alike, so this assembly could not have      |
+// |         |            |        | compiled in-engine. No functional change.                                          |
+// | 1.7     | 2026-06-12 | —      | Build fix (dotnet CI gate): IsApprovedShotState referenced AgentMovementState      |
+// |         |            |        | members by PascalCase names (Idle/Walking/Jogging/Sprinting/Decelerating) but the  |
+// |         |            |        | #2 enum declares ALL_CAPS members (IDLE..DECELERATING) - CS0117 under Unity and    |
+// |         |            |        | the Linux gate alike; this assembly never compiled. Members corrected;             |
+// |         |            |        | approved/rejected set unchanged.                                                   |
 #endregion

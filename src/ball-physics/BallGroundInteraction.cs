@@ -7,7 +7,7 @@
 //           Ground normal is always UP for regulation football pitches.
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 namespace TacticalDirector.BallPhysics
 {
@@ -127,6 +127,11 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | §3.1.8.1 pseudocode patched in the same commit). M-1: friction     |
 // |         |            |        | stick impulse divided by StickImpulseCouplingDivisor (1 + m·r²/I)  |
 // |         |            |        | (ERR-001-002). L-1: 0.01f slip threshold → Bounce.MinContactSpeed. |
+// | 1.4     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling ->         |
+// |         |            |        | Unity.Profiling. ProfilerMarker's actual namespace is              |
+// |         |            |        | Unity.Profiling; the old using was CS0246 under Unity and the      |
+// |         |            |        | Linux compile gate alike, so this assembly could not have compiled |
+// |         |            |        | in-engine. No functional change.                                   |
 // | 1.3.1   | 2026-06-09 | —      | AR-8 L-1: ApplyBounce XML doc records its preconditions (entry     |
 // |         |            |        | Velocity.z < 0 and ground proximity, both guaranteed by the state  |
 // |         |            |        | machine; the unconditional Position.z = RADIUS snap makes direct   |

@@ -9,6 +9,7 @@ using NUnit.Framework;
 
 using UnityEngine;
 
+using TacticalDirector.BallPhysics;
 using TacticalDirector.GoalkeeperMechanics;
 
 namespace TacticalDirector.GoalkeeperMechanics.Tests
@@ -1514,4 +1515,9 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |         |            |        | stubs T-GK-I-001..011; §5.3 validation stubs T-GK-V-001..004;     |
 // |         |            |        | §5.4 conformance stubs T-GK-C-001..007. All Assert.Ignore pending  |
 // |         |            |        | full match-simulation infrastructure (Stage 0+1).                   |
+// | 1.2     | 2026-06-12 | —      | Build fix (dotnet CI gate): missing 'using                         |
+// |         |            |        | TacticalDirector.BallPhysics;' - BallState (DefaultBall helper and |
+// |         |            |        | fixture surface) was CS0246 under Unity and the Linux gate alike   |
+// |         |            |        | despite the asmdef carrying the BallPhysics reference; the suite   |
+// |         |            |        | never compiled.                                                    |
 #endregion

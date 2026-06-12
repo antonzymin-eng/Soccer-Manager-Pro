@@ -7,7 +7,7 @@
 //           Pure calculations — no state management, no ownership of BallState.
 
 using UnityEngine;
-using UnityEngine.Profiling;
+using Unity.Profiling;
 
 namespace TacticalDirector.BallPhysics
 {
@@ -412,4 +412,9 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | literal → Magnus.MinForceDirectionSqMagnitude (FR-CS-016). L-3:    |
 // |         |            |        | HasInvalidValues takes `in BallState` (64-byte struct was copied   |
 // |         |            |        | by value twice per 60 Hz tick).                                    |
+// | 1.5     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling ->         |
+// |         |            |        | Unity.Profiling. ProfilerMarker's actual namespace is              |
+// |         |            |        | Unity.Profiling; the old using was CS0246 under Unity and the      |
+// |         |            |        | Linux compile gate alike, so this assembly could not have compiled |
+// |         |            |        | in-engine. No functional change.                                   |
 #endregion

@@ -357,6 +357,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/positioning-ai/Tests/PositioningAITests.cs` | T-U-001..021 (unit) + T-D-001..002 (determinism) + T-I-001..004 (integration) + T-P-001 (perf) + T-T-001 (tactical) |
 | `src/pressing-ai/pressing-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai, pass-mechanics) |
 | `src/pressing-ai/PressingAIConstants.cs` | Single constant catalogue: trigger distances/durations, cover-shadow geometry, stamina costs, pitch constants (GT/Fixed/Derived/Cross regions) |
+| `src/pressing-ai/AssemblyInfo.cs` | `[InternalsVisibleTo("TacticalDirector.PressingAI.Tests")]` — created June 12, 2026 (dotnet CI gate; test suite was uncompilable without it) |
 | `src/pressing-ai/TriggerFlags.cs` | [Flags] enum: None / BadTouch / BackwardPass / SidelineTrap / WeakReceiver (byte) |
 | `src/pressing-ai/PressRole.cs` | Enum: HoldShape / PrimaryPress / CoverShadow (byte) |
 | `src/pressing-ai/CoverShadow.cs` | Struct: DefenderId, ReceiverId, TargetPosition |
@@ -484,6 +485,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/event-system/EventLedger.cs` | Ring buffer + typed BFS dispatch; EventSlotMeta (FM-017-002 sort key); EventTypeDispatchBase / EventTypeDispatcher<T>; DrainTick; InsertionSort; SerializeLedger; Subscribe. v1.3: AR-4 H-1: EventTypeOrdinal removed from CompareKey (not in FM-017-002); AR-4 H-2: SerializeLedger now sorts by FM-017-002 key (was insertion order). |
 | `src/event-system/CosmeticChannel.cs` | Tier C immediate dispatch: per-ordinal pub-count table; ≥ maxPerTick drop predicate; stackalloc span dispatch (zero-alloc FR-EVT-048). v1.5: AR-3 fix — structSize <= 0 guard promoted from silent return to throw; added upper-bound guard structSize > MaxEventSlotBytes preventing ArgumentOutOfRangeException crash on oversized Tier C structs. |
 | `src/event-system/EventBus.cs` | Public static API: BeginTick / BeginPhase / DrainTick / SerializeLedger / OnTickBoundary; Publish / Subscribe overloads per tier. v1.3: AR-2 fix — unconditional if/throw guard in PublishAuthoritative; Subscribe<IEventA/B> guard. v1.4: AR-4 M-1: upper-bound structSize > MaxEventSlotBytes guard added to PublishAuthoritative Tier A/B path; AR-4 L-1: structSize<=0 fallback promoted to throw. |
+| `src/event-system/EventTierCache.cs` | internal static generic: cached tier-marker flags (IsTierA/B/C/IsValid) backing EventBus single-method dispatch (ERR-017-002); type-init reflection only |
 | `src/event-system/PossessionChangedEvent.cs` | Tier A 0x04: PreviousHolder / NewHolder / Reason |
 | `src/event-system/FoulCommittedEvent.cs` | Tier A 0x05: Offender / Victim / Location (Vector3) / FoulKind |
 | `src/event-system/CardIssuedEvent.cs` | Tier A 0x06: Recipient / CardKind / FoulOrdinal (byte; 0xFF = procedural) |
@@ -573,6 +575,25 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 ---
 
+### `tools/dotnet-ci/` — Non-certifying Linux compile/test gate (June 12, 2026)
+
+| File | Purpose |
+|---|---|
+| `tools/dotnet-ci/README.md` | Gate rationale, first-run findings (8 never-compiled surfaces), shim fidelity rules, NOT-a-certification caveat |
+| `tools/dotnet-ci/generate_projects.py` | asmdef → `*.gen.csproj` + `TacticalDirector.gen.sln` generator (generated files gitignored; asmdefs remain single source of truth; production netstandard2.1 / tests net8.0; LangVersion 9.0; AssemblyName = asmdef name; DEVELOPMENT_BUILD defined) |
+| `tools/dotnet-ci/run-gate.sh` | Gate runner: generate → restore → build (errors block) → `dotnet test` excluding quarantine (any failure blocks) → report-only quarantined run |
+| `tools/dotnet-ci/known-failures.txt` | Machine-readable quarantine ledger (30 entries from the first-ever suite execution; shrinking-only; mirrored in `docs/tracking/dotnet-ci-quarantine.md`) |
+| `tools/dotnet-ci/LogAssertVerifyAssemblyInfo.cs` | Linked into every generated test project; applies the assembly-level LogAssert reset/verify action |
+| `tools/dotnet-ci/UnityShim/UnityShim.csproj` | Shim assembly project (netstandard2.1) |
+| `tools/dotnet-ci/UnityShim/Vector2.cs` | UnityEngine.Vector2 shim — Unity-exact approximate `==`, exact `Equals`, 1e-5 Normalize threshold |
+| `tools/dotnet-ci/UnityShim/Vector3.cs` | UnityEngine.Vector3 shim — same semantics notes as Vector2 |
+| `tools/dotnet-ci/UnityShim/Mathf.cs` | UnityEngine.Mathf shim — Unity NaN-propagation semantics (NaN-gate pattern depends on them), round-half-to-even RoundToInt |
+| `tools/dotnet-ci/UnityShim/Debug.cs` | UnityEngine.Debug + LogType + ShimLog event spine (LogAssert observation seam) |
+| `tools/dotnet-ci/UnityShim/Profiling.cs` | No-op UnityEngine.Profiling.Profiler + Unity.Profiling.ProfilerMarker |
+| `tools/dotnet-ci/UnityShim.TestTools/UnityShim.TestTools.csproj` | TestTools shim project (separate so production assemblies gain no NUnit reference) |
+| `tools/dotnet-ci/UnityShim.TestTools/LogAssert.cs` | UnityEngine.TestTools.LogAssert with UTF parity (unmet expectation / unexpected failing log fails the test) |
+| `tools/dotnet-ci/UnityShim.TestTools/LogAssertVerifyAttribute.cs` | Assembly-level NUnit ITestAction applying the log contract per test |
+
 ## Tracking Documents
 
 | File | Purpose |
@@ -593,6 +614,9 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `tools/spec-stress/reports/a16-triage.json` | A-16 normative-constraint-audit triage state — 167 entries (all XC- confirmed), 0 open; COMPLETE |
 
 ---
+
+
+*(June 12, 2026: `docs/tracking/dotnet-ci-quarantine.md` added — human-readable quarantine ledger for the dotnet CI gate; machine mirror at `tools/dotnet-ci/known-failures.txt`.)*
 
 ## Planning Documents
 

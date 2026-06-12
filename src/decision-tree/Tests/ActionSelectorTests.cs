@@ -92,7 +92,7 @@ namespace TacticalDirector.DecisionTree.Tests
                 Buffer, 1, in ctx, out _, out _);
 
             // UtilityScore is the EffectiveUtility stored in the action.
-            Assert.AreNotEqual(baseU, action.UtilityScore, 0.0001f,
+            Assert.That(action.UtilityScore, Is.Not.EqualTo(baseU).Within(0.0001f),
                 "Selector must add composure noise; EffectiveUtility should differ from BaseUtility");
         }
 
@@ -174,4 +174,15 @@ namespace TacticalDirector.DecisionTree.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-12 | —      | Build fix (dotnet CI    |
+// |         |            |        | gate):                  |
+// |         |            |        | Assert.AreNotEqual has  |
+// |         |            |        | no tolerance overload   |
+// |         |            |        | in NUnit 3 (CS1503;     |
+// |         |            |        | UT-14 never compiled).  |
+// |         |            |        | Rewritten as            |
+// |         |            |        | Is.Not.EqualTo(baseU).Within(0.0001f)|
+// |         |            |        | - same                  |
+// |         |            |        | must-differ-beyond-tolerance|
+// |         |            |        | substance.              |
 #endregion

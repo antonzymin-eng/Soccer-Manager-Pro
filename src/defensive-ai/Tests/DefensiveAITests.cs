@@ -93,7 +93,7 @@ namespace TacticalDirector.DefensiveAI.Tests
     {
         /// <summary>T-DA-001 — GK excluded from pool unconditionally.</summary>
         [Test]
-        internal void T_DA_001_GkExcludedFromPool()
+        public void T_DA_001_GkExcludedFromPool()
         {
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[11];
             agents[0] = SnapshotBuilder.MakeAgent(entityId: 1, isGoalkeeper: true);
@@ -114,7 +114,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-002 — PRIMARY_PRESS excluded from pool.</summary>
         [Test]
-        internal void T_DA_002_PrimaryPressExcluded()
+        public void T_DA_002_PrimaryPressExcluded()
         {
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[11];
             agents[0] = SnapshotBuilder.MakeAgent(entityId: 1, isGoalkeeper: true);
@@ -135,7 +135,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-003 — COVER_SHADOW excluded from pool.</summary>
         [Test]
-        internal void T_DA_003_CoverShadowExcluded()
+        public void T_DA_003_CoverShadowExcluded()
         {
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[11];
             agents[0] = SnapshotBuilder.MakeAgent(entityId: 1, isGoalkeeper: true);
@@ -157,7 +157,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-004 — All-ZONAL team: all non-GK outfield agents in pool.</summary>
         [Test]
-        internal void T_DA_004_AllZonalTeamFullPool()
+        public void T_DA_004_AllZonalTeamFullPool()
         {
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[11];
             agents[0] = SnapshotBuilder.MakeAgent(entityId: 1, isGoalkeeper: true);
@@ -181,7 +181,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-005 — Empty pool handled gracefully when all outfield are PRIMARY_PRESS.</summary>
         [Test]
-        internal void T_DA_005_EmptyPoolNoAllocation()
+        public void T_DA_005_EmptyPoolNoAllocation()
         {
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[11];
             agents[0] = SnapshotBuilder.MakeAgent(entityId: 1, isGoalkeeper: true);
@@ -200,7 +200,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-006 — Pool iteration is EntityId-ascending.</summary>
         [Test]
-        internal void T_DA_006_PoolIterationEntityIdAscending()
+        public void T_DA_006_PoolIterationEntityIdAscending()
         {
             // Build agents with out-of-order EntityIds — orchestrator inserts in ascending order
             // per #16 §3.2.5 so we provide them ascending here.
@@ -234,7 +234,7 @@ namespace TacticalDirector.DefensiveAI.Tests
     {
         /// <summary>T-DA-013 — Threat score perceivedGoalProximity component computed correctly.</summary>
         [Test]
-        internal void T_DA_013_ThreatScoreWorkedExample()
+        public void T_DA_013_ThreatScoreWorkedExample()
         {
             // Team 0 defends x=0. Opponent at (22.0, 34.0), FirstTouch = 16.
             Vector2 oppPos = new Vector2(22.0f, 34.0f);
@@ -254,7 +254,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-014 — Threat score clamped to [0, 1] at goal-mouth opponent.</summary>
         [Test]
-        internal void T_DA_014_ThreatScoreClampedAtMaximum()
+        public void T_DA_014_ThreatScoreClampedAtMaximum()
         {
             Vector2 oppPos = new Vector2(0.0f, 34.0f);  // At own goal-line, defending x=0.
             float firstTouch = 20f;                       // Maximum attribute.
@@ -267,7 +267,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-015 — Attribute minimum (FirstTouch = 1) produces zero contribution.</summary>
         [Test]
-        internal void T_DA_015_ThreatScoreZeroAtMinAttribute()
+        public void T_DA_015_ThreatScoreZeroAtMinAttribute()
         {
             Vector2 oppPos = new Vector2(22.0f, 34.0f);
             float firstTouch = 1f;  // Minimum attribute.
@@ -288,7 +288,7 @@ namespace TacticalDirector.DefensiveAI.Tests
     {
         /// <summary>T-DA-011 — No candidates within radius → ZONAL fallback.</summary>
         [Test]
-        internal void T_DA_011_NoCandidatesProducesZonal()
+        public void T_DA_011_NoCandidatesProducesZonal()
         {
             // Agent at (30, 34). All opponents at distance > ManMarkCandidateRadiusM.
             Vector2 agentPos = new Vector2(30.0f, 34.0f);
@@ -324,7 +324,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-012 — Displacement cost tie-break uses EntityId ascending.</summary>
         [Test]
-        internal void T_DA_012_TieBreakEntityIdAscending()
+        public void T_DA_012_TieBreakEntityIdAscending()
         {
             // Agent at (30, 34). Two opponents with identical threat + distance.
             Vector2 agentPos = new Vector2(30.0f, 34.0f);
@@ -364,7 +364,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-016 — INTERCEPT_RUNNER: direction check toward own goal (positive) and away (negative).</summary>
         [Test]
-        internal void T_DA_016_InterceptRunnerDirectionCheck()
+        public void T_DA_016_InterceptRunnerDirectionCheck()
         {
             // Defending x=0. Opponent at (30, 34) running toward x=0 (velocity.x < 0).
             Vector2 agentPos = new Vector2(30.0f, 34.0f);
@@ -419,7 +419,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-017 — INTERCEPT_RUNNER: velocity below threshold → no qualification.</summary>
         [Test]
-        internal void T_DA_017_InterceptRunnerBelowThresholdNotQualified()
+        public void T_DA_017_InterceptRunnerBelowThresholdNotQualified()
         {
             Vector2 agentPos = new Vector2(30.0f, 34.0f);
             float speed = DefensiveAIConstants.RunnerVelocityThresholdMS - 0.1f;  // Below threshold.
@@ -450,7 +450,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-019 — Assignment skips overridden agents.</summary>
         [Test]
-        internal void T_DA_019_OverriddenAgentSkipped()
+        public void T_DA_019_OverriddenAgentSkipped()
         {
             Vector2 agentPos = new Vector2(30.0f, 34.0f);
             float speed = DefensiveAIConstants.RunnerVelocityThresholdMS + 1f;
@@ -496,7 +496,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-020 — Displacement cost formula numerically correct.</summary>
         [Test]
-        internal void T_DA_020_DisplacementCostFormula()
+        public void T_DA_020_DisplacementCostFormula()
         {
             Vector2 from = new Vector2(30.0f, 25.0f);
             Vector2 to   = new Vector2(40.0f, 30.0f);
@@ -537,7 +537,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-021 — COMMIT when coverageDepth >= floor.</summary>
         [Test]
-        internal void T_DA_021_CommitWithCoverage()
+        public void T_DA_021_CommitWithCoverage()
         {
             // Agent at (18, 34); opponent at (20.5, 34) — dist=2.5 < 3.0 (eligible).
             // Teammate T1 at (12, 32): |32-34|=2 < 5 (corridor), distToGoal=12 < 18 → counted.
@@ -578,7 +578,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-022 — JOCKEY when coverageDepth < floor but approach angle below threshold.</summary>
         [Test]
-        internal void T_DA_022_JockeyLowCoverageGoodAngle()
+        public void T_DA_022_JockeyLowCoverageGoodAngle()
         {
             // No teammates in corridor → coverageDepth = 0. Agent moves directly toward opponent.
             Vector2 agentPos = new Vector2(18.0f, 34.0f);
@@ -612,7 +612,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-023 — HOLD when coverageDepth < floor AND approach angle >= threshold.</summary>
         [Test]
-        internal void T_DA_023_HoldLowCoverageBadAngle()
+        public void T_DA_023_HoldLowCoverageBadAngle()
         {
             // Stationary agent → approach angle defaults to PI/2 which exceeds TackleJockeyAngleRad (0.35).
             Vector2 agentPos = new Vector2(18.0f, 34.0f);
@@ -646,7 +646,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-024 — Agent beyond TACKLE_ELIGIBLE_RADIUS_M: no request emitted.</summary>
         [Test]
-        internal void T_DA_024_BeyondRadiusNoRequest()
+        public void T_DA_024_BeyondRadiusNoRequest()
         {
             // Opponent at distance 4.0 > TackleEligibleRadiusM (3.0).
             Vector2 agentPos = new Vector2(18.0f, 34.0f);
@@ -679,7 +679,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-025 — ZONAL agents produce no tackle request.</summary>
         [Test]
-        internal void T_DA_025_ZonalAgentNoTackleRequest()
+        public void T_DA_025_ZonalAgentNoTackleRequest()
         {
             Vector2 agentPos = new Vector2(18.0f, 34.0f);
             Vector2 oppPos   = new Vector2(19.0f, 34.0f);  // Within radius.
@@ -714,7 +714,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-026 — Coverage depth counts only y-corridor teammates closer to own goal.</summary>
         [Test]
-        internal void T_DA_026_CoverageDepthCorridor()
+        public void T_DA_026_CoverageDepthCorridor()
         {
             // Agent A at (18, 34). Defending x=0.
             // T1 at (12, 32): |32-34|=2 < 5 (in corridor), distToGoal=12 < 18 → counted.
@@ -826,7 +826,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-027 — Trap fires after OFFSIDE_TRAP_DWELL_TICKS consecutive qualifying ticks.</summary>
         [Test]
-        internal void T_DA_027_TrapFiresAfterDwellTicks()
+        public void T_DA_027_TrapFiresAfterDwellTicks()
         {
             OffsideLineState state     = OffsideLineState.Default();
             MarkDirective    directive = MarkDirective.Inactive(0);
@@ -855,7 +855,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-028 — Trap blocked during cooldown.</summary>
         [Test]
-        internal void T_DA_028_TrapBlockedDuringCooldown()
+        public void T_DA_028_TrapBlockedDuringCooldown()
         {
             OffsideLineState state     = OffsideLineState.Default();
             MarkDirective    directive = MarkDirective.Inactive(0);
@@ -893,7 +893,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-029 — Ball too fast: dwell counter resets.</summary>
         [Test]
-        internal void T_DA_029_BallTooFastResetsDwellCounter()
+        public void T_DA_029_BallTooFastResetsDwellCounter()
         {
             OffsideLineState state     = OffsideLineState.Default();
             MarkDirective    directive = MarkDirective.Inactive(0);
@@ -923,7 +923,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-030 — Line not coherent: trap blocked.</summary>
         [Test]
-        internal void T_DA_030_IncoherentLineBlocksTrap()
+        public void T_DA_030_IncoherentLineBlocksTrap()
         {
             // Spread = 11.0 m > LineCoherenceThresholdM (8.0 m).
             OffsideLineState state     = OffsideLineState.Default();
@@ -941,7 +941,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-031 — Active PRIMARY_PRESS blocks trap.</summary>
         [Test]
-        internal void T_DA_031_PrimaryPressBlocksTrap()
+        public void T_DA_031_PrimaryPressBlocksTrap()
         {
             OffsideLineState state     = OffsideLineState.Default();
             MarkDirective    directive = MarkDirective.Inactive(0);
@@ -958,7 +958,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-033 — OFFSIDE_MAX_DEPTH_M safety ceiling enforced.</summary>
         [Test]
-        internal void T_DA_033_MaxDepthCeilingEnforced()
+        public void T_DA_033_MaxDepthCeilingEnforced()
         {
             // currentLineDepth = 44.0; step = 3.0 → raw = 47.0 > 45.0 (max).
             float deepLineDepth = 44.0f;
@@ -982,7 +982,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-034 — Step depth is max of (currentLineDepth+step, shape.DefensiveLineDepth).</summary>
         [Test]
-        internal void T_DA_034_StepDepthMaxWithShapeLineDepth()
+        public void T_DA_034_StepDepthMaxWithShapeLineDepth()
         {
             // currentLineDepth = 35.0; step = 3.0 → raw = 38.0.
             // DefensiveLineDepth (#12 target) = 40.0 → max(38.0, 40.0) = 40.0.
@@ -1020,7 +1020,7 @@ namespace TacticalDirector.DefensiveAI.Tests
     {
         /// <summary>T-DA-035 — Correct last-man agent identified (minimum distToOwnGoal).</summary>
         [Test]
-        internal void T_DA_035_LastManMinDistToOwnGoal()
+        public void T_DA_035_LastManMinDistToOwnGoal()
         {
             // Pool distToOwnGoal: 102→18.0, 105→22.0, 107→25.0. Team defends x=0.
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
@@ -1047,7 +1047,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-036 — EntityId tie-break for equal distToOwnGoal.</summary>
         [Test]
-        internal void T_DA_036_LastManEntityIdTieBreak()
+        public void T_DA_036_LastManEntityIdTieBreak()
         {
             // Two agents at same distToOwnGoal=18.0. EntityId 5 < 12 → EntityId 5 wins.
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
@@ -1071,7 +1071,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-037 — GK not selected as last-man even if forward of outfield defenders.</summary>
         [Test]
-        internal void T_DA_037_GkNotSelectedAsLastMan()
+        public void T_DA_037_GkNotSelectedAsLastMan()
         {
             // GK would have distToOwnGoal=5.0 (smallest), but GK is excluded from pool.
             // Only outfield agent with distToOwnGoal=20.0 appears in pool.
@@ -1099,7 +1099,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-038 — Emergency flag set and INTERCEPT_RUNNER issued when predicate fires.</summary>
         [Test]
-        internal void T_DA_038_EmergencyFlagAndInterceptRunner()
+        public void T_DA_038_EmergencyFlagAndInterceptRunner()
         {
             // lastMan at distToOwnGoal=18; ball at distToOwnGoal=12 → 12 < 18+5=23 → threat.
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
@@ -1120,7 +1120,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-039 — Predicate does NOT fire when ball is not ahead of last man.</summary>
         [Test]
-        internal void T_DA_039_PredicateNoFireBallNotAhead()
+        public void T_DA_039_PredicateNoFireBallNotAhead()
         {
             // lastMan at distToOwnGoal=18; ball at distToOwnGoal=30 → 30 > 18+5=23 → no threat.
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
@@ -1149,7 +1149,7 @@ namespace TacticalDirector.DefensiveAI.Tests
     {
         /// <summary>T-DA-041 — COVER_GK_ZONE triggered when GK out-of-zone AND emergency active.</summary>
         [Test]
-        internal void T_DA_041_CoverGkZoneIssuedWhenGkOutOfZone()
+        public void T_DA_041_CoverGkZoneIssuedWhenGkOutOfZone()
         {
             // GK at distToOwnGoal=40 > GkExpectedZoneMaxX (15). Emergency is active (ball at 5, lastMan at 8).
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
@@ -1180,7 +1180,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-042 — COVER_GK_ZONE NOT issued when GK is in zone.</summary>
         [Test]
-        internal void T_DA_042_CoverGkZoneNotIssuedWhenGkInZone()
+        public void T_DA_042_CoverGkZoneNotIssuedWhenGkInZone()
         {
             // GK at distToOwnGoal=8 <= GkExpectedZoneMaxX (15) → in zone.
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
@@ -1205,7 +1205,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-044 — Minimum-displacement-cost cover agent selected.</summary>
         [Test]
-        internal void T_DA_044_MinCostCoverAgentSelected()
+        public void T_DA_044_MinCostCoverAgentSelected()
         {
             // Emergency active. GK at 20.0 distToOwnGoal (out of zone).
             // abandonedZoneCenter = (7.5, 34.0) for defending x=0.
@@ -1269,7 +1269,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-045 — Invariant 2 violation: lowest-threat MAN_MARK demoted.</summary>
         [Test]
-        internal void T_DA_045_MaxManMarkDemotesLowestThreat()
+        public void T_DA_045_MaxManMarkDemotesLowestThreat()
         {
             int poolCount = 5;
             DefensiveSnapshot snapshot = BuildInvariantSnapshot(poolCount);
@@ -1305,7 +1305,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-047 — Invariant 3 violation: over-displaced assignment demoted.</summary>
         [Test]
-        internal void T_DA_047_OverDisplacedAssignmentDemoted()
+        public void T_DA_047_OverDisplacedAssignmentDemoted()
         {
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
             {
@@ -1341,7 +1341,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-048 — All invariants satisfied: no demotions applied.</summary>
         [Test]
-        internal void T_DA_048_NoViolationNoDemotion()
+        public void T_DA_048_NoViolationNoDemotion()
         {
             // 4 MAN_MARK (= max), 3 DEFENSE-line in ZONAL (= min backline), all displacements <= 20 m.
             int poolCount = 7;  // 4 non-backline MAN_MARK + 3 backline ZONAL.
@@ -1430,7 +1430,7 @@ namespace TacticalDirector.DefensiveAI.Tests
     {
         /// <summary>T-DA-051 — Assignment held for MARK_DWELL_TICKS before transition commits.</summary>
         [Test]
-        internal void T_DA_051_DwellLockHoldsAssignment()
+        public void T_DA_051_DwellLockHoldsAssignment()
         {
             MarkHysteresisState hysteresis = MarkHysteresisState.Default();
 
@@ -1470,7 +1470,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-052 — Oscillating candidate does not trigger transition.</summary>
         [Test]
-        internal void T_DA_052_OscillatingCandidateNoTransition()
+        public void T_DA_052_OscillatingCandidateNoTransition()
         {
             MarkHysteresisState hysteresis = MarkHysteresisState.Default();
 
@@ -1504,7 +1504,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-053 — New candidate resets holdTicks accumulator.</summary>
         [Test]
-        internal void T_DA_053_NewCandidateResetsAccumulator()
+        public void T_DA_053_NewCandidateResetsAccumulator()
         {
             MarkHysteresisState hysteresis = MarkHysteresisState.Default();
 
@@ -1543,7 +1543,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>T-DA-054 — ZONAL agents not subject to dwellCounter pre-check.</summary>
         [Test]
-        internal void T_DA_054_ZonalNotSubjectToPreCheck()
+        public void T_DA_054_ZonalNotSubjectToPreCheck()
         {
             // Agent in ZONAL mode with DwellCounter > 0. PreCheck must return false.
             MarkAssignment currentZonal = new MarkAssignment
@@ -1572,7 +1572,7 @@ namespace TacticalDirector.DefensiveAI.Tests
     {
         /// <summary>DistToOwnGoal is correct for defending-x0 and defending-x105 teams.</summary>
         [Test]
-        internal void DistToOwnGoal_BothTeamConventions()
+        public void DistToOwnGoal_BothTeamConventions()
         {
             float x = 30.0f;
             Assert.AreEqual(30.0f, LastManDetector.DistToOwnGoal(x, defendsX0: true), 0.001f);
@@ -1582,7 +1582,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>AbandonedZoneCenter for defending-x0 team is (7.5, 34.0).</summary>
         [Test]
-        internal void AbandonedZoneCenter_DefendingX0()
+        public void AbandonedZoneCenter_DefendingX0()
         {
             Vector2 center = LastManDetector.ComputeAbandonedZoneCenter(defendsX0: true);
 
@@ -1597,7 +1597,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>MarkAssignment.MakeZonal factory sets all fields correctly.</summary>
         [Test]
-        internal void MakeZonal_SetsFieldsCorrectly()
+        public void MakeZonal_SetsFieldsCorrectly()
         {
             Vector2 slot = new Vector2(30.0f, 34.0f);
             MarkAssignment zonal = MarkAssignment.MakeZonal(agentEntityId: 42, formationSlot: slot, tick: 5);
@@ -1613,7 +1613,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>MarkHysteresisState.Default initialises with expected zero values.</summary>
         [Test]
-        internal void MarkHysteresisStateDefault_ZeroValues()
+        public void MarkHysteresisStateDefault_ZeroValues()
         {
             MarkHysteresisState s = MarkHysteresisState.Default();
 
@@ -1625,7 +1625,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>MarkHysteresis.Reset zeroes all fields (emergency bypass).</summary>
         [Test]
-        internal void MarkHysteresisReset_ZeroesAllFields()
+        public void MarkHysteresisReset_ZeroesAllFields()
         {
             MarkHysteresisState s = new MarkHysteresisState
             {
@@ -1645,7 +1645,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>OffsideLineState.Default initialises with zeroed state.</summary>
         [Test]
-        internal void OffsideLineStateDefault_ZeroValues()
+        public void OffsideLineStateDefault_ZeroValues()
         {
             OffsideLineState s = OffsideLineState.Default();
 
@@ -1657,7 +1657,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>MarkDirective.Inactive factory produces all-false, all-zero values.</summary>
         [Test]
-        internal void MarkDirectiveInactive_AllFalseZero()
+        public void MarkDirectiveInactive_AllFalseZero()
         {
             MarkDirective d = MarkDirective.Inactive(teamId: 1);
 
@@ -1669,7 +1669,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 
         /// <summary>HoldShapePoolFilter.IndexOf returns -1 for absent EntityId.</summary>
         [Test]
-        internal void IndexOf_ReturnsMinusOneWhenAbsent()
+        public void IndexOf_ReturnsMinusOneWhenAbsent()
         {
             int[] pool = new int[] { 10, 20, 30 };
             int result = HoldShapePoolFilter.IndexOf(pool, 3, 99);
@@ -1901,4 +1901,8 @@ namespace TacticalDirector.DefensiveAI.Tests
 // |         |            |        |   T-DA-DET-001..006 (§5.4 determinism), T-DA-PERF-001..003 (§5.5 performance),          |
 // |         |            |        |   T-DA-INV-001..003 + T-DA-EXP-001..004 (§5.6 anti-chaos/exploit-resistance).          |
 // |         |            |        |   All stubs use Assert.Ignore with Stage 0+1 activation conditions.                     |
+// | 1.2     | 2026-06-12 | —      | Build fix (dotnet CI gate): every [Test] method was declared internal - NUnit rejects    |
+// |         |            |        | non-public test methods at runtime ('Method is not public'), so all 51 non-skipped tests |
+// |         |            |        | in this suite FAILED on their first-ever execution; under Unity's NUnit runner the suite |
+// |         |            |        | would fail identically. All [Test] methods promoted to public; bodies unchanged.         |
 #endregion
