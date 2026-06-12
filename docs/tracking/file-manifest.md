@@ -430,10 +430,11 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/attacking-ai/InvariantEnforcer.cs` | Pure static: Apply() 3 anti-chaos invariants (max runners, min support, no own-half runs); ApplyFallback() all-HoldWidth |
 | `src/attacking-ai/AttackingAITick.cs` | Sealed class: 10 Hz orchestrator; §3.13 pipeline; pre-allocated zero-alloc buffers; LastDirective/GetIntent/GetSnapshot public API |
 
-### `src/deterministic-sim/` — Spec #16 (23 files: 21 .cs + 2 asmdef)
+### `src/deterministic-sim/` — Spec #16 (27 files: 25 .cs + 2 asmdef)
 
 > Cross-cutting foundation assembly; all gameplay layers reference it; it references no other gameplay assembly.
 > AR-1 (4H+4M) + AR-2 (1L) + AR-3 (1L) adversarial review cycles complete (AR-3 clean). Implementation date: May 29, 2026.
+> Golden-vector pass June 12, 2026: full §9.5 #4(a)/(b)/(c) KAT suites landed (3 new test fixtures); HKDF upgraded to full RFC 5869 multi-block Expand; WriteF64TierB added; AssemblyInfo.cs InternalsVisibleTo added (the test assembly's internal HkdfSha256/SipHash24_64 calls had never been compilable without it); DeterministicSimTests.cs stray namespace closure fixed (save/load fixture was stranded in the global namespace).
 
 | File | Purpose |
 |------|---------|
@@ -450,7 +451,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/deterministic-sim/RngStreamState.cs` | Mutable struct: StreamKey/RngCursor/ActionOrdinal (ulong), BudgetRemaining/DeclaredBudget/DrawIndex (int), SiteId (string), StreamVersion (ushort), SubsystemOrdinal (int), EntityId (int); ClearReservation() |
 | `src/deterministic-sim/MatchClock.cs` | Sealed class: CurrentTick / CurrentTacticalTick (÷AI_PHASE_STRIDE) / CurrentMatchTimeMs (×FrameMs) / IsAiStrideTick; Advance(); RestoreFromSnapshot(tick) for replay step 5 — no System.DateTime (FR-CS-042) |
 | `src/deterministic-sim/DeterministicRngService.cs` | Sealed class: HKDF-SHA256 key derivation at construction; SipHash-2-4-64 per-draw hash; RegisterStream / Reserve / DrawReserved / CloseReservation / Skip / RestoreStream; zero-alloc hot path (stackalloc Span<byte>[21]; AR-1 H-3) |
-| `src/deterministic-sim/CanonicalSerializer.cs` | Static class: §3.2.4.1 Write/Read for bool, u8/i8, u16/i16, u32/i32, u64/i64, f32 (−0.0→+0.0), f32TierB (NaN→0x7FC00000), f64, strings, bytes, optional tags; FloatUintUnion explicit-layout struct (AR-1 H-1/H-2: eliminates BitConverter.GetBytes heap alloc) |
+| `src/deterministic-sim/CanonicalSerializer.cs` | Static class: §3.2.4.1 Write/Read for bool, u8/i8, u16/i16, u32/i32, u64/i64, f32 (−0.0→+0.0), f32TierB (NaN→0x7FC00000), f64, f64TierB (NaN→0x7FF8000000000000; corpus F-09), strings, bytes, optional tags; FloatUintUnion explicit-layout struct (AR-1 H-1/H-2: eliminates BitConverter.GetBytes heap alloc) |
 | `src/deterministic-sim/SnapshotHeader.cs` | Sealed class: SchemaVersion (u32) / DigestVersion (u16) / Tick (u64) / PrevSnapshotDigest[32] / CurrentSnapshotDigest[32] / Fingerprint / Cursor; Initialize(tick, prevDigest, fingerprint) |
 | `src/deterministic-sim/SnapshotPayload.cs` | Sealed class: pre-allocated PayloadBytes[MaxSnapshotBytes] / BytesWritten; Reset() |
 | `src/deterministic-sim/SnapshotCodec.cs` | Sealed class: Encode() — SHA-256 over payload bytes, digest chain advance; ValidateHeader() → ERR_DS_SCHEMA_INCOMPATIBLE; ValidatePrevDigest() → ERR_DS_DIGEST_CHAIN_BREAK; CommitLoadedDigest() for replay load |
@@ -458,8 +459,12 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/deterministic-sim/SaveManager.cs` | Sealed class: CommitAtomic() implements §4.6.1.1 five-step atomic save (temp write → fsync → rename-with-overwrite → dir fsync); File.Move(overwrite:true) (AR-1 M-2: IOException fix) |
 | `src/deterministic-sim/TickOrchestrator.cs` | Sealed class: RunTick() 7-phase 60 Hz pipeline (Input→Intent→AI/AI_NoOp→Physics→Resolve→Events→Snapshot); AI stride-gated on IsAiStrideTick; System.Action phase callbacks; 9 ProfilerMarkers; zero-alloc hot path |
 | `src/deterministic-sim/DivergenceDetector.cs` | Static class: CompareDigests / CompareTierAFloat / CompareTierBFloat (AR-1 M-3: one-canonical-NaN case returns SoftDrift) / CompareTierAInt / CompareTierAUlong / Worst(DivergenceClass, DivergenceClass) |
+| `src/deterministic-sim/AssemblyInfo.cs` | Assembly-level attributes: InternalsVisibleTo("TacticalDirector.DeterministicSim.Tests") so the KAT suites can drive internal HkdfSha256/HkdfExtract/HkdfExpand/SipHash24_64 (first-touch/pass-mechanics precedent) |
 | `src/deterministic-sim/tests/deterministic-sim-tests.asmdef` | Test assembly definition (EditMode; references deterministic-sim.asmdef) |
-| `src/deterministic-sim/tests/DeterministicSimTests.cs` | HKDF RFC 5869 Appendix A.1 KAT; SipHash-2-4-64 ref vectors 0–7; canonical serialization (bool, u32/u64 LE, −0.0, PHYSICS_DT bits); T-DS-ORDER-001 clock sequence; T-DS-RNG-002 branch cursor parity; T-DS-SNAP-003 u64 round-trip; T-DS-FAULT-009..014 (budget mismatch, Tier A NaN, Tier B non-canonical NaN, digest chain break, env mismatch, replay boundary); AI stride; DespawnLog |
+| `src/deterministic-sim/tests/DeterministicSimTests.cs` | HKDF RFC 5869 Appendix A.1 KAT; SipHash-2-4-64 ref vectors 0–7; canonical serialization (bool, u32/u64 LE, −0.0, PHYSICS_DT bits); T-DS-ORDER-001 clock sequence; T-DS-RNG-002 branch cursor parity; T-DS-SNAP-003 u64 round-trip; T-DS-FAULT-009..014 (budget mismatch, Tier A NaN, Tier B non-canonical NaN, digest chain break, env mismatch, replay boundary); AI stride; DespawnLog; v1.2 fixed the v1.1 stray namespace closure that stranded the save/load fixture in the global namespace |
+| `src/deterministic-sim/tests/HkdfSha256KatTests.cs` | Full HKDF-SHA256 KAT suite (§9.5 #4(a)): RFC 5869 A.1–A.3 PRK + full OKM byte-exact (L=42/82 locks multi-block Expand) + pinned project Test Case 4 (RNG_KDF invocation pattern → (k0,k1)) per hkdf-sha256-kat.md v1.2 |
+| `src/deterministic-sim/tests/SipHash24KatTests.cs` | Full SipHash-2-4-64 KAT suite (§9.5 #4(b)): all 64 Aumasson & Bernstein 2012 Appendix A vectors + pinned project RNG_STREAM_HASH 21-byte draw-preimage case per siphash-2-4-kat.md v1.2 |
+| `src/deterministic-sim/tests/SerializeCanonicalCorpusTests.cs` | Full canonical-serialization corpus suite (§9.5 #4(c)): all 41 serialize-canonical-corpus.md entries (P/F/S/B/O/E/A/ST/D incl. chained SnapshotDigest D-07), encoded bytes + SHA-256 asserted per entry |
 
 ### `src/event-system/` — Spec #17 (21 files: 19 .cs + 2 asmdef)
 

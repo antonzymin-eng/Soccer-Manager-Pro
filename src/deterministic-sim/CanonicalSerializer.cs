@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/CanonicalSerializer.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29 (AR-1 H-1/H-2: FloatUintUnion replaces BitConverter heap pattern)
+// Modified: 2026-06-12 (golden-vector pass: WriteF64TierB added — corpus F-09 f64 NaN normalization)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.2.4.1, §3.4, Code Standards #20
 // Purpose:  Static helper for canonical binary serialization of all primitive types per §3.2.4.1.
@@ -132,6 +132,27 @@ namespace TacticalDirector.DeterministicSim
             if (bits == 0x8000000000000000UL)
             {
                 bits = 0UL; // -0.0 → +0.0
+            }
+            WriteU64(buf, ref offset, bits);
+        }
+
+        /// <summary>
+        /// Writes f64 Tier B canonical encoding (NaN normalized to 0x7FF8000000000000; -0.0 → +0.0).
+        /// Parallel to WriteF32TierB — corpus entry F-09 was previously unencodable. §3.2.4.1.
+        /// </summary>
+        public static void WriteF64TierB(byte[] buf, ref int offset, double value)
+        {
+            ulong bits = DoubleToUInt64Bits(value);
+            if (bits == 0x8000000000000000UL)
+            {
+                bits = 0UL; // -0.0 → +0.0
+            }
+            // Normalize any NaN to canonical quiet NaN (exponent all-ones + non-zero mantissa)
+            bool isNaN = (bits & 0x7FF0000000000000UL) == 0x7FF0000000000000UL
+                      && (bits & 0x000FFFFFFFFFFFFFUL) != 0UL;
+            if (isNaN)
+            {
+                bits = DeterministicSimConstants.F64_CANONICAL_NAN_BITS;
             }
             WriteU64(buf, ref offset, bits);
         }
@@ -289,4 +310,7 @@ namespace TacticalDirector.DeterministicSim
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                              |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-1/H-2: FloatUintUnion replaces BitConverter.GetBytes alloc.  |
+// | 1.2     | 2026-06-12 | —      | Golden-vector pass: WriteF64TierB added (f64 NaN → F64_CANONICAL_   |
+// |         |            |        | NAN_BITS) — corpus entry F-09 had no encodable surface; parallel to |
+// |         |            |        | WriteF32TierB.                                                      |
 #endregion

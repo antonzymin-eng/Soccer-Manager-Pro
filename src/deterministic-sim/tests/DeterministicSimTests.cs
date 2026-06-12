@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/tests/DeterministicSimTests.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-12 (golden-vector pass: stray namespace closure fixed — save/load fixture was stranded in the global namespace)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §5 (T-DS-ORDER-001..T-DS-FAULT-014), §9.5 (golden vectors),
 //           Code Standards #20
@@ -437,7 +437,6 @@ namespace TacticalDirector.DeterministicSim
             Assert.AreEqual(1, log.Count);
         }
     }
-}
 
     /// <summary>
     /// Save/load equivalence tests for the §4.6.1.1 atomic save contract.
@@ -561,6 +560,7 @@ namespace TacticalDirector.DeterministicSim
                 "T-DS-008: PrepareReplay must return 0 on a well-formed snapshot (§4.2.2 steps 1–7).");
         }
     }
+}
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                              |
@@ -568,4 +568,11 @@ namespace TacticalDirector.DeterministicSim
 // | 1.1     | 2026-06-01 | —      | Add DeterministicSimSaveLoadTests: T-DS-004..007 stubs with       |
 //           |            |        | Assert.Ignore (file I/O requires Stage 1 CI), T-DS-008 concrete   |
 //           |            |        | ReplayEngine.PrepareReplay happy-path test (no file I/O needed).   |
+// | 1.2     | 2026-06-12 | —      | Golden-vector pass compile fixes: v1.1 closed the namespace BEFORE |
+//           |            |        | the appended save/load fixture, stranding it in the global         |
+//           |            |        | namespace with unresolvable type refs (CS0246) — identical defect  |
+//           |            |        | class to First Touch ERR-004 / Pass Mechanics AR-9 H-1; namespace  |
+//           |            |        | now closes at EOF. Full KAT coverage moved to dedicated fixtures   |
+//           |            |        | (HkdfSha256KatTests / SipHash24KatTests /                          |
+//           |            |        | SerializeCanonicalCorpusTests).                                    |
 #endregion
