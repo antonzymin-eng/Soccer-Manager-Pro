@@ -70,13 +70,6 @@ applicable, and **remove the quarantine line in the same commit**.
 |---|---|---|
 | `CoverShadow_AssignsHigherThreatReceiverFirst` | First shadow must cover the higher-threat receiver | Threat-ranking order vs greedy assignment in CoverShadowSelector §3.x. |
 
-### Heading Mechanics #10 (2)
-
-| Test | First-run failure | Hypothesis |
-|---|---|---|
-| `ComputeHeadZ_AtApex_EqualsJumpReach` | Head Z at apex frame must equal jumpReach | KD-18 synthetic parabola apex sampling (frame quantisation vs exact apex) — implementation may never sample the exact apex frame. |
-| `OwnGoalFlag_TrajectoryTowardOwnGoal_ReturnsTrue` | Trajectory at own goal must set own-goal flag | §3.8 HeadingPowerAngle own-goal bounding-box predicate; possible home/away or axis-sign defect (Decision Tree AR-2 asymmetry family). |
-
 ### Deterministic Sim #16 (1)
 
 | Test | First-run failure | Hypothesis |
@@ -84,6 +77,15 @@ applicable, and **remove the quarantine line in the same commit**.
 | `ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero` | T-DS-008: PrepareReplay must return 0; returned 5640 (0x1608) | PrepareReplay step validation rejects the fixture's "well-formed" snapshot — either a validation step the fixture doesn't satisfy (fixture defect) or a step mis-ordered in ReplayEngine. Error code 0x1608 names the step; adjudicate against §4.2.2. |
 
 ## Resolved
+
+### Heading Mechanics #10 (2/2) — resolved June 12, 2026 (1 PRODUCTION-DEFECT + 1 TEST-DEFECT)
+
+| Test | Verdict | Adjudication |
+|---|---|---|
+| `ComputeHeadZ_AtApex_EqualsJumpReach` | PRODUCTION-DEFECT | §3.3 (outline-detailed) specifies the synthetic trajectory "parabolic interpolation peaking at apexFrame with peak value JumpReach_m". `ComputeHeadZ` parameterised u = offset/totalPhaseFrames, peaking at the continuous midpoint: totalPhaseFrames = round(650/16.667) = 39, peak at offset 19.5. But `ComputeApexFrame` rounds the apex to offset 20 (banker's rounding of 19.5), so u(apex) = 20/39 = 0.5128 → headZ = 2.65·4·0.5128·0.4872 = 2.6483 m, not 2.65. Fixed by time-warping u (rising span [0, apexOffset], falling span [apexOffset, total]) so u = 0.5 lands exactly on the rounded apexFrame; endpoints (0 at start/landing) and monotonicity preserved. `HeadingJumpKinematics.cs` v1.2. |
+| `OwnGoalFlag_TrajectoryTowardOwnGoal_ReturnsTrue` | TEST-DEFECT | `ComputeOwnGoalFlag`'s ballistic projection (with gravity, §3.8) is correct: the test's outgoing velocity (−14, 0, 1) from (15, 34, 1.5) grounds out — z(t) = 1.5 + t − 4.905t² = 0 at t ≈ 0.66 s / x ≈ 5.7 m — and reaches the goal line x = 0 only at t ≈ 1.07 s / z ≈ −3.05 m, so the ball never enters the goal box and the predicate correctly returned false. The test's "moderate Z keeps it in goal height range" premise is unphysical. vz raised 1.0 → 5.0: z(1.07 s) ≈ 1.23 m ∈ [0, 2.44] at x = 0, y = 34 — a valid own-goal trajectory. `Tests/HeadingMechanicsTests.cs` v1.2. |
+
+Files: `HeadingJumpKinematics.cs` v1.2, `Tests/HeadingMechanicsTests.cs` v1.2. Suite: 45 passed / 0 failed / 15 skipped.
 
 ### Shot Mechanics #6 (3/3) — resolved June 12, 2026 (2 PRODUCTION-DEFECT root causes)
 

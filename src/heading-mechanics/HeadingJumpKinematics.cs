@@ -1,6 +1,6 @@
 // File:     src/heading-mechanics/HeadingJumpKinematics.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.3, KD-4, KD-18, FR-HE-004, FR-HE-019, FR-HE-021, FR-HE-031, Code Standards #20
 // Purpose:  JumpReach formula (FM-010-001) and Stage 0 synthetic parabolic Z trajectory.
@@ -66,8 +66,13 @@ namespace TacticalDirector.HeadingMechanics
 
         /// <summary>
         /// Returns the agent head Z coordinate (m) at the given physics frame during the aerial phase.
-        /// Parabolic interpolation: agentHeadZ = jumpReachM × 4u(1−u), where u = frameOffset / totalPhaseFrames.
-        /// Standing height baseline absorbed into jumpReachM (§3.3).
+        /// Parabola peaking at the integer apexFrame with peak value jumpReachM (§3.3 outline:
+        /// "parabolic interpolation peaking at apexFrame with peak value JumpReach_m").
+        /// The normalised time u is time-warped so u = 0.5 lands exactly on the rounded apexFrame:
+        /// rising half spans [0, apexOffset], falling half spans [apexOffset, totalPhaseFrames].
+        /// (A single u = offset / totalPhaseFrames peaks at the continuous midpoint 19.5, NOT the
+        ///  rounded apexFrame 20, so the apex sample fell ~1.7 mm short of jumpReach — dotnet-CI
+        ///  quarantine PRODUCTION-DEFECT.) Standing height baseline absorbed into jumpReachM.
         /// Returns 0 when currentFrame is outside the aerial window.
         /// Heading Mechanics #10 §3.3 / KD-18 / FR-HE-019.
         /// </summary>
@@ -78,6 +83,9 @@ namespace TacticalDirector.HeadingMechanics
         {
             int totalPhaseFrames = Mathf.RoundToInt(
                 HeadingMechanicsConstants.JumpPhaseDurationMs / HeadingMechanicsConstants.FrameMs);
+            int apexOffset = Mathf.RoundToInt(
+                HeadingMechanicsConstants.JumpPhaseDurationMs * HeadingMechanicsConstants.JumpApexFraction
+                / HeadingMechanicsConstants.FrameMs);
 
             int offset = currentFrame - jumpStartFrame;
             if (offset < 0 || offset > totalPhaseFrames)
@@ -85,7 +93,21 @@ namespace TacticalDirector.HeadingMechanics
                 return 0.0f;
             }
 
-            float u = (float)offset / totalPhaseFrames;
+            // Time-warp so the parabola peak (u = 0.5) coincides with the rounded apexFrame.
+            float u;
+            if (apexOffset <= 0 || apexOffset >= totalPhaseFrames)
+            {
+                u = (float)offset / totalPhaseFrames; // degenerate guard: fall back to symmetric span
+            }
+            else if (offset <= apexOffset)
+            {
+                u = 0.5f * offset / apexOffset;
+            }
+            else
+            {
+                u = 0.5f + 0.5f * (offset - apexOffset) / (totalPhaseFrames - apexOffset);
+            }
+
             return jumpReachM * HeadingMechanicsConstants.PARABOLA_AMPLITUDE * u * (1.0f - u);
         }
 
@@ -105,4 +127,11 @@ namespace TacticalDirector.HeadingMechanics
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                          |
 // | 1.1     | 2026-05-28 | —      | AR-1 M-2: 4.0f literal → PARABOLA_AMPLITUDE constant.             |
+// | 1.2     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication (PRODUCTION-DEFECT, ComputeHeadZ_AtApex):   |
+// |         |            |        | ComputeHeadZ used u = offset/totalPhaseFrames, peaking at the CONTINUOUS      |
+// |         |            |        | midpoint (offset 19.5), but ComputeApexFrame rounds the apex to offset 20, so |
+// |         |            |        | the apex sample read 2.6483 m, not jumpReach 2.65. §3.3 (outline) requires the |
+// |         |            |        | parabola to peak AT apexFrame with peak value JumpReach. u is now time-warped |
+// |         |            |        | (rising [0,apexOffset], falling [apexOffset,total]) so u=0.5 lands exactly on  |
+// |         |            |        | the rounded apexFrame; endpoints and monotonicity unchanged. No constants.    |
 #endregion
