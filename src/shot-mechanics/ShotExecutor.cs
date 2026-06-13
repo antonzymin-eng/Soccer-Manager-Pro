@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotExecutor.cs
 // Created:  2026-05-27
-// Modified: 2026-05-28
+// Modified: 2026-06-13
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.9, §4.1, §4.2, §4.3, §4.4, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the five-state shot execution state machine:
@@ -119,12 +119,14 @@ namespace TacticalDirector.ShotMechanics
         {
             using var _ = s_executeMarker.Auto();
 
-            // Guard: reject if a shot is already executing
+            // Guard: reject if a shot is already executing.
+            // Report the rejection via the return value ONLY — must NOT stomp _lastResult, which
+            // may hold the committed Completed record (ContactFrame replay-sync data) of a shot
+            // still in FollowThrough/Complete. Mirrors Pass Mechanics AR-9 M-1.
             if (_state != ShotExecutionState.Idle)
             {
                 Debug.LogError($"[ShotExecutor] Execute() called while shot in progress (state={_state}). Agent={request.AgentId} Frame={request.FrameNumber}");
-                _lastResult = MakeInvalidResult();
-                return _lastResult;
+                return MakeInvalidResult();
             }
 
             // ── §3.1 VR-01: Agent possession check ───────────────────────────────────
@@ -176,7 +178,9 @@ namespace TacticalDirector.ShotMechanics
             }
 
             // ── §3.1 VR-07: DistanceToGoal > 0 ──────────────────────────────────────
-            if (request.DistanceToGoal <= 0.0f)
+            // Project NaN-gate idiom: `<= 0f` passes NaN (NaN comparisons are false), so test the
+            // positive case and reject non-finite distances explicitly. Mirrors Pass Mechanics AR-9 M-2.
+            if (!(request.DistanceToGoal > 0.0f) || float.IsInfinity(request.DistanceToGoal))
             {
                 Debug.LogError($"[ShotExecutor] VR-07: DistanceToGoal={request.DistanceToGoal} ≤ 0. Agent={request.AgentId}");
                 _lastResult = MakeInvalidResult();
@@ -286,6 +290,12 @@ namespace TacticalDirector.ShotMechanics
                                              request.PowerIntent, request.SpinIntent);
             _windupFramesRemaining     = _windupFrames;
             _followThroughFramesRemaining = ShotMechanicsConstants.FollowThroughFrames;
+
+            // §3.8.5 freshness: drain (discard) any stale tackle flag before WINDUP begins.
+            // The flag is otherwise only polled during AdvanceWindup, so a tackle registered while
+            // idle / in FollowThrough (even with no possession) would survive and cancel THIS shot
+            // on its first WINDUP frame. Mirrors Pass Mechanics AR-9 M-3.
+            _collisionQuery.GetAndClearTackleFlag(request.AgentId);
 
             _state = ShotExecutionState.Windup;
 
@@ -452,11 +462,16 @@ namespace TacticalDirector.ShotMechanics
                 ContactFrame       = frameNumber
             };
 
+            // Commit the state transition BEFORE publishing. The ball is already kicked (ApplyKick
+            // above); if a Publish throws (queue overflow / registry mismatch) the executor must not
+            // remain in Contact, or the next Update would re-enter ExecuteContact and call ApplyKick
+            // a second time. FM-03's possession recheck currently guards the double-kick, but ordering
+            // the transition first removes the dependence on that recovery seam. Mirrors Pass AR-8 L-2.
+            _state = ShotExecutionState.FollowThrough;
+
             // §3.10: Publish events — Ball.ApplyKick() first, then events (§3.10.2 ordering)
             ShotEventEmitter.PublishShotExecuted(in _request, in _lastResult, matchTime);
             ShotEventEmitter.PublishAnimationData(in _request, _bodyMechanics.Score, _windupFrames);
-
-            _state = ShotExecutionState.FollowThrough;
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -519,4 +534,13 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        | #2 enum declares ALL_CAPS members (IDLE..DECELERATING) - CS0117 under Unity and    |
 // |         |            |        | the Linux gate alike; this assembly never compiled. Members corrected;             |
 // |         |            |        | approved/rejected set unchanged.                                                   |
+// | 1.8     | 2026-06-13 | —      | AR fix pass — four defect classes ported from the sibling PassExecutor that were   |
+// |         |            |        | never propagated here. M-1 (Pass AR-9 M-3): Execute() drains the stale tackle flag |
+// |         |            |        | at INITIATING; a flag set while idle/FollowThrough no longer cancels the NEXT      |
+// |         |            |        | shot's first WINDUP frame. M-2 (Pass AR-9 M-1): in-progress Execute() guard no      |
+// |         |            |        | longer stomps _lastResult (was destroying a committed Completed record); reports    |
+// |         |            |        | rejection via return value only. L-1 (Pass AR-8 L-2): _state=FollowThrough          |
+// |         |            |        | hoisted above the Publish calls (a throwing Publish previously left the executor    |
+// |         |            |        | in Contact → ApplyKick double-kick on re-entry). L-2 (Pass AR-9 M-2): VR-07 gate    |
+// |         |            |        | `<= 0f` passed NaN; now `!(d > 0f) || IsInfinity(d)` per the project NaN-gate idiom.|
 #endregion
