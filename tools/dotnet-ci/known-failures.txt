@@ -15,12 +15,8 @@
 #  - NEVER add a line without a matching entry in the tracking doc.
 #  - Any test failure NOT in this list fails the gate.
 ContextModifier_ScoreDiff_ExpandsLateralSpread
-CoverShadow_AssignsHigherThreatReceiverFirst
-CrossbarCollision_DeflectsVelocityDownward
 FailureMode_F3_NaNBallPosition_SlotsRemainFinite
 Integration_OutOfPoss_NarrowerLateralSpread_Than_InPoss
-ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero
-SpatialHash_TwoAgentsFar_QueryReturnsOnlySelf
 TacticalCorrectness_4231_TransToAtk_AMAdvances_RelativeTo_OutOfPoss
 TacticalCorrectness_OutOfPoss_DefensiveLineCompact
 TacticalCorrectness_TransToDef_NarrowerLateralSpread

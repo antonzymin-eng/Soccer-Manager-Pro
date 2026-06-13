@@ -33,18 +33,6 @@ applicable, and **remove the quarantine line in the same commit**.
 
 ## Open quarantine entries — by suite
 
-### Ball Physics #1 (1)
-
-| Test | First-run failure | Hypothesis |
-|---|---|---|
-| `CrossbarCollision_DeflectsVelocityDownward` | Crossbar impact should deflect velocity downward (negative Z) | Crossbar deflection model or test geometry; same family as the AR-7 Z-up normal class. Needs §3.1.9 derivation. |
-
-### Collision System #3 (1)
-
-| Test | First-run failure | Hypothesis |
-|---|---|---|
-| `SpatialHash_TwoAgentsFar_QueryReturnsOnlySelf` | SH-003: distant agent must not appear in query | Broad-phase query radius vs test distance; check 3×3 window proof (AR-10) against the test's cell geometry. |
-
 ### Positioning AI #12 (6)
 
 | Test | First-run failure | Hypothesis |
@@ -56,19 +44,20 @@ applicable, and **remove the quarantine line in the same commit**.
 | `TacticalCorrectness_TransToDef_NarrowerLateralSpread` | TransToDef spread must be narrower than InPoss | Same §3.5 cluster. |
 | `FailureMode_F3_NaNBallPosition_SlotsRemainFinite` | Slot 0.x must not be NaN after F3 guard | F3 NaN guard not sanitising ball position before anchor math — project NaN-gate pattern (FT AR-8 / AM AR-10 / CS AR-7) probably missing here. |
 
-### Pressing AI #13 (1)
-
-| Test | First-run failure | Hypothesis |
-|---|---|---|
-| `CoverShadow_AssignsHigherThreatReceiverFirst` | First shadow must cover the higher-threat receiver | Threat-ranking order vs greedy assignment in CoverShadowSelector §3.x. |
-
-### Deterministic Sim #16 (1)
-
-| Test | First-run failure | Hypothesis |
-|---|---|---|
-| `ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero` | T-DS-008: PrepareReplay must return 0; returned 5640 (0x1608) | PrepareReplay step validation rejects the fixture's "well-formed" snapshot — either a validation step the fixture doesn't satisfy (fixture defect) or a step mis-ordered in ReplayEngine. Error code 0x1608 names the step; adjudicate against §4.2.2. |
-
 ## Resolved
+
+### Singletons — Ball Physics #1, Collision #3, Pressing AI #13, Deterministic Sim #16 (4/4) — resolved June 13, 2026 (all TEST/FIXTURE-DEFECT; production faithful to spec)
+
+| Test | Spec | Verdict | Adjudication |
+|---|---|---|---|
+| `CrossbarCollision_DeflectsVelocityDownward` | Ball Physics #1 §3.1.10.2 | FIXTURE-DEFECT | The fixture supplied vertical-**post** geometry (postCenter (105,34,2.44), contact (104.94,34,2.44) — X-offset only, equal Z) → `normal=(−1,0,0)`, which cannot touch Velocity.z (stays 5.0). A crossbar (§3.1.2) is a horizontal cylinder, lower edge at GOAL_HEIGHT 2.44 m, axis at 2.44 + POST_DIAMETER/2; an underside strike gives `normal=(0,0,−1)` → vz = −3.75 < 0. Fixture re-derived to real crossbar geometry; `BallCollision.cs` unchanged. `BallIntegrationTests.cs` v1.5. |
+| `SpatialHash_TwoAgentsFar_QueryReturnsOnlySelf` | Collision #3 §3.1/§3.1.3 | FIXTURE-DEFECT | CellSize 1.0 m; the fixture placed both agents exactly on cell boundaries (x=50.0, 52.0). §3.1.3 mandates boundary-spread insertion (an agent on a boundary inserts into both adjacent cells — tested by SH-006), so agent at x=52.0 spreads into cells 51 and 52, and the 3×3 broad-phase query from cell 50 legitimately returns it from cell 51. The broad phase is candidate generation, not radius filtering (§3.2.3 — the caller filters). Positions moved off-boundary into genuinely non-adjacent cells (x=50.5, 53.5); `SpatialHashGrid.cs` unchanged. `CollisionSystemTests.cs` v1.4. |
+| `CoverShadow_AssignsHigherThreatReceiverFirst` | Pressing AI #13 §3.4 | FIXTURE-DEFECT | The §3.4 threat skill term `(FirstTouch/20)·THREAT_SKILL_W` is monotonically increasing in FirstTouch; the fixture's comment ("weak skill maximises threat") inverted it. Hand-calc: id 51 (forward, FT=5) = 0.245, id 52 (lateral, FT=18) = 0.280 — so 52 correctly out-scored 51 and ranked first (the observed result). FirstTouch values swapped so id 51 is genuinely higher threat (0.375 vs 0.150); `CoverShadowSelector.cs` unchanged. `PressingAITests.cs` v1.2. |
+| `ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero` | Deterministic Sim #16 §4.2.2 | FIXTURE-DEFECT | Error 0x1608 = `ERR_DS_DIGEST_CHAIN_BREAK` at §4.2.2 step 4 (`ValidatePrevDigest`). The fixture called the recording-side `codec.Encode()`, advancing the codec's `_prevDigest` to the just-encoded digest D, then `PrepareReplay` compared D against the genesis snapshot's recorded `PrevSnapshotDigest` (all-zeros) → mismatch. A fresh `SnapshotCodec` already holds the genesis sentinel (all-zeros), which is exactly what a well-formed genesis snapshot chains to. Removed the `Encode()` call; `ReplayEngine.cs`/`SnapshotCodec.cs` unchanged. `DeterministicSimTests.cs` v1.4. |
+
+All four were test-fixture defects (no production or spec change). Suites: ball-physics 83/83, collision-system 30/30 (+9 skipped), pressing-ai 44/44 (+26 skipped), deterministic-sim 37/37 (+4 skipped).
+
+
 
 ### Pass Mechanics #5 (3/3) — resolved June 13, 2026 (all TEST/SPEC; production faithful to normative §3)
 

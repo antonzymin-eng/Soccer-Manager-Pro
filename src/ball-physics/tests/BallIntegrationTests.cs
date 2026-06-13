@@ -1,6 +1,6 @@
 // File:     src/ball-physics/tests/BallIntegrationTests.cs
 // Created:  2026-05-24
-// Modified: 2026-06-09 (AR-7 fix pass)
+// Modified: 2026-06-13 (dotnet CI gate: IT-COL-002 crossbar geometry fixture fix)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  End-to-end integration tests against §3.1.14 derived validation test cases.
@@ -512,17 +512,33 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void CrossbarCollision_DeflectsVelocityDownward()
         {
-            float goalHeight = BallPhysicsConstants.Pitch.GOAL_HEIGHT;
+            // Fixture corrected (dotnet CI gate). The crossbar (§3.1.2) is a HORIZONTAL
+            // cylinder of radius POST_DIAMETER/2 spanning the goal mouth along Y, whose
+            // lower edge sits at GOAL_HEIGHT = 2.44 m. Its centre axis is therefore at
+            // z = GOAL_HEIGHT + radius. The §3.1.10.2 ApplyGoalPostCollision normal is
+            // (contactPoint − postCenter).normalized, so an UNDERSIDE strike must place
+            // the contact point BELOW the bar centre in Z to obtain a downward (−Z)
+            // normal. The original fixture offset the contact in X by the post radius and
+            // left Z equal to the centre — that is a vertical-POST geometry (normal
+            // (−1,0,0)) which only reflects the X component and provably cannot change
+            // Velocity.z. Production is correct per spec; the fixture mislabelled a post
+            // hit as a crossbar hit.
+            float barRadius  = BallPhysicsConstants.Pitch.POST_DIAMETER / 2f; // 0.06 m
+            float lowerEdge  = BallPhysicsConstants.Pitch.GOAL_HEIGHT;        // 2.44 m underside
+            float barCenterZ = lowerEdge + barRadius;                         // crossbar axis Z
+
             var ball = new BallState
             {
-                Position        = new Vector3(105f, 34f, goalHeight),
+                Position        = new Vector3(105f, 34f, lowerEdge),
                 Velocity        = new Vector3(10f, 0f, 5f),
                 AngularVelocity = Vector3.zero,
                 State           = BallStateType.Airborne
             };
 
-            Vector3 postCenter   = new Vector3(105f, 34f, goalHeight);
-            Vector3 contactPoint = new Vector3(105f - 0.06f, 34f, goalHeight);
+            // Crossbar centre axis (at the goal line, mid-mouth) and an underside contact
+            // point directly below it → normal = (0, 0, −1).
+            Vector3 postCenter   = new Vector3(105f, 34f, barCenterZ);
+            Vector3 contactPoint = new Vector3(105f, 34f, lowerEdge);
 
             BallCollision.ApplyGoalPostCollision(ref ball, contactPoint, postCenter, null, 0f);
 
@@ -593,4 +609,13 @@ namespace TacticalDirector.BallPhysics.Tests
 // |         |            |        | the vacuum ceiling for vz = 8). H-2 regression: new                |
 // |         |            |        | Airborne_FastDescent_Bounces_NoHoverDeadlock locks the ground-     |
 // |         |            |        | clamp / state-machine ordering fix in BallPhysicsCore.             |
+// | 1.5     | 2026-06-13 | —      | dotnet CI gate adjudication (IT-COL-002): fixture defect, not a    |
+// |         |            |        | production defect. CrossbarCollision_DeflectsVelocityDownward      |
+// |         |            |        | supplied a vertical-POST geometry (contact offset in X, Z equal to |
+// |         |            |        | the centre) under a crossbar label — §3.1.10.2's                   |
+// |         |            |        | (contactPoint−postCenter) normal was (−1,0,0), which cannot change |
+// |         |            |        | Velocity.z (stayed 5.0). Re-derived crossbar geometry: horizontal  |
+// |         |            |        | bar, lower edge at GOAL_HEIGHT=2.44 m, centre axis at +radius;      |
+// |         |            |        | underside contact → normal (0,0,−1) → Velocity.z = −3.75 m/s.      |
+// |         |            |        | BallCollision unchanged.                                           |
 #endregion
