@@ -81,8 +81,10 @@ namespace TacticalDirector.PerceptionSystem
         /// <param name="currentFrame">Current heartbeat tick.</param>
         public bool UpdateAgent(int agentId, int anticipation, bool hasPossession, int currentFrame)
         {
-            // Close expired window
-            if (_windowActive[agentId] && currentFrame > _windowExpiryFrame[agentId])
+            // Close expired window. The window is active for SHOULDER_CHECK_DURATION ticks
+            // starting at the fire tick: expiry is the first CLOSED tick (>=), so a window
+            // fired at F is active on F .. F+DURATION-1 and closes at F+DURATION. §3.4.3.
+            if (_windowActive[agentId] && currentFrame >= _windowExpiryFrame[agentId])
             {
                 CloseWindow(agentId);
             }
@@ -140,6 +142,17 @@ namespace TacticalDirector.PerceptionSystem
         }
 
         /// <summary>
+        /// Read-only query: true if the (observer, target) pair has been confirmed in the
+        /// current blind-side window. Used by the forced mid-heartbeat refresh path (§4.6.2),
+        /// which rebuilds the view WITHOUT advancing the blind-side latency counter. No side effects.
+        /// Perception System #7 §4.6.2.
+        /// </summary>
+        public bool IsBlindSideConfirmed(int observerId, int targetId)
+        {
+            return _blindSideConfirmed[observerId * _maxAgents + targetId];
+        }
+
+        /// <summary>
         /// Clears blind-side latency state for all targets seen by an observer.
         /// Called when a window closes (unconfirmed entries are discarded). §3.4.3.
         /// </summary>
@@ -167,7 +180,8 @@ namespace TacticalDirector.PerceptionSystem
 
             if (hasPossession)
             {
-                interval *= 2.0f; // doubles check interval when in possession = halves check frequency (§3.4.2)
+                // Doubles check interval when in possession = halves check frequency (§3.4.2)
+                interval *= PerceptionConstants.PossessionCheckIntervalMultiplier;
             }
 
             int jitter = (RecognitionLatencyTracker.DeterministicHash(agentId, currentFrame, 0)
@@ -199,4 +213,5 @@ namespace TacticalDirector.PerceptionSystem
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                                                       |
 // | 1.1     | 2026-05-28 | —      | AR-1 fixes: M-2 AnyEntityConfirmed updated on blind-side confirmation; L-5 possession comment clarified.      |
+// | 1.2     | 2026-06-13 | —      | AR-3 fixes: H-1 added read-only IsBlindSideConfirmed() for the forced-refresh path (no counter advance); L-2 magic 2.0f possession multiplier → PerceptionConstants.PossessionCheckIntervalMultiplier (FR-CS-016); L-3 window-close comparison `>` → `>=` so the window spans exactly SHOULDER_CHECK_DURATION ticks (was DURATION+1). |
 #endregion
