@@ -1,11 +1,14 @@
 # Dotnet CI Gate — Quarantine Ledger
 
 > **Created:** June 12, 2026
-> **Version:** 1.0
+> **Version:** 2.0
+> **Status:** **EMPTY — all 30 quarantined tests resolved June 12–13, 2026.** The
+> gate now enforces the full 1,165-test suite; any new failure or compile error
+> fails CI.
 > **Purpose:** Human-readable tracking for every test quarantined from the
 > non-certifying Linux compile/test gate (`tools/dotnet-ci/run-gate.sh`). The
 > machine-readable mirror is `tools/dotnet-ci/known-failures.txt` — the two MUST
-> stay in sync (CI excludes exactly the names in that file).
+> stay in sync (CI excludes exactly the names in that file; it now lists none).
 
 ## Provenance
 
@@ -20,6 +23,20 @@ AR-style derivation: decide whether the production model or the test
 expectation is wrong, fix that side, verify with a numerical mirror where
 applicable, and **remove the quarantine line in the same commit**.
 
+**Outcome (June 12–13, 2026):** all 30 adjudicated and removed. Split: **9
+PRODUCTION-DEFECTS** (Perception `[DERIVED]` FoV constants reading 0 via
+static-init order ×1 fixing 2 tests; Defensive AI ZONAL hysteresis-gate bypass;
+Shot Mechanics Z-up sidespin axis + run-up deadband-vs-§3.7.3-ramp; Heading
+synthetic-jump apex quantization; Positioning AI §3.5 baseline-cancellation
+[also SPEC] + GK NaN guard), **plus SPEC-DEFECTS** (Positioning §3.5.1/§3.5.2
+double-count) and the remainder **TEST/FIXTURE-DEFECTS** (First Touch §5 matrix
+drift; Pass Mechanics §5 bands never re-derived; the 4 singletons; assorted test
+ordering/premise errors). Two production bugs were load-bearing model defects the
+never-compiled suites had masked: shot sidespin computed on Unity +Y (the
+touchline axis in this Z-up project) was identically zero, and the base FoV
+half-angle / peripheral-arc bound read 0 at runtime for every perception
+consumer.
+
 ## Rules
 
 1. A test failure NOT in the ledger fails the gate — quarantine only grows via
@@ -33,18 +50,22 @@ applicable, and **remove the quarantine line in the same commit**.
 
 ## Open quarantine entries — by suite
 
-### Positioning AI #12 (6)
-
-| Test | First-run failure | Hypothesis |
-|---|---|---|
-| `ContextModifier_ScoreDiff_ExpandsLateralSpread` | scoreDiff=+3 should expand lateral spread vs neutral | ContextModifier sign/keying — possibly inverted scoreDiff direction. The five positioning failures cluster on §3.5 modifier application; adjudicate together. |
-| `Integration_OutOfPoss_NarrowerLateralSpread_Than_InPoss` | OutOfPoss must be narrower laterally than InPoss | Phase-keyed BaseLateral application order (modifier before/after spacing). |
-| `TacticalCorrectness_4231_TransToAtk_AMAdvances_RelativeTo_OutOfPoss` | AM slot.x must advance in TransToAtk | Phase anchor/vertical-compactness path. |
-| `TacticalCorrectness_OutOfPoss_DefensiveLineCompact` | OutOfPoss defense line must sit deeper (lower X) | Same §3.5 cluster. |
-| `TacticalCorrectness_TransToDef_NarrowerLateralSpread` | TransToDef spread must be narrower than InPoss | Same §3.5 cluster. |
-| `FailureMode_F3_NaNBallPosition_SlotsRemainFinite` | Slot 0.x must not be NaN after F3 guard | F3 NaN guard not sanitising ball position before anchor math — project NaN-gate pattern (FT AR-8 / AM AR-10 / CS AR-7) probably missing here. |
+*(none — all 30 resolved; see below. CI now enforces all 1,165 tests; any new failure or compile error fails the gate.)*
 
 ## Resolved
+
+### Positioning AI #12 (6/6) — resolved June 13, 2026 (1 SPEC-DEFECT root cause for 3 tests + 1 PRODUCTION-DEFECT + 2 TEST-DEFECT)
+
+| Test | Verdict | Adjudication |
+|---|---|---|
+| `Integration_OutOfPoss_NarrowerLateralSpread_Than_InPoss` | SPEC-DEFECT (+ test ordering) | §3.5.2 applies `rel *= baseLateral[phase] / lateralCompactness`, but §3.5.1 folded `baseLateral[phase]` INTO `lateralCompactness`, so the phase baseline cancelled (`base/(base·gain) = 1/gain`) — a guaranteed no-op (hence the EXACT-equality failures). Invisible because every spec worked example used InPoss (base=1.00). Fixed: §3.5.1 compactness scalars now carry dynamic gains only; the phase baseline contributes solely via the §3.5.2 numerator (`ContextModifier.cs` v1.1; section-3.md v0.5). OutOfPoss rescale = 0.88/1.0 → spread 47.87 < 54.40 InPoss; InPoss worked example numerically unchanged. Test ordering: the phase override was set BEFORE `SeedFromFormation()` (which resets phase to InPoss) — moved after. |
+| `TacticalCorrectness_4231_TransToAtk_AMAdvances_RelativeTo_OutOfPoss` | SPEC-DEFECT (+ test ordering) | Same baseline-cancellation root cause + same phase-before-seed ordering. |
+| `TacticalCorrectness_TransToDef_NarrowerLateralSpread` | SPEC-DEFECT (+ test ordering) | Same root cause; TransToDef BaseLateral 0.82 < 1.00 now narrows as specified. |
+| `FailureMode_F3_NaNBallPosition_SlotsRemainFinite` | PRODUCTION-DEFECT | FR-PA-044/§2.4 F3 requires any NaN composed slot to fall back to the raw role anchor; `SlotComposer` guarded only outfield agents, so a NaN ball produced a NaN GK slot (slot 0) — `Mathf.Clamp(NaN,…)` passes NaN through (the project NaN-gate hazard). GK composed slot now NaN-guarded to the GK formation anchor (`SlotComposer.cs` v1.1). |
+| `ContextModifier_ScoreDiff_ExpandsLateralSpread` | TEST-DEFECT | §3.5.3 and the §5 T-U-063 invariant specify a goal lead → compactness rises → shape TIGHTENS (narrower), but the test asserted spread widens. Renamed `…_TightensLateralSpread`, assertion flipped (`PositioningAITests.cs` v1.2). |
+| `TacticalCorrectness_OutOfPoss_DefensiveLineCompact` | TEST-DEFECT | The defensive-line-deeper effect is a §3.2 ball-relative pull (fires only when the ball is in the own third, basisX≠0); the test used a CENTER ball (basisX=0 → zero §3.2 offset) and invented an OutOfPoss-vs-InPoss mean-X comparison the spec never specified (unsatisfiable under §3.5 vertical compactness, which compresses toward the centroid). Rewritten to the spec §5 T-T-001 absolute condition (ball in own third; all 4 defenders x ≤ 25 m; measured 23.5–24.1). §5 T-T-001 clarified (section-5.md v0.3). |
+
+Files: `ContextModifier.cs` v1.1, `SlotComposer.cs` v1.1, `Tests/PositioningAITests.cs` v1.2, `docs/specs/positioning-ai/{section-3.md v0.5, section-5.md v0.3, appendices.md v0.4}`. Suite: 57 passed / 0 failed / 13 skipped. Cross-suite: PositioningAITick output feeds pressing-ai + defensive-ai via PositioningAIView — both re-run green (pressing 44/44, defensive 51/51). Proposed spec-error-log entries: ERR-012-003 (H, baseline cancellation), ERR-012-004 (M, GK NaN guard), ERR-012-005/006 (test-side).
 
 ### Singletons — Ball Physics #1, Collision #3, Pressing AI #13, Deterministic Sim #16 (4/4) — resolved June 13, 2026 (all TEST/FIXTURE-DEFECT; production faithful to spec)
 
@@ -128,3 +149,4 @@ Files: `src/first-touch/Tests/FirstTouchTests.cs` v1.3, `docs/specs/first-touch/
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-06-12 | — | Initial ledger: 30 entries from the first-ever full suite execution on the new dotnet CI gate. |
+| 2.0 | 2026-06-13 | — | Burn-down complete — all 30 entries adjudicated and removed (9 production-defect, ≥1 spec-defect, remainder test/fixture-defect). `known-failures.txt` now empty; the gate enforces the full 1,165-test suite. Per-spec resolutions: First Touch #4 (4), Perception #7 (4), Defensive AI #14 (4), Shot Mechanics #6 (3), Heading #10 (2), Pass Mechanics #5 (3), 4 singletons (Ball/Collision/Pressing/DetSim), Positioning AI #12 (6). |

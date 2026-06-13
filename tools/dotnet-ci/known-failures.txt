@@ -14,9 +14,3 @@
 #    enforces it forever).
 #  - NEVER add a line without a matching entry in the tracking doc.
 #  - Any test failure NOT in this list fails the gate.
-ContextModifier_ScoreDiff_ExpandsLateralSpread
-FailureMode_F3_NaNBallPosition_SlotsRemainFinite
-Integration_OutOfPoss_NarrowerLateralSpread_Than_InPoss
-TacticalCorrectness_4231_TransToAtk_AMAdvances_RelativeTo_OutOfPoss
-TacticalCorrectness_OutOfPoss_DefensiveLineCompact
-TacticalCorrectness_TransToDef_NarrowerLateralSpread

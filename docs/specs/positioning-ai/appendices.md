@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Appendices
 
 **Created:** May 15, 2026
-**Last Updated:** May 18, 2026 (v0.3 — APPROVED: Appendix A derivations confirmed; GK constants added)
-**Version:** 0.3
+**Last Updated:** June 13, 2026 (v0.4 — ERR-012-003: Appendix E.3 "vertical compactness loosens" corrected to "tightens" (contradicted §3.5.1 and the T-U-062/T-U-063 directional invariant))
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -180,8 +180,11 @@ Input: ball `(60.0, 40.0)` loose, `ball.vx_filtered = +6 m/s`,
 `scoreDiff = 0`, `fatigue = 0.2`, `tacticalIntensity = 0.6`.
 Candidate phase: `TransToAtk` after `PHASE_HYSTERESIS_TICKS = 3`
 sustained ticks. ST advances; AM advances; defenders hold.
-Vertical compactness loosens (`INTENSITY_VERTICAL_GAIN = 0.20`
-applied).
+Vertical compactness **tightens** (`INTENSITY_VERTICAL_GAIN = 0.20`
+raises `verticalCompactness` → the §3.5.2 divisor grows → the
+longitudinal shape compresses). (ERR-012-003 prose fix: prior
+"loosens" contradicted §3.5.1 and the T-U-063 / T-U-062 directional
+invariant.)
 
 ## Appendix F — Glossary
 
@@ -207,3 +210,4 @@ applied).
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial appendices draft. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-17 glossary Compositor "six → seven sequential steps"; AR-S1-02 Appendix B preamble adds per-archetype `lineCutIndices` table + planning-doc citation; AR-S1-07 `SENTINEL_NO_SLOT` added to glossary. |
 | 0.3 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | APPROVED patch. Appendix A.1–A.8 derivation entries promoted from PENDING to CONFIRMED (→ [GT]); rationale text expanded with worked justifications. |
+| 0.4 | June 13, 2026 | AI agent (dotnet-CI quarantine adjudication) | ERR-012-003 prose fix: Appendix E.3 "vertical compactness loosens" → "tightens" — `INTENSITY_VERTICAL_GAIN` RAISES `verticalCompactness` so the §3.5.2 divisor grows and the longitudinal shape compresses (consistent with §3.5.1 and the T-U-062/T-U-063 directional invariants). |

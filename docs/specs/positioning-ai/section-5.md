@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 5: Test Plan
 
 **Created:** May 15, 2026
-**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
-**Version:** 0.2
+**Last Updated:** June 13, 2026 (v0.3 — ERR-012-006: T-T-001 clarified as an absolute deep-line threshold, not an OutOfPoss-vs-InPoss comparison)
+**Version:** 0.3
 **Status:** DRAFT
 
 ---
@@ -109,7 +109,7 @@ The test plan binds to Testing Strategy #19 §3 (test taxonomy) and
 
 ## 5.6 Tactical-Correctness Scenarios (Binding to Appendix B)
 
-- **T-T-001** 4-4-2 `OutOfPoss` against opponent attacking own third: defensive line at `x ≤ 25 m` for all 4 defenders.
+- **T-T-001** 4-4-2 `OutOfPoss` against opponent attacking own third: defensive line at `x ≤ 25 m` for all 4 defenders. **(ERR-012-006 clarification, June 13, 2026):** this is an ABSOLUTE deep-line threshold with the ball in the own defensive third — the deep line is a §3.2 ball-relative pull (OutOfPoss defender `pullFactor.x` > InPoss). It is NOT an OutOfPoss-vs-InPoss centroid comparison: at a center ball §3.2 contributes zero offset and the only phase effect is §3.5 vertical compactness, which compresses the shape toward the centroid and RAISES the deepest line's mean X. Assert the `x ≤ 25 m` threshold, not `avgDefXOut < avgDefXIn`.
 - **T-T-002** 4-3-3 `InPoss` deep build-up: wingers `lane ∈ {LW, RW}` for all 10 ticks.
 - **T-T-003** 4-2-3-1 `TransToAtk`: AM advances ≥ 5 m relative to `OutOfPoss` baseline.
 - **T-T-004** 4-4-2 `TransToDef`: full team retreats; centroid moves ≥ 8 m toward own goal within 10 ticks.
@@ -122,3 +122,4 @@ The test plan binds to Testing Strategy #19 §3 (test taxonomy) and
 |---|---|---|---|
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. Added T-U-035..T-U-037 (archetype line cuts, lane boundary semantics, post-spacing lane); T-U-044/T-U-045 (spacing convergence + non-convergent fallback); T-U-063..T-U-065 (compactness directional invariants, isActive centroid, baseSlot subject); T-I-004 sentinel correction; T-I-011 orchestrator non-invocation of `Stage0Default()`. Unit target ≥48; integration target ≥11; total ≥74. |
+| 0.3 | June 13, 2026 | AI agent (dotnet-CI quarantine adjudication) | ERR-012-006: T-T-001 clarified — the `x ≤ 25 m` deep-line condition is ABSOLUTE (ball in own defensive third; §3.2 ball-relative pull), not an OutOfPoss-vs-InPoss comparison. The implemented `TacticalCorrectness_OutOfPoss_DefensiveLineCompact` test had invented such a comparison with a center ball (unsatisfiable under §3.5 vertical compactness) and was corrected to the absolute threshold. |

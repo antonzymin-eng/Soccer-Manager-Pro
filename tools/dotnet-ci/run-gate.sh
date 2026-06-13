@@ -23,16 +23,27 @@ dotnet restore "$SLN"
 echo "── Build (full tree; any compile error fails the gate) ─────────────"
 dotnet build "$SLN" --no-restore -clp:ErrorsOnly -m
 
-# Build the exclusion filter from the quarantine ledger.
+# Build the exclusion filter from the quarantine ledger (empty when no tests are
+# quarantined — the burn-down is complete and the whole suite is enforced).
+# `|| true`: grep exits 1 when the quarantine has no test lines (burn-down done);
+# under `set -euo pipefail` that would abort the gate, so tolerate empty output.
 FILTER="$(grep -v '^\s*#' "$QUARANTINE" | grep -v '^\s*$' \
-          | sed 's/^/FullyQualifiedName!~/' | paste -sd'&' -)"
+          | sed 's/^/FullyQualifiedName!~/' | paste -sd'&' - || true)"
 
 echo "── Test (blocking; quarantined tests excluded) ─────────────────────"
-dotnet test "$SLN" --no-build --filter "$FILTER"
+if [ -n "$FILTER" ]; then
+    dotnet test "$SLN" --no-build --filter "$FILTER"
+else
+    dotnet test "$SLN" --no-build
+fi
 
-echo "── Quarantined tests (report-only; failure expected, not blocking) ─"
 INCLUDE="$(grep -v '^\s*#' "$QUARANTINE" | grep -v '^\s*$' \
-           | sed 's/^/FullyQualifiedName~/' | paste -sd'|' -)"
-dotnet test "$SLN" --no-build --filter "$INCLUDE" || true
+           | sed 's/^/FullyQualifiedName~/' | paste -sd'|' - || true)"
+if [ -n "$INCLUDE" ]; then
+    echo "── Quarantined tests (report-only; failure expected, not blocking) ─"
+    dotnet test "$SLN" --no-build --filter "$INCLUDE" || true
+else
+    echo "── Quarantine empty — full suite enforced above; no report-only run ─"
+fi
 
 echo "── Gate PASSED ─────────────────────────────────────────────────────"

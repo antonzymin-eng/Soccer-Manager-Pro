@@ -845,13 +845,20 @@ namespace TacticalDirector.PositioningAI.Tests
         }
 
         // ──────────────────────────────────────────────────────────────────────
-        // T-U-060: ContextModifier — positive score difference expands lateral spread
+        // T-U-060/T-U-063: ContextModifier — positive score difference TIGHTENS lateral spread
+        //   Spec §3.5.1: "each goal lead RAISES compactness → shape TIGHTENS under §3.5.2 division."
+        //   Spec §3.5.3 directional check: scoreDiff=+2, fatigue=0 → factor 1.00/1.10 = 0.909
+        //     (tighter than baseline). §5 T-U-063 (AR-S1-15): "scoreDiff=+2, fatigue=0 strictly
+        //     DECREASES team-mean |rel.y| vs baseline." A goal lead therefore NARROWS the lateral
+        //     spread (team defends the lead with a more compact block).
+        //   The original assertion (>) contradicted the spec direction; corrected to (<) to match
+        //   §3.5.3 / T-U-063 (ERR-012-003 adjudication: TEST-DEFECT, expectation inverted).
         // ──────────────────────────────────────────────────────────────────────
         [Test]
-        public void ContextModifier_ScoreDiff_ExpandsLateralSpread()
+        public void ContextModifier_ScoreDiff_TightensLateralSpread()
         {
-            // Higher score difference (winning) increases lateral compactness multiplier,
-            // reducing the lateral rescale factor → agents spread wider relative to centroid.
+            // Higher score difference (winning) increases lateral compactness, raising the
+            // §3.5.2 divisor → smaller rescale factor → agents tighten toward the centroid.
             // Compare spread with scoreDiff=0 vs scoreDiff=+3.
             var snap = MakeSnapshot(possOwner: 3, possIsOwn: true);
 
@@ -873,8 +880,8 @@ namespace TacticalDirector.PositioningAI.Tests
             for (int t = 0; t < 4; t++) { snap.TickIndex = t; tickWinning.Tick(snap, new ContextModifierInputs(3, 0f, 0f)); }
             float spreadWinning = ComputeLateralSpread(tickWinning, snap);
 
-            Assert.That(spreadWinning, Is.GreaterThan(spreadNeutral),
-                "Winning (scoreDiff=+3) should expand lateral spread compared to neutral (scoreDiff=0)");
+            Assert.That(spreadWinning, Is.LessThan(spreadNeutral),
+                "Winning (scoreDiff=+3) must tighten lateral spread vs neutral (scoreDiff=0) per §3.5.3 / T-U-063");
         }
 
         // ──────────────────────────────────────────────────────────────────────
@@ -1318,9 +1325,11 @@ namespace TacticalDirector.PositioningAI.Tests
             var hystIn = typeof(PositioningAITick)
                 .GetField("_hyst", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(tickIn) as HysteresisState;
-            if (hystIn != null) { hystIn.CurrentPhase = Phase.InPoss; hystIn.CandidatePhase = Phase.InPoss; }
+            // ERR-012-005: SeedFromFormation() resets CurrentPhase to InPoss (match-init
+            // default), so the phase override MUST be applied AFTER seeding, not before.
             snap.PossessionOwnerEntityId = 3; snap.PossessionOwnerIsOwnTeam = true;
             tickIn.SeedFromFormation(snap);
+            if (hystIn != null) { hystIn.CurrentPhase = Phase.InPoss; hystIn.CandidatePhase = Phase.InPoss; }
             for (int t = 0; t < 5; t++) { snap.TickIndex = t; tickIn.Tick(snap, modIn); }
 
             float spreadIn = ComputeLateralSpread(tickIn, snap);
@@ -1330,9 +1339,9 @@ namespace TacticalDirector.PositioningAI.Tests
             var hystOut = typeof(PositioningAITick)
                 .GetField("_hyst", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(tickOut) as HysteresisState;
-            if (hystOut != null) { hystOut.CurrentPhase = Phase.OutOfPoss; hystOut.CandidatePhase = Phase.OutOfPoss; }
             snap.PossessionOwnerEntityId = -1; snap.PossessionOwnerIsOwnTeam = false;
             tickOut.SeedFromFormation(snap);
+            if (hystOut != null) { hystOut.CurrentPhase = Phase.OutOfPoss; hystOut.CandidatePhase = Phase.OutOfPoss; }
             for (int t = 0; t < 5; t++) { snap.TickIndex = t; tickOut.Tick(snap, modIn); }
 
             float spreadOut = ComputeLateralSpread(tickOut, snap);
@@ -1409,8 +1418,9 @@ namespace TacticalDirector.PositioningAI.Tests
             var hystTTA = typeof(PositioningAITick)
                 .GetField("_hyst", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(tickTTA) as HysteresisState;
-            if (hystTTA != null) { hystTTA.CurrentPhase = Phase.TransToAtk; hystTTA.CandidatePhase = Phase.TransToAtk; }
+            // ERR-012-005: apply the phase override AFTER SeedFromFormation (which resets phase to InPoss).
             tickTTA.SeedFromFormation(snap4231);
+            if (hystTTA != null) { hystTTA.CurrentPhase = Phase.TransToAtk; hystTTA.CandidatePhase = Phase.TransToAtk; }
             for (int t = 0; t < 5; t++) { snap4231.TickIndex = t; tickTTA.Tick(snap4231, NeutralModifiers()); }
             float amTTA = tickTTA.GetFormationSlot(8).x;
 
@@ -1419,8 +1429,8 @@ namespace TacticalDirector.PositioningAI.Tests
             var hystOOP = typeof(PositioningAITick)
                 .GetField("_hyst", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(tickOOP) as HysteresisState;
-            if (hystOOP != null) { hystOOP.CurrentPhase = Phase.OutOfPoss; hystOOP.CandidatePhase = Phase.OutOfPoss; }
             tickOOP.SeedFromFormation(snap4231);
+            if (hystOOP != null) { hystOOP.CurrentPhase = Phase.OutOfPoss; hystOOP.CandidatePhase = Phase.OutOfPoss; }
             for (int t = 0; t < 5; t++) { snap4231.TickIndex = t; tickOOP.Tick(snap4231, NeutralModifiers()); }
             float amOOP = tickOOP.GetFormationSlot(8).x;
 
@@ -1434,39 +1444,36 @@ namespace TacticalDirector.PositioningAI.Tests
         [Test]
         public void TacticalCorrectness_OutOfPoss_DefensiveLineCompact()
         {
-            var snap = MakeSnapshot();
+            // ERR-012-006 (dotnet-CI quarantine adjudication): the defensive-line-deeper effect is a
+            // §3.2 ball-relative pull, NOT a §3.5 vertical-compactness effect. Spec §5 T-T-001 defines
+            // this scenario as "OutOfPoss against opponent attacking own third: defensive line at
+            // x ≤ 25 m for all 4 defenders" — an ABSOLUTE deep-line threshold with the ball in the
+            // team's own defensive third, NOT an OutOfPoss-vs-InPoss comparison. The original test
+            // invented an `avgDefXOut < avgDefXIn` comparison the spec never specified AND used a
+            // CENTER ball (basisX = 0 ⇒ zero §3.2 offset). At a center ball the only phase effect is
+            // §3.5 vertical compactness, which legitimately COMPRESSES the shape toward the centroid
+            // and RAISES the deepest defenders' mean X — so the invented comparison is unsatisfiable
+            // by the spec model. Corrected to the spec T-T-001 condition: ball in own defensive third,
+            // OutOfPoss defender pull factors (LB/CB/RB OutOfPoss pull.x > InPoss) drop the line.
+            var snap = MakeSnapshot(ballPos: new Vector3(20f, 34f, 0f));
 
-            // InPoss run — seed phase directly.
-            var tickIn = new PositioningAITick(FormationFamily.F442);
-            var hystIn = typeof(PositioningAITick)
-                .GetField("_hyst", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                ?.GetValue(tickIn) as HysteresisState;
-            if (hystIn != null) { hystIn.CurrentPhase = Phase.InPoss; hystIn.CandidatePhase = Phase.InPoss; }
-            snap.PossessionOwnerEntityId = 3; snap.PossessionOwnerIsOwnTeam = true;
-            tickIn.SeedFromFormation(snap);
-            for (int t = 0; t < 5; t++) { snap.TickIndex = t; tickIn.Tick(snap, NeutralModifiers()); }
-
-            // Average X of defenders (slots 1-4) in InPoss.
-            float avgDefXIn = 0f;
-            for (int i = 1; i <= 4; i++) avgDefXIn += tickIn.GetFormationSlot(i).x;
-            avgDefXIn /= 4f;
-
-            // OutOfPoss run.
+            // OutOfPoss run — phase override applied AFTER SeedFromFormation (ERR-012-005).
             var tickOut = new PositioningAITick(FormationFamily.F442);
             var hystOut = typeof(PositioningAITick)
                 .GetField("_hyst", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(tickOut) as HysteresisState;
-            if (hystOut != null) { hystOut.CurrentPhase = Phase.OutOfPoss; hystOut.CandidatePhase = Phase.OutOfPoss; }
             snap.PossessionOwnerEntityId = -1; snap.PossessionOwnerIsOwnTeam = false;
             tickOut.SeedFromFormation(snap);
+            if (hystOut != null) { hystOut.CurrentPhase = Phase.OutOfPoss; hystOut.CandidatePhase = Phase.OutOfPoss; }
             for (int t = 0; t < 5; t++) { snap.TickIndex = t; tickOut.Tick(snap, NeutralModifiers()); }
 
-            float avgDefXOut = 0f;
-            for (int i = 1; i <= 4; i++) avgDefXOut += tickOut.GetFormationSlot(i).x;
-            avgDefXOut /= 4f;
-
-            Assert.That(avgDefXOut, Is.LessThan(avgDefXIn),
-                "OutOfPoss defense line must sit deeper (lower X) than InPoss defense line");
+            // Spec §5 T-T-001: all 4 defenders sit deep (x ≤ 25 m) when defending the own third.
+            for (int i = 1; i <= 4; i++)
+            {
+                float defX = tickOut.GetFormationSlot(i).x;
+                Assert.That(defX, Is.LessThanOrEqualTo(25f),
+                    $"OutOfPoss defender slot {i} must sit deep (x ≤ 25 m) per spec §5 T-T-001; was {defX}");
+            }
         }
 
         // ──────────────────────────────────────────────────────────────────────
@@ -1482,9 +1489,10 @@ namespace TacticalDirector.PositioningAI.Tests
             var hystIn = typeof(PositioningAITick)
                 .GetField("_hyst", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(tickIn) as HysteresisState;
-            if (hystIn != null) { hystIn.CurrentPhase = Phase.InPoss; hystIn.CandidatePhase = Phase.InPoss; }
+            // ERR-012-005: apply the phase override AFTER SeedFromFormation (which resets phase to InPoss).
             snap.PossessionOwnerEntityId = 3; snap.PossessionOwnerIsOwnTeam = true;
             tickIn.SeedFromFormation(snap);
+            if (hystIn != null) { hystIn.CurrentPhase = Phase.InPoss; hystIn.CandidatePhase = Phase.InPoss; }
             for (int t = 0; t < 5; t++) { snap.TickIndex = t; tickIn.Tick(snap, NeutralModifiers()); }
             float spreadIn = ComputeLateralSpread(tickIn, snap);
 
@@ -1492,9 +1500,9 @@ namespace TacticalDirector.PositioningAI.Tests
             var hystTTD = typeof(PositioningAITick)
                 .GetField("_hyst", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(tickTTD) as HysteresisState;
-            if (hystTTD != null) { hystTTD.CurrentPhase = Phase.TransToDef; hystTTD.CandidatePhase = Phase.TransToDef; }
             snap.PossessionOwnerEntityId = -1; snap.PossessionOwnerIsOwnTeam = false;
             tickTTD.SeedFromFormation(snap);
+            if (hystTTD != null) { hystTTD.CurrentPhase = Phase.TransToDef; hystTTD.CandidatePhase = Phase.TransToDef; }
             for (int t = 0; t < 5; t++) { snap.TickIndex = t; tickTTD.Tick(snap, NeutralModifiers()); }
             float spreadTTD = ComputeLateralSpread(tickTTD, snap);
 
@@ -1549,4 +1557,7 @@ namespace TacticalDirector.PositioningAI.Tests
 // | Version | Date       | Author | Notes                                                                                              |
 // | 1.0     | 2026-05-29 | —      | Initial implementation (T-U-001..021, T-D-001..002, T-I-001..004, T-P-001, T-T-001).            |
 // | 1.1     | 2026-06-01 | —      | Added T-U-022..072, T-I-005..011, T-D-003..006, T-P-002..003, T-T-002..006 (total ≥74 tests).   |
+// | 1.2     | 2026-06-13 | —      | ERR-012-003 dotnet-CI quarantine: T-U-060 ContextModifier_ScoreDiff_ExpandsLateralSpread inverted |
+// |         |            |        | the spec direction (§3.5.3 / §5 T-U-063: a goal lead TIGHTENS the lateral spread). Renamed to     |
+// |         |            |        | ContextModifier_ScoreDiff_TightensLateralSpread; assertion flipped (>)→(<) to match spec.         |
 #endregion

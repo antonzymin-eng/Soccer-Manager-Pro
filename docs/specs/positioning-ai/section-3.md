@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 15, 2026
-**Last Updated:** May 18, 2026 (v0.4 — Run 3 adversarial fix pass: 11 body-text `[EST]` constants promoted to `[GT]` matching §6.1 catalogue; GK §3.3.3 stale prose updated to reflect #11 APPROVED; §3.8 table-header corrected; SPACING_MAX_PASSES promoted)
-**Version:** 0.4
+**Last Updated:** June 13, 2026 (v0.5 — ERR-012-003: §3.5.1/§3.5.2/§3.5.3 corrected — `baseLateral[phase]`/`baseVertical[phase]` removed from the compactness scalar (was double-counted against the §3.5.2 numerator, cancelling the phase baseline to a no-op); phase baseline now contributes only via the §3.5.2 numerator. `InPoss` worked example numerically unchanged.)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -261,17 +261,28 @@ current centroid, not the static anchor centroid.
 
 ### 3.5.1 Composition
 
-Compactness scalars are composed multiplicatively. Higher values
-denote a tighter shape:
+Compactness scalars are composed multiplicatively from the **dynamic
+gains only** (score, fatigue, intensity). Higher values denote a
+tighter shape:
 
 ```
-lateralCompactness  = baseLateral[phase]
-                      * (1 + SCORE_ATK_GAIN * clamp(scoreDiff, -3, +3))
+lateralCompactness  = (1 + SCORE_ATK_GAIN * clamp(scoreDiff, -3, +3))
                       * (1 - FATIGUE_LATERAL_RELAX * teamMeanFatigue)
 
-verticalCompactness = baseVertical[phase]
-                      * (1 + INTENSITY_VERTICAL_GAIN * tacticalIntensity)
+verticalCompactness = (1 + INTENSITY_VERTICAL_GAIN * tacticalIntensity)
 ```
+
+**ERR-012-003 (June 13, 2026):** `baseLateral[phase]` /
+`baseVertical[phase]` are **NOT** factored into the compactness
+scalar. v0.1–v0.4 of this section listed `baseLateral[phase]` as the
+leading factor of `lateralCompactness` AND as the §3.5.2 numerator,
+so it cancelled (`base / (base·gain) = 1/gain`) and the phase-keyed
+baseline was a guaranteed no-op. Because every worked example used
+`InPoss` (`base = 1.00`) the cancellation was numerically invisible.
+The phase baseline now lives solely in the §3.5.2 numerator, where it
+shapes per-phase spread (e.g. `OutOfPoss = 0.88` ⇒ narrower than
+`InPoss = 1.00`). The §3.5.3 `InPoss` worked example is unchanged
+(`base = 1.00`).
 
 `baseLateral[phase]` and `baseVertical[phase]` are 4-row `[GT]`
 lookups in §6.1. Gains:
@@ -294,16 +305,26 @@ with §3.11 pseudocode):
 ```
 foreach (agent in ownTeamOutfield where agent.isActive) {
     rel = baseSlot[agent] - centroid
-    rel.y *= baseLateral[phase]  / lateralCompactness     // higher compactness → tighter
-    rel.x *= baseVertical[phase] / verticalCompactness    // higher compactness → tighter
+    rel.y *= baseLateral[phase]  / lateralCompactness     // base phase-keyed; gains tighten via divisor
+    rel.x *= baseVertical[phase] / verticalCompactness    // base phase-keyed; gains tighten via divisor
     baseSlot[agent] = centroid + rel
 }
 ```
 
-Note the **inverted ratio** relative to v0.1 (AR-S1-01): scaling
-by `base/compactness` means a compactness scalar of `1.10` reduces
-`rel` by a factor of `1/1.10 ≈ 0.909` → shape tightens by ~9.1%.
-This matches the prose intent at all sites.
+Two independent effects compose here (ERR-012-003):
+
+1. **Phase baseline (numerator):** `baseLateral[phase]` scales the
+   spread directly — `OutOfPoss = 0.88` yields an 0.88× lateral
+   spread vs the `InPoss = 1.00` baseline (tighter defensive block);
+   `TransToAtk = 1.05` yields a wider transition shape.
+2. **Dynamic gains (divisor):** a compactness scalar of `1.10`
+   reduces `rel` by `1/1.10 ≈ 0.909` → shape tightens by ~9.1%. A
+   goal lead raises compactness ⇒ tighter; fatigue lowers it ⇒
+   looser. (Inverted ratio relative to v0.1 — AR-S1-01.)
+
+The two effects are orthogonal: the phase baseline survives even
+when all gains are neutral (`lateralCompactness = 1.0`), which is
+the no-op the pre-fix double-count masked.
 
 ### 3.5.3 Worked Example
 
@@ -311,13 +332,17 @@ Phase = `InPoss`, `baseLateral[InPoss] = 1.00`, `scoreDiff = +2`,
 `teamMeanFatigue = 0.40`:
 
 ```
-lateralCompactness = 1.00 × (1 + 0.05 × 2) × (1 − 0.15 × 0.40)
-                   = 1.00 × 1.10 × 0.94
+lateralCompactness = (1 + 0.05 × 2) × (1 − 0.15 × 0.40)   // gains only (ERR-012-003)
+                   = 1.10 × 0.94
                    = 1.034
-rescale factor     = baseLateral / lateralCompactness
+rescale factor     = baseLateral[InPoss] / lateralCompactness
                    = 1.00 / 1.034
                    = 0.9671
 ```
+
+(`baseLateral[InPoss] = 1.00`, so the numeric result is identical to
+the pre-ERR-012-003 form; under any non-`InPoss` phase the numerator
+differs and the phase baseline now contributes.)
 
 Team is leading by 2 and moderately fatigued. Net lateral rescale
 is `0.9671` — agents move 3.29% closer to centroid (tighter
@@ -588,3 +613,4 @@ that agent (§4.4.3).
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-01 §3.5 compactness formula inverted to match prose ("higher = tighter") — §3.5.2 now `rel *= base/compactness`, §3.5.3 worked example replayed; AR-S1-02 §3.3.1 per-archetype `lineCutIndices` + AM override for 4-2-3-1; AR-S1-03 §3.7 step order: line/lane resolved AFTER spacing+clamp; AR-S1-05 §3.5.2 now operates on `(baseSlot − centroid)` aligning with §3.11 pseudocode; AR-S1-06 spacing iterates up to `SPACING_MAX_PASSES = 4`; AR-S1-07 `SENTINEL_NO_SLOT = Vector2.NegativeInfinity` distinct from NaN; isActive filter added in §3.11; AR-S1-09 §3.0.3/§3.0.4 commit on the Nth (not N+1th) candidate tick; AR-S1-10 §3.2.2 "8 m" → 7.2 m corrected to formula; AR-S1-11 GK constants demoted `[GT]` → `[EST]`; AR-S1-12 lane bins declared as `LANE_EDGES_M` literal array with explicit boundary semantics; AR-S1-13 §3.5.0 centroid definition added; AR-S1-14 §3.6.4 worked example records post-displacement lane state. |
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §3.9 RNG domain tag — corrected value `0x16` → `0x17` and promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`; ERR-012-001 resolved; value-shift history documented. |
 | 0.4 | May 18, 2026 | AI agent (adversarial-specs-review-run3) | Run 3 adversarial fix pass (FAIL-6): 11 body-text `[EST]` constants promoted to `[GT]` to match §6.1 catalogue (PHASE_LOOSE_VELOCITY_THRESHOLD, PHASE_HYSTERESIS_TICKS, OFFSET_RANGE_X_M, OFFSET_RANGE_Y_M, LINE_HYSTERESIS_M, LINE_DWELL_TICKS, LANE_HYSTERESIS_M, GK_DEPTH_M, GK_ADVANCE_FACTOR, GK_LATERAL_FACTOR, SPACING_MAX_PASSES); §3.3.3 GK prose updated to reflect #11 APPROVED (May 18, 2026) and [GT] promotion; §3.8 table-header corrected from "all [EST]" to "all [GT]"; Appendix A.N citations added to formula-context inline tags. |
+| 0.5 | June 13, 2026 | AI agent (dotnet-CI quarantine adjudication) | ERR-012-003 (dotnet-CI Linux gate, Positioning AI quarantine cluster): §3.5.1/§3.5.2/§3.5.3 double-counted `baseLateral[phase]`/`baseVertical[phase]` (in both the compactness scalar and the §3.5.2 numerator), so the phase baseline cancelled to a no-op (`base/(base·gain) = 1/gain`) — invisible because every worked example used `InPoss` (`base = 1.00`). Removed `base[phase]` from the §3.5.1 compactness scalars (now dynamic-gain products only); phase baseline contributes solely via the §3.5.2 numerator. `InPoss` §3.5.3 result unchanged. Production fix in `ContextModifier.cs` v1.1; locks tactical tests T-T-001/003/004/005 + T-U-063 directional invariant. |
