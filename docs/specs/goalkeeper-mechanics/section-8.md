@@ -56,18 +56,26 @@ emitted by Goalkeeper Mechanics #11.
 
 ## 8.3 External References (Academic / Empirical)
 
-DOI verification status as of 2026-05-16: marked `[CITATION-PENDING]`
-where the DOI lookup has not yet been executed. OI-003 tracks
-verification completion as a post-`IN REVIEW` follow-up; not
-blocking.
+DOI verification status: **COMPLETE (OI-003 closed June 13, 2026).**
+All four formerly-`[CITATION-PENDING]` references were verified against
+their publisher records; none required dropping. Two carried draft
+metadata errors corrected in the same pass (Spratford 2009 journal
+*Journal of Sports Sciences* → *Sports Biomechanics*; Williams &
+Burwitz 1993 title "utilisation by soccer goalkeepers" → published
+"utilization in soccer"). The two conference/book references resolve
+to Routledge/Taylor & Francis DOIs (the Suzuki 1988 entry cites the
+Routledge Revivals reissue volume DOI, no per-chapter DOI being
+locatable). No reference was fabricated or replaced — a better
+outcome than Heading #10 OI-003, which had to substitute two
+unverifiable references.
 
 | Reference | DOI / verification | Purpose |
 |-----------|-------------------|---------|
-| Dicks, M., Davids, K. & Button, C. (2010). Individual differences in the visual control of intercepting a penalty kick. *Human Movement Science*. | `[CITATION-PENDING]` DOI lookup | Visual perception and action in 1v1 GK (§3.2 reaction model anchor) |
+| Dicks, M., Davids, K. & Button, C. (2010). Individual differences in the visual control of intercepting a penalty kick in association football. *Human Movement Science*, 29(3), 401–411. | DOI [10.1016/j.humov.2010.02.008](https://doi.org/10.1016/j.humov.2010.02.008) — verified June 13, 2026 (OI-003) | Visual perception and action in 1v1 GK (§3.2 reaction model anchor) |
 | Savelsbergh, G. J. P., Williams, A. M., van der Kamp, J. & Ward, P. (2002). Visual search, anticipation and expertise in soccer goalkeepers. *Journal of Sports Sciences*, 20(3), 279–287. | DOI [10.1080/026404102320183319](https://doi.org/10.1080/026404102320183319) | Anticipation skill in penalty saves (§3.2 `Reflexes` modulation) |
-| Spratford, W., Mellifont, R. & Burkett, B. (2009). The influence of dive direction on the movement characteristics of elite football goalkeepers. *Journal of Sports Sciences*. | `[CITATION-PENDING]` DOI lookup | Biomechanics of dive launch + peak reach (§3.3 anchor) |
-| Suzuki, S., Togari, H., Isokawa, M., Ohashi, J. & Ohgushi, T. (1988). Analysis of the goalkeeper's diving motion. *Science and Football*. | `[CITATION-PENDING]` DOI lookup (conference proceedings; ISBN-based citation if no DOI) | Hand-ball contact geometry baselines (§3.5) |
-| Williams, A. M. & Burwitz, L. (1993). Advance cue utilisation by soccer goalkeepers. In *Science and Football II*. | `[CITATION-PENDING]` DOI lookup (book chapter; ISBN-based citation if no DOI) | Anticipation modelling (§3.2 / KD-18 asymmetry rationale) |
+| Spratford, W., Mellifont, R. & Burkett, B. (2009). The influence of dive direction on the movement characteristics for elite football goalkeepers. *Sports Biomechanics*, 8(3), 235–245. | DOI [10.1080/14763140903229526](https://doi.org/10.1080/14763140903229526) — verified June 13, 2026 (OI-003); **journal corrected** from the v0.1 draft's *Journal of Sports Sciences* to *Sports Biomechanics*, and title preposition corrected "of" → "for" | Biomechanics of dive launch + peak reach (§3.3 anchor) |
+| Suzuki, S., Togari, H., Isokawa, M., Ohashi, J. & Ohgushi, T. (1988). Analysis of the goalkeeper's diving motion. In T. Reilly, A. Lees, K. Davids & W. J. Murphy (Eds.), *Science and Football* (Proceedings of the First World Congress of Science and Football, Liverpool, 1987), pp. 468–475. London: E & FN Spon. | Book-level DOI (Routledge Revivals reissue) [10.4324/9780203720035](https://doi.org/10.4324/9780203720035) — verified June 13, 2026 (OI-003); no per-chapter DOI located, so the reissue volume DOI is cited per the OI-003 "verified equivalent" rule (fabricated chapter DOIs forbidden) | Hand-ball contact geometry baselines (§3.5) |
+| Williams, A. M. & Burwitz, L. (1993). Advance cue utilization in soccer. In T. Reilly, J. Clarys & A. Stibbe (Eds.), *Science and Football II*, pp. 239–243. London: E & FN Spon. | Chapter DOI [10.4324/9780203474235-48](https://doi.org/10.4324/9780203474235-48) — verified June 13, 2026 (OI-003); **title corrected** from the v0.1 draft's "Advance cue utilisation by soccer goalkeepers" to the published "Advance cue utilization in soccer" | Anticipation modelling (§3.2 / KD-18 asymmetry rationale) |
 | Opta / StatsBomb shots-on-target, saves-per-match, crosses-per-match, 1v1-conversion-rate baseline (commercial data class). | Commercial data; not DOI-verifiable. Retained per Heading #10 §9.6 commercial-data baseline class precedent. | §5.3 validation scenarios; §6.3 frequency anchors |
 
 **Note (OI-003).** Per Heading #10 OI-003 closure pattern, fabricated
@@ -139,3 +147,4 @@ Allocated cross-reference IDs emitted by Goalkeeper Mechanics #11.
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 5 project-doc citations, 22 upstream-spec rows, 6 external academic references (2 verified DOI / 4 `[CITATION-PENDING]` per OI-003 follow-up), 32 typed cross-references (15 XC / 7 FM / 10 EC) | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | ERR-011-001 resolved: `DOMAIN_TAG_GOALKEEPER = 0x1D` allocated in #16 §3.4 v1.0.5 (value shifted from `0x17` to `0x1D` — #12 Positioning AI reached `APPROVED` first). §8.2 upstream-spec row and XC-011-007 updated to reflect confirmed allocation. |
+| 0.3 | June 13, 2026 | AI agent | OI-003 DOI verification COMPLETE. §8.3: all four `[CITATION-PENDING]` external references verified and DOIs inlined — Dicks 2010 [10.1016/j.humov.2010.02.008]; Spratford 2009 [10.1080/14763140903229526] (journal corrected *Journal of Sports Sciences* → *Sports Biomechanics*, title "of" → "for"); Suzuki 1988 [10.4324/9780203720035] (Routledge Revivals reissue book DOI; no chapter DOI located); Williams & Burwitz 1993 [10.4324/9780203474235-48] (title corrected "utilisation by soccer goalkeepers" → "utilization in soccer"). No reference fabricated or dropped. §8.3 status note updated; OI-003 closed. |

@@ -96,12 +96,17 @@ Sign-offs — all completed May 18, 2026:
   rows back-propagated to #18 Appendix F.0 13-field schema at
   Stage 0+1 delivery schedule per Heading #10 OI-002 closure
   pattern. Not blocking #11 sign-off.
-- **OI-003 (DOI verification for §8.3).** Four
-  `[CITATION-PENDING]` external references (Dicks 2010; Spratford
-  2009; Suzuki 1988; Williams & Burwitz 1993). One reference
-  already DOI-verified (Savelsbergh 2002); Opta/StatsBomb retained
-  as commercial-data baseline class. Verification follow-up per
-  Heading #10 OI-003 pattern; not blocking sign-off.
+- **OI-003 (DOI verification for §8.3).** **RESOLVED June 13, 2026.**
+  All four formerly-`[CITATION-PENDING]` external references verified
+  and DOIs inlined in §8.3: Dicks 2010 [10.1016/j.humov.2010.02.008];
+  Spratford 2009 [10.1080/14763140903229526] (journal corrected to
+  *Sports Biomechanics*); Suzuki 1988 [10.4324/9780203720035]
+  (Routledge Revivals reissue book DOI); Williams & Burwitz 1993
+  [10.4324/9780203474235-48] (title corrected to published form).
+  None fabricated, dropped, or substituted. Savelsbergh 2002 was
+  already verified; Opta/StatsBomb retained as commercial-data
+  baseline class. Per Heading #10 OI-003 pattern; was never blocking
+  sign-off.
 - **OI-004 (anchor pinning).** Exact §X.Y anchors for #3
   `ICollisionEventConsumer`, #5 `PassIntent` consumer surface,
   #7 perception-latency surface, #8 GK-branch intent surface
@@ -145,8 +150,9 @@ Particular attention to:
   (Decision Tree precedent).
 - AM #2 `GroundedReason.DIVING_SAVE` enum addition at Stage 1+ as
   non-behavioral patch (OI-007 / KD-12 / §7.5).
-- DOI verification for the remaining four `[CITATION-PENDING]`
-  external references in §8.3 (OI-003).
+- ~~DOI verification for the remaining four `[CITATION-PENDING]`
+  external references in §8.3 (OI-003).~~ **DONE June 13, 2026** —
+  all four verified; see §9.4 OI-003 and §8.3.
 - Defensive AI #14 / Attacking AI #15 / Pressing AI #13 integration
   verification once those specs reach `IN REVIEW`.
 
@@ -167,3 +173,4 @@ Particular attention to:
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; constant-tag inventory (~79 rows), cross-spec verification (15 XC), 5 sign-off requirements, 8 outstanding items | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | APPROVED. OI-001 (ERR-011-001): `DOMAIN_TAG_GOALKEEPER = 0x1D` allocated in #16 §3.4 v1.0.5 (value shifted from `0x17` — #12 Positioning AI reached `APPROVED` first); §3.4.9 constant tag promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`. OI-005: #12 GK constants promoted `[EST]` → `[GT]` atomically in #12 §6.1 v0.3. R-01..R-05 signed May 18, 2026. |
+| 0.3 | June 13, 2026 | AI agent | OI-003 (DOI verification for §8.3) RESOLVED — all four `[CITATION-PENDING]` external references verified, DOIs inlined in §8.3 (two with metadata corrections; none fabricated or dropped). §9.4 OI-003 and §9.6 post-approval list updated. Non-gating closeout; APPROVED status unchanged. |
