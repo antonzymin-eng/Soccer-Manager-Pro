@@ -45,14 +45,6 @@ applicable, and **remove the quarantine line in the same commit**.
 |---|---|---|
 | `SpatialHash_TwoAgentsFar_QueryReturnsOnlySelf` | SH-003: distant agent must not appear in query | Broad-phase query radius vs test distance; check 3×3 window proof (AR-10) against the test's cell geometry. |
 
-### Pass Mechanics #5 (3)
-
-| Test | First-run failure | Hypothesis |
-|---|---|---|
-| `PV003_Lofted_MidAttributes_40m_VelocityInRange` | PV-003: lofted mid-power 40 m velocity must be ≥ 14 m/s | Velocity-calculator output vs §3.1.4 profile windows; possibly the AR-9 L-5 through-ball underhit family extends to lofted profiles. |
-| `VS001_EliteShortGroundPass_OutputsInRange` | VS-001: elite short pass velocity must be ≥ 11.0 m/s | §5 verification-scenario hand-calc vs implementation. |
-| `VS003_ChipOverDefensiveLine_OutputsInRange` | VS-003: chip velocity must be ≤ 11.0 m/s | Same family as VS-001 (note VS-001/VS-003 bracket 11.0 from opposite sides — at least one hand-calc is mis-derived). |
-
 ### Positioning AI #12 (6)
 
 | Test | First-run failure | Hypothesis |
@@ -77,6 +69,18 @@ applicable, and **remove the quarantine line in the same commit**.
 | `ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero` | T-DS-008: PrepareReplay must return 0; returned 5640 (0x1608) | PrepareReplay step validation rejects the fixture's "well-formed" snapshot — either a validation step the fixture doesn't satisfy (fixture defect) or a step mis-ordered in ReplayEngine. Error code 0x1608 names the step; adjudicate against §4.2.2. |
 
 ## Resolved
+
+### Pass Mechanics #5 (3/3) — resolved June 13, 2026 (all TEST/SPEC; production faithful to normative §3)
+
+The §5.11 NUnit suite was uncompilable from v1.1 until June 11 (stray-brace, AR-9 H-1), so its §5.12 validation-scenario expectations had never executed and were never re-derived against the §3 model — the First Touch ERR-004-006 family.
+
+| Test | Verdict | Adjudication |
+|---|---|---|
+| `PV003_Lofted_MidAttributes_40m_VelocityInRange` | TEST/SPEC | §3.2.7 against the authoritative §3.1.4 Lofted profile (vOffset=9, vMax=22, distMax=60): powerScale = (10/20)·(40/60) = 0.3333 → V_base = 9 + 0.3333·(22−9) = 13.333 m/s (the "40/3" coincidence is 9 + 13/3). The ≥14.0 floor was transcribed from the stale §3.2.9 reference table (Lofted distMax=55) and is unreachable for distMax=60. Test lower bound 14.0→13.0; §5.3 expected band [14,20]→[13,20]; §3.2.9 stale-distMax warning. |
+| `VS001_EliteShortGroundPass_OutputsInRange` | TEST/SPEC | Ground vOffset=8/vMax=18/distMax=30, KickPower proxy (19+17)/2=18: V_base = 8 + 0.24·10 = 10.4, ×0.98 = 10.192 m/s (matches runtime). The §5 ≈11.5 m/s is categorically unreachable for an 8 m Ground pass (caps ~10.45 at K=20). Latent second failure: §3.5.3 error = 1.05° vs the §5 ≤0.8° (also unreachable; elite Ground floors at 0.861°). Velocity band [11,12]→[9.5,11.0]; error ≤0.8°→≤1.1°. |
+| `VS003_ChipOverDefensiveLine_OutputsInRange` | TEST/SPEC | Chip vOffset=6/vMax=14/distMax=20, KickPower proxy 15.5: V_base = 6 + 0.6975·8 = 11.58, ×0.96 = 11.117 m/s (matches runtime). §3.3.4 aerial angle θ = atan(4·4.5/18) = atan(1) = 45° (the §5 ≈55° needs apexChip≈6.4 m, inconsistent with the 4.5 m chip apex). Velocity band [10,11]→[10.5,11.5]; angle [50,60]→[44,56]. |
+
+The VS-001/VS-003 "11.0 bracketed from opposite sides" paradox is resolved: corrected, the chip (11.12 m/s) correctly travels faster than the short ground pass (10.19 m/s). No production velocity/error/angle code changed. Files: `src/pass-mechanics/Tests/PassMechanicsTests.cs` v1.3, `docs/specs/pass-mechanics/section-5-1-to-5-12.md` v1.3, `section-5-13-to-5-16.md`, `section-3-2.md` v1.2. Suite: 80 passed / 0 failed / 12 skipped; cross-spec (testing-strategy incl. `lofted-pass-kick-bounce-roll`) 20/20.
 
 ### Heading Mechanics #10 (2/2) — resolved June 12, 2026 (1 PRODUCTION-DEFECT + 1 TEST-DEFECT)
 

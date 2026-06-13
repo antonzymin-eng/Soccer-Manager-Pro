@@ -9,7 +9,8 @@ for every design decision. This is the authoritative implementation reference fo
 `PassVelocityCalculator.cs`. Full mathematical derivations are in Appendix A.1.
 
 **Created:** February 21, 2026
-**Version:** 1.0
+**Revised:** June 13, 2026
+**Version:** 1.2
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -379,6 +380,15 @@ and stored separately from compiled logic.
 
 > ⚠ All values are [GT] placeholder estimates. Require Ball Physics drag model simulation
 > validation (XC-3.1-01) before finalisation. Do not approve §3.2 without this check.
+>
+> ⚠ **STALE distMax — §3.1.4 is authoritative.** The `distMax` column in this table
+> (e.g. Ground 35, Lofted 55) predates the §3.1.4 v1.1 Master Physical Profile Table and
+> was NOT updated when §3.1.4 set Ground `distMax = 30`, Lofted `distMax = 60`. The
+> implementation (`PassTypeProfiles.cs`) and all worked derivations MUST source `distMax`
+> (and every other profile field) from §3.1.4, never from this reference copy. This stale
+> column caused the §5 PV-003 expected-velocity mis-derivation corrected June 13, 2026
+> (ERR-005-001). The §3.2.8 boundary checks below also use the stale Ground `distMax = 35`
+> and are illustrative only — re-derive against §3.1.4 before relying on them.
 
 ### Citation Audit (§3.2 Scope)
 
@@ -470,6 +480,7 @@ See Amendment AM-003-001 (retained for audit history) and Appendix A.1 for full 
 |---------|------|--------|-------|
 | 1.0 | February 21, 2026 | Claude (AI) / Anton | Initial full section. Amendment AM-003-001 fully incorporated — `vOffset` interpolation base replaces the Outline's `vMin` base. Complete formula reference, constants, boundary verification, pseudocode, and citation audit included. Supersedes §3.2 content in Outline v1.0. |
 | 1.1 | March 25, 2026 | Claude (AI) / Anton | Post-audit fixes: Decision Tree #7→#8 (C-03, 1 instance); Chip distMax corrected 25m→20m in boundary check and constants table (M-01). |
+| 1.2 | June 13, 2026 | — | ERR-005-001 (dotnet-CI quarantine burn-down): added a STALE-distMax warning to the §3.2.9 constants table — the `distMax` column here predates §3.1.4 v1.1 (Ground 35→30, Lofted 55→60) and is NOT authoritative; §3.1.4 is. This stale copy was the upstream cause of the §5 PV-003 expected-velocity mis-derivation. No formula or production-code change. |
 
 ---
 
