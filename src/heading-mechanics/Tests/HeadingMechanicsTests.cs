@@ -1,6 +1,6 @@
 // File:     src/heading-mechanics/Tests/HeadingMechanicsTests.cs
 // Created:  2026-05-31
-// Modified: 2026-05-31
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Heading Mechanics #10 §5, Code Standards #20
 // Purpose:  Unit tests for Heading Mechanics. §5.1 unit test groups.
@@ -531,8 +531,12 @@ namespace TacticalDirector.HeadingMechanics.Tests
         {
             // Team 0 defends goal at X = 0. Place agent near own-half and aim back toward X = 0.
             Vector3 contactPosition = new Vector3(15.0f, 34.0f, 1.5f);  // 15 m from own goal
-            // Velocity strongly in -X direction, moderate Z component keeps it in goal height range.
-            Vector3 outgoingVelocity = new Vector3(-14.0f, 0.0f, 1.0f);
+            // Velocity strongly in -X with enough loft to STILL be at goal height when x reaches 0.
+            // (The prior vz = 1.0 grounded out — z(t)=1.5+t−4.905t² hits 0 at t≈0.66 s / x≈5.7 m,
+            //  reaching x=0 only at z≈−3.05 m, so the ball never entered the goal box and the
+            //  predicate correctly returned false. dotnet-CI quarantine TEST-DEFECT.) With vz = 5:
+            //  z(1.071 s) = 1.5 + 5·1.071 − 4.905·1.071² ≈ 1.23 m ∈ [0, 2.44] at x = 0, y = 34.
+            Vector3 outgoingVelocity = new Vector3(-14.0f, 0.0f, 5.0f);
 
             bool flag = HeadingPowerAngle.ComputeOwnGoalFlag(outgoingVelocity, contactPosition, teamId: 0);
 
@@ -1073,4 +1077,9 @@ namespace TacticalDirector.HeadingMechanics.Tests
 // |         |            |        | T-HE-I-001..009 (§5.2 integration), T-HE-V-001..003 (§5.3         |
 // |         |            |        | validation), T-HE-C-001..003 (§5.4 conformance). All stubs use    |
 // |         |            |        | Assert.Ignore with Stage 0+1 activation conditions.               |
+// | 1.2     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication. ComputeHeadZ_AtApex now passes via the     |
+// |         |            |        | HeadingJumpKinematics v1.2 time-warp fix (no test change). OwnGoalFlag         |
+// |         |            |        | (TEST-DEFECT): outgoing vz 1.0 → 5.0 — the prior ball grounded out at x≈5.7 m  |
+// |         |            |        | (z=0 at t≈0.66 s) and reached x=0 only at z≈−3.05 m, so the predicate          |
+// |         |            |        | correctly returned false; vz=5 keeps it at z≈1.23 m ∈ [0,2.44] when x=0.       |
 #endregion

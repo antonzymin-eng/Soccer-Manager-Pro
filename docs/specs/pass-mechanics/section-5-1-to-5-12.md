@@ -10,8 +10,8 @@ Machine (§3.8), and Event Publishing (§3.9). This section is the authoritative
 for Stage 0 implementation sign-off.
 
 **Created:** February 20, 2026, 11:30 PM PST
-**Revised:** February 21, 2026
-**Version:** 1.1
+**Revised:** June 13, 2026
+**Version:** 1.3
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -175,7 +175,7 @@ are forbidden.
 |----|-----------|--------|-----------------|-----------|
 | PV-001 | Ground pass, mid-range attributes, mid-range distance | `PassType.Ground`, `KickPower=10`, `Distance=20m`, `Fatigue=0` | `V ∈ [10, 16] m/s` | ± 0.01 m/s |
 | PV-002 | Driven pass, high attributes, long distance | `PassType.Driven`, `KickPower=18`, `Distance=35m`, `Fatigue=0` | `V ∈ [20, 26] m/s` | ± 0.01 m/s |
-| PV-003 | Lofted pass, mid-range attributes, long distance | `PassType.Lofted`, `KickPower=10`, `Distance=40m`, `Fatigue=0` | `V ∈ [14, 20] m/s` | ± 0.01 m/s |
+| PV-003 | Lofted pass, mid-range attributes, long distance | `PassType.Lofted`, `KickPower=10`, `Distance=40m`, `Fatigue=0` | `V ∈ [13, 20] m/s` (true 13.333) | ± 0.01 m/s |
 | PV-004 | Ground pass, minimum power, long distance | `PassType.Ground`, `KickPower=1`, `Distance=30m`, `Fatigue=0` | `V ∈ [V_OFFSET_Ground, V_OFFSET_Ground + 1.5]` (low but above floor) | ± 0.05 m/s |
 | PV-005 | Chip pass, maximum power, maximum distance | `PassType.Chip`, `KickPower=20`, `Distance=D_MAX_Chip`, `Fatigue=0` | `V == V_MAX_Chip` (clamped) | ± 0.001 m/s |
 | PV-006 `[ERR-007-BLOCKED]` | Fatigue=1.0 reduces velocity | `PassType.Driven`, `KickPower=15`, `Fatigue=1.0` | `V < V_at_Fatigue_0` | Strict inequality |
@@ -201,6 +201,15 @@ modifier is accidentally inverted, this test catches it before any integration t
 
 PV-012 tests the degenerate zero-distance case. While Decision Tree should not produce
 this, Pass Mechanics must reject it gracefully rather than producing NaN velocity.
+
+PV-003 lower bound corrected June 13, 2026 (ERR-005-001, dotnet-CI quarantine burn-down):
+the original `[14, 20]` lower bound was never re-derived after §3.1.4 set Lofted
+`distMax = 60 m` (the stale §3.2.9 reference table used 55 m). With the authoritative
+§3.1.4 Lofted profile (`vOffset = 9`, `vMax = 22`, `distMax = 60`), the §3.2.7 formula at
+`K = 10`, `D = 40`, `Fatigue = 0` gives `powerScale = (10/20)×(40/60) = 0.33333`,
+`V_base = 9 + 0.33333×(22−9) = 13.333 m/s`. The 14 m/s floor is unreachable for this
+input (it would require `distMax ≤ 52 m`). Lower bound corrected `14 → 13` to bracket the
+true model output. The implementation was correct; the §5 expectation was stale.
 
 ---
 
@@ -519,12 +528,24 @@ tracing each value back to the §3.x formula and the input attributes.
 
 | Output | Expected | Tolerance |
 |--------|----------|-----------|
-| Velocity | ≈ 11.5 m/s | ± 0.5 m/s |
-| Launch Angle | ≈ 1.5° | ± 0.5° |
-| Error Angle | ≤ 0.8° | Exact ≤ |
+| Velocity | ≈ 10.2 m/s (proxy KickPower) / ≈ 9.7 m/s (fixture KickPower=14) | ± 0.5 m/s |
+| Launch Angle | ≈ 2.0° (clamped to angleMin) | ± 0.5° |
+| Error Angle | ≈ 1.05° | ± 0.1° |
 | Spin type | Topspin dominant | Sign check |
 
-**Football realism check:** A 0.8° error on an 8m pass produces ≈ 0.11m lateral miss —
+**Re-derivation (ERR-005-001, June 13, 2026):** The original `≈11.5 m/s` velocity and
+`≤0.8°` error were never derived from the §3.2/§3.5 model against the §3.1.4 Ground
+profile (`vOffset = 8`, `vMax = 18`, `distMax = 30`). For an 8 m Ground pass, velocity is
+intrinsically low: even at `K = 20`, `V_base = 8 + (20/20)×(8/30)×10 = 10.667`, so
+`≈11.5 m/s` is unreachable. The §5.11 test uses the ERR-007 proxy
+`KickPower = (Passing + Technique)/2 = 18`, giving `V = (8 + 0.24×10)×0.98 = 10.192 m/s`;
+the fixture's explicit `KickPower = 14` gives `9.667 m/s`. Error: `BaseErrorGround = 1.5`,
+`passingMod(P=19) = 2.8 − (18/19)×2.35 = 0.5737`, `pressureMod = 1.025`,
+`fatigueMod = 1.02`, `orientationMod = 1 + (10/90)×1.5 = 1.1667` ⇒
+`error = 1.5×0.5737×1.025×1.02×1.1667 = 1.05°`. The `≤0.8°` floor is unreachable: even at
+neutral conditions an elite passer's Ground error is `1.5×0.5737 = 0.861°`.
+
+**Football realism check:** A 1.05° error on an 8m pass produces ≈ 0.15m lateral miss —
 ball reaches the target's feet with a minor correction required. Appropriate for an elite
 passer under minimal pressure.
 
@@ -583,14 +604,30 @@ for a pressured, fatigued passer playing quickly.
 
 | Output | Expected | Tolerance |
 |--------|----------|-----------|
-| Velocity | ≈ 10.5 m/s | ± 0.5 m/s |
-| Launch Angle | ≈ 55° | ± 5° |
+| Velocity | ≈ 11.1 m/s (proxy KickPower) / ≈ 9.9 m/s (fixture KickPower=12) | ± 0.5 m/s |
+| Launch Angle | ≈ 45° (= angleMin; apexChip=4.5 m at D=18) | ± 2° |
 | Error Angle | ≈ 2.0° | ± 0.5° |
 | Spin type | Backspin dominant | Sign check |
 
-**Football realism check:** A 55° launch angle produces a steeply lofted ball that drops
-sharply — characteristic of a dinked chip. 2.0° error on 18m ≈ 0.63m lateral miss.
-Appropriate for a technically good player under moderate pressure.
+**Re-derivation (ERR-005-001, June 13, 2026):** The original `≈10.5 m/s` velocity and
+`≈55°` angle were never derived from the §3.2/§3.3 model against the §3.1.4 Chip profile
+(`vOffset = 6`, `vMax = 14`, `distMax = 20`; `angleMin = 45`, `angleMax = 65`;
+`apexChip = 4.5 m`). The §5.11 test uses the ERR-007 proxy
+`KickPower = (Passing + Technique)/2 = 15.5`:
+`powerScale = (15.5/20)×(18/20) = 0.6975`, `V_base = 6 + 0.6975×8 = 11.58`,
+`× fatigueMod(0.96) = 11.117 m/s`. The fixture's explicit `KickPower = 12` gives
+`(6 + 0.54×8)×0.96 = 9.907 m/s`. Launch angle is the §3.3.4 aerial formula
+`θ = atan(4H/D) = atan(4×4.5/18) = atan(1.0) = 45.0°`, clamped to `[45, 65] = 45.0°`. The
+`≈55°` expectation would require `apexChip ≈ 6.43 m` at `D = 18` and is inconsistent with
+the 4.5 m chip apex. **Cross-spec coherence:** the corrected VS-003 chip velocity
+(11.1 m/s) now correctly exceeds the corrected VS-001 short Ground pass (10.2 m/s) — a
+chip over a defensive line travels faster than a tiki-taka short pass, which the original
+`≈10.5 < ≈11.5` ordering inverted.
+
+**Football realism check:** A 45° launch angle produces a lofted ball that clears a close
+defender and drops behind the line — characteristic of a dinked chip at this range. 2.0°
+error on 18m ≈ 0.63m lateral miss. Appropriate for a technically good player under
+moderate pressure.
 
 ---
 

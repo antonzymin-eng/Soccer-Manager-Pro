@@ -9,13 +9,14 @@ implementation sign-off.
 
 **Created:** February 18, 2026, 3:00 PM PST
 **Updated:** February 22, 2026, 12:00 AM PST
-**Version:** 1.3
+**Version:** 1.5
 **Status:** Approved â€” VS-001 radius corrected (v1.2)
 **Author:** Claude (AI) with Anton (Lead Developer)
 **Specification Number:** 4 of 20 (Stage 0 Physics Foundation)
 **Prerequisites:** Section 1 (v1.0), Section 2 (v1.0), Section 3 (v1.1), Section 4 (v1.1)
 
 **Changelog:**
+- v1.5 (June 12, 2026): Dotnet-CI quarantine adjudication — §5.2 CQ-012 table Scenario 2 expected band corrected 0.55–0.65 → ≈0.48–0.55. Parallel-surface drift: the same row in the normative §3.1.3 verification matrix was corrected to ≈0.48–0.55 on May 26, 2026 (section-3-1-to-3-5.md v1.3 — the old band predated the unconditional Step-5 movement difficulty), but the §5.2 copy of the matrix was never synced. For the prescribed inputs (Tech=12, FT=11, ball=15.0, agent=2.0, pressure=0.0) the normative §3.1.1 formula yields q = 0.585 / 1.142857 ≈ 0.512, outside the stale band. ERR-004-006 family (§5 expectation not re-derived from normative §3). No formula change. Housekeeping: Version header field reconciled — the v1.4 changelog entry landed without bumping the field from 1.3.
 - v1.4 (June 10, 2026): ERR-004-006 — §5.10 VS-001 radius hand-calc re-derived: the v1.2 “correction” introduced an additive velocity modifier applied below reference speed (r = 0.195 + 0.233 = 0.428m), contradicting the normative §3.2.3 formula (multiplicative on excess above 15 m/s only → no modifier at 14 m/s; r = 0.195m). Outcome (CONTROLLED) unaffected. See section-5-7-to-5-13.md v1.1 and spec-error-log.md ERR-004-006.
 - v1.3 (March 25, 2026): MOD-04 audit fix — subsection numbering normalised.
   §5.10.x subsections renumbered to §5.11.x (under §5.11 Acceptance Criteria Summary);
@@ -404,7 +405,7 @@ Acts as a high-level regression test for the entire formula.
 | Scenario | Tech | FT | Ball | Agent | Pressure | HalfTurn | Expected q |
 |---|---|---|---|---|---|---|---|
 | Elite, slow, no pressure | 20 | 20 | 5.0 | 0.0 | 0.0 | No | â‰¥ 0.85 |
-| Average, typical, no pressure | 12 | 11 | 15.0 | 2.0 | 0.0 | No | 0.55â€“0.65 |
+| Average, typical, no pressure | 12 | 11 | 15.0 | 2.0 | 0.0 | No | â‰ˆ 0.48â€“0.55 |
 | Average, typical, medium pressure | 12 | 11 | 15.0 | 2.0 | 0.5 | No | 0.35â€“0.45 |
 | Poor, hard shot, full pressure, sprint | 5 | 5 | 30.0 | 7.0 | 1.0 | No | â‰¤ 0.15 |
 

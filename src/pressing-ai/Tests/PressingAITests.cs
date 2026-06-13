@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/Tests/PressingAITests.cs
 // Created:  2026-05-31
-// Modified: 2026-05-31
+// Modified: 2026-06-13
 // Author:   —
 // Spec:     Pressing AI #13 §5, Code Standards #20
 // Purpose:  Unit tests for Pressing AI. T-U unit tests from §5.
@@ -788,6 +788,20 @@ namespace TacticalDirector.PressingAI.Tests
         /// <summary>
         /// T-U-031: Greedy assignment by threat score descending.
         /// Two receivers with different threat scores → higher-threat receiver is shadowed first.
+        ///
+        /// Fixture corrected (dotnet CI gate). The §3.4 threat formula's skill term is
+        /// (FirstTouch / 20) * THREAT_SKILL_W, i.e. monotonically INCREASING in FirstTouch
+        /// — a STRONGER first touch raises threat. The original fixture assigned the
+        /// "high-threat" receiver a weak touch (5) and the "low-threat" receiver a strong
+        /// touch (18), so the laterally-placed strong-skill receiver (id 52, score ≈ 0.28)
+        /// actually out-scored the forward weak-skill receiver (id 51, score ≈ 0.245), and
+        /// the selector correctly shadowed id 52 first. Production matches §3.4 line 230.
+        /// The intended-higher-threat receiver is now genuinely higher threat: forward
+        /// (progression gain) AND strong-skilled. Hand derivation with the two defenders
+        /// below (both within 20 m of each receiver → pressure = 2/3):
+        ///   id 51 @ (60,34) FT=18: 0.1905·0.50 + 0.3333·0.30 + 0.90·0.20 = 0.375
+        ///   id 52 @ (50,44) FT=5 : 0       ·0.50 + 0.3333·0.30 + 0.25·0.20 = 0.150
+        /// id 51 wins; its shadow lane (55.5, 34) is covered by defender1 (55,34).
         /// </summary>
         [Test]
         public void CoverShadow_AssignsHigherThreatReceiverFirst()
@@ -809,19 +823,21 @@ namespace TacticalDirector.PressingAI.Tests
                 teamId: SnapshotFactory.OpposingTeamId,
                 position: new Vector2(50f, 34f));
 
-            // High-threat receiver: close, forward, weak skill (maximises threat score).
+            // High-threat receiver: close, forward (progression gain) AND strong skill
+            // (high FirstTouch → high skill term per §3.4) — maximises threat score.
             SnapshotFactory.SetAgent(snap, 1,
                 entityId: highThreatId,
                 teamId: SnapshotFactory.OpposingTeamId,
                 position: new Vector2(60f, 34f),
-                firstTouch: 5f);
+                firstTouch: 18f);
 
-            // Low-threat receiver: same distance, but laterally (no progression gain).
+            // Low-threat receiver: same distance, but laterally (no progression gain) and
+            // weak skill (low FirstTouch → low skill term).
             SnapshotFactory.SetAgent(snap, 2,
                 entityId: lowThreatId,
                 teamId: SnapshotFactory.OpposingTeamId,
                 position: new Vector2(50f, 44f),
-                firstTouch: 18f);
+                firstTouch: 5f);
 
             // Two defenders available.
             SnapshotFactory.SetAgent(snap, 3,
@@ -1711,4 +1727,11 @@ namespace TacticalDirector.PressingAI.Tests
 // | 1.1     | 2026-06-01 | —      | Added PressingAIIntegrationTests class with 26 stubs: T-I-001..010 (§5.3 integration),       |
 // |         |            |        | T-D-001..006 (§5.4 determinism), T-P-001..003 (§5.5 performance), T-C-001..007 (§5.6        |
 // |         |            |        | anti-chaos including AR-S1-M6 T-C-007). All stubs use Assert.Ignore with Stage 0+1 conditions.|
+// | 1.2     | 2026-06-13 | —      | dotnet CI gate adjudication (T-U-031): fixture defect, not a production defect.               |
+// |         |            |        | CoverShadow_AssignsHigherThreatReceiverFirst encoded an inverted skill term — the §3.4        |
+// |         |            |        | threat formula's skill component is (FirstTouch/20)·THREAT_SKILL_W (increasing in FirstTouch),|
+// |         |            |        | so the "high-threat" receiver's weak touch (5) actually under-scored the "low-threat"         |
+// |         |            |        | receiver's strong touch (18) and the selector correctly shadowed id 52. FirstTouch values     |
+// |         |            |        | swapped so id 51 is genuinely higher threat (forward + strong skill). CoverShadowSelector     |
+// |         |            |        | unchanged; matches §3.4 line 230.                                                             |
 #endregion

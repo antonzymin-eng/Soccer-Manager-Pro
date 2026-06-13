@@ -1,6 +1,6 @@
 // File: src/positioning-ai/ContextModifier.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-13
 // Author:   —
 // Spec: #12 Positioning AI §3.5
 // Purpose: Applies multiplicative compactness modifiers to base slots relative to the active centroid.
@@ -34,11 +34,16 @@ namespace TacticalDirector.PositioningAI
         {
             Vector2 centroid = ComputeCentroid(outSlots, snapshot);
 
-            float lateralCompactness  = ComputeLateralCompactness(modifiers, phase);
-            float verticalCompactness = ComputeVerticalCompactness(modifiers, phase);
+            // §3.5.2 (corrected — ERR-012-003): the rescale numerator carries the phase-keyed
+            // baseLateral/baseVertical; the compactness denominator carries ONLY the dynamic
+            // gain products (score/fatigue/intensity). The pre-fix code folded base[phase] into
+            // BOTH sides, so it cancelled and the phase baseline was a no-op (all InPoss worked
+            // examples used base=1.00, masking the defect). Now base[phase] survives.
+            float lateralGain  = ComputeLateralGain(modifiers);
+            float verticalGain = ComputeVerticalGain(modifiers);
 
-            float lateralScale  = PositioningAIConstants.BaseLateral[(int)phase]  / lateralCompactness;
-            float verticalScale = PositioningAIConstants.BaseVertical[(int)phase] / verticalCompactness;
+            float lateralScale  = PositioningAIConstants.BaseLateral[(int)phase]  / lateralGain;
+            float verticalScale = PositioningAIConstants.BaseVertical[(int)phase] / verticalGain;
 
             for (int i = 0; i < snapshot.Agents.Length; i++)
             {
@@ -81,33 +86,38 @@ namespace TacticalDirector.PositioningAI
         }
 
         /// <summary>
-        /// lateralCompactness = baseLateral[phase]
-        ///     × (1 + SCORE_ATK_GAIN × clamp(scoreDiff, -3, +3))
-        ///     × (1 − FATIGUE_LATERAL_RELAX × teamMeanFatigue)
-        /// §3.5.1, FR-PA-028, FR-PA-029, FR-PA-030.
+        /// Dynamic lateral gain product (phase-independent):
+        ///     (1 + SCORE_ATK_GAIN × clamp(scoreDiff, -3, +3))
+        ///   × (1 − FATIGUE_LATERAL_RELAX × teamMeanFatigue)
+        /// §3.5.1, FR-PA-028, FR-PA-029, FR-PA-030. The phase-keyed baseLateral[phase] is
+        /// applied separately as the §3.5.2 numerator (ERR-012-003) and is NOT folded in here.
+        /// For InPoss (baseLateral = 1.00) this equals the historical lateralCompactness, so
+        /// the §3.5.3 worked example (rescale ≈ 0.9671) is preserved.
         /// </summary>
-        private static float ComputeLateralCompactness(ContextModifierInputs m, Phase phase)
+        private static float ComputeLateralGain(ContextModifierInputs m)
         {
             float clamped = Mathf.Clamp(m.ScoreDiff, -3, 3);
-            return PositioningAIConstants.BaseLateral[(int)phase]
-                   * (1f + PositioningAIConstants.SCORE_ATK_GAIN     * clamped)
+            return (1f + PositioningAIConstants.SCORE_ATK_GAIN     * clamped)
                    * (1f - PositioningAIConstants.FATIGUE_LATERAL_RELAX * m.TeamMeanFatigue);
         }
 
         /// <summary>
-        /// verticalCompactness = baseVertical[phase]
-        ///     × (1 + INTENSITY_VERTICAL_GAIN × tacticalIntensity)
-        /// §3.5.1, FR-PA-031.
+        /// Dynamic vertical gain product (phase-independent):
+        ///     (1 + INTENSITY_VERTICAL_GAIN × tacticalIntensity)
+        /// §3.5.1, FR-PA-031. The phase-keyed baseVertical[phase] is applied separately as the
+        /// §3.5.2 numerator (ERR-012-003) and is NOT folded in here.
         /// </summary>
-        private static float ComputeVerticalCompactness(ContextModifierInputs m, Phase phase)
+        private static float ComputeVerticalGain(ContextModifierInputs m)
         {
-            return PositioningAIConstants.BaseVertical[(int)phase]
-                   * (1f + PositioningAIConstants.INTENSITY_VERTICAL_GAIN * m.TacticalIntensity);
+            return (1f + PositioningAIConstants.INTENSITY_VERTICAL_GAIN * m.TacticalIntensity);
         }
     }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                                                  |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                                                                |
+// | 1.1     | 2026-06-13 | —      | ERR-012-003: §3.5.2 baseLateral/baseVertical[phase] double-counted (numerator AND compactness factor) |
+// |         |            |        | so the phase baseline cancelled to a no-op. Compactness helpers now hold dynamic gain products only;   |
+// |         |            |        | base[phase] survives as the §3.5.2 numerator. InPoss (base=1.00) result unchanged (T-U-015 preserved). |
 #endregion

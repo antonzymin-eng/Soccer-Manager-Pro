@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/BodyMechanicsEvaluator.cs
 // Created:  2026-05-27
-// Modified: 2026-05-28
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.7, Code Standards #20
 // Purpose:  Computes BodyMechanicsScore [0, 1] from run-up angle, plant foot offset,
@@ -62,8 +62,10 @@ namespace TacticalDirector.ShotMechanics
 
         /// <summary>
         /// §3.7.3 — Run-up angle score. Measures angular deviation of agent velocity from ideal approach.
-        /// Ideal: IdealRunUpAngle relative to goal direction. Tolerance: RunUpTolerance.
-        /// Returns 1.0 within tolerance, decreases linearly to 0 at 2× tolerance.
+        /// Ideal: IdealRunUpAngle (37.5°, off the goal bearing) relative to goal direction.
+        /// Linear ramp: 1.0 at zero deviation, decreasing to 0.0 at RunUpTolerance (45°) of deviation.
+        /// Boundary checks (§3.7.3): dev=0°→1.0, dev=22.5°→0.5, dev≥45°→0.0 (incl. a 90° approach,
+        /// whose 52.5° deviation clamps to 0).
         /// </summary>
         private static float ComputeRunUpScore(Vector3 agentVelocity, Vector3 toGoalDirection)
         {
@@ -74,9 +76,10 @@ namespace TacticalDirector.ShotMechanics
             Vector3 velDir           = agentVelocity / speed;
             float   approachAngleDeg = Vector3.Angle(velDir, toGoalDirection);
             float   deviation        = Mathf.Abs(approachAngleDeg - ShotMechanicsConstants.IdealRunUpAngle);
-            // Full score within tolerance; linear ramp to 0 at 2× tolerance. §3.7.3.
-            return Mathf.Clamp01(1.0f - Mathf.Max(0.0f, deviation - ShotMechanicsConstants.RunUpTolerance)
-                                          / ShotMechanicsConstants.RunUpTolerance);
+            // §3.7.3 linear ramp: RunUpScore = 1 − Clamp01(dev / RUN_UP_TOLERANCE).
+            // (The prior deadband form 1 − max(0, dev−tol)/tol held full score for dev ≤ 45°,
+            //  contradicting the §3.7.3 boundary checks — a 90° approach scored 0.83, not 0.)
+            return 1.0f - Mathf.Clamp01(deviation / ShotMechanicsConstants.RunUpTolerance);
         }
 
         /// <summary>
@@ -136,4 +139,10 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        |   (LeanTolerance == BodyLeanMaxDeg == 20°) and dead-weight WeightLean.  |
 // | 1.4     | 2026-05-28 | —      | L-2: 0.1f stationary threshold → StationarySpeedThreshold constant.        |
 // | 1.5     | 2026-05-28 | —      | L-3: 0.5f stationary neutral run-up score → StationaryRunUpScore constant.  |
+// | 1.6     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication (PRODUCTION-DEFECT, BM-002): ComputeRunUpScore |
+// |         |            |        |   reverted from the v1.2 deadband 1−max(0,dev−tol)/tol (full score for ALL dev  |
+// |         |            |        |   ≤ 45°) to the §3.7.3 normative linear ramp 1−Clamp01(dev/tol). The v1.2 note   |
+// |         |            |        |   "matches §3.7.3" was wrong: §3.7.3's boundary checks (dev=22.5→0.5, dev=45→0,  |
+// |         |            |        |   90° approach→0) describe a ramp, not a deadband; the deadband scored a 90°     |
+// |         |            |        |   approach 0.83 (composite 0.958) instead of 0. No constant changes.            |
 #endregion

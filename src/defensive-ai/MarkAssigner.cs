@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/MarkAssigner.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Defensive AI #14 §3.3, §3.4, §3.5, §4.3, Code Standards #20
 // Purpose:  Pure static module: implements the mark-mode assignment algorithm (§3.3),
@@ -68,8 +68,21 @@ namespace TacticalDirector.DefensiveAI
                     snapshot, agent, defendsX0, currentTick,
                     out MarkAssignment candidate);
 
-                // Apply hysteresis gate (§3.11) before committing.
-                MarkHysteresis.ApplyGate(candidate, ref assignments[p], ref hysteresis[p]);
+                // §3.3.3 Step 6: a ZONAL fallback commits DIRECTLY, bypassing the
+                // hysteresis gate — only non-ZONAL candidates route through Step 7.
+                // Routing ZONAL through the gate stranded the default-constructed
+                // assignment record (Mode 0 / TargetEntityId 0) forever: the gate
+                // dwell-held the MakeZonal candidate (target −1) against the default
+                // (target 0) and no ZONAL assignment ever published a valid record.
+                if (candidate.Mode == MarkMode.Zonal)
+                {
+                    assignments[p] = candidate;
+                }
+                else
+                {
+                    // Apply hysteresis gate (§3.11) before committing.
+                    MarkHysteresis.ApplyGate(candidate, ref assignments[p], ref hysteresis[p]);
+                }
 
                 // Stamp the agent EntityId and tick on the committed assignment.
                 assignments[p].AgentEntityId    = agentId;
@@ -248,4 +261,11 @@ namespace TacticalDirector.DefensiveAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                                             |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-2: refresh ValidThroughTick when PreCheck returns true (dwell lock retained); |
 // |         |            |        |   without this external consumers see stale tick on retained assignments.           |
+// | 1.2     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication (PRODUCTION-DEFECT, T-DA-011): §3.3.3 Step 6       |
+// |         |            |        |   commits a ZONAL fallback DIRECTLY (assignments[agent] = …; continue) — only        |
+// |         |            |        |   non-ZONAL candidates route through the Step 7 hysteresis gate. Assign() routed     |
+// |         |            |        |   ZONAL through ApplyGate, so the default-constructed assignment record              |
+// |         |            |        |   (TargetEntityId 0) was dwell-held forever and no valid ZONAL record (target −1,    |
+// |         |            |        |   formation-slot position) ever published. ZONAL now bypasses the gate per spec;     |
+// |         |            |        |   hysteresis state untouched on the bypass path, matching the Step 6 pseudocode.     |
 #endregion

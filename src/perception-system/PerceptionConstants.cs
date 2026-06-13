@@ -1,6 +1,6 @@
 // File:     src/perception-system/PerceptionConstants.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Perception System #7 §3.10, Code Standards #20
 // Purpose:  All numeric constants for the perception system. No magic literals in formula files.
@@ -53,17 +53,23 @@ namespace TacticalDirector.PerceptionSystem
         #region Derived
 
         /// <summary>
-        /// [DERIVED] Base FoV half-angle (degrees). Formula: BASE_FOV_ANGLE / 2.
+        /// [DERIVED] Base FoV half-angle (degrees). Formula: BASE_FOV_ANGLE / 2 = 80°.
         /// Perception System #7 §3.1.2. Source constants: BASE_FOV_ANGLE (GT, below).
+        /// Expression-bodied property, NOT a static readonly field: C# initialises static
+        /// fields in textual order, and the documented region order (Fixed → Derived → Cross → GT)
+        /// places this declaration BEFORE its GT source — a readonly field initialiser here
+        /// reads BASE_FOV_ANGLE as 0 (CI gate 2026-06-12; sibling of the EventRegistry
+        /// static-init-order defect). The property defers evaluation past static init.
         /// </summary>
-        public static readonly float BASE_FOV_HALF_ANGLE = BASE_FOV_ANGLE / 2.0f;
+        public static float BASE_FOV_HALF_ANGLE => BASE_FOV_ANGLE / 2.0f;
 
         /// <summary>
         /// [DERIVED] Peripheral arc inner bound (degrees). Formula: BASE_FOV_HALF_ANGLE / 2 = 40°.
         /// Entities at angular separation [40°, 80°] from facing are in the peripheral arc.
         /// Perception System #7 §3.3.3. Source constants: BASE_FOV_HALF_ANGLE (Derived, above).
+        /// Expression-bodied property for the same static-init-order reason as BASE_FOV_HALF_ANGLE.
         /// </summary>
-        public static readonly float PERIPHERAL_ARC_INNER_BOUND = BASE_FOV_HALF_ANGLE / 2.0f;
+        public static float PERIPHERAL_ARC_INNER_BOUND => BASE_FOV_HALF_ANGLE / 2.0f;
 
         /// <summary>
         /// [DERIVED] Confirmation expiry window (heartbeat ticks). Formula: minimum window = 1 tick.
@@ -200,4 +206,5 @@ namespace TacticalDirector.PerceptionSystem
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                                                      |
 // | 1.1     | 2026-05-28 | —      | AR-1 fix M-3: HalfTurnLRecReduction now sourced from FirstTouchConstants (CROSS tag contract satisfied).      |
+// | 1.2     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication (PRODUCTION-DEFECT, static-init-order class — EventRegistry sibling): BASE_FOV_HALF_ANGLE and PERIPHERAL_ARC_INNER_BOUND were static readonly fields initialised in textual region order (Fixed → Derived → Cross → GT) BEFORE their [GT] source BASE_FOV_ANGLE, so both read 0 at runtime; converted to expression-bodied properties (evaluation deferred past static init). Values unchanged: 80° / 40°. |
 #endregion

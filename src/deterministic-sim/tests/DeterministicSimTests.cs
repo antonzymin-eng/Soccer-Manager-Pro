@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/tests/DeterministicSimTests.cs
 // Created:  2026-05-29
-// Modified: 2026-06-12 (golden-vector pass: stray namespace closure fixed — save/load fixture was stranded in the global namespace)
+// Modified: 2026-06-13 (dotnet CI gate: T-DS-008 genesis digest-chain fixture fix)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §5 (T-DS-ORDER-001..T-DS-FAULT-014), §9.5 (golden vectors),
 //           Code Standards #20
@@ -550,7 +550,10 @@ namespace TacticalDirector.DeterministicSim
             var engine = new ReplayEngine(codec, rng, clock, fingerprint);
 
             var header = new SnapshotHeader();
-            // Initialize sets Cursor = EndOfSnapshot(tick) — step 7 already satisfied.
+            // Initialize sets Cursor = EndOfSnapshot(tick) — step 7 already satisfied — and
+            // (prevDigest == null) clears PrevSnapshotDigest to all-zeros: this is the GENESIS
+            // snapshot of the chain (§4.2.2 step 4 "expected predecessor" is the genesis
+            // sentinel for the first snapshot).
             header.Initialize(1UL, null, fingerprint);
 
             var payload = new SnapshotPayload();
@@ -558,8 +561,18 @@ namespace TacticalDirector.DeterministicSim
             payload.PayloadBytes[0] = 0x01;
             payload.BytesWritten    = 1;
 
-            // Encode so CurrentSnapshotDigest is computed and _prevDigest chain is seeded.
-            codec.Encode(header, payload);
+            // Fixture corrected (dotnet CI gate). The previous version called codec.Encode(),
+            // which is the RECORDING-side operation: it ADVANCES the codec's stored _prevDigest
+            // to the just-encoded payload digest D, leaving the chain authority positioned to
+            // record the NEXT snapshot. PrepareReplay then ran step-4 ValidatePrevDigest with
+            // _prevDigest = D against the genesis snapshot's recorded PrevSnapshotDigest = zeros,
+            // which mismatched and returned ERR_DS_DIGEST_CHAIN_BREAK (0x1608). That conflated
+            // the recording-side chain authority with the replay-side one. On a fresh codec the
+            // stored _prevDigest is already the genesis sentinel (all-zeros), which is exactly
+            // what a well-formed genesis snapshot's recorded PrevSnapshotDigest must match, so
+            // no Encode is needed here. CurrentSnapshotDigest stays all-zeros (a valid digest
+            // value); CommitLoadedDigest threads it forward without affecting this assertion.
+            // ReplayEngine / SnapshotCodec are unchanged — production is correct per §4.2.2.
 
             ushort err = engine.PrepareReplay(header, payload);
             Assert.AreEqual(0, err,
@@ -588,4 +601,13 @@ namespace TacticalDirector.DeterministicSim
 //           |            |        | now closes at EOF. Full KAT coverage moved to dedicated fixtures   |
 //           |            |        | (HkdfSha256KatTests / SipHash24KatTests /                          |
 //           |            |        | SerializeCanonicalCorpusTests).                                    |
+// | 1.4     | 2026-06-13 | —      | Dotnet CI gate adjudication (T-DS-008): fixture defect, not a      |
+// |         |            |        | production defect. The happy-path test called codec.Encode()       |
+// |         |            |        | (recording side), which advances the codec's _prevDigest to the    |
+// |         |            |        | just-encoded digest; PrepareReplay step 4 (§4.2.2) then compared    |
+// |         |            |        | that against the genesis snapshot's recorded all-zero              |
+// |         |            |        | PrevSnapshotDigest and returned ERR_DS_DIGEST_CHAIN_BREAK (0x1608).|
+// |         |            |        | A fresh codec already holds the genesis sentinel (zeros), which is |
+// |         |            |        | what a genesis snapshot must chain to, so the Encode call was      |
+// |         |            |        | removed. ReplayEngine / SnapshotCodec unchanged.                   |
 #endregion

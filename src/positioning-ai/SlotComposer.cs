@@ -1,6 +1,6 @@
 // File: src/positioning-ai/SlotComposer.cs
 // Created: 2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-13
 // Author: —
 // Spec: #12 Positioning AI §3.7
 // Purpose: Orchestrates the 7-step per-agent slot composition pipeline.
@@ -47,8 +47,14 @@ namespace TacticalDirector.PositioningAI
             FormationSlotRecord[] formation = PositioningAIConstants.GetFormationSlots(archetype);
 
             // ── Steps 1+2: Compute base slots (anchor + ball-relative offset) ──────
-            // GK: dedicated formula.
-            outSlots[0] = AnchorCalculator.ComputeGkSlot(snapshot.BallPosition);
+            // GK: dedicated formula. FR-PA-044 / F3: the GK slot is a composed slot, so a
+            // NaN intermediate (e.g. a NaN ball position — Mathf.Clamp passes NaN through per
+            // the project NaN-gate hazard) must fall back to the raw GK formation anchor, not
+            // be emitted as NaN. The pre-fix code guarded only outfield agents (ERR-012-004).
+            Vector2 gkSlot = AnchorCalculator.ComputeGkSlot(snapshot.BallPosition);
+            if (float.IsNaN(gkSlot.x) || float.IsNaN(gkSlot.y))
+                gkSlot = AnchorCalculator.ComputeAnchor(formation[0]);
+            outSlots[0] = gkSlot;
 
             // Outfield agents in SlotIndex order (0=GK excluded here, 1-10=outfield).
             for (int i = 0; i < snapshot.Agents.Length; i++)
@@ -127,6 +133,8 @@ namespace TacticalDirector.PositioningAI
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                                                              |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                                                            |
+// | 1.1     | 2026-06-13 | —      | ERR-012-004 / FR-PA-044: GK composed slot now NaN-guarded to the raw GK formation anchor. The F3   |
+// |         |            |        | guard previously covered only outfield agents, so a NaN ball position emitted a NaN GK slot.       |
 #endregion

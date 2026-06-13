@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotSpinCalculator.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.4, Code Standards #20
 // Purpose:  Computes world-space spin vector (rad/s) from ContactZone, SpinIntent,
@@ -52,11 +52,18 @@ namespace TacticalDirector.ShotMechanics
             // For a ball moving in +X: F_z = (ω × v)_z = -ω_y * vx.
             // Topspin (ball dips, F_z < 0): need ω_y > 0 → axis = left = 90° CCW from facing in XY.
             // Backspin (ball floats, F_z > 0): inverse of topspin → ω_y < 0 → automatically correct.
-            Vector3 left = new Vector3(-facingDirectionXY.y, facingDirectionXY.x, 0.0f); // 90° CCW in XY
-            Vector3 up   = Vector3.up;
+            // Sidespin (lateral curl): axis is the PROJECT vertical +Z (Ball Physics #1 §1.2 Z-up) —
+            // ω = (0,0,s), v in XY gives a pure lateral Magnus force. NOT Vector3.up: Unity's up is
+            // +Y, which in this Z-up project is the touchline axis and COLLIDES with the topspin
+            // axis for +X facing (ERR-006-001 — §3.4.3 was written in a Y-up frame; sidespin was
+            // identically zero on the vertical axis and corrupted net topspin instead).
+            // Stage 0: the §3.4.9 Step-1 curl-direction sign (aim-deviation term) is not modelled —
+            // Compute has no aim input; sidespin is applied with positive sign.
+            Vector3 left     = new Vector3(-facingDirectionXY.y, facingDirectionXY.x, 0.0f); // 90° CCW in XY
+            Vector3 vertical = new Vector3(0.0f, 0.0f, 1.0f); // project Z-up vertical (#1 §1.2)
 
             float netForwardSpin = topspinMag - backspinMag;
-            Vector3 spinVector   = left * netForwardSpin + up * sidespinMag;
+            Vector3 spinVector   = left * netForwardSpin + vertical * sidespinMag;
 
             // §3.4.10 — Clamp spin magnitude to SpinAbsoluteMax (80 rad/s, matches Ball Physics MAX_SPIN)
             float magnitude = spinVector.magnitude;
@@ -127,4 +134,10 @@ namespace TacticalDirector.ShotMechanics
 // | 1.2     | 2026-05-28 | —      | H-1: Topspin/backspin axis corrected from right (90° CW) to    |
 // |         |            |        |   left (90° CCW). Ball Physics uses ω×v for Magnus force;       |
 // |         |            |        |   right vector produced upward force for topspin (wrong).       |
+// | 1.3     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication (PRODUCTION-DEFECT, SN-003/SN-004):  |
+// |         |            |        |   sidespin axis was Vector3.up (Unity +Y = the project's TOUCHLINE axis |
+// |         |            |        |   in this Z-up world, §1.2), which collides with the topspin/backspin   |
+// |         |            |        |   left-vector for +X facing — sidespin was identically zero on the      |
+// |         |            |        |   vertical and instead corrupted net forward spin. Axis now (0,0,1) =   |
+// |         |            |        |   project Z-up vertical, so OffCentre contact produces real lateral spin. |
 #endregion

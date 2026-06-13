@@ -1,6 +1,6 @@
 // File:     src/perception-system/Tests/PerceptionSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-01
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Perception System #7 §5, Code Standards #20
 // Purpose:  Unit tests for Perception System. FOV, OCC, LR, SC, BP test groups.
@@ -392,10 +392,15 @@ namespace TacticalDirector.PerceptionSystem.Tests
         {
             float halfAngle = OcclusionFilter.ComputeShadowHalfAngleDeg(Vector2.zero, new Vector2(2.0f, 0.0f));
 
+            // Hand-calc (§A.4 / Appendix B): arcsin(0.4/2.0) = arcsin(0.200) = 11.537°.
+            // The previous expectation 11.31° was arctan(0.2) — a trig mis-derivation (tangent
+            // for sine); the spec's tangent-line geometry uses arcsin and both appendix worked
+            // examples print 11.537° (dotnet-CI quarantine adjudication). The denominator guard
+            // Max(d, AGENT_BODY_RADIUS + 0.1) = Max(2.0, 0.5) is inactive at 2m.
             Assert.Greater(halfAngle, PerceptionConstants.MIN_SHADOW_HALF_ANGLE,
                 "OCC-005: Shadow half-angle at 2m must exceed 5° floor (floor not active)");
-            Assert.AreEqual(11.31f, halfAngle, 0.15f,
-                "OCC-005: arcsin(0.4/2)≈11.31° expected (±0.15° tolerance for guard adjustment)");
+            Assert.AreEqual(11.537f, halfAngle, 0.05f,
+                "OCC-005: arcsin(0.4/2)≈11.537° expected (§A.4)");
         }
 
         // ── OCC-006 — Teammate does NOT generate shadow cone (Stage 0) ───────────
@@ -530,16 +535,39 @@ namespace TacticalDirector.PerceptionSystem.Tests
         [Test]
         public void LR001_ProcessVisible_ConfirmsAfterLrecTicks()
         {
+            // §3.3.4: L_rec_final = Min(L_rec_base + noise, L_MAX) with additive deterministic
+            // noise ∈ {0, +1} from DeterministicHash(observerId, targetId, frameNumber) % 2.
+            // The previous form asserted confirmation on the FIRST call unconditionally — true
+            // only when the noise term is 0; for this (observer, target, frame) tuple the hash
+            // is odd, so L_rec_final = 1 + 1 = 2 and §3.3.4 REQUIRES the first call to return
+            // false (dotnet-CI quarantine adjudication). The spec-true invariant is "confirms
+            // exactly at the L_rec_final-th visible tick", asserted tick-by-tick below.
             RecognitionLatencyTracker tracker = new RecognitionLatencyTracker();
             const int observerId = 0;
             const int targetId   = 1;
-            const int decisions  = 20; // D=20 → L_rec=1; confirmed after first tick
+            const int decisions  = 20; // D=20 → L_rec_base = floor(5 − 4×(19/19)) = 1
 
-            bool confirmed = tracker.ProcessVisible(observerId, targetId, decisions,
-                false, 0.0f, 0, false);
+            int lRec = tracker.ComputeLRec(observerId, targetId, decisions, false, 0.0f, 0);
+            Assert.GreaterOrEqual(lRec, PerceptionConstants.L_MIN,
+                "LR-001 variant: L_rec_final at D=20 must be ≥ L_MIN");
+            Assert.LessOrEqual(lRec, PerceptionConstants.L_MIN + 1,
+                "LR-001 variant: L_rec_final at D=20 must be ≤ base (1) + noise (1)");
 
-            Assert.IsTrue(confirmed,
-                "LR-001 variant: D=20 (L_rec=1) — entity must be confirmed on first ProcessVisible call");
+            for (int tick = 1; tick <= lRec; tick++)
+            {
+                bool confirmed = tracker.ProcessVisible(observerId, targetId, decisions,
+                    false, 0.0f, 0, false);
+                if (tick < lRec)
+                {
+                    Assert.IsFalse(confirmed,
+                        "LR-001 variant: entity must NOT be confirmed before the L_rec-th visible tick");
+                }
+                else
+                {
+                    Assert.IsTrue(confirmed,
+                        "LR-001 variant: entity must be confirmed exactly at the L_rec-th visible tick");
+                }
+            }
         }
 
         // ── LR-002 — L_rec at Decisions=20 (minimum latency = 1 tick) ────────────
@@ -1358,4 +1386,5 @@ namespace TacticalDirector.PerceptionSystem.Tests
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-31 | —      | Initial implementation. FOV-001..008, OCC-001..007+009, LR-001..008, SC-002..005+008, BP-001..006, SNAP-006+010 + constants. 31 tests total. |
 // | 1.1     | 2026-06-01 | —      | Add §5.11 integration test stubs IT-AM-001..004, IT-BP-001..002, IT-CS-001..003, IT-FULL-001..006 (15 stubs; Stage 0+1 Assert.Ignore). |
+// | 1.2     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication (both TEST-DEFECT): OCC-005 expectation 11.31° was arctan(0.2) — spec §A.4/App-B mandate arcsin(0.4/2) = 11.537° (production correct); LR-001 variant asserted first-call confirmation unconditionally, ignoring the §3.3.4 additive noise term (0/+1) — rewritten to derive L_rec_final via ComputeLRec and assert confirmation exactly at the L_rec-th tick. |
 #endregion

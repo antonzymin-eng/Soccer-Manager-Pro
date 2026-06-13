@@ -1,6 +1,6 @@
 // File:     src/collision-system/tests/CollisionSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-10  [v1.3]
+// Modified: 2026-06-13  [v1.4]
 // Author:   —
 // Spec:     Collision System #3 §5.2, §5.3, Code Standards #20
 // Purpose:  Unit tests for SpatialHashGrid, CollisionDetection, CollisionResponse,
@@ -58,10 +58,20 @@ namespace TacticalDirector.CollisionSystem.Tests
         [Test]
         public void SpatialHash_TwoAgentsFar_QueryReturnsOnlySelf()
         {
-            _grid.Insert(0, new Vector3(50.0f, 34.0f, 0f), 0.40f);
-            _grid.Insert(1, new Vector3(52.0f, 34.0f, 0f), 0.40f);
-            List<int> r0 = _grid.Query(new Vector3(50.0f, 34.0f, 0f), 0.40f);
-            Assert.IsFalse(r0.Contains(1), "SH-003: distant agent must not appear in query");
+            // Fixture corrected (dotnet CI gate): the original positions x=50.0 and x=52.0
+            // were BOTH exactly on cell boundaries (CellSize=1.0). Per §3.1.3 the
+            // on-boundary entity is inserted into BOTH adjacent cells (verified by SH-006),
+            // so x=52.0 spread into cell 51, and the 3×3 broad-phase window of a query at
+            // cell 50 (cr=1 → cells 49,50,51) legitimately returned it. That is correct
+            // broad-phase candidate generation (§3.1, §3.2.3 — the narrow phase filters by
+            // radius), not a production defect. To exercise the intended "genuinely
+            // non-adjacent cells" property, agents are placed off-boundary at x=50.5
+            // (cell 50 only) and x=53.5 (cell 53 only): the query window 49–51 cannot reach
+            // cell 53, so the distant agent is correctly absent.
+            _grid.Insert(0, new Vector3(50.5f, 34.0f, 0f), 0.40f);
+            _grid.Insert(1, new Vector3(53.5f, 34.0f, 0f), 0.40f);
+            List<int> r0 = _grid.Query(new Vector3(50.5f, 34.0f, 0f), 0.40f);
+            Assert.IsFalse(r0.Contains(1), "SH-003: distant (non-adjacent-cell) agent must not appear in query");
         }
 
         // SH-004
@@ -783,4 +793,11 @@ namespace TacticalDirector.CollisionSystem.Tests
 // |         |            |        | removed — the namespace closed at the determinism fixture, leaving the         |
 // |         |            |        | integration class at file scope and an unbalanced `}` at EOF (file could not   |
 // |         |            |        | have compiled; latent because the Unity project is not yet initialised).       |
+// | 1.4     | 2026-06-13 | —      | dotnet CI gate quarantine adjudication (SH-003): fixture defect, not a         |
+// |         |            |        | production defect. The original x=50.0/x=52.0 positions were both on cell       |
+// |         |            |        | boundaries; per §3.1.3 (verified by SH-006) the on-boundary entity is inserted  |
+// |         |            |        | into both adjacent cells, so x=52.0 spread into cell 51 and the §3.1 broad-     |
+// |         |            |        | phase 3×3 window correctly returned it (narrow phase filters by radius, §3.2.3).|
+// |         |            |        | Positions moved off-boundary to x=50.5 (cell 50) / x=53.5 (cell 53) so the      |
+// |         |            |        | cells are genuinely non-adjacent. SpatialHashGrid unchanged.                    |
 #endregion
