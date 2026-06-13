@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/Tests/ShotMechanicsTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-01
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Shot Mechanics #6 §5
 // Purpose:  NUnit Edit-Mode unit tests covering PV (parameter validation), SV (velocity model),
@@ -545,10 +545,11 @@ namespace TacticalDirector.ShotMechanics.Tests
         [Test]
         public void BM001_PerfectApproach_RunUpScoreNearMax()
         {
-            // Agent moving at ideal approach angle toward goal (straight on = 0° deviation from ideal).
-            // IdealRunUpAngle=37.5°, RunUpTolerance=45° → 0° offset ≤ tolerance → RunUpScore=1.0.
-            // We approximate "perfect" by setting velocity to approach toward goal centre.
-            Vector3 agentVelocity = k_goalDir * 3.0f; // ~ideal approach speed, toward goal
+            // §3.7.3: the IDEAL run-up is 37.5° OFF the goal bearing, not straight on. A straight-on
+            // approach has deviation |0 − 37.5| = 37.5° → RunUpScore = 1 − 37.5/45 = 0.1667, so the
+            // composite is 0.25·0.1667 + 0.30 + 0.20 + 0.25 = 0.7917 (plant/velocity/lean all 1.0).
+            // The test asserts the looser ≥ 0.5 contract; a straight-on shot is "acceptable", not ideal.
+            Vector3 agentVelocity = k_goalDir * 3.0f; // straight-on approach at ~ideal speed
             BodyMechanicsResult result = BodyMechanicsEvaluator.Evaluate(
                 agentVelocity, Vector3.zero, Vector3.zero, k_goalDir, powerIntent: 0.5f);
 
@@ -556,19 +557,27 @@ namespace TacticalDirector.ShotMechanics.Tests
                 "BM-001: Straight-on approach at ideal speed should produce a Score ≥ 0.5.");
         }
 
-        // BM-002 — 90° run-up offset: RunUpScore significantly penalised.
+        // BM-002 — 90° run-up offset: RunUpScore zeroed per §3.7.3.
         [Test]
         public void BM002_NinetyDegreeRunUp_ReducesScore()
         {
-            // Agent moving perpendicular to the goal direction.
-            Vector3 perpendicularVelocity = Vector3.forward * 3.0f;
+            // Agent moving along +Y (touchline) — a true in-plane 90° approach to the +X goal
+            // direction. (The prior fixture used Vector3.forward = +Z, the project's vertical
+            // height axis, a physically meaningless "approach"; the angle is 90° either way.)
+            // §3.7.3: 90° approach → deviation |90 − 37.5| = 52.5° → RunUpScore = 1 − Clamp01(52.5/45)
+            // = 0. With plant/velocity/lean all 1.0 the composite is the no-run-up ceiling:
+            // 0.25·0 + 0.30 + 0.20 + 0.25 = 0.75. (Pre-fix the deadband held run-up at 0.83 → 0.958,
+            // which could never satisfy the "noticeably reduced" intent — dotnet-CI quarantine
+            // PRODUCTION-DEFECT adjudication.)
+            Vector3 perpendicularVelocity = new Vector3(0.0f, 3.0f, 0.0f);
             Vector3 agentPosition         = new Vector3(80.0f, 34.0f, 0.0f);
             BodyMechanicsResult result = BodyMechanicsEvaluator.Evaluate(
                 perpendicularVelocity, agentPosition, agentPosition, k_goalDir, powerIntent: 0.5f);
 
-            // RunUpScore should be < 0.5 when approach is 90° off ideal.
-            Assert.Less(result.Score, 0.75f,
-                "BM-002: 90° approach offset should produce a noticeably reduced composite BMS.");
+            Assert.Less(result.Score, 0.80f,
+                "BM-002: 90° approach must drop the composite BMS to the no-run-up ceiling (~0.75).");
+            Assert.AreEqual(0.75f, result.Score, 0.01f,
+                "BM-002: 90° approach zeroes the §3.7.3 run-up term → composite BMS = 0.75.");
         }
 
         // BM-003 — Agent at ball (zero lateral distance): PlantFootScore near maximum.
@@ -606,11 +615,20 @@ namespace TacticalDirector.ShotMechanics.Tests
             BodyMechanicsResult stationary = BodyMechanicsEvaluator.Evaluate(
                 Vector3.zero, pos, pos, k_goalDir, powerIntent: 0.5f);
 
+            // §3.7.3: a fair "ideal approach" runs at the 37.5° ideal angle (dev=0 → RunUpScore 1.0),
+            // NOT straight on (dev=37.5 → 0.1667). The prior fixture moved straight at goal; under the
+            // §3.7.3 linear ramp that straight-on run-up (0.1667) dragged the moving composite (0.7917)
+            // BELOW the stationary neutral (0.808), so the comparison only held under the old deadband.
+            // Velocity at the ideal 37.5° off +X, magnitude VelocityIdealMin (dotnet-CI quarantine
+            // companion to the BodyMechanicsEvaluator §3.7.3 PRODUCTION fix).
+            float idealRad = ShotMechanicsConstants.IdealRunUpAngle * Mathf.Deg2Rad;
+            Vector3 idealApproach = new Vector3(Mathf.Cos(idealRad), Mathf.Sin(idealRad), 0.0f)
+                                    * ShotMechanicsConstants.VelocityIdealMin;
             BodyMechanicsResult moving = BodyMechanicsEvaluator.Evaluate(
-                k_goalDir * ShotMechanicsConstants.VelocityIdealMin, pos, pos, k_goalDir, powerIntent: 0.5f);
+                idealApproach, pos, pos, k_goalDir, powerIntent: 0.5f);
 
             Assert.Greater(moving.Score, stationary.Score,
-                "BM-005: Moving at ideal approach speed must score higher than stationary (§3.7.5).");
+                "BM-005: Moving at the ideal approach angle and speed must score higher than stationary (§3.7.3/§3.7.5).");
         }
 
         // BM-006 — BodyMechanicsScore always in [0.0, 1.0] for extreme inputs.
@@ -1331,4 +1349,12 @@ namespace TacticalDirector.ShotMechanics.Tests
 // |         |            |        | compiled; identical defect class to First Touch ERR-004 and Pass Mechanics   |
 // |         |            |        | AR-9 H-1 (sixth instance). Namespace now closes at EOF; [TestFixture] added  |
 // |         |            |        | to the IT- fixture per the PM precedent.                                     |
+// | 1.3     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication companions to the BodyMechanicsEvaluator   |
+// |         |            |        | v1.6 / ShotSpinCalculator v1.3 production fixes. BM-002: +Z vertical "approach" |
+// |         |            |        | → +Y in-plane 90° approach; assertion re-derived to the §3.7.3 no-run-up      |
+// |         |            |        | ceiling 0.75 (run-up zeroed). BM-005: moving agent moved straight-on → ideal  |
+// |         |            |        | 37.5° angle, the only fair "ideal approach" under the §3.7.3 ramp (straight-on |
+// |         |            |        | run-up 0.1667 dragged the moving composite below the stationary neutral).     |
+// |         |            |        | BM-001 comment corrected (straight-on is acceptable, not ideal). SN-003/004   |
+// |         |            |        | now pass via the ShotSpinCalculator Z-up sidespin-axis fix (no test change).  |
 #endregion

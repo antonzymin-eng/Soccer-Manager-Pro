@@ -53,14 +53,6 @@ applicable, and **remove the quarantine line in the same commit**.
 | `VS001_EliteShortGroundPass_OutputsInRange` | VS-001: elite short pass velocity must be ≥ 11.0 m/s | §5 verification-scenario hand-calc vs implementation. |
 | `VS003_ChipOverDefensiveLine_OutputsInRange` | VS-003: chip velocity must be ≤ 11.0 m/s | Same family as VS-001 (note VS-001/VS-003 bracket 11.0 from opposite sides — at least one hand-calc is mis-derived). |
 
-### Shot Mechanics #6 (3)
-
-| Test | First-run failure | Hypothesis |
-|---|---|---|
-| `BM002_NinetyDegreeRunUp_ReducesScore` | BM-002: 90° approach offset should reduce composite BMS | Run-up angle term in §3.7 body-mechanics score not penalising (or test's "noticeably reduced" threshold mis-set). |
-| `SN003_OffCentre_ProducesNonZeroSidespin` | SN-003: OffCentre contact must produce non-zero sidespin (Z) | Sidespin output is 0.0 — §3.4.5 sidespin path likely never engages (dead branch or wrong axis); SN-004 corroborates. |
-| `SN004_HigherTechnique_IncreasesSpinMagnitude` | SN-004: Technique=18 must out-spin Technique=5 | Same root cause as SN-003 (sidespin identically 0). |
-
 ### Positioning AI #12 (6)
 
 | Test | First-run failure | Hypothesis |
@@ -92,6 +84,16 @@ applicable, and **remove the quarantine line in the same commit**.
 | `ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero` | T-DS-008: PrepareReplay must return 0; returned 5640 (0x1608) | PrepareReplay step validation rejects the fixture's "well-formed" snapshot — either a validation step the fixture doesn't satisfy (fixture defect) or a step mis-ordered in ReplayEngine. Error code 0x1608 names the step; adjudicate against §4.2.2. |
 
 ## Resolved
+
+### Shot Mechanics #6 (3/3) — resolved June 12, 2026 (2 PRODUCTION-DEFECT root causes)
+
+| Test | Verdict | Adjudication |
+|---|---|---|
+| `SN003_OffCentre_ProducesNonZeroSidespin` | PRODUCTION-DEFECT (Z-up axis) | `ShotSpinCalculator.Compute` assembled sidespin on `Vector3.up` = Unity +Y, which in this Z-up project (#1 §1.2) is the **touchline** axis. For a +X-facing shooter the topspin/backspin `left` vector is also ±Y, so sidespin collided with forward spin and the vertical (Z) sidespin component was identically 0. Axis changed to `(0,0,1)` (project vertical); OffCentre contact now produces real lateral spin. `ShotSpinCalculator.cs` v1.3. |
+| `SN004_HigherTechnique_IncreasesSpinMagnitude` | (same root cause) | Technique scaled a magnitude that was being zeroed; fixed by the same axis correction. No test change. |
+| `BM002_NinetyDegreeRunUp_ReducesScore` | PRODUCTION-DEFECT (deadband vs ramp) | `BodyMechanicsEvaluator.ComputeRunUpScore` used a deadband `1−max(0,dev−tol)/tol` (full score for any deviation ≤ 45°), contradicting §3.7.3's boundary checks (dev=22.5°→0.5, dev=45°→0, 90° approach→0). A 90° approach scored 0.83 (composite 0.958) where the spec requires 0 (composite 0.75). Reverted to the §3.7.3 linear ramp `1−Clamp01(dev/tol)`. The v1.2 history row that introduced the deadband falsely claimed it "matches §3.7.3". Test companions (TEST-DEFECT, same commit): BM-002 +Z "approach" → +Y in-plane 90°, assertion re-derived to the 0.75 no-run-up ceiling; BM-005 moving agent moved straight-on → the ideal 37.5° angle (the only fair "ideal approach" under the ramp — straight-on run-up 0.1667 sits below the stationary neutral 0.5); BM-001 comment corrected. `BodyMechanicsEvaluator.cs` v1.6, `Tests/ShotMechanicsTests.cs` v1.3. |
+
+Files: `ShotSpinCalculator.cs` v1.3, `BodyMechanicsEvaluator.cs` v1.6, `Tests/ShotMechanicsTests.cs` v1.3. Suite: 79 passed / 0 failed / 12 skipped. Cross-suite: ShotExecutor feeds BodyMechanicsScore into the contact-quality modifier; the run-up change shifts BMS for off-ideal approaches — full gate re-run confirms no downstream shot/decision-tree expectation regressed.
 
 ### Defensive AI #14 (4/4) — resolved June 12, 2026 (1 PRODUCTION-DEFECT + 3 TEST-DEFECT)
 

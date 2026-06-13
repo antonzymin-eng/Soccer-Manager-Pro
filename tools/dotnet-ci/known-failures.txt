@@ -14,7 +14,6 @@
 #    enforces it forever).
 #  - NEVER add a line without a matching entry in the tracking doc.
 #  - Any test failure NOT in this list fails the gate.
-BM002_NinetyDegreeRunUp_ReducesScore
 ComputeHeadZ_AtApex_EqualsJumpReach
 ContextModifier_ScoreDiff_ExpandsLateralSpread
 CoverShadow_AssignsHigherThreatReceiverFirst
@@ -24,8 +23,6 @@ Integration_OutOfPoss_NarrowerLateralSpread_Than_InPoss
 OwnGoalFlag_TrajectoryTowardOwnGoal_ReturnsTrue
 PV003_Lofted_MidAttributes_40m_VelocityInRange
 ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero
-SN003_OffCentre_ProducesNonZeroSidespin
-SN004_HigherTechnique_IncreasesSpinMagnitude
 SpatialHash_TwoAgentsFar_QueryReturnsOnlySelf
 TacticalCorrectness_4231_TransToAtk_AMAdvances_RelativeTo_OutOfPoss
 TacticalCorrectness_OutOfPoss_DefensiveLineCompact
