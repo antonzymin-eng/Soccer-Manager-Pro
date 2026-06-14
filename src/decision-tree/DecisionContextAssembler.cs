@@ -1,6 +1,6 @@
 // File:     src/decision-tree/DecisionContextAssembler.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-14 (audit AR-3 fix pass)
 // Author:   —
 // Spec:     Decision Tree #8 §2.2.4, §3.1.1, Code Standards #20
 // Purpose:  Step 2 of the 6-step pipeline. Assembles DecisionContext from the validated
@@ -48,9 +48,12 @@ namespace TacticalDirector.DecisionTree
             else
             {
                 // Determine which team possesses from possessing agent ID.
-                // Agent IDs 0–10 = home team, 11–21 = away team (Stage 0 convention).
-                // Stage 1+: replace with AgentState.TeamId lookup.
-                bool possessorIsHome = matchContext.PossessingAgentId < 11;
+                // Agent IDs [0, HomeSquadAgentCount) = home, the rest = away (Stage 0
+                // convention; single source of truth in DecisionTreeConstants — AR-3 L,
+                // was a bare literal 11 decoupled from the convention). Stage 1+:
+                // replace ID-range inference with AgentState.TeamId lookup.
+                bool possessorIsHome =
+                    matchContext.PossessingAgentId < DecisionTreeConstants.HomeSquadAgentCount;
                 possessedByTeam = possessorIsHome
                     ? PossessionState.HOME_TEAM
                     : PossessionState.AWAY_TEAM;
@@ -85,6 +88,34 @@ namespace TacticalDirector.DecisionTree
             Vector2 opponentGoalPostL  = PitchGeometry.GetOpponentGoalPostL(teamId);
             Vector2 opponentGoalPostR  = PitchGeometry.GetOpponentGoalPostR(teamId);
 
+            // ── Position / facing sanitise ───────────────────────────────────────
+            // AR-3 L: non-finite AgentPosition would propagate NaN through every
+            // generated TargetPosition (dribble look-ahead, intercept projection,
+            // pass-lane geometry); SnapshotValidator does not range-check position, so
+            // sanitise non-finite components to 0 here (project NaN-gate pattern). The
+            // generators and dispatcher read this field, not AgentState.Position.
+            Vector2 agentPosition = SanitiseXy(agentState.Position);
+
+            // AR-3 L: a degenerate facing vector defaults toward the opponent goal
+            // (team-relative) rather than the home-perspective Vector2.right — the
+            // latter pointed downfield for the home team but BACKWARD for the away
+            // team, the home-default class the AR-2 audit targeted. Falls back to the
+            // team forward axis only if the agent is exactly on the goal centre.
+            Vector2 agentFacing;
+            if (agentState.FacingDirection.sqrMagnitude
+                > DecisionTreeConstants.FacingDegenerateSqrThreshold)
+            {
+                agentFacing = agentState.FacingDirection;
+            }
+            else
+            {
+                Vector2 toGoal = opponentGoalCentre - agentPosition;
+                agentFacing = toGoal.sqrMagnitude
+                    > DecisionTreeConstants.FacingDegenerateSqrThreshold
+                    ? toGoal.normalized
+                    : (teamId == 0 ? Vector2.right : Vector2.left);
+            }
+
             return new DecisionContext
             {
                 Snapshot          = snapshot,
@@ -98,10 +129,8 @@ namespace TacticalDirector.DecisionTree
                 StaminaAvailable  = staminaAvailable,
 
                 AgentState        = agentState,
-                AgentPosition     = agentState.Position,
-                AgentFacingDirection = agentState.FacingDirection.sqrMagnitude > 0.0001f
-                    ? agentState.FacingDirection
-                    : Vector2.right,
+                AgentPosition     = agentPosition,
+                AgentFacingDirection = agentFacing,
 
                 A_Vision      = (attributes.Vision      - minA) / norm,
                 A_Passing     = (attributes.Passing     - minA) / norm,
@@ -129,6 +158,15 @@ namespace TacticalDirector.DecisionTree
                 OpponentGoalPostR  = opponentGoalPostR
             };
         }
+
+        // AR-3 L: non-finite (NaN / ±Inf) XY components → 0, so corrupt upstream
+        // position state cannot seed NaN into generated TargetPositions.
+        private static Vector2 SanitiseXy(Vector2 p)
+        {
+            float x = (float.IsNaN(p.x) || float.IsInfinity(p.x)) ? 0.0f : p.x;
+            float y = (float.IsNaN(p.y) || float.IsInfinity(p.y)) ? 0.0f : p.y;
+            return new Vector2(x, y);
+        }
     }
 }
 
@@ -140,4 +178,9 @@ namespace TacticalDirector.DecisionTree
 // | 1.2     | 2026-06-11 | —      | Audit AR-2: H-2 team-relative BallZone computed from BallPosition.x per         |
 // |         |            |        |   §3.2.1.3 ("from own goal line"); M-1 OpponentHasBall derived flag for the     |
 // |         |            |        |   §3.4.6 press-urgency gate.                                                    |
+// | 1.3     | 2026-06-14 | —      | Audit AR-3 L: degenerate-facing default now team-relative (toward opponent      |
+// |         |            |        |   goal, then team forward axis) instead of the home-perspective Vector2.right;  |
+// |         |            |        |   AgentPosition sanitised against non-finite components (SanitiseXy) so corrupt |
+// |         |            |        |   position cannot seed NaN into generated TargetPositions; possessor-team split |
+// |         |            |        |   reads DecisionTreeConstants.HomeSquadAgentCount (was a bare literal 11).      |
 #endregion

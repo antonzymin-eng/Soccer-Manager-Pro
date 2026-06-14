@@ -1,6 +1,6 @@
 // File:     src/decision-tree/ActionSelector.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-14 (audit AR-3 fix pass)
 // Author:   —
 // Spec:     Decision Tree #8 §3.3, Code Standards #20
 // Purpose:  Step 5 of the 6-step pipeline. Injects deterministic composure noise into
@@ -102,9 +102,25 @@ namespace TacticalDirector.DecisionTree
             int heartbeatTick,
             int actionTypeOrdinal)
         {
-            ulong packed   = (ulong)agentId
-                           | ((ulong)heartbeatTick       << 5)
-                           | ((ulong)actionTypeOrdinal   << 25);
+            // Pack the three deterministic inputs into disjoint bit fields before the
+            // SplitMix64 mix. Each input is masked to its allotted width so an
+            // out-of-range value cannot bleed into the next field and silently
+            // correlate noise (e.g. a heartbeat tick past ~1.05M frames, or a stray
+            // agentId ≥ 32). The masked layout reproduces the prior shift layout
+            // bit-for-bit on every in-range input, so determinism is unchanged.
+            //   agentId           : bits  0–4  (5 bits  → [0, 31];  AgentId range 0–21)
+            //   heartbeatTick     : bits  5–24 (20 bits → [0, ~1.05M]; > a full match)
+            //   actionTypeOrdinal : bits 25–27 (3 bits  → [0, 7];   7 action types)
+            const int AgentIdBits   = 5;
+            const int HeartbeatBits = 20;
+            const int OrdinalBits   = 3;
+            const ulong AgentIdMask   = (1UL << AgentIdBits)   - 1UL;
+            const ulong HeartbeatMask = (1UL << HeartbeatBits) - 1UL;
+            const ulong OrdinalMask   = (1UL << OrdinalBits)   - 1UL;
+
+            ulong packed   = ((ulong)agentId           & AgentIdMask)
+                           | (((ulong)heartbeatTick    & HeartbeatMask) << AgentIdBits)
+                           | (((ulong)actionTypeOrdinal & OrdinalMask)  << (AgentIdBits + HeartbeatBits));
             ulong combined = matchSeed ^ packed;
             ulong hash     = SplitMix64(combined);
 
@@ -187,4 +203,9 @@ namespace TacticalDirector.DecisionTree
 // | 1.1     | 2026-05-29 | —      | AR-1 H-2: SplitMix64 wrapped in unchecked{} per FR-CS-044.        |
 // | 1.2     | 2026-06-11 | —      | Audit AR-2 L: tiebreakerApplied resets on a strict improvement per |
 // |         |            |        |   the §3.3 selection pseudocode (INV-SEL-07 winner semantics).     |
+// | 1.3     | 2026-06-14 | —      | Audit AR-3 L-1: ComputeOptionNoise bit-fields masked to their       |
+// |         |            |        |   allotted widths (5/20/3) so an out-of-range frame or agentId      |
+// |         |            |        |   cannot bleed into the action-ordinal field and correlate noise.   |
+// |         |            |        |   In-range layout (and determinism) unchanged; magic 5/25 promoted  |
+// |         |            |        |   to named local bit-width consts.                                 |
 #endregion

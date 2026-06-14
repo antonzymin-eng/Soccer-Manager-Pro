@@ -1,6 +1,6 @@
 // File:     src/decision-tree/DecisionTreeConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-14 (audit AR-3 fix pass)
 // Author:   —
 // Spec:     Decision Tree #8 §4.2, §3.7, Code Standards #20
 // Purpose:  Pipeline-level constants not owned by UtilityWeights, ComposureWeights,
@@ -18,6 +18,16 @@ namespace TacticalDirector.DecisionTree
 
         /// <summary>[FIXED] Standard football squad size on pitch.</summary>
         public const int AgentCount = 22;
+
+        /// <summary>
+        /// [FIXED] AgentId convention split point: IDs [0, HomeSquadAgentCount) are the
+        /// home team, [HomeSquadAgentCount, AgentCount) the away team (Stage 0 convention).
+        /// Single source of truth for the possessor-team classification in
+        /// DecisionContextAssembler (AR-3 L: the bare literal 11 was previously inlined
+        /// there, decoupled from this convention). Stage 1+: replace ID-range inference
+        /// with an explicit per-agent team lookup.
+        /// </summary>
+        public const int HomeSquadAgentCount = 11;
 
         // ── Option Array Capacity ─────────────────────────────────────────────
         // §3.1.0: up to 17 slots (7 action types + 10 PASS candidates)
@@ -51,6 +61,16 @@ namespace TacticalDirector.DecisionTree
 
         /// <summary>[FIXED] Minimum raw attribute value (raw − AttributeNormMin) / AttributeNormRange = A ∈ [0,1].</summary>
         public const float AttributeNormMin   = 1.0f;
+
+        // ── Facing ────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// [FIXED] Squared-magnitude floor below which a facing vector is treated as
+        /// degenerate (zero-length) and a team-relative default is substituted
+        /// (DecisionContextAssembler). AR-3 L: the bare literal 0.0001f was previously
+        /// inlined; promoting it satisfies FR-CS-016 and documents the shared threshold.
+        /// </summary>
+        public const float FacingDegenerateSqrThreshold = 0.0001f;
 
         // ── Intercept Look-ahead Steps ────────────────────────────────────────
         // Decision Tree #8 §3.1.9.2
@@ -94,4 +114,7 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   nonexistent "forced-refresh dispatch" notion; FM-DT-11/12 added for the new   |
 // |         |            |        |   pre-dispatch assertions; FM-DT-14 allocated for unknown-ActionType            |
 // |         |            |        |   (FM-DT-09 double-allocation resolved per ERR-008-007).                        |
+// | 1.3     | 2026-06-14 | —      | Audit AR-3 L: HomeSquadAgentCount (single source for the possessor-team ID     |
+// |         |            |        |   split, was a bare literal 11 in the assembler) + FacingDegenerateSqrThreshold |
+// |         |            |        |   (was an inlined 0.0001f) added per FR-CS-016.                                 |
 #endregion
