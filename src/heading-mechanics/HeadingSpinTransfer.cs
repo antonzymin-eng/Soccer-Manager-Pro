@@ -1,6 +1,6 @@
 // File:     src/heading-mechanics/HeadingSpinTransfer.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-14
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.6, KD-16, FR-HE-015, FR-HE-032, Code Standards #20
 // Purpose:  headAngularVelocity derivation (FR-HE-032) and outgoing spin assembly (FM-010-004).
@@ -37,6 +37,13 @@ namespace TacticalDirector.HeadingMechanics
             Vector2 prevFacingDir)
         {
             Vector3 headAngularVelocity = DeriveHeadAngularVelocity(currentFacingDir, prevFacingDir);
+
+            // NaN/Inf gate (AR-3 L-1): a non-finite incoming spin would propagate through the
+            // preservation term into Ball.ApplyKick; treat it as zero (Step-0 sanitise pattern).
+            if (!IsFinite(incomingSpin))
+            {
+                incomingSpin = Vector3.zero;
+            }
 
             float contactPointAxialOffset = Mathf.Abs(contactPointActual_headLocal.x);
 
@@ -75,6 +82,11 @@ namespace TacticalDirector.HeadingMechanics
 
             return new Vector3(0.0f, 0.0f, yawRateRadPerS);
         }
+
+        private static bool IsFinite(Vector3 v)
+        {
+            return float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
+        }
     }
 }
 
@@ -83,4 +95,6 @@ namespace TacticalDirector.HeadingMechanics
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                              |
 // | 1.1     | 2026-05-28 | —      | AR-1: 1e-6f literals → DEGENERACY_EPSILON_SQ constant.                          |
 // | 1.2     | 2026-05-28 | —      | AR-2 M-2: FrameMs/1000.0f → FrameS.                                             |
+// | 1.3     | 2026-06-14 | —      | AR-3 L-1: ComputeOutgoingSpin zeroes a non-finite incomingSpin before the        |
+// |         |            |        | preservation term (Step-0 sanitise); new IsFinite helper.                        |
 #endregion
