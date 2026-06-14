@@ -81,10 +81,11 @@ namespace TacticalDirector.PerceptionSystem
         /// <param name="currentFrame">Current heartbeat tick.</param>
         public bool UpdateAgent(int agentId, int anticipation, bool hasPossession, int currentFrame)
         {
-            // Close expired window. The window is active for SHOULDER_CHECK_DURATION ticks
-            // starting at the fire tick: expiry is the first CLOSED tick (>=), so a window
-            // fired at F is active on F .. F+DURATION-1 and closes at F+DURATION. §3.4.3.
-            if (_windowActive[agentId] && currentFrame >= _windowExpiryFrame[agentId])
+            // Close expired window. GetWindowExpiryFrame is the LAST active tick (inclusive):
+            // a window fired at F with duration D is active on F .. F+D and closes at F+D+1
+            // (locked by SC-002). Do not tighten to `>=` — that contradicts the diagnostic
+            // contract and the published window semantics.
+            if (_windowActive[agentId] && currentFrame > _windowExpiryFrame[agentId])
             {
                 CloseWindow(agentId);
             }
@@ -213,5 +214,5 @@ namespace TacticalDirector.PerceptionSystem
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                                                       |
 // | 1.1     | 2026-05-28 | —      | AR-1 fixes: M-2 AnyEntityConfirmed updated on blind-side confirmation; L-5 possession comment clarified.      |
-// | 1.2     | 2026-06-13 | —      | AR-3 fixes: H-1 added read-only IsBlindSideConfirmed() for the forced-refresh path (no counter advance); L-2 magic 2.0f possession multiplier → PerceptionConstants.PossessionCheckIntervalMultiplier (FR-CS-016); L-3 window-close comparison `>` → `>=` so the window spans exactly SHOULDER_CHECK_DURATION ticks (was DURATION+1). |
+// | 1.2     | 2026-06-13 | —      | AR-3 fixes: H-1 added read-only IsBlindSideConfirmed() for the forced-refresh path (no counter advance); L-2 magic 2.0f possession multiplier → PerceptionConstants.PossessionCheckIntervalMultiplier (FR-CS-016). NOTE: the AR-3 L-3 window-close `>`→`>=` change was REVERTED before merge — SC-002 locks GetWindowExpiryFrame as the last active tick (inclusive), so the window is active through expiry by design; comment added to prevent re-tightening. |
 #endregion
