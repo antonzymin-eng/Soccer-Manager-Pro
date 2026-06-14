@@ -594,6 +594,27 @@ namespace TacticalDirector.GoalkeeperMechanics
                     }
                 }
 
+                // ── OneOnOne close-down (Stage 0) ─────────────────────────────────────
+                // Keep advancing toward the locked rush target and evaluate the smother trigger
+                // so OneOnOne → Smothered can fire. The trigger is otherwise computed only while
+                // Rushing, which stranded the keeper in OneOnOne (it could exit only via a 10 Hz
+                // SaveIntent → Diving). Movement is the same locked-target dispatch as the rush.
+                if (gkState == GoalkeeperState.OneOnOne)
+                {
+                    Vector3 gkMutablePos = agentState.Position;
+                    if (_rushIntentActive[gkIndex])
+                    {
+                        GoalkeeperRushDispatch.UpdateRushFrame(
+                            ref gkMutablePos,
+                            _rushIntents[gkIndex].RushTarget,
+                            _rushLaunchMps[gkIndex]);
+                        agentStates[agentId].Position = new Vector2(gkMutablePos.x, gkMutablePos.y);
+                    }
+
+                    gkWithinSmotherRadius = CheckAttackerWithinRadius(
+                        gkMutablePos, ballState, GoalkeeperConstants.SmotherTriggerRadiusM);
+                }
+
                 // ── Smother / 1v1 terminal contact (Stage 0 approximation) ────────────
                 // The full §3.6 contested hand-ball resolution for Smothered/OneOnOne depends on
                 // the #3 collision feed that is not plumbed into this entry point at Stage 0 (see
@@ -732,12 +753,19 @@ namespace TacticalDirector.GoalkeeperMechanics
                     }
                 }
 
-                // ── Clear rush intent once the rush is fully resolved ─────────────────
-                // Rushing → Smothered: contact made. Rushing → Recovering: ball intercepted (cleared above).
-                // Rushing → HandsOnBall path via Smothered → HandsOnBall handled transitively next frame.
-                if (_rushIntentActive[gkIndex] && gkState == GoalkeeperState.Rushing)
+                // ── Clear rush intent once the rush chain is fully resolved ───────────
+                // The chain is Rushing → {Smothered, OneOnOne} → {Smothered} → {HandsOnBall,
+                // Recovering}. Clear when leaving any chain state into a terminal/holding state so a
+                // stale active rush intent cannot spuriously re-trigger Set → Rushing later.
+                if (_rushIntentActive[gkIndex])
                 {
-                    if (newState == GoalkeeperState.Smothered || newState == GoalkeeperState.Recovering)
+                    bool inRushChain = gkState == GoalkeeperState.Rushing
+                                    || gkState == GoalkeeperState.OneOnOne
+                                    || gkState == GoalkeeperState.Smothered;
+                    if (inRushChain &&
+                        (newState == GoalkeeperState.Smothered
+                         || newState == GoalkeeperState.Recovering
+                         || newState == GoalkeeperState.HandsOnBall))
                     {
                         _rushIntentActive[gkIndex] = false;
                     }
@@ -813,4 +841,11 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |         |            |        | smother resolution: ball within the save volume → 1v1 claim       |
 // |         |            |        | (SetPossessor + BallClaimedEvent); else a failed close-down routes |
 // |         |            |        | to Recovering. Full §3.6 contested outcomes are Stage 1.          |
+// | 1.6     | 2026-06-14 | —      | AR-5 M-1: OneOnOne → Smothered was dead — gkWithinSmotherRadius   |
+// |         |            |        | was computed only while Rushing, so a keeper that reached OneOnOne |
+// |         |            |        | (now reachable after the v1.4 H-2 rush-motion fix) stranded there. |
+// |         |            |        | OneOnOne now advances toward the locked rush target and evaluates  |
+// |         |            |        | the smother trigger; rush-intent clear broadened to the whole      |
+// |         |            |        | Rushing/OneOnOne/Smothered chain so a stale intent cannot          |
+// |         |            |        | re-trigger Set → Rushing.                                          |
 #endregion
