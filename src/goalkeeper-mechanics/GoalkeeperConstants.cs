@@ -1,6 +1,6 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperConstants.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-14
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.4, KD-9, FR-GK-015, FR-GK-042, Code Standards #20
 // Purpose:  All numeric constants for the goalkeeper mechanics system. No magic literals in formula files.
@@ -81,7 +81,9 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>
         /// [CROSS] Gravitational acceleration (m/s²).
         /// Authoritative source: BallPhysicsConstants.Environment.GRAVITY. Ball Physics #1 §1.2.
-        /// Value: 9.81 m/s².
+        /// Value: 9.81 m/s². STAGE 0 STATUS: declared-but-unconsumed — the Stage 0 synthetic dive Z
+        /// is a fixed parabola (§3.3.3), not a gravity-integrated trajectory; consumed at Stage 1 when
+        /// the dive binds to AM #2 native Z kinematics.
         /// </summary>
         public static readonly float GravityMps2 = BallPhysicsConstants.Environment.GRAVITY;
 
@@ -102,7 +104,9 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>
         /// [CROSS] Penalty area depth (m).
         /// Authoritative source: Ball Physics #1 (anchor pinned during drafting per §3.4.9).
-        /// Value: 16.5 m. TODO: mirror from BallPhysicsConstants.Pitch.PENALTY_AREA_DEPTH when that constant is added.
+        /// Value: 16.5 m. STAGE 0 STATUS: declared-but-unconsumed — handling-area / pickup-legality
+        /// gating on the penalty box is not yet implemented; consumed at Stage 1.
+        /// TODO: mirror from BallPhysicsConstants.Pitch.PENALTY_AREA_DEPTH when that constant is added.
         /// </summary>
         public static readonly float PenaltyAreaDepthM = 16.5f; // TODO: replace with BallPhysicsConstants.Pitch.PENALTY_AREA_DEPTH
 
@@ -254,7 +258,10 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>[GT] Scaling of dive timing jitter on peak hand Z (m per ms of jitter). §3.3.</summary>
         public static readonly float DiveJitterPeakZCoeff = 0.002f; // TODO: replace with config loader (Stage 1)
 
-        /// <summary>[GT] Minimum XY displacement (m) before a dive is classified as wrong-direction (F-02). §2.3 F-02.</summary>
+        /// <summary>[GT] Minimum XY displacement (m) before a dive is classified as wrong-direction (F-02). §2.3 F-02.
+        /// STAGE 0 STATUS: declared-but-unconsumed — the F-02 wrong-direction failure-mode classification
+        /// is not yet implemented in GoalkeeperMechanics (failed dives route to Recovering without an
+        /// F-01/F-02/F-03 FailureCause split). Wired at Stage 1 with the §3.9 failed-save pipeline.</summary>
         public static readonly float WrongDirectionThresholdM = 1.5f; // TODO: replace with config loader (Stage 1)
 
         // ── §3.4.5 Handling-Quality Constants ────────────────────────────────────────
@@ -408,6 +415,9 @@ namespace TacticalDirector.GoalkeeperMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                            |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                          |
+// | 1.1     | 2026-06-14 | —      | AR-6 L: Stage-0 declared-but-unconsumed doc-notes on GravityMps2 |
+// |         |            |        | (synthetic dive Z is a fixed parabola), PenaltyAreaDepthM, and   |
+// |         |            |        | WrongDirectionThresholdM (F-02 classification not yet wired).    |
 #endregion

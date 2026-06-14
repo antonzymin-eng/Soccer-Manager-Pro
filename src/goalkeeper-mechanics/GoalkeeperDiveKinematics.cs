@@ -22,6 +22,11 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// Computes the dive launch impulse (m/s) along the dive direction.
         /// Formula: DIVE_LAUNCH_BASE_MPS + DIVE_LAUNCH_K_STRENGTH × Strength_norm
         ///          + DIVE_LAUNCH_K_AERIAL × Aerial_norm - DIVE_LAUNCH_FATIGUE_COEFF × fatigue.
+        /// STAGE 0 STATUS: this §3.3.1 formula is verified in isolation (T-5.1.3.1) but is NOT
+        /// invoked by GoalkeeperMechanics — the Stage 0 synthetic dive moves the hand-reach envelope
+        /// via ComputeReachCenter's DIVE_LAUNCH_DISPLACEMENT_M displacement rather than applying this
+        /// impulse to the GK body. It binds to AM #2 §3.5.1 kinematics at Stage 1 (KD-12 migration);
+        /// do NOT also displace reachCenter once the impulse drives real body motion (double-count).
         /// §3.3.1. Goalkeeper Mechanics #11 §3.3.
         /// </summary>
         /// <param name="attrs">GK agent attributes. §3.3.1.</param>
@@ -170,4 +175,8 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.1     | 2026-06-14 | —      | AR-3 M-2: lateral dive axis X→Y. The goal mouth spans Y        |
 // |         |            |        | (touchline-to-touchline), so reachCenter now displaces along Y |
 // |         |            |        | (gkPos.x fixed); diveDirectionX renamed diveDirectionLateral.  |
+// | 1.2     | 2026-06-14 | —      | AR-6 L: doc-note on ComputeDiveLaunchImpulse — tested in       |
+// |         |            |        | isolation but not invoked at Stage 0 (synthetic reachCenter    |
+// |         |            |        | displacement is used); double-count hazard flagged for the     |
+// |         |            |        | Stage 1 AM-kinematics binding.                                 |
 #endregion
