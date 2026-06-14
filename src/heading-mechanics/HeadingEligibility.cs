@@ -1,6 +1,6 @@
 // File:     src/heading-mechanics/HeadingEligibility.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-14
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.2, KD-3, KD-17, KD-18, FR-HE-001, FR-HE-018, Code Standards #20
 // Purpose:  Pure eligibility predicate. No event side effects; the §4.6 caller emits events.
@@ -197,7 +197,7 @@ namespace TacticalDirector.HeadingMechanics
         {
             float dt = (targetFrame - currentFrame) * HeadingMechanicsConstants.FrameS;
             return ball.Position.z + ball.Velocity.z * dt
-                   - 0.5f * HeadingMechanicsConstants.GravityMps2 * dt * dt;
+                   - HeadingMechanicsConstants.KINEMATIC_HALF_COEFF * HeadingMechanicsConstants.GravityMps2 * dt * dt;
         }
     }
 }
@@ -208,4 +208,6 @@ namespace TacticalDirector.HeadingMechanics
 // | 1.1     | 2026-05-28 | —      | AR-2 H-3: corrected misleading comment in FindContactFrame (now describes        |
 // |         |            |        | forward-only window correctly). M-2: FrameMs/1000.0f → FrameS (×2).            |
 // |         |            |        | M-6: 0.5f*GravityMps2 → KINEMATIC_HALF_COEFF*GravityMps2 (×2).                 |
+// | 1.2     | 2026-06-14 | —      | AR-3 L-3: PredictBallZ still carried a raw 0.5f literal the AR-2 M-6 sweep      |
+// |         |            |        | missed (claimed ×2; only PredictBallPosition was converted) → KINEMATIC_HALF_COEFF.|
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/heading-mechanics/HeadingMechanics.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-14
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.2–§3.9 dispatch, §4.6, KD-9, KD-17, KD-18, Code Standards #20
 // Purpose:  60 Hz physics-tick orchestrator. Manages per-agent intent tracking, jump kinematics,
@@ -313,11 +313,15 @@ namespace TacticalDirector.HeadingMechanics
                 Vector2 contactPointActual_headLocal = ComputeContactPointHeadLocal(
                     currentBall.Position, headCentre_ws, agentState.FacingDirection);
 
+                // Invert ComputeContactPointHeadLocal exactly: head-local +x = facing-forward,
+                // +y = agent-left lateral (-facing.y, facing.x) — both horizontal (XY plane).
+                // The lateral component MUST map to the left axis, not world Z (AR-3 M-1 fix);
+                // the prior code injected the lateral offset as height, tilting the reflection
+                // normal vertically for any off-centre header.
+                Vector2 facing = agentState.FacingDirection;
                 Vector3 contactPointActual_ws = headCentre_ws
-                    + new Vector3(
-                        agentState.FacingDirection.x * contactPointActual_headLocal.x,
-                        agentState.FacingDirection.y * contactPointActual_headLocal.x,
-                        contactPointActual_headLocal.y);
+                    + new Vector3(facing.x, facing.y, 0.0f) * contactPointActual_headLocal.x
+                    + new Vector3(-facing.y, facing.x, 0.0f) * contactPointActual_headLocal.y;
 
                 // Find this agent's duel result.
                 int  duelId          = -1;
@@ -538,4 +542,9 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246    |
 // |         |            |        | under Unity and the Linux compile gate alike, so this assembly could not have     |
 // |         |            |        | compiled in-engine. No functional change.                                         |
+// | 1.5     | 2026-06-14 | —      | AR-3 M-1: Pass-2 head-local→world contact-point reconstruction mapped the         |
+// |         |            |        | lateral (+y) head-local offset onto world Z, tilting the reflection normal        |
+// |         |            |        | vertically for off-centre headers; now reconstructed on the (-facing.y,facing.x)  |
+// |         |            |        | left axis, exactly inverting ComputeContactPointHeadLocal. Centred headers        |
+// |         |            |        | unaffected (why unit tests passed).                                               |
 #endregion

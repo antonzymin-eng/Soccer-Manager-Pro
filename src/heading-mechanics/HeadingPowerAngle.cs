@@ -1,6 +1,6 @@
 // File:     src/heading-mechanics/HeadingPowerAngle.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-14
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.5, §3.8, KD-6, KD-9, FR-HE-007, FR-HE-011, FR-HE-025, Code Standards #20
 // Purpose:  Outgoing speed (FM-010-003), launch-angle reflection geometry, and own-goal-shape flag (§3.8).
@@ -85,7 +85,11 @@ namespace TacticalDirector.HeadingMechanics
             Vector3 headCentre_worldspace,
             Vector3 incomingBallVelocity)
         {
-            if (incomingBallVelocity.sqrMagnitude < HeadingMechanicsConstants.DEGENERACY_EPSILON_SQ)
+            // NaN/Inf gate (AR-3 L-1): sqrMagnitude < eps is false for NaN, so a non-finite
+            // ball velocity would otherwise propagate through .normalized into ApplyKick.
+            // Mirrors the Step-0 sanitise pattern in First Touch / Agent Movement / Collision.
+            if (!IsFinite(incomingBallVelocity) ||
+                incomingBallVelocity.sqrMagnitude < HeadingMechanicsConstants.DEGENERACY_EPSILON_SQ)
             {
                 return Vector3.forward;
             }
@@ -152,16 +156,18 @@ namespace TacticalDirector.HeadingMechanics
                 arcLength += Vector3.Distance(pos, prev);
                 prev       = pos;
 
-                if (arcLength >= horizonM)
-                {
-                    break;
-                }
-
+                // Test this sample before applying the distance horizon (AR-3 L-2): the prior
+                // order broke on the step that crossed horizonM without ever checking its position.
                 if (pos.x >= goalXMin && pos.x <= goalXMax &&
                     pos.y >= goalYMin && pos.y <= goalYMax &&
                     pos.z >= 0.0f    && pos.z <= goalZMax)
                 {
                     return true;
+                }
+
+                if (arcLength >= horizonM)
+                {
+                    break;
                 }
             }
 
@@ -169,6 +175,11 @@ namespace TacticalDirector.HeadingMechanics
         }
 
         // ── Private helpers ──────────────────────────────────────────────────────────
+
+        private static bool IsFinite(Vector3 v)
+        {
+            return float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
+        }
 
         private static Vector3 PredictBallistic(Vector3 origin, Vector3 velocity, float t)
         {
@@ -196,4 +207,8 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | L-1: 1e-6f → DEGENERACY_EPSILON_SQ. L-2: 1e-8f → SURFACE_NORMAL_EPSILON_SQ (×2).          |
 // | 1.2     | 2026-05-28 | —      | AR-2 M-2: FrameMs/1000.0f → FrameS. M-3: PitchWidthM*0.5f → PitchCentreYM.     |
 // |         |            |        | M-4: 2.0f*dot*normal → REFLECTION_FORMULA_COEFF. M-6: 0.5f*g → KINEMATIC_HALF_COEFF. |
+// | 1.3     | 2026-06-14 | —      | AR-3 L-1: ComputeReflectionDirection now rejects non-finite incomingBallVelocity |
+// |         |            |        | (NaN < eps is false) → returns forward; new IsFinite helper. AR-3 L-2:           |
+// |         |            |        | ComputeOwnGoalFlag tests the sampled position BEFORE the horizonM distance break |
+// |         |            |        | (the crossing step's position was previously never checked).                     |
 #endregion
