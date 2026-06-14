@@ -1,6 +1,6 @@
 // File:     src/decision-tree/UtilityScorer.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-14 (audit AR-3 fix pass)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2, §3.4, Code Standards #20
 // Purpose:  Step 4 of the 6-step pipeline. Applies the utility scoring model to each
@@ -49,7 +49,14 @@ namespace TacticalDirector.DecisionTree
                 default:                         u = UtilityWeights.UTILITY_FLOOR;    break;
             }
 
-            return Mathf.Clamp(u, UtilityWeights.UTILITY_FLOOR, UtilityWeights.UTILITY_CEILING);
+            float clamped = Mathf.Clamp(u, UtilityWeights.UTILITY_FLOOR, UtilityWeights.UTILITY_CEILING);
+
+            // AR-3 L: Mathf.Clamp passes NaN through (NaN comparisons are false), so a
+            // non-finite utility — from a corrupt attribute or position upstream — would
+            // otherwise survive into selection, where ActionSelector picks index 0 when
+            // every comparison is false and could dispatch the NaN option. Fail closed to
+            // the floor (project NaN-gate pattern: AM AR-10 / CS AR-7 / FT AR-8).
+            return float.IsNaN(clamped) ? UtilityWeights.UTILITY_FLOOR : clamped;
         }
 
         // ── §3.2.2 PASS ────────────────────────────────────────────────────────
@@ -327,4 +334,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | - FilteredView (ctx.Snapshot local, ScoreMove SS 3.2) was CS0246, so the       |
 // |         |            |        | decision-tree assembly STILL did not compile after the June 11 AR-2 H-1        |
 // |         |            |        | asmdef/static-call fixes. No functional change.                                |
+// | 1.4     | 2026-06-14 | —      | Audit AR-3 L: ComputeUtility fails closed to UTILITY_FLOOR on a non-finite     |
+// |         |            |        | result — Mathf.Clamp passes NaN, which would otherwise win selection           |
+// |         |            |        | (ActionSelector picks index 0 when all comparisons are false). NaN-gate        |
+// |         |            |        | pattern (AM AR-10 / CS AR-7 / FT AR-8).                                         |
 #endregion
