@@ -261,19 +261,39 @@ namespace TacticalDirector.PerceptionSystem
             Vector3 observerPos3D = new Vector3(observerPos.x, observerPos.y, 0.0f);
             List<int> candidates  = _spatialHash.Query(observerPos3D, PerceptionConstants.MaxPerceptionRange);
 
+            // Dedup BEFORE truncation: the spatial hash can return the same entity from
+            // multiple cells (body-radius straddle). _candidateIds holds MaxAgents + 1 unique
+            // slots (22 agents + 1 ball), so we scan the entire raw list and the buffer cannot
+            // overflow once duplicates are filtered. Truncating the raw list first (old behaviour)
+            // could drop a unique agent that only appeared past the cap behind duplicate entries.
             _candidateCount = 0;
+            bool ballAdded = false;
             if (candidates != null)
             {
-                int limit = Mathf.Min(candidates.Count, _candidateIds.Length);
-                for (int i = 0; i < limit; i++)
+                int rawCount = candidates.Count;
+                for (int i = 0; i < rawCount; i++)
                 {
                     int id = candidates[i];
+
                     if (id >= 0 && id < PerceptionConstants.MaxAgents)
                     {
                         // Deduplicate: skip agent IDs seen in a prior cell during this query
                         if (_candidateVisited[id]) continue;
                         _candidateVisited[id] = true;
                     }
+                    else if (id < 0)
+                    {
+                        // Ball sentinel (-1): keep a single entry; multiple cells can return it
+                        if (ballAdded) continue;
+                        ballAdded = true;
+                    }
+                    else
+                    {
+                        // id >= MaxAgents: out-of-range entity, not perceivable here — skip
+                        continue;
+                    }
+
+                    if (_candidateCount >= _candidateIds.Length) break; // unreachable post-dedup; defensive
                     _candidateIds[_candidateCount++] = id;
                 }
             }
@@ -316,12 +336,25 @@ namespace TacticalDirector.PerceptionSystem
                 // Entity passed range + FoV + occlusion tests
                 _entitySeenThisFrame[targetId] = true;
 
-                // On forced refresh, L_rec = 0 only for the directly triggering entity (§4.6.2)
-                bool isTriggeringEntity = forcedRefresh && targetId == triggeringEntityId;
-
-                bool confirmed = _latencyTracker.ProcessVisible(
-                    agentId, targetId, attrs.Decisions, attrs.IsHalfTurned,
-                    angSepAbs, currentFrame, isTriggeringEntity);
+                bool confirmed;
+                if (forcedRefresh)
+                {
+                    // A forced refresh runs out of the normal 10 Hz schedule and must NOT advance
+                    // cross-heartbeat latency counters (§4.6.2). L_rec = 0 (force-confirm) applies
+                    // ONLY to the directly triggering entity; every other visible entity is reported
+                    // from its already-established confirmation state via a side-effect-free read.
+                    confirmed = targetId == triggeringEntityId
+                        ? _latencyTracker.ProcessVisible(
+                            agentId, targetId, attrs.Decisions, attrs.IsHalfTurned,
+                            angSepAbs, currentFrame, forcedRefresh: true)
+                        : _latencyTracker.IsConfirmed(agentId, targetId);
+                }
+                else
+                {
+                    confirmed = _latencyTracker.ProcessVisible(
+                        agentId, targetId, attrs.Decisions, attrs.IsHalfTurned,
+                        angSepAbs, currentFrame, forcedRefresh: false);
+                }
 
                 if (!confirmed) continue;
 
@@ -352,14 +385,26 @@ namespace TacticalDirector.PerceptionSystem
 
             // Second pass: advance expiry counters for all agents that were NOT fully visible
             // (out of range, failed FoV, or failed occlusion). §3.3.6.
-            for (int targetId = 0; targetId < PerceptionConstants.MaxAgents; targetId++)
+            // Skipped on a forced refresh — it runs out of the normal 10 Hz schedule, so advancing
+            // expiry/eviction here would double-tick those counters and prematurely evict confirmed
+            // entities (§4.6.2). The next scheduled heartbeat advances them exactly once.
+            if (!forcedRefresh)
             {
-                if (targetId == agentId || _entitySeenThisFrame[targetId]) continue;
-                _latencyTracker.ProcessInvisible(agentId, targetId);
+                for (int targetId = 0; targetId < PerceptionConstants.MaxAgents; targetId++)
+                {
+                    if (targetId == agentId || _entitySeenThisFrame[targetId]) continue;
+                    _latencyTracker.ProcessInvisible(agentId, targetId);
+                }
             }
 
             // ── Step 6: Shoulder check scheduling + blind-side processing ─────────────
-            _shoulderCheckScheduler.UpdateAgent(agentId, attrs.Anticipation, hasPossession, currentFrame);
+            // On a forced refresh, do NOT advance the autonomous schedule — UpdateAgent would
+            // fire or retime shoulder checks off the 10 Hz cadence (§4.6.2). Read the current
+            // window state and rebuild blind-side entries from established confirmation only.
+            if (!forcedRefresh)
+            {
+                _shoulderCheckScheduler.UpdateAgent(agentId, attrs.Anticipation, hasPossession, currentFrame);
+            }
             bool windowActive = _shoulderCheckScheduler.IsWindowActive(agentId);
 
             int blindSideCount = 0;
@@ -387,9 +432,11 @@ namespace TacticalDirector.PerceptionSystem
                     float angSep    = FovCalculator.ComputeAngularSeparationDeg(observerPos, facingDir, targetPos);
                     float angSepAbs = Mathf.Abs(angSep);
 
-                    bool confirmed = _shoulderCheckScheduler.ProcessBlindSideEntity(
-                        agentId, targetId, attrs.Decisions, attrs.IsHalfTurned,
-                        angSepAbs, currentFrame, _latencyTracker);
+                    bool confirmed = forcedRefresh
+                        ? _shoulderCheckScheduler.IsBlindSideConfirmed(agentId, targetId)
+                        : _shoulderCheckScheduler.ProcessBlindSideEntity(
+                            agentId, targetId, attrs.Decisions, attrs.IsHalfTurned,
+                            angSepAbs, currentFrame, _latencyTracker);
 
                     if (confirmed && blindSideCount < PerceptionConstants.MaxBlindSideAgents)
                     {
@@ -443,4 +490,8 @@ namespace TacticalDirector.PerceptionSystem
 // | 1.2     | 2026-05-29 | —      | AR-2 fixes L-1/L-2: removed prevBallVisible argument (dead param); added length guards to HandleForcedRefresh; added agentHasPossession length guard. |
 // | 1.3     | 2026-06-12 | —      | Build fix (dotnet CI gate): using UnityEngine.Profiling -> Unity.Profiling. ProfilerMarker's actual namespace is Unity.Profiling; the old using was   |
 // |         |            |        | CS0246 under Unity and the Linux compile gate alike, so this assembly could not have compiled in-engine. No functional change.                        |
+// | 1.4     | 2026-06-13 | —      | AR-3 fixes. H-1: HandleForcedRefresh no longer double-advances cross-heartbeat state — RunAgentPipeline gates the ProcessInvisible expiry loop,        |
+// |         |            |        | the ShoulderCheckScheduler.UpdateAgent advance, and the per-entity latency/blind-side increments behind !forcedRefresh; non-triggering entities are    |
+// |         |            |        | read via the new side-effect-free IsConfirmed/IsBlindSideConfirmed, triggering entity still force-confirms (L_rec=0) per §4.6.2. M-1: Step 1 candidate |
+// |         |            |        | enumeration dedups (agents + ball) across the FULL raw query before any cap, so multi-cell straddle can no longer truncate a unique agent out.         |
 #endregion

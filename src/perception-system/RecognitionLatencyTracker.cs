@@ -129,7 +129,9 @@ namespace TacticalDirector.PerceptionSystem
             {
                 if (_expiryCounters[key] <= 0)
                 {
-                    // Begin expiry countdown
+                    // Begin expiry countdown. The entity stays confirmed for this first
+                    // invisible tick (CONFIRMATION_EXPIRY_TICKS ticks of stale data) and is
+                    // evicted on the subsequent invisible tick when the counter drains. §3.3.6.
                     _expiryCounters[key] = PerceptionConstants.CONFIRMATION_EXPIRY_TICKS;
                 }
                 else
@@ -166,19 +168,15 @@ namespace TacticalDirector.PerceptionSystem
         }
 
         /// <summary>
-        /// Resets all recognition latency state for a given observer.
-        /// Called on forced refresh when the observer's full snapshot is rebuilt.
-        /// Perception System #7 §3.8.2.
+        /// Read-only query: true if the (observer, target) pair is currently confirmed.
+        /// Used by the forced mid-heartbeat refresh path (§4.6.2), which must read the
+        /// established confirmation state for non-triggering entities WITHOUT advancing
+        /// any cross-heartbeat latency counter. Has no side effects.
+        /// Perception System #7 §4.6.2.
         /// </summary>
-        public void ResetObserver(int observerId)
+        public bool IsConfirmed(int observerId, int targetId)
         {
-            for (int targetId = 0; targetId < _maxAgents; targetId++)
-            {
-                int key = Key(observerId, targetId);
-                _latencyCounters[key] = -1;
-                _confirmed[key]       = false;
-                _expiryCounters[key]  = 0;
-            }
+            return _confirmed[Key(observerId, targetId)];
         }
 
         // ── L_rec computation ────────────────────────────────────────────────────────
@@ -235,7 +233,10 @@ namespace TacticalDirector.PerceptionSystem
                 h ^= h >> 16;
                 h *= unchecked((int)0x45d9f3b);
                 h ^= h >> 16;
-                return Mathf.Abs(h);
+                // Mask off the sign bit rather than Mathf.Abs(h): Math.Abs(int.MinValue)
+                // throws OverflowException (even under unchecked), and a negative result
+                // would make the caller's `% N` yield an out-of-range (negative) value.
+                return h & 0x7FFFFFFF;
             }
         }
 
@@ -251,4 +252,5 @@ namespace TacticalDirector.PerceptionSystem
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                  |
 // | 1.1     | 2026-05-28 | —      | AR-1 fix L-6: ProcessVisible uses Key() helper (style consistency fix).                    |
 // | 1.2     | 2026-05-29 | —      | AR-2 fix L-3: DeterministicHash literals cast to unchecked int for true 32-bit wrapping. |
+// | 1.3     | 2026-06-13 | —      | AR-3 fixes: H-1 added read-only IsConfirmed() for the forced-refresh path (no counter advance); M-2 removed dead ResetObserver() (never called; doc misrepresented §4.6.2 which resets only the triggering entity); L-1 DeterministicHash returns h & 0x7FFFFFFF instead of Mathf.Abs (Math.Abs(int.MinValue) throws; negative result corrupted caller modulo); L-5 expiry-grace comment. |
 #endregion

@@ -174,6 +174,10 @@ namespace TacticalDirector.PerceptionSystem
         /// Master Vol 1 §3.1: ~0.3s for a shoulder check movement. Perception System #7 §3.4.3.</summary>
         public static readonly int SHOULDER_CHECK_DURATION = 3; // TODO: replace with config loader (Stage 1)
 
+        /// <summary>[GT] In-possession shoulder check interval multiplier. Doubling the interval
+        /// halves scan frequency for the ball carrier (eyes more on the ball). Perception System #7 §3.4.2.</summary>
+        public static readonly float PossessionCheckIntervalMultiplier = 2.0f; // TODO: replace with config loader (Stage 1)
+
         // ── §3.1 / §3.5 Range ───────────────────────────────────────────────────────
 
         /// <summary>[GT] Maximum perception range (m). Full pitch diagonal; effectively uncapped.
@@ -207,4 +211,5 @@ namespace TacticalDirector.PerceptionSystem
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                                                      |
 // | 1.1     | 2026-05-28 | —      | AR-1 fix M-3: HalfTurnLRecReduction now sourced from FirstTouchConstants (CROSS tag contract satisfied).      |
 // | 1.2     | 2026-06-12 | —      | Dotnet-CI quarantine adjudication (PRODUCTION-DEFECT, static-init-order class — EventRegistry sibling): BASE_FOV_HALF_ANGLE and PERIPHERAL_ARC_INNER_BOUND were static readonly fields initialised in textual region order (Fixed → Derived → Cross → GT) BEFORE their [GT] source BASE_FOV_ANGLE, so both read 0 at runtime; converted to expression-bodied properties (evaluation deferred past static init). Values unchanged: 80° / 40°. |
+// | 1.3     | 2026-06-13 | —      | AR-3 L-2: added [GT] PossessionCheckIntervalMultiplier (2.0) — replaces the magic 2.0f literal in ShoulderCheckScheduler.FireCheck (FR-CS-016). |
 #endregion

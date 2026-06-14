@@ -22,7 +22,10 @@ namespace TacticalDirector.PerceptionSystem
     {
         /// <summary>
         /// Computes the effective FoV full angle (degrees) after Decisions modifier and pressure narrowing.
-        /// Result is clamped to [MIN_FOV_ANGLE, BASE_FOV_ANGLE + MAX_FOV_BONUS_ANGLE] = [120°, 170°].
+        /// Decisions normalisation is decisions/ATTR_MAX per the §3.9 worked examples (160° + (D/20)×10°).
+        /// Only the MIN_FOV_ANGLE floor is applied explicitly; the upper bound of
+        /// BASE_FOV_ANGLE + MAX_FOV_BONUS_ANGLE = 170° holds by construction (pressure only narrows,
+        /// and D ≤ 20), so the effective range is [120°, 170°].
         /// Perception System #7 §3.1.3–§3.1.4.
         /// </summary>
         /// <param name="decisions">Decisions attribute [1–20].</param>
@@ -134,4 +137,5 @@ namespace TacticalDirector.PerceptionSystem
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.1     | 2026-06-13 | —      | AR-3 L-4: ComputeEffectiveFoV doc clarifies the decisions/ATTR_MAX normalisation (per §3.9) and that only the MIN_FOV_ANGLE floor is explicit (170° upper bound holds by construction). No code change. |
 #endregion
