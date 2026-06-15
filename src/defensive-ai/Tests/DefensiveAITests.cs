@@ -1277,12 +1277,15 @@ namespace TacticalDirector.DefensiveAI.Tests
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[poolCount * 2];
             for (int i = 0; i < poolCount; i++)
             {
+                // MIDFIELD line so invariant 1 (backline minimum) is vacuous and this snapshot
+                // isolates invariant 2 (MAN_MARK cap). With DEFENSE-line agents the AR-2 H-2 full
+                // enforcement would demote to satisfy the backline first, conflating the two.
                 agents[i] = SnapshotBuilder.MakeAgent(
                     entityId: i + 10,
                     teamId: 0,
                     position: new Vector2(30.0f + i * 2.0f, 34.0f),
                     baselineSlot: new Vector2(30.0f + i * 2.0f, 34.0f),
-                    line: LineId.Defense);
+                    line: LineId.Midfield);
                 // Matching opponent for each defender.
                 agents[poolCount + i] = SnapshotBuilder.MakeAgent(
                     entityId: 100 + i,
@@ -1706,6 +1709,301 @@ namespace TacticalDirector.DefensiveAI.Tests
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // AR-2 Regression Locks (H-1 / H-2 / M-2)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// AR-2 H-1: hysteresis and the prior committed assignment must travel with the agent's
+    /// EntityId, not the compacted pool slot. Drives the real DefensiveAITick orchestrator
+    /// across a pool-membership change and asserts a committed MAN_MARK survives the slot shift.
+    /// </summary>
+    [TestFixture]
+    internal sealed class HysteresisAliasingRegressionTests
+    {
+        private static DefensiveSnapshot Build(int tick, bool lowIdIsPresser)
+        {
+            // EntityId-ascending: 8 (low-id pool filler), 10 (man-marker), 40 (opponent).
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+            {
+                SnapshotBuilder.MakeAgent(entityId: 8, teamId: 0,
+                    position: new Vector2(20.0f, 10.0f), baselineSlot: new Vector2(20.0f, 10.0f),
+                    line: LineId.Midfield,
+                    pressRole: lowIdIsPresser ? PressRole.PrimaryPress : PressRole.HoldShape),
+                SnapshotBuilder.MakeAgent(entityId: 10, teamId: 0,
+                    position: new Vector2(40.0f, 34.0f), baselineSlot: new Vector2(40.0f, 34.0f),
+                    line: LineId.Midfield),
+                SnapshotBuilder.MakeAgent(entityId: 40, teamId: 1,
+                    position: new Vector2(45.0f, 34.0f), firstTouch: 14f),
+            };
+
+            // Ball deep in opponent half, slow — no last-man emergency, no offside trap.
+            return SnapshotBuilder.Build(agents,
+                ballPosition: new Vector2(80.0f, 34.0f),
+                ballVelocity: new Vector2(1.0f, 0f),
+                tick: tick);
+        }
+
+        /// <summary>T-DA-H1 — committed MAN_MARK retained across pool-slot churn.</summary>
+        [Test]
+        public void T_DA_H1_HysteresisKeyedByEntityNotPoolSlot()
+        {
+            DefensiveAITick tick = new DefensiveAITick();
+
+            // Burn the dwell so agent 10 commits MAN_MARK on opponent 40 (pool = [8, 10], slot 1).
+            int lastTick = 0;
+            for (int t = 1; t <= DefensiveAIConstants.MarkDwellTicks; t++)
+            {
+                tick.Tick(Build(t, lowIdIsPresser: false));
+                lastTick = t;
+            }
+
+            Assert.AreEqual(MarkMode.ManMark, tick.GetAssignment(10).Mode,
+                "Agent 10 must commit MAN_MARK after the dwell window.");
+            Assert.AreEqual(40, tick.GetAssignment(10).TargetEntityId);
+
+            // Low-id pool member 8 becomes a presser and leaves the pool → pool = [10] (slot 0).
+            // Under the per-slot bug, slot 0 would carry entity 8's stale ZONAL state and agent 10
+            // would drop its mark. With per-entity state it must retain MAN_MARK on opponent 40.
+            tick.Tick(Build(lastTick + 1, lowIdIsPresser: true));
+
+            Assert.AreEqual(MarkMode.ManMark, tick.GetAssignment(10).Mode,
+                "Agent 10 must RETAIN MAN_MARK after slot churn (hysteresis keyed by EntityId).");
+            Assert.AreEqual(40, tick.GetAssignment(10).TargetEntityId,
+                "Retained target must still be opponent 40, not aliased from the departed agent.");
+        }
+
+        /// <summary>T-DA-H1b — phase swing to InPoss clears dwell so it cannot leak back (AR-2 M-1).</summary>
+        [Test]
+        public void T_DA_H1b_PhaseSwingResetsHysteresis()
+        {
+            DefensiveAITick tick = new DefensiveAITick();
+
+            for (int t = 1; t <= DefensiveAIConstants.MarkDwellTicks; t++)
+                tick.Tick(Build(t, lowIdIsPresser: false));
+
+            Assert.AreEqual(MarkMode.ManMark, tick.GetAssignment(10).Mode);
+
+            // Possession regained → all-ZONAL path; per-entity hysteresis must reset.
+            DefensiveSnapshot inPoss = Build(DefensiveAIConstants.MarkDwellTicks + 1, lowIdIsPresser: false);
+            inPoss.TeamPhase = Phase.InPoss;
+            tick.Tick(inPoss);
+
+            Assert.AreEqual(MarkMode.Zonal, tick.GetAssignment(10).Mode,
+                "All-ZONAL emitted while in possession.");
+
+            // Back out of possession: the mark must be rebuilt from scratch (dwell again), not
+            // resurrected instantly from a stale dwell lock.
+            DefensiveSnapshot outAgain = Build(DefensiveAIConstants.MarkDwellTicks + 2, lowIdIsPresser: false);
+            tick.Tick(outAgain);
+
+            Assert.AreEqual(MarkMode.Zonal, tick.GetAssignment(10).Mode,
+                "First tick after possession must NOT instantly re-commit MAN_MARK (dwell was reset).");
+        }
+    }
+
+    /// <summary>
+    /// AR-2 H-2: InvariantEnforcer must demote ALL violations, not just one per call, and must
+    /// not report satisfied while an invariant is still breached.
+    /// </summary>
+    [TestFixture]
+    internal sealed class InvariantMultiViolationTests
+    {
+        /// <summary>T-DA-H2 — 8 MAN_MARK (cap 4) → exactly 4 retained (highest threat), all excess demoted.</summary>
+        [Test]
+        public void T_DA_H2_MaxManMarkDemotesAllExcessNotJustOne()
+        {
+            const int n = 8;
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[n * 2];
+            for (int i = 0; i < n; i++)
+            {
+                // MIDFIELD so the backline invariant is vacuous and only the MAN_MARK cap is tested.
+                agents[i] = SnapshotBuilder.MakeAgent(entityId: 10 + i, teamId: 0,
+                    position: new Vector2(40.0f, 20.0f + i * 3.0f),
+                    baselineSlot: new Vector2(40.0f, 20.0f + i * 3.0f),
+                    line: LineId.Midfield);
+                // Threat strictly increases with i (firstTouch 8..15).
+                agents[n + i] = SnapshotBuilder.MakeAgent(entityId: 100 + i, teamId: 1,
+                    position: new Vector2(42.0f, 20.0f + i * 3.0f), firstTouch: 8f + i);
+            }
+
+            DefensiveSnapshot snapshot = SnapshotBuilder.Build(agents);
+            int[] pool = new int[] { 10, 11, 12, 13, 14, 15, 16, 17 };
+
+            MarkAssignment[] assignments = new MarkAssignment[n];
+            for (int i = 0; i < n; i++)
+            {
+                assignments[i] = new MarkAssignment
+                {
+                    AgentEntityId    = 10 + i,
+                    Mode             = MarkMode.ManMark,
+                    TargetEntityId   = 100 + i,
+                    TargetPosition   = new Vector2(42.0f, 20.0f + i * 3.0f),
+                    ValidThroughTick = 1,
+                };
+            }
+
+            bool result = InvariantEnforcer.Enforce(snapshot, pool, n, 1, assignments);
+
+            int manMarkCount = 0;
+            for (int i = 0; i < n; i++)
+                if (assignments[i].Mode == MarkMode.ManMark) manMarkCount++;
+
+            Assert.IsTrue(result, "Enforce must return true once the cap is actually satisfied.");
+            Assert.AreEqual(DefensiveAIConstants.MaxManMarkAssignments, manMarkCount,
+                "ALL excess MAN_MARKs (8 - 4 = 4) must be demoted, not just one (AR-2 H-2).");
+
+            // The 4 lowest-threat agents (i = 0..3) must be the demoted ones.
+            for (int i = 0; i < 4; i++)
+                Assert.AreEqual(MarkMode.Zonal, assignments[i].Mode,
+                    $"Lowest-threat agent {10 + i} must be demoted to ZONAL.");
+            for (int i = 4; i < n; i++)
+                Assert.AreEqual(MarkMode.ManMark, assignments[i].Mode,
+                    $"Highest-threat agent {10 + i} must retain MAN_MARK.");
+        }
+
+        /// <summary>T-DA-H2b — multiple over-displaced assignments all demoted in one call.</summary>
+        [Test]
+        public void T_DA_H2b_AllOverDisplacedDemoted()
+        {
+            const int n = 3;
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[n * 2];
+            for (int i = 0; i < n; i++)
+            {
+                agents[i] = SnapshotBuilder.MakeAgent(entityId: 10 + i, teamId: 0,
+                    position: new Vector2(30.0f, 20.0f + i * 6.0f),
+                    baselineSlot: new Vector2(30.0f, 20.0f + i * 6.0f),
+                    line: LineId.Midfield);
+                // Opponent 25 m away (> MaxMarkDisplacementM = 20).
+                agents[n + i] = SnapshotBuilder.MakeAgent(entityId: 100 + i, teamId: 1,
+                    position: new Vector2(55.0f, 20.0f + i * 6.0f), firstTouch: 14f);
+            }
+
+            DefensiveSnapshot snapshot = SnapshotBuilder.Build(agents);
+            int[] pool = new int[] { 10, 11, 12 };
+
+            MarkAssignment[] assignments = new MarkAssignment[n];
+            for (int i = 0; i < n; i++)
+            {
+                assignments[i] = new MarkAssignment
+                {
+                    AgentEntityId    = 10 + i,
+                    Mode             = MarkMode.ManMark,
+                    TargetEntityId   = 100 + i,
+                    TargetPosition   = new Vector2(55.0f, 20.0f + i * 6.0f), // 25 m from baseline.
+                    ValidThroughTick = 1,
+                };
+            }
+
+            bool result = InvariantEnforcer.Enforce(snapshot, pool, n, 1, assignments);
+
+            Assert.IsTrue(result);
+            for (int i = 0; i < n; i++)
+                Assert.AreEqual(MarkMode.Zonal, assignments[i].Mode,
+                    $"Over-displaced agent {10 + i} must be demoted (all of them, AR-2 H-2).");
+        }
+    }
+
+    /// <summary>
+    /// AR-2 sweep L: a ZONAL tick must clear the dwell accumulator so a re-acquisition does
+    /// not commit MAN_MARK without re-serving the §3.11 dwell window.
+    /// </summary>
+    [TestFixture]
+    internal sealed class ZonalBypassResetTests
+    {
+        private static DefensiveSnapshot WithOpponentAt(Vector2 oppPos, int tick)
+        {
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+            {
+                SnapshotBuilder.MakeAgent(entityId: 10, teamId: 0,
+                    position: new Vector2(30.0f, 34.0f), baselineSlot: new Vector2(30.0f, 34.0f),
+                    line: LineId.Midfield),
+                SnapshotBuilder.MakeAgent(entityId: 99, teamId: 1, position: oppPos, firstTouch: 14f),
+            };
+            return SnapshotBuilder.Build(agents, tick: tick);
+        }
+
+        /// <summary>T-DA-H3 — dwell does not carry through a ZONAL gap on re-acquisition.</summary>
+        [Test]
+        public void T_DA_H3_ZonalGapResetsDwell()
+        {
+            int[] pool = new int[] { 10 };
+            MarkAssignment[] assignments = new MarkAssignment[1];
+            MarkHysteresisState[] hysteresis = new MarkHysteresisState[] { MarkHysteresisState.Default() };
+
+            Vector2 inRange  = new Vector2(35.0f, 34.0f);   // dist 5 < 15 → MAN_MARK candidate.
+            Vector2 outRange = new Vector2(70.0f, 34.0f);   // dist 40 > 15 → ZONAL.
+
+            // Build the dwell almost to commit (MarkDwellTicks - 1 preferences).
+            int t = 1;
+            for (; t < DefensiveAIConstants.MarkDwellTicks; t++)
+                MarkAssigner.Assign(WithOpponentAt(inRange, t), pool, 1, t, assignments, hysteresis);
+
+            Assert.AreEqual(MarkMode.Zonal, assignments[0].Mode,
+                "Must not have committed yet (dwell incomplete).");
+
+            // One ZONAL tick (opponent leaves radius) — must clear the accumulator.
+            MarkAssigner.Assign(WithOpponentAt(outRange, t), pool, 1, t, assignments, hysteresis);
+            t++;
+
+            // Opponent re-enters: a single tick must NOT instantly commit — dwell restarts.
+            MarkAssigner.Assign(WithOpponentAt(inRange, t), pool, 1, t, assignments, hysteresis);
+
+            Assert.AreEqual(MarkMode.Zonal, assignments[0].Mode,
+                "Re-acquisition after a ZONAL gap must re-serve the dwell, not commit immediately.");
+        }
+    }
+
+    /// <summary>
+    /// AR-2 M-2: the offside trap must not arm when there is no DEFENSE-line to step up.
+    /// </summary>
+    [TestFixture]
+    internal sealed class OffsideTrapEmptyLineTests
+    {
+        /// <summary>T-DA-M2 — qualifying ball but zero DEFENSE-line agents → trap never arms.</summary>
+        [Test]
+        public void T_DA_M2_EmptyDefenseLineDoesNotArmTrap()
+        {
+            // All MIDFIELD: ComputeDefenseLineSpread sees no DEFENSE agent → must fail condition 3.
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+            {
+                SnapshotBuilder.MakeAgent(entityId: 10, teamId: 0,
+                    position: new Vector2(35.0f, 34.0f), baselineSlot: new Vector2(35.0f, 34.0f),
+                    line: LineId.Midfield),
+                SnapshotBuilder.MakeAgent(entityId: 11, teamId: 0,
+                    position: new Vector2(36.0f, 28.0f), baselineSlot: new Vector2(36.0f, 28.0f),
+                    line: LineId.Midfield),
+            };
+
+            OffsideLineState state     = OffsideLineState.Default();
+            MarkDirective    directive = MarkDirective.Inactive(0);
+            int[]            pool      = new int[] { 10, 11 };
+
+            // Run well past the dwell threshold with otherwise-qualifying conditions.
+            for (int t = 1; t <= DefensiveAIConstants.OffsideTrapDwellTicks + 2; t++)
+            {
+                DefensiveSnapshot snap = SnapshotBuilder.Build(agents,
+                    ballPosition: new Vector2(60.0f, 34.0f),   // opponent half, satisfies cond 2.
+                    ballVelocity: new Vector2(1.5f, 0f),        // slow, satisfies cond 1.
+                    tick: t);
+
+                MarkAssignment[] asgn = new MarkAssignment[]
+                {
+                    MarkAssignment.MakeZonal(10, new Vector2(35f, 34f), t),
+                    MarkAssignment.MakeZonal(11, new Vector2(36f, 28f), t),
+                };
+
+                OffsideTrapController.Update(snap, pool, pool.Length, t,
+                    ref state, ref directive, asgn);
+            }
+
+            Assert.AreEqual(0, state.StepUpDwellCounter,
+                "Dwell must never increment without a coherent DEFENSE line (AR-2 M-2).");
+            Assert.IsFalse(directive.OffsideTrapActive,
+                "Trap must not fire with an empty DEFENSE line.");
+        }
+    }
+
     // ────────────────────────────────────────────────────────────────────────────
     // §5.3 Integration / §5.4 Determinism / §5.5 Performance / §5.6 Anti-Chaos
     // ────────────────────────────────────────────────────────────────────────────
@@ -1941,4 +2239,10 @@ namespace TacticalDirector.DefensiveAI.Tests
 // |         |            |        | max(line+step, shape) arm is unreachable; the test now LOCKS the mirror semantics.       |
 // |         |            |        | T-DA-011 unchanged — fixed by MarkAssigner v1.2 (ZONAL bypasses the gate per §3.3.3      |
 // |         |            |        | Step 6).                                                                                 |
+// | 1.4     | 2026-06-15 | —      | AR-2 regression locks: HysteresisAliasingRegressionTests (T-DA-H1 EntityId-keyed         |
+// |         |            |        | hysteresis across pool-slot churn via the real orchestrator; T-DA-H1b phase-swing reset),|
+// |         |            |        | InvariantMultiViolationTests (T-DA-H2 all-excess MAN_MARK demotion; T-DA-H2b all          |
+// |         |            |        | over-displaced demoted), OffsideTrapEmptyLineTests (T-DA-M2 empty DEFENSE line gate),     |
+// |         |            |        | ZonalBypassResetTests (T-DA-H3 dwell does not carry through a ZONAL gap). T-DA-045        |
+// |         |            |        | helper moved to Midfield line to isolate invariant 2 from backline enforcement.          |
 #endregion

@@ -77,6 +77,10 @@ namespace TacticalDirector.DefensiveAI
                 if (candidate.Mode == MarkMode.Zonal)
                 {
                     assignments[p] = candidate;
+                    // ZONAL has no dwell semantics (§3.11.3): clear any candidate accumulator left
+                    // over from a prior non-ZONAL build-up so a brief ZONAL gap cannot let the next
+                    // re-acquisition commit MAN_MARK without re-serving the dwell window.
+                    MarkHysteresis.Reset(ref hysteresis[p]);
                 }
                 else
                 {
@@ -268,4 +272,7 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   (TargetEntityId 0) was dwell-held forever and no valid ZONAL record (target −1,    |
 // |         |            |        |   formation-slot position) ever published. ZONAL now bypasses the gate per spec;     |
 // |         |            |        |   hysteresis state untouched on the bypass path, matching the Step 6 pseudocode.     |
+// | 1.3     | 2026-06-15 | —      | AR-2 sweep L: ZONAL bypass now resets hysteresis[p] (§3.11.3). A non-ZONAL candidate  |
+// |         |            |        |   accumulator (HoldTicks/CandidateMode) surviving a ZONAL tick let the next            |
+// |         |            |        |   re-acquisition of the same opponent commit MAN_MARK immediately, skipping the dwell. |
 #endregion
