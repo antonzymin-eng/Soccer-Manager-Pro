@@ -55,6 +55,14 @@ namespace TacticalDirector.PressingAI
         private readonly int[] _entityToAssignmentIdx; // entityId → idx; -1 = not mapped
         private readonly int   _entityIdCapacity;
 
+        // ── Persistent press-fatigue ledger (AR-2 M-1) ───────────────────────
+        // Accumulated press-role fatigue per EntityId. The input snapshot is rebuilt
+        // each tick from authoritative state and discarded, so per-tick stamina costs
+        // (§3.7) must persist here rather than in the throwaway snapshot. Folded onto
+        // snapshot.Fatigue at the start of every tick so eligibility (§3.3 / §3.7
+        // ceiling) sees the accumulated total.
+        private readonly float[] _pressFatigue; // entityId → accumulated press fatigue [0, 1]
+
         /// <summary>The press directive produced by the most recent Tick() call.</summary>
         public PressDirective LastDirective => _lastDirective;
 
@@ -68,13 +76,17 @@ namespace TacticalDirector.PressingAI
         {
             _posAI      = posAI;
             _passRing   = passRing;
-            _hystState  = new RoleHysteresisState(PressingAIConstants.SQUAD_SIZE);
             _assignments = new PressAssignment[PressingAIConstants.SQUAD_SIZE];
 
             _entityIdCapacity      = maxEntityId + 1;
             _entityToAssignmentIdx = new int[_entityIdCapacity];
             for (int i = 0; i < _entityIdCapacity; i++)
                 _entityToAssignmentIdx[i] = -1;
+
+            // Hysteresis state is keyed by EntityId (AR-2 M-2), so size it to the
+            // EntityId space rather than the squad-size array-index space.
+            _hystState    = new RoleHysteresisState(_entityIdCapacity);
+            _pressFatigue = new float[_entityIdCapacity];
 
             _lastDirective  = PressDirective.Inactive;
             _triggerState   = default;
@@ -103,6 +115,12 @@ namespace TacticalDirector.PressingAI
 #endif
                 return;
             }
+
+            // Fold persisted press fatigue (AR-2 M-1) onto the freshly-populated snapshot
+            // so every eligibility/ceiling check this tick sees the accumulated total.
+            // Assumes the orchestrator repopulates snapshot.Fatigue from authoritative
+            // state each tick (PressingSnapshot contract) — folding once is then exact.
+            FoldPressFatigue(snapshot);
 
             // Phase gate (§3.11 step 0): if own team is InPoss, no pressing.
             Phase phase = _posAI.GetPhase();
@@ -186,8 +204,8 @@ namespace TacticalDirector.PressingAI
             // ── Step 7: Apply role hysteresis (§3.6) + build assignments ─────
             BuildAssignments(snapshot, directive);
 
-            // ── Step 8: Apply stamina costs (§3.7) ───────────────────────────
-            StaminaAccumulator.ApplyAll(snapshot, _assignments, _assignmentCount);
+            // ── Step 8: Apply stamina costs (§3.7) into the persistent ledger ─
+            StaminaAccumulator.ApplyAll(_assignments, _assignmentCount, _pressFatigue, _entityIdCapacity);
 
             _lastDirective     = directive;
             _lastProcessedTick = snapshot.TickIndex;
@@ -286,8 +304,13 @@ namespace TacticalDirector.PressingAI
                     candidateTarget = directive.Shadow1.TargetPosition;
                 }
 
-                // Apply hysteresis.
-                PressRole committed = RoleHysteresis.Commit(i, candidateRole, _hystState);
+                // Apply hysteresis, keyed by EntityId (AR-2 M-2) so dwell state follows the
+                // agent across snapshot re-ordering. EntityIds outside the state capacity
+                // bypass hysteresis (commit the candidate directly) rather than aliasing.
+                PressRole committed =
+                    (a.EntityId >= 0 && a.EntityId < _hystState.Capacity)
+                        ? RoleHysteresis.Commit(a.EntityId, candidateRole, _hystState)
+                        : candidateRole;
 
                 // If hysteresis holds a press role but directive no longer has a target,
                 // fall back to HoldShape target (position comes from PositioningAI).
@@ -307,6 +330,27 @@ namespace TacticalDirector.PressingAI
                     _entityToAssignmentIdx[a.EntityId] = idx;
             }
         }
+
+        /// <summary>
+        /// Adds the persisted press-fatigue ledger (AR-2 M-1) onto the snapshot's own-team
+        /// agent Fatigue fields, clamped to [0, 1], so eligibility checks this tick see the
+        /// accumulated total. Called once per tick before any fatigue is read.
+        /// </summary>
+        private void FoldPressFatigue(PressingSnapshot snapshot)
+        {
+            int pressingTeamId = snapshot.PressingTeamId;
+            for (int i = 0; i < snapshot.Agents.Length; i++)
+            {
+                ref PressingAgentSnapshot a = ref snapshot.Agents[i];
+                if (a.TeamId != pressingTeamId)
+                    continue;
+                if (a.EntityId < 0 || a.EntityId >= _entityIdCapacity)
+                    continue;
+
+                float total = a.Fatigue + _pressFatigue[a.EntityId];
+                a.Fatigue = total > 1f ? 1f : total;
+            }
+        }
     }
 }
 
@@ -314,4 +358,5 @@ namespace TacticalDirector.PressingAI
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 M-1: added using TacticalDirector.PositioningAI; simplified Phase references. AR-1 H-1: added IsActive guards in SetAllHoldShape and BuildAssignments. |
+// | 1.2     | 2026-06-15 | —      | AR-2 M-1: persistent per-EntityId press-fatigue ledger folded onto snapshot each tick; Step 8 accumulates into it instead of the throwaway snapshot. AR-2 M-2: hysteresis state sized to EntityId space and keyed by EntityId (not snapshot array index). |
 #endregion

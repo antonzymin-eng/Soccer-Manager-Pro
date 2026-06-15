@@ -38,7 +38,12 @@ namespace TacticalDirector.PressingAI
             ref int cooldownTicks)
         {
             // (b) Zone check — immediate collapse regardless of trigger state.
-            float ballX = snapshot.BallPosition.x;
+            // §3.8 BallOutsidePressZone is attack-direction-relative: PressZoneXMin/Max are
+            // measured up the pitch from the pressing team's OWN goal line (0 m = own goal),
+            // so they must be applied in attack-relative coordinates, not absolute pitch X.
+            // Without this, a team attacking −X presses in the wrong half (AR-2 H-1).
+            float ballX = PitchOrientation.AttackRelativeX(
+                snapshot.BallPosition.x, snapshot.AttackingDirection.x);
             if (ballX < PressingAIConstants.PressZoneXMin || ballX > PressingAIConstants.PressZoneXMax)
             {
                 disengageDwell = 0;
@@ -79,4 +84,5 @@ namespace TacticalDirector.PressingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-15 | —      | AR-2 H-1: press-zone check is now attack-direction-relative (PitchOrientation.AttackRelativeX) so a team attacking −X presses in the correct half. |
 #endregion

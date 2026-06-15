@@ -364,7 +364,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/pressing-ai/PressDirective.cs` | Struct: per-tick output (PrimaryPresserId, PrimaryTargetPosition, Shadow0, Shadow1, CoverShadowCount, ActiveTriggers); static Inactive; IsActive property |
 | `src/pressing-ai/PressAssignment.cs` | Struct: per-agent output (EntityId, Role, TargetPosition) |
 | `src/pressing-ai/PressTrigger.cs` | Struct: 8 dwell/release counters (4 dwell + 4 release; zero allocation, no arrays) |
-| `src/pressing-ai/RoleHysteresisState.cs` | Sealed class: LastRole[], RoleDwell[] arrays; Reset() |
+| `src/pressing-ai/RoleHysteresisState.cs` | Sealed class: LastRole[], PendingRole[], RoleDwell[] arrays keyed by EntityId (AR-2 M-2/M-3); Reset() |
 | `src/pressing-ai/PressingAgentSnapshot.cs` | Struct: per-agent tick input (EntityId, TeamId, Position, BaselineSlot, Fatigue, FirstTouchAttribute, Line, IsGoalkeeper, HasBall, IsActive) |
 | `src/pressing-ai/PressingSnapshot.cs` | Sealed class: tick input container (TickIndex, BallPosition, BallVelocity, BallCarrierEntityId, AttackingDirection, PossessionTeamId, PressingTeamId, Agents[22]) |
 | `src/pressing-ai/PassEventRing.cs` | Sealed class: ring buffer for BackwardPass trigger (Push, TryGetLatest, Clear) |
@@ -376,7 +376,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/pressing-ai/StaminaAccumulator.cs` | Pure static: Apply() per-role fatigue cost; ApplyAll() batch apply |
 | `src/pressing-ai/DisengageResolver.cs` | Pure static: Evaluate() disengage conditions (zone exit + timeout); IsInCooldown() |
 | `src/pressing-ai/InvariantEnforcer.cs` | Pure static: Enforce() three anti-chaos invariants (MaxPressersBallThird, MinBacklineAgents, MaxPressDisplacementM) |
-| `src/pressing-ai/PressingAITick.cs` | Sealed class: 10 Hz orchestrator; 8-step pipeline; pre-allocated buffers; zero-alloc hot path |
+| `src/pressing-ai/PitchOrientation.cs` | Pure static: AttackRelativeX() — attack-direction-relative pitch X for §3.8 zone / §3.9 own-third checks (AR-2 H-1) |
+| `src/pressing-ai/PressingAITick.cs` | Sealed class: 10 Hz orchestrator; 8-step pipeline; pre-allocated buffers; zero-alloc hot path; persistent press-fatigue ledger (AR-2 M-1) |
 
 ### `src/defensive-ai/` — Spec #14 (19 files: 18 .cs + 1 asmdef)
 

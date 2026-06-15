@@ -76,6 +76,13 @@ namespace TacticalDirector.PressingAI
                 if (!a.IsActive)
                     return false;
 
+                // §3.1.2 F2: explicitly suppress on non-finite inputs. The `<`/`>`
+                // comparisons already evaluate false for NaN, but the explicit gate makes
+                // the suppression contract robust against future refactors that might
+                // invert a comparison.
+                if (float.IsNaN(a.LastTouchQuality) || float.IsNaN(a.PostTouchBallSpeed))
+                    return false;
+
                 return a.LastTouchQuality < PressingAIConstants.BadTouchThreshold
                     && a.PostTouchBallSpeed > PressingAIConstants.BadTouchVelocityMS;
             }
@@ -87,7 +94,9 @@ namespace TacticalDirector.PressingAI
 
         internal static bool EvaluateBackwardPass(PressingSnapshot snapshot, PassAttemptEvent evt)
         {
-            // Resolve passer position.
+            // Resolve passer position. The trigger evaluates the POSSESSING team's pass;
+            // a pass by the pressing team itself must never fire it (AR-3 L: passer-team
+            // guard — the ring buffer is team-agnostic).
             Vector2 passerPos = Vector2.zero;
             bool found = false;
             for (int i = 0; i < snapshot.Agents.Length; i++)
@@ -97,6 +106,8 @@ namespace TacticalDirector.PressingAI
                 {
                     if (!a.IsActive)
                         break;
+                    if (a.TeamId == snapshot.PressingTeamId)
+                        break; // own-team pass — not a press trigger
                     passerPos = a.Position;
                     found     = true;
                     break;
@@ -104,6 +115,11 @@ namespace TacticalDirector.PressingAI
             }
 
             if (!found)
+                return false;
+
+            // §3.1.2 F2: suppress on non-finite passer/target coordinates.
+            if (float.IsNaN(passerPos.x) || float.IsNaN(passerPos.y)
+                || float.IsNaN(evt.TargetPosition.x) || float.IsNaN(evt.TargetPosition.y))
                 return false;
 
             Vector2 toTarget = new Vector2(
@@ -114,8 +130,16 @@ namespace TacticalDirector.PressingAI
             if (len * len < PressingAIConstants.SpacingEpsilonM2)
                 return false;
 
+            // AR-3 H (ERR-013-009): "backward" is relative to the BALL-CARRIER's (possessing
+            // team's) attacking direction, which is the opposite of the pressing team's.
+            // snapshot.AttackingDirection is the pressing team's (its XML doc; also the frame
+            // the §3.8/§3.9 zone checks require), so negate it here to get the possessing
+            // team's forward. A backward pass therefore moves opposite the possessing team's
+            // attack — i.e., toward the pressing team's attacking half / the possessing team's
+            // own goal — and dot(passDir, carrierForward) < threshold fires.
+            Vector2 carrierForward = -snapshot.AttackingDirection;
             Vector2 passDir = toTarget / len;
-            float dot = Vector2.Dot(passDir, snapshot.AttackingDirection);
+            float dot = Vector2.Dot(passDir, carrierForward);
             return dot < PressingAIConstants.BackwardPassThreshold;
         }
 
@@ -128,6 +152,13 @@ namespace TacticalDirector.PressingAI
                 return false;
 
             float ballY = snapshot.BallPosition.y;
+
+            // §3.1.2 F2: a NaN ballY would slip past the `nearSide >= distance` early-out
+            // (NaN comparisons are false) and fall through to the facing test, which could
+            // spuriously fire. Suppress explicitly.
+            if (float.IsNaN(ballY))
+                return false;
+
             float yToBottom = ballY;
             float yToTop    = PressingAIConstants.PITCH_WIDTH_M - ballY;
             float nearSide  = yToBottom < yToTop ? yToBottom : yToTop;
@@ -190,7 +221,11 @@ namespace TacticalDirector.PressingAI
                 if (r.IsGoalkeeper)
                     continue;
 
-                if (r.FirstTouchAttribute >= PressingAIConstants.WeakReceiverThreshold)
+                // §3.1.2 F2: a NaN first-touch attribute fails the `>=` weak-gate (NaN
+                // comparisons are false), which would let it fall through as "weak" and
+                // possibly fire. Treat non-finite skill as not-weak and skip.
+                if (float.IsNaN(r.FirstTouchAttribute)
+                    || r.FirstTouchAttribute >= PressingAIConstants.WeakReceiverThreshold)
                     continue;
 
                 float pressure = ComputeGeometricPressure(r.Position, snapshot, pressingTeamId, radiusSq);
@@ -264,4 +299,6 @@ namespace TacticalDirector.PressingAI
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-2: fixed unit mismatch in EvaluateBackwardPass (len*len vs len). AR-1 H-1: added IsActive guards in BadTouch, BackwardPass, SidelineTrap, WeakReceiver, ComputeGeometricPressure. |
+// | 1.2     | 2026-06-15 | —      | AR-2 L-1: explicit §3.1.2 F2 NaN suppression — BadTouch (touch/speed), BackwardPass (positions), SidelineTrap (ballY, which previously could fall through to a spurious fire), WeakReceiver (first-touch attribute, likewise). |
+// | 1.3     | 2026-06-15 | —      | AR-3 H (ERR-013-009): BackwardPass now evaluates the possessing team's frame (negated AttackingDirection); a pressing-team passer is ignored. Corrects the home/away inversion class. |
 #endregion
