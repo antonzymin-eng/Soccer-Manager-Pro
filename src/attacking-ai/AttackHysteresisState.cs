@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/AttackHysteresisState.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Attacking AI #15 §2.2.4, §3.12, FR-AT-022, Code Standards #20
 // Purpose:  Per-agent role-dwell state. Increments-based hysteresis: a transition fires only
@@ -13,10 +13,11 @@ namespace TacticalDirector.AttackingAI
     /// Per-agent dwell-lock state for attacking role transitions. Mutable authoritative
     /// simulation state (FR-AT-004 / #16 §3.2). Attacking AI #15 §2.2.4 / §3.12.
     ///
-    /// <para><see cref="DwellCounter"/> accumulates while the same role is consistently preferred.
-    /// <see cref="IsStable"/> fires when <see cref="DwellCounter"/> reaches
-    /// <see cref="AttackingAIConstants.AttackDwellTicks"/>; while stable the role is retained
-    /// without re-evaluation.</para>
+    /// <para><see cref="DwellCounter"/> accumulates while the same role is consistently preferred;
+    /// <see cref="AttackHysteresis.IsStable"/> fires when it reaches
+    /// <see cref="AttackingAIConstants.AttackDwellTicks"/> — a diagnostic signal only. Role
+    /// retention is governed by <see cref="CandidateDwell"/> (a transition commits only after a
+    /// different candidate persists the dwell window); agents are re-evaluated every tick.</para>
     /// </summary>
     public struct AttackHysteresisState
     {
@@ -26,7 +27,8 @@ namespace TacticalDirector.AttackingAI
         /// <summary>
         /// Ticks the current role has been stably preferred. Increments each tick while
         /// the same role is consistently chosen; resets to 0 on role transition.
-        /// isStable = (DwellCounter >= ATTACK_DWELL_TICKS).
+        /// IsStable = (DwellCounter >= ATTACK_DWELL_TICKS) — diagnostic only; does not gate
+        /// re-evaluation (ERR-015-009).
         /// </summary>
         public int DwellCounter;
 
@@ -44,4 +46,5 @@ namespace TacticalDirector.AttackingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-15 | —      | AR-4 H-1 (ERR-015-009): DwellCounter/IsStable docs clarified as diagnostic-only; role retention is governed by CandidateDwell, not by skipping evaluation while stable. |
 #endregion

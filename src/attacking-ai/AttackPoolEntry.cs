@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/AttackPoolEntry.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Attacking AI #15 §3.2–§3.11, Code Standards #20
 // Purpose:  Internal per-agent scratch entry used during one tick's pool construction and
@@ -61,13 +61,21 @@ namespace TacticalDirector.AttackingAI
         /// <summary>
         /// Non-runner target position (HOLD_WIDTH or WEAK_SIDE).
         /// Set by <see cref="WidthHolder"/> and <see cref="WeakSideController"/>.
-        /// Zero when role is RUNNER or SUPPORT_BALL.
+        /// Valid only when <see cref="HasTargetPosition"/> is true; zero otherwise.
         /// </summary>
         public Vector2   TargetPosition;
+
+        /// <summary>
+        /// True when <see cref="TargetPosition"/> holds a committed HOLD_WIDTH / WEAK_SIDE
+        /// target for this tick. Explicit flag rather than a Vector2.zero sentinel — a
+        /// legitimate target can land at the pitch origin (0, 0).
+        /// </summary>
+        public bool      HasTargetPosition;
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-15 | —      | AR-4 L-2: added HasTargetPosition flag — explicit validity for TargetPosition, replacing the Vector2.zero sentinel that aliased a legitimate pitch-origin target. |
 #endregion
