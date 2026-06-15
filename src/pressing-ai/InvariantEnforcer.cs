@@ -112,28 +112,38 @@ namespace TacticalDirector.PressingAI
             if (presserCount <= PressingAIConstants.MaxPressersBallThird)
                 return true;
 
-            // Over limit — demote shadow(s) from highest cost downward.
-            // Try demoting Shadow1 first, then Shadow0.
-            if (directive.CoverShadowCount == 2)
+            // Over limit — demote in-ball-third COVER_SHADOWs, highest cover-cost first
+            // (§3.9 demotion priority order), repacking slots each pass so a still-valid
+            // Shadow1 is never orphaned when Shadow0 is demoted. PrimaryPress is only ever
+            // demoted via F5. (At Stage-0 constants MaxCoverShadows=2 / MaxPressers=3 this
+            // path is unreachable, but the logic is now correct if those constants change.)
+            while (presserCount > PressingAIConstants.MaxPressersBallThird)
             {
-                Vector2 pos1 = GetAgentPosition(snapshot, directive.Shadow1.DefenderId);
-                if (pos1.x >= thirdMin && pos1.x <= thirdMax)
-                {
-                    directive.Shadow1        = default;
-                    directive.CoverShadowCount = 1;
-                    presserCount--;
-                }
-            }
+                int   worstSlot = -1;
+                float worstCost = -1f;
 
-            if (presserCount > PressingAIConstants.MaxPressersBallThird && directive.CoverShadowCount >= 1)
-            {
-                Vector2 pos0 = GetAgentPosition(snapshot, directive.Shadow0.DefenderId);
-                if (pos0.x >= thirdMin && pos0.x <= thirdMax)
+                for (int slot = 0; slot < directive.CoverShadowCount; slot++)
                 {
-                    directive.Shadow0          = default;
-                    directive.CoverShadowCount = 0;
-                    presserCount--;
+                    CoverShadow shadow = slot == 0 ? directive.Shadow0 : directive.Shadow1;
+                    Vector2 dpos = GetAgentPosition(snapshot, shadow.DefenderId);
+                    if (dpos.x < thirdMin || dpos.x > thirdMax)
+                        continue; // only shadows occupying the ball-side third count toward the cap
+
+                    float ddx  = dpos.x - shadow.TargetPosition.x;
+                    float ddy  = dpos.y - shadow.TargetPosition.y;
+                    float cost = ddx * ddx + ddy * ddy;
+                    if (cost > worstCost)
+                    {
+                        worstCost = cost;
+                        worstSlot = slot;
+                    }
                 }
+
+                if (worstSlot < 0)
+                    break; // no demotable shadow in the ball-side third — only PrimaryPress remains
+
+                DemoteShadow(ref directive, worstSlot);
+                presserCount--;
             }
 
             // If still over (would require demoting PrimaryPress) → F5.
@@ -141,6 +151,19 @@ namespace TacticalDirector.PressingAI
                 return false;
 
             return true;
+        }
+
+        /// <summary>
+        /// Removes the cover-shadow occupying <paramref name="slot"/> (0 or 1) and repacks so
+        /// Shadow0 stays the filled slot when one assignment remains. Decrements CoverShadowCount.
+        /// </summary>
+        private static void DemoteShadow(ref PressDirective directive, int slot)
+        {
+            if (slot == 0)
+                directive.Shadow0 = directive.Shadow1; // shift Shadow1 down (default when count was 1)
+
+            directive.Shadow1 = default;
+            directive.CoverShadowCount--;
         }
 
         // ── Invariant (2): MinBacklineAgents ────────────────────────────────
@@ -264,4 +287,5 @@ namespace TacticalDirector.PressingAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-1: added IsActive guard in EnforceMinBackline. |
 // | 1.2     | 2026-06-15 | —      | AR-2 H-1: EnforceMinBackline own-defensive-third test now attack-direction-relative (PitchOrientation.AttackRelativeX). |
+// | 1.3     | 2026-06-15 | —      | AR-3 L: EnforceMaxPressersBallThird demotion repacks via DemoteShadow (no orphaned Shadow1) and demotes highest cover-cost first per §3.9 priority. |
 #endregion

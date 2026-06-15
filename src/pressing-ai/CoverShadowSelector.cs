@@ -216,10 +216,15 @@ namespace TacticalDirector.PressingAI
             float halfPitchX,
             float radiusSq)
         {
-            // Progression gain: how much closer to goal the receiver is vs carrier.
+            // Progression gain: how much closer to the POSSESSING team's goal the receiver is
+            // vs the carrier. AR-3 H (ERR-013-010): a receiver is more threatening the further
+            // it is advanced along the ball-carrier's attack, which is the opposite of the
+            // pressing team's. snapshot.AttackingDirection is the pressing team's (its XML doc),
+            // so negate it to measure progression in the possessing team's frame — otherwise the
+            // score rewards receivers retreating toward their own goal (home/away inversion).
             Vector2 toReceiver = rPos - carrierPos;
-            float dot = toReceiver.x * snapshot.AttackingDirection.x
-                      + toReceiver.y * snapshot.AttackingDirection.y;
+            float dot = toReceiver.x * -snapshot.AttackingDirection.x
+                      + toReceiver.y * -snapshot.AttackingDirection.y;
             float progressionGain = dot / halfPitchX;
             if (progressionGain < 0f) progressionGain = 0f;
             if (progressionGain > 1f) progressionGain = 1f;
@@ -258,4 +263,6 @@ namespace TacticalDirector.PressingAI
 // | 1.2     | 2026-06-12 | —      | Build fix (dotnet CI gate): missing 'using System;' - Span<T> (stackalloc scratch,   |
 // |         |            |        | lines ~77-78) is System namespace, so the file was CS0246 under Unity and the Linux  |
 // |         |            |        | gate alike. Using added per FR-CS-006 ordering; no functional change.                |
+// | 1.3     | 2026-06-15 | —      | AR-3 H (ERR-013-010): threat progressionGain measured in the possessing team's frame |
+// |         |            |        | (negated AttackingDirection) so advanced receivers — not retreating ones — rank highest.|
 #endregion

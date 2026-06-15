@@ -213,10 +213,12 @@ namespace TacticalDirector.PressingAI.Tests
     internal sealed class TriggerBackwardPassTests
     {
         /// <summary>
-        /// T-U-002: BACKWARD_PASS worked example.
-        /// Kick velocity (-6, 3, 0) from passer at (50, 34) → target at (44, 37).
-        /// AttackingDirection = (+1, 0).
-        /// PassDir normalised ≈ (-0.894, 0.447). Dot with (1,0) = -0.894 < threshold (-0.30). Fires.
+        /// T-U-002: BACKWARD_PASS worked example (ERR-013-009 frame correction).
+        /// snapshot.AttackingDirection = (+1, 0) is the PRESSING team's; the possessing team
+        /// (the passer) therefore attacks (−1, 0). A backward pass moves opposite the
+        /// possessing team's attack — toward +X (the possessing team's own goal).
+        /// Passer at (50, 34) → target (56, 37). PassDir ≈ (0.894, 0.447).
+        /// carrierForward = (−1, 0). Dot = −0.894 < threshold (−0.30). Fires.
         /// </summary>
         [Test]
         public void BackwardPass_FiresWhenDotBelowThreshold()
@@ -231,19 +233,20 @@ namespace TacticalDirector.PressingAI.Tests
                 teamId: SnapshotFactory.OpposingTeamId,
                 position: new Vector2(50f, 34f));
 
-            // Target at (44, 37) — backward relative to +X attacking direction.
+            // Target at (56, 37) — toward +X = backward for the possessing team (attacks −X).
             PassAttemptEvent evt = SnapshotFactory.MakePassEvent(
                 passerId,
-                new Vector3(44f, 37f, 0f));
+                new Vector3(56f, 37f, 0f));
 
             bool result = TriggerEvaluator.EvaluateBackwardPass(snap, evt);
 
             Assert.IsTrue(result,
-                "BackwardPass must fire when passDir dot attackingDirection < BackwardPassThreshold.");
+                "BackwardPass must fire when the pass retreats in the possessing team's frame (dot < BackwardPassThreshold).");
         }
 
         /// <summary>
-        /// BACKWARD_PASS does NOT fire when pass direction is forward (dot > threshold).
+        /// BACKWARD_PASS does NOT fire when the pass is forward for the possessing team.
+        /// The possessing team attacks −X, so a forward pass moves toward −X.
         /// </summary>
         [Test]
         public void BackwardPass_DoesNotFireWhenPassIsForward()
@@ -257,15 +260,41 @@ namespace TacticalDirector.PressingAI.Tests
                 teamId: SnapshotFactory.OpposingTeamId,
                 position: new Vector2(50f, 34f));
 
-            // Target forward (+X direction) at (60, 34).
+            // Target toward −X at (44, 34) — forward for the possessing team (attacks −X).
             PassAttemptEvent evt = SnapshotFactory.MakePassEvent(
                 passerId,
-                new Vector3(60f, 34f, 0f));
+                new Vector3(44f, 34f, 0f));
 
             bool result = TriggerEvaluator.EvaluateBackwardPass(snap, evt);
 
             Assert.IsFalse(result,
-                "BackwardPass must NOT fire when pass is in the forward attacking direction.");
+                "BackwardPass must NOT fire when the pass is forward in the possessing team's attacking direction.");
+        }
+
+        /// <summary>
+        /// ERR-013-009 guard: a pass made by the PRESSING team itself must never fire the trigger.
+        /// </summary>
+        [Test]
+        public void BackwardPass_DoesNotFireForOwnTeamPasser()
+        {
+            PressingSnapshot snap = SnapshotFactory.MakeDefault();
+
+            const int passerId = 3;
+            // Passer is on the pressing team.
+            SnapshotFactory.SetAgent(snap, 0,
+                entityId: passerId,
+                teamId: SnapshotFactory.PressingTeamId,
+                position: new Vector2(50f, 34f));
+
+            // Geometrically a "backward" pass, but the passer is the pressing team.
+            PassAttemptEvent evt = SnapshotFactory.MakePassEvent(
+                passerId,
+                new Vector3(56f, 37f, 0f));
+
+            bool result = TriggerEvaluator.EvaluateBackwardPass(snap, evt);
+
+            Assert.IsFalse(result,
+                "BackwardPass must NOT fire for a pass made by the pressing team itself.");
         }
     }
 
@@ -789,19 +818,15 @@ namespace TacticalDirector.PressingAI.Tests
         /// T-U-031: Greedy assignment by threat score descending.
         /// Two receivers with different threat scores → higher-threat receiver is shadowed first.
         ///
-        /// Fixture corrected (dotnet CI gate). The §3.4 threat formula's skill term is
-        /// (FirstTouch / 20) * THREAT_SKILL_W, i.e. monotonically INCREASING in FirstTouch
-        /// — a STRONGER first touch raises threat. The original fixture assigned the
-        /// "high-threat" receiver a weak touch (5) and the "low-threat" receiver a strong
-        /// touch (18), so the laterally-placed strong-skill receiver (id 52, score ≈ 0.28)
-        /// actually out-scored the forward weak-skill receiver (id 51, score ≈ 0.245), and
-        /// the selector correctly shadowed id 52 first. Production matches §3.4 line 230.
-        /// The intended-higher-threat receiver is now genuinely higher threat: forward
-        /// (progression gain) AND strong-skilled. Hand derivation with the two defenders
-        /// below (both within 20 m of each receiver → pressure = 2/3):
-        ///   id 51 @ (60,34) FT=18: 0.1905·0.50 + 0.3333·0.30 + 0.90·0.20 = 0.375
+        /// Frame corrected (ERR-013-010): progressionGain is measured in the POSSESSING team's
+        /// attack frame. snapshot.AttackingDirection = (+1,0) is the pressing team's, so the
+        /// possessing team attacks −X; a receiver advanced toward −X (lower X than the carrier)
+        /// is the progressed/dangerous one. The skill term (FirstTouch/20)·THREAT_SKILL_W is
+        /// monotonically increasing. Hand derivation with the two defenders below (both within
+        /// 20 m of each receiver → pressure = 2/3):
+        ///   id 51 @ (40,34) FT=18: 0.1905·0.50 + 0.3333·0.30 + 0.90·0.20 = 0.375
         ///   id 52 @ (50,44) FT=5 : 0       ·0.50 + 0.3333·0.30 + 0.25·0.20 = 0.150
-        /// id 51 wins; its shadow lane (55.5, 34) is covered by defender1 (55,34).
+        /// id 51 wins (forward in the possessing frame AND strong-skilled).
         /// </summary>
         [Test]
         public void CoverShadow_AssignsHigherThreatReceiverFirst()
@@ -823,12 +848,12 @@ namespace TacticalDirector.PressingAI.Tests
                 teamId: SnapshotFactory.OpposingTeamId,
                 position: new Vector2(50f, 34f));
 
-            // High-threat receiver: close, forward (progression gain) AND strong skill
-            // (high FirstTouch → high skill term per §3.4) — maximises threat score.
+            // High-threat receiver: close, forward in the possessing frame (lower X = toward
+            // the possessing team's −X attack → progression gain) AND strong skill.
             SnapshotFactory.SetAgent(snap, 1,
                 entityId: highThreatId,
                 teamId: SnapshotFactory.OpposingTeamId,
-                position: new Vector2(60f, 34f),
+                position: new Vector2(40f, 34f),
                 firstTouch: 18f);
 
             // Low-threat receiver: same distance, but laterally (no progression gain) and
@@ -1734,4 +1759,8 @@ namespace TacticalDirector.PressingAI.Tests
 // |         |            |        | receiver's strong touch (18) and the selector correctly shadowed id 52. FirstTouch values     |
 // |         |            |        | swapped so id 51 is genuinely higher threat (forward + strong skill). CoverShadowSelector     |
 // |         |            |        | unchanged; matches §3.4 line 230.                                                             |
+// | 1.3     | 2026-06-15 | —      | AR-3 H frame correction (ERR-013-009/010): BackwardPass + threat progression now evaluate the |
+// |         |            |        | possessing team's frame. T-U-002 targets re-derived (backward = +X for a −X-attacking         |
+// |         |            |        | possessor); new BackwardPass_DoesNotFireForOwnTeamPasser; T-U-031 high-threat receiver moved  |
+// |         |            |        | to (40,34) so progression gain is exercised in the corrected frame.                           |
 #endregion

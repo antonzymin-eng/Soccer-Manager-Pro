@@ -61,23 +61,37 @@ position to the event's `TargetPosition`:
 e = mostRecentPassAttemptEventThisTick
 passerPosition = perception.agents[e.AgentID].position
 passDir = normalize((e.TargetPosition - passerPosition).xy)
+ballCarrierForward = -attackingDirection          // possessing team attacks the opposite goal
 trigger.BACKWARD_PASS =
     (e != null)
-    AND (dot(passDir, attackingDirection) < BACKWARD_PASS_THRESHOLD)
+    AND (e.AgentID is on the possessing team)      // ignore own-team passes
+    AND (dot(passDir, ballCarrierForward) < BACKWARD_PASS_THRESHOLD)
 ```
 
 `BACKWARD_PASS_THRESHOLD = -0.30 [GT]` — dimensionless dot-product
 threshold; values more negative than -0.3 are clearly retreating
 passes. The `attackingDirection` unit vector is supplied by the
-orchestrator (own goal → opponent goal in pitch X).
+orchestrator and is the **pressing team's** (own goal → opponent goal
+in pitch X), consistent with the §3.8/§3.9 zone frame.
+
+> **ERR-013-009 (frame correction, 2026-06-15).** A "backward pass"
+> is backward for the team **in possession**, which attacks the goal
+> opposite the pressing team. Because `attackingDirection` is the
+> pressing team's, the trigger must measure the pass against
+> `-attackingDirection` (the possessing team's forward). The original
+> pseudocode/worked example dotted against `attackingDirection`
+> directly — the home/away inversion class documented project-wide —
+> which fired on the possessing team's *forward* pass. The implementation
+> negates accordingly and guards out own-team passers.
 
 **Trigger origin:** the passer `AgentID` from the event.
 
-**Worked example.** Own team attacks `+X`; `attackingDirection =
-(+1, 0)`. Passer at `(45, 30)`, `TargetPosition = (39, 33)`.
-Direction delta `(39-45, 33-30) = (−6, 3)`. Unit vector
-`(−6, 3)/||(−6,3)|| = (−0.894, 0.447)`. Dot with `(+1, 0)`
-is `−0.894`. `−0.894 < −0.30` → trigger fires.
+**Worked example (corrected).** Pressing team attacks `+X`;
+`attackingDirection = (+1, 0)`, so the possessing team's forward is
+`(−1, 0)`. Passer (possessing team) at `(50, 34)`,
+`TargetPosition = (56, 37)` — toward `+X`, i.e. back toward the
+possessing team's own goal. Direction delta `(6, 3)`, unit vector
+`(0.894, 0.447)`. Dot with `(−1, 0)` is `−0.894 < −0.30` → fires.
 
 ### 3.1.3 `SIDELINE_TRAP` (source: Ball Physics #1 §1.2 + #7)
 
@@ -234,19 +248,30 @@ threatScore(r) =
 `THREAT_SKILL_W = 0.20 [GT]`.
 
 **`receiverProgressionGain(r)`** — forward distance from ball-carrier
-to `r` along the attacking direction, normalised by half the pitch
-length and clamped to [0, 1] (FR-PR-034):
+to `r` along the **possessing team's** attacking direction
+(`-attackingDirection`, since `attackingDirection` is the pressing
+team's), normalised by half the pitch length and clamped to [0, 1]
+(FR-PR-034):
 
 ```
 receiverProgressionGain(r) =
-    clamp(dot(r.pos - ballCarrier.pos, attackingDirection)
+    clamp(dot(r.pos - ballCarrier.pos, -attackingDirection)
           / (PITCH_LENGTH_M * 0.5),
           0.0, 1.0)
 ```
 
-*Worked example.* Ball-carrier at `(60, 30)`, receiver `r` at
-`(72, 34)`, `attackingDirection = (+1, 0)`. `dot((12, 4), (1, 0))
-= 12 m`. `12 / 52.5 = 0.229`. `clamp(0.229, 0, 1) = 0.229`.
+> **ERR-013-010 (frame correction, 2026-06-15).** A receiver is more
+> threatening the further it is advanced along the **possessing**
+> team's attack, which is opposite the pressing team's. The original
+> formula/worked example dotted against `attackingDirection` (the
+> pressing team's), rewarding receivers retreating toward their own
+> goal — the same home/away inversion as ERR-013-009. The implementation
+> uses `-attackingDirection`.
+
+*Worked example (corrected).* Ball-carrier at `(60, 30)`, receiver
+`r` at `(48, 34)` (advanced toward the possessing team's `−X` goal),
+`attackingDirection = (+1, 0)`. `dot((−12, 4), (−1, 0)) = 12 m`.
+`12 / 52.5 = 0.229`. `clamp(0.229, 0, 1) = 0.229`.
 
 **`geometricPressureOn(r)`** — locally computed by #13 from the
 perception snapshot; does **NOT** read `r.perceivedPressure`
@@ -609,3 +634,4 @@ effects and are themselves authoritative simulation state under
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. §3.0–§3.11 published with worked examples per FR-PR-034. |
 | 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H1: `#5 §2 FR-08` → `FR-10`. AR-S1-H2: §3.1.2 `BACKWARD_PASS` rewritten to use `TargetPosition - passerPosition` direction; worked example updated. AR-S1-H3: §3.0 preamble added (fatigue/stamina boundary); §3.3 eligibility constraint 2 corrected from `Stamina ≤ PRESS_FATIGUE_CEILING` → `Fatigue < PRESS_FATIGUE_CEILING`; §3.7 removed erroneous "stamina is complement of fatigue" sentence. AR-S1-H5: §3.4 cover-shadow tie-break tolerance added (`SPACING_EPSILON_M2`). AR-S1-H6: §3.4 `r.perceivedPressure` replaced with `geometricPressureOn(r)` (locally computed from own-team positions); `receiverProgressionGain` formula and worked example added; `THREAT_PRESSURE_NORMALIZER = 3.0 [GT]` introduced. AR-S1-M1: §3.8 `PRESS_ZONE_X_MAX` dead-code noted; "high-press default" label corrected. AR-S1-M4: §3.1.4 reviewer aside removed; clean statement added. AR-S1-M6: §3.9 invariant (2) F5-immediate path documented; backline-floor breach no longer mischaracterised as cover-shadow demotion. L1: §3.1.5 #7 §3.7 snapshot citation added. |
 | 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | APPROVED gate: all `[EST]` occurrences for `TRIGGER_DWELL_TICKS`, `TRIGGER_RELEASE_TICKS`, `ROLE_DWELL_TICKS`, `INTERCEPT_LOOKAHEAD_TICKS` promoted to `[GT]` (Appendix A.1–A.4 derivations complete; §9.3 (d) precondition DONE). |
+| 0.4 | June 15, 2026 | — | AR-3 implementation-review frame correction. ERR-013-009: §3.1.2 `BACKWARD_PASS` dotted against `attackingDirection` (the pressing team's) instead of the possessing team's `-attackingDirection`, firing on the possessing team's forward pass (home/away inversion class); pseudocode + worked example corrected, own-team-passer guard added. ERR-013-010: §3.4 `receiverProgressionGain` had the same inversion; formula + worked example corrected to `-attackingDirection`. Zone/third frames (§3.8/§3.9) unchanged — those correctly use the pressing team's `attackingDirection`. |
