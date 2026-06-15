@@ -153,12 +153,18 @@ namespace TacticalDirector.DefensiveAI
                 if (d > maxX) maxX = d;
             }
 
-            return (minX > maxX) ? 0f : (maxX - minX);
+            // No DEFENSE-line agents found: there is no coherent line to step up. Return a
+            // sentinel that FAILS the §3.7.2 condition-3 coherence gate (< threshold) rather
+            // than 0f, which would spuriously read as a perfectly coherent (zero-spread) line.
+            return (minX > maxX) ? float.MaxValue : (maxX - minX);
         }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                                              |
+// | 1.1     | 2026-06-15 | —      | AR-2 M-2: ComputeDefenseLineSpread returned 0f when no DEFENSE-line agents exist,     |
+// |         |            |        |   which passes condition-3 (< coherence threshold) and could arm the trap with no      |
+// |         |            |        |   back line to step up; now returns float.MaxValue (fails the gate) for the empty case. |
 #endregion

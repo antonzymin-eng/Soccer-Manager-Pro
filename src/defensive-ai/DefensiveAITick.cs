@@ -33,14 +33,22 @@ namespace TacticalDirector.DefensiveAI
         private static readonly ProfilerMarker s_TickMarker =
             new ProfilerMarker("DefensiveAI.Tick");
 
-        // ── Persistent state ──────────────────────────────────────────────────
-        private readonly MarkHysteresisState[] _hysteresis;   // per-agent (index = pool slot; pre-alloc to SQUAD_SIZE)
+        // ── Persistent per-ENTITY state ───────────────────────────────────────
+        // Keyed by EntityId (NOT pool slot): the HOLD_SHAPE pool is compacted EntityId-ascending
+        // each tick, so slot indices shift whenever membership changes (a presser joins/leaves,
+        // a substitution). Carrying hysteresis + the prior committed assignment by slot would
+        // mis-attribute one agent's dwell lock to another (AR-2 H-1). These two arrays are the
+        // authoritative cross-tick stores; the per-slot working buffers below are loaded from
+        // and written back to them every tick.
+        private readonly MarkHysteresisState[] _hysteresisByEntity;  // entityId → hysteresis state
+        private readonly MarkAssignment[]      _prevAssignByEntity;  // entityId → last committed assignment
         private OffsideLineState               _offsideState; // per-team (value-type in-place)
         private int                            _lastProcessedTick = -1;
 
-        // ── Pre-allocated output / scratch buffers ────────────────────────────
+        // ── Pre-allocated output / scratch buffers (indexed by pool slot, per tick) ───
         private readonly int[]                 _poolBuffer;       // HOLD_SHAPE pool (EntityId-ascending)
         private readonly MarkAssignment[]      _assignments;      // per pool-slot assignment output
+        private readonly MarkHysteresisState[] _hysteresis;       // per pool-slot working hysteresis (loaded per tick)
         private readonly TackleIntentRequest[] _tackleBuffer;     // tackle intent output
 
         // ── Published output ──────────────────────────────────────────────────
@@ -81,8 +89,14 @@ namespace TacticalDirector.DefensiveAI
 
             _entityIdCapacity  = maxEntityId + 1;
             _entityToPoolIdx   = new int[_entityIdCapacity];
+            _hysteresisByEntity = new MarkHysteresisState[_entityIdCapacity];
+            _prevAssignByEntity = new MarkAssignment[_entityIdCapacity];
             for (int i = 0; i < _entityIdCapacity; i++)
-                _entityToPoolIdx[i] = -1;
+            {
+                _entityToPoolIdx[i]    = -1;
+                _hysteresisByEntity[i] = MarkHysteresisState.Default();
+                _prevAssignByEntity[i] = MarkAssignment.MakeZonal(i, Vector2.zero, -1);
+            }
         }
 
         // ── Per-tick entry point ───────────────────────────────────────────────
@@ -139,9 +153,26 @@ namespace TacticalDirector.DefensiveAI
             HoldShapePoolFilter.BuildPool(snapshot, _poolBuffer, out _poolCount);
             RebuildEntityMap(_poolCount);
 
-            // Step 3b: Reset per-tick transient flag for all pool slots (§3.13 Step 3b).
+            // Step 3a: Load each pool slot's working assignment + hysteresis from the persistent
+            // per-ENTITY stores (AR-2 H-1). The pool is compacted EntityId-ascending, so slot p
+            // can hold a different agent than last tick; the prior committed assignment and dwell
+            // lock must travel with the EntityId, not the slot. OverriddenThisTick is the per-tick
+            // transient flag reset here (former §3.13 Step 3b).
             for (int p = 0; p < _poolCount; p++)
+            {
+                int entityId = _poolBuffer[p];
+                if (entityId >= 0 && entityId < _entityIdCapacity)
+                {
+                    _assignments[p] = _prevAssignByEntity[entityId];
+                    _hysteresis[p]  = _hysteresisByEntity[entityId];
+                }
+                else
+                {
+                    _assignments[p] = MarkAssignment.MakeZonal(entityId, Vector2.zero, currentTick);
+                    _hysteresis[p]  = MarkHysteresisState.Default();
+                }
                 _assignments[p].OverriddenThisTick = false;
+            }
 
             // Step 4: Last-man predicate (§3.8) — highest priority override.
             LastManDetector.Evaluate(snapshot, _poolBuffer, _poolCount, out LastManResult lastManResult);
@@ -154,12 +185,9 @@ namespace TacticalDirector.DefensiveAI
                 int lmPoolIdx = lastManResult.LastManPoolIndex;
                 if (lmPoolIdx >= 0 && lastManResult.AdvancingAttackerEntityId >= 0)
                 {
-                    int aIdx = HoldShapePoolFilter.SnapshotIndexOf(snapshot, lastManResult.LastManEntityId);
-                    Vector2 oppPos = aIdx >= 0 ? snapshot.Agents[aIdx].Position : Vector2.zero; // placeholder; overridden in §3.8 Step 3
-                    // Find actual attacker position.
+                    // Target the advancing attacker's perceived position (§3.8 Step 3).
                     int advAIdx = HoldShapePoolFilter.SnapshotIndexOf(snapshot, lastManResult.AdvancingAttackerEntityId);
-                    if (advAIdx >= 0)
-                        oppPos = snapshot.Agents[advAIdx].Position;
+                    Vector2 oppPos = advAIdx >= 0 ? snapshot.Agents[advAIdx].Position : Vector2.zero;
 
                     _assignments[lmPoolIdx] = new MarkAssignment
                     {
@@ -246,9 +274,27 @@ namespace TacticalDirector.DefensiveAI
                 return;
             }
 
-            // Step 9: Publish.
+            // Step 9: Publish + persist per-entity state for the next tick (AR-2 H-1).
+            WriteBackEntityState();
             _lastDirective.TeamId = defensiveTeamId;
             _lastProcessedTick    = currentTick;
+        }
+
+        /// <summary>
+        /// Persists each pool slot's committed assignment + hysteresis back into the per-ENTITY
+        /// stores so the next tick reloads them by EntityId regardless of slot churn (AR-2 H-1).
+        /// </summary>
+        private void WriteBackEntityState()
+        {
+            for (int p = 0; p < _poolCount; p++)
+            {
+                int entityId = _poolBuffer[p];
+                if (entityId >= 0 && entityId < _entityIdCapacity)
+                {
+                    _prevAssignByEntity[entityId] = _assignments[p];
+                    _hysteresisByEntity[entityId] = _hysteresis[p];
+                }
+            }
         }
 
         // ── Public accessors ──────────────────────────────────────────────────
@@ -309,7 +355,13 @@ namespace TacticalDirector.DefensiveAI
                 int aIdx    = HoldShapePoolFilter.SnapshotIndexOf(snapshot, agentId);
                 Vector2 slot = aIdx >= 0 ? snapshot.Agents[aIdx].BaselineSlot : Vector2.zero;
                 _assignments[p] = MarkAssignment.MakeZonal(agentId, slot, currentTick);
+                // AR-2 M-1: clear dwell accumulators on the all-ZONAL paths (InPoss / F2 / F4) so a
+                // stale candidate/HoldTicks from a prior defensive phase cannot leak into the first
+                // tick after possession is regained.
+                _hysteresis[p] = MarkHysteresisState.Default();
             }
+
+            WriteBackEntityState();
         }
 
         private void RebuildEntityMap(int poolCount)
@@ -345,5 +397,12 @@ namespace TacticalDirector.DefensiveAI
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                                              |
+// | 1.1     | 2026-06-15 | —      | AR-2 H-1: hysteresis + prior assignment were carried in per-pool-SLOT arrays across   |
+// |         |            |        |   ticks, but the pool is compacted EntityId-ascending so slots shift on membership     |
+// |         |            |        |   churn (presser join/leave, substitution), mis-attributing one agent's dwell lock to  |
+// |         |            |        |   another. Added persistent per-ENTITY stores (_hysteresisByEntity / _prevAssignByEntity); |
+// |         |            |        |   Step 3a loads working slot buffers by EntityId, Step 9 (and EmitAllZonal) writes back. |
+// |         |            |        |   AR-2 M-1: EmitAllZonal now resets per-entity hysteresis on InPoss/F2/F4 paths.        |
+// |         |            |        |   AR-2 L-1: removed the dead last-man placeholder oppPos lookup (immediately overwritten). |
 #endregion
