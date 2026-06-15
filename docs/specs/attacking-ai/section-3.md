@@ -117,9 +117,14 @@ fields; confusing them is a known hazard (see CLAUDE.md).
 ```
 for each agent in attackingPool (EntityId-ascending):
 
-    // Step 1: Hysteresis check (§3.12)
-    if hysteresis.isStable(agent.entityId, ATTACK_DWELL_TICKS):
-        retain current role; continue
+    // Step 1: Evaluate the candidate role for EVERY agent EVERY tick.
+    //   There is no "is-stable, skip evaluation" short-circuit. The §3.12 dwell
+    //   hysteresis is applied by hysteresisState.update() at commit (Step 3) — it
+    //   retains currentRole until a DIFFERENT candidate persists ATTACK_DWELL_TICKS
+    //   ticks, so boundary oscillation is smoothed WITHOUT skipping evaluation.
+    //   Skipping evaluation while stable permanently LOCKS a role because the
+    //   candidateDwell machinery can never observe a new preferred role (ERR-015-009);
+    //   isStable() is a diagnostic predicate only. §3.13 is the canonical wiring.
 
     // Step 2: Candidate role evaluation (priority order)
     candidateRole = HOLD_WIDTH   // default
@@ -147,13 +152,21 @@ for each agent in attackingPool (EntityId-ascending):
 
     // Priority d: HOLD_WIDTH (default — already set)
 
-    agent.assignedRole = candidateRole
+    // Step 3: Apply the §3.12 dwell gate, then commit the post-hysteresis role.
+    //   currentRole changes only on a committed transition; otherwise it is retained.
+    hysteresisState.update(agent.entityId, candidateRole)
+    agent.assignedRole = hysteresisState.currentRole(agent.entityId)
 
-    // Step 3: If RUNNER, generate RunParameters (§3.4)
-    if candidateRole == RUNNER:
+    // Step 4: If the committed role is RUNNER, generate RunParameters (§3.4)
+    if agent.assignedRole == RUNNER:
         agent.runParameters = GenerateRunParameters(agent, ballCarrier, teamAttackAngle,
                                                     styleProfile, currentTick)
 ```
+
+> **Cap accounting:** the `runnerCount += 1` / `weakSideCount += 1` increments above
+> are illustrated on the candidate for readability. The canonical §3.13 loop increments
+> on the *committed* (post-hysteresis) role so a retained holder mid-transition still
+> counts toward the cap; any residual intra-tick over-cap is corrected by §3.11.
 
 **Role catalog (FR-AT-012):** Exactly four values — RUNNER, SUPPORT_BALL,
 HOLD_WIDTH, WEAK_SIDE. No other values exist.
@@ -752,6 +765,10 @@ struct HysteresisEntry:
 // TransitionHoldState (per-team state), not here (per-agent state).
 
 function isStable(entityId, dwellTicks):
+    // DIAGNOSTIC / telemetry predicate ONLY — it does NOT gate role re-evaluation.
+    // The role-assignment loop (§3.3 / §3.13) evaluates every agent every tick and applies
+    // the hysteresis via update(); skipping evaluation while isStable would permanently lock
+    // an agent's role because candidateDwell could never observe a new candidate (ERR-015-009).
     entry = hysteresisState[entityId]
     return entry.dwellCounter >= dwellTicks
 
@@ -779,6 +796,16 @@ the new candidate role has been the preferred assignment for 3 consecutive ticks
 At 10 Hz this is a 300 ms stability window; sufficient to smooth out
 boundary oscillations without introducing perceptible lag. Derivation in
 Appendix A §A.1 (promoted from `[EST]` to `[GT]` at section-file draft time).
+
+**Hysteresis is enforced by `candidateDwell`, NOT by skipping evaluation
+(ERR-015-009).** `update()` is the sole anti-thrash mechanism: it retains
+`currentRole` until a *different* candidate persists `ATTACK_DWELL_TICKS` ticks.
+The role-assignment loop therefore evaluates **every agent every tick** and feeds
+the freshly-evaluated candidate to `update()`. `isStable()` is a diagnostic /
+telemetry predicate (e.g., "how settled is the shape?"); it MUST NOT be used to
+short-circuit evaluation, because once `dwellCounter` crosses the threshold the
+`candidateDwell` machinery would never observe a newly-preferred role and the
+agent's role would be locked for the remainder of the possession.
 
 **State persistence:** `hysteresisState` (one `HysteresisEntry` per pool agent)
 is authoritative simulation state per #16 §3.2 and is included in the per-tick
@@ -832,28 +859,34 @@ function AttackingAITick(teamId, perceptionSnapshot, positioningAIView,
         hysteresisState.prevPhase = phase
         return emptyDirective                       // degenerate case
 
-    // Step 4: Role assignment (§3.3).
-    //   For each agent in pool (EntityId-ascending):
-    //     - Hysteresis check (§3.12): retain if dwell valid.
-    //     - Else: evaluate RUNNER / SUPPORT_BALL / WEAK_SIDE / HOLD_WIDTH priority.
-    //     - If RUNNER: generate RunParameters using teamAttackAngle + lateralPct (§3.4).
+    // Step 4: Role assignment (§3.3) — SINGLE EntityId-ascending pass.
+    //   EVERY agent is evaluated EVERY tick. There is no "is-stable, skip evaluation"
+    //   short-circuit: the §3.12 anti-thrash hysteresis lives entirely in
+    //   hysteresisState.update() — a transition commits only after a DIFFERENT candidate
+    //   has been preferred for ATTACK_DWELL_TICKS consecutive ticks, so currentRole is
+    //   retained across boundary oscillation WITHOUT skipping evaluation. Skipping
+    //   evaluation while stable would permanently LOCK a role, because the candidateDwell
+    //   machinery could never observe a newly-preferred role once dwellCounter crossed the
+    //   threshold (ERR-015-009; isStable() is a diagnostic predicate, not an evaluation gate).
+    //   Counting on the committed (post-hysteresis) role also seeds the MAX_RUNNERS cap and
+    //   the single-WEAK_SIDE gate for later agents — including retained RUNNERs whose
+    //   candidate is mid-transition (ERR-015-007). Residual intra-tick over-cap (an early
+    //   agent could not see a retained holder evaluated later) is corrected by the §3.11
+    //   invariant pass.
     runnerCount    = 0
     weakSideCount  = 0
     for each agent in attackingPool:
-        if hysteresisState.isStable(agent.entityId, ATTACK_DWELL_TICKS):
-            // retain; do not re-evaluate role
-            continue
         role = AssignRole(agent, perceptionSnapshot, positioningAIView,
-                          styleProfile, runnerCount, weakSideCount)  // §3.3
-        if role == RUNNER:
+                          styleProfile, runnerCount, weakSideCount)  // §3.3 four-priority
+        hysteresisState.update(agent.entityId, role)                 // §3.12 dwell gate
+        agent.assignedRole = hysteresisState.currentRole(agent.entityId)  // committed role
+        if agent.assignedRole == RUNNER:
             agent.runParameters = GenerateRunParameters(agent, ballCarrier,
                                                         teamAttackAngle,
                                                         styleProfile, currentTick)  // §3.4
             runnerCount += 1
-        if role == WEAK_SIDE:
+        if agent.assignedRole == WEAK_SIDE:
             weakSideCount += 1
-        agent.assignedRole = role
-        hysteresisState.update(agent.entityId, role)
 
     // Step 5: Validate support radius for SUPPORT_BALL candidates (§3.5).
     //   (Implicit in Step 4; §3.5 defines the distance threshold used in §3.3.)
@@ -886,7 +919,11 @@ function AttackingAITick(teamId, perceptionSnapshot, positioningAIView,
             role           = agent.assignedRole,
             runParameters  = (agent.assignedRole == RUNNER)
                              ? agent.runParameters : null,
-            validThroughTick = currentTick + 1
+            validThroughTick = currentTick   // §2.2.2: equals currentTick; a consumer
+                                             // reading vt < currentTick treats it as stale
+                                             // and falls back to the #12 baseline slot
+                                             // (ERR-015-008 — was `currentTick + 1`, which
+                                             //  contradicted the §2.2.2 data-structure contract)
         }
 
     transitionHoldState.prevPhase = phase

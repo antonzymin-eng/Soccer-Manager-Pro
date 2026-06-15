@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/WidthHolder.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Attacking AI #15 §3.6, FR-AT-014, Code Standards #20
 // Purpose:  Enforces MIN_WIDTH_HOLDERS near-touchline agents. If fewer than required, promotes
@@ -81,9 +81,10 @@ namespace TacticalDirector.AttackingAI
 
                 if (bestIdx < 0) break; // no eligible candidates
 
-                pool[bestIdx].AssignedRole  = AttackRole.HoldWidth;
-                pool[bestIdx].TargetPosition = holdTarget;
-                pool[bestIdx].HasRunParams   = false;
+                pool[bestIdx].AssignedRole      = AttackRole.HoldWidth;
+                pool[bestIdx].TargetPosition    = holdTarget;
+                pool[bestIdx].HasTargetPosition = true;
+                pool[bestIdx].HasRunParams      = false;
                 nearSideCount++;
             }
 
@@ -91,8 +92,11 @@ namespace TacticalDirector.AttackingAI
             for (int i = 0; i < poolCount; i++)
             {
                 ref AttackPoolEntry e = ref pool[i];
-                if (e.AssignedRole == AttackRole.HoldWidth && e.TargetPosition == Vector2.zero)
-                    e.TargetPosition = holdTarget;
+                if (e.AssignedRole == AttackRole.HoldWidth && !e.HasTargetPosition)
+                {
+                    e.TargetPosition    = holdTarget;
+                    e.HasTargetPosition = true;
+                }
             }
         }
 
@@ -107,4 +111,5 @@ namespace TacticalDirector.AttackingAI
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 M-2: extended promotion-loop skip condition to include near-side WeakSide agents (already counted in nearSideCount, must not be re-promoted). |
+// | 1.2     | 2026-06-15 | —      | AR-4 L-2: replaced the fragile `TargetPosition == Vector2.zero` default-fill guard with the explicit HasTargetPosition flag (a legitimate target can sit at the pitch origin); sets the flag on promoted agents. |
 #endregion

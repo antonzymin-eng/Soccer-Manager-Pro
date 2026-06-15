@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/WeakSideController.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Attacking AI #15 §3.7, FR-AT-015, Code Standards #20
 // Purpose:  Post-assignment step ensuring exactly one WEAK_SIDE agent when pool qualifies.
@@ -40,8 +40,10 @@ namespace TacticalDirector.AttackingAI
             }
 
             // Compute weak-side target position (§3.7).
+            // Half-line tiebreak uses >= for parity with RoleAssigner.IsOnWeakSide,
+            // WidthHolder, and OverloadDetector (all treat ballY == halfWidth as the high side).
             float halfWidth = AttackingAIConstants.PITCH_WIDTH_M * 0.5f;
-            float targetY = (ballPosition.y > halfWidth)
+            float targetY = (ballPosition.y >= halfWidth)
                 ? AttackingAIConstants.WeakSideFarYM                                    // near y=0
                 : AttackingAIConstants.PITCH_WIDTH_M - AttackingAIConstants.WeakSideFarYM; // near y=68
             float targetX = Mathf.Clamp(
@@ -69,9 +71,10 @@ namespace TacticalDirector.AttackingAI
 
             if (bestIdx >= 0)
             {
-                pool[bestIdx].AssignedRole   = AttackRole.WeakSide;
-                pool[bestIdx].TargetPosition = weakTarget;
-                pool[bestIdx].HasRunParams   = false;
+                pool[bestIdx].AssignedRole      = AttackRole.WeakSide;
+                pool[bestIdx].TargetPosition    = weakTarget;
+                pool[bestIdx].HasTargetPosition = true;
+                pool[bestIdx].HasRunParams      = false;
             }
         }
     }
@@ -80,4 +83,5 @@ namespace TacticalDirector.AttackingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-15 | —      | AR-4 L-1: half-line tiebreak `ballY > halfWidth` → `>= halfWidth` for parity with the other modules (RoleAssigner/WidthHolder/OverloadDetector all treat ballY == halfWidth as the high side). AR-4 L-2: sets HasTargetPosition on the selected WEAK_SIDE agent. |
 #endregion

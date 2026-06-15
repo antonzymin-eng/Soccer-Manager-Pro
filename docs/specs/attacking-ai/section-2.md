@@ -225,14 +225,18 @@ the full per-agent `AttackIntent[]` slice.
 readonly struct AttackIntentSnapshot
 {
     AttackDirective     directive;          // team-level output for this tick
-    ReadOnlySpan<AttackIntent> intents;    // per-agent outputs; EntityId-ascending
+    ArraySegment<AttackIntent> intents;    // per-agent outputs; EntityId-ascending;
+                                           //   .Count == valid intent count (ERR-015-010)
     int                 tickIndex;          // tick at which snapshot was captured
 }
 ```
 
 This struct is a zero-copy view over the authoritative arrays; it does not
-own the memory it exposes. Channels are deferred to Stage 1 — see §7.5,
-ERR-015-003, ERR-015-004.
+own the memory it exposes. `intents` is bounded to the valid count via
+`ArraySegment.Count` — consumers iterate that, not the backing array length.
+(`ReadOnlySpan` cannot be a field of a non-ref `readonly struct`; `ArraySegment`
+is the bounded, zero-allocation equivalent — ERR-015-010.) Channels are deferred
+to Stage 1 — see §7.5, ERR-015-003, ERR-015-004.
 
 ### 2.2.7 `BaselineShapeView` (Stage 1; read-only, declared here as boundary)
 

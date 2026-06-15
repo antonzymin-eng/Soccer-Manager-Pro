@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/Tests/AttackingAITests.cs
 // Created:  2026-05-31
-// Modified: 2026-05-31
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Attacking AI #15 §5, Code Standards #20
 // Purpose:  Unit tests for Attacking AI. T-AT-U unit tests from §5.
@@ -1257,6 +1257,28 @@ namespace TacticalDirector.AttackingAI.Tests
             Assert.IsFalse(intent.RunParameters.HasValue,
                 "RunParameters must be null for non-Runner roles (FR-AT-011).");
         }
+
+        /// <summary>
+        /// T-AT-U-051 (ERR-015-010 regression): AttackIntentSnapshot.Intents is bounded to the
+        /// valid count, not the backing-buffer length. A consumer iterating .Count must see only
+        /// the published intents, never the stale tail of the SQUAD_SIZE buffer.
+        /// </summary>
+        [Test]
+        public void AttackIntentSnapshot_Intents_BoundedToValidCount()
+        {
+            AttackIntent[] buffer = new AttackIntent[AttackingAIConstants.SQUAD_SIZE];
+            buffer[0] = new AttackIntent(5, AttackRole.Runner, null, 7);
+            buffer[1] = new AttackIntent(9, AttackRole.SupportBall, null, 7);
+            // buffer[2..] are default(AttackIntent) — stale tail that must NOT be exposed.
+
+            AttackIntentSnapshot snap = new AttackIntentSnapshot(
+                AttackDirective.Empty, buffer, intentCount: 2, tickIndex: 7);
+
+            Assert.AreEqual(2, snap.Intents.Count,
+                "Intents.Count must equal the valid intent count, not the buffer length.");
+            Assert.AreEqual(5, snap.Intents[0].AgentEntityId, "First published intent must be EntityId 5.");
+            Assert.AreEqual(9, snap.Intents[1].AgentEntityId, "Second published intent must be EntityId 9.");
+        }
     }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -1428,8 +1450,48 @@ namespace TacticalDirector.AttackingAI.Tests
                     "RunTargetPosition.y must be >= 0 (T-AT-U-015).");
             }
         }
+
+        /// <summary>
+        /// T-AT-U-050 (ERR-015-009 regression): a dwell-stable agent is NOT locked into its
+        /// role. RoleAssigner re-evaluates every agent every tick; when the preferred role
+        /// changes, the §3.12 hysteresis transitions after AttackDwellTicks ticks. Pre-fix, the
+        /// is-stable short-circuit froze the role for the remainder of the possession.
+        /// </summary>
+        [Test]
+        public void Assign_StableAgent_StillReevaluated_TransitionsWhenPreferenceChanges()
+        {
+            StyleProfile profile = StyleProfile.Possession; // MaxRunners = 1
+            AttackHysteresisState[] hyst = new AttackHysteresisState[AttackingAIConstants.SQUAD_SIZE];
+
+            // Agent 1 starts dwell-STABLE in SUPPORT_BALL — the "frozen" precondition.
+            hyst[1].CurrentRole  = AttackRole.SupportBall;
+            hyst[1].DwellCounter = AttackingAIConstants.AttackDwellTicks;
+
+            // SUPPORT_BALL is no longer preferred (carrier ~40 m away, outside support radius);
+            // the Attack-line agent now prefers RUNNER (priority a).
+            AttackingSnapshot snap = new AttackingSnapshot();
+            snap.AttackingTeamId     = 1;
+            snap.BallCarrierEntityId = 99;
+            snap.BallPosition        = new Vector2(20f, 34f);
+            snap.BallCarrierPosition = new Vector2(20f, 34f);
+            snap.TeamAttackAngle     = 0f;
+            snap.Agents[0]           = MakeAgent(1, 1, 34f, LineId.Attack);
+
+            float cos = Mathf.Cos(0f);
+            float sin = Mathf.Sin(0f);
+
+            for (int t = 0; t < AttackingAIConstants.AttackDwellTicks; t++)
+            {
+                (AttackPoolEntry[] pool, int count) = BuildPoolWithOneAgent(snap);
+                Assert.AreEqual(1, count, "Pool should have 1 agent.");
+                RoleAssigner.Assign(snap, pool, count, profile, hyst, cos, sin, 10 + t);
+            }
+
+            Assert.AreEqual(AttackRole.Runner, hyst[1].CurrentRole,
+                "A dwell-stable agent must still be re-evaluated and transition when its " +
+                "preferred role changes — no permanent role lock (ERR-015-009 regression).");
+        }
     }
-}
 
     // ════════════════════════════════════════════════════════════════════════════
     // §5.2 Anti-chaos order test (T-AT-U-046) — orchestrator-level ordering check
@@ -1450,6 +1512,20 @@ namespace TacticalDirector.AttackingAI.Tests
             Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline including " +
                           "publish phase to verify ordering — activate when " +
                           "AttackingAITick integration tests are wired at Stage 1 (FR-AT-021).");
+        }
+
+        /// <summary>
+        /// T-AT-I-013 (ERR-015-011 regression): an IN_POSSESSION tick with BallCarrierEntityId &lt; 0
+        /// (loose ball) must emit an empty directive (FR-AT-008), not run the pipeline against an
+        /// undefined BallCarrierPosition. Requires a PositioningAIView reporting IN_POSSESSION —
+        /// stub until the AttackingAITick driver is wired at Stage 1.
+        /// </summary>
+        [Test]
+        public void Tick_InPossession_LooseBall_EmitsEmptyDirective()
+        {
+            Assert.Ignore("Stage 0+1: requires a PositioningAIView phase seam to drive " +
+                          "AttackingAITick.Tick with phase=IN_POSSESSION and carrier=-1 — " +
+                          "activate when the AttackingAITick driver is wired (FR-AT-008).");
         }
     }
 
@@ -1713,6 +1789,7 @@ namespace TacticalDirector.AttackingAI.Tests
                           "perf-gate infrastructure is ready (§5.5 T-AT-P-003).");
         }
     }
+}
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                                              |
@@ -1723,4 +1800,10 @@ namespace TacticalDirector.AttackingAI.Tests
 // | 1.1     | 2026-06-01 | —      | Add §5.3 integration stubs (T-AT-I-001..012), §5.4 determinism stubs               |
 //           |            |        | (T-AT-D-001..006), §5.5 performance stubs (T-AT-P-001..003), and T-AT-U-046         |
 //           |            |        | anti-chaos order stub. All stubs use Assert.Ignore per §5.1.1.                       |
+// | 1.2     | 2026-06-15 | —      | AR-4 H-2: namespace closed prematurely after RunParameterGenerationTests, stranding |
+//           |            |        | ~13 fixtures in the global namespace (could not resolve TacticalDirector.AttackingAI |
+//           |            |        | types) — the suite had NEVER compiled (ERR-004 defect class). Namespace now closes  |
+//           |            |        | at EOF. AR-4 H-1: added T-AT-U-050 (ERR-015-009 role-lock regression).               |
+// | 1.3     | 2026-06-15 | —      | AR-5: added T-AT-U-051 (ERR-015-010 — AttackIntentSnapshot.Intents bounded to valid |
+//           |            |        | count) and the T-AT-I-013 stub (ERR-015-011 — loose-ball empty-directive guard).     |
 #endregion

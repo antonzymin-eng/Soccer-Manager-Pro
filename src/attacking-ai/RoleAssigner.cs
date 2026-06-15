@@ -1,12 +1,13 @@
 // File:     src/attacking-ai/RoleAssigner.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Attacking AI #15 §3.3–§3.4, §3.12, FR-AT-003, FR-AT-017, Code Standards #20
-// Purpose:  Iterates the attacking pool EntityId-ascending and assigns each agent a role using
-//           the four-priority order (§3.3). Stable agents retain their current role (§3.12).
-//           Stable runners ARE counted against MAX_RUNNERS before non-stable assignment begins.
-//           Generates RunParameters for every committed RUNNER (stable or newly assigned).
+// Purpose:  Iterates the attacking pool EntityId-ascending (single pass) and assigns each agent a
+//           role using the four-priority order (§3.3). Every agent is re-evaluated every tick;
+//           the §3.12 dwell hysteresis (AttackHysteresis.Update) retains the committed role across
+//           boundary oscillation without skipping evaluation. Counts on the committed role so the
+//           MAX_RUNNERS cap is seeded for later agents. Generates RunParameters for every RUNNER.
 
 using System;
 using UnityEngine;
@@ -17,9 +18,11 @@ namespace TacticalDirector.AttackingAI
 {
     /// <summary>
     /// Role-assignment pipeline (§3.3) and run-parameter generation (§3.4). Pure static.
-    /// Iterates <paramref name="pool"/> EntityId-ascending (FR-AT-003 / #16 §3.2.5).
-    /// Applies hysteresis (§3.12): stable agents retain their role; non-stable agents are
-    /// evaluated with the four-priority order and their hysteresis state is updated.
+    /// Iterates <paramref name="pool"/> EntityId-ascending (FR-AT-003 / #16 §3.2.5) in a single
+    /// pass. Every agent is evaluated with the four-priority order every tick; the §3.12 dwell
+    /// hysteresis (<see cref="AttackHysteresis.Update"/>) retains the committed role across
+    /// boundary oscillation without skipping evaluation (no is-stable short-circuit — that would
+    /// permanently lock a role; ERR-015-009).
     /// Attacking AI #15 §3.3–§3.4 / §3.12.
     /// </summary>
     internal static class RoleAssigner
@@ -49,54 +52,38 @@ namespace TacticalDirector.AttackingAI
         {
             int maxRunners = styleProfile.MaxRunners;
 
-            // Pass 1: count stable agents' roles to correctly seed runnerCount and weakSideCount
-            // before evaluating non-stable agents. This prevents stable RUNNERs from being
-            // invisible to the MAX_RUNNERS cap when processing non-stable agents.
+            // Single EntityId-ascending pass (§3.13 step 4). EVERY agent is evaluated every
+            // tick — there is no "is-stable, skip evaluation" short-circuit. The §3.12
+            // anti-thrash hysteresis lives entirely in AttackHysteresis.Update(): a role
+            // transition commits only after a new candidate has been preferred for
+            // ATTACK_DWELL_TICKS consecutive ticks, so CurrentRole is retained across the
+            // boundary without skipping evaluation. Skipping evaluation while "stable" would
+            // permanently lock an agent's role, because the candidate-dwell machinery could
+            // never observe a newly-preferred role once DwellCounter crossed the threshold
+            // (ERR-015-009). Counting on the committed (post-hysteresis) role also seeds the
+            // MAX_RUNNERS cap correctly for later agents — including retained RUNNERs whose
+            // candidate is mid-transition (ERR-015-007); residual over-cap from intra-tick
+            // ordering is corrected by the §3.11 invariant pass.
             int runnerCount   = 0;
             int weakSideCount = 0;
             for (int i = 0; i < poolCount; i++)
             {
-                int eid = pool[i].EntityId;
-                ref AttackHysteresisState hyst = ref hysteresis[eid];
-                if (AttackHysteresis.IsStable(ref hyst))
-                {
-                    if (hyst.CurrentRole == AttackRole.Runner)   runnerCount++;
-                    if (hyst.CurrentRole == AttackRole.WeakSide) weakSideCount++;
-                }
-            }
-
-            // Pass 2: assign roles (EntityId-ascending pass already enforced by pool sort).
-            for (int i = 0; i < poolCount; i++)
-            {
                 ref AttackPoolEntry   entry = ref pool[i];
-                int                   eid   = entry.EntityId;
-                ref AttackHysteresisState hyst = ref hysteresis[eid];
+                ref AttackHysteresisState hyst = ref hysteresis[entry.EntityId];
 
-                if (AttackHysteresis.IsStable(ref hyst))
-                {
-                    // Retain committed role; increment dwell counter without changing role.
-                    entry.AssignedRole = hyst.CurrentRole;
-                    AttackHysteresis.Update(ref hyst, hyst.CurrentRole);
-
-                    // Stable RUNNERs still need fresh RunParameters each tick.
-                    if (hyst.CurrentRole == AttackRole.Runner)
-                    {
-                        GenerateRunParams(ref entry, snapshot, cosAngle, sinAngle,
-                                          currentTick, styleProfile);
-                    }
-                    continue;
-                }
-
-                // Evaluate candidate role (priority order §3.3).
+                // Evaluate the preferred role (four-priority order §3.3) and feed it to the
+                // dwell gate. A retained RUNNER re-prefers RUNNER while its slot is free,
+                // refreshing its dwell; a displaced one begins a transition but stays RUNNER
+                // (and counts) until the candidate commits.
                 AttackRole candidate = EvaluateCandidate(
                     ref entry, snapshot, poolCount, styleProfile,
                     runnerCount, maxRunners, weakSideCount);
 
-                // Update hysteresis; CurrentRole may change on transition commit.
+                // Update hysteresis; CurrentRole changes only on a committed transition.
                 AttackHysteresis.Update(ref hyst, candidate);
                 entry.AssignedRole = hyst.CurrentRole;
 
-                // Update counts based on committed (post-hysteresis) role.
+                // Count and parameterise based on the committed (post-hysteresis) role.
                 if (hyst.CurrentRole == AttackRole.Runner)
                 {
                     runnerCount++;
@@ -208,4 +195,5 @@ namespace TacticalDirector.AttackingAI
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-2: replaced magic literals with catalogue constants (MinRunDepthM, MaxRunDepthM, MaxLateralOffsetM). AR-1 M-3: Math.Round(double) → Mathf.RoundToInt. |
+// | 1.2     | 2026-06-15 | —      | AR-4 H-1 (ERR-015-009): removed the is-stable short-circuit that skipped re-evaluation — once DwellCounter crossed the threshold an agent's role was permanently locked because the candidate-dwell machinery never saw a new preferred role. Collapsed to a single always-evaluate pass; hysteresis now lives entirely in Update(). Supersedes the AR-4 M-2 two-pass form (ERR-015-007) — stable runners are still counted because counting is on the committed role. |
 #endregion
