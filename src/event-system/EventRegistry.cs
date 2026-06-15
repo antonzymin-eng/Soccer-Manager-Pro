@@ -1,6 +1,6 @@
 // File:     src/event-system/EventRegistry.cs
 // Created:  2026-05-30
-// Modified: 2026-06-07  (v1.4 — AR-8 M-1 registration collision + L-1 Tier A/B header-size guards)
+// Modified: 2026-06-15  (v1.6 — AR-12 M-1 error-code message prefixes)
 // Author:   —
 // Spec:     Event System #17 §2.4.2, Appendix A, Code Standards #20
 // Purpose:  Compile-time Appendix A registry. Maps event type ordinals to tier, version,
@@ -145,7 +145,7 @@ namespace TacticalDirector.EventSystem
             if ((tier == (byte)DeterminismTier.TierA || tier == (byte)DeterminismTier.TierB)
                 && structSize < EventSystemConstants.EventHeaderBytes)
                 throw new ArgumentException(
-                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier A/B struct " + typeof(T).Name +
+                    EventSystemConstants.ErrPrefixUnregisteredOrdinal + ": Tier A/B struct " + typeof(T).Name +
                     " sizeof " + structSize + " bytes is smaller than EventHeaderBytes " +
                     EventSystemConstants.EventHeaderBytes + " — Tier A/B structs MUST embed the " +
                     "canonical 12-byte header per §2.4.1.", nameof(T));
@@ -167,7 +167,7 @@ namespace TacticalDirector.EventSystem
             // so registration-time collisions could go undetected for an entire boot.
             if (s_rows[ordinal].IsRegistered && s_rows[ordinal].StructSize > 0)
                 throw new InvalidOperationException(
-                    "ERR_EVT_ORDINAL_COLLISION (0x1707): ordinal 0x" + ordinal.ToString("X2") +
+                    EventSystemConstants.ErrPrefixOrdinalCollision + ": ordinal 0x" + ordinal.ToString("X2") +
                     " is already fully registered (subsystem 0x" +
                     s_rows[ordinal].SubsystemOrdinal.ToString("X4") + ", tier " +
                     s_rows[ordinal].Tier + ", structSize " + s_rows[ordinal].StructSize +
@@ -295,4 +295,7 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | before anything touched EventRegistry threw                         |
 // |         |            |        | ERR_EVT_UNREGISTERED_ORDINAL. EventBus entry points now force the   |
 // |         |            |        | cctor.                                                              |
+// | 1.6     | 2026-06-15 | —      | AR-12 M-1: throw-site hex literals (0x1706 / 0x1707) replaced with   |
+// |         |            |        | EventSystemConstants.ErrPrefix* strings (codes single source of      |
+// |         |            |        | truth; rendered text byte-identical). No functional change.         |
 #endregion

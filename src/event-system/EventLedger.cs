@@ -1,6 +1,6 @@
 // File:     src/event-system/EventLedger.cs
 // Created:  2026-05-30
-// Modified: 2026-06-07
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.2.4, §3.2.5, §3.4.2, §4.4, Code Standards #20
 // Purpose:  Tier A/B ring buffer, typed dispatch infrastructure, and per-tick serialization.
@@ -86,7 +86,7 @@ namespace TacticalDirector.EventSystem
             }
             if (HandlerCount >= _handlers.Length)
                 throw new InvalidOperationException(
-                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): subscriber handler capacity exceeded. " +
+                    EventSystemConstants.ErrPrefixQueueOverflow + ": subscriber handler capacity exceeded. " +
                     "Increase MaxHandlersPerEventType or MaxTierCHandlersPerType.");
             ushort idx = (ushort)HandlerCount;
             _handlers[HandlerCount++] = handler;
@@ -169,7 +169,7 @@ namespace TacticalDirector.EventSystem
         {
             if (EventSystemConstants.EventQueueCapacity > EventSystemConstants.MAX_QUEUE_SORT_INTS)
                 throw new InvalidOperationException(
-                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): EventQueueCapacity (" +
+                    EventSystemConstants.ErrPrefixQueueOverflow + ": EventQueueCapacity (" +
                     EventSystemConstants.EventQueueCapacity +
                     ") exceeds MAX_QUEUE_SORT_INTS (" +
                     EventSystemConstants.MAX_QUEUE_SORT_INTS +
@@ -208,7 +208,7 @@ namespace TacticalDirector.EventSystem
             {
                 if (depth >= EventSystemConstants.MaxEventDispatchDepth)
                     throw new InvalidOperationException(
-                        "ERR_EVT_QUEUE_OVERFLOW (0x1701): BFS dispatch depth exceeded " +
+                        EventSystemConstants.ErrPrefixQueueOverflow + ": BFS dispatch depth exceeded " +
                         EventSystemConstants.MaxEventDispatchDepth);
 
                 int batchEnd  = QueueCount; // snapshot before dispatch (handlers may append)
@@ -384,7 +384,7 @@ namespace TacticalDirector.EventSystem
             var typed = Dispatchers[ordinal] as EventTypeDispatcher<T>;
             if (typed == null)
                 throw new InvalidOperationException(
-                    "ERR_EVT_ORDINAL_COLLISION (0x1707): ordinal 0x" + ordinal.ToString("X2") +
+                    EventSystemConstants.ErrPrefixOrdinalCollision + ": ordinal 0x" + ordinal.ToString("X2") +
                     " is already bound to a different Tier A/B event type. " +
                     typeof(T).Name + " and the existing type share the same ordinal — " +
                     "check for duplicate ordinal in RegisterExternalRow calls.");
@@ -454,4 +454,8 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | header; previously a too-small dst threw an opaque                |
 // |         |            |        | IndexOutOfRangeException at dst[0] / dst[countOffset+3] rather    |
 // |         |            |        | than the diagnostic ArgumentException the payload-copy path emits.|
+// | 1.10    | 2026-06-15 | —      | AR-12 M-1: throw-site hex literals (0x1701 / 0x1707) replaced with |
+// |         |            |        | EventSystemConstants.ErrPrefixQueueOverflow / ErrPrefixOrdinal-    |
+// |         |            |        | Collision so the error codes are the single source of truth.      |
+// |         |            |        | Rendered text byte-identical; no functional change.               |
 #endregion

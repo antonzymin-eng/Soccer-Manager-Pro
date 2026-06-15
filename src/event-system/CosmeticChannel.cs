@@ -1,6 +1,6 @@
 // File:     src/event-system/CosmeticChannel.cs
 // Created:  2026-05-30
-// Modified: 2026-06-07
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.5.3, §3.6.2, §4.3.2, Code Standards #20
 // Purpose:  Tier C immediate-synchronous dispatch with deterministic drop predicate.
@@ -49,7 +49,7 @@ namespace TacticalDirector.EventSystem
             // also catches the error in release builds. FR-EVT-020 / FR-EVT-048).
             if (ordinal == 0)
                 throw new InvalidOperationException(
-                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    EventSystemConstants.ErrPrefixUnregisteredOrdinal + ": " + typeof(T).Name +
                     " published before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
                     "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
 
@@ -74,14 +74,14 @@ namespace TacticalDirector.EventSystem
             // loss is worse than an exception for a registration error (AR-1 open finding).
             if (structSize <= 0)
                 throw new InvalidOperationException(
-                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier C struct size is 0 for ordinal 0x" +
+                    EventSystemConstants.ErrPrefixUnregisteredOrdinal + ": Tier C struct size is 0 for ordinal 0x" +
                     ordinal.ToString("X2") + ". Call EventBusRegistrar.Initialize() before publishing.");
 
             // AR-3 fix: upper-bound guard — stackSlot is MaxEventSlotBytes bytes; Slice(0, structSize)
             // throws ArgumentOutOfRangeException if structSize > MaxEventSlotBytes (FR-EVT-048 / §3.5.1).
             if (structSize > EventSystemConstants.MaxEventSlotBytes)
                 throw new InvalidOperationException(
-                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): Tier C struct size " + structSize +
+                    EventSystemConstants.ErrPrefixQueueOverflow + ": Tier C struct size " + structSize +
                     " bytes exceeds MaxEventSlotBytes " + EventSystemConstants.MaxEventSlotBytes +
                     " for ordinal 0x" + ordinal.ToString("X2") +
                     ". Increase MaxEventSlotBytes or reduce struct size (§3.5.1).");
@@ -122,13 +122,23 @@ namespace TacticalDirector.EventSystem
             where T : struct
         {
             EventRegistry.EnsureInitialized();
+
+            // AR-12 L-2: enforce the FR-EVT-009a exactly-one-marker contract here too. EventBus's
+            // unified Subscribe validates before routing, but the public CosmeticChannel.Subscribe<T>
+            // (constraint: struct, IEventC) reaches this seam directly and a type implementing IEventC
+            // AND another tier marker would otherwise bypass the check. Cheap cached-flag read.
+            if (!EventTierCache<T>.IsValid)
+                throw new InvalidOperationException(
+                    "EventBus tier contract violation (FR-EVT-009a / ERR-017-002): " +
+                    typeof(T).Name + " must implement exactly one of IEventA / IEventB / IEventC.");
+
             byte ordinal = EventOrdinalCache<T>.Ordinal;
 
             // Zero-ordinal guard (AR-2 fix: replaces debug-only Debug.Assert — handler would be
             // stored at slot 0 and orphaned once Initialize() runs with the real ordinal. FR-EVT-020).
             if (ordinal == 0)
                 throw new InvalidOperationException(
-                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    EventSystemConstants.ErrPrefixUnregisteredOrdinal + ": " + typeof(T).Name +
                     " subscribed before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
                     "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
 
@@ -143,7 +153,7 @@ namespace TacticalDirector.EventSystem
             var typed = s_dispatchers[ordinal] as EventTypeDispatcher<T>;
             if (typed == null)
                 throw new InvalidOperationException(
-                    "ERR_EVT_ORDINAL_COLLISION (0x1707): ordinal 0x" + ordinal.ToString("X2") +
+                    EventSystemConstants.ErrPrefixOrdinalCollision + ": ordinal 0x" + ordinal.ToString("X2") +
                     " is already bound to a different Tier C event type. " +
                     typeof(T).Name + " and the existing type share the same ordinal — " +
                     "check for duplicate ordinal in RegisterExternalRow calls.");
@@ -229,4 +239,10 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | constraint and now delegates to new internal SubscribeFromBus<T>     |
 // |         |            |        | (where T : struct) carrying the original body - the seam EventBus's  |
 // |         |            |        | unified Subscribe routes Tier C through.                             |
+// | 1.10    | 2026-06-15 | —      | AR-12 L-2: SubscribeFromBus<T> now enforces the FR-EVT-009a          |
+// |         |            |        | exactly-one-marker contract (EventTierCache<T>.IsValid) so the       |
+// |         |            |        | public Subscribe<T> direct path cannot bypass the check that the     |
+// |         |            |        | EventBus route applies. AR-12 M-1: throw-site hex literals replaced  |
+// |         |            |        | with EventSystemConstants.ErrPrefix* strings (codes single source    |
+// |         |            |        | of truth; rendered text byte-identical).                             |
 #endregion
