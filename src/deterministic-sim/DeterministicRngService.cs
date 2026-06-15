@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/DeterministicRngService.cs
 // Created:  2026-05-29
-// Modified: 2026-06-12 (golden-vector pass: full RFC 5869 multi-block Expand; HkdfExtract/HkdfExpand split)
+// Modified: 2026-06-15 (AR fix H-1: Skip() advances ActionOrdinal so branch parity holds)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.2.1, §3.2.5, §3.2.5.1, §3.4, Code Standards #20
 // Purpose:  Deterministic RNG service using HKDF-SHA256 key derivation and SipHash-2-4-64 stream hashing.
@@ -129,12 +129,30 @@ namespace TacticalDirector.DeterministicSim
         }
 
         /// <summary>
-        /// Skips <paramref name="count"/> draws without producing values.
-        /// Advances the cursor by count to maintain parity with branches that do draw. §3.2.5.
+        /// Skips one draw-site evaluation whose drawing branch would have consumed
+        /// <paramref name="count"/> draws, without producing any values.
+        /// Advances BOTH ActionOrdinal (by one action) and RngCursor (by count) so the stream
+        /// stays in lockstep with the branch that took the Reserve path. Returns
+        /// ERR_DS_RNG_BUDGET_MISMATCH if a reservation is already open on this stream. §3.2.5.
         /// </summary>
-        public void Skip(int streamIndex, int count)
+        public ushort Skip(int streamIndex, int count)
         {
-            _streams[streamIndex].RngCursor += (ulong)count;
+            ref RngStreamState s = ref _streams[streamIndex];
+
+            if (s.BudgetRemaining != 0)
+            {
+                return DeterministicSimConstants.ERR_DS_RNG_BUDGET_MISMATCH;
+            }
+
+            // Branch-safety invariant (§3.2.5): the draw value is keyed on ActionOrdinal (the
+            // only RNG hash input that advances per draw-site evaluation), NOT on RngCursor.
+            // The pre-fix Skip advanced only RngCursor, so a skipped branch and a drawing branch
+            // ended a draw-site evaluation with different ActionOrdinals and DESYNCED every
+            // subsequent draw on the stream. A skip is one consumed action: bump ActionOrdinal
+            // exactly as Reserve() does, and advance RngCursor by the declared count for parity.
+            s.ActionOrdinal++;
+            s.RngCursor += (ulong)count;
+            return 0;
         }
 
         /// <summary>Returns a read-only reference to the stream state for snapshot serialization.</summary>
@@ -431,4 +449,9 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | §2.3 implemented; HkdfExtract/HkdfExpand split out so the KAT suite  |
 // |         |            |        | asserts PRK byte-exact. No behaviour change for L ≤ 32 (production   |
 // |         |            |        | path uses RNG_KDF_OUTPUT_BYTES = 16; T(1) prefix is identical).      |
+// | 1.3     | 2026-06-15 | —      | AR fix H-1: Skip() now advances ActionOrdinal (one consumed action) |
+// |         |            |        | AND RngCursor, and rejects an open reservation (ERR_DS_RNG_BUDGET_  |
+// |         |            |        | MISMATCH; signature void→ushort). Draw values key on ActionOrdinal, |
+// |         |            |        | not RngCursor, so the pre-fix RngCursor-only Skip desynced every     |
+// |         |            |        | subsequent draw on a skipped branch vs a Reserve branch.            |
 #endregion

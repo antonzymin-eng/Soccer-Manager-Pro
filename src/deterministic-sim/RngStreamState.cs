@@ -24,13 +24,19 @@ namespace TacticalDirector.DeterministicSim
         /// <summary>Reservation evaluation index: the per-evaluation draw-site call order counter. §3.2.5 / §3.2.5.1.</summary>
         public ulong ActionOrdinal;
 
-        /// <summary>Remaining draws in the current Reserve() budget. 0 when no reservation is active.</summary>
+        /// <summary>Open-reservation flag: equals DeclaredBudget while a Reserve() window is open,
+        /// 0 when no reservation is active. Reserve() rejects a second open via this field;
+        /// CloseReservation()/Skip() clear it. (DrawReserved is random-access by index and does
+        /// not decrement this.) §3.2.5.</summary>
         public int BudgetRemaining;
 
-        /// <summary>Total budget declared by the current Reserve() call (for mismatch detection). §3.4 / FR-DS-012.</summary>
+        /// <summary>Total budget declared by the current Reserve() call. Bounds DrawReserved's index
+        /// and is the amount CloseReservation() advances RngCursor by. §3.4 / FR-DS-012.</summary>
         public int DeclaredBudget;
 
-        /// <summary>Draw index within the current reservation window (advances in DrawReserved). §3.2.5.</summary>
+        /// <summary>Window-base draw index, reset to 0 by Reserve(). Reserved for diagnostics — the
+        /// reservation API is random-access by explicit index, so this does not track per-draw
+        /// progress. §3.2.5.</summary>
         public int DrawIndex;
 
         /// <summary>Stable draw-site string identifier. Stored for ERR_DS_RNG_BUDGET_MISMATCH diagnostics.</summary>
