@@ -1,7 +1,7 @@
 # Match Engine — Tick Orchestrator Composition Root (Design Note)
 
 > **Created:** June 15, 2026
-> **Last Updated:** June 15, 2026
+> **Last Updated:** June 15, 2026 (v0.2 — self-AR fix pass: collision→movement ordering, EventBus AI-phase entry, cross-tick state in snapshot, stride-tick correction, per-agent-instance verification)
 > **Status:** DESIGN NOTE (Stage 0+1 integration scaffolding — NOT a formal approved spec)
 > **Author:** —
 > **Purpose:** Authoritative design for the match engine: the composition root that owns
@@ -100,6 +100,13 @@ certified file, the engine drives the EventBus lifecycle from inside its callbac
   (`MatchClock.Advance()` has already run inside `RunTick` before the callback, so
   `CurrentTick` is the tick being processed.)
 - each subsequent phase callback first line: `EventBus.BeginPhase(PhaseId.X);`
+- **AI phase entry is unconditional.** `TickOrchestrator` does **not** invoke `_runAI`
+  on non-stride ticks (it runs an empty marker scope instead), so a `BeginPhase(PhaseId.AI)`
+  placed inside `RunAiPhase` would be skipped 5 of every 6 ticks and the EventBus phase
+  stream would diverge on non-stride ticks. The engine therefore calls
+  `EventBus.BeginPhase(PhaseId.AI)` at the **end of `RunIntentPhase`** (i.e.
+  unconditionally, before the orchestrator's stride branch), so the AI phase is entered
+  every tick regardless of stride. `RunAiPhase` itself does **not** call `BeginPhase`.
 - `RunEventsPhase`: `EventBus.DrainTick();`
 - `RunSnapshotPhase`: write world state into the payload, then
   `EventBus.SerializeLedger(...)`, then `EventBus.OnTickBoundary();`
@@ -122,9 +129,26 @@ subsystem was unit-tested with hand-built inputs. They are the highest-risk new 
 The world-state serialization order written into `SnapshotPayload.PayloadBytes` feeds the
 digest chain. It MUST be pinned and versioned with a `SNAPSHOT_SCHEMA_VERSION` (parallel
 to `PhaseId`'s schema-bump rule) **before Phase B lands**, or every later field change
-forces a schema bump. Stage 0 minimal field set: ball (position, velocity, spin, state) +
-per-agent (position, velocity, facing, locomotion state, fatigue). Serialize via
-`CanonicalSerializer` (−0.0 normalization, canonical NaN handling already implemented).
+forces a schema bump. Serialize via `CanonicalSerializer` (−0.0 normalization, canonical
+NaN handling already implemented).
+
+**The payload MUST capture all state that survives across ticks — not just kinematics.**
+A field that is read on tick N but written on tick N−1 (or earlier) is simulation state
+and its omission diverges replay. Stage 0 field set:
+
+- ball: position, velocity, spin, state-machine state.
+- per-agent: position, velocity, facing, locomotion state, fatigue.
+- **per-agent held `MovementCommand`** — produced only on stride ticks but consumed every
+  tick (§3, §6.below), so it persists in world state and is digest-relevant.
+- **per-agent collision-feedback buffers** (`knockdownForce`, `isGrounded`, `stumble`) —
+  produced in Resolve (tick N) and consumed by movement in Physics (tick N+1) per the
+  one-tick-lag contract below; carried across the tick boundary, therefore serialized.
+- per-agent DecisionTree state-machine state (IDLE/EVALUATING/EXECUTING/INTERRUPTED) and
+  any in-flight executor state (Pass/Shot WINDUP/CONTACT) — persists between heartbeats.
+
+If a buffer can be proven fully recomputed before its first read each tick, it may be
+excluded — but the default is to serialize cross-tick state, and the proof must be recorded
+here per field.
 
 ---
 
@@ -137,13 +161,28 @@ per-agent (position, velocity, facing, locomotion state, fatigue). Serialize via
 | Input (0) | `RunInputPhase` | Stage 0 stub (no controller yet); opens EventBus tick | 60 Hz |
 | Intent (1) | `RunIntentPhase` | Stage 0: static `TacticalContext`; later set-piece / manager intent | 60 Hz |
 | AI (2) | `RunAiPhase` | assemble snapshots → `PerceptionSystem.OnHeartbeat` (×22) → `DecisionTree.ReceiveSnapshot` (×22) → `PositioningAITick` / `PressingAITick` / `DefensiveAITick` / `AttackingAITick` → emit `MovementCommand`s | 10 Hz (stride-gated by orchestrator) |
-| Physics (3) | `RunPhysicsPhase` | `BallPhysicsCore.UpdateBallPhysics(ref _ball, dt)`; `AgentMovementSystem.Update(...)` ×22 | 60 Hz |
-| Resolve (4) | `RunResolvePhase` | `CollisionSystem.UpdateCollisions(...)`; `PassExecutor.Update` / `ShotExecutor.Update`; `FirstTouchSystem.EvaluateOnBallContact` on contact; possession → `_matchContext` | 60 Hz |
+| Physics (3) | `RunPhysicsPhase` | `BallPhysicsCore.UpdateBallPhysics(ref _ball, dt)`; `AgentMovementSystem.Update(...)` ×22 — consumes the **previous tick's** collision-feedback buffers (see contract below) | 60 Hz |
+| Resolve (4) | `RunResolvePhase` | `CollisionSystem.UpdateCollisions(...)` → writes this tick's collision-feedback buffers; `PassExecutor.Update` / `ShotExecutor.Update`; `FirstTouchSystem.EvaluateOnBallContact` on contact; possession → `_matchContext` | 60 Hz |
 | Events (5) | `RunEventsPhase` | `EventBus.DrainTick()` → registered consumers | 60 Hz |
-| Snapshot (6) | `RunSnapshotPhase` | serialize `_ball` + `_agents` → `SnapshotPayload`; `EventBus.SerializeLedger`; `EventBus.OnTickBoundary` | 60 Hz |
+| Snapshot (6) | `RunSnapshotPhase` | serialize world state (§2.6) → `SnapshotPayload`; `EventBus.SerializeLedger`; `EventBus.OnTickBoundary` | 60 Hz |
 
-The AI phase only executes on stride ticks (`tick % AI_PHASE_STRIDE == 0`, stride = 6);
-the orchestrator runs it as a no-op otherwise. Tick 0 is a stride tick.
+**Collision ↔ movement ordering contract (one-tick lag).** `AgentMovementSystem.Update`
+(Physics, phase 3) takes collision force / grounded / knockdown as **inputs**, but
+`CollisionSystem.UpdateCollisions` (Resolve, phase 4) runs *after* movement in the same
+tick. Movement at tick N therefore consumes the collision-feedback buffers written at tick
+N−1. This is deliberate (the canonical phase order is fixed by `#16` and MUST NOT be
+reordered): collisions resolve the positions movement just produced, and the response feeds
+back next tick. Consequences the implementation MUST honor: (a) the buffers are seeded to
+"no contact" at boot so tick 1 reads a defined value; (b) the buffers are cross-tick state
+and are serialized into the snapshot (§2.6); (c) this one-frame feedback latency is an
+accepted Stage 0 model property, recorded here rather than hidden.
+
+**Stride timing.** `RunTick` calls `MatchClock.Advance()` *first*, so the first processed
+tick is **1**, not 0; the initial state (tick 0) is never "run." The AI phase executes when
+`tick % AI_PHASE_STRIDE == 0` (stride = 6), so the **first AI evaluation is tick 6**
+(~100 ms after kickoff) — agents hold their boot-time `MovementCommand` until then. The
+orchestrator runs the AI phase as a no-op on non-stride ticks (but the EventBus AI phase is
+still entered every tick per §2.4).
 
 ---
 
@@ -208,11 +247,18 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
 4. **EventBus boot idempotency** — several registrars were historically non-idempotent; the
    host boots them once, but the replay path needs a reset seam (`#16` `ReplayEngine` step 6
    is a Stage 0 stub today).
-5. **Per-agent system fan-out** (PassExecutor/ShotExecutor/DecisionTree ×22) — confirm
-   holding these as arrays vs. pooling them respects the zero-alloc budget.
+5. **Per-agent system fan-out and per-agent state** (PassExecutor/ShotExecutor/DecisionTree
+   ×22) — `DecisionTree` holds per-agent state-machine state that persists between
+   heartbeats (EXECUTING holds mid-pass-windup), and the executors hold WINDUP/CONTACT
+   state. **Before Phase D, verify** whether each is a per-agent instance (22 independent
+   objects) or a shared evaluator backed by per-agent state arrays; the choice determines
+   both the zero-alloc construction strategy and exactly which fields §2.6 must serialize.
 6. **MatchContext authorship** — the host owns and updates `MatchContext` each AI tick
    (score, possession, ball, zone); possession transitions are produced in Resolve and read
    by the next AI tick. Pin the write/read ordering to avoid a one-tick staleness ambiguity.
+   The host MUST author `MatchContext.BallZone` from the home-team perspective only — per
+   the Decision Tree AR-2 fix, the `DecisionContextAssembler` derives the team-relative zone
+   downstream; re-deriving it host-side would reintroduce ERR-008-002.
 
 ---
 
@@ -232,3 +278,4 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
 | 0.1     | 2026-06-15 | —      | Initial design note. Composition-root architecture, phase→subsystem wiring, boot sequence, phased delivery A–F, risks. |
+| 0.2     | 2026-06-15 | —      | Self-adversarial-review fix pass (1H+3M+2L). H-1: collision↔movement one-tick-lag ordering contract documented (buffers seeded at boot, serialized, latency accepted). M-1: EventBus `BeginPhase(PhaseId.AI)` moved to end of Intent phase so the AI phase is entered every tick (orchestrator skips `_runAI` on non-stride ticks). M-2: cross-tick state (held MovementCommands, collision-feedback buffers, DecisionTree/executor state) added to the §2.6 snapshot field set. L-1: stride-timing corrected — first processed tick is 1, first AI evaluation is tick 6 (Advance runs first). L-2: per-agent-instance-vs-shared-evaluator verification required before Phase D. Plus: MatchContext home-perspective ball-zone caution (ERR-008-002 regression guard). |
