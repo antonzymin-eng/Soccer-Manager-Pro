@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/SnapshotCodec.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15 (AR fix M-1: Encode computes the §3.2.3 chained digest, not payload-only)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.9.2, §3.2.4.1, §3.4, §4.6.1, Code Standards #20
 // Purpose:  Encodes and decodes snapshots in canonical binary format. Computes SHA-256 digest over
@@ -27,7 +27,18 @@ namespace TacticalDirector.DeterministicSim
 
         // ── Digest chain state ────────────────────────────────────────────────────────
 
+        // §3.2.3 SnapshotHeader preimage width: 0x12 ‖ schemaVersion(u32) ‖ tick(u64)
+        //                                        ‖ prevSnapshotDigest(32) ‖ envFpDigest(32).
+        private const int HeaderPreimageBytes =
+            1 + 4 + 8 + DeterministicSimConstants.SHA256_BYTES + DeterministicSimConstants.SHA256_BYTES;
+
+        private static readonly byte[] s_payloadDomainTag =
+            { DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_PAYLOAD };
+
+        private static readonly byte[] s_zeroDigest = new byte[DeterministicSimConstants.SHA256_BYTES];
+
         private readonly byte[] _prevDigest;
+        private readonly byte[] _headerPreimage; // reused per tick — no per-tick alloc for the header region
 
         /// <summary>
         /// Constructs a SnapshotCodec.
@@ -35,27 +46,50 @@ namespace TacticalDirector.DeterministicSim
         /// </summary>
         public SnapshotCodec()
         {
-            _prevDigest = new byte[DeterministicSimConstants.SHA256_BYTES];
+            _prevDigest     = new byte[DeterministicSimConstants.SHA256_BYTES];
+            _headerPreimage = new byte[HeaderPreimageBytes];
         }
 
         // ── Encode ────────────────────────────────────────────────────────────────────
 
         /// <summary>
         /// Finalizes the snapshot for durable storage.
-        /// Computes SHA-256(payloadBytes[0..bytesWritten]) → CurrentSnapshotDigest.
-        /// Sets PrevSnapshotDigest from the prior committed snapshot.
-        /// §4.6.1.
+        /// Computes the §3.2.3 chained SnapshotDigest:
+        ///   SHA-256( 0x12 ‖ schemaVersion ‖ tick ‖ prevSnapshotDigest ‖ envFpDigest ‖ 0x11 ‖ payloadBytes ).
+        /// Because PrevSnapshotDigest is part of the preimage, CurrentSnapshotDigest genuinely
+        /// chains off its predecessor (a prior snapshot cannot be altered without invalidating
+        /// every later digest). §4.6.1 / §3.2.3.
         /// </summary>
         public void Encode(SnapshotHeader header, SnapshotPayload payload)
         {
             using var _ = s_encodeMarker.Auto();
 
-            // Compute payload digest
-            byte[] digest = ComputeSha256(payload.PayloadBytes, payload.BytesWritten);
-            Array.Copy(digest, 0, header.CurrentSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
-
-            // Thread in the previous digest for chain continuity
+            // Thread the previous digest into the header BEFORE hashing — it is part of the preimage.
             Array.Copy(_prevDigest, 0, header.PrevSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
+
+            // Build the §3.2.3 / corpus D-04 header preimage into the reused buffer.
+            int o = 0;
+            CanonicalSerializer.WriteU8 (_headerPreimage, ref o, DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_HEADER);
+            CanonicalSerializer.WriteU32(_headerPreimage, ref o, header.SchemaVersion);
+            CanonicalSerializer.WriteU64(_headerPreimage, ref o, header.Tick);
+            Array.Copy(header.PrevSnapshotDigest, 0, _headerPreimage, o, DeterministicSimConstants.SHA256_BYTES);
+            o += DeterministicSimConstants.SHA256_BYTES;
+            byte[] envFpDigest = header.Fingerprint != null ? header.Fingerprint.ComputeDigest() : s_zeroDigest;
+            Array.Copy(envFpDigest, 0, _headerPreimage, o, DeterministicSimConstants.SHA256_BYTES);
+            o += DeterministicSimConstants.SHA256_BYTES;
+
+            // SnapshotDigest = SHA-256( headerPreimage ‖ 0x11 ‖ payloadBytes ).
+            // TransformBlock feeds the three regions without allocating a combined preimage buffer.
+            byte[] digest;
+            using (SHA256 sha = SHA256.Create())
+            {
+                sha.TransformBlock(_headerPreimage, 0, o, null, 0);
+                sha.TransformBlock(s_payloadDomainTag, 0, s_payloadDomainTag.Length, null, 0);
+                sha.TransformFinalBlock(payload.PayloadBytes, 0, payload.BytesWritten);
+                digest = sha.Hash;
+            }
+
+            Array.Copy(digest, 0, header.CurrentSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
 
             // Advance chain
             Array.Copy(digest, 0, _prevDigest, 0, DeterministicSimConstants.SHA256_BYTES);
@@ -116,14 +150,6 @@ namespace TacticalDirector.DeterministicSim
             Array.Copy(header.CurrentSnapshotDigest, 0, _prevDigest, 0, DeterministicSimConstants.SHA256_BYTES);
         }
 
-        // ── SHA-256 helper ────────────────────────────────────────────────────────────
-
-        /// <summary>Computes SHA-256 over buf[0..length). §3.9.2.</summary>
-        private static byte[] ComputeSha256(byte[] buf, int length)
-        {
-            using SHA256 sha = SHA256.Create();
-            return sha.ComputeHash(buf, 0, length);
-        }
     }
 }
 
@@ -144,4 +170,11 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | could not have compiled |
 // |         |            |        | in-engine. No           |
 // |         |            |        | functional change.      |
+// | 1.2     | 2026-06-15 | —      | AR fix M-1: Encode now computes the spec §3.2.3 chained          |
+// |         |            |        | SnapshotDigest = SHA-256(0x12‖schemaVersion‖tick‖prevDigest‖     |
+// |         |            |        | envFpDigest ‖ 0x11‖payload). The prior payload-only digest was   |
+// |         |            |        | not chained (an altered earlier snapshot left later digests      |
+// |         |            |        | valid) and ignored the domain tags/header the corpus D-07 pins.  |
+// |         |            |        | Unused ComputeSha256 helper removed; envFp digest sourced from   |
+// |         |            |        | EnvironmentFingerprint.ComputeDigest().                          |
 #endregion

@@ -1,11 +1,12 @@
 // File:     src/deterministic-sim/TickOrchestrator.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15 (AR fix L-3/L-4: codec owns the digest chain; AI no-op doc corrected)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.1.2, §3.6.1, §3.4, FR-DS-001/002, Code Standards #20
 // Purpose:  7-phase 60 Hz tick pipeline orchestrator. Enforces canonical phase order
-//           (Input→Intent→AI/AI_NoOp→Physics→Resolve→Events→Snapshot) and gates the AI phase
-//           on the AI_PHASE_STRIDE. Zero heap allocation on hot path.
+//           (Input→Intent→AI→Physics→Resolve→Events→Snapshot; AI runs as a no-op on non-stride
+//           ticks, same ordinal) and gates the AI phase on the AI_PHASE_STRIDE. Zero heap
+//           allocation on hot path.
 
 using Unity.Profiling;
 
@@ -117,7 +118,7 @@ namespace TacticalDirector.DeterministicSim
                 _runIntent();
             }
 
-            // ── Phase: AI (stride-gated) or AI_NoOp ──────────────────────────────────
+            // ── Phase: AI (stride-gated; runs as a no-op on non-stride ticks) ────────
             if (_clock.IsAiStrideTick)
             {
                 using (s_aiMarker.Auto())
@@ -127,10 +128,12 @@ namespace TacticalDirector.DeterministicSim
             }
             else
             {
-                // AI_NoOp: emit empty phase digest so the digest stream remains invariant. §3.1.2
+                // Non-stride tick: the AI phase runs but writes nothing. It occupies the same
+                // PhaseId.AI ordinal (2) as a stride tick (§3.1.2). The snapshot digest is
+                // computed once per tick over the payload (no per-phase digest is emitted here),
+                // so "no writes" simply means the payload carries no AI-phase contribution.
                 using (s_aiNoOpMarker.Auto())
                 {
-                    // No subsystem writes. Phase ordinal still advances in the digest chain.
                 }
             }
 
@@ -155,7 +158,10 @@ namespace TacticalDirector.DeterministicSim
             // ── Phase: Snapshot ───────────────────────────────────────────────────────
             using (s_snapshotMarker.Auto())
             {
-                _snapshotHeader.Initialize(tick, _snapshotHeader.CurrentSnapshotDigest, _snapshotHeader.Fingerprint);
+                // The codec is the digest-chain authority: Encode threads the previous digest into
+                // PrevSnapshotDigest and computes CurrentSnapshotDigest over the §3.2.3 preimage.
+                // Pass prevDigest: null here (Encode overwrites it) rather than the stale field.
+                _snapshotHeader.Initialize(tick, prevDigest: null, _snapshotHeader.Fingerprint);
                 _runSnapshot(_snapshotPayload);
                 _codec.Encode(_snapshotHeader, _snapshotPayload);
             }
@@ -186,4 +192,9 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | could not have compiled |
 // |         |            |        | in-engine. No           |
 // |         |            |        | functional change.      |
+// | 1.2     | 2026-06-15 | —      | AR fix L-3: Snapshot phase passes prevDigest:null to            |
+// |         |            |        | Initialize (the codec is the chain authority and fills          |
+// |         |            |        | PrevSnapshotDigest in Encode); removes dead self-referential    |
+// |         |            |        | plumbing. AR fix L-4: AI-no-op comment no longer claims a       |
+// |         |            |        | per-phase digest emission that does not exist.                  |
 #endregion

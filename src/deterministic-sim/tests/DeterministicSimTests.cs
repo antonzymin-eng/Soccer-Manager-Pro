@@ -579,6 +579,153 @@ namespace TacticalDirector.DeterministicSim
                 "T-DS-008: PrepareReplay must return 0 on a well-formed snapshot (§4.2.2 steps 1–7).");
         }
     }
+
+    /// <summary>
+    /// Regression locks for the 2026-06-15 adversarial-review fixes:
+    /// H-1 (Skip branch parity) and M-1 (§3.2.3 chained snapshot digest). These exercise the
+    /// production code paths the prior suites encoded but never executed.
+    /// </summary>
+    [TestFixture]
+    public sealed class DeterministicSimAdversarialRegressionTests
+    {
+        /// <summary>
+        /// AR H-1: a branch that Skips a draw-site evaluation and a branch that Reserves+draws it
+        /// must leave the stream in lockstep, so a subsequent draw produces the SAME value.
+        /// Draw values key on ActionOrdinal (not RngCursor); the pre-fix RngCursor-only Skip
+        /// desynced this. §3.2.5.
+        /// </summary>
+        [Test]
+        public void RngService_Skip_PreservesActionOrdinalParity_WithReserveBranch()
+        {
+            const ulong seed = 0x1234567890ABCDEFUL;
+            var taken   = new DeterministicRngService(seed);
+            var skipped = new DeterministicRngService(seed);
+
+            int a = taken.RegisterStream("site", SubsystemOrdinals.BallPhysics, 7, 0);
+            int b = skipped.RegisterStream("site", SubsystemOrdinals.BallPhysics, 7, 0);
+
+            // First action: one branch draws it, the other skips it (drawing branch would use 3).
+            taken.Reserve(a, 3);
+            taken.DrawReserved(a, 0, out _);
+            taken.CloseReservation(a);
+
+            ushort skipErr = skipped.Skip(b, 3);
+            Assert.AreEqual(0, skipErr, "Skip on an idle stream must succeed");
+
+            // Second action: both draw — value MUST match if ActionOrdinal stayed in lockstep.
+            taken.Reserve(a, 1);
+            taken.DrawReserved(a, 0, out ulong takenValue);
+            taken.CloseReservation(a);
+
+            skipped.Reserve(b, 1);
+            skipped.DrawReserved(b, 0, out ulong skippedValue);
+            skipped.CloseReservation(b);
+
+            Assert.AreEqual(takenValue, skippedValue,
+                "AR H-1: Skip must keep ActionOrdinal in lockstep with the drawing branch");
+            Assert.AreEqual(taken.GetStreamState(a).ActionOrdinal,
+                            skipped.GetStreamState(b).ActionOrdinal,
+                "AR H-1: ActionOrdinal must match after Skip(3) vs Reserve(3)");
+            Assert.AreEqual(taken.GetStreamState(a).RngCursor,
+                            skipped.GetStreamState(b).RngCursor,
+                "AR H-1: RngCursor must match after Skip(3) vs Reserve(3)");
+        }
+
+        /// <summary>AR H-1: Skip during an open reservation is rejected. §3.2.5 / §3.4.</summary>
+        [Test]
+        public void RngService_Skip_DuringOpenReservation_ReturnsBudgetMismatch()
+        {
+            var rng = new DeterministicRngService(0xAAUL);
+            int s = rng.RegisterStream("site", SubsystemOrdinals.BallPhysics, 0, 0);
+            rng.Reserve(s, 2);
+            Assert.AreEqual(DeterministicSimConstants.ERR_DS_RNG_BUDGET_MISMATCH, rng.Skip(s, 1),
+                "AR H-1: Skip during an open reservation must return ERR_DS_RNG_BUDGET_MISMATCH");
+        }
+
+        /// <summary>
+        /// AR M-1: SnapshotCodec.Encode must emit the §3.2.3 chained digest
+        /// SHA-256(0x12‖schemaVersion‖tick‖prevDigest‖envFpDigest ‖ 0x11‖payload),
+        /// not SHA-256(payload) alone.
+        /// </summary>
+        [Test]
+        public void SnapshotCodec_Encode_ProducesSpecChainedDigest()
+        {
+            var codec = new SnapshotCodec();
+            EnvironmentFingerprint fp = EnvironmentFingerprint.CreateStage0Dev();
+
+            var header = new SnapshotHeader();
+            header.Initialize(120UL, prevDigest: null, fp);
+
+            var payload = new SnapshotPayload();
+            payload.PayloadBytes[0] = 0xAB;
+            payload.BytesWritten = 1;
+
+            codec.Encode(header, payload);
+
+            byte[] expected = ExpectedSnapshotDigest(
+                DeterministicSimConstants.SNAPSHOT_SCHEMA_VERSION, 120UL,
+                new byte[DeterministicSimConstants.SHA256_BYTES], fp, payload.PayloadBytes, 1);
+
+            CollectionAssert.AreEqual(expected, header.CurrentSnapshotDigest,
+                "AR M-1: Encode digest must equal SHA-256 of the §3.2.3 header‖payload preimage");
+            CollectionAssert.AreEqual(new byte[DeterministicSimConstants.SHA256_BYTES],
+                header.PrevSnapshotDigest,
+                "AR M-1: genesis snapshot PrevSnapshotDigest must be all-zero");
+        }
+
+        /// <summary>
+        /// AR M-1: the digest genuinely chains — the second snapshot records the first's digest as
+        /// prev, and an identical tick+payload hashed from the genesis sentinel yields a DIFFERENT
+        /// digest (proving prevDigest is part of the preimage).
+        /// </summary>
+        [Test]
+        public void SnapshotCodec_Encode_DigestChain_DependsOnPrevDigest()
+        {
+            EnvironmentFingerprint fp = EnvironmentFingerprint.CreateStage0Dev();
+
+            var codec = new SnapshotCodec();
+            var h1 = new SnapshotHeader(); h1.Initialize(1UL, null, fp);
+            var p1 = new SnapshotPayload(); p1.PayloadBytes[0] = 0x01; p1.BytesWritten = 1;
+            codec.Encode(h1, p1);
+            byte[] d1 = (byte[])h1.CurrentSnapshotDigest.Clone();
+
+            var h2 = new SnapshotHeader(); h2.Initialize(2UL, null, fp);
+            var p2 = new SnapshotPayload(); p2.PayloadBytes[0] = 0x01; p2.BytesWritten = 1;
+            codec.Encode(h2, p2);
+
+            CollectionAssert.AreEqual(d1, h2.PrevSnapshotDigest,
+                "AR M-1: second snapshot must record the first snapshot's digest as prev");
+
+            // Same tick + payload, but chained from genesis (all-zero prev) → must differ.
+            var genesisCodec = new SnapshotCodec();
+            var hg = new SnapshotHeader(); hg.Initialize(2UL, null, fp);
+            var pg = new SnapshotPayload(); pg.PayloadBytes[0] = 0x01; pg.BytesWritten = 1;
+            genesisCodec.Encode(hg, pg);
+
+            CollectionAssert.AreNotEqual(hg.CurrentSnapshotDigest, h2.CurrentSnapshotDigest,
+                "AR M-1: identical tick+payload must hash differently under a different prev digest");
+        }
+
+        private static byte[] ExpectedSnapshotDigest(
+            uint schemaVersion, ulong tick, byte[] prevDigest,
+            EnvironmentFingerprint fingerprint, byte[] payload, int payloadLen)
+        {
+            byte[] envFpDigest = fingerprint.ComputeDigest();
+            byte[] pre = new byte[1 + 4 + 8 + (DeterministicSimConstants.SHA256_BYTES * 2) + 1 + payloadLen];
+            int o = 0;
+            CanonicalSerializer.WriteU8 (pre, ref o, DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_HEADER);
+            CanonicalSerializer.WriteU32(pre, ref o, schemaVersion);
+            CanonicalSerializer.WriteU64(pre, ref o, tick);
+            Array.Copy(prevDigest,  0, pre, o, DeterministicSimConstants.SHA256_BYTES); o += DeterministicSimConstants.SHA256_BYTES;
+            Array.Copy(envFpDigest, 0, pre, o, DeterministicSimConstants.SHA256_BYTES); o += DeterministicSimConstants.SHA256_BYTES;
+            CanonicalSerializer.WriteU8(pre, ref o, DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_PAYLOAD);
+            Array.Copy(payload, 0, pre, o, payloadLen); o += payloadLen;
+            using (System.Security.Cryptography.SHA256 sha = System.Security.Cryptography.SHA256.Create())
+            {
+                return sha.ComputeHash(pre, 0, o);
+            }
+        }
+    }
 }
 
 #region VersionHistory
@@ -610,4 +757,9 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | A fresh codec already holds the genesis sentinel (zeros), which is |
 // |         |            |        | what a genesis snapshot must chain to, so the Encode call was      |
 // |         |            |        | removed. ReplayEngine / SnapshotCodec unchanged.                   |
+// | 1.5     | 2026-06-15 | —      | New DeterministicSimAdversarialRegressionTests fixture pins AR     |
+// |         |            |        | H-1 (Skip ActionOrdinal branch parity + open-reservation reject)  |
+// |         |            |        | and AR M-1 (§3.2.3 chained Encode digest + chain dependence on    |
+// |         |            |        | prevDigest) — production paths the corpus suite rebuilt by hand    |
+// |         |            |        | but never executed against SnapshotCodec.Encode.                  |
 #endregion

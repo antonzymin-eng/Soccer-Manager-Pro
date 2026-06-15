@@ -1,11 +1,13 @@
 // File:     src/deterministic-sim/EnvironmentFingerprint.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15 (AR fix M-1/M-2: ComputeDigest() added; mutation-guard doc corrected)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §4.8, §4.8.1–§4.8.3, §3.4, Code Standards #20
 // Purpose:  Records the runtime environment at match start and embeds it in every snapshot header.
-//           Any field mutation after capture triggers ERR_DS_ENV_MUTATION (recording side).
+//           Fields are readonly, so the §4.8.1 no-mutation invariant is enforced structurally.
 //           Replay-side mismatch triggers ERR_DS_REPLAY_ENV_MISMATCH.
+
+using System.Security.Cryptography;
 
 namespace TacticalDirector.DeterministicSim
 {
@@ -38,9 +40,10 @@ namespace TacticalDirector.DeterministicSim
         /// Stage 0 value: "15.1" per UNICODE_NFC_VERSION.</summary>
         public readonly string UnicodeNormalizationVersion;
 
-        // ── Mutation guard ────────────────────────────────────────────────────────────
+        // ── Lifecycle / derived state ─────────────────────────────────────────────────
 
         private bool _locked;
+        private byte[] _cachedDigest;
 
         // ── Constructor ───────────────────────────────────────────────────────────────
 
@@ -66,12 +69,51 @@ namespace TacticalDirector.DeterministicSim
         }
 
         /// <summary>
-        /// Seals the fingerprint so any subsequent mutation attempt returns ERR_DS_ENV_MUTATION.
-        /// Called immediately after match-start capture. §4.8.1.
+        /// Marks the §4.8.1 capture lifecycle as sealed. Field immutability itself is enforced
+        /// structurally by the readonly fields — there is no mutation path to guard — so
+        /// ERR_DS_ENV_MUTATION is reserved for a Stage 1 mutable-capture builder, should one be
+        /// introduced. Called immediately after match-start capture. §4.8.1.
         /// </summary>
         public void Lock()
         {
             _locked = true;
+        }
+
+        /// <summary>
+        /// Returns the 32-byte SHA-256 digest of this fingerprint's canonical preimage
+        /// (DOMAIN_TAG_ENV_FP ‖ workerCount(u32) ‖ length-prefixed §4.8 strings). Cached after
+        /// the first call (the fields are immutable, so the digest is deterministic). Consumed by
+        /// SnapshotCodec.Encode as the envFp slot of the §3.2.3 header preimage. §4.8 / §3.2.3.
+        /// </summary>
+        public byte[] ComputeDigest()
+        {
+            if (_cachedDigest != null)
+            {
+                return _cachedDigest;
+            }
+
+            int size = DeterministicSimConstants.FIELD_WIDTH_DOMAIN_TAG + 4
+                     + 4 + SchedulerPolicy.Length
+                     + 4 + ReductionTopology.Length
+                     + 4 + SimdFeatureLevel.Length
+                     + 4 + FloatModelHash.Length
+                     + 4 + UnicodeNormalizationVersion.Length;
+
+            byte[] preimage = new byte[size];
+            int o = 0;
+            CanonicalSerializer.WriteU8(preimage, ref o, DeterministicSimConstants.DOMAIN_TAG_ENV_FP);
+            CanonicalSerializer.WriteI32(preimage, ref o, WorkerCount);
+            CanonicalSerializer.WriteString(preimage, ref o, SchedulerPolicy);
+            CanonicalSerializer.WriteString(preimage, ref o, ReductionTopology);
+            CanonicalSerializer.WriteString(preimage, ref o, SimdFeatureLevel);
+            CanonicalSerializer.WriteString(preimage, ref o, FloatModelHash);
+            CanonicalSerializer.WriteString(preimage, ref o, UnicodeNormalizationVersion);
+
+            using (SHA256 sha = SHA256.Create())
+            {
+                _cachedDigest = sha.ComputeHash(preimage, 0, o);
+            }
+            return _cachedDigest;
         }
 
         /// <summary>
@@ -102,18 +144,25 @@ namespace TacticalDirector.DeterministicSim
         /// </summary>
         public static EnvironmentFingerprint CreateStage0Dev()
         {
-            return new EnvironmentFingerprint(
+            var fp = new EnvironmentFingerprint(
                 workerCount:               1,
                 schedulerPolicy:           "Stage0-SingleThread-v1",
                 reductionTopology:         "Serial",
                 simdFeatureLevel:          "SSE2",
                 floatModelHash:            "STAGE0_DEV_PLACEHOLDER",
                 unicodeNormalizationVersion: DeterministicSimConstants.UNICODE_NFC_VERSION);
+            fp.Lock(); // §4.8.1 lifecycle: dev fingerprint is sealed at construction
+            return fp;
         }
     }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-06-15 | —      | AR fix M-1: ComputeDigest() (32-byte canonical digest) added   |
+// |         |            |        | for the §3.2.3 header preimage. AR fix M-2: Lock() doc no       |
+// |         |            |        | longer claims a runtime mutation guard — immutability is        |
+// |         |            |        | enforced by the readonly fields; ERR_DS_ENV_MUTATION reserved   |
+// |         |            |        | for a Stage 1 mutable builder. CreateStage0Dev() now Lock()s.   |
 #endregion

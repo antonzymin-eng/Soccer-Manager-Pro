@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/SaveManager.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15 (AR fix L-2/L-5: Load distinguishes storage vs schema failure; dir-fsync doc)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §4.6.1, §4.6.1.1, §3.4 (FR-DS-006), Code Standards #20
 // Purpose:  Atomic save/load manager. Satisfies the §4.6.1.1 atomic-write contract:
@@ -15,7 +15,9 @@ namespace TacticalDirector.DeterministicSim
 {
     /// <summary>
     /// Atomic snapshot save/load manager.
-    /// Commit satisfies §4.6.1.1: temp-write → fsync → rename → dir-fsync.
+    /// Commit satisfies §4.6.1.1: temp-write → fsync → atomic rename. The directory-fsync step is
+    /// a documented Stage-0 Windows carve-out (NTFS rename semantics cover it) and is deferred to a
+    /// Stage 1 P/Invoke on POSIX — see the §4.6.1.1 note in CommitAtomic.
     /// Returns ERR_DS_STORAGE_ATOMICITY on any contract violation.
     /// Constructor-injected (FR-CS-051–054). Deterministic Simulation #16 §4.6.1.
     /// </summary>
@@ -101,8 +103,9 @@ namespace TacticalDirector.DeterministicSim
 
         /// <summary>
         /// Loads the serialized snapshot bytes for the given tick.
-        /// Returns ERR_DS_SCHEMA_INCOMPATIBLE if the file cannot be opened; 0 on success.
-        /// Corresponds to replay lifecycle step 1 (§4.2.2).
+        /// Returns ERR_DS_STORAGE_ATOMICITY if the file cannot be read (missing / IO error),
+        /// ERR_DS_SCHEMA_INCOMPATIBLE if the file is present but malformed (truncated / oversize),
+        /// 0 on success. Corresponds to replay lifecycle step 1 (§4.2.2).
         /// </summary>
         public ushort Load(ulong tick, SnapshotPayload payloadOut)
         {
@@ -110,29 +113,32 @@ namespace TacticalDirector.DeterministicSim
 
             string path = BuildSnapshotPath(tick);
 
+            byte[] raw;
             try
             {
-                byte[] raw = File.ReadAllBytes(path);
-
-                // Stage 0 layout: skip the fixed header bytes and treat the rest as payload
-                // Full structured decode belongs to SnapshotCodec at Stage 1 structured format.
-                int headerSize = ComputeRawHeaderSize();
-                int payloadSize = raw.Length - headerSize;
-
-                if (payloadSize <= 0 || payloadSize > payloadOut.Capacity)
-                {
-                    return DeterministicSimConstants.ERR_DS_SCHEMA_INCOMPATIBLE;
-                }
-
-                Array.Copy(raw, headerSize, payloadOut.PayloadBytes, 0, payloadSize);
-                payloadOut.BytesWritten = payloadSize;
-
-                return 0;
+                raw = File.ReadAllBytes(path);
             }
             catch (Exception)
             {
+                // Storage-layer failure (file missing, permissions, IO) — distinct from a
+                // structurally invalid snapshot, which is reported as schema-incompatible below.
+                return DeterministicSimConstants.ERR_DS_STORAGE_ATOMICITY;
+            }
+
+            // Stage 0 layout: skip the fixed header bytes and treat the rest as payload
+            // Full structured decode belongs to SnapshotCodec at Stage 1 structured format.
+            int headerSize = ComputeRawHeaderSize();
+            int payloadSize = raw.Length - headerSize;
+
+            if (payloadSize <= 0 || payloadSize > payloadOut.Capacity)
+            {
                 return DeterministicSimConstants.ERR_DS_SCHEMA_INCOMPATIBLE;
             }
+
+            Array.Copy(raw, headerSize, payloadOut.PayloadBytes, 0, payloadSize);
+            payloadOut.BytesWritten = payloadSize;
+
+            return 0;
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -184,4 +190,9 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | File.Exists ? File.Replace(temp,dest,null) : File.Move(temp,dest) -       |
 // |         |            |        | File.Replace is netstandard2.1 and atomically replaces (ReplaceFile);     |
 // |         |            |        | AR-1 M-2 intent (no IOException on existing dest) preserved.              |
+// | 1.4     | 2026-06-15 | —      | AR fix L-2: Load() returns ERR_DS_STORAGE_ATOMICITY for a read/IO         |
+// |         |            |        | failure (missing file etc.) and reserves ERR_DS_SCHEMA_INCOMPATIBLE for   |
+// |         |            |        | a present-but-malformed file, instead of collapsing both. AR fix L-5:     |
+// |         |            |        | class doc no longer asserts dir-fsync as part of the satisfied contract   |
+// |         |            |        | (Stage-0 Windows carve-out; POSIX dir-fsync deferred to Stage 1).         |
 #endregion
