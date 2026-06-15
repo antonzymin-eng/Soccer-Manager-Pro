@@ -1,6 +1,6 @@
 // File:     src/event-system/CosmeticChannel.cs
 // Created:  2026-05-30
-// Modified: 2026-06-07
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.5.3, §3.6.2, §4.3.2, Code Standards #20
 // Purpose:  Tier C immediate-synchronous dispatch with deterministic drop predicate.
@@ -9,6 +9,8 @@
 
 using System;
 using System.Runtime.InteropServices;
+
+using TacticalDirector.DeterministicSim;
 
 namespace TacticalDirector.EventSystem
 {
@@ -49,7 +51,7 @@ namespace TacticalDirector.EventSystem
             // also catches the error in release builds. FR-EVT-020 / FR-EVT-048).
             if (ordinal == 0)
                 throw new InvalidOperationException(
-                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    EventSystemConstants.ErrPrefixUnregisteredOrdinal + ": " + typeof(T).Name +
                     " published before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
                     "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
 
@@ -74,14 +76,14 @@ namespace TacticalDirector.EventSystem
             // loss is worse than an exception for a registration error (AR-1 open finding).
             if (structSize <= 0)
                 throw new InvalidOperationException(
-                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier C struct size is 0 for ordinal 0x" +
+                    EventSystemConstants.ErrPrefixUnregisteredOrdinal + ": Tier C struct size is 0 for ordinal 0x" +
                     ordinal.ToString("X2") + ". Call EventBusRegistrar.Initialize() before publishing.");
 
             // AR-3 fix: upper-bound guard — stackSlot is MaxEventSlotBytes bytes; Slice(0, structSize)
             // throws ArgumentOutOfRangeException if structSize > MaxEventSlotBytes (FR-EVT-048 / §3.5.1).
             if (structSize > EventSystemConstants.MaxEventSlotBytes)
                 throw new InvalidOperationException(
-                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): Tier C struct size " + structSize +
+                    EventSystemConstants.ErrPrefixQueueOverflow + ": Tier C struct size " + structSize +
                     " bytes exceeds MaxEventSlotBytes " + EventSystemConstants.MaxEventSlotBytes +
                     " for ordinal 0x" + ordinal.ToString("X2") +
                     ". Increase MaxEventSlotBytes or reduce struct size (§3.5.1).");
@@ -122,13 +124,23 @@ namespace TacticalDirector.EventSystem
             where T : struct
         {
             EventRegistry.EnsureInitialized();
+
+            // AR-12 L-2: enforce the FR-EVT-009a exactly-one-marker contract here too. EventBus's
+            // unified Subscribe validates before routing, but the public CosmeticChannel.Subscribe<T>
+            // (constraint: struct, IEventC) reaches this seam directly and a type implementing IEventC
+            // AND another tier marker would otherwise bypass the check. Cheap cached-flag read.
+            if (!EventTierCache<T>.IsValid)
+                throw new InvalidOperationException(
+                    "EventBus tier contract violation (FR-EVT-009a / ERR-017-002): " +
+                    typeof(T).Name + " must implement exactly one of IEventA / IEventB / IEventC.");
+
             byte ordinal = EventOrdinalCache<T>.Ordinal;
 
             // Zero-ordinal guard (AR-2 fix: replaces debug-only Debug.Assert — handler would be
             // stored at slot 0 and orphaned once Initialize() runs with the real ordinal. FR-EVT-020).
             if (ordinal == 0)
                 throw new InvalidOperationException(
-                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    EventSystemConstants.ErrPrefixUnregisteredOrdinal + ": " + typeof(T).Name +
                     " subscribed before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
                     "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
 
@@ -143,7 +155,7 @@ namespace TacticalDirector.EventSystem
             var typed = s_dispatchers[ordinal] as EventTypeDispatcher<T>;
             if (typed == null)
                 throw new InvalidOperationException(
-                    "ERR_EVT_ORDINAL_COLLISION (0x1707): ordinal 0x" + ordinal.ToString("X2") +
+                    EventSystemConstants.ErrPrefixOrdinalCollision + ": ordinal 0x" + ordinal.ToString("X2") +
                     " is already bound to a different Tier C event type. " +
                     typeof(T).Name + " and the existing type share the same ordinal — " +
                     "check for duplicate ordinal in RegisterExternalRow calls.");
@@ -160,10 +172,23 @@ namespace TacticalDirector.EventSystem
         /// Removes a previously registered Tier C subscriber.
         /// The token's handler slot is nulled out; the dispatcher skips null slots.
         /// Permitted at any time during match (FR-EVT-022).
+        /// AR-12 L-1: this is the Tier C unsubscribe surface only. A token issued for a
+        /// Tier A/B ordinal indexes the Tier C dispatcher table here and would silently
+        /// no-op (Tier A/B dispatchers live in EventLedger), so such a token is rejected
+        /// explicitly rather than failing quietly — Tier A/B subscriptions are boot-time
+        /// permanent (FR-EVT-020).
         /// Event System #17 §3.2.2 / §4.3.2.
         /// </summary>
         public static void Unsubscribe(SubscriptionToken token)
         {
+            byte tier = EventRegistry.GetTier(token.EventTypeOrdinal);
+            if (tier != (byte)DeterminismTier.TierC)
+                throw new InvalidOperationException(
+                    EventSystemConstants.ErrPrefixRegistrationPhase + ": ordinal 0x" +
+                    token.EventTypeOrdinal.ToString("X2") + " is a Tier A/B event — Tier A/B " +
+                    "subscriptions are boot-time permanent and cannot be unsubscribed " +
+                    "(FR-EVT-020). CosmeticChannel.Unsubscribe handles Tier C only.");
+
             EventTypeDispatchBase dispatcher = s_dispatchers[token.EventTypeOrdinal];
             dispatcher?.RemoveHandler(token.SubscriberIndex);
         }
@@ -229,4 +254,16 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | constraint and now delegates to new internal SubscribeFromBus<T>     |
 // |         |            |        | (where T : struct) carrying the original body - the seam EventBus's  |
 // |         |            |        | unified Subscribe routes Tier C through.                             |
+// | 1.10    | 2026-06-15 | —      | AR-12 L-2: SubscribeFromBus<T> now enforces the FR-EVT-009a          |
+// |         |            |        | exactly-one-marker contract (EventTierCache<T>.IsValid) so the       |
+// |         |            |        | public Subscribe<T> direct path cannot bypass the check that the     |
+// |         |            |        | EventBus route applies. AR-12 M-1: throw-site hex literals replaced  |
+// |         |            |        | with EventSystemConstants.ErrPrefix* strings (codes single source    |
+// |         |            |        | of truth; rendered text byte-identical).                             |
+// | 1.11    | 2026-06-15 | —      | AR-12 (re-review) L-1: Unsubscribe now rejects a Tier A/B token with |
+// |         |            |        | ERR_EVT_REGISTRATION_PHASE instead of silently no-opping. The method |
+// |         |            |        | only indexes the Tier C dispatcher table, so a Tier A/B token (whose |
+// |         |            |        | dispatcher lives in EventLedger) previously did nothing quietly;     |
+// |         |            |        | Tier A/B subscriptions are boot-time permanent (FR-EVT-020). Added   |
+// |         |            |        | using TacticalDirector.DeterministicSim for DeterminismTier.         |
 #endregion

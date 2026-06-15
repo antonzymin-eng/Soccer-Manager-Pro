@@ -1,6 +1,6 @@
 // File:     src/event-system/EventSystemConstants.cs
 // Created:  2026-05-30
-// Modified: 2026-06-07
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Event System #17 §3.10, Code Standards #20
 // Purpose:  All constants for the event system. Region order: GT → Cross.
@@ -27,7 +27,10 @@ namespace TacticalDirector.EventSystem
         public static readonly int EventQueueCapacity = 1024; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Aggregate per-tick Tier C publication sanity ceiling. §3.5.3 / §6.3.
-        /// NOT a delivery queue capacity — Tier C is immediate-dispatch per §3.2.3.</summary>
+        /// NOT a delivery queue capacity — Tier C is immediate-dispatch per §3.2.3.
+        /// AR-12 L-1: declared-but-unconsumed at Stage 0 — the per-ordinal drop predicate
+        /// (FR-EVT-043) is the only Tier C cap enforced at Stage 0. The cross-ordinal aggregate
+        /// ceiling activates at Stage 0+1 alongside the FR-EVT-045 dropped-publish trace channel.</summary>
         public static readonly int CosmeticPerTickPublicationBudget = 4096; // TODO: replace with config loader (Stage 1)
 
         /// <summary>[GT] Maximum second-order Tier A/B BFS dispatch depth per DrainTick. §3.2.5.</summary>
@@ -49,7 +52,10 @@ namespace TacticalDirector.EventSystem
         /// <summary>[GT] Event type ordinal namespace width in bytes. §3.1.2. Stage 5+ expansion to 2 bytes per D5 §7.5.</summary>
         public const int EventTypeOrdinalWidth = 1;
 
-        /// <summary>[GT] Payload version field width in bytes. §3.1 / §3.7.</summary>
+        /// <summary>[GT] Payload version field width in bytes. §3.1 / §3.7.
+        /// AR-12 L-1: declared-but-unconsumed at Stage 0 — the version byte itself is written
+        /// from <see cref="EventRegistry.GetVersion"/> at header offset 1. This width constant
+        /// feeds the Stage 5+ canonical-layout / §7.5 D5 ordinal-expansion documentation.</summary>
         public const int PayloadVersionWidth = 1;
 
         /// <summary>[GT] Fixed 12-byte event header size (per §2.4.1 struct skeleton).
@@ -90,6 +96,30 @@ namespace TacticalDirector.EventSystem
         /// dispatcher at s_dispatchers[ordinal] is typed for a different event type. AR-4 L.</summary>
         public const ushort ErrEvtOrdinalCollision = 0x1707;
 
+        // ── Diagnostic message prefixes (derived from the error codes above) ───────────────
+        // AR-12 M-1: throw sites previously hardcoded the hex (e.g. "(0x1701)") inside their
+        // message literals, duplicating the values declared above — a code retune would leave
+        // the diagnostic strings stale. These prefixes derive the rendered "0xNNNN" text from
+        // the ushort constants so the codes are the single source of truth. Rendered text is
+        // byte-identical to the prior literals (X4 of 0x1701 = "1701"), so existing message
+        // substring assertions (e.g. Contains("0x1701")) are unaffected.
+
+        /// <summary>[GT] Rendered prefix for <see cref="ErrEvtQueueOverflow"/> diagnostics.</summary>
+        internal static readonly string ErrPrefixQueueOverflow =
+            "ERR_EVT_QUEUE_OVERFLOW (0x" + ErrEvtQueueOverflow.ToString("X4") + ")";
+
+        /// <summary>[GT] Rendered prefix for <see cref="ErrEvtRegistrationPhase"/> diagnostics.</summary>
+        internal static readonly string ErrPrefixRegistrationPhase =
+            "ERR_EVT_REGISTRATION_PHASE (0x" + ErrEvtRegistrationPhase.ToString("X4") + ")";
+
+        /// <summary>[GT] Rendered prefix for <see cref="ErrEvtUnregisteredOrdinal"/> diagnostics.</summary>
+        internal static readonly string ErrPrefixUnregisteredOrdinal =
+            "ERR_EVT_UNREGISTERED_ORDINAL (0x" + ErrEvtUnregisteredOrdinal.ToString("X4") + ")";
+
+        /// <summary>[GT] Rendered prefix for <see cref="ErrEvtOrdinalCollision"/> diagnostics.</summary>
+        internal static readonly string ErrPrefixOrdinalCollision =
+            "ERR_EVT_ORDINAL_COLLISION (0x" + ErrEvtOrdinalCollision.ToString("X4") + ")";
+
         #endregion
 
         #region Cross
@@ -120,4 +150,11 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | stackalloc footprint of EventLedger.DrainTick / SerializeLedger so a       |
 // |         |            |        | Stage 1 config-loader bump of EventQueueCapacity cannot grow the           |
 // |         |            |        | stackalloc into StackOverflowException range inside the tick pipeline.    |
+// | 1.4     | 2026-06-15 | —      | AR-12 M-1: added ErrPrefix* internal static readonly strings that derive  |
+// |         |            |        | the rendered "0xNNNN" diagnostic text from the ushort error codes, so the |
+// |         |            |        | codes are the single source of truth (throw sites in EventBus/EventLedger/|
+// |         |            |        | CosmeticChannel/EventRegistry previously hardcoded the hex in message     |
+// |         |            |        | literals). Rendered text byte-identical — substring assertions unaffected.|
+// |         |            |        | AR-12 L-1: doc-noted CosmeticPerTickPublicationBudget + PayloadVersionWidth|
+// |         |            |        | as declared-but-unconsumed at Stage 0 (Stage 0+1 / Stage 5+ activation).  |
 #endregion

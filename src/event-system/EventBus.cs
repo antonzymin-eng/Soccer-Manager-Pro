@@ -1,6 +1,6 @@
 // File:     src/event-system/EventBus.cs
 // Created:  2026-05-30
-// Modified: 2026-06-07
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Event System #17 §3.2.1, §3.2.2, §4.4, Code Standards #20
 // Purpose:  Public static event bus. Publish/Subscribe entry points plus DrainTick,
@@ -118,12 +118,17 @@ namespace TacticalDirector.EventSystem
             // verify the call comes from the registered producer phase. Stripped from
             // release builds (FR-EVT-048 zero-alloc). Both message arms are constant
             // string literals — no allocation from the eager argument evaluation.
+            // AR-12 L-3: skip the assert when the ordinal is 0 (unregistered). Otherwise
+            // GetProducerPhaseIndex(0) reads the default registry row (phase Input) and the
+            // assert fires with a misleading "incorrect producer phase" message — let
+            // PublishAuthoritative throw the accurate ERR_EVT_UNREGISTERED_ORDINAL instead.
             byte dbgOrdinal = EventOrdinalCache<T>.Ordinal;
-            UnityEngine.Debug.Assert(
-                (byte)EventLedger.CurrentPhase == EventRegistry.GetProducerPhaseIndex(dbgOrdinal),
-                EventTierCache<T>.IsTierB
-                    ? "EventBus.Publish<T>: Tier B event published from incorrect producer phase."
-                    : "EventBus.Publish<T>: Tier A event published from incorrect producer phase.");
+            if (dbgOrdinal != 0)
+                UnityEngine.Debug.Assert(
+                    (byte)EventLedger.CurrentPhase == EventRegistry.GetProducerPhaseIndex(dbgOrdinal),
+                    EventTierCache<T>.IsTierB
+                        ? "EventBus.Publish<T>: Tier B event published from incorrect producer phase."
+                        : "EventBus.Publish<T>: Tier A event published from incorrect producer phase.");
 #endif
             PublishAuthoritative(in evt);
         }
@@ -154,7 +159,7 @@ namespace TacticalDirector.EventSystem
             byte ordinal = EventOrdinalCache<T>.Ordinal;
             if (ordinal == 0)
                 throw new InvalidOperationException(
-                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    EventSystemConstants.ErrPrefixUnregisteredOrdinal + ": " + typeof(T).Name +
                     " subscribed before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
                     "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
             return EventLedger.Subscribe<T>(handler, ordinal,
@@ -182,13 +187,13 @@ namespace TacticalDirector.EventSystem
             // is true. Unconditional throw catches the error in release builds too. FR-EVT-020).
             if (ordinal == 0)
                 throw new InvalidOperationException(
-                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): " + typeof(T).Name +
+                    EventSystemConstants.ErrPrefixUnregisteredOrdinal + ": " + typeof(T).Name +
                     " published before EventBusRegistrar.Initialize() — ordinal cache is 0. " +
                     "Call the owning spec's EventBusRegistrar.Initialize() during boot phase (FR-EVT-020).");
 
             if (EventLedger.QueueCount >= EventSystemConstants.EventQueueCapacity)
                 throw new InvalidOperationException(
-                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): ring buffer full. " +
+                    EventSystemConstants.ErrPrefixQueueOverflow + ": ring buffer full. " +
                     "EventQueueCapacity=" + EventSystemConstants.EventQueueCapacity);
 
             // Out-degree cap (FR-EVT-046a): during BFS dispatch, a handler may publish
@@ -198,7 +203,8 @@ namespace TacticalDirector.EventSystem
                 EventLedger.HandlerSecondaryPublishCount++;
                 if (EventLedger.HandlerSecondaryPublishCount > 1)
                     throw new InvalidOperationException(
-                        "ERR_EVT_QUEUE_OVERFLOW (0x1701): per-handler Tier A/B out-degree > 1 (FR-EVT-046a).");
+                        EventSystemConstants.ErrPrefixQueueOverflow +
+                        ": per-handler Tier A/B out-degree > 1 (FR-EVT-046a).");
             }
 
             // AR-5 M-1: structSize validation must precede QueueCount reservation. If a guard
@@ -218,7 +224,7 @@ namespace TacticalDirector.EventSystem
             // CosmeticChannel.Publish).
             if (structSize <= 0)
                 throw new InvalidOperationException(
-                    "ERR_EVT_UNREGISTERED_ORDINAL (0x1706): struct size is 0 for ordinal 0x" +
+                    EventSystemConstants.ErrPrefixUnregisteredOrdinal + ": struct size is 0 for ordinal 0x" +
                     ordinal.ToString("X2") + ". Call EventBusRegistrar.Initialize() before publishing.");
 
             // AR-4 fix: upper-bound guard (symmetric with AR-3 fix in CosmeticChannel.Publish).
@@ -227,7 +233,7 @@ namespace TacticalDirector.EventSystem
             // throws when slotOffset+structSize > PayloadBuffer.Length, not when > MaxEventSlotBytes).
             if (structSize > EventSystemConstants.MaxEventSlotBytes)
                 throw new InvalidOperationException(
-                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): Tier A/B struct size " + structSize +
+                    EventSystemConstants.ErrPrefixQueueOverflow + ": Tier A/B struct size " + structSize +
                     " bytes exceeds MaxEventSlotBytes " + EventSystemConstants.MaxEventSlotBytes +
                     " for ordinal 0x" + ordinal.ToString("X2") +
                     ". Increase MaxEventSlotBytes or reduce struct size (§3.5.1).");
@@ -244,7 +250,7 @@ namespace TacticalDirector.EventSystem
             byte phaseIdxCheck = (byte)EventLedger.CurrentPhase;
             if (phaseIdxCheck >= EventLedger.PhaseDrawIndices.Length)
                 throw new InvalidOperationException(
-                    "ERR_EVT_QUEUE_OVERFLOW (0x1701): Publish<T> called with invalid CurrentPhase 0x" +
+                    EventSystemConstants.ErrPrefixQueueOverflow + ": Publish<T> called with invalid CurrentPhase 0x" +
                     phaseIdxCheck.ToString("X2") + " (likely a stale publish between OnTickBoundary " +
                     "and the next BeginPhase). AR-8 M-2 sentinel — call BeginTick + BeginPhase first.");
 
@@ -296,7 +302,7 @@ namespace TacticalDirector.EventSystem
         {
             if (EventLedger.BootPhaseComplete)
                 throw new InvalidOperationException(
-                    "ERR_EVT_REGISTRATION_PHASE (0x1705): Tier A/B subscriber registered " +
+                    EventSystemConstants.ErrPrefixRegistrationPhase + ": Tier A/B subscriber registered " +
                     "after boot phase ended. Register before first DrainTick call (FR-EVT-020/021).");
         }
     }
@@ -373,4 +379,11 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | sites (EventBus.Publish(in evt) / Subscribe(handler)) compile      |
 // |         |            |        | unchanged — dispatch moved from overload resolution to runtime     |
 // |         |            |        | cached flags with identical per-tier behaviour.                    |
+// | 2.0     | 2026-06-15 | —      | AR-12 M-1: throw-site hex literals replaced with the                |
+// |         |            |        | EventSystemConstants.ErrPrefix* strings (codes are now the single  |
+// |         |            |        | source of truth; rendered text byte-identical). AR-12 L-3: the     |
+// |         |            |        | dev-only producer-phase Debug.Assert is now skipped when the       |
+// |         |            |        | ordinal is 0 (unregistered) so PublishAuthoritative throws the     |
+// |         |            |        | accurate ERR_EVT_UNREGISTERED_ORDINAL instead of a misleading      |
+// |         |            |        | "incorrect producer phase" assert against the default row.         |
 #endregion
