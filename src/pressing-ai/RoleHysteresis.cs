@@ -26,21 +26,30 @@ namespace TacticalDirector.PressingAI
         /// <returns>Committed role after applying dwell guard.</returns>
         public static PressRole Commit(int agentIdx, PressRole candidateRole, RoleHysteresisState hystState)
         {
-            PressRole lastRole  = hystState.LastRole[agentIdx];
-            int       roleDwell = hystState.RoleDwell[agentIdx];
+            PressRole lastRole = hystState.LastRole[agentIdx];
 
             if (candidateRole == lastRole)
             {
                 // Candidate matches committed role — reset dwell, hold.
-                hystState.RoleDwell[agentIdx] = 0;
+                hystState.PendingRole[agentIdx] = lastRole;
+                hystState.RoleDwell[agentIdx]   = 0;
                 return lastRole;
             }
 
-            // Candidate differs — accumulate dwell.
-            roleDwell++;
-            hystState.RoleDwell[agentIdx] = roleDwell;
+            // Candidate differs from the committed role. Dwell must count CONSECUTIVE
+            // ticks of the SAME pending candidate (AR-2 M-3) — a candidate that changes
+            // each tick (A→B→A) restarts the count and cannot commit.
+            if (candidateRole == hystState.PendingRole[agentIdx])
+            {
+                hystState.RoleDwell[agentIdx]++;
+            }
+            else
+            {
+                hystState.PendingRole[agentIdx] = candidateRole;
+                hystState.RoleDwell[agentIdx]   = 1;
+            }
 
-            if (roleDwell >= PressingAIConstants.RoleDwellTicks)
+            if (hystState.RoleDwell[agentIdx] >= PressingAIConstants.RoleDwellTicks)
             {
                 // Dwell threshold reached — commit new role.
                 hystState.LastRole[agentIdx]  = candidateRole;
@@ -61,8 +70,9 @@ namespace TacticalDirector.PressingAI
         {
             for (int i = 0; i < hystState.Capacity; i++)
             {
-                hystState.LastRole[i]  = PressRole.HoldShape;
-                hystState.RoleDwell[i] = 0;
+                hystState.LastRole[i]    = PressRole.HoldShape;
+                hystState.PendingRole[i] = PressRole.HoldShape;
+                hystState.RoleDwell[i]   = 0;
             }
         }
     }
@@ -71,4 +81,5 @@ namespace TacticalDirector.PressingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-15 | —      | AR-2 M-3: Commit dwell now tracks a specific PendingRole; a flapping candidate restarts the count. ForceAllHoldShape resets PendingRole. |
 #endregion

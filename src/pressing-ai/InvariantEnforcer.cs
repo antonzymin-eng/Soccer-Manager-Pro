@@ -151,10 +151,13 @@ namespace TacticalDirector.PressingAI
         {
             float defensiveThirdMax = PressingAIConstants.PITCH_THIRD_M;
             int   pressingTeamId   = snapshot.PressingTeamId;
+            float attackDirX       = snapshot.AttackingDirection.x;
 
-            // Count own Defense-line agents in own defensive third (X < defensiveThirdMax).
-            // Agents with active press roles still occupy their physical position —
-            // we count by position, not by role assignment, per §3.9 invariant (2).
+            // Count own Defense-line agents in own defensive third. §3.9 "ownDefensiveThird"
+            // is measured from the pressing team's own goal line, so the position test is in
+            // attack-relative coordinates — a team attacking −X owns the X∈[70,105] third, not
+            // [0,35] (AR-2 H-1). Agents with active press roles still occupy their physical
+            // position — we count by position, not by role assignment, per §3.9 invariant (2).
             int backlineCount = 0;
             for (int i = 0; i < snapshot.Agents.Length; i++)
             {
@@ -167,7 +170,7 @@ namespace TacticalDirector.PressingAI
                     continue;
                 if (a.Line != LineId.Defense)
                     continue;
-                if (a.Position.x < defensiveThirdMax)
+                if (PitchOrientation.AttackRelativeX(a.Position.x, attackDirX) < defensiveThirdMax)
                     backlineCount++;
             }
 
@@ -260,4 +263,5 @@ namespace TacticalDirector.PressingAI
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-1: added IsActive guard in EnforceMinBackline. |
+// | 1.2     | 2026-06-15 | —      | AR-2 H-1: EnforceMinBackline own-defensive-third test now attack-direction-relative (PitchOrientation.AttackRelativeX). |
 #endregion
