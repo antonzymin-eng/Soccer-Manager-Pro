@@ -10,6 +10,8 @@
 using System;
 using System.Runtime.InteropServices;
 
+using TacticalDirector.DeterministicSim;
+
 namespace TacticalDirector.EventSystem
 {
     /// <summary>
@@ -170,10 +172,23 @@ namespace TacticalDirector.EventSystem
         /// Removes a previously registered Tier C subscriber.
         /// The token's handler slot is nulled out; the dispatcher skips null slots.
         /// Permitted at any time during match (FR-EVT-022).
+        /// AR-12 L-1: this is the Tier C unsubscribe surface only. A token issued for a
+        /// Tier A/B ordinal indexes the Tier C dispatcher table here and would silently
+        /// no-op (Tier A/B dispatchers live in EventLedger), so such a token is rejected
+        /// explicitly rather than failing quietly — Tier A/B subscriptions are boot-time
+        /// permanent (FR-EVT-020).
         /// Event System #17 §3.2.2 / §4.3.2.
         /// </summary>
         public static void Unsubscribe(SubscriptionToken token)
         {
+            byte tier = EventRegistry.GetTier(token.EventTypeOrdinal);
+            if (tier != (byte)DeterminismTier.TierC)
+                throw new InvalidOperationException(
+                    EventSystemConstants.ErrPrefixRegistrationPhase + ": ordinal 0x" +
+                    token.EventTypeOrdinal.ToString("X2") + " is a Tier A/B event — Tier A/B " +
+                    "subscriptions are boot-time permanent and cannot be unsubscribed " +
+                    "(FR-EVT-020). CosmeticChannel.Unsubscribe handles Tier C only.");
+
             EventTypeDispatchBase dispatcher = s_dispatchers[token.EventTypeOrdinal];
             dispatcher?.RemoveHandler(token.SubscriberIndex);
         }
@@ -245,4 +260,10 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | EventBus route applies. AR-12 M-1: throw-site hex literals replaced  |
 // |         |            |        | with EventSystemConstants.ErrPrefix* strings (codes single source    |
 // |         |            |        | of truth; rendered text byte-identical).                             |
+// | 1.11    | 2026-06-15 | —      | AR-12 (re-review) L-1: Unsubscribe now rejects a Tier A/B token with |
+// |         |            |        | ERR_EVT_REGISTRATION_PHASE instead of silently no-opping. The method |
+// |         |            |        | only indexes the Tier C dispatcher table, so a Tier A/B token (whose |
+// |         |            |        | dispatcher lives in EventLedger) previously did nothing quietly;     |
+// |         |            |        | Tier A/B subscriptions are boot-time permanent (FR-EVT-020). Added   |
+// |         |            |        | using TacticalDirector.DeterministicSim for DeterminismTier.         |
 #endregion
