@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/AttackingAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Attacking AI #15 §3.13, §4.1–§4.3, FR-AT-001–FR-AT-027, Code Standards #20
 // Purpose:  10 Hz attacking AI orchestrator for one team. Runs the §3.13 pipeline:
@@ -138,6 +138,16 @@ namespace TacticalDirector.AttackingAI
             // ── IN_POSSESSION ─────────────────────────────────────────────────
             _transitionState.TransitionHoldTick = 0; // reset countdown on IN_POSSESSION return
 
+            // Loose-ball guard (FR-AT-008 / §2.3): an IN_POSSESSION phase with no identified
+            // carrier (BallCarrierEntityId < 0) has an undefined BallCarrierPosition — run-target
+            // origin (§3.4) and support radius (§3.5) would key off stale data. Emit empty; no
+            // role assignment is meaningful without a carrier.
+            if (snapshot.BallCarrierEntityId < 0)
+            {
+                SetEmpty(snapshot.TickIndex, phase);
+                return;
+            }
+
             // ── Step 3: Build attacking pool (§3.2) ──────────────────────────
             int poolCount = AttackingPoolBuilder.Build(snapshot, _poolBuffer);
 
@@ -269,4 +279,5 @@ namespace TacticalDirector.AttackingAI
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 M-4: removed dead firstLossThisTick variable and || clause (OutOfPoss already caught above; remaining non-InPoss phases are TransToAtk/TransToDef, covered by isTransition). |
+// | 1.2     | 2026-06-15 | —      | AR-5 M-2 (ERR-015-011): added the FR-AT-008 loose-ball guard — an IN_POSSESSION phase with BallCarrierEntityId < 0 now emits an empty directive instead of running the pipeline against an undefined BallCarrierPosition. |
 #endregion

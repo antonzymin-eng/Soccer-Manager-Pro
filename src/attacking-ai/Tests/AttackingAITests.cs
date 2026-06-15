@@ -1257,6 +1257,28 @@ namespace TacticalDirector.AttackingAI.Tests
             Assert.IsFalse(intent.RunParameters.HasValue,
                 "RunParameters must be null for non-Runner roles (FR-AT-011).");
         }
+
+        /// <summary>
+        /// T-AT-U-051 (ERR-015-010 regression): AttackIntentSnapshot.Intents is bounded to the
+        /// valid count, not the backing-buffer length. A consumer iterating .Count must see only
+        /// the published intents, never the stale tail of the SQUAD_SIZE buffer.
+        /// </summary>
+        [Test]
+        public void AttackIntentSnapshot_Intents_BoundedToValidCount()
+        {
+            AttackIntent[] buffer = new AttackIntent[AttackingAIConstants.SQUAD_SIZE];
+            buffer[0] = new AttackIntent(5, AttackRole.Runner, null, 7);
+            buffer[1] = new AttackIntent(9, AttackRole.SupportBall, null, 7);
+            // buffer[2..] are default(AttackIntent) — stale tail that must NOT be exposed.
+
+            AttackIntentSnapshot snap = new AttackIntentSnapshot(
+                AttackDirective.Empty, buffer, intentCount: 2, tickIndex: 7);
+
+            Assert.AreEqual(2, snap.Intents.Count,
+                "Intents.Count must equal the valid intent count, not the buffer length.");
+            Assert.AreEqual(5, snap.Intents[0].AgentEntityId, "First published intent must be EntityId 5.");
+            Assert.AreEqual(9, snap.Intents[1].AgentEntityId, "Second published intent must be EntityId 9.");
+        }
     }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -1490,6 +1512,20 @@ namespace TacticalDirector.AttackingAI.Tests
             Assert.Ignore("Stage 0+1: requires full AttackingAITick pipeline including " +
                           "publish phase to verify ordering — activate when " +
                           "AttackingAITick integration tests are wired at Stage 1 (FR-AT-021).");
+        }
+
+        /// <summary>
+        /// T-AT-I-013 (ERR-015-011 regression): an IN_POSSESSION tick with BallCarrierEntityId &lt; 0
+        /// (loose ball) must emit an empty directive (FR-AT-008), not run the pipeline against an
+        /// undefined BallCarrierPosition. Requires a PositioningAIView reporting IN_POSSESSION —
+        /// stub until the AttackingAITick driver is wired at Stage 1.
+        /// </summary>
+        [Test]
+        public void Tick_InPossession_LooseBall_EmitsEmptyDirective()
+        {
+            Assert.Ignore("Stage 0+1: requires a PositioningAIView phase seam to drive " +
+                          "AttackingAITick.Tick with phase=IN_POSSESSION and carrier=-1 — " +
+                          "activate when the AttackingAITick driver is wired (FR-AT-008).");
         }
     }
 
@@ -1768,4 +1804,6 @@ namespace TacticalDirector.AttackingAI.Tests
 //           |            |        | ~13 fixtures in the global namespace (could not resolve TacticalDirector.AttackingAI |
 //           |            |        | types) — the suite had NEVER compiled (ERR-004 defect class). Namespace now closes  |
 //           |            |        | at EOF. AR-4 H-1: added T-AT-U-050 (ERR-015-009 role-lock regression).               |
+// | 1.3     | 2026-06-15 | —      | AR-5: added T-AT-U-051 (ERR-015-010 — AttackIntentSnapshot.Intents bounded to valid |
+//           |            |        | count) and the T-AT-I-013 stub (ERR-015-011 — loose-ball empty-directive guard).     |
 #endregion
