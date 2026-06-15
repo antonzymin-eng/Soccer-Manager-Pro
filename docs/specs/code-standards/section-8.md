@@ -33,7 +33,7 @@ URL, the retrieval/verification date, and the section(s) in which it is used.
 | S-03 | `docs/planning/master-development-plan.md` — Stage 0–Stage 6 definitions, Fixed64 scope decision | `docs/planning/master-development-plan.md` | May 8, 2026 — Stage 5+ scope for Fixed64 confirmed in current text | §1.1, §7.3 |
 | S-04 | `docs/tracking/certification-platform.md` — Unity LTS version pin, C# version pin, compiler flags | `docs/tracking/certification-platform.md` | May 8, 2026 — file present; all Stage 0 rows confirmed `_TBD_` / `⏳ Not pinned` as of this date | §2.2.1 (FR-CS-008 INACTIVE condition), §3.7, §7.1 (D1-artifact, D5-artifact), §7.2 (merge gate note), §7.5 (D1, D5) |
 | S-05 | Microsoft C# Coding Conventions | https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions | May 8, 2026 | §3.1.1 (naming), §3.1.4 (Allman brace style), §7.4 |
-| S-06 | Unity Scripting API — Performance Best Practices | https://docs.unity3d.com/Manual/BestPracticeUnderstandingPerformanceInUnity.html | May 8, 2026 | §3.3 (zero-alloc patterns), §6.2 (virtual dispatch), §6.3 (ProfilerMarker) |
+| S-06 | Unity Scripting API — Performance Best Practices | https://docs.unity3d.com/2022.3/Documentation/Manual/BestPracticeUnderstandingPerformanceInUnity.html | June 15, 2026 | §3.3 (zero-alloc patterns), §6.2 (virtual dispatch), §6.3 (ProfilerMarker) |
 | S-07 | RFC 2119 — Key words for use in RFCs to Indicate Requirement Levels (MUST / SHOULD / MAY) | https://www.ietf.org/rfc/rfc2119.txt | May 8, 2026 | §1.1 (RFC 2119 conformance statement), §2.2 (every FR conformance level) |
 | S-08 | Microsoft Roslyn Analyzer documentation — `BannedApiAnalyzers`, `.editorconfig` severity levels | https://learn.microsoft.com/en-us/visualstudio/code-quality/roslyn-analyzers-overview | May 8, 2026 | §5.2 (analyzer gate), §7.1 (D2-artifact, D3-artifact), §7.2 (PR gate command), Appendix D (Stage 1 analyzer ID column) |
 
@@ -179,6 +179,7 @@ vacuously satisfied:
 | Version | Date | Author | Notes | Reviewer |
 |---|---|---|---|---|
 | 1.0 | May 8, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 8 and `outline-mid.md` v1.2 §8.1–§8.4. All eight sources verified on drafting date. | — |
+| 1.1 | June 15, 2026 | — | S-06 (Unity Performance Best Practices) URL re-pinned per the §8.4 retire-or-redirect rule: the unversioned `docs.unity3d.com/Manual/…` path drifts to Unity's latest manual and began returning HTTP 503 (CI Markdown link check, PR #169). Replaced with the 2022.3 versioned path matching the certified engine (`certification-platform.md` v1.2). Same page/content; retrieved-date refreshed. No normative spec text changed. | — |
 
 ---
 
