@@ -3,7 +3,8 @@
     { "pattern": "^https://doi.org/" },
     { "pattern": "^https://web\\.archive\\.org/" },
     { "pattern": "^https://github.com/.*/issues/" },
-    { "pattern": "^https://www\\.fifa\\.com/" }
+    { "pattern": "^https://www\\.fifa\\.com/" },
+    { "pattern": "^https://docs\\.unity3d\\.com/" }
   ],
   "timeout": "20s",
   "retryOn429": true,
