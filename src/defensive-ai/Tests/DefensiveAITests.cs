@@ -1905,6 +1905,56 @@ namespace TacticalDirector.DefensiveAI.Tests
     }
 
     /// <summary>
+    /// AR-2 sweep L: a ZONAL tick must clear the dwell accumulator so a re-acquisition does
+    /// not commit MAN_MARK without re-serving the §3.11 dwell window.
+    /// </summary>
+    [TestFixture]
+    internal sealed class ZonalBypassResetTests
+    {
+        private static DefensiveSnapshot WithOpponentAt(Vector2 oppPos, int tick)
+        {
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+            {
+                SnapshotBuilder.MakeAgent(entityId: 10, teamId: 0,
+                    position: new Vector2(30.0f, 34.0f), baselineSlot: new Vector2(30.0f, 34.0f),
+                    line: LineId.Midfield),
+                SnapshotBuilder.MakeAgent(entityId: 99, teamId: 1, position: oppPos, firstTouch: 14f),
+            };
+            return SnapshotBuilder.Build(agents, tick: tick);
+        }
+
+        /// <summary>T-DA-H3 — dwell does not carry through a ZONAL gap on re-acquisition.</summary>
+        [Test]
+        public void T_DA_H3_ZonalGapResetsDwell()
+        {
+            int[] pool = new int[] { 10 };
+            MarkAssignment[] assignments = new MarkAssignment[1];
+            MarkHysteresisState[] hysteresis = new MarkHysteresisState[] { MarkHysteresisState.Default() };
+
+            Vector2 inRange  = new Vector2(35.0f, 34.0f);   // dist 5 < 15 → MAN_MARK candidate.
+            Vector2 outRange = new Vector2(70.0f, 34.0f);   // dist 40 > 15 → ZONAL.
+
+            // Build the dwell almost to commit (MarkDwellTicks - 1 preferences).
+            int t = 1;
+            for (; t < DefensiveAIConstants.MarkDwellTicks; t++)
+                MarkAssigner.Assign(WithOpponentAt(inRange, t), pool, 1, t, assignments, hysteresis);
+
+            Assert.AreEqual(MarkMode.Zonal, assignments[0].Mode,
+                "Must not have committed yet (dwell incomplete).");
+
+            // One ZONAL tick (opponent leaves radius) — must clear the accumulator.
+            MarkAssigner.Assign(WithOpponentAt(outRange, t), pool, 1, t, assignments, hysteresis);
+            t++;
+
+            // Opponent re-enters: a single tick must NOT instantly commit — dwell restarts.
+            MarkAssigner.Assign(WithOpponentAt(inRange, t), pool, 1, t, assignments, hysteresis);
+
+            Assert.AreEqual(MarkMode.Zonal, assignments[0].Mode,
+                "Re-acquisition after a ZONAL gap must re-serve the dwell, not commit immediately.");
+        }
+    }
+
+    /// <summary>
     /// AR-2 M-2: the offside trap must not arm when there is no DEFENSE-line to step up.
     /// </summary>
     [TestFixture]
@@ -2192,5 +2242,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 // | 1.4     | 2026-06-15 | —      | AR-2 regression locks: HysteresisAliasingRegressionTests (T-DA-H1 EntityId-keyed         |
 // |         |            |        | hysteresis across pool-slot churn via the real orchestrator; T-DA-H1b phase-swing reset),|
 // |         |            |        | InvariantMultiViolationTests (T-DA-H2 all-excess MAN_MARK demotion; T-DA-H2b all          |
-// |         |            |        | over-displaced demoted), OffsideTrapEmptyLineTests (T-DA-M2 empty DEFENSE line gate).     |
+// |         |            |        | over-displaced demoted), OffsideTrapEmptyLineTests (T-DA-M2 empty DEFENSE line gate),     |
+// |         |            |        | ZonalBypassResetTests (T-DA-H3 dwell does not carry through a ZONAL gap). T-DA-045        |
+// |         |            |        | helper moved to Midfield line to isolate invariant 2 from backline enforcement.          |
 #endregion
