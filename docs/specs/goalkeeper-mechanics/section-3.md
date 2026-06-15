@@ -187,7 +187,9 @@ the dive's vertical component until that migration.
 ### 3.3.1 Dive launch impulse
 
 ```
-diveDirectionX     = sign(targetHandX - gkX)      // ∈ {-1, 0, +1}
+// Lateral dive axis is Y (touchline-to-touchline): the goal mouth spans Y, so
+// the keeper dives left/right across the goal along Y, NOT along goal-to-goal X (§1.2).
+diveDirectionY     = sign(targetHandY - gkY)      // ∈ {-1, 0, +1}
 diveLaunchImpulse  = DIVE_LAUNCH_BASE_MPS
                    + DIVE_LAUNCH_K_STRENGTH · Strength_norm
                    + DIVE_LAUNCH_K_AERIAL   · Aerial_norm
@@ -241,9 +243,9 @@ reachRadius(frame)  = reachRadiusBase
                     + REACH_K_AERIAL   · Aerial_norm
                     + REACH_K_STRENGTH · Strength_norm
                     - REACH_FATIGUE_COEFF · fatigue
-reachCenter(frame)  = (gkPos(frame).x + diveDirectionX · DIVE_LAUNCH_DISPLACEMENT_M
+reachCenter(frame)  = (gkPos(frame).x,
+                       gkPos(frame).y + diveDirectionY · DIVE_LAUNCH_DISPLACEMENT_M
                                               · t(frame),
-                       gkPos(frame).y,
                        handPathZ(frame))
 ```
 
@@ -895,3 +897,4 @@ standard rebound physics.
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; state machine (24 transitions), reaction pipeline, dive kinematics, §3.3.0 #12 consumer contract, master constants table (~70 rows / 8 subsections), handling-quality scalar with band-to-action mapping, cross-claim duel, rush dispatch, distribution generation, failed-save pipeline, boundary algorithms | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | May 16, 2026 | pass-1 fix pass | Resolves AR-S1-H2 (spillVelocity Gaussian removed — KD-7 single-purpose-per-site); AR-S1-H3 (HANDLING_K_BALL_SPEED unit corrected `per m/s` → `dimensionless`); AR-S1-M1 (BALL_ATTACKING_THIRD_X_M citation corrected to Ball Physics #1 §1.2); AR-S1-M3 (Throwing/Kicking attribute consumption wired in §3.8.1; THROW_ACCURACY_COEFF + KICK_ACCURACY_COEFF added to §3.4.7); AR-S1-M4 (§3.6.1 collider-surface citations to #3 added); AR-S1-M5 (`Recovering → Set` trigger amended to OR); AR-S1-L2 (`ONE_VS_ONE_REACTION_COEFF` sign documented in §3.4.3); AR-S1-L3 (`DOMAIN_TAG_GOALKEEPER` source-column references `ERR-011-001` explicitly) | self-pass-2 self-critique on v0.2 yields no further findings |
+| 0.3 | June 14, 2026 | impl AR-3 fix pass | §3.3.1 / §3.3.4 lateral dive axis corrected X → Y. The goal mouth spans the Y axis (touchline-to-touchline) per §1.2, so `diveDirectionX = sign(targetHandX − gkX)` and the `reachCenter` X displacement dived the keeper toward/away from its own goal instead of across the goal mouth — shots placed wide in Y were unreachable. Now `diveDirectionY = sign(targetHandY − gkY)` and `reachCenter` displaces along Y with `gkPos.x` fixed. Same axis-error defect class as Ball Physics ERR-001-001 / Decision Tree ERR-008-003. Code: `GoalkeeperDiveKinematics.cs` v1.1, `GoalkeeperMechanics.cs` v1.4 | implementation adversarial review |

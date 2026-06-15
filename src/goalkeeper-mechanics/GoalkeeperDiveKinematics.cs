@@ -1,6 +1,6 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperDiveKinematics.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-14
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.3, KD-12, Code Standards #20
 // Purpose:  Stage 0 synthetic dive trajectory (XY launch impulse + Z parabolic arc) owned
@@ -22,19 +22,24 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// Computes the dive launch impulse (m/s) along the dive direction.
         /// Formula: DIVE_LAUNCH_BASE_MPS + DIVE_LAUNCH_K_STRENGTH × Strength_norm
         ///          + DIVE_LAUNCH_K_AERIAL × Aerial_norm - DIVE_LAUNCH_FATIGUE_COEFF × fatigue.
+        /// STAGE 0 STATUS: this §3.3.1 formula is verified in isolation (T-5.1.3.1) but is NOT
+        /// invoked by GoalkeeperMechanics — the Stage 0 synthetic dive moves the hand-reach envelope
+        /// via ComputeReachCenter's DIVE_LAUNCH_DISPLACEMENT_M displacement rather than applying this
+        /// impulse to the GK body. It binds to AM #2 §3.5.1 kinematics at Stage 1 (KD-12 migration);
+        /// do NOT also displace reachCenter once the impulse drives real body motion (double-count).
         /// §3.3.1. Goalkeeper Mechanics #11 §3.3.
         /// </summary>
         /// <param name="attrs">GK agent attributes. §3.3.1.</param>
-        /// <param name="diveDirectionX">Signed dive direction in X-axis (∈ {-1, 0, +1}). §3.3.1.</param>
-        /// <returns>Signed dive launch impulse (m/s) along diveDirectionX.</returns>
-        public static float ComputeDiveLaunchImpulse(GoalkeeperAgentAttributes attrs, float diveDirectionX)
+        /// <param name="diveDirectionLateral">Signed lateral dive direction in the Y-axis (∈ {-1, 0, +1}). §3.3.1.</param>
+        /// <returns>Signed dive launch impulse (m/s) along diveDirectionLateral.</returns>
+        public static float ComputeDiveLaunchImpulse(GoalkeeperAgentAttributes attrs, float diveDirectionLateral)
         {
             float magnitude = GoalkeeperConstants.DiveLaunchBaseMps
                             + GoalkeeperConstants.DiveLaunchKStrength * attrs.StrengthNorm
                             + GoalkeeperConstants.DiveLaunchKAerial   * attrs.AerialNorm
                             - GoalkeeperConstants.DiveLaunchFatigueCoeff * attrs.Fatigue;
 
-            return magnitude * diveDirectionX;
+            return magnitude * diveDirectionLateral;
         }
 
         /// <summary>
@@ -111,16 +116,19 @@ namespace TacticalDirector.GoalkeeperMechanics
 
         /// <summary>
         /// Computes the world-space centre of the hand reach envelope at the given frame.
-        /// Formula: reachCenter = (gkPos.x + diveDirectionX × DIVE_LAUNCH_DISPLACEMENT_M × t,
-        ///                         gkPos.y, handPathZ)
+        /// Formula: reachCenter = (gkPos.x,
+        ///                         gkPos.y + diveDirectionLateral × DIVE_LAUNCH_DISPLACEMENT_M × t,
+        ///                         handPathZ)
         /// where t = (currentFrame - diveLaunchFrame) / diveDurationFrm ∈ [0, 1].
+        /// The lateral dive axis is Y (touchline-to-touchline): the goal mouth spans Y, so the keeper
+        /// dives left/right across the goal along Y, not along the goal-to-goal X axis (§1.2 / §3.3.4).
         /// §3.3.4. Goalkeeper Mechanics #11 §3.3.
         /// </summary>
         /// <param name="gkPos">Current GK XYZ position from AM #2 kinematics. §3.3.4.</param>
         /// <param name="currentFrame">Current 60 Hz physics frame. §3.3.4.</param>
         /// <param name="diveLaunchFrame">Frame at which the dive impulse was applied. §3.3.4.</param>
         /// <param name="diveDurationFrm">Total dive phase duration in frames. §3.3.4.</param>
-        /// <param name="diveDirectionX">Signed dive direction in X (∈ {-1, 0, +1}). §3.3.4.</param>
+        /// <param name="diveDirectionLateral">Signed lateral dive direction in Y (∈ {-1, 0, +1}). §3.3.4.</param>
         /// <param name="handPathZ">Hand Z (m) at currentFrame from ComputeHandPathZ. §3.3.4.</param>
         /// <returns>World-space centre of the hand reach envelope.</returns>
         public static Vector3 ComputeReachCenter(
@@ -128,16 +136,16 @@ namespace TacticalDirector.GoalkeeperMechanics
             int currentFrame,
             int diveLaunchFrame,
             int diveDurationFrm,
-            float diveDirectionX,
+            float diveDirectionLateral,
             float handPathZ)
         {
             float t = diveDurationFrm > 0
                 ? Clamp01((float)(currentFrame - diveLaunchFrame) / diveDurationFrm)
                 : 0.0f;
 
-            float reachX = gkPos.x + diveDirectionX * GoalkeeperConstants.DiveLaunchDisplacementM * t;
+            float reachY = gkPos.y + diveDirectionLateral * GoalkeeperConstants.DiveLaunchDisplacementM * t;
 
-            return new Vector3(reachX, gkPos.y, handPathZ);
+            return new Vector3(gkPos.x, reachY, handPathZ);
         }
 
         /// <summary>
@@ -162,6 +170,13 @@ namespace TacticalDirector.GoalkeeperMechanics
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-05-28 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-06-14 | —      | AR-3 M-2: lateral dive axis X→Y. The goal mouth spans Y        |
+// |         |            |        | (touchline-to-touchline), so reachCenter now displaces along Y |
+// |         |            |        | (gkPos.x fixed); diveDirectionX renamed diveDirectionLateral.  |
+// | 1.2     | 2026-06-14 | —      | AR-6 L: doc-note on ComputeDiveLaunchImpulse — tested in       |
+// |         |            |        | isolation but not invoked at Stage 0 (synthetic reachCenter    |
+// |         |            |        | displacement is used); double-count hazard flagged for the     |
+// |         |            |        | Stage 1 AM-kinematics binding.                                 |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperMechanics.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-14
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
 // Purpose:  Main 10 Hz + 60 Hz orchestrator. Manages per-GK state, dive kinematics, reaction pipeline,
@@ -47,8 +47,9 @@ namespace TacticalDirector.GoalkeeperMechanics
         private readonly int[]   _diveLaunchFrames;
         private readonly int[]   _diveDurationFrames;
         private readonly float[] _divePeakHandZ;
-        private readonly float[] _diveDirectionX;
+        private readonly float[] _diveDirectionLateral;
         private readonly float[] _rushLaunchMps;
+        private readonly int[]   _rushInitialAttackerId;
 
         // Shot reaction state
         private readonly float[] _shotDetectedTickMs;
@@ -100,8 +101,9 @@ namespace TacticalDirector.GoalkeeperMechanics
             _diveLaunchFrames       = new int[maxGks];
             _diveDurationFrames     = new int[maxGks];
             _divePeakHandZ          = new float[maxGks];
-            _diveDirectionX         = new float[maxGks];
+            _diveDirectionLateral   = new float[maxGks];
             _rushLaunchMps          = new float[maxGks];
+            _rushInitialAttackerId  = new int[maxGks];
 
             _shotDetectedTickMs     = new float[maxGks];
             _requiredReactionMs     = new float[maxGks];
@@ -118,6 +120,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                 _claimTick[i]               = -1;
                 _releaseTickEarliest[i]      = int.MaxValue;
                 _recoveryCooldownEndTick[i]  = 0;
+                _rushInitialAttackerId[i]   = -1;
                 _contactStates[i]           = GkContactState.CreateNew();
             }
         }
@@ -191,6 +194,9 @@ namespace TacticalDirector.GoalkeeperMechanics
             _rushIntentActive[gkIndex] = true;
             _attrs[gkIndex]            = attrs;
             _rushLaunchMps[gkIndex]    = GoalkeeperRushDispatch.ComputeRushLaunchMps(attrs);
+            // Lock the attacker the rush commits against (current ball holder) so a later
+            // F-08 interception abort fires only on possession passing to a THIRD party (KD-15).
+            _rushInitialAttackerId[gkIndex] = _ballSystem.GetBallPossessorId();
         }
 
         /// <summary>
@@ -321,6 +327,12 @@ namespace TacticalDirector.GoalkeeperMechanics
         {
             using var _ = s_updateMarker.Auto();
 
+            // §3.6 cross-claim / aerial duel resolution requires opponent hand/head collider
+            // geometry that the single-GK Stage 0 contact path does not yet plumb through this
+            // entry point. The duel buffer is cleared each frame and the resolver is exercised by
+            // GoalkeeperCrossClaimDuelTests; wiring contested multi-agent claims here is a Stage 1
+            // deliverable (pending the multi-agent contact feed). Until then no participants are
+            // registered, so ResolveHandContactDuel is intentionally not called.
             _crossClaimDuel.ClearFrameBuffer();
 
             for (int gkIndex = 0; gkIndex < GoalkeeperConstants.MaxGkAgents; gkIndex++)
@@ -376,9 +388,9 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                         _divePeakHandZ[gkIndex] = GoalkeeperDiveKinematics.ComputePeakHandZ(_attrs[gkIndex], jitterMs);
 
-                        // Dive direction from save intent
-                        _diveDirectionX[gkIndex] = _saveIntentActive[gkIndex]
-                            ? ComputeDiveDirectionX(_saveIntents[gkIndex], agentState)
+                        // Dive direction from save intent (lateral = Y, across the goal mouth)
+                        _diveDirectionLateral[gkIndex] = _saveIntentActive[gkIndex]
+                            ? ComputeDiveDirectionLateral(_saveIntents[gkIndex], agentState)
                             : 0.0f;
 
                         // Emit rush event (Launched phase) if applicable — not for save dives
@@ -404,13 +416,20 @@ namespace TacticalDirector.GoalkeeperMechanics
                         Vector3 gkPos3    = agentState.Position;
                         Vector3 reachCenter = GoalkeeperDiveKinematics.ComputeReachCenter(
                             gkPos3, currentFrame, launchFrame, durationFrames,
-                            _diveDirectionX[gkIndex], handZ);
+                            _diveDirectionLateral[gkIndex], handZ);
 
                         float distToBallSq = (ballState.Position - reachCenter).sqrMagnitude;
 
                         if (distToBallSq <= reachRadius * reachRadius)
                         {
                             handBallContactOccurred = true;
+
+                            // Telemetry: real hand-envelope-vs-ball offset at contact (XY metres).
+                            // The §3.5.1 pointQuality term consumes a SEPARATE cm-scale placement
+                            // error (below); this field is diagnostic only.
+                            _contactStates[gkIndex].ContactPointError = new Vector2(
+                                reachCenter.x - ballState.Position.x,
+                                reachCenter.y - ballState.Position.y);
 
                             // Compute handling quality
                             // Raw unit-variance Gaussian draws; GoalkeeperHandlingQuality.Compute
@@ -425,9 +444,16 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                             float pointNoise = GoalkeeperConstants.HandlingPointErrorSigmaM * pointNoiseRaw;
 
+                            // §3.5.1 pointQuality is a cm-scale placement-error term (worked
+                            // example: 0.03 m). The reach gate above guarantees the ball is inside
+                            // the hand envelope, so the Stage 0 model treats the hand as reaching
+                            // the ball with the residual deviation supplied by pointErrorNoise —
+                            // both anchors are the ball position. Feeding the metre-scale envelope
+                            // offset here would saturate pointQuality to 0 (divisor is 0.05 m) and
+                            // make clean catches/parries unreachable.
                             handlingQualityScalar = GoalkeeperHandlingQuality.Compute(
                                 attrs:                  _attrs[gkIndex],
-                                handContactActual:      reachCenter,
+                                handContactActual:      ballState.Position,
                                 targetHandContact:      ballState.Position,
                                 ballSpeedMps:           ballState.Velocity.magnitude,
                                 reactionWindowAchieved: _contactStates[gkIndex].ReactionWindowAchieved,
@@ -524,18 +550,22 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                 if (gkState == GoalkeeperState.Rushing)
                 {
+                    // Advance the GK toward the locked rush target and write the new position back
+                    // to the AM #2 state array so the rush actually moves the keeper (§3.7.2).
                     Vector3 gkMutablePos = agentState.Position;
                     GoalkeeperRushDispatch.UpdateRushFrame(
                         ref gkMutablePos,
                         _rushIntents[gkIndex].RushTarget,
                         _rushLaunchMps[gkIndex]);
+                    agentStates[agentId].Position = new Vector2(gkMutablePos.x, gkMutablePos.y);
 
-                    // F-08 ball-interception check (KD-15)
+                    // F-08 ball-interception check (KD-15): abort only when possession passes to a
+                    // THIRD party — not the GK, not the attacker the rush committed against. The
+                    // committed attacker still holding the ball is the expected case and must not abort.
                     int ballPossessorId = _ballSystem.GetBallPossessorId();
-                    int gkId           = agentId;
                     rushBallIntercepted = ballPossessorId >= 0
-                                       && ballPossessorId != gkId
-                                       && ballPossessorId != GetInitialAttackerTargetId(gkIndex);
+                                       && ballPossessorId != agentId
+                                       && ballPossessorId != _rushInitialAttackerId[gkIndex];
 
                     if (rushBallIntercepted)
                     {
@@ -546,7 +576,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                             RushPhase      = RushPhase.Aborted,
                             AbortReason    = AbortReason.BallIntercepted,
                             RushTarget     = _rushIntents[gkIndex].RushTarget,
-                            GkPosition     = agentState.Position,
+                            GkPosition     = gkMutablePos,
                             RushLaunchMps  = _rushLaunchMps[gkIndex]
                         };
                         EventBusStub.Publish(in rushEvt);
@@ -555,17 +585,79 @@ namespace TacticalDirector.GoalkeeperMechanics
                     }
                     else
                     {
-                        // Check 1v1 trigger and smother trigger
+                        // Check 1v1 and smother triggers from the UPDATED GK position this frame.
                         attackerWithinOneVsOneRadius = CheckAttackerWithinRadius(
-                            agentState.Position, ballState, GoalkeeperConstants.OneVsOneTriggerRadiusM);
+                            gkMutablePos, ballState, GoalkeeperConstants.OneVsOneTriggerRadiusM);
 
                         gkWithinSmotherRadius = CheckAttackerWithinRadius(
-                            agentState.Position, ballState, GoalkeeperConstants.SmotherTriggerRadiusM);
+                            gkMutablePos, ballState, GoalkeeperConstants.SmotherTriggerRadiusM);
+                    }
+                }
 
-                        if (gkWithinSmotherRadius)
+                // ── OneOnOne close-down (Stage 0) ─────────────────────────────────────
+                // Keep advancing toward the locked rush target and evaluate the smother trigger
+                // so OneOnOne → Smothered can fire. The trigger is otherwise computed only while
+                // Rushing, which stranded the keeper in OneOnOne (it could exit only via a 10 Hz
+                // SaveIntent → Diving). Movement is the same locked-target dispatch as the rush.
+                if (gkState == GoalkeeperState.OneOnOne)
+                {
+                    Vector3 gkMutablePos = agentState.Position;
+                    if (_rushIntentActive[gkIndex])
+                    {
+                        GoalkeeperRushDispatch.UpdateRushFrame(
+                            ref gkMutablePos,
+                            _rushIntents[gkIndex].RushTarget,
+                            _rushLaunchMps[gkIndex]);
+                        agentStates[agentId].Position = new Vector2(gkMutablePos.x, gkMutablePos.y);
+                    }
+
+                    gkWithinSmotherRadius = CheckAttackerWithinRadius(
+                        gkMutablePos, ballState, GoalkeeperConstants.SmotherTriggerRadiusM);
+                }
+
+                // ── Smother / 1v1 terminal contact (Stage 0 approximation) ────────────
+                // The full §3.6 contested hand-ball resolution for Smothered/OneOnOne depends on
+                // the #3 collision feed that is not plumbed into this entry point at Stage 0 (see
+                // the ClearFrameBuffer note above). To avoid stranding the keeper in Smothered, a
+                // close-range smother that reaches the ball within the save volume is resolved as a
+                // committed 1v1 claim (catch) here; richer parry/deflect outcomes land at Stage 1.
+                if (gkState == GoalkeeperState.Smothered)
+                {
+                    Vector3 gkBodyPos = agentState.Position;
+                    float   smotherReach = GoalkeeperConstants.GkSaveVolumeRadiusM;
+                    float   smotherDistSq = (ballState.Position - gkBodyPos).sqrMagnitude;
+
+                    if (smotherDistSq <= smotherReach * smotherReach)
+                    {
+                        handBallContactOccurred = true;
+                        handlingQualityScalar   = GoalkeeperConstants.CatchThreshold; // claim
+                        _contactStates[gkIndex].HandlingQualityScalar = handlingQualityScalar;
+                        _contactStates[gkIndex].ActualContactFrame    = currentFrame;
+
+                        _ballSystem.SetPossessor(agentId);
+                        _claimTick[gkIndex]           = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
+                        _releaseTickEarliest[gkIndex]  = _claimTick[gkIndex] + 1;
+
+                        BallClaimedEvent smotherClaim = new BallClaimedEvent
                         {
-                            // Transition will happen in physics transition evaluation
-                        }
+                            AgentId               = agentId,
+                            MatchTimeMs           = currentMatchTimeMs,
+                            HandlingQualityScalar = handlingQualityScalar,
+                            ClaimType             = ClaimType.OneOnOne,
+                            ClaimPosition         = gkBodyPos,
+                            ContactBodyPart       = BodyPartEnum.Body,
+                            ContestedDuelId       = -1
+                        };
+                        EventBusStub.Publish(in smotherClaim);
+                        _telemetry.RecordBallClaim(ClaimType.OneOnOne);
+                    }
+                    else
+                    {
+                        // Attacker took the ball out of the smother volume — resolve as a failed
+                        // close-down (contact, quality below MIN_HANDLING_QUALITY) so the Smothered
+                        // state machine routes to Recovering rather than stalling. No claim emitted.
+                        handBallContactOccurred = true;
+                        handlingQualityScalar   = 0.0f;
                     }
                 }
 
@@ -612,6 +704,14 @@ namespace TacticalDirector.GoalkeeperMechanics
                     _telemetry.RecordDistribution(distIntent.DeliveryKind);
                     _distributeIntentActive[gkIndex] = false;
                 }
+                else if (gkState == GoalkeeperState.Distributing)
+                {
+                    // Forced 6-second release (§3.1 / FR-GK-028) reaches Distributing with no
+                    // committed DistributeIntent. Release the state anyway so the GK does not
+                    // stall holding the ball indefinitely; no DistributionExecutedEvent is
+                    // published (the Decision Tree never supplied a delivery).
+                    distributionReleaseReached = true;
+                }
 
                 // ── Physics state transition ──────────────────────────────────────────
                 _states[gkIndex] = GoalkeeperStateMachine.EvaluatePhysicsTransition(
@@ -653,12 +753,19 @@ namespace TacticalDirector.GoalkeeperMechanics
                     }
                 }
 
-                // ── Clear rush intent once the rush is fully resolved ─────────────────
-                // Rushing → Smothered: contact made. Rushing → Recovering: ball intercepted (cleared above).
-                // Rushing → HandsOnBall path via Smothered → HandsOnBall handled transitively next frame.
-                if (_rushIntentActive[gkIndex] && gkState == GoalkeeperState.Rushing)
+                // ── Clear rush intent once the rush chain is fully resolved ───────────
+                // The chain is Rushing → {Smothered, OneOnOne} → {Smothered} → {HandsOnBall,
+                // Recovering}. Clear when leaving any chain state into a terminal/holding state so a
+                // stale active rush intent cannot spuriously re-trigger Set → Rushing later.
+                if (_rushIntentActive[gkIndex])
                 {
-                    if (newState == GoalkeeperState.Smothered || newState == GoalkeeperState.Recovering)
+                    bool inRushChain = gkState == GoalkeeperState.Rushing
+                                    || gkState == GoalkeeperState.OneOnOne
+                                    || gkState == GoalkeeperState.Smothered;
+                    if (inRushChain &&
+                        (newState == GoalkeeperState.Smothered
+                         || newState == GoalkeeperState.Recovering
+                         || newState == GoalkeeperState.HandsOnBall))
                     {
                         _rushIntentActive[gkIndex] = false;
                     }
@@ -668,12 +775,14 @@ namespace TacticalDirector.GoalkeeperMechanics
 
         // ── Private helpers ──────────────────────────────────────────────────────────
 
-        private static float ComputeDiveDirectionX(SaveIntent intent, AgentState agentState)
+        // Lateral dive axis is Y (touchline-to-touchline): the goal mouth spans Y, so the keeper
+        // dives left/right across the goal along Y — not along the goal-to-goal X axis (§1.2 / §3.3.1).
+        private static float ComputeDiveDirectionLateral(SaveIntent intent, AgentState agentState)
         {
             if (intent.DeflectionTarget.HasValue)
             {
-                float dx = intent.DeflectionTarget.Value.x - agentState.Position.x;
-                return dx > 0.0f ? 1.0f : dx < 0.0f ? -1.0f : 0.0f;
+                float dy = intent.DeflectionTarget.Value.y - agentState.Position.y;
+                return dy > 0.0f ? 1.0f : dy < 0.0f ? -1.0f : 0.0f;
             }
             return 0.0f;
         }
@@ -687,13 +796,6 @@ namespace TacticalDirector.GoalkeeperMechanics
                 return distSq <= radius * radius;
             }
             return false;
-        }
-
-        private int GetInitialAttackerTargetId(int gkIndex)
-        {
-            // Stage 0 stub: return -1 (no stored attacker target tracking yet)
-            // Full attacker-target tracking is a Stage 1 concern per §3.7 / KD-15
-            return -1;
         }
     }
 }
@@ -713,4 +815,37 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |         |            |        | CS0266 everywhere; assembly never compiled. Now coalesces null ->   |
 // |         |            |        | -1, the zone-target sentinel the event field documented in its v1.2 |
 // |         |            |        | AR-2 row. No behaviour change for receiver-targeted distributions.  |
+// | 1.4     | 2026-06-14 | —      | AR-3 fix pass (2H+3M+L). H-1: §3.5.1 handling Compute was fed the  |
+// |         |            |        | metre-scale reach-envelope offset (reachCenter vs ball) as the     |
+// |         |            |        | point error, so pointQuality (divisor 0.05 m) saturated to 0 and   |
+// |         |            |        | clean catches/parries were unreachable; both contact anchors are   |
+// |         |            |        | now the ball position (cm-scale noise-driven error per §3.5.4).    |
+// |         |            |        | H-2: rush UpdateRushFrame result was written to a discarded local; |
+// |         |            |        | the GK never moved during a rush — now written back to            |
+// |         |            |        | agentStates[agentId].Position and used for the same-frame          |
+// |         |            |        | 1v1/smother radius checks. M-1: rush abort no longer fires on the  |
+// |         |            |        | committed attacker holding the ball (GetInitialAttackerTargetId    |
+// |         |            |        | stub −1 made every possession abort); attacker captured at         |
+// |         |            |        | CommitRushIntent (_rushInitialAttackerId). M-2: dive lateral axis  |
+// |         |            |        | X→Y (goal mouth spans Y, §1.2). M-3: cross-claim duel wiring       |
+// |         |            |        | documented as a Stage 1 deliverable. L: SaveAttemptedEvent.        |
+// |         |            |        | ContactPointError now populated (was always 0); dead              |
+// |         |            |        | GetInitialAttackerTargetId + empty smother-if removed.            |
+// | 1.5     | 2026-06-14 | —      | AR-4. M-1: forced 6-second release with no committed              |
+// |         |            |        | DistributeIntent reached Distributing and stalled forever (the     |
+// |         |            |        | release guard required an active intent); now exits to Recovering  |
+// |         |            |        | without publishing when no delivery was supplied. M-2: Smothered/  |
+// |         |            |        | OneOnOne had NO terminal contact resolver (contact was computed    |
+// |         |            |        | only in the Airborne dive path), so a rush that reached the        |
+// |         |            |        | smother radius stranded the keeper. Added a Stage 0 close-range    |
+// |         |            |        | smother resolution: ball within the save volume → 1v1 claim       |
+// |         |            |        | (SetPossessor + BallClaimedEvent); else a failed close-down routes |
+// |         |            |        | to Recovering. Full §3.6 contested outcomes are Stage 1.          |
+// | 1.6     | 2026-06-14 | —      | AR-5 M-1: OneOnOne → Smothered was dead — gkWithinSmotherRadius   |
+// |         |            |        | was computed only while Rushing, so a keeper that reached OneOnOne |
+// |         |            |        | (now reachable after the v1.4 H-2 rush-motion fix) stranded there. |
+// |         |            |        | OneOnOne now advances toward the locked rush target and evaluates  |
+// |         |            |        | the smother trigger; rush-intent clear broadened to the whole      |
+// |         |            |        | Rushing/OneOnOne/Smothered chain so a stale intent cannot          |
+// |         |            |        | re-trigger Set → Rushing.                                          |
 #endregion

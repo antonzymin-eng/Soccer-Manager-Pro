@@ -851,7 +851,7 @@ elapsed = 250 ms at 60 Hz tick following shot detection;
 **Stage 0 synthetic dive trajectory (KD-12):**
 
 ```
-diveDirection         = sign(targetHandX - gkX)        // -1 / 0 / +1
+diveDirection         = sign(targetHandY - gkY)        // -1 / 0 / +1  (lateral = Y, across goal mouth; §1.2)
 diveLaunchImpulse_mps = DIVE_LAUNCH_BASE_MPS
                       + DIVE_LAUNCH_K_STRENGTH · Strength_norm
                       + DIVE_LAUNCH_K_AERIAL   · Aerial_norm
