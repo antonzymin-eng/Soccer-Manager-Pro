@@ -1,6 +1,6 @@
 // File:     src/agent-movement/OscillationGuard.cs
 // Created:  2026-05-25
-// Modified: 2026-06-07 (AR-11 fix pass)
+// Modified: 2026-06-16 (Match Engine Phase B step B0: GetState/RestoreState serialization seam)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.7, Code Standards #20
 // Purpose:  Ring-buffer guard that detects rapid state oscillation and enforces a lock-out period.
@@ -80,6 +80,40 @@ namespace TacticalDirector.AgentMovement
             return false;
         }
 
+        /// <summary>
+        /// Captures this guard's cross-tick ring-buffer state as a plain-data snapshot for canonical
+        /// serialization / deterministic replay (Match Engine design note §2.6, Phase B step B0).
+        /// Parallel to DeterministicRngService.GetStreamState. Allocation-free (returns a value type).
+        /// </summary>
+        public readonly OscillationGuardState GetState()
+        {
+            // Field-count coupling guard, parallel to WriteTime's default arm: the snapshot struct
+            // carries exactly TimestampSlots timestamps, so a BufferSize bump beyond it would silently
+            // drop ring-buffer state from the snapshot and diverge replay.
+            Debug.Assert(OscillationGuardConstants.BufferSize == OscillationGuardState.TimestampSlots,
+                "OscillationGuard.GetState: BufferSize changed without updating OscillationGuardState.TimestampSlots / the 8 hardcoded slots.");
+
+            return new OscillationGuardState(
+                _t0, _t1, _t2, _t3, _t4, _t5, _t6, _t7,
+                _writeIndex, _isLocked, _lockUntilTime);
+        }
+
+        /// <summary>
+        /// Restores this guard's cross-tick ring-buffer state from a snapshot produced by
+        /// <see cref="GetState"/> (replay / save-load). Parallel to DeterministicRngService.RestoreStream.
+        /// </summary>
+        public void RestoreState(in OscillationGuardState state)
+        {
+            Debug.Assert(OscillationGuardConstants.BufferSize == OscillationGuardState.TimestampSlots,
+                "OscillationGuard.RestoreState: BufferSize changed without updating OscillationGuardState.TimestampSlots / the 8 hardcoded slots.");
+
+            _t0 = state.T0; _t1 = state.T1; _t2 = state.T2; _t3 = state.T3;
+            _t4 = state.T4; _t5 = state.T5; _t6 = state.T6; _t7 = state.T7;
+            _writeIndex    = state.WriteIndex;
+            _isLocked      = state.IsLocked;
+            _lockUntilTime = state.LockUntilTime;
+        }
+
         private void WriteTime(int index, float value)
         {
             switch (index)
@@ -138,4 +172,10 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | NegativeInfinity default. A future BufferSize bump beyond the 8 hardcoded switch arms          |
 // |         |            |        | would silently drop writes while ReadTime treats unreached slots as -Infinity, corrupting      |
 // |         |            |        | the recent-transition count. Fails fast in dev builds instead. `using UnityEngine;` added.    |
+// | 1.5     | 2026-06-16 | —      | Match Engine Phase B step B0: GetState()/RestoreState(in OscillationGuardState) serialization  |
+// |         |            |        | seam added (parallel to DeterministicRngService.GetStreamState/RestoreStream) so the           |
+// |         |            |        | match-engine snapshot can canonically serialize the guard's private ring-buffer state — the    |
+// |         |            |        | guard is embedded in AgentState (design note §2.6). New OscillationGuardState.cs DTO. Both     |
+// |         |            |        | methods Debug.Assert BufferSize == OscillationGuardState.TimestampSlots (field-count coupling). |
+// |         |            |        | GetState is `readonly` (pure getter — avoids defensive copies through in/ref-readonly callers). |
 #endregion

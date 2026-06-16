@@ -64,7 +64,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/agent-movement/MovementCommand.cs` | Input command structure from Decision Tree / tactical layer |
 | `src/agent-movement/AgentMovementSystem.cs` | 12-step 60 Hz pipeline orchestrator |
 | `src/agent-movement/AgentStateMachine.cs` | Pure state evaluator (no side effects) |
-| `src/agent-movement/OscillationGuard.cs` | Ring-buffer anti-oscillation guard |
+| `src/agent-movement/OscillationGuard.cs` | Ring-buffer anti-oscillation guard; v1.5 adds the GetState/RestoreState serialization seam (Match Engine Phase B step B0) |
+| `src/agent-movement/OscillationGuardState.cs` | Plain-data snapshot DTO of OscillationGuard's ring-buffer state (Phase B step B0 serialization seam; parallel to DeterministicSim RngStreamState) |
 | `src/agent-movement/AgentLocomotion.cs` | Acceleration / deceleration formulas |
 | `src/agent-movement/AgentTurning.cs` | Turn rate / lean angle / stumble probability |
 | `src/agent-movement/AgentDirectionalMovement.cs` | Directional multipliers / facing update |
@@ -75,7 +76,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/agent-movement/Tests/AgentMovementUnitTests.cs` | Pure-function unit coverage T-AM-007..009 / 019..023 / 034..039 / 044..047 / 050..052 / 070..109 (T-AM-108..109 added in AR-12 fix pass, June 9, 2026) |
 | `src/agent-movement/Tests/AgentMovementScenarios.cs` | Per-spec closed-loop scenario corpus T-AM-110..115 (#19 §3.3.1): scenario bodies + Appendix A.1 manifests; first fixture corpus on the #19 ScenarioRunner (June 10, 2026) |
 | `src/agent-movement/Tests/AgentMovementScenarioTests.cs` | Simulation-layer executable tests (`sim_<scenario>` per #19 §3.1.4) running the T-AM-110..115 corpus through ScenarioRunner.Run |
-| `src/agent-movement/Tests/agent-movement-tests.asmdef` | Test assembly definition (EditMode; references agent-movement.asmdef + testing-strategy.asmdef) |
+| `src/agent-movement/Tests/OscillationGuardSerializationTests.cs` | B0-001..004 — OscillationGuard GetState/RestoreState CanonicalSerializer round-trip + behavioural-equivalence locks (Match Engine Phase B step B0) |
+| `src/agent-movement/Tests/agent-movement-tests.asmdef` | Test assembly definition (EditMode; references agent-movement.asmdef + testing-strategy.asmdef + deterministic-sim.asmdef for the B0 CanonicalSerializer round-trip) |
 
 ### Spec #3 — Collision System (`src/collision-system/`)
 
