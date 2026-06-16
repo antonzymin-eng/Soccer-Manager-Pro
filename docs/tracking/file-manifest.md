@@ -443,7 +443,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | File | Purpose |
 |------|---------|
 | `src/deterministic-sim/deterministic-sim.asmdef` | Assembly definition (no references — cross-cutting foundation) |
-| `src/deterministic-sim/DeterministicSimConstants.cs` | All [FIXED]/[DERIVED]/[GT] constants: tick rates, error codes (0x1601–0x160D), domain tags (0x10–0x1D), field widths, RNG params, digest/schema versions, END_OF_SNAPSHOT_PHASE_ORDINAL=6 |
+| `src/deterministic-sim/DeterministicSimConstants.cs` | All [FIXED]/[DERIVED]/[GT] constants: tick rates, error codes (0x1601–0x160D), domain tags (0x10–0x1D), field widths, RNG params, digest/schema versions, END_OF_SNAPSHOT_PHASE_ORDINAL=6, FrameMs / FrameSeconds (B1 per-tick dt) |
 | `src/deterministic-sim/PhaseId.cs` | Enum: Input=0 / Intent=1 / AI=2 / Physics=3 / Resolve=4 / Events=5 / Snapshot=6 (byte; AR-1 H-4: AI_NoOp removed; Events=5 added) |
 | `src/deterministic-sim/DeterminismTier.cs` | Enum: TierA=0 / TierB=1 / TierC=2 (byte) |
 | `src/deterministic-sim/DivergenceClass.cs` | Enum: None / HardDesync / SoftDrift / Cosmetic (byte) |
@@ -453,7 +453,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/deterministic-sim/DespawnLog.cs` | Pre-allocated tombstone list: Append / ContainsEntity / GetEntry / Clear; capacity = MaxDespawnEntries (512) |
 | `src/deterministic-sim/EnvironmentFingerprint.cs` | Sealed class: 6 readonly fields (WorkerCount, SchedulerPolicy, ReductionTopology, SimdFeatureLevel, FloatModelHash, UnicodeNormalizationVersion); Lock(); ValidateAgainst() → ERR_DS_REPLAY_ENV_MISMATCH; CreateStage0Dev() factory |
 | `src/deterministic-sim/RngStreamState.cs` | Mutable struct: StreamKey/RngCursor/ActionOrdinal (ulong), BudgetRemaining/DeclaredBudget/DrawIndex (int), SiteId (string), StreamVersion (ushort), SubsystemOrdinal (int), EntityId (int); ClearReservation() |
-| `src/deterministic-sim/MatchClock.cs` | Sealed class: CurrentTick / CurrentTacticalTick (÷AI_PHASE_STRIDE) / CurrentMatchTimeMs (×FrameMs) / IsAiStrideTick; Advance(); RestoreFromSnapshot(tick) for replay step 5 — no System.DateTime (FR-CS-042) |
+| `src/deterministic-sim/MatchClock.cs` | Sealed class: CurrentTick / CurrentTacticalTick (÷AI_PHASE_STRIDE) / CurrentMatchTimeMs (×FrameMs) / CurrentMatchTimeSeconds (×FrameSeconds; B1 seconds-clock) / IsAiStrideTick; Advance(); RestoreFromSnapshot(tick) for replay step 5 — no System.DateTime (FR-CS-042) |
 | `src/deterministic-sim/DeterministicRngService.cs` | Sealed class: HKDF-SHA256 key derivation at construction; SipHash-2-4-64 per-draw hash; RegisterStream / Reserve / DrawReserved / CloseReservation / Skip / RestoreStream; zero-alloc hot path (stackalloc Span<byte>[21]; AR-1 H-3) |
 | `src/deterministic-sim/CanonicalSerializer.cs` | Static class: §3.2.4.1 Write/Read for bool, u8/i8, u16/i16, u32/i32, u64/i64, f32 (−0.0→+0.0), f32TierB (NaN→0x7FC00000), f64, f64TierB (NaN→0x7FF8000000000000; corpus F-09), strings, bytes, optional tags; FloatUintUnion explicit-layout struct (AR-1 H-1/H-2: eliminates BitConverter.GetBytes heap alloc) |
 | `src/deterministic-sim/SnapshotHeader.cs` | Sealed class: SchemaVersion (u32) / DigestVersion (u16) / Tick (u64) / PrevSnapshotDigest[32] / CurrentSnapshotDigest[32] / Fingerprint / Cursor; Initialize(tick, prevDigest, fingerprint) |

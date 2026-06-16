@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/MatchClock.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-16
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.4, CLAUDE.md §Determinism Rules (FR-CS-042), Code Standards #20
 // Purpose:  Deterministic match clock. Provides tick index and match time (ms) derived exclusively from
@@ -29,6 +29,17 @@ namespace TacticalDirector.DeterministicSim
         /// </summary>
         public float CurrentMatchTimeMs =>
             (float)_currentTick * DeterministicSimConstants.FrameMs;
+
+        /// <summary>
+        /// Current match time in seconds from kickoff.
+        /// Formula: CurrentTick × FrameSeconds. Always ≥ 0.
+        /// This is the seconds-domain clock systems must consume — e.g. the per-agent
+        /// <c>currentTime</c> AgentMovement passes to <c>OscillationGuard.RecordAndCheck</c>,
+        /// which compares elapsed time against <c>WindowSeconds</c>. Passing CurrentMatchTimeMs
+        /// there is a silent 1000× unit error (the finite/≥0 guards accept ms just as readily).
+        /// </summary>
+        public float CurrentMatchTimeSeconds =>
+            (float)_currentTick * DeterministicSimConstants.FrameSeconds;
 
         /// <summary>
         /// Constructs a MatchClock with the given initial tick.
@@ -67,6 +78,10 @@ namespace TacticalDirector.DeterministicSim
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-06-16 | —      | Match Engine Phase B step B1 (time-unit plumbing): added       |
+// |         |            |        | CurrentMatchTimeSeconds (CurrentTick × FrameSeconds) so seconds |
+// |         |            |        | consumers (AgentMovement OscillationGuard WindowSeconds) no     |
+// |         |            |        | longer risk the silent 1000× ms↔s unit error.                  |
 #endregion

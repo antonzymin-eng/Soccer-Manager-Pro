@@ -258,10 +258,16 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
     `RngStreamState`. Determinism-load-bearing movement file → its own focused AR + a
     `CanonicalSerializer` round-trip test before anything else lands. Without this, the §2.6
     snapshot cannot serialize agent state canonically (§2.6 seam dependency).
-  - **B1 — time-unit plumbing.** `dt = DeterministicSimConstants.FrameMs / 1000f` (already). Agent
+  - **B1 — time-unit plumbing. ✅ IMPLEMENTED (June 16, 2026).** `dt =
+    DeterministicSimConstants.FrameSeconds` (the per-tick seconds step; B2 sources dt here). Agent
     `currentTime` MUST be **seconds** — `OscillationGuard` compares against `WindowSeconds` — but
-    `MatchClock` only exposes `CurrentMatchTimeMs`. Add `MatchClock.CurrentMatchTimeSeconds` (or
-    convert at the call site). Silent if wrong: the `Update` finite/≥0 assert passes for ms too.
+    `MatchClock` only exposed `CurrentMatchTimeMs`. Added `[DERIVED] FrameSeconds = FrameMs / 1000`
+    and `MatchClock.CurrentMatchTimeSeconds` (= `CurrentTick × FrameSeconds`) so the seconds clock and
+    the integration dt share one derivation chain (`PHYSICS_TICK_HZ → FrameMs → FrameSeconds`). Silent
+    if wrong: the `Update` finite/≥0 assert passes for ms too. *Tests
+    (`tests/DeterministicSimTests.cs`): FrameSeconds = FrameMs/1000; CurrentMatchTimeSeconds tick
+    tracking + one-second landing + seconds↔ms agreement.* Files: `DeterministicSimConstants.cs` v1.2,
+    `MatchClock.cs` v1.1, `DeterministicSimTests.cs` v1.6.
   - **B2 — physics wiring in `RunPhysicsPhase`.** `BallPhysicsCore.UpdateBallPhysics(ref _ball, dt,
     surface, Vector3.zero, logger: null, matchTime: 0f)` — the logger is the *only* consumer of
     ball `matchTime`, so a `null` logger drops it (no alloc, non-load-bearing). Agents via
@@ -337,6 +343,7 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 0.6     | 2026-06-16 | —      | **Phase B step B1 implemented (time-unit plumbing).** Added `[DERIVED] DeterministicSimConstants.FrameSeconds` (= `FrameMs / 1000`) and `MatchClock.CurrentMatchTimeSeconds` (= `CurrentTick × FrameSeconds`) so seconds consumers (AgentMovement `OscillationGuard.WindowSeconds`) read a real seconds clock instead of risking the silent 1000× ms↔s unit error; the seconds clock and the B2 integration dt share one derivation chain (`PHYSICS_TICK_HZ → FrameMs → FrameSeconds`). Tests added in `DeterministicSimTests.cs` (FrameSeconds value; seconds-clock tick tracking / one-second landing / seconds↔ms agreement). Files: `DeterministicSimConstants.cs` v1.2, `MatchClock.cs` v1.1, `DeterministicSimTests.cs` v1.6. (B0 already merged; B2–B4 remain.) CI gate runs on push. |
 | 0.5     | 2026-06-16 | —      | **Phase B re-sequenced (adversarial review of the planned wiring; 2H+3M+2L).** H-1: `AgentState.OscillationGuard` holds private cross-tick sliding-window state with no accessor → canonical (`CanonicalSerializer`) agent serialization is impossible without a new get/restore seam; promoted to gating step **B0**; the gap is invisible to Phase B's same-seed-in-process determinism test (both runs omit identically) and only diverges under save/restore. H-2: agent `currentTime` must be **seconds** (`OscillationGuard.WindowSeconds`) but `MatchClock` exposes only `CurrentMatchTimeMs` — silent 1000× bug (the finite/≥0 assert passes for ms); step **B1**. M-1: the §2.6/§3 three-buffer collision model {`isGrounded`, `knockdownForce`, `stumble`} is a phantom — the real `Update` seam takes two inputs {`isCollisionKnockdown`, `collisionForce`}; `GroundedReason` is internal `AgentState`; boot-seed corrected to `false`/`0`. M-2: use the existing `UpdateAllAgents` batch seam (it **skips goalkeepers**) instead of a hand-rolled loop. M-3: serialize the **full** `AgentState` + `BallState.LastValid*`, not the kinematic subset. L-1: `MaxSnapshotBytes` (65536) is ample (~4 KB) — risk dropped. L-2: ball `matchTime` feeds only `BallEventLogger`; pass `null` logger (non-load-bearing, no alloc). Confirmations: `AgentMovementSystem` is stateless except `_physicsHz` (shared instance safe); Phase B uses no RNG (determinism holds without draw-site plumbing). Docs-only; CI gate runs on push. |
 | 0.4     | 2026-06-16 | —      | **Phase A implemented.** New `src/match-engine/` assembly (`TacticalDirector.MatchEngine`): `MatchEngineConstants.cs`, `MatchEngine.cs` (composition root — boot, world-state fields, 7 method-group phase callbacks wired into `TickOrchestrator` as EventBus-lifecycle-only stubs, digest-load-bearing snapshot serialization), `AssemblyInfo.cs`, `match-engine.asmdef`; tests `MatchEngineDeterminismTests.cs` (same-seed digest-chain equality, chain advance/non-degeneracy, AI-stride cadence, first-tick timing) + `match-engine-tests.asmdef`. Phase-A scope: references only deterministic-sim + event-system; kinematic world-state subset; `SNAPSHOT_SCHEMA_VERSION` pinning deferred to Phase B (§2.6); EventBus registrar boot deferred to Phase E (no events published in A). file-manifest.md updated. |
 | 0.1     | 2026-06-15 | —      | Initial design note. Composition-root architecture, phase→subsystem wiring, boot sequence, phased delivery A–F, risks. |
