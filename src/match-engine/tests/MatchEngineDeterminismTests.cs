@@ -82,6 +82,24 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void WorldState_FeedsSnapshotDigest()
+        {
+            // Baseline run vs a run whose ball height is perturbed before the first tick.
+            // If world state were not serialized into the digest preimage, both digests would
+            // match (the M-1 coverage gap: chain-advance alone is satisfied by the header tick).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_SetBallHeight(MatchEngineConstants.BALL_REST_HEIGHT_M + 1f);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Perturbing world state left the snapshot digest unchanged — world state is not in the digest preimage.");
+        }
+
+        [Test]
         public void AiPhase_RunsOnStrideTicks_Only()
         {
             int stride = DeterministicSimConstants.AI_PHASE_STRIDE;

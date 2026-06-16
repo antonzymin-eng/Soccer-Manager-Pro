@@ -119,8 +119,8 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void InitializeKickoffState()
         {
-            _ballX = MatchEngineConstants.KICKOFF_BALL_X_M;
-            _ballY = MatchEngineConstants.KICKOFF_BALL_Y_M;
+            _ballX = MatchEngineConstants.KickoffBallXM;
+            _ballY = MatchEngineConstants.KickoffBallYM;
             _ballZ = MatchEngineConstants.BALL_REST_HEIGHT_M;
 
             for (int team = 0; team < MatchEngineConstants.TEAM_COUNT; team++)
@@ -132,8 +132,8 @@ namespace TacticalDirector.MatchEngine
                     _teamIds[i]      = team;
                     _isGoalkeeper[i] = k == 0;
                     _agentX[i]       = team == 0
-                        ? MatchEngineConstants.HOME_LINE_X_M
-                        : MatchEngineConstants.AWAY_LINE_X_M;
+                        ? MatchEngineConstants.HomeLineXM
+                        : MatchEngineConstants.AwayLineXM;
                     // Even lateral spread across the pitch width: k+1 of PLAYERS_PER_TEAM+1 gaps.
                     _agentY[i] = MatchEngineConstants.PITCH_WIDTH_M
                                * (k + 1) / (MatchEngineConstants.PLAYERS_PER_TEAM + 1);
@@ -177,6 +177,17 @@ namespace TacticalDirector.MatchEngine
         /// an internal seam for those phases and for seed-plumbing assertions in tests.
         /// </summary>
         internal DeterministicRngService Rng => _rng;
+
+        /// <summary>
+        /// Test-only seam: overwrites the ball height before a tick so a determinism test can prove
+        /// world state actually contributes to the snapshot digest (a perturbed value MUST change
+        /// the digest). Not called by production code; gameplay mutates the ball via the physics
+        /// phase in Phase B onward.
+        /// </summary>
+        internal void TestOnly_SetBallHeight(float z)
+        {
+            _ballZ = z;
+        }
 
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
@@ -261,7 +272,11 @@ namespace TacticalDirector.MatchEngine
 
             // Append the canonical event-ledger bytes after the world state — they are part of
             // the snapshot preimage and therefore digest-load-bearing. Phase A publishes no
-            // events, so this writes the empty-ledger header (domain tag + zero count).
+            // events, so this writes the empty-ledger header (domain tag + zero count) — a
+            // constant byte string. NOTE: the EventBus ledger is process-static; Phase A keeps
+            // two same-seed runs deterministic only because nothing is published or subscribed
+            // (the ledger is always empty here). When real publishes land (Phase E), cross-run
+            // ledger state becomes load-bearing and this assumption must be revisited.
             int free = payload.PayloadBytes.Length - payload.BytesWritten;
             int written = EventBus.SerializeLedger(
                 new Span<byte>(payload.PayloadBytes, payload.BytesWritten, free));
@@ -281,6 +296,8 @@ namespace TacticalDirector.MatchEngine
             int o = payload.BytesWritten;
 
             CanonicalSerializer.WriteU8(buf, ref o, MatchEngineConstants.PHASE_A_PAYLOAD_FORMAT_VERSION);
+            // Tick is also carried in the header; included here so the payload is self-describing
+            // when decoded in isolation (Phase B replay/save tooling reads the payload directly).
             CanonicalSerializer.WriteU64(buf, ref o, _clock.CurrentTick);
 
             CanonicalSerializer.WriteF32(buf, ref o, _ballX);
@@ -308,4 +325,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | phase callbacks wired into TickOrchestrator with EventBus      |
 // |         |            |        | tick-lifecycle-only stubs and digest-load-bearing snapshot     |
 // |         |            |        | serialization. No gameplay subsystems invoked (design note §5).|
+// | 1.1     | 2026-06-16 | —      | AR-1: L-1 kickoff/line constant references updated to the      |
+// |         |            |        | retagged [DERIVED] names; M-1 TestOnly_SetBallHeight seam added |
+// |         |            |        | so a test can prove world state feeds the digest; L-2 static-  |
+// |         |            |        | EventBus determinism assumption documented at SerializeLedger; |
+// |         |            |        | L-3 payload-tick-vs-header redundancy noted as intentional.    |
 #endregion
