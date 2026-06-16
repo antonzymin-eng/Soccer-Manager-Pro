@@ -85,7 +85,7 @@ namespace TacticalDirector.AgentMovement
         /// serialization / deterministic replay (Match Engine design note §2.6, Phase B step B0).
         /// Parallel to DeterministicRngService.GetStreamState. Allocation-free (returns a value type).
         /// </summary>
-        public OscillationGuardState GetState()
+        public readonly OscillationGuardState GetState()
         {
             // Field-count coupling guard, parallel to WriteTime's default arm: the snapshot struct
             // carries exactly TimestampSlots timestamps, so a BufferSize bump beyond it would silently
@@ -177,4 +177,5 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | match-engine snapshot can canonically serialize the guard's private ring-buffer state — the    |
 // |         |            |        | guard is embedded in AgentState (design note §2.6). New OscillationGuardState.cs DTO. Both     |
 // |         |            |        | methods Debug.Assert BufferSize == OscillationGuardState.TimestampSlots (field-count coupling). |
+// |         |            |        | GetState is `readonly` (pure getter — avoids defensive copies through in/ref-readonly callers). |
 #endregion
