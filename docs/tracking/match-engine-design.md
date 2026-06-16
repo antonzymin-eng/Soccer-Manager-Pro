@@ -1,7 +1,7 @@
 # Match Engine — Tick Orchestrator Composition Root (Design Note)
 
 > **Created:** June 15, 2026
-> **Last Updated:** June 16, 2026 (v0.4 — Phase A landed: `src/match-engine/` assembly + `MatchEngine` composition root (world-state fields, boot, 7 method-group phase callbacks wired into `TickOrchestrator` as EventBus-lifecycle-only stubs) + digest-load-bearing snapshot serialization + determinism/AI-stride test suite; see §5 Phase A and the Version History. v0.3 — second self-AR fix pass; v0.2 — self-AR fix pass: collision→movement ordering, EventBus AI-phase entry, cross-tick state in snapshot, stride-tick correction, per-agent-instance verification)
+> **Last Updated:** June 16, 2026 (v0.5 — Phase B re-sequenced after adversarial review of the planned Physics-phase wiring: `OscillationGuard` get/restore seam promoted to gating step B0 (its private sliding-window state blocks canonical agent serialization; the omission is invisible to Phase B's same-seed determinism test, only diverging under save/restore); §2.6 corrected — full `AgentState`/`BallState` field set incl. `OscillationGuard` + `LastValid*` checkpoints, and the phantom three-buffer collision model {isGrounded, knockdownForce, stumble} replaced with the real two-input seam {isCollisionKnockdown, collisionForce}; B1 time-unit fix (agent `currentTime` is seconds, clock exposes only ms); B2 uses `UpdateAllAgents` batch seam (skips GKs) + null ball logger. v0.4 — Phase A landed: `src/match-engine/` assembly + `MatchEngine` composition root (world-state fields, boot, 7 method-group phase callbacks wired into `TickOrchestrator` as EventBus-lifecycle-only stubs) + digest-load-bearing snapshot serialization + determinism/AI-stride test suite; see §5 Phase A and the Version History. v0.3 — second self-AR fix pass; v0.2 — self-AR fix pass: collision→movement ordering, EventBus AI-phase entry, cross-tick state in snapshot, stride-tick correction, per-agent-instance verification)
 > **Status:** DESIGN NOTE (Stage 0+1 integration scaffolding — NOT a formal approved spec). **Phase A implemented** (June 16, 2026); Phases B–F pending.
 > **Author:** —
 > **Purpose:** Authoritative design for the match engine: the composition root that owns
@@ -137,13 +137,23 @@ NaN handling already implemented).
 A field that is read on tick N but written on tick N−1 (or earlier) is simulation state
 and its omission diverges replay. Stage 0 field set:
 
-- ball: position, velocity, spin, state-machine state.
-- per-agent: position, velocity, facing, locomotion state, fatigue.
+- ball: position, velocity, spin, state-machine state, **plus the `LastValidPosition` /
+  `LastValidVelocity` NaN-recovery checkpoints** (written each valid tick, read on an invalid
+  tick — cross-tick, therefore serialized). All `BallState` fields are public.
+- per-agent: **the full `AgentState` struct, field for field** — not just kinematics. Beyond
+  position / velocity / facing / locomotion state / fatigue, this includes `PreviousState`,
+  `TimeInState`, `GroundedReason`, `CollisionForce`, `LeanAngle`, `CurrentTurnRate`, the three
+  `LastValid*` checkpoints, `Speed`, **and the embedded `OscillationGuard` sub-struct's internal
+  sliding-window state** (8 transition timestamps + write index + lock flag + lock-until time).
+  Each is read-before-written on a later tick; omitting any diverges replay. The `OscillationGuard`
+  fields are *private* — serializing them needs a new accessor seam (see seam dependency below).
 - **per-agent held `MovementCommand`** — produced only on stride ticks but consumed every
   tick (§3, §6.below), so it persists in world state and is digest-relevant.
-- **per-agent collision-feedback buffers** (`knockdownForce`, `isGrounded`, `stumble`) —
-  produced in Resolve (tick N) and consumed by movement in Physics (tick N+1) per the
-  one-tick-lag contract below; carried across the tick boundary, therefore serialized.
+- **per-agent collision inputs** — the real `AgentMovementSystem.Update` seam takes exactly
+  **two**: `isCollisionKnockdown` (bool) and `collisionForce` (float). There is **no** `isGrounded`
+  or `stumble` parameter — `GroundedReason` lives *inside* `AgentState` (above), and stumble is not
+  consumed by movement at Stage 0. These two buffers are produced in Resolve (tick N) and consumed
+  by movement in Physics (tick N+1) per the one-tick-lag contract below; cross-tick, so serialized.
 - per-agent DecisionTree state-machine state (IDLE/EVALUATING/EXECUTING/INTERRUPTED) and
   any in-flight executor state (Pass/Shot WINDUP/CONTACT) — persists between heartbeats.
 
@@ -151,11 +161,21 @@ If a buffer can be proven fully recomputed before its first read each tick, it m
 excluded — but the default is to serialize cross-tick state, and the proof must be recorded
 here per field.
 
-**Seam dependency (Phase C/D blocker).** DecisionTree and the Pass/Shot executors hold this
-state internally; they do **not** currently expose get/restore accessors. Serializing it
-(and restoring it on replay) requires adding read/restore seams to each — parallel to
-`RngStreamState` ↔ `DeterministicRngService.GetStreamState`/`RestoreStream`. These seams are
-a prerequisite for Phase C (executors) and Phase D (DecisionTree); they do not exist yet.
+**Seam dependency (blocker — affects Phase B *and* C/D).** Several subsystems hold cross-tick
+state in *private* fields with no get/restore accessor; serializing (and replay-restoring) it
+requires adding read/restore seams — parallel to
+`RngStreamState` ↔ `DeterministicRngService.GetStreamState`/`RestoreStream`:
+- **Phase B:** `AgentState.OscillationGuard` (`_t0.._t7`, `_writeIndex`, `_isLocked`,
+  `_lockUntilTime`, all private). This is the gating item for Phase B's snapshot — canonical
+  field-by-field serialization via `CanonicalSerializer` (mandatory for −0.0 / NaN normalization;
+  a raw struct blit would bypass it and is determinism-unsafe) cannot read these fields without
+  the seam. **Subtlety:** Phase B's same-seed-in-process determinism test passes *even if the
+  guard state is omitted* (both runs omit it identically) — the omission only diverges under
+  save/restore replay, which Phase B doesn't exercise. The seam is therefore required up front
+  (step 0 below), not deferred to a later phase that "needs it for a test."
+- **Phase C/D:** the Pass/Shot executors and DecisionTree hold their state-machine / in-flight
+  state internally and likewise expose no get/restore accessors. These are a prerequisite for
+  Phase C (executors) and Phase D (DecisionTree); they do not exist yet.
 
 ---
 
@@ -180,11 +200,11 @@ tick. Movement at tick N therefore consumes the collision-feedback buffers writt
 N−1. This is deliberate (the canonical phase order is fixed by `#16` and MUST NOT be
 reordered): collisions resolve the positions movement just produced, and the response feeds
 back next tick. Consequences the implementation MUST honor: (a) the buffers are seeded at
-boot to the **standing-at-rest** value — `isGrounded = true`, zero force, no stumble (a
-blanket "no contact"/`false` seed would make every agent airborne on tick 1, since
-`AgentMovementSystem.Update` consumes `isGrounded` as an input); (b) the buffers are
-cross-tick state and are serialized into the snapshot (§2.6); (c) this one-frame feedback
-latency is an accepted Stage 0 model property, recorded here rather than hidden.
+boot to the **standing-at-rest** value — `isCollisionKnockdown = false`, `collisionForce = 0`
+(the two real inputs; `GroundedReason` is internal `AgentState`, default `NONE`, and is not an
+external seed); (b) the two buffers are cross-tick state and are serialized into the snapshot
+(§2.6); (c) this one-frame feedback latency is an accepted Stage 0 model property, recorded here
+rather than hidden.
 
 **Stride timing.** `RunTick` calls `MatchClock.Advance()` *first*, so the first processed
 tick is **1**, not 0; the initial state (tick 0) is never "run." The AI phase executes when
@@ -231,10 +251,33 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
   (§2.6) land in Phase B; `MatchEngineConstants.PHASE_A_PAYLOAD_FORMAT_VERSION` versions the
   interim payload; the EventBus registry boot (§4 step 2 registrars) lands when real consumers
   wire in (Phase E) — Phase A publishes nothing, so the empty-ledger lifecycle is sufficient.
-- **Phase B — Physics phase.** Wire ball physics + agent movement (×22) + world-state
-  serialization. Pin `SNAPSHOT_SCHEMA_VERSION` + field order (§2.6).
-  *Tests: drop-and-settle ball through the real loop; agent locomotion under a fixed
-  `MovementCommand`; digest stable across runs.*
+- **Phase B — Physics phase.** Wire ball physics + agent movement (×22) + full world-state
+  serialization. Ordered sub-steps (B0 first — it gates the snapshot):
+  - **B0 — `OscillationGuard` get/restore seam (gating).** Add a public read/restore accessor to
+    `OscillationGuard` (8 timestamps + write index + lock flag + lock-until time), parallel to
+    `RngStreamState`. Determinism-load-bearing movement file → its own focused AR + a
+    `CanonicalSerializer` round-trip test before anything else lands. Without this, the §2.6
+    snapshot cannot serialize agent state canonically (§2.6 seam dependency).
+  - **B1 — time-unit plumbing.** `dt = DeterministicSimConstants.FrameMs / 1000f` (already). Agent
+    `currentTime` MUST be **seconds** — `OscillationGuard` compares against `WindowSeconds` — but
+    `MatchClock` only exposes `CurrentMatchTimeMs`. Add `MatchClock.CurrentMatchTimeSeconds` (or
+    convert at the call site). Silent if wrong: the `Update` finite/≥0 assert passes for ms too.
+  - **B2 — physics wiring in `RunPhysicsPhase`.** `BallPhysicsCore.UpdateBallPhysics(ref _ball, dt,
+    surface, Vector3.zero, logger: null, matchTime: 0f)` — the logger is the *only* consumer of
+    ball `matchTime`, so a `null` logger drops it (no alloc, non-load-bearing). Agents via
+    `AgentMovementSystem.UpdateAllAgents(...)` (the batch seam) — note it **skips goalkeepers**
+    (`if isGoalkeeper continue`), so the 2 GKs stay put at Stage 0 (GK is #11). Boot-seed the two
+    collision inputs standing-at-rest (`false` / `0`). `PlayerAttributes.CreateDefault()` /
+    `PerformanceContext.CreateNeutral()` for the per-agent input arrays.
+  - **B3 — serialization + schema pin.** Replace `PHASE_A_PAYLOAD_FORMAT_VERSION` with
+    `SNAPSHOT_SCHEMA_VERSION`; serialize the **full** `BallState` + `AgentState` field set per the
+    revised §2.6 (incl. `LastValid*` checkpoints and the B0 guard state). Payload ≈ 4 KB, well
+    under `MaxSnapshotBytes` (65536).
+  - **B4 — design-note reconciliation.** This entry already corrects the §2.6 / §3 phantom
+    `isGrounded` seam; confirm no other doc references the three-buffer model.
+  *Tests: B0 guard round-trip; drop-and-settle ball through the real loop; outfield-agent
+  locomotion under a fixed `WalkTo` command (GKs excluded); digest stable across two same-seed
+  runs with real dynamics.*
 - **Phase C — Resolve phase.** Collision (×22) + pass/shot executors + first-touch +
   possession tracking into `MatchContext`.
   *Tests: a scripted pass between two agents completes; possession flips.*
@@ -294,6 +337,7 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 0.5     | 2026-06-16 | —      | **Phase B re-sequenced (adversarial review of the planned wiring; 2H+3M+2L).** H-1: `AgentState.OscillationGuard` holds private cross-tick sliding-window state with no accessor → canonical (`CanonicalSerializer`) agent serialization is impossible without a new get/restore seam; promoted to gating step **B0**; the gap is invisible to Phase B's same-seed-in-process determinism test (both runs omit identically) and only diverges under save/restore. H-2: agent `currentTime` must be **seconds** (`OscillationGuard.WindowSeconds`) but `MatchClock` exposes only `CurrentMatchTimeMs` — silent 1000× bug (the finite/≥0 assert passes for ms); step **B1**. M-1: the §2.6/§3 three-buffer collision model {`isGrounded`, `knockdownForce`, `stumble`} is a phantom — the real `Update` seam takes two inputs {`isCollisionKnockdown`, `collisionForce`}; `GroundedReason` is internal `AgentState`; boot-seed corrected to `false`/`0`. M-2: use the existing `UpdateAllAgents` batch seam (it **skips goalkeepers**) instead of a hand-rolled loop. M-3: serialize the **full** `AgentState` + `BallState.LastValid*`, not the kinematic subset. L-1: `MaxSnapshotBytes` (65536) is ample (~4 KB) — risk dropped. L-2: ball `matchTime` feeds only `BallEventLogger`; pass `null` logger (non-load-bearing, no alloc). Confirmations: `AgentMovementSystem` is stateless except `_physicsHz` (shared instance safe); Phase B uses no RNG (determinism holds without draw-site plumbing). Docs-only; CI gate runs on push. |
 | 0.4     | 2026-06-16 | —      | **Phase A implemented.** New `src/match-engine/` assembly (`TacticalDirector.MatchEngine`): `MatchEngineConstants.cs`, `MatchEngine.cs` (composition root — boot, world-state fields, 7 method-group phase callbacks wired into `TickOrchestrator` as EventBus-lifecycle-only stubs, digest-load-bearing snapshot serialization), `AssemblyInfo.cs`, `match-engine.asmdef`; tests `MatchEngineDeterminismTests.cs` (same-seed digest-chain equality, chain advance/non-degeneracy, AI-stride cadence, first-tick timing) + `match-engine-tests.asmdef`. Phase-A scope: references only deterministic-sim + event-system; kinematic world-state subset; `SNAPSHOT_SCHEMA_VERSION` pinning deferred to Phase B (§2.6); EventBus registrar boot deferred to Phase E (no events published in A). file-manifest.md updated. |
 | 0.1     | 2026-06-15 | —      | Initial design note. Composition-root architecture, phase→subsystem wiring, boot sequence, phased delivery A–F, risks. |
 | 0.3     | 2026-06-16 | —      | Second self-AR fix pass (1M+2L). M: snapshot serialization of DecisionTree/executor internal state machines requires get/restore seams those subsystems do not yet expose (parallel to RngStreamState) — recorded as a Phase C/D prerequisite in §2.6. L: collision-feedback boot seed corrected to the standing-at-rest value (`isGrounded = true`), not a blanket "no contact" that would make agents airborne on tick 1. L: §2.4 phase-entry wording tightened (AI/Input carve-outs made explicit). (Note: the Linux compile/test gate could not be executed locally — no .NET SDK in this environment; it runs in CI on push. This change is docs-only and adds no code to the tree.) |
