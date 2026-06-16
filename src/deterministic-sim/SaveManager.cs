@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/SaveManager.cs
 // Created:  2026-05-29
-// Modified: 2026-06-15 (AR fix L-2/L-5: Load distinguishes storage vs schema failure; dir-fsync doc)
+// Modified: 2026-06-16 (AR fix H-1: Load reconstructs the header from disk so replay can verify the chain)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §4.6.1, §4.6.1.1, §3.4 (FR-DS-006), Code Standards #20
 // Purpose:  Atomic save/load manager. Satisfies the §4.6.1.1 atomic-write contract:
@@ -102,12 +102,29 @@ namespace TacticalDirector.DeterministicSim
         // ── Load (replay step 1) ──────────────────────────────────────────────────────
 
         /// <summary>
-        /// Loads the serialized snapshot bytes for the given tick.
+        /// Loads the serialized snapshot payload for the given tick, discarding the header.
         /// Returns ERR_DS_STORAGE_ATOMICITY if the file cannot be read (missing / IO error),
         /// ERR_DS_SCHEMA_INCOMPATIBLE if the file is present but malformed (truncated / oversize),
         /// 0 on success. Corresponds to replay lifecycle step 1 (§4.2.2).
+        /// Prefer the (tick, headerOut, payloadOut) overload for replay: the digest-chain,
+        /// schema, and cursor validation steps (§4.2.2 steps 2/4/7) require the loaded header.
         /// </summary>
-        public ushort Load(ulong tick, SnapshotPayload payloadOut)
+        public ushort Load(ulong tick, SnapshotPayload payloadOut) =>
+            Load(tick, new SnapshotHeader(), payloadOut);
+
+        /// <summary>
+        /// Loads the serialized snapshot for the given tick, reconstructing BOTH the header and
+        /// the payload from disk. Without this, replay validation (ValidateHeader / ValidatePrevDigest
+        /// / cursor step 7) would run against a placeholder header and the digest chain could not be
+        /// verified across a process restart (AR H-1/H-2).
+        /// Returns ERR_DS_STORAGE_ATOMICITY on read/IO failure, ERR_DS_SCHEMA_INCOMPATIBLE on a
+        /// truncated/oversize file, 0 on success.
+        /// NOTE: the on-disk header does not yet carry the EnvironmentFingerprint (Stage-0 wire-format
+        /// limitation; serializing it requires a SNAPSHOT_SCHEMA_VERSION bump — tracked separately),
+        /// so <see cref="SnapshotHeader.Fingerprint"/> is left null on a disk load and the §4.2.2
+        /// step-3 env check must fail closed (see ReplayEngine).
+        /// </summary>
+        public ushort Load(ulong tick, SnapshotHeader headerOut, SnapshotPayload payloadOut)
         {
             using var _ = s_loadMarker.Auto();
 
@@ -125,15 +142,17 @@ namespace TacticalDirector.DeterministicSim
                 return DeterministicSimConstants.ERR_DS_STORAGE_ATOMICITY;
             }
 
-            // Stage 0 layout: skip the fixed header bytes and treat the rest as payload
-            // Full structured decode belongs to SnapshotCodec at Stage 1 structured format.
             int headerSize = ComputeRawHeaderSize();
             int payloadSize = raw.Length - headerSize;
 
+            // payloadSize <= 0 covers both raw.Length < headerSize (truncated header) and
+            // a header-only file, so ReadHeaderBytes below never reads past the buffer.
             if (payloadSize <= 0 || payloadSize > payloadOut.Capacity)
             {
                 return DeterministicSimConstants.ERR_DS_SCHEMA_INCOMPATIBLE;
             }
+
+            ReadHeaderBytes(raw, headerOut);
 
             Array.Copy(raw, headerSize, payloadOut.PayloadBytes, 0, payloadSize);
             payloadOut.BytesWritten = payloadSize;
@@ -168,6 +187,29 @@ namespace TacticalDirector.DeterministicSim
             fs.Write(buf, 0, buf.Length);
         }
 
+        // Inverse of WriteHeaderBytes: reconstructs the SnapshotHeader from the first
+        // ComputeRawHeaderSize() bytes of a loaded snapshot file. Fingerprint is NOT on disk
+        // at Stage 0 (see the Load overload doc) and is left null. The caller (the Load overload)
+        // guarantees raw.Length > ComputeRawHeaderSize() before calling, so the reads are bounded.
+        private static void ReadHeaderBytes(byte[] raw, SnapshotHeader headerOut)
+        {
+            int offset = 0;
+            headerOut.SchemaVersion = CanonicalSerializer.ReadU32(raw, ref offset);
+            headerOut.DigestVersion = CanonicalSerializer.ReadU16(raw, ref offset);
+            headerOut.Tick          = CanonicalSerializer.ReadU64(raw, ref offset);
+            Array.Copy(raw, offset, headerOut.PrevSnapshotDigest,    0, DeterministicSimConstants.SHA256_BYTES);
+            offset += DeterministicSimConstants.SHA256_BYTES;
+            Array.Copy(raw, offset, headerOut.CurrentSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
+            offset += DeterministicSimConstants.SHA256_BYTES;
+            ulong cursorTick = CanonicalSerializer.ReadU64(raw, ref offset);
+            // The cursor phase byte is read to advance past it; the writer only ever persists the
+            // EndOfSnapshot cursor (SnapshotHeader.Initialize), so the cursor is reconstructed via
+            // the EndOfSnapshot factory and the §4.2.2 step-7 boundary check validates it downstream.
+            _ = CanonicalSerializer.ReadU8(raw, ref offset);
+            headerOut.Fingerprint = null;
+            headerOut.Cursor      = ReplayCursor.EndOfSnapshot(cursorTick);
+        }
+
         private static void TryDeleteFile(string path)
         {
             try { File.Delete(path); } catch (Exception) { }
@@ -195,4 +237,12 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | a present-but-malformed file, instead of collapsing both. AR fix L-5:     |
 // |         |            |        | class doc no longer asserts dir-fsync as part of the satisfied contract   |
 // |         |            |        | (Stage-0 Windows carve-out; POSIX dir-fsync deferred to Stage 1).         |
+// | 1.5     | 2026-06-16 | —      | AR fix H-1 (foundation review): new ReadHeaderBytes + Load(tick,          |
+// |         |            |        | headerOut, payloadOut) overload reconstruct the SnapshotHeader from the   |
+// |         |            |        | on-disk bytes so replay's ValidateHeader / ValidatePrevDigest / cursor    |
+// |         |            |        | step-7 run against the LOADED header instead of a placeholder — the       |
+// |         |            |        | digest chain is now verifiable across a process restart. Purely additive  |
+// |         |            |        | (old payload-only Load delegates to the new overload; on-disk format      |
+// |         |            |        | unchanged). Fingerprint stays null on a disk load (M-4: serializing it    |
+// |         |            |        | needs a SNAPSHOT_SCHEMA_VERSION bump — filed for gate-verified follow-up). |
 #endregion
