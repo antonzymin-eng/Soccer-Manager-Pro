@@ -99,7 +99,8 @@ certified file, the engine drives the EventBus lifecycle from inside its callbac
   `EventBus.BeginTick(_clock.CurrentTick); EventBus.BeginPhase(PhaseId.Input);`
   (`MatchClock.Advance()` has already run inside `RunTick` before the callback, so
   `CurrentTick` is the tick being processed.)
-- each subsequent phase callback first line: `EventBus.BeginPhase(PhaseId.X);`
+- each subsequent phase callback first line calls `EventBus.BeginPhase(PhaseId.X)` for its
+  own phase — **except the AI phase** (handled by the next bullet) and Input (handled above).
 - **AI phase entry is unconditional.** `TickOrchestrator` does **not** invoke `_runAI`
   on non-stride ticks (it runs an empty marker scope instead), so a `BeginPhase(PhaseId.AI)`
   placed inside `RunAiPhase` would be skipped 5 of every 6 ticks and the EventBus phase
@@ -150,6 +151,12 @@ If a buffer can be proven fully recomputed before its first read each tick, it m
 excluded — but the default is to serialize cross-tick state, and the proof must be recorded
 here per field.
 
+**Seam dependency (Phase C/D blocker).** DecisionTree and the Pass/Shot executors hold this
+state internally; they do **not** currently expose get/restore accessors. Serializing it
+(and restoring it on replay) requires adding read/restore seams to each — parallel to
+`RngStreamState` ↔ `DeterministicRngService.GetStreamState`/`RestoreStream`. These seams are
+a prerequisite for Phase C (executors) and Phase D (DecisionTree); they do not exist yet.
+
 ---
 
 ## 3. Phase → subsystem wiring
@@ -172,10 +179,12 @@ here per field.
 tick. Movement at tick N therefore consumes the collision-feedback buffers written at tick
 N−1. This is deliberate (the canonical phase order is fixed by `#16` and MUST NOT be
 reordered): collisions resolve the positions movement just produced, and the response feeds
-back next tick. Consequences the implementation MUST honor: (a) the buffers are seeded to
-"no contact" at boot so tick 1 reads a defined value; (b) the buffers are cross-tick state
-and are serialized into the snapshot (§2.6); (c) this one-frame feedback latency is an
-accepted Stage 0 model property, recorded here rather than hidden.
+back next tick. Consequences the implementation MUST honor: (a) the buffers are seeded at
+boot to the **standing-at-rest** value — `isGrounded = true`, zero force, no stumble (a
+blanket "no contact"/`false` seed would make every agent airborne on tick 1, since
+`AgentMovementSystem.Update` consumes `isGrounded` as an input); (b) the buffers are
+cross-tick state and are serialized into the snapshot (§2.6); (c) this one-frame feedback
+latency is an accepted Stage 0 model property, recorded here rather than hidden.
 
 **Stride timing.** `RunTick` calls `MatchClock.Advance()` *first*, so the first processed
 tick is **1**, not 0; the initial state (tick 0) is never "run." The AI phase executes when
@@ -278,4 +287,5 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
 | 0.1     | 2026-06-15 | —      | Initial design note. Composition-root architecture, phase→subsystem wiring, boot sequence, phased delivery A–F, risks. |
+| 0.3     | 2026-06-16 | —      | Second self-AR fix pass (1M+2L). M: snapshot serialization of DecisionTree/executor internal state machines requires get/restore seams those subsystems do not yet expose (parallel to RngStreamState) — recorded as a Phase C/D prerequisite in §2.6. L: collision-feedback boot seed corrected to the standing-at-rest value (`isGrounded = true`), not a blanket "no contact" that would make agents airborne on tick 1. L: §2.4 phase-entry wording tightened (AI/Input carve-outs made explicit). (Note: the Linux compile/test gate could not be executed locally — no .NET SDK in this environment; it runs in CI on push. This change is docs-only and adds no code to the tree.) |
 | 0.2     | 2026-06-15 | —      | Self-adversarial-review fix pass (1H+3M+2L). H-1: collision↔movement one-tick-lag ordering contract documented (buffers seeded at boot, serialized, latency accepted). M-1: EventBus `BeginPhase(PhaseId.AI)` moved to end of Intent phase so the AI phase is entered every tick (orchestrator skips `_runAI` on non-stride ticks). M-2: cross-tick state (held MovementCommands, collision-feedback buffers, DecisionTree/executor state) added to the §2.6 snapshot field set. L-1: stride-timing corrected — first processed tick is 1, first AI evaluation is tick 6 (Advance runs first). L-2: per-agent-instance-vs-shared-evaluator verification required before Phase D. Plus: MatchContext home-perspective ball-zone caution (ERR-008-002 regression guard). |
