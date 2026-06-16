@@ -1,0 +1,19 @@
+{
+    "name": "TacticalDirector.MatchEngine.Tests",
+    "rootNamespace": "TacticalDirector.MatchEngine",
+    "references": [
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.DeterministicSim"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

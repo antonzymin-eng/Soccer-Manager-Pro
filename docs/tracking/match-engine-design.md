@@ -1,8 +1,8 @@
 # Match Engine — Tick Orchestrator Composition Root (Design Note)
 
 > **Created:** June 15, 2026
-> **Last Updated:** June 15, 2026 (v0.2 — self-AR fix pass: collision→movement ordering, EventBus AI-phase entry, cross-tick state in snapshot, stride-tick correction, per-agent-instance verification)
-> **Status:** DESIGN NOTE (Stage 0+1 integration scaffolding — NOT a formal approved spec)
+> **Last Updated:** June 16, 2026 (v0.4 — Phase A landed: `src/match-engine/` assembly + `MatchEngine` composition root (world-state fields, boot, 7 method-group phase callbacks wired into `TickOrchestrator` as EventBus-lifecycle-only stubs) + digest-load-bearing snapshot serialization + determinism/AI-stride test suite; see §5 Phase A and the Version History. v0.3 — second self-AR fix pass; v0.2 — self-AR fix pass: collision→movement ordering, EventBus AI-phase entry, cross-tick state in snapshot, stride-tick correction, per-agent-instance verification)
+> **Status:** DESIGN NOTE (Stage 0+1 integration scaffolding — NOT a formal approved spec). **Phase A implemented** (June 16, 2026); Phases B–F pending.
 > **Author:** —
 > **Purpose:** Authoritative design for the match engine: the composition root that owns
 > match world state and drives the existing `TickOrchestrator` 7-phase pipeline by wiring
@@ -218,11 +218,19 @@ still entered every tick per §2.4).
 Each phase is its own commit + adversarial review (per project convention), gated by the
 Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
 
-- **Phase A — Skeleton & determinism spine (chosen first slice).** New assembly + asmdef,
+- **Phase A — Skeleton & determinism spine (chosen first slice). ✅ IMPLEMENTED (June 16, 2026).**
+  New assembly + asmdef (`src/match-engine/`, `TacticalDirector.MatchEngine`),
   `MatchEngine` with world-state fields, boot, all 7 callbacks as **EventBus-lifecycle-only
   stubs** (no subsystem calls). Capstone: run N ticks twice with the same seed → identical
   snapshot digest chain. Proves the loop + EventBus lifecycle + digest before any physics.
-  *Tests: determinism digest equality across two runs; AI-stride cadence.*
+  *Tests (`tests/MatchEngineDeterminismTests.cs`): determinism digest equality across two
+  same-seed runs; digest-chain non-degeneracy + advance; AI-stride cadence; first-tick / first-
+  AI-tick timing.* Phase-A scope notes: references only `deterministic-sim` + `event-system`
+  (game-layer refs land with B–F); world state is a deterministic kinematic subset (ball + 22
+  agent slots) — the full §2.3 game-struct field set and the `SNAPSHOT_SCHEMA_VERSION` pinning
+  (§2.6) land in Phase B; `MatchEngineConstants.PHASE_A_PAYLOAD_FORMAT_VERSION` versions the
+  interim payload; the EventBus registry boot (§4 step 2 registrars) lands when real consumers
+  wire in (Phase E) — Phase A publishes nothing, so the empty-ledger lifecycle is sufficient.
 - **Phase B — Physics phase.** Wire ball physics + agent movement (×22) + world-state
   serialization. Pin `SNAPSHOT_SCHEMA_VERSION` + field order (§2.6).
   *Tests: drop-and-settle ball through the real loop; agent locomotion under a fixed
@@ -286,6 +294,7 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 0.4     | 2026-06-16 | —      | **Phase A implemented.** New `src/match-engine/` assembly (`TacticalDirector.MatchEngine`): `MatchEngineConstants.cs`, `MatchEngine.cs` (composition root — boot, world-state fields, 7 method-group phase callbacks wired into `TickOrchestrator` as EventBus-lifecycle-only stubs, digest-load-bearing snapshot serialization), `AssemblyInfo.cs`, `match-engine.asmdef`; tests `MatchEngineDeterminismTests.cs` (same-seed digest-chain equality, chain advance/non-degeneracy, AI-stride cadence, first-tick timing) + `match-engine-tests.asmdef`. Phase-A scope: references only deterministic-sim + event-system; kinematic world-state subset; `SNAPSHOT_SCHEMA_VERSION` pinning deferred to Phase B (§2.6); EventBus registrar boot deferred to Phase E (no events published in A). file-manifest.md updated. |
 | 0.1     | 2026-06-15 | —      | Initial design note. Composition-root architecture, phase→subsystem wiring, boot sequence, phased delivery A–F, risks. |
 | 0.3     | 2026-06-16 | —      | Second self-AR fix pass (1M+2L). M: snapshot serialization of DecisionTree/executor internal state machines requires get/restore seams those subsystems do not yet expose (parallel to RngStreamState) — recorded as a Phase C/D prerequisite in §2.6. L: collision-feedback boot seed corrected to the standing-at-rest value (`isGrounded = true`), not a blanket "no contact" that would make agents airborne on tick 1. L: §2.4 phase-entry wording tightened (AI/Input carve-outs made explicit). (Note: the Linux compile/test gate could not be executed locally — no .NET SDK in this environment; it runs in CI on push. This change is docs-only and adds no code to the tree.) |
 | 0.2     | 2026-06-15 | —      | Self-adversarial-review fix pass (1H+3M+2L). H-1: collision↔movement one-tick-lag ordering contract documented (buffers seeded at boot, serialized, latency accepted). M-1: EventBus `BeginPhase(PhaseId.AI)` moved to end of Intent phase so the AI phase is entered every tick (orchestrator skips `_runAI` on non-stride ticks). M-2: cross-tick state (held MovementCommands, collision-feedback buffers, DecisionTree/executor state) added to the §2.6 snapshot field set. L-1: stride-timing corrected — first processed tick is 1, first AI evaluation is tick 6 (Advance runs first). L-2: per-agent-instance-vs-shared-evaluator verification required before Phase D. Plus: MatchContext home-perspective ball-zone caution (ERR-008-002 regression guard). |
