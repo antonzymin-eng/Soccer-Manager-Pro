@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/ReplayEngine.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-16 (AR fix M-3: step-3 null-fingerprint guard fails closed instead of NRE)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §4.2.2, §3.4, Code Standards #20
 // Purpose:  8-step replay lifecycle orchestrator per §4.2.2. Each step must succeed before the next
@@ -72,7 +72,16 @@ namespace TacticalDirector.DeterministicSim
                 return err;
             }
 
-            // Step 3: validate EnvironmentFingerprint against live runtime
+            // Step 3: validate EnvironmentFingerprint against live runtime.
+            // AR fix M-3: a header reconstructed from disk carries no embedded fingerprint at
+            // Stage 0 (SaveManager does not yet serialize it — the M-4 wire-format gap), and the
+            // live fingerprint is constructor-injected; a null on either side MUST fail closed with
+            // ERR_DS_REPLAY_ENV_MISMATCH rather than NullReferenceException. An in-process replay
+            // that passes a header carrying its fingerprint is unaffected.
+            if (header.Fingerprint == null || _liveFingerprint == null)
+            {
+                return DeterministicSimConstants.ERR_DS_REPLAY_ENV_MISMATCH;
+            }
             err = header.Fingerprint.ValidateAgainst(_liveFingerprint);
             if (err != 0)
             {
@@ -131,4 +140,8 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | Unity.Profiling; the old using was CS0246 under Unity and the      |
 // |         |            |        | Linux compile gate alike, so this assembly could not have compiled |
 // |         |            |        | in-engine. No functional change.                                   |
+// | 1.3     | 2026-06-16 | —      | AR fix M-3 (foundation review): step 3 guards a null                |
+// |         |            |        | header.Fingerprint / _liveFingerprint and fails closed with        |
+// |         |            |        | ERR_DS_REPLAY_ENV_MISMATCH. A disk-reconstructed header has a null  |
+// |         |            |        | fingerprint (not serialized at Stage 0), which previously NRE'd.    |
 #endregion
