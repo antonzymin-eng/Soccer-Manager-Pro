@@ -105,6 +105,72 @@ namespace TacticalDirector.PassMechanics
             _collisionQuery = collisionQuery;
         }
 
+        // ── Snapshot seam — Match Engine Phase C step C0 ─────────────────────────────
+
+        /// <summary>
+        /// Captures the executor's cross-tick state-machine + in-flight fields as a plain-data
+        /// snapshot for canonical serialization / deterministic replay (Match Engine design note
+        /// §2.6). Allocation-free (returns a value type). Parallel to
+        /// <see cref="AgentMovement.OscillationGuard.GetState"/> and DeterministicSim's
+        /// RngStreamState. Named Capture (NOT Get) to avoid colliding with
+        /// <see cref="IPassAgentQuery.GetState"/>.
+        /// </summary>
+        public PassExecutorState CaptureState()
+        {
+            return new PassExecutorState(
+                (int)_state,
+                in _request,
+                _cachedEffectiveSubType,
+                _kickSpeed,
+                _launchAngleDeg,
+                _spinVector,
+                _baseKickDirection,
+                _aimPoint,
+                _leadDistance,
+                _cachedPassing,
+                _cachedFatigue,
+                _cachedBodyAngleDeg,
+                _cachedIsWeakFoot,
+                _cachedWeakFootRating,
+                _windupFramesRemaining,
+                _followThroughFramesRemaining,
+                in _lastResult);
+        }
+
+        /// <summary>
+        /// Restores the executor's cross-tick state from a snapshot produced by
+        /// <see cref="CaptureState"/> (replay / save-load). Parallel to
+        /// <see cref="AgentMovement.OscillationGuard.RestoreState"/>. The internal
+        /// <see cref="PhysicalProfile"/> is NOT serialized — it is a pure function of
+        /// (<see cref="PassRequest.PassType"/>, effective sub-type), so it is recomputed here
+        /// (design note §2.6 "fully recomputed before its first read" exclusion).
+        /// </summary>
+        public void RestoreState(in PassExecutorState state)
+        {
+            _state                  = (PassExecutionState)state.State;
+            _request                = state.Request;
+            _cachedEffectiveSubType = state.EffectiveSubType;
+
+            // Recompute the internal profile (pure function of PassType + effective sub-type;
+            // never serialized — §2.6 recompute exclusion).
+            _profile = PassTypeProfiles.GetProfile(state.Request.PassType, state.EffectiveSubType);
+
+            _kickSpeed                    = state.KickSpeed;
+            _launchAngleDeg               = state.LaunchAngleDeg;
+            _spinVector                   = state.SpinVector;
+            _baseKickDirection            = state.BaseKickDirection;
+            _aimPoint                     = state.AimPoint;
+            _leadDistance                 = state.LeadDistance;
+            _cachedPassing                = state.CachedPassing;
+            _cachedFatigue                = state.CachedFatigue;
+            _cachedBodyAngleDeg           = state.CachedBodyAngleDeg;
+            _cachedIsWeakFoot             = state.CachedIsWeakFoot;
+            _cachedWeakFootRating         = state.CachedWeakFootRating;
+            _windupFramesRemaining        = state.WindupFramesRemaining;
+            _followThroughFramesRemaining = state.FollowThroughFramesRemaining;
+            _lastResult                   = state.LastResult;
+        }
+
         // ── Execute — INITIATING State ───────────────────────────────────────────────
 
         /// <summary>
@@ -629,4 +695,11 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | the old using was CS0246 under Unity and the Linux compile gate alike,  |
 // |         |            |        | so this assembly could not have compiled in-engine. No functional       |
 // |         |            |        | change.                                                                 |
+// | 1.14    | 2026-06-19 | —      | Match Engine Phase C step C0: CaptureState()/RestoreState(in            |
+// |         |            |        | PassExecutorState) snapshot seam added (parallel to OscillationGuard    |
+// |         |            |        | GetState/RestoreState B0 seam) so the match-engine snapshot can         |
+// |         |            |        | serialize the executor's cross-tick state-machine + in-flight fields    |
+// |         |            |        | for deterministic replay (design note §2.6). The internal              |
+// |         |            |        | PhysicalProfile is recomputed on restore, not serialized. No change to  |
+// |         |            |        | the Execute/Update execution paths.                                     |
 #endregion
