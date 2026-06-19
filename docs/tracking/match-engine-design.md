@@ -1,8 +1,8 @@
 # Match Engine — Tick Orchestrator Composition Root (Design Note)
 
 > **Created:** June 15, 2026
-> **Last Updated:** June 16, 2026 (v0.5 — Phase B re-sequenced after adversarial review of the planned Physics-phase wiring: `OscillationGuard` get/restore seam promoted to gating step B0 (its private sliding-window state blocks canonical agent serialization; the omission is invisible to Phase B's same-seed determinism test, only diverging under save/restore); §2.6 corrected — full `AgentState`/`BallState` field set incl. `OscillationGuard` + `LastValid*` checkpoints, and the phantom three-buffer collision model {isGrounded, knockdownForce, stumble} replaced with the real two-input seam {isCollisionKnockdown, collisionForce}; B1 time-unit fix (agent `currentTime` is seconds, clock exposes only ms); B2 uses `UpdateAllAgents` batch seam (skips GKs) + null ball logger. v0.4 — Phase A landed: `src/match-engine/` assembly + `MatchEngine` composition root (world-state fields, boot, 7 method-group phase callbacks wired into `TickOrchestrator` as EventBus-lifecycle-only stubs) + digest-load-bearing snapshot serialization + determinism/AI-stride test suite; see §5 Phase A and the Version History. v0.3 — second self-AR fix pass; v0.2 — self-AR fix pass: collision→movement ordering, EventBus AI-phase entry, cross-tick state in snapshot, stride-tick correction, per-agent-instance verification)
-> **Status:** DESIGN NOTE (Stage 0+1 integration scaffolding — NOT a formal approved spec). **Phase A implemented** (June 16, 2026); Phases B–F pending.
+> **Last Updated:** June 16, 2026 (v0.8 — **Phase B complete**: steps B3 + B4 implemented. B3 — full canonical world-state field-set serialization + schema pin: `PHASE_A_PAYLOAD_FORMAT_VERSION` (u8) replaced with `MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION` (u32 = 1; distinct from the #16 `SnapshotHeader` schema version — body vs framing); `SerializeWorldState` now writes the full §2.6 field set field-by-field via `CanonicalSerializer` (ball position/velocity/spin/state + `LastValid*`; per-agent full `AgentState` incl. the B0 `OscillationGuard` ring-buffer state via `GetState()`; team/GK flags; the two collision-feedback inputs; the held `MovementCommand`), zero-alloc, ≈3.8 KB. New `TestOnly_SetAgent` seam + `MatchEngineSnapshotSchemaTests.cs` (schema pin; OscillationGuard + ball-spin digest-preimage probes; locked-guard determinism). B4 — design-note reconciliation: corrected the stale §2.3 three-buffer `{_knockdown, _knockdownForce, _stumble}` field block to the real two-input `{_isCollisionKnockdown, _collisionForces}` seam; confirmed no other doc references the phantom model (the remaining Collision System #3 `knockdownForceOut`/`stumbleOut` hits are its legitimate Phase-C OUTPUT API). Files: `MatchEngine.cs` v1.3, `MatchEngineConstants.cs` v1.3, `MatchEngineSnapshotSchemaTests.cs` v1.0. Prior v0.5 — Phase B re-sequenced after adversarial review of the planned Physics-phase wiring: `OscillationGuard` get/restore seam promoted to gating step B0 (its private sliding-window state blocks canonical agent serialization; the omission is invisible to Phase B's same-seed determinism test, only diverging under save/restore); §2.6 corrected — full `AgentState`/`BallState` field set incl. `OscillationGuard` + `LastValid*` checkpoints, and the phantom three-buffer collision model {isGrounded, knockdownForce, stumble} replaced with the real two-input seam {isCollisionKnockdown, collisionForce}; B1 time-unit fix (agent `currentTime` is seconds, clock exposes only ms); B2 uses `UpdateAllAgents` batch seam (skips GKs) + null ball logger. v0.4 — Phase A landed: `src/match-engine/` assembly + `MatchEngine` composition root (world-state fields, boot, 7 method-group phase callbacks wired into `TickOrchestrator` as EventBus-lifecycle-only stubs) + digest-load-bearing snapshot serialization + determinism/AI-stride test suite; see §5 Phase A and the Version History. v0.3 — second self-AR fix pass; v0.2 — self-AR fix pass: collision→movement ordering, EventBus AI-phase entry, cross-tick state in snapshot, stride-tick correction, per-agent-instance verification)
+> **Status:** DESIGN NOTE (Stage 0+1 integration scaffolding — NOT a formal approved spec). **Phase A + Phase B implemented** (June 16, 2026); Phases C–F pending.
 > **Author:** —
 > **Purpose:** Authoritative design for the match engine: the composition root that owns
 > match world state and drives the existing `TickOrchestrator` 7-phase pipeline by wiring
@@ -83,8 +83,12 @@ PositioningPerceptionSnapshot    _posSnapshot;
 PressingSnapshot                 _pressSnapshot;
 DefensiveSnapshot                _defSnapshot;
 AttackingSnapshot                _atkSnapshot;
-// Collision outputs (pre-allocated):
-bool[22] _knockdown; float[22] _knockdownForce; bool[22] _stumble;
+// Collision-feedback inputs to movement (pre-allocated) — the real two-input seam
+// {isCollisionKnockdown, collisionForce}; written by Resolve (tick N), consumed by movement
+// (tick N+1) per the one-tick-lag contract in §3. There is NO {isGrounded, knockdownForce,
+// stumble} three-buffer model — GroundedReason lives inside AgentState, and stumble is not a
+// movement input at Stage 0 (B4 reconciliation; matches §2.6 / §3 and the B2 implementation):
+bool[22] _isCollisionKnockdown; float[22] _collisionForces;
 ```
 
 All buffers are allocated once at construction. The hot path mutates them by `ref`.
@@ -160,6 +164,16 @@ and its omission diverges replay. Stage 0 field set:
 If a buffer can be proven fully recomputed before its first read each tick, it may be
 excluded — but the default is to serialize cross-tick state, and the proof must be recorded
 here per field.
+
+**Excluded-field proofs (B3).** Two world-state arrays are deliberately NOT serialized:
+- **`_attrs` (`PlayerAttributes[]`) / `_perfs` (`PerformanceContext[]`)** — read every tick by
+  `AgentMovementSystem.UpdateAllAgents` but passed by `in` (read-only; never mutated mid-sim). At
+  Stage 0 both are boot-deterministic constants (`CreateDefault()` / `CreateNeutral()`), so a
+  save/restore reconstructs them identically at boot and their omission cannot diverge replay.
+  **PHASE-D FLAG:** when the AI phase begins writing per-agent form/fatigue context into `_perfs`,
+  `_perfs` becomes cross-tick state and MUST be added to the payload (bump `SNAPSHOT_SCHEMA_VERSION`).
+- **`_aiPhaseRanThisTick` / `_aiPhaseRunCount`** — Phase-A observation instrumentation, fully
+  derivable from the tick number (stride cadence); not gameplay state.
 
 **Seam dependency (blocker — affects Phase B *and* C/D).** Several subsystems hold cross-tick
 state in *private* fields with no get/restore accessor; serializing (and replay-restoring) it
@@ -286,12 +300,30 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
     integration, outfield walk-toward-target + goalkeeper-skip, same-seed determinism with live
     dynamics.* Files: `MatchEngine.cs` v1.2, `MatchEngineConstants.cs` v1.2, `match-engine.asmdef` +
     `match-engine-tests.asmdef` (+BallPhysics +AgentMovement), `MatchEnginePhysicsTests.cs` v1.0.
-  - **B3 — serialization + schema pin.** Replace `PHASE_A_PAYLOAD_FORMAT_VERSION` with
-    `SNAPSHOT_SCHEMA_VERSION`; serialize the **full** `BallState` + `AgentState` field set per the
-    revised §2.6 (incl. `LastValid*` checkpoints and the B0 guard state). Payload ≈ 4 KB, well
-    under `MaxSnapshotBytes` (65536).
-  - **B4 — design-note reconciliation.** This entry already corrects the §2.6 / §3 phantom
-    `isGrounded` seam; confirm no other doc references the three-buffer model.
+  - **B3 — serialization + schema pin. ✅ IMPLEMENTED (June 16, 2026).** `PHASE_A_PAYLOAD_FORMAT_VERSION`
+    (u8) replaced with `MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION` (u32 = 1; distinct from the #16
+    `SnapshotHeader` schema version — that versions the codec framing, this versions the world-state
+    body inside the payload). `SerializeWorldState` now writes the **full** §2.6 field set field-by-field
+    via `CanonicalSerializer`: ball position/velocity/spin/state + `LastValid*` checkpoints; per agent the
+    full `AgentState` (kinematic + state-machine + turning + dual-energy fatigue + `LastValid*` + `Speed`)
+    **including the B0 `OscillationGuard` ring-buffer state via its `GetState()` accessor**; plus the
+    ancillary per-agent world state not carried inside `AgentState` — team id, goalkeeper flag, the two
+    collision-feedback inputs (`isCollisionKnockdown`/`collisionForce`), and the held `MovementCommand`.
+    Enum fields are written as i32 (ordinal). Zero-alloc (the guard seam returns a value type). Measured
+    payload ≈ 3.8 KB, well under `MaxSnapshotBytes` (65536). DecisionTree / executor in-flight state stays
+    excluded until Phase C/D (those seams do not exist yet — §2.6 seam dependency). New
+    `TestOnly_SetAgent` seam + `MatchEngineSnapshotSchemaTests.cs` (schema-version pin; OscillationGuard
+    and ball-spin digest-preimage probes proving the expanded field set feeds the digest; locked-guard
+    determinism). *Tests: `tests/MatchEngineSnapshotSchemaTests.cs`.* Files: `MatchEngine.cs` v1.3,
+    `MatchEngineConstants.cs` v1.3, `MatchEngineSnapshotSchemaTests.cs` v1.0.
+  - **B4 — design-note reconciliation. ✅ IMPLEMENTED (June 16, 2026).** The §2.6 / §3 phantom
+    `isGrounded` three-buffer seam was corrected in v0.5; B4 also corrected the stale §2.3 world-state
+    field block (it still listed the `{_knockdown, _knockdownForce, _stumble}` three-buffer model) to the
+    real two-input `{_isCollisionKnockdown, _collisionForces}` seam matching §2.6 / §3 and the B2
+    implementation. Sweep confirms no other doc references the three-buffer model: the only remaining
+    `knockdownForce`/`stumble` hits are the **Collision System #3** `UpdateCollisions` OUTPUT API
+    (`knockdownForceOut`/`stumbleOut`) — a legitimate separate seam (collision produces both; movement
+    consumes only the knockdown subset), wired in Phase C, not part of the movement-input contract.
   *Tests: B0 guard round-trip; drop-and-settle ball through the real loop; outfield-agent
   locomotion under a fixed `WalkTo` command (GKs excluded); digest stable across two same-seed
   runs with real dynamics.*
@@ -336,6 +368,31 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
    The host MUST author `MatchContext.BallZone` from the home-team perspective only — per
    the Decision Tree AR-2 fix, the `DecisionContextAssembler` derives the team-relative zone
    downstream; re-deriving it host-side would reintroduce ERR-008-002.
+7. **Snapshot serialization is write-only at B3 — no symmetric reader yet.** `SerializeWorldState`
+   writes the canonical field order, but there is no `ReadWorldState` (deserialize/restore is
+   ReplayEngine / Phase C–D territory per the §2.6 seam dependency). Consequence: the field *order*
+   is currently verified only by relative-digest equality + the per-field B0 / `CanonicalSerializer`
+   round-trips, not end-to-end. **When the restore reader lands, it MUST mirror the exact write
+   order in `SerializeWorldState` field-for-field** (ball → per-agent `AgentState` incl. the guard
+   via `RestoreState` → team/GK flags → collision inputs → held command), and a payload round-trip
+   test must lock the two in sync. (Recorded from the Phase B full-surface AR — accepted, not a B3
+   defect.)
+8. **World-state floats are written Tier A without non-finite enforcement.** `SerializeWorldState`
+   uses `CanonicalSerializer.WriteF32` (Tier A), which normalizes `-0.0` but does **not** enforce
+   the "Tier A NaN/±Inf is a hard error" contract — it writes the raw bits. Determinism still holds
+   (identical bits across same-seed runs), and the match engine relies on upstream sanitisation
+   (`BallPhysicsCore.ValidatePhysicsState`, `AgentSafetySystem`) to keep non-finite values out of
+   world state. Note: the `OscillationGuard` empty-slot sentinel is `float.NegativeInfinity` by
+   design and flows through `WriteF32` intentionally (it round-trips). If a future field set admits
+   a non-finite value that upstream does *not* guard, add an explicit gate at the serialization
+   boundary. (Pre-existing `CanonicalSerializer` behaviour; recorded from the Phase B AR — accepted.)
+9. **Two constants named `SNAPSHOT_SCHEMA_VERSION` — confusion hazard.**
+   `MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION` versions the world-state *body* written into the
+   payload; `DeterministicSimConstants.SNAPSHOT_SCHEMA_VERSION` versions the #16 `SnapshotHeader` /
+   codec *framing* that wraps it. They evolve independently. The collision is mitigated by
+   cross-referencing doc comments on both constants (and the §2.6 / B3 text), and the match-engine
+   name is mandated by this design note. A maintainer editing one MUST NOT assume it covers the
+   other. (Recorded from the Phase B AR — accepted, no rename.)
 
 ---
 
@@ -354,6 +411,9 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 0.8.2   | 2026-06-16 | —      | Phase B full-surface AR (B0–B4): no new H/M (the one substantive finding, the `_attrs`/`_perfs` exclusion proof, was already fixed in 0.8.1). Recorded three inherited/accepted scope observations as §6 items 7–9: (7) B3 serialization is write-only — no symmetric `ReadWorldState` yet, so the restore reader (Phase C–D) MUST mirror the `SerializeWorldState` field order + add a round-trip lock; (8) world-state floats are written Tier A without non-finite enforcement (relies on upstream sanitisation; `OscillationGuard` `-Infinity` sentinel flows through intentionally); (9) the `SNAPSHOT_SCHEMA_VERSION` name collision (match-engine body vs #16 header framing) is a documented confusion hazard. Doc-only. |
+| 0.8.1   | 2026-06-16 | —      | B3 self-AR (0H+1M+2L). M-1: §2.6 gains the excluded-field proofs for `_attrs`/`_perfs` (boot-deterministic constants, passed `in`, never mutated mid-sim — omission cannot diverge replay) + the Phase-A observation counters, with a PHASE-D flag that `_perfs` MUST be serialized once the AI phase writes it (the omission is invisible to the same-seed determinism test — the §2.6 trap). L-1/L-2 (code-side): MatchEngine.cs Modified annotation B2 → B3; Modified header field added to the new test file. No functional code change. |
+| 0.8     | 2026-06-16 | —      | **Phase B steps B3 + B4 implemented — Phase B complete.** B3 (serialization + schema pin): `PHASE_A_PAYLOAD_FORMAT_VERSION` (u8) → `MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION` (u32 = 1, distinct from the #16 `SnapshotHeader` schema version — world-state body vs codec framing); `SerializeWorldState` writes the full §2.6 field set field-by-field via `CanonicalSerializer` — ball position/velocity/spin/state + `LastValid*`; per-agent full `AgentState` incl. the embedded `OscillationGuard` ring-buffer state via the B0 `GetState()` seam; team/GK flags; the two collision-feedback inputs; the held `MovementCommand`. Enums as i32; zero-alloc (guard seam returns a value type); payload ≈3.8 KB ≪ `MaxSnapshotBytes`. DecisionTree/executor in-flight state stays excluded (Phase C/D seam dependency). New `TestOnly_SetAgent` seam + `MatchEngineSnapshotSchemaTests.cs` (schema-version pin; OscillationGuard + ball-spin digest-preimage probes; locked-guard determinism). B4 (design-note reconciliation): corrected the stale §2.3 three-buffer `{_knockdown, _knockdownForce, _stumble}` world-state field block to the real two-input `{_isCollisionKnockdown, _collisionForces}` seam (matches §2.6 / §3 + the B2 code); sweep confirms no other doc references the phantom three-buffer model — the remaining Collision System #3 `knockdownForceOut`/`stumbleOut` hits are its legitimate Phase-C OUTPUT API, not a movement input. Files: `MatchEngine.cs` v1.3, `MatchEngineConstants.cs` v1.3, `MatchEngineSnapshotSchemaTests.cs` v1.0 (new). CI gate runs on push. |
 | 0.7     | 2026-06-16 | —      | **Phase B step B2 implemented (Physics-phase wiring).** World state migrated from the Phase-A kinematic float arrays to real `BallState` + `AgentState[]` plus per-agent input buffers (attrs/perfs/commands) and the two collision-feedback buffers. `RunPhysicsPhase` now drives `BallPhysicsCore.UpdateBallPhysics` (null logger, GrassDry, no wind) and `AgentMovementSystem.UpdateAllAgents` (skips GKs) with `dt = FrameSeconds` and the seconds-domain clock; boot seeds `Stop` hold commands + default attrs + neutral perfs. Interim serialization sources the kinematic subset (position + facing) from the structs (`PHASE_A_PAYLOAD_FORMAT_VERSION` 1 → 2); full field set + `SNAPSHOT_SCHEMA_VERSION` pin remain B3. New test seams + `MatchEnginePhysicsTests.cs` (ball drop, outfield walk + GK skip, same-seed determinism with live dynamics). asmdefs gain BallPhysics + AgentMovement. B0 + B1 already landed; B3 + B4 remain. CI gate runs on push. Files: `MatchEngine.cs` v1.2, `MatchEngineConstants.cs` v1.2, both asmdefs, `MatchEnginePhysicsTests.cs` v1.0. |
 | 0.6     | 2026-06-16 | —      | **Phase B step B1 implemented (time-unit plumbing).** Added `[DERIVED] DeterministicSimConstants.FrameSeconds` (= `FrameMs / 1000`) and `MatchClock.CurrentMatchTimeSeconds` (= `CurrentTick × FrameSeconds`) so seconds consumers (AgentMovement `OscillationGuard.WindowSeconds`) read a real seconds clock instead of risking the silent 1000× ms↔s unit error; the seconds clock and the B2 integration dt share one derivation chain (`PHYSICS_TICK_HZ → FrameMs → FrameSeconds`). Tests added in `DeterministicSimTests.cs` (FrameSeconds value; seconds-clock tick tracking / one-second landing / seconds↔ms agreement). Files: `DeterministicSimConstants.cs` v1.2, `MatchClock.cs` v1.1, `DeterministicSimTests.cs` v1.6. (B0 already merged; B2–B4 remain.) CI gate runs on push. |
 | 0.5     | 2026-06-16 | —      | **Phase B re-sequenced (adversarial review of the planned wiring; 2H+3M+2L).** H-1: `AgentState.OscillationGuard` holds private cross-tick sliding-window state with no accessor → canonical (`CanonicalSerializer`) agent serialization is impossible without a new get/restore seam; promoted to gating step **B0**; the gap is invisible to Phase B's same-seed-in-process determinism test (both runs omit identically) and only diverges under save/restore. H-2: agent `currentTime` must be **seconds** (`OscillationGuard.WindowSeconds`) but `MatchClock` exposes only `CurrentMatchTimeMs` — silent 1000× bug (the finite/≥0 assert passes for ms); step **B1**. M-1: the §2.6/§3 three-buffer collision model {`isGrounded`, `knockdownForce`, `stumble`} is a phantom — the real `Update` seam takes two inputs {`isCollisionKnockdown`, `collisionForce`}; `GroundedReason` is internal `AgentState`; boot-seed corrected to `false`/`0`. M-2: use the existing `UpdateAllAgents` batch seam (it **skips goalkeepers**) instead of a hand-rolled loop. M-3: serialize the **full** `AgentState` + `BallState.LastValid*`, not the kinematic subset. L-1: `MaxSnapshotBytes` (65536) is ample (~4 KB) — risk dropped. L-2: ball `matchTime` feeds only `BallEventLogger`; pass `null` logger (non-load-bearing, no alloc). Confirmations: `AgentMovementSystem` is stateless except `_physicsHz` (shared instance safe); Phase B uses no RNG (determinism holds without draw-site plumbing). Docs-only; CI gate runs on push. |

@@ -46,12 +46,25 @@ namespace TacticalDirector.MatchEngine
         /// A fixed kickoff orientation, not a tunable.</summary>
         public const float AWAY_FACING_DEG = 180f;
 
-        /// <summary>[FIXED] Interim world-state payload format version. Independent of the
-        /// deterministic-sim SNAPSHOT_SCHEMA_VERSION, which is pinned for the full §2.6 field set in
-        /// step B3. Bump when the interim field order changes. v2 (step B2): the payload is now
-        /// sourced from the real BallState / AgentState structs and agent facing is a 2-component
-        /// direction (was a single heading degree in v1's kinematic-subset scaffold).</summary>
-        public const byte PHASE_A_PAYLOAD_FORMAT_VERSION = 2;
+        /// <summary>[FIXED] Match-engine world-state snapshot schema version (design note §2.6 /
+        /// step B3). Versions the field set and serialization order of the world state written into
+        /// the <c>SnapshotPayload</c> body by <see cref="MatchEngine.SerializeWorldState"/>; bump on
+        /// ANY backward-incompatible change to that field set or order (parallel to the
+        /// <c>PhaseId</c> schema-bump rule). Written as the first u32 of the payload so the body is
+        /// self-describing when decoded in isolation.
+        ///
+        /// DISTINCT from <c>DeterministicSimConstants.SNAPSHOT_SCHEMA_VERSION</c>: that constant
+        /// versions the #16 <c>SnapshotHeader</c> / codec framing that WRAPS this payload, whereas
+        /// this one versions only the match-engine world-state body INSIDE it. The two evolve
+        /// independently — a match-engine field-set change bumps this without touching the certified
+        /// #16 header schema.
+        ///
+        /// v1 is the first full §2.6 field set (ball position/velocity/spin/state + LastValid*
+        /// checkpoints; per-agent full <c>AgentState</c> including the B0 <c>OscillationGuard</c>
+        /// state, LastValid* checkpoints, team/goalkeeper flags, the two collision-feedback inputs,
+        /// and the held <c>MovementCommand</c>). It supersedes the B2-era kinematic-subset
+        /// PHASE_A_PAYLOAD_FORMAT_VERSION.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 1;
 
         #endregion
 
@@ -98,4 +111,9 @@ namespace TacticalDirector.MatchEngine
 // | 1.2     | 2026-06-16 | —      | Phase B step B2: PHASE_A_PAYLOAD_FORMAT_VERSION bumped 1 → 2   |
 // |         |            |        | — interim payload now sourced from real BallState/AgentState   |
 // |         |            |        | and agent facing serialized as a 2-component direction.        |
+// | 1.3     | 2026-06-16 | —      | Phase B step B3: PHASE_A_PAYLOAD_FORMAT_VERSION (byte) replaced |
+// |         |            |        | with SNAPSHOT_SCHEMA_VERSION (uint = 1) — the design-note §2.6  |
+// |         |            |        | schema pin for the full world-state field set now serialized by |
+// |         |            |        | SerializeWorldState. Doc distinguishes it from the #16          |
+// |         |            |        | SnapshotHeader SNAPSHOT_SCHEMA_VERSION (header framing vs body).|
 #endregion

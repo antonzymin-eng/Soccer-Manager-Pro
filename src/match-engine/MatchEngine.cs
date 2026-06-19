@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-16 (Phase B step B2 — physics-phase wiring)
+// Modified: 2026-06-16 (Phase B step B3 — full canonical field-set serialization + schema pin)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -21,7 +21,8 @@ using TacticalDirector.EventSystem;
 namespace TacticalDirector.MatchEngine
 {
     /// <summary>
-    /// Stage 0 match-engine composition root (determinism spine + Physics-phase wiring as of B2).
+    /// Stage 0 match-engine composition root (determinism spine + Physics-phase wiring as of B2,
+    /// full-field-set snapshot serialization as of B3).
     /// Owns the world state, boots the deterministic infrastructure, and exposes the seven
     /// phase methods as <see cref="System.Action"/> method-group callbacks handed to
     /// <see cref="TickOrchestrator"/> (constructor injection per FR-CS-051–054; method-group
@@ -52,10 +53,10 @@ namespace TacticalDirector.MatchEngine
         private readonly AgentMovementSystem _movement;
 
         // ── World state (design note §2.3) ────────────────────────────────────────────
-        // Real BallState + AgentState[] driven by the production physics seams (step B2). The full
-        // §2.6 field-by-field canonical serialization + SNAPSHOT_SCHEMA_VERSION pin lands in step B3;
-        // B2 serializes the kinematic subset (position + facing) sourced from these structs so
-        // movement is reflected in the digest chain.
+        // Real BallState + AgentState[] driven by the production physics seams (step B2). Step B3
+        // serializes the full §2.6 field set field-by-field through CanonicalSerializer (incl. the
+        // embedded OscillationGuard via its B0 get/restore seam) under the pinned
+        // SNAPSHOT_SCHEMA_VERSION, so all cross-tick state — not just kinematics — feeds the digest.
 
         private BallState _ball;
 
@@ -273,6 +274,16 @@ namespace TacticalDirector.MatchEngine
         /// assert movement, or its absence for skipped goalkeepers).</summary>
         internal AgentState TestOnly_AgentSnapshot(int index) => _agents[index];
 
+        /// <summary>
+        /// Test-only seam: overwrites an agent's full state so a B3 test can prove the full §2.6
+        /// field set (e.g. velocity, OscillationGuard ring-buffer state) feeds the snapshot digest —
+        /// a perturbation of any serialized field MUST change the digest. Not called by production.
+        /// </summary>
+        internal void TestOnly_SetAgent(int index, in AgentState state)
+        {
+            _agents[index] = state;
+        }
+
         /// <summary>Test-only: whether the agent at the given roster index is a goalkeeper
         /// (UpdateAllAgents skips goalkeepers at Stage 0).</summary>
         internal bool TestOnly_IsGoalkeeper(int index) => _isGoalkeeper[index];
@@ -393,38 +404,144 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// Writes the interim world state into the snapshot payload in a fixed canonical order,
-        /// sourced from the real BallState / AgentState structs. Order is digest-load-bearing and
-        /// versioned by PHASE_A_PAYLOAD_FORMAT_VERSION. Step B2 serializes the kinematic subset
-        /// (position + facing) so movement is reflected in the digest; the full §2.6 field set
-        /// (velocity, state-machine state, LastValid* checkpoints, OscillationGuard) plus the
-        /// SNAPSHOT_SCHEMA_VERSION pin land in step B3.
+        /// Writes the full world state into the snapshot payload in a fixed canonical order, sourced
+        /// from the real BallState / AgentState structs (design note §2.6, step B3). Order is
+        /// digest-load-bearing and versioned by <see cref="MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION"/>
+        /// — bump that constant on any field-set or ordering change.
+        ///
+        /// The field set captures all state that survives across ticks, not just kinematics: the ball
+        /// velocity / spin / state-machine state and its LastValid* NaN-recovery checkpoints; per agent
+        /// the full <see cref="AgentState"/> field-for-field (incl. the embedded
+        /// <see cref="OscillationGuard"/> ring-buffer state via the B0 get/restore seam); and the
+        /// per-agent ancillary world state that is not part of AgentState but persists cross-tick —
+        /// team id, goalkeeper flag, the two collision-feedback inputs (one-tick-lag contract, §3),
+        /// and the held <see cref="MovementCommand"/>. Each is read-before-written on a later tick, so
+        /// omitting any would diverge save/restore replay. Zero allocation: the OscillationGuard seam
+        /// returns a value type.
         /// </summary>
         private void SerializeWorldState(SnapshotPayload payload)
         {
             byte[] buf = payload.PayloadBytes;
             int o = payload.BytesWritten;
 
-            CanonicalSerializer.WriteU8(buf, ref o, MatchEngineConstants.PHASE_A_PAYLOAD_FORMAT_VERSION);
+            // EXCLUSION PROOF (design note §2.6 "proof must be recorded per field"): _attrs and
+            // _perfs are NOT serialized. At Stage 0 both are boot-deterministic constants —
+            // PlayerAttributes.CreateDefault() / PerformanceContext.CreateNeutral(), passed to
+            // UpdateAllAgents by `in` (read-only, never mutated mid-sim) — so a save/restore
+            // reconstructs them identically at boot and their omission cannot diverge replay. The
+            // Phase-A observation counters (_aiPhaseRanThisTick/_aiPhaseRunCount) are likewise
+            // excluded — instrumentation derivable from the tick number, not gameplay state.
+            // PHASE-D FLAG: when the AI phase begins writing per-agent form/fatigue context into
+            // _perfs, _perfs becomes cross-tick state and MUST be serialized here (bump
+            // SNAPSHOT_SCHEMA_VERSION at that point).
+            CanonicalSerializer.WriteU32(buf, ref o, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION);
             // Tick is also carried in the header; included here so the payload is self-describing
             // when decoded in isolation (replay/save tooling reads the payload directly).
             CanonicalSerializer.WriteU64(buf, ref o, _clock.CurrentTick);
 
-            CanonicalSerializer.WriteF32(buf, ref o, _ball.Position.x);
-            CanonicalSerializer.WriteF32(buf, ref o, _ball.Position.y);
-            CanonicalSerializer.WriteF32(buf, ref o, _ball.Position.z);
+            WriteBallState(buf, ref o, in _ball);
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                CanonicalSerializer.WriteF32 (buf, ref o, _agents[i].Position.x);
-                CanonicalSerializer.WriteF32 (buf, ref o, _agents[i].Position.y);
-                CanonicalSerializer.WriteF32 (buf, ref o, _agents[i].FacingDirection.x);
-                CanonicalSerializer.WriteF32 (buf, ref o, _agents[i].FacingDirection.y);
+                WriteAgentState(buf, ref o, in _agents[i]);
+
+                // Ancillary per-agent world state (not carried inside AgentState) — all cross-tick.
                 CanonicalSerializer.WriteI32 (buf, ref o, _teamIds[i]);
                 CanonicalSerializer.WriteBool(buf, ref o, _isGoalkeeper[i]);
+                CanonicalSerializer.WriteBool(buf, ref o, _isCollisionKnockdown[i]);
+                CanonicalSerializer.WriteF32 (buf, ref o, _collisionForces[i]);
+                WriteMovementCommand(buf, ref o, in _commands[i]);
             }
 
             payload.BytesWritten = o;
+        }
+
+        /// <summary>Serializes the full <see cref="BallState"/> field set in canonical order.
+        /// Enum state is written as i32 (ordinal); ordinal stability is the enum's own contract.</summary>
+        private static void WriteBallState(byte[] buf, ref int o, in BallState ball)
+        {
+            CanonicalSerializer.WriteF32(buf, ref o, ball.Position.x);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.Position.y);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.Position.z);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.Velocity.x);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.Velocity.y);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.Velocity.z);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.AngularVelocity.x);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.AngularVelocity.y);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.AngularVelocity.z);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)ball.State);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.LastValidPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.LastValidPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.LastValidPosition.z);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.LastValidVelocity.x);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.LastValidVelocity.y);
+            CanonicalSerializer.WriteF32(buf, ref o, ball.LastValidVelocity.z);
+        }
+
+        /// <summary>Serializes the full <see cref="AgentState"/> field set in canonical order,
+        /// including the embedded <see cref="OscillationGuard"/> ring-buffer state via its B0
+        /// <see cref="OscillationGuard.GetState"/> accessor. Enum fields are written as i32.</summary>
+        private static void WriteAgentState(byte[] buf, ref int o, in AgentState a)
+        {
+            // Kinematic
+            CanonicalSerializer.WriteF32(buf, ref o, a.Position.x);
+            CanonicalSerializer.WriteF32(buf, ref o, a.Position.y);
+            CanonicalSerializer.WriteF32(buf, ref o, a.Velocity.x);
+            CanonicalSerializer.WriteF32(buf, ref o, a.Velocity.y);
+            CanonicalSerializer.WriteF32(buf, ref o, a.FacingDirection.x);
+            CanonicalSerializer.WriteF32(buf, ref o, a.FacingDirection.y);
+
+            // State machine
+            CanonicalSerializer.WriteI32(buf, ref o, (int)a.CurrentState);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)a.PreviousState);
+            CanonicalSerializer.WriteF32(buf, ref o, a.TimeInState);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)a.GroundedReason);
+            CanonicalSerializer.WriteF32(buf, ref o, a.CollisionForce);
+
+            // Turning
+            CanonicalSerializer.WriteF32(buf, ref o, a.LeanAngle);
+            CanonicalSerializer.WriteF32(buf, ref o, a.CurrentTurnRate);
+
+            // Dual-energy fatigue
+            CanonicalSerializer.WriteF32(buf, ref o, a.AerobicPool);
+            CanonicalSerializer.WriteF32(buf, ref o, a.SprintReservoir);
+
+            // Safety / recovery checkpoints
+            CanonicalSerializer.WriteF32(buf, ref o, a.LastValidPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, a.LastValidPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, a.LastValidVelocity.x);
+            CanonicalSerializer.WriteF32(buf, ref o, a.LastValidVelocity.y);
+            CanonicalSerializer.WriteF32(buf, ref o, a.LastValidFacing.x);
+            CanonicalSerializer.WriteF32(buf, ref o, a.LastValidFacing.y);
+            CanonicalSerializer.WriteF32(buf, ref o, a.Speed);
+
+            // Oscillation guard — private ring-buffer state via the B0 get/restore seam.
+            OscillationGuardState g = a.OscillationGuard.GetState();
+            CanonicalSerializer.WriteF32 (buf, ref o, g.T0);
+            CanonicalSerializer.WriteF32 (buf, ref o, g.T1);
+            CanonicalSerializer.WriteF32 (buf, ref o, g.T2);
+            CanonicalSerializer.WriteF32 (buf, ref o, g.T3);
+            CanonicalSerializer.WriteF32 (buf, ref o, g.T4);
+            CanonicalSerializer.WriteF32 (buf, ref o, g.T5);
+            CanonicalSerializer.WriteF32 (buf, ref o, g.T6);
+            CanonicalSerializer.WriteF32 (buf, ref o, g.T7);
+            CanonicalSerializer.WriteI32 (buf, ref o, g.WriteIndex);
+            CanonicalSerializer.WriteBool(buf, ref o, g.IsLocked);
+            CanonicalSerializer.WriteF32 (buf, ref o, g.LockUntilTime);
+        }
+
+        /// <summary>Serializes the held <see cref="MovementCommand"/> field set in canonical order.
+        /// Produced only on stride ticks but consumed every tick (§2.6), so it is cross-tick state.</summary>
+        private static void WriteMovementCommand(byte[] buf, ref int o, in MovementCommand c)
+        {
+            CanonicalSerializer.WriteF32 (buf, ref o, c.TargetPosition.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, c.TargetPosition.y);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)c.DesiredState);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)c.DecelerationMode);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)c.FacingMode);
+            CanonicalSerializer.WriteF32 (buf, ref o, c.FacingTarget.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, c.FacingTarget.y);
+            CanonicalSerializer.WriteBool(buf, ref o, c.OverrideSafetyConstraints);
         }
     }
 }
@@ -458,4 +575,22 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | kickoff headings (0° / 180°) to exact unit vectors instead of  |
 // |         |            |        | Mathf.Cos/Sin, keeping sin(180°)≈8.7e-8 fuzz out of the        |
 // |         |            |        | deterministic snapshot; non-cardinal headings still use trig.  |
+// | 1.3     | 2026-06-16 | —      | Phase B step B3 — full canonical field-set serialization +    |
+// |         |            |        | schema pin. SerializeWorldState now writes the full §2.6 field |
+// |         |            |        | set field-by-field (BallState position/velocity/spin/state +   |
+// |         |            |        | LastValid*; per-agent full AgentState incl. the OscillationGuard|
+// |         |            |        | ring-buffer state via the B0 GetState seam; team/GK flags; the |
+// |         |            |        | two collision-feedback inputs; the held MovementCommand) under |
+// |         |            |        | MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION (u32), replacing  |
+// |         |            |        | the B2 kinematic-subset + PHASE_A_PAYLOAD_FORMAT_VERSION (u8). |
+// |         |            |        | New WriteBallState/WriteAgentState/WriteMovementCommand        |
+// |         |            |        | helpers (zero-alloc — guard seam returns a value type). New    |
+// |         |            |        | TestOnly_SetAgent seam so a test can prove the expanded field  |
+// |         |            |        | set feeds the digest.                                          |
+// | 1.3.1   | 2026-06-16 | —      | B3 self-AR (0H+1M+2L). M-1: recorded the §2.6 exclusion proof  |
+// |         |            |        | for _attrs/_perfs (boot-deterministic constants, passed `in`,  |
+// |         |            |        | never mutated mid-sim) + the Phase-A observation counters, with |
+// |         |            |        | a PHASE-D flag that _perfs MUST be serialized once the AI phase |
+// |         |            |        | writes it. L-1: file-header Modified annotation refreshed B2 →  |
+// |         |            |        | B3. (L-2: Modified field added to the new test file header.)    |
 #endregion
