@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-16 (Phase B step B2 — physics-phase wiring)
+// Modified: 2026-06-16 (Phase B step B3 — full canonical field-set serialization + schema pin)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -424,6 +424,16 @@ namespace TacticalDirector.MatchEngine
             byte[] buf = payload.PayloadBytes;
             int o = payload.BytesWritten;
 
+            // EXCLUSION PROOF (design note §2.6 "proof must be recorded per field"): _attrs and
+            // _perfs are NOT serialized. At Stage 0 both are boot-deterministic constants —
+            // PlayerAttributes.CreateDefault() / PerformanceContext.CreateNeutral(), passed to
+            // UpdateAllAgents by `in` (read-only, never mutated mid-sim) — so a save/restore
+            // reconstructs them identically at boot and their omission cannot diverge replay. The
+            // Phase-A observation counters (_aiPhaseRanThisTick/_aiPhaseRunCount) are likewise
+            // excluded — instrumentation derivable from the tick number, not gameplay state.
+            // PHASE-D FLAG: when the AI phase begins writing per-agent form/fatigue context into
+            // _perfs, _perfs becomes cross-tick state and MUST be serialized here (bump
+            // SNAPSHOT_SCHEMA_VERSION at that point).
             CanonicalSerializer.WriteU32(buf, ref o, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION);
             // Tick is also carried in the header; included here so the payload is self-describing
             // when decoded in isolation (replay/save tooling reads the payload directly).
@@ -577,4 +587,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | helpers (zero-alloc — guard seam returns a value type). New    |
 // |         |            |        | TestOnly_SetAgent seam so a test can prove the expanded field  |
 // |         |            |        | set feeds the digest.                                          |
+// | 1.3.1   | 2026-06-16 | —      | B3 self-AR (0H+1M+2L). M-1: recorded the §2.6 exclusion proof  |
+// |         |            |        | for _attrs/_perfs (boot-deterministic constants, passed `in`,  |
+// |         |            |        | never mutated mid-sim) + the Phase-A observation counters, with |
+// |         |            |        | a PHASE-D flag that _perfs MUST be serialized once the AI phase |
+// |         |            |        | writes it. L-1: file-header Modified annotation refreshed B2 →  |
+// |         |            |        | B3. (L-2: Modified field added to the new test file header.)    |
 #endregion
