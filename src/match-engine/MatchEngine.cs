@@ -182,10 +182,22 @@ namespace TacticalDirector.MatchEngine
         /// <summary>
         /// Converts a kickoff heading in degrees (project convention: +X = toward the away goal,
         /// so 0° faces the away goal and 180° faces the home goal) into a unit facing direction.
-        /// Boot-only — not on the hot path.
+        /// Stage 0 kickoff headings are axis-aligned, so they map to exact unit vectors — this keeps
+        /// floating-point fuzz (e.g. <c>Mathf.Sin(180°)</c> ≈ 8.7e-8) out of the deterministic
+        /// snapshot. Non-cardinal headings (none at Stage 0) fall back to trig. Boot-only — not on
+        /// the hot path.
         /// </summary>
         private static Vector2 FacingFromHeading(float degrees)
         {
+            if (degrees == 0f)
+            {
+                return new Vector2(1f, 0f);
+            }
+            if (degrees == 180f)
+            {
+                return new Vector2(-1f, 0f);
+            }
+
             float rad = degrees * Mathf.Deg2Rad;
             return new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
         }
@@ -442,4 +454,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | test seams: TestOnly_SetBall / BallSnapshot / SetCommand /     |
 // |         |            |        | AgentSnapshot / IsGoalkeeper. asmdef gains BallPhysics +       |
 // |         |            |        | AgentMovement references.                                      |
+// | 1.2.1   | 2026-06-16 | —      | B2 self-review L-1: FacingFromHeading maps the axis-aligned    |
+// |         |            |        | kickoff headings (0° / 180°) to exact unit vectors instead of  |
+// |         |            |        | Mathf.Cos/Sin, keeping sin(180°)≈8.7e-8 fuzz out of the        |
+// |         |            |        | deterministic snapshot; non-cardinal headings still use trig.  |
 #endregion
