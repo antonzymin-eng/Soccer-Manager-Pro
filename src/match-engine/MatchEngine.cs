@@ -1,25 +1,27 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-16
+// Modified: 2026-06-16 (Phase B step B2 — physics-phase wiring)
 // Author:   —
-// Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5 (Phase A), Code Standards #20
+// Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
-//           TickOrchestrator 7-phase pipeline. Phase A wires the loop, the EventBus tick
-//           lifecycle, and world-state → snapshot serialization (the determinism spine).
-//           No gameplay subsystems are invoked yet — every phase callback is an
-//           EventBus-lifecycle-only stub (design note §5 Phase A).
+//           TickOrchestrator 7-phase pipeline. Phase B step B2 wires the Physics phase to the
+//           real Ball Physics (#1) and Agent Movement (#2) seams; the AI and Resolve phases
+//           remain EventBus-lifecycle-only stubs (design note §5 Phases C–F).
 
 using System;
 
 using Unity.Profiling;
+using UnityEngine;
 
+using TacticalDirector.AgentMovement;
+using TacticalDirector.BallPhysics;
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.MatchEngine
 {
     /// <summary>
-    /// Stage 0 match-engine composition root (Phase A — skeleton &amp; determinism spine).
+    /// Stage 0 match-engine composition root (determinism spine + Physics-phase wiring as of B2).
     /// Owns the world state, boots the deterministic infrastructure, and exposes the seven
     /// phase methods as <see cref="System.Action"/> method-group callbacks handed to
     /// <see cref="TickOrchestrator"/> (constructor injection per FR-CS-051–054; method-group
@@ -29,8 +31,9 @@ namespace TacticalDirector.MatchEngine
     /// orchestrator does not touch the EventBus, so the engine opens the tick in the Input
     /// phase, enters every phase (the AI phase unconditionally, at the end of Intent, so the
     /// EventBus phase stream is invariant across stride/non-stride ticks), drains at Events,
-    /// and serializes the ledger + world state at Snapshot. Phase A invokes no gameplay
-    /// subsystems — those wire in Phases B–F.
+    /// and serializes the ledger + world state at Snapshot. The Physics phase (step B2) drives
+    /// the real Ball Physics (#1) and Agent Movement (#2) seams; the AI and Resolve phases remain
+    /// lifecycle-only stubs until Phases C–F.
     /// </summary>
     public sealed class MatchEngine
     {
@@ -42,20 +45,33 @@ namespace TacticalDirector.MatchEngine
         private readonly EnvironmentFingerprint  _fingerprint;
         private readonly TickOrchestrator        _orchestrator;
 
-        // ── World state (design note §2.3; Phase A kinematic subset) ──────────────────
-        // The full BallState / AgentState[] field set and the pinned SNAPSHOT_SCHEMA_VERSION
-        // land in Phase B (design note §2.6). Phase A carries a deterministic kinematic slice
-        // sufficient to exercise snapshot serialization and prove the digest chain.
+        // ── Physics subsystems (design note §3) ───────────────────────────────────────
+        // AgentMovementSystem is stateless except its pinned physics Hz, so one shared instance
+        // serves all 22 agents. BallPhysicsCore is a static class (no instance needed).
 
-        private float _ballX;
-        private float _ballY;
-        private float _ballZ;
+        private readonly AgentMovementSystem _movement;
 
-        private readonly float[] _agentX;        // [SQUAD_SIZE]
-        private readonly float[] _agentY;
-        private readonly float[] _agentFacingDeg;
-        private readonly int[]   _teamIds;
-        private readonly bool[]  _isGoalkeeper;
+        // ── World state (design note §2.3) ────────────────────────────────────────────
+        // Real BallState + AgentState[] driven by the production physics seams (step B2). The full
+        // §2.6 field-by-field canonical serialization + SNAPSHOT_SCHEMA_VERSION pin lands in step B3;
+        // B2 serializes the kinematic subset (position + facing) sourced from these structs so
+        // movement is reflected in the digest chain.
+
+        private BallState _ball;
+
+        private readonly AgentState[]         _agents;       // [SQUAD_SIZE]
+        private readonly PlayerAttributes[]   _attrs;        // per-agent attribute snapshot (default)
+        private readonly PerformanceContext[] _perfs;        // per-agent form/context modifiers (neutral)
+        private readonly MovementCommand[]    _commands;     // per-agent held command (AI owns it at Phase D)
+        private readonly int[]                _teamIds;
+        private readonly bool[]               _isGoalkeeper;
+
+        // Collision-feedback buffers (design note §3 one-tick-lag contract): the real two-input
+        // movement seam {isCollisionKnockdown, collisionForce}. Written by the Resolve phase
+        // (Phase C); consumed by movement here. Boot-seeded standing-at-rest (false / 0); cross-tick
+        // state, serialized into the snapshot at B3.
+        private readonly bool[]  _isCollisionKnockdown;      // [SQUAD_SIZE]
+        private readonly float[] _collisionForces;           // [SQUAD_SIZE]
 
         // ── Phase A observation state (no gameplay effect) ────────────────────────────
 
@@ -87,12 +103,19 @@ namespace TacticalDirector.MatchEngine
             _codec       = new SnapshotCodec();
             _fingerprint = EnvironmentFingerprint.CreateStage0Dev();
 
-            // World-state buffers (pre-allocated once).
-            _agentX         = new float[MatchEngineConstants.SQUAD_SIZE];
-            _agentY         = new float[MatchEngineConstants.SQUAD_SIZE];
-            _agentFacingDeg = new float[MatchEngineConstants.SQUAD_SIZE];
-            _teamIds        = new int[MatchEngineConstants.SQUAD_SIZE];
-            _isGoalkeeper   = new bool[MatchEngineConstants.SQUAD_SIZE];
+            // §4 step 3 — physics subsystems. AgentMovementSystem is pinned to the 60 Hz physics
+            // tick (deterministic; never wall-clock-derived).
+            _movement = new AgentMovementSystem(DeterministicSimConstants.PHYSICS_TICK_HZ);
+
+            // World-state + per-agent input buffers (pre-allocated once; hot path mutates by ref).
+            _agents               = new AgentState[MatchEngineConstants.SQUAD_SIZE];
+            _attrs                = new PlayerAttributes[MatchEngineConstants.SQUAD_SIZE];
+            _perfs                = new PerformanceContext[MatchEngineConstants.SQUAD_SIZE];
+            _commands             = new MovementCommand[MatchEngineConstants.SQUAD_SIZE];
+            _teamIds              = new int[MatchEngineConstants.SQUAD_SIZE];
+            _isGoalkeeper         = new bool[MatchEngineConstants.SQUAD_SIZE];
+            _isCollisionKnockdown = new bool[MatchEngineConstants.SQUAD_SIZE];   // default false (standing at rest)
+            _collisionForces      = new float[MatchEngineConstants.SQUAD_SIZE];  // default 0    (standing at rest)
 
             // §4 step 4 — initialise kickoff world state (deterministic; no RNG).
             InitializeKickoffState();
@@ -119,9 +142,11 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void InitializeKickoffState()
         {
-            _ballX = MatchEngineConstants.KickoffBallXM;
-            _ballY = MatchEngineConstants.KickoffBallYM;
-            _ballZ = MatchEngineConstants.BALL_REST_HEIGHT_M;
+            // Stationary ball at the centre spot (a kick would set it in motion; none at Stage 0).
+            _ball = BallState.CreateAtPosition(new Vector3(
+                MatchEngineConstants.KickoffBallXM,
+                MatchEngineConstants.KickoffBallYM,
+                MatchEngineConstants.BALL_REST_HEIGHT_M));
 
             for (int team = 0; team < MatchEngineConstants.TEAM_COUNT; team++)
             {
@@ -131,17 +156,38 @@ namespace TacticalDirector.MatchEngine
 
                     _teamIds[i]      = team;
                     _isGoalkeeper[i] = k == 0;
-                    _agentX[i]       = team == 0
+
+                    float lineX = team == 0
                         ? MatchEngineConstants.HomeLineXM
                         : MatchEngineConstants.AwayLineXM;
                     // Even lateral spread across the pitch width: k+1 of PLAYERS_PER_TEAM+1 gaps.
-                    _agentY[i] = MatchEngineConstants.PITCH_WIDTH_M
-                               * (k + 1) / (MatchEngineConstants.PLAYERS_PER_TEAM + 1);
-                    _agentFacingDeg[i] = team == 0
+                    float spreadY = MatchEngineConstants.PITCH_WIDTH_M
+                                  * (k + 1) / (MatchEngineConstants.PLAYERS_PER_TEAM + 1);
+                    float headingDeg = team == 0
                         ? MatchEngineConstants.HOME_FACING_DEG
                         : MatchEngineConstants.AWAY_FACING_DEG;
+
+                    _agents[i] = AgentState.CreateAtPosition(
+                        new Vector2(lineX, spreadY), FacingFromHeading(headingDeg));
+                    _attrs[i]  = PlayerAttributes.CreateDefault();
+                    _perfs[i]  = PerformanceContext.CreateNeutral();
+
+                    // Boot-time command: hold formation position. The AI phase (Phase D) replaces
+                    // this on the first stride tick (tick 6); until then every agent holds (§3).
+                    _commands[i] = MovementCommand.Stop(_agents[i].Position);
                 }
             }
+        }
+
+        /// <summary>
+        /// Converts a kickoff heading in degrees (project convention: +X = toward the away goal,
+        /// so 0° faces the away goal and 180° faces the home goal) into a unit facing direction.
+        /// Boot-only — not on the hot path.
+        /// </summary>
+        private static Vector2 FacingFromHeading(float degrees)
+        {
+            float rad = degrees * Mathf.Deg2Rad;
+            return new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
         }
 
         // ── Public API ────────────────────────────────────────────────────────────────
@@ -181,13 +227,43 @@ namespace TacticalDirector.MatchEngine
         /// <summary>
         /// Test-only seam: overwrites the ball height before a tick so a determinism test can prove
         /// world state actually contributes to the snapshot digest (a perturbed value MUST change
-        /// the digest). Not called by production code; gameplay mutates the ball via the physics
-        /// phase in Phase B onward.
+        /// the digest). The ball stays Stationary, so the physics phase leaves it untouched. Not
+        /// called by production code; gameplay mutates the ball via the Physics phase.
         /// </summary>
         internal void TestOnly_SetBallHeight(float z)
         {
-            _ballZ = z;
+            _ball.Position = new Vector3(_ball.Position.x, _ball.Position.y, z);
         }
+
+        /// <summary>
+        /// Test-only seam: overwrites the entire ball state (e.g. an Airborne ball for a drop-and-
+        /// settle test that exercises the real Ball Physics seam). Not called by production code.
+        /// </summary>
+        internal void TestOnly_SetBall(in BallState state)
+        {
+            _ball = state;
+        }
+
+        /// <summary>Test-only: a copy of the current ball state (read after <see cref="RunTick"/>
+        /// to assert the physics seam mutated it).</summary>
+        internal BallState TestOnly_BallSnapshot => _ball;
+
+        /// <summary>
+        /// Test-only seam: overwrites an agent's held movement command. The AI phase owns this at
+        /// Phase D; B2 tests inject a WalkTo to exercise the movement seam. Not called by production.
+        /// </summary>
+        internal void TestOnly_SetCommand(int index, in MovementCommand command)
+        {
+            _commands[index] = command;
+        }
+
+        /// <summary>Test-only: a copy of an agent's state (read after <see cref="RunTick"/> to
+        /// assert movement, or its absence for skipped goalkeepers).</summary>
+        internal AgentState TestOnly_AgentSnapshot(int index) => _agents[index];
+
+        /// <summary>Test-only: whether the agent at the given roster index is a goalkeeper
+        /// (UpdateAllAgents skips goalkeepers at Stage 0).</summary>
+        internal bool TestOnly_IsGoalkeeper(int index) => _isGoalkeeper[index];
 
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
@@ -208,7 +284,9 @@ namespace TacticalDirector.MatchEngine
         }
 
         // ── Phase callbacks (design note §2.4 / §3) ───────────────────────────────────
-        // Phase A: EventBus-lifecycle-only stubs. No gameplay subsystem is invoked.
+        // Each callback drives the EventBus phase lifecycle. The Physics phase (B2) invokes the
+        // ball + agent-movement seams; the Input / Intent / AI / Resolve phases remain lifecycle-
+        // only stubs (gameplay wires in at Phases C–F).
 
         /// <summary>Phase 0 — Input. Opens the EventBus tick and enters the Input phase.</summary>
         private void RunInputPhase()
@@ -242,10 +320,27 @@ namespace TacticalDirector.MatchEngine
             _aiPhaseRunCount++;
         }
 
-        /// <summary>Phase 3 — Physics. Enters the Physics phase (no ball/agent integration yet).</summary>
+        /// <summary>Phase 3 — Physics. Integrates the ball (#1) and the 22 agents (#2) one 60 Hz
+        /// step. Consumes the previous tick's collision-feedback buffers per the §3 one-tick-lag
+        /// contract (those buffers are written by the Resolve phase, which is still a stub at B2).</summary>
         private void RunPhysicsPhase()
         {
             EventBus.BeginPhase(PhaseId.Physics);
+
+            // Fixed 60 Hz timestep in SECONDS (design note §3 / step B1); never wall-clock.
+            float dt = DeterministicSimConstants.FrameSeconds;
+
+            // Ball: a null logger drops matchTime (the logger is its sole consumer — design note B2),
+            // so no allocation and no non-load-bearing time enters the digest. No wind at Stage 0.
+            BallPhysicsCore.UpdateBallPhysics(
+                ref _ball, dt, SurfaceType.GrassDry, Vector3.zero, logger: null, matchTime: 0f);
+
+            // Agents: the batch seam skips goalkeepers (Stage 0 — GK locomotion is Spec #11).
+            // currentTime is the seconds-domain match clock (step B1), as OscillationGuard compares
+            // elapsed transition times against WindowSeconds.
+            _movement.UpdateAllAgents(
+                _agents, _attrs, _perfs, _commands, _isGoalkeeper,
+                _isCollisionKnockdown, _collisionForces, dt, _clock.CurrentMatchTimeSeconds);
         }
 
         /// <summary>Phase 4 — Resolve. Enters the Resolve phase (no collision/executors yet).</summary>
@@ -286,9 +381,12 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// Writes the Phase-A world state into the snapshot payload in a fixed canonical order.
-        /// Order is digest-load-bearing and versioned by PHASE_A_PAYLOAD_FORMAT_VERSION; the
-        /// full field set + SNAPSHOT_SCHEMA_VERSION pinning lands in Phase B (design note §2.6).
+        /// Writes the interim world state into the snapshot payload in a fixed canonical order,
+        /// sourced from the real BallState / AgentState structs. Order is digest-load-bearing and
+        /// versioned by PHASE_A_PAYLOAD_FORMAT_VERSION. Step B2 serializes the kinematic subset
+        /// (position + facing) so movement is reflected in the digest; the full §2.6 field set
+        /// (velocity, state-machine state, LastValid* checkpoints, OscillationGuard) plus the
+        /// SNAPSHOT_SCHEMA_VERSION pin land in step B3.
         /// </summary>
         private void SerializeWorldState(SnapshotPayload payload)
         {
@@ -297,18 +395,19 @@ namespace TacticalDirector.MatchEngine
 
             CanonicalSerializer.WriteU8(buf, ref o, MatchEngineConstants.PHASE_A_PAYLOAD_FORMAT_VERSION);
             // Tick is also carried in the header; included here so the payload is self-describing
-            // when decoded in isolation (Phase B replay/save tooling reads the payload directly).
+            // when decoded in isolation (replay/save tooling reads the payload directly).
             CanonicalSerializer.WriteU64(buf, ref o, _clock.CurrentTick);
 
-            CanonicalSerializer.WriteF32(buf, ref o, _ballX);
-            CanonicalSerializer.WriteF32(buf, ref o, _ballY);
-            CanonicalSerializer.WriteF32(buf, ref o, _ballZ);
+            CanonicalSerializer.WriteF32(buf, ref o, _ball.Position.x);
+            CanonicalSerializer.WriteF32(buf, ref o, _ball.Position.y);
+            CanonicalSerializer.WriteF32(buf, ref o, _ball.Position.z);
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                CanonicalSerializer.WriteF32 (buf, ref o, _agentX[i]);
-                CanonicalSerializer.WriteF32 (buf, ref o, _agentY[i]);
-                CanonicalSerializer.WriteF32 (buf, ref o, _agentFacingDeg[i]);
+                CanonicalSerializer.WriteF32 (buf, ref o, _agents[i].Position.x);
+                CanonicalSerializer.WriteF32 (buf, ref o, _agents[i].Position.y);
+                CanonicalSerializer.WriteF32 (buf, ref o, _agents[i].FacingDirection.x);
+                CanonicalSerializer.WriteF32 (buf, ref o, _agents[i].FacingDirection.y);
                 CanonicalSerializer.WriteI32 (buf, ref o, _teamIds[i]);
                 CanonicalSerializer.WriteBool(buf, ref o, _isGoalkeeper[i]);
             }
@@ -330,4 +429,17 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | so a test can prove world state feeds the digest; L-2 static-  |
 // |         |            |        | EventBus determinism assumption documented at SerializeLedger; |
 // |         |            |        | L-3 payload-tick-vs-header redundancy noted as intentional.    |
+// | 1.2     | 2026-06-16 | —      | Phase B step B2 — Physics-phase wiring. World state migrated   |
+// |         |            |        | from the Phase-A kinematic float arrays to real BallState +    |
+// |         |            |        | AgentState[] plus per-agent input buffers (attrs/perfs/        |
+// |         |            |        | commands) and the two collision-feedback buffers. RunPhysics-  |
+// |         |            |        | Phase now calls BallPhysicsCore.UpdateBallPhysics (null logger,|
+// |         |            |        | GrassDry, no wind) and AgentMovementSystem.UpdateAllAgents     |
+// |         |            |        | (skips GKs) with dt = FrameSeconds and the seconds-domain      |
+// |         |            |        | clock. Boot seeds Stop commands, default attrs, neutral perfs. |
+// |         |            |        | Serialization sources the kinematic subset (position + facing) |
+// |         |            |        | from the structs; full field set + schema pin land at B3. New  |
+// |         |            |        | test seams: TestOnly_SetBall / BallSnapshot / SetCommand /     |
+// |         |            |        | AgentSnapshot / IsGoalkeeper. asmdef gains BallPhysics +       |
+// |         |            |        | AgentMovement references.                                      |
 #endregion

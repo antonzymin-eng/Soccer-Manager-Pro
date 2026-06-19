@@ -599,18 +599,19 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 ---
 
-### `src/match-engine/` — Match Engine composition root (Phase A, June 16, 2026)
+### `src/match-engine/` — Match Engine composition root (Phase A June 16, 2026; Phase B steps B0–B2 June 16, 2026)
 
-> Infrastructure/composition assembly — NOT a member of any gameplay layer; NOT covered by a formal spec (governance anchor: `docs/tracking/match-engine-design.md`). Drives the deterministic-sim `TickOrchestrator` 7-phase pipeline. Phase A references only `TacticalDirector.DeterministicSim` + `TacticalDirector.EventSystem`; game-layer references and full world-state structs land with Phases B–F. autoReferenced true. Game-layer assemblies MUST NOT reference match-engine back.
+> Infrastructure/composition assembly — NOT a member of any gameplay layer; NOT covered by a formal spec (governance anchor: `docs/tracking/match-engine-design.md`). Drives the deterministic-sim `TickOrchestrator` 7-phase pipeline. References `TacticalDirector.DeterministicSim` + `TacticalDirector.EventSystem` + (Phase B step B2) `TacticalDirector.BallPhysics` + `TacticalDirector.AgentMovement`; remaining game-layer references and the full world-state field set land with Phases C–F. autoReferenced true. Game-layer assemblies MUST NOT reference match-engine back.
 
 | File | Purpose |
 |------|---------|
-| `src/match-engine/match-engine.asmdef` | Assembly definition; references TacticalDirector.DeterministicSim + TacticalDirector.EventSystem |
+| `src/match-engine/match-engine.asmdef` | Assembly definition; references DeterministicSim + EventSystem + BallPhysics + AgentMovement (B2) |
 | `src/match-engine/AssemblyInfo.cs` | InternalsVisibleTo("TacticalDirector.MatchEngine.Tests") |
-| `src/match-engine/MatchEngineConstants.cs` | [FIXED] catalogue: SQUAD_SIZE / TEAM_COUNT / PLAYERS_PER_TEAM, kickoff coordinate constants (Ball Physics #1 §1.2 corner-origin), PHASE_A_PAYLOAD_FORMAT_VERSION |
-| `src/match-engine/MatchEngine.cs` | Sealed composition root: boot (seed → DeterministicRngService, clock/codec/fingerprint, kickoff world state), 7 method-group phase callbacks wired into TickOrchestrator driving the EventBus tick lifecycle (BeginTick/BeginPhase ×7 incl. unconditional AI entry / DrainTick / SerializeLedger / OnTickBoundary) + digest-load-bearing world-state snapshot serialization. Phase A invokes no gameplay subsystems. |
-| `src/match-engine/tests/match-engine-tests.asmdef` | Test assembly definition (EditMode; references match-engine + deterministic-sim) |
+| `src/match-engine/MatchEngineConstants.cs` | [FIXED]/[DERIVED] catalogue: SQUAD_SIZE / TEAM_COUNT / PLAYERS_PER_TEAM, kickoff coordinate constants (Ball Physics #1 §1.2 corner-origin), PHASE_A_PAYLOAD_FORMAT_VERSION (=2, B2 interim payload) |
+| `src/match-engine/MatchEngine.cs` | Sealed composition root: boot (seed → DeterministicRngService, clock/codec/fingerprint, AgentMovementSystem, real BallState + AgentState[] kickoff world state + per-agent input/collision buffers), 7 method-group phase callbacks wired into TickOrchestrator driving the EventBus tick lifecycle + digest-load-bearing world-state snapshot serialization. B2: Physics phase drives BallPhysicsCore.UpdateBallPhysics + AgentMovementSystem.UpdateAllAgents (skips GKs) at dt = FrameSeconds / seconds-domain clock; AI + Resolve phases remain stubs (Phases C–F). |
+| `src/match-engine/tests/match-engine-tests.asmdef` | Test assembly definition (EditMode; references match-engine + deterministic-sim + ball-physics + agent-movement) |
 | `src/match-engine/tests/MatchEngineDeterminismTests.cs` | Phase A capstone: two same-seed runs → byte-identical snapshot digest chains; chain non-degenerate + advances; AI phase fires only on AI_PHASE_STRIDE ticks; first processed tick is 1 / first AI tick is stride |
+| `src/match-engine/tests/MatchEnginePhysicsTests.cs` | Phase B step B2: dropped-ball integration through the real loop; outfielder walks toward its WalkTo target while goalkeepers are skipped; same-seed determinism with live ball + agent dynamics |
 
 ## Tracking Documents
 
