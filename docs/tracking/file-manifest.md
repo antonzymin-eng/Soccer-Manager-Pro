@@ -599,7 +599,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 ---
 
-### `src/match-engine/` — Match Engine composition root (Phase A June 16, 2026; Phase B steps B0–B2 June 16, 2026)
+### `src/match-engine/` — Match Engine composition root (Phase A June 16, 2026; Phase B steps B0–B4 June 16, 2026 — Phase B complete)
 
 > Infrastructure/composition assembly — NOT a member of any gameplay layer; NOT covered by a formal spec (governance anchor: `docs/tracking/match-engine-design.md`). Drives the deterministic-sim `TickOrchestrator` 7-phase pipeline. References `TacticalDirector.DeterministicSim` + `TacticalDirector.EventSystem` + (Phase B step B2) `TacticalDirector.BallPhysics` + `TacticalDirector.AgentMovement`; remaining game-layer references and the full world-state field set land with Phases C–F. autoReferenced true. Game-layer assemblies MUST NOT reference match-engine back.
 
@@ -607,11 +607,12 @@ Use this file to track the **current folder structure**, not legacy per-version 
 |------|---------|
 | `src/match-engine/match-engine.asmdef` | Assembly definition; references DeterministicSim + EventSystem + BallPhysics + AgentMovement (B2) |
 | `src/match-engine/AssemblyInfo.cs` | InternalsVisibleTo("TacticalDirector.MatchEngine.Tests") |
-| `src/match-engine/MatchEngineConstants.cs` | [FIXED]/[DERIVED] catalogue: SQUAD_SIZE / TEAM_COUNT / PLAYERS_PER_TEAM, kickoff coordinate constants (Ball Physics #1 §1.2 corner-origin), PHASE_A_PAYLOAD_FORMAT_VERSION (=2, B2 interim payload) |
-| `src/match-engine/MatchEngine.cs` | Sealed composition root: boot (seed → DeterministicRngService, clock/codec/fingerprint, AgentMovementSystem, real BallState + AgentState[] kickoff world state + per-agent input/collision buffers), 7 method-group phase callbacks wired into TickOrchestrator driving the EventBus tick lifecycle + digest-load-bearing world-state snapshot serialization. B2: Physics phase drives BallPhysicsCore.UpdateBallPhysics + AgentMovementSystem.UpdateAllAgents (skips GKs) at dt = FrameSeconds / seconds-domain clock; AI + Resolve phases remain stubs (Phases C–F). |
+| `src/match-engine/MatchEngineConstants.cs` | [FIXED]/[DERIVED] catalogue: SQUAD_SIZE / TEAM_COUNT / PLAYERS_PER_TEAM, kickoff coordinate constants (Ball Physics #1 §1.2 corner-origin), SNAPSHOT_SCHEMA_VERSION (u32 = 1; B3 world-state field-set pin — distinct from the #16 SnapshotHeader schema version) |
+| `src/match-engine/MatchEngine.cs` | Sealed composition root: boot (seed → DeterministicRngService, clock/codec/fingerprint, AgentMovementSystem, real BallState + AgentState[] kickoff world state + per-agent input/collision buffers), 7 method-group phase callbacks wired into TickOrchestrator driving the EventBus tick lifecycle + digest-load-bearing world-state snapshot serialization. B2: Physics phase drives BallPhysicsCore.UpdateBallPhysics + AgentMovementSystem.UpdateAllAgents (skips GKs) at dt = FrameSeconds / seconds-domain clock. B3: SerializeWorldState writes the full §2.6 field set field-by-field via CanonicalSerializer (ball + full AgentState incl. OscillationGuard via the B0 GetState seam + held MovementCommand + collision inputs) under SNAPSHOT_SCHEMA_VERSION; TestOnly_SetAgent seam. AI + Resolve phases remain stubs (Phases C–F). |
 | `src/match-engine/tests/match-engine-tests.asmdef` | Test assembly definition (EditMode; references match-engine + deterministic-sim + ball-physics + agent-movement) |
 | `src/match-engine/tests/MatchEngineDeterminismTests.cs` | Phase A capstone: two same-seed runs → byte-identical snapshot digest chains; chain non-degenerate + advances; AI phase fires only on AI_PHASE_STRIDE ticks; first processed tick is 1 / first AI tick is stride |
 | `src/match-engine/tests/MatchEnginePhysicsTests.cs` | Phase B step B2: dropped-ball integration through the real loop; outfielder walks toward its WalkTo target while goalkeepers are skipped; same-seed determinism with live ball + agent dynamics |
+| `src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs` | Phase B step B3: SNAPSHOT_SCHEMA_VERSION pin; OscillationGuard-state + ball-spin digest-preimage probes (proving the full §2.6 field set feeds the digest, not just the B2 kinematic subset); locked-guard same-seed determinism |
 
 ## Tracking Documents
 
