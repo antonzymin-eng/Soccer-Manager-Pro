@@ -443,7 +443,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | File | Purpose |
 |------|---------|
 | `src/deterministic-sim/deterministic-sim.asmdef` | Assembly definition (no references — cross-cutting foundation) |
-| `src/deterministic-sim/DeterministicSimConstants.cs` | All [FIXED]/[DERIVED]/[GT] constants: tick rates, error codes (0x1601–0x160D), domain tags (0x10–0x1D), field widths, RNG params, digest/schema versions, END_OF_SNAPSHOT_PHASE_ORDINAL=6 |
+| `src/deterministic-sim/DeterministicSimConstants.cs` | All [FIXED]/[DERIVED]/[GT] constants: tick rates, error codes (0x1601–0x160D), domain tags (0x10–0x1D), field widths, RNG params, digest/schema versions, END_OF_SNAPSHOT_PHASE_ORDINAL=6, FrameMs / FrameSeconds (B1 per-tick dt) |
 | `src/deterministic-sim/PhaseId.cs` | Enum: Input=0 / Intent=1 / AI=2 / Physics=3 / Resolve=4 / Events=5 / Snapshot=6 (byte; AR-1 H-4: AI_NoOp removed; Events=5 added) |
 | `src/deterministic-sim/DeterminismTier.cs` | Enum: TierA=0 / TierB=1 / TierC=2 (byte) |
 | `src/deterministic-sim/DivergenceClass.cs` | Enum: None / HardDesync / SoftDrift / Cosmetic (byte) |
@@ -453,7 +453,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/deterministic-sim/DespawnLog.cs` | Pre-allocated tombstone list: Append / ContainsEntity / GetEntry / Clear; capacity = MaxDespawnEntries (512) |
 | `src/deterministic-sim/EnvironmentFingerprint.cs` | Sealed class: 6 readonly fields (WorkerCount, SchedulerPolicy, ReductionTopology, SimdFeatureLevel, FloatModelHash, UnicodeNormalizationVersion); Lock(); ValidateAgainst() → ERR_DS_REPLAY_ENV_MISMATCH; CreateStage0Dev() factory |
 | `src/deterministic-sim/RngStreamState.cs` | Mutable struct: StreamKey/RngCursor/ActionOrdinal (ulong), BudgetRemaining/DeclaredBudget/DrawIndex (int), SiteId (string), StreamVersion (ushort), SubsystemOrdinal (int), EntityId (int); ClearReservation() |
-| `src/deterministic-sim/MatchClock.cs` | Sealed class: CurrentTick / CurrentTacticalTick (÷AI_PHASE_STRIDE) / CurrentMatchTimeMs (×FrameMs) / IsAiStrideTick; Advance(); RestoreFromSnapshot(tick) for replay step 5 — no System.DateTime (FR-CS-042) |
+| `src/deterministic-sim/MatchClock.cs` | Sealed class: CurrentTick / CurrentTacticalTick (÷AI_PHASE_STRIDE) / CurrentMatchTimeMs (×FrameMs) / CurrentMatchTimeSeconds (×FrameSeconds; B1 seconds-clock) / IsAiStrideTick; Advance(); RestoreFromSnapshot(tick) for replay step 5 — no System.DateTime (FR-CS-042) |
 | `src/deterministic-sim/DeterministicRngService.cs` | Sealed class: HKDF-SHA256 key derivation at construction; SipHash-2-4-64 per-draw hash; RegisterStream / Reserve / DrawReserved / CloseReservation / Skip / RestoreStream; zero-alloc hot path (stackalloc Span<byte>[21]; AR-1 H-3) |
 | `src/deterministic-sim/CanonicalSerializer.cs` | Static class: §3.2.4.1 Write/Read for bool, u8/i8, u16/i16, u32/i32, u64/i64, f32 (−0.0→+0.0), f32TierB (NaN→0x7FC00000), f64, f64TierB (NaN→0x7FF8000000000000; corpus F-09), strings, bytes, optional tags; FloatUintUnion explicit-layout struct (AR-1 H-1/H-2: eliminates BitConverter.GetBytes heap alloc) |
 | `src/deterministic-sim/SnapshotHeader.cs` | Sealed class: SchemaVersion (u32) / DigestVersion (u16) / Tick (u64) / PrevSnapshotDigest[32] / CurrentSnapshotDigest[32] / Fingerprint / Cursor; Initialize(tick, prevDigest, fingerprint) |
@@ -599,18 +599,19 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 ---
 
-### `src/match-engine/` — Match Engine composition root (Phase A, June 16, 2026)
+### `src/match-engine/` — Match Engine composition root (Phase A June 16, 2026; Phase B steps B0–B2 June 16, 2026)
 
-> Infrastructure/composition assembly — NOT a member of any gameplay layer; NOT covered by a formal spec (governance anchor: `docs/tracking/match-engine-design.md`). Drives the deterministic-sim `TickOrchestrator` 7-phase pipeline. Phase A references only `TacticalDirector.DeterministicSim` + `TacticalDirector.EventSystem`; game-layer references and full world-state structs land with Phases B–F. autoReferenced true. Game-layer assemblies MUST NOT reference match-engine back.
+> Infrastructure/composition assembly — NOT a member of any gameplay layer; NOT covered by a formal spec (governance anchor: `docs/tracking/match-engine-design.md`). Drives the deterministic-sim `TickOrchestrator` 7-phase pipeline. References `TacticalDirector.DeterministicSim` + `TacticalDirector.EventSystem` + (Phase B step B2) `TacticalDirector.BallPhysics` + `TacticalDirector.AgentMovement`; remaining game-layer references and the full world-state field set land with Phases C–F. autoReferenced true. Game-layer assemblies MUST NOT reference match-engine back.
 
 | File | Purpose |
 |------|---------|
-| `src/match-engine/match-engine.asmdef` | Assembly definition; references TacticalDirector.DeterministicSim + TacticalDirector.EventSystem |
+| `src/match-engine/match-engine.asmdef` | Assembly definition; references DeterministicSim + EventSystem + BallPhysics + AgentMovement (B2) |
 | `src/match-engine/AssemblyInfo.cs` | InternalsVisibleTo("TacticalDirector.MatchEngine.Tests") |
-| `src/match-engine/MatchEngineConstants.cs` | [FIXED] catalogue: SQUAD_SIZE / TEAM_COUNT / PLAYERS_PER_TEAM, kickoff coordinate constants (Ball Physics #1 §1.2 corner-origin), PHASE_A_PAYLOAD_FORMAT_VERSION |
-| `src/match-engine/MatchEngine.cs` | Sealed composition root: boot (seed → DeterministicRngService, clock/codec/fingerprint, kickoff world state), 7 method-group phase callbacks wired into TickOrchestrator driving the EventBus tick lifecycle (BeginTick/BeginPhase ×7 incl. unconditional AI entry / DrainTick / SerializeLedger / OnTickBoundary) + digest-load-bearing world-state snapshot serialization. Phase A invokes no gameplay subsystems. |
-| `src/match-engine/tests/match-engine-tests.asmdef` | Test assembly definition (EditMode; references match-engine + deterministic-sim) |
+| `src/match-engine/MatchEngineConstants.cs` | [FIXED]/[DERIVED] catalogue: SQUAD_SIZE / TEAM_COUNT / PLAYERS_PER_TEAM, kickoff coordinate constants (Ball Physics #1 §1.2 corner-origin), PHASE_A_PAYLOAD_FORMAT_VERSION (=2, B2 interim payload) |
+| `src/match-engine/MatchEngine.cs` | Sealed composition root: boot (seed → DeterministicRngService, clock/codec/fingerprint, AgentMovementSystem, real BallState + AgentState[] kickoff world state + per-agent input/collision buffers), 7 method-group phase callbacks wired into TickOrchestrator driving the EventBus tick lifecycle + digest-load-bearing world-state snapshot serialization. B2: Physics phase drives BallPhysicsCore.UpdateBallPhysics + AgentMovementSystem.UpdateAllAgents (skips GKs) at dt = FrameSeconds / seconds-domain clock; AI + Resolve phases remain stubs (Phases C–F). |
+| `src/match-engine/tests/match-engine-tests.asmdef` | Test assembly definition (EditMode; references match-engine + deterministic-sim + ball-physics + agent-movement) |
 | `src/match-engine/tests/MatchEngineDeterminismTests.cs` | Phase A capstone: two same-seed runs → byte-identical snapshot digest chains; chain non-degenerate + advances; AI phase fires only on AI_PHASE_STRIDE ticks; first processed tick is 1 / first AI tick is stride |
+| `src/match-engine/tests/MatchEnginePhysicsTests.cs` | Phase B step B2: dropped-ball integration through the real loop; outfielder walks toward its WalkTo target while goalkeepers are skipped; same-seed determinism with live ball + agent dynamics |
 
 ## Tracking Documents
 

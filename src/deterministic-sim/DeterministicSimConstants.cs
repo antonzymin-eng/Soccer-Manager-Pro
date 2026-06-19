@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/DeterministicSimConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-16
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.4, §3.2.4.1, Code Standards #20
 // Purpose:  All numeric and string constants for the deterministic simulation system.
@@ -228,6 +228,17 @@ namespace TacticalDirector.DeterministicSim
         /// </summary>
         public static readonly float FrameMs = 1000.0f / PHYSICS_TICK_HZ;
 
+        /// <summary>
+        /// [DERIVED] Physics frame duration in seconds (the per-tick simulation timestep dt).
+        /// Formula: FrameMs / 1000.0f. Deterministic Simulation #16 §3.4.
+        /// Source constants: FrameMs (transitively PHYSICS_TICK_HZ).
+        /// Derived from FrameMs (rather than 1.0f / PHYSICS_TICK_HZ) so the seconds clock and the
+        /// physics-integration dt share one derivation chain (PHYSICS_TICK_HZ → FrameMs → FrameSeconds);
+        /// consumers that need seconds (e.g. AgentMovement OscillationGuard's WindowSeconds comparison)
+        /// MUST source seconds here, never by reinterpreting FrameMs.
+        /// </summary>
+        public static readonly float FrameSeconds = FrameMs / 1000.0f;
+
         #endregion
 
         #region GT
@@ -251,4 +262,6 @@ namespace TacticalDirector.DeterministicSim
 // | Version | Date       | Author | Notes                           |
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                              |
 // | 1.1     | 2026-05-29 | —      | AR-1 M-1: AI_PHASE_STRIDE changed from const to static readonly.     |
+// | 1.2     | 2026-06-16 | —      | Match Engine Phase B step B1: added [DERIVED] FrameSeconds           |
+// |         |            |        | (FrameMs / 1000) — the per-tick dt / seconds-clock derivation.       |
 #endregion

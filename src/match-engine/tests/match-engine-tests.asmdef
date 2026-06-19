@@ -3,7 +3,9 @@
     "rootNamespace": "TacticalDirector.MatchEngine",
     "references": [
         "TacticalDirector.MatchEngine",
-        "TacticalDirector.DeterministicSim"
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.AgentMovement"
     ],
     "includePlatforms": [
         "Editor"

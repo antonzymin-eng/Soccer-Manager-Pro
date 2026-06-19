@@ -46,10 +46,12 @@ namespace TacticalDirector.MatchEngine
         /// A fixed kickoff orientation, not a tunable.</summary>
         public const float AWAY_FACING_DEG = 180f;
 
-        /// <summary>[FIXED] Phase-A world-state payload format version. Independent of the
-        /// deterministic-sim SNAPSHOT_SCHEMA_VERSION, which is pinned for the full field set in
-        /// Phase B (design note §2.6). Bump when the Phase-A field order changes.</summary>
-        public const byte PHASE_A_PAYLOAD_FORMAT_VERSION = 1;
+        /// <summary>[FIXED] Interim world-state payload format version. Independent of the
+        /// deterministic-sim SNAPSHOT_SCHEMA_VERSION, which is pinned for the full §2.6 field set in
+        /// step B3. Bump when the interim field order changes. v2 (step B2): the payload is now
+        /// sourced from the real BallState / AgentState structs and agent facing is a 2-component
+        /// direction (was a single heading degree in v1's kinematic-subset scaffold).</summary>
+        public const byte PHASE_A_PAYLOAD_FORMAT_VERSION = 2;
 
         #endregion
 
@@ -93,4 +95,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | pitch dims) instead of [FIXED] placeholders; PITCH_LENGTH_M    |
 // |         |            |        | added as the derivation source. Facing headings kept [FIXED]  |
 // |         |            |        | (fixed kickoff orientation, not tunable).                     |
+// | 1.2     | 2026-06-16 | —      | Phase B step B2: PHASE_A_PAYLOAD_FORMAT_VERSION bumped 1 → 2   |
+// |         |            |        | — interim payload now sourced from real BallState/AgentState   |
+// |         |            |        | and agent facing serialized as a 2-component direction.        |
 #endregion

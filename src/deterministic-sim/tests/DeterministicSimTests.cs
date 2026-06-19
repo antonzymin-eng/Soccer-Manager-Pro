@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/tests/DeterministicSimTests.cs
 // Created:  2026-05-29
-// Modified: 2026-06-13 (dotnet CI gate: T-DS-008 genesis digest-chain fixture fix)
+// Modified: 2026-06-16 (Match Engine Phase B step B1: MatchClock seconds-clock + FrameSeconds coverage)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §5 (T-DS-ORDER-001..T-DS-FAULT-014), §9.5 (golden vectors),
 //           Code Standards #20
@@ -428,6 +428,67 @@ namespace TacticalDirector.DeterministicSim
         }
 
         /// <summary>
+        /// FrameSeconds is FrameMs / 1000 — the per-tick dt / seconds-clock step. §3.4.
+        /// </summary>
+        [Test]
+        public void Constants_FrameSeconds_IsFrameMsOverThousand()
+        {
+            Assert.AreEqual(
+                DeterministicSimConstants.FrameMs / 1000.0f,
+                DeterministicSimConstants.FrameSeconds,
+                "FrameSeconds must equal FrameMs / 1000 (shared PHYSICS_TICK_HZ → FrameMs → FrameSeconds chain)");
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // Match Engine Phase B step B1: MatchClock seconds-domain plumbing
+        // ══════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// MatchClock.CurrentMatchTimeSeconds advances by FrameSeconds per tick and equals
+        /// CurrentTick × FrameSeconds — the seconds-domain clock OscillationGuard.WindowSeconds
+        /// consumers must read (the silent 1000× ms↔s unit fix).
+        /// </summary>
+        [Test]
+        public void MatchClock_CurrentMatchTimeSeconds_TracksTicks()
+        {
+            var clock = new MatchClock(0UL);
+            Assert.AreEqual(0.0f, clock.CurrentMatchTimeSeconds,
+                "At tick 0 the seconds clock must read 0.");
+
+            // One full second of physics ticks lands the clock at exactly 1.0 s.
+            for (int i = 0; i < DeterministicSimConstants.PHYSICS_TICK_HZ; i++)
+            {
+                clock.Advance();
+            }
+
+            Assert.AreEqual(
+                (float)DeterministicSimConstants.PHYSICS_TICK_HZ * DeterministicSimConstants.FrameSeconds,
+                clock.CurrentMatchTimeSeconds,
+                "After PHYSICS_TICK_HZ ticks the seconds clock must equal CurrentTick × FrameSeconds.");
+            Assert.AreEqual(1.0f, clock.CurrentMatchTimeSeconds, 1e-4f,
+                "PHYSICS_TICK_HZ ticks is one match second.");
+        }
+
+        /// <summary>
+        /// CurrentMatchTimeSeconds is the millisecond clock scaled by 1/1000 — the two clocks
+        /// agree on the same instant so neither domain drifts from the other.
+        /// </summary>
+        [Test]
+        public void MatchClock_SecondsAndMs_Agree()
+        {
+            var clock = new MatchClock(0UL);
+            for (int i = 0; i < 37; i++)
+            {
+                clock.Advance();
+            }
+
+            Assert.AreEqual(
+                clock.CurrentMatchTimeMs / 1000.0f,
+                clock.CurrentMatchTimeSeconds, 1e-6f,
+                "Seconds clock must equal the ms clock / 1000 at the same tick.");
+        }
+
+        /// <summary>
         /// DespawnLog: Append and ContainsEntity operate correctly; overflow returns false. §3.2.3.
         /// </summary>
         [Test]
@@ -762,4 +823,7 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | and AR M-1 (§3.2.3 chained Encode digest + chain dependence on    |
 // |         |            |        | prevDigest) — production paths the corpus suite rebuilt by hand    |
 // |         |            |        | but never executed against SnapshotCodec.Encode.                  |
+// | 1.6     | 2026-06-16 | —      | Match Engine Phase B step B1: FrameSeconds constant test +         |
+// |         |            |        | MatchClock.CurrentMatchTimeSeconds coverage (tick tracking,        |
+// |         |            |        | one-second landing, seconds↔ms agreement).                        |
 #endregion
