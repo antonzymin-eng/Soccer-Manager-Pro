@@ -5,6 +5,11 @@
 > enum re-homing, translate-once snapshot rule pinned, FocusPlay/RoleWeightModifiers flagged as new
 > branches, mentality-collapse softened to open balance question; all supplement code references
 > fact-checked against source)
+> **SUPERSEDED June 20, 2026** — promoted to formal **Spec #21 (Tactical Instructions)** at
+> `docs/specs/tactical-instructions/` (status IN REVIEW; see `SPEC_INDEX.md` row 21). This note is
+> retained for history; the spec section files are authoritative. Folder/assembly naming reconciled
+> there (`tactical-instructions/` / `TacticalDirector.TacticalInstructions`).
+>
 > **Status:** DESIGN SUPPLEMENT (forward-looking; **NOT** a formal approved spec, **NOT** yet implemented).
 > Targets Stage 1 implementation, sequenced against the match-engine Phase C–F roadmap
 > (`match-engine-design.md`). No code is authored from this note until it is reviewed and approved.
