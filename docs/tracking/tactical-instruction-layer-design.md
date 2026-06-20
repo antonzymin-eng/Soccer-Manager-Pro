@@ -1,8 +1,10 @@
 # Tactical Instruction Layer — Design Supplement
 
 > **Created:** June 20, 2026
-> **Last Updated:** June 20, 2026 (v0.2 — adversarial fix pass: enum-ownership resolved, routing defined,
-> mentality→style mapping pinned, review-readiness claim corrected)
+> **Last Updated:** June 20, 2026 (v0.3 — second adversarial fix pass: "no migration" claim narrowed to
+> enum re-homing, translate-once snapshot rule pinned, FocusPlay/RoleWeightModifiers flagged as new
+> branches, mentality-collapse softened to open balance question; all supplement code references
+> fact-checked against source)
 > **Status:** DESIGN SUPPLEMENT (forward-looking; **NOT** a formal approved spec, **NOT** yet implemented).
 > Targets Stage 1 implementation, sequenced against the match-engine Phase C–F roadmap
 > (`match-engine-design.md`). No code is authored from this note until it is reviewed and approved.
@@ -93,7 +95,9 @@ assembly, so it **cannot reuse** enums that live in higher assemblies — `Passi
   (a small pure `static` map function in the consuming assembly — which legally references `tactics/`
   downward). The subsystem-owned enums are left untouched; **no approved file is migrated.**
 - The translation maps are the explicit seam, not an implicit "reuse." This trades a few tiny mapping
-  functions for a clean acyclic graph and zero edits to #8/#12/#13's existing enums.
+  functions for a clean acyclic graph and **zero edits to any approved enum file**. Note this avoids
+  *enum re-homing only* — the routing in §2.5/§4 still adds fields to four approved snapshot structs and
+  to `TacticalContext`; that is unavoidable and is the bounded edit surface this layer accepts.
 
 > **Alternative considered & rejected:** make `tactics/` the canonical owner and have #8/#13/#12 mirror
 > its enums. Rejected — that re-homes enums embedded in approved, adversarially-reviewed event payloads
@@ -118,6 +122,12 @@ field, or a utility weight — rather than a new code path. Mentality scales uti
 `ContextModifier` compactness; line-of-engagement feeds press trigger distances; the role→weight table
 multiplies `UtilityWeights`. Small additive surface; the reviewed scoring math is not re-derived.
 
+**Exception — instructions that require genuinely new logic** (not just a value fed to an existing
+input): `FocusPlay` has no existing hook (`OptionGenerator` generates options from perceived geometry +
+`AgentFacingDirection`, not from a directional preference), and the `RoleWeightModifiers` table (§3.4)
+is a new multiply stage. These are flagged as **new branches** in §4, not "maps to," and carry the
+heavier review burden (§6.2). Everything else resolves into an existing input.
+
 ### 2.4 `PlayerRole` (behavioural) is distinct from `RoleId` (positional)
 
 `RoleId {GK..ST}` — owned by `positioning-ai`, a **position** (row index into the formation pull-factor
@@ -141,8 +151,11 @@ match-engine Phase-D snapshot-assembly layer (the single place that reads `TeamT
 | #14 Defensive | via `DefensiveSnapshot` | man-mark override + offside-toggle fields |
 | #15 Attacking | via `AttackingSnapshot` | style/overload/width fields |
 
-The assembly layer translates `tactics`-owned enums → each subsystem's local enums (§2.1) while filling
-these fields, so the subsystems never see a `tactics` enum directly on their hot path.
+**Snapshots store the already-translated *local* enums, not `tactics` enums.** The assembly layer runs
+the §2.1 translation **once** when it materializes/changes a tactic (i.e. on a tactic-change event, not
+per agent per tick) and writes the subsystem's own enum into the snapshot field. So the Mechanics ticks
+never run a map on their hot path and never reference `tactics` — they read their own enum type as they
+do today. `tactics`-typed values appear only in `TeamTactic`/`PlayerTactic` and at the DT seam.
 
 ---
 
@@ -164,7 +177,7 @@ these fields, so the subsystems never see a `tactics` enum directly on their hot
 | `TacticDefWidth` | Narrow/Standard/Wide | `ContextModifier` out-of-possession compactness |
 | `TransitionPlan` | CounterPress/Regroup (lost); Counter/HoldShape (won) | `StyleProfile.TransitionHoldTicks` (#15); counter-press gate (#13) |
 | `GkDistributionPolicy` | DistributeQuick, SlowDown, ToCentreBacks, ToFullBacks, ToTarget, LongClear | `DistributeIntent` defaults (#11) |
-| `FocusPlay` | Left, Right, ThroughMiddle, Mixed | `OverloadDetector` flank bias (#15); option-gen lateral bias (#8) |
+| `FocusPlay` | Left, Right, ThroughMiddle, Mixed | `OverloadDetector` flank bias (#15); **NEW** lateral-preference branch in #8 `OptionGenerator` (no existing hook — §2.3 exception) |
 | `TacticPassing` | Short, Mixed, Direct | translated → #8 `PassingStyle` at the DT seam |
 | `TacticPressing` | Low, Medium, High | translated → #8 `PressingMode` at the DT seam |
 | `TacticTriggerMask` | `[Flags]` BadTouch/BackwardPass/SidelineTrap/WeakReceiver | translated → #13 `TriggerFlags` at the pressing seam |
@@ -200,7 +213,7 @@ TeamTactic            // input, one per team
   TriggerPressMask    TacticTriggerMask   // → #13 TriggerFlags via the seam map
   FocusPlay           FocusPlay
   GkDistribution      GkDistributionPolicy
-  TimeWasting         byte [0..N]         // game-management dial
+  TimeWasting         byte [0..4]         // game-management dial (0 = never … 4 = always)
 
 PlayerInstructions    // input, per agent (all biases Default = follow team)
   RiskyPasses         InstrBias
@@ -245,9 +258,11 @@ Mentality is 7-valued; #15 ships 3 `StyleProfile` factories. The collapse is **e
 | Attacking | Direct | 1.14 | +0.12 |
 | VeryAttacking | Direct | 1.20 | +0.20 |
 
-Mentality therefore drives **three** distinct outputs (style profile, a risk multiplier on utility, a
-defensive-line bias), so the 7→3 style collapse is not lossy in aggregate — the risk multiplier and line
-bias preserve the finer gradation. Values are illustrative pending the §6.2 balance pass.
+Mentality drives **three** distinct outputs (style profile, a risk multiplier on utility, a
+defensive-line bias). The 7→3 style collapse is intended to be covered by the risk-mult + line-bias
+gradation, but whether three Mentalities sharing one `StyleProfile` (Cautious/Balanced/Positive →
+Possession) feel distinct in play is an **open balance question for §6.2**, not a settled fact — the
+risk-mult spread (~6% per step) and all other values here are illustrative pending that pass.
 
 ---
 
@@ -255,7 +270,7 @@ bias preserve the finer gradation. Values are illustrative pending the §6.2 bal
 
 | Subsystem | Change needed |
 |---|---|
-| **#8 Decision Tree** | `UtilityScorer`: apply (a) `Mentality` global risk multiplier (§3.5), (b) `RoleWeightModifiers[Role, type]`, (c) `Duty` aggression bias, (d) `PlayerInstructions` per-action biases. `OptionGenerator`: `Tempo`/`FocusPlay` bias on option generation; `Width` bias on MOVE target generation. `TacticalContext`: replace the two `bool` stubs with resolved `TeamTactic`/`PlayerTactic` refs. Add `tactics`→DT enum maps (`TacticPassing`→`PassingStyle`, `TacticPressing`→`PressingMode`). |
+| **#8 Decision Tree** | `UtilityScorer`: apply (a) `Mentality` global risk multiplier (§3.5), (b) `RoleWeightModifiers[Role, type]`, (c) `Duty` aggression bias, (d) `PlayerInstructions` per-action biases. `OptionGenerator`: `Tempo` threshold bias + `Width` bias on MOVE target generation (existing inputs); **new** `FocusPlay` lateral-preference branch (no existing hook — §2.3 exception). `TacticalContext`: replace the two `bool` stubs with resolved `TeamTactic`/`PlayerTactic` refs. Add `tactics`→DT enum maps (`TacticPassing`→`PassingStyle`, `TacticPressing`→`PressingMode`). |
 | **#12 Positioning** | `PositioningPerceptionSnapshot`/`ContextModifierInputs`: new width/role/duty fields. Add a `PlayerRole`/`Duty` positioning-offset table parallel to the pull-factor table. Expand `FormationFamily` + `TacticFormation` seam map. |
 | **#13 Pressing** | `PressingSnapshot`: new trigger-mask + line-of-engagement fields. `TriggerEvaluator`: gate each trigger on the mask; scale distances by `LineOfEngagement`/`TacticPressing`. Counter-press gate from `TransitionLost`. Add `TacticTriggerMask`→`TriggerFlags` map. |
 | **#14 Defensive** | `DefensiveSnapshot`: new man-mark-override + offside-toggle fields. `MarkAssigner`: honour a `MarkTargetEntityId` override **subject to** the §3.10 anti-chaos invariants (precedence defined in §6.5 before implementation, not assumed). `OffsideTrapController`: enable from `OffsideTrap`. `TackleIntentEvaluator`: `CloseDown`/`Duty` → COMMIT floor + jockey angle. |
@@ -284,8 +299,11 @@ avoiding the phantom-interface anti-pattern (ERR-001/ERR-004).
 - **T4 — polish:** GK distribution policy, in-possession granular instructions, time-wasting, expanded
   formations, set-piece duties.
 
-Each stage is unit-testable on the resolver/map math and end-to-end through the #19 `ScenarioRunner`
-once the AI phase composes.
+**Verification per stage:** T0 — `EnumOrdinalStabilityTests` + struct-factory unit tests (no behaviour).
+T1 — loader round-trip + `[GT]` resolution units. T2 — `Mentality`/`RoleWeightModifiers` units on
+`UtilityScorer` (numerical-mirror, per §6.2) + DT closed-loop scenario. T3 — per-subsystem seam-map
+units + a Mechanics closed-loop scenario each. T4 — feature units. All closed-loop work runs through the
+#19 `ScenarioRunner` once the AI phase composes.
 
 ---
 
@@ -317,5 +335,6 @@ once the AI phase composes.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Initial draft. Cross-checked FM tactical taxonomy against the implemented AI subsystems; enumerated missing enums, the role→weight table, and per-subsystem wiring; sequenced against match-engine Phase C–F. |
+| 0.3 | 2026-06-20 | — | Second adversarial fix pass + full code fact-check. M-1: §2.1 "no approved file migrated" narrowed to "no enum re-homed"; the four snapshot structs + `TacticalContext` edits are named as the accepted bounded surface. M-2: §2.5 pins that snapshots store the **translated local** enum (assembly maps once on tactic-change, not per agent per tick) — no hot-path mapping, Mechanics never reference `tactics`. M-3: `FocusPlay` + `RoleWeightModifiers` flagged as genuinely **new branches** (§2.3 exception, §3.1/§4) — `OptionGenerator` has no lateral hook (verified in source). L: `TimeWasting` range pinned `[0..4]`; §3.5 "non-lossy" softened to an open §6.2 balance question; §5 gains a per-stage verification line. Code fact-check: all supplement references (4 snapshot structs, `ContextModifierInputs`/`MarkDirective` fields, `StyleProfile` factories, `UtilityScorer` product, `OptionGenerator` lack-of-hook) verified against source — no corrections needed. |
 | 0.2 | 2026-06-20 | — | Adversarial fix pass. H-1: enum-ownership rule (§2.1) — `tactics/` owns its own instruction enums (`TacticPassing`/`TacticPressing`/`TacticTriggerMask`/`TacticFormation`) and consumers translate at a downward seam; no upward reference, no migration of approved files. H-2: `RoleId` correctly attributed to `positioning-ai` (not `agent-movement`); §2.4 no longer "reuses" it — `PlayerRole` is a new distinct enum. M-1: new §2.5 routing table — Mechanics consumers (#12–#15) receive tactics via new fields on their own per-tick snapshots, only #8 via `TacticalContext`; §4 lists the snapshot-field additions. M-2: §3.5 pins the `Mentality`→`StyleProfile` mapping + risk-mult + line bias (7→3 collapse shown non-lossy in aggregate). M-3: §0 corrected — explicitly a design note, not template-complete; promotion needs §5/§9/FR-IDs. L: set-piece field fixed to `SetPieceDutyFlags` (no bogus "Forward"); §4 #14 defers man-mark precedence to §6.5 instead of asserting; illustrative-value caveat reinforced in §3 + §6.2. |
 #endregion
