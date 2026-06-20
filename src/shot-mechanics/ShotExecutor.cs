@@ -40,6 +40,10 @@ namespace TacticalDirector.ShotMechanics
 
         // ── State Machine ────────────────────────────────────────────────────────────
 
+        // ORDINAL STABILITY (Match Engine Phase C C0): these ordinals are captured into
+        // ShotExecutorState.State and become digest-load-bearing once the C5 snapshot serializes
+        // them. APPEND-only — never reorder or insert in the middle, or persisted snapshots /
+        // replays desync on the executor state field.
         private enum ShotExecutionState
         {
             Idle,
@@ -606,4 +610,7 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        | match-engine snapshot can serialize the executor's cross-tick state-machine +      |
 // |         |            |        | in-flight fields for deterministic replay (design note §2.6). Full field set       |
 // |         |            |        | carried directly (no internal recompute exclusion). No change to Execute/Update.   |
+// | 1.9.1   | 2026-06-19 | —      | C0 AR-1 (L-1): ShotExecutionState gains an ORDINAL STABILITY note — its ordinals    |
+// |         |            |        | are captured into ShotExecutorState.State and become digest-load-bearing at C5      |
+// |         |            |        | (APPEND-only). Doc-only.                                                            |
 #endregion

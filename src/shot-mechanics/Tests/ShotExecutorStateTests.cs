@@ -8,9 +8,13 @@
 //           snapshot layer performs at C5), and (2) CaptureState → RestoreState → CaptureState is the
 //           identity on the executor's cross-tick fields.
 
+using System.Reflection;
+
 using NUnit.Framework;
 using UnityEngine;
 
+using TacticalDirector.AgentMovement;
+using TacticalDirector.BallPhysics;
 using TacticalDirector.DeterministicSim;
 
 namespace TacticalDirector.ShotMechanics.Tests
@@ -301,6 +305,88 @@ namespace TacticalDirector.ShotMechanics.Tests
 
             AssertStateEquals(in seeded, in recaptured);
         }
+
+        // Stubs let a real Execute() populate the in-flight fields from genuine computation rather
+        // than a hand-built DTO. The lifecycle stays in WINDUP so no CONTACT publish is reached
+        // (publish needs a booted EventBus registry); full CONTACT-through-publish behavioural
+        // parity is exercised at Phase C C3's MatchEngineResolveTests where Resolve boots the bus.
+        private sealed class StubBall : IShotBallSystem
+        {
+            public bool IsBallPossessedBy(int agentId) => true;
+            public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime) { }
+        }
+
+        private sealed class StubAgent : IShotAgentQuery
+        {
+            public ShotAgentAttributes GetAttributes(int agentId) => new ShotAgentAttributes
+            {
+                Finishing = 16, LongShots = 12, Composure = 13, KickPower = 15,
+                Technique = 11, WeakFootRating = 3, Fatigue = 0.2f
+            };
+            public ShotAgentState GetState(int agentId) => new ShotAgentState
+            {
+                Position        = new Vector3(85f, 34f, 0f),
+                Velocity        = Vector3.zero,
+                FacingDirection = new Vector2(-1f, 0f),
+                CurrentState    = AgentMovementState.IDLE
+            };
+        }
+
+        private sealed class StubCollision : IShotCollisionQuery
+        {
+            public bool GetAndClearTackleFlag(int agentId) => false;
+            public float ComputePressureScalar(Vector3 shooterPosition, int shooterTeamId) => 0.3f;
+        }
+
+        [Test]
+        public void ShotExecutor_RealExecuteThenCaptureRestore_PreservesComputedState()
+        {
+            var ball = new StubBall();
+            var agent = new StubAgent();
+            var collision = new StubCollision();
+
+            var request = new ShotRequest
+            {
+                AgentId         = 9,
+                PowerIntent     = 0.8f,
+                ContactZone     = ContactZone.Centre,
+                SpinIntent      = 0.3f,
+                PlacementTarget = new Vector2(0.6f, 0.5f),
+                IsWeakFoot      = false,
+                DistanceToGoal  = 18f,
+                TeamId          = 0,
+                FrameNumber     = 100
+            };
+
+            var executorA = new ShotExecutor(ball, agent, collision);
+            ShotResult initiated = executorA.Execute(in request);
+            Assert.AreEqual(ShotOutcome.Initiated, initiated.Outcome, "Execute should begin windup");
+            Assert.IsFalse(executorA.IsIdle, "executor should be mid-windup");
+
+            ShotExecutorState captured = executorA.CaptureState();
+            var executorB = new ShotExecutor(null, null, null);
+            executorB.RestoreState(in captured);
+            ShotExecutorState recaptured = executorB.CaptureState();
+
+            AssertStateEquals(in captured, in recaptured);
+            Assert.Greater(captured.KickSpeed, 0f, "Execute must have computed a positive kick speed");
+        }
+
+        [Test]
+        public void ShotExecutor_InstanceFieldCount_MatchesSerializedSet()
+        {
+            // Mechanical coupling guard, the analogue of the B0 OscillationGuard BufferSize assert:
+            // adding cross-tick in-flight state without extending ShotExecutorState / CaptureState /
+            // RestoreState would silently drop it from the snapshot and diverge replay (§2.6 trap).
+            // This count (4 injected deps + 17 captured in-flight fields) trips first.
+            int fieldCount = typeof(ShotExecutor)
+                .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+                .Length;
+
+            Assert.AreEqual(21, fieldCount,
+                "ShotExecutor instance field count changed. If you added cross-tick in-flight state, " +
+                "extend ShotExecutorState + CaptureState + RestoreState, then update this count.");
+        }
     }
 }
 
@@ -308,4 +394,8 @@ namespace TacticalDirector.ShotMechanics.Tests
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-06-19 | —      | Initial implementation — Phase C C0 ShotExecutor snapshot-seam |
 // |         |            |        | round-trip + Capture/Restore identity locks.                  |
+// | 1.1     | 2026-06-19 | —      | C0 AR-1: added M-1 real-Execute capture/restore preservation  |
+// |         |            |        | test (genuine computed state, stays in WINDUP) + M-2 reflection|
+// |         |            |        | field-count lock (silent-omission guard, B0 BufferSize analogue|
+// |         |            |        | ). Added stub IShot* implementations.                         |
 #endregion

@@ -27,7 +27,10 @@ namespace TacticalDirector.ShotMechanics
     /// </summary>
     public readonly struct ShotExecutorState
     {
-        /// <summary>State-machine ordinal: 0=Idle, 1=Windup, 2=Contact, 3=FollowThrough, 4=Complete.</summary>
+        /// <summary>State-machine ordinal: 0=Idle, 1=Windup, 2=Contact, 3=FollowThrough, 4=Complete.
+        /// ORDINAL STABILITY: this value mirrors the private <c>ShotExecutor.ShotExecutionState</c> enum
+        /// and is digest-load-bearing once the C5 snapshot serializes it — the enum is APPEND-only
+        /// (reordering it silently breaks replay compatibility for persisted snapshots).</summary>
         public readonly int State;
 
         /// <summary>The ShotRequest captured at INITIATING and held for the execution lifecycle.</summary>
@@ -78,6 +81,7 @@ namespace TacticalDirector.ShotMechanics
         /// <summary>The most recently committed result (read via <see cref="ShotExecutor.LastResult"/> after IsIdle).</summary>
         public readonly ShotResult LastResult;
 
+        /// <summary>Constructs an immutable executor-state snapshot from the captured field set.</summary>
         public ShotExecutorState(
             int state,
             in ShotRequest request,
@@ -123,4 +127,7 @@ namespace TacticalDirector.ShotMechanics
 // | 1.0     | 2026-06-19 | —      | Initial implementation — Match Engine Phase C step C0 executor |
 // |         |            |        | snapshot seam DTO (parallel to OscillationGuardState / Rng-    |
 // |         |            |        | StreamState). Full in-flight field set (no internal profile).  |
+// | 1.0.1   | 2026-06-19 | —      | C0 AR-1 (L-1/L-3): State field gains an ORDINAL STABILITY note |
+// |         |            |        | (digest-load-bearing at C5); public constructor gains a        |
+// |         |            |        | <summary> (FR-CS-060). Doc-only.                               |
 #endregion

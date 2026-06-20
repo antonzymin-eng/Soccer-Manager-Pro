@@ -29,7 +29,10 @@ namespace TacticalDirector.PassMechanics
     /// </summary>
     public readonly struct PassExecutorState
     {
-        /// <summary>State-machine ordinal: 0=Idle, 1=Windup, 2=Contact, 3=FollowThrough, 4=Complete.</summary>
+        /// <summary>State-machine ordinal: 0=Idle, 1=Windup, 2=Contact, 3=FollowThrough, 4=Complete.
+        /// ORDINAL STABILITY: this value mirrors the private <c>PassExecutor.PassExecutionState</c> enum
+        /// and is digest-load-bearing once the C5 snapshot serializes it — the enum is APPEND-only
+        /// (reordering it silently breaks replay compatibility for persisted snapshots).</summary>
         public readonly int State;
 
         /// <summary>The PassRequest captured at INITIATING and held for the execution lifecycle.</summary>
@@ -80,6 +83,7 @@ namespace TacticalDirector.PassMechanics
         /// <summary>The most recently committed result (read via <see cref="PassExecutor.LastResult"/> after IsIdle).</summary>
         public readonly PassResult LastResult;
 
+        /// <summary>Constructs an immutable executor-state snapshot from the captured field set.</summary>
         public PassExecutorState(
             int state,
             in PassRequest request,
@@ -125,4 +129,7 @@ namespace TacticalDirector.PassMechanics
 // | 1.0     | 2026-06-19 | —      | Initial implementation — Match Engine Phase C step C0 executor |
 // |         |            |        | snapshot seam DTO (parallel to OscillationGuardState / Rng-    |
 // |         |            |        | StreamState). PhysicalProfile excluded (recomputed on restore).|
+// | 1.0.1   | 2026-06-19 | —      | C0 AR-1 (L-1/L-3): State field gains an ORDINAL STABILITY note |
+// |         |            |        | (digest-load-bearing at C5); public constructor gains a        |
+// |         |            |        | <summary> (FR-CS-060). Doc-only.                               |
 #endregion

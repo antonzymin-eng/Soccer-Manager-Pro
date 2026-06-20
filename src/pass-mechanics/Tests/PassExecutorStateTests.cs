@@ -9,9 +9,12 @@
 //           identity on the executor's cross-tick fields (the seam is lossless, incl. the recomputed
 //           internal PhysicalProfile path).
 
+using System.Reflection;
+
 using NUnit.Framework;
 using UnityEngine;
 
+using TacticalDirector.BallPhysics;
 using TacticalDirector.DeterministicSim;
 
 namespace TacticalDirector.PassMechanics.Tests
@@ -273,6 +276,90 @@ namespace TacticalDirector.PassMechanics.Tests
 
             AssertStateEquals(in seeded, in recaptured);
         }
+
+        // Stubs let a real Execute() populate the in-flight fields from genuine computation rather
+        // than a hand-built DTO — this is what upgrades the round-trip from "my DTO survives bytes"
+        // to "CaptureState reflects what Execute() actually produced". The lifecycle stays in WINDUP
+        // so no CONTACT publish is reached (the executor's EventBus publish needs a booted registry;
+        // full CONTACT-through-publish behavioural parity is exercised at Phase C C3's
+        // MatchEngineResolveTests where the Resolve phase boots the EventBus).
+        private sealed class StubBall : IPassBallSystem
+        {
+            public bool IsBallPossessedBy(int agentId) => true;
+            public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime) { }
+        }
+
+        private sealed class StubAgent : IPassAgentQuery
+        {
+            public PassAgentAttributes GetAttributes(int agentId) => new PassAgentAttributes
+            {
+                Passing = 14f, Technique = 12f, KickPower = 13f, WeakFootRating = 3, Crossing = 14f, Fatigue = 0.2f
+            };
+            public PassAgentState GetState(int agentId) => new PassAgentState
+            {
+                Position = new Vector2(30f, 34f), Velocity = Vector2.zero, FacingDirection = new Vector2(1f, 0f)
+            };
+        }
+
+        private sealed class StubCollision : IPassCollisionQuery
+        {
+            public bool GetAndClearTackleFlag(int agentId) => false;
+            public float ComputePressureScalar(Vector2 passerPosition, int passerTeamId) => 0.3f;
+        }
+
+        [Test]
+        public void PassExecutor_RealExecuteThenCaptureRestore_PreservesComputedState()
+        {
+            var ball = new StubBall();
+            var agent = new StubAgent();
+            var collision = new StubCollision();
+
+            var request = new PassRequest
+            {
+                AgentId          = 7,
+                PassType         = PassType.Ground,
+                CrossSubType     = CrossSubType.Flat,
+                TargetAgentId    = 13,
+                TargetPosition   = Vector3.zero,
+                IntendedDistance = 15f,
+                Urgency          = 0.2f,
+                IsWeakFoot       = false,
+                TeamId           = 1,
+                FrameNumber      = 100
+            };
+
+            var executorA = new PassExecutor(ball, agent, collision);
+            PassResult initiated = executorA.Execute(in request);
+            Assert.AreEqual(PassOutcome.Initiated, initiated.Outcome, "Execute should begin windup");
+            Assert.IsFalse(executorA.IsIdle, "executor should be mid-windup");
+
+            // Capture the genuinely-computed in-flight state, restore into a fresh executor, recapture.
+            PassExecutorState captured = executorA.CaptureState();
+            var executorB = new PassExecutor(null, null, null);
+            executorB.RestoreState(in captured);
+            PassExecutorState recaptured = executorB.CaptureState();
+
+            AssertStateEquals(in captured, in recaptured);
+            // Sanity: the computed kick speed is real (not a default), so the seam is moving live data.
+            Assert.Greater(captured.KickSpeed, 0f, "Execute must have computed a positive kick speed");
+        }
+
+        [Test]
+        public void PassExecutor_InstanceFieldCount_MatchesSerializedSet()
+        {
+            // Mechanical coupling guard, the analogue of the B0 OscillationGuard BufferSize assert:
+            // if a maintainer adds cross-tick in-flight state to PassExecutor without extending
+            // PassExecutorState / CaptureState / RestoreState, the snapshot silently drops it and
+            // replay diverges (invisible to same-seed in-process tests — the §2.6 trap). This count
+            // (3 injected deps + 18 captured in-flight fields) trips first.
+            int fieldCount = typeof(PassExecutor)
+                .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+                .Length;
+
+            Assert.AreEqual(21, fieldCount,
+                "PassExecutor instance field count changed. If you added cross-tick in-flight state, " +
+                "extend PassExecutorState + CaptureState + RestoreState, then update this count.");
+        }
     }
 }
 
@@ -280,4 +367,8 @@ namespace TacticalDirector.PassMechanics.Tests
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-06-19 | —      | Initial implementation — Phase C C0 PassExecutor snapshot-seam |
 // |         |            |        | round-trip + Capture/Restore identity locks.                  |
+// | 1.1     | 2026-06-19 | —      | C0 AR-1: added M-1 real-Execute capture/restore preservation  |
+// |         |            |        | test (genuine computed state, stays in WINDUP) + M-2 reflection|
+// |         |            |        | field-count lock (silent-omission guard, B0 BufferSize analogue|
+// |         |            |        | ). Added stub IPass* implementations.                         |
 #endregion

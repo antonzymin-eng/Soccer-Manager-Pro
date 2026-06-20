@@ -38,6 +38,10 @@ namespace TacticalDirector.PassMechanics
 
         // ── State Machine ────────────────────────────────────────────────────────────
 
+        // ORDINAL STABILITY (Match Engine Phase C C0): these ordinals are captured into
+        // PassExecutorState.State and become digest-load-bearing once the C5 snapshot serializes
+        // them. APPEND-only — never reorder or insert in the middle, or persisted snapshots /
+        // replays desync on the executor state field.
         private enum PassExecutionState
         {
             Idle,
@@ -152,7 +156,11 @@ namespace TacticalDirector.PassMechanics
             _cachedEffectiveSubType = state.EffectiveSubType;
 
             // Recompute the internal profile (pure function of PassType + effective sub-type;
-            // never serialized — §2.6 recompute exclusion).
+            // never serialized — §2.6 recompute exclusion). NOTE: restoring a captured-Idle state
+            // recomputes a real profile (e.g. GetProfile(Ground, Flat)) rather than the
+            // default(PhysicalProfile) a freshly-constructed executor holds; this is benign — Idle
+            // Update is a no-op, _profile is excluded from the digest, and the next Execute()
+            // overwrites it before any read.
             _profile = PassTypeProfiles.GetProfile(state.Request.PassType, state.EffectiveSubType);
 
             _kickSpeed                    = state.KickSpeed;
@@ -702,4 +710,8 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | for deterministic replay (design note §2.6). The internal              |
 // |         |            |        | PhysicalProfile is recomputed on restore, not serialized. No change to  |
 // |         |            |        | the Execute/Update execution paths.                                     |
+// | 1.14.1  | 2026-06-19 | —      | C0 AR-1 (L-1/L-2): PassExecutionState gains an ORDINAL STABILITY note   |
+// |         |            |        | (its ordinals are captured into PassExecutorState.State and become      |
+// |         |            |        | digest-load-bearing at C5 — APPEND-only); RestoreState documents the    |
+// |         |            |        | benign restored-Idle profile recompute. Doc-only.                       |
 #endregion
