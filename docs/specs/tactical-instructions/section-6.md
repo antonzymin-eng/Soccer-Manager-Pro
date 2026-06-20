@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 6: Performance
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** June 20, 2026 (v0.3 — PASS-2 fix pass)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 ---
@@ -26,10 +26,13 @@ Zero managed allocation on any path (FR-TI-002, #18 §3.7). Structs are value ty
 
 ## 6.3 Per-tick added cost (charged to #8)
 
-The `UtilityScorer` product gains up to four scalar multiplies per scored option
-(`role × mentality × duty × instruction`). All four are array/lookup reads of pre-resolved values;
-no branching beyond the existing per-option loop. Estimated < 0.01 ms added to #8's existing per-tick
-budget at 22 agents — to be measured against the pinned host once Phase D composes (#18 / FR-PO-052).
+The `UtilityScorer` product gains **five** scalar multiplies per scored option
+(`role × mentality × duty × instruction × tempo`), all array/lookup reads of pre-resolved values.
+Two **new option-generation branches** also run per tick in `OptionGenerator`: the `FocusPlay`
+lateral-preference term and the `Tempo` breadth widening (PASS-2 M-3 — these were not in the v0.1
+estimate). Both are bounded per-agent passes over the already-generated candidate set (no new
+allocation, no new outer loop). Combined estimate still < 0.02 ms added to #8's existing per-tick budget
+at 22 agents — to be measured against the pinned host once Phase D composes (#18 / FR-PO-052).
 
 ## 6.4 Memory
 
@@ -47,4 +50,5 @@ verified at Stage 1 against the pinned host.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Cold-path-only cost model; ≤0.01 ms charged to #8; <3 KB working set. |
+| 0.3 | 2026-06-20 | — | PASS-2 fix pass (M-3): §6.3 now accounts for the five utility multiplies + the two new `OptionGenerator` branches (Tempo breadth, FocusPlay); estimate widened to <0.02 ms. |
 #endregion

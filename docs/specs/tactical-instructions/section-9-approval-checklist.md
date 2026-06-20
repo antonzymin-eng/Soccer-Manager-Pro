@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 9: Approval Checklist
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.2 — PASS-1 fix pass)
-**Version:** 0.2
+**Last Updated:** June 20, 2026 (v0.3 — PASS-2 fix pass)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 ---
@@ -34,7 +34,7 @@ This checklist is the normative quality gate for transitioning Tactical Instruct
 | 17 | Determinism boundaries (no RNG; stride apply; schema bump) | [x] | `section-4.md` §4.6; FR-TI-026/027/028 |
 | 18 | Test counts ≥ 78 with layer breakdown | [x] | `section-5.md` §5.1 |
 | 19 | FR-to-test traceability matrix (all 32) | [x] | `section-5.md` §5.7 |
-| 20 | Performance: cold-path-only model + ≤0.01 ms #8 charge | [x] | `section-6.md` |
+| 20 | Performance: cold-path-only model + ≤0.02 ms #8 charge (incl. new option-gen branches) | [x] | `section-6.md` |
 | 21 | Future extensions + stage gating | [x] | `section-7.md` |
 | 22 | Cross-refs allocated XC-021-001..014 | [x] | `section-8.md` §8.1 |
 | 23 | ERR-021-001..004 declared with target/stage/status | [x] | `section-8.md` §8.3 |
@@ -45,7 +45,7 @@ This checklist is the normative quality gate for transitioning Tactical Instruct
 
 | # | Gate | Status |
 |---|---|---|
-| G1 | Formal PASS-1 adversarial review of the section files + fix pass | DONE — `adversarial-review-section-files-v1.md` (2H+4M+4L), all resolved in the v0.2 fix pass |
+| G1 | Formal adversarial review of the section files + fix pass | DONE — PASS-1 `adversarial-review-section-files-v1.md` (2H+4M+4L → v0.2) and PASS-2 `…-v2.md` (1H+4M+1L → v0.3), all resolved |
 | G2 | `RoleWeightModifiers` + §3.2 value **balance pass** (numerical mirror + adversarial) before `[GT]` values are pinned | OPEN — values currently illustrative; tests assert shape, not magnitude (§5.6) |
 | G3 | Lead-developer R-01..R-05 sign-off | OPEN |
 | G4 | `SPEC_INDEX.md` row 21 reflects status | DONE (added v0.1, IN REVIEW) |
@@ -65,4 +65,5 @@ R-01 (lead developer) … R-05: **not yet signed** — gated on G1–G3.
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Initial checklist; §9.1 self-contained items satisfied; G1–G3 open (PASS-1, balance pass, sign-off). |
 | 0.2 | 2026-06-20 | — | PASS-1 fix pass: item 2 reworded for named-verification FRs (M-4); G1 marked DONE. |
+| 0.3 | 2026-06-20 | — | PASS-2 fix pass: G1 evidence cites both PASS-1 and PASS-2; item 20 perf charge updated to ≤0.02 ms. |
 #endregion

@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Appendices
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.2 — PASS-1 fix pass)
-**Version:** 0.2
+**Last Updated:** June 20, 2026 (v0.3 — PASS-2 fix pass)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 ---
@@ -34,7 +34,8 @@ magnitudes are not pinned until the balance pass. Region order Fixed → Derived
 | `MentalityRiskMult[7]` | [GT] | {0.80,0.88,0.94,1.00,1.06,1.14,1.20} | §3.2 / #8 |
 | `MentalityLineBias[7]` | [GT] | {−0.20,−0.12,−0.05,0,+0.05,+0.12,+0.20} | §3.2 |
 | `InstrBiasMult[3]` | [GT] | {0.85, 1.00, 1.15} | §3.4 |
-| `TempoThresholdStep` | [GT] | 0.10 | §3.4 / #8 thresholds |
+| `TempoActionBias[5][7]` | [GT] | per-(Tempo, ActionType); Standard row = all 1.0 (identity); higher Tempo raises PASS/SHOOT, lowers HOLD | §3.3 / #8 |
+| `TempoBreadthScalar[5]` | [GT] | {0.90,0.95,1.00,1.05,1.10} | §3.3 / #8 `OptionGenerator` breadth |
 | `WidthScalar[5]` | [GT] | {0.85,0.92,1.00,1.08,1.15} | §3.4 / #12 |
 | `DefWidthScalar[3]` | [GT] | {0.90,1.00,1.10} | §3.4 / #12 |
 | `LineOfEngagementScalar[5]` | [GT] | {0.80,0.90,1.00,1.10,1.20} | §3.4 / #13 |
@@ -69,6 +70,13 @@ PositioningFreedom, CloseDown, TightMarking, MarkTargetEntityId, SetPieceRoles).
 `byte` ordinal; the order above is digest-load-bearing and locked by T-TI-EXP-004. Any reorder/field add
 requires a `SNAPSHOT_SCHEMA_VERSION` bump.
 
+**Note (PASS-2 M-1):** `DefensiveLine` here is the manager **input dial**. The resolved
+`DefensiveLineDepth` consumed by #8/#12/#14 is **derived** each tick from the dial + `MentalityLineBias`
+and is **not** independently serialized by this layer (§3.4), so restore cannot diverge the two.
+**Note (PASS-2 H-1):** adding this whole block makes the snapshot payload digest differ from the
+pre-tactics baseline; FR-TI-031 identity is asserted on the world-state subset (DET-002), not the full
+payload.
+
 ## Appendix C — Worked example (full tactic → behaviour)
 
 Team set **Attacking / Wide / High press / High line**, an `InsideForward` (Attack duty) in the
@@ -89,4 +97,5 @@ attacking third evaluating SHOOT:
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Constant catalogue (illustrative [GT]), RoleWeightModifiers excerpt, snapshot order, worked example. |
 | 0.2 | 2026-06-20 | — | PASS-1 fix pass: RISK_MULT_BALANCED / LINE_BIAS_BALANCED given formulas to validate the [DERIVED] tag (L-2). |
+| 0.3 | 2026-06-20 | — | PASS-2 fix pass: A.3 gains `TempoActionBias[5][7]` + `TempoBreadthScalar[5]` (M-2); Appendix B notes the DefensiveLine-dial serialization (M-1) and the world-state-subset digest identity (H-1). |
 #endregion

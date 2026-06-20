@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 3: Algorithms
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.2 — PASS-1 fix pass)
-**Version:** 0.2
+**Last Updated:** June 20, 2026 (v0.3 — PASS-2 fix pass)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 > All constants cited here live in `TacticalInstructionsConstants.cs` (Appendix A). Values shown are
@@ -63,21 +63,24 @@ and **before** the `[UTILITY_FLOOR, UTILITY_CEILING]` clamp:
 
 ```
 utility' = clamp( utility × RoleWeightModifiers[role, opt.Type] × mentalityRiskMult
-                  × dutyBias[duty, opt.Type] × instrBias[instructions, opt.Type],
+                  × dutyBias[duty, opt.Type] × instrBias[instructions, opt.Type]
+                  × tempoActionBias[tempo, opt.Type],
                   UTILITY_FLOOR, UTILITY_CEILING )
 ```
 
 - Default role row = all 1.0 (identity; FR-TI-031). A Poacher row raises SHOOT (e.g. 1.25), lowers HOLD
   (0.80); a Deep-Lying Playmaker raises PASS, lowers DRIBBLE; a Ball-Winning Mid raises PRESS/INTERCEPT.
-- **`FocusPlay`** and **`Tempo`** have no existing hook (verified: #8 selection is pure max
-  EffectiveUtility in `ActionSelector` — there is no decision threshold to bias). Both are **new
-  branches** (KD-11): `FocusPlay` adds a lateral-preference term in `OptionGenerator` + a flank bias in
-  #15 `OverloadDetector`; `Tempo` adds a forward-vs-retain weighting (raise PASS/SHOOT relative to HOLD,
-  widen option-generation breadth) — **not** a threshold. Reviewed in §5.6.
-- All four multiplicative factors default to 1.0, so a default tactic is exactly today's behaviour.
+- **`Tempo`** acts in **two** places (both new, KD-11): (a) `tempoActionBias[tempo, opt.Type]` above — a
+  per-action forward-vs-retain weighting (raises PASS/SHOOT relative to HOLD), and (b) an
+  option-generation **breadth** widening in `OptionGenerator`. It is NOT a tick-rate or threshold change.
+- **`FocusPlay`** has no existing hook (verified: #8 selection is pure max EffectiveUtility in
+  `ActionSelector`): it adds a lateral-preference term in `OptionGenerator` + a flank bias in #15
+  `OverloadDetector`. Reviewed in §5.6.
+- All **five** multiplicative factors default to 1.0 (Tempo.Standard / Balanced / Default rows = identity),
+  so a default tactic is exactly today's behaviour.
 
-**Worked example.** Poacher, ActionType SHOOT, attacking third: `utility × 1.25 × 1.14(Attacking) ×
-1.0(Attack duty SHOOT) × 1.0(no instr) `, then clamp.
+**Worked example.** Poacher, ActionType SHOOT, attacking third, Standard tempo: `utility × 1.25(role) ×
+1.14(Attacking) × 1.0(Attack duty SHOOT) × 1.0(no instr) × 1.0(Standard tempo)`, then clamp.
 
 ## 3.4 Direct-input instructions (resolve into existing tunables; FR-TI-013..020, 022)
 
@@ -85,7 +88,7 @@ utility' = clamp( utility × RoleWeightModifiers[role, opt.Type] × mentalityRis
 |---|---|---|
 | `Duty` | #12 long-pct; #8 risk bias; #14 COMMIT floor | Defend −Δ fore, Attack +Δ fore; aggression ±0.05 |
 | `InstrBias` (per action) | the matching #8 term | Less ×0.85, Default ×1.0, More ×1.15 |
-| `Tempo` | **NEW branch** (no existing hook — §3.3) | forward-vs-retain utility weighting; NOT tick rate, NOT a threshold |
+| `Tempo` | **NEW branch** (no existing hook — §3.3): `tempoActionBias` factor in the §3.3 product + option-gen breadth | forward-vs-retain per-action weighting; NOT tick rate, NOT a threshold |
 | `TacticWidth`/`TacticDefWidth` | **new field** on #12 `ContextModifierInputs`, feeding the existing compactness scaling | map 5/3 steps → scalar [0.85..1.15] |
 | `LineOfEngagement` | #13 trigger distances (existing) | scalar [0.80..1.20] on trigger radius |
 | `OffsideTrap` | #14 `MarkDirective.OffsideTrapActive` | bool passthrough |
@@ -93,11 +96,14 @@ utility' = clamp( utility × RoleWeightModifiers[role, opt.Type] × mentalityRis
 | `GkDistributionPolicy` | #11 `DistributeIntent` defaults | enum → (DeliveryKind, target, power) defaults |
 
 **`DefensiveLine` single-source (resolves PASS-1 M-2).** `TeamTactic.DefensiveLine` is the manager-set
-**input** only; it is **not** a parallel depth value. The assembly layer writes
-`DefensiveLineDepth = Clamp01(TeamTactic.DefensiveLine + MentalityLineBias[mentality])` into the **single
-authoritative** `DefensiveLineDepth` field that #8 (`TacticalContext`) and #14 (`DefensiveSnapshot`,
-sourced from #12 per FR-DA-012) already read. #12 remains the depth authority; this layer never creates
-a second depth surface.
+**input dial** only; it is **not** a parallel depth value. Each tick the assembly layer **recomputes**
+`DefensiveLineDepth = Clamp01(TeamTactic.DefensiveLine + MentalityLineBias[mentality])` and writes it
+into the **single authoritative** `DefensiveLineDepth` field that #8 (`TacticalContext`) and #14
+(`DefensiveSnapshot`, sourced from #12 per FR-DA-012) read. #12 remains the depth authority.
+**Serialization (no divergence-on-restore):** only the input dial `TeamTactic.DefensiveLine` is part of
+this layer's snapshot block (Appendix B); the resolved `DefensiveLineDepth` is a derived value
+recomputed every tick from the dial + mentality, so it is never an independently-restorable second
+surface that could diverge from the dial on load.
 
 Each transform is a pure function with a default that is the identity (Default/Standard/Mixed →
 unchanged), satisfying FR-TI-031.
@@ -120,4 +126,5 @@ KD-9 precedence, not a limitation to be "fixed."
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Translation seams, mentality table, role-weight model, direct-input transforms, man-mark precedence. |
 | 0.2 | 2026-06-20 | — | PASS-1 fix pass: §3.2 Mentality/Transition composition (H-2); §3.3+§3.4 Tempo reclassified new branch (H-1); §3.4 Width relabelled new-field-feeds-existing (M-1) + `DefensiveLine` single-source (M-2); §3.1 `TacticFormation` 3-family clamp (L-4). |
+| 0.3 | 2026-06-20 | — | PASS-2 fix pass: §3.3 product gains the fifth factor `tempoActionBias` (M-2); §3.4 `DefensiveLine` serialization pinned to the input dial, resolved depth recomputed each tick (M-1). |
 #endregion

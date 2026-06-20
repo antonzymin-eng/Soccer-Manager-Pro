@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 5: Test Plan
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.2 — PASS-1 fix pass)
-**Version:** 0.2
+**Last Updated:** June 20, 2026 (v0.3 — PASS-2 fix pass)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 > Test-ID prefixes follow #19 §3.1.4: `T-TI-U-*` unit, `T-TI-I-*` integration, `sim_*` /
@@ -56,7 +56,9 @@
 - **T-TI-DET-001** — an in-match tactic change applied at a non-stride tick is deferred to the next
   stride; two runs with the change requested at different sub-stride frames produce identical digests
   (FR-TI-027).
-- **T-TI-DET-002** — default-tactic match digest == no-instruction baseline digest (FR-TI-031).
+- **T-TI-DET-002** — default-tactic **world-state-subset** digest (ball + agent state, excluding the
+  tactics block) == pre-tactics baseline world-state digest (FR-TI-031 behavioural identity). The full
+  payload digest necessarily differs (tactics block added per FR-TI-028) and is NOT asserted equal.
 - **T-TI-DET-003** — snapshot field-set ordering matches Appendix B; a perturbed instruction field
   changes the digest (proves it is digest-load-bearing; FR-TI-028).
 - **T-TI-DET-004** — no RNG draw site is registered by this layer (FR-TI-026).
@@ -95,7 +97,7 @@ FR-TI-030. These are listed as `verify:` below.
 | 005 | U-001..016 | 020 | I-016 |
 | 006 | U-017..019 | 021 | EXP-003, I-014 |
 | 007 | U-001..016 | 022 | I-013 |
-| 008–010 | §9 checklist, U-001..016 | 023 | I-009..012, EXP-001 |
+| 008–010 | verify: §9 item 6 (constant-tag inspection) | 023 | I-009..012, EXP-001 |
 | 011 | U-020..026 | 024 | I-001..008 |
 | 012 | U-027..030, I-001..004 | 025 | DET-003, §4.7 grep |
 | 013 | U-031, I-017 | 026 | DET-004 |
@@ -111,4 +113,5 @@ FR-TI-030. These are listed as `verify:` below.
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Test plan: ≥78 tests across 6 layers + FR traceability + balance-pass gate. |
 | 0.2 | 2026-06-20 | — | PASS-1 fix pass: `[Flags]` stability-test carve-out (M-3); FR-002/003/029/030 reclassified verify-by-inspection (M-4). |
+| 0.3 | 2026-06-20 | — | PASS-2 fix pass: DET-002 compares the world-state subset, not the full payload (H-1); §5.7 FR-008/009/010 retargeted to constant-tag inspection (L-1). |
 #endregion

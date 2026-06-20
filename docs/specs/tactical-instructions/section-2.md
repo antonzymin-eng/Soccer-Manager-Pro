@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.2 — PASS-1 fix pass)
-**Version:** 0.2
+**Last Updated:** June 20, 2026 (v0.3 — PASS-2 fix pass)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 ---
@@ -27,8 +27,8 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-TI-012 | `RoleWeightModifiers[(PlayerRole, ActionType)] → float` is applied in #8 `UtilityScorer` after the existing zone×AM×context×tactical×risk product and before the `[UTILITY_FLOOR, UTILITY_CEILING]` clamp. | MUST | §3.3 |
 | FR-TI-013 | `Duty {Defend,Support,Attack}` biases positioning long-pct (#12), utility aggression (#8), and the tackle COMMIT floor (#14). | MUST | §3.4 |
 | FR-TI-014 | Each `PlayerInstructions` bias (`InstrBias {Less,Default,More}`) modulates exactly its named #8 term; `Default` is the multiplicative/additive identity. | MUST | §3.4 / KD-10 |
-| FR-TI-015 | `Tempo` is a **new branch** (no existing #8 hook — selection is pure max EffectiveUtility): it applies a forward-vs-retain utility weighting and option-generation breadth bias. It MUST NOT change either loop tick rate (10 Hz / 60 Hz invariant) and is NOT a decision threshold. | MUST | §3.3 / §3.4 / KD-11 |
-| FR-TI-016 | `TacticWidth`/`TacticDefWidth` feed #12 `ContextModifierInputs` lateral/vertical compactness; no new positioning branch is introduced. | MUST | §3.4 / KD-11 |
+| FR-TI-015 | `Tempo` is a **new branch** (no existing #8 hook — selection is pure max EffectiveUtility): it adds a `tempoActionBias` factor to the §3.3 utility product (forward-vs-retain per-action weighting) and an option-generation breadth bias. It MUST NOT change either loop tick rate (10 Hz / 60 Hz invariant) and is NOT a decision threshold. `Tempo.Standard` is the identity row. | MUST | §3.3 / §3.4 / KD-11 |
+| FR-TI-016 | `TacticWidth`/`TacticDefWidth` feed #12's existing lateral-compactness scaling **via a new field on `ContextModifierInputs`** (the struct has no width field today); the scaling code is reused, no new positioning branch is introduced. | MUST | §3.4 / KD-11 |
 | FR-TI-017 | `LineOfEngagement` scales #13 press trigger distances. | MUST | §3.4 |
 | FR-TI-018 | `TacticTriggerMask` (`[Flags]`) gates which #13 triggers are active; an unset flag disables that trigger. | MUST | §3.1 |
 | FR-TI-019 | `OffsideTrap` (bool) enables #14 `MarkDirective.OffsideTrapActive`. | MUST | §3.4 |
@@ -43,7 +43,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-TI-028 | Once match-engine Phase D serializes tactics, `TeamTactic`/`PlayerTactic`/`PlayerInstructions` enter the canonical snapshot field set with a `SNAPSHOT_SCHEMA_VERSION` bump; the field order is pinned (Appendix B) before T2. | MUST | KD-12 / #16 |
 | FR-TI-029 | No interface or accessor is produced against an unspecified consumer (no phantom interfaces). | MUST | CLAUDE.md / #20 FR-CS-048 |
 | FR-TI-030 | Stage-1 activation is gated on (a) the `[GT]` config-loader existing and (b) match-engine Phase C+D wiring the consumers. | MUST | KD-8 / §7 |
-| FR-TI-031 | `TeamTactic.Balanced` and `PlayerTactic.Default` (with `PlayerInstructions.Default`) reproduce the current no-instruction baseline exactly — landing the layer with defaults is a behavioural no-op. | MUST | KD-10 |
+| FR-TI-031 | `TeamTactic.Balanced` and `PlayerTactic.Default` (with `PlayerInstructions.Default`) reproduce the current no-instruction **behaviour** exactly — realised agent trajectories, ball state, and the pre-tactics world-state fields are bit-identical. The full snapshot *payload* digest necessarily differs once FR-TI-028 adds the tactics block; identity is asserted on the world-state subset, not the full payload (see DET-002). | MUST | KD-10 |
 | FR-TI-032 | Every mapping/formula in §3 includes units, valid input ranges, and at least one worked example (inline or Appendix A). | MUST | CLAUDE.md |
 
 ## 2.2 Data structures
@@ -127,4 +127,5 @@ Snapshot contribution is governed by FR-TI-028. In-match mutation timing by FR-T
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Initial FRs (FR-TI-001..032), data structures, failure modes from supplement v0.3. |
 | 0.2 | 2026-06-20 | — | PASS-1 fix pass: FR-TI-007 `[Flags]` carve-out (M-3); FR-TI-015 Tempo reclassified new branch (H-1); FR-TI-020 StyleProfile composition (H-2); `DefensiveLine` single-source note (M-2); §2.2.4 `TacticFormation` tightened (L-4). |
+| 0.3 | 2026-06-20 | — | PASS-2 fix pass: FR-TI-031 reworded to world-state (not full-payload) identity vs FR-TI-028 (H-1); FR-TI-015 gains the `tempoActionBias` utility factor (M-2); FR-TI-016 names the new `ContextModifierInputs` field (M-4); §2.2.1 Tempo note updated. |
 #endregion
