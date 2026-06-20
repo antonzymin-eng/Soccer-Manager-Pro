@@ -466,6 +466,10 @@ namespace TacticalDirector.MatchEngine
             // C2 — collision first. Reuses _attrs (PlayerAttributes[]); writes _isCollisionKnockdown /
             // _collisionForces (consumed by movement at tick N+1). stumbleOut is discarded (B4 — not a
             // Stage-0 movement input). Self-seeds its own RNG from _matchSeed ^ frameNumber internally.
+            // NOTE: UpdateCollisions processes ALL 22 agents incl. goalkeepers, whereas Physics-phase
+            // UpdateAllAgents skips GKs (Stage 0 — GK locomotion is #11). A GK can therefore be
+            // displaced by a collision that movement never re-integrates; benign at Stage 0 (kickoff
+            // spread admits no GK collisions) and inherent to the two seams, recorded here for Phase D.
             _collisionSystem.UpdateCollisions(
                 _agents, _attrs, _teamIds, _isGoalkeeper,
                 knockdownOut:      _isCollisionKnockdown,
@@ -548,6 +552,14 @@ namespace TacticalDirector.MatchEngine
             // PHASE-D FLAG: when the AI phase begins writing per-agent form/fatigue context into
             // _perfs, _perfs becomes cross-tick state and MUST be serialized here (bump
             // SNAPSHOT_SCHEMA_VERSION at that point).
+            //
+            // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but at Stage 0 it
+            // is constant NO_POSSESSION — kickoff is loose and there is no production possession
+            // producer (the TestOnly_ seam is test-only; the AI dispatcher arrives at Phase D). Its
+            // value is therefore identical across any two same-seed runs, so omission cannot diverge
+            // replay. C4 folds it into MatchContext.PossessingAgentId and serializes that (bump
+            // SNAPSHOT_SCHEMA_VERSION then). The executor in-flight state (C0 CaptureState) is likewise
+            // excluded until C5 — at Stage 0 the executors are idle in production (same reasoning).
             CanonicalSerializer.WriteU32(buf, ref o, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION);
             // Tick is also carried in the header; included here so the payload is self-describing
             // when decoded in isolation (replay/save tooling reads the payload directly).
@@ -862,4 +874,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | completion test land at C4). Snapshot field set unchanged       |
 // |         |            |        | (executor/MatchContext state serialized at C5). asmdef gains    |
 // |         |            |        | CollisionSystem + PassMechanics + ShotMechanics references.     |
+// | 1.4.1   | 2026-06-19 | —      | C1–C3 AR-1 (doc-only): M-1 — SerializeWorldState gains the §2.6 |
+// |         |            |        | exclusion proof for _possessingAgentId (constant NO_POSSESSION  |
+// |         |            |        | at Stage 0; C4 serializes it via MatchContext) + the executor   |
+// |         |            |        | in-flight-state exclusion note (C5). L-1 — RunResolvePhase notes |
+// |         |            |        | the GK collision-active / movement-inactive asymmetry (benign   |
+// |         |            |        | at Stage 0, recorded for Phase D). L-2 (DeterministicRNG is a    |
+// |         |            |        | struct — no per-frame alloc) and L-3 (ApplySeparation runs       |
+// |         |            |        | before the vRel<=0 early return — static-overlap separation     |
+// |         |            |        | holds) verified non-issues. No behaviour change.                |
 #endregion
