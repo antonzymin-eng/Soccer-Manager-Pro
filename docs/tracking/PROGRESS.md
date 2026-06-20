@@ -1,7 +1,7 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** June 7, 2026 (Implementation-phase AR-hardening sweep complete across all coded sections. Every section's last adversarial review round now yields no findings or L-only findings — except Pass Mechanics #5 AR-5 (1M+3L) which carries an explicit "cycle stop" judgement. Final AR-round status by spec: #1 Ball Physics AR-6 (4L); #2 Agent Movement AR-11 (2L); #3 Collision System AR-6 (3L); #4 First Touch AR-6 (3L); #5 Pass Mechanics AR-5 (1M+3L cycle-stop); #6 Shot Mechanics AR-4 (3L); #7 Perception AR-2 (3L); #8 Decision Tree AR-2 clean; #10 Heading AR-2 clean; #11 Goalkeeper AR-3 clean; #12 Positioning AI AR-3 clean; #13 Pressing AI AR-2 clean; #14 Defensive AI AR-2 clean; #15 Attacking AI AR-3 clean; #16 Deterministic Sim AR-3 (1L); #17 Event System AR-11 (no findings); #18 Performance Optimization AR-4 (2L); #19 Testing Strategy AR-5 (2L) + PR #132 Codex P2 follow-up. New test scaffolding: Ball Physics gained EnumOrdinalStabilityTests + BodyPartCoefficientsTests + SurfacePropertiesTests; Agent Movement gained T-AM-001..107 regression+unit roster (77 NUnit tests across 11 fixtures) + AssemblyInfo.cs + test-plan.md v0.2. Stage 0 host platform pin in `docs/tracking/certification-platform.md` remains the standing blocker for `FR-DS-009-GATE` activation. Prior June 2: Testing Strategy #19 scaffold (14 files) + AR-1..AR-5 complete; Performance Optimization #18 AR-1+AR-2 complete; Event System #17 AR-5..AR-7 complete. Prior May 31: Event System #17 AR-4 complete. Prior May 30: Stage 1 event-bus wiring batch (32 files) + Event System #17 coded.)
+**Last Updated:** June 20, 2026 (**Tactical Instructions (#21) APPROVED** — first Stage-1 forward spec beyond the Stage-0 set of 20. Manager-facing tactical instruction layer (formation/mentality/team instructions/player roles+duties/individual instructions) driving the existing AI subsystems #8/#11–#15. Promoted from `docs/tracking/tactical-instruction-layer-design.md` v0.3 to `docs/specs/tactical-instructions/` (11 section files); PASS-1 (2H+4M+4L) + PASS-2 (1H+4M+1L) section-file adversarial reviews resolved to v0.3; lead-developer R-01..R-05 sign-off granted. 32 FRs; no RNG/no domain tag. **Post-APPROVED follow-ups (non-blocking, Stage-1):** G2 `RoleWeightModifiers`/§3.2 balance pass to pin the illustrative `[GT]` values; ERR-021-001..004 cross-spec back-props. Runtime activation gated on the `[GT]` config-loader + match-engine Phase C/D. No `src/` code yet (T0 pending). Prior June 7, 2026: Implementation-phase AR-hardening sweep complete across all coded sections. Every section's last adversarial review round now yields no findings or L-only findings — except Pass Mechanics #5 AR-5 (1M+3L) which carries an explicit "cycle stop" judgement. Final AR-round status by spec: #1 Ball Physics AR-6 (4L); #2 Agent Movement AR-11 (2L); #3 Collision System AR-6 (3L); #4 First Touch AR-6 (3L); #5 Pass Mechanics AR-5 (1M+3L cycle-stop); #6 Shot Mechanics AR-4 (3L); #7 Perception AR-2 (3L); #8 Decision Tree AR-2 clean; #10 Heading AR-2 clean; #11 Goalkeeper AR-3 clean; #12 Positioning AI AR-3 clean; #13 Pressing AI AR-2 clean; #14 Defensive AI AR-2 clean; #15 Attacking AI AR-3 clean; #16 Deterministic Sim AR-3 (1L); #17 Event System AR-11 (no findings); #18 Performance Optimization AR-4 (2L); #19 Testing Strategy AR-5 (2L) + PR #132 Codex P2 follow-up. New test scaffolding: Ball Physics gained EnumOrdinalStabilityTests + BodyPartCoefficientsTests + SurfacePropertiesTests; Agent Movement gained T-AM-001..107 regression+unit roster (77 NUnit tests across 11 fixtures) + AssemblyInfo.cs + test-plan.md v0.2. Stage 0 host platform pin in `docs/tracking/certification-platform.md` remains the standing blocker for `FR-DS-009-GATE` activation. Prior June 2: Testing Strategy #19 scaffold (14 files) + AR-1..AR-5 complete; Performance Optimization #18 AR-1+AR-2 complete; Event System #17 AR-5..AR-7 complete. Prior May 31: Event System #17 AR-4 complete. Prior May 30: Stage 1 event-bus wiring batch (32 files) + Event System #17 coded.)
 **Purpose:** Track specification writing progress for Stage 0 (Physics Foundation)  
 **Started:** February 2, 2026  
 **Note:** Scheduling milestones removed — passion project, no deadline.
@@ -10,14 +10,17 @@
 
 ## PROGRESS SUMMARY
 
-**Total Specifications:** 20  
+**Total Specifications (Stage 0):** 20  
 **Approved:** 20 ← ALL APPROVED — Stage 0 specification phase COMPLETE  
 **Suspended:** 0  
 **In Review:** 0  
 **In Progress:** 0  
 **Not Started:** 0
 
+**Stage-1 forward specs:** 1 — Tactical Instructions (#21), APPROVED June 20, 2026 (manager-facing tactical instruction layer; `[GT]` balance-pass values illustrative pending a non-blocking Stage-1 follow-up; no `src/` code yet). Canonical count in `SPEC_INDEX.md`: **21 APPROVED**.
+
 **Specifications approved:**
+- Tactical Instructions (#21, June 20, 2026 — Stage-1 forward spec; PASS-1 + PASS-2 adversarial reviews; G2 balance pass carried as a non-blocking post-APPROVED follow-up)
 - Ball Physics (#1, Feb 8, 2026)
 - Agent Movement (#2, Apr 27, 2026; §2.5 patch May 6, 2026 — `XC-002-001` EntityId no-reuse)
 - Collision System (#3, Feb 19, 2026 — §9 back-filled Apr 26, 2026)

@@ -1,7 +1,7 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** June 7, 2026 (AR-hardening sweep complete across all 18 coded sections; every section's last adversarial review now yields no findings or L-only findings, with one explicit cycle-stop at Pass Mechanics #5 AR-5. Implementation phase well underway: 350+ source files across 17 spec assemblies + Testing Strategy CI tooling. New test scaffolding for Ball Physics (3 new test files) and Agent Movement (77 NUnit tests across 11 fixtures). See `docs/tracking/PROGRESS.md` for per-spec AR-round tallies. Prior May 30: Event System #17 coded — 20 files (18 .cs + 2 asmdef).)
+**Last Updated:** June 20, 2026 (Tactical Instructions **#21** APPROVED — first Stage-1 forward spec beyond the Stage-0 set of 20: the manager-facing tactical instruction layer (formation/mentality/team instructions/player roles+duties/individual instructions) that drives the existing AI subsystems #8/#11–#15. 11 section files at v0.3 after PASS-1 + PASS-2 adversarial reviews; lead-developer sign-off granted. Its `[GT]` balance-pass values are illustrative pending a non-blocking Stage-1 follow-up; no `src/` code yet (T0 scaffolding pending). `SPEC_INDEX.md` count now **21 APPROVED**. Prior June 7, 2026: AR-hardening sweep complete across all 18 coded sections; 350+ source files across 17 spec assemblies + Testing Strategy CI tooling. See `docs/tracking/PROGRESS.md` for per-spec AR-round tallies.)
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
