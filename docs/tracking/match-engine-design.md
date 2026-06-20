@@ -2,7 +2,7 @@
 
 > **Created:** June 15, 2026
 > **Last Updated:** June 19, 2026 (v0.9 — **Phase C plan folded in** (docs-only; no code). §5 Phase C expanded from a one-liner to ordered sub-steps C0–C6, with three corrections caught in adversarial review against the actual subsystem APIs: (1) the §3 Resolve row's `FirstTouchSystem.EvaluateOnBallContact` was a phantom — the real API is the pure `EvaluateFirstTouch(FirstTouchContext)` + `ApplyTouchResult` via first-touch's own adapters; (2) first-touch has no Stage-0 trigger and needs 2 extra adapters, so it is **deferred to Phase D**; (3) Phase C registers NO `DeterministicRngService` draw sites — collision self-seeds from `matchSeed ^ frameNumber` and pass/shot error is hash-based, so the planned RNG-registration sub-step was dropped. New C1a sub-step makes the six pass/shot executor adapter implementations (`IPass/IShotBallSystem` / `AgentQuery` / `CollisionQuery`) explicit as the highest-risk net-new surface; C0 executor snapshot seam named `CaptureState`/`RestoreState` to avoid colliding with the existing `IPassAgentQuery.GetState`. All claims verified against `PassExecutor`/`ShotExecutor` ctors, `IPass*` interfaces, `FirstTouchContext`/`FirstTouchSystem`, and `CollisionSystem.UpdateCollisions`. Phase D entry updated to absorb first-touch + the DecisionTree restore seam. Prior v0.8 — **Phase B complete**: steps B3 + B4 implemented. B3 — full canonical world-state field-set serialization + schema pin: `PHASE_A_PAYLOAD_FORMAT_VERSION` (u8) replaced with `MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION` (u32 = 1; distinct from the #16 `SnapshotHeader` schema version — body vs framing); `SerializeWorldState` now writes the full §2.6 field set field-by-field via `CanonicalSerializer` (ball position/velocity/spin/state + `LastValid*`; per-agent full `AgentState` incl. the B0 `OscillationGuard` ring-buffer state via `GetState()`; team/GK flags; the two collision-feedback inputs; the held `MovementCommand`), zero-alloc, ≈3.8 KB. New `TestOnly_SetAgent` seam + `MatchEngineSnapshotSchemaTests.cs` (schema pin; OscillationGuard + ball-spin digest-preimage probes; locked-guard determinism). B4 — design-note reconciliation: corrected the stale §2.3 three-buffer `{_knockdown, _knockdownForce, _stumble}` field block to the real two-input `{_isCollisionKnockdown, _collisionForces}` seam; confirmed no other doc references the phantom model (the remaining Collision System #3 `knockdownForceOut`/`stumbleOut` hits are its legitimate Phase-C OUTPUT API). Files: `MatchEngine.cs` v1.3, `MatchEngineConstants.cs` v1.3, `MatchEngineSnapshotSchemaTests.cs` v1.0. Prior v0.5 — Phase B re-sequenced after adversarial review of the planned Physics-phase wiring: `OscillationGuard` get/restore seam promoted to gating step B0 (its private sliding-window state blocks canonical agent serialization; the omission is invisible to Phase B's same-seed determinism test, only diverging under save/restore); §2.6 corrected — full `AgentState`/`BallState` field set incl. `OscillationGuard` + `LastValid*` checkpoints, and the phantom three-buffer collision model {isGrounded, knockdownForce, stumble} replaced with the real two-input seam {isCollisionKnockdown, collisionForce}; B1 time-unit fix (agent `currentTime` is seconds, clock exposes only ms); B2 uses `UpdateAllAgents` batch seam (skips GKs) + null ball logger. v0.4 — Phase A landed: `src/match-engine/` assembly + `MatchEngine` composition root (world-state fields, boot, 7 method-group phase callbacks wired into `TickOrchestrator` as EventBus-lifecycle-only stubs) + digest-load-bearing snapshot serialization + determinism/AI-stride test suite; see §5 Phase A and the Version History. v0.3 — second self-AR fix pass; v0.2 — self-AR fix pass: collision→movement ordering, EventBus AI-phase entry, cross-tick state in snapshot, stride-tick correction, per-agent-instance verification)
-> **Status:** DESIGN NOTE (Stage 0+1 integration scaffolding — NOT a formal approved spec). **Phase A + Phase B implemented** (June 16, 2026); **Phase C step C0 implemented** (June 19, 2026 — executor snapshot seams); Phase C steps C1–C6 + Phases D–F pending.
+> **Status:** DESIGN NOTE (Stage 0+1 integration scaffolding — NOT a formal approved spec). **Phase A + Phase B implemented** (June 16, 2026); **Phase C steps C0–C3 implemented** (June 19, 2026 — executor snapshot seams + Resolve-phase wiring: collision, executors, adapters); Phase C steps C4–C6 + Phases D–F pending.
 > **Author:** —
 > **Purpose:** Authoritative design for the match engine: the composition root that owns
 > match world state and drives the existing `TickOrchestrator` 7-phase pipeline by wiring
@@ -353,34 +353,45 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
     asmdefs gained the `TacticalDirector.DeterministicSim` reference for `CanonicalSerializer`. No change
     to the `Execute`/`Update` execution paths. DecisionTree state-machine state stays deferred to Phase D
     (its restore seam does not exist yet — §2.6 seam dependency).
-  - **C1 — boot wiring.** Retain `matchSeed` as a `MatchEngine` field (today it is only fed into
-    `_rng` at construction; `UpdateCollisions` needs the raw value). Construct `CollisionSystem`
-    + a null-object `ICollisionEventConsumer` (drains collision events; real consumers are Phase E).
-    Construct the executors — **resolve the per-agent-instance-vs-shared-evaluator question (§6
-    item 5) here**, since it determines both the C0 serialized field set and the zero-alloc
-    construction strategy.
-  - **C1a — executor adapter implementations (highest-risk net-new surface).** `PassExecutor`/
-    `ShotExecutor` each inject three interfaces the host must implement over its world state —
-    `IPass/IShotBallSystem` (`IsBallPossessedBy` + `ApplyKick(ref _ball, …)`), `IPass/IShotAgentQuery`
-    (`GetAttributes` + `GetState` reading `_agents`/`_attrs`), `IPass/IShotCollisionQuery`
-    (`GetAndClearTackleFlag` + `ComputePressureScalar`). Six adapters total at Phase C (first-touch
-    adds its own `IBallPhysicsSystem` + `IAgentMovementSystem` at Phase D → 8). This is the
-    "passes in isolation, breaks composed" surface of §6.3 — assemble-and-run smoke coverage lands here.
-  - **C2 — collision wiring in `RunResolvePhase`.** First call after `BeginPhase(PhaseId.Resolve)`:
-    `UpdateCollisions(_agents, _attrs, _teamIds, _isGoalkeeper, knockdownOut: _isCollisionKnockdown,
-    knockdownForceOut: _collisionForces, stumbleOut: <throwaway scratch>, ref _ball, _matchSeed,
-    frameNumber, matchTime, _eventConsumer)`. Reuses the existing `_attrs` (`PlayerAttributes[]`) —
-    `UpdateCollisions` consumes that, NOT `AgentPhysicalProperties[]` (collision-internal). `stumbleOut`
-    is discarded (not a Stage-0 movement input, per B4). Buffers written tick N, consumed by movement
-    tick N+1 (the §3 one-tick-lag contract). `frameNumber` is `(int)_clock.CurrentTick` — safe at
-    Stage 0 (overflow ~414 days at 60 Hz); note the narrowing where collision/executors consume it.
-  - **C3 — executor lifecycle.** Advance in-flight executors each tick via `Update(matchTime,
-    frameNumber, ref _ball)`; initiate via `Execute(in PassRequest/ShotRequest)` from a `TestOnly_`
-    scripted seam (production trigger arrives with the AI dispatcher in Phase D).
+  - **C1 — boot wiring. ✅ IMPLEMENTED (June 19, 2026).** `_matchSeed` retained as a field
+    (`UpdateCollisions` self-seeds from the raw value). `CollisionSystem(22)` + a null-object
+    `ICollisionEventConsumer` (`NullCollisionEventConsumer`, drains events; real consumers Phase E)
+    constructed at boot. §6 item 5 **resolved: per-agent INSTANCE** — `PassExecutor[22]` /
+    `ShotExecutor[22]` arrays (each holds its own C0 state machine, so a shared evaluator cannot
+    serve them); a single adapter per family backs all 22 (adapter methods take `agentId`). New
+    `_possessingAgentId` field (NO_POSSESSION at kickoff).
+  - **C1a — executor adapter implementations. ✅ IMPLEMENTED (June 19, 2026).** Two nested sealed
+    classes — `PassWorldAdapter` / `ShotWorldAdapter` — implement all six executor query interfaces
+    over host world state via a back-reference: `IsBallPossessedBy` (== `_possessingAgentId`) +
+    `ApplyKick` (→ `BallCollision.ApplyKick` + possession release), `GetAttributes`/`GetState`
+    (`BuildPass*`/`BuildShot*` mappers over `_agents`/`_attrs`; ERR-007 attribute fields are
+    Stage-0 neutral `[GT]` proxies, fatigue derived from `AerobicPool`). `GetAndClearTackleFlag`/
+    `ComputePressureScalar` are deterministic Stage-0 stubs (no tackle flags / pressure model until
+    Phase D/E). First-touch's 7th/8th adapters land at Phase D.
+  - **C2 — collision wiring in `RunResolvePhase`. ✅ IMPLEMENTED (June 19, 2026).** First call after
+    `BeginPhase(PhaseId.Resolve)`: `UpdateCollisions(_agents, _attrs, _teamIds, _isGoalkeeper,
+    knockdownOut: _isCollisionKnockdown, knockdownForceOut: _collisionForces, stumbleOut:
+    _stumbleScratch, ball: ref _ball, …)`. Reuses `_attrs` (`PlayerAttributes[]`); `_stumbleScratch`
+    discarded (B4). Buffers written tick N, consumed by movement tick N+1 (the §3 one-tick-lag
+    contract). `frameNumber = (int)_clock.CurrentTick`.
+  - **C3 — executor lifecycle. ✅ IMPLEMENTED (June 19, 2026).** All 22 pass + 22 shot executors
+    advanced each Resolve tick via `Update(matchTime, frameNumber, ref _ball)` (idle ones no-op);
+    `TestOnly_InitiatePass`/`InitiateShot` + `TestOnly_SetPossession` script `Execute` (production
+    trigger is the Phase D AI dispatcher). NOTE: no executor reaches the CONTACT publish at Stage 0
+    (idle in production / determinism tests; `EventRegistry.EnsureInitialized` is `internal` so the
+    host cannot boot the registry yet) — the registry boot + the pass-completes / possession-flips
+    test move to C4. *Tests (`MatchEngineResolveTests.cs`): collision separates an overlapping pair
+    in Resolve; same-seed digest equality with a live collision; scripted pass/shot initiates through
+    the adapters and advances one tick (below the CONTACT boundary).*
   - **C4 — possession → `MatchContext`.** Add `MatchContext _matchContext` to world state; update
-    possession/ball from executor outcomes. Author `BallZone` **home-perspective only** — the
+    possession/ball from executor outcomes (fold the C1 `_possessingAgentId` into
+    `MatchContext.PossessingAgentId`). Author `BallZone` **home-perspective only** — the
     `DecisionContextAssembler` derives team-relative zone downstream (ERR-008-002 regression guard).
-    Pin write(Resolve) / read(next AI tick) ordering.
+    Pin write(Resolve) / read(next AI tick) ordering. **Absorbs from C3:** the pass/shot EventBus
+    registry boot (`EventRegistry.EnsureInitialized` is `internal`, so the host boots via the public
+    `EventBusRegistrar.Initialize()` sites — verify they are self-sufficient) so a scripted pass can
+    reach CONTACT, plus the deferred "a scripted pass between two agents completes; possession flips"
+    test (the first executor run that crosses the CONTACT publish boundary).
   - **C5 — snapshot extension + schema bump.** Add the C0 executor state + `_matchContext` to
     `SerializeWorldState`; bump `MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION`; record per-field
     exclusion proofs for anything left out (§2.6 discipline).
@@ -478,6 +489,7 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 0.9.2   | 2026-06-19 | —      | **Phase C steps C1/C1a/C2/C3 implemented** (Resolve-phase wiring). C1: retain `_matchSeed`; construct `CollisionSystem(22)` + null-object `ICollisionEventConsumer` + per-agent `PassExecutor[22]`/`ShotExecutor[22]` instance arrays (§6 item 5 resolved — per-agent instance, shared adapter) + `_possessingAgentId`. C1a: `PassWorldAdapter`/`ShotWorldAdapter` nested classes implement all six executor query interfaces over world state (ERR-007 neutral attribute proxies; fatigue from AerobicPool; Stage-0 no-tackle/zero-pressure stubs). C2: `RunResolvePhase` calls `UpdateCollisions` (reuses `_attrs`; `_stumbleScratch` discarded; writes the one-tick-lag feedback buffers). C3: advances all 44 executors via `Update` each Resolve tick; `TestOnly_` seams script `Execute`+possession. No CONTACT publish at Stage 0 (executors idle in production/determinism; registry boot deferred to C4 — `EventRegistry.EnsureInitialized` is `internal`). `MatchEngine.cs` v1.4, `MatchEngineConstants.cs` v1.4 (NO_POSSESSION + STAGE0_NEUTRAL_* in a new GT region), both asmdefs (+CollisionSystem/PassMechanics/ShotMechanics), `MatchEngineResolveTests.cs` v1.0. C4–C6 pending. |
 | 0.9.1   | 2026-06-19 | —      | **Phase C step C0 implemented** (executor snapshot get/restore seams — the gating sub-step). `PassExecutor.CaptureState()`/`RestoreState(in PassExecutorState)` (v1.14) + `ShotExecutor.CaptureState()`/`RestoreState(in ShotExecutorState)` (v1.9), parallel to the B0 `OscillationGuard` seam. New DTOs `PassExecutorState` / `ShotExecutorState` (state-machine ordinal + INITIATING-frozen in-flight field set). Pass's internal `PhysicalProfile` recomputed on restore (§2.6 recompute exclusion + it is an `internal` type); Shot carries its full field set. Round-trip locks `PassExecutorStateTests` / `ShotExecutorStateTests` (CanonicalSerializer byte round-trip + Capture/Restore identity); both test asmdefs gain the DeterministicSim reference. No execution-path change. C1–C6 remain pending. |
 | 0.9     | 2026-06-19 | —      | Phase C plan folded in (docs-only; no code). §5 Phase C expanded to ordered sub-steps C0–C6 + new C1a (executor adapter implementations as the highest-risk net-new surface); §3 Resolve row corrected (`EvaluateOnBallContact` phantom → pure `EvaluateFirstTouch`; first-touch deferred to Phase D; executor `Execute`-initiates / `Update`-advances split made explicit). Three AR corrections vs. the actual APIs: phantom first-touch method; first-touch has no Stage-0 trigger + needs 2 extra adapters (→ Phase D); Phase C registers no RNG draw sites (collision self-seeds, pass/shot error is hash-based) so the RNG-registration sub-step was dropped. C0 snapshot seam named `CaptureState`/`RestoreState` to avoid the existing `IPassAgentQuery.GetState` collision. Phase D entry updated to absorb first-touch + the DecisionTree restore seam. All claims verified against the executor ctors, `IPass*` interfaces, `FirstTouchContext`/`FirstTouchSystem`, and `CollisionSystem.UpdateCollisions`. Intra-Resolve order pinned: collision → executor Update → possession. |
 | 0.8.2   | 2026-06-16 | —      | Phase B full-surface AR (B0–B4): no new H/M (the one substantive finding, the `_attrs`/`_perfs` exclusion proof, was already fixed in 0.8.1). Recorded three inherited/accepted scope observations as §6 items 7–9: (7) B3 serialization is write-only — no symmetric `ReadWorldState` yet, so the restore reader (Phase C–D) MUST mirror the `SerializeWorldState` field order + add a round-trip lock; (8) world-state floats are written Tier A without non-finite enforcement (relies on upstream sanitisation; `OscillationGuard` `-Infinity` sentinel flows through intentionally); (9) the `SNAPSHOT_SCHEMA_VERSION` name collision (match-engine body vs #16 header framing) is a documented confusion hazard. Doc-only. |
