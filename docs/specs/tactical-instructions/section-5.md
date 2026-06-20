@@ -3,7 +3,7 @@
 **Created:** June 20, 2026
 **Last Updated:** June 20, 2026 (v0.3 — PASS-2 fix pass)
 **Version:** 0.3
-**Status:** IN REVIEW
+**Status:** APPROVED (June 20, 2026)
 
 > Test-ID prefixes follow #19 §3.1.4: `T-TI-U-*` unit, `T-TI-I-*` integration, `sim_*` /
 > `T-TI-SIM-*` simulation (closed-loop on the #19 `ScenarioRunner`), `T-TI-DET-*` determinism,

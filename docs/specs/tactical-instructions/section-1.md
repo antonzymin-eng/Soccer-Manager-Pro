@@ -3,7 +3,7 @@
 **Created:** June 20, 2026
 **Last Updated:** June 20, 2026 (v0.2 — PASS-1 fix pass)
 **Version:** 0.2
-**Status:** IN REVIEW
+**Status:** APPROVED (June 20, 2026)
 **Source:** `docs/tracking/tactical-instruction-layer-design.md` v0.3
 
 ---

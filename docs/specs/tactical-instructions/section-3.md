@@ -3,7 +3,7 @@
 **Created:** June 20, 2026
 **Last Updated:** June 20, 2026 (v0.3 — PASS-2 fix pass)
 **Version:** 0.3
-**Status:** IN REVIEW
+**Status:** APPROVED (June 20, 2026)
 
 > All constants cited here live in `TacticalInstructionsConstants.cs` (Appendix A). Values shown are
 > illustrative `[GT]` defaults pending the §5.6 balance pass; the **shapes** are normative.

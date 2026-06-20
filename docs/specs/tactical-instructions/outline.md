@@ -3,7 +3,7 @@
 **Created:** June 20, 2026
 **Last Updated:** June 20, 2026 (v0.1 — promoted from `docs/tracking/tactical-instruction-layer-design.md` v0.3)
 **Version:** 0.1
-**Status:** IN REVIEW (Stage-1 forward spec; runtime activation gated — see §1.8 / §7)
+**Status:** APPROVED (June 20, 2026)
 **Source:** `docs/tracking/tactical-instruction-layer-design.md` v0.3 (June 20, 2026), three adversarial fix passes
 
 ---
