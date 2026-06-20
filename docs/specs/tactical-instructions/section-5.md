@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 5: Test Plan
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** June 20, 2026 (v0.2 — PASS-1 fix pass)
+**Version:** 0.2
 **Status:** IN REVIEW
 
 > Test-ID prefixes follow #19 §3.1.4: `T-TI-U-*` unit, `T-TI-I-*` integration, `sim_*` /
@@ -25,8 +25,9 @@
 
 ## 5.2 Unit tests (`T-TI-U-*`)
 
-- **T-TI-U-001..016** — `EnumOrdinalStability`: each of the 16 enums asserts `(int)Member == N` for
-  every member (APPEND-only lock; FR-TI-007).
+- **T-TI-U-001..016** — `EnumOrdinalStability`: the 14 sequential enums assert `(int)Member == N`; the
+  2 `[Flags]` enums (`TacticTriggerMask`, `SetPieceDutyFlags`) assert bit-position values (1,2,4,…) and
+  the 8-flag `byte` ceiling instead (APPEND-only lock; FR-TI-007).
 - **T-TI-U-017..019** — factory identity: `TeamTactic.Balanced`, `PlayerInstructions.Default`,
   `PlayerTactic.Default(role)` field-by-field equal the documented neutral values (FR-TI-031).
 - **T-TI-U-020..026** — `Mentality` map (§3.2): all 7 rows return the pinned `(profile, riskMult,
@@ -82,10 +83,14 @@ One scenario per consumer once its match-engine phase composes: e.g. `sim_high_m
 
 ## 5.7 FR → test traceability
 
+Most FRs trace to ≥1 executable test. Four FRs are structural and trace to a **named verification**
+(asmdef-reference grep / inspection) rather than a runtime test: FR-TI-002, FR-TI-003, FR-TI-029,
+FR-TI-030. These are listed as `verify:` below.
+
 | FR | Tests | FR | Tests |
 |---|---|---|---|
 | 001 | I-001 | 017 | U-035, I-006 |
-| 002–003 | EXP-004, §4.7 grep | 018 | I-006 |
+| 002–003 | verify: §4.7 asmdef-ref grep | 018 | I-006 |
 | 004 | U-037..040 | 019 | I-007 |
 | 005 | U-001..016 | 020 | I-016 |
 | 006 | U-017..019 | 021 | EXP-003, I-014 |
@@ -96,8 +101,8 @@ One scenario per consumer once its match-engine phase composes: e.g. `sim_high_m
 | 013 | U-031, I-017 | 026 | DET-004 |
 | 014 | U-031, I-013..018 | 027 | DET-001 |
 | 015 | U-033, I-015 | 028 | DET-003, EXP-004 |
-| 016 | U-034, I-005 | 029 | §4.5 (no interface) |
-| | | 030 | §7 gating (manual) |
+| 016 | U-034, I-005 | 029 | verify: §4.5 (no interface published) |
+| | | 030 | verify: §7 stage gating |
 | | | 031 | U-017..019, DET-002 |
 | | | 032 | §3 worked examples |
 
@@ -105,4 +110,5 @@ One scenario per consumer once its match-engine phase composes: e.g. `sim_high_m
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Test plan: ≥78 tests across 6 layers + FR traceability + balance-pass gate. |
+| 0.2 | 2026-06-20 | — | PASS-1 fix pass: `[Flags]` stability-test carve-out (M-3); FR-002/003/029/030 reclassified verify-by-inspection (M-4). |
 #endregion

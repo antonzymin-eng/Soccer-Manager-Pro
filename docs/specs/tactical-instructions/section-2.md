@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** June 20, 2026 (v0.2 — PASS-1 fix pass)
+**Version:** 0.2
 **Status:** IN REVIEW
 
 ---
@@ -19,7 +19,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-TI-004 | Each instruction enum that parallels a subsystem-local enum is declared locally (`TacticPassing`/`TacticPressing`/`TacticTriggerMask`/`TacticFormation`); the consumer translates it (§3.1). No approved enum file is re-homed. | MUST | KD-2 |
 | FR-TI-005 | `PlayerRole` (behavioural) is a new enum distinct from positional `RoleId` (#12); this layer never references `RoleId`. | MUST | KD-3 |
 | FR-TI-006 | The data model is two-tier: one `TeamTactic` per team, one `PlayerTactic` per agent. | MUST | KD-1 / §2.2 |
-| FR-TI-007 | Every enum is `byte`-backed and APPEND-only (ordinal stability); each has an `EnumOrdinalStability` test entry. | MUST | #16 §6.2 / #1 precedent |
+| FR-TI-007 | Every enum is `byte`-backed and APPEND-only. The 14 sequential enums assert `(int)Member == N`; the 2 `[Flags]` enums (`TacticTriggerMask`, `SetPieceDutyFlags`) instead assert **bit-position** stability and the 8-flag `byte` ceiling. Each has a stability test entry. | MUST | #16 §6.2 / #1 precedent |
 | FR-TI-008 | Every constant carries exactly one tag: `[GT]`, `[FIXED]`, `[DERIVED]`, or `[CROSS]`. | MUST | CLAUDE.md |
 | FR-TI-009 | No `[EST]` tag remains at `APPROVED`; placeholders promote to `[GT]`/`[DERIVED]`. | MUST | #20 FR-CS-020 |
 | FR-TI-010 | All constants live in one catalogue `TacticalInstructionsConstants.cs` in `#region` order Fixed→Derived→GT. | MUST | #20 FR-CS-025 |
@@ -27,12 +27,12 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-TI-012 | `RoleWeightModifiers[(PlayerRole, ActionType)] → float` is applied in #8 `UtilityScorer` after the existing zone×AM×context×tactical×risk product and before the `[UTILITY_FLOOR, UTILITY_CEILING]` clamp. | MUST | §3.3 |
 | FR-TI-013 | `Duty {Defend,Support,Attack}` biases positioning long-pct (#12), utility aggression (#8), and the tackle COMMIT floor (#14). | MUST | §3.4 |
 | FR-TI-014 | Each `PlayerInstructions` bias (`InstrBias {Less,Default,More}`) modulates exactly its named #8 term; `Default` is the multiplicative/additive identity. | MUST | §3.4 / KD-10 |
-| FR-TI-015 | `Tempo` adjusts decision/pass utility thresholds only; it MUST NOT change either loop tick rate (10 Hz / 60 Hz invariant). | MUST | §3.4 / CLAUDE.md |
+| FR-TI-015 | `Tempo` is a **new branch** (no existing #8 hook — selection is pure max EffectiveUtility): it applies a forward-vs-retain utility weighting and option-generation breadth bias. It MUST NOT change either loop tick rate (10 Hz / 60 Hz invariant) and is NOT a decision threshold. | MUST | §3.3 / §3.4 / KD-11 |
 | FR-TI-016 | `TacticWidth`/`TacticDefWidth` feed #12 `ContextModifierInputs` lateral/vertical compactness; no new positioning branch is introduced. | MUST | §3.4 / KD-11 |
 | FR-TI-017 | `LineOfEngagement` scales #13 press trigger distances. | MUST | §3.4 |
 | FR-TI-018 | `TacticTriggerMask` (`[Flags]`) gates which #13 triggers are active; an unset flag disables that trigger. | MUST | §3.1 |
 | FR-TI-019 | `OffsideTrap` (bool) enables #14 `MarkDirective.OffsideTrapActive`. | MUST | §3.4 |
-| FR-TI-020 | `TransitionWon`/`TransitionLost` select #15 transition behaviour and the #13 counter-press gate. | MUST | §3.4 |
+| FR-TI-020 | `TransitionWon`/`TransitionLost` override **only** the transition dimension of the `Mentality`-selected `StyleProfile` (`TransitionHoldTicks`) and the #13 counter-press gate — never the profile's other multipliers. Composition with `Mentality` is defined in §3.2. | MUST | §3.2 / §3.4 |
 | FR-TI-021 | `FocusPlay` is a **new** lateral-preference branch in #8 `OptionGenerator` and a flank bias in #15 `OverloadDetector` (no existing hook — §2.3 of supplement / KD-11). | MUST | §3.3 / KD-11 |
 | FR-TI-022 | `GkDistributionPolicy` sets the default fields of #11 `DistributeIntent`. | MUST | §3.4 |
 | FR-TI-023 | A manager man-mark override (`PlayerInstructions.MarkTargetEntityId ≥ 0`) requests #14 force `MarkMode.ManMark` on that opponent, honoured **only within** #14's §3.10 anti-chaos invariants (safety floor wins on conflict). | MUST | KD-9 / §3.5 |
@@ -57,12 +57,12 @@ snapshot order** (Appendix B) once FR-TI-028 activates.
 |---|---|---|
 | Mentality | `Mentality` | master risk dial (§3.2) |
 | Formation | `TacticFormation` | translated → #12 `FormationFamily` |
-| Tempo | `Tempo` | decision-threshold bias |
+| Tempo | `Tempo` | forward-vs-retain weighting (NEW branch, §3.3 — not a threshold) |
 | Width | `TacticWidth` | → #12 compactness |
 | Passing | `TacticPassing` | translated → #8 `PassingStyle` |
 | Pressing | `TacticPressing` | translated → #8 `PressingMode` |
 | LineOfEngagement | `LineOfEngagement` | → #13 trigger distances |
-| DefensiveLine | `float [0,1]` | same semantics as `DefensiveLineDepth` |
+| DefensiveLine | `float [0,1]` | manager **input** only; assembly layer writes it (+ Mentality line bias) into the single authoritative `DefensiveLineDepth` (#12-owned). NOT a parallel depth surface — see §3.4 |
 | DefensiveWidth | `TacticDefWidth` | → #12 OOP compactness |
 | TransitionWon | `TransitionPlan` | → #15 / #13 |
 | TransitionLost | `TransitionPlan` | → #15 / #13 |
@@ -103,8 +103,9 @@ SetPieceRoles None.
 
 `Mentality`(7), `Tempo`(5), `TacticWidth`(5), `TacticDefWidth`(3), `LineOfEngagement`(5),
 `TransitionPlan`(4), `GkDistributionPolicy`(6), `FocusPlay`(4), `TacticPassing`(3), `TacticPressing`(3),
-`TacticTriggerMask`(`[Flags]`), `TacticFormation`(≥3), `Duty`(3), `PlayerRole`(curated subset, §3.3),
-`InstrBias`(3), `SetPieceDutyFlags`(`[Flags]`).
+`TacticTriggerMask`(`[Flags]`), `TacticFormation`(exactly the 3 #12 families today; widen with #12),
+`Duty`(3), `PlayerRole`(curated subset, §3.3), `InstrBias`(3), `SetPieceDutyFlags`(`[Flags]`).
+The two `[Flags]` enums use bit-position stability (FR-TI-007), not sequential ordinals.
 
 ## 2.3 Determinism notes
 
@@ -125,4 +126,5 @@ Snapshot contribution is governed by FR-TI-028. In-match mutation timing by FR-T
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Initial FRs (FR-TI-001..032), data structures, failure modes from supplement v0.3. |
+| 0.2 | 2026-06-20 | — | PASS-1 fix pass: FR-TI-007 `[Flags]` carve-out (M-3); FR-TI-015 Tempo reclassified new branch (H-1); FR-TI-020 StyleProfile composition (H-2); `DefensiveLine` single-source note (M-2); §2.2.4 `TacticFormation` tightened (L-4). |
 #endregion

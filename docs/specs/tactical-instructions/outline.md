@@ -32,7 +32,7 @@ The gap this spec fills is that nothing currently feeds them a manager's intent.
 | 9 | Approval checklist |
 | Appendices | Constant catalogue + derivations; Mentality / role-weight / bias tables |
 
-## Key decisions (summary; full text in §1.5)
+## Key decisions (summary; **full set KD-1..KD-12 in §1.5**)
 
 - **KD-1** Input-only layer; produces no per-tick directive.
 - **KD-2** Bottom-layer assembly; owns its own instruction enums; consumers translate downward (no upward reference).
@@ -42,6 +42,7 @@ The gap this spec fills is that nothing currently feeds them a manager's intent.
 - **KD-6** No RNG / no domain tag (deterministic application).
 - **KD-7** In-match changes apply only at a 10 Hz tactical-stride boundary.
 - **KD-8** Runtime activation gated on the `[GT]` config-loader + match-engine Phase C/D.
+- **KD-9..KD-12** man-mark-vs-safety-floor precedence; identity defaults; `FocusPlay`/`Tempo`/role-weights as new logic; snapshot-schema ownership — see §1.5.
 
 #region VersionHistory
 | Version | Date | Author | Notes |

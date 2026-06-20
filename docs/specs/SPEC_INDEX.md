@@ -39,7 +39,9 @@
 | 18 | Performance Optimization Strategy | `performance-optimization/` | 5 | APPROVED | May 15, 2026 |
 | 19 | Testing Strategy & Framework | `testing-strategy/` | 5 | APPROVED | May 15, 2026 |
 | 20 | Code Standards & Style Guide | `code-standards/` | 5 | APPROVED | May 11, 2026 |
-| 21 | Tactical Instructions | `tactical-instructions/` | 6 | IN REVIEW | — |
+| 21 | Tactical Instructions | `tactical-instructions/` | 6¹ | IN REVIEW | — |
+
+¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
 ---
 

@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 1: Introduction, Scope, Dependencies
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** June 20, 2026 (v0.2 — PASS-1 fix pass)
+**Version:** 0.2
 **Status:** IN REVIEW
 **Source:** `docs/tracking/tactical-instruction-layer-design.md` v0.3
 
@@ -80,9 +80,11 @@ wired (T2–T3 in §7.2).
   deliberate decision, not an omission.
 - **KD-10 — Identity defaults.** `Balanced`/`Default` factories reproduce the current no-instruction
   baseline exactly (FR-TI-031), so landing the layer with default tactics is a behavioural no-op.
-- **KD-11 — `FocusPlay`/`RoleWeightModifiers` are new logic.** Unlike width/tempo, these have no
-  existing hook (`OptionGenerator` generates from geometry, not directional preference); they are new
-  branches and carry the heavier review burden (§5.6 / §3.3).
+- **KD-11 — `FocusPlay`/`Tempo`/`RoleWeightModifiers` are new logic.** These have no existing #8 hook
+  (`OptionGenerator` generates from geometry, not directional preference; `ActionSelector` picks pure max
+  EffectiveUtility, so there is no decision threshold for `Tempo` to move); they are new branches and
+  carry the heavier review burden (§5.6 / §3.3). `Width`/`DefWidth` differ — they add a field that feeds
+  #12's **existing** compactness scaling, not a new branch.
 - **KD-12 — Schema ownership.** When Phase D serializes tactics, the field set + ordering is owned here
   (§2.5 / Appendix B) and pinned before T2 to avoid a later `SNAPSHOT_SCHEMA_VERSION` churn.
 
@@ -116,4 +118,5 @@ catalogue `TacticalInstructionsConstants.cs`. The supplement is superseded by th
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Initial section from supplement v0.3. |
+| 0.2 | 2026-06-20 | — | PASS-1 fix pass: KD-11 adds Tempo to the new-logic list; Width/DefWidth clarified as field-feeds-existing (H-1/M-1). |
 #endregion

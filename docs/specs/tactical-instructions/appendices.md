@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Appendices
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** June 20, 2026 (v0.2 — PASS-1 fix pass)
+**Version:** 0.2
 **Status:** IN REVIEW
 
 ---
@@ -24,8 +24,8 @@ magnitudes are not pinned until the balance pass. Region order Fixed → Derived
 
 | Constant | Tag | Formula | Rationale |
 |---|---|---|---|
-| `RISK_MULT_BALANCED` | [DERIVED] | 1.0 | identity row of the §3.2 table (FR-TI-031) |
-| `LINE_BIAS_BALANCED` | [DERIVED] | 0.0 | identity row of the §3.2 table |
+| `RISK_MULT_BALANCED` | [DERIVED] | `= MentalityRiskMult[(int)Mentality.Balanced]` = 1.0 | formula-tagged per FR-CS-021; identity row (FR-TI-031) |
+| `LINE_BIAS_BALANCED` | [DERIVED] | `= MentalityLineBias[(int)Mentality.Balanced]` = 0.0 | formula-tagged per FR-CS-021 |
 
 ### A.3 GT (game-tuned; illustrative pending balance pass)
 
@@ -88,4 +88,5 @@ attacking third evaluating SHOOT:
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Constant catalogue (illustrative [GT]), RoleWeightModifiers excerpt, snapshot order, worked example. |
+| 0.2 | 2026-06-20 | — | PASS-1 fix pass: RISK_MULT_BALANCED / LINE_BIAS_BALANCED given formulas to validate the [DERIVED] tag (L-2). |
 #endregion
