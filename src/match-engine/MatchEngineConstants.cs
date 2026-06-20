@@ -46,6 +46,11 @@ namespace TacticalDirector.MatchEngine
         /// A fixed kickoff orientation, not a tunable.</summary>
         public const float AWAY_FACING_DEG = 180f;
 
+        /// <summary>[FIXED] Possessing-agent sentinel for "ball is loose" (no agent has possession).
+        /// Mirrors the Decision Tree #8 MatchContext.PossessingAgentId convention (−1 = loose);
+        /// the C4 step folds host possession into MatchContext.</summary>
+        public const int NO_POSSESSION = -1;
+
         /// <summary>[FIXED] Match-engine world-state snapshot schema version (design note §2.6 /
         /// step B3). Versions the field set and serialization order of the world state written into
         /// the <c>SnapshotPayload</c> body by <see cref="MatchEngine.SerializeWorldState"/>; bump on
@@ -97,6 +102,24 @@ namespace TacticalDirector.MatchEngine
         public static readonly float AwayLineXM = PITCH_LENGTH_M * 3f / 4f;
 
         #endregion
+
+        #region GT
+
+        /// <summary>
+        /// [GT] Stage-0 neutral mid-scale player attribute [1–20] supplied to the pass/shot executor
+        /// adapters (Phase C C1a). Agent Movement #2 PlayerAttributes carries no passing/finishing/
+        /// technique fields yet (ERR-007 attribute split), so the executor query adapters synthesise a
+        /// neutral value until the AI phase wires real attributes in (Phase D).
+        /// </summary>
+        public static readonly float STAGE0_NEUTRAL_ATTRIBUTE = 10f; // TODO: replace when ERR-007 attribute split lands (Phase D)
+
+        /// <summary>
+        /// [GT] Stage-0 neutral weak-foot rating [1–5] supplied to the pass/shot executor adapters
+        /// (Phase C C1a). Mid-scale placeholder until the ERR-007 attribute split (Phase D).
+        /// </summary>
+        public static readonly int STAGE0_NEUTRAL_WEAK_FOOT = 3; // TODO: replace when ERR-007 attribute split lands (Phase D)
+
+        #endregion
     }
 }
 
@@ -116,4 +139,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | schema pin for the full world-state field set now serialized by |
 // |         |            |        | SerializeWorldState. Doc distinguishes it from the #16          |
 // |         |            |        | SnapshotHeader SNAPSHOT_SCHEMA_VERSION (header framing vs body).|
+// | 1.4     | 2026-06-19 | —      | Phase C C1/C1a: NO_POSSESSION sentinel ([FIXED] −1, mirrors     |
+// |         |            |        | MatchContext.PossessingAgentId) for the host possession field;  |
+// |         |            |        | STAGE0_NEUTRAL_ATTRIBUTE / STAGE0_NEUTRAL_WEAK_FOOT ([GT]) feed |
+// |         |            |        | the pass/shot executor query adapters until the ERR-007         |
+// |         |            |        | attribute split wires real attributes in (Phase D). New GT      |
+// |         |            |        | region added after Derived.                                    |
 #endregion

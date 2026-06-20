@@ -5,7 +5,10 @@
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.EventSystem",
         "TacticalDirector.BallPhysics",
-        "TacticalDirector.AgentMovement"
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.CollisionSystem",
+        "TacticalDirector.PassMechanics",
+        "TacticalDirector.ShotMechanics"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -1,12 +1,13 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-16 (Phase B step B3 — full canonical field-set serialization + schema pin)
+// Modified: 2026-06-19 (Phase C C1/C1a/C2/C3 — Resolve-phase wiring: collision + executors + adapters)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
-//           TickOrchestrator 7-phase pipeline. Phase B step B2 wires the Physics phase to the
-//           real Ball Physics (#1) and Agent Movement (#2) seams; the AI and Resolve phases
-//           remain EventBus-lifecycle-only stubs (design note §5 Phases C–F).
+//           TickOrchestrator 7-phase pipeline. The Physics phase (B2) drives Ball Physics (#1) +
+//           Agent Movement (#2); the Resolve phase (Phase C) drives Collision (#3) + the per-agent
+//           Pass (#5) / Shot (#6) executor lifecycles via host world-state adapters. The AI phase
+//           remains an EventBus-lifecycle-only stub (design note §5 Phase D).
 
 using System;
 
@@ -15,8 +16,15 @@ using UnityEngine;
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
+using TacticalDirector.CollisionSystem;
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
+using TacticalDirector.PassMechanics;
+using TacticalDirector.ShotMechanics;
+
+// The collision orchestrator type name (CollisionSystem) collides with its own namespace leaf
+// (TacticalDirector.CollisionSystem); alias it to a distinct name so the type is unambiguous here.
+using CollisionSubsystem = TacticalDirector.CollisionSystem.CollisionSystem;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -41,6 +49,7 @@ namespace TacticalDirector.MatchEngine
         // ── Deterministic infrastructure ──────────────────────────────────────────────
 
         private readonly DeterministicRngService _rng;
+        private readonly ulong                   _matchSeed;   // raw seed; UpdateCollisions self-seeds from it (C2)
         private readonly MatchClock              _clock;
         private readonly SnapshotCodec           _codec;
         private readonly EnvironmentFingerprint  _fingerprint;
@@ -51,6 +60,25 @@ namespace TacticalDirector.MatchEngine
         // serves all 22 agents. BallPhysicsCore is a static class (no instance needed).
 
         private readonly AgentMovementSystem _movement;
+
+        // ── Resolve subsystems (design note §3 / Phase C C1) ──────────────────────────
+        // Per-agent executors are 22-element INSTANCE arrays — each holds its own in-flight
+        // state machine (the C0 CaptureState surface), so a shared evaluator cannot serve them
+        // (resolves §6 item 5: per-agent instance, not shared). The three query interfaces each
+        // executor injects are stateless over world state, so ONE adapter per family (Pass / Shot)
+        // backs all 22 instances (the adapter methods take agentId). DecisionTree stays Phase D.
+
+        private readonly CollisionSubsystem            _collisionSystem;
+        private readonly ICollisionEventConsumer       _eventConsumer;   // null-object drain; real consumers Phase E
+        private readonly PassExecutor[]                _passExecutors;   // [SQUAD_SIZE]
+        private readonly ShotExecutor[]                _shotExecutors;   // [SQUAD_SIZE]
+        private readonly bool[]                        _stumbleScratch;  // UpdateCollisions stumbleOut sink (discarded — not a Stage-0 movement input, B4)
+
+        // Authoritative ball possession: agent index [0–21], or NO_POSSESSION (−1) when loose.
+        // Read by the executor adapters (IsBallPossessedBy); cleared on ApplyKick. The C4 step folds
+        // this into MatchContext.PossessingAgentId; Stage 0 has no production possession producer
+        // (kickoff is loose), so a TestOnly_ seam scripts it for the executor-lifecycle tests.
+        private int _possessingAgentId;
 
         // ── World state (design note §2.3) ────────────────────────────────────────────
         // Real BallState + AgentState[] driven by the production physics seams (step B2). Step B3
@@ -98,6 +126,9 @@ namespace TacticalDirector.MatchEngine
             // §4 step 1 — deterministic RNG. Phase A registers no draw sites (no subsystem
             // draws until Phase C+); the seed plumbing is established here for later phases.
             _rng = new DeterministicRngService(matchSeed);
+            // Retained raw: CollisionSystem.UpdateCollisions self-seeds its own DeterministicRNG from
+            // matchSeed ^ frameNumber (design note C2 NOTE — Phase C registers no host RNG draw sites).
+            _matchSeed = matchSeed;
 
             // §4 step 5 — clock, codec, environment fingerprint.
             _clock       = new MatchClock(0UL);
@@ -120,6 +151,24 @@ namespace TacticalDirector.MatchEngine
 
             // §4 step 4 — initialise kickoff world state (deterministic; no RNG).
             InitializeKickoffState();
+
+            // §4 step 3 (cont.) — Resolve subsystems (Phase C C1). Kickoff ball is loose.
+            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+            _collisionSystem   = new CollisionSubsystem(MatchEngineConstants.SQUAD_SIZE);
+            _eventConsumer     = new NullCollisionEventConsumer();
+            _stumbleScratch    = new bool[MatchEngineConstants.SQUAD_SIZE];
+
+            // One adapter per executor family backs all 22 per-agent instances (C1a). Constructed once
+            // here; the executors hold them for the match lifetime (no per-frame allocation).
+            var passAdapter = new PassWorldAdapter(this);
+            var shotAdapter = new ShotWorldAdapter(this);
+            _passExecutors = new PassExecutor[MatchEngineConstants.SQUAD_SIZE];
+            _shotExecutors = new ShotExecutor[MatchEngineConstants.SQUAD_SIZE];
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _passExecutors[i] = new PassExecutor(passAdapter, passAdapter, passAdapter);
+                _shotExecutors[i] = new ShotExecutor(shotAdapter, shotAdapter, shotAdapter);
+            }
 
             // §4 step 6 — construct the orchestrator with the seven method-group callbacks.
             // Method-group conversion allocates the delegates once here (no per-frame closures).
@@ -289,6 +338,41 @@ namespace TacticalDirector.MatchEngine
         internal bool TestOnly_IsGoalkeeper(int index) => _isGoalkeeper[index];
 
         /// <summary>
+        /// Test-only seam: sets authoritative possession to an agent (or NO_POSSESSION). The production
+        /// possession producer lands at C4/Phase D; Phase C scripts it so the executor adapters'
+        /// IsBallPossessedBy gate passes for a scripted pass/shot. Not called by production.
+        /// </summary>
+        internal void TestOnly_SetPossession(int agentId)
+        {
+            _possessingAgentId = agentId;
+        }
+
+        /// <summary>Test-only: the current authoritative possessing agent index (NO_POSSESSION = loose).</summary>
+        internal int TestOnly_PossessingAgentId => _possessingAgentId;
+
+        /// <summary>
+        /// Test-only seam: scripts a pass on the given agent's executor (the Phase D AI dispatcher is the
+        /// production trigger — design note C3). The executor advances on subsequent Resolve phases. Not
+        /// called by production.
+        /// </summary>
+        internal PassResult TestOnly_InitiatePass(int agentId, in PassRequest request)
+        {
+            return _passExecutors[agentId].Execute(in request);
+        }
+
+        /// <summary>Test-only seam: scripts a shot on the given agent's executor (see TestOnly_InitiatePass).</summary>
+        internal ShotResult TestOnly_InitiateShot(int agentId, in ShotRequest request)
+        {
+            return _shotExecutors[agentId].Execute(in request);
+        }
+
+        /// <summary>Test-only: whether the agent's pass executor is idle (no pass in flight).</summary>
+        internal bool TestOnly_PassExecutorIdle(int agentId) => _passExecutors[agentId].IsIdle;
+
+        /// <summary>Test-only: whether the agent's shot executor is idle (no shot in flight).</summary>
+        internal bool TestOnly_ShotExecutorIdle(int agentId) => _shotExecutors[agentId].IsIdle;
+
+        /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
         /// CurrentSnapshotDigest after the most recent <see cref="RunTick"/>). Diagnostic /
         /// test accessor — allocates a copy and is not called on the hot path.
@@ -366,10 +450,44 @@ namespace TacticalDirector.MatchEngine
                 _isCollisionKnockdown, _collisionForces, dt, _clock.CurrentMatchTimeSeconds);
         }
 
-        /// <summary>Phase 4 — Resolve. Enters the Resolve phase (no collision/executors yet).</summary>
+        /// <summary>Phase 4 — Resolve. Runs collision (×22) then advances the in-flight pass/shot
+        /// executor lifecycles (Phase C C2/C3). Intra-Resolve order is fixed and digest-load-bearing:
+        /// collision → executor Update → possession (possession update lands in C4). Collision writes
+        /// THIS tick's feedback buffers (consumed by movement next tick — the §3 one-tick-lag contract);
+        /// the executors advance any pass/shot scripted via the TestOnly_ seam (production trigger is the
+        /// Phase D AI dispatcher), kicking the ball at CONTACT through the executor adapters.</summary>
         private void RunResolvePhase()
         {
             EventBus.BeginPhase(PhaseId.Resolve);
+
+            int   frameNumber = (int)_clock.CurrentTick;          // narrows safely at Stage 0 (~414 days @ 60 Hz)
+            float matchTime   = _clock.CurrentMatchTimeSeconds;
+
+            // C2 — collision first. Reuses _attrs (PlayerAttributes[]); writes _isCollisionKnockdown /
+            // _collisionForces (consumed by movement at tick N+1). stumbleOut is discarded (B4 — not a
+            // Stage-0 movement input). Self-seeds its own RNG from _matchSeed ^ frameNumber internally.
+            // NOTE: UpdateCollisions processes ALL 22 agents incl. goalkeepers, whereas Physics-phase
+            // UpdateAllAgents skips GKs (Stage 0 — GK locomotion is #11). A GK can therefore be
+            // displaced by a collision that movement never re-integrates; benign at Stage 0 (kickoff
+            // spread admits no GK collisions) and inherent to the two seams, recorded here for Phase D.
+            _collisionSystem.UpdateCollisions(
+                _agents, _attrs, _teamIds, _isGoalkeeper,
+                knockdownOut:      _isCollisionKnockdown,
+                knockdownForceOut: _collisionForces,
+                stumbleOut:        _stumbleScratch,
+                ball:              ref _ball,
+                matchSeed:         _matchSeed,
+                frameNumber:       frameNumber,
+                matchTime:         matchTime,
+                eventConsumer:     _eventConsumer);
+
+            // C3 — advance any in-flight executors. Idle executors no-op; only a pass/shot started via
+            // the TestOnly_ seam (or, from Phase D, the AI dispatcher) is mid-lifecycle here.
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _passExecutors[i].Update(matchTime, frameNumber, ref _ball);
+                _shotExecutors[i].Update(matchTime, frameNumber, ref _ball);
+            }
         }
 
         /// <summary>Phase 5 — Events. Enters the Events phase and drains the tick's ledger.</summary>
@@ -434,6 +552,14 @@ namespace TacticalDirector.MatchEngine
             // PHASE-D FLAG: when the AI phase begins writing per-agent form/fatigue context into
             // _perfs, _perfs becomes cross-tick state and MUST be serialized here (bump
             // SNAPSHOT_SCHEMA_VERSION at that point).
+            //
+            // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but at Stage 0 it
+            // is constant NO_POSSESSION — kickoff is loose and there is no production possession
+            // producer (the TestOnly_ seam is test-only; the AI dispatcher arrives at Phase D). Its
+            // value is therefore identical across any two same-seed runs, so omission cannot diverge
+            // replay. C4 folds it into MatchContext.PossessingAgentId and serializes that (bump
+            // SNAPSHOT_SCHEMA_VERSION then). The executor in-flight state (C0 CaptureState) is likewise
+            // excluded until C5 — at Stage 0 the executors are idle in production (same reasoning).
             CanonicalSerializer.WriteU32(buf, ref o, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION);
             // Tick is also carried in the header; included here so the payload is self-describing
             // when decoded in isolation (replay/save tooling reads the payload directly).
@@ -543,6 +669,141 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteF32 (buf, ref o, c.FacingTarget.y);
             CanonicalSerializer.WriteBool(buf, ref o, c.OverrideSafetyConstraints);
         }
+
+        // ── Executor world-state mappers (Phase C C1a) ────────────────────────────────
+        // Translate the host's AgentState / PlayerAttributes into the per-spec query DTOs the
+        // executors consume. Attribute fields Agent Movement does not yet carry (passing / finishing /
+        // technique / weak-foot — ERR-007) are Stage-0 neutral placeholders; fatigue is derived from
+        // the agent's AerobicPool (0 = spent → 1 fatigued) so it is real, not a placeholder.
+
+        private PassAgentAttributes BuildPassAttributes(int i)
+        {
+            return new PassAgentAttributes
+            {
+                Passing        = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
+                Technique      = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
+                KickPower      = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
+                WeakFootRating = MatchEngineConstants.STAGE0_NEUTRAL_WEAK_FOOT,
+                Crossing       = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
+                Fatigue        = 1f - _agents[i].AerobicPool
+            };
+        }
+
+        private PassAgentState BuildPassState(int i)
+        {
+            return new PassAgentState
+            {
+                Position        = _agents[i].Position,
+                Velocity        = _agents[i].Velocity,
+                FacingDirection = _agents[i].FacingDirection
+            };
+        }
+
+        private ShotAgentAttributes BuildShotAttributes(int i)
+        {
+            int neutral = Mathf.RoundToInt(MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE);
+            return new ShotAgentAttributes
+            {
+                Finishing      = neutral,
+                LongShots      = neutral,
+                Composure      = neutral,
+                KickPower      = neutral,
+                Technique      = neutral,
+                WeakFootRating = MatchEngineConstants.STAGE0_NEUTRAL_WEAK_FOOT,
+                Fatigue        = 1f - _agents[i].AerobicPool
+            };
+        }
+
+        private ShotAgentState BuildShotState(int i)
+        {
+            return new ShotAgentState
+            {
+                Position        = new Vector3(_agents[i].Position.x, _agents[i].Position.y, 0f),
+                Velocity        = new Vector3(_agents[i].Velocity.x, _agents[i].Velocity.y, 0f),
+                FacingDirection = _agents[i].FacingDirection,
+                CurrentState    = _agents[i].CurrentState
+            };
+        }
+
+        /// <summary>
+        /// Releases possession from <paramref name="agentId"/> when it kicks the ball (Option B: the ball
+        /// leaves Controlled at ApplyKick). Authoritative possession transitions are finalized at C4; this
+        /// keeps the executor adapters' IsBallPossessedBy honest so a re-entrant CONTACT cannot re-kick.
+        /// </summary>
+        private void ReleasePossessionOnKick(int agentId)
+        {
+            if (_possessingAgentId == agentId)
+            {
+                _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+            }
+        }
+
+        // ── Executor adapters (Phase C C1a) ───────────────────────────────────────────
+        // Two adapter classes implement all six executor query interfaces (IPass/IShot × Ball/Agent/
+        // Collision) over the host world state. Private nested sealed classes so they can read the
+        // enclosing engine's private state through the injected back-reference. Collision queries are
+        // Stage-0 deterministic stubs (no tackle flags / pressure model until Phase D/E).
+
+        private sealed class PassWorldAdapter : IPassBallSystem, IPassAgentQuery, IPassCollisionQuery
+        {
+            private readonly MatchEngine _engine;
+
+            public PassWorldAdapter(MatchEngine engine)
+            {
+                _engine = engine;
+            }
+
+            public bool IsBallPossessedBy(int agentId) => _engine._possessingAgentId == agentId;
+
+            public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
+            {
+                BallCollision.ApplyKick(ref ball, velocity, spin, agentId, matchTime, logger: null);
+                _engine.ReleasePossessionOnKick(agentId);
+            }
+
+            public PassAgentAttributes GetAttributes(int agentId) => _engine.BuildPassAttributes(agentId);
+
+            public PassAgentState GetState(int agentId) => _engine.BuildPassState(agentId);
+
+            // Stage 0: tackle flags arrive with the collision-event consumers (Phase E); pressure model
+            // wires in with the AI phase (Phase D). Both return deterministic no-pressure defaults.
+            public bool GetAndClearTackleFlag(int agentId) => false;
+
+            public float ComputePressureScalar(Vector2 passerPosition, int passerTeamId) => 0f;
+        }
+
+        private sealed class ShotWorldAdapter : IShotBallSystem, IShotAgentQuery, IShotCollisionQuery
+        {
+            private readonly MatchEngine _engine;
+
+            public ShotWorldAdapter(MatchEngine engine)
+            {
+                _engine = engine;
+            }
+
+            public bool IsBallPossessedBy(int agentId) => _engine._possessingAgentId == agentId;
+
+            public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
+            {
+                BallCollision.ApplyKick(ref ball, velocity, spin, agentId, matchTime, logger: null);
+                _engine.ReleasePossessionOnKick(agentId);
+            }
+
+            public ShotAgentAttributes GetAttributes(int agentId) => _engine.BuildShotAttributes(agentId);
+
+            public ShotAgentState GetState(int agentId) => _engine.BuildShotState(agentId);
+
+            public bool GetAndClearTackleFlag(int agentId) => false;
+
+            public float ComputePressureScalar(Vector3 shooterPosition, int shooterTeamId) => 0f;
+        }
+
+        /// <summary>Null-object collision-event consumer (Phase C C1): drains every collision event.
+        /// Real cross-subsystem consumers subscribe at Phase E.</summary>
+        private sealed class NullCollisionEventConsumer : ICollisionEventConsumer
+        {
+            public void OnCollisionEvent(in CollisionEvent evt) { }
+        }
     }
 }
 
@@ -593,4 +854,33 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | a PHASE-D flag that _perfs MUST be serialized once the AI phase |
 // |         |            |        | writes it. L-1: file-header Modified annotation refreshed B2 →  |
 // |         |            |        | B3. (L-2: Modified field added to the new test file header.)    |
+// | 1.4     | 2026-06-19 | —      | Phase C C1/C1a/C2/C3 — Resolve-phase wiring. C1: retain        |
+// |         |            |        | _matchSeed; construct CollisionSystem(22), a null-object        |
+// |         |            |        | ICollisionEventConsumer, the per-agent PassExecutor[22] /       |
+// |         |            |        | ShotExecutor[22] instance arrays (resolves §6 item 5 — per-     |
+// |         |            |        | agent instance, shared adapter), and _possessingAgentId         |
+// |         |            |        | (NO_POSSESSION at kickoff). C1a: PassWorldAdapter /             |
+// |         |            |        | ShotWorldAdapter nested classes implement all six executor      |
+// |         |            |        | query interfaces over world state (BuildPass*/BuildShot*        |
+// |         |            |        | mappers; ERR-007 neutral attribute proxies; fatigue from        |
+// |         |            |        | AerobicPool; Stage-0 no-tackle / zero-pressure collision        |
+// |         |            |        | stubs). C2: RunResolvePhase calls UpdateCollisions (reuses      |
+// |         |            |        | _attrs; stumbleOut discarded; writes the one-tick-lag feedback  |
+// |         |            |        | buffers). C3: advances all 22 pass + 22 shot executors via      |
+// |         |            |        | Update each Resolve tick; TestOnly_ seams script Execute +      |
+// |         |            |        | possession (Phase D AI dispatcher is the production trigger).   |
+// |         |            |        | No CONTACT publish reached at Stage 0 (executors idle in        |
+// |         |            |        | production / determinism tests; registry boot + possession-flip |
+// |         |            |        | completion test land at C4). Snapshot field set unchanged       |
+// |         |            |        | (executor/MatchContext state serialized at C5). asmdef gains    |
+// |         |            |        | CollisionSystem + PassMechanics + ShotMechanics references.     |
+// | 1.4.1   | 2026-06-19 | —      | C1–C3 AR-1 (doc-only): M-1 — SerializeWorldState gains the §2.6 |
+// |         |            |        | exclusion proof for _possessingAgentId (constant NO_POSSESSION  |
+// |         |            |        | at Stage 0; C4 serializes it via MatchContext) + the executor   |
+// |         |            |        | in-flight-state exclusion note (C5). L-1 — RunResolvePhase notes |
+// |         |            |        | the GK collision-active / movement-inactive asymmetry (benign   |
+// |         |            |        | at Stage 0, recorded for Phase D). L-2 (DeterministicRNG is a    |
+// |         |            |        | struct — no per-frame alloc) and L-3 (ApplySeparation runs       |
+// |         |            |        | before the vRel<=0 early return — static-overlap separation     |
+// |         |            |        | holds) verified non-issues. No behaviour change.                |
 #endregion

@@ -5,6 +5,7 @@
         "TacticalDirector.ShotMechanics",
         "TacticalDirector.BallPhysics",
         "TacticalDirector.AgentMovement",
+        "TacticalDirector.DeterministicSim",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

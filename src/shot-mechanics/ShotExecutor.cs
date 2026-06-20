@@ -40,6 +40,10 @@ namespace TacticalDirector.ShotMechanics
 
         // ── State Machine ────────────────────────────────────────────────────────────
 
+        // ORDINAL STABILITY (Match Engine Phase C C0): these ordinals are captured into
+        // ShotExecutorState.State and become digest-load-bearing once the C5 snapshot serializes
+        // them. APPEND-only — never reorder or insert in the middle, or persisted snapshots /
+        // replays desync on the executor state field.
         private enum ShotExecutionState
         {
             Idle,
@@ -105,6 +109,64 @@ namespace TacticalDirector.ShotMechanics
             _agentQuery          = agentQuery;
             _collisionQuery      = collisionQuery;
             _velocityCalculator  = velocityCalculator ?? ShotVelocityCalculator.Instance; // EC-008 tests inject NaNVelocityStub; production uses singleton
+        }
+
+        // ── Snapshot seam — Match Engine Phase C step C0 ─────────────────────────────
+
+        /// <summary>
+        /// Captures the executor's cross-tick state-machine + in-flight fields as a plain-data
+        /// snapshot for canonical serialization / deterministic replay (Match Engine design note
+        /// §2.6). Allocation-free (returns a value type). Parallel to the Pass executor seam and
+        /// to <see cref="AgentMovement.OscillationGuard.GetState"/>. Named Capture (NOT Get) to
+        /// avoid colliding with the Shot agent-query <c>GetState</c> surface.
+        /// </summary>
+        public ShotExecutorState CaptureState()
+        {
+            return new ShotExecutorState(
+                (int)_state,
+                in _request,
+                _kickSpeed,
+                _launchAngleDeg,
+                _spinVector,
+                _intendedAimDirection,
+                in _bodyMechanics,
+                _weakFootErrorMultiplier,
+                _windupFrames,
+                _cachedAgentPosition,
+                _cachedFinishing,
+                _cachedLongShots,
+                _cachedComposure,
+                _cachedFatigue,
+                _windupFramesRemaining,
+                _followThroughFramesRemaining,
+                in _lastResult);
+        }
+
+        /// <summary>
+        /// Restores the executor's cross-tick state from a snapshot produced by
+        /// <see cref="CaptureState"/> (replay / save-load). Parallel to the Pass executor seam.
+        /// Every in-flight field is carried directly — Shot has no internal recompute-on-restore
+        /// exclusion (unlike Pass's PhysicalProfile).
+        /// </summary>
+        public void RestoreState(in ShotExecutorState state)
+        {
+            _state                        = (ShotExecutionState)state.State;
+            _request                      = state.Request;
+            _kickSpeed                    = state.KickSpeed;
+            _launchAngleDeg               = state.LaunchAngleDeg;
+            _spinVector                   = state.SpinVector;
+            _intendedAimDirection         = state.IntendedAimDirection;
+            _bodyMechanics                = state.BodyMechanics;
+            _weakFootErrorMultiplier      = state.WeakFootErrorMultiplier;
+            _windupFrames                 = state.WindupFrames;
+            _cachedAgentPosition          = state.CachedAgentPosition;
+            _cachedFinishing              = state.CachedFinishing;
+            _cachedLongShots              = state.CachedLongShots;
+            _cachedComposure              = state.CachedComposure;
+            _cachedFatigue                = state.CachedFatigue;
+            _windupFramesRemaining        = state.WindupFramesRemaining;
+            _followThroughFramesRemaining = state.FollowThroughFramesRemaining;
+            _lastResult                   = state.LastResult;
         }
 
         // ── Execute — INITIATING State ───────────────────────────────────────────────
@@ -543,4 +605,12 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        | hoisted above the Publish calls (a throwing Publish previously left the executor    |
 // |         |            |        | in Contact → ApplyKick double-kick on re-entry). L-2 (Pass AR-9 M-2): VR-07 gate    |
 // |         |            |        | `<= 0f` passed NaN; now `!(d > 0f) || IsInfinity(d)` per the project NaN-gate idiom.|
+// | 1.9     | 2026-06-19 | —      | Match Engine Phase C step C0: CaptureState()/RestoreState(in ShotExecutorState)    |
+// |         |            |        | snapshot seam added (parallel to PassExecutor C0 + OscillationGuard B0) so the      |
+// |         |            |        | match-engine snapshot can serialize the executor's cross-tick state-machine +      |
+// |         |            |        | in-flight fields for deterministic replay (design note §2.6). Full field set       |
+// |         |            |        | carried directly (no internal recompute exclusion). No change to Execute/Update.   |
+// | 1.9.1   | 2026-06-19 | —      | C0 AR-1 (L-1): ShotExecutionState gains an ORDINAL STABILITY note — its ordinals    |
+// |         |            |        | are captured into ShotExecutorState.State and become digest-load-bearing at C5      |
+// |         |            |        | (APPEND-only). Doc-only.                                                            |
 #endregion

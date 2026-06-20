@@ -38,6 +38,10 @@ namespace TacticalDirector.PassMechanics
 
         // ── State Machine ────────────────────────────────────────────────────────────
 
+        // ORDINAL STABILITY (Match Engine Phase C C0): these ordinals are captured into
+        // PassExecutorState.State and become digest-load-bearing once the C5 snapshot serializes
+        // them. APPEND-only — never reorder or insert in the middle, or persisted snapshots /
+        // replays desync on the executor state field.
         private enum PassExecutionState
         {
             Idle,
@@ -103,6 +107,76 @@ namespace TacticalDirector.PassMechanics
             _ballSystem     = ballSystem;
             _agentQuery     = agentQuery;
             _collisionQuery = collisionQuery;
+        }
+
+        // ── Snapshot seam — Match Engine Phase C step C0 ─────────────────────────────
+
+        /// <summary>
+        /// Captures the executor's cross-tick state-machine + in-flight fields as a plain-data
+        /// snapshot for canonical serialization / deterministic replay (Match Engine design note
+        /// §2.6). Allocation-free (returns a value type). Parallel to
+        /// <see cref="AgentMovement.OscillationGuard.GetState"/> and DeterministicSim's
+        /// RngStreamState. Named Capture (NOT Get) to avoid colliding with
+        /// <see cref="IPassAgentQuery.GetState"/>.
+        /// </summary>
+        public PassExecutorState CaptureState()
+        {
+            return new PassExecutorState(
+                (int)_state,
+                in _request,
+                _cachedEffectiveSubType,
+                _kickSpeed,
+                _launchAngleDeg,
+                _spinVector,
+                _baseKickDirection,
+                _aimPoint,
+                _leadDistance,
+                _cachedPassing,
+                _cachedFatigue,
+                _cachedBodyAngleDeg,
+                _cachedIsWeakFoot,
+                _cachedWeakFootRating,
+                _windupFramesRemaining,
+                _followThroughFramesRemaining,
+                in _lastResult);
+        }
+
+        /// <summary>
+        /// Restores the executor's cross-tick state from a snapshot produced by
+        /// <see cref="CaptureState"/> (replay / save-load). Parallel to
+        /// <see cref="AgentMovement.OscillationGuard.RestoreState"/>. The internal
+        /// <see cref="PhysicalProfile"/> is NOT serialized — it is a pure function of
+        /// (<see cref="PassRequest.PassType"/>, effective sub-type), so it is recomputed here
+        /// (design note §2.6 "fully recomputed before its first read" exclusion).
+        /// </summary>
+        public void RestoreState(in PassExecutorState state)
+        {
+            _state                  = (PassExecutionState)state.State;
+            _request                = state.Request;
+            _cachedEffectiveSubType = state.EffectiveSubType;
+
+            // Recompute the internal profile (pure function of PassType + effective sub-type;
+            // never serialized — §2.6 recompute exclusion). NOTE: restoring a captured-Idle state
+            // recomputes a real profile (e.g. GetProfile(Ground, Flat)) rather than the
+            // default(PhysicalProfile) a freshly-constructed executor holds; this is benign — Idle
+            // Update is a no-op, _profile is excluded from the digest, and the next Execute()
+            // overwrites it before any read.
+            _profile = PassTypeProfiles.GetProfile(state.Request.PassType, state.EffectiveSubType);
+
+            _kickSpeed                    = state.KickSpeed;
+            _launchAngleDeg               = state.LaunchAngleDeg;
+            _spinVector                   = state.SpinVector;
+            _baseKickDirection            = state.BaseKickDirection;
+            _aimPoint                     = state.AimPoint;
+            _leadDistance                 = state.LeadDistance;
+            _cachedPassing                = state.CachedPassing;
+            _cachedFatigue                = state.CachedFatigue;
+            _cachedBodyAngleDeg           = state.CachedBodyAngleDeg;
+            _cachedIsWeakFoot             = state.CachedIsWeakFoot;
+            _cachedWeakFootRating         = state.CachedWeakFootRating;
+            _windupFramesRemaining        = state.WindupFramesRemaining;
+            _followThroughFramesRemaining = state.FollowThroughFramesRemaining;
+            _lastResult                   = state.LastResult;
         }
 
         // ── Execute — INITIATING State ───────────────────────────────────────────────
@@ -629,4 +703,15 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | the old using was CS0246 under Unity and the Linux compile gate alike,  |
 // |         |            |        | so this assembly could not have compiled in-engine. No functional       |
 // |         |            |        | change.                                                                 |
+// | 1.14    | 2026-06-19 | —      | Match Engine Phase C step C0: CaptureState()/RestoreState(in            |
+// |         |            |        | PassExecutorState) snapshot seam added (parallel to OscillationGuard    |
+// |         |            |        | GetState/RestoreState B0 seam) so the match-engine snapshot can         |
+// |         |            |        | serialize the executor's cross-tick state-machine + in-flight fields    |
+// |         |            |        | for deterministic replay (design note §2.6). The internal              |
+// |         |            |        | PhysicalProfile is recomputed on restore, not serialized. No change to  |
+// |         |            |        | the Execute/Update execution paths.                                     |
+// | 1.14.1  | 2026-06-19 | —      | C0 AR-1 (L-1/L-2): PassExecutionState gains an ORDINAL STABILITY note   |
+// |         |            |        | (its ordinals are captured into PassExecutorState.State and become      |
+// |         |            |        | digest-load-bearing at C5 — APPEND-only); RestoreState documents the    |
+// |         |            |        | benign restored-Idle profile recompute. Doc-only.                       |
 #endregion
