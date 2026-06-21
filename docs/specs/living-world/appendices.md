@@ -1,8 +1,8 @@
 # Living World System Specification #22 — Appendices
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.3 — PASS-2 fix pass: `ActiveLayers` bitmask added to the Appendix B snapshot order, replacing the NaN sentinel (AR2-M1))
-**Version:** 0.3
+**Last Updated:** June 21, 2026 (v0.4 — PASS-3 fix pass: `ColdSummary` gains `ActiveLayers` in Appendix B; Appendix C ties bit positions to `RelationshipLayer` ordinals and corrects the stale NaN wording + `PlayerEdge` read-only note (AR3-L1/L2/M1))
+**Version:** 0.4
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -36,17 +36,19 @@ the shape/direction, not the value (precedent #21 G2, #8 draft-level). No `[EST]
 `MemoryEpisode { EpisodeId, Kind, Salience, WorldTick, ManagerChoiceId }` →
 `Arc { Kind, State, Cause, PinnedEpisodes[], SpawnTick, MaxLifetimeTick }` →
 `SpawnCause { TriggerId, Inputs[], SnapshotRef, WorldTick }` →
-`ColdSummary { EntityId, NetRelationship, RetainedEpisodes[] }`.
+`ColdSummary { EntityId, ActiveLayers, NetRelationship, RetainedEpisodes[] }`.
 
 Order is load-bearing for the `SNAPSHOT_SCHEMA_VERSION` digest (ERR-022-002); locked before T-store
 activation.
 
 ## Appendix C — Enum rosters (APPEND-only, ordinal-stable — FR-LW-028)
 
-- `RelationshipLayer { PlayerEdge=0, Affinity=1, Trust=2 }`
+- `RelationshipLayer { PlayerEdge=0, Affinity=1, Trust=2 }` — the `ActiveLayers` bitmask uses these
+  ordinals as bit positions (bit 0 = PlayerEdge, …); APPEND-only per FR-LW-028.
 
-**Active-layer matrix by node-type pairing (FR-LW-005 / §2.2.1).** Inactive layers store sentinel `NaN`
-and are excluded from updates and the F6 [0,1] invariant.
+**Active-layer matrix by node-type pairing (FR-LW-005 / §2.2.1).** Inactive layers hold a defined `0.0`
+and are excluded from updates and the F6 [0,1] invariant **by the `ActiveLayers` mask** (not a NaN
+sentinel). `PlayerEdge`, even when active, is a read-only mirror of vol-2's authoritative edge.
 
 | Edge pairing | PlayerEdge | Affinity | Trust |
 |---|---|---|---|

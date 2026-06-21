@@ -1,10 +1,11 @@
 # Living World System Specification #22 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.3 — PASS-2 fix pass: replaced the NaN inactive-layer sentinel with an
-`ActiveLayers` bitmask (det-safe round-trip) (AR2-M1); FR-LW-034 identity scoped to the world-state
-subset digest, not full payload (AR2-M2); `Arc.State` added to the FR-LW-028 stability contract (AR2-L2))
-**Version:** 0.3
+**Last Updated:** June 21, 2026 (v0.4 — PASS-3 fix pass: `PlayerEdge` pinned as a read-only mirror of
+vol-2's authoritative edge — never mutated here, removing the double-authority hazard (AR3-M1, FR-LW-004);
+`ActiveLayers` bit positions tied to `RelationshipLayer` ordinals (AR3-L1); `ColdSummary` retains
+`ActiveLayers` for rehydration (AR3-L2))
+**Version:** 0.4
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -18,7 +19,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-LW-001 | The layer is a supplement: it consumes vol-2/vol-3 human-systems state read-only and introduces no mechanic canon already owns. | MUST | KD-1 |
 | FR-LW-002 | All living-world types live in one assembly `TacticalDirector.LivingWorld` that references only the human-systems/data assemblies and `project-constants`, downward. | MUST | KD-2 / #20 §3.5.2 |
 | FR-LW-003 | No match hot-path assembly (`Physics`/`Mechanics`/`AI`) may reference this assembly; the match engine consumes nothing from it and is only read by it via outcome events. | MUST | KD-2 / KD-9 |
-| FR-LW-004 | The relationship edge adopts vol-2 §2.1's 0.0–1.0 scalar unchanged, including the > 0.6 clique threshold. | MUST | KD-3 |
+| FR-LW-004 | The relationship edge adopts vol-2 §2.1's 0.0–1.0 scalar unchanged, including the > 0.6 clique threshold. `PlayerEdge` is consumed **read-only** — this layer mirrors it for arc reads but never mutates it (vol-2 owns its evolution); only `Affinity`/`Trust` are owned/written here. | MUST | KD-3 / KD-9 |
 | FR-LW-005 | New relationship layers (`Affinity`, directional `Trust`) are additive parallel layers on the same 0.0–1.0 scale; the player edge is never re-scaled. `Trust` is stored per ordered pair (A→B ≠ B→A). | MUST | KD-3 |
 | FR-LW-006 | `Affinity` is the manager's personal relationship with an individual; it is NOT a board-confidence or supporter-trust authority (those stay owned by vol-3 §4 / vol-2 §4.1). | MUST | KD-9 |
 | FR-LW-007 | Morale spread is vol-2 §2.2 Pulse Propagation consumed as-is; this layer defines no contagion rule. Faction outcomes are modelled only as arcs (§3.4) that read the propagation result. | MUST | KD-1 |
@@ -61,7 +62,7 @@ FR-LW-022 activates serialisation into the world store.
 |---|---|---|
 | FromId / ToId | `EntityId` | directed; symmetric relations = two equal directed edges |
 | ActiveLayers | `byte` | bitmask of which layers are meaningful for this pairing (FR-LW-005) |
-| PlayerEdge | `float` 0.0–1.0 | vol-2 §2.1 relationship strength (only between players; clique math owns it) |
+| PlayerEdge | `float` 0.0–1.0 | **read-only projection** of vol-2 §2.1's authoritative edge — mirrored for arc reads, **never mutated here** (vol-2 owns its evolution) |
 | Affinity | `float` 0.0–1.0 | manager↔non-player personal relationship (KD-3) |
 | Trust | `float` 0.0–1.0 | directional; will `ToId` act on `FromId`'s word |
 | Memory | `MemoryEpisode[]` | bounded ring buffer (FR-LW-008) |
@@ -69,10 +70,12 @@ FR-LW-022 activates serialisation into the world store.
 **Layer applicability by node-type (FR-LW-005).** Not every layer is active on every edge. `PlayerEdge`
 is valid **only** on player↔player pairs (it owns the vol-2 clique math); `Affinity` is valid **only**
 on manager↔non-player pairs (journalist/board/staff); `Trust` is valid on manager↔contact pairs. The
-`ActiveLayers` bitmask records which layers are meaningful; **inactive layers hold a defined `0.0`** and
-are excluded from updates and from the F6 invariant **by mask** (not by a NaN sentinel — NaN would break
-the F5 bitwise round-trip and the snapshot digest). The active-layer matrix per node-type pairing is
-pinned in Appendix C.
+`ActiveLayers` bitmask records which layers are meaningful (its **bit positions = `RelationshipLayer`
+ordinals**, FR-LW-028); **inactive layers hold a defined `0.0`** and are excluded from updates and from
+the F6 invariant **by mask** (not by a NaN sentinel — NaN would break the F5 bitwise round-trip and the
+snapshot digest). `PlayerEdge` is a **read-only mirror** of vol-2's authoritative edge even when active —
+this layer's update (§3.1) writes only its **owned** layers (`Affinity`, `Trust`). The active-layer
+matrix per node-type pairing is pinned in Appendix C.
 
 ### 2.2.2 `MemoryEpisode`
 
@@ -108,8 +111,9 @@ pinned in Appendix C.
 | Field | Type | Notes |
 |---|---|---|
 | EntityId | `EntityId` | the cold-stored contact |
+| ActiveLayers | `byte` | retained so rehydration (§3.5) can reconstruct which layers to populate |
 | NetRelationship | `float` 0.0–1.0 | compressed standing |
-| RetainedEpisodes | `MemoryEpisode[]` | top-N by salience (schema deferred, §7 residue A) |
+| RetainedEpisodes | `MemoryEpisode[]` | top-N by salience (full schema deferred, §7 residue A) |
 
 ### 2.2.6 Enums (all `byte`-backed, APPEND-only, ordinal-stable — FR-LW-028)
 

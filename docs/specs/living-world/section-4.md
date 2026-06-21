@@ -1,10 +1,9 @@
 # Living World System Specification #22 — Section 4: Architecture
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.3 — PASS-2 fix pass: §4.5 eviction extended to cold-summary
-compaction, edges governed by the active-set cap not eviction (AR2-M3); §4.2 sequences the vol-2/vol-3
-daily update as a prior phase the loop consumes (AR2-L3))
-**Version:** 0.3
+**Last Updated:** June 21, 2026 (v0.4 — PASS-3 fix pass: §4.5 edge bound restated as O(active-set²)
+governed by the whole active-set size, not just the external-contacts cap (AR3-M2))
+**Version:** 0.4
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -62,9 +61,10 @@ One `[GT]` budget caps the three live-state classes together — **live edges + 
 summaries**. Eviction order when exceeded: (1) lowest-salience **unpinned** episode (§3.2); (2) if relief
 is still needed, **cold-summary compaction** — the lowest-`NetRelationship` summary drops its
 lowest-salience `RetainedEpisode`, then the summary itself is dropped once empty. Live edges are **not**
-an eviction target: they are bounded by the active-set cap (`ACTIVE_SET_EXTERNAL_CONTACTS_MAX`,
-FR-LW-023), so the active set is the edge governor, not eviction. Arc-pinned episodes are exempt until
-the arc resolves. The per-class budget split is **deferred** (§7 residue B): default is a single shared
+an eviction target: edge count is **pairwise — O(active-set²)** and bounded by the whole finite active
+set (squad + staff + board + external contacts capped at `ACTIVE_SET_EXTERNAL_CONTACTS_MAX`, FR-LW-023),
+so the **active-set size is the edge governor, not eviction**. This O(active-set²) edge×memory product is
+the budget's dominant driver. Arc-pinned episodes are exempt until the arc resolves. The per-class budget split is **deferred** (§7 residue B): default is a single shared
 pool + the above eviction order, split into sub-quotas only if §6 soak shows one class starving another.
 
 ## 4.6 Snapshot schema integration

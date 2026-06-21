@@ -1,9 +1,9 @@
 # Living World System Specification #22 — Section 3: Algorithms
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.3 — PASS-2 fix pass: §3.2 transient buffer-growth bounded by
-simultaneous pins + budget so FR-LW-008 holds in steady state (AR2-L1))
-**Version:** 0.3
+**Last Updated:** June 21, 2026 (v0.4 — PASS-3 fix pass: §3.1 update restricted to owned layers
+(`Affinity`/`Trust`); `PlayerEdge` is read-only, never written here (AR3-M1))
+**Version:** 0.4
 **Status:** IN REVIEW (June 21, 2026)
 
 > All formulas state units and input ranges and carry a worked example (FR-LW-033). Constants reference
@@ -23,8 +23,9 @@ pair:
 
 **Event update (FR-LW-005; reduces to a no-op under FR-LW-034 when no event/decay applies).** An
 off-pitch event with signed impact `δ ∈ [−1,1]` and a `[GT]` layer volatility `v ∈ (0,1]` updates a
-layer value `x` toward its event target, clamped (applied only to layers active for the edge's
-node-type, §2.2.1):
+layer value `x` toward its event target, clamped. It is applied **only to this layer's owned layers
+(`Affinity`, `Trust`)** that are active for the edge's node-type (§2.2.1); **`PlayerEdge` is never written
+here** — it is a read-only mirror of vol-2's authoritative social-graph edge (FR-LW-004, KD-9):
 
 ```
 x' = clamp01( x + v · δ · (1 − x)   if δ ≥ 0
