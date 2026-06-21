@@ -1,7 +1,14 @@
 # Living World System — Design Supplement
 
 > **Created:** June 21, 2026
-> **Last Updated:** June 21, 2026 (v0.3 — PASS-2 full-document adversarial fix pass: top-layer
+> **Last Updated:** June 21, 2026 (v0.4 — PASS-3 full-document adversarial fix pass: added a stable
+> `episodeId` handle to the §3.1 episode tuple — the arc-pinning mechanism (M4) referenced "episode
+> IDs" the data model never defined (M1); pinned a fixed `ArcKind`-ordinal evaluation order for
+> non-entity-scoped (squad/board) arcs so spawn/RNG/pinning stay deterministic (L1); corrected
+> "relationship-layer enums" to the layer-identifier enum, since `Affinity`/`Trust` are float scalars
+> (L2); clarified `Affinity` is the manager's personal relationship, not a second board/supporter
+> authority (L3). No High findings; convergence reached.)
+> **Last Updated (prior):** June 21, 2026 (v0.3 — PASS-2 full-document adversarial fix pass: top-layer
 > off-pitch "world" assembly placement declared (M1); a deterministic season-calendar clock defined
 > and `worldTick` pinned to the calendar day to align with vol-2 §2.2 day-based latencies (M2);
 > AI-managed clubs scoped to an abstracted memory/arc-free model — deep sim is the human active set
@@ -121,6 +128,9 @@ adds **parallel relationship layers on the same 0.0–1.0 scale**, never a re-sc
 These are *additional* layers, not a replacement; the vol-2 player edge and its 0.6 clique threshold
 remain authoritative and untouched. The graph is **directed**: every layer is stored per ordered pair,
 and symmetric relationships are simply two equal directed edges (no shared/bidirectional storage).
+`Affinity` is the manager's *personal* relationship with an individual (a board member, a journalist) —
+it is **not** a second board-confidence or supporter-trust authority; collective board sentiment stays
+owned by vol-3 §4 and supporter trust by vol-2 §4.1 (risk #5).
 
 Morale spread across this graph is **vol-2 §2.2 Pulse Propagation, consumed as-is** — this note does
 **not** define its own contagion rule. Faction *outcomes* (a dressing-room split) are modelled here only
@@ -133,11 +143,14 @@ as an **arc** (§3.3) that *reads* the propagation result; the propagation itsel
 ### 3.1 Per-edge episodic memory
 
 Give each significant edge a **bounded ring buffer** of episodes:
-`(eventKind, salience, worldTick, managerChoiceId)`. When an interaction is generated, recent
-high-salience episodes become eligible to be *referenced* ("after what you said about me in March…").
-Memory is what converts the graph from "current mood" into "a history," and it is the single biggest
-lever against the repetition feel because the *context* a line is built on is never identical twice.
+`(episodeId, eventKind, salience, worldTick, managerChoiceId)`. When an interaction is generated,
+recent high-salience episodes become eligible to be *referenced* ("after what you said about me in
+March…"). Memory is what converts the graph from "current mood" into "a history," and it is the single
+biggest lever against the repetition feel because the *context* a line is built on is never identical
+twice.
 
+- `episodeId` is a stable per-edge handle (monotonic within the edge); it is what an arc (§3.3) pins
+  and what survives save/load — the tuple's other fields are content, not identity.
 - Buffer depth is a small `[GT]` constant (target 8–16) **per significant edge only** — not every edge
   (see §4 node boundary), to bound save growth.
 - `worldTick` is the deterministic season-calendar day (§4 clock), the same time base vol-2 §2.2 uses
@@ -211,7 +224,10 @@ never leave a live arc referencing a dropped episode.
   any read of vol-2 propagation results) MUST iterate nodes/edges in a **canonical order keyed on a
   stable entity ID**, not on dictionary/hashset enumeration order (which is not a stable contract in
   C#). Order-dependent results without a pinned ordering are a determinism defect — the same class as
-  the EventRegistry static-init-order finding.
+  the EventRegistry static-init-order finding. **Arcs that are not entity-scoped** (squad- or
+  board-level, e.g. `DressingRoomSplit` / `BoardPatienceCollapse`) are evaluated in a fixed `ArcKind`
+  ordinal order so spawn order, RNG draw order, and episode-pinning are deterministic regardless of
+  which entity triggered them.
 - **State, not scripts.** Graph extensions, memory buffers, and arc state machines are plain
   serialisable structs; off-pitch save/load, replay, and debug-rewind fall out of the same
   state-snapshot model the match uses.
@@ -228,10 +244,11 @@ never leave a live arc referencing a dropped episode.
 - **Zero magic numbers.** Every salience weight, decay rate, arc threshold, and buffer depth is a `[GT]`
   constant in a designated catalogue, validated by a balance pass (precedent: #21 G2 balance pass, #8
   draft-level approval).
-- **Ordinal stability.** `eventKind`, `ArcKind`, `InteractionIntent`, and the new relationship-layer
-  enums are embedded in saved state — reordering breaks save compatibility. They carry the
-  ordinal-stability contract from day one; `managerChoiceId` and arc/episode reference IDs are likewise
-  stable persisted IDs.
+- **Ordinal stability.** `eventKind`, `ArcKind`, `InteractionIntent`, and the **relationship-layer
+  identifier enum** (which layer — `Affinity`/`Trust`/… — a stored 0.0–1.0 value belongs to) are
+  embedded in saved state — reordering breaks save compatibility. They carry the ordinal-stability
+  contract from day one; `episodeId`, `managerChoiceId`, and arc reference IDs are likewise stable
+  persisted IDs.
 
 ---
 
