@@ -1,7 +1,14 @@
 # Living World System — Design Supplement
 
 > **Created:** June 21, 2026
-> **Last Updated:** June 21, 2026 (v0.6 — PASS-4 adversarial fix pass on the v0.5 additions, L-only:
+> **Last Updated:** June 21, 2026 (v0.7 — recorded five §7 review decisions: §7.1 authoring corpus is
+> AI-generated as an offline tool (volume no longer the gate; curation/balance still to do); §7.2 full
+> inspector — time-scrub/replay-step + "why did this arc fire?" causal tracing, which adds a new §4
+> **provenance-at-spawn** constraint (arcs/interactions record trigger inputs + state-snapshot ref);
+> §7.4 localisation commits to English-shaped templates now, accepting later rework; the two churn
+> residues (cold-summary compression schema; `[GT]` budget split, defaulting to one shared pool) are
+> **deferred to implementation** as they depend on the not-yet-designed interaction/data model.)
+> **Last Updated (prior):** June 21, 2026 (v0.6 — PASS-4 adversarial fix pass on the v0.5 additions, L-only:
 > §6 CI-gate claim softened to forward-looking "intended to run" (L1); coverage/gap detection gains an
 > expected-rarity annotation so designed scarcity isn't flagged as a gap (L2); soak liveness reframed
 > as a checkable per-instance max-arc-lifetime bound rather than an unprovable global "every arc
@@ -245,6 +252,10 @@ never leave a live arc referencing a dropped episode.
 - **State, not scripts.** Graph extensions, memory buffers, and arc state machines are plain
   serialisable structs; off-pitch save/load, replay, and debug-rewind fall out of the same
   state-snapshot model the match uses.
+- **Provenance at spawn.** Every arc and generated interaction records, at creation, the **trigger
+  inputs and the state-snapshot reference** that caused it. This is what powers the §7.2 "why did this
+  arc fire?" causal tracing and replay-step inspector; it is cheap to capture inline at spawn and
+  effectively impossible to reconstruct after the fact, so it is mandatory from the first commit.
 - **Node-population boundary (feasibility-critical).** A full graph over a multi-league world is O(N²)
   and infeasible. The **active set** is bounded: nodes are *own-club* players/staff/board + a small
   per-manager set of external contacts (journalists, rival managers, agents the manager has interacted
@@ -325,21 +336,30 @@ suites once the system is implemented; any invariant breach or determinism misma
 
 ## 7. Risks / open questions for review
 
-1. **Authoring cost is the real risk.** The §3.2 template/grammar corpus and §3.3 arc library need
-   sizeable, curated content plus tuning guardrails or they emit nonsense. Budget a content-authoring +
-   balance pass comparable to a spec's `[GT]` validation — larger than the engineering.
-2. **Tuning legibility vs. emergence — RESOLVED (direction set).** Addressed by a debug/inspector view of
-   the graph + memory + arc state (also the replay-verification surface) **plus** the §6 automated
-   stress/coverage harnesses. The inspector covers *quality* tuning; the harnesses cover *structural*
-   gaps and determinism. Open residue: scope/effort of the inspector tooling.
+1. **Authoring corpus — DECIDED (AI-generated).** The §3.2 template/grammar corpus and §3.3 arc library
+   are produced with **AI assistance as an offline authoring tool** (consistent with the §3.2 rule: model
+   inference generates the *static* corpus, never runs at runtime in saved-state paths). This removes the
+   manual-authoring headcount concern but **is still real work** — corpus generation, curation, and the
+   §7-balance/guardrail pass remain to be done; volume is no longer the gate, quality/curation is.
+2. **Inspector tooling — DECIDED (full).** The debug/inspector view provides **time-scrub / replay-step**
+   and **"why did this arc fire?" causal tracing**, not just a static state view, on top of the §6
+   automated harnesses (which cover structural gaps + determinism). **Design implication (pinned now):**
+   causal tracing requires every arc and interaction to **record its provenance at spawn** — the trigger
+   inputs and the state-snapshot reference that caused it — see the §4 provenance constraint. Cheap if
+   designed in from day one, expensive to retrofit.
 3. **Combinatorial test surface.** "Interaction depends on full graph state" resists unit testing — see
    §6; verification is scenario- and property-based (envelope assertions), not exact-string.
-4. **Localisation.** Procedural template expansion interacts badly with grammatical-gender/inflection
-   languages; if multi-language is a goal the grammar must be designed for it up front, not retrofitted.
+4. **Localisation — DECIDED (English-shaped now).** v1 commits to **English-shaped templates** and
+   **accepts a costly rework** if/when multi-language is added later. The grammar is *not* pre-built for
+   gender/inflection agreement; this is a known, accepted future cost, recorded so it is a choice rather
+   than a surprise.
 5. **Boundary discipline.** Confirm the world loop only ever *reads* match-outcome events and canonical
    human-systems state, and never writes back into vol-2's H-Gate / propagation math (it adds layers and
    arcs on top; it must not become a second authority over morale).
 6. **Active-set churn — RESOLVED (direction set).** Contacts leaving the active set are **cold-stored as
    compressed summaries** (not hard-evicted) and **rehydrate** on re-entry; off-set entities run the
-   **abstracted background tier** (§4 LOD). Open residue: summary compression schema + the `[GT]` budget
-   split across live edges, live episodes, and cold summaries.
+   **abstracted background tier** (§4 LOD). Two sub-items **deferred to implementation** (intentionally
+   not decided now — both depend on the not-yet-designed full interaction/data model): (a) the
+   cold-summary compression schema (what the summary retains); (b) the `[GT]` budget split — default to a
+   **single shared pool + one eviction policy**, splitting into per-class sub-quotas only if soak testing
+   (§6) shows one class starving another.
