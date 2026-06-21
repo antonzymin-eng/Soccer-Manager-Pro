@@ -1,8 +1,9 @@
 # Living World System Specification #22 — Section 5: Test Plan
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** June 21, 2026 (v0.2 — PASS-1 fix pass: added T-LW-DET-007 for FR-LW-034 additive-only
+identity (M-1); determinism count 6→7, total ≥73; traceability row for FR-LW-034)
+**Version:** 0.2
 **Status:** IN REVIEW (June 21, 2026)
 
 > Test-ID prefixes follow #19 §3.1.4: `T-LW-U-*` unit, `T-LW-I-*` integration, `sim_*` / `T-LW-SIM-*`
@@ -18,10 +19,10 @@
 | Unit | 34 | enum ordinals, edge update/decay, memory eviction/pinning, intent→text determinism, arc lifecycle |
 | Integration | 14 | each consume-as-is canon seam + arc routing + cold-store round-trip |
 | Simulation (closed-loop) | 6 | one per construct, via #19 ScenarioRunner |
-| Determinism | 6 | RNG stream, iteration order, text reproducibility, replay |
+| Determinism | 7 | RNG stream, iteration order, text reproducibility, replay, additive-only identity |
 | Failure-mode | 6 | F1–F6 |
 | Exploit / stress | 6 | §6 harness classes (fuzz, soak, coverage, replay) + budget overflow + tier-transition |
-| **Total** | **≥ 72** | |
+| **Total** | **≥ 73** | |
 
 ## 5.2 Unit tests (`T-LW-U-*`)
 
@@ -55,6 +56,9 @@
 - **T-LW-DET-005** — snapshot/restore (deep + background tier) ⇒ bit-identical continuation on the
   pinned host (single-machine; FR-LW-022).
 - **T-LW-DET-006** — `worldTick` advances only on the calendar clock, never the match loops (FR-LW-019).
+- **T-LW-DET-007** — **additive-only identity:** an empty world (no episodes, no arcs) yields a
+  canonical-behaviour digest bit-identical to the human-systems baseline with this layer disabled; an
+  all-inactive-layer edge contributes nothing to any outcome (FR-LW-034).
 
 ## 5.5 Simulation / closed-loop (`T-LW-SIM-*`, via #19 ScenarioRunner)
 
@@ -91,3 +95,4 @@ save-budget overflow eviction; **-006** tier-transition round-trip.
 | FR-LW-031 | inspection (no phantom interface) |
 | FR-LW-032 | §7 gating (named verification) |
 | FR-LW-033 | §3 worked examples present |
+| FR-LW-034 | T-LW-DET-007 |

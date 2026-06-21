@@ -1,8 +1,10 @@
 # Living World System Specification #22 — Section 3: Algorithms
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** June 21, 2026 (v0.2 — PASS-1 fix pass: background tier reframed as reflect/summarise,
+not authority, for off-screen outcomes (M-4); §3.1 update rule bound to FR-LW-005/034 + active-layer
+gating (L-3))
+**Version:** 0.2
 **Status:** IN REVIEW (June 21, 2026)
 
 > All formulas state units and input ranges and carry a worked example (FR-LW-033). Constants reference
@@ -20,8 +22,10 @@ pair:
 - `Affinity ∈ [0,1]` — manager↔non-player personal relationship.
 - `Trust ∈ [0,1]` — directional; `Trust(A→B)` = will B act on A's word.
 
-**Event update.** An off-pitch event with signed impact `δ ∈ [−1,1]` and a `[GT]` layer volatility
-`v ∈ (0,1]` updates a layer value `x` toward its event target, clamped:
+**Event update (FR-LW-005; reduces to a no-op under FR-LW-034 when no event/decay applies).** An
+off-pitch event with signed impact `δ ∈ [−1,1]` and a `[GT]` layer volatility `v ∈ (0,1]` updates a
+layer value `x` toward its event target, clamped (applied only to layers active for the edge's
+node-type, §2.2.1):
 
 ```
 x' = clamp01( x + v · δ · (1 − x)   if δ ≥ 0
@@ -100,8 +104,11 @@ KD-9).
 ## 3.5 Two-tier LOD, cold-store, rehydration (KD-7)
 
 **Deep tier** (active set): full §3.1–§3.4. **Background tier** (everyone else): a cheap deterministic
-update of summary state only (transfers, sackings, form swings) — no per-edge memory, no arcs — on the
-same RNG stream and a bounded per-tick cost (FR-LW-024).
+update of summary state only — no per-edge memory, no arcs — on the same RNG stream and a bounded
+per-tick cost (FR-LW-024). The background tier **reflects/summarises** outcomes produced by the
+(abstracted) club-AI and the canonical systems (transfers, sackings, form swings); it is **not** the
+authority for those outcomes — transfers/recruitment stay owned by vol-3 §2 and governance by vol-3 §4
+(KD-9). It records *that* a club sacked its manager, it does not decide it.
 
 **Demotion (active → background).** Compress the edge's memory to a `ColdSummary`
 (`NetRelationship` + top-N salient episodes; schema deferred §7) and drop live buffers.

@@ -1,8 +1,8 @@
 # Living World System Specification #22 — Appendices
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** June 21, 2026 (v0.2 — PASS-1 fix pass: added the active-layer-by-node-type matrix to Appendix C (M-3))
+**Version:** 0.2
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -44,6 +44,16 @@ activation.
 ## Appendix C — Enum rosters (APPEND-only, ordinal-stable — FR-LW-028)
 
 - `RelationshipLayer { PlayerEdge=0, Affinity=1, Trust=2 }`
+
+**Active-layer matrix by node-type pairing (FR-LW-005 / §2.2.1).** Inactive layers store sentinel `NaN`
+and are excluded from updates and the F6 [0,1] invariant.
+
+| Edge pairing | PlayerEdge | Affinity | Trust |
+|---|---|---|---|
+| player ↔ player | active | — | — |
+| manager ↔ journalist/board/staff | — | active | active |
+| manager ↔ player | — | active | active |
+
 - `EventKind` — populated from the consumed vol-2 §7 event taxonomy + manager-choice outcomes (roster
   finalised at implementation; APPEND-only).
 - `ArcKind { DressingRoomSplit=0, MediaVendetta=1, BoardPatienceCollapse=2, WonderkidVsVeteran=3, … }`

@@ -24,7 +24,7 @@ any implementation must honour.
 | Section | Content |
 |---|---|
 | 1 | Introduction, scope, dependencies, key decisions (KD-1..KD-10), canon consume-as-is matrix, stage binding |
-| 2 | Functional requirements (FR-LW-001..033), data structures, failure modes F1–F6 |
+| 2 | Functional requirements (FR-LW-001..034), data structures, failure modes F1–F6 |
 | 3 | Algorithms: edge-model extension, episodic memory, procedural text, arcs, LOD + cold-store, provenance |
 | 4 | Architecture, assembly/file layout, the season-calendar loop, determinism boundaries |
 | 5 | Test plan (unit / integration / simulation / determinism / failure / stress) + FR traceability |

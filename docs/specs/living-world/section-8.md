@@ -1,8 +1,10 @@
 # Living World System Specification #22 — Section 8: Cross-References, Back-Props, Invariant Binding
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** June 21, 2026 (v0.2 — PASS-1 fix pass: ERR-022-005 recategorised — the season-calendar
+clock is this spec's own forward deliverable (§7.1), not a cross-spec back-prop (L-2); back-props now
+001..004)
+**Version:** 0.2
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -45,7 +47,11 @@
 | ERR-022-002 | #16 snapshot schema | add living-world field block + `SNAPSHOT_SCHEMA_VERSION` bump (Appendix B order) | world-store activation |
 | ERR-022-003 | #19 §3.1.4 | register `T-LW-*` / `sim_*` prefixes | first test commit |
 | ERR-022-004 | vol-2/vol-3 | confirm read-only public surface for the consumed state (no write-back seam) | human-systems implementation |
-| ERR-022-005 | new | calendar-clock / season-loop ownership (does not exist; introduced by this spec) | world-store activation |
 
-None gate spec approval (parallel to the #13/#14/#15/#21 deferred-back-prop precedent). Runtime
-activation remains gated on KD-10.
+ERR-022-001..004 are genuine cross-spec back-props; none gate spec approval (parallel to the
+#13/#14/#15/#21 deferred-back-prop precedent).
+
+**Forward deliverable (not a back-prop).** The deterministic season-calendar clock + season loop do not
+exist today and are **owned by this spec** (§7.1 / §4.2) — they are a Stage-1 implementation deliverable
+of #22, not a change requested of another spec, so they are tracked in §7.1, not as an ERR-022 row.
+Runtime activation remains gated on KD-10.

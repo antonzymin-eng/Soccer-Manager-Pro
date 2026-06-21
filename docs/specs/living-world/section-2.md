@@ -1,8 +1,9 @@
 # Living World System Specification #22 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** June 21, 2026 (v0.2 — PASS-1 fix pass: added FR-LW-034 additive-only identity (M-1);
+layer-applicability-by-node-type rule + NaN sentinel (M-3); open-roster enum stability note (L-1))
+**Version:** 0.2
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -46,6 +47,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-LW-031 | No interface or accessor is produced against an unspecified consumer (no phantom interfaces). | MUST | CLAUDE.md / #20 FR-CS-048 |
 | FR-LW-032 | Stage-1 activation is gated on KD-10 prerequisites (world store + season loop; vol-2/vol-3 impl.; `[GT]` config-loader; structured match-outcome events). | MUST | KD-10 / §7 |
 | FR-LW-033 | Every §3 mapping/formula includes units, valid input ranges, and at least one worked example (inline or Appendix A). | MUST | CLAUDE.md |
+| FR-LW-034 | **Additive-only identity:** a world with no recorded episodes and no spawned arcs produces the canonical human-systems behaviour exactly — this layer only *adds* on top and never alters a baseline outcome. The §3.1 layer update/decay rule reduces to a no-op when no event/decay applies. | MUST | KD-1 / KD-9 / §2.3 |
 
 ## 2.2 Data structures
 
@@ -61,6 +63,12 @@ FR-LW-022 activates serialisation into the world store.
 | Affinity | `float` 0.0–1.0 | manager↔non-player personal relationship (KD-3) |
 | Trust | `float` 0.0–1.0 | directional; will `ToId` act on `FromId`'s word |
 | Memory | `MemoryEpisode[]` | bounded ring buffer (FR-LW-008) |
+
+**Layer applicability by node-type (FR-LW-005).** Not every layer is active on every edge. `PlayerEdge`
+is valid **only** on player↔player pairs (it owns the vol-2 clique math); `Affinity` is valid **only**
+on manager↔non-player pairs (journalist/board/staff); `Trust` is valid on manager↔contact pairs.
+Inactive layers are stored as a sentinel `NaN` and are excluded from the F6 [0,1] invariant and from all
+updates; an active-layer matrix per node-type pairing is pinned in Appendix C.
 
 ### 2.2.2 `MemoryEpisode`
 
@@ -103,12 +111,18 @@ FR-LW-022 activates serialisation into the world store.
 
 `EventKind`, `ArcKind`, `InteractionIntent`, `RelationshipLayer { PlayerEdge, Affinity, Trust }`.
 
+`EventKind` and `InteractionIntent` are **open rosters** finalised at implementation (Appendix C); the
+FR-LW-028 stability test **grows with the roster** — it locks the ordinal of every member that exists
+and new members are APPEND-only, so deferred membership does not weaken the contract for existing
+members.
+
 ## 2.3 Identity / neutral state
 
 A fresh `RelationshipEdge` initialises every layer to the vol-2 baseline (strangers = 0.0 for new
 contacts; existing canonical relationship strength for known players) with an empty memory buffer and no
 arcs. A world with no recorded episodes and no spawned arcs reproduces the canonical human-systems
-behaviour exactly (this layer only *adds* on top).
+behaviour exactly (this layer only *adds* on top) — the normative additive-only identity contract
+(**FR-LW-034**), verified by T-LW-DET-007.
 
 ## 2.4 Failure modes
 
