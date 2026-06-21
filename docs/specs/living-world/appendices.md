@@ -1,8 +1,9 @@
 # Living World System Specification #22 — Appendices
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.4 — PASS-3 fix pass: `ColdSummary` gains `ActiveLayers` in Appendix B; Appendix C ties bit positions to `RelationshipLayer` ordinals and corrects the stale NaN wording + `PlayerEdge` read-only note (AR3-L1/L2/M1))
-**Version:** 0.4
+**Last Updated:** June 21, 2026 (v0.5 — PASS-8 fix pass: SAVE_SIZE_BUDGET labelled platform-tuned [GT], not unset (AR8-L1))
+**Last Updated (prior):** June 21, 2026 (v0.4 — PASS-3 fix pass: `ColdSummary` gains `ActiveLayers` in Appendix B; Appendix C ties bit positions to `RelationshipLayer` ordinals and corrects the stale NaN wording + `PlayerEdge` read-only note (AR3-L1/L2/M1))
+**Version:** 0.5
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -23,7 +24,7 @@ the shape/direction, not the value (precedent #21 G2, #8 draft-level). No `[EST]
 | `ARC_MAX_LIFETIME_DAYS` | 120 | `[GT]` | per-instance liveness bound (§3.4 / §6.2) |
 | `ARC_SPAWN_THRESHOLD_*` | per-arc | `[GT]` | trigger thresholds (one per `ArcKind`, §3.4) |
 | `ACTIVE_SET_EXTERNAL_CONTACTS_MAX` | 64 | `[GT]` | bound on per-manager external contacts (§3.5) |
-| `SAVE_SIZE_BUDGET` | (platform) | `[GT]` | caps live edges + live episodes + cold summaries (§4.5) |
+| `SAVE_SIZE_BUDGET` | platform-tuned (per-platform `[GT]`, set by designer; not unset) | `[GT]` | caps live edges + live episodes + cold summaries (§4.5) |
 | `COLD_SUMMARY_RETAINED_EPISODES` | 4 | `[GT]` | top-N salient retained on demotion (schema deferred §7) |
 | `CLIQUE_THRESHOLD` | 0.6 | `[CROSS]` | vol-2 §2.1 — consumed, not set here |
 | `PULSE_INTRA_RETENTION` | 0.90–1.00 | `[CROSS]` | vol-2 §2.2 — consumed |

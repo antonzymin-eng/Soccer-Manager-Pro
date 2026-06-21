@@ -1,7 +1,8 @@
 # Living World System Specification #22 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.8 — PASS-7 fix pass: FR-LW-021 extended to selection/eviction with stable tiebreaks (AR7-M1))
+**Last Updated:** June 21, 2026 (v0.9 — PASS-8 fix pass: FR-LW-023 defines active-set membership (entry on interaction; LRU demotion at the cap, deterministic) (AR8-M1))
+**Last Updated (prior):** June 21, 2026 (v0.8 — PASS-7 fix pass: FR-LW-021 extended to selection/eviction with stable tiebreaks (AR7-M1))
 **Last Updated (prior):** June 21, 2026 (v0.7 — PASS-6 fix pass: FR-LW-020 split into separate `world.arcs`/`world.text`
 RNG sub-streams to remove the periodic/aperiodic draw-interleaving hazard (AR6-M1))
 **Last Updated (prior):** June 21, 2026 (v0.6 — PASS-5 fix pass: FR-LW-016 scoped — durable `SpawnCause` on arcs;
@@ -12,7 +13,7 @@ vol-2 §2.1 social-graph edge (`PlayerEdge` read-only) (AR4-L1))
 vol-2's authoritative edge — never mutated here, removing the double-authority hazard (AR3-M1, FR-LW-004);
 `ActiveLayers` bit positions tied to `RelationshipLayer` ordinals (AR3-L1); `ColdSummary` retains
 `ActiveLayers` for rehydration (AR3-L2))
-**Version:** 0.8
+**Version:** 0.9
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -33,7 +34,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-LW-008 | Each significant edge carries a bounded ring buffer of `MemoryEpisode`; buffer depth is a `[GT]` constant (target 8–16). | MUST | §3.2 |
 | FR-LW-009 | Every `MemoryEpisode` carries a stable per-edge `episodeId` (monotonic within the edge) that survives save/load and is what an arc pins. | MUST | §3.2 |
 | FR-LW-010 | Episode salience and salience-decay are `[GT]`; lowest-salience episodes evict first, **except** episodes pinned by a live arc. | MUST | §3.2 / FR-LW-018 |
-| FR-LW-011 | Surface text is produced by deterministic template/grammar expansion; template selection draws from the dedicated `DeterministicRngService` world stream. | MUST | KD-6 |
+| FR-LW-011 | Surface text is produced by deterministic template/grammar expansion; template selection draws from the dedicated `DeterministicRngService` `world.text` sub-stream (§3.3, FR-LW-020). | MUST | KD-6 |
 | FR-LW-012 | No generative-model/LLM inference runs on any path whose output is persisted in saved state. Model assistance is offline authoring of the static corpus only. | MUST | KD-6 |
 | FR-LW-013 | `InteractionIntent` is graph-/event-driven and separate from surface text; one intent maps to many phrasings. Slot facts are limited to data the match engine actually emits (no assumed derived stats). | MUST | §3.3 |
 | FR-LW-014 | An arc spawns when canonical state crosses a `[GT]` threshold; it is a serialised state machine with a defined resolved/escalated lifecycle. | MUST | §3.4 |
@@ -45,7 +46,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-LW-020 | All stochastic selection draws from dedicated `DeterministicRngService` world **sub-streams** via `Reserve`/`DrawReserved`/`Skip`; no `System.Random`, no wall-clock. The **periodic** tick-driven draws (`world.arcs`) and the **aperiodic** interaction-text draws (`world.text`) use **separate** sub-streams so player-triggered text generation never perturbs the tick/arc cursor (no cross-source interleaving). | MUST | KD-5 / #16 |
 | FR-LW-021 | Every pass that **iterates, selects, or evicts** over the graph uses a canonical order keyed on a stable key, never dictionary/hashset enumeration order. **Eviction/selection ties** are broken deterministically: episodes by (lowest salience → oldest `worldTick` → lowest `episodeId`); cold summaries by (lowest `NetRelationship` → lowest `EntityId`). | MUST | KD-5 |
 | FR-LW-022 | All living-world state (edges, layers, memory buffers, arcs, cold summaries) is plain serialisable value state; off-pitch save/load, replay, and debug-rewind derive from the snapshot model. | MUST | KD-5 |
-| FR-LW-023 | The deep tier (memory, text, arcs) runs only for the human manager's active set. The active set = own-club players/staff/board + a bounded per-manager set of external contacts. | MUST | KD-7 |
+| FR-LW-023 | The deep tier (memory, text, arcs) runs only for the human manager's active set = own-club players/staff/board + a bounded per-manager set of external contacts. **Membership:** an external contact **enters** on first interaction; when `ACTIVE_SET_EXTERNAL_CONTACTS_MAX` is exceeded, the **least-recently-interacted** contact (last-interaction = max episode `worldTick` on the edge; ties → lowest `EntityId`) is **demoted** to cold-store (§3.5) — a deterministic selection. | MUST | KD-7 |
 | FR-LW-024 | Off-active-set entities run the abstracted background tier: cheap, deterministic, summary state only, no per-edge memory or arcs. It obeys the same RNG/iteration determinism rules and a bounded per-tick cost. | MUST | KD-7 |
 | FR-LW-025 | A contact leaving the active set is compressed to a cold-stored summary (not hard-evicted); on re-entry the summary rehydrates into live edges/episodes. Tier promotion/demotion is deterministic and neither loses nor duplicates state. | MUST | KD-7 / F5 |
 | FR-LW-026 | One `[GT]` save-size budget caps total live state — live edges + live episodes + cold summaries — together; eviction is governed by §3.2. | MUST | §3.2 / §4.5 |
