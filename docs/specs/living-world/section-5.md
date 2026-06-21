@@ -1,11 +1,12 @@
 # Living World System Specification #22 — Section 5: Test Plan
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.7 — PASS-9 fix pass: T-LW-I-015 verifies deterministic LRU active-set demotion; integration 15, total ≥75 (AR9-M1))
+**Last Updated:** June 21, 2026 (v0.8 — PASS-10 fix pass: T-LW-I-011..014 scoped to retained-fields + episodeId-resume (AR10-M1/L1))
+**Last Updated (prior):** June 21, 2026 (v0.7 — PASS-9 fix pass: T-LW-I-015 verifies deterministic LRU active-set demotion; integration 15, total ≥75 (AR9-M1))
 **Last Updated (prior):** June 21, 2026 (v0.6 — PASS-7 fix pass: T-LW-EXP-005 adds a tie-forced eviction determinism case (AR7-M1))
 **Last Updated (prior):** June 21, 2026 (v0.4 — PASS-4 fix pass: added T-LW-U-035 verifying the read-only
 `PlayerEdge` contract (AR4-M1); unit 35, total ≥74; traceability updated)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** IN REVIEW (June 21, 2026)
 
 > Test-ID prefixes follow #19 §3.1.4: `T-LW-U-*` unit, `T-LW-I-*` integration, `sim_*` / `T-LW-SIM-*`
@@ -48,8 +49,9 @@
   supporters each read correctly and drive an interaction without write-back (FR-LW-001/007/027).
 - **T-LW-I-007..010** — arc routing: `BoardPatienceCollapse` reads vol-3 §4.1 archetype and routes to
   sack/backing; `MediaVendetta` cites a §3.2 episode (FR-LW-015).
-- **T-LW-I-011..014** — LOD: demotion→`ColdSummary`; rehydration round-trip equality; background tier
-  bounded + deterministic (FR-LW-024/025).
+- **T-LW-I-011..014** — LOD: demotion→`ColdSummary`; rehydration **retained-fields** round-trip equality
+  (lossy by design beyond `COLD_SUMMARY_RETAINED_EPISODES`); `episodeId` counter resumes from
+  `NextEpisodeId` (no id reuse); background tier bounded + deterministic (FR-LW-024/025/009).
 - **T-LW-I-015** — active-set membership: at `ACTIVE_SET_EXTERNAL_CONTACTS_MAX`, the
   least-recently-interacted contact (max episode `worldTick`; tie → lowest `EntityId`) is the one
   demoted, and the choice is replay-identical across two runs; an own-club member demotes on

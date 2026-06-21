@@ -1,7 +1,8 @@
 # Living World System Specification #22 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.9 — PASS-8 fix pass: FR-LW-023 defines active-set membership (entry on interaction; LRU demotion at the cap, deterministic) (AR8-M1))
+**Last Updated:** June 21, 2026 (v0.10 — PASS-10 fix pass: ColdSummary gains NextEpisodeId (episodeId monotonicity survives cold-store) (AR10-M1); FR-LW-018 extended to demotion (AR10-M2); F5 scoped to retained-fields (AR10-L1))
+**Last Updated (prior):** June 21, 2026 (v0.9 — PASS-8 fix pass: FR-LW-023 defines active-set membership (entry on interaction; LRU demotion at the cap, deterministic) (AR8-M1))
 **Last Updated (prior):** June 21, 2026 (v0.8 — PASS-7 fix pass: FR-LW-021 extended to selection/eviction with stable tiebreaks (AR7-M1))
 **Last Updated (prior):** June 21, 2026 (v0.7 — PASS-6 fix pass: FR-LW-020 split into separate `world.arcs`/`world.text`
 RNG sub-streams to remove the periodic/aperiodic draw-interleaving hazard (AR6-M1))
@@ -13,7 +14,7 @@ vol-2 §2.1 social-graph edge (`PlayerEdge` read-only) (AR4-L1))
 vol-2's authoritative edge — never mutated here, removing the double-authority hazard (AR3-M1, FR-LW-004);
 `ActiveLayers` bit positions tied to `RelationshipLayer` ordinals (AR3-L1); `ColdSummary` retains
 `ActiveLayers` for rehydration (AR3-L2))
-**Version:** 0.9
+**Version:** 0.10
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -32,7 +33,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-LW-006 | `Affinity` is the manager's personal relationship with an individual; it is NOT a board-confidence or supporter-trust authority (those stay owned by vol-3 §4 / vol-2 §4.1). | MUST | KD-9 |
 | FR-LW-007 | Morale spread is vol-2 §2.2 Pulse Propagation consumed as-is; this layer defines no contagion rule. Faction outcomes are modelled only as arcs (§3.4) that read the propagation result. | MUST | KD-1 |
 | FR-LW-008 | Each significant edge carries a bounded ring buffer of `MemoryEpisode`; buffer depth is a `[GT]` constant (target 8–16). | MUST | §3.2 |
-| FR-LW-009 | Every `MemoryEpisode` carries a stable per-edge `episodeId` (monotonic within the edge) that survives save/load and is what an arc pins. | MUST | §3.2 |
+| FR-LW-009 | Every `MemoryEpisode` carries a stable per-edge `episodeId` (monotonic within the edge) that survives save/load and is what an arc pins. Monotonicity also survives **cold-store**: the per-edge `nextId` high-water mark is persisted in `ColdSummary.NextEpisodeId` and resumed on rehydration (never re-derived from retained ids). | MUST | §3.2 / §3.5 |
 | FR-LW-010 | Episode salience and salience-decay are `[GT]`; lowest-salience episodes evict first, **except** episodes pinned by a live arc. | MUST | §3.2 / FR-LW-018 |
 | FR-LW-011 | Surface text is produced by deterministic template/grammar expansion; template selection draws from the dedicated `DeterministicRngService` `world.text` sub-stream (§3.3, FR-LW-020). | MUST | KD-6 |
 | FR-LW-012 | No generative-model/LLM inference runs on any path whose output is persisted in saved state. Model assistance is offline authoring of the static corpus only. | MUST | KD-6 |
@@ -41,7 +42,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-LW-015 | Board arcs read and route into vol-3 §4 (archetype patience, takeover, DoF veto); they do not introduce a board node. The fan node is an aggregate view over vol-2 §4.1 / §5.1. | MUST | KD-1 / KD-9 |
 | FR-LW-016 | Every **arc** records a `SpawnCause` (trigger rule/threshold, the input values at spawn, the state-snapshot reference, `worldTick`) at creation. A generated **interaction** carries no separate persisted `SpawnCause`: its provenance is **implicit** — a deterministic function of `(InteractionIntent, RNG cursor, snapshotRef)` reconstructable from the snapshot + cursor (an optional inspector interaction-log MAY store that lightweight tuple). | MUST | KD-8 |
 | FR-LW-017 | Arcs not scoped to a single entity (squad/board-level) are evaluated in fixed `ArcKind` ordinal order so spawn order, RNG draw order, and episode pinning are deterministic. | MUST | KD-5 |
-| FR-LW-018 | An arc snapshots the facts it needs at spawn and pins its source episodes non-evictable until it resolves; salience eviction may never leave a live arc referencing a dropped episode. | MUST | §3.4 / KD-8 |
+| FR-LW-018 | An arc snapshots the facts it needs at spawn and pins its source episodes non-evictable until it resolves; **neither salience eviction nor active-set demotion** may leave a live arc referencing a dropped episode (a contact holding an arc-pinned episode is skipped by LRU demotion, §3.5). | MUST | §3.4 / KD-8 |
 | FR-LW-019 | The world ticks on a deterministic season-calendar clock distinct from `MatchClock`; one `worldTick` = one calendar day. The loop never runs inside the 10 Hz / 60 Hz match loops. | MUST | KD-4 |
 | FR-LW-020 | All stochastic selection draws from dedicated `DeterministicRngService` world **sub-streams** via `Reserve`/`DrawReserved`/`Skip`; no `System.Random`, no wall-clock. The **periodic** tick-driven draws (`world.arcs`) and the **aperiodic** interaction-text draws (`world.text`) use **separate** sub-streams so player-triggered text generation never perturbs the tick/arc cursor (no cross-source interleaving). | MUST | KD-5 / #16 |
 | FR-LW-021 | Every pass that **iterates, selects, or evicts** over the graph uses a canonical order keyed on a stable key, never dictionary/hashset enumeration order. **Eviction/selection ties** are broken deterministically: episodes by (lowest salience → oldest `worldTick` → lowest `episodeId`); cold summaries by (lowest `NetRelationship` → lowest `EntityId`). | MUST | KD-5 |
@@ -121,6 +122,7 @@ matrix per node-type pairing is pinned in Appendix C.
 | EntityId | `EntityId` | the cold-stored contact |
 | ActiveLayers | `byte` | retained so rehydration (§3.5) can reconstruct which layers to populate |
 | NetRelationship | `float` 0.0–1.0 | compressed standing |
+| NextEpisodeId | `uint` | per-edge `episodeId` high-water mark — preserves monotonicity across rehydration (FR-LW-009) |
 | RetainedEpisodes | `MemoryEpisode[]` | top-N by salience (full schema deferred, §7 residue A) |
 
 ### 2.2.6 Enums (all `byte`-backed, APPEND-only, ordinal-stable — FR-LW-028)
@@ -149,5 +151,5 @@ payload, which gains the living-world block per §4.6) and verified by T-LW-DET-
 | F2 | Non-deterministic graph iteration | determinism replay (§6.4) divergence | canonical entity-ID / `ArcKind` ordering (FR-LW-021/017) | T-LW-FAIL-002 |
 | F3 | Runtime model inference on a saved-state path | static gate / code review; FR-LW-012 | forbidden by construction; offline authoring only | T-LW-FAIL-003 |
 | F4 | Save-size budget overflow | budget check each tick (FR-LW-026) | salience eviction (arc-pinned excepted); ties broken deterministically (FR-LW-021) so eviction is replay-stable | T-LW-FAIL-004 |
-| F5 | Tier transition loses/duplicates state on cold-store↔rehydrate | round-trip equality check | deterministic, lossless transition contract (FR-LW-025) | T-LW-FAIL-005 |
+| F5 | Tier transition loses/duplicates state on cold-store↔rehydrate | **retained-fields** round-trip equality check (demotion is lossy by design — only `COLD_SUMMARY_RETAINED_EPISODES` survive) | deterministic, lossless-within-retained-fields transition contract (FR-LW-025) | T-LW-FAIL-005 |
 | F6 | An **active** layer value (per `ActiveLayers`) escapes [0.0, 1.0] | invariant fuzzer (§6.1) | clamp + author-error log; inactive layers are not checked | T-LW-FAIL-006 |

@@ -1,9 +1,10 @@
 # Living World System Specification #22 — Appendices
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.5 — PASS-8 fix pass: SAVE_SIZE_BUDGET labelled platform-tuned [GT], not unset (AR8-L1))
+**Last Updated:** June 21, 2026 (v0.6 — PASS-10 fix pass: ColdSummary snapshot order gains NextEpisodeId (AR10-M1))
+**Last Updated (prior):** June 21, 2026 (v0.5 — PASS-8 fix pass: SAVE_SIZE_BUDGET labelled platform-tuned [GT], not unset (AR8-L1))
 **Last Updated (prior):** June 21, 2026 (v0.4 — PASS-3 fix pass: `ColdSummary` gains `ActiveLayers` in Appendix B; Appendix C ties bit positions to `RelationshipLayer` ordinals and corrects the stale NaN wording + `PlayerEdge` read-only note (AR3-L1/L2/M1))
-**Version:** 0.5
+**Version:** 0.6
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -37,7 +38,7 @@ the shape/direction, not the value (precedent #21 G2, #8 draft-level). No `[EST]
 `MemoryEpisode { EpisodeId, Kind, Salience, WorldTick, ManagerChoiceId }` →
 `Arc { Kind, State, Cause, PinnedEpisodes[], SpawnTick, MaxLifetimeTick }` →
 `SpawnCause { TriggerId, Inputs[], SnapshotRef, WorldTick }` →
-`ColdSummary { EntityId, ActiveLayers, NetRelationship, RetainedEpisodes[] }`.
+`ColdSummary { EntityId, ActiveLayers, NetRelationship, NextEpisodeId, RetainedEpisodes[] }`.
 
 Order is load-bearing for the `SNAPSHOT_SCHEMA_VERSION` digest (ERR-022-002); locked before T-store
 activation.

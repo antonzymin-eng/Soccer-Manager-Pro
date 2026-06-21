@@ -1,8 +1,8 @@
 # Living World System Specification #22 — Section 9: Approval Checklist
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.10 — PASS-9 fix pass landed; G1 cites all nine passes; G2/G3 remain open)
-**Version:** 0.10
+**Last Updated:** June 21, 2026 (v0.11 — PASS-10 fix pass landed; G1 cites all ten passes; G2/G3 remain open)
+**Version:** 0.11
 **Status:** IN REVIEW
 
 ---
@@ -45,7 +45,7 @@ checklist entries are fabricated (CLAUDE.md).
 
 | # | Gate | Status |
 |---|---|---|
-| G1 | Formal adversarial review of the section files (PASS-1..9) + fix passes | **DONE** — v1..v9 reviews (4M+3L → 3M+3L → 2M+2L → 1M+3L → 1M+2L → 1M+2L → 1M+1L → 1M+1L → 1M+1L), all resolved; no High since PASS-1; M-count plateaued at the determinism-detail floor (1/pass) — design stable, remaining findings are localized implementation-grade detail |
+| G1 | Formal adversarial review of the section files (PASS-1..10) + fix passes | **DONE** — v1..v10 reviews (4M+3L → 3M+3L → 2M+2L → 1M+3L → 1M+2L → 1M+2L → 1M+1L → 1M+1L → 1M+1L → 2M+1L), all resolved; no High since PASS-1; findings are localized implementation-grade detail (PASS-10's 2 M were cold-store/membership edges opened by the PASS-8/9 fixes) — design stable |
 | G2 | `[GT]` value **balance pass** (numerical mirror + adversarial) before values are pinned | **CARRIED FORWARD (post-APPROVED, non-blocking)** — §3/Appendix A values are illustrative; tests assert shape/direction not magnitude (§5). Precedent: #21 G2, #8 draft-level, #9 §9.8, #16 post-approved |
 | G3 | Lead-developer R-01..R-05 sign-off | **OPEN** |
 | G4 | `SPEC_INDEX.md` row 22 reflects status | DONE — IN REVIEW, Jun 21, 2026 |
@@ -75,4 +75,5 @@ magnitudes are illustrative and are not relied on for sign-off (the contract is 
 | 0.8 | 2026-06-21 | — | PASS-7 fix pass (1M+1L resolved): FR-LW-021 extended to selection/eviction with stable tiebreaks (episode salience → worldTick → episodeId; cold summary → EntityId); XC-022-008 sub-stream wording. G1 cites all seven passes. G2/G3 remain open. |
 | 0.9 | 2026-06-21 | — | PASS-8 fix pass (1M+1L resolved): FR-LW-023/§3.5 define active-set membership (entry on interaction; deterministic LRU demotion at the cap — closes the supplement §6.6 churn item); SAVE_SIZE_BUDGET labelled platform-tuned; FR-LW-011 sub-stream wording. G1 cites all eight passes. G2/G3 remain open. |
 | 0.10 | 2026-06-21 | — | PASS-9 fix pass (1M+1L resolved): T-LW-I-015 verifies deterministic LRU active-set demotion (integration 15, total ≥75); §3.5 own-club departure (transfer/release) demotes to cold-store via FR-LW-025. G1 cites all nine passes. G2/G3 remain open. |
+| 0.11 | 2026-06-21 | — | PASS-10 fix pass (2M+1L resolved): ColdSummary gains NextEpisodeId so episodeId monotonicity survives cold-store; FR-LW-018 extended so demotion never orphans an arc-pinned episode; F5/round-trip-equality scoped to retained fields. G1 cites all ten passes. G2/G3 remain open. |
 #endregion

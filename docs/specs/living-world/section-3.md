@@ -1,13 +1,14 @@
 # Living World System Specification #22 — Section 3: Algorithms
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.10 — PASS-9 fix pass: §3.5 own-club departure (transfer/release) demotes to cold-store via the FR-LW-025 path (AR9-L1))
+**Last Updated:** June 21, 2026 (v0.11 — PASS-10 fix pass: §3.5 rehydration resumes episodeId from NextEpisodeId (AR10-M1); LRU demotion skips live-arc contacts (AR10-M2))
+**Last Updated (prior):** June 21, 2026 (v0.10 — PASS-9 fix pass: §3.5 own-club departure (transfer/release) demotes to cold-store via the FR-LW-025 path (AR9-L1))
 **Last Updated (prior):** June 21, 2026 (v0.9 — PASS-8 fix pass: §3.5 membership entry/exit rule — LRU demotion at the cap; closes the supplement §6.6 churn item (AR8-M1))
 **Last Updated (prior):** June 21, 2026 (v0.8 — PASS-7 fix pass: §3.2 episode-eviction salience tiebreak (oldest worldTick, then episodeId) (AR7-M1))
 **Last Updated (prior):** June 21, 2026 (v0.6 — PASS-5 fix pass: §3.6 scopes persisted `SpawnCause` to arcs,
 interaction provenance implicit (AR5-M1); §3.1 decay worked example corrected to the geometric ~0.016 (AR5-L1))
 **Last Updated (prior):** June 21, 2026 (v0.5 — PASS-4 fix pass: §3.2 worked-example depth marked illustrative vs the catalogue default (AR4-L3))
-**Version:** 0.10
+**Version:** 0.11
 **Status:** IN REVIEW (June 21, 2026)
 
 > All formulas state units and input ranges and carry a worked example (FR-LW-033). Constants reference
@@ -126,7 +127,9 @@ authority for those outcomes — transfers/recruitment stay owned by vol-3 §2 a
 **Membership (entry/exit).** An external contact **enters** the active set on first interaction. When
 `ACTIVE_SET_EXTERNAL_CONTACTS_MAX` is exceeded, the **least-recently-interacted** external contact is
 demoted — last-interaction is the max episode `worldTick` on its edge, ties broken by lowest `EntityId`
-(FR-LW-021/023) — a deterministic, replay-stable choice. Own-club players/staff/board never demote
+(FR-LW-021/023) — **skipping any contact with a live arc-pinned episode** (demoting it would orphan the
+arc, the demotion-path analogue of the FR-LW-018 eviction exemption; the next-least-recent eligible
+contact is chosen instead). Own-club players/staff/board never demote
 *while at the club*; on **leaving** it (transfer-out, release, sacking) they demote to cold-store via the
 same path as an external contact (FR-LW-025) — preserving the ex-member history you might re-sign or face
 again. This closes the supplement §6.6 "active-set churn" question.
@@ -135,7 +138,9 @@ again. This closes the supplement §6.6 "active-set churn" question.
 (`NetRelationship` + top-N salient episodes; schema deferred §7) and drop live buffers.
 
 **Promotion (background → active / rehydration).** Expand the `ColdSummary` back into a live
-`RelationshipEdge` (layers from `NetRelationship`, memory from `RetainedEpisodes`).
+`RelationshipEdge` (layers from `NetRelationship`, memory from `RetainedEpisodes`); the edge resumes its
+`episodeId` counter from `ColdSummary.NextEpisodeId` (never `max(retained)+1`, which would reuse the ids
+of compressed-away episodes) so `episodeId` monotonicity holds across the cycle (FR-LW-009).
 
 Both transitions are **deterministic and lossless within the retained-fields contract** — round-trip
 through cold-store and back yields an edge equal on all retained fields (F5, T-LW-FAIL-005). The
