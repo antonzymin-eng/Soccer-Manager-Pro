@@ -15,6 +15,10 @@ namespace TacticalDirector.TacticalInstructions
     /// (digest-load-bearing once FR-TI-028 serializes it). <see cref="Balanced"/> reproduces the
     /// current no-instruction baseline exactly (FR-TI-031 / KD-10).
     /// </summary>
+    /// <remarks>
+    /// HAZARD — <c>default(TeamTactic)</c> is NOT the identity (e.g. Mentality VeryDefensive, Passing
+    /// Short, DefensiveLine 0.0). Use <see cref="Balanced"/>; treat default-valued instances as malformed.
+    /// </remarks>
     public readonly struct TeamTactic
     {
         /// <summary>Master risk dial (§3.2).</summary>
@@ -134,6 +138,7 @@ namespace TacticalDirector.TacticalInstructions
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                              |
-// | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).   |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).                               |
+// | 1.1     | 2026-06-21 | —      | AR-1 L-1: <remarks> default(TeamTactic) is not the identity.   |
 #endregion

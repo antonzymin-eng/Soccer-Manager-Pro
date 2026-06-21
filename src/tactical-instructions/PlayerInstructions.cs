@@ -15,6 +15,13 @@ namespace TacticalDirector.TacticalInstructions
     /// named #8 term (FR-TI-014); <see cref="Default"/> is the behavioural identity (FR-TI-031).
     /// Property order matches the Appendix B canonical snapshot order.
     /// </summary>
+    /// <remarks>
+    /// HAZARD — <c>default(PlayerInstructions)</c> is NOT the identity: the C# struct default skips
+    /// the factory, so <see cref="MarkTargetEntityId"/> is 0 (a *valid* entity id ⇒ a silent man-mark
+    /// request on agent 0), not the −1 "none" sentinel. Construct only via <see cref="Default"/> or
+    /// the explicit constructor; consumers must treat default-valued instances as malformed
+    /// (parallels Testing Strategy #19 AR-2 L-6).
+    /// </remarks>
     public readonly struct PlayerInstructions
     {
         /// <summary>Risky/ambitious passing bias (#8 pass-risk term). §3.4.</summary>
@@ -89,6 +96,8 @@ namespace TacticalDirector.TacticalInstructions
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                              |
-// | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).   |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).                                   |
+// | 1.1     | 2026-06-21 | —      | AR-1 L-1: <remarks> default-value hazard note (default() encodes a |
+// |         |            |        | man-mark on agent 0 via MarkTargetEntityId 0, not the −1 sentinel).|
 #endregion

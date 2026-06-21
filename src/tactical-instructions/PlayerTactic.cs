@@ -13,6 +13,11 @@ namespace TacticalDirector.TacticalInstructions
     /// agent's <see cref="PlayerInstructions"/>. Property order matches the Appendix B canonical
     /// snapshot order. <see cref="Default(PlayerRole)"/> is the behavioural identity (FR-TI-031).
     /// </summary>
+    /// <remarks>
+    /// HAZARD — <c>default(PlayerTactic)</c> is NOT the identity: its embedded
+    /// <see cref="PlayerInstructions"/> defaults to a man-mark on agent 0 (see that type). Use
+    /// <see cref="Default(PlayerRole)"/>; treat default-valued instances as malformed.
+    /// </remarks>
     public readonly struct PlayerTactic
     {
         /// <summary>Behavioural role (modifier on a position; KD-3). §2.2.3.</summary>
@@ -43,6 +48,7 @@ namespace TacticalDirector.TacticalInstructions
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                              |
-// | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).   |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).                               |
+// | 1.1     | 2026-06-21 | —      | AR-1 L-1: <remarks> default(PlayerTactic) is not the identity. |
 #endregion

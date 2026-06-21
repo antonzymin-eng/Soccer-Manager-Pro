@@ -198,23 +198,39 @@ namespace TacticalDirector.TacticalInstructions.Tests
         }
 
         [Test]
-        public void FlagEnums_StayWithinTheByteCeiling()
+        public void FlagEnums_EachFlagIsASingleBitWithinTheByteCeiling()
         {
-            // Highest bit used must be < 256 so the [Flags] mask fits the byte backing (FR-TI-007).
+            // FR-TI-007 "8-flag byte ceiling": each flag must occupy a single bit no higher than
+            // bit 7 (value ≤ 128), so at most 8 distinct flags ever fit the byte backing. A bare
+            // `<= 255` check is vacuous (any byte-backed value satisfies it); the single-bit +
+            // ≤ 128 check actually guards the ceiling — a 9th flag would need bit value 256.
             foreach (TacticTriggerMask flag in Enum.GetValues(typeof(TacticTriggerMask)))
             {
-                Assert.LessOrEqual((int)flag, 255);
+                AssertSingleBitWithinByte((int)flag);
             }
 
             foreach (SetPieceDutyFlags flag in Enum.GetValues(typeof(SetPieceDutyFlags)))
             {
-                Assert.LessOrEqual((int)flag, 255);
+                AssertSingleBitWithinByte((int)flag);
             }
+        }
+
+        private static void AssertSingleBitWithinByte(int value)
+        {
+            if (value == 0)
+            {
+                return; // None sentinel occupies no bit.
+            }
+
+            Assert.LessOrEqual(value, 128, "flag bit must not exceed bit 7 (the byte [Flags] ceiling)");
+            Assert.AreEqual(0, value & (value - 1), "each flag must be a single power-of-two bit");
         }
     }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                              |
-// | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).   |
+// | Version | Date       | Author | Notes                                                                 |
+// | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).                                      |
+// | 1.1     | 2026-06-21 | —      | AR-1 L-2: flag-ceiling test was vacuous (`<= 255` holds for any byte  |
+// |         |            |        | enum); now asserts each flag is a single power-of-two bit ≤ 128.      |
 #endregion

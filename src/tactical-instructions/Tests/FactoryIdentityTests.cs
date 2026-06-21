@@ -82,6 +82,30 @@ namespace TacticalDirector.TacticalInstructions.Tests
             Assert.AreEqual(Duty.Support, d.Duty);
         }
 
+        // ── Default-struct values are NOT the identity (AR-1 L-1 hazard lock) ─
+
+        [Test]
+        public void DefaultPlayerInstructions_IsNotTheIdentity_EncodesManMarkOnAgentZero()
+        {
+            // default() skips the factory: MarkTargetEntityId is 0 (a valid entity id ⇒ a man-mark
+            // request on agent 0), not the −1 "none" sentinel. Consumers must use Default.
+            PlayerInstructions d = default;
+
+            Assert.AreEqual(0, d.MarkTargetEntityId);
+            Assert.AreNotEqual(PlayerInstructions.Default.MarkTargetEntityId, d.MarkTargetEntityId);
+        }
+
+        [Test]
+        public void DefaultTeamTactic_IsNotTheBalancedIdentity()
+        {
+            TeamTactic d = default;
+
+            // default ordinals land on VeryDefensive / Short, not Balanced / Mixed.
+            Assert.AreEqual(Mentality.VeryDefensive, d.Mentality);
+            Assert.AreEqual(TacticPassing.Short, d.Passing);
+            Assert.AreNotEqual(TeamTactic.Balanced.Mentality, d.Mentality);
+        }
+
         // ── Catalogue identity rows are exact (FR-TI-031) ─────────────────────
 
         [Test]
@@ -174,6 +198,8 @@ namespace TacticalDirector.TacticalInstructions.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                              |
-// | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).   |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).                                   |
+// | 1.1     | 2026-06-21 | —      | AR-1 L-1: default-struct-is-not-identity locks (PlayerInstructions |
+// |         |            |        | man-mark-on-0 hazard; default TeamTactic ≠ Balanced).             |
 #endregion
