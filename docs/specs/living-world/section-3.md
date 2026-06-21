@@ -4,7 +4,7 @@
 **Last Updated:** June 21, 2026 (v0.6 — PASS-5 fix pass: §3.6 scopes persisted `SpawnCause` to arcs,
 interaction provenance implicit (AR5-M1); §3.1 decay worked example corrected to the geometric ~0.016 (AR5-L1))
 **Last Updated (prior):** June 21, 2026 (v0.5 — PASS-4 fix pass: §3.2 worked-example depth marked illustrative vs the catalogue default (AR4-L3))
-**Version:** 0.6
+**Version:** 0.7
 **Status:** IN REVIEW (June 21, 2026)
 
 > All formulas state units and input ranges and carry a worked example (FR-LW-033). Constants reference
@@ -69,16 +69,20 @@ pinned `e1 (s=0.02)` is skipped and the next-lowest unpinned is chosen.
 vol-2 §7.1 Press-Conference-Trap class). **Surface text** is deterministic template/grammar expansion:
 
 ```
-template = SelectTemplate(intent, rng.DrawReserved(worldStream))   // deterministic
-text     = Expand(template, slots)                                  // slots from real facts + §3.2 memory
+template = SelectTemplate(intent, rng.DrawReserved(world.text))   // deterministic, isolated sub-stream
+text     = Expand(template, slots)                                 // slots from real facts + §3.2 memory
 ```
 
-`SelectTemplate` indexes the static authored corpus; `rng` is the dedicated world stream (FR-LW-020).
-**Slots** are filled only from facts the match engine emits (opponent, scoreline, the chance a player
-missed) and from a referenced episode (§3.2) — **no assumed derived stats** (FR-LW-013). **No model
-inference runs here** (FR-LW-012); the corpus is authored offline (§7, KD-6).
+`SelectTemplate` indexes the static authored corpus; `rng` draws from the **`world.text` sub-stream**,
+separate from the tick-driven `world.arcs` sub-stream (FR-LW-020) so that **aperiodic, player-triggered**
+generation never perturbs the arc/world cursor. **Slots** are filled only from facts the match engine
+emits (opponent, scoreline, the chance a player missed) and from a referenced episode (§3.2) — **no
+assumed derived stats** (FR-LW-013). **No model inference runs here** (FR-LW-012); the corpus is authored
+offline (§7, KD-6).
 
-**Determinism.** Same `(intent, world stream cursor, slots)` ⇒ identical string. Verified by T-LW-DET-*.
+**Determinism.** Same `(intent, world.text cursor, slots)` ⇒ identical string (verified by T-LW-DET-003);
+the `world.text`/`world.arcs` separation makes this hold regardless of when in the calendar the player
+triggers generation.
 
 ## 3.4 Emergent arcs (KD-1 gap)
 
@@ -109,8 +113,8 @@ KD-9).
 ## 3.5 Two-tier LOD, cold-store, rehydration (KD-7)
 
 **Deep tier** (active set): full §3.1–§3.4. **Background tier** (everyone else): a cheap deterministic
-update of summary state only — no per-edge memory, no arcs — on the same RNG stream and a bounded
-per-tick cost (FR-LW-024). The background tier **reflects/summarises** outcomes produced by the
+update of summary state only — no per-edge memory, no arcs — under the same RNG-service determinism rules
+(a periodic, tick-driven sub-stream) and a bounded per-tick cost (FR-LW-024). The background tier **reflects/summarises** outcomes produced by the
 (abstracted) club-AI and the canonical systems (transfers, sackings, form swings); it is **not** the
 authority for those outcomes — transfers/recruitment stay owned by vol-3 §2 and governance by vol-3 §4
 (KD-9). It records *that* a club sacked its manager, it does not decide it.

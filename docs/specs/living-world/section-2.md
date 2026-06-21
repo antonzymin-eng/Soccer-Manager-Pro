@@ -1,7 +1,9 @@
 # Living World System Specification #22 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.6 — PASS-5 fix pass: FR-LW-016 scoped — durable `SpawnCause` on arcs;
+**Last Updated:** June 21, 2026 (v0.7 — PASS-6 fix pass: FR-LW-020 split into separate `world.arcs`/`world.text`
+RNG sub-streams to remove the periodic/aperiodic draw-interleaving hazard (AR6-M1))
+**Last Updated (prior):** June 21, 2026 (v0.6 — PASS-5 fix pass: FR-LW-016 scoped — durable `SpawnCause` on arcs;
 interaction provenance is implicit (no interaction record type) (AR5-M1))
 **Last Updated (prior):** June 21, 2026 (v0.5 — PASS-4 fix pass: FR-LW-027 no-write-back scope extended to the
 vol-2 §2.1 social-graph edge (`PlayerEdge` read-only) (AR4-L1))
@@ -9,7 +11,7 @@ vol-2 §2.1 social-graph edge (`PlayerEdge` read-only) (AR4-L1))
 vol-2's authoritative edge — never mutated here, removing the double-authority hazard (AR3-M1, FR-LW-004);
 `ActiveLayers` bit positions tied to `RelationshipLayer` ordinals (AR3-L1); `ColdSummary` retains
 `ActiveLayers` for rehydration (AR3-L2))
-**Version:** 0.6
+**Version:** 0.7
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -39,7 +41,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-LW-017 | Arcs not scoped to a single entity (squad/board-level) are evaluated in fixed `ArcKind` ordinal order so spawn order, RNG draw order, and episode pinning are deterministic. | MUST | KD-5 |
 | FR-LW-018 | An arc snapshots the facts it needs at spawn and pins its source episodes non-evictable until it resolves; salience eviction may never leave a live arc referencing a dropped episode. | MUST | §3.4 / KD-8 |
 | FR-LW-019 | The world ticks on a deterministic season-calendar clock distinct from `MatchClock`; one `worldTick` = one calendar day. The loop never runs inside the 10 Hz / 60 Hz match loops. | MUST | KD-4 |
-| FR-LW-020 | All stochastic selection draws from one dedicated `DeterministicRngService` world stream via `Reserve`/`DrawReserved`/`Skip`; no `System.Random`, no wall-clock. | MUST | KD-5 / #16 |
+| FR-LW-020 | All stochastic selection draws from dedicated `DeterministicRngService` world **sub-streams** via `Reserve`/`DrawReserved`/`Skip`; no `System.Random`, no wall-clock. The **periodic** tick-driven draws (`world.arcs`) and the **aperiodic** interaction-text draws (`world.text`) use **separate** sub-streams so player-triggered text generation never perturbs the tick/arc cursor (no cross-source interleaving). | MUST | KD-5 / #16 |
 | FR-LW-021 | Every pass that walks the graph iterates nodes/edges in a canonical order keyed on a stable entity ID, never on dictionary/hashset enumeration order. | MUST | KD-5 |
 | FR-LW-022 | All living-world state (edges, layers, memory buffers, arcs, cold summaries) is plain serialisable value state; off-pitch save/load, replay, and debug-rewind derive from the snapshot model. | MUST | KD-5 |
 | FR-LW-023 | The deep tier (memory, text, arcs) runs only for the human manager's active set. The active set = own-club players/staff/board + a bounded per-manager set of external contacts. | MUST | KD-7 |

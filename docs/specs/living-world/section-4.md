@@ -3,7 +3,7 @@
 **Created:** June 21, 2026
 **Last Updated:** June 21, 2026 (v0.4 — PASS-3 fix pass: §4.5 edge bound restated as O(active-set²)
 governed by the whole active-set size, not just the external-contacts cap (AR3-M2))
-**Version:** 0.4
+**Version:** 0.5
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -45,9 +45,12 @@ route only); (3) memory salience decay (§3.2); (4) arc evaluation (§3.4); (5) 
 
 ## 4.4 Determinism boundaries (KD-5)
 
-- **RNG:** one dedicated `DeterministicRngService` world stream, `Reserve`/`DrawReserved`/`Skip`
-  (FR-LW-020). SplitMix64 is only that service's construction-time match-seed PRNG; per-draw is
-  HKDF-SHA256 + SipHash-2-4-64 — not re-implemented here.
+- **RNG:** dedicated `DeterministicRngService` world **sub-streams**, `Reserve`/`DrawReserved`/`Skip`
+  (FR-LW-020). The periodic `world.arcs` sub-stream (tick-driven arc evaluation) and the aperiodic
+  `world.text` sub-stream (player-triggered interaction generation) are **separate**, so on-demand text
+  draws never advance the arc cursor — eliminating draw-order interleaving between periodic and aperiodic
+  sources. SplitMix64 is only the service's construction-time match-seed PRNG; per-draw is HKDF-SHA256 +
+  SipHash-2-4-64 — not re-implemented here.
 - **Iteration:** canonical entity-ID order for entity passes; fixed `ArcKind` ordinal for non-entity
   arcs (FR-LW-021/017).
 - **Snapshot:** all state is serialised value state; single-machine snapshot determinism (replay,

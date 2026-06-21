@@ -1,8 +1,9 @@
 # Living World System Specification #22 — Section 1: Introduction, Scope, Dependencies
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.2 — PASS-4 fix pass: KD-3 read-only `PlayerEdge` mirror clause; KD-9 no-write-back extended to vol-2 §2.1 (AR4-L2))
-**Version:** 0.2
+**Last Updated:** June 21, 2026 (v0.3 — PASS-6 fix pass: KD-5 split into `world.arcs`/`world.text` RNG sub-streams (AR6-M1))
+**Last Updated (prior):** June 21, 2026 (v0.2 — PASS-4 fix pass: KD-3 read-only `PlayerEdge` mirror clause; KD-9 no-write-back extended to vol-2 §2.1 (AR4-L2))
+**Version:** 0.3
 **Status:** IN REVIEW (June 21, 2026)
 **Source:** `docs/tracking/living-world-system-design.md` v0.7
 
@@ -79,10 +80,12 @@ an unspecified consumer (FR-LW-031).
 - **KD-4 — Slow loop on a season-calendar clock.** The world ticks on a deterministic season-calendar
   clock (own loop, distinct from `MatchClock`), event- and day-driven; one `worldTick` = one calendar
   day, the unit vol-2 §2.2 latencies are expressed in. It runs **never** inside the 10/60 Hz match loops.
-- **KD-5 — Determinism.** All stochastic selection draws from a **dedicated `DeterministicRngService`
-  stream**; every graph pass iterates in a **canonical order keyed on a stable entity ID**; arcs not
-  scoped to a single entity evaluate in fixed `ArcKind` ordinal order; all state is snapshot-serialised
-  (single-machine determinism; cross-platform parity stays Stage 5+ per CLAUDE.md).
+- **KD-5 — Determinism.** All stochastic selection draws from **dedicated `DeterministicRngService`
+  sub-streams** (periodic `world.arcs` and aperiodic `world.text` are separate, so player-triggered text
+  generation never perturbs the tick cursor); every graph pass iterates in a **canonical order keyed on a
+  stable entity ID**; arcs not scoped to a single entity evaluate in fixed `ArcKind` ordinal order; all
+  state is snapshot-serialised (single-machine determinism; cross-platform parity stays Stage 5+ per
+  CLAUDE.md).
 - **KD-6 — Deterministic text.** Surface text is **deterministic template/grammar expansion** with
   selection drawn from the RNG stream. **No generative-model/LLM inference on any path whose output is
   persisted in saved state.** Model assistance is an **offline authoring tool** that produces the static

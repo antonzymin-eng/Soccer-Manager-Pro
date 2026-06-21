@@ -2,7 +2,7 @@
 
 **Created:** June 21, 2026
 **Last Updated:** June 21, 2026 (v0.1)
-**Version:** 0.1
+**Version:** 0.2
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -30,7 +30,9 @@ prerequisite does.
 - **Inspector tooling (DECIDED — full).** A debug/inspector view providing **time-scrub / replay-step**
   and **"why did this arc fire?" causal tracing**, powered by the FR-LW-016 `SpawnCause` provenance.
   Mandatory-from-day-one consequence: provenance is captured inline at spawn (it cannot be reconstructed
-  later).
+  later). The optional interaction-log (`(intent, cursor, snapshotRef)`, §3.6) is **determinism-neutral**:
+  side-effect-free w.r.t. world state and **excluded from the determinism digest**, so a debug build that
+  keeps it does not diverge from a release build that omits it.
 - **Localisation (DECIDED — English-shaped now).** v1 commits to English-shaped templates and **accepts
   a costly rework** if/when multi-language is added; the grammar is not pre-built for
   gender/inflection agreement. A recorded, accepted future cost.

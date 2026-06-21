@@ -3,7 +3,7 @@
 **Created:** June 21, 2026
 **Last Updated:** June 21, 2026 (v0.4 — PASS-4 fix pass: added T-LW-U-035 verifying the read-only
 `PlayerEdge` contract (AR4-M1); unit 35, total ≥74; traceability updated)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** IN REVIEW (June 21, 2026)
 
 > Test-ID prefixes follow #19 §3.1.4: `T-LW-U-*` unit, `T-LW-I-*` integration, `sim_*` / `T-LW-SIM-*`
@@ -55,7 +55,9 @@
 - **T-LW-DET-002** — graph iteration order is entity-ID/`ArcKind`-canonical: a shuffled internal
   container yields an identical digest (FR-LW-021/017).
 - **T-LW-DET-003** — text reproducibility: identical intent+cursor+slots ⇒ identical string (FR-LW-011).
-- **T-LW-DET-004** — no RNG draw site outside the dedicated world stream (FR-LW-020).
+- **T-LW-DET-004** — no RNG draw site outside the dedicated world sub-streams; `world.text` (aperiodic)
+  and `world.arcs` (periodic) are separate, and interleaving a player-triggered text generation between
+  two ticks leaves the `world.arcs` cursor — and the world-state digest — unchanged (FR-LW-020).
 - **T-LW-DET-005** — snapshot/restore (deep + background tier) ⇒ bit-identical continuation on the
   pinned host (single-machine; FR-LW-022).
 - **T-LW-DET-006** — `worldTick` advances only on the calendar clock, never the match loops (FR-LW-019).
