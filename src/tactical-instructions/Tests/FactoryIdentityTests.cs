@@ -1,0 +1,179 @@
+// File:     src/tactical-instructions/Tests/FactoryIdentityTests.cs
+// Created:  2026-06-21
+// Modified: 2026-06-21
+// Author:   —
+// Spec:     Tactical Instructions #21 §2.2, §3.2–§3.4, Appendix A, FR-TI-031, Code Standards #20
+// Purpose:  Locks the identity factories (TeamTactic.Balanced / PlayerTactic.Default /
+//           PlayerInstructions.Default) and the catalogue identity rows so a default
+//           tactic is behaviour-neutral (FR-TI-031 / KD-10). Catalogue shape checks:
+//           T-TI-U-029 ([0.5,2.0] RoleWeightModifiers), identity-row exactness.
+
+using NUnit.Framework;
+
+using TacticalDirector.TacticalInstructions;
+
+namespace TacticalDirector.TacticalInstructions.Tests
+{
+    /// <summary>Identity-factory and catalogue-shape locks for FR-TI-031.</summary>
+    public class FactoryIdentityTests
+    {
+        // ── TeamTactic.Balanced reproduces Stage0Default (§2.2.1) ─────────────
+
+        [Test]
+        public void TeamTactic_Balanced_IsTheIdentityTactic()
+        {
+            TeamTactic t = TeamTactic.Balanced;
+
+            Assert.AreEqual(Mentality.Balanced, t.Mentality);
+            Assert.AreEqual(TacticFormation.F442, t.Formation);
+            Assert.AreEqual(Tempo.Standard, t.Tempo);
+            Assert.AreEqual(TacticWidth.Standard, t.Width);
+            Assert.AreEqual(TacticPassing.Mixed, t.Passing);
+            Assert.AreEqual(TacticPressing.Medium, t.Pressing);
+            Assert.AreEqual(LineOfEngagement.Standard, t.LineOfEngagement);
+            Assert.AreEqual(0.5f, t.DefensiveLine);
+            Assert.AreEqual(TacticDefWidth.Standard, t.DefensiveWidth);
+            Assert.AreEqual(TransitionPlan.HoldShape, t.TransitionWon);
+            Assert.AreEqual(TransitionPlan.Regroup, t.TransitionLost);
+            Assert.IsFalse(t.OffsideTrap);
+            Assert.AreEqual(TacticTriggerMask.None, t.TriggerPressMask);
+            Assert.AreEqual(FocusPlay.Mixed, t.FocusPlay);
+            Assert.AreEqual(GkDistributionPolicy.SlowDown, t.GkDistribution);
+            Assert.AreEqual(0, t.TimeWasting);
+        }
+
+        // ── PlayerInstructions.Default (§2.2.2) ───────────────────────────────
+
+        [Test]
+        public void PlayerInstructions_Default_IsAllIdentity()
+        {
+            PlayerInstructions p = PlayerInstructions.Default;
+
+            Assert.AreEqual(InstrBias.Default, p.RiskyPasses);
+            Assert.AreEqual(InstrBias.Default, p.ShootTendency);
+            Assert.AreEqual(InstrBias.Default, p.DribbleTendency);
+            Assert.AreEqual(InstrBias.Default, p.CrossTendency);
+            Assert.AreEqual(InstrBias.Default, p.PositioningFreedom);
+            Assert.AreEqual(InstrBias.Default, p.CloseDown);
+            Assert.IsFalse(p.TightMarking);
+            Assert.AreEqual(TacticalInstructionsConstants.MARK_TARGET_NONE, p.MarkTargetEntityId);
+            Assert.AreEqual(SetPieceDutyFlags.None, p.SetPieceRoles);
+        }
+
+        // ── PlayerTactic.Default(role) (§2.2.3) ───────────────────────────────
+
+        [Test]
+        public void PlayerTactic_Default_KeepsRoleAndUsesSupportPlusDefaultInstructions()
+        {
+            PlayerTactic d = PlayerTactic.Default(PlayerRole.Poacher);
+
+            Assert.AreEqual(PlayerRole.Poacher, d.Role);
+            Assert.AreEqual(Duty.Support, d.Duty);
+            Assert.AreEqual(InstrBias.Default, d.Instructions.RiskyPasses);
+            Assert.AreEqual(TacticalInstructionsConstants.MARK_TARGET_NONE, d.Instructions.MarkTargetEntityId);
+        }
+
+        [Test]
+        public void PlayerTactic_Default_WithDefaultRole_IsTheFullBaseline()
+        {
+            PlayerTactic d = PlayerTactic.Default(PlayerRole.Default);
+
+            Assert.AreEqual(PlayerRole.Default, d.Role);
+            Assert.AreEqual(Duty.Support, d.Duty);
+        }
+
+        // ── Catalogue identity rows are exact (FR-TI-031) ─────────────────────
+
+        [Test]
+        public void MentalityBalanced_RiskAndLineRowsAreIdentity()
+        {
+            Assert.AreEqual(1.0f, TacticalInstructionsConstants.MentalityRiskMult[(int)Mentality.Balanced]);
+            Assert.AreEqual(0.0f, TacticalInstructionsConstants.MentalityLineBias[(int)Mentality.Balanced]);
+            Assert.AreEqual(1.0f, TacticalInstructionsConstants.RiskMultBalanced);
+            Assert.AreEqual(0.0f, TacticalInstructionsConstants.LineBiasBalanced);
+        }
+
+        [Test]
+        public void InstrBiasDefault_IsMultiplicativeIdentity()
+        {
+            Assert.AreEqual(1.0f, TacticalInstructionsConstants.InstrBiasMult[(int)InstrBias.Default]);
+        }
+
+        [Test]
+        public void DutySupport_IsOffsetAndAggressionIdentity()
+        {
+            Assert.AreEqual(0.0f, TacticalInstructionsConstants.DutyForeOffsetM[(int)Duty.Support]);
+            Assert.AreEqual(0.0f, TacticalInstructionsConstants.DutyAggressionBias[(int)Duty.Support]);
+        }
+
+        [Test]
+        public void ScalarIdentityRows_AreExactlyOne()
+        {
+            Assert.AreEqual(1.0f, TacticalInstructionsConstants.WidthScalar[(int)TacticWidth.Standard]);
+            Assert.AreEqual(1.0f, TacticalInstructionsConstants.DefWidthScalar[(int)TacticDefWidth.Standard]);
+            Assert.AreEqual(1.0f, TacticalInstructionsConstants.LineOfEngagementScalar[(int)LineOfEngagement.Standard]);
+            Assert.AreEqual(1.0f, TacticalInstructionsConstants.TempoBreadthScalar[(int)Tempo.Standard]);
+        }
+
+        [Test]
+        public void TempoStandardRow_IsExactIdentity()
+        {
+            float[] row = TacticalInstructionsConstants.TempoActionBias[(int)Tempo.Standard];
+            foreach (float cell in row)
+            {
+                Assert.AreEqual(1.0f, cell);
+            }
+        }
+
+        [Test]
+        public void RoleWeightModifiers_DefaultRow_IsExactIdentity()
+        {
+            float[] row = TacticalInstructionsConstants.RoleWeightModifiers[(int)PlayerRole.Default];
+            foreach (float cell in row)
+            {
+                Assert.AreEqual(1.0f, cell);
+            }
+        }
+
+        // ── Catalogue shape / range invariants ────────────────────────────────
+
+        [Test]
+        public void RoleWeightModifiers_AllCellsWithinHalfToTwo()
+        {
+            // T-TI-U-029: every cell ∈ [0.5, 2.0].
+            foreach (float[] row in TacticalInstructionsConstants.RoleWeightModifiers)
+            {
+                Assert.AreEqual(7, row.Length); // one column per #8 ActionType
+                foreach (float cell in row)
+                {
+                    Assert.GreaterOrEqual(cell, 0.5f);
+                    Assert.LessOrEqual(cell, 2.0f);
+                }
+            }
+        }
+
+        [Test]
+        public void PerActionTables_HaveExpectedDimensions()
+        {
+            Assert.AreEqual(TacticalInstructionsConstants.MENTALITY_LEVELS,
+                            TacticalInstructionsConstants.MentalityRiskMult.Length);
+            Assert.AreEqual(TacticalInstructionsConstants.MENTALITY_LEVELS,
+                            TacticalInstructionsConstants.MentalityLineBias.Length);
+            Assert.AreEqual(TacticalInstructionsConstants.INSTR_BIAS_LEVELS,
+                            TacticalInstructionsConstants.InstrBiasMult.Length);
+
+            Assert.AreEqual(5, TacticalInstructionsConstants.TempoActionBias.Length);
+            foreach (float[] row in TacticalInstructionsConstants.TempoActionBias)
+            {
+                Assert.AreEqual(7, row.Length);
+            }
+
+            Assert.AreEqual(6, TacticalInstructionsConstants.RoleWeightModifiers.Length);
+        }
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                              |
+// | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).   |
+#endregion

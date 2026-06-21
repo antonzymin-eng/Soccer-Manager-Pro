@@ -566,6 +566,37 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/testing-strategy/Tests/CrossSpecScenarioTests.cs` | sim_<scenario> Simulation-layer tests running the cross-spec corpus through ScenarioRunner |
 | `src/testing-strategy/Tests/ScenarioRunnerTests.cs` | v1.2 — 19 ScenarioRunner contract tests: index refusal, format-version rejection, kebab-case validation, implicit-pass rejection, failure diagnostics, NaN in_range, exception + stack capture, seed plumbing (KD-7), per-invocation hermeticity, AR-1 locks (manifest coherence, fixture-refs refusal, newline flattening, duplicate-name / path↔name / cross-spec arity) |
 
+### `src/tactical-instructions/` — Tactical Instructions input layer (Spec #21 T0, June 21, 2026)
+
+> T0 scaffolding (the first landable slice of #21 §7.2): the bottom-of-graph data assembly — 16 enums + 3 aggregate structs + identity factories + 1 constant catalogue + 2 test files. Behaviour-neutral (KD-10): no consumer is wired and the identity factories reproduce today's no-instruction baseline. References only `TacticalDirector.ProjectConstants` per FR-TI-002, but that assembly does not exist yet and T0 consumes nothing from it, so the asmdef `references` array is empty until project-constants lands. Seams into #8/#11–#15 + the consumer-side `TacticTranslation` maps are T2–T3 (gated on match-engine Phase C/D + the `[GT]` config-loader).
+
+| File | Purpose |
+|---|---|
+| `src/tactical-instructions/tactical-instructions.asmdef` | Assembly `TacticalDirector.TacticalInstructions`; empty `references` (project-constants not yet created); autoReferenced true |
+| `src/tactical-instructions/Mentality.cs` | enum (byte, 7): VeryDefensive…VeryAttacking; indexes MentalityRiskMult/LineBias (§3.2) |
+| `src/tactical-instructions/Tempo.cs` | enum (byte, 5): VerySlow…VeryFast; Standard (2) identity; NEW #8 branch (§3.3) |
+| `src/tactical-instructions/TacticWidth.cs` | enum (byte, 5): VeryNarrow…VeryWide; Standard (2) identity; → #12 compactness |
+| `src/tactical-instructions/TacticDefWidth.cs` | enum (byte, 3): Narrow/Standard/Wide; → #12 OOP compactness |
+| `src/tactical-instructions/LineOfEngagement.cs` | enum (byte, 5): VeryLow…VeryHigh; → #13 trigger distances |
+| `src/tactical-instructions/TransitionPlan.cs` | enum (byte, 4): CounterAttack/HoldShape/CounterPress/Regroup; overrides only the transition dimension (§3.2) |
+| `src/tactical-instructions/GkDistributionPolicy.cs` | enum (byte, 6): SlowDown…ThrowOut; → #11 DistributeIntent defaults |
+| `src/tactical-instructions/FocusPlay.cs` | enum (byte, 4): Mixed/LeftFlank/RightFlank/ThroughMiddle; NEW #8/#15 branch |
+| `src/tactical-instructions/TacticPassing.cs` | enum (byte, 3): Short/Mixed/Direct; translated → #8 PassingStyle |
+| `src/tactical-instructions/TacticPressing.cs` | enum (byte, 3): Low/Medium/High; translated → #8 PressingMode |
+| `src/tactical-instructions/TacticTriggerMask.cs` | [Flags] enum (byte): None/BadTouch/BackwardPass/SidelineTrap/WeakReceiver; translated → #13 TriggerFlags |
+| `src/tactical-instructions/TacticFormation.cs` | enum (byte, 3): F442/F433/F4231 (ordinals match #12 FormationFamily); translated → #12 |
+| `src/tactical-instructions/Duty.cs` | enum (byte, 3): Defend/Support/Attack; indexes DutyForeOffsetM/DutyAggressionBias |
+| `src/tactical-instructions/PlayerRole.cs` | enum (byte, 6): Default/Poacher/DeepLyingPlaymaker/BallWinningMid/InsideForward/TargetMan; behavioural role (KD-3, ≠ RoleId); indexes RoleWeightModifiers |
+| `src/tactical-instructions/InstrBias.cs` | enum (byte, 3): Less/Default/More; indexes InstrBiasMult |
+| `src/tactical-instructions/SetPieceDutyFlags.cs` | [Flags] enum (byte): None/FreeKickTaker/CornerTaker/PenaltyTaker (Stage 1+) |
+| `src/tactical-instructions/TeamTactic.cs` | readonly struct (16 fields, canonical Appendix B order) + `Balanced` identity factory (reproduces Stage0Default; FR-TI-031) |
+| `src/tactical-instructions/PlayerInstructions.cs` | readonly struct (per-agent individual instructions) + `Default` identity factory |
+| `src/tactical-instructions/PlayerTactic.cs` | readonly struct (Role + Duty + Instructions) + `Default(role)` identity factory |
+| `src/tactical-instructions/TacticalInstructionsConstants.cs` | single catalogue (Appendix A): Fixed (cardinalities + MARK_TARGET_NONE) / Derived (identity-row properties — expression-bodied to dodge static-init order) / GT (all [GT] tables, illustrative pending T2 balance pass) |
+| `src/tactical-instructions/Tests/tactical-instructions-tests.asmdef` | Test assembly (EditMode; references the production assembly) |
+| `src/tactical-instructions/Tests/EnumOrdinalStabilityTests.cs` | Locks all 16 enums' ordinals / bit-positions + byte-backing + 8-flag ceiling (FR-TI-007) |
+| `src/tactical-instructions/Tests/FactoryIdentityTests.cs` | Locks the identity factories + catalogue identity rows + RoleWeightModifiers [0.5,2.0] (T-TI-U-029) + table dimensions (FR-TI-031) |
+
 ### `tools/` — Stage 0 perf-gate tooling (Spec #18 Appendix E / FR-PO-070)
 
 > Added June 1, 2026. All tools are Stage 0 deliverables per Appendix E. Stage 0+1 upgrades the harness from manual Stopwatch to automated benchmark per §3.3.5.
