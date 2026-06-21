@@ -1,7 +1,15 @@
 # Living World System — Design Supplement
 
 > **Created:** June 21, 2026
-> **Last Updated:** June 21, 2026 (v0.1 — initial draft)
+> **Last Updated:** June 21, 2026 (v0.2 — PASS-1 adversarial fix pass: reframed as a supplement
+> layered on `master-vol-2-human-systems.md` / `master-vol-3-club-operations.md` rather than a
+> greenfield proposal (H1); edge model reconciled to vol-2 §2.1's 0.0–1.0 scale with the extra axes
+> demoted to an explicit additive extension (H2); the contagion section replaced by a consume-as-is
+> reference to vol-2 §2.2 Pulse Propagation (H3); RNG seam corrected to `DeterministicRngService`
+> (M1); deterministic text-generation constraint pinned (M2); deterministic graph-iteration ordering
+> mandated (M3); node-population boundary + save budget defined (M4); board/fan routing into canon
+> (L3/L4); minor trims (L1/L2). All seam claims fact-checked against source.)
+> **Last Updated (prior):** June 21, 2026 (v0.1 — initial draft)
 >
 > **Status:** DESIGN SUPPLEMENT (forward-looking; **NOT** a formal approved spec, **NOT** yet
 > implemented). Targets **Stage 1+** (manager-facing meta layer), sequenced after the match engine
@@ -9,184 +17,229 @@
 > reviewed and, if promoted, written up as a formal spec with FR-IDs, a §5 test plan, and a §9
 > approval checklist.
 > **Author:** —
-> **Purpose:** Propose a graph-driven "living world" relationship and narrative system that attacks
-> the central immersion failure of management games — *every off-pitch interaction (media, players,
-> staff, board, fans) starts repeating itself after a few seasons.* Define the problem precisely,
-> enumerate candidate solutions, recommend a composition, and pin the determinism / authoring
-> constraints any implementation must honour.
+> **Purpose:** Propose the **immersion layer** that sits on top of the already-canonical human-systems
+> model (`master-vol-2-human-systems.md`) to attack the central immersion failure of management games:
+> *every off-pitch interaction (media, players, staff, board, fans) starts repeating itself after a few
+> seasons.* The social graph, happiness gate, pulse propagation, and media systems **already exist in
+> canon** — this note does not redesign them. It adds the three constructs canon lacks that actually
+> defeat repetition: **per-edge episodic memory**, **intent≠surface procedural text**, and **emergent
+> narrative arcs** — and pins the determinism/authoring constraints any implementation must honour.
 
 ---
 
 ## 0. Scope and governance
 
-This supplement covers the **off-pitch interaction layer**: press conferences, player/staff
-conversations, board confidence, fan sentiment, contract talks, dressing-room dynamics, and the
-narrative arcs that emerge from them. It does **not** touch the match engine, the physics/AI
-subsystems (#1–#15), or the tactical-instruction input layer (#21) — it consumes their *outcomes*
-(results, minutes played, transfers, tactical changes) as inputs and produces *social state* as
-output.
+This supplement covers the **off-pitch interaction-generation layer**: how the existing human-systems
+state (happiness, the social graph, board/media relationships) is turned into *non-repeating*
+interactions — press conferences, player/staff conversations, contract talks, and the narrative arcs
+that emerge from them. It does **not** redesign the human-systems model and it does **not** touch the
+match engine, the physics/AI subsystems (#1–#15), or the tactical-instruction layer (#21); it consumes
+their outputs and the canonical social state as inputs and produces *interaction content* + arc state
+as output.
 
-This note introduces **no spec number yet**. It is a candidate for promotion once reviewed. It is
-**not** spec-template-complete. It is governance scaffolding parallel to
-`tactical-instruction-layer-design.md` and `match-engine-design.md`, and is reviewed as a design
-note, not as a spec.
+**This note introduces no new mechanics that canon already owns.** The following are **consume-as-is**:
+
+| Concern | Canonical owner (authoritative) | This note's relationship |
+|---|---|---|
+| Happiness / psychological state | vol-2 §1.1 **H-Gate** (`H = f(Narrative_Stress, Mental_Noise, Acoustic_Distortion, Social_Support)`; Confidence vs. Self-Efficacy split) | consume as input |
+| Social graph (nodes=players, edges, cliques) | vol-2 §2.1 **Structure** (edge weight 0.0–1.0; cliques at mutual >0.6) | consume; extend per §3 |
+| Morale spread across the graph | vol-2 §2.2 **Pulse Propagation** (intra-clique 90–100%/instant; inter-clique 40–60% via bridge, 1–2 day latency) | consume as-is — **not** re-derived here |
+| Isolation / ego-clash / hazing | vol-2 §2.3 / §2.4 / §2.5 | consume as input |
+| Media & narrative events | vol-2 §7 (Press Conference Traps, Transfer Rumor Mill, Commentator Bias, New-Manager Bounce) | consume; arcs in §3.3 sit on top |
+| Board / governance | vol-3 §4 (Board Archetypes, Takeover Cycles, DoF Veto) | consume; board arcs route here |
+| Supporters / crowd | vol-2 §4.1 Supporter Trust, §5.1 Crowd Dynamics | consume; fan node is an aggregate view of these |
+
+**What this note actually adds** (the gap canon leaves): §3.1 per-edge **episodic memory**, §3.2
+**procedural interaction text** (intent vs. surface), §3.3 **emergent arc** state machines.
+
+This is governance scaffolding parallel to `tactical-instruction-layer-design.md`; it is reviewed as a
+design note, not a spec, and is **not** spec-template-complete.
 
 **Hard prerequisites (this layer cannot be runtime-driven until these land):**
 
 1. **A persistent world-state store and a season/calendar loop.** The living world is a *slow loop*
    (event- and day-driven), entirely separate from the 10 Hz tactical and 60 Hz physics match loops.
    No such loop exists yet.
-2. **The `[GT]` config-loader mechanism** (`src/CLAUDE.md` "WHAT IS NOT HERE YET"): every edge gain,
-   decay rate, and threshold below is a `[GT]` tunable with nowhere to be injected until the loader
-   exists.
-3. **The match engine producing structured outcome events** (result, scoreline context, individual
-   performance, injuries, cards) for the world loop to consume.
+2. **The human-systems model from vol-2/vol-3 implemented** (the H-Gate, social graph, pulse
+   propagation). This layer reads that state; it cannot run before it exists.
+3. **The `[GT]` config-loader mechanism** (`src/CLAUDE.md` "WHAT IS NOT HERE YET"): every memory
+   salience weight, arc threshold, and decay rate added below is a `[GT]` tunable with nowhere to be
+   injected until the loader exists.
+4. **The match engine producing structured outcome events** (result, performance, injuries, cards) for
+   the world loop to consume.
 
-Read `CLAUDE.md` and `src/CLAUDE.md` first. Every rule there applies — deterministic time only
-(no `DateTime.Now`), SplitMix64 RNG only (no `System.Random`), state-snapshot determinism, and
-ordinal stability on every new enum. **The entire world graph is serialised state**, which is what
-makes save/load, replay, and debug-rewind work for off-pitch content exactly as they do for the match.
+Read `CLAUDE.md`, `src/CLAUDE.md`, `master-vol-2-human-systems.md`, and `master-vol-3-club-operations.md`
+first. Deterministic time only (no `DateTime.Now`), the injected `DeterministicRngService` only (no
+`System.Random`), state-snapshot determinism, ordinal stability on every new enum. **All new state is
+serialised**, which is what makes save/load, replay, and debug-rewind work off-pitch as they do in-match.
 
 ---
 
 ## 1. The problem, stated precisely
 
-The repetition players perceive is not a content-volume problem — adding more canned lines only delays
-the onset. It is a **statelessness problem**. In current management games an interaction is selected
-from a pool keyed on a shallow trigger (won/lost/big-result), so:
+The repetition players perceive is **not** a content-volume problem — more canned lines only delay
+onset. It is a **statelessness problem**. In current management games an interaction is selected from a
+pool keyed on a shallow trigger (won/lost/big-result), so the same trigger yields the same line
+regardless of relationship history; NPCs have no memory; nothing accumulates into a story.
 
-- the *same trigger* produces the *same interaction* regardless of relationship history;
-- NPCs have **no memory** — a journalist you humiliated last week greets you identically;
-- outcomes don't *propagate* — one unhappy player never infects the squad;
-- nothing *accumulates into a story* — there are events, but no arcs.
+Canon (vol-2) already gives us the *state* to fix this — a happiness gate and a weighted social graph
+that evolve continuously. What canon does **not** specify is how that state is turned into *content*
+without repeating. Three constructs close that gap, and they compose:
 
-The fix is to make each interaction a **function of persistent, evolving state** rather than a draw
-from a pool. The four levers below each attack one of those four failures, and they compose.
-
----
-
-## 2. Candidate solutions
-
-### 2.1 Multilayer relationship graph (the backbone)
-
-Model the world as a directed, multilayer graph. **Nodes** are entities (each player, staff member,
-board member, journalist/outlet, the fanbase as an aggregate node, rival clubs). **Edges** are typed,
-weighted relationships carrying continuous state, e.g.:
-
-| Edge axis | Range | Meaning |
-|---|---|---|
-| `Trust` | −1.0 … +1.0 | will they take you at your word |
-| `Respect` | −1.0 … +1.0 | professional standing |
-| `Warmth` | −1.0 … +1.0 | personal affinity |
-| `Volatility` | 0.0 … 1.0 | how fast this edge moves per event `[GT]` |
-
-"Multilayer" = the same node pair can carry several edge types on parallel layers (manager↔player has
-a professional layer and a personal layer; they move at different rates). An interaction is **generated
-from the current edge vector plus the triggering event**, not selected by the trigger alone. The same
-loss yields a supportive exchange on a high-`Trust` edge and a pointed one on a low-`Trust` edge.
-
-Edges **decay toward a per-entity baseline** each world-tick (relationships cool without contact) and
-are **reinforced by events** (a public defence, a benching, a contract snub). Decay/reinforcement
-constants are all `[GT]`. This is pure state evolution → fully deterministic and snapshot-friendly.
-
-### 2.2 Episodic memory (kills "I've seen this line")
-
-Give each edge a small bounded ring buffer of **episodes**: `(eventKind, salience, worldTick,
-managerChoiceId)`. When an interaction is generated, recent high-salience episodes are eligible to be
-*referenced* ("after what you said about me in March…"). Memory is what converts a graph from
-"current mood" into "a history." Even an 8–16 slot buffer per significant edge removes most of the
-repetition feel, because the *context* the line is built on is never identical twice.
-
-### 2.3 Procedural narrative templates (intent ≠ surface text)
-
-Separate **intent** (graph-driven: *media wants to provoke on title-pressure*) from **surface text**
-(grammar/template expansion with slots filled from real facts — opponent name, the actual xG, the
-player referenced from memory). One intent → effectively unbounded phrasings, all anchored to true
-match facts. This is the layer that prevents the graph itself from feeling repetitive: without it,
-identical intents still emit identical strings.
-
-### 2.4 Emergent storyline arcs (events → stories)
-
-When edge values cross thresholds, **spawn an arc** with its own lifecycle state (e.g.
-`DressingRoomSplit`, `MediaVendetta`, `WonderkidVsVeteran`, `BoardPatienceCollapse`). An arc is a
-small state machine that lives across multiple world-ticks, biases which interactions fire while
-active, and resolves (or escalates) based on subsequent results and manager choices. Arcs are what the
-player remembers as "that season when…".
-
-### 2.5 Social contagion / factions (outcomes propagate)
-
-Let opinion diffuse across the graph: an unhappy senior pro shifts teammates' edges toward the manager
-by an amount scaled by their inter-player edge weight and the senior's influence. This produces
-non-obvious, system-level outcomes (a mishandled benching becomes a dressing-room faction) that stay
-interesting because they aren't a single scripted branch. Contagion is a bounded, deterministic
-relaxation step over the graph each world-tick.
+1. **Episodic memory** — so an interaction can reference its own history (§3.1).
+2. **Procedural text** — so identical intent never emits identical strings (§3.2).
+3. **Emergent arcs** — so events accumulate into seasons-long stories (§3.3).
 
 ---
 
-## 3. Recommended composition
+## 2. Reconciliation with the canonical social graph
 
-**Backbone §2.1 + memory §2.2 + procedural text §2.3 are the minimum viable set** — the graph alone
-still feels repetitive if its outputs are canned, so §2.3 is not optional. **§2.4 (arcs)** and
-**§2.5 (contagion)** are high-value second-phase additions that turn the substrate into stories and
-emergent drama.
+The canonical edge model (vol-2 §2.1) is a **single relationship-strength scalar, 0.0–1.0** (strangers
+→ best friends), with the clique-formation rule "cliques form when 3+ players have mutual edge weights
+> 0.6" and the pulse-propagation retention percentages (§2.2) keyed to that same scale. **This note
+adopts that model unchanged** — the earlier v0.1 signed −1..+1 multi-axis edge is withdrawn because it
+would have silently broken the clique threshold and the propagation math.
 
-Recommended phasing:
+**Additive extension (optional, non-breaking).** Where richer manager↔entity relationships are needed
+(journalists, board members, staff — entities vol-2's *player* graph does not enumerate), this note
+adds **parallel relationship layers on the same 0.0–1.0 scale**, never a re-scaling of the player edge:
 
-| Phase | Adds | Payoff |
+| Layer | Applies to | Notes |
 |---|---|---|
-| A | §2.1 graph + §2.2 memory + §2.3 templates | interactions stop repeating; history is felt |
-| B | §2.4 arcs | events accumulate into seasons-long storylines |
-| C | §2.5 contagion/factions | squad-level emergent drama |
+| `Affinity` (0.0–1.0) | manager ↔ {journalist, board member, staff} | the vol-2 player-edge analogue for non-player nodes |
+| `Trust` (0.0–1.0) | directional: A→B ≠ B→A | will B act on A's word; **asymmetric, stored per direction** |
 
-Phase A is the load-bearing deliverable; B and C are layered on the same state with no rework.
+These are *additional* layers, not a replacement; the vol-2 player edge and its 0.6 clique threshold
+remain authoritative and untouched. The graph is **directed**: every layer is stored per ordered pair,
+and symmetric relationships are simply two equal directed edges (no shared/bidirectional storage).
+
+Morale spread across this graph is **vol-2 §2.2 Pulse Propagation, consumed as-is** — this note does
+**not** define its own contagion rule. Faction *outcomes* (a dressing-room split) are modelled here only
+as an **arc** (§3.3) that *reads* the propagation result; the propagation itself stays in canon.
+
+---
+
+## 3. What this note adds (the concrete gap)
+
+### 3.1 Per-edge episodic memory
+
+Give each significant edge a **bounded ring buffer** of episodes:
+`(eventKind, salience, worldTick, managerChoiceId)`. When an interaction is generated, recent
+high-salience episodes become eligible to be *referenced* ("after what you said about me in March…").
+Memory is what converts the graph from "current mood" into "a history," and it is the single biggest
+lever against the repetition feel because the *context* a line is built on is never identical twice.
+
+- Buffer depth is a small `[GT]` constant (target 8–16) **per significant edge only** — not every edge
+  (see §4 node boundary), to bound save growth.
+- Salience and decay-of-salience are `[GT]`. Low-salience episodes age out first.
+- Episodes are plain serialised structs; `eventKind` is an ordinal-stable enum.
+
+### 3.2 Procedural interaction text (intent ≠ surface)
+
+Separate **intent** (graph-/event-driven: *media wants to provoke on title-pressure*, a vol-2 §7.1
+Press-Conference-Trap class) from **surface text** (slot-filled expansion from real facts — opponent,
+actual xG, the player referenced from §3.1 memory). One intent → effectively unbounded phrasings, all
+anchored to true facts. Without this layer the graph still feels repetitive, because identical intents
+emit identical strings.
+
+> **Determinism constraint (load-bearing).** Surface text is generated by **deterministic template /
+> grammar expansion** with template selection drawn from the injected `DeterministicRngService` (§4).
+> **No generative-model / LLM inference is permitted on any path whose output is persisted in saved
+> state** — that would be non-reproducible and would break snapshot/replay parity, which is a hard
+> project requirement. If model-assisted text is ever explored, it is strictly an offline *authoring*
+> tool that produces the static template corpus, never a runtime call.
+
+### 3.3 Emergent narrative arcs
+
+When canonical state crosses a threshold, **spawn an arc** with its own lifecycle state machine that
+lives across multiple world-ticks, biases which interactions fire while active, and resolves or
+escalates on subsequent results/choices. Arcs are what the player remembers as "that season when…".
+Examples and their canonical triggers:
+
+| Arc | Spawn trigger (reads canon) | Routes into |
+|---|---|---|
+| `DressingRoomSplit` | vol-2 §2.2 pulse divergence across cliques + §2.4 ego clash | squad happiness (vol-2 §1.1) |
+| `MediaVendetta` | repeated low-`Affinity` journalist episodes (§3.1) after §7.1 traps | vol-2 §7 media events |
+| `BoardPatienceCollapse` | results vs. the **vol-3 §4.1 archetype** patience profile (Tycoon 3–5 bad results; Sustainable trend-tolerant) | vol-3 §4 governance (sack/backing), §4.2 takeover |
+| `WonderkidVsVeteran` | vol-2 §2.4 ego-clash trigger on overlapping high-reputation pair | squad + minutes |
+
+Board arcs **do not** invent a board node — they read and route into vol-3 §4 (Board Archetypes,
+Takeover Cycles, DoF Veto). The fan node is an **aggregate view** over vol-2 §4.1 Supporter Trust /
+§5.1 Crowd Dynamics, not a new authority.
+
+Arcs are small serialised state machines; `ArcKind` and arc-state enums are ordinal-stable.
 
 ---
 
 ## 4. Determinism & architecture constraints (non-negotiable)
 
 - **Separate slow loop.** The world graph ticks on the season/calendar loop (event- and day-driven),
-  **never** inside the 10 Hz / 60 Hz match loops. Tag it as such to avoid the loop-conflation hazard
-  called out in `CLAUDE.md`.
-- **RNG.** Any stochastic edge nudge or template selection draws from **SplitMix64** seeded from world
-  state — never `System.Random`, never wall-clock. This keeps "what the journalist asked" replayable.
-- **State, not scripts.** The graph, memory buffers, and arc state machines are plain serialisable
-  structs. Off-pitch save/load, replay, and debug-rewind fall out of the same state-snapshot model the
-  match uses (`CLAUDE.md` "When Writing Code").
-- **Zero magic numbers.** Every gain, decay rate, baseline, volatility, threshold, and contagion
-  coefficient is a `[GT]` constant in a designated catalogue, validated by a balance pass (precedent:
-  #21 G2 balance pass, #8 draft-level approval).
-- **Ordinal stability.** Edge-type, arc-kind, and intent enums are embedded in saved state and likely
-  in any event digest — reordering breaks save compatibility. They carry the ordinal-stability contract
-  from day one.
+  **never** inside the 10 Hz / 60 Hz match loops — tag it to avoid the loop-conflation hazard in
+  `CLAUDE.md`.
+- **RNG seam.** All stochastic selection (template choice, salience tie-breaks, any nudge) draws from
+  the injected **`DeterministicRngService`** via its `Reserve`/`DrawReserved`/`Skip` reservation API
+  (`src/deterministic-sim/DeterministicRngService.cs`), on a **dedicated world-loop stream** — never
+  `System.Random`, never wall-clock. (SplitMix64 is only that service's construction-time match-seed
+  PRNG; the per-draw primitive is HKDF-SHA256 + SipHash-2-4-64 — do not re-implement it here.)
+- **Deterministic graph iteration.** Every pass that walks the graph (memory aging, arc evaluation, and
+  any read of vol-2 propagation results) MUST iterate nodes/edges in a **canonical order keyed on a
+  stable entity ID**, not on dictionary/hashset enumeration order (which is not a stable contract in
+  C#). Order-dependent results without a pinned ordering are a determinism defect — the same class as
+  the EventRegistry static-init-order finding.
+- **State, not scripts.** Graph extensions, memory buffers, and arc state machines are plain
+  serialisable structs; off-pitch save/load, replay, and debug-rewind fall out of the same
+  state-snapshot model the match uses.
+- **Node-population boundary (feasibility-critical).** A full graph over a multi-league world is O(N²)
+  and infeasible. The **active set** is bounded: nodes are *own-club* players/staff/board + a small
+  per-manager set of external contacts (journalists, rival managers, agents the manager has interacted
+  with). Edges and §3.1 memory buffers exist **only within the active set**; world entities outside it
+  carry no per-edge memory until they enter it. A `[GT]` **save-size budget** caps total live edges +
+  memory episodes; oldest low-salience episodes evict first.
+- **Zero magic numbers.** Every salience weight, decay rate, arc threshold, and buffer depth is a `[GT]`
+  constant in a designated catalogue, validated by a balance pass (precedent: #21 G2 balance pass, #8
+  draft-level approval).
+- **Ordinal stability.** `eventKind`, `ArcKind`, intent, and the new relationship-layer enums are
+  embedded in saved state — reordering breaks save compatibility. They carry the ordinal-stability
+  contract from day one.
 
 ---
 
 ## 5. Sequencing
 
-This is **Stage 1+**, after: the match engine produces structured outcome events; the `[GT]`
-config-loader exists; and ideally after #21 (tactical instructions) so manager *tactical* intent and
-manager *social* intent share the same config and meta-loop plumbing. It does **not** block, and is
-not blocked by, any Stage-0 physics/AI spec. Promotion path mirrors #21: this note → adversarial
-passes → formal spec folder with FR-IDs, §5 test plan, §9 checklist.
+**Stage 1+**, after: the vol-2/vol-3 human-systems model is implemented; the match engine produces
+structured outcome events; the `[GT]` config-loader exists; and ideally after #21 so manager *tactical*
+and manager *social* intent share the same config and meta-loop plumbing. It does **not** block, and is
+not blocked by, any Stage-0 physics/AI spec. Promotion path mirrors #21: this note → adversarial passes
+→ formal spec folder with FR-IDs, §5 test plan, §9 checklist.
+
+Recommended phasing (all on the same state, no rework between phases):
+
+| Phase | Adds | Payoff |
+|---|---|---|
+| A | §3.1 memory + §3.2 procedural text (on the existing vol-2 graph) | interactions stop repeating; history is felt |
+| B | §3.3 arcs | events accumulate into seasons-long storylines |
+
+Phase A is the load-bearing deliverable; B layers on with no rework. (No "contagion" phase — that is
+vol-2 §2.2, already canonical.)
 
 ---
 
 ## 6. Risks / open questions for review
 
-1. **Authoring cost is the real risk.** Emergent + procedural systems need a sizeable, curated
-   template/grammar corpus and tuning guardrails or they emit nonsense. Budget a content-authoring and
-   balance pass comparable to a spec's `[GT]` validation — this is larger than the engineering.
-2. **Tuning legibility vs. emergence.** The more emergent the system, the harder designers can predict
-   why an outcome happened. Need a debug/inspector view of the graph + arc state (also the natural
+1. **Authoring cost is the real risk.** The §3.2 template/grammar corpus and §3.3 arc library need
+   sizeable, curated content plus tuning guardrails or they emit nonsense. Budget a content-authoring +
+   balance pass comparable to a spec's `[GT]` validation — larger than the engineering.
+2. **Tuning legibility vs. emergence.** The more emergent the arcs, the harder designers predict why an
+   outcome happened. Needs a debug/inspector view of the graph + memory + arc state (also the natural
    home for replay verification).
-3. **Combinatorial test surface.** "Interaction depends on full graph state" is hard to unit-test.
-   Likely needs scenario-style fixtures (cf. the #19 ScenarioRunner pattern) that seed a graph,
-   tick the world loop, and assert envelope properties of the generated intent — not exact strings.
-4. **Aggregate vs. individual fan modelling.** Single fanbase node (cheap, less rich) vs. segmented
-   fan factions (richer, more state). Recommend starting aggregate; segmentation is a contagion-layer
-   extension.
-5. **Localisation.** Procedural template expansion interacts badly with grammatical-gender/inflection
-   languages. If multi-language is a goal, the template grammar must be designed for it up front, not
-   retrofitted.
-6. **Scope boundary with the match engine.** Confirm the world loop only ever *reads* match outcome
-   events and never reaches into live match state — preserves the clean layer separation.
+3. **Combinatorial test surface.** "Interaction depends on full graph state" resists unit testing.
+   Likely needs scenario-style fixtures (cf. the #19 ScenarioRunner pattern) that seed a graph + memory,
+   tick the world loop, and assert *envelope* properties of the generated intent — not exact strings.
+4. **Localisation.** Procedural template expansion interacts badly with grammatical-gender/inflection
+   languages; if multi-language is a goal the grammar must be designed for it up front, not retrofitted.
+5. **Boundary discipline.** Confirm the world loop only ever *reads* match-outcome events and canonical
+   human-systems state, and never writes back into vol-2's H-Gate / propagation math (it adds layers and
+   arcs on top; it must not become a second authority over morale).
+6. **Active-set churn.** When an external contact leaves the active set (manager never interacts again),
+   what happens to its memory buffer — hard-evict, or cold-store a compressed summary? Affects "the
+   journalist who remembers you from three clubs ago" fantasy vs. save size.
