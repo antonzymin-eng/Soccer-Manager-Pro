@@ -52,15 +52,33 @@ checklist entries are fabricated (CLAUDE.md).
 
 ## 9.3 Non-blocking (Stage-1 implementation-time, per §8.3)
 
-ERR-022-001..005 land at their named stage; none gate spec approval. **Runtime activation** remains
+ERR-022-001..004 land at their named stage; none gate spec approval. **Runtime activation** remains
 gated on KD-10 (world store + season loop; vol-2/vol-3 impl.; `[GT]` config-loader; match-outcome
 events) — a Stage-1 dependency, not a spec-approval gate.
 
-## 9.4 Sign-off
+## 9.4 Lead-developer review gates (R-01..R-05)
 
-Pending. Advancement to `APPROVED` requires G1 (section-file PASS-1 + fix pass) and G3 (lead-developer
-R-01..R-05). G2 is explicitly carried forward as a post-APPROVED Stage-1 follow-up — the `[GT]`
-magnitudes are illustrative and are not relied on for sign-off (the contract is the shapes/directions).
+> **Status: AWAITING SIGN-OFF.** Each box is the lead developer's to tick. They are **unchecked** —
+> do not mark complete without the lead developer's review. G1 (adversarial review) and §9.1 are DONE;
+> these five gates plus the §9.5 decision are what advances #22 `IN REVIEW → APPROVED`.
+
+| # | Review gate | Evidence to confirm | Status |
+|---|---|---|---|
+| R-01 | **Content completeness** — all sections (§1–§9 + appendices) present per the CLAUDE.md 9-section template | `outline.md`, `section-1..8`, `section-9-approval-checklist.md`, `appendices.md` (all present) | ☐ |
+| R-02 | **Technical accuracy** — formulas, pseudocode, constants, and worked examples correct and internally consistent (e.g. §3.1 event→0.56, decay→~0.016; determinism tiebreaks; `NextEpisodeId` monotonicity) | §3.1–§3.6; Appendix A; ten adversarial passes (no High; all M/L resolved) | ☐ |
+| R-03 | **Cross-spec consistency** — XC-022-001..014 point to sections that exist and say what is claimed; ERR-022-001..004 correctly scoped as non-blocking back-props | §8.1 / §8.3 | ☐ |
+| R-04 | **Stage-binding correctness** — Stage-1 forward split unambiguous (KD-10); no Stage-1 interface authored against an unspecified consumer (FR-LW-031); T0 code is data-types-only, no live wiring to nonexistent upstreams | §1.6 / §7.1; `src/living-world/` (types + pure math + tests only) | ☐ |
+| R-05 | **Approval granted** — `SPEC_INDEX.md` row 22 to flip `IN REVIEW → APPROVED`; G2 balance pass recorded as the sole carried-forward post-APPROVED item | `SPEC_INDEX.md` row 22; §9.2 G2 | ☐ |
+
+## 9.5 Decision
+
+**PENDING.** Advancement to `APPROVED` requires R-01..R-05 above (lead developer) — G1 is DONE (ten
+section-file adversarial passes, no High) and §9.1 self-contained content is satisfied. **G2** (the
+`[GT]` balance pass) is explicitly carried forward as a post-APPROVED Stage-1 follow-up — the magnitudes
+in §3/Appendix A are illustrative and were **not** relied on for review; the contract is the
+shapes/directions (precedent #21 G2, #8 draft-level, #9 §9.8, #16 post-approved items). No High finding
+appeared in any of the ten passes; the design has been stable since PASS-1. **Lead-developer signature:**
+______________________  **Date:** ____________.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
