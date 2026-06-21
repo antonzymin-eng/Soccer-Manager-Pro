@@ -1,7 +1,15 @@
 # Living World System — Design Supplement
 
 > **Created:** June 21, 2026
-> **Last Updated:** June 21, 2026 (v0.5 — folded in two resolved review decisions: new §6 **Verification
+> **Last Updated:** June 21, 2026 (v0.6 — PASS-4 adversarial fix pass on the v0.5 additions, L-only:
+> §6 CI-gate claim softened to forward-looking "intended to run" (L1); coverage/gap detection gains an
+> expected-rarity annotation so designed scarcity isn't flagged as a gap (L2); soak liveness reframed
+> as a checkable per-instance max-arc-lifetime bound rather than an unprovable global "every arc
+> resolves" (L3); save-size budget unified to one canonical scope — live edges + live episodes + cold
+> summaries (L4); background-tier "rivalries forming" reworded to "form swings" to not imply an arc, and
+> deterministic tier promotion/demotion pinned (L5); determinism-replay caveated to single-machine
+> snapshot determinism. No High/Medium findings; convergence terminal.)
+> **Last Updated (prior):** June 21, 2026 (v0.5 — folded in two resolved review decisions: new §6 **Verification
 > & stress testing** (four automated script classes on the #19 ScenarioRunner + `tools/spec-stress/` —
 > invariant fuzzing, long-horizon soak, coverage/gap detection, determinism replay — resolving §7 risk 2
 > on the structural side); §4 reworked into a **two-tier LOD** model with an abstracted, deterministic
@@ -241,19 +249,21 @@ never leave a live arc referencing a dropped episode.
   and infeasible. The **active set** is bounded: nodes are *own-club* players/staff/board + a small
   per-manager set of external contacts (journalists, rival managers, agents the manager has interacted
   with). Edges and §3.1 memory buffers exist **only within the active set**; world entities outside it
-  carry no per-edge memory until they enter it. A `[GT]` **save-size budget** caps total live edges +
-  memory episodes; oldest low-salience episodes evict first (arc-pinned episodes excepted, §3.3).
+  carry no per-edge memory until they enter it. The `[GT]` **save-size budget** is canonical here and
+  caps the three live-state classes together — **live edges + live episodes + cold summaries**; oldest
+  low-salience episodes evict first (arc-pinned episodes excepted, §3.3).
 - **Two-tier level-of-detail (LOD).** The world runs at two fidelities. The **deep tier** (per-edge
   memory, procedural text, arcs) runs **only for the human manager's active set**. Every other entity —
   AI-managed clubs, out-of-set contacts — runs an **abstracted background tier**: a cheap, deterministic
-  simulation of living-world events/interactions between off-set entities (transfers, sackings, rivalries
-  forming) with **no per-edge memory or arcs**, just summary state. The background tier obeys the same
-  determinism rules (seeded `DeterministicRngService` stream, bounded per-tick cost) so the wider world
-  stays reproducible.
+  simulation of living-world events between off-set entities (transfers, sackings, form swings) held as
+  **summary state only — no per-edge memory or arcs**. The background tier obeys the same determinism
+  rules (seeded `DeterministicRngService` stream, bounded per-tick cost) so the wider world stays
+  reproducible. **Tier promotion/demotion is deterministic** — an entity crossing the active-set boundary
+  transitions state at a defined point, never losing or duplicating it.
 - **Cold-store + rehydration.** When a contact leaves the active set, its memory is **compressed to a
   cold-stored summary** (not hard-evicted) so the "journalist who's had it in for you across three clubs"
   fantasy survives; when that contact re-enters the active set, the summary **rehydrates** into live
-  edges/episodes. The `[GT]` save-size budget below covers live edges + cold summaries together.
+  edges/episodes. Cold summaries count against the save-size budget above.
 - **Zero magic numbers.** Every salience weight, decay rate, arc threshold, and buffer depth is a `[GT]`
   constant in a designated catalogue, validated by a balance pass (precedent: #21 G2 balance pass, #8
   draft-level approval).
@@ -296,15 +306,20 @@ the inspector view + human review):
    never-violated rules: all edge/layer values stay in [0.0, 1.0]; no dangling `episodeId`; no orphan or
    unresolvable arc; live edges + cold summaries within the `[GT]` save-size budget; rehydration of a
    cold summary reproduces a valid edge.
-2. **Long-horizon soak.** Run N seasons headless and assert no deadlock, no runaway/monotonic state
-   drift, and that every arc that can spawn can also reach a resolved state (no permanently-stuck arcs).
+2. **Long-horizon soak.** Run N seasons headless and assert no deadlock and no runaway/monotonic state
+   drift; the checkable liveness rule is **per-instance**: no arc instance stays unresolved beyond a
+   `[GT]` maximum lifetime (a finite soak cannot prove global "every arc resolves," but it can bound
+   every instance it spawns).
 3. **Coverage / gap detection.** Track which `InteractionIntent` / `ArcKind` actually fire across a large
    seeded corpus; **unreached content is the "gap"** — surfaced automatically rather than found in play.
+   Content that is *intentionally* rare (e.g. takeovers) carries an expected-rarity annotation so the
+   harness flags genuine unreachability, not designed scarcity.
 4. **Determinism replay.** Same seed + snapshot-restore (deep tier *and* background tier) must produce
-   bit-identical world state — the off-pitch analogue of the match determinism gate.
+   bit-identical world state on the pinned host — the off-pitch analogue of the match determinism gate
+   (single-machine snapshot determinism per `CLAUDE.md`; cross-platform parity stays Stage 5+).
 
-These run in the non-certifying CI gate alongside the existing suites; any invariant breach or
-determinism mismatch fails the build.
+These are **intended to run** in the non-certifying CI gate (`tools/dotnet-ci/`) alongside the existing
+suites once the system is implemented; any invariant breach or determinism mismatch would fail the build.
 
 ---
 
@@ -327,4 +342,4 @@ determinism mismatch fails the build.
 6. **Active-set churn — RESOLVED (direction set).** Contacts leaving the active set are **cold-stored as
    compressed summaries** (not hard-evicted) and **rehydrate** on re-entry; off-set entities run the
    **abstracted background tier** (§4 LOD). Open residue: summary compression schema + the `[GT]` budget
-   split between live edges and cold summaries.
+   split across live edges, live episodes, and cold summaries.
