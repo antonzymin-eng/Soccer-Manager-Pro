@@ -1,5 +1,10 @@
 # Living World System — Design Supplement
 
+> **SUPERSEDED June 21, 2026** — promoted to formal **Spec #22 (Living World System)** at
+> `docs/specs/living-world/` (status IN REVIEW; see `SPEC_INDEX.md` row 22). This note is retained for
+> history; the spec section files are authoritative. Folder/assembly naming reconciled there
+> (`living-world/` / `TacticalDirector.LivingWorld`).
+>
 > **Created:** June 21, 2026
 > **Last Updated:** June 21, 2026 (v0.7 — recorded five §7 review decisions: §7.1 authoring corpus is
 > AI-generated as an offline tool (volume no longer the gate; curation/balance still to do); §7.2 full
