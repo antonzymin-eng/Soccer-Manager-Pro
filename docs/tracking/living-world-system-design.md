@@ -304,8 +304,8 @@ the inspector view + human review):
 
 1. **Invariant / property fuzzing.** Random seeds drive the world loop; after every tick assert the
    never-violated rules: all edge/layer values stay in [0.0, 1.0]; no dangling `episodeId`; no orphan or
-   unresolvable arc; live edges + cold summaries within the `[GT]` save-size budget; rehydration of a
-   cold summary reproduces a valid edge.
+   unresolvable arc; total live state (live edges + live episodes + cold summaries) within the `[GT]`
+   save-size budget; rehydration of a cold summary reproduces a valid edge.
 2. **Long-horizon soak.** Run N seasons headless and assert no deadlock and no runaway/monotonic state
    drift; the checkable liveness rule is **per-instance**: no arc instance stays unresolved beyond a
    `[GT]` maximum lifetime (a finite soak cannot prove global "every arc resolves," but it can bound
