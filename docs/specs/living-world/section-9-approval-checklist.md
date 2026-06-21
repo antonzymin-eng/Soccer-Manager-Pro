@@ -1,8 +1,8 @@
 # Living World System Specification #22 — Section 9: Approval Checklist
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.2 — PASS-1 fix pass landed; G1 marked DONE; FR count 34; tests ≥73; ERR back-props 001..004; G2/G3 remain open)
-**Version:** 0.2
+**Last Updated:** June 21, 2026 (v0.3 — PASS-2 fix pass landed; G1 evidence cites both passes; G2/G3 remain open)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 ---
@@ -45,7 +45,7 @@ checklist entries are fabricated (CLAUDE.md).
 
 | # | Gate | Status |
 |---|---|---|
-| G1 | Formal adversarial review of the section files (PASS-1) + fix pass | **DONE** — `adversarial-review-section-files-v1.md` (4M+3L, no High) resolved in the v0.2 fix pass same day |
+| G1 | Formal adversarial review of the section files (PASS-1 + PASS-2) + fix passes | **DONE** — `adversarial-review-section-files-v1.md` (4M+3L → v0.2) and `…-v2.md` (3M+3L, no High → v0.3), all resolved; PASS-2 caught two issues introduced by PASS-1 fixes |
 | G2 | `[GT]` value **balance pass** (numerical mirror + adversarial) before values are pinned | **CARRIED FORWARD (post-APPROVED, non-blocking)** — §3/Appendix A values are illustrative; tests assert shape/direction not magnitude (§5). Precedent: #21 G2, #8 draft-level, #9 §9.8, #16 post-approved |
 | G3 | Lead-developer R-01..R-05 sign-off | **OPEN** |
 | G4 | `SPEC_INDEX.md` row 22 reflects status | DONE — IN REVIEW, Jun 21, 2026 |
@@ -67,4 +67,5 @@ magnitudes are illustrative and are not relied on for sign-off (the contract is 
 |---|---|---|---|
 | 0.1 | 2026-06-21 | — | Initial checklist on promotion from design supplement v0.7; §9.1 self-contained items satisfied; G1 (section-file PASS-1), G2 (balance pass), G3 (sign-off) open. |
 | 0.2 | 2026-06-21 | — | PASS-1 fix pass (4M+3L resolved): FR-LW-034 added; counts updated (34 FRs / ≥73 tests); ERR back-props 001..004; G1 marked DONE. G2/G3 remain open. |
+| 0.3 | 2026-06-21 | — | PASS-2 fix pass (3M+3L resolved): NaN sentinel → `ActiveLayers` bitmask; FR-LW-034 scoped to world-state-subset digest; cold-summary eviction; `Arc.State` stability; G1 cites both passes. G2/G3 remain open. |
 #endregion

@@ -1,8 +1,8 @@
 # Living World System Specification #22 — Appendices
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.2 — PASS-1 fix pass: added the active-layer-by-node-type matrix to Appendix C (M-3))
-**Version:** 0.2
+**Last Updated:** June 21, 2026 (v0.3 — PASS-2 fix pass: `ActiveLayers` bitmask added to the Appendix B snapshot order, replacing the NaN sentinel (AR2-M1))
+**Version:** 0.3
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -32,7 +32,7 @@ the shape/direction, not the value (precedent #21 G2, #8 draft-level). No `[EST]
 
 ## Appendix B — Canonical snapshot field order (pinned before first serialisation)
 
-`RelationshipEdge { FromId, ToId, PlayerEdge, Affinity, Trust, Memory[] }` →
+`RelationshipEdge { FromId, ToId, ActiveLayers, PlayerEdge, Affinity, Trust, Memory[] }` →
 `MemoryEpisode { EpisodeId, Kind, Salience, WorldTick, ManagerChoiceId }` →
 `Arc { Kind, State, Cause, PinnedEpisodes[], SpawnTick, MaxLifetimeTick }` →
 `SpawnCause { TriggerId, Inputs[], SnapshotRef, WorldTick }` →

@@ -1,9 +1,10 @@
 # Living World System Specification #22 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.2 — PASS-1 fix pass: added FR-LW-034 additive-only identity (M-1);
-layer-applicability-by-node-type rule + NaN sentinel (M-3); open-roster enum stability note (L-1))
-**Version:** 0.2
+**Last Updated:** June 21, 2026 (v0.3 — PASS-2 fix pass: replaced the NaN inactive-layer sentinel with an
+`ActiveLayers` bitmask (det-safe round-trip) (AR2-M1); FR-LW-034 identity scoped to the world-state
+subset digest, not full payload (AR2-M2); `Arc.State` added to the FR-LW-028 stability contract (AR2-L2))
+**Version:** 0.3
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -41,13 +42,13 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-LW-025 | A contact leaving the active set is compressed to a cold-stored summary (not hard-evicted); on re-entry the summary rehydrates into live edges/episodes. Tier promotion/demotion is deterministic and neither loses nor duplicates state. | MUST | KD-7 / F5 |
 | FR-LW-026 | One `[GT]` save-size budget caps total live state — live edges + live episodes + cold summaries — together; eviction is governed by §3.2. | MUST | §3.2 / §4.5 |
 | FR-LW-027 | The world loop only reads canonical human-systems state and match-outcome events; it never writes back into the H-Gate or vol-2 §2.2 propagation math. | MUST | KD-9 |
-| FR-LW-028 | Every ordinal-stable enum (`EventKind`, `ArcKind`, `InteractionIntent`, `RelationshipLayer`) and stable ID (`episodeId`, `managerChoiceId`, arc reference IDs) is APPEND-only and carries a stability test. | MUST | #16 §6.2 |
+| FR-LW-028 | Every ordinal-stable enum (`EventKind`, `ArcKind`, `InteractionIntent`, `RelationshipLayer`), the per-kind `Arc.State` byte values, and stable IDs (`episodeId`, `managerChoiceId`, arc reference IDs) are APPEND-only and carry a stability test. | MUST | #16 §6.2 |
 | FR-LW-029 | Every constant carries exactly one tag (`[GT]`/`[FIXED]`/`[DERIVED]`/`[CROSS]`); no `[EST]` remains at `APPROVED`; all live in one catalogue `LivingWorldConstants.cs`. | MUST | CLAUDE.md / #20 |
 | FR-LW-030 | The system is validated by the §6 automated harnesses (invariant fuzzing, soak, coverage/gap, determinism replay) on the #19 ScenarioRunner; structural conformance is machine-checked, quality is human-reviewed. | MUST | §5 / §6 |
 | FR-LW-031 | No interface or accessor is produced against an unspecified consumer (no phantom interfaces). | MUST | CLAUDE.md / #20 FR-CS-048 |
 | FR-LW-032 | Stage-1 activation is gated on KD-10 prerequisites (world store + season loop; vol-2/vol-3 impl.; `[GT]` config-loader; structured match-outcome events). | MUST | KD-10 / §7 |
 | FR-LW-033 | Every §3 mapping/formula includes units, valid input ranges, and at least one worked example (inline or Appendix A). | MUST | CLAUDE.md |
-| FR-LW-034 | **Additive-only identity:** a world with no recorded episodes and no spawned arcs produces the canonical human-systems behaviour exactly — this layer only *adds* on top and never alters a baseline outcome. The §3.1 layer update/decay rule reduces to a no-op when no event/decay applies. | MUST | KD-1 / KD-9 / §2.3 |
+| FR-LW-034 | **Additive-only identity:** a world with no recorded episodes and no spawned arcs produces the canonical human-systems behaviour exactly — this layer only *adds* on top and never alters a baseline outcome. Identity is asserted on the **human-systems/world-state subset** digest, NOT the full snapshot payload (which necessarily differs once FR-LW-022/§4.6 adds the living-world block + `SNAPSHOT_SCHEMA_VERSION` bump — cf. #21 DET-002). The §3.1 update/decay rule reduces to a no-op when no event/decay applies. | MUST | KD-1 / KD-9 / §2.3 |
 
 ## 2.2 Data structures
 
@@ -59,6 +60,7 @@ FR-LW-022 activates serialisation into the world store.
 | Field | Type | Notes |
 |---|---|---|
 | FromId / ToId | `EntityId` | directed; symmetric relations = two equal directed edges |
+| ActiveLayers | `byte` | bitmask of which layers are meaningful for this pairing (FR-LW-005) |
 | PlayerEdge | `float` 0.0–1.0 | vol-2 §2.1 relationship strength (only between players; clique math owns it) |
 | Affinity | `float` 0.0–1.0 | manager↔non-player personal relationship (KD-3) |
 | Trust | `float` 0.0–1.0 | directional; will `ToId` act on `FromId`'s word |
@@ -66,9 +68,11 @@ FR-LW-022 activates serialisation into the world store.
 
 **Layer applicability by node-type (FR-LW-005).** Not every layer is active on every edge. `PlayerEdge`
 is valid **only** on player↔player pairs (it owns the vol-2 clique math); `Affinity` is valid **only**
-on manager↔non-player pairs (journalist/board/staff); `Trust` is valid on manager↔contact pairs.
-Inactive layers are stored as a sentinel `NaN` and are excluded from the F6 [0,1] invariant and from all
-updates; an active-layer matrix per node-type pairing is pinned in Appendix C.
+on manager↔non-player pairs (journalist/board/staff); `Trust` is valid on manager↔contact pairs. The
+`ActiveLayers` bitmask records which layers are meaningful; **inactive layers hold a defined `0.0`** and
+are excluded from updates and from the F6 invariant **by mask** (not by a NaN sentinel — NaN would break
+the F5 bitwise round-trip and the snapshot digest). The active-layer matrix per node-type pairing is
+pinned in Appendix C.
 
 ### 2.2.2 `MemoryEpisode`
 
@@ -122,7 +126,8 @@ A fresh `RelationshipEdge` initialises every layer to the vol-2 baseline (strang
 contacts; existing canonical relationship strength for known players) with an empty memory buffer and no
 arcs. A world with no recorded episodes and no spawned arcs reproduces the canonical human-systems
 behaviour exactly (this layer only *adds* on top) — the normative additive-only identity contract
-(**FR-LW-034**), verified by T-LW-DET-007.
+(**FR-LW-034**), asserted on the human-systems/world-state **subset** digest (not the full snapshot
+payload, which gains the living-world block per §4.6) and verified by T-LW-DET-007.
 
 ## 2.4 Failure modes
 
@@ -133,4 +138,4 @@ behaviour exactly (this layer only *adds* on top) — the normative additive-onl
 | F3 | Runtime model inference on a saved-state path | static gate / code review; FR-LW-012 | forbidden by construction; offline authoring only | T-LW-FAIL-003 |
 | F4 | Save-size budget overflow | budget check each tick (FR-LW-026) | salience eviction (arc-pinned excepted) | T-LW-FAIL-004 |
 | F5 | Tier transition loses/duplicates state on cold-store↔rehydrate | round-trip equality check | deterministic, lossless transition contract (FR-LW-025) | T-LW-FAIL-005 |
-| F6 | Edge/layer value escapes [0.0, 1.0] | invariant fuzzer (§6.1) | clamp + author-error log | T-LW-FAIL-006 |
+| F6 | An **active** layer value (per `ActiveLayers`) escapes [0.0, 1.0] | invariant fuzzer (§6.1) | clamp + author-error log; inactive layers are not checked | T-LW-FAIL-006 |

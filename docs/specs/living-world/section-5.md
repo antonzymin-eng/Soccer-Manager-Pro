@@ -1,9 +1,9 @@
 # Living World System Specification #22 — Section 5: Test Plan
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.2 — PASS-1 fix pass: added T-LW-DET-007 for FR-LW-034 additive-only
-identity (M-1); determinism count 6→7, total ≥73; traceability row for FR-LW-034)
-**Version:** 0.2
+**Last Updated:** June 21, 2026 (v0.3 — PASS-2 fix pass: T-LW-DET-007 scoped to the world-state-subset
+digest, not full payload (AR2-M2); aligned with the `ActiveLayers` bitmask)
+**Version:** 0.3
 **Status:** IN REVIEW (June 21, 2026)
 
 > Test-ID prefixes follow #19 §3.1.4: `T-LW-U-*` unit, `T-LW-I-*` integration, `sim_*` / `T-LW-SIM-*`
@@ -57,8 +57,10 @@ identity (M-1); determinism count 6→7, total ≥73; traceability row for FR-LW
   pinned host (single-machine; FR-LW-022).
 - **T-LW-DET-006** — `worldTick` advances only on the calendar clock, never the match loops (FR-LW-019).
 - **T-LW-DET-007** — **additive-only identity:** an empty world (no episodes, no arcs) yields a
-  canonical-behaviour digest bit-identical to the human-systems baseline with this layer disabled; an
-  all-inactive-layer edge contributes nothing to any outcome (FR-LW-034).
+  **world-state-subset** digest bit-identical to the human-systems baseline with this layer disabled
+  (the full snapshot payload differs by the living-world block per §4.6 and is NOT asserted equal — cf.
+  #21 DET-002); an all-inactive-layer edge (per `ActiveLayers`) contributes nothing to any outcome
+  (FR-LW-034).
 
 ## 5.5 Simulation / closed-loop (`T-LW-SIM-*`, via #19 ScenarioRunner)
 

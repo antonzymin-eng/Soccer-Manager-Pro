@@ -1,10 +1,9 @@
 # Living World System Specification #22 — Section 3: Algorithms
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.2 — PASS-1 fix pass: background tier reframed as reflect/summarise,
-not authority, for off-screen outcomes (M-4); §3.1 update rule bound to FR-LW-005/034 + active-layer
-gating (L-3))
-**Version:** 0.2
+**Last Updated:** June 21, 2026 (v0.3 — PASS-2 fix pass: §3.2 transient buffer-growth bounded by
+simultaneous pins + budget so FR-LW-008 holds in steady state (AR2-L1))
+**Version:** 0.3
 **Status:** IN REVIEW (June 21, 2026)
 
 > All formulas state units and input ranges and carry a worked example (FR-LW-033). Constants reference
@@ -46,7 +45,9 @@ event:
 
 1. Construct `episode = (episodeId = nextId(edge), kind, salience0, worldTick, managerChoiceId)`.
 2. Append; if the buffer is full, evict the **lowest-salience** episode **that is not arc-pinned**
-   (FR-LW-010/018). If all are pinned, grow transiently and flag against the §4.5 budget.
+   (FR-LW-010/018). If all are pinned, the buffer grows transiently — bounded by the count of
+   simultaneous arc pins on that edge and capped by the §4.5 budget — and shrinks back to depth as arcs
+   resolve and unpin (so FR-LW-008 "bounded" holds in steady state).
 3. Each `worldTick`, decay every episode's salience: `s' = s · (1 − decayRate)` (`[GT]`).
 
 `episodeId` is monotonic per edge and is the durable handle an arc pins and that survives save/load.

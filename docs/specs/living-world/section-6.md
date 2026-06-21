@@ -1,8 +1,9 @@
 # Living World System Specification #22 — Section 6: Performance & Verification Harnesses
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** June 21, 2026 (v0.2 — PASS-2 fix pass: §6.1 invariant qualifies F6 to active layers and
+F4 to the §4.5 eviction order; F5 stated as bitwise round-trip (AR2-M1))
+**Version:** 0.2
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -19,10 +20,11 @@ costs.
 
 ## 6.1 Invariant / property fuzzing (`T-LW-EXP-001`)
 
-Random world seeds drive the loop; after every tick assert the never-violated rules: all edge/layer
-values ∈ [0,1] (F6); no dangling `episodeId` (F1); no orphan or unresolvable arc; total live state
-(live edges + live episodes + cold summaries) within the `[GT]` budget (F4); a cold-summary rehydration
-reproduces a valid edge (F5).
+Random world seeds drive the loop; after every tick assert the never-violated rules: every **active**
+layer value (per `ActiveLayers`) ∈ [0,1] (F6); no dangling `episodeId` (F1); no orphan or unresolvable
+arc; total live state (live edges + live episodes + cold summaries) within the `[GT]` budget, with the
+§4.5 eviction order applied (F4); a cold-summary rehydration reproduces a bitwise-equal edge on retained
+fields (F5).
 
 ## 6.2 Long-horizon soak (`T-LW-EXP-002`)
 
