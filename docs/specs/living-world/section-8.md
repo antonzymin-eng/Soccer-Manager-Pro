@@ -1,11 +1,12 @@
 # Living World System Specification #22 — Section 8: Cross-References, Back-Props, Invariant Binding
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.3 — PASS-5 fix pass: §8.2 fatigue row marked n/a — this layer consumes
+**Last Updated:** June 21, 2026 (v0.4 — PASS-7 fix pass: XC-022-008 updated to world.arcs/world.text sub-streams (AR7-L1))
+**Last Updated (prior):** June 21, 2026 (v0.3 — PASS-5 fix pass: §8.2 fatigue row marked n/a — this layer consumes
 the H-Gate (happiness), not fatigue (AR5-L2))
 **Last Updated (prior):** June 21, 2026 (v0.2 — PASS-1 fix pass: ERR-022-005 recategorised — the season-calendar
 clock is this spec's own forward deliverable (§7.1), not a cross-spec back-prop (L-2); back-props now 001..004)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -21,7 +22,7 @@ clock is this spec's own forward deliverable (§7.1), not a cross-spec back-prop
 | XC-022-005 | vol-2 §7 media & narrative | intent classes + arc routing (FR-LW-013/015) |
 | XC-022-006 | vol-3 §4 board/governance | board arc routing (FR-LW-015) |
 | XC-022-007 | vol-2 §4.1 / §5.1 supporters | aggregate fan node (FR-LW-015) |
-| XC-022-008 | #16 `DeterministicRngService` | dedicated world RNG stream (FR-LW-020) |
+| XC-022-008 | #16 `DeterministicRngService` | dedicated `world.arcs`/`world.text` RNG sub-streams (FR-LW-020) |
 | XC-022-009 | #16 snapshot / `SNAPSHOT_SCHEMA_VERSION` | world-state serialisation (FR-LW-022 / §4.6) |
 | XC-022-010 | #19 `ScenarioRunner` / `tools/spec-stress` | verification harnesses (FR-LW-030 / §6) |
 | XC-022-011 | #18 hot-path/cold-path model | slow-loop posture (§6.0) |

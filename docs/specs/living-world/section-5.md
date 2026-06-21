@@ -1,9 +1,10 @@
 # Living World System Specification #22 — Section 5: Test Plan
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.4 — PASS-4 fix pass: added T-LW-U-035 verifying the read-only
+**Last Updated:** June 21, 2026 (v0.6 — PASS-7 fix pass: T-LW-EXP-005 adds a tie-forced eviction determinism case (AR7-M1))
+**Last Updated (prior):** June 21, 2026 (v0.4 — PASS-4 fix pass: added T-LW-U-035 verifying the read-only
 `PlayerEdge` contract (AR4-M1); unit 35, total ≥74; traceability updated)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** IN REVIEW (June 21, 2026)
 
 > Test-ID prefixes follow #19 §3.1.4: `T-LW-U-*` unit, `T-LW-I-*` integration, `sim_*` / `T-LW-SIM-*`
@@ -80,7 +81,9 @@ asserts an envelope predicate on the realised world state, not exact strings.
 The four §6 harness classes are realised here: **T-LW-EXP-001** invariant/property fuzz; **-002**
 long-horizon soak (per-instance `maxLifetime` liveness); **-003** coverage/gap (unreached
 `InteractionIntent`/`ArcKind`, expected-rarity-annotated); **-004** determinism replay; **-005**
-save-budget overflow eviction; **-006** tier-transition round-trip.
+save-budget overflow eviction — including a **tie-forced** case (two equal-salience episodes / equal-
+`NetRelationship` summaries) that asserts the FR-LW-021 tiebreak makes eviction replay-identical;
+**-006** tier-transition round-trip.
 
 ## 5.7 FR traceability
 

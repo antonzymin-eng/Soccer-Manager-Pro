@@ -1,10 +1,11 @@
 # Living World System Specification #22 — Section 3: Algorithms
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.6 — PASS-5 fix pass: §3.6 scopes persisted `SpawnCause` to arcs,
+**Last Updated:** June 21, 2026 (v0.8 — PASS-7 fix pass: §3.2 episode-eviction salience tiebreak (oldest worldTick, then episodeId) (AR7-M1))
+**Last Updated (prior):** June 21, 2026 (v0.6 — PASS-5 fix pass: §3.6 scopes persisted `SpawnCause` to arcs,
 interaction provenance implicit (AR5-M1); §3.1 decay worked example corrected to the geometric ~0.016 (AR5-L1))
 **Last Updated (prior):** June 21, 2026 (v0.5 — PASS-4 fix pass: §3.2 worked-example depth marked illustrative vs the catalogue default (AR4-L3))
-**Version:** 0.7
+**Version:** 0.8
 **Status:** IN REVIEW (June 21, 2026)
 
 > All formulas state units and input ranges and carry a worked example (FR-LW-033). Constants reference
@@ -48,7 +49,8 @@ event:
 
 1. Construct `episode = (episodeId = nextId(edge), kind, salience0, worldTick, managerChoiceId)`.
 2. Append; if the buffer is full, evict the **lowest-salience** episode **that is not arc-pinned**
-   (FR-LW-010/018). If all are pinned, the buffer grows transiently — bounded by the count of
+   (FR-LW-010/018; salience ties broken by oldest `worldTick`, then lowest `episodeId` — FR-LW-021). If
+   all are pinned, the buffer grows transiently — bounded by the count of
    simultaneous arc pins on that edge and capped by the §4.5 budget — and shrinks back to depth as arcs
    resolve and unpin (so FR-LW-008 "bounded" holds in steady state).
 3. Each `worldTick`, decay every episode's salience: `s' = s · (1 − decayRate)` (`[GT]`).

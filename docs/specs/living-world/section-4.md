@@ -1,9 +1,10 @@
 # Living World System Specification #22 — Section 4: Architecture
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.4 — PASS-3 fix pass: §4.5 edge bound restated as O(active-set²)
+**Last Updated:** June 21, 2026 (v0.6 — PASS-7 fix pass: §4.5 cold-summary eviction tiebreak (lowest EntityId); replay-deterministic eviction (AR7-M1))
+**Last Updated (prior):** June 21, 2026 (v0.4 — PASS-3 fix pass: §4.5 edge bound restated as O(active-set²)
 governed by the whole active-set size, not just the external-contacts cap (AR3-M2))
-**Version:** 0.5
+**Version:** 0.6
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -62,8 +63,9 @@ route only); (3) memory salience decay (§3.2); (4) arc evaluation (§3.4); (5) 
 
 One `[GT]` budget caps the three live-state classes together — **live edges + live episodes + cold
 summaries**. Eviction order when exceeded: (1) lowest-salience **unpinned** episode (§3.2); (2) if relief
-is still needed, **cold-summary compaction** — the lowest-`NetRelationship` summary drops its
-lowest-salience `RetainedEpisode`, then the summary itself is dropped once empty. Live edges are **not**
+is still needed, **cold-summary compaction** — the lowest-`NetRelationship` summary (ties → lowest
+`EntityId`) drops its lowest-salience `RetainedEpisode`, then the summary itself is dropped once empty.
+All eviction ties are broken by the FR-LW-021 stable-key rule so eviction is replay-deterministic. Live edges are **not**
 an eviction target: edge count is **pairwise — O(active-set²)** and bounded by the whole finite active
 set (squad + staff + board + external contacts capped at `ACTIVE_SET_EXTERNAL_CONTACTS_MAX`, FR-LW-023),
 so the **active-set size is the edge governor, not eviction**. This O(active-set²) edge×memory product is
