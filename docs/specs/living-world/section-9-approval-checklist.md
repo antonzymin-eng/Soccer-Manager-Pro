@@ -1,8 +1,8 @@
 # Living World System Specification #22 — Section 9: Approval Checklist
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.9 — PASS-8 fix pass landed; G1 cites all eight passes; G2/G3 remain open)
-**Version:** 0.9
+**Last Updated:** June 21, 2026 (v0.10 — PASS-9 fix pass landed; G1 cites all nine passes; G2/G3 remain open)
+**Version:** 0.10
 **Status:** IN REVIEW
 
 ---
@@ -31,7 +31,7 @@ checklist entries are fabricated (CLAUDE.md).
 | 14 | Season-calendar loop distinct from `MatchClock`; tick order | [x] | `section-4.md` §4.2; FR-LW-019 |
 | 15 | Determinism boundaries (RNG stream, iteration order, snapshot, no write-back) | [x] | `section-4.md` §4.4; FR-LW-020/021/027 |
 | 16 | Save-size budget + eviction; per-class split deferred | [x] | `section-4.md` §4.5; FR-LW-026 |
-| 17 | Test counts ≥ 74 with layer breakdown | [x] | `section-5.md` §5.1 |
+| 17 | Test counts ≥ 75 with layer breakdown | [x] | `section-5.md` §5.1 |
 | 18 | FR-to-test traceability matrix (all 34) | [x] | `section-5.md` §5.7 |
 | 19 | Performance posture (slow-loop / cold-path; no hot-path budget) | [x] | `section-6.md` §6.0 |
 | 20 | Verification harnesses (fuzz/soak/coverage/replay) | [x] | `section-6.md` §6.1–§6.5 |
@@ -45,7 +45,7 @@ checklist entries are fabricated (CLAUDE.md).
 
 | # | Gate | Status |
 |---|---|---|
-| G1 | Formal adversarial review of the section files (PASS-1..8) + fix passes | **DONE** — `…-v1.md` (4M+3L), `…-v2.md` (3M+3L), `…-v3.md` (2M+2L), `…-v4.md` (1M+3L), `…-v5.md` (1M+2L), `…-v6.md` (1M+2L), `…-v7.md` (1M+1L), `…-v8.md` (1M+1L, no High → v0.9), all resolved; no High in any pass — convergence reached |
+| G1 | Formal adversarial review of the section files (PASS-1..9) + fix passes | **DONE** — v1..v9 reviews (4M+3L → 3M+3L → 2M+2L → 1M+3L → 1M+2L → 1M+2L → 1M+1L → 1M+1L → 1M+1L), all resolved; no High since PASS-1; M-count plateaued at the determinism-detail floor (1/pass) — design stable, remaining findings are localized implementation-grade detail |
 | G2 | `[GT]` value **balance pass** (numerical mirror + adversarial) before values are pinned | **CARRIED FORWARD (post-APPROVED, non-blocking)** — §3/Appendix A values are illustrative; tests assert shape/direction not magnitude (§5). Precedent: #21 G2, #8 draft-level, #9 §9.8, #16 post-approved |
 | G3 | Lead-developer R-01..R-05 sign-off | **OPEN** |
 | G4 | `SPEC_INDEX.md` row 22 reflects status | DONE — IN REVIEW, Jun 21, 2026 |
@@ -74,4 +74,5 @@ magnitudes are illustrative and are not relied on for sign-off (the contract is 
 | 0.7 | 2026-06-21 | — | PASS-6 fix pass (1M+2L resolved): RNG split into `world.arcs`/`world.text` sub-streams (periodic/aperiodic draw-interleaving hazard); inspector interaction-log marked determinism-neutral; §3.3 cites T-LW-DET-003. G1 cites all six passes. G2/G3 remain open. |
 | 0.8 | 2026-06-21 | — | PASS-7 fix pass (1M+1L resolved): FR-LW-021 extended to selection/eviction with stable tiebreaks (episode salience → worldTick → episodeId; cold summary → EntityId); XC-022-008 sub-stream wording. G1 cites all seven passes. G2/G3 remain open. |
 | 0.9 | 2026-06-21 | — | PASS-8 fix pass (1M+1L resolved): FR-LW-023/§3.5 define active-set membership (entry on interaction; deterministic LRU demotion at the cap — closes the supplement §6.6 churn item); SAVE_SIZE_BUDGET labelled platform-tuned; FR-LW-011 sub-stream wording. G1 cites all eight passes. G2/G3 remain open. |
+| 0.10 | 2026-06-21 | — | PASS-9 fix pass (1M+1L resolved): T-LW-I-015 verifies deterministic LRU active-set demotion (integration 15, total ≥75); §3.5 own-club departure (transfer/release) demotes to cold-store via FR-LW-025. G1 cites all nine passes. G2/G3 remain open. |
 #endregion

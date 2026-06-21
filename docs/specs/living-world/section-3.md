@@ -1,12 +1,13 @@
 # Living World System Specification #22 — Section 3: Algorithms
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.9 — PASS-8 fix pass: §3.5 membership entry/exit rule — LRU demotion at the cap; closes the supplement §6.6 churn item (AR8-M1))
+**Last Updated:** June 21, 2026 (v0.10 — PASS-9 fix pass: §3.5 own-club departure (transfer/release) demotes to cold-store via the FR-LW-025 path (AR9-L1))
+**Last Updated (prior):** June 21, 2026 (v0.9 — PASS-8 fix pass: §3.5 membership entry/exit rule — LRU demotion at the cap; closes the supplement §6.6 churn item (AR8-M1))
 **Last Updated (prior):** June 21, 2026 (v0.8 — PASS-7 fix pass: §3.2 episode-eviction salience tiebreak (oldest worldTick, then episodeId) (AR7-M1))
 **Last Updated (prior):** June 21, 2026 (v0.6 — PASS-5 fix pass: §3.6 scopes persisted `SpawnCause` to arcs,
 interaction provenance implicit (AR5-M1); §3.1 decay worked example corrected to the geometric ~0.016 (AR5-L1))
 **Last Updated (prior):** June 21, 2026 (v0.5 — PASS-4 fix pass: §3.2 worked-example depth marked illustrative vs the catalogue default (AR4-L3))
-**Version:** 0.9
+**Version:** 0.10
 **Status:** IN REVIEW (June 21, 2026)
 
 > All formulas state units and input ranges and carry a worked example (FR-LW-033). Constants reference
@@ -125,8 +126,10 @@ authority for those outcomes — transfers/recruitment stay owned by vol-3 §2 a
 **Membership (entry/exit).** An external contact **enters** the active set on first interaction. When
 `ACTIVE_SET_EXTERNAL_CONTACTS_MAX` is exceeded, the **least-recently-interacted** external contact is
 demoted — last-interaction is the max episode `worldTick` on its edge, ties broken by lowest `EntityId`
-(FR-LW-021/023) — a deterministic, replay-stable choice. (Own-club players/staff/board never demote
-while at the club.) This closes the supplement §6.6 "active-set churn" question.
+(FR-LW-021/023) — a deterministic, replay-stable choice. Own-club players/staff/board never demote
+*while at the club*; on **leaving** it (transfer-out, release, sacking) they demote to cold-store via the
+same path as an external contact (FR-LW-025) — preserving the ex-member history you might re-sign or face
+again. This closes the supplement §6.6 "active-set churn" question.
 
 **Demotion (active → background).** Compress the edge's memory to a `ColdSummary`
 (`NetRelationship` + top-N salient episodes; schema deferred §7) and drop live buffers.
