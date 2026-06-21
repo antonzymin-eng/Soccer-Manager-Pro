@@ -53,7 +53,7 @@ read-only:
 |---|---|---|
 | `project-constants` | this → it | one of two downward references |
 | Human-systems model (vol-2/vol-3 impl.) | this → it | reads H-Gate, social graph, propagation results, board/media state |
-| Deterministic Sim #16 | this → it | `DeterministicRngService` (dedicated world stream); snapshot/replay model; `SNAPSHOT_SCHEMA_VERSION` |
+| Deterministic Sim #16 | this → it | `DeterministicRngService` (dedicated `world.arcs`/`world.text` sub-streams); snapshot/replay model; `SNAPSHOT_SCHEMA_VERSION` |
 | Testing Strategy #19 | this → it | `ScenarioRunner` closed-loop harness; `tools/spec-stress/` |
 | Performance #18 | governs | hot-path/cold-path tagging (this layer is entirely cold-path / slow-loop) |
 | Code Standards #20 | governs | layering, naming, constant tags, ordinal stability |
