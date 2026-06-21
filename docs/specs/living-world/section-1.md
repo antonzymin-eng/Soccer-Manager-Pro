@@ -1,8 +1,8 @@
 # Living World System Specification #22 — Section 1: Introduction, Scope, Dependencies
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.1 — promoted from design supplement v0.7)
-**Version:** 0.1
+**Last Updated:** June 21, 2026 (v0.2 — PASS-4 fix pass: KD-3 read-only `PlayerEdge` mirror clause; KD-9 no-write-back extended to vol-2 §2.1 (AR4-L2))
+**Version:** 0.2
 **Status:** IN REVIEW (June 21, 2026)
 **Source:** `docs/tracking/living-world-system-design.md` v0.7
 
@@ -72,8 +72,10 @@ an unspecified consumer (FR-LW-031).
 - **KD-3 — Edge model reconciliation.** The canonical edge is vol-2 §2.1's single 0.0–1.0 scalar with
   the > 0.6 clique threshold; this layer **adopts it unchanged**. Where richer manager↔non-player
   relationships are needed (journalists, board, staff), it adds **parallel layers on the same 0.0–1.0
-  scale** (`Affinity`, directional `Trust`) — never a re-scaling of the player edge. `Affinity` is a
-  *personal* relationship, not a second board-confidence or supporter-trust authority (KD-9).
+  scale** (`Affinity`, directional `Trust`) — never a re-scaling of the player edge. `PlayerEdge` is a
+  **read-only mirror** of vol-2's authoritative edge (never mutated here; vol-2 owns its evolution);
+  only `Affinity`/`Trust` are owned/written. `Affinity` is a *personal* relationship, not a second
+  board-confidence or supporter-trust authority (KD-9).
 - **KD-4 — Slow loop on a season-calendar clock.** The world ticks on a deterministic season-calendar
   clock (own loop, distinct from `MatchClock`), event- and day-driven; one `worldTick` = one calendar
   day, the unit vol-2 §2.2 latencies are expressed in. It runs **never** inside the 10/60 Hz match loops.
@@ -93,8 +95,8 @@ an unspecified consumer (FR-LW-031).
   **trigger inputs and the state-snapshot reference** that caused it — powering causal tracing/replay
   (§7) and cheap inline but impossible to reconstruct later.
 - **KD-9 — Boundary discipline.** The world loop only **reads** canonical human-systems state and
-  match-outcome events; it never writes back into the H-Gate or propagation math. It must not become a
-  second authority over morale.
+  match-outcome events; it never writes back into the H-Gate, the vol-2 §2.1 social-graph edge, or §2.2
+  propagation math. It must not become a second authority over morale.
 - **KD-10 — Stage-1+ gating.** Runtime activation is gated on: a persistent world store + season loop;
   vol-2/vol-3 implemented; the `[GT]` config-loader; and structured match-outcome events. Data types and
   algorithms are authorable now; activation lands as the prerequisites do (§7).

@@ -1,11 +1,13 @@
 # Living World System Specification #22 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.4 — PASS-3 fix pass: `PlayerEdge` pinned as a read-only mirror of
+**Last Updated:** June 21, 2026 (v0.5 — PASS-4 fix pass: FR-LW-027 no-write-back scope extended to the
+vol-2 §2.1 social-graph edge (`PlayerEdge` read-only) (AR4-L1))
+**Last Updated (prior):** June 21, 2026 (v0.4 — PASS-3 fix pass: `PlayerEdge` pinned as a read-only mirror of
 vol-2's authoritative edge — never mutated here, removing the double-authority hazard (AR3-M1, FR-LW-004);
 `ActiveLayers` bit positions tied to `RelationshipLayer` ordinals (AR3-L1); `ColdSummary` retains
 `ActiveLayers` for rehydration (AR3-L2))
-**Version:** 0.4
+**Version:** 0.5
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -42,7 +44,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-LW-024 | Off-active-set entities run the abstracted background tier: cheap, deterministic, summary state only, no per-edge memory or arcs. It obeys the same RNG/iteration determinism rules and a bounded per-tick cost. | MUST | KD-7 |
 | FR-LW-025 | A contact leaving the active set is compressed to a cold-stored summary (not hard-evicted); on re-entry the summary rehydrates into live edges/episodes. Tier promotion/demotion is deterministic and neither loses nor duplicates state. | MUST | KD-7 / F5 |
 | FR-LW-026 | One `[GT]` save-size budget caps total live state — live edges + live episodes + cold summaries — together; eviction is governed by §3.2. | MUST | §3.2 / §4.5 |
-| FR-LW-027 | The world loop only reads canonical human-systems state and match-outcome events; it never writes back into the H-Gate or vol-2 §2.2 propagation math. | MUST | KD-9 |
+| FR-LW-027 | The world loop only reads canonical human-systems state and match-outcome events; it never writes back into the H-Gate, the vol-2 §2.1 social-graph edge (`PlayerEdge` is read-only), or vol-2 §2.2 propagation math. | MUST | KD-9 |
 | FR-LW-028 | Every ordinal-stable enum (`EventKind`, `ArcKind`, `InteractionIntent`, `RelationshipLayer`), the per-kind `Arc.State` byte values, and stable IDs (`episodeId`, `managerChoiceId`, arc reference IDs) are APPEND-only and carry a stability test. | MUST | #16 §6.2 |
 | FR-LW-029 | Every constant carries exactly one tag (`[GT]`/`[FIXED]`/`[DERIVED]`/`[CROSS]`); no `[EST]` remains at `APPROVED`; all live in one catalogue `LivingWorldConstants.cs`. | MUST | CLAUDE.md / #20 |
 | FR-LW-030 | The system is validated by the §6 automated harnesses (invariant fuzzing, soak, coverage/gap, determinism replay) on the #19 ScenarioRunner; structural conformance is machine-checked, quality is human-reviewed. | MUST | §5 / §6 |

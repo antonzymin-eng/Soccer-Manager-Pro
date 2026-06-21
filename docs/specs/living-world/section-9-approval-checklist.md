@@ -1,8 +1,8 @@
 # Living World System Specification #22 — Section 9: Approval Checklist
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.4 — PASS-3 fix pass landed; G1 cites all three passes; G2/G3 remain open)
-**Version:** 0.4
+**Last Updated:** June 21, 2026 (v0.5 — PASS-4 fix pass landed; G1 cites all four passes; tests ≥74; G2/G3 remain open)
+**Version:** 0.5
 **Status:** IN REVIEW
 
 ---
@@ -31,7 +31,7 @@ checklist entries are fabricated (CLAUDE.md).
 | 14 | Season-calendar loop distinct from `MatchClock`; tick order | [x] | `section-4.md` §4.2; FR-LW-019 |
 | 15 | Determinism boundaries (RNG stream, iteration order, snapshot, no write-back) | [x] | `section-4.md` §4.4; FR-LW-020/021/027 |
 | 16 | Save-size budget + eviction; per-class split deferred | [x] | `section-4.md` §4.5; FR-LW-026 |
-| 17 | Test counts ≥ 73 with layer breakdown | [x] | `section-5.md` §5.1 |
+| 17 | Test counts ≥ 74 with layer breakdown | [x] | `section-5.md` §5.1 |
 | 18 | FR-to-test traceability matrix (all 34) | [x] | `section-5.md` §5.7 |
 | 19 | Performance posture (slow-loop / cold-path; no hot-path budget) | [x] | `section-6.md` §6.0 |
 | 20 | Verification harnesses (fuzz/soak/coverage/replay) | [x] | `section-6.md` §6.1–§6.5 |
@@ -45,7 +45,7 @@ checklist entries are fabricated (CLAUDE.md).
 
 | # | Gate | Status |
 |---|---|---|
-| G1 | Formal adversarial review of the section files (PASS-1..3) + fix passes | **DONE** — `…-v1.md` (4M+3L → v0.2), `…-v2.md` (3M+3L → v0.3), `…-v3.md` (2M+2L, no High → v0.4), all resolved; descending severity (no High in any pass) indicates convergence |
+| G1 | Formal adversarial review of the section files (PASS-1..4) + fix passes | **DONE** — `…-v1.md` (4M+3L → v0.2), `…-v2.md` (3M+3L → v0.3), `…-v3.md` (2M+2L → v0.4), `…-v4.md` (1M+3L, no High → v0.5), all resolved; monotonic descent in M-count, no High in any pass — convergence reached |
 | G2 | `[GT]` value **balance pass** (numerical mirror + adversarial) before values are pinned | **CARRIED FORWARD (post-APPROVED, non-blocking)** — §3/Appendix A values are illustrative; tests assert shape/direction not magnitude (§5). Precedent: #21 G2, #8 draft-level, #9 §9.8, #16 post-approved |
 | G3 | Lead-developer R-01..R-05 sign-off | **OPEN** |
 | G4 | `SPEC_INDEX.md` row 22 reflects status | DONE — IN REVIEW, Jun 21, 2026 |
@@ -69,4 +69,5 @@ magnitudes are illustrative and are not relied on for sign-off (the contract is 
 | 0.2 | 2026-06-21 | — | PASS-1 fix pass (4M+3L resolved): FR-LW-034 added; counts updated (34 FRs / ≥73 tests); ERR back-props 001..004; G1 marked DONE. G2/G3 remain open. |
 | 0.3 | 2026-06-21 | — | PASS-2 fix pass (3M+3L resolved): NaN sentinel → `ActiveLayers` bitmask; FR-LW-034 scoped to world-state-subset digest; cold-summary eviction; `Arc.State` stability; G1 cites both passes. G2/G3 remain open. |
 | 0.4 | 2026-06-21 | — | PASS-3 fix pass (2M+2L resolved): `PlayerEdge` pinned read-only (no double-authority); O(active-set²) edge bound; `ActiveLayers` bit-stability + `ColdSummary` retention. G1 cites all three passes. G2/G3 remain open. |
+| 0.5 | 2026-06-21 | — | PASS-4 fix pass (1M+3L resolved): T-LW-U-035 verifies read-only `PlayerEdge`; FR-LW-027/KD-9 no-write-back extended to vol-2 §2.1; tests ≥74. G1 cites all four passes. G2/G3 remain open. |
 #endregion

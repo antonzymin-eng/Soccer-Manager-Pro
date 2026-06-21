@@ -1,9 +1,10 @@
 # Living World System Specification #22 — Section 3: Algorithms
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.4 — PASS-3 fix pass: §3.1 update restricted to owned layers
+**Last Updated:** June 21, 2026 (v0.5 — PASS-4 fix pass: §3.2 worked-example depth marked illustrative vs the catalogue default (AR4-L3))
+**Last Updated (prior):** June 21, 2026 (v0.4 — PASS-3 fix pass: §3.1 update restricted to owned layers
 (`Affinity`/`Trust`); `PlayerEdge` is read-only, never written here (AR3-M1))
-**Version:** 0.4
+**Version:** 0.5
 **Status:** IN REVIEW (June 21, 2026)
 
 > All formulas state units and input ranges and carry a worked example (FR-LW-033). Constants reference
@@ -57,8 +58,9 @@ event:
 eligible to be cited in surface text (§3.3) — this is what makes the context a line is built on never
 identical twice.
 
-**Worked example.** Buffer depth 8, full, salience floor episode `e3 (s=0.05)` unpinned → evicted when a
-new `s=0.6` episode arrives; a pinned `e1 (s=0.02)` is skipped and the next-lowest unpinned is chosen.
+**Worked example** (illustrative depth 8; the catalogue default is `MEMORY_BUFFER_DEPTH = 12`). Buffer
+full, salience floor episode `e3 (s=0.05)` unpinned → evicted when a new `s=0.6` episode arrives; a
+pinned `e1 (s=0.02)` is skipped and the next-lowest unpinned is chosen.
 
 ## 3.3 Procedural text: `InteractionIntent` ≠ surface (KD-6)
 

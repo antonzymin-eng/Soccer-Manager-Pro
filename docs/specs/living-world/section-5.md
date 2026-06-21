@@ -1,9 +1,9 @@
 # Living World System Specification #22 — Section 5: Test Plan
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.3 — PASS-2 fix pass: T-LW-DET-007 scoped to the world-state-subset
-digest, not full payload (AR2-M2); aligned with the `ActiveLayers` bitmask)
-**Version:** 0.3
+**Last Updated:** June 21, 2026 (v0.4 — PASS-4 fix pass: added T-LW-U-035 verifying the read-only
+`PlayerEdge` contract (AR4-M1); unit 35, total ≥74; traceability updated)
+**Version:** 0.4
 **Status:** IN REVIEW (June 21, 2026)
 
 > Test-ID prefixes follow #19 §3.1.4: `T-LW-U-*` unit, `T-LW-I-*` integration, `sim_*` / `T-LW-SIM-*`
@@ -16,13 +16,13 @@ digest, not full payload (AR2-M2); aligned with the `ActiveLayers` bitmask)
 
 | Layer | Count (≥) | Notes |
 |---|---|---|
-| Unit | 34 | enum ordinals, edge update/decay, memory eviction/pinning, intent→text determinism, arc lifecycle |
+| Unit | 35 | enum ordinals, edge update/decay, read-only PlayerEdge, memory eviction/pinning, intent→text determinism, arc lifecycle |
 | Integration | 14 | each consume-as-is canon seam + arc routing + cold-store round-trip |
 | Simulation (closed-loop) | 6 | one per construct, via #19 ScenarioRunner |
 | Determinism | 7 | RNG stream, iteration order, text reproducibility, replay, additive-only identity |
 | Failure-mode | 6 | F1–F6 |
 | Exploit / stress | 6 | §6 harness classes (fuzz, soak, coverage, replay) + budget overflow + tier-transition |
-| **Total** | **≥ 73** | |
+| **Total** | **≥ 74** | |
 
 ## 5.2 Unit tests (`T-LW-U-*`)
 
@@ -36,6 +36,9 @@ digest, not full payload (AR2-M2); aligned with the `ActiveLayers` bitmask)
   slot facts limited to emitted data; no model call on any path (FR-LW-011/012/013).
 - **T-LW-U-027..034** — arc lifecycle (§3.4): spawn on threshold; `SpawnCause` captured; episodes pinned;
   resolve/escalate; `maxLifetime` enforced; `ArcKind`-ordinal evaluation (FR-LW-014/016/017/018).
+- **T-LW-U-035** — read-only `PlayerEdge`: a §3.1 update on a player↔player edge leaves `PlayerEdge`
+  bit-unchanged (only `Affinity`/`Trust` are written); the layer never mutates the vol-2 §2.1 edge
+  (FR-LW-004/027).
 
 ## 5.3 Integration tests (`T-LW-I-*`)
 
@@ -81,9 +84,9 @@ save-budget overflow eviction; **-006** tier-transition round-trip.
 
 | FR | Verified by |
 |---|---|
-| FR-LW-001/007/027 | T-LW-I-001..006, T-LW-DET (no write-back) |
+| FR-LW-001/007/027 | T-LW-I-001..006, T-LW-U-035 (§2.1 read-only), T-LW-DET (no write-back) |
 | FR-LW-002/003 | asmdef-grep / inspection (structural) |
-| FR-LW-004/005/006 | T-LW-U-005..010 |
+| FR-LW-004/005/006 | T-LW-U-005..010, T-LW-U-035 (read-only PlayerEdge) |
 | FR-LW-008/009/010 | T-LW-U-011..018, T-LW-FAIL-001/004 |
 | FR-LW-011/012/013 | T-LW-U-019..026, T-LW-DET-003, T-LW-FAIL-003 |
 | FR-LW-014/016/017/018 | T-LW-U-027..034, T-LW-FAIL-001 |
