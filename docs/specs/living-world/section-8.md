@@ -1,10 +1,11 @@
 # Living World System Specification #22 — Section 8: Cross-References, Back-Props, Invariant Binding
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.2 — PASS-1 fix pass: ERR-022-005 recategorised — the season-calendar
-clock is this spec's own forward deliverable (§7.1), not a cross-spec back-prop (L-2); back-props now
-001..004)
-**Version:** 0.2
+**Last Updated:** June 21, 2026 (v0.3 — PASS-5 fix pass: §8.2 fatigue row marked n/a — this layer consumes
+the H-Gate (happiness), not fatigue (AR5-L2))
+**Last Updated (prior):** June 21, 2026 (v0.2 — PASS-1 fix pass: ERR-022-005 recategorised — the season-calendar
+clock is this spec's own forward deliverable (§7.1), not a cross-spec back-prop (L-2); back-props now 001..004)
+**Version:** 0.3
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -33,7 +34,7 @@ clock is this spec's own forward deliverable (§7.1), not a cross-spec back-prop
 | Invariant | Binding |
 |---|---|
 | Deterministic replay (no `System.Random`, no `DateTime.Now`) | FR-LW-019/020/022 |
-| Fatigue `0 = rested, 1 = fatigued` | consumed from vol-2 H-Gate; not redefined |
+| Fatigue `0 = rested, 1 = fatigued` | n/a — this layer consumes the vol-2 **H-Gate (happiness)**, not fatigue; convention listed for completeness, never redefined here |
 | No phantom interfaces | FR-LW-031 |
 | Constant tags `[GT]/[FIXED]/[DERIVED]/[CROSS]`; no `[EST]` at APPROVED | FR-LW-029 / Appendix A |
 | Single-machine snapshot determinism; Fixed64 Stage 5+ | §4.4 |

@@ -1,13 +1,15 @@
 # Living World System Specification #22 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.5 — PASS-4 fix pass: FR-LW-027 no-write-back scope extended to the
+**Last Updated:** June 21, 2026 (v0.6 — PASS-5 fix pass: FR-LW-016 scoped — durable `SpawnCause` on arcs;
+interaction provenance is implicit (no interaction record type) (AR5-M1))
+**Last Updated (prior):** June 21, 2026 (v0.5 — PASS-4 fix pass: FR-LW-027 no-write-back scope extended to the
 vol-2 §2.1 social-graph edge (`PlayerEdge` read-only) (AR4-L1))
 **Last Updated (prior):** June 21, 2026 (v0.4 — PASS-3 fix pass: `PlayerEdge` pinned as a read-only mirror of
 vol-2's authoritative edge — never mutated here, removing the double-authority hazard (AR3-M1, FR-LW-004);
 `ActiveLayers` bit positions tied to `RelationshipLayer` ordinals (AR3-L1); `ColdSummary` retains
 `ActiveLayers` for rehydration (AR3-L2))
-**Version:** 0.5
+**Version:** 0.6
 **Status:** IN REVIEW (June 21, 2026)
 
 ---
@@ -33,7 +35,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-LW-013 | `InteractionIntent` is graph-/event-driven and separate from surface text; one intent maps to many phrasings. Slot facts are limited to data the match engine actually emits (no assumed derived stats). | MUST | §3.3 |
 | FR-LW-014 | An arc spawns when canonical state crosses a `[GT]` threshold; it is a serialised state machine with a defined resolved/escalated lifecycle. | MUST | §3.4 |
 | FR-LW-015 | Board arcs read and route into vol-3 §4 (archetype patience, takeover, DoF veto); they do not introduce a board node. The fan node is an aggregate view over vol-2 §4.1 / §5.1. | MUST | KD-1 / KD-9 |
-| FR-LW-016 | Every arc and every generated interaction records a `SpawnCause` (trigger rule/threshold, the input values at spawn, the state-snapshot reference, `worldTick`) at creation. | MUST | KD-8 |
+| FR-LW-016 | Every **arc** records a `SpawnCause` (trigger rule/threshold, the input values at spawn, the state-snapshot reference, `worldTick`) at creation. A generated **interaction** carries no separate persisted `SpawnCause`: its provenance is **implicit** — a deterministic function of `(InteractionIntent, RNG cursor, snapshotRef)` reconstructable from the snapshot + cursor (an optional inspector interaction-log MAY store that lightweight tuple). | MUST | KD-8 |
 | FR-LW-017 | Arcs not scoped to a single entity (squad/board-level) are evaluated in fixed `ArcKind` ordinal order so spawn order, RNG draw order, and episode pinning are deterministic. | MUST | KD-5 |
 | FR-LW-018 | An arc snapshots the facts it needs at spawn and pins its source episodes non-evictable until it resolves; salience eviction may never leave a live arc referencing a dropped episode. | MUST | §3.4 / KD-8 |
 | FR-LW-019 | The world ticks on a deterministic season-calendar clock distinct from `MatchClock`; one `worldTick` = one calendar day. The loop never runs inside the 10 Hz / 60 Hz match loops. | MUST | KD-4 |

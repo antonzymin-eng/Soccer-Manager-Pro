@@ -1,10 +1,10 @@
 # Living World System Specification #22 — Section 3: Algorithms
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.5 — PASS-4 fix pass: §3.2 worked-example depth marked illustrative vs the catalogue default (AR4-L3))
-**Last Updated (prior):** June 21, 2026 (v0.4 — PASS-3 fix pass: §3.1 update restricted to owned layers
-(`Affinity`/`Trust`); `PlayerEdge` is read-only, never written here (AR3-M1))
-**Version:** 0.5
+**Last Updated:** June 21, 2026 (v0.6 — PASS-5 fix pass: §3.6 scopes persisted `SpawnCause` to arcs,
+interaction provenance implicit (AR5-M1); §3.1 decay worked example corrected to the geometric ~0.016 (AR5-L1))
+**Last Updated (prior):** June 21, 2026 (v0.5 — PASS-4 fix pass: §3.2 worked-example depth marked illustrative vs the catalogue default (AR4-L3))
+**Version:** 0.6
 **Status:** IN REVIEW (June 21, 2026)
 
 > All formulas state units and input ranges and carry a worked example (FR-LW-033). Constants reference
@@ -37,8 +37,9 @@ x' = clamp01( x + v · δ · (1 − x)   if δ ≥ 0
 `[GT]` rate `r` per `worldTick`: `x' = x + r·(b − x)`.
 
 **Worked example.** `Trust = 0.50`, a public manager defence `δ = +0.4`, `v = 0.3`:
-`x' = 0.50 + 0.3·0.4·(1−0.50) = 0.50 + 0.06 = 0.56`. Over 30 idle days at `r = 0.01`, `b = 0.5`:
-relaxes ~0.018 back toward baseline.
+`x' = 0.50 + 0.3·0.4·(1−0.50) = 0.50 + 0.06 = 0.56`. Over 30 idle days at `r = 0.01`, `b = 0.5`, the
+geometric recurrence gives `x = 0.5 + 0.06·(0.99)^30 ≈ 0.544` — i.e. **~0.016** closed back toward
+baseline (the linear estimate `r·n·gap = 0.018` overstates it).
 
 ## 3.2 Episodic memory (KD-1 gap)
 
@@ -126,7 +127,14 @@ through cold-store and back yields an edge equal on all retained fields (F5, T-L
 
 ## 3.6 Provenance and inspection (KD-8)
 
-`SpawnCause` is captured inline at every arc/interaction creation (§3.4 step 1) and is never
-reconstructed after the fact. It is the data source for the §7 inspector's time-scrub/replay-step and
-"why did this arc fire?" causal tracing. Because it references a snapshot, the full causal state is
-recoverable deterministically from the world store.
+`SpawnCause` is captured inline at every **arc** creation (§3.4 step 1) and is never reconstructed after
+the fact. It is the data source for the §7 inspector's time-scrub/replay-step and "why did this arc
+fire?" causal tracing. Because it references a snapshot, the full causal state is recoverable
+deterministically from the world store.
+
+**Generated interactions** carry no separate persisted `SpawnCause` (there is no interaction record type
+in §2.2). Their provenance is **implicit**: an interaction is a deterministic function of
+`(InteractionIntent, RNG cursor, snapshotRef)` (§3.3), so the inspector reconstructs "why this line
+surfaced" from the snapshot + RNG cursor. An optional inspector interaction-log may persist that
+lightweight `(intent, cursor, snapshotRef)` tuple, but it is not part of the core serialised model
+(FR-LW-016).

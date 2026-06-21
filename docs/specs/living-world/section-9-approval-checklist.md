@@ -1,8 +1,8 @@
 # Living World System Specification #22 — Section 9: Approval Checklist
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.5 — PASS-4 fix pass landed; G1 cites all four passes; tests ≥74; G2/G3 remain open)
-**Version:** 0.5
+**Last Updated:** June 21, 2026 (v0.6 — PASS-5 fix pass landed; G1 cites all five passes; G2/G3 remain open)
+**Version:** 0.6
 **Status:** IN REVIEW
 
 ---
@@ -45,7 +45,7 @@ checklist entries are fabricated (CLAUDE.md).
 
 | # | Gate | Status |
 |---|---|---|
-| G1 | Formal adversarial review of the section files (PASS-1..4) + fix passes | **DONE** — `…-v1.md` (4M+3L → v0.2), `…-v2.md` (3M+3L → v0.3), `…-v3.md` (2M+2L → v0.4), `…-v4.md` (1M+3L, no High → v0.5), all resolved; monotonic descent in M-count, no High in any pass — convergence reached |
+| G1 | Formal adversarial review of the section files (PASS-1..5) + fix passes | **DONE** — `…-v1.md` (4M+3L → v0.2), `…-v2.md` (3M+3L → v0.3), `…-v3.md` (2M+2L → v0.4), `…-v4.md` (1M+3L → v0.5), `…-v5.md` (1M+2L, no High → v0.6), all resolved; monotonic M-descent, no High in any pass — convergence reached |
 | G2 | `[GT]` value **balance pass** (numerical mirror + adversarial) before values are pinned | **CARRIED FORWARD (post-APPROVED, non-blocking)** — §3/Appendix A values are illustrative; tests assert shape/direction not magnitude (§5). Precedent: #21 G2, #8 draft-level, #9 §9.8, #16 post-approved |
 | G3 | Lead-developer R-01..R-05 sign-off | **OPEN** |
 | G4 | `SPEC_INDEX.md` row 22 reflects status | DONE — IN REVIEW, Jun 21, 2026 |
@@ -70,4 +70,5 @@ magnitudes are illustrative and are not relied on for sign-off (the contract is 
 | 0.3 | 2026-06-21 | — | PASS-2 fix pass (3M+3L resolved): NaN sentinel → `ActiveLayers` bitmask; FR-LW-034 scoped to world-state-subset digest; cold-summary eviction; `Arc.State` stability; G1 cites both passes. G2/G3 remain open. |
 | 0.4 | 2026-06-21 | — | PASS-3 fix pass (2M+2L resolved): `PlayerEdge` pinned read-only (no double-authority); O(active-set²) edge bound; `ActiveLayers` bit-stability + `ColdSummary` retention. G1 cites all three passes. G2/G3 remain open. |
 | 0.5 | 2026-06-21 | — | PASS-4 fix pass (1M+3L resolved): T-LW-U-035 verifies read-only `PlayerEdge`; FR-LW-027/KD-9 no-write-back extended to vol-2 §2.1; tests ≥74. G1 cites all four passes. G2/G3 remain open. |
+| 0.6 | 2026-06-21 | — | PASS-5 fix pass (1M+2L resolved): FR-LW-016 scoped — durable `SpawnCause` on arcs, interaction provenance implicit (no interaction record type); §3.1 decay example corrected to geometric ~0.016; §8.2 fatigue row marked n/a. G1 cites all five passes. G2/G3 remain open. |
 #endregion
