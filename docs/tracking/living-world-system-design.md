@@ -1,7 +1,13 @@
 # Living World System — Design Supplement
 
 > **Created:** June 21, 2026
-> **Last Updated:** June 21, 2026 (v0.4 — PASS-3 full-document adversarial fix pass: added a stable
+> **Last Updated:** June 21, 2026 (v0.5 — folded in two resolved review decisions: new §6 **Verification
+> & stress testing** (four automated script classes on the #19 ScenarioRunner + `tools/spec-stress/` —
+> invariant fuzzing, long-horizon soak, coverage/gap detection, determinism replay — resolving §7 risk 2
+> on the structural side); §4 reworked into a **two-tier LOD** model with an abstracted, deterministic
+> **background simulation** for off-active-set entities plus **cold-store + rehydration** of departed
+> contacts (resolving §7 risk 6); old §6 Risks renumbered §7 with risks 2 and 6 marked RESOLVED.)
+> **Last Updated (prior):** June 21, 2026 (v0.4 — PASS-3 full-document adversarial fix pass: added a stable
 > `episodeId` handle to the §3.1 episode tuple — the arc-pinning mechanism (M4) referenced "episode
 > IDs" the data model never defined (M1); pinned a fixed `ArcKind`-ordinal evaluation order for
 > non-entity-scoped (squad/board) arcs so spawn/RNG/pinning stay deterministic (L1); corrected
@@ -130,7 +136,7 @@ remain authoritative and untouched. The graph is **directed**: every layer is st
 and symmetric relationships are simply two equal directed edges (no shared/bidirectional storage).
 `Affinity` is the manager's *personal* relationship with an individual (a board member, a journalist) —
 it is **not** a second board-confidence or supporter-trust authority; collective board sentiment stays
-owned by vol-3 §4 and supporter trust by vol-2 §4.1 (risk #5).
+owned by vol-3 §4 and supporter trust by vol-2 §4.1 (§7 risk 5).
 
 Morale spread across this graph is **vol-2 §2.2 Pulse Propagation, consumed as-is** — this note does
 **not** define its own contagion rule. Faction *outcomes* (a dressing-room split) are modelled here only
@@ -237,10 +243,17 @@ never leave a live arc referencing a dropped episode.
   with). Edges and §3.1 memory buffers exist **only within the active set**; world entities outside it
   carry no per-edge memory until they enter it. A `[GT]` **save-size budget** caps total live edges +
   memory episodes; oldest low-salience episodes evict first (arc-pinned episodes excepted, §3.3).
-- **Deep sim is the human manager's active set only.** AI-managed clubs do **not** run per-edge memory,
-  procedural-text generation, or arcs — they use an abstracted, cheaper morale/board model so the cost
-  is bounded to one active set, not the whole world. (An AI manager's media/board interactions surface
-  to the player only via existing canonical events, not a second living-world instance.)
+- **Two-tier level-of-detail (LOD).** The world runs at two fidelities. The **deep tier** (per-edge
+  memory, procedural text, arcs) runs **only for the human manager's active set**. Every other entity —
+  AI-managed clubs, out-of-set contacts — runs an **abstracted background tier**: a cheap, deterministic
+  simulation of living-world events/interactions between off-set entities (transfers, sackings, rivalries
+  forming) with **no per-edge memory or arcs**, just summary state. The background tier obeys the same
+  determinism rules (seeded `DeterministicRngService` stream, bounded per-tick cost) so the wider world
+  stays reproducible.
+- **Cold-store + rehydration.** When a contact leaves the active set, its memory is **compressed to a
+  cold-stored summary** (not hard-evicted) so the "journalist who's had it in for you across three clubs"
+  fantasy survives; when that contact re-enters the active set, the summary **rehydrates** into live
+  edges/episodes. The `[GT]` save-size budget below covers live edges + cold summaries together.
 - **Zero magic numbers.** Every salience weight, decay rate, arc threshold, and buffer depth is a `[GT]`
   constant in a designated catalogue, validated by a balance pass (precedent: #21 G2 balance pass, #8
   draft-level approval).
@@ -272,22 +285,46 @@ vol-2 §2.2, already canonical.)
 
 ---
 
-## 6. Risks / open questions for review
+## 6. Verification & stress testing
+
+Beyond the inspector view (§7 risk 2), the system is validated by automated harnesses on the existing
+`#19 ScenarioRunner` + `tools/spec-stress/` infrastructure. Four script classes verify **structure**
+(no gaps, no deadlocks, determinism) — they do **not** verify *quality* (tone/believability still needs
+the inspector view + human review):
+
+1. **Invariant / property fuzzing.** Random seeds drive the world loop; after every tick assert the
+   never-violated rules: all edge/layer values stay in [0.0, 1.0]; no dangling `episodeId`; no orphan or
+   unresolvable arc; live edges + cold summaries within the `[GT]` save-size budget; rehydration of a
+   cold summary reproduces a valid edge.
+2. **Long-horizon soak.** Run N seasons headless and assert no deadlock, no runaway/monotonic state
+   drift, and that every arc that can spawn can also reach a resolved state (no permanently-stuck arcs).
+3. **Coverage / gap detection.** Track which `InteractionIntent` / `ArcKind` actually fire across a large
+   seeded corpus; **unreached content is the "gap"** — surfaced automatically rather than found in play.
+4. **Determinism replay.** Same seed + snapshot-restore (deep tier *and* background tier) must produce
+   bit-identical world state — the off-pitch analogue of the match determinism gate.
+
+These run in the non-certifying CI gate alongside the existing suites; any invariant breach or
+determinism mismatch fails the build.
+
+---
+
+## 7. Risks / open questions for review
 
 1. **Authoring cost is the real risk.** The §3.2 template/grammar corpus and §3.3 arc library need
    sizeable, curated content plus tuning guardrails or they emit nonsense. Budget a content-authoring +
    balance pass comparable to a spec's `[GT]` validation — larger than the engineering.
-2. **Tuning legibility vs. emergence.** The more emergent the arcs, the harder designers predict why an
-   outcome happened. Needs a debug/inspector view of the graph + memory + arc state (also the natural
-   home for replay verification).
-3. **Combinatorial test surface.** "Interaction depends on full graph state" resists unit testing.
-   Likely needs scenario-style fixtures (cf. the #19 ScenarioRunner pattern) that seed a graph + memory,
-   tick the world loop, and assert *envelope* properties of the generated intent — not exact strings.
+2. **Tuning legibility vs. emergence — RESOLVED (direction set).** Addressed by a debug/inspector view of
+   the graph + memory + arc state (also the replay-verification surface) **plus** the §6 automated
+   stress/coverage harnesses. The inspector covers *quality* tuning; the harnesses cover *structural*
+   gaps and determinism. Open residue: scope/effort of the inspector tooling.
+3. **Combinatorial test surface.** "Interaction depends on full graph state" resists unit testing — see
+   §6; verification is scenario- and property-based (envelope assertions), not exact-string.
 4. **Localisation.** Procedural template expansion interacts badly with grammatical-gender/inflection
    languages; if multi-language is a goal the grammar must be designed for it up front, not retrofitted.
 5. **Boundary discipline.** Confirm the world loop only ever *reads* match-outcome events and canonical
    human-systems state, and never writes back into vol-2's H-Gate / propagation math (it adds layers and
    arcs on top; it must not become a second authority over morale).
-6. **Active-set churn.** When an external contact leaves the active set (manager never interacts again),
-   what happens to its memory buffer — hard-evict, or cold-store a compressed summary? Affects "the
-   journalist who remembers you from three clubs ago" fantasy vs. save size.
+6. **Active-set churn — RESOLVED (direction set).** Contacts leaving the active set are **cold-stored as
+   compressed summaries** (not hard-evicted) and **rehydrate** on re-entry; off-set entities run the
+   **abstracted background tier** (§4 LOD). Open residue: summary compression schema + the `[GT]` budget
+   split between live edges and cold summaries.
