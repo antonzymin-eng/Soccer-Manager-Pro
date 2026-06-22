@@ -1,6 +1,6 @@
 // File:     src/decision-tree/DecisionTree.cs
 // Created:  2026-05-29
-// Modified: 2026-06-11 (audit AR-2 fix pass)
+// Modified: 2026-06-22 (Match Engine Phase D step D0 — CaptureState/RestoreState snapshot seam)
 // Author:   —
 // Spec:     Decision Tree #8 §2.1.2, §3.6, §3.7, §4.1–4.3, Code Standards #20
 // Purpose:  Orchestrator-facing entry point. Runs the 6-step pipeline for one agent
@@ -73,6 +73,34 @@ namespace TacticalDirector.DecisionTree
 
         /// <summary>Last selected action. Valid after at least one successful evaluation.</summary>
         public AgentAction LastAction => _lastAction;
+
+        // ── Snapshot seam — Match Engine Phase D step D0 ─────────────────────────
+
+        /// <summary>
+        /// Captures the per-agent cross-tick state machine (state ordinal + last action + the §3.7.2
+        /// DispatchedActionType flag) as a plain-data snapshot for canonical serialization / deterministic
+        /// replay (Match Engine design note §2.6). Allocation-free (returns a value type). Parallel to the
+        /// Pass/Shot executor C0 seams and <see cref="AgentMovement.OscillationGuard.GetState"/>. The
+        /// per-match seed and the per-tick option buffer are excluded — see <see cref="DecisionTreeState"/>.
+        /// </summary>
+        public DecisionTreeState CaptureState()
+        {
+            return new DecisionTreeState((int)_state, in _lastAction, _hasDispatchedAction);
+        }
+
+        /// <summary>
+        /// Restores the per-agent cross-tick state machine from a snapshot produced by
+        /// <see cref="CaptureState"/> (replay / save-load). The match seed is not carried in the snapshot;
+        /// it is re-established at boot via the constructor / <see cref="SetMatchSeed"/> (§2.6
+        /// boot-deterministic exclusion), so a restore path must seed it separately if a new match context
+        /// is being loaded.
+        /// </summary>
+        public void RestoreState(in DecisionTreeState state)
+        {
+            _state               = (DtState)state.State;
+            _lastAction          = state.LastAction;
+            _hasDispatchedAction = state.HasDispatchedAction;
+        }
 
         /// <summary>
         /// Entry point called by the simulation orchestrator each heartbeat.
@@ -210,4 +238,9 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   forced refresh re-evaluates with same-ActionType re-dispatch suppression;   |
 // |         |            |        |   HOLD lands in IDLE; _hasDispatchedAction tracks the §3.7.2                  |
 // |         |            |        |   DispatchedActionType record. M-10: §3.1.1.3 warning now FR-CS-031 gated.    |
+// | 1.2     | 2026-06-22 | —      | Match Engine Phase D step D0: CaptureState()/RestoreState(in DecisionTreeState)|
+// |         |            |        |   snapshot get/restore seam over the cross-tick state machine (_state /        |
+// |         |            |        |   _lastAction / _hasDispatchedAction), parallel to the Pass/Shot executor C0   |
+// |         |            |        |   seams. _matchSeed (boot-deterministic) and _optionBuffer (per-tick scratch) |
+// |         |            |        |   excluded per §2.6. No change to the ReceiveSnapshot pipeline.                |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-19 (Phase C C1/C1a/C2/C3 — Resolve-phase wiring: collision + executors + adapters)
+// Modified: 2026-06-22 (Phase C C4/C5/C6 — possession→MatchContext, registry boot, executor+context snapshot)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -17,6 +17,7 @@ using UnityEngine;
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
 using TacticalDirector.CollisionSystem;
+using TacticalDirector.DecisionTree;
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 using TacticalDirector.PassMechanics;
@@ -75,10 +76,17 @@ namespace TacticalDirector.MatchEngine
         private readonly bool[]                        _stumbleScratch;  // UpdateCollisions stumbleOut sink (discarded — not a Stage-0 movement input, B4)
 
         // Authoritative ball possession: agent index [0–21], or NO_POSSESSION (−1) when loose.
-        // Read by the executor adapters (IsBallPossessedBy); cleared on ApplyKick. The C4 step folds
-        // this into MatchContext.PossessingAgentId; Stage 0 has no production possession producer
-        // (kickoff is loose), so a TestOnly_ seam scripts it for the executor-lifecycle tests.
+        // Read by the executor adapters (IsBallPossessedBy); cleared on ApplyKick. Folded into
+        // MatchContext.PossessingAgentId each Resolve (C4); Stage 0 has no production possession
+        // producer (kickoff is loose), so a TestOnly_ seam scripts it for the lifecycle tests.
         private int _possessingAgentId;
+
+        // Authoritative match state (Decision Tree #8 §2.2.5) authored by the host each Resolve tick
+        // (C4) and read by the next AI tick (Phase D). Folds in possession, ball kinematics, and the
+        // home-perspective ball zone (the team-relative zone is derived downstream by the
+        // DecisionContextAssembler — authoring it per-team here would reintroduce ERR-008-002).
+        // Serialized into the snapshot at C5 (cross-tick state).
+        private MatchContext _matchContext;
 
         // ── World state (design note §2.3) ────────────────────────────────────────────
         // Real BallState + AgentState[] driven by the production physics seams (step B2). Step B3
@@ -169,6 +177,21 @@ namespace TacticalDirector.MatchEngine
                 _passExecutors[i] = new PassExecutor(passAdapter, passAdapter, passAdapter);
                 _shotExecutors[i] = new ShotExecutor(shotAdapter, shotAdapter, shotAdapter);
             }
+
+            // §4 step 2 — boot the EventBus registry for the wired producers (Pass #5 / Shot #6) so a
+            // pass/shot reaching CONTACT can publish (C4 — without this, ExecuteContact throws
+            // ERR_EVT_UNREGISTERED_ORDINAL). EventRegistry.EnsureInitialized() is internal to the
+            // event-system assembly, so the host boots via the public, idempotent
+            // EventBusRegistrar.Initialize() sites (both carry an s_registered guard, so repeated boot
+            // across multiple MatchEngine constructions in one process is a no-op). RegisterExternalRow
+            // forces EventRegistry's seeded-row cctor, so no explicit EnsureInitialized is needed.
+            // Fully qualified — both spec namespaces expose an EventBusRegistrar.
+            TacticalDirector.PassMechanics.EventBusRegistrar.Initialize();
+            TacticalDirector.ShotMechanics.EventBusRegistrar.Initialize();
+
+            // §4 step 4 (cont.) — author the kickoff MatchContext from the seeded world state so it is
+            // valid before the first AI read; the Resolve phase re-authors it every tick (C4).
+            UpdateMatchContext();
 
             // §4 step 6 — construct the orchestrator with the seven method-group callbacks.
             // Method-group conversion allocates the delegates once here (no per-frame closures).
@@ -350,6 +373,10 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: the current authoritative possessing agent index (NO_POSSESSION = loose).</summary>
         internal int TestOnly_PossessingAgentId => _possessingAgentId;
 
+        /// <summary>Test-only: a copy of the authoritative MatchContext authored at the last Resolve
+        /// (C4). Read after <see cref="RunTick"/> to assert possession / ball-zone authoring.</summary>
+        internal MatchContext TestOnly_MatchContext => _matchContext;
+
         /// <summary>
         /// Test-only seam: scripts a pass on the given agent's executor (the Phase D AI dispatcher is the
         /// production trigger — design note C3). The executor advances on subsequent Resolve phases. Not
@@ -450,12 +477,14 @@ namespace TacticalDirector.MatchEngine
                 _isCollisionKnockdown, _collisionForces, dt, _clock.CurrentMatchTimeSeconds);
         }
 
-        /// <summary>Phase 4 — Resolve. Runs collision (×22) then advances the in-flight pass/shot
-        /// executor lifecycles (Phase C C2/C3). Intra-Resolve order is fixed and digest-load-bearing:
-        /// collision → executor Update → possession (possession update lands in C4). Collision writes
-        /// THIS tick's feedback buffers (consumed by movement next tick — the §3 one-tick-lag contract);
-        /// the executors advance any pass/shot scripted via the TestOnly_ seam (production trigger is the
-        /// Phase D AI dispatcher), kicking the ball at CONTACT through the executor adapters.</summary>
+        /// <summary>Phase 4 — Resolve. Runs collision (×22), advances the in-flight pass/shot executor
+        /// lifecycles (C2/C3), then authors the authoritative <see cref="MatchContext"/> from the settled
+        /// world state (C4). Intra-Resolve order is fixed and digest-load-bearing: collision → executor
+        /// Update → possession/MatchContext. Collision writes THIS tick's feedback buffers (consumed by
+        /// movement next tick — the §3 one-tick-lag contract); the executors advance any pass/shot
+        /// scripted via the TestOnly_ seam (production trigger is the Phase D AI dispatcher), kicking the
+        /// ball at CONTACT through the executor adapters and releasing possession. MatchContext is
+        /// authored last so it reflects post-kick possession; it is read by the next AI tick (Phase D).</summary>
         private void RunResolvePhase()
         {
             EventBus.BeginPhase(PhaseId.Resolve);
@@ -488,6 +517,48 @@ namespace TacticalDirector.MatchEngine
                 _passExecutors[i].Update(matchTime, frameNumber, ref _ball);
                 _shotExecutors[i].Update(matchTime, frameNumber, ref _ball);
             }
+
+            // C4 — author MatchContext last, so it reflects this tick's settled possession (a CONTACT
+            // kick above released possession) and ball kinematics. Read by the next AI tick (Phase D).
+            UpdateMatchContext();
+        }
+
+        /// <summary>
+        /// Authors the authoritative <see cref="MatchContext"/> from the current world state (C4).
+        /// Called at the end of Resolve (after possession settles) and once at boot. Stage 0 has no
+        /// scoring or match-flow producer, so score is 0 and the phase is a fixed OPEN_PLAY (the running
+        /// tick loop is open play; Phase D / match-flow logic drives real phase transitions). The ball
+        /// zone is authored from
+        /// the HOME-team perspective ONLY — the DecisionContextAssembler derives the team-relative zone
+        /// downstream (ERR-008-002 regression guard); re-deriving it per-team here would invert away-team
+        /// zone modifiers.
+        /// </summary>
+        private void UpdateMatchContext()
+        {
+            _matchContext.HomeScore        = 0;
+            _matchContext.AwayScore        = 0;
+            _matchContext.MatchTimeSeconds = _clock.CurrentMatchTimeSeconds;
+
+            _matchContext.PossessingAgentId = _possessingAgentId;
+            // A valid possessing index 0 ≤ i < SQUAD_SIZE resolves to its team; NO_POSSESSION — or any
+            // out-of-range value, a defensive guard against a future Phase-D possession producer
+            // writing a stale index into the digest path — is CONTESTED (the project sanitize-to-safe
+            // pattern, parallel to the NaN gates; the bounds check cannot throw on the _teamIds access).
+            bool possessed = _possessingAgentId >= 0 && _possessingAgentId < MatchEngineConstants.SQUAD_SIZE;
+            _matchContext.Possession = !possessed
+                ? PossessionState.CONTESTED
+                : (_teamIds[_possessingAgentId] == 0 ? PossessionState.HOME_TEAM : PossessionState.AWAY_TEAM);
+
+            // Stage 0 has no kickoff ceremony or set-piece state machine — the running tick loop IS
+            // open play, so author OPEN_PLAY. (Phase D / match-flow drives real KICK_OFF→OPEN_PLAY and
+            // set-piece transitions.) NOTE: this MUST be OPEN_PLAY, not KICK_OFF — the OptionGenerator
+            // returns zero options for any non-OPEN_PLAY phase (§3.1), so KICK_OFF would silently make
+            // the entire Phase D AI a no-op (every agent falls back to HOLD).
+            _matchContext.Phase = MatchPhase.OPEN_PLAY;
+
+            _matchContext.BallPosition = new Vector2(_ball.Position.x, _ball.Position.y);
+            _matchContext.BallVelocity = _ball.Velocity;
+            _matchContext.BallZone     = PitchGeometry.ComputeFieldZone(_ball.Position.x); // home-perspective only
         }
 
         /// <summary>Phase 5 — Events. Enters the Events phase and drains the tick's ledger.</summary>
@@ -553,13 +624,13 @@ namespace TacticalDirector.MatchEngine
             // _perfs, _perfs becomes cross-tick state and MUST be serialized here (bump
             // SNAPSHOT_SCHEMA_VERSION at that point).
             //
-            // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but at Stage 0 it
-            // is constant NO_POSSESSION — kickoff is loose and there is no production possession
-            // producer (the TestOnly_ seam is test-only; the AI dispatcher arrives at Phase D). Its
-            // value is therefore identical across any two same-seed runs, so omission cannot diverge
-            // replay. C4 folds it into MatchContext.PossessingAgentId and serializes that (bump
-            // SNAPSHOT_SCHEMA_VERSION then). The executor in-flight state (C0 CaptureState) is likewise
-            // excluded until C5 — at Stage 0 the executors are idle in production (same reasoning).
+            // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but it is NOT
+            // serialized directly because C4 folds it into MatchContext.PossessingAgentId (authored
+            // each Resolve from this exact field, equal at snapshot time), and the MatchContext IS
+            // serialized below — so the value is captured, just under a different field. The per-agent
+            // Pass/Shot executor in-flight state (C0 CaptureState) is now serialized in the loop below
+            // (C5) — at Stage 0 the executors are idle in production, but once the Phase D AI dispatcher
+            // initiates passes/shots their WINDUP/CONTACT state is cross-tick and digest-relevant.
             CanonicalSerializer.WriteU32(buf, ref o, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION);
             // Tick is also carried in the header; included here so the payload is self-describing
             // when decoded in isolation (replay/save tooling reads the payload directly).
@@ -577,7 +648,19 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteBool(buf, ref o, _isCollisionKnockdown[i]);
                 CanonicalSerializer.WriteF32 (buf, ref o, _collisionForces[i]);
                 WriteMovementCommand(buf, ref o, in _commands[i]);
+
+                // C5 — per-agent Pass/Shot executor in-flight state via the C0 capture seam (value
+                // types, zero heap alloc). Idle executors capture a constant default block at Stage 0;
+                // a Phase-D dispatched pass/shot capture is the cross-tick WINDUP/CONTACT state.
+                PassExecutorState passState = _passExecutors[i].CaptureState();
+                WritePassExecutorState(buf, ref o, in passState);
+                ShotExecutorState shotState = _shotExecutors[i].CaptureState();
+                WriteShotExecutorState(buf, ref o, in shotState);
             }
+
+            // C5 — authoritative MatchContext (folds in the possessing-agent id). Authored each Resolve;
+            // read by the next AI tick. Written after the per-agent block so the field order is pinned.
+            WriteMatchContext(buf, ref o, in _matchContext);
 
             payload.BytesWritten = o;
         }
@@ -668,6 +751,150 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteF32 (buf, ref o, c.FacingTarget.x);
             CanonicalSerializer.WriteF32 (buf, ref o, c.FacingTarget.y);
             CanonicalSerializer.WriteBool(buf, ref o, c.OverrideSafetyConstraints);
+        }
+
+        /// <summary>Serializes a <see cref="PassExecutorState"/> (C0 capture) in canonical order — the
+        /// state-machine ordinal, the held <see cref="PassRequest"/>, the INITIATING-frozen in-flight
+        /// fields, and the committed <see cref="PassResult"/>. Mirrors the C0 round-trip field order in
+        /// PassExecutorStateTests (the lock that this body must stay in sync with). The internal
+        /// PhysicalProfile is excluded — it is recomputed on restore (§2.6).</summary>
+        private static void WritePassExecutorState(byte[] buf, ref int o, in PassExecutorState s)
+        {
+            CanonicalSerializer.WriteI32 (buf, ref o, s.State);
+
+            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.AgentId);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.Request.PassType);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.Request.CrossSubType);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.TargetAgentId);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.TargetPosition.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.TargetPosition.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.TargetPosition.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.IntendedDistance);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.Urgency);
+            CanonicalSerializer.WriteBool(buf, ref o, s.Request.IsWeakFoot);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.TeamId);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.FrameNumber);
+
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.EffectiveSubType);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.KickSpeed);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LaunchAngleDeg);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.BaseKickDirection.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.BaseKickDirection.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.BaseKickDirection.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.AimPoint.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.AimPoint.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.AimPoint.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LeadDistance);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedPassing);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedFatigue);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedBodyAngleDeg);
+            CanonicalSerializer.WriteBool(buf, ref o, s.CachedIsWeakFoot);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.CachedWeakFootRating);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.WindupFramesRemaining);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.FollowThroughFramesRemaining);
+
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.LastResult.Outcome);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.AimPoint.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.AimPoint.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.AimPoint.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.ErrorAngleDeg);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.LeadDistance);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.LastResult.PassType);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.LastResult.ContactFrame);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.ContactMatchTime);
+        }
+
+        /// <summary>Serializes a <see cref="ShotExecutorState"/> (C0 capture) in canonical order, mirroring
+        /// the C0 round-trip field order in ShotExecutorStateTests. Shot carries its full in-flight field
+        /// set (no recompute-on-restore exclusion, unlike Pass).</summary>
+        private static void WriteShotExecutorState(byte[] buf, ref int o, in ShotExecutorState s)
+        {
+            CanonicalSerializer.WriteI32 (buf, ref o, s.State);
+
+            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.AgentId);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.PowerIntent);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.Request.ContactZone);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.SpinIntent);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.PlacementTarget.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.PlacementTarget.y);
+            CanonicalSerializer.WriteBool(buf, ref o, s.Request.IsWeakFoot);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.DistanceToGoal);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.TeamId);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.FrameNumber);
+
+            CanonicalSerializer.WriteF32 (buf, ref o, s.KickSpeed);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LaunchAngleDeg);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.IntendedAimDirection.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.IntendedAimDirection.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.IntendedAimDirection.z);
+
+            CanonicalSerializer.WriteF32 (buf, ref o, s.BodyMechanics.Score);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.BodyMechanics.ContactQualityModifier);
+            CanonicalSerializer.WriteBool(buf, ref o, s.BodyMechanics.StumbleTriggered);
+
+            CanonicalSerializer.WriteF32 (buf, ref o, s.WeakFootErrorMultiplier);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.WindupFrames);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedAgentPosition.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedAgentPosition.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedAgentPosition.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedFinishing);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedLongShots);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedComposure);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedFatigue);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.WindupFramesRemaining);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.FollowThroughFramesRemaining);
+
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.LastResult.Outcome);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.IntendedDirection.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.IntendedDirection.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.IntendedDirection.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalDirection.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalDirection.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalDirection.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.ErrorOffset.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.ErrorOffset.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.BodyMechanicsScore);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.PowerPenaltyApplied);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.KickSpeed);
+            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.LaunchAngleDeg);
+            CanonicalSerializer.WriteBool(buf, ref o, s.LastResult.StumbleTriggered);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.LastResult.ContactFrame);
+        }
+
+        /// <summary>Serializes the authoritative <see cref="MatchContext"/> in canonical order (C5).
+        /// Enum fields (Possession / Phase / BallZone) are written as i32 ordinals.</summary>
+        private static void WriteMatchContext(byte[] buf, ref int o, in MatchContext m)
+        {
+            CanonicalSerializer.WriteI32 (buf, ref o, m.HomeScore);
+            CanonicalSerializer.WriteI32 (buf, ref o, m.AwayScore);
+            CanonicalSerializer.WriteF32 (buf, ref o, m.MatchTimeSeconds);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)m.Possession);
+            CanonicalSerializer.WriteI32 (buf, ref o, m.PossessingAgentId);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)m.Phase);
+            CanonicalSerializer.WriteF32 (buf, ref o, m.BallPosition.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, m.BallPosition.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, m.BallVelocity.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, m.BallVelocity.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, m.BallVelocity.z);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)m.BallZone);
         }
 
         // ── Executor world-state mappers (Phase C C1a) ────────────────────────────────
@@ -883,4 +1110,24 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | struct — no per-frame alloc) and L-3 (ApplySeparation runs       |
 // |         |            |        | before the vRel<=0 early return — static-overlap separation     |
 // |         |            |        | holds) verified non-issues. No behaviour change.                |
+// | 1.5     | 2026-06-22 | —      | Phase C C4/C5/C6 — Resolve-phase completion. C4: new            |
+// |         |            |        | MatchContext _matchContext authored each Resolve (after         |
+// |         |            |        | possession settles) + at boot via UpdateMatchContext — folds    |
+// |         |            |        | _possessingAgentId into PossessingAgentId, derives Possession,  |
+// |         |            |        | ball kinematics, home-perspective BallZone (ERR-008-002 guard:  |
+// |         |            |        | team-relative zone derived downstream). Boot now boots the      |
+// |         |            |        | Pass/Shot EventBusRegistrars (idempotent) so a scripted pass    |
+// |         |            |        | can reach CONTACT + publish. C5: SerializeWorldState adds the   |
+// |         |            |        | per-agent Pass/Shot executor C0 capture (×22 each) +            |
+// |         |            |        | MatchContext; SNAPSHOT_SCHEMA_VERSION 1 → 2; _possessingAgentId |
+// |         |            |        | captured via MatchContext (exclusion proof updated). New        |
+// |         |            |        | WritePassExecutorState / WriteShotExecutorState /               |
+// |         |            |        | WriteMatchContext helpers (mirror the C0 round-trip order);     |
+// |         |            |        | TestOnly_MatchContext accessor. asmdef gains the DecisionTree   |
+// |         |            |        | reference (MatchContext / PitchGeometry).                       |
+// | 1.5.1   | 2026-06-22 | —      | C4/C5 AR (M-1): UpdateMatchContext authors MatchPhase.OPEN_PLAY |
+// |         |            |        | (not KICK_OFF) — OptionGenerator returns zero options for any   |
+// |         |            |        | non-OPEN_PLAY phase (§3.1), so KICK_OFF would silently no-op    |
+// |         |            |        | the entire Phase D AI (all agents HOLD). Stage 0 has no kickoff |
+// |         |            |        | ceremony, so the running tick loop is open play. Doc-aligned.   |
 #endregion

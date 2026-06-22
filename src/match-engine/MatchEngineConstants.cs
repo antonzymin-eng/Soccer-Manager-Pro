@@ -64,12 +64,17 @@ namespace TacticalDirector.MatchEngine
         /// independently — a match-engine field-set change bumps this without touching the certified
         /// #16 header schema.
         ///
-        /// v1 is the first full §2.6 field set (ball position/velocity/spin/state + LastValid*
-        /// checkpoints; per-agent full <c>AgentState</c> including the B0 <c>OscillationGuard</c>
-        /// state, LastValid* checkpoints, team/goalkeeper flags, the two collision-feedback inputs,
-        /// and the held <c>MovementCommand</c>). It supersedes the B2-era kinematic-subset
-        /// PHASE_A_PAYLOAD_FORMAT_VERSION.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 1;
+        /// v1 (Phase B / B3) was the first full §2.6 field set (ball position/velocity/spin/state +
+        /// LastValid* checkpoints; per-agent full <c>AgentState</c> including the B0
+        /// <c>OscillationGuard</c> state, LastValid* checkpoints, team/goalkeeper flags, the two
+        /// collision-feedback inputs, and the held <c>MovementCommand</c>); it superseded the B2-era
+        /// kinematic-subset PHASE_A_PAYLOAD_FORMAT_VERSION.
+        ///
+        /// v2 (Phase C / C5) adds the per-agent Pass/Shot executor in-flight state (the C0
+        /// <c>PassExecutorState</c> / <c>ShotExecutorState</c> capture, ×22 each — cross-tick once an
+        /// AI dispatcher initiates a pass/shot) and the authoritative <c>MatchContext</c> (which folds
+        /// in the host's possessing-agent id; written each Resolve, read by the next AI tick).</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 2;
 
         #endregion
 
@@ -145,4 +150,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | the pass/shot executor query adapters until the ERR-007         |
 // |         |            |        | attribute split wires real attributes in (Phase D). New GT      |
 // |         |            |        | region added after Derived.                                    |
+// | 1.5     | 2026-06-22 | —      | Phase C C5: SNAPSHOT_SCHEMA_VERSION bumped 1 → 2 — the world-    |
+// |         |            |        | state body now also serializes the per-agent Pass/Shot executor |
+// |         |            |        | in-flight state (C0 capture) + the authoritative MatchContext   |
+// |         |            |        | (folds in the possessing-agent id). Doc records the v1/v2 split. |
 #endregion
