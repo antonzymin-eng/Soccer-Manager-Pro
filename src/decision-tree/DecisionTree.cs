@@ -1,6 +1,6 @@
 // File:     src/decision-tree/DecisionTree.cs
 // Created:  2026-05-29
-// Modified: 2026-06-22 (Match Engine Phase D step D0 — CaptureState/RestoreState snapshot seam)
+// Modified: 2026-06-22 (Phase D D1 AR — HasDispatchedAction accessor)
 // Author:   —
 // Spec:     Decision Tree #8 §2.1.2, §3.6, §3.7, §4.1–4.3, Code Standards #20
 // Purpose:  Orchestrator-facing entry point. Runs the 6-step pipeline for one agent
@@ -73,6 +73,13 @@ namespace TacticalDirector.DecisionTree
 
         /// <summary>Last selected action. Valid after at least one successful evaluation.</summary>
         public AgentAction LastAction => _lastAction;
+
+        /// <summary>
+        /// True once this agent has selected and dispatched at least one action (the §3.7.2
+        /// DispatchedActionType record is set). Stays true thereafter. Lets a host verify the
+        /// pipeline actually produced a decision rather than aborting at the validation gate.
+        /// </summary>
+        public bool HasDispatchedAction => _hasDispatchedAction;
 
         // ── Snapshot seam — Match Engine Phase D step D0 ─────────────────────────
 
@@ -243,4 +250,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   _lastAction / _hasDispatchedAction), parallel to the Pass/Shot executor C0   |
 // |         |            |        |   seams. _matchSeed (boot-deterministic) and _optionBuffer (per-tick scratch) |
 // |         |            |        |   excluded per §2.6. No change to the ReceiveSnapshot pipeline.                |
+// | 1.3     | 2026-06-22 | —      | Phase D D1 AR (L-1): public HasDispatchedAction accessor (parallel to State / |
+// |         |            |        |   LastAction) so a host can verify the pipeline produced a decision rather    |
+// |         |            |        |   than aborting at SnapshotValidator. Read-only over the existing field; no    |
+// |         |            |        |   behaviour change.                                                            |
 #endregion

@@ -461,6 +461,10 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: whether the agent's shot executor is idle (no shot in flight).</summary>
         internal bool TestOnly_ShotExecutorIdle(int agentId) => _shotExecutors[agentId].IsIdle;
 
+        /// <summary>Test-only: whether the agent's DecisionTree has dispatched at least one action
+        /// (proves the AI pipeline ran and produced a decision rather than aborting at validation).</summary>
+        internal bool TestOnly_DtHasDispatched(int agentId) => _decisionTrees[agentId].HasDispatchedAction;
+
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
         /// CurrentSnapshotDigest after the most recent <see cref="RunTick"/>). Diagnostic /
@@ -1303,4 +1307,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | INSERT_RADIUS constant; asmdef gains PerceptionSystem. Snapshot |
 // |         |            |        | schema UNCHANGED (DT/perception cross-tick state serialization  |
 // |         |            |        | is D4). Aliases: PerceptionSubsystem / DecisionTreeAI.          |
+// | 1.6.1   | 2026-06-22 | —      | Phase D D1 AR (L-1): TestOnly_DtHasDispatched accessor over the |
+// |         |            |        | per-agent DecisionTree.HasDispatchedAction, so the D1 test can  |
+// |         |            |        | assert the AI pipeline produced a decision (not a silent abort).|
 #endregion

@@ -76,20 +76,28 @@ namespace TacticalDirector.MatchEngine
         // Roster: index 0 is the home goalkeeper; index 11 (PLAYERS_PER_TEAM) is the away goalkeeper.
         private const int AwayGoalkeeperIndex = MatchEngineConstants.PLAYERS_PER_TEAM;
 
+        // AI-driven collision-free window (ticks). The nearest non-GK to a goalkeeper at kickoff is the
+        // same-team adjacent agent at ~5.67 m (PITCH_WIDTH/12 lateral gap on the shared line). Even at an
+        // unreachable constant 10 m/s straight at the GK, 30 ticks (0.5 s) covers ≤ 5 m < 5.67 m, so no
+        // agent can close to collision range — and the AI in fact pulls agents toward the central ball
+        // (away from the spread GKs). This makes the byte-exact GK assertion provably sound (collision,
+        // which DOES process GKs in Resolve, cannot fire). 30 ticks = 5 stride ticks of the AI chain.
+        private const int AiCollisionFreeTicks = 30;
+
         [Test]
         public void AiPhase_DrivesChain_GoalkeepersSkipped()
         {
             // Phase D D1: the AI phase now OWNS the held movement commands (the DecisionTree dispatches
-            // them each 10 Hz stride tick), superseding the B2 TestOnly_SetCommand injection. This locks
-            // two robust invariants over a two-second run: the full perception → decision → dispatch
-            // chain executes every stride tick without throwing (RunTick completing TickCount times is
-            // the proof — a chain exception would surface here), and goalkeepers stay byte-exact
-            // (UpdateAllAgents skips them at Stage 0, regardless of any command the DT writes for them).
-            // NOTE: a "≥1 outfielder moved" assertion is deliberately NOT made — at kickoff the loose
-            // ball sits ~26 m from the nearest agents, so the DT may hold every outfielder at its
-            // formation slot (= kickoff position ⇒ no displacement). Real off-ball motion arrives with
-            // Positioning AI slots at D2 and is exercised by the Phase F closed-loop scenario. AI-driven
-            // determinism is covered by TwoSameSeedRuns_WithLiveDynamics (the AI runs during those ticks).
+            // them each 10 Hz stride tick), superseding the B2 TestOnly_SetCommand injection. Locks three
+            // robust invariants: (1) the full perception → decision → dispatch chain executes every stride
+            // tick without throwing (RunTick completing is the proof); (2) the chain actually produces a
+            // decision — at least one outfielder's DecisionTree dispatches (not a silent abort at
+            // SnapshotValidator); (3) goalkeepers stay byte-exact over the collision-free window
+            // (UpdateAllAgents skips them; collision can't reach them — see AiCollisionFreeTicks).
+            // A specific "outfielder MOVED" assertion is deliberately NOT made — at kickoff the loose ball
+            // sits ~26 m away so the DT may hold every agent at its formation slot; real off-ball motion
+            // arrives with Positioning AI slots at D2. AI determinism is covered by
+            // TwoSameSeedRuns_WithLiveDynamics (the AI runs during those 120 ticks).
             var engine = new MatchEngine(MatchSeed);
 
             Assert.IsTrue(engine.TestOnly_IsGoalkeeper(GoalkeeperIndex),
@@ -100,15 +108,31 @@ namespace TacticalDirector.MatchEngine
             Vector2 homeGkStart = engine.TestOnly_AgentSnapshot(GoalkeeperIndex).Position;
             Vector2 awayGkStart = engine.TestOnly_AgentSnapshot(AwayGoalkeeperIndex).Position;
 
-            for (int i = 0; i < TickCount; i++)
+            for (int i = 0; i < AiCollisionFreeTicks; i++)
             {
                 engine.RunTick();
             }
 
             // The AI chain ran on every stride tick (and never threw — otherwise the loop above aborts).
-            Assert.AreEqual((ulong)(TickCount / DeterministicSimConstants.AI_PHASE_STRIDE),
+            Assert.AreEqual((ulong)(AiCollisionFreeTicks / DeterministicSimConstants.AI_PHASE_STRIDE),
                 engine.AiPhaseRunCount,
                 "The AI phase must have run once per stride tick across the run.");
+
+            // The chain produced a real decision: at least one outfielder dispatched an action. (On the
+            // first heartbeat every valid agent transitions IDLE → EVALUATING → dispatch, so this holds
+            // unless the pipeline silently aborts at the validation gate.)
+            bool anyDispatched = false;
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (engine.TestOnly_IsGoalkeeper(i)) continue;
+                if (engine.TestOnly_DtHasDispatched(i))
+                {
+                    anyDispatched = true;
+                    break;
+                }
+            }
+            Assert.IsTrue(anyDispatched,
+                "No DecisionTree dispatched — the AI pipeline aborted before producing a decision.");
 
             // Both goalkeepers are left completely untouched, so position is byte-exact.
             Vector2 homeGkEnd = engine.TestOnly_AgentSnapshot(GoalkeeperIndex).Position;
@@ -174,4 +198,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | is replaced by AiPhase_DrivesOutfieldMovement_           |
 // |         |            |        | GoalkeepersSkipped: the AI+physics seam moves ≥1         |
 // |         |            |        | outfielder while both goalkeepers stay byte-exact.      |
+// | 1.2     | 2026-06-22 | —      | Phase D D1 AR (M-1 + L-1): run capped to AiCollision-    |
+// |         |            |        | FreeTicks (30 = 5 stride ticks) so collision (which      |
+// |         |            |        | processes GKs in Resolve) provably cannot reach a GK,    |
+// |         |            |        | making byte-exact sound; added a "≥1 DecisionTree        |
+// |         |            |        | dispatched" assertion (TestOnly_DtHasDispatched) so the  |
+// |         |            |        | chain can't silently abort at SnapshotValidator.        |
 #endregion
