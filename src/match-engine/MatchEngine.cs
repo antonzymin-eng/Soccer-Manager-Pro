@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-22 (Phase D D1 — AI-phase wiring: perception → decision → movement)
+// Modified: 2026-06-22 (Phase D D2 — mechanics-AI wiring: Positioning AI #12 → formation slots)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -23,6 +23,7 @@ using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 using TacticalDirector.PassMechanics;
 using TacticalDirector.PerceptionSystem;
+using TacticalDirector.PositioningAI;
 using TacticalDirector.ShotMechanics;
 
 // The collision orchestrator type name (CollisionSystem) collides with its own namespace leaf
@@ -117,6 +118,21 @@ namespace TacticalDirector.MatchEngine
         private readonly DtAgentAttributes[]         _dtAttrs;           // [SQUAD_SIZE]
         private readonly TacticalContext[]           _tacticalContexts;  // [SQUAD_SIZE]
         private readonly bool[]                       _hasPossession;     // [SQUAD_SIZE]
+
+        // ── Mechanics AI (design note §3 / Phase D D2) ────────────────────────────────
+        // Positioning AI (#12) drives per-team formation slots fed into each agent's TacticalContext —
+        // the DecisionTree MOVE_TO_POSITION / HOLD anchor (§3.1.7), so agents settle into formation
+        // shape instead of holding their kickoff scaffold line (the documented D2 off-ball-motion
+        // payoff). One PositioningAITick INSTANCE per team (each owns its own §3 hysteresis), with a
+        // reused PositioningPerceptionSnapshot filled from world state each AI tick. The #12 formation
+        // table is authored attack-toward-+X (single perspective), so the away team's world state is
+        // mapped into that canonical frame (180° pitch rotation) before the tick and the resulting slot
+        // mapped back — the ERR-008-002 home/away-asymmetry guard applied at the mechanics layer.
+        // NOTE (D4 follow-up): the per-team PositioningAITick hysteresis is cross-tick state NOT yet
+        // serialized (same class as the D1 perception / DecisionTree internal state) — same-seed
+        // in-process determinism holds; save/restore replay needs a get/restore seam (fold into D4).
+        private readonly PositioningAITick[]             _positioning;   // [TEAM_COUNT]
+        private readonly PositioningPerceptionSnapshot[] _posSnapshots;  // [TEAM_COUNT]
 
         // ── World state (design note §2.3) ────────────────────────────────────────────
         // Real BallState + AgentState[] driven by the production physics seams (step B2). Step B3
@@ -218,6 +234,20 @@ namespace TacticalDirector.MatchEngine
             _tacticalContexts = new TacticalContext[MatchEngineConstants.SQUAD_SIZE];
             _hasPossession    = new bool[MatchEngineConstants.SQUAD_SIZE];
             InitializeAiSnapshots();
+
+            // §4 step 3 (cont.) — mechanics AI (Phase D D2). One Positioning AI (#12) instance + reused
+            // perception snapshot per team; seed each from the kickoff formation so a valid slot exists
+            // before the first AI read (the per-tick Tick() refreshes them — RunPositioningAI).
+            _positioning  = new PositioningAITick[MatchEngineConstants.TEAM_COUNT];
+            _posSnapshots = new PositioningPerceptionSnapshot[MatchEngineConstants.TEAM_COUNT];
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _positioning[t]  = new PositioningAITick(
+                    MatchEngineConstants.STAGE0_FORMATION, MatchEngineConstants.MaxEntityId);
+                _posSnapshots[t] = new PositioningPerceptionSnapshot(MatchEngineConstants.PLAYERS_PER_TEAM);
+                FillPositioningSnapshot(t, tickIndex: 0);
+                _positioning[t].SeedFromFormation(_posSnapshots[t]);
+            }
 
             // One movement controller forwards every DT-selected movement command into the held
             // _commands buffer (consumed by the Physics phase next, on the same tick). One instance
@@ -465,6 +495,11 @@ namespace TacticalDirector.MatchEngine
         /// (proves the AI pipeline ran and produced a decision rather than aborting at validation).</summary>
         internal bool TestOnly_DtHasDispatched(int agentId) => _decisionTrees[agentId].HasDispatchedAction;
 
+        /// <summary>Test-only: the world-space formation slot the mechanics AI (Positioning #12, D2) fed
+        /// into the agent's TacticalContext at the last AI tick. Read after <see cref="RunTick"/> to assert
+        /// the formation slots feed the decision context and that away-team slots mirror home-team slots.</summary>
+        internal Vector2 TestOnly_FormationSlot(int agentId) => _tacticalContexts[agentId].GetFormationSlot(agentId);
+
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
         /// CurrentSnapshotDigest after the most recent <see cref="RunTick"/>). Diagnostic /
@@ -515,7 +550,8 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Phase 2 — AI (Phase D D1). Stride-gated by the orchestrator (runs only when
         /// tick % AI_PHASE_STRIDE == 0). Does NOT call BeginPhase (handled by RunIntentPhase, so the
         /// EventBus phase stream is invariant across stride/non-stride ticks). Drives the 10 Hz AI
-        /// chain: rebuild the perception broad-phase grid + refresh per-tick inputs (§2.5), run
+        /// chain: rebuild the perception broad-phase grid + refresh per-tick inputs (§2.5), run the
+        /// mechanics AI (Positioning #12 → formation slots into _tacticalContexts, D2), then
         /// PerceptionSystem.OnHeartbeat (×22), then DecisionTree.ReceiveSnapshot (×22). Each DecisionTree
         /// dispatches a MovementCommand into _commands (via the host movement controller, consumed by the
         /// Physics phase that runs next this tick) or a PASS/SHOOT into this agent's executor (advanced in
@@ -537,6 +573,11 @@ namespace TacticalDirector.MatchEngine
             // The AI heartbeat index is the 10 Hz tactical tick (CurrentTick / AI_PHASE_STRIDE). RunAiPhase
             // runs only on stride ticks, so the integer division is exact (no truncation of a partial tick).
             int heartbeat = (int)_clock.CurrentTacticalTick;
+
+            // §2.5 mechanics AI (Phase D D2): refresh the per-team formation slots into _tacticalContexts
+            // BEFORE the DecisionTree reads them below, so each agent's MOVE_TO_POSITION / HOLD anchor is
+            // this tick's Positioning AI (#12) slot rather than the boot scaffold.
+            RunPositioningAI(heartbeat);
 
             _perception.OnHeartbeat(heartbeat, _agents, _ball, _perceptionAttrs, _hasPossession);
 
@@ -577,8 +618,9 @@ namespace TacticalDirector.MatchEngine
         /// Assembles the Stage-0 static per-agent AI input snapshots once at boot (Phase D D1 §2.5).
         /// Perception attributes use neutral cognition with the agent's real TeamId (it discriminates
         /// teammate vs opponent shadow cones). DT attributes are CreateDefault(teamId). The tactical
-        /// context is Stage0Default with the agent's kickoff position as its formation slot (the Phase-A
-        /// scaffold slot — real Positioning AI #12 slots arrive at D2). _hasPossession defaults false.
+        /// context is Stage0Default with the agent's kickoff position as its formation slot. This is the
+        /// boot value used until the first AI stride tick; from then on RunPositioningAI (D2) overwrites
+        /// the formation slot with the live Positioning AI #12 slot each tick. _hasPossession defaults false.
         /// </summary>
         private void InitializeAiSnapshots()
         {
@@ -593,6 +635,130 @@ namespace TacticalDirector.MatchEngine
                 _tacticalContexts[i] = TacticalContext.Stage0Default(_agents[i].Position);
                 _hasPossession[i]    = false;
             }
+        }
+
+        /// <summary>
+        /// Mechanics AI (Phase D D2): runs the per-team Positioning AI (#12) tick and folds each agent's
+        /// computed formation slot into its <see cref="TacticalContext"/> for the DecisionTree to read
+        /// (the MOVE_TO_POSITION / HOLD anchor). For each team it fills the perception snapshot from
+        /// current world state, ticks, then writes <c>GetFormationSlot(entityId)</c> back into the
+        /// per-agent <c>_tacticalContexts</c>. The away team's world state is mapped into the canonical
+        /// attack-toward-+X frame for the snapshot and the resulting slot mapped back to world space
+        /// (180° pitch rotation), so the single-perspective #12 formation table positions both teams
+        /// correctly (the ERR-008-002 home/away-asymmetry guard at the mechanics layer). Deterministic
+        /// (no RNG); the Stage-0 default Pressing / Passing / line-depth and the false Mark/Attack stub
+        /// flags are re-applied via <see cref="TacticalContext.Stage0Default"/> — the Defensive (#14) /
+        /// Attacking (#15) / Pressing (#13) tick wiring that would author those is the remaining D2 work.
+        /// </summary>
+        private void RunPositioningAI(int tacticalTick)
+        {
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                FillPositioningSnapshot(t, tacticalTick);
+
+                ContextModifierInputs modifiers = new ContextModifierInputs(
+                    scoreDiff:         0,
+                    teamMeanFatigue:   ComputeTeamMeanFatigue(t),
+                    tacticalIntensity: MatchEngineConstants.STAGE0_TACTICAL_INTENSITY);
+
+                _positioning[t].Tick(_posSnapshots[t], modifiers);
+
+                for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+                {
+                    int i = t * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+
+                    Vector2 canonicalSlot = _positioning[t].GetFormationSlot(i);
+                    // A sentinel slot (inactive agent — none at Stage 0) would corrupt under the 180°
+                    // map (PITCH − (−∞) = +∞); fall back to the agent's own position in that case.
+                    Vector2 worldSlot = PositioningAITick.IsSentinelSlot(canonicalSlot)
+                        ? _agents[i].Position
+                        : MirrorPitchIfAway(t, canonicalSlot);
+
+                    // Rebuild the Stage-0 TacticalContext around the live formation slot. Pressing / Passing
+                    // / DefensiveLineDepth stay the Stage-0 defaults and the Mark/Attack stub flags stay
+                    // false (the #13/#14/#15 wiring that would set them is the remaining D2 work).
+                    _tacticalContexts[i] = TacticalContext.Stage0Default(worldSlot);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fills team <paramref name="team"/>'s reused <see cref="PositioningPerceptionSnapshot"/> from
+        /// current world state. Agents are written in roster order (k = 0..PLAYERS_PER_TEAM−1), which is
+        /// EntityId-ascending (EntityId = roster index = team·PLAYERS_PER_TEAM + k), as #12 requires.
+        /// Positions, the ball, and the longitudinal ball velocity are mapped into the canonical
+        /// attack-toward-+X frame (identity for the home team, 180° pitch rotation for the away team).
+        /// </summary>
+        private void FillPositioningSnapshot(int team, int tickIndex)
+        {
+            PositioningPerceptionSnapshot snap = _posSnapshots[team];
+            FormationSlotRecord[] formation =
+                PositioningAIConstants.GetFormationSlots(MatchEngineConstants.STAGE0_FORMATION);
+
+            snap.TickIndex      = tickIndex;
+            snap.BallPosition   = MirrorPitchIfAway(team, _ball.Position);
+            snap.BallVxFiltered = team == 0 ? _ball.Velocity.x : -_ball.Velocity.x;
+
+            int owner = _possessingAgentId;
+            snap.PossessionOwnerEntityId  = owner;
+            snap.PossessionOwnerIsOwnTeam = owner >= 0 && _teamIds[owner] == team;
+
+            int activeOutfield = 0;
+            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            {
+                int i = team * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                bool isGk = _isGoalkeeper[i];
+
+                snap.Agents[k] = new AgentPositioningData(
+                    entityId:     i,
+                    slotIndex:    k,
+                    position:     MirrorPitchIfAway(team, _agents[i].Position),
+                    isActive:     true,                 // Stage 0: no substitutions / red cards yet
+                    role:         formation[k].Role,
+                    isGoalkeeper: isGk);
+
+                if (!isGk) activeOutfield++;
+            }
+            snap.ActiveOutfieldCount = activeOutfield;
+        }
+
+        /// <summary>Mean fatigue [0,1] (0 = rested) across team <paramref name="team"/>, derived from
+        /// each agent's AerobicPool (1 = rested) per the project fatigue convention.</summary>
+        private float ComputeTeamMeanFatigue(int team)
+        {
+            float sum = 0f;
+            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            {
+                int i = team * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                sum += 1f - _agents[i].AerobicPool;
+            }
+            return sum / MatchEngineConstants.PLAYERS_PER_TEAM;
+        }
+
+        /// <summary>
+        /// Maps a world-space position into / out of the canonical attack-toward-+X frame used by the
+        /// Positioning AI (#12) formation table: identity for the home team (team 0, which attacks +X),
+        /// a 180° pitch rotation (x → LENGTH−x, y → WIDTH−y) for the away team (team 1, which attacks −X).
+        /// The rotation is its own inverse, so the same call maps world→canonical when filling the
+        /// snapshot and canonical→world when reading the computed slot back.
+        /// </summary>
+        private static Vector2 MirrorPitchIfAway(int team, Vector2 p)
+        {
+            if (team == 0) return p;
+            return new Vector2(
+                MatchEngineConstants.PITCH_LENGTH_M - p.x,
+                MatchEngineConstants.PITCH_WIDTH_M  - p.y);
+        }
+
+        /// <summary>Vector3 overload of <see cref="MirrorPitchIfAway(int, Vector2)"/> preserving Z (height,
+        /// frame-invariant).</summary>
+        private static Vector3 MirrorPitchIfAway(int team, Vector3 p)
+        {
+            if (team == 0) return p;
+            return new Vector3(
+                MatchEngineConstants.PITCH_LENGTH_M - p.x,
+                MatchEngineConstants.PITCH_WIDTH_M  - p.y,
+                p.z);
         }
 
         /// <summary>Phase 3 — Physics. Integrates the ball (#1) and the 22 agents (#2) one 60 Hz
@@ -1317,4 +1483,20 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | PerceptionDiagnostics, NOT FilteredView (CS1061 build break the |
 // |         |            |        | Linux gate caught; the AR grep had matched the diagnostics      |
 // |         |            |        | struct in the shared FilteredView.cs file).                     |
+// | 1.7     | 2026-06-22 | —      | Phase D D2 — mechanics-AI wiring (Positioning AI #12). One      |
+// |         |            |        | PositioningAITick INSTANCE + reused PositioningPerceptionSnap-  |
+// |         |            |        | shot per team, seeded at boot. RunAiPhase now runs RunPositi-   |
+// |         |            |        | oningAI before the DT loop: it fills each team's snapshot from  |
+// |         |            |        | world state, ticks #12, and folds GetFormationSlot back into    |
+// |         |            |        | each agent's TacticalContext (the DT MOVE_TO_POSITION / HOLD    |
+// |         |            |        | anchor) so agents settle into formation shape instead of the    |
+// |         |            |        | kickoff scaffold line. The away team's world state is mapped    |
+// |         |            |        | into the canonical attack-+X frame and the slot mapped back     |
+// |         |            |        | (180° pitch rotation via MirrorPitchIfAway) — the ERR-008-002   |
+// |         |            |        | home/away guard at the mechanics layer. New helpers RunPositi-  |
+// |         |            |        | oningAI / FillPositioningSnapshot / ComputeTeamMeanFatigue /    |
+// |         |            |        | MirrorPitchIfAway + TestOnly_FormationSlot accessor. asmdef     |
+// |         |            |        | gains PositioningAI. Snapshot schema UNCHANGED (positioning     |
+// |         |            |        | hysteresis serialization is the D4 step). Pressing #13 /        |
+// |         |            |        | Defensive #14 / Attacking #15 tick wiring remains for D2.       |
 #endregion
