@@ -51,6 +51,12 @@ namespace TacticalDirector.MatchEngine
         /// the C4 step folds host possession into MatchContext.</summary>
         public const int NO_POSSESSION = -1;
 
+        /// <summary>[FIXED] Perception broad-phase grid insert radius (metres), Phase D D1. The host
+        /// point-inserts agents into the perception grid each AI tick; the MaxPerceptionRange (120 m)
+        /// query window spans the whole pitch, so the body radius does not affect candidacy — a point
+        /// insert (0 m, center cell only) is sufficient and deterministic. Not a tunable.</summary>
+        public const float PERCEPTION_GRID_POINT_INSERT_RADIUS = 0f;
+
         /// <summary>[FIXED] Match-engine world-state snapshot schema version (design note §2.6 /
         /// step B3). Versions the field set and serialization order of the world state written into
         /// the <c>SnapshotPayload</c> body by <see cref="MatchEngine.SerializeWorldState"/>; bump on
@@ -154,4 +160,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | state body now also serializes the per-agent Pass/Shot executor |
 // |         |            |        | in-flight state (C0 capture) + the authoritative MatchContext   |
 // |         |            |        | (folds in the possessing-agent id). Doc records the v1/v2 split. |
+// | 1.6     | 2026-06-22 | —      | Phase D D1: PERCEPTION_GRID_POINT_INSERT_RADIUS ([FIXED] 0 m)   |
+// |         |            |        | added to the Fixed region — the host point-inserts agents into  |
+// |         |            |        | the perception broad-phase grid each AI tick. SNAPSHOT_SCHEMA_  |
+// |         |            |        | VERSION unchanged (DT/perception cross-tick serialization is    |
+// |         |            |        | the D4 step).                                                   |
 #endregion
