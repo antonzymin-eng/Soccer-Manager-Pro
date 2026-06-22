@@ -526,8 +526,9 @@ namespace TacticalDirector.MatchEngine
         /// <summary>
         /// Authors the authoritative <see cref="MatchContext"/> from the current world state (C4).
         /// Called at the end of Resolve (after possession settles) and once at boot. Stage 0 has no
-        /// scoring or match-flow producer, so score is 0 and the phase is a fixed KICK_OFF placeholder
-        /// (Phase D / match-flow logic drives real phase transitions). The ball zone is authored from
+        /// scoring or match-flow producer, so score is 0 and the phase is a fixed OPEN_PLAY (the running
+        /// tick loop is open play; Phase D / match-flow logic drives real phase transitions). The ball
+        /// zone is authored from
         /// the HOME-team perspective ONLY — the DecisionContextAssembler derives the team-relative zone
         /// downstream (ERR-008-002 regression guard); re-deriving it per-team here would invert away-team
         /// zone modifiers.
@@ -543,7 +544,12 @@ namespace TacticalDirector.MatchEngine
                 ? PossessionState.CONTESTED
                 : (_teamIds[_possessingAgentId] == 0 ? PossessionState.HOME_TEAM : PossessionState.AWAY_TEAM);
 
-            _matchContext.Phase = MatchPhase.KICK_OFF; // Stage 0 placeholder; Phase D drives transitions.
+            // Stage 0 has no kickoff ceremony or set-piece state machine — the running tick loop IS
+            // open play, so author OPEN_PLAY. (Phase D / match-flow drives real KICK_OFF→OPEN_PLAY and
+            // set-piece transitions.) NOTE: this MUST be OPEN_PLAY, not KICK_OFF — the OptionGenerator
+            // returns zero options for any non-OPEN_PLAY phase (§3.1), so KICK_OFF would silently make
+            // the entire Phase D AI a no-op (every agent falls back to HOLD).
+            _matchContext.Phase = MatchPhase.OPEN_PLAY;
 
             _matchContext.BallPosition = new Vector2(_ball.Position.x, _ball.Position.y);
             _matchContext.BallVelocity = _ball.Velocity;
@@ -1114,4 +1120,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | WriteMatchContext helpers (mirror the C0 round-trip order);     |
 // |         |            |        | TestOnly_MatchContext accessor. asmdef gains the DecisionTree   |
 // |         |            |        | reference (MatchContext / PitchGeometry).                       |
+// | 1.5.1   | 2026-06-22 | —      | C4/C5 AR (M-1): UpdateMatchContext authors MatchPhase.OPEN_PLAY |
+// |         |            |        | (not KICK_OFF) — OptionGenerator returns zero options for any   |
+// |         |            |        | non-OPEN_PLAY phase (§3.1), so KICK_OFF would silently no-op    |
+// |         |            |        | the entire Phase D AI (all agents HOLD). Stage 0 has no kickoff |
+// |         |            |        | ceremony, so the running tick loop is open play. Doc-aligned.   |
 #endregion
