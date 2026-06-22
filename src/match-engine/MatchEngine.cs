@@ -542,12 +542,14 @@ namespace TacticalDirector.MatchEngine
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                // FilteredView carries the pressure scalar computed during the heartbeat (§3.6); reuse it
-                // rather than re-running PressureEvaluator (it is the same formula and inputs).
+                // The pressure scalar is computed during the heartbeat and exposed on the per-agent
+                // PerceptionDiagnostics (§3.6 / §3.7.2) — it is NOT a FilteredView field. Reuse it rather
+                // than re-running PressureEvaluator (same formula + inputs).
                 FilteredView view = _perception.GetFilteredView(i);
+                float pressureScalar = _perception.GetDiagnostics(i).PressureScalar;
                 _decisionTrees[i].ReceiveSnapshot(
                     view, _matchContext, _tacticalContexts[i], _dtAttrs[i],
-                    _agents[i], view.PressureScalar);
+                    _agents[i], pressureScalar);
             }
         }
 
@@ -1310,4 +1312,9 @@ namespace TacticalDirector.MatchEngine
 // | 1.6.1   | 2026-06-22 | —      | Phase D D1 AR (L-1): TestOnly_DtHasDispatched accessor over the |
 // |         |            |        | per-agent DecisionTree.HasDispatchedAction, so the D1 test can  |
 // |         |            |        | assert the AI pipeline produced a decision (not a silent abort).|
+// | 1.6.2   | 2026-06-22 | —      | Phase D D1 CI fix: pressure scalar sourced from               |
+// |         |            |        | PerceptionSystem.GetDiagnostics(i).PressureScalar — it lives on |
+// |         |            |        | PerceptionDiagnostics, NOT FilteredView (CS1061 build break the |
+// |         |            |        | Linux gate caught; the AR grep had matched the diagnostics      |
+// |         |            |        | struct in the shared FilteredView.cs file).                     |
 #endregion
