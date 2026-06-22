@@ -540,7 +540,12 @@ namespace TacticalDirector.MatchEngine
             _matchContext.MatchTimeSeconds = _clock.CurrentMatchTimeSeconds;
 
             _matchContext.PossessingAgentId = _possessingAgentId;
-            _matchContext.Possession = _possessingAgentId == MatchEngineConstants.NO_POSSESSION
+            // A valid possessing index 0 ≤ i < SQUAD_SIZE resolves to its team; NO_POSSESSION — or any
+            // out-of-range value, a defensive guard against a future Phase-D possession producer
+            // writing a stale index into the digest path — is CONTESTED (the project sanitize-to-safe
+            // pattern, parallel to the NaN gates; the bounds check cannot throw on the _teamIds access).
+            bool possessed = _possessingAgentId >= 0 && _possessingAgentId < MatchEngineConstants.SQUAD_SIZE;
+            _matchContext.Possession = !possessed
                 ? PossessionState.CONTESTED
                 : (_teamIds[_possessingAgentId] == 0 ? PossessionState.HOME_TEAM : PossessionState.AWAY_TEAM);
 
