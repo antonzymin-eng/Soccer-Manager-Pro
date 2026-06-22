@@ -8,7 +8,8 @@
         "TacticalDirector.AgentMovement",
         "TacticalDirector.CollisionSystem",
         "TacticalDirector.PassMechanics",
-        "TacticalDirector.ShotMechanics"
+        "TacticalDirector.ShotMechanics",
+        "TacticalDirector.DecisionTree"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

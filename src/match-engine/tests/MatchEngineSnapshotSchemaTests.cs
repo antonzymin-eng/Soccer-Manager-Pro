@@ -42,7 +42,8 @@ namespace TacticalDirector.MatchEngine
         public void SchemaVersion_IsPinned()
         {
             // The pin must change deliberately (with a field-set or ordering change), never by drift.
-            Assert.AreEqual(1u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v2 added the C5 per-agent executor state + MatchContext to the serialized body.
+            Assert.AreEqual(2u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
         }
 
