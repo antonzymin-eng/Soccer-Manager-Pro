@@ -648,6 +648,28 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-engine/tests/MatchEnginePhysicsTests.cs` | Phase B step B2: dropped-ball integration through the real loop; outfielder walks toward its WalkTo target while goalkeepers are skipped; same-seed determinism with live ball + agent dynamics |
 | `src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs` | Phase B step B3: SNAPSHOT_SCHEMA_VERSION pin; OscillationGuard-state + ball-spin digest-preimage probes (proving the full §2.6 field set feeds the digest, not just the B2 kinematic subset); locked-guard same-seed determinism |
 
+### `src/living-world/` — Living World System #22 T0 scaffolding (June 21, 2026; data types + pure math only — spec IN REVIEW)
+
+> Self-contained T0: no references (the spec's vol-2/vol-3 human-systems + project-constants upstreams do not exist in `src/` yet; engine-free, `noEngineReferences`). Services (WorldLoop/ArcEngine/text-gen/background-tier/cold-store) land as KD-10 prerequisites are wired.
+
+| File | Purpose |
+|---|---|
+| `src/living-world/living-world.asmdef` | Assembly definition `TacticalDirector.LivingWorld`; no references; `noEngineReferences` (off-pitch layer touches no physics) |
+| `src/living-world/AssemblyInfo.cs` | `InternalsVisibleTo("TacticalDirector.LivingWorld.Tests")` |
+| `src/living-world/RelationshipLayer.cs` | `enum : byte {PlayerEdge,Affinity,Trust}` — ordinals = ActiveLayers bit positions (FR-LW-028) |
+| `src/living-world/EventKind.cs` | `enum : byte` — open roster (vol-2 §7), APPEND-only seed members |
+| `src/living-world/ArcKind.cs` | `enum : byte` — ordinal order = non-entity arc evaluation order (FR-LW-017) |
+| `src/living-world/InteractionIntent.cs` | `enum : byte` — named to avoid existing Intent/AttackIntent/DistributeIntent collisions |
+| `src/living-world/MemoryEpisode.cs` | `readonly struct` — episodeId/Kind/Salience/WorldTick/ManagerChoiceId + WithDecayedSalience |
+| `src/living-world/SpawnCause.cs` | `readonly struct` provenance (KD-8) with nested Input |
+| `src/living-world/Arc.cs` | `struct` arc state machine + PinnedEpisode refs + IsExpired liveness |
+| `src/living-world/RelationshipEdge.cs` | `struct` — ActiveLayers mask, read-only PlayerEdge mirror, owned Affinity/Trust, Memory[], NextEpisodeId; IsLayerActive |
+| `src/living-world/ColdSummary.cs` | `struct` — departed-contact compression incl. NextEpisodeId high-water mark (FR-LW-009) |
+| `src/living-world/LivingWorldConstants.cs` | Appendix A catalogue — [GT] (illustrative, pending §7 G2 balance pass) + CLIQUE_THRESHOLD [CROSS vol-2 §2.1] |
+| `src/living-world/LivingWorldMath.cs` | Pure deterministic helpers: §3.1 ApplyEvent/ApplyDecay/Clamp01 + FR-LW-021 CompareEvictability tiebreak |
+| `src/living-world/Tests/living-world-tests.asmdef` | Test assembly definition (EditMode; references living-world) |
+| `src/living-world/Tests/LivingWorldTests.cs` | T0 units: enum ordinals (T-LW-U-001..004); §3.1 worked examples (0.56, ~0.016, no-overshoot, no-op); eviction tiebreak; ActiveLayers masking; episodeId-resume |
+
 ## Tracking Documents
 
 | File | Purpose |
