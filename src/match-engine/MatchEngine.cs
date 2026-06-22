@@ -1,13 +1,14 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-22 (Phase C C4/C5/C6 — possession→MatchContext, registry boot, executor+context snapshot)
+// Modified: 2026-06-22 (Phase D D1 — AI-phase wiring: perception → decision → movement)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
 //           TickOrchestrator 7-phase pipeline. The Physics phase (B2) drives Ball Physics (#1) +
 //           Agent Movement (#2); the Resolve phase (Phase C) drives Collision (#3) + the per-agent
 //           Pass (#5) / Shot (#6) executor lifecycles via host world-state adapters. The AI phase
-//           remains an EventBus-lifecycle-only stub (design note §5 Phase D).
+//           (Phase D D1) drives Perception (#7) + the per-agent DecisionTree (#8) on the 10 Hz
+//           stride tick, emitting movement commands / pass-shot dispatches.
 
 using System;
 
@@ -21,11 +22,18 @@ using TacticalDirector.DecisionTree;
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 using TacticalDirector.PassMechanics;
+using TacticalDirector.PerceptionSystem;
 using TacticalDirector.ShotMechanics;
 
 // The collision orchestrator type name (CollisionSystem) collides with its own namespace leaf
 // (TacticalDirector.CollisionSystem); alias it to a distinct name so the type is unambiguous here.
 using CollisionSubsystem = TacticalDirector.CollisionSystem.CollisionSystem;
+
+// PerceptionSystem and DecisionTree each name a TYPE identical to their namespace leaf
+// (TacticalDirector.PerceptionSystem.PerceptionSystem / TacticalDirector.DecisionTree.DecisionTree);
+// alias both so the bare names are unambiguous here (parallel to CollisionSubsystem).
+using PerceptionSubsystem = TacticalDirector.PerceptionSystem.PerceptionSystem;
+using DecisionTreeAI      = TacticalDirector.DecisionTree.DecisionTree;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -42,8 +50,9 @@ namespace TacticalDirector.MatchEngine
     /// phase, enters every phase (the AI phase unconditionally, at the end of Intent, so the
     /// EventBus phase stream is invariant across stride/non-stride ticks), drains at Events,
     /// and serializes the ledger + world state at Snapshot. The Physics phase (step B2) drives
-    /// the real Ball Physics (#1) and Agent Movement (#2) seams; the AI and Resolve phases remain
-    /// lifecycle-only stubs until Phases C–F.
+    /// the real Ball Physics (#1) and Agent Movement (#2) seams; the Resolve phase (Phase C) drives
+    /// Collision (#3) + the Pass (#5) / Shot (#6) executor lifecycles; the AI phase (Phase D D1)
+    /// drives Perception (#7) + the per-agent DecisionTree (#8) on the 10 Hz stride tick.
     /// </summary>
     public sealed class MatchEngine
     {
@@ -87,6 +96,27 @@ namespace TacticalDirector.MatchEngine
         // DecisionContextAssembler — authoring it per-team here would reintroduce ERR-008-002).
         // Serialized into the snapshot at C5 (cross-tick state).
         private MatchContext _matchContext;
+
+        // ── AI subsystems (design note §3 / Phase D D1) ───────────────────────────────
+        // Perception (#7) + per-agent DecisionTree (#8) drive the AI phase on the 10 Hz stride
+        // tick: perception → decision → movement command. Perception owns its OWN broad-phase grid
+        // (host-populated each AI tick from agent positions) — distinct from the CollisionSystem's
+        // internal grid. The DecisionTrees are 22 per-agent INSTANCES (each holds a cross-tick state
+        // machine; the D0 CaptureState seam) sharing one movement controller + this agent's Pass/Shot
+        // executor. NOTE: perception's internal RecognitionLatencyTracker / ShoulderCheckScheduler /
+        // ball-prev arrays AND the DecisionTree state machine are cross-tick state that is NOT yet
+        // serialized — same-seed-in-process determinism holds (both runs evolve identically), but
+        // save/restore replay needs get/restore seams + serialization (deferred to D4; design note §6.5).
+        private readonly SpatialHashGrid     _perceptionGrid;
+        private readonly PerceptionSubsystem _perception;
+        private readonly DecisionTreeAI[]    _decisionTrees;     // [SQUAD_SIZE]
+
+        // Per-agent AI input snapshots (§2.5). Stage-0 static (neutral attributes + Stage0Default
+        // tactics), assembled once at boot; _hasPossession is the only per-tick-refreshed input.
+        private readonly PerceptionAgentAttributes[] _perceptionAttrs;   // [SQUAD_SIZE]
+        private readonly DtAgentAttributes[]         _dtAttrs;           // [SQUAD_SIZE]
+        private readonly TacticalContext[]           _tacticalContexts;  // [SQUAD_SIZE]
+        private readonly bool[]                       _hasPossession;     // [SQUAD_SIZE]
 
         // ── World state (design note §2.3) ────────────────────────────────────────────
         // Real BallState + AgentState[] driven by the production physics seams (step B2). Step B3
@@ -178,6 +208,29 @@ namespace TacticalDirector.MatchEngine
                 _shotExecutors[i] = new ShotExecutor(shotAdapter, shotAdapter, shotAdapter);
             }
 
+            // §4 step 3 (cont.) — AI subsystems (Phase D D1). Perception gets its own broad-phase grid
+            // (host-populated each AI tick). The per-agent AI input buffers are allocated once and the
+            // Stage-0 static snapshots assembled now (needs the kickoff positions + team ids above).
+            _perceptionGrid   = new SpatialHashGrid();
+            _perception       = new PerceptionSubsystem(_perceptionGrid);
+            _perceptionAttrs  = new PerceptionAgentAttributes[MatchEngineConstants.SQUAD_SIZE];
+            _dtAttrs          = new DtAgentAttributes[MatchEngineConstants.SQUAD_SIZE];
+            _tacticalContexts = new TacticalContext[MatchEngineConstants.SQUAD_SIZE];
+            _hasPossession    = new bool[MatchEngineConstants.SQUAD_SIZE];
+            InitializeAiSnapshots();
+
+            // One movement controller forwards every DT-selected movement command into the held
+            // _commands buffer (consumed by the Physics phase next, on the same tick). One instance
+            // backs all 22 DecisionTrees. Each DecisionTree is constructed with its agent id, this
+            // agent's Pass/Shot executor (the dispatch target for PASS/SHOOT), and the match seed.
+            var movementController = new HostMovementController(this);
+            _decisionTrees = new DecisionTreeAI[MatchEngineConstants.SQUAD_SIZE];
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _decisionTrees[i] = new DecisionTreeAI(
+                    i, movementController, matchSeed, _passExecutors[i], _shotExecutors[i]);
+            }
+
             // §4 step 2 — boot the EventBus registry for the wired producers (Pass #5 / Shot #6) so a
             // pass/shot reaching CONTACT can publish (C4 — without this, ExecuteContact throws
             // ERR_EVT_UNREGISTERED_ORDINAL). EventRegistry.EnsureInitialized() is internal to the
@@ -188,6 +241,15 @@ namespace TacticalDirector.MatchEngine
             // Fully qualified — both spec namespaces expose an EventBusRegistrar.
             TacticalDirector.PassMechanics.EventBusRegistrar.Initialize();
             TacticalDirector.ShotMechanics.EventBusRegistrar.Initialize();
+
+            // Phase D D1 — the DecisionTree publishes DecisionMadeEvent (Tier C, 0x11) every evaluation,
+            // and Tier C publish throws for an unregistered ordinal, so boot the DT registrar too. It is
+            // idempotent (s_registered guard — audit AR-2 M-11), safe across multiple constructions in
+            // one process (the determinism tests build two engines). DecisionMadeEvent is immediate-
+            // dispatch (CosmeticChannel) and excluded from the ledger, so it never enters the digest.
+            // Perception publishes PerceptionRefreshEvent only on HandleForcedRefresh (not OnHeartbeat),
+            // which the host does not call, so no perception registrar boot is required.
+            TacticalDirector.DecisionTree.EventBusRegistrar.Initialize();
 
             // §4 step 4 (cont.) — author the kickoff MatchContext from the seeded world state so it is
             // valid before the first AI read; the Resolve phase re-authors it every tick (C4).
@@ -399,6 +461,10 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: whether the agent's shot executor is idle (no shot in flight).</summary>
         internal bool TestOnly_ShotExecutorIdle(int agentId) => _shotExecutors[agentId].IsIdle;
 
+        /// <summary>Test-only: whether the agent's DecisionTree has dispatched at least one action
+        /// (proves the AI pipeline ran and produced a decision rather than aborting at validation).</summary>
+        internal bool TestOnly_DtHasDispatched(int agentId) => _decisionTrees[agentId].HasDispatchedAction;
+
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
         /// CurrentSnapshotDigest after the most recent <see cref="RunTick"/>). Diagnostic /
@@ -418,9 +484,10 @@ namespace TacticalDirector.MatchEngine
         }
 
         // ── Phase callbacks (design note §2.4 / §3) ───────────────────────────────────
-        // Each callback drives the EventBus phase lifecycle. The Physics phase (B2) invokes the
-        // ball + agent-movement seams; the Input / Intent / AI / Resolve phases remain lifecycle-
-        // only stubs (gameplay wires in at Phases C–F).
+        // Each callback drives the EventBus phase lifecycle. Physics (B2) drives ball + agent-movement;
+        // AI (D1) drives perception + decision tree; Resolve (Phase C) drives collision + executors +
+        // MatchContext. The Input / Intent phases remain lifecycle-only (controller / set-piece intent
+        // wire in at Phases E–F).
 
         /// <summary>Phase 0 — Input. Opens the EventBus tick and enters the Input phase.</summary>
         private void RunInputPhase()
@@ -445,13 +512,87 @@ namespace TacticalDirector.MatchEngine
             EventBus.BeginPhase(PhaseId.AI);
         }
 
-        /// <summary>Phase 2 — AI. Stride-gated by the orchestrator (runs only when
-        /// tick % AI_PHASE_STRIDE == 0). Does NOT call BeginPhase (handled by RunIntentPhase).</summary>
+        /// <summary>Phase 2 — AI (Phase D D1). Stride-gated by the orchestrator (runs only when
+        /// tick % AI_PHASE_STRIDE == 0). Does NOT call BeginPhase (handled by RunIntentPhase, so the
+        /// EventBus phase stream is invariant across stride/non-stride ticks). Drives the 10 Hz AI
+        /// chain: rebuild the perception broad-phase grid + refresh per-tick inputs (§2.5), run
+        /// PerceptionSystem.OnHeartbeat (×22), then DecisionTree.ReceiveSnapshot (×22). Each DecisionTree
+        /// dispatches a MovementCommand into _commands (via the host movement controller, consumed by the
+        /// Physics phase that runs next this tick) or a PASS/SHOOT into this agent's executor (advanced in
+        /// Resolve). Reads C4's _matchContext. DecisionMadeEvent (Tier C) publishes here in the AI phase.</summary>
         private void RunAiPhase()
         {
-            // Phase A: no perception / decision / mechanics-AI calls yet (Phase D).
             _aiPhaseRanThisTick = true;
             _aiPhaseRunCount++;
+
+            // §2.5 per-tick assembly. Possession is the only per-tick-varying AI input at Stage 0
+            // (attributes + tactics are static defaults assembled at boot). Rebuild the broad-phase grid
+            // from current agent positions (perception queries it; the host owns population).
+            PopulatePerceptionGrid();
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _hasPossession[i] = i == _possessingAgentId;
+            }
+
+            // The AI heartbeat index is the 10 Hz tactical tick (CurrentTick / AI_PHASE_STRIDE). RunAiPhase
+            // runs only on stride ticks, so the integer division is exact (no truncation of a partial tick).
+            int heartbeat = (int)_clock.CurrentTacticalTick;
+
+            _perception.OnHeartbeat(heartbeat, _agents, _ball, _perceptionAttrs, _hasPossession);
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                // The pressure scalar is computed during the heartbeat and exposed on the per-agent
+                // PerceptionDiagnostics (§3.6 / §3.7.2) — it is NOT a FilteredView field. Reuse it rather
+                // than re-running PressureEvaluator (same formula + inputs).
+                FilteredView view = _perception.GetFilteredView(i);
+                float pressureScalar = _perception.GetDiagnostics(i).PressureScalar;
+                _decisionTrees[i].ReceiveSnapshot(
+                    view, _matchContext, _tacticalContexts[i], _dtAttrs[i],
+                    _agents[i], pressureScalar);
+            }
+        }
+
+        /// <summary>
+        /// Rebuilds the perception broad-phase grid from current agent positions (Phase D D1 §2.5).
+        /// Clear + point-insert all 22 agents each AI tick. The ball is NOT inserted — ball perception
+        /// (#7 §3.5) targets the ball directly via BallState and uses the grid only to find agent
+        /// occluders, so the ball is never a candidate. Point insert (radius 0) is sufficient: the
+        /// MaxPerceptionRange (120 m) query window spans the whole pitch, so body radius does not affect
+        /// candidacy. Zero allocation (grid buffers are pre-allocated).
+        /// </summary>
+        private void PopulatePerceptionGrid()
+        {
+            _perceptionGrid.Clear();
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                Vector2 p = _agents[i].Position;
+                _perceptionGrid.Insert(
+                    i, new Vector3(p.x, p.y, 0f),
+                    MatchEngineConstants.PERCEPTION_GRID_POINT_INSERT_RADIUS);
+            }
+        }
+
+        /// <summary>
+        /// Assembles the Stage-0 static per-agent AI input snapshots once at boot (Phase D D1 §2.5).
+        /// Perception attributes use neutral cognition with the agent's real TeamId (it discriminates
+        /// teammate vs opponent shadow cones). DT attributes are CreateDefault(teamId). The tactical
+        /// context is Stage0Default with the agent's kickoff position as its formation slot (the Phase-A
+        /// scaffold slot — real Positioning AI #12 slots arrive at D2). _hasPossession defaults false.
+        /// </summary>
+        private void InitializeAiSnapshots()
+        {
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                int teamId = _teamIds[i];
+
+                _perceptionAttrs[i]        = PerceptionAgentAttributes.CreateDefault();
+                _perceptionAttrs[i].TeamId = teamId;
+
+                _dtAttrs[i]          = DtAgentAttributes.CreateDefault(teamId);
+                _tacticalContexts[i] = TacticalContext.Stage0Default(_agents[i].Position);
+                _hasPossession[i]    = false;
+            }
         }
 
         /// <summary>Phase 3 — Physics. Integrates the ball (#1) and the 22 agents (#2) one 60 Hz
@@ -1031,6 +1172,28 @@ namespace TacticalDirector.MatchEngine
         {
             public void OnCollisionEvent(in CollisionEvent evt) { }
         }
+
+        /// <summary>
+        /// Movement-controller adapter (Phase D D1): the DecisionTree dispatch boundary
+        /// (<see cref="IDtMovementController"/>, XC-3.5-10). Writes each DT-selected movement command
+        /// into the host's held <c>_commands</c> buffer, which the Physics phase consumes the same tick.
+        /// One instance backs all 22 DecisionTrees (it routes by agentId). Goalkeeper commands are written
+        /// but the Physics phase skips goalkeepers at Stage 0, so they have no locomotion effect.
+        /// </summary>
+        private sealed class HostMovementController : IDtMovementController
+        {
+            private readonly MatchEngine _engine;
+
+            public HostMovementController(MatchEngine engine)
+            {
+                _engine = engine;
+            }
+
+            public void SubmitCommand(int agentId, MovementCommand command)
+            {
+                _engine._commands[agentId] = command;
+            }
+        }
     }
 }
 
@@ -1130,4 +1293,28 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | non-OPEN_PLAY phase (§3.1), so KICK_OFF would silently no-op    |
 // |         |            |        | the entire Phase D AI (all agents HOLD). Stage 0 has no kickoff |
 // |         |            |        | ceremony, so the running tick loop is open play. Doc-aligned.   |
+// | 1.6     | 2026-06-22 | —      | Phase D D1 — AI-phase wiring (perception → decision → movement).|
+// |         |            |        | New AI subsystems: a perception-owned SpatialHashGrid, a        |
+// |         |            |        | PerceptionSystem, and 22 per-agent DecisionTree instances       |
+// |         |            |        | (sharing one HostMovementController adapter + this agent's      |
+// |         |            |        | Pass/Shot executor). RunAiPhase now (on stride ticks) rebuilds  |
+// |         |            |        | the perception grid, refreshes _hasPossession, runs             |
+// |         |            |        | PerceptionSystem.OnHeartbeat (×22) then DecisionTree.Receive-   |
+// |         |            |        | Snapshot (×22); the DT writes movement commands into _commands  |
+// |         |            |        | (consumed by Physics this tick) / dispatches PASS/SHOOT into    |
+// |         |            |        | the executors (advanced in Resolve). Boot assembles the §2.5    |
+// |         |            |        | Stage-0 static AI input snapshots (InitializeAiSnapshots) and   |
+// |         |            |        | boots the DecisionTree EventBusRegistrar (DecisionMadeEvent is  |
+// |         |            |        | Tier C — excluded from the digest). New PERCEPTION_GRID_POINT_  |
+// |         |            |        | INSERT_RADIUS constant; asmdef gains PerceptionSystem. Snapshot |
+// |         |            |        | schema UNCHANGED (DT/perception cross-tick state serialization  |
+// |         |            |        | is D4). Aliases: PerceptionSubsystem / DecisionTreeAI.          |
+// | 1.6.1   | 2026-06-22 | —      | Phase D D1 AR (L-1): TestOnly_DtHasDispatched accessor over the |
+// |         |            |        | per-agent DecisionTree.HasDispatchedAction, so the D1 test can  |
+// |         |            |        | assert the AI pipeline produced a decision (not a silent abort).|
+// | 1.6.2   | 2026-06-22 | —      | Phase D D1 CI fix: pressure scalar sourced from               |
+// |         |            |        | PerceptionSystem.GetDiagnostics(i).PressureScalar — it lives on |
+// |         |            |        | PerceptionDiagnostics, NOT FilteredView (CS1061 build break the |
+// |         |            |        | Linux gate caught; the AR grep had matched the diagnostics      |
+// |         |            |        | struct in the shared FilteredView.cs file).                     |
 #endregion

@@ -9,6 +9,7 @@
         "TacticalDirector.CollisionSystem",
         "TacticalDirector.PassMechanics",
         "TacticalDirector.ShotMechanics",
+        "TacticalDirector.PerceptionSystem",
         "TacticalDirector.DecisionTree"
     ],
     "includePlatforms": [],

@@ -436,11 +436,30 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
     silent-omission guard, B0 BufferSize / C0 field-count analogue). `decision-tree-tests.asmdef` gained the
     `TacticalDirector.DeterministicSim` reference for `CanonicalSerializer` (parallel to the C0 test asmdefs).
     No change to the `ReceiveSnapshot` pipeline.
-  - **D1 — AI-phase wiring (perception → decision → movement).** Assemble the per-agent `FilteredView` /
-    `MatchContext` / `TacticalContext` / `DtAgentAttributes` snapshots, run `PerceptionSystem.OnHeartbeat`
-    (×22) → `DecisionTree.ReceiveSnapshot` (×22) → emit `MovementCommand`s into the held `_commands` buffer
-    consumed by the Physics phase. Requires C4's `MatchContext` (the AI phase reads it). The §2.5 snapshot-
-    assembly helpers are the highest-risk net-new surface (§6.3).
+  - **D1 — AI-phase wiring (perception → decision → movement). ✅ IMPLEMENTED (June 22, 2026).**
+    `RunAiPhase` (stride-gated) rebuilds a host-owned perception `SpatialHashGrid` from current agent
+    positions, refreshes the per-tick `_hasPossession` input, then runs `PerceptionSystem.OnHeartbeat` (×22)
+    → `DecisionTree.ReceiveSnapshot` (×22). Each per-agent `DecisionTree` (constructed with a shared
+    `HostMovementController` adapter + this agent's Pass/Shot executor) dispatches a `MovementCommand` into
+    the held `_commands` buffer (consumed by the Physics phase the same tick) or a PASS/SHOOT into its
+    executor (advanced in Resolve). The Stage-0 static §2.5 AI input snapshots (`PerceptionAgentAttributes`
+    neutral + real TeamId; `DtAgentAttributes.CreateDefault`; `TacticalContext.Stage0Default` with the
+    kickoff slot) are assembled once at boot (`InitializeAiSnapshots`); only `_hasPossession` + the grid are
+    per-tick. The DecisionTree `EventBusRegistrar` is booted (idempotent) so `DecisionMadeEvent` (Tier C,
+    excluded from the digest) can publish from the AI phase. `pressureScalar` is taken from
+    `FilteredView.PressureScalar`; the heartbeat index is `MatchClock.CurrentTacticalTick` (exact on stride
+    ticks). Snapshot schema UNCHANGED — DT/perception cross-tick state serialization is the D4 step (below).
+    The B2 `TestOnly_SetCommand` injection is superseded by AI ownership; `MatchEnginePhysicsTests.Outfield-
+    Agent_MovesTowardTarget...` was replaced by `AiPhase_DrivesChain_GoalkeepersSkipped` (chain runs every
+    stride tick without throwing; GKs byte-exact). AI-driven determinism is covered by the same file's
+    live-dynamics two-run digest test. **NOTE (D4 follow-up):** perception's internal
+    `RecognitionLatencyTracker` / `ShoulderCheckScheduler` / ball-prev arrays AND the per-agent `DecisionTree`
+    state machine are now cross-tick state NOT yet in the snapshot — same-seed-in-process determinism holds,
+    but save/restore replay needs get/restore seams + serialization (the DT seam exists from D0; the
+    perception seams do not yet — fold both into D4). A "≥1 outfielder moves at kickoff" assertion was
+    deliberately NOT made: at kickoff the loose ball is ~26 m from the nearest agents, likely outside
+    PRESS/INTERCEPT range, so the DT may hold every outfielder at its formation slot — real off-ball motion
+    arrives with Positioning AI slots at D2 and the Phase F closed-loop scenario.
   - **D2 — mechanics-AI wiring.** `PositioningAITick` / `PressingAITick` / `DefensiveAITick` /
     `AttackingAITick` feeding tactical intent into the decision context (per the 4 Mechanics-layer specs).
   - **D3 — first-touch.** Deferred from Phase C: once the AI produces a carrier/receiver decision there is a
