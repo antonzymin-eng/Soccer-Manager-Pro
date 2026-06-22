@@ -5,7 +5,7 @@
 **Last Updated (prior):** June 21, 2026 (v0.4 — PASS-3 fix pass: §4.5 edge bound restated as O(active-set²)
 governed by the whole active-set size, not just the external-contacts cap (AR3-M2))
 **Version:** 0.6
-**Status:** IN REVIEW (June 21, 2026)
+**Status:** APPROVED (June 22, 2026)
 
 ---
 

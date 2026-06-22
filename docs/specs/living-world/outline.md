@@ -3,7 +3,7 @@
 **Created:** June 21, 2026
 **Last Updated:** June 21, 2026 (v0.1 — promoted from `docs/tracking/living-world-system-design.md` v0.7)
 **Version:** 0.1
-**Status:** IN REVIEW (June 21, 2026)
+**Status:** APPROVED (June 22, 2026)
 **Source:** `docs/tracking/living-world-system-design.md` v0.7 (June 21, 2026), four adversarial passes + five recorded scope decisions
 
 ---

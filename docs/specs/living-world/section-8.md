@@ -7,7 +7,7 @@ the H-Gate (happiness), not fatigue (AR5-L2))
 **Last Updated (prior):** June 21, 2026 (v0.2 — PASS-1 fix pass: ERR-022-005 recategorised — the season-calendar
 clock is this spec's own forward deliverable (§7.1), not a cross-spec back-prop (L-2); back-props now 001..004)
 **Version:** 0.4
-**Status:** IN REVIEW (June 21, 2026)
+**Status:** APPROVED (June 22, 2026)
 
 ---
 

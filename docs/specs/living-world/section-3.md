@@ -9,7 +9,7 @@
 interaction provenance implicit (AR5-M1); §3.1 decay worked example corrected to the geometric ~0.016 (AR5-L1))
 **Last Updated (prior):** June 21, 2026 (v0.5 — PASS-4 fix pass: §3.2 worked-example depth marked illustrative vs the catalogue default (AR4-L3))
 **Version:** 0.11
-**Status:** IN REVIEW (June 21, 2026)
+**Status:** APPROVED (June 22, 2026)
 
 > All formulas state units and input ranges and carry a worked example (FR-LW-033). Constants reference
 > Appendix A. `[GT]` magnitudes here are **illustrative pending the §7 balance pass** — the spec's

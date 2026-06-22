@@ -7,7 +7,7 @@
 **Last Updated (prior):** June 21, 2026 (v0.4 — PASS-4 fix pass: added T-LW-U-035 verifying the read-only
 `PlayerEdge` contract (AR4-M1); unit 35, total ≥74; traceability updated)
 **Version:** 0.8
-**Status:** IN REVIEW (June 21, 2026)
+**Status:** APPROVED (June 22, 2026)
 
 > Test-ID prefixes follow #19 §3.1.4: `T-LW-U-*` unit, `T-LW-I-*` integration, `sim_*` / `T-LW-SIM-*`
 > simulation (closed-loop on the #19 `ScenarioRunner`), `T-LW-DET-*` determinism, `T-LW-FAIL-*`

@@ -1,9 +1,10 @@
 # Living World System Specification #22 — Section 9: Approval Checklist
 
 **Created:** June 21, 2026
-**Last Updated:** June 21, 2026 (v0.11 — PASS-10 fix pass landed; G1 cites all ten passes; G2/G3 remain open)
-**Version:** 0.11
-**Status:** IN REVIEW
+**Last Updated:** June 22, 2026 (v1.0 — APPROVED; lead-developer R-01..R-05 sign-off granted; §9.5 decision APPROVED; G3/G4 DONE)
+**Last Updated (prior):** June 21, 2026 (v0.11 — PASS-10 fix pass landed; G1 cites all ten passes; G2/G3 remain open)
+**Version:** 1.0
+**Status:** APPROVED (June 22, 2026)
 
 ---
 
@@ -47,8 +48,8 @@ checklist entries are fabricated (CLAUDE.md).
 |---|---|---|
 | G1 | Formal adversarial review of the section files (PASS-1..10) + fix passes | **DONE** — v1..v10 reviews (4M+3L → 3M+3L → 2M+2L → 1M+3L → 1M+2L → 1M+2L → 1M+1L → 1M+1L → 1M+1L → 2M+1L), all resolved; no High since PASS-1; findings are localized implementation-grade detail (PASS-10's 2 M were cold-store/membership edges opened by the PASS-8/9 fixes) — design stable |
 | G2 | `[GT]` value **balance pass** (numerical mirror + adversarial) before values are pinned | **CARRIED FORWARD (post-APPROVED, non-blocking)** — §3/Appendix A values are illustrative; tests assert shape/direction not magnitude (§5). Precedent: #21 G2, #8 draft-level, #9 §9.8, #16 post-approved |
-| G3 | Lead-developer R-01..R-05 sign-off | **OPEN** |
-| G4 | `SPEC_INDEX.md` row 22 reflects status | DONE — IN REVIEW, Jun 21, 2026 |
+| G3 | Lead-developer R-01..R-05 sign-off | **DONE** — granted June 22, 2026 (§9.4) |
+| G4 | `SPEC_INDEX.md` row 22 reflects status | DONE — APPROVED, Jun 22, 2026 |
 
 ## 9.3 Non-blocking (Stage-1 implementation-time, per §8.3)
 
@@ -58,27 +59,26 @@ events) — a Stage-1 dependency, not a spec-approval gate.
 
 ## 9.4 Lead-developer review gates (R-01..R-05)
 
-> **Status: AWAITING SIGN-OFF.** Each box is the lead developer's to tick. They are **unchecked** —
-> do not mark complete without the lead developer's review. G1 (adversarial review) and §9.1 are DONE;
-> these five gates plus the §9.5 decision are what advances #22 `IN REVIEW → APPROVED`.
+> **Status: SIGNED — June 22, 2026.** All five gates ticked by the lead developer.
 
 | # | Review gate | Evidence to confirm | Status |
 |---|---|---|---|
-| R-01 | **Content completeness** — all sections (§1–§9 + appendices) present per the CLAUDE.md 9-section template | `outline.md`, `section-1..8`, `section-9-approval-checklist.md`, `appendices.md` (all present) | ☐ |
-| R-02 | **Technical accuracy** — formulas, pseudocode, constants, and worked examples correct and internally consistent (e.g. §3.1 event→0.56, decay→~0.016; determinism tiebreaks; `NextEpisodeId` monotonicity) | §3.1–§3.6; Appendix A; ten adversarial passes (no High; all M/L resolved) | ☐ |
-| R-03 | **Cross-spec consistency** — XC-022-001..014 point to sections that exist and say what is claimed; ERR-022-001..004 correctly scoped as non-blocking back-props | §8.1 / §8.3 | ☐ |
-| R-04 | **Stage-binding correctness** — Stage-1 forward split unambiguous (KD-10); no Stage-1 interface authored against an unspecified consumer (FR-LW-031); T0 code is data-types-only, no live wiring to nonexistent upstreams | §1.6 / §7.1; `src/living-world/` (types + pure math + tests only) | ☐ |
-| R-05 | **Approval granted** — `SPEC_INDEX.md` row 22 to flip `IN REVIEW → APPROVED`; G2 balance pass recorded as the sole carried-forward post-APPROVED item | `SPEC_INDEX.md` row 22; §9.2 G2 | ☐ |
+| R-01 | **Content completeness** — all sections (§1–§9 + appendices) present per the CLAUDE.md 9-section template | `outline.md`, `section-1..8`, `section-9-approval-checklist.md`, `appendices.md` (all present) | ☑ |
+| R-02 | **Technical accuracy** — formulas, pseudocode, constants, and worked examples correct and internally consistent (e.g. §3.1 event→0.56, decay→~0.016; determinism tiebreaks; `NextEpisodeId` monotonicity) | §3.1–§3.6; Appendix A; ten adversarial passes (no High; all M/L resolved) | ☑ |
+| R-03 | **Cross-spec consistency** — XC-022-001..014 point to sections that exist and say what is claimed; ERR-022-001..004 correctly scoped as non-blocking back-props | §8.1 / §8.3 | ☑ |
+| R-04 | **Stage-binding correctness** — Stage-1 forward split unambiguous (KD-10); no Stage-1 interface authored against an unspecified consumer (FR-LW-031); T0 code is data-types-only, no live wiring to nonexistent upstreams | §1.6 / §7.1; `src/living-world/` (types + pure math + tests only) | ☑ |
+| R-05 | **Approval granted** — `SPEC_INDEX.md` row 22 flipped `IN REVIEW → APPROVED`; G2 balance pass recorded as the sole carried-forward post-APPROVED item | `SPEC_INDEX.md` row 22; §9.2 G2 | ☑ |
 
 ## 9.5 Decision
 
-**PENDING.** Advancement to `APPROVED` requires R-01..R-05 above (lead developer) — G1 is DONE (ten
-section-file adversarial passes, no High) and §9.1 self-contained content is satisfied. **G2** (the
-`[GT]` balance pass) is explicitly carried forward as a post-APPROVED Stage-1 follow-up — the magnitudes
-in §3/Appendix A are illustrative and were **not** relied on for review; the contract is the
-shapes/directions (precedent #21 G2, #8 draft-level, #9 §9.8, #16 post-approved items). No High finding
-appeared in any of the ten passes; the design has been stable since PASS-1. **Lead-developer signature:**
-______________________  **Date:** ____________.
+**APPROVED — June 22, 2026.** Lead-developer R-01..R-05 sign-off granted. G1 is DONE (ten section-file
+adversarial passes, no High in any) and §9.1 self-contained content is satisfied. **G2** (the `[GT]`
+balance pass) is explicitly carried forward as a post-APPROVED Stage-1 follow-up — the magnitudes in
+§3/Appendix A are illustrative and were **not** relied on for sign-off; the contract is the
+shapes/directions (precedent #21 G2, #8 draft-level, #9 §9.8, #16 post-approved items). Runtime
+activation remains separately gated on KD-10 (world store + season loop; vol-2/vol-3 impl.; `[GT]`
+config-loader; match-outcome events) — a Stage-1 dependency, not a spec-approval gate. T0 scaffolding
+(`src/living-world/` data types + pure math + tests) has landed.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -94,4 +94,5 @@ ______________________  **Date:** ____________.
 | 0.9 | 2026-06-21 | — | PASS-8 fix pass (1M+1L resolved): FR-LW-023/§3.5 define active-set membership (entry on interaction; deterministic LRU demotion at the cap — closes the supplement §6.6 churn item); SAVE_SIZE_BUDGET labelled platform-tuned; FR-LW-011 sub-stream wording. G1 cites all eight passes. G2/G3 remain open. |
 | 0.10 | 2026-06-21 | — | PASS-9 fix pass (1M+1L resolved): T-LW-I-015 verifies deterministic LRU active-set demotion (integration 15, total ≥75); §3.5 own-club departure (transfer/release) demotes to cold-store via FR-LW-025. G1 cites all nine passes. G2/G3 remain open. |
 | 0.11 | 2026-06-21 | — | PASS-10 fix pass (2M+1L resolved): ColdSummary gains NextEpisodeId so episodeId monotonicity survives cold-store; FR-LW-018 extended so demotion never orphans an arc-pinned episode; F5/round-trip-equality scoped to retained fields. G1 cites all ten passes. G2/G3 remain open. |
+| 1.0 | 2026-06-22 | Lead Developer | APPROVED. R-01..R-05 ticked; §9.5 decision flipped PENDING → APPROVED; G3 sign-off DONE; G4 SPEC_INDEX row 22 flipped IN REVIEW → APPROVED. All 11 section files' status → APPROVED. G2 balance pass carried forward as the sole post-APPROVED Stage-1 item. |
 #endregion

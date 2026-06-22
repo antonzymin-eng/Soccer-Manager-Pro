@@ -4,7 +4,7 @@
 **Last Updated:** June 21, 2026 (v0.3 — PASS-6 fix pass: KD-5 split into `world.arcs`/`world.text` RNG sub-streams (AR6-M1))
 **Last Updated (prior):** June 21, 2026 (v0.2 — PASS-4 fix pass: KD-3 read-only `PlayerEdge` mirror clause; KD-9 no-write-back extended to vol-2 §2.1 (AR4-L2))
 **Version:** 0.3
-**Status:** IN REVIEW (June 21, 2026)
+**Status:** APPROVED (June 22, 2026)
 **Source:** `docs/tracking/living-world-system-design.md` v0.7
 
 ---

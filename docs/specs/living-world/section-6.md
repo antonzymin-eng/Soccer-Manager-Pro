@@ -4,7 +4,7 @@
 **Last Updated:** June 21, 2026 (v0.2 — PASS-2 fix pass: §6.1 invariant qualifies F6 to active layers and
 F4 to the §4.5 eviction order; F5 stated as bitwise round-trip (AR2-M1))
 **Version:** 0.2
-**Status:** IN REVIEW (June 21, 2026)
+**Status:** APPROVED (June 22, 2026)
 
 ---
 

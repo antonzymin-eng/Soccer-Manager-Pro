@@ -5,7 +5,7 @@
 **Last Updated (prior):** June 21, 2026 (v0.5 — PASS-8 fix pass: SAVE_SIZE_BUDGET labelled platform-tuned [GT], not unset (AR8-L1))
 **Last Updated (prior):** June 21, 2026 (v0.4 — PASS-3 fix pass: `ColdSummary` gains `ActiveLayers` in Appendix B; Appendix C ties bit positions to `RelationshipLayer` ordinals and corrects the stale NaN wording + `PlayerEdge` read-only note (AR3-L1/L2/M1))
 **Version:** 0.6
-**Status:** IN REVIEW (June 21, 2026)
+**Status:** APPROVED (June 22, 2026)
 
 ---
 

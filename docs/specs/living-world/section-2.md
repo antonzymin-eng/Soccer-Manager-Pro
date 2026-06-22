@@ -15,7 +15,7 @@ vol-2's authoritative edge — never mutated here, removing the double-authority
 `ActiveLayers` bit positions tied to `RelationshipLayer` ordinals (AR3-L1); `ColdSummary` retains
 `ActiveLayers` for rehydration (AR3-L2))
 **Version:** 0.10
-**Status:** IN REVIEW (June 21, 2026)
+**Status:** APPROVED (June 22, 2026)
 
 ---
 
