@@ -722,8 +722,9 @@ namespace TacticalDirector.MatchEngine
             snap.ActiveOutfieldCount = activeOutfield;
         }
 
-        /// <summary>Mean fatigue [0,1] (0 = rested) across team <paramref name="team"/>, derived from
-        /// each agent's AerobicPool (1 = rested) per the project fatigue convention.</summary>
+        /// <summary>Mean fatigue [0,1] across team <paramref name="team"/> (0 fully rested, 1 fully
+        /// fatigued, per the project convention), derived from each agent's AerobicPool reservoir as
+        /// fatigue = 1 − pool (a full pool means the agent is rested).</summary>
         private float ComputeTeamMeanFatigue(int team)
         {
             float sum = 0f;
