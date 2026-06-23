@@ -9,6 +9,8 @@
 //           PositioningAIConstants when the AI phase is wired (Phase D); the Phase-A kickoff line
 //           positions are scaffold values derived from pitch geometry only.
 
+using TacticalDirector.PositioningAI;
+
 namespace TacticalDirector.MatchEngine
 {
     /// <summary>
@@ -112,6 +114,13 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         public static readonly float AwayLineXM = PITCH_LENGTH_M * 3f / 4f;
 
+        /// <summary>
+        /// [DERIVED] Highest EntityId in the match = SQUAD_SIZE − 1 (roster indices 0..SQUAD_SIZE−1
+        /// are the agent EntityIds the mechanics-AI ticks key by). Sizes the Positioning AI (#12)
+        /// per-team EntityId→slot lookups (Phase D D2). Source constants: MatchEngineConstants.SQUAD_SIZE.
+        /// </summary>
+        public static readonly int MaxEntityId = SQUAD_SIZE - 1;
+
         #endregion
 
         #region GT
@@ -129,6 +138,21 @@ namespace TacticalDirector.MatchEngine
         /// (Phase C C1a). Mid-scale placeholder until the ERR-007 attribute split (Phase D).
         /// </summary>
         public static readonly int STAGE0_NEUTRAL_WEAK_FOOT = 3; // TODO: replace when ERR-007 attribute split lands (Phase D)
+
+        /// <summary>
+        /// [GT] Stage-0 formation archetype assigned to BOTH teams (Phase D D2). The Positioning AI
+        /// (#12) formation table is authored attack-toward-+X; the host maps the away team into that
+        /// canonical frame, so a single shared archetype positions both teams correctly. Replaced by a
+        /// per-team tactical selection when the [GT] config loader lands (Stage 1).
+        /// </summary>
+        public static readonly FormationFamily STAGE0_FORMATION = FormationFamily.F442; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>
+        /// [GT] Stage-0 team tactical-intensity input [0,1] supplied to Positioning AI (#12)
+        /// ContextModifierInputs (Phase D D2). Mid-scale placeholder until per-archetype tactical
+        /// instructions wire in (Stage 1, #21 / FR-PA-018 / FR-PA-032).
+        /// </summary>
+        public static readonly float STAGE0_TACTICAL_INTENSITY = 0.5f; // TODO: replace with config loader (Stage 1)
 
         #endregion
     }
@@ -165,4 +189,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | the perception broad-phase grid each AI tick. SNAPSHOT_SCHEMA_  |
 // |         |            |        | VERSION unchanged (DT/perception cross-tick serialization is    |
 // |         |            |        | the D4 step).                                                   |
+// | 1.7     | 2026-06-22 | —      | Phase D D2: MaxEntityId ([DERIVED] SQUAD_SIZE−1) sizes the      |
+// |         |            |        | Positioning AI (#12) per-team EntityId→slot lookups;            |
+// |         |            |        | STAGE0_FORMATION ([GT] F442) + STAGE0_TACTICAL_INTENSITY ([GT]  |
+// |         |            |        | 0.5) feed the per-team formation tick. SNAPSHOT_SCHEMA_VERSION  |
+// |         |            |        | unchanged (positioning hysteresis serialization is the D4 step).|
 #endregion

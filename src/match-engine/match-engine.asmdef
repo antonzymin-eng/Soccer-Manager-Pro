@@ -10,7 +10,8 @@
         "TacticalDirector.PassMechanics",
         "TacticalDirector.ShotMechanics",
         "TacticalDirector.PerceptionSystem",
-        "TacticalDirector.DecisionTree"
+        "TacticalDirector.DecisionTree",
+        "TacticalDirector.PositioningAI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
