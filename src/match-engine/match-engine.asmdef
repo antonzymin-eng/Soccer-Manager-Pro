@@ -7,6 +7,7 @@
         "TacticalDirector.BallPhysics",
         "TacticalDirector.AgentMovement",
         "TacticalDirector.CollisionSystem",
+        "TacticalDirector.FirstTouch",
         "TacticalDirector.PassMechanics",
         "TacticalDirector.ShotMechanics",
         "TacticalDirector.PerceptionSystem",
