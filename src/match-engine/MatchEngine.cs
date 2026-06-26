@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-22 (Phase D D2 — mechanics-AI wiring: Positioning AI #12 → formation slots)
+// Modified: 2026-06-22 (Phase D D3 — first-touch wiring: loose-ball receive → EvaluateFirstTouch)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -21,6 +21,7 @@ using TacticalDirector.CollisionSystem;
 using TacticalDirector.DecisionTree;
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
+using TacticalDirector.FirstTouch;
 using TacticalDirector.PassMechanics;
 using TacticalDirector.PerceptionSystem;
 using TacticalDirector.PositioningAI;
@@ -84,6 +85,16 @@ namespace TacticalDirector.MatchEngine
         private readonly PassExecutor[]                _passExecutors;   // [SQUAD_SIZE]
         private readonly ShotExecutor[]                _shotExecutors;   // [SQUAD_SIZE]
         private readonly bool[]                        _stumbleScratch;  // UpdateCollisions stumbleOut sink (discarded — not a Stage-0 movement input, B4)
+
+        // First touch (#4, Phase D D3). One stateless FirstTouchSystem instance + one adapter backing
+        // both its IBallPhysicsSystem (writes _ball) and IAgentMovementSystem (Stage-0 dribbling no-op)
+        // boundaries. Triggered each Resolve when a loose, approaching, ground-level ball reaches the
+        // nearest eligible agent (RunFirstTouch). _opponentScratch is the pre-allocated buffer the
+        // PressureEvaluator pass reads (one team's positions; zero alloc on the hot path). The system
+        // holds no cross-tick state — it writes only _ball (already serialized) and _possessingAgentId
+        // (serialized via MatchContext.PossessingAgentId), so the snapshot schema is unchanged at D3.
+        private readonly FirstTouchSystem _firstTouch;
+        private readonly Vector2[]        _opponentScratch;  // [PLAYERS_PER_TEAM]
 
         // Authoritative ball possession: agent index [0–21], or NO_POSSESSION (−1) when loose.
         // Read by the executor adapters (IsBallPossessedBy); cleared on ApplyKick. Folded into
@@ -223,6 +234,13 @@ namespace TacticalDirector.MatchEngine
                 _passExecutors[i] = new PassExecutor(passAdapter, passAdapter, passAdapter);
                 _shotExecutors[i] = new ShotExecutor(shotAdapter, shotAdapter, shotAdapter);
             }
+
+            // §4 step 3 (cont.) — first touch (Phase D D3). One adapter backs both first-touch boundaries
+            // (IBallPhysicsSystem writes _ball; IAgentMovementSystem is a Stage-0 dribbling no-op). The
+            // opponent-position scratch buffer feeds the per-touch PressureEvaluator pass (one team).
+            var firstTouchAdapter = new FirstTouchWorldAdapter(this);
+            _firstTouch      = new FirstTouchSystem(firstTouchAdapter, firstTouchAdapter);
+            _opponentScratch = new Vector2[MatchEngineConstants.PLAYERS_PER_TEAM];
 
             // §4 step 3 (cont.) — AI subsystems (Phase D D1). Perception gets its own broad-phase grid
             // (host-populated each AI tick). The per-agent AI input buffers are allocated once and the
@@ -786,13 +804,15 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>Phase 4 — Resolve. Runs collision (×22), advances the in-flight pass/shot executor
-        /// lifecycles (C2/C3), then authors the authoritative <see cref="MatchContext"/> from the settled
-        /// world state (C4). Intra-Resolve order is fixed and digest-load-bearing: collision → executor
-        /// Update → possession/MatchContext. Collision writes THIS tick's feedback buffers (consumed by
-        /// movement next tick — the §3 one-tick-lag contract); the executors advance any pass/shot
-        /// scripted via the TestOnly_ seam (production trigger is the Phase D AI dispatcher), kicking the
-        /// ball at CONTACT through the executor adapters and releasing possession. MatchContext is
-        /// authored last so it reflects post-kick possession; it is read by the next AI tick (Phase D).</summary>
+        /// lifecycles (C2/C3), runs first touch on a loose arriving ball (D3), then authors the
+        /// authoritative <see cref="MatchContext"/> from the settled world state (C4). Intra-Resolve
+        /// order is fixed and digest-load-bearing: collision → executor Update → first touch →
+        /// possession/MatchContext. Collision writes THIS tick's feedback buffers (consumed by movement
+        /// next tick — the §3 one-tick-lag contract); the executors advance any pass/shot scripted via the
+        /// TestOnly_ seam (production trigger is the Phase D AI dispatcher), kicking the ball at CONTACT
+        /// through the executor adapters and releasing possession; first touch (D3) receives a loose
+        /// approaching ball and may re-establish possession. MatchContext is authored last so it reflects
+        /// post-kick / post-touch possession; it is read by the next AI tick (Phase D).</summary>
         private void RunResolvePhase()
         {
             EventBus.BeginPhase(PhaseId.Resolve);
@@ -826,8 +846,16 @@ namespace TacticalDirector.MatchEngine
                 _shotExecutors[i].Update(matchTime, frameNumber, ref _ball);
             }
 
+            // D3 — first touch. A loose, approaching, ground-level ball arriving within reach of an agent
+            // is received here (a CONTROLLED touch gains possession; an INTERCEPTION flips it to the
+            // opponent; a LOOSE_BALL / DEFLECTION redirects the ball but leaves it loose). Runs AFTER the
+            // executors so the same-tick kick that releases possession is visible (the ball is loose), and
+            // BEFORE C4 so MatchContext reflects any possession gained by the touch.
+            RunFirstTouch();
+
             // C4 — author MatchContext last, so it reflects this tick's settled possession (a CONTACT
-            // kick above released possession) and ball kinematics. Read by the next AI tick (Phase D).
+            // kick above released possession, or a D3 first touch) and ball kinematics. Read by the next
+            // AI tick (Phase D).
             UpdateMatchContext();
         }
 
@@ -867,6 +895,159 @@ namespace TacticalDirector.MatchEngine
             _matchContext.BallPosition = new Vector2(_ball.Position.x, _ball.Position.y);
             _matchContext.BallVelocity = _ball.Velocity;
             _matchContext.BallZone     = PitchGeometry.ComputeFieldZone(_ball.Position.x); // home-perspective only
+        }
+
+        /// <summary>
+        /// First touch (Phase D D3). When a loose, ground-level ball is moving and arrives within
+        /// <see cref="MatchEngineConstants.FIRST_TOUCH_ACCEPTANCE_RADIUS_M"/> of an approaching agent,
+        /// the host assembles a <see cref="FirstTouchContext"/> (incl. a <c>PressureEvaluator</c> pass for
+        /// PressureScalar / NearestOpponent* and an <c>OrientationDetector</c> pass for IsHalfTurnOriented),
+        /// runs <see cref="FirstTouchSystem.EvaluateFirstTouch"/> + <see cref="FirstTouchSystem.ApplyTouchResult"/>,
+        /// and maps the outcome onto authoritative possession: CONTROLLED → the toucher, INTERCEPTION →
+        /// the intercepting opponent (AGENT_ID_NONE at Stage 0 — the §3.4.2 interceptor id is a spec gap,
+        /// ERR-004-002 — so possession is released to loose), LOOSE_BALL / DEFLECTION → stays loose.
+        ///
+        /// Eligibility gates (all required): the ball is loose (a possessed ball is already controlled);
+        /// the ball centre is at or below ground-control height (a higher ball is a Heading #10 event, not
+        /// Stage 0); the ball is moving above the min-speed gate; and the agent is APPROACHED by the ball
+        /// (ball velocity · agent-from-ball &gt; 0). The closing-direction gate is what excludes the agent
+        /// the ball just departed after a kick — its dot is negative — so a kicker never re-touches the
+        /// ball it just played. The nearest such agent is the toucher. Deterministic (no RNG); first-touch
+        /// is a pure function of world state + public/internal First Touch formulas.
+        /// </summary>
+        private void RunFirstTouch()
+        {
+            // Gate 1 — only a loose ball can be received; a possessed ball is already under control.
+            if (_possessingAgentId != MatchEngineConstants.NO_POSSESSION)
+            {
+                return;
+            }
+
+            // Gate 2 — ground control only. Ball centre height above the surface = z − RADIUS; above the
+            // GroundControlHeight threshold the ball is a Heading Mechanics (#10) event (not Stage 0).
+            float ballHeight = _ball.Position.z - FirstTouchConstants.BallRadius;
+            if (ballHeight > FirstTouchConstants.GroundControlHeight)
+            {
+                return;
+            }
+
+            // Gate 3 — the ball must be in motion (a resting loose ball is not an incoming receive).
+            Vector2 ballPosXY = new Vector2(_ball.Position.x, _ball.Position.y);
+            Vector2 ballVelXY = new Vector2(_ball.Velocity.x, _ball.Velocity.y);
+            float minSpeed = MatchEngineConstants.FIRST_TOUCH_MIN_BALL_SPEED_M_S;
+            if (ballVelXY.sqrMagnitude < minSpeed * minSpeed)
+            {
+                return;
+            }
+
+            // Gate 4 — nearest APPROACHING agent within the acceptance reach. "Approaching" = the ball is
+            // closing on the agent (velocity · (agentPos − ballPos) > 0); this excludes the just-kicked
+            // owner (the ball recedes from it). Squared-distance compare; bestSq shrinks to the nearest.
+            float acceptanceSq = MatchEngineConstants.FIRST_TOUCH_ACCEPTANCE_RADIUS_M
+                               * MatchEngineConstants.FIRST_TOUCH_ACCEPTANCE_RADIUS_M;
+            int   toucher = MatchEngineConstants.NO_POSSESSION;
+            float bestSq  = acceptanceSq;
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                Vector2 toAgent = _agents[i].Position - ballPosXY;
+                float distSq = toAgent.sqrMagnitude;
+                if (distSq > bestSq)
+                {
+                    continue;
+                }
+                if (Vector2.Dot(ballVelXY, toAgent) <= 0f)
+                {
+                    continue; // ball receding from this agent — not a receive
+                }
+                bestSq  = distSq;
+                toucher = i;
+            }
+            if (toucher == MatchEngineConstants.NO_POSSESSION)
+            {
+                return;
+            }
+
+            // Assemble the per-touch context, evaluate, and apply. ApplyTouchResult writes the displaced
+            // ball state via the adapter; the host owns the possession transition from the outcome.
+            FirstTouchContext context = BuildFirstTouchContext(toucher);
+            FirstTouchResult  result  = _firstTouch.EvaluateFirstTouch(context);
+            _firstTouch.ApplyTouchResult(result, context);
+
+            switch (result.PossessionOutcome)
+            {
+                case TouchResult.Controlled:
+                    _possessingAgentId = result.PossessingAgentID;
+                    break;
+                case TouchResult.Interception:
+                    // Stage 0: the intercepting agent id is unresolved (ERR-004-002 spec gap — the
+                    // interceptor's id is not exposed on FirstTouchContext), so InterceptingAgentID is
+                    // AGENT_ID_NONE (−1). Map that to NO_POSSESSION: the ball is loose and redirected
+                    // toward the opponent (§3.4.5), to be re-received on a later tick when it arrives.
+                    _possessingAgentId = result.InterceptingAgentID;
+                    break;
+                default:
+                    // LOOSE_BALL / DEFLECTION — ball redirected but uncontrolled; possession stays loose.
+                    _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Assembles the <see cref="FirstTouchContext"/> for the receiving agent (Phase D D3). Player
+        /// touch attributes (Technique / FirstTouch) are Stage-0 neutral placeholders — Agent Movement #2
+        /// PlayerAttributes carries no such fields yet (ERR-007), the same synthesis the pass/shot
+        /// adapters use. Pressure / nearest-opponent data come from a <c>PressureEvaluator</c> pass over
+        /// the opposing team (filling <see cref="_opponentScratch"/>, zero alloc), and
+        /// <see cref="OrientationDetector.IsHalfTurnOriented"/> supplies the half-turn flag against the
+        /// incoming ball direction. The intended touch direction defaults to the agent's facing (no
+        /// movement-target carrier at Stage 0; HasMovementTarget = false).
+        /// </summary>
+        private FirstTouchContext BuildFirstTouchContext(int i)
+        {
+            int teamId       = _teamIds[i];
+            int opponentTeam = MatchEngineConstants.TEAM_COUNT - 1 - teamId; // 0 ↔ 1
+
+            // Fill the opponent-position scratch buffer (the whole opposing team, GK included).
+            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            {
+                int oi = opponentTeam * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                _opponentScratch[k] = _agents[oi].Position;
+            }
+
+            Vector2 agentPosXY = _agents[i].Position;
+            PressureResult pressure = PressureEvaluator.Evaluate(
+                agentPosXY,
+                new ReadOnlySpan<Vector2>(_opponentScratch, 0, MatchEngineConstants.PLAYERS_PER_TEAM));
+
+            Vector2 facing = _agents[i].FacingDirection;
+            Vector2 ballVelXY = new Vector2(_ball.Velocity.x, _ball.Velocity.y);
+            bool isHalfTurn = OrientationDetector.IsHalfTurnOriented(facing, ballVelXY);
+
+            int neutralAttr = Mathf.RoundToInt(MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE);
+            Vector3 facing3 = new Vector3(facing.x, facing.y, 0f);
+
+            return new FirstTouchContext
+            {
+                AgentID                   = i,
+                TeamID                    = teamId,
+                Technique                 = neutralAttr,
+                FirstTouchAttribute       = neutralAttr,
+                AgentPosition             = new Vector3(agentPosXY.x, agentPosXY.y, 0f),
+                AgentVelocity             = new Vector3(_agents[i].Velocity.x, _agents[i].Velocity.y, 0f),
+                AgentFacing               = facing3,
+                IntendedTouchDirection    = facing3,
+                HasMovementTarget         = false,
+                BallPosition              = _ball.Position,
+                BallVelocity              = _ball.Velocity,
+                BallHeight                = _ball.Position.z - FirstTouchConstants.BallRadius,
+                BallIsAirborne            = _ball.State == BallStateType.Airborne,
+                PressureScalar            = pressure.PressureScalar,
+                HasNearbyOpponent         = pressure.HasNearbyOpponent,
+                NearestOpponentDistance   = pressure.NearestOpponentDistance,
+                NearestOpponentPositionXY = pressure.NearestOpponentPositionXY,
+                IsHalfTurnOriented        = isHalfTurn,
+                IsGoalkeeper              = _isGoalkeeper[i]
+            };
         }
 
         /// <summary>Phase 5 — Events. Enters the Events phase and drains the tick's ledger.</summary>
@@ -1361,6 +1542,38 @@ namespace TacticalDirector.MatchEngine
                 _engine._commands[agentId] = command;
             }
         }
+
+        /// <summary>
+        /// First-touch world adapter (Phase D D3): implements both First Touch (#4) write boundaries over
+        /// the host world state. <see cref="IBallPhysicsSystem.SetBallState"/> writes the displaced ball
+        /// position + velocity straight into <c>_ball</c> (the logical BallState enum is left unchanged —
+        /// the §4.5.4 BallState-write API gap; at Stage 0 possession is tracked by the host's
+        /// <c>_possessingAgentId</c>, not the ball's state machine). <see cref="IAgentMovementSystem.SetDribblingState"/>
+        /// is a Stage-0 no-op: Agent Movement #2 AgentState carries no dribbling locomotion modifier yet,
+        /// so there is no field to write (the carry/dribble mechanic is a later-stage concern); the host
+        /// records the controlled outcome via possession in RunFirstTouch instead. One instance backs both
+        /// boundaries (it routes through the injected engine back-reference).
+        /// </summary>
+        private sealed class FirstTouchWorldAdapter : IBallPhysicsSystem, IAgentMovementSystem
+        {
+            private readonly MatchEngine _engine;
+
+            public FirstTouchWorldAdapter(MatchEngine engine)
+            {
+                _engine = engine;
+            }
+
+            public void SetBallState(Vector3 newPosition, Vector3 newVelocity)
+            {
+                _engine._ball.Position = newPosition;
+                _engine._ball.Velocity = newVelocity;
+            }
+
+            public void SetDribblingState(int agentID, bool isDribbling)
+            {
+                // Stage-0 no-op — see the class summary (no dribbling modifier on AgentState yet).
+            }
+        }
     }
 }
 
@@ -1500,4 +1713,24 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | gains PositioningAI. Snapshot schema UNCHANGED (positioning     |
 // |         |            |        | hysteresis serialization is the D4 step). Pressing #13 /        |
 // |         |            |        | Defensive #14 / Attacking #15 tick wiring remains for D2.       |
+// | 1.8     | 2026-06-22 | —      | Phase D D3 — first-touch wiring. New stateless FirstTouchSystem |
+// |         |            |        | + one FirstTouchWorldAdapter backing both write boundaries      |
+// |         |            |        | (IBallPhysicsSystem → _ball; IAgentMovementSystem → Stage-0     |
+// |         |            |        | dribbling no-op). RunResolvePhase calls RunFirstTouch after the |
+// |         |            |        | executor Update (C3) and before MatchContext (C4): a loose,     |
+// |         |            |        | ground-level, moving ball arriving within FIRST_TOUCH_ACCEPT-   |
+// |         |            |        | ANCE_RADIUS_M of an APPROACHING agent (ball-closing dot gate —  |
+// |         |            |        | excludes the just-kicked owner) triggers BuildFirstTouchContext |
+// |         |            |        | (PressureEvaluator pass over the opposing team via the pre-     |
+// |         |            |        | allocated _opponentScratch + OrientationDetector half-turn      |
+// |         |            |        | flag; ERR-007 neutral touch attributes) → EvaluateFirstTouch +  |
+// |         |            |        | ApplyTouchResult. Outcome maps onto possession: CONTROLLED →    |
+// |         |            |        | toucher, INTERCEPTION → interceptor id (AGENT_ID_NONE at Stage  |
+// |         |            |        | 0 per ERR-004-002 → loose), LOOSE_BALL / DEFLECTION → loose.    |
+// |         |            |        | first-touch InternalsVisibleTo grants the host the internal     |
+// |         |            |        | PressureEvaluator / OrientationDetector seams. asmdef gains     |
+// |         |            |        | FirstTouch; new FIRST_TOUCH_ACCEPTANCE_RADIUS_M / FIRST_TOUCH_  |
+// |         |            |        | MIN_BALL_SPEED_M_S constants. Snapshot schema UNCHANGED         |
+// |         |            |        | (FirstTouchSystem stateless; writes only _ball + possession,    |
+// |         |            |        | both already serialized). D2b (#13/#14/#15) + D4/D5 pending.    |
 #endregion

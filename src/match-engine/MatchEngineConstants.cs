@@ -154,6 +154,24 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         public static readonly float STAGE0_TACTICAL_INTENSITY = 0.5f; // TODO: replace with config loader (Stage 1)
 
+        /// <summary>
+        /// [GT] Host reach (m) within which a loose, approaching ground ball triggers a first-touch
+        /// attempt by the nearest eligible agent (Phase D D3). This is the host-side trigger gate — the
+        /// decision to ATTEMPT a touch — distinct from the First Touch (#4) §3.2 OUTPUT displacement
+        /// radius. A ball outside this reach has not yet "arrived" at the agent; one inside it, closing
+        /// on the agent, is a receive. Mid-scale placeholder pending the Stage-1 config loader.
+        /// </summary>
+        public static readonly float FIRST_TOUCH_ACCEPTANCE_RADIUS_M = 1.0f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>
+        /// [GT] Minimum ball speed (m/s) for a first-touch trigger (Phase D D3). Below this the ball is
+        /// treated as at-rest — a resting loose ball is not an incoming receive, so an idle agent next to
+        /// it does not auto-control it. (The closing-direction gate already excludes a zero-velocity ball,
+        /// since its velocity·to-agent dot is 0; this threshold makes the intent explicit and tunable.)
+        /// Mid-scale placeholder pending the Stage-1 config loader.
+        /// </summary>
+        public static readonly float FIRST_TOUCH_MIN_BALL_SPEED_M_S = 0.5f; // TODO: replace with config loader (Stage 1)
+
         #endregion
     }
 }
@@ -194,4 +212,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | STAGE0_FORMATION ([GT] F442) + STAGE0_TACTICAL_INTENSITY ([GT]  |
 // |         |            |        | 0.5) feed the per-team formation tick. SNAPSHOT_SCHEMA_VERSION  |
 // |         |            |        | unchanged (positioning hysteresis serialization is the D4 step).|
+// | 1.8     | 2026-06-22 | —      | Phase D D3 (first-touch): FIRST_TOUCH_ACCEPTANCE_RADIUS_M ([GT] |
+// |         |            |        | 1.0 m, host trigger reach) + FIRST_TOUCH_MIN_BALL_SPEED_M_S     |
+// |         |            |        | ([GT] 0.5 m/s) gate the Resolve-phase first-touch trigger.      |
+// |         |            |        | SNAPSHOT_SCHEMA_VERSION unchanged — FirstTouchSystem is         |
+// |         |            |        | stateless; it writes only _ball + _possessingAgentId (already   |
+// |         |            |        | serialized, the latter via MatchContext.PossessingAgentId).     |
 #endregion
