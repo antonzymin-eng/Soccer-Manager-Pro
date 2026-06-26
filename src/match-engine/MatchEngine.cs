@@ -1029,7 +1029,11 @@ namespace TacticalDirector.MatchEngine
             }
 
             Vector2 agentPosXY = _agents[i].Position;
-            PressureResult pressure = PressureEvaluator.Evaluate(
+            // Fully qualified: TacticalDirector.PerceptionSystem also exposes a public PressureEvaluator
+            // (the same §3.5 formula), so the bare name is ambiguous (CS0104) under both usings — the
+            // first-touch producer is the one whose PressureResult this context consumes. (Parallel to the
+            // fully-qualified EventBusRegistrar.Initialize() calls — both spec namespaces expose that type.)
+            PressureResult pressure = TacticalDirector.FirstTouch.PressureEvaluator.Evaluate(
                 agentPosXY,
                 new ReadOnlySpan<Vector2>(_opponentScratch, 0, MatchEngineConstants.PLAYERS_PER_TEAM));
 
@@ -1763,4 +1767,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | or call + context (the contract is a unit vector; Acos angle    |
 // |         |            |        | assumes unit facing). No new alloc; outcomes unchanged for unit |
 // |         |            |        | facings (the only Stage-0 case).                                |
+// | 1.8.2   | 2026-06-22 | —      | D3 CI fix: fully-qualify TacticalDirector.FirstTouch.Pressure-  |
+// |         |            |        | Evaluator in BuildFirstTouchContext — PerceptionSystem also     |
+// |         |            |        | exposes a PUBLIC PressureEvaluator (same §3.5 formula), so the  |
+// |         |            |        | bare name was ambiguous under both usings (CS0104 — caught by   |
+// |         |            |        | the Linux gate; the pass-1 review wrongly assumed perception's  |
+// |         |            |        | was internal). Parallel to the fully-qualified EventBusRegistrar|
+// |         |            |        | calls. No behaviour change.                                     |
 #endregion
