@@ -942,7 +942,10 @@ namespace TacticalDirector.MatchEngine
 
             // Gate 4 — nearest APPROACHING agent within the acceptance reach. "Approaching" = the ball is
             // closing on the agent (velocity · (agentPos − ballPos) > 0); this excludes the just-kicked
-            // owner (the ball recedes from it). Squared-distance compare; bestSq shrinks to the nearest.
+            // owner (the ball recedes from it). Squared-distance compare; bestSq shrinks only on a
+            // STRICTLY closer candidate, so an exact-distance tie keeps the lower roster index (snapshot
+            // order, matching the project's other proximity tie-breaks — DT §3.1.3.6). The acceptance
+            // boundary is inclusive (distSq == acceptanceSq is in reach) via the first-candidate clause.
             float acceptanceSq = MatchEngineConstants.FIRST_TOUCH_ACCEPTANCE_RADIUS_M
                                * MatchEngineConstants.FIRST_TOUCH_ACCEPTANCE_RADIUS_M;
             int   toucher = MatchEngineConstants.NO_POSSESSION;
@@ -953,14 +956,17 @@ namespace TacticalDirector.MatchEngine
                 float distSq = toAgent.sqrMagnitude;
                 if (distSq > bestSq)
                 {
-                    continue;
+                    continue; // outside reach, or not closer than the current best
                 }
                 if (Vector2.Dot(ballVelXY, toAgent) <= 0f)
                 {
                     continue; // ball receding from this agent — not a receive
                 }
-                bestSq  = distSq;
-                toucher = i;
+                if (toucher == MatchEngineConstants.NO_POSSESSION || distSq < bestSq)
+                {
+                    bestSq  = distSq;
+                    toucher = i;
+                }
             }
             if (toucher == MatchEngineConstants.NO_POSSESSION)
             {
@@ -979,12 +985,20 @@ namespace TacticalDirector.MatchEngine
                     _possessingAgentId = result.PossessingAgentID;
                     break;
                 case TouchResult.Interception:
-                    // Stage 0: the intercepting agent id is unresolved (ERR-004-002 spec gap — the
-                    // interceptor's id is not exposed on FirstTouchContext), so InterceptingAgentID is
-                    // AGENT_ID_NONE (−1). Map that to NO_POSSESSION: the ball is loose and redirected
-                    // toward the opponent (§3.4.5), to be re-received on a later tick when it arrives.
-                    _possessingAgentId = result.InterceptingAgentID;
+                {
+                    // The intercepting opponent gains possession. At Stage 0 the interceptor id is
+                    // unresolved (ERR-004-002 spec gap — FirstTouchContext does not expose it), so
+                    // InterceptingAgentID is AGENT_ID_NONE. Map any unresolved / out-of-range id to
+                    // NO_POSSESSION explicitly rather than trusting the AGENT_ID_NONE == NO_POSSESSION
+                    // cross-assembly sentinel coincidence: the ball is loose, redirected toward the
+                    // opponent (§3.4.5), to be re-received on a later tick. A Stage-1 in-range
+                    // interceptor id is taken as-is.
+                    int interceptor = result.InterceptingAgentID;
+                    _possessingAgentId = interceptor >= 0 && interceptor < MatchEngineConstants.SQUAD_SIZE
+                        ? interceptor
+                        : MatchEngineConstants.NO_POSSESSION;
                     break;
+                }
                 default:
                     // LOOSE_BALL / DEFLECTION — ball redirected but uncontrolled; possession stays loose.
                     _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
@@ -1019,7 +1033,12 @@ namespace TacticalDirector.MatchEngine
                 agentPosXY,
                 new ReadOnlySpan<Vector2>(_opponentScratch, 0, MatchEngineConstants.PLAYERS_PER_TEAM));
 
-            Vector2 facing = _agents[i].FacingDirection;
+            // Normalise: the FirstTouchContext contract treats AgentFacing / IntendedTouchDirection as
+            // unit vectors, and OrientationDetector's angle math assumes a unit facing (it clamps the dot
+            // before Acos, so a non-unit facing only skews the half-turn angle). Unity's Vector2.normalized
+            // returns zero for a degenerate facing, which routes through the §3.6 / §3.3.2 zero-input
+            // fallbacks — at Stage 0 facings are non-degenerate (boot ±X, maintained by movement).
+            Vector2 facing = _agents[i].FacingDirection.normalized;
             Vector2 ballVelXY = new Vector2(_ball.Velocity.x, _ball.Velocity.y);
             bool isHalfTurn = OrientationDetector.IsHalfTurnOriented(facing, ballVelXY);
 
@@ -1733,4 +1752,15 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | MIN_BALL_SPEED_M_S constants. Snapshot schema UNCHANGED         |
 // |         |            |        | (FirstTouchSystem stateless; writes only _ball + possession,    |
 // |         |            |        | both already serialized). D2b (#13/#14/#15) + D4/D5 pending.    |
+// | 1.8.1   | 2026-06-22 | —      | D3 AR (3L). L-1: INTERCEPTION possession maps an unresolved /   |
+// |         |            |        | out-of-range InterceptingAgentID to NO_POSSESSION explicitly    |
+// |         |            |        | (was trusting the AGENT_ID_NONE == NO_POSSESSION cross-assembly |
+// |         |            |        | sentinel coincidence). L-2: the nearest-toucher loop shrinks    |
+// |         |            |        | bestSq only on a STRICTLY closer candidate, so an exact-distance |
+// |         |            |        | tie keeps the lower roster index (was last-wins); boundary stays |
+// |         |            |        | inclusive via the first-candidate clause. L-3: BuildFirstTouch- |
+// |         |            |        | Context normalises FacingDirection before the OrientationDetect-|
+// |         |            |        | or call + context (the contract is a unit vector; Acos angle    |
+// |         |            |        | assumes unit facing). No new alloc; outcomes unchanged for unit |
+// |         |            |        | facings (the only Stage-0 case).                                |
 #endregion
