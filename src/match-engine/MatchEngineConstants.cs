@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
-// Modified: 2026-06-16
+// Modified: 2026-06-26 (Phase D D2b — Pressing/Defensive/Attacking Stage-0 inputs)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -155,6 +155,27 @@ namespace TacticalDirector.MatchEngine
         public static readonly float STAGE0_TACTICAL_INTENSITY = 0.5f; // TODO: replace with config loader (Stage 1)
 
         /// <summary>
+        /// [GT] Capacity of the per-team <c>PassEventRing</c> feeding the Pressing AI (#13) BackwardPass
+        /// trigger (Phase D D2b). Stage 0 publishes no pass events into the ring (no carrier exists yet),
+        /// so the trigger never fires; the small ring is allocated once at boot for the wiring path.
+        /// </summary>
+        public static readonly int STAGE0_PASS_EVENT_RING_CAPACITY = 16; // TODO: feed real pass events (Stage 1)
+
+        /// <summary>
+        /// [GT] Stage-0 default defensive-line depth [0.0 = deepest, 1.0 = highest] supplied to the
+        /// Defensive AI (#14) snapshot (Phase D D2b). Mirrors the Decision Tree #8 Stage0Default value;
+        /// passed straight through to MarkDirective.OffensiveLineDepth and back into the decision context.
+        /// </summary>
+        public static readonly float STAGE0_DEFENSIVE_LINE_DEPTH = 0.5f; // TODO: replace with config loader (Stage 1)
+
+        /// <summary>
+        /// [GT] Stage-0 neutral normalised attribute [0,1] for the Mechanics-AI snapshot fields the Stage-0
+        /// algorithms do not consume (Attacking #15 Pace / Dribbling — §2.3 "declared for Stage 1+ use").
+        /// Replaced by real normalised attributes once the ERR-007 attribute split lands.
+        /// </summary>
+        public static readonly float STAGE0_NEUTRAL_NORMALIZED = 0.5f; // TODO: replace when ERR-007 attribute split lands (Phase D+)
+
+        /// <summary>
         /// [GT] Host reach (m) within which a loose, approaching ground ball triggers a first-touch
         /// attempt by the nearest eligible agent (Phase D D3). This is the host-side trigger gate — the
         /// decision to ATTEMPT a touch — distinct from the First Touch (#4) §3.2 OUTPUT displacement
@@ -218,4 +239,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | SNAPSHOT_SCHEMA_VERSION unchanged — FirstTouchSystem is         |
 // |         |            |        | stateless; it writes only _ball + _possessingAgentId (already   |
 // |         |            |        | serialized, the latter via MatchContext.PossessingAgentId).     |
+// | 1.9     | 2026-06-26 | —      | Phase D D2b (Pressing #13 / Defensive #14 / Attacking #15):     |
+// |         |            |        | STAGE0_PASS_EVENT_RING_CAPACITY ([GT] 16) sizes the per-team    |
+// |         |            |        | PassEventRing; STAGE0_DEFENSIVE_LINE_DEPTH ([GT] 0.5) feeds the |
+// |         |            |        | Defensive snapshot (→ MarkDirective.OffensiveLineDepth carrier);|
+// |         |            |        | STAGE0_NEUTRAL_NORMALIZED ([GT] 0.5) for the unconsumed [0,1]   |
+// |         |            |        | Attacking pace/dribbling fields. SNAPSHOT_SCHEMA_VERSION         |
+// |         |            |        | unchanged (mechanics hysteresis serialization is the D4 step).  |
 #endregion

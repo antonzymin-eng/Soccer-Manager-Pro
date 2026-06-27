@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-22 (Phase D D3 — first-touch wiring: loose-ball receive → EvaluateFirstTouch)
+// Modified: 2026-06-26 (Phase D D2b — Pressing #13 / Defensive #14 / Attacking #15 wiring)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -16,15 +16,18 @@ using Unity.Profiling;
 using UnityEngine;
 
 using TacticalDirector.AgentMovement;
+using TacticalDirector.AttackingAI;
 using TacticalDirector.BallPhysics;
 using TacticalDirector.CollisionSystem;
 using TacticalDirector.DecisionTree;
+using TacticalDirector.DefensiveAI;
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 using TacticalDirector.FirstTouch;
 using TacticalDirector.PassMechanics;
 using TacticalDirector.PerceptionSystem;
 using TacticalDirector.PositioningAI;
+using TacticalDirector.PressingAI;
 using TacticalDirector.ShotMechanics;
 
 // The collision orchestrator type name (CollisionSystem) collides with its own namespace leaf
@@ -144,6 +147,24 @@ namespace TacticalDirector.MatchEngine
         // in-process determinism holds; save/restore replay needs a get/restore seam (fold into D4).
         private readonly PositioningAITick[]             _positioning;   // [TEAM_COUNT]
         private readonly PositioningPerceptionSnapshot[] _posSnapshots;  // [TEAM_COUNT]
+
+        // Pressing (#13) → Defensive (#14) → Attacking (#15) chain (Phase D D2b). One INSTANCE + reused
+        // input snapshot per team, ticked AFTER Positioning each AI tick (Pressing's per-agent PressRole
+        // feeds the Defensive snapshot; both read the Positioning slots via the PositioningAIView facade).
+        // Each snapshot carries all 22 agents mapped into the acting team's canonical attack-toward-+X
+        // frame (MirrorPitchIfAway) and discriminated by TeamId, mirroring the D2a guard. Stage-0 carriers
+        // into the decision context: Defensive MarkDirective.OffensiveLineDepth → TacticalContext.Defensive-
+        // LineDepth + HasMarkDirective; Attacking run intent → HasAttackIntent. Pressing's PressDirective has
+        // no Stage-0 TacticalContext carrier (PressingMode is a static team tactic) — it runs only to feed
+        // PressRole to Defensive. NOTE (D4 follow-up): each tick's internal hysteresis is cross-tick state
+        // NOT yet serialized (same class as the D1/D2a state) — fold the get/restore seams into D4.
+        private readonly PressingAITick[]    _pressing;       // [TEAM_COUNT]
+        private readonly PressingSnapshot[]  _pressSnapshots; // [TEAM_COUNT]
+        private readonly PassEventRing[]     _passRings;      // [TEAM_COUNT]
+        private readonly DefensiveAITick[]   _defensive;      // [TEAM_COUNT]
+        private readonly DefensiveSnapshot[] _defSnapshots;   // [TEAM_COUNT]
+        private readonly AttackingAITick[]   _attacking;      // [TEAM_COUNT]
+        private readonly AttackingSnapshot[] _attackSnapshots;// [TEAM_COUNT]
 
         // ── World state (design note §2.3) ────────────────────────────────────────────
         // Real BallState + AgentState[] driven by the production physics seams (step B2). Step B3
@@ -265,6 +286,29 @@ namespace TacticalDirector.MatchEngine
                 _posSnapshots[t] = new PositioningPerceptionSnapshot(MatchEngineConstants.PLAYERS_PER_TEAM);
                 FillPositioningSnapshot(t, tickIndex: 0);
                 _positioning[t].SeedFromFormation(_posSnapshots[t]);
+            }
+
+            // §4 step 3 (cont.) — Pressing/Defensive/Attacking chain (Phase D D2b). One INSTANCE + reused
+            // 22-agent snapshot per team. Pressing + Attacking take the PositioningAIView facade over this
+            // team's Positioning instance; Attacking takes a Stage-0 balanced StyleProfile. Snapshots are
+            // filled from world state each AI tick (RunMechanicsAI).
+            _pressing        = new PressingAITick[MatchEngineConstants.TEAM_COUNT];
+            _pressSnapshots  = new PressingSnapshot[MatchEngineConstants.TEAM_COUNT];
+            _passRings       = new PassEventRing[MatchEngineConstants.TEAM_COUNT];
+            _defensive       = new DefensiveAITick[MatchEngineConstants.TEAM_COUNT];
+            _defSnapshots    = new DefensiveSnapshot[MatchEngineConstants.TEAM_COUNT];
+            _attacking       = new AttackingAITick[MatchEngineConstants.TEAM_COUNT];
+            _attackSnapshots = new AttackingSnapshot[MatchEngineConstants.TEAM_COUNT];
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                var posView = new PositioningAIView(_positioning[t]);
+                _passRings[t]      = new PassEventRing(MatchEngineConstants.STAGE0_PASS_EVENT_RING_CAPACITY);
+                _pressing[t]       = new PressingAITick(posView, _passRings[t], MatchEngineConstants.MaxEntityId);
+                _pressSnapshots[t] = new PressingSnapshot();
+                _defensive[t]      = new DefensiveAITick(MatchEngineConstants.MaxEntityId);
+                _defSnapshots[t]   = new DefensiveSnapshot();
+                _attacking[t]      = new AttackingAITick(posView, StyleProfile.Possession, MatchEngineConstants.MaxEntityId);
+                _attackSnapshots[t] = new AttackingSnapshot();
             }
 
             // One movement controller forwards every DT-selected movement command into the held
@@ -518,6 +562,16 @@ namespace TacticalDirector.MatchEngine
         /// the formation slots feed the decision context and that away-team slots mirror home-team slots.</summary>
         internal Vector2 TestOnly_FormationSlot(int agentId) => _tacticalContexts[agentId].GetFormationSlot(agentId);
 
+        /// <summary>Test-only: the DefensiveLineDepth carrier the Defensive AI (#14, D2b) fed into the
+        /// agent's TacticalContext at the last AI tick (MarkDirective.OffensiveLineDepth).</summary>
+        internal float TestOnly_DefensiveLineDepth(int agentId) => _tacticalContexts[agentId].DefensiveLineDepth;
+
+        /// <summary>Test-only: the HasMarkDirective carrier (Defensive AI #14, D2b) at the last AI tick.</summary>
+        internal bool TestOnly_HasMarkDirective(int agentId) => _tacticalContexts[agentId].HasMarkDirective;
+
+        /// <summary>Test-only: the HasAttackIntent carrier (Attacking AI #15, D2b) at the last AI tick.</summary>
+        internal bool TestOnly_HasAttackIntent(int agentId) => _tacticalContexts[agentId].HasAttackIntent;
+
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
         /// CurrentSnapshotDigest after the most recent <see cref="RunTick"/>). Diagnostic /
@@ -592,10 +646,11 @@ namespace TacticalDirector.MatchEngine
             // runs only on stride ticks, so the integer division is exact (no truncation of a partial tick).
             int heartbeat = (int)_clock.CurrentTacticalTick;
 
-            // §2.5 mechanics AI (Phase D D2): refresh the per-team formation slots into _tacticalContexts
-            // BEFORE the DecisionTree reads them below, so each agent's MOVE_TO_POSITION / HOLD anchor is
-            // this tick's Positioning AI (#12) slot rather than the boot scaffold.
-            RunPositioningAI(heartbeat);
+            // §2.5 mechanics AI (Phase D D2): refresh the per-team formation slots + tactical carriers into
+            // _tacticalContexts BEFORE the DecisionTree reads them below, so each agent's MOVE_TO_POSITION /
+            // HOLD anchor is this tick's Positioning AI (#12) slot and its DefensiveLineDepth / Mark / Attack
+            // carriers are this tick's Defensive (#14) / Attacking (#15) output rather than the boot scaffold.
+            RunMechanicsAI(heartbeat);
 
             _perception.OnHeartbeat(heartbeat, _agents, _ball, _perceptionAttrs, _hasPossession);
 
@@ -656,30 +711,50 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// Mechanics AI (Phase D D2): runs the per-team Positioning AI (#12) tick and folds each agent's
-        /// computed formation slot into its <see cref="TacticalContext"/> for the DecisionTree to read
-        /// (the MOVE_TO_POSITION / HOLD anchor). For each team it fills the perception snapshot from
-        /// current world state, ticks, then writes <c>GetFormationSlot(entityId)</c> back into the
-        /// per-agent <c>_tacticalContexts</c>. The away team's world state is mapped into the canonical
-        /// attack-toward-+X frame for the snapshot and the resulting slot mapped back to world space
-        /// (180° pitch rotation), so the single-perspective #12 formation table positions both teams
-        /// correctly (the ERR-008-002 home/away-asymmetry guard at the mechanics layer). Deterministic
-        /// (no RNG); the Stage-0 default Pressing / Passing / line-depth and the false Mark/Attack stub
-        /// flags are re-applied via <see cref="TacticalContext.Stage0Default"/> — the Defensive (#14) /
-        /// Attacking (#15) / Pressing (#13) tick wiring that would author those is the remaining D2 work.
+        /// Mechanics AI (Phase D D2): runs the per-team Positioning (#12) → Pressing (#13) → Defensive (#14)
+        /// → Attacking (#15) chain and folds each agent's formation slot + tactical carriers into its
+        /// <see cref="TacticalContext"/> for the DecisionTree to read. Per team it fills each subsystem's
+        /// snapshot from current world state, ticks in dependency order (Pressing's per-agent PressRole feeds
+        /// the Defensive snapshot), then writes back: <c>GetFormationSlot(entityId)</c> → the MOVE_TO_POSITION
+        /// / HOLD anchor; Defensive <c>MarkDirective.OffensiveLineDepth</c> → <c>DefensiveLineDepth</c> +
+        /// <c>HasMarkDirective</c> (ERR-014-001; raised only for the team WITHOUT the ball — the Stage-1
+        /// <c>MarkDirective?</c> = null shape for attackers); Attacking run intent → <c>HasAttackIntent</c> (ERR-015-002).
+        /// The away team's world state is mapped into the canonical attack-toward-+X frame for every snapshot
+        /// and the formation slot mapped back to world space (180° pitch rotation, <see cref="MirrorPitchIfAway"/>),
+        /// so the single-perspective #12 / #13 / #14 / #15 authoring positions both teams correctly (the
+        /// ERR-008-002 home/away-asymmetry guard at the mechanics layer). Deterministic (no RNG). Pressing's
+        /// PressDirective has no Stage-0 carrier (PressingMode is a static team tactic) so it runs only to
+        /// feed PressRole to Defensive; the Stage-0 default Pressing / Passing tactics stay the Stage0Default.
         /// </summary>
-        private void RunPositioningAI(int tacticalTick)
+        private void RunMechanicsAI(int tacticalTick)
         {
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
+                // Positioning (#12) — formation slots + the Line/Phase inputs the rest of the chain reads.
                 FillPositioningSnapshot(t, tacticalTick);
-
                 ContextModifierInputs modifiers = new ContextModifierInputs(
                     scoreDiff:         0,
                     teamMeanFatigue:   ComputeTeamMeanFatigue(t),
                     tacticalIntensity: MatchEngineConstants.STAGE0_TACTICAL_INTENSITY);
-
                 _positioning[t].Tick(_posSnapshots[t], modifiers);
+
+                // Pressing (#13) — per-agent PressRole consumed by the Defensive snapshot below.
+                FillPressingSnapshot(t, tacticalTick);
+                _pressing[t].Tick(_pressSnapshots[t]);
+
+                // Defensive (#14) — team-level MarkDirective; OffensiveLineDepth is the DecisionContext carrier.
+                FillDefensiveSnapshot(t, tacticalTick);
+                _defensive[t].Tick(_defSnapshots[t]);
+                MarkDirective mark = _defensive[t].GetMarkDirective();
+
+                // Attacking (#15) — per-agent AttackIntent; a committed run is the HasAttackIntent carrier.
+                FillAttackingSnapshot(t, tacticalTick);
+                _attacking[t].Tick(_attackSnapshots[t]);
+
+                // A Defensive MarkDirective applies only to the team WITHOUT the ball (when this team has
+                // possession its agents attack and carry no mark — the Stage-1 MarkDirective? = null shape).
+                int owner = _possessingAgentId;
+                bool teamHasPossession = owner >= 0 && _teamIds[owner] == t;
 
                 for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
                 {
@@ -692,12 +767,26 @@ namespace TacticalDirector.MatchEngine
                         ? _agents[i].Position
                         : MirrorPitchIfAway(t, canonicalSlot);
 
-                    // Rebuild the Stage-0 TacticalContext around the live formation slot. Pressing / Passing
-                    // / DefensiveLineDepth stay the Stage-0 defaults and the Mark/Attack stub flags stay
-                    // false (the #13/#14/#15 wiring that would set them is the remaining D2 work).
-                    _tacticalContexts[i] = TacticalContext.Stage0Default(worldSlot);
+                    // Rebuild the Stage-0 TacticalContext around the live formation slot, then overlay the
+                    // Mechanics-AI carriers. Pressing / Passing tactics stay the Stage0Default (no Stage-0
+                    // carrier). OffensiveLineDepth is frame-invariant ([0,1] depth), so no inverse map needed.
+                    TacticalContext ctx = TacticalContext.Stage0Default(worldSlot);
+                    ctx.DefensiveLineDepth = mark.OffensiveLineDepth;
+                    ctx.HasMarkDirective   = !teamHasPossession;
+                    ctx.HasAttackIntent    = HasActiveAttackIntent(_attacking[t].GetIntent(i));
+                    _tacticalContexts[i]   = ctx;
                 }
             }
+        }
+
+        /// <summary>
+        /// True when the Attacking AI (#15) produced a committed off-ball run for this agent (a non-null
+        /// <see cref="RunParameters"/>). Stage-0 boolean stand-in for the ERR-015-002 <c>AttackIntent[]?</c>
+        /// carrier; a HoldWidth/SupportBall/WeakSide intent without a run is not flagged.
+        /// </summary>
+        private static bool HasActiveAttackIntent(in AttackIntent intent)
+        {
+            return intent.RunParameters.HasValue;
         }
 
         /// <summary>
@@ -740,6 +829,163 @@ namespace TacticalDirector.MatchEngine
             snap.ActiveOutfieldCount = activeOutfield;
         }
 
+        /// <summary>
+        /// Fills team <paramref name="team"/>'s reused <see cref="PressingSnapshot"/> (Phase D D2b). Carries
+        /// all 22 agents discriminated by <c>TeamId</c>, mapped into the acting team's canonical
+        /// attack-toward-+X frame (<see cref="MirrorPitchIfAway"/> for positions, the 180° direction rotation
+        /// for velocities/facing). Own-team agents take their Positioning AI (#12) slot + line; opponents take
+        /// a position placeholder + neutral line (consumed only for own-team hold-shape geometry). Touch
+        /// quality is the perfect-touch identity so the Stage-0 BadTouch trigger never fires.
+        /// </summary>
+        private void FillPressingSnapshot(int team, int tickIndex)
+        {
+            PressingSnapshot snap = _pressSnapshots[team];
+            int owner = _possessingAgentId;
+
+            snap.TickIndex           = tickIndex;
+            snap.BallPosition        = MirrorPitchIfAway(team, _ball.Position);
+            snap.BallVelocity        = MirrorVelocityIfAway(team, _ball.Velocity);
+            snap.BallCarrierEntityId = owner;
+            snap.AttackingDirection  = CanonicalAttackDir(team);
+            snap.PossessionTeamId    = owner >= 0 ? _teamIds[owner] : MatchEngineConstants.NO_POSSESSION;
+            snap.PressingTeamId      = team;
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                bool isOwn = _teamIds[i] == team;
+                snap.Agents[i] = new PressingAgentSnapshot
+                {
+                    EntityId            = i,
+                    TeamId              = _teamIds[i],
+                    Position            = MirrorPitchIfAway(team, _agents[i].Position),
+                    Velocity            = MirrorVelocityIfAway(team, _agents[i].Velocity),
+                    Facing              = MirrorVelocityIfAway(team, _agents[i].FacingDirection),
+                    Fatigue             = 1f - _agents[i].AerobicPool,
+                    FirstTouchAttribute = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
+                    LastTouchQuality    = 1f,   // perfect touch ⇒ no Stage-0 BadTouch trigger
+                    PostTouchBallSpeed  = 0f,
+                    IsGoalkeeper        = _isGoalkeeper[i],
+                    HasBall             = i == owner,
+                    IsActive            = true,
+                    BaselineSlot        = isOwn ? _positioning[team].GetFormationSlot(i)
+                                                : MirrorPitchIfAway(team, _agents[i].Position),
+                    Line                = isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
+                };
+            }
+        }
+
+        /// <summary>
+        /// Fills team <paramref name="team"/>'s reused <see cref="DefensiveSnapshot"/> (Phase D D2b). The
+        /// per-agent <c>PressRole</c> is read back from this team's Pressing AI (#13) output, completing the
+        /// Positioning→Pressing→Defensive chain. All 22 agents are carried in the canonical attack-+X frame;
+        /// the team phase is the Positioning AI phase and the line depth is the Stage-0 default (echoed into
+        /// <see cref="MarkDirective.OffensiveLineDepth"/>). The team's goalkeeper anchors the COVER_GK_ZONE
+        /// last-man check (§3.9).
+        /// </summary>
+        private void FillDefensiveSnapshot(int team, int tickIndex)
+        {
+            DefensiveSnapshot snap = _defSnapshots[team];
+            int owner = _possessingAgentId;
+            Vector2 ballXY = new Vector2(_ball.Position.x, _ball.Position.y);
+            Vector2 ballVelXY = new Vector2(_ball.Velocity.x, _ball.Velocity.y);
+
+            snap.TickIndex               = tickIndex;
+            snap.DefensiveTeamId         = team;
+            snap.BallPosition            = MirrorPitchIfAway(team, ballXY);
+            snap.BallVelocity            = MirrorVelocityIfAway(team, ballVelXY);
+            snap.PossessionOwnerEntityId = owner;
+            snap.TeamPhase               = _positioning[team].GetPhase();
+            snap.DefensiveLineDepth      = MatchEngineConstants.STAGE0_DEFENSIVE_LINE_DEPTH;
+            snap.AgentCount              = MatchEngineConstants.SQUAD_SIZE;
+            snap.HasActivePrimaryPress   = _pressing[team].LastDirective.IsActive;
+
+            int gkEntity = MatchEngineConstants.NO_POSSESSION;
+            Vector2 gkPos = Vector2.zero;
+            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            {
+                int g = team * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                if (_isGoalkeeper[g])
+                {
+                    gkEntity = g;
+                    gkPos    = MirrorPitchIfAway(team, _agents[g].Position);
+                    break;
+                }
+            }
+            snap.GkEntityId = gkEntity;
+            snap.GkPosition = gkPos;
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                bool isOwn = _teamIds[i] == team;
+                snap.Agents[i] = new DefensiveAgentSnapshot
+                {
+                    EntityId            = i,
+                    TeamId              = _teamIds[i],
+                    Position            = MirrorPitchIfAway(team, _agents[i].Position),
+                    Velocity            = MirrorVelocityIfAway(team, _agents[i].Velocity),
+                    IsActive            = true,
+                    IsGoalkeeper        = _isGoalkeeper[i],
+                    HasBall             = i == owner,
+                    BaselineSlot        = isOwn ? _positioning[team].GetFormationSlot(i)
+                                                : MirrorPitchIfAway(team, _agents[i].Position),
+                    Line                = isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
+                    PressRole           = _pressing[team].GetAssignment(i).Role,
+                    PerceivedFirstTouch = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
+                };
+            }
+        }
+
+        /// <summary>
+        /// Fills team <paramref name="team"/>'s reused <see cref="AttackingSnapshot"/> (Phase D D2b). All 22
+        /// agents are carried in the acting team's canonical attack-+X frame, so the team attack angle is 0.
+        /// Stamina is the live fatigue (1 − AerobicPool); pace / dribbling are the Stage-0 neutral normalised
+        /// placeholder (§2.3 — not consumed by the Stage-0 RUNNER algorithm).
+        /// </summary>
+        private void FillAttackingSnapshot(int team, int tickIndex)
+        {
+            AttackingSnapshot snap = _attackSnapshots[team];
+            int owner = _possessingAgentId;
+            Vector2 ballXY = new Vector2(_ball.Position.x, _ball.Position.y);
+
+            snap.TickIndex           = tickIndex;
+            snap.AttackingTeamId     = team;
+            snap.BallPosition        = MirrorPitchIfAway(team, ballXY);
+            snap.BallCarrierEntityId = owner;
+            snap.BallCarrierPosition = owner >= 0
+                ? MirrorPitchIfAway(team, _agents[owner].Position)
+                : MirrorPitchIfAway(team, ballXY);
+            snap.TeamAttackAngle     = 0f;   // acting team attacks +X in its canonical frame
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                bool isOwn = _teamIds[i] == team;
+                snap.Agents[i] = new AttackingAgentSnapshot(
+                    entityId:     i,
+                    teamId:       _teamIds[i],
+                    position:     MirrorPitchIfAway(team, _agents[i].Position),
+                    baselineSlot: isOwn ? _positioning[team].GetFormationSlot(i)
+                                        : MirrorPitchIfAway(team, _agents[i].Position),
+                    line:         isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
+                    isGoalkeeper: _isGoalkeeper[i],
+                    hasBall:      i == owner,
+                    isActive:     true,
+                    pace:         MatchEngineConstants.STAGE0_NEUTRAL_NORMALIZED,
+                    stamina:      1f - _agents[i].AerobicPool,
+                    dribbling:    MatchEngineConstants.STAGE0_NEUTRAL_NORMALIZED);
+            }
+        }
+
+        /// <summary>
+        /// Canonical attack direction (acting team frame) of whichever team currently holds the ball: +X when
+        /// the acting team (or no one) holds it, −X when the opponent holds it. Unit vector; never zero.
+        /// </summary>
+        private Vector2 CanonicalAttackDir(int team)
+        {
+            int owner = _possessingAgentId;
+            if (owner >= 0 && _teamIds[owner] != team) return new Vector2(-1f, 0f);
+            return new Vector2(1f, 0f);
+        }
+
         /// <summary>Mean fatigue [0,1] across team <paramref name="team"/> (0 fully rested, 1 fully
         /// fatigued, per the project convention), derived from each agent's AerobicPool reservoir as
         /// fatigue = 1 − pool (a full pool means the agent is rested).</summary>
@@ -778,6 +1024,23 @@ namespace TacticalDirector.MatchEngine
                 MatchEngineConstants.PITCH_LENGTH_M - p.x,
                 MatchEngineConstants.PITCH_WIDTH_M  - p.y,
                 p.z);
+        }
+
+        /// <summary>
+        /// Maps a world-space velocity/direction into / out of the canonical attack-+X frame. Unlike a
+        /// position (an affine point — <see cref="MirrorPitchIfAway"/>), a velocity is a free vector, so the
+        /// away-team 180° rotation negates both planar components (no PITCH offset). Self-inverse.
+        /// </summary>
+        private static Vector2 MirrorVelocityIfAway(int team, Vector2 v)
+        {
+            return team == 0 ? v : new Vector2(-v.x, -v.y);
+        }
+
+        /// <summary>Vector3 overload of <see cref="MirrorVelocityIfAway(int, Vector2)"/> preserving Z
+        /// (height velocity, frame-invariant).</summary>
+        private static Vector3 MirrorVelocityIfAway(int team, Vector3 v)
+        {
+            return team == 0 ? v : new Vector3(-v.x, -v.y, v.z);
         }
 
         /// <summary>Phase 3 — Physics. Integrates the ball (#1) and the 22 agents (#2) one 60 Hz
@@ -1774,4 +2037,30 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | the Linux gate; the pass-1 review wrongly assumed perception's  |
 // |         |            |        | was internal). Parallel to the fully-qualified EventBusRegistrar|
 // |         |            |        | calls. No behaviour change.                                     |
+// | 1.9     | 2026-06-26 | —      | Phase D D2b — Pressing #13 / Defensive #14 / Attacking #15      |
+// |         |            |        | wiring. RunPositioningAI → RunMechanicsAI: per team it now ticks|
+// |         |            |        | the Positioning→Pressing→Defensive→Attacking chain in           |
+// |         |            |        | dependency order (Pressing's per-agent PressRole feeds the      |
+// |         |            |        | Defensive snapshot) then folds the carriers into each agent's   |
+// |         |            |        | TacticalContext: MarkDirective.OffensiveLineDepth →             |
+// |         |            |        | DefensiveLineDepth + HasMarkDirective (ERR-014-001); a committed|
+// |         |            |        | Attacking run → HasAttackIntent (ERR-015-002). One INSTANCE +   |
+// |         |            |        | reused 22-agent snapshot per team; each snapshot carries all 22 |
+// |         |            |        | agents in the acting team's canonical attack-+X frame           |
+// |         |            |        | (MirrorPitchIfAway positions, MirrorVelocityIfAway velocities/  |
+// |         |            |        | facing) discriminated by TeamId — the ERR-008-002 guard. New    |
+// |         |            |        | helpers FillPressing/Defensive/AttackingSnapshot, CanonicalAt-  |
+// |         |            |        | tackDir, MirrorVelocityIfAway, HasActiveAttackIntent. New       |
+// |         |            |        | constants STAGE0_PASS_EVENT_RING_CAPACITY / STAGE0_DEFENSIVE_   |
+// |         |            |        | LINE_DEPTH / STAGE0_NEUTRAL_NORMALIZED. asmdef gains PressingAI |
+// |         |            |        | / DefensiveAI / AttackingAI. Snapshot schema UNCHANGED (the     |
+// |         |            |        | per-team tick hysteresis is cross-tick state deferred to D4).   |
+// | 1.9.1   | 2026-06-26 | —      | D2b AR (2L). L-1: HasMarkDirective now gated on possession —    |
+// |         |            |        | raised only for the team WITHOUT the ball (the Stage-1          |
+// |         |            |        | MarkDirective? = null shape for attackers) instead of           |
+// |         |            |        | unconditionally true; inert today (stub unread by the DT) but   |
+// |         |            |        | no longer locks a future-wrong contract. L-2: new               |
+// |         |            |        | AwayTeamCarriers_MirrorHomeTeam test asserts the three carriers |
+// |         |            |        | are slot-symmetric home↔away (the D2b analogue of the D2a       |
+// |         |            |        | GK-pitch-mirror lock). No behaviour change to consumed output.  |
 #endregion
