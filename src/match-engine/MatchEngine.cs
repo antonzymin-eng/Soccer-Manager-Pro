@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-26 (Phase D D2b — Pressing #13 / Defensive #14 / Attacking #15 wiring)
+// Modified: 2026-06-27 (Phase D D4 — snapshot extension: DecisionTree state + schema bump 2→3)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -556,6 +556,11 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: whether the agent's DecisionTree has dispatched at least one action
         /// (proves the AI pipeline ran and produced a decision rather than aborting at validation).</summary>
         internal bool TestOnly_DtHasDispatched(int agentId) => _decisionTrees[agentId].HasDispatchedAction;
+
+        /// <summary>Test-only: restores an agent's DecisionTree cross-tick state (D0 seam) so a test can
+        /// prove the D4 per-agent DecisionTreeState is in the snapshot digest preimage.</summary>
+        internal void TestOnly_SetDecisionTreeState(int agentId, in DecisionTreeState state) =>
+            _decisionTrees[agentId].RestoreState(state);
 
         /// <summary>Test-only: the world-space formation slot the mechanics AI (Positioning #12, D2) fed
         /// into the agent's TacticalContext at the last AI tick. Read after <see cref="RunTick"/> to assert
@@ -1395,9 +1400,17 @@ namespace TacticalDirector.MatchEngine
             // reconstructs them identically at boot and their omission cannot diverge replay. The
             // Phase-A observation counters (_aiPhaseRanThisTick/_aiPhaseRunCount) are likewise
             // excluded — instrumentation derivable from the tick number, not gameplay state.
-            // PHASE-D FLAG: when the AI phase begins writing per-agent form/fatigue context into
-            // _perfs, _perfs becomes cross-tick state and MUST be serialized here (bump
-            // SNAPSHOT_SCHEMA_VERSION at that point).
+            // PHASE-D FLAG: the AI phase still does NOT write per-agent form/fatigue context into
+            // _perfs (it stays the boot-neutral constant) — when it begins to, _perfs becomes
+            // cross-tick state and MUST be serialized here (bump SNAPSHOT_SCHEMA_VERSION at that point).
+            //
+            // EXCLUSION PROOF — perception internal state + per-team mechanics-AI hysteresis (D4): the
+            // perception RecognitionLatencyTracker / ShoulderCheckScheduler / ball-prev arrays and the
+            // per-team Positioning/Pressing/Defensive/Attacking hysteresis ARE cross-tick state but are
+            // NOT serialized at v3 — none expose a get/restore seam yet. Same-seed in-process
+            // determinism is unaffected (both runs init at boot and evolve identically); only
+            // save/restore replay needs them, so they are deferred to a follow-up snapshot extension
+            // (which will add the seams + serialization and bump SNAPSHOT_SCHEMA_VERSION again).
             //
             // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but it is NOT
             // serialized directly because C4 folds it into MatchContext.PossessingAgentId (authored
@@ -1431,6 +1444,12 @@ namespace TacticalDirector.MatchEngine
                 WritePassExecutorState(buf, ref o, in passState);
                 ShotExecutorState shotState = _shotExecutors[i].CaptureState();
                 WriteShotExecutorState(buf, ref o, in shotState);
+
+                // D4 — per-agent DecisionTree state machine via the D0 capture seam. A PASS/SHOOT
+                // decision holds EXECUTING across the 60 Hz ticks between heartbeats, so this is
+                // cross-tick simulation state; at Stage 0 a resting DT captures the IDLE default block.
+                DecisionTreeState dtState = _decisionTrees[i].CaptureState();
+                WriteDecisionTreeState(buf, ref o, in dtState);
             }
 
             // C5 — authoritative MatchContext (folds in the possessing-agent id). Authored each Resolve;
@@ -1652,6 +1671,51 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.LaunchAngleDeg);
             CanonicalSerializer.WriteBool(buf, ref o, s.LastResult.StumbleTriggered);
             CanonicalSerializer.WriteI32 (buf, ref o, s.LastResult.ContactFrame);
+        }
+
+        /// <summary>Serializes a <see cref="DecisionTreeState"/> (D0 capture) in canonical order — the
+        /// state-machine ordinal, the dispatched-action flag, and the last <see cref="AgentAction"/>
+        /// (incl. its embedded Pass/Shot request blocks). Mirrors the D0 round-trip field order in
+        /// DecisionTreeStateTests (the lock this body must stay in sync with). The DecisionTree's
+        /// _matchSeed and per-tick _optionBuffer are excluded — boot-deterministic / scratch (§2.6).</summary>
+        private static void WriteDecisionTreeState(byte[] buf, ref int o, in DecisionTreeState s)
+        {
+            CanonicalSerializer.WriteI32 (buf, ref o, s.State);
+            CanonicalSerializer.WriteBool(buf, ref o, s.HasDispatchedAction);
+
+            AgentAction a = s.LastAction;
+            CanonicalSerializer.WriteI32 (buf, ref o, a.AgentId);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)a.Type);
+            CanonicalSerializer.WriteI32 (buf, ref o, a.TargetAgentId);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.TargetPosition.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.TargetPosition.y);
+
+            CanonicalSerializer.WriteI32 (buf, ref o, a.PassParams.AgentId);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)a.PassParams.PassType);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)a.PassParams.CrossSubType);
+            CanonicalSerializer.WriteI32 (buf, ref o, a.PassParams.TargetAgentId);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.PassParams.TargetPosition.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.PassParams.TargetPosition.y);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.PassParams.TargetPosition.z);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.PassParams.IntendedDistance);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.PassParams.Urgency);
+            CanonicalSerializer.WriteBool(buf, ref o, a.PassParams.IsWeakFoot);
+            CanonicalSerializer.WriteI32 (buf, ref o, a.PassParams.TeamId);
+            CanonicalSerializer.WriteI32 (buf, ref o, a.PassParams.FrameNumber);
+
+            CanonicalSerializer.WriteI32 (buf, ref o, a.ShotParams.AgentId);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.ShotParams.PowerIntent);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)a.ShotParams.ContactZone);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.ShotParams.SpinIntent);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.ShotParams.PlacementTarget.x);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.ShotParams.PlacementTarget.y);
+            CanonicalSerializer.WriteBool(buf, ref o, a.ShotParams.IsWeakFoot);
+            CanonicalSerializer.WriteF32 (buf, ref o, a.ShotParams.DistanceToGoal);
+            CanonicalSerializer.WriteI32 (buf, ref o, a.ShotParams.TeamId);
+            CanonicalSerializer.WriteI32 (buf, ref o, a.ShotParams.FrameNumber);
+
+            CanonicalSerializer.WriteF32 (buf, ref o, a.UtilityScore);
+            CanonicalSerializer.WriteI32 (buf, ref o, a.HeartbeatTick);
         }
 
         /// <summary>Serializes the authoritative <see cref="MatchContext"/> in canonical order (C5).
@@ -2063,4 +2127,15 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | AwayTeamCarriers_MirrorHomeTeam test asserts the three carriers |
 // |         |            |        | are slot-symmetric home↔away (the D2b analogue of the D2a       |
 // |         |            |        | GK-pitch-mirror lock). No behaviour change to consumed output.  |
+// | 1.10    | 2026-06-27 | —      | Phase D D4 — snapshot extension + schema bump. SerializeWorld-  |
+// |         |            |        | State now writes the per-agent DecisionTree state machine (D0   |
+// |         |            |        | CaptureState, ×22) via new WriteDecisionTreeState (mirrors the  |
+// |         |            |        | DecisionTreeStateTests round-trip order); SNAPSHOT_SCHEMA_      |
+// |         |            |        | VERSION 2 → 3. Exclusion proofs recorded for _perfs (still      |
+// |         |            |        | boot-neutral — PHASE-D flag not yet fired) and the perception   |
+// |         |            |        | internal state + per-team Positioning/Pressing/Defensive/      |
+// |         |            |        | Attacking hysteresis (no get/restore seam yet — deferred to a   |
+// |         |            |        | follow-up extension; same-seed determinism unaffected). New     |
+// |         |            |        | TestOnly_SetDecisionTreeState seam + DtState_FeedsSnapshot-     |
+// |         |            |        | Digest probe. D5 (design-note reconciliation) pending.         |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
-// Modified: 2026-06-26 (Phase D D2b — Pressing/Defensive/Attacking Stage-0 inputs)
+// Modified: 2026-06-27 (Phase D D4 — SNAPSHOT_SCHEMA_VERSION 2 → 3, DecisionTree state)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -81,8 +81,18 @@ namespace TacticalDirector.MatchEngine
         /// v2 (Phase C / C5) adds the per-agent Pass/Shot executor in-flight state (the C0
         /// <c>PassExecutorState</c> / <c>ShotExecutorState</c> capture, ×22 each — cross-tick once an
         /// AI dispatcher initiates a pass/shot) and the authoritative <c>MatchContext</c> (which folds
-        /// in the host's possessing-agent id; written each Resolve, read by the next AI tick).</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 2;
+        /// in the host's possessing-agent id; written each Resolve, read by the next AI tick).
+        ///
+        /// v3 (Phase D / D4) adds the per-agent DecisionTree state machine (the D0
+        /// <c>DecisionTreeState</c> capture, ×22 — the <c>DtState</c> ordinal + last <c>AgentAction</c> +
+        /// the §3.7.2 dispatched-action flag): a PASS/SHOOT decision is taken on one 10 Hz heartbeat and
+        /// EXECUTING persists across the intervening 60 Hz ticks, so this is cross-tick simulation state
+        /// that a save/restore must reconstruct. The perception internal state (RecognitionLatency /
+        /// ShoulderCheck / ball-prev) and the per-team Positioning/Pressing/Defensive/Attacking hysteresis
+        /// remain EXCLUDED at v3 — they have no get/restore seam yet; same-seed in-process determinism
+        /// still holds (both runs evolve identically), only save/restore replay is affected. Their seams
+        /// + serialization are a follow-up snapshot extension (they will bump this again).</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 3;
 
         #endregion
 
@@ -246,4 +256,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | STAGE0_NEUTRAL_NORMALIZED ([GT] 0.5) for the unconsumed [0,1]   |
 // |         |            |        | Attacking pace/dribbling fields. SNAPSHOT_SCHEMA_VERSION         |
 // |         |            |        | unchanged (mechanics hysteresis serialization is the D4 step).  |
+// | 1.10    | 2026-06-27 | —      | Phase D D4: SNAPSHOT_SCHEMA_VERSION 2 → 3 — the per-agent       |
+// |         |            |        | DecisionTree state machine (D0 DecisionTreeState capture, ×22)  |
+// |         |            |        | is now serialized into the world-state body. v3 doc paragraph   |
+// |         |            |        | added; perception + per-team mechanics hysteresis remain        |
+// |         |            |        | excluded (no get/restore seam yet — follow-up extension).       |
 #endregion

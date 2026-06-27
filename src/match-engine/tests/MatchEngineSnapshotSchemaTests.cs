@@ -1,8 +1,8 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
-// Modified: 2026-06-16
+// Modified: 2026-06-27 (Phase D D4 — schema pin 3 + DecisionTree-state digest probe)
 // Author:   —
-// Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3), Code Standards #20
+// Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
 // Purpose:  Phase B step B3 tests — proves the full §2.6 world-state field set (not just the B2
 //           kinematic subset) feeds the snapshot digest: perturbing the embedded OscillationGuard
 //           ring-buffer state (B0 seam) or the ball spin changes the digest, and the schema pin holds.
@@ -14,6 +14,7 @@ using UnityEngine;
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
+using TacticalDirector.DecisionTree;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -42,9 +43,34 @@ namespace TacticalDirector.MatchEngine
         public void SchemaVersion_IsPinned()
         {
             // The pin must change deliberately (with a field-set or ordering change), never by drift.
-            // v2 added the C5 per-agent executor state + MatchContext to the serialized body.
-            Assert.AreEqual(2u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v3 added the D4 per-agent DecisionTree state machine to the serialized body.
+            Assert.AreEqual(3u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void DecisionTreeState_FeedsSnapshotDigest()
+        {
+            // Baseline: untouched kickoff state (every DecisionTree at the fresh IDLE default).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: one agent's DecisionTree restored to an EXECUTING state with a dispatched
+            // action. The first processed tick is not an AI stride tick, so the DecisionTree is not
+            // re-evaluated this tick and the injected state passes through to the snapshot unchanged —
+            // a clean single-field probe (parallel to the OscillationGuard probe above).
+            var perturbed = new MatchEngine(MatchSeed);
+            var injected = new DecisionTreeState(
+                state: (int)DtState.EXECUTING,
+                lastAction: default,
+                hasDispatchedAction: true);
+            perturbed.TestOnly_SetDecisionTreeState(OutfieldIndex, injected);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Perturbing the DecisionTree state machine left the digest unchanged — " +
+                "the D0 decision state is not in the digest preimage (D4 regression).");
         }
 
         [Test]
@@ -139,4 +165,6 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-06-16 | —      | Initial Phase B step B3 tests: schema-version pin, OscillationGuard |
 // |         |            |        | + ball-spin digest-preimage probes, and locked-guard determinism.  |
+// | 1.1     | 2026-06-27 | —      | Phase D D4: schema pin 2 → 3; new DecisionTreeState_FeedsSnapshot-  |
+// |         |            |        | Digest probe (D0 decision state reaches the digest preimage).       |
 #endregion
