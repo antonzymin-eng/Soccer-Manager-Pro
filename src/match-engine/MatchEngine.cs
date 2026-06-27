@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — snapshot extension: DecisionTree state + schema bump 2→3)
+// Modified: 2026-06-27 (Phase D D4 — DecisionTree + Positioning hysteresis snapshot; schema 2→4)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -561,6 +561,10 @@ namespace TacticalDirector.MatchEngine
         /// prove the D4 per-agent DecisionTreeState is in the snapshot digest preimage.</summary>
         internal void TestOnly_SetDecisionTreeState(int agentId, in DecisionTreeState state) =>
             _decisionTrees[agentId].RestoreState(state);
+
+        /// <summary>Test-only: the live per-team Positioning AI (#12) hysteresis (D4 CaptureState seam),
+        /// so a test can perturb it and prove the positioning hysteresis is in the snapshot digest preimage.</summary>
+        internal HysteresisState TestOnly_PositioningState(int teamId) => _positioning[teamId].CaptureState();
 
         /// <summary>Test-only: the world-space formation slot the mechanics AI (Positioning #12, D2) fed
         /// into the agent's TacticalContext at the last AI tick. Read after <see cref="RunTick"/> to assert
@@ -1404,13 +1408,14 @@ namespace TacticalDirector.MatchEngine
             // _perfs (it stays the boot-neutral constant) — when it begins to, _perfs becomes
             // cross-tick state and MUST be serialized here (bump SNAPSHOT_SCHEMA_VERSION at that point).
             //
-            // EXCLUSION PROOF — perception internal state + per-team mechanics-AI hysteresis (D4): the
+            // EXCLUSION PROOF — perception internal state + remaining mechanics-AI hysteresis (D4): the
             // perception RecognitionLatencyTracker / ShoulderCheckScheduler / ball-prev arrays and the
-            // per-team Positioning/Pressing/Defensive/Attacking hysteresis ARE cross-tick state but are
-            // NOT serialized at v3 — none expose a get/restore seam yet. Same-seed in-process
-            // determinism is unaffected (both runs init at boot and evolve identically); only
-            // save/restore replay needs them, so they are deferred to a follow-up snapshot extension
-            // (which will add the seams + serialization and bump SNAPSHOT_SCHEMA_VERSION again).
+            // per-team Pressing/Defensive/Attacking hysteresis ARE cross-tick state but are NOT serialized
+            // at v4 — none expose a get/restore seam yet. Same-seed in-process determinism is unaffected
+            // (both runs init at boot and evolve identically); only save/restore replay needs them, so
+            // they are deferred to a follow-up snapshot extension (which will add the seams + serialization
+            // and bump SNAPSHOT_SCHEMA_VERSION again). The per-team Positioning (#12) hysteresis IS now
+            // serialized below (v4) via its CaptureState seam.
             //
             // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but it is NOT
             // serialized directly because C4 folds it into MatchContext.PossessingAgentId (authored
@@ -1455,6 +1460,13 @@ namespace TacticalDirector.MatchEngine
             // C5 — authoritative MatchContext (folds in the possessing-agent id). Authored each Resolve;
             // read by the next AI tick. Written after the per-agent block so the field order is pinned.
             WriteMatchContext(buf, ref o, in _matchContext);
+
+            // D4 — per-team Positioning AI (#12) hysteresis via the CaptureState seam. Cross-tick state
+            // (phase dwell + per-agent line/lane membership) that drives formation shape across AI ticks.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                WritePositioningHysteresis(buf, ref o, _positioning[t].CaptureState());
+            }
 
             payload.BytesWritten = o;
         }
@@ -1734,6 +1746,28 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteF32 (buf, ref o, m.BallVelocity.y);
             CanonicalSerializer.WriteF32 (buf, ref o, m.BallVelocity.z);
             CanonicalSerializer.WriteI32 (buf, ref o, (int)m.BallZone);
+        }
+
+        /// <summary>Serializes one team's Positioning AI (#12) <see cref="HysteresisState"/> (D4) in
+        /// canonical order — the team phase + dwell, then each agent's line/lane membership + dwell.
+        /// Enum fields are written as i32 ordinals; the per-agent count is fixed by the seeded squad size
+        /// (<c>state.Agents.Length</c>), equal across teams and stable for the match.</summary>
+        private static void WritePositioningHysteresis(byte[] buf, ref int o, HysteresisState state)
+        {
+            CanonicalSerializer.WriteI32(buf, ref o, (int)state.CurrentPhase);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)state.CandidatePhase);
+            CanonicalSerializer.WriteI32(buf, ref o, state.PhaseDwellCount);
+
+            AgentHysteresisState[] agents = state.Agents;
+            for (int i = 0; i < agents.Length; i++)
+            {
+                CanonicalSerializer.WriteI32(buf, ref o, (int)agents[i].CurrentLine);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)agents[i].CandidateLine);
+                CanonicalSerializer.WriteI32(buf, ref o, agents[i].LineDwellCount);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)agents[i].CurrentLane);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)agents[i].CandidateLane);
+                CanonicalSerializer.WriteI32(buf, ref o, agents[i].LaneDwellCount);
+            }
         }
 
         // ── Executor world-state mappers (Phase C C1a) ────────────────────────────────
@@ -2138,4 +2172,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | follow-up extension; same-seed determinism unaffected). New     |
 // |         |            |        | TestOnly_SetDecisionTreeState seam + DtState_FeedsSnapshot-     |
 // |         |            |        | Digest probe. D5 (design-note reconciliation) pending.         |
+// | 1.11    | 2026-06-27 | —      | Phase D D4 (cont.) — per-team Positioning AI (#12) hysteresis   |
+// |         |            |        | serialized via its new CaptureState seam (WritePositioning-     |
+// |         |            |        | Hysteresis, ×TEAM_COUNT); SNAPSHOT_SCHEMA_VERSION 3 → 4.        |
+// |         |            |        | Exclusion proof narrowed: Positioning no longer excluded;       |
+// |         |            |        | perception + Pressing/Defensive/Attacking hysteresis still      |
+// |         |            |        | excluded (no seam yet). New TestOnly_PositioningState seam +    |
+// |         |            |        | PositioningHysteresis_FeedsSnapshotDigest probe; test asmdef    |
+// |         |            |        | gains TacticalDirector.PositioningAI. D5 + E–F pending.         |
 #endregion

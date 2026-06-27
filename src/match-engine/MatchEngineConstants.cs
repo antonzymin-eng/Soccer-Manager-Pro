@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — SNAPSHOT_SCHEMA_VERSION 2 → 3, DecisionTree state)
+// Modified: 2026-06-27 (Phase D D4 — SNAPSHOT_SCHEMA_VERSION 2 → 4, DecisionTree + Positioning state)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -91,8 +91,13 @@ namespace TacticalDirector.MatchEngine
         /// ShoulderCheck / ball-prev) and the per-team Positioning/Pressing/Defensive/Attacking hysteresis
         /// remain EXCLUDED at v3 — they have no get/restore seam yet; same-seed in-process determinism
         /// still holds (both runs evolve identically), only save/restore replay is affected. Their seams
-        /// + serialization are a follow-up snapshot extension (they will bump this again).</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 3;
+        /// + serialization are a follow-up snapshot extension (they will bump this again).
+        ///
+        /// v4 (Phase D / D4 follow-up) adds the per-team Positioning AI (#12) <c>HysteresisState</c> (the
+        /// CaptureState seam, ×TEAM_COUNT — team phase + dwell + per-agent line/lane membership), the first
+        /// of the mechanics-AI hysteresis seams. Perception internal state and the Pressing/Defensive/
+        /// Attacking hysteresis remain excluded pending their own get/restore seams.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 4;
 
         #endregion
 
@@ -261,4 +266,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | is now serialized into the world-state body. v3 doc paragraph   |
 // |         |            |        | added; perception + per-team mechanics hysteresis remain        |
 // |         |            |        | excluded (no get/restore seam yet — follow-up extension).       |
+// | 1.11    | 2026-06-27 | —      | Phase D D4 (cont.): SNAPSHOT_SCHEMA_VERSION 3 → 4 — the per-    |
+// |         |            |        | team Positioning AI (#12) HysteresisState is now serialized.    |
+// |         |            |        | v4 doc paragraph added; perception + Pressing/Defensive/        |
+// |         |            |        | Attacking hysteresis still excluded (no seam yet).             |
 #endregion

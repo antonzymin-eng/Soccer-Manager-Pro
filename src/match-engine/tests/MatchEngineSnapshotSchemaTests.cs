@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — schema pin 3 + DecisionTree-state digest probe)
+// Modified: 2026-06-27 (Phase D D4 — schema pin 4 + DecisionTree + Positioning digest probes)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
 // Purpose:  Phase B step B3 tests — proves the full §2.6 world-state field set (not just the B2
@@ -43,9 +43,29 @@ namespace TacticalDirector.MatchEngine
         public void SchemaVersion_IsPinned()
         {
             // The pin must change deliberately (with a field-set or ordering change), never by drift.
-            // v3 added the D4 per-agent DecisionTree state machine to the serialized body.
-            Assert.AreEqual(3u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v4 added the D4 per-team Positioning AI hysteresis to the serialized body.
+            Assert.AreEqual(4u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void PositioningHysteresis_FeedsSnapshotDigest()
+        {
+            // Baseline: untouched kickoff state (both teams' positioning seeded at boot, dwell = 0).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: bump one team's positioning phase-dwell counter. The first processed tick is not
+            // an AI stride tick, so RunPositioningAI does not run and the injected dwell passes through to
+            // the snapshot unchanged — a clean single-field probe (parallel to the probes above).
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_PositioningState(0).PhaseDwellCount += 1;
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Perturbing the Positioning AI hysteresis left the digest unchanged — " +
+                "the per-team positioning state is not in the digest preimage (D4 regression).");
         }
 
         [Test]
@@ -167,4 +187,6 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | + ball-spin digest-preimage probes, and locked-guard determinism.  |
 // | 1.1     | 2026-06-27 | —      | Phase D D4: schema pin 2 → 3; new DecisionTreeState_FeedsSnapshot-  |
 // |         |            |        | Digest probe (D0 decision state reaches the digest preimage).       |
+// | 1.2     | 2026-06-27 | —      | Phase D D4 (cont.): schema pin 3 → 4; new PositioningHysteresis_    |
+// |         |            |        | FeedsSnapshotDigest probe (per-team #12 hysteresis in the preimage).|
 #endregion
