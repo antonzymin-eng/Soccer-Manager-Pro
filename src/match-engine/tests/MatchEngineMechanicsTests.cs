@@ -2,9 +2,9 @@
 // Created:  2026-06-22
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §5 Phase D (D2), Code Standards #20
-// Purpose:  Phase D step D2 tests — proves the mechanics AI (Positioning AI #12) feeds live formation
-//           slots into each agent's decision context, that the away team's slots mirror the home team's
-//           (the ERR-008-002 home/away-asymmetry guard), and that the wiring is deterministic.
+// Purpose:  Phase D step D2 tests — proves the mechanics AI feeds live decision-context inputs: the
+//           Positioning AI (#12) formation slots (D2a, incl. the away-team ERR-008-002 mirror) and the
+//           Defensive (#14) / Attacking (#15) carriers (D2b), and that the wiring is deterministic.
 
 using NUnit.Framework;
 using UnityEngine;
@@ -115,6 +115,45 @@ namespace TacticalDirector.MatchEngine
                     $"Formation slot Y for agent {i} diverged across two same-seed runs.");
             }
         }
+
+        [Test]
+        public void DefensiveAI_FeedsLineDepthCarrier_IntoDecisionContext()
+        {
+            // D2b: the Defensive AI (#14) MarkDirective.OffensiveLineDepth is folded into each agent's
+            // TacticalContext.DefensiveLineDepth and HasMarkDirective is raised. At Stage 0 the depth is
+            // the passthrough default (STAGE0_DEFENSIVE_LINE_DEPTH) — the carrier path is real even though
+            // the value is value-neutral until live tactical instructions wire in.
+            MatchEngine engine = RunTo(TwoStrideTicks);
+
+            foreach (int agent in new[] { HomeGoalkeeper, HomeDefender, HomeStriker, AwayGoalkeeper })
+            {
+                Assert.IsTrue(engine.TestOnly_HasMarkDirective(agent),
+                    $"Agent {agent} must carry a mark directive after the Defensive AI tick.");
+                Assert.AreEqual(MatchEngineConstants.STAGE0_DEFENSIVE_LINE_DEPTH,
+                    engine.TestOnly_DefensiveLineDepth(agent), 1e-6f,
+                    $"Agent {agent} DefensiveLineDepth carrier must echo the Stage-0 default.");
+            }
+        }
+
+        [Test]
+        public void MechanicsCarriers_AreDeterministic_AcrossSameSeedRuns()
+        {
+            // The full Positioning→Pressing→Defensive→Attacking chain (incl. each tick's internal
+            // hysteresis) must be byte-stable across two same-seed runs, so the carriers it folds into the
+            // decision context are identical.
+            MatchEngine engineA = RunTo(TwoStrideTicks);
+            MatchEngine engineB = RunTo(TwoStrideTicks);
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                Assert.AreEqual(engineA.TestOnly_DefensiveLineDepth(i), engineB.TestOnly_DefensiveLineDepth(i),
+                    $"DefensiveLineDepth carrier for agent {i} diverged across two same-seed runs.");
+                Assert.AreEqual(engineA.TestOnly_HasMarkDirective(i), engineB.TestOnly_HasMarkDirective(i),
+                    $"HasMarkDirective carrier for agent {i} diverged across two same-seed runs.");
+                Assert.AreEqual(engineA.TestOnly_HasAttackIntent(i), engineB.TestOnly_HasAttackIntent(i),
+                    $"HasAttackIntent carrier for agent {i} diverged across two same-seed runs.");
+            }
+        }
     }
 }
 
@@ -125,4 +164,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | defender deep / striker advanced); away-team slots mirror the   |
 // |         |            |        | home team (ERR-008-002 guard, exact GK pitch-mirror); and the   |
 // |         |            |        | wiring is deterministic across two same-seed runs.              |
+// | 1.1     | 2026-06-26 | —      | Phase D step D2b: added Defensive AI (#14) line-depth +         |
+// |         |            |        | HasMarkDirective carrier test and a same-seed determinism lock  |
+// |         |            |        | over all three Mechanics-AI carriers (DefensiveLineDepth /      |
+// |         |            |        | HasMarkDirective / HasAttackIntent).                            |
 #endregion
