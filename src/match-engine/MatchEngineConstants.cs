@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
-// Modified: 2026-06-26 (Phase D D2b — Pressing/Defensive/Attacking Stage-0 inputs)
+// Modified: 2026-06-27 (Phase D D4 — SNAPSHOT_SCHEMA_VERSION 2 → 8, DT + 4 mechanics-AI + perception)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -81,8 +81,40 @@ namespace TacticalDirector.MatchEngine
         /// v2 (Phase C / C5) adds the per-agent Pass/Shot executor in-flight state (the C0
         /// <c>PassExecutorState</c> / <c>ShotExecutorState</c> capture, ×22 each — cross-tick once an
         /// AI dispatcher initiates a pass/shot) and the authoritative <c>MatchContext</c> (which folds
-        /// in the host's possessing-agent id; written each Resolve, read by the next AI tick).</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 2;
+        /// in the host's possessing-agent id; written each Resolve, read by the next AI tick).
+        ///
+        /// v3 (Phase D / D4) adds the per-agent DecisionTree state machine (the D0
+        /// <c>DecisionTreeState</c> capture, ×22 — the <c>DtState</c> ordinal + last <c>AgentAction</c> +
+        /// the §3.7.2 dispatched-action flag): a PASS/SHOOT decision is taken on one 10 Hz heartbeat and
+        /// EXECUTING persists across the intervening 60 Hz ticks, so this is cross-tick simulation state
+        /// that a save/restore must reconstruct. The perception internal state (RecognitionLatency /
+        /// ShoulderCheck / ball-prev) and the per-team Positioning/Pressing/Defensive/Attacking hysteresis
+        /// remain EXCLUDED at v3 — they have no get/restore seam yet; same-seed in-process determinism
+        /// still holds (both runs evolve identically), only save/restore replay is affected. Their seams
+        /// + serialization are a follow-up snapshot extension (they will bump this again).
+        ///
+        /// v4 (Phase D / D4 follow-up) adds the per-team Positioning AI (#12) <c>HysteresisState</c> (the
+        /// CaptureState seam, ×TEAM_COUNT — team phase + dwell + per-agent line/lane membership), the first
+        /// of the mechanics-AI hysteresis seams.
+        ///
+        /// v5 (Phase D / D4 follow-up) adds the per-team Pressing AI (#13) <c>PressingTickState</c> (the
+        /// CaptureState seam, ×TEAM_COUNT — trigger debounce counters, disengage/cooldown dwell, per-agent
+        /// role hysteresis + accumulated press fatigue).
+        ///
+        /// v6 (Phase D / D4 follow-up) adds the per-team Defensive AI (#14) <c>DefensiveTickState</c> (the
+        /// CaptureState seam, ×TEAM_COUNT — per-team offside-line state + per-agent mark hysteresis + last
+        /// committed mark assignment).
+        ///
+        /// v7 (Phase D / D4 follow-up) adds the per-team Attacking AI (#15) <c>AttackingTickState</c> (the
+        /// CaptureState seam, ×TEAM_COUNT — per-team transition-hold state + frozen in-possession directive +
+        /// per-agent role hysteresis).
+        ///
+        /// v8 (Phase D / D4 follow-up) adds the Perception (#7) <c>PerceptionTickState</c> (single shared
+        /// instance — the recognition-latency tracker pair arrays, the shoulder-check scheduler per-agent +
+        /// per-pair arrays, and the per-agent ball-perception carry-over). With v8 every cross-tick gameplay
+        /// surface is serialized; no cross-tick state remains excluded (only boot-deterministic constants and
+        /// tick-derivable observation counters).</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 8;
 
         #endregion
 
@@ -246,4 +278,25 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | STAGE0_NEUTRAL_NORMALIZED ([GT] 0.5) for the unconsumed [0,1]   |
 // |         |            |        | Attacking pace/dribbling fields. SNAPSHOT_SCHEMA_VERSION         |
 // |         |            |        | unchanged (mechanics hysteresis serialization is the D4 step).  |
+// | 1.10    | 2026-06-27 | —      | Phase D D4: SNAPSHOT_SCHEMA_VERSION 2 → 3 — the per-agent       |
+// |         |            |        | DecisionTree state machine (D0 DecisionTreeState capture, ×22)  |
+// |         |            |        | is now serialized into the world-state body. v3 doc paragraph   |
+// |         |            |        | added; perception + per-team mechanics hysteresis remain        |
+// |         |            |        | excluded (no get/restore seam yet — follow-up extension).       |
+// | 1.11    | 2026-06-27 | —      | Phase D D4 (cont.): SNAPSHOT_SCHEMA_VERSION 3 → 4 — the per-    |
+// |         |            |        | team Positioning AI (#12) HysteresisState is now serialized.    |
+// |         |            |        | v4 doc paragraph added; perception + Pressing/Defensive/        |
+// |         |            |        | Attacking hysteresis still excluded (no seam yet).             |
+// | 1.12    | 2026-06-27 | —      | Phase D D4 (cont.): SNAPSHOT_SCHEMA_VERSION 4 → 5 — the per-    |
+// |         |            |        | team Pressing AI (#13) PressingTickState is now serialized.     |
+// |         |            |        | v5 doc paragraph added; perception + Defensive/Attacking        |
+// |         |            |        | hysteresis still excluded (no seam yet).                       |
+// | 1.13    | 2026-06-27 | —      | Phase D D4 (cont.): SNAPSHOT_SCHEMA_VERSION 5 → 7 — Defensive   |
+// |         |            |        | AI (#14, v6) DefensiveTickState + Attacking AI (#15, v7)        |
+// |         |            |        | AttackingTickState now serialized. v6/v7 doc paragraphs added;  |
+// |         |            |        | perception internal state is the only remaining exclusion.     |
+// | 1.14    | 2026-06-27 | —      | Phase D D4 (final): SNAPSHOT_SCHEMA_VERSION 7 → 8 — Perception  |
+// |         |            |        | (#7, v8) PerceptionTickState now serialized. v8 doc paragraph   |
+// |         |            |        | added; cross-tick coverage complete (no gameplay state left     |
+// |         |            |        | excluded — only boot-deterministic constants + observation).   |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/perception-system/RecognitionLatencyTracker.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
 // Author:   —
 // Spec:     Perception System #7 §3.3, §3.3.5, Code Standards #20
 // Purpose:  Manages per-(observer, target) latency counters across heartbeats (§3.3.5).
@@ -168,6 +168,14 @@ namespace TacticalDirector.PerceptionSystem
         }
 
         /// <summary>
+        /// Snapshot seam: returns a read-only view over the cross-tick counter arrays (§3.3) so a host
+        /// snapshot layer can serialize them canonically for deterministic save/restore. The arrays are
+        /// the live, allocated-once instances (read-only serialization use only).
+        /// </summary>
+        public RecognitionLatencyState CaptureState() =>
+            new RecognitionLatencyState(_latencyCounters, _confirmed, _expiryCounters);
+
+        /// <summary>
         /// Read-only query: true if the (observer, target) pair is currently confirmed.
         /// Used by the forced mid-heartbeat refresh path (§4.6.2), which must read the
         /// established confirmation state for non-triggering entities WITHOUT advancing
@@ -253,4 +261,5 @@ namespace TacticalDirector.PerceptionSystem
 // | 1.1     | 2026-05-28 | —      | AR-1 fix L-6: ProcessVisible uses Key() helper (style consistency fix).                    |
 // | 1.2     | 2026-05-29 | —      | AR-2 fix L-3: DeterministicHash literals cast to unchecked int for true 32-bit wrapping. |
 // | 1.3     | 2026-06-13 | —      | AR-3 fixes: H-1 added read-only IsConfirmed() for the forced-refresh path (no counter advance); M-2 removed dead ResetObserver() (never called; doc misrepresented §4.6.2 which resets only the triggering entity); L-1 DeterministicHash returns h & 0x7FFFFFFF instead of Mathf.Abs (Math.Abs(int.MinValue) throws; negative result corrupted caller modulo); L-5 expiry-grace comment. |
+// | 1.4     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam returns a RecognitionLatencyState view over the cross-tick counter arrays for the host snapshot layer. Read-only; no behaviour change. |
 #endregion

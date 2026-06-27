@@ -287,6 +287,9 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/perception-system/RecognitionLatencyTracker.cs` | Per-(observer,target) latency counters, L_rec formula, half-turn peripheral bonus, Wang/Jenkins deterministic hash (§3.3); INV-10 pre-allocated int[22×22] arrays. v1.2: AR-2 L-3 DeterministicHash literals cast to unchecked int for true 32-bit wrapping. |
 | `src/perception-system/ShoulderCheckScheduler.cs` | Autonomous shoulder check scheduling, window management, blind-side entity L_rec (§3.4); INV-10 pre-allocated arrays |
 | `src/perception-system/ViewBuilder.cs` | Pure field-assembly step: sets scalar/count fields on pre-allocated FilteredView + PerceptionDiagnostics without overwriting PerceivedAgent[] references (§3.7); static, no computation |
+| `src/perception-system/RecognitionLatencyState.cs` | Readonly struct: D4 snapshot view over the recognition-latency tracker pair arrays (latency/confirmed/expiry); returned by RecognitionLatencyTracker.CaptureState |
+| `src/perception-system/ShoulderCheckState.cs` | Readonly struct: D4 snapshot view over the shoulder-check scheduler per-agent arrays (next-check/window-expiry/active/anim) + per-pair blind-side arrays; returned by ShoulderCheckScheduler.CaptureState |
+| `src/perception-system/PerceptionTickState.cs` | Readonly struct: D4 snapshot bundle (RecognitionLatencyState + ShoulderCheckState + per-agent ball-perception carry-over); returned by PerceptionSystem.CaptureState for the Match Engine snapshot layer |
 | `src/perception-system/PerceptionSystem.cs` | 10Hz orchestrator; 7-step pipeline for all 22 agents; forced-refresh handler; zero heap allocation on hot path (§3.0–§3.8, §4.1, §4.6). v1.2: AR-2 L-1/L-2 — removed prevBallVisible argument; added length guards to HandleForcedRefresh; added agentHasPossession length guard. |
 
 ### Decision Tree (#8) — 38 files
@@ -372,6 +375,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/pressing-ai/PressAssignment.cs` | Struct: per-agent output (EntityId, Role, TargetPosition) |
 | `src/pressing-ai/PressTrigger.cs` | Struct: 8 dwell/release counters (4 dwell + 4 release; zero allocation, no arrays) |
 | `src/pressing-ai/RoleHysteresisState.cs` | Sealed class: LastRole[], PendingRole[], RoleDwell[] arrays keyed by EntityId (AR-2 M-2/M-3); Reset() |
+| `src/pressing-ai/PressingTickState.cs` | Readonly struct: D4 snapshot view bundling the cross-tick state (RoleHysteresisState, PressTrigger, disengage/cooldown dwell, press-fatigue array); returned by PressingAITick.CaptureState for the Match Engine snapshot layer |
 | `src/pressing-ai/PressingAgentSnapshot.cs` | Struct: per-agent tick input (EntityId, TeamId, Position, BaselineSlot, Fatigue, FirstTouchAttribute, Line, IsGoalkeeper, HasBall, IsActive) |
 | `src/pressing-ai/PressingSnapshot.cs` | Sealed class: tick input container (TickIndex, BallPosition, BallVelocity, BallCarrierEntityId, AttackingDirection, PossessionTeamId, PressingTeamId, Agents[22]) |
 | `src/pressing-ai/PassEventRing.cs` | Sealed class: ring buffer for BackwardPass trigger (Push, TryGetLatest, Clear) |
@@ -398,6 +402,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/defensive-ai/MarkAssignment.cs` | Struct: per-agent assignment (Mode, TargetEntityId, TargetPosition, ValidThroughTick, OverriddenThisTick, IsManuallyAssigned); MakeZonal() factory |
 | `src/defensive-ai/TackleIntentRequest.cs` | Struct: per-agent tackle intent (AgentEntityId, Mode, TargetEntityId, ApproachAngle, CoverageDepth) |
 | `src/defensive-ai/MarkHysteresisState.cs` | Struct: per-agent dwell-lock state (DwellCounter, CandidateMode, CandidateTargetEntityId, HoldTicks); Default() factory |
+| `src/defensive-ai/DefensiveTickState.cs` | Readonly struct: D4 snapshot view bundling cross-tick state (per-entity MarkHysteresisState[], per-entity last MarkAssignment[], OffsideLineState); returned by DefensiveAITick.CaptureState for the Match Engine snapshot layer |
 | `src/defensive-ai/OffsideLineState.cs` | Struct: per-team offside state (CurrentLineDepth, StepUpDwellCounter, CooldownTicksRemaining, CoverGkZoneActiveTicks); Default() factory |
 | `src/defensive-ai/DefensiveAgentSnapshot.cs` | Struct: per-agent tick input (EntityId, TeamId, Position, Velocity, IsActive, IsGoalkeeper, HasBall, BaselineSlot, Line, PressRole, PerceivedFirstTouch) |
 | `src/defensive-ai/DefensiveSnapshot.cs` | Sealed class: tick input container (TickIndex, DefensiveTeamId, BallPosition, BallVelocity, TeamPhase, DefensiveLineDepth, GkEntityId, GkPosition, Agents[22], HasActivePrimaryPress) |
@@ -420,6 +425,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/attacking-ai/Flank.cs` | Enum: Left / Right — overload lateral discriminator (§3.8) |
 | `src/attacking-ai/RunParameters.cs` | Readonly struct: DepthOffsetM / LateralOffsetM / RunTriggerTick — exactly 3 fields (FR-AT-011) |
 | `src/attacking-ai/AttackHysteresisState.cs` | Struct: per-agent dwell state (CurrentRole, DwellCounter, CandidateRole, CandidateDwell) |
+| `src/attacking-ai/AttackingTickState.cs` | Readonly struct: D4 snapshot view bundling cross-tick state (per-agent AttackHysteresisState[], TransitionHoldState, frozen in-possession AttackDirective); returned by AttackingAITick.CaptureState for the Match Engine snapshot layer |
 | `src/attacking-ai/TransitionHoldState.cs` | Struct: per-team possession-loss countdown + PrevPhase |
 | `src/attacking-ai/AttackDirective.cs` | Readonly struct: team-level tick output (TeamId, OverloadActive, OverloadFlank, TransitionHoldTick); static Empty |
 | `src/attacking-ai/AttackIntent.cs` | Readonly struct: per-agent tick output (AgentEntityId, Role, RunParameters?, ValidThroughTick) |

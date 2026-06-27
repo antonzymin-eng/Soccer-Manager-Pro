@@ -1,6 +1,6 @@
 // File:     src/perception-system/ShoulderCheckScheduler.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
 // Author:   —
 // Spec:     Perception System #7 §3.4, Code Standards #20
 // Purpose:  Manages autonomous shoulder check scheduling per agent (§3.4.2).
@@ -167,6 +167,17 @@ namespace TacticalDirector.PerceptionSystem
             }
         }
 
+        /// <summary>
+        /// Snapshot seam: returns a read-only view over the per-agent scheduling arrays and per-pair
+        /// blind-side counters (§3.4) so a host snapshot layer can serialize them canonically for
+        /// deterministic save/restore. The arrays are the live, allocated-once instances (read-only
+        /// serialization use only).
+        /// </summary>
+        public ShoulderCheckState CaptureState() =>
+            new ShoulderCheckState(
+                _nextCheckFrame, _windowExpiryFrame, _windowActive, _animData,
+                _blindSideLatency, _blindSideConfirmed);
+
         // ── Private helpers ──────────────────────────────────────────────────────────
 
         private void FireCheck(int agentId, int anticipation, bool hasPossession, int currentFrame)
@@ -215,4 +226,5 @@ namespace TacticalDirector.PerceptionSystem
 // | 1.0     | 2026-05-28 | —      | Initial implementation.                                                                                       |
 // | 1.1     | 2026-05-28 | —      | AR-1 fixes: M-2 AnyEntityConfirmed updated on blind-side confirmation; L-5 possession comment clarified.      |
 // | 1.2     | 2026-06-13 | —      | AR-3 fixes: H-1 added read-only IsBlindSideConfirmed() for the forced-refresh path (no counter advance); L-2 magic 2.0f possession multiplier → PerceptionConstants.PossessionCheckIntervalMultiplier (FR-CS-016). NOTE: the AR-3 L-3 window-close `>`→`>=` change was REVERTED before merge — SC-002 locks GetWindowExpiryFrame as the last active tick (inclusive), so the window is active through expiry by design; comment added to prevent re-tightening. |
+// | 1.3     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam returns a ShoulderCheckState view over the per-agent scheduling arrays + per-pair blind-side counters for the host snapshot layer. Read-only; no behaviour change. |
 #endregion

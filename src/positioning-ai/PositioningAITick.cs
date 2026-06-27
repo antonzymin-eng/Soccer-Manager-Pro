@@ -1,6 +1,6 @@
 // File: src/positioning-ai/PositioningAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
 // Author:   —
 // Spec: #12 Positioning AI §3.7, §3.11, §4.3, FR-PA-001..006
 // Purpose: 10 Hz entry point for Positioning AI. Classifies phase, delegates to SlotComposer,
@@ -162,6 +162,15 @@ namespace TacticalDirector.PositioningAI
         /// <summary>Returns the committed team phase. Stage-1+ API (§4.5).</summary>
         public Phase GetPhase() => _hyst.CurrentPhase;
 
+        /// <summary>
+        /// Snapshot seam: returns the live team-level <see cref="HysteresisState"/> (phase dwell +
+        /// per-agent line/lane membership) so a host snapshot layer can serialize this cross-tick state
+        /// canonically for deterministic save/restore (parallel to the DecisionTree D0 / executor C0 /
+        /// OscillationGuard B0 seams). The instance is returned by reference for read-only serialization;
+        /// callers MUST NOT mutate it outside a sanctioned restore path.
+        /// </summary>
+        public HysteresisState CaptureState() => _hyst;
+
         // ── Private helpers ───────────────────────────────────────────────────
 
         private int GetSlotIndex(int entityId)
@@ -175,4 +184,9 @@ namespace TacticalDirector.PositioningAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam |
+// |         |            |        | exposes the live HysteresisState so the host snapshot layer can |
+// |         |            |        | serialize the per-team cross-tick positioning hysteresis        |
+// |         |            |        | (parallel to DecisionTree D0 / executor C0 / OscillationGuard   |
+// |         |            |        | B0). Read-only serialization use; no behaviour change.          |
 #endregion

@@ -8,7 +8,12 @@
         "TacticalDirector.AgentMovement",
         "TacticalDirector.PassMechanics",
         "TacticalDirector.ShotMechanics",
-        "TacticalDirector.DecisionTree"
+        "TacticalDirector.DecisionTree",
+        "TacticalDirector.PositioningAI",
+        "TacticalDirector.PressingAI",
+        "TacticalDirector.DefensiveAI",
+        "TacticalDirector.AttackingAI",
+        "TacticalDirector.PerceptionSystem"
     ],
     "includePlatforms": [
         "Editor"

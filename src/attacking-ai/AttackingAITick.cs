@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/AttackingAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-06-15
+// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
 // Author:   —
 // Spec:     Attacking AI #15 §3.13, §4.1–§4.3, FR-AT-001–FR-AT-027, Code Standards #20
 // Purpose:  10 Hz attacking AI orchestrator for one team. Runs the §3.13 pipeline:
@@ -235,6 +235,16 @@ namespace TacticalDirector.AttackingAI
             return new AttackIntentSnapshot(_lastDirective, _intentBuffer, _intentCount, _lastProcessedTick);
         }
 
+        /// <summary>
+        /// Snapshot seam: bundles this tick's cross-tick state (per-agent role hysteresis, per-team
+        /// transition-hold state, frozen in-possession directive) into an <see cref="AttackingTickState"/>
+        /// view so a host snapshot layer can serialize it canonically for deterministic save/restore
+        /// (parallel to the Positioning / Pressing / Defensive seams). The bundled array is the live,
+        /// allocated-once instance (read-only serialization use only).
+        /// </summary>
+        public AttackingTickState CaptureState() =>
+            new AttackingTickState(_hysteresis, in _transitionState, in _lastInPossDirective);
+
         // ── Private helpers ───────────────────────────────────────────────────
 
         private void SetEmpty(int tickIndex, Phase phase)
@@ -280,4 +290,5 @@ namespace TacticalDirector.AttackingAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 M-4: removed dead firstLossThisTick variable and || clause (OutOfPoss already caught above; remaining non-InPoss phases are TransToAtk/TransToDef, covered by isTransition). |
 // | 1.2     | 2026-06-15 | —      | AR-5 M-2 (ERR-015-011): added the FR-AT-008 loose-ball guard — an IN_POSSESSION phase with BallCarrierEntityId < 0 now emits an empty directive instead of running the pipeline against an undefined BallCarrierPosition. |
+// | 1.3     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam bundles the cross-tick state (per-agent role hysteresis, transition-hold state, frozen in-possession directive) into an AttackingTickState view for the host snapshot layer. Read-only; no behaviour change. |
 #endregion
