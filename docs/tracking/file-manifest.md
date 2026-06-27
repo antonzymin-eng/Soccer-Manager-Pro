@@ -287,6 +287,9 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/perception-system/RecognitionLatencyTracker.cs` | Per-(observer,target) latency counters, L_rec formula, half-turn peripheral bonus, Wang/Jenkins deterministic hash (§3.3); INV-10 pre-allocated int[22×22] arrays. v1.2: AR-2 L-3 DeterministicHash literals cast to unchecked int for true 32-bit wrapping. |
 | `src/perception-system/ShoulderCheckScheduler.cs` | Autonomous shoulder check scheduling, window management, blind-side entity L_rec (§3.4); INV-10 pre-allocated arrays |
 | `src/perception-system/ViewBuilder.cs` | Pure field-assembly step: sets scalar/count fields on pre-allocated FilteredView + PerceptionDiagnostics without overwriting PerceivedAgent[] references (§3.7); static, no computation |
+| `src/perception-system/RecognitionLatencyState.cs` | Readonly struct: D4 snapshot view over the recognition-latency tracker pair arrays (latency/confirmed/expiry); returned by RecognitionLatencyTracker.CaptureState |
+| `src/perception-system/ShoulderCheckState.cs` | Readonly struct: D4 snapshot view over the shoulder-check scheduler per-agent arrays (next-check/window-expiry/active/anim) + per-pair blind-side arrays; returned by ShoulderCheckScheduler.CaptureState |
+| `src/perception-system/PerceptionTickState.cs` | Readonly struct: D4 snapshot bundle (RecognitionLatencyState + ShoulderCheckState + per-agent ball-perception carry-over); returned by PerceptionSystem.CaptureState for the Match Engine snapshot layer |
 | `src/perception-system/PerceptionSystem.cs` | 10Hz orchestrator; 7-step pipeline for all 22 agents; forced-refresh handler; zero heap allocation on hot path (§3.0–§3.8, §4.1, §4.6). v1.2: AR-2 L-1/L-2 — removed prevBallVisible argument; added length guards to HandleForcedRefresh; added agentHasPossession length guard. |
 
 ### Decision Tree (#8) — 38 files

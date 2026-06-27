@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — DT + all 4 mechanics-AI hysteresis snapshot; schema 2→7)
+// Modified: 2026-06-27 (Phase D D4 — DT + 4 mechanics-AI + perception snapshot; schema 2→8)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -575,6 +575,9 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Test-only: the live per-team Attacking AI (#15) cross-tick state (D4 CaptureState seam).</summary>
         internal AttackingTickState TestOnly_AttackingState(int teamId) => _attacking[teamId].CaptureState();
+
+        /// <summary>Test-only: the live Perception (#7) cross-tick state (D4 CaptureState seam; single shared instance).</summary>
+        internal PerceptionTickState TestOnly_PerceptionState() => _perception.CaptureState();
 
         /// <summary>Test-only: the world-space formation slot the mechanics AI (Positioning #12, D2) fed
         /// into the agent's TacticalContext at the last AI tick. Read after <see cref="RunTick"/> to assert
@@ -1418,15 +1421,14 @@ namespace TacticalDirector.MatchEngine
             // _perfs (it stays the boot-neutral constant) — when it begins to, _perfs becomes
             // cross-tick state and MUST be serialized here (bump SNAPSHOT_SCHEMA_VERSION at that point).
             //
-            // EXCLUSION PROOF — perception internal state (D4): the perception RecognitionLatencyTracker /
-            // ShoulderCheckScheduler / ball-prev arrays ARE cross-tick state but are NOT serialized at v7 —
-            // they have no get/restore seam yet (perception holds them in private trackers; the seam is the
-            // last piece of this follow-up). Same-seed in-process determinism is unaffected (both runs init
-            // at boot and evolve identically); only save/restore replay needs them, so they are deferred to
-            // the final snapshot extension (which will add the seam + serialization and bump
-            // SNAPSHOT_SCHEMA_VERSION again). All four mechanics-AI hysteresis surfaces — Positioning (#12,
-            // v4), Pressing (#13, v5), Defensive (#14, v6), Attacking (#15, v7) — ARE now serialized below
-            // via their CaptureState seams.
+            // CROSS-TICK COVERAGE COMPLETE (D4, v8): every cross-tick gameplay surface is now serialized.
+            // The four mechanics-AI hysteresis surfaces — Positioning (#12, v4), Pressing (#13, v5),
+            // Defensive (#14, v6), Attacking (#15, v7) — and the Perception (#7, v8) internal state
+            // (RecognitionLatencyTracker / ShoulderCheckScheduler / ball-prev arrays) are all serialized
+            // below via their CaptureState seams, alongside the per-agent DecisionTreeState (D4) and the
+            // C0/B0 executor + OscillationGuard state. The ONLY remaining un-serialized fields are the
+            // boot-deterministic constants (_attrs/_perfs, proven above) and the tick-derivable observation
+            // counters — no cross-tick gameplay state is excluded.
             //
             // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but it is NOT
             // serialized directly because C4 folds it into MatchContext.PossessingAgentId (authored
@@ -1499,6 +1501,12 @@ namespace TacticalDirector.MatchEngine
             {
                 WriteAttackingTickState(buf, ref o, _attacking[t].CaptureState());
             }
+
+            // D4 — Perception (#7) cross-tick state (single shared instance over all 22 agents): the
+            // recognition-latency tracker, shoulder-check scheduler, and per-agent ball-perception
+            // carry-over. The last AI-internal cross-tick surface; with this the snapshot covers every
+            // cross-tick subsystem and there is no remaining excluded gameplay state.
+            WritePerceptionTickState(buf, ref o, _perception.CaptureState());
 
             payload.BytesWritten = o;
         }
@@ -1884,6 +1892,51 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteI32(buf, ref o, hyst[i].DwellCounter);
                 CanonicalSerializer.WriteI32(buf, ref o, (int)hyst[i].CandidateRole);
                 CanonicalSerializer.WriteI32(buf, ref o, hyst[i].CandidateDwell);
+            }
+        }
+
+        /// <summary>Serializes the Perception (#7) <see cref="PerceptionTickState"/> (D4) in canonical
+        /// order — the recognition-latency pair arrays, then the shoulder-check per-agent + per-pair arrays,
+        /// then the per-agent ball-perception carry-over. The pair-array length (MaxAgents²) and per-agent
+        /// length (MaxAgents) are fixed for the match. There is one shared perception instance (not per team).</summary>
+        private static void WritePerceptionTickState(byte[] buf, ref int o, in PerceptionTickState s)
+        {
+            RecognitionLatencyState lat = s.Latency;
+            int pairCap = lat.PairCapacity;
+            for (int i = 0; i < pairCap; i++)
+            {
+                CanonicalSerializer.WriteI32 (buf, ref o, lat.LatencyCounters[i]);
+                CanonicalSerializer.WriteBool(buf, ref o, lat.Confirmed[i]);
+                CanonicalSerializer.WriteI32 (buf, ref o, lat.ExpiryCounters[i]);
+            }
+
+            ShoulderCheckState sc = s.ShoulderCheck;
+            int agentCap = sc.AgentCapacity;
+            for (int i = 0; i < agentCap; i++)
+            {
+                CanonicalSerializer.WriteI32 (buf, ref o, sc.NextCheckFrame[i]);
+                CanonicalSerializer.WriteI32 (buf, ref o, sc.WindowExpiryFrame[i]);
+                CanonicalSerializer.WriteBool(buf, ref o, sc.WindowActive[i]);
+                CanonicalSerializer.WriteI32 (buf, ref o, sc.AnimData[i].AgentId);
+                CanonicalSerializer.WriteI32 (buf, ref o, sc.AnimData[i].FireFrame);
+                CanonicalSerializer.WriteF32 (buf, ref o, sc.AnimData[i].CheckDirection);
+                CanonicalSerializer.WriteBool(buf, ref o, sc.AnimData[i].AnyEntityConfirmed);
+            }
+
+            int scPairCap = sc.PairCapacity;
+            for (int i = 0; i < scPairCap; i++)
+            {
+                CanonicalSerializer.WriteI32 (buf, ref o, sc.BlindSideLatency[i]);
+                CanonicalSerializer.WriteBool(buf, ref o, sc.BlindSideConfirmed[i]);
+            }
+
+            int agentCount = s.AgentCount;
+            for (int i = 0; i < agentCount; i++)
+            {
+                CanonicalSerializer.WriteBool(buf, ref o, s.BallVisiblePrev[i]);
+                CanonicalSerializer.WriteF32 (buf, ref o, s.BallPerceivedPositionPrev[i].x);
+                CanonicalSerializer.WriteF32 (buf, ref o, s.BallPerceivedPositionPrev[i].y);
+                CanonicalSerializer.WriteI32 (buf, ref o, s.BallStalenessFramesPrev[i]);
             }
         }
 
@@ -2313,4 +2366,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | SNAPSHOT_SCHEMA_VERSION 5 → 7. Exclusion list down to perception|
 // |         |            |        | only. New TestOnly_DefensiveState/_AttackingState seams + two   |
 // |         |            |        | digest probes; test asmdef gains DefensiveAI + AttackingAI.     |
+// | 1.14    | 2026-06-27 | —      | Phase D D4 (final cross-tick surface) — Perception (#7) state   |
+// |         |            |        | serialized via its new CaptureState seam (WritePerceptionTick-  |
+// |         |            |        | State: recognition-latency pair arrays + shoulder-check per-    |
+// |         |            |        | agent/per-pair arrays + ball-perception carry-over; one shared  |
+// |         |            |        | instance); SNAPSHOT_SCHEMA_VERSION 7 → 8. CROSS-TICK COVERAGE   |
+// |         |            |        | COMPLETE — no cross-tick gameplay state remains excluded. New   |
+// |         |            |        | TestOnly_PerceptionState seam + PerceptionState_FeedsSnapshot-  |
+// |         |            |        | Digest probe; test asmdef gains PerceptionSystem.              |
 #endregion

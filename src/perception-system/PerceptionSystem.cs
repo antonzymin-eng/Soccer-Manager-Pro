@@ -1,6 +1,6 @@
 // File:     src/perception-system/PerceptionSystem.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
 // Author:   —
 // Spec:     Perception System #7 §3.0–§3.8, §4.1, §4.6, Code Standards #20
 // Purpose:  Main 10Hz orchestrator. Runs the full perception pipeline for all 22 agents
@@ -118,6 +118,23 @@ namespace TacticalDirector.PerceptionSystem
 
         /// <summary>Returns the most recently assembled PerceptionDiagnostics for the given agent. Not delivered to Decision Tree. §3.7.2.</summary>
         public PerceptionDiagnostics GetDiagnostics(int agentId) => _diagnostics[agentId];
+
+        /// <summary>
+        /// Snapshot seam: bundles the cross-tick perception state (recognition-latency tracker,
+        /// shoulder-check scheduler, per-agent ball-perception carry-over) into a
+        /// <see cref="PerceptionTickState"/> view so a host snapshot layer can serialize it canonically
+        /// for deterministic save/restore. The per-tick FilteredView / diagnostics / candidate buffers
+        /// are scratch (overwritten each heartbeat before any read) and are NOT included; the spatial-hash
+        /// grid is host-populated each tick and likewise excluded. Read-only serialization use only.
+        /// </summary>
+        public PerceptionTickState CaptureState()
+        {
+            RecognitionLatencyState latency = _latencyTracker.CaptureState();
+            ShoulderCheckState shoulderCheck = _shoulderCheckScheduler.CaptureState();
+            return new PerceptionTickState(
+                in latency, in shoulderCheck,
+                _ballVisiblePrev, _ballPerceivedPositionPrev, _ballStalenessFramesPrev);
+        }
 
         /// <summary>
         /// 10Hz heartbeat entry point. Runs the full perception pipeline for all 22 agents
@@ -494,4 +511,7 @@ namespace TacticalDirector.PerceptionSystem
 // |         |            |        | the ShoulderCheckScheduler.UpdateAgent advance, and the per-entity latency/blind-side increments behind !forcedRefresh; non-triggering entities are    |
 // |         |            |        | read via the new side-effect-free IsConfirmed/IsBlindSideConfirmed, triggering entity still force-confirms (L_rec=0) per §4.6.2. M-1: Step 1 candidate |
 // |         |            |        | enumeration dedups (agents + ball) across the FULL raw query before any cap, so multi-cell straddle can no longer truncate a unique agent out.         |
+// | 1.5     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam bundles the cross-tick state (recognition-latency tracker, shoulder-check scheduler,    |
+// |         |            |        | per-agent ball-perception carry-over) into a PerceptionTickState view for the host snapshot layer; per-tick FilteredView/diagnostics/candidate scratch  |
+// |         |            |        | and the host-populated spatial-hash grid excluded. Read-only; no behaviour change.                                                                     |
 #endregion

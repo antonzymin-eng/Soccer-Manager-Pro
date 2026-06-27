@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — SNAPSHOT_SCHEMA_VERSION 2 → 7, DT + all 4 mechanics-AI state)
+// Modified: 2026-06-27 (Phase D D4 — SNAPSHOT_SCHEMA_VERSION 2 → 8, DT + 4 mechanics-AI + perception)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -107,9 +107,14 @@ namespace TacticalDirector.MatchEngine
         ///
         /// v7 (Phase D / D4 follow-up) adds the per-team Attacking AI (#15) <c>AttackingTickState</c> (the
         /// CaptureState seam, ×TEAM_COUNT — per-team transition-hold state + frozen in-possession directive +
-        /// per-agent role hysteresis). Perception internal state remains the only excluded cross-tick surface,
-        /// pending its own get/restore seam.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 7;
+        /// per-agent role hysteresis).
+        ///
+        /// v8 (Phase D / D4 follow-up) adds the Perception (#7) <c>PerceptionTickState</c> (single shared
+        /// instance — the recognition-latency tracker pair arrays, the shoulder-check scheduler per-agent +
+        /// per-pair arrays, and the per-agent ball-perception carry-over). With v8 every cross-tick gameplay
+        /// surface is serialized; no cross-tick state remains excluded (only boot-deterministic constants and
+        /// tick-derivable observation counters).</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 8;
 
         #endregion
 
@@ -290,4 +295,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | AI (#14, v6) DefensiveTickState + Attacking AI (#15, v7)        |
 // |         |            |        | AttackingTickState now serialized. v6/v7 doc paragraphs added;  |
 // |         |            |        | perception internal state is the only remaining exclusion.     |
+// | 1.14    | 2026-06-27 | —      | Phase D D4 (final): SNAPSHOT_SCHEMA_VERSION 7 → 8 — Perception  |
+// |         |            |        | (#7, v8) PerceptionTickState now serialized. v8 doc paragraph   |
+// |         |            |        | added; cross-tick coverage complete (no gameplay state left     |
+// |         |            |        | excluded — only boot-deterministic constants + observation).   |
 #endregion

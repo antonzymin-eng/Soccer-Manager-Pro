@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — schema pin 7 + DT + 4 mechanics-AI digest probes)
+// Modified: 2026-06-27 (Phase D D4 — schema pin 8 + DT + 4 mechanics-AI + perception probes)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
 // Purpose:  Phase B step B3 tests — proves the full §2.6 world-state field set (not just the B2
@@ -43,9 +43,29 @@ namespace TacticalDirector.MatchEngine
         public void SchemaVersion_IsPinned()
         {
             // The pin must change deliberately (with a field-set or ordering change), never by drift.
-            // v6 added Defensive AI, v7 added Attacking AI cross-tick state to the serialized body.
-            Assert.AreEqual(7u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v6 Defensive, v7 Attacking, v8 Perception cross-tick state added to the serialized body.
+            Assert.AreEqual(8u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void PerceptionState_FeedsSnapshotDigest()
+        {
+            // Baseline: untouched kickoff state (perception seeded at boot).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: bump a recognition-latency counter. The first processed tick is not an AI stride
+            // tick, so the perception pipeline does not run and the injected counter passes through to the
+            // snapshot unchanged — a clean single-field probe.
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_PerceptionState().Latency.LatencyCounters[0] += 1;
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Perturbing the Perception recognition-latency state left the digest unchanged — " +
+                "the perception cross-tick state is not in the digest preimage (D4 regression).");
         }
 
         [Test]
@@ -252,4 +272,6 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | shotDigest probe (per-team #13 cross-tick state in the preimage).   |
 // | 1.4     | 2026-06-27 | —      | Phase D D4 (cont.): schema pin 5 → 7; new DefensiveState_ +         |
 // |         |            |        | AttackingState_FeedsSnapshotDigest probes (#14 / #15 cross-tick).   |
+// | 1.5     | 2026-06-27 | —      | Phase D D4 (final): schema pin 7 → 8; new PerceptionState_FeedsSnap-|
+// |         |            |        | shotDigest probe (#7 recognition-latency cross-tick state).         |
 #endregion

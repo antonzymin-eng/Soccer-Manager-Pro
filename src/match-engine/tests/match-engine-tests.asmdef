@@ -12,7 +12,8 @@
         "TacticalDirector.PositioningAI",
         "TacticalDirector.PressingAI",
         "TacticalDirector.DefensiveAI",
-        "TacticalDirector.AttackingAI"
+        "TacticalDirector.AttackingAI",
+        "TacticalDirector.PerceptionSystem"
     ],
     "includePlatforms": [
         "Editor"
