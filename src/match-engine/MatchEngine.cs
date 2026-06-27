@@ -717,7 +717,8 @@ namespace TacticalDirector.MatchEngine
         /// snapshot from current world state, ticks in dependency order (Pressing's per-agent PressRole feeds
         /// the Defensive snapshot), then writes back: <c>GetFormationSlot(entityId)</c> → the MOVE_TO_POSITION
         /// / HOLD anchor; Defensive <c>MarkDirective.OffensiveLineDepth</c> → <c>DefensiveLineDepth</c> +
-        /// <c>HasMarkDirective</c> (ERR-014-001); Attacking run intent → <c>HasAttackIntent</c> (ERR-015-002).
+        /// <c>HasMarkDirective</c> (ERR-014-001; raised only for the team WITHOUT the ball — the Stage-1
+        /// <c>MarkDirective?</c> = null shape for attackers); Attacking run intent → <c>HasAttackIntent</c> (ERR-015-002).
         /// The away team's world state is mapped into the canonical attack-toward-+X frame for every snapshot
         /// and the formation slot mapped back to world space (180° pitch rotation, <see cref="MirrorPitchIfAway"/>),
         /// so the single-perspective #12 / #13 / #14 / #15 authoring positions both teams correctly (the
@@ -750,6 +751,11 @@ namespace TacticalDirector.MatchEngine
                 FillAttackingSnapshot(t, tacticalTick);
                 _attacking[t].Tick(_attackSnapshots[t]);
 
+                // A Defensive MarkDirective applies only to the team WITHOUT the ball (when this team has
+                // possession its agents attack and carry no mark — the Stage-1 MarkDirective? = null shape).
+                int owner = _possessingAgentId;
+                bool teamHasPossession = owner >= 0 && _teamIds[owner] == t;
+
                 for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
                 {
                     int i = t * MatchEngineConstants.PLAYERS_PER_TEAM + k;
@@ -766,7 +772,7 @@ namespace TacticalDirector.MatchEngine
                     // carrier). OffensiveLineDepth is frame-invariant ([0,1] depth), so no inverse map needed.
                     TacticalContext ctx = TacticalContext.Stage0Default(worldSlot);
                     ctx.DefensiveLineDepth = mark.OffensiveLineDepth;
-                    ctx.HasMarkDirective   = true;
+                    ctx.HasMarkDirective   = !teamHasPossession;
                     ctx.HasAttackIntent    = HasActiveAttackIntent(_attacking[t].GetIntent(i));
                     _tacticalContexts[i]   = ctx;
                 }
@@ -2049,4 +2055,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | LINE_DEPTH / STAGE0_NEUTRAL_NORMALIZED. asmdef gains PressingAI |
 // |         |            |        | / DefensiveAI / AttackingAI. Snapshot schema UNCHANGED (the     |
 // |         |            |        | per-team tick hysteresis is cross-tick state deferred to D4).   |
+// | 1.9.1   | 2026-06-26 | —      | D2b AR (2L). L-1: HasMarkDirective now gated on possession —    |
+// |         |            |        | raised only for the team WITHOUT the ball (the Stage-1          |
+// |         |            |        | MarkDirective? = null shape for attackers) instead of           |
+// |         |            |        | unconditionally true; inert today (stub unread by the DT) but   |
+// |         |            |        | no longer locks a future-wrong contract. L-2: new               |
+// |         |            |        | AwayTeamCarriers_MirrorHomeTeam test asserts the three carriers |
+// |         |            |        | are slot-symmetric home↔away (the D2b analogue of the D2a       |
+// |         |            |        | GK-pitch-mirror lock). No behaviour change to consumed output.  |
 #endregion

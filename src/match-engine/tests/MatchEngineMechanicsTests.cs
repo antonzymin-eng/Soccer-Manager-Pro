@@ -120,19 +120,50 @@ namespace TacticalDirector.MatchEngine
         public void DefensiveAI_FeedsLineDepthCarrier_IntoDecisionContext()
         {
             // D2b: the Defensive AI (#14) MarkDirective.OffensiveLineDepth is folded into each agent's
-            // TacticalContext.DefensiveLineDepth and HasMarkDirective is raised. At Stage 0 the depth is
-            // the passthrough default (STAGE0_DEFENSIVE_LINE_DEPTH) — the carrier path is real even though
-            // the value is value-neutral until live tactical instructions wire in.
+            // TacticalContext.DefensiveLineDepth, and HasMarkDirective is raised for the team WITHOUT the
+            // ball (the Stage-1 MarkDirective? = null shape for attackers). At Stage 0 the depth is the
+            // passthrough default (STAGE0_DEFENSIVE_LINE_DEPTH) — the carrier path is real even though the
+            // value is value-neutral until live tactical instructions wire in.
             MatchEngine engine = RunTo(TwoStrideTicks);
+            int owner = engine.TestOnly_PossessingAgentId;
 
             foreach (int agent in new[] { HomeGoalkeeper, HomeDefender, HomeStriker, AwayGoalkeeper })
             {
-                Assert.IsTrue(engine.TestOnly_HasMarkDirective(agent),
-                    $"Agent {agent} must carry a mark directive after the Defensive AI tick.");
+                // The agent's team carries a mark directive iff the ball is not held by one of its own.
+                bool ownTeamHasBall = owner >= 0 && SameTeam(agent, owner);
+                Assert.AreEqual(!ownTeamHasBall, engine.TestOnly_HasMarkDirective(agent),
+                    $"Agent {agent} HasMarkDirective must reflect its team being out of possession.");
                 Assert.AreEqual(MatchEngineConstants.STAGE0_DEFENSIVE_LINE_DEPTH,
                     engine.TestOnly_DefensiveLineDepth(agent), 1e-6f,
                     $"Agent {agent} DefensiveLineDepth carrier must echo the Stage-0 default.");
             }
+        }
+
+        [Test]
+        public void AwayTeamCarriers_MirrorHomeTeam()
+        {
+            // The three Mechanics-AI carriers are authored in the per-team canonical attack-+X frame; with a
+            // centre-spot kickoff the pitch is mirror-symmetric, so each home agent and its away counterpart
+            // (slot k ↔ PLAYERS_PER_TEAM + k) must carry identical carrier values. The D2b analogue of the
+            // D2a exact-GK-pitch-mirror lock (ERR-008-002 guard at the carrier layer).
+            MatchEngine engine = RunTo(TwoStrideTicks);
+
+            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            {
+                int home = k;
+                int away = MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                Assert.AreEqual(engine.TestOnly_DefensiveLineDepth(home), engine.TestOnly_DefensiveLineDepth(away),
+                    $"Slot {k}: away DefensiveLineDepth must mirror home.");
+                Assert.AreEqual(engine.TestOnly_HasMarkDirective(home), engine.TestOnly_HasMarkDirective(away),
+                    $"Slot {k}: away HasMarkDirective must mirror home.");
+                Assert.AreEqual(engine.TestOnly_HasAttackIntent(home), engine.TestOnly_HasAttackIntent(away),
+                    $"Slot {k}: away HasAttackIntent must mirror home.");
+            }
+        }
+
+        private static bool SameTeam(int a, int b)
+        {
+            return (a / MatchEngineConstants.PLAYERS_PER_TEAM) == (b / MatchEngineConstants.PLAYERS_PER_TEAM);
         }
 
         [Test]
@@ -168,4 +199,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | HasMarkDirective carrier test and a same-seed determinism lock  |
 // |         |            |        | over all three Mechanics-AI carriers (DefensiveLineDepth /      |
 // |         |            |        | HasMarkDirective / HasAttackIntent).                            |
+// | 1.2     | 2026-06-26 | —      | D2b AR (2L): line-depth test now asserts HasMarkDirective       |
+// |         |            |        | tracks possession (raised iff the agent's team is ball-less);   |
+// |         |            |        | new AwayTeamCarriers_MirrorHomeTeam home↔away symmetry lock.    |
 #endregion
