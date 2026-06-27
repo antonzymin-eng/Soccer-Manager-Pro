@@ -372,6 +372,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/pressing-ai/PressAssignment.cs` | Struct: per-agent output (EntityId, Role, TargetPosition) |
 | `src/pressing-ai/PressTrigger.cs` | Struct: 8 dwell/release counters (4 dwell + 4 release; zero allocation, no arrays) |
 | `src/pressing-ai/RoleHysteresisState.cs` | Sealed class: LastRole[], PendingRole[], RoleDwell[] arrays keyed by EntityId (AR-2 M-2/M-3); Reset() |
+| `src/pressing-ai/PressingTickState.cs` | Readonly struct: D4 snapshot view bundling the cross-tick state (RoleHysteresisState, PressTrigger, disengage/cooldown dwell, press-fatigue array); returned by PressingAITick.CaptureState for the Match Engine snapshot layer |
 | `src/pressing-ai/PressingAgentSnapshot.cs` | Struct: per-agent tick input (EntityId, TeamId, Position, BaselineSlot, Fatigue, FirstTouchAttribute, Line, IsGoalkeeper, HasBall, IsActive) |
 | `src/pressing-ai/PressingSnapshot.cs` | Sealed class: tick input container (TickIndex, BallPosition, BallVelocity, BallCarrierEntityId, AttackingDirection, PossessionTeamId, PressingTeamId, Agents[22]) |
 | `src/pressing-ai/PassEventRing.cs` | Sealed class: ring buffer for BackwardPass trigger (Push, TryGetLatest, Clear) |

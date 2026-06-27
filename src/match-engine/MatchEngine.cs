@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — DecisionTree + Positioning hysteresis snapshot; schema 2→4)
+// Modified: 2026-06-27 (Phase D D4 — DecisionTree + Positioning + Pressing snapshot; schema 2→5)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -565,6 +565,10 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: the live per-team Positioning AI (#12) hysteresis (D4 CaptureState seam),
         /// so a test can perturb it and prove the positioning hysteresis is in the snapshot digest preimage.</summary>
         internal HysteresisState TestOnly_PositioningState(int teamId) => _positioning[teamId].CaptureState();
+
+        /// <summary>Test-only: the live per-team Pressing AI (#13) cross-tick state (D4 CaptureState seam),
+        /// so a test can perturb it and prove the pressing hysteresis is in the snapshot digest preimage.</summary>
+        internal PressingTickState TestOnly_PressingState(int teamId) => _pressing[teamId].CaptureState();
 
         /// <summary>Test-only: the world-space formation slot the mechanics AI (Positioning #12, D2) fed
         /// into the agent's TacticalContext at the last AI tick. Read after <see cref="RunTick"/> to assert
@@ -1410,12 +1414,12 @@ namespace TacticalDirector.MatchEngine
             //
             // EXCLUSION PROOF — perception internal state + remaining mechanics-AI hysteresis (D4): the
             // perception RecognitionLatencyTracker / ShoulderCheckScheduler / ball-prev arrays and the
-            // per-team Pressing/Defensive/Attacking hysteresis ARE cross-tick state but are NOT serialized
-            // at v4 — none expose a get/restore seam yet. Same-seed in-process determinism is unaffected
-            // (both runs init at boot and evolve identically); only save/restore replay needs them, so
-            // they are deferred to a follow-up snapshot extension (which will add the seams + serialization
-            // and bump SNAPSHOT_SCHEMA_VERSION again). The per-team Positioning (#12) hysteresis IS now
-            // serialized below (v4) via its CaptureState seam.
+            // per-team Defensive/Attacking hysteresis ARE cross-tick state but are NOT serialized at v5 —
+            // none expose a get/restore seam yet. Same-seed in-process determinism is unaffected (both runs
+            // init at boot and evolve identically); only save/restore replay needs them, so they are
+            // deferred to a follow-up snapshot extension (which will add the seams + serialization and bump
+            // SNAPSHOT_SCHEMA_VERSION again). The per-team Positioning (#12, v4) and Pressing (#13, v5)
+            // hysteresis ARE now serialized below via their CaptureState seams.
             //
             // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but it is NOT
             // serialized directly because C4 folds it into MatchContext.PossessingAgentId (authored
@@ -1466,6 +1470,13 @@ namespace TacticalDirector.MatchEngine
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 WritePositioningHysteresis(buf, ref o, _positioning[t].CaptureState());
+            }
+
+            // D4 — per-team Pressing AI (#13) cross-tick state via the CaptureState seam (role hysteresis,
+            // trigger debounce, disengage/cooldown dwell, accumulated press fatigue).
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                WritePressingTickState(buf, ref o, _pressing[t].CaptureState());
             }
 
             payload.BytesWritten = o;
@@ -1767,6 +1778,36 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteI32(buf, ref o, (int)agents[i].CurrentLane);
                 CanonicalSerializer.WriteI32(buf, ref o, (int)agents[i].CandidateLane);
                 CanonicalSerializer.WriteI32(buf, ref o, agents[i].LaneDwellCount);
+            }
+        }
+
+        /// <summary>Serializes one team's Pressing AI (#13) <see cref="PressingTickState"/> (D4) in canonical
+        /// order — the eight trigger debounce counters, the disengage + cooldown dwell, then each agent's
+        /// role-hysteresis (last/pending role + dwell) and accumulated press fatigue. Enum fields are written
+        /// as i32 ordinals; the per-agent count is fixed by the EntityId-space capacity
+        /// (<c>state.Roles.Capacity</c> == <c>state.PressFatigue.Length</c>), stable for the match.</summary>
+        private static void WritePressingTickState(byte[] buf, ref int o, in PressingTickState s)
+        {
+            CanonicalSerializer.WriteI32(buf, ref o, s.Trigger.BadTouchDwell);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Trigger.BadTouchRelease);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Trigger.BackwardPassDwell);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Trigger.BackwardPassRelease);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Trigger.SidelineTrapDwell);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Trigger.SidelineTrapRelease);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Trigger.WeakReceiverDwell);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Trigger.WeakReceiverRelease);
+
+            CanonicalSerializer.WriteI32(buf, ref o, s.DisengageDwell);
+            CanonicalSerializer.WriteI32(buf, ref o, s.CooldownTicks);
+
+            RoleHysteresisState roles = s.Roles;
+            float[] fatigue = s.PressFatigue;
+            for (int i = 0; i < roles.Capacity; i++)
+            {
+                CanonicalSerializer.WriteI32(buf, ref o, (int)roles.LastRole[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)roles.PendingRole[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, roles.RoleDwell[i]);
+                CanonicalSerializer.WriteF32(buf, ref o, fatigue[i]);
             }
         }
 
@@ -2180,4 +2221,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | excluded (no seam yet). New TestOnly_PositioningState seam +    |
 // |         |            |        | PositioningHysteresis_FeedsSnapshotDigest probe; test asmdef    |
 // |         |            |        | gains TacticalDirector.PositioningAI. D5 + E–F pending.         |
+// | 1.12    | 2026-06-27 | —      | Phase D D4 (cont.) — per-team Pressing AI (#13) cross-tick      |
+// |         |            |        | state serialized via its new CaptureState seam (WritePressing-  |
+// |         |            |        | TickState, ×TEAM_COUNT: trigger debounce + disengage/cooldown   |
+// |         |            |        | dwell + per-agent role hysteresis + press fatigue); SNAPSHOT_   |
+// |         |            |        | SCHEMA_VERSION 4 → 5. Pressing dropped from the exclusion list; |
+// |         |            |        | perception + Defensive/Attacking still excluded (no seam yet).  |
+// |         |            |        | New TestOnly_PressingState seam + PressingState_FeedsSnapshot-  |
+// |         |            |        | Digest probe; test asmdef gains TacticalDirector.PressingAI.    |
 #endregion

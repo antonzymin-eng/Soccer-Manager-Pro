@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/PressingAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
 // Author:   —
 // Spec:     Pressing AI #13 §3.11, §4.2, Code Standards #20
 // Purpose:  10 Hz Pressing AI orchestrator for one team. Runs the full §3.11 pipeline:
@@ -230,6 +230,16 @@ namespace TacticalDirector.PressingAI
             return new PressAssignment { EntityId = entityId, Role = PressRole.HoldShape };
         }
 
+        /// <summary>
+        /// Snapshot seam: bundles this tick's cross-tick state (role hysteresis, trigger debounce
+        /// counters, disengage/cooldown dwell, accumulated press fatigue) into a <see cref="PressingTickState"/>
+        /// view so a host snapshot layer can serialize it canonically for deterministic save/restore
+        /// (parallel to the Positioning <see cref="PositioningAI.HysteresisState"/> seam). The bundled
+        /// containers are the live, allocated-once instances (read-only serialization use only).
+        /// </summary>
+        public PressingTickState CaptureState() =>
+            new PressingTickState(_hystState, in _triggerState, _disengageDwell, _cooldownTicks, _pressFatigue);
+
         // ── Private helpers ───────────────────────────────────────────────────
 
         /// <summary>
@@ -359,4 +369,5 @@ namespace TacticalDirector.PressingAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 M-1: added using TacticalDirector.PositioningAI; simplified Phase references. AR-1 H-1: added IsActive guards in SetAllHoldShape and BuildAssignments. |
 // | 1.2     | 2026-06-15 | —      | AR-2 M-1: persistent per-EntityId press-fatigue ledger folded onto snapshot each tick; Step 8 accumulates into it instead of the throwaway snapshot. AR-2 M-2: hysteresis state sized to EntityId space and keyed by EntityId (not snapshot array index). |
+// | 1.3     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam bundles the cross-tick state (role hysteresis, trigger debounce, disengage/cooldown dwell, press-fatigue ledger) into a PressingTickState view for the host snapshot layer. Read-only serialization use; no behaviour change. |
 #endregion

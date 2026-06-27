@@ -9,7 +9,8 @@
         "TacticalDirector.PassMechanics",
         "TacticalDirector.ShotMechanics",
         "TacticalDirector.DecisionTree",
-        "TacticalDirector.PositioningAI"
+        "TacticalDirector.PositioningAI",
+        "TacticalDirector.PressingAI"
     ],
     "includePlatforms": [
         "Editor"

@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — SNAPSHOT_SCHEMA_VERSION 2 → 4, DecisionTree + Positioning state)
+// Modified: 2026-06-27 (Phase D D4 — SNAPSHOT_SCHEMA_VERSION 2 → 5, DT + Positioning + Pressing state)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -95,9 +95,13 @@ namespace TacticalDirector.MatchEngine
         ///
         /// v4 (Phase D / D4 follow-up) adds the per-team Positioning AI (#12) <c>HysteresisState</c> (the
         /// CaptureState seam, ×TEAM_COUNT — team phase + dwell + per-agent line/lane membership), the first
-        /// of the mechanics-AI hysteresis seams. Perception internal state and the Pressing/Defensive/
-        /// Attacking hysteresis remain excluded pending their own get/restore seams.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 4;
+        /// of the mechanics-AI hysteresis seams.
+        ///
+        /// v5 (Phase D / D4 follow-up) adds the per-team Pressing AI (#13) <c>PressingTickState</c> (the
+        /// CaptureState seam, ×TEAM_COUNT — trigger debounce counters, disengage/cooldown dwell, per-agent
+        /// role hysteresis + accumulated press fatigue). Perception internal state and the Defensive/Attacking
+        /// hysteresis remain excluded pending their own get/restore seams.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 5;
 
         #endregion
 
@@ -270,4 +274,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | team Positioning AI (#12) HysteresisState is now serialized.    |
 // |         |            |        | v4 doc paragraph added; perception + Pressing/Defensive/        |
 // |         |            |        | Attacking hysteresis still excluded (no seam yet).             |
+// | 1.12    | 2026-06-27 | —      | Phase D D4 (cont.): SNAPSHOT_SCHEMA_VERSION 4 → 5 — the per-    |
+// |         |            |        | team Pressing AI (#13) PressingTickState is now serialized.     |
+// |         |            |        | v5 doc paragraph added; perception + Defensive/Attacking        |
+// |         |            |        | hysteresis still excluded (no seam yet).                       |
 #endregion
