@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/DefensiveAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
 // Author:   —
 // Spec:     Defensive AI #14 §3.13, §4.1, §4.2, Code Standards #20
 // Purpose:  10 Hz Defensive AI orchestrator for one team. Implements the 9-step pipeline
@@ -319,6 +319,16 @@ namespace TacticalDirector.DefensiveAI
         }
 
         /// <summary>
+        /// Snapshot seam: bundles this tick's cross-tick state (per-agent mark hysteresis, per-agent last
+        /// committed assignment, per-team offside-line state) into a <see cref="DefensiveTickState"/> view
+        /// so a host snapshot layer can serialize it canonically for deterministic save/restore (parallel
+        /// to the Positioning / Pressing seams). The bundled arrays are the live, allocated-once instances
+        /// (read-only serialization use only).
+        /// </summary>
+        public DefensiveTickState CaptureState() =>
+            new DefensiveTickState(_hysteresisByEntity, _prevAssignByEntity, in _offsideState);
+
+        /// <summary>
         /// Returns a read-only span of the tackle intent requests produced by the most recent Tick().
         /// Length == <see cref="TackleCount"/>.
         /// </summary>
@@ -405,4 +415,7 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   Step 3a loads working slot buffers by EntityId, Step 9 (and EmitAllZonal) writes back. |
 // |         |            |        |   AR-2 M-1: EmitAllZonal now resets per-entity hysteresis on InPoss/F2/F4 paths.        |
 // |         |            |        |   AR-2 L-1: removed the dead last-man placeholder oppPos lookup (immediately overwritten). |
+// | 1.3     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam bundles the cross-tick    |
+// |         |            |        |   state (per-entity mark hysteresis, per-entity last assignment, per-team offside state)  |
+// |         |            |        |   into a DefensiveTickState view for the host snapshot layer. Read-only; no behaviour change. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — DecisionTree + Positioning + Pressing snapshot; schema 2→5)
+// Modified: 2026-06-27 (Phase D D4 — DT + all 4 mechanics-AI hysteresis snapshot; schema 2→7)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -569,6 +569,12 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: the live per-team Pressing AI (#13) cross-tick state (D4 CaptureState seam),
         /// so a test can perturb it and prove the pressing hysteresis is in the snapshot digest preimage.</summary>
         internal PressingTickState TestOnly_PressingState(int teamId) => _pressing[teamId].CaptureState();
+
+        /// <summary>Test-only: the live per-team Defensive AI (#14) cross-tick state (D4 CaptureState seam).</summary>
+        internal DefensiveTickState TestOnly_DefensiveState(int teamId) => _defensive[teamId].CaptureState();
+
+        /// <summary>Test-only: the live per-team Attacking AI (#15) cross-tick state (D4 CaptureState seam).</summary>
+        internal AttackingTickState TestOnly_AttackingState(int teamId) => _attacking[teamId].CaptureState();
 
         /// <summary>Test-only: the world-space formation slot the mechanics AI (Positioning #12, D2) fed
         /// into the agent's TacticalContext at the last AI tick. Read after <see cref="RunTick"/> to assert
@@ -1412,14 +1418,15 @@ namespace TacticalDirector.MatchEngine
             // _perfs (it stays the boot-neutral constant) — when it begins to, _perfs becomes
             // cross-tick state and MUST be serialized here (bump SNAPSHOT_SCHEMA_VERSION at that point).
             //
-            // EXCLUSION PROOF — perception internal state + remaining mechanics-AI hysteresis (D4): the
-            // perception RecognitionLatencyTracker / ShoulderCheckScheduler / ball-prev arrays and the
-            // per-team Defensive/Attacking hysteresis ARE cross-tick state but are NOT serialized at v5 —
-            // none expose a get/restore seam yet. Same-seed in-process determinism is unaffected (both runs
-            // init at boot and evolve identically); only save/restore replay needs them, so they are
-            // deferred to a follow-up snapshot extension (which will add the seams + serialization and bump
-            // SNAPSHOT_SCHEMA_VERSION again). The per-team Positioning (#12, v4) and Pressing (#13, v5)
-            // hysteresis ARE now serialized below via their CaptureState seams.
+            // EXCLUSION PROOF — perception internal state (D4): the perception RecognitionLatencyTracker /
+            // ShoulderCheckScheduler / ball-prev arrays ARE cross-tick state but are NOT serialized at v7 —
+            // they have no get/restore seam yet (perception holds them in private trackers; the seam is the
+            // last piece of this follow-up). Same-seed in-process determinism is unaffected (both runs init
+            // at boot and evolve identically); only save/restore replay needs them, so they are deferred to
+            // the final snapshot extension (which will add the seam + serialization and bump
+            // SNAPSHOT_SCHEMA_VERSION again). All four mechanics-AI hysteresis surfaces — Positioning (#12,
+            // v4), Pressing (#13, v5), Defensive (#14, v6), Attacking (#15, v7) — ARE now serialized below
+            // via their CaptureState seams.
             //
             // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but it is NOT
             // serialized directly because C4 folds it into MatchContext.PossessingAgentId (authored
@@ -1477,6 +1484,20 @@ namespace TacticalDirector.MatchEngine
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 WritePressingTickState(buf, ref o, _pressing[t].CaptureState());
+            }
+
+            // D4 — per-team Defensive AI (#14) cross-tick state (per-entity mark hysteresis + last
+            // assignment + per-team offside-line state).
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                WriteDefensiveTickState(buf, ref o, _defensive[t].CaptureState());
+            }
+
+            // D4 — per-team Attacking AI (#15) cross-tick state (per-agent role hysteresis + transition-
+            // hold state + frozen in-possession directive).
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                WriteAttackingTickState(buf, ref o, _attacking[t].CaptureState());
             }
 
             payload.BytesWritten = o;
@@ -1808,6 +1829,61 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteI32(buf, ref o, (int)roles.PendingRole[i]);
                 CanonicalSerializer.WriteI32(buf, ref o, roles.RoleDwell[i]);
                 CanonicalSerializer.WriteF32(buf, ref o, fatigue[i]);
+            }
+        }
+
+        /// <summary>Serializes one team's Defensive AI (#14) <see cref="DefensiveTickState"/> (D4) in
+        /// canonical order — the per-team offside-line state, then per agent the mark-hysteresis block and
+        /// the last committed mark assignment. Enum fields are written as i32 ordinals; the per-agent count
+        /// is the EntityId-space capacity (<c>state.Hysteresis.Length</c> == <c>state.PrevAssignments.Length</c>).</summary>
+        private static void WriteDefensiveTickState(byte[] buf, ref int o, in DefensiveTickState s)
+        {
+            CanonicalSerializer.WriteF32(buf, ref o, s.Offside.CurrentLineDepth);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Offside.StepUpDwellCounter);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Offside.CooldownTicksRemaining);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Offside.CoverGkZoneActiveTicks);
+
+            MarkHysteresisState[] hyst = s.Hysteresis;
+            MarkAssignment[] prev = s.PrevAssignments;
+            for (int i = 0; i < hyst.Length; i++)
+            {
+                CanonicalSerializer.WriteI32(buf, ref o, hyst[i].DwellCounter);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)hyst[i].CandidateMode);
+                CanonicalSerializer.WriteI32(buf, ref o, hyst[i].CandidateTargetEntityId);
+                CanonicalSerializer.WriteI32(buf, ref o, hyst[i].HoldTicks);
+
+                CanonicalSerializer.WriteI32 (buf, ref o, prev[i].AgentEntityId);
+                CanonicalSerializer.WriteI32 (buf, ref o, (int)prev[i].Mode);
+                CanonicalSerializer.WriteI32 (buf, ref o, prev[i].TargetEntityId);
+                CanonicalSerializer.WriteF32 (buf, ref o, prev[i].TargetPosition.x);
+                CanonicalSerializer.WriteF32 (buf, ref o, prev[i].TargetPosition.y);
+                CanonicalSerializer.WriteI32 (buf, ref o, prev[i].ValidThroughTick);
+                CanonicalSerializer.WriteBool(buf, ref o, prev[i].OverriddenThisTick);
+                CanonicalSerializer.WriteBool(buf, ref o, prev[i].IsManuallyAssigned);
+            }
+        }
+
+        /// <summary>Serializes one team's Attacking AI (#15) <see cref="AttackingTickState"/> (D4) in
+        /// canonical order — the per-team transition-hold state, the frozen in-possession directive, then
+        /// per agent the role-hysteresis block. Enum fields are written as i32 ordinals; the per-agent count
+        /// is the EntityId-space capacity (<c>state.Hysteresis.Length</c>).</summary>
+        private static void WriteAttackingTickState(byte[] buf, ref int o, in AttackingTickState s)
+        {
+            CanonicalSerializer.WriteI32(buf, ref o, s.Transition.TransitionHoldTick);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)s.Transition.PrevPhase);
+
+            CanonicalSerializer.WriteI32 (buf, ref o, s.LastInPossDirective.TeamId);
+            CanonicalSerializer.WriteBool(buf, ref o, s.LastInPossDirective.OverloadActive);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.LastInPossDirective.OverloadFlank);
+            CanonicalSerializer.WriteI32 (buf, ref o, s.LastInPossDirective.TransitionHoldTick);
+
+            AttackHysteresisState[] hyst = s.Hysteresis;
+            for (int i = 0; i < hyst.Length; i++)
+            {
+                CanonicalSerializer.WriteI32(buf, ref o, (int)hyst[i].CurrentRole);
+                CanonicalSerializer.WriteI32(buf, ref o, hyst[i].DwellCounter);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)hyst[i].CandidateRole);
+                CanonicalSerializer.WriteI32(buf, ref o, hyst[i].CandidateDwell);
             }
         }
 
@@ -2229,4 +2305,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | perception + Defensive/Attacking still excluded (no seam yet).  |
 // |         |            |        | New TestOnly_PressingState seam + PressingState_FeedsSnapshot-  |
 // |         |            |        | Digest probe; test asmdef gains TacticalDirector.PressingAI.    |
+// | 1.13    | 2026-06-27 | —      | Phase D D4 (cont.) — per-team Defensive AI (#14) + Attacking AI |
+// |         |            |        | (#15) cross-tick state serialized via new CaptureState seams    |
+// |         |            |        | (WriteDefensiveTickState: offside + per-agent mark hysteresis + |
+// |         |            |        | last assignment; WriteAttackingTickState: transition-hold +     |
+// |         |            |        | frozen directive + per-agent role hysteresis; each ×TEAM_COUNT);|
+// |         |            |        | SNAPSHOT_SCHEMA_VERSION 5 → 7. Exclusion list down to perception|
+// |         |            |        | only. New TestOnly_DefensiveState/_AttackingState seams + two   |
+// |         |            |        | digest probes; test asmdef gains DefensiveAI + AttackingAI.     |
 #endregion

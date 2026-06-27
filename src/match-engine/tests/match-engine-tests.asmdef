@@ -10,7 +10,9 @@
         "TacticalDirector.ShotMechanics",
         "TacticalDirector.DecisionTree",
         "TacticalDirector.PositioningAI",
-        "TacticalDirector.PressingAI"
+        "TacticalDirector.PressingAI",
+        "TacticalDirector.DefensiveAI",
+        "TacticalDirector.AttackingAI"
     ],
     "includePlatforms": [
         "Editor"

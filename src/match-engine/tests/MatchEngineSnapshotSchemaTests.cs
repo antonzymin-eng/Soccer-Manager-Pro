@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — schema pin 5 + DecisionTree + Positioning + Pressing digest probes)
+// Modified: 2026-06-27 (Phase D D4 — schema pin 7 + DT + 4 mechanics-AI digest probes)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
 // Purpose:  Phase B step B3 tests — proves the full §2.6 world-state field set (not just the B2
@@ -43,9 +43,48 @@ namespace TacticalDirector.MatchEngine
         public void SchemaVersion_IsPinned()
         {
             // The pin must change deliberately (with a field-set or ordering change), never by drift.
-            // v5 added the D4 per-team Pressing AI cross-tick state to the serialized body.
-            Assert.AreEqual(5u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v6 added Defensive AI, v7 added Attacking AI cross-tick state to the serialized body.
+            Assert.AreEqual(7u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void DefensiveState_FeedsSnapshotDigest()
+        {
+            // Baseline: untouched kickoff state (both teams' defensive AI seeded at boot).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: bump one team's per-agent mark-hysteresis dwell. The first processed tick is not
+            // an AI stride tick, so RunMechanicsAI does not run and the injected counter passes through to
+            // the snapshot unchanged — a clean single-field probe.
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_DefensiveState(0).Hysteresis[0].DwellCounter += 1;
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Perturbing the Defensive AI hysteresis left the digest unchanged — " +
+                "the per-team defensive state is not in the digest preimage (D4 regression).");
+        }
+
+        [Test]
+        public void AttackingState_FeedsSnapshotDigest()
+        {
+            // Baseline: untouched kickoff state (both teams' attacking AI seeded at boot).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: bump one team's per-agent role-hysteresis dwell. The first processed tick is not
+            // an AI stride tick, so the injected counter passes through to the snapshot unchanged.
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_AttackingState(0).Hysteresis[0].DwellCounter += 1;
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Perturbing the Attacking AI hysteresis left the digest unchanged — " +
+                "the per-team attacking state is not in the digest preimage (D4 regression).");
         }
 
         [Test]
@@ -211,4 +250,6 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | FeedsSnapshotDigest probe (per-team #12 hysteresis in the preimage).|
 // | 1.3     | 2026-06-27 | —      | Phase D D4 (cont.): schema pin 4 → 5; new PressingState_FeedsSnap-  |
 // |         |            |        | shotDigest probe (per-team #13 cross-tick state in the preimage).   |
+// | 1.4     | 2026-06-27 | —      | Phase D D4 (cont.): schema pin 5 → 7; new DefensiveState_ +         |
+// |         |            |        | AttackingState_FeedsSnapshotDigest probes (#14 / #15 cross-tick).   |
 #endregion

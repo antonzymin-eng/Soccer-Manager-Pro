@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — SNAPSHOT_SCHEMA_VERSION 2 → 5, DT + Positioning + Pressing state)
+// Modified: 2026-06-27 (Phase D D4 — SNAPSHOT_SCHEMA_VERSION 2 → 7, DT + all 4 mechanics-AI state)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -99,9 +99,17 @@ namespace TacticalDirector.MatchEngine
         ///
         /// v5 (Phase D / D4 follow-up) adds the per-team Pressing AI (#13) <c>PressingTickState</c> (the
         /// CaptureState seam, ×TEAM_COUNT — trigger debounce counters, disengage/cooldown dwell, per-agent
-        /// role hysteresis + accumulated press fatigue). Perception internal state and the Defensive/Attacking
-        /// hysteresis remain excluded pending their own get/restore seams.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 5;
+        /// role hysteresis + accumulated press fatigue).
+        ///
+        /// v6 (Phase D / D4 follow-up) adds the per-team Defensive AI (#14) <c>DefensiveTickState</c> (the
+        /// CaptureState seam, ×TEAM_COUNT — per-team offside-line state + per-agent mark hysteresis + last
+        /// committed mark assignment).
+        ///
+        /// v7 (Phase D / D4 follow-up) adds the per-team Attacking AI (#15) <c>AttackingTickState</c> (the
+        /// CaptureState seam, ×TEAM_COUNT — per-team transition-hold state + frozen in-possession directive +
+        /// per-agent role hysteresis). Perception internal state remains the only excluded cross-tick surface,
+        /// pending its own get/restore seam.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 7;
 
         #endregion
 
@@ -278,4 +286,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | team Pressing AI (#13) PressingTickState is now serialized.     |
 // |         |            |        | v5 doc paragraph added; perception + Defensive/Attacking        |
 // |         |            |        | hysteresis still excluded (no seam yet).                       |
+// | 1.13    | 2026-06-27 | —      | Phase D D4 (cont.): SNAPSHOT_SCHEMA_VERSION 5 → 7 — Defensive   |
+// |         |            |        | AI (#14, v6) DefensiveTickState + Attacking AI (#15, v7)        |
+// |         |            |        | AttackingTickState now serialized. v6/v7 doc paragraphs added;  |
+// |         |            |        | perception internal state is the only remaining exclusion.     |
 #endregion
