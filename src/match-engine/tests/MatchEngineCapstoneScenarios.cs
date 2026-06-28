@@ -54,13 +54,21 @@ namespace TacticalDirector.MatchEngine
             { 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 16, 17, 19 };
 
         // Pitch envelope (Ball Physics #1 §1.2: corner origin, X 0–105 m, Y 0–68 m, Z up, ground
-        // at 0). Both ball and agents are bounded with a small margin: the invariant exists to catch
-        // NaN / gross divergence of the composed loop over a multi-second run, not to police a
-        // sub-metre touchline overrun (Stage 0 has no restart/throw-in model). A genuine escape of
-        // these bounds is a real Phase F finding, not test fuzz.
-        private const float PitchLengthM = 105.0f;
-        private const float PitchWidthM  = 68.0f;
-        private const float BoundsMarginM = 2.0f;
+        // at 0). The invariant is "every world-state coordinate stays finite and inside the engine's
+        // OWN clamp envelope" — a NaN / gross-divergence guard over the composed 10 s run, NOT a tight
+        // on-pitch assertion. Stage 0 has no restart/throw-in model, so out-of-play is legitimate; the
+        // ball is clamped each physics tick to pitch ± Ball Physics `Limits.PitchBuffer` (20 m) and
+        // agents to pitch ± Agent Movement `SafetyConstants.PitchBoundaryBuffer` (5 m). Asserting the
+        // tighter pitch line would false-fail a width-holding agent in the buffer zone or a ball
+        // played out of play. A small epsilon absorbs float fuzz at the exact clamp edge.
+        private const float PitchLengthM   = 105.0f;
+        private const float PitchWidthM    = 68.0f;
+        private const float BallBufferM    = 20.0f; // = BallPhysicsConstants.Limits.PitchBuffer
+        private const float AgentBufferM   = 5.0f;  // = AgentMovementConstants SafetyConstants.PitchBoundaryBuffer
+        private const float BoundsEpsilonM = 0.5f;
+        // Generous upper bound on ball height — physics caps a kicked apex well under this; an
+        // unbounded Z is the only world coordinate with no engine clamp, so it gets a divergence ceiling.
+        private const float BallMaxHeightM = 100.0f;
 
         public static ScenarioIndex BuildIndex()
         {
@@ -173,9 +181,10 @@ namespace TacticalDirector.MatchEngine
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 Vector2 p = engine.TestOnly_AgentSnapshot(i).Position;
+                float bound = AgentBufferM + BoundsEpsilonM;
                 if (!float.IsFinite(p.x) || !float.IsFinite(p.y)
-                    || p.x < -BoundsMarginM || p.x > PitchLengthM + BoundsMarginM
-                    || p.y < -BoundsMarginM || p.y > PitchWidthM + BoundsMarginM)
+                    || p.x < -bound || p.x > PitchLengthM + bound
+                    || p.y < -bound || p.y > PitchWidthM + bound)
                 {
                     return false;
                 }
@@ -185,10 +194,11 @@ namespace TacticalDirector.MatchEngine
 
         private static bool IsBallInBounds(Vector3 p)
         {
+            float bound = BallBufferM + BoundsEpsilonM;
             return float.IsFinite(p.x) && float.IsFinite(p.y) && float.IsFinite(p.z)
-                && p.x >= -BoundsMarginM && p.x <= PitchLengthM + BoundsMarginM
-                && p.y >= -BoundsMarginM && p.y <= PitchWidthM + BoundsMarginM
-                && p.z >= -BoundsMarginM;
+                && p.x >= -bound && p.x <= PitchLengthM + bound
+                && p.y >= -bound && p.y <= PitchWidthM + bound
+                && p.z >= -BoundsEpsilonM && p.z <= BallMaxHeightM;
         }
 
         private static bool DigestChainsEqual(RunObservations a, RunObservations b, out int divergeTick)
