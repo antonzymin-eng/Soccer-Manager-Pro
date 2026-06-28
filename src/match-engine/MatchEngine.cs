@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — DT + 4 mechanics-AI + perception snapshot; schema 2→8)
+// Modified: 2026-06-27 (Phase E — possession-changed event publish + AI consumer; EventBus per-match reset)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -84,7 +84,7 @@ namespace TacticalDirector.MatchEngine
         // backs all 22 instances (the adapter methods take agentId). DecisionTree stays Phase D.
 
         private readonly CollisionSubsystem            _collisionSystem;
-        private readonly ICollisionEventConsumer       _eventConsumer;   // null-object drain; real consumers Phase E
+        private readonly ICollisionEventConsumer       _eventConsumer;   // null-object drain; real collision/foul consumers deferred (no Stage-0 card/foul model)
         private readonly PassExecutor[]                _passExecutors;   // [SQUAD_SIZE]
         private readonly ShotExecutor[]                _shotExecutors;   // [SQUAD_SIZE]
         private readonly bool[]                        _stumbleScratch;  // UpdateCollisions stumbleOut sink (discarded — not a Stage-0 movement input, B4)
@@ -104,6 +104,12 @@ namespace TacticalDirector.MatchEngine
         // MatchContext.PossessingAgentId each Resolve (C4); Stage 0 has no production possession
         // producer (kickoff is loose), so a TestOnly_ seam scripts it for the lifecycle tests.
         private int _possessingAgentId;
+
+        // Phase E — the possession holder as of the END of the PREVIOUS Resolve, used to detect a
+        // possession transition once per tick (after this tick's possession settles). On a change the
+        // host publishes a Tier A PossessionChangedEvent (digest-load-bearing ledger). Seeded at boot to
+        // the kickoff value so the first real transition (not the boot state) is the first event.
+        private int _prevPossessingAgentId;
 
         // Authoritative match state (Decision Tree #8 §2.2.5) authored by the host each Resolve tick
         // (C4) and read by the next AI tick (Phase D). Folds in possession, ball kinematics, and the
@@ -239,7 +245,8 @@ namespace TacticalDirector.MatchEngine
             InitializeKickoffState();
 
             // §4 step 3 (cont.) — Resolve subsystems (Phase C C1). Kickoff ball is loose.
-            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+            _possessingAgentId     = MatchEngineConstants.NO_POSSESSION;
+            _prevPossessingAgentId = MatchEngineConstants.NO_POSSESSION; // Phase E — no transition at boot
             _collisionSystem   = new CollisionSubsystem(MatchEngineConstants.SQUAD_SIZE);
             _eventConsumer     = new NullCollisionEventConsumer();
             _stumbleScratch    = new bool[MatchEngineConstants.SQUAD_SIZE];
@@ -323,8 +330,19 @@ namespace TacticalDirector.MatchEngine
                     i, movementController, matchSeed, _passExecutors[i], _shotExecutors[i]);
             }
 
-            // §4 step 2 — boot the EventBus registry for the wired producers (Pass #5 / Shot #6) so a
-            // pass/shot reaching CONTACT can publish (C4 — without this, ExecuteContact throws
+            // §4 step 2 (Phase E) — reset the process-static EventBus for THIS match before booting the
+            // registrars and subscribing consumers. The bus is a spec-mandated static singleton (#17
+            // §3.2.1 KD-4/KD-8): without this, a second MatchEngine in the same process (and, critically,
+            // the two same-seed runs the determinism tests build back-to-back) would hit
+            // ERR_EVT_REGISTRATION_PHASE when it tries to Subscribe after the first match's first
+            // DrainTick set BootPhaseComplete, and would leak subscribers toward MaxHandlersPerEventType.
+            // ResetForNewMatch clears the subscriber tables + reopens the boot phase but leaves the
+            // EventRegistry row schema intact, so the idempotent registrar Initialize() calls below stay
+            // correct. (Match-engine design note Risk #4 / #16 ReplayEngine step 6.)
+            EventBus.ResetForNewMatch();
+
+            // Boot the EventBus registry for the wired producers (Pass #5 / Shot #6) so a pass/shot
+            // reaching CONTACT can publish (C4 — without this, ExecuteContact throws
             // ERR_EVT_UNREGISTERED_ORDINAL). EventRegistry.EnsureInitialized() is internal to the
             // event-system assembly, so the host boots via the public, idempotent
             // EventBusRegistrar.Initialize() sites (both carry an s_registered guard, so repeated boot
@@ -342,6 +360,15 @@ namespace TacticalDirector.MatchEngine
             // Perception publishes PerceptionRefreshEvent only on HandleForcedRefresh (not OnHeartbeat),
             // which the host does not call, so no perception registrar boot is required.
             TacticalDirector.DecisionTree.EventBusRegistrar.Initialize();
+
+            // Phase E — subscribe the real cross-subsystem consumer: possession-changed → AI. Tier A
+            // subscription MUST happen during the boot phase (#17 FR-EVT-020/021 — Subscribe throws
+            // ERR_EVT_REGISTRATION_PHASE after the first DrainTick), which is why this is here in Boot and
+            // not lazily. The handler is a method group (no per-frame closure). PossessionChangedEvent
+            // (ordinal 0x04) is a seeded EventRegistry row, so EnsureInitialized() inside Subscribe has
+            // already populated its ordinal cache by now. The returned token is discarded — the bus is
+            // reset per match (ResetForNewMatch above), so there is no per-subscription teardown to do.
+            EventBus.Subscribe<PossessionChangedEvent>(OnPossessionChanged);
 
             // §4 step 4 (cont.) — author the kickoff MatchContext from the seeded world state so it is
             // valid before the first AI read; the Resolve phase re-authors it every tick (C4).
@@ -556,6 +583,10 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: whether the agent's DecisionTree has dispatched at least one action
         /// (proves the AI pipeline ran and produced a decision rather than aborting at validation).</summary>
         internal bool TestOnly_DtHasDispatched(int agentId) => _decisionTrees[agentId].HasDispatchedAction;
+
+        /// <summary>Test-only: the agent's DecisionTree state-machine state — lets the Phase E events test
+        /// prove the possession-changed consumer interrupted the new holder (EXECUTING → INTERRUPTED).</summary>
+        internal DtState TestOnly_DtState(int agentId) => _decisionTrees[agentId].State;
 
         /// <summary>Test-only: restores an agent's DecisionTree cross-tick state (D0 seam) so a test can
         /// prove the D4 per-agent DecisionTreeState is in the snapshot digest preimage.</summary>
@@ -1142,6 +1173,53 @@ namespace TacticalDirector.MatchEngine
             // kick above released possession, or a D3 first touch) and ball kinematics. Read by the next
             // AI tick (Phase D).
             UpdateMatchContext();
+
+            // Phase E — possession now SETTLED for this tick; publish a Tier A PossessionChangedEvent if
+            // the holder changed since the previous tick. Diffing the settled value once here (not at each
+            // mutation site) collapses an intra-tick kick-release-then-first-touch-regain to its NET change
+            // — a transient mid-Resolve flicker that ends on the same holder emits nothing. Publishing in
+            // Resolve (phase 4) enqueues the event before the Events phase (5) drains it the same tick.
+            PublishPossessionChangeIfChanged();
+        }
+
+        /// <summary>
+        /// Phase E producer. Compares the settled possession holder against the previous tick's holder and,
+        /// on a change, publishes a Tier A <see cref="PossessionChangedEvent"/> (ordinal 0x04) into the
+        /// digest-load-bearing ledger, then records the new holder. Deterministic and allocation-free (the
+        /// event is a struct passed by <c>in</c>). The <c>Reason</c> is the Stage-0 UNSPECIFIED sentinel
+        /// (no reason taxonomy yet — see <see cref="MatchEngineConstants.POSSESSION_CHANGE_REASON_UNSPECIFIED"/>).
+        /// </summary>
+        private void PublishPossessionChangeIfChanged()
+        {
+            if (_possessingAgentId == _prevPossessingAgentId)
+                return;
+
+            var evt = new PossessionChangedEvent(
+                _prevPossessingAgentId,
+                _possessingAgentId,
+                MatchEngineConstants.POSSESSION_CHANGE_REASON_UNSPECIFIED);
+            EventBus.Publish(in evt);
+
+            _prevPossessingAgentId = _possessingAgentId;
+        }
+
+        /// <summary>
+        /// Phase E consumer (possession-changed → AI). Subscribed once at boot (#17 boot-phase Subscribe);
+        /// invoked from <see cref="EventBus.DrainTick"/> in the Events phase. Forces the NEW holder's
+        /// DecisionTree to re-plan on its next AI stride: <see cref="DecisionTreeAI.NotifyInterrupt"/>
+        /// clears an in-flight EXECUTING hold (EXECUTING → INTERRUPTED, DispatchedActionType reset), and
+        /// INTERRUPTED transitions to EVALUATING on the next valid snapshot (#8 §3.7.2/§3.7.3). It is a safe
+        /// no-op when the new holder is not mid-PASS/SHOOT (OnInterrupt only transitions from EXECUTING).
+        /// The PREVIOUS holder is not interrupted here — losing the ball mid-pass already self-cancels via
+        /// the executor's own possession recheck (Pass #5 FM-08), so a second interrupt would be redundant.
+        /// A loose-ball transition (NewHolder = NO_POSSESSION) has no DecisionTree to interrupt. Pure and
+        /// allocation-free; the effect (DecisionTree state) is captured in the same tick's snapshot digest.
+        /// </summary>
+        private void OnPossessionChanged(in PossessionChangedEvent evt)
+        {
+            int newHolder = evt.NewHolder;
+            if (newHolder >= 0 && newHolder < MatchEngineConstants.SQUAD_SIZE)
+                _decisionTrees[newHolder].NotifyInterrupt();
         }
 
         /// <summary>
@@ -1375,12 +1453,15 @@ namespace TacticalDirector.MatchEngine
             SerializeWorldState(payload);
 
             // Append the canonical event-ledger bytes after the world state — they are part of
-            // the snapshot preimage and therefore digest-load-bearing. Phase A publishes no
-            // events, so this writes the empty-ledger header (domain tag + zero count) — a
-            // constant byte string. NOTE: the EventBus ledger is process-static; Phase A keeps
-            // two same-seed runs deterministic only because nothing is published or subscribed
-            // (the ledger is always empty here). When real publishes land (Phase E), cross-run
-            // ledger state becomes load-bearing and this assumption must be revisited.
+            // the snapshot preimage and therefore digest-load-bearing. Phase E publishes a Tier A
+            // PossessionChangedEvent (ordinal 0x04) into this ledger on each possession transition, so on
+            // a no-transition tick this writes the empty-ledger header (domain tag + zero count) and on a
+            // transition tick it writes that header plus the one event record. NOTE: the EventBus ledger
+            // is process-static — two same-seed runs stay deterministic because each match resets the bus
+            // at boot (EventBus.ResetForNewMatch) and replays the identical possession transitions, so the
+            // ledger byte stream (and thus the digest) is reproduced exactly. (Phase A relied on nothing
+            // being published; Phase E makes the published ledger load-bearing — locked by the
+            // two-same-seed ledger-digest test in MatchEngineEventsTests.)
             int free = payload.PayloadBytes.Length - payload.BytesWritten;
             int written = EventBus.SerializeLedger(
                 new Span<byte>(payload.PayloadBytes, payload.BytesWritten, free));
@@ -2374,4 +2455,23 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | COMPLETE — no cross-tick gameplay state remains excluded. New   |
 // |         |            |        | TestOnly_PerceptionState seam + PerceptionState_FeedsSnapshot-  |
 // |         |            |        | Digest probe; test asmdef gains PerceptionSystem.              |
+// | 1.15    | 2026-06-27 | —      | Phase E — events-phase consumers. PRODUCER: RunResolvePhase now |
+// |         |            |        | calls PublishPossessionChangeIfChanged after UpdateMatchContext |
+// |         |            |        | — diffs the settled holder against _prevPossessingAgentId (new  |
+// |         |            |        | field) and on a change publishes a Tier A PossessionChangedEvent|
+// |         |            |        | (#17 ordinal 0x04) into the digest-load-bearing ledger (net     |
+// |         |            |        | change per tick; an intra-tick flicker that ends on the same    |
+// |         |            |        | holder emits nothing). CONSUMER: Boot subscribes               |
+// |         |            |        | OnPossessionChanged (Tier A Subscribe MUST be in the boot phase,|
+// |         |            |        | FR-EVT-020) which NotifyInterrupt()s the new holder's Decision- |
+// |         |            |        | Tree so it re-plans next AI stride (EXECUTING→INTERRUPTED→      |
+// |         |            |        | EVALUATING; safe no-op otherwise). Boot first calls the new     |
+// |         |            |        | EventBus.ResetForNewMatch() so the process-static bus can re-   |
+// |         |            |        | Subscribe per match without ERR_EVT_REGISTRATION_PHASE / handler|
+// |         |            |        | leakage across the determinism tests' two engines (Risk #4 /   |
+// |         |            |        | #16 ReplayEngine step 6). New POSSESSION_CHANGE_REASON_UNSPEC-  |
+// |         |            |        | IFIED constant; TestOnly_DtState seam. Snapshot world-state body|
+// |         |            |        | UNCHANGED (no schema bump) — the LEDGER digest now carries the  |
+// |         |            |        | event. Collision/foul real consumers stay deferred (no Stage-0  |
+// |         |            |        | card/foul model). New MatchEngineEventsTests fixture.           |
 #endregion
