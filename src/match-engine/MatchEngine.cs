@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase E — possession-changed event publish + AI consumer; EventBus per-match reset)
+// Modified: 2026-06-28 (#21 T2 Pressing AI seam fallout — disambiguate TacticTranslation reference)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -895,8 +895,11 @@ namespace TacticalDirector.MatchEngine
                     // so the overlay is behaviour-neutral until a non-Balanced tactic is set (FR-TI-031).
                     TeamTactic tactic = _activeTeamTactics[t];
                     ctx.Mentality = tactic.Mentality;
-                    ctx.Pressing  = TacticTranslation.ToPressingMode(tactic.Pressing);
-                    ctx.Passing   = TacticTranslation.ToPassingStyle(tactic.Passing);
+                    // Fully qualified: TacticTranslation now exists in BOTH DecisionTree (#8) and
+                    // PressingAI (#13), and the match-engine references both, so the bare name is
+                    // ambiguous (CS0104). These two are the #8 enum maps specifically.
+                    ctx.Pressing  = TacticalDirector.DecisionTree.TacticTranslation.ToPressingMode(tactic.Pressing);
+                    ctx.Passing   = TacticalDirector.DecisionTree.TacticTranslation.ToPassingStyle(tactic.Passing);
 
                     // DefensiveLineDepth stays the #14 MarkDirective output (the depth authority at Stage 0);
                     // the §3.4 Clamp01(DefensiveLine + MentalityLineBias) recompute is deferred with the
@@ -2567,4 +2570,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | deterministic (tactic not in snapshot — ERR-021-002). New       |
 // |         |            |        | TestOnly_Mentality/Pressing/Passing seams; asmdef gains the     |
 // |         |            |        | TacticalInstructions ref. New MatchEngineTacticTests fixture.   |
+// | 1.17    | 2026-06-28 | —      | Build fix (CS0104): the #21 T2 Pressing AI (#13) seam added a   |
+// |         |            |        | second public TacticTranslation (in PressingAI), and the match- |
+// |         |            |        | engine references both PressingAI and DecisionTree, so the two  |
+// |         |            |        | bare TacticTranslation.ToPressingMode/ToPassingStyle calls in   |
+// |         |            |        | RunMechanicsAI became ambiguous. Fully qualified them to        |
+// |         |            |        | TacticalDirector.DecisionTree.TacticTranslation. No behaviour   |
+// |         |            |        | change.                                                         |
 #endregion
