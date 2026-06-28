@@ -1,13 +1,15 @@
 // File:     src/decision-tree/TacticalContext.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-28
 // Author:   —
-// Spec:     Decision Tree #8 §2.2.6, Code Standards #20
+// Spec:     Decision Tree #8 §2.2.6, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Team tactical instructions delivered to each agent's Decision Tree.
 //           Stage 0: hardcoded defaults via Stage0Default(formationSlot).
 //           Stage 1+: Formation System (Positioning AI #12) populates live values.
 
 using UnityEngine;
+
+using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.DecisionTree
 {
@@ -32,6 +34,18 @@ namespace TacticalDirector.DecisionTree
         /// Adjusts formation slot Y positions (§3.4.5).
         /// </summary>
         public float DefensiveLineDepth;
+
+        /// <summary>
+        /// Team mentality (#21 §3.2 master risk dial). <see cref="Stage0Default"/> seeds this to
+        /// <see cref="Mentality.Balanced"/> (risk ×1.00, line bias 0.00) so the seam is a no-op
+        /// until the match-engine Phase-D writer routes a live tactic in (FR-TI-031). NOTE: the
+        /// zero-value struct default is <see cref="Mentality.VeryDefensive"/> (×0.80), NOT Balanced —
+        /// like <see cref="Pressing"/> and <see cref="DefensiveLineDepth"/>, this field is only valid
+        /// when the struct is built via the factory; never consume a <c>default(TacticalContext)</c>.
+        /// Its utility multiplier is applied per scored option in UtilityScorer via
+        /// <see cref="TacticTranslation.MentalityRiskMultiplier"/>.
+        /// </summary>
+        public Mentality Mentality;
 
         // ── Formation Slot ────────────────────────────────────────────────────
 
@@ -67,6 +81,7 @@ namespace TacticalDirector.DecisionTree
                 Pressing           = PressingMode.MEDIUM,
                 Passing            = PassingStyle.MIXED,
                 DefensiveLineDepth = 0.5f,
+                Mentality          = Mentality.Balanced,
                 _formationSlot     = formationSlot,
                 HasMarkDirective   = false,
                 HasAttackIntent    = false
@@ -110,4 +125,7 @@ namespace TacticalDirector.DecisionTree
 // | 1.1     | 2026-06-11 | —      | Audit AR-2 M-2: GetAdjustedFormationSlot shifts X (pitch depth, team-signed) |
 // |         |            |        |   instead of Y (touchline axis); signature gains teamId. Latent at Stage 0   |
 // |         |            |        |   (depth pinned 0.5). Spec §3.4.5 pseudocode patched same commit.             |
+// | 1.2     | 2026-06-28 | —      | #21 T2 seam: Mentality routing field added (default Balanced = identity,     |
+// |         |            |        |   FR-TI-031); Stage0Default seeds it. Risk multiplier applied in             |
+// |         |            |        |   UtilityScorer via TacticTranslation. Behaviour-neutral until Phase-D writes.|
 #endregion

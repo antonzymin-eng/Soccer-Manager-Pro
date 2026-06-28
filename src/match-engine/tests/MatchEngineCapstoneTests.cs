@@ -141,7 +141,7 @@ namespace TacticalDirector.MatchEngine
                 gitSha: "stage0-dev",
                 seed: MatchEngineCapstoneScenarios.KickoffMultiSecondSeed,
                 environmentFingerprint: EnvironmentFingerprint.CreateStage0Dev(),
-                platformPin: "linux-dotnet-noncert",
+                platformPin: CertifiedPerfBaseline.LinuxNonCertPlatformPin,
                 scenarioManifestId: MatchEngineCapstoneScenarios.KickoffMultiSecondPath,
                 sessionStartUtc: "2026-06-28T00:00:00Z",
                 sessionEndUtc: "2026-06-28T00:00:10Z",
@@ -167,4 +167,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | digest-chain equality (re-locks ResetForNewMatch). (3) FR-PO-052   |
 // |         |            |        | per-tick perf-gate activation against a generous Stage-0 anchor    |
 // |         |            |        | (NON-certifying Linux gate; proves wiring, not budget).            |
+// | 1.1     | 2026-06-28 | —      | Non-cert anchor pin string replaced with the named constant         |
+// |         |            |        | CertifiedPerfBaseline.LinuxNonCertPlatformPin (behaviour-neutral;   |
+// |         |            |        | removes the magic string, single source with the cert corpus).     |
 #endregion

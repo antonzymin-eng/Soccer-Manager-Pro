@@ -10,7 +10,8 @@
         "TacticalDirector.GoalkeeperMechanics",
         "TacticalDirector.CollisionSystem",
         "TacticalDirector.EventSystem",
-        "TacticalDirector.DeterministicSim"
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.TacticalInstructions"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

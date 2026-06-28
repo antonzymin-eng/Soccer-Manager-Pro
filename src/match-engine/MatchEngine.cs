@@ -29,6 +29,7 @@ using TacticalDirector.PerceptionSystem;
 using TacticalDirector.PositioningAI;
 using TacticalDirector.PressingAI;
 using TacticalDirector.ShotMechanics;
+using TacticalDirector.TacticalInstructions;
 
 // The collision orchestrator type name (CollisionSystem) collides with its own namespace leaf
 // (TacticalDirector.CollisionSystem); alias it to a distinct name so the type is unambiguous here.
@@ -138,6 +139,19 @@ namespace TacticalDirector.MatchEngine
         private readonly DtAgentAttributes[]         _dtAttrs;           // [SQUAD_SIZE]
         private readonly TacticalContext[]           _tacticalContexts;  // [SQUAD_SIZE]
         private readonly bool[]                       _hasPossession;     // [SQUAD_SIZE]
+
+        // ── Tactical Instructions (#21 T2 runtime activation) ─────────────────────────
+        // Per-team manager tactic (the §3.1/§3.2 input layer). _pending is what SetTeamTactic writes;
+        // _active is what the AI phase reads. FR-TI-027: a mid-match change takes effect only at a
+        // tactical-stride boundary, so _pending → _active is copied at the top of RunAiPhase (which runs
+        // only on stride ticks) — never mid-tick. Both default to TeamTactic.Balanced, which reproduces
+        // Stage0Default exactly (Mentality.Balanced ⇒ risk ×1.0, Pressing.Medium → MEDIUM, Passing.Mixed
+        // → MIXED; FR-TI-031), so a match left at the default is byte-identical to pre-#21 behaviour.
+        // NOT serialized at Stage 0 (ERR-021-002 — the TeamTactic.DefensiveLine snapshot field + schema
+        // bump is a deferred #16 back-prop): a tactic changed MID-match is not yet restore-deterministic,
+        // so Stage-0 callers set it before the first RunTick (static for the run, same across same-seed runs).
+        private readonly TeamTactic[] _activeTeamTactics;   // [TEAM_COUNT]
+        private readonly TeamTactic[] _pendingTeamTactics;  // [TEAM_COUNT]
 
         // ── Mechanics AI (design note §3 / Phase D D2) ────────────────────────────────
         // Positioning AI (#12) drives per-team formation slots fed into each agent's TacticalContext —
@@ -279,6 +293,18 @@ namespace TacticalDirector.MatchEngine
             _dtAttrs          = new DtAgentAttributes[MatchEngineConstants.SQUAD_SIZE];
             _tacticalContexts = new TacticalContext[MatchEngineConstants.SQUAD_SIZE];
             _hasPossession    = new bool[MatchEngineConstants.SQUAD_SIZE];
+
+            // #21 T2: both teams start at the Balanced identity tactic (FR-TI-031) — behaviour-neutral
+            // until a caller invokes SetTeamTactic before kickoff. _active is seeded directly (not via the
+            // stride swap) so the very first AI stride already reads a valid tactic.
+            _activeTeamTactics  = new TeamTactic[MatchEngineConstants.TEAM_COUNT];
+            _pendingTeamTactics = new TeamTactic[MatchEngineConstants.TEAM_COUNT];
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _activeTeamTactics[t]  = TeamTactic.Balanced;
+                _pendingTeamTactics[t] = TeamTactic.Balanced;
+            }
+
             InitializeAiSnapshots();
 
             // §4 step 3 (cont.) — mechanics AI (Phase D D2). One Positioning AI (#12) instance + reused
@@ -468,6 +494,24 @@ namespace TacticalDirector.MatchEngine
             _orchestrator.RunTick();
         }
 
+        /// <summary>
+        /// Sets a team's manager tactic (#21 §3.1/§3.2 — T2 runtime activation). The change is staged
+        /// as <em>pending</em> and committed at the next tactical-stride boundary (FR-TI-027), so it never
+        /// takes effect mid-tick. <paramref name="teamId"/> is 0 (home) or 1 (away).
+        /// Stage-0 note: the tactic is not yet part of the snapshot (ERR-021-002 deferred), so a change
+        /// made MID-match is not restore-deterministic — set it before the first <see cref="RunTick"/>
+        /// for a deterministic run. The default is <see cref="TeamTactic.Balanced"/> (behaviour-neutral).
+        /// </summary>
+        public void SetTeamTactic(int teamId, in TeamTactic tactic)
+        {
+            if (teamId < 0 || teamId >= MatchEngineConstants.TEAM_COUNT)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(teamId), teamId, "teamId must be 0 (home) or 1 (away).");
+            }
+            _pendingTeamTactics[teamId] = tactic;
+        }
+
         /// <summary>Current 60 Hz physics tick (0 before the first <see cref="RunTick"/>).</summary>
         public ulong CurrentTick => _clock.CurrentTick;
 
@@ -625,6 +669,13 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: the HasAttackIntent carrier (Attacking AI #15, D2b) at the last AI tick.</summary>
         internal bool TestOnly_HasAttackIntent(int agentId) => _tacticalContexts[agentId].HasAttackIntent;
 
+        /// <summary>Test-only: the #21 routed tactic carriers (Mentality / Pressing / Passing) folded into
+        /// the agent's TacticalContext at the last AI tick — lets the runtime-activation test prove
+        /// SetTeamTactic reaches the DecisionTree input and the Balanced default is behaviour-neutral.</summary>
+        internal Mentality TestOnly_Mentality(int agentId) => _tacticalContexts[agentId].Mentality;
+        internal PressingMode TestOnly_Pressing(int agentId) => _tacticalContexts[agentId].Pressing;
+        internal PassingStyle TestOnly_Passing(int agentId) => _tacticalContexts[agentId].Passing;
+
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
         /// CurrentSnapshotDigest after the most recent <see cref="RunTick"/>). Diagnostic /
@@ -685,6 +736,16 @@ namespace TacticalDirector.MatchEngine
         {
             _aiPhaseRanThisTick = true;
             _aiPhaseRunCount++;
+
+            // #21 FR-TI-027: commit any pending tactic change at this tactical-stride boundary.
+            // RunAiPhase runs only on stride ticks, so copying pending → active here is exactly the
+            // "swap on IsAiStrideTick" contract — a SetTeamTactic call during the intervening 60 Hz
+            // physics frames cannot take effect until the next stride. Cheap struct copy (TEAM_COUNT=2),
+            // zero allocation; idempotent when unchanged.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _activeTeamTactics[t] = _pendingTeamTactics[t];
+            }
 
             // §2.5 per-tick assembly. Possession is the only per-tick-varying AI input at Stage 0
             // (attributes + tactics are static defaults assembled at boot). Rebuild the broad-phase grid
@@ -777,7 +838,9 @@ namespace TacticalDirector.MatchEngine
         /// so the single-perspective #12 / #13 / #14 / #15 authoring positions both teams correctly (the
         /// ERR-008-002 home/away-asymmetry guard at the mechanics layer). Deterministic (no RNG). Pressing's
         /// PressDirective has no Stage-0 carrier (PressingMode is a static team tactic) so it runs only to
-        /// feed PressRole to Defensive; the Stage-0 default Pressing / Passing tactics stay the Stage0Default.
+        /// feed PressRole to Defensive (PressDirective has no Stage-0 TacticalContext carrier). The DT-facing
+        /// Pressing / Passing / Mentality carriers come from the #21 active team tactic (default Balanced =
+        /// the prior Stage0Default values), overlaid below — see RunAiPhase for the FR-TI-027 stride swap.
         /// </summary>
         private void RunMechanicsAI(int tacticalTick)
         {
@@ -821,9 +884,23 @@ namespace TacticalDirector.MatchEngine
                         : MirrorPitchIfAway(t, canonicalSlot);
 
                     // Rebuild the Stage-0 TacticalContext around the live formation slot, then overlay the
-                    // Mechanics-AI carriers. Pressing / Passing tactics stay the Stage0Default (no Stage-0
-                    // carrier). OffensiveLineDepth is frame-invariant ([0,1] depth), so no inverse map needed.
+                    // Mechanics-AI carriers + the #21 team tactic (T2 runtime activation).
+                    // OffensiveLineDepth is frame-invariant ([0,1] depth), so no inverse map needed.
                     TacticalContext ctx = TacticalContext.Stage0Default(worldSlot);
+
+                    // #21 §3.1/§3.2: route this team's active tactic into the DecisionTree input. Mentality
+                    // drives the UtilityScorer risk multiplier; Pressing/Passing translate to the #8 enums
+                    // (TacticTranslation, rank-mapped so the opposite enum orderings do not invert). For the
+                    // default Balanced tactic these resolve to MEDIUM/MIXED/×1.0 — identical to Stage0Default,
+                    // so the overlay is behaviour-neutral until a non-Balanced tactic is set (FR-TI-031).
+                    TeamTactic tactic = _activeTeamTactics[t];
+                    ctx.Mentality = tactic.Mentality;
+                    ctx.Pressing  = TacticTranslation.ToPressingMode(tactic.Pressing);
+                    ctx.Passing   = TacticTranslation.ToPassingStyle(tactic.Passing);
+
+                    // DefensiveLineDepth stays the #14 MarkDirective output (the depth authority at Stage 0);
+                    // the §3.4 Clamp01(DefensiveLine + MentalityLineBias) recompute is deferred with the
+                    // #12/#14 depth-ownership wiring (ERR-021-002), so it is NOT applied here.
                     ctx.DefensiveLineDepth = mark.OffensiveLineDepth;
                     ctx.HasMarkDirective   = !teamHasPossession;
                     ctx.HasAttackIntent    = HasActiveAttackIntent(_attacking[t].GetIntent(i));
@@ -2474,4 +2551,20 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | UNCHANGED (no schema bump) — the LEDGER digest now carries the  |
 // |         |            |        | event. Collision/foul real consumers stay deferred (no Stage-0  |
 // |         |            |        | card/foul model). New MatchEngineEventsTests fixture.           |
+// | 1.16    | 2026-06-28 | —      | #21 T2 runtime activation — the Phase-D single-writer now routes|
+// |         |            |        | a live per-team TeamTactic into the DecisionTree input. New     |
+// |         |            |        | _active/_pendingTeamTactics[TEAM_COUNT] (default TeamTactic.    |
+// |         |            |        | Balanced); public SetTeamTactic(teamId, tactic) stages pending; |
+// |         |            |        | RunAiPhase commits pending→active at the stride boundary (FR-TI-|
+// |         |            |        | 027). RunMechanicsAI overlays ctx.Mentality (drives the #8      |
+// |         |            |        | UtilityScorer risk mult) + ctx.Pressing/Passing via the now-    |
+// |         |            |        | public TacticTranslation (rank-mapped, non-inverting). Balanced |
+// |         |            |        | resolves to MEDIUM/MIXED/×1.0 = Stage0Default, so a default     |
+// |         |            |        | match is byte-identical to pre-#21 (TacticalContext is a per-   |
+// |         |            |        | tick input, NOT serialized → no schema bump). DefensiveLineDepth|
+// |         |            |        | stays the #14 output; the §3.4 mentality-line recompute is      |
+// |         |            |        | deferred (ERR-021-002). Mid-match changes not yet restore-      |
+// |         |            |        | deterministic (tactic not in snapshot — ERR-021-002). New       |
+// |         |            |        | TestOnly_Mentality/Pressing/Passing seams; asmdef gains the     |
+// |         |            |        | TacticalInstructions ref. New MatchEngineTacticTests fixture.   |
 #endregion

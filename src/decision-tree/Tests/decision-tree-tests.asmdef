@@ -8,6 +8,7 @@
         "TacticalDirector.PassMechanics",
         "TacticalDirector.ShotMechanics",
         "TacticalDirector.DeterministicSim",
+        "TacticalDirector.TacticalInstructions",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
