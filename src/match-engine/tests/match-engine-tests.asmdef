@@ -4,6 +4,7 @@
     "references": [
         "TacticalDirector.MatchEngine",
         "TacticalDirector.DeterministicSim",
+        "TacticalDirector.EventSystem",
         "TacticalDirector.BallPhysics",
         "TacticalDirector.AgentMovement",
         "TacticalDirector.PassMechanics",

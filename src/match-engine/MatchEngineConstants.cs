@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — SNAPSHOT_SCHEMA_VERSION 2 → 8, DT + 4 mechanics-AI + perception)
+// Modified: 2026-06-27 (Phase E — POSSESSION_CHANGE_REASON_UNSPECIFIED for the possession-changed event)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -52,6 +52,12 @@ namespace TacticalDirector.MatchEngine
         /// Mirrors the Decision Tree #8 MatchContext.PossessingAgentId convention (−1 = loose);
         /// the C4 step folds host possession into MatchContext.</summary>
         public const int NO_POSSESSION = -1;
+
+        /// <summary>[FIXED] Reason ordinal written into the Phase E PossessionChangedEvent (#17 ordinal
+        /// 0x04) payload. Stage 0 has no possession-change reason taxonomy (a kick release, a first-touch
+        /// gain, and an interception all surface only as a holder change), so the host emits a single
+        /// UNSPECIFIED reason. Stage 1+ may introduce a real reason enum; this sentinel reserves 0.</summary>
+        public const byte POSSESSION_CHANGE_REASON_UNSPECIFIED = 0;
 
         /// <summary>[FIXED] Perception broad-phase grid insert radius (metres), Phase D D1. The host
         /// point-inserts agents into the perception grid each AI tick; the MaxPerceptionRange (120 m)
@@ -299,4 +305,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | (#7, v8) PerceptionTickState now serialized. v8 doc paragraph   |
 // |         |            |        | added; cross-tick coverage complete (no gameplay state left     |
 // |         |            |        | excluded — only boot-deterministic constants + observation).   |
+// | 1.15    | 2026-06-27 | —      | Phase E: POSSESSION_CHANGE_REASON_UNSPECIFIED ([FIXED] byte 0)  |
+// |         |            |        | added to the Fixed region — the Stage-0 reason ordinal written  |
+// |         |            |        | into the possession-changed event (#17 0x04) payload (no reason |
+// |         |            |        | taxonomy yet). SNAPSHOT_SCHEMA_VERSION unchanged (world-state    |
+// |         |            |        | body untouched; only the serialized ledger carries the event).  |
 #endregion

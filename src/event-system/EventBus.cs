@@ -1,6 +1,6 @@
 // File:     src/event-system/EventBus.cs
 // Created:  2026-05-30
-// Modified: 2026-06-15
+// Modified: 2026-06-27
 // Author:   —
 // Spec:     Event System #17 §3.2.1, §3.2.2, §4.4, Code Standards #20
 // Purpose:  Public static event bus. Publish/Subscribe entry points plus DrainTick,
@@ -84,6 +84,45 @@ namespace TacticalDirector.EventSystem
         {
             EventLedger.OnTickBoundary();
             CosmeticChannel.ResetPublicationCounts();
+        }
+
+        /// <summary>
+        /// Resets the process-static bus to its pre-boot state for a NEW match lifecycle: clears every
+        /// Tier A/B subscriber (the <c>EventLedger.Dispatchers</c> table) and every Tier C subscriber
+        /// (<see cref="CosmeticChannel"/>), reopens the boot phase (<c>BootPhaseComplete = false</c>) so a
+        /// fresh set of Tier A/B consumers can <see cref="Subscribe{T}"/> during the new match's boot, and
+        /// zeroes the per-tick ledger pointers. The Appendix A event-type <em>registry</em> (the row schema
+        /// owned by <see cref="EventRegistry"/>) is deliberately NOT cleared — rows are static schema, and
+        /// every <c>EventBusRegistrar.Initialize()</c> is already idempotent, so re-booting the registrars
+        /// after this reset is a no-op while subscriptions start clean.
+        ///
+        /// Because the bus is a spec-mandated process-static singleton (§3.2.1 KD-4/KD-8), a second match in
+        /// the same process (and, critically, two same-seed match runs in one test process) would otherwise
+        /// (a) hit <c>ERR_EVT_REGISTRATION_PHASE</c> when the second match tries to subscribe after the first
+        /// match's first <see cref="DrainTick"/>, and (b) leak subscribers toward
+        /// <c>MaxHandlersPerEventType</c>. The match host calls this at the start of its boot sequence,
+        /// before booting the registrars and subscribing its consumers. This is the production reset seam the
+        /// match-engine design note Risk #4 / #16 <c>ReplayEngine</c> step 6 anticipated.
+        /// </summary>
+        public static void ResetForNewMatch()
+        {
+            // Clear Tier A/B subscriber dispatch table (per-match state; rows in EventRegistry persist).
+            Array.Clear(EventLedger.Dispatchers, 0, EventLedger.Dispatchers.Length);
+
+            // Reopen the boot phase so Tier A/B Subscribe is permitted again, and zero per-tick pointers
+            // (BeginTick / BeginPhase / OnTickBoundary re-establish these each tick, but a clean slate
+            // keeps a reset-then-inspect path unambiguous).
+            EventLedger.BootPhaseComplete            = false;
+            EventLedger.InDrainDispatch              = false;
+            EventLedger.QueueCount                   = 0;
+            EventLedger.HandlerSecondaryPublishCount = 0;
+            EventLedger.CurrentTick                  = 0;
+            EventLedger.CurrentPhase                 = PhaseId.Input;
+            for (int i = 0; i < EventLedger.PhaseDrawIndices.Length; i++)
+                EventLedger.PhaseDrawIndices[i] = 0;
+
+            // Clear Tier C subscribers + publication counts.
+            CosmeticChannel.ResetForTests();
         }
 
         // ── Publish (all tiers — single method, cached marker dispatch) ──────────────
@@ -386,4 +425,14 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | ordinal is 0 (unregistered) so PublishAuthoritative throws the     |
 // |         |            |        | accurate ERR_EVT_UNREGISTERED_ORDINAL instead of a misleading      |
 // |         |            |        | "incorrect producer phase" assert against the default row.         |
+// | 2.1     | 2026-06-27 | —      | Match Engine Phase E: added public ResetForNewMatch() — the match  |
+// |         |            |        | lifecycle reset seam (Risk #4 / #16 ReplayEngine step 6). Clears   |
+// |         |            |        | the Tier A/B subscriber Dispatchers table + Tier C subscribers,    |
+// |         |            |        | reopens the boot phase (BootPhaseComplete=false) so a new match    |
+// |         |            |        | can re-Subscribe, and zeroes per-tick ledger pointers; leaves the  |
+// |         |            |        | EventRegistry row schema intact (registrars stay idempotent). The  |
+// |         |            |        | process-static bus (§3.2.1 KD-4/KD-8) otherwise throws             |
+// |         |            |        | ERR_EVT_REGISTRATION_PHASE on a second match's Subscribe and leaks |
+// |         |            |        | handlers toward MaxHandlersPerEventType across runs. No change to  |
+// |         |            |        | the Publish/Subscribe/DrainTick hot paths.                         |
 #endregion
