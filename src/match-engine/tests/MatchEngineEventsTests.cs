@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineEventsTests.cs
 // Created:  2026-06-27
-// Modified: 2026-06-27
+// Modified: 2026-06-27 (AR F1 — [TearDown] resets the static bus for test isolation)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §5 Phase E, Event System #17 §4.4, Code Standards #20
 // Purpose:  Phase E tests — events-phase consumers. Proves the host publishes a Tier A
@@ -29,6 +29,21 @@ namespace TacticalDirector.MatchEngine
         private const int   TickCount   = 30;
         private const int   NewHolder   = 5;   // an outfielder that gains possession
         private const int   OtherAgent  = 16;  // an unrelated agent (different team) — a control
+
+        /// <summary>
+        /// Resets the process-static EventBus after every test. Each test's first <c>new MatchEngine(...)</c>
+        /// already resets the bus on the way in (via <c>Boot</c>'s <see cref="EventBus.ResetForNewMatch"/>),
+        /// but <see cref="TierA_Subscribe_AfterBootPhase_Throws"/> deliberately ends with
+        /// <c>BootPhaseComplete</c> set and a live <c>OnPossessionChanged</c> handler subscribed. Clearing
+        /// the bus here guarantees this fixture leaves no Tier A subscriber or boot-phase state behind for a
+        /// later fixture that might inspect the bus without first constructing an engine (the fixture-order
+        /// hazard class the project has hit before).
+        /// </summary>
+        [TearDown]
+        public void ResetEventBus()
+        {
+            EventBus.ResetForNewMatch();
+        }
 
         /// <summary>An EXECUTING DecisionTree state with a dispatched action — the only state from which
         /// NotifyInterrupt is observable (OnInterrupt transitions only from EXECUTING; §8 §3.7.2 row 6).</summary>
@@ -158,4 +173,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | change, two-same-seed ledger-backed digest stability (+ reset   |
 // |         |            |        | seam lock), transition-vs-baseline effect, Tier A boot-phase    |
 // |         |            |        | Subscribe guard.                                                |
+// | 1.1     | 2026-06-27 | —      | AR F1: added [TearDown] EventBus.ResetForNewMatch() so the      |
+// |         |            |        | boot-phase-guard test cannot leave a live Tier A subscriber +   |
+// |         |            |        | BootPhaseComplete set for a later (cross-fixture) test —        |
+// |         |            |        | closes the static-bus order-dependence hazard.                 |
 #endregion
