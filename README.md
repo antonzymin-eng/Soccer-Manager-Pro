@@ -118,9 +118,9 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Spec Phase Completed:** May 18, 2026 — all 20 specs APPROVED
 **Deliverables:** 20 comprehensive specification documents + initial code for Ball Physics and Agent Movement
 
-**Summary (May 29, 2026):** All 20 specs APPROVED. Stage 0 specification phase COMPLETE. Active implementations (AR-clean): Ball Physics (#1), Agent Movement (#2), Collision System (#3), First Touch (#4), Pass Mechanics (#5), Shot Mechanics (#6), Perception System (#7) (14 files), Decision Tree (#8) (36 files), Heading Mechanics (#10) (25 files), Goalkeeper Mechanics (#11) (36 files), Positioning AI (#12) (20 files), Pressing AI (#13) (21 files), Defensive AI (#14) (19 files), Attacking AI (#15) (24 files), Deterministic Simulation (#16) (23 files). `src/CLAUDE.md` coding guide (v1.21) governs all C# authoring.
-**Total specification output:** ~4.33 MB across 106 files (see file-manifest.md)
-**Implementation active:** #1–#8, #10–#16 (16 of 20 specs implemented)
+**Summary (June 28, 2026):** All 20 Stage-0 specs APPROVED, plus 2 Stage-1 forward specs (#21 Tactical Instructions, #22 Living World System) APPROVED. Every spec #1–#20 has an active `src/` implementation. A non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) now compiles the entire `src/` tree and runs all 1,165+ NUnit tests on every push; quarantine list is empty. **Match Engine** (`src/match-engine/`, design note at `docs/tracking/match-engine-design.md`) — the composition root wiring every subsystem into the deterministic-sim 7-phase tick pipeline — has Phases A–E complete (boot, full canonical world-state snapshot serialization at schema v8, Physics/Resolve/AI phase wiring through Positioning→Pressing→Defensive→Attacking→DecisionTree, and an Events-phase possession-changed producer/consumer). **Phase F (capstone closed-loop scenario on the #19 `ScenarioRunner`) is the only remaining phase.** `src/CLAUDE.md` coding guide (v1.66) governs all C# authoring.
+**Total specification output:** ~4.33 MB+ across 100+ files (see file-manifest.md)
+**Implementation active:** #1–#20 implemented; #21/#22 scaffolded (T0); match-engine integration Phase F pending
 
 ---
 
