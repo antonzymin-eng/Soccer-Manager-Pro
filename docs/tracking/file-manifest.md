@@ -296,7 +296,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 | File | Description |
 |------|-------------|
-| `src/decision-tree/decision-tree.asmdef` | Assembly definition (AI layer; references agent-movement, perception-system, pass-mechanics, shot-mechanics, heading-mechanics, goalkeeper-mechanics, collision-system, event-system, deterministic-sim; June 11, 2026 audit added the deterministic-sim ref EventBusRegistrar requires — asmdef refs are not transitive) |
+| `src/decision-tree/decision-tree.asmdef` | Assembly definition (AI layer; references agent-movement, perception-system, pass-mechanics, shot-mechanics, heading-mechanics, goalkeeper-mechanics, collision-system, event-system, deterministic-sim, tactical-instructions; June 11, 2026 audit added the deterministic-sim ref EventBusRegistrar requires — asmdef refs are not transitive; June 28, 2026 added tactical-instructions for the #21 T2 seam) |
 | `src/decision-tree/AssemblyInfo.cs` | [assembly: InternalsVisibleTo("TacticalDirector.DecisionTree.Tests")] |
 | `src/decision-tree/DecisionTree.cs` | Public sealed class: 6-step pipeline orchestrator + state machine (§3.6, §3.7, §4.1) |
 | `src/decision-tree/DecisionTreeStateMachine.cs` | Pure state evaluator: IDLE/EVALUATING/EXECUTING/INTERRUPTED transitions (§3.7.2) |
@@ -305,6 +305,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/decision-tree/OptionGenerator.cs` | Step 3: generates all eligible ActionOption candidates (§3.1) |
 | `src/decision-tree/UtilityScorer.cs` | Step 4: scores ActionOptions with §3.2 formulas |
 | `src/decision-tree/TacticalModifierResolver.cs` | Step 4 helper: resolves tactical multipliers per action type (§3.4) |
+| `src/decision-tree/TacticTranslation.cs` | #21 T2 consumer seam: TacticPressing/TacticPassing → #8 enums (rank-mapped, F5 clamp) + Mentality risk/line resolvers (#21 §3.1/§3.2; pure, translate-once) |
 | `src/decision-tree/ActionSelector.cs` | Step 5: composure noise injection + highest-EffectiveUtility winner (§3.3) |
 | `src/decision-tree/ActionDispatcher.cs` | Step 6: routes selected action to movement controller or physics executor (§3.5) |
 | `src/decision-tree/DecisionContext.cs` | Internal struct: all assembled pipeline inputs for one agent-tick (§2.2.4) |
@@ -314,7 +315,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/decision-tree/DecisionMadeEvent.cs` | Tier C struct event (IEventC; ordinal 0x11): published after each decision (§2.2.7) |
 | `src/decision-tree/DtAgentAttributes.cs` | Struct: all DT-consumed player attributes [1–20] + CreateDefault factory (§3.1) |
 | `src/decision-tree/MatchContext.cs` | Struct: authoritative match state per heartbeat (§2.2.5) |
-| `src/decision-tree/TacticalContext.cs` | Struct: pressing mode, passing style, formation slots; Stage0Default factory (§2.2.6) |
+| `src/decision-tree/TacticalContext.cs` | Struct: pressing mode, passing style, formation slots, #21 Mentality routing field (default Balanced); Stage0Default factory (§2.2.6) |
 | `src/decision-tree/DecisionTreeConstants.cs` | Constants: capacity limits / timing budgets / pipeline invariants (§4.2, §3.7) |
 | `src/decision-tree/UtilityWeights.cs` | Constants: all 58+ utility scoring constants (§3.2.11) |
 | `src/decision-tree/ComposureWeights.cs` | Constants: NOISE_MAX / COMPOSURE_SUPPRESSION / TIEBREAK_EPSILON (§3.3.3–3.3.5) |
@@ -338,6 +339,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/decision-tree/Tests/DecisionTreeIntegrationTests.cs` | UT-24..35: full pipeline state machine + output (UT-33..35 are June 11 audit H-3 locks) |
 | `src/decision-tree/Tests/DecisionContextAssemblerTests.cs` | June 11, 2026 audit locks: H-2 team-relative BallZone + M-1 OpponentHasBall derivation |
 | `src/decision-tree/Tests/DecisionTreeStateTests.cs` | Match Engine Phase D D0 locks: DecisionTreeState CanonicalSerializer round-trip + Capture/Restore identity + fresh-IDLE default + reflection field-count guard (asmdef gains DeterministicSim ref) |
+| `src/decision-tree/Tests/TacticTranslationTests.cs` | #21 T2 seam locks: enum-translation validity + non-inversion + F5 clamp; Mentality Balanced identity (FR-TI-031) + Stage0Default no-op + monotone risk/line shape (asmdef gains TacticalInstructions ref) |
 
 ### Positioning AI (#12) — 20 files
 

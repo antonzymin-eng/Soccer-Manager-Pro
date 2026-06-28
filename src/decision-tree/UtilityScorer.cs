@@ -1,8 +1,8 @@
 // File:     src/decision-tree/UtilityScorer.cs
 // Created:  2026-05-29
-// Modified: 2026-06-14 (audit AR-3 fix pass)
+// Modified: 2026-06-28 (#21 T2 mentality risk multiplier)
 // Author:   —
-// Spec:     Decision Tree #8 §3.2, §3.4, Code Standards #20
+// Spec:     Decision Tree #8 §3.2, §3.4, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Step 4 of the 6-step pipeline. Applies the utility scoring model to each
 //           ActionOption, populating BaseUtility. Pure function: no side effects.
 
@@ -48,6 +48,14 @@ namespace TacticalDirector.DecisionTree
                 case ActionType.INTERCEPT:       u = ScoreIntercept(ref opt, in ctx); break;
                 default:                         u = UtilityWeights.UTILITY_FLOOR;    break;
             }
+
+            // #21 §3.2/§3.3 (T2): team mentality risk multiplier, applied to every scored option
+            // BEFORE the [FLOOR, CEILING] clamp. Higher mentality lifts PASS/SHOOT/DRIBBLE relative
+            // to HOLD. The Stage 0 / no-instruction default Mentality.Balanced resolves to ×1.00
+            // (FR-TI-031), so this is exactly today's behaviour until the match-engine Phase-D writer
+            // routes a live tactic in. The per-agent role/duty/instr/tempo factors (§3.3 product)
+            // land with the per-agent PlayerTactic routing field, gated on the §5.6 balance pass.
+            u *= TacticTranslation.MentalityRiskMultiplier(ctx.TacticalContext.Mentality);
 
             float clamped = Mathf.Clamp(u, UtilityWeights.UTILITY_FLOOR, UtilityWeights.UTILITY_CEILING);
 
@@ -338,4 +346,7 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | result — Mathf.Clamp passes NaN, which would otherwise win selection           |
 // |         |            |        | (ActionSelector picks index 0 when all comparisons are false). NaN-gate        |
 // |         |            |        | pattern (AM AR-10 / CS AR-7 / FT AR-8).                                         |
+// | 1.5     | 2026-06-28 | —      | #21 T2: per-option utility × Mentality risk multiplier (§3.2/§3.3) before the  |
+// |         |            |        | clamp; resolved via TacticTranslation. Balanced default ⇒ ×1.0 (FR-TI-031),    |
+// |         |            |        | behaviour-neutral until match-engine Phase-D routes a live tactic.             |
 #endregion
