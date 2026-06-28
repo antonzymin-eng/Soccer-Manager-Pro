@@ -7,6 +7,7 @@
         "TacticalDirector.AgentMovement",
         "TacticalDirector.PerceptionSystem",
         "TacticalDirector.PassMechanics",
+        "TacticalDirector.TacticalInstructions",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

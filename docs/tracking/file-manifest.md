@@ -367,7 +367,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/positioning-ai/PositioningAITick.cs` | Sealed class: 10 Hz orchestrator; zero-alloc hot path; F1 stale detection; GetFormationSlot/GetLine/GetLane/GetPhase |
 | `src/positioning-ai/Tests/positioning-ai-tests.asmdef` | Test assembly (EditMode; references positioning-ai.asmdef) |
 | `src/positioning-ai/Tests/PositioningAITests.cs` | T-U-001..021 (unit) + T-D-001..002 (determinism) + T-I-001..004 (integration) + T-P-001 (perf) + T-T-001 (tactical) |
-| `src/pressing-ai/pressing-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai, pass-mechanics) |
+| `src/pressing-ai/pressing-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai, pass-mechanics, tactical-instructions) |
 | `src/pressing-ai/PressingAIConstants.cs` | Single constant catalogue: trigger distances/durations, cover-shadow geometry, stamina costs, pitch constants (GT/Fixed/Derived/Cross regions) |
 | `src/pressing-ai/AssemblyInfo.cs` | `[InternalsVisibleTo("TacticalDirector.PressingAI.Tests")]` — created June 12, 2026 (dotnet CI gate; test suite was uncompilable without it) |
 | `src/pressing-ai/TriggerFlags.cs` | [Flags] enum: None / BadTouch / BackwardPass / SidelineTrap / WeakReceiver (byte) |
@@ -379,11 +379,12 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/pressing-ai/RoleHysteresisState.cs` | Sealed class: LastRole[], PendingRole[], RoleDwell[] arrays keyed by EntityId (AR-2 M-2/M-3); Reset() |
 | `src/pressing-ai/PressingTickState.cs` | Readonly struct: D4 snapshot view bundling the cross-tick state (RoleHysteresisState, PressTrigger, disengage/cooldown dwell, press-fatigue array); returned by PressingAITick.CaptureState for the Match Engine snapshot layer |
 | `src/pressing-ai/PressingAgentSnapshot.cs` | Struct: per-agent tick input (EntityId, TeamId, Position, BaselineSlot, Fatigue, FirstTouchAttribute, Line, IsGoalkeeper, HasBall, IsActive) |
-| `src/pressing-ai/PressingSnapshot.cs` | Sealed class: tick input container (TickIndex, BallPosition, BallVelocity, BallCarrierEntityId, AttackingDirection, PossessionTeamId, PressingTeamId, Agents[22]) |
+| `src/pressing-ai/PressingSnapshot.cs` | Sealed class: tick input container (TickIndex, BallPosition, BallVelocity, BallCarrierEntityId, AttackingDirection, PossessionTeamId, PressingTeamId, Agents[22]); #21 T2 `LineOfEngagement` routing field (ctor-seeded `Standard` = identity — zero-value default is VeryLow) |
 | `src/pressing-ai/PassEventRing.cs` | Sealed class: ring buffer for BackwardPass trigger (Push, TryGetLatest, Clear) |
 | `src/pressing-ai/PositioningAIView.cs` | Readonly struct: facade over PositioningAITick (GetFormationSlot, GetLine, GetPhase, IsSentinelSlot) |
 | `src/pressing-ai/TriggerEvaluator.cs` | Pure static: Evaluate() debounce pipeline for 4 triggers + ComputeGeometricPressure helper |
-| `src/pressing-ai/PrimaryPressSelector.cs` | Pure static: Select() best presser by cost; ComputeInterceptionPoint(); GetCarrierPosition() helper |
+| `src/pressing-ai/PrimaryPressSelector.cs` | Pure static: Select() best presser by cost; ComputeInterceptionPoint(); GetCarrierPosition() helper; #21 T2 — eligibility radius scaled by TacticTranslation.PressTriggerRadiusScalar(snapshot.LineOfEngagement) (Standard ⇒ ×1.0) |
+| `src/pressing-ai/TacticTranslation.cs` | #21 T2 consumer seam: LineOfEngagement → #13 press-trigger-radius scalar (direct ordinal lookup over LineOfEngagementScalar, §3.1 F5 clamp; Standard ⇒ ×1.0); pure, translate-once (FR-TI-025) |
 | `src/pressing-ai/CoverShadowSelector.cs` | Pure static: Select() up to 2 cover shadows; threat score + greedy defender assignment |
 | `src/pressing-ai/RoleHysteresis.cs` | Pure static: Commit() dwell guard; ForceAllHoldShape() |
 | `src/pressing-ai/StaminaAccumulator.cs` | Pure static: Apply() per-role fatigue cost; ApplyAll() batch apply |
@@ -391,6 +392,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/pressing-ai/InvariantEnforcer.cs` | Pure static: Enforce() three anti-chaos invariants (MaxPressersBallThird, MinBacklineAgents, MaxPressDisplacementM) |
 | `src/pressing-ai/PitchOrientation.cs` | Pure static: AttackRelativeX() — attack-direction-relative pitch X for §3.8 zone / §3.9 own-third checks (AR-2 H-1) |
 | `src/pressing-ai/PressingAITick.cs` | Sealed class: 10 Hz orchestrator; 8-step pipeline; pre-allocated buffers; zero-alloc hot path; persistent press-fatigue ledger (AR-2 M-1) |
+| `src/pressing-ai/Tests/TacticTranslationTests.cs` | #21 T2 seam locks: LineOfEngagement → press-trigger-radius scalar validity + Standard identity (FR-TI-031) + PressingSnapshot ctor-seed behaviour-neutrality + monotone shape + F5 clamp (tests asmdef gains TacticalInstructions ref) |
 
 ### `src/defensive-ai/` — Spec #14 (19 files: 18 .cs + 1 asmdef)
 

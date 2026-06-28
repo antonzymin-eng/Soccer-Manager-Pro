@@ -1,8 +1,8 @@
 // File:     src/pressing-ai/PrimaryPressSelector.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-28
 // Author:   —
-// Spec:     Pressing AI #13 §3.3, Code Standards #20
+// Spec:     Pressing AI #13 §3.3, Tactical Instructions #21 §3.4, Code Standards #20
 // Purpose:  Pure static class: selects the single primary presser from eligible
 //           own-team agents using minimum-cost (squared distance) assignment.
 
@@ -39,8 +39,11 @@ namespace TacticalDirector.PressingAI
             int   bestId   = -1;
             float bestCost = float.MaxValue;
 
-            float triggerDistSq = PressingAIConstants.PressTriggerDistanceM
-                                * PressingAIConstants.PressTriggerDistanceM;
+            // §21 §3.4 / FR-TI-017: the line of engagement scales the press-trigger radius
+            // (Standard ⇒ ×1.0, behaviour-neutral; a higher line widens it). Same-assembly seam.
+            float triggerDist   = PressingAIConstants.PressTriggerDistanceM
+                                * TacticTranslation.PressTriggerRadiusScalar(snapshot.LineOfEngagement);
+            float triggerDistSq = triggerDist * triggerDist;
 
             // Eligibility constraint 3 (§3.3 / #8 §3.1.8.2): distance is from ball-carrier.
             Vector2 carrierPos = GetCarrierPosition(snapshot);
@@ -142,4 +145,5 @@ namespace TacticalDirector.PressingAI
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-3: eligibility distance now checks ball-carrier position per §3.3/#8 §3.1.8.2; cost unchanged (interception point). AR-1 H-1: added IsActive guard. Added GetCarrierPosition helper. |
+// | 1.2     | 2026-06-28 | —      | #21 T2 seam: press-trigger radius scaled by TacticTranslation.PressTriggerRadiusScalar(snapshot.LineOfEngagement) (Standard ⇒ ×1.0, behaviour-neutral). |
 #endregion
