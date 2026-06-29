@@ -2,6 +2,7 @@
 // Created:  2026-06-16
 // Modified: 2026-06-28 (Pressing #13 wiring AR — AttackingDirection inversion fix)
 // Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
+// Modified: 2026-06-29 (#21 T2 Defensive (#14) + Attacking (#15) Phase-D writers — route OffsideTrap / FocusPlay → snapshots)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -682,6 +683,16 @@ namespace TacticalDirector.MatchEngine
         /// SetTeamTactic reaches the press input and the Balanced default (Standard) is behaviour-neutral.</summary>
         internal LineOfEngagement TestOnly_PressLineOfEngagement(int teamId) => _pressSnapshots[teamId].LineOfEngagement;
 
+        /// <summary>Test-only: the #21 OffsideTrap toggle routed into team <paramref name="teamId"/>'s
+        /// Defensive AI (#14) snapshot at the last AI tick — lets the Phase-D writer test prove
+        /// SetTeamTactic reaches the defensive input and the Balanced default (false) is the identity.</summary>
+        internal bool TestOnly_OffsideTrapRequested(int teamId) => _defSnapshots[teamId].OffsideTrapRequested;
+
+        /// <summary>Test-only: the #21 FocusPlay routed into team <paramref name="teamId"/>'s Attacking
+        /// AI (#15) snapshot at the last AI tick — lets the Phase-D writer test prove SetTeamTactic
+        /// reaches the attacking input and the Balanced default (Mixed) is the identity.</summary>
+        internal TacticalDirector.TacticalInstructions.FocusPlay TestOnly_FocusPlay(int teamId) => _attackSnapshots[teamId].FocusPlay;
+
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
         /// CurrentSnapshotDigest after the most recent <see cref="RunTick"/>). Diagnostic /
@@ -1053,6 +1064,19 @@ namespace TacticalDirector.MatchEngine
             snap.AgentCount              = MatchEngineConstants.SQUAD_SIZE;
             snap.HasActivePrimaryPress   = _pressing[team].LastDirective.IsActive;
 
+            // #21 §3.4 / FR-TI-022 (T2 Phase-D writer): route this team's active tactic OffsideTrap
+            // toggle into the Defensive AI (#14) input. Fully qualified because TacticTranslation now
+            // exists in five referenced assemblies (#8/#12/#13/#14/#15) — CS0104 at the composition
+            // root (the #13 v1.17 lesson). Default Balanced ⇒ false (the routing identity, FR-TI-031);
+            // per KD-9 this is a REQUEST, not a guarantee — OffsideTrapController's §3.7.2 autonomous
+            // cascade is unchanged at Stage 0 and does not yet read this flag (gating today's arming
+            // behind a default-false toggle would not be behaviour-neutral; active consumption lands
+            // with the §3.7.2 additive-request design at activation). The snapshot is per-tick
+            // assembled, so this overwrites the class-field default each tick.
+            snap.OffsideTrapRequested    =
+                TacticalDirector.DefensiveAI.TacticTranslation.OffsideTrapRequested(
+                    _activeTeamTactics[team].OffsideTrap);
+
             int gkEntity = MatchEngineConstants.NO_POSSESSION;
             Vector2 gkPos = Vector2.zero;
             for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
@@ -1109,6 +1133,15 @@ namespace TacticalDirector.MatchEngine
                 ? MirrorPitchIfAway(team, _agents[owner].Position)
                 : MirrorPitchIfAway(team, ballXY);
             snap.TeamAttackAngle     = 0f;   // acting team attacks +X in its canonical frame
+
+            // #21 §3.3 / FR-TI-021 (T2 Phase-D writer): route this team's active tactic FocusPlay into
+            // the Attacking AI (#15) input. The snapshot field is the #21 enum; the translation to a
+            // preferred Flank? (TacticTranslation.PreferredFlank) is the consumer's job. Default
+            // Balanced ⇒ FocusPlay.Mixed (no lateral preference = the routing identity, FR-TI-031), so
+            // a default match is byte-identical to pre-#21. The OverloadDetector flank-preference
+            // consumption is deferred to the §5.6 / G2 balance pass; this writer connects the seam. The
+            // snapshot is per-tick assembled, so this overwrites the auto-property zero-value each tick.
+            snap.FocusPlay           = _activeTeamTactics[team].FocusPlay;
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
@@ -2605,4 +2638,18 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Balanced ⇒ Standard ⇒ ×1.0 = byte-identical to pre-#21. New     |
 // |         |            |        | TestOnly_PressLineOfEngagement seam. No schema bump (Pressing-  |
 // |         |            |        | Snapshot is a per-tick input). New MatchEngineTacticTests case. |
+// | 1.19    | 2026-06-29 | —      | #21 T2 Defensive (#14) + Attacking (#15) Phase-D writers — the  |
+// |         |            |        | #14/#15 analogues of the v1.18 #13 writer. FillDefensiveSnapshot|
+// |         |            |        | routes the active TeamTactic.OffsideTrap → DefensiveSnapshot.   |
+// |         |            |        | OffsideTrapRequested via fully-qualified DefensiveAI.Tactic-    |
+// |         |            |        | Translation (CS0104 — five TacticTranslation types now in scope)|
+// |         |            |        | FillAttackingSnapshot routes the active TeamTactic.FocusPlay →  |
+// |         |            |        | AttackingSnapshot.FocusPlay (enum passthrough; consumer trans-  |
+// |         |            |        | lates to Flank?). Default Balanced ⇒ false / Mixed = the routing|
+// |         |            |        | identities (FR-TI-022/021), byte-identical to pre-#21. Active   |
+// |         |            |        | consumption stays deferred: #14 OffsideTrapController per KD-9  |
+// |         |            |        | (gating autonomous arming behind a default-false toggle is not  |
+// |         |            |        | neutral); #15 OverloadDetector flank-pref per §5.6/G2 balance   |
+// |         |            |        | pass. No schema bump (both are per-tick inputs). New TestOnly_  |
+// |         |            |        | OffsideTrapRequested / TestOnly_FocusPlay seams; new test cases.|
 #endregion

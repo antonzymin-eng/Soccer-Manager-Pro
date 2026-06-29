@@ -85,8 +85,8 @@ namespace TacticalDirector.DefensiveAI
         /// <b>request, never a guarantee</b>: at Stage 0 the §3.7.2 autonomous cascade in
         /// <see cref="OffsideTrapController"/> remains the sole adjudicator and does not yet read this
         /// flag (gating today's autonomous arming behind a default-false toggle would not be
-        /// behaviour-neutral). The arming-gate consumption lands with the match-engine Phase-D writer
-        /// + activation pass; this field is the routing seam awaiting that wiring.
+        /// behaviour-neutral). The match-engine Phase-D writer routes the active tactic here (v1.19); the
+        /// arming-gate consumption is deferred to the §3.7.2 additive-request design at activation.
         /// </summary>
         public bool OffsideTrapRequested;
 
@@ -106,4 +106,6 @@ namespace TacticalDirector.DefensiveAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                          |
 // | 1.1     | 2026-06-29 | —      | #21 T2: + OffsideTrapRequested routing field (FR-TI-022); false   |
 // |         |            |        |   identity, arming-gate consumption deferred (KD-9, not neutral). |
+// | 1.2     | 2026-06-29 | —      | Doc: Phase-D writer landed (MatchEngine v1.19); arming-gate       |
+// |         |            |        |   consumption deferred to §3.7.2 additive-request (doc-only).     |
 #endregion
