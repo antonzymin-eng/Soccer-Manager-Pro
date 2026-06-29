@@ -115,8 +115,8 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 
 **Progress:** Implementation Phase (coding begun May 19, 2026)
 **Spec Phase Started:** February 2, 2026
-**Spec Phase Completed:** May 18, 2026 — all 20 specs APPROVED
-**Deliverables:** 20 comprehensive specification documents + initial code for Ball Physics and Agent Movement
+**Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED; 2 further Stage-1 forward specs (#21 Jun 20, #22 Jun 22) APPROVED since
+**Deliverables:** 22 comprehensive specification documents + active `src/` implementation for specs #1–#8, #10–#19, #21, #22, plus the unnumbered Match Engine composition root
 
 **Summary (June 29, 2026):** All 20 Stage-0 specs APPROVED, plus 2 Stage-1 forward specs (#21 Tactical Instructions, #22 Living World System) APPROVED. Every spec #1–#20 has an active `src/` implementation. A non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) now compiles the entire `src/` tree and runs all 1,165+ NUnit tests on every push; quarantine list is empty. **Match Engine** (`src/match-engine/`, design note at `docs/tracking/match-engine-design.md`) — the composition root wiring every subsystem into the deterministic-sim 7-phase tick pipeline — has Phases A–F complete (boot, full canonical world-state snapshot serialization at schema v8, Physics/Resolve/AI phase wiring through Positioning→Pressing→Defensive→Attacking→DecisionTree, an Events-phase possession-changed producer/consumer, and the Phase F capstone closed-loop scenario on the #19 `ScenarioRunner`). **Match Engine integration is complete.** **Tactical Instructions (#21)** now drives the live AI: T0 data layer + T2 consumer seams across DecisionTree/Pressing/Positioning/Defensive/Attacking (behaviour-neutral at identity) + runtime activation via `MatchEngine.SetTeamTactic` and an in-code `TeamTacticConfig` source + boot applier (on-disk tactic-file format deferred to Stage 0+1 per the #19 D1 precedent). `src/CLAUDE.md` coding guide (v1.76) governs all C# authoring.
 **Total specification output:** ~4.33 MB+ across 100+ files (see file-manifest.md)
@@ -156,6 +156,10 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 19. ✅ Testing Strategy & Framework — **APPROVED** May 15, 2026 (§9 v1.0 lead-developer sign-off; v1.0.1 `[TBD-NORMATIVE]` sweep landed across §1 / §3 / §4 / §5 / §6 / §8 / appendices against #16 APPROVED text + #18 v0.3; KD-2 sequencing satisfied. Clears #18's last KD-2 gate.)
 20. ✅ Code Standards & Style Guide — **APPROVED** May 11, 2026 (adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete)
 
+**Stage-1 Forward Specs (beyond the Stage-0 set of 20):**
+21. ✅ Tactical Instructions — **APPROVED** Jun 20, 2026 (manager-facing tactic input layer driving #8/#11–#15; 32 FRs; G2 `[GT]` balance pass is a non-blocking post-approval follow-up; T0 data layer + T2 consumer seams + runtime activation via `MatchEngine.SetTeamTactic` landed Jun 29, 2026)
+22. ✅ Living World System — **APPROVED** Jun 22, 2026 (off-pitch interaction-generation layer over vol-2/vol-3 human systems; 34 FRs; T0 scaffolding at `src/living-world/`; runtime activation gated on KD-10)
+
 **Status Key:**
 - ⏳ Not started
 - 📝 In progress
@@ -164,7 +168,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 - ✅ Approved
 - 🔒 Locked (implementation begun)
 
-**Locked (implementation begun):** Ball Physics #1, Agent Movement #2, Collision System #3, First Touch #4, Pass Mechanics #5, Shot Mechanics #6, Perception System #7, Decision Tree #8, Heading Mechanics #10, Goalkeeper Mechanics #11, Positioning AI #12, Pressing AI #13, Defensive AI #14, Attacking AI #15, Deterministic Simulation #16
+**Locked (implementation begun):** Ball Physics #1, Agent Movement #2, Collision System #3, First Touch #4, Pass Mechanics #5, Shot Mechanics #6, Perception System #7, Decision Tree #8, Heading Mechanics #10, Goalkeeper Mechanics #11, Positioning AI #12, Pressing AI #13, Defensive AI #14, Attacking AI #15, Deterministic Simulation #16, Event System #17, Performance Optimization #18, Testing Strategy #19, Tactical Instructions #21 (T0 + runtime activation), Living World System #22 (T0). Fixed64 Math Library #9 and Code Standards #20 have no `src/` implementation by design (#9 implementation deferred to Stage 5+; #20 is a style guide, not a coded subsystem). Plus the unnumbered `src/match-engine/` composition root (Phases A–F complete).
 
 **For detailed progress tracking, see:** [docs/tracking/PROGRESS.md](docs/tracking/PROGRESS.md)
 **For file inventory, see:** [docs/tracking/file-manifest.md](docs/tracking/file-manifest.md)
@@ -266,54 +270,66 @@ Soccer-Manager-Pro/
 │   │   ├── positioning-ai/             [Spec #12 — APPROVED May 18]
 │   │   ├── pressing-ai/               [Spec #13 — APPROVED May 17]
 │   │   ├── defensive-ai/              [Spec #14 — APPROVED May 18]
-│   │   └── attacking-ai/              [Spec #15 — APPROVED May 18]
+│   │   ├── attacking-ai/              [Spec #15 — APPROVED May 18]
+│   │   ├── tactical-instructions/     [Spec #21 — APPROVED Jun 20]
+│   │   └── living-world/              [Spec #22 — APPROVED Jun 22]
 │   └── tracking/
 │       ├── PROGRESS.md                 [Schedule and milestone tracking]
 │       ├── spec-error-log.md           [Cross-spec architectural errors]
 │       ├── fix-manifest-pass-mechanics.md [Per-audit fix tracking — Pass Mechanics #5]
-│       └── file-manifest.md            [Authoritative file inventory]
+│       ├── file-manifest.md            [Authoritative file inventory]
+│       ├── match-engine-design.md      [Match Engine composition-root design note — not a numbered spec]
+│       └── certification-platform.md  [Stage-0 host platform pin]
 └── src/                                [Implementation — coding begun May 19, 2026]
-    ├── CLAUDE.md                       [Coding guide v1.8 — read before writing code]
-    ├── Core/Physics/Ball/              [Spec #1 — known deviation from src/ball-physics/]
-    │   ├── BallPhysicsConstants.cs
-    │   ├── BallState.cs
-    │   ├── BallPhysicsCore.cs
-    │   ├── BallStateMachine.cs
-    │   ├── BallGroundInteraction.cs
-    │   ├── BallCollision.cs
-    │   ├── BallEventLogger.cs
-    │   ├── SurfaceProperties.cs
-    │   └── Tests/  [BallPhysicsCoreTests, BallIntegrationTests, BallStateMachineTests]
-    └── agent-movement/                 [Spec #2 — 16 source files]
+    ├── CLAUDE.md                       [Coding guide — read before writing code]
+    ├── ball-physics/                   [Spec #1 — relocated May 30, 2026 from src/Core/Physics/Ball/]
+    ├── agent-movement/                 [Spec #2]
+    ├── collision-system/                [Spec #3]
+    ├── first-touch/                     [Spec #4]
+    ├── pass-mechanics/                  [Spec #5]
+    ├── shot-mechanics/                  [Spec #6]
+    ├── perception-system/               [Spec #7]
+    ├── decision-tree/                   [Spec #8]
+    ├── heading-mechanics/                [Spec #10]
+    ├── goalkeeper-mechanics/             [Spec #11]
+    ├── positioning-ai/                   [Spec #12]
+    ├── pressing-ai/                       [Spec #13]
+    ├── defensive-ai/                      [Spec #14]
+    ├── attacking-ai/                      [Spec #15]
+    ├── deterministic-sim/                 [Spec #16]
+    ├── event-system/                       [Spec #17]
+    ├── performance-optimization/           [Spec #18]
+    ├── testing-strategy/                   [Spec #19 — ScenarioRunner closed-loop harness]
+    ├── tactical-instructions/              [Spec #21 — T0 + runtime-activation seams]
+    ├── living-world/                       [Spec #22 — T0 scaffolding]
+    └── match-engine/                       [Composition root — Phases A–F complete; not a numbered spec]
 ```
+
+Note: Fixed64 Math Library (#9) has no `src/` tree — implementation deferred to Stage 5+. Code Standards (#20) is a style guide, not a coded subsystem.
 
 ---
 
 ## NEXT IMMEDIATE STEPS
 
-### Outstanding (as of May 29, 2026)
+### Outstanding (as of June 29, 2026)
 
-**Specification phase:** ✅ COMPLETE — all 20 specs APPROVED (May 18, 2026).
+**Specification phase:** ✅ COMPLETE for the Stage-0 set of 20 (May 18, 2026), plus 2 Stage-1 forward specs APPROVED (#21 Tactical Instructions Jun 20; #22 Living World System Jun 22).
 
 **Implementation phase — active frontier:**
-1. 🔒 Ball Physics (#1) — at `src/Core/Physics/Ball/`. Structural deviation from `src/ball-physics/` fix pass pending.
-2. 🔒 Agent Movement (#2) — at `src/agent-movement/`. Tests landed May 27 (AR-2/AR-3).
-3. 🔒 Collision System (#3), First Touch (#4), Pass Mechanics (#5), Shot Mechanics (#6) — all coded and AR-clean (May 25–28).
-4. 🔒 Heading Mechanics (#10) — 25 source files coded and AR-clean (May 28).
-5. 🔒 Goalkeeper Mechanics (#11) — 36 source files coded and AR-clean (May 28).
-6. 🔒 Perception System (#7) — 14 source files coded and AR-clean (May 29).
-7. 🔒 Decision Tree (#8) — 36 files coded and AR-clean (May 29). AR-1: 2H+3M+4L fixed; AR-2: clean.
-8. 🔒 Positioning AI (#12) — 20 files coded and AR-clean (May 29). AR-1+AR-2+AR-3 complete.
-9. 🔒 Pressing AI (#13) — 21 files coded and AR-clean (May 29). AR-1: 3H+1M+1L fixed; AR-2: clean.
-10. 🔒 Defensive AI (#14) — 19 files (18 .cs + 1 asmdef) coded and AR-clean (May 29). AR-1: 2H+1M fixed; AR-2: clean.
-11. 🔒 Attacking AI (#15) — 24 files (23 .cs + 1 asmdef) coded and AR-clean (May 29). AR-1: 2H+4M fixed; AR-2: 2L fixed; AR-3: clean.
-12. 🔒 Deterministic Simulation (#16) — 23 files (21 .cs + 2 asmdef) coded and AR-clean (May 29). AR-1: 4H+4M fixed; AR-2: 1L fixed; AR-3: 1L fixed; AR-3 clean.
-13. ⏳ Structural fix: move Ball Physics from `src/Core/Physics/Ball/` → `src/ball-physics/` (spec-canonical path).
+1. 🔒 Specs #1–#8, #10–#20 — all coded, AR-clean, and covered by the non-certifying Linux `dotnet-ci` gate (full `src/` tree compiles; 1,165+ NUnit tests; quarantine list empty).
+2. 🔒 **Match Engine** (`src/match-engine/`, unnumbered composition root) — Phases A–F **complete** (Jun 28, 2026): boot, full canonical world-state snapshot serialization (`SNAPSHOT_SCHEMA_VERSION` 8), Physics/Resolve/AI-phase wiring (Positioning→Pressing→Defensive→Attacking→DecisionTree), Events-phase possession-changed producer/consumer, and the Phase F capstone closed-loop scenario on the #19 `ScenarioRunner`.
+3. 🔒 **Tactical Instructions (#21)** — T0 data layer + T2 consumer seams across DecisionTree/Pressing/Positioning/Defensive/Attacking (behaviour-neutral at identity) + runtime activation via `MatchEngine.SetTeamTactic` and an in-code `TeamTacticConfig` source + boot applier landed Jun 29, 2026. Remaining: per-agent `PlayerTactic` routing + remaining §3.3 product factors (gated on the G2 balance pass); #12/#14/#15 match-engine Phase-D writers; on-disk tactic-file loader (Stage 0+1).
+4. 🔒 **Living World System (#22)** — T0 scaffolding (`src/living-world/`: data types, pure math, ordinal/determinism unit tests) landed Jun 21, 2026. Runtime activation gated on KD-10 (world store + season loop; `[GT]` config-loader; match-outcome events).
+5. ⏳ **FR-PO-052 certified perf baseline** — corpus machinery landed (`CertifiedPerfBaseline.cs`); the match-engine kickoff entry is still **Pending** (no certified number yet — requires a cert run on the pinned Windows/Unity tuple, not the non-certifying Linux gate).
 
 **Operations / housekeeping:**
-5. ⏳ Push 12+ approval tags (HTTP 403 branch-protection); run squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`.
-6. ⏳ Stage-0 host-platform pin in `docs/tracking/certification-platform.md` (lead-developer task; blocks first `FR-DS-009-GATE` cert run and `FR-PO-052` Stage 0+1 perf-gate activation).
-7. ⏳ Fix smart-quote regression in `first-touch/section-7.md` L19–20.
+6. ⏳ Push 12+ approval tags (HTTP 403 branch-protection); run squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`.
+7. ⏳ Verify the `first-touch/section-7.md` smart-quote regression (flagged historically; status unverified).
+
+**Resolved since the last update (no longer outstanding):**
+- ✅ Structural fix: Ball Physics moved `src/Core/Physics/Ball/` → `src/ball-physics/` (May 30, 2026).
+- ✅ Stage-0 host-platform pin landed in `docs/tracking/certification-platform.md` (Jun 7, 2026) — unblocked `FR-DS-009-GATE` and `FR-PO-052` activation.
+- ✅ Dotnet CI gate quarantine burn-down — all 30 quarantined tests adjudicated; quarantine list empty (Jun 13, 2026).
 
 ---
 
@@ -371,7 +387,13 @@ These remain available in `/Archive/` for historical reference but should NOT be
 15. ✅ Defensive AI (#14) — 19 files, coded and AR-clean (May 29)
 16. ✅ Attacking AI (#15) — 24 files, coded and AR-clean (May 29)
 17. ✅ Deterministic Simulation (#16) — 23 files (21 .cs + 2 asmdef), coded and AR-clean (May 29)
-18. ⏳ Resolve structural deviation: move Ball Physics to `src/ball-physics/`
+18. ✅ Structural deviation resolved: Ball Physics relocated to `src/ball-physics/` (May 30, 2026)
+19. ✅ Event System (#17), Performance Optimization (#18), Testing Strategy (#19) — coded, AR-clean
+20. ✅ Non-certifying Linux `dotnet-ci` gate — full `src/` tree compile + 1,165+ NUnit tests on every push (Jun 12–13, 2026)
+21. ✅ Match Engine composition root — Phases A–F complete, wiring all subsystems into the deterministic-sim 7-phase tick pipeline (Jun 28, 2026)
+22. ✅ Tactical Instructions (#21) APPROVED + T0/T2/runtime-activation landed (Jun 20–29, 2026)
+23. ✅ Living World System (#22) APPROVED + T0 scaffolding landed (Jun 21–22, 2026)
+24. ⏳ FR-PO-052 certified perf baseline — corpus machinery built; first cert run on the pinned Windows/Unity tuple still outstanding
 
 ---
 
@@ -571,6 +593,18 @@ git push --tags
 - Priority 5 schedule row 17 updated from ⏳ NOT STARTED to ✅ APPROVED.
 - Project Structure block: #17 broken out as APPROVED; catch-all updated to Specs #10–#15, #18.
 - Tag list: `spec-pass-mechanics-v1.0-approved` corrected; `spec-event-system-v1.0-approved` added.
+
+**v3.0 — June 29, 2026 (consolidates a month of unrecorded changes, May 30 – June 29)**
+- Structural fix landed: Ball Physics relocated `src/Core/Physics/Ball/` → `src/ball-physics/` (May 30, 2026).
+- AR-hardening sweep completed across all 18 then-coded sections (June 7, 2026); Stage-0 host-platform pin landed in `certification-platform.md` (June 7, 2026).
+- Non-certifying Linux `dotnet-ci` gate landed (June 12–13, 2026): full `src/` tree compile + 1,165+ NUnit tests on every push; first-ever full compile surfaced 8 previously-dead build surfaces (notably ERR-017-002, the illegal-overload EventBus production assembly); 30-test quarantine fully adjudicated and cleared.
+- Comprehensive Decision Tree (#8) audit (AR-2, June 11, 2026): 3H+11M+9L resolved — production assembly had never compiled; away-team zone/press/line-depth asymmetry bugs fixed.
+- Pass Mechanics (#5) AR-9/AR-10 fix pass (June 11, 2026): test suite had never compiled since v1.1; 3 functional defects fixed.
+- **Match Engine** composition root (`src/match-engine/`, unnumbered) built end-to-end: Phases A–F complete (June 19–28, 2026) — boot, full snapshot serialization (`SNAPSHOT_SCHEMA_VERSION` 8), Physics/Resolve/AI-phase wiring through all five tactical AI specs, Events-phase possession-changed pipeline, and the Phase F capstone closed-loop scenario.
+- **Tactical Instructions (#21)** — second Stage-1 forward spec — APPROVED June 20, 2026; T0 data layer, T2 consumer seams (DecisionTree/Pressing/Positioning/Defensive/Attacking), and runtime activation (`MatchEngine.SetTeamTactic` + in-code `TeamTacticConfig`) landed through June 29, 2026.
+- **Living World System (#22)** — third Stage-1 forward spec — APPROVED June 22, 2026; T0 scaffolding landed at `src/living-world/`.
+- Spec count: **22 APPROVED** (20 Stage-0 + 2 Stage-1 forward specs), 0 outstanding in any other status.
+- Project Structure, Locked list, Next Immediate Steps, and Getting Started checklist all corrected to match current `src/` and `docs/specs/` contents (this README had not been substantively updated since v2.7 / May 29, 2026 despite header dates being hand-advanced).
 
 ---
 
