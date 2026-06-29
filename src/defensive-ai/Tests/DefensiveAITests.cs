@@ -974,6 +974,45 @@ namespace TacticalDirector.DefensiveAI.Tests
                 "Dwell counter must remain 0 when PRIMARY_PRESS is active (condition 4 fails).");
         }
 
+        /// <summary>
+        /// T-DA-032 — #21 FR-TI-022 / KD-9: a manager-requested trap arms after the reduced
+        /// OffsideTrapRequestedDwellTicks; the autonomous (unrequested) baseline does not arm that
+        /// fast. The §3.7.2 conditions still adjudicate.
+        /// </summary>
+        [Test]
+        public void T_DA_032_RequestedTrapArmsAfterReducedDwell()
+        {
+            int[] pool = new int[] { 10, 11, 12, 13 };
+            int reduced = DefensiveAIConstants.OffsideTrapRequestedDwellTicks;
+            Assert.Less(reduced, DefensiveAIConstants.OffsideTrapDwellTicks,
+                "Test premise: the requested dwell must be below the baseline dwell.");
+
+            // Requested: arms exactly when the dwell counter reaches the reduced threshold.
+            OffsideLineState reqState = OffsideLineState.Default();
+            MarkDirective    reqDir   = MarkDirective.Inactive(0);
+            for (int tick = 1; tick <= reduced; tick++)
+            {
+                DefensiveSnapshot snap = BuildTrapSnapshot(tick: tick);
+                snap.OffsideTrapRequested = true;
+                OffsideTrapController.Update(snap, pool, pool.Length, tick,
+                    ref reqState, ref reqDir, MakeZonalAssignments(pool.Length));
+            }
+            Assert.IsTrue(reqDir.OffsideTrapActive,
+                "A requested trap must arm at OffsideTrapRequestedDwellTicks (FR-TI-022).");
+
+            // Baseline (unrequested): the same qualifying ticks must NOT yet arm the trap.
+            OffsideLineState baseState = OffsideLineState.Default();
+            MarkDirective    baseDir   = MarkDirective.Inactive(0);
+            for (int tick = 1; tick <= reduced; tick++)
+            {
+                DefensiveSnapshot snap = BuildTrapSnapshot(tick: tick); // OffsideTrapRequested = false
+                OffsideTrapController.Update(snap, pool, pool.Length, tick,
+                    ref baseState, ref baseDir, MakeZonalAssignments(pool.Length));
+            }
+            Assert.IsFalse(baseDir.OffsideTrapActive,
+                "The autonomous baseline must not arm before OffsideTrapDwellTicks (behaviour-neutral).");
+        }
+
         /// <summary>T-DA-033 — OFFSIDE_MAX_DEPTH_M safety ceiling enforced.</summary>
         [Test]
         public void T_DA_033_MaxDepthCeilingEnforced()

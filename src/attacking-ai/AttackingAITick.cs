@@ -1,8 +1,8 @@
 // File:     src/attacking-ai/AttackingAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
+// Modified: 2026-06-29 (#21 FR-TI-021: route FocusPlay flank preference into OverloadDetector)
 // Author:   —
-// Spec:     Attacking AI #15 §3.13, §4.1–§4.3, FR-AT-001–FR-AT-027, Code Standards #20
+// Spec:     Attacking AI #15 §3.13, §4.1–§4.3, FR-AT-001–FR-AT-027, Code Standards #20; Tactical Instructions #21 §3.3
 // Purpose:  10 Hz attacking AI orchestrator for one team. Runs the §3.13 pipeline:
 //           phase gate → pool build → role assignment → width enforcement → weak-side →
 //           overload detection → invariant enforcement → publish directive + intents.
@@ -186,8 +186,11 @@ namespace TacticalDirector.AttackingAI
                 _poolBuffer, poolCount);
 
             // ── Step 8: Overload detection (§3.8) ────────────────────────────
+            // #21 FR-TI-021: route the manager's FocusPlay into a flank preference (Mixed /
+            // ThroughMiddle ⇒ null ⇒ behaviour-neutral).
             bool overloadActive = OverloadDetector.Evaluate(
-                snapshot.BallPosition, _poolBuffer, poolCount, out Flank overloadFlank);
+                snapshot.BallPosition, _poolBuffer, poolCount,
+                TacticTranslation.PreferredFlank(snapshot.FocusPlay), out Flank overloadFlank);
 
             // ── Step 9: Anti-chaos invariant enforcement (§3.11) ─────────────
             bool invariantOk = InvariantEnforcer.Apply(

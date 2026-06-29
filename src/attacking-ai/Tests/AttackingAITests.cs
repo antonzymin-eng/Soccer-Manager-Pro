@@ -550,6 +550,55 @@ namespace TacticalDirector.AttackingAI.Tests
             Assert.IsFalse(active,
                 "Agents beyond OverloadZoneWidthM must not be counted (§3.8).");
         }
+
+        /// <summary>
+        /// #21 FR-TI-021: a FocusPlay preference for the ball-side flank lowers the trigger count,
+        /// so a sub-baseline number of agents declares an overload there.
+        /// </summary>
+        [Test]
+        public void Evaluate_FocusBias_LowersThresholdOnPreferredFlank()
+        {
+            float ballY = 55f; // Right side
+            Vector2 ball = new Vector2(60f, ballY);
+
+            AttackPoolEntry[] pool = new AttackPoolEntry[AttackingAIConstants.SQUAD_SIZE];
+            int count = 0;
+            int agents = AttackingAIConstants.OverloadCount - AttackingAIConstants.OverloadFocusCountBias;
+            for (int i = 0; i < agents; i++)
+            {
+                pool[count++] = MakeEntry(i, ballY + i * 0.5f, AttackRole.HoldWidth);
+            }
+
+            Assert.IsFalse(OverloadDetector.Evaluate(ball, pool, count, out Flank _),
+                "Baseline (null preference) must not declare an overload below OverloadCount.");
+
+            bool active = OverloadDetector.Evaluate(ball, pool, count, Flank.Right, out Flank flank);
+            Assert.IsTrue(active,
+                "A preference for the ball-side flank must lower the trigger count (FR-TI-021).");
+            Assert.AreEqual(Flank.Right, flank);
+        }
+
+        /// <summary>
+        /// #21 FR-TI-021: the FocusPlay bias is a preference, not a gate — a preference for the
+        /// non-ball-side flank leaves the threshold unchanged.
+        /// </summary>
+        [Test]
+        public void Evaluate_FocusBias_UnchangedOnNonPreferredFlank()
+        {
+            float ballY = 55f; // Right side
+            Vector2 ball = new Vector2(60f, ballY);
+
+            AttackPoolEntry[] pool = new AttackPoolEntry[AttackingAIConstants.SQUAD_SIZE];
+            int count = 0;
+            int agents = AttackingAIConstants.OverloadCount - AttackingAIConstants.OverloadFocusCountBias;
+            for (int i = 0; i < agents; i++)
+            {
+                pool[count++] = MakeEntry(i, ballY + i * 0.5f, AttackRole.HoldWidth);
+            }
+
+            Assert.IsFalse(OverloadDetector.Evaluate(ball, pool, count, Flank.Left, out Flank _),
+                "A preference for the non-ball-side flank must not lower the threshold (bias, not gate).");
+        }
     }
 
     // ════════════════════════════════════════════════════════════════════════════

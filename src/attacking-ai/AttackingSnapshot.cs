@@ -53,8 +53,10 @@ namespace TacticalDirector.AttackingAI
         /// through <see cref="TacticTranslation.PreferredFlank"/> into an overload flank bias. The
         /// auto-property zero-value default is <see cref="FocusPlay.Mixed"/> (no lateral preference)
         /// = the <c>TeamTactic.Balanced</c> identity (FR-TI-031), so a default snapshot is
-        /// behaviour-neutral. The match-engine Phase-D writer routes the active tactic here (v1.19); the
-        /// active OverloadDetector flank-preference consumption is deferred to the §5.6 / G2 balance pass.
+        /// behaviour-neutral. The match-engine Phase-D writer routes the active tactic here (v1.19);
+        /// <see cref="OverloadDetector"/> consumes it as a flank-preference bias (v1.1) — a preferred
+        /// ball-side flank lowers the overload trigger count; null (Mixed / ThroughMiddle) leaves it
+        /// unchanged. Magnitude pending the §5.6 / G2 balance pass.
         /// </summary>
         public TacticalDirector.TacticalInstructions.FocusPlay FocusPlay { get; set; }
 
@@ -79,4 +81,6 @@ namespace TacticalDirector.AttackingAI
 // |         |            |        |   identity, OverloadDetector consumption deferred to Phase-D.     |
 // | 1.2     | 2026-06-29 | —      | Doc: Phase-D writer landed (MatchEngine v1.19); OverloadDetector  |
 // |         |            |        |   flank-pref consumption now deferred to §5.6/G2 (doc-only).      |
+// | 1.3     | 2026-06-29 | —      | Doc: OverloadDetector now consumes FocusPlay as a flank-pref bias |
+// |         |            |        |   (null = unchanged = neutral).                                  |
 #endregion
