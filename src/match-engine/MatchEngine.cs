@@ -3,6 +3,7 @@
 // Modified: 2026-06-28 (Pressing #13 wiring AR — AttackingDirection inversion fix)
 // Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
 // Modified: 2026-06-29 (#21 T2 Defensive (#14) + Attacking (#15) Phase-D writers — route OffsideTrap / FocusPlay → snapshots)
+// Modified: 2026-06-29 (#21 T2 Positioning (#12) Phase-D writer — route TeamTactic.Width / DefensiveWidth → ContextModifierInputs; all three writers now closed)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -169,6 +170,10 @@ namespace TacticalDirector.MatchEngine
         // in-process determinism holds; save/restore replay needs a get/restore seam (fold into D4).
         private readonly PositioningAITick[]             _positioning;   // [TEAM_COUNT]
         private readonly PositioningPerceptionSnapshot[] _posSnapshots;  // [TEAM_COUNT]
+        // Last ContextModifierInputs handed to each team's PositioningAITick.Tick this AI tick. Persisted
+        // only so a test can read back the #21 Phase-D Width / DefensiveWidth routing (the modifier struct
+        // is otherwise a transient per-tick input, not part of the serialized world state).
+        private readonly ContextModifierInputs[]         _posModifiers;  // [TEAM_COUNT]
 
         // Pressing (#13) → Defensive (#14) → Attacking (#15) chain (Phase D D2b). One INSTANCE + reused
         // input snapshot per team, ticked AFTER Positioning each AI tick (Pressing's per-agent PressRole
@@ -314,6 +319,7 @@ namespace TacticalDirector.MatchEngine
             // before the first AI read (the per-tick Tick() refreshes them — RunPositioningAI).
             _positioning  = new PositioningAITick[MatchEngineConstants.TEAM_COUNT];
             _posSnapshots = new PositioningPerceptionSnapshot[MatchEngineConstants.TEAM_COUNT];
+            _posModifiers = new ContextModifierInputs[MatchEngineConstants.TEAM_COUNT];
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 _positioning[t]  = new PositioningAITick(
@@ -693,6 +699,13 @@ namespace TacticalDirector.MatchEngine
         /// reaches the attacking input and the Balanced default (Mixed) is the identity.</summary>
         internal TacticalDirector.TacticalInstructions.FocusPlay TestOnly_FocusPlay(int teamId) => _attackSnapshots[teamId].FocusPlay;
 
+        /// <summary>Test-only: the #21 Width / DefensiveWidth routed into team <paramref name="teamId"/>'s
+        /// Positioning AI (#12) ContextModifierInputs at the last AI tick — lets the Phase-D writer test
+        /// prove SetTeamTactic reaches the positioning input and the Balanced default (Standard) is the
+        /// identity. (The modifier struct is a transient per-tick input captured for the seam.)</summary>
+        internal TacticalDirector.TacticalInstructions.TacticWidth TestOnly_PositioningWidth(int teamId) => _posModifiers[teamId].Width;
+        internal TacticalDirector.TacticalInstructions.TacticDefWidth TestOnly_PositioningDefWidth(int teamId) => _posModifiers[teamId].DefensiveWidth;
+
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
         /// CurrentSnapshotDigest after the most recent <see cref="RunTick"/>). Diagnostic /
@@ -864,11 +877,19 @@ namespace TacticalDirector.MatchEngine
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 // Positioning (#12) — formation slots + the Line/Phase inputs the rest of the chain reads.
+                // #21 T2 Phase-D writer (FR-TI-016): route the active team tactic's Width / DefensiveWidth
+                // into the modifier inputs (#12 ContextModifier translates them to the lateral-compactness
+                // scalar). Default Balanced ⇒ Standard / Standard ⇒ scalar 1.00 ⇒ byte-identical to pre-#21
+                // (the 5-arg ctor with both Standard equals the 3-arg identity-seeding ctor). This is the
+                // #12 analogue of the #13 FillPressingSnapshot single-writer.
                 FillPositioningSnapshot(t, tacticalTick);
                 ContextModifierInputs modifiers = new ContextModifierInputs(
                     scoreDiff:         0,
                     teamMeanFatigue:   ComputeTeamMeanFatigue(t),
-                    tacticalIntensity: MatchEngineConstants.STAGE0_TACTICAL_INTENSITY);
+                    tacticalIntensity: MatchEngineConstants.STAGE0_TACTICAL_INTENSITY,
+                    width:             _activeTeamTactics[t].Width,
+                    defensiveWidth:    _activeTeamTactics[t].DefensiveWidth);
+                _posModifiers[t] = modifiers;
                 _positioning[t].Tick(_posSnapshots[t], modifiers);
 
                 // Pressing (#13) — per-agent PressRole consumed by the Defensive snapshot below.
@@ -2652,4 +2673,14 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | neutral); #15 OverloadDetector flank-pref per §5.6/G2 balance   |
 // |         |            |        | pass. No schema bump (both are per-tick inputs). New TestOnly_  |
 // |         |            |        | OffsideTrapRequested / TestOnly_FocusPlay seams; new test cases.|
+// | 1.20    | 2026-06-29 | —      | #21 T2 Positioning (#12) Phase-D writer — the last of the three |
+// |         |            |        | Mechanics writers. RunMechanicsAI now builds ContextModifier-   |
+// |         |            |        | Inputs via the 5-arg ctor, routing the active TeamTactic.Width /|
+// |         |            |        | DefensiveWidth (ContextModifier translates them to the lateral- |
+// |         |            |        | compactness scalar). Default Balanced ⇒ Standard / Standard ⇒   |
+// |         |            |        | scalar 1.00 = byte-identical to pre-#21 (5-arg both-Standard ≡  |
+// |         |            |        | 3-arg identity ctor). Per-team _posModifiers captured for the   |
+// |         |            |        | TestOnly_PositioningWidth / _PositioningDefWidth seams. No      |
+// |         |            |        | schema bump (the modifier struct is a per-tick input). New test |
+// |         |            |        | cases. All three Mechanics Phase-D writers now closed.          |
 #endregion
