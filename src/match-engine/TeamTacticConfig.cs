@@ -20,11 +20,13 @@ namespace TacticalDirector.MatchEngine
     /// before the first tick — the in-code half of the #21 §3.1/§3.2 T2 runtime-activation gate.
     /// </summary>
     /// <remarks>
-    /// STAGE-0 SCOPE — the on-disk tactic file format is deferred: the <c>[GT]</c> config-loader
-    /// (FR-CS-019) is a Stage 1 deliverable and on-disk encodings are D1-pinned at Stage 0+1. Following
-    /// the #19 <c>ScenarioIndex</c> precedent, Stage 0 authors the config in code and injects this
-    /// immutable value; the Stage 0+1 file loader is a pure parser swap that produces a
-    /// <see cref="TeamTacticConfig"/> and leaves <see cref="TeamTacticConfigApplier"/> unchanged.
+    /// SOURCES — Stage 0 authors this config either in code (the <see cref="Default"/> factory or the
+    /// full <see cref="TeamTactic"/> constructor) or from the on-disk Stage-0 text format via
+    /// <see cref="TeamTacticFileLoader.Parse"/> (the parser swap this type was authored to receive, per
+    /// the #19 <c>ScenarioIndex</c> precedent — it produces a <see cref="TeamTacticConfig"/> and leaves
+    /// <see cref="TeamTacticConfigApplier"/> unchanged). The Stage-1 <c>[GT]</c> config-loader
+    /// (FR-CS-019) may replace that text grammar with the pinned <c>[GT]</c> encoding; this type and the
+    /// applier are unaffected.
     ///
     /// <see cref="Default"/> sets every team to <see cref="TeamTactic.Balanced"/>, which reproduces the
     /// pre-#21 baseline exactly (FR-TI-031) — applying the default config is behaviour-neutral.
@@ -71,4 +73,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-06-29 | —      | Initial implementation — in-code TeamTactic config source (#21 T2). |
+// | 1.1     | 2026-06-29 | —      | Remark updated: on-disk source now exists (TeamTacticFileLoader.Parse). |
 #endregion
