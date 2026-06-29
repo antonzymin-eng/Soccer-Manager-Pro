@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-06-28 (Pressing #13 wiring AR — AttackingDirection inversion fix)
 // Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
@@ -984,7 +985,15 @@ namespace TacticalDirector.MatchEngine
             snap.BallPosition        = MirrorPitchIfAway(team, _ball.Position);
             snap.BallVelocity        = MirrorVelocityIfAway(team, _ball.Velocity);
             snap.BallCarrierEntityId = owner;
-            snap.AttackingDirection  = CanonicalAttackDir(team);
+            // The snapshot is built in the PRESSING team's canonical attack-+X frame, so the
+            // pressing team's own attacking direction is the constant +X. PressingSnapshot's
+            // contract (AR-3 H / ERR-013-009/010) is that AttackingDirection is the PRESSING
+            // team's; the consumers (TriggerEvaluator.EvaluateBackwardPass, CoverShadowSelector
+            // threat progression) NEGATE it to recover the ball-carrier's forward. Feeding the
+            // ball-carrier's direction here (−X when the opponent holds the ball — i.e. exactly
+            // when pressing is active) would double-invert those two, firing BackwardPass on
+            // forward passes and rewarding retreating receivers.
+            snap.AttackingDirection  = new Vector2(1f, 0f);
             snap.PossessionTeamId    = owner >= 0 ? _teamIds[owner] : MatchEngineConstants.NO_POSSESSION;
             snap.PressingTeamId      = team;
 
@@ -1118,17 +1127,6 @@ namespace TacticalDirector.MatchEngine
                     stamina:      1f - _agents[i].AerobicPool,
                     dribbling:    MatchEngineConstants.STAGE0_NEUTRAL_NORMALIZED);
             }
-        }
-
-        /// <summary>
-        /// Canonical attack direction (acting team frame) of whichever team currently holds the ball: +X when
-        /// the acting team (or no one) holds it, −X when the opponent holds it. Unit vector; never zero.
-        /// </summary>
-        private Vector2 CanonicalAttackDir(int team)
-        {
-            int owner = _possessingAgentId;
-            if (owner >= 0 && _teamIds[owner] != team) return new Vector2(-1f, 0f);
-            return new Vector2(1f, 0f);
         }
 
         /// <summary>Mean fatigue [0,1] across team <paramref name="team"/> (0 fully rested, 1 fully
@@ -2582,6 +2580,15 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | deterministic (tactic not in snapshot — ERR-021-002). New       |
 // |         |            |        | TestOnly_Mentality/Pressing/Passing seams; asmdef gains the     |
 // |         |            |        | TacticalInstructions ref. New MatchEngineTacticTests fixture.   |
+// | 1.17    | 2026-06-28 | —      | Pressing (#13) wiring AR — H. FillPressingSnapshot fed the ball-|
+// |         |            |        | carrier's attack direction (CanonicalAttackDir → −X when the    |
+// |         |            |        | opponent holds the ball) into PressingSnapshot.AttackingDirec-  |
+// |         |            |        | tion, but that field's contract (AR-3 H / ERR-013-009/010) is   |
+// |         |            |        | the PRESSING team's own direction, which the consumers NEGATE.  |
+// |         |            |        | During active pressing this double-inverted the BackwardPass    |
+// |         |            |        | trigger and the CoverShadow threat-progression term. Snapshot   |
+// |         |            |        | is in the pressing team's canonical attack-+X frame, so the     |
+// |         |            |        | field is the constant +X; dead CanonicalAttackDir helper removed|
 // | 1.17    | 2026-06-28 | —      | Build fix (CS0104): the #21 T2 Pressing AI (#13) seam added a   |
 // |         |            |        | second public TacticTranslation (in PressingAI), and the match- |
 // |         |            |        | engine references both PressingAI and DecisionTree, so the two  |
