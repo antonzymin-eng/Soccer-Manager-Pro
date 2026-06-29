@@ -1,10 +1,11 @@
 // File:     src/match-engine/tests/MatchEngineTacticTests.cs
 // Created:  2026-06-28
-// Modified: 2026-06-28
+// Modified: 2026-06-29
 // Author:   —
-// Spec:     Tactical Instructions #21 §3.1/§3.2/§4.6 (FR-TI-027/031); Match Engine design note §5; Code Standards #20
+// Spec:     Tactical Instructions #21 §3.1/§3.2/§3.4/§4.6 (FR-TI-017/027/031); Match Engine design note §5; Code Standards #20
 // Purpose:  #21 T2 runtime-activation tests — SetTeamTactic routes a live TeamTactic into each
-//           agent's DecisionTree input at the AI-stride boundary, the Balanced default is
+//           agent's DecisionTree input (Mentality/Pressing/Passing) and into the Pressing AI (#13)
+//           snapshot (LineOfEngagement) at the AI-stride boundary, the Balanced default is
 //           behaviour-neutral (digest unchanged), and activation stays deterministic.
 
 using System.Collections.Generic;
@@ -39,6 +40,13 @@ namespace TacticalDirector.MatchEngine
         private static TeamTactic Defending() => new TeamTactic(
             Mentality.VeryDefensive, TacticFormation.F442, Tempo.Standard, TacticWidth.Standard,
             TacticPassing.Short, TacticPressing.Low, LineOfEngagement.Standard, 0.5f,
+            TacticDefWidth.Standard, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
+            TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
+
+        // Balanced in every dimension except the line of engagement (the #13 routing axis under test).
+        private static TeamTactic WithLine(LineOfEngagement line) => new TeamTactic(
+            Mentality.Balanced, TacticFormation.F442, Tempo.Standard, TacticWidth.Standard,
+            TacticPassing.Mixed, TacticPressing.Medium, line, 0.5f,
             TacticDefWidth.Standard, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
             TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
 
@@ -83,6 +91,31 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(Mentality.VeryDefensive, engine.TestOnly_Mentality(AwayAgent));
             Assert.AreEqual(PressingMode.LOW,   engine.TestOnly_Pressing(AwayAgent));
             Assert.AreEqual(PassingStyle.SHORT, engine.TestOnly_Passing(AwayAgent));
+        }
+
+        // ── #13 Phase-D writer: LineOfEngagement routes per team into the Pressing AI snapshot ──
+
+        [Test]
+        public void SetTeamTactic_RoutesLineOfEngagement_PerTeam()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.SetTeamTactic(0, WithLine(LineOfEngagement.VeryHigh));
+            engine.SetTeamTactic(1, WithLine(LineOfEngagement.VeryLow));
+            TickToFirstStride(engine);
+
+            Assert.AreEqual(LineOfEngagement.VeryHigh, engine.TestOnly_PressLineOfEngagement(0));
+            Assert.AreEqual(LineOfEngagement.VeryLow,  engine.TestOnly_PressLineOfEngagement(1));
+        }
+
+        [Test]
+        public void DefaultTactic_RoutesStandardLineOfEngagement()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            TickToFirstStride(engine);
+
+            // Balanced ⇒ Standard ⇒ the #13 trigger-radius scalar is ×1.0 (behaviour-neutral).
+            Assert.AreEqual(LineOfEngagement.Standard, engine.TestOnly_PressLineOfEngagement(0));
+            Assert.AreEqual(LineOfEngagement.Standard, engine.TestOnly_PressLineOfEngagement(1));
         }
 
         [Test]
@@ -181,4 +214,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                   |
 // | 1.0     | 2026-06-28 | —      | #21 T2 runtime-activation tests (SetTeamTactic routing). |
+// | 1.1     | 2026-06-29 | —      | #13 Phase-D writer: LineOfEngagement per-team routing + Standard-default cases. |
 #endregion
