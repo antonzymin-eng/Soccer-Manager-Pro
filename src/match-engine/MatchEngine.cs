@@ -933,6 +933,12 @@ namespace TacticalDirector.MatchEngine
                     // so the overlay is behaviour-neutral until a non-Balanced tactic is set (FR-TI-031).
                     TeamTactic tactic = _activeTeamTactics[t];
                     ctx.Mentality = tactic.Mentality;
+                    // #21 §3.3: team tempo drives the per-option forward-vs-retain factor in the
+                    // UtilityScorer §3.3 product. Balanced ⇒ Tempo.Standard ⇒ all factors ×1.0
+                    // (behaviour-neutral). The per-agent PlayerTactic stays the Stage0Default identity
+                    // (PlayerRole.Default / Duty.Support / no instructions) — there is no per-agent tactic
+                    // config surface at Stage 0; it lands with the §5.6 / G2 balance pass.
+                    ctx.Tempo = tactic.Tempo;
                     // Fully qualified: TacticTranslation now exists in BOTH DecisionTree (#8) and
                     // PressingAI (#13), and the match-engine references both, so the bare name is
                     // ambiguous (CS0104). These two are the #8 enum maps specifically.

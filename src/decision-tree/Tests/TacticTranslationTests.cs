@@ -1,10 +1,11 @@
 // File:     src/decision-tree/Tests/TacticTranslationTests.cs
 // Created:  2026-06-28
-// Modified: 2026-06-28
+// Modified: 2026-06-29 (#21 §3.3 PlayerTacticActionMultiplier coverage)
 // Author:   —
-// Spec:     Tactical Instructions #21 §3.1, §3.2, §4.7; Code Standards #20
+// Spec:     Tactical Instructions #21 §3.1, §3.2, §3.3, §4.7; Code Standards #20
 // Purpose:  Locks the #21 → #8 T2 consumer seam: enum-translation validity + F5 clamp,
-//           Mentality identity rows (FR-TI-031), and the §3.2 risk/line gradation shape.
+//           Mentality identity rows (FR-TI-031), the §3.2 risk/line gradation shape, and the
+//           §3.3 per-agent role/duty/instruction × tempo utility product (identity ⇒ ×1.0).
 
 using NUnit.Framework;
 
@@ -103,6 +104,90 @@ namespace TacticalDirector.DecisionTree.Tests
         {
             Assert.AreEqual(TacticTranslation.MentalityRiskMultiplier(Mentality.VeryAttacking),
                             TacticTranslation.MentalityRiskMultiplier((Mentality)99));
+        }
+
+        // ── §3.3 per-agent utility product: identity is exact ×1.0, shapes are directional ──
+
+        private static PlayerTactic Identity => PlayerTactic.Default(PlayerRole.Default);
+
+        [Test]
+        public void PlayerTacticActionMultiplier_Identity_IsExactlyOne()
+        {
+            // PlayerRole.Default / Duty.Support / every InstrBias.Default at Tempo.Standard ⇒ ×1.0
+            // for every action (FR-TI-031) — the seam is a no-op for a default-tactic match.
+            foreach (ActionType action in System.Enum.GetValues(typeof(ActionType)))
+            {
+                Assert.AreEqual(1.0f,
+                    TacticTranslation.PlayerTacticActionMultiplier(Identity, Tempo.Standard, action),
+                    $"Identity PlayerTactic must resolve to ×1.0 for {action}.");
+            }
+        }
+
+        // The Stage 0 default context must resolve to the identity product so the whole seam is a no-op.
+        [Test]
+        public void Stage0Default_ResolvesToIdentityProduct()
+        {
+            TacticalContext ctx = TacticalContext.Stage0Default(UnityEngine.Vector2.zero);
+            Assert.AreEqual(1.0f,
+                TacticTranslation.PlayerTacticActionMultiplier(ctx.PlayerTactic, ctx.Tempo, ActionType.SHOOT));
+        }
+
+        [Test]
+        public void PlayerTacticActionMultiplier_RoleRaisesNamedAction()
+        {
+            // Poacher's A.4 row raises SHOOT above the Default identity row (the reviewable shape).
+            Assert.Greater(
+                TacticTranslation.PlayerTacticActionMultiplier(
+                    PlayerTactic.Default(PlayerRole.Poacher), Tempo.Standard, ActionType.SHOOT),
+                1.0f);
+        }
+
+        [Test]
+        public void PlayerTacticActionMultiplier_TempoShiftsPassVsHold()
+        {
+            // Faster tempo raises PASS and lowers HOLD relative to the Standard identity row.
+            Assert.Greater(
+                TacticTranslation.PlayerTacticActionMultiplier(Identity, Tempo.VeryFast, ActionType.PASS), 1.0f);
+            Assert.Less(
+                TacticTranslation.PlayerTacticActionMultiplier(Identity, Tempo.VeryFast, ActionType.HOLD), 1.0f);
+        }
+
+        [Test]
+        public void PlayerTacticActionMultiplier_InstructionBiasModulatesNamedTerm()
+        {
+            // A "shoot more" individual instruction lifts SHOOT; everything else stays identity.
+            var instr = new PlayerInstructions(
+                InstrBias.Default, InstrBias.More, InstrBias.Default, InstrBias.Default,
+                InstrBias.Default, InstrBias.Default, false,
+                TacticalInstructionsConstants.MARK_TARGET_NONE, SetPieceDutyFlags.None);
+            var tactic = new PlayerTactic(PlayerRole.Default, Duty.Support, instr);
+
+            Assert.Greater(
+                TacticTranslation.PlayerTacticActionMultiplier(tactic, Tempo.Standard, ActionType.SHOOT), 1.0f);
+            Assert.AreEqual(1.0f,
+                TacticTranslation.PlayerTacticActionMultiplier(tactic, Tempo.Standard, ActionType.PASS));
+        }
+
+        [Test]
+        public void PlayerTacticActionMultiplier_AttackDutyRaisesOnBallActions()
+        {
+            // Attack duty's positive aggression bias lifts the on-ball attacking actions; Defend lowers them.
+            var attack  = new PlayerTactic(PlayerRole.Default, Duty.Attack,  PlayerInstructions.Default);
+            var defend  = new PlayerTactic(PlayerRole.Default, Duty.Defend,  PlayerInstructions.Default);
+            Assert.Greater(
+                TacticTranslation.PlayerTacticActionMultiplier(attack, Tempo.Standard, ActionType.DRIBBLE), 1.0f);
+            Assert.Less(
+                TacticTranslation.PlayerTacticActionMultiplier(defend, Tempo.Standard, ActionType.DRIBBLE), 1.0f);
+        }
+
+        [Test]
+        public void PlayerTacticActionMultiplier_WidenedRoleAndTempo_ClampToTableBounds()
+        {
+            Assert.AreEqual(
+                TacticTranslation.PlayerTacticActionMultiplier(
+                    PlayerTactic.Default((PlayerRole)99), (Tempo)99, ActionType.PASS),
+                TacticTranslation.PlayerTacticActionMultiplier(
+                    PlayerTactic.Default(PlayerRole.TargetMan), Tempo.VeryFast, ActionType.PASS));
         }
     }
 }
