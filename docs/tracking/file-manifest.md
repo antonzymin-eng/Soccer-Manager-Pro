@@ -341,11 +341,11 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/decision-tree/Tests/DecisionTreeStateTests.cs` | Match Engine Phase D D0 locks: DecisionTreeState CanonicalSerializer round-trip + Capture/Restore identity + fresh-IDLE default + reflection field-count guard (asmdef gains DeterministicSim ref) |
 | `src/decision-tree/Tests/TacticTranslationTests.cs` | #21 T2 seam locks: enum-translation validity + non-inversion + F5 clamp; Mentality Balanced identity (FR-TI-031) + Stage0Default no-op + monotone risk/line shape (asmdef gains TacticalInstructions ref) |
 
-### Positioning AI (#12) — 20 files
+### Positioning AI (#12) — 24 files
 
 | File | Description |
 |------|-------------|
-| `src/positioning-ai/positioning-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai constants) |
+| `src/positioning-ai/positioning-ai.asmdef` | Assembly definition (Mechanics layer; references tactical-instructions for the #21 T2 width seam) |
 | `src/positioning-ai/PositioningAIConstants.cs` | Single constant catalogue (FR-PA-011/KD-17): pitch/spacing/hysteresis/GK/phase constants + 3 formation tables + pull-factor 13×4 table + lane edges |
 | `src/positioning-ai/Phase.cs` | Enum: InPoss/OutOfPoss/TransToAtk/TransToDef (byte) |
 | `src/positioning-ai/LineId.cs` | Enum: Defense/Midfield/Attack (byte) |
@@ -353,20 +353,22 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/positioning-ai/RoleId.cs` | Enum: 13 roles GK..ST — row index in 13×4 pull-factor table (byte) |
 | `src/positioning-ai/FormationFamily.cs` | Enum: F442/F433/F4231 (byte) |
 | `src/positioning-ai/FormationSlotRecord.cs` | Readonly struct: LongPct/LateralPct/Role/DefaultLine/DefaultLane/IsGoalkeeper |
-| `src/positioning-ai/ContextModifierInputs.cs` | Readonly struct: ScoreDiff/TeamMeanFatigue/TacticalIntensity |
+| `src/positioning-ai/ContextModifierInputs.cs` | Readonly struct: ScoreDiff/TeamMeanFatigue/TacticalIntensity; #21 T2 Width/DefensiveWidth routing fields (3-arg ctor seeds Standard = ×1.00 identity; 5-arg ctor for the Phase-D writer) |
 | `src/positioning-ai/AgentPositioningData.cs` | Readonly struct: EntityId/SlotIndex/Position/IsActive/Role/IsGoalkeeper |
 | `src/positioning-ai/AgentHysteresisState.cs` | Struct: CurrentLine/CandidateLine/LineDwellCount/CurrentLane/CandidateLane/LaneDwellCount |
 | `src/positioning-ai/HysteresisState.cs` | Sealed class: team phase state + AgentHysteresisState[] Agents; SeedFromFormation() |
 | `src/positioning-ai/PositioningPerceptionSnapshot.cs` | Sealed class: pre-allocated tick input (TickIndex/BallPosition/BallVxFiltered/Agents[]) |
 | `src/positioning-ai/PhaseClassifier.cs` | Pure static: ClassifyAndCommit() PHASE_HYSTERESIS_TICKS dwell; indeterminate → lastCommitted |
 | `src/positioning-ai/AnchorCalculator.cs` | Pure static: ComputeAnchor/ComputeBallRelativeOffset/ComputeGkSlot (own-half ball.x clamp) |
-| `src/positioning-ai/ContextModifier.cs` | Pure static: ApplyToAll() — lateral + vertical compactness scaling relative to centroid (§3.5) |
+| `src/positioning-ai/ContextModifier.cs` | Pure static: ApplyToAll() — lateral + vertical compactness scaling relative to centroid (§3.5); #21 T2 — lateralScale ×= phase-selected width scalar via TacticTranslation (in-poss Width / OOP DefensiveWidth; Standard ⇒ ×1.00 exact) |
 | `src/positioning-ai/SpacingResolver.cs` | Pure static: EnforceHardSpacing() cost-based displacement up to SPACING_MAX_PASSES (§3.6) |
 | `src/positioning-ai/ShapeAnalyzer.cs` | Pure static: ResolveAllLines() insertion-sort + LINE_DWELL_TICKS; ResolveAllLanes() LANE_DWELL_TICKS; called AFTER spacing+clamp (AR-S1-03) |
 | `src/positioning-ai/SlotComposer.cs` | Pure static: Compose() 7-step pipeline (anchor→offset→modifiers→spacing→clamp→lines→lanes) |
 | `src/positioning-ai/PositioningAITick.cs` | Sealed class: 10 Hz orchestrator; zero-alloc hot path; F1 stale detection; GetFormationSlot/GetLine/GetLane/GetPhase |
-| `src/positioning-ai/Tests/positioning-ai-tests.asmdef` | Test assembly (EditMode; references positioning-ai.asmdef) |
+| `src/positioning-ai/TacticTranslation.cs` | #21 T2 consumer seam: TacticWidth/TacticDefWidth → lateral-compactness scalar (direct ordinal lookup over WidthScalar/DefWidthScalar, §3.1 F5 clamp; Standard ⇒ ×1.00); pure, translate-once (FR-TI-025) |
+| `src/positioning-ai/Tests/positioning-ai-tests.asmdef` | Test assembly (EditMode; references positioning-ai.asmdef + tactical-instructions) |
 | `src/positioning-ai/Tests/PositioningAITests.cs` | T-U-001..021 (unit) + T-D-001..002 (determinism) + T-I-001..004 (integration) + T-P-001 (perf) + T-T-001 (tactical) |
+| `src/positioning-ai/Tests/TacticTranslationTests.cs` | #21 T2 seam locks: TacticWidth/TacticDefWidth → compactness scalar validity + Standard identity (FR-TI-031) + ContextModifierInputs Standard-seed neutrality + monotone shape + F5 clamp |
 | `src/pressing-ai/pressing-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai, pass-mechanics, tactical-instructions) |
 | `src/pressing-ai/PressingAIConstants.cs` | Single constant catalogue: trigger distances/durations, cover-shadow geometry, stamina costs, pitch constants (GT/Fixed/Derived/Cross regions) |
 | `src/pressing-ai/AssemblyInfo.cs` | `[InternalsVisibleTo("TacticalDirector.PressingAI.Tests")]` — created June 12, 2026 (dotnet CI gate; test suite was uncompilable without it) |
@@ -394,11 +396,11 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/pressing-ai/PressingAITick.cs` | Sealed class: 10 Hz orchestrator; 8-step pipeline; pre-allocated buffers; zero-alloc hot path; persistent press-fatigue ledger (AR-2 M-1) |
 | `src/pressing-ai/Tests/TacticTranslationTests.cs` | #21 T2 seam locks: LineOfEngagement → press-trigger-radius scalar validity + Standard identity (FR-TI-031) + PressingSnapshot ctor-seed behaviour-neutrality + monotone shape + F5 clamp (tests asmdef gains TacticalInstructions ref) |
 
-### `src/defensive-ai/` — Spec #14 (19 files: 18 .cs + 1 asmdef)
+### `src/defensive-ai/` — Spec #14 (20 files: 19 .cs + 1 asmdef)
 
 | File | Role |
 |------|------|
-| `src/defensive-ai/defensive-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai, pressing-ai) |
+| `src/defensive-ai/defensive-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai, pressing-ai, tactical-instructions) |
 | `src/defensive-ai/DefensiveAIConstants.cs` | Single constant catalogue: 22 [GT] + 4 [CROSS] constants (assignment, hysteresis, offside-trap, tackle, anti-chaos, GK-zone bounds) |
 | `src/defensive-ai/MarkMode.cs` | Enum: Zonal / ManMark / InterceptRunner / CoverGkZone (byte; FR-DA-011) |
 | `src/defensive-ai/TackleMode.cs` | Enum: Hold / Jockey / Commit (byte) |
@@ -409,7 +411,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/defensive-ai/DefensiveTickState.cs` | Readonly struct: D4 snapshot view bundling cross-tick state (per-entity MarkHysteresisState[], per-entity last MarkAssignment[], OffsideLineState); returned by DefensiveAITick.CaptureState for the Match Engine snapshot layer |
 | `src/defensive-ai/OffsideLineState.cs` | Struct: per-team offside state (CurrentLineDepth, StepUpDwellCounter, CooldownTicksRemaining, CoverGkZoneActiveTicks); Default() factory |
 | `src/defensive-ai/DefensiveAgentSnapshot.cs` | Struct: per-agent tick input (EntityId, TeamId, Position, Velocity, IsActive, IsGoalkeeper, HasBall, BaselineSlot, Line, PressRole, PerceivedFirstTouch) |
-| `src/defensive-ai/DefensiveSnapshot.cs` | Sealed class: tick input container (TickIndex, DefensiveTeamId, BallPosition, BallVelocity, TeamPhase, DefensiveLineDepth, GkEntityId, GkPosition, Agents[22], HasActivePrimaryPress) |
+| `src/defensive-ai/DefensiveSnapshot.cs` | Sealed class: tick input container (TickIndex, DefensiveTeamId, BallPosition, BallVelocity, TeamPhase, DefensiveLineDepth, GkEntityId, GkPosition, Agents[22], HasActivePrimaryPress); #21 T2 OffsideTrapRequested routing field (false identity; arming-gate consumption deferred per KD-9) |
 | `src/defensive-ai/HoldShapePoolFilter.cs` | Pure static: BuildPool() filters GK + PrimaryPress/CoverShadow; SnapshotIndexOf(); IndexOf() |
 | `src/defensive-ai/LastManDetector.cs` | Pure static: Evaluate() last-man predicate (§3.8) + COVER_GK_ZONE trigger (§3.9); DefendsX0/DistToOwnGoal/DisplacementCost/ComputeAbandonedZoneCenter helpers; LastManResult struct |
 | `src/defensive-ai/MarkHysteresis.cs` | Pure static: PreCheck() dwell-lock gate; ApplyGate() transition accumulator; Reset() for emergency overrides |
@@ -418,12 +420,14 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/defensive-ai/OffsideTrapController.cs` | Pure static: Update() dwell counter + fire trigger (§3.7); ExecuteStepUp(); ComputeDefenseLineSpread() |
 | `src/defensive-ai/InvariantEnforcer.cs` | Pure static: Enforce() 3 anti-chaos invariants (§3.10); 3-pass demotion loop; AreAllSatisfied() post-loop check; F4 hard-fallback detection |
 | `src/defensive-ai/DefensiveAITick.cs` | Sealed class: 10 Hz orchestrator; 9-step §3.13 pipeline; pre-allocated buffers; GetMarkDirective/GetAssignment/GetTackleIntentRequests public API |
+| `src/defensive-ai/TacticTranslation.cs` | #21 T2 consumer seam: OffsideTrap → #14 trap-request bool passthrough (false identity; KD-9 request-not-guarantee); pure, translate-once (FR-TI-025) |
+| `src/defensive-ai/Tests/TacticTranslationTests.cs` | #21 T2 seam locks: OffsideTrap passthrough + DefensiveSnapshot false-seed identity (FR-TI-031); tests asmdef gains tactical-instructions ref |
 
-### `src/attacking-ai/` — Spec #15 (24 files: 23 .cs + 1 asmdef)
+### `src/attacking-ai/` — Spec #15 (26 files: 24 .cs + 1 asmdef + 1 test)
 
 | File | Description |
 |------|-------------|
-| `src/attacking-ai/attacking-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai, pressing-ai) |
+| `src/attacking-ai/attacking-ai.asmdef` | Assembly definition (Mechanics layer; references positioning-ai, pressing-ai, tactical-instructions) |
 | `src/attacking-ai/AttackingAIConstants.cs` | Single constant catalogue: GT/Derived/Cross constants (run-params bounds, support radius, width, weak-side, overload, invariants, hysteresis, test criteria, angle epsilon) |
 | `src/attacking-ai/AttackRole.cs` | Enum: HoldWidth / SupportBall / Runner / WeakSide (byte; FR-AT-012) |
 | `src/attacking-ai/Flank.cs` | Enum: Left / Right — overload lateral discriminator (§3.8) |
@@ -436,7 +440,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/attacking-ai/StyleProfile.cs` | Readonly struct: 5 profile multipliers + static factories Possession/Direct/Counter |
 | `src/attacking-ai/AttackIntentSnapshot.cs` | Readonly struct: read-only zero-copy view over tick output (Directive, Intents[], IntentCount, TickIndex) |
 | `src/attacking-ai/AttackingAgentSnapshot.cs` | Readonly struct: per-agent tick input (EntityId, TeamId, Position, BaselineSlot, Line, IsGoalkeeper, HasBall, IsActive, Pace, Stamina, Dribbling) |
-| `src/attacking-ai/AttackingSnapshot.cs` | Sealed class: pre-allocated tick input container (TickIndex, AttackingTeamId, BallPosition, BallCarrierEntityId, BallCarrierPosition, TeamAttackAngle, Agents[22]) |
+| `src/attacking-ai/AttackingSnapshot.cs` | Sealed class: pre-allocated tick input container (TickIndex, AttackingTeamId, BallPosition, BallCarrierEntityId, BallCarrierPosition, TeamAttackAngle, Agents[22]); #21 T2 FocusPlay routing field (Mixed zero-value identity; OverloadDetector consumption deferred) |
 | `src/attacking-ai/AttackPoolEntry.cs` | Internal struct: per-agent scratch entry during pipeline (EntityId, Position, LateralPct, Line, AssignedRole, HasRunParams, run-param fields, RunTargetPosition, TargetPosition) |
 | `src/attacking-ai/AttackingPoolBuilder.cs` | Pure static: Build() filters snapshot→pool, EntityId-ascending insertion sort; −1 on F2 sentinel |
 | `src/attacking-ai/AttackHysteresis.cs` | Pure static: IsStable() / Update() (with CandidateDwell reset on current-role re-preference) / Reset() — increment-based dwell |
@@ -448,6 +452,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/attacking-ai/TransitionController.cs` | Pure static: Evaluate() SET-then-DECREMENT transition hold; COUNTER (0 ticks) → instant empty |
 | `src/attacking-ai/InvariantEnforcer.cs` | Pure static: Apply() 3 anti-chaos invariants (max runners, min support, no own-half runs); ApplyFallback() all-HoldWidth |
 | `src/attacking-ai/AttackingAITick.cs` | Sealed class: 10 Hz orchestrator; §3.13 pipeline; pre-allocated zero-alloc buffers; LastDirective/GetIntent/GetSnapshot public API |
+| `src/attacking-ai/TacticTranslation.cs` | #21 T2 consumer seam: FocusPlay → preferred Flank? (Mixed/ThroughMiddle → null identity; FR-TI-021); pure, translate-once (FR-TI-025) |
+| `src/attacking-ai/Tests/TacticTranslationTests.cs` | #21 T2 seam locks: FocusPlay → preferred-flank mapping + AttackingSnapshot Mixed-zero-value identity (FR-TI-031); tests asmdef gains tactical-instructions ref |
 
 ### `src/deterministic-sim/` — Spec #16 (27 files: 25 .cs + 2 asmdef)
 
@@ -657,6 +663,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-engine/AssemblyInfo.cs` | InternalsVisibleTo("TacticalDirector.MatchEngine.Tests") |
 | `src/match-engine/MatchEngineConstants.cs` | [FIXED]/[DERIVED]/[GT] catalogue: SQUAD_SIZE / TEAM_COUNT / PLAYERS_PER_TEAM, kickoff coordinate constants (Ball Physics #1 §1.2 corner-origin), NO_POSSESSION sentinel, STAGE0_NEUTRAL_* executor-adapter proxies, PERCEPTION_GRID_POINT_INSERT_RADIUS (D1 broad-phase point insert), MaxEntityId + STAGE0_FORMATION + STAGE0_TACTICAL_INTENSITY (D2a Positioning AI inputs), FIRST_TOUCH_ACCEPTANCE_RADIUS_M + FIRST_TOUCH_MIN_BALL_SPEED_M_S (D3 first-touch trigger gates), SNAPSHOT_SCHEMA_VERSION (u32 = 2 as of C5; world-state field-set pin — distinct from the #16 SnapshotHeader schema version) |
 | `src/match-engine/MatchEngine.cs` | Sealed composition root: boot (seed → DeterministicRngService, clock/codec/fingerprint, AgentMovementSystem, CollisionSystem + per-agent PassExecutor[22]/ShotExecutor[22] + adapters, Pass/Shot EventBusRegistrar boot, real BallState + AgentState[] kickoff world state + buffers + MatchContext), 7 method-group phase callbacks driving the EventBus lifecycle + digest-load-bearing snapshot serialization. B2: Physics drives BallPhysicsCore + AgentMovementSystem.UpdateAllAgents (skips GKs). B3: full §2.6 AgentState/Ball field set incl. OscillationGuard. C2/C3: Resolve drives CollisionSystem.UpdateCollisions + the 22 pass + 22 shot executor lifecycles via the PassWorldAdapter/ShotWorldAdapter. C4: UpdateMatchContext authors MatchContext (possession state, home-perspective BallZone) at the end of Resolve. C5: SerializeWorldState adds the per-agent C0 executor capture + MatchContext (schema v2). D1: RunAiPhase drives a host-owned perception SpatialHashGrid + PerceptionSystem.OnHeartbeat ×22 → 22 per-agent DecisionTree.ReceiveSnapshot, dispatching MovementCommands into _commands (HostMovementController) / PASS-SHOOT into the executors; Stage-0 static AI input snapshots assembled at boot (InitializeAiSnapshots); DecisionTree EventBusRegistrar booted (DecisionMadeEvent Tier C, excluded from digest). D2a: RunAiPhase runs RunPositioningAI before the DT loop — one PositioningAITick + reused PositioningPerceptionSnapshot per team (seeded at boot from STAGE0_FORMATION), filled from world state and ticked, with GetFormationSlot folded back into each agent's TacticalContext (the DT MOVE_TO_POSITION / HOLD anchor); the away team is mapped through the canonical attack-+X frame and back via the self-inverse 180° MirrorPitchIfAway (ERR-008-002 guard). D3: RunResolvePhase calls RunFirstTouch after the executor Update (C3) and before UpdateMatchContext (C4) — a loose, ground-level, moving ball arriving within FIRST_TOUCH_ACCEPTANCE_RADIUS_M of the nearest APPROACHING agent triggers BuildFirstTouchContext (real PressureEvaluator pass over the opposing team via _opponentScratch + OrientationDetector half-turn flag; ERR-007 neutral touch attributes) → FirstTouchSystem.EvaluateFirstTouch/ApplyTouchResult through the FirstTouchWorldAdapter (IBallPhysicsSystem → _ball; IAgentMovementSystem → Stage-0 dribbling no-op); the outcome maps onto possession (CONTROLLED → toucher, INTERCEPTION → interceptor id (AGENT_ID_NONE at Stage 0 → loose), LOOSE_BALL/DEFLECTION → loose). Snapshot schema unchanged (FirstTouchSystem stateless). #21 T2 runtime activation: per-team `_active`/`_pendingTeamTactics` (default `TeamTactic.Balanced`); public `SetTeamTactic(teamId, in TeamTactic)` stages pending; RunAiPhase commits pending→active at the stride boundary (FR-TI-027); RunMechanicsAI overlays the active tactic's Mentality (→ #8 UtilityScorer risk mult) + translated Pressing/Passing (TacticTranslation) into each TacticalContext. Balanced = MEDIUM/MIXED/×1.0 = Stage0Default (behaviour-neutral; tactic arrays NOT serialized → no schema bump; mid-match change not yet restore-deterministic, ERR-021-002). TestOnly_Mentality/Pressing/Passing seams added. #13 Phase-D writer (v1.18): FillPressingSnapshot routes the pressing team's active TeamTactic.LineOfEngagement → PressingSnapshot.LineOfEngagement (overwriting the ctor Standard seed; PrimaryPressSelector scales its trigger radius by PressingAI.TacticTranslation; Balanced ⇒ Standard ⇒ ×1.0 byte-identical). TestOnly_PressLineOfEngagement seam added. |
+| `src/match-engine/TeamTacticConfig.cs` | #21 T2 in-code manager-tactic config source: immutable per-team TeamTactic (index = teamId 0 home / 1 away); `Default` = Balanced for every team (FR-TI-031 behaviour-neutral); ForTeam(teamId) with bounds guard. STAGE-0 SCOPE — the on-disk tactic file format is deferred (the [GT] config-loader FR-CS-019 is Stage 1; on-disk encodings are D1-pinned at Stage 0+1); per the #19 ScenarioIndex precedent the Stage 0+1 file loader is a pure parser swap producing this same type. No disk format invented here |
+| `src/match-engine/TeamTacticConfigApplier.cs` | #21 T2 boot applier: static Apply(engine, config) stages every team's tactic into MatchEngine.SetTeamTactic once per team before kickoff (committed at the first AI-stride boundary, FR-TI-027); null-guards both args; applying TeamTacticConfig.Default is behaviour-neutral. The boot-time seam the Stage 0+1 on-disk loader feeds (parses a file → TeamTacticConfig → Apply unchanged) |
 | `src/match-engine/tests/match-engine-tests.asmdef` | Test assembly definition (EditMode; references match-engine + deterministic-sim + event-system + ball-physics + agent-movement + pass-mechanics + shot-mechanics + decision-tree + positioning/pressing/defensive/attacking AI + perception-system + testing-strategy + performance-optimization (Phase F) + tactical-instructions (#21 T2)) |
 | `src/match-engine/tests/MatchEngineDeterminismTests.cs` | Phase A capstone: two same-seed runs → byte-identical snapshot digest chains; chain non-degenerate + advances; AI phase fires only on AI_PHASE_STRIDE ticks; first processed tick is 1 / first AI tick is stride |
 | `src/match-engine/tests/MatchEnginePhysicsTests.cs` | Phase B step B2 + Phase D D1: dropped-ball integration through the real loop; same-seed determinism with live ball + agent + AI dynamics; AiPhase_DrivesChain_GoalkeepersSkipped (D1 — the AI chain runs ×22/stride over a 2 s run without throwing and both goalkeepers stay byte-exact; supersedes the B2 injected-WalkTo test now that the AI owns _commands) |
@@ -671,6 +679,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-engine/tests/MatchEngineAwayTeamScenarios.cs` | Decision Tree #8 audit deferred away-team closed-loop scenario on the #19 ScenarioRunner (`away-team-tactic-mirror`, Tier B, owning specs {2,8,16,19,21}, cross-spec path): boots a real MatchEngine, sets home=defending / away=attacking, ticks 300× (5 s), and locks that every away agent carries the away (attacking) routed tactic, every home agent the home (defending) one, the partitions distinct (composition-level inverse of the ERR-008-002 home/away root cause), away agents in bounds, two-run determinism digest match |
 | `src/match-engine/tests/MatchEngineAwayTeamTests.cs` | Runs the away-team tactic-mirror scenario through ScenarioRunner.Run → Passed (DT #8 deferred away-team closed-loop follow-up, enabled by #21 runtime activation) |
 | `src/match-engine/tests/CertifiedPerfBaselineTests.cs` | v1.0 — locks the FR-PO-052 certified perf baseline for the kickoff scenario: Stage-0 corpus entry is PENDING (no metric, refuses to build a record — no fabricated certification); certified projection builds a complete BaselineRecord that self-compares through PerfGateRunner (0% → pass); fail-closed invariants (degenerate metrics, incomplete manifest, empty args); platform-pin tokens match the documented tuple |
+| `src/match-engine/tests/TeamTacticConfigTests.cs` | #21 T2 TeamTacticConfig + applier tests: Default Balanced-for-every-team, ForTeam per-team mapping + bounds throw, applier null-guards, Apply routes each team's tactic through SetTeamTactic at the stride boundary (Attacking/Defending translated per team), and applying the Default config is behaviour-neutral (digest chain identical to the unconfigured run) |
 
 ### `src/living-world/` — Living World System #22 T0 scaffolding (June 21, 2026; data types + pure math only — spec IN REVIEW)
 

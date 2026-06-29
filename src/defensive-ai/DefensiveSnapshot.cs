@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/DefensiveSnapshot.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-29
 // Author:   —
-// Spec:     Defensive AI #14 §2.3, §4.4, Code Standards #20
+// Spec:     Defensive AI #14 §2.3, §4.4, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022)
 // Purpose:  Full tick input container for DefensiveAITick. Populated once per tick by
 //           the match orchestrator from #7, #12, #13 state before Tick() is called.
 
@@ -79,6 +79,18 @@ namespace TacticalDirector.DefensiveAI
         public bool HasActivePrimaryPress;
 
         /// <summary>
+        /// #21 T2 routing field (FR-TI-022): the team's manager OffsideTrap toggle, routed through
+        /// <see cref="TacticTranslation.OffsideTrapRequested"/>. The class-field default is
+        /// <c>false</c> = the <c>TeamTactic.Balanced</c> identity (FR-TI-031). Per KD-9 this is a
+        /// <b>request, never a guarantee</b>: at Stage 0 the §3.7.2 autonomous cascade in
+        /// <see cref="OffsideTrapController"/> remains the sole adjudicator and does not yet read this
+        /// flag (gating today's autonomous arming behind a default-false toggle would not be
+        /// behaviour-neutral). The arming-gate consumption lands with the match-engine Phase-D writer
+        /// + activation pass; this field is the routing seam awaiting that wiring.
+        /// </summary>
+        public bool OffsideTrapRequested;
+
+        /// <summary>
         /// Constructs a snapshot with a pre-allocated agents array of the given capacity.
         /// </summary>
         public DefensiveSnapshot(int agentCapacity = DefensiveAIConstants.SQUAD_SIZE)
@@ -90,6 +102,8 @@ namespace TacticalDirector.DefensiveAI
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                            |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                          |
+// | 1.1     | 2026-06-29 | —      | #21 T2: + OffsideTrapRequested routing field (FR-TI-022); false   |
+// |         |            |        |   identity, arming-gate consumption deferred (KD-9, not neutral). |
 #endregion

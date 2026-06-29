@@ -1,8 +1,8 @@
 // File:     src/attacking-ai/AttackingSnapshot.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-29
 // Author:   —
-// Spec:     Attacking AI #15 §2.3, §3.13, Code Standards #20
+// Spec:     Attacking AI #15 §2.3, §3.13, Code Standards #20; Tactical Instructions #21 §3.3 (FR-TI-021)
 // Purpose:  Pre-allocated tick input container for one 10 Hz attacking-AI evaluation.
 //           Sealed class; Agents array is allocated once at construction (FR-AT-030 zero-alloc).
 
@@ -49,6 +49,16 @@ namespace TacticalDirector.AttackingAI
         public float TeamAttackAngle     { get; set; }
 
         /// <summary>
+        /// #21 T2 routing field (FR-TI-021): the team's manager <see cref="FocusPlay"/>, translated
+        /// through <see cref="TacticTranslation.PreferredFlank"/> into an overload flank bias. The
+        /// auto-property zero-value default is <see cref="FocusPlay.Mixed"/> (no lateral preference)
+        /// = the <c>TeamTactic.Balanced</c> identity (FR-TI-031), so a default snapshot is
+        /// behaviour-neutral. The active OverloadDetector consumption lands with the match-engine
+        /// Phase-D writer; this field is the routing seam awaiting that wiring.
+        /// </summary>
+        public TacticalDirector.TacticalInstructions.FocusPlay FocusPlay { get; set; }
+
+        /// <summary>
         /// Pre-allocated per-agent snapshot array. Capacity = SQUAD_SIZE.
         /// Orchestrator writes active agent data before each Tick() call.
         /// </summary>
@@ -63,6 +73,8 @@ namespace TacticalDirector.AttackingAI
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                            |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                          |
+// | 1.1     | 2026-06-29 | —      | #21 T2: + FocusPlay routing field (FR-TI-021); Mixed zero-value   |
+// |         |            |        |   identity, OverloadDetector consumption deferred to Phase-D.     |
 #endregion

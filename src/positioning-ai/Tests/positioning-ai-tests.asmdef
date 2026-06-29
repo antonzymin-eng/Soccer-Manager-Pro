@@ -2,7 +2,8 @@
     "name": "TacticalDirector.PositioningAI.Tests",
     "rootNamespace": "TacticalDirector.PositioningAI.Tests",
     "references": [
-        "TacticalDirector.PositioningAI"
+        "TacticalDirector.PositioningAI",
+        "TacticalDirector.TacticalInstructions"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
