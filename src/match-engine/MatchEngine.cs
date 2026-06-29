@@ -4,6 +4,7 @@
 // Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
 // Modified: 2026-06-29 (#21 T2 Defensive (#14) + Attacking (#15) Phase-D writers — route OffsideTrap / FocusPlay → snapshots)
 // Modified: 2026-06-29 (#21 T2 Positioning (#12) Phase-D writer — route TeamTactic.Width / DefensiveWidth → ContextModifierInputs; all three writers now closed)
+// Modified: 2026-06-29 (#21 §3.3 team-Tempo routing + ERR-021-002: SNAPSHOT_SCHEMA_VERSION 8 → 9, per-team active+pending TeamTactic serialized)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -150,9 +151,10 @@ namespace TacticalDirector.MatchEngine
         // only on stride ticks) — never mid-tick. Both default to TeamTactic.Balanced, which reproduces
         // Stage0Default exactly (Mentality.Balanced ⇒ risk ×1.0, Pressing.Medium → MEDIUM, Passing.Mixed
         // → MIXED; FR-TI-031), so a match left at the default is byte-identical to pre-#21 behaviour.
-        // NOT serialized at Stage 0 (ERR-021-002 — the TeamTactic.DefensiveLine snapshot field + schema
-        // bump is a deferred #16 back-prop): a tactic changed MID-match is not yet restore-deterministic,
-        // so Stage-0 callers set it before the first RunTick (static for the run, same across same-seed runs).
+        // BOTH arrays are serialized into the world-state snapshot at SNAPSHOT_SCHEMA_VERSION v9
+        // (ERR-021-002 resolved): the active tactic (read by the AI phase) and the pending tactic (staged
+        // by SetTeamTactic, committed at the next stride) are cross-tick state, so a tactic changed
+        // MID-match now survives save/restore — a mid-match change is restore-deterministic.
         private readonly TeamTactic[] _activeTeamTactics;   // [TEAM_COUNT]
         private readonly TeamTactic[] _pendingTeamTactics;  // [TEAM_COUNT]
 
@@ -506,9 +508,9 @@ namespace TacticalDirector.MatchEngine
         /// Sets a team's manager tactic (#21 §3.1/§3.2 — T2 runtime activation). The change is staged
         /// as <em>pending</em> and committed at the next tactical-stride boundary (FR-TI-027), so it never
         /// takes effect mid-tick. <paramref name="teamId"/> is 0 (home) or 1 (away).
-        /// Stage-0 note: the tactic is not yet part of the snapshot (ERR-021-002 deferred), so a change
-        /// made MID-match is not restore-deterministic — set it before the first <see cref="RunTick"/>
-        /// for a deterministic run. The default is <see cref="TeamTactic.Balanced"/> (behaviour-neutral).
+        /// The active and pending tactics are serialized into the snapshot (SNAPSHOT_SCHEMA_VERSION v9,
+        /// ERR-021-002), so a change made MID-match is restore-deterministic. The default is
+        /// <see cref="TeamTactic.Balanced"/> (behaviour-neutral).
         /// </summary>
         public void SetTeamTactic(int teamId, in TeamTactic tactic)
         {
@@ -1657,9 +1659,13 @@ namespace TacticalDirector.MatchEngine
             // Defensive (#14, v6), Attacking (#15, v7) — and the Perception (#7, v8) internal state
             // (RecognitionLatencyTracker / ShoulderCheckScheduler / ball-prev arrays) are all serialized
             // below via their CaptureState seams, alongside the per-agent DecisionTreeState (D4) and the
-            // C0/B0 executor + OscillationGuard state. The ONLY remaining un-serialized fields are the
-            // boot-deterministic constants (_attrs/_perfs, proven above) and the tick-derivable observation
-            // counters — no cross-tick gameplay state is excluded.
+            // C0/B0 executor + OscillationGuard state. v9 adds the per-team #21 manager tactic (active +
+            // pending), closing ERR-021-002 — a mid-match tactic change is now restore-deterministic. The
+            // ONLY remaining un-serialized fields are the boot-deterministic constants (_attrs/_perfs,
+            // proven above) and the tick-derivable observation counters — no cross-tick gameplay state is
+            // excluded. NOTE: the per-agent PlayerTactic / team Tempo carried in TacticalContext (#21 §3.3)
+            // are re-assembled each AI tick in RunMechanicsAI from the serialized team tactic + the boot
+            // identity (no per-agent tactic config exists at Stage 0), so they need no separate field.
             //
             // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but it is NOT
             // serialized directly because C4 folds it into MatchContext.PossessingAgentId (authored
@@ -1739,7 +1745,41 @@ namespace TacticalDirector.MatchEngine
             // cross-tick subsystem and there is no remaining excluded gameplay state.
             WritePerceptionTickState(buf, ref o, _perception.CaptureState());
 
+            // v9 (ERR-021-002 resolved) — the per-team manager tactic. Both the active tactic (what the AI
+            // phase reads) and the pending tactic (a SetTeamTactic staged but not yet committed at a stride
+            // boundary) are cross-tick state: a tactic changed MID-match now survives save/restore, so a
+            // mid-match change is restore-deterministic. Default Balanced is still byte-stable across two
+            // same-seed runs (both serialize the identical Balanced block every tick).
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                WriteTeamTactic(buf, ref o, in _activeTeamTactics[t]);
+                WriteTeamTactic(buf, ref o, in _pendingTeamTactics[t]);
+            }
+
             payload.BytesWritten = o;
+        }
+
+        /// <summary>Serializes a <see cref="TeamTactic"/> in canonical (Appendix B) field order. Enum
+        /// fields are written as i32 ordinals (ordinal stability is each enum's own APPEND-only contract);
+        /// the manager-input <c>DefensiveLine</c> dial as f32 and <c>TimeWasting</c> as u8.</summary>
+        private static void WriteTeamTactic(byte[] buf, ref int o, in TeamTactic t)
+        {
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Mentality);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Formation);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Tempo);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Width);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Passing);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Pressing);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.LineOfEngagement);
+            CanonicalSerializer.WriteF32(buf, ref o, t.DefensiveLine);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.DefensiveWidth);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.TransitionWon);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.TransitionLost);
+            CanonicalSerializer.WriteBool(buf, ref o, t.OffsideTrap);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.TriggerPressMask);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.FocusPlay);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.GkDistribution);
+            CanonicalSerializer.WriteU8 (buf, ref o, t.TimeWasting);
         }
 
         /// <summary>Serializes the full <see cref="BallState"/> field set in canonical order.
@@ -2689,4 +2729,14 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | TestOnly_PositioningWidth / _PositioningDefWidth seams. No      |
 // |         |            |        | schema bump (the modifier struct is a per-tick input). New test |
 // |         |            |        | cases. All three Mechanics Phase-D writers now closed.          |
+// | 1.21    | 2026-06-29 | —      | #21 §3.3: RunMechanicsAI routes the active team Tempo into the  |
+// |         |            |        | TacticalContext (per-option §3.3 utility product in UtilityScor-|
+// |         |            |        | er); per-agent PlayerTactic stays the Stage0Default identity.   |
+// |         |            |        | Balanced ⇒ Tempo.Standard ⇒ ×1.0 (behaviour-neutral).          |
+// | 1.22    | 2026-06-29 | —      | ERR-021-002 resolved: SNAPSHOT_SCHEMA_VERSION 8 → 9 — the per-  |
+// |         |            |        | team active + pending TeamTactic now serialized via WriteTeam-  |
+// |         |            |        | Tactic (Appendix B order). A mid-match tactic change is now     |
+// |         |            |        | restore-deterministic; SetTeamTactic / _activeTeamTactics docs  |
+// |         |            |        | + the cross-tick-coverage proof updated. New TeamTactic_Feeds-  |
+// |         |            |        | SnapshotDigest probe.                                           |
 #endregion

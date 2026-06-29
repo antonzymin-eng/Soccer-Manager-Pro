@@ -128,21 +128,21 @@ namespace TacticalDirector.MatchEngine
             TeamTactic d = TeamTactic.Balanced;
 
             var tactic = new TeamTactic(
-                mentality:        Enum(kv, "mentality",        d.Mentality),
-                formation:        Enum(kv, "formation",        d.Formation),
-                tempo:            Enum(kv, "tempo",            d.Tempo),
-                width:            Enum(kv, "width",            d.Width),
-                passing:          Enum(kv, "passing",          d.Passing),
-                pressing:         Enum(kv, "pressing",         d.Pressing),
-                lineOfEngagement: Enum(kv, "lineOfEngagement", d.LineOfEngagement),
+                mentality:        ParseEnum(kv, "mentality",        d.Mentality),
+                formation:        ParseEnum(kv, "formation",        d.Formation),
+                tempo:            ParseEnum(kv, "tempo",            d.Tempo),
+                width:            ParseEnum(kv, "width",            d.Width),
+                passing:          ParseEnum(kv, "passing",          d.Passing),
+                pressing:         ParseEnum(kv, "pressing",         d.Pressing),
+                lineOfEngagement: ParseEnum(kv, "lineOfEngagement", d.LineOfEngagement),
                 defensiveLine:    Float(kv, "defensiveLine",   d.DefensiveLine),
-                defensiveWidth:   Enum(kv, "defensiveWidth",   d.DefensiveWidth),
-                transitionWon:    Enum(kv, "transitionWon",    d.TransitionWon),
-                transitionLost:   Enum(kv, "transitionLost",   d.TransitionLost),
+                defensiveWidth:   ParseEnum(kv, "defensiveWidth",   d.DefensiveWidth),
+                transitionWon:    ParseEnum(kv, "transitionWon",    d.TransitionWon),
+                transitionLost:   ParseEnum(kv, "transitionLost",   d.TransitionLost),
                 offsideTrap:      Bool(kv, "offsideTrap",      d.OffsideTrap),
-                triggerPressMask: Enum(kv, "triggerPressMask", d.TriggerPressMask),
-                focusPlay:        Enum(kv, "focusPlay",        d.FocusPlay),
-                gkDistribution:   Enum(kv, "gkDistribution",   d.GkDistribution),
+                triggerPressMask: ParseEnum(kv, "triggerPressMask", d.TriggerPressMask),
+                focusPlay:        ParseEnum(kv, "focusPlay",        d.FocusPlay),
+                gkDistribution:   ParseEnum(kv, "gkDistribution",   d.GkDistribution),
                 timeWasting:      TimeWasting(kv, "timeWasting", d.TimeWasting));
 
             if (kv.Count > 0)
@@ -153,7 +153,7 @@ namespace TacticalDirector.MatchEngine
             return tactic;
         }
 
-        private static T Enum<T>(Dictionary<string, string> kv, string key, T fallback) where T : struct
+        private static T ParseEnum<T>(Dictionary<string, string> kv, string key, T fallback) where T : struct
         {
             if (!kv.TryGetValue(key, out string raw))
             {

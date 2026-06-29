@@ -43,9 +43,46 @@ namespace TacticalDirector.MatchEngine
         public void SchemaVersion_IsPinned()
         {
             // The pin must change deliberately (with a field-set or ordering change), never by drift.
-            // v6 Defensive, v7 Attacking, v8 Perception cross-tick state added to the serialized body.
-            Assert.AreEqual(8u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v6 Defensive, v7 Attacking, v8 Perception, v9 #21 per-team TeamTactic (active + pending).
+            Assert.AreEqual(9u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void TeamTactic_FeedsSnapshotDigest()
+        {
+            // Baseline: untouched kickoff state (both teams' tactic at the Balanced boot seed).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: a non-Balanced tactic staged for one team. The first processed tick is not an AI
+            // stride tick, so RunAiPhase does not commit pending → active — but the snapshot serializes the
+            // PENDING tactic too, so the staged change reaches the digest preimage immediately (v9). This is
+            // exactly what makes a mid-match SetTeamTactic restore-deterministic (ERR-021-002).
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.SetTeamTactic(0, new TacticalDirector.TacticalInstructions.TeamTactic(
+                TacticalDirector.TacticalInstructions.Mentality.VeryAttacking,
+                TacticalDirector.TacticalInstructions.TacticFormation.F442,
+                TacticalDirector.TacticalInstructions.Tempo.VeryFast,
+                TacticalDirector.TacticalInstructions.TacticWidth.VeryWide,
+                TacticalDirector.TacticalInstructions.TacticPassing.Direct,
+                TacticalDirector.TacticalInstructions.TacticPressing.High,
+                TacticalDirector.TacticalInstructions.LineOfEngagement.VeryHigh,
+                0.9f,
+                TacticalDirector.TacticalInstructions.TacticDefWidth.Wide,
+                TacticalDirector.TacticalInstructions.TransitionPlan.HoldShape,
+                TacticalDirector.TacticalInstructions.TransitionPlan.Regroup,
+                true,
+                TacticalDirector.TacticalInstructions.TacticTriggerMask.None,
+                TacticalDirector.TacticalInstructions.FocusPlay.LeftFlank,
+                TacticalDirector.TacticalInstructions.GkDistributionPolicy.SlowDown,
+                3));
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Staging a non-Balanced TeamTactic left the digest unchanged — the per-team tactic is not " +
+                "in the digest preimage (v9 / ERR-021-002 regression).");
         }
 
         [Test]
@@ -274,4 +311,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | AttackingState_FeedsSnapshotDigest probes (#14 / #15 cross-tick).   |
 // | 1.5     | 2026-06-27 | —      | Phase D D4 (final): schema pin 7 → 8; new PerceptionState_FeedsSnap-|
 // |         |            |        | shotDigest probe (#7 recognition-latency cross-tick state).         |
+// | 1.6     | 2026-06-29 | —      | #21 / ERR-021-002: schema pin 8 → 9; new TeamTactic_FeedsSnapshot-  |
+// |         |            |        | Digest probe (per-team active/pending manager tactic in the         |
+// |         |            |        | preimage — a mid-match change is restore-deterministic).            |
 #endregion
