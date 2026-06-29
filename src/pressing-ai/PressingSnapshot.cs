@@ -1,12 +1,14 @@
 // File:     src/pressing-ai/PressingSnapshot.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-28
 // Author:   —
-// Spec:     Pressing AI #13 §4.2, Code Standards #20
+// Spec:     Pressing AI #13 §4.2, Tactical Instructions #21 §3.4, Code Standards #20
 // Purpose:  Allocated-once-per-match input container for PressingAITick. The match
 //           orchestrator populates this struct before each 10 Hz tick.
 
 using UnityEngine;
+
+using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.PressingAI
 {
@@ -60,16 +62,30 @@ namespace TacticalDirector.PressingAI
         public readonly PressingAgentSnapshot[] Agents;
 
         /// <summary>
-        /// Allocates agent array with the standard squad capacity.
+        /// Team line of engagement (#21 FR-TI-017) → scales the #13 press-trigger radius via
+        /// <see cref="TacticTranslation.PressTriggerRadiusScalar"/>. Seeded to
+        /// <see cref="LineOfEngagement.Standard"/> (identity, ×1.0) so a snapshot the orchestrator
+        /// never sets is behaviour-neutral; the match-engine Phase-D writer overrides it from the
+        /// active <c>TeamTactic.LineOfEngagement</c>. NOTE: the zero-value default is VeryLow
+        /// (×0.80), NOT identity — the constructor seeds Standard for exactly this reason.
+        /// </summary>
+        public LineOfEngagement LineOfEngagement;
+
+        /// <summary>
+        /// Allocates agent array with the standard squad capacity and seeds the identity
+        /// line of engagement (<see cref="LineOfEngagement.Standard"/>).
         /// </summary>
         public PressingSnapshot()
         {
             Agents = new PressingAgentSnapshot[PressingAIConstants.SQUAD_SIZE];
+            LineOfEngagement = LineOfEngagement.Standard;
         }
     }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-05-29 | —      | Initial implementation.                                            |
+// | 1.1     | 2026-06-28 | —      | #21 T2 seam: LineOfEngagement routing field (ctor-seeded Standard  |
+// |         |            |        |   = identity; zero-value is VeryLow, hence the explicit seed).     |
 #endregion
