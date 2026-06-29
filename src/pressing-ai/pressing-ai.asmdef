@@ -1,7 +1,7 @@
 {
     "name": "TacticalDirector.PressingAI",
     "rootNamespace": "TacticalDirector.PressingAI",
-    "references": ["TacticalDirector.PositioningAI", "TacticalDirector.PassMechanics"],
+    "references": ["TacticalDirector.PositioningAI", "TacticalDirector.PassMechanics", "TacticalDirector.TacticalInstructions"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

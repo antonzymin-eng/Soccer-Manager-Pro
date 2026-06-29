@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
 // Modified: 2026-06-28 (Pressing #13 wiring AR — AttackingDirection inversion fix)
+// Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -676,6 +677,11 @@ namespace TacticalDirector.MatchEngine
         internal PressingMode TestOnly_Pressing(int agentId) => _tacticalContexts[agentId].Pressing;
         internal PassingStyle TestOnly_Passing(int agentId) => _tacticalContexts[agentId].Passing;
 
+        /// <summary>Test-only: the #21 line of engagement routed into team <paramref name="teamId"/>'s
+        /// Pressing AI (#13) snapshot at the last AI tick — lets the Phase-D writer test prove
+        /// SetTeamTactic reaches the press input and the Balanced default (Standard) is behaviour-neutral.</summary>
+        internal LineOfEngagement TestOnly_PressLineOfEngagement(int teamId) => _pressSnapshots[teamId].LineOfEngagement;
+
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
         /// CurrentSnapshotDigest after the most recent <see cref="RunTick"/>). Diagnostic /
@@ -895,8 +901,11 @@ namespace TacticalDirector.MatchEngine
                     // so the overlay is behaviour-neutral until a non-Balanced tactic is set (FR-TI-031).
                     TeamTactic tactic = _activeTeamTactics[t];
                     ctx.Mentality = tactic.Mentality;
-                    ctx.Pressing  = TacticTranslation.ToPressingMode(tactic.Pressing);
-                    ctx.Passing   = TacticTranslation.ToPassingStyle(tactic.Passing);
+                    // Fully qualified: TacticTranslation now exists in BOTH DecisionTree (#8) and
+                    // PressingAI (#13), and the match-engine references both, so the bare name is
+                    // ambiguous (CS0104). These two are the #8 enum maps specifically.
+                    ctx.Pressing  = TacticalDirector.DecisionTree.TacticTranslation.ToPressingMode(tactic.Pressing);
+                    ctx.Passing   = TacticalDirector.DecisionTree.TacticTranslation.ToPassingStyle(tactic.Passing);
 
                     // DefensiveLineDepth stays the #14 MarkDirective output (the depth authority at Stage 0);
                     // the §3.4 Clamp01(DefensiveLine + MentalityLineBias) recompute is deferred with the
@@ -987,6 +996,13 @@ namespace TacticalDirector.MatchEngine
             snap.AttackingDirection  = new Vector2(1f, 0f);
             snap.PossessionTeamId    = owner >= 0 ? _teamIds[owner] : MatchEngineConstants.NO_POSSESSION;
             snap.PressingTeamId      = team;
+
+            // #21 §3.4 / FR-TI-017 (T2 Phase-D writer): route this team's active tactic line of
+            // engagement into the Pressing AI (#13) input. PrimaryPressSelector scales its trigger
+            // radius by TacticTranslation.PressTriggerRadiusScalar(LineOfEngagement). Default Balanced
+            // ⇒ Standard ⇒ ×1.0, byte-identical to pre-#21 (the #13 analogue of the #8 RunMechanicsAI
+            // single-writer). The snapshot is per-tick assembled, so this overwrites the ctor seed.
+            snap.LineOfEngagement    = _activeTeamTactics[team].LineOfEngagement;
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
@@ -2573,4 +2589,20 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | trigger and the CoverShadow threat-progression term. Snapshot   |
 // |         |            |        | is in the pressing team's canonical attack-+X frame, so the     |
 // |         |            |        | field is the constant +X; dead CanonicalAttackDir helper removed|
+// | 1.17    | 2026-06-28 | —      | Build fix (CS0104): the #21 T2 Pressing AI (#13) seam added a   |
+// |         |            |        | second public TacticTranslation (in PressingAI), and the match- |
+// |         |            |        | engine references both PressingAI and DecisionTree, so the two  |
+// |         |            |        | bare TacticTranslation.ToPressingMode/ToPassingStyle calls in   |
+// |         |            |        | RunMechanicsAI became ambiguous. Fully qualified them to        |
+// |         |            |        | TacticalDirector.DecisionTree.TacticTranslation. No behaviour   |
+// |         |            |        | change.                                                         |
+// | 1.18    | 2026-06-29 | —      | #21 T2 Pressing AI (#13) Phase-D writer — the #13 analogue of   |
+// |         |            |        | the v1.16 #8 single-writer. FillPressingSnapshot now routes the |
+// |         |            |        | pressing team's active TeamTactic.LineOfEngagement into         |
+// |         |            |        | PressingSnapshot.LineOfEngagement (overwriting the ctor seed),  |
+// |         |            |        | which PrimaryPressSelector scales the trigger radius by via     |
+// |         |            |        | PressingAI.TacticTranslation.PressTriggerRadiusScalar. Default  |
+// |         |            |        | Balanced ⇒ Standard ⇒ ×1.0 = byte-identical to pre-#21. New     |
+// |         |            |        | TestOnly_PressLineOfEngagement seam. No schema bump (Pressing-  |
+// |         |            |        | Snapshot is a per-tick input). New MatchEngineTacticTests case. |
 #endregion
