@@ -3,7 +3,8 @@
     "rootNamespace": "TacticalDirector.AttackingAI",
     "references": [
         "TacticalDirector.PositioningAI",
-        "TacticalDirector.PressingAI"
+        "TacticalDirector.PressingAI",
+        "TacticalDirector.TacticalInstructions"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

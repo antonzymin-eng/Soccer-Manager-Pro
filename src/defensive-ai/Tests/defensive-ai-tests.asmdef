@@ -5,6 +5,7 @@
         "TacticalDirector.DefensiveAI",
         "TacticalDirector.PositioningAI",
         "TacticalDirector.PressingAI",
+        "TacticalDirector.TacticalInstructions",
         "TacticalDirector.AgentMovement",
         "TacticalDirector.PerceptionSystem",
         "UnityEngine.TestRunner",

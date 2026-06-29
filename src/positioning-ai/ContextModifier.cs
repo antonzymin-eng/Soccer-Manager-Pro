@@ -1,8 +1,8 @@
 // File: src/positioning-ai/ContextModifier.cs
 // Created:  2026-05-29
-// Modified: 2026-06-13
+// Modified: 2026-06-29
 // Author:   —
-// Spec: #12 Positioning AI §3.5
+// Spec: #12 Positioning AI §3.5; Tactical Instructions #21 §3.4 (FR-TI-016)
 // Purpose: Applies multiplicative compactness modifiers to base slots relative to the active centroid.
 
 using UnityEngine;
@@ -44,6 +44,16 @@ namespace TacticalDirector.PositioningAI
 
             float lateralScale  = PositioningAIConstants.BaseLateral[(int)phase]  / lateralGain;
             float verticalScale = PositioningAIConstants.BaseVertical[(int)phase] / verticalGain;
+
+            // #21 T2 (FR-TI-016): the manager width instruction widens/narrows the lateral
+            // spread. In-possession phases consume TacticWidth; OOP phases consume TacticDefWidth.
+            // Both Standard rows are scalar 1.00 (FR-TI-031), so a default tactic leaves lateralScale
+            // byte-identical to pre-#21 (1.00 is exact in IEEE-754). The match-engine Phase-D writer
+            // routes the live tactic onto modifiers.Width / modifiers.DefensiveWidth.
+            float widthScalar = (phase == Phase.InPoss || phase == Phase.TransToAtk)
+                ? TacticTranslation.WidthCompactnessScalar(modifiers.Width)
+                : TacticTranslation.DefWidthCompactnessScalar(modifiers.DefensiveWidth);
+            lateralScale *= widthScalar;
 
             for (int i = 0; i < snapshot.Agents.Length; i++)
             {
@@ -120,4 +130,6 @@ namespace TacticalDirector.PositioningAI
 // | 1.1     | 2026-06-13 | —      | ERR-012-003: §3.5.2 baseLateral/baseVertical[phase] double-counted (numerator AND compactness factor) |
 // |         |            |        | so the phase baseline cancelled to a no-op. Compactness helpers now hold dynamic gain products only;   |
 // |         |            |        | base[phase] survives as the §3.5.2 numerator. InPoss (base=1.00) result unchanged (T-U-015 preserved). |
+// | 1.2     | 2026-06-29 | —      | #21 T2 (FR-TI-016): lateralScale ×= phase-selected width scalar (TacticWidth in-poss /          |
+// |         |            |        | TacticDefWidth OOP) via TacticTranslation. Standard ⇒ ×1.00 exact ⇒ byte-identical to pre-#21. |
 #endregion

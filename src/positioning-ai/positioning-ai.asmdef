@@ -1,7 +1,9 @@
 {
     "name": "TacticalDirector.PositioningAI",
     "rootNamespace": "TacticalDirector.PositioningAI",
-    "references": [],
+    "references": [
+        "TacticalDirector.TacticalInstructions"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
