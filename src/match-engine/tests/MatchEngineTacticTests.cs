@@ -228,6 +228,122 @@ namespace TacticalDirector.MatchEngine
             Assert.Throws<System.ArgumentOutOfRangeException>(() => engine.SetTeamTactic(-1, Attacking()));
         }
 
+        // ── #21 §3.3 per-agent PlayerTactic config surface (SetPlayerTactic) ───
+
+        // Balanced in every dimension except Mentality + DefensiveLine (the §3.4 depth recompute axes).
+        private static TeamTactic WithMentalityAndLine(Mentality mentality, float defensiveLine) => new TeamTactic(
+            mentality, TacticFormation.F442, Tempo.Standard, TacticWidth.Standard,
+            TacticPassing.Mixed, TacticPressing.Medium, LineOfEngagement.Standard, defensiveLine,
+            TacticDefWidth.Standard, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
+            TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
+
+        private static PlayerTactic BoldPlayer() =>
+            new PlayerTactic(PlayerRole.Poacher, Duty.Attack, PlayerInstructions.Default);
+
+        [Test]
+        public void DefaultPlayerTactic_RoutesIdentity()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            TickToFirstStride(engine);
+
+            PlayerTactic t = engine.TestOnly_PlayerTactic(HomeAgent);
+            Assert.AreEqual(PlayerRole.Default, t.Role);
+            Assert.AreEqual(Duty.Support, t.Duty);
+        }
+
+        [Test]
+        public void SetPlayerTactic_RoutesPerAgent()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.SetPlayerTactic(HomeAgent, BoldPlayer());
+            TickToFirstStride(engine);
+
+            PlayerTactic home = engine.TestOnly_PlayerTactic(HomeAgent);
+            Assert.AreEqual(PlayerRole.Poacher, home.Role);
+            Assert.AreEqual(Duty.Attack, home.Duty);
+
+            // A different agent is untouched (still the identity).
+            Assert.AreEqual(PlayerRole.Default, engine.TestOnly_PlayerTactic(HomeAgent + 1).Role);
+        }
+
+        [Test]
+        public void SetPlayerTactic_TakesEffectOnlyAtStride()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.SetPlayerTactic(HomeAgent, BoldPlayer());
+
+            engine.RunTick(); // tick 1 — not a stride tick
+            Assert.IsFalse(engine.DidAiPhaseRunLastTick);
+            Assert.AreEqual(PlayerRole.Default, engine.TestOnly_PlayerTactic(HomeAgent).Role,
+                "A pending per-agent tactic must not apply before the stride boundary (FR-TI-027).");
+
+            for (ulong t = engine.CurrentTick + 1; t <= (ulong)Stride; t++)
+            {
+                engine.RunTick();
+            }
+            Assert.AreEqual(PlayerRole.Poacher, engine.TestOnly_PlayerTactic(HomeAgent).Role);
+        }
+
+        [Test]
+        public void SetPlayerTactic_InvalidAgent_Throws()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => engine.SetPlayerTactic(MatchEngineConstants.SQUAD_SIZE, BoldPlayer()));
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => engine.SetPlayerTactic(-1, BoldPlayer()));
+        }
+
+        [Test]
+        public void ExplicitIdentityPlayerTactic_IsBehaviourNeutral_DigestUnchanged()
+        {
+            const int ticks = 2 * 6 * 2;
+            PlayerTactic identity = PlayerTactic.Default(PlayerRole.Default);
+
+            List<byte[]> defaultChain = RunChain(ticks, configure: null);
+            List<byte[]> identityChain = RunChain(ticks, configure: e =>
+            {
+                for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+                {
+                    e.SetPlayerTactic(i, identity);
+                }
+            });
+
+            for (int i = 0; i < ticks; i++)
+            {
+                CollectionAssert.AreEqual(defaultChain[i], identityChain[i],
+                    $"Explicit identity PlayerTactic perturbed the digest at tick {i + 1} — not behaviour-neutral.");
+            }
+        }
+
+        // ── #21 §3.4 DefensiveLine depth recompute: Clamp01(DefensiveLine + MentalityLineBias) ──
+
+        [Test]
+        public void DefaultTactic_DefensiveLineDepthIsHalf()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            TickToFirstStride(engine);
+
+            // Balanced ⇒ Clamp01(0.5 + 0.0) = 0.5 = the prior STAGE0 default (behaviour-neutral).
+            Assert.AreEqual(0.5f, engine.TestOnly_DefensiveLineDepth(HomeAgent));
+        }
+
+        [Test]
+        public void DefensiveLineDepth_RecomputedFromDialPlusMentalityBias()
+        {
+            // Cautious (line bias −0.05) + dial 0.50 ⇒ Clamp01(0.45) = 0.45.
+            var deeper = new MatchEngine(MatchSeed);
+            deeper.SetTeamTactic(0, WithMentalityAndLine(Mentality.Cautious, 0.50f));
+            TickToFirstStride(deeper);
+            Assert.AreEqual(0.45f, deeper.TestOnly_DefensiveLineDepth(HomeAgent), 1e-5f);
+
+            // VeryAttacking (line bias +0.20) + dial 0.90 ⇒ Clamp01(1.10) = 1.0 (the Clamp01 ceiling).
+            var higher = new MatchEngine(MatchSeed);
+            higher.SetTeamTactic(0, WithMentalityAndLine(Mentality.VeryAttacking, 0.90f));
+            TickToFirstStride(higher);
+            Assert.AreEqual(1.0f, higher.TestOnly_DefensiveLineDepth(HomeAgent), 1e-5f);
+        }
+
         // ── FR-TI-027: a pending change does not take effect before the stride boundary ──
 
         [Test]
@@ -319,4 +435,6 @@ namespace TacticalDirector.MatchEngine
 // | 1.1     | 2026-06-29 | —      | #13 Phase-D writer: LineOfEngagement per-team routing + Standard-default cases. |
 // | 1.2     | 2026-06-29 | —      | #14/#15 Phase-D writers: OffsideTrap + FocusPlay per-team routing + identity defaults. |
 // | 1.3     | 2026-06-29 | —      | #12 Phase-D writer: Width / DefensiveWidth per-team routing + Standard-default cases. |
+// | 1.4     | 2026-06-30 | —      | #21 §3.3 per-agent PlayerTactic config (SetPlayerTactic routing / stride-gating / |
+// |         |            |        | invalid-agent / identity behaviour-neutrality) + §3.4 DefensiveLine depth recompute. |
 #endregion

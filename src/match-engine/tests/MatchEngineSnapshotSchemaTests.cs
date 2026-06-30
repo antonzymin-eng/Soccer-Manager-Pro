@@ -43,8 +43,9 @@ namespace TacticalDirector.MatchEngine
         public void SchemaVersion_IsPinned()
         {
             // The pin must change deliberately (with a field-set or ordering change), never by drift.
-            // v6 Defensive, v7 Attacking, v8 Perception, v9 #21 per-team TeamTactic (active + pending).
-            Assert.AreEqual(9u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v6 Defensive, v7 Attacking, v8 Perception, v9 #21 per-team TeamTactic, v10 #21 per-agent
+            // PlayerTactic (active + pending).
+            Assert.AreEqual(10u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
         }
 
@@ -83,6 +84,30 @@ namespace TacticalDirector.MatchEngine
                 baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
                 "Staging a non-Balanced TeamTactic left the digest unchanged — the per-team tactic is not " +
                 "in the digest preimage (v9 / ERR-021-002 regression).");
+        }
+
+        [Test]
+        public void PlayerTactic_FeedsSnapshotDigest()
+        {
+            // Baseline: untouched kickoff state (every agent's per-agent tactic at the identity boot seed).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: a non-identity per-agent tactic staged for one agent. The first processed tick is
+            // not an AI stride tick, so RunAiPhase does not commit pending → active — but the snapshot
+            // serializes the PENDING per-agent tactic too (v10), so the staged change reaches the digest
+            // preimage immediately. This is what makes a mid-match SetPlayerTactic restore-deterministic.
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.SetPlayerTactic(OutfieldIndex, new TacticalDirector.TacticalInstructions.PlayerTactic(
+                TacticalDirector.TacticalInstructions.PlayerRole.Poacher,
+                TacticalDirector.TacticalInstructions.Duty.Attack,
+                TacticalDirector.TacticalInstructions.PlayerInstructions.Default));
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Staging a non-identity PlayerTactic left the digest unchanged — the per-agent tactic is " +
+                "not in the digest preimage (v10).");
         }
 
         [Test]
@@ -314,4 +339,6 @@ namespace TacticalDirector.MatchEngine
 // | 1.6     | 2026-06-29 | —      | #21 / ERR-021-002: schema pin 8 → 9; new TeamTactic_FeedsSnapshot-  |
 // |         |            |        | Digest probe (per-team active/pending manager tactic in the         |
 // |         |            |        | preimage — a mid-match change is restore-deterministic).            |
+// | 1.7     | 2026-06-30 | —      | #21 §3.3: schema pin 9 → 10; new PlayerTactic_FeedsSnapshotDigest   |
+// |         |            |        | probe (per-agent active/pending tactic in the preimage).            |
 #endregion

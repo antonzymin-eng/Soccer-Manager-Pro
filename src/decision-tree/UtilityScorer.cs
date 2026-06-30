@@ -60,7 +60,7 @@ namespace TacticalDirector.DecisionTree
             // every scored option BEFORE the clamp. The Stage 0 / no-instruction defaults (PlayerRole.
             // Default / Duty.Support / every InstrBias.Default at Tempo.Standard) resolve to exactly ×1.0
             // (FR-TI-031), so this is byte-identical to today's behaviour until the Phase-D writer routes a
-            // live per-agent PlayerTactic / team Tempo. Magnitudes are illustrative pending §5.6 / G2.
+            // live per-agent PlayerTactic / team Tempo. Magnitudes are the §5.6 / G2-pinned defaults.
             u *= TacticTranslation.PlayerTacticActionMultiplier(
                 ctx.TacticalContext.PlayerTactic, ctx.TacticalContext.Tempo, opt.Type);
 
@@ -359,4 +359,5 @@ namespace TacticalDirector.DecisionTree
 // | 1.6     | 2026-06-29 | —      | #21 §3.3: per-option × PlayerTacticActionMultiplier (per-agent role/duty/instr |
 // |         |            |        | × team tempo product) before the clamp. Identity PlayerTactic + Tempo.Standard |
 // |         |            |        | ⇒ ×1.0 (FR-TI-031), behaviour-neutral. Magnitudes illustrative (G2).           |
+// | 1.7     | 2026-06-30 | —      | #21 §5.6 / G2 balance pass: doc reframed illustrative → pinned (no code change).|
 #endregion

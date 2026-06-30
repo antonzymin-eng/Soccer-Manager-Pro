@@ -2,19 +2,34 @@
 // Created:  2026-06-21
 // Modified: 2026-06-21
 // Author:   —
-// Spec:     Tactical Instructions #21 Appendix A, §3.2–§3.4, Code Standards #20
-// Purpose:  Single constant catalogue for the Tactical Instructions layer. All [GT]
-//           magnitudes are illustrative pending the §5.6 (G2) balance pass — the
-//           SHAPES (directions, identity rows) are the normative reviewable contract.
-//           No magic numbers live in any other file in this assembly (FR-CS-016).
+// Spec:     Tactical Instructions #21 Appendix A, §3.2–§3.4, §5.6, Code Standards #20
+// Modified: 2026-06-30 (§5.6 / G2 balance pass — [GT] magnitudes pinned)
+// Purpose:  Single constant catalogue for the Tactical Instructions layer. The [GT]
+//           magnitudes are the §5.6 (G2) balance-pass-PINNED Stage-1 defaults (June 30, 2026);
+//           the identity rows are exact 1.0 / 0.0 so a default tactic reproduces today's
+//           behaviour (FR-TI-031). No magic numbers live elsewhere in this assembly (FR-CS-016).
 
 namespace TacticalDirector.TacticalInstructions
 {
     /// <summary>
     /// Constant catalogue for #21 (Appendix A). Region order Fixed → Derived → GT (FR-TI-010).
-    /// All multiplier/scalar/table values are [GT] illustrative defaults; magnitudes are pinned at
-    /// the T2 balance pass (§5.6 / G2). The identity rows (index that maps to "no instruction") are
-    /// exact 1.0 / 0.0 so a default tactic reproduces today's behaviour (FR-TI-031).
+    /// The multiplier/scalar/table values are the §5.6 / G2 balance-pass-PINNED Stage-1 defaults
+    /// (pinned June 30, 2026). The identity rows (index that maps to "no instruction") are exact
+    /// 1.0 / 0.0 so a default tactic reproduces today's behaviour (FR-TI-031).
+    ///
+    /// BALANCE PASS (§5.6 / G2) — pinned June 30, 2026. The pinned values satisfy the numerical-mirror
+    /// invariants the balance review checked, and <c>BalancePassInvariantsTests</c> locks them:
+    ///   • every identity row is EXACT (Mentality.Balanced ⇒ 1.0/0.0; InstrBias.Default ⇒ 1.0;
+    ///     Tempo.Standard / TacticWidth.Standard / … / PlayerRole.Default rows ⇒ 1.0; Duty.Support ⇒ 0.0),
+    ///     so a default tactic is byte-identical to pre-#21 (FR-TI-031);
+    ///   • the Mentality risk/line and width/line-of-engagement tables are STRICTLY MONOTONIC in their
+    ///     dial direction (bolder ⇒ higher risk + higher line; wider ⇒ higher compactness scalar), so the
+    ///     7-/5-/3-step gradation is not collapsed (the §3.2 "gradation carrier" requirement);
+    ///   • every RoleWeightModifiers cell ∈ [0.5, 2.0] (T-TI-U-029) with the §3.3 directional shapes
+    ///     (Poacher SHOOT↑/HOLD↓; DeepLyingPlaymaker PASS↑/DRIBBLE↓; BallWinningMid PRESS+INTERCEPT↑).
+    /// The shapes/directions remain the normative reviewable contract; the magnitudes are now committed
+    /// (no longer "illustrative"). The Stage-1 [GT] config-loader (FR-CS-019) may still surface these as
+    /// tunables, but the in-code defaults are the pinned values below.
     ///
     /// COLUMN ORDER for the per-ActionType tables (<see cref="TempoActionBias"/>,
     /// <see cref="RoleWeightModifiers"/>): the column index is the #8 <c>ActionType</c> ordinal —
@@ -145,4 +160,9 @@ namespace TacticalDirector.TacticalInstructions
 #region VersionHistory
 // | Version | Date       | Author | Notes                              |
 // | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).   |
+// | 1.1     | 2026-06-30 | —      | §5.6 / G2 balance pass: [GT] magnitudes PINNED (values unchanged — |
+// |         |            |        |   already spec-aligned + monotonic). Header/class doc reframed     |
+// |         |            |        |   illustrative → pinned; numerical-mirror invariants documented    |
+// |         |            |        |   (identity-row exactness, strict monotonicity, [0.5,2.0] role     |
+// |         |            |        |   bounds). Locked by BalancePassInvariantsTests.                   |
 #endregion
