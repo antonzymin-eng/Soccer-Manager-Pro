@@ -86,9 +86,14 @@ One scenario per consumer once its match-engine phase composes: e.g. `sim_high_m
   the invariant locks). The numerical-mirror invariants — exact identity rows, strict monotonicity of
   the risk/line/width/engagement tables, `RoleWeightModifiers` ∈ [0.5, 2.0] with the §3.3 directional
   shapes — are asserted by `BalancePassInvariantsTests`. The shapes/directions remain the normative
-  contract; magnitudes are now committed rather than illustrative. (The #14 `OffsideTrapRequestedDwell-
-  Ticks` / #15 `OverloadFocusCountBias` activation magnitudes are tracked separately under their own
-  consumers.)
+  contract; magnitudes are now committed rather than illustrative. The #14 `OffsideTrapRequestedDwell-
+  Ticks` / #15 `OverloadFocusCountBias` activation magnitudes — which live in their own consumers'
+  catalogues, not in `TacticalInstructionsConstants.cs` — have had the same numerical-mirror treatment
+  and are **pinned** (2026-06-30): `OffsideTrapRequestedDwellTicks` at 1 with the invariant
+  `1 ≤ value ≤ OffsideTrapDwellTicks` (FR-TI-022 / KD-9, locked by
+  `OffsideTrapControllerTests.RequestedDwell_InvariantPinned`); `OverloadFocusCountBias` at 1 with the
+  invariant `1 ≤ bias ≤ OverloadCount − 2` so the biased preferred-flank trigger stays a genuine
+  numerical overload (FR-TI-021, locked by `AttackingAIConstantsTests.OverloadFocusCountBias_InvariantPinned`).
 
 ## 5.7 FR → test traceability
 

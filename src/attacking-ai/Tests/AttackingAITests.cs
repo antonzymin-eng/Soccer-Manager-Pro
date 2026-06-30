@@ -75,6 +75,25 @@ namespace TacticalDirector.AttackingAI.Tests
             Assert.AreEqual(0, AttackingAIConstants.TransitionHoldTicksCounter,
                 "COUNTER_ATTACK profile must have TRANSITION_HOLD_TICKS = 0 (§6.1.5 / FR-AT-009).");
         }
+
+        /// <summary>
+        /// #21 §5.6 / G2 balance-pass lock for the FocusPlay overload bias (FR-TI-021).
+        /// Pins the numerical-mirror invariant: 1 ≤ bias ≤ OverloadCount − 2, so the biased
+        /// preferred-flank trigger (OverloadCount − bias) stays ≥ 2 — a genuine numerical
+        /// overload, never a trivial 1-agent declaration. A future edit that zeroes the bias
+        /// (no effect) or over-reduces it (trivial trigger) fails the gate.
+        /// </summary>
+        [Test]
+        public void OverloadFocusCountBias_InvariantPinned()
+        {
+            Assert.GreaterOrEqual(AttackingAIConstants.OverloadFocusCountBias, 1,
+                "bias must be ≥ 1 to make the FocusPlay preference bite (FR-TI-021).");
+            Assert.LessOrEqual(AttackingAIConstants.OverloadFocusCountBias,
+                AttackingAIConstants.OverloadCount - 2,
+                "biased preferred-flank trigger (OverloadCount − bias) must stay ≥ 2 — a genuine overload.");
+            Assert.AreEqual(1, AttackingAIConstants.OverloadFocusCountBias,
+                "pinned magnitude: with OverloadCount = 3 the invariant band admits only 1 (§5.6 / G2).");
+        }
     }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -1855,4 +1874,6 @@ namespace TacticalDirector.AttackingAI.Tests
 //           |            |        | at EOF. AR-4 H-1: added T-AT-U-050 (ERR-015-009 role-lock regression).               |
 // | 1.3     | 2026-06-15 | —      | AR-5: added T-AT-U-051 (ERR-015-010 — AttackIntentSnapshot.Intents bounded to valid |
 //           |            |        | count) and the T-AT-I-013 stub (ERR-015-011 — loose-ball empty-directive guard).     |
+// | 1.4     | 2026-06-30 | —      | #21 §5.6 / G2: OverloadFocusCountBias_InvariantPinned locks the pinned bias magnitude |
+// |         |            |        | + invariant (1 ≤ bias ≤ OverloadCount − 2) (FR-TI-021).                              |
 #endregion
