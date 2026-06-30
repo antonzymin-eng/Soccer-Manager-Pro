@@ -27,9 +27,15 @@
 src/
 ├── CLAUDE.md                          ← You are here
 │
-├── project-constants/
-│   ├── project-constants.asmdef       ← one assembly per folder (FR-CS-055)
-│   └── ProjectConstants.cs            ← source-of-truth for constants consumed by more than one spec assembly (Spec #20 §4.2)
+├── project-constants/                 ← infrastructure; read-only by all (bottom of the reference graph)
+│   ├── project-constants.asmdef       ← one assembly per folder (FR-CS-055); references: [] (autoReferenced)
+│   ├── GameplayConfig.cs              ← FR-CS-019: immutable boot-time [GT] key/value store (GetFloat/Int/Bool/String + fallback; fail-loud on malformed)
+│   ├── GameplayConfigFileLoader.cs    ← FR-CS-019: on-disk [section] key = value text → GameplayConfig (parser swap; fail-loud)
+│   ├── (ProjectConstants.cs)          ← source-of-truth for multi-consumer constants (Spec #20 §4.2) — not yet needed; add when a multi-consumer [CROSS] constant exists
+│   └── tests/
+│       ├── project-constants-tests.asmdef
+│       ├── GameplayConfigTests.cs            ← getter / fallback / fail-loud / case-insensitive / ctor-guard locks
+│       └── GameplayConfigFileLoaderTests.cs  ← grammar round-trip + empty→Empty + fail-loud cases
 │
 ├── ball-physics/                      ← Spec #1
 │   ├── ball-physics.asmdef            ← references TacticalDirector.DeterministicSim; autoReferenced true
@@ -757,7 +763,35 @@ public static readonly float TerminalVelocity =
     Mathf.Sqrt(BallPhysicsConstants.GRAVITY / BallPhysicsConstants.DRAG_COEFFICIENT);
 ```
 
-**`[GT]` loading mechanism:** The exact class and method for loading `[GT]` constants from tunable config at boot (FR-CS-019) is a Stage 1 deliverable — no class named `ConfigLoader` exists in any approved spec. Until the mechanism is defined and documented in this file, use the constant's design-time default directly and mark it with `// TODO: replace with config loader`:
+**`[GT]` loading mechanism (FR-CS-019):** The loader landed June 30, 2026 as
+`TacticalDirector.ProjectConstants.GameplayConfig` + `GameplayConfigFileLoader`
+(`src/project-constants/`). `GameplayConfigFileLoader.Parse(text)` reads the on-disk
+text format — line-oriented case-insensitive `key = value` pairs under `[section]`
+headers (the section is the owning catalogue, conventionally its spec folder name),
+`#` comments, blank lines ignored — into an immutable `GameplayConfig`. A catalogue
+reads each constant at boot via `GetFloat/GetInt/GetBool/GetString(section, key, fallback)`:
+
+```csharp
+#region GT
+/// <summary>[GT] Maximum physics substeps per frame. Config key [ball-physics] MaxSubsteps. Code Standards #20 §3.2.3.</summary>
+public static readonly int MaxSubsteps = Config.GetInt("ball-physics", "MaxSubsteps", 8);
+```
+
+Contract: an **absent** key returns the supplied design-time fallback, so an empty/partial
+config file leaves every constant at today's baseline (behaviour-neutral); a **present** key
+whose value does not parse to the requested type throws `FormatException` (a config typo fails
+loud at boot). `GameplayConfig` is immutable and **constructor-injected** (never a static mutable
+singleton — stays clear of FR-CS-051..054); getters run once at boot, never on the 60 Hz path. The
+text grammar is a human-authoring format, NOT a determinism-pinned wire format — only the loaded
+values feed the sim, so a future binary/richer grammar is a pure parser swap leaving the catalogues
+untouched (the #19 `ScenarioIndex` / #21 `TeamTacticFileLoader` precedent).
+
+**Migration status:** the 520 existing `[GT] public const` declarations are NOT yet rewired —
+each still carries `// TODO: replace with config loader (Stage 1)` and stays a literal until its
+catalogue is migrated (a separate, mechanical per-assembly follow-up). The remaining design point
+is how each catalogue obtains the injected `GameplayConfig` instance for its `static readonly`
+initializers (a boot-sequencing concern — the loader itself is done). Until a catalogue is migrated,
+keep the literal + TODO:
 
 ```csharp
 #region GT
@@ -1056,7 +1090,7 @@ These items are deferred pending Unity project setup and platform pinning:
 | Unity batch-mode CI commands | Unity project initialization |
 | `.editorconfig` path and contents | Stage 1 setup |
 | C# language version pin | `certification-platform.md` pinned |
-| `[GT]` config loader class / method | Stage 1 setup — define in this file when resolved; update all `// TODO: replace with config loader` constants |
+| `[GT]` config loader class / method | **Mechanism landed June 30, 2026** — `TacticalDirector.ProjectConstants.GameplayConfig` + `GameplayConfigFileLoader` (`src/project-constants/`); see the "`[GT]` loading mechanism (FR-CS-019)" section above. **Still pending:** migrating the 520 existing `[GT] public const` declarations to read from an injected `GameplayConfig` (per-assembly mechanical follow-up + the boot-sequencing design point) — the `// TODO: replace with config loader` markers stay until each catalogue is migrated. |
 | Project math helper class name / assembly | Stage 1 setup — update determinism table when defined |
 | `src/tactical-instructions/` seams into #8/#11–#15 (Spec #21 T2–T3) | **T0 landed June 21, 2026** — the `TacticalDirector.TacticalInstructions` assembly (16 enums + `TeamTactic`/`PlayerTactic`/`PlayerInstructions` + identity factories + catalogue + ordinal/identity tests) is in the tree above, behaviour-neutral. **T2 Decision Tree (#8) seam landed June 28, 2026** (behaviour-neutral): `decision-tree/TacticTranslation.cs` (rank-mapped TacticPressing/TacticPassing → #8 enums + §3.1 F5 clamp + §3.2 Mentality risk/line resolvers), a `Mentality` routing field on `TacticalContext` (`Stage0Default` seeds Balanced = identity), and the §3.2/§3.3 Mentality risk multiplier in `UtilityScorer.ComputeUtility` (×1.0 at Balanced). `decision-tree(.Tests).asmdef` gain the `TacticalInstructions` ref. **Runtime activation (Phase-D single-writer for #8) landed June 28, 2026** (behaviour-neutral): `MatchEngine` holds a per-team `TeamTactic` (default `Balanced`), exposes `public SetTeamTactic(teamId, tactic)` (stages pending; committed pending→active at the AI-stride boundary per FR-TI-027), and `RunMechanicsAI` overlays the active tactic's `Mentality` + translated `Pressing`/`Passing` into each `TacticalContext`. `TacticTranslation` promoted internal→public (the match-engine is its §3.1 caller). `match-engine(.Tests).asmdef` gain the `TacticalInstructions` ref; `MatchEngineTacticTests.cs` added. **T2 Pressing AI (#13) consumer seam landed June 28, 2026** (behaviour-neutral): `pressing-ai/TacticTranslation.cs` maps `LineOfEngagement` → a multiplicative scalar on the #13 press-trigger radius (`PressTriggerDistanceM`) via `LineOfEngagementScalar` (direct ordinal lookup + §3.1 F5 clamp; Standard ⇒ ×1.0), a `LineOfEngagement` routing field on `PressingSnapshot` (ctor-seeded `Standard` = identity; zero-value default is `VeryLow`), and `PrimaryPressSelector.Select` scaling its eligibility radius by that scalar (×1.0 at Standard = byte-identical). `pressing-ai(.Tests).asmdef` gain the `TacticalInstructions` ref; `Tests/TacticTranslationTests.cs` added. **The #13 match-engine Phase-D writer landed June 29, 2026** (MatchEngine.cs v1.18, behaviour-neutral): `FillPressingSnapshot` routes the pressing team's active `TeamTactic.LineOfEngagement` → `PressingSnapshot.LineOfEngagement` (default Balanced ⇒ Standard ⇒ ×1.0; new `TestOnly_PressLineOfEngagement` seam; `MatchEngineTacticTests.cs` v1.1). **The #12/#14/#15 consumer seams landed June 29, 2026** (behaviour-neutral): each gains `<assembly>/TacticTranslation.cs` + a snapshot routing field seeded to identity — #12 `TacticWidth`/`TacticDefWidth` → lateral-compactness scalar on `ContextModifierInputs`, fully wired into `ContextModifier.ApplyToAll` (Standard ⇒ ×1.00 exact); #14 `OffsideTrap` → `DefensiveSnapshot.OffsideTrapRequested` (false identity, arming-gate consumption deferred — KD-9 request-not-guarantee, gating today's autonomous trap behind a default-false toggle is not neutral); #15 `FocusPlay` → `AttackingSnapshot.FocusPlay` (Mixed zero-value identity, `OverloadDetector` flank-preference consumption deferred). **The #14/#15 match-engine Phase-D writers landed June 29, 2026** (MatchEngine.cs v1.19, behaviour-neutral): `FillDefensiveSnapshot` routes `TeamTactic.OffsideTrap` → `DefensiveSnapshot.OffsideTrapRequested` via fully-qualified `DefensiveAI.TacticTranslation` (CS0104 — five `TacticTranslation` types in match-engine scope per the #13 v1.17 lesson); `FillAttackingSnapshot` routes `TeamTactic.FocusPlay` → `AttackingSnapshot.FocusPlay` (enum passthrough). Default Balanced ⇒ false / Mixed = identities, byte-identical to pre-#21. Active consumption still deferred (#14 `OffsideTrapController` per KD-9; #15 `OverloadDetector` per §5.6/G2). New `TestOnly_OffsideTrapRequested`/`TestOnly_FocusPlay` seams; `MatchEngineTacticTests.cs` v1.2. **The #12 match-engine Phase-D writer landed June 29, 2026** (MatchEngine.cs v1.20, behaviour-neutral) — the last of the three Mechanics writers: `RunMechanicsAI` builds `ContextModifierInputs` via the 5-arg ctor, routing the active `TeamTactic.Width`/`DefensiveWidth` (translated by `ContextModifier` to the in-poss / OOP lateral-compactness scalar). Default Balanced ⇒ Standard/Standard ⇒ ×1.00 = byte-identical (5-arg both-Standard ≡ 3-arg identity ctor). Per-team `_posModifiers` captured for the new `TestOnly_PositioningWidth`/`TestOnly_PositioningDefWidth` seams; `MatchEngineTacticTests.cs` v1.3. **All three Mechanics Phase-D writers (#12/#13/#14/#15) are now closed.** **Active #14/#15 consumption landed June 29, 2026** (behaviour-neutral on default): #14 `OffsideTrapController.Update` consumes `OffsideTrapRequested` as the KD-9 additive request (requested ⇒ arms after reduced `[GT] OffsideTrapRequestedDwellTicks` ≤ baseline; the §3.7.2 conditions still adjudicate; false ⇒ baseline); #15 `OverloadDetector` gains a 5-arg `Evaluate(…, Flank? preferredFlank, …)` (4-arg delegates null) using `FocusPlay`→`Flank?` as a bias (preferred ball-side flank lowers the trigger count by `[GT] OverloadFocusCountBias`; null/non-ball-side ⇒ unchanged); `AttackingAITick` threads it. Both `[GT]` magnitudes illustrative pending §5.6/G2. **The TeamTactic config-loader in-code source + boot applier landed June 29, 2026** (the runtime-activation gate that populates `SetTeamTactic`): `match-engine/TeamTacticConfig.cs` (immutable per-team `TeamTactic`, index = teamId; `Default` = Balanced-for-every-team identity, FR-TI-031; `ForTeam` bounds-guarded) + `match-engine/TeamTacticConfigApplier.cs` (static `Apply(engine, config)` stages each team via the public `SetTeamTactic` before kickoff — committed at the first stride per FR-TI-027). Per the #19 `ScenarioIndex` D1 precedent the **on-disk file format is deferred** (the FR-CS-019 `[GT]` loader is Stage 1; encodings D1-pinned at Stage 0+1) — the Stage 0+1 disk loader is a pure parser swap producing a `TeamTacticConfig` and feeding `Apply` unchanged; no format invented, no production `MatchEngine.cs` change. `match-engine/tests/TeamTacticConfigTests.cs` added. **The §3.3 per-agent PlayerTactic utility product seam landed June 29, 2026** (v1.80): `decision-tree/TacticTranslation.PlayerTacticActionMultiplier` composes `RoleWeightModifiers`×dutyBias×instrBias×`TempoActionBias`; `TacticalContext` gains `Tempo` + `PlayerTactic` routing fields (Stage0Default identity-seeded); `UtilityScorer` applies it per option (identity ⇒ ×1.0). `RunMechanicsAI` routes the active team `Tempo`; the per-agent `PlayerTactic` stays the Stage-0 identity (no per-agent config surface). **The on-disk tactic-file loader landed June 29, 2026** (v1.81): `TeamTacticFileLoader.Parse(text) → TeamTacticConfig` (Stage-0 `key=value` text format; empty ⇒ Default ⇒ neutral; fail-loud). **ERR-021-002 resolved June 29, 2026** (v1.82): per-team active+pending `TeamTactic` serialized into the snapshot, `SNAPSHOT_SCHEMA_VERSION` 8 → 9 — a mid-match change is now restore-deterministic. Still pending (Stage-1): the **per-agent tactic config surface** (all agents are the identity `PlayerTactic` at Stage 0) + the **§5.6/G2 balance pass** pinning the illustrative `[GT]` magnitudes; the §3.4 `DefensiveLine` depth recompute (#12/#14 depth-ownership) remains separately deferred. The #21 assembly's own asmdef `references` array is empty until `project-constants` exists (FR-TI-002 — T0 consumes nothing from it). |
 | MonoBehaviour / PlayerLoop integration pattern | Unity project initialization — how Unity's lifecycle loop calls into struct-based game systems; until defined, system entry points are pure C# instance methods named `Update`, `Tick`, or similar |

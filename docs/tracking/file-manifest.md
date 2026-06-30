@@ -685,6 +685,19 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-engine/tests/CertifiedPerfBaselineTests.cs` | v1.0 — locks the FR-PO-052 certified perf baseline for the kickoff scenario: Stage-0 corpus entry is PENDING (no metric, refuses to build a record — no fabricated certification); certified projection builds a complete BaselineRecord that self-compares through PerfGateRunner (0% → pass); fail-closed invariants (degenerate metrics, incomplete manifest, empty args); platform-pin tokens match the documented tuple |
 | `src/match-engine/tests/TeamTacticConfigTests.cs` | #21 T2 TeamTacticConfig + applier tests: Default Balanced-for-every-team, ForTeam per-team mapping + bounds throw, applier null-guards, Apply routes each team's tactic through SetTeamTactic at the stride boundary (Attacking/Defending translated per team), and applying the Default config is behaviour-neutral (digest chain identical to the unconfigured run) |
 
+### `src/project-constants/` — Project Constants & `[GT]` config loader (FR-CS-019, June 30, 2026)
+
+> Infrastructure assembly at the bottom of the reference graph (read-only by all; `references: []`, `autoReferenced`). The documented home for the `[GT]` config-loading mechanism and (when one exists) multi-consumer `[CROSS]` constants. The mechanism landed June 30, 2026; the per-catalogue migration of the 520 existing `[GT] public const` literals is a separate per-assembly follow-up.
+
+| File | Purpose |
+|---|---|
+| `src/project-constants/project-constants.asmdef` | Assembly definition `TacticalDirector.ProjectConstants`; `references: []`; `autoReferenced` |
+| `src/project-constants/GameplayConfig.cs` | FR-CS-019 immutable boot-time `[GT]` key/value store keyed `[section] key`; `GetFloat/GetInt/GetBool/GetString(section, key, fallback)` — absent ⇒ fallback (behaviour-neutral), present-but-malformed ⇒ `FormatException`; immutable + constructor-injected (not a static singleton); boot-time only |
+| `src/project-constants/GameplayConfigFileLoader.cs` | FR-CS-019 `Parse(text) → GameplayConfig` over `[section]` `key = value` + `#` comments; `null`/empty ⇒ `Empty`; key-before-section / empty key / duplicate `section.key` / malformed header / no-`=` line all throw `FormatException`; parser-swap seam (grammar not determinism-pinned) |
+| `src/project-constants/tests/project-constants-tests.asmdef` | Test assembly definition (EditMode; references project-constants) |
+| `src/project-constants/tests/GameplayConfigTests.cs` | Getter / fallback / fail-loud / case-insensitive / ctor-guard locks |
+| `src/project-constants/tests/GameplayConfigFileLoaderTests.cs` | Grammar round-trip + comments/blanks + empty→Empty + every fail-loud case |
+
 ### `src/living-world/` — Living World System #22 T0 scaffolding (June 21, 2026; data types + pure math only — spec IN REVIEW)
 
 > Self-contained T0: no references (the spec's vol-2/vol-3 human-systems + project-constants upstreams do not exist in `src/` yet; engine-free, `noEngineReferences`). Services (WorldLoop/ArcEngine/text-gen/background-tier/cold-store) land as KD-10 prerequisites are wired.
