@@ -9,6 +9,8 @@
 //           the identity rows are exact 1.0 / 0.0 so a default tactic reproduces today's
 //           behaviour (FR-TI-031). No magic numbers live elsewhere in this assembly (FR-CS-016).
 
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
+
 namespace TacticalDirector.TacticalInstructions
 {
     /// <summary>

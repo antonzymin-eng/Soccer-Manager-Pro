@@ -7,6 +7,8 @@
 //           No magic literals permitted in any formula or system file.
 //           Region order: Fixed → Derived → Cross → GT.
 
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
+
 namespace TacticalDirector.DeterministicSim
 {
     /// <summary>
@@ -245,14 +247,14 @@ namespace TacticalDirector.DeterministicSim
 
         /// <summary>[GT] Maximum number of DespawnLog entries per match (pre-allocated). §3.2.3.
         /// Sized at 512 = 2 × 22 agents × 11.6 average lifetime minutes; ample headroom for Stage 0.</summary>
-        public static readonly int MaxDespawnEntries = 512; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxDespawnEntries = Config.GetInt("deterministic-sim", "MaxDespawnEntries", 512);
 
         /// <summary>[GT] Maximum number of concurrent RNG streams registered per match. §3.2.5.</summary>
-        public static readonly int MaxRngStreams = 64; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxRngStreams = Config.GetInt("deterministic-sim", "MaxRngStreams", 64);
 
         /// <summary>[GT] Maximum size in bytes of the in-memory snapshot ring buffer slot. §3.9.2.
         /// Conservatively sized; actual serialized size depends on authoritative state surface.</summary>
-        public static readonly int MaxSnapshotBytes = 65536; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxSnapshotBytes = Config.GetInt("deterministic-sim", "MaxSnapshotBytes", 65536);
 
         #endregion
     }

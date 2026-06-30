@@ -6,6 +6,8 @@
 // Purpose:  All tunable and physical constants for ball physics simulation.
 //           No magic numbers anywhere else in the ball-physics assembly.
 
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
+
 namespace TacticalDirector.BallPhysics
 {
     /// <summary>
@@ -61,10 +63,10 @@ namespace TacticalDirector.BallPhysics
         public static class Drag
         {
             /// <summary>[GT] Drag coefficient for laminar flow (Re &lt; 200,000). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float CoefficientLaminar = 0.20f; // TODO: replace with config loader (Stage 1)
+            public static readonly float CoefficientLaminar = Config.GetFloat("ball-physics", "Drag.CoefficientLaminar", 0.20f);
 
             /// <summary>[GT] Drag coefficient in turbulent flow (Re &gt; 400,000). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float CoefficientTurbulent = 0.10f; // TODO: replace with config loader (Stage 1)
+            public static readonly float CoefficientTurbulent = Config.GetFloat("ball-physics", "Drag.CoefficientTurbulent", 0.10f);
 
             /// <summary>[EST] Speed at which drag crisis begins (m/s). Ball Physics #1 §3.1.2.</summary>
             public static readonly float CrisisSpeedLow = 20.0f;
@@ -76,35 +78,35 @@ namespace TacticalDirector.BallPhysics
         public static class Magnus
         {
             /// <summary>[GT] Base lift coefficient. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float LiftCoefficientBase = 0.1f; // TODO: replace with config loader (Stage 1)
+            public static readonly float LiftCoefficientBase = Config.GetFloat("ball-physics", "Magnus.LiftCoefficientBase", 0.1f);
 
             /// <summary>[GT] Lift coefficient scaling factor. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float LiftCoefficientScale = 0.4f; // TODO: replace with config loader (Stage 1)
+            public static readonly float LiftCoefficientScale = Config.GetFloat("ball-physics", "Magnus.LiftCoefficientScale", 0.4f);
 
             /// <summary>[GT] Minimum spin parameter for valid calculation. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float MinSpinParameter = 0.01f; // TODO: replace with config loader (Stage 1)
+            public static readonly float MinSpinParameter = Config.GetFloat("ball-physics", "Magnus.MinSpinParameter", 0.01f);
 
             /// <summary>[GT] Maximum spin parameter (clamped). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float MaxSpinParameter = 1.0f; // TODO: replace with config loader (Stage 1)
+            public static readonly float MaxSpinParameter = Config.GetFloat("ball-physics", "Magnus.MaxSpinParameter", 1.0f);
 
             /// <summary>
             /// [GT] Squared-magnitude threshold below which the ω̂ × v̂ cross product is
             /// treated as degenerate (spin near-parallel to velocity) and Magnus force is
             /// zeroed. Ball Physics #1 §3.1.5.
             /// </summary>
-            public static readonly float MinForceDirectionSqMagnitude = 0.0001f; // TODO: replace with config loader (Stage 1)
+            public static readonly float MinForceDirectionSqMagnitude = Config.GetFloat("ball-physics", "Magnus.MinForceDirectionSqMagnitude", 0.0001f);
         }
 
         public static class Spin
         {
             /// <summary>[GT] Velocity-dependent spin decay coefficient (s/m). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float DecayVelocityFactor = 0.01f; // TODO: replace with config loader (Stage 1)
+            public static readonly float DecayVelocityFactor = Config.GetFloat("ball-physics", "Spin.DecayVelocityFactor", 0.01f);
 
             /// <summary>[GT] Spin-rate-dependent decay coefficient (1/rad). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float DecaySpinFactor = 0.005f; // TODO: replace with config loader (Stage 1)
+            public static readonly float DecaySpinFactor = Config.GetFloat("ball-physics", "Spin.DecaySpinFactor", 0.005f);
 
             /// <summary>[GT] Aerodynamic torque coefficient. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float TorqueCoefficient = 0.01f; // TODO: replace with config loader (Stage 1)
+            public static readonly float TorqueCoefficient = Config.GetFloat("ball-physics", "Spin.TorqueCoefficient", 0.01f);
 
             /// <summary>
             /// [EST] Rate at which spin decays during rolling (rad/s per second). Ball Physics #1 §3.1.2.
@@ -137,104 +139,104 @@ namespace TacticalDirector.BallPhysics
             /// [GT] Minimum contact-point slip speed (m/s) for the bounce friction impulse to
             /// apply; below this the contact is treated as non-sliding. Ball Physics #1 §3.1.8.
             /// </summary>
-            public static readonly float MinContactSpeed = 0.01f; // TODO: replace with config loader (Stage 1)
+            public static readonly float MinContactSpeed = Config.GetFloat("ball-physics", "Bounce.MinContactSpeed", 0.01f);
         }
 
         public static class Rolling
         {
             /// <summary>[GT] Rolling resistance for dry grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ResistanceGrassDry = 0.13f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ResistanceGrassDry = Config.GetFloat("ball-physics", "Rolling.ResistanceGrassDry", 0.13f);
 
             /// <summary>[GT] Rolling resistance for wet grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ResistanceGrassWet = 0.07f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ResistanceGrassWet = Config.GetFloat("ball-physics", "Rolling.ResistanceGrassWet", 0.07f);
 
             /// <summary>[GT] Rolling resistance for long grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ResistanceGrassLong = 0.22f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ResistanceGrassLong = Config.GetFloat("ball-physics", "Rolling.ResistanceGrassLong", 0.22f);
 
             /// <summary>[GT] Rolling resistance for artificial turf. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ResistanceArtificial = 0.09f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ResistanceArtificial = Config.GetFloat("ball-physics", "Rolling.ResistanceArtificial", 0.09f);
 
             /// <summary>[GT] Rolling resistance for frozen pitch. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ResistanceFrozen = 0.04f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ResistanceFrozen = Config.GetFloat("ball-physics", "Rolling.ResistanceFrozen", 0.04f);
         }
 
         public static class SurfaceCoR
         {
             /// <summary>[GT] Coefficient of restitution — dry grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float GrassDry = 0.65f; // TODO: replace with config loader (Stage 1)
+            public static readonly float GrassDry = Config.GetFloat("ball-physics", "SurfaceCoR.GrassDry", 0.65f);
 
             /// <summary>[GT] Coefficient of restitution — wet grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float GrassWet = 0.70f; // TODO: replace with config loader (Stage 1)
+            public static readonly float GrassWet = Config.GetFloat("ball-physics", "SurfaceCoR.GrassWet", 0.70f);
 
             /// <summary>[GT] Coefficient of restitution — long grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float GrassLong = 0.55f; // TODO: replace with config loader (Stage 1)
+            public static readonly float GrassLong = Config.GetFloat("ball-physics", "SurfaceCoR.GrassLong", 0.55f);
 
             /// <summary>[GT] Coefficient of restitution — artificial turf. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float Artificial = 0.72f; // TODO: replace with config loader (Stage 1)
+            public static readonly float Artificial = Config.GetFloat("ball-physics", "SurfaceCoR.Artificial", 0.72f);
 
             /// <summary>[GT] Coefficient of restitution — frozen pitch. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float Frozen = 0.80f; // TODO: replace with config loader (Stage 1)
+            public static readonly float Frozen = Config.GetFloat("ball-physics", "SurfaceCoR.Frozen", 0.80f);
         }
 
         public static class SurfaceFriction
         {
             /// <summary>[GT] Tangential friction coefficient — dry grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float GrassDry = 0.60f; // TODO: replace with config loader (Stage 1)
+            public static readonly float GrassDry = Config.GetFloat("ball-physics", "SurfaceFriction.GrassDry", 0.60f);
 
             /// <summary>[GT] Tangential friction coefficient — wet grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float GrassWet = 0.40f; // TODO: replace with config loader (Stage 1)
+            public static readonly float GrassWet = Config.GetFloat("ball-physics", "SurfaceFriction.GrassWet", 0.40f);
 
             /// <summary>[GT] Tangential friction coefficient — long grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float GrassLong = 0.70f; // TODO: replace with config loader (Stage 1)
+            public static readonly float GrassLong = Config.GetFloat("ball-physics", "SurfaceFriction.GrassLong", 0.70f);
 
             /// <summary>[GT] Tangential friction coefficient — artificial turf. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float Artificial = 0.55f; // TODO: replace with config loader (Stage 1)
+            public static readonly float Artificial = Config.GetFloat("ball-physics", "SurfaceFriction.Artificial", 0.55f);
 
             /// <summary>[GT] Tangential friction coefficient — frozen pitch. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float Frozen = 0.20f; // TODO: replace with config loader (Stage 1)
+            public static readonly float Frozen = Config.GetFloat("ball-physics", "SurfaceFriction.Frozen", 0.20f);
         }
 
         public static class SurfaceSpinRetention
         {
             /// <summary>[GT] Spin retention multiplier after ground contact — dry grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float GrassDry = 0.80f; // TODO: replace with config loader (Stage 1)
+            public static readonly float GrassDry = Config.GetFloat("ball-physics", "SurfaceSpinRetention.GrassDry", 0.80f);
 
             /// <summary>[GT] Spin retention multiplier after ground contact — wet grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float GrassWet = 0.85f; // TODO: replace with config loader (Stage 1)
+            public static readonly float GrassWet = Config.GetFloat("ball-physics", "SurfaceSpinRetention.GrassWet", 0.85f);
 
             /// <summary>[GT] Spin retention multiplier after ground contact — long grass. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float GrassLong = 0.70f; // TODO: replace with config loader (Stage 1)
+            public static readonly float GrassLong = Config.GetFloat("ball-physics", "SurfaceSpinRetention.GrassLong", 0.70f);
 
             /// <summary>[GT] Spin retention multiplier after ground contact — artificial turf. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float Artificial = 0.75f; // TODO: replace with config loader (Stage 1)
+            public static readonly float Artificial = Config.GetFloat("ball-physics", "SurfaceSpinRetention.Artificial", 0.75f);
 
             /// <summary>[GT] Spin retention multiplier after ground contact — frozen pitch. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float Frozen = 0.90f; // TODO: replace with config loader (Stage 1)
+            public static readonly float Frozen = Config.GetFloat("ball-physics", "SurfaceSpinRetention.Frozen", 0.90f);
         }
 
         public static class State
         {
             /// <summary>[GT] Minimum velocity before ball considered stationary (m/s). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float MinVelocity = 0.1f; // TODO: replace with config loader (Stage 1)
+            public static readonly float MinVelocity = Config.GetFloat("ball-physics", "State.MinVelocity", 0.1f);
 
             /// <summary>[GT] Minimum spin before considered zero (rad/s). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float MinSpin = 0.1f; // TODO: replace with config loader (Stage 1)
+            public static readonly float MinSpin = Config.GetFloat("ball-physics", "State.MinSpin", 0.1f);
 
             /// <summary>
             /// [GT] Height threshold to ENTER airborne state (m). Ball Physics #1 §3.1.2.
             /// Position.z is ball CENTER. At rest: z = RADIUS (0.11 m). 0.17 m means centre is 6 cm above resting position.
             /// </summary>
-            public static readonly float AirborneEnterThreshold = 0.17f; // TODO: replace with config loader (Stage 1)
+            public static readonly float AirborneEnterThreshold = Config.GetFloat("ball-physics", "State.AirborneEnterThreshold", 0.17f);
 
             /// <summary>
             /// [GT] Height threshold to EXIT airborne state (m). Ball Physics #1 §3.1.2.
             /// Hysteresis: exit threshold lower than enter to prevent oscillation.
             /// At 0.13 m, ball centre is 2 cm above resting position.
             /// </summary>
-            public static readonly float AirborneExitThreshold = 0.13f; // TODO: replace with config loader (Stage 1)
+            public static readonly float AirborneExitThreshold = Config.GetFloat("ball-physics", "State.AirborneExitThreshold", 0.13f);
 
             /// <summary>[GT] Vertical velocity after bounce to stay airborne (m/s). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float BounceVelocityThreshold = 0.5f; // TODO: replace with config loader (Stage 1)
+            public static readonly float BounceVelocityThreshold = Config.GetFloat("ball-physics", "State.BounceVelocityThreshold", 0.5f);
         }
 
         public static class Limits
@@ -249,19 +251,19 @@ namespace TacticalDirector.BallPhysics
             public static readonly float MaxHeight = 50.0f;
 
             /// <summary>[GT] Buffer zone beyond pitch boundaries (m). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float PitchBuffer = 20.0f; // TODO: replace with config loader (Stage 1)
+            public static readonly float PitchBuffer = Config.GetFloat("ball-physics", "Limits.PitchBuffer", 20.0f);
         }
 
         public static class Possession
         {
             /// <summary>[GT] Max distance for possession (m). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ControlRadius = 0.5f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ControlRadius = Config.GetFloat("ball-physics", "Possession.ControlRadius", 0.5f);
 
             /// <summary>[GT] Max relative ball speed for control (m/s). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ControlVelocity = 2.0f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ControlVelocity = Config.GetFloat("ball-physics", "Possession.ControlVelocity", 2.0f);
 
             /// <summary>[GT] Min opponent distance for uncontested control (m). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ChallengeRadius = 1.0f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ChallengeRadius = Config.GetFloat("ball-physics", "Possession.ChallengeRadius", 1.0f);
 
             /// <summary>
             /// [GT] Max ball height for ground control (m). Ball Physics #1 §3.1.2 / §3.1.11.
@@ -271,7 +273,7 @@ namespace TacticalDirector.BallPhysics
             /// the First Touch §3.4.3 aerial-ball routing guard cannot silently drift from the
             /// Ball Physics §3.1.11 possession height gate. Tune here only.
             /// </summary>
-            public static readonly float ControlHeight = 0.5f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ControlHeight = Config.GetFloat("ball-physics", "Possession.ControlHeight", 0.5f);
         }
 
         public static class Pitch
@@ -295,58 +297,58 @@ namespace TacticalDirector.BallPhysics
         public static class GoalPost
         {
             /// <summary>[GT] Coefficient of restitution (aluminium/steel). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float CoefficientOfRestitution = 0.75f; // TODO: replace with config loader (Stage 1)
+            public static readonly float CoefficientOfRestitution = Config.GetFloat("ball-physics", "GoalPost.CoefficientOfRestitution", 0.75f);
 
             /// <summary>[GT] Spin retention on metal surface. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float SpinRetention = 0.40f; // TODO: replace with config loader (Stage 1)
+            public static readonly float SpinRetention = Config.GetFloat("ball-physics", "GoalPost.SpinRetention", 0.40f);
         }
 
         public static class Rendering
         {
             /// <summary>[GT] Shadow offset per metre of height. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ShadowOffsetFactor = 0.3f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ShadowOffsetFactor = Config.GetFloat("ball-physics", "Rendering.ShadowOffsetFactor", 0.3f);
 
             /// <summary>[GT] Ball scale increase per metre of height. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float HeightScaleFactor = 0.02f; // TODO: replace with config loader (Stage 1)
+            public static readonly float HeightScaleFactor = Config.GetFloat("ball-physics", "Rendering.HeightScaleFactor", 0.02f);
         }
 
         public static class BodyPartRetention
         {
             /// <summary>[GT] Foot speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float FootSpeed  = 0.75f; // TODO: replace with config loader (Stage 1)
+            public static readonly float FootSpeed = Config.GetFloat("ball-physics", "BodyPartRetention.FootSpeed", 0.75f);
             /// <summary>[GT] Foot spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float FootSpin   = 0.30f; // TODO: replace with config loader (Stage 1)
+            public static readonly float FootSpin = Config.GetFloat("ball-physics", "BodyPartRetention.FootSpin", 0.30f);
 
             /// <summary>[GT] Shin speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ShinSpeed  = 0.65f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ShinSpeed = Config.GetFloat("ball-physics", "BodyPartRetention.ShinSpeed", 0.65f);
             /// <summary>[GT] Shin spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ShinSpin   = 0.20f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ShinSpin = Config.GetFloat("ball-physics", "BodyPartRetention.ShinSpin", 0.20f);
 
             /// <summary>[GT] Thigh speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ThighSpeed = 0.60f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ThighSpeed = Config.GetFloat("ball-physics", "BodyPartRetention.ThighSpeed", 0.60f);
             /// <summary>[GT] Thigh spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ThighSpin  = 0.40f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ThighSpin = Config.GetFloat("ball-physics", "BodyPartRetention.ThighSpin", 0.40f);
 
             /// <summary>[GT] Torso speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float TorsoSpeed = 0.55f; // TODO: replace with config loader (Stage 1)
+            public static readonly float TorsoSpeed = Config.GetFloat("ball-physics", "BodyPartRetention.TorsoSpeed", 0.55f);
             /// <summary>[GT] Torso spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float TorsoSpin  = 0.50f; // TODO: replace with config loader (Stage 1)
+            public static readonly float TorsoSpin = Config.GetFloat("ball-physics", "BodyPartRetention.TorsoSpin", 0.50f);
 
             /// <summary>[GT] Head speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float HeadSpeed  = 0.70f; // TODO: replace with config loader (Stage 1)
+            public static readonly float HeadSpeed = Config.GetFloat("ball-physics", "BodyPartRetention.HeadSpeed", 0.70f);
             /// <summary>[GT] Head spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float HeadSpin   = 0.10f; // TODO: replace with config loader (Stage 1)
+            public static readonly float HeadSpin = Config.GetFloat("ball-physics", "BodyPartRetention.HeadSpin", 0.10f);
 
             /// <summary>[GT] Arm speed-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ArmSpeed   = 0.50f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ArmSpeed = Config.GetFloat("ball-physics", "BodyPartRetention.ArmSpeed", 0.50f);
             /// <summary>[GT] Arm spin-retention factor on deflection. Ball Physics #1 §3.1.2.</summary>
-            public static readonly float ArmSpin    = 0.30f; // TODO: replace with config loader (Stage 1)
+            public static readonly float ArmSpin = Config.GetFloat("ball-physics", "BodyPartRetention.ArmSpin", 0.30f);
         }
 
         public static class Logging
         {
             /// <summary>[GT] Interval between position snapshots (seconds). Ball Physics #1 §3.1.2.</summary>
-            public static readonly float SnapshotInterval = 1.0f; // TODO: replace with config loader (Stage 1)
+            public static readonly float SnapshotInterval = Config.GetFloat("ball-physics", "Logging.SnapshotInterval", 1.0f);
         }
     }
 }

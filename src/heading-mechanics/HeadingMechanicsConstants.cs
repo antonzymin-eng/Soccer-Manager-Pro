@@ -16,6 +16,7 @@
 using UnityEngine;
 
 using TacticalDirector.BallPhysics;
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.HeadingMechanics
 {
@@ -174,16 +175,16 @@ namespace TacticalDirector.HeadingMechanics
         // ── §3.2 Eligibility ──────────────────────────────────────────────────────────
 
         /// <summary>[GT] Effective radius (m) of the sphere around head centre that admits ball contact. §3.1 / §3.2.</summary>
-        public static readonly float HeadContactVolumeRadiusM = 0.18f; // TODO: replace with config loader (Stage 1)
+        public static readonly float HeadContactVolumeRadiusM = Config.GetFloat("heading-mechanics", "HeadContactVolumeRadiusM", 0.18f);
 
         /// <summary>[GT] Vertical half-extent (m) of the contact volume. §3.1 / §3.2.</summary>
-        public static readonly float HeadContactVolumeHeightM = 0.22f; // TODO: replace with config loader (Stage 1)
+        public static readonly float HeadContactVolumeHeightM = Config.GetFloat("heading-mechanics", "HeadContactVolumeHeightM", 0.22f);
 
         /// <summary>[GT] Earliest allowable signed timing offset (ms). Distinct from MaxLateToleranceMs per FR-HE-022 / pass-1 H-1. §3.1.</summary>
-        public static readonly float MaxEarlyToleranceMs = 140.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MaxEarlyToleranceMs = Config.GetFloat("heading-mechanics", "MaxEarlyToleranceMs", 140.0f);
 
         /// <summary>[GT] Latest allowable signed timing offset (ms). Numerically smaller than MaxEarlyToleranceMs — late headers degrade faster. FR-HE-022 / pass-1 H-1. §3.1.</summary>
-        public static readonly float MaxLateToleranceMs = 90.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MaxLateToleranceMs = Config.GetFloat("heading-mechanics", "MaxLateToleranceMs", 90.0f);
 
         // [DERIVED] — placed here (after MaxEarlyToleranceMs/MaxLateToleranceMs) because C# static-field
         // initialisation is declaration-order dependent and these depend on GT values above and on FrameMs [Derived].
@@ -210,122 +211,122 @@ namespace TacticalDirector.HeadingMechanics
         // ── §3.3 Jump Kinematics ─────────────────────────────────────────────────────
 
         /// <summary>[GT] Sensitivity of JumpReach to Strength_norm (m). §3.1 / §3.3.</summary>
-        public static readonly float JumpReachKStrength = 0.18f; // TODO: replace with config loader (Stage 1)
+        public static readonly float JumpReachKStrength = Config.GetFloat("heading-mechanics", "JumpReachKStrength", 0.18f);
 
         /// <summary>[GT] Sensitivity of JumpReach to Balance_norm (m). §3.1 / §3.3.</summary>
-        public static readonly float JumpReachKBalance = 0.10f; // TODO: replace with config loader (Stage 1)
+        public static readonly float JumpReachKBalance = Config.GetFloat("heading-mechanics", "JumpReachKBalance", 0.10f);
 
         /// <summary>[GT] Sensitivity of JumpReach to Heading_norm (m). Covers jump-timing skill until §7.10. FR-HE-021 / pass-1 H-2. §3.1.</summary>
-        public static readonly float JumpReachKHeading = 0.12f; // TODO: replace with config loader (Stage 1)
+        public static readonly float JumpReachKHeading = Config.GetFloat("heading-mechanics", "JumpReachKHeading", 0.12f);
 
         /// <summary>[GT] Total ground-to-ground aerial phase duration (ms) for the Stage 0 synthetic trajectory. KD-18. §3.1.</summary>
-        public static readonly float JumpPhaseDurationMs = 650.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float JumpPhaseDurationMs = Config.GetFloat("heading-mechanics", "JumpPhaseDurationMs", 650.0f);
 
         /// <summary>[GT] Apex location as a fraction of JumpPhaseDurationMs. [GT] not [FIXED]: trajectory is synthetic (KD-18 footnote). §3.1.</summary>
-        public static readonly float JumpApexFraction = 0.50f; // TODO: replace with config loader (Stage 1)
+        public static readonly float JumpApexFraction = Config.GetFloat("heading-mechanics", "JumpApexFraction", 0.50f);
 
         // ── §3.4 Contact Quality ─────────────────────────────────────────────────────
 
         /// <summary>[GT] Telemetry-bucket early boundary (ms). NOT a formula gate (KD-2). §3.1.</summary>
-        public static readonly float EarlyLabelThresholdMs = 40.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float EarlyLabelThresholdMs = Config.GetFloat("heading-mechanics", "EarlyLabelThresholdMs", 40.0f);
 
         /// <summary>[GT] Telemetry-bucket late boundary (ms). NOT a formula gate (KD-2). §3.1.</summary>
-        public static readonly float LateLabelThresholdMs = 40.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float LateLabelThresholdMs = Config.GetFloat("heading-mechanics", "LateLabelThresholdMs", 40.0f);
 
         /// <summary>[GT] Alpha weight on timingQuality in the §3.4 convex combination. §3.1.</summary>
-        public static readonly float TimingPointBlendAlpha = 0.55f; // TODO: replace with config loader (Stage 1)
+        public static readonly float TimingPointBlendAlpha = Config.GetFloat("heading-mechanics", "TimingPointBlendAlpha", 0.55f);
 
         /// <summary>[GT] Baseline denominator for pointQuality; mean point-error scale (m). §3.1.</summary>
-        public static readonly float ContactPointErrorSigmaM = 0.03f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ContactPointErrorSigmaM = Config.GetFloat("heading-mechanics", "ContactPointErrorSigmaM", 0.03f);
 
         /// <summary>[GT] Amplitude of per-attempt point-error Gaussian noise via DRAW_SITE_CONTACT_POINT_ERROR (m). pass-1 M-4. §3.1.</summary>
-        public static readonly float ContactPointNoiseSigmaM = 0.012f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ContactPointNoiseSigmaM = Config.GetFloat("heading-mechanics", "ContactPointNoiseSigmaM", 0.012f);
 
         /// <summary>[GT] Amplitude of per-attempt timing-noise Gaussian via DRAW_SITE_TIMING_JITTER (ms). pass-1 M-4. §3.1.</summary>
-        public static readonly float TimingJitterSigmaMs = 8.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float TimingJitterSigmaMs = Config.GetFloat("heading-mechanics", "TimingJitterSigmaMs", 8.0f);
 
         /// <summary>[GT] Heading-attribute scaling coefficient for contact point error. §3.1 / §3.4.</summary>
-        public static readonly float ContactPointHeadingAttrCoeff = 0.40f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ContactPointHeadingAttrCoeff = Config.GetFloat("heading-mechanics", "ContactPointHeadingAttrCoeff", 0.40f);
 
         // ── §3.5 Power & Launch Angle ────────────────────────────────────────────────
 
         /// <summary>[GT] Baseline header outgoing speed (m/s). §3.1.</summary>
-        public static readonly float PowerBaseMps = 7.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PowerBaseMps = Config.GetFloat("heading-mechanics", "PowerBaseMps", 7.0f);
 
         /// <summary>[GT] Strength contribution to outgoing speed (m/s per unit norm). §3.1.</summary>
-        public static readonly float PowerKStrength = 4.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PowerKStrength = Config.GetFloat("heading-mechanics", "PowerKStrength", 4.0f);
 
         /// <summary>[GT] Heading-attribute contribution to outgoing speed (m/s per unit norm). §3.1.</summary>
-        public static readonly float PowerKHeading = 5.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PowerKHeading = Config.GetFloat("heading-mechanics", "PowerKHeading", 5.0f);
 
         /// <summary>[GT] Fatigue penalty coefficient [0, 0.5]. 0 = no degradation. CLAUDE.md fatigue convention. §3.1.</summary>
-        public static readonly float PowerFatigueCoeff = 0.18f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PowerFatigueCoeff = Config.GetFloat("heading-mechanics", "PowerFatigueCoeff", 0.18f);
 
         // ── §3.6 Spin Transfer ───────────────────────────────────────────────────────
 
         /// <summary>[GT] Multiplier on derived headAngularVelocity contribution to outgoing spin. §3.1.</summary>
-        public static readonly float SpinTransferCoeff = 0.55f; // TODO: replace with config loader (Stage 1)
+        public static readonly float SpinTransferCoeff = Config.GetFloat("heading-mechanics", "SpinTransferCoeff", 0.55f);
 
         /// <summary>[GT] Scale-factor base for spinPreservationFactor. §3.1.</summary>
-        public static readonly float SpinPreservationBase = 0.60f; // TODO: replace with config loader (Stage 1)
+        public static readonly float SpinPreservationBase = Config.GetFloat("heading-mechanics", "SpinPreservationBase", 0.60f);
 
         /// <summary>[GT] Contact-point axial offset beyond which spinPreservationFactor goes negative (m). §3.1.</summary>
-        public static readonly float SpinTransferReversalThreshold = 0.015f; // TODO: replace with config loader (Stage 1)
+        public static readonly float SpinTransferReversalThreshold = Config.GetFloat("heading-mechanics", "SpinTransferReversalThreshold", 0.015f);
 
         // ── §3.7 Duel Resolution ─────────────────────────────────────────────────────
 
         /// <summary>[GT] Minimum contactQualityScalar; duel loser below this emits HeaderAttemptFailedEvent. FR-HE-026. §3.1.</summary>
-        public static readonly float MinContactQuality = 0.20f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MinContactQuality = Config.GetFloat("heading-mechanics", "MinContactQuality", 0.20f);
 
         /// <summary>[GT] Balance weight w_B in §3.7 base-score formula FM-010-005. §3.1.</summary>
-        public static readonly float DuelBalanceWeight = 0.30f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DuelBalanceWeight = Config.GetFloat("heading-mechanics", "DuelBalanceWeight", 0.30f);
 
         /// <summary>[GT] Strength weight w_S in §3.7 base-score formula FM-010-005. §3.1.</summary>
-        public static readonly float DuelStrengthWeight = 0.35f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DuelStrengthWeight = Config.GetFloat("heading-mechanics", "DuelStrengthWeight", 0.35f);
 
         /// <summary>[GT] Heading weight w_H in §3.7 base-score formula FM-010-005. Sum of three weights = 1.0. §3.1.</summary>
-        public static readonly float DuelHeadingWeight = 0.35f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DuelHeadingWeight = Config.GetFloat("heading-mechanics", "DuelHeadingWeight", 0.35f);
 
         /// <summary>[GT] Match-time tolerance (s) for grouping two contact events into the same contested duel. §3.7.</summary>
-        public static readonly float DuelFrameMatchToleranceS = 0.001f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DuelFrameMatchToleranceS = Config.GetFloat("heading-mechanics", "DuelFrameMatchToleranceS", 0.001f);
 
         /// <summary>[GT] Near-tie threshold gating RNG perturbation. Non-tie scores are NEVER perturbed. FR-HE-023 / pass-1 H-5. §3.1.</summary>
-        public static readonly float DuelTiebreakEpsilon = 0.02f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DuelTiebreakEpsilon = Config.GetFloat("heading-mechanics", "DuelTiebreakEpsilon", 0.02f);
 
         /// <summary>[GT] RNG perturbation amplitude applied only when score gap &lt; DuelTiebreakEpsilon. pass-1 H-5. §3.1.</summary>
-        public static readonly float DuelTiebreakNoiseAmplitude = 0.01f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DuelTiebreakNoiseAmplitude = Config.GetFloat("heading-mechanics", "DuelTiebreakNoiseAmplitude", 0.01f);
 
         /// <summary>[GT] Maximum disturbance factor applied to a duel loser's contactQualityScalar. §3.1.</summary>
-        public static readonly float DuelDisturbanceMax = 0.50f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DuelDisturbanceMax = Config.GetFloat("heading-mechanics", "DuelDisturbanceMax", 0.50f);
 
         /// <summary>[GT] baseScore gap at which disturbanceFactor saturates at DuelDisturbanceMax. v0.2 H-4. §3.1.</summary>
-        public static readonly float DuelDisturbanceGapSaturation = 0.20f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DuelDisturbanceGapSaturation = Config.GetFloat("heading-mechanics", "DuelDisturbanceGapSaturation", 0.20f);
 
         // ── §3.8 Own-Goal Flag ───────────────────────────────────────────────────────
 
         /// <summary>[GT] Projection time horizon for own-goal-shape flag (s). §3.1.</summary>
-        public static readonly float OwnGoalProjectionHorizonS = 1.2f; // TODO: replace with config loader (Stage 1)
+        public static readonly float OwnGoalProjectionHorizonS = Config.GetFloat("heading-mechanics", "OwnGoalProjectionHorizonS", 1.2f);
 
         /// <summary>[GT] Projection distance horizon for own-goal-shape flag (m). pass-1 L-7. §3.1.</summary>
-        public static readonly float OwnGoalProjectionHorizonM = 18.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float OwnGoalProjectionHorizonM = Config.GetFloat("heading-mechanics", "OwnGoalProjectionHorizonM", 18.0f);
 
         /// <summary>[GT] X-axis depth (m) of the own-goal bounding box used in the §3.8 intersection test. §3.8.</summary>
-        public static readonly float OwnGoalBoundingBoxDepthM = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float OwnGoalBoundingBoxDepthM = Config.GetFloat("heading-mechanics", "OwnGoalBoundingBoxDepthM", 0.5f);
 
         // ── §4.2.1 Buffer / Draw Sites ───────────────────────────────────────────────
 
         /// <summary>[GT] Pre-allocated collision-event buffer capacity for ICollisionEventConsumer (§4.2.1).
         /// Bound: 3-way duel × 2 contact-pairs × safety margin. Allocated once at Initialize(). §3.1.</summary>
-        public static readonly int HeadingContactBufferCapacity = 16; // TODO: replace with config loader (Stage 1)
+        public static readonly int HeadingContactBufferCapacity = Config.GetInt("heading-mechanics", "HeadingContactBufferCapacity", 16);
 
         /// <summary>[GT] Maximum number of active header intents tracked simultaneously (one per agent). §4.6.</summary>
-        public static readonly int MaxAgents = 22; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxAgents = Config.GetInt("heading-mechanics", "MaxAgents", 22);
 
         /// <summary>[GT] Maximum participants tracked in a single contested duel. §3.7.</summary>
-        public static readonly int MaxDuelParticipants = 8; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxDuelParticipants = Config.GetInt("heading-mechanics", "MaxDuelParticipants", 8);
 
         /// <summary>[GT] Maximum simultaneous contested duels per physics frame. §3.7.</summary>
-        public static readonly int MaxSimultaneousDuels = 4; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxSimultaneousDuels = Config.GetInt("heading-mechanics", "MaxSimultaneousDuels", 4);
 
         // ── Draw-Site IDs (registered with Deterministic Simulation #16 §4.5) ────────
 

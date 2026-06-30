@@ -7,6 +7,8 @@
 //           These are cross-cutting infrastructure constants; game-layer assemblies
 //           must NOT import this assembly at runtime (src/CLAUDE.md layer taxonomy).
 
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
+
 namespace TacticalDirector.PerformanceOptimization
 {
     /// <summary>
@@ -52,61 +54,54 @@ namespace TacticalDirector.PerformanceOptimization
         /// <summary>
         /// [GT] Per-PR regression threshold as a fraction (5% = 0.05).
         /// A per-spec budget increase beyond this fraction triggers a regression alert.
-        /// §3.5.2 / FR-PO-031. // TODO: replace with config loader (Stage 1)
+        /// §3.5.2 / FR-PO-031.
         /// </summary>
-        public static readonly float PerPrRegressionFraction = 0.05f;
+        public static readonly float PerPrRegressionFraction = Config.GetFloat("performance-optimization", "PerPrRegressionFraction", 0.05f);
 
         /// <summary>
         /// [GT] Absolute milestone-baseline drift threshold as a fraction (10% = 0.10).
         /// Guards against slow accumulation that escapes per-PR alerts. §3.5.6 / FR-PO-039.
-        /// // TODO: replace with config loader (Stage 1)
         /// </summary>
-        public static readonly float AbsoluteDriftFraction = 0.10f;
+        public static readonly float AbsoluteDriftFraction = Config.GetFloat("performance-optimization", "AbsoluteDriftFraction", 0.10f);
 
         /// <summary>
         /// [GT] Minimum sample count for a statistical baseline to be considered stable,
         /// and rolling-window size for per-spec dashboard percentiles (Appendix F.1).
         /// N=100 reduces 1%-flake false-positive rate to an acceptable level. §3.4.4 / §8.4.
-        /// // TODO: replace with config loader (Stage 1)
         /// </summary>
-        public static readonly int BaselineSampleCount = 100;
+        public static readonly int BaselineSampleCount = Config.GetInt("performance-optimization", "BaselineSampleCount", 100);
 
         /// <summary>
         /// [GT] Maximum acceptable test-flake rate before a scenario is flagged for
         /// boundary-defect routing. §5.7.3 / §3.10 / §8.4 / Appendix F.5.
-        /// // TODO: replace with config loader (Stage 1)
         /// </summary>
-        public static readonly float MaxFlakeRate = 0.01f;
+        public static readonly float MaxFlakeRate = Config.GetFloat("performance-optimization", "MaxFlakeRate", 0.01f);
 
         /// <summary>
         /// [GT] Typical headroom multiplier lower bound reserved per-spec §6 to absorb
         /// measurement variance. §3.1.2 / §3.4.4 / Appendix B / Appendix C.
-        /// // TODO: replace with config loader (Stage 1)
         /// </summary>
-        public static readonly float HeadroomMultiplierMin = 1.2f;
+        public static readonly float HeadroomMultiplierMin = Config.GetFloat("performance-optimization", "HeadroomMultiplierMin", 1.2f);
 
         /// <summary>
         /// [GT] Typical headroom multiplier upper bound. §3.1.2 / §3.4.4 / Appendix B.
-        /// // TODO: replace with config loader (Stage 1)
         /// </summary>
-        public static readonly float HeadroomMultiplierMax = 1.5f;
+        public static readonly float HeadroomMultiplierMax = Config.GetFloat("performance-optimization", "HeadroomMultiplierMax", 1.5f);
 
         /// <summary>
         /// [GT] [EST]→[GT] promotion tolerance fraction (±20% = 0.20).
         /// First Stage 0+1 baseline capture promotes a spec-time [EST] anchor to [GT]
         /// if within ±20% of the estimate; files an ERR-018-NNN finding if not. §3.9.1.
-        /// // TODO: replace with config loader (Stage 1)
         /// </summary>
-        public static readonly float PromotionToleranceFraction = 0.20f;
+        public static readonly float PromotionToleranceFraction = Config.GetFloat("performance-optimization", "PromotionToleranceFraction", 0.20f);
 
         /// <summary>
         /// [GT] Reproducibility tolerance fraction (±20% = 0.20).
         /// A re-captured baseline must match the original p50 within this fraction
         /// to be considered reproducible per §3.4.4 / FR-PO-067.
         /// Shares the §3.9.1 ±20% value; promoted independently if divergence is measured.
-        /// // TODO: replace with config loader (Stage 1)
         /// </summary>
-        public static readonly float ReproducibilityToleranceFraction = 0.20f;
+        public static readonly float ReproducibilityToleranceFraction = Config.GetFloat("performance-optimization", "ReproducibilityToleranceFraction", 0.20f);
         #endregion
 
         #region EST

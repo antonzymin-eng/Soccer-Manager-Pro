@@ -2,7 +2,8 @@
     "name": "TacticalDirector.EventSystem",
     "rootNamespace": "TacticalDirector.EventSystem",
     "references": [
-        "TacticalDirector.DeterministicSim"
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

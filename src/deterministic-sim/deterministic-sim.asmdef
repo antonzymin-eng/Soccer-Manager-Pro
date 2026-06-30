@@ -1,7 +1,9 @@
 {
     "name": "TacticalDirector.DeterministicSim",
     "rootNamespace": "TacticalDirector.DeterministicSim",
-    "references": [],
+    "references": [
+        "TacticalDirector.ProjectConstants"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

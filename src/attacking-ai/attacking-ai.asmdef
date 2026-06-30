@@ -4,7 +4,8 @@
     "references": [
         "TacticalDirector.PositioningAI",
         "TacticalDirector.PressingAI",
-        "TacticalDirector.TacticalInstructions"
+        "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

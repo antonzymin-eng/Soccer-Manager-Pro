@@ -687,16 +687,19 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 ### `src/project-constants/` — Project Constants & `[GT]` config loader (FR-CS-019, June 30, 2026)
 
-> Infrastructure assembly at the bottom of the reference graph (read-only by all; `references: []`, `autoReferenced`). The documented home for the `[GT]` config-loading mechanism and (when one exists) multi-consumer `[CROSS]` constants. The mechanism landed June 30, 2026; the per-catalogue migration of the 520 existing `[GT] public const` literals is a separate per-assembly follow-up.
+> Infrastructure assembly at the bottom of the reference graph (read-only by all; `references: []`, `autoReferenced`). The documented home for the `[GT]` config-loading mechanism and (when one exists) multi-consumer `[CROSS]` constants. The mechanism landed June 30, 2026; the per-catalogue migration of the 520 existing `[GT]` literals landed the same day (509/520 — see `GameplayConfigHolder.cs` + the 17 migrated `<Spec>Constants.cs` catalogues listed in their own per-spec sections; 11 array-table constants in `tactical-instructions` + 4 untagged catalogues are explicit carve-outs, see `src/CLAUDE.md` "Migration status").
 
 | File | Purpose |
 |---|---|
 | `src/project-constants/project-constants.asmdef` | Assembly definition `TacticalDirector.ProjectConstants`; `references: []`; `autoReferenced` |
 | `src/project-constants/GameplayConfig.cs` | FR-CS-019 immutable boot-time `[GT]` key/value store keyed `[section] key`; `GetFloat/GetInt/GetBool/GetString(section, key, fallback)` — absent ⇒ fallback (behaviour-neutral), present-but-malformed ⇒ `FormatException`; immutable + constructor-injected (not a static singleton); boot-time only |
 | `src/project-constants/GameplayConfigFileLoader.cs` | FR-CS-019 `Parse(text) → GameplayConfig` over `[section]` `key = value` + `#` comments; `null`/empty ⇒ `Empty`; key-before-section / empty key / duplicate `section.key` / malformed header / no-`=` line all throw `FormatException`; parser-swap seam (grammar not determinism-pinned) |
+| `src/project-constants/GameplayConfigHolder.cs` | Resolves the boot-sequencing design point: single `Bind(config)` call point a composition root uses before any `[GT]` catalogue is referenced; `Config` resolves to `GameplayConfig.Empty` until bound (behaviour-neutral default); first `Config` read locks the binding, so a late `Bind` throws `InvalidOperationException` instead of silently losing the override |
+| `src/project-constants/AssemblyInfo.cs` | `[InternalsVisibleTo("TacticalDirector.ProjectConstants.Tests")]` for `GameplayConfigHolder.ResetForTests` |
 | `src/project-constants/tests/project-constants-tests.asmdef` | Test assembly definition (EditMode; references project-constants) |
 | `src/project-constants/tests/GameplayConfigTests.cs` | Getter / fallback / fail-loud / case-insensitive / ctor-guard locks |
 | `src/project-constants/tests/GameplayConfigFileLoaderTests.cs` | Grammar round-trip + comments/blanks + empty→Empty + every fail-loud case |
+| `src/project-constants/tests/GameplayConfigHolderTests.cs` | Empty-default / Bind-before-lock takes effect / Bind(null) throws / Bind-after-lock throws / ResetForTests clears the lock |
 
 ### `src/living-world/` — Living World System #22 T0 scaffolding (June 21, 2026; data types + pure math only — spec IN REVIEW)
 

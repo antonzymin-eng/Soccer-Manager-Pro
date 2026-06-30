@@ -6,7 +6,8 @@
         "TacticalDirector.AgentMovement",
         "TacticalDirector.CollisionSystem",
         "TacticalDirector.EventSystem",
-        "TacticalDirector.DeterministicSim"
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

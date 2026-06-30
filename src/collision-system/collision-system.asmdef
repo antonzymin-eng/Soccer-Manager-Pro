@@ -3,7 +3,8 @@
     "rootNamespace": "TacticalDirector.CollisionSystem",
     "references": [
         "TacticalDirector.BallPhysics",
-        "TacticalDirector.AgentMovement"
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

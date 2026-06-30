@@ -2,7 +2,8 @@
     "name": "TacticalDirector.BallPhysics",
     "rootNamespace": "TacticalDirector.BallPhysics",
     "references": [
-        "TacticalDirector.DeterministicSim"
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

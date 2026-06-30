@@ -10,6 +10,7 @@
 using UnityEngine;
 
 using TacticalDirector.BallPhysics;
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.PassMechanics
 {
@@ -71,186 +72,186 @@ namespace TacticalDirector.PassMechanics
 
         /// <summary>[GT] Fatigue-induced velocity reduction coefficient. §3.2.5, [ALI-2011] direction.
         /// At Fatigue=1.0, velocity is reduced by this fraction. Tune in [0.10, 0.30].</summary>
-        public static readonly float FatiguePowerReduction = 0.20f; // TODO: replace with config loader (Stage 1)
+        public static readonly float FatiguePowerReduction = Config.GetFloat("pass-mechanics", "FatiguePowerReduction", 0.20f);
 
         /// <summary>[GT] Defensive floor for the weakFootPowerPenalty argument to ComputeKickSpeed.
         /// Caller contract is [0.85, 1.0]; this clamp guards against malformed input that would
         /// push velocity into a numerically invalid regime. §3.7.4.</summary>
-        public static readonly float WeakFootPowerFloorMin = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float WeakFootPowerFloorMin = Config.GetFloat("pass-mechanics", "WeakFootPowerFloorMin", 0.5f);
 
         // §3.3 — Launch Angle (Apex Heights)
 
         /// <summary>[GT] Apex height (metres) for Lofted pass type. §3.3.7.
         /// Produces ~39° at 30m. Tune by 0.5m increments.</summary>
-        public static readonly float ApexHeightLofted = 6.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ApexHeightLofted = Config.GetFloat("pass-mechanics", "ApexHeightLofted", 6.0f);
 
         /// <summary>[GT] Apex height (metres) for Chip pass type. §3.3.7.
         /// Produces ~56° at 12m; sufficient to clear goalkeeper.</summary>
-        public static readonly float ApexHeightChip = 4.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ApexHeightChip = Config.GetFloat("pass-mechanics", "ApexHeightChip", 4.5f);
 
         /// <summary>[GT] Apex height (metres) for AerialThrough pass type. §3.3.7.</summary>
-        public static readonly float ApexHeightAerialThrough = 5.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ApexHeightAerialThrough = Config.GetFloat("pass-mechanics", "ApexHeightAerialThrough", 5.0f);
 
         /// <summary>[GT] Apex height (metres) for Cross (High) sub-type. §3.3.7.</summary>
-        public static readonly float ApexHeightCrossHigh = 5.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ApexHeightCrossHigh = Config.GetFloat("pass-mechanics", "ApexHeightCrossHigh", 5.5f);
 
         // §3.4 — Spin Vector
 
         /// <summary>[GT] TechniqueScale lower bound (at Technique=1). §3.4.3. [0.5, 1.5] range.</summary>
-        public static readonly float TechniqueSpinMin = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float TechniqueSpinMin = Config.GetFloat("pass-mechanics", "TechniqueSpinMin", 0.5f);
 
         /// <summary>[GT] TechniqueScale upper bound (at Technique=20). §3.4.3.</summary>
-        public static readonly float TechniqueSpinMax = 1.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float TechniqueSpinMax = Config.GetFloat("pass-mechanics", "TechniqueSpinMax", 1.5f);
 
         /// <summary>[GT] Topspin fraction for Lofted/AerialThrough types. §3.4.5.
         /// Applied to SpinMagnitude to produce mild topspin. Extract if per-type tuning required.</summary>
-        public static readonly float LoftedTopspinFraction = 0.7f; // TODO: replace with config loader (Stage 1)
+        public static readonly float LoftedTopspinFraction = Config.GetFloat("pass-mechanics", "LoftedTopspinFraction", 0.7f);
 
         /// <summary>[GT] Topspin/sidespin mix fraction for Cross (High) type. §3.4.5.
         /// Equal split: each component = SpinMagnitude × 0.5.</summary>
-        public static readonly float CrossHighMixFraction = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float CrossHighMixFraction = Config.GetFloat("pass-mechanics", "CrossHighMixFraction", 0.5f);
 
         // §3.5 — Error Model
 
         /// <summary>[GT] PassingModifier at Passing=1 (worst). §3.5.4. Tune per completion rate targets.</summary>
-        public static readonly float PassingErrorMax = 2.8f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PassingErrorMax = Config.GetFloat("pass-mechanics", "PassingErrorMax", 2.8f);
 
         /// <summary>[GT] PassingModifier at Passing=20 (elite). §3.5.4.</summary>
-        public static readonly float PassingErrorMin = 0.45f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PassingErrorMin = Config.GetFloat("pass-mechanics", "PassingErrorMin", 0.45f);
 
         /// <summary>[GT] Pressure modifier weight. §3.5.4. [BEILOCK-2007] range: maximum +50% error.</summary>
-        public static readonly float PressureWeight = 0.50f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PressureWeight = Config.GetFloat("pass-mechanics", "PressureWeight", 0.50f);
 
         /// <summary>[GT] Fatigue-induced accuracy reduction. §3.5.4, independent from velocity fatigue.
         /// At Fatigue=1.0, error multiplier is 1.0 + this value.</summary>
-        public static readonly float FatigueAccuracyReduction = 0.20f; // TODO: replace with config loader (Stage 1)
+        public static readonly float FatigueAccuracyReduction = Config.GetFloat("pass-mechanics", "FatigueAccuracyReduction", 0.20f);
 
         /// <summary>[GT] Maximum orientation penalty (at 90° body misalignment). §3.5.4.
         /// +150% error at perpendicular body angle.</summary>
-        public static readonly float OrientationMaxPenalty = 1.50f; // TODO: replace with config loader (Stage 1)
+        public static readonly float OrientationMaxPenalty = Config.GetFloat("pass-mechanics", "OrientationMaxPenalty", 1.50f);
 
         /// <summary>[GT] Urgency error scaling factor. §3.5.4. Maximum +35% error at Urgency=1.0.</summary>
-        public static readonly float UrgencyErrorScale = 0.35f; // TODO: replace with config loader (Stage 1)
+        public static readonly float UrgencyErrorScale = Config.GetFloat("pass-mechanics", "UrgencyErrorScale", 0.35f);
 
         /// <summary>[GT] Minimum error angle (degrees). No pass is laser-precise. §3.5.5.</summary>
-        public static readonly float MinErrorAngle = 0.1f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MinErrorAngle = Config.GetFloat("pass-mechanics", "MinErrorAngle", 0.1f);
 
         /// <summary>[GT] Maximum error angle (degrees). Prevents multiplicative chain absurdities. §3.5.5.
         /// At 18° on 20m: miss ~6.5m lateral (≈ penalty area width).</summary>
-        public static readonly float MaxErrorAngle = 18.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MaxErrorAngle = Config.GetFloat("pass-mechanics", "MaxErrorAngle", 18.0f);
 
         // §3.5.4 — BASE_ERROR per PassType (degrees)
         // Values are the error an exactly-average passer (Passing=10) produces at neutral conditions.
 
         /// <summary>[GT] BASE_ERROR for Ground passes (degrees). §3.5.4.</summary>
-        public static readonly float BaseErrorGround = 1.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float BaseErrorGround = Config.GetFloat("pass-mechanics", "BaseErrorGround", 1.5f);
 
         /// <summary>[GT] BASE_ERROR for Driven passes (degrees). §3.5.4.</summary>
-        public static readonly float BaseErrorDriven = 2.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float BaseErrorDriven = Config.GetFloat("pass-mechanics", "BaseErrorDriven", 2.0f);
 
         /// <summary>[GT] BASE_ERROR for Lofted passes (degrees). §3.5.4.</summary>
-        public static readonly float BaseErrorLofted = 3.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float BaseErrorLofted = Config.GetFloat("pass-mechanics", "BaseErrorLofted", 3.0f);
 
         /// <summary>[GT] BASE_ERROR for ThroughBall passes (degrees). §3.5.4.</summary>
-        public static readonly float BaseErrorThroughBall = 2.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float BaseErrorThroughBall = Config.GetFloat("pass-mechanics", "BaseErrorThroughBall", 2.0f);
 
         /// <summary>[GT] BASE_ERROR for AerialThrough passes (degrees). §3.5.4.</summary>
-        public static readonly float BaseErrorAerialThrough = 3.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float BaseErrorAerialThrough = Config.GetFloat("pass-mechanics", "BaseErrorAerialThrough", 3.5f);
 
         /// <summary>[GT] BASE_ERROR for Cross.Flat / Cross.High passes (degrees). §3.5.4.</summary>
-        public static readonly float BaseErrorCrossFlat = 2.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float BaseErrorCrossFlat = Config.GetFloat("pass-mechanics", "BaseErrorCrossFlat", 2.5f);
 
         /// <summary>[GT] BASE_ERROR for Cross.Whipped passes (degrees). §3.5.4.</summary>
-        public static readonly float BaseErrorCrossWhipped = 3.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float BaseErrorCrossWhipped = Config.GetFloat("pass-mechanics", "BaseErrorCrossWhipped", 3.0f);
 
         /// <summary>[GT] BASE_ERROR for Chip passes (degrees). §3.5.4.</summary>
-        public static readonly float BaseErrorChip = 2.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float BaseErrorChip = Config.GetFloat("pass-mechanics", "BaseErrorChip", 2.5f);
 
         // §3.5.6 — Pressure Scalar
 
         /// <summary>[GT] Spatial hash query radius for pressure detection (metres). §3.5.6.</summary>
-        public static readonly float PressureRadius = 3.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PressureRadius = Config.GetFloat("pass-mechanics", "PressureRadius", 3.0f);
 
         /// <summary>[GT] Pressure saturation denominator. §3.5.6.
         /// 2 opponents at close range saturates pressure to 1.0.</summary>
-        public static readonly float PressureScalarMax = 2.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PressureScalarMax = Config.GetFloat("pass-mechanics", "PressureScalarMax", 2.0f);
 
         // §3.6 — Target Resolution
 
         /// <summary>[GT] Speed threshold below which receiver is treated as stationary (m/s). §3.6.5.</summary>
-        public static readonly float VThresholdStationary = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float VThresholdStationary = Config.GetFloat("pass-mechanics", "VThresholdStationary", 0.5f);
 
         // §3.7 — Weak Foot Penalty
 
         /// <summary>[GT] Maximum accuracy penalty fraction for Rating=1. §3.7.3, [CAREY-2001].
         /// WeakFootModifier = 1.0 + PenaltyFraction × this value.</summary>
-        public static readonly float WeakFootBasePenalty = 0.30f; // TODO: replace with config loader (Stage 1)
+        public static readonly float WeakFootBasePenalty = Config.GetFloat("pass-mechanics", "WeakFootBasePenalty", 0.30f);
 
         /// <summary>[GT] Maximum power penalty fraction for Rating=1. §3.7.4.
         /// WeakFootPowerPenalty = 1.0 - PenaltyFraction × this value.</summary>
-        public static readonly float WeakFootPowerPenalty = 0.15f; // TODO: replace with config loader (Stage 1)
+        public static readonly float WeakFootPowerPenalty = Config.GetFloat("pass-mechanics", "WeakFootPowerPenalty", 0.15f);
 
         // §3.8 — State Machine Timing
 
         /// <summary>[GT] Minimum windup frames regardless of Urgency. §3.8.8.
         /// 3 frames = 50ms at 60 Hz — physical minimum for kick motion.</summary>
-        public static readonly int MinWindupFrames = 3; // TODO: replace with config loader (Stage 1)
+        public static readonly int MinWindupFrames = Config.GetInt("pass-mechanics", "MinWindupFrames", 3);
 
         /// <summary>[GT] Urgency windup reduction factor. §3.8.8.
         /// At Urgency=1.0, windup is halved: windupFrames × (1 - Urgency × 0.5).</summary>
-        public static readonly float UrgencyWindupReduction = 0.50f; // TODO: replace with config loader (Stage 1)
+        public static readonly float UrgencyWindupReduction = Config.GetFloat("pass-mechanics", "UrgencyWindupReduction", 0.50f);
 
         // §3.8.10 — Per-Type Windup Frames at Urgency=0
 
         /// <summary>[GT] Windup frames for Ground passes at Urgency=0. §3.8.10.</summary>
-        public static readonly int WindupFramesGround = 8; // TODO: replace with config loader (Stage 1)
+        public static readonly int WindupFramesGround = Config.GetInt("pass-mechanics", "WindupFramesGround", 8);
 
         /// <summary>[GT] Windup frames for Driven passes at Urgency=0. §3.8.10.</summary>
-        public static readonly int WindupFramesDriven = 12; // TODO: replace with config loader (Stage 1)
+        public static readonly int WindupFramesDriven = Config.GetInt("pass-mechanics", "WindupFramesDriven", 12);
 
         /// <summary>[GT] Windup frames for Lofted passes at Urgency=0. §3.8.10.</summary>
-        public static readonly int WindupFramesLofted = 15; // TODO: replace with config loader (Stage 1)
+        public static readonly int WindupFramesLofted = Config.GetInt("pass-mechanics", "WindupFramesLofted", 15);
 
         /// <summary>[GT] Windup frames for ThroughBall passes at Urgency=0. §3.8.10.</summary>
-        public static readonly int WindupFramesThroughBall = 8; // TODO: replace with config loader (Stage 1)
+        public static readonly int WindupFramesThroughBall = Config.GetInt("pass-mechanics", "WindupFramesThroughBall", 8);
 
         /// <summary>[GT] Windup frames for AerialThrough passes at Urgency=0. §3.8.10.</summary>
-        public static readonly int WindupFramesAerialThrough = 14; // TODO: replace with config loader (Stage 1)
+        public static readonly int WindupFramesAerialThrough = Config.GetInt("pass-mechanics", "WindupFramesAerialThrough", 14);
 
         /// <summary>[GT] Windup frames for Cross.Flat / Cross.Whipped passes at Urgency=0. §3.8.10.</summary>
-        public static readonly int WindupFramesCrossFlat = 12; // TODO: replace with config loader (Stage 1)
+        public static readonly int WindupFramesCrossFlat = Config.GetInt("pass-mechanics", "WindupFramesCrossFlat", 12);
 
         /// <summary>[GT] Windup frames for Cross.High passes at Urgency=0. §3.8.10.</summary>
-        public static readonly int WindupFramesCrossHigh = 14; // TODO: replace with config loader (Stage 1)
+        public static readonly int WindupFramesCrossHigh = Config.GetInt("pass-mechanics", "WindupFramesCrossHigh", 14);
 
         /// <summary>[GT] Windup frames for Chip passes at Urgency=0. §3.8.10.</summary>
-        public static readonly int WindupFramesChip = 10; // TODO: replace with config loader (Stage 1)
+        public static readonly int WindupFramesChip = Config.GetInt("pass-mechanics", "WindupFramesChip", 10);
 
         // §3.8.10 — Per-Type Follow-Through Frames
 
         /// <summary>[GT] Follow-through frames for Ground passes. §3.8.10.</summary>
-        public static readonly int FollowThroughFramesGround = 6; // TODO: replace with config loader (Stage 1)
+        public static readonly int FollowThroughFramesGround = Config.GetInt("pass-mechanics", "FollowThroughFramesGround", 6);
 
         /// <summary>[GT] Follow-through frames for Driven passes. §3.8.10.</summary>
-        public static readonly int FollowThroughFramesDriven = 8; // TODO: replace with config loader (Stage 1)
+        public static readonly int FollowThroughFramesDriven = Config.GetInt("pass-mechanics", "FollowThroughFramesDriven", 8);
 
         /// <summary>[GT] Follow-through frames for Lofted passes. §3.8.10.</summary>
-        public static readonly int FollowThroughFramesLofted = 10; // TODO: replace with config loader (Stage 1)
+        public static readonly int FollowThroughFramesLofted = Config.GetInt("pass-mechanics", "FollowThroughFramesLofted", 10);
 
         /// <summary>[GT] Follow-through frames for ThroughBall passes. §3.8.10.</summary>
-        public static readonly int FollowThroughFramesThroughBall = 6; // TODO: replace with config loader (Stage 1)
+        public static readonly int FollowThroughFramesThroughBall = Config.GetInt("pass-mechanics", "FollowThroughFramesThroughBall", 6);
 
         /// <summary>[GT] Follow-through frames for AerialThrough passes. §3.8.10.</summary>
-        public static readonly int FollowThroughFramesAerialThrough = 10; // TODO: replace with config loader (Stage 1)
+        public static readonly int FollowThroughFramesAerialThrough = Config.GetInt("pass-mechanics", "FollowThroughFramesAerialThrough", 10);
 
         /// <summary>[GT] Follow-through frames for Cross.Flat / Cross.Whipped passes. §3.8.10.</summary>
-        public static readonly int FollowThroughFramesCrossFlat = 8; // TODO: replace with config loader (Stage 1)
+        public static readonly int FollowThroughFramesCrossFlat = Config.GetInt("pass-mechanics", "FollowThroughFramesCrossFlat", 8);
 
         /// <summary>[GT] Follow-through frames for Cross.High passes. §3.8.10.</summary>
-        public static readonly int FollowThroughFramesCrossHigh = 10; // TODO: replace with config loader (Stage 1)
+        public static readonly int FollowThroughFramesCrossHigh = Config.GetInt("pass-mechanics", "FollowThroughFramesCrossHigh", 10);
 
         /// <summary>[GT] Follow-through frames for Chip passes. §3.8.10.</summary>
-        public static readonly int FollowThroughFramesChip = 8; // TODO: replace with config loader (Stage 1)
+        public static readonly int FollowThroughFramesChip = Config.GetInt("pass-mechanics", "FollowThroughFramesChip", 8);
 
         #endregion
 

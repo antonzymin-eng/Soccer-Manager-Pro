@@ -1,7 +1,9 @@
 {
     "name": "TacticalDirector.TacticalInstructions",
     "rootNamespace": "TacticalDirector.TacticalInstructions",
-    "references": [],
+    "references": [
+        "TacticalDirector.ProjectConstants"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
