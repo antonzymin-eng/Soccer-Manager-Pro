@@ -128,6 +128,16 @@ namespace TacticalDirector.DefensiveAI
         public const int OffsideTrapDwellTicks = 3;
 
         /// <summary>
+        /// [GT] Reduced dwell threshold used when the manager requests the offside trap
+        /// (#21 FR-TI-022 / KD-9 additive request): a requested trap arms more readily than the
+        /// autonomous baseline. MUST be ≤ <see cref="OffsideTrapDwellTicks"/> — the request only
+        /// lowers (never raises) the arm threshold, and the §3.7.2 conditions still adjudicate.
+        /// Illustrative magnitude pending the #21 §5.6 / G2 balance pass. Defensive AI #14 §6.1.
+        /// TODO: replace with config loader (Stage 1).
+        /// </summary>
+        public const int OffsideTrapRequestedDwellTicks = 1;
+
+        /// <summary>
         /// [GT] Post-trap cooldown ticks before a new step-up may fire (§3.7.3).
         /// At 10 Hz: 1,000 ms cooldown. Defensive AI #14 §6.1.
         /// TODO: replace with config loader (Stage 1).

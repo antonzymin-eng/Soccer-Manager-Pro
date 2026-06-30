@@ -241,6 +241,17 @@ namespace TacticalDirector.AttackingAI
         public const int OverloadCount = 3;
 
         /// <summary>
+        /// [GT] Reduction applied to <see cref="OverloadCount"/> when the manager's #21 FocusPlay
+        /// prefers the flank the ball is on (FR-TI-021): the team commits numbers to the chosen
+        /// flank, so an overload declares more readily there. A bias, not a gate — no preference
+        /// (Mixed / ThroughMiddle → null) and a ball on the non-preferred flank leave the count
+        /// unchanged. Illustrative magnitude pending the #21 §5.6 / G2 balance pass.
+        /// Attacking AI #15 §6.1.6 / §3.8.
+        /// TODO: replace with config loader (Stage 1).
+        /// </summary>
+        public const int OverloadFocusCountBias = 1;
+
+        /// <summary>
         /// [GT] Y-half-width of overload detection corridor: |agentY − ballY| ≤ this value.
         /// Units: m. Attacking AI #15 §6.1.6 / §3.8.
         /// TODO: replace with config loader (Stage 1).

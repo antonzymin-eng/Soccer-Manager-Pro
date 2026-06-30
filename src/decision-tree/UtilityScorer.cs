@@ -53,9 +53,16 @@ namespace TacticalDirector.DecisionTree
             // BEFORE the [FLOOR, CEILING] clamp. Higher mentality lifts PASS/SHOOT/DRIBBLE relative
             // to HOLD. The Stage 0 / no-instruction default Mentality.Balanced resolves to ×1.00
             // (FR-TI-031), so this is exactly today's behaviour until the match-engine Phase-D writer
-            // routes a live tactic in. The per-agent role/duty/instr/tempo factors (§3.3 product)
-            // land with the per-agent PlayerTactic routing field, gated on the §5.6 balance pass.
+            // routes a live tactic in.
             u *= TacticTranslation.MentalityRiskMultiplier(ctx.TacticalContext.Mentality);
+
+            // #21 §3.3 (T2): the per-agent role/duty/instruction × team-tempo utility product, applied to
+            // every scored option BEFORE the clamp. The Stage 0 / no-instruction defaults (PlayerRole.
+            // Default / Duty.Support / every InstrBias.Default at Tempo.Standard) resolve to exactly ×1.0
+            // (FR-TI-031), so this is byte-identical to today's behaviour until the Phase-D writer routes a
+            // live per-agent PlayerTactic / team Tempo. Magnitudes are illustrative pending §5.6 / G2.
+            u *= TacticTranslation.PlayerTacticActionMultiplier(
+                ctx.TacticalContext.PlayerTactic, ctx.TacticalContext.Tempo, opt.Type);
 
             float clamped = Mathf.Clamp(u, UtilityWeights.UTILITY_FLOOR, UtilityWeights.UTILITY_CEILING);
 
@@ -349,4 +356,7 @@ namespace TacticalDirector.DecisionTree
 // | 1.5     | 2026-06-28 | —      | #21 T2: per-option utility × Mentality risk multiplier (§3.2/§3.3) before the  |
 // |         |            |        | clamp; resolved via TacticTranslation. Balanced default ⇒ ×1.0 (FR-TI-031),    |
 // |         |            |        | behaviour-neutral until match-engine Phase-D routes a live tactic.             |
+// | 1.6     | 2026-06-29 | —      | #21 §3.3: per-option × PlayerTacticActionMultiplier (per-agent role/duty/instr |
+// |         |            |        | × team tempo product) before the clamp. Identity PlayerTactic + Tempo.Standard |
+// |         |            |        | ⇒ ×1.0 (FR-TI-031), behaviour-neutral. Magnitudes illustrative (G2).           |
 #endregion

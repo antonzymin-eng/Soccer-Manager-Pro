@@ -36,7 +36,8 @@ namespace TacticalDirector.PositioningAI
         /// <see cref="TacticTranslation.WidthCompactnessScalar"/> for in-possession phases. The
         /// zero-value enum default is <c>VeryNarrow</c>, so the identity-seeding 3-arg constructor
         /// sets <see cref="TacticWidth.Standard"/> explicitly (scalar 1.00 ⇒ behaviour-neutral,
-        /// FR-TI-031). Set to a live tactic only by the match-engine Phase-D writer.
+        /// FR-TI-031). The match-engine Phase-D writer routes the active tactic here via the 5-arg
+        /// constructor (MatchEngine v1.20); default Balanced ⇒ Standard ⇒ scalar 1.00.
         /// </summary>
         public readonly TacticWidth Width;
 
@@ -81,4 +82,6 @@ namespace TacticalDirector.PositioningAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                          |
 // | 1.1     | 2026-06-29 | —      | #21 T2: + Width / DefensiveWidth routing fields (FR-TI-016); 3-arg |
 // |         |            |        |   ctor seeds Standard (scalar 1.00 ⇒ neutral); 5-arg ctor added.  |
+// | 1.2     | 2026-06-29 | —      | Doc: match-engine Phase-D writer landed (MatchEngine v1.20),      |
+// |         |            |        |   routes the active tactic Width / DefWidth via the 5-arg ctor.   |
 #endregion

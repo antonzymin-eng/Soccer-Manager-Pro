@@ -47,6 +47,28 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public Mentality Mentality;
 
+        /// <summary>
+        /// Team tempo (#21 §3.3 forward-vs-retain dial). <see cref="Stage0Default"/> seeds
+        /// <see cref="Tempo.Standard"/> (the §3.3 identity row ⇒ all action factors ×1.0, FR-TI-031), so
+        /// the seam is a no-op until the match-engine Phase-D writer routes a live tactic in. NOTE: the
+        /// zero-value struct default is <see cref="Tempo.VerySlow"/>, NOT Standard — like the other
+        /// tactic fields, only valid when built via the factory. Consumed per scored option in
+        /// UtilityScorer via <see cref="TacticTranslation.PlayerTacticActionMultiplier"/>.
+        /// </summary>
+        public Tempo Tempo;
+
+        /// <summary>
+        /// This agent's per-agent tactic (#21 §3.3 — behavioural role + duty + individual instructions).
+        /// <see cref="Stage0Default"/> seeds the identity <see cref="PlayerTactic.Default(PlayerRole)"/>
+        /// with <see cref="PlayerRole.Default"/> (every §3.3 product factor ×1.0, FR-TI-031). NOTE:
+        /// <c>default(PlayerTactic)</c> is NOT the identity (its embedded instructions man-mark agent 0);
+        /// consume only when built via the factory. Drives the per-option §3.3 utility product in
+        /// UtilityScorer via <see cref="TacticTranslation.PlayerTacticActionMultiplier"/>. Stage 0 sets
+        /// every agent to the identity (no per-agent tactic config exists yet); the per-agent config
+        /// surface lands with the §5.6 / G2 balance pass.
+        /// </summary>
+        public PlayerTactic PlayerTactic;
+
         // ── Formation Slot ────────────────────────────────────────────────────
 
         /// <summary>
@@ -82,6 +104,8 @@ namespace TacticalDirector.DecisionTree
                 Passing            = PassingStyle.MIXED,
                 DefensiveLineDepth = 0.5f,
                 Mentality          = Mentality.Balanced,
+                Tempo              = Tempo.Standard,
+                PlayerTactic       = PlayerTactic.Default(PlayerRole.Default),
                 _formationSlot     = formationSlot,
                 HasMarkDirective   = false,
                 HasAttackIntent    = false
@@ -128,4 +152,7 @@ namespace TacticalDirector.DecisionTree
 // | 1.2     | 2026-06-28 | —      | #21 T2 seam: Mentality routing field added (default Balanced = identity,     |
 // |         |            |        |   FR-TI-031); Stage0Default seeds it. Risk multiplier applied in             |
 // |         |            |        |   UtilityScorer via TacticTranslation. Behaviour-neutral until Phase-D writes.|
+// | 1.3     | 2026-06-29 | —      | #21 §3.3: Tempo + per-agent PlayerTactic routing fields added (Stage0Default |
+// |         |            |        |   seeds Standard / identity PlayerTactic ⇒ ×1.0, FR-TI-031). Drive the per-  |
+// |         |            |        |   option §3.3 utility product in UtilityScorer. Behaviour-neutral.           |
 #endregion

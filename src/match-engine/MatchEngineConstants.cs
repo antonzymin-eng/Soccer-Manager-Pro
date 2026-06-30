@@ -119,8 +119,16 @@ namespace TacticalDirector.MatchEngine
         /// instance — the recognition-latency tracker pair arrays, the shoulder-check scheduler per-agent +
         /// per-pair arrays, and the per-agent ball-perception carry-over). With v8 every cross-tick gameplay
         /// surface is serialized; no cross-tick state remains excluded (only boot-deterministic constants and
-        /// tick-derivable observation counters).</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 8;
+        /// tick-derivable observation counters).
+        ///
+        /// v9 (#21 / ERR-021-002) adds the per-team Tactical Instructions (#21) manager tactic — both the
+        /// active <c>TeamTactic</c> (read by the AI phase) and the pending one (a <c>SetTeamTactic</c> staged
+        /// but not yet committed at a stride boundary), ×TEAM_COUNT each, in Appendix B field order. Until v9
+        /// the tactic was excluded, so a tactic changed MID-match did not survive save/restore; with v9 a
+        /// mid-match change is restore-deterministic. The per-agent PlayerTactic / team Tempo carried in the
+        /// Decision Tree <c>TacticalContext</c> (#21 §3.3) need NO field — they are re-assembled each AI tick
+        /// from this serialized team tactic plus the boot identity (no per-agent tactic config at Stage 0).</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 9;
 
         #endregion
 
@@ -310,4 +318,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | into the possession-changed event (#17 0x04) payload (no reason |
 // |         |            |        | taxonomy yet). SNAPSHOT_SCHEMA_VERSION unchanged (world-state    |
 // |         |            |        | body untouched; only the serialized ledger carries the event).  |
+// | 1.16    | 2026-06-29 | —      | #21 / ERR-021-002: SNAPSHOT_SCHEMA_VERSION 8 → 9 — the per-team  |
+// |         |            |        | active + pending TeamTactic is now serialized into the world-    |
+// |         |            |        | state body (Appendix B order), so a mid-match tactic change is   |
+// |         |            |        | restore-deterministic. v9 doc paragraph added.                  |
 #endregion

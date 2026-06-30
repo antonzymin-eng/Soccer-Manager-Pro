@@ -2,6 +2,9 @@
 // Created:  2026-06-16
 // Modified: 2026-06-28 (Pressing #13 wiring AR — AttackingDirection inversion fix)
 // Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
+// Modified: 2026-06-29 (#21 T2 Defensive (#14) + Attacking (#15) Phase-D writers — route OffsideTrap / FocusPlay → snapshots)
+// Modified: 2026-06-29 (#21 T2 Positioning (#12) Phase-D writer — route TeamTactic.Width / DefensiveWidth → ContextModifierInputs; all three writers now closed)
+// Modified: 2026-06-29 (#21 §3.3 team-Tempo routing + ERR-021-002: SNAPSHOT_SCHEMA_VERSION 8 → 9, per-team active+pending TeamTactic serialized)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -148,9 +151,10 @@ namespace TacticalDirector.MatchEngine
         // only on stride ticks) — never mid-tick. Both default to TeamTactic.Balanced, which reproduces
         // Stage0Default exactly (Mentality.Balanced ⇒ risk ×1.0, Pressing.Medium → MEDIUM, Passing.Mixed
         // → MIXED; FR-TI-031), so a match left at the default is byte-identical to pre-#21 behaviour.
-        // NOT serialized at Stage 0 (ERR-021-002 — the TeamTactic.DefensiveLine snapshot field + schema
-        // bump is a deferred #16 back-prop): a tactic changed MID-match is not yet restore-deterministic,
-        // so Stage-0 callers set it before the first RunTick (static for the run, same across same-seed runs).
+        // BOTH arrays are serialized into the world-state snapshot at SNAPSHOT_SCHEMA_VERSION v9
+        // (ERR-021-002 resolved): the active tactic (read by the AI phase) and the pending tactic (staged
+        // by SetTeamTactic, committed at the next stride) are cross-tick state, so a tactic changed
+        // MID-match now survives save/restore — a mid-match change is restore-deterministic.
         private readonly TeamTactic[] _activeTeamTactics;   // [TEAM_COUNT]
         private readonly TeamTactic[] _pendingTeamTactics;  // [TEAM_COUNT]
 
@@ -168,6 +172,10 @@ namespace TacticalDirector.MatchEngine
         // in-process determinism holds; save/restore replay needs a get/restore seam (fold into D4).
         private readonly PositioningAITick[]             _positioning;   // [TEAM_COUNT]
         private readonly PositioningPerceptionSnapshot[] _posSnapshots;  // [TEAM_COUNT]
+        // Last ContextModifierInputs handed to each team's PositioningAITick.Tick this AI tick. Persisted
+        // only so a test can read back the #21 Phase-D Width / DefensiveWidth routing (the modifier struct
+        // is otherwise a transient per-tick input, not part of the serialized world state).
+        private readonly ContextModifierInputs[]         _posModifiers;  // [TEAM_COUNT]
 
         // Pressing (#13) → Defensive (#14) → Attacking (#15) chain (Phase D D2b). One INSTANCE + reused
         // input snapshot per team, ticked AFTER Positioning each AI tick (Pressing's per-agent PressRole
@@ -313,6 +321,7 @@ namespace TacticalDirector.MatchEngine
             // before the first AI read (the per-tick Tick() refreshes them — RunPositioningAI).
             _positioning  = new PositioningAITick[MatchEngineConstants.TEAM_COUNT];
             _posSnapshots = new PositioningPerceptionSnapshot[MatchEngineConstants.TEAM_COUNT];
+            _posModifiers = new ContextModifierInputs[MatchEngineConstants.TEAM_COUNT];
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 _positioning[t]  = new PositioningAITick(
@@ -499,9 +508,9 @@ namespace TacticalDirector.MatchEngine
         /// Sets a team's manager tactic (#21 §3.1/§3.2 — T2 runtime activation). The change is staged
         /// as <em>pending</em> and committed at the next tactical-stride boundary (FR-TI-027), so it never
         /// takes effect mid-tick. <paramref name="teamId"/> is 0 (home) or 1 (away).
-        /// Stage-0 note: the tactic is not yet part of the snapshot (ERR-021-002 deferred), so a change
-        /// made MID-match is not restore-deterministic — set it before the first <see cref="RunTick"/>
-        /// for a deterministic run. The default is <see cref="TeamTactic.Balanced"/> (behaviour-neutral).
+        /// The active and pending tactics are serialized into the snapshot (SNAPSHOT_SCHEMA_VERSION v9,
+        /// ERR-021-002), so a change made MID-match is restore-deterministic. The default is
+        /// <see cref="TeamTactic.Balanced"/> (behaviour-neutral).
         /// </summary>
         public void SetTeamTactic(int teamId, in TeamTactic tactic)
         {
@@ -682,6 +691,23 @@ namespace TacticalDirector.MatchEngine
         /// SetTeamTactic reaches the press input and the Balanced default (Standard) is behaviour-neutral.</summary>
         internal LineOfEngagement TestOnly_PressLineOfEngagement(int teamId) => _pressSnapshots[teamId].LineOfEngagement;
 
+        /// <summary>Test-only: the #21 OffsideTrap toggle routed into team <paramref name="teamId"/>'s
+        /// Defensive AI (#14) snapshot at the last AI tick — lets the Phase-D writer test prove
+        /// SetTeamTactic reaches the defensive input and the Balanced default (false) is the identity.</summary>
+        internal bool TestOnly_OffsideTrapRequested(int teamId) => _defSnapshots[teamId].OffsideTrapRequested;
+
+        /// <summary>Test-only: the #21 FocusPlay routed into team <paramref name="teamId"/>'s Attacking
+        /// AI (#15) snapshot at the last AI tick — lets the Phase-D writer test prove SetTeamTactic
+        /// reaches the attacking input and the Balanced default (Mixed) is the identity.</summary>
+        internal TacticalDirector.TacticalInstructions.FocusPlay TestOnly_FocusPlay(int teamId) => _attackSnapshots[teamId].FocusPlay;
+
+        /// <summary>Test-only: the #21 Width / DefensiveWidth routed into team <paramref name="teamId"/>'s
+        /// Positioning AI (#12) ContextModifierInputs at the last AI tick — lets the Phase-D writer test
+        /// prove SetTeamTactic reaches the positioning input and the Balanced default (Standard) is the
+        /// identity. (The modifier struct is a transient per-tick input captured for the seam.)</summary>
+        internal TacticalDirector.TacticalInstructions.TacticWidth TestOnly_PositioningWidth(int teamId) => _posModifiers[teamId].Width;
+        internal TacticalDirector.TacticalInstructions.TacticDefWidth TestOnly_PositioningDefWidth(int teamId) => _posModifiers[teamId].DefensiveWidth;
+
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
         /// CurrentSnapshotDigest after the most recent <see cref="RunTick"/>). Diagnostic /
@@ -853,11 +879,19 @@ namespace TacticalDirector.MatchEngine
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 // Positioning (#12) — formation slots + the Line/Phase inputs the rest of the chain reads.
+                // #21 T2 Phase-D writer (FR-TI-016): route the active team tactic's Width / DefensiveWidth
+                // into the modifier inputs (#12 ContextModifier translates them to the lateral-compactness
+                // scalar). Default Balanced ⇒ Standard / Standard ⇒ scalar 1.00 ⇒ byte-identical to pre-#21
+                // (the 5-arg ctor with both Standard equals the 3-arg identity-seeding ctor). This is the
+                // #12 analogue of the #13 FillPressingSnapshot single-writer.
                 FillPositioningSnapshot(t, tacticalTick);
                 ContextModifierInputs modifiers = new ContextModifierInputs(
                     scoreDiff:         0,
                     teamMeanFatigue:   ComputeTeamMeanFatigue(t),
-                    tacticalIntensity: MatchEngineConstants.STAGE0_TACTICAL_INTENSITY);
+                    tacticalIntensity: MatchEngineConstants.STAGE0_TACTICAL_INTENSITY,
+                    width:             _activeTeamTactics[t].Width,
+                    defensiveWidth:    _activeTeamTactics[t].DefensiveWidth);
+                _posModifiers[t] = modifiers;
                 _positioning[t].Tick(_posSnapshots[t], modifiers);
 
                 // Pressing (#13) — per-agent PressRole consumed by the Defensive snapshot below.
@@ -901,6 +935,12 @@ namespace TacticalDirector.MatchEngine
                     // so the overlay is behaviour-neutral until a non-Balanced tactic is set (FR-TI-031).
                     TeamTactic tactic = _activeTeamTactics[t];
                     ctx.Mentality = tactic.Mentality;
+                    // #21 §3.3: team tempo drives the per-option forward-vs-retain factor in the
+                    // UtilityScorer §3.3 product. Balanced ⇒ Tempo.Standard ⇒ all factors ×1.0
+                    // (behaviour-neutral). The per-agent PlayerTactic stays the Stage0Default identity
+                    // (PlayerRole.Default / Duty.Support / no instructions) — there is no per-agent tactic
+                    // config surface at Stage 0; it lands with the §5.6 / G2 balance pass.
+                    ctx.Tempo = tactic.Tempo;
                     // Fully qualified: TacticTranslation now exists in BOTH DecisionTree (#8) and
                     // PressingAI (#13), and the match-engine references both, so the bare name is
                     // ambiguous (CS0104). These two are the #8 enum maps specifically.
@@ -1053,6 +1093,19 @@ namespace TacticalDirector.MatchEngine
             snap.AgentCount              = MatchEngineConstants.SQUAD_SIZE;
             snap.HasActivePrimaryPress   = _pressing[team].LastDirective.IsActive;
 
+            // #21 §3.4 / FR-TI-022 (T2 Phase-D writer): route this team's active tactic OffsideTrap
+            // toggle into the Defensive AI (#14) input. Fully qualified because TacticTranslation now
+            // exists in five referenced assemblies (#8/#12/#13/#14/#15) — CS0104 at the composition
+            // root (the #13 v1.17 lesson). Default Balanced ⇒ false (the routing identity, FR-TI-031);
+            // per KD-9 this is a REQUEST, not a guarantee — OffsideTrapController's §3.7.2 autonomous
+            // cascade is unchanged at Stage 0 and does not yet read this flag (gating today's arming
+            // behind a default-false toggle would not be behaviour-neutral; active consumption lands
+            // with the §3.7.2 additive-request design at activation). The snapshot is per-tick
+            // assembled, so this overwrites the class-field default each tick.
+            snap.OffsideTrapRequested    =
+                TacticalDirector.DefensiveAI.TacticTranslation.OffsideTrapRequested(
+                    _activeTeamTactics[team].OffsideTrap);
+
             int gkEntity = MatchEngineConstants.NO_POSSESSION;
             Vector2 gkPos = Vector2.zero;
             for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
@@ -1109,6 +1162,15 @@ namespace TacticalDirector.MatchEngine
                 ? MirrorPitchIfAway(team, _agents[owner].Position)
                 : MirrorPitchIfAway(team, ballXY);
             snap.TeamAttackAngle     = 0f;   // acting team attacks +X in its canonical frame
+
+            // #21 §3.3 / FR-TI-021 (T2 Phase-D writer): route this team's active tactic FocusPlay into
+            // the Attacking AI (#15) input. The snapshot field is the #21 enum; the translation to a
+            // preferred Flank? (TacticTranslation.PreferredFlank) is the consumer's job. Default
+            // Balanced ⇒ FocusPlay.Mixed (no lateral preference = the routing identity, FR-TI-031), so
+            // a default match is byte-identical to pre-#21. The OverloadDetector flank-preference
+            // consumption is deferred to the §5.6 / G2 balance pass; this writer connects the seam. The
+            // snapshot is per-tick assembled, so this overwrites the auto-property zero-value each tick.
+            snap.FocusPlay           = _activeTeamTactics[team].FocusPlay;
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
@@ -1597,9 +1659,13 @@ namespace TacticalDirector.MatchEngine
             // Defensive (#14, v6), Attacking (#15, v7) — and the Perception (#7, v8) internal state
             // (RecognitionLatencyTracker / ShoulderCheckScheduler / ball-prev arrays) are all serialized
             // below via their CaptureState seams, alongside the per-agent DecisionTreeState (D4) and the
-            // C0/B0 executor + OscillationGuard state. The ONLY remaining un-serialized fields are the
-            // boot-deterministic constants (_attrs/_perfs, proven above) and the tick-derivable observation
-            // counters — no cross-tick gameplay state is excluded.
+            // C0/B0 executor + OscillationGuard state. v9 adds the per-team #21 manager tactic (active +
+            // pending), closing ERR-021-002 — a mid-match tactic change is now restore-deterministic. The
+            // ONLY remaining un-serialized fields are the boot-deterministic constants (_attrs/_perfs,
+            // proven above) and the tick-derivable observation counters — no cross-tick gameplay state is
+            // excluded. NOTE: the per-agent PlayerTactic / team Tempo carried in TacticalContext (#21 §3.3)
+            // are re-assembled each AI tick in RunMechanicsAI from the serialized team tactic + the boot
+            // identity (no per-agent tactic config exists at Stage 0), so they need no separate field.
             //
             // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but it is NOT
             // serialized directly because C4 folds it into MatchContext.PossessingAgentId (authored
@@ -1679,7 +1745,41 @@ namespace TacticalDirector.MatchEngine
             // cross-tick subsystem and there is no remaining excluded gameplay state.
             WritePerceptionTickState(buf, ref o, _perception.CaptureState());
 
+            // v9 (ERR-021-002 resolved) — the per-team manager tactic. Both the active tactic (what the AI
+            // phase reads) and the pending tactic (a SetTeamTactic staged but not yet committed at a stride
+            // boundary) are cross-tick state: a tactic changed MID-match now survives save/restore, so a
+            // mid-match change is restore-deterministic. Default Balanced is still byte-stable across two
+            // same-seed runs (both serialize the identical Balanced block every tick).
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                WriteTeamTactic(buf, ref o, in _activeTeamTactics[t]);
+                WriteTeamTactic(buf, ref o, in _pendingTeamTactics[t]);
+            }
+
             payload.BytesWritten = o;
+        }
+
+        /// <summary>Serializes a <see cref="TeamTactic"/> in canonical (Appendix B) field order. Enum
+        /// fields are written as i32 ordinals (ordinal stability is each enum's own APPEND-only contract);
+        /// the manager-input <c>DefensiveLine</c> dial as f32 and <c>TimeWasting</c> as u8.</summary>
+        private static void WriteTeamTactic(byte[] buf, ref int o, in TeamTactic t)
+        {
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Mentality);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Formation);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Tempo);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Width);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Passing);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Pressing);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.LineOfEngagement);
+            CanonicalSerializer.WriteF32(buf, ref o, t.DefensiveLine);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.DefensiveWidth);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.TransitionWon);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.TransitionLost);
+            CanonicalSerializer.WriteBool(buf, ref o, t.OffsideTrap);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.TriggerPressMask);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.FocusPlay);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.GkDistribution);
+            CanonicalSerializer.WriteU8 (buf, ref o, t.TimeWasting);
         }
 
         /// <summary>Serializes the full <see cref="BallState"/> field set in canonical order.
@@ -2605,4 +2705,38 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Balanced ⇒ Standard ⇒ ×1.0 = byte-identical to pre-#21. New     |
 // |         |            |        | TestOnly_PressLineOfEngagement seam. No schema bump (Pressing-  |
 // |         |            |        | Snapshot is a per-tick input). New MatchEngineTacticTests case. |
+// | 1.19    | 2026-06-29 | —      | #21 T2 Defensive (#14) + Attacking (#15) Phase-D writers — the  |
+// |         |            |        | #14/#15 analogues of the v1.18 #13 writer. FillDefensiveSnapshot|
+// |         |            |        | routes the active TeamTactic.OffsideTrap → DefensiveSnapshot.   |
+// |         |            |        | OffsideTrapRequested via fully-qualified DefensiveAI.Tactic-    |
+// |         |            |        | Translation (CS0104 — five TacticTranslation types now in scope)|
+// |         |            |        | FillAttackingSnapshot routes the active TeamTactic.FocusPlay →  |
+// |         |            |        | AttackingSnapshot.FocusPlay (enum passthrough; consumer trans-  |
+// |         |            |        | lates to Flank?). Default Balanced ⇒ false / Mixed = the routing|
+// |         |            |        | identities (FR-TI-022/021), byte-identical to pre-#21. Active   |
+// |         |            |        | consumption stays deferred: #14 OffsideTrapController per KD-9  |
+// |         |            |        | (gating autonomous arming behind a default-false toggle is not  |
+// |         |            |        | neutral); #15 OverloadDetector flank-pref per §5.6/G2 balance   |
+// |         |            |        | pass. No schema bump (both are per-tick inputs). New TestOnly_  |
+// |         |            |        | OffsideTrapRequested / TestOnly_FocusPlay seams; new test cases.|
+// | 1.20    | 2026-06-29 | —      | #21 T2 Positioning (#12) Phase-D writer — the last of the three |
+// |         |            |        | Mechanics writers. RunMechanicsAI now builds ContextModifier-   |
+// |         |            |        | Inputs via the 5-arg ctor, routing the active TeamTactic.Width /|
+// |         |            |        | DefensiveWidth (ContextModifier translates them to the lateral- |
+// |         |            |        | compactness scalar). Default Balanced ⇒ Standard / Standard ⇒   |
+// |         |            |        | scalar 1.00 = byte-identical to pre-#21 (5-arg both-Standard ≡  |
+// |         |            |        | 3-arg identity ctor). Per-team _posModifiers captured for the   |
+// |         |            |        | TestOnly_PositioningWidth / _PositioningDefWidth seams. No      |
+// |         |            |        | schema bump (the modifier struct is a per-tick input). New test |
+// |         |            |        | cases. All three Mechanics Phase-D writers now closed.          |
+// | 1.21    | 2026-06-29 | —      | #21 §3.3: RunMechanicsAI routes the active team Tempo into the  |
+// |         |            |        | TacticalContext (per-option §3.3 utility product in UtilityScor-|
+// |         |            |        | er); per-agent PlayerTactic stays the Stage0Default identity.   |
+// |         |            |        | Balanced ⇒ Tempo.Standard ⇒ ×1.0 (behaviour-neutral).          |
+// | 1.22    | 2026-06-29 | —      | ERR-021-002 resolved: SNAPSHOT_SCHEMA_VERSION 8 → 9 — the per-  |
+// |         |            |        | team active + pending TeamTactic now serialized via WriteTeam-  |
+// |         |            |        | Tactic (Appendix B order). A mid-match tactic change is now     |
+// |         |            |        | restore-deterministic; SetTeamTactic / _activeTeamTactics docs  |
+// |         |            |        | + the cross-tick-coverage proof updated. New TeamTactic_Feeds-  |
+// |         |            |        | SnapshotDigest probe.                                           |
 #endregion

@@ -599,6 +599,15 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
     (mechanics-AI #12–#15 + perception #7 + DecisionTree D0), so the snapshot now covers every cross-tick
     gameplay surface (`SNAPSHOT_SCHEMA_VERSION` 8). **Phase D is complete.** Remaining: Phase F (capstone
     closed-loop scenario on the #19 ScenarioRunner + FR-PO-052 perf gate) — Phase E landed June 27, 2026.
+  - **D6 — #21 manager-tactic serialization (ERR-021-002). ✅ COMPLETE (June 29, 2026).** The per-team
+    `TeamTactic` (#21 T2 runtime activation) was a per-tick input excluded from the snapshot, so a tactic
+    changed MID-match was not restore-deterministic. `WriteTeamTactic` now serializes both the active and
+    pending `TeamTactic` (×`TEAM_COUNT`, Appendix B field order) after the perception block;
+    `SNAPSHOT_SCHEMA_VERSION` 8 → 9. Default Balanced is byte-stable across same-seed runs; a mid-match
+    `SetTeamTactic` is now restore-deterministic. The per-agent `PlayerTactic` / team `Tempo` carried in
+    `TacticalContext` (#21 §3.3) need no field — re-assembled each AI tick from the serialized team tactic
+    plus the boot identity. New `TeamTactic_FeedsSnapshotDigest` probe; `MatchEngine.cs` v1.22,
+    `MatchEngineConstants.cs` v1.16, `MatchEngineSnapshotSchemaTests.cs` v1.6.
   *Tests: a ball carrier decides PASS/SHOOT/DRIBBLE and the dispatcher drives movement; a scripted receive
   runs first-touch to a CONTROLLED outcome; away-team symmetry (closes the deferred Decision Tree away-team
   scenario).*

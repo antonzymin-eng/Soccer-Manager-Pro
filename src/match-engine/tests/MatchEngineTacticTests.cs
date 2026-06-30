@@ -5,7 +5,9 @@
 // Spec:     Tactical Instructions #21 §3.1/§3.2/§3.4/§4.6 (FR-TI-017/027/031); Match Engine design note §5; Code Standards #20
 // Purpose:  #21 T2 runtime-activation tests — SetTeamTactic routes a live TeamTactic into each
 //           agent's DecisionTree input (Mentality/Pressing/Passing) and into the Pressing AI (#13)
-//           snapshot (LineOfEngagement) at the AI-stride boundary, the Balanced default is
+//           snapshot (LineOfEngagement), the Defensive AI (#14) snapshot (OffsideTrap), the
+//           Attacking AI (#15) snapshot (FocusPlay), and the Positioning AI (#12) modifiers
+//           (Width / DefensiveWidth) at the AI-stride boundary, the Balanced default is
 //           behaviour-neutral (digest unchanged), and activation stays deterministic.
 
 using System.Collections.Generic;
@@ -48,6 +50,27 @@ namespace TacticalDirector.MatchEngine
             Mentality.Balanced, TacticFormation.F442, Tempo.Standard, TacticWidth.Standard,
             TacticPassing.Mixed, TacticPressing.Medium, line, 0.5f,
             TacticDefWidth.Standard, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
+            TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
+
+        // Balanced in every dimension except OffsideTrap (the #14 routing axis under test).
+        private static TeamTactic WithOffsideTrap(bool trap) => new TeamTactic(
+            Mentality.Balanced, TacticFormation.F442, Tempo.Standard, TacticWidth.Standard,
+            TacticPassing.Mixed, TacticPressing.Medium, LineOfEngagement.Standard, 0.5f,
+            TacticDefWidth.Standard, TransitionPlan.HoldShape, TransitionPlan.Regroup, trap,
+            TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
+
+        // Balanced in every dimension except FocusPlay (the #15 routing axis under test).
+        private static TeamTactic WithFocus(FocusPlay focus) => new TeamTactic(
+            Mentality.Balanced, TacticFormation.F442, Tempo.Standard, TacticWidth.Standard,
+            TacticPassing.Mixed, TacticPressing.Medium, LineOfEngagement.Standard, 0.5f,
+            TacticDefWidth.Standard, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
+            TacticTriggerMask.None, focus, GkDistributionPolicy.SlowDown, 0);
+
+        // Balanced in every dimension except Width / DefensiveWidth (the #12 routing axes under test).
+        private static TeamTactic WithWidth(TacticWidth width, TacticDefWidth defWidth) => new TeamTactic(
+            Mentality.Balanced, TacticFormation.F442, Tempo.Standard, width,
+            TacticPassing.Mixed, TacticPressing.Medium, LineOfEngagement.Standard, 0.5f,
+            defWidth, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
             TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
 
         private static void TickToFirstStride(MatchEngine engine)
@@ -116,6 +139,85 @@ namespace TacticalDirector.MatchEngine
             // Balanced ⇒ Standard ⇒ the #13 trigger-radius scalar is ×1.0 (behaviour-neutral).
             Assert.AreEqual(LineOfEngagement.Standard, engine.TestOnly_PressLineOfEngagement(0));
             Assert.AreEqual(LineOfEngagement.Standard, engine.TestOnly_PressLineOfEngagement(1));
+        }
+
+        // ── #14 Phase-D writer: OffsideTrap routes per team into the Defensive AI snapshot ──
+
+        [Test]
+        public void SetTeamTactic_RoutesOffsideTrap_PerTeam()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.SetTeamTactic(0, WithOffsideTrap(true));
+            engine.SetTeamTactic(1, WithOffsideTrap(false));
+            TickToFirstStride(engine);
+
+            Assert.IsTrue(engine.TestOnly_OffsideTrapRequested(0));
+            Assert.IsFalse(engine.TestOnly_OffsideTrapRequested(1));
+        }
+
+        [Test]
+        public void DefaultTactic_RoutesFalseOffsideTrap()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            TickToFirstStride(engine);
+
+            // Balanced ⇒ OffsideTrap false ⇒ the #14 routing identity (KD-9 request-not-guarantee).
+            Assert.IsFalse(engine.TestOnly_OffsideTrapRequested(0));
+            Assert.IsFalse(engine.TestOnly_OffsideTrapRequested(1));
+        }
+
+        // ── #15 Phase-D writer: FocusPlay routes per team into the Attacking AI snapshot ──
+
+        [Test]
+        public void SetTeamTactic_RoutesFocusPlay_PerTeam()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.SetTeamTactic(0, WithFocus(FocusPlay.LeftFlank));
+            engine.SetTeamTactic(1, WithFocus(FocusPlay.RightFlank));
+            TickToFirstStride(engine);
+
+            Assert.AreEqual(FocusPlay.LeftFlank,  engine.TestOnly_FocusPlay(0));
+            Assert.AreEqual(FocusPlay.RightFlank, engine.TestOnly_FocusPlay(1));
+        }
+
+        [Test]
+        public void DefaultTactic_RoutesMixedFocusPlay()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            TickToFirstStride(engine);
+
+            // Balanced ⇒ FocusPlay.Mixed ⇒ no lateral preference (the #15 routing identity).
+            Assert.AreEqual(FocusPlay.Mixed, engine.TestOnly_FocusPlay(0));
+            Assert.AreEqual(FocusPlay.Mixed, engine.TestOnly_FocusPlay(1));
+        }
+
+        // ── #12 Phase-D writer: Width / DefensiveWidth route per team into the Positioning modifiers ──
+
+        [Test]
+        public void SetTeamTactic_RoutesWidth_PerTeam()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.SetTeamTactic(0, WithWidth(TacticWidth.VeryWide,   TacticDefWidth.Wide));
+            engine.SetTeamTactic(1, WithWidth(TacticWidth.VeryNarrow, TacticDefWidth.Narrow));
+            TickToFirstStride(engine);
+
+            Assert.AreEqual(TacticWidth.VeryWide,      engine.TestOnly_PositioningWidth(0));
+            Assert.AreEqual(TacticDefWidth.Wide,       engine.TestOnly_PositioningDefWidth(0));
+            Assert.AreEqual(TacticWidth.VeryNarrow,    engine.TestOnly_PositioningWidth(1));
+            Assert.AreEqual(TacticDefWidth.Narrow,     engine.TestOnly_PositioningDefWidth(1));
+        }
+
+        [Test]
+        public void DefaultTactic_RoutesStandardWidth()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            TickToFirstStride(engine);
+
+            // Balanced ⇒ Standard / Standard ⇒ the #12 lateral-compactness scalar is 1.00 (behaviour-neutral).
+            Assert.AreEqual(TacticWidth.Standard,    engine.TestOnly_PositioningWidth(0));
+            Assert.AreEqual(TacticDefWidth.Standard, engine.TestOnly_PositioningDefWidth(0));
+            Assert.AreEqual(TacticWidth.Standard,    engine.TestOnly_PositioningWidth(1));
+            Assert.AreEqual(TacticDefWidth.Standard, engine.TestOnly_PositioningDefWidth(1));
         }
 
         [Test]
@@ -215,4 +317,6 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes                                                   |
 // | 1.0     | 2026-06-28 | —      | #21 T2 runtime-activation tests (SetTeamTactic routing). |
 // | 1.1     | 2026-06-29 | —      | #13 Phase-D writer: LineOfEngagement per-team routing + Standard-default cases. |
+// | 1.2     | 2026-06-29 | —      | #14/#15 Phase-D writers: OffsideTrap + FocusPlay per-team routing + identity defaults. |
+// | 1.3     | 2026-06-29 | —      | #12 Phase-D writer: Width / DefensiveWidth per-team routing + Standard-default cases. |
 #endregion

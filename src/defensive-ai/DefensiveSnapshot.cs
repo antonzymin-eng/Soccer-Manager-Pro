@@ -82,11 +82,12 @@ namespace TacticalDirector.DefensiveAI
         /// #21 T2 routing field (FR-TI-022): the team's manager OffsideTrap toggle, routed through
         /// <see cref="TacticTranslation.OffsideTrapRequested"/>. The class-field default is
         /// <c>false</c> = the <c>TeamTactic.Balanced</c> identity (FR-TI-031). Per KD-9 this is a
-        /// <b>request, never a guarantee</b>: at Stage 0 the §3.7.2 autonomous cascade in
-        /// <see cref="OffsideTrapController"/> remains the sole adjudicator and does not yet read this
-        /// flag (gating today's autonomous arming behind a default-false toggle would not be
-        /// behaviour-neutral). The arming-gate consumption lands with the match-engine Phase-D writer
-        /// + activation pass; this field is the routing seam awaiting that wiring.
+        /// <b>request, never a guarantee</b>: the §3.7.2 autonomous cascade in
+        /// <see cref="OffsideTrapController"/> still adjudicates the four trigger conditions.
+        /// <see cref="OffsideTrapController.Update"/> consumes it as an additive request (v1.2) — when
+        /// <c>true</c> the trap arms after the reduced
+        /// <see cref="DefensiveAIConstants.OffsideTrapRequestedDwellTicks"/>; <c>false</c> keeps the
+        /// baseline dwell (behaviour-neutral).
         /// </summary>
         public bool OffsideTrapRequested;
 
@@ -106,4 +107,8 @@ namespace TacticalDirector.DefensiveAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                          |
 // | 1.1     | 2026-06-29 | —      | #21 T2: + OffsideTrapRequested routing field (FR-TI-022); false   |
 // |         |            |        |   identity, arming-gate consumption deferred (KD-9, not neutral). |
+// | 1.2     | 2026-06-29 | —      | Doc: Phase-D writer landed (MatchEngine v1.19); arming-gate       |
+// |         |            |        |   consumption deferred to §3.7.2 additive-request (doc-only).     |
+// | 1.3     | 2026-06-29 | —      | Doc: OffsideTrapController now consumes the request additively    |
+// |         |            |        |   (reduced dwell when true; false = baseline = neutral).          |
 #endregion

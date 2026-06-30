@@ -20,8 +20,9 @@ namespace TacticalDirector.MatchEngine
     /// restore-deterministic. Applying <see cref="TeamTacticConfig.Default"/> is behaviour-neutral
     /// (every team Balanced ⇒ byte-identical to an unconfigured match, FR-TI-031).
     ///
-    /// This is the boot-time entry point the Stage 0+1 on-disk tactic loader will feed: that loader parses
-    /// a file into a <see cref="TeamTacticConfig"/> and calls <see cref="Apply"/> unchanged.
+    /// This is the boot-time entry point the on-disk tactic loader feeds: <see cref="TeamTacticFileLoader"/>
+    /// parses a file into a <see cref="TeamTacticConfig"/> and the caller passes it to <see cref="Apply"/>
+    /// unchanged.
     /// </remarks>
     public static class TeamTacticConfigApplier
     {

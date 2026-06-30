@@ -16,8 +16,8 @@ namespace TacticalDirector.AttackingAI
     /// #15 hook; it contributes a flank bias in <see cref="OverloadDetector"/> (FR-TI-021).
     /// <see cref="FocusPlay.Mixed"/> (the zero-value identity) and <see cref="FocusPlay.ThroughMiddle"/>
     /// express no lateral preference (<c>null</c>), so a default tactic is behaviour-neutral
-    /// (FR-TI-031). The active OverloadDetector consumption lands with the match-engine Phase-D writer
-    /// + §5.6 review; this seam is the routing translation awaiting that wiring.
+    /// (FR-TI-031). Consumed by <see cref="OverloadDetector.Evaluate"/> as a flank-preference bias;
+    /// the bias magnitude is pending the §5.6 / G2 balance pass.
     /// </summary>
     public static class TacticTranslation
     {

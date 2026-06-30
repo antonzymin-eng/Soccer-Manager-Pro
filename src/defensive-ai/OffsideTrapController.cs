@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/OffsideTrapController.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-29
 // Author:   —
-// Spec:     Defensive AI #14 §3.7, §4.3, Code Standards #20
+// Spec:     Defensive AI #14 §3.7, §4.3, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022 / KD-9)
 // Purpose:  Pure static module: manages the offside-trap dwell counter (§3.7.3) and
 //           executes the DEFENSE-line step-up when all trigger conditions are satisfied.
 
@@ -62,8 +62,17 @@ namespace TacticalDirector.DefensiveAI
                 offsideState.StepUpDwellCounter = 0;
             }
 
+            // #21 FR-TI-022 / KD-9 additive request: a manager-requested trap arms after fewer
+            // qualifying ticks. The request only lowers the threshold (never raises it) and the
+            // four §3.7.2 conditions above still adjudicate — the toggle is a request, not a
+            // guarantee. Default (Balanced ⇒ OffsideTrapRequested false) keeps the autonomous
+            // baseline dwell, so behaviour is byte-identical to pre-#21.
+            int dwellRequired = snapshot.OffsideTrapRequested
+                ? DefensiveAIConstants.OffsideTrapRequestedDwellTicks
+                : DefensiveAIConstants.OffsideTrapDwellTicks;
+
             // Fire the trap when dwell count reached and cooldown expired.
-            if (offsideState.StepUpDwellCounter >= DefensiveAIConstants.OffsideTrapDwellTicks
+            if (offsideState.StepUpDwellCounter >= dwellRequired
              && offsideState.CooldownTicksRemaining == 0)
             {
                 ExecuteStepUp(snapshot, poolBuffer, poolCount, currentTick,
@@ -167,4 +176,7 @@ namespace TacticalDirector.DefensiveAI
 // | 1.1     | 2026-06-15 | —      | AR-2 M-2: ComputeDefenseLineSpread returned 0f when no DEFENSE-line agents exist,     |
 // |         |            |        |   which passes condition-3 (< coherence threshold) and could arm the trap with no      |
 // |         |            |        |   back line to step up; now returns float.MaxValue (fails the gate) for the empty case. |
+// | 1.2     | 2026-06-29 | —      | #21 FR-TI-022 / KD-9: active consumption of OffsideTrapRequested — a requested trap    |
+// |         |            |        |   arms after OffsideTrapRequestedDwellTicks (≤ baseline); the §3.7.2 conditions still   |
+// |         |            |        |   adjudicate. Default false ⇒ baseline dwell ⇒ behaviour-neutral.                       |
 #endregion

@@ -1,8 +1,8 @@
 // File:     src/decision-tree/TacticTranslation.cs
 // Created:  2026-06-28
-// Modified: 2026-06-28
+// Modified: 2026-06-29 (#21 §3.3 per-agent PlayerTactic utility product seam)
 // Author:   —
-// Spec:     Tactical Instructions #21 §3.1, §3.2, FR-TI-004 / FR-TI-025; Decision Tree #8 §2.2.6
+// Spec:     Tactical Instructions #21 §3.1, §3.2, §3.3, FR-TI-004 / FR-TI-005 / FR-TI-014 / FR-TI-025; Decision Tree #8 §2.2.6
 // Purpose:  Consumer-side (T2) enum-translation seam: maps #21 Tactic* inputs onto the
 //           #8-local PressingMode / PassingStyle enums and resolves the Mentality
 //           risk/line outputs. Pure functions, translate-once (FR-TI-025); invoked by
@@ -59,6 +59,63 @@ namespace TacticalDirector.DecisionTree
         public static float MentalityLineBias(Mentality mentality)
             => TacticalInstructionsConstants.MentalityLineBias[ClampMentality(mentality)];
 
+        /// <summary>
+        /// §3.3 per-agent utility product for one option's <see cref="ActionType"/>:
+        /// <c>RoleWeightModifiers × dutyBias × instrBias × tempoActionBias</c>. The identity per-agent
+        /// tactic (<see cref="PlayerRole.Default"/> / <see cref="Duty.Support"/> / every
+        /// <see cref="InstrBias.Default"/>) at <see cref="Tempo.Standard"/> resolves to exactly ×1.0
+        /// (FR-TI-031), so a default-tactic match is behaviour-neutral. <see cref="Tempo"/> is the
+        /// team-level forward-vs-retain dial (carried alongside the per-agent tactic). All magnitudes
+        /// are illustrative pending the §5.6 / G2 balance pass — the directional shapes are the
+        /// reviewable contract (precedent: #14/#15 illustrative-pending-G2). Pure; one static table read
+        /// per factor (translate-once, FR-TI-025) — invoked per scored option, never allocates.
+        /// </summary>
+        public static float PlayerTacticActionMultiplier(in PlayerTactic tactic, Tempo tempo, ActionType action)
+        {
+            int a = (int)action;
+
+            // Role weight (§3.3 / A.4): per-(role, action) table; the Default row is all 1.0.
+            float[][] roleRows = TacticalInstructionsConstants.RoleWeightModifiers;
+            float role = roleRows[ClampRank((int)tactic.Role, roleRows.Length)][a];
+
+            // Team tempo forward-vs-retain weighting (§3.3); the Standard row is all 1.0.
+            float[][] tempoRows = TacticalInstructionsConstants.TempoActionBias;
+            float tempoFactor = tempoRows[ClampRank((int)tempo, tempoRows.Length)][a];
+
+            // Individual instruction bias (§3.4): each bias modulates exactly its named action; Default = 1.0.
+            float instr = TacticalInstructionsConstants.InstrBiasMult[
+                (int)InstructionBiasForAction(tactic.Instructions, action)];
+
+            // Duty aggression (§3.4): the additive aggression bias folded into a multiplier on the on-ball
+            // attacking actions (PASS/SHOOT/DRIBBLE). Support (identity) ⇒ +0.0 ⇒ ×1.0; the action set and
+            // the additive→multiplicative fold are illustrative pending G2.
+            float duty = 1.0f;
+            if (action == ActionType.PASS || action == ActionType.SHOOT || action == ActionType.DRIBBLE)
+            {
+                duty = 1.0f + TacticalInstructionsConstants.DutyAggressionBias[(int)tactic.Duty];
+            }
+
+            return role * tempoFactor * instr * duty;
+        }
+
+        /// <summary>
+        /// §3.4: the <see cref="PlayerInstructions"/> bias that modulates a given <see cref="ActionType"/>
+        /// (each individual instruction maps to exactly one #8 action term). HOLD and INTERCEPT have no
+        /// individual hook, so they follow the team default (<see cref="InstrBias.Default"/>).
+        /// </summary>
+        private static InstrBias InstructionBiasForAction(PlayerInstructions instr, ActionType action)
+        {
+            switch (action)
+            {
+                case ActionType.PASS:             return instr.RiskyPasses;
+                case ActionType.SHOOT:            return instr.ShootTendency;
+                case ActionType.DRIBBLE:          return instr.DribbleTendency;
+                case ActionType.MOVE_TO_POSITION: return instr.PositioningFreedom;
+                case ActionType.PRESS:            return instr.CloseDown;
+                default:                          return InstrBias.Default; // HOLD / INTERCEPT
+            }
+        }
+
         private static int ClampRank(int rank, int count)
         {
             if (rank < 0) return 0;
@@ -76,4 +133,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   (rank-mapped, F5 clamp) + Mentality risk/line resolvers.        |
 // | 1.1     | 2026-06-28 | —      | Runtime activation: class + maps promoted internal→public — the   |
 // |         |            |        |   match-engine Phase-D writer is the intended caller (#21 §3.1).   |
+// | 1.2     | 2026-06-29 | —      | #21 §3.3: PlayerTacticActionMultiplier — per-agent role/duty/instr |
+// |         |            |        |   × team tempo utility product (identity ⇒ ×1.0, FR-TI-031);       |
+// |         |            |        |   consumed per option in UtilityScorer. Magnitudes illustrative    |
+// |         |            |        |   (G2). InstructionBiasForAction helper added.                     |
 #endregion
