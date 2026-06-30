@@ -245,7 +245,13 @@ namespace TacticalDirector.AttackingAI
         /// prefers the flank the ball is on (FR-TI-021): the team commits numbers to the chosen
         /// flank, so an overload declares more readily there. A bias, not a gate — no preference
         /// (Mixed / ThroughMiddle → null) and a ball on the non-preferred flank leave the count
-        /// unchanged. Illustrative magnitude pending the #21 §5.6 / G2 balance pass.
+        /// unchanged. PINNED (#21 §5.6 / G2 balance pass, 2026-06-30 numerical-mirror).
+        /// Invariant: 1 ≤ value ≤ <see cref="OverloadCount"/> − 2 — ≥ 1 makes the bias bite, and
+        /// the upper bound keeps the biased trigger (<see cref="OverloadCount"/> − value) at ≥ 2
+        /// so a preferred flank still needs a genuine numerical overload, never collapsing to a
+        /// trivial 1-agent declaration. With <see cref="OverloadCount"/> = 3 the band pins the
+        /// value to exactly 1 (preferred-flank trigger drops 3 → 2). Locked by
+        /// <c>AttackingAIConstantsTests.OverloadFocusCountBias_InvariantPinned</c>.
         /// Attacking AI #15 §6.1.6 / §3.8.
         /// TODO: replace with config loader (Stage 1).
         /// </summary>
@@ -343,4 +349,7 @@ namespace TacticalDirector.AttackingAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation. 38+ constants; 3 [CROSS] + 1 [DERIVED] + GT. |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-1/H-2/L-1: added MinEffectiveRadiusM, MinRunDepthM, MaxRunDepthM (GT) and MaxLateralOffsetM (DERIVED). |
 // | 1.2     | 2026-05-29 | —      | AR-3 L-1: added AttackAngleEpsilon GT constant for InvariantEnforcer §3.11 angle-comparison branch. |
+// | 1.3     | 2026-06-30 | —      | #21 §5.6 / G2: OverloadFocusCountBias (FR-TI-021) PINNED — illustrative → pinned at 1 with the |
+// |         |            |        |   numerical-mirror invariant 1 ≤ bias ≤ OverloadCount − 2 (biased trigger stays ≥ 2) documented;  |
+// |         |            |        |   locked by AttackingAIConstantsTests.OverloadFocusCountBias_InvariantPinned. |
 #endregion

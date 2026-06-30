@@ -130,9 +130,14 @@ namespace TacticalDirector.DefensiveAI
         /// <summary>
         /// [GT] Reduced dwell threshold used when the manager requests the offside trap
         /// (#21 FR-TI-022 / KD-9 additive request): a requested trap arms more readily than the
-        /// autonomous baseline. MUST be ≤ <see cref="OffsideTrapDwellTicks"/> — the request only
-        /// lowers (never raises) the arm threshold, and the §3.7.2 conditions still adjudicate.
-        /// Illustrative magnitude pending the #21 §5.6 / G2 balance pass. Defensive AI #14 §6.1.
+        /// autonomous baseline. PINNED (#21 §5.6 / G2 balance pass, 2026-06-30 numerical-mirror).
+        /// Invariant: 1 ≤ value ≤ <see cref="OffsideTrapDwellTicks"/> — the request only lowers
+        /// (never raises) the arm threshold, and ≥ 1 keeps it a request, not a guarantee (the
+        /// §3.7.2 conditions must still hold for at least one tick; a zero dwell would arm the
+        /// trap the instant they momentarily coincide). Pinned at 1 (= 100 ms @ 10 Hz, the floor)
+        /// against the 3-tick (300 ms) autonomous baseline: a manager dialling the trap on shaves
+        /// the qualification window to its minimum without removing adjudication. Locked by
+        /// <c>OffsideTrapControllerTests.RequestedDwell_InvariantPinned</c>. Defensive AI #14 §6.1.
         /// TODO: replace with config loader (Stage 1).
         /// </summary>
         public const int OffsideTrapRequestedDwellTicks = 1;
@@ -254,4 +259,7 @@ namespace TacticalDirector.DefensiveAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation. 26-entry catalogue (22 [GT] + 4 [CROSS]).                   |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-1: SQUAD_SIZE mirror corrected to reference PressingAIConstants.SQUAD_SIZE;   |
 // |         |            |        |   added using TacticalDirector.PressingAI; literal copy violated [CROSS] semantics. |
+// | 1.2     | 2026-06-30 | —      | #21 §5.6 / G2: OffsideTrapRequestedDwellTicks (FR-TI-022) PINNED — illustrative →    |
+// |         |            |        |   pinned at 1 with the numerical-mirror invariant 1 ≤ value ≤ OffsideTrapDwellTicks  |
+// |         |            |        |   documented; locked by OffsideTrapControllerTests.RequestedDwell_InvariantPinned.   |
 #endregion

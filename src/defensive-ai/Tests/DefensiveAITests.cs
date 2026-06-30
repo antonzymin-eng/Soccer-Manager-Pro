@@ -1013,6 +1013,25 @@ namespace TacticalDirector.DefensiveAI.Tests
                 "The autonomous baseline must not arm before OffsideTrapDwellTicks (behaviour-neutral).");
         }
 
+        /// <summary>
+        /// #21 §5.6 / G2 balance-pass lock for OffsideTrapRequestedDwellTicks (FR-TI-022 / KD-9).
+        /// Pins the numerical-mirror invariant: 1 ≤ requested ≤ baseline — the request only lowers
+        /// the arm threshold, and ≥ 1 keeps it a request (the §3.7.2 conditions must hold for at
+        /// least one tick), never an instant auto-arm. A future edit that raises it above the
+        /// baseline or zeroes it fails the gate.
+        /// </summary>
+        [Test]
+        public void RequestedDwell_InvariantPinned()
+        {
+            Assert.GreaterOrEqual(DefensiveAIConstants.OffsideTrapRequestedDwellTicks, 1,
+                "requested dwell must be ≥ 1 — a request, not an instant auto-arm (KD-9).");
+            Assert.LessOrEqual(DefensiveAIConstants.OffsideTrapRequestedDwellTicks,
+                DefensiveAIConstants.OffsideTrapDwellTicks,
+                "requested dwell must not exceed the autonomous baseline (the request only lowers).");
+            Assert.AreEqual(1, DefensiveAIConstants.OffsideTrapRequestedDwellTicks,
+                "pinned magnitude: the floor (100 ms @ 10 Hz) against the 3-tick baseline (§5.6 / G2).");
+        }
+
         /// <summary>T-DA-033 — OFFSIDE_MAX_DEPTH_M safety ceiling enforced.</summary>
         [Test]
         public void T_DA_033_MaxDepthCeilingEnforced()
@@ -2284,4 +2303,6 @@ namespace TacticalDirector.DefensiveAI.Tests
 // |         |            |        | over-displaced demoted), OffsideTrapEmptyLineTests (T-DA-M2 empty DEFENSE line gate),     |
 // |         |            |        | ZonalBypassResetTests (T-DA-H3 dwell does not carry through a ZONAL gap). T-DA-045        |
 // |         |            |        | helper moved to Midfield line to isolate invariant 2 from backline enforcement.          |
+// | 1.5     | 2026-06-30 | —      | #21 §5.6 / G2: RequestedDwell_InvariantPinned locks the pinned OffsideTrapRequestedDwell- |
+// |         |            |        | Ticks magnitude + invariant (1 ≤ requested ≤ baseline) (FR-TI-022 / KD-9).               |
 #endregion
