@@ -44,8 +44,11 @@ once per tactic-change and writes the *subsystem* enum into the routing field.
 - `riskMultiplier` ∈ [0.80, 1.20], dimensionless, multiplies each scored option's utility in #8
   `UtilityScorer` (before clamp). Higher = bolder (PASS/SHOOT/DRIBBLE rise relative to HOLD).
 - `defensiveLineBias` ∈ [−0.20, +0.20], added to `TeamTactic.DefensiveLine` then re-`Clamp01`'d.
-- Whether Cautious/Balanced/Positive (same profile) feel distinct is an **open balance question**
-  (§5.6); the risk/line spread is the gradation carrier. Values illustrative.
+- Whether Cautious/Balanced/Positive (same profile) feel distinct is a §5.6 balance question; the
+  risk/line spread is the gradation carrier. **Values PINNED by the §5.6 / G2 balance pass (2026-06-30):**
+  the table is strictly monotonic in both `riskMultiplier` and `defensiveLineBias` with the Balanced
+  identity row exact (1.00 / 0.00), so the 7-step gradation is preserved and a default tactic is
+  behaviour-neutral (FR-TI-031). Locked in code by `BalancePassInvariantsTests`.
 
 **Composition with `TransitionWon/Lost` (resolves PASS-1 H-2).** `Mentality` selects the **base**
 `StyleProfile`. `TransitionWon`/`TransitionLost` (FR-TI-020) then **override only the transition

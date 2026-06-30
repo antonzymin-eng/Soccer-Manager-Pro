@@ -125,10 +125,15 @@ namespace TacticalDirector.MatchEngine
         /// active <c>TeamTactic</c> (read by the AI phase) and the pending one (a <c>SetTeamTactic</c> staged
         /// but not yet committed at a stride boundary), ×TEAM_COUNT each, in Appendix B field order. Until v9
         /// the tactic was excluded, so a tactic changed MID-match did not survive save/restore; with v9 a
-        /// mid-match change is restore-deterministic. The per-agent PlayerTactic / team Tempo carried in the
-        /// Decision Tree <c>TacticalContext</c> (#21 §3.3) need NO field — they are re-assembled each AI tick
-        /// from this serialized team tactic plus the boot identity (no per-agent tactic config at Stage 0).</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 9;
+        /// mid-match change is restore-deterministic.
+        ///
+        /// v10 (#21 §3.3) adds the per-agent Tactical Instructions (#21) <c>PlayerTactic</c> (role + duty +
+        /// individual instructions) — both the active tactic (read by the AI phase) and the pending one (a
+        /// <c>SetPlayerTactic</c> staged but not yet committed at a stride boundary), ×SQUAD_SIZE each, in
+        /// Appendix B field order. A per-agent tactic changed MID-match is now restore-deterministic. The team
+        /// <c>Tempo</c> carried in the Decision Tree <c>TacticalContext</c> still needs NO field — it is
+        /// re-assembled each AI tick from the serialized team tactic plus the boot identity.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 10;
 
         #endregion
 
@@ -322,4 +327,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | active + pending TeamTactic is now serialized into the world-    |
 // |         |            |        | state body (Appendix B order), so a mid-match tactic change is   |
 // |         |            |        | restore-deterministic. v9 doc paragraph added.                  |
+// | 1.17    | 2026-06-30 | —      | #21 §3.3: SNAPSHOT_SCHEMA_VERSION 9 → 10 — the per-agent active  |
+// |         |            |        | + pending PlayerTactic (×SQUAD_SIZE) is now serialized, so a     |
+// |         |            |        | mid-match per-agent tactic change is restore-deterministic. v10  |
+// |         |            |        | doc paragraph added.                                            |
 #endregion

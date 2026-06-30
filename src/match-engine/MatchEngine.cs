@@ -5,6 +5,7 @@
 // Modified: 2026-06-29 (#21 T2 Defensive (#14) + Attacking (#15) Phase-D writers — route OffsideTrap / FocusPlay → snapshots)
 // Modified: 2026-06-29 (#21 T2 Positioning (#12) Phase-D writer — route TeamTactic.Width / DefensiveWidth → ContextModifierInputs; all three writers now closed)
 // Modified: 2026-06-29 (#21 §3.3 team-Tempo routing + ERR-021-002: SNAPSHOT_SCHEMA_VERSION 8 → 9, per-team active+pending TeamTactic serialized)
+// Modified: 2026-06-30 (#21 §3.3 per-agent PlayerTactic config surface (SetPlayerTactic) + §3.4 DefensiveLine depth recompute; SNAPSHOT_SCHEMA_VERSION 9 → 10)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -157,6 +158,16 @@ namespace TacticalDirector.MatchEngine
         // MID-match now survives save/restore — a mid-match change is restore-deterministic.
         private readonly TeamTactic[] _activeTeamTactics;   // [TEAM_COUNT]
         private readonly TeamTactic[] _pendingTeamTactics;  // [TEAM_COUNT]
+
+        // Per-agent manager tactic (#21 §3.3 — the per-agent role/duty/individual-instruction layer).
+        // Same active/pending stride-commit contract as the team tactic (FR-TI-027): _pending is what
+        // SetPlayerTactic writes, _active is what RunMechanicsAI folds into each agent's TacticalContext.
+        // Both default to the identity PlayerTactic.Default(PlayerRole.Default) (every §3.3 product factor
+        // ×1.0; FR-TI-031), so a match left at the default is byte-identical to pre-#21. Both arrays are
+        // serialized into the snapshot (SNAPSHOT_SCHEMA_VERSION v10), so a per-agent tactic changed
+        // MID-match is restore-deterministic (the same reasoning as ERR-021-002 for the team tactic).
+        private readonly PlayerTactic[] _activePlayerTactics;   // [SQUAD_SIZE]
+        private readonly PlayerTactic[] _pendingPlayerTactics;  // [SQUAD_SIZE]
 
         // ── Mechanics AI (design note §3 / Phase D D2) ────────────────────────────────
         // Positioning AI (#12) drives per-team formation slots fed into each agent's TacticalContext —
@@ -312,6 +323,17 @@ namespace TacticalDirector.MatchEngine
             {
                 _activeTeamTactics[t]  = TeamTactic.Balanced;
                 _pendingTeamTactics[t] = TeamTactic.Balanced;
+            }
+
+            // #21 §3.3: every agent starts at the identity per-agent tactic (FR-TI-031) — behaviour-neutral
+            // until a caller invokes SetPlayerTactic before kickoff. _active is seeded directly so the very
+            // first AI stride already reads a valid per-agent tactic.
+            _activePlayerTactics  = new PlayerTactic[MatchEngineConstants.SQUAD_SIZE];
+            _pendingPlayerTactics = new PlayerTactic[MatchEngineConstants.SQUAD_SIZE];
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _activePlayerTactics[i]  = PlayerTactic.Default(PlayerRole.Default);
+                _pendingPlayerTactics[i] = PlayerTactic.Default(PlayerRole.Default);
             }
 
             InitializeAiSnapshots();
@@ -522,6 +544,24 @@ namespace TacticalDirector.MatchEngine
             _pendingTeamTactics[teamId] = tactic;
         }
 
+        /// <summary>
+        /// Sets an agent's per-agent tactic (#21 §3.3 — behavioural role + duty + individual instructions).
+        /// Like <see cref="SetTeamTactic"/> the change is staged as <em>pending</em> and committed at the next
+        /// tactical-stride boundary (FR-TI-027). <paramref name="agentId"/> is a roster index in
+        /// <c>[0, SQUAD_SIZE)</c>. The per-agent tactic is serialized into the snapshot
+        /// (SNAPSHOT_SCHEMA_VERSION v10), so a mid-match change is restore-deterministic. The default is the
+        /// identity <see cref="PlayerTactic.Default(PlayerRole)"/> (behaviour-neutral; FR-TI-031).
+        /// </summary>
+        public void SetPlayerTactic(int agentId, in PlayerTactic tactic)
+        {
+            if (agentId < 0 || agentId >= MatchEngineConstants.SQUAD_SIZE)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(agentId), agentId, "agentId must be a roster index in [0, SQUAD_SIZE).");
+            }
+            _pendingPlayerTactics[agentId] = tactic;
+        }
+
         /// <summary>Current 60 Hz physics tick (0 before the first <see cref="RunTick"/>).</summary>
         public ulong CurrentTick => _clock.CurrentTick;
 
@@ -686,6 +726,11 @@ namespace TacticalDirector.MatchEngine
         internal PressingMode TestOnly_Pressing(int agentId) => _tacticalContexts[agentId].Pressing;
         internal PassingStyle TestOnly_Passing(int agentId) => _tacticalContexts[agentId].Passing;
 
+        /// <summary>Test-only: the #21 per-agent tactic (role / duty / instructions) folded into the agent's
+        /// TacticalContext at the last AI tick — lets the per-agent config test prove SetPlayerTactic reaches
+        /// the DecisionTree input and the identity default is behaviour-neutral.</summary>
+        internal PlayerTactic TestOnly_PlayerTactic(int agentId) => _tacticalContexts[agentId].PlayerTactic;
+
         /// <summary>Test-only: the #21 line of engagement routed into team <paramref name="teamId"/>'s
         /// Pressing AI (#13) snapshot at the last AI tick — lets the Phase-D writer test prove
         /// SetTeamTactic reaches the press input and the Balanced default (Standard) is behaviour-neutral.</summary>
@@ -777,6 +822,11 @@ namespace TacticalDirector.MatchEngine
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 _activeTeamTactics[t] = _pendingTeamTactics[t];
+            }
+            // #21 §3.3 FR-TI-027: the per-agent tactic commits at the same stride boundary.
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _activePlayerTactics[i] = _pendingPlayerTactics[i];
             }
 
             // §2.5 per-tick assembly. Possession is the only per-tick-varying AI input at Stage 0
@@ -937,19 +987,23 @@ namespace TacticalDirector.MatchEngine
                     ctx.Mentality = tactic.Mentality;
                     // #21 §3.3: team tempo drives the per-option forward-vs-retain factor in the
                     // UtilityScorer §3.3 product. Balanced ⇒ Tempo.Standard ⇒ all factors ×1.0
-                    // (behaviour-neutral). The per-agent PlayerTactic stays the Stage0Default identity
-                    // (PlayerRole.Default / Duty.Support / no instructions) — there is no per-agent tactic
-                    // config surface at Stage 0; it lands with the §5.6 / G2 balance pass.
-                    ctx.Tempo = tactic.Tempo;
+                    // (behaviour-neutral). The per-agent PlayerTactic (role / duty / individual instructions)
+                    // is routed from the active per-agent config — the default identity tactic resolves to
+                    // ×1.0 on every factor (FR-TI-031), so a default match stays byte-identical.
+                    ctx.Tempo        = tactic.Tempo;
+                    ctx.PlayerTactic = _activePlayerTactics[i];
                     // Fully qualified: TacticTranslation now exists in BOTH DecisionTree (#8) and
                     // PressingAI (#13), and the match-engine references both, so the bare name is
                     // ambiguous (CS0104). These two are the #8 enum maps specifically.
                     ctx.Pressing  = TacticalDirector.DecisionTree.TacticTranslation.ToPressingMode(tactic.Pressing);
                     ctx.Passing   = TacticalDirector.DecisionTree.TacticTranslation.ToPassingStyle(tactic.Passing);
 
-                    // DefensiveLineDepth stays the #14 MarkDirective output (the depth authority at Stage 0);
-                    // the §3.4 Clamp01(DefensiveLine + MentalityLineBias) recompute is deferred with the
-                    // #12/#14 depth-ownership wiring (ERR-021-002), so it is NOT applied here.
+                    // #21 §3.4: DefensiveLineDepth is the #14 MarkDirective output — #12/#14 remain the depth
+                    // authority. The §3.4 recompute Clamp01(TeamTactic.DefensiveLine + MentalityLineBias) is
+                    // now applied at the #14 INPUT (FillDefensiveSnapshot.DefensiveLineDepth), so the manager
+                    // dial + mentality bias flows into #14 and its output reaches #8 here — a single
+                    // authoritative depth source (no parallel surface). Balanced ⇒ 0.5 + 0.0 = 0.5, the prior
+                    // STAGE0_DEFENSIVE_LINE_DEPTH, so a default match is unchanged (FR-TI-031).
                     ctx.DefensiveLineDepth = mark.OffensiveLineDepth;
                     ctx.HasMarkDirective   = !teamHasPossession;
                     ctx.HasAttackIntent    = HasActiveAttackIntent(_attacking[t].GetIntent(i));
@@ -1072,8 +1126,9 @@ namespace TacticalDirector.MatchEngine
         /// Fills team <paramref name="team"/>'s reused <see cref="DefensiveSnapshot"/> (Phase D D2b). The
         /// per-agent <c>PressRole</c> is read back from this team's Pressing AI (#13) output, completing the
         /// Positioning→Pressing→Defensive chain. All 22 agents are carried in the canonical attack-+X frame;
-        /// the team phase is the Positioning AI phase and the line depth is the Stage-0 default (echoed into
-        /// <see cref="MarkDirective.OffensiveLineDepth"/>). The team's goalkeeper anchors the COVER_GK_ZONE
+        /// the team phase is the Positioning AI phase and the line depth is the #21 §3.4 recompute
+        /// <c>Clamp01(TeamTactic.DefensiveLine + MentalityLineBias[mentality])</c> (echoed into
+        /// <see cref="MarkDirective.OffensiveLineDepth"/>; Balanced ⇒ 0.5). The team's goalkeeper anchors the COVER_GK_ZONE
         /// last-man check (§3.9).
         /// </summary>
         private void FillDefensiveSnapshot(int team, int tickIndex)
@@ -1089,7 +1144,17 @@ namespace TacticalDirector.MatchEngine
             snap.BallVelocity            = MirrorVelocityIfAway(team, ballVelXY);
             snap.PossessionOwnerEntityId = owner;
             snap.TeamPhase               = _positioning[team].GetPhase();
-            snap.DefensiveLineDepth      = MatchEngineConstants.STAGE0_DEFENSIVE_LINE_DEPTH;
+            // #21 §3.4 (resolves PASS-1 M-2): the authoritative defensive-line depth is the manager input
+            // dial + the per-mentality additive bias, re-Clamp01'd — TeamTactic.DefensiveLine is INPUT ONLY,
+            // never a parallel depth value. This is the single source #12/#14 (here) and #8 (via the #14
+            // MarkDirective output) read. Default Balanced ⇒ Clamp01(0.5 + 0.0) = 0.5 = the prior
+            // STAGE0_DEFENSIVE_LINE_DEPTH, so a default match is byte-identical (FR-TI-031). The resolved
+            // depth is recomputed every tick from the serialized dial + mentality, so it is never an
+            // independently-restorable second surface (no divergence-on-restore; §3.4 serialization note).
+            TeamTactic depthTactic = _activeTeamTactics[team];
+            snap.DefensiveLineDepth      = Mathf.Clamp01(
+                depthTactic.DefensiveLine
+                + TacticalDirector.DecisionTree.TacticTranslation.MentalityLineBias(depthTactic.Mentality));
             snap.AgentCount              = MatchEngineConstants.SQUAD_SIZE;
             snap.HasActivePrimaryPress   = _pressing[team].LastDirective.IsActive;
 
@@ -1663,9 +1728,10 @@ namespace TacticalDirector.MatchEngine
             // pending), closing ERR-021-002 — a mid-match tactic change is now restore-deterministic. The
             // ONLY remaining un-serialized fields are the boot-deterministic constants (_attrs/_perfs,
             // proven above) and the tick-derivable observation counters — no cross-tick gameplay state is
-            // excluded. NOTE: the per-agent PlayerTactic / team Tempo carried in TacticalContext (#21 §3.3)
-            // are re-assembled each AI tick in RunMechanicsAI from the serialized team tactic + the boot
-            // identity (no per-agent tactic config exists at Stage 0), so they need no separate field.
+            // excluded. The per-agent PlayerTactic is now its own config surface (SetPlayerTactic) and is
+            // serialized (active + pending, ×SQUAD_SIZE) at v10 below. The team Tempo carried in
+            // TacticalContext (#21 §3.3) still needs no separate field — it is re-assembled each AI tick in
+            // RunMechanicsAI from the serialized team tactic.
             //
             // EXCLUSION PROOF — _possessingAgentId (Phase C C1): cross-tick state, but it is NOT
             // serialized directly because C4 folds it into MatchContext.PossessingAgentId (authored
@@ -1756,7 +1822,40 @@ namespace TacticalDirector.MatchEngine
                 WriteTeamTactic(buf, ref o, in _pendingTeamTactics[t]);
             }
 
+            // v10 (#21 §3.3) — the per-agent PlayerTactic (role + duty + individual instructions). Both the
+            // active tactic (read by RunMechanicsAI) and the pending one (a SetPlayerTactic staged but not yet
+            // committed at a stride boundary) are cross-tick state, so a per-agent tactic changed MID-match is
+            // restore-deterministic — the same reasoning as the v9 team tactic. Default identity is byte-stable
+            // across two same-seed runs (both serialize the identical identity block every tick).
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                WritePlayerTactic(buf, ref o, in _activePlayerTactics[i]);
+                WritePlayerTactic(buf, ref o, in _pendingPlayerTactics[i]);
+            }
+
             payload.BytesWritten = o;
+        }
+
+        /// <summary>Serializes a <see cref="PlayerTactic"/> in canonical (Appendix B) field order: the
+        /// behavioural <c>Role</c> and <c>Duty</c> as i32 ordinals, then the embedded
+        /// <see cref="PlayerInstructions"/> (six <see cref="InstrBias"/> ordinals as i32, the TightMarking
+        /// bool, the man-mark target id as i32, and the set-piece-duty flags as i32). Ordinal stability is
+        /// each enum's own APPEND-only contract.</summary>
+        private static void WritePlayerTactic(byte[] buf, ref int o, in PlayerTactic t)
+        {
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Role);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Duty);
+
+            PlayerInstructions ins = t.Instructions;
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.RiskyPasses);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.ShootTendency);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.DribbleTendency);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.CrossTendency);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.PositioningFreedom);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.CloseDown);
+            CanonicalSerializer.WriteBool(buf, ref o, ins.TightMarking);
+            CanonicalSerializer.WriteI32 (buf, ref o, ins.MarkTargetEntityId);
+            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.SetPieceRoles);
         }
 
         /// <summary>Serializes a <see cref="TeamTactic"/> in canonical (Appendix B) field order. Enum
@@ -2739,4 +2838,18 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | restore-deterministic; SetTeamTactic / _activeTeamTactics docs  |
 // |         |            |        | + the cross-tick-coverage proof updated. New TeamTactic_Feeds-  |
 // |         |            |        | SnapshotDigest probe.                                           |
+// | 1.23    | 2026-06-30 | —      | #21 §3.3 per-agent PlayerTactic config surface + §3.4 Defensive-|
+// |         |            |        | Line depth recompute. (1) New _active/_pendingPlayerTactics[    |
+// |         |            |        | SQUAD_SIZE] (default identity); public SetPlayerTactic(agentId, |
+// |         |            |        | tactic) stages pending, committed at the stride boundary (FR-TI-|
+// |         |            |        | 027); RunMechanicsAI routes the active per-agent tactic into    |
+// |         |            |        | ctx.PlayerTactic (identity ⇒ ×1.0, byte-identical default). New |
+// |         |            |        | PlayerTacticConfig / PlayerTacticConfigApplier in-code source.  |
+// |         |            |        | Serialized active+pending ×SQUAD_SIZE via WritePlayerTactic;    |
+// |         |            |        | SNAPSHOT_SCHEMA_VERSION 9 → 10 (mid-match per-agent change is   |
+// |         |            |        | restore-deterministic). New TestOnly_PlayerTactic seam. (2) §3.4|
+// |         |            |        | FillDefensiveSnapshot.DefensiveLineDepth = Clamp01(TeamTactic.  |
+// |         |            |        | DefensiveLine + MentalityLineBias[mentality]) — the manager dial|
+// |         |            |        | + bias is the single depth source; #14 output still reaches #8. |
+// |         |            |        | Balanced ⇒ 0.5 = STAGE0_DEFENSIVE_LINE_DEPTH (behaviour-neutral)|
 #endregion

@@ -63,9 +63,9 @@ namespace TacticalDirector.DecisionTree
         /// with <see cref="PlayerRole.Default"/> (every §3.3 product factor ×1.0, FR-TI-031). NOTE:
         /// <c>default(PlayerTactic)</c> is NOT the identity (its embedded instructions man-mark agent 0);
         /// consume only when built via the factory. Drives the per-option §3.3 utility product in
-        /// UtilityScorer via <see cref="TacticTranslation.PlayerTacticActionMultiplier"/>. Stage 0 sets
-        /// every agent to the identity (no per-agent tactic config exists yet); the per-agent config
-        /// surface lands with the §5.6 / G2 balance pass.
+        /// UtilityScorer via <see cref="TacticTranslation.PlayerTacticActionMultiplier"/>. The per-agent
+        /// config surface now exists (<c>MatchEngine.SetPlayerTactic</c> / <c>PlayerTacticConfig</c>); an
+        /// unconfigured agent stays the identity, so a default match is behaviour-neutral (FR-TI-031).
         /// </summary>
         public PlayerTactic PlayerTactic;
 
@@ -155,4 +155,6 @@ namespace TacticalDirector.DecisionTree
 // | 1.3     | 2026-06-29 | —      | #21 §3.3: Tempo + per-agent PlayerTactic routing fields added (Stage0Default |
 // |         |            |        |   seeds Standard / identity PlayerTactic ⇒ ×1.0, FR-TI-031). Drive the per-  |
 // |         |            |        |   option §3.3 utility product in UtilityScorer. Behaviour-neutral.           |
+// | 1.4     | 2026-06-30 | —      | #21 §3.3: PlayerTactic field doc updated — the per-agent config surface now  |
+// |         |            |        |   exists (MatchEngine.SetPlayerTactic / PlayerTacticConfig). No code change. |
 #endregion

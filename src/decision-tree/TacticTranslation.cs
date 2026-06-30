@@ -1,6 +1,6 @@
 // File:     src/decision-tree/TacticTranslation.cs
 // Created:  2026-06-28
-// Modified: 2026-06-29 (#21 §3.3 per-agent PlayerTactic utility product seam)
+// Modified: 2026-06-30 (#21 §5.6 / G2 balance pass — doc reframed illustrative → pinned)
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.1, §3.2, §3.3, FR-TI-004 / FR-TI-005 / FR-TI-014 / FR-TI-025; Decision Tree #8 §2.2.6
 // Purpose:  Consumer-side (T2) enum-translation seam: maps #21 Tactic* inputs onto the
@@ -65,9 +65,9 @@ namespace TacticalDirector.DecisionTree
         /// tactic (<see cref="PlayerRole.Default"/> / <see cref="Duty.Support"/> / every
         /// <see cref="InstrBias.Default"/>) at <see cref="Tempo.Standard"/> resolves to exactly ×1.0
         /// (FR-TI-031), so a default-tactic match is behaviour-neutral. <see cref="Tempo"/> is the
-        /// team-level forward-vs-retain dial (carried alongside the per-agent tactic). All magnitudes
-        /// are illustrative pending the §5.6 / G2 balance pass — the directional shapes are the
-        /// reviewable contract (precedent: #14/#15 illustrative-pending-G2). Pure; one static table read
+        /// team-level forward-vs-retain dial (carried alongside the per-agent tactic). The magnitudes are
+        /// the §5.6 / G2 balance-pass-pinned defaults (June 30, 2026); the directional shapes remain the
+        /// normative contract (<c>BalancePassInvariantsTests</c> locks both). Pure; one static table read
         /// per factor (translate-once, FR-TI-025) — invoked per scored option, never allocates.
         /// </summary>
         public static float PlayerTacticActionMultiplier(in PlayerTactic tactic, Tempo tempo, ActionType action)
@@ -88,7 +88,7 @@ namespace TacticalDirector.DecisionTree
 
             // Duty aggression (§3.4): the additive aggression bias folded into a multiplier on the on-ball
             // attacking actions (PASS/SHOOT/DRIBBLE). Support (identity) ⇒ +0.0 ⇒ ×1.0; the action set and
-            // the additive→multiplicative fold are illustrative pending G2.
+            // the additive→multiplicative fold are the §5.6 / G2-pinned shapes (June 30, 2026).
             float duty = 1.0f;
             if (action == ActionType.PASS || action == ActionType.SHOOT || action == ActionType.DRIBBLE)
             {
@@ -137,4 +137,6 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   × team tempo utility product (identity ⇒ ×1.0, FR-TI-031);       |
 // |         |            |        |   consumed per option in UtilityScorer. Magnitudes illustrative    |
 // |         |            |        |   (G2). InstructionBiasForAction helper added.                     |
+// | 1.3     | 2026-06-30 | —      | §5.6 / G2 balance pass: doc reframed illustrative → pinned         |
+// |         |            |        |   (magnitudes unchanged; identity ⇒ ×1.0 invariant preserved).     |
 #endregion

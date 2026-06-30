@@ -79,9 +79,16 @@ One scenario per consumer once its match-engine phase composes: e.g. `sim_high_m
 - **T-TI-EXP-003** — `FocusPlay.Left` measurably biases option laterality but never starves the
   opposite channel to zero options (no degenerate funnel).
 - **T-TI-EXP-004** — schema-order lock: Appendix B order is asserted byte-for-byte.
-- **Balance pass (gating §6.2 of the supplement):** `RoleWeightModifiers` + §3.2 values get a
-  numerical-mirror + adversarial review before their `[GT]` values are pinned. Until then values are
-  illustrative and tests assert **shape/direction**, not absolute magnitudes.
+- **Balance pass (gating §6.2 of the supplement) — DONE (2026-06-30):** `RoleWeightModifiers` + the
+  §3.2/§3.3/§3.4 Mentality/role/duty/tempo/instr `[GT]` magnitudes have had their numerical-mirror +
+  adversarial review and are **pinned** (the in-code defaults in `TacticalInstructionsConstants.cs` are
+  the committed values — they were already spec-aligned and monotonic, so pinning kept them and added
+  the invariant locks). The numerical-mirror invariants — exact identity rows, strict monotonicity of
+  the risk/line/width/engagement tables, `RoleWeightModifiers` ∈ [0.5, 2.0] with the §3.3 directional
+  shapes — are asserted by `BalancePassInvariantsTests`. The shapes/directions remain the normative
+  contract; magnitudes are now committed rather than illustrative. (The #14 `OffsideTrapRequestedDwell-
+  Ticks` / #15 `OverloadFocusCountBias` activation magnitudes are tracked separately under their own
+  consumers.)
 
 ## 5.7 FR → test traceability
 
