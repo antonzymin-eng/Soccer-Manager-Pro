@@ -7,6 +7,7 @@
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.CollisionSystem
 {
@@ -88,13 +89,13 @@ namespace TacticalDirector.CollisionSystem
         #region GT
 
         /// <summary>[GT] Number of agents per match (22 = 11 per team). §3.2.4.</summary>
-        public static readonly int AgentCapacity = 22; // TODO: replace with config loader (Stage 1)
+        public static readonly int AgentCapacity = Config.GetInt("collision-system", "AgentCapacity", 22);
 
         /// <summary>[GT] Max entities per cell before warning. §4.3.1.</summary>
-        public static readonly int CellDensityWarning = 8; // TODO: replace with config loader (Stage 1)
+        public static readonly int CellDensityWarning = Config.GetInt("collision-system", "CellDensityWarning", 8);
 
         /// <summary>[GT] Max collision pairs processed per frame. §4.3.1 Safety.</summary>
-        public static readonly int MaxCollisionPairs = 50; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxCollisionPairs = Config.GetInt("collision-system", "MaxCollisionPairs", 50);
 
         /// <summary>
         /// [GT] Max loop iterations; prevents infinite loops from corrupt state. §4.3.1 Safety.
@@ -102,7 +103,7 @@ namespace TacticalDirector.CollisionSystem
         /// no iterative solver (single-pass response; pair dedupe bounds the broad phase). Wire to
         /// the first iterative loop that lands, or retire with a §4.3.1 spec patch at Stage 1.
         /// </summary>
-        public static readonly int MaxIterations = 1000; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxIterations = Config.GetInt("collision-system", "MaxIterations", 1000);
 
         #endregion
     }
@@ -158,29 +159,29 @@ namespace TacticalDirector.CollisionSystem
         /// which inflated forces ~10× and put the entire stochastic fall/stumble band below
         /// walking pace (ERR-003-001; spec §3.3 patched June 10, 2026).
         /// </summary>
-        public static readonly float ContactDurationS = 0.15f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ContactDurationS = Config.GetFloat("collision-system", "ContactDurationS", 0.15f);
 
         /// <summary>[GT] Coefficient of restitution for agent-agent collision (0=inelastic, 1=elastic). §3.3.1.</summary>
-        public static readonly float CoefficientOfRestitution = 0.3f; // TODO: replace with config loader (Stage 1)
+        public static readonly float CoefficientOfRestitution = Config.GetFloat("collision-system", "CoefficientOfRestitution", 0.3f);
 
         /// <summary>[GT] Impulse scale for same-team collisions (spatial awareness reduces hard contact). §3.3.1.</summary>
-        public static readonly float SameTeamMomentumScale = 0.3f; // TODO: replace with config loader (Stage 1)
+        public static readonly float SameTeamMomentumScale = Config.GetFloat("collision-system", "SameTeamMomentumScale", 0.3f);
 
         /// <summary>[GT] Max ball Z height for ground-contact detection (m); above → aerial duel. §3.2.1 / FR-03.</summary>
-        public static readonly float AgentReachHeight = 2.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float AgentReachHeight = Config.GetFloat("collision-system", "AgentReachHeight", 2.0f);
 
         /// <summary>
         /// [GT] Slight over-separation multiplier applied to penetration depth to prevent re-contact on the next frame. §3.3.2.
         /// Value of 1.01 pushes entities 1% beyond exact contact surface.
         /// </summary>
-        public static readonly float SeparationSlop = 1.01f; // TODO: replace with config loader (Stage 1)
+        public static readonly float SeparationSlop = Config.GetFloat("collision-system", "SeparationSlop", 1.01f);
 
         /// <summary>
         /// [GT] Minimum squared vector magnitude below which a response (impulse or position correction) is skipped. §3.4.1.
         /// Avoids applying negligible responses that would only introduce floating-point noise.
         /// Effective magnitude threshold: sqrt(MinResponseSqrMagnitude) ≈ 0.01 m or m/s.
         /// </summary>
-        public static readonly float MinResponseSqrMagnitude = 0.0001f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MinResponseSqrMagnitude = Config.GetFloat("collision-system", "MinResponseSqrMagnitude", 0.0001f);
 
         #endregion
     }
@@ -193,19 +194,19 @@ namespace TacticalDirector.CollisionSystem
         #region GT
 
         /// <summary>[GT] Base force threshold for falling (N). §3.3.1. Strength-1 agent: 550N.</summary>
-        public static readonly float FallForceBase = 500f; // TODO: replace with config loader (Stage 1)
+        public static readonly float FallForceBase = Config.GetFloat("collision-system", "FallForceBase", 500f);
 
         /// <summary>[GT] Additional fall threshold per Strength point (N/point). §3.3.1.</summary>
-        public static readonly float FallForcePerStrength = 50f; // TODO: replace with config loader (Stage 1)
+        public static readonly float FallForcePerStrength = Config.GetFloat("collision-system", "FallForcePerStrength", 50f);
 
         /// <summary>[GT] Stumble threshold as fraction of fall threshold. §3.3.1.</summary>
-        public static readonly float StumbleThresholdFraction = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float StumbleThresholdFraction = Config.GetFloat("collision-system", "StumbleThresholdFraction", 0.5f);
 
         /// <summary>[GT] Force range over which P(fall) interpolates 0→1 above threshold (N). §3.3.1.</summary>
-        public static readonly float FallProbabilityRange = 500f; // TODO: replace with config loader (Stage 1)
+        public static readonly float FallProbabilityRange = Config.GetFloat("collision-system", "FallProbabilityRange", 500f);
 
         /// <summary>[GT] Max penetration before tunneling warning (m). §3.3.1.</summary>
-        public static readonly float MaxPenetrationDepth = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MaxPenetrationDepth = Config.GetFloat("collision-system", "MaxPenetrationDepth", 0.5f);
 
         #endregion
     }
@@ -218,16 +219,16 @@ namespace TacticalDirector.CollisionSystem
         #region GT
 
         /// <summary>[GT] Dot-product threshold for shoulder-to-shoulder (parallel velocities). §3.3.6.</summary>
-        public static readonly float ShoulderDotThreshold = 0.7f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ShoulderDotThreshold = Config.GetFloat("collision-system", "ShoulderDotThreshold", 0.7f);
 
         /// <summary>[GT] Dot-product threshold for from-behind detection. §3.3.6.</summary>
-        public static readonly float BehindDotThreshold = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float BehindDotThreshold = Config.GetFloat("collision-system", "BehindDotThreshold", 0.5f);
 
         /// <summary>[GT] Minimum speed for instigator direction to be meaningful (m/s). §3.3.6.</summary>
-        public static readonly float MinSpeedForClassification = 0.1f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MinSpeedForClassification = Config.GetFloat("collision-system", "MinSpeedForClassification", 0.1f);
 
         /// <summary>[GT] Minimum victim speed to test from-behind case (m/s). §3.3.6.</summary>
-        public static readonly float MinVictimSpeedBehind = 1.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MinVictimSpeedBehind = Config.GetFloat("collision-system", "MinVictimSpeedBehind", 1.0f);
 
         #endregion
     }

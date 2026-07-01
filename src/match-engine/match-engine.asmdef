@@ -16,7 +16,8 @@
         "TacticalDirector.PressingAI",
         "TacticalDirector.DefensiveAI",
         "TacticalDirector.AttackingAI",
-        "TacticalDirector.TacticalInstructions"
+        "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -7,6 +7,7 @@
 //           No magic literals permitted in any other event-system file.
 
 using TacticalDirector.DeterministicSim;
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.EventSystem
 {
@@ -24,28 +25,28 @@ namespace TacticalDirector.EventSystem
         /// <summary>[GT] Ring-buffer slot count per tick. §3.5.1 / §6.3.
         /// Derivation: 64 first-order ceiling × MAX_EVENT_DISPATCH_DEPTH (8) × 2 headroom = 1024
         /// (additive BFS under FR-EVT-046a out-degree cap = 1).</summary>
-        public static readonly int EventQueueCapacity = 1024; // TODO: replace with config loader (Stage 1)
+        public static readonly int EventQueueCapacity = Config.GetInt("event-system", "EventQueueCapacity", 1024);
 
         /// <summary>[GT] Aggregate per-tick Tier C publication sanity ceiling. §3.5.3 / §6.3.
         /// NOT a delivery queue capacity — Tier C is immediate-dispatch per §3.2.3.
         /// AR-12 L-1: declared-but-unconsumed at Stage 0 — the per-ordinal drop predicate
         /// (FR-EVT-043) is the only Tier C cap enforced at Stage 0. The cross-ordinal aggregate
         /// ceiling activates at Stage 0+1 alongside the FR-EVT-045 dropped-publish trace channel.</summary>
-        public static readonly int CosmeticPerTickPublicationBudget = 4096; // TODO: replace with config loader (Stage 1)
+        public static readonly int CosmeticPerTickPublicationBudget = Config.GetInt("event-system", "CosmeticPerTickPublicationBudget", 4096);
 
         /// <summary>[GT] Maximum second-order Tier A/B BFS dispatch depth per DrainTick. §3.2.5.</summary>
-        public static readonly int MaxEventDispatchDepth = 8; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxEventDispatchDepth = Config.GetInt("event-system", "MaxEventDispatchDepth", 8);
 
         /// <summary>[GT] Maximum Tier A/B subscriber handlers per event type. Revisited at Stage 0+1 measurements.</summary>
-        public static readonly int MaxHandlersPerEventType = 32; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxHandlersPerEventType = Config.GetInt("event-system", "MaxHandlersPerEventType", 32);
 
         /// <summary>[GT] Maximum Tier C subscriber handlers per event type. §4.3.2.</summary>
-        public static readonly int MaxTierCHandlersPerType = 64; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxTierCHandlersPerType = Config.GetInt("event-system", "MaxTierCHandlersPerType", 64);
 
         /// <summary>[GT] Maximum bytes per ring-buffer slot (12-byte header + up to MaxEventSlotBytes-12 bytes payload).
         /// Sized to accommodate the largest registered event struct: HeaderExecutedEvent and DecisionMadeEvent (136 bytes each).
         /// AR-2 H-1/H-3: was 128 — caused ring-buffer overrun and stackalloc slice crash. §3.5.1.</summary>
-        public static readonly int MaxEventSlotBytes = 160; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxEventSlotBytes = Config.GetInt("event-system", "MaxEventSlotBytes", 160);
 
         // ── Design-fixed [GT] — locked at approval; NOT runtime-tunable per §3.10 sub-class note ────
 

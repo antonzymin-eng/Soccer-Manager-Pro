@@ -4,7 +4,8 @@
     "references": [
         "TacticalDirector.BallPhysics",
         "TacticalDirector.AgentMovement",
-        "TacticalDirector.CollisionSystem"
+        "TacticalDirector.CollisionSystem",
+        "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

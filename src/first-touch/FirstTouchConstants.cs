@@ -7,6 +7,7 @@
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.FirstTouch
 {
@@ -67,122 +68,122 @@ namespace TacticalDirector.FirstTouch
         #region GT
 
         /// <summary>[GT] Weight applied to the Technique attribute in control quality. First Touch Mechanics #4 §3.1.</summary>
-        public static readonly float TechniqueWeight = 0.70f; // TODO: replace with config loader (Stage 1)
+        public static readonly float TechniqueWeight = Config.GetFloat("first-touch", "TechniqueWeight", 0.70f);
 
         /// <summary>[GT] Weight applied to the FirstTouch attribute in control quality. First Touch Mechanics #4 §3.1.</summary>
-        public static readonly float FirstTouchWeight = 0.30f; // TODO: replace with config loader (Stage 1)
+        public static readonly float FirstTouchWeight = Config.GetFloat("first-touch", "FirstTouchWeight", 0.30f);
 
         /// <summary>[GT] Guard floor for uninitialised player attributes (int). First Touch Mechanics #4 §3.1.</summary>
-        public static readonly int AttrMinGuard = 1; // TODO: replace with config loader (Stage 1)
+        public static readonly int AttrMinGuard = Config.GetInt("first-touch", "AttrMinGuard", 1);
 
         /// <summary>[GT] Reference ball speed for difficulty scaling (m/s). First Touch Mechanics #4 §3.1.</summary>
-        public static readonly float VelocityReference = 15.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float VelocityReference = Config.GetFloat("first-touch", "VelocityReference", 15.0f);
 
         /// <summary>[GT] Maximum velocity difficulty multiplier. First Touch Mechanics #4 §3.1.</summary>
-        public static readonly float VelocityMaxFactor = 4.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float VelocityMaxFactor = Config.GetFloat("first-touch", "VelocityMaxFactor", 4.0f);
 
         /// <summary>[GT] Lower clamp on velocity difficulty in §3.1.4. First Touch Mechanics #4 §3.1.4.</summary>
-        public static readonly float VelocityDifficultyMin = 0.1f; // TODO: replace with config loader (Stage 1)
+        public static readonly float VelocityDifficultyMin = Config.GetFloat("first-touch", "VelocityDifficultyMin", 0.1f);
 
         /// <summary>[GT] Minimum input ball speed guard (m/s). First Touch Mechanics #4 §3.1.</summary>
-        public static readonly float VelocityMin = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float VelocityMin = Config.GetFloat("first-touch", "VelocityMin", 0.5f);
 
         /// <summary>[GT] Reference agent movement speed for penalty scaling (m/s). First Touch Mechanics #4 §3.1.2.</summary>
-        public static readonly float MovementReference = 7.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MovementReference = Config.GetFloat("first-touch", "MovementReference", 7.0f);
 
         /// <summary>[GT] Penalty applied when agent is moving above MovementReference. First Touch Mechanics #4 §3.1.2.</summary>
-        public static readonly float MovementPenalty = 0.50f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MovementPenalty = Config.GetFloat("first-touch", "MovementPenalty", 0.50f);
 
         /// <summary>[GT] Orientation bonus added when agent is half-turn oriented. First Touch Mechanics #4 §3.6.</summary>
-        public static readonly float HalfTurnBonus = 0.15f; // TODO: replace with config loader (Stage 1)
+        public static readonly float HalfTurnBonus = Config.GetFloat("first-touch", "HalfTurnBonus", 0.15f);
 
         /// <summary>[GT] Minimum angle (degrees) for half-turn orientation detection. First Touch Mechanics #4 §3.6.</summary>
-        public static readonly float HalfTurnAngleMin = 30.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float HalfTurnAngleMin = Config.GetFloat("first-touch", "HalfTurnAngleMin", 30.0f);
 
         /// <summary>[GT] Maximum angle (degrees) for half-turn orientation detection. First Touch Mechanics #4 §3.6.</summary>
-        public static readonly float HalfTurnAngleMax = 60.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float HalfTurnAngleMax = Config.GetFloat("first-touch", "HalfTurnAngleMax", 60.0f);
 
         /// <summary>[GT] Weight of pressure in final control quality formula. First Touch Mechanics #4 §3.1 Step 7.</summary>
-        public static readonly float PressureWeight = 0.40f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PressureWeight = Config.GetFloat("first-touch", "PressureWeight", 0.40f);
 
         /// <summary>[GT] Lower bound of the Good quality band; q ∈ [ControlledThreshold, QualityBandPerfect) → radius in [RadiusPerfect, RadiusGood]. NOTE: the §3.4.2 CONTROLLED outcome is classified on displacement radius r (see LooseBallThreshold), not on q — the §3.2.3 velocity modifier can push r past 0.60 m even at q above this threshold. First Touch Mechanics #4 §3.2, §3.4.</summary>
-        public static readonly float ControlledThreshold = 0.60f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ControlledThreshold = Config.GetFloat("first-touch", "ControlledThreshold", 0.60f);
 
         /// <summary>[GT] Lower bound of the Perfect quality band; q ∈ [QualityBandPerfect, 1] → radius in [RadiusMin, RadiusPerfect]. First Touch Mechanics #4 §3.2.</summary>
-        public static readonly float QualityBandPerfect = 0.85f; // TODO: replace with config loader (Stage 1)
+        public static readonly float QualityBandPerfect = Config.GetFloat("first-touch", "QualityBandPerfect", 0.85f);
 
         /// <summary>[GT] Lower bound of the Poor quality band; q ∈ [QualityBandPoor, ControlledThreshold) → radius in [RadiusGood, RadiusPoor]. First Touch Mechanics #4 §3.2.</summary>
-        public static readonly float QualityBandPoor = 0.35f; // TODO: replace with config loader (Stage 1)
+        public static readonly float QualityBandPoor = Config.GetFloat("first-touch", "QualityBandPoor", 0.35f);
 
         /// <summary>[GT] Ball displacement radius for a CONTROLLED touch (m). First Touch Mechanics #4 §3.4 / appendix B.
         /// STAGE 0 NOTE (AR-7 L-2): declared-but-unconsumed — the §3.4.2 classifier consumes LooseBallThreshold
         /// (same value, named for the classification role); retained for the §4.4 contract surface. Tune the two together.</summary>
-        public static readonly float ControlledRadius = 0.60f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ControlledRadius = Config.GetFloat("first-touch", "ControlledRadius", 0.60f);
 
         /// <summary>[GT] Displacement radius band for a perfect touch (m). First Touch Mechanics #4 §3.2.</summary>
-        public static readonly float RadiusPerfect = 0.30f; // TODO: replace with config loader (Stage 1)
+        public static readonly float RadiusPerfect = Config.GetFloat("first-touch", "RadiusPerfect", 0.30f);
 
         /// <summary>[GT] Displacement radius band for a good touch (m). First Touch Mechanics #4 §3.2.</summary>
-        public static readonly float RadiusGood = 0.60f; // TODO: replace with config loader (Stage 1)
+        public static readonly float RadiusGood = Config.GetFloat("first-touch", "RadiusGood", 0.60f);
 
         /// <summary>[GT] Displacement radius band for a poor touch (m). First Touch Mechanics #4 §3.2.</summary>
-        public static readonly float RadiusPoor = 1.20f; // TODO: replace with config loader (Stage 1)
+        public static readonly float RadiusPoor = Config.GetFloat("first-touch", "RadiusPoor", 1.20f);
 
         /// <summary>[GT] Displacement radius band for a heavy touch (m). First Touch Mechanics #4 §3.2.</summary>
-        public static readonly float RadiusHeavy = 2.00f; // TODO: replace with config loader (Stage 1)
+        public static readonly float RadiusHeavy = Config.GetFloat("first-touch", "RadiusHeavy", 2.00f);
 
         /// <summary>[GT] Minimum achievable touch radius (m). First Touch Mechanics #4 §3.2.</summary>
-        public static readonly float RadiusMin = 0.10f; // TODO: replace with config loader (Stage 1)
+        public static readonly float RadiusMin = Config.GetFloat("first-touch", "RadiusMin", 0.10f);
 
         /// <summary>[GT] Fraction of ball speed added to radius when ball is fast. First Touch Mechanics #4 §3.2.3.</summary>
-        public static readonly float VelocityRadiusFactor = 0.25f; // TODO: replace with config loader (Stage 1)
+        public static readonly float VelocityRadiusFactor = Config.GetFloat("first-touch", "VelocityRadiusFactor", 0.25f);
 
         /// <summary>[GT] Maximum dribble speed cap (m/s). First Touch Mechanics #4 §3.3.5.</summary>
-        public static readonly float DribbleMaxSpeed = 5.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DribbleMaxSpeed = Config.GetFloat("first-touch", "DribbleMaxSpeed", 5.5f);
 
         /// <summary>[GT] Fraction of incoming ball momentum retained during a general touch. First Touch Mechanics #4 §3.3.5.</summary>
-        public static readonly float MomentumRetentionContact = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MomentumRetentionContact = Config.GetFloat("first-touch", "MomentumRetentionContact", 0.5f);
 
         /// <summary>[GT] Hard speed cap on any touch output ball velocity (m/s). First Touch Mechanics #4 §3.3.5.</summary>
-        public static readonly float TouchMaxBallSpeed = 12.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float TouchMaxBallSpeed = Config.GetFloat("first-touch", "TouchMaxBallSpeed", 12.0f);
 
         /// <summary>[GT] Ball speed threshold at which thunderbolt cap applies (m/s). First Touch Mechanics #4 §3.3.7.</summary>
-        public static readonly float ThunderboltSpeed = 28.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ThunderboltSpeed = Config.GetFloat("first-touch", "ThunderboltSpeed", 28.0f);
 
         /// <summary>[GT] Maximum control quality when receiving a thunderbolt. First Touch Mechanics #4 §3.3.7.</summary>
-        public static readonly float ThunderboltQualityCap = 0.30f; // TODO: replace with config loader (Stage 1)
+        public static readonly float ThunderboltQualityCap = Config.GetFloat("first-touch", "ThunderboltQualityCap", 0.30f);
 
         /// <summary>[GT] Displacement radius threshold above which INTERCEPTION is checked (m). First Touch Mechanics #4 §3.4.2.</summary>
-        public static readonly float InterceptionThreshold = 1.20f; // TODO: replace with config loader (Stage 1)
+        public static readonly float InterceptionThreshold = Config.GetFloat("first-touch", "InterceptionThreshold", 1.20f);
 
         /// <summary>[GT] Radius within which an opponent can intercept (m). First Touch Mechanics #4 §3.4.2.</summary>
-        public static readonly float InterceptionRadius = 2.50f; // TODO: replace with config loader (Stage 1)
+        public static readonly float InterceptionRadius = Config.GetFloat("first-touch", "InterceptionRadius", 2.50f);
 
         /// <summary>[GT] Displacement radius threshold for DEFLECTION classification (m). First Touch Mechanics #4 §3.4.2.</summary>
-        public static readonly float DeflectionThreshold = 1.50f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DeflectionThreshold = Config.GetFloat("first-touch", "DeflectionThreshold", 1.50f);
 
         /// <summary>[GT] Minimum dot product (cos 45°) for deflection momentum alignment. First Touch Mechanics #4 §3.4.2.</summary>
-        public static readonly float DeflectionAlignmentMin = 0.70f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DeflectionAlignmentMin = Config.GetFloat("first-touch", "DeflectionAlignmentMin", 0.70f);
 
         /// <summary>[GT] Displacement radius threshold for LOOSE_BALL classification (m). Equals ControlledRadius; named for clarity. First Touch Mechanics #4 §3.4.2.</summary>
-        public static readonly float LooseBallThreshold = 0.60f; // TODO: replace with config loader (Stage 1)
+        public static readonly float LooseBallThreshold = Config.GetFloat("first-touch", "LooseBallThreshold", 0.60f);
 
         /// <summary>[GT] Radius within which opponents contribute to pressure (m). First Touch Mechanics #4 §3.5.</summary>
-        public static readonly float PressureRadius = 3.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PressureRadius = Config.GetFloat("first-touch", "PressureRadius", 3.0f);
 
         /// <summary>[GT] Minimum opponent distance guard for inverse-square pressure (m). First Touch Mechanics #4 §3.5.2.</summary>
-        public static readonly float MinPressureDistance = 0.3f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MinPressureDistance = Config.GetFloat("first-touch", "MinPressureDistance", 0.3f);
 
         /// <summary>[GT] Saturation value above which pressure is clamped to 1. First Touch Mechanics #4 §3.5.3.</summary>
-        public static readonly float PressureSaturation = 1.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PressureSaturation = Config.GetFloat("first-touch", "PressureSaturation", 1.5f);
 
         /// <summary>[GT] Ball displacement radius beyond which dribble attach is broken (m). First Touch Mechanics #4 §3.4.4.
         /// STAGE 0 NOTE (AR-7 L-2): declared-but-unconsumed — the §3.4.4 dribble-detach monitor runs in the
         /// possession-update loop, which is a Stage 0+1 deliverable; this catalogue row is its landing site.</summary>
-        public static readonly float DribbleDetachRadius = 1.50f; // TODO: replace with config loader (Stage 1)
+        public static readonly float DribbleDetachRadius = Config.GetFloat("first-touch", "DribbleDetachRadius", 1.50f);
 
         /// <summary>[GT] L_rec multiplier applied when agent is in half-turn stance and the target entity falls in the peripheral arc (40°–80°). Value = 1 − 0.15 (15% reduction matches HalfTurnBonus). First Touch Mechanics #4 §3.3.2. Consumed by Perception System #7 §3.3.3.</summary>
-        public static readonly float HalfTurnLRecReduction = 0.85f; // TODO: replace with config loader (Stage 1)
+        public static readonly float HalfTurnLRecReduction = Config.GetFloat("first-touch", "HalfTurnLRecReduction", 0.85f);
 
         #endregion
     }

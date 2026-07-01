@@ -1,7 +1,9 @@
 {
     "name": "TacticalDirector.AgentMovement",
     "rootNamespace": "TacticalDirector.AgentMovement",
-    "references": [],
+    "references": [
+        "TacticalDirector.ProjectConstants"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

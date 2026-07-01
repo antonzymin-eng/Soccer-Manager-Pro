@@ -3,7 +3,8 @@
     "rootNamespace": "TacticalDirector.TestingStrategy",
     "references": [
         "TacticalDirector.DeterministicSim",
-        "TacticalDirector.PerformanceOptimization"
+        "TacticalDirector.PerformanceOptimization",
+        "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

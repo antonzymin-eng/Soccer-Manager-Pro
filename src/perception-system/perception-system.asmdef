@@ -7,7 +7,8 @@
         "TacticalDirector.CollisionSystem",
         "TacticalDirector.FirstTouch",
         "TacticalDirector.EventSystem",
-        "TacticalDirector.DeterministicSim"
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

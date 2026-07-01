@@ -8,6 +8,7 @@
 //           floors, GK zone bounds, and cross-spec scalar imports.
 
 using TacticalDirector.PressingAI;
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.DefensiveAI
 {
@@ -67,16 +68,14 @@ namespace TacticalDirector.DefensiveAI
         /// <summary>
         /// [GT] Radius (m) within which an opponent qualifies as a MAN_MARK candidate
         /// for a given agent (§3.3.3). Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float ManMarkCandidateRadiusM = 15.0f;
+        public static readonly float ManMarkCandidateRadiusM = Config.GetFloat("defensive-ai", "ManMarkCandidateRadiusM", 15.0f);
 
         /// <summary>
         /// [GT] Minimum opponent speed (m/s) to qualify as an INTERCEPT_RUNNER target (§3.3.3).
         /// Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float RunnerVelocityThresholdMS = 3.0f;
+        public static readonly float RunnerVelocityThresholdMS = Config.GetFloat("defensive-ai", "RunnerVelocityThresholdMS", 3.0f);
 
         // ── Last-Man Detection (§3.8) ──────────────────────────────────────────
 
@@ -84,17 +83,15 @@ namespace TacticalDirector.DefensiveAI
         /// [GT] Ball-ahead buffer (m): emergency fires when
         /// distToOwnGoal(ball) &lt; distToOwnGoal(lastMan) + LAST_MAN_BALL_BUFFER_M (§3.8.1).
         /// Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float LastManBallBufferM = 5.0f;
+        public static readonly float LastManBallBufferM = Config.GetFloat("defensive-ai", "LastManBallBufferM", 5.0f);
 
         /// <summary>
         /// [GT] Minimum distToOwnGoal(ball) for the last-man predicate to fire (§3.8.1).
         /// Prevents constant emergency triggering when ball is deep in own area.
         /// Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float LastManOwnHalfMinX = 5.0f;
+        public static readonly float LastManOwnHalfMinX = Config.GetFloat("defensive-ai", "LastManOwnHalfMinX", 5.0f);
 
         // ── Offside Trap (§3.7) ────────────────────────────────────────────────
 
@@ -102,30 +99,26 @@ namespace TacticalDirector.DefensiveAI
         /// [GT] Ball speed ceiling (m/s) for offside trap trigger condition 1 (§3.7.2).
         /// Above this speed a through-ball can outrun the step-up.
         /// Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float OffsideBallSpeedThresholdMS = 4.0f;
+        public static readonly float OffsideBallSpeedThresholdMS = Config.GetFloat("defensive-ai", "OffsideBallSpeedThresholdMS", 4.0f);
 
         /// <summary>
         /// [GT] Forward advancement (distToOwnGoal increase, m) per trap execution (§3.7.4).
         /// Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float OffsideStepSizeM = 3.0f;
+        public static readonly float OffsideStepSizeM = Config.GetFloat("defensive-ai", "OffsideStepSizeM", 3.0f);
 
         /// <summary>
         /// [GT] Safety ceiling: defensive line may not advance beyond this distToOwnGoal
         /// value via the trap (§3.7.4). Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float OffsideMaxDepthM = 45.0f;
+        public static readonly float OffsideMaxDepthM = Config.GetFloat("defensive-ai", "OffsideMaxDepthM", 45.0f);
 
         /// <summary>
         /// [GT] Consecutive qualifying ticks required before the trap fires (§3.7.2).
         /// At 10 Hz: 300 ms minimum qualification window. Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int OffsideTrapDwellTicks = 3;
+        public static readonly int OffsideTrapDwellTicks = Config.GetInt("defensive-ai", "OffsideTrapDwellTicks", 3);
 
         /// <summary>
         /// [GT] Reduced dwell threshold used when the manager requests the offside trap
@@ -138,92 +131,80 @@ namespace TacticalDirector.DefensiveAI
         /// against the 3-tick (300 ms) autonomous baseline: a manager dialling the trap on shaves
         /// the qualification window to its minimum without removing adjudication. Locked by
         /// <c>OffsideTrapControllerTests.RequestedDwell_InvariantPinned</c>. Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int OffsideTrapRequestedDwellTicks = 1;
+        public static readonly int OffsideTrapRequestedDwellTicks = Config.GetInt("defensive-ai", "OffsideTrapRequestedDwellTicks", 1);
 
         /// <summary>
         /// [GT] Post-trap cooldown ticks before a new step-up may fire (§3.7.3).
         /// At 10 Hz: 1,000 ms cooldown. Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int OffsideResetCooldownTicks = 10;
+        public static readonly int OffsideResetCooldownTicks = Config.GetInt("defensive-ai", "OffsideResetCooldownTicks", 10);
 
         /// <summary>
         /// [GT] Maximum x-spread (m) of the DEFENSE-line for it to be eligible for a
         /// coordinated step-up (§3.7.2 condition 3). Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float LineCoherenceThresholdM = 8.0f;
+        public static readonly float LineCoherenceThresholdM = Config.GetFloat("defensive-ai", "LineCoherenceThresholdM", 8.0f);
 
         // ── Hysteresis and Assignment Timing (§3.11) ───────────────────────────
 
         /// <summary>
         /// [GT] Consecutive ticks a new mark candidate must be consistently preferred before
         /// the transition commits (§3.11.4). At 10 Hz: 400 ms dwell. Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int MarkDwellTicks = 4;
+        public static readonly int MarkDwellTicks = Config.GetInt("defensive-ai", "MarkDwellTicks", 4);
 
         /// <summary>
         /// [GT] Maximum ticks before an unassigned zone receives cover after a ball switch
         /// (§5.6.2 T-DA-EXP-002 criterion). At 10 Hz: 200 ms. Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int ReassignLatencyTicks = 2;
+        public static readonly int ReassignLatencyTicks = Config.GetInt("defensive-ai", "ReassignLatencyTicks", 2);
 
         // ── Tackle Intent (§3.6) ───────────────────────────────────────────────
 
         /// <summary>
         /// [GT] Radius (m) within which an agent's assigned opponent qualifies for tackle
         /// intent evaluation (§3.6.2). Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float TackleEligibleRadiusM = 3.0f;
+        public static readonly float TackleEligibleRadiusM = Config.GetFloat("defensive-ai", "TackleEligibleRadiusM", 3.0f);
 
         /// <summary>
         /// [GT] Minimum teammates behind the agent (within y-corridor) before COMMIT mode
         /// is permitted (§3.6.2). Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int TackleCommitCoverageFloor = 1;
+        public static readonly int TackleCommitCoverageFloor = Config.GetInt("defensive-ai", "TackleCommitCoverageFloor", 1);
 
         /// <summary>
         /// [GT] Approach angle (rad, ~20°) below which JOCKEY is preferred over HOLD when
         /// COMMIT is disallowed (§3.6.2). Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float TackleJockeyAngleRad = 0.35f;
+        public static readonly float TackleJockeyAngleRad = Config.GetFloat("defensive-ai", "TackleJockeyAngleRad", 0.35f);
 
         /// <summary>
         /// [GT] Half-width (m) of the y-axis corridor used to count "teammates behind" for
         /// coverage depth (§3.6.2). Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float CoverageDepthCorridorM = 5.0f;
+        public static readonly float CoverageDepthCorridorM = Config.GetFloat("defensive-ai", "CoverageDepthCorridorM", 5.0f);
 
         // ── Anti-Chaos Invariants (§3.10) ──────────────────────────────────────
 
         /// <summary>
         /// [GT] Minimum DEFENSE-line agents that must remain in ZONAL mode after assignment.
         /// Invariant 1 in §3.10 (FR-DA-025). Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int MinBacklineAgents = 3;
+        public static readonly int MinBacklineAgents = Config.GetInt("defensive-ai", "MinBacklineAgents", 3);
 
         /// <summary>
         /// [GT] Maximum simultaneous MAN_MARK assignments across the HOLD_SHAPE pool.
         /// Invariant 2 in §3.10 (FR-DA-026). Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int MaxManMarkAssignments = 4;
+        public static readonly int MaxManMarkAssignments = Config.GetInt("defensive-ai", "MaxManMarkAssignments", 4);
 
         /// <summary>
         /// [GT] Maximum displacement (m) of a non-ZONAL assignment from the agent's #12
         /// baseline anchor. Invariant 3 in §3.10 (FR-DA-027). Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float MaxMarkDisplacementM = 20.0f;
+        public static readonly float MaxMarkDisplacementM = Config.GetFloat("defensive-ai", "MaxMarkDisplacementM", 20.0f);
 
         // ── GK Zone (§3.9) ─────────────────────────────────────────────────────
 
@@ -246,9 +227,8 @@ namespace TacticalDirector.DefensiveAI
         /// [GT] Safety release duration (ticks): if COVER_GK_ZONE override has been active
         /// this many consecutive ticks, the cover agent reverts to ZONAL (§3.9.2).
         /// At 10 Hz: 2,000 ms. Defensive AI #14 §6.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int CoverGkZoneMaxTicks = 20;
+        public static readonly int CoverGkZoneMaxTicks = Config.GetInt("defensive-ai", "CoverGkZoneMaxTicks", 20);
 
         #endregion
     }

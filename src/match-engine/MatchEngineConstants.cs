@@ -9,7 +9,10 @@
 //           PositioningAIConstants when the AI phase is wired (Phase D); the Phase-A kickoff line
 //           positions are scaffold values derived from pitch geometry only.
 
+using System;
+
 using TacticalDirector.PositioningAI;
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -196,14 +199,15 @@ namespace TacticalDirector.MatchEngine
         /// canonical frame, so a single shared archetype positions both teams correctly. Replaced by a
         /// per-team tactical selection when the [GT] config loader lands (Stage 1).
         /// </summary>
-        public static readonly FormationFamily STAGE0_FORMATION = FormationFamily.F442; // TODO: replace with config loader (Stage 1)
+        public static readonly FormationFamily STAGE0_FORMATION =
+            (FormationFamily)Enum.Parse(typeof(FormationFamily), Config.GetString("match-engine", "STAGE0_FORMATION", "F442"));
 
         /// <summary>
         /// [GT] Stage-0 team tactical-intensity input [0,1] supplied to Positioning AI (#12)
         /// ContextModifierInputs (Phase D D2). Mid-scale placeholder until per-archetype tactical
         /// instructions wire in (Stage 1, #21 / FR-PA-018 / FR-PA-032).
         /// </summary>
-        public static readonly float STAGE0_TACTICAL_INTENSITY = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float STAGE0_TACTICAL_INTENSITY = Config.GetFloat("match-engine", "STAGE0_TACTICAL_INTENSITY", 0.5f);
 
         /// <summary>
         /// [GT] Capacity of the per-team <c>PassEventRing</c> feeding the Pressing AI (#13) BackwardPass
@@ -217,7 +221,7 @@ namespace TacticalDirector.MatchEngine
         /// Defensive AI (#14) snapshot (Phase D D2b). Mirrors the Decision Tree #8 Stage0Default value;
         /// passed straight through to MarkDirective.OffensiveLineDepth and back into the decision context.
         /// </summary>
-        public static readonly float STAGE0_DEFENSIVE_LINE_DEPTH = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float STAGE0_DEFENSIVE_LINE_DEPTH = Config.GetFloat("match-engine", "STAGE0_DEFENSIVE_LINE_DEPTH", 0.5f);
 
         /// <summary>
         /// [GT] Stage-0 neutral normalised attribute [0,1] for the Mechanics-AI snapshot fields the Stage-0
@@ -233,7 +237,7 @@ namespace TacticalDirector.MatchEngine
         /// radius. A ball outside this reach has not yet "arrived" at the agent; one inside it, closing
         /// on the agent, is a receive. Mid-scale placeholder pending the Stage-1 config loader.
         /// </summary>
-        public static readonly float FIRST_TOUCH_ACCEPTANCE_RADIUS_M = 1.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float FIRST_TOUCH_ACCEPTANCE_RADIUS_M = Config.GetFloat("match-engine", "FIRST_TOUCH_ACCEPTANCE_RADIUS_M", 1.0f);
 
         /// <summary>
         /// [GT] Minimum ball speed (m/s) for a first-touch trigger (Phase D D3). Below this the ball is
@@ -242,7 +246,7 @@ namespace TacticalDirector.MatchEngine
         /// since its velocity·to-agent dot is 0; this threshold makes the intent explicit and tunable.)
         /// Mid-scale placeholder pending the Stage-1 config loader.
         /// </summary>
-        public static readonly float FIRST_TOUCH_MIN_BALL_SPEED_M_S = 0.5f; // TODO: replace with config loader (Stage 1)
+        public static readonly float FIRST_TOUCH_MIN_BALL_SPEED_M_S = Config.GetFloat("match-engine", "FIRST_TOUCH_MIN_BALL_SPEED_M_S", 0.5f);
 
         #endregion
     }

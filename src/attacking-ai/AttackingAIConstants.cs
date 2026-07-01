@@ -10,6 +10,7 @@
 using UnityEngine;
 
 using TacticalDirector.PressingAI;
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.AttackingAI
 {
@@ -86,55 +87,48 @@ namespace TacticalDirector.AttackingAI
         /// <summary>
         /// [GT] Anti-chaos baseline runner cap. Overridden per style profile by
         /// MAX_RUNNERS_POSSESSION / _DIRECT / _COUNTER (§6.1.5). Attacking AI #15 §6.1.2.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int MaxRunners = 2;
+        public static readonly int MaxRunners = Config.GetInt("attacking-ai", "MaxRunners", 2);
 
         /// <summary>
         /// [GT] Minimum pool size required before a WEAK_SIDE agent is assigned.
         /// Below this threshold, pool is too small to dedicate an agent to the far side.
         /// Attacking AI #15 §6.1.2 / §3.3 / §3.7 (FR-AT-015).
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int MinWeakSideAgentThreshold = 4;
+        public static readonly int MinWeakSideAgentThreshold = Config.GetInt("attacking-ai", "MinWeakSideAgentThreshold", 4);
 
         // ── Run Parameter Generation (§6.1.3) ──────────────────────────────────
 
         /// <summary>
         /// [GT] Minimum run-target depth offset after profile multiplier (clamp floor). Units: m.
         /// Attacking AI #15 §6.1.3 / §3.4.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float MinRunDepthM = 5.0f;
+        public static readonly float MinRunDepthM = Config.GetFloat("attacking-ai", "MinRunDepthM", 5.0f);
 
         /// <summary>
         /// [GT] Maximum run-target depth offset after profile multiplier (clamp ceiling). Units: m.
         /// Attacking AI #15 §6.1.3 / §3.4.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float MaxRunDepthM = 40.0f;
+        public static readonly float MaxRunDepthM = Config.GetFloat("attacking-ai", "MaxRunDepthM", 40.0f);
 
         /// <summary>
         /// [GT] Base run target depth before profile multiplier. Output clamped to
         /// [<see cref="MinRunDepthM"/>, <see cref="MaxRunDepthM"/>].
         /// Attacking AI #15 §6.1.3 / §3.4.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float BaseRunDepthM = 15.0f;
+        public static readonly float BaseRunDepthM = Config.GetFloat("attacking-ai", "BaseRunDepthM", 15.0f);
 
         /// <summary>
         /// [GT] Scale factor converting lateralPct deviation to lateral run offset. &lt; 1 so
         /// runs stay slightly narrower than the agent's baseline lane. Attacking AI #15 §6.1.3 / §3.4.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float LateralScale = 0.8f;
+        public static readonly float LateralScale = Config.GetFloat("attacking-ai", "LateralScale", 0.8f);
 
         /// <summary>
         /// [GT] Base run trigger delay in 10 Hz ticks before profile multiplier.
         /// Minimum 1 tick enforced by max(1, round(...)). Attacking AI #15 §6.1.3 / §3.4.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int BaseRunTriggerDelayTicks = 3;
+        public static readonly int BaseRunTriggerDelayTicks = Config.GetInt("attacking-ai", "BaseRunTriggerDelayTicks", 3);
 
         // ── Support, Width-Holding, Weak-Side (§6.1.4) ─────────────────────────
 
@@ -142,46 +136,40 @@ namespace TacticalDirector.AttackingAI
         /// [GT] Minimum effective support radius: floor applied after profile multiplier (§3.5).
         /// Prevents radius collapse under aggressive <see cref="SupportMult"/> values.
         /// Units: m. Attacking AI #15 §6.1.4 / §3.5.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float MinEffectiveRadiusM = 5.0f;
+        public static readonly float MinEffectiveRadiusM = Config.GetFloat("attacking-ai", "MinEffectiveRadiusM", 5.0f);
 
         /// <summary>
         /// [GT] Base support radius before profile multiplier. Effective radius =
         /// max(<see cref="MinEffectiveRadiusM"/>, SupportRadiusM × supportMult). Units: m.
         /// Attacking AI #15 §6.1.4 / §3.5.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float SupportRadiusM = 12.0f;
+        public static readonly float SupportRadiusM = Config.GetFloat("attacking-ai", "SupportRadiusM", 12.0f);
 
         /// <summary>
         /// [GT] Minimum agents holding near-touchline width per tick. Attacking AI #15 §6.1.4 / §3.6.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int MinWidthHolders = 2;
+        public static readonly int MinWidthHolders = Config.GetInt("attacking-ai", "MinWidthHolders", 2);
 
         /// <summary>
         /// [GT] Distance from the nearest touchline for a HOLD_WIDTH target position (NOT
         /// absolute Y). Formula in §3.6 derives absolute Y from this distance.
         /// Attacking AI #15 §6.1.4 / §3.6.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float TouchlineHoldDistM = 4.0f;
+        public static readonly float TouchlineHoldDistM = Config.GetFloat("attacking-ai", "TouchlineHoldDistM", 4.0f);
 
         /// <summary>
         /// [GT] Distance from the weak-side touchline for the WEAK_SIDE agent target.
         /// §3.7 formula: if ball on y=68 half, weakTarget.y = WEAK_SIDE_FAR_Y_M (near y=0).
         /// Attacking AI #15 §6.1.4 / §3.7.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float WeakSideFarYM = 8.0f;
+        public static readonly float WeakSideFarYM = Config.GetFloat("attacking-ai", "WeakSideFarYM", 8.0f);
 
         /// <summary>
         /// [GT] X-offset toward the opponent goal for the WEAK_SIDE agent target position.
         /// Target x = ballCarrier.x + WEAK_SIDE_DEPTH_OFFSET_M. Attacking AI #15 §6.1.4 / §3.7.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float WeakSideDepthOffsetM = 5.0f;
+        public static readonly float WeakSideDepthOffsetM = Config.GetFloat("attacking-ai", "WeakSideDepthOffsetM", 5.0f);
 
         // ── Team-Style Profile Multipliers (§6.1.5) ────────────────────────────
         // 5 families × 3 profiles = 15 GT constants (§3.10 "These 15 constants").
@@ -236,9 +224,8 @@ namespace TacticalDirector.AttackingAI
         /// <summary>
         /// [GT] Minimum non-WEAK_SIDE agents within the Y-corridor to declare an overload.
         /// Attacking AI #15 §6.1.6 / §3.8 (FR-AT-016).
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int OverloadCount = 3;
+        public static readonly int OverloadCount = Config.GetInt("attacking-ai", "OverloadCount", 3);
 
         /// <summary>
         /// [GT] Reduction applied to <see cref="OverloadCount"/> when the manager's #21 FocusPlay
@@ -253,39 +240,34 @@ namespace TacticalDirector.AttackingAI
         /// value to exactly 1 (preferred-flank trigger drops 3 → 2). Locked by
         /// <c>AttackingAIConstantsTests.OverloadFocusCountBias_InvariantPinned</c>.
         /// Attacking AI #15 §6.1.6 / §3.8.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int OverloadFocusCountBias = 1;
+        public static readonly int OverloadFocusCountBias = Config.GetInt("attacking-ai", "OverloadFocusCountBias", 1);
 
         /// <summary>
         /// [GT] Y-half-width of overload detection corridor: |agentY − ballY| ≤ this value.
         /// Units: m. Attacking AI #15 §6.1.6 / §3.8.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float OverloadZoneWidthM = 20.0f;
+        public static readonly float OverloadZoneWidthM = Config.GetFloat("attacking-ai", "OverloadZoneWidthM", 20.0f);
 
         // ── Anti-Chaos Invariants (§6.1.7) ──────────────────────────────────────
 
         /// <summary>
         /// [GT] Minimum combined SUPPORT_BALL + HOLD_WIDTH agents per tick (FR-AT-019).
         /// Attacking AI #15 §6.1.7 / §3.11 invariant 2.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int MinSupportAgents = 1;
+        public static readonly int MinSupportAgents = Config.GetInt("attacking-ai", "MinSupportAgents", 1);
 
         /// <summary>
         /// [GT] Run target must not be more than this distance past the half-line into own half.
         /// Units: m. Attacking AI #15 §6.1.7 / §3.11 invariant 3 (FR-AT-020).
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float OwnHalfRunBlockM = 5.0f;
+        public static readonly float OwnHalfRunBlockM = Config.GetFloat("attacking-ai", "OwnHalfRunBlockM", 5.0f);
 
         /// <summary>
         /// [GT] Maximum demotion-loop iterations before emitting all-default directive.
         /// Attacking AI #15 §6.1.7 / §3.11 (FR-AT-026).
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int MaxInvariantPasses = 3;
+        public static readonly int MaxInvariantPasses = Config.GetInt("attacking-ai", "MaxInvariantPasses", 3);
 
         // ── Hysteresis (§6.1.8) ──────────────────────────────────────────────────
 
@@ -293,9 +275,8 @@ namespace TacticalDirector.AttackingAI
         /// [GT] Dwell ticks before a role/target transition fires. At 10 Hz = 300 ms stability
         /// window. Attacking AI #15 §6.1.8 / §3.12 (FR-AT-022 / FR-AT-023).
         /// Promoted from [EST] to [GT] per Appendix A §A.1.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int AttackDwellTicks = 3;
+        public static readonly int AttackDwellTicks = Config.GetInt("attacking-ai", "AttackDwellTicks", 3);
 
         // ── Own-Half Run Block (§6.1.7 continued) ────────────────────────────────
 
@@ -304,41 +285,36 @@ namespace TacticalDirector.AttackingAI
         /// attacking toward x=105). Used by <see cref="InvariantEnforcer"/> §3.11 invariant 3
         /// to select the correct own-half depth formula branch. Units: radians.
         /// Attacking AI #15 §6.1.7 / §3.11.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float AttackAngleEpsilon = 0.01f;
+        public static readonly float AttackAngleEpsilon = Config.GetFloat("attacking-ai", "AttackAngleEpsilon", 0.01f);
 
         // ── Test Acceptance Criteria (§6.1.10) ───────────────────────────────────
 
         /// <summary>
         /// [GT] Max distance to opponent goal centre for dangerous-zone surrogate metric (§5.7).
         /// Units: m. Attacking AI #15 §6.1.10.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float DangerZoneMaxDistM = 20.0f;
+        public static readonly float DangerZoneMaxDistM = Config.GetFloat("attacking-ai", "DangerZoneMaxDistM", 20.0f);
 
         /// <summary>
         /// [GT] Half-width of dangerous zone for §5.7 surrogate metric.
         /// Derived from penalty-area half-width; Appendix A §A.3. Units: m.
         /// Attacking AI #15 §6.1.10.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float DangerZoneCorridorHwM = 10.16f;
+        public static readonly float DangerZoneCorridorHwM = Config.GetFloat("attacking-ai", "DangerZoneCorridorHwM", 10.16f);
 
         /// <summary>
         /// [GT] Min additional RUNNER assignments per 90-min match: DIRECT vs. POSSESSION profile.
         /// Test criterion for tactical-identity acceptance (§5.8 / FR-AT-035).
         /// Attacking AI #15 §6.1.10.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int DirectRunCountDelta = 15;
+        public static readonly int DirectRunCountDelta = Config.GetInt("attacking-ai", "DirectRunCountDelta", 15);
 
         /// <summary>
         /// [GT] Max mean transitionHoldTick for COUNTER_ATTACK per possession-loss event (§5.8).
         /// Value 0 reflects TRANSITION_HOLD_TICKS_COUNTER = 0. Attacking AI #15 §6.1.10.
-        /// TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const int CounterMaxHoldTicks = 0;
+        public static readonly int CounterMaxHoldTicks = Config.GetInt("attacking-ai", "CounterMaxHoldTicks", 0);
 
         #endregion
     }

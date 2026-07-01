@@ -8,6 +8,7 @@
 //           18 constants from §3.10 + system-sizing constants.
 
 using TacticalDirector.FirstTouch;
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.PerceptionSystem
 {
@@ -126,81 +127,81 @@ namespace TacticalDirector.PerceptionSystem
 
         /// <summary>[GT] Base field-of-view full angle (degrees). Within Franks 1985 plausibility range 140°–180°.
         /// Perception System #7 §3.1.2.</summary>
-        public static readonly float BASE_FOV_ANGLE = 160.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float BASE_FOV_ANGLE = Config.GetFloat("perception-system", "BASE_FOV_ANGLE", 160.0f);
 
         /// <summary>[GT] Maximum FoV bonus from Decisions attribute (degrees). Williams &amp; Davids 1998 expert–novice data.
         /// Perception System #7 §3.1.3.</summary>
-        public static readonly float MAX_FOV_BONUS_ANGLE = 10.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MAX_FOV_BONUS_ANGLE = Config.GetFloat("perception-system", "MAX_FOV_BONUS_ANGLE", 10.0f);
 
         /// <summary>[GT] Maximum FoV reduction under full pressure (degrees). Beilock 2010: 18% of 170° ≈ 30°.
         /// Perception System #7 §3.1.4.</summary>
-        public static readonly float MAX_FOV_PRESSURE_REDUCTION = 30.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MAX_FOV_PRESSURE_REDUCTION = Config.GetFloat("perception-system", "MAX_FOV_PRESSURE_REDUCTION", 30.0f);
 
         /// <summary>[GT] Absolute minimum effective FoV angle (degrees). Safety floor; prevents degenerate near-zero cone.
         /// Perception System #7 §3.1.4.</summary>
-        public static readonly float MIN_FOV_ANGLE = 120.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MIN_FOV_ANGLE = Config.GetFloat("perception-system", "MIN_FOV_ANGLE", 120.0f);
 
         // ── §3.2 Occlusion ───────────────────────────────────────────────────────────
 
         /// <summary>[GT] Agent body radius for shadow cone projection (m). Adult shoulder half-width; consistent with Agent Movement §3.2.
         /// Perception System #7 §3.2.2.</summary>
-        public static readonly float AGENT_BODY_RADIUS = 0.4f; // TODO: replace with config loader (Stage 1)
+        public static readonly float AGENT_BODY_RADIUS = Config.GetFloat("perception-system", "AGENT_BODY_RADIUS", 0.4f);
 
         /// <summary>[GT] Minimum shadow cone half-angle (degrees). Prevents zero-width cones at extreme range.
         /// Perception System #7 §3.2.3.</summary>
-        public static readonly float MIN_SHADOW_HALF_ANGLE = 5.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MIN_SHADOW_HALF_ANGLE = Config.GetFloat("perception-system", "MIN_SHADOW_HALF_ANGLE", 5.0f);
 
         // ── §3.3 Recognition Latency ─────────────────────────────────────────────────
 
         /// <summary>[GT] Maximum recognition latency (heartbeat ticks). 500ms for Decisions=1.
         /// Franks 1985 upper bracket for novice recognition. Perception System #7 §3.3.2.</summary>
-        public static readonly int L_MAX = 5; // TODO: replace with config loader (Stage 1)
+        public static readonly int L_MAX = Config.GetInt("perception-system", "L_MAX", 5);
 
         /// <summary>[GT] Minimum recognition latency (heartbeat ticks). 100ms for Decisions=20.
         /// Helsen 1999 expert lower bracket. Perception System #7 §3.3.2.</summary>
-        public static readonly int L_MIN = 1; // TODO: replace with config loader (Stage 1)
+        public static readonly int L_MIN = Config.GetInt("perception-system", "L_MIN", 1);
 
         // ── §3.4 Shoulder Check ──────────────────────────────────────────────────────
 
         /// <summary>[GT] Maximum shoulder check interval (heartbeat ticks). 3.0s for Anticipation=1.
         /// Franks 1985: average player scans every 3–5s. Perception System #7 §3.4.2.</summary>
-        public static readonly int CHECK_MAX_TICKS = 30; // TODO: replace with config loader (Stage 1)
+        public static readonly int CHECK_MAX_TICKS = Config.GetInt("perception-system", "CHECK_MAX_TICKS", 30);
 
         /// <summary>[GT] Minimum shoulder check interval (heartbeat ticks). 0.6s for Anticipation=20.
         /// Master Vol 1 §3.1: 6–8 elite scans per possession. Perception System #7 §3.4.2.</summary>
-        public static readonly int CHECK_MIN_TICKS = 6; // TODO: replace with config loader (Stage 1)
+        public static readonly int CHECK_MIN_TICKS = Config.GetInt("perception-system", "CHECK_MIN_TICKS", 6);
 
         /// <summary>[GT] Shoulder check window duration (heartbeat ticks). 300ms.
         /// Master Vol 1 §3.1: ~0.3s for a shoulder check movement. Perception System #7 §3.4.3.</summary>
-        public static readonly int SHOULDER_CHECK_DURATION = 3; // TODO: replace with config loader (Stage 1)
+        public static readonly int SHOULDER_CHECK_DURATION = Config.GetInt("perception-system", "SHOULDER_CHECK_DURATION", 3);
 
         /// <summary>[GT] In-possession shoulder check interval multiplier. Doubling the interval
         /// halves scan frequency for the ball carrier (eyes more on the ball). Perception System #7 §3.4.2.</summary>
-        public static readonly float PossessionCheckIntervalMultiplier = 2.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float PossessionCheckIntervalMultiplier = Config.GetFloat("perception-system", "PossessionCheckIntervalMultiplier", 2.0f);
 
         // ── §3.1 / §3.5 Range ───────────────────────────────────────────────────────
 
         /// <summary>[GT] Maximum perception range (m). Full pitch diagonal; effectively uncapped.
         /// Stage 2 weather/fog effects will reduce this dynamically (OQ-5 resolution).
         /// Perception System #7 §3.1.2, §3.5.1.</summary>
-        public static readonly float MaxPerceptionRange = 120.0f; // TODO: replace with config loader (Stage 1)
+        public static readonly float MaxPerceptionRange = Config.GetFloat("perception-system", "MaxPerceptionRange", 120.0f);
 
         // ── System sizing ────────────────────────────────────────────────────────────
 
         /// <summary>[GT] Total number of active agents per match (22 = 11 per team). §2.4.8.</summary>
-        public static readonly int MaxAgents = 22; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxAgents = Config.GetInt("perception-system", "MaxAgents", 22);
 
         /// <summary>[GT] Maximum teammates visible per agent (10 outfield + 1 GK = 11 minus self). §2.3.1.</summary>
-        public static readonly int MaxVisibleTeammates = 11; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxVisibleTeammates = Config.GetInt("perception-system", "MaxVisibleTeammates", 11);
 
         /// <summary>[GT] Maximum opponents visible per agent (11 total). §2.3.1.</summary>
-        public static readonly int MaxVisibleOpponents = 11; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxVisibleOpponents = Config.GetInt("perception-system", "MaxVisibleOpponents", 11);
 
         /// <summary>[GT] Maximum agents perceived via shoulder check window. Bounded by MaxAgents. §3.4.3.</summary>
-        public static readonly int MaxBlindSideAgents = 22; // TODO: replace with config loader (Stage 1)
+        public static readonly int MaxBlindSideAgents = Config.GetInt("perception-system", "MaxBlindSideAgents", 22);
 
         /// <summary>[GT] Jitter range (ticks) for shoulder check scheduling. DeterministicHash % (2*JITTER_RANGE+1) - JITTER_RANGE. §3.4.2.</summary>
-        public static readonly int ShoulderCheckJitterRange = 2; // TODO: replace with config loader (Stage 1)
+        public static readonly int ShoulderCheckJitterRange = Config.GetInt("perception-system", "ShoulderCheckJitterRange", 2);
 
         #endregion
     }
