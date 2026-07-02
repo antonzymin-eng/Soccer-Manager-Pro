@@ -326,6 +326,9 @@ namespace TacticalDirector.LivingWorld
             }
             _pins.RemoveAt(idx);
 
+            // Invariant (AR-3 L-3): every pin references a live edge — PinEpisode requires a live
+            // episode and RemoveEdge refuses pinned edges — so this lookup always succeeds; the guard
+            // is defensive only, never a sanctioned silent-skip path.
             int edgeIdx = FindEdgeIndex(fromId, toId, out bool edgeFound);
             if (edgeFound)
             {
@@ -526,4 +529,7 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | for a junk layer). L-1/L-2: InsertEdge memory coherence gates  |
 // |         |            |        | — episodeIds strictly ascending and < NextEpisodeId            |
 // |         |            |        | (FR-LW-009); salience finite in [0,1], NaN-gated.              |
+// | 1.3     | 2026-07-02 | —      | AR-3 L-3 (doc-only): UnpinEpisode edge-lookup guard documented |
+// |         |            |        | as defensive-only — pins always reference live edges (Pin      |
+// |         |            |        | requires a live episode; RemoveEdge refuses pinned edges).     |
 #endregion

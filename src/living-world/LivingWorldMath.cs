@@ -1,6 +1,6 @@
 // File:     src/living-world/LivingWorldMath.cs
 // Created:  2026-06-21
-// Modified: 2026-06-21
+// Modified: 2026-07-02 (AR-3 L-1 doc-notes: declared-but-unconsumed pointers)
 // Author:   —
 // Spec:     Living World System #22 §3.1, §3.2, §4.4, Code Standards #20
 // Purpose:  Pure deterministic helpers for the living-world layer: the §3.1 layer update/decay rule
@@ -37,6 +37,9 @@ namespace TacticalDirector.LivingWorld
         /// <summary>
         /// §3.1 relaxation of a layer value toward a per-entity baseline at rate r per worldTick.
         /// x' = x + r·(b − x). Reduces to a no-op when x == b (FR-LW-034).
+        /// DECLARED-BUT-UNCONSUMED in production (AR-3 L-1): the per-entity baseline b is
+        /// vol-2-owned state, so the WorldLoop phase-3 caller lands with the phase-2 human-systems
+        /// wiring (KD-10). Exercised by T-LW-U-009/010 until then.
         /// </summary>
         public static float ApplyDecay(float x, float baseline, float rate)
             => x + rate * (baseline - x);

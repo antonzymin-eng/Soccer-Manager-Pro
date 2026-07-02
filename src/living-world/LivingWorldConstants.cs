@@ -1,6 +1,6 @@
 // File:     src/living-world/LivingWorldConstants.cs
 // Created:  2026-06-21
-// Modified: 2026-06-21
+// Modified: 2026-07-02 (AR-3 L-1 doc-notes: declared-but-unconsumed pointers)
 // Author:   —
 // Spec:     Living World System #22 Appendix A, Code Standards #20
 // Purpose:  Constant catalogue for the living-world layer. No literals in formula code.
@@ -32,10 +32,15 @@ namespace TacticalDirector.LivingWorld
         /// <summary>[GT] Minimum salience for an episode to be citable in text. §3.3.</summary>
         public const float SALIENCE_REF_THRESHOLD = 0.30f;
 
-        /// <summary>[GT] Default edge-update responsiveness (volatility v). §3.1.</summary>
+        /// <summary>[GT] Default edge-update responsiveness (volatility v). §3.1.
+        /// DECLARED-BUT-UNCONSUMED in production (AR-3 L-1): callers of MemoryStore.ApplyEvent supply
+        /// volatility per event; this default is the fallback the event-ingest phase (WorldLoop phase 1)
+        /// adopts when it lands with the KD-10 match-outcome-event producer.</summary>
         public const float LAYER_VOLATILITY_DEFAULT = 0.30f;
 
-        /// <summary>[GT] Per-tick relaxation rate toward baseline (r). §3.1.</summary>
+        /// <summary>[GT] Per-tick relaxation rate toward baseline (r). §3.1.
+        /// DECLARED-BUT-UNCONSUMED in production (AR-3 L-1): feeds LivingWorldMath.ApplyDecay, whose
+        /// WorldLoop phase-3 caller is deferred with the phase-2 vol-2 baseline wiring (KD-10).</summary>
         public const float LAYER_DECAY_RATE = 0.01f;
 
         /// <summary>[GT] Per-arc-instance liveness bound, in calendar days. §3.4 / §6.2.</summary>

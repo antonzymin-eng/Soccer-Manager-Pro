@@ -85,6 +85,11 @@ namespace TacticalDirector.LivingWorld
         /// <summary>
         /// Removes and returns the summary for the contact (the §3.5 promotion path). Returns false
         /// if the contact has no cold history (a genuinely new contact).
+        /// ORDERING (AR-3 L-2): removal is destructive — the promotion flow must verify no live edge
+        /// exists for the pair BEFORE taking (TryTake → Rehydrate → InsertEdge), because a duplicate-
+        /// edge throw from InsertEdge after a take would strand the summary outside both tiers,
+        /// violating the FR-LW-025 neither-loses-nor-duplicates contract. The §3.5 membership service
+        /// (follow-up slice) owns that sequencing.
         /// </summary>
         public bool TryTake(int entityId, out ColdSummary summary)
         {
@@ -222,4 +227,7 @@ namespace TacticalDirector.LivingWorld
 // | 1.2     | 2026-07-02 | —      | AR-2 L-1/L-2: Add also requires strictly-ascending retained   |
 // |         |            |        | episodeIds (duplicates rehydrate into ambiguous pin identity) |
 // |         |            |        | and salience finite in [0,1] (NaN fails closed).              |
+// | 1.3     | 2026-07-02 | —      | AR-3 L-2 (doc-only): TryTake ordering contract — verify no    |
+// |         |            |        | live edge exists BEFORE taking (destructive removal; a post-  |
+// |         |            |        | take InsertEdge throw would strand the summary, FR-LW-025).   |
 #endregion
