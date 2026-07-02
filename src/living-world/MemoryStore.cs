@@ -43,6 +43,17 @@ namespace TacticalDirector.LivingWorld
             }
         }
 
+        /// <summary>
+        /// Bits of <see cref="RelationshipEdge.ActiveLayers"/> that correspond to a defined
+        /// <see cref="RelationshipLayer"/> member. Built from the enum so a roster APPEND extends it
+        /// automatically; a mask carrying any other bit is refused (AR-2 M-1 — an undefined bit made
+        /// IsLayerActive pass for an out-of-roster layer value).
+        /// </summary>
+        private const byte DefinedLayersMask =
+            (1 << (int)RelationshipLayer.PlayerEdge)
+            | (1 << (int)RelationshipLayer.Affinity)
+            | (1 << (int)RelationshipLayer.Trust);
+
         private readonly List<RelationshipEdge> _edges = new List<RelationshipEdge>();
         private readonly List<PinEntry> _pins = new List<PinEntry>();
 
@@ -72,6 +83,7 @@ namespace TacticalDirector.LivingWorld
         public void GetOrCreateEdge(int fromId, int toId, byte activeLayers)
         {
             ValidatePair(fromId, toId);
+            ValidateMask(activeLayers);
             int idx = FindEdgeIndex(fromId, toId, out bool found);
             if (found)
             {
@@ -98,6 +110,7 @@ namespace TacticalDirector.LivingWorld
         public void InsertEdge(in RelationshipEdge edge)
         {
             ValidatePair(edge.FromId, edge.ToId);
+            ValidateMask(edge.ActiveLayers);
             if (edge.Memory == null)
             {
                 throw new ArgumentException("MemoryStore.InsertEdge: Memory buffer must be non-null (use Array.Empty).");
@@ -109,6 +122,27 @@ namespace TacticalDirector.LivingWorld
                 || (edge.IsLayerActive(RelationshipLayer.Trust) && !(edge.Trust >= 0f && edge.Trust <= 1f)))
             {
                 throw new ArgumentException("MemoryStore.InsertEdge: an active layer value escapes [0, 1] (F6 invariant).");
+            }
+            // Memory coherence gates (AR-2 L-1/L-2): the store maintains episodeIds strictly ascending
+            // in the buffer (append order = allocation order; eviction preserves order) and all below
+            // the NextEpisodeId high-water mark — accepting anything else lets the next RecordEpisode
+            // re-allocate a live id and break the FR-LW-009 durable-handle contract pins depend on.
+            // Salience must be finite in [0,1] (NaN-gated) — it feeds the eviction comparator and the
+            // §3.3 refThreshold checks.
+            for (int i = 0; i < edge.Memory.Length; i++)
+            {
+                if (edge.Memory[i].EpisodeId >= edge.NextEpisodeId)
+                {
+                    throw new ArgumentException("MemoryStore.InsertEdge: episodeId >= NextEpisodeId (FR-LW-009 monotonicity).");
+                }
+                if (i > 0 && edge.Memory[i].EpisodeId <= edge.Memory[i - 1].EpisodeId)
+                {
+                    throw new ArgumentException("MemoryStore.InsertEdge: episodeIds must be strictly ascending (duplicate ids break pin identity).");
+                }
+                if (!(edge.Memory[i].Salience >= 0f && edge.Memory[i].Salience <= 1f))
+                {
+                    throw new ArgumentException("MemoryStore.InsertEdge: episode salience must be finite in [0, 1].");
+                }
             }
             int idx = FindEdgeIndex(edge.FromId, edge.ToId, out bool found);
             if (found)
@@ -155,6 +189,13 @@ namespace TacticalDirector.LivingWorld
             {
                 throw new ArgumentException(
                     "MemoryStore.ApplyEvent: PlayerEdge is a read-only mirror of the vol-2 §2.1 authoritative edge (FR-LW-004 / KD-9).");
+            }
+            if (layer != RelationshipLayer.Affinity && layer != RelationshipLayer.Trust)
+            {
+                // AR-2 M-1: without this allowlist the else-branch below routed ANY out-of-roster
+                // enum value (e.g. a junk cast) to the Trust write.
+                throw new ArgumentOutOfRangeException(nameof(layer), layer,
+                    "MemoryStore.ApplyEvent: not a defined owned layer.");
             }
             // NaN-gate pattern: negated comparisons fail closed on NaN.
             if (!(delta >= -1f && delta <= 1f))
@@ -314,6 +355,15 @@ namespace TacticalDirector.LivingWorld
 
         // ── internals ──────────────────────────────────────────────────────────────────────
 
+        private static void ValidateMask(byte activeLayers)
+        {
+            if ((activeLayers & ~DefinedLayersMask) != 0)
+            {
+                throw new ArgumentException(
+                    "MemoryStore: ActiveLayers carries a bit with no defined RelationshipLayer member (AR-2 M-1).");
+            }
+        }
+
         private static void ValidatePair(int fromId, int toId)
         {
             if (fromId < 0)
@@ -469,4 +519,11 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | CreateEdge throws on a conflicting ActiveLayers mask. L-2:     |
 // |         |            |        | InsertEdge F6 gate (active layers finite in [0,1], NaN-gated). |
 // |         |            |        | L-4: ValidatePair names the offending parameter.               |
+// | 1.2     | 2026-07-02 | —      | AR-2 fix pass. M-1: ApplyEvent explicit owned-layer allowlist  |
+// |         |            |        | (the else-branch routed any out-of-roster enum value to the    |
+// |         |            |        | Trust write) + DefinedLayersMask validation on GetOrCreateEdge |
+// |         |            |        | and InsertEdge (an undefined mask bit made IsLayerActive pass  |
+// |         |            |        | for a junk layer). L-1/L-2: InsertEdge memory coherence gates  |
+// |         |            |        | — episodeIds strictly ascending and < NextEpisodeId            |
+// |         |            |        | (FR-LW-009); salience finite in [0,1], NaN-gated.              |
 #endregion

@@ -449,6 +449,80 @@ namespace TacticalDirector.LivingWorld.Tests
                 "AR-1 L-3: NaN NetRelationship fails closed");
         }
 
+        // ── AR-2 regression locks ───────────────────────────────────────────────────────────
+
+        [Test]
+        public void AR2M1_OutOfRosterLayerAndUndefinedMaskBits_FailLoud()
+        {
+            MemoryStore store = StoreWithEdge(Manager, ContactA);
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => store.ApplyEvent(Manager, ContactA, (RelationshipLayer)5, 0.4f, 0.3f),
+                "AR-2 M-1: a junk layer cast previously fell into the else-branch and wrote Trust");
+            store.TryGetEdge(Manager, ContactA, out RelationshipEdge edge);
+            Assert.AreEqual(0f, edge.Trust, "AR-2 M-1: Trust untouched by the refused write");
+
+            Assert.Throws<ArgumentException>(
+                () => store.GetOrCreateEdge(Manager, 9, 0b0010_0000),
+                "AR-2 M-1: ActiveLayers bit with no defined RelationshipLayer member refused");
+        }
+
+        [Test]
+        public void AR2L1_InsertEdgeIncoherentEpisodeIds_FailLoud()
+        {
+            MemoryStore store = new MemoryStore();
+            RelationshipEdge bad = default;
+            bad.FromId = Manager;
+            bad.ToId = 9;
+
+            bad.NextEpisodeId = 1u;
+            bad.Memory = new[] { new MemoryEpisode(3u, EventKind.None, 0.5f, 0u, 0) };
+            RelationshipEdge overHighWater = bad;
+            Assert.Throws<ArgumentException>(() => store.InsertEdge(overHighWater),
+                "AR-2 L-1: id >= NextEpisodeId lets RecordEpisode re-allocate a live id (FR-LW-009)");
+
+            bad.NextEpisodeId = 10u;
+            bad.Memory = new[]
+            {
+                new MemoryEpisode(2u, EventKind.None, 0.5f, 0u, 0),
+                new MemoryEpisode(2u, EventKind.None, 0.5f, 1u, 0),
+            };
+            RelationshipEdge duplicateIds = bad;
+            Assert.Throws<ArgumentException>(() => store.InsertEdge(duplicateIds),
+                "AR-2 L-1: duplicate ids break pin identity");
+
+            ColdStore cold = new ColdStore();
+            ColdSummary summary = default;
+            summary.EntityId = 9;
+            summary.NetRelationship = 0.5f;
+            summary.NextEpisodeId = 10u;
+            summary.RetainedEpisodes = duplicateIds.Memory;
+            Assert.Throws<ArgumentException>(() => cold.Add(summary),
+                "AR-2 L-1: same gate on the cold-store seam");
+        }
+
+        [Test]
+        public void AR2L2_NonFiniteEpisodeSalience_FailsLoudAtBothSeams()
+        {
+            MemoryStore store = new MemoryStore();
+            RelationshipEdge bad = default;
+            bad.FromId = Manager;
+            bad.ToId = 9;
+            bad.NextEpisodeId = 5u;
+            bad.Memory = new[] { new MemoryEpisode(1u, EventKind.None, float.NaN, 0u, 0) };
+            RelationshipEdge nanSalience = bad;
+            Assert.Throws<ArgumentException>(() => store.InsertEdge(nanSalience),
+                "AR-2 L-2: NaN salience fails closed at InsertEdge");
+
+            ColdStore cold = new ColdStore();
+            ColdSummary summary = default;
+            summary.EntityId = 9;
+            summary.NetRelationship = 0.5f;
+            summary.NextEpisodeId = 5u;
+            summary.RetainedEpisodes = nanSalience.Memory;
+            Assert.Throws<ArgumentException>(() => cold.Add(summary),
+                "AR-2 L-2: NaN salience fails closed at ColdStore.Add");
+        }
+
         // ── WorldLoop (§4.2; FR-LW-034 / T-LW-DET-007 subset) ──────────────────────────────
 
         [Test]
@@ -546,4 +620,7 @@ namespace TacticalDirector.LivingWorld.Tests
 // | 1.1     | 2026-07-02 | —      | AR-1 regression locks (+5 tests, 25 total): M-1 ref-counted   |
 // |         |            |        | pins, M-2 RemoveEdge pinned-edge refusal, L-1 mask conflict,  |
 // |         |            |        | L-2 InsertEdge F6 gate, L-3 ColdStore.Add coherence gates.    |
+// | 1.2     | 2026-07-02 | —      | AR-2 regression locks (+3 tests, 28 total): M-1 out-of-roster |
+// |         |            |        | layer / undefined mask bits, L-1 episodeId coherence at both  |
+// |         |            |        | seams, L-2 salience NaN-gates at both seams.                  |
 #endregion

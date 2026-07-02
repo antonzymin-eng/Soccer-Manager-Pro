@@ -61,6 +61,17 @@ namespace TacticalDirector.LivingWorld
                     throw new ArgumentException(
                         "ColdStore.Add: retained episodeId >= NextEpisodeId — rehydration would reuse the id and break FR-LW-009 monotonicity.");
                 }
+                // AR-2 L-1/L-2: ascending-strict ids (duplicates would rehydrate into ambiguous pin
+                // identity); salience finite in [0,1] (NaN fails closed — it feeds the eviction
+                // comparator and §3.3 refThreshold on rehydration).
+                if (i > 0 && summary.RetainedEpisodes[i].EpisodeId <= summary.RetainedEpisodes[i - 1].EpisodeId)
+                {
+                    throw new ArgumentException("ColdStore.Add: retained episodeIds must be strictly ascending.");
+                }
+                if (!(summary.RetainedEpisodes[i].Salience >= 0f && summary.RetainedEpisodes[i].Salience <= 1f))
+                {
+                    throw new ArgumentException("ColdStore.Add: retained episode salience must be finite in [0, 1].");
+                }
             }
             int idx = FindIndex(summary.EntityId, out bool found);
             if (found)
@@ -208,4 +219,7 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | [0,1] (NaN fails closed); every retained episodeId must sit   |
 // |         |            |        | below NextEpisodeId or rehydration would reuse an id and      |
 // |         |            |        | break FR-LW-009 monotonicity.                                 |
+// | 1.2     | 2026-07-02 | —      | AR-2 L-1/L-2: Add also requires strictly-ascending retained   |
+// |         |            |        | episodeIds (duplicates rehydrate into ambiguous pin identity) |
+// |         |            |        | and salience finite in [0,1] (NaN fails closed).              |
 #endregion
