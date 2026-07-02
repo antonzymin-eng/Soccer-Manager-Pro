@@ -9,6 +9,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
+
+using UnityEngine;
 
 namespace TacticalDirector.MatchViewer
 {
@@ -53,6 +56,12 @@ namespace TacticalDirector.MatchViewer
         /// <summary>
         /// Constructs a replay. <paramref name="teamIds"/> / <paramref name="isGoalkeeper"/> are
         /// copied; <paramref name="frames"/> is wrapped read-only (the recorder hands over ownership).
+        /// Every frame's <see cref="ReplayFrame.AgentPositions"/> must be non-null and match the
+        /// roster length — an incoherent frame would otherwise reach the exporter as a short/long
+        /// data row the canvas renderer silently no-ops on, so it is refused here (fail loud).
+        /// NOTE: the per-frame position arrays themselves are NOT copied — immutability rests on
+        /// the hand-over convention documented on <see cref="ReplayFrame"/> (the recorder never
+        /// retains or mutates them). Do not hand this constructor arrays you keep writing to.
         /// </summary>
         public MatchReplay(
             ulong matchSeed,
@@ -72,6 +81,19 @@ namespace TacticalDirector.MatchViewer
                 throw new ArgumentException(
                     "teamIds and isGoalkeeper must describe the same roster length.", nameof(isGoalkeeper));
             }
+            for (int f = 0; f < frames.Count; f++)
+            {
+                Vector2[] positions = frames[f].AgentPositions;
+                if (positions == null || positions.Length != teamIds.Length)
+                {
+                    throw new ArgumentException(
+                        string.Format(
+                            CultureInfo.InvariantCulture,
+                            "frame {0} AgentPositions must be non-null and match the roster length {1}.",
+                            f, teamIds.Length),
+                        nameof(frames));
+                }
+            }
 
             MatchSeed      = matchSeed;
             TicksPerSecond = ticksPerSecond;
@@ -89,4 +111,9 @@ namespace TacticalDirector.MatchViewer
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-02 | —      | Initial creation: immutable frame sequence + roster/pitch/    |
 // |         |            |        | cadence metadata for the HTML exporter.                       |
+// | 1.1     | 2026-07-02 | —      | AR-1 M-1: ctor refuses frames whose AgentPositions is null or |
+// |         |            |        | mismatches the roster length (fail loud — the canvas renderer |
+// |         |            |        | would silently no-op on a short/long data row). AR-1 L-1:     |
+// |         |            |        | frame-array hand-over convention documented (arrays NOT       |
+// |         |            |        | copied; immutability by convention per ReplayFrame doc).      |
 #endregion

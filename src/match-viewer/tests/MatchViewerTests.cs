@@ -131,6 +131,32 @@ namespace TacticalDirector.MatchViewer.Tests
         }
 
         [Test]
+        public void ObservationSurface_GuardsFailLoud()
+        {
+            var engine = new MatchEngine.MatchEngine(Seed);
+            Assert.Throws<ArgumentOutOfRangeException>(() => engine.AgentView(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => engine.AgentTeamId(MatchEngineConstants.SQUAD_SIZE));
+            Assert.Throws<ArgumentOutOfRangeException>(() => engine.AgentIsGoalkeeper(-1));
+        }
+
+        [Test]
+        public void Replay_RefusesIncoherentFrames()
+        {
+            // AR-1 M-1: a frame whose AgentPositions is null or does not match the roster length
+            // must be refused at construction, not silently no-op in the canvas renderer.
+            var shortFrame = new List<ReplayFrame>
+            {
+                new ReplayFrame(0UL, Vector3.zero, -1, new Vector2[1]),
+            };
+            Assert.Throws<ArgumentException>(
+                () => new MatchReplay(0UL, 60, 1, 105f, 68f, new[] { 0, 1 }, new[] { false, false }, shortFrame));
+
+            var nullFrame = new List<ReplayFrame> { new ReplayFrame(0UL, Vector3.zero, -1, null) };
+            Assert.Throws<ArgumentException>(
+                () => new MatchReplay(0UL, 60, 1, 105f, 68f, new[] { 0 }, new[] { false }, nullFrame));
+        }
+
+        [Test]
         public void Export_GuardsFailLoud()
         {
             Assert.Throws<ArgumentNullException>(() => HtmlReplayExporter.Export(null));
@@ -170,4 +196,6 @@ namespace TacticalDirector.MatchViewer.Tests
 // | 1.0     | 2026-07-02 | —      | Initial creation: cadence, on-pitch finiteness, bitwise       |
 // |         |            |        | determinism, observer-neutrality digest lock, fail-loud       |
 // |         |            |        | guards, exporter structure locks.                             |
+// | 1.1     | 2026-07-02 | —      | AR-1 locks: observation-surface roster-index guards (M-2) +   |
+// |         |            |        | MatchReplay incoherent-frame refusal (M-1).                   |
 #endregion

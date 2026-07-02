@@ -159,6 +159,8 @@ const scrub=document.getElementById('scrub'),playBtn=document.getElementById('pl
 const speedSel=document.getElementById('speed'),clockEl=document.getElementById('clock'),possEl=document.getElementById('poss');
 scrub.max=FRAMES.length-1;
 const px=x=>MARGIN+x*PPM,py=y=>MARGIN+(WID-y)*PPM; // corner origin, +Y drawn upward
+// Per-team shirt numbers derived from the TEAM array (no contiguous-roster assumption).
+const JERSEY=[];{const c={};for(let i=0;i<TEAM.length;i++){c[TEAM[i]]=(c[TEAM[i]]||0)+1;JERSEY[i]=c[TEAM[i]];}}
 function drawPitch(){
   ctx.fillStyle='#1e7a3c';ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle='rgba(255,255,255,0.85)';ctx.lineWidth=2;ctx.fillStyle='rgba(255,255,255,0.85)';
@@ -186,12 +188,13 @@ function drawFrame(f){
     ctx.fillStyle=TEAM[i]===0?'#d1495b':'#3d7ea6';ctx.fill();
     ctx.strokeStyle=GK[i]?'#ffd166':'rgba(0,0,0,0.55)';ctx.lineWidth=GK[i]?3:1.5;ctx.stroke();
     ctx.fillStyle='#fff';ctx.font='9px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(String(i%(TEAM.length/2)+1),x,y);
+    ctx.fillText(String(JERSEY[i]),x,y);
   }
   ctx.beginPath();ctx.arc(px(f[1]),py(f[2]),BALL_R+f[3]*BALL_RZ,0,2*Math.PI);
   ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.stroke();
-  const secs=f[0]/TPS;
-  clockEl.textContent='t '+f[0]+' ('+Math.floor(secs/60)+':'+(secs%60).toFixed(1).padStart(4,'0')+')';
+  // Round to tenths BEFORE splitting into minutes so 59.96 s shows 1:00.0, never 0:60.0.
+  const tenths=Math.round(f[0]/TPS*10);
+  clockEl.textContent='t '+f[0]+' ('+Math.floor(tenths/600)+':'+((tenths%600)/10).toFixed(1).padStart(4,'0')+')';
   possEl.textContent=poss<0?'ball loose':'possession: agent '+poss+' ('+(TEAM[poss]===0?'home':'away')+')';
 }
 let cursor=0,playing=false,last=null;
@@ -199,8 +202,11 @@ function render(){drawFrame(FRAMES[Math.floor(cursor)]);scrub.value=String(Math.
 function step(now){
   if(!playing)return;
   if(last!==null){
-    const dataFps=TPS/((FRAMES.length>1)?(FRAMES[1][0]-FRAMES[0][0]):1);
-    cursor+=(now-last)/1000*dataFps*parseFloat(speedSel.value);
+    // Advance at the CURRENT frame's tick interval — frames are stride-spaced except the
+    // forced final capture, whose interval may be shorter (recorder contract).
+    const i=Math.floor(cursor);
+    const dt=(i<FRAMES.length-1)?(FRAMES[i+1][0]-FRAMES[i][0]):1;
+    cursor+=(now-last)/1000*(TPS/dt)*parseFloat(speedSel.value);
     if(cursor>=FRAMES.length-1){cursor=FRAMES.length-1;setPlaying(false);}
   }
   last=now;render();
@@ -243,4 +249,10 @@ render();
 // |         |            |        | markings, teams/GK/possession/ball-height cues, play/pause/   |
 // |         |            |        | scrub/speed, space toggles). Fail-loud non-finite gate;       |
 // |         |            |        | InvariantCulture formatting throughout.                       |
+// | 1.1     | 2026-07-02 | —      | AR-1 player-script fixes. L-2: playback advances at the       |
+// |         |            |        | CURRENT frame's tick interval instead of assuming uniform     |
+// |         |            |        | spacing (the forced final capture may be a short interval).   |
+// |         |            |        | L-3: clock rounds to tenths BEFORE the minute split (59.96 s  |
+// |         |            |        | showed 0:60.0); shirt numbers derived per-team from the TEAM  |
+// |         |            |        | array (no contiguous-roster assumption).                      |
 #endregion
