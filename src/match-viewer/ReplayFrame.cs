@@ -17,7 +17,11 @@ namespace TacticalDirector.MatchViewer
     /// </summary>
     public readonly struct ReplayFrame
     {
-        /// <summary>The 60 Hz physics tick this frame was sampled at (0 = kickoff state).</summary>
+        /// <summary>
+        /// The 60 Hz physics tick this frame was sampled at. The recorder's first frame is the
+        /// engine's pre-run state — tick 0 (kickoff) for a freshly booted engine, or the current
+        /// tick when recording a pre-run engine (the recorder overload contract).
+        /// </summary>
         public readonly ulong Tick;
 
         /// <summary>Ball position (x, y, z) in metres.</summary>
@@ -48,4 +52,6 @@ namespace TacticalDirector.MatchViewer
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-02 | —      | Initial creation: sampled frame (tick / ball / possession /   |
 // |         |            |        | agent positions) for the match-viewer replay recorder.        |
+// | 1.1     | 2026-07-02 | —      | AR-4 L (doc): Tick doc no longer claims "0 = kickoff" —       |
+// |         |            |        | recording a pre-run engine starts at its current tick.        |
 #endregion

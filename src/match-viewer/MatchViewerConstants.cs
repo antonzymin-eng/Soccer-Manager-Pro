@@ -68,6 +68,8 @@ namespace TacticalDirector.MatchViewer
         /// <summary>
         /// [GT] Default recorder sample stride, physics ticks per captured frame. 2 ⇒ 30 samples/s
         /// at the 60 Hz physics tick — smooth playback at half the file size of per-tick capture.
+        /// A config-supplied non-positive value is rejected fail-loud by the recorder's stride
+        /// guard on the default-stride overloads (this catalogue does not re-validate).
         /// </summary>
         public static readonly int DefaultSampleStride = Config.GetInt("match-viewer", "DefaultSampleStride", 2);
 
@@ -83,4 +85,7 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | (Config.GetFloat/GetInt, "match-viewer" section) — this       |
 // |         |            |        | catalogue was authored plain-const the day after the June-30  |
 // |         |            |        | 17-catalogue migration. [FIXED] IFAB rows stay const.         |
+// | 1.2     | 2026-07-02 | —      | AR-4 L (doc): DefaultSampleStride notes that a config-        |
+// |         |            |        | supplied non-positive value is rejected by the recorder's     |
+// |         |            |        | stride guard (catalogue does not re-validate).                |
 #endregion

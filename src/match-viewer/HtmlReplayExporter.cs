@@ -29,6 +29,17 @@ namespace TacticalDirector.MatchViewer
 
             float ppm    = MatchViewerConstants.PixelsPerMetre;
             float margin = MatchViewerConstants.CanvasMarginPx;
+            // The [GT] presentation values are config-resolved — a malformed config (0/negative/
+            // NaN scale) would emit a silently broken document; gate per the fail-loud convention
+            // (NaN-gate pattern: !(x > 0) also rejects NaN).
+            if (!(ppm > 0f) || float.IsInfinity(ppm))
+            {
+                throw new InvalidOperationException("[GT] MatchViewerConstants.PixelsPerMetre must be finite and > 0.");
+            }
+            if (!(margin >= 0f) || float.IsInfinity(margin))
+            {
+                throw new InvalidOperationException("[GT] MatchViewerConstants.CanvasMarginPx must be finite and >= 0.");
+            }
             int canvasW  = (int)Math.Ceiling(replay.PitchLengthM * ppm + 2f * margin);
             int canvasH  = (int)Math.Ceiling(replay.PitchWidthM * ppm + 2f * margin);
 
@@ -218,7 +229,9 @@ function setPlaying(p){
 }
 playBtn.addEventListener('click',()=>setPlaying(!playing));
 scrub.addEventListener('input',()=>{cursor=parseInt(scrub.value,10);render();});
-document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();setPlaying(!playing);}});
+// Space toggles playback — except when a control is focused: preventDefault there would
+// hijack native activation (a focused select's dropdown; a focused button would double-toggle).
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!['BUTTON','SELECT','INPUT'].includes(e.target.tagName)){e.preventDefault();setPlaying(!playing);}});
 render();
 ");
         }
@@ -258,4 +271,10 @@ render();
 // | 1.2     | 2026-07-02 | —      | AR-2 L-2: ball marker radius clamped to >= 1 px — a corrupt-  |
 // |         |            |        | but-finite negative ball z could drive the radius <= 0 and    |
 // |         |            |        | canvas arc() throws IndexSizeError, killing every frame draw. |
+// | 1.3     | 2026-07-02 | —      | AR-4 L: Export gates the config-resolved [GT] presentation    |
+// |         |            |        | values (PixelsPerMetre > 0, CanvasMarginPx >= 0, NaN-gate     |
+// |         |            |        | pattern) — a malformed config emitted a silently broken       |
+// |         |            |        | document. Space-key toggle skips focused BUTTON/SELECT/INPUT  |
+// |         |            |        | (preventDefault hijacked native activation: focused select's  |
+// |         |            |        | dropdown; focused button double-toggled).                     |
 #endregion

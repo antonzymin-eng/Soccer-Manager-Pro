@@ -32,7 +32,11 @@ namespace TacticalDirector.MatchViewer
         /// <summary>Physics ticks per second of the recorded engine (60 Hz).</summary>
         public int TicksPerSecond { get; }
 
-        /// <summary>Physics ticks between captured frames (≥ 1).</summary>
+        /// <summary>
+        /// Physics ticks between captured frames (≥ 1). Provenance metadata only — the exported
+        /// player derives playback timing from consecutive frame TICK deltas (which also cover the
+        /// recorder's forced final capture at a shorter interval), never from this value.
+        /// </summary>
         public int SampleStride { get; }
 
         /// <summary>Pitch length (goal-to-goal, X), metres.</summary>
@@ -41,7 +45,7 @@ namespace TacticalDirector.MatchViewer
         /// <summary>Pitch width (touchline-to-touchline, Y), metres.</summary>
         public float PitchWidthM { get; }
 
-        /// <summary>The sampled frames, oldest first (frame 0 = pre-tick kickoff state).</summary>
+        /// <summary>The sampled frames, oldest first (frame 0 = the engine's pre-run state).</summary>
         public ReadOnlyCollection<ReplayFrame> Frames { get; }
 
         /// <summary>Number of agents per frame.</summary>
@@ -204,4 +208,6 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | PossessingAgentId validated (−1 or roster index — an out-of-  |
 // |         |            |        | range id drew no ring while the HUD named a nonexistent       |
 // |         |            |        | agent); empty roster refused.                                 |
+// | 1.4     | 2026-07-02 | —      | AR-4 L (doc): SampleStride marked provenance-only — the       |
+// |         |            |        | player times playback from frame tick deltas, never this.     |
 #endregion
