@@ -1,0 +1,20 @@
+{
+    "name": "TacticalDirector.MatchViewer",
+    "rootNamespace": "TacticalDirector.MatchViewer",
+    "references": [
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.ProjectConstants"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

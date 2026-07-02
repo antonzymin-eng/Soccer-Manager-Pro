@@ -576,6 +576,48 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Total number of AI-phase executions since boot (one per stride tick).</summary>
         public ulong AiPhaseRunCount => _aiPhaseRunCount;
 
+        // ── Public observation surface (presentation layer / match viewer) ─────────────
+        // Read-only world-state COPIES for presentation consumers (the match viewer records
+        // these between ticks). Value-type copies only — no reference into the live buffers
+        // escapes, and nothing here can mutate world state or perturb determinism.
+
+        /// <summary>A copy of the current ball state (corner-origin frame per Ball Physics #1 §1.2).</summary>
+        public BallState BallView => _ball;
+
+        /// <summary>A copy of agent <paramref name="index"/>'s movement state (roster index in [0, SQUAD_SIZE)).</summary>
+        public AgentState AgentView(int index)
+        {
+            GuardRosterIndex(index);
+            return _agents[index];
+        }
+
+        /// <summary>Team id (0 = home, 1 = away) of roster <paramref name="index"/>.</summary>
+        public int AgentTeamId(int index)
+        {
+            GuardRosterIndex(index);
+            return _teamIds[index];
+        }
+
+        /// <summary>True when roster <paramref name="index"/> is a goalkeeper.</summary>
+        public bool AgentIsGoalkeeper(int index)
+        {
+            GuardRosterIndex(index);
+            return _isGoalkeeper[index];
+        }
+
+        /// <summary>Public-surface roster-index guard (parallel to <see cref="SetPlayerTactic"/>).</summary>
+        private static void GuardRosterIndex(int index)
+        {
+            if (index < 0 || index >= MatchEngineConstants.SQUAD_SIZE)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(index), index, "index must be a roster index in [0, SQUAD_SIZE).");
+            }
+        }
+
+        /// <summary>Possessing agent's roster index, or NO_POSSESSION (−1) when the ball is loose.</summary>
+        public int PossessingAgentId => _possessingAgentId;
+
         /// <summary>
         /// The match-seeded deterministic RNG owned by the composition root. Phase A registers
         /// no draw sites; later phases inject this into subsystems (collision foul/stumble,
@@ -2852,4 +2894,14 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | DefensiveLine + MentalityLineBias[mentality]) — the manager dial|
 // |         |            |        | + bias is the single depth source; #14 output still reaches #8. |
 // |         |            |        | Balanced ⇒ 0.5 = STAGE0_DEFENSIVE_LINE_DEPTH (behaviour-neutral)|
+// | 1.24    | 2026-07-02 | —      | Public observation surface for the presentation layer (match   |
+// |         |            |        | viewer): BallView / AgentView(i) / AgentTeamId(i) /             |
+// |         |            |        | AgentIsGoalkeeper(i) / PossessingAgentId — read-only value-type |
+// |         |            |        | COPIES of world state (no live-buffer reference escapes; no     |
+// |         |            |        | mutation path; determinism unaffected). Consumed by the new     |
+// |         |            |        | src/match-viewer/ MatchReplayRecorder. No behaviour change.     |
+// | 1.25    | 2026-07-02 | —      | AR-1 M-2 (match-viewer review): the three indexed observation   |
+// |         |            |        | accessors gain the public-surface roster-index guard            |
+// |         |            |        | (ArgumentOutOfRangeException, parallel to SetPlayerTactic)      |
+// |         |            |        | instead of a bare IndexOutOfRangeException from the array.      |
 #endregion
