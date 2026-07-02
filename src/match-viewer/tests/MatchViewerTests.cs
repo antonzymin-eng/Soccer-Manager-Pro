@@ -163,6 +163,31 @@ namespace TacticalDirector.MatchViewer.Tests
             };
             Assert.Throws<ArgumentException>(
                 () => new MatchReplay(0UL, 60, 1, 105f, 68f, new[] { 0 }, new[] { false }, stalled));
+
+            // AR-3: possession must be -1 (loose) or a roster index.
+            var badPossession = new List<ReplayFrame>
+            {
+                new ReplayFrame(0UL, Vector3.zero, 1, new Vector2[1]),
+            };
+            Assert.Throws<ArgumentException>(
+                () => new MatchReplay(0UL, 60, 1, 105f, 68f, new[] { 0 }, new[] { false }, badPossession));
+        }
+
+        [Test]
+        public void Replay_SnapshotsFramesAtConstruction()
+        {
+            // AR-3 M-1: mutating the caller's list after construction must neither change the
+            // replay nor smuggle an unvalidated frame past the ctor guards.
+            var frames = new List<ReplayFrame>
+            {
+                new ReplayFrame(0UL, Vector3.zero, -1, new Vector2[1]),
+            };
+            var replay = new MatchReplay(0UL, 60, 1, 105f, 68f, new[] { 0 }, new[] { false }, frames);
+
+            frames.Add(new ReplayFrame(0UL, Vector3.zero, 99, null)); // incoherent on every axis
+
+            Assert.AreEqual(1, replay.Frames.Count);
+            StringAssert.Contains("const FRAMES=[", HtmlReplayExporter.Export(replay)); // still exports cleanly
         }
 
         [Test]
@@ -178,6 +203,10 @@ namespace TacticalDirector.MatchViewer.Tests
             // Empty replay: the exported player would crash at first render (blank pitch, dead controls).
             Assert.Throws<ArgumentException>(
                 () => new MatchReplay(0UL, 60, 1, 105f, 68f, roster, gk, new List<ReplayFrame>()));
+            // AR-3: empty roster refused (degenerate agentless document).
+            Assert.Throws<ArgumentException>(
+                () => new MatchReplay(0UL, 60, 1, 105f, 68f, new int[0], new bool[0],
+                    new List<ReplayFrame> { new ReplayFrame(0UL, Vector3.zero, -1, new Vector2[0]) }));
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => new MatchReplay(0UL, 0, 1, 105f, 68f, roster, gk, oneFrame()));
             Assert.Throws<ArgumentOutOfRangeException>(
@@ -237,4 +266,7 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | MatchReplay incoherent-frame refusal (M-1).                   |
 // | 1.2     | 2026-07-02 | —      | AR-2 locks: empty-replay + non-monotonic-tick refusal;        |
 // |         |            |        | degenerate-metadata guards; MatchReplay roster-index guards.  |
+// | 1.3     | 2026-07-02 | —      | AR-3 locks: frames snapshot-at-construction (post-ctor list   |
+// |         |            |        | mutation cannot bypass validation); possession-range +        |
+// |         |            |        | empty-roster refusal.                                         |
 #endregion

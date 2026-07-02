@@ -73,7 +73,9 @@ namespace TacticalDirector.MatchViewer
 
         /// <summary>
         /// Constructs a replay. <paramref name="teamIds"/> / <paramref name="isGoalkeeper"/> are
-        /// copied; <paramref name="frames"/> is wrapped read-only (the recorder hands over ownership).
+        /// copied, and <paramref name="frames"/> is snapshot-copied BEFORE validation — the
+        /// validated snapshot is what this instance exposes, so later mutation of the caller's
+        /// list can neither change the replay nor smuggle an unvalidated frame past the guards.
         /// Every frame's <see cref="ReplayFrame.AgentPositions"/> must be non-null and match the
         /// roster length — an incoherent frame would otherwise reach the exporter as a short/long
         /// data row the canvas renderer silently no-ops on, so it is refused here (fail loud).
@@ -99,6 +101,10 @@ namespace TacticalDirector.MatchViewer
                 throw new ArgumentException(
                     "teamIds and isGoalkeeper must describe the same roster length.", nameof(isGoalkeeper));
             }
+            if (teamIds.Length == 0)
+            {
+                throw new ArgumentException("the roster must contain at least one agent.", nameof(teamIds));
+            }
             if (ticksPerSecond <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(ticksPerSecond), ticksPerSecond, "ticksPerSecond must be > 0.");
@@ -116,15 +122,21 @@ namespace TacticalDirector.MatchViewer
             {
                 throw new ArgumentOutOfRangeException(nameof(pitchWidthM), pitchWidthM, "pitchWidthM must be finite and > 0.");
             }
-            if (frames.Count == 0)
+            // Snapshot BEFORE validating: the guards below run against the copy this instance
+            // keeps, so a caller mutating its list after construction cannot bypass them
+            // (ReadOnlyCollection is a view, not a copy — wrapping the caller's list would let
+            // frames.Add(...) inject unvalidated rows into an already-constructed replay).
+            var snapshot = new List<ReplayFrame>(frames);
+
+            if (snapshot.Count == 0)
             {
                 // An empty replay would export a document whose player crashes at first render
                 // (blank pitch, dead controls) — refused here per the fail-loud convention.
                 throw new ArgumentException("frames must contain at least one frame.", nameof(frames));
             }
-            for (int f = 0; f < frames.Count; f++)
+            for (int f = 0; f < snapshot.Count; f++)
             {
-                Vector2[] positions = frames[f].AgentPositions;
+                Vector2[] positions = snapshot[f].AgentPositions;
                 if (positions == null || positions.Length != teamIds.Length)
                 {
                     throw new ArgumentException(
@@ -136,13 +148,24 @@ namespace TacticalDirector.MatchViewer
                 }
                 // Strictly increasing ticks: the player derives per-interval playback timing from
                 // consecutive tick deltas, so dt <= 0 would stall or reverse playback.
-                if (f > 0 && frames[f].Tick <= frames[f - 1].Tick)
+                if (f > 0 && snapshot[f].Tick <= snapshot[f - 1].Tick)
                 {
                     throw new ArgumentException(
                         string.Format(
                             CultureInfo.InvariantCulture,
                             "frame ticks must be strictly increasing (frame {0}: {1} after {2}).",
-                            f, frames[f].Tick, frames[f - 1].Tick),
+                            f, snapshot[f].Tick, snapshot[f - 1].Tick),
+                        nameof(frames));
+                }
+                // Possession must be the loose sentinel (−1) or a roster index — an out-of-range
+                // id would render no possession ring while the HUD names a nonexistent agent.
+                if (snapshot[f].PossessingAgentId < -1 || snapshot[f].PossessingAgentId >= teamIds.Length)
+                {
+                    throw new ArgumentException(
+                        string.Format(
+                            CultureInfo.InvariantCulture,
+                            "frame {0} PossessingAgentId {1} must be -1 (loose) or a roster index in [0, {2}).",
+                            f, snapshot[f].PossessingAgentId, teamIds.Length),
                         nameof(frames));
                 }
             }
@@ -154,7 +177,7 @@ namespace TacticalDirector.MatchViewer
             PitchWidthM    = pitchWidthM;
             _teamIds       = (int[])teamIds.Clone();
             _isGoalkeeper  = (bool[])isGoalkeeper.Clone();
-            Frames         = new ReadOnlyCollection<ReplayFrame>(frames);
+            Frames         = new ReadOnlyCollection<ReplayFrame>(snapshot);
         }
     }
 }
@@ -174,4 +197,11 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | dt > 0); metadata guards (ticksPerSecond/sampleStride > 0,    |
 // |         |            |        | pitch dims finite > 0, NaN-gate pattern). TeamId/IsGoalkeeper |
 // |         |            |        | gain the roster-index guard (parallel to MatchEngine v1.25).  |
+// | 1.3     | 2026-07-02 | —      | AR-3 M-1: frames list snapshot-copied BEFORE validation and   |
+// |         |            |        | the SNAPSHOT wrapped — ReadOnlyCollection is a view, so       |
+// |         |            |        | wrapping the caller's live list let frames.Add(...) inject    |
+// |         |            |        | unvalidated rows past every AR-1/AR-2 ctor guard. AR-3 L:     |
+// |         |            |        | PossessingAgentId validated (−1 or roster index — an out-of-  |
+// |         |            |        | range id drew no ring while the HUD named a nonexistent       |
+// |         |            |        | agent); empty roster refused.                                 |
 #endregion
