@@ -154,6 +154,43 @@ namespace TacticalDirector.MatchViewer.Tests
             var nullFrame = new List<ReplayFrame> { new ReplayFrame(0UL, Vector3.zero, -1, null) };
             Assert.Throws<ArgumentException>(
                 () => new MatchReplay(0UL, 60, 1, 105f, 68f, new[] { 0 }, new[] { false }, nullFrame));
+
+            // AR-2: non-strictly-increasing frame ticks (player per-interval timing needs dt > 0).
+            var stalled = new List<ReplayFrame>
+            {
+                new ReplayFrame(5UL, Vector3.zero, -1, new Vector2[1]),
+                new ReplayFrame(5UL, Vector3.zero, -1, new Vector2[1]),
+            };
+            Assert.Throws<ArgumentException>(
+                () => new MatchReplay(0UL, 60, 1, 105f, 68f, new[] { 0 }, new[] { false }, stalled));
+        }
+
+        [Test]
+        public void Replay_RefusesDegenerateMetadata()
+        {
+            List<ReplayFrame> oneFrame() => new List<ReplayFrame>
+            {
+                new ReplayFrame(0UL, Vector3.zero, -1, new Vector2[1]),
+            };
+            int[] roster = { 0 };
+            bool[] gk = { false };
+
+            // Empty replay: the exported player would crash at first render (blank pitch, dead controls).
+            Assert.Throws<ArgumentException>(
+                () => new MatchReplay(0UL, 60, 1, 105f, 68f, roster, gk, new List<ReplayFrame>()));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new MatchReplay(0UL, 0, 1, 105f, 68f, roster, gk, oneFrame()));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new MatchReplay(0UL, 60, 0, 105f, 68f, roster, gk, oneFrame()));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new MatchReplay(0UL, 60, 1, float.NaN, 68f, roster, gk, oneFrame()));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new MatchReplay(0UL, 60, 1, 105f, float.PositiveInfinity, roster, gk, oneFrame()));
+
+            // Roster-index guard (parallel to the MatchEngine observation surface).
+            var replay = new MatchReplay(0UL, 60, 1, 105f, 68f, roster, gk, oneFrame());
+            Assert.Throws<ArgumentOutOfRangeException>(() => replay.TeamId(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => replay.IsGoalkeeper(1));
         }
 
         [Test]
@@ -198,4 +235,6 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | guards, exporter structure locks.                             |
 // | 1.1     | 2026-07-02 | —      | AR-1 locks: observation-surface roster-index guards (M-2) +   |
 // |         |            |        | MatchReplay incoherent-frame refusal (M-1).                   |
+// | 1.2     | 2026-07-02 | —      | AR-2 locks: empty-replay + non-monotonic-tick refusal;        |
+// |         |            |        | degenerate-metadata guards; MatchReplay roster-index guards.  |
 #endregion

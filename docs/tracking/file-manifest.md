@@ -730,10 +730,10 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 | File | Purpose |
 |---|---|
-| `src/match-viewer/match-viewer.asmdef` | Assembly definition `TacticalDirector.MatchViewer`; references MatchEngine + DeterministicSim + BallPhysics + AgentMovement |
-| `src/match-viewer/MatchViewerConstants.cs` | Catalogue: IFAB pitch-marking geometry `[FIXED]` + canvas/recording presentation `[GT]` (presentation-only; nothing feeds the sim or digest) |
+| `src/match-viewer/match-viewer.asmdef` | Assembly definition `TacticalDirector.MatchViewer`; references MatchEngine + DeterministicSim + BallPhysics + AgentMovement + ProjectConstants |
+| `src/match-viewer/MatchViewerConstants.cs` | Catalogue: IFAB pitch-marking geometry `[FIXED]` (const) + canvas/recording presentation `[GT]` (config-resolved via `GameplayConfig`, `"match-viewer"` section; presentation-only — nothing feeds the sim or digest) |
 | `src/match-viewer/ReplayFrame.cs` | One sampled frame: tick / ball position / possessing agent / agent positions (value copies, never aliasing live buffers) |
-| `src/match-viewer/MatchReplay.cs` | Immutable frame sequence + roster (teamIds, GK flags) / pitch / cadence metadata; ReadOnlyCollection + cloned arrays |
+| `src/match-viewer/MatchReplay.cs` | Immutable frame sequence + roster (teamIds, GK flags) / pitch / cadence metadata; ReadOnlyCollection + cloned arrays; fail-loud ctor (frame coherence, strictly-increasing ticks, non-empty, metadata NaN-gates) + roster-index guards |
 | `src/match-viewer/MatchReplayRecorder.cs` | Ticks an engine, sampling between ticks; seed + pre-configured-engine overloads; fail-loud guards; kickoff frame + final tick always captured |
 | `src/match-viewer/HtmlReplayExporter.cs` | Self-contained HTML canvas replay: pitch markings, home/away/GK/possession/ball-height cues, play/pause/scrub/speed + space toggle; InvariantCulture; fail-loud non-finite gate |
 | `src/match-viewer/tests/match-viewer-tests.asmdef` | Test assembly definition (EditMode; references match-viewer + match-engine + deterministic-sim + ball-physics + agent-movement) |

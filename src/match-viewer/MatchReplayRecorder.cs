@@ -33,12 +33,19 @@ namespace TacticalDirector.MatchViewer
         /// <param name="matchSeed">Deterministic match seed the engine is booted with.</param>
         /// <param name="numTicks">Number of 60 Hz physics ticks to run (&gt; 0).</param>
         /// <param name="sampleStride">Ticks per captured frame (&gt; 0); frame 0 (kickoff) is always captured.</param>
-        public static MatchReplay Record(
-            ulong matchSeed,
-            int numTicks,
-            int sampleStride = MatchViewerConstants.DefaultSampleStride)
+        public static MatchReplay Record(ulong matchSeed, int numTicks, int sampleStride)
         {
             return Record(new MatchEngine.MatchEngine(matchSeed), matchSeed, numTicks, sampleStride);
+        }
+
+        /// <summary>
+        /// As <see cref="Record(ulong, int, int)"/> at the default sample stride
+        /// (<see cref="MatchViewerConstants.DefaultSampleStride"/>). Explicit overload rather than
+        /// a default parameter — the [GT] stride is config-resolved, not a compile-time constant.
+        /// </summary>
+        public static MatchReplay Record(ulong matchSeed, int numTicks)
+        {
+            return Record(matchSeed, numTicks, MatchViewerConstants.DefaultSampleStride);
         }
 
         /// <summary>
@@ -55,7 +62,7 @@ namespace TacticalDirector.MatchViewer
             MatchEngine.MatchEngine engine,
             ulong matchSeed,
             int numTicks,
-            int sampleStride = MatchViewerConstants.DefaultSampleStride)
+            int sampleStride)
         {
             if (engine == null) { throw new ArgumentNullException(nameof(engine)); }
             if (numTicks <= 0)
@@ -99,6 +106,15 @@ namespace TacticalDirector.MatchViewer
                 frames);
         }
 
+        /// <summary>
+        /// As <see cref="Record(MatchEngine.MatchEngine, ulong, int, int)"/> at the default sample
+        /// stride (explicit overload — the [GT] stride is config-resolved, not a compile-time constant).
+        /// </summary>
+        public static MatchReplay Record(MatchEngine.MatchEngine engine, ulong matchSeed, int numTicks)
+        {
+            return Record(engine, matchSeed, numTicks, MatchViewerConstants.DefaultSampleStride);
+        }
+
         private static ReplayFrame CaptureFrame(MatchEngine.MatchEngine engine)
         {
             var positions = new Vector2[MatchEngineConstants.SQUAD_SIZE];
@@ -120,4 +136,8 @@ namespace TacticalDirector.MatchViewer
 // | 1.0     | 2026-07-02 | —      | Initial creation: seed + pre-configured-engine overloads;     |
 // |         |            |        | fail-loud guards; kickoff frame + stride sampling + final     |
 // |         |            |        | tick always captured.                                         |
+// | 1.1     | 2026-07-02 | —      | AR-2 M-3 follow-through: default-stride parameters replaced   |
+// |         |            |        | with explicit overloads — DefaultSampleStride is now config-  |
+// |         |            |        | resolved [GT] (static readonly), not a compile-time constant, |
+// |         |            |        | so it can no longer be a default parameter value.             |
 #endregion

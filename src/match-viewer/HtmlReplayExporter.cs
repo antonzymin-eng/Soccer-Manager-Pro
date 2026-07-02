@@ -190,7 +190,7 @@ function drawFrame(f){
     ctx.fillStyle='#fff';ctx.font='9px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(String(JERSEY[i]),x,y);
   }
-  ctx.beginPath();ctx.arc(px(f[1]),py(f[2]),BALL_R+f[3]*BALL_RZ,0,2*Math.PI);
+  ctx.beginPath();ctx.arc(px(f[1]),py(f[2]),Math.max(1,BALL_R+f[3]*BALL_RZ),0,2*Math.PI);
   ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.stroke();
   // Round to tenths BEFORE splitting into minutes so 59.96 s shows 1:00.0, never 0:60.0.
   const tenths=Math.round(f[0]/TPS*10);
@@ -255,4 +255,7 @@ render();
 // |         |            |        | L-3: clock rounds to tenths BEFORE the minute split (59.96 s  |
 // |         |            |        | showed 0:60.0); shirt numbers derived per-team from the TEAM  |
 // |         |            |        | array (no contiguous-roster assumption).                      |
+// | 1.2     | 2026-07-02 | —      | AR-2 L-2: ball marker radius clamped to >= 1 px — a corrupt-  |
+// |         |            |        | but-finite negative ball z could drive the radius <= 0 and    |
+// |         |            |        | canvas arc() throws IndexSizeError, killing every frame draw. |
 #endregion

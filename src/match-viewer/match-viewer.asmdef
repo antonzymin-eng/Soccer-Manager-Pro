@@ -5,7 +5,8 @@
         "TacticalDirector.MatchEngine",
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.BallPhysics",
-        "TacticalDirector.AgentMovement"
+        "TacticalDirector.AgentMovement",
+        "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

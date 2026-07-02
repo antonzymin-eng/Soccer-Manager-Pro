@@ -7,6 +7,8 @@
 // Purpose:  Constant catalogue for the minimal match viewer: recording defaults plus the HTML replay
 //           exporter's pitch-marking geometry and canvas presentation values.
 
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
+
 namespace TacticalDirector.MatchViewer
 {
     /// <summary>
@@ -45,19 +47,19 @@ namespace TacticalDirector.MatchViewer
         #region GT — canvas presentation (pixels / display tuning)
 
         /// <summary>[GT] Canvas scale, pixels per metre.</summary>
-        public const float PixelsPerMetre = 9f;
+        public static readonly float PixelsPerMetre = Config.GetFloat("match-viewer", "PixelsPerMetre", 9f);
 
         /// <summary>[GT] Canvas margin around the pitch, pixels.</summary>
-        public const float CanvasMarginPx = 24f;
+        public static readonly float CanvasMarginPx = Config.GetFloat("match-viewer", "CanvasMarginPx", 24f);
 
         /// <summary>[GT] Outfield-agent marker radius, pixels.</summary>
-        public const float AgentRadiusPx = 7f;
+        public static readonly float AgentRadiusPx = Config.GetFloat("match-viewer", "AgentRadiusPx", 7f);
 
         /// <summary>[GT] Ball marker radius at ground level, pixels (grows with ball height).</summary>
-        public const float BallRadiusPx = 4f;
+        public static readonly float BallRadiusPx = Config.GetFloat("match-viewer", "BallRadiusPx", 4f);
 
         /// <summary>[GT] Extra ball-marker radius per metre of ball height, pixels (cheap 2D height cue).</summary>
-        public const float BallRadiusPerMetreHeightPx = 2f;
+        public static readonly float BallRadiusPerMetreHeightPx = Config.GetFloat("match-viewer", "BallRadiusPerMetreHeightPx", 2f);
 
         #endregion
 
@@ -67,7 +69,7 @@ namespace TacticalDirector.MatchViewer
         /// [GT] Default recorder sample stride, physics ticks per captured frame. 2 ⇒ 30 samples/s
         /// at the 60 Hz physics tick — smooth playback at half the file size of per-tick capture.
         /// </summary>
-        public const int DefaultSampleStride = 2;
+        public static readonly int DefaultSampleStride = Config.GetInt("match-viewer", "DefaultSampleStride", 2);
 
         #endregion
     }
@@ -77,4 +79,8 @@ namespace TacticalDirector.MatchViewer
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-02 | —      | Initial creation: IFAB marking geometry [FIXED] + canvas/      |
 // |         |            |        | recording presentation values [GT] for the minimal viewer.    |
+// | 1.1     | 2026-07-02 | —      | AR-2 M-3: [GT] values migrated onto GameplayConfig             |
+// |         |            |        | (Config.GetFloat/GetInt, "match-viewer" section) — this       |
+// |         |            |        | catalogue was authored plain-const the day after the June-30  |
+// |         |            |        | 17-catalogue migration. [FIXED] IFAB rows stay const.         |
 #endregion

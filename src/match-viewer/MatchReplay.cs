@@ -48,10 +48,28 @@ namespace TacticalDirector.MatchViewer
         public int AgentCount => _teamIds.Length;
 
         /// <summary>Team id (0 = home, 1 = away) of roster <paramref name="index"/>.</summary>
-        public int TeamId(int index) => _teamIds[index];
+        public int TeamId(int index)
+        {
+            GuardRosterIndex(index);
+            return _teamIds[index];
+        }
 
         /// <summary>True when roster <paramref name="index"/> is a goalkeeper.</summary>
-        public bool IsGoalkeeper(int index) => _isGoalkeeper[index];
+        public bool IsGoalkeeper(int index)
+        {
+            GuardRosterIndex(index);
+            return _isGoalkeeper[index];
+        }
+
+        /// <summary>Public-surface roster-index guard (parallel to the MatchEngine observation surface).</summary>
+        private void GuardRosterIndex(int index)
+        {
+            if (index < 0 || index >= _teamIds.Length)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(index), index, "index must be a roster index in [0, AgentCount).");
+            }
+        }
 
         /// <summary>
         /// Constructs a replay. <paramref name="teamIds"/> / <paramref name="isGoalkeeper"/> are
@@ -81,6 +99,29 @@ namespace TacticalDirector.MatchViewer
                 throw new ArgumentException(
                     "teamIds and isGoalkeeper must describe the same roster length.", nameof(isGoalkeeper));
             }
+            if (ticksPerSecond <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ticksPerSecond), ticksPerSecond, "ticksPerSecond must be > 0.");
+            }
+            if (sampleStride <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(sampleStride), sampleStride, "sampleStride must be > 0.");
+            }
+            // Project NaN-gate pattern: !(x > 0) also rejects NaN (which compares false).
+            if (!(pitchLengthM > 0f) || float.IsInfinity(pitchLengthM))
+            {
+                throw new ArgumentOutOfRangeException(nameof(pitchLengthM), pitchLengthM, "pitchLengthM must be finite and > 0.");
+            }
+            if (!(pitchWidthM > 0f) || float.IsInfinity(pitchWidthM))
+            {
+                throw new ArgumentOutOfRangeException(nameof(pitchWidthM), pitchWidthM, "pitchWidthM must be finite and > 0.");
+            }
+            if (frames.Count == 0)
+            {
+                // An empty replay would export a document whose player crashes at first render
+                // (blank pitch, dead controls) — refused here per the fail-loud convention.
+                throw new ArgumentException("frames must contain at least one frame.", nameof(frames));
+            }
             for (int f = 0; f < frames.Count; f++)
             {
                 Vector2[] positions = frames[f].AgentPositions;
@@ -91,6 +132,17 @@ namespace TacticalDirector.MatchViewer
                             CultureInfo.InvariantCulture,
                             "frame {0} AgentPositions must be non-null and match the roster length {1}.",
                             f, teamIds.Length),
+                        nameof(frames));
+                }
+                // Strictly increasing ticks: the player derives per-interval playback timing from
+                // consecutive tick deltas, so dt <= 0 would stall or reverse playback.
+                if (f > 0 && frames[f].Tick <= frames[f - 1].Tick)
+                {
+                    throw new ArgumentException(
+                        string.Format(
+                            CultureInfo.InvariantCulture,
+                            "frame ticks must be strictly increasing (frame {0}: {1} after {2}).",
+                            f, frames[f].Tick, frames[f - 1].Tick),
                         nameof(frames));
                 }
             }
@@ -116,4 +168,10 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | would silently no-op on a short/long data row). AR-1 L-1:     |
 // |         |            |        | frame-array hand-over convention documented (arrays NOT       |
 // |         |            |        | copied; immutability by convention per ReplayFrame doc).      |
+// | 1.2     | 2026-07-02 | —      | AR-2: ctor refuses empty frames (exported player crashed at   |
+// |         |            |        | first render — blank pitch, dead controls) and non-strictly-  |
+// |         |            |        | increasing frame ticks (player per-interval timing needs      |
+// |         |            |        | dt > 0); metadata guards (ticksPerSecond/sampleStride > 0,    |
+// |         |            |        | pitch dims finite > 0, NaN-gate pattern). TeamId/IsGoalkeeper |
+// |         |            |        | gain the roster-index guard (parallel to MatchEngine v1.25).  |
 #endregion
