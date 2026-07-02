@@ -702,9 +702,9 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/project-constants/tests/GameplayConfigFileLoaderTests.cs` | Grammar round-trip + comments/blanks + empty→Empty + every fail-loud case |
 | `src/project-constants/tests/GameplayConfigHolderTests.cs` | Empty-default / Bind-before-lock takes effect / Bind(null) throws / Bind-after-lock throws / ResetForTests clears the lock |
 
-### `src/living-world/` — Living World System #22 T0 scaffolding (June 21, 2026; data types + pure math only — spec IN REVIEW)
+### `src/living-world/` — Living World System #22 T0 scaffolding + season/world-loop slice 1 (June 21 / July 2, 2026; spec APPROVED June 22, 2026)
 
-> Self-contained T0: no references (the spec's vol-2/vol-3 human-systems + project-constants upstreams do not exist in `src/` yet; engine-free, `noEngineReferences`). Services (WorldLoop/ArcEngine/text-gen/background-tier/cold-store) land as KD-10 prerequisites are wired.
+> Self-contained: no references (the spec's vol-2/vol-3 human-systems + project-constants upstreams do not exist in `src/` yet; engine-free, `noEngineReferences`). **Season/world-loop slice 1 landed July 2, 2026** — the KD-10 "persistent world store + season-calendar loop" prerequisite: `WorldClock` / `WorldLoop` / `MemoryStore` / `ColdStore` (§4.2/§4.3). Remaining services (ArcEngine / InteractionTextGenerator / BackgroundTierSim) land as their KD-10 upstreams (vol-2/vol-3, match-outcome events, world RNG sub-streams) are wired.
 
 | File | Purpose |
 |---|---|
@@ -721,8 +721,13 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/living-world/ColdSummary.cs` | `struct` — departed-contact compression incl. NextEpisodeId high-water mark (FR-LW-009) |
 | `src/living-world/LivingWorldConstants.cs` | Appendix A catalogue — [GT] (illustrative, pending §7 G2 balance pass) + CLIQUE_THRESHOLD [CROSS vol-2 §2.1] |
 | `src/living-world/LivingWorldMath.cs` | Pure deterministic helpers: §3.1 ApplyEvent/ApplyDecay/Clamp01 + FR-LW-021 CompareEvictability tiebreak |
+| `src/living-world/WorldClock.cs` | Season-calendar clock (KD-4/FR-LW-019): one worldTick = one calendar day; Advance/RestoreFromSnapshot; distinct from MatchClock, never advanced by the match loops |
+| `src/living-world/WorldLoop.cs` | §4.2 per-tick orchestrator: clock advance + phase-3 salience decay; phases 1/2/4/5/6 documented seams (producers not yet built; no phantom interfaces per FR-LW-031) |
+| `src/living-world/MemoryStore.cs` | Live deep-tier store: edges sorted on the canonical (FromId,ToId) key (FR-LW-021); §3.2 evict-before-append (lowest-salience unpinned pre-existing episode; all-pinned ⇒ transient growth, shrink on unpin); FR-LW-018 pins; §3.1 owned-layer ApplyEvent (PlayerEdge refused, FR-LW-004) |
+| `src/living-world/ColdStore.cs` | Cold tier sorted by EntityId + §3.5 Compress/Rehydrate transforms; Residue-A v1 schema recorded (NetRelationship = mean of active owned layers); episodeId resumes from NextEpisodeId (FR-LW-009) |
 | `src/living-world/Tests/living-world-tests.asmdef` | Test assembly definition (EditMode; references living-world) |
 | `src/living-world/Tests/LivingWorldTests.cs` | T0 units: enum ordinals (T-LW-U-001..004); §3.1 worked examples (0.56, ~0.016, no-overshoot, no-op); eviction tiebreak; ActiveLayers masking; episodeId-resume |
+| `src/living-world/Tests/SeasonWorldLoopTests.cs` | Slice-1 suite (20 tests): clock calendar semantics + T-LW-DET-006; memory T-LW-U-011..018 (monotonic ids, eviction + tiebreak + pin exemption + transient growth, decay, F1 guard, PlayerEdge/F6 refusal, NaN-gates); T-LW-DET-002 canonical order; LOD T-LW-I-011..014 (top-N retention, F5 retained-fields round-trip / T-LW-FAIL-005, episodeId resume, duplicate demote/promote fail-loud); loop phase order + T-LW-DET-007 additive identity; two-run field-identity determinism |
 
 ### `src/match-viewer/` — Minimal match viewer (July 2, 2026; presentation tooling — not a numbered spec)
 

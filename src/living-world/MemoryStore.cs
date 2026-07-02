@@ -1,0 +1,424 @@
+// File:     src/living-world/MemoryStore.cs
+// Created:  2026-07-02
+// Modified: 2026-07-02
+// Author:   —
+// Spec:     Living World System #22 §3.1, §3.2, §4.3, §4.4, FR-LW-004/005/008/009/010/018/021, Code Standards #20
+// Purpose:  The live (deep-tier) world store: relationship edges with their bounded episode buffers.
+//           Owns episode append/eviction (§3.2), per-tick salience decay, arc pinning (FR-LW-018),
+//           and the §3.1 owned-layer event update. Canonical (FromId, ToId) iteration order (FR-LW-021).
+
+using System;
+using System.Collections.Generic;
+
+namespace TacticalDirector.LivingWorld
+{
+    /// <summary>
+    /// Live edge + episodic-memory store for the deep tier (#22 §3.2 / §4.3). Edges are kept sorted by
+    /// the stable (FromId, ToId) key so every pass iterates in canonical order — never container
+    /// enumeration order (FR-LW-021 / T-LW-DET-002). All state is plain serialisable value state
+    /// (FR-LW-022). Runs at calendar-day cadence (KD-4), NOT on the 60 Hz hot path, so the
+    /// append/evict array reallocation here is not subject to the zero-alloc game-loop budget.
+    /// </summary>
+    public sealed class MemoryStore
+    {
+        /// <summary>A pinned-episode key: (edge FromId, edge ToId, episodeId). FR-LW-018.</summary>
+        private readonly struct PinKey
+        {
+            public readonly int FromId;
+            public readonly int ToId;
+            public readonly uint EpisodeId;
+
+            public PinKey(int fromId, int toId, uint episodeId)
+            {
+                FromId = fromId;
+                ToId = toId;
+                EpisodeId = episodeId;
+            }
+        }
+
+        private readonly List<RelationshipEdge> _edges = new List<RelationshipEdge>();
+        private readonly List<PinKey> _pins = new List<PinKey>();
+
+        /// <summary>Number of live edges.</summary>
+        public int EdgeCount => _edges.Count;
+
+        /// <summary>
+        /// Returns the edge at the given canonical-order index (ascending (FromId, ToId)).
+        /// NOTE: the returned struct's <c>Memory</c> array is the LIVE buffer, not a copy — callers
+        /// must treat it as read-only (exposed-array hand-over convention, #18 AR-1 L-3 parallel).
+        /// </summary>
+        public RelationshipEdge GetEdgeAt(int index) => _edges[index];
+
+        /// <summary>Copies out the edge for the given directed pair. Same live-array caveat as <see cref="GetEdgeAt"/>.</summary>
+        public bool TryGetEdge(int fromId, int toId, out RelationshipEdge edge)
+        {
+            int idx = FindEdgeIndex(fromId, toId, out bool found);
+            edge = found ? _edges[idx] : default;
+            return found;
+        }
+
+        /// <summary>
+        /// Creates the directed edge if absent. A fresh edge initialises every layer to the strangers
+        /// baseline 0.0 with an empty memory buffer (§2.3 identity; the vol-2 PlayerEdge mirror is
+        /// populated by the canon read at wiring, never written here — FR-LW-004).
+        /// </summary>
+        public void GetOrCreateEdge(int fromId, int toId, byte activeLayers)
+        {
+            ValidatePair(fromId, toId);
+            int idx = FindEdgeIndex(fromId, toId, out bool found);
+            if (found)
+            {
+                return;
+            }
+
+            RelationshipEdge edge = default;
+            edge.FromId = fromId;
+            edge.ToId = toId;
+            edge.ActiveLayers = activeLayers;
+            edge.Memory = Array.Empty<MemoryEpisode>();
+            _edges.Insert(idx, edge);
+        }
+
+        /// <summary>
+        /// Inserts a fully-formed edge (the §3.5 rehydration path). Throws if the pair already has a
+        /// live edge — promotion must not duplicate state (FR-LW-025).
+        /// </summary>
+        public void InsertEdge(in RelationshipEdge edge)
+        {
+            ValidatePair(edge.FromId, edge.ToId);
+            if (edge.Memory == null)
+            {
+                throw new ArgumentException("MemoryStore.InsertEdge: Memory buffer must be non-null (use Array.Empty).");
+            }
+            int idx = FindEdgeIndex(edge.FromId, edge.ToId, out bool found);
+            if (found)
+            {
+                throw new InvalidOperationException(
+                    "MemoryStore.InsertEdge: edge already live for this pair — rehydration must not duplicate state (FR-LW-025).");
+            }
+            _edges.Insert(idx, edge);
+        }
+
+        /// <summary>
+        /// Removes and returns the edge for the given pair (the §3.5 demotion path). Throws if absent —
+        /// demotion of a non-live contact is a logic error (fail loud).
+        /// </summary>
+        public RelationshipEdge RemoveEdge(int fromId, int toId)
+        {
+            int idx = FindEdgeIndex(fromId, toId, out bool found);
+            if (!found)
+            {
+                throw new InvalidOperationException("MemoryStore.RemoveEdge: no live edge for this pair.");
+            }
+            RelationshipEdge edge = _edges[idx];
+            _edges.RemoveAt(idx);
+            return edge;
+        }
+
+        /// <summary>
+        /// §3.1 event update of an OWNED layer (Affinity / Trust) toward its event target.
+        /// <c>PlayerEdge</c> is a read-only mirror of vol-2 §2.1 and is refused here (FR-LW-004 / KD-9);
+        /// an update on an inactive layer is refused (F6 — inactive layers are excluded from updates).
+        /// </summary>
+        /// <param name="delta">Signed event impact in [−1, 1].</param>
+        /// <param name="volatility">Layer responsiveness v in (0, 1].</param>
+        public void ApplyEvent(int fromId, int toId, RelationshipLayer layer, float delta, float volatility)
+        {
+            if (layer == RelationshipLayer.PlayerEdge)
+            {
+                throw new ArgumentException(
+                    "MemoryStore.ApplyEvent: PlayerEdge is a read-only mirror of the vol-2 §2.1 authoritative edge (FR-LW-004 / KD-9).");
+            }
+            // NaN-gate pattern: negated comparisons fail closed on NaN.
+            if (!(delta >= -1f && delta <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(delta), delta, "MemoryStore.ApplyEvent: delta must be finite in [-1, 1].");
+            }
+            if (!(volatility > 0f && volatility <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(volatility), volatility, "MemoryStore.ApplyEvent: volatility must be finite in (0, 1].");
+            }
+
+            int idx = FindEdgeIndex(fromId, toId, out bool found);
+            if (!found)
+            {
+                throw new InvalidOperationException("MemoryStore.ApplyEvent: no live edge for this pair.");
+            }
+            RelationshipEdge edge = _edges[idx];
+            if (!edge.IsLayerActive(layer))
+            {
+                throw new InvalidOperationException(
+                    "MemoryStore.ApplyEvent: layer is not active on this edge (F6 — inactive layers hold 0.0 and are excluded from updates).");
+            }
+            if (layer == RelationshipLayer.Affinity)
+            {
+                edge.Affinity = LivingWorldMath.ApplyEvent(edge.Affinity, delta, volatility);
+            }
+            else
+            {
+                edge.Trust = LivingWorldMath.ApplyEvent(edge.Trust, delta, volatility);
+            }
+            _edges[idx] = edge;
+        }
+
+        /// <summary>
+        /// §3.2 episode append: allocates the next monotonic per-edge episodeId (FR-LW-009). On a full
+        /// buffer the lowest-salience UNPINNED PRE-EXISTING episode is evicted first (ties → oldest
+        /// worldTick → lowest episodeId; FR-LW-010/018/021 — the §3.2 worked example's candidates are
+        /// the episodes already in the buffer, so a fresh event is always remembered); if every
+        /// pre-existing episode is arc-pinned the buffer grows transiently and shrinks back as arcs
+        /// unpin (§3.2 step 2).
+        /// </summary>
+        /// <returns>The allocated episodeId — the durable handle an arc pins.</returns>
+        public uint RecordEpisode(int fromId, int toId, EventKind kind, uint worldTick, ushort managerChoiceId)
+        {
+            int idx = FindEdgeIndex(fromId, toId, out bool found);
+            if (!found)
+            {
+                throw new InvalidOperationException("MemoryStore.RecordEpisode: no live edge for this pair — create it first.");
+            }
+            RelationshipEdge edge = _edges[idx];
+            uint episodeId = edge.NextEpisodeId;
+            edge.NextEpisodeId = episodeId + 1u;
+
+            while (edge.Memory.Length >= LivingWorldConstants.MEMORY_BUFFER_DEPTH && TryEvictOne(ref edge))
+            {
+            }
+
+            MemoryEpisode episode = new MemoryEpisode(
+                episodeId, kind, LivingWorldConstants.SALIENCE_INITIAL, worldTick, managerChoiceId);
+
+            MemoryEpisode[] old = edge.Memory;
+            MemoryEpisode[] grown = new MemoryEpisode[old.Length + 1];
+            Array.Copy(old, grown, old.Length);
+            grown[old.Length] = episode;
+            edge.Memory = grown;
+            _edges[idx] = edge;
+            return episodeId;
+        }
+
+        /// <summary>
+        /// Phase-3 per-tick salience decay: s' = s · (1 − decayRate) for every episode on every edge,
+        /// iterated in canonical edge order (§3.2 step 3 / §4.2). A no-op on an empty store (FR-LW-034).
+        /// </summary>
+        public void DecayEpisodeSalience(float decayRate)
+        {
+            if (!(decayRate >= 0f && decayRate < 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(decayRate), decayRate, "MemoryStore.DecayEpisodeSalience: rate must be finite in [0, 1).");
+            }
+            for (int i = 0; i < _edges.Count; i++)
+            {
+                MemoryEpisode[] memory = _edges[i].Memory;
+                for (int j = 0; j < memory.Length; j++)
+                {
+                    memory[j] = memory[j].WithDecayedSalience(decayRate);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Pins an episode non-evictable until its arc resolves (FR-LW-018). The episode must exist —
+        /// pinning a dangling id is the F1 failure mode and fails loud here.
+        /// </summary>
+        public void PinEpisode(int fromId, int toId, uint episodeId)
+        {
+            if (!EpisodeExists(fromId, toId, episodeId))
+            {
+                throw new InvalidOperationException("MemoryStore.PinEpisode: episode not found on this edge (F1 dangling-id guard).");
+            }
+            int idx = FindPinIndex(fromId, toId, episodeId, out bool found);
+            if (found)
+            {
+                return; // Two arcs may pin the same episode; a single pin entry keeps it exempt.
+            }
+            _pins.Insert(idx, new PinKey(fromId, toId, episodeId));
+        }
+
+        /// <summary>
+        /// Removes a pin (arc resolved). The edge's buffer then shrinks back toward depth (§3.2 step 2).
+        /// Unpinning an unknown key throws — the arc/pin bookkeeping must never drift.
+        /// </summary>
+        public void UnpinEpisode(int fromId, int toId, uint episodeId)
+        {
+            int idx = FindPinIndex(fromId, toId, episodeId, out bool found);
+            if (!found)
+            {
+                throw new InvalidOperationException("MemoryStore.UnpinEpisode: pin not found.");
+            }
+            _pins.RemoveAt(idx);
+
+            int edgeIdx = FindEdgeIndex(fromId, toId, out bool edgeFound);
+            if (edgeFound)
+            {
+                EnforceDepth(edgeIdx);
+            }
+        }
+
+        /// <summary>True if the episode is currently arc-pinned (FR-LW-018).</summary>
+        public bool IsEpisodePinned(int fromId, int toId, uint episodeId)
+        {
+            FindPinIndex(fromId, toId, episodeId, out bool found);
+            return found;
+        }
+
+        /// <summary>True if the edge holds any arc-pinned episode (the §3.5 LRU-demotion skip predicate).</summary>
+        public bool EdgeHasPinnedEpisode(int fromId, int toId)
+        {
+            // _pins is sorted by (FromId, ToId, EpisodeId): the first pin for the pair, if any, sits
+            // at the insertion point of (fromId, toId, episodeId=0).
+            int idx = FindPinIndex(fromId, toId, 0u, out bool found);
+            if (found)
+            {
+                return true;
+            }
+            return idx < _pins.Count && _pins[idx].FromId == fromId && _pins[idx].ToId == toId;
+        }
+
+        // ── internals ──────────────────────────────────────────────────────────────────────
+
+        private static void ValidatePair(int fromId, int toId)
+        {
+            if (fromId < 0 || toId < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(fromId), "MemoryStore: entity ids must be non-negative (-1 is the loose/none sentinel).");
+            }
+            if (fromId == toId)
+            {
+                throw new ArgumentException("MemoryStore: a relationship edge to self is invalid.");
+            }
+        }
+
+        private bool EpisodeExists(int fromId, int toId, uint episodeId)
+        {
+            int idx = FindEdgeIndex(fromId, toId, out bool found);
+            if (!found)
+            {
+                return false;
+            }
+            MemoryEpisode[] memory = _edges[idx].Memory;
+            for (int i = 0; i < memory.Length; i++)
+            {
+                if (memory[i].EpisodeId == episodeId)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Post-unpin shrink: while over MEMORY_BUFFER_DEPTH (transient growth from an all-pinned
+        /// append), evict lowest-salience unpinned episodes so the buffer returns to depth as arcs
+        /// resolve (§3.2 step 2).
+        /// </summary>
+        private void EnforceDepth(int edgeIdx)
+        {
+            RelationshipEdge edge = _edges[edgeIdx];
+            while (edge.Memory.Length > LivingWorldConstants.MEMORY_BUFFER_DEPTH && TryEvictOne(ref edge))
+            {
+            }
+            _edges[edgeIdx] = edge;
+        }
+
+        /// <summary>
+        /// Evicts the single lowest-salience unpinned episode per the FR-LW-021 total order
+        /// (salience → oldest worldTick → lowest episodeId). Returns false — transient growth —
+        /// when every episode is arc-pinned (FR-LW-018).
+        /// </summary>
+        private bool TryEvictOne(ref RelationshipEdge edge)
+        {
+            int evict = -1;
+            for (int i = 0; i < edge.Memory.Length; i++)
+            {
+                if (IsEpisodePinned(edge.FromId, edge.ToId, edge.Memory[i].EpisodeId))
+                {
+                    continue;
+                }
+                if (evict < 0 || LivingWorldMath.CompareEvictability(edge.Memory[i], edge.Memory[evict]) < 0)
+                {
+                    evict = i;
+                }
+            }
+            if (evict < 0)
+            {
+                return false; // All pinned — bounded by simultaneous arc pins + the §4.5 budget.
+            }
+            MemoryEpisode[] shrunk = new MemoryEpisode[edge.Memory.Length - 1];
+            for (int i = 0, k = 0; i < edge.Memory.Length; i++)
+            {
+                if (i != evict)
+                {
+                    shrunk[k++] = edge.Memory[i];
+                }
+            }
+            edge.Memory = shrunk;
+            return true;
+        }
+
+        /// <summary>Binary search on the canonical (FromId, ToId) order. Returns the match or insertion index.</summary>
+        private int FindEdgeIndex(int fromId, int toId, out bool found)
+        {
+            int lo = 0;
+            int hi = _edges.Count - 1;
+            while (lo <= hi)
+            {
+                int mid = (lo + hi) >> 1;
+                RelationshipEdge e = _edges[mid];
+                int c = e.FromId != fromId ? e.FromId.CompareTo(fromId) : e.ToId.CompareTo(toId);
+                if (c == 0)
+                {
+                    found = true;
+                    return mid;
+                }
+                if (c < 0)
+                {
+                    lo = mid + 1;
+                }
+                else
+                {
+                    hi = mid - 1;
+                }
+            }
+            found = false;
+            return lo;
+        }
+
+        /// <summary>Binary search on the canonical (FromId, ToId, EpisodeId) pin order.</summary>
+        private int FindPinIndex(int fromId, int toId, uint episodeId, out bool found)
+        {
+            int lo = 0;
+            int hi = _pins.Count - 1;
+            while (lo <= hi)
+            {
+                int mid = (lo + hi) >> 1;
+                PinKey p = _pins[mid];
+                int c = p.FromId != fromId ? p.FromId.CompareTo(fromId)
+                      : p.ToId != toId ? p.ToId.CompareTo(toId)
+                      : p.EpisodeId.CompareTo(episodeId);
+                if (c == 0)
+                {
+                    found = true;
+                    return mid;
+                }
+                if (c < 0)
+                {
+                    lo = mid + 1;
+                }
+                else
+                {
+                    hi = mid - 1;
+                }
+            }
+            found = false;
+            return lo;
+        }
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-07-02 | —      | Initial implementation (season/world loop slice 1): edges,    |
+// |         |            |        | §3.2 episode append/evict/decay, FR-LW-018 pins, §3.1 owned-   |
+// |         |            |        | layer ApplyEvent, canonical iteration (FR-LW-021).             |
+#endregion
