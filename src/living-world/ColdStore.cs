@@ -47,6 +47,21 @@ namespace TacticalDirector.LivingWorld
             {
                 throw new ArgumentException("ColdStore.Add: RetainedEpisodes must be non-null (use Array.Empty).");
             }
+            // AR-1 L-3 coherence gates: NetRelationship must be finite in [0,1] (negated compare fails
+            // closed on NaN), and every retained id must sit BELOW the high-water mark — otherwise
+            // rehydration would re-allocate a retained id and break FR-LW-009 monotonicity.
+            if (!(summary.NetRelationship >= 0f && summary.NetRelationship <= 1f))
+            {
+                throw new ArgumentException("ColdStore.Add: NetRelationship must be finite in [0, 1].");
+            }
+            for (int i = 0; i < summary.RetainedEpisodes.Length; i++)
+            {
+                if (summary.RetainedEpisodes[i].EpisodeId >= summary.NextEpisodeId)
+                {
+                    throw new ArgumentException(
+                        "ColdStore.Add: retained episodeId >= NextEpisodeId — rehydration would reuse the id and break FR-LW-009 monotonicity.");
+                }
+            }
             int idx = FindIndex(summary.EntityId, out bool found);
             if (found)
             {
@@ -189,4 +204,8 @@ namespace TacticalDirector.LivingWorld
 // | 1.0     | 2026-07-02 | —      | Initial implementation (season/world loop slice 1): sorted    |
 // |         |            |        | summary container + §3.5 Compress/Rehydrate transforms;       |
 // |         |            |        | Residue-A v1 compression schema recorded.                     |
+// | 1.1     | 2026-07-02 | —      | AR-1 L-3: Add coherence gates — NetRelationship finite in     |
+// |         |            |        | [0,1] (NaN fails closed); every retained episodeId must sit   |
+// |         |            |        | below NextEpisodeId or rehydration would reuse an id and      |
+// |         |            |        | break FR-LW-009 monotonicity.                                 |
 #endregion

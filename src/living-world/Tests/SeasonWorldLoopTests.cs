@@ -342,6 +342,113 @@ namespace TacticalDirector.LivingWorld.Tests
                 "T-LW-I-014: promotion onto a live edge must not duplicate state (FR-LW-025)");
         }
 
+        // ── AR-1 regression locks ───────────────────────────────────────────────────────────
+
+        private static bool EpisodePresent(MemoryStore store, int from, int to, uint episodeId)
+        {
+            store.TryGetEdge(from, to, out RelationshipEdge edge);
+            for (int i = 0; i < edge.Memory.Length; i++)
+            {
+                if (edge.Memory[i].EpisodeId == episodeId)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        [Test]
+        public void AR1M1_RefCountedPin_StaysExemptUntilLastArcUnpins()
+        {
+            MemoryStore store = StoreWithEdge(Manager, ContactA);
+            uint pinned = store.RecordEpisode(Manager, ContactA, EventKind.PressConferenceTrap, 0u, 0);
+            store.PinEpisode(Manager, ContactA, pinned); // Arc A
+            store.PinEpisode(Manager, ContactA, pinned); // Arc B — same episode
+            store.DecayEpisodeSalience(0.5f);            // Make it the salience floor.
+            for (int i = 0; i < LivingWorldConstants.MEMORY_BUFFER_DEPTH; i++)
+            {
+                store.RecordEpisode(Manager, ContactA, EventKind.Benching, (uint)(i + 1), 0);
+            }
+
+            store.UnpinEpisode(Manager, ContactA, pinned); // Arc A resolves.
+            Assert.IsTrue(store.IsEpisodePinned(Manager, ContactA, pinned),
+                "AR-1 M-1: Arc B's hold must survive Arc A's unpin (FR-LW-018)");
+            store.RecordEpisode(Manager, ContactA, EventKind.Benching, 20u, 0);
+            Assert.IsTrue(EpisodePresent(store, Manager, ContactA, pinned),
+                "AR-1 M-1: still-held episode exempt from eviction");
+
+            store.UnpinEpisode(Manager, ContactA, pinned); // Arc B resolves — last hold.
+            Assert.IsFalse(store.IsEpisodePinned(Manager, ContactA, pinned));
+            store.RecordEpisode(Manager, ContactA, EventKind.Benching, 21u, 0);
+            Assert.IsFalse(EpisodePresent(store, Manager, ContactA, pinned),
+                "AR-1 M-1: fully-released episode evicts as the salience floor");
+        }
+
+        [Test]
+        public void AR1M2_RemoveEdgeWithArcPinnedEpisode_FailsLoud()
+        {
+            MemoryStore store = StoreWithEdge(Manager, ContactA);
+            uint pinned = store.RecordEpisode(Manager, ContactA, EventKind.TransferRumour, 0u, 0);
+            store.PinEpisode(Manager, ContactA, pinned);
+
+            Assert.Throws<InvalidOperationException>(() => store.RemoveEdge(Manager, ContactA),
+                "AR-1 M-2: §3.5 demotion must skip a contact holding an arc-pinned episode (F1)");
+
+            store.UnpinEpisode(Manager, ContactA, pinned);
+            RelationshipEdge edge = store.RemoveEdge(Manager, ContactA);
+            Assert.AreEqual(ContactA, edge.ToId, "AR-1 M-2: removal legal once the arc resolves");
+        }
+
+        [Test]
+        public void AR1L1_GetOrCreateEdgeWithConflictingMask_FailsLoud()
+        {
+            MemoryStore store = new MemoryStore();
+            store.GetOrCreateEdge(Manager, ContactA, Layers(RelationshipLayer.Affinity));
+            Assert.DoesNotThrow(() => store.GetOrCreateEdge(Manager, ContactA, Layers(RelationshipLayer.Affinity)),
+                "same mask is idempotent");
+            Assert.Throws<InvalidOperationException>(
+                () => store.GetOrCreateEdge(Manager, ContactA, Layers(RelationshipLayer.Affinity, RelationshipLayer.Trust)),
+                "AR-1 L-1: a conflicting mask must not be silently ignored");
+        }
+
+        [Test]
+        public void AR1L2_InsertEdgeWithActiveLayerEscaping01_FailsLoud()
+        {
+            MemoryStore store = new MemoryStore();
+            RelationshipEdge bad = default;
+            bad.FromId = Manager;
+            bad.ToId = ContactA;
+            bad.ActiveLayers = Layers(RelationshipLayer.Affinity);
+            bad.Memory = Array.Empty<MemoryEpisode>();
+
+            bad.Affinity = float.NaN;
+            RelationshipEdge nanEdge = bad;
+            Assert.Throws<ArgumentException>(() => store.InsertEdge(nanEdge), "AR-1 L-2: NaN active layer (F6)");
+
+            bad.Affinity = 1.5f;
+            RelationshipEdge rangeEdge = bad;
+            Assert.Throws<ArgumentException>(() => store.InsertEdge(rangeEdge), "AR-1 L-2: active layer > 1 (F6)");
+        }
+
+        [Test]
+        public void AR1L3_ColdStoreAddIncoherentSummary_FailsLoud()
+        {
+            ColdStore cold = new ColdStore();
+            ColdSummary summary = default;
+            summary.EntityId = ContactA;
+            summary.NetRelationship = 0.5f;
+            summary.NextEpisodeId = 2u;
+            summary.RetainedEpisodes = new[] { new MemoryEpisode(5u, EventKind.None, 0.5f, 0u, 0) };
+            Assert.Throws<ArgumentException>(() => cold.Add(summary),
+                "AR-1 L-3: retained id >= NextEpisodeId would break FR-LW-009 on rehydrate");
+
+            summary.NextEpisodeId = 6u;
+            summary.NetRelationship = float.NaN;
+            ColdSummary nanSummary = summary;
+            Assert.Throws<ArgumentException>(() => cold.Add(nanSummary),
+                "AR-1 L-3: NaN NetRelationship fails closed");
+        }
+
         // ── WorldLoop (§4.2; FR-LW-034 / T-LW-DET-007 subset) ──────────────────────────────
 
         [Test]
@@ -436,4 +543,7 @@ namespace TacticalDirector.LivingWorld.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-02 | —      | Initial season/world-loop slice-1 suite (20 tests).           |
+// | 1.1     | 2026-07-02 | —      | AR-1 regression locks (+5 tests, 25 total): M-1 ref-counted   |
+// |         |            |        | pins, M-2 RemoveEdge pinned-edge refusal, L-1 mask conflict,  |
+// |         |            |        | L-2 InsertEdge F6 gate, L-3 ColdStore.Add coherence gates.    |
 #endregion

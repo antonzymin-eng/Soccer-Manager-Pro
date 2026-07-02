@@ -21,23 +21,30 @@ namespace TacticalDirector.LivingWorld
     /// </summary>
     public sealed class MemoryStore
     {
-        /// <summary>A pinned-episode key: (edge FromId, edge ToId, episodeId). FR-LW-018.</summary>
-        private readonly struct PinKey
+        /// <summary>
+        /// A reference-counted pin: (edge FromId, edge ToId, episodeId) + the number of live arcs
+        /// holding it. FR-LW-018 — two arcs may pin the same episode; the episode stays exempt until
+        /// the LAST arc unpins (AR-1 M-1: a single-entry pin let the first arc's resolve drop the
+        /// second arc's protection — the F1 dangling-episode class).
+        /// </summary>
+        private readonly struct PinEntry
         {
             public readonly int FromId;
             public readonly int ToId;
             public readonly uint EpisodeId;
+            public readonly int Count;
 
-            public PinKey(int fromId, int toId, uint episodeId)
+            public PinEntry(int fromId, int toId, uint episodeId, int count)
             {
                 FromId = fromId;
                 ToId = toId;
                 EpisodeId = episodeId;
+                Count = count;
             }
         }
 
         private readonly List<RelationshipEdge> _edges = new List<RelationshipEdge>();
-        private readonly List<PinKey> _pins = new List<PinKey>();
+        private readonly List<PinEntry> _pins = new List<PinEntry>();
 
         /// <summary>Number of live edges.</summary>
         public int EdgeCount => _edges.Count;
@@ -68,6 +75,11 @@ namespace TacticalDirector.LivingWorld
             int idx = FindEdgeIndex(fromId, toId, out bool found);
             if (found)
             {
+                if (_edges[idx].ActiveLayers != activeLayers)
+                {
+                    throw new InvalidOperationException(
+                        "MemoryStore.GetOrCreateEdge: edge exists with a different ActiveLayers mask — silently keeping the old mask would misroute updates (AR-1 L-1).");
+                }
                 return;
             }
 
@@ -90,6 +102,14 @@ namespace TacticalDirector.LivingWorld
             {
                 throw new ArgumentException("MemoryStore.InsertEdge: Memory buffer must be non-null (use Array.Empty).");
             }
+            // F6 gate (AR-1 L-2): every ACTIVE layer value must be finite in [0,1]; the negated
+            // comparison fails closed on NaN. Inactive layers hold 0.0 and are not checked.
+            if ((edge.IsLayerActive(RelationshipLayer.PlayerEdge) && !(edge.PlayerEdge >= 0f && edge.PlayerEdge <= 1f))
+                || (edge.IsLayerActive(RelationshipLayer.Affinity) && !(edge.Affinity >= 0f && edge.Affinity <= 1f))
+                || (edge.IsLayerActive(RelationshipLayer.Trust) && !(edge.Trust >= 0f && edge.Trust <= 1f)))
+            {
+                throw new ArgumentException("MemoryStore.InsertEdge: an active layer value escapes [0, 1] (F6 invariant).");
+            }
             int idx = FindEdgeIndex(edge.FromId, edge.ToId, out bool found);
             if (found)
             {
@@ -101,7 +121,9 @@ namespace TacticalDirector.LivingWorld
 
         /// <summary>
         /// Removes and returns the edge for the given pair (the §3.5 demotion path). Throws if absent —
-        /// demotion of a non-live contact is a logic error (fail loud).
+        /// demotion of a non-live contact is a logic error (fail loud). Throws if the edge holds any
+        /// arc-pinned episode: §3.5 demotion must SKIP such contacts (demoting one would orphan the
+        /// arc's pinned episode — F1 — and strand stale entries in the pin table; AR-1 M-2).
         /// </summary>
         public RelationshipEdge RemoveEdge(int fromId, int toId)
         {
@@ -109,6 +131,11 @@ namespace TacticalDirector.LivingWorld
             if (!found)
             {
                 throw new InvalidOperationException("MemoryStore.RemoveEdge: no live edge for this pair.");
+            }
+            if (EdgeHasPinnedEpisode(fromId, toId))
+            {
+                throw new InvalidOperationException(
+                    "MemoryStore.RemoveEdge: edge holds an arc-pinned episode — §3.5 demotion must skip it until the arc resolves (FR-LW-018 / F1).");
             }
             RelationshipEdge edge = _edges[idx];
             _edges.RemoveAt(idx);
@@ -218,8 +245,9 @@ namespace TacticalDirector.LivingWorld
         }
 
         /// <summary>
-        /// Pins an episode non-evictable until its arc resolves (FR-LW-018). The episode must exist —
-        /// pinning a dangling id is the F1 failure mode and fails loud here.
+        /// Pins an episode non-evictable until its arc resolves (FR-LW-018). Reference-counted: each
+        /// call adds one hold; the episode stays exempt until every hold is released (AR-1 M-1). The
+        /// episode must exist — pinning a dangling id is the F1 failure mode and fails loud here.
         /// </summary>
         public void PinEpisode(int fromId, int toId, uint episodeId)
         {
@@ -230,14 +258,17 @@ namespace TacticalDirector.LivingWorld
             int idx = FindPinIndex(fromId, toId, episodeId, out bool found);
             if (found)
             {
-                return; // Two arcs may pin the same episode; a single pin entry keeps it exempt.
+                PinEntry entry = _pins[idx];
+                _pins[idx] = new PinEntry(entry.FromId, entry.ToId, entry.EpisodeId, entry.Count + 1);
+                return;
             }
-            _pins.Insert(idx, new PinKey(fromId, toId, episodeId));
+            _pins.Insert(idx, new PinEntry(fromId, toId, episodeId, 1));
         }
 
         /// <summary>
-        /// Removes a pin (arc resolved). The edge's buffer then shrinks back toward depth (§3.2 step 2).
-        /// Unpinning an unknown key throws — the arc/pin bookkeeping must never drift.
+        /// Releases one pin hold (an arc resolved). Only when the LAST hold is released does the
+        /// episode become evictable and the edge's buffer shrink back toward depth (§3.2 step 2 /
+        /// AR-1 M-1). Unpinning an unknown key throws — the arc/pin bookkeeping must never drift.
         /// </summary>
         public void UnpinEpisode(int fromId, int toId, uint episodeId)
         {
@@ -245,6 +276,12 @@ namespace TacticalDirector.LivingWorld
             if (!found)
             {
                 throw new InvalidOperationException("MemoryStore.UnpinEpisode: pin not found.");
+            }
+            PinEntry entry = _pins[idx];
+            if (entry.Count > 1)
+            {
+                _pins[idx] = new PinEntry(entry.FromId, entry.ToId, entry.EpisodeId, entry.Count - 1);
+                return; // Another arc still holds the episode — nothing becomes evictable.
             }
             _pins.RemoveAt(idx);
 
@@ -279,9 +316,13 @@ namespace TacticalDirector.LivingWorld
 
         private static void ValidatePair(int fromId, int toId)
         {
-            if (fromId < 0 || toId < 0)
+            if (fromId < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(fromId), "MemoryStore: entity ids must be non-negative (-1 is the loose/none sentinel).");
+                throw new ArgumentOutOfRangeException(nameof(fromId), fromId, "MemoryStore: entity ids must be non-negative (-1 is the loose/none sentinel).");
+            }
+            if (toId < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(toId), toId, "MemoryStore: entity ids must be non-negative (-1 is the loose/none sentinel).");
             }
             if (fromId == toId)
             {
@@ -392,7 +433,7 @@ namespace TacticalDirector.LivingWorld
             while (lo <= hi)
             {
                 int mid = (lo + hi) >> 1;
-                PinKey p = _pins[mid];
+                PinEntry p = _pins[mid];
                 int c = p.FromId != fromId ? p.FromId.CompareTo(fromId)
                       : p.ToId != toId ? p.ToId.CompareTo(toId)
                       : p.EpisodeId.CompareTo(episodeId);
@@ -421,4 +462,11 @@ namespace TacticalDirector.LivingWorld
 // | 1.0     | 2026-07-02 | —      | Initial implementation (season/world loop slice 1): edges,    |
 // |         |            |        | §3.2 episode append/evict/decay, FR-LW-018 pins, §3.1 owned-   |
 // |         |            |        | layer ApplyEvent, canonical iteration (FR-LW-021).             |
+// | 1.1     | 2026-07-02 | —      | AR-1 fix pass. M-1: pins reference-counted — two arcs pinning  |
+// |         |            |        | one episode no longer lose protection when the first resolves |
+// |         |            |        | (F1 class). M-2: RemoveEdge refuses an edge holding a pinned   |
+// |         |            |        | episode (§3.5 demotion skip; orphan-pin hazard). L-1: GetOr-   |
+// |         |            |        | CreateEdge throws on a conflicting ActiveLayers mask. L-2:     |
+// |         |            |        | InsertEdge F6 gate (active layers finite in [0,1], NaN-gated). |
+// |         |            |        | L-4: ValidatePair names the offending parameter.               |
 #endregion
