@@ -1,6 +1,6 @@
 // File:     src/living-world/Tests/ArcMembershipTests.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02 (AR-1 regression locks)
+// Modified: 2026-07-02 (slice-2 AR-2 regression locks)
 // Author:   —
 // Spec:     Living World System #22 §5 (T-LW-U-005/006, T-LW-I-002/003, T-LW-FAIL-001,
 //           T-LW-DET-002/007 subsets), Testing Strategy #19 §3.1.4, Code Standards #20
@@ -415,6 +415,42 @@ namespace TacticalDirector.LivingWorld.Tests
                 "AR-1 L-1: calendar overflow refused instead of wrapping into an instantly expired arc");
         }
 
+        // ── AR-2 regression locks ───────────────────────────────────────────────────────────
+
+        [Test]
+        public void AR2M1_ColdStoreAdd_RefusesUndefinedActiveLayersMaskBit()
+        {
+            ColdStore cold = new ColdStore();
+            ColdSummary summary = default;
+            summary.EntityId = ContactA;
+            summary.ActiveLayers = 0b0010_0000; // no defined RelationshipLayer at bit 5
+            summary.RetainedEpisodes = Array.Empty<MemoryEpisode>();
+
+            Assert.Throws<ArgumentException>(() => cold.Add(summary),
+                "AR-2 M-1: an undefined mask bit must be refused at Add — accepted, it strands the summary at the post-take InsertEdge mask gate (FR-LW-025)");
+        }
+
+        [Test]
+        public void AR2M1_RecordInteraction_SelfContact_FailsLoud_BeforeAnyTake()
+        {
+            ActiveSetMembership set = Membership(out _, out ColdStore cold);
+            // Craft the hazard: a cold summary claiming the manager's own id (only reachable via a
+            // direct Add — the managed demotion path can never produce a self-edge).
+            ColdSummary summary = default;
+            summary.EntityId = Manager;
+            summary.ActiveLayers = OwnedLayers();
+            summary.RetainedEpisodes = Array.Empty<MemoryEpisode>();
+            cold.Add(summary);
+
+            Assert.Throws<ArgumentException>(
+                () => set.RecordInteraction(Manager, false, OwnedLayers(), EventKind.None, 1u, 0),
+                "AR-2 M-1: self-contact refused up front");
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => set.RecordInteraction(-1, false, OwnedLayers(), EventKind.None, 1u, 0),
+                "negative id refused up front");
+            Assert.AreEqual(1, cold.Count, "refused BEFORE the destructive take — the summary is not stranded (FR-LW-025)");
+        }
+
         // ── Determinism (T-LW-DET-002/007 subset) ───────────────────────────────────────────
 
         [Test]
@@ -481,4 +517,8 @@ namespace TacticalDirector.LivingWorld.Tests
 // |         |            |        | array mutation cannot desync resolve; M-2 promotion mask      |
 // |         |            |        | conflict fails loud without stranding the summary; L-1        |
 // |         |            |        | spawnTick+lifetime overflow refused.                          |
+// | 1.2     | 2026-07-02 | —      | AR-2 regression locks (+2, 24 total): M-1 ColdStore.Add       |
+// |         |            |        | refuses an undefined ActiveLayers mask bit; self-contact and  |
+// |         |            |        | negative-id RecordInteraction refused up front, BEFORE any    |
+// |         |            |        | destructive take (FR-LW-025).                                 |
 #endregion

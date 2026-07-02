@@ -1,6 +1,6 @@
 // File:     src/living-world/LivingWorldConstants.cs
 // Created:  2026-06-21
-// Modified: 2026-07-02 (AR-3 L-1 doc-notes: declared-but-unconsumed pointers)
+// Modified: 2026-07-02 (slice-2 AR-2 L-1: SALIENCE_REF_THRESHOLD / CLIQUE_THRESHOLD unconsumed notes)
 // Author:   —
 // Spec:     Living World System #22 Appendix A, Code Standards #20
 // Purpose:  Constant catalogue for the living-world layer. No literals in formula code.
@@ -29,7 +29,10 @@ namespace TacticalDirector.LivingWorld
         /// <summary>[GT] Per-calendar-day salience decay rate. §3.2.</summary>
         public const float SALIENCE_DECAY_RATE = 0.02f;
 
-        /// <summary>[GT] Minimum salience for an episode to be citable in text. §3.3.</summary>
+        /// <summary>[GT] Minimum salience for an episode to be citable in text. §3.3.
+        /// DECLARED-BUT-UNCONSUMED in production (slice-2 AR-2 L-1): its consumer is the §3.3
+        /// InteractionTextGenerator (episode-referencing gate), deferred with the `world.text`
+        /// sub-stream + authored corpus (KD-10 / KD-6).</summary>
         public const float SALIENCE_REF_THRESHOLD = 0.30f;
 
         /// <summary>[GT] Default edge-update responsiveness (volatility v). §3.1.
@@ -59,7 +62,10 @@ namespace TacticalDirector.LivingWorld
 
         #region Cross (vol-2 — consumed read-only; mirrored as comments until the human-systems assembly exists)
 
-        /// <summary>[CROSS: vol-2 §2.1] Clique-formation threshold (mutual edge weight). Consumed, not set here.</summary>
+        /// <summary>[CROSS: vol-2 §2.1] Clique-formation threshold (mutual edge weight). Consumed, not set here.
+        /// DECLARED-BUT-UNCONSUMED in production (slice-2 AR-2 L-1): its consumer is the
+        /// DressingRoomSplit trigger evaluator reading vol-2 clique state (§3.4), deferred with the
+        /// KD-10 human-systems upstream; the value is a comment-mirror until that assembly exists.</summary>
         public const float CLIQUE_THRESHOLD = 0.6f;
 
         #endregion

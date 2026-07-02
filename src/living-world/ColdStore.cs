@@ -1,6 +1,6 @@
 // File:     src/living-world/ColdStore.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02 (slice-2 AR-1 M-2: TryPeek verify-before-take companion)
+// Modified: 2026-07-02 (slice-2 AR-2: M-1 mask coherence gate on Add; L-2 single-manager scope doc)
 // Author:   —
 // Spec:     Living World System #22 §3.5, §4.3, §4.5, FR-LW-009/021/023/025, Code Standards #20
 // Purpose:  Cold-store container plus the §3.5 demotion/rehydration transforms: compress a live edge
@@ -22,6 +22,12 @@ namespace TacticalDirector.LivingWorld
     /// RESIDUE-A DECISION (v1, recorded per §7.3): the compression schema is NetRelationship = mean of
     /// the ACTIVE owned layers (Affinity / Trust) of the demoted manager→contact edge; PlayerEdge is
     /// canon-owned (vol-2 §2.1) and re-read at rehydration, never summarised here (KD-9).
+    ///
+    /// SCOPE (slice-2 AR-2 L-2): the store is SINGLE-MANAGER by shape — <see cref="ColdSummary"/>
+    /// (#22 §2.2.5) is keyed by EntityId alone, with no manager/FromId field, so one instance holds
+    /// the cold history of exactly one manager's contacts (the #22 model is manager-centric, §3.5
+    /// "per-manager external contacts"). A multi-manager world would need one ColdStore per manager;
+    /// sharing an instance makes two managers' demotions of the same contact collide in Add.
     /// </summary>
     public sealed class ColdStore
     {
@@ -46,6 +52,15 @@ namespace TacticalDirector.LivingWorld
             if (summary.RetainedEpisodes == null)
             {
                 throw new ArgumentException("ColdStore.Add: RetainedEpisodes must be non-null (use Array.Empty).");
+            }
+            // Slice-2 AR-2 M-1: the sibling gates below cover ids/salience/net but the ActiveLayers
+            // mask was unchecked — an undefined-bit summary passed Add and threw at InsertEdge's mask
+            // gate only AFTER the destructive TryTake, stranding the summary (FR-LW-025). Same
+            // coherence rule as the MemoryStore edge-entry seams.
+            if ((summary.ActiveLayers & ~MemoryStore.DefinedLayersMask) != 0)
+            {
+                throw new ArgumentException(
+                    "ColdStore.Add: ActiveLayers carries a bit with no defined RelationshipLayer member.");
             }
             // AR-1 L-3 coherence gates: NetRelationship must be finite in [0,1] (negated compare fails
             // closed on NaN), and every retained id must sit BELOW the high-water mark — otherwise
@@ -246,4 +261,9 @@ namespace TacticalDirector.LivingWorld
 // | 1.4     | 2026-07-02 | —      | Slice-2 AR-1 M-2: TryPeek added — the non-destructive         |
 // |         |            |        | verify-before-take companion (pre-take validation must not    |
 // |         |            |        | run after the destructive removal, FR-LW-025).                |
+// | 1.5     | 2026-07-02 | —      | Slice-2 AR-2. M-1: Add gains the ActiveLayers mask coherence  |
+// |         |            |        | gate (an undefined-bit summary stranded at promotion — post-  |
+// |         |            |        | take InsertEdge throw, FR-LW-025); reuses MemoryStore.        |
+// |         |            |        | DefinedLayersMask (private→internal). L-2: single-manager     |
+// |         |            |        | store scope documented (ColdSummary keyed by EntityId alone). |
 #endregion

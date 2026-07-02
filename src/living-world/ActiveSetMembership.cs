@@ -1,6 +1,6 @@
 // File:     src/living-world/ActiveSetMembership.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02 (slice-2 AR-1: M-2 promotion mask check, L-2/L-3 doc)
+// Modified: 2026-07-02 (slice-2 AR-2 M-1: upfront entity validation + take-result guard; L-2 doc)
 // Author:   —
 // Spec:     Living World System #22 §3.5, §4.3, §4.5, FR-LW-021/023/025, Code Standards #20
 // Purpose:  §3.5 active-set membership: entry on first interaction, deterministic LRU demotion of
@@ -41,7 +41,9 @@ namespace TacticalDirector.LivingWorld
     /// SCOPE (AR-1 L-3): exactly ONE manager→contact edge is managed per contact — the shape
     /// <see cref="ColdSummary"/> compresses (single NetRelationship + single NextEpisodeId).
     /// Reverse-direction edges (the directional Trust(contact→manager), §3.1) are vol-2-era state
-    /// outside this service; nothing here creates, demotes, or promotes them.
+    /// outside this service; nothing here creates, demotes, or promotes them. The injected
+    /// <see cref="ColdStore"/> must be dedicated to this manager — the store is single-manager by
+    /// shape (see its class doc; slice-2 AR-2 L-2).
     /// </summary>
     public sealed class ActiveSetMembership
     {
@@ -120,6 +122,20 @@ namespace TacticalDirector.LivingWorld
         /// <returns>The allocated episodeId — the durable handle an arc pins (FR-LW-009).</returns>
         public uint RecordInteraction(int entityId, bool isOwnClub, byte activeLayers, EventKind kind, uint worldTick, ushort managerChoiceId)
         {
+            // Slice-2 AR-2 M-1: validate the contact id UP FRONT. Downstream seams would catch both
+            // cases eventually, but a self-referential cold summary (EntityId == managerId, insertable
+            // by a direct ColdStore.Add) would otherwise throw at InsertEdge's pair gate only AFTER
+            // the destructive take, stranding it (FR-LW-025).
+            if (entityId < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(entityId), entityId,
+                    "ActiveSetMembership.RecordInteraction: entity ids must be non-negative.");
+            }
+            if (entityId == _managerId)
+            {
+                throw new ArgumentException(
+                    "ActiveSetMembership.RecordInteraction: a manager cannot be their own contact (edge to self is invalid).");
+            }
             int idx = FindMemberIndex(entityId, out bool found);
             if (found)
             {
@@ -160,7 +176,13 @@ namespace TacticalDirector.LivingWorld
                         throw new InvalidOperationException(
                             "ActiveSetMembership.RecordInteraction: ActiveLayers mask conflicts with the cold-stored summary (AR-1 M-2).");
                     }
-                    _cold.TryTake(entityId, out summary);
+                    if (!_cold.TryTake(entityId, out summary))
+                    {
+                        // Unreachable single-threaded after a successful TryPeek; defensive so a
+                        // future concurrency bug fails loud instead of inserting a default edge.
+                        throw new InvalidOperationException(
+                            "ActiveSetMembership.RecordInteraction: summary vanished between peek and take.");
+                    }
                     _memory.InsertEdge(ColdStore.Rehydrate(summary, _managerId));
                 }
                 else
@@ -331,4 +353,10 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | exist; a mismatch silently misrouted updates). L-2: stale-    |
 // |         |            |        | worldTick entrant can be its own LRU victim (doc). L-3:       |
 // |         |            |        | single manager→contact edge scope (doc).                      |
+// | 1.2     | 2026-07-02 | —      | AR-2 fix pass. M-1: upfront entityId validation (negative /   |
+// |         |            |        | == managerId) — a self-referential cold summary otherwise     |
+// |         |            |        | stranded at the post-take InsertEdge pair gate (FR-LW-025);   |
+// |         |            |        | defensive TryTake-result guard (peek/take drift fails loud    |
+// |         |            |        | instead of inserting a default edge). L-2: injected ColdStore |
+// |         |            |        | must be manager-dedicated (doc).                              |
 #endregion

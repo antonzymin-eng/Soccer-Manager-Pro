@@ -1,6 +1,6 @@
 // File:     src/living-world/MemoryStore.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02
+// Modified: 2026-07-02 (slice-2 AR-2 M-1: DefinedLayersMask internal)
 // Author:   —
 // Spec:     Living World System #22 §3.1, §3.2, §4.3, §4.4, FR-LW-004/005/008/009/010/018/021, Code Standards #20
 // Purpose:  The live (deep-tier) world store: relationship edges with their bounded episode buffers.
@@ -47,9 +47,10 @@ namespace TacticalDirector.LivingWorld
         /// Bits of <see cref="RelationshipEdge.ActiveLayers"/> that correspond to a defined
         /// <see cref="RelationshipLayer"/> member. Built from the enum so a roster APPEND extends it
         /// automatically; a mask carrying any other bit is refused (AR-2 M-1 — an undefined bit made
-        /// IsLayerActive pass for an out-of-roster layer value).
+        /// IsLayerActive pass for an out-of-roster layer value). Internal so ColdStore.Add can apply
+        /// the same coherence gate to incoming summaries (slice-2 AR-2 M-1).
         /// </summary>
-        private const byte DefinedLayersMask =
+        internal const byte DefinedLayersMask =
             (1 << (int)RelationshipLayer.PlayerEdge)
             | (1 << (int)RelationshipLayer.Affinity)
             | (1 << (int)RelationshipLayer.Trust);
@@ -532,4 +533,6 @@ namespace TacticalDirector.LivingWorld
 // | 1.3     | 2026-07-02 | —      | AR-3 L-3 (doc-only): UnpinEpisode edge-lookup guard documented |
 // |         |            |        | as defensive-only — pins always reference live edges (Pin      |
 // |         |            |        | requires a live episode; RemoveEdge refuses pinned edges).     |
+// | 1.4     | 2026-07-02 | —      | Slice-2 AR-2 M-1: DefinedLayersMask private → internal so     |
+// |         |            |        | ColdStore.Add applies the same mask coherence gate.           |
 #endregion
