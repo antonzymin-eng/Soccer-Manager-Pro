@@ -1,6 +1,6 @@
 // File:     src/living-world/ArcEngine.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02
+// Modified: 2026-07-02 (slice-2 AR-1: M-1 pin-array snapshot, L-1 overflow gate)
 // Author:   —
 // Spec:     Living World System #22 §3.4, §3.6, §6.2, FR-LW-014/016/017/018/020/021/028/031, Code Standards #20
 // Purpose:  Emergent-arc lifecycle engine: §3.4 spawn (SpawnCause capture + FR-LW-018 episode pinning),
@@ -51,10 +51,10 @@ namespace TacticalDirector.LivingWorld
 
         /// <summary>
         /// Returns the live arc at the given spawn-order index. NOTE: the returned struct's
-        /// <c>PinnedEpisodes</c> array is the LIVE buffer, not a copy — callers must treat it as
-        /// read-only (exposed-array hand-over convention, MemoryStore.GetEdgeAt parallel). Indices are
-        /// stable only until the next <see cref="ResolveArc"/> / <see cref="Update"/> (removals
-        /// compact the list).
+        /// <c>PinnedEpisodes</c> array is the engine's LIVE internal buffer (the spawn-time snapshot,
+        /// AR-1 M-1), not a copy — callers must treat it as read-only (exposed-array hand-over
+        /// convention, MemoryStore.GetEdgeAt parallel). Indices are stable only until the next
+        /// <see cref="ResolveArc"/> / <see cref="Update"/> (removals compact the list).
         /// </summary>
         public Arc GetArcAt(int index) => _arcs[index];
 
@@ -92,23 +92,35 @@ namespace TacticalDirector.LivingWorld
                 throw new ArgumentOutOfRangeException(nameof(maxLifetimeDays), maxLifetimeDays,
                     "ArcEngine.SpawnArc: lifetime must be in [1, ARC_MAX_LIFETIME_DAYS] calendar days (§6.2).");
             }
+            if (spawnTick > uint.MaxValue - maxLifetimeDays)
+            {
+                // AR-1 L-1: unchecked uint wrap would make MaxLifetimeTick tiny — an instantly
+                // expired arc instead of a fail-loud refusal.
+                throw new ArgumentOutOfRangeException(nameof(spawnTick), spawnTick,
+                    "ArcEngine.SpawnArc: spawnTick + maxLifetimeDays overflows the calendar (uint).");
+            }
+
+            // AR-1 M-1: snapshot the caller's array BEFORE taking any hold — the arc must resolve
+            // exactly the pins it took, and a caller mutating its array post-spawn would otherwise
+            // desynchronise resolve/expiry unpinning from the pin table (a stale hold leaks — the F1
+            // class — or UnpinEpisode fails loud on a key that was never pinned).
+            Arc.PinnedEpisode[] pins = new Arc.PinnedEpisode[pinnedEpisodes.Length];
+            Array.Copy(pinnedEpisodes, pins, pinnedEpisodes.Length);
 
             // §3.4 step 2 — pin the source episodes, atomically (roll back on an F1 dangling id).
             int pinned = 0;
             try
             {
-                for (; pinned < pinnedEpisodes.Length; pinned++)
+                for (; pinned < pins.Length; pinned++)
                 {
-                    Arc.PinnedEpisode pe = pinnedEpisodes[pinned];
-                    _memory.PinEpisode(pe.EdgeFromId, pe.EdgeToId, pe.EpisodeId);
+                    _memory.PinEpisode(pins[pinned].EdgeFromId, pins[pinned].EdgeToId, pins[pinned].EpisodeId);
                 }
             }
             catch
             {
                 for (int i = 0; i < pinned; i++)
                 {
-                    Arc.PinnedEpisode pe = pinnedEpisodes[i];
-                    _memory.UnpinEpisode(pe.EdgeFromId, pe.EdgeToId, pe.EpisodeId);
+                    _memory.UnpinEpisode(pins[i].EdgeFromId, pins[i].EdgeToId, pins[i].EpisodeId);
                 }
                 throw;
             }
@@ -118,7 +130,7 @@ namespace TacticalDirector.LivingWorld
             arc.Kind = kind;
             arc.State = 0;
             arc.Cause = cause;
-            arc.PinnedEpisodes = pinnedEpisodes;
+            arc.PinnedEpisodes = pins;
             arc.SpawnTick = spawnTick;
             arc.MaxLifetimeTick = spawnTick + maxLifetimeDays;
             _arcs.Add(arc);
@@ -205,4 +217,9 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | world.arcs RNG sub-stream documented as the KD-10 seam        |
 // |         |            |        | (FR-LW-020/031 — no draw site exists, so no stream is         |
 // |         |            |        | registered).                                                  |
+// | 1.1     | 2026-07-02 | —      | AR-1 fix pass. M-1: SpawnArc snapshots the caller's pin array |
+// |         |            |        | before taking holds — post-spawn mutation no longer           |
+// |         |            |        | desynchronises resolve/expiry unpinning from the pin table.   |
+// |         |            |        | L-1: spawnTick + maxLifetimeDays uint-overflow gate (wrap     |
+// |         |            |        | made the arc instantly expired instead of failing loud).      |
 #endregion

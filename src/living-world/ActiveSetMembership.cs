@@ -1,6 +1,6 @@
 // File:     src/living-world/ActiveSetMembership.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02
+// Modified: 2026-07-02 (slice-2 AR-1: M-2 promotion mask check, L-2/L-3 doc)
 // Author:   —
 // Spec:     Living World System #22 §3.5, §4.3, §4.5, FR-LW-021/023/025, Code Standards #20
 // Purpose:  §3.5 active-set membership: entry on first interaction, deterministic LRU demotion of
@@ -37,6 +37,11 @@ namespace TacticalDirector.LivingWorld
     /// entry remains a follow-up. Day-cadence: not subject to the 60 Hz hot-path rules. The
     /// BackgroundTierSim summary *update* (reflecting club-AI outcomes) stays a KD-10 seam — this
     /// service owns only membership and the demotion/promotion transitions.
+    ///
+    /// SCOPE (AR-1 L-3): exactly ONE manager→contact edge is managed per contact — the shape
+    /// <see cref="ColdSummary"/> compresses (single NetRelationship + single NextEpisodeId).
+    /// Reverse-direction edges (the directional Trust(contact→manager), §3.1) are vol-2-era state
+    /// outside this service; nothing here creates, demotes, or promotes them.
     /// </summary>
     public sealed class ActiveSetMembership
     {
@@ -99,12 +104,18 @@ namespace TacticalDirector.LivingWorld
 
         /// <summary>
         /// Records one interaction with a contact: enters it into the active set if absent (promoting
-        /// cold history when present — on that path the rehydrated summary's stored ActiveLayers mask
-        /// wins and <paramref name="activeLayers"/> is only checked for consistency), appends the
-        /// §3.2 episode (which advances the contact's last-interaction to <paramref name="worldTick"/>),
-        /// then enforces the external cap. A re-entering ex-member re-enters with the class the caller
-        /// declares (re-signing an ex-player makes it own-club again); an ACTIVE member's class cannot
-        /// flip here — own-club exit goes through <see cref="Depart"/> (fail loud on drift).
+        /// cold history when present — <paramref name="activeLayers"/> must match the summary's stored
+        /// mask, verified BEFORE the destructive take so a mismatch never strands the summary,
+        /// AR-1 M-2), appends the §3.2 episode (which advances the contact's last-interaction to
+        /// <paramref name="worldTick"/>), then enforces the external cap. A re-entering ex-member
+        /// re-enters with the class the caller declares (re-signing an ex-player makes it own-club
+        /// again); an ACTIVE member's class cannot flip here — own-club exit goes through
+        /// <see cref="Depart"/> (fail loud on drift).
+        /// NOTE (AR-1 L-2): worldTicks are caller-supplied and not required to be monotonic, so an
+        /// entering EXTERNAL contact bearing the stalest last-interaction can itself be the immediate
+        /// LRU demotion victim of the cap enforcement this call runs — spec-conformant and
+        /// deterministic (§3.5/FR-LW-021); the returned episodeId then references a cold-tier episode,
+        /// and a subsequent PinEpisode on it fails loud (F1).
         /// </summary>
         /// <returns>The allocated episodeId — the durable handle an arc pins (FR-LW-009).</returns>
         public uint RecordInteraction(int entityId, bool isOwnClub, byte activeLayers, EventKind kind, uint worldTick, ushort managerChoiceId)
@@ -138,8 +149,18 @@ namespace TacticalDirector.LivingWorld
                     throw new InvalidOperationException(
                         "ActiveSetMembership.RecordInteraction: live edge exists for a non-member — membership bookkeeping drifted (FR-LW-025).");
                 }
-                if (_cold.TryTake(entityId, out ColdSummary summary))
+                if (_cold.TryPeek(entityId, out ColdSummary summary))
                 {
+                    // AR-1 M-2: the stored mask is the contract (§2.2.1 node-type); a conflicting
+                    // caller mask fails loud — and is checked against the PEEK, before the
+                    // destructive take, so the summary is never stranded (FR-LW-025). A node-type
+                    // change flow (e.g. ex-player re-entering as staff) is future canon work.
+                    if (summary.ActiveLayers != activeLayers)
+                    {
+                        throw new InvalidOperationException(
+                            "ActiveSetMembership.RecordInteraction: ActiveLayers mask conflicts with the cold-stored summary (AR-1 M-2).");
+                    }
+                    _cold.TryTake(entityId, out summary);
                     _memory.InsertEdge(ColdStore.Rehydrate(summary, _managerId));
                 }
                 else
@@ -304,4 +325,10 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | demotion at the FR-LW-023 cap (pinned edges skipped; ties →   |
 // |         |            |        | lowest EntityId), own-club at-club exemption + Depart path    |
 // |         |            |        | (pinned departure defers as external).                        |
+// | 1.1     | 2026-07-02 | —      | AR-1 fix pass. M-2: promotion-path mask check implemented —   |
+// |         |            |        | caller ActiveLayers verified against the summary via TryPeek  |
+// |         |            |        | BEFORE the destructive take (doc claimed a check that did not |
+// |         |            |        | exist; a mismatch silently misrouted updates). L-2: stale-    |
+// |         |            |        | worldTick entrant can be its own LRU victim (doc). L-3:       |
+// |         |            |        | single manager→contact edge scope (doc).                      |
 #endregion

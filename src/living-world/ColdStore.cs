@@ -1,6 +1,6 @@
 // File:     src/living-world/ColdStore.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02
+// Modified: 2026-07-02 (slice-2 AR-1 M-2: TryPeek verify-before-take companion)
 // Author:   —
 // Spec:     Living World System #22 §3.5, §4.3, §4.5, FR-LW-009/021/023/025, Code Standards #20
 // Purpose:  Cold-store container plus the §3.5 demotion/rehydration transforms: compress a live edge
@@ -80,6 +80,19 @@ namespace TacticalDirector.LivingWorld
                     "ColdStore.Add: contact already cold-stored — demotion must not duplicate state (FR-LW-025).");
             }
             _summaries.Insert(idx, summary);
+        }
+
+        /// <summary>
+        /// Non-destructive read of the contact's summary, if cold-stored. The verify-before-take
+        /// companion to <see cref="TryTake"/> (slice-2 AR-1 M-2): pre-take validation (e.g. an
+        /// ActiveLayers mask check) must run against a peek — validating after the destructive take
+        /// and throwing would strand the summary outside both tiers (FR-LW-025).
+        /// </summary>
+        public bool TryPeek(int entityId, out ColdSummary summary)
+        {
+            int idx = FindIndex(entityId, out bool found);
+            summary = found ? _summaries[idx] : default;
+            return found;
         }
 
         /// <summary>
@@ -230,4 +243,7 @@ namespace TacticalDirector.LivingWorld
 // | 1.3     | 2026-07-02 | —      | AR-3 L-2 (doc-only): TryTake ordering contract — verify no    |
 // |         |            |        | live edge exists BEFORE taking (destructive removal; a post-  |
 // |         |            |        | take InsertEdge throw would strand the summary, FR-LW-025).   |
+// | 1.4     | 2026-07-02 | —      | Slice-2 AR-1 M-2: TryPeek added — the non-destructive         |
+// |         |            |        | verify-before-take companion (pre-take validation must not    |
+// |         |            |        | run after the destructive removal, FR-LW-025).                |
 #endregion

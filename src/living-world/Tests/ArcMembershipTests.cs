@@ -1,6 +1,6 @@
 // File:     src/living-world/Tests/ArcMembershipTests.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02
+// Modified: 2026-07-02 (AR-1 regression locks)
 // Author:   —
 // Spec:     Living World System #22 §5 (T-LW-U-005/006, T-LW-I-002/003, T-LW-FAIL-001,
 //           T-LW-DET-002/007 subsets), Testing Strategy #19 §3.1.4, Code Standards #20
@@ -364,6 +364,57 @@ namespace TacticalDirector.LivingWorld.Tests
             Assert.IsTrue(set.IsActive(ContactA), "under-cap membership untouched by phase 6");
         }
 
+        // ── AR-1 regression locks ───────────────────────────────────────────────────────────
+
+        [Test]
+        public void AR1M1_MutatingCallerPinArrayAfterSpawn_DoesNotDesyncResolve()
+        {
+            MemoryStore store = StoreWithEdge(Manager, ContactA);
+            uint e0 = store.RecordEpisode(Manager, ContactA, EventKind.Benching, 1u, 0);
+            uint e1 = store.RecordEpisode(Manager, ContactA, EventKind.ContractSnub, 2u, 0);
+            ArcEngine engine = new ArcEngine(store);
+            Arc.PinnedEpisode[] callerArray = { new Arc.PinnedEpisode(Manager, ContactA, e0) };
+            int idx = engine.SpawnArc(ArcKind.MediaVendetta, Cause(1, 2u), callerArray, 2u, 10u);
+
+            callerArray[0] = new Arc.PinnedEpisode(Manager, ContactA, e1); // hostile post-spawn mutation
+
+            engine.ResolveArc(idx); // must release the hold it TOOK (e0), not the mutated key (e1)
+            Assert.IsFalse(store.IsEpisodePinned(Manager, ContactA, e0), "AR-1 M-1: resolve unpins the spawn-time snapshot");
+            Assert.IsFalse(store.IsEpisodePinned(Manager, ContactA, e1), "e1 was never pinned — and no throw on a phantom key");
+        }
+
+        [Test]
+        public void AR1M2_PromotionMaskConflict_FailsLoud_WithoutStrandingTheSummary()
+        {
+            ActiveSetMembership set = Membership(out _, out ColdStore cold);
+            set.RecordInteraction(ContactA, true, OwnedLayers(), EventKind.Benching, 1u, 0);
+            set.Depart(ContactA);
+            Assert.AreEqual(1, cold.Count);
+
+            byte conflicting = (byte)(1 << (int)RelationshipLayer.Affinity);
+            Assert.Throws<InvalidOperationException>(
+                () => set.RecordInteraction(ContactA, false, conflicting, EventKind.TransferRumour, 5u, 0),
+                "AR-1 M-2: mask conflicting with the cold summary fails loud");
+            Assert.AreEqual(1, cold.Count, "checked against the PEEK — the summary is not stranded (FR-LW-025)");
+            Assert.IsFalse(set.IsActive(ContactA), "the failed entry left no half-promoted member");
+
+            uint episodeId = set.RecordInteraction(ContactA, false, OwnedLayers(), EventKind.TransferRumour, 5u, 0);
+            Assert.AreEqual(1u, episodeId, "the correct mask still promotes, resuming episodeIds (FR-LW-009)");
+            Assert.AreEqual(0, cold.Count);
+        }
+
+        [Test]
+        public void AR1L1_SpawnTickLifetimeOverflow_FailsLoud()
+        {
+            MemoryStore store = StoreWithEdge(Manager, ContactA);
+            ArcEngine engine = new ArcEngine(store);
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => engine.SpawnArc(ArcKind.MediaVendetta, Cause(1, 0u), Array.Empty<Arc.PinnedEpisode>(),
+                    uint.MaxValue - 1u, 10u),
+                "AR-1 L-1: calendar overflow refused instead of wrapping into an instantly expired arc");
+        }
+
         // ── Determinism (T-LW-DET-002/007 subset) ───────────────────────────────────────────
 
         [Test]
@@ -426,4 +477,8 @@ namespace TacticalDirector.LivingWorld.Tests
 // |         |            |        | shared-pin/expiry/state (7), ActiveSetMembership entry/LRU/   |
 // |         |            |        | tiebreak/pin-skip/own-club/depart/reentry (10), WorldLoop     |
 // |         |            |        | phase-4/6 wiring (1), two-run determinism (1) — 19 tests.     |
+// | 1.1     | 2026-07-02 | —      | AR-1 regression locks (+3, 22 total): M-1 post-spawn caller-  |
+// |         |            |        | array mutation cannot desync resolve; M-2 promotion mask      |
+// |         |            |        | conflict fails loud without stranding the summary; L-1        |
+// |         |            |        | spawnTick+lifetime overflow refused.                          |
 #endregion
