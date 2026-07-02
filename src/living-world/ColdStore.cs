@@ -1,6 +1,6 @@
 // File:     src/living-world/ColdStore.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02 (slice-2 AR-2: M-1 mask coherence gate on Add; L-2 single-manager scope doc)
+// Modified: 2026-07-02 (slice-2 AR-3 L-1: TryTake ordering doc names its live consumer)
 // Author:   —
 // Spec:     Living World System #22 §3.5, §4.3, §4.5, FR-LW-009/021/023/025, Code Standards #20
 // Purpose:  Cold-store container plus the §3.5 demotion/rehydration transforms: compress a live edge
@@ -116,8 +116,9 @@ namespace TacticalDirector.LivingWorld
         /// ORDERING (AR-3 L-2): removal is destructive — the promotion flow must verify no live edge
         /// exists for the pair BEFORE taking (TryTake → Rehydrate → InsertEdge), because a duplicate-
         /// edge throw from InsertEdge after a take would strand the summary outside both tiers,
-        /// violating the FR-LW-025 neither-loses-nor-duplicates contract. The §3.5 membership service
-        /// (follow-up slice) owns that sequencing.
+        /// violating the FR-LW-025 neither-loses-nor-duplicates contract.
+        /// <see cref="ActiveSetMembership.RecordInteraction"/> is the live owning consumer of that
+        /// sequencing (slice 2); any other pre-take validation runs against <see cref="TryPeek"/>.
         /// </summary>
         public bool TryTake(int entityId, out ColdSummary summary)
         {
@@ -266,4 +267,7 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | take InsertEdge throw, FR-LW-025); reuses MemoryStore.        |
 // |         |            |        | DefinedLayersMask (private→internal). L-2: single-manager     |
 // |         |            |        | store scope documented (ColdSummary keyed by EntityId alone). |
+// | 1.6     | 2026-07-02 | —      | Slice-2 AR-3 L-1 (doc-only): the TryTake ordering contract's  |
+// |         |            |        | "(follow-up slice)" owner note was stale — ActiveSetMember-   |
+// |         |            |        | ship.RecordInteraction is the live owning consumer.           |
 #endregion

@@ -1,8 +1,8 @@
 // File:     src/living-world/WorldLoop.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02 (slice 2: phase-4 ArcEngine + phase-6 membership wiring)
+// Modified: 2026-07-02 (slice-2 AR-3 L-2: Spec header citations aligned to the wired phases)
 // Author:   —
-// Spec:     Living World System #22 §4.2 (KD-4), FR-LW-019/027/032/034, Code Standards #20
+// Spec:     Living World System #22 §4.2 (KD-4), FR-LW-014/019/023/027/032/034, Code Standards #20
 // Purpose:  The season-calendar world loop orchestrator: advances the WorldClock one calendar day and
 //           runs the §4.2 per-tick phases over the subsystems that exist. Event- and day-driven; runs
 //           NEVER inside the 10 Hz tactical or 60 Hz physics loops.
@@ -104,4 +104,6 @@ namespace TacticalDirector.LivingWorld
 // | 1.1     | 2026-07-02 | —      | Slice 2: phase 4 wired to ArcEngine.Update (expiry sweep) and |
 // |         |            |        | phase 6 to ActiveSetMembership.EnforceExternalCap; both       |
 // |         |            |        | injectable as null = not-wired seam (2-arg ctor kept).        |
+// | 1.2     | 2026-07-02 | —      | Slice-2 AR-3 L-2 (doc-only): Spec header gains FR-LW-014/023  |
+// |         |            |        | — the citations had drifted from the wired phases 4/6.       |
 #endregion
