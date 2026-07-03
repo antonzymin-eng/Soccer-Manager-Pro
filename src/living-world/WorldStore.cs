@@ -166,6 +166,82 @@ namespace TacticalDirector.LivingWorld
             return _text.Generate(intent, in slots);
         }
 
+        /// <summary>
+        /// Generates the §3.3 surface text for one player-triggered interaction with a contact,
+        /// automatically citing that contact's most-salient citable §3.2 episode drawn from this
+        /// store's own <see cref="Memory"/> — the deep-tier→text connection the caller-supplied-slots
+        /// overload leaves to the caller. The manager→<paramref name="entityId"/> edge is scanned for
+        /// the highest-salience episode that has a citable kind (not <see cref="EventKind.None"/>) and
+        /// clears <c>SALIENCE_REF_THRESHOLD</c> (the §3.2 referencing gate); ties break by more-recent
+        /// calendar day, then higher episodeId, so the selection is deterministic. If nothing qualifies
+        /// — no edge for the contact, or no episode above the threshold — the text is generated with no
+        /// citation. Either way exactly one <c>world.text</c> draw is consumed (the citation decides slot
+        /// content, never whether a draw happens), so replay parity holds across both paths and the
+        /// selection is a pure function of the serialized memory state (it resumes across
+        /// <see cref="Snapshot"/>/<see cref="Restore"/>). Fails loud on a refused intent / malformed
+        /// facts exactly as the slots overload.
+        /// </summary>
+        public string GenerateInteractionText(InteractionIntent intent, int entityId,
+            string subjectName, string opponentName, int homeGoals, int awayGoals)
+        {
+            if (TryFindCitableEpisode(entityId, out MemoryEpisode cited))
+            {
+                InteractionSlots withCitation =
+                    new InteractionSlots(subjectName, opponentName, homeGoals, awayGoals, in cited);
+                return _text.Generate(intent, in withCitation);
+            }
+            InteractionSlots plain = new InteractionSlots(subjectName, opponentName, homeGoals, awayGoals);
+            return _text.Generate(intent, in plain);
+        }
+
+        /// <summary>
+        /// Finds the most-salient citable episode on the manager→<paramref name="entityId"/> edge: the
+        /// episode with a citable kind whose salience clears <c>SALIENCE_REF_THRESHOLD</c> (negated
+        /// compare — fails closed on the NaN the store seams already gate out). Deterministic tiebreak:
+        /// higher salience, then more-recent worldTick, then higher episodeId. Returns false when the
+        /// contact has no live edge or nothing on it clears the gate.
+        /// </summary>
+        private bool TryFindCitableEpisode(int entityId, out MemoryEpisode best)
+        {
+            best = default;
+            if (!_memory.TryGetEdge(_managerId, entityId, out RelationshipEdge edge) || edge.Memory == null)
+            {
+                return false;
+            }
+
+            bool found = false;
+            MemoryEpisode[] memory = edge.Memory;
+            for (int i = 0; i < memory.Length; i++)
+            {
+                MemoryEpisode e = memory[i];
+                if (e.Kind == EventKind.None || !(e.Salience >= LivingWorldConstants.SALIENCE_REF_THRESHOLD))
+                {
+                    continue;
+                }
+                if (!found || IsMoreCitable(in e, in best))
+                {
+                    best = e;
+                    found = true;
+                }
+            }
+            return found;
+        }
+
+        /// <summary>True if <paramref name="a"/> outranks <paramref name="b"/> as a citation candidate
+        /// under the deterministic (salience, worldTick, episodeId) order.</summary>
+        private static bool IsMoreCitable(in MemoryEpisode a, in MemoryEpisode b)
+        {
+            if (a.Salience != b.Salience)
+            {
+                return a.Salience > b.Salience;
+            }
+            if (a.WorldTick != b.WorldTick)
+            {
+                return a.WorldTick > b.WorldTick;
+            }
+            return a.EpisodeId > b.EpisodeId;
+        }
+
         // ── persistence (§4.6 / FR-LW-022) ──────────────────────────────────────────────────
 
         /// <summary>
@@ -340,4 +416,10 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | future registration-order change); L-2 documented the atomic- |
 // |         |            |        | Generate invariant that lets the block omit the reservation    |
 // |         |            |        | fields; L-3 header byte-order corrected. No behaviour change.  |
+// | 1.3     | 2026-07-03 | —      | Slice 6: auto-cite GenerateInteractionText overload — pulls    |
+// |         |            |        | the contact's most-salient citable §3.2 episode from the own   |
+// |         |            |        | MemoryStore (SALIENCE_REF_THRESHOLD gate; deterministic        |
+// |         |            |        | salience→worldTick→episodeId tiebreak) and cites it, else no   |
+// |         |            |        | citation. No serialized-state / format change (the episode is  |
+// |         |            |        | read from the already-serialized memory; still one draw).     |
 #endregion
