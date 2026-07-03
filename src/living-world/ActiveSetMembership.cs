@@ -1,6 +1,6 @@
 // File:     src/living-world/ActiveSetMembership.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02 (slice-2 AR-2 M-1: upfront entity validation + take-result guard; L-2 doc)
+// Modified: 2026-07-03 (KD-10: FR-LW-022 roster-serialization seam — MemberCount/GetMemberAt/RestoreMember)
 // Author:   —
 // Spec:     Living World System #22 §3.5, §4.3, §4.5, FR-LW-021/023/025, Code Standards #20
 // Purpose:  §3.5 active-set membership: entry on first interaction, deterministic LRU demotion of
@@ -246,6 +246,58 @@ namespace TacticalDirector.LivingWorld
             return demoted;
         }
 
+        // ── roster serialization seam (FR-LW-022; the KD-10 composition-root snapshot entry) ────
+
+        /// <summary>
+        /// Number of roster entries (own-club + external). The roster (entityId, isOwnClub) is
+        /// serialisable value state (FR-LW-022); iterate <see cref="GetMemberAt"/> in [0, MemberCount)
+        /// to persist it, and rebuild via <see cref="RestoreMember"/>. Entries are in canonical
+        /// ascending-EntityId order (FR-LW-021), so a save is a pure function of state.
+        /// </summary>
+        public int MemberCount => _members.Count;
+
+        /// <summary>Reads the roster entry at the given canonical-order index (ascending EntityId).</summary>
+        public void GetMemberAt(int index, out int entityId, out bool isOwnClub)
+        {
+            Member m = _members[index];
+            entityId = m.EntityId;
+            isOwnClub = m.IsOwnClub;
+        }
+
+        /// <summary>
+        /// Rebuilds one roster entry on load (the §4.6/FR-LW-022 restore seam, owned by the KD-10
+        /// composition root). Validates against the already-rebuilt <see cref="MemoryStore"/>: the id
+        /// must be a legal contact (non-negative, not the manager), must not already be in the roster,
+        /// and must have a live edge — a roster entry without one is corrupt state (the same
+        /// membership↔edge invariant <see cref="RecordInteraction"/> maintains, FR-LW-025). Insertion
+        /// is at the canonical index, so entries may be restored in any order.
+        /// </summary>
+        public void RestoreMember(int entityId, bool isOwnClub)
+        {
+            if (entityId < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(entityId), entityId,
+                    "ActiveSetMembership.RestoreMember: entity ids must be non-negative.");
+            }
+            if (entityId == _managerId)
+            {
+                throw new ArgumentException(
+                    "ActiveSetMembership.RestoreMember: a manager cannot be their own contact (edge to self is invalid).");
+            }
+            int idx = FindMemberIndex(entityId, out bool found);
+            if (found)
+            {
+                throw new InvalidOperationException(
+                    "ActiveSetMembership.RestoreMember: duplicate roster entry in the save (corrupt state).");
+            }
+            if (!_memory.TryGetEdge(_managerId, entityId, out _))
+            {
+                throw new InvalidOperationException(
+                    "ActiveSetMembership.RestoreMember: no live edge for a roster entry — membership/edge state drifted (FR-LW-025).");
+            }
+            _members.Insert(idx, new Member { EntityId = entityId, IsOwnClub = isOwnClub });
+        }
+
         // ── internals ──────────────────────────────────────────────────────────────────────
 
         /// <summary>Demotes the member at the given index: RemoveEdge → Compress → ColdStore.Add (§3.5).</summary>
@@ -359,4 +411,8 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | defensive TryTake-result guard (peek/take drift fails loud    |
 // |         |            |        | instead of inserting a default edge). L-2: injected ColdStore |
 // |         |            |        | must be manager-dedicated (doc).                              |
+// | 1.3     | 2026-07-03 | —      | KD-10: FR-LW-022 roster-serialization seam for the season     |
+// |         |            |        | composition root — MemberCount/GetMemberAt read the canonical |
+// |         |            |        | roster; RestoreMember rebuilds one entry on load, validated   |
+// |         |            |        | against the rebuilt MemoryStore (live-edge invariant).        |
 #endregion

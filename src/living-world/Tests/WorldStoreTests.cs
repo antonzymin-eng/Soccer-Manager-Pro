@@ -1,0 +1,234 @@
+// File:     src/living-world/Tests/WorldStoreTests.cs
+// Created:  2026-07-03
+// Author:   —
+// Spec:     Living World System #22 §4.2/§4.6/§7.1 (KD-10), FR-LW-019/022/023, Testing Strategy #19
+//           §3.1.4, Code Standards #20
+// Purpose:  KD-10 season composition root tests: construction/wiring, the season loop driving the
+//           §4.2 phases that have producers (decay, arc expiry), current-tick interaction stamping,
+//           the composite Snapshot/Restore round-trip (four-store block + manager id + membership
+//           roster), two-run determinism, and the fail-loud restore gates.
+
+using System;
+
+using NUnit.Framework;
+
+using TacticalDirector.LivingWorld;
+
+namespace TacticalDirector.LivingWorld.Tests
+{
+    [TestFixture]
+    public class WorldStoreTests
+    {
+        private const int Manager = 0;
+        private const byte AffinityTrust = 0b110; // Affinity (bit 1) | Trust (bit 2)
+
+        private static SpawnCause Cause(uint worldTick)
+        {
+            return new SpawnCause(42, new[] { new SpawnCause.Input(1, 0.5f) }, 999UL, worldTick);
+        }
+
+        /// <summary>
+        /// Builds a store exercising every serialized block: 3 live edges (2 external + 1 own-club),
+        /// a live arc pinning an episode, and a departed contact compressed into cold-store. Two days
+        /// advanced so the calendar and decayed salience are non-trivial.
+        /// </summary>
+        private static WorldStore PopulatedStore()
+        {
+            WorldStore s = new WorldStore(Manager);
+
+            uint ep5 = s.RecordInteraction(5, isOwnClub: false, AffinityTrust, EventKind.ManagerCriticism, 11);
+            s.Arcs.SpawnArc(ArcKind.MediaVendetta, Cause(s.CurrentWorldTick),
+                new[] { new Arc.PinnedEpisode(Manager, 5, ep5) }, s.CurrentWorldTick, 30u);
+
+            s.RecordInteraction(8, isOwnClub: true, AffinityTrust, EventKind.ManagerDefence, 0);
+            s.RecordInteraction(3, isOwnClub: false, AffinityTrust, EventKind.Benching, 0);
+
+            s.RecordInteraction(12, isOwnClub: true, AffinityTrust, EventKind.ContractSnub, 0);
+            s.Membership.Depart(12); // no pinned episode ⇒ demotes to cold-store
+
+            s.AdvanceDay();
+            s.AdvanceDay();
+            return s;
+        }
+
+        // ── construction + wiring ───────────────────────────────────────────────────────────
+
+        [Test]
+        public void NewStore_StartsEmptyAtDayZero()
+        {
+            WorldStore s = new WorldStore(7);
+            Assert.AreEqual(7, s.ManagerId);
+            Assert.AreEqual(0u, s.CurrentWorldTick, "day 0 at world start");
+            Assert.AreEqual(0, s.Memory.EdgeCount);
+            Assert.AreEqual(0, s.Arcs.ArcCount);
+            Assert.AreEqual(0, s.Cold.Count);
+            Assert.AreEqual(0, s.Membership.MemberCount);
+        }
+
+        [Test]
+        public void Ctor_NegativeManager_Throws()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new WorldStore(-1));
+        }
+
+        // ── season loop drives the §4.2 phases that have producers ──────────────────────────
+
+        [Test]
+        public void AdvanceDay_AdvancesCalendarAndDecaysSalience()
+        {
+            WorldStore s = new WorldStore(Manager);
+            s.RecordInteraction(5, isOwnClub: false, AffinityTrust, EventKind.ManagerCriticism, 0);
+
+            float before = s.Memory.GetEdgeAt(0).Memory[0].Salience;
+            s.AdvanceDay();
+            Assert.AreEqual(1u, s.CurrentWorldTick, "AdvanceDay advances the calendar one day");
+            float after = s.Memory.GetEdgeAt(0).Memory[0].Salience;
+            Assert.Less(after, before, "phase 3: AdvanceDay decays episode salience");
+        }
+
+        [Test]
+        public void AdvanceDay_ExpiresArcsPastTheirLifetime()
+        {
+            WorldStore s = new WorldStore(Manager);
+            uint ep = s.RecordInteraction(5, isOwnClub: false, AffinityTrust, EventKind.ManagerCriticism, 0);
+            s.Arcs.SpawnArc(ArcKind.MediaVendetta, Cause(0u),
+                new[] { new Arc.PinnedEpisode(Manager, 5, ep) }, 0u, 2u); // MaxLifetimeTick = 2
+
+            Assert.AreEqual(1, s.Arcs.ArcCount);
+            Assert.IsTrue(s.Memory.EdgeHasPinnedEpisode(Manager, 5), "episode pinned while the arc is live");
+
+            s.AdvanceDay(); // day 1
+            s.AdvanceDay(); // day 2 — not expired (2 > 2 is false)
+            Assert.AreEqual(1, s.Arcs.ArcCount, "phase 4: arc still live at its lifetime boundary");
+
+            s.AdvanceDay(); // day 3 — expired
+            Assert.AreEqual(0, s.Arcs.ArcCount, "phase 4: AdvanceDay force-resolves the expired arc");
+            Assert.IsFalse(s.Memory.EdgeHasPinnedEpisode(Manager, 5), "expiry unpins the episode");
+        }
+
+        [Test]
+        public void RecordInteraction_StampsCurrentWorldTick()
+        {
+            WorldStore s = new WorldStore(Manager);
+            s.AdvanceDay();
+            s.AdvanceDay(); // day 2
+            s.RecordInteraction(5, isOwnClub: false, AffinityTrust, EventKind.Benching, 0);
+            Assert.AreEqual(2u, s.Memory.GetEdgeAt(0).Memory[0].WorldTick,
+                "the episode is stamped with the store's current calendar day, not a caller value");
+        }
+
+        // ── persistence (§4.6 / FR-LW-022) ──────────────────────────────────────────────────
+
+        [Test]
+        public void SnapshotRestore_IsFieldIdentical()
+        {
+            WorldStore original = PopulatedStore();
+            byte[] payload = original.Snapshot();
+
+            WorldStore restored = WorldStore.Restore(payload);
+
+            Assert.AreEqual(original.ManagerId, restored.ManagerId);
+            Assert.AreEqual(original.CurrentWorldTick, restored.CurrentWorldTick);
+            Assert.AreEqual(original.Memory.EdgeCount, restored.Memory.EdgeCount);
+            Assert.AreEqual(original.Arcs.ArcCount, restored.Arcs.ArcCount);
+            Assert.AreEqual(original.Cold.Count, restored.Cold.Count);
+            Assert.AreEqual(original.Membership.MemberCount, restored.Membership.MemberCount);
+            Assert.IsTrue(restored.Membership.IsOwnClubMember(8), "own-club class survives the round-trip");
+            Assert.IsTrue(restored.Membership.IsActive(3) && !restored.Membership.IsOwnClubMember(3),
+                "external class survives the round-trip");
+            Assert.IsTrue(restored.Memory.EdgeHasPinnedEpisode(Manager, 5),
+                "SpawnArc re-takes the pin on restore (FR-LW-018 refcount reconstructed)");
+
+            // Idempotent re-serialization is the strongest field-identity check.
+            CollectionAssert.AreEqual(payload, restored.Snapshot(),
+                "Restore(Snapshot()).Snapshot() reproduces the original bytes");
+        }
+
+        [Test]
+        public void SnapshotRestore_EmptyStore_RoundTrips()
+        {
+            WorldStore empty = new WorldStore(4);
+            empty.AdvanceDay(); // day 1, still no edges/arcs/cold/members
+            byte[] payload = empty.Snapshot();
+
+            WorldStore restored = WorldStore.Restore(payload);
+            Assert.AreEqual(4, restored.ManagerId);
+            Assert.AreEqual(1u, restored.CurrentWorldTick);
+            Assert.AreEqual(0, restored.Memory.EdgeCount);
+            Assert.AreEqual(0, restored.Membership.MemberCount);
+            CollectionAssert.AreEqual(payload, restored.Snapshot());
+        }
+
+        [Test]
+        public void RestoredStore_KeepsAdvancing()
+        {
+            WorldStore restored = WorldStore.Restore(PopulatedStore().Snapshot());
+            uint before = restored.CurrentWorldTick;
+            restored.AdvanceDay();
+            Assert.AreEqual(before + 1u, restored.CurrentWorldTick, "the restored loop is fully wired");
+        }
+
+        [Test]
+        public void Snapshot_IsDeterministicAcrossTwoIdenticalStores()
+        {
+            byte[] a = PopulatedStore().Snapshot();
+            byte[] b = PopulatedStore().Snapshot();
+            CollectionAssert.AreEqual(a, b, "two identically-built stores serialize byte-identically");
+        }
+
+        // ── fail-loud restore gates ─────────────────────────────────────────────────────────
+
+        [Test]
+        public void Restore_Null_Throws()
+        {
+            Assert.Throws<ArgumentNullException>(() => WorldStore.Restore(null));
+        }
+
+        [Test]
+        public void Restore_WrongVersion_Throws()
+        {
+            byte[] p = PopulatedStore().Snapshot();
+            p[0] = 0xEE;
+            p[1] = 0xEE; // both bytes of the u16 version ⇒ guaranteed != WORLD_STORE_FORMAT_VERSION
+            Assert.Throws<ArgumentException>(() => WorldStore.Restore(p));
+        }
+
+        [Test]
+        public void Restore_WrongDomainTag_Throws()
+        {
+            byte[] p = PopulatedStore().Snapshot();
+            p[2] = 0x00; // domain tag byte (after the u16 version); 0x00 != DOMAIN_TAG_LIVING_WORLD (0x1E)
+            Assert.Throws<ArgumentException>(() => WorldStore.Restore(p));
+        }
+
+        [Test]
+        public void Restore_CorruptStoreLength_Throws()
+        {
+            byte[] p = PopulatedStore().Snapshot();
+            // Store-block length prefix (i32) sits after version(2) + tag(1) + managerId(4) = offset 7.
+            p[7] = 0x7F;
+            p[8] = 0x7F;
+            p[9] = 0x7F;
+            p[10] = 0x7F; // a large positive count exceeding the remaining payload
+            Assert.Throws<ArgumentException>(() => WorldStore.Restore(p));
+        }
+
+        [Test]
+        public void Restore_TrailingBytes_Throws()
+        {
+            byte[] p = PopulatedStore().Snapshot();
+            byte[] longer = new byte[p.Length + 1];
+            Array.Copy(p, longer, p.Length);
+            Assert.Throws<ArgumentException>(() => WorldStore.Restore(longer));
+        }
+
+        [Test]
+        public void Restore_BadMembershipFlag_Throws()
+        {
+            byte[] p = PopulatedStore().Snapshot();
+            // The last byte is the final member's isOwnClub flag (roster is written last).
+            p[p.Length - 1] = 0x02; // neither 0 nor 1
+            Assert.Throws<ArgumentException>(() => WorldStore.Restore(p));
+        }
+    }
+}
