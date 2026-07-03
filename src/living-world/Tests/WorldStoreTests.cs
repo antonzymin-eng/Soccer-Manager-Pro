@@ -46,6 +46,12 @@ namespace TacticalDirector.LivingWorld.Tests
             s.RecordInteraction(12, isOwnClub: true, AffinityTrust, EventKind.ContractSnub, 0);
             s.Membership.Depart(12); // no pinned episode ⇒ demotes to cold-store
 
+            // Two player-triggered generations advance the owned world.text cursor so the round-trip
+            // and determinism tests exercise a non-zero stream position.
+            InteractionSlots slots = new InteractionSlots("Boss", "Rivals FC", 1, 2);
+            s.GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots);
+            s.GenerateInteractionText(InteractionIntent.BoardSignalsConfidence, in slots);
+
             s.AdvanceDay();
             s.AdvanceDay();
             return s;
@@ -174,6 +180,59 @@ namespace TacticalDirector.LivingWorld.Tests
             byte[] a = PopulatedStore().Snapshot();
             byte[] b = PopulatedStore().Snapshot();
             CollectionAssert.AreEqual(a, b, "two identically-built stores serialize byte-identically");
+        }
+
+        // ── world.text generation (§3.3) wired into the store ───────────────────────────────
+
+        [Test]
+        public void GenerateInteractionText_ExpandsSlots()
+        {
+            WorldStore s = new WorldStore(Manager);
+            InteractionSlots slots = new InteractionSlots("Boss", "Rivals FC", 1, 2);
+            string text = s.GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots);
+            Assert.IsFalse(string.IsNullOrEmpty(text));
+            StringAssert.Contains("Boss", text);
+            StringAssert.Contains("Rivals FC", text);
+            StringAssert.Contains("1-2", text);
+        }
+
+        [Test]
+        public void GenerateInteractionText_ResumesDeterministicallyAfterRestore()
+        {
+            // PopulatedStore has already advanced the world.text cursor (2 generations). Snapshot at
+            // that position, restore, and confirm the restored stream produces the SAME continuation
+            // as the original — the draw keys on the saved action ordinal (§3.2.5), so a store that
+            // failed to restore the cursor would diverge on the very next generation.
+            WorldStore original = PopulatedStore();
+            WorldStore restored = WorldStore.Restore(original.Snapshot());
+
+            InteractionSlots slots = new InteractionSlots("Boss", "Rivals FC", 0, 3);
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.AreEqual(
+                    original.GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots),
+                    restored.GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots),
+                    "restored world.text stream resumes at the saved cursor");
+            }
+        }
+
+        [Test]
+        public void GenerateInteractionText_DivergesWithWorldSeed()
+        {
+            // The explicit-seed overload plumbs a distinct world.text stream: the same intent/slots at
+            // the same (zero) cursor draw different action-ordinal-keyed values across enough seeds
+            // that at least one selects a different template.
+            InteractionSlots slots = new InteractionSlots("Boss", "Rivals FC", 0, 0);
+            string baseline = new WorldStore(Manager, 1UL)
+                .GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots);
+            bool anyDifferent = false;
+            for (ulong seed = 2UL; seed <= 40UL && !anyDifferent; seed++)
+            {
+                string other = new WorldStore(Manager, seed)
+                    .GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots);
+                anyDifferent = other != baseline;
+            }
+            Assert.IsTrue(anyDifferent, "world seed selects the world.text draw sequence");
         }
 
         // ── fail-loud restore gates ─────────────────────────────────────────────────────────

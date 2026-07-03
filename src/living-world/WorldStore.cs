@@ -7,7 +7,8 @@
 // Purpose:  The KD-10 season composition root — the persistent world store + season-calendar loop.
 //           Owns and wires the living-world services (clock, memory, cold store, arcs, membership,
 //           loop) into one durable object, drives the per-day season loop, and persists the whole
-//           store (the §4.6 four-store block + the manager id + the FR-LW-022 membership roster).
+//           store (the §4.6 four-store block + the manager id + the FR-LW-022 membership roster +
+//           the world.text RNG cursor of the owned InteractionTextGenerator).
 
 using System;
 
@@ -41,20 +42,25 @@ namespace TacticalDirector.LivingWorld
     /// (FR-LW-003 bars the match engine from referencing this assembly).
     ///
     /// SCOPE: single-manager, matching the <see cref="ColdStore"/>/<see cref="ActiveSetMembership"/>
-    /// shape (§3.5 "per-manager"). The aperiodic <c>world.text</c> RNG stream belongs to a separately-
-    /// attached <see cref="InteractionTextGenerator"/> (player-triggered, not part of the tick loop),
-    /// so no RNG service is owned here; its cursor is #16-serialized wherever that generator is wired.
-    /// Day-cadence — not subject to the 60 Hz zero-alloc / ProfilerMarker hot-path rules.
+    /// shape (§3.5 "per-manager"). The store owns the aperiodic <c>world.text</c> RNG stream: it
+    /// constructs a <see cref="DeterministicRngService"/> from a world seed and the
+    /// <see cref="InteractionTextGenerator"/> (player-triggered, not part of the tick loop) that
+    /// registers its single draw site — this is the "generator wired in" the prior slice deferred to,
+    /// so <see cref="Snapshot"/> now carries the stream's cursor. Day-cadence — not subject to the
+    /// 60 Hz zero-alloc / ProfilerMarker hot-path rules.
     /// </summary>
     public sealed class WorldStore
     {
         private readonly int _managerId;
+        private readonly ulong _worldSeed;
         private WorldClock _clock;
         private MemoryStore _memory;
         private ColdStore _cold;
         private ArcEngine _arcs;
         private ActiveSetMembership _membership;
         private WorldLoop _loop;
+        private DeterministicRngService _rng;
+        private InteractionTextGenerator _text;
 
         /// <summary>The manager this world store is scoped to.</summary>
         public int ManagerId => _managerId;
@@ -75,11 +81,23 @@ namespace TacticalDirector.LivingWorld
         public ActiveSetMembership Membership => _membership;
 
         /// <summary>
-        /// Constructs an empty world store for the given manager at calendar day 0. All stores are
-        /// freshly allocated and wired: the loop drives arc expiry (phase 4) and the external-cap LRU
-        /// (phase 6) over the same instances.
+        /// Constructs an empty world store for the given manager at calendar day 0, seeding the owned
+        /// <c>world.text</c> RNG stream from the manager id (a deterministic default — the same manager
+        /// always resumes the same text stream; two managers never share a cursor). Use the
+        /// <see cref="WorldStore(int, ulong)"/> overload to supply the world seed explicitly.
         /// </summary>
         public WorldStore(int managerId)
+            : this(managerId, (ulong)managerId)
+        {
+        }
+
+        /// <summary>
+        /// Constructs an empty world store for the given manager at calendar day 0. All stores are
+        /// freshly allocated and wired: the loop drives arc expiry (phase 4) and the external-cap LRU
+        /// (phase 6) over the same instances, and the <see cref="InteractionTextGenerator"/> registers
+        /// the <c>world.text</c> sub-stream (FR-LW-020) on a service derived from <paramref name="worldSeed"/>.
+        /// </summary>
+        public WorldStore(int managerId, ulong worldSeed)
         {
             if (managerId < 0)
             {
@@ -87,25 +105,32 @@ namespace TacticalDirector.LivingWorld
                     "WorldStore: manager id must be non-negative.");
             }
             _managerId = managerId;
+            _worldSeed = worldSeed;
             _clock = new WorldClock();
             _memory = new MemoryStore();
             _cold = new ColdStore();
             _arcs = new ArcEngine(_memory);
             _membership = new ActiveSetMembership(managerId, _memory, _cold);
             _loop = new WorldLoop(_clock, _memory, _arcs, _membership);
+            _rng = new DeterministicRngService(worldSeed);
+            _text = new InteractionTextGenerator(_rng);
         }
 
         // Private ctor used by Restore — takes already-rebuilt, already-wired stores.
-        private WorldStore(int managerId, WorldClock clock, MemoryStore memory, ColdStore cold,
-            ArcEngine arcs, ActiveSetMembership membership, WorldLoop loop)
+        private WorldStore(int managerId, ulong worldSeed, WorldClock clock, MemoryStore memory,
+            ColdStore cold, ArcEngine arcs, ActiveSetMembership membership, WorldLoop loop,
+            DeterministicRngService rng, InteractionTextGenerator text)
         {
             _managerId = managerId;
+            _worldSeed = worldSeed;
             _clock = clock;
             _memory = memory;
             _cold = cold;
             _arcs = arcs;
             _membership = membership;
             _loop = loop;
+            _rng = rng;
+            _text = text;
         }
 
         /// <summary>
@@ -129,19 +154,35 @@ namespace TacticalDirector.LivingWorld
             return _membership.RecordInteraction(entityId, isOwnClub, activeLayers, kind, _clock.CurrentWorldTick, managerChoiceId);
         }
 
+        /// <summary>
+        /// Generates the §3.3 surface text for one player-triggered interaction, advancing the owned
+        /// <c>world.text</c> RNG cursor by exactly one reserved draw (FR-LW-011/020). Deterministic in
+        /// (intent, current cursor, slots); the cursor is folded into <see cref="Snapshot"/>, so a
+        /// restored store resumes the same sequence. Fails loud on a refused intent / malformed slots /
+        /// an uncitable episode exactly as <see cref="InteractionTextGenerator.Generate"/> specifies.
+        /// </summary>
+        public string GenerateInteractionText(InteractionIntent intent, in InteractionSlots slots)
+        {
+            return _text.Generate(intent, in slots);
+        }
+
         // ── persistence (§4.6 / FR-LW-022) ──────────────────────────────────────────────────
 
         /// <summary>
         /// Serializes the whole store to one canonical payload: a fail-loud composite header
-        /// (version + domain tag + manager id), the §4.6 four-store block, then the membership roster.
-        /// A round-trip through <see cref="Restore"/> reproduces field-identical state.
+        /// (version + domain tag + manager id), the §4.6 four-store block, the world.text RNG block
+        /// (world seed + stream cursor + action ordinal), then the membership roster. A round-trip
+        /// through <see cref="Restore"/> reproduces field-identical state, including the text stream's
+        /// position so generation resumes deterministically.
         /// </summary>
         public byte[] Snapshot()
         {
             byte[] storeBlock = WorldStateSerializer.Serialize(_clock, _memory, _arcs, _cold);
+            RngStreamState textStream = _rng.GetStreamState(_text.StreamIndex);
 
             int size = 2 + 1 + 4;                 // version, domain tag, manager id
             size += 4 + storeBlock.Length;        // store-block length prefix + block
+            size += 8 + 8 + 8;                    // world seed + world.text cursor + action ordinal
             size += 4;                            // member count
             size += _membership.MemberCount * (4 + 1); // entityId + isOwnClub flag per member
 
@@ -155,6 +196,12 @@ namespace TacticalDirector.LivingWorld
             CanonicalSerializer.WriteI32(payload, ref offset, storeBlock.Length);
             Array.Copy(storeBlock, 0, payload, offset, storeBlock.Length);
             offset += storeBlock.Length;
+
+            // world.text RNG block: the seed re-derives the service on restore; cursor + action
+            // ordinal resume the stream position (the draw value keys on ActionOrdinal, §3.2.5).
+            CanonicalSerializer.WriteU64(payload, ref offset, _worldSeed);
+            CanonicalSerializer.WriteU64(payload, ref offset, textStream.RngCursor);
+            CanonicalSerializer.WriteU64(payload, ref offset, textStream.ActionOrdinal);
 
             CanonicalSerializer.WriteI32(payload, ref offset, _membership.MemberCount);
             for (int i = 0; i < _membership.MemberCount; i++)
@@ -209,6 +256,19 @@ namespace TacticalDirector.LivingWorld
             WorldStateSerializer.Deserialize(storeBlock, out WorldClock clock, out MemoryStore memory,
                 out ArcEngine arcs, out ColdStore cold);
 
+            // world.text RNG block: re-derive the service from the persisted seed (identical k0/k1 +
+            // stream key), then resume the cursor + action ordinal the generator's fresh registration
+            // zeroed. StreamKey/SiteId/version are recomputed by re-registration, not carried.
+            ulong worldSeed = CanonicalSerializer.ReadU64(payload, ref offset);
+            ulong textCursor = CanonicalSerializer.ReadU64(payload, ref offset);
+            ulong textActionOrdinal = CanonicalSerializer.ReadU64(payload, ref offset);
+            DeterministicRngService rng = new DeterministicRngService(worldSeed);
+            InteractionTextGenerator text = new InteractionTextGenerator(rng);
+            RngStreamState textStream = rng.GetStreamState(text.StreamIndex);
+            textStream.RngCursor = textCursor;
+            textStream.ActionOrdinal = textActionOrdinal;
+            rng.RestoreStream(text.StreamIndex, in textStream);
+
             ActiveSetMembership membership = new ActiveSetMembership(managerId, memory, cold);
             int memberCount = ReadCount(payload, ref offset);
             for (int i = 0; i < memberCount; i++)
@@ -228,7 +288,7 @@ namespace TacticalDirector.LivingWorld
             }
 
             WorldLoop loop = new WorldLoop(clock, memory, arcs, membership);
-            return new WorldStore(managerId, clock, memory, cold, arcs, membership, loop);
+            return new WorldStore(managerId, worldSeed, clock, memory, cold, arcs, membership, loop, rng, text);
         }
 
         /// <summary>
@@ -258,4 +318,9 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | that have producers (phases 1/2/5 stay WorldLoop null seams,  |
 // |         |            |        | FR-LW-031); Snapshot/Restore round-trip the §4.6 four-store    |
 // |         |            |        | block + manager id + FR-LW-022 membership roster.             |
+// | 1.1     | 2026-07-03 | —      | Wired the InteractionTextGenerator in: the store now owns a   |
+// |         |            |        | DeterministicRngService (from a world seed) + the generator   |
+// |         |            |        | (world.text sub-stream); GenerateInteractionText exposes it;  |
+// |         |            |        | Snapshot/Restore fold the seed + stream cursor + action       |
+// |         |            |        | ordinal into the composite save (WORLD_STORE_FORMAT_VERSION 2).|
 #endregion
