@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/DeterministicSimConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-06-16
+// Modified: 2026-07-02 (DOMAIN_TAG_LIVING_WORLD = 0x1E, ERR-022-001)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.4, §3.2.4.1, Code Standards #20
 // Purpose:  All numeric and string constants for the deterministic simulation system.
@@ -109,6 +109,11 @@ namespace TacticalDirector.DeterministicSim
 
         /// <summary>[FIXED] Domain tag allocated for Goalkeeper Mechanics #11. §3.4 v1.0.5; ERR-011-001 resolved.</summary>
         public const byte DOMAIN_TAG_GOALKEEPER = 0x1D;
+
+        /// <summary>[FIXED] Domain tag allocated for Living World #22 (world.text RNG stream + §4.6
+        /// snapshot block). §3.4 v1.0.7; ERR-022-001 resolved — next value after 0x1D (0x18/0x1C stay
+        /// permanently orphaned per ERR-016-003).</summary>
+        public const byte DOMAIN_TAG_LIVING_WORLD = 0x1E;
 
         // ── Error codes (u16; §3.4 / §3.10) ──────────────────────────────────────────
 
@@ -266,4 +271,6 @@ namespace TacticalDirector.DeterministicSim
 // | 1.1     | 2026-05-29 | —      | AR-1 M-1: AI_PHASE_STRIDE changed from const to static readonly.     |
 // | 1.2     | 2026-06-16 | —      | Match Engine Phase B step B1: added [DERIVED] FrameSeconds           |
 // |         |            |        | (FrameMs / 1000) — the per-tick dt / seconds-clock derivation.       |
+// | 1.3     | 2026-07-02 | —      | DOMAIN_TAG_LIVING_WORLD = 0x1E allocated (ERR-022-001; #16 §3.4      |
+// |         |            |        | v1.0.7 — next value after 0x1D; 0x18/0x1C stay orphaned).            |
 #endregion

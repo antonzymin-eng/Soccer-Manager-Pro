@@ -1,7 +1,9 @@
 {
     "name": "TacticalDirector.LivingWorld",
     "rootNamespace": "TacticalDirector.LivingWorld",
-    "references": [],
+    "references": [
+        "TacticalDirector.DeterministicSim"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
