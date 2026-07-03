@@ -7,8 +7,8 @@
 // Purpose:  The KD-10 season composition root — the persistent world store + season-calendar loop.
 //           Owns and wires the living-world services (clock, memory, cold store, arcs, membership,
 //           loop) into one durable object, drives the per-day season loop, and persists the whole
-//           store (the §4.6 four-store block + the manager id + the FR-LW-022 membership roster +
-//           the world.text RNG cursor of the owned InteractionTextGenerator).
+//           store (the §4.6 four-store block + the manager id + the world.text RNG cursor of the
+//           owned InteractionTextGenerator + the FR-LW-022 membership roster, in that byte order).
 
 using System;
 
@@ -258,7 +258,12 @@ namespace TacticalDirector.LivingWorld
 
             // world.text RNG block: re-derive the service from the persisted seed (identical k0/k1 +
             // stream key), then resume the cursor + action ordinal the generator's fresh registration
-            // zeroed. StreamKey/SiteId/version are recomputed by re-registration, not carried.
+            // zeroed. StreamKey/SiteId/version are recomputed by re-registration, not carried. Only
+            // RngCursor + ActionOrdinal are serialized: the reservation fields (BudgetRemaining /
+            // DeclaredBudget / DrawIndex) are always 0 at rest because GenerateInteractionText is
+            // atomic (Reserve…CloseReservation in one call, no yield), so fresh registration
+            // reconstructs them exactly. A future "hold a reservation across ticks" API would break
+            // this and must extend the block.
             ulong worldSeed = CanonicalSerializer.ReadU64(payload, ref offset);
             ulong textCursor = CanonicalSerializer.ReadU64(payload, ref offset);
             ulong textActionOrdinal = CanonicalSerializer.ReadU64(payload, ref offset);
@@ -267,7 +272,14 @@ namespace TacticalDirector.LivingWorld
             RngStreamState textStream = rng.GetStreamState(text.StreamIndex);
             textStream.RngCursor = textCursor;
             textStream.ActionOrdinal = textActionOrdinal;
-            rng.RestoreStream(text.StreamIndex, in textStream);
+            // Unreachable under the API contract (the generator just registered stream index 0 on a
+            // service with streamCount 1); a non-zero return means the registration order was changed
+            // without extending this block — fail loud rather than silently resume at cursor 0.
+            if (rng.RestoreStream(text.StreamIndex, in textStream) != 0)
+            {
+                throw new InvalidOperationException(
+                    "WorldStore.Restore: world.text stream index invalid on restore (internal invariant — registration order changed).");
+            }
 
             ActiveSetMembership membership = new ActiveSetMembership(managerId, memory, cold);
             int memberCount = ReadCount(payload, ref offset);
@@ -323,4 +335,9 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | (world.text sub-stream); GenerateInteractionText exposes it;  |
 // |         |            |        | Snapshot/Restore fold the seed + stream cursor + action       |
 // |         |            |        | ordinal into the composite save (WORLD_STORE_FORMAT_VERSION 2).|
+// | 1.2     | 2026-07-03 | —      | Slice-5 AR-1 (0H+0M+3L): L-1 Restore fails loud on a non-zero |
+// |         |            |        | RestoreStream code (was silently resuming at cursor 0 under a  |
+// |         |            |        | future registration-order change); L-2 documented the atomic- |
+// |         |            |        | Generate invariant that lets the block omit the reservation    |
+// |         |            |        | fields; L-3 header byte-order corrected. No behaviour change.  |
 #endregion
