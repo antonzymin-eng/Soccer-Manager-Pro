@@ -1,6 +1,6 @@
 // File:     src/living-world/Tests/WorldTextSnapshotTests.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02
+// Modified: 2026-07-03 (slice-3 AR-1: +L-1 count-prefix + L-2 non-finite-input locks)
 // Author:   —
 // Spec:     Living World System #22 §5 (T-LW-U-019..026 subset, T-LW-DET-003/004, F5 parallels),
 //           Testing Strategy #19 §3.1.4, Code Standards #20
@@ -328,6 +328,42 @@ namespace TacticalDirector.LivingWorld.Tests
         }
 
         [Test]
+        public void Deserialize_RefusesCorruptCountPrefix()
+        {
+            // L-1: the edge-count prefix sits at offset 7 (u16 version + u8 tag + u32 worldTick).
+            // A negative count would desync the offset; ReadCount must fail loud instead.
+            BuildWorld(out WorldClock clock, out MemoryStore memory, out ArcEngine arcs, out ColdStore cold);
+            byte[] payload = WorldStateSerializer.Serialize(clock, memory, arcs, cold);
+            payload[7] = 0xFF;
+            payload[8] = 0xFF;
+            payload[9] = 0xFF;
+            payload[10] = 0xFF; // edgeCount = -1
+            Assert.Throws<ArgumentException>(() => WorldStateSerializer.Deserialize(payload, out _, out _, out _, out _));
+
+            byte[] huge = WorldStateSerializer.Serialize(clock, memory, arcs, cold);
+            huge[7] = 0xFF;
+            huge[8] = 0xFF;
+            huge[9] = 0xFF;
+            huge[10] = 0x7F; // edgeCount = 0x7FFFFFFF ≫ remaining bytes
+            Assert.Throws<ArgumentException>(() => WorldStateSerializer.Deserialize(huge, out _, out _, out _, out _));
+        }
+
+        [Test]
+        public void Serialize_RefusesNonFiniteInputValue()
+        {
+            // L-2: a NaN SpawnCause.Input.Value must not reach the digest preimage.
+            WorldClock clock = new WorldClock(1u);
+            MemoryStore memory = new MemoryStore();
+            memory.GetOrCreateEdge(Manager, ContactA, OwnedLayers());
+            uint ep = memory.RecordEpisode(Manager, ContactA, EventKind.Benching, 1u, 1);
+            ArcEngine arcs = new ArcEngine(memory);
+            SpawnCause bad = new SpawnCause(7, new[] { new SpawnCause.Input(1, float.NaN) }, 0UL, 1u);
+            arcs.SpawnArc(ArcKind.MediaVendetta, in bad, new[] { new Arc.PinnedEpisode(Manager, ContactA, ep) }, 1u, 10u);
+            ColdStore cold = new ColdStore();
+            Assert.Throws<ArgumentException>(() => WorldStateSerializer.Serialize(clock, memory, arcs, cold));
+        }
+
+        [Test]
         public void Serialize_NullStores_FailLoud()
         {
             BuildWorld(out WorldClock clock, out MemoryStore memory, out ArcEngine arcs, out ColdStore cold);
@@ -347,4 +383,6 @@ namespace TacticalDirector.LivingWorld.Tests
 // |         |            |        | no-draw-on-refusal replay-parity lock); §4.6 serializer       |
 // |         |            |        | round-trip field identity + shared-pin refcount               |
 // |         |            |        | reconstruction + bitwise determinism + fail-loud gates.       |
+// | 1.1     | 2026-07-03 | —      | Slice-3 AR-1 locks: corrupt count-prefix refusal (L-1) +      |
+// |         |            |        | non-finite SpawnCause.Input.Value refusal (L-2).              |
 #endregion

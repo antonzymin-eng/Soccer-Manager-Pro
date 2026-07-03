@@ -1,6 +1,6 @@
 // File:     src/living-world/WorldStateSerializer.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02
+// Modified: 2026-07-03 (slice-3 AR-1: L-1 count-prefix bounds gate, L-2 Input.Value finiteness gate)
 // Author:   —
 // Spec:     Living World System #22 §4.6, Appendix B, FR-LW-009/022/025, Deterministic Simulation #16
 //           §3.2.4.1, Code Standards #20
@@ -98,6 +98,16 @@ namespace TacticalDirector.LivingWorld
                 CanonicalSerializer.WriteI32(payload, ref offset, inputs.Length);
                 for (int k = 0; k < inputs.Length; k++)
                 {
+                    // L-2: Input.Value is the one float in this digest block with no store-seam
+                    // finiteness gate (SpawnArc does not validate it; WriteF32 carries Tier-A
+                    // semantics but does not itself enforce the no-NaN contract). Fail loud rather
+                    // than write a non-finite value into the digest preimage — the negated compare
+                    // rejects NaN and ±Inf (project NaN-gate pattern).
+                    if (!(inputs[k].Value >= float.MinValue && inputs[k].Value <= float.MaxValue))
+                    {
+                        throw new ArgumentException(
+                            "WorldStateSerializer.Serialize: SpawnCause.Input.Value must be finite (Tier-A no-NaN / no-Inf).", nameof(arcs));
+                    }
                     CanonicalSerializer.WriteI16(payload, ref offset, inputs[k].Key);
                     CanonicalSerializer.WriteF32(payload, ref offset, inputs[k].Value);
                 }
@@ -160,7 +170,7 @@ namespace TacticalDirector.LivingWorld
             clock = new WorldClock(CanonicalSerializer.ReadU32(payload, ref offset));
 
             memory = new MemoryStore();
-            int edgeCount = CanonicalSerializer.ReadI32(payload, ref offset);
+            int edgeCount = ReadCount(payload, ref offset);
             for (int i = 0; i < edgeCount; i++)
             {
                 RelationshipEdge edge = default;
@@ -176,13 +186,13 @@ namespace TacticalDirector.LivingWorld
             }
 
             arcs = new ArcEngine(memory);
-            int arcCount = CanonicalSerializer.ReadI32(payload, ref offset);
+            int arcCount = ReadCount(payload, ref offset);
             for (int i = 0; i < arcCount; i++)
             {
                 ArcKind kind = (ArcKind)CanonicalSerializer.ReadU8(payload, ref offset);
                 byte state = CanonicalSerializer.ReadU8(payload, ref offset);
                 ushort triggerId = CanonicalSerializer.ReadU16(payload, ref offset);
-                int inputCount = CanonicalSerializer.ReadI32(payload, ref offset);
+                int inputCount = ReadCount(payload, ref offset);
                 SpawnCause.Input[] inputs = inputCount == 0 ? Array.Empty<SpawnCause.Input>() : new SpawnCause.Input[inputCount];
                 for (int k = 0; k < inputCount; k++)
                 {
@@ -194,7 +204,7 @@ namespace TacticalDirector.LivingWorld
                 }
                 ulong snapshotRef = CanonicalSerializer.ReadU64(payload, ref offset);
                 uint causeTick = CanonicalSerializer.ReadU32(payload, ref offset);
-                int pinCount = CanonicalSerializer.ReadI32(payload, ref offset);
+                int pinCount = ReadCount(payload, ref offset);
                 Arc.PinnedEpisode[] pins = pinCount == 0 ? Array.Empty<Arc.PinnedEpisode>() : new Arc.PinnedEpisode[pinCount];
                 for (int k = 0; k < pinCount; k++)
                 {
@@ -217,7 +227,7 @@ namespace TacticalDirector.LivingWorld
             }
 
             cold = new ColdStore();
-            int coldCount = CanonicalSerializer.ReadI32(payload, ref offset);
+            int coldCount = ReadCount(payload, ref offset);
             for (int i = 0; i < coldCount; i++)
             {
                 ColdSummary summary = default;
@@ -246,6 +256,25 @@ namespace TacticalDirector.LivingWorld
         /// </summary>
         private const EventKind MaxDefinedEventKind = EventKind.PressConferenceTrap;
 
+        /// <summary>
+        /// Reads a length prefix and fail-louds on a corrupt count (L-1): a negative count would
+        /// silently desync the read offset (caught only incidentally by the trailing-byte gate);
+        /// an absurd positive count would throw OverflowException / OutOfMemoryException on the
+        /// element allocation. Every serialized record is ≥ 1 byte, so a valid count can never
+        /// exceed the bytes remaining after the prefix — that conservative upper bound is enforced
+        /// here as a clean ArgumentException, matching the version/tag/trailing fail-loud contract.
+        /// </summary>
+        private static int ReadCount(byte[] payload, ref int offset)
+        {
+            int count = CanonicalSerializer.ReadI32(payload, ref offset);
+            if (count < 0 || count > payload.Length - offset)
+            {
+                throw new ArgumentException(
+                    "WorldStateSerializer.Deserialize: corrupt length prefix (negative, or exceeds the remaining payload).", nameof(payload));
+            }
+            return count;
+        }
+
         private static void WriteEpisodes(byte[] payload, ref int offset, MemoryEpisode[] episodes)
         {
             CanonicalSerializer.WriteI32(payload, ref offset, episodes.Length);
@@ -261,7 +290,7 @@ namespace TacticalDirector.LivingWorld
 
         private static MemoryEpisode[] ReadEpisodes(byte[] payload, ref int offset)
         {
-            int count = CanonicalSerializer.ReadI32(payload, ref offset);
+            int count = ReadCount(payload, ref offset);
             if (count == 0)
             {
                 return Array.Empty<MemoryEpisode>();
@@ -327,4 +356,10 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | FR-LW-018 refcounts reconstructed); fail-loud version/tag/    |
 // |         |            |        | trailing-byte/roster gates. Composite SNAPSHOT_SCHEMA_VERSION |
 // |         |            |        | bump stays at the KD-10 season composition root.              |
+// | 1.1     | 2026-07-03 | —      | Slice-3 AR-1. L-1: ReadCount gates every length prefix        |
+// |         |            |        | (edge/arc/input/pin/episode/cold) — a corrupt count now fails |
+// |         |            |        | loud with ArgumentException instead of desyncing the offset   |
+// |         |            |        | or throwing OverflowException/OOM on the allocation. L-2:     |
+// |         |            |        | SpawnCause.Input.Value finiteness gate at the serialize seam  |
+// |         |            |        | (the one digest-block float with no store-seam NaN gate).     |
 #endregion

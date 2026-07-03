@@ -1,6 +1,6 @@
 // File:     src/living-world/InteractionTextGenerator.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02
+// Modified: 2026-07-03 (slice-3 AR-1 L-3: DrawReserved-failure documented as a corruption abort)
 // Author:   —
 // Spec:     Living World System #22 §3.3 (KD-6), §3.6, FR-LW-011/012/013/016/020, Code Standards #20
 // Purpose:  Deterministic §3.3 surface-text generation: template selection draws from the dedicated
@@ -99,8 +99,15 @@ namespace TacticalDirector.LivingWorld
             }
             if (_rng.DrawReserved(_streamIndex, 0, out ulong draw) != 0)
             {
+                // L-3: UNREACHABLE under the API contract — Reserve(1) above set DeclaredBudget = 1,
+                // so index 0 is always in range. Reaching here means the RNG service's reservation
+                // state is corrupt (an internal invariant violation), NOT one of the ordinary
+                // pre-draw refusals (those all return BEFORE opening the reservation and consume no
+                // cursor). We MUST close the now-open reservation so the stream stays usable for the
+                // next caller; the resulting cursor advance is the deliberate cost of aborting a
+                // corrupt draw, not a silent cursor burn on a normal refusal.
                 _rng.CloseReservation(_streamIndex);
-                throw new InvalidOperationException("InteractionTextGenerator.Generate: world.text draw failed (budget mismatch).");
+                throw new InvalidOperationException("InteractionTextGenerator.Generate: world.text draw failed — corrupt reservation state (internal invariant).");
             }
             _rng.CloseReservation(_streamIndex);
 
@@ -127,4 +134,8 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | selection off the new world.text sub-stream (its first draw   |
 // |         |            |        | site) + slot expansion + §3.2 citation gate. Validation runs  |
 // |         |            |        | pre-draw so refusals consume no cursor.                       |
+// | 1.1     | 2026-07-03 | —      | Slice-3 AR-1 L-3: the (unreachable) DrawReserved-failure       |
+// |         |            |        | branch documented as an internal-invariant corruption abort — |
+// |         |            |        | its CloseReservation cursor advance is deliberate (keeps the  |
+// |         |            |        | stream usable), not a normal pre-draw refusal.                |
 #endregion
