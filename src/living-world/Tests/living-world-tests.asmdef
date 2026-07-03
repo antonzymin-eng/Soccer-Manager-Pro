@@ -3,6 +3,7 @@
     "rootNamespace": "TacticalDirector.LivingWorld.Tests",
     "references": [
         "TacticalDirector.LivingWorld",
+        "TacticalDirector.DeterministicSim",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

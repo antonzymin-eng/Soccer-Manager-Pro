@@ -1,8 +1,9 @@
 // File:     src/living-world/LivingWorldConstants.cs
 // Created:  2026-06-21
-// Modified: 2026-07-02 (slice-2 AR-2 L-1: SALIENCE_REF_THRESHOLD / CLIQUE_THRESHOLD unconsumed notes)
+// Modified: 2026-07-02 (slice 3: Fixed region — world.text stream ids + snapshot format version;
+//           Cross region gains the DomainTagLivingWorld mirror; region order now Fixed→Cross→GT)
 // Author:   —
-// Spec:     Living World System #22 Appendix A, Code Standards #20
+// Spec:     Living World System #22 Appendix A, §3.3, §4.4, §4.6, Code Standards #20
 // Purpose:  Constant catalogue for the living-world layer. No literals in formula code.
 //
 // NOTE: every [GT] magnitude below is ILLUSTRATIVE pending the §7 (G2) balance pass — the reviewed
@@ -18,6 +19,50 @@ namespace TacticalDirector.LivingWorld
     /// </summary>
     public static class LivingWorldConstants
     {
+        #region Fixed
+
+        /// <summary>
+        /// [FIXED] Stable siteId of the aperiodic world.text RNG sub-stream (#22 §3.3 / §4.4,
+        /// FR-LW-020). Registered by <see cref="InteractionTextGenerator"/> — separate from the
+        /// tick-driven world.arcs stream (still the ArcEngine's KD-10 seam) so player-triggered text
+        /// generation never perturbs the arc cursor. #16 §3.2.5.1: the siteId must never change.
+        /// </summary>
+        public const string WORLD_TEXT_STREAM_SITE_ID = "world.text";
+
+        /// <summary>
+        /// [FIXED] world.text stream version (#16 §3.2.5.1 — bumped only if the draw-site ordering
+        /// contract is ever re-authored; a bump invalidates replay parity by design).
+        /// </summary>
+        public const ushort WORLD_TEXT_STREAM_VERSION = 1;
+
+        /// <summary>
+        /// [FIXED] Format version of the §4.6 living-world snapshot block (Appendix B pinned field
+        /// order; ERR-022-002). WorldStateSerializer refuses any other value — bump only with an
+        /// Appendix B order change.
+        /// </summary>
+        public const ushort WORLD_SNAPSHOT_FORMAT_VERSION = 1;
+
+        #endregion
+
+        #region Cross
+
+        /// <summary>
+        /// [CROSS] Living-world hash-domain tag.
+        /// Authoritative source: DeterministicSimConstants.DOMAIN_TAG_LIVING_WORLD.
+        /// Deterministic Simulation #16 §3.4 (allocated per ERR-022-001). Value: 0x1E.
+        /// Single-consumer mirror per Spec #20 §4.2; leads the §4.6 snapshot block.
+        /// </summary>
+        public static readonly byte DomainTagLivingWorld =
+            TacticalDirector.DeterministicSim.DeterministicSimConstants.DOMAIN_TAG_LIVING_WORLD;
+
+        /// <summary>[CROSS: vol-2 §2.1] Clique-formation threshold (mutual edge weight). Consumed, not set here.
+        /// DECLARED-BUT-UNCONSUMED in production (slice-2 AR-2 L-1): its consumer is the
+        /// DressingRoomSplit trigger evaluator reading vol-2 clique state (§3.4), deferred with the
+        /// KD-10 human-systems upstream; the value is a comment-mirror until that assembly exists.</summary>
+        public const float CLIQUE_THRESHOLD = 0.6f;
+
+        #endregion
+
         #region GT (illustrative, pending the §7 balance pass)
 
         /// <summary>[GT] Episodes retained per significant edge (target 8–16). §3.2.</summary>
@@ -30,9 +75,8 @@ namespace TacticalDirector.LivingWorld
         public const float SALIENCE_DECAY_RATE = 0.02f;
 
         /// <summary>[GT] Minimum salience for an episode to be citable in text. §3.3.
-        /// DECLARED-BUT-UNCONSUMED in production (slice-2 AR-2 L-1): its consumer is the §3.3
-        /// InteractionTextGenerator (episode-referencing gate), deferred with the `world.text`
-        /// sub-stream + authored corpus (KD-10 / KD-6).</summary>
+        /// Consumed by InteractionTextGenerator.Generate (the §3.2 referencing gate) since slice 3 —
+        /// the slice-2 AR-2 L-1 unconsumed note is retired.</summary>
         public const float SALIENCE_REF_THRESHOLD = 0.30f;
 
         /// <summary>[GT] Default edge-update responsiveness (volatility v). §3.1.
@@ -57,16 +101,6 @@ namespace TacticalDirector.LivingWorld
 
         // SAVE_SIZE_BUDGET is platform-tuned ([GT], set per-platform by the config-loader; caps
         // live edges + live episodes + cold summaries, §4.5) — not declared as a single literal here.
-
-        #endregion
-
-        #region Cross (vol-2 — consumed read-only; mirrored as comments until the human-systems assembly exists)
-
-        /// <summary>[CROSS: vol-2 §2.1] Clique-formation threshold (mutual edge weight). Consumed, not set here.
-        /// DECLARED-BUT-UNCONSUMED in production (slice-2 AR-2 L-1): its consumer is the
-        /// DressingRoomSplit trigger evaluator reading vol-2 clique state (§3.4), deferred with the
-        /// KD-10 human-systems upstream; the value is a comment-mirror until that assembly exists.</summary>
-        public const float CLIQUE_THRESHOLD = 0.6f;
 
         #endregion
     }
