@@ -7,6 +7,7 @@
         "TacticalDirector.AgentMovement",
         "TacticalDirector.CollisionSystem",
         "TacticalDirector.EventSystem",
+        "TacticalDirector.TestingStrategy",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
