@@ -46,6 +46,12 @@ namespace TacticalDirector.LivingWorld.Tests
             s.RecordInteraction(12, isOwnClub: true, AffinityTrust, EventKind.ContractSnub, 0);
             s.Membership.Depart(12); // no pinned episode ⇒ demotes to cold-store
 
+            // Two player-triggered generations advance the owned world.text cursor so the round-trip
+            // and determinism tests exercise a non-zero stream position.
+            InteractionSlots slots = new InteractionSlots("Boss", "Rivals FC", 1, 2);
+            s.GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots);
+            s.GenerateInteractionText(InteractionIntent.BoardSignalsConfidence, in slots);
+
             s.AdvanceDay();
             s.AdvanceDay();
             return s;
@@ -174,6 +180,124 @@ namespace TacticalDirector.LivingWorld.Tests
             byte[] a = PopulatedStore().Snapshot();
             byte[] b = PopulatedStore().Snapshot();
             CollectionAssert.AreEqual(a, b, "two identically-built stores serialize byte-identically");
+        }
+
+        // ── world.text generation (§3.3) wired into the store ───────────────────────────────
+
+        [Test]
+        public void GenerateInteractionText_ExpandsSlots()
+        {
+            WorldStore s = new WorldStore(Manager);
+            InteractionSlots slots = new InteractionSlots("Boss", "Rivals FC", 1, 2);
+            string text = s.GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots);
+            Assert.IsFalse(string.IsNullOrEmpty(text));
+            StringAssert.Contains("Boss", text);
+            StringAssert.Contains("Rivals FC", text);
+            StringAssert.Contains("1-2", text);
+        }
+
+        [Test]
+        public void GenerateInteractionText_ResumesDeterministicallyAfterRestore()
+        {
+            // PopulatedStore has already advanced the world.text cursor (2 generations). Snapshot at
+            // that position, restore, and confirm the restored stream produces the SAME continuation
+            // as the original — the draw keys on the saved action ordinal (§3.2.5), so a store that
+            // failed to restore the cursor would diverge on the very next generation.
+            WorldStore original = PopulatedStore();
+            WorldStore restored = WorldStore.Restore(original.Snapshot());
+
+            InteractionSlots slots = new InteractionSlots("Boss", "Rivals FC", 0, 3);
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.AreEqual(
+                    original.GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots),
+                    restored.GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots),
+                    "restored world.text stream resumes at the saved cursor");
+            }
+        }
+
+        [Test]
+        public void GenerateInteractionText_DivergesWithWorldSeed()
+        {
+            // The explicit-seed overload plumbs a distinct world.text stream: the same intent/slots at
+            // the same (zero) cursor draw different action-ordinal-keyed values across enough seeds
+            // that at least one selects a different template.
+            InteractionSlots slots = new InteractionSlots("Boss", "Rivals FC", 0, 0);
+            string baseline = new WorldStore(Manager, 1UL)
+                .GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots);
+            bool anyDifferent = false;
+            for (ulong seed = 2UL; seed <= 40UL && !anyDifferent; seed++)
+            {
+                string other = new WorldStore(Manager, seed)
+                    .GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, in slots);
+                anyDifferent = other != baseline;
+            }
+            Assert.IsTrue(anyDifferent, "world seed selects the world.text draw sequence");
+        }
+
+        // ── auto-cited world.text generation (§3.3 referencing) ─────────────────────────────
+
+        // The §3.3 episode clauses (InteractionTextCorpus.EpisodeClause) the auto-cite path appends.
+        private const string CriticismClause = "The public criticism still hangs over the exchange.";
+        private const string BenchingClause = "The benching has not been forgotten.";
+
+        [Test]
+        public void GenerateInteractionText_AutoCite_CitesTheContactsEpisode()
+        {
+            WorldStore s = new WorldStore(Manager);
+            s.RecordInteraction(5, isOwnClub: false, AffinityTrust, EventKind.ManagerCriticism, 11);
+
+            string text = s.GenerateInteractionText(
+                InteractionIntent.MediaProvokeTitlePressure, entityId: 5, "Boss", "Rivals FC", 1, 2);
+
+            StringAssert.Contains("Boss", text);
+            StringAssert.Contains(CriticismClause, text, "the fresh episode clears the salience gate and is cited");
+        }
+
+        [Test]
+        public void GenerateInteractionText_AutoCite_BreaksTiesDeterministically()
+        {
+            WorldStore s = new WorldStore(Manager);
+            // Both recorded on day 0 ⇒ salience 1.0 and worldTick 0 tie; the tiebreak falls through to
+            // the higher episodeId (the Benching episode, allocated second).
+            s.RecordInteraction(5, isOwnClub: false, AffinityTrust, EventKind.ManagerCriticism, 11);
+            s.RecordInteraction(5, isOwnClub: false, AffinityTrust, EventKind.Benching, 12);
+
+            string text = s.GenerateInteractionText(
+                InteractionIntent.MediaProvokeTitlePressure, entityId: 5, "Boss", "Rivals FC", 1, 2);
+
+            StringAssert.Contains(BenchingClause, text, "on a full tie the higher episodeId wins");
+            StringAssert.DoesNotContain(CriticismClause, text);
+        }
+
+        [Test]
+        public void GenerateInteractionText_AutoCite_NoEdge_OmitsCitation()
+        {
+            WorldStore s = new WorldStore(Manager);
+            // Entity 99 has no recorded interaction ⇒ no edge ⇒ nothing citable.
+            string text = s.GenerateInteractionText(
+                InteractionIntent.MediaProvokeTitlePressure, entityId: 99, "Boss", "Rivals FC", 1, 2);
+
+            StringAssert.Contains("Boss", text);
+            StringAssert.DoesNotContain(CriticismClause, text);
+            StringAssert.DoesNotContain(BenchingClause, text);
+        }
+
+        [Test]
+        public void GenerateInteractionText_AutoCite_ResumesDeterministicallyAfterRestore()
+        {
+            // The cited episode is a pure function of the serialized MemoryStore and the draw resumes
+            // at the saved cursor, so an auto-cite call reproduces byte-for-byte across the save boundary.
+            WorldStore original = PopulatedStore();
+            WorldStore restored = WorldStore.Restore(original.Snapshot());
+
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.AreEqual(
+                    original.GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, 5, "Boss", "Rivals FC", 0, 3),
+                    restored.GenerateInteractionText(InteractionIntent.MediaProvokeTitlePressure, 5, "Boss", "Rivals FC", 0, 3),
+                    "auto-cite selection + world.text stream both resume from the restored state");
+            }
         }
 
         // ── fail-loud restore gates ─────────────────────────────────────────────────────────

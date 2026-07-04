@@ -8,6 +8,7 @@
         "TacticalDirector.TacticalInstructions",
         "TacticalDirector.AgentMovement",
         "TacticalDirector.PerceptionSystem",
+        "TacticalDirector.TestingStrategy",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

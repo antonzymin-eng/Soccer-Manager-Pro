@@ -44,11 +44,13 @@ namespace TacticalDirector.LivingWorld
 
         /// <summary>
         /// [FIXED] Format version of the composite <see cref="WorldStore"/> save produced at the KD-10
-        /// season composition root — the §4.6 four-store block PLUS the manager id and the FR-LW-022
-        /// active-set membership roster (which the §4.6 block does not carry). WorldStore refuses any
-        /// other value; bump only when the composite field order changes.
+        /// season composition root — the §4.6 four-store block PLUS the manager id, the world.text RNG
+        /// block (world seed + <see cref="InteractionTextGenerator"/> stream cursor + action ordinal),
+        /// and the FR-LW-022 active-set membership roster (none of which the §4.6 block carries).
+        /// WorldStore refuses any other value; bump only when the composite field order changes.
+        /// v2: added the world.text RNG block (generator wired into the store).
         /// </summary>
-        public const ushort WORLD_STORE_FORMAT_VERSION = 1;
+        public const ushort WORLD_STORE_FORMAT_VERSION = 2;
 
         #endregion
 

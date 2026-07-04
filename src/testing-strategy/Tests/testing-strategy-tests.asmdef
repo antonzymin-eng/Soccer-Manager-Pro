@@ -6,7 +6,10 @@
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.BallPhysics",
         "TacticalDirector.PassMechanics",
-        "TacticalDirector.EventSystem"
+        "TacticalDirector.EventSystem",
+        "TacticalDirector.PositioningAI",
+        "TacticalDirector.PressingAI",
+        "TacticalDirector.TacticalInstructions"
     ],
     "includePlatforms": [
         "Editor"
