@@ -12,10 +12,18 @@
 //           phase output is read into a REAL PressingAITick (#13) snapshot each tick —
 //           the exact FillPositioningSnapshot → Tick → FillPressingSnapshot → Tick
 //           handoff MatchEngine performs. This is the composition surface the two
-//           per-spec suites each verify only their own half of: the #12 corpus ticks
-//           positioning against a static input, and the #13 corpus feeds pressing a
-//           STATIC positioning state (SnapshotFactory baseline slots, never ticked).
-//           Only the chained run verifies that #12's live output actually drives #13.
+//           per-spec suites never run together: the #12 corpus ticks positioning
+//           against a static input, and the #13 corpus feeds pressing a STATIC
+//           positioning state (SnapshotFactory baseline slots, never ticked). Here
+//           both real orchestrators run in sequence with #12's live output wired into
+//           #13's input each tick, and the composed result is checked for structural
+//           well-formedness + two-instance determinism.
+//
+//           SCOPE NOTE: the handoff is exercised by construction (the Step() copy of
+//           #12's slots/lines into the pressing snapshot), NOT asserted by a predicate
+//           — the envelope checks below would still pass if that copy were removed and
+//           pressing read only its static baseline. The value here is that the whole
+//           chain executes end-to-end deterministically, not a consumption proof.
 
 using System;
 using System.Globalization;
@@ -281,11 +289,13 @@ namespace TacticalDirector.TestingStrategy.Tests
 
         // ── scenarios ─────────────────────────────────────────────────────────────────────
 
-        // Drives the composed #12 → #13 chain across 20 ticks and asserts the handoff carries
-        // real data and both halves stay well-formed: (a) Positioning produces a finite,
-        // non-sentinel, on-pitch formation slot for every own agent (the geometry that feeds
-        // Pressing's BaselineSlot); (b) the Pressing directive is bounded; (c) every own
-        // pressing agent carries a defined PressRole. Robust to behaviour — no exact positions.
+        // Runs the composed #12 → #13 chain across 20 ticks and checks both halves stay
+        // well-formed: (a) Positioning produces a finite, non-sentinel, on-pitch formation
+        // slot for every own agent (the geometry Step() wires into Pressing's BaselineSlot);
+        // (b) the Pressing directive is bounded; (c) every own pressing agent carries a
+        // defined PressRole. Robust to behaviour — no exact positions. NOTE: these predicates
+        // check each half independently; they do NOT assert that #13's output depends on the
+        // #12 slots (see the file-header SCOPE NOTE) — the handoff is run, not proven.
         private static void PositioningFeedsPressing(ScenarioContext context)
         {
             var chain = new MechanicsChain();
