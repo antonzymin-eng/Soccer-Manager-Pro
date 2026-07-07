@@ -75,6 +75,34 @@ The following are permanently excluded and require architectural amendment to ad
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | April 20, 2026 | Claude (AI) / Anton | Initial draft of Section 7 future extensions and exclusions. |
+| 1.1 | 2026-07-07 | AI agent | Cheap-item additions: new §7.7 (rest-defense risk dampener) + §7.8 (half-spaces PASS bonus) appended below — both LANDED, not deferrals. |
+
+---
+
+## 7.7 Rest-Defense Risk Dampener — LANDED (cheap-item addition, July 7, 2026)
+
+Motivated by a tactical-theory cross-reference pass: "rest defence" is the defensive structure a team
+leaves behind while attacking. Positioning AI #12's new `RestDefenseEvaluator` (its own §3.5/§7.13)
+judges per-tick whether enough outfield agents sit behind a coverage line while `IN_POSSESSION`. The
+result is routed into a new `TacticalContext.RestDefenseSufficient` field (`Stage0Default` seeds
+`true` = identity — zero-value `bool` default is `false`, NOT identity, same trap class as
+`Mentality`/`Pressing`). `UtilityScorer.ComputeUtility` multiplies PASS/SHOOT/DRIBBLE (only) by
+`TacticalWeights.RestDefenseRiskMult` (`[GT]` 0.85) when insufficient; HOLD/MOVE/PRESS/INTERCEPT are
+unaffected. Sufficient coverage applies no dampening — byte-identical to pre-addition.
+
+## 7.8 Half-Spaces PASS Bonus — LANDED (cheap-item addition, July 7, 2026)
+
+Motivated by the same cross-reference pass: modern positional-play theory treats the half-spaces
+(the lateral corridor between the touchline and the central channel) as the pitch's highest-value
+combination-play zone. Positioning AI #12 already classifies every agent's lateral position into one
+of five `LaneId` lanes (LW/LH/C/RH/RW, each 13.6 m) for formation-slot purposes — already team-relative
+since #12 operates in the per-team canonical attack-toward-+X frame, so no new axis-mirroring risk was
+introduced. A new `TacticalContext.AgentLane` field routes each scoring agent's current lane
+(`Stage0Default` seeds `LaneId.C`, the semantically-correct identity); `decision-tree.asmdef` gains the
+`TacticalDirector.PositioningAI` reference (the first AI-layer → Mechanics-layer reference beyond
+`TacticalInstructions`, permitted by the Physics ← Mechanics ← AI ← UI direction). `UtilityScorer.
+ScorePass` multiplies by `TacticalWeights.LaneMult[(int)AgentLane]` — half-space lanes (LH/RH) carry
+a bonus; central (C) and wide (LW/RW) lanes stay ×1.0.
 
 ---
 

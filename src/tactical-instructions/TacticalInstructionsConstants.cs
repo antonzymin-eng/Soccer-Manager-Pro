@@ -4,6 +4,7 @@
 // Author:   —
 // Spec:     Tactical Instructions #21 Appendix A, §3.2–§3.4, §5.6, Code Standards #20
 // Modified: 2026-06-30 (§5.6 / G2 balance pass — [GT] magnitudes pinned)
+// Modified: 2026-07-07 (+ MarkingOrientationScalar[3])
 // Purpose:  Single constant catalogue for the Tactical Instructions layer. The [GT]
 //           magnitudes are the §5.6 (G2) balance-pass-PINNED Stage-1 defaults (June 30, 2026);
 //           the identity rows are exact 1.0 / 0.0 so a default tactic reproduces today's
@@ -130,6 +131,10 @@ namespace TacticalDirector.TacticalInstructions
         public static readonly float[] LineOfEngagementScalar =
             { 0.80f, 0.90f, 1.00f, 1.10f, 1.20f }; // TODO: replace with config loader (Stage 1)
 
+        /// <summary>[GT] Per-<see cref="MarkingOrientation"/> scalar on #14 MAN_MARK candidate radius; Balanced = identity. §3.4.</summary>
+        public static readonly float[] MarkingOrientationScalar =
+            { 0.80f, 1.00f, 1.20f }; // TODO: replace with config loader (Stage 1)
+
         /// <summary>[GT] Per-<see cref="Duty"/> fore/aft positioning offset (m) {Defend, Support, Attack}; Support = identity. §3.4 / #12.</summary>
         public static readonly float[] DutyForeOffsetM =
             { -3.0f, 0.0f, 3.0f }; // TODO: replace with config loader (Stage 1)
@@ -167,4 +172,6 @@ namespace TacticalDirector.TacticalInstructions
 // |         |            |        |   illustrative → pinned; numerical-mirror invariants documented    |
 // |         |            |        |   (identity-row exactness, strict monotonicity, [0.5,2.0] role     |
 // |         |            |        |   bounds). Locked by BalancePassInvariantsTests.                   |
+// | 1.2     | 2026-07-07 | —      | Cheap-item addition: + MarkingOrientationScalar[3] (§3.4, #14 MAN_ |
+// |         |            |        |   MARK candidate radius); Balanced row = identity ×1.00.           |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/tactical-instructions/TeamTactic.cs
 // Created:  2026-06-21
-// Modified: 2026-06-21
+// Modified: 2026-07-07
 // Author:   —
 // Spec:     Tactical Instructions #21 §2.2.1, §3.2, §3.4, Appendix B, Code Standards #20
 // Purpose:  One team's tactic — the manager input layer. Immutable-per-match input
@@ -73,6 +73,14 @@ namespace TacticalDirector.TacticalInstructions
         /// <summary>Time-wasting dial [0..4] (0 = never … 4 = always). §2.2.1.</summary>
         public byte TimeWasting { get; }
 
+        /// <summary>
+        /// Defensive marking orientation → #14 MAN_MARK candidate radius scalar (new §3.4 axis,
+        /// cheap-item addition). APPENDED after <see cref="TimeWasting"/> so the pre-existing
+        /// Appendix B field order is undisturbed; <see cref="TacticalInstructions.MarkingOrientation.Balanced"/>
+        /// is identity (FR-TI-031).
+        /// </summary>
+        public MarkingOrientation MarkingOrientation { get; }
+
         /// <summary>Constructs a <see cref="TeamTactic"/> in canonical field order (Appendix B).</summary>
         public TeamTactic(
             Mentality mentality,
@@ -90,7 +98,8 @@ namespace TacticalDirector.TacticalInstructions
             TacticTriggerMask triggerPressMask,
             FocusPlay focusPlay,
             GkDistributionPolicy gkDistribution,
-            byte timeWasting)
+            byte timeWasting,
+            MarkingOrientation markingOrientation = MarkingOrientation.Balanced)
         {
             Mentality = mentality;
             Formation = formation;
@@ -108,14 +117,15 @@ namespace TacticalDirector.TacticalInstructions
             FocusPlay = focusPlay;
             GkDistribution = gkDistribution;
             TimeWasting = timeWasting;
+            MarkingOrientation = markingOrientation;
         }
 
         /// <summary>
         /// The balanced identity tactic (§2.2.1): Mentality.Balanced, F442, Tempo.Standard, Width.Standard,
         /// Passing.Mixed, Pressing.Medium, LineOfEngagement.Standard, DefensiveLine 0.5,
         /// DefensiveWidth.Standard, TransitionWon HoldShape / TransitionLost Regroup, OffsideTrap false,
-        /// TriggerPressMask None, FocusPlay.Mixed, GkDistribution.SlowDown, TimeWasting 0. Reproduces
-        /// today's <c>Stage0Default</c> behaviour exactly (FR-TI-031).
+        /// TriggerPressMask None, FocusPlay.Mixed, GkDistribution.SlowDown, TimeWasting 0,
+        /// MarkingOrientation.Balanced. Reproduces today's <c>Stage0Default</c> behaviour exactly (FR-TI-031).
         /// </summary>
         public static TeamTactic Balanced => new TeamTactic(
             Mentality.Balanced,
@@ -133,7 +143,8 @@ namespace TacticalDirector.TacticalInstructions
             TacticTriggerMask.None,
             FocusPlay.Mixed,
             GkDistributionPolicy.SlowDown,
-            0);
+            0,
+            MarkingOrientation.Balanced);
     }
 }
 
@@ -141,4 +152,8 @@ namespace TacticalDirector.TacticalInstructions
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).                               |
 // | 1.1     | 2026-06-21 | —      | AR-1 L-1: <remarks> default(TeamTactic) is not the identity.   |
+// | 1.2     | 2026-07-07 | —      | Cheap-item addition: + MarkingOrientation field (§3.4, #14),   |
+// |         |            |        |   appended after TimeWasting via a defaulted ctor parameter so |
+// |         |            |        |   every existing call site (WithLine/WithWidth factories etc.)|
+// |         |            |        |   stays source-compatible without naming the new arg.         |
 #endregion

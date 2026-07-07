@@ -44,9 +44,46 @@ namespace TacticalDirector.MatchEngine
         {
             // The pin must change deliberately (with a field-set or ordering change), never by drift.
             // v6 Defensive, v7 Attacking, v8 Perception, v9 #21 per-team TeamTactic, v10 #21 per-agent
-            // PlayerTactic (active + pending).
-            Assert.AreEqual(10u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // PlayerTactic (active + pending), v11 #21 TeamTactic.MarkingOrientation appended.
+            Assert.AreEqual(11u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void MarkingOrientation_FeedsSnapshotDigest()
+        {
+            // Baseline: untouched kickoff state (both teams' tactic at the Balanced boot seed, including
+            // the appended MarkingOrientation field).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: only MarkingOrientation differs from Balanced (every other field stays identity)
+            // — isolates the v11 field addition from the v9 TeamTactic test above.
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.SetTeamTactic(0, new TacticalDirector.TacticalInstructions.TeamTactic(
+                TacticalDirector.TacticalInstructions.Mentality.Balanced,
+                TacticalDirector.TacticalInstructions.TacticFormation.F442,
+                TacticalDirector.TacticalInstructions.Tempo.Standard,
+                TacticalDirector.TacticalInstructions.TacticWidth.Standard,
+                TacticalDirector.TacticalInstructions.TacticPassing.Mixed,
+                TacticalDirector.TacticalInstructions.TacticPressing.Medium,
+                TacticalDirector.TacticalInstructions.LineOfEngagement.Standard,
+                0.5f,
+                TacticalDirector.TacticalInstructions.TacticDefWidth.Standard,
+                TacticalDirector.TacticalInstructions.TransitionPlan.HoldShape,
+                TacticalDirector.TacticalInstructions.TransitionPlan.Regroup,
+                false,
+                TacticalDirector.TacticalInstructions.TacticTriggerMask.None,
+                TacticalDirector.TacticalInstructions.FocusPlay.Mixed,
+                TacticalDirector.TacticalInstructions.GkDistributionPolicy.SlowDown,
+                0,
+                TacticalDirector.TacticalInstructions.MarkingOrientation.ManOriented));
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Staging a non-Balanced MarkingOrientation left the digest unchanged — the v11 field is not " +
+                "in the digest preimage.");
         }
 
         [Test]
@@ -341,4 +378,6 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | preimage — a mid-match change is restore-deterministic).            |
 // | 1.7     | 2026-06-30 | —      | #21 §3.3: schema pin 9 → 10; new PlayerTactic_FeedsSnapshotDigest   |
 // |         |            |        | probe (per-agent active/pending tactic in the preimage).            |
+// | 1.8     | 2026-07-07 | —      | Cheap-item addition: schema pin 10 → 11; new MarkingOrientation_    |
+// |         |            |        | FeedsSnapshotDigest probe (appended TeamTactic field in preimage).  |
 #endregion

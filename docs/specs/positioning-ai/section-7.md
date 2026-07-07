@@ -135,3 +135,21 @@ bit-exact parity is deferred to Stage 5+ when Fixed64 lands.
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-16 §7.8 `SHAPE_TRANSITION` retagged Stage 1+ (was inconsistent "Stage 0+1"). |
 | 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | ERR-013-001 back-prop: §7.3 updated — #13 `APPROVED`; `PressDirective?` field in #8 §2.2.6 via Option B; composition contract language made present-tense. |
+| 0.4 | 2026-07-07 | AI agent | Cheap-item addition: new §7.13 (Rest-Defense Coverage Check — LANDED) appended below. |
+
+## 7.13 Rest-Defense Coverage Check — LANDED (cheap-item addition, July 7, 2026)
+
+Unlike §7.1–§7.11 above (Stage 1+/2+/5+ deferrals), this is a **landed** Stage-0 addition, motivated
+by a tactical-theory cross-reference pass: "rest defence" ("restverteidigung") — the defensive
+structure a team leaves behind while attacking, so a counter-attack loss finds cover instead of open
+space.
+
+`RestDefenseEvaluator.Evaluate(snapshot, phase)` (pure static, `src/positioning-ai/RestDefenseEvaluator.cs`)
+counts active outfield agents (goalkeeper excluded) at or behind `REST_DEFENSE_DEPTH_M`
+(`[DERIVED]` = `PITCH_LENGTH_M × REST_DEFENSE_DEPTH_FRACTION` [GT], own-goal-relative, canonical
+attack-toward-+X frame) while the team is `IN_POSSESSION`; returns `true` (sufficient / no dampening)
+for any other phase, since the concept only applies while attacking. `PositioningAITick.Tick()` runs
+it each tick; `GetRestDefenseSufficient()` exposes the result to the match orchestrator, which routes
+it into Decision Tree #8's `TacticalContext.RestDefenseSufficient` (new §3.2/§7.7 in #8) — insufficient
+coverage dampens PASS/SHOOT/DRIBBLE utility via `TacticalWeights.RestDefenseRiskMult`. Sufficient
+(the `Stage0Default` identity, `true`) applies no dampening — byte-identical to pre-addition.

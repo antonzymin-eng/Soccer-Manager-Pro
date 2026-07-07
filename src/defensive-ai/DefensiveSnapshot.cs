@@ -1,14 +1,15 @@
 // File:     src/defensive-ai/DefensiveSnapshot.cs
 // Created:  2026-05-29
-// Modified: 2026-06-29
+// Modified: 2026-07-07
 // Author:   —
-// Spec:     Defensive AI #14 §2.3, §4.4, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022)
+// Spec:     Defensive AI #14 §2.3, §4.4, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022 / FR-TI-033)
 // Purpose:  Full tick input container for DefensiveAITick. Populated once per tick by
 //           the match orchestrator from #7, #12, #13 state before Tick() is called.
 
 using UnityEngine;
 
 using TacticalDirector.PositioningAI;
+using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.DefensiveAI
 {
@@ -92,12 +93,24 @@ namespace TacticalDirector.DefensiveAI
         public bool OffsideTrapRequested;
 
         /// <summary>
+        /// #21 T2 routing field (cheap-item addition, FR-TI-033): the team's manager
+        /// <see cref="MarkingOrientation"/> dial, resolved through
+        /// <see cref="TacticTranslation.MarkRadiusScalar"/> by <see cref="MarkAssigner"/> to scale the
+        /// MAN_MARK candidate radius. <b>Constructor-seeded</b> to
+        /// <see cref="TacticalInstructions.MarkingOrientation.Balanced"/> — the zero-value enum default
+        /// is <c>BallOriented</c> (×0.80), NOT identity, so an un-set snapshot must not rely on the
+        /// field's default value (same zero-value-trap class as #13's <c>PressingSnapshot.LineOfEngagement</c>).
+        /// </summary>
+        public MarkingOrientation MarkingOrientation;
+
+        /// <summary>
         /// Constructs a snapshot with a pre-allocated agents array of the given capacity.
         /// </summary>
         public DefensiveSnapshot(int agentCapacity = DefensiveAIConstants.SQUAD_SIZE)
         {
             Agents     = new DefensiveAgentSnapshot[agentCapacity];
             AgentCount = 0;
+            MarkingOrientation = TacticalInstructions.MarkingOrientation.Balanced;
         }
     }
 }
@@ -111,4 +124,6 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   consumption deferred to §3.7.2 additive-request (doc-only).     |
 // | 1.3     | 2026-06-29 | —      | Doc: OffsideTrapController now consumes the request additively    |
 // |         |            |        |   (reduced dwell when true; false = baseline = neutral).          |
+// | 1.4     | 2026-07-07 | —      | Cheap-item addition: + MarkingOrientation routing field (FR-TI-033),|
+// |         |            |        |   ctor-seeded Balanced (zero-value default is BallOriented).      |
 #endregion

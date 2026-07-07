@@ -1,10 +1,10 @@
 // File:     src/tactical-instructions/Tests/EnumOrdinalStabilityTests.cs
 // Created:  2026-06-21
-// Modified: 2026-06-21
+// Modified: 2026-07-07
 // Author:   —
 // Spec:     Tactical Instructions #21 FR-TI-007, §2.2.4, Code Standards #20
-// Purpose:  Mechanically locks the APPEND-only contract on all 16 instruction enums.
-//           The 14 sequential enums assert (int)Member == N; the 2 [Flags] enums
+// Purpose:  Mechanically locks the APPEND-only contract on all 17 instruction enums.
+//           The 15 sequential enums assert (int)Member == N; the 2 [Flags] enums
 //           assert bit-position stability + the 8-flag byte ceiling (FR-TI-007).
 //           Any mid-insertion fails the suite immediately (#1 ball-physics precedent).
 
@@ -153,6 +153,15 @@ namespace TacticalDirector.TacticalInstructions.Tests
             Assert.AreEqual(2, (int)InstrBias.More);
         }
 
+        [Test]
+        public void MarkingOrientation_OrdinalsAreStable()
+        {
+            // Row index into MarkingOrientationScalar; index 1 is the identity row.
+            Assert.AreEqual(0, (int)MarkingOrientation.BallOriented);
+            Assert.AreEqual(1, (int)MarkingOrientation.Balanced);
+            Assert.AreEqual(2, (int)MarkingOrientation.ManOriented);
+        }
+
         // ── [Flags] enums (assert bit positions + the 8-flag byte ceiling) ────
 
         [Test]
@@ -195,6 +204,7 @@ namespace TacticalDirector.TacticalInstructions.Tests
             Assert.AreEqual(typeof(byte), Enum.GetUnderlyingType(typeof(PlayerRole)));
             Assert.AreEqual(typeof(byte), Enum.GetUnderlyingType(typeof(InstrBias)));
             Assert.AreEqual(typeof(byte), Enum.GetUnderlyingType(typeof(SetPieceDutyFlags)));
+            Assert.AreEqual(typeof(byte), Enum.GetUnderlyingType(typeof(MarkingOrientation)));
         }
 
         [Test]
@@ -233,4 +243,5 @@ namespace TacticalDirector.TacticalInstructions.Tests
 // | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).                                      |
 // | 1.1     | 2026-06-21 | —      | AR-1 L-2: flag-ceiling test was vacuous (`<= 255` holds for any byte  |
 // |         |            |        | enum); now asserts each flag is a single power-of-two bit ≤ 128.      |
+// | 1.2     | 2026-07-07 | —      | Cheap-item addition: + MarkingOrientation ordinal + byte-backing lock.|
 #endregion

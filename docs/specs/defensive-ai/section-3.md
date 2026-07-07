@@ -169,11 +169,14 @@ for each agent in holdShapePool (EntityId-ascending):
         continue
 
     // Step 2: Collect MAN_MARK candidates
-    //   Opponents within MAN_MARK_CANDIDATE_RADIUS_M [GT] AND visible per #7
+    //   Opponents within MAN_MARK_CANDIDATE_RADIUS_M [GT] × MarkingOrientationScalar
+    //   (cheap-item addition, FR-TI-033 — #21 §3.4 MarkingOrientation dial;
+    //   Balanced = ×1.00 identity) AND visible per #7
     manMarkCandidates = []
+    radius = MAN_MARK_CANDIDATE_RADIUS_M * MarkRadiusScalar(team.MarkingOrientation)
     for each opponent in perception.opponents:
         d = distance(agent.position, opponent.position)
-        if d <= MAN_MARK_CANDIDATE_RADIUS_M AND perception.isVisible(opponent.entityId):
+        if d <= radius AND perception.isVisible(opponent.entityId):
             manMarkCandidates.Add(opponent)
 
     // Step 3: Collect INTERCEPT_RUNNER candidates
@@ -1294,3 +1297,4 @@ resolved May 18, 2026.
 | 0.1 | May 17, 2026 | AI agent | Initial draft from `outline-detailed.md` v1.0. All 13 algorithm subsections populated. §3.1 phase gate with `EmitAllZonal` pseudocode. §3.2 HOLD_SHAPE pool filter with GK and press-role exclusion. §3.3 mark-mode assignment with INTERCEPT_RUNNER > MAN_MARK > ZONAL priority. §3.4 displacement cost formula (units m², worked example, valid ranges). §3.5 threat score with perceivedGoalProximity x-axis-only formula and attribute normalisation `(attr-1)/19`; Q3 resolved (attribute range [1–20] → [0,1]). §3.6 tackle intent (COMMIT/JOCKEY/HOLD) with approach-angle and coverage-depth logic; worked example. §3.7 offside trap with four trigger conditions, dwell counter, step-depth formula, two worked examples (fires / blocked). §3.8 last-man predicate with `distToOwnGoal` team-agnostic normalisation; KD-12 formal definition; two worked examples. §3.9 COVER_GK_ZONE override; Q4 resolved (GK zone expressed as distToOwnGoal scalar, team-agnostic). §3.10 anti-chaos three-invariant pass loop (max 3 passes; F4 hard fallback); worked example. §3.11 assignment hysteresis binding to #2 §3.1; dwell-counter + holdTicks state; thrash-prevention worked example. §3.12 constants index with tags. §3.13 per-tick main-loop pseudocode (9 steps). §3.14 this version history. KD-5 Option B resolved via `TacticalContext.MarkDirective?` nullable field mechanism (aligned with #13 Option B per ERR-013-001; #8 §2.2.6 amendment to be filed as ERR-014-001). |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. H1: §3.3.3 Step 1 hysteresis pre-check now guards `mode != ZONAL` to avoid suppressing ZONAL re-evaluation (T-DA-054). H6: §3.7.4 offside trap loop now skips agents with `overriddenThisTick` set, preventing overwrite of last-man/GK-cover emergency assignments. H3: §3.10.3 Invariant 1 condition corrected `> MIN_BACKLINE_AGENTS` → `>= MIN_BACKLINE_AGENTS` (was triggering unnecessary fallbacks when exactly at the minimum). H5: §3.10.3 Invariant 1 demotion candidate argmin now requires `targetEntityId != null AND NOT overriddenThisTick` to prevent null-ref on COVER_GK_ZONE assignments and respect emergency overrides. M4: §3.3.3 Step 7 `ApplyHysteresisGate` call now passes `targetPosition = perception.GetAgent(bestTarget).position` (was missing, causing null targetPosition in non-ZONAL assignments). M5: §3.10.3 Invariant 3 displacement check now skips agents with `overriddenThisTick` set. |
 | 0.3 | May 17, 2026 | AI agent | PASS-2 adversarial review fix pass. PASS-2-H1: §3.13 now includes Step 3b that explicitly resets `overriddenThisTick = false` for all pool slots before Steps 4/4a set emergency overrides — without this, stale `true` values from the previous tick would cause Step 5 to incorrectly skip non-emergency agents. PASS-2-M1: §3.10.3 Invariant 1 demotion now checks `eligiblePool is empty` before calling `argmin` — if all non-ZONAL DEFENSE-line agents have `overriddenThisTick = true`, a `break` exits the pass loop and allows the F4 post-loop check to handle the residual invariant violation, rather than crashing on an empty argmin. |
+| 0.4 | 2026-07-07 | AI agent | Cheap-item addition (FR-TI-033): §3.3.3 Step 2 MAN_MARK candidate radius scaled by `MarkRadiusScalar(TeamTactic.MarkingOrientation)` — Balanced ⇒ ×1.00 identity, byte-identical to pre-addition. Implemented in `src/defensive-ai/TacticTranslation.cs` + `MarkAssigner.cs`. |

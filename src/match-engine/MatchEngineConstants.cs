@@ -135,8 +135,12 @@ namespace TacticalDirector.MatchEngine
         /// <c>SetPlayerTactic</c> staged but not yet committed at a stride boundary), ×SQUAD_SIZE each, in
         /// Appendix B field order. A per-agent tactic changed MID-match is now restore-deterministic. The team
         /// <c>Tempo</c> carried in the Decision Tree <c>TacticalContext</c> still needs NO field — it is
-        /// re-assembled each AI tick from the serialized team tactic plus the boot identity.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 10;
+        /// re-assembled each AI tick from the serialized team tactic plus the boot identity.
+        ///
+        /// v11 (2026-07-07, cheap-item addition) appends <c>TeamTactic.MarkingOrientation</c> to the
+        /// per-team WriteTeamTactic field list (§3.4, #14 MAN_MARK candidate radius). Appended after
+        /// TimeWasting so no prior field's byte offset moves.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 11;
 
         #endregion
 

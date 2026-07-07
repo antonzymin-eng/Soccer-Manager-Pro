@@ -122,3 +122,17 @@ per §4.6). Cross-platform bit-exact parity is deferred to Stage
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. `ERR-013-004` filed: "Fatigue System #13" stale reference verified present at `decision-tree/section-3-1.md` L753. |
+| 0.2 | 2026-07-07 | AI agent | Cheap-item addition: new §7.12 (curving-press blind-side bias) appended below — LANDED, not a deferral. |
+
+## 7.12 Curving-Press Blind-Side Bias — LANDED (cheap-item addition, July 7, 2026)
+
+Motivated by a tactical-theory cross-reference pass: pressing intelligently from a defender's blind
+side (approaching from behind their facing direction) reduces reaction time and denies the easy
+outlet pass, versus a straight-on approach the ball-carrier sees coming. `BlindSideApproach.ApplyBias`
+(pure static, `src/pressing-ai/BlindSideApproach.cs`) reads the ball carrier's `Facing` (already
+carried on `PressingAgentSnapshot` for both teams) and nudges the primary presser's approach target
+`BlindSideApproachBiasM` (`[GT]` 1.0 m) in the direction opposite the carrier's facing. Applied in
+`PressingAITick` Step 3 **after** `PrimaryPressSelector.Select` returns — the bias affects only the
+final movement target, never who is selected as primary presser (the selection cost function is
+unchanged). A degenerate (near-zero) facing vector, an inactive carrier, or no carrier at all leaves
+the target unchanged.

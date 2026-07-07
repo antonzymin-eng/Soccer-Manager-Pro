@@ -1,6 +1,6 @@
 // File:     src/tactical-instructions/Tests/FactoryIdentityTests.cs
 // Created:  2026-06-21
-// Modified: 2026-06-21
+// Modified: 2026-07-07
 // Author:   —
 // Spec:     Tactical Instructions #21 §2.2, §3.2–§3.4, Appendix A, FR-TI-031, Code Standards #20
 // Purpose:  Locks the identity factories (TeamTactic.Balanced / PlayerTactic.Default /
@@ -40,6 +40,7 @@ namespace TacticalDirector.TacticalInstructions.Tests
             Assert.AreEqual(FocusPlay.Mixed, t.FocusPlay);
             Assert.AreEqual(GkDistributionPolicy.SlowDown, t.GkDistribution);
             Assert.AreEqual(0, t.TimeWasting);
+            Assert.AreEqual(MarkingOrientation.Balanced, t.MarkingOrientation);
         }
 
         // ── PlayerInstructions.Default (§2.2.2) ───────────────────────────────
@@ -202,4 +203,5 @@ namespace TacticalDirector.TacticalInstructions.Tests
 // | 1.0     | 2026-06-21 | —      | Initial implementation (T0 #21).                                   |
 // | 1.1     | 2026-06-21 | —      | AR-1 L-1: default-struct-is-not-identity locks (PlayerInstructions |
 // |         |            |        | man-mark-on-0 hazard; default TeamTactic ≠ Balanced).             |
+// | 1.2     | 2026-07-07 | —      | Cheap-item addition: + MarkingOrientation.Balanced identity assert.|
 #endregion

@@ -1,8 +1,8 @@
 // File: src/positioning-ai/PositioningAIConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-07-07
 // Author:   —
-// Spec: #12 Positioning AI §6.1, Appendix B
+// Spec: #12 Positioning AI §6.1, Appendix B, new §3.5/§7.13 rest-defense coverage (cheap-item addition)
 // Purpose: Single constant catalogue for Spec #12. All scalars, formation tables, and lookup arrays.
 //          Per FR-PA-011 / KD-17 / #20 §4.2 FR-CS-025: NO second constant file may exist for this spec.
 
@@ -61,6 +61,13 @@ namespace TacticalDirector.PositioningAI
 
         /// <summary>[DERIVED] Upper clamp bound for slot Y. = PITCH_WIDTH_M − PITCH_TOUCHLINE_MARGIN_M.</summary>
         public const float SLOT_Y_MAX = PITCH_WIDTH_M - PITCH_TOUCHLINE_MARGIN_M;
+
+        /// <summary>
+        /// [DERIVED] Rest-defense coverage line (m), own-goal-relative, in the team's canonical
+        /// attack-toward-+X frame. Formula: PITCH_LENGTH_M * REST_DEFENSE_DEPTH_FRACTION. Cheap-item
+        /// addition (§3.5, new §7.13 rest-defense coverage check).
+        /// </summary>
+        public const float REST_DEFENSE_DEPTH_M = PITCH_LENGTH_M * REST_DEFENSE_DEPTH_FRACTION;
 
         #endregion
 
@@ -143,6 +150,22 @@ namespace TacticalDirector.PositioningAI
 
         /// <summary>[GT] Ticks the candidate lane must be observed outside dead zone before committing. Separate from LINE_DWELL_TICKS for independent tuning.</summary>
         public const int LANE_DWELL_TICKS = 5;
+
+        // ── Rest defense (cheap-item addition, new §3.5 / §7.13) ──────────────────
+
+        /// <summary>
+        /// [GT] Fraction of PITCH_LENGTH_M (own-goal-relative) counted as "sufficient defensive cover"
+        /// while the team is in possession — an outfield agent at or behind this line contributes to
+        /// rest-defense coverage. See <see cref="REST_DEFENSE_DEPTH_M"/>.
+        /// </summary>
+        public const float REST_DEFENSE_DEPTH_FRACTION = 0.40f;
+
+        /// <summary>
+        /// [GT] Minimum count of outfield agents at/behind REST_DEFENSE_DEPTH_M for the team's rest-
+        /// defense coverage to be judged sufficient (RestDefenseEvaluator). Mirrors the "2+3"/"3+2"
+        /// coverage structures observed in modern positional play.
+        /// </summary>
+        public const int REST_DEFENSE_MIN_COUNT = 3;
 
         // ── Phase-indexed compactness baselines (4 rows: InPoss/OutOfPoss/TransToAtk/TransToDef) ─
 
@@ -425,4 +448,6 @@ namespace TacticalDirector.PositioningAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-07-07 | —      | Cheap-item addition: + REST_DEFENSE_DEPTH_FRACTION / _MIN_COUNT   |
+// |         |            |        |   [GT] + REST_DEFENSE_DEPTH_M [DERIVED] (§3.5/§7.13).              |
 #endregion

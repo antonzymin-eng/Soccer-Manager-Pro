@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/MarkAssigner.cs
 // Created:  2026-05-29
-// Modified: 2026-06-12
+// Modified: 2026-07-07
 // Author:   —
-// Spec:     Defensive AI #14 §3.3, §3.4, §3.5, §4.3, Code Standards #20
+// Spec:     Defensive AI #14 §3.3, §3.4, §3.5, §4.3, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-033)
 // Purpose:  Pure static module: implements the mark-mode assignment algorithm (§3.3),
 //           displacement cost (§3.4), and threat score (§3.5) for the HOLD_SHAPE pool.
 
@@ -110,8 +110,11 @@ namespace TacticalDirector.DefensiveAI
             Vector2  bestPos     = Vector2.zero;
 
             int defensiveTeam = snapshot.DefensiveTeamId;
-            float manMarkRadSq = DefensiveAIConstants.ManMarkCandidateRadiusM
-                               * DefensiveAIConstants.ManMarkCandidateRadiusM;
+            // Cheap-item addition (FR-TI-033): the #21 MarkingOrientation dial scales the MAN_MARK
+            // candidate radius (Balanced ⇒ ×1.0, identity — byte-identical to pre-addition).
+            float orientationScalar = TacticTranslation.MarkRadiusScalar(snapshot.MarkingOrientation);
+            float manMarkRadius = DefensiveAIConstants.ManMarkCandidateRadiusM * orientationScalar;
+            float manMarkRadSq = manMarkRadius * manMarkRadius;
 
             for (int i = 0; i < snapshot.AgentCount; i++)
             {
@@ -275,4 +278,6 @@ namespace TacticalDirector.DefensiveAI
 // | 1.3     | 2026-06-15 | —      | AR-2 sweep L: ZONAL bypass now resets hysteresis[p] (§3.11.3). A non-ZONAL candidate  |
 // |         |            |        |   accumulator (HoldTicks/CandidateMode) surviving a ZONAL tick let the next            |
 // |         |            |        |   re-acquisition of the same opponent commit MAN_MARK immediately, skipping the dwell. |
+// | 1.4     | 2026-07-07 | —      | Cheap-item addition (FR-TI-033): MAN_MARK candidate radius scaled by                  |
+// |         |            |        |   TacticTranslation.MarkRadiusScalar(snapshot.MarkingOrientation); Balanced ⇒ ×1.0.     |
 #endregion

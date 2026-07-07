@@ -6,6 +6,7 @@
 // Modified: 2026-06-29 (#21 T2 Positioning (#12) Phase-D writer — route TeamTactic.Width / DefensiveWidth → ContextModifierInputs; all three writers now closed)
 // Modified: 2026-06-29 (#21 §3.3 team-Tempo routing + ERR-021-002: SNAPSHOT_SCHEMA_VERSION 8 → 9, per-team active+pending TeamTactic serialized)
 // Modified: 2026-06-30 (#21 §3.3 per-agent PlayerTactic config surface (SetPlayerTactic) + §3.4 DefensiveLine depth recompute; SNAPSHOT_SCHEMA_VERSION 9 → 10)
+// Modified: 2026-07-07 (Cheap-item additions: #14 MarkingOrientation routing (SNAPSHOT_SCHEMA_VERSION 10 → 11) + #12 rest-defense coverage routed into TacticalContext)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -783,6 +784,21 @@ namespace TacticalDirector.MatchEngine
         /// SetTeamTactic reaches the defensive input and the Balanced default (false) is the identity.</summary>
         internal bool TestOnly_OffsideTrapRequested(int teamId) => _defSnapshots[teamId].OffsideTrapRequested;
 
+        /// <summary>Test-only: the #21 MarkingOrientation dial routed into team <paramref name="teamId"/>'s
+        /// Defensive AI (#14) snapshot at the last AI tick — lets the Phase-D writer test prove
+        /// SetTeamTactic reaches the defensive input and the Balanced default is the identity.</summary>
+        internal TacticalDirector.TacticalInstructions.MarkingOrientation TestOnly_MarkingOrientation(int teamId) =>
+            _defSnapshots[teamId].MarkingOrientation;
+
+        /// <summary>Test-only: the cheap-item Positioning AI (#12) rest-defense coverage result routed
+        /// into team <paramref name="teamId"/>'s agents' TacticalContext at the last AI tick.</summary>
+        internal bool TestOnly_RestDefenseSufficient(int teamId) => _positioning[teamId].GetRestDefenseSufficient();
+
+        /// <summary>Test-only: the cheap-item half-spaces AgentLane routed into agent
+        /// <paramref name="agentId"/>'s TacticalContext at the last AI tick.</summary>
+        internal TacticalDirector.PositioningAI.LaneId TestOnly_AgentLane(int agentId) =>
+            _tacticalContexts[agentId].AgentLane;
+
         /// <summary>Test-only: the #21 FocusPlay routed into team <paramref name="teamId"/>'s Attacking
         /// AI (#15) snapshot at the last AI tick — lets the Phase-D writer test prove SetTeamTactic
         /// reaches the attacking input and the Balanced default (Mixed) is the identity.</summary>
@@ -1049,6 +1065,11 @@ namespace TacticalDirector.MatchEngine
                     ctx.DefensiveLineDepth = mark.OffensiveLineDepth;
                     ctx.HasMarkDirective   = !teamHasPossession;
                     ctx.HasAttackIntent    = HasActiveAttackIntent(_attacking[t].GetIntent(i));
+                    // Cheap-item addition (new §3.2/§7.7): Positioning AI #12's rest-defense coverage
+                    // check, computed once per team per stride, routed to every agent's context.
+                    ctx.RestDefenseSufficient = _positioning[t].GetRestDefenseSufficient();
+                    // Cheap-item addition (new §3.2/§7.8 half-spaces): this agent's own lane.
+                    ctx.AgentLane          = _positioning[t].GetLane(i);
                     _tacticalContexts[i]   = ctx;
                 }
             }
@@ -1212,6 +1233,12 @@ namespace TacticalDirector.MatchEngine
             snap.OffsideTrapRequested    =
                 TacticalDirector.DefensiveAI.TacticTranslation.OffsideTrapRequested(
                     _activeTeamTactics[team].OffsideTrap);
+
+            // Cheap-item addition (2026-07-07): routes the team's MarkingOrientation dial into the
+            // #14 MAN_MARK candidate radius (MarkAssigner scales DefensiveAIConstants.ManMarkCandidateRadiusM
+            // by TacticTranslation.MarkRadiusScalar(MarkingOrientation)). Balanced ⇒ ×1.0, byte-identical
+            // to pre-addition (FR-TI-031).
+            snap.MarkingOrientation      = _activeTeamTactics[team].MarkingOrientation;
 
             int gkEntity = MatchEngineConstants.NO_POSSESSION;
             Vector2 gkPos = Vector2.zero;
@@ -1921,6 +1948,7 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.FocusPlay);
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.GkDistribution);
             CanonicalSerializer.WriteU8 (buf, ref o, t.TimeWasting);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.MarkingOrientation);
         }
 
         /// <summary>Serializes the full <see cref="BallState"/> field set in canonical order.
@@ -2904,4 +2932,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | accessors gain the public-surface roster-index guard            |
 // |         |            |        | (ArgumentOutOfRangeException, parallel to SetPlayerTactic)      |
 // |         |            |        | instead of a bare IndexOutOfRangeException from the array.      |
+// | 1.26    | 2026-07-07 | —      | Cheap-item additions (tactical-theory cross-reference follow-up): |
+// |         |            |        | (a) #14 MarkingOrientation appended to WriteTeamTactic + routed |
+// |         |            |        | into FillDefensiveSnapshot (SNAPSHOT_SCHEMA_VERSION 10 → 11);   |
+// |         |            |        | (b) Positioning AI #12 rest-defense coverage (GetRestDefense-   |
+// |         |            |        | Sufficient) + (c) each agent's own GetLane (half-spaces, new    |
+// |         |            |        | §3.2/§7.8) routed into every agent's TacticalContext each      |
+// |         |            |        | stride. New TestOnly_MarkingOrientation / _RestDefenseSufficient|
+// |         |            |        | seams. Balanced/default/LaneId.C ⇒ identity, byte-identical to  |
+// |         |            |        | pre-addition.                                                   |
 #endregion
