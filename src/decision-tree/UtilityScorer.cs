@@ -1,8 +1,9 @@
 // File:     src/decision-tree/UtilityScorer.cs
 // Created:  2026-05-29
 // Modified: 2026-06-28 (#21 T2 mentality risk multiplier)
+// Modified: 2026-07-07 (cheap-item addition: rest-defense risk dampener)
 // Author:   —
-// Spec:     Decision Tree #8 §3.2, §3.4, Tactical Instructions #21 §3.2, Code Standards #20
+// Spec:     Decision Tree #8 §3.2, §3.4, new §3.2/§7.7, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Step 4 of the 6-step pipeline. Applies the utility scoring model to each
 //           ActionOption, populating BaseUtility. Pure function: no side effects.
 
@@ -64,6 +65,15 @@ namespace TacticalDirector.DecisionTree
             u *= TacticTranslation.PlayerTacticActionMultiplier(
                 ctx.TacticalContext.PlayerTactic, ctx.TacticalContext.Tempo, opt.Type);
 
+            // Cheap-item addition (new §3.2/§7.7): Positioning AI #12's rest-defense coverage check
+            // dampens PASS/SHOOT/DRIBBLE when insufficient cover is left behind. Sufficient (the
+            // Stage0Default identity, true) applies no dampening — byte-identical to pre-addition.
+            if (!ctx.TacticalContext.RestDefenseSufficient
+                && (opt.Type == ActionType.PASS || opt.Type == ActionType.SHOOT || opt.Type == ActionType.DRIBBLE))
+            {
+                u *= TacticalWeights.RestDefenseRiskMult;
+            }
+
             float clamped = Mathf.Clamp(u, UtilityWeights.UTILITY_FLOOR, UtilityWeights.UTILITY_CEILING);
 
             // AR-3 L: Mathf.Clamp passes NaN through (NaN comparisons are false), so a
@@ -94,7 +104,12 @@ namespace TacticalDirector.DecisionTree
             float tactM = TacticalModifierResolver.Resolve(
                 ActionType.PASS, in ctx.TacticalContext, ctx.OpponentHasBall, opt.IntendedDistance);
 
-            return baseU * am * contextM * tactM * (1.0f - risk);
+            // Cheap-item addition (new §3.2/§7.8): half-space lane bonus. The passer's own lane
+            // (Positioning AI #12, already team-relative) — LH/RH carry a combination-play bonus;
+            // C/LW/RW are ×1.0 (the Stage0Default identity, LaneId.C).
+            float laneM = TacticalWeights.LaneMult[(int)ctx.TacticalContext.AgentLane];
+
+            return baseU * am * contextM * tactM * laneM * (1.0f - risk);
         }
 
         // ── §3.2.3 SHOOT ───────────────────────────────────────────────────────
@@ -360,4 +375,9 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | × team tempo product) before the clamp. Identity PlayerTactic + Tempo.Standard |
 // |         |            |        | ⇒ ×1.0 (FR-TI-031), behaviour-neutral. Magnitudes illustrative (G2).           |
 // | 1.7     | 2026-06-30 | —      | #21 §5.6 / G2 balance pass: doc reframed illustrative → pinned (no code change).|
+// | 1.8     | 2026-07-07 | —      | Cheap-item addition: PASS/SHOOT/DRIBBLE × RestDefenseRiskMult when            |
+// |         |            |        |   TacticalContext.RestDefenseSufficient is false (new §3.2/§7.7). Sufficient |
+// |         |            |        |   (the Stage0Default identity) applies no dampening.                          |
+// | 1.9     | 2026-07-07 | —      | Cheap-item addition: ScorePass × TacticalWeights.LaneMult[AgentLane] (new     |
+// |         |            |        |   §3.2/§7.8 half-spaces). C/LW/RW ⇒ ×1.0 identity; LH/RH ⇒ bonus.            |
 #endregion

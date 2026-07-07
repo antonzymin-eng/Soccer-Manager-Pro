@@ -1,14 +1,15 @@
 // File:     src/decision-tree/TacticalContext.cs
 // Created:  2026-05-29
-// Modified: 2026-06-28
+// Modified: 2026-07-07
 // Author:   —
-// Spec:     Decision Tree #8 §2.2.6, Tactical Instructions #21 §3.2, Code Standards #20
+// Spec:     Decision Tree #8 §2.2.6, new §3.2/§7.7/§7.8, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Team tactical instructions delivered to each agent's Decision Tree.
 //           Stage 0: hardcoded defaults via Stage0Default(formationSlot).
 //           Stage 1+: Formation System (Positioning AI #12) populates live values.
 
 using UnityEngine;
 
+using TacticalDirector.PositioningAI;
 using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.DecisionTree
@@ -69,6 +70,29 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public PlayerTactic PlayerTactic;
 
+        /// <summary>
+        /// Cheap-item addition (new §3.2/§7.7): whether Positioning AI #12's rest-defense coverage
+        /// check judged the team's shape sufficient this tick (<c>RestDefenseEvaluator</c>).
+        /// <see cref="Stage0Default"/> seeds <c>true</c> (no dampening — identity, FR-TI-031-style).
+        /// NOTE: the zero-value <c>bool</c> default is <c>false</c>, NOT identity — like
+        /// <see cref="Mentality"/> and <see cref="Pressing"/>, this field is only valid when the
+        /// struct is built via the factory; never consume a <c>default(TacticalContext)</c>.
+        /// <c>false</c> applies <see cref="TacticalWeights.RestDefenseRiskMult"/> to PASS/SHOOT/DRIBBLE
+        /// in UtilityScorer.
+        /// </summary>
+        public bool RestDefenseSufficient;
+
+        /// <summary>
+        /// Cheap-item addition (new §3.2/§7.8 half-spaces): this agent's current Positioning AI #12
+        /// lane (<c>LaneId</c> — LW/LH/C/RH/RW, already team-relative since Positioning AI operates in
+        /// the per-team canonical attack-toward-+X frame). <see cref="Stage0Default"/> seeds
+        /// <see cref="LaneId.C"/> (no half-space bonus — same numeric identity as the zero-value
+        /// default, <c>LaneId.LW</c>, since both index to ×1.0 in <c>TacticalWeights.LaneMult</c>, but
+        /// <c>C</c> is seeded explicitly for semantic honesty). Consumed by UtilityScorer's PASS
+        /// scoring: LH/RH apply <see cref="TacticalWeights.LaneMult"/>'s half-space bonus.
+        /// </summary>
+        public LaneId AgentLane;
+
         // ── Formation Slot ────────────────────────────────────────────────────
 
         /// <summary>
@@ -106,6 +130,8 @@ namespace TacticalDirector.DecisionTree
                 Mentality          = Mentality.Balanced,
                 Tempo              = Tempo.Standard,
                 PlayerTactic       = PlayerTactic.Default(PlayerRole.Default),
+                RestDefenseSufficient = true,
+                AgentLane          = LaneId.C,
                 _formationSlot     = formationSlot,
                 HasMarkDirective   = false,
                 HasAttackIntent    = false
@@ -157,4 +183,9 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   option §3.3 utility product in UtilityScorer. Behaviour-neutral.           |
 // | 1.4     | 2026-06-30 | —      | #21 §3.3: PlayerTactic field doc updated — the per-agent config surface now  |
 // |         |            |        |   exists (MatchEngine.SetPlayerTactic / PlayerTacticConfig). No code change. |
+// | 1.5     | 2026-07-07 | —      | Cheap-item addition: + RestDefenseSufficient routing field (new §3.2/§7.7), |
+// |         |            |        |   Stage0Default seeds true (identity); consumed in UtilityScorer.           |
+// | 1.6     | 2026-07-07 | —      | Cheap-item addition: + AgentLane (LaneId) routing field (new §3.2/§7.8     |
+// |         |            |        |   half-spaces), Stage0Default seeds LaneId.C; decision-tree.asmdef gains    |
+// |         |            |        |   the PositioningAI reference.                                              |
 #endregion

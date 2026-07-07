@@ -1,8 +1,8 @@
 // File:     src/decision-tree/TacticalWeights.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-07-07
 // Author:   —
-// Spec:     Decision Tree #8 §3.4.7, Code Standards #20
+// Spec:     Decision Tree #8 §3.4.7, new §3.2/§7.7, Code Standards #20
 // Purpose:  All tactical context modifier constants (§3.4) and dispatch constants (§3.5).
 //           22 constants total: 16 tactical + 6 dispatch/movement. All [GT].
 //           (AR-2 L: the spec §3.4.7 table claims 23 but lists 22 rows — the v1.1
@@ -52,6 +52,21 @@ namespace TacticalDirector.DecisionTree
         public const float PlacementCornerOffset   = 0.1f; // [GT] inward nudge from post/bar for PlacementTarget
         public const float MoveSprintThreshold     = 15.0f; // [GT] m; distance above which agent sprints
         public const float MoveJogThreshold        = 6.0f;  // [GT] m; distance above which agent jogs
+
+        // ── Rest Defense (cheap-item addition, new §3.2/§7.7) ───────────────
+
+        public const float RestDefenseRiskMult = 0.85f; // [GT] PASS/SHOOT/DRIBBLE dampener when Positioning AI #12 rest-defense coverage is insufficient
+
+        // ── Half-Spaces (cheap-item addition, new §3.2/§7.8) ────────────────
+
+        /// <summary>
+        /// [GT] Per-<c>LaneId</c> PASS utility multiplier (LW=0, LH=1, C=2, RH=3, RW=4). Half-space
+        /// lanes (LH/RH) carry a bonus reflecting their combination-play value; wide (LW/RW) and
+        /// central (C) lanes are neutral (×1.0 — also the zero-value <c>LaneId</c> default, LW, so an
+        /// un-set lane is numerically harmless even though <c>TacticalContext.Stage0Default</c> seeds
+        /// the semantically-correct <c>C</c>).
+        /// </summary>
+        public static readonly float[] LaneMult = { 1.00f, 1.10f, 1.00f, 1.10f, 1.00f };
     }
 }
 
@@ -60,4 +75,8 @@ namespace TacticalDirector.DecisionTree
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-06-11 | —      | Audit AR-2 L: constant tally corrected 23 → 22 (16 tactical + 6 dispatch);  |
 // |         |            |        |   the spec §3.4.7 22-row table claiming 23 is filed as ERR-008-010.          |
+// | 1.2     | 2026-07-07 | —      | Cheap-item addition: + RestDefenseRiskMult (new §3.2/§7.7, rest-defense    |
+// |         |            |        |   dampener on PASS/SHOOT/DRIBBLE).                                          |
+// | 1.3     | 2026-07-07 | —      | Cheap-item addition: + LaneMult[5] (new §3.2/§7.8 half-spaces, PASS bonus  |
+// |         |            |        |   for LH/RH lanes).                                                         |
 #endregion

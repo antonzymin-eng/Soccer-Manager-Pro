@@ -27,6 +27,24 @@ namespace TacticalDirector.DefensiveAI
         /// is the behaviour-neutral default, FR-TI-031).
         /// </summary>
         public static bool OffsideTrapRequested(bool offsideTrap) => offsideTrap;
+
+        /// <summary>
+        /// §3.4 (cheap-item addition, FR-TI-033): <see cref="MarkingOrientation"/> → multiplicative
+        /// scalar on the #14 MAN_MARK candidate radius (<c>DefensiveAIConstants.ManMarkCandidateRadiusM</c>).
+        /// Direct ordinal lookup into <see cref="TacticalInstructionsConstants.MarkingOrientationScalar"/>
+        /// (Balanced ⇒ ×1.0, identity, FR-TI-031); a ball-oriented team narrows the radius (favours
+        /// ZONAL/ball-side coverage), a man-oriented team widens it (commits tighter to individuals).
+        /// F5: an out-of-range ordinal clamps to the boldest peer.
+        /// </summary>
+        public static float MarkRadiusScalar(MarkingOrientation orientation)
+            => TacticalInstructionsConstants.MarkingOrientationScalar[
+                   ClampIndex((int)orientation, TacticalInstructionsConstants.MarkingOrientationScalar.Length)];
+
+        private static int ClampIndex(int index, int count)
+        {
+            if (index < 0) return 0;
+            return index >= count ? count - 1 : index;
+        }
     }
 }
 
@@ -34,4 +52,7 @@ namespace TacticalDirector.DefensiveAI
 // | Version | Date       | Author | Notes                                                            |
 // | 1.0     | 2026-06-29 | —      | Initial T2 consumer seam: OffsideTrap → #14 trap request          |
 // |         |            |        |   (bool passthrough, false identity; KD-9 request-not-guarantee). |
+// | 1.1     | 2026-07-07 | —      | Cheap-item addition: + MarkRadiusScalar(MarkingOrientation) →     |
+// |         |            |        |   #14 MAN_MARK candidate radius scalar (direct ordinal lookup,    |
+// |         |            |        |   §3.1 F5 clamp; Balanced ⇒ ×1.0 identity).                       |
 #endregion

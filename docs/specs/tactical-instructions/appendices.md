@@ -39,6 +39,7 @@ magnitudes are not pinned until the balance pass. Region order Fixed → Derived
 | `WidthScalar[5]` | [GT] | {0.85,0.92,1.00,1.08,1.15} | §3.4 / #12 |
 | `DefWidthScalar[3]` | [GT] | {0.90,1.00,1.10} | §3.4 / #12 |
 | `LineOfEngagementScalar[5]` | [GT] | {0.80,0.90,1.00,1.10,1.20} | §3.4 / #13 |
+| `MarkingOrientationScalar[3]` | [GT] | {0.80,1.00,1.20} | §3.4 / #14 MAN_MARK candidate radius (cheap-item addition, FR-TI-033) |
 | `DutyForeOffsetM[3]` | [GT] | {−3.0, 0.0, +3.0} | §3.4 / #12 (Defend/Support/Attack) |
 | `DutyAggressionBias[3]` | [GT] | {−0.05, 0.0, +0.05} | §3.4 / #8 |
 | `RoleWeightModifiers[PlayerRole][ActionType]` | [GT] | table A.4 | §3.3 / #8 |
@@ -64,11 +65,19 @@ All cells ∈ [0.5, 2.0] (T-TI-U-029). Magnitudes illustrative; directions are t
 
 When match-engine Phase D serializes tactics, the order is: **TeamTactic** (Mentality, Formation, Tempo,
 Width, Passing, Pressing, LineOfEngagement, DefensiveLine, DefensiveWidth, TransitionWon, TransitionLost,
-OffsideTrap, TriggerPressMask, FocusPlay, GkDistribution, TimeWasting) → **per agent PlayerTactic**
+OffsideTrap, TriggerPressMask, FocusPlay, GkDistribution, TimeWasting, **MarkingOrientation**) → **per agent PlayerTactic**
 (Role, Duty, then PlayerInstructions: RiskyPasses, ShootTendency, DribbleTendency, CrossTendency,
 PositioningFreedom, CloseDown, TightMarking, MarkTargetEntityId, SetPieceRoles). Enums serialize as their
 `byte` ordinal; the order above is digest-load-bearing and locked by T-TI-EXP-004. Any reorder/field add
 requires a `SNAPSHOT_SCHEMA_VERSION` bump.
+
+**Cheap-item addition (July 7, 2026, FR-TI-033):** `MarkingOrientation` (new §3.4 axis — BallOriented
+[0.80×] / Balanced [1.00× identity] / ManOriented [1.20×]) appended AFTER `TimeWasting` so no prior field's
+byte offset moves; `SNAPSHOT_SCHEMA_VERSION` 10 → 11 (`MatchEngineConstants.cs`). Scales the #14 MAN_MARK
+candidate radius (`DefensiveAIConstants.ManMarkCandidateRadiusM`) via `defensive-ai/TacticTranslation.
+MarkRadiusScalar` — a ball-oriented team narrows the radius (favours zonal/ball-side coverage over
+individual duels), a man-oriented team widens it (commits tighter to opponents). Constant table:
+`TacticalInstructionsConstants.MarkingOrientationScalar`.
 
 **Note (PASS-2 M-1):** `DefensiveLine` here is the manager **input dial**. The resolved
 `DefensiveLineDepth` consumed by #8/#12/#14 is **derived** each tick from the dial + `MentalityLineBias`
@@ -98,4 +107,5 @@ attacking third evaluating SHOOT:
 | 0.1 | 2026-06-20 | — | Constant catalogue (illustrative [GT]), RoleWeightModifiers excerpt, snapshot order, worked example. |
 | 0.2 | 2026-06-20 | — | PASS-1 fix pass: RISK_MULT_BALANCED / LINE_BIAS_BALANCED given formulas to validate the [DERIVED] tag (L-2). |
 | 0.3 | 2026-06-20 | — | PASS-2 fix pass: A.3 gains `TempoActionBias[5][7]` + `TempoBreadthScalar[5]` (M-2); Appendix B notes the DefensiveLine-dial serialization (M-1) and the world-state-subset digest identity (H-1). |
+| 0.4 | 2026-07-07 | — | Cheap-item addition: `MarkingOrientation` appended to Appendix B field order + `MarkingOrientationScalar` A.3 row (FR-TI-033); `SNAPSHOT_SCHEMA_VERSION` 10 → 11. |
 #endregion

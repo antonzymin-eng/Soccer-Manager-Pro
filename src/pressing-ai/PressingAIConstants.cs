@@ -1,8 +1,8 @@
 // File:     src/pressing-ai/PressingAIConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-07-07
 // Author:   —
-// Spec:     Pressing AI #13 §6.1, Code Standards #20
+// Spec:     Pressing AI #13 §6.1, new §3.3/§7.12, Code Standards #20
 // Purpose:  Single constant catalogue for Spec #13. All trigger thresholds, hysteresis,
 //           role caps, stamina costs, zone parameters, and anti-chaos floors.
 
@@ -166,6 +166,14 @@ namespace TacticalDirector.PressingAI
         /// <summary>[GT] Fatigue ceiling above which an agent is excluded from press roles. §3.3 / §3.7. FR-PR-029. TODO: replace with config loader (Stage 1).</summary>
         public const float PressFatigueCeiling = 0.85f;
 
+        /// <summary>
+        /// [GT] Lateral bias (m) applied to the primary presser's approach target, toward the ball
+        /// carrier's blind side (opposite the carrier's Facing), so the press stays hidden from the
+        /// carrier's peripheral vision longer. Cheap-item addition (new §3.3/§7.12 curving press).
+        /// TODO: replace with config loader (Stage 1).
+        /// </summary>
+        public const float BlindSideApproachBiasM = 1.0f;
+
         // ── Disengage / reset / zone ───────────────────────────────────────────
 
         /// <summary>[GT] Ticks of no committed trigger before disengage fires. §3.8. TODO: replace with config loader (Stage 1).</summary>
@@ -199,4 +207,5 @@ namespace TacticalDirector.PressingAI
 // | Version | Date       | Author | Notes                                                                                       |
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                                                     |
 // | 1.1     | 2026-05-29 | —      | Added PITCH_HALF_LENGTH_M, PITCH_THIRD_M, ATTRIBUTE_SCALE_MAX to Derived region.            |
+// | 1.2     | 2026-07-07 | —      | Cheap-item addition: + BlindSideApproachBiasM (new §3.3/§7.12 curving press).               |
 #endregion

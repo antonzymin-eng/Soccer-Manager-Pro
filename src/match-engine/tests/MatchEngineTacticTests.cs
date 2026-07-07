@@ -1,8 +1,8 @@
 // File:     src/match-engine/tests/MatchEngineTacticTests.cs
 // Created:  2026-06-28
-// Modified: 2026-06-29
+// Modified: 2026-07-07
 // Author:   —
-// Spec:     Tactical Instructions #21 §3.1/§3.2/§3.4/§4.6 (FR-TI-017/027/031); Match Engine design note §5; Code Standards #20
+// Spec:     Tactical Instructions #21 §3.1/§3.2/§3.4/§4.6 (FR-TI-017/027/031/033); Match Engine design note §5; Code Standards #20
 // Purpose:  #21 T2 runtime-activation tests — SetTeamTactic routes a live TeamTactic into each
 //           agent's DecisionTree input (Mentality/Pressing/Passing) and into the Pressing AI (#13)
 //           snapshot (LineOfEngagement), the Defensive AI (#14) snapshot (OffsideTrap), the
@@ -72,6 +72,13 @@ namespace TacticalDirector.MatchEngine
             TacticPassing.Mixed, TacticPressing.Medium, LineOfEngagement.Standard, 0.5f,
             defWidth, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
             TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
+
+        // Balanced in every dimension except MarkingOrientation (the #14 cheap-item routing axis under test).
+        private static TeamTactic WithMarkingOrientation(MarkingOrientation orientation) => new TeamTactic(
+            Mentality.Balanced, TacticFormation.F442, Tempo.Standard, TacticWidth.Standard,
+            TacticPassing.Mixed, TacticPressing.Medium, LineOfEngagement.Standard, 0.5f,
+            TacticDefWidth.Standard, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
+            TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0, orientation);
 
         private static void TickToFirstStride(MatchEngine engine)
         {
@@ -164,6 +171,47 @@ namespace TacticalDirector.MatchEngine
             // Balanced ⇒ OffsideTrap false ⇒ the #14 routing identity (KD-9 request-not-guarantee).
             Assert.IsFalse(engine.TestOnly_OffsideTrapRequested(0));
             Assert.IsFalse(engine.TestOnly_OffsideTrapRequested(1));
+        }
+
+        // ── #14 Phase-D writer (cheap-item addition): MarkingOrientation routes per team ──
+
+        [Test]
+        public void SetTeamTactic_RoutesMarkingOrientation_PerTeam()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.SetTeamTactic(0, WithMarkingOrientation(MarkingOrientation.ManOriented));
+            engine.SetTeamTactic(1, WithMarkingOrientation(MarkingOrientation.BallOriented));
+            TickToFirstStride(engine);
+
+            Assert.AreEqual(MarkingOrientation.ManOriented, engine.TestOnly_MarkingOrientation(0));
+            Assert.AreEqual(MarkingOrientation.BallOriented, engine.TestOnly_MarkingOrientation(1));
+        }
+
+        [Test]
+        public void DefaultTactic_RoutesBalancedMarkingOrientation()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            TickToFirstStride(engine);
+
+            Assert.AreEqual(MarkingOrientation.Balanced, engine.TestOnly_MarkingOrientation(0));
+            Assert.AreEqual(MarkingOrientation.Balanced, engine.TestOnly_MarkingOrientation(1));
+        }
+
+        // ── #8 half-spaces (cheap-item addition): AgentLane routes from Positioning AI #12 ──
+
+        [Test]
+        public void AgentLane_RoutesADefinedLaneId_ForEveryAgent()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            TickToFirstStride(engine);
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                var lane = engine.TestOnly_AgentLane(i);
+                Assert.IsTrue(
+                    System.Enum.IsDefined(typeof(TacticalDirector.PositioningAI.LaneId), lane),
+                    $"Agent {i}'s routed AgentLane must be a defined LaneId (got {lane}).");
+            }
         }
 
         // ── #15 Phase-D writer: FocusPlay routes per team into the Attacking AI snapshot ──
@@ -437,4 +485,6 @@ namespace TacticalDirector.MatchEngine
 // | 1.3     | 2026-06-29 | —      | #12 Phase-D writer: Width / DefensiveWidth per-team routing + Standard-default cases. |
 // | 1.4     | 2026-06-30 | —      | #21 §3.3 per-agent PlayerTactic config (SetPlayerTactic routing / stride-gating / |
 // |         |            |        | invalid-agent / identity behaviour-neutrality) + §3.4 DefensiveLine depth recompute. |
+// | 1.5     | 2026-07-07 | —      | Cheap-item addition: #14 MarkingOrientation per-team routing + Balanced-default case. |
+// | 1.6     | 2026-07-07 | —      | Cheap-item addition: half-spaces AgentLane routing smoke test (defined-value check). |
 #endregion

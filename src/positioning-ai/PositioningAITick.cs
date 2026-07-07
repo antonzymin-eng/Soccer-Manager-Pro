@@ -1,8 +1,9 @@
 // File: src/positioning-ai/PositioningAITick.cs
 // Created:  2026-05-29
 // Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
+// Modified: 2026-07-07 (cheap-item addition: rest-defense coverage check)
 // Author:   —
-// Spec: #12 Positioning AI §3.7, §3.11, §4.3, FR-PA-001..006
+// Spec: #12 Positioning AI §3.7, §3.11, §4.3, FR-PA-001..006, new §3.5/§7.13
 // Purpose: 10 Hz entry point for Positioning AI. Classifies phase, delegates to SlotComposer,
 //          and exposes per-tick accessors consumed by the match orchestrator.
 
@@ -48,6 +49,9 @@ namespace TacticalDirector.PositioningAI
 
         // ── F1 stale detection ────────────────────────────────────────────────
         private int _lastProcessedTick = -1;
+
+        // ── Rest defense (cheap-item addition, §3.5/§7.13) ─────────────────────
+        private bool _lastRestDefenseSufficient = true;
 
         public PositioningAITick(FormationFamily archetype, int maxEntityId = 64)
         {
@@ -128,6 +132,10 @@ namespace TacticalDirector.PositioningAI
 
             SlotComposer.Compose(snapshot, _archetype, modifiers, phase, _hyst, _slots, _anchorBuf, _entityIdArr);
 
+            // Cheap-item addition (§3.5/§7.13): rest-defense coverage check, read by the match
+            // orchestrator and routed into the Decision Tree (#8) risk multiplier.
+            _lastRestDefenseSufficient = RestDefenseEvaluator.Evaluate(snapshot, phase);
+
             _lastProcessedTick = snapshot.TickIndex;
         }
 
@@ -163,6 +171,13 @@ namespace TacticalDirector.PositioningAI
         public Phase GetPhase() => _hyst.CurrentPhase;
 
         /// <summary>
+        /// Returns whether the team's rest-defense coverage was judged sufficient at the last Tick()
+        /// (cheap-item addition, §3.5/§7.13). <c>true</c> when not IN_POSSESSION (concept inapplicable)
+        /// or before the first Tick() (behaviour-neutral default — no dampening).
+        /// </summary>
+        public bool GetRestDefenseSufficient() => _lastRestDefenseSufficient;
+
+        /// <summary>
         /// Snapshot seam: returns the live team-level <see cref="HysteresisState"/> (phase dwell +
         /// per-agent line/lane membership) so a host snapshot layer can serialize this cross-tick state
         /// canonically for deterministic save/restore (parallel to the DecisionTree D0 / executor C0 /
@@ -189,4 +204,6 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        | serialize the per-team cross-tick positioning hysteresis        |
 // |         |            |        | (parallel to DecisionTree D0 / executor C0 / OscillationGuard   |
 // |         |            |        | B0). Read-only serialization use; no behaviour change.          |
+// | 1.2     | 2026-07-07 | —      | Cheap-item addition: rest-defense coverage check (RestDefenseEvaluator) |
+// |         |            |        |   runs each Tick(); GetRestDefenseSufficient() exposes the result.       |
 #endregion

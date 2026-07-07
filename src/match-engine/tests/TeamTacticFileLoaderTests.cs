@@ -31,6 +31,7 @@ namespace TacticalDirector.MatchEngine
                 "offsideTrap = true\n" +
                 "focusPlay = LeftFlank\n" +
                 "timeWasting = 2\n" +
+                "markingOrientation = ManOriented\n" +
                 "\n" +
                 "[away]\n" +
                 "mentality = Defensive\n" +
@@ -46,6 +47,7 @@ namespace TacticalDirector.MatchEngine
             Assert.IsTrue(home.OffsideTrap);
             Assert.AreEqual(FocusPlay.LeftFlank, home.FocusPlay);
             Assert.AreEqual((byte)2, home.TimeWasting);
+            Assert.AreEqual(MarkingOrientation.ManOriented, home.MarkingOrientation);
             // An omitted key inherits the Balanced identity value.
             Assert.AreEqual(TeamTactic.Balanced.Passing, home.Passing);
 
@@ -55,6 +57,7 @@ namespace TacticalDirector.MatchEngine
             // Untouched fields are Balanced — a partial section is well-defined.
             Assert.AreEqual(TeamTactic.Balanced.Tempo, away.Tempo);
             Assert.AreEqual(TeamTactic.Balanced.Width, away.Width);
+            Assert.AreEqual(TeamTactic.Balanced.MarkingOrientation, away.MarkingOrientation);
         }
 
         [Test]
@@ -152,4 +155,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-06-29 | —      | Initial loader tests: round-trip, Balanced identity, fail-loud, applier feed. |
+// | 1.1     | 2026-07-07 | —      | Cheap-item addition: + markingOrientation key round-trip + omitted-key default. |
 #endregion

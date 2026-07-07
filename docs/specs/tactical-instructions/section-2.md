@@ -45,6 +45,7 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.5 or a downstream sec
 | FR-TI-030 | Stage-1 activation is gated on (a) the `[GT]` config-loader existing and (b) match-engine Phase C+D wiring the consumers. | MUST | KD-8 / §7 |
 | FR-TI-031 | `TeamTactic.Balanced` and `PlayerTactic.Default` (with `PlayerInstructions.Default`) reproduce the current no-instruction **behaviour** exactly — realised agent trajectories, ball state, and the pre-tactics world-state fields are bit-identical. The full snapshot *payload* digest necessarily differs once FR-TI-028 adds the tactics block; identity is asserted on the world-state subset, not the full payload (see DET-002). | MUST | KD-10 |
 | FR-TI-032 | Every mapping/formula in §3 includes units, valid input ranges, and at least one worked example (inline or Appendix A). | MUST | CLAUDE.md |
+| FR-TI-033 | `MarkingOrientation` (cheap-item addition, 2026-07-07) scales #14's MAN_MARK candidate radius (`DefensiveAIConstants.ManMarkCandidateRadiusM`) via `MarkingOrientationScalar`; `Balanced` is the identity (×1.00). Appended after `TimeWasting` in the canonical field order (Appendix B); `SNAPSHOT_SCHEMA_VERSION` 10 → 11. | MUST | §3.4 |
 
 ## 2.2 Data structures
 
@@ -71,11 +72,13 @@ snapshot order** (Appendix B) once FR-TI-028 activates.
 | FocusPlay | `FocusPlay` | NEW branch (#8/#15) |
 | GkDistribution | `GkDistributionPolicy` | → #11 `DistributeIntent` |
 | TimeWasting | `byte [0..4]` | 0 = never … 4 = always |
+| MarkingOrientation | `MarkingOrientation` | cheap-item addition (FR-TI-033) — → #14 MAN_MARK candidate radius scalar; appended after TimeWasting (Appendix B) |
 
 `static TeamTactic Balanced` → Mentality.Balanced, Tempo.Standard (index 2), Width.Standard,
 Passing.Mixed, Pressing.Medium, LineOfEngagement.Standard, DefensiveLine 0.5, DefensiveWidth.Standard,
 both transitions = HoldShape/Regroup, OffsideTrap false, TriggerPressMask = None, FocusPlay.Mixed,
-GkDistribution.SlowDown, TimeWasting 0 — reproduces today's `Stage0Default` (FR-TI-031).
+GkDistribution.SlowDown, TimeWasting 0, MarkingOrientation.Balanced — reproduces today's `Stage0Default`
+(FR-TI-031).
 
 ### 2.2.2 `PlayerInstructions` (one per agent; all biases `Default` = follow team)
 
@@ -128,4 +131,5 @@ Snapshot contribution is governed by FR-TI-028. In-match mutation timing by FR-T
 | 0.1 | 2026-06-20 | — | Initial FRs (FR-TI-001..032), data structures, failure modes from supplement v0.3. |
 | 0.2 | 2026-06-20 | — | PASS-1 fix pass: FR-TI-007 `[Flags]` carve-out (M-3); FR-TI-015 Tempo reclassified new branch (H-1); FR-TI-020 StyleProfile composition (H-2); `DefensiveLine` single-source note (M-2); §2.2.4 `TacticFormation` tightened (L-4). |
 | 0.3 | 2026-06-20 | — | PASS-2 fix pass: FR-TI-031 reworded to world-state (not full-payload) identity vs FR-TI-028 (H-1); FR-TI-015 gains the `tempoActionBias` utility factor (M-2); FR-TI-016 names the new `ContextModifierInputs` field (M-4); §2.2.1 Tempo note updated. |
+| 0.4 | 2026-07-07 | — | Cheap-item addition: + FR-TI-033 (`MarkingOrientation` → #14 MAN_MARK radius); TeamTactic field table + Balanced factory description updated. |
 #endregion

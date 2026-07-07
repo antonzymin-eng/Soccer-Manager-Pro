@@ -143,7 +143,8 @@ namespace TacticalDirector.MatchEngine
                 triggerPressMask: ParseEnum(kv, "triggerPressMask", d.TriggerPressMask),
                 focusPlay:        ParseEnum(kv, "focusPlay",        d.FocusPlay),
                 gkDistribution:   ParseEnum(kv, "gkDistribution",   d.GkDistribution),
-                timeWasting:      TimeWasting(kv, "timeWasting", d.TimeWasting));
+                timeWasting:      TimeWasting(kv, "timeWasting", d.TimeWasting),
+                markingOrientation: ParseEnum(kv, "markingOrientation", d.MarkingOrientation));
 
             if (kv.Count > 0)
             {
@@ -216,4 +217,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-06-29 | —      | Initial implementation — Stage-0 text → TeamTacticConfig parser swap (#21).  |
+// | 1.1     | 2026-07-07 | —      | + markingOrientation key (cheap-item addition; omitted ⇒ Balanced).          |
 #endregion

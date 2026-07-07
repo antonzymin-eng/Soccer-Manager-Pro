@@ -1,8 +1,9 @@
 // File:     src/pressing-ai/PressingAITick.cs
 // Created:  2026-05-29
 // Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
+// Modified: 2026-07-07 (cheap-item addition: curving-press blind-side bias)
 // Author:   —
-// Spec:     Pressing AI #13 §3.11, §4.2, Code Standards #20
+// Spec:     Pressing AI #13 §3.11, §4.2, new §3.3/§7.12, Code Standards #20
 // Purpose:  10 Hz Pressing AI orchestrator for one team. Runs the full §3.11 pipeline:
 //           trigger evaluation → primary presser selection → cover-shadow selection →
 //           role hysteresis → stamina accumulation → disengage/invariant enforcement.
@@ -173,6 +174,14 @@ namespace TacticalDirector.PressingAI
             Vector2 interceptPt = PrimaryPressSelector.ComputeInterceptionPoint(snapshot);
             int primaryId = PrimaryPressSelector.Select(
                 snapshot, interceptPt, out Vector2 primaryTargetPos);
+
+            // Cheap-item addition (new §3.3/§7.12 curving press): bias the approach target toward
+            // the ball carrier's blind side. Applied only to the movement target, never to who was
+            // selected as primary presser (selection already ran above).
+            if (primaryId >= 0)
+            {
+                primaryTargetPos = BlindSideApproach.ApplyBias(primaryTargetPos, snapshot);
+            }
 
             // ── Step 4: Cover-shadow selection (§3.4–§3.5) ───────────────────
             int shadowCount = CoverShadowSelector.Select(
@@ -370,4 +379,5 @@ namespace TacticalDirector.PressingAI
 // | 1.1     | 2026-05-29 | —      | AR-1 M-1: added using TacticalDirector.PositioningAI; simplified Phase references. AR-1 H-1: added IsActive guards in SetAllHoldShape and BuildAssignments. |
 // | 1.2     | 2026-06-15 | —      | AR-2 M-1: persistent per-EntityId press-fatigue ledger folded onto snapshot each tick; Step 8 accumulates into it instead of the throwaway snapshot. AR-2 M-2: hysteresis state sized to EntityId space and keyed by EntityId (not snapshot array index). |
 // | 1.3     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam bundles the cross-tick state (role hysteresis, trigger debounce, disengage/cooldown dwell, press-fatigue ledger) into a PressingTickState view for the host snapshot layer. Read-only serialization use; no behaviour change. |
+// | 1.4     | 2026-07-07 | —      | Cheap-item addition: Step 3 result biased via BlindSideApproach.ApplyBias (new §3.3/§7.12) — nudges the primary presser's target toward the ball carrier's blind side; who is selected as presser is unaffected. |
 #endregion
