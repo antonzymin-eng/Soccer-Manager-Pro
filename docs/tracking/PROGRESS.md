@@ -1,7 +1,16 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** July 7, 2026, later same day (**Two design supplements opened, reserving
+**Last Updated:** July 8, 2026 (**Candidates #23–#26 promoted to section files at `IN REVIEW`** —
+the four design-supplement candidates each authored as a full 11-file spec set (v0.1):
+`docs/specs/dismarking-ai/` (#23, FR-DM-001..018), `docs/specs/build-up-structures/` (#24,
+FR-BU-001..016), `docs/specs/positional-rotations/` (#25, FR-RO-001..018),
+`docs/specs/tactical-presets/` (#26, FR-TP-001..020). `SPEC_INDEX.md` registry rows added —
+**22 APPROVED / 4 IN REVIEW** overall; supplements bumped to v0.4/v0.5 with promotion notes.
+Section-file PASS-1 adversarial reviews pending per each spec's §9.3; `[CITATION-PENDING]` §8
+rows outstanding; back-prop ERRs file at each `APPROVED`. **Stage 0 counts unchanged: 20
+APPROVED** — all four are Stage-1-forward, like #21/#22.)
+**Last Updated (prior):** July 7, 2026, later same day (**Two design supplements opened, reserving
 candidate specs #23–#26** — `docs/tracking/advanced-positional-behaviors-design.md` (dismarking
 #23, scripted build-up structures #24, positional rotations #25) and
 `docs/tracking/game-model-ai-manager-design.md` (tactical presets & AI-manager selection #26).

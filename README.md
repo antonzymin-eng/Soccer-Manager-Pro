@@ -1,7 +1,14 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** July 7, 2026, later same day (Two design supplements opened, scoping the four
+**Last Updated:** July 8, 2026 (Candidates **#23–#26 promoted to section files at `IN REVIEW`** —
+`docs/specs/dismarking-ai/` (#23), `docs/specs/build-up-structures/` (#24),
+`docs/specs/positional-rotations/` (#25), `docs/specs/tactical-presets/` (#26), each a full
+11-file spec set (v0.1) authored from its July 7 design supplement per that supplement's §6
+promotion pipeline. `SPEC_INDEX.md` now reads **22 APPROVED / 4 IN REVIEW**; the RESERVED entries
+are retired. Section-file PASS-1 adversarial reviews are pending per each spec's §9.3 — no `src/`
+code lands until each is `APPROVED`.)
+**Last Updated (prior):** July 7, 2026, later same day (Two design supplements opened, scoping the four
 items the same day's tactical-theory cross-reference flagged as too large for a cheap seam
 reuse: `docs/tracking/advanced-positional-behaviors-design.md` (dismarking, scripted build-up
 structures, positional rotations — candidate specs #23–#25) and

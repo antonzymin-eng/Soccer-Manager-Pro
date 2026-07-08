@@ -1,7 +1,14 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 7, 2026 (New "RESERVED (design-supplement stage — not yet promoted)"
+> **Last Updated:** July 8, 2026 (Candidates **#23–#26 promoted from RESERVED to registry rows at
+> `IN REVIEW`** — all four authored as full 11-file section-file sets (v0.1) from their design
+> supplements, per each supplement's §6 promotion pipeline: `dismarking-ai/` (#23, FR-DM),
+> `build-up-structures/` (#24, FR-BU), `positional-rotations/` (#25, FR-RO), `tactical-presets/`
+> (#26, FR-TP). Section-file PASS-1 adversarial reviews NOT yet run (each §9.3 records the open
+> gates); `[CITATION-PENDING]` §8 rows outstanding in all four. The RESERVED section below now
+> records the promotion. **Count: 22 APPROVED / 4 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 7, 2026 (New "RESERVED (design-supplement stage — not yet promoted)"
 > section added, reserving candidate numbers **#23–#26** for the two design supplements opened
 > the same day — `docs/tracking/advanced-positional-behaviors-design.md` (dismarking #23,
 > scripted build-up structures #24, positional rotations #25) and
@@ -51,6 +58,10 @@
 | 20 | Code Standards & Style Guide | `code-standards/` | 5 | APPROVED | May 11, 2026 |
 | 21 | Tactical Instructions | `tactical-instructions/` | 6¹ | APPROVED | Jun 20, 2026 |
 | 22 | Living World System | `living-world/` | 6¹ | APPROVED | Jun 22, 2026 |
+| 23 | Dismarking & Marker-Awareness AI | `dismarking-ai/` | 6¹ | IN REVIEW | — |
+| 24 | Scripted Build-Up Structures | `build-up-structures/` | 6¹ | IN REVIEW | — |
+| 25 | Positional Rotations | `positional-rotations/` | 6¹ | IN REVIEW | — |
+| 26 | Tactical Presets & AI-Manager Selection | `tactical-presets/` | 6¹ | IN REVIEW | — |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
@@ -58,23 +69,20 @@
 
 ## RESERVED (design-supplement stage — not yet promoted)
 
-These numbers are **reserved to prevent a future renumbering collision** (per "Before creating a
-new spec folder, add the entry here first" below) but are deliberately **NOT** registry rows —
-no folder exists yet, no section files have been authored, and none has a status per the
-definitions below. Promoted to a real registry row above only when each is authored into
-`docs/specs/<folder>/` from its design supplement, matching the #21/#22 precedent (design note →
-promoted spec, row added at promotion).
+**All four reservations promoted July 8, 2026** — #23–#26 were reserved here July 7, 2026 for the
+two design supplements (`docs/tracking/advanced-positional-behaviors-design.md` #23–#25;
+`docs/tracking/game-model-ai-manager-design.md` #26) and moved to registry rows at `IN REVIEW`
+the next day when their section files were authored, matching the #21/#22 precedent (design note →
+promoted spec, row added at promotion). The section is retained (empty) as the standing mechanism
+for future design-supplement reservations.
 
 | # | Working title | Design supplement | Reserved |
 |---|---------------|--------------------|----------|
-| 23 | Dismarking & Marker-Awareness AI | `docs/tracking/advanced-positional-behaviors-design.md` | Jul 7, 2026 |
-| 24 | Scripted Build-Up Structures | `docs/tracking/advanced-positional-behaviors-design.md` | Jul 7, 2026 |
-| 25 | Positional Rotations | `docs/tracking/advanced-positional-behaviors-design.md` | Jul 7, 2026 |
-| 26 | Tactical Presets & AI-Manager Selection | `docs/tracking/game-model-ai-manager-design.md` | Jul 7, 2026 |
+| — | *(none currently reserved)* | | |
 
 Note: the June 27, 2026 Match Engine integration entry in root `CLAUDE.md` OPEN ISSUES explicitly
 recorded that the (unnumbered) `src/match-engine/` composition root "does not introduce #23" —
-consistent with #23 being free to reserve here.
+consistent with #23 having been free to reserve and now promote.
 
 ---
 

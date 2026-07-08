@@ -1,7 +1,17 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 7, 2026, later same day (**Two design supplements opened, AR cycle
+> **Last Updated:** July 8, 2026 (**Candidates #23–#26 promoted to section files at `IN REVIEW`** —
+> all four authored as full 11-file spec sets (v0.1) from the two July 7 design supplements, per
+> each supplement's own §6 promotion pipeline (steps 1–3): `docs/specs/dismarking-ai/` (#23,
+> FR-DM), `docs/specs/build-up-structures/` (#24, FR-BU), `docs/specs/positional-rotations/`
+> (#25, FR-RO), `docs/specs/tactical-presets/` (#26, FR-TP). `SPEC_INDEX.md` registry rows added
+> (**22 APPROVED / 4 IN REVIEW**); RESERVED entries retired; supplements bumped to v0.4/v0.5 with
+> promotion notes + the "Specification Before Code" citation fix (a README.md heading, not
+> CLAUDE.md — both §6 sections cited it wrongly). Section-file PASS-1 adversarial reviews NOT yet
+> run — each spec's §9.3 records its open gates (`[CITATION-PENDING]` §8 rows; back-prop ERR
+> filing at `APPROVED`; R-01..R-05 sign-off). See the updated OPEN ISSUES entry below.)
+> **Last Updated (prior):** July 7, 2026, later same day (**Two design supplements opened, AR cycle
 > converged same day, §6 Implementation Plans added** — for the items the same day's
 > tactical-theory cross-reference flagged as too large for a cheap routing-seam reuse — see the
 > new OPEN ISSUES entry below. `docs/tracking/advanced-positional-behaviors-design.md` v0.1 → v0.3
@@ -274,7 +284,29 @@ precedent/hazard anchors) exist with the claimed shape; found nothing further. B
 at `advanced-positional-behaviors-design.md` v0.3 and `game-model-ai-manager-design.md` v0.4.
 **Next step:** none outstanding for this entry's own scope — the detailed implementation plans
 requested are the §6 sections just landed; further work is each candidate's own spec-promotion
-pipeline (§6 step 1 onward in each note), not tracked here.
+pipeline (§6 step 1 onward in each note), not tracked here. **PROMOTED July 8, 2026:** all four
+candidates authored as full 11-file section-file sets at `IN REVIEW` (§6 steps 1–3 complete) —
+`dismarking-ai/` #23 (FR-DM: `MarkingPressure` = perception-derived proximity×dwell; #12
+`SlotComposer` dismark offset stage + #8 awareness-scaled marked-pass-target penalty; KD-1 cites
+the perception-boundary invariant verbatim), `build-up-structures/` #24 (FR-BU: 3-zone
+team-relative classifier + hysteresis; per-structure `[GT]` offset overlay; **KD-3 deliberately
+refines the supplement** — opt-in `BuildUpStructure` dial + `TransitionWon` post-regain
+suppression window, because `Balanced` already sets a non-`CounterAttack` `TransitionWon` and a
+pure `TransitionWon` gate would break default-neutrality), `positional-rotations/` #25 (FR-RO:
+static per-family adjacency table, both-sided organic-exchange trigger, two-sided hysteresis with
+the `ROTATION_HOLD_TICKS ≥ line-dwell` `[DERIVED]` non-interference bound, atomic pairwise
+`SlotIndex` swap + partner lock, permutation-validated restore; the #12 "`SlotIndex` immutable
+after `SeedFromFormation`" contract amendment is an explicit pending back-prop), and
+`tactical-presets/` #26 (FR-TP: preset = named point in #21's pinned parameter space; decision
+gate (not a clock file) at kickoff/half-time/5-min intervals on the stride boundary; own-state
+scoring + one-rung ladder with hold intervals; boot via existing appliers, mid-match via
+`SetTeamTactic` — the supplement's AR-1/AR-2 corrections carried into FRs). All four: zero-value
+dial = identity (`Off`/`None`/`Human`), byte-identity determinism tests specified, away-mirror
+tests where geometry is team-relative (#24/#25), no RNG/domain tags, `[GT]` magnitudes
+illustrative pending balance pass (#21 G2 precedent). **Open gates per spec §9.3:** PASS-1
+adversarial reviews not yet run; `[CITATION-PENDING]` §8 rows; back-prop ERRs (#21 `TeamTactic`
+field appends ×3, #12 pipeline/contract amendments, #8 scorer row) file at each `APPROVED`; #25
+Appendix A ships only the 4-4-2 exemplar (flagged completeness item).
 - **Tactical-theory research cross-reference — four cheap-item additions LANDED** — *opened and closed July 7, 2026.* A conversation cross-referencing published soccer tactical theory (rest defence, marking orientation, half-spaces, cover-shadow/blind-side pressing, etc.) against the game plan identified several gaps whose extendibility cost was assessed as cheap-to-medium given the existing `TacticTranslation`/routing-field seam pattern (#21 Tactical Instructions T2). All four landed the same day, each defaulting to today's exact pre-addition behaviour (byte-identical) until a manager sets a non-default tactic: **(1) `MarkingOrientation` dial** (new `src/tactical-instructions/MarkingOrientation.cs`; `TeamTactic` gains the field, appended after `TimeWasting`; `SNAPSHOT_SCHEMA_VERSION` 10 → 11) — BallOriented/Balanced/ManOriented scales the #14 MAN_MARK candidate radius via new `defensive-ai/TacticTranslation.MarkRadiusScalar` + `DefensiveSnapshot.MarkingOrientation` (ctor-seeded Balanced, since the enum's zero-value is BallOriented) + `MarkAssigner` consumption (FR-TI-033). **(2) Positioning AI #12 rest-defense coverage check** (new `src/positioning-ai/RestDefenseEvaluator.cs` + `Tests/RestDefenseEvaluatorTests.cs`, new §3.5/§7.13; `PositioningAITick.GetRestDefenseSufficient()`) — counts active outfield agents (GK excluded) behind `REST_DEFENSE_DEPTH_M` while `IN_POSSESSION`; insufficient coverage dampens PASS/SHOOT/DRIBBLE via new `TacticalContext.RestDefenseSufficient` (Stage0Default seeds `true`, since the zero-value `bool` default is `false`) + `TacticalWeights.RestDefenseRiskMult` in `UtilityScorer` (new #8 §3.2/§7.7). **(3) Half-spaces PASS bonus** (new #8 §3.2/§7.8) — `TacticalContext.AgentLane` routes each agent's EXISTING Positioning AI `LaneId` (already team-relative — no new axis-mirroring risk, unlike the historical `BallZone` home/away bugs) into the Decision Tree; `decision-tree.asmdef` gains the `TacticalDirector.PositioningAI` reference (first AI→Mechanics reference beyond `TacticalInstructions`); `TacticalWeights.LaneMult[5]` gives half-space lanes (LH/RH) a PASS bonus, central/wide stay ×1.0. **(4) Curving-press blind-side bias** (new `src/pressing-ai/BlindSideApproach.cs` + `Tests/BlindSideApproachTests.cs`, new #13 §7.12) — nudges the primary presser's approach target (post-selection only; who presses is unaffected) toward the ball carrier's blind side (opposite `PressingAgentSnapshot.Facing`, already carried for both teams) by `PressingAIConstants.BlindSideApproachBiasM`; wired into `PressingAITick` Step 3.
 
   **CORRECTED/REVERTED after user review, same day** — the user identified items (2)/(3)/(4) as architecturally wrong designs, not bugs. **(2) redesigned**: the dampener must not be an omniscient flat team-wide penalty; it now scales by the ball carrier's own tactical awareness (mean of `A_Decisions`/`A_Anticipation`) via `Mathf.Lerp(1.0f, RestDefenseRiskMult, awareness)` in `UtilityScorer` — an unaware carrier takes the risky action anyway (a genuine tactical/setup flaw for the manager to fix, not the AI to silently correct). **(3) REVERTED entirely**: half-spaces are an exploitable spatial gap requiring tactical/player instructions to exploit, not a flat passing bonus; `TacticalContext.AgentLane`, `TacticalWeights.LaneMult`, and the `decision-tree.asmdef` to `PositioningAI` reference are all removed (decision-tree/section-7.md §7.8 marked REVERTED, not deleted). **(4) redesigned**: curving press runs are for bending the pursuit path to adjust COVER SHADOW (deny a nearby passing option while closing down), not for approaching the carrier's blind side; `BlindSideApproach.cs` DELETED, replaced by `src/pressing-ai/CoverShadowCurve.cs` (`PressingAIConstants.CoverCurveBlendWeightMax`) whose effectiveness is gated by the presser's own attributes (new `PressingAgentSnapshot.DefensivePositioningAttribute`/`PhysicalEffortAttribute`/`MentalSharpnessAttribute`, sourced by `MatchEngine` from the same `_dtAttrs` the Decision Tree reads) — a poor, low-effort defender barely curves at all.
