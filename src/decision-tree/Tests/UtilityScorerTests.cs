@@ -1,7 +1,8 @@
 // File:     src/decision-tree/Tests/UtilityScorerTests.cs
 // Created:  2026-05-29
 // Modified: 2026-06-01
-// Modified: 2026-07-07 (cheap-item addition: rest-defense risk dampener test)
+// Modified: 2026-07-07 (cheap-item addition: rest-defense risk dampener test; half-spaces
+//           test added then reverted after user review — see VersionHistory)
 // Author:   —
 // Spec:     Decision Tree #8 §5 (UT-US-01, UT-US-03, UT-05 through UT-09), §3.2.10, new §3.2/§7.7, Code Standards #20
 // Purpose:  Unit tests for UtilityScorer. Verifies utility floor/ceiling clamp,
@@ -195,7 +196,11 @@ namespace TacticalDirector.DecisionTree.Tests
                 "HOLD utility must never fall below UTILITY_FLOOR");
         }
 
-        // ── Cheap-item addition (new §3.2/§7.7): rest-defense risk dampener ──
+        // ── Cheap-item addition (new §3.2/§7.7): rest-defense risk dampener,
+        // redesigned after user review to gate on the ball carrier's own
+        // tactical awareness (A_Decisions/A_Anticipation) rather than a flat
+        // team-wide penalty — an unaware carrier takes the risky action
+        // anyway; the manager, not the AI, must correct a genuine tactical flaw.
 
         [Test]
         public void RestDefenseInsufficient_DampensPassShootDribble_ButNotHold()
@@ -218,7 +223,8 @@ namespace TacticalDirector.DecisionTree.Tests
             float passInsufficient = Buffer[0].BaseUtility;
 
             Assert.Less(passInsufficient, passSufficient,
-                "Insufficient rest-defense coverage must dampen PASS utility.");
+                "Insufficient rest-defense coverage must dampen PASS utility when the " +
+                "carrier has non-zero awareness (BuildContext seeds A_Decisions/A_Anticipation = 0.5).");
 
             Buffer[0] = MakeHold();
             UtilityScorer.ScoreOptions(Buffer, 1, in sufficient);
@@ -232,41 +238,32 @@ namespace TacticalDirector.DecisionTree.Tests
                 "HOLD must not be dampened by rest-defense coverage (only PASS/SHOOT/DRIBBLE are).");
         }
 
-        // ── Cheap-item addition (new §3.2/§7.8): half-spaces PASS bonus ─────
-
         [Test]
-        public void HalfSpaceLane_BoostsPassUtility_RelativeToCentralAndWide()
+        public void RestDefenseInsufficient_ObliviousCarrier_TakesNoDampening()
         {
-            DecisionContext central = BuildContext(0.5f, 0.5f, 0.0f);
-            Assert.AreEqual(TacticalDirector.PositioningAI.LaneId.C, central.TacticalContext.AgentLane,
-                "Stage0Default must seed the central identity lane.");
+            DecisionContext insufficient = BuildContext(0.5f, 0.5f, 0.0f);
+            TacticalContext tc = insufficient.TacticalContext;
+            tc.RestDefenseSufficient = false;
+            insufficient.TacticalContext = tc;
+            insufficient.A_Decisions = 0.0f;
+            insufficient.A_Anticipation = 0.0f;
 
-            DecisionContext halfSpace = central;
-            TacticalContext tcHs = halfSpace.TacticalContext;
-            tcHs.AgentLane = TacticalDirector.PositioningAI.LaneId.LH;
-            halfSpace.TacticalContext = tcHs;
-
-            DecisionContext wide = central;
-            TacticalContext tcWide = wide.TacticalContext;
-            tcWide.AgentLane = TacticalDirector.PositioningAI.LaneId.LW;
-            wide.TacticalContext = tcWide;
+            DecisionContext sufficient = insufficient;
+            TacticalContext tcSuff = sufficient.TacticalContext;
+            tcSuff.RestDefenseSufficient = true;
+            sufficient.TacticalContext = tcSuff;
 
             Buffer[0] = MakePass(0.5f, 0.5f, 15.0f);
-            UtilityScorer.ScoreOptions(Buffer, 1, in central);
-            float passCentral = Buffer[0].BaseUtility;
+            UtilityScorer.ScoreOptions(Buffer, 1, in sufficient);
+            float passSufficient = Buffer[0].BaseUtility;
 
             Buffer[0] = MakePass(0.5f, 0.5f, 15.0f);
-            UtilityScorer.ScoreOptions(Buffer, 1, in halfSpace);
-            float passHalfSpace = Buffer[0].BaseUtility;
+            UtilityScorer.ScoreOptions(Buffer, 1, in insufficient);
+            float passInsufficient = Buffer[0].BaseUtility;
 
-            Buffer[0] = MakePass(0.5f, 0.5f, 15.0f);
-            UtilityScorer.ScoreOptions(Buffer, 1, in wide);
-            float passWide = Buffer[0].BaseUtility;
-
-            Assert.Greater(passHalfSpace, passCentral,
-                "A half-space lane (LH) must boost PASS utility relative to the central lane.");
-            Assert.AreEqual(passCentral, passWide, 1e-6f,
-                "Wide (LW) and central (C) lanes must both be the ×1.0 identity.");
+            Assert.AreEqual(passSufficient, passInsufficient, 1e-6f,
+                "A carrier with zero awareness (Decisions=Anticipation=0) must take no " +
+                "dampening at all — the risk is invisible to them, not silently corrected.");
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
@@ -501,5 +498,8 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        |   opponent possession, M-4 shifted-form midfield gate (raw 12 passes),         |
 // |         |            |        |   M-3 SHOOT risk zero at full goal opening.                                    |
 // | 1.3     | 2026-07-07 | —      | Cheap-item addition: RestDefenseInsufficient_DampensPassShootDribble_ButNotHold. |
-// | 1.4     | 2026-07-07 | —      | Cheap-item addition: HalfSpaceLane_BoostsPassUtility_RelativeToCentralAndWide.  |
+// | 1.4     | 2026-07-07 | —      | Reverted after user review: HalfSpaceLane_BoostsPassUtility_RelativeToCentral- |
+// |         |            |        |   AndWide REMOVED (half-spaces need tactical/player instructions, not a flat  |
+// |         |            |        |   bonus). RestDefense test redesigned for the awareness gate: added new       |
+// |         |            |        |   RestDefenseInsufficient_ObliviousCarrier_TakesNoDampening.                  |
 #endregion

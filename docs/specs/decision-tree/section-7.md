@@ -76,33 +76,50 @@ The following are permanently excluded and require architectural amendment to ad
 |---|---|---|---|
 | 1.0 | April 20, 2026 | Claude (AI) / Anton | Initial draft of Section 7 future extensions and exclusions. |
 | 1.1 | 2026-07-07 | AI agent | Cheap-item additions: new §7.7 (rest-defense risk dampener) + §7.8 (half-spaces PASS bonus) appended below — both LANDED, not deferrals. |
+| 1.2 | 2026-07-07 | AI agent | **Redesigned/reverted after user review** — §7.7 redesigned to gate the dampener on the ball carrier's own tactical awareness rather than a flat team-wide penalty (an unaware carrier takes the risky action anyway; insufficient rest defense is a manager-facing tactical flaw, not something the AI silently corrects for). §7.8 REVERTED entirely — half-spaces are an exploitable spatial gap requiring tactical/player instructions, not a flat passing bonus. |
 
 ---
 
-## 7.7 Rest-Defense Risk Dampener — LANDED (cheap-item addition, July 7, 2026)
+## 7.7 Rest-Defense Risk Dampener — LANDED, redesigned (cheap-item addition, July 7, 2026)
 
 Motivated by a tactical-theory cross-reference pass: "rest defence" is the defensive structure a team
 leaves behind while attacking. Positioning AI #12's new `RestDefenseEvaluator` (its own §3.5/§7.13)
 judges per-tick whether enough outfield agents sit behind a coverage line while `IN_POSSESSION`. The
 result is routed into a new `TacticalContext.RestDefenseSufficient` field (`Stage0Default` seeds
 `true` = identity — zero-value `bool` default is `false`, NOT identity, same trap class as
-`Mentality`/`Pressing`). `UtilityScorer.ComputeUtility` multiplies PASS/SHOOT/DRIBBLE (only) by
-`TacticalWeights.RestDefenseRiskMult` (`[GT]` 0.85) when insufficient; HOLD/MOVE/PRESS/INTERCEPT are
-unaffected. Sufficient coverage applies no dampening — byte-identical to pre-addition.
+`Mentality`/`Pressing`).
 
-## 7.8 Half-Spaces PASS Bonus — LANDED (cheap-item addition, July 7, 2026)
+**Corrected model (after user review):** the dampener must not be an omniscient, flat team-wide
+penalty — a player who cannot perceive or understand the thin cover behind them will take the risky
+action anyway, and the insufficient coverage is then a genuine tactical flaw in team setup or player
+instructions for the manager to address, not something the AI silently corrects for. `UtilityScorer.
+ComputeUtility` now scales `TacticalWeights.RestDefenseRiskMult` (`[GT]` 0.85) by the ball carrier's
+own tactical awareness — the mean of `A_Decisions` and `A_Anticipation` — via `Mathf.Lerp(1.0f,
+RestDefenseRiskMult, awareness)`: a fully aware carrier (awareness = 1.0) takes the full dampener, an
+oblivious one (awareness = 0.0) takes none at all. Only PASS/SHOOT/DRIBBLE are eligible; HOLD/MOVE/
+PRESS/INTERCEPT are unaffected. Sufficient coverage applies no dampening either way — byte-identical
+to pre-addition.
 
-Motivated by the same cross-reference pass: modern positional-play theory treats the half-spaces
-(the lateral corridor between the touchline and the central channel) as the pitch's highest-value
-combination-play zone. Positioning AI #12 already classifies every agent's lateral position into one
-of five `LaneId` lanes (LW/LH/C/RH/RW, each 13.6 m) for formation-slot purposes — already team-relative
-since #12 operates in the per-team canonical attack-toward-+X frame, so no new axis-mirroring risk was
-introduced. A new `TacticalContext.AgentLane` field routes each scoring agent's current lane
-(`Stage0Default` seeds `LaneId.C`, the semantically-correct identity); `decision-tree.asmdef` gains the
-`TacticalDirector.PositioningAI` reference (the first AI-layer → Mechanics-layer reference beyond
-`TacticalInstructions`, permitted by the Physics ← Mechanics ← AI ← UI direction). `UtilityScorer.
-ScorePass` multiplies by `TacticalWeights.LaneMult[(int)AgentLane]` — half-space lanes (LH/RH) carry
-a bonus; central (C) and wide (LW/RW) lanes stay ×1.0.
+## 7.8 Half-Spaces PASS Bonus — REVERTED after user review (cheap-item addition, landed and reverted July 7, 2026)
+
+**Original framing (landed then reverted same day):** modern positional-play theory treats the
+half-spaces (the lateral corridor between the touchline and the central channel) as the pitch's
+highest-value combination-play zone. Positioning AI #12 already classifies every agent's lateral
+position into one of five `LaneId` lanes (LW/LH/C/RH/RW, each 13.6 m) for formation-slot purposes —
+already team-relative since #12 operates in the per-team canonical attack-toward-+X frame, so no new
+axis-mirroring risk was introduced. A `TacticalContext.AgentLane` field routed each scoring agent's
+current lane into a flat `TacticalWeights.LaneMult[(int)AgentLane]` PASS multiplier — half-space lanes
+(LH/RH) carried a bonus; central (C) and wide (LW/RW) lanes stayed ×1.0.
+
+**Why it was reverted:** the half-spaces are not a zone that rewards a flat statistical bonus — they
+are an exploitable spatial gap between an opponent's centre-back and full-back that an attacking
+player or team must actually target via tactical/player instructions (width, roles, runs). A
+no-instruction agent should not get a free PASS-utility boost merely for standing in a lane; that
+manufactures a bonus no tactic or attribute earned. `TacticalContext.AgentLane`,
+`TacticalWeights.LaneMult`, and the `decision-tree.asmdef` → `TacticalDirector.PositioningAI`
+reference it required are all REMOVED. Should a real half-spaces mechanic be built later, it belongs
+behind an explicit tactical/instruction seam (e.g. a #21 `FocusPlay`-style dial or per-role
+instruction), not an ambient lane lookup.
 
 ---
 

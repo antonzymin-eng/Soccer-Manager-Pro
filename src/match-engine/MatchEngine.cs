@@ -794,11 +794,6 @@ namespace TacticalDirector.MatchEngine
         /// into team <paramref name="teamId"/>'s agents' TacticalContext at the last AI tick.</summary>
         internal bool TestOnly_RestDefenseSufficient(int teamId) => _positioning[teamId].GetRestDefenseSufficient();
 
-        /// <summary>Test-only: the cheap-item half-spaces AgentLane routed into agent
-        /// <paramref name="agentId"/>'s TacticalContext at the last AI tick.</summary>
-        internal TacticalDirector.PositioningAI.LaneId TestOnly_AgentLane(int agentId) =>
-            _tacticalContexts[agentId].AgentLane;
-
         /// <summary>Test-only: the #21 FocusPlay routed into team <paramref name="teamId"/>'s Attacking
         /// AI (#15) snapshot at the last AI tick — lets the Phase-D writer test prove SetTeamTactic
         /// reaches the attacking input and the Balanced default (Mixed) is the identity.</summary>
@@ -1068,8 +1063,6 @@ namespace TacticalDirector.MatchEngine
                     // Cheap-item addition (new §3.2/§7.7): Positioning AI #12's rest-defense coverage
                     // check, computed once per team per stride, routed to every agent's context.
                     ctx.RestDefenseSufficient = _positioning[t].GetRestDefenseSufficient();
-                    // Cheap-item addition (new §3.2/§7.8 half-spaces): this agent's own lane.
-                    ctx.AgentLane          = _positioning[t].GetLane(i);
                     _tacticalContexts[i]   = ctx;
                 }
             }
@@ -1181,6 +1174,12 @@ namespace TacticalDirector.MatchEngine
                     BaselineSlot        = isOwn ? _positioning[team].GetFormationSlot(i)
                                                 : MirrorPitchIfAway(team, _agents[i].Position),
                     Line                = isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
+                    // Cheap-item addition (new §7.12): cover-shadow curve attributes, sourced from
+                    // the same _dtAttrs the Decision Tree already reads (Stage 0: neutral defaults
+                    // for every agent; Stage 1+ real rosters will differentiate this).
+                    DefensivePositioningAttribute = _dtAttrs[i].Positioning,
+                    PhysicalEffortAttribute       = (_dtAttrs[i].WorkRate + _dtAttrs[i].Pace + _dtAttrs[i].Stamina) / 3f,
+                    MentalSharpnessAttribute      = (_dtAttrs[i].Decisions + _dtAttrs[i].Anticipation) / 2f,
                 };
             }
         }
@@ -2932,13 +2931,18 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | accessors gain the public-surface roster-index guard            |
 // |         |            |        | (ArgumentOutOfRangeException, parallel to SetPlayerTactic)      |
 // |         |            |        | instead of a bare IndexOutOfRangeException from the array.      |
-// | 1.26    | 2026-07-07 | —      | Cheap-item additions (tactical-theory cross-reference follow-up): |
+/// | 1.26    | 2026-07-07 | —      | Cheap-item additions (tactical-theory cross-reference follow-up): |
 // |         |            |        | (a) #14 MarkingOrientation appended to WriteTeamTactic + routed |
 // |         |            |        | into FillDefensiveSnapshot (SNAPSHOT_SCHEMA_VERSION 10 → 11);   |
 // |         |            |        | (b) Positioning AI #12 rest-defense coverage (GetRestDefense-   |
-// |         |            |        | Sufficient) + (c) each agent's own GetLane (half-spaces, new    |
-// |         |            |        | §3.2/§7.8) routed into every agent's TacticalContext each      |
+// |         |            |        | Sufficient) routed into every agent's TacticalContext each      |
 // |         |            |        | stride. New TestOnly_MarkingOrientation / _RestDefenseSufficient|
-// |         |            |        | seams. Balanced/default/LaneId.C ⇒ identity, byte-identical to  |
+// |         |            |        | seams. Balanced/default ⇒ identity, byte-identical to           |
 // |         |            |        | pre-addition.                                                   |
+// | 1.27    | 2026-07-07 | —      | Reverted after user review: the half-spaces AgentLane routing   |
+// |         |            |        | (ctx.AgentLane = _positioning[t].GetLane(i)) and the             |
+// |         |            |        | TestOnly_AgentLane seam are REMOVED — half-spaces are an        |
+// |         |            |        | exploitable spatial gap requiring tactical/player instructions, |
+// |         |            |        | not a flat passing bonus. No SNAPSHOT_SCHEMA_VERSION change     |
+// |         |            |        | (AgentLane was never serialized).                               |
 #endregion

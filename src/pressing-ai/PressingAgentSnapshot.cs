@@ -82,6 +82,30 @@ namespace TacticalDirector.PressingAI
         /// to count backline agents in the defensive third.
         /// </summary>
         public TacticalDirector.PositioningAI.LineId Line;
+
+        /// <summary>
+        /// Defensive positioning discipline, raw 1–20 scale (mirrors Decision Tree #8's
+        /// <c>DtAgentAttributes.Positioning</c> — the closest existing proxy for a defensive/marking
+        /// attribute; no dedicated Marking/Tackling attribute exists yet in the master attribute
+        /// table). Cheap-item addition (new §7.12 cover-shadow curve): used by
+        /// <see cref="CoverShadowCurve.ComputeCurveEffectiveness"/> — a poorly-positioned defender
+        /// curves less effectively.
+        /// </summary>
+        public float DefensivePositioningAttribute;
+
+        /// <summary>
+        /// Physical capacity to execute a curving pursuit at full effort — average of WorkRate,
+        /// Pace, and Stamina (each raw 1–20 scale, mirroring <c>DtAgentAttributes</c>). Cheap-item
+        /// addition (new §7.12): a low-effort/low-pace/tired defender cannot sustain the curve.
+        /// </summary>
+        public float PhysicalEffortAttribute;
+
+        /// <summary>
+        /// Mental read of the game needed to curve correctly rather than closing down directly —
+        /// average of Decisions and Anticipation (each raw 1–20 scale, mirroring
+        /// <c>DtAgentAttributes</c>). Cheap-item addition (new §7.12).
+        /// </summary>
+        public float MentalSharpnessAttribute;
     }
 }
 
@@ -89,4 +113,9 @@ namespace TacticalDirector.PressingAI
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-05-29 | —      | AR-1 H-1: added IsActive field (§4.4.1 / #7 §3.10). |
+// | 1.2     | 2026-07-07 | —      | Cheap-item addition (redesign, new §7.12): + DefensivePositioningAttribute / |
+// |         |            |        |   PhysicalEffortAttribute / MentalSharpnessAttribute — gate the cover-shadow  |
+// |         |            |        |   curving technique on the presser's own attributes (raw 1–20 scale, mirrors  |
+// |         |            |        |   DtAgentAttributes; MatchEngine is the sole writer, sourced from the same     |
+// |         |            |        |   _dtAttrs the Decision Tree already reads — no duplicate attribute invented). |
 #endregion

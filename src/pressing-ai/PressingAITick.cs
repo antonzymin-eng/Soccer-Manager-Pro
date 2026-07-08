@@ -175,12 +175,20 @@ namespace TacticalDirector.PressingAI
             int primaryId = PrimaryPressSelector.Select(
                 snapshot, interceptPt, out Vector2 primaryTargetPos);
 
-            // Cheap-item addition (new §3.3/§7.12 curving press): bias the approach target toward
-            // the ball carrier's blind side. Applied only to the movement target, never to who was
-            // selected as primary presser (selection already ran above).
+            // Cheap-item addition (new §7.12, redesigned): curve the approach toward a nearby cover-
+            // shadow lane point, gated by the presser's own attributes (a poor/unfit/low-effort
+            // presser curves near zero — straight-line pursuit). Applied only to the movement target,
+            // never to who was selected as primary presser (selection already ran above).
             if (primaryId >= 0)
             {
-                primaryTargetPos = BlindSideApproach.ApplyBias(primaryTargetPos, snapshot);
+                for (int pi = 0; pi < snapshot.Agents.Length; pi++)
+                {
+                    ref readonly PressingAgentSnapshot presserSnap = ref snapshot.Agents[pi];
+                    if (presserSnap.EntityId != primaryId)
+                        continue;
+                    primaryTargetPos = CoverShadowCurve.ApplyCurve(primaryTargetPos, snapshot, in presserSnap);
+                    break;
+                }
             }
 
             // ── Step 4: Cover-shadow selection (§3.4–§3.5) ───────────────────
@@ -380,4 +388,5 @@ namespace TacticalDirector.PressingAI
 // | 1.2     | 2026-06-15 | —      | AR-2 M-1: persistent per-EntityId press-fatigue ledger folded onto snapshot each tick; Step 8 accumulates into it instead of the throwaway snapshot. AR-2 M-2: hysteresis state sized to EntityId space and keyed by EntityId (not snapshot array index). |
 // | 1.3     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam bundles the cross-tick state (role hysteresis, trigger debounce, disengage/cooldown dwell, press-fatigue ledger) into a PressingTickState view for the host snapshot layer. Read-only serialization use; no behaviour change. |
 // | 1.4     | 2026-07-07 | —      | Cheap-item addition: Step 3 result biased via BlindSideApproach.ApplyBias (new §3.3/§7.12) — nudges the primary presser's target toward the ball carrier's blind side; who is selected as presser is unaffected. |
+// | 1.5     | 2026-07-07 | —      | Redesign after user review: BlindSideApproach.ApplyBias → CoverShadowCurve.ApplyCurve — curves the target toward the nearest cover-shadow lane point instead of an arbitrary blind-side offset, gated by the presser's own PressingAgentSnapshot attributes (looked up by EntityId). |
 #endregion
