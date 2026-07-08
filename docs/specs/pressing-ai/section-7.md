@@ -123,16 +123,31 @@ per §4.6). Cross-platform bit-exact parity is deferred to Stage
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. `ERR-013-004` filed: "Fatigue System #13" stale reference verified present at `decision-tree/section-3-1.md` L753. |
 | 0.2 | 2026-07-07 | AI agent | Cheap-item addition: new §7.12 (curving-press blind-side bias) appended below — LANDED, not a deferral. |
+| 0.3 | 2026-07-07 | AI agent | **Redesigned after user review** — see the updated §7.12 below. The original "blind-side approach" (bias toward the position opposite the ball carrier's facing) was the wrong mechanic: curving runs are for adjusting COVER SHADOW to deny a passing option during pursuit, not for approaching the carrier from an unseen angle, and the effect must be gated by the presser's own attributes rather than a flat bonus. |
 
-## 7.12 Curving-Press Blind-Side Bias — LANDED (cheap-item addition, July 7, 2026)
+## 7.12 Cover-Shadow Curving — LANDED, redesigned (cheap-item addition, July 7, 2026)
 
-Motivated by a tactical-theory cross-reference pass: pressing intelligently from a defender's blind
-side (approaching from behind their facing direction) reduces reaction time and denies the easy
-outlet pass, versus a straight-on approach the ball-carrier sees coming. `BlindSideApproach.ApplyBias`
-(pure static, `src/pressing-ai/BlindSideApproach.cs`) reads the ball carrier's `Facing` (already
-carried on `PressingAgentSnapshot` for both teams) and nudges the primary presser's approach target
-`BlindSideApproachBiasM` (`[GT]` 1.0 m) in the direction opposite the carrier's facing. Applied in
-`PressingAITick` Step 3 **after** `PrimaryPressSelector.Select` returns — the bias affects only the
-final movement target, never who is selected as primary presser (the selection cost function is
-unchanged). A degenerate (near-zero) facing vector, an inactive carrier, or no carrier at all leaves
-the target unchanged.
+**Original framing (superseded same day):** the first version of this addition biased the primary
+presser's approach target toward the position opposite the ball carrier's facing direction (a
+"blind-side approach" — reduced reaction time from an unseen angle). User review corrected this: that
+is not what a curving press run is for, and applying it as a flat, attribute-independent bias was
+architecturally wrong (it manufactured a tactical bonus no player attribute earned).
+
+**Corrected model:** a curving press run adjusts the presser's **cover shadow** — bending the pursuit
+path so the presser simultaneously closes down the ball carrier AND denies a nearby passing option,
+rather than running a straight line that leaves an easy outlet pass open. `CoverShadowCurve.ApplyCurve`
+(pure static, `src/pressing-ai/CoverShadowCurve.cs`) finds the nearest eligible opponent receiver to
+the ball carrier (within `CoverShadowCandidateRadiusM`, the same radius `CoverShadowSelector` uses),
+computes the shadow-lane point between carrier and receiver (`CoverShadowLaneFraction`, the same lane
+concept `CoverShadowSelector` uses), and blends the presser's raw interception target toward that lane
+point. The blend weight is `CoverCurveBlendWeightMax` (`[GT]` 0.35, capped below 1.0 so even the best
+presser never abandons the direct press) scaled by `CoverShadowCurve.ComputeCurveEffectiveness` — the
+presser's own attribute average (`DefensivePositioningAttribute`, `PhysicalEffortAttribute` — the
+average of work rate / pace / stamina, `MentalSharpnessAttribute` — the average of decisions /
+anticipation — all new `PressingAgentSnapshot` fields, raw 1–20 scale, sourced by `MatchEngine` from
+the same `_dtAttrs` the Decision Tree already reads) normalised by `ATTRIBUTE_SCALE_MAX`. A poor,
+unfit, low-effort defender (low attributes) curves almost none — effectively a straight line, matching
+the intuition that such a player "will not be trying his hardest to pursue the ball and use curving
+run correctly." Applied in `PressingAITick` Step 3 **after** `PrimaryPressSelector.Select` returns —
+who is selected as primary presser is unaffected; only their movement target curves. No carrier, an
+inactive carrier, or no eligible nearby receiver leaves the target unchanged.
