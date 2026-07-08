@@ -1,7 +1,14 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** June 22, 2026 (Living World System #22 advanced `IN REVIEW → APPROVED` — lead-developer R-01..R-05 sign-off granted; §9.5 decision APPROVED; all 11 section files at status APPROVED (checklist v1.0). Ten section-file adversarial passes (no High in any; all M/L resolved) + T0 `src/living-world/` scaffolding (data types + pure math + ordinal/determinism unit tests) landed. G2 `[GT]` balance pass carried forward as the sole post-APPROVED Stage-1 item; runtime activation gated on KD-10. **Count: 22 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated:** July 7, 2026 (New "RESERVED (design-supplement stage — not yet promoted)"
+> section added, reserving candidate numbers **#23–#26** for the two design supplements opened
+> the same day — `docs/tracking/advanced-positional-behaviors-design.md` (dismarking #23,
+> scripted build-up structures #24, positional rotations #25) and
+> `docs/tracking/game-model-ai-manager-design.md` (tactical presets & AI-manager selection #26).
+> No registry rows added — none is promoted yet; see root `CLAUDE.md` OPEN ISSUES for the full
+> entry. **Count remains 22 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** June 22, 2026 (Living World System #22 advanced `IN REVIEW → APPROVED` — lead-developer R-01..R-05 sign-off granted; §9.5 decision APPROVED; all 11 section files at status APPROVED (checklist v1.0). Ten section-file adversarial passes (no High in any; all M/L resolved) + T0 `src/living-world/` scaffolding (data types + pure math + ordinal/determinism unit tests) landed. G2 `[GT]` balance pass carried forward as the sole post-APPROVED Stage-1 item; runtime activation gated on KD-10. **Count: 22 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
 > **Last Updated (prior):** June 21, 2026 (Living World System #22 added at `NOT STARTED → IN REVIEW`, then section-file PASS-1 fix pass landed same day (v0.2). Second Stage-1 forward spec (Priority 6); 10 section files + appendices + `adversarial-review-section-files-v1.md`, promoted from the design supplement `docs/tracking/living-world-system-design.md` v0.7 after four adversarial passes + five recorded scope decisions. Off-pitch interaction-generation layer that consumes the vol-2/vol-3 human-systems model read-only and adds per-edge episodic memory, deterministic procedural text, and emergent narrative arcs. Section-file PASS-1..10 resolved (4M+3L → 3M+3L → 2M+2L → 1M+3L → 1M+2L → 1M+2L → 1M+1L → 1M+1L → 1M+1L → 2M+1L; no High in any pass since PASS-1 — design stable; findings are localized implementation-grade detail). PASS-10 fixed two cold-store/membership edges opened by the PASS-8/9 fixes (ColdSummary `NextEpisodeId` for episodeId monotonicity; demotion never orphans an arc-pinned episode). ≥75 tests. PASS-3 caught a `PlayerEdge` double-authority hazard (now a read-only mirror); PASS-4 added the verifying test + closed the §2.1 no-write-back gap; PASS-5 scoped FR-LW-016 provenance to arcs (interaction provenance implicit); PASS-6 split the RNG into `world.arcs`/`world.text` sub-streams (periodic/aperiodic draw-interleaving hazard). 34 FRs (FR-LW-001..034); XC-022-001..014; ERR-022-001..004 back-props (season-loop is a §7.1 forward deliverable, not an ERR); ≥74 tests. **T0 scaffolding landed June 21, 2026:** `src/living-world/` data types + pure math + ordinal/determinism units (self-contained, engine-free; CI project-gen validated — services land as KD-10 prerequisites are wired). **Outstanding gates (§9.4):** R-01..R-05 lead-developer sign-off (block added to §9.4, awaiting signature); `[GT]` balance pass (G2, carried forward post-APPROVED). G1 section-file PASS-1..10 DONE. Runtime activation gated on KD-10 (world store + season loop; vol-2/vol-3 impl.; `[GT]` config-loader; match-outcome events). Count: **21 APPROVED / 1 IN REVIEW (#22) / 0 NOT STARTED**.)
 > **Last Updated (prior):** June 20, 2026, later same day (Tactical Instructions #21 advanced `IN REVIEW → APPROVED` — lead-developer R-01..R-05 sign-off granted; section files at v0.3 after PASS-1 (2H+4M+4L) + PASS-2 (1H+4M+1L) adversarial reviews, both resolved. **Post-APPROVED follow-up (non-blocking, Stage-1 implementation-time):** the `RoleWeightModifiers`/§3.2 **balance pass** that pins the illustrative `[GT]` values (G2 in §9.2) — precedent: #8 draft-level approval, #9 §9.8, #16 post-approved items. Runtime activation remains gated on the `[GT]` config-loader + match-engine Phase C/D (KD-8). Count: **21 APPROVED / 0 IN REVIEW / 0 NOT STARTED**.)
 > **Last Updated (prior):** June 20, 2026 (Tactical Instructions #21 added at `NOT STARTED → IN REVIEW` — first Stage-1 forward spec beyond the Stage-0 set of 20; all 11 section files authored v0.1, promoted from the design supplement `docs/tracking/tactical-instruction-layer-design.md` v0.3 after three adversarial passes.)
@@ -46,6 +53,28 @@
 | 22 | Living World System | `living-world/` | 6¹ | APPROVED | Jun 22, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
+
+---
+
+## RESERVED (design-supplement stage — not yet promoted)
+
+These numbers are **reserved to prevent a future renumbering collision** (per "Before creating a
+new spec folder, add the entry here first" below) but are deliberately **NOT** registry rows —
+no folder exists yet, no section files have been authored, and none has a status per the
+definitions below. Promoted to a real registry row above only when each is authored into
+`docs/specs/<folder>/` from its design supplement, matching the #21/#22 precedent (design note →
+promoted spec, row added at promotion).
+
+| # | Working title | Design supplement | Reserved |
+|---|---------------|--------------------|----------|
+| 23 | Dismarking & Marker-Awareness AI | `docs/tracking/advanced-positional-behaviors-design.md` | Jul 7, 2026 |
+| 24 | Scripted Build-Up Structures | `docs/tracking/advanced-positional-behaviors-design.md` | Jul 7, 2026 |
+| 25 | Positional Rotations | `docs/tracking/advanced-positional-behaviors-design.md` | Jul 7, 2026 |
+| 26 | Tactical Presets & AI-Manager Selection | `docs/tracking/game-model-ai-manager-design.md` | Jul 7, 2026 |
+
+Note: the June 27, 2026 Match Engine integration entry in root `CLAUDE.md` OPEN ISSUES explicitly
+recorded that the (unnumbered) `src/match-engine/` composition root "does not introduce #23" —
+consistent with #23 being free to reserve here.
 
 ---
 
