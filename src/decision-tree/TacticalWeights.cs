@@ -55,18 +55,7 @@ namespace TacticalDirector.DecisionTree
 
         // ── Rest Defense (cheap-item addition, new §3.2/§7.7) ───────────────
 
-        public const float RestDefenseRiskMult = 0.85f; // [GT] PASS/SHOOT/DRIBBLE dampener when Positioning AI #12 rest-defense coverage is insufficient
-
-        // ── Half-Spaces (cheap-item addition, new §3.2/§7.8) ────────────────
-
-        /// <summary>
-        /// [GT] Per-<c>LaneId</c> PASS utility multiplier (LW=0, LH=1, C=2, RH=3, RW=4). Half-space
-        /// lanes (LH/RH) carry a bonus reflecting their combination-play value; wide (LW/RW) and
-        /// central (C) lanes are neutral (×1.0 — also the zero-value <c>LaneId</c> default, LW, so an
-        /// un-set lane is numerically harmless even though <c>TacticalContext.Stage0Default</c> seeds
-        /// the semantically-correct <c>C</c>).
-        /// </summary>
-        public static readonly float[] LaneMult = { 1.00f, 1.10f, 1.00f, 1.10f, 1.00f };
+        public const float RestDefenseRiskMult = 0.85f; // [GT] PASS/SHOOT/DRIBBLE dampener when Positioning AI #12 rest-defense coverage is insufficient AND the ball carrier is aware of it (Lerp'd by carrier Decisions/Anticipation in UtilityScorer)
     }
 }
 
@@ -79,4 +68,7 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   dampener on PASS/SHOOT/DRIBBLE).                                          |
 // | 1.3     | 2026-07-07 | —      | Cheap-item addition: + LaneMult[5] (new §3.2/§7.8 half-spaces, PASS bonus  |
 // |         |            |        |   for LH/RH lanes).                                                         |
+// | 1.4     | 2026-07-07 | —      | Reverted after user review: LaneMult[5] half-spaces bonus REMOVED (an       |
+// |         |            |        |   exploitable spatial gap needs tactical/player instructions, not a flat    |
+// |         |            |        |   bonus). RestDefenseRiskMult doc updated for the awareness-gated consumer. |
 #endregion

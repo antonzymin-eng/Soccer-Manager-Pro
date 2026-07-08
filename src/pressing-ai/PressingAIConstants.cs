@@ -167,12 +167,14 @@ namespace TacticalDirector.PressingAI
         public const float PressFatigueCeiling = 0.85f;
 
         /// <summary>
-        /// [GT] Lateral bias (m) applied to the primary presser's approach target, toward the ball
-        /// carrier's blind side (opposite the carrier's Facing), so the press stays hidden from the
-        /// carrier's peripheral vision longer. Cheap-item addition (new §3.3/§7.12 curving press).
-        /// TODO: replace with config loader (Stage 1).
+        /// [GT] Maximum blend weight (0..1) toward the cover-shadow lane point when curving the
+        /// primary presser's approach (§7.12, redesigned). The effective blend is this value scaled
+        /// by <see cref="CoverShadowCurve.ComputeCurveEffectiveness"/> — a maximally attribute-capable
+        /// presser bends this far toward shadowing a nearby pass; an ineffective presser blends near
+        /// zero (straight-line pursuit). Capped below 1.0 so even the best presser never abandons the
+        /// direct press entirely. TODO: replace with config loader (Stage 1).
         /// </summary>
-        public const float BlindSideApproachBiasM = 1.0f;
+        public const float CoverCurveBlendWeightMax = 0.35f;
 
         // ── Disengage / reset / zone ───────────────────────────────────────────
 
@@ -208,4 +210,7 @@ namespace TacticalDirector.PressingAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                                                     |
 // | 1.1     | 2026-05-29 | —      | Added PITCH_HALF_LENGTH_M, PITCH_THIRD_M, ATTRIBUTE_SCALE_MAX to Derived region.            |
 // | 1.2     | 2026-07-07 | —      | Cheap-item addition: + BlindSideApproachBiasM (new §3.3/§7.12 curving press).               |
+// | 1.3     | 2026-07-07 | —      | Redesign after user review: BlindSideApproachBiasM → CoverCurveBlendWeightMax (curving now   |
+// |         |            |        |   blends toward a cover-shadow lane point, gated by the presser's own attributes, not a flat |
+// |         |            |        |   blind-side position offset).                                                              |
 #endregion

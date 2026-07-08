@@ -197,23 +197,6 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(MarkingOrientation.Balanced, engine.TestOnly_MarkingOrientation(1));
         }
 
-        // ── #8 half-spaces (cheap-item addition): AgentLane routes from Positioning AI #12 ──
-
-        [Test]
-        public void AgentLane_RoutesADefinedLaneId_ForEveryAgent()
-        {
-            var engine = new MatchEngine(MatchSeed);
-            TickToFirstStride(engine);
-
-            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
-            {
-                var lane = engine.TestOnly_AgentLane(i);
-                Assert.IsTrue(
-                    System.Enum.IsDefined(typeof(TacticalDirector.PositioningAI.LaneId), lane),
-                    $"Agent {i}'s routed AgentLane must be a defined LaneId (got {lane}).");
-            }
-        }
-
         // ── #15 Phase-D writer: FocusPlay routes per team into the Attacking AI snapshot ──
 
         [Test]
@@ -486,5 +469,6 @@ namespace TacticalDirector.MatchEngine
 // | 1.4     | 2026-06-30 | —      | #21 §3.3 per-agent PlayerTactic config (SetPlayerTactic routing / stride-gating / |
 // |         |            |        | invalid-agent / identity behaviour-neutrality) + §3.4 DefensiveLine depth recompute. |
 // | 1.5     | 2026-07-07 | —      | Cheap-item addition: #14 MarkingOrientation per-team routing + Balanced-default case. |
-// | 1.6     | 2026-07-07 | —      | Cheap-item addition: half-spaces AgentLane routing smoke test (defined-value check). |
+// | 1.6     | 2026-07-07 | —      | Reverted after user review: the half-spaces AgentLane routing smoke test is |
+// |         |            |        | REMOVED (half-spaces need tactical/player instructions, not a flat bonus).  |
 #endregion

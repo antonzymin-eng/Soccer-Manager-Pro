@@ -11,8 +11,7 @@
         "TacticalDirector.CollisionSystem",
         "TacticalDirector.EventSystem",
         "TacticalDirector.DeterministicSim",
-        "TacticalDirector.TacticalInstructions",
-        "TacticalDirector.PositioningAI"
+        "TacticalDirector.TacticalInstructions"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

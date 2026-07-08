@@ -65,13 +65,20 @@ namespace TacticalDirector.DecisionTree
             u *= TacticTranslation.PlayerTacticActionMultiplier(
                 ctx.TacticalContext.PlayerTactic, ctx.TacticalContext.Tempo, opt.Type);
 
-            // Cheap-item addition (new §3.2/§7.7): Positioning AI #12's rest-defense coverage check
-            // dampens PASS/SHOOT/DRIBBLE when insufficient cover is left behind. Sufficient (the
-            // Stage0Default identity, true) applies no dampening — byte-identical to pre-addition.
+            // Cheap-item addition (new §3.2/§7.7, redesigned after user review): Positioning AI #12's
+            // rest-defense coverage check only matters if THIS agent — the ball carrier, since PASS/
+            // SHOOT/DRIBBLE only score when AgentHasBall — actually has the tactical awareness to
+            // perceive the thin cover. An unaware player (low Decisions/Anticipation) takes the risky
+            // action anyway; the insufficient cover is then a genuine tactical flaw in team setup or
+            // instructions for the manager to address, not something the AI silently corrects for. A
+            // fully aware player (awareness = 1.0) gets the full dampener; an oblivious one (0.0) gets
+            // none. Sufficient coverage (the Stage0Default identity, true) applies no dampening either
+            // way — byte-identical to pre-addition.
             if (!ctx.TacticalContext.RestDefenseSufficient
                 && (opt.Type == ActionType.PASS || opt.Type == ActionType.SHOOT || opt.Type == ActionType.DRIBBLE))
             {
-                u *= TacticalWeights.RestDefenseRiskMult;
+                float awareness = (ctx.A_Decisions + ctx.A_Anticipation) * 0.5f;
+                u *= Mathf.Lerp(1.0f, TacticalWeights.RestDefenseRiskMult, awareness);
             }
 
             float clamped = Mathf.Clamp(u, UtilityWeights.UTILITY_FLOOR, UtilityWeights.UTILITY_CEILING);
@@ -104,12 +111,7 @@ namespace TacticalDirector.DecisionTree
             float tactM = TacticalModifierResolver.Resolve(
                 ActionType.PASS, in ctx.TacticalContext, ctx.OpponentHasBall, opt.IntendedDistance);
 
-            // Cheap-item addition (new §3.2/§7.8): half-space lane bonus. The passer's own lane
-            // (Positioning AI #12, already team-relative) — LH/RH carry a combination-play bonus;
-            // C/LW/RW are ×1.0 (the Stage0Default identity, LaneId.C).
-            float laneM = TacticalWeights.LaneMult[(int)ctx.TacticalContext.AgentLane];
-
-            return baseU * am * contextM * tactM * laneM * (1.0f - risk);
+            return baseU * am * contextM * tactM * (1.0f - risk);
         }
 
         // ── §3.2.3 SHOOT ───────────────────────────────────────────────────────
@@ -378,6 +380,12 @@ namespace TacticalDirector.DecisionTree
 // | 1.8     | 2026-07-07 | —      | Cheap-item addition: PASS/SHOOT/DRIBBLE × RestDefenseRiskMult when            |
 // |         |            |        |   TacticalContext.RestDefenseSufficient is false (new §3.2/§7.7). Sufficient |
 // |         |            |        |   (the Stage0Default identity) applies no dampening.                          |
-// | 1.9     | 2026-07-07 | —      | Cheap-item addition: ScorePass × TacticalWeights.LaneMult[AgentLane] (new     |
-// |         |            |        |   §3.2/§7.8 half-spaces). C/LW/RW ⇒ ×1.0 identity; LH/RH ⇒ bonus.            |
+// | 1.9     | 2026-07-07 | —      | Redesign after user review: the rest-defense dampener is no longer a flat     |
+// |         |            |        |   multiplier — it is Lerp'd by the ball carrier's own (Decisions +            |
+// |         |            |        |   Anticipation) / 2 awareness. An unaware carrier gets no dampening (the      |
+// |         |            |        |   thin cover is a real tactical flaw exposed, not silently corrected); a      |
+// |         |            |        |   fully aware one gets the full RestDefenseRiskMult. Also REVERTS the half-   |
+// |         |            |        |   spaces PASS bonus (v1.9-as-first-written) — per user review, half-spaces    |
+// |         |            |        |   are an exploitable gap requiring tactical/player instructions, not a flat   |
+// |         |            |        |   passing bonus; ScorePass no longer reads AgentLane.                        |
 #endregion
