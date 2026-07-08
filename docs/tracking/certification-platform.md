@@ -12,6 +12,13 @@
 
 This pin satisfies the precondition for `FR-DS-009-GATE` Stage 0 activation per Spec #16 §5.5. Updates require Platform Certification owner sign-off per Spec #16 §1.7 Governance Artifacts.
 
+**Executing a certification run against this pin:** see the operator runbook at
+`docs/tracking/cert-run-runbook.md` (host pre-flight against the tuple below,
+100-run capture, `PENDING → CERTIFIED` promotion of the
+`CertifiedPerfBaseline` corpus entry, and sign-off). The first run is currently
+blocked on Unity project initialization + pinned-host access — see that file's
+Status section.
+
 ---
 
 ## Stage 0 Host Platform

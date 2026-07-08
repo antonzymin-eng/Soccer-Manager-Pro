@@ -38,6 +38,10 @@ The code-side entry is `CertifiedPerfBaseline.Pending(...)` (see
 
 ## Runbook — promoting PENDING → CERTIFIED
 
+> Full operator procedure (host pre-flight, capture, promotion, sign-off):
+> `docs/tracking/cert-run-runbook.md`. The abridged steps below stay here for
+> quick reference.
+
 1. On the pinned platform (`certification-platform.md` Stage 0 tuple), run the capstone scenario
    under the perf harness for `BaselineSampleCount` (= 100) runs.
 2. Record the measured per-tick `p50`/`p99` (ms) and the full `SessionManifest`
