@@ -16,7 +16,7 @@
 | FR-BU-003 | Zone transitions apply hysteresis: the boundary must be crossed by more than `BUILDUP_ZONE_HYSTERESIS_M` beyond the threshold to commit a new zone; otherwise the committed zone holds (§3.1). | MUST | KD-2 |
 | FR-BU-004 | The overlay is active only when `BuildUpStructure ≠ None` AND phase = `Phase.InPoss` AND committed zone ∈ {OwnThird, MiddleThird} AND the post-regain suppression window (§3.3) is closed. | MUST | KD-3 |
 | FR-BU-005 | `BuildUpStructure.None` (zero value) is the exact identity: zero offsets, and a default match is byte-identical to pre-#24. | MUST | KD-6 |
-| FR-BU-006 | `TeamTactic.TransitionWon ∈ {CounterAttack, CounterPress}` opens a suppression window of `REGAIN_SUPPRESS_TICKS` heartbeats on each possession regain (consumed from the existing possession-changed signal); `{HoldShape, Regroup}` opens none. | MUST | KD-3 / §3.3 |
+| FR-BU-006 | `TeamTactic.TransitionWon ∈ {CounterAttack, CounterPress}` opens a suppression window of `REGAIN_SUPPRESS_TICKS` heartbeats on each **team-level regain** — the possessing *team* (derived from the possession-changed signal's holder ids) transitions opponent → this team. Intra-team possessor changes MUST NOT arm the window (PASS-1 M-1: the raw per-agent event fires on teammate receptions too); `{HoldShape, Regroup}` opens none. | MUST | KD-3 / §3.3 |
 | FR-BU-007 | Overlay offsets are additive per-slot displacements from the structure catalogue (Appendix A), keyed by `(BuildUpStructure, zone, LineId, LaneId)`; applied after `ContextModifier`, before `SpacingResolver` and the pitch clamp. | MUST | KD-4 / §3.2 |
 | FR-BU-008 | Offsets are bounded: every catalogue entry satisfies `|Δx| ≤ BUILDUP_OFFSET_MAX_M` and `|Δy| ≤ BUILDUP_OFFSET_MAX_M`, enforced by a catalogue-invariant test. | MUST | §3.2 |
 | FR-BU-009 | The goalkeeper receives no overlay offset (GK positioning stays #11/#12-owned). | MUST | §3.2 |
@@ -63,7 +63,7 @@ duplicated here).
 | F | Mode | Handling |
 |---|---|---|
 | F1 | Non-finite ball X reaches the classifier | hold the committed zone (decay-free no-op), never classify from NaN |
-| F2 | Deserialized `SuppressTicksRemaining` negative or > `REGAIN_SUPPRESS_TICKS` cap | fail loud at the snapshot seam |
+| F2 | Deserialized `SuppressTicksRemaining` negative or > `REGAIN_SUPPRESS_TICKS` cap, or `CommittedZone` byte > FinalThird (PASS-1 L-2) | fail loud at the snapshot seam |
 | F3 | Undefined `BuildUpStructure` byte at a routing seam | refuse (fail loud), never clamp |
 | F4 | Catalogue row exceeding `BUILDUP_OFFSET_MAX_M` | build-time invariant test failure (FR-BU-008) — cannot ship |
 
@@ -71,4 +71,5 @@ duplicated here).
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial FR set (16), data structures, back-props, failure modes. |
+| 0.2 | 2026-07-08 | — | PASS-1 fixes: FR-BU-006 team-level-regain arming (M-1); F2 CommittedZone gate (L-2). |
 #endregion

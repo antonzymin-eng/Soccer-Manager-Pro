@@ -30,8 +30,9 @@ above central ones.
 ## Appendix B — Snapshot field order (pinned before wiring, FR-RO-013)
 
 1. Per agent, roster order: `SlotIndex` (int32) — the binding permutation
-2. Per pair, table-row order: `TriggerDwellTicks` (int32), `Rotated` (byte), `HoldTicksRemaining` (int32)
-3. `TeamTactic.RotationFreedom` (byte) via `WriteTeamTactic` per the append-order coordination rule
+2. Per agent, roster order: `LastComposedTarget.X` (float32), `LastComposedTarget.Y` (float32) — PASS-1 H-1 cache
+3. Per pair, table-row order: `TriggerDwellTicks` (int32), `Rotated` (byte), `HoldTicksRemaining` (int32)
+4. `TeamTactic.RotationFreedom` (byte) via `WriteTeamTactic` per the append-order coordination rule
 
 ## Appendix C — FR traceability matrix (completed as tests land)
 
@@ -64,8 +65,9 @@ ROTATION_HOLD_TICKS ≥ D_line        [DERIVED lower bound]
 ```
 
 guarantees the analyzer's dwell always resolves against a stable binding before the binding can
-change again. The catalogue value 30 sits well above today's line-dwell constant; T-RO-U-013 locks
-the inequality against future retuning of either side. (The reverse direction needs no bound: the
+change again. Verified against source (PASS-1 L-3): `PositioningAIConstants.LINE_DWELL_TICKS = 5`,
+so the catalogue value 30 satisfies the bound with 6× margin; T-RO-U-013 locks the inequality
+against future retuning of either side. (The reverse direction needs no bound: the
 analyzer re-sorting mid-hold is harmless — it operates on positions and the binding is stable.)
 
 ## Appendix E — Sensitivity notes
@@ -80,4 +82,5 @@ analyzer re-sorting mid-hold is harmless — it operates on positions and the bi
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial appendices: 4-4-2 exemplar, snapshot order, traceability, FR-RO-007 derivation. |
+| 0.2 | 2026-07-08 | — | PASS-1: Appendix B gains the `LastComposedTarget` block (H-1); Appendix D line-dwell value verified = 5 (L-3). |
 #endregion

@@ -18,15 +18,19 @@ advantage = ROTATION_ADVANTAGE_M × ROTATION_ADVANTAGE_SCALAR[dial]          [m]
 swapGain(A) = |pA − tA| − |pA − tB|      # how much closer A is to B's target
 swapGain(B) = |pB − tB| − |pB − tA|
 predicate  = swapGain(A) ≥ advantage AND swapGain(B) ≥ advantage
-             AND phase ∈ {InPoss, TransToAtk}
 ```
+
+The predicate is **pure geometry** (PASS-1 M-1): the phase condition
+(phase ∈ {InPoss, TransToAtk}) is an *outer evaluation gate* in §3.2, not a predicate term — out
+of phase the predicate is not evaluated at all and dwell freezes rather than resets (FR-RO-010).
 
 - **Units/ranges:** metres; `ROTATION_ADVANTAGE_M > 0` `[GT]` = 4.0;
   `ROTATION_ADVANTAGE_SCALAR`: `Off → +∞` (never — implemented as the dial gate, not arithmetic),
   `Conservative → 1.5`, `Free → 1.0` `[GT]`.
 - **Both-sided by design:** one agent drifting is not an exchange; requiring positive gain on both
-  sides means the swap strictly reduces total displacement — the geometric guarantee that rotating
-  is better than running home (`|pA−tB| + |pB−tA| < |pA−tA| + |pB−tB| − 2×advantage`).
+  sides means the swap reduces total displacement by at least twice the advantage margin — the
+  geometric guarantee that rotating is better than running home
+  (`|pA−tB| + |pB−tA| ≤ |pA−tA| + |pB−tB| − 2×advantage`; PASS-1 L-1).
 - **Worked example:** left-mid A at (60, 10) with target (45, 12); left-back B at (44, 14) with
   target (58, 8). |pA−tA| = 15.1, |pA−tB| = 2.8 → swapGain(A) = 12.3. |pB−tB| = 15.2,
   |pB−tA| = 2.2 → swapGain(B) = 13.0. At `Conservative` (advantage = 6.0): both ≥ 6.0 → predicate
@@ -38,6 +42,11 @@ Per pair, per heartbeat, in ascending Appendix-A row order, skipping pairs whose
 partner-locked (FR-RO-009):
 
 ```
+if phase ∉ {InPoss, TransToAtk}:                    # PASS-1 M-1 outer gate
+    if Rotated: HoldTicksRemaining = max(0, HoldTicksRemaining − 1)
+    # TriggerDwellTicks unchanged — frozen, not reset (FR-RO-010)
+    skip pair (no predicate evaluation)
+
 if !Rotated:
     TriggerDwellTicks = predicate ? TriggerDwellTicks + 1 : 0
     if TriggerDwellTicks ≥ ROTATION_TRIGGER_DWELL_TICKS and teamCommitsThisTick < ROTATION_MAX_PER_TICK:
@@ -94,4 +103,5 @@ ordering contract is what makes this safe.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial FM-RO-01..02 + atomicity/partner-lock/phase-exit semantics. |
+| 0.2 | 2026-07-08 | — | PASS-1 fixes: M-1 phase hoisted to an outer freeze gate (predicate now pure geometry — v0.1 pseudocode reset dwell on phase exit, contradicting FR-RO-010); L-1 inequality ≤. |
 #endregion

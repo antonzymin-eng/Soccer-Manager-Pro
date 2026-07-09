@@ -41,10 +41,16 @@ else:
     if S.DwellTicks == 0: S.LastMarkerId = -1
 ```
 
-Update order: dwell updates run in ascending agent index inside the #12 tick, before `SlotComposer`
-consumes pressure that same tick (parallel to the `PositioningAITick` ordering that lets
-`GetRestDefenseSufficient()` read current-tick values — the AR-2 routing-order check in the July 7
-cheap-item cycle). Marker identity switches (a *different* opponent takes over inside the radius)
+Update order (PASS-1 M-1): dwell/pressure updates run in ascending agent index inside the
+**per-agent perception pass** at stride N — the pass where `FilteredView` is built. The #12 offset
+stage (§3.3) therefore consumes the value computed at stride **N−1** (Positioning runs before the
+per-agent pass in the stride order), a documented one-stride latency in the conservative direction:
+a newly acquired marker starts influencing the offset one stride late, which the dwell ramp absorbs.
+The `RestDefenseEvaluator` same-tick pattern does NOT apply here — it consumes
+`PositioningPerceptionSnapshot`, not `FilteredView`. The §3.4 passer-side penalty runs in the same
+per-agent pass as its `FilteredView` and is always fresh. Restore determinism is unaffected: the
+consumed value is a pure function of serialized dwell state + #16-serialized perception state.
+Marker identity switches (a *different* opponent takes over inside the radius)
 do **not** reset dwell — being handed from marker to marker is still being marked; `LastMarkerId`
 simply tracks the current nearest.
 
@@ -120,4 +126,5 @@ G2 precedent (§9.2 note).
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial formulas FM-DM-01..03 with units, ranges, worked examples; constant table. |
+| 0.2 | 2026-07-08 | — | PASS-1 M-1: dwell-update site pinned to the per-agent perception pass; #12 consumption is one-stride-stale by design (the RestDefense same-tick analogy does not transfer to `FilteredView`-derived signals). |
 #endregion

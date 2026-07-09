@@ -26,8 +26,8 @@ hysteresis shape, suppression semantics.
 
 ## 9.3 Review gates
 
-- [ ] PASS-1 adversarial review (pending)
-- [ ] PASS-2+ until no High findings (pending)
+- [x] PASS-1 adversarial review — **run July 8, 2026: 0H+3M+2L, all resolved in the v0.2 fix pass same day** (`adversarial-review-section-files-v1.md`; M-1 = intra-team possession events re-arming the suppression window, verified against the actual `PossessionChangedEvent` payload)
+- [x] PASS-2 not required (PASS-1 found no High findings)
 - [ ] §2.3 back-props filed as ERR entries, landed atomically with `APPROVED`
 - [ ] Lead-developer R-01..R-05 sign-off (pending)
 
@@ -42,4 +42,5 @@ hysteresis shape, suppression semantics.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial checklist. |
+| 0.2 | 2026-07-08 | — | PASS-1 run and resolved (0H+3M+2L); PASS-2 not required (no High). |
 #endregion

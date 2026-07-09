@@ -28,7 +28,7 @@ post-AR-7/AR-12 lesson that pure-function suites encode rather than catch compos
 | T-DM-U-011 | Penalty `mult` per §3.4 worked example (0.832); floor at `TARGET_MARKED_UTILITY_MULT` |
 | T-DM-U-012 | awareness01 = 0 ⇒ mult = 1.0 (unaware passer ignores markedness) |
 | T-DM-U-013 | `DismarkIntensity` ordinal stability (Off=0/Conservative=1/Aggressive=2) |
-| T-DM-U-014 | Dwell-state deserialization gates: negative / above-cap ⇒ throw (F2) |
+| T-DM-U-014 | Dwell-state deserialization gates: negative / above-cap `DwellTicks`, out-of-range `LastMarkerId`, and the `DwellTicks > 0 ∧ LastMarkerId = −1` incoherence all throw (F2, PASS-1 L-2) |
 
 ## 5.2 Integration
 
@@ -36,7 +36,7 @@ post-AR-7/AR-12 lesson that pure-function suites encode rather than catch compos
 |---|---|
 | T-DM-I-001 | Offset stage position: composed target with offset still passes the pitch clamp; an offset that would exit the pitch is clamped (FR-DM-008) |
 | T-DM-I-002 | Carrier and GK receive no offset at maximum pressure (FR-DM-007) |
-| T-DM-I-003 | Dwell update runs before `SlotComposer` consumption within one tick (current-tick value, not stale) |
+| T-DM-I-003 | One-stride staleness contract (§3.2 PASS-1 M-1): the offset stage at stride N consumes the pressure computed in stride N−1's per-agent pass; the §3.4 penalty consumes the same-pass value |
 | T-DM-I-004 | Phase-D routing: per-team `DismarkIntensity` reaches both consumers' fields; teams independent (via `TestOnly_DismarkIntensity`) |
 | T-DM-I-005 | `SNAPSHOT_SCHEMA_VERSION` probe: dwell state + dial feed the snapshot digest (schema-pin test, at wiring) |
 
@@ -58,4 +58,5 @@ completed (not fabricated) as tests land — matching the honesty rule for check
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial test plan: 14 unit, 5 integration, 3 determinism + 1 scenario. |
+| 0.2 | 2026-07-08 | — | PASS-1: T-DM-I-003 rewritten to the one-stride contract (M-1); T-DM-U-014 extended (L-2). |
 #endregion

@@ -94,12 +94,13 @@ AI internals.
 |---|---|
 | T0 | `TacticPreset` + `TacticPresetLibrary` (in-code catalogue) |
 | T1 | Preset → config projection + boot wiring via existing appliers |
-| T2 | Decision gate in the composition root (KD-3) |
+| T2 | Decision gate in the composition root (KD-3). **Prerequisite gate (PASS-1 M-1):** the half-time trigger and `MATCH_TICKS_TOTAL` require the engine to model halves/match length — until then the gate fires kickoff + fixed interval only |
 | T3 | Kickoff selection scoring (own-state-only) |
-| T4 | In-match adaptation ladder via `SetTeamTactic`/`SetPlayerTactic` |
+| T4 | In-match adaptation ladder via `SetTeamTactic`/`SetPlayerTactic`. **Prerequisite gate (PASS-1 M-1):** every `goalDiff ≠ 0` path requires engine score state, which does not exist until a goal-detection producer lands (§7.2's named first candidate); until then the ladder is exercised via test seams only |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial section; supplement open questions 1–4 resolved (KD-3/KD-5/KD-7 + §7 UI deferral). |
+| 0.2 | 2026-07-08 | — | PASS-1 M-1: §1.6 T2/T4 rows gain explicit engine-substrate prerequisite gates (score state; halves/match-length model). |
 #endregion

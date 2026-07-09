@@ -22,8 +22,8 @@
 | T-RO-U-009 | NaN position/target ⇒ predicate false, dwell reset, no NaN propagation (F4) |
 | T-RO-U-010 | Adjacency catalogue invariants: GK-free, valid indices, distinct pairs, row cap (F1) |
 | T-RO-U-011 | `RotationFreedom` ordinal stability (Off=0/Conservative=1/Free=2) |
-| T-RO-U-012 | Restore seam refuses a non-permutation `SlotIndex` set (F2) |
-| T-RO-U-013 | FR-RO-007 invariant: `ROTATION_HOLD_TICKS ≥` line-dwell constant (BalancePassInvariants style) |
+| T-RO-U-012 | Restore seam refuses a non-permutation `SlotIndex` set (F2), incoherent pair state, and non-finite cached targets (F6, PASS-1 L-2) |
+| T-RO-U-013 | FR-RO-007 invariant: `ROTATION_HOLD_TICKS (30) ≥ LINE_DWELL_TICKS (5)` (BalancePassInvariants style; value verified at PASS-1 L-3) |
 
 ## 5.2 Integration
 
@@ -31,7 +31,7 @@
 |---|---|
 | T-RO-I-001 | Controller→Composer→ShapeAnalyzer order: post-swap tick composes both agents at their new targets; lines/lanes re-sort sees post-swap bindings |
 | T-RO-I-002 | Away-team mirror: identical scenario mirrored for the away team rotates the mirrored pair (ERR-008-002 class) |
-| T-RO-I-003 | Previous-tick-target read: a swap does not recompose within its own tick (§4.2) |
+| T-RO-I-003 | Previous-tick-target read via the serialized `LastComposedTarget` cache: a swap does not recompose within its own tick; the cache is written post-compose every tick (§4.2, PASS-1 H-1) |
 | T-RO-I-004 | Turnover mid-rotation: bindings persist through OutOfPoss; no snap-home (FR-RO-010) |
 | T-RO-I-005 | Phase-D routing per team via `TestOnly_SlotBinding`; teams independent |
 | T-RO-I-006 | Schema probe: permutation + pair state + dial feed the digest (at wiring) |
@@ -42,7 +42,7 @@
 |---|---|
 | T-RO-DET-001 | Two same-seed runs with `Free`: bitwise-identical digests |
 | T-RO-DET-002 | Default (`Off`) run digest-identical to pre-#25 |
-| T-RO-DET-003 | Save/restore with an active rotation (mid-hold) resumes byte-identically, bindings included |
+| T-RO-DET-003 | Save/restore with an active rotation (mid-hold) resumes byte-identically — bindings, pair state, AND the `LastComposedTarget` cache (the PASS-1 H-1 lock: a re-seed instead of a verbatim cache restore fails this test) |
 | sim_rotation-ratifies-exchange | #19 scenario: scripted movement drives an organic LM/LB exchange under `Free`; envelope asserts exactly one rotation commits, total displacement decreases vs the `Off` baseline, and no oscillation occurs over 20 s |
 
 ## 5.4 FR traceability
@@ -53,4 +53,5 @@ Matrix in Appendix C, completed as tests land.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial plan: 13 unit, 6 integration, 3 determinism + 1 scenario. |
+| 0.2 | 2026-07-08 | — | PASS-1: T-RO-I-003 / T-RO-DET-003 rewritten to the serialized-cache contract (H-1); T-RO-U-012/013 extended (L-2/L-3). |
 #endregion

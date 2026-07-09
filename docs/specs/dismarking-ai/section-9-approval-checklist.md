@@ -27,8 +27,8 @@ formula shapes, gates, and identity rows.
 
 ## 9.3 Review gates
 
-- [ ] PASS-1 adversarial review of section files (pending — not yet run)
-- [ ] PASS-2+ until no High findings (pending)
+- [x] PASS-1 adversarial review of section files — **run July 8, 2026: 0H+1M+3L, all resolved in the v0.2 fix pass same day** (`adversarial-review-section-files-v1.md`; M-1 = dwell-update ordering vs the stride phase order)
+- [x] PASS-2 not required (PASS-1 found no High findings, per the §6 pipeline step 5 rule)
 - [ ] Cross-spec back-props (§2.4) filed as ERR entries and landed atomically with `APPROVED`
 - [ ] Lead-developer R-01..R-05 sign-off (pending)
 
@@ -42,4 +42,5 @@ formula shapes, gates, and identity rows.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial checklist; review/sign-off gates open by construction. |
+| 0.2 | 2026-07-08 | — | PASS-1 run and resolved (0H+1M+3L); PASS-2 not required (no High). |
 #endregion

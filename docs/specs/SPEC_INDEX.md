@@ -1,13 +1,17 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 8, 2026 (Candidates **#23–#26 promoted from RESERVED to registry rows at
+> **Last Updated:** July 8, 2026, later same day (**PASS-1 adversarial reviews run on #23–#26,
+> all resolved in same-day v0.2 fix passes**: #23 0H+1M+3L; #24 0H+3M+2L; #25 1H+1M+3L (+ PASS-2
+> re-read clean at H/M per the High-found rule); #26 0H+1M+2L. Per-spec
+> `adversarial-review-section-files-v1.md` files filed; §9.3 gates updated. Remaining gates:
+> `[CITATION-PENDING]` §8 rows, back-prop ERRs at `APPROVED`, #25 Appendix-A family completeness,
+> R-01..R-05 sign-off. Count unchanged: **22 APPROVED / 4 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 8, 2026 (Candidates **#23–#26 promoted from RESERVED to registry rows at
 > `IN REVIEW`** — all four authored as full 11-file section-file sets (v0.1) from their design
 > supplements, per each supplement's §6 promotion pipeline: `dismarking-ai/` (#23, FR-DM),
 > `build-up-structures/` (#24, FR-BU), `positional-rotations/` (#25, FR-RO), `tactical-presets/`
-> (#26, FR-TP). Section-file PASS-1 adversarial reviews NOT yet run (each §9.3 records the open
-> gates); `[CITATION-PENDING]` §8 rows outstanding in all four. The RESERVED section below now
-> records the promotion. **Count: 22 APPROVED / 4 IN REVIEW / 0 NOT STARTED.**)
+> (#26, FR-TP). The RESERVED section below records the promotion.)
 > **Last Updated (prior):** July 7, 2026 (New "RESERVED (design-supplement stage — not yet promoted)"
 > section added, reserving candidate numbers **#23–#26** for the two design supplements opened
 > the same day — `docs/tracking/advanced-positional-behaviors-design.md` (dismarking #23,

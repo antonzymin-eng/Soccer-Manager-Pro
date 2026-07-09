@@ -26,8 +26,8 @@ predicate shape, two-sided hysteresis, atomicity, caps, ordering contract.
 
 ## 9.3 Review gates
 
-- [ ] PASS-1 adversarial review (pending) — reviewers directed at §4.2 (previous-tick-target read) and §3.4 (turnover persistence), the two highest-risk decisions
-- [ ] PASS-2+ until no High findings (pending)
+- [x] PASS-1 adversarial review — **run July 8, 2026: 1H+1M+3L, all resolved in the v0.2 fix pass same day** (`adversarial-review-section-files-v1.md`). The predicted §4.2 risk was real: H-1 = the previous-tick targets did not exist on `AgentPositioningData` and the restore re-seed broke byte-identity; now a controller-owned serialized cache
+- [x] PASS-2 — run after the fixes per the pipeline rule (High found ⇒ repeat); re-read of the fixed surfaces clean at H/M
 - [ ] §2.4 back-props filed (incl. the #12 `SlotIndex` single-writer contract amendment) atomically with `APPROVED`
 - [ ] Lead-developer R-01..R-05 sign-off (pending)
 
@@ -42,4 +42,5 @@ predicate shape, two-sided hysteresis, atomicity, caps, ordering contract.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial checklist; Appendix-A family completeness flagged as an open PASS-1 item. |
+| 0.2 | 2026-07-08 | — | PASS-1 run and resolved (1H+1M+3L); PASS-2 re-read clean at H/M. Appendix-A family completeness remains open (§9.1). |
 #endregion

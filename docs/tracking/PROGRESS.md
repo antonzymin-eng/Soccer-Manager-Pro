@@ -1,7 +1,16 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** July 8, 2026 (**Candidates #23–#26 promoted to section files at `IN REVIEW`** —
+**Last Updated:** July 8, 2026, later same day (**PASS-1 adversarial reviews run on #23–#26, all
+findings resolved in same-day v0.2 fix passes** — #23 Dismarking 0H+1M+3L (one-stride-stale
+pressure consumption contract); #24 Build-Up 0H+3M+2L (team-level-regain suppression arming —
+the per-agent `PossessionChangedEvent` fires on teammate receptions too; committed-zone-expansion
+hysteresis; lane-key fixes); #25 Rotations **1H**+1M+3L, PASS-2 re-read clean at H/M (serialized
+`LastComposedTarget` cache replaces a nonexistent-field claim that broke restore byte-identity;
+phase-exit freeze fixed); #26 Presets 0H+1M+2L (engine score/halves substrate gates;
+`MATCH_TICKS_TOTAL` `[CROSS-PENDING]`; Appendix E re-derived). Remaining gates per §9.3:
+`[CITATION-PENDING]` rows, back-prop ERRs at `APPROVED`, #25 Appendix-A completeness, R-01..R-05.)
+**Last Updated (prior):** July 8, 2026 (**Candidates #23–#26 promoted to section files at `IN REVIEW`** —
 the four design-supplement candidates each authored as a full 11-file spec set (v0.1):
 `docs/specs/dismarking-ai/` (#23, FR-DM-001..018), `docs/specs/build-up-structures/` (#24,
 FR-BU-001..016), `docs/specs/positional-rotations/` (#25, FR-RO-001..018),

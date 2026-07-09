@@ -1,7 +1,28 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 8, 2026 (**Candidates #23–#26 promoted to section files at `IN REVIEW`** —
+> **Last Updated:** July 8, 2026, later same day (**Section-file PASS-1 adversarial reviews run on
+> all four IN-REVIEW specs #23–#26, all findings resolved in same-day v0.2 fix passes** — #23
+> Dismarking 0H+1M+3L (M-1: the dwell-update-inside-#12-tick claim was impossible — `FilteredView`
+> is built in the per-agent pass AFTER Positioning in the stride order; now a pinned one-stride-
+> stale consumption contract); #24 Build-Up 0H+3M+2L (M-1: the post-regain suppression window
+> armed on EVERY teammate reception — `PossessionChangedEvent` carries per-agent holder ids and
+> fires on intra-team transfers, verified against the payload; now team-level-regain arming. M-2:
+> zone hysteresis reformulated as committed-zone expansion, well-defined for long-ball jumps. M-3:
+> catalogue lane keys corrected — fullbacks occupy wide L/R lanes, not LH/RH); #25 Rotations
+> **1H**+1M+3L (H-1: §4.2's "previous-tick composed targets on `AgentPositioningData`" did not
+> exist — the struct has no such field — and the restore re-seed broke FR-RO-013/T-RO-DET-003
+> byte-identity; now a controller-owned SERIALIZED `LastComposedTarget` cache. M-1: phase exit
+> reset dwell in the pseudocode while FR-RO-010 mandated freeze — the test plan contradicted the
+> pseudocode, caught at spec stage. PASS-2 re-read clean at H/M per the High-found rule. L-3:
+> `LINE_DWELL_TICKS = 5` verified, 30 ≥ 5 with 6× margin); #26 Presets 0H+1M+2L (M-1: §3.2/§3.4
+> consumed engine score/halves state that does not exist — no goal producer, no halves model, and
+> `MATCH_TICKS_TOTAL` was an untagged phantom; now explicit T2/T4 prerequisite gates +
+> `[CROSS-PENDING]` row. L-1: Appendix E sensitivity values re-derived — ~39.4′/~52.5′, not
+> ~35′/~85′). Four `adversarial-review-section-files-v1.md` files filed; §9.3 gates updated.
+> Remaining open gates: `[CITATION-PENDING]` §8 rows, back-prop ERRs at `APPROVED`, #25 Appendix-A
+> family completeness, R-01..R-05 sign-off.)
+> **Last Updated (prior):** July 8, 2026 (**Candidates #23–#26 promoted to section files at `IN REVIEW`** —
 > all four authored as full 11-file spec sets (v0.1) from the two July 7 design supplements, per
 > each supplement's own §6 promotion pipeline (steps 1–3): `docs/specs/dismarking-ai/` (#23,
 > FR-DM), `docs/specs/build-up-structures/` (#24, FR-BU), `docs/specs/positional-rotations/`
@@ -303,10 +324,19 @@ scoring + one-rung ladder with hold intervals; boot via existing appliers, mid-m
 `SetTeamTactic` — the supplement's AR-1/AR-2 corrections carried into FRs). All four: zero-value
 dial = identity (`Off`/`None`/`Human`), byte-identity determinism tests specified, away-mirror
 tests where geometry is team-relative (#24/#25), no RNG/domain tags, `[GT]` magnitudes
-illustrative pending balance pass (#21 G2 precedent). **Open gates per spec §9.3:** PASS-1
-adversarial reviews not yet run; `[CITATION-PENDING]` §8 rows; back-prop ERRs (#21 `TeamTactic`
-field appends ×3, #12 pipeline/contract amendments, #8 scorer row) file at each `APPROVED`; #25
-Appendix A ships only the 4-4-2 exemplar (flagged completeness item).
+illustrative pending balance pass (#21 G2 precedent). **PASS-1 adversarial reviews run July 8,
+2026 (later same day), all findings resolved in same-day v0.2 fix passes:** #23 0H+1M+3L (dwell
+update pinned to the per-agent perception pass, one-stride-stale #12 consumption — the
+RestDefense same-tick analogy does not transfer to `FilteredView`-derived signals); #24 0H+3M+2L
+(team-level-regain arming — the per-agent `PossessionChangedEvent` fires on teammate receptions;
+committed-zone-expansion hysteresis; lane-key corrections); #25 1H+1M+3L + PASS-2 clean at H/M
+(serialized `LastComposedTarget` cache — `AgentPositioningData` has no composed-target field and a
+restore re-seed broke byte-identity; phase-exit freeze-vs-reset contradiction fixed;
+`LINE_DWELL_TICKS = 5` verified); #26 0H+1M+2L (explicit engine-substrate gates for score/halves
+state + `MATCH_TICKS_TOTAL` `[CROSS-PENDING]`; Appendix E sensitivity values re-derived). **Open
+gates per spec §9.3:** `[CITATION-PENDING]` §8 rows; back-prop ERRs (#21 `TeamTactic` field
+appends ×3, #12 pipeline/contract amendments, #8 scorer row) file at each `APPROVED`; #25
+Appendix A ships only the 4-4-2 exemplar (flagged completeness item); R-01..R-05 sign-off.
 - **Tactical-theory research cross-reference — four cheap-item additions LANDED** — *opened and closed July 7, 2026.* A conversation cross-referencing published soccer tactical theory (rest defence, marking orientation, half-spaces, cover-shadow/blind-side pressing, etc.) against the game plan identified several gaps whose extendibility cost was assessed as cheap-to-medium given the existing `TacticTranslation`/routing-field seam pattern (#21 Tactical Instructions T2). All four landed the same day, each defaulting to today's exact pre-addition behaviour (byte-identical) until a manager sets a non-default tactic: **(1) `MarkingOrientation` dial** (new `src/tactical-instructions/MarkingOrientation.cs`; `TeamTactic` gains the field, appended after `TimeWasting`; `SNAPSHOT_SCHEMA_VERSION` 10 → 11) — BallOriented/Balanced/ManOriented scales the #14 MAN_MARK candidate radius via new `defensive-ai/TacticTranslation.MarkRadiusScalar` + `DefensiveSnapshot.MarkingOrientation` (ctor-seeded Balanced, since the enum's zero-value is BallOriented) + `MarkAssigner` consumption (FR-TI-033). **(2) Positioning AI #12 rest-defense coverage check** (new `src/positioning-ai/RestDefenseEvaluator.cs` + `Tests/RestDefenseEvaluatorTests.cs`, new §3.5/§7.13; `PositioningAITick.GetRestDefenseSufficient()`) — counts active outfield agents (GK excluded) behind `REST_DEFENSE_DEPTH_M` while `IN_POSSESSION`; insufficient coverage dampens PASS/SHOOT/DRIBBLE via new `TacticalContext.RestDefenseSufficient` (Stage0Default seeds `true`, since the zero-value `bool` default is `false`) + `TacticalWeights.RestDefenseRiskMult` in `UtilityScorer` (new #8 §3.2/§7.7). **(3) Half-spaces PASS bonus** (new #8 §3.2/§7.8) — `TacticalContext.AgentLane` routes each agent's EXISTING Positioning AI `LaneId` (already team-relative — no new axis-mirroring risk, unlike the historical `BallZone` home/away bugs) into the Decision Tree; `decision-tree.asmdef` gains the `TacticalDirector.PositioningAI` reference (first AI→Mechanics reference beyond `TacticalInstructions`); `TacticalWeights.LaneMult[5]` gives half-space lanes (LH/RH) a PASS bonus, central/wide stay ×1.0. **(4) Curving-press blind-side bias** (new `src/pressing-ai/BlindSideApproach.cs` + `Tests/BlindSideApproachTests.cs`, new #13 §7.12) — nudges the primary presser's approach target (post-selection only; who presses is unaffected) toward the ball carrier's blind side (opposite `PressingAgentSnapshot.Facing`, already carried for both teams) by `PressingAIConstants.BlindSideApproachBiasM`; wired into `PressingAITick` Step 3.
 
   **CORRECTED/REVERTED after user review, same day** — the user identified items (2)/(3)/(4) as architecturally wrong designs, not bugs. **(2) redesigned**: the dampener must not be an omniscient flat team-wide penalty; it now scales by the ball carrier's own tactical awareness (mean of `A_Decisions`/`A_Anticipation`) via `Mathf.Lerp(1.0f, RestDefenseRiskMult, awareness)` in `UtilityScorer` — an unaware carrier takes the risky action anyway (a genuine tactical/setup flaw for the manager to fix, not the AI to silently correct). **(3) REVERTED entirely**: half-spaces are an exploitable spatial gap requiring tactical/player instructions to exploit, not a flat passing bonus; `TacticalContext.AgentLane`, `TacticalWeights.LaneMult`, and the `decision-tree.asmdef` to `PositioningAI` reference are all removed (decision-tree/section-7.md §7.8 marked REVERTED, not deleted). **(4) redesigned**: curving press runs are for bending the pursuit path to adjust COVER SHADOW (deny a nearby passing option while closing down), not for approaching the carrier's blind side; `BlindSideApproach.cs` DELETED, replaced by `src/pressing-ai/CoverShadowCurve.cs` (`PressingAIConstants.CoverCurveBlendWeightMax`) whose effectiveness is gated by the presser's own attributes (new `PressingAgentSnapshot.DefensivePositioningAttribute`/`PhysicalEffortAttribute`/`MentalSharpnessAttribute`, sourced by `MatchEngine` from the same `_dtAttrs` the Decision Tree reads) — a poor, low-effort defender barely curves at all.

@@ -28,10 +28,12 @@ FR-DM-016.
 `SlotComposer` stage order after this spec (insertion in **bold**):
 
 ```
-anchor → offset → ContextModifier → spacing → **dismark offset (§3.3)** → pitch clamp → lines → lanes
+anchor → offset → ContextModifier → [#24 build-up overlay] → spacing → **dismark offset (§3.3)** → pitch clamp → lines → lanes
 ```
 
-The stage is a no-op unless `DismarkIntensity ≠ Off` **and** phase is `InPoss` **and** the agent is
+This is the combined order pinned in Build-Up Structures #24 §4.2 (the overlay precedes spacing;
+this spec's evasion nudge follows it) — whichever spec implements second cites the first and adds
+the shared stage-order test (PASS-1 L-3). The stage is a no-op unless `DismarkIntensity ≠ Off` **and** phase is `InPoss` **and** the agent is
 an eligible off-ball outfielder with pressure above the floor (FR-DM-006/007/009).
 
 ## 4.3 Routing contract
@@ -52,7 +54,10 @@ Identical in shape to the #21 T2/Phase-D pattern:
 `MarkingPressureEvaluator` receives the agent's `FilteredView` by value from the same per-agent
 loop that already feeds #8 — it does not call into `PerceptionSystem` itself. This keeps the
 evaluator pure (KD-2) and makes FR-DM-001 mechanically auditable (the function signature admits no
-other opponent-data source).
+other opponent-data source). Per the §3.2 PASS-1 M-1 contract, this pass runs **after** #12 in the
+stride order, so the offset stage reads the previous stride's pressure — the match-engine writer
+carries it into the next tick's `PositioningPerceptionSnapshot` build, keeping #12 itself free of
+any `FilteredView` dependency.
 
 ## 4.5 Interface contracts
 
@@ -64,4 +69,5 @@ phantom-interface class ERR-001/ERR-004 prohibit.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial architecture: placement table, pipeline position, routing contract. |
+| 0.2 | 2026-07-08 | — | PASS-1: combined #23/#24 stage order cross-cited (L-3); §4.4 records the one-stride staleness routing (M-1). |
 #endregion

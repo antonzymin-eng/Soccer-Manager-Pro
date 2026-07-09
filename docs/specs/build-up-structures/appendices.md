@@ -12,21 +12,24 @@
 Unlisted (structure, zone, line, lane) combinations are (0, 0). FinalThird is all-zero by rule
 (FR-BU-004).
 
-### A.1 `BackThree`
+### A.1 `BackThree` (lane keys corrected per PASS-1 M-3 — fullbacks occupy the wide L/R lanes)
 
 | Zone | Line | Lane | Δx | Δy (toward centre) | Meaning |
 |---|---|---|---|---|---|
-| OwnThird | DEF | LH/RH | −4.0 | 6.0 | fullbacks tuck beside CBs |
-| OwnThird | MID | C | −6.0 | 0.0 | pivot drops between lines |
-| MiddleThird | DEF | LH/RH | −2.0 | 3.0 | partial tuck while progressing |
-| MiddleThird | MID | C | −3.0 | 0.0 | pivot half-drop |
+| OwnThird | DEF | L/R (wide) | −4.0 | 6.0 | fullbacks tuck beside CBs |
+| OwnThird | MID | LH/RH | −4.0 | 0.0 | central pair drops toward the back line |
+| MiddleThird | DEF | L/R (wide) | −2.0 | 3.0 | partial tuck while progressing |
+| MiddleThird | MID | LH/RH | −2.0 | 0.0 | half-drop |
+
+A lane-keyed table cannot single out one of two half-space midfielders as "the pivot" — both LH/RH
+slots take the row. Slot-specific rows (per-`SlotIndex` overlays) are a §7.6 deferral.
 
 ### A.2 `DoublePivot`
 
 | Zone | Line | Lane | Δx | Δy (toward centre) | Meaning |
 |---|---|---|---|---|---|
-| OwnThird | MID | LH/RH | −5.0 | 4.0 | two central mids form the pivot pair |
-| OwnThird | ATT | C | −3.0 | 0.0 | forward drops to link |
+| OwnThird | MID | LH/RH | −5.0 | 4.0 | two half-space mids form the pivot pair |
+| OwnThird | ATT | LH/RH | −3.0 | 0.0 | inner forwards drop to link |
 | MiddleThird | MID | LH/RH | −2.5 | 2.0 | pivot pair holds shape while progressing |
 
 ### A.3 `InvertedFullBacks`
@@ -80,4 +83,5 @@ coordination rule.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial appendices; A.3 inversion bounded to the half-space step so the whole catalogue satisfies FR-BU-008. |
+| 0.2 | 2026-07-08 | — | PASS-1 M-3: A.1/A.2 lane keys corrected to actual formation lane occupancy (fullbacks L/R wide; mid pair LH/RH); slot-specific rows recorded as the §7.6 deferral. |
 #endregion

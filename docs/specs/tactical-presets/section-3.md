@@ -50,6 +50,10 @@ rows scores Gegenpress 0.66 vs Balanced 0.50 vs ParkTheBus −0.58 → selects G
 
 At each fired decision point (Mode == AI, `HoldIntervalsRemaining == 0`):
 
+**Prerequisite (PASS-1 M-1):** `goalDiff` requires engine score state and `MATCH_TICKS_TOTAL` an
+engine match-length model — neither exists today (no goal producer is wired; KD-2's own grep). The
+formulas below are the reviewed contract; their live inputs arrive with goal detection (§7.2).
+
 ```
 t01     = clamp01(ticksRemaining / MATCH_TICKS_TOTAL)      # 1 → full match left, 0 → final whistle
 urgency = goalDiff < 0 ? Aggression × (1 − t01) × min(−goalDiff, URGENCY_DIFF_CAP) : 0
@@ -88,6 +92,7 @@ impossible within `2 × hold` windows.
 | `URGENCY_DIFF_CAP` | `[GT]` | 2 | goals |
 | `BASE_FIT` / `AGGR_AFFINITY` / `CAUT_AFFINITY` tables | `[GT]` | Appendix A.3 | — |
 | Ladder order | `[FIXED]` | Appendix A.1 | catalogue ordinal order — an ordering contract, not a tunable |
+| `MATCH_TICKS_TOTAL` | `[CROSS-PENDING]` | engine-owned, pending | 60 Hz ticks; allocated when the engine models match length (PASS-1 M-1 gate; tracked in §9.3) |
 
 `[GT]` magnitudes pinned at this spec's own balance review (§9.2); preset *contents* reuse #21
 pinned values (KD-7) and add no magnitudes.
@@ -96,4 +101,5 @@ pinned values (KD-7) and add no magnitudes.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial FM-TP-01..04 with worked examples; ladder + hold = structural anti-churn. |
+| 0.2 | 2026-07-08 | — | PASS-1 M-1: §3.4 prerequisite note + `MATCH_TICKS_TOTAL` added to §3.5 as `[CROSS-PENDING]` (was an untagged phantom). |
 #endregion

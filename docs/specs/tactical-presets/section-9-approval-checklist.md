@@ -18,6 +18,8 @@ Entries verified against actual files; nothing checked without a verifiable anch
 - [x] #21 cited as the hard dependency in §1.1/§1.3, per the same requirement
 - [x] Zero-value-identity: `ManagerMode.Human = 0` is the subsystem-level identity
 - [ ] `[CITATION-PENDING]` rows verified or replaced (gate for `APPROVED`)
+- [ ] A.1 preset compositions' Tempo/Passing/Width member names pinned against the #21 enums (at T0 latest, before any catalogue code — PASS-1 L-2)
+- [ ] PASS-1 M-1 engine-substrate gates tracked: T2 half-time trigger + `MATCH_TICKS_TOTAL` `[CROSS-PENDING]` promotion (halves/match-length model); T4 live `goalDiff` (score state via the first goal-detection producer)
 
 ## 9.2 Balance review scope
 
@@ -27,8 +29,8 @@ get their own balance review at implementation (#21 G2 pattern).
 
 ## 9.3 Review gates
 
-- [ ] PASS-1 adversarial review (pending) — reviewers directed at §3.4 (ladder + hold anti-churn) and the F3 no-post-kickoff-applier audit
-- [ ] PASS-2+ until no High findings (pending)
+- [x] PASS-1 adversarial review — **run July 8, 2026: 0H+1M+2L, all resolved in the v0.2 fix pass same day** (`adversarial-review-section-files-v1.md`; M-1 = §3.2/§3.4 consumed nonexistent engine score/halves state with no recorded gate)
+- [x] PASS-2 not required (PASS-1 found no High findings)
 - [ ] Lead-developer R-01..R-05 sign-off (pending)
 
 ## 9.4 Consistency gates
@@ -42,4 +44,5 @@ get their own balance review at implementation (#21 G2 pattern).
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial checklist. |
+| 0.2 | 2026-07-08 | — | PASS-1 run and resolved (0H+1M+2L); §9.1 gains the A.1-pinning and engine-substrate gate items. |
 #endregion

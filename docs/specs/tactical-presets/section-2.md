@@ -16,7 +16,7 @@
 | FR-TP-003 | Every preset composes only #21 value types; a preset introduces no new tunable magnitude beyond selecting existing enum members / pinned dial values. | MUST | KD-7 |
 | FR-TP-004 | Kickoff application: preset → `TeamTacticConfig`/`PlayerTacticConfig` projection → the existing `TeamTacticConfigApplier.Apply`/`PlayerTacticConfigApplier.Apply`, pre-kickoff only. | MUST | KD-1 |
 | FR-TP-005 | Mid-match application: `MatchEngine.SetTeamTactic`/`SetPlayerTactic` directly; the boot appliers MUST NOT be called after kickoff. | MUST | KD-1 |
-| FR-TP-006 | All manager-AI decisions evaluate only at decision points: kickoff, half-time, and every `MANAGER_DECISION_INTERVAL_TICKS` — derived from `MatchClock` tick counts at the AI-stride boundary; never per-tick, never event-triggered (deferral, KD-2). | MUST | KD-2 / KD-3 |
+| FR-TP-006 | All manager-AI decisions evaluate only at decision points: kickoff, half-time, and every `MANAGER_DECISION_INTERVAL_TICKS` — derived from `MatchClock` tick counts at the AI-stride boundary; never per-tick, never event-triggered (deferral, KD-2). The half-time trigger is gated on the engine modelling halves (PASS-1 M-1) — the gate ships kickoff + interval first. | MUST | KD-2 / KD-3 |
 | FR-TP-007 | `ManagerMode.Human = 0` (zero-value identity): no selection, no adaptation, no engine calls; a default match is byte-identical to pre-#26. `ManagerMode.AI = 1` opts a team in. | MUST | KD-4 |
 | FR-TP-008 | The selection/adaptation scoring function consumes exactly: own score differential, time-remaining fraction, own current preset ordinal, own `ManagerProfile`. It MUST NOT read the opponent's `TeamTactic`, `PlayerTactic`, or any opposing AI internal state. | MUST | KD-5 |
 | FR-TP-009 | Selection is deterministic: pure function + lowest-preset-ordinal tiebreak; no RNG draw site, no domain tag. | MUST | KD-8 |
@@ -29,7 +29,7 @@
 | FR-TP-016 | Every §3 formula has units, ranges, and a worked example. | MUST | CLAUDE.md |
 | FR-TP-017 | No phantom interfaces: no opponent-model hook, no event-trigger subscription, no disk-loader interface until their prerequisites exist. | MUST | KD-2/KD-5/KD-6 |
 | FR-TP-018 | The decision gate runs before the AI-stride tactic commit within the same tick, so a decision made at tick N is staged at N and committed at the same stride boundary the existing machinery uses. | MUST | §3.2 |
-| FR-TP-019 | Half-time detection derives from the match-phase tick counts the engine already owns; this spec adds no clock state of its own beyond `LastDecisionTick`. | MUST | KD-3 |
+| FR-TP-019 | Half-time detection derives from engine-owned match-phase tick counts **once the engine models halves** (it does not today — PASS-1 M-1 gate); this spec adds no clock state of its own beyond `LastDecisionTick`. | MUST | KD-3 |
 | FR-TP-020 | `ManagerProfile` `[GT]` parameters ship with named archetypes (Appendix A.2); archetype rows are data, validated by shape tests (monotone urgency, bounded thresholds). | MUST | §3.3 |
 
 ## 2.2 Data structures
@@ -80,4 +80,5 @@ None to approved specs at T0–T3 (this spec composes #21 without amending it). 
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial FR set (20), data model, failure modes. |
+| 0.2 | 2026-07-08 | — | PASS-1 M-1: FR-TP-006/019 carry the engine-substrate gates (halves model; score state). |
 #endregion

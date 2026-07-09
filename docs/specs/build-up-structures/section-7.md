@@ -33,8 +33,15 @@ bias, the #21 InstrBias pattern) — explicitly not smuggled in via positioning 
 Coupling `Tempo` to the committed zone (slower in own third) is a #21/#8 balance-pass idea once
 this spec's zone state exists as a routing field. Deferred until a consumer is specified.
 
+## 7.6 Slot-specific overlay rows
+
+The Appendix A tables are lane-keyed, so paired half-space slots always move together (PASS-1 M-3
+note). Per-`SlotIndex` rows (e.g. only one pivot drops) are a data-model extension deferred until
+the lane-keyed catalogue is balance-validated.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial deferrals. |
+| 0.2 | 2026-07-08 | — | PASS-1: §7.6 slot-specific-rows deferral added (M-3). |
 #endregion

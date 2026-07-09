@@ -85,10 +85,12 @@ Per team, team-index order: `Mode` (byte), `ProfileOrdinal` (byte), `CurrentPres
 
 ## Appendix E — Sensitivity notes
 
-- `ADAPT_STEP_THRESHOLD` vs archetype Aggression/Caution spans decide *which* managers ever adapt;
-  the shipped values make the Aggressive archetype adapt from ~35′ in a one-goal deficit and the
-  Pragmatic one only past ~85′ (urgency crosses 0.35 when (1−t01) ≥ 0.35/0.3 > 1 — i.e. never for
-  a single goal; it adapts only at deficit 2, by design).
+- `ADAPT_STEP_THRESHOLD` vs archetype Aggression/Caution spans decide *which* managers ever adapt.
+  Derived (PASS-1 L-1 corrected values): the Aggressive archetype (0.8) crosses 0.35 in a one-goal
+  deficit when (1−t01) ≥ 0.35/0.8 = 0.4375, i.e. from ~39.4 match-minutes elapsed. The Pragmatic
+  archetype (0.3) never crosses for a single goal ((1−t01) ≥ 1.167 is impossible) and at a
+  two-goal deficit crosses when (1−t01) ≥ 0.35/0.6 = 0.5833, i.e. from ~52.5′ — a late-urgency
+  profile, by design.
 - `PatienceIntervals` doubling the hold makes Pragmatic switch at most ~4 times/match even if
   thresholds retune.
 
@@ -96,4 +98,5 @@ Per team, team-index order: `Mode` (byte), `ProfileOrdinal` (byte), `CurrentPres
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial appendices; B.1/B.2 derivations authoritative and aligned with §3.3/§3.4 prose. |
+| 0.2 | 2026-07-08 | — | PASS-1 L-1: Appendix E sensitivity values re-derived (~39.4′ Aggressive one-goal; ~52.5′ Pragmatic two-goal; one-goal-never claim stands). |
 #endregion

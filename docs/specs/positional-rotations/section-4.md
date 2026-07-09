@@ -23,12 +23,16 @@ phase classification → **RotationController (§3.2)** → SlotComposer (anchor
 ```
 
 The §3.1 predicate consumes composed targets, but the controller runs *before* `SlotComposer` — so
-it uses the **previous heartbeat's** composed targets (already stored on `AgentPositioningData`
-from the last tick). This one-tick-stale read is deliberate and documented: it avoids a
-same-tick circular dependency (compose → maybe swap → recompose), costs at most one heartbeat of
-trigger latency (absorbed by the 5-tick dwell anyway), and keeps the pipeline single-pass. The
-first heartbeat after boot/restore has valid previous targets because `SeedFromFormation` composes
-an initial solution; the restore path re-runs that seeding against restored bindings.
+it uses the **previous heartbeat's** composed targets, held in a controller-owned per-agent
+`LastComposedTarget` cache (`Vector2` × roster) written at the end of every #12 tick (PASS-1 H-1:
+`AgentPositioningData` carries no composed-target field, so the cache is new state this spec
+owns). The one-tick-stale read is deliberate: it avoids a same-tick circular dependency (compose →
+maybe swap → recompose), costs at most one heartbeat of trigger latency (absorbed by the 5-tick
+dwell anyway), and keeps the pipeline single-pass. Boot populates the cache from
+`SeedFromFormation`'s initial compose. **The cache is serialized state** (Appendix B): restore
+loads it verbatim — a re-seed on restore would evaluate post-restore triggers against baseline
+targets instead of the actual previous tick's contextual targets and break FR-RO-013/T-RO-DET-003
+byte-identity.
 
 ## 4.3 Routing contract
 
@@ -52,4 +56,5 @@ None new (FR-RO-018).
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial architecture; the previous-tick-target read is the load-bearing design note here. |
+| 0.2 | 2026-07-08 | — | PASS-1 H-1: previous-tick targets are a controller-owned SERIALIZED `LastComposedTarget` cache — the v0.1 claim that `AgentPositioningData` stored them was false, and the v0.1 restore re-seed broke byte-identity. |
 #endregion

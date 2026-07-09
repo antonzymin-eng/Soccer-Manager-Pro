@@ -15,10 +15,10 @@ Conformance per RFC 2119. Citations resolve to a KD in §1.4 or a downstream sec
 |---|---|---|---|
 | FR-DM-001 | `MarkingPressure` is computed exclusively from the agent's own `FilteredView` (`VisibleOpponents[0..Count-1].PerceivedPosition`). No input may originate from `MarkAssignment`, `PressDirective`, `AttackDirective`, or any opposing team's internal state. | MUST | KD-1 |
 | FR-DM-002 | `MarkingPressure ∈ [0,1]`; `0` = unmarked, `1` = fully marked. Computed per §3.1 as `proximity01 × dwell01`. | MUST | §3.1 |
-| FR-DM-003 | The dwell counter updates once per 10 Hz heartbeat per agent, before any consumer reads it that tick (increment while a perceived opponent is within `MARKING_RADIUS_M`; decay by `MARKING_DWELL_DECAY_PER_TICK` otherwise), per the §3.2 state machine. | MUST | §3.2 |
+| FR-DM-003 | The dwell counter updates once per 10 Hz heartbeat per agent **in the per-agent perception pass** (where `FilteredView` is built); the #12 offset stage consumes the previous stride's value (one-stride latency, §3.2 PASS-1 M-1 contract) while the §3.4 penalty consumes the same-pass fresh value. | MUST | §3.2 |
 | FR-DM-004 | An unperceived marker (out of FoV / occluded / blind side) contributes zero pressure. The evaluator MUST NOT compensate with ground-truth data. | MUST | KD-1 |
 | FR-DM-005 | The evaluator is a pure static function of `(FilteredView, dwell state)`; no RNG draw site, no #16 domain tag, no allocation. | MUST | KD-2 / #20 |
-| FR-DM-006 | Evaluation applies only while the agent's team phase is `Phase.InPoss`; any other phase returns the identity (pressure 0, no offset) and freezes decay-only dwell updates per §3.2. | MUST | KD-6 |
+| FR-DM-006 | Evaluation applies only while the agent's team phase is `Phase.InPoss`; any other phase returns the identity (pressure 0, no offset); dwell accumulation stops but decay continues per §3.2 (PASS-1 L-1 wording). | MUST | KD-6 |
 | FR-DM-007 | The ball carrier and the goalkeeper are excluded from the dismark offset stage. | MUST | KD-6 |
 | FR-DM-008 | The dismark offset stage runs inside #12 `SlotComposer` **after** `SpacingResolver` and **before** the pitch clamp, so composed targets remain on-pitch. | MUST | §3.3 / KD-3 |
 | FR-DM-009 | Offset magnitude = `DISMARK_OFFSET_MAX_M × MarkingPressure × DismarkIntensityScalar[dial]`; direction per §3.3 (away from the perceived marker), with the degenerate-distance guard `DISMARK_MIN_MARKER_DIST_EPS`. | MUST | §3.3 |
@@ -74,7 +74,7 @@ bump covers both.
 | F | Mode | Handling |
 |---|---|---|
 | F1 | Non-finite perceived position reaches the evaluator | NaN-gate per the project pattern (`!(d > 0f) || IsInfinity(d)` class): treat as no marker this tick (decay path); never propagate NaN into an offset |
-| F2 | `DwellTicks` deserialized negative or above cap | fail loud at the snapshot seam (`ArgumentException`), matching the living-world validating-seam precedent |
+| F2 | Dwell state deserialized incoherent: `DwellTicks` negative or above cap; `LastMarkerId` outside `{−1} ∪ [0, roster)`; or `DwellTicks > 0` with `LastMarkerId = −1` (§3.2 clears the id only at zero dwell) | fail loud at the snapshot seam (`ArgumentException`), matching the living-world validating-seam precedent (PASS-1 L-2) |
 | F3 | Marker exactly coincident with agent (`d < DISMARK_MIN_MARKER_DIST_EPS`) | skip offset this tick (deterministic no-op); pressure still computed from dwell |
 | F4 | `DismarkIntensity` byte outside defined members at a routing seam | refuse at the seam (fail loud), never silently clamp |
 
@@ -82,4 +82,5 @@ bump covers both.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial FR set (18), data structures, back-prop table, failure modes. |
+| 0.2 | 2026-07-08 | — | PASS-1 fixes: FR-DM-003 update-site/staleness contract (M-1); FR-DM-006 decay wording (L-1); F2 LastMarkerId + coherence gates (L-2). |
 #endregion

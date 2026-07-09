@@ -1,7 +1,11 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 8, 2026 (**Candidates #23–#26 promoted to section files at `IN REVIEW`** —
+**Last Updated:** July 8, 2026, later same day (**PASS-1 adversarial reviews on #23–#26** — one new
+`adversarial-review-section-files-v1.md` per spec folder (4 files); findings resolved in same-day
+v0.2 fix passes touching section files across all four folders (#23 0H+1M+3L; #24 0H+3M+2L; #25
+1H+1M+3L + PASS-2 clean at H/M; #26 0H+1M+2L). No `src/` change.)  
+**Last Updated (prior):** July 8, 2026 (**Candidates #23–#26 promoted to section files at `IN REVIEW`** —
 four new spec folders, 11 files each (outline + section-1..8 + section-9-approval-checklist +
 appendices, all v0.1): `docs/specs/dismarking-ai/` (#23), `docs/specs/build-up-structures/` (#24),
 `docs/specs/positional-rotations/` (#25), `docs/specs/tactical-presets/` (#26). Design supplements
@@ -838,10 +842,10 @@ reconciled). Status reflects authoritative classification in `SPEC_INDEX.md`.
 | 20 | `docs/specs/code-standards/` | APPROVED (May 11, 2026) — 10 section files + appendices; adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete |
 | 21 | `docs/specs/tactical-instructions/` | APPROVED (Jun 20, 2026) — 11 section files + 2 adversarial-review files; promoted from `tactical-instruction-layer-design.md` v0.3 |
 | 22 | `docs/specs/living-world/` | APPROVED (Jun 22, 2026) — 11 section files + 10 adversarial-review files; promoted from `living-world-system-design.md` v0.7 |
-| 23 | `docs/specs/dismarking-ai/` | IN REVIEW (Jul 8, 2026) — 11 section files v0.1 promoted from `advanced-positional-behaviors-design.md` v0.3; PASS-1 pending; FR-DM-001..018 |
-| 24 | `docs/specs/build-up-structures/` | IN REVIEW (Jul 8, 2026) — 11 section files v0.1, same source; PASS-1 pending; FR-BU-001..016; KD-3 records the deliberate TransitionWon-gating refinement vs the supplement |
-| 25 | `docs/specs/positional-rotations/` | IN REVIEW (Jul 8, 2026) — 11 section files v0.1, same source; PASS-1 pending; FR-RO-001..018; Appendix A ships the 4-4-2 exemplar only (flagged §9.1 completeness item) |
-| 26 | `docs/specs/tactical-presets/` | IN REVIEW (Jul 8, 2026) — 11 section files v0.1 promoted from `game-model-ai-manager-design.md` v0.4; PASS-1 pending; FR-TP-001..020 |
+| 23 | `docs/specs/dismarking-ai/` | IN REVIEW (Jul 8, 2026) — 12 files (11 section files v0.2 + PASS-1 review); PASS-1 0H+1M+3L resolved same day; FR-DM-001..018 |
+| 24 | `docs/specs/build-up-structures/` | IN REVIEW (Jul 8, 2026) — 12 files (11 section files v0.2 + PASS-1 review); PASS-1 0H+3M+2L resolved same day; FR-BU-001..016; KD-3 records the deliberate TransitionWon-gating refinement vs the supplement |
+| 25 | `docs/specs/positional-rotations/` | IN REVIEW (Jul 8, 2026) — 12 files (11 section files v0.2 + PASS-1 review); PASS-1 1H+1M+3L resolved same day, PASS-2 re-read clean at H/M; FR-RO-001..018; Appendix A ships the 4-4-2 exemplar only (open §9.1 completeness item) |
+| 26 | `docs/specs/tactical-presets/` | IN REVIEW (Jul 8, 2026) — 12 files (11 section files v0.2 + PASS-1 review); PASS-1 0H+1M+2L resolved same day; FR-TP-001..020 |
 
 **Notes:**
 - Attacking AI (#15) files (May 17–18, 2026): `outline.md` (high-level v1.0), `outline-detailed.md` (v1.1), `adversarial-review-outline-detailed-v1.md`, `section-1.md` through `section-9-approval-checklist.md` + `appendices.md` (all at v0.2). `DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS: #16 §3.4]` (ERR-015-001 CLOSED May 18, 2026). Lead-developer R-01..R-05 signed May 18, 2026. Status: APPROVED.
