@@ -11,8 +11,8 @@ reference for all utility constants; all [GT] constants must be implemented excl
 formulas.
 
 **Created:** March 01, 2026, 7:00 PM PST
-**Updated:** March 02, 2026, 12:00 PM PST
-**Version:** 1.3
+**Updated:** July 10, 2026 (v1.5 — ERR-008-012 back-prop anchor note in §3.2.2.1)
+**Version:** 1.5
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist)
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -494,6 +494,16 @@ teammate gets close to 1.0; a backward pass through a crowded lane gets ≈ 0.1.
 further context adjustment is needed at this stage; `TacticalModifier_PASS` is
 Stage 1+ only (1.0 at Stage 0).
 
+**Back-prop note (ERR-008-012, July 10, 2026 — Dismarking AI #23 `APPROVED`):** at #23's
+implementation stage, `UtilityScorer` applies one additional per-PASS-option multiplier — the
+**marked-pass-target penalty** `mult = Lerp(1.0, TARGET_MARKED_UTILITY_MULT, targetProx01 ×
+awareness01)` defined normatively in #23 §3.4 (FM-DM-03; constant lives in `TacticalWeights` per
+FR-DM-016). It joins the existing externally-owned tactical multipliers (#21 §3.2 Mentality risk,
+#21 §3.3 `PlayerTactic` product, §7.7 rest-defense dampener) applied after the four components
+above and **before** the single final clamp (§3.2.1.5 timing unchanged). Identity contract:
+`DismarkIntensity.Off` ⇒ ×1.0 exactly (byte-identical to pre-#23). This note is the §3.2-side
+anchor only; #23 owns the formula, constants, and tests.
+
 ---
 
 ### 3.2.2.2 Sub-Component Derivations
@@ -623,5 +633,6 @@ defence; SHOOT correctly takes over in the attacking third for capable finishers
 | 1.1 | March 02, 2026 | AI agent / Anton | Original approved version. Utility model for all seven action types. |
 | 1.2 | (not documented) | — | Minor updates (see file header). |
 | 1.4 | June 11, 2026 | AI agent (audit AR-2) | ERR-008-002: §3.2.1.3 consumption note — zone modifiers read the team-relative `DecisionContext.BallZone` derived from `BallPosition.x`, not the shared home-perspective `MatchContext.BallZone` (away-team modifiers were inverted). |
+| 1.5 | July 10, 2026 | AI agent | ERR-008-012 back-prop (Dismarking AI #23 `APPROVED`): §3.2.2.1 gains the marked-pass-target multiplier anchor note — FM-DM-03 joins the external tactical multiplier product before the final clamp; #23 owns formula/constants/tests; `Off` = ×1.0 identity. |
 | 1.3 | May 18, 2026 | AI agent (claude-sonnet-4-6) | ERR-008-001 fix (A-06 FAIL — coordinate system): rewrote `PitchGeometry` class from centered origin `(0,0) = centre of pitch` to authoritative corner-origin `(0,0,0) = corner of pitch` per Ball Physics #1 §1.2 and Appendix C. All goal `Vector2` constants replaced with `Vector3` constants using correct corner-origin values: `HOME_OPPONENT_GOAL_CENTRE (105, 34, 0)`, `HOME_OWN_GOAL_CENTRE (0, 34, 0)`, etc. `HALF_LENGTH_M`/`HALF_WIDTH_M` comments updated. Coordinate system comment corrected from "§2.2" to "§1.2 and Appendix C". Stale XC-NOTE (XC-GEOM-01) replaced with resolution verification. |
 

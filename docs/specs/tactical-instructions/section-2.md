@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.3 — PASS-2 fix pass)
-**Version:** 0.3
+**Last Updated:** July 10, 2026 (v0.5 — ERR-021-005/006/007 back-prop field appends)
+**Version:** 0.5
 **Status:** APPROVED (June 20, 2026)
 
 ---
@@ -73,12 +73,17 @@ snapshot order** (Appendix B) once FR-TI-028 activates.
 | GkDistribution | `GkDistributionPolicy` | → #11 `DistributeIntent` |
 | TimeWasting | `byte [0..4]` | 0 = never … 4 = always |
 | MarkingOrientation | `MarkingOrientation` | cheap-item addition (FR-TI-033) — → #14 MAN_MARK candidate radius scalar; appended after TimeWasting (Appendix B) |
+| DismarkIntensity | `DismarkIntensity` | back-prop ERR-021-005 (#23 `APPROVED` July 10, 2026) — → #12 dismark offset stage + #8 FM-DM-03; `Off = 0` identity; contracts owned by #23 (FR-DM-*); appended after MarkingOrientation (Appendix B) |
+| BuildUpStructure | `BuildUpStructure` | back-prop ERR-021-006 (#24 `APPROVED` July 10, 2026) — → #12 build-up overlay stage; `None = 0` identity; contracts owned by #24 (FR-BU-*); appended after DismarkIntensity (Appendix B) |
+| RotationFreedom | `RotationFreedom` | back-prop ERR-021-007 (#25 `APPROVED` July 10, 2026) — → #12 `RotationController`; `Off = 0` identity; contracts owned by #25 (FR-RO-*); appended after BuildUpStructure (Appendix B) |
 
 `static TeamTactic Balanced` → Mentality.Balanced, Tempo.Standard (index 2), Width.Standard,
 Passing.Mixed, Pressing.Medium, LineOfEngagement.Standard, DefensiveLine 0.5, DefensiveWidth.Standard,
 both transitions = HoldShape/Regroup, OffsideTrap false, TriggerPressMask = None, FocusPlay.Mixed,
-GkDistribution.SlowDown, TimeWasting 0, MarkingOrientation.Balanced — reproduces today's `Stage0Default`
-(FR-TI-031).
+GkDistribution.SlowDown, TimeWasting 0, MarkingOrientation.Balanced, DismarkIntensity.Off,
+BuildUpStructure.None, RotationFreedom.Off — reproduces today's `Stage0Default` (FR-TI-031; the
+three July-10 back-prop fields are zero-value identities per their owning specs' KD-4 discipline,
+so `Balanced` needs no non-zero seeding for them).
 
 ### 2.2.2 `PlayerInstructions` (one per agent; all biases `Default` = follow team)
 
@@ -132,4 +137,5 @@ Snapshot contribution is governed by FR-TI-028. In-match mutation timing by FR-T
 | 0.2 | 2026-06-20 | — | PASS-1 fix pass: FR-TI-007 `[Flags]` carve-out (M-3); FR-TI-015 Tempo reclassified new branch (H-1); FR-TI-020 StyleProfile composition (H-2); `DefensiveLine` single-source note (M-2); §2.2.4 `TacticFormation` tightened (L-4). |
 | 0.3 | 2026-06-20 | — | PASS-2 fix pass: FR-TI-031 reworded to world-state (not full-payload) identity vs FR-TI-028 (H-1); FR-TI-015 gains the `tempoActionBias` utility factor (M-2); FR-TI-016 names the new `ContextModifierInputs` field (M-4); §2.2.1 Tempo note updated. |
 | 0.4 | 2026-07-07 | — | Cheap-item addition: + FR-TI-033 (`MarkingOrientation` → #14 MAN_MARK radius); TeamTactic field table + Balanced factory description updated. |
+| 0.5 | 2026-07-10 | — | Back-props ERR-021-005/006/007 (#23/#24/#25 `APPROVED`): `DismarkIntensity`, `BuildUpStructure`, `RotationFreedom` appended to the TeamTactic field table in spec-approval order; Balanced factory notes all three as zero-value identities. Behaviour contracts stay in the owning specs (FR-DM/FR-BU/FR-RO); serialization coverage lands with each spec's wiring via `WriteTeamTactic` + one `SNAPSHOT_SCHEMA_VERSION` bump per landing (Appendix B v0.5). |
 #endregion

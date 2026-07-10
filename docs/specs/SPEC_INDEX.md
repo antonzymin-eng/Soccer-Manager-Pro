@@ -1,7 +1,19 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 10, 2026 (**#23–#26 post-PASS-1 gates closed where closable** — §8
+> **Last Updated:** July 10, 2026, later same day (**Specs #23–#26 all advanced `IN REVIEW → APPROVED`** —
+> lead-developer R-01..R-05 sign-off granted on all four (each spec's §9 checklist v0.4); the last
+> closable gates closed in the same pass: the #26 Bradley citation VERIFIED (Bradley & Noakes 2013,
+> *J Sports Sci* 31(15):1627–1638, DOI 10.1080/02640414.2013.796062, PMID 23808376 — index-level
+> corroboration, publisher/Crossref direct resolution still environment-blocked), and the seven
+> cross-spec back-props FILED and landed atomically with the flips (spec-error-log.md v1.30:
+> ERR-021-005/006/007 → #21 `TeamTactic` field + Appendix B appends in pinned order #23 → #24 → #25;
+> ERR-012-007/008/009 → #12 §3.7.1 pipeline amendments incl. the `SlotIndex` single-writer contract;
+> ERR-008-012 → #8 §3.2.2.1 marked-pass-target anchor row). Carried forward post-APPROVED,
+> non-blocking: the `[GT]` balance passes (#21 G2 precedent) and the #26 engine-substrate gates
+> (T2 halves/`MATCH_TICKS_TOTAL`, T4 goal-detection — upstream-owned prerequisites, not spec-text
+> gates). Count: **26 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 10, 2026 (**#23–#26 post-PASS-1 gates closed where closable** — §8
 > citation rows closed for #23/#24/#25 (verified / replaced / reclassified; #26 Wilson verified,
 > Bradley row pending with a recorded environment-blocked attempt); #25 Appendix A completed
 > (all three `FormationFamily` tables); #26 A.1 member names pinned against the #21 enums.
@@ -67,10 +79,10 @@
 | 20 | Code Standards & Style Guide | `code-standards/` | 5 | APPROVED | May 11, 2026 |
 | 21 | Tactical Instructions | `tactical-instructions/` | 6¹ | APPROVED | Jun 20, 2026 |
 | 22 | Living World System | `living-world/` | 6¹ | APPROVED | Jun 22, 2026 |
-| 23 | Dismarking & Marker-Awareness AI | `dismarking-ai/` | 6¹ | IN REVIEW | — |
-| 24 | Scripted Build-Up Structures | `build-up-structures/` | 6¹ | IN REVIEW | — |
-| 25 | Positional Rotations | `positional-rotations/` | 6¹ | IN REVIEW | — |
-| 26 | Tactical Presets & AI-Manager Selection | `tactical-presets/` | 6¹ | IN REVIEW | — |
+| 23 | Dismarking & Marker-Awareness AI | `dismarking-ai/` | 6¹ | APPROVED | Jul 10, 2026 |
+| 24 | Scripted Build-Up Structures | `build-up-structures/` | 6¹ | APPROVED | Jul 10, 2026 |
+| 25 | Positional Rotations | `positional-rotations/` | 6¹ | APPROVED | Jul 10, 2026 |
+| 26 | Tactical Presets & AI-Manager Selection | `tactical-presets/` | 6¹ | APPROVED | Jul 10, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 

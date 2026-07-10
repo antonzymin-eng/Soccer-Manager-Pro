@@ -1,7 +1,18 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 10, 2026 (**#23–#26 gate close-out touches 10 spec files, no new files, no
+**Last Updated:** July 10, 2026, later same day (**Specs #23–#26 `IN REVIEW → APPROVED` + the seven
+back-prop amendments; no new files, no `src/` change** — all 44 files across the four spec folders
+flip `Status: APPROVED`; the four `section-9-approval-checklist.md` files → v0.4 (R-01..R-05
+sign-off tables + decisions); `tactical-presets/section-8.md` → v0.3 (Bradley & Noakes 2013 DOI
+10.1080/02640414.2013.796062 VERIFIED); the three owning `section-2.md` files → v0.3 (back-prop
+tables record filed ERRs + pinned append order). Back-prop targets: `tactical-instructions/
+section-2.md` → v0.5 + `appendices.md` → v0.5 (ERR-021-005/006/007 `TeamTactic` field + Appendix B
+appends); `positioning-ai/section-3.md` → v0.6 (new §3.7.1, ERR-012-007/008/009 incl. the
+`SlotIndex` single-writer amendment); `decision-tree/section-3-2.md` → v1.5 (ERR-008-012 §3.2.2.1
+anchor note). `spec-error-log.md` → v1.30 (seven entries filed and resolved); `SPEC_INDEX.md`
+count **26 APPROVED / 0 IN REVIEW**.)  
+**Last Updated (prior):** July 10, 2026 (**#23–#26 gate close-out touches 10 spec files, no new files, no
 `src/` change** — the four `section-8.md` files → v0.2 (citations verified / replaced /
 reclassified; #26 Bradley row pending with a recorded attempt); the four
 `section-9-approval-checklist.md` files → v0.3 (gates ticked; headers de-drifted from the v0.2
@@ -789,8 +800,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `docs/tracking/fix-manifest-pass-mechanics.md` | Pass Mechanics audit/fix closure tracking |
 | `docs/tracking/certification-platform.md` | Stage 0 host platform version pin (required before first Spec #16 certification run) |
 | `docs/tracking/file-manifest.md` | This manifest |
-| `docs/tracking/advanced-positional-behaviors-design.md` | Design supplement (v0.4, Jul 8, 2026 — PROMOTED) — dismarking, scripted build-up structures, positional rotations; promoted to specs #23–#25 (`dismarking-ai/`, `build-up-structures/`, `positional-rotations/`, all IN REVIEW); superseded by the specs on deviation |
-| `docs/tracking/game-model-ai-manager-design.md` | Design supplement (v0.5, Jul 8, 2026 — PROMOTED) — tactical preset library + AI-manager selection/adaptation; promoted to spec #26 (`tactical-presets/`, IN REVIEW); superseded by the spec on deviation |
+| `docs/tracking/advanced-positional-behaviors-design.md` | Design supplement (v0.4, Jul 8, 2026 — PROMOTED) — dismarking, scripted build-up structures, positional rotations; promoted to specs #23–#25 (`dismarking-ai/`, `build-up-structures/`, `positional-rotations/`, all APPROVED Jul 10, 2026); superseded by the specs on deviation |
+| `docs/tracking/game-model-ai-manager-design.md` | Design supplement (v0.5, Jul 8, 2026 — PROMOTED) — tactical preset library + AI-manager selection/adaptation; promoted to spec #26 (`tactical-presets/`, APPROVED Jul 10, 2026); superseded by the spec on deviation |
 | `docs/tracking/stress-test-strategy.md` | Tier A/B/C spec stress-test probe strategy (v1.0, May 18, 2026) |
 | `docs/tracking/stress-reports/INDEX.md` | Index of all stress-test run reports |
 | `docs/tracking/stress-reports/2026-05-18-tier-a-run-1.md` | Tier A Run 1 report (May 18, 2026) — 3 FAIL, 2 WARN; all 3 FAILs resolved before Run 2 |
@@ -848,10 +859,10 @@ reconciled). Status reflects authoritative classification in `SPEC_INDEX.md`.
 | 20 | `docs/specs/code-standards/` | APPROVED (May 11, 2026) — 10 section files + appendices; adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete |
 | 21 | `docs/specs/tactical-instructions/` | APPROVED (Jun 20, 2026) — 11 section files + 2 adversarial-review files; promoted from `tactical-instruction-layer-design.md` v0.3 |
 | 22 | `docs/specs/living-world/` | APPROVED (Jun 22, 2026) — 11 section files + 10 adversarial-review files; promoted from `living-world-system-design.md` v0.7 |
-| 23 | `docs/specs/dismarking-ai/` | IN REVIEW (Jul 8, 2026) — 12 files (11 section files v0.2 + PASS-1 review); PASS-1 0H+1M+3L resolved same day; FR-DM-001..018 |
-| 24 | `docs/specs/build-up-structures/` | IN REVIEW (Jul 8, 2026) — 12 files (11 section files v0.2 + PASS-1 review); PASS-1 0H+3M+2L resolved same day; FR-BU-001..016; KD-3 records the deliberate TransitionWon-gating refinement vs the supplement |
-| 25 | `docs/specs/positional-rotations/` | IN REVIEW (Jul 8, 2026) — 12 files (11 section files v0.2 + PASS-1 review); PASS-1 1H+1M+3L resolved same day, PASS-2 re-read clean at H/M; FR-RO-001..018; Appendix A ships the 4-4-2 exemplar only (open §9.1 completeness item) |
-| 26 | `docs/specs/tactical-presets/` | IN REVIEW (Jul 8, 2026) — 12 files (11 section files v0.2 + PASS-1 review); PASS-1 0H+1M+2L resolved same day; FR-TP-001..020 |
+| 23 | `docs/specs/dismarking-ai/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+1M+3L resolved Jul 8; §8.2 both rows VERIFIED; back-props ERR-021-005/012-007/008-012 filed + landed at approval; FR-DM-001..018 |
+| 24 | `docs/specs/build-up-structures/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+3M+2L resolved Jul 8; back-props ERR-021-006/012-008 filed + landed at approval; append order pinned #23 → #24 → #25; FR-BU-001..016; KD-3 records the deliberate TransitionWon-gating refinement vs the supplement |
+| 25 | `docs/specs/positional-rotations/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 1H+1M+3L resolved Jul 8 + PASS-2 clean at H/M; Appendix A complete for all three `FormationFamily` members; back-props ERR-021-007/012-009 (incl. the #12 `SlotIndex` single-writer amendment) filed + landed at approval; FR-RO-001..018 |
+| 26 | `docs/specs/tactical-presets/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+1M+2L resolved Jul 8; §8.2 fully closed (Bradley & Noakes 2013 verified Jul 10); no back-props (§2.3); engine-substrate gates carried forward upstream-owned; FR-TP-001..020 |
 
 **Notes:**
 - Attacking AI (#15) files (May 17–18, 2026): `outline.md` (high-level v1.0), `outline-detailed.md` (v1.1), `adversarial-review-outline-detailed-v1.md`, `section-1.md` through `section-9-approval-checklist.md` + `appendices.md` (all at v0.2). `DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS: #16 §3.4]` (ERR-015-001 CLOSED May 18, 2026). Lead-developer R-01..R-05 signed May 18, 2026. Status: APPROVED.
