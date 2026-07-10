@@ -1,7 +1,17 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** July 8, 2026, later same day (**PASS-1 adversarial reviews run on #23–#26, all
+**Last Updated:** July 10, 2026 (**#23–#26 post-PASS-1 gates closed where closable** — §8
+citation rows: #23 both VERIFIED (Wilson ISBN 978-0-7528-8995-5; Low et al. 2020 DOI
+10.1007/s40279-019-01194-7); #24 Wilson verified + Spielverlagerung reclassified informal
+background; #25 Wilson verified + Memmert & Raabe REPLACED with the verified Low et al. 2020
+review (OI-003 precedent); #26 Wilson verified, Bradley row pending with a recorded
+environment-blocked July-10 attempt. **#25 Appendix A completed** (A.2 4-3-3 + A.3 4-2-3-1
+authored against the verified `Family433`/`Family4231` rosters, F1 hand-audited). **#26 A.1
+compositions pinned** against the actual #21 enum members (PASS-1 L-2). Checklists at v0.3.
+Still open: the #26 Bradley citation; back-prop ERRs at `APPROVED`; #26 engine-substrate gates
+(upstream-owned); R-01..R-05 sign-off.)  
+**Last Updated (prior):** July 8, 2026, later same day (**PASS-1 adversarial reviews run on #23–#26, all
 findings resolved in same-day v0.2 fix passes** — #23 Dismarking 0H+1M+3L (one-stride-stale
 pressure consumption contract); #24 Build-Up 0H+3M+2L (team-level-regain suppression arming —
 the per-agent `PossessionChangedEvent` fires on teammate receptions too; committed-zone-expansion

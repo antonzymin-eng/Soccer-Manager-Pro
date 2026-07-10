@@ -1,7 +1,12 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 8, 2026, later same day (**PASS-1 adversarial reviews run on #23–#26,
+> **Last Updated:** July 10, 2026 (**#23–#26 post-PASS-1 gates closed where closable** — §8
+> citation rows closed for #23/#24/#25 (verified / replaced / reclassified; #26 Wilson verified,
+> Bradley row pending with a recorded environment-blocked attempt); #25 Appendix A completed
+> (all three `FormationFamily` tables); #26 A.1 member names pinned against the #21 enums.
+> Count unchanged: **22 APPROVED / 4 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 8, 2026, later same day (**PASS-1 adversarial reviews run on #23–#26,
 > all resolved in same-day v0.2 fix passes**: #23 0H+1M+3L; #24 0H+3M+2L; #25 1H+1M+3L (+ PASS-2
 > re-read clean at H/M per the High-found rule); #26 0H+1M+2L. Per-spec
 > `adversarial-review-section-files-v1.md` files filed; §9.3 gates updated. Remaining gates:

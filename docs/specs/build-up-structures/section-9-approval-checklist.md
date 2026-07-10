@@ -1,8 +1,8 @@
 # Scripted Build-Up Structures Specification #24 — Section 9: Approval Checklist
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 10, 2026 (v0.3)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 ---
@@ -16,7 +16,7 @@ Entries verified against actual files; nothing checked without a verifiable anch
 - [x] KD-5 perception-boundary invariant cited verbatim (§1.4) — satisfied trivially (no opponent data consumed)
 - [x] Zero-value-identity check: `BuildUpStructure.None = 0` is the identity row
 - [x] Supplement deviation recorded: KD-3 documents the deliberate refinement of the supplement's `TransitionWon` gating (opt-in dial + suppression window), with the default-neutrality rationale
-- [ ] `[CITATION-PENDING]` rows in §8.2 verified or replaced (gate for `APPROVED`)
+- [x] `[CITATION-PENDING]` rows in §8.2 verified or replaced — **closed July 10, 2026** (Wilson VERIFIED ISBN 978-0-7528-8995-5; Spielverlagerung reclassified informal background per its own resolution path); see §8.2 v0.2
 
 ## 9.2 Balance-pass carve-out
 
@@ -43,4 +43,5 @@ hysteresis shape, suppression semantics.
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial checklist. |
 | 0.2 | 2026-07-08 | — | PASS-1 run and resolved (0H+3M+2L); PASS-2 not required (no High). |
+| 0.3 | 2026-07-10 | — | §9.1 citation gate closed (§8.2 verified/reclassified). Remaining open: back-prop ERRs at `APPROVED`; R-01..R-05 sign-off; status flip. |
 #endregion

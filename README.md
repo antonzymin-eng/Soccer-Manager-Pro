@@ -1,7 +1,12 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** July 8, 2026 (Candidates **#23–#26 promoted to section files at `IN REVIEW`** —
+**Last Updated:** July 10, 2026 (**#23–#26 post-PASS-1 gates closed where closable** — §8
+citations verified/replaced/reclassified across all four specs (one #26 row remains pending with
+a recorded environment-blocked attempt); #25 Appendix A completed for all three formation
+families; #26 A.1 preset compositions pinned against the #21 enums. Remaining before `APPROVED`:
+the #26 Bradley citation, back-prop ERRs, #26 engine-substrate gates, R-01..R-05 sign-off.)
+**Last Updated (prior):** July 8, 2026 (Candidates **#23–#26 promoted to section files at `IN REVIEW`** —
 `docs/specs/dismarking-ai/` (#23), `docs/specs/build-up-structures/` (#24),
 `docs/specs/positional-rotations/` (#25), `docs/specs/tactical-presets/` (#26), each a full
 11-file spec set (v0.1) authored from its July 7 design supplement per that supplement's §6

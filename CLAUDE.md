@@ -1,7 +1,23 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 8, 2026, later same day (**Section-file PASS-1 adversarial reviews run on
+> **Last Updated:** July 10, 2026 (**#23–#26 post-PASS-1 open gates closed where closable** — §8
+> `[CITATION-PENDING]` rows: #23 both VERIFIED (Wilson Orion 2008 ISBN 978-0-7528-8995-5; Low et
+> al. 2020 *Sports Medicine* 50:343–385 DOI 10.1007/s40279-019-01194-7); #24 Wilson VERIFIED +
+> Spielverlagerung reclassified informal background per its own resolution path; #25 Wilson
+> VERIFIED + the Memmert & Raabe book row REPLACED with the verified Low et al. 2020 review per
+> the #10/#11 OI-003 replace-with-verifiable precedent; #26 Wilson VERIFIED, the Bradley
+> score-line row stays `[CITATION-PENDING]` with a recorded July-10 environment-blocked
+> verification attempt (search quota + Crossref/publisher access unavailable — not fabricated,
+> per the "never fabricate" rule). **#25 Appendix A completed**: A.2 (4-3-3, 5 rows — single
+> pivot deliberately excluded, rest-defence anchor) + A.3 (4-2-3-1, 6 rows — double pivot rotates
+> as a pair) authored against the verified `Family433`/`Family4231` slot rosters (F442/F433/F4231
+> = the complete `FormationFamily` enum), F1 hand-audits recorded. **#26 A.1 preset compositions
+> pinned** against the actual #21 enum member names (PASS-1 L-2 close-out; all names verified
+> present, full rosters recorded). Checklists at v0.3. Remaining open gates: the one #26 Bradley
+> citation row; back-prop ERRs at `APPROVED`; #26 engine-substrate gates (upstream-owned);
+> R-01..R-05 sign-off.)
+> **Last Updated (prior):** July 8, 2026, later same day (**Section-file PASS-1 adversarial reviews run on
 > all four IN-REVIEW specs #23–#26, all findings resolved in same-day v0.2 fix passes** — #23
 > Dismarking 0H+1M+3L (M-1: the dwell-update-inside-#12-tick claim was impossible — `FilteredView`
 > is built in the per-agent pass AFTER Positioning in the stride order; now a pinned one-stride-
@@ -334,9 +350,17 @@ committed-zone-expansion hysteresis; lane-key corrections); #25 1H+1M+3L + PASS-
 restore re-seed broke byte-identity; phase-exit freeze-vs-reset contradiction fixed;
 `LINE_DWELL_TICKS = 5` verified); #26 0H+1M+2L (explicit engine-substrate gates for score/halves
 state + `MATCH_TICKS_TOTAL` `[CROSS-PENDING]`; Appendix E sensitivity values re-derived). **Open
-gates per spec §9.3:** `[CITATION-PENDING]` §8 rows; back-prop ERRs (#21 `TeamTactic` field
-appends ×3, #12 pipeline/contract amendments, #8 scorer row) file at each `APPROVED`; #25
-Appendix A ships only the 4-4-2 exemplar (flagged completeness item); R-01..R-05 sign-off.
+gates per spec §9.3 (updated July 10, 2026 — closable gates closed):** §8 citation rows CLOSED
+for #23 (both VERIFIED — Wilson ISBN 978-0-7528-8995-5; Low et al. DOI 10.1007/s40279-019-01194-7),
+#24 (Wilson verified; Spielverlagerung reclassified informal background), and #25 (Wilson
+verified; Memmert & Raabe REPLACED with the verified Low et al. 2020 review per the OI-003
+precedent); #26 partially closed (Wilson verified; the Bradley score-line row remains pending
+with a recorded environment-blocked July-10 attempt). #25 Appendix A COMPLETED (A.2 4-3-3 +
+A.3 4-2-3-1 authored against the verified `Family433`/`Family4231` rosters, F1 hand-audited).
+#26 A.1 member names PINNED against the #21 enums (PASS-1 L-2). Still open: the #26 Bradley
+citation; back-prop ERRs (#21 `TeamTactic` field appends ×3, #12 pipeline/contract amendments,
+#8 scorer row) file at each `APPROVED`; #26 engine-substrate gates (upstream-owned);
+R-01..R-05 sign-off.
 - **Tactical-theory research cross-reference — four cheap-item additions LANDED** — *opened and closed July 7, 2026.* A conversation cross-referencing published soccer tactical theory (rest defence, marking orientation, half-spaces, cover-shadow/blind-side pressing, etc.) against the game plan identified several gaps whose extendibility cost was assessed as cheap-to-medium given the existing `TacticTranslation`/routing-field seam pattern (#21 Tactical Instructions T2). All four landed the same day, each defaulting to today's exact pre-addition behaviour (byte-identical) until a manager sets a non-default tactic: **(1) `MarkingOrientation` dial** (new `src/tactical-instructions/MarkingOrientation.cs`; `TeamTactic` gains the field, appended after `TimeWasting`; `SNAPSHOT_SCHEMA_VERSION` 10 → 11) — BallOriented/Balanced/ManOriented scales the #14 MAN_MARK candidate radius via new `defensive-ai/TacticTranslation.MarkRadiusScalar` + `DefensiveSnapshot.MarkingOrientation` (ctor-seeded Balanced, since the enum's zero-value is BallOriented) + `MarkAssigner` consumption (FR-TI-033). **(2) Positioning AI #12 rest-defense coverage check** (new `src/positioning-ai/RestDefenseEvaluator.cs` + `Tests/RestDefenseEvaluatorTests.cs`, new §3.5/§7.13; `PositioningAITick.GetRestDefenseSufficient()`) — counts active outfield agents (GK excluded) behind `REST_DEFENSE_DEPTH_M` while `IN_POSSESSION`; insufficient coverage dampens PASS/SHOOT/DRIBBLE via new `TacticalContext.RestDefenseSufficient` (Stage0Default seeds `true`, since the zero-value `bool` default is `false`) + `TacticalWeights.RestDefenseRiskMult` in `UtilityScorer` (new #8 §3.2/§7.7). **(3) Half-spaces PASS bonus** (new #8 §3.2/§7.8) — `TacticalContext.AgentLane` routes each agent's EXISTING Positioning AI `LaneId` (already team-relative — no new axis-mirroring risk, unlike the historical `BallZone` home/away bugs) into the Decision Tree; `decision-tree.asmdef` gains the `TacticalDirector.PositioningAI` reference (first AI→Mechanics reference beyond `TacticalInstructions`); `TacticalWeights.LaneMult[5]` gives half-space lanes (LH/RH) a PASS bonus, central/wide stay ×1.0. **(4) Curving-press blind-side bias** (new `src/pressing-ai/BlindSideApproach.cs` + `Tests/BlindSideApproachTests.cs`, new #13 §7.12) — nudges the primary presser's approach target (post-selection only; who presses is unaffected) toward the ball carrier's blind side (opposite `PressingAgentSnapshot.Facing`, already carried for both teams) by `PressingAIConstants.BlindSideApproachBiasM`; wired into `PressingAITick` Step 3.
 
   **CORRECTED/REVERTED after user review, same day** — the user identified items (2)/(3)/(4) as architecturally wrong designs, not bugs. **(2) redesigned**: the dampener must not be an omniscient flat team-wide penalty; it now scales by the ball carrier's own tactical awareness (mean of `A_Decisions`/`A_Anticipation`) via `Mathf.Lerp(1.0f, RestDefenseRiskMult, awareness)` in `UtilityScorer` — an unaware carrier takes the risky action anyway (a genuine tactical/setup flaw for the manager to fix, not the AI to silently correct). **(3) REVERTED entirely**: half-spaces are an exploitable spatial gap requiring tactical/player instructions to exploit, not a flat passing bonus; `TacticalContext.AgentLane`, `TacticalWeights.LaneMult`, and the `decision-tree.asmdef` to `PositioningAI` reference are all removed (decision-tree/section-7.md §7.8 marked REVERTED, not deleted). **(4) redesigned**: curving press runs are for bending the pursuit path to adjust COVER SHADOW (deny a nearby passing option while closing down), not for approaching the carrier's blind side; `BlindSideApproach.cs` DELETED, replaced by `src/pressing-ai/CoverShadowCurve.cs` (`PressingAIConstants.CoverCurveBlendWeightMax`) whose effectiveness is gated by the presser's own attributes (new `PressingAgentSnapshot.DefensivePositioningAttribute`/`PhysicalEffortAttribute`/`MentalSharpnessAttribute`, sourced by `MatchEngine` from the same `_dtAttrs` the Decision Tree reads) — a poor, low-effort defender barely curves at all.

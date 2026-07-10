@@ -1,7 +1,13 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 8, 2026, later same day (**PASS-1 adversarial reviews on #23–#26** — one new
+**Last Updated:** July 10, 2026 (**#23–#26 gate close-out touches 10 spec files, no new files, no
+`src/` change** — the four `section-8.md` files → v0.2 (citations verified / replaced /
+reclassified; #26 Bradley row pending with a recorded attempt); the four
+`section-9-approval-checklist.md` files → v0.3 (gates ticked; headers de-drifted from the v0.2
+pass); `positional-rotations/appendices.md` → v0.3 (A.2 4-3-3 + A.3 4-2-3-1 adjacency tables);
+`tactical-presets/appendices.md` → v0.3 (A.1 member names pinned against the #21 enums).)  
+**Last Updated (prior):** July 8, 2026, later same day (**PASS-1 adversarial reviews on #23–#26** — one new
 `adversarial-review-section-files-v1.md` per spec folder (4 files); findings resolved in same-day
 v0.2 fix passes touching section files across all four folders (#23 0H+1M+3L; #24 0H+3M+2L; #25
 1H+1M+3L + PASS-2 clean at H/M; #26 0H+1M+2L). No `src/` change.)  

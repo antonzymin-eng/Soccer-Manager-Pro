@@ -1,8 +1,8 @@
 # Dismarking & Marker-Awareness AI Specification #23 — Section 8: References
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 10, 2026 (v0.2)
+**Version:** 0.2
 **Status:** IN REVIEW
 
 ---
@@ -22,15 +22,15 @@
 
 | Ref | Status |
 |---|---|
-| Wilson, J. — *Inverting the Pyramid: The History of Football Tactics* (Orion, 2008) — marking evolution, man-marking vs zonal context | `[CITATION-PENDING]` edition/ISBN verification per the #11 OI-003 precedent |
-| Low, B. et al. — "A systematic review of collective tactical behaviours in football using positional data" (*Sports Medicine*, 2020) — marking/dyad proximity metrics motivating the proximity×dwell form | `[CITATION-PENDING]` DOI verification |
+| Wilson, J. — *Inverting the Pyramid: The History of Football Tactics* (Orion, hardcover, September 2, 2008, ISBN 978-0-7528-8995-5) — marking evolution, man-marking vs zonal context | **VERIFIED** July 10, 2026 (publisher/retail listings; first edition, Orion Books) |
+| Low, B., Coutinho, D., Gonçalves, B., Rein, R., Memmert, D. & Sampaio, J. — "A Systematic Review of Collective Tactical Behaviours in Football Using Positional Data", *Sports Medicine* 50, 343–385 (2020), DOI [10.1007/s40279-019-01194-7](https://doi.org/10.1007/s40279-019-01194-7) — marking/dyad proximity metrics motivating the proximity×dwell form | **VERIFIED** July 10, 2026 (Springer record) |
 
-Per the #10/#11 precedent, `[CITATION-PENDING]` rows must be verified (or replaced with verifiable
-equivalents) before `APPROVED`; none may be cited as load-bearing for a formula constant — §3's
-constants are `[GT]` (designer-tuned), not literature-derived.
+Both rows verified July 10, 2026 per the #10/#11 OI-003 precedent; neither is load-bearing for a
+formula constant — §3's constants are `[GT]` (designer-tuned), not literature-derived.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial references; two external rows explicitly CITATION-PENDING, none load-bearing. |
+| 0.2 | 2026-07-10 | — | Both `[CITATION-PENDING]` rows VERIFIED (Wilson ISBN 978-0-7528-8995-5; Low et al. DOI 10.1007/s40279-019-01194-7 with full author list, vol/pages). §9.1 citation gate closed. |
 #endregion

@@ -1,8 +1,8 @@
 # Tactical Presets & AI-Manager Selection Specification #26 — Appendices
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 10, 2026 (v0.3)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 ---
@@ -11,19 +11,23 @@
 
 ### A.1 Presets (APPEND-only; ordinal = ladder position, defensive → attacking)
 
-| Ord | Name | TeamTactic composition (all values existing #21 members/pins) |
+| Ord | Name | TeamTactic composition (all values verified #21 enum members / pins; non-listed dials stay at their `TeamTactic.Balanced` identity values) |
 |---|---|---|
-| 0 | ParkTheBus | Mentality.VeryDefensive, Pressing Low, LineOfEngagement Low, DefensiveLine 0.30, TimeWasting 3, TransitionWon HoldShape |
-| 1 | CounterAttack | Mentality.Defensive, TransitionWon CounterAttack, Tempo fast rows, Passing Direct, DefensiveLine 0.40 |
+| 0 | ParkTheBus | `Mentality.VeryDefensive`, `TacticPressing.Low`, `LineOfEngagement.Low`, `DefensiveLine = 0.30`, `TimeWasting = 3`, `TransitionWon = TransitionPlan.HoldShape` |
+| 1 | CounterAttack | `Mentality.Defensive`, `TransitionWon = TransitionPlan.CounterAttack`, `Tempo.Fast`, `TacticPassing.Direct`, `DefensiveLine = 0.40` |
 | 2 | Balanced | `TeamTactic.Balanced` verbatim (the FR-TI-031 identity) |
-| 3 | Possession | Mentality.Positive, Passing Short, Tempo slow rows, Width Wide, DefensiveLine 0.55 |
-| 4 | Gegenpress | Mentality.Attacking, Pressing High, LineOfEngagement High, TransitionLost CounterPress, DefensiveLine 0.65 |
+| 3 | Possession | `Mentality.Positive`, `TacticPassing.Short`, `Tempo.Slow`, `TacticWidth.Wide`, `DefensiveLine = 0.55` |
+| 4 | Gegenpress | `Mentality.Attacking`, `TacticPressing.High`, `LineOfEngagement.High`, `TransitionLost = TransitionPlan.CounterPress`, `DefensiveLine = 0.65` |
 
 **Ladder order note (§3.4/§3.5):** the `StepToward` ladder *is* this ordinal order — pinned
 `[FIXED]` as an ordering contract. `Balanced` at ordinal 2 is both the catalogue midpoint and the
-kickoff default for a profile with no affinity. Exact member names for Tempo/Passing/Width rows
-follow #21's enums at T0 authoring; the compositions above are complete at the dial level and add
-no new magnitudes (KD-7).
+kickoff default for a profile with no affinity. **Member names pinned July 10, 2026** against the
+actual `src/tactical-instructions/` enums (PASS-1 L-2 close-out): every name above verified
+present — `Mentality` {VeryDefensive=0..VeryAttacking=6}, `TacticPressing` {Low=0, Medium=1,
+High=2}, `LineOfEngagement` {VeryLow=0..VeryHigh=4}, `Tempo` {VerySlow=0..VeryFast=4},
+`TacticPassing` {Short=0, Mixed=1, Direct=2}, `TacticWidth` {VeryNarrow=0..VeryWide=4},
+`TransitionPlan` {CounterAttack=0, HoldShape=1, CounterPress=2, Regroup=3}. The compositions are
+complete at the dial level and add no new magnitudes (KD-7).
 
 ### A.2 `ManagerProfile` archetypes (`[GT]`)
 
@@ -99,4 +103,5 @@ Per team, team-index order: `Mode` (byte), `ProfileOrdinal` (byte), `CurrentPres
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial appendices; B.1/B.2 derivations authoritative and aligned with §3.3/§3.4 prose. |
 | 0.2 | 2026-07-08 | — | PASS-1 L-1: Appendix E sensitivity values re-derived (~39.4′ Aggressive one-goal; ~52.5′ Pragmatic two-goal; one-goal-never claim stands). |
+| 0.3 | 2026-07-10 | — | A.1 member names pinned against the actual #21 enums (PASS-1 L-2 close-out); every composition value verified present; non-listed-dials-stay-identity rule made explicit. |
 #endregion

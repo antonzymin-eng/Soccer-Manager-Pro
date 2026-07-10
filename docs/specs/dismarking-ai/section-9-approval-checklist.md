@@ -1,8 +1,8 @@
 # Dismarking & Marker-Awareness AI Specification #23 — Section 9: Approval Checklist
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 10, 2026 (v0.3)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 ---
@@ -17,7 +17,7 @@ programmatically verifiable anchor (CLAUDE.md "Never fabricate verification valu
 - [x] KD-1 perception-boundary invariant cited verbatim from the design supplement (§1.4)
 - [x] No `[EST]` tags present
 - [x] Zero-value-identity check: `DismarkIntensity.Off = 0` is the identity row (KD-4)
-- [ ] `[CITATION-PENDING]` rows in §8.2 verified or replaced (gate for `APPROVED`, #11 OI-003 precedent)
+- [x] `[CITATION-PENDING]` rows in §8.2 verified or replaced (#11 OI-003 precedent) — **both rows VERIFIED July 10, 2026** (Wilson ISBN 978-0-7528-8995-5; Low et al. DOI 10.1007/s40279-019-01194-7); see §8.2 v0.2
 
 ## 9.2 Balance-pass carve-out
 
@@ -43,4 +43,5 @@ formula shapes, gates, and identity rows.
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial checklist; review/sign-off gates open by construction. |
 | 0.2 | 2026-07-08 | — | PASS-1 run and resolved (0H+1M+3L); PASS-2 not required (no High). |
+| 0.3 | 2026-07-10 | — | §9.1 citation gate closed (both §8.2 rows verified). Remaining open: back-prop ERRs at `APPROVED`; R-01..R-05 sign-off; status flip. |
 #endregion

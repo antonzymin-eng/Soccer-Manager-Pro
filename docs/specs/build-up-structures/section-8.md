@@ -1,8 +1,8 @@
 # Scripted Build-Up Structures Specification #24 — Section 8: References
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 10, 2026 (v0.2)
+**Version:** 0.2
 **Status:** IN REVIEW
 
 ---
@@ -22,8 +22,8 @@
 
 | Ref | Status |
 |---|---|
-| Wilson, J. — *Inverting the Pyramid* (Orion, 2008) — back-three build-up and positional-structure history | `[CITATION-PENDING]` edition/ISBN verification |
-| Maric, R. et al. — Spielverlagerung analyses of build-up structures (juego de posición / salida lavolpiana) | `[CITATION-PENDING]` — web-published analysis; per the #10 OI-003 precedent, either pinned to stable citations or reclassified as informal background before `APPROVED` |
+| Wilson, J. — *Inverting the Pyramid: The History of Football Tactics* (Orion, hardcover, September 2, 2008, ISBN 978-0-7528-8995-5) — back-three build-up and positional-structure history | **VERIFIED** July 10, 2026 (publisher/retail listings; first edition, Orion Books) |
+| Spielverlagerung web analyses of build-up structures (juego de posición / salida lavolpiana) | **RECLASSIFIED — informal background, non-citable** (July 10, 2026, per this row's own v0.1 resolution path and the #10 OI-003 precedent: web-published analysis with no stable citation form; carries no normative weight and is not consulted for any constant or FR) |
 
 No formula constant is literature-derived; all magnitudes are `[GT]`.
 
@@ -31,4 +31,5 @@ No formula constant is literature-derived; all magnitudes are `[GT]`.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial references. |
+| 0.2 | 2026-07-10 | — | Wilson row VERIFIED (ISBN 978-0-7528-8995-5); Spielverlagerung row reclassified informal background per its own resolution path. §9.1 citation gate closed. |
 #endregion
