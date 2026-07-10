@@ -28,9 +28,15 @@ namespace TacticalDirector.TacticalInstructions
 
         /// <summary>
         /// Optional roster-indexed per-agent tactics; null = every agent keeps the identity
-        /// <c>PlayerTactic.Default</c>. When present, must be full roster length — validated via
-        /// <see cref="ValidatePlayers"/> at library construction (FR-TP-014 / F1). The Stage-0+1
-        /// catalogue carries none (team-dial compositions only, #26 Appendix A.1).
+        /// <c>PlayerTactic.Default</c>. When present, must be full roster length — the FR-TP-014
+        /// gate is <see cref="ValidatePlayers"/>, run by the consuming applier seam (the T1
+        /// preset→config projection), where the roster size is known; this bottom-of-graph
+        /// assembly cannot reference a roster-size constant itself. The Stage-0+1 catalogue
+        /// carries none (team-dial compositions only, #26 Appendix A.1 — test-locked), so
+        /// FR-TP-014's library-construction mandate is vacuously satisfied at Stage 0.
+        /// The array is snapshot-copied at construction (post-construction mutation of the
+        /// caller's array never reaches the preset); the getter hands out the internal snapshot
+        /// — treat it as read-only (the #18 AR-1 L-3 / match-viewer AR-1 L-1 hand-over convention).
         /// </summary>
         public PlayerTactic[] Players { get; }
 
@@ -43,12 +49,16 @@ namespace TacticalDirector.TacticalInstructions
             }
             Name = name;
             Team = team;
-            Players = players;
+            // Snapshot-copy BEFORE the preset exposes it: a retained live caller array would let
+            // post-construction mutation bypass the FR-TP-014 gate (the living-world slice-2 AR-1
+            // M-1 / match-viewer AR-3 M-1 defect class).
+            Players = players == null ? null : (PlayerTactic[])players.Clone();
         }
 
         /// <summary>
         /// FR-TP-014 gate: when <see cref="Players"/> is present it must be exactly
-        /// <paramref name="rosterSize"/> long. Called at library construction (fail loud, F1).
+        /// <paramref name="rosterSize"/> long. Run by the consuming applier before projection
+        /// (fail loud, F1); a null <see cref="Players"/> always validates.
         /// </summary>
         /// <param name="rosterSize">The roster length the consumer expects (e.g. SQUAD_SIZE).</param>
         public void ValidatePlayers(int rosterSize)
@@ -65,4 +75,9 @@ namespace TacticalDirector.TacticalInstructions
 #region VersionHistory
 // | Version | Date       | Author | Notes                                   |
 // | 1.0     | 2026-07-10 | —      | Initial implementation (#26 T0). |
+// | 1.1     | 2026-07-10 | —      | T0 AR-1 M-1: ctor snapshot-copies Players (retained live caller  |
+// |         |            |        |   array bypassed the FR-TP-014 gate — the slice-2 AR-1 M-1 class);|
+// |         |            |        |   L-2: Players/ValidatePlayers docs re-anchored to the consuming  |
+// |         |            |        |   applier seam (the library performs no validation call and       |
+// |         |            |        |   cannot know roster size; Stage-0 mandate vacuously satisfied).  |
 #endregion

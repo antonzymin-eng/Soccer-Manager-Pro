@@ -1,5 +1,6 @@
 // File:     src/match-engine/TeamTacticFileLoader.cs
 // Created:  2026-06-29
+// Modified: 2026-07-10
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.1/§3.2 (T2 runtime activation), FR-TI-027/031, FR-CS-019; Match Engine design note §5; Code Standards #20
 // Purpose:  The on-disk → TeamTacticConfig parser swap (the deferred half of the #21 config loader).

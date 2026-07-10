@@ -96,8 +96,10 @@ namespace TacticalDirector.TacticalInstructions
         /// Builds a TeamTactic from the Balanced identity with only the named dials overridden —
         /// the KD-7 "named point in the existing #21 parameter space" composition rule. Every
         /// optional-parameter default below IS the corresponding <see cref="TeamTactic.Balanced"/>
-        /// identity value (locked by the T0 suite's identity test), so an unnamed dial stays at
-        /// identity by construction.
+        /// identity value, so an unnamed dial stays at identity by construction. Locked per preset
+        /// by the T0 suite's composition tests, which assert every dial a preset's A.1 row does
+        /// NOT list equals its Balanced value (T0 AR-1 L-1 — the earlier "identity test" claim
+        /// covered only globally-untouched dials).
         /// </summary>
         private static TeamTactic Compose(
             Mentality mentality = Mentality.Balanced,
@@ -133,4 +135,6 @@ namespace TacticalDirector.TacticalInstructions
 #region VersionHistory
 // | Version | Date       | Author | Notes                                   |
 // | 1.0     | 2026-07-10 | —      | Initial implementation (#26 T0): the five Appendix A.1 presets in pinned ladder order. |
+// | 1.1     | 2026-07-10 | —      | T0 AR-1 L-1: Compose doc no longer overclaims the identity-test coverage — the |
+// |         |            |        |   per-preset inherited-dial == Balanced locks now live in the composition tests. |
 #endregion

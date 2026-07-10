@@ -1,7 +1,20 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 10, 2026, latest same day (**#23–#26 T0 scaffolding landed** — 14 new `src/`
+**Last Updated:** July 10, 2026, latest same day (**T0 AR-1 fix pass: 0H+1M+3L, all resolved** — findings
+confined to the #26 preset surface + one header defect; no new files. M-1: `TacticPreset.cs` v1.1
+ctor snapshot-copies `Players` (a retained live caller array bypassed the FR-TP-014 gate — the
+living-world slice-2 AR-1 M-1 / match-viewer AR-3 M-1 class); L-1: `TacticPresetLibraryTests.cs`
+v1.1 composition tests gain inherited-dial == Balanced locks (the `Compose`-defaults coherence was
+claimed but unlocked for dials some presets touch) + the new M-1 snapshot regression;
+`TacticPresetLibrary.cs` v1.1 doc de-overclaimed; L-2: `TacticPreset` FR-TP-014 docs re-anchored to
+the consuming applier seam (the library performs no validation call and cannot know roster size —
+vacuously satisfied at Stage 0, test-locked); L-3: `TeamTacticFileLoader.cs` header gains its
+missing `// Modified:` field (FR-CS-056). Everything else verified clean against the specs:
+#23 §3.1/§3.2/§3.3 + #24 §3.1/§3.2 worked examples spec-exact, #25 Appendix A/D row-for-row,
+#26 A.1 composition-for-composition, NaN gates correct under Unity `Clamp01` semantics, family row
+keys hit real slots, ordinal locks extended. Full dotnet gate re-run: PASSED, 0 failures.)  
+**Last Updated (prior):** July 10, 2026, latest same day (**#23–#26 T0 scaffolding landed** — 14 new `src/`
 files + 4 test files + 5 edits, all behaviour-neutral. tactical-instructions: +
 `DismarkIntensity.cs` / `BuildUpStructure.cs` / `RotationFreedom.cs` / `TacticPreset.cs` /
 `TacticPresetLibrary.cs` + `Tests/TacticPresetLibraryTests.cs`; `TeamTactic.cs` v1.3 (ERR-021

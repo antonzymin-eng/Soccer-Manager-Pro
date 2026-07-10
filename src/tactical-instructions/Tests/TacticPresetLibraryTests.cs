@@ -32,9 +32,16 @@ namespace TacticalDirector.TacticalInstructions.Tests
 
         // ---------- A.1 compositions ----------
 
+        // Each composition test also locks every dial its A.1 row does NOT list to the Balanced
+        // identity value (T0 AR-1 L-1): the globally-untouched dials are covered once by
+        // NonListedDials_StayAtBalancedIdentity_OnEveryPreset, so here each preset asserts only
+        // the dials some OTHER preset touches — together they lock the Compose-defaults-are-
+        // Balanced coherence the library doc claims.
+
         [Test]
         public void ParkTheBus_MatchesA1Composition()
         {
+            TeamTactic b = TeamTactic.Balanced;
             TeamTactic t = TacticPresetLibrary.Presets[TacticPresetLibrary.ParkTheBusOrdinal].Team;
             Assert.AreEqual(Mentality.VeryDefensive, t.Mentality);
             Assert.AreEqual(TacticPressing.Low, t.Pressing);
@@ -42,39 +49,65 @@ namespace TacticalDirector.TacticalInstructions.Tests
             Assert.AreEqual(0.30f, t.DefensiveLine);
             Assert.AreEqual(3, t.TimeWasting);
             Assert.AreEqual(TransitionPlan.HoldShape, t.TransitionWon);
+            // Inherited dials (touched by other presets) stay at Balanced identity.
+            Assert.AreEqual(b.Tempo, t.Tempo);
+            Assert.AreEqual(b.Passing, t.Passing);
+            Assert.AreEqual(b.Width, t.Width);
+            Assert.AreEqual(b.TransitionLost, t.TransitionLost);
         }
 
         [Test]
         public void CounterAttack_MatchesA1Composition()
         {
+            TeamTactic b = TeamTactic.Balanced;
             TeamTactic t = TacticPresetLibrary.Presets[TacticPresetLibrary.CounterAttackOrdinal].Team;
             Assert.AreEqual(Mentality.Defensive, t.Mentality);
             Assert.AreEqual(TransitionPlan.CounterAttack, t.TransitionWon);
             Assert.AreEqual(Tempo.Fast, t.Tempo);
             Assert.AreEqual(TacticPassing.Direct, t.Passing);
             Assert.AreEqual(0.40f, t.DefensiveLine);
+            // Inherited dials stay at Balanced identity.
+            Assert.AreEqual(b.Pressing, t.Pressing);
+            Assert.AreEqual(b.LineOfEngagement, t.LineOfEngagement);
+            Assert.AreEqual(b.Width, t.Width);
+            Assert.AreEqual(b.TransitionLost, t.TransitionLost);
+            Assert.AreEqual(b.TimeWasting, t.TimeWasting);
         }
 
         [Test]
         public void Possession_MatchesA1Composition()
         {
+            TeamTactic b = TeamTactic.Balanced;
             TeamTactic t = TacticPresetLibrary.Presets[TacticPresetLibrary.PossessionOrdinal].Team;
             Assert.AreEqual(Mentality.Positive, t.Mentality);
             Assert.AreEqual(TacticPassing.Short, t.Passing);
             Assert.AreEqual(Tempo.Slow, t.Tempo);
             Assert.AreEqual(TacticWidth.Wide, t.Width);
             Assert.AreEqual(0.55f, t.DefensiveLine);
+            // Inherited dials stay at Balanced identity.
+            Assert.AreEqual(b.Pressing, t.Pressing);
+            Assert.AreEqual(b.LineOfEngagement, t.LineOfEngagement);
+            Assert.AreEqual(b.TransitionWon, t.TransitionWon);
+            Assert.AreEqual(b.TransitionLost, t.TransitionLost);
+            Assert.AreEqual(b.TimeWasting, t.TimeWasting);
         }
 
         [Test]
         public void Gegenpress_MatchesA1Composition()
         {
+            TeamTactic b = TeamTactic.Balanced;
             TeamTactic t = TacticPresetLibrary.Presets[TacticPresetLibrary.GegenpressOrdinal].Team;
             Assert.AreEqual(Mentality.Attacking, t.Mentality);
             Assert.AreEqual(TacticPressing.High, t.Pressing);
             Assert.AreEqual(LineOfEngagement.High, t.LineOfEngagement);
             Assert.AreEqual(TransitionPlan.CounterPress, t.TransitionLost);
             Assert.AreEqual(0.65f, t.DefensiveLine);
+            // Inherited dials stay at Balanced identity.
+            Assert.AreEqual(b.Tempo, t.Tempo);
+            Assert.AreEqual(b.Passing, t.Passing);
+            Assert.AreEqual(b.Width, t.Width);
+            Assert.AreEqual(b.TransitionWon, t.TransitionWon);
+            Assert.AreEqual(b.TimeWasting, t.TimeWasting);
         }
 
         // ---------- KD-7 / FR-TI-031 identity discipline ----------
@@ -131,6 +164,27 @@ namespace TacticalDirector.TacticalInstructions.Tests
             preset.ValidatePlayers(5); // exact length passes.
         }
 
+        [Test]
+        public void Preset_SnapshotsPlayersAtConstruction()
+        {
+            // T0 AR-1 M-1: a retained live caller array would let post-construction mutation
+            // bypass the FR-TP-014 gate (the slice-2 AR-1 M-1 / match-viewer AR-3 M-1 class).
+            var source = new PlayerTactic[3]
+            {
+                PlayerTactic.Default(PlayerRole.Default),
+                PlayerTactic.Default(PlayerRole.Default),
+                PlayerTactic.Default(PlayerRole.Default),
+            };
+            var preset = new TacticPreset("X", TeamTactic.Balanced, source);
+
+            source[1] = new PlayerTactic(
+                PlayerRole.Default, Duty.Attack, PlayerInstructions.Default);
+
+            Assert.AreEqual(Duty.Support, preset.Players[1].Duty,
+                "post-construction mutation of the caller's array must not reach the preset");
+            Assert.AreNotSame(source, preset.Players);
+        }
+
         private static void AssertTacticsEqual(in TeamTactic expected, in TeamTactic actual)
         {
             Assert.AreEqual(expected.Mentality, actual.Mentality);
@@ -160,4 +214,7 @@ namespace TacticalDirector.TacticalInstructions.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                                   |
 // | 1.0     | 2026-07-10 | —      | Initial T0 suite (#26): pinned catalogue + identity discipline + gates. |
+// | 1.1     | 2026-07-10 | —      | T0 AR-1: composition tests gain inherited-dial == Balanced locks (L-1 —  |
+// |         |            |        |   the Compose-defaults coherence was claimed but unlocked for dials some |
+// |         |            |        |   presets touch); + Preset_SnapshotsPlayersAtConstruction (M-1 lock).    |
 #endregion
