@@ -1,7 +1,13 @@
 # Tactical Presets & AI-Manager Selection — Design Supplement
 
 > **Created:** July 7, 2026
-> **Last Updated:** July 7, 2026 (v0.4 — AR-2 fix: KD-2's event-triggered re-evaluation claim
+> **Last Updated:** July 8, 2026 (v0.5 — **PROMOTED**: candidate #26 authored as section files at
+> `IN REVIEW` — `docs/specs/tactical-presets/` (FR-TP) — completing §6 steps 1–3 (`SPEC_INDEX.md`
+> registry row added; RESERVED entry retired). The promoted spec resolves this note's §4 open
+> questions (Q1 → compose-only, Q2 → gate-not-clock, Q3 → explicit deferral, Q4 → UI deferral) and
+> supersedes this note where they deviate. Also: §6's "Specification Before Code" citation
+> corrected root `CLAUDE.md` → `README.md` (the heading lives in README.md; verified by grep).)
+> **Prior:** v0.4 — AR-2 fix: KD-2's event-triggered re-evaluation claim
 > corrected after grepping `src/match-engine/MatchEngine.cs` — `GoalAwardedEvent`/`CardIssuedEvent`/
 > `SubstitutionEvent` are all declared in Event System #17's catalogue but NONE has an actual
 > producer yet (only `PossessionChangedEvent` does), not just the red-card/substitution pair as
@@ -168,7 +174,7 @@ substrate (on-pitch per-agent AI, not the tactic-config layer).
 
 ## 6. Implementation plan
 
-Per root `CLAUDE.md` "Specification Before Code" — no `src/` code lands from this note directly.
+Per `README.md` "Specification Before Code" — no `src/` code lands from this note directly.
 This section is the promotion pipeline for candidate #26, then the T0–T4 code-landing sequence
 from §3 once it is `APPROVED`.
 
@@ -228,6 +234,7 @@ and its implementation, not further design-supplement content.
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.5 | 2026-07-08 | PROMOTED — #26 section files authored at `IN REVIEW` (§6 steps 1–3 complete); `SPEC_INDEX.md` registry row added, RESERVED entry retired; §4 open questions resolved in the spec (Q1 compose-only / Q2 gate / Q3 deferral / Q4 UI deferral). §6 citation fix: "Specification Before Code" is a `README.md` heading, not root `CLAUDE.md`. |
 | 0.4 | 2026-07-07 | AR-2 fix (0H+0M+1L): KD-2 claimed goal-scored re-evaluation was available today with only red-card/substitution deferred; grepping `src/match-engine/MatchEngine.cs` shows zero producers for `GoalAwardedEvent`, `CardIssuedEvent`, or `SubstitutionEvent` (only `PossessionChangedEvent` is wired) — corrected to defer all three event-triggered points uniformly, with goal-scoring flagged as the likely first candidate once a producer lands. |
 | 0.3 | 2026-07-07 | Added §6 Implementation Plan — spec-promotion pipeline for #26 + T0–T4 code-landing sequence + explicit deferral note. |
 | 0.2 | 2026-07-07 | AR-1 fix (0H+0M+1L): KD-1 originally implied `TeamTacticConfigApplier.Apply`/`PlayerTacticConfigApplier.Apply` cover both boot-time and mid-match preset application; their own doc comments scope `Apply` to pre-kickoff only. Corrected KD-1 and the §3 T-phase table (T1 vs T4) to route mid-match adaptation through `MatchEngine.SetTeamTactic`/`SetPlayerTactic` directly instead. |

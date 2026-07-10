@@ -1,7 +1,35 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** July 7, 2026, later same day (**Two design supplements opened, reserving
+**Last Updated:** July 10, 2026 (**#23–#26 post-PASS-1 gates closed where closable** — §8
+citation rows: #23 both VERIFIED (Wilson ISBN 978-0-7528-8995-5; Low et al. 2020 DOI
+10.1007/s40279-019-01194-7); #24 Wilson verified + Spielverlagerung reclassified informal
+background; #25 Wilson verified + Memmert & Raabe REPLACED with the verified Low et al. 2020
+review (OI-003 precedent); #26 Wilson verified, Bradley row pending with a recorded
+environment-blocked July-10 attempt. **#25 Appendix A completed** (A.2 4-3-3 + A.3 4-2-3-1
+authored against the verified `Family433`/`Family4231` rosters, F1 hand-audited). **#26 A.1
+compositions pinned** against the actual #21 enum members (PASS-1 L-2). Checklists at v0.3.
+Still open: the #26 Bradley citation; back-prop ERRs at `APPROVED`; #26 engine-substrate gates
+(upstream-owned); R-01..R-05 sign-off.)  
+**Last Updated (prior):** July 8, 2026, later same day (**PASS-1 adversarial reviews run on #23–#26, all
+findings resolved in same-day v0.2 fix passes** — #23 Dismarking 0H+1M+3L (one-stride-stale
+pressure consumption contract); #24 Build-Up 0H+3M+2L (team-level-regain suppression arming —
+the per-agent `PossessionChangedEvent` fires on teammate receptions too; committed-zone-expansion
+hysteresis; lane-key fixes); #25 Rotations **1H**+1M+3L, PASS-2 re-read clean at H/M (serialized
+`LastComposedTarget` cache replaces a nonexistent-field claim that broke restore byte-identity;
+phase-exit freeze fixed); #26 Presets 0H+1M+2L (engine score/halves substrate gates;
+`MATCH_TICKS_TOTAL` `[CROSS-PENDING]`; Appendix E re-derived). Remaining gates per §9.3:
+`[CITATION-PENDING]` rows, back-prop ERRs at `APPROVED`, #25 Appendix-A completeness, R-01..R-05.)
+**Last Updated (prior):** July 8, 2026 (**Candidates #23–#26 promoted to section files at `IN REVIEW`** —
+the four design-supplement candidates each authored as a full 11-file spec set (v0.1):
+`docs/specs/dismarking-ai/` (#23, FR-DM-001..018), `docs/specs/build-up-structures/` (#24,
+FR-BU-001..016), `docs/specs/positional-rotations/` (#25, FR-RO-001..018),
+`docs/specs/tactical-presets/` (#26, FR-TP-001..020). `SPEC_INDEX.md` registry rows added —
+**22 APPROVED / 4 IN REVIEW** overall; supplements bumped to v0.4/v0.5 with promotion notes.
+Section-file PASS-1 adversarial reviews pending per each spec's §9.3; `[CITATION-PENDING]` §8
+rows outstanding; back-prop ERRs file at each `APPROVED`. **Stage 0 counts unchanged: 20
+APPROVED** — all four are Stage-1-forward, like #21/#22.)
+**Last Updated (prior):** July 7, 2026, later same day (**Two design supplements opened, reserving
 candidate specs #23–#26** — `docs/tracking/advanced-positional-behaviors-design.md` (dismarking
 #23, scripted build-up structures #24, positional rotations #25) and
 `docs/tracking/game-model-ai-manager-design.md` (tactical presets & AI-manager selection #26).

@@ -1,7 +1,15 @@
 # Advanced Positional Behaviors — Design Supplement
 
 > **Created:** July 7, 2026
-> **Last Updated:** July 7, 2026 (v0.3 — new §6 Implementation Plan: the per-candidate
+> **Last Updated:** July 8, 2026 (v0.4 — **PROMOTED**: all three candidates authored as section
+> files at `IN REVIEW` — `docs/specs/dismarking-ai/` (#23, FR-DM), `docs/specs/build-up-structures/`
+> (#24, FR-BU), `docs/specs/positional-rotations/` (#25, FR-RO) — completing §6 steps 1–3 for all
+> three (`SPEC_INDEX.md` registry rows added; RESERVED entries retired). The promoted specs
+> supersede this note where they deviate (notably #24 §1 KD-3 refines this note's KD-3
+> `TransitionWon` gating into an opt-in dial + post-regain suppression window, with rationale).
+> Also: §6's "Specification Before Code" citation corrected root `CLAUDE.md` → `README.md`
+> (the heading lives in README.md; verified by grep).)
+> **Prior:** v0.3 — new §6 Implementation Plan: the per-candidate
 > spec-promotion pipeline (outline → section files → PASS-1/2 → sign-off → `APPROVED` → T0 code
 > → match-engine wiring → implementation AR cycle) plus a recommended #23→#24→#25 sequencing.)
 > **Prior:** v0.2 — AR-1 fix: KD-3's gating-dial citation corrected from a generic
@@ -168,7 +176,7 @@ AI-Manager Selection), reserved separately since it extends a different substrat
 
 ## 6. Implementation plan
 
-Per root `CLAUDE.md` "Specification Before Code" and the project's own recurring precedent (every
+Per `README.md` "Specification Before Code" and the project's own recurring precedent (every
 one of #1–#22 went spec-first), **no `src/` code is written from this note directly.** The plan
 below is the promotion pipeline each of #23/#24/#25 must pass through — identical in shape to how
 `tactical-instruction-layer-design.md` became Spec #21 and `living-world-system-design.md` became
@@ -241,6 +249,7 @@ candidate's own eventual spec and implementation work, not further design-supple
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.4 | 2026-07-08 | PROMOTED — #23/#24/#25 section files authored at `IN REVIEW` (§6 steps 1–3 complete for all three); `SPEC_INDEX.md` registry rows added, RESERVED entries retired. Promoted specs supersede this note on deviation (#24 KD-3 gating refinement recorded there). §6 citation fix: "Specification Before Code" is a `README.md` heading, not root `CLAUDE.md`. |
 | 0.3 | 2026-07-07 | Added §6 Implementation Plan — the per-candidate spec-promotion pipeline + recommended #23→#24→#25 sequencing rationale. Self-review of the plan caught the proposed `FR-PR-*` prefix for Rotations colliding with Pressing AI's (#13) existing prefix (grep-verified against `docs/specs/**/*.md`); corrected to `FR-RO-*`. |
 | 0.2 | 2026-07-07 | AR-1 fix (0H+0M+1L): KD-3 (and the parallel §1 table cell) cited a generic `TeamTactic.TransitionPlan` field as the build-up gating dial; the struct actually has no such field, only `TransitionWon`/`TransitionLost` (both backed by the `TransitionPlan` enum type). Corrected both citations to `TransitionWon` specifically, with the no-AI-consumer-yet claim re-verified by grep. |
 | 0.1 | 2026-07-07 | Initial creation — joint scoping note for dismarking, scripted build-up structures, and positional rotations, per the July 7, 2026 tactical-theory cross-reference's "considered but NOT implemented" carve-out. |
