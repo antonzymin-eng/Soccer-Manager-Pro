@@ -162,6 +162,36 @@ namespace TacticalDirector.TacticalInstructions.Tests
             Assert.AreEqual(2, (int)MarkingOrientation.ManOriented);
         }
 
+        [Test]
+        public void DismarkIntensity_OrdinalsAreStable()
+        {
+            // Row index into PositioningAIConstants.DISMARK_INTENSITY_SCALAR; Off = 0 is the
+            // FR-DM-012 identity row (back-prop ERR-021-005).
+            Assert.AreEqual(0, (int)DismarkIntensity.Off);
+            Assert.AreEqual(1, (int)DismarkIntensity.Conservative);
+            Assert.AreEqual(2, (int)DismarkIntensity.Aggressive);
+        }
+
+        [Test]
+        public void BuildUpStructure_OrdinalsAreStable()
+        {
+            // Keys the BuildUpOverlayCatalogue tables; None = 0 is the FR-BU-005 identity
+            // (back-prop ERR-021-006).
+            Assert.AreEqual(0, (int)BuildUpStructure.None);
+            Assert.AreEqual(1, (int)BuildUpStructure.BackThree);
+            Assert.AreEqual(2, (int)BuildUpStructure.DoublePivot);
+            Assert.AreEqual(3, (int)BuildUpStructure.InvertedFullBacks);
+        }
+
+        [Test]
+        public void RotationFreedom_OrdinalsAreStable()
+        {
+            // Off = 0 is the FR-RO-011 identity (back-prop ERR-021-007).
+            Assert.AreEqual(0, (int)RotationFreedom.Off);
+            Assert.AreEqual(1, (int)RotationFreedom.Conservative);
+            Assert.AreEqual(2, (int)RotationFreedom.Free);
+        }
+
         // ── [Flags] enums (assert bit positions + the 8-flag byte ceiling) ────
 
         [Test]
@@ -205,6 +235,9 @@ namespace TacticalDirector.TacticalInstructions.Tests
             Assert.AreEqual(typeof(byte), Enum.GetUnderlyingType(typeof(InstrBias)));
             Assert.AreEqual(typeof(byte), Enum.GetUnderlyingType(typeof(SetPieceDutyFlags)));
             Assert.AreEqual(typeof(byte), Enum.GetUnderlyingType(typeof(MarkingOrientation)));
+            Assert.AreEqual(typeof(byte), Enum.GetUnderlyingType(typeof(DismarkIntensity)));
+            Assert.AreEqual(typeof(byte), Enum.GetUnderlyingType(typeof(BuildUpStructure)));
+            Assert.AreEqual(typeof(byte), Enum.GetUnderlyingType(typeof(RotationFreedom)));
         }
 
         [Test]
@@ -244,4 +277,6 @@ namespace TacticalDirector.TacticalInstructions.Tests
 // | 1.1     | 2026-06-21 | —      | AR-1 L-2: flag-ceiling test was vacuous (`<= 255` holds for any byte  |
 // |         |            |        | enum); now asserts each flag is a single power-of-two bit ≤ 128.      |
 // | 1.2     | 2026-07-07 | —      | Cheap-item addition: + MarkingOrientation ordinal + byte-backing lock.|
+// | 1.3     | 2026-07-10 | —      | #23/#24/#25 T0: + DismarkIntensity/BuildUpStructure/RotationFreedom  |
+// |         |            |        |   ordinal + byte-backing locks (back-props ERR-021-005/006/007).     |
 #endregion

@@ -1,7 +1,21 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 10, 2026, later same day (**Specs #23–#26 `IN REVIEW → APPROVED` + the seven
+**Last Updated:** July 10, 2026, latest same day (**#23–#26 T0 scaffolding landed** — 14 new `src/`
+files + 4 test files + 5 edits, all behaviour-neutral. tactical-instructions: +
+`DismarkIntensity.cs` / `BuildUpStructure.cs` / `RotationFreedom.cs` / `TacticPreset.cs` /
+`TacticPresetLibrary.cs` + `Tests/TacticPresetLibraryTests.cs`; `TeamTactic.cs` v1.3 (ERR-021
+field appends), `Tests/EnumOrdinalStabilityTests.cs` v1.3, `Tests/FactoryIdentityTests.cs` v1.3.
+match-engine: `TeamTacticFileLoader.cs` v1.2 (+3 keys). positioning-ai: + `MarkingDwellState.cs` /
+`MarkingPressureEvaluator.cs` (#23), `BuildUpZone.cs` / `BuildUpZoneState.cs` /
+`BuildUpZoneClassifier.cs` / `BuildUpOverlayCatalogue.cs` (#24), `RotationPair.cs` /
+`RotationPairState.cs` / `RotationAdjacencyCatalogue.cs` (#25) + `Tests/
+MarkingPressureEvaluatorTests.cs` / `Tests/BuildUpStructureTests.cs` /
+`Tests/RotationCatalogueTests.cs`; `PositioningAIConstants.cs` v1.2. Spec-side: ERR-024-001 (H,
+resolved — #24 catalogue row keys matched no slot; `build-up-structures/appendices.md` v0.3 +
+`section-3.md` v0.3), #26 `section-2.md` v0.3 (stale §2.2.2 ordinals), `spec-error-log.md` v1.31.
+Full dotnet gate run locally: PASSED, 0 failures.)  
+**Last Updated (prior):** July 10, 2026, later same day (**Specs #23–#26 `IN REVIEW → APPROVED` + the seven
 back-prop amendments; no new files, no `src/` change** — all 44 files across the four spec folders
 flip `Status: APPROVED`; the four `section-9-approval-checklist.md` files → v0.4 (R-01..R-05
 sign-off tables + decisions); `tactical-presets/section-8.md` → v0.3 (Bradley & Noakes 2013 DOI

@@ -1,6 +1,6 @@
 // File: src/positioning-ai/PositioningAIConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-07-07
+// Modified: 2026-07-10
 // Author:   —
 // Spec: #12 Positioning AI §6.1, Appendix B, new §3.5/§7.13 rest-defense coverage (cheap-item addition)
 // Purpose: Single constant catalogue for Spec #12. All scalars, formation tables, and lookup arrays.
@@ -33,6 +33,18 @@ namespace TacticalDirector.PositioningAI
 
         /// <summary>[FIXED] Squared distance epsilon for floating-point boundary comparisons. KD-16. Value = (0.01 m)².</summary>
         public const float SPACING_EPSILON_M2 = 1e-4f;
+
+        /// <summary>
+        /// [FIXED] Degenerate-distance guard for the dismark offset direction (F3): a marker closer
+        /// than this to the agent skips the offset this tick (deterministic no-op). #23 §3.3/§3.5.
+        /// </summary>
+        public const float DISMARK_MIN_MARKER_DIST_EPS = 1e-3f;
+
+        /// <summary>
+        /// [FIXED] Hard cap on rotation adjacency-table rows per formation family — bounds the #25
+        /// per-heartbeat evaluation cost. A cap, not a tunable. #25 §3.5 / FR-RO-016.
+        /// </summary>
+        public const int ROTATION_MAX_PAIRS_PER_FAMILY = 8;
 
         #endregion
 
@@ -68,6 +80,18 @@ namespace TacticalDirector.PositioningAI
         /// addition (§3.5, new §7.13 rest-defense coverage check).
         /// </summary>
         public const float REST_DEFENSE_DEPTH_M = PITCH_LENGTH_M * REST_DEFENSE_DEPTH_FRACTION;
+
+        /// <summary>
+        /// [DERIVED] Build-up zone boundary 1 (own third → middle third), team-relative X.
+        /// Formula: PITCH_LENGTH_M / 3 = 35.0 m. #24 §3.1 (FM-BU-01).
+        /// </summary>
+        public const float BUILDUP_ZONE_THRESHOLD_1_M = PITCH_LENGTH_M / 3f;
+
+        /// <summary>
+        /// [DERIVED] Build-up zone boundary 2 (middle third → final third), team-relative X.
+        /// Formula: 2 × PITCH_LENGTH_M / 3 = 70.0 m. #24 §3.1 (FM-BU-01).
+        /// </summary>
+        public const float BUILDUP_ZONE_THRESHOLD_2_M = 2f * PITCH_LENGTH_M / 3f;
 
         #endregion
 
@@ -194,6 +218,69 @@ namespace TacticalDirector.PositioningAI
             1.10f,  // TransToAtk — push lines up in attack transition
             0.75f,  // TransToDef — drop lines quickly when transitioning to defend
         };
+
+        // ----- Dismarking AI (#23) — magnitudes illustrative pending the balance pass (#21 G2). -----
+
+        /// <summary>[GT] Marking-radius (m): a perceived opponent inside this range is a marker candidate. #23 §3.1/§3.5.</summary>
+        public const float MARKING_RADIUS_M = 3.0f;
+
+        /// <summary>[GT] Heartbeats of sustained marking at which dwell01 saturates to 1. #23 §3.1/§3.5.</summary>
+        public const int MARKING_DWELL_FULL_TICKS = 10;
+
+        /// <summary>[GT] Dwell decay per unmarked (or out-of-phase) heartbeat. #23 §3.2/§3.5.</summary>
+        public const int MARKING_DWELL_DECAY_PER_TICK = 2;
+
+        /// <summary>[GT] MarkingPressure below/at this floor produces no dismark offset. #23 §3.3/§3.5 (FR-DM-006/009).</summary>
+        public const float DISMARK_PRESSURE_FLOOR = 0.15f;
+
+        /// <summary>[GT] Maximum dismark offset magnitude (m) at full pressure and full intensity. #23 §3.3/§3.5.</summary>
+        public const float DISMARK_OFFSET_MAX_M = 2.5f;
+
+        /// <summary>
+        /// [GT] Dismark intensity scalar, indexed by (int)DismarkIntensity — Off/Conservative/Aggressive.
+        /// Off row MUST stay exactly 0.0 (the FR-DM-012 identity). #23 §3.3/§3.5.
+        /// </summary>
+        public static readonly float[] DISMARK_INTENSITY_SCALAR = new float[3]
+        {
+            0.0f,   // Off          — identity (FR-DM-012)
+            0.6f,   // Conservative
+            1.0f,   // Aggressive
+        };
+
+        // ----- Build-Up Structures (#24) — magnitudes illustrative pending the balance pass. -----
+
+        /// <summary>[GT] Zone-boundary hysteresis (m): the committed zone's interval expands by this at each boundary. #24 §3.1 (FM-BU-01, PASS-1 M-2).</summary>
+        public const float BUILDUP_ZONE_HYSTERESIS_M = 2.0f;
+
+        /// <summary>[GT] Componentwise bound on every overlay-catalogue offset (m); enforced by a catalogue-invariant test (FR-BU-008). #24 §3.2/§3.4.</summary>
+        public const float BUILDUP_OFFSET_MAX_M = 8.0f;
+
+        /// <summary>[GT] Post-regain suppression window (heartbeats) armed on a team-level regain when TransitionWon ∈ {CounterAttack, CounterPress}. #24 §3.3 (FM-BU-03).</summary>
+        public const int REGAIN_SUPPRESS_TICKS = 30;
+
+        // ----- Positional Rotations (#25) — magnitudes illustrative pending the balance pass. -----
+
+        /// <summary>[GT] Base rotation-trigger advantage margin (m). #25 §3.1 (FM-RO-01).</summary>
+        public const float ROTATION_ADVANTAGE_M = 4.0f;
+
+        /// <summary>[GT] Advantage scalar at RotationFreedom.Conservative. Off is the dial gate, never arithmetic. #25 §3.1/§3.5.</summary>
+        public const float ROTATION_ADVANTAGE_SCALAR_CONSERVATIVE = 1.5f;
+
+        /// <summary>[GT] Advantage scalar at RotationFreedom.Free. #25 §3.1/§3.5.</summary>
+        public const float ROTATION_ADVANTAGE_SCALAR_FREE = 1.0f;
+
+        /// <summary>[GT] Consecutive heartbeats the (commit or revert) predicate must hold. #25 §3.2 (FM-RO-02).</summary>
+        public const int ROTATION_TRIGGER_DWELL_TICKS = 5;
+
+        /// <summary>
+        /// [GT] Minimum heartbeats a committed rotation holds before revert becomes evaluable.
+        /// Subject to the FR-RO-007 [DERIVED] lower bound ROTATION_HOLD_TICKS ≥ LINE_DWELL_TICKS
+        /// (#25 Appendix D — hysteresis non-interference; locked by T-RO-U-013). #25 §3.2/§3.5.
+        /// </summary>
+        public const int ROTATION_HOLD_TICKS = 30;
+
+        /// <summary>[GT] Maximum rotation commits per team per heartbeat. #25 §3.2/§3.5 (FR-RO-009).</summary>
+        public const int ROTATION_MAX_PER_TICK = 1;
 
         #endregion
 
@@ -450,4 +537,11 @@ namespace TacticalDirector.PositioningAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-07-07 | —      | Cheap-item addition: + REST_DEFENSE_DEPTH_FRACTION / _MIN_COUNT   |
 // |         |            |        |   [GT] + REST_DEFENSE_DEPTH_M [DERIVED] (§3.5/§7.13).              |
+// | 1.2     | 2026-07-10 | —      | #23/#24/#25 T0 constants (FR-DM-016/FR-BU-014/FR-RO-016):         |
+// |         |            |        |   Fixed: DISMARK_MIN_MARKER_DIST_EPS, ROTATION_MAX_PAIRS_PER_FAMILY|
+// |         |            |        |   Derived: BUILDUP_ZONE_THRESHOLD_1_M/_2_M;                       |
+// |         |            |        |   GT: dismark radius/dwell/floor/offset/scalar table, build-up    |
+// |         |            |        |   hysteresis/offset-bound/suppress window, rotation advantage/    |
+// |         |            |        |   scalars/dwell/hold/per-tick cap. Magnitudes illustrative        |
+// |         |            |        |   pending each spec's balance pass (#21 G2 precedent).            |
 #endregion

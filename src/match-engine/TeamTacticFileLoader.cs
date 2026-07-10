@@ -144,7 +144,10 @@ namespace TacticalDirector.MatchEngine
                 focusPlay:        ParseEnum(kv, "focusPlay",        d.FocusPlay),
                 gkDistribution:   ParseEnum(kv, "gkDistribution",   d.GkDistribution),
                 timeWasting:      TimeWasting(kv, "timeWasting", d.TimeWasting),
-                markingOrientation: ParseEnum(kv, "markingOrientation", d.MarkingOrientation));
+                markingOrientation: ParseEnum(kv, "markingOrientation", d.MarkingOrientation),
+                dismarkIntensity:   ParseEnum(kv, "dismarkIntensity",   d.DismarkIntensity),
+                buildUpStructure:   ParseEnum(kv, "buildUpStructure",   d.BuildUpStructure),
+                rotationFreedom:    ParseEnum(kv, "rotationFreedom",    d.RotationFreedom));
 
             if (kv.Count > 0)
             {
@@ -218,4 +221,7 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-06-29 | —      | Initial implementation — Stage-0 text → TeamTacticConfig parser swap (#21).  |
 // | 1.1     | 2026-07-07 | —      | + markingOrientation key (cheap-item addition; omitted ⇒ Balanced).          |
+// | 1.2     | 2026-07-10 | —      | + dismarkIntensity/buildUpStructure/rotationFreedom keys (back-props         |
+// |         |            |        |   ERR-021-005/006/007; omitted ⇒ Off/None/Off identities — keeps the         |
+// |         |            |        |   "every TeamTactic field has a key" contract after the field appends).      |
 #endregion

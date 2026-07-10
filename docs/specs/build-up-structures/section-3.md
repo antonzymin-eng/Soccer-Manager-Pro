@@ -1,8 +1,8 @@
 # Scripted Build-Up Structures Specification #24 — Section 3: Formulas and Algorithms
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 10, 2026 (v0.3 — ERR-024-001 worked-example row keys)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -51,10 +51,11 @@ Every Δ satisfies |Dx|,|Dy| ≤ `BUILDUP_OFFSET_MAX_M` `[GT]` = 8.0 m (FR-BU-00
 own/middle-third concept (FR-BU-004); in the final third the existing #12/#15 attacking shapes own
 positioning.
 
-- **Worked example (BackThree, OwnThird; lane keys per PASS-1 M-3):** the DEF-line wide **L/R**
-  lane slots get Δ = (−4.0, 6.0 toward pitch centre) — fullbacks tuck deep and narrow beside the
-  centre-backs; the MID-line half-space **LH/RH** slots get Δ = (−4.0, 0.0) — the central pair
-  drops toward the back line. A 4-4-2's left back at composed target (18.0, 12.0) team-relative
+- **Worked example (BackThree, OwnThird; row keys per ERR-024-001 — the recorded `DefaultLane`
+  values):** the DEF-line half-space **LH/RH** slots (the fullbacks, as recorded in every
+  `Family*` table) get Δ = (−4.0, 6.0 toward pitch centre) — fullbacks tuck deep and narrow beside
+  the centre-backs; the MID-line **C** slots get Δ = (−4.0, 0.0) — the central mids
+  drop toward the back line. A 4-4-2's left back at composed target (18.0, 12.0) team-relative
   moves toward the y = 34 centreline: (18.0 − 4.0, 12.0 + 6.0) = (14.0, 18.0). The catalogue in
   Appendix A stores lane-symmetric magnitudes; the lateral sign resolves toward pitch centre per
   lane side (y < 34 ⇒ +, y > 34 ⇒ −, **0 at exactly y = 34** — PASS-1 L-1), which keeps one table
@@ -100,4 +101,5 @@ before a team settles into structure).
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial FM-BU-01..03 with units, ranges, worked examples. |
 | 0.2 | 2026-07-08 | — | PASS-1 fixes: M-2 committed-zone-expansion hysteresis formulation (+ long-ball example); M-1 team-level-regain arming; M-3 lane keys in the §3.2 example; L-1 centreline sign pin. |
+| 0.3 | 2026-07-10 | — | ERR-024-001: §3.2 worked-example row keys aligned to the recorded `DefaultLane` values (the M-3 keys matched no slot — see Appendix A v0.3). |
 #endregion

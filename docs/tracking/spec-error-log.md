@@ -6,8 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.30
-**Updated:** July 10, 2026 (ERR-021-005 through ERR-021-007, ERR-012-007 through ERR-012-009, and ERR-008-012 filed and RESOLVED same commit — the seven cross-spec back-props landed atomically with specs #23 Dismarking / #24 Build-Up Structures / #25 Positional Rotations reaching `APPROVED` (each spec's §2.3/§2.4 pending-ERR table, per its own pipeline step 6; #26 Tactical Presets declares no back-props at T0–T3). #21-side: `TeamTactic` gains `DismarkIntensity`/`BuildUpStructure`/`RotationFreedom` field rows + Appendix B canonical-order appends in pinned approval order #23 → #24 → #25 after `MarkingOrientation` (`tactical-instructions/section-2.md` v0.5 + `appendices.md` v0.5); serialization enters `WriteTeamTactic` with a `SNAPSHOT_SCHEMA_VERSION` bump only when each owning spec's wiring lands. #12-side: new `positioning-ai/section-3.md` §3.7.1 (v0.6) records the build-up overlay stage (ContextModifier → spacing), the dismark offset stage (spacing → pitch clamp, FR-DM-008), the `RotationController` pre-composition tick position, and the `AgentPositioningData.SlotIndex` single-writer contract amendment (no longer immutable after `SeedFromFormation`; `RotationController` sole post-seed writer). #8-side: `decision-tree/section-3-2.md` v1.5 §3.2.2.1 anchors the FM-DM-03 marked-pass-target multiplier in the external tactical-multiplier product before the final clamp. All amendments identity-preserving at zero-value dials; ERR-012-004..006 remain soft-reserved for the June-13 quarantine adjudication cluster and were deliberately skipped.)
+**Version:** 1.31
+**Updated:** July 10, 2026, later same day (ERR-024-001 filed and RESOLVED at #23–#26 T0 implementation: Build-Up Structures #24 Appendix A v0.2's PASS-1 M-3 "lane-key correction" keyed every overlay row to lane values NO slot occupies — FR-BU-007 keys rows by the RECORDED `FormationSlotRecord.DefaultLine`/`DefaultLane`, and all three `PositioningAIConstants.Family*` tables record fullbacks at `LH`/`RH` (half-space) and central mids/forwards at `C`, so the catalogue as spec'd was a structural no-op. M-3 verified lane GEOMETRY (LB at y = 10.2 m is in the wide bin) but not the recorded seed values the key actually uses. Appendix A v0.3 + §3.2 v0.3 re-keyed with magnitudes/intents unchanged; `BuildUpOverlayCatalogue.cs` implements the corrected keys; `BuildUpStructureTests.Catalogue_RowKeys_HitEveryFamily_Err024001Regression` locks that every family receives a non-zero own-third offset per structure.)
+**Updated (prior):** July 10, 2026 (ERR-021-005 through ERR-021-007, ERR-012-007 through ERR-012-009, and ERR-008-012 filed and RESOLVED same commit — the seven cross-spec back-props landed atomically with specs #23 Dismarking / #24 Build-Up Structures / #25 Positional Rotations reaching `APPROVED` (each spec's §2.3/§2.4 pending-ERR table, per its own pipeline step 6; #26 Tactical Presets declares no back-props at T0–T3). #21-side: `TeamTactic` gains `DismarkIntensity`/`BuildUpStructure`/`RotationFreedom` field rows + Appendix B canonical-order appends in pinned approval order #23 → #24 → #25 after `MarkingOrientation` (`tactical-instructions/section-2.md` v0.5 + `appendices.md` v0.5); serialization enters `WriteTeamTactic` with a `SNAPSHOT_SCHEMA_VERSION` bump only when each owning spec's wiring lands. #12-side: new `positioning-ai/section-3.md` §3.7.1 (v0.6) records the build-up overlay stage (ContextModifier → spacing), the dismark offset stage (spacing → pitch clamp, FR-DM-008), the `RotationController` pre-composition tick position, and the `AgentPositioningData.SlotIndex` single-writer contract amendment (no longer immutable after `SeedFromFormation`; `RotationController` sole post-seed writer). #8-side: `decision-tree/section-3-2.md` v1.5 §3.2.2.1 anchors the FM-DM-03 marked-pass-target multiplier in the external tactical-multiplier product before the final clamp. All amendments identity-preserving at zero-value dials; ERR-012-004..006 remain soft-reserved for the June-13 quarantine adjudication cluster and were deliberately skipped.)
 **Updated (prior):** June 16, 2026 (ERR-016-006 through ERR-016-008 + ERR-017-003 filed from the `src/deterministic-sim/` + `src/event-system/` foundation adversarial review. ERR-016-006 (H) RESOLVED same commit — `SaveManager.Load` discarded the on-disk header so the digest chain was unverifiable on reload + `ReplayEngine` step-3 null-fingerprint NRE; `SaveManager.cs` v1.5 (`ReadHeaderBytes` + header-reconstructing `Load` overload) and `ReplayEngine.cs` v1.3 (fail-closed env guard). ERR-016-007 (M, open) fingerprint not on the on-disk header — cross-process digest/env verification blocked, needs a `SNAPSHOT_SCHEMA_VERSION` bump. ERR-016-008 (M, open) RNG zero-count `Reserve` ambiguity + `Skip`/`Reserve` by-convention parity. ERR-017-003 (M, open) `EventBus` producer-phase enforcement is debug-only → debug/release digest divergence on a mis-phased publish. The three open items are deferred for gate-verified follow-up — they are digest/wire-format-sensitive and the remote review environment has no .NET SDK.)
 **Updated (prior):** June 13, 2026 (ERR-007-001 through ERR-007-003 filed from the Perception System #7 implementation AR-3 adversarial review (1H+1M+1L-cluster); all patched and CLOSED same commit — forced-refresh double-advance of cross-heartbeat state, pre-dedup candidate-buffer truncation, DeterministicHash Mathf.Abs overflow)
 **Updated (prior):** June 11, 2026 (ERR-008-002 through ERR-008-011 filed from the Decision Tree #8 comprehensive audit (spec + May 29 implementation); all ten spec-side defects patched and CLOSED same commit — see the consolidated entry below and `decision-tree/audit-report.md`)
@@ -101,6 +102,7 @@ authoritative remediation backlog.
 | ERR-012-008 | Build-Up Structures #24 back-prop: #12 `SlotComposer` pipeline gains the build-up overlay stage between `ContextModifier` and spacing + per-team `BuildUpZoneState` classifier state (identity no-op at `None`) | Medium | 1 | ✅ Resolved July 10, 2026 — `positioning-ai/section-3.md` v0.6 §3.7.1 |
 | ERR-012-009 | Positional Rotations #25 back-prop: #12 contract amendment — `RotationController` runs before slot composition, and `AgentPositioningData.SlotIndex` is no longer immutable after `SeedFromFormation` (the `RotationController` is its sole post-seed writer; single-writer rule per #25 §4.4) | Medium | 1 | ✅ Resolved July 10, 2026 — `positioning-ai/section-3.md` v0.6 §3.7.1 (numbers ERR-012-004..006 deliberately skipped — soft-reserved by the June-13 dotnet-CI quarantine adjudication cluster, whose ERR-012-003 citation is already live in section-3.md v0.5) |
 | ERR-008-012 | Dismarking AI #23 back-prop: #8 §3.2 `UtilityScorer` gains the FM-DM-03 marked-pass-target multiplier row in the external tactical-multiplier product, applied before the single final clamp (identity ×1.0 at `Off`) | Medium | 1 | ✅ Resolved July 10, 2026 — `decision-tree/section-3-2.md` v1.5 §3.2.2.1 back-prop anchor note; #23 owns formula/constants/tests |
+| ERR-024-001 | Build-Up Structures #24 Appendix A v0.2 keyed every overlay row to lane values no slot occupies (fullbacks recorded `LH`/`RH` in every family table, not wide L/R; central mids `C`, not LH/RH) — the whole FR-BU-007 catalogue was a structural no-op; the PASS-1 M-3 "correction" checked lane geometry, not the recorded `DefaultLane` key values | High | 3 | ✅ Resolved July 10, 2026 (T0 implementation) — `build-up-structures/appendices.md` v0.3 + `section-3.md` v0.3 re-keyed to the recorded values (magnitudes/intents unchanged); `BuildUpOverlayCatalogue.cs` v1.0 implements the corrected keys; regression test locks non-zero own-third coverage in every family |
 
 ---
 
@@ -1726,4 +1728,33 @@ All seven amendments are documentation/contract changes only — no code changed
 
 ---
 
-*End of Spec Error Log v1.30 — July 10, 2026.*
+## ERR-024-001: #24 overlay catalogue keyed to lane values no slot occupies (structural no-op)
+
+**Spec:** Scripted Build-Up Structures #24
+**Section:** Appendix A (overlay catalogue) / §3.2 worked example
+**Severity:** High
+**Detected During:** #23–#26 T0 implementation (July 10, 2026) — authoring `BuildUpOverlayCatalogue.cs` against the real `PositioningAIConstants.Family*` tables.
+**Status:** ✅ Resolved July 10, 2026, same commit (freeze-then-amend pattern).
+
+**Problem:** FR-BU-007 addresses catalogue rows by the slot's EXISTING
+`FormationSlotRecord.DefaultLine` / `DefaultLane`. Appendix A v0.2 (the PASS-1 M-3 "lane-key
+correction") keyed the fullback rows to the wide L/R lanes and the midfield rows to LH/RH — but
+every family table records fullbacks at `DefaultLane` LH/RH (half-space), wide
+midfielders/wingers/AMs at LW/RW, and central mids/DMs/forwards at C. No v0.2 row key matched any
+slot in any family: with a non-`None` dial the overlay stage would have run and displaced nothing
+— a silent structural no-op of the spec's entire behavioural payload. Root cause: M-3 verified
+lane *geometry* (LB's LateralPct 0.15 → y = 10.2 m sits in the LW bin) but not the recorded seed
+values the FR-BU-007 key actually uses (the #12 tables deliberately seed fullbacks as half-space —
+a data-vs-geometry divergence inside #12 itself that the key inherits).
+
+**Resolution:** Appendix A v0.3 + §3.2 v0.3 re-keyed every row to the recorded values —
+BackThree: (DEF, LH/RH) fullback tuck + (MID, C) central drop; DoublePivot: (MID, C) pivot +
+(ATT, C) link drop; InvertedFullBacks: (DEF, LH/RH) inversion. Magnitudes and row intents
+unchanged (the `[GT]` shapes stay as reviewed). `BuildUpOverlayCatalogue.cs` v1.0 implements the
+corrected keys; `BuildUpStructureTests.Catalogue_RowKeys_HitEveryFamily_Err024001Regression`
+mechanically locks that every `FormationFamily` receives at least one non-zero own-third offset
+per structure, so a future table/key drift of this class fails the suite immediately.
+
+---
+
+*End of Spec Error Log v1.31 — July 10, 2026.*

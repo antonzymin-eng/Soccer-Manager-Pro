@@ -41,6 +41,9 @@ namespace TacticalDirector.TacticalInstructions.Tests
             Assert.AreEqual(GkDistributionPolicy.SlowDown, t.GkDistribution);
             Assert.AreEqual(0, t.TimeWasting);
             Assert.AreEqual(MarkingOrientation.Balanced, t.MarkingOrientation);
+            Assert.AreEqual(DismarkIntensity.Off, t.DismarkIntensity);
+            Assert.AreEqual(BuildUpStructure.None, t.BuildUpStructure);
+            Assert.AreEqual(RotationFreedom.Off, t.RotationFreedom);
         }
 
         // ── PlayerInstructions.Default (§2.2.2) ───────────────────────────────
@@ -204,4 +207,6 @@ namespace TacticalDirector.TacticalInstructions.Tests
 // | 1.1     | 2026-06-21 | —      | AR-1 L-1: default-struct-is-not-identity locks (PlayerInstructions |
 // |         |            |        | man-mark-on-0 hazard; default TeamTactic ≠ Balanced).             |
 // | 1.2     | 2026-07-07 | —      | Cheap-item addition: + MarkingOrientation.Balanced identity assert.|
+// | 1.3     | 2026-07-10 | —      | #23/#24/#25 T0: + DismarkIntensity.Off / BuildUpStructure.None /   |
+// |         |            |        |   RotationFreedom.Off identity asserts (ERR-021-005/006/007).      |
 #endregion
