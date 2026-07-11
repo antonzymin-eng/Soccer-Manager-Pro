@@ -46,9 +46,32 @@ namespace TacticalDirector.MatchEngine
             // v6 Defensive, v7 Attacking, v8 Perception, v9 #21 per-team TeamTactic, v10 #21 per-agent
             // PlayerTactic (active + pending), v11 #21 TeamTactic.MarkingOrientation appended,
             // v12 #23/#24/#25 wiring (marking dwell + build-up zone/settled-team + rotation state +
-            // the three #21 back-prop dials in WriteTeamTactic).
-            Assert.AreEqual(12u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // the three #21 back-prop dials in WriteTeamTactic), v13 #26 per-team ManagerState
+            // (Appendix C order, FR-TP-012).
+            Assert.AreEqual(13u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void ManagerState_FeedsSnapshotDigest()
+        {
+            // #26 FR-TP-012 / T-TP-I-005: the per-team ManagerState reaches the digest preimage.
+            // A Pragmatic AI manager's kickoff selection is Balanced (Appendix B.1), so the APPLIED
+            // TACTIC is the identity — the only difference from the baseline run is the v13 manager
+            // block itself (Mode/ProfileOrdinal/preset seed/decision bookkeeping). The digest must move.
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.ConfigureManager(
+                0, ManagerMode.AI, TacticalDirector.TacticalInstructions.TacticalPresetsConstants.ARCHETYPE_PRAGMATIC);
+            ManagerAdaptation.ApplyKickoff(perturbed);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "An AI-managed team with the identity (Balanced) kickoff selection left the digest " +
+                "unchanged — the v13 ManagerState block (#26 Appendix C) must feed the preimage.");
         }
 
         [Test]
@@ -447,4 +470,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Dials_FeedSnapshotDigest (the three WriteTeamTactic appends) +      |
 // |         |            |        | BuildUpSettledTeamAndSuppression_FeedSnapshotDigest (settled-team   |
 // |         |            |        | tracker) probes.                                                    |
+// | 1.10    | 2026-07-11 | —      | #26 manager-AI wiring: schema pin 12 → 13; new ManagerState_        |
+// |         |            |        | FeedsSnapshotDigest probe (v13 Appendix C block in the preimage,    |
+// |         |            |        | isolated via the Pragmatic → Balanced identity kickoff selection).  |
 #endregion

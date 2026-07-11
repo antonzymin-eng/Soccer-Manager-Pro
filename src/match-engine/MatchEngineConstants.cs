@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
 // Modified: 2026-06-27 (Phase E — POSSESSION_CHANGE_REASON_UNSPECIFIED for the possession-changed event)
+// Modified: 2026-07-11 (#26 manager-AI wiring — SNAPSHOT_SCHEMA_VERSION 12 → 13, v13 ManagerState doc)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -151,8 +152,15 @@ namespace TacticalDirector.MatchEngine
         /// LastComposedTarget f32×2 ×11, per-pair TriggerDwellTicks i32 + Rotated bool +
         /// HoldTicksRemaining i32 in table-row order). WriteTeamTactic additionally appends the three
         /// #21 back-prop dials (DismarkIntensity / BuildUpStructure / RotationFreedom, i32 each) after
-        /// MarkingOrientation in the pinned #21 Appendix B order.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 12;
+        /// MarkingOrientation in the pinned #21 Appendix B order.
+        ///
+        /// v13 (2026-07-11, #26 manager-AI wiring / FR-TP-012) appends the per-team
+        /// <c>ManagerState</c> in the #26 Appendix C pinned field order (Mode u8, ProfileOrdinal u8,
+        /// CurrentPresetOrdinal u8, HoldIntervalsRemaining i32, LastDecisionTick i32, ×TEAM_COUNT).
+        /// The hold countdown and last-decision tick drive future decision points, so a save between
+        /// two decision points resumes byte-identically (T-TP-DET-003). The default Human zero-init
+        /// block is byte-stable across same-seed runs.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 13;
 
         #endregion
 
@@ -358,4 +366,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | WriteTeamTactic. v12 doc paragraph added. (The v10 → 11 bump of  |
 // |         |            |        | 2026-07-07 predates this row — its doc paragraph was added       |
 // |         |            |        | without a history row here; recorded now for completeness.)     |
+// | 1.19    | 2026-07-11 | —      | #26 manager-AI wiring: SNAPSHOT_SCHEMA_VERSION 12 → 13 — the     |
+// |         |            |        | per-team ManagerState (Appendix C order) is now serialized, so   |
+// |         |            |        | mid-match manager decisions are restore-deterministic (FR-TP-012).|
+// |         |            |        | v13 doc paragraph added.                                        |
 #endregion

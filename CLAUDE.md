@@ -1,7 +1,33 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 11, 2026 (**Specs #23/#24/#25 wiring LANDED** — the T-phase step after the
+> **Last Updated:** July 11, 2026, later same day (**#26 T1–T4 manager-AI wiring LANDED** — the last
+> item on the July-10 T-phase plans; default-behaviour-neutral (`ManagerMode.Human = 0` zero-init =
+> the inert identity per KD-4 — no gate fire, no adaptation, no engine calls; a default match is
+> byte-identical to pre-#26). **T1:** `tactical-instructions/TacticalPresetsConstants.cs` (§3.5
+> scalars + the A.2 archetype / A.3 affinity `[GT]` tables; `MATCH_TICKS_TOTAL` deliberately
+> absent — `[CROSS-PENDING]`) + `match-engine/TacticPresetProjection.cs` (FM-TP-01; the FR-TP-014
+> roster gate at the consuming seam). **T2:** `ManagerDecisionGate` (FM-TP-02, KD-3 — kickoff +
+> fixed interval; the half-time trigger stays gated on the engine halves model per §1.6/PASS-1
+> M-1), evaluated only in RunAiPhase's stride branch BEFORE the FR-TI-027 commit (FR-TP-018;
+> off-stride firing impossible, F5). **T3:** `ManagerProfile` (F4 NaN-gated, A.2 factory) +
+> `ManagerAdaptation` kickoff scoring (Appendix B.1 exact: Aggressive → Gegenpress 0.66,
+> Pragmatic → Balanced 0.50; tie → lowest ordinal, KD-8) + `ApplyKickoff` (the FR-TP-004 boot
+> path via the EXISTING appliers; seeds `LastDecisionTick = 0` so the first stride gate never
+> double-fires). **T4:** `StepToward`/`EvaluateLadder` (FM-TP-04, B.2 exact — 0.622 steps / 0.233
+> holds; `URGENCY_DIFF_CAP`) + `RunDecisionPoint` (the FR-TP-005 mid-match path via
+> `SetTeamTactic`/`SetPlayerTactic`, never the appliers — F3; decrement-then-check hold per the
+> B.2 70′→80′ cadence). The live engine call passes goalDiff = 0 — engine-TRUE (no goal producer
+> exists) — so both ladder terms are identically zero for any clock inputs and the T4 prerequisite
+> gate is honoured with a single code path; the ladder body is unit-locked through explicit
+> parameters. `MatchEngine.cs` v1.29 (public `ConfigureManager`, internal boot seams, `TestOnly_
+> ManagerState`), **`SNAPSHOT_SCHEMA_VERSION` 13** (per-team `ManagerState` in pinned Appendix C
+> order — mid-match manager decisions restore-deterministic, FR-TP-012). Tests: new
+> `ManagerAITests` (21) + `MatchEngineSnapshotSchemaTests` v1.10 (pin 13 + ManagerState probe).
+> **Full dotnet gate: PASSED, 0 failures.** See src/CLAUDE.md v2.14. Remaining #26 follow-ups are
+> the spec's own engine-substrate gates (half-time trigger; live goalDiff/`MATCH_TICKS_TOTAL` —
+> upstream match-engine deliverables per §9.3) + the KD-6 on-disk preset format (parser swap).)
+> **Last Updated (prior):** July 11, 2026 (**Specs #23/#24/#25 wiring LANDED** — the T-phase step after the
 > July-10 T0 scaffolding; all default-behaviour-neutral (Balanced ⇒ Off/None/Off = the exact
 > identities, byte-identical default match). **(a)** `SlotComposer` v1.2 gains the #24 build-up
 > overlay stage (Step 3b, FM-BU-02 — after ContextModifier, before spacing) and the #23 dismark
@@ -467,6 +493,16 @@ gate: PASSED, 0 failures.** See the July-11 Last-Updated header entry + src/CLAU
 **Next per the T-phase plans: #26 T1 preset→config projection, T2 decision gate, T3 kickoff
 scoring, T4 adaptation** (T2/T4 remain gated on the upstream engine-substrate deliverables —
 halves/`MATCH_TICKS_TOTAL`, goal detection — recorded in #26 §9.3).
+**#26 T1–T4 WIRING LANDED July 11, 2026 (later same day)** — see the July-11 later-same-day
+Last-Updated header entry + src/CLAUDE.md v2.14 for the full description. Default-behaviour-neutral
+(Human zero-init identity, KD-4); the shipped decision gate fires kickoff + fixed interval only
+(half-time gated on the engine halves model) and the live ladder call runs at the engine-TRUE
+goalDiff = 0, so adaptation switches are unreachable until goal detection + `MATCH_TICKS_TOTAL`
+land (the §1.6/§3.4 PASS-1 M-1 gates, honoured with one code path). `SNAPSHOT_SCHEMA_VERSION`
+12 → 13 (per-team `ManagerState`, Appendix C order). Full dotnet gate: PASSED, 0 failures.
+**With this, every §6 T-phase plan from the July-7 supplements (#23/#24/#25/#26) is implemented**;
+what remains on #26 is upstream-owned (goal detection, halves/match-length model) plus the KD-6
+on-disk preset format parser swap and the post-APPROVED `[GT]` balance passes.
 - **Tactical-theory research cross-reference — four cheap-item additions LANDED** — *opened and closed July 7, 2026.* A conversation cross-referencing published soccer tactical theory (rest defence, marking orientation, half-spaces, cover-shadow/blind-side pressing, etc.) against the game plan identified several gaps whose extendibility cost was assessed as cheap-to-medium given the existing `TacticTranslation`/routing-field seam pattern (#21 Tactical Instructions T2). All four landed the same day, each defaulting to today's exact pre-addition behaviour (byte-identical) until a manager sets a non-default tactic: **(1) `MarkingOrientation` dial** (new `src/tactical-instructions/MarkingOrientation.cs`; `TeamTactic` gains the field, appended after `TimeWasting`; `SNAPSHOT_SCHEMA_VERSION` 10 → 11) — BallOriented/Balanced/ManOriented scales the #14 MAN_MARK candidate radius via new `defensive-ai/TacticTranslation.MarkRadiusScalar` + `DefensiveSnapshot.MarkingOrientation` (ctor-seeded Balanced, since the enum's zero-value is BallOriented) + `MarkAssigner` consumption (FR-TI-033). **(2) Positioning AI #12 rest-defense coverage check** (new `src/positioning-ai/RestDefenseEvaluator.cs` + `Tests/RestDefenseEvaluatorTests.cs`, new §3.5/§7.13; `PositioningAITick.GetRestDefenseSufficient()`) — counts active outfield agents (GK excluded) behind `REST_DEFENSE_DEPTH_M` while `IN_POSSESSION`; insufficient coverage dampens PASS/SHOOT/DRIBBLE via new `TacticalContext.RestDefenseSufficient` (Stage0Default seeds `true`, since the zero-value `bool` default is `false`) + `TacticalWeights.RestDefenseRiskMult` in `UtilityScorer` (new #8 §3.2/§7.7). **(3) Half-spaces PASS bonus** (new #8 §3.2/§7.8) — `TacticalContext.AgentLane` routes each agent's EXISTING Positioning AI `LaneId` (already team-relative — no new axis-mirroring risk, unlike the historical `BallZone` home/away bugs) into the Decision Tree; `decision-tree.asmdef` gains the `TacticalDirector.PositioningAI` reference (first AI→Mechanics reference beyond `TacticalInstructions`); `TacticalWeights.LaneMult[5]` gives half-space lanes (LH/RH) a PASS bonus, central/wide stay ×1.0. **(4) Curving-press blind-side bias** (new `src/pressing-ai/BlindSideApproach.cs` + `Tests/BlindSideApproachTests.cs`, new #13 §7.12) — nudges the primary presser's approach target (post-selection only; who presses is unaffected) toward the ball carrier's blind side (opposite `PressingAgentSnapshot.Facing`, already carried for both teams) by `PressingAIConstants.BlindSideApproachBiasM`; wired into `PressingAITick` Step 3.
 
   **CORRECTED/REVERTED after user review, same day** — the user identified items (2)/(3)/(4) as architecturally wrong designs, not bugs. **(2) redesigned**: the dampener must not be an omniscient flat team-wide penalty; it now scales by the ball carrier's own tactical awareness (mean of `A_Decisions`/`A_Anticipation`) via `Mathf.Lerp(1.0f, RestDefenseRiskMult, awareness)` in `UtilityScorer` — an unaware carrier takes the risky action anyway (a genuine tactical/setup flaw for the manager to fix, not the AI to silently correct). **(3) REVERTED entirely**: half-spaces are an exploitable spatial gap requiring tactical/player instructions to exploit, not a flat passing bonus; `TacticalContext.AgentLane`, `TacticalWeights.LaneMult`, and the `decision-tree.asmdef` to `PositioningAI` reference are all removed (decision-tree/section-7.md §7.8 marked REVERTED, not deleted). **(4) redesigned**: curving press runs are for bending the pursuit path to adjust COVER SHADOW (deny a nearby passing option while closing down), not for approaching the carrier's blind side; `BlindSideApproach.cs` DELETED, replaced by `src/pressing-ai/CoverShadowCurve.cs` (`PressingAIConstants.CoverCurveBlendWeightMax`) whose effectiveness is gated by the presser's own attributes (new `PressingAgentSnapshot.DefensivePositioningAttribute`/`PhysicalEffortAttribute`/`MentalSharpnessAttribute`, sourced by `MatchEngine` from the same `_dtAttrs` the Decision Tree reads) — a poor, low-effort defender barely curves at all.

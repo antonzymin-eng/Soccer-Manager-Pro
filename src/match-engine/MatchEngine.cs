@@ -8,6 +8,7 @@
 // Modified: 2026-06-30 (#21 §3.3 per-agent PlayerTactic config surface (SetPlayerTactic) + §3.4 DefensiveLine depth recompute; SNAPSHOT_SCHEMA_VERSION 9 → 10)
 // Modified: 2026-07-07 (Cheap-item additions: #14 MarkingOrientation routing (SNAPSHOT_SCHEMA_VERSION 10 → 11) + #12 rest-defense coverage routed into TacticalContext)
 // Modified: 2026-07-11 (#23/#24/#25 wiring: Phase-D writers + dismark per-agent pass + build-up regain consumer + rotation serialization; SNAPSHOT_SCHEMA_VERSION 11 → 12)
+// Modified: 2026-07-11 (#26 manager-AI wiring: ConfigureManager + stride decision gate + ManagerState serialization; SNAPSHOT_SCHEMA_VERSION 12 → 13)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -170,6 +171,15 @@ namespace TacticalDirector.MatchEngine
         // MID-match is restore-deterministic (the same reasoning as ERR-021-002 for the team tactic).
         private readonly PlayerTactic[] _activePlayerTactics;   // [SQUAD_SIZE]
         private readonly PlayerTactic[] _pendingPlayerTactics;  // [SQUAD_SIZE]
+
+        // ── Manager AI #26 per-team state (FR-TP-012, §2.2.4) ─────────────────────────
+        // Zero-init = ManagerMode.Human = inert (KD-4): no decision-gate fire, no adaptation, no
+        // engine calls — a default match is byte-identical to pre-#26. ConfigureManager opts a
+        // team into AI mode; ManagerAdaptation.ApplyKickoff seeds the kickoff selection; the
+        // stride-boundary gate in RunAiPhase fires interval decisions (FR-TP-006/018).
+        // Serialized at v13 in Appendix C order, so mid-match manager state (hold countdown,
+        // last-decision tick, current preset) is restore-deterministic.
+        private readonly ManagerState[] _managerStates;  // [TEAM_COUNT]
 
         // ── Dismarking #23 per-agent state (FR-DM-014) ────────────────────────────────
         // Persistent per-agent marking dwell, updated in the per-agent perception pass each AI
@@ -383,6 +393,11 @@ namespace TacticalDirector.MatchEngine
                 _activePlayerTactics[i]  = PlayerTactic.Default(PlayerRole.Default);
                 _pendingPlayerTactics[i] = PlayerTactic.Default(PlayerRole.Default);
             }
+
+            // #26 KD-4: both teams start in ManagerMode.Human — the CLR zero-init of ManagerState IS
+            // the inert identity (no gate fire, no adaptation), so a default match is byte-identical
+            // to pre-#26. ConfigureManager opts a team into AI mode.
+            _managerStates = new ManagerState[MatchEngineConstants.TEAM_COUNT];
 
             InitializeAiSnapshots();
 
@@ -608,6 +623,84 @@ namespace TacticalDirector.MatchEngine
                     nameof(agentId), agentId, "agentId must be a roster index in [0, SQUAD_SIZE).");
             }
             _pendingPlayerTactics[agentId] = tactic;
+        }
+
+        /// <summary>
+        /// Configures a team's manager AI (#26 FR-TP-007 / KD-4). <see cref="ManagerMode.Human"/>
+        /// (the default) resets the team's manager state to the inert identity — no selection, no
+        /// adaptation, no engine calls. <see cref="ManagerMode.AI"/> opts the team in: the given
+        /// Appendix A.2 archetype backs its <see cref="ManagerProfile"/>, the current preset seeds
+        /// to the Balanced catalogue midpoint until the kickoff boot path
+        /// (<see cref="ManagerAdaptation.ApplyKickoff"/>) selects one, and
+        /// <c>LastDecisionTick = −1</c> marks the kickoff decision as not yet fired. Intended
+        /// pre-kickoff; a mid-match call is deterministic (the state is serialized at v13) but the
+        /// kickoff selection path only runs pre-kickoff (KD-1).
+        /// </summary>
+        /// <param name="teamId">0 (home) or 1 (away).</param>
+        /// <param name="mode">The manager mode.</param>
+        /// <param name="profileOrdinal">Appendix A.2 archetype ordinal (AI mode; ignored for Human).</param>
+        public void ConfigureManager(int teamId, ManagerMode mode, byte profileOrdinal = 0)
+        {
+            if (teamId < 0 || teamId >= MatchEngineConstants.TEAM_COUNT)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(teamId), teamId, "teamId must be 0 (home) or 1 (away).");
+            }
+            if (mode != ManagerMode.Human && mode != ManagerMode.AI)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(mode), mode, "Undefined ManagerMode ordinal (#26 FR-TP-013).");
+            }
+            if (mode == ManagerMode.Human)
+            {
+                _managerStates[teamId] = default;  // the inert zero-init identity (KD-4)
+                return;
+            }
+            if (profileOrdinal >= TacticalPresetsConstants.MANAGER_ARCHETYPE_COUNT)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(profileOrdinal), profileOrdinal,
+                    "Archetype ordinal beyond the A.2 catalogue (#26 F2).");
+            }
+            _managerStates[teamId] = new ManagerState
+            {
+                Mode = ManagerMode.AI,
+                ProfileOrdinal = profileOrdinal,
+                CurrentPresetOrdinal = TacticPresetLibrary.BalancedOrdinal,
+                HoldIntervalsRemaining = 0,
+                LastDecisionTick = -1,
+            };
+        }
+
+        /// <summary>Copy of a team's #26 manager state (read by <see cref="ManagerAdaptation.ApplyKickoff"/>).</summary>
+        internal ManagerState GetManagerState(int teamId)
+        {
+            return _managerStates[teamId];
+        }
+
+        /// <summary>
+        /// Seeds a team's kickoff selection from the boot path (#26 FR-TP-004/010): stamps the
+        /// selected preset ordinal and <c>LastDecisionTick = 0</c> (the kickoff decision is
+        /// consumed, so the tick-0 in-engine gate does not double-fire). Called only by
+        /// <see cref="ManagerAdaptation.ApplyKickoff"/>; an out-of-range ordinal fails loud (F2).
+        /// </summary>
+        internal void SeedManagerKickoff(int teamId, byte presetOrdinal)
+        {
+            if (presetOrdinal >= TacticPresetLibrary.Count)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(presetOrdinal), presetOrdinal,
+                    "Preset ordinal beyond the A.1 catalogue (#26 F2).");
+            }
+            _managerStates[teamId].CurrentPresetOrdinal = presetOrdinal;
+            _managerStates[teamId].LastDecisionTick = 0;
+            _managerStates[teamId].HoldIntervalsRemaining = 0;
+        }
+
+        /// <summary>Test-only seam (#26 §4.3): a team's manager state (mode, ordinals, hold, last tick).</summary>
+        internal ManagerState TestOnly_ManagerState(int teamId)
+        {
+            return _managerStates[teamId];
         }
 
         /// <summary>Current 60 Hz physics tick (0 before the first <see cref="RunTick"/>).</summary>
@@ -942,6 +1035,29 @@ namespace TacticalDirector.MatchEngine
         {
             _aiPhaseRanThisTick = true;
             _aiPhaseRunCount++;
+
+            // #26 FR-TP-006/018: the manager decision gate — evaluated ONLY here inside the stride
+            // branch (off-stride firing impossible by construction, F5) and BEFORE the FR-TI-027
+            // pending→active commit below, so a decision fired at tick N stages via SetTeamTactic
+            // and commits at this same stride boundary. Human mode (the default) never fires (KD-4).
+            // The goalDiff/clock arguments: goalDiff = 0 is engine-TRUE at Stage 0 (no goal producer
+            // exists, so the score is level by construction) and makes both §3.4 ladder terms
+            // identically zero for ANY clock inputs — the placeholder ticksRemaining/matchTicksTotal
+            // pair cannot influence behaviour. They become live with goal detection + the engine
+            // match-length model (MATCH_TICKS_TOTAL, [CROSS-PENDING] — #26 §3.4 PASS-1 M-1); until
+            // then the ladder body is exercised by the unit suite through the explicit parameters.
+            {
+                int decisionTick = (int)_clock.CurrentTick;
+                for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+                {
+                    if (ManagerDecisionGate.DecisionDue(decisionTick, in _managerStates[t]))
+                    {
+                        ManagerAdaptation.RunDecisionPoint(
+                            this, t, ref _managerStates[t], decisionTick,
+                            goalDiff: 0, ticksRemaining: 0L, matchTicksTotal: 1L);
+                    }
+                }
+            }
 
             // #21 FR-TI-027: commit any pending tactic change at this tactical-stride boundary.
             // RunAiPhase runs only on stride ticks, so copying pending → active here is exactly the
@@ -2145,6 +2261,20 @@ namespace TacticalDirector.MatchEngine
                 }
             }
 
+            // v13 — #26 per-team manager-AI state (FR-TP-012; Appendix C pinned field order:
+            // Mode u8, ProfileOrdinal u8, CurrentPresetOrdinal u8, HoldIntervalsRemaining i32,
+            // LastDecisionTick i32). Cross-tick state: the hold countdown and last-decision tick
+            // drive future decisions, so a save between two decision points resumes byte-identically
+            // (T-TP-DET-003). Default Human zero-init is byte-stable across same-seed runs.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                CanonicalSerializer.WriteU8 (buf, ref o, (byte)_managerStates[t].Mode);
+                CanonicalSerializer.WriteU8 (buf, ref o, _managerStates[t].ProfileOrdinal);
+                CanonicalSerializer.WriteU8 (buf, ref o, _managerStates[t].CurrentPresetOrdinal);
+                CanonicalSerializer.WriteI32(buf, ref o, _managerStates[t].HoldIntervalsRemaining);
+                CanonicalSerializer.WriteI32(buf, ref o, _managerStates[t].LastDecisionTick);
+            }
+
             payload.BytesWritten = o;
         }
 
@@ -3211,4 +3341,18 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | _BuildUpStructure/_BuildUpCommittedZone/_BuildUpSuppressTicks/  |
 // |         |            |        | _RotationFreedom/_SlotBinding/_RotationPairState. Default       |
 // |         |            |        | Balanced ⇒ Off/None/Off = identities (behaviour-neutral).       |
+// | 1.29    | 2026-07-11 | —      | #26 manager-AI wiring (SNAPSHOT_SCHEMA_VERSION 12 → 13): new    |
+// |         |            |        | per-team _managerStates (zero-init Human = inert, KD-4); public |
+// |         |            |        | ConfigureManager(teamId, mode, profileOrdinal) (F2-gated);      |
+// |         |            |        | internal GetManagerState / SeedManagerKickoff (the ApplyKickoff |
+// |         |            |        | boot seam — LastDecisionTick = 0 consumes the kickoff decision) |
+// |         |            |        | + TestOnly_ManagerState (§4.3). RunAiPhase evaluates the        |
+// |         |            |        | ManagerDecisionGate per team BEFORE the FR-TI-027 pending→      |
+// |         |            |        | active commit (FR-TP-018; off-stride firing impossible, F5) and |
+// |         |            |        | on fire runs ManagerAdaptation.RunDecisionPoint with goalDiff=0 |
+// |         |            |        | (engine-TRUE — no goal producer exists; the ladder terms are   |
+// |         |            |        | identically 0, so the clock placeholders cannot influence       |
+// |         |            |        | behaviour until goal detection + MATCH_TICKS_TOTAL land, §3.4   |
+// |         |            |        | PASS-1 M-1). v13 serializes ManagerState per team in Appendix C |
+// |         |            |        | order. Default Human/Human is byte-identical to pre-#26.        |
 #endregion
