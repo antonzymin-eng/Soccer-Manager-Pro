@@ -1,9 +1,9 @@
 # Dismarking & Marker-Awareness AI Specification #23 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
-**Status:** IN REVIEW
+**Last Updated:** July 10, 2026 (v0.3 — §2.4 back-props filed: ERR-021-005 / ERR-012-007 / ERR-008-012)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -63,11 +63,13 @@ bump covers both.
 
 ## 2.4 Cross-spec back-props (filed at `APPROVED` per pipeline step 6)
 
-| Pending ERR | Target | Amendment |
+**FILED AND LANDED July 10, 2026, atomically with `APPROVED`** (spec-error-log.md v1.30):
+
+| ERR | Target | Amendment |
 |---|---|---|
-| ERR-021-NNN (to file) | #21 §2.2.1 / Appendix B | `TeamTactic.DismarkIntensity` field + canonical order row + `WriteTeamTactic` coverage |
-| ERR-012-NNN (to file) | #12 §4 | `SlotComposer` pipeline gains the dismark offset stage (order pinned by FR-DM-008) |
-| ERR-008-NNN (to file) | #8 §3.2 | `UtilityScorer` marked-pass-target multiplier row |
+| **ERR-021-005** (filed, resolved) | #21 §2.2.1 / Appendix B | `TeamTactic.DismarkIntensity` field + canonical order row (after `MarkingOrientation`; `tactical-instructions/section-2.md` v0.5 + `appendices.md` v0.5); `WriteTeamTactic` coverage + schema bump land with this spec's wiring stage |
+| **ERR-012-007** (filed, resolved) | #12 §3.7.1 | `SlotComposer` pipeline gains the dismark offset stage (order pinned by FR-DM-008; `positioning-ai/section-3.md` v0.6) |
+| **ERR-008-012** (filed, resolved) | #8 §3.2.2.1 | `UtilityScorer` marked-pass-target multiplier anchor row (`decision-tree/section-3-2.md` v1.5) |
 
 ## 2.5 Failure modes
 
@@ -83,4 +85,5 @@ bump covers both.
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial FR set (18), data structures, back-prop table, failure modes. |
 | 0.2 | 2026-07-08 | — | PASS-1 fixes: FR-DM-003 update-site/staleness contract (M-1); FR-DM-006 decay wording (L-1); F2 LastMarkerId + coherence gates (L-2). |
+| 0.3 | 2026-07-10 | — | §2.4 back-props FILED and landed atomically with `APPROVED`: ERR-021-005 / ERR-012-007 / ERR-008-012 (spec-error-log.md v1.30); table updated with filed numbers + landed-file citations. |
 #endregion

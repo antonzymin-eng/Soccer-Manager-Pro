@@ -1,7 +1,62 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 7, 2026, later same day (v2.10 — **no code change; two design
+> **Last Updated:** July 10, 2026, latest same day (v2.12 — **T0 AR-1 fix pass: 0H+1M+3L, all
+> resolved**; fresh-eyes sweep over the v2.11 landing (14 src files + 4 suites), findings confined
+> to the #26 preset surface + one header defect. M-1: `TacticPreset` ctor now snapshot-copies
+> `Players` — the v1.0 ctor retained the caller's LIVE array, so post-construction mutation
+> bypassed the FR-TP-014 gate (the living-world slice-2 AR-1 M-1 / match-viewer AR-3 M-1 defect
+> class; latent at Stage 0 since every catalogue preset carries null, closed before T1 builds the
+> preset→config projection on it); getter hand-over convention documented; new
+> `Preset_SnapshotsPlayersAtConstruction` regression lock. L-1: `TacticPresetLibrary.Compose`'s
+> doc claimed its Balanced-identity defaults were "locked by the T0 suite's identity test", but
+> the NonListedDials test covers only globally-untouched dials — dials some presets touch
+> (Tempo/Passing/Width/Pressing/LineOfEngagement/TimeWasting/TransitionWon/TransitionLost) were
+> unlocked for the presets inheriting them; the four composition tests now assert every
+> non-listed dial equals its Balanced value, and the doc points at the real lock. L-2:
+> `TacticPreset`'s docs claimed `ValidatePlayers` is "called at library construction" — no such
+> call exists (and this bottom-of-graph assembly cannot know roster size); re-anchored to the
+> consuming applier seam, with FR-TP-014's library-construction mandate recorded as vacuously
+> satisfied at Stage 0 (null-Players catalogue, test-locked). L-3: `TeamTacticFileLoader.cs`
+> header was missing its `// Modified:` field (FR-CS-056). Verified clean with no change: #23
+> §3.1/§3.2/§3.3 + #24 §3.1/§3.2 worked examples spec-exact (incl. Unity `Clamp01`-NaN gate
+> semantics); #25 Appendix A tables row-for-row + the Appendix D FR-RO-007 bound; #26 A.1
+> composition-for-composition; overlay row keys hit real slots in all three families (the
+> ERR-024-001 regression holds); `TeamTactic` pinned append order + loader keys + enum ordinal
+> locks. Files: TacticPreset.cs v1.1, TacticPresetLibrary.cs v1.1, Tests/TacticPresetLibraryTests.cs
+> v1.1 (9→10 tests), TeamTacticFileLoader.cs (header only). Full dotnet gate re-run locally:
+> PASSED, 0 failures.)
+> **Last Updated (prior):** July 10, 2026 (v2.11 — **Specs #23–#26 T0 scaffolding landed**, all
+> behaviour-neutral (every new dial's zero value is the exact identity; nothing is wired into any
+> orchestrator or the match engine — wiring is each spec's later T-phase). **#21 back-prop code
+> side (ERR-021-005/006/007):** `TeamTactic` gains `DismarkIntensity`/`BuildUpStructure`/
+> `RotationFreedom` via defaulted ctor params in pinned Appendix B order after `MarkingOrientation`
+> (new enums `tactical-instructions/DismarkIntensity.cs`/`BuildUpStructure.cs`/`RotationFreedom.cs`;
+> `TeamTactic.cs` v1.3; NOT serialized — `WriteTeamTactic` + schema bump land at each spec's
+> wiring); `TeamTacticFileLoader` v1.2 gains the three keys (omitted ⇒ identity, preserving the
+> "every field has a key" contract). **#23:** `positioning-ai/MarkingDwellState.cs` +
+> `MarkingPressureEvaluator.cs` — pure static FM-DM-01 pressure, §3.2 dwell machine, FM-DM-02
+> offset with F1/F3/F4 gates; primitive-span signatures (LAYERING: `FilteredView` is AI-layer,
+> positioning-ai is Mechanics — the sanctioned match-engine caller extracts perceived
+> positions/ids per #23 §4.4, keeping FR-DM-001 auditable at the call seam). **#24:**
+> `BuildUpZone.cs` + `BuildUpZoneState.cs` + `BuildUpZoneClassifier.cs` (FM-BU-01
+> committed-zone-expansion hysteresis + FM-BU-03 suppression arithmetic) +
+> `BuildUpOverlayCatalogue.cs` — which surfaced **ERR-024-001 (H)**: the spec's PASS-1 M-3 row
+> keys matched NO slot (fullbacks are recorded `DefaultLane` LH/RH in every family table, not wide
+> L/R) so the whole catalogue was a structural no-op; re-keyed to the recorded values (magnitudes
+> unchanged), Appendix A v0.3 + §3.2 v0.3 patched same commit, regression test locks per-family
+> coverage. **#25:** `RotationPair.cs` (normalized SlotA<SlotB, GK-refusing ctor) +
+> `RotationPairState.cs` + `RotationAdjacencyCatalogue.cs` (all three Appendix A v0.3 family
+> tables; ReadOnlyCollection surface). **#26:** `tactical-instructions/TacticPreset.cs`
+> (FR-TP-001/014) + `TacticPresetLibrary.cs` (the five A.1 presets in the pinned defensive →
+> attacking ladder order; `Compose` helper whose defaults ARE the Balanced identity values, KD-7)
+> — also fixed #26 §2.2.2's stale pre-ladder ordinal list (L, spec v0.3). Constants:
+> `PositioningAIConstants.cs` v1.2 (+2 Fixed, +2 Derived, +13 GT incl. the
+> `DISMARK_INTENSITY_SCALAR` table; positioning-ai keeps its no-config-loader carve-out). Tests:
+> new `MarkingPressureEvaluatorTests` (16) + `BuildUpStructureTests` (11) +
+> `RotationCatalogueTests` (7) + `TacticPresetLibraryTests` (9); `EnumOrdinalStabilityTests` v1.3 /
+> `FactoryIdentityTests` v1.3 extended. See the v2.11 Version History row.)
+> **Last Updated (prior):** July 7, 2026, later same day (v2.10 — **no code change; two design
 > supplements opened, AR cycle converged, §6 Implementation Plans added** at
 > `docs/tracking/advanced-positional-behaviors-design.md` v0.3 (dismarking, scripted build-up
 > structures, positional rotations — candidate specs #23–#25) and
@@ -364,11 +419,25 @@ src/
 │   ├── ContextModifier.cs             ← pure static: ApplyToAll() — lateral + vertical compactness scaling relative to centroid (§3.5)
 │   ├── SpacingResolver.cs             ← pure static: EnforceHardSpacing() cost-based displacement up to SPACING_MAX_PASSES (§3.6)
 │   ├── ShapeAnalyzer.cs               ← pure static: ResolveAllLines() insertion-sort + LINE_DWELL_TICKS; ResolveAllLanes() LANE_DWELL_TICKS; called AFTER spacing+clamp per AR-S1-03
+│   ├── MarkingDwellState.cs           ← #23 §2.2.1 per-agent dwell state (T0; serialized at #23 wiring)
+│   ├── MarkingPressureEvaluator.cs    ← #23 pure static: FM-DM-01 pressure + §3.2 dwell machine + FM-DM-02 offset (primitive-span inputs per the layering note)
+│   ├── BuildUpZone.cs                 ← #24 enum: OwnThird / MiddleThird / FinalThird
+│   ├── BuildUpZoneState.cs            ← #24 §2.2.2 per-team committed zone + suppression countdown (T0)
+│   ├── BuildUpZoneClassifier.cs       ← #24 pure static: FM-BU-01 hysteresis classifier + FM-BU-03 suppression arithmetic
+│   ├── BuildUpOverlayCatalogue.cs     ← #24 Appendix A [GT] overlay tables (row keys per ERR-024-001)
+│   ├── RotationPair.cs                ← #25 §2.2.3 normalized adjacency pair (GK-refusing ctor)
+│   ├── RotationPairState.cs           ← #25 §2.2.2 per-pair dwell/rotated/hold state (T0)
+│   ├── RotationAdjacencyCatalogue.cs  ← #25 Appendix A [GT] adjacency tables (F442/F433/F4231)
 │   ├── SlotComposer.cs                ← pure static: Compose() 7-step pipeline (anchor→offset→modifiers→spacing→clamp→lines→lanes)
 │   ├── PositioningAITick.cs           ← sealed class: 10 Hz orchestrator; zero-alloc hot path; F1 stale detection; GetFormationSlot / GetLine / GetLane / GetPhase
 │   └── Tests/
 │       ├── positioning-ai-tests.asmdef
-│       └── PositioningAITests.cs      ← T-U-001..021 (unit) + T-D-001..002 (determinism) + T-I-001..004 (integration) + T-P-001 (perf) + T-T-001 (tactical)
+│       ├── PositioningAITests.cs      ← T-U-001..021 (unit) + T-D-001..002 (determinism) + T-I-001..004 (integration) + T-P-001 (perf) + T-T-001 (tactical)
+│       ├── RestDefenseEvaluatorTests.cs   ← §3.5/§7.13 rest-defense coverage locks
+│       ├── TacticTranslationTests.cs      ← #21 T2 width-scalar seam locks
+│       ├── MarkingPressureEvaluatorTests.cs ← #23 T0: FM-DM-01/02 worked examples + dwell machine + gates
+│       ├── BuildUpStructureTests.cs       ← #24 T0: FM-BU-01/03 + catalogue bound/identities + ERR-024-001 regression
+│       └── RotationCatalogueTests.cs      ← #25 T0: F1 invariants + pinned Appendix A rows + FR-RO-007 bound
 ├── pressing-ai/                       ← Spec #13
 │   ├── pressing-ai.asmdef             ← Mechanics layer; references positioning-ai, pass-mechanics
 │   ├── PressingAIConstants.cs         ← single constant catalogue: trigger distances/durations, cover-shadow geometry, stamina costs, pitch constants (GT/Fixed/Derived/Cross regions)
@@ -587,12 +656,15 @@ src/
     ├── Mentality.cs / Tempo.cs / TacticWidth.cs / TacticDefWidth.cs / LineOfEngagement.cs
     ├── TransitionPlan.cs / GkDistributionPolicy.cs / FocusPlay.cs / TacticPassing.cs / TacticPressing.cs
     ├── TacticTriggerMask.cs ([Flags]) / TacticFormation.cs / Duty.cs / PlayerRole.cs / InstrBias.cs / SetPieceDutyFlags.cs ([Flags])
+    ├── MarkingOrientation.cs / DismarkIntensity.cs / BuildUpStructure.cs / RotationFreedom.cs  ← appended dials (cheap-item + ERR-021-005/006/007 back-props; zero/seeded identities)
     ├── TeamTactic.cs / PlayerInstructions.cs / PlayerTactic.cs   ← readonly-struct carriers + identity factories (Balanced / Default)
+    ├── TacticPreset.cs / TacticPresetLibrary.cs                  ← #26 T0: named #21-space points + the pinned A.1 ladder catalogue
     ├── TacticalInstructionsConstants.cs                          ← Appendix A catalogue (Fixed/Derived/GT); identity rows exact
     └── Tests/
         ├── tactical-instructions-tests.asmdef
-        ├── EnumOrdinalStabilityTests.cs   ← FR-TI-007 ordinal / bit-position / byte-backing locks (16 enums)
-        └── FactoryIdentityTests.cs        ← FR-TI-031 identity-factory + catalogue identity-row locks
+        ├── EnumOrdinalStabilityTests.cs   ← FR-TI-007 ordinal / bit-position / byte-backing locks (19 enums)
+        ├── FactoryIdentityTests.cs        ← FR-TI-031 identity-factory + catalogue identity-row locks
+        └── TacticPresetLibraryTests.cs    ← #26 T0: pinned ladder order + A.1 compositions + KD-7 identity discipline
 ```
 
 **One folder per spec. One `.asmdef` per folder. Folder names match `docs/specs/` exactly.**
@@ -1182,6 +1254,8 @@ Update this file when those items are resolved.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.12 | 2026-07-10 | — | **T0 AR-1 fix pass (0H+1M+3L, all resolved)** over the v2.11 landing. M-1: `TacticPreset` ctor snapshot-copies `Players` (retained live caller array bypassed the FR-TP-014 gate — slice-2 AR-1 M-1 / match-viewer AR-3 M-1 class) + new regression lock. L-1: the four `TacticPresetLibraryTests` composition tests gain inherited-dial == Balanced asserts (the Compose-defaults coherence was claimed but unlocked for dials some presets touch); Compose doc de-overclaimed. L-2: `TacticPreset` FR-TP-014 docs re-anchored to the consuming applier seam (no library-side validation call exists; vacuously satisfied at Stage 0, test-locked). L-3: `TeamTacticFileLoader.cs` header missing `// Modified:` (FR-CS-056). Verified clean: #23/#24 worked examples spec-exact incl. NaN-gate semantics; #25 Appendix A/D row-for-row; #26 A.1; ERR-024-001 regression holds; ordinal locks. Files: TacticPreset.cs v1.1, TacticPresetLibrary.cs v1.1, Tests/TacticPresetLibraryTests.cs v1.1, TeamTacticFileLoader.cs (header). Gate re-run: PASSED, 0 failures. |
+| 2.11 | 2026-07-10 | — | **Specs #23–#26 T0 scaffolding** (all four APPROVED July 10, 2026; per the supplements' §6 step 8 / the #26 §1 T0 row), behaviour-neutral — zero-value dials are exact identities and nothing is orchestrator- or engine-wired. tactical-instructions: + `DismarkIntensity.cs`/`BuildUpStructure.cs`/`RotationFreedom.cs` enums, `TeamTactic.cs` v1.3 field appends via defaulted ctor params (ERR-021-005/006/007 code side; not serialized until each spec's wiring), + `TacticPreset.cs`/`TacticPresetLibrary.cs` (#26 T0 — five A.1 presets in the pinned ladder order, `Compose` defaults = Balanced identity), Tests + `TacticPresetLibraryTests.cs`, `EnumOrdinalStabilityTests.cs` v1.3, `FactoryIdentityTests.cs` v1.3. match-engine: `TeamTacticFileLoader.cs` v1.2 (+3 keys, omitted ⇒ identity). positioning-ai: + `MarkingDwellState.cs`/`MarkingPressureEvaluator.cs` (#23 — primitive-span signatures per the Mechanics-cannot-import-AI layering note; FR-DM-001 provenance enforced at the match-engine call seam), + `BuildUpZone.cs`/`BuildUpZoneState.cs`/`BuildUpZoneClassifier.cs`/`BuildUpOverlayCatalogue.cs` (#24), + `RotationPair.cs`/`RotationPairState.cs`/`RotationAdjacencyCatalogue.cs` (#25), `PositioningAIConstants.cs` v1.2 (+17 constants), Tests + `MarkingPressureEvaluatorTests.cs`/`BuildUpStructureTests.cs`/`RotationCatalogueTests.cs`. **ERR-024-001 (H) filed + resolved same commit:** the #24 Appendix A v0.2 row keys matched no slot in any family table (fullbacks recorded LH/RH, not wide L/R) — the catalogue was a structural no-op; re-keyed to the recorded `DefaultLane` values, spec Appendix A v0.3 + §3.2 v0.3 patched, regression test locks per-family coverage. Also #26 §2.2.2 stale ordinal list aligned to the A.1 ladder (spec v0.3). Deferred to later T-phases: SlotComposer stage insertions, RotationController, dwell/zone/pair state serialization + schema bumps, `TacticalWeights.TARGET_MARKED_UTILITY_MULT` (#8 wiring stage), preset→config projection (T1), manager decision gate/scoring (T2–T4). |
 | 2.10 | 2026-07-07 | — | No code change. Two design supplements opened at `docs/tracking/advanced-positional-behaviors-design.md` (dismarking, scripted build-up structures, positional rotations — candidate specs #23–#25) and `docs/tracking/game-model-ai-manager-design.md` (tactical preset library + AI-manager selection/adaptation — candidate #26), both pre-promotion DESIGN SUPPLEMENT stage per the #21/#22 precedent. AR-1 (0H+0M+2L) + AR-2 (0H+0M+1L) + AR-3 (clean, CONVERGENCE) on the design-note text itself (citation/prefix-collision fixes verified against real `src/` source — see root `CLAUDE.md` OPEN ISSUES for detail), then both notes gained a §6 Implementation Plan (spec-promotion pipeline + T-phase code-landing sequence). Now at v0.3 / v0.4 respectively. This coding guide's tree, layer taxonomy, and rules are unaffected until one is promoted to section files and reaches its own T0 scaffolding milestone. |
 | 2.9 | 2026-07-07 | — | **Tactical-theory research cross-reference: four cheap-item additions landed**, all default-behaviour-neutral — `MarkingOrientation` dial (#14 MAN_MARK radius scalar), Positioning AI #12 rest-defense coverage check (dampens risky PASS/SHOOT/DRIBBLE via `TacticalContext.RestDefenseSufficient`), half-spaces PASS bonus (`TacticalContext.AgentLane` routes the existing #12 `LaneId` into #8's `UtilityScorer`), curving-press blind-side bias (#13 `BlindSideApproach`). `SNAPSHOT_SCHEMA_VERSION` 10 → 11. AR-1 (0H+0M+1L, §7.x citation-collision renumbering) + AR-2 (clean, CONVERGENCE). See the header note above and root `CLAUDE.md` OPEN ISSUES for full detail. |
 | 2.10 | 2026-07-07 | — | Tactical-theory cross-reference items (2)/(3)/(4) corrected/reverted after user review — see the v2.10 "Last Updated" header entry for the full description. Files: UtilityScorer.cs, TacticalContext.cs, TacticalWeights.cs, decision-tree.asmdef, decision-tree-tests.asmdef, Tests/UtilityScorerTests.cs, MatchEngine.cs, tests/MatchEngineTacticTests.cs, BlindSideApproach.cs + Tests/BlindSideApproachTests.cs (deleted), CoverShadowCurve.cs + Tests/CoverShadowCurveTests.cs (new), PressingAgentSnapshot.cs, PressingAITick.cs, PressingAIConstants.cs, decision-tree/section-7.md, pressing-ai/section-7.md. |

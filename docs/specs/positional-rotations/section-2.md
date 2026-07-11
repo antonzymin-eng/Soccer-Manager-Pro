@@ -1,9 +1,9 @@
 # Positional Rotations Specification #25 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
-**Status:** IN REVIEW
+**Last Updated:** July 10, 2026 (v0.3 — §2.4 back-props filed: ERR-021-007 / ERR-012-009; append order pinned)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -35,7 +35,9 @@
 ### 2.2.1 `RotationFreedom` (new enum, #21-owned after back-prop)
 
 `Off = 0` (identity), `Conservative = 1`, `Free = 2`. Appended to `TeamTactic` per the same
-append-order coordination rule as #23/#24 (§2.2.1 of #24).
+append-order coordination rule as #23/#24 (§2.2.1 of #24). **PINNED July 10, 2026 (ERR-021-007):**
+appended after `BuildUpStructure` — the order is `MarkingOrientation` → `DismarkIntensity` (#23) →
+`BuildUpStructure` (#24) → **`RotationFreedom` (#25)**, recorded in #21 Appendix B v0.5.
 
 ### 2.2.2 `RotationPairState` (per adjacency-table row, per team, persistent)
 
@@ -67,10 +69,12 @@ pinned in Appendix B.
 
 ## 2.4 Cross-spec back-props (filed at `APPROVED`)
 
-| Pending ERR | Target | Amendment |
+**FILED AND LANDED July 10, 2026, atomically with `APPROVED`** (spec-error-log.md v1.30):
+
+| ERR | Target | Amendment |
 |---|---|---|
-| ERR-021-NNN (to file) | #21 §2.2.1 / Appendix B | `TeamTactic.RotationFreedom` field + order row |
-| ERR-012-NNN (to file) | #12 §3/§4 | controller position in the tick; the documented invariant that `SlotIndex` is no longer immutable after `SeedFromFormation` (a **text amendment to #12's own contract**, the reason the supplement ranked this spec riskiest) |
+| **ERR-021-007** (filed, resolved) | #21 §2.2.1 / Appendix B | `TeamTactic.RotationFreedom` field + order row (after `BuildUpStructure`; `tactical-instructions/section-2.md` v0.5 + `appendices.md` v0.5) |
+| **ERR-012-009** (filed, resolved) | #12 §3.7.1 | controller position in the tick; the documented invariant that `SlotIndex` is no longer immutable after `SeedFromFormation` — the `RotationController` is its sole post-seed writer (the **text amendment to #12's own contract** the supplement ranked riskiest; `positioning-ai/section-3.md` v0.6) |
 
 ## 2.5 Failure modes
 
@@ -88,4 +92,5 @@ pinned in Appendix B.
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial FR set (18), pair-state model, permutation-restore gate, failure modes. |
 | 0.2 | 2026-07-08 | — | PASS-1 fixes: §2.2.4 serialized `LastComposedTarget` cache + FR-RO-013 amendment (H-1); FR-RO-004 outer-gate wording (M-1); F6 pair-state gates (L-2). |
+| 0.3 | 2026-07-10 | — | §2.4 back-props FILED and landed atomically with `APPROVED`: ERR-021-007 / ERR-012-009 (spec-error-log.md v1.30); §2.2.1 append order PINNED (after `BuildUpStructure`). |
 #endregion

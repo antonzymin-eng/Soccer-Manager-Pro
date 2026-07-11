@@ -1,7 +1,18 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** July 10, 2026 (**#23–#26 post-PASS-1 gates closed where closable** — §8
+**Last Updated:** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
+lead-developer R-01..R-05 sign-off granted on all four (checklists v0.4 with §9.5 gate tables +
+§9.6 decisions); the #26 Bradley citation VERIFIED (Bradley & Noakes 2013, *J Sports Sci*
+31(15):1627–1638, DOI 10.1080/02640414.2013.796062, PMID 23808376 — index-level corroboration;
+publisher/Crossref direct resolution still environment-blocked); the seven back-prop ERRs FILED
+and landed atomically with the flips (`spec-error-log.md` v1.30: ERR-021-005/006/007 → #21
+`TeamTactic` + Appendix B appends in pinned order #23 → #24 → #25; ERR-012-007/008/009 → #12
+§3.7.1 pipeline amendments incl. the `SlotIndex` single-writer contract; ERR-008-012 → #8
+§3.2.2.1 anchor row). `SPEC_INDEX.md`: **26 APPROVED / 0 IN REVIEW**. Carried forward
+post-APPROVED, non-blocking: `[GT]` balance passes (#21 G2 pattern) + the #26 engine-substrate
+gates (upstream-owned). Stage 0 counts unchanged — all four are Stage-1-forward like #21/#22.)  
+**Last Updated (prior):** July 10, 2026 (**#23–#26 post-PASS-1 gates closed where closable** — §8
 citation rows: #23 both VERIFIED (Wilson ISBN 978-0-7528-8995-5; Low et al. 2020 DOI
 10.1007/s40279-019-01194-7); #24 Wilson verified + Spielverlagerung reclassified informal
 background; #25 Wilson verified + Memmert & Raabe REPLACED with the verified Low et al. 2020

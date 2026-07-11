@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 15, 2026
-**Last Updated:** June 13, 2026 (v0.5 — ERR-012-003: §3.5.1/§3.5.2/§3.5.3 corrected — `baseLateral[phase]`/`baseVertical[phase]` removed from the compactness scalar (was double-counted against the §3.5.2 numerator, cancelling the phase baseline to a no-op); phase baseline now contributes only via the §3.5.2 numerator. `InPoss` worked example numerically unchanged.)
-**Version:** 0.5
+**Last Updated:** July 10, 2026 (v0.6 — §3.7.1 Stage-1 pipeline amendments, back-props ERR-012-007/008/009)
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -481,6 +481,30 @@ step 1 and receive the `SENTINEL_NO_SLOT` value (§2.4 / AR-S1-07).
 No Stage 0 step performs #13 Press, #14 Mark, or #15 Run override.
 KD-13: those compositor slots are declared in §7 only.
 
+### 3.7.1 Stage-1 pipeline amendments (back-props ERR-012-007/008/009, July 10, 2026)
+
+Dismarking AI #23, Build-Up Structures #24, and Positional Rotations #25 (all `APPROVED`
+July 10, 2026) amend this pipeline at their implementation stage. The amendments are recorded
+here as the #12-side contract; formulas, constants, state, and tests stay in the owning specs.
+Every inserted stage is a **no-op at its dial's zero-value identity** (`Off`/`None`), so a default
+match remains byte-identical to the Stage-0 pipeline above.
+
+- **ERR-012-008 (#24):** a **build-up overlay** stage is inserted between step 3
+  (`ContextModifier`) and step 4 (spacing) — the structure proposes a shape, spacing resolves
+  conflicts inside it (#24 §3.2/§4.2). Adds per-team `BuildUpZoneState` (classifier + hysteresis,
+  #24 §2.2.2) to this assembly.
+- **ERR-012-007 (#23):** a **dismark offset** stage is inserted between step 4 (spacing) and
+  step 5 (pitch clamp), so composed targets remain on-pitch (#23 §3.3, order pinned by
+  FR-DM-008). The combined order — `anchor → offset → ContextModifier → build-up overlay →
+  spacing → dismark offset → pitch clamp → lines → lanes` — is the contract pinned jointly in
+  #23 §4.2 / #24 §4.2; whichever implements second adds the shared stage-order test.
+- **ERR-012-009 (#25):** the `RotationController` runs **before** slot composition (after phase
+  classification), reading the previous heartbeat's composed targets from its own serialized
+  `LastComposedTarget` cache (#25 §4.2). **Contract amendment:** `AgentPositioningData.SlotIndex`
+  is no longer immutable after `SeedFromFormation` — the field stays #12-owned and the
+  `RotationController` is its **sole** post-seed writer (single-writer rule, #25 §4.4). No other
+  system may reassign a slot binding.
+
 ## 3.8 Hysteresis (Binding to #2 §3.1)
 
 Anchor, line, lane, and phase hysteresis all parameterise the
@@ -614,3 +638,4 @@ that agent (§4.4.3).
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §3.9 RNG domain tag — corrected value `0x16` → `0x17` and promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`; ERR-012-001 resolved; value-shift history documented. |
 | 0.4 | May 18, 2026 | AI agent (adversarial-specs-review-run3) | Run 3 adversarial fix pass (FAIL-6): 11 body-text `[EST]` constants promoted to `[GT]` to match §6.1 catalogue (PHASE_LOOSE_VELOCITY_THRESHOLD, PHASE_HYSTERESIS_TICKS, OFFSET_RANGE_X_M, OFFSET_RANGE_Y_M, LINE_HYSTERESIS_M, LINE_DWELL_TICKS, LANE_HYSTERESIS_M, GK_DEPTH_M, GK_ADVANCE_FACTOR, GK_LATERAL_FACTOR, SPACING_MAX_PASSES); §3.3.3 GK prose updated to reflect #11 APPROVED (May 18, 2026) and [GT] promotion; §3.8 table-header corrected from "all [EST]" to "all [GT]"; Appendix A.N citations added to formula-context inline tags. |
 | 0.5 | June 13, 2026 | AI agent (dotnet-CI quarantine adjudication) | ERR-012-003 (dotnet-CI Linux gate, Positioning AI quarantine cluster): §3.5.1/§3.5.2/§3.5.3 double-counted `baseLateral[phase]`/`baseVertical[phase]` (in both the compactness scalar and the §3.5.2 numerator), so the phase baseline cancelled to a no-op (`base/(base·gain) = 1/gain`) — invisible because every worked example used `InPoss` (`base = 1.00`). Removed `base[phase]` from the §3.5.1 compactness scalars (now dynamic-gain products only); phase baseline contributes solely via the §3.5.2 numerator. `InPoss` §3.5.3 result unchanged. Production fix in `ContextModifier.cs` v1.1; locks tactical tests T-T-001/003/004/005 + T-U-063 directional invariant. |
+| 0.6 | July 10, 2026 | AI agent | Back-props ERR-012-007/008/009 (#23/#24/#25 `APPROVED` same day): new §3.7.1 records the Stage-1 pipeline amendments — build-up overlay stage (between ContextModifier and spacing), dismark offset stage (between spacing and pitch clamp, FR-DM-008), `RotationController` pre-composition position, and the `AgentPositioningData.SlotIndex` single-writer contract amendment (no longer immutable after `SeedFromFormation`; `RotationController` sole post-seed writer). All stages identity-no-op at zero-value dials; owning specs hold formulas/constants/tests. |

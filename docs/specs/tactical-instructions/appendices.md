@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Appendices
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.3 — PASS-2 fix pass)
-**Version:** 0.3
+**Last Updated:** July 10, 2026 (v0.5 — ERR-021-005/006/007 back-prop Appendix B appends)
+**Version:** 0.5
 **Status:** APPROVED (June 20, 2026)
 
 ---
@@ -65,7 +65,8 @@ All cells ∈ [0.5, 2.0] (T-TI-U-029). Magnitudes illustrative; directions are t
 
 When match-engine Phase D serializes tactics, the order is: **TeamTactic** (Mentality, Formation, Tempo,
 Width, Passing, Pressing, LineOfEngagement, DefensiveLine, DefensiveWidth, TransitionWon, TransitionLost,
-OffsideTrap, TriggerPressMask, FocusPlay, GkDistribution, TimeWasting, **MarkingOrientation**) → **per agent PlayerTactic**
+OffsideTrap, TriggerPressMask, FocusPlay, GkDistribution, TimeWasting, **MarkingOrientation**,
+**DismarkIntensity**, **BuildUpStructure**, **RotationFreedom**) → **per agent PlayerTactic**
 (Role, Duty, then PlayerInstructions: RiskyPasses, ShootTendency, DribbleTendency, CrossTendency,
 PositioningFreedom, CloseDown, TightMarking, MarkTargetEntityId, SetPieceRoles). Enums serialize as their
 `byte` ordinal; the order above is digest-load-bearing and locked by T-TI-EXP-004. Any reorder/field add
@@ -78,6 +79,17 @@ candidate radius (`DefensiveAIConstants.ManMarkCandidateRadiusM`) via `defensive
 MarkRadiusScalar` — a ball-oriented team narrows the radius (favours zonal/ball-side coverage over
 individual duels), a man-oriented team widens it (commits tighter to opponents). Constant table:
 `TacticalInstructionsConstants.MarkingOrientationScalar`.
+
+**Back-prop appends (July 10, 2026, ERR-021-005/006/007 — #23/#24/#25 `APPROVED` same day):**
+`DismarkIntensity` (#23, `Off = 0` identity), `BuildUpStructure` (#24, `None = 0` identity), and
+`RotationFreedom` (#25, `Off = 0` identity) appended in that order AFTER `MarkingOrientation`, per
+the #24 §2.2.1 append-order coordination rule (append order = spec-approval order; all three
+approved in one pass, so the order is pinned here as #23 → #24 → #25 and mirrored in each owning
+spec's Appendix B). No prior field's byte offset moves. Serialization is **not** live yet — each
+field enters `WriteTeamTactic` (with its own `SNAPSHOT_SCHEMA_VERSION` bump) only when its owning
+spec's wiring stage lands, exactly as `MarkingOrientation` did at 10 → 11; until then the field
+order above is the pinned contract, not shipped bytes. Behaviour contracts, scalars, and tests
+stay in the owning specs (FR-DM-*/FR-BU-*/FR-RO-*).
 
 **Note (PASS-2 M-1):** `DefensiveLine` here is the manager **input dial**. The resolved
 `DefensiveLineDepth` consumed by #8/#12/#14 is **derived** each tick from the dial + `MentalityLineBias`
@@ -108,4 +120,5 @@ attacking third evaluating SHOOT:
 | 0.2 | 2026-06-20 | — | PASS-1 fix pass: RISK_MULT_BALANCED / LINE_BIAS_BALANCED given formulas to validate the [DERIVED] tag (L-2). |
 | 0.3 | 2026-06-20 | — | PASS-2 fix pass: A.3 gains `TempoActionBias[5][7]` + `TempoBreadthScalar[5]` (M-2); Appendix B notes the DefensiveLine-dial serialization (M-1) and the world-state-subset digest identity (H-1). |
 | 0.4 | 2026-07-07 | — | Cheap-item addition: `MarkingOrientation` appended to Appendix B field order + `MarkingOrientationScalar` A.3 row (FR-TI-033); `SNAPSHOT_SCHEMA_VERSION` 10 → 11. |
+| 0.5 | 2026-07-10 | — | Back-props ERR-021-005/006/007: `DismarkIntensity`/`BuildUpStructure`/`RotationFreedom` appended to the Appendix B field order (#23 → #24 → #25, pinned); per-landing schema-bump note. No scalar tables added here — owning specs hold them. |
 #endregion

@@ -1,9 +1,9 @@
 # Scripted Build-Up Structures Specification #24 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
-**Status:** IN REVIEW
+**Last Updated:** July 10, 2026 (v0.3 — §2.3 back-props filed: ERR-021-006 / ERR-012-008; append order pinned)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -35,7 +35,10 @@
 `None = 0` (identity), `BackThree = 1`, `DoublePivot = 2`, `InvertedFullBacks = 3`. Appended to
 `TeamTactic` after `DismarkIntensity` if #23 lands first, else after `MarkingOrientation`
 (coordination rule: append order = spec-approval order; pinned in each spec's Appendix B at
-back-prop time — the renumbering-cascade hazard applied to field order).
+back-prop time — the renumbering-cascade hazard applied to field order). **PINNED July 10, 2026
+(ERR-021-006):** #23/#24/#25 approved in one pass; the order is `MarkingOrientation` →
+`DismarkIntensity` (#23) → **`BuildUpStructure` (#24)** → `RotationFreedom` (#25), recorded in #21
+Appendix B v0.5.
 
 ### 2.2.2 `BuildUpZoneState` (per team, persistent)
 
@@ -53,10 +56,12 @@ duplicated here).
 
 ## 2.3 Cross-spec back-props (filed at `APPROVED`)
 
-| Pending ERR | Target | Amendment |
+**FILED AND LANDED July 10, 2026, atomically with `APPROVED`** (spec-error-log.md v1.30):
+
+| ERR | Target | Amendment |
 |---|---|---|
-| ERR-021-NNN (to file) | #21 §2.2.1 / Appendix B | `TeamTactic.BuildUpStructure` field + order row |
-| ERR-012-NNN (to file) | #12 §4 | `SlotComposer` overlay stage + zone classifier state |
+| **ERR-021-006** (filed, resolved) | #21 §2.2.1 / Appendix B | `TeamTactic.BuildUpStructure` field + order row (after `DismarkIntensity` — append order pinned #23 → #24 → #25 per §2.2.1; `tactical-instructions/section-2.md` v0.5 + `appendices.md` v0.5) |
+| **ERR-012-008** (filed, resolved) | #12 §3.7.1 | `SlotComposer` overlay stage + zone classifier state (`positioning-ai/section-3.md` v0.6) |
 
 ## 2.4 Failure modes
 
@@ -72,4 +77,5 @@ duplicated here).
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial FR set (16), data structures, back-props, failure modes. |
 | 0.2 | 2026-07-08 | — | PASS-1 fixes: FR-BU-006 team-level-regain arming (M-1); F2 CommittedZone gate (L-2). |
+| 0.3 | 2026-07-10 | — | §2.3 back-props FILED and landed atomically with `APPROVED`: ERR-021-006 / ERR-012-008 (spec-error-log.md v1.30); §2.2.1 append order PINNED (#23 → #24 → #25). |
 #endregion

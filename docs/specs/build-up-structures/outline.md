@@ -3,7 +3,7 @@
 **Created:** July 8, 2026
 **Last Updated:** July 8, 2026 (v0.1 — promoted from `docs/tracking/advanced-positional-behaviors-design.md` v0.3)
 **Version:** 0.1
-**Status:** IN REVIEW
+**Status:** APPROVED
 **Source:** `docs/tracking/advanced-positional-behaviors-design.md` v0.3 (July 7, 2026), AR-1..AR-3 converged
 
 ---

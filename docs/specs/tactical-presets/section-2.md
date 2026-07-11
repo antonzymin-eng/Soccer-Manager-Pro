@@ -1,9 +1,9 @@
 # Tactical Presets & AI-Manager Selection Specification #26 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
-**Status:** IN REVIEW
+**Last Updated:** July 10, 2026 (v0.3 — §2.2.2 ordinal list aligned to the A.1 pinned ladder order)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -45,8 +45,10 @@
 ### 2.2.2 `TacticPresetLibrary`
 
 Static, ordered, APPEND-only catalogue; ordinal = array index = serialized identity + tiebreak
-order. Stage-0+1 contents in Appendix A.1: `Balanced(0)`, `Possession(1)`, `Gegenpress(2)`,
-`CounterAttack(3)`, `ParkTheBus(4)`.
+order. Stage-0+1 contents in Appendix A.1's pinned ladder order (defensive → attacking, the
+`[FIXED]` ordering contract): `ParkTheBus(0)`, `CounterAttack(1)`, `Balanced(2)`, `Possession(3)`,
+`Gegenpress(4)`. (The v0.1 text listed stale pre-ladder ordinals contradicting A.1 — corrected at
+T0 implementation, July 10, 2026; A.1 is authoritative.)
 
 ### 2.2.3 `ManagerProfile` (per AI-managed team; `[GT]` archetype rows in Appendix A.2)
 
@@ -81,4 +83,5 @@ None to approved specs at T0–T3 (this spec composes #21 without amending it). 
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial FR set (20), data model, failure modes. |
 | 0.2 | 2026-07-08 | — | PASS-1 M-1: FR-TP-006/019 carry the engine-substrate gates (halves model; score state). |
+| 0.3 | 2026-07-10 | — | T0 implementation fix (L): §2.2.2's parenthetical ordinals were stale pre-ladder values contradicting the A.1 `[FIXED]` ladder order; aligned to A.1 (ParkTheBus 0 … Gegenpress 4). |
 #endregion

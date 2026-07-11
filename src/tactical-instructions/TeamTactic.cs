@@ -1,6 +1,6 @@
 // File:     src/tactical-instructions/TeamTactic.cs
 // Created:  2026-06-21
-// Modified: 2026-07-07
+// Modified: 2026-07-10
 // Author:   —
 // Spec:     Tactical Instructions #21 §2.2.1, §3.2, §3.4, Appendix B, Code Standards #20
 // Purpose:  One team's tactic — the manager input layer. Immutable-per-match input
@@ -81,6 +81,31 @@ namespace TacticalDirector.TacticalInstructions
         /// </summary>
         public MarkingOrientation MarkingOrientation { get; }
 
+        /// <summary>
+        /// Dismarking-intensity dial → #12 dismark offset stage + #8 FM-DM-03 (#23; back-prop
+        /// ERR-021-005). APPENDED after <see cref="MarkingOrientation"/> per the pinned #23 → #24 →
+        /// #25 approval order (Appendix B); <see cref="TacticalInstructions.DismarkIntensity.Off"/>
+        /// (zero value) is identity (FR-DM-012). Serialization enters <c>WriteTeamTactic</c> with a
+        /// schema bump only at #23's wiring stage.
+        /// </summary>
+        public DismarkIntensity DismarkIntensity { get; }
+
+        /// <summary>
+        /// Build-up structure dial → #12 build-up overlay stage (#24; back-prop ERR-021-006).
+        /// APPENDED after <see cref="DismarkIntensity"/> (Appendix B);
+        /// <see cref="TacticalInstructions.BuildUpStructure.None"/> (zero value) is identity
+        /// (FR-BU-005). Serialization enters <c>WriteTeamTactic</c> only at #24's wiring stage.
+        /// </summary>
+        public BuildUpStructure BuildUpStructure { get; }
+
+        /// <summary>
+        /// Positional-rotation freedom dial → #12 <c>RotationController</c> (#25; back-prop
+        /// ERR-021-007). APPENDED after <see cref="BuildUpStructure"/> (Appendix B);
+        /// <see cref="TacticalInstructions.RotationFreedom.Off"/> (zero value) is identity
+        /// (FR-RO-011). Serialization enters <c>WriteTeamTactic</c> only at #25's wiring stage.
+        /// </summary>
+        public RotationFreedom RotationFreedom { get; }
+
         /// <summary>Constructs a <see cref="TeamTactic"/> in canonical field order (Appendix B).</summary>
         public TeamTactic(
             Mentality mentality,
@@ -99,7 +124,10 @@ namespace TacticalDirector.TacticalInstructions
             FocusPlay focusPlay,
             GkDistributionPolicy gkDistribution,
             byte timeWasting,
-            MarkingOrientation markingOrientation = MarkingOrientation.Balanced)
+            MarkingOrientation markingOrientation = MarkingOrientation.Balanced,
+            DismarkIntensity dismarkIntensity = DismarkIntensity.Off,
+            BuildUpStructure buildUpStructure = BuildUpStructure.None,
+            RotationFreedom rotationFreedom = RotationFreedom.Off)
         {
             Mentality = mentality;
             Formation = formation;
@@ -118,6 +146,9 @@ namespace TacticalDirector.TacticalInstructions
             GkDistribution = gkDistribution;
             TimeWasting = timeWasting;
             MarkingOrientation = markingOrientation;
+            DismarkIntensity = dismarkIntensity;
+            BuildUpStructure = buildUpStructure;
+            RotationFreedom = rotationFreedom;
         }
 
         /// <summary>
@@ -125,7 +156,9 @@ namespace TacticalDirector.TacticalInstructions
         /// Passing.Mixed, Pressing.Medium, LineOfEngagement.Standard, DefensiveLine 0.5,
         /// DefensiveWidth.Standard, TransitionWon HoldShape / TransitionLost Regroup, OffsideTrap false,
         /// TriggerPressMask None, FocusPlay.Mixed, GkDistribution.SlowDown, TimeWasting 0,
-        /// MarkingOrientation.Balanced. Reproduces today's <c>Stage0Default</c> behaviour exactly (FR-TI-031).
+        /// MarkingOrientation.Balanced, DismarkIntensity.Off, BuildUpStructure.None,
+        /// RotationFreedom.Off (the three July-10 back-prop fields are zero-value identities, taken
+        /// via the ctor defaults). Reproduces today's <c>Stage0Default</c> behaviour exactly (FR-TI-031).
         /// </summary>
         public static TeamTactic Balanced => new TeamTactic(
             Mentality.Balanced,
@@ -156,4 +189,10 @@ namespace TacticalDirector.TacticalInstructions
 // |         |            |        |   appended after TimeWasting via a defaulted ctor parameter so |
 // |         |            |        |   every existing call site (WithLine/WithWidth factories etc.)|
 // |         |            |        |   stays source-compatible without naming the new arg.         |
+// | 1.3     | 2026-07-10 | —      | Back-props ERR-021-005/006/007 (#23/#24/#25 APPROVED):        |
+// |         |            |        |   + DismarkIntensity/BuildUpStructure/RotationFreedom fields   |
+// |         |            |        |   in pinned approval order after MarkingOrientation, via       |
+// |         |            |        |   defaulted ctor params (all three zero-value identities).     |
+// |         |            |        |   NOT serialized yet — WriteTeamTactic + schema bump land at   |
+// |         |            |        |   each owning spec's wiring stage (#21 Appendix B v0.5).       |
 #endregion
