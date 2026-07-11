@@ -1,7 +1,60 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 10, 2026, latest same day (v2.12 — **T0 AR-1 fix pass: 0H+1M+3L, all
+> **Last Updated:** July 11, 2026 (v2.13 — **Specs #23/#24/#25 wiring landed** (the T-phase step after
+> the July-10 T0 scaffolding; #26's T1 preset→config projection onward is the next body of work),
+> all default-behaviour-neutral (Balanced ⇒ Off/None/Off = the exact identities). **(a) SlotComposer
+> stage insertions (ERR-012-007/008, the #24 §4.2 combined order):** Step 3b build-up overlay
+> (FM-BU-02 — after ContextModifier, before spacing; gated on dial ≠ None + InPoss + committed zone
+> ∈ {Own, Middle} + suppression closed) and Step 4b dismark offset (FM-DM-02 — after spacing,
+> before the pitch clamp; gated on dial ≠ Off + InPoss + off-ball outfielder; the FR-DM-006 phase
+> gate lives at the stage with the tick's committed phase, so the snapshot carries UNGATED
+> proximity × dwell pressure). `PositioningPerceptionSnapshot` v1.1 gains the routing dials + the
+> per-agent pressure/marker carriers (all zero defaults = identities). **(b) #25
+> `RotationController`** (new `positioning-ai/RotationController.cs`): FM-RO-01 predicate on the
+> controller-owned SERIALIZED `LastComposedTarget` cache (PASS-1 H-1 — restore loads it verbatim
+> via a validating seam; no re-seed), FM-RO-02 dwell/commit + hold/revert (revert evaluable the
+> same heartbeat the hold reaches 0, per the §3.2 worked example), §3.3 atomic pairwise SlotIndex
+> swap + partner lock (slot-sharing rows skipped with dwell reset), §3.4 phase-exit freeze
+> (dwell frozen, hold continues, committed rotations persist), FR-RO-009 per-tick commit cap,
+> F2/F5/F6 validating seams (non-permutation / GK rebind / undefined dial / incoherent pair state /
+> non-finite cache all refused). Wired into `PositioningAITick` v1.3 per §4.2 (after phase
+> classification, before compose — the ERR-012-009 sole-post-seed-writer contract; identity binding
+> leaves snapshot rows untouched, so every pre-#25 fill is byte-identical; entityId→slot lookup
+> refreshed from the rebound rows; post-compose cache write-back; `CaptureRotationState()` seam).
+> **(c) #23 §3.4 marked-pass-target penalty in #8** (`UtilityScorer` v1.10):
+> `Lerp(1.0, TargetMarkedUtilityMult, targetProx01 × awareness01)` on PASS options before the
+> clamp — both terms from the PASSER's own FilteredView (FR-DM-011), awareness-scaled per
+> FR-DM-010 (an unaware passer plays the marked pass anyway; mirrors the rest-defense design);
+> `TacticalContext` v1.7 gains the `DismarkIntensity` routing field (zero = Off = identity);
+> `TacticalWeights` v1.5 gains `TargetMarkedUtilityMult` [GT] + `MarkedPassRadiusM` [CROSS] mirror
+> of `PositioningAIConstants.MARKING_RADIUS_M` (#23 Appendix D one-definition-of-tight;
+> `decision-tree(.Tests).asmdef` re-gain the `PositioningAI` ref — a valid AI→Mechanics direction).
+> **(d) Match-engine wiring** (`MatchEngine.cs` v1.28, `SNAPSHOT_SCHEMA_VERSION` 11 → 12):
+> `FillPositioningSnapshot` is the sole Phase-D populator of the three dials + the per-agent
+> dismark carriers (computed from the PREVIOUS stride's FilteredView + current dwell — positioning
+> runs before the per-agent perception pass, the §3.2 M-1 one-stride contract; carriers are NOT
+> stored cross-tick, so dwell is the only new #23 serialized surface, matching #23 Appendix B);
+> the per-agent perception pass updates `_markingDwell` (FR-DM-003, ascending index, runs
+> regardless of dial so a mid-match flip starts warm); RunMechanicsAI runs the #24 per-team
+> pre-pass (classify → gate-read → decrement, check-then-decrement per the §3.3 worked example);
+> `OnPossessionChanged` arms the FM-BU-03 window on a TEAM-LEVEL regain only (settledTeam diff;
+> first-ever settle arms nothing; the regaining team's own TransitionWon decides — Balanced
+> carries HoldShape so a default match never opens a window); v12 serializes per-agent dwell,
+> per-team zone state + the settledTeam tracker, and per-team rotation binding/cache/pair state
+> (#25 Appendix B order) + the three dials appended to `WriteTeamTactic` in pinned #21 Appendix B
+> order. Nine new TestOnly seams. **Tests:** new `SlotComposerStageTests` (7 — exact catalogue Δ /
+> FM-DM-02 offset, bitwise identities, gates, post-overlay spacing invariant, clamp bounds) +
+> `RotationControllerTests` (12 — trigger/dwell/commit, Conservative bar, hold+mirrored-dwell
+> revert, partner lock, commit cap, phase freeze, Off identity, F2/F5/F6 gates);
+> `UtilityScorerTests` v1.5 (+4: exact 0.832 worked-example ratio, Off bitwise identity,
+> zero-awareness + out-of-radius no-penalty); `MatchEngineTacticTests` v1.5 (+5 incl. FM-BU-03
+> arming/decrement + marking-dwell coherence + non-identity-dial determinism);
+> `MatchEngineSnapshotSchemaTests` v1.9 (pin 12 + two new preimage probes). **Full dotnet gate run
+> locally (SDK via apt): PASSED, 0 failures.** Remaining per the T-phase plans: #26 T1
+> preset→config projection, T2 decision gate, T3 kickoff scoring, T4 adaptation; the `[GT]`
+> balance passes stay post-APPROVED follow-ups.)
+> **Last Updated (prior):** July 10, 2026, latest same day (v2.12 — **T0 AR-1 fix pass: 0H+1M+3L, all
 > resolved**; fresh-eyes sweep over the v2.11 landing (14 src files + 4 suites), findings confined
 > to the #26 preset surface + one header defect. M-1: `TacticPreset` ctor now snapshot-copies
 > `Players` — the v1.0 ctor retained the caller's LIVE array, so post-construction mutation
@@ -426,10 +479,12 @@ src/
 │   ├── BuildUpZoneClassifier.cs       ← #24 pure static: FM-BU-01 hysteresis classifier + FM-BU-03 suppression arithmetic
 │   ├── BuildUpOverlayCatalogue.cs     ← #24 Appendix A [GT] overlay tables (row keys per ERR-024-001)
 │   ├── RotationPair.cs                ← #25 §2.2.3 normalized adjacency pair (GK-refusing ctor)
-│   ├── RotationPairState.cs           ← #25 §2.2.2 per-pair dwell/rotated/hold state (T0)
+│   ├── RotationPairState.cs           ← #25 §2.2.2 per-pair dwell/rotated/hold state (serialized at v12)
 │   ├── RotationAdjacencyCatalogue.cs  ← #25 Appendix A [GT] adjacency tables (F442/F433/F4231)
-│   ├── SlotComposer.cs                ← pure static: Compose() 7-step pipeline (anchor→offset→modifiers→spacing→clamp→lines→lanes)
-│   ├── PositioningAITick.cs           ← sealed class: 10 Hz orchestrator; zero-alloc hot path; F1 stale detection; GetFormationSlot / GetLine / GetLane / GetPhase
+│   ├── RotationController.cs          ← #25 §3.1–§3.4 controller: FM-RO-01/02 on the serialized LastComposedTarget cache; atomic SlotIndex swap + partner lock; F2/F5/F6 seams; sole post-seed SlotIndex writer (ERR-012-009)
+│   ├── RestDefenseEvaluator.cs        ← §3.5/§7.13 rest-defense coverage check (cheap-item addition)
+│   ├── SlotComposer.cs                ← pure static: Compose() pipeline (anchor→offset→modifiers→#24 build-up overlay→spacing→#23 dismark offset→clamp→lines→lanes; ERR-012-007/008 stage insertions)
+│   ├── PositioningAITick.cs           ← sealed class: 10 Hz orchestrator; zero-alloc hot path; F1 stale detection; #25 RotationController before compose (§4.2); GetFormationSlot / GetLine / GetLane / GetPhase / CaptureRotationState
 │   └── Tests/
 │       ├── positioning-ai-tests.asmdef
 │       ├── PositioningAITests.cs      ← T-U-001..021 (unit) + T-D-001..002 (determinism) + T-I-001..004 (integration) + T-P-001 (perf) + T-T-001 (tactical)
@@ -437,7 +492,9 @@ src/
 │       ├── TacticTranslationTests.cs      ← #21 T2 width-scalar seam locks
 │       ├── MarkingPressureEvaluatorTests.cs ← #23 T0: FM-DM-01/02 worked examples + dwell machine + gates
 │       ├── BuildUpStructureTests.cs       ← #24 T0: FM-BU-01/03 + catalogue bound/identities + ERR-024-001 regression
-│       └── RotationCatalogueTests.cs      ← #25 T0: F1 invariants + pinned Appendix A rows + FR-RO-007 bound
+│       ├── RotationCatalogueTests.cs      ← #25 T0: F1 invariants + pinned Appendix A rows + FR-RO-007 bound
+│       ├── SlotComposerStageTests.cs      ← #23/#24 stage-insertion locks (exact Δ/offset, identities, gates, spacing invariant, clamp bounds)
+│       └── RotationControllerTests.cs     ← #25 controller locks (dwell/commit/revert/hold, partner lock, cap, phase freeze, Off identity, F2/F5/F6 gates)
 ├── pressing-ai/                       ← Spec #13
 │   ├── pressing-ai.asmdef             ← Mechanics layer; references positioning-ai, pass-mechanics
 │   ├── PressingAIConstants.cs         ← single constant catalogue: trigger distances/durations, cover-shadow geometry, stamina costs, pitch constants (GT/Fixed/Derived/Cross regions)
@@ -1254,6 +1311,7 @@ Update this file when those items are resolved.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.13 | 2026-07-11 | — | **Specs #23/#24/#25 wiring landed** (the post-T0 T-phase step), default-behaviour-neutral. (a) `SlotComposer` v1.2 gains the #24 build-up overlay (Step 3b, before spacing) + #23 dismark offset (Step 4b, after spacing / before the clamp) stages per ERR-012-007/008 and the #24 §4.2 combined order; `PositioningPerceptionSnapshot` v1.1 carries the routing dials + per-agent pressure/marker carriers. (b) New `RotationController.cs` (#25 §3.1–§3.4: FM-RO-01 on the serialized `LastComposedTarget` cache, dwell/commit/hold/revert, atomic swap + partner lock, phase-exit freeze, F2/F5/F6 validating seams) wired into `PositioningAITick` v1.3 per §4.2/ERR-012-009 (identity binding never rewrites a row — pre-#25 fills byte-identical). (c) #23 §3.4 marked-pass-target penalty in `UtilityScorer` v1.10 (passer-view proximity × passer awareness; Off ⇒ exact ×1.0); `TacticalContext` v1.7 `DismarkIntensity` field; `TacticalWeights` v1.5 `TargetMarkedUtilityMult` [GT] + `MarkedPassRadiusM` [CROSS]; `decision-tree(.Tests).asmdef` +PositioningAI. (d) `MatchEngine.cs` v1.28 / `MatchEngineConstants.cs` v1.18: `SNAPSHOT_SCHEMA_VERSION` 11 → 12 — Phase-D dial writers + one-stride-stale dismark carriers, per-agent dwell update in the perception pass (FR-DM-003), #24 classify/check-then-decrement pre-pass + FM-BU-03 team-level regain arming in `OnPossessionChanged` (settledTeam diff; Balanced HoldShape never arms), v12 serialization (dwell / zone+settledTeam / rotation binding+cache+pairs / 3 dials in `WriteTeamTactic`), 9 TestOnly seams. Tests: +`SlotComposerStageTests` (7) + `RotationControllerTests` (12); `UtilityScorerTests` v1.5 (+4), `MatchEngineTacticTests` v1.5 (+5), `MatchEngineSnapshotSchemaTests` v1.9 (pin 12, +2 probes). Full dotnet gate: PASSED, 0 failures. Next: #26 T1–T4. |
 | 2.12 | 2026-07-10 | — | **T0 AR-1 fix pass (0H+1M+3L, all resolved)** over the v2.11 landing. M-1: `TacticPreset` ctor snapshot-copies `Players` (retained live caller array bypassed the FR-TP-014 gate — slice-2 AR-1 M-1 / match-viewer AR-3 M-1 class) + new regression lock. L-1: the four `TacticPresetLibraryTests` composition tests gain inherited-dial == Balanced asserts (the Compose-defaults coherence was claimed but unlocked for dials some presets touch); Compose doc de-overclaimed. L-2: `TacticPreset` FR-TP-014 docs re-anchored to the consuming applier seam (no library-side validation call exists; vacuously satisfied at Stage 0, test-locked). L-3: `TeamTacticFileLoader.cs` header missing `// Modified:` (FR-CS-056). Verified clean: #23/#24 worked examples spec-exact incl. NaN-gate semantics; #25 Appendix A/D row-for-row; #26 A.1; ERR-024-001 regression holds; ordinal locks. Files: TacticPreset.cs v1.1, TacticPresetLibrary.cs v1.1, Tests/TacticPresetLibraryTests.cs v1.1, TeamTacticFileLoader.cs (header). Gate re-run: PASSED, 0 failures. |
 | 2.11 | 2026-07-10 | — | **Specs #23–#26 T0 scaffolding** (all four APPROVED July 10, 2026; per the supplements' §6 step 8 / the #26 §1 T0 row), behaviour-neutral — zero-value dials are exact identities and nothing is orchestrator- or engine-wired. tactical-instructions: + `DismarkIntensity.cs`/`BuildUpStructure.cs`/`RotationFreedom.cs` enums, `TeamTactic.cs` v1.3 field appends via defaulted ctor params (ERR-021-005/006/007 code side; not serialized until each spec's wiring), + `TacticPreset.cs`/`TacticPresetLibrary.cs` (#26 T0 — five A.1 presets in the pinned ladder order, `Compose` defaults = Balanced identity), Tests + `TacticPresetLibraryTests.cs`, `EnumOrdinalStabilityTests.cs` v1.3, `FactoryIdentityTests.cs` v1.3. match-engine: `TeamTacticFileLoader.cs` v1.2 (+3 keys, omitted ⇒ identity). positioning-ai: + `MarkingDwellState.cs`/`MarkingPressureEvaluator.cs` (#23 — primitive-span signatures per the Mechanics-cannot-import-AI layering note; FR-DM-001 provenance enforced at the match-engine call seam), + `BuildUpZone.cs`/`BuildUpZoneState.cs`/`BuildUpZoneClassifier.cs`/`BuildUpOverlayCatalogue.cs` (#24), + `RotationPair.cs`/`RotationPairState.cs`/`RotationAdjacencyCatalogue.cs` (#25), `PositioningAIConstants.cs` v1.2 (+17 constants), Tests + `MarkingPressureEvaluatorTests.cs`/`BuildUpStructureTests.cs`/`RotationCatalogueTests.cs`. **ERR-024-001 (H) filed + resolved same commit:** the #24 Appendix A v0.2 row keys matched no slot in any family table (fullbacks recorded LH/RH, not wide L/R) — the catalogue was a structural no-op; re-keyed to the recorded `DefaultLane` values, spec Appendix A v0.3 + §3.2 v0.3 patched, regression test locks per-family coverage. Also #26 §2.2.2 stale ordinal list aligned to the A.1 ladder (spec v0.3). Deferred to later T-phases: SlotComposer stage insertions, RotationController, dwell/zone/pair state serialization + schema bumps, `TacticalWeights.TARGET_MARKED_UTILITY_MULT` (#8 wiring stage), preset→config projection (T1), manager decision gate/scoring (T2–T4). |
 | 2.10 | 2026-07-07 | — | No code change. Two design supplements opened at `docs/tracking/advanced-positional-behaviors-design.md` (dismarking, scripted build-up structures, positional rotations — candidate specs #23–#25) and `docs/tracking/game-model-ai-manager-design.md` (tactical preset library + AI-manager selection/adaptation — candidate #26), both pre-promotion DESIGN SUPPLEMENT stage per the #21/#22 precedent. AR-1 (0H+0M+2L) + AR-2 (0H+0M+1L) + AR-3 (clean, CONVERGENCE) on the design-note text itself (citation/prefix-collision fixes verified against real `src/` source — see root `CLAUDE.md` OPEN ISSUES for detail), then both notes gained a §6 Implementation Plan (spec-promotion pipeline + T-phase code-landing sequence). Now at v0.3 / v0.4 respectively. This coding guide's tree, layer taxonomy, and rules are unaffected until one is promoted to section files and reaches its own T0 scaffolding milestone. |

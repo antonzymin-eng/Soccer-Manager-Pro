@@ -10,6 +10,7 @@
 using UnityEngine;
 
 using TacticalDirector.PerceptionSystem;
+using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.DecisionTree
 {
@@ -81,6 +82,20 @@ namespace TacticalDirector.DecisionTree
                 u *= Mathf.Lerp(1.0f, TacticalWeights.RestDefenseRiskMult, awareness);
             }
 
+            // Dismarking #23 §3.4 (FM-DM-03, anchored at #8 §3.2.2.1): the marked-pass-target
+            // penalty, applied next to the Mentality / rest-defense multipliers BEFORE the clamp.
+            // Both terms come from the PASSER's own FilteredView (FR-DM-011 — the perceived
+            // teammate position is the option's TargetPosition, generated from VisibleTeammates;
+            // the opponent scan below reads the same view's VisibleOpponents) and the penalty is
+            // scaled by the PASSER's awareness — an unaware passer plays the marked pass anyway
+            // (FR-DM-010, mirroring the rest-defense design above). Off is the exact ×1.0 identity
+            // (FR-DM-012).
+            if (opt.Type == ActionType.PASS
+                && ctx.TacticalContext.DismarkIntensity != DismarkIntensity.Off)
+            {
+                u *= MarkedPassTargetMultiplier(ref opt, in ctx);
+            }
+
             float clamped = Mathf.Clamp(u, UtilityWeights.UTILITY_FLOOR, UtilityWeights.UTILITY_CEILING);
 
             // AR-3 L: Mathf.Clamp passes NaN through (NaN comparisons are false), so a
@@ -89,6 +104,37 @@ namespace TacticalDirector.DecisionTree
             // every comparison is false and could dispatch the NaN option. Fail closed to
             // the floor (project NaN-gate pattern: AM AR-10 / CS AR-7 / FT AR-8).
             return float.IsNaN(clamped) ? UtilityWeights.UTILITY_FLOOR : clamped;
+        }
+
+        // ── Dismarking #23 §3.4 (FM-DM-03) helper ─────────────────────────────
+
+        /// <summary>
+        /// Marked-pass-target multiplier ∈ [TargetMarkedUtilityMult, 1.0]:
+        /// Lerp(1.0, TargetMarkedUtilityMult, targetProximity01 × awareness01), where
+        /// targetProximity01 = Clamp01(1 − d_t / MarkedPassRadiusM) with d_t the minimum distance
+        /// from the option's target position to any passer-perceived opponent (no dwell term —
+        /// the passer judges a snapshot, #23 §3.4), and awareness01 = the passer's mean of
+        /// Decisions/Anticipation. No visible opponents (or a non-finite distance — F1 NaN gate)
+        /// resolves to the ×1.0 identity. Worked example (#23 §3.4): opponent 0.9 m from the
+        /// teammate ⇒ prox 0.7; awareness 0.8 ⇒ Lerp(1.0, 0.7, 0.56) = 0.832.
+        /// </summary>
+        private static float MarkedPassTargetMultiplier(ref ActionOption opt, in DecisionContext ctx)
+        {
+            FilteredView snap = ctx.Snapshot;
+            float dMin = float.PositiveInfinity;
+            for (int i = 0; i < snap.VisibleOpponentsCount; i++)
+            {
+                float d = Vector2.Distance(opt.TargetPosition, snap.VisibleOpponents[i].PerceivedPosition);
+                if (d < dMin) dMin = d; // NaN compares false — non-finite entries never win (F1)
+            }
+            if (float.IsPositiveInfinity(dMin)) return 1.0f; // no perceived opponent ⇒ free target
+
+            float targetProx01 = Mathf.Clamp01(1.0f - dMin / TacticalWeights.MarkedPassRadiusM);
+            // NaN-gate: !(x > 0) form — a NaN proximity resolves to the identity, never NaN utility.
+            if (!(targetProx01 > 0.0f)) return 1.0f;
+
+            float awareness01 = Mathf.Clamp01((ctx.A_Decisions + ctx.A_Anticipation) * 0.5f);
+            return Mathf.Lerp(1.0f, TacticalWeights.TargetMarkedUtilityMult, targetProx01 * awareness01);
         }
 
         // ── §3.2.2 PASS ────────────────────────────────────────────────────────
@@ -388,4 +434,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   spaces PASS bonus (v1.9-as-first-written) — per user review, half-spaces    |
 // |         |            |        |   are an exploitable gap requiring tactical/player instructions, not a flat   |
 // |         |            |        |   passing bonus; ScorePass no longer reads AgentLane.                        |
+// | 1.10    | 2026-07-11 | —      | Dismarking #23 §3.4 (FM-DM-03 / #8 §3.2.2.1): PASS options × the marked-      |
+// |         |            |        |   pass-target multiplier (target proximity to passer-perceived opponents ×   |
+// |         |            |        |   passer awareness), before the clamp. Off dial ⇒ exact ×1.0 identity        |
+// |         |            |        |   (FR-DM-012) — a default match is byte-identical.                           |
 #endregion

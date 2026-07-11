@@ -9,6 +9,7 @@
         "TacticalDirector.ShotMechanics",
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.PositioningAI",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

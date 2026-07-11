@@ -2,10 +2,12 @@
 // Created:  2026-05-29
 // Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
 // Modified: 2026-07-07 (cheap-item addition: rest-defense coverage check)
+// Modified: 2026-07-11 (#25 RotationController wired into the tick, §4.2 order)
 // Author:   —
-// Spec: #12 Positioning AI §3.7, §3.11, §4.3, FR-PA-001..006, new §3.5/§7.13
-// Purpose: 10 Hz entry point for Positioning AI. Classifies phase, delegates to SlotComposer,
-//          and exposes per-tick accessors consumed by the match orchestrator.
+// Spec: #12 Positioning AI §3.7 (§3.7.1 as amended by ERR-012-009), §3.11, §4.3, FR-PA-001..006,
+//       new §3.5/§7.13; Positional Rotations #25 §4.2
+// Purpose: 10 Hz entry point for Positioning AI. Classifies phase, runs the rotation controller,
+//          delegates to SlotComposer, and exposes per-tick accessors consumed by the orchestrator.
 
 using UnityEngine;
 using Unity.Profiling;
@@ -53,6 +55,9 @@ namespace TacticalDirector.PositioningAI
         // ── Rest defense (cheap-item addition, §3.5/§7.13) ─────────────────────
         private bool _lastRestDefenseSufficient = true;
 
+        // ── #25 rotation controller (§4.2: phase → rotations → compose) ────────
+        private readonly RotationController _rotation;
+
         public PositioningAITick(FormationFamily archetype, int maxEntityId = 64)
         {
             _archetype        = archetype;
@@ -62,6 +67,7 @@ namespace TacticalDirector.PositioningAI
             _entityIdArr      = new int[PositioningAIConstants.SQUAD_SIZE];
             _entityIdCapacity = maxEntityId + 1;
             _entityToSlotIndex = new int[_entityIdCapacity];
+            _rotation         = new RotationController(archetype, PositioningAIConstants.SQUAD_SIZE);
 
             for (int i = 0; i < _entityIdCapacity; i++) _entityToSlotIndex[i] = -1;
 
@@ -88,6 +94,10 @@ namespace TacticalDirector.PositioningAI
             FormationSlotRecord[] formation = PositioningAIConstants.GetFormationSlots(_archetype);
             _hyst.SeedFromFormation(formation);
 
+            // #25: (re)seeding a formation resets the rotation state to the identity binding —
+            // SeedFromFormation is the one sanctioned pre-controller SlotIndex assignment (§4.4).
+            _rotation.ResetToIdentity();
+
             for (int i = 0; i < snapshot.Agents.Length; i++)
             {
                 ref readonly AgentPositioningData a = ref snapshot.Agents[i];
@@ -101,6 +111,10 @@ namespace TacticalDirector.PositioningAI
                 else
                     _slots[a.SlotIndex] = AnchorCalculator.ComputeGkSlot(snapshot.BallPosition);
             }
+
+            // #25 §4.2: boot-populate the LastComposedTarget cache from the initial compose (the
+            // seeded anchor slots) so the first heartbeat's predicate has finite targets.
+            _rotation.WriteBackComposedTargets(_slots);
         }
 
         // ── Per-tick entry point ───────────────────────────────────────────────
@@ -130,7 +144,28 @@ namespace TacticalDirector.PositioningAI
             // F6 — phase corruption guard: committed inside PhaseClassifier.
             Phase phase = PhaseClassifier.ClassifyAndCommit(snapshot, _hyst);
 
+            // #25 §4.2 (FR-RO-008): rotation controller runs after phase classification and BEFORE
+            // SlotComposer — it may swap a pair's SlotIndex bindings and rewrites the snapshot's
+            // agent rows to the bound slots, so every downstream stage sees a consistent post-swap
+            // binding this tick. At RotationFreedom.Off with the identity binding this is a no-op.
+            FormationSlotRecord[] formation = PositioningAIConstants.GetFormationSlots(_archetype);
+            _rotation.Run(snapshot, phase, formation);
+
+            // Refresh the EntityId → SlotIndex lookup from the (possibly rebound) snapshot rows so
+            // GetFormationSlot(entityId) resolves through the live binding. Identity binding writes
+            // the same values SeedFromFormation seeded.
+            for (int i = 0; i < snapshot.Agents.Length; i++)
+            {
+                ref readonly AgentPositioningData a = ref snapshot.Agents[i];
+                if (a.EntityId >= 0 && a.EntityId < _entityIdCapacity)
+                    _entityToSlotIndex[a.EntityId] = a.SlotIndex;
+            }
+
             SlotComposer.Compose(snapshot, _archetype, modifiers, phase, _hyst, _slots, _anchorBuf, _entityIdArr);
+
+            // #25 §4.2 post-compose hook: cache this heartbeat's composed targets for the next
+            // heartbeat's trigger predicate (the serialized LastComposedTarget cache, FR-RO-013).
+            _rotation.WriteBackComposedTargets(_slots);
 
             // Cheap-item addition (§3.5/§7.13): rest-defense coverage check, read by the match
             // orchestrator and routed into the Decision Tree (#8) risk multiplier.
@@ -186,6 +221,14 @@ namespace TacticalDirector.PositioningAI
         /// </summary>
         public HysteresisState CaptureState() => _hyst;
 
+        /// <summary>
+        /// #25 snapshot seam (FR-RO-013): returns the live <see cref="RotationController"/> so the
+        /// host snapshot layer can serialize the slot-binding permutation, the LastComposedTarget
+        /// cache, and the per-pair state canonically (Appendix B order) — and restore them through
+        /// its validating seams. Read/restore only; callers MUST NOT drive it outside the tick.
+        /// </summary>
+        public RotationController CaptureRotationState() => _rotation;
+
         // ── Private helpers ───────────────────────────────────────────────────
 
         private int GetSlotIndex(int entityId)
@@ -206,4 +249,9 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        | B0). Read-only serialization use; no behaviour change.          |
 // | 1.2     | 2026-07-07 | —      | Cheap-item addition: rest-defense coverage check (RestDefenseEvaluator) |
 // |         |            |        |   runs each Tick(); GetRestDefenseSufficient() exposes the result.       |
+// | 1.3     | 2026-07-11 | —      | #25 wiring (§4.2 / ERR-012-009): RotationController runs after phase     |
+// |         |            |        |   classification, before SlotComposer; entityId→slot lookup refreshed    |
+// |         |            |        |   from the (possibly rebound) snapshot rows each tick; post-compose      |
+// |         |            |        |   LastComposedTarget cache write-back; SeedFromFormation resets the      |
+// |         |            |        |   controller + boot-seeds the cache. CaptureRotationState() seam.        |
 #endregion

@@ -139,8 +139,20 @@ namespace TacticalDirector.MatchEngine
         ///
         /// v11 (2026-07-07, cheap-item addition) appends <c>TeamTactic.MarkingOrientation</c> to the
         /// per-team WriteTeamTactic field list (§3.4, #14 MAN_MARK candidate radius). Appended after
-        /// TimeWasting so no prior field's byte offset moves.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 11;
+        /// TimeWasting so no prior field's byte offset moves.
+        ///
+        /// v12 (2026-07-11, specs #23/#24/#25 wiring — one bump covers all three, landed together)
+        /// appends, after the v10 per-agent tactic block and in spec order: (a) #23 per-agent
+        /// <c>MarkingDwellState</c> (DwellTicks i32 + LastMarkerId i32, ×SQUAD_SIZE, #23 Appendix B);
+        /// (b) #24 per-team <c>BuildUpZoneState</c> (CommittedZone u8 + SuppressTicksRemaining i32,
+        /// ×TEAM_COUNT, #24 Appendix B) + the engine-level FM-BU-03 settled-possession-team tracker
+        /// (i32 — the "settledTeam" the team-level-regain arming diffs against); (c) #25 per-team
+        /// rotation state in #25 Appendix B order (per-agent SlotIndex binding i32 ×11, per-agent
+        /// LastComposedTarget f32×2 ×11, per-pair TriggerDwellTicks i32 + Rotated bool +
+        /// HoldTicksRemaining i32 in table-row order). WriteTeamTactic additionally appends the three
+        /// #21 back-prop dials (DismarkIntensity / BuildUpStructure / RotationFreedom, i32 each) after
+        /// MarkingOrientation in the pinned #21 Appendix B order.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 12;
 
         #endregion
 
@@ -339,4 +351,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | + pending PlayerTactic (×SQUAD_SIZE) is now serialized, so a     |
 // |         |            |        | mid-match per-agent tactic change is restore-deterministic. v10  |
 // |         |            |        | doc paragraph added.                                            |
+// | 1.18    | 2026-07-11 | —      | #23/#24/#25 wiring: SNAPSHOT_SCHEMA_VERSION 11 → 12 — per-agent  |
+// |         |            |        | marking dwell (#23), per-team build-up zone state + settled-     |
+// |         |            |        | possession-team tracker (#24), per-team rotation binding/cache/  |
+// |         |            |        | pair state (#25), and the three #21 back-prop dials appended to  |
+// |         |            |        | WriteTeamTactic. v12 doc paragraph added. (The v10 → 11 bump of  |
+// |         |            |        | 2026-07-07 predates this row — its doc paragraph was added       |
+// |         |            |        | without a history row here; recorded now for completeness.)     |
 #endregion

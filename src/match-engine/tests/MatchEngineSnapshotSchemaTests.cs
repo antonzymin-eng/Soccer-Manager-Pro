@@ -44,9 +44,72 @@ namespace TacticalDirector.MatchEngine
         {
             // The pin must change deliberately (with a field-set or ordering change), never by drift.
             // v6 Defensive, v7 Attacking, v8 Perception, v9 #21 per-team TeamTactic, v10 #21 per-agent
-            // PlayerTactic (active + pending), v11 #21 TeamTactic.MarkingOrientation appended.
-            Assert.AreEqual(11u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // PlayerTactic (active + pending), v11 #21 TeamTactic.MarkingOrientation appended,
+            // v12 #23/#24/#25 wiring (marking dwell + build-up zone/settled-team + rotation state +
+            // the three #21 back-prop dials in WriteTeamTactic).
+            Assert.AreEqual(12u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void DismarkBuildUpRotationDials_FeedSnapshotDigest()
+        {
+            // Baseline: untouched kickoff state (both teams' tactic at the Balanced boot seed —
+            // Off / None / Off for the three #23/#24/#25 dials).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: ONLY the three back-prop dials differ from Balanced (named args over the
+            // Balanced identity positional prefix) — isolates the v12 WriteTeamTactic appends.
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.SetTeamTactic(0, new TacticalDirector.TacticalInstructions.TeamTactic(
+                TacticalDirector.TacticalInstructions.Mentality.Balanced,
+                TacticalDirector.TacticalInstructions.TacticFormation.F442,
+                TacticalDirector.TacticalInstructions.Tempo.Standard,
+                TacticalDirector.TacticalInstructions.TacticWidth.Standard,
+                TacticalDirector.TacticalInstructions.TacticPassing.Mixed,
+                TacticalDirector.TacticalInstructions.TacticPressing.Medium,
+                TacticalDirector.TacticalInstructions.LineOfEngagement.Standard,
+                0.5f,
+                TacticalDirector.TacticalInstructions.TacticDefWidth.Standard,
+                TacticalDirector.TacticalInstructions.TransitionPlan.HoldShape,
+                TacticalDirector.TacticalInstructions.TransitionPlan.Regroup,
+                false,
+                TacticalDirector.TacticalInstructions.TacticTriggerMask.None,
+                TacticalDirector.TacticalInstructions.FocusPlay.Mixed,
+                TacticalDirector.TacticalInstructions.GkDistributionPolicy.SlowDown,
+                0,
+                TacticalDirector.TacticalInstructions.MarkingOrientation.Balanced,
+                dismarkIntensity: TacticalDirector.TacticalInstructions.DismarkIntensity.Aggressive,
+                buildUpStructure: TacticalDirector.TacticalInstructions.BuildUpStructure.BackThree,
+                rotationFreedom:  TacticalDirector.TacticalInstructions.RotationFreedom.Free));
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Staging non-identity #23/#24/#25 dials left the digest unchanged — the v12 WriteTeamTactic " +
+                "appends are not in the digest preimage.");
+        }
+
+        [Test]
+        public void BuildUpSettledTeamAndSuppression_FeedSnapshotDigest()
+        {
+            // Baseline: kickoff, ball loose the whole tick (settledTeam stays −1).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: an away agent takes possession before the tick — the possession-changed
+            // consumer records settledTeam = 1 (serialized at v12), and MatchContext.PossessingAgentId
+            // differs too. The digest must move (locks the settled-team tracker into the preimage
+            // alongside the possession fields).
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_SetPossession(MatchEngineConstants.PLAYERS_PER_TEAM);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A settled possession change left the digest unchanged — the v12 build-up settled-team " +
+                "tracker (and MatchContext possession) must feed the preimage.");
         }
 
         [Test]
@@ -380,4 +443,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | probe (per-agent active/pending tactic in the preimage).            |
 // | 1.8     | 2026-07-07 | —      | Cheap-item addition: schema pin 10 → 11; new MarkingOrientation_    |
 // |         |            |        | FeedsSnapshotDigest probe (appended TeamTactic field in preimage).  |
+// | 1.9     | 2026-07-11 | —      | #23/#24/#25 wiring: schema pin 11 → 12; new DismarkBuildUpRotation- |
+// |         |            |        | Dials_FeedSnapshotDigest (the three WriteTeamTactic appends) +      |
+// |         |            |        | BuildUpSettledTeamAndSuppression_FeedSnapshotDigest (settled-team   |
+// |         |            |        | tracker) probes.                                                    |
 #endregion

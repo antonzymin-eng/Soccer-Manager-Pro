@@ -56,6 +56,25 @@ namespace TacticalDirector.DecisionTree
         // ── Rest Defense (cheap-item addition, new §3.2/§7.7) ───────────────
 
         public const float RestDefenseRiskMult = 0.85f; // [GT] PASS/SHOOT/DRIBBLE dampener when Positioning AI #12 rest-defense coverage is insufficient AND the ball carrier is aware of it (Lerp'd by carrier Decisions/Anticipation in UtilityScorer)
+
+        // ── Marked-Pass-Target Penalty (Dismarking #23 §3.4 / FM-DM-03, #8 §3.2.2.1) ──
+
+        /// <summary>
+        /// [GT] Floor of the marked-pass-target utility multiplier: a fully aware passer sees ×this
+        /// on a PASS to a teammate with a perceived opponent at 0 m, ×1.0 on a free teammate
+        /// (Lerp'd by targetProximity01 × passer awareness in UtilityScorer). #23 §3.4/§3.5;
+        /// magnitude illustrative pending the #23 balance pass (#21 G2 precedent).
+        /// </summary>
+        public const float TargetMarkedUtilityMult = 0.7f;
+
+        /// <summary>
+        /// [CROSS] Marking radius (m) for the §3.4 target-proximity term.
+        /// Authoritative source: PositioningAIConstants.MARKING_RADIUS_M (Dismarking #23 §3.1/§3.5 —
+        /// shared by design: one definition of "tight" couples §3.1 and §3.4, #23 Appendix D).
+        /// Value: 3.0 m. Single-consumer mirror per Spec #20 §4.2.
+        /// </summary>
+        public static readonly float MarkedPassRadiusM =
+            TacticalDirector.PositioningAI.PositioningAIConstants.MARKING_RADIUS_M;
     }
 }
 
@@ -71,4 +90,8 @@ namespace TacticalDirector.DecisionTree
 // | 1.4     | 2026-07-07 | —      | Reverted after user review: LaneMult[5] half-spaces bonus REMOVED (an       |
 // |         |            |        |   exploitable spatial gap needs tactical/player instructions, not a flat    |
 // |         |            |        |   bonus). RestDefenseRiskMult doc updated for the awareness-gated consumer. |
+// | 1.5     | 2026-07-11 | —      | #23 §3.4 wiring: + TargetMarkedUtilityMult [GT] + MarkedPassRadiusM [CROSS] |
+// |         |            |        |   mirror of PositioningAIConstants.MARKING_RADIUS_M (FM-DM-03 consumer in   |
+// |         |            |        |   UtilityScorer; decision-tree.asmdef gains the PositioningAI reference —   |
+// |         |            |        |   a valid AI→Mechanics direction per the layer taxonomy).                   |
 #endregion

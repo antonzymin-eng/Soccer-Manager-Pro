@@ -70,6 +70,15 @@ namespace TacticalDirector.DecisionTree
         public PlayerTactic PlayerTactic;
 
         /// <summary>
+        /// #23 routing field (FR-DM-015): the team's DismarkIntensity dial, populated solely by the
+        /// match-engine Phase-D writer. Drives the §3.4 marked-pass-target penalty in UtilityScorer
+        /// (FM-DM-03). Zero value = <see cref="TacticalInstructions.DismarkIntensity.Off"/> = the
+        /// exact identity (#23 §2.2.3 — safe unseeded, unlike <see cref="Mentality"/>);
+        /// <see cref="Stage0Default"/> seeds Off explicitly for symmetry with the other dials.
+        /// </summary>
+        public DismarkIntensity DismarkIntensity;
+
+        /// <summary>
         /// Cheap-item addition (new §3.2/§7.7): whether Positioning AI #12's rest-defense coverage
         /// check judged the team's shape sufficient this tick (<c>RestDefenseEvaluator</c>).
         /// <see cref="Stage0Default"/> seeds <c>true</c> (no dampening — identity, FR-TI-031-style).
@@ -118,6 +127,7 @@ namespace TacticalDirector.DecisionTree
                 Mentality          = Mentality.Balanced,
                 Tempo              = Tempo.Standard,
                 PlayerTactic       = PlayerTactic.Default(PlayerRole.Default),
+                DismarkIntensity   = DismarkIntensity.Off,
                 RestDefenseSufficient = true,
                 _formationSlot     = formationSlot,
                 HasMarkDirective   = false,
@@ -178,4 +188,7 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   gap requiring tactical/player instructions, not a flat passing bonus.     |
 // |         |            |        |   decision-tree.asmdef's PositioningAI reference is reverted (no longer     |
 // |         |            |        |   needed by this file).                                                     |
+// | 1.7     | 2026-07-11 | —      | #23 wiring (FR-DM-015): + DismarkIntensity routing field (zero value = Off  |
+// |         |            |        |   = identity, safe unseeded; Stage0Default seeds Off explicitly). Drives    |
+// |         |            |        |   the FM-DM-03 marked-pass-target penalty in UtilityScorer.                 |
 #endregion
