@@ -7,6 +7,9 @@
 // Modified: 2026-06-29 (#21 §3.3 team-Tempo routing + ERR-021-002: SNAPSHOT_SCHEMA_VERSION 8 → 9, per-team active+pending TeamTactic serialized)
 // Modified: 2026-06-30 (#21 §3.3 per-agent PlayerTactic config surface (SetPlayerTactic) + §3.4 DefensiveLine depth recompute; SNAPSHOT_SCHEMA_VERSION 9 → 10)
 // Modified: 2026-07-07 (Cheap-item additions: #14 MarkingOrientation routing (SNAPSHOT_SCHEMA_VERSION 10 → 11) + #12 rest-defense coverage routed into TacticalContext)
+// Modified: 2026-07-11 (#23/#24/#25 wiring: Phase-D writers + dismark per-agent pass + build-up regain consumer + rotation serialization; SNAPSHOT_SCHEMA_VERSION 11 → 12)
+// Modified: 2026-07-11 (#26 manager-AI wiring: ConfigureManager + stride decision gate + ManagerState serialization; SNAPSHOT_SCHEMA_VERSION 12 → 13)
+// Modified: 2026-07-11 (engine substrate: Resolve-phase goal detection + score state + GoalAwardedEvent + centre-spot restart; #26 live goalDiff/clock inputs + half-time trigger; SNAPSHOT_SCHEMA_VERSION 13 → 14)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -170,6 +173,56 @@ namespace TacticalDirector.MatchEngine
         private readonly PlayerTactic[] _activePlayerTactics;   // [SQUAD_SIZE]
         private readonly PlayerTactic[] _pendingPlayerTactics;  // [SQUAD_SIZE]
 
+        // ── Manager AI #26 per-team state (FR-TP-012, §2.2.4) ─────────────────────────
+        // Zero-init = ManagerMode.Human = inert (KD-4): no decision-gate fire, no adaptation, no
+        // engine calls — a default match is byte-identical to pre-#26. ConfigureManager opts a
+        // team into AI mode; ManagerAdaptation.ApplyKickoff seeds the kickoff selection; the
+        // stride-boundary gate in RunAiPhase fires interval decisions (FR-TP-006/018).
+        // Serialized at v13 in Appendix C order, so mid-match manager state (hold countdown,
+        // last-decision tick, current preset) is restore-deterministic.
+        private readonly ManagerState[] _managerStates;  // [TEAM_COUNT]
+
+        // ── Score state (engine substrate — the #26 §9.3 upstream deliverable) ────────
+        // Per-team goal counts, incremented by the Resolve-phase goal check (CheckGoalAndRestart)
+        // when the ball fully crosses a goal line between the posts under the crossbar
+        // (BallCollision.CheckBoundaries ⇒ RestartType.KickOff; the Stage-0 z < Diameter gate is
+        // that predicate's own documented simplification). Read by the #26 manager-AI decision
+        // point as goalDiff (own − opponent). Serialized at v14 (cross-tick, digest-load-bearing).
+        private readonly int[] _goals;  // [TEAM_COUNT]
+
+        // The last agent roster index that HELD settled possession (never reset to NO_POSSESSION
+        // once an agent has held the ball). At goal time the ball is loose (the scoring kick
+        // released possession at CONTACT), so _possessingAgentId is −1 — this tracker supplies the
+        // GoalAwardedEvent Scorer credit and CheckBoundaries' lastTouchTeamID. Stage-0 credit
+        // approximation: the last HOLDER, not the last TOUCH (a deflection en route is not
+        // tracked); an own-goal deflection therefore credits the deflecting holder if they ever
+        // held the ball — the scoring TEAM is classified by geometry (which goal), never by this
+        // field. Serialized at v14. −1 until any agent first holds possession.
+        private int _lastHolderAgentId;
+
+        // ── Dismarking #23 per-agent state (FR-DM-014) ────────────────────────────────
+        // Persistent per-agent marking dwell, updated in the per-agent perception pass each AI
+        // stride (FR-DM-003 — AFTER the mechanics AI, so the positioning stage consumes the
+        // previous stride's FilteredView-derived pressure per the §3.2 PASS-1 M-1 contract).
+        // Serialized at v12 (#23 Appendix B). The pressure/marker carriers handed to #12 are NOT
+        // stored across ticks — they are recomputed each stride from the (stale) FilteredView +
+        // this dwell state, so the dwell is the only new cross-tick surface.
+        private readonly MarkingDwellState[] _markingDwell;         // [SQUAD_SIZE]
+        private readonly Vector2[]           _dismarkOppPosScratch; // [SQUAD_SIZE] perceived-opponent scratch
+        private readonly int[]               _dismarkOppIdScratch;  // [SQUAD_SIZE]
+
+        // ── Build-Up Structures #24 per-team state (FR-BU-011) ────────────────────────
+        // Committed hysteresis zone + post-regain suppression countdown, advanced once per team
+        // per AI stride in RunMechanicsAI (classify → gate-read → decrement, #24 §3.1/§3.3);
+        // armed by the possession-changed consumer on a TEAM-LEVEL regain (FM-BU-03, PASS-1 M-1).
+        // Serialized at v12 (#24 Appendix B).
+        private readonly BuildUpZoneState[] _buildUpStates;  // [TEAM_COUNT]
+
+        // FM-BU-03 "settledTeam": the team of the current settled possessor (−1 = never settled).
+        // A loose ball does NOT change it; only an opponent → this-team transition arms the
+        // suppression window. Cross-tick state, serialized at v12.
+        private int _settledPossessionTeam;
+
         // ── Mechanics AI (design note §3 / Phase D D2) ────────────────────────────────
         // Positioning AI (#12) drives per-team formation slots fed into each agent's TacticalContext —
         // the DecisionTree MOVE_TO_POSITION / HOLD anchor (§3.1.7), so agents settle into formation
@@ -315,6 +368,29 @@ namespace TacticalDirector.MatchEngine
             _tacticalContexts = new TacticalContext[MatchEngineConstants.SQUAD_SIZE];
             _hasPossession    = new bool[MatchEngineConstants.SQUAD_SIZE];
 
+            // #23 — per-agent marking dwell (zero dwell / NoMarker) + the perceived-opponent
+            // extraction scratch the marker search reads (zero alloc on the hot path). Allocated
+            // BEFORE the positioning loop below: FillPositioningSnapshot reads them.
+            _markingDwell         = new MarkingDwellState[MatchEngineConstants.SQUAD_SIZE];
+            _dismarkOppPosScratch = new Vector2[MatchEngineConstants.SQUAD_SIZE];
+            _dismarkOppIdScratch  = new int[MatchEngineConstants.SQUAD_SIZE];
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _markingDwell[i] = MarkingDwellState.Unmarked;
+            }
+
+            // #24 — per-team build-up state. The committed zone is boot-seeded from the actual
+            // kickoff ball X (team-relative) per §2.2.2; suppression starts closed. The settled-
+            // possession tracker starts "never settled" (kickoff ball is loose), so the FIRST
+            // possession is not a regain and arms nothing (FM-BU-03: opponent → this team only).
+            _buildUpStates = new BuildUpZoneState[MatchEngineConstants.TEAM_COUNT];
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _buildUpStates[t].CommittedZone =
+                    BuildUpZoneClassifier.RawZone(MirrorPitchIfAway(t, _ball.Position).x);
+            }
+            _settledPossessionTeam = -1;
+
             // #21 T2: both teams start at the Balanced identity tactic (FR-TI-031) — behaviour-neutral
             // until a caller invokes SetTeamTactic before kickoff. _active is seeded directly (not via the
             // stride swap) so the very first AI stride already reads a valid tactic.
@@ -336,6 +412,15 @@ namespace TacticalDirector.MatchEngine
                 _activePlayerTactics[i]  = PlayerTactic.Default(PlayerRole.Default);
                 _pendingPlayerTactics[i] = PlayerTactic.Default(PlayerRole.Default);
             }
+
+            // #26 KD-4: both teams start in ManagerMode.Human — the CLR zero-init of ManagerState IS
+            // the inert identity (no gate fire, no adaptation), so a default match is byte-identical
+            // to pre-#26. ConfigureManager opts a team into AI mode.
+            _managerStates = new ManagerState[MatchEngineConstants.TEAM_COUNT];
+
+            // Engine score state (v14): 0–0 at kickoff; no agent has held possession yet.
+            _goals             = new int[MatchEngineConstants.TEAM_COUNT];
+            _lastHolderAgentId = MatchEngineConstants.NO_POSSESSION;
 
             InitializeAiSnapshots();
 
@@ -561,6 +646,108 @@ namespace TacticalDirector.MatchEngine
                     nameof(agentId), agentId, "agentId must be a roster index in [0, SQUAD_SIZE).");
             }
             _pendingPlayerTactics[agentId] = tactic;
+        }
+
+        /// <summary>
+        /// Configures a team's manager AI (#26 FR-TP-007 / KD-4). <see cref="ManagerMode.Human"/>
+        /// (the default) resets the team's manager state to the inert identity — no selection, no
+        /// adaptation, no engine calls. <see cref="ManagerMode.AI"/> opts the team in: the given
+        /// Appendix A.2 archetype backs its <see cref="ManagerProfile"/>, the current preset seeds
+        /// to the Balanced catalogue midpoint until the kickoff boot path
+        /// (<see cref="ManagerAdaptation.ApplyKickoff"/>) selects one, and
+        /// <c>LastDecisionTick = −1</c> marks the kickoff decision as not yet fired. Intended
+        /// pre-kickoff; a mid-match call is deterministic (the state is serialized at v13) but the
+        /// kickoff selection path only runs pre-kickoff (KD-1).
+        /// </summary>
+        /// <param name="teamId">0 (home) or 1 (away).</param>
+        /// <param name="mode">The manager mode.</param>
+        /// <param name="profileOrdinal">Appendix A.2 archetype ordinal (AI mode; ignored for Human).</param>
+        public void ConfigureManager(int teamId, ManagerMode mode, byte profileOrdinal = 0)
+        {
+            if (teamId < 0 || teamId >= MatchEngineConstants.TEAM_COUNT)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(teamId), teamId, "teamId must be 0 (home) or 1 (away).");
+            }
+            if (mode != ManagerMode.Human && mode != ManagerMode.AI)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(mode), mode, "Undefined ManagerMode ordinal (#26 FR-TP-013).");
+            }
+            if (mode == ManagerMode.Human)
+            {
+                _managerStates[teamId] = default;  // the inert zero-init identity (KD-4)
+                return;
+            }
+            if (profileOrdinal >= TacticalPresetsConstants.MANAGER_ARCHETYPE_COUNT)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(profileOrdinal), profileOrdinal,
+                    "Archetype ordinal beyond the A.2 catalogue (#26 F2).");
+            }
+            _managerStates[teamId] = new ManagerState
+            {
+                Mode = ManagerMode.AI,
+                ProfileOrdinal = profileOrdinal,
+                CurrentPresetOrdinal = TacticPresetLibrary.BalancedOrdinal,
+                HoldIntervalsRemaining = 0,
+                LastDecisionTick = -1,
+            };
+        }
+
+        /// <summary>Copy of a team's #26 manager state (read by <see cref="ManagerAdaptation.ApplyKickoff"/>).</summary>
+        internal ManagerState GetManagerState(int teamId)
+        {
+            return _managerStates[teamId];
+        }
+
+        /// <summary>
+        /// Seeds a team's kickoff selection from the boot path (#26 FR-TP-004/010): stamps the
+        /// selected preset ordinal and <c>LastDecisionTick = 0</c> (the kickoff decision is
+        /// consumed, so the tick-0 in-engine gate does not double-fire). Called only by
+        /// <see cref="ManagerAdaptation.ApplyKickoff"/>; an out-of-range ordinal fails loud (F2).
+        /// </summary>
+        internal void SeedManagerKickoff(int teamId, byte presetOrdinal)
+        {
+            if (presetOrdinal >= TacticPresetLibrary.Count)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(presetOrdinal), presetOrdinal,
+                    "Preset ordinal beyond the A.1 catalogue (#26 F2).");
+            }
+            _managerStates[teamId].CurrentPresetOrdinal = presetOrdinal;
+            _managerStates[teamId].LastDecisionTick = 0;
+            _managerStates[teamId].HoldIntervalsRemaining = 0;
+        }
+
+        /// <summary>Test-only seam (#26 §4.3): a team's manager state (mode, ordinals, hold, last tick).</summary>
+        internal ManagerState TestOnly_ManagerState(int teamId)
+        {
+            return _managerStates[teamId];
+        }
+
+        /// <summary>Test-only: a team's goal count (the v14 engine score state).</summary>
+        internal int TestOnly_Goals(int teamId) => _goals[teamId];
+
+        /// <summary>Test-only seam: scripts the score directly (the production writer is the
+        /// Resolve-phase goal check). Lets the manager-AI live-input tests exercise a non-level
+        /// score without simulating the ~minutes of play a real goal needs.</summary>
+        internal void TestOnly_SetGoals(int homeGoals, int awayGoals)
+        {
+            _goals[0] = homeGoals;
+            _goals[1] = awayGoals;
+        }
+
+        /// <summary>Test-only: the last settled possession holder (v14; −1 = no agent has held yet).</summary>
+        internal int TestOnly_LastHolderAgentId => _lastHolderAgentId;
+
+        /// <summary>Test-only seam: runs the manager decision points exactly as RunAiPhase does —
+        /// same gate, same live goalDiff/clock inputs — at an arbitrary <paramref name="decisionTick"/>,
+        /// so late-match ladder behaviour is testable without running ~270 000 real ticks. A staged
+        /// tactic still commits only at the next real stride boundary (FR-TI-027).</summary>
+        internal void TestOnly_RunManagerDecisionPoints(int decisionTick)
+        {
+            RunManagerDecisionPoints(decisionTick);
         }
 
         /// <summary>Current 60 Hz physics tick (0 before the first <see cref="RunTick"/>).</summary>
@@ -806,6 +993,35 @@ namespace TacticalDirector.MatchEngine
         internal TacticalDirector.TacticalInstructions.TacticWidth TestOnly_PositioningWidth(int teamId) => _posModifiers[teamId].Width;
         internal TacticalDirector.TacticalInstructions.TacticDefWidth TestOnly_PositioningDefWidth(int teamId) => _posModifiers[teamId].DefensiveWidth;
 
+        /// <summary>#23 routing seam: the DismarkIntensity routed into this agent's TacticalContext (FR-DM-015).</summary>
+        internal DismarkIntensity TestOnly_DismarkIntensity(int agentId) => _tacticalContexts[agentId].DismarkIntensity;
+
+        /// <summary>#23 routing seam: the DismarkIntensity routed into this team's #12 snapshot (FR-DM-015).</summary>
+        internal DismarkIntensity TestOnly_PositioningDismarkIntensity(int teamId) => _posSnapshots[teamId].DismarkIntensity;
+
+        /// <summary>#23 state seam: this agent's marking-dwell state (FR-DM-014).</summary>
+        internal MarkingDwellState TestOnly_MarkingDwell(int agentId) => _markingDwell[agentId];
+
+        /// <summary>#24 routing seam: the BuildUpStructure routed into this team's #12 snapshot (FR-BU-012).</summary>
+        internal BuildUpStructure TestOnly_BuildUpStructure(int teamId) => _posSnapshots[teamId].BuildUpStructure;
+
+        /// <summary>#24 state seam: this team's committed build-up zone (FM-BU-01).</summary>
+        internal BuildUpZone TestOnly_BuildUpCommittedZone(int teamId) => _buildUpStates[teamId].CommittedZone;
+
+        /// <summary>#24 state seam: this team's post-regain suppression countdown (FM-BU-03).</summary>
+        internal int TestOnly_BuildUpSuppressTicks(int teamId) => _buildUpStates[teamId].SuppressTicksRemaining;
+
+        /// <summary>#25 routing seam: the RotationFreedom routed into this team's #12 snapshot (FR-RO-014).</summary>
+        internal RotationFreedom TestOnly_RotationFreedom(int teamId) => _posSnapshots[teamId].RotationFreedom;
+
+        /// <summary>#25 state seam: the bound slot index for this team's roster index (FR-RO-014).</summary>
+        internal int TestOnly_SlotBinding(int teamId, int rosterIndex) =>
+            _positioning[teamId].CaptureRotationState().GetSlotOfAgent(rosterIndex);
+
+        /// <summary>#25 state seam: the per-pair rotation state for this team's adjacency-table row.</summary>
+        internal RotationPairState TestOnly_RotationPairState(int teamId, int row) =>
+            _positioning[teamId].CaptureRotationState().GetPairState(row);
+
         /// <summary>
         /// Returns a fresh 32-byte copy of the current snapshot digest (the chained
         /// CurrentSnapshotDigest after the most recent <see cref="RunTick"/>). Diagnostic /
@@ -862,10 +1078,51 @@ namespace TacticalDirector.MatchEngine
         /// dispatches a MovementCommand into _commands (via the host movement controller, consumed by the
         /// Physics phase that runs next this tick) or a PASS/SHOOT into this agent's executor (advanced in
         /// Resolve). Reads C4's _matchContext. DecisionMadeEvent (Tier C) publishes here in the AI phase.</summary>
+        /// <summary>
+        /// Evaluates the #26 manager decision gate for both teams and runs any due decision point
+        /// with the LIVE engine inputs (§3.4 FM-TP-04): <c>goalDiff</c> = own goals − opponent goals
+        /// from the v14 score state, <c>ticksRemaining</c> = <c>MATCH_TICKS_TOTAL − decisionTick</c>
+        /// clamped at 0 (the clock does not stop at full time at Stage 0 — a decision point past the
+        /// notional final whistle sees t01 = 0, maximum urgency/protect weight), and the engine
+        /// match-length constant. Production caller: RunAiPhase's stride branch (F5 — plus the
+        /// signature-preserving TestOnly wrapper, which exists so late-match ladder arithmetic is
+        /// testable without ~270 000 real ticks).
+        /// </summary>
+        private void RunManagerDecisionPoints(int decisionTick)
+        {
+            long ticksRemaining = MatchEngineConstants.MATCH_TICKS_TOTAL - decisionTick;
+            if (ticksRemaining < 0)
+            {
+                ticksRemaining = 0;
+            }
+
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                if (ManagerDecisionGate.DecisionDue(decisionTick, in _managerStates[t]))
+                {
+                    // TEAM_COUNT == 2, so the opponent index is 1 − t.
+                    int goalDiff = _goals[t] - _goals[1 - t];
+                    ManagerAdaptation.RunDecisionPoint(
+                        this, t, ref _managerStates[t], decisionTick,
+                        goalDiff, ticksRemaining, MatchEngineConstants.MATCH_TICKS_TOTAL);
+                }
+            }
+        }
+
         private void RunAiPhase()
         {
             _aiPhaseRanThisTick = true;
             _aiPhaseRunCount++;
+
+            // #26 FR-TP-006/018: the manager decision gate — evaluated ONLY here inside the stride
+            // branch (off-stride firing impossible by construction, F5) and BEFORE the FR-TI-027
+            // pending→active commit below, so a decision fired at tick N stages via SetTeamTactic
+            // and commits at this same stride boundary. Human mode (the default) never fires (KD-4).
+            // LIVE INPUTS (the §3.4 PASS-1 M-1 gates, closed 2026-07-11 by the engine substrate):
+            // goalDiff reads the Resolve-phase goal producer's score state (v14), and the clock pair
+            // is MATCH_TICKS_TOTAL / ticksRemaining from the engine match-length model — the ladder
+            // and the half-time trigger are fully live.
+            RunManagerDecisionPoints((int)_clock.CurrentTick);
 
             // #21 FR-TI-027: commit any pending tactic change at this tactical-stride boundary.
             // RunAiPhase runs only on stride ticks, so copying pending → active here is exactly the
@@ -909,6 +1166,26 @@ namespace TacticalDirector.MatchEngine
                 // PerceptionDiagnostics (§3.6 / §3.7.2) — it is NOT a FilteredView field. Reuse it rather
                 // than re-running PressureEvaluator (same formula + inputs).
                 FilteredView view = _perception.GetFilteredView(i);
+
+                // #23 §3.2 (FR-DM-003): the per-agent marking-dwell update runs HERE, in the
+                // per-agent perception pass where FilteredView was just rebuilt, in ascending agent
+                // index. The #12 offset stage consumed the PREVIOUS stride's value earlier this
+                // stride (FillPositioningSnapshot); the §3.4 passer-side penalty below consumes the
+                // same-pass fresh view. Runs regardless of the DismarkIntensity dial — the dwell
+                // state machine models attention, the dial gates only its consumers — so a mid-match
+                // dial flip starts from warm dwell. Deterministic: pure function of the view + the
+                // committed team phase.
+                {
+                    int oppCount = ExtractPerceivedOpponents(in view);
+                    bool markerExists = MarkingPressureEvaluator.TryFindNearestMarker(
+                        _agents[i].Position,
+                        new ReadOnlySpan<Vector2>(_dismarkOppPosScratch, 0, oppCount),
+                        new ReadOnlySpan<int>(_dismarkOppIdScratch, 0, oppCount),
+                        out int markerId, out _, out _);
+                    _markingDwell[i] = MarkingPressureEvaluator.UpdateDwell(
+                        in _markingDwell[i], _positioning[_teamIds[i]].GetPhase(), markerExists, markerId);
+                }
+
                 float pressureScalar = _perception.GetDiagnostics(i).PressureScalar;
                 _decisionTrees[i].ReceiveSnapshot(
                     view, _matchContext, _tacticalContexts[i], _dtAttrs[i],
@@ -981,6 +1258,16 @@ namespace TacticalDirector.MatchEngine
         {
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
+                // #24 §3.1/§3.3 per-team pre-pass, BEFORE the positioning tick (the classifier
+                // "runs once per team per heartbeat, before the overlay stage"): classify the
+                // committed zone from team-relative ball X (FM-BU-01 hysteresis), then let
+                // FillPositioningSnapshot read this heartbeat's gate values (zone + pre-decrement
+                // suppression flag); the suppression countdown decrements AFTER the fill so the
+                // gate reads the current heartbeat's value (check-then-decrement — the §3.3 worked
+                // example: armed 30 at heartbeat 100 ⇒ suppressed through 129, active from 130).
+                _buildUpStates[t].CommittedZone = BuildUpZoneClassifier.Classify(
+                    _buildUpStates[t].CommittedZone, MirrorPitchIfAway(t, _ball.Position).x);
+
                 // Positioning (#12) — formation slots + the Line/Phase inputs the rest of the chain reads.
                 // #21 T2 Phase-D writer (FR-TI-016): route the active team tactic's Width / DefensiveWidth
                 // into the modifier inputs (#12 ContextModifier translates them to the lateral-compactness
@@ -996,6 +1283,10 @@ namespace TacticalDirector.MatchEngine
                     defensiveWidth:    _activeTeamTactics[t].DefensiveWidth);
                 _posModifiers[t] = modifiers;
                 _positioning[t].Tick(_posSnapshots[t], modifiers);
+
+                // #24 §3.3: per-heartbeat suppression decrement (after the gate consumed this
+                // heartbeat's value above).
+                _buildUpStates[t] = BuildUpZoneClassifier.TickSuppression(in _buildUpStates[t]);
 
                 // Pressing (#13) — per-agent PressRole consumed by the Defensive snapshot below.
                 FillPressingSnapshot(t, tacticalTick);
@@ -1045,6 +1336,9 @@ namespace TacticalDirector.MatchEngine
                     // ×1.0 on every factor (FR-TI-031), so a default match stays byte-identical.
                     ctx.Tempo        = tactic.Tempo;
                     ctx.PlayerTactic = _activePlayerTactics[i];
+                    // #23 FR-DM-015: route the team's DismarkIntensity into the DecisionTree input
+                    // (drives the §3.4 marked-pass-target penalty). Default Off ⇒ ×1.0 identity.
+                    ctx.DismarkIntensity = tactic.DismarkIntensity;
                     // Fully qualified: TacticTranslation now exists in BOTH DecisionTree (#8) and
                     // PressingAI (#13), and the match-engine references both, so the bare name is
                     // ambiguous (CS0104). These two are the #8 enum maps specifically.
@@ -1099,6 +1393,18 @@ namespace TacticalDirector.MatchEngine
             snap.PossessionOwnerEntityId  = owner;
             snap.PossessionOwnerIsOwnTeam = owner >= 0 && _teamIds[owner] == team;
 
+            // #23/#24/#25 Phase-D writers (FR-DM-015 / FR-BU-012 / FR-RO-014): this fill is the sole
+            // populator of the #12 snapshot's routing dials. Default Balanced ⇒ Off / None / Off —
+            // the exact identities, so a default match's composed slots are unchanged. The #24 zone
+            // + suppression carriers were advanced by the RunMechanicsAI pre-pass (boot fill reads
+            // the seeded zone + a closed window).
+            TeamTactic activeTactic  = _activeTeamTactics[team];
+            snap.DismarkIntensity    = activeTactic.DismarkIntensity;
+            snap.BuildUpStructure    = activeTactic.BuildUpStructure;
+            snap.BuildUpCommittedZone = _buildUpStates[team].CommittedZone;
+            snap.BuildUpSuppressed   = _buildUpStates[team].SuppressTicksRemaining > 0;
+            snap.RotationFreedom     = activeTactic.RotationFreedom;
+
             int activeOutfield = 0;
             for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
             {
@@ -1114,8 +1420,62 @@ namespace TacticalDirector.MatchEngine
                     isGoalkeeper: isGk);
 
                 if (!isGk) activeOutfield++;
+
+                // #23 §3.2/§4.4: the per-agent dismark carriers — the nearest qualifying marker +
+                // the UNGATED proximity × dwell pressure — computed from this agent's FilteredView.
+                // Positioning runs BEFORE the per-agent perception pass in the stride order, so the
+                // view content here is the PREVIOUS stride's (the deliberate one-stride staleness of
+                // the PASS-1 M-1 contract; empty at boot/heartbeat 0 ⇒ no marker, conservative).
+                // The FR-DM-006 phase gate is applied by the SlotComposer stage with this tick's
+                // committed phase, hence the InPoss argument here (bypass — pressure ungated).
+                // Skipped entirely at Off (§6.3 default-cheap): the carriers stay zero and the
+                // composer stage is gated off anyway.
+                if (activeTactic.DismarkIntensity == DismarkIntensity.Off || isGk)
+                {
+                    snap.HasMarker[k]       = false;
+                    snap.MarkingPressure[k] = 0f;
+                    snap.MarkerPosition[k]  = Vector2.zero;
+                }
+                else
+                {
+                    FilteredView view = _perception.GetFilteredView(i);
+                    int oppCount = ExtractPerceivedOpponents(in view);
+                    bool markerExists = MarkingPressureEvaluator.TryFindNearestMarker(
+                        _agents[i].Position,
+                        new ReadOnlySpan<Vector2>(_dismarkOppPosScratch, 0, oppCount),
+                        new ReadOnlySpan<int>(_dismarkOppIdScratch, 0, oppCount),
+                        out _, out Vector2 markerPos, out float markerDist);
+
+                    snap.HasMarker[k]       = markerExists;
+                    snap.MarkingPressure[k] = MarkingPressureEvaluator.ComputePressure(
+                        TacticalDirector.PositioningAI.Phase.InPoss, markerExists, markerDist,
+                        _markingDwell[i].DwellTicks);
+                    // Marker position mapped into the same canonical frame as agent positions —
+                    // it is the agent's PERCEIVED marker (FR-DM-001/004), never ground truth.
+                    snap.MarkerPosition[k]  = markerExists
+                        ? MirrorPitchIfAway(team, markerPos)
+                        : Vector2.zero;
+                }
             }
             snap.ActiveOutfieldCount = activeOutfield;
+        }
+
+        /// <summary>
+        /// Copies the visible-opponent perceived positions/ids of one agent's <see cref="FilteredView"/>
+        /// into the pre-allocated dismark scratch buffers (#23 §4.4 — the sanctioned extraction seam
+        /// that keeps <c>MarkingPressureEvaluator</c>'s primitive-span signature auditable: the only
+        /// opponent-data source reaching it is the agent's own FilteredView). Returns the entry count.
+        /// </summary>
+        private int ExtractPerceivedOpponents(in FilteredView view)
+        {
+            int n = 0;
+            for (int j = 0; j < view.VisibleOpponentsCount; j++)
+            {
+                _dismarkOppPosScratch[n] = view.VisibleOpponents[j].PerceivedPosition;
+                _dismarkOppIdScratch[n]  = view.VisibleOpponents[j].AgentId;
+                n++;
+            }
+            return n;
         }
 
         /// <summary>
@@ -1447,6 +1807,14 @@ namespace TacticalDirector.MatchEngine
                 _shotExecutors[i].Update(matchTime, frameNumber, ref _ball);
             }
 
+            // Engine substrate — goal check. Runs AFTER the executors (the ball's crossing position came
+            // from this tick's Physics phase, possibly adjusted by collision) and BEFORE first touch, so a
+            // ball that has fully crossed the goal line cannot be "received" by an agent standing in the
+            // out-of-bounds buffer. On a goal the ball is restarted at the centre spot, so D3/C4 below see
+            // the restarted state. Non-goal exits (throw-in/corner/goal-kick classifications) are ignored —
+            // Stage 0 has no restart model for them, preserving pre-substrate behaviour exactly.
+            CheckGoalAndRestart();
+
             // D3 — first touch. A loose, approaching, ground-level ball arriving within reach of an agent
             // is received here (a CONTROLLED touch gains possession; an INTERCEPTION flips it to the
             // opponent; a LOOSE_BALL / DEFLECTION redirects the ball but leaves it loose). Runs AFTER the
@@ -1459,12 +1827,73 @@ namespace TacticalDirector.MatchEngine
             // AI tick (Phase D).
             UpdateMatchContext();
 
+            // Engine substrate — record the last settled HOLDER (v14). Updated after C4 so it tracks the
+            // same settled value MatchContext folds in; only ever overwritten by a real holder, so at goal
+            // time (ball loose) it still names the agent whose kick scored (the GoalAwardedEvent credit).
+            if (_possessingAgentId >= 0)
+            {
+                _lastHolderAgentId = _possessingAgentId;
+            }
+
             // Phase E — possession now SETTLED for this tick; publish a Tier A PossessionChangedEvent if
             // the holder changed since the previous tick. Diffing the settled value once here (not at each
             // mutation site) collapses an intra-tick kick-release-then-first-touch-regain to its NET change
             // — a transient mid-Resolve flicker that ends on the same holder emits nothing. Publishing in
             // Resolve (phase 4) enqueues the event before the Events phase (5) drains it the same tick.
             PublishPossessionChangeIfChanged();
+        }
+
+        /// <summary>
+        /// Engine-substrate goal check (Resolve phase; the #26 §9.3 upstream goal-detection
+        /// deliverable, first named by #26 §7.2). Classifies the ball's settled position through
+        /// <see cref="BallCollision.CheckBoundaries"/> — a <see cref="RestartType.KickOff"/> return
+        /// means the ball fully crossed a goal line between the posts under the crossbar (the z-gate
+        /// and corner-precedence simplifications are that predicate's own documented Stage-0 scope).
+        /// The scoring TEAM is classified by geometry alone (which half-space the ball exited —
+        /// home attacks +X toward the away goal at x = PITCH_LENGTH_M, so an exit there scores for
+        /// team 0; an exit at x &lt; 0 scores for team 1): an own goal therefore credits the correct
+        /// team regardless of who touched last. On a goal: the scoring team's count increments, a
+        /// Tier A <see cref="GoalAwardedEvent"/> (ordinal 0x07, registry producer phase = Resolve)
+        /// is published into the digest-load-bearing ledger (Scorer = the last settled holder, −1 if
+        /// none yet; Assister = −1 — no assist tracking at Stage 0), and the ball restarts at the
+        /// centre spot, stationary at rest height — the minimal Stage-0 restart (agents keep their
+        /// positions; no kickoff re-setup, no half-end swap; an executor mid-windup elsewhere
+        /// proceeds against the restarted ball and self-cancels via its own possession recheck if it
+        /// lost the ball). Non-goal exits return without touching any state — Stage 0 has no
+        /// throw-in/corner/goal-kick restart model and the ball remains out of play exactly as
+        /// before this check existed. Deterministic and allocation-free.
+        /// </summary>
+        private void CheckGoalAndRestart()
+        {
+            int lastTouchTeam = _lastHolderAgentId >= 0 ? _teamIds[_lastHolderAgentId] : 0;
+            (bool isOut, RestartType restart) = BallCollision.CheckBoundaries(_ball, lastTouchTeam);
+            if (!isOut || restart != RestartType.KickOff)
+            {
+                return;
+            }
+
+            // Which goal: the exit half-space. CheckBoundaries only returns KickOff for x < −r or
+            // x > LENGTH + r, so a mid-pitch compare cleanly separates the two.
+            int scoringTeam = _ball.Position.x > MatchEngineConstants.PITCH_LENGTH_M * 0.5f ? 0 : 1;
+            _goals[scoringTeam]++;
+
+            var evt = new GoalAwardedEvent(
+                scorer:       _lastHolderAgentId,
+                assister:     -1,
+                scoringTeam:  (byte)scoringTeam,
+                ballPosition: _ball.Position);
+            EventBus.Publish(in evt);
+
+            // Centre-spot restart: same construction as the kickoff boot state. The restarted ball
+            // is definitionally loose — in the (kick-scored) common case possession was already
+            // released at CONTACT and this is a no-op; in the degenerate possessed-into-the-goal
+            // case it prevents a stale holder claiming a ball now 50 m away (the Phase E publisher
+            // below emits the holder → loose transition).
+            _ball = BallState.CreateAtPosition(new Vector3(
+                MatchEngineConstants.KickoffBallXM,
+                MatchEngineConstants.KickoffBallYM,
+                MatchEngineConstants.BALL_REST_HEIGHT_M));
+            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
         }
 
         /// <summary>
@@ -1504,7 +1933,28 @@ namespace TacticalDirector.MatchEngine
         {
             int newHolder = evt.NewHolder;
             if (newHolder >= 0 && newHolder < MatchEngineConstants.SQUAD_SIZE)
+            {
                 _decisionTrees[newHolder].NotifyInterrupt();
+
+                // #24 §3.3 (FM-BU-03, PASS-1 M-1): TEAM-LEVEL regain detection. The raw event fires
+                // on teammate receptions too (PreviousHolder/NewHolder are agent ids), so the window
+                // arms only when the settled possessing TEAM transitions opponent → this team; an
+                // intra-team possessor change never re-arms. A loose-ball transition (NewHolder < 0)
+                // does not change settledTeam, and the first-ever settle (settledTeam −1 at kickoff)
+                // is not a regain. The regaining team's OWN TransitionWon decides the arming
+                // (CounterAttack/CounterPress ⇒ REGAIN_SUPPRESS_TICKS; HoldShape/Regroup ⇒ none) —
+                // default Balanced carries HoldShape, so a default match never opens a window.
+                int newTeam = _teamIds[newHolder];
+                if (newTeam != _settledPossessionTeam)
+                {
+                    if (_settledPossessionTeam >= 0)
+                    {
+                        _buildUpStates[newTeam] = BuildUpZoneClassifier.ArmOnTeamRegain(
+                            in _buildUpStates[newTeam], _activeTeamTactics[newTeam].TransitionWon);
+                    }
+                    _settledPossessionTeam = newTeam;
+                }
+            }
         }
 
         /// <summary>
@@ -1901,6 +2351,73 @@ namespace TacticalDirector.MatchEngine
                 WritePlayerTactic(buf, ref o, in _pendingPlayerTactics[i]);
             }
 
+            // v12 (a) — #23 per-agent marking-dwell state (FR-DM-014; #23 Appendix B order). The
+            // dwell is the ONLY new #23 cross-tick surface: the pressure/marker carriers the #12
+            // stage consumes are recomputed each stride from this dwell + the (already-serialized,
+            // v8) perception state, so they need no field of their own.
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                CanonicalSerializer.WriteI32(buf, ref o, _markingDwell[i].DwellTicks);
+                CanonicalSerializer.WriteI32(buf, ref o, _markingDwell[i].LastMarkerId);
+            }
+
+            // v12 (b) — #24 per-team build-up state (FR-BU-011; #24 Appendix B order) + the
+            // engine-level FM-BU-03 settled-possession-team tracker the regain arming diffs against.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                CanonicalSerializer.WriteU8 (buf, ref o, (byte)_buildUpStates[t].CommittedZone);
+                CanonicalSerializer.WriteI32(buf, ref o, _buildUpStates[t].SuppressTicksRemaining);
+            }
+            CanonicalSerializer.WriteI32(buf, ref o, _settledPossessionTeam);
+
+            // v12 (c) — #25 per-team rotation state (FR-RO-013; #25 Appendix B order: the binding
+            // permutation, then the LastComposedTarget cache — restore loads it VERBATIM, a re-seed
+            // would break byte-identity (PASS-1 H-1) — then the per-pair state in table-row order).
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                RotationController rot = _positioning[t].CaptureRotationState();
+                for (int k = 0; k < rot.SquadSize; k++)
+                {
+                    CanonicalSerializer.WriteI32(buf, ref o, rot.GetSlotOfAgent(k));
+                }
+                for (int k = 0; k < rot.SquadSize; k++)
+                {
+                    Vector2 target = rot.GetLastComposedTarget(k);
+                    CanonicalSerializer.WriteF32(buf, ref o, target.x);
+                    CanonicalSerializer.WriteF32(buf, ref o, target.y);
+                }
+                for (int r = 0; r < rot.PairCount; r++)
+                {
+                    RotationPairState pair = rot.GetPairState(r);
+                    CanonicalSerializer.WriteI32 (buf, ref o, pair.TriggerDwellTicks);
+                    CanonicalSerializer.WriteBool(buf, ref o, pair.Rotated);
+                    CanonicalSerializer.WriteI32 (buf, ref o, pair.HoldTicksRemaining);
+                }
+            }
+
+            // v13 — #26 per-team manager-AI state (FR-TP-012; Appendix C pinned field order:
+            // Mode u8, ProfileOrdinal u8, CurrentPresetOrdinal u8, HoldIntervalsRemaining i32,
+            // LastDecisionTick i32). Cross-tick state: the hold countdown and last-decision tick
+            // drive future decisions, so a save between two decision points resumes byte-identically
+            // (T-TP-DET-003). Default Human zero-init is byte-stable across same-seed runs.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                CanonicalSerializer.WriteU8 (buf, ref o, (byte)_managerStates[t].Mode);
+                CanonicalSerializer.WriteU8 (buf, ref o, _managerStates[t].ProfileOrdinal);
+                CanonicalSerializer.WriteU8 (buf, ref o, _managerStates[t].CurrentPresetOrdinal);
+                CanonicalSerializer.WriteI32(buf, ref o, _managerStates[t].HoldIntervalsRemaining);
+                CanonicalSerializer.WriteI32(buf, ref o, _managerStates[t].LastDecisionTick);
+            }
+
+            // v14 — engine score state (goal detection substrate). Cross-tick and digest-load-
+            // bearing: the score drives the #26 manager-AI goalDiff input and the goal-side
+            // classification, and the last-holder tracker feeds the GoalAwardedEvent scorer credit.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                CanonicalSerializer.WriteI32(buf, ref o, _goals[t]);
+            }
+            CanonicalSerializer.WriteI32(buf, ref o, _lastHolderAgentId);
+
             payload.BytesWritten = o;
         }
 
@@ -1948,6 +2465,11 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.GkDistribution);
             CanonicalSerializer.WriteU8 (buf, ref o, t.TimeWasting);
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.MarkingOrientation);
+            // v12: the three #21 back-prop dials in the pinned Appendix B approval order
+            // (#23 → #24 → #25), appended after MarkingOrientation so no prior offset moves.
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.DismarkIntensity);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.BuildUpStructure);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.RotationFreedom);
         }
 
         /// <summary>Serializes the full <see cref="BallState"/> field set in canonical order.
@@ -2945,4 +3467,53 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | exploitable spatial gap requiring tactical/player instructions, |
 // |         |            |        | not a flat passing bonus. No SNAPSHOT_SCHEMA_VERSION change     |
 // |         |            |        | (AgentLane was never serialized).                               |
+// | 1.28    | 2026-07-11 | —      | Specs #23/#24/#25 wiring (SNAPSHOT_SCHEMA_VERSION 11 → 12):     |
+// |         |            |        | (a) #23 — FillPositioningSnapshot routes DismarkIntensity + the |
+// |         |            |        | per-agent pressure/marker carriers (previous stride's Filtered- |
+// |         |            |        | View + dwell, the §3.2 M-1 one-stride contract); the per-agent  |
+// |         |            |        | perception pass updates _markingDwell (FR-DM-003);              |
+// |         |            |        | ctx.DismarkIntensity routed for the #8 §3.4 penalty; dwell      |
+// |         |            |        | serialized (Appendix B). (b) #24 — per-team zone classify +     |
+// |         |            |        | check-then-decrement suppression in RunMechanicsAI; team-level  |
+// |         |            |        | regain arming in OnPossessionChanged (settledTeam diff, FM-BU-  |
+// |         |            |        | 03); zone state + settledTeam serialized. (c) #25 —             |
+// |         |            |        | RotationFreedom routed; binding/cache/pair state serialized via |
+// |         |            |        | CaptureRotationState. WriteTeamTactic appends the three dials   |
+// |         |            |        | in pinned #21 Appendix B order. New TestOnly seams:             |
+// |         |            |        | _DismarkIntensity/_PositioningDismarkIntensity/_MarkingDwell/   |
+// |         |            |        | _BuildUpStructure/_BuildUpCommittedZone/_BuildUpSuppressTicks/  |
+// |         |            |        | _RotationFreedom/_SlotBinding/_RotationPairState. Default       |
+// |         |            |        | Balanced ⇒ Off/None/Off = identities (behaviour-neutral).       |
+// | 1.29    | 2026-07-11 | —      | #26 manager-AI wiring (SNAPSHOT_SCHEMA_VERSION 12 → 13): new    |
+// |         |            |        | per-team _managerStates (zero-init Human = inert, KD-4); public |
+// |         |            |        | ConfigureManager(teamId, mode, profileOrdinal) (F2-gated);      |
+// |         |            |        | internal GetManagerState / SeedManagerKickoff (the ApplyKickoff |
+// |         |            |        | boot seam — LastDecisionTick = 0 consumes the kickoff decision) |
+// |         |            |        | + TestOnly_ManagerState (§4.3). RunAiPhase evaluates the        |
+// |         |            |        | ManagerDecisionGate per team BEFORE the FR-TI-027 pending→      |
+// |         |            |        | active commit (FR-TP-018; off-stride firing impossible, F5) and |
+// |         |            |        | on fire runs ManagerAdaptation.RunDecisionPoint with goalDiff=0 |
+// |         |            |        | (engine-TRUE — no goal producer exists; the ladder terms are   |
+// |         |            |        | identically 0, so the clock placeholders cannot influence       |
+// |         |            |        | behaviour until goal detection + MATCH_TICKS_TOTAL land, §3.4   |
+// |         |            |        | PASS-1 M-1). v13 serializes ManagerState per team in Appendix C |
+// |         |            |        | order. Default Human/Human is byte-identical to pre-#26.        |
+// | 1.30    | 2026-07-11 | —      | Engine substrate (the #26 §9.3 upstream deliverables): NEW      |
+// |         |            |        | Resolve-phase CheckGoalAndRestart between the executor advance   |
+// |         |            |        | and first touch — BallCollision.CheckBoundaries ⇒ KickOff means |
+// |         |            |        | a goal (side classified by exit half-space geometry, so own      |
+// |         |            |        | goals credit the right TEAM); increments _goals[scoringTeam],   |
+// |         |            |        | publishes the first-ever Tier A GoalAwardedEvent (0x07, scorer = |
+// |         |            |        | last settled holder, assister −1), restarts the ball at the      |
+// |         |            |        | centre spot (minimal Stage-0 restart — agents keep positions, no |
+// |         |            |        | end-swap; non-goal exits untouched, no throw-in/corner model).   |
+// |         |            |        | NEW _lastHolderAgentId tracker (updated post-C4). v14 serializes |
+// |         |            |        | _goals ×TEAM_COUNT + the tracker. #26 activation: the manager    |
+// |         |            |        | block extracted to RunManagerDecisionPoints, now passing LIVE    |
+// |         |            |        | goalDiff (v14 score) + ticksRemaining/MATCH_TICKS_TOTAL (the     |
+// |         |            |        | match-length model) — closes the §3.4 PASS-1 M-1 gates; the      |
+// |         |            |        | half-time trigger activates in ManagerDecisionGate v1.1. New     |
+// |         |            |        | seams: TestOnly_Goals/SetGoals/LastHolderAgentId +               |
+// |         |            |        | TestOnly_RunManagerDecisionPoints (late-match ladder testable    |
+// |         |            |        | without ~270k ticks).                                            |
 #endregion

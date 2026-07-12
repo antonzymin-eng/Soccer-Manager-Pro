@@ -1,8 +1,8 @@
 # Tactical Presets & AI-Manager Selection Specification #26 — Section 3: Formulas and Algorithms
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 11, 2026 (v0.3 — PASS-1 M-1 gates closed; `MATCH_TICKS_TOTAL` promoted to `[CROSS]`)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -53,6 +53,12 @@ At each fired decision point (Mode == AI, `HoldIntervalsRemaining == 0`):
 **Prerequisite (PASS-1 M-1):** `goalDiff` requires engine score state and `MATCH_TICKS_TOTAL` an
 engine match-length model — neither exists today (no goal producer is wired; KD-2's own grep). The
 formulas below are the reviewed contract; their live inputs arrive with goal detection (§7.2).
+**CLOSED 2026-07-11:** the engine substrate landed — a Resolve-phase goal producer (score state,
+`GoalAwardedEvent` 0x07, centre-spot restart) and the match-length model
+(`MatchEngineConstants.MATCH_TICKS_TOTAL` / `HALF_TIME_BOUNDARY_TICK`). The engine's
+decision-point seam now passes live `goalDiff`/`ticksRemaining`/`matchTicksTotal`, and the §3.2
+half-time trigger is active (FR-TP-019). The ladder keeps its explicit-parameter signature (the
+data assembly cannot reference the engine upward).
 
 ```
 t01     = clamp01(ticksRemaining / MATCH_TICKS_TOTAL)      # 1 → full match left, 0 → final whistle
@@ -92,7 +98,7 @@ impossible within `2 × hold` windows.
 | `URGENCY_DIFF_CAP` | `[GT]` | 2 | goals |
 | `BASE_FIT` / `AGGR_AFFINITY` / `CAUT_AFFINITY` tables | `[GT]` | Appendix A.3 | — |
 | Ladder order | `[FIXED]` | Appendix A.1 | catalogue ordinal order — an ordering contract, not a tunable |
-| `MATCH_TICKS_TOTAL` | `[CROSS-PENDING]` | engine-owned, pending | 60 Hz ticks; allocated when the engine models match length (PASS-1 M-1 gate; tracked in §9.3) |
+| `MATCH_TICKS_TOTAL` | `[CROSS]` | 324 000 | 60 Hz ticks; authoritative source: `MatchEngineConstants.MATCH_TICKS_TOTAL` (match-engine design note — allocated 2026-07-11, closing the PASS-1 M-1 gate; consumed as an explicit ladder parameter, never re-declared, since the #26 data assembly sits below the engine) |
 
 `[GT]` magnitudes pinned at this spec's own balance review (§9.2); preset *contents* reuse #21
 pinned values (KD-7) and add no magnitudes.
@@ -102,4 +108,5 @@ pinned values (KD-7) and add no magnitudes.
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial FM-TP-01..04 with worked examples; ladder + hold = structural anti-churn. |
 | 0.2 | 2026-07-08 | — | PASS-1 M-1: §3.4 prerequisite note + `MATCH_TICKS_TOTAL` added to §3.5 as `[CROSS-PENDING]` (was an untagged phantom). |
+| 0.3 | 2026-07-11 | — | PASS-1 M-1 gates CLOSED: the engine substrate landed goal detection (score state, `GoalAwardedEvent`, centre-spot restart) + the match-length model; `MATCH_TICKS_TOTAL` promoted `[CROSS-PENDING]` → `[CROSS]` (authority `MatchEngineConstants.MATCH_TICKS_TOTAL` = 324 000); §3.2's half-time trigger and §3.4's live inputs are active in the engine. |
 #endregion

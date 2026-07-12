@@ -1,8 +1,8 @@
 # Tactical Presets & AI-Manager Selection Specification #26 — Section 9: Approval Checklist
 
 **Created:** July 8, 2026
-**Last Updated:** July 10, 2026, later same day (v0.4 — APPROVED)
-**Version:** 0.4
+**Last Updated:** July 11, 2026 (v0.5 — §9.1 engine-substrate gates closed)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -19,7 +19,7 @@ Entries verified against actual files; nothing checked without a verifiable anch
 - [x] Zero-value-identity: `ManagerMode.Human = 0` is the subsystem-level identity
 - [x] `[CITATION-PENDING]` rows verified or replaced (gate for `APPROVED`) — **fully closed July 10, 2026 (later same day)**: Wilson VERIFIED (ISBN 978-0-7528-8995-5); Bradley VERIFIED (Bradley & Noakes 2013, *J Sports Sci* 31(15):1627–1638, DOI 10.1080/02640414.2013.796062, PMID 23808376 — index-level corroboration, publisher/Crossref direct resolution still environment-blocked; same evidence class as the Wilson row); see §8.2 v0.3
 - [x] A.1 preset compositions' Tempo/Passing/Width member names pinned against the #21 enums — **closed July 10, 2026** (every A.1 value verified against `src/tactical-instructions/`; full member rosters recorded in Appendix A v0.3; PASS-1 L-2)
-- [x] PASS-1 M-1 engine-substrate gates tracked — **carried forward post-APPROVED (upstream-owned, July 10, 2026)**: T2 half-time trigger + `MATCH_TICKS_TOTAL` `[CROSS-PENDING]` promotion (halves/match-length model) and T4 live `goalDiff` (first goal-detection producer) are prerequisites of those *implementation phases*, owned by the match-engine substrate, not spec-text gates — the same class as #21's runtime-activation gating (KD-8) and #22's KD-10 upstreams, neither of which blocked sign-off. §3.2/§3.4 record the explicit prerequisite gates; the phases cannot land until the substrate exists
+- [x] PASS-1 M-1 engine-substrate gates tracked — **carried forward post-APPROVED (upstream-owned, July 10, 2026)**: T2 half-time trigger + `MATCH_TICKS_TOTAL` `[CROSS-PENDING]` promotion (halves/match-length model) and T4 live `goalDiff` (first goal-detection producer) are prerequisites of those *implementation phases*, owned by the match-engine substrate, not spec-text gates — the same class as #21's runtime-activation gating (KD-8) and #22's KD-10 upstreams, neither of which blocked sign-off. §3.2/§3.4 record the explicit prerequisite gates; the phases cannot land until the substrate exists. **CLOSED July 11, 2026** — the match-engine substrate landed: Resolve-phase goal detection (v14 score state + `GoalAwardedEvent` 0x07 + centre-spot restart) and the match-length model (`MatchEngineConstants.MATCH_TICKS_TOTAL` = 324 000 / `HALF_TIME_BOUNDARY_TICK` = 162 000). `MATCH_TICKS_TOTAL` promoted `[CROSS-PENDING]` → `[CROSS]` (§3.5 v0.3); the half-time trigger and the live `goalDiff`/clock ladder inputs are active (§1.6 v0.3, §2.1 v0.4)
 
 ## 9.2 Balance review scope
 
@@ -72,4 +72,5 @@ contents reuse #21-pinned values per KD-7 (shape/reference review sufficed).
 | 0.2 | 2026-07-08 | — | PASS-1 run and resolved (0H+1M+2L); §9.1 gains the A.1-pinning and engine-substrate gate items. |
 | 0.3 | 2026-07-10 | — | A.1 member-name pinning closed; citation gate partially closed (Wilson verified; Bradley row pending with a recorded environment-blocked attempt). Remaining open: Bradley citation; engine-substrate gates (upstream-owned); sign-off; status flip. |
 | 0.4 | 2026-07-10 | — | **APPROVED.** Bradley citation VERIFIED (§8.2 v0.3); engine-substrate gates reclassified carried-forward upstream-owned; sign-off granted; status flip done; §9.5 table + §9.6 decision added. |
+| 0.5 | 2026-07-11 | — | §9.1 engine-substrate gates CLOSED — the match-engine substrate landed (goal detection + match-length/halves model); `MATCH_TICKS_TOTAL` promoted to `[CROSS]`; half-time trigger + live ladder inputs active. Remaining carried-forward item: the §9.2 own-`[GT]` balance review. |
 #endregion

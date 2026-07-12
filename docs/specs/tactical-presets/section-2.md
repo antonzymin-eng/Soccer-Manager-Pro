@@ -1,8 +1,8 @@
 # Tactical Presets & AI-Manager Selection Specification #26 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 8, 2026
-**Last Updated:** July 10, 2026 (v0.3 — §2.2.2 ordinal list aligned to the A.1 pinned ladder order)
-**Version:** 0.3
+**Last Updated:** July 11, 2026 (v0.4 — FR-TP-006/019 engine-substrate gates recorded closed)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -16,7 +16,7 @@
 | FR-TP-003 | Every preset composes only #21 value types; a preset introduces no new tunable magnitude beyond selecting existing enum members / pinned dial values. | MUST | KD-7 |
 | FR-TP-004 | Kickoff application: preset → `TeamTacticConfig`/`PlayerTacticConfig` projection → the existing `TeamTacticConfigApplier.Apply`/`PlayerTacticConfigApplier.Apply`, pre-kickoff only. | MUST | KD-1 |
 | FR-TP-005 | Mid-match application: `MatchEngine.SetTeamTactic`/`SetPlayerTactic` directly; the boot appliers MUST NOT be called after kickoff. | MUST | KD-1 |
-| FR-TP-006 | All manager-AI decisions evaluate only at decision points: kickoff, half-time, and every `MANAGER_DECISION_INTERVAL_TICKS` — derived from `MatchClock` tick counts at the AI-stride boundary; never per-tick, never event-triggered (deferral, KD-2). The half-time trigger is gated on the engine modelling halves (PASS-1 M-1) — the gate ships kickoff + interval first. | MUST | KD-2 / KD-3 |
+| FR-TP-006 | All manager-AI decisions evaluate only at decision points: kickoff, half-time, and every `MANAGER_DECISION_INTERVAL_TICKS` — derived from `MatchClock` tick counts at the AI-stride boundary; never per-tick, never event-triggered (deferral, KD-2). The half-time trigger is gated on the engine modelling halves (PASS-1 M-1) — the gate ships kickoff + interval first. *(Gate closed 2026-07-11: the engine halves model landed; all three triggers are live.)* | MUST | KD-2 / KD-3 |
 | FR-TP-007 | `ManagerMode.Human = 0` (zero-value identity): no selection, no adaptation, no engine calls; a default match is byte-identical to pre-#26. `ManagerMode.AI = 1` opts a team in. | MUST | KD-4 |
 | FR-TP-008 | The selection/adaptation scoring function consumes exactly: own score differential, time-remaining fraction, own current preset ordinal, own `ManagerProfile`. It MUST NOT read the opponent's `TeamTactic`, `PlayerTactic`, or any opposing AI internal state. | MUST | KD-5 |
 | FR-TP-009 | Selection is deterministic: pure function + lowest-preset-ordinal tiebreak; no RNG draw site, no domain tag. | MUST | KD-8 |
@@ -29,7 +29,7 @@
 | FR-TP-016 | Every §3 formula has units, ranges, and a worked example. | MUST | CLAUDE.md |
 | FR-TP-017 | No phantom interfaces: no opponent-model hook, no event-trigger subscription, no disk-loader interface until their prerequisites exist. | MUST | KD-2/KD-5/KD-6 |
 | FR-TP-018 | The decision gate runs before the AI-stride tactic commit within the same tick, so a decision made at tick N is staged at N and committed at the same stride boundary the existing machinery uses. | MUST | §3.2 |
-| FR-TP-019 | Half-time detection derives from engine-owned match-phase tick counts **once the engine models halves** (it does not today — PASS-1 M-1 gate); this spec adds no clock state of its own beyond `LastDecisionTick`. | MUST | KD-3 |
+| FR-TP-019 | Half-time detection derives from engine-owned match-phase tick counts **once the engine models halves** (it does not today — PASS-1 M-1 gate); this spec adds no clock state of its own beyond `LastDecisionTick`. *(Gate closed 2026-07-11: `MatchEngineConstants.HALF_TIME_BOUNDARY_TICK` is the engine-owned boundary; the gate consumes it with no new clock state — satisfied as specified.)* | MUST | KD-3 |
 | FR-TP-020 | `ManagerProfile` `[GT]` parameters ship with named archetypes (Appendix A.2); archetype rows are data, validated by shape tests (monotone urgency, bounded thresholds). | MUST | §3.3 |
 
 ## 2.2 Data structures
@@ -84,4 +84,5 @@ None to approved specs at T0–T3 (this spec composes #21 without amending it). 
 | 0.1 | 2026-07-08 | — | Initial FR set (20), data model, failure modes. |
 | 0.2 | 2026-07-08 | — | PASS-1 M-1: FR-TP-006/019 carry the engine-substrate gates (halves model; score state). |
 | 0.3 | 2026-07-10 | — | T0 implementation fix (L): §2.2.2's parenthetical ordinals were stale pre-ladder values contradicting the A.1 `[FIXED]` ladder order; aligned to A.1 (ParkTheBus 0 … Gegenpress 4). |
+| 0.4 | 2026-07-11 | — | FR-TP-006/019 gate-closure notes: the engine substrate landed the halves/match-length model + goal detection; all three decision triggers live. |
 #endregion

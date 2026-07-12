@@ -16,6 +16,7 @@ using NUnit.Framework;
 
 using TacticalDirector.DecisionTree;
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.PositioningAI;
 using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.MatchEngine
@@ -457,6 +458,169 @@ namespace TacticalDirector.MatchEngine
             }
             return chain;
         }
+
+        // ── #23/#24/#25 Phase-D writers: the three back-prop dials route per team ──
+
+        // Balanced in every dimension except the three #23/#24/#25 dials (the routing axes under test).
+        private static TeamTactic WithDials(
+            DismarkIntensity dismark, BuildUpStructure buildUp, RotationFreedom rotation) => new TeamTactic(
+            Mentality.Balanced, TacticFormation.F442, Tempo.Standard, TacticWidth.Standard,
+            TacticPassing.Mixed, TacticPressing.Medium, LineOfEngagement.Standard, 0.5f,
+            TacticDefWidth.Standard, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
+            TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0,
+            MarkingOrientation.Balanced, dismark, buildUp, rotation);
+
+        // Balanced in every dimension except TransitionWon (the #24 FM-BU-03 arming axis under test).
+        private static TeamTactic WithTransitionWon(TransitionPlan won) => new TeamTactic(
+            Mentality.Balanced, TacticFormation.F442, Tempo.Standard, TacticWidth.Standard,
+            TacticPassing.Mixed, TacticPressing.Medium, LineOfEngagement.Standard, 0.5f,
+            TacticDefWidth.Standard, won, TransitionPlan.Regroup, false,
+            TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
+
+        [Test]
+        public void SetTeamTactic_RoutesDismarkBuildUpRotationDials_PerTeam()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.SetTeamTactic(0, WithDials(
+                DismarkIntensity.Aggressive, BuildUpStructure.BackThree, RotationFreedom.Free));
+            TickToFirstStride(engine);
+
+            // Home: routed into the #12 snapshot (FR-DM-015 / FR-BU-012 / FR-RO-014) and, for the
+            // dismark dial, into the DecisionTree input (the §3.4 penalty carrier).
+            Assert.AreEqual(DismarkIntensity.Aggressive, engine.TestOnly_PositioningDismarkIntensity(0));
+            Assert.AreEqual(DismarkIntensity.Aggressive, engine.TestOnly_DismarkIntensity(HomeAgent));
+            Assert.AreEqual(BuildUpStructure.BackThree,  engine.TestOnly_BuildUpStructure(0));
+            Assert.AreEqual(RotationFreedom.Free,        engine.TestOnly_RotationFreedom(0));
+
+            // Away stays at the Balanced identities.
+            Assert.AreEqual(DismarkIntensity.Off,   engine.TestOnly_PositioningDismarkIntensity(1));
+            Assert.AreEqual(DismarkIntensity.Off,   engine.TestOnly_DismarkIntensity(AwayAgent));
+            Assert.AreEqual(BuildUpStructure.None,  engine.TestOnly_BuildUpStructure(1));
+            Assert.AreEqual(RotationFreedom.Off,    engine.TestOnly_RotationFreedom(1));
+        }
+
+        [Test]
+        public void DefaultTactic_RoutesDialIdentities_AndIdentityBindings()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            TickToFirstStride(engine);
+
+            Assert.AreEqual(DismarkIntensity.Off,  engine.TestOnly_PositioningDismarkIntensity(0));
+            Assert.AreEqual(BuildUpStructure.None, engine.TestOnly_BuildUpStructure(0));
+            Assert.AreEqual(RotationFreedom.Off,   engine.TestOnly_RotationFreedom(0));
+
+            // #24: kickoff ball at the centre spot ⇒ team-relative x = 52.5 ⇒ MiddleThird for both
+            // teams; no suppression window at boot.
+            Assert.AreEqual(BuildUpZone.MiddleThird, engine.TestOnly_BuildUpCommittedZone(0));
+            Assert.AreEqual(BuildUpZone.MiddleThird, engine.TestOnly_BuildUpCommittedZone(1));
+            Assert.AreEqual(0, engine.TestOnly_BuildUpSuppressTicks(0));
+
+            // #25: the slot binding stays the identity permutation at Off (FR-RO-011).
+            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            {
+                Assert.AreEqual(k, engine.TestOnly_SlotBinding(0, k), $"home binding (roster {k})");
+                Assert.AreEqual(k, engine.TestOnly_SlotBinding(1, k), $"away binding (roster {k})");
+            }
+            Assert.IsFalse(engine.TestOnly_RotationPairState(0, 0).Rotated);
+        }
+
+        // ── #24 FM-BU-03: a TEAM-LEVEL regain arms the suppression window per TransitionWon ──
+
+        [Test]
+        public void TeamRegain_ArmsSuppressionWindow_PerTransitionWon()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            // Home counter-attacks on regain; away keeps the Balanced HoldShape (never arms).
+            engine.SetTeamTactic(0, WithTransitionWon(TransitionPlan.CounterAttack));
+            TickToFirstStride(engine); // commits the tactic (ticks 1..6; stride at 6)
+
+            // Away settles first: the FIRST settle (settledTeam −1 → 1) is not a regain — no window.
+            engine.TestOnly_SetPossession(AwayAgent);
+            engine.RunTick(); // tick 7 — possession-changed publishes + drains; settledTeam = 1
+            Assert.AreEqual(0, engine.TestOnly_BuildUpSuppressTicks(1),
+                "The first-ever settle must not arm a window (not an opponent → this-team transition).");
+
+            // Home regains: opponent → home transition + CounterAttack ⇒ the full window arms.
+            engine.TestOnly_SetPossession(HomeAgent);
+            engine.RunTick(); // tick 8 — non-stride, so no decrement has run yet
+            Assert.AreEqual(PositioningAIConstants.REGAIN_SUPPRESS_TICKS,
+                engine.TestOnly_BuildUpSuppressTicks(0),
+                "A team-level regain under CounterAttack must arm REGAIN_SUPPRESS_TICKS (FM-BU-03).");
+
+            // The countdown decrements once per heartbeat (the next stride, tick 12).
+            for (ulong t = engine.CurrentTick + 1; t <= 2UL * (ulong)Stride; t++)
+            {
+                engine.RunTick();
+            }
+            Assert.IsTrue(engine.DidAiPhaseRunLastTick);
+            Assert.AreEqual(PositioningAIConstants.REGAIN_SUPPRESS_TICKS - 1,
+                engine.TestOnly_BuildUpSuppressTicks(0),
+                "The suppression countdown must decrement once per AI stride (heartbeat).");
+
+            // Away regains under HoldShape (Balanced): no window (FR-BU-006).
+            engine.TestOnly_SetPossession(AwayAgent);
+            engine.RunTick();
+            Assert.AreEqual(0, engine.TestOnly_BuildUpSuppressTicks(1),
+                "A HoldShape regain must open no suppression window (FR-BU-006).");
+        }
+
+        // ── #23: the marking dwell state machine advances in the per-agent perception pass ──
+
+        [Test]
+        public void MarkingDwell_StartsUnmarked_AndStaysCoherent()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.SetTeamTactic(0, WithDials(
+                DismarkIntensity.Aggressive, BuildUpStructure.None, RotationFreedom.Off));
+            for (int i = 0; i < 3 * Stride; i++)
+            {
+                engine.RunTick();
+            }
+
+            // The kickoff scaffold spreads the teams on two distant lines, so dwell stays coherent:
+            // DwellTicks within [0, cap]; a positive dwell always carries a real marker id (F2).
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                MarkingDwellState s = engine.TestOnly_MarkingDwell(i);
+                Assert.GreaterOrEqual(s.DwellTicks, 0, $"agent {i} dwell ≥ 0");
+                Assert.LessOrEqual(s.DwellTicks, PositioningAIConstants.MARKING_DWELL_FULL_TICKS,
+                    $"agent {i} dwell ≤ cap");
+                if (s.DwellTicks > 0)
+                {
+                    Assert.AreNotEqual(MarkingDwellState.NoMarker, s.LastMarkerId,
+                        $"agent {i}: positive dwell must carry a marker id (F2 coherence)");
+                }
+            }
+        }
+
+        // ── Activation of the new dials stays deterministic (exercises all three wired paths) ──
+
+        [Test]
+        public void NonIdentityDials_AreDeterministic()
+        {
+            const int ticks = 2 * 6 * 2;
+
+            List<byte[]> a = RunChain(ticks, configure: e =>
+            {
+                e.SetTeamTactic(0, WithDials(
+                    DismarkIntensity.Aggressive, BuildUpStructure.BackThree, RotationFreedom.Free));
+                e.SetTeamTactic(1, WithDials(
+                    DismarkIntensity.Conservative, BuildUpStructure.DoublePivot, RotationFreedom.Conservative));
+            });
+            List<byte[]> b = RunChain(ticks, configure: e =>
+            {
+                e.SetTeamTactic(0, WithDials(
+                    DismarkIntensity.Aggressive, BuildUpStructure.BackThree, RotationFreedom.Free));
+                e.SetTeamTactic(1, WithDials(
+                    DismarkIntensity.Conservative, BuildUpStructure.DoublePivot, RotationFreedom.Conservative));
+            });
+
+            for (int i = 0; i < ticks; i++)
+            {
+                CollectionAssert.AreEqual(a[i], b[i],
+                    $"Two same-seed, same-dial runs diverged at tick {i + 1} — #23/#24/#25 activation is non-deterministic.");
+            }
+        }
     }
 }
 
@@ -468,6 +632,10 @@ namespace TacticalDirector.MatchEngine
 // | 1.3     | 2026-06-29 | —      | #12 Phase-D writer: Width / DefensiveWidth per-team routing + Standard-default cases. |
 // | 1.4     | 2026-06-30 | —      | #21 §3.3 per-agent PlayerTactic config (SetPlayerTactic routing / stride-gating / |
 // |         |            |        | invalid-agent / identity behaviour-neutrality) + §3.4 DefensiveLine depth recompute. |
+// | 1.5     | 2026-07-11 | —      | #23/#24/#25 wiring: dial routing per team (snapshot + TacticalContext), identity   |
+// |         |            |        | defaults + identity bindings, FM-BU-03 team-regain arming (first-settle / counter- |
+// |         |            |        | attack / hold-shape / per-heartbeat decrement), marking-dwell coherence, and the   |
+// |         |            |        | non-identity-dial determinism chain.                                               |
 // | 1.5     | 2026-07-07 | —      | Cheap-item addition: #14 MarkingOrientation per-team routing + Balanced-default case. |
 // | 1.6     | 2026-07-07 | —      | Reverted after user review: the half-spaces AgentLane routing smoke test is |
 // |         |            |        | REMOVED (half-spaces need tactical/player instructions, not a flat bonus).  |

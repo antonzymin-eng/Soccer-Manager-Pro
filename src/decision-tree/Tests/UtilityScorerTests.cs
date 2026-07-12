@@ -266,6 +266,134 @@ namespace TacticalDirector.DecisionTree.Tests
                 "dampening at all — the risk is invisible to them, not silently corrected.");
         }
 
+        // ── Dismarking #23 §3.4 (FM-DM-03): marked-pass-target penalty ────────
+
+        [Test]
+        public void MarkedPassTarget_Penalised_ExactWorkedExample()
+        {
+            // #23 §3.4 worked example: opponent perceived 0.9 m from the pass target ⇒
+            // targetProx01 = 1 − 0.9/3.0 = 0.7; awareness 0.8 ⇒ mult = 1 − 0.3×0.56 = 0.832.
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            TacticalContext tc = ctx.TacticalContext;
+            tc.DismarkIntensity = TacticalInstructions.DismarkIntensity.Aggressive;
+            ctx.TacticalContext = tc;
+            ctx.A_Decisions    = 0.8f;
+            ctx.A_Anticipation = 0.8f;
+
+            var target = new Vector2(60f, 34f);
+
+            // Free target (no visible opponents) — the baseline.
+            Buffer[0] = MakePassTo(target);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float freeU = Buffer[0].BaseUtility;
+
+            // Marked target: one perceived opponent 0.9 m away.
+            ctx.Snapshot = ViewWithOpponentAt(new Vector2(60f, 34.9f));
+            Buffer[0] = MakePassTo(target);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float markedU = Buffer[0].BaseUtility;
+
+            Assert.AreEqual(0.832f, markedU / freeU, 1e-4f,
+                "FM-DM-03 worked example: Lerp(1.0, 0.7, 0.7×0.8) = 0.832 relative to a free target");
+        }
+
+        [Test]
+        public void MarkedPassTarget_OffDial_IsExactIdentity()
+        {
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            Assert.AreEqual(TacticalInstructions.DismarkIntensity.Off, ctx.TacticalContext.DismarkIntensity,
+                "Stage0Default must seed the Off identity (FR-DM-012).");
+
+            var target = new Vector2(60f, 34f);
+
+            Buffer[0] = MakePassTo(target);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float freeU = Buffer[0].BaseUtility;
+
+            // Opponent right on top of the target — at Off the penalty must not apply at all.
+            ctx.Snapshot = ViewWithOpponentAt(target);
+            Buffer[0] = MakePassTo(target);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float markedU = Buffer[0].BaseUtility;
+
+            Assert.AreEqual(freeU, markedU, 0f,
+                "Off dial must be the exact ×1.0 identity (FR-DM-012) — bitwise-equal utility");
+        }
+
+        [Test]
+        public void MarkedPassTarget_UnawarePasser_TakesNoPenalty()
+        {
+            // FR-DM-010: awareness01 scales the penalty — an unaware passer plays the marked
+            // pass anyway (mirrors the rest-defense design).
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            TacticalContext tc = ctx.TacticalContext;
+            tc.DismarkIntensity = TacticalInstructions.DismarkIntensity.Aggressive;
+            ctx.TacticalContext = tc;
+            ctx.A_Decisions    = 0.0f;
+            ctx.A_Anticipation = 0.0f;
+
+            var target = new Vector2(60f, 34f);
+
+            Buffer[0] = MakePassTo(target);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float freeU = Buffer[0].BaseUtility;
+
+            ctx.Snapshot = ViewWithOpponentAt(target);
+            Buffer[0] = MakePassTo(target);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float markedU = Buffer[0].BaseUtility;
+
+            Assert.AreEqual(freeU, markedU, 1e-6f,
+                "Zero-awareness passer must take no marked-target penalty (FR-DM-010)");
+        }
+
+        [Test]
+        public void MarkedPassTarget_DistantOpponent_NoPenalty()
+        {
+            // An opponent beyond MarkedPassRadiusM (3.0 m) contributes zero proximity.
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            TacticalContext tc = ctx.TacticalContext;
+            tc.DismarkIntensity = TacticalInstructions.DismarkIntensity.Aggressive;
+            ctx.TacticalContext = tc;
+
+            var target = new Vector2(60f, 34f);
+
+            Buffer[0] = MakePassTo(target);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float freeU = Buffer[0].BaseUtility;
+
+            ctx.Snapshot = ViewWithOpponentAt(new Vector2(60f, 34f + TacticalWeights.MarkedPassRadiusM + 1f));
+            Buffer[0] = MakePassTo(target);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float markedU = Buffer[0].BaseUtility;
+
+            Assert.AreEqual(freeU, markedU, 1e-6f,
+                "An opponent outside the marking radius must contribute no penalty");
+        }
+
+        private static ActionOption MakePassTo(Vector2 targetPosition) =>
+            new ActionOption
+            {
+                Type = ActionType.PASS, PassLaneScore = 0.5f,
+                AdjustedPassLaneScore = 0.5f, IntendedDistance = 10.0f,
+                TargetPosition = targetPosition
+            };
+
+        private static FilteredView ViewWithOpponentAt(Vector2 perceivedPosition)
+        {
+            return new FilteredView
+            {
+                ObserverId = 0, FrameNumber = 1,
+                VisibleTeammates = new PerceivedAgent[0],
+                VisibleOpponents = new[]
+                {
+                    new PerceivedAgent { AgentId = 15, PerceivedPosition = perceivedPosition }
+                },
+                VisibleOpponentsCount = 1,
+                BlindSidePerceivedAgents = new PerceivedAgent[0]
+            };
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────
 
         private static DecisionContext BuildContext(
@@ -502,4 +630,7 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        |   AndWide REMOVED (half-spaces need tactical/player instructions, not a flat  |
 // |         |            |        |   bonus). RestDefense test redesigned for the awareness gate: added new       |
 // |         |            |        |   RestDefenseInsufficient_ObliviousCarrier_TakesNoDampening.                  |
+// | 1.5     | 2026-07-11 | —      | Dismarking #23 §3.4 (FM-DM-03) locks: exact 0.832 worked-example ratio;       |
+// |         |            |        |   Off-dial bitwise identity (FR-DM-012); zero-awareness passer no-penalty     |
+// |         |            |        |   (FR-DM-010); out-of-radius opponent no-penalty.                             |
 #endregion

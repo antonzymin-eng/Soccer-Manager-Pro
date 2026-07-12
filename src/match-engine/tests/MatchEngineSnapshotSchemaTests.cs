@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
 // Modified: 2026-06-27 (Phase D D4 — schema pin 8 + DT + 4 mechanics-AI + perception probes)
+// Modified: 2026-07-11 (engine substrate — schema pin 13 → 14 + ScoreState probe)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
 // Purpose:  Phase B step B3 tests — proves the full §2.6 world-state field set (not just the B2
@@ -44,9 +45,114 @@ namespace TacticalDirector.MatchEngine
         {
             // The pin must change deliberately (with a field-set or ordering change), never by drift.
             // v6 Defensive, v7 Attacking, v8 Perception, v9 #21 per-team TeamTactic, v10 #21 per-agent
-            // PlayerTactic (active + pending), v11 #21 TeamTactic.MarkingOrientation appended.
-            Assert.AreEqual(11u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // PlayerTactic (active + pending), v11 #21 TeamTactic.MarkingOrientation appended,
+            // v12 #23/#24/#25 wiring (marking dwell + build-up zone/settled-team + rotation state +
+            // the three #21 back-prop dials in WriteTeamTactic), v13 #26 per-team ManagerState
+            // (Appendix C order, FR-TP-012), v14 engine score state (per-team goals + the
+            // last-holder tracker — the goal-detection substrate).
+            Assert.AreEqual(14u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void ScoreState_FeedsSnapshotDigest()
+        {
+            // v14: the per-team goal counts reach the digest preimage. The scripted score is the
+            // ONLY difference from the baseline run (no tactic, no manager, no ball change) — the
+            // digest must move, or a restored save could silently resume with the wrong score.
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_SetGoals(homeGoals: 1, awayGoals: 0);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A non-level score left the digest unchanged — the v14 score block must feed the preimage.");
+        }
+
+        [Test]
+        public void ManagerState_FeedsSnapshotDigest()
+        {
+            // #26 FR-TP-012 / T-TP-I-005: the per-team ManagerState reaches the digest preimage.
+            // A Pragmatic AI manager's kickoff selection is Balanced (Appendix B.1), so the APPLIED
+            // TACTIC is the identity — the only difference from the baseline run is the v13 manager
+            // block itself (Mode/ProfileOrdinal/preset seed/decision bookkeeping). The digest must move.
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.ConfigureManager(
+                0, ManagerMode.AI, TacticalDirector.TacticalInstructions.TacticalPresetsConstants.ARCHETYPE_PRAGMATIC);
+            ManagerAdaptation.ApplyKickoff(perturbed);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "An AI-managed team with the identity (Balanced) kickoff selection left the digest " +
+                "unchanged — the v13 ManagerState block (#26 Appendix C) must feed the preimage.");
+        }
+
+        [Test]
+        public void DismarkBuildUpRotationDials_FeedSnapshotDigest()
+        {
+            // Baseline: untouched kickoff state (both teams' tactic at the Balanced boot seed —
+            // Off / None / Off for the three #23/#24/#25 dials).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: ONLY the three back-prop dials differ from Balanced (named args over the
+            // Balanced identity positional prefix) — isolates the v12 WriteTeamTactic appends.
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.SetTeamTactic(0, new TacticalDirector.TacticalInstructions.TeamTactic(
+                TacticalDirector.TacticalInstructions.Mentality.Balanced,
+                TacticalDirector.TacticalInstructions.TacticFormation.F442,
+                TacticalDirector.TacticalInstructions.Tempo.Standard,
+                TacticalDirector.TacticalInstructions.TacticWidth.Standard,
+                TacticalDirector.TacticalInstructions.TacticPassing.Mixed,
+                TacticalDirector.TacticalInstructions.TacticPressing.Medium,
+                TacticalDirector.TacticalInstructions.LineOfEngagement.Standard,
+                0.5f,
+                TacticalDirector.TacticalInstructions.TacticDefWidth.Standard,
+                TacticalDirector.TacticalInstructions.TransitionPlan.HoldShape,
+                TacticalDirector.TacticalInstructions.TransitionPlan.Regroup,
+                false,
+                TacticalDirector.TacticalInstructions.TacticTriggerMask.None,
+                TacticalDirector.TacticalInstructions.FocusPlay.Mixed,
+                TacticalDirector.TacticalInstructions.GkDistributionPolicy.SlowDown,
+                0,
+                TacticalDirector.TacticalInstructions.MarkingOrientation.Balanced,
+                dismarkIntensity: TacticalDirector.TacticalInstructions.DismarkIntensity.Aggressive,
+                buildUpStructure: TacticalDirector.TacticalInstructions.BuildUpStructure.BackThree,
+                rotationFreedom:  TacticalDirector.TacticalInstructions.RotationFreedom.Free));
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Staging non-identity #23/#24/#25 dials left the digest unchanged — the v12 WriteTeamTactic " +
+                "appends are not in the digest preimage.");
+        }
+
+        [Test]
+        public void BuildUpSettledTeamAndSuppression_FeedSnapshotDigest()
+        {
+            // Baseline: kickoff, ball loose the whole tick (settledTeam stays −1).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            // Perturbed: an away agent takes possession before the tick — the possession-changed
+            // consumer records settledTeam = 1 (serialized at v12), and MatchContext.PossessingAgentId
+            // differs too. The digest must move (locks the settled-team tracker into the preimage
+            // alongside the possession fields).
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_SetPossession(MatchEngineConstants.PLAYERS_PER_TEAM);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A settled possession change left the digest unchanged — the v12 build-up settled-team " +
+                "tracker (and MatchContext possession) must feed the preimage.");
         }
 
         [Test]
@@ -380,4 +486,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | probe (per-agent active/pending tactic in the preimage).            |
 // | 1.8     | 2026-07-07 | —      | Cheap-item addition: schema pin 10 → 11; new MarkingOrientation_    |
 // |         |            |        | FeedsSnapshotDigest probe (appended TeamTactic field in preimage).  |
+// | 1.9     | 2026-07-11 | —      | #23/#24/#25 wiring: schema pin 11 → 12; new DismarkBuildUpRotation- |
+// |         |            |        | Dials_FeedSnapshotDigest (the three WriteTeamTactic appends) +      |
+// |         |            |        | BuildUpSettledTeamAndSuppression_FeedSnapshotDigest (settled-team   |
+// |         |            |        | tracker) probes.                                                    |
+// | 1.10    | 2026-07-11 | —      | #26 manager-AI wiring: schema pin 12 → 13; new ManagerState_        |
+// |         |            |        | FeedsSnapshotDigest probe (v13 Appendix C block in the preimage,    |
+// |         |            |        | isolated via the Pragmatic → Balanced identity kickoff selection).  |
+// | 1.11    | 2026-07-11 | —      | Engine substrate: schema pin 13 → 14; new ScoreState_FeedsSnapshot- |
+// |         |            |        | Digest probe (per-team goals + last-holder tracker in the preimage).|
 #endregion
