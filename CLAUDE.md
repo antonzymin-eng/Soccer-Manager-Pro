@@ -54,8 +54,8 @@
 > identities, byte-identical default match). **(a)** `SlotComposer` v1.2 gains the #24 build-up
 > overlay stage (Step 3b, FM-BU-02 — after ContextModifier, before spacing) and the #23 dismark
 > offset stage (Step 4b, FM-DM-02 — after spacing, before the pitch clamp), per ERR-012-007/008
-> and the #24 §4.2 combined order; `PositioningPerceptionSnapshot` v1.1 carries the routing dials
-> + per-agent pressure/marker carriers (zero defaults = identities). **(b)** New
+> and the #24 §4.2 combined order; `PositioningPerceptionSnapshot` v1.1 carries the routing dials +
+> per-agent pressure/marker carriers (zero defaults = identities). **(b)** New
 > `positioning-ai/RotationController.cs` (#25 §3.1–§3.4: FM-RO-01 predicate on the
 > controller-owned SERIALIZED `LastComposedTarget` cache per PASS-1 H-1, FM-RO-02 dwell/commit +
 > hold/revert, atomic pairwise `SlotIndex` swap + partner lock, phase-exit freeze, FR-RO-009
