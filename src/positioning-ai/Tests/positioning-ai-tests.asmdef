@@ -3,13 +3,19 @@
     "rootNamespace": "TacticalDirector.PositioningAI.Tests",
     "references": [
         "TacticalDirector.PositioningAI",
-        "TacticalDirector.TacticalInstructions"
+        "TacticalDirector.TacticalInstructions",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
     "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [],
