@@ -1,7 +1,29 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 11, 2026, later same day (**#26 T1–T4 manager-AI wiring LANDED** — the last
+> **Last Updated:** July 11, 2026, latest same day (**Engine substrate LANDED — goal detection + score
+> state + match-length/halves model (the #26 §9.3 upstream deliverables) — and the #26 half-time
+> trigger + live ladder inputs ACTIVATED** (the §3.4/§1.6 PASS-1 M-1 gates CLOSED). **(a)
+> Match-length model:** `MatchEngineConstants` v1.20 — `[FIXED] MATCH_LENGTH_MINUTES` (90) +
+> `[DERIVED] MATCH_TICKS_TOTAL` (= 324 000; the #26 §3.5 `[CROSS-PENDING]` row promoted `[CROSS]`,
+> §3.5 v0.3) + `[DERIVED] HALF_TIME_BOUNDARY_TICK` (162 000 — the FR-TP-019 Stage-0 halves model:
+> boundary only, no break/end-swap/match-end). **(b) Goal detection:** `MatchEngine.cs` v1.30 —
+> Resolve-phase `CheckGoalAndRestart` (executor advance → goal check → first touch):
+> `BallCollision.CheckBoundaries` ⇒ KickOff = goal; scoring TEAM by exit half-space geometry (own
+> goals credit the right side); per-team score + the FIRST-EVER Tier A `GoalAwardedEvent` (0x07;
+> Scorer = the new last-holder tracker) + centre-spot restart (agents keep positions; possession
+> cleared); non-goal exits untouched (no throw-in/corner model). **`SNAPSHOT_SCHEMA_VERSION` 13 →
+> 14** (goals + last-holder serialized). **(c) #26 activation:** `RunManagerDecisionPoints` passes
+> LIVE goalDiff + `ticksRemaining`/`MATCH_TICKS_TOTAL`; `ManagerDecisionGate` v1.1 fires the
+> half-time decision (once, first stride at/after the boundary, regardless of interval position —
+> the §3.2 worked example). Tests: new `MatchEngineGoalTests` (6) + `ManagerAITests` v1.1 (+4) +
+> schema pin 14 + ScoreState probe. Spec docs: #26 section-1 v0.3 / section-2 v0.4 / section-3
+> v0.3 / section-9 v0.5 (§9.1 engine-substrate gates CLOSED); `match-engine-design.md` v1.4.
+> **Full dotnet gate: PASSED, 0 failures.** See src/CLAUDE.md v2.15. Remaining #26 follow-up:
+> only the §9.2 own-`[GT]` balance review — the KD-6 on-disk preset format stays deferred BY SPEC
+> (FR-TP-002/017: no disk format at Stage 0+1). Not built (Stage-1+ restart model): throw-ins /
+> corners / goal kicks, the half-time break / end swap, match-end.)
+> **Last Updated (prior):** July 11, 2026, later same day (**#26 T1–T4 manager-AI wiring LANDED** — the last
 > item on the July-10 T-phase plans; default-behaviour-neutral (`ManagerMode.Human = 0` zero-init =
 > the inert identity per KD-4 — no gate fire, no adaptation, no engine calls; a default match is
 > byte-identical to pre-#26). **T1:** `tactical-instructions/TacticalPresetsConstants.cs` (§3.5
@@ -503,6 +525,14 @@ land (the §1.6/§3.4 PASS-1 M-1 gates, honoured with one code path). `SNAPSHOT_
 **With this, every §6 T-phase plan from the July-7 supplements (#23/#24/#25/#26) is implemented**;
 what remains on #26 is upstream-owned (goal detection, halves/match-length model) plus the KD-6
 on-disk preset format parser swap and the post-APPROVED `[GT]` balance passes.
+**ENGINE SUBSTRATE LANDED July 11, 2026 (latest same day)** — see the latest Last-Updated header
+entry: the match engine gained goal detection (v14 score state + `GoalAwardedEvent` + centre-spot
+restart) and the match-length/halves model (`MATCH_TICKS_TOTAL` promoted `[CROSS]`); the #26
+half-time trigger and live goalDiff/clock ladder inputs are ACTIVE (#26 §9.1 engine-substrate
+gates CLOSED, checklist v0.5). Remaining #26 follow-up: only the §9.2 own-`[GT]` balance review.
+The KD-6 on-disk preset format is NOT a doable follow-up at this stage — FR-TP-002/FR-TP-017 pin
+"no disk format / no disk-loader interface at Stage 0+1" as MUSTs, so it waits for Stage 1 (unlike
+the #21 tactic-file loaders, whose spec carried no such prohibition).
 - **Tactical-theory research cross-reference — four cheap-item additions LANDED** — *opened and closed July 7, 2026.* A conversation cross-referencing published soccer tactical theory (rest defence, marking orientation, half-spaces, cover-shadow/blind-side pressing, etc.) against the game plan identified several gaps whose extendibility cost was assessed as cheap-to-medium given the existing `TacticTranslation`/routing-field seam pattern (#21 Tactical Instructions T2). All four landed the same day, each defaulting to today's exact pre-addition behaviour (byte-identical) until a manager sets a non-default tactic: **(1) `MarkingOrientation` dial** (new `src/tactical-instructions/MarkingOrientation.cs`; `TeamTactic` gains the field, appended after `TimeWasting`; `SNAPSHOT_SCHEMA_VERSION` 10 → 11) — BallOriented/Balanced/ManOriented scales the #14 MAN_MARK candidate radius via new `defensive-ai/TacticTranslation.MarkRadiusScalar` + `DefensiveSnapshot.MarkingOrientation` (ctor-seeded Balanced, since the enum's zero-value is BallOriented) + `MarkAssigner` consumption (FR-TI-033). **(2) Positioning AI #12 rest-defense coverage check** (new `src/positioning-ai/RestDefenseEvaluator.cs` + `Tests/RestDefenseEvaluatorTests.cs`, new §3.5/§7.13; `PositioningAITick.GetRestDefenseSufficient()`) — counts active outfield agents (GK excluded) behind `REST_DEFENSE_DEPTH_M` while `IN_POSSESSION`; insufficient coverage dampens PASS/SHOOT/DRIBBLE via new `TacticalContext.RestDefenseSufficient` (Stage0Default seeds `true`, since the zero-value `bool` default is `false`) + `TacticalWeights.RestDefenseRiskMult` in `UtilityScorer` (new #8 §3.2/§7.7). **(3) Half-spaces PASS bonus** (new #8 §3.2/§7.8) — `TacticalContext.AgentLane` routes each agent's EXISTING Positioning AI `LaneId` (already team-relative — no new axis-mirroring risk, unlike the historical `BallZone` home/away bugs) into the Decision Tree; `decision-tree.asmdef` gains the `TacticalDirector.PositioningAI` reference (first AI→Mechanics reference beyond `TacticalInstructions`); `TacticalWeights.LaneMult[5]` gives half-space lanes (LH/RH) a PASS bonus, central/wide stay ×1.0. **(4) Curving-press blind-side bias** (new `src/pressing-ai/BlindSideApproach.cs` + `Tests/BlindSideApproachTests.cs`, new #13 §7.12) — nudges the primary presser's approach target (post-selection only; who presses is unaffected) toward the ball carrier's blind side (opposite `PressingAgentSnapshot.Facing`, already carried for both teams) by `PressingAIConstants.BlindSideApproachBiasM`; wired into `PressingAITick` Step 3.
 
   **CORRECTED/REVERTED after user review, same day** — the user identified items (2)/(3)/(4) as architecturally wrong designs, not bugs. **(2) redesigned**: the dampener must not be an omniscient flat team-wide penalty; it now scales by the ball carrier's own tactical awareness (mean of `A_Decisions`/`A_Anticipation`) via `Mathf.Lerp(1.0f, RestDefenseRiskMult, awareness)` in `UtilityScorer` — an unaware carrier takes the risky action anyway (a genuine tactical/setup flaw for the manager to fix, not the AI to silently correct). **(3) REVERTED entirely**: half-spaces are an exploitable spatial gap requiring tactical/player instructions to exploit, not a flat passing bonus; `TacticalContext.AgentLane`, `TacticalWeights.LaneMult`, and the `decision-tree.asmdef` to `PositioningAI` reference are all removed (decision-tree/section-7.md §7.8 marked REVERTED, not deleted). **(4) redesigned**: curving press runs are for bending the pursuit path to adjust COVER SHADOW (deny a nearby passing option while closing down), not for approaching the carrier's blind side; `BlindSideApproach.cs` DELETED, replaced by `src/pressing-ai/CoverShadowCurve.cs` (`PressingAIConstants.CoverCurveBlendWeightMax`) whose effectiveness is gated by the presser's own attributes (new `PressingAgentSnapshot.DefensivePositioningAttribute`/`PhysicalEffortAttribute`/`MentalSharpnessAttribute`, sourced by `MatchEngine` from the same `_dtAttrs` the Decision Tree reads) — a poor, low-effort defender barely curves at all.

@@ -9,6 +9,7 @@
 // Modified: 2026-07-07 (Cheap-item additions: #14 MarkingOrientation routing (SNAPSHOT_SCHEMA_VERSION 10 → 11) + #12 rest-defense coverage routed into TacticalContext)
 // Modified: 2026-07-11 (#23/#24/#25 wiring: Phase-D writers + dismark per-agent pass + build-up regain consumer + rotation serialization; SNAPSHOT_SCHEMA_VERSION 11 → 12)
 // Modified: 2026-07-11 (#26 manager-AI wiring: ConfigureManager + stride decision gate + ManagerState serialization; SNAPSHOT_SCHEMA_VERSION 12 → 13)
+// Modified: 2026-07-11 (engine substrate: Resolve-phase goal detection + score state + GoalAwardedEvent + centre-spot restart; #26 live goalDiff/clock inputs + half-time trigger; SNAPSHOT_SCHEMA_VERSION 13 → 14)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -180,6 +181,24 @@ namespace TacticalDirector.MatchEngine
         // Serialized at v13 in Appendix C order, so mid-match manager state (hold countdown,
         // last-decision tick, current preset) is restore-deterministic.
         private readonly ManagerState[] _managerStates;  // [TEAM_COUNT]
+
+        // ── Score state (engine substrate — the #26 §9.3 upstream deliverable) ────────
+        // Per-team goal counts, incremented by the Resolve-phase goal check (CheckGoalAndRestart)
+        // when the ball fully crosses a goal line between the posts under the crossbar
+        // (BallCollision.CheckBoundaries ⇒ RestartType.KickOff; the Stage-0 z < Diameter gate is
+        // that predicate's own documented simplification). Read by the #26 manager-AI decision
+        // point as goalDiff (own − opponent). Serialized at v14 (cross-tick, digest-load-bearing).
+        private readonly int[] _goals;  // [TEAM_COUNT]
+
+        // The last agent roster index that HELD settled possession (never reset to NO_POSSESSION
+        // once an agent has held the ball). At goal time the ball is loose (the scoring kick
+        // released possession at CONTACT), so _possessingAgentId is −1 — this tracker supplies the
+        // GoalAwardedEvent Scorer credit and CheckBoundaries' lastTouchTeamID. Stage-0 credit
+        // approximation: the last HOLDER, not the last TOUCH (a deflection en route is not
+        // tracked); an own-goal deflection therefore credits the deflecting holder if they ever
+        // held the ball — the scoring TEAM is classified by geometry (which goal), never by this
+        // field. Serialized at v14. −1 until any agent first holds possession.
+        private int _lastHolderAgentId;
 
         // ── Dismarking #23 per-agent state (FR-DM-014) ────────────────────────────────
         // Persistent per-agent marking dwell, updated in the per-agent perception pass each AI
@@ -398,6 +417,10 @@ namespace TacticalDirector.MatchEngine
             // the inert identity (no gate fire, no adaptation), so a default match is byte-identical
             // to pre-#26. ConfigureManager opts a team into AI mode.
             _managerStates = new ManagerState[MatchEngineConstants.TEAM_COUNT];
+
+            // Engine score state (v14): 0–0 at kickoff; no agent has held possession yet.
+            _goals             = new int[MatchEngineConstants.TEAM_COUNT];
+            _lastHolderAgentId = MatchEngineConstants.NO_POSSESSION;
 
             InitializeAiSnapshots();
 
@@ -701,6 +724,30 @@ namespace TacticalDirector.MatchEngine
         internal ManagerState TestOnly_ManagerState(int teamId)
         {
             return _managerStates[teamId];
+        }
+
+        /// <summary>Test-only: a team's goal count (the v14 engine score state).</summary>
+        internal int TestOnly_Goals(int teamId) => _goals[teamId];
+
+        /// <summary>Test-only seam: scripts the score directly (the production writer is the
+        /// Resolve-phase goal check). Lets the manager-AI live-input tests exercise a non-level
+        /// score without simulating the ~minutes of play a real goal needs.</summary>
+        internal void TestOnly_SetGoals(int homeGoals, int awayGoals)
+        {
+            _goals[0] = homeGoals;
+            _goals[1] = awayGoals;
+        }
+
+        /// <summary>Test-only: the last settled possession holder (v14; −1 = no agent has held yet).</summary>
+        internal int TestOnly_LastHolderAgentId => _lastHolderAgentId;
+
+        /// <summary>Test-only seam: runs the manager decision points exactly as RunAiPhase does —
+        /// same gate, same live goalDiff/clock inputs — at an arbitrary <paramref name="decisionTick"/>,
+        /// so late-match ladder behaviour is testable without running ~270 000 real ticks. A staged
+        /// tactic still commits only at the next real stride boundary (FR-TI-027).</summary>
+        internal void TestOnly_RunManagerDecisionPoints(int decisionTick)
+        {
+            RunManagerDecisionPoints(decisionTick);
         }
 
         /// <summary>Current 60 Hz physics tick (0 before the first <see cref="RunTick"/>).</summary>
@@ -1031,6 +1078,37 @@ namespace TacticalDirector.MatchEngine
         /// dispatches a MovementCommand into _commands (via the host movement controller, consumed by the
         /// Physics phase that runs next this tick) or a PASS/SHOOT into this agent's executor (advanced in
         /// Resolve). Reads C4's _matchContext. DecisionMadeEvent (Tier C) publishes here in the AI phase.</summary>
+        /// <summary>
+        /// Evaluates the #26 manager decision gate for both teams and runs any due decision point
+        /// with the LIVE engine inputs (§3.4 FM-TP-04): <c>goalDiff</c> = own goals − opponent goals
+        /// from the v14 score state, <c>ticksRemaining</c> = <c>MATCH_TICKS_TOTAL − decisionTick</c>
+        /// clamped at 0 (the clock does not stop at full time at Stage 0 — a decision point past the
+        /// notional final whistle sees t01 = 0, maximum urgency/protect weight), and the engine
+        /// match-length constant. Production caller: RunAiPhase's stride branch (F5 — plus the
+        /// signature-preserving TestOnly wrapper, which exists so late-match ladder arithmetic is
+        /// testable without ~270 000 real ticks).
+        /// </summary>
+        private void RunManagerDecisionPoints(int decisionTick)
+        {
+            long ticksRemaining = MatchEngineConstants.MATCH_TICKS_TOTAL - decisionTick;
+            if (ticksRemaining < 0)
+            {
+                ticksRemaining = 0;
+            }
+
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                if (ManagerDecisionGate.DecisionDue(decisionTick, in _managerStates[t]))
+                {
+                    // TEAM_COUNT == 2, so the opponent index is 1 − t.
+                    int goalDiff = _goals[t] - _goals[1 - t];
+                    ManagerAdaptation.RunDecisionPoint(
+                        this, t, ref _managerStates[t], decisionTick,
+                        goalDiff, ticksRemaining, MatchEngineConstants.MATCH_TICKS_TOTAL);
+                }
+            }
+        }
+
         private void RunAiPhase()
         {
             _aiPhaseRanThisTick = true;
@@ -1040,24 +1118,11 @@ namespace TacticalDirector.MatchEngine
             // branch (off-stride firing impossible by construction, F5) and BEFORE the FR-TI-027
             // pending→active commit below, so a decision fired at tick N stages via SetTeamTactic
             // and commits at this same stride boundary. Human mode (the default) never fires (KD-4).
-            // The goalDiff/clock arguments: goalDiff = 0 is engine-TRUE at Stage 0 (no goal producer
-            // exists, so the score is level by construction) and makes both §3.4 ladder terms
-            // identically zero for ANY clock inputs — the placeholder ticksRemaining/matchTicksTotal
-            // pair cannot influence behaviour. They become live with goal detection + the engine
-            // match-length model (MATCH_TICKS_TOTAL, [CROSS-PENDING] — #26 §3.4 PASS-1 M-1); until
-            // then the ladder body is exercised by the unit suite through the explicit parameters.
-            {
-                int decisionTick = (int)_clock.CurrentTick;
-                for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
-                {
-                    if (ManagerDecisionGate.DecisionDue(decisionTick, in _managerStates[t]))
-                    {
-                        ManagerAdaptation.RunDecisionPoint(
-                            this, t, ref _managerStates[t], decisionTick,
-                            goalDiff: 0, ticksRemaining: 0L, matchTicksTotal: 1L);
-                    }
-                }
-            }
+            // LIVE INPUTS (the §3.4 PASS-1 M-1 gates, closed 2026-07-11 by the engine substrate):
+            // goalDiff reads the Resolve-phase goal producer's score state (v14), and the clock pair
+            // is MATCH_TICKS_TOTAL / ticksRemaining from the engine match-length model — the ladder
+            // and the half-time trigger are fully live.
+            RunManagerDecisionPoints((int)_clock.CurrentTick);
 
             // #21 FR-TI-027: commit any pending tactic change at this tactical-stride boundary.
             // RunAiPhase runs only on stride ticks, so copying pending → active here is exactly the
@@ -1742,6 +1807,14 @@ namespace TacticalDirector.MatchEngine
                 _shotExecutors[i].Update(matchTime, frameNumber, ref _ball);
             }
 
+            // Engine substrate — goal check. Runs AFTER the executors (the ball's crossing position came
+            // from this tick's Physics phase, possibly adjusted by collision) and BEFORE first touch, so a
+            // ball that has fully crossed the goal line cannot be "received" by an agent standing in the
+            // out-of-bounds buffer. On a goal the ball is restarted at the centre spot, so D3/C4 below see
+            // the restarted state. Non-goal exits (throw-in/corner/goal-kick classifications) are ignored —
+            // Stage 0 has no restart model for them, preserving pre-substrate behaviour exactly.
+            CheckGoalAndRestart();
+
             // D3 — first touch. A loose, approaching, ground-level ball arriving within reach of an agent
             // is received here (a CONTROLLED touch gains possession; an INTERCEPTION flips it to the
             // opponent; a LOOSE_BALL / DEFLECTION redirects the ball but leaves it loose). Runs AFTER the
@@ -1754,12 +1827,73 @@ namespace TacticalDirector.MatchEngine
             // AI tick (Phase D).
             UpdateMatchContext();
 
+            // Engine substrate — record the last settled HOLDER (v14). Updated after C4 so it tracks the
+            // same settled value MatchContext folds in; only ever overwritten by a real holder, so at goal
+            // time (ball loose) it still names the agent whose kick scored (the GoalAwardedEvent credit).
+            if (_possessingAgentId >= 0)
+            {
+                _lastHolderAgentId = _possessingAgentId;
+            }
+
             // Phase E — possession now SETTLED for this tick; publish a Tier A PossessionChangedEvent if
             // the holder changed since the previous tick. Diffing the settled value once here (not at each
             // mutation site) collapses an intra-tick kick-release-then-first-touch-regain to its NET change
             // — a transient mid-Resolve flicker that ends on the same holder emits nothing. Publishing in
             // Resolve (phase 4) enqueues the event before the Events phase (5) drains it the same tick.
             PublishPossessionChangeIfChanged();
+        }
+
+        /// <summary>
+        /// Engine-substrate goal check (Resolve phase; the #26 §9.3 upstream goal-detection
+        /// deliverable, first named by #26 §7.2). Classifies the ball's settled position through
+        /// <see cref="BallCollision.CheckBoundaries"/> — a <see cref="RestartType.KickOff"/> return
+        /// means the ball fully crossed a goal line between the posts under the crossbar (the z-gate
+        /// and corner-precedence simplifications are that predicate's own documented Stage-0 scope).
+        /// The scoring TEAM is classified by geometry alone (which half-space the ball exited —
+        /// home attacks +X toward the away goal at x = PITCH_LENGTH_M, so an exit there scores for
+        /// team 0; an exit at x &lt; 0 scores for team 1): an own goal therefore credits the correct
+        /// team regardless of who touched last. On a goal: the scoring team's count increments, a
+        /// Tier A <see cref="GoalAwardedEvent"/> (ordinal 0x07, registry producer phase = Resolve)
+        /// is published into the digest-load-bearing ledger (Scorer = the last settled holder, −1 if
+        /// none yet; Assister = −1 — no assist tracking at Stage 0), and the ball restarts at the
+        /// centre spot, stationary at rest height — the minimal Stage-0 restart (agents keep their
+        /// positions; no kickoff re-setup, no half-end swap; an executor mid-windup elsewhere
+        /// proceeds against the restarted ball and self-cancels via its own possession recheck if it
+        /// lost the ball). Non-goal exits return without touching any state — Stage 0 has no
+        /// throw-in/corner/goal-kick restart model and the ball remains out of play exactly as
+        /// before this check existed. Deterministic and allocation-free.
+        /// </summary>
+        private void CheckGoalAndRestart()
+        {
+            int lastTouchTeam = _lastHolderAgentId >= 0 ? _teamIds[_lastHolderAgentId] : 0;
+            (bool isOut, RestartType restart) = BallCollision.CheckBoundaries(_ball, lastTouchTeam);
+            if (!isOut || restart != RestartType.KickOff)
+            {
+                return;
+            }
+
+            // Which goal: the exit half-space. CheckBoundaries only returns KickOff for x < −r or
+            // x > LENGTH + r, so a mid-pitch compare cleanly separates the two.
+            int scoringTeam = _ball.Position.x > MatchEngineConstants.PITCH_LENGTH_M * 0.5f ? 0 : 1;
+            _goals[scoringTeam]++;
+
+            var evt = new GoalAwardedEvent(
+                scorer:       _lastHolderAgentId,
+                assister:     -1,
+                scoringTeam:  (byte)scoringTeam,
+                ballPosition: _ball.Position);
+            EventBus.Publish(in evt);
+
+            // Centre-spot restart: same construction as the kickoff boot state. The restarted ball
+            // is definitionally loose — in the (kick-scored) common case possession was already
+            // released at CONTACT and this is a no-op; in the degenerate possessed-into-the-goal
+            // case it prevents a stale holder claiming a ball now 50 m away (the Phase E publisher
+            // below emits the holder → loose transition).
+            _ball = BallState.CreateAtPosition(new Vector3(
+                MatchEngineConstants.KickoffBallXM,
+                MatchEngineConstants.KickoffBallYM,
+                MatchEngineConstants.BALL_REST_HEIGHT_M));
+            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
         }
 
         /// <summary>
@@ -2274,6 +2408,15 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteI32(buf, ref o, _managerStates[t].HoldIntervalsRemaining);
                 CanonicalSerializer.WriteI32(buf, ref o, _managerStates[t].LastDecisionTick);
             }
+
+            // v14 — engine score state (goal detection substrate). Cross-tick and digest-load-
+            // bearing: the score drives the #26 manager-AI goalDiff input and the goal-side
+            // classification, and the last-holder tracker feeds the GoalAwardedEvent scorer credit.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                CanonicalSerializer.WriteI32(buf, ref o, _goals[t]);
+            }
+            CanonicalSerializer.WriteI32(buf, ref o, _lastHolderAgentId);
 
             payload.BytesWritten = o;
         }
@@ -3355,4 +3498,22 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | behaviour until goal detection + MATCH_TICKS_TOTAL land, §3.4   |
 // |         |            |        | PASS-1 M-1). v13 serializes ManagerState per team in Appendix C |
 // |         |            |        | order. Default Human/Human is byte-identical to pre-#26.        |
+// | 1.30    | 2026-07-11 | —      | Engine substrate (the #26 §9.3 upstream deliverables): NEW      |
+// |         |            |        | Resolve-phase CheckGoalAndRestart between the executor advance   |
+// |         |            |        | and first touch — BallCollision.CheckBoundaries ⇒ KickOff means |
+// |         |            |        | a goal (side classified by exit half-space geometry, so own      |
+// |         |            |        | goals credit the right TEAM); increments _goals[scoringTeam],   |
+// |         |            |        | publishes the first-ever Tier A GoalAwardedEvent (0x07, scorer = |
+// |         |            |        | last settled holder, assister −1), restarts the ball at the      |
+// |         |            |        | centre spot (minimal Stage-0 restart — agents keep positions, no |
+// |         |            |        | end-swap; non-goal exits untouched, no throw-in/corner model).   |
+// |         |            |        | NEW _lastHolderAgentId tracker (updated post-C4). v14 serializes |
+// |         |            |        | _goals ×TEAM_COUNT + the tracker. #26 activation: the manager    |
+// |         |            |        | block extracted to RunManagerDecisionPoints, now passing LIVE    |
+// |         |            |        | goalDiff (v14 score) + ticksRemaining/MATCH_TICKS_TOTAL (the     |
+// |         |            |        | match-length model) — closes the §3.4 PASS-1 M-1 gates; the      |
+// |         |            |        | half-time trigger activates in ManagerDecisionGate v1.1. New     |
+// |         |            |        | seams: TestOnly_Goals/SetGoals/LastHolderAgentId +               |
+// |         |            |        | TestOnly_RunManagerDecisionPoints (late-match ladder testable    |
+// |         |            |        | without ~270k ticks).                                            |
 #endregion

@@ -2,6 +2,7 @@
 // Created:  2026-06-16
 // Modified: 2026-06-27 (Phase E — POSSESSION_CHANGE_REASON_UNSPECIFIED for the possession-changed event)
 // Modified: 2026-07-11 (#26 manager-AI wiring — SNAPSHOT_SCHEMA_VERSION 12 → 13, v13 ManagerState doc)
+// Modified: 2026-07-11 (engine substrate — match-length/halves model + SNAPSHOT_SCHEMA_VERSION 13 → 14)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -159,8 +160,22 @@ namespace TacticalDirector.MatchEngine
         /// CurrentPresetOrdinal u8, HoldIntervalsRemaining i32, LastDecisionTick i32, ×TEAM_COUNT).
         /// The hold countdown and last-decision tick drive future decision points, so a save between
         /// two decision points resumes byte-identically (T-TP-DET-003). The default Human zero-init
-        /// block is byte-stable across same-seed runs.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 13;
+        /// block is byte-stable across same-seed runs.
+        ///
+        /// v14 (2026-07-11, engine substrate — goal detection + score state) appends the per-team
+        /// goal count (i32 ×TEAM_COUNT) and the last-holder tracker (i32 — the last agent roster
+        /// index that HELD settled possession; the GoalAwardedEvent scorer credit and the
+        /// CheckBoundaries lastTouchTeamID source). Cross-tick state: the score drives the #26
+        /// manager-AI goalDiff input and the restart-side classification, so a save mid-match
+        /// resumes with the correct score.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 14;
+
+        /// <summary>[FIXED] Regulation match length, minutes (Laws of the Game — two 45-minute
+        /// halves). Stage 0 models no stoppage time and no extra time; the engine's match-length
+        /// model is exactly this many minutes of 60 Hz ticks (see <see cref="MATCH_TICKS_TOTAL"/>).
+        /// Mirrors <c>TestingStrategyConstants.MATCH_LENGTH_MINUTES</c> (an infrastructure assembly
+        /// game code cannot reference — both derive independently from the Laws of the Game).</summary>
+        public const int MATCH_LENGTH_MINUTES = 90;
 
         #endregion
 
@@ -198,6 +213,32 @@ namespace TacticalDirector.MatchEngine
         /// per-team EntityId→slot lookups (Phase D D2). Source constants: MatchEngineConstants.SQUAD_SIZE.
         /// </summary>
         public static readonly int MaxEntityId = SQUAD_SIZE - 1;
+
+        /// <summary>
+        /// [DERIVED] Total 60 Hz ticks in a regulation match = MATCH_LENGTH_MINUTES × 60 s ×
+        /// PHYSICS_TICK_HZ = 90 × 60 × 60 = 324 000. This is the engine match-length model the #26
+        /// adaptation ladder's <c>t01 = clamp01(ticksRemaining / MATCH_TICKS_TOTAL)</c> divides by
+        /// (#26 §3.4 FM-TP-04 — the constant #26 §3.5 carried as <c>[CROSS-PENDING]</c>, engine-owned
+        /// and now allocated here; the consuming ladder takes it as an explicit parameter because
+        /// the tactical-instructions assembly sits below this one in the reference graph).
+        /// Stage 0 scope: the clock does not STOP at this tick — no end-of-match model exists yet;
+        /// <c>ticksRemaining</c> clamps at 0 for ticks beyond it.
+        /// Source constants: MatchEngineConstants.MATCH_LENGTH_MINUTES,
+        /// DeterministicSimConstants.PHYSICS_TICK_HZ (Deterministic Simulation #16 §3.1.2).
+        /// </summary>
+        public const long MATCH_TICKS_TOTAL =
+            MATCH_LENGTH_MINUTES * 60L * TacticalDirector.DeterministicSim.DeterministicSimConstants.PHYSICS_TICK_HZ;
+
+        /// <summary>
+        /// [DERIVED] The half-time boundary tick = MATCH_TICKS_TOTAL / 2 = 162 000 (the first tick
+        /// of the second half). This is the Stage-0 halves model FR-TP-019 gates on: half boundaries
+        /// derive from the engine-owned match-length constants — the engine does NOT yet stop play,
+        /// swap ends, or model a half-time break (those are a Stage-1+ restart-model deliverable).
+        /// The #26 decision gate fires its half-time decision at the first stride evaluation at or
+        /// after this tick (see <see cref="ManagerDecisionGate"/>).
+        /// Source constants: MatchEngineConstants.MATCH_TICKS_TOTAL.
+        /// </summary>
+        public const long HALF_TIME_BOUNDARY_TICK = MATCH_TICKS_TOTAL / 2;
 
         #endregion
 
@@ -370,4 +411,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | per-team ManagerState (Appendix C order) is now serialized, so   |
 // |         |            |        | mid-match manager decisions are restore-deterministic (FR-TP-012).|
 // |         |            |        | v13 doc paragraph added.                                        |
+// | 1.20    | 2026-07-11 | —      | Engine substrate (match-length/halves model + score state, the   |
+// |         |            |        | #26 §9.3 upstream deliverables): [FIXED] MATCH_LENGTH_MINUTES +  |
+// |         |            |        | [DERIVED] MATCH_TICKS_TOTAL (= 324 000; the #26 §3.5             |
+// |         |            |        | [CROSS-PENDING] allocation — ALL_CAPS kept per the spec's own    |
+// |         |            |        | token, the AI_PHASE_STRIDE precedent) + [DERIVED]                |
+// |         |            |        | HALF_TIME_BOUNDARY_TICK (= 162 000; the FR-TP-019 Stage-0 halves |
+// |         |            |        | model — boundary only, no break/end-swap/match-end).             |
+// |         |            |        | SNAPSHOT_SCHEMA_VERSION 13 → 14 — per-team goal counts + the     |
+// |         |            |        | last-holder tracker serialized (v14 doc paragraph).              |
 #endregion

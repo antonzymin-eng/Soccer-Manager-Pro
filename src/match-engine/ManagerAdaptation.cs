@@ -107,11 +107,11 @@ namespace TacticalDirector.MatchEngine
         /// Pragmatic same state → 0.233 → hold.
         /// </para>
         /// <para>
-        /// PREREQUISITE (PASS-1 M-1): <paramref name="matchTicksTotal"/> is the engine-owned
-        /// <c>MATCH_TICKS_TOTAL</c>, still <c>[CROSS-PENDING]</c>, and <paramref name="goalDiff"/>
-        /// requires engine score state that has no producer yet — both are explicit parameters so
-        /// the reviewed contract is test-exercisable today (#26 §3.4) and the live inputs arrive
-        /// with goal detection (§7.2).
+        /// LIVE INPUTS (the §3.4 PASS-1 M-1 prerequisite, closed 2026-07-11): the engine substrate
+        /// landed <c>MatchEngineConstants.MATCH_TICKS_TOTAL</c> (the #26 §3.5 allocation) and the
+        /// Resolve-phase goal producer (v14 score state); <c>MatchEngine.RunManagerDecisionPoints</c>
+        /// now passes both live. They stay explicit parameters — this bottom-of-the-call-graph
+        /// ladder body remains a pure, unit-exercisable function.
         /// </para>
         /// </summary>
         /// <param name="profile">The manager's own profile.</param>
@@ -160,7 +160,7 @@ namespace TacticalDirector.MatchEngine
         /// <param name="teamId">The AI-managed team.</param>
         /// <param name="state">The team's manager state (mutated: tick stamp, hold, preset).</param>
         /// <param name="tick">The fired decision tick.</param>
-        /// <param name="goalDiff">Own score differential (see <see cref="EvaluateLadder"/>'s prerequisite note).</param>
+        /// <param name="goalDiff">Own score differential (live from the v14 engine score state).</param>
         /// <param name="ticksRemaining">60 Hz ticks left in the match.</param>
         /// <param name="matchTicksTotal">Total 60 Hz ticks in the match.</param>
         internal static void RunDecisionPoint(

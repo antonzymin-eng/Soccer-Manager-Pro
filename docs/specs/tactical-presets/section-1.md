@@ -1,8 +1,8 @@
 # Tactical Presets & AI-Manager Selection Specification #26 — Section 1: Introduction, Scope, Dependencies
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 11, 2026 (v0.3 — §1.6 T2/T4 engine-substrate gates closed)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/game-model-ai-manager-design.md` v0.4
 
@@ -94,13 +94,14 @@ AI internals.
 |---|---|
 | T0 | `TacticPreset` + `TacticPresetLibrary` (in-code catalogue) |
 | T1 | Preset → config projection + boot wiring via existing appliers |
-| T2 | Decision gate in the composition root (KD-3). **Prerequisite gate (PASS-1 M-1):** the half-time trigger and `MATCH_TICKS_TOTAL` require the engine to model halves/match length — until then the gate fires kickoff + fixed interval only |
+| T2 | Decision gate in the composition root (KD-3). **Prerequisite gate (PASS-1 M-1):** the half-time trigger and `MATCH_TICKS_TOTAL` require the engine to model halves/match length — until then the gate fires kickoff + fixed interval only. **Gate CLOSED 2026-07-11** — the engine match-length model landed (`MatchEngineConstants.MATCH_TICKS_TOTAL`/`HALF_TIME_BOUNDARY_TICK`); the half-time trigger is active |
 | T3 | Kickoff selection scoring (own-state-only) |
-| T4 | In-match adaptation ladder via `SetTeamTactic`/`SetPlayerTactic`. **Prerequisite gate (PASS-1 M-1):** every `goalDiff ≠ 0` path requires engine score state, which does not exist until a goal-detection producer lands (§7.2's named first candidate); until then the ladder is exercised via test seams only |
+| T4 | In-match adaptation ladder via `SetTeamTactic`/`SetPlayerTactic`. **Prerequisite gate (PASS-1 M-1):** every `goalDiff ≠ 0` path requires engine score state, which does not exist until a goal-detection producer lands (§7.2's named first candidate); until then the ladder is exercised via test seams only. **Gate CLOSED 2026-07-11** — the Resolve-phase goal producer landed (v14 score state); the ladder runs on live inputs |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-08 | — | Initial section; supplement open questions 1–4 resolved (KD-3/KD-5/KD-7 + §7 UI deferral). |
 | 0.2 | 2026-07-08 | — | PASS-1 M-1: §1.6 T2/T4 rows gain explicit engine-substrate prerequisite gates (score state; halves/match-length model). |
+| 0.3 | 2026-07-11 | — | §1.6 T2/T4 prerequisite gates recorded CLOSED — the engine substrate landed (goal detection + match-length model); half-time trigger + live ladder inputs active. |
 #endregion

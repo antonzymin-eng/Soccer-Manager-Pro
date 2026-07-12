@@ -1,6 +1,6 @@
 // File:     src/tactical-instructions/TacticalPresetsConstants.cs
 // Created:  2026-07-11
-// Modified: 2026-07-11
+// Modified: 2026-07-11 (later same day — MATCH_TICKS_TOTAL note updated: allocated engine-side, [CROSS])
 // Author:   —
 // Spec:     Tactical Presets #26 §3.5, Appendix A.2/A.3 (v0.3), §4.1 placement; Code Standards #20
 // Purpose:  Single constant catalogue for the #26 manager-AI layer: the §3.5 decision-cadence /
@@ -22,9 +22,11 @@ namespace TacticalDirector.TacticalInstructions
     /// ordinal (Aggressive 0 / Pragmatic 1 / Balanced 2) — both APPEND-only, matching the
     /// catalogue's own FR-TP-013 contract (a removed row would dangle serialized ordinals).
     ///
-    /// NOTE — <c>MATCH_TICKS_TOTAL</c> is deliberately ABSENT: it is <c>[CROSS-PENDING]</c> on the
-    /// engine modelling match length (#26 §3.5 / PASS-1 M-1; tracked in #26 §9.3). The §3.4 ladder
-    /// takes the total as an explicit parameter until the engine allocates it.
+    /// NOTE — <c>MATCH_TICKS_TOTAL</c> is deliberately ABSENT: it is engine-owned, allocated
+    /// 2026-07-11 as <c>MatchEngineConstants.MATCH_TICKS_TOTAL</c> (the #26 §3.5 row, promoted
+    /// <c>[CROSS-PENDING]</c> → <c>[CROSS]</c>). It cannot be mirrored here — this bottom-of-graph
+    /// assembly sits BELOW the match engine in the reference graph — so the §3.4 ladder keeps
+    /// taking the total as an explicit parameter, supplied live by the engine's decision-point seam.
     /// </summary>
     public static class TacticalPresetsConstants
     {
@@ -130,4 +132,9 @@ namespace TacticalDirector.TacticalInstructions
 // | 1.0     | 2026-07-11 | —      | Initial implementation (#26 T1/T3 — §3.5 scalars + A.2/A.3 [GT] |
 // |         |            |        |   tables; arrays literal per the table carve-out precedent;      |
 // |         |            |        |   MATCH_TICKS_TOTAL deliberately absent, [CROSS-PENDING]).       |
+// | 1.1     | 2026-07-11 | —      | Doc-only: the engine substrate allocated MATCH_TICKS_TOTAL as    |
+// |         |            |        |   MatchEngineConstants.MATCH_TICKS_TOTAL (#26 §3.5 row promoted  |
+// |         |            |        |   [CROSS-PENDING] → [CROSS]); it stays absent here because this  |
+// |         |            |        |   assembly cannot reference upward — the ladder takes it as an   |
+// |         |            |        |   explicit parameter, supplied live by the engine.               |
 #endregion

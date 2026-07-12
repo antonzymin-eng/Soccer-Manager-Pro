@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/ManagerAITests.cs
 // Created:  2026-07-11
-// Modified: 2026-07-11
+// Modified: 2026-07-11 (later same day — +4 live-input tests: half-time trigger + live goalDiff ladder)
 // Author:   —
 // Spec:     Tactical Presets #26 §3.1–§3.4, §5 (T-TP-U-002..012, T-TP-I-001/003/004, T-TP-DET-001/002),
 //           Appendix B/C; Code Standards #20
@@ -241,6 +241,30 @@ namespace TacticalDirector.MatchEngine
             Assert.IsFalse(ManagerDecisionGate.DecisionDue(int.MaxValue, in st));
         }
 
+        [Test]
+        public void Gate_HalfTime_FiresOnceRegardlessOfIntervalPosition()
+        {
+            // FR-TP-019 / §3.2 worked example ("half-time fires regardless of interval position"):
+            // a decision fired just BEFORE the boundary does not suppress the half-time decision,
+            // and the half-time term fires exactly once (the fired decision stamps
+            // LastDecisionTick ≥ boundary, closing it).
+            int half = (int)MatchEngineConstants.HALF_TIME_BOUNDARY_TICK;
+            ManagerState st = new ManagerState { Mode = ManagerMode.AI, LastDecisionTick = half - 1000 };
+
+            Assert.IsFalse(ManagerDecisionGate.DecisionDue(half - 1, in st),
+                "Before the boundary, a 1 000-tick-old decision is within the interval — not due.");
+            Assert.IsTrue(ManagerDecisionGate.DecisionDue(half, in st),
+                "At the boundary the half-time term fires even though the interval has not elapsed.");
+            Assert.IsTrue(ManagerDecisionGate.DecisionDue(half + 42, in st),
+                "First evaluation AT OR AFTER the boundary — a stride landing past it still fires.");
+
+            st.LastDecisionTick = half;  // half-time decision consumed
+            Assert.IsFalse(ManagerDecisionGate.DecisionDue(half + 60, in st),
+                "The half-time term fires once; afterwards only the interval term applies.");
+            Assert.IsTrue(ManagerDecisionGate.DecisionDue(
+                half + TacticalPresetsConstants.ManagerDecisionIntervalTicks, in st));
+        }
+
         // ── FM-TP-01 projection (T-TP-U-002) ──────────────────────────────────────────
 
         [Test]
@@ -443,6 +467,68 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(Mentality.Balanced, engine.TestOnly_Mentality(HomeAgent), "No switch at a level score.");
         }
 
+        // ── Live engine inputs (the §3.4 PASS-1 M-1 gates, closed by the engine substrate) ──
+
+        [Test]
+        public void Engine_HalfTimeDecision_FiresThroughLiveGate()
+        {
+            // FR-TP-019 through the engine's own decision-point seam: a decision fired shortly
+            // before the boundary does not suppress the half-time decision; the half-time fire
+            // stamps the state at the boundary tick.
+            var engine = new MatchEngine(MatchSeed);
+            engine.ConfigureManager(0, ManagerMode.AI, TacticalPresetsConstants.ARCHETYPE_PRAGMATIC);
+
+            int half = (int)MatchEngineConstants.HALF_TIME_BOUNDARY_TICK;
+            engine.TestOnly_RunManagerDecisionPoints(half - 60);   // kickoff (first-ever) decision
+            Assert.AreEqual(half - 60, engine.TestOnly_ManagerState(0).LastDecisionTick);
+
+            engine.TestOnly_RunManagerDecisionPoints(half);        // 60 ticks later — interval NOT due
+            Assert.AreEqual(half, engine.TestOnly_ManagerState(0).LastDecisionTick,
+                "The half-time term fires even though only 60 ticks elapsed since the last decision.");
+        }
+
+        [Test]
+        public void Engine_LiveLadder_TrailingLate_StepsAttackingFromScoreState()
+        {
+            // The live goalDiff path: the engine's v14 score state (scripted via the TestOnly
+            // seam — the production writer is the Resolve-phase goal check) reaches the ladder.
+            // Aggressive, 0–1 down at tick 280 000: t01 = 44 000/324 000 ≈ 0.1358, urgency =
+            // 0.8 × 0.8642 × 1 ≈ 0.691 ≥ 0.35 → step Balanced → Possession; the switch stages
+            // via SetTeamTactic and commits at the next stride (FR-TP-005/018).
+            var engine = new MatchEngine(MatchSeed);
+            engine.ConfigureManager(0, ManagerMode.AI, TacticalPresetsConstants.ARCHETYPE_AGGRESSIVE);
+            engine.TestOnly_SetGoals(homeGoals: 0, awayGoals: 1);
+
+            engine.TestOnly_RunManagerDecisionPoints(280000);
+            Assert.AreEqual(TacticPresetLibrary.PossessionOrdinal,
+                engine.TestOnly_ManagerState(0).CurrentPresetOrdinal);
+
+            TickToFirstStride(engine);
+            Assert.AreEqual(Mentality.Positive, engine.TestOnly_Mentality(HomeAgent),
+                "The Possession preset's Mentality is routed once the staged tactic commits.");
+            Assert.AreEqual(ManagerMode.Human, engine.TestOnly_ManagerState(1).Mode,
+                "The opponent stays Human (zero-init state — its preset ordinal is inert).");
+            Assert.AreEqual(Mentality.Balanced, engine.TestOnly_Mentality(AwayAgent),
+                "The Human opponent's tactic is untouched by the home manager's switch.");
+        }
+
+        [Test]
+        public void Engine_LiveLadder_LeadingLate_StepsDefensive()
+        {
+            // The protect term, live: Pragmatic (Caution 0.7) leading 1–0 at tick 280 000 —
+            // protect = 0.7 × 0.8642 × 1 ≈ 0.605 ≥ 0.35 → step Balanced → CounterAttack.
+            var engine = new MatchEngine(MatchSeed);
+            engine.ConfigureManager(0, ManagerMode.AI, TacticalPresetsConstants.ARCHETYPE_PRAGMATIC);
+            engine.TestOnly_SetGoals(homeGoals: 1, awayGoals: 0);
+
+            engine.TestOnly_RunManagerDecisionPoints(280000);
+            Assert.AreEqual(TacticPresetLibrary.CounterAttackOrdinal,
+                engine.TestOnly_ManagerState(0).CurrentPresetOrdinal);
+
+            TickToFirstStride(engine);
+            Assert.AreEqual(Mentality.Defensive, engine.TestOnly_Mentality(HomeAgent));
+        }
+
         // ── Determinism (T-TP-DET-001/002) ────────────────────────────────────────────
 
         [Test]
@@ -496,4 +582,9 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-07-11 | —      | Initial #26 T1–T4 suite (21 tests): B.1/B.2 worked examples,   |
 // |         |            |        |   gate arithmetic, projection, hold cadence, fail-loud gates,  |
 // |         |            |        |   boot/mid-match routing, Human identity + two-AI determinism. |
+// | 1.1     | 2026-07-11 | —      | +4 (engine substrate / PASS-1 M-1 closure): half-time gate     |
+// |         |            |        |   arithmetic (fires once, regardless of interval position) +   |
+// |         |            |        |   half-time through the engine's live seam + live-goalDiff     |
+// |         |            |        |   urgency (trailing → Possession) and protect (leading →       |
+// |         |            |        |   CounterAttack) ladder steps committed at the stride.         |
 #endregion

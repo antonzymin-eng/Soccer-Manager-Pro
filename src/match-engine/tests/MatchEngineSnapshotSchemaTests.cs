@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
 // Modified: 2026-06-27 (Phase D D4 — schema pin 8 + DT + 4 mechanics-AI + perception probes)
+// Modified: 2026-07-11 (engine substrate — schema pin 13 → 14 + ScoreState probe)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
 // Purpose:  Phase B step B3 tests — proves the full §2.6 world-state field set (not just the B2
@@ -47,9 +48,28 @@ namespace TacticalDirector.MatchEngine
             // PlayerTactic (active + pending), v11 #21 TeamTactic.MarkingOrientation appended,
             // v12 #23/#24/#25 wiring (marking dwell + build-up zone/settled-team + rotation state +
             // the three #21 back-prop dials in WriteTeamTactic), v13 #26 per-team ManagerState
-            // (Appendix C order, FR-TP-012).
-            Assert.AreEqual(13u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // (Appendix C order, FR-TP-012), v14 engine score state (per-team goals + the
+            // last-holder tracker — the goal-detection substrate).
+            Assert.AreEqual(14u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void ScoreState_FeedsSnapshotDigest()
+        {
+            // v14: the per-team goal counts reach the digest preimage. The scripted score is the
+            // ONLY difference from the baseline run (no tactic, no manager, no ball change) — the
+            // digest must move, or a restored save could silently resume with the wrong score.
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_SetGoals(homeGoals: 1, awayGoals: 0);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A non-level score left the digest unchanged — the v14 score block must feed the preimage.");
         }
 
         [Test]
@@ -473,4 +493,6 @@ namespace TacticalDirector.MatchEngine
 // | 1.10    | 2026-07-11 | —      | #26 manager-AI wiring: schema pin 12 → 13; new ManagerState_        |
 // |         |            |        | FeedsSnapshotDigest probe (v13 Appendix C block in the preimage,    |
 // |         |            |        | isolated via the Pragmatic → Balanced identity kickoff selection).  |
+// | 1.11    | 2026-07-11 | —      | Engine substrate: schema pin 13 → 14; new ScoreState_FeedsSnapshot- |
+// |         |            |        | Digest probe (per-team goals + last-holder tracker in the preimage).|
 #endregion
