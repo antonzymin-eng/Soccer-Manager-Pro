@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/Tests/AttackingAITests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-15
+// Modified: 2026-07-13
 // Author:   —
 // Spec:     Attacking AI #15 §5, Code Standards #20
 // Purpose:  Unit tests for Attacking AI. T-AT-U unit tests from §5.
@@ -1344,8 +1344,13 @@ namespace TacticalDirector.AttackingAI.Tests
 
             Assert.AreEqual(2, snap.Intents.Count,
                 "Intents.Count must equal the valid intent count, not the buffer length.");
-            Assert.AreEqual(5, snap.Intents[0].AgentEntityId, "First published intent must be EntityId 5.");
-            Assert.AreEqual(9, snap.Intents[1].AgentEntityId, "Second published intent must be EntityId 9.");
+            // Index via Array/Offset rather than the ArraySegment<T> indexer: the this[int]
+            // indexer is absent from the Unity Mono/.NET Standard BCL surface (CS0021), though
+            // present under net8 (the dotnet-ci gate). Array/Offset are portable across both.
+            Assert.AreEqual(5, snap.Intents.Array[snap.Intents.Offset + 0].AgentEntityId,
+                "First published intent must be EntityId 5.");
+            Assert.AreEqual(9, snap.Intents.Array[snap.Intents.Offset + 1].AgentEntityId,
+                "Second published intent must be EntityId 9.");
         }
     }
 

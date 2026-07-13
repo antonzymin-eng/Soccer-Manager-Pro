@@ -1,6 +1,6 @@
 // File:     src/event-system/tests/EventSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-07
+// Modified: 2026-07-13
 // Author:   —
 // Spec:     Event System #17 §5, Code Standards #20
 // Purpose:  Unit tests for Event System. Tests Stage-0 activation criteria.
@@ -13,7 +13,6 @@
 //           Assert.Ignore as activation criterion is first src/event-system/ code commit.
 
 using System;
-using System.Runtime.CompilerServices;
 
 using NUnit.Framework;
 
@@ -327,15 +326,15 @@ namespace TacticalDirector.EventSystem.Tests
         public void AllSeededTierARows_HaveStructSizeEqualToSizeofT()
         {
             // FR-EVT-001: struct size stored in the registry must equal the CLR size of the
-            // event type. Validates that RegisterRow<T> used Unsafe.SizeOf<T>() correctly.
-            // Checks all 5 production Tier A rows (#17-owned ordinals 0x04..0x08).
+            // event type. Validates that RegisterRow<T> used EventRegistry.SizeOfStruct<T>()
+            // correctly. Checks all 5 production Tier A rows (#17-owned ordinals 0x04..0x08).
             byte ord04 = EventOrdinalCache<PossessionChangedEvent>.Ordinal;
             byte ord07 = EventOrdinalCache<GoalAwardedEvent>.Ordinal;
 
-            Assert.AreEqual(Unsafe.SizeOf<PossessionChangedEvent>(),
+            Assert.AreEqual(EventRegistry.SizeOfStruct<PossessionChangedEvent>(),
                 EventRegistry.GetStructSize(ord04),
                 "PossessionChangedEvent struct size mismatch in registry");
-            Assert.AreEqual(Unsafe.SizeOf<GoalAwardedEvent>(),
+            Assert.AreEqual(EventRegistry.SizeOfStruct<GoalAwardedEvent>(),
                 EventRegistry.GetStructSize(ord07),
                 "GoalAwardedEvent struct size mismatch in registry");
         }
