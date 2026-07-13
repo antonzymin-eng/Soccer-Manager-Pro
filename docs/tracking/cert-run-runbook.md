@@ -19,7 +19,7 @@ prerequisites that do not exist in the current tree:
 
 | # | Prerequisite | Why it blocks | Tracked in |
 |---|--------------|---------------|------------|
-| P1 | **Unity project initialized** | The Stage-0 perf harness (`tools/perf-harness/run.sh`) is a synthetic-timing stub — it records `p50=0.000` / `p99=0.000` and runs no `src/` code. A real per-tick number requires the capstone scenario executing under a real harness inside Unity batch mode. The Unity batch-mode command is a documented TBD (`src/CLAUDE.md` → "BUILD AND TEST COMMANDS" and "WHAT IS NOT HERE YET"). | `src/CLAUDE.md` |
+| P1 | **Unity host to execute the harness** | *(Partially cleared 2026-07-13.)* The real harness now EXISTS: `StopwatchPerfHarness` + `MatchEngineCapstonePerfHarness` boot the real `MatchEngine` and Stopwatch-time each `RunTick` (superseding the synthetic `tools/perf-harness/run.sh` `p50=0.000` stub), and the Unity batch-mode command is now DEFINED (`src/CLAUDE.md` → "BUILD AND TEST COMMANDS"; Step 2 below). The harness runs on the Linux `dotnet-ci` gate as a non-certifying compile+execute proof. What remains: a **Unity host** to run that command so the capture executes under the pinned Mono runtime (folds into P2). | `src/CLAUDE.md` |
 | P2 | **Access to the pinned host** | A certified number MUST be captured on the exact tuple in `certification-platform.md` v1.3 (Unity 6000.4.9f1, DX11 — target pin, not yet certified). The Linux compile/test gate (`tools/dotnet-ci`) is explicitly NON-certifying — a number sourced from it would be a fabricated certification. | `certification-platform.md` |
 
 Everything else — the platform pin, the corpus entry, the code seam, the
@@ -108,16 +108,35 @@ Rule"). Do not certify against an unpinned tuple.
 
 ## Step 2 — Capture (100 runs on the pinned host)
 
-> Blocked on P1 until the Unity batch-mode harness exists. The command below is
-> the shape it will take; fill in the concrete invocation when Unity project
-> init lands and update `src/CLAUDE.md` "BUILD AND TEST COMMANDS" in the same
-> change.
+> **Update (2026-07-13):** the real harness now EXISTS (P1 Tier-A landed) —
+> `StopwatchPerfHarness` (`src/performance-optimization/`) + the capstone runner
+> `MatchEngineCapstonePerfHarness` (`src/match-engine/tests/`) boot the real
+> `MatchEngine` and Stopwatch-time each `RunTick`, so this step is no longer
+> blocked on writing the harness. The concrete host invocation is below (also in
+> `src/CLAUDE.md` "BUILD AND TEST COMMANDS"). What still blocks a *certified*
+> number is P2 (pinned-host access) — the Linux run of this same harness is
+> NON-certifying.
+
+Concrete host command (Unity Test Framework batch mode; set the run count to the
+full `BaselineSampleCount`). The pinned host is Windows 11, so set the env var
+first with `set TD_PERF_RUN_COUNT=100` (cmd) or `$env:TD_PERF_RUN_COUNT=100`
+(PowerShell) — the inline `VAR=value command` prefix shown here is POSIX-shell
+form for reference:
+
+```bash
+TD_PERF_RUN_COUNT=100 Unity -batchmode -runTests -projectPath . \
+      -testPlatform EditMode \
+      -testFilter "TacticalDirector.MatchEngine.MatchEngineCapstonePerfHarnessTests" \
+      -testResults ./perf-results.xml -logFile -
+```
 
 1. Build the player / test assembly for the pinned Mono/x64 config with the
-   determinism compiler flags above.
+   determinism compiler flags above (creating the `Assets/Scripts` junction into
+   `src/` first — see `Assets/README.md`).
 2. Run the capstone scenario under the perf harness for `BaselineSampleCount`
-   (= 100) runs, sampling per-tick wall time across the 600-tick (10 s @ 60 Hz)
-   run.
+   (= 100) runs (`TD_PERF_RUN_COUNT=100`), sampling per-tick wall time across the
+   600-tick (10 s @ 60 Hz) run. `MatchEngineCapstonePerfHarnessTests` logs the
+   measured per-tick `p50`/`p99` via `TestContext`.
 3. Record the measured per-tick **p50** and **p99** (ms) — finite, positive,
    with `p99 ≥ p50` (the `Certified(...)` factory fails closed otherwise).
 4. Capture the full `SessionManifest`:
@@ -184,3 +203,10 @@ Stage 0+1 perf-gate).
 |         |            |        | `win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags`. Step 0  |
 |         |            |        | note + Step 2 citation updated to the new pin. P1/P2 still block   |
 |         |            |        | an actual cert run; token update asserts no certified baseline.   |
+| 1.3     | 2026-07-13 | —      | P1 harness LANDED (Tier A): `StopwatchPerfHarness` (concrete       |
+|         |            |        | IPerfHarness, §3.3.5) + `MatchEngineCapstonePerfHarness` boot the  |
+|         |            |        | real MatchEngine and Stopwatch-time each RunTick, superseding the  |
+|         |            |        | synthetic run.sh stub. Step 2 now carries the concrete Unity       |
+|         |            |        | batch-mode command; P1 row rewritten (harness exists; only a Unity |
+|         |            |        | host remains, folding into P2). Linux run of the harness is        |
+|         |            |        | NON-certifying; no certified number produced.                     |

@@ -42,7 +42,10 @@ namespace TacticalDirector.MatchEngine
         // 600 ticks @ 60 Hz = 10 s of composed match time. Long enough that the 10 Hz AI loop
         // strides exactly NumTicks / AI_PHASE_STRIDE times and the physics/resolve loop runs every
         // tick — the loop-separation invariant the host composes (#16 §3.1, design note §2.4).
-        private const int NumTicks = 600;
+        // Public so the FR-PO-052 perf harness (MatchEngineCapstonePerfHarness) times the SAME tick
+        // count this scenario asserts — single source of truth.
+        public const int KickoffMultiSecondTicks = 600;
+        private const int NumTicks = KickoffMultiSecondTicks;
 
         // Owning specs: every spec whose behaviour the composed run drives through the host.
         // Ball Physics (#1) + Agent Movement (#2) in Physics; Collision (#3) + First Touch (#4) +

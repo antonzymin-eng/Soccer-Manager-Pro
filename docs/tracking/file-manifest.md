@@ -1,7 +1,21 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 11, 2026, latest same day (**Engine substrate landed — goal detection +
+**Last Updated:** July 13, 2026 (**P1 real perf harness LANDED (cert-run-runbook.md P1 Tier A) —
+replaces the synthetic `tools/perf-harness/run.sh` `p50=0.000` stub with a harness that boots the
+real `MatchEngine` capstone.** New files: `src/performance-optimization/StopwatchPerfHarness.cs`
+(concrete `IPerfHarness`, §3.3.5 manual Stopwatch capture; nearest-rank p50/p99),
+`src/performance-optimization/tests/performance-optimization-tests.asmdef` +
+`src/performance-optimization/tests/StopwatchPerfHarnessTests.cs` (new perf-opt test assembly),
+`src/match-engine/tests/MatchEngineCapstonePerfHarness.cs` (Stopwatch-times each `RunTick` of the
+capstone; non-cert `LinuxNonCertPlatformPin` stamp) + `src/match-engine/tests/MatchEngineCapstonePerfHarnessTests.cs`.
+Modified: `src/match-engine/tests/MatchEngineCapstoneScenarios.cs` (`NumTicks` → public
+`KickoffMultiSecondTicks`), `src/CLAUDE.md` (BUILD AND TEST COMMANDS batch-mode command +
+WHAT IS NOT HERE YET row), `docs/tracking/cert-run-runbook.md` v1.3 (Step 2 concrete command +
+P1 row), `tools/perf-harness/run.sh` (header note), root `CLAUDE.md` OPEN ISSUES. Linux run is
+NON-certifying; the certified capture stays gated on P2 (pinned host) + Steps 2–4. dotnet gate
+runs in CI on push.)
+**Last Updated (prior):** July 11, 2026, latest same day (**Engine substrate landed — goal detection +
 score state + match-length/halves model; #26 half-time trigger + live ladder inputs activated.**
 New file: `src/match-engine/tests/MatchEngineGoalTests.cs` (6 tests). Modified:
 `match-engine/{MatchEngine.cs v1.30 (Resolve-phase CheckGoalAndRestart + _goals/_lastHolderAgentId

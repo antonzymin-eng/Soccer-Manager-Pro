@@ -1,0 +1,23 @@
+{
+    "name": "TacticalDirector.PerformanceOptimization.Tests",
+    "rootNamespace": "TacticalDirector.PerformanceOptimization.Tests",
+    "references": [
+        "TacticalDirector.PerformanceOptimization",
+        "TacticalDirector.DeterministicSim",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
