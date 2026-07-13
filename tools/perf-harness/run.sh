@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
 # File:    tools/perf-harness/run.sh
 # Spec:    Performance Optimization Strategy #18 Appendix E, §3.3.5, §4.1
-# Purpose: Stage 0 synthetic harness runner.
+# Purpose: Stage 0 synthetic harness runner (schema-validation only).
 #          Executes a scenario manifest against the manual Stopwatch harness and writes
 #          a baseline-record JSON projection under the specified output directory.
 #
 #          Stage 0:    manual Stopwatch-based capture per §3.3.5; no src/ code exercised.
 #          Stage 0+1:  replaced by the production harness against tests/perf/<spec>/.
+#
+#          SUPERSEDED for real measurement (2026-07-13): the synthetic p50=0.000/p99=0.000
+#          block below runs no src/ code and exists only to validate the JSON projection
+#          schema. The REAL FR-PO-052 per-tick capture now boots the actual MatchEngine
+#          capstone — see src/performance-optimization/StopwatchPerfHarness.cs +
+#          src/match-engine/tests/MatchEngineCapstonePerfHarness.cs, driven on the pinned
+#          host via the Unity batch-mode command in src/CLAUDE.md "BUILD AND TEST COMMANDS"
+#          (cert-run-runbook.md Step 2). This script is retained for the anchor-manifest
+#          schema check only; do not read its p50/p99 as a measurement.
 #
 # Usage:
 #   bash tools/perf-harness/run.sh \

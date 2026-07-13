@@ -869,7 +869,7 @@ For the specific `.asmdef` references each assembly declares, read that spec's `
 
 ## BUILD AND TEST COMMANDS
 
-> **Note:** The Unity LTS revision, backend (Mono/IL2CPP), and compiler flags are not yet pinned in `docs/tracking/certification-platform.md`. Fill those in before running the first certification gate (`FR-DS-009-GATE`). The commands below are the intended Stage 1 setup; update this section when the project is configured.
+> **Note:** The certification platform is now pinned in `docs/tracking/certification-platform.md` v1.3 (Windows 11 / Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker / deterministic compiler flags) but is **⏳ RECERT REQUIRED** — no certification run has executed against the Unity-6 tuple yet (`cert-run-runbook.md` P1/P2). The batch-mode command below is defined but requires a Unity host to execute; the Linux path (`dotnet-ci` gate) is the day-to-day compile/test gate.
 
 **Format check (pre-commit gate):**
 ```bash
@@ -898,10 +898,22 @@ the quarantine in `tools/dotnet-ci/known-failures.txt` (tracked in
 test failure fails the gate. NOT a determinism certification — see
 `docs/tracking/certification-platform.md`.
 
-**Unity batch-mode test run (CI):**
+**Unity batch-mode test run (pinned host — FR-PO-052 certified perf capture):**
+```bash
+# Run on the pinned certification host (Windows 11 / Unity 6000.4.9f1 / DX11 / Mono),
+# after creating the Assets/Scripts junction into src/ (see Assets/README.md).
+# TD_PERF_RUN_COUNT=100 (= BaselineSampleCount) drives the certified capture; unset ⇒ CI-fast 2.
+Unity -batchmode -runTests -projectPath . \
+      -testPlatform EditMode \
+      -testFilter "TacticalDirector.MatchEngine.MatchEngineCapstonePerfHarnessTests" \
+      -testResults ./perf-results.xml -logFile -
 ```
-# To be filled in once Unity project is initialized and certification-platform.md is pinned.
-```
+The test (`MatchEngineCapstonePerfHarnessTests`) drives the real `MatchEngine`
+capstone through `MatchEngineCapstonePerfHarness.CaptureBaseline` and logs the
+per-tick `p50`/`p99` via `TestContext` for the operator to transcribe into the
+`.cert.md` corpus entry (`cert-run-runbook.md` Step 3). The same test runs on the
+Linux `dotnet-ci` gate (non-certifying) as the harness's compile+execute proof.
+This command requires a Unity host — it is **not** runnable from the Linux gate.
 
 **Stage 0 verification:** Manual code review against Spec #20 §5.4 checklist (7 categories, 73 FRs). Static analysis tooling (Roslyn analyzers, BannedSymbols.txt, `.editorconfig`) activates at Stage 1.
 
@@ -1372,7 +1384,7 @@ These items are deferred pending Unity project setup and platform pinning:
 | `.asmdef` content (GUIDs, `allowUnsafeCode`, `autoReferenced`, `testPlatforms`, `versionDefines`) | Unity project initialization |
 | Exact Unity LTS revision | `docs/tracking/certification-platform.md` pinned |
 | `dotnet test` framework args | Stage 0+1 setup (Spec #19 §7.5 D2 — framework pin deferred to Stage 0+1) |
-| Unity batch-mode CI commands | Unity project initialization |
+| Unity batch-mode CI commands | **Command DEFINED July 13, 2026** — the FR-PO-052 certified perf capture command is in "BUILD AND TEST COMMANDS" above, driving `MatchEngineCapstonePerfHarnessTests` → the real `MatchEngine` capstone via `MatchEngineCapstonePerfHarness`. The harness itself (`StopwatchPerfHarness` + the capstone runner) runs on the Linux `dotnet-ci` gate as a non-certifying compile+execute proof. Still requires a **Unity host** to execute the certified capture (`cert-run-runbook.md` P2 + Steps 2–4); a full batch-mode *build* pipeline (as opposed to the test-runner invocation) remains for Unity project initialization. |
 | `.editorconfig` path and contents | Stage 1 setup |
 | C# language version pin | `certification-platform.md` pinned |
 | `[GT]` config loader class / method | **Mechanism landed June 30, 2026** — `TacticalDirector.ProjectConstants.GameplayConfig` + `GameplayConfigFileLoader` (`src/project-constants/`). **Migration landed June 30, 2026** — `GameplayConfigHolder` resolves the boot-sequencing design point; 509/520 `[GT]` declarations across 17 catalogues now read `Config.GetX(...)`. See the "`[GT]` loading mechanism" + "Boot-sequencing resolution" + "Migration status" sections above for the mechanism, the 11-array-table + 4-untagged-catalogue carve-outs, and the still-open follow-up (no composition root calls `GameplayConfigHolder.Bind` yet — Stage 0 has no on-disk config load wired into match-engine boot). |

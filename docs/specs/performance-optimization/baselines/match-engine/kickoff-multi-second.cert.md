@@ -20,7 +20,7 @@ The code-side entry is `CertifiedPerfBaseline.Pending(...)` (see
 | Scenario manifest ID | `tests/scenarios/cross-spec/match-engine-kickoff-multi-second` |
 | Loop | `PhysicsSixtyHz` (`LOOP-PHYSICS-60HZ`) |
 | Threshold cited | `FR-PO-052` |
-| Platform pin | `win11-unity2022.3.62f1-mono-x64-sse4.2-1w-detflags` |
+| Platform pin | `win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags` |
 | Seed | `MatchEngineCapstoneScenarios.KickoffMultiSecondSeed` |
 
 ## Metrics (PENDING)

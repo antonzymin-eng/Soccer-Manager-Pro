@@ -1,6 +1,6 @@
 // File:     src/performance-optimization/CertifiedPerfBaseline.cs
 // Created:  2026-06-28
-// Modified: 2026-06-28
+// Modified: 2026-07-13
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.3.2 / §3.4.4 / §4.3.2 / FR-PO-031 / FR-PO-052,
 //           Deterministic Simulation #16 §4.8 (EnvironmentFingerprint), certification-platform.md
@@ -33,11 +33,15 @@ namespace TacticalDirector.PerformanceOptimization
     {
         /// <summary>
         /// [FIXED] Stage 0 certification-platform pin token. Encodes the certification-platform.md
-        /// v1.2 tuple: Windows 11 / Unity 2022.3.62f1 / Mono / x64 / SSE4.2 / 1 worker /
+        /// v1.3 target tuple: Windows 11 / Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker /
         /// deterministic compiler flags. certification-platform.md is the source of truth; this token
         /// is the machine-readable form stamped into a certified <see cref="SessionManifest.PlatformPin"/>.
+        /// NOTE: the tuple this token encodes is ⏳ RECERT REQUIRED as of the July 13, 2026 Unity 6
+        /// version bump — no certification run has executed against it yet (see certification-platform.md
+        /// Status). The token is updated here so a future cert run stamps the correct pin; it does not
+        /// itself assert that a certified baseline exists.
         /// </summary>
-        public const string Stage0CertPlatformPin = "win11-unity2022.3.62f1-mono-x64-sse4.2-1w-detflags";
+        public const string Stage0CertPlatformPin = "win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags";
 
         /// <summary>
         /// [FIXED] Platform pin for the NON-certifying Linux compile/test gate (tools/dotnet-ci).
@@ -237,4 +241,9 @@ namespace TacticalDirector.PerformanceOptimization
 // |         |            |        | Certified validates a complete manifest + finite positive metrics  |
 // |         |            |        | and projects to a corpus BaselineRecord. Platform-pin tokens for    |
 // |         |            |        | the Stage-0 cert tuple + the Linux non-cert gate.                  |
+// | 1.1     | 2026-07-13 | —      | Stage0CertPlatformPin bumped to the certification-platform.md v1.3 |
+// |         |            |        | target tuple: win11-unity6000.4.9f1-dx11-...-detflags (was         |
+// |         |            |        | unity2022.3.62f1). Doc notes the tuple is RECERT REQUIRED — token  |
+// |         |            |        | updated so a first cert run stamps the correct pin; asserts no     |
+// |         |            |        | certified baseline exists. Guard test updated in lockstep.         |
 #endregion
