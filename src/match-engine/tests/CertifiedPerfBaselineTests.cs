@@ -179,7 +179,7 @@ namespace TacticalDirector.MatchEngine
             // Guards against an accidental edit silently decoupling the token from
             // certification-platform.md / the capstone non-cert anchor.
             Assert.AreEqual(
-                "win11-unity2022.3.62f1-mono-x64-sse4.2-1w-detflags",
+                "win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags",
                 CertifiedPerfBaseline.Stage0CertPlatformPin);
             Assert.AreEqual(
                 "linux-dotnet-noncert",

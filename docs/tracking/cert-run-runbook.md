@@ -60,12 +60,16 @@ v1.3 before capturing anything. A mismatch on any row invalidates the run
 > to Unity **6000.4.9f1** (DX11) — a MAJOR version bump from the 2022.3.62f1
 > tuple this runbook and the `P2` prerequisite were originally written against.
 > No cert run has ever executed (P1/P2 below still block), so nothing is
-> invalidated in-flight, but before Step 0 is run for the first time:
-> `CertifiedPerfBaseline.Stage0CertPlatformPin` (`src/performance-optimization/CertifiedPerfBaseline.cs`)
-> and its citation in Step 2 below still hardcode the string
-> `win11-unity2022.3.62f1-mono-x64-sse4.2-1w-detflags` and must be updated to
-> match the new pin before any `SessionManifest` is captured — that is a code
-> change, out of scope for this documentation pass.
+> invalidated in-flight.
+>
+> **Update (2026-07-13, later same day):** the code follow-up this note flagged
+> is now DONE — `CertifiedPerfBaseline.Stage0CertPlatformPin`
+> (`src/performance-optimization/CertifiedPerfBaseline.cs`) and its guard test
+> (`CertifiedPerfBaselineTests.PlatformPinTokens_MatchDocumentedTuple`) now
+> encode `win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags`. The token is
+> updated so a first cert run stamps the correct pin; it does NOT assert a
+> certified baseline exists (P1/P2 still block). Step 0 and Step 2 below cite the
+> new value.
 
 | Pin row | Required value | How to verify |
 |---------|---------------|---------------|
@@ -121,7 +125,7 @@ Rule"). Do not certify against an unpinned tuple.
    - `EnvironmentFingerprint` — the locked 6-field snapshot (#16 §4.8), not
      `CreateStage0Dev()`
    - `PlatformPin` = `CertifiedPerfBaseline.Stage0CertPlatformPin`
-     (`win11-unity2022.3.62f1-mono-x64-sse4.2-1w-detflags`)
+     (`win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags`)
    - `ScenarioManifestId` = `tests/scenarios/cross-spec/match-engine-kickoff-multi-second`
    - `SessionStartUtc` / `SessionEndUtc` (RFC 3339)
    - `HardwareCounters` (CPU model, core count > 0, thermal state — Step 0)
@@ -175,3 +179,8 @@ Stage 0+1 perf-gate).
 |         |            |        | that `CertifiedPerfBaseline.Stage0CertPlatformPin` still hardcodes |
 |         |            |        | the superseded `win11-unity2022.3.62f1-...` string and needs a    |
 |         |            |        | code change before Step 2 can be executed against the new pin.    |
+| 1.2     | 2026-07-13 | —      | Code follow-up DONE: `CertifiedPerfBaseline.Stage0CertPlatformPin` |
+|         |            |        | + its guard test now encode                                       |
+|         |            |        | `win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags`. Step 0  |
+|         |            |        | note + Step 2 citation updated to the new pin. P1/P2 still block   |
+|         |            |        | an actual cert run; token update asserts no certified baseline.   |
