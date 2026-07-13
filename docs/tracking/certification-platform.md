@@ -1,23 +1,27 @@
 # Certification Platform Pin
 
 **Created:** May 2, 2026
-**Last Updated:** June 12, 2026 (v1.2 — non-certifying Linux compile/test gate note added; pin unchanged). Prior: June 7, 2026 (Stage 0 host platform pinned — closes the standing OPEN ISSUE that blocked `FR-DS-009-GATE` Stage 0 activation across #16 §5.5, #18 FR-PO-052 perf-gate, #19 §7.5 D1 test-runner pin, #18 §3.9.4 IL2CPP/Mono warmup measurement, and the four downstream `[EST]` constants that depend on the measured warmup characteristic. Pin set: Windows 11, Unity 2022 LTS revision **2022.3.62f1** (default Stage 0; revise if a later patch release supersedes before first cert run), Mono backend (IL2CPP migrates at Stage 5+), x64, SSE4.2 SIMD baseline, 1 worker thread (single-threaded — multi-threading is a Stage 5+ concern), deterministic compiler flags per row 5.)
+**Last Updated:** July 13, 2026 (v1.3 — **Unity engine version bump proposed: 2022.3.62f1 → Unity 6000.4.9f1, graphics API pinned to DX11.** This is a MAJOR Unity version bump under this file's own Maintenance Rule (row 2), which REQUIRES full recertification before the tuple can be marked ✅ Pinned again. `ProjectSettings/ProjectVersion.txt` has been updated to `6000.4.9f1` to match. No certification run has been performed against the new tuple — the Unity-version and Graphics-API rows below are recorded as the TARGET pin, status **⏳ Recert required**, not yet ✅ Pinned. All downstream unblockers this file previously closed (`FR-DS-009-GATE`, `FR-PO-052`, §7.5 D1, `EnvironmentFingerprint`) revert to blocked until a certification run completes against the new tuple per `cert-run-runbook.md`. See Version History v1.3.)
+**Last Updated (prior):** June 12, 2026 (v1.2 — non-certifying Linux compile/test gate note added; pin unchanged). Prior: June 7, 2026 (Stage 0 host platform pinned — closes the standing OPEN ISSUE that blocked `FR-DS-009-GATE` Stage 0 activation across #16 §5.5, #18 FR-PO-052 perf-gate, #19 §7.5 D1 test-runner pin, #18 §3.9.4 IL2CPP/Mono warmup measurement, and the four downstream `[EST]` constants that depend on the measured warmup characteristic. Pin set: Windows 11, Unity 2022 LTS revision **2022.3.62f1** (default Stage 0; revise if a later patch release supersedes before first cert run), Mono backend (IL2CPP migrates at Stage 5+), x64, SSE4.2 SIMD baseline, 1 worker thread (single-threaded — multi-threading is a Stage 5+ concern), deterministic compiler flags per row 5.)
 **Purpose:** Records the exact Stage 0 host platform tuple for deterministic simulation certification runs, as required by Spec #16 §5.5.
 
 ---
 
 ## Status
 
-**✅ PINNED — Stage 0 host platform tuple set June 7, 2026.**
+**⏳ RECERT REQUIRED — Unity engine version bumped to 6000.4.9f1 (DX11) on July 13, 2026; not yet certified.**
 
-This pin satisfies the precondition for `FR-DS-009-GATE` Stage 0 activation per Spec #16 §5.5. Updates require Platform Certification owner sign-off per Spec #16 §1.7 Governance Artifacts.
+The Stage 0 host platform tuple was previously pinned June 7, 2026 against Unity 2022.3.62f1. That tuple has been superseded by a major Unity version bump (2022.3.62f1 → 6000.4.9f1). Per this file's own Maintenance Rule, a major Unity version bump requires full recertification before the pin can be marked ✅ again — this document records the new TARGET tuple, not a completed certification. `FR-DS-009-GATE` Stage 0 activation and every other downstream unblocker below are **blocked again** until a certification run completes against the new tuple and Platform Certification owner sign-off is obtained per Spec #16 §1.7 Governance Artifacts.
 
 **Executing a certification run against this pin:** see the operator runbook at
 `docs/tracking/cert-run-runbook.md` (host pre-flight against the tuple below,
 100-run capture, `PENDING → CERTIFIED` promotion of the
 `CertifiedPerfBaseline` corpus entry, and sign-off). The first run is currently
 blocked on Unity project initialization + pinned-host access — see that file's
-Status section.
+Status section. That runbook's Step 0 pre-flight table, and the
+`CertifiedPerfBaseline.Stage0CertPlatformPin` code constant it cites, still
+name the superseded `2022.3.62f1` tuple and need updating to match this file
+before any cert run is executed against the new pin.
 
 ---
 
@@ -26,13 +30,14 @@ Status section.
 | Field | Required value | Pinned value | Status |
 |-------|---------------|--------------|--------|
 | OS | Windows 10 or 11 | **Windows 11** | ✅ Pinned |
-| Unity version | Unity 2022 LTS | **Unity 2022.3.62f1** | ✅ Pinned |
-| Backend | Mono or IL2CPP per project default | **Mono** | ✅ Pinned |
+| Unity version | Unity 6 LTS | **Unity 6000.4.9f1** | ⏳ Recert required |
+| Graphics API | Pinned per platform default | **DX11** | ⏳ Recert required |
+| Backend | Mono or IL2CPP per project default | **Mono** | ⏳ Recert required (carried over pending confirmation Mono is still the Stage 0 default under Unity 6) |
 | IL2CPP version | — | N/A (Mono backend) | ✅ N/A |
-| Compiler flag set | Deterministic flags (denormals-are-zero off, fp-contract off, fma off unless platform-pinned) | **DAZ off · FTZ off · fp-contract off · FMA intrinsics off · /fp:strict-equivalent** | ✅ Pinned |
+| Compiler flag set | Deterministic flags (denormals-are-zero off, fp-contract off, fma off unless platform-pinned) | **DAZ off · FTZ off · fp-contract off · FMA intrinsics off · /fp:strict-equivalent** | ⏳ Recert required |
 | CPU architecture | x64 | **x64** | ✅ Fixed |
-| Worker thread count | Pinned (see §4.8 EnvironmentFingerprint) | **1 (main thread only — Stage 0 is single-threaded)** | ✅ Pinned |
-| SIMD feature level | Pinned (see §4.8) | **SSE4.2 baseline (no AVX / AVX2 / FMA intrinsics)** | ✅ Pinned |
+| Worker thread count | Pinned (see §4.8 EnvironmentFingerprint) | **1 (main thread only — Stage 0 is single-threaded)** | ⏳ Recert required |
+| SIMD feature level | Pinned (see §4.8) | **SSE4.2 baseline (no AVX / AVX2 / FMA intrinsics)** | ⏳ Recert required |
 
 ---
 
@@ -40,7 +45,9 @@ Status section.
 
 **OS — Windows 11.** Win 10 standard support ended October 2025; Win 11 is the supported developer target through Stage 0+1.
 
-**Unity 2022.3.62f1.** Latest Unity 2022 LTS revision at pin time. Subsequent patch releases (`f2`, `f3`, …) may be adopted before the first certification run by updating this file with sign-off; **major version bumps (Unity 6, 2023.X, 2024.X) require a new pin and full recertification** per #16 §4.8 `EnvironmentFingerprint` invariant.
+**Unity 6000.4.9f1.** Target Unity 6 LTS revision, superseding the prior 2022.3.62f1 pin (record retained below in Version History, not deleted). This is a MAJOR version bump under this file's own rule — it invalidates the June 7, 2026 certification and requires a fresh certification run before the tuple can be marked ✅ Pinned again. Subsequent patch releases (`f10`, `f11`, …) may be adopted before that first Unity-6 certification run by updating this file with sign-off; any further major version bump requires the same reset.
+
+**Graphics API — DX11.** New row, not present under the Unity 2022.3.62f1 pin (this file had no graphics-API row because none of the Stage 0 gameplay-simulation surface renders — determinism certification is a headless/logic concern). Recorded here because Unity 6's default graphics API selection differs by platform and template; DX11 is pinned explicitly for the Windows 11 host so `EnvironmentFingerprint` (#16 §4.8) has an unambiguous value to capture once the digest is extended to include it. Rendering is not part of the Stage 0 determinism surface — this pin exists for host-tuple completeness, not because gameplay logic reads the graphics API.
 
 **Mono backend.** Faster iteration than IL2CPP for the Stage 0 implementation phase; the determinism story is simpler (no AOT compilation pass). IL2CPP migration is a Stage 5+ concern when ship-quality perf becomes a hard requirement (per `src/CLAUDE.md` "Fixed64 stage scope decision" precedent — single-machine determinism via state snapshots is sufficient at Stage 0).
 
@@ -70,8 +77,8 @@ This pin unblocks the following spec-level deliverables that were gated on it:
 
 Update this file and obtain Platform Certification owner sign-off before:
 
-1. **Unity patch-release bump** (e.g. 2022.3.62f1 → 2022.3.63f1) — preferred path, document in row 2 with date.
-2. **Major Unity version bump** (2022.3.X → Unity 6 or later) — REQUIRES full recertification per #16 §4.8.
+1. **Unity patch-release bump** (e.g. 6000.4.9f1 → 6000.4.10f1) — preferred path, document in row 2 with date.
+2. **Major Unity version bump** (e.g. 2022.3.X → 6000.X, or any future Unity 7+) — REQUIRES full recertification per #16 §4.8. (This is the exact case this v1.3 update records: the pin below is the target tuple, not yet certified.)
 3. **Backend swap** (Mono → IL2CPP) — REQUIRES Stage 5+ planning per `src/CLAUDE.md` Fixed64 stage scope; not a Stage 0 path.
 4. **SIMD baseline raise** (SSE4.2 → AVX2) — REQUIRES re-running all FR-PO-031 baselines against the new instruction set.
 5. **Worker count bump** (1 → N) — REQUIRES Stage 5+ planning; introduces cross-thread determinism concerns not addressed at Stage 0.
@@ -104,3 +111,12 @@ Linux gate answers "does it compile and do the tests pass," this pin answers
 |         |            |        | blocking FR-DS-009-GATE. Downstream unblockers documented per row.            |
 | 1.2     | 2026-06-12 | —      | Non-certifying-gate note added: the new Linux dotnet compile/test CI gate     |
 |         |            |        | (tools/dotnet-ci) is a smoke gate only; certification stays on this pin.      |
+| 1.3     | 2026-07-13 | —      | Unity engine version bumped: 2022.3.62f1 → **6000.4.9f1**, graphics API      |
+|         |            |        | pinned **DX11** (new row). MAJOR version bump per row 2 of the Maintenance   |
+|         |            |        | Rule — resets certification status to ⏳ Recert required; the June 7, 2026    |
+|         |            |        | certification against 2022.3.62f1 no longer applies. `ProjectVersion.txt`    |
+|         |            |        | updated to match. Backend/compiler-flag/worker-count/SIMD rows carried over  |
+|         |            |        | unverified pending a real Unity 6 host check. No recertification run has     |
+|         |            |        | been performed; all downstream unblockers revert to blocked. Documentation-  |
+|         |            |        | only change — no Platform Certification owner sign-off obtained for this     |
+|         |            |        | edit (required before the tuple can be marked ✅ Pinned again).              |
