@@ -1,6 +1,6 @@
 // File:     src/perception-system/Tests/PerceptionSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-12
+// Modified: 2026-07-13
 // Author:   —
 // Spec:     Perception System #7 §5, Code Standards #20
 // Purpose:  Unit tests for Perception System. FOV, OCC, LR, SC, BP test groups.
@@ -598,12 +598,10 @@ namespace TacticalDirector.PerceptionSystem.Tests
             // Test base computation: run over multiple frames to see both noise outcomes
             // and verify base always floors to 3.
             bool sawBase3  = false;
-            bool sawBase4  = false;
             for (int frame = 0; frame < 20; frame++)
             {
                 int lRec = tracker.ComputeLRec(0, 1, 10, false, 0.0f, frame);
                 if (lRec == 3) { sawBase3 = true; }
-                if (lRec == 4) { sawBase4 = true; }
                 // Must never exceed 4 (base=3, max noise=+1)
                 Assert.LessOrEqual(lRec, 4, $"LR-003: L_rec at D=10 must be ≤4 (frame {frame})");
                 Assert.GreaterOrEqual(lRec, 3, $"LR-003: L_rec at D=10 must be ≥3 (frame {frame})");

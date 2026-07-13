@@ -160,8 +160,9 @@ namespace TacticalDirector.EventSystem
         /// the exact size <see cref="MemoryMarshal"/> uses when it writes/reads the event into the
         /// ledger slot region (EventLedger / CosmeticChannel / EventBus). Computed via a one-element
         /// span rather than System.Runtime.CompilerServices.Unsafe.SizeOf&lt;T&gt;() so the type
-        /// resolves under the Unity 2022.3 BCL surface (the System.Runtime.CompilerServices.Unsafe
-        /// assembly is not referenced there). Boot-time only — the one-element array allocation is
+        /// resolves under the Unity Mono/.NET Standard BCL surface (the
+        /// System.Runtime.CompilerServices.Unsafe assembly is not referenced there). Boot-time
+        /// only — the one-element array allocation is
         /// off the hot path (RegisterRow&lt;T&gt; runs during static init / RegisterExternalRow).
         /// </summary>
         internal static int SizeOfStruct<T>() where T : struct
