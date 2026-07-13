@@ -17,6 +17,11 @@
 *.booproj
 .vs/
 
+# Unity-project junction into src/ (created locally per clone; never committed —
+# it is a link, and committing it would double-track the whole src/ tree)
+/Assets/Scripts
+/Assets/Scripts.meta
+
 # OS
 .DS_Store
 Thumbs.db

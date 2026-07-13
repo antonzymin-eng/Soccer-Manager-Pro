@@ -6,15 +6,19 @@
         "TacticalDirector.MatchEngine",
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.BallPhysics",
-        "TacticalDirector.AgentMovement"
+        "TacticalDirector.AgentMovement",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [
         "Editor"
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
     "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [],
