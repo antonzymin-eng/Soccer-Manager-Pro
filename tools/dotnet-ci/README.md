@@ -12,7 +12,9 @@ since v1.1), First Touch ERR-004 (same class), the Decision Tree production
 assembly (static calls to instance executors), the deterministic-sim test
 assembly (missing `InternalsVisibleTo`), and more. Unit suites "verified" claims
 while being uncompilable. The certification platform (Windows / Unity
-2022.3.62f1) governs *determinism certification*, not smoke-level "does it
+6000.4.9f1, target pin as of `certification-platform.md` v1.3 — recertification
+pending, superseding the 2022.3.62f1 tuple this gate was originally written
+against) governs *determinism certification*, not smoke-level "does it
 compile and do the tests run" — and the codebase is, by design, pure
 deterministic C# whose only engine surface is `Vector2`/`Vector3`, `Mathf`,
 `Debug`, `ProfilerMarker`/`Profiler`, and `LogAssert`. A ~6-type shim closes the
@@ -35,8 +37,10 @@ time: 30 genuine model/expectation failures were quarantined into
 
 **Not a determinism certification.** Bit-exactness, FR-DS-009-GATE, perf gates,
 and golden-digest pins are certified ONLY on the pinned host in
-`docs/tracking/certification-platform.md` (Windows 11 / Unity 2022.3.62f1 /
-Mono / x64 / SSE4.2 / 1 worker / DAZ+FTZ+fp-contract+FMA off). This gate proves
+`docs/tracking/certification-platform.md` (target tuple as of v1.3: Windows 11 /
+Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker /
+DAZ+FTZ+fp-contract+FMA off — status ⏳ Recert required, not yet certified).
+This gate proves
 the tree *compiles* and the suites *execute and pass*; float results on Linux
 x64 under .NET 8 are expected to agree for the operations used, but no digest
 produced here is authoritative.
@@ -78,3 +82,4 @@ Requires the .NET 8 SDK and Python 3 (stdlib only). Generated `*.gen.csproj`,
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-06-12 | — | Initial gate: shim + generator + runner + quarantine; first-ever full suite execution. |
+| 1.1 | 2026-07-13 | — | Certification-pin citations updated to the `certification-platform.md` v1.3 target tuple (Unity 6000.4.9f1, DX11) — recert pending, not yet certified. The `generate_projects.py` / `UnityShim` technical claims about Unity's actual `netstandard2.1` BCL surface and `LangVersion 9.0` C# level are UNCHANGED and unverified against Unity 6 — see root `CLAUDE.md` OPEN ISSUES. |

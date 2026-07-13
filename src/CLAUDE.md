@@ -1,7 +1,18 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 11, 2026, latest same day (v2.15 — **Engine substrate landed: goal detection +
+> **Last Updated:** July 13, 2026 (v2.16 — **Unity engine version bump referenced (documentation
+> only): 2022.3.62f1 → Unity 6000.4.9f1, DX11.** Root `CLAUDE.md`'s coding-convention line ("C# with
+> Unity 2022 LTS conventions") updated to Unity 6; see the root `CLAUDE.md` v2026-07-13 Last Updated
+> entry and its new OPEN ISSUES entry for the full change (`certification-platform.md` v1.3,
+> `ProjectVersion.txt`, `cert-run-runbook.md` v1.1). **This file's own technical claims about
+> Unity's C#/BCL surface are DELIBERATELY UNCHANGED and now flagged stale-pending-verification**:
+> the "BUILD AND TEST COMMANDS" section below and the `tools/dotnet-ci` description still state
+> production compiles against `netstandard2.1` because that is "Unity 2022.3's BCL surface" — under
+> Unity 6000.4.9f1 that claim has not been re-verified (Unity 6's default scripting API level / BCL
+> target may differ) and is out of scope for this documentation-only pass; see root `CLAUDE.md`
+> OPEN ISSUES item 4. No source or build-config file changed in this update.)
+> **Last Updated (prior):** July 11, 2026, latest same day (v2.15 — **Engine substrate landed: goal detection +
 > score state + match-length/halves model — the #26 §9.3 upstream deliverables; #26 half-time
 > trigger + live ladder inputs ACTIVATED.** (a) `MatchEngineConstants` v1.20: `[FIXED]
 > MATCH_LENGTH_MINUTES` (90) + `[DERIVED] MATCH_TICKS_TOTAL` (= 90×60×`PHYSICS_TICK_HZ` = 324 000

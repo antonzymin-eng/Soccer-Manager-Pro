@@ -20,7 +20,7 @@ prerequisites that do not exist in the current tree:
 | # | Prerequisite | Why it blocks | Tracked in |
 |---|--------------|---------------|------------|
 | P1 | **Unity project initialized** | The Stage-0 perf harness (`tools/perf-harness/run.sh`) is a synthetic-timing stub — it records `p50=0.000` / `p99=0.000` and runs no `src/` code. A real per-tick number requires the capstone scenario executing under a real harness inside Unity batch mode. The Unity batch-mode command is a documented TBD (`src/CLAUDE.md` → "BUILD AND TEST COMMANDS" and "WHAT IS NOT HERE YET"). | `src/CLAUDE.md` |
-| P2 | **Access to the pinned host** | A certified number MUST be captured on the exact tuple in `certification-platform.md` v1.2. The Linux compile/test gate (`tools/dotnet-ci`) is explicitly NON-certifying — a number sourced from it would be a fabricated certification. | `certification-platform.md` |
+| P2 | **Access to the pinned host** | A certified number MUST be captured on the exact tuple in `certification-platform.md` v1.3 (Unity 6000.4.9f1, DX11 — target pin, not yet certified). The Linux compile/test gate (`tools/dotnet-ci`) is explicitly NON-certifying — a number sourced from it would be a fabricated certification. | `certification-platform.md` |
 
 Everything else — the platform pin, the corpus entry, the code seam, the
 capstone scenario, and the perf-gate wiring — is in place. When P1 and P2 clear,
@@ -53,13 +53,25 @@ that anchor with a real certified number.
 ## Step 0 — Pre-flight: verify the host matches the pin
 
 On the certification host, confirm every row of `certification-platform.md`
-v1.2 before capturing anything. A mismatch on any row invalidates the run
+v1.3 before capturing anything. A mismatch on any row invalidates the run
 (`EnvironmentFingerprint` mismatch → `ERR_DS_REPLAY_ENV_MISMATCH`, #16 §4.8).
+
+> **Note (2026-07-13):** `certification-platform.md` v1.3 bumped the target pin
+> to Unity **6000.4.9f1** (DX11) — a MAJOR version bump from the 2022.3.62f1
+> tuple this runbook and the `P2` prerequisite were originally written against.
+> No cert run has ever executed (P1/P2 below still block), so nothing is
+> invalidated in-flight, but before Step 0 is run for the first time:
+> `CertifiedPerfBaseline.Stage0CertPlatformPin` (`src/performance-optimization/CertifiedPerfBaseline.cs`)
+> and its citation in Step 2 below still hardcode the string
+> `win11-unity2022.3.62f1-mono-x64-sse4.2-1w-detflags` and must be updated to
+> match the new pin before any `SessionManifest` is captured — that is a code
+> change, out of scope for this documentation pass.
 
 | Pin row | Required value | How to verify |
 |---------|---------------|---------------|
 | OS | Windows 11 | `winver` |
-| Unity version | 2022.3.62f1 | Unity Hub → installed editors; or `Editor\Data\...\ProjectVersion.txt` |
+| Unity version | 6000.4.9f1 | Unity Hub → installed editors; or `Editor\Data\...\ProjectVersion.txt` |
+| Graphics API | DX11 | Project Settings → Player → Other Settings → Graphics APIs |
 | Backend | Mono | Project Settings → Player → Configuration → Scripting Backend |
 | CPU arch | x64 | `wmic cpu get Architecture` (9 = x64) |
 | SIMD level | SSE4.2 baseline, no AVX/AVX2/FMA | confirm build defines exclude AVX intrinsics; CPU-Z for the CPU feature set |
@@ -158,3 +170,8 @@ Stage 0+1 perf-gate).
 | 1.0     | 2026-07-04 | —      | Initial runbook. Prep complete; run blocked on Unity project init |
 |         |            |        | (P1) + pinned-host access (P2). Steps 0–4 authored against the    |
 |         |            |        | existing pin + CertifiedPerfBaseline seam + Phase-F capstone.     |
+| 1.1     | 2026-07-13 | —      | Step 0 pre-flight table updated for the `certification-platform.md` |
+|         |            |        | v1.3 target pin bump (Unity 6000.4.9f1, DX11 row added). Flagged   |
+|         |            |        | that `CertifiedPerfBaseline.Stage0CertPlatformPin` still hardcodes |
+|         |            |        | the superseded `win11-unity2022.3.62f1-...` string and needs a    |
+|         |            |        | code change before Step 2 can be executed against the new pin.    |
