@@ -1,6 +1,6 @@
 // File:     src/event-system/EventRegistry.cs
 // Created:  2026-05-30
-// Modified: 2026-06-15  (v1.6 — AR-12 M-1 error-code message prefixes)
+// Modified: 2026-07-13  (v1.7 — Unity CS0103 fix: Unsafe.SizeOf<T> → package-free SizeOfStruct<T>)
 // Author:   —
 // Spec:     Event System #17 §2.4.2, Appendix A, Code Standards #20
 // Purpose:  Compile-time Appendix A registry. Maps event type ordinals to tier, version,
@@ -8,7 +8,7 @@
 //           EventOrdinalCache<T> provides O(1) type→ordinal lookup with no hot-path allocation.
 
 using System;
-using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using TacticalDirector.DeterministicSim;
 
@@ -134,7 +134,7 @@ namespace TacticalDirector.EventSystem
             int subsystemOrdinal, ushort maxPerTick, byte producerPhaseIndex)
             where T : struct
         {
-            int structSize = Unsafe.SizeOf<T>();
+            int structSize = SizeOfStruct<T>();
 
             // AR-8 L-1: Tier A/B structs must embed the canonical 12-byte header (§2.4.1).
             // A struct smaller than EventHeaderBytes would let EventBus.PublishAuthoritative
@@ -153,6 +153,21 @@ namespace TacticalDirector.EventSystem
             RegisterRowRaw(ordinal, tier, version, subsystemOrdinal,
                 maxPerTick, producerPhaseIndex, structSize);
             EventOrdinalCache<T>.Ordinal = ordinal;
+        }
+
+        /// <summary>
+        /// Returns the in-memory (CLR) size of event struct <typeparamref name="T"/> in bytes —
+        /// the exact size <see cref="MemoryMarshal"/> uses when it writes/reads the event into the
+        /// ledger slot region (EventLedger / CosmeticChannel / EventBus). Computed via a one-element
+        /// span rather than System.Runtime.CompilerServices.Unsafe.SizeOf&lt;T&gt;() so the type
+        /// resolves under the Unity 2022.3 BCL surface (the System.Runtime.CompilerServices.Unsafe
+        /// assembly is not referenced there). Boot-time only — the one-element array allocation is
+        /// off the hot path (RegisterRow&lt;T&gt; runs during static init / RegisterExternalRow).
+        /// </summary>
+        internal static int SizeOfStruct<T>() where T : struct
+        {
+            Span<T> single = new T[1];
+            return MemoryMarshal.AsBytes(single).Length;
         }
 
         private static void RegisterRowRaw(byte ordinal, byte tier, byte version,
@@ -298,4 +313,12 @@ namespace TacticalDirector.EventSystem
 // | 1.6     | 2026-06-15 | —      | AR-12 M-1: throw-site hex literals (0x1706 / 0x1707) replaced with   |
 // |         |            |        | EventSystemConstants.ErrPrefix* strings (codes single source of      |
 // |         |            |        | truth; rendered text byte-identical). No functional change.         |
+// | 1.7     | 2026-07-13 | —      | Unity build fix (CS0103 'Unsafe' does not exist): the                |
+// |         |            |        | System.Runtime.CompilerServices.Unsafe assembly is not referenced    |
+// |         |            |        | under the Unity 2022.3 BCL surface, so Unsafe.SizeOf<T>() failed to  |
+// |         |            |        | resolve in-engine (the dotnet-ci shim provides it, so CI was green). |
+// |         |            |        | Replaced with a package-free internal SizeOfStruct<T>() helper that  |
+// |         |            |        | reads MemoryMarshal.AsBytes(new T[1]).Length — the identical CLR     |
+// |         |            |        | struct size MemoryMarshal already uses to (de)serialise events.      |
+// |         |            |        | Boot-time only; value byte-identical to the prior Unsafe.SizeOf.     |
 #endregion
