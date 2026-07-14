@@ -1,6 +1,7 @@
 // File:     src/event-system/EventRegistry.cs
 // Created:  2026-05-30
-// Modified: 2026-07-13  (v1.7 — Unity CS0103 fix: Unsafe.SizeOf<T> → package-free SizeOfStruct<T>)
+// Modified: 2026-07-14  (v1.8 — match-flow completion: registered OffsideCalledEvent (0x18) /
+//           RestartAwardedEvent (0x19) / MatchPhaseChangedEvent (0x1A))
 // Author:   —
 // Spec:     Event System #17 §2.4.2, Appendix A, Code Standards #20
 // Purpose:  Compile-time Appendix A registry. Maps event type ordinals to tier, version,
@@ -128,6 +129,20 @@ namespace TacticalDirector.EventSystem
             RegisterRowRaw(0x17, tier: 2, version: 1,
                 subsystemOrdinal: SubsystemOrdinals.GoalkeeperMechanics,
                 maxPerTick: 8, producerPhaseIndex: (byte)PhaseId.Physics, structSize: 0);
+
+            // Match-flow completion (docs/tracking/match-flow-completion-design.md §8) — owned by the
+            // match-engine composition root, not a numbered spec, so these mirror the existing
+            // PossessionChangedEvent/GoalAwardedEvent/etc. convention of subsystemOrdinal =
+            // SubsystemOrdinals.EventSystem (match-engine has no domain-tag/subsystem-ordinal of its own).
+            RegisterRow<OffsideCalledEvent>(0x18, tier: 0, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.EventSystem,
+                maxPerTick: 0, producerPhaseIndex: (byte)PhaseId.Resolve);
+            RegisterRow<RestartAwardedEvent>(0x19, tier: 0, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.EventSystem,
+                maxPerTick: 0, producerPhaseIndex: (byte)PhaseId.Resolve);
+            RegisterRow<MatchPhaseChangedEvent>(0x1A, tier: 0, version: 1,
+                subsystemOrdinal: SubsystemOrdinals.EventSystem,
+                maxPerTick: 0, producerPhaseIndex: (byte)PhaseId.Input);
         }
 
         private static void RegisterRow<T>(byte ordinal, byte tier, byte version,
@@ -322,4 +337,9 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | reads MemoryMarshal.AsBytes(new T[1]).Length — the identical CLR     |
 // |         |            |        | struct size MemoryMarshal already uses to (de)serialise events.      |
 // |         |            |        | Boot-time only; value byte-identical to the prior Unsafe.SizeOf.     |
+// | 1.8     | 2026-07-14 | —      | Match-flow completion: three new Tier A rows registered — 0x18       |
+// |         |            |        | OffsideCalledEvent, 0x19 RestartAwardedEvent, 0x1A                   |
+// |         |            |        | MatchPhaseChangedEvent (all subsystemOrdinal = EventSystem, matching |
+// |         |            |        | the existing match-engine-authored rows; see docs/tracking/          |
+// |         |            |        | match-flow-completion-design.md §8).                                 |
 #endregion

@@ -10,6 +10,7 @@
 // Modified: 2026-07-11 (#23/#24/#25 wiring: Phase-D writers + dismark per-agent pass + build-up regain consumer + rotation serialization; SNAPSHOT_SCHEMA_VERSION 11 → 12)
 // Modified: 2026-07-11 (#26 manager-AI wiring: ConfigureManager + stride decision gate + ManagerState serialization; SNAPSHOT_SCHEMA_VERSION 12 → 13)
 // Modified: 2026-07-11 (engine substrate: Resolve-phase goal detection + score state + GoalAwardedEvent + centre-spot restart; #26 live goalDiff/clock inputs + half-time trigger; SNAPSHOT_SCHEMA_VERSION 13 → 14)
+// Modified: 2026-07-14 (match-flow completion: throw-in/corner/goal-kick restarts, fouls/cards, offside, substitutions, half-time ends-swap, full-time freeze; SNAPSHOT_SCHEMA_VERSION 14 → 15 — see docs/tracking/match-flow-completion-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -94,7 +95,7 @@ namespace TacticalDirector.MatchEngine
         // backs all 22 instances (the adapter methods take agentId). DecisionTree stays Phase D.
 
         private readonly CollisionSubsystem            _collisionSystem;
-        private readonly ICollisionEventConsumer       _eventConsumer;   // null-object drain; real collision/foul consumers deferred (no Stage-0 card/foul model)
+        private readonly ICollisionEventConsumer       _eventConsumer;   // MatchFlowCollisionConsumer (design note §3) — captures at most one foul candidate per tick
         private readonly PassExecutor[]                _passExecutors;   // [SQUAD_SIZE]
         private readonly ShotExecutor[]                _shotExecutors;   // [SQUAD_SIZE]
         private readonly bool[]                        _stumbleScratch;  // UpdateCollisions stumbleOut sink (discarded — not a Stage-0 movement input, B4)
@@ -183,7 +184,7 @@ namespace TacticalDirector.MatchEngine
         private readonly ManagerState[] _managerStates;  // [TEAM_COUNT]
 
         // ── Score state (engine substrate — the #26 §9.3 upstream deliverable) ────────
-        // Per-team goal counts, incremented by the Resolve-phase goal check (CheckGoalAndRestart)
+        // Per-team goal counts, incremented by the Resolve-phase goal check (CheckRestartAndApply)
         // when the ball fully crosses a goal line between the posts under the crossbar
         // (BallCollision.CheckBoundaries ⇒ RestartType.KickOff; the Stage-0 z < Diameter gate is
         // that predicate's own documented simplification). Read by the #26 manager-AI decision
@@ -199,6 +200,58 @@ namespace TacticalDirector.MatchEngine
         // held the ball — the scoring TEAM is classified by geometry (which goal), never by this
         // field. Serialized at v14. −1 until any agent first holds possession.
         private int _lastHolderAgentId;
+
+        // ── Match-flow completion (docs/tracking/match-flow-completion-design.md) ─────
+        // Discipline: per-agent yellow-card count + sent-off flag, plus a global foul-detection
+        // cooldown (design note §3). Serialized at v15 (cross-tick, digest-load-bearing).
+        private readonly byte[] _yellowCards;   // [SQUAD_SIZE]
+        private readonly bool[] _isSentOff;     // [SQUAD_SIZE]
+        private int _foulCooldownRemaining;
+
+        // Single-candidate foul capture (design note §3) — MatchFlowCollisionConsumer.OnCollisionEvent
+        // writes these during CollisionSystem.UpdateCollisions; ApplyFoulIfCaptured reads + resets
+        // them immediately after (the sole reset — see the RunResolvePhase comment at the
+        // UpdateCollisions call site). Not persisted cross-tick in any meaningful sense (always
+        // false entering a tick's collision step), so NOT serialized.
+        private bool _foulCandidateFound;
+        private int  _foulCandidateOffender;
+        private int  _foulCandidateVictim;
+
+        // RNG stream for card-severity draws (design note §3), registered at Boot on the injected
+        // DeterministicRngService — the first host-owned draw site in match-engine (Phase A/C register
+        // none; collision self-seeds and pass/shot error is hash-based). entityId -1 = the world-scoped
+        // (non-entity) stream, matching the InteractionTextGenerator (#22) convention.
+        private readonly int _cardSeverityStreamIndex;
+
+        // Substitutions (design note §6): per-agent active bench slot (-1 = original starter) + per-team
+        // substitutions-used count are cross-tick, serialized at v15. The bench roster itself
+        // (attributes/perf/GK-flag per team per bench slot) is a boot-deterministic Stage-0 in-code
+        // config — same B3 exclusion proof as _attrs/_perfs — so it is NOT serialized.
+        private readonly int[] _activeBenchSlot;    // [SQUAD_SIZE], -1 = original starter
+        private readonly int[] _substitutionsUsed;  // [TEAM_COUNT]
+
+        // Pending substitution-event queue (design note §6, AR-5 finding): SubstitutePlayer is a
+        // public API a caller may invoke BETWEEN ticks, when EventBus.CurrentPhase is the post-
+        // OnTickBoundary 0xFF sentinel — publishing a SubstitutionEvent immediately there would throw
+        // (EventBus.cs AR-8 M-2 stale-Publish guard). The state effect (attrs/perf/GK-flag swap) is
+        // applied immediately in SubstitutePlayer; only the notification event is queued here and
+        // flushed at the top of the next RunResolvePhase, where CurrentPhase == Resolve (the
+        // registered producer phase for SubstitutionEvent). Capacity = every team's max subs, so it
+        // can never overflow. Not cross-tick in any persisted sense (drained same tick it is filled,
+        // whenever that tick next runs) — NOT serialized.
+        private readonly int[]  _pendingSubOutgoing;  // [MAX_SUBSTITUTIONS_PER_TEAM * TEAM_COUNT]
+        private readonly int[]  _pendingSubIncoming;
+        private readonly byte[] _pendingSubTeam;
+        private readonly byte[] _pendingSubReason;
+        private int _pendingSubCount;
+        private readonly PlayerAttributes[][]   _benchAttrs;        // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
+        private readonly PerformanceContext[][] _benchPerfs;        // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
+        private readonly bool[][]               _benchIsGoalkeeper; // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
+
+        // Match-flow clock (design note §7): half-time ends-swap and full-time gameplay freeze, each
+        // fired exactly once (guarded by these flags). Serialized at v15 (cross-tick).
+        private bool _secondHalfStarted;
+        private bool _matchEnded;
 
         // ── Dismarking #23 per-agent state (FR-DM-014) ────────────────────────────────
         // Persistent per-agent marking dwell, updated in the per-agent perception pass each AI
@@ -336,8 +389,14 @@ namespace TacticalDirector.MatchEngine
             _possessingAgentId     = MatchEngineConstants.NO_POSSESSION;
             _prevPossessingAgentId = MatchEngineConstants.NO_POSSESSION; // Phase E — no transition at boot
             _collisionSystem   = new CollisionSubsystem(MatchEngineConstants.SQUAD_SIZE);
-            _eventConsumer     = new NullCollisionEventConsumer();
+            _eventConsumer     = new MatchFlowCollisionConsumer(this);
             _stumbleScratch    = new bool[MatchEngineConstants.SQUAD_SIZE];
+
+            // Match-flow completion (design note §3) — the first host-owned RNG draw site. Registered
+            // once here; the entityId -1 sentinel matches the InteractionTextGenerator (#22) world-
+            // scoped-stream convention (this is a match-wide, not per-agent, draw).
+            _cardSeverityStreamIndex = _rng.RegisterStream(
+                "match-flow.card-severity", SubsystemOrdinals.EventSystem, entityId: -1, streamVersion: 1);
 
             // One adapter per executor family backs all 22 per-agent instances (C1a). Constructed once
             // here; the executors hold them for the match lifetime (no per-frame allocation).
@@ -421,6 +480,49 @@ namespace TacticalDirector.MatchEngine
             // Engine score state (v14): 0–0 at kickoff; no agent has held possession yet.
             _goals             = new int[MatchEngineConstants.TEAM_COUNT];
             _lastHolderAgentId = MatchEngineConstants.NO_POSSESSION;
+
+            // Match-flow completion (design note §2/§3/§6/§7): discipline, substitutions, match-flow
+            // clock. Every array starts at its behaviour-neutral identity (no cards, no subs used, no
+            // transition fired) — a match that never calls SubstitutePlayer and never triggers a foul
+            // is unaffected.
+            _yellowCards            = new byte[MatchEngineConstants.SQUAD_SIZE];
+            _isSentOff              = new bool[MatchEngineConstants.SQUAD_SIZE];
+            _foulCooldownRemaining  = 0;
+            _activeBenchSlot        = new int[MatchEngineConstants.SQUAD_SIZE];
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _activeBenchSlot[i] = -1;
+            }
+            _substitutionsUsed = new int[MatchEngineConstants.TEAM_COUNT];
+            int maxPendingSubs = MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM * MatchEngineConstants.TEAM_COUNT;
+            _pendingSubOutgoing = new int[maxPendingSubs];
+            _pendingSubIncoming = new int[maxPendingSubs];
+            _pendingSubTeam     = new byte[maxPendingSubs];
+            _pendingSubReason   = new byte[maxPendingSubs];
+            _pendingSubCount    = 0;
+
+            // Bench roster (design note §6): a Stage-0 in-code source, mirroring the TeamTacticConfig
+            // precedent — the on-disk loader is a Stage 1+ parser swap. Every slot defaults to the
+            // neutral identity attributes/perf/GK-flag; a real per-competition bench is a config-loader
+            // follow-up, not a Stage-0 requirement.
+            _benchAttrs        = new PlayerAttributes[MatchEngineConstants.TEAM_COUNT][];
+            _benchPerfs        = new PerformanceContext[MatchEngineConstants.TEAM_COUNT][];
+            _benchIsGoalkeeper = new bool[MatchEngineConstants.TEAM_COUNT][];
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _benchAttrs[t]        = new PlayerAttributes[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                _benchPerfs[t]        = new PerformanceContext[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                _benchIsGoalkeeper[t] = new bool[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
+                {
+                    _benchAttrs[t][b] = PlayerAttributes.CreateDefault();
+                    _benchPerfs[t][b] = PerformanceContext.CreateNeutral();
+                    _benchIsGoalkeeper[t][b] = false;
+                }
+            }
+
+            _secondHalfStarted = false;
+            _matchEnded        = false;
 
             InitializeAiSnapshots();
 
@@ -649,6 +751,97 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// Substitutes a bench player onto the pitch in place of an on-pitch agent (design note §6).
+        /// The outgoing slot's attributes/performance-context/goalkeeper-flag are overwritten from the
+        /// Stage-0 in-code bench config (<paramref name="teamId"/>'s slot <paramref name="benchIndex"/>);
+        /// position/velocity are left untouched (no re-entry ceremony, matching every other restart's
+        /// minimalism). The outgoing agent's DecisionTree is interrupted so it re-plans fresh next AI
+        /// stride (reuses the existing possession-change seam). Publishes a Tier A
+        /// <see cref="SubstitutionEvent"/> with a synthetic incoming-player id
+        /// (<c>SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex</c>) distinct from any on-pitch
+        /// slot index. Fails loud (boot/manager-decision-time call, not hot-path) on: an out-of-range
+        /// team/slot/bench index; a slot not belonging to <paramref name="teamId"/>; a sent-off or
+        /// already-substituted slot; a bench index already used this match for the team; or the
+        /// team's <see cref="MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM"/> cap already reached.
+        /// </summary>
+        public void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
+        {
+            if (teamId < 0 || teamId >= MatchEngineConstants.TEAM_COUNT)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(teamId), teamId, "teamId must be 0 (home) or 1 (away).");
+            }
+            if (outSlotIndex < 0 || outSlotIndex >= MatchEngineConstants.SQUAD_SIZE)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(outSlotIndex), outSlotIndex, "outSlotIndex must be a roster index in [0, SQUAD_SIZE).");
+            }
+            if (_teamIds[outSlotIndex] != teamId)
+            {
+                throw new System.ArgumentException(
+                    "SubstitutePlayer: outSlotIndex does not belong to teamId.", nameof(outSlotIndex));
+            }
+            if (_isSentOff[outSlotIndex])
+            {
+                throw new System.InvalidOperationException("SubstitutePlayer: outSlotIndex has been sent off.");
+            }
+            if (_activeBenchSlot[outSlotIndex] != -1)
+            {
+                throw new System.InvalidOperationException("SubstitutePlayer: outSlotIndex has already been substituted.");
+            }
+            if (benchIndex < 0 || benchIndex >= MatchEngineConstants.SUBSTITUTES_PER_TEAM)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(benchIndex), benchIndex, "benchIndex must be in [0, SUBSTITUTES_PER_TEAM).");
+            }
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (_teamIds[i] == teamId && _activeBenchSlot[i] == benchIndex)
+                {
+                    throw new System.InvalidOperationException("SubstitutePlayer: benchIndex has already been used this match.");
+                }
+            }
+            if (_substitutionsUsed[teamId] >= MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM)
+            {
+                throw new System.InvalidOperationException("SubstitutePlayer: teamId has used all permitted substitutions.");
+            }
+
+            _attrs[outSlotIndex]        = _benchAttrs[teamId][benchIndex];
+            _perfs[outSlotIndex]        = _benchPerfs[teamId][benchIndex];
+            _isGoalkeeper[outSlotIndex] = _benchIsGoalkeeper[teamId][benchIndex];
+            _decisionTrees[outSlotIndex].NotifyInterrupt();
+            _activeBenchSlot[outSlotIndex] = benchIndex;
+            _substitutionsUsed[teamId]++;
+
+            // AR-5: queue the notification rather than publishing immediately — this method may be
+            // called between ticks, when EventBus.CurrentPhase is not a valid producer phase. Flushed
+            // at the top of the next RunResolvePhase. Capacity can never overflow (bounded by every
+            // team's MAX_SUBSTITUTIONS_PER_TEAM, enforced above).
+            int incomingId = MatchEngineConstants.SQUAD_SIZE
+                + teamId * MatchEngineConstants.SUBSTITUTES_PER_TEAM + benchIndex;
+            _pendingSubOutgoing[_pendingSubCount] = outSlotIndex;
+            _pendingSubIncoming[_pendingSubCount] = incomingId;
+            _pendingSubTeam[_pendingSubCount]     = (byte)teamId;
+            _pendingSubReason[_pendingSubCount]   = (byte)reason;
+            _pendingSubCount++;
+        }
+
+        /// <summary>Publishes every queued <see cref="SubstitutionEvent"/> from <see cref="SubstitutePlayer"/>
+        /// calls made since the last flush (design note §6, AR-5), then clears the queue. Called at the
+        /// top of <see cref="RunResolvePhase"/>, where <c>EventBus.CurrentPhase == Resolve</c> — the
+        /// registered producer phase for <see cref="SubstitutionEvent"/>.</summary>
+        private void PublishPendingSubstitutions()
+        {
+            for (int i = 0; i < _pendingSubCount; i++)
+            {
+                var evt = new SubstitutionEvent(
+                    _pendingSubOutgoing[i], _pendingSubIncoming[i], _pendingSubTeam[i], _pendingSubReason[i]);
+                EventBus.Publish(in evt);
+            }
+            _pendingSubCount = 0;
+        }
+
+        /// <summary>
         /// Configures a team's manager AI (#26 FR-TP-007 / KD-4). <see cref="ManagerMode.Human"/>
         /// (the default) resets the team's manager state to the inert identity — no selection, no
         /// adaptation, no engine calls. <see cref="ManagerMode.AI"/> opts the team in: the given
@@ -740,6 +933,67 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Test-only: the last settled possession holder (v14; −1 = no agent has held yet).</summary>
         internal int TestOnly_LastHolderAgentId => _lastHolderAgentId;
+
+        /// <summary>Test-only: an agent's yellow-card count (design note §3; v15).</summary>
+        internal byte TestOnly_YellowCards(int agentId) => _yellowCards[agentId];
+
+        /// <summary>Test-only: an agent's sent-off flag (design note §3; v15).</summary>
+        internal bool TestOnly_IsSentOff(int agentId) => _isSentOff[agentId];
+
+        /// <summary>Test-only: the global foul-detection cooldown remaining (design note §3; v15).</summary>
+        internal int TestOnly_FoulCooldownRemaining => _foulCooldownRemaining;
+
+        /// <summary>Test-only: an agent's active bench slot, −1 = original starter (design note §6; v15).</summary>
+        internal int TestOnly_ActiveBenchSlot(int agentId) => _activeBenchSlot[agentId];
+
+        /// <summary>Test-only: a team's substitutions-used count (design note §6; v15).</summary>
+        internal int TestOnly_SubstitutionsUsed(int teamId) => _substitutionsUsed[teamId];
+
+        /// <summary>Test-only: the half-time-fired flag (design note §7; v15).</summary>
+        internal bool TestOnly_SecondHalfStarted => _secondHalfStarted;
+
+        /// <summary>Test-only: the full-time-fired (gameplay-freeze) flag (design note §7; v15).</summary>
+        internal bool TestOnly_MatchEnded => _matchEnded;
+
+        /// <summary>Test-only seam: runs the match-flow clock check exactly as RunInputPhase does, at
+        /// an arbitrary <paramref name="tick"/> (mirrors the <c>TestOnly_RunManagerDecisionPoints</c>
+        /// explicit-tick pattern), so half-time/full-time behaviour is testable without running the
+        /// real ~162 000 / ~324 000 ticks.</summary>
+        internal void TestOnly_CheckMatchFlowTransitions(long tick) => CheckMatchFlowTransitions(tick);
+
+        /// <summary>Test-only seam: sets an agent's team id directly (offside/foul fixture construction;
+        /// pairs with the existing <c>TestOnly_SetAgent</c>, which sets position/facing/velocity via a
+        /// full <see cref="AgentState"/> — e.g. <c>AgentState.CreateAtPosition</c>).</summary>
+        internal void TestOnly_SetTeamId(int agentId, int teamId) => _teamIds[agentId] = teamId;
+
+        /// <summary>Test-only seam: sets an agent's sent-off flag directly, bypassing the RNG-driven
+        /// card path (fixture construction for the offside/mechanics-AI exclusion tests).</summary>
+        internal void TestOnly_SetIsSentOff(int agentId, bool isSentOff) => _isSentOff[agentId] = isSentOff;
+
+        /// <summary>Test-only seam: configures a bench slot's attributes directly (substitution fixture
+        /// construction — the production source is the Stage-0 in-code default per design note §6).</summary>
+        internal void TestOnly_SetBenchSlot(int teamId, int benchIndex, bool isGoalkeeper)
+        {
+            _benchIsGoalkeeper[teamId][benchIndex] = isGoalkeeper;
+        }
+
+        /// <summary>Test-only seam: runs the offside check exactly as the <c>RunFirstTouch</c> Controlled
+        /// case does, for an arbitrary <paramref name="toucher"/>, without needing to engineer a full
+        /// first-touch reception through ball/agent physics. Returns true iff a violation was called
+        /// (and applied — ball/possession already stomped by the time this returns).</summary>
+        internal bool TestOnly_EvaluateAndApplyOffside(int toucher) => EvaluateAndApplyOffside(toucher);
+
+        /// <summary>Test-only seam: injects a foul candidate exactly as <see cref="MatchFlowCollisionConsumer"/>
+        /// would, bypassing the need to engineer a real FROM_BEHIND high-force agent-agent collision.
+        /// Call before <see cref="RunTick"/> — the value survives into that tick's <c>RunResolvePhase</c>
+        /// (which resets it only via <c>ApplyFoulIfCaptured</c> consuming it, never pre-emptively) and is
+        /// applied in the normal Resolve-phase place (design note §3 test plan).</summary>
+        internal void TestOnly_InjectFoulCandidate(int offender, int victim)
+        {
+            _foulCandidateFound    = true;
+            _foulCandidateOffender = offender;
+            _foulCandidateVictim   = victim;
+        }
 
         /// <summary>Test-only seam: runs the manager decision points exactly as RunAiPhase does —
         /// same gate, same live goalDiff/clock inputs — at an arbitrary <paramref name="decisionTick"/>,
@@ -1056,6 +1310,48 @@ namespace TacticalDirector.MatchEngine
             // being processed (design note §2.4).
             EventBus.BeginTick((uint)_clock.CurrentTick);
             EventBus.BeginPhase(PhaseId.Input);
+
+            // Match-flow completion (design note §7): half-time ends-swap / full-time freeze, checked
+            // every tick (not stride-gated) so the transition fires on the exact boundary tick
+            // regardless of AI stride alignment.
+            CheckMatchFlowTransitions((long)_clock.CurrentTick);
+        }
+
+        /// <summary>
+        /// Match-flow clock transitions (design note §7): checked every tick (not stride-gated) so a
+        /// transition fires on the exact boundary tick. Half-time (once, guarded by
+        /// <see cref="_secondHalfStarted"/>): resets the ball to the centre spot, clears possession,
+        /// and publishes <see cref="MatchPhaseChangedEvent"/>(SecondHalf) — a real, visible transition
+        /// marker. AR-4 (design note v0.4): does NOT reposition agents or flip the attack-direction
+        /// convention — <c>team 0 attacks +X</c> is hardcoded across goal detection, offside, and every
+        /// Mechanics-AI frame mapping, so a full ends-swap is a documented Stage-1+ deferral, not
+        /// attempted here. Full-time (once, guarded by <see cref="_matchEnded"/>): publishes
+        /// <see cref="MatchPhaseChangedEvent"/>(FullTime) — the freeze itself is enforced by the
+        /// per-phase <see cref="_matchEnded"/> guards in RunPhysicsPhase/RunResolvePhase/RunAiPhase.
+        /// Neither transition pauses real time (the sim has no wall-clock) — both are instantaneous
+        /// tick-boundary events, consistent with every other restart in this note.
+        /// </summary>
+        private void CheckMatchFlowTransitions(long tick)
+        {
+            if (!_secondHalfStarted && tick >= MatchEngineConstants.HALF_TIME_BOUNDARY_TICK)
+            {
+                _secondHalfStarted = true;
+                ApplyRestart(new Vector2(MatchEngineConstants.KickoffBallXM, MatchEngineConstants.KickoffBallYM));
+
+                var evt = new MatchPhaseChangedEvent(newPhase: 0, homeScore: _goals[0], awayScore: _goals[1]);
+                EventBus.Publish(in evt);
+            }
+
+            // Deliberately NOT an else-if: a real per-tick increment can never cross both boundaries
+            // in the same call (HALF_TIME_BOUNDARY_TICK != MATCH_TICKS_TOTAL), but a test-only direct
+            // jump straight to MATCH_TICKS_TOTAL on a fresh engine must still fire both transitions.
+            if (!_matchEnded && tick >= MatchEngineConstants.MATCH_TICKS_TOTAL)
+            {
+                _matchEnded = true;
+
+                var evt = new MatchPhaseChangedEvent(newPhase: 1, homeScore: _goals[0], awayScore: _goals[1]);
+                EventBus.Publish(in evt);
+            }
         }
 
         /// <summary>Phase 1 — Intent. Enters the Intent phase, then unconditionally enters the
@@ -1113,6 +1409,14 @@ namespace TacticalDirector.MatchEngine
         {
             _aiPhaseRanThisTick = true;
             _aiPhaseRunCount++;
+
+            // Match-flow completion (design note §7): freeze all gameplay decisions after full time.
+            // Placed after the observation counters (so stride-cadence tests are unaffected) and
+            // before any tactic commit / mechanics AI / decision dispatch.
+            if (_matchEnded)
+            {
+                return;
+            }
 
             // #26 FR-TP-006/018: the manager decision gate — evaluated ONLY here inside the stride
             // branch (off-stride firing impossible by construction, F5) and BEFORE the FR-TI-027
@@ -1184,6 +1488,15 @@ namespace TacticalDirector.MatchEngine
                         out int markerId, out _, out _);
                     _markingDwell[i] = MarkingPressureEvaluator.UpdateDwell(
                         in _markingDwell[i], _positioning[_teamIds[i]].GetPhase(), markerExists, markerId);
+                }
+
+                // Match-flow completion (design note §3): a sent-off agent is never dispatched a new
+                // action (RunPhysicsPhase separately forces them to a stop each tick). Perception/dwell
+                // above still runs unconditionally — harmless, and keeps this the only orchestration-
+                // level skip needed.
+                if (_isSentOff[i])
+                {
+                    continue;
                 }
 
                 float pressureScalar = _perception.GetDiagnostics(i).PressureScalar;
@@ -1415,7 +1728,7 @@ namespace TacticalDirector.MatchEngine
                     entityId:     i,
                     slotIndex:    k,
                     position:     MirrorPitchIfAway(team, _agents[i].Position),
-                    isActive:     true,                 // Stage 0: no substitutions / red cards yet
+                    isActive:     !_isSentOff[i],       // match-flow completion: red-carded agents excluded
                     role:         formation[k].Role,
                     isGoalkeeper: isGk);
 
@@ -1530,7 +1843,7 @@ namespace TacticalDirector.MatchEngine
                     PostTouchBallSpeed  = 0f,
                     IsGoalkeeper        = _isGoalkeeper[i],
                     HasBall             = i == owner,
-                    IsActive            = true,
+                    IsActive            = !_isSentOff[i], // match-flow completion: red-carded agents excluded
                     BaselineSlot        = isOwn ? _positioning[team].GetFormationSlot(i)
                                                 : MirrorPitchIfAway(team, _agents[i].Position),
                     Line                = isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
@@ -1623,7 +1936,7 @@ namespace TacticalDirector.MatchEngine
                     TeamId              = _teamIds[i],
                     Position            = MirrorPitchIfAway(team, _agents[i].Position),
                     Velocity            = MirrorVelocityIfAway(team, _agents[i].Velocity),
-                    IsActive            = true,
+                    IsActive            = !_isSentOff[i], // match-flow completion: red-carded agents excluded
                     IsGoalkeeper        = _isGoalkeeper[i],
                     HasBall             = i == owner,
                     BaselineSlot        = isOwn ? _positioning[team].GetFormationSlot(i)
@@ -1677,7 +1990,7 @@ namespace TacticalDirector.MatchEngine
                     line:         isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
                     isGoalkeeper: _isGoalkeeper[i],
                     hasBall:      i == owner,
-                    isActive:     true,
+                    isActive:     !_isSentOff[i], // match-flow completion: red-carded agents excluded
                     pace:         MatchEngineConstants.STAGE0_NEUTRAL_NORMALIZED,
                     stamina:      1f - _agents[i].AerobicPool,
                     dribbling:    MatchEngineConstants.STAGE0_NEUTRAL_NORMALIZED);
@@ -1747,6 +2060,10 @@ namespace TacticalDirector.MatchEngine
         private void RunPhysicsPhase()
         {
             EventBus.BeginPhase(PhaseId.Physics);
+            if (_matchEnded)
+            {
+                return;
+            }
 
             // Fixed 60 Hz timestep in SECONDS (design note §3 / step B1); never wall-clock.
             float dt = DeterministicSimConstants.FrameSeconds;
@@ -1755,6 +2072,17 @@ namespace TacticalDirector.MatchEngine
             // so no allocation and no non-load-bearing time enters the digest. No wind at Stage 0.
             BallPhysicsCore.UpdateBallPhysics(
                 ref _ball, dt, SurfaceType.GrassDry, Vector3.zero, logger: null, matchTime: 0f);
+
+            // Match-flow completion (design note §3): a sent-off agent is frozen — forced to a stop
+            // command every tick, overriding whatever the last AI dispatch left held (they will never
+            // receive a new one, per the RunAiPhase skip above). Decelerates to rest and stays there.
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (_isSentOff[i])
+                {
+                    _commands[i] = MovementCommand.Stop(_agents[i].Position);
+                }
+            }
 
             // Agents: the batch seam skips goalkeepers (Stage 0 — GK locomotion is Spec #11).
             // currentTime is the seconds-domain match clock (step B1), as OscillationGuard compares
@@ -1777,9 +2105,24 @@ namespace TacticalDirector.MatchEngine
         private void RunResolvePhase()
         {
             EventBus.BeginPhase(PhaseId.Resolve);
+            if (_matchEnded)
+            {
+                return;
+            }
+
+            // Match-flow completion (design note §6, AR-5): flush any SubstitutePlayer calls made
+            // since the last tick — CurrentPhase is now Resolve, the registered producer phase.
+            PublishPendingSubstitutions();
 
             int   frameNumber = (int)_clock.CurrentTick;          // narrows safely at Stage 0 (~414 days @ 60 Hz)
             float matchTime   = _clock.CurrentMatchTimeSeconds;
+
+            // Match-flow completion (design note §3): the global foul-detection cooldown decrements
+            // once per tick, before the collision step that would otherwise re-arm a foul this tick.
+            if (_foulCooldownRemaining > 0)
+            {
+                _foulCooldownRemaining--;
+            }
 
             // C2 — collision first. Reuses _attrs (PlayerAttributes[]); writes _isCollisionKnockdown /
             // _collisionForces (consumed by movement at tick N+1). stumbleOut is discarded (B4 — not a
@@ -1788,6 +2131,9 @@ namespace TacticalDirector.MatchEngine
             // UpdateAllAgents skips GKs (Stage 0 — GK locomotion is #11). A GK can therefore be
             // displaced by a collision that movement never re-integrates; benign at Stage 0 (kickoff
             // spread admits no GK collisions) and inherent to the two seams, recorded here for Phase D.
+            // _foulCandidateFound needs no reset here: ApplyFoulIfCaptured (called every tick, right
+            // below) always clears it when true, so it is already false entering UpdateCollisions —
+            // an invariant a TestOnly-injected candidate can rely on too (design note §3 test plan).
             _collisionSystem.UpdateCollisions(
                 _agents, _attrs, _teamIds, _isGoalkeeper,
                 knockdownOut:      _isCollisionKnockdown,
@@ -1799,6 +2145,10 @@ namespace TacticalDirector.MatchEngine
                 matchTime:         matchTime,
                 eventConsumer:     _eventConsumer);
 
+            // Match-flow completion (design note §3): apply the (at most one) foul candidate the
+            // consumer just captured — RNG-drawn severity, card issuance, sent-off, and a free kick.
+            ApplyFoulIfCaptured();
+
             // C3 — advance any in-flight executors. Idle executors no-op; only a pass/shot started via
             // the TestOnly_ seam (or, from Phase D, the AI dispatcher) is mid-lifecycle here.
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
@@ -1807,13 +2157,12 @@ namespace TacticalDirector.MatchEngine
                 _shotExecutors[i].Update(matchTime, frameNumber, ref _ball);
             }
 
-            // Engine substrate — goal check. Runs AFTER the executors (the ball's crossing position came
-            // from this tick's Physics phase, possibly adjusted by collision) and BEFORE first touch, so a
-            // ball that has fully crossed the goal line cannot be "received" by an agent standing in the
-            // out-of-bounds buffer. On a goal the ball is restarted at the centre spot, so D3/C4 below see
-            // the restarted state. Non-goal exits (throw-in/corner/goal-kick classifications) are ignored —
-            // Stage 0 has no restart model for them, preserving pre-substrate behaviour exactly.
-            CheckGoalAndRestart();
+            // Engine substrate — restart check (goal / throw-in / corner / goal-kick). Runs AFTER the
+            // executors (the ball's crossing position came from this tick's Physics phase, possibly
+            // adjusted by collision) and BEFORE first touch, so a ball that has fully left the field
+            // cannot be "received" by an agent standing in the out-of-bounds buffer. Every restart
+            // places the ball and clears possession, so D3/C4 below see the restarted state.
+            CheckRestartAndApply();
 
             // D3 — first touch. A loose, approaching, ground-level ball arriving within reach of an agent
             // is received here (a CONTROLLED touch gains possession; an INTERCEPTION flips it to the
@@ -1859,16 +2208,33 @@ namespace TacticalDirector.MatchEngine
         /// centre spot, stationary at rest height — the minimal Stage-0 restart (agents keep their
         /// positions; no kickoff re-setup, no half-end swap; an executor mid-windup elsewhere
         /// proceeds against the restarted ball and self-cancels via its own possession recheck if it
-        /// lost the ball). Non-goal exits return without touching any state — Stage 0 has no
-        /// throw-in/corner/goal-kick restart model and the ball remains out of play exactly as
-        /// before this check existed. Deterministic and allocation-free.
+        /// lost the ball). Non-goal exits (design note §5, landed 2026-07-14) route through
+        /// <see cref="RestartResolver"/> + <see cref="ApplyRestart"/> instead of being ignored — a
+        /// throw-in/corner/goal-kick now places the ball and clears possession exactly like a goal
+        /// does, and publishes a Tier A <see cref="RestartAwardedEvent"/> (ordinal 0x19). Deterministic
+        /// and allocation-free.
         /// </summary>
-        private void CheckGoalAndRestart()
+        private void CheckRestartAndApply()
         {
             int lastTouchTeam = _lastHolderAgentId >= 0 ? _teamIds[_lastHolderAgentId] : 0;
             (bool isOut, RestartType restart) = BallCollision.CheckBoundaries(_ball, lastTouchTeam);
-            if (!isOut || restart != RestartType.KickOff)
+            if (!isOut || restart == RestartType.None)
             {
+                return;
+            }
+
+            if (restart != RestartType.KickOff)
+            {
+                // Design note §5: throw-in / corner / goal-kick.
+                Vector2 ballXY = new Vector2(_ball.Position.x, _ball.Position.y);
+                (Vector2 position, int awardedTeam) = RestartResolver.Resolve(restart, ballXY, lastTouchTeam);
+                ApplyRestart(position);
+
+                var restartEvt = new RestartAwardedEvent(
+                    restartKind: (byte)restart,
+                    awardedTeam: (byte)awardedTeam,
+                    location:    new Vector3(position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
+                EventBus.Publish(in restartEvt);
                 return;
             }
 
@@ -1889,12 +2255,131 @@ namespace TacticalDirector.MatchEngine
             // released at CONTACT and this is a no-op; in the degenerate possessed-into-the-goal
             // case it prevents a stale holder claiming a ball now 50 m away (the Phase E publisher
             // below emits the holder → loose transition).
+            ApplyRestart(new Vector2(MatchEngineConstants.KickoffBallXM, MatchEngineConstants.KickoffBallYM));
+        }
+
+        /// <summary>
+        /// Shared restart primitive (design note §5): places the ball at <paramref name="position"/>
+        /// at rest height, stationary, and clears possession. Used by the goal restart, the throw-in/
+        /// corner/goal-kick restarts, an offside violation, and a foul's awarded free kick — the same
+        /// "stomp, don't undo" minimalism throughout (no ceremony; agents keep their positions and
+        /// naturally contest the loose ball via the existing pressing/first-touch systems).
+        /// </summary>
+        private void ApplyRestart(Vector2 position)
+        {
             _ball = BallState.CreateAtPosition(new Vector3(
-                MatchEngineConstants.KickoffBallXM,
-                MatchEngineConstants.KickoffBallYM,
-                MatchEngineConstants.BALL_REST_HEIGHT_M));
+                position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
             _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
         }
+
+        /// <summary>
+        /// Applies the (at most one) foul candidate <see cref="MatchFlowCollisionConsumer"/> captured
+        /// this tick (design note §3): publishes <see cref="FoulCommittedEvent"/>, draws card severity
+        /// from the <c>match-flow.card-severity</c> RNG stream, issues a card if the draw qualifies
+        /// (second yellow promotes to red), sends the offender off on any red, re-arms the global
+        /// cooldown, and awards a free kick to the victim's team at the foul location. No-op if no
+        /// candidate was captured this tick.
+        /// </summary>
+        private void ApplyFoulIfCaptured()
+        {
+            if (!_foulCandidateFound)
+            {
+                return;
+            }
+            _foulCandidateFound = false;
+
+            int offender = _foulCandidateOffender;
+            int victim   = _foulCandidateVictim;
+            Vector2 victimPos = _agents[victim].Position;
+            Vector3 location  = new Vector3(victimPos.x, victimPos.y, 0f);
+
+            var foulEvt = new FoulCommittedEvent(offender, victim, location, foulKind: (byte)ContactType.FROM_BEHIND);
+            EventBus.Publish(in foulEvt);
+
+            if (_rng.Reserve(_cardSeverityStreamIndex, 1) != 0)
+            {
+                throw new InvalidOperationException(
+                    "MatchEngine.ApplyFoulIfCaptured: a card-severity reservation is already open (draw-site misuse).");
+            }
+            if (_rng.DrawReserved(_cardSeverityStreamIndex, 0, out ulong draw) != 0)
+            {
+                // Unreachable under the API contract (Reserve(1) above set DeclaredBudget = 1, so index
+                // 0 is always in range); closing keeps the stream usable for the next caller, matching
+                // the InteractionTextGenerator (#22) precedent for this exact defensive branch.
+                _rng.CloseReservation(_cardSeverityStreamIndex);
+                throw new InvalidOperationException(
+                    "MatchEngine.ApplyFoulIfCaptured: card-severity draw failed — corrupt reservation state (internal invariant).");
+            }
+            _rng.CloseReservation(_cardSeverityStreamIndex);
+
+            float u = (draw % 1_000_000UL) / 1_000_000f;
+            byte? drawnKind = DetermineCardKind(u);
+
+            if (drawnKind.HasValue)
+            {
+                byte cardKind = ApplyCardAndCheckSentOff(offender, drawnKind.Value);
+                var cardEvt = new CardIssuedEvent(offender, cardKind, foulOrdinal: 0xFFFF);
+                EventBus.Publish(in cardEvt);
+            }
+
+            _foulCooldownRemaining = MatchEngineConstants.FoulCooldownTicks;
+
+            // Free kick to the victim's team at the foul location (design note §3).
+            ApplyRestart(victimPos);
+        }
+
+        /// <summary>
+        /// Pure card-severity band lookup (design note §3), separated from the RNG draw itself so the
+        /// boundary conditions are directly testable with an explicit <paramref name="u"/> (mirrors the
+        /// project's pure-formula-over-hash-derived-input convention, e.g. <c>OffsideEvaluator.IsOffside</c>).
+        /// <c>[0, RedCardProbability)</c> = straight red (1); <c>[RedCardProbability,
+        /// RedCardProbability + YellowCardProbability)</c> = yellow (0); else null (no card).
+        /// </summary>
+        private static byte? DetermineCardKind(float u)
+        {
+            if (u < MatchEngineConstants.RedCardProbability)
+            {
+                return 1;
+            }
+            if (u < MatchEngineConstants.RedCardProbability + MatchEngineConstants.YellowCardProbability)
+            {
+                return 0;
+            }
+            return null;
+        }
+
+        /// <summary>Test-only seam: the pure card-severity band lookup, directly testable at exact
+        /// boundary values without needing to know a real RNG draw output (design note §3 test plan).</summary>
+        internal static byte? TestOnly_DetermineCardKind(float u) => DetermineCardKind(u);
+
+        /// <summary>
+        /// Applies a drawn card kind (0=yellow, 1=red) to <paramref name="offender"/>: a first yellow
+        /// just increments the count; a SECOND yellow promotes to card kind 2 (SecondYellow) and sends
+        /// the agent off; a straight red sends the agent off immediately. Returns the ACTUAL card kind
+        /// issued (0/1/2) for the published <see cref="CardIssuedEvent"/>. Separated from the RNG draw
+        /// so the promotion logic is directly testable (design note §3 test plan).
+        /// </summary>
+        private byte ApplyCardAndCheckSentOff(int offender, byte drawnKind)
+        {
+            if (drawnKind == 0)
+            {
+                _yellowCards[offender]++;
+                if (_yellowCards[offender] >= 2)
+                {
+                    _isSentOff[offender] = true;
+                    return 2; // SecondYellow
+                }
+                return 0;
+            }
+
+            _isSentOff[offender] = true; // straight red
+            return 1;
+        }
+
+        /// <summary>Test-only seam: the card-kind-to-effect resolution, directly testable without a real
+        /// RNG draw (design note §3 test plan).</summary>
+        internal byte TestOnly_ApplyCardAndCheckSentOff(int agentId, byte drawnKind) =>
+            ApplyCardAndCheckSentOff(agentId, drawnKind);
 
         /// <summary>
         /// Phase E producer. Compares the settled possession holder against the previous tick's holder and,
@@ -1969,8 +2454,12 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void UpdateMatchContext()
         {
-            _matchContext.HomeScore        = 0;
-            _matchContext.AwayScore        = 0;
+            // Incidental fix (match-flow completion, design note §7): _goals has existed since the
+            // v14 engine-substrate goal detection landed, but this method still hardcoded 0-0. Reading
+            // the real score here is a one-line correction of that pre-existing latent bug, not new
+            // scope — no other change in this method.
+            _matchContext.HomeScore        = _goals[0];
+            _matchContext.AwayScore        = _goals[1];
             _matchContext.MatchTimeSeconds = _clock.CurrentMatchTimeSeconds;
 
             _matchContext.PossessingAgentId = _possessingAgentId;
@@ -2080,8 +2569,27 @@ namespace TacticalDirector.MatchEngine
             switch (result.PossessionOutcome)
             {
                 case TouchResult.Controlled:
-                    _possessingAgentId = result.PossessingAgentID;
+                {
+                    // Design note §4 — Stage-0 offside (reception-time approximation). At this point
+                    // _lastHolderAgentId still names the PREVIOUS tick's holder (the production
+                    // writer runs later in RunResolvePhase, after UpdateMatchContext), so this is
+                    // exactly "a genuine same-team pass reception, not an interception and not the
+                    // same agent re-touching a loose dribble".
+                    int newHolder = result.PossessingAgentID;
+                    bool isPassReception = _lastHolderAgentId >= 0
+                        && _teamIds[_lastHolderAgentId] == _teamIds[newHolder]
+                        && _lastHolderAgentId != newHolder;
+
+                    if (isPassReception && EvaluateAndApplyOffside(newHolder))
+                    {
+                        // Violation: the assignment below is skipped (not undone) and ApplyRestart
+                        // already stomped ball/possession state (design note §4 point 3).
+                        break;
+                    }
+
+                    _possessingAgentId = newHolder;
                     break;
+                }
                 case TouchResult.Interception:
                 {
                     // The intercepting opponent gains possession. At Stage 0 the interceptor id is
@@ -2102,6 +2610,41 @@ namespace TacticalDirector.MatchEngine
                     _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
                     break;
             }
+        }
+
+        /// <summary>
+        /// Stage-0 offside evaluation (design note §4) for a same-team pass reception by
+        /// <paramref name="toucher"/>. Computes the OPPONENT team's offside line from live agent
+        /// positions (<see cref="OffsideEvaluator.ComputeOffsideLineX"/>) and checks the toucher
+        /// against it. On a violation: publishes a Tier A <see cref="OffsideCalledEvent"/> and awards
+        /// an indirect free kick to the defending team at the toucher's position via
+        /// <see cref="ApplyRestart"/> (no explicit "undo" of the touch — see the design note §4 point 3).
+        /// Returns true iff a violation was called (the caller skips the possession assignment).
+        /// </summary>
+        private bool EvaluateAndApplyOffside(int toucher)
+        {
+            int toucherTeam    = _teamIds[toucher];
+            int defendingTeam  = 1 - toucherTeam;
+            float toucherX     = _agents[toucher].Position.x;
+
+            float lineX = OffsideEvaluator.ComputeOffsideLineX(
+                new ReadOnlySpan<AgentState>(_agents), new ReadOnlySpan<int>(_teamIds),
+                new ReadOnlySpan<bool>(_isSentOff), defendingTeam, MatchEngineConstants.SQUAD_SIZE);
+
+            if (!OffsideEvaluator.IsOffside(toucherX, toucherTeam, lineX))
+            {
+                return false;
+            }
+
+            Vector2 toucherPos = _agents[toucher].Position;
+            var evt = new OffsideCalledEvent(
+                offendingAgentId: toucher,
+                team:             (byte)toucherTeam,
+                location:         new Vector3(toucherPos.x, toucherPos.y, 0f));
+            EventBus.Publish(in evt);
+
+            ApplyRestart(toucherPos);
+            return true;
         }
 
         /// <summary>
@@ -2417,6 +2960,28 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteI32(buf, ref o, _goals[t]);
             }
             CanonicalSerializer.WriteI32(buf, ref o, _lastHolderAgentId);
+
+            // v15 (match-flow completion) — discipline (per-agent yellow-card count + sent-off flag +
+            // the global foul cooldown), substitutions (per-agent active bench slot + per-team
+            // substitutions-used count), and the match-flow clock (half-time / full-time fired flags).
+            // All cross-tick and digest-load-bearing: a mid-match card, substitution, or half/full-time
+            // transition now feeds the digest chain.
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                CanonicalSerializer.WriteU8 (buf, ref o, _yellowCards[i]);
+                CanonicalSerializer.WriteBool(buf, ref o, _isSentOff[i]);
+            }
+            CanonicalSerializer.WriteI32(buf, ref o, _foulCooldownRemaining);
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                CanonicalSerializer.WriteI32(buf, ref o, _activeBenchSlot[i]);
+            }
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                CanonicalSerializer.WriteI32(buf, ref o, _substitutionsUsed[t]);
+            }
+            CanonicalSerializer.WriteBool(buf, ref o, _secondHalfStarted);
+            CanonicalSerializer.WriteBool(buf, ref o, _matchEnded);
 
             payload.BytesWritten = o;
         }
@@ -3029,11 +3594,52 @@ namespace TacticalDirector.MatchEngine
             public float ComputePressureScalar(Vector3 shooterPosition, int shooterTeamId) => 0f;
         }
 
-        /// <summary>Null-object collision-event consumer (Phase C C1): drains every collision event.
-        /// Real cross-subsystem consumers subscribe at Phase E.</summary>
-        private sealed class NullCollisionEventConsumer : ICollisionEventConsumer
+        /// <summary>
+        /// Collision-event consumer (design note §3): captures AT MOST ONE foul candidate per Resolve
+        /// tick into scalar fields on the host — no buffer, since only the first qualifying collision
+        /// is ever acted on (cards are rare). Qualification: AGENT_AGENT, ContactType.FROM_BEHIND,
+        /// ForceMagnitude ≥ FoulImpactForceThresholdN, opposite teams, and the host's foul cooldown is
+        /// closed. <see cref="MatchEngine.ApplyFoulIfCaptured"/> reads + resets this state immediately
+        /// after <c>UpdateCollisions</c> returns.
+        /// </summary>
+        private sealed class MatchFlowCollisionConsumer : ICollisionEventConsumer
         {
-            public void OnCollisionEvent(in CollisionEvent evt) { }
+            private readonly MatchEngine _engine;
+
+            public MatchFlowCollisionConsumer(MatchEngine engine)
+            {
+                _engine = engine;
+            }
+
+            public void OnCollisionEvent(in CollisionEvent evt)
+            {
+                if (_engine._foulCandidateFound || _engine._foulCooldownRemaining > 0)
+                {
+                    return;
+                }
+                if (evt.Type != CollisionType.AGENT_AGENT)
+                {
+                    return;
+                }
+
+                ContactForceData foul = evt.FoulData;
+                if (foul.Type != ContactType.FROM_BEHIND)
+                {
+                    return;
+                }
+                if (foul.ForceMagnitude < MatchEngineConstants.FoulImpactForceThresholdN)
+                {
+                    return;
+                }
+                if (_engine._teamIds[foul.InstigatorAgentID] == _engine._teamIds[foul.VictimAgentID])
+                {
+                    return;
+                }
+
+                _engine._foulCandidateFound    = true;
+                _engine._foulCandidateOffender = foul.InstigatorAgentID;
+                _engine._foulCandidateVictim   = foul.VictimAgentID;
+            }
         }
 
         /// <summary>
@@ -3516,4 +4122,44 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | seams: TestOnly_Goals/SetGoals/LastHolderAgentId +               |
 // |         |            |        | TestOnly_RunManagerDecisionPoints (late-match ladder testable    |
 // |         |            |        | without ~270k ticks).                                            |
+// | 1.31    | 2026-07-14 | —      | Match-flow completion (docs/tracking/match-flow-completion-      |
+// |         |            |        | design.md): CheckGoalAndRestart renamed/extended to              |
+// |         |            |        | CheckRestartAndApply — throw-ins/corners/goal-kicks now route     |
+// |         |            |        | through new RestartResolver + a shared ApplyRestart primitive,   |
+// |         |            |        | publishing RestartAwardedEvent (0x19). Fouls/cards: renamed       |
+// |         |            |        | NullCollisionEventConsumer → MatchFlowCollisionConsumer (captures |
+// |         |            |        | one FROM_BEHIND candidate/tick); new ApplyFoulIfCaptured draws    |
+// |         |            |        | severity from the new match-flow.card-severity RNG stream,        |
+// |         |            |        | publishes FoulCommittedEvent/CardIssuedEvent, sends off on red /  |
+// |         |            |        | second yellow, awards a free kick. Offside: new                  |
+// |         |            |        | EvaluateAndApplyOffside hooked into RunFirstTouch's Controlled    |
+// |         |            |        | case (reception-time approximation via new OffsideEvaluator),    |
+// |         |            |        | publishes OffsideCalledEvent (0x18). Sent-off agents excluded via |
+// |         |            |        | the FOUR existing IsActive/isActive snapshot fields (Positioning/ |
+// |         |            |        | Pressing/Defensive/Attacking — previously hardcoded true, now     |
+// |         |            |        | !_isSentOff[i]) + frozen in RunPhysicsPhase + skipped in          |
+// |         |            |        | RunAiPhase's per-agent dispatch loop. Substitutions: new public   |
+// |         |            |        | SubstitutePlayer (Stage-0 in-code bench roster per design note    |
+// |         |            |        | §6); publishes SubstitutionEvent (0x08, now wired — previously    |
+// |         |            |        | registered with zero producers) via a small pending-event queue   |
+// |         |            |        | flushed at the top of RunResolvePhase (AR-5 — the public API may  |
+// |         |            |        | be called between ticks, when EventBus.CurrentPhase is not a      |
+// |         |            |        | valid producer phase). Half-time/full-time: new                  |
+// |         |            |        | CheckMatchFlowTransitions, called every tick from RunInputPhase;  |
+// |         |            |        | half-time resets the ball + publishes MatchPhaseChangedEvent      |
+// |         |            |        | (0x1A) — NOT a full ends-swap (AR-4 — team 0 attacks +X is        |
+// |         |            |        | hardcoded across goal/offside/MirrorPitchIfAway; repositioning    |
+// |         |            |        | agents without flipping that convention everywhere would break    |
+// |         |            |        | second-half goal/offside detection); full-time sets _matchEnded,  |
+// |         |            |        | which RunPhysicsPhase/RunResolvePhase/RunAiPhase check to freeze  |
+// |         |            |        | gameplay while the EventBus phase lifecycle keeps running.        |
+// |         |            |        | Incidental fix: UpdateMatchContext's hardcoded 0-0 score replaced |
+// |         |            |        | with the real _goals[] (existed since v14, never wired here).     |
+// |         |            |        | SNAPSHOT_SCHEMA_VERSION 14 → 15 (discipline + substitution +      |
+// |         |            |        | match-flow-clock fields). New files: RestartResolver.cs,          |
+// |         |            |        | OffsideEvaluator.cs, SubstitutionReason.cs. 15 new TestOnly_       |
+// |         |            |        | seams. Full dotnet gate not runnable in this environment (network |
+// |         |            |        | policy blocks the SDK download) — every file hand-verified for    |
+// |         |            |        | brace/paren balance and member-name accuracy against actual       |
+// |         |            |        | source; CI verification pending push.                            |
 #endregion

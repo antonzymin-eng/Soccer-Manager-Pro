@@ -1,7 +1,60 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** July 10, 2026 (**#23–#26 post-PASS-1 gates closed where closable** — §8
+**Last Updated:** July 14, 2026 (**Match-flow model completion LANDED** — throw-ins, corners,
+goal kicks, fouls/cards, offside, substitutions, half-time break, and full-time end (previously
+only kickoff + goal-restart existed). Design doc adversarially reviewed to convergence, then
+implemented, then the code itself adversarially reviewed to convergence (catching an
+`OffsideEvaluator` bug where too few defenders left an accumulator at an `Infinity` sentinel
+instead of `NaN`, inverting the offside rule for every finite attacker position). New
+`src/match-engine/RestartResolver.cs`, `OffsideEvaluator.cs`, `SubstitutionReason.cs`; three new
+Tier A events (`OffsideCalledEvent` 0x18, `RestartAwardedEvent` 0x19, `MatchPhaseChangedEvent`
+0x1A). `MatchEngine.cs` v1.31 gains restart routing, per-tick foul/card detection with sent-off
+tracking, offside evaluation on pass reception, a public `SubstitutePlayer` (bench-roster swap,
+pending-event queue flushed at the next Resolve phase per an AR-5 fix), and half-time/full-time
+transition handling. **`SNAPSHOT_SCHEMA_VERSION` 14 → 15.** New test suites for restarts, offside,
+fouls/cards, substitutions, and match-flow transitions. Full dotnet gate not runnable in this
+environment — verified by exhaustive manual code review in place of `dotnet test`. See
+`docs/tracking/match-flow-completion-design.md`, `docs/tracking/match-engine-design.md` v2.0, and
+`src/CLAUDE.md` v2.17.)
+**Last Updated (prior):** July 13, 2026, later same day (**P1 real perf harness landed** —
+`StopwatchPerfHarness` + `MatchEngineCapstonePerfHarness` boot the real capstone scenario and
+Stopwatch-time each `RunTick`, superseding the synthetic `run.sh` stub that ran no `src/` code.
+The Linux run is stamped non-certifying; a certified number still needs pinned-host access
+(Windows 11 / Unity 6000.4.9f1) plus a real cert run. `CertifiedPerfBaseline.Stage0CertPlatformPin`
+updated to the Unity-6 tuple string.)
+**Last Updated (prior):** July 13, 2026 (**Unity engine version bumped: 2022.3.62f1 → Unity
+6000.4.9f1, graphics API pinned DX11 — documentation-only, no recertification performed.**
+`certification-platform.md` → v1.3, Status reverted `✅ PINNED` → `⏳ RECERT REQUIRED` per its own
+Maintenance Rule; every downstream unblocker it previously closed (`FR-DS-009-GATE`, `FR-PO-052`,
+the §7.5 D1 test-runner pin, `EnvironmentFingerprint`) is blocked again until a real cert run
+executes against the new tuple. Historical `Unity 2022.3` citations inside already-`APPROVED`
+spec section files deliberately left untouched — frozen approval-time records, per this project's
+"historical rows preserved verbatim" convention.)
+**Last Updated (prior):** July 11, 2026, latest same day (**Engine substrate landed** — goal
+detection (`MatchEngine.cs` v1.30: Resolve-phase goal check + scoring + centre-spot restart +
+`GoalAwardedEvent`) and the match-length/halves model (`MATCH_TICKS_TOTAL` = 324,000 ticks,
+`HALF_TIME_BOUNDARY_TICK` = 162,000). **`SNAPSHOT_SCHEMA_VERSION` 13 → 14.** This activates
+Tactical Presets **#26**'s half-time trigger and live goalDiff/clock ladder inputs — its
+engine-substrate gates (§9.1) are now closed; only the §9.2 `[GT]` balance-pass review remains.
+Full dotnet gate: PASSED, 0 failures.)
+**Last Updated (prior):** July 11, 2026 (**Specs #23/#24/#25/#26 wiring landed**, all
+default-behaviour-neutral — Balanced ⇒ Off/None/Off/Human are exact identities, byte-identical
+default match: the #24 build-up overlay + #23 dismark offset `SlotComposer` stages;
+`positioning-ai/RotationController.cs` (#25) wired into `PositioningAITick`; the #23 marked-pass-
+target penalty in the Decision Tree's `UtilityScorer`; and **#26**'s full T1–T4 stack (preset→
+config projection, kickoff/interval decision gate, kickoff scoring, mid-match adaptation ladder)
+via `ManagerDecisionGate`/`ManagerProfile`/`ManagerAdaptation`. `SNAPSHOT_SCHEMA_VERSION` 11 → 12
+→ 13 across the two commits. Full dotnet gate: PASSED, 0 failures both times.)
+**Last Updated (prior):** July 10, 2026, later same day (**Specs #23–#26 — Dismarking &
+Marker-Awareness AI, Scripted Build-Up Structures, Positional Rotations, Tactical Presets &
+AI-Manager Selection — all advanced `IN REVIEW` → `APPROVED`.** PASS-1 section-file adversarial
+reviews resolved same day; lead-developer R-01..R-05 sign-off granted on all four; the seven
+cross-spec back-prop ERRs filed and landed atomically; the #26 Bradley citation VERIFIED. `docs/
+specs/dismarking-ai/`, `build-up-structures/`, `positional-rotations/`, `tactical-presets/`
+folders now exist. **`SPEC_INDEX.md`: 26 APPROVED / 0 IN REVIEW / 0 NOT STARTED.** T0 scaffolding
+(behaviour-neutral data types + pure math) landed the same day.)
+**Last Updated (prior):** July 10, 2026 (**#23–#26 post-PASS-1 gates closed where closable** — §8
 citations verified/replaced/reclassified across all four specs (one #26 row remains pending with
 a recorded environment-blocked attempt); #25 Appendix A completed for all three formation
 families; #26 A.1 preset compositions pinned against the #21 enums. Remaining before `APPROVED`:
@@ -25,7 +78,10 @@ see root `CLAUDE.md` OPEN ISSUES and `SPEC_INDEX.md` "RESERVED" section.)
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
-**Current Stage:** Stage 0+1 — Implementation (coding begun May 19, 2026)
+**Current Stage:** Stage 0+1 — Implementation (coding begun May 19, 2026). All 26 approved specs
+(20 Stage-0 + 6 Stage-1 forward specs #21–#26) have active `src/` implementations; the match
+engine composition root now includes goal detection, halves/full-time, and the complete
+match-flow model (throw-ins, corners, goal kicks, fouls/cards, offside, substitutions).
 
 ---
 
@@ -135,12 +191,28 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 
 **Progress:** Implementation Phase (coding begun May 19, 2026)
 **Spec Phase Started:** February 2, 2026
-**Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED; 2 further Stage-1 forward specs (#21 Jun 20, #22 Jun 22) APPROVED since
-**Deliverables:** 22 comprehensive specification documents + active `src/` implementation for specs #1–#8, #10–#19, #21, #22, plus the unnumbered Match Engine composition root
+**Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED; 6 further Stage-1 forward specs (#21 Jun 20, #22 Jun 22, #23–#26 Jul 10) APPROVED since
+**Deliverables:** 26 comprehensive specification documents + active `src/` implementation for specs #1–#8, #10–#19, #21–#26, plus the unnumbered Match Engine composition root
 
-**Summary (June 29, 2026):** All 20 Stage-0 specs APPROVED, plus 2 Stage-1 forward specs (#21 Tactical Instructions, #22 Living World System) APPROVED. Every spec #1–#20 has an active `src/` implementation. A non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) now compiles the entire `src/` tree and runs all 1,165+ NUnit tests on every push; quarantine list is empty. **Match Engine** (`src/match-engine/`, design note at `docs/tracking/match-engine-design.md`) — the composition root wiring every subsystem into the deterministic-sim 7-phase tick pipeline — has Phases A–F complete (boot, full canonical world-state snapshot serialization at schema v8, Physics/Resolve/AI phase wiring through Positioning→Pressing→Defensive→Attacking→DecisionTree, an Events-phase possession-changed producer/consumer, and the Phase F capstone closed-loop scenario on the #19 `ScenarioRunner`). **Match Engine integration is complete.** **Tactical Instructions (#21)** now drives the live AI: T0 data layer + T2 consumer seams across DecisionTree/Pressing/Positioning/Defensive/Attacking (behaviour-neutral at identity) + runtime activation via `MatchEngine.SetTeamTactic` and an in-code `TeamTacticConfig` source + boot applier (on-disk tactic-file format deferred to Stage 0+1 per the #19 D1 precedent). `src/CLAUDE.md` coding guide (v1.76) governs all C# authoring.
-**Total specification output:** ~4.33 MB+ across 100+ files (see file-manifest.md)
-**Implementation active:** #1–#20 implemented; #21 Tactical Instructions T0 + T2 (DecisionTree/Pressing/Positioning/Defensive/Attacking consumer seams, behaviour-neutral) + runtime activation (per-team `SetTeamTactic` + in-code `TeamTacticConfig` source + boot applier) landed; #22 scaffolded (T0); match-engine integration Phases A–F complete
+**Summary (July 14, 2026):** All 20 Stage-0 specs APPROVED, plus 6 Stage-1 forward specs — #21
+Tactical Instructions, #22 Living World System, #23 Dismarking & Marker-Awareness AI, #24
+Scripted Build-Up Structures, #25 Positional Rotations, #26 Tactical Presets & AI-Manager
+Selection — all APPROVED. Every spec #1–#20 plus #21–#26 has an active `src/` implementation. A
+non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) compiles the entire `src/`
+tree and runs the full NUnit suite on every push; quarantine list is empty. **Match Engine**
+(`src/match-engine/`, design note at `docs/tracking/match-engine-design.md`) — the composition
+root wiring every subsystem into the deterministic-sim 7-phase tick pipeline — now includes goal
+detection + the match-length/halves model (Jul 11), the #21–#26 tactical wiring (Jul 10–11), and
+the **complete match-flow model** (Jul 14): throw-ins, corners, goal kicks, fouls/cards
+(sent-off tracking), offside, substitutions, and half-time/full-time transitions.
+**`SNAPSHOT_SCHEMA_VERSION` is now 15.** The Unity engine target was bumped 2022.3.62f1 → Unity
+6000.4.9f1 (DX11) on Jul 13 — documentation-only; the Stage-0 platform-certification pin reverted
+to `⏳ RECERT REQUIRED` pending a real cert run on the new tuple. `src/CLAUDE.md` coding guide
+(v2.17) governs all C# authoring.
+**Total specification output:** ~5 MB+ across 120+ files (see file-manifest.md)
+**Implementation active:** #1–#20 implemented; #21–#26 all implemented and wired (behaviour-neutral
+at their identity defaults until a manager/preset sets non-default tactics); match-engine
+composition root includes goal detection, halves/full-time, and the full match-flow model.
 
 ---
 
@@ -177,12 +249,12 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 20. ✅ Code Standards & Style Guide — **APPROVED** May 11, 2026 (adversarial review pass-1 applied; lead-developer R-01..R-05 sign-off complete)
 
 **Stage-1 Forward Specs (beyond the Stage-0 set of 20):**
-21. ✅ Tactical Instructions — **APPROVED** Jun 20, 2026 (manager-facing tactic input layer driving #8/#11–#15; 32 FRs; G2 `[GT]` balance pass is a non-blocking post-approval follow-up; T0 data layer + T2 consumer seams + runtime activation via `MatchEngine.SetTeamTactic` landed Jun 29, 2026)
-22. ✅ Living World System — **APPROVED** Jun 22, 2026 (off-pitch interaction-generation layer over vol-2/vol-3 human systems; 34 FRs; T0 scaffolding at `src/living-world/`; runtime activation gated on KD-10)
-
-**Candidate future specs (design-supplement stage — reserved numbers, not yet promoted):**
-23–25. ⏳ Dismarking & Marker-Awareness AI / Scripted Build-Up Structures / Positional Rotations — see `docs/tracking/advanced-positional-behaviors-design.md` v0.3 (opened Jul 7, 2026)
-26. ⏳ Tactical Presets & AI-Manager Selection — see `docs/tracking/game-model-ai-manager-design.md` v0.4 (opened Jul 7, 2026)
+21. ✅ Tactical Instructions — **APPROVED** Jun 20, 2026 (manager-facing tactic input layer driving #8/#11–#15; 32 FRs; G2 `[GT]` balance pass landed Jun 30, 2026; T0 data layer + T2 consumer seams + runtime activation via `MatchEngine.SetTeamTactic` + per-agent `PlayerTactic` + on-disk tactic-file loaders all landed)
+22. ✅ Living World System — **APPROVED** Jun 22, 2026 (off-pitch interaction-generation layer over vol-2/vol-3 human systems; 34 FRs; season/world loop (`WorldStore`) + `InteractionTextGenerator` + deep-memory auto-cite all landed at `src/living-world/`; BackgroundTierSim + arc triggers remain documented seams pending upstream canon)
+23. ✅ Dismarking & Marker-Awareness AI — **APPROVED** Jul 10, 2026 (perception-derived marking-pressure signal; `SlotComposer` dismark offset stage + Decision Tree marked-pass-target penalty wired Jul 11)
+24. ✅ Scripted Build-Up Structures — **APPROVED** Jul 10, 2026 (3-zone team-relative classifier + hysteresis; `SlotComposer` build-up overlay stage wired Jul 11)
+25. ✅ Positional Rotations — **APPROVED** Jul 10, 2026 (adjacency-table two-sided rotation with hysteresis; `RotationController` wired into `PositioningAITick` Jul 11)
+26. ✅ Tactical Presets & AI-Manager Selection — **APPROVED** Jul 10, 2026 (preset library over #21's parameter space + AI-manager kickoff/interval decision gate and adaptation ladder; full T1–T4 stack + the engine-substrate gates it depended on — goal detection, halves model — all landed Jul 11; only the §9.2 `[GT]` balance-pass review remains)
 
 **Status Key:**
 - ⏳ Not started
@@ -192,7 +264,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 - ✅ Approved
 - 🔒 Locked (implementation begun)
 
-**Locked (implementation begun):** Ball Physics #1, Agent Movement #2, Collision System #3, First Touch #4, Pass Mechanics #5, Shot Mechanics #6, Perception System #7, Decision Tree #8, Heading Mechanics #10, Goalkeeper Mechanics #11, Positioning AI #12, Pressing AI #13, Defensive AI #14, Attacking AI #15, Deterministic Simulation #16, Event System #17, Performance Optimization #18, Testing Strategy #19, Tactical Instructions #21 (T0 + runtime activation), Living World System #22 (T0). Fixed64 Math Library #9 and Code Standards #20 have no `src/` implementation by design (#9 implementation deferred to Stage 5+; #20 is a style guide, not a coded subsystem). Plus the unnumbered `src/match-engine/` composition root (Phases A–F complete).
+**Locked (implementation begun):** Ball Physics #1, Agent Movement #2, Collision System #3, First Touch #4, Pass Mechanics #5, Shot Mechanics #6, Perception System #7, Decision Tree #8, Heading Mechanics #10, Goalkeeper Mechanics #11, Positioning AI #12, Pressing AI #13, Defensive AI #14, Attacking AI #15, Deterministic Simulation #16, Event System #17, Performance Optimization #18, Testing Strategy #19, Tactical Instructions #21 (full — T0/T2/runtime activation/per-agent tactics/disk loaders), Living World System #22 (season/world loop, ArcEngine, text generation), Dismarking & Marker-Awareness AI #23, Scripted Build-Up Structures #24, Positional Rotations #25, Tactical Presets & AI-Manager Selection #26. Fixed64 Math Library #9 and Code Standards #20 have no `src/` implementation by design (#9 implementation deferred to Stage 5+; #20 is a style guide, not a coded subsystem). Plus the unnumbered `src/match-engine/` composition root (goal detection, halves/full-time model, and the complete match-flow model — throw-ins, corners, goal kicks, fouls/cards, offside, substitutions).
 
 **For detailed progress tracking, see:** [docs/tracking/PROGRESS.md](docs/tracking/PROGRESS.md)
 **For file inventory, see:** [docs/tracking/file-manifest.md](docs/tracking/file-manifest.md)
@@ -296,7 +368,11 @@ Soccer-Manager-Pro/
 │   │   ├── defensive-ai/              [Spec #14 — APPROVED May 18]
 │   │   ├── attacking-ai/              [Spec #15 — APPROVED May 18]
 │   │   ├── tactical-instructions/     [Spec #21 — APPROVED Jun 20]
-│   │   └── living-world/              [Spec #22 — APPROVED Jun 22]
+│   │   ├── living-world/              [Spec #22 — APPROVED Jun 22]
+│   │   ├── dismarking-ai/             [Spec #23 — APPROVED Jul 10]
+│   │   ├── build-up-structures/       [Spec #24 — APPROVED Jul 10]
+│   │   ├── positional-rotations/      [Spec #25 — APPROVED Jul 10]
+│   │   └── tactical-presets/          [Spec #26 — APPROVED Jul 10]
 │   └── tracking/
 │       ├── PROGRESS.md                 [Schedule and milestone tracking]
 │       ├── spec-error-log.md           [Cross-spec architectural errors]
@@ -324,9 +400,13 @@ Soccer-Manager-Pro/
     ├── event-system/                       [Spec #17]
     ├── performance-optimization/           [Spec #18]
     ├── testing-strategy/                   [Spec #19 — ScenarioRunner closed-loop harness]
-    ├── tactical-instructions/              [Spec #21 — T0 + runtime-activation seams]
-    ├── living-world/                       [Spec #22 — T0 scaffolding]
-    └── match-engine/                       [Composition root — Phases A–F complete; not a numbered spec]
+    ├── tactical-instructions/              [Spec #21 — full: T0/T2/runtime activation/per-agent tactics/disk loaders]
+    ├── living-world/                       [Spec #22 — season/world loop, ArcEngine, text generation]
+    ├── dismarking-ai/                       [Spec #23 — perception-derived marking pressure]
+    ├── build-up-structures/                 [Spec #24 — 3-zone build-up classifier]
+    ├── positional-rotations/                [Spec #25 — RotationController]
+    ├── tactical-presets/                    [Spec #26 — preset library + AI-manager decision gate]
+    └── match-engine/                       [Composition root — goal detection, halves/full-time, complete match-flow model; not a numbered spec]
 ```
 
 Note: Fixed64 Math Library (#9) has no `src/` tree — implementation deferred to Stage 5+. Code Standards (#20) is a style guide, not a coded subsystem.
@@ -335,26 +415,28 @@ Note: Fixed64 Math Library (#9) has no `src/` tree — implementation deferred t
 
 ## NEXT IMMEDIATE STEPS
 
-### Outstanding (as of June 29, 2026)
+### Outstanding (as of July 14, 2026)
 
-**Specification phase:** ✅ COMPLETE for the Stage-0 set of 20 (May 18, 2026), plus 2 Stage-1 forward specs APPROVED (#21 Tactical Instructions Jun 20; #22 Living World System Jun 22).
+**Specification phase:** ✅ COMPLETE for the Stage-0 set of 20 (May 18, 2026), plus 6 Stage-1 forward specs APPROVED (#21 Tactical Instructions Jun 20; #22 Living World System Jun 22; #23–#26 Jul 10). `SPEC_INDEX.md`: **26 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**
 
 **Implementation phase — active frontier:**
-1. 🔒 Specs #1–#8, #10–#20 — all coded, AR-clean, and covered by the non-certifying Linux `dotnet-ci` gate (full `src/` tree compiles; 1,165+ NUnit tests; quarantine list empty).
-2. 🔒 **Match Engine** (`src/match-engine/`, unnumbered composition root) — Phases A–F **complete** (Jun 28, 2026): boot, full canonical world-state snapshot serialization (`SNAPSHOT_SCHEMA_VERSION` 8), Physics/Resolve/AI-phase wiring (Positioning→Pressing→Defensive→Attacking→DecisionTree), Events-phase possession-changed producer/consumer, and the Phase F capstone closed-loop scenario on the #19 `ScenarioRunner`.
-3. 🔒 **Tactical Instructions (#21)** — T0 data layer + T2 consumer seams across DecisionTree/Pressing/Positioning/Defensive/Attacking (behaviour-neutral at identity) + runtime activation via `MatchEngine.SetTeamTactic` and an in-code `TeamTacticConfig` source + boot applier landed Jun 29, 2026. Remaining: per-agent `PlayerTactic` routing + remaining §3.3 product factors (gated on the G2 balance pass); #12/#14/#15 match-engine Phase-D writers; on-disk tactic-file loader (Stage 0+1).
-4. 🔒 **Living World System (#22)** — T0 scaffolding (`src/living-world/`: data types, pure math, ordinal/determinism unit tests) landed Jun 21, 2026. Runtime activation gated on KD-10 (world store + season loop; `[GT]` config-loader; match-outcome events).
-5. ⏳ **FR-PO-052 certified perf baseline** — corpus machinery landed (`CertifiedPerfBaseline.cs`); the match-engine kickoff entry is still **Pending** (no certified number yet — requires a cert run on the pinned Windows/Unity tuple, not the non-certifying Linux gate).
-6. ⏳ **Design supplements opened Jul 7, 2026** — `advanced-positional-behaviors-design.md` (candidates #23–#25) and `game-model-ai-manager-design.md` (candidate #26), both pre-promotion; next step is a detailed implementation plan for the highest-priority slice, adversarially reviewed before any section-file drafting begins.
+1. 🔒 Specs #1–#8, #10–#20 — all coded, AR-clean, and covered by the non-certifying Linux `dotnet-ci` gate (full `src/` tree compiles; full NUnit suite; quarantine list empty).
+2. 🔒 **Match Engine** (`src/match-engine/`, unnumbered composition root) — goal detection + the match-length/halves model landed Jul 11 (`SNAPSHOT_SCHEMA_VERSION` 14); the **complete match-flow model** (throw-ins, corners, goal kicks, fouls/cards with sent-off tracking, offside, substitutions, half-time break, full-time end) landed Jul 14 (`SNAPSHOT_SCHEMA_VERSION` 15). Both landings were adversarially reviewed (design + code) to convergence.
+3. 🔒 **Tactical Instructions (#21)** — fully landed: T0/T2 consumer seams, runtime activation, per-agent `PlayerTactic` routing, the G2 balance pass, and on-disk team/player tactic-file loaders. No remaining Stage-1 leftovers.
+4. 🔒 **Living World System (#22)** — season/world loop (`WorldStore`), `ArcEngine` + `ActiveSetMembership`, `InteractionTextGenerator` (incl. deep-memory auto-cite) all landed. Remaining seams (BackgroundTierSim summaries, arc trigger evaluators + `world.arcs` stream registration) are deliberately unbuilt — they'd consume vol-2/vol-3 canon and match-outcome events that don't exist yet (phantom-interface rule).
+5. 🔒 **Specs #23–#26** — all APPROVED and wired Jul 10–11: dismarking (#23) and build-up (#24) `SlotComposer` stages, positional rotations (#25) `RotationController`, and tactical presets (#26)'s full T1–T4 stack (preset→config projection, decision gate, kickoff scoring, adaptation ladder) — the last gated on the goal-detection/halves-model engine substrate, which landed the same week. Only the #26 §9.2 `[GT]` balance-pass review remains, non-blocking.
+6. ⏳ **Unity 6 recertification** — the engine target moved to Unity 6000.4.9f1 (DX11) on Jul 13, documentation-only. `certification-platform.md` reverted to `⏳ RECERT REQUIRED`; a real cert run on the new tuple (needs pinned Windows-11/Unity-6 host access, not available in this environment) is required before `FR-DS-009-GATE`/`FR-PO-052`/the §7.5 D1 test-runner pin/`EnvironmentFingerprint` re-unblock.
+7. ⏳ **FR-PO-052 certified perf baseline** — the real Stopwatch-based harness (`StopwatchPerfHarness` / `MatchEngineCapstonePerfHarness`) landed Jul 13, superseding the old synthetic stub; the match-engine kickoff entry is still **Pending** (needs the same pinned-host cert run as above).
 
 **Operations / housekeeping:**
-6. ⏳ Push 12+ approval tags (HTTP 403 branch-protection); run squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`.
-7. ⏳ Verify the `first-touch/section-7.md` smart-quote regression (flagged historically; status unverified).
+8. ⏳ Push 12+ approval tags (HTTP 403 branch-protection); run squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`.
+9. ⏳ Verify the `first-touch/section-7.md` smart-quote regression (flagged historically; status unverified).
 
 **Resolved since the last update (no longer outstanding):**
 - ✅ Structural fix: Ball Physics moved `src/Core/Physics/Ball/` → `src/ball-physics/` (May 30, 2026).
-- ✅ Stage-0 host-platform pin landed in `docs/tracking/certification-platform.md` (Jun 7, 2026) — unblocked `FR-DS-009-GATE` and `FR-PO-052` activation.
+- ✅ Stage-0 host-platform pin landed in `docs/tracking/certification-platform.md` (Jun 7, 2026) — unblocked `FR-DS-009-GATE` and `FR-PO-052` activation (**since reverted to RECERT REQUIRED by the Jul 13 Unity 6 bump, see item 6 above**).
 - ✅ Dotnet CI gate quarantine burn-down — all 30 quarantined tests adjudicated; quarantine list empty (Jun 13, 2026).
+- ✅ Design supplements for #23–#26 promoted to full spec sets, approved, and implemented (Jul 7–14, 2026).
 
 ---
 
@@ -416,9 +498,12 @@ These remain available in `/Archive/` for historical reference but should NOT be
 19. ✅ Event System (#17), Performance Optimization (#18), Testing Strategy (#19) — coded, AR-clean
 20. ✅ Non-certifying Linux `dotnet-ci` gate — full `src/` tree compile + 1,165+ NUnit tests on every push (Jun 12–13, 2026)
 21. ✅ Match Engine composition root — Phases A–F complete, wiring all subsystems into the deterministic-sim 7-phase tick pipeline (Jun 28, 2026)
-22. ✅ Tactical Instructions (#21) APPROVED + T0/T2/runtime-activation landed (Jun 20–29, 2026)
-23. ✅ Living World System (#22) APPROVED + T0 scaffolding landed (Jun 21–22, 2026)
-24. ⏳ FR-PO-052 certified perf baseline — corpus machinery built; first cert run on the pinned Windows/Unity tuple still outstanding
+22. ✅ Tactical Instructions (#21) APPROVED + fully landed incl. per-agent tactics, balance pass, disk loaders (Jun 20–30, 2026)
+23. ✅ Living World System (#22) APPROVED + season/world loop, ArcEngine, text generation landed (Jun 21 – Jul 3, 2026)
+24. ✅ Specs #23–#26 (Dismarking, Build-Up Structures, Positional Rotations, Tactical Presets) APPROVED + wired (Jul 8–11, 2026)
+25. ✅ Match Engine — goal detection, halves/full-time model, and the complete match-flow model (throw-ins, corners, goal kicks, fouls/cards, offside, substitutions) landed (Jul 11–14, 2026)
+26. ⏳ Unity 6 recertification — engine target bumped to 6000.4.9f1/DX11 (Jul 13, 2026, docs-only); real cert run on the new tuple outstanding (needs pinned host access)
+27. ⏳ FR-PO-052 certified perf baseline — real Stopwatch harness landed (Jul 13); first cert run on the pinned tuple still outstanding, blocked on item 26
 
 ---
 
@@ -631,6 +716,17 @@ git push --tags
 - Spec count: **22 APPROVED** (20 Stage-0 + 2 Stage-1 forward specs), 0 outstanding in any other status.
 - Project Structure, Locked list, Next Immediate Steps, and Getting Started checklist all corrected to match current `src/` and `docs/specs/` contents (this README had not been substantively updated since v2.7 / May 29, 2026 despite header dates being hand-advanced).
 
+**v4.0 — July 14, 2026 (consolidates two weeks of unrecorded changes, June 30 – July 14)**
+- **Specs #23–#26 promoted from design supplements to full 11-file spec sets, adversarially reviewed, and APPROVED** (July 8–10, 2026): Dismarking & Marker-Awareness AI (#23), Scripted Build-Up Structures (#24), Positional Rotations (#25), Tactical Presets & AI-Manager Selection (#26). Spec count: **26 APPROVED**, 0 outstanding in any other status.
+- **#23/#24/#25/#26 implementation wiring landed** (July 10–11, 2026): T0 data-layer scaffolding, then the #24 build-up + #23 dismark `SlotComposer` stages, the #25 `RotationController`, the #23 Decision Tree marked-pass-target penalty, and #26's full T1–T4 stack (preset→config projection, kickoff/interval decision gate, kickoff scoring, mid-match adaptation ladder). All default-behaviour-neutral at each dial's identity value.
+- **Match Engine — engine substrate landed** (July 11, 2026): goal detection (scoring, `GoalAwardedEvent`, centre-spot restart) and the match-length/halves model (`MATCH_TICKS_TOTAL`, `HALF_TIME_BOUNDARY_TICK`). `SNAPSHOT_SCHEMA_VERSION` 13 → 14. This closed #26's engine-substrate gates, activating its half-time trigger and live goalDiff/clock ladder inputs.
+- **Unity engine version bumped 2022.3.62f1 → Unity 6000.4.9f1, DX11** (July 13, 2026) — documentation-only; no recertification performed. `certification-platform.md` Status reverted `✅ PINNED` → `⏳ RECERT REQUIRED`, re-blocking `FR-DS-009-GATE`, `FR-PO-052`, the §7.5 D1 test-runner pin, and `EnvironmentFingerprint` until a real cert run executes against the new tuple. A real Stopwatch-based perf harness (`StopwatchPerfHarness` / `MatchEngineCapstonePerfHarness`) landed the same day, superseding the old synthetic stub — still non-certifying pending pinned-host access.
+- **Tactical Instructions (#21) Stage-1 leftovers landed** (June 30, 2026): per-agent `PlayerTactic` config surface, the §5.6/G2 `[GT]` balance pass, the §3.4 defensive-line depth recompute, and on-disk team/player tactic-file loaders. #21 has no remaining Stage-1 follow-ups.
+- **Living World System (#22) season/world loop landed** (July 2–3, 2026): `WorldClock`/`WorldLoop`/`MemoryStore`/`ColdStore`, `ArcEngine` + `ActiveSetMembership`, `InteractionTextGenerator` with deep-memory auto-cite, and the `WorldStore` composition root (the KD-10 season-store prerequisite). BackgroundTierSim summaries and arc trigger evaluators remain documented seams, deliberately unbuilt pending upstream canon.
+- **Presentation layer: minimal match viewer landed** (July 2, 2026): `src/match-viewer/` records a real `MatchEngine` run and exports a self-contained HTML canvas replay. Observer-neutral and digest-locked; not a determinism-pinned wire format.
+- **Match-flow model completion landed** (July 14, 2026): throw-ins, corners, goal kicks, fouls/cards (with sent-off tracking), offside, substitutions, half-time break, and full-time end — the last major gap in the match engine (previously only kickoff + goal-restart existed). New `RestartResolver.cs`, `OffsideEvaluator.cs`, `SubstitutionReason.cs`; three new Tier A events. `SNAPSHOT_SCHEMA_VERSION` 14 → 15. Design doc and code both adversarially reviewed to convergence.
+- Header "Last Updated" chain, CURRENT STATUS, Specification Writing Schedule, Locked list, Project Structure, and Next Immediate Steps all reconciled to match current `src/` and `docs/specs/` contents (this README had drifted since v3.0 / June 29, 2026 despite the header being updated piecemeal through July 10).
+
 ---
 
 ## LICENSE
@@ -641,4 +737,4 @@ git push --tags
 
 **Remember:** This is a 10-year project. Quality over speed. Build it right.
 
-**Current Focus:** Implement remaining AI specs per `src/CLAUDE.md`. Active frontier: Positioning AI (#12) complete (May 29); next up: Pressing AI (#13) or Defensive AI (#14).
+**Current Focus:** All 26 approved specs have active `src/` implementations. Active frontier: Unity 6 recertification (pinned-host access required) and the #26 `[GT]` balance-pass review — both non-blocking follow-ups, not new feature work.
