@@ -3,6 +3,7 @@
 // Modified: 2026-06-27 (Phase E — POSSESSION_CHANGE_REASON_UNSPECIFIED for the possession-changed event)
 // Modified: 2026-07-11 (#26 manager-AI wiring — SNAPSHOT_SCHEMA_VERSION 12 → 13, v13 ManagerState doc)
 // Modified: 2026-07-11 (engine substrate — match-length/halves model + SNAPSHOT_SCHEMA_VERSION 13 → 14)
+// Modified: 2026-07-14 (match-flow completion — restart/foul-card/offside/substitution/half-full-time constants; SNAPSHOT_SCHEMA_VERSION 14 → 15)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -167,8 +168,16 @@ namespace TacticalDirector.MatchEngine
         /// index that HELD settled possession; the GoalAwardedEvent scorer credit and the
         /// CheckBoundaries lastTouchTeamID source). Cross-tick state: the score drives the #26
         /// manager-AI goalDiff input and the restart-side classification, so a save mid-match
-        /// resumes with the correct score.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 14;
+        /// resumes with the correct score.
+        ///
+        /// v15 (2026-07-14, match-flow completion — docs/tracking/match-flow-completion-design.md)
+        /// appends: per-agent yellow-card count (u8 ×SQUAD_SIZE) and sent-off flag (bool ×SQUAD_SIZE);
+        /// the global foul-detection cooldown counter (i32); per-agent active bench slot (i32
+        /// ×SQUAD_SIZE, −1 = original starter); per-team substitutions-used count (i32 ×TEAM_COUNT);
+        /// and the half-time / full-time transition flags (bool, bool). All cross-tick, digest-load-
+        /// bearing — a mid-match card, substitution, or half/full-time transition now feeds the
+        /// digest chain, matching every prior field-set addition in this history.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 15;
 
         /// <summary>[FIXED] Regulation match length, minutes (Laws of the Game — two 45-minute
         /// halves). Stage 0 models no stoppage time and no extra time; the engine's match-length
@@ -176,6 +185,17 @@ namespace TacticalDirector.MatchEngine
         /// Mirrors <c>TestingStrategyConstants.MATCH_LENGTH_MINUTES</c> (an infrastructure assembly
         /// game code cannot reference — both derive independently from the Laws of the Game).</summary>
         public const int MATCH_LENGTH_MINUTES = 90;
+
+        /// <summary>[FIXED] Six-yard-box depth from the goal line (Laws of the Game §1 — the goal
+        /// area), metres. Used to place the Stage-0 goal-kick restart position (design note §5).</summary>
+        public const float GOAL_AREA_DEPTH_M = 5.5f;
+
+        /// <summary>[FIXED] Bench size per team (match-day substitutes). Design note §6.</summary>
+        public const int SUBSTITUTES_PER_TEAM = 7;
+
+        /// <summary>[FIXED] Maximum substitutions permitted per team per match (current IFAB
+        /// allowance). Design note §6.</summary>
+        public const int MAX_SUBSTITUTIONS_PER_TEAM = 5;
 
         #endregion
 
@@ -221,8 +241,10 @@ namespace TacticalDirector.MatchEngine
         /// (#26 §3.4 FM-TP-04 — the constant #26 §3.5 carried as <c>[CROSS-PENDING]</c>, engine-owned
         /// and now allocated here; the consuming ladder takes it as an explicit parameter because
         /// the tactical-instructions assembly sits below this one in the reference graph).
-        /// Stage 0 scope: the clock does not STOP at this tick — no end-of-match model exists yet;
-        /// <c>ticksRemaining</c> clamps at 0 for ticks beyond it.
+        /// Stage 0 scope: <c>ticksRemaining</c> (the #26 adaptation-ladder input) clamps at 0 for
+        /// ticks beyond this constant; the engine ITSELF freezes gameplay at this tick per
+        /// <c>MatchEngine.CheckMatchFlowTransitions</c> (design note §7, landed 2026-07-14) — a host
+        /// that keeps calling RunTick past full time gets a frozen, still-serializable match.
         /// Source constants: MatchEngineConstants.MATCH_LENGTH_MINUTES,
         /// DeterministicSimConstants.PHYSICS_TICK_HZ (Deterministic Simulation #16 §3.1.2).
         /// </summary>
@@ -231,11 +253,16 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>
         /// [DERIVED] The half-time boundary tick = MATCH_TICKS_TOTAL / 2 = 162 000 (the first tick
-        /// of the second half). This is the Stage-0 halves model FR-TP-019 gates on: half boundaries
-        /// derive from the engine-owned match-length constants — the engine does NOT yet stop play,
-        /// swap ends, or model a half-time break (those are a Stage-1+ restart-model deliverable).
-        /// The #26 decision gate fires its half-time decision at the first stride evaluation at or
-        /// after this tick (see <see cref="ManagerDecisionGate"/>).
+        /// of the second half). The #26 decision gate fires its half-time decision at the first stride
+        /// evaluation at or after this tick (see <see cref="ManagerDecisionGate"/>). The engine ALSO
+        /// marks the transition here (design note §7, landed 2026-07-14) —
+        /// <c>MatchEngine.CheckMatchFlowTransitions</c> resets the ball to the centre spot, clears
+        /// possession, and publishes <c>MatchPhaseChangedEvent</c>, exactly once, the first tick at or
+        /// after this boundary. <b>NOT a full ends-swap</b> (AR-4): agent positions and the fixed
+        /// <c>team 0 attacks +X</c> convention are left untouched — that convention is hardcoded across
+        /// goal detection, <c>OffsideEvaluator</c>, and every Mechanics-AI <c>MirrorPitchIfAway</c> call,
+        /// so repositioning agents without also flipping it everywhere would break second-half goal/
+        /// offside classification. The true ends-swap is a documented Stage-1+ deferral.
         /// Source constants: MatchEngineConstants.MATCH_TICKS_TOTAL.
         /// </summary>
         public const long HALF_TIME_BOUNDARY_TICK = MATCH_TICKS_TOTAL / 2;
@@ -312,6 +339,36 @@ namespace TacticalDirector.MatchEngine
         /// Mid-scale placeholder pending the Stage-1 config loader.
         /// </summary>
         public static readonly float FIRST_TOUCH_MIN_BALL_SPEED_M_S = Config.GetFloat("match-engine", "FIRST_TOUCH_MIN_BALL_SPEED_M_S", 0.5f);
+
+        /// <summary>
+        /// [GT] Minimum <c>ContactForceData.ForceMagnitude</c> (N) for a FROM_BEHIND agent-agent
+        /// collision to qualify as a candidate foul (design note §3). Set near the top of the
+        /// existing 500–1500 N fall/stumble literature band (<c>CollisionSystemConstants</c>) so
+        /// incidental jogging/shoulder contact cannot spuriously qualify. Illustrative pending a
+        /// balance pass (the #21 G2 precedent) — the contract under review is the wiring, not the
+        /// tuned magnitude.
+        /// </summary>
+        public static readonly float FoulImpactForceThresholdN = Config.GetFloat("match-engine", "FoulImpactForceThresholdN", 1200f);
+
+        /// <summary>
+        /// [GT] Probability band width [0,1) for a straight red card on a qualifying foul (design
+        /// note §3). Drawn from the <c>match-flow.card-severity</c> RNG stream: <c>[0, Red)</c> =
+        /// straight red, <c>[Red, Red+Yellow)</c> = yellow, else no card.
+        /// </summary>
+        public static readonly float RedCardProbability = Config.GetFloat("match-engine", "RedCardProbability", 0.05f);
+
+        /// <summary>
+        /// [GT] Probability band width [0,1) for a yellow card on a qualifying foul (design note §3),
+        /// immediately after the <see cref="RedCardProbability"/> band.
+        /// </summary>
+        public static readonly float YellowCardProbability = Config.GetFloat("match-engine", "YellowCardProbability", 0.35f);
+
+        /// <summary>
+        /// [GT] Ticks a qualifying foul suppresses further foul detection (design note §3) — a global
+        /// debounce so a sustained agent-agent overlap cannot generate a card every tick. 60 ticks = 1 s
+        /// at 60 Hz.
+        /// </summary>
+        public static readonly int FoulCooldownTicks = Config.GetInt("match-engine", "FoulCooldownTicks", 60);
 
         #endregion
     }
@@ -420,4 +477,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | model — boundary only, no break/end-swap/match-end).             |
 // |         |            |        | SNAPSHOT_SCHEMA_VERSION 13 → 14 — per-team goal counts + the     |
 // |         |            |        | last-holder tracker serialized (v14 doc paragraph).              |
+// | 1.21    | 2026-07-14 | —      | Match-flow completion: GOAL_AREA_DEPTH_M / SUBSTITUTES_PER_TEAM /|
+// |         |            |        | MAX_SUBSTITUTIONS_PER_TEAM [FIXED] + FoulImpactForceThresholdN / |
+// |         |            |        | RedCardProbability / YellowCardProbability / FoulCooldownTicks   |
+// |         |            |        | [GT] added; MATCH_TICKS_TOTAL / HALF_TIME_BOUNDARY_TICK docs     |
+// |         |            |        | updated (half-time ends-swap + full-time freeze now implemented, |
+// |         |            |        | see MatchEngine.CheckMatchFlowTransitions). SNAPSHOT_SCHEMA_     |
+// |         |            |        | VERSION 14 → 15 (v15 doc paragraph — discipline/substitution/    |
+// |         |            |        | match-flow-clock cross-tick fields).                             |
 #endregion

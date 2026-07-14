@@ -1,7 +1,50 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 13, 2026 (**Unity engine version bumped: 2022.3.62f1 → Unity 6000.4.9f1,
+> **Last Updated:** July 14, 2026 (**Match-flow completion LANDED** — throw-ins, corners, goal kicks,
+> fouls/cards, offside, substitutions, half-time break, and full-time end (previously only kickoff +
+> goal-restart existed; see `docs/tracking/match-flow-completion-design.md` for the full plan +
+> adversarial-review history). Per the user's process instructions: a design doc was written first,
+> adversarially reviewed to convergence (AR-1 through AR-6, each documented in the design note's own
+> version history — including AR-4's rejection of a full ends-swap at half-time, since `team 0
+> attacks +X` is hardcoded across goal detection/offside/Mechanics-AI and a real ends-swap is a
+> Stage-1+ deferral, and AR-5's fix for `SubstitutePlayer` being callable between ticks when
+> `EventBus.CurrentPhase` is not a valid producer phase — now a pending-event queue flushed at the
+> top of the next Resolve phase), then implemented, then the CODE was itself adversarially reviewed
+> to convergence (catching, among other things, an `OffsideEvaluator` bug where fewer than two active
+> defenders left the accumulator at an `Infinity` sentinel instead of `NaN`, which made `IsOffside`
+> return true for every finite attacker position — the exact opposite of the intended "too few
+> defenders to be offside" rule). **New:** `src/match-engine/RestartResolver.cs` (pure
+> position/awarded-team resolution for `RestartType.ThrowIn`/`Corner`/`GoalKick`, unified
+> `awardedTeam = 1 − lastTouchTeam`), `OffsideEvaluator.cs` (pure second-nearest-to-goal-line
+> geometry + reception-time offside check — a documented Stage-0 approximation, not the full
+> freeze-at-the-pass Law), `SubstitutionReason.cs`; three new Tier A events
+> (`OffsideCalledEvent` 0x18, `RestartAwardedEvent` 0x19, `MatchPhaseChangedEvent` 0x1A, all
+> registered in `EventRegistry` v1.8). `MatchEngine.cs` v1.31: `CheckRestartAndApply` (renamed/
+> extended from `CheckGoalAndRestart`) routes non-goal exits through `RestartResolver` +
+> a shared `ApplyRestart` primitive; a per-tick foul-detection consumer (`MatchFlowCollisionConsumer`,
+> replacing the former no-op `NullCollisionEventConsumer`) captures at most one FROM_BEHIND
+> high-force cross-team collision per tick, drawn against a new `match-flow.card-severity` RNG
+> stream for card severity (yellow/red bands), with second-yellow promotion and sent-off tracking
+> (`_yellowCards`/`_isSentOff`) feeding a forced-stop in the Physics phase and an `IsActive = false`
+> exclusion in all four Mechanics-AI snapshot fill sites (#12/#13/#14/#15); `EvaluateAndApplyOffside`
+> hooked into `RunFirstTouch`'s Controlled case for genuine same-team pass receptions; a public
+> `SubstitutePlayer` (bench-roster swap, cap-enforced at `MAX_SUBSTITUTIONS_PER_TEAM`, queued
+> `SubstitutionEvent` publish); `CheckMatchFlowTransitions` (called every Input phase, not
+> stride-gated) fires the half-time ball-reset-only transition once at `HALF_TIME_BOUNDARY_TICK` and
+> the full-time gameplay-freeze once at `MATCH_TICKS_TOTAL` (both guarded by one-shot flags;
+> `_matchEnded` freezes AI/Physics/Resolve while the tick/snapshot loop keeps advancing).
+> **`SNAPSHOT_SCHEMA_VERSION` 14 → 15** (per-agent yellow-card count + sent-off flag, the global foul
+> cooldown, per-agent active bench slot, per-team substitutions-used count, half-time/full-time
+> fired flags — all cross-tick and now digest-load-bearing). New tests:
+> `MatchEngineRestartTests`/`MatchEngineOffsideTests`/`MatchEngineFoulCardTests`/
+> `MatchEngineSubstitutionTests`/`MatchEngineMatchFlowTests` (pure-function locks + MatchEngine
+> integration + two-run determinism each); `MatchEngineSnapshotSchemaTests` v1.12 (pin 15 + two new
+> preimage probes). Full dotnet gate not runnable in this environment (no SDK access) — verified by
+> exhaustive manual code review (multiple adversarial-review rounds reading the entire touched
+> surface, not just the diff) in place of `dotnet test`. See src/CLAUDE.md v2.17 and
+> `docs/tracking/match-engine-design.md` v2.0.)
+> **Last Updated (prior):** July 13, 2026 (**Unity engine version bumped: 2022.3.62f1 → Unity 6000.4.9f1,
 > graphics API pinned DX11 — documentation-only pass, no recertification performed.**
 > `ProjectSettings/ProjectVersion.txt` updated to `6000.4.9f1`. `docs/tracking/certification-platform.md`
 > → v1.3: Unity-version and new Graphics-API rows updated to the target tuple; per that file's own

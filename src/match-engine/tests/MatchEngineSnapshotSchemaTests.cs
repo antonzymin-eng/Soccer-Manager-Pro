@@ -2,6 +2,7 @@
 // Created:  2026-06-16
 // Modified: 2026-06-27 (Phase D D4 — schema pin 8 + DT + 4 mechanics-AI + perception probes)
 // Modified: 2026-07-11 (engine substrate — schema pin 13 → 14 + ScoreState probe)
+// Modified: 2026-07-14 (match-flow completion — schema pin 14 → 15 + discipline/substitution probes)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
 // Purpose:  Phase B step B3 tests — proves the full §2.6 world-state field set (not just the B2
@@ -49,9 +50,45 @@ namespace TacticalDirector.MatchEngine
             // v12 #23/#24/#25 wiring (marking dwell + build-up zone/settled-team + rotation state +
             // the three #21 back-prop dials in WriteTeamTactic), v13 #26 per-team ManagerState
             // (Appendix C order, FR-TP-012), v14 engine score state (per-team goals + the
-            // last-holder tracker — the goal-detection substrate).
-            Assert.AreEqual(14u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // last-holder tracker — the goal-detection substrate), v15 match-flow completion
+            // (per-agent yellow-card count + sent-off flag, the global foul cooldown, per-agent
+            // active bench slot, per-team substitutions-used count, half-time/full-time flags).
+            Assert.AreEqual(15u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void MatchFlowCompletionState_FeedsSnapshotDigest()
+        {
+            // v15: a sent-off flag with no other change reaches the digest preimage.
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_SetIsSentOff(OutfieldIndex, true);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A sent-off flag left the digest unchanged — the v15 discipline block must feed the preimage.");
+        }
+
+        [Test]
+        public void SubstitutionState_FeedsSnapshotDigest()
+        {
+            // v15: a substitution (per-agent active bench slot + per-team substitutions-used) reaches
+            // the digest preimage even though the bench identity defaults are neutral (no attribute
+            // difference from the starter) — the bookkeeping fields alone must move the digest.
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.SubstitutePlayer(0, OutfieldIndex, benchIndex: 0, SubstitutionReason.Tactical);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A substitution left the digest unchanged — the v15 substitution block must feed the preimage.");
         }
 
         [Test]
@@ -495,4 +532,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | isolated via the Pragmatic → Balanced identity kickoff selection).  |
 // | 1.11    | 2026-07-11 | —      | Engine substrate: schema pin 13 → 14; new ScoreState_FeedsSnapshot- |
 // |         |            |        | Digest probe (per-team goals + last-holder tracker in the preimage).|
+// | 1.12    | 2026-07-14 | —      | Match-flow completion: schema pin 14 → 15; new MatchFlowCompletion- |
+// |         |            |        | State_FeedsSnapshotDigest (sent-off flag) + SubstitutionState_      |
+// |         |            |        | FeedsSnapshotDigest (bench-slot/count bookkeeping) probes.          |
 #endregion
