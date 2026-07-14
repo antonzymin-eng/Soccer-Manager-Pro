@@ -1,14 +1,16 @@
 // File:     src/match-engine/tests/MatchEngineGoalTests.cs
 // Created:  2026-07-11
-// Modified: 2026-07-11
+// Modified: 2026-07-14
 // Author:   —
 // Spec:     Match Engine design note (goal-detection substrate — the #26 §9.3 upstream
-//           deliverable); Ball Physics #1 §3 (CheckBoundaries); Code Standards #20
+//           deliverable); Match Engine design note (match-flow-completion — RestartResolver);
+//           Ball Physics #1 §3 (CheckBoundaries); Code Standards #20
 // Purpose:  Locks the Resolve-phase goal check: goal-mouth crossings score for the correct team
 //           (classified by exit geometry, so own goals credit the right side), restart the ball
-//           at the centre spot, and update the v14 score state; non-goal and airborne exits are
-//           untouched (Stage 0 has no throw-in/corner restart model). Determinism re-locked with
-//           a goal in the run.
+//           at the centre spot, and update the v14 score state; airborne exits are untouched.
+//           Non-goal exits now route through RestartResolver (throw-in/corner/goal-kick) per the
+//           July 14, 2026 match-flow completion — see MatchEngineRestartTests.cs for the full
+//           restart-model coverage. Determinism re-locked with a goal in the run.
 
 using NUnit.Framework;
 
@@ -66,19 +68,26 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
-        public void Goal_OutsideThePosts_IsNotAGoal_AndBallIsUntouched()
+        public void Goal_OutsideThePosts_IsNotAGoal_AndRestartsAsGoalKick()
         {
             // Behind the goal line but outside the goal mouth: CheckBoundaries classifies a
-            // corner/goal-kick, which Stage 0 has no restart model for — score and ball unchanged
-            // (the pre-substrate out-of-play behaviour, preserved exactly).
+            // goal-kick (default lastTouchTeam is 0/home on a fresh engine, so the away-side exit
+            // is credited to the defending team per RestartResolver) — no goal, and the ball
+            // restarts in the six-yard box per MatchEngineRestartTests.GoalKick_PlacesBallInSixYardBox,
+            // superseding the pre-substrate "ball stays where it went out" behaviour this test
+            // locked before the match-flow restart model existed.
             Vector3 pos = new Vector3(
                 MatchEngineConstants.PITCH_LENGTH_M + 0.5f, 10f, MatchEngineConstants.BALL_REST_HEIGHT_M);
             var engine = RunOneTickWithBallAt(pos);
 
             Assert.AreEqual(0, engine.TestOnly_Goals(0));
             Assert.AreEqual(0, engine.TestOnly_Goals(1));
-            Assert.AreEqual(pos.x, engine.TestOnly_BallSnapshot.Position.x, 1e-4f,
-                "No restart for a non-goal exit — the ball stays where it went out.");
+            BallState ball = engine.TestOnly_BallSnapshot;
+            Assert.AreEqual(
+                MatchEngineConstants.PITCH_LENGTH_M - MatchEngineConstants.GOAL_AREA_DEPTH_M,
+                ball.Position.x, 1e-4f, "Goal-kick restart in the six-yard box on the exited (away) goal line.");
+            Assert.AreEqual(MatchEngineConstants.PITCH_WIDTH_M * 0.5f, ball.Position.y, 1e-4f);
+            Assert.AreEqual(MatchEngineConstants.NO_POSSESSION, engine.TestOnly_PossessingAgentId);
         }
 
         [Test]
@@ -148,4 +157,12 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-07-11 | —      | Initial goal-detection substrate suite (6 tests): both goal    |
 // |         |            |        |   mouths, non-goal + airborne exits untouched, last-holder     |
 // |         |            |        |   scorer credit, two-run determinism with a goal in the run.   |
+// | 1.1     | 2026-07-14 | —      | Goal_OutsideThePosts_IsNotAGoal_AndBallIsUntouched renamed to  |
+// |         |            |        |   Goal_OutsideThePosts_IsNotAGoal_AndRestartsAsGoalKick and     |
+// |         |            |        |   re-derived: it asserted the pre-substrate "ball stays put"   |
+// |         |            |        |   behaviour, which the same-day match-flow-completion landing  |
+// |         |            |        |   (RestartResolver) superseded without this v1.0 test being    |
+// |         |            |        |   updated — caught by the real CI test run once the compile    |
+// |         |            |        |   error blocking it was fixed. Now asserts the goal-kick        |
+// |         |            |        |   restart position, matching MatchEngineRestartTests.          |
 #endregion
