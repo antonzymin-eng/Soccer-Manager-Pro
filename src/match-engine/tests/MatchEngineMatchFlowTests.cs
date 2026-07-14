@@ -14,6 +14,8 @@ using NUnit.Framework;
 
 using UnityEngine;
 
+using TacticalDirector.BallPhysics;
+
 namespace TacticalDirector.MatchEngine
 {
     [TestFixture]
