@@ -13,6 +13,8 @@ using UnityEngine;
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
+using TacticalDirector.DeterministicSim;
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -151,6 +153,9 @@ namespace TacticalDirector.MatchEngine
             int toucher = 1; // a home outfield agent
             engine.TestOnly_SetAgent(toucher, AgentState.CreateAtPosition(new Vector2(95f, 34f), new Vector2(1f, 0f)));
 
+            // OffsideCalledEvent's registered producer phase is Resolve; this direct seam call
+            // bypasses RunTick's normal phase progression, so the phase must be set explicitly.
+            EventBus.BeginPhase(PhaseId.Resolve);
             bool violation = engine.TestOnly_EvaluateAndApplyOffside(toucher);
 
             Assert.IsTrue(violation);
@@ -195,6 +200,9 @@ namespace TacticalDirector.MatchEngine
             int awayToucher = MatchEngineConstants.PLAYERS_PER_TEAM + 1;
             engine.TestOnly_SetAgent(awayToucher, AgentState.CreateAtPosition(new Vector2(10f, 34f), new Vector2(-1f, 0f)));
 
+            // OffsideCalledEvent's registered producer phase is Resolve; this direct seam call
+            // bypasses RunTick's normal phase progression, so the phase must be set explicitly.
+            EventBus.BeginPhase(PhaseId.Resolve);
             bool violation = engine.TestOnly_EvaluateAndApplyOffside(awayToucher);
             Assert.IsTrue(violation, "Away toucher at x=10, home line's second-nearest ~45 -> beyond it toward x=0.");
         }

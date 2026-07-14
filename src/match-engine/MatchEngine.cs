@@ -1340,9 +1340,11 @@ namespace TacticalDirector.MatchEngine
 
                 var evt = new MatchPhaseChangedEvent(newPhase: 0, homeScore: _goals[0], awayScore: _goals[1]);
                 EventBus.Publish(in evt);
-                return;
             }
 
+            // Deliberately NOT an else-if: a real per-tick increment can never cross both boundaries
+            // in the same call (HALF_TIME_BOUNDARY_TICK != MATCH_TICKS_TOTAL), but a test-only direct
+            // jump straight to MATCH_TICKS_TOTAL on a fresh engine must still fire both transitions.
             if (!_matchEnded && tick >= MatchEngineConstants.MATCH_TICKS_TOTAL)
             {
                 _matchEnded = true;
