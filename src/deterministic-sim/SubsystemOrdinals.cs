@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/SubsystemOrdinals.cs
 // Created:  2026-05-29
-// Modified: 2026-07-02 (LivingWorld = 80, ERR-022-001)
+// Modified: 2026-07-15 (PlayerDatabase = 81, squad-player-data-design.md KD-5)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.1.1, §3.4, Code Standards #20
 // Purpose:  Compile-time subsystem ordinals used as the secondary sort key in canonical intra-phase ordering.
@@ -78,6 +78,11 @@ namespace TacticalDirector.DeterministicSim
         /// match Physics/Mechanics/AI bands so calendar-cadence streams never collide with match
         /// streams.</summary>
         public const int LivingWorld = 80;
+
+        /// <summary>[FIXED] Player Database subsystem ordinal (roster-generation RNG stream; not a
+        /// per-tick match stream — off-pitch band per squad-player-data-design.md KD-5). Next value
+        /// after LivingWorld.</summary>
+        public const int PlayerDatabase = 81;
     }
 }
 
@@ -86,4 +91,7 @@ namespace TacticalDirector.DeterministicSim
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                        |
 // | 1.1     | 2026-07-02 | —      | Off-pitch band (80–99) opened: LivingWorld = 80 (ERR-022-001;  |
 // |         |            |        | first consumer = the #22 world.text stream registration).      |
+// | 1.2     | 2026-07-15 | —      | PlayerDatabase = 81 allocated (squad-player-data-design.md     |
+// |         |            |        | KD-5; roster generation is boot/off-match-tick, same off-pitch |
+// |         |            |        | category as LivingWorld).                                     |
 #endregion
