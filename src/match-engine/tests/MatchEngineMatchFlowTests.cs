@@ -31,6 +31,7 @@ namespace TacticalDirector.MatchEngine
 
             Assert.IsFalse(engine.TestOnly_SecondHalfStarted);
             Assert.IsFalse(engine.TestOnly_MatchEnded);
+            Assert.IsFalse(engine.MatchEnded);
         }
 
         [Test]
@@ -67,6 +68,7 @@ namespace TacticalDirector.MatchEngine
             var engine = new MatchEngine(MatchSeed);
             engine.TestOnly_CheckMatchFlowTransitions(MatchEngineConstants.MATCH_TICKS_TOTAL);
             Assert.IsTrue(engine.TestOnly_MatchEnded);
+            Assert.IsTrue(engine.MatchEnded, "Public MatchEnded mirrors TestOnly_MatchEnded.");
 
             // Second call at a later tick must be a no-op (nothing further to assert on besides no throw
             // — the guard is the same `!_matchEnded` pattern already locked by the half-time test above).
@@ -120,4 +122,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   guard, post-full-time gameplay freeze (ball/agents unchanged |
 // |         |            |        |   while the tick/snapshot loop keeps advancing), + two-run      |
 // |         |            |        |   determinism.                                                 |
+// | 1.1     | 2026-07-15 | —      | Interactive match view: BeforeBoundary/FullTimeBoundary tests   |
+// |         |            |        |   also assert the new public MatchEnded property mirrors       |
+// |         |            |        |   TestOnly_MatchEnded (the observation-surface consumer         |
+// |         |            |        |   contract the live viewer's auto-pause depends on).            |
 #endregion

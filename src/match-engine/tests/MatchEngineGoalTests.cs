@@ -49,6 +49,8 @@ namespace TacticalDirector.MatchEngine
 
             Assert.AreEqual(1, engine.TestOnly_Goals(0), "Home scores into the away goal (+X).");
             Assert.AreEqual(0, engine.TestOnly_Goals(1));
+            Assert.AreEqual(1, engine.HomeScore, "Public HomeScore mirrors TestOnly_Goals(0).");
+            Assert.AreEqual(0, engine.AwayScore, "Public AwayScore mirrors TestOnly_Goals(1).");
 
             BallState ball = engine.TestOnly_BallSnapshot;
             Assert.AreEqual(MatchEngineConstants.KickoffBallXM, ball.Position.x, 1e-4f, "Centre-spot restart (X).");
@@ -65,6 +67,8 @@ namespace TacticalDirector.MatchEngine
 
             Assert.AreEqual(0, engine.TestOnly_Goals(0));
             Assert.AreEqual(1, engine.TestOnly_Goals(1), "Away scores into the home goal (−X).");
+            Assert.AreEqual(0, engine.HomeScore);
+            Assert.AreEqual(1, engine.AwayScore);
         }
 
         [Test]
@@ -165,4 +169,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   updated — caught by the real CI test run once the compile    |
 // |         |            |        |   error blocking it was fixed. Now asserts the goal-kick        |
 // |         |            |        |   restart position, matching MatchEngineRestartTests.          |
+// | 1.2     | 2026-07-15 | —      | Interactive match view: the two goal-mouth tests also assert   |
+// |         |            |        |   the new public HomeScore/AwayScore properties mirror         |
+// |         |            |        |   TestOnly_Goals (the observation-surface consumer contract).  |
 #endregion

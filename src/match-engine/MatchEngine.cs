@@ -11,6 +11,7 @@
 // Modified: 2026-07-11 (#26 manager-AI wiring: ConfigureManager + stride decision gate + ManagerState serialization; SNAPSHOT_SCHEMA_VERSION 12 → 13)
 // Modified: 2026-07-11 (engine substrate: Resolve-phase goal detection + score state + GoalAwardedEvent + centre-spot restart; #26 live goalDiff/clock inputs + half-time trigger; SNAPSHOT_SCHEMA_VERSION 13 → 14)
 // Modified: 2026-07-14 (match-flow completion: throw-in/corner/goal-kick restarts, fouls/cards, offside, substitutions, half-time ends-swap, full-time freeze; SNAPSHOT_SCHEMA_VERSION 14 → 15 — see docs/tracking/match-flow-completion-design.md)
+// Modified: 2026-07-15 (interactive match view: observation-surface extension — HomeScore/AwayScore/MatchEnded; no schema change; see docs/tracking/interactive-match-view-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -1059,6 +1060,15 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Possessing agent's roster index, or NO_POSSESSION (−1) when the ball is loose.</summary>
         public int PossessingAgentId => _possessingAgentId;
+
+        /// <summary>Home team's (team 0) current goal count.</summary>
+        public int HomeScore => _goals[0];
+
+        /// <summary>Away team's (team 1) current goal count.</summary>
+        public int AwayScore => _goals[1];
+
+        /// <summary>True once full time has fired (see <see cref="CheckMatchFlowTransitions"/>); AI/Physics/Resolve are frozen but the tick/snapshot loop keeps advancing.</summary>
+        public bool MatchEnded => _matchEnded;
 
         /// <summary>
         /// The match-seeded deterministic RNG owned by the composition root. Phase A registers
@@ -4162,4 +4172,15 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | policy blocks the SDK download) — every file hand-verified for    |
 // |         |            |        | brace/paren balance and member-name accuracy against actual       |
 // |         |            |        | source; CI verification pending push.                            |
+// | 1.32    | 2026-07-15 | —      | Interactive match view (docs/tracking/interactive-match-view-    |
+// |         |            |        | design.md): observation-surface extension — HomeScore/AwayScore/ |
+// |         |            |        | MatchEnded read-only properties, same section as the v1.24       |
+// |         |            |        | BallView/AgentView surface (trivial field reads; no new state,   |
+// |         |            |        | no SNAPSHOT_SCHEMA_VERSION change). Consumed by the new           |
+// |         |            |        | src/match-viewer/LiveMatchStreamer + LiveMatchServer (real-time-  |
+// |         |            |        | paced tick loop + a loopback-only HTTP server for a live browser |
+// |         |            |        | viewer, replacing "watch after the match ends" with "watch the   |
+// |         |            |        | match happen"). Full dotnet gate not runnable in this            |
+// |         |            |        | environment (no SDK reachable) — verified by exhaustive manual   |
+// |         |            |        | review in place of dotnet test.                                  |
 #endregion

@@ -1,7 +1,25 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 14, 2026 (**Match-flow completion LANDED** — throw-ins, corners, goal kicks,
+> **Last Updated:** July 15, 2026 (**Interactive match view LANDED** — upgrades the passive post-hoc
+> HTML replay (`src/match-viewer/`) into a live-updating viewer watched *during* a real match: a
+> background thread paces a real `MatchEngine` at wall-clock speed (`LiveMatchStreamer.cs`, new)
+> and a minimal loopback-only HTTP server (`LiveMatchServer.cs`, new — hand-rolled over
+> `TcpListener`, no package dependency) serves a browser page that polls `/frame` and redraws, plus
+> a playback-only `/control` endpoint (pause/resume/speed — deliberately never a gameplay-mutation
+> channel). `MatchEngine.cs` v1.32 gains 3 trivial read-only properties (`HomeScore`/`AwayScore`/
+> `MatchEnded`), same section as the existing `BallView`/`AgentView` observation surface. Full
+> in-Unity rendering remains blocked on Unity host access (existing OPEN ISSUE) — this is the
+> "at minimum a live-updating viewer" floor. Per the user's process instructions: a design doc
+> (`docs/tracking/interactive-match-view-design.md`) went through 2 self-adversarial-review rounds
+> to convergence before implementation, then the code itself went through 2 adversarial-review
+> passes, catching and fixing (among other things) an identical `Start()`/`Stop()` race condition
+> in both new classes — the running-state flag flipped true inside the lifecycle lock before the
+> background thread was actually assigned, so a `Stop()` racing into that narrow window could join
+> a null thread while a fresh thread got spawned against an already-stopped listener. Full dotnet
+> gate not runnable in this environment (no SDK reachable) — verified by exhaustive manual review
+> in place of `dotnet test`. See src/CLAUDE.md v2.18 for the full file-by-file description.)
+> **Last Updated (prior):** July 14, 2026 (**Match-flow completion LANDED** — throw-ins, corners, goal kicks,
 > fouls/cards, offside, substitutions, half-time break, and full-time end (previously only kickoff +
 > goal-restart existed; see `docs/tracking/match-flow-completion-design.md` for the full plan +
 > adversarial-review history). Per the user's process instructions: a design doc was written first,
