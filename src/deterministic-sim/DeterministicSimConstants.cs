@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/DeterministicSimConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-07-02 (DOMAIN_TAG_LIVING_WORLD = 0x1E, ERR-022-001)
+// Modified: 2026-07-15 (DOMAIN_TAG_PLAYER_DATABASE = 0x1F, squad-player-data-design.md KD-5)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.4, §3.2.4.1, Code Standards #20
 // Purpose:  All numeric and string constants for the deterministic simulation system.
@@ -114,6 +114,12 @@ namespace TacticalDirector.DeterministicSim
         /// snapshot block). §3.4 v1.0.7; ERR-022-001 resolved — next value after 0x1D (0x18/0x1C stay
         /// permanently orphaned per ERR-016-003).</summary>
         public const byte DOMAIN_TAG_LIVING_WORLD = 0x1E;
+
+        /// <summary>[FIXED] Domain tag allocated for the Player Database (roster-generation RNG
+        /// stream). §3.4; next value after 0x1E. Back-prop from
+        /// docs/tracking/squad-player-data-design.md KD-5 (design-supplement stage; no numbered
+        /// spec yet — candidate #27).</summary>
+        public const byte DOMAIN_TAG_PLAYER_DATABASE = 0x1F;
 
         // ── Error codes (u16; §3.4 / §3.10) ──────────────────────────────────────────
 
@@ -273,4 +279,7 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | (FrameMs / 1000) — the per-tick dt / seconds-clock derivation.       |
 // | 1.3     | 2026-07-02 | —      | DOMAIN_TAG_LIVING_WORLD = 0x1E allocated (ERR-022-001; #16 §3.4      |
 // |         |            |        | v1.0.7 — next value after 0x1D; 0x18/0x1C stay orphaned).            |
+// | 1.4     | 2026-07-15 | —      | DOMAIN_TAG_PLAYER_DATABASE = 0x1F allocated for the new              |
+// |         |            |        | player-database roster-generation RNG stream (next value after      |
+// |         |            |        | 0x1E). Back-prop from squad-player-data-design.md KD-5.              |
 #endregion
