@@ -74,6 +74,28 @@ namespace TacticalDirector.MatchViewer
         public static readonly int DefaultSampleStride = Config.GetInt("match-viewer", "DefaultSampleStride", 2);
 
         #endregion
+
+        #region GT — live server / streamer (interactive match view)
+
+        /// <summary>[GT] Default loopback TCP port for <c>LiveMatchServer</c>. A caller may pass 0 to bind an OS-chosen ephemeral port instead (used by tests).</summary>
+        public static readonly int LiveServerDefaultPort = Config.GetInt("match-viewer", "LiveServerDefaultPort", 8787);
+
+        /// <summary>[GT] Browser <c>/frame</c> poll cadence, milliseconds. 50 ms ⇒ 20 Hz — cheap over loopback and smooth to the eye; independent of the 60 Hz sim tick rate (a presentation sampling choice, not a physics constant).</summary>
+        public static readonly int LivePollIntervalMs = Config.GetInt("match-viewer", "LivePollIntervalMs", 50);
+
+        /// <summary>[GT] Slowest allowed <c>LiveMatchStreamer</c> playback-speed multiplier.</summary>
+        public static readonly float MinLiveSpeedMultiplier = Config.GetFloat("match-viewer", "MinLiveSpeedMultiplier", 0.25f);
+
+        /// <summary>[GT] Fastest allowed <c>LiveMatchStreamer</c> playback-speed multiplier.</summary>
+        public static readonly float MaxLiveSpeedMultiplier = Config.GetFloat("match-viewer", "MaxLiveSpeedMultiplier", 8f);
+
+        /// <summary>[GT] Maximum bytes <c>LiveMatchServer</c> will read while looking for the end of an HTTP request line before abandoning the connection (abuse/hang guard against a client that never sends CRLF).</summary>
+        public static readonly int MaxHttpRequestLineBytes = Config.GetInt("match-viewer", "MaxHttpRequestLineBytes", 8192);
+
+        /// <summary>[GT] Milliseconds <c>LiveMatchStreamer</c>'s pacing loop sleeps between checks while paused (user-paused or auto-paused at full time), instead of spinning.</summary>
+        public static readonly int LivePausedPollIntervalMs = Config.GetInt("match-viewer", "LivePausedPollIntervalMs", 100);
+
+        #endregion
     }
 }
 
@@ -88,4 +110,7 @@ namespace TacticalDirector.MatchViewer
 // | 1.2     | 2026-07-02 | —      | AR-4 L (doc): DefaultSampleStride notes that a config-        |
 // |         |            |        | supplied non-positive value is rejected by the recorder's     |
 // |         |            |        | stride guard (catalogue does not re-validate).                |
+// | 1.3     | 2026-07-15 | —      | Interactive match view: new [GT] region for LiveMatchServer /  |
+// |         |            |        | LiveMatchStreamer — default port, browser poll cadence, min/  |
+// |         |            |        | max speed multiplier, max HTTP request-line bytes.             |
 #endregion
