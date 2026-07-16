@@ -1,7 +1,21 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 16, 2026 (**Adversarial-review fix pass over the last three landings** —
+> **Last Updated:** July 16, 2026, later same day (**Repeat adversarial review (AR-2 of the cycle) — 1 M
+> + 1 L found, both fixed; the pass otherwise re-verified the first round's fixes and swept the
+> surfaces the first round had only skimmed** (LiveMatchFrame, AttrIdx/NameCatalogue, the four
+> live-viewer/player-database test suites, RunPhysicsPhase freeze, RunFirstTouch gates). **M-1:**
+> sent-off agents could still RECEIVE the ball — `RunFirstTouch`'s gate-4 receiver scan was the one
+> participation surface without the `_isSentOff` exclusion (AI dispatch, all four Mechanics-AI
+> `IsActive` snapshot fills, the physics forced-stop, and the offside line all have it), so a ball
+> rolling past a frozen red-carded agent handed them possession they could never release (no AI
+> dispatch ⇒ no kick), deadlocking play until the next half/full-time ball reset. Fixed
+> (`MatchEngine.cs` v1.34) + regression lock (`MatchEngineFirstTouchTests` v1.1 — the exact
+> CONTROLLED-receive geometry with the agent sent off stays loose). Physical presence
+> (collision/perception/pressure) deliberately unchanged. **L (doc):** `AttrIdx`'s "Technical (8)"
+> group comment lists 7 members (totals were correct). Full dotnet gate re-run: PASSED, 0 failures.
+> See src/CLAUDE.md v2.21.)
+> **Last Updated (prior):** July 16, 2026 (**Adversarial-review fix pass over the last three landings** —
 > match-flow completion (July 14) / interactive match view (July 15) / squad-player data layer
 > (July 15) were re-reviewed fresh-eyes at the user's request; findings 2 M + 4 L, all fixed same
 > day. M-1: `MatchEngine.SubstitutePlayer` never reset the outgoing slot's yellow-card count —

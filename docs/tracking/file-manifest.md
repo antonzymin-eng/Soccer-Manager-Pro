@@ -1,7 +1,13 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 16, 2026 (**Adversarial-review fix pass over the July 14–15 landings (match-flow
+**Last Updated:** July 16, 2026, later same day (**Repeat adversarial review (AR-2): 1M+1L, both fixed —
+no new files, modified only:** `src/match-engine/MatchEngine.cs` v1.34 (M-1 — sent-off agents
+excluded from the first-touch receiver scan; pre-fix a red-carded agent could receive into
+un-releasable possession, deadlocking play), `src/match-engine/tests/MatchEngineFirstTouchTests.cs`
+v1.1 (+1 regression lock), `src/player-database/AttrIdx.cs` v1.1 (L — group-count doc comment),
+root + src `CLAUDE.md`. Full dotnet gate re-run: PASSED, 0 failures.)
+**Last Updated (prior):** July 16, 2026 (**Adversarial-review fix pass over the July 14–15 landings (match-flow
 completion / interactive match view / squad-player data layer) — no new files, modified only:**
 `src/match-engine/MatchEngine.cs` v1.33 (M-1 substitution yellow-card reset + L-2 post-full-time
 `SubstitutePlayer` refusal + L-1 last-holder-approximation doc at the restart seam),

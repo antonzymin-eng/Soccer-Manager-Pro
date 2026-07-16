@@ -13,6 +13,7 @@
 // Modified: 2026-07-14 (match-flow completion: throw-in/corner/goal-kick restarts, fouls/cards, offside, substitutions, half-time ends-swap, full-time freeze; SNAPSHOT_SCHEMA_VERSION 14 → 15 — see docs/tracking/match-flow-completion-design.md)
 // Modified: 2026-07-15 (interactive match view: observation-surface extension — HomeScore/AwayScore/MatchEnded; no schema change; see docs/tracking/interactive-match-view-design.md)
 // Modified: 2026-07-16 (match-flow AR-7 fix pass: substitution yellow-card reset (M-1) + post-full-time SubstitutePlayer refusal (L-2) + last-holder-vs-last-toucher approximation documented at the restart seam (L-1))
+// Modified: 2026-07-16 (AR-8 M-1, later same day: sent-off agents excluded from first-touch reception — the one participation surface missing the exclusion; a red-carded agent could receive the ball and deadlock possession)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -2575,6 +2576,17 @@ namespace TacticalDirector.MatchEngine
             float bestSq  = acceptanceSq;
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
+                // AR-8 M-1: a sent-off agent no longer participates and must not receive the ball.
+                // This was the ONE participation surface without the exclusion (AI dispatch, all four
+                // Mechanics-AI snapshot fills, the physics forced-stop, and the offside line all have
+                // it) — a ball rolling past the frozen agent handed them possession, which they could
+                // never release (no AI dispatch ⇒ no kick), deadlocking play until half/full time.
+                // They remain a PHYSICAL presence (collision, perception, pressure) — that is the
+                // documented agents-keep-positions minimalism, distinct from participating in play.
+                if (_isSentOff[i])
+                {
+                    continue;
+                }
                 Vector2 toAgent = _agents[i].Position - ballPosXY;
                 float distSq = toAgent.sqrMagnitude;
                 if (distSq > bestSq)
@@ -4228,4 +4240,14 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | 's param doc claimed "touched last", a contract drift against    |
 // |         |            |        | what the caller actually passes (its doc patched in the same     |
 // |         |            |        | commit, v1.1).                                                   |
+// | 1.34    | 2026-07-16 | —      | AR-8 fix pass (repeat review, later same day). M-1: sent-off     |
+// |         |            |        | agents excluded from RunFirstTouch's receiver scan — every       |
+// |         |            |        | other participation surface had the exclusion (AI dispatch, the  |
+// |         |            |        | four Mechanics-AI snapshot IsActive fills, the physics forced-   |
+// |         |            |        | stop, the offside line) but the gate-4 loop did not, so a ball   |
+// |         |            |        | rolling past a frozen red-carded agent handed them possession    |
+// |         |            |        | they could never release (no AI dispatch ⇒ no kick),             |
+// |         |            |        | deadlocking play until the next half/full-time ball reset.       |
+// |         |            |        | Physical presence (collision/perception/pressure sources) is     |
+// |         |            |        | deliberately unchanged — agents-keep-positions minimalism.       |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/player-database/AttrIdx.cs
 // Created:  2026-07-15
-// Modified: 2026-07-15
+// Modified: 2026-07-16 (AR-4 L, doc-only: Technical group comment said 8, lists 7 — totals were already correct)
 // Author:   —
 // Spec:     Squad/Player Data Layer design supplement (docs/tracking/squad-player-data-design.md)
 // Purpose:  Single ordinal mapping for the 31 int[1,20] fields on PlayerAttributes, shared by
@@ -24,7 +24,7 @@ namespace TacticalDirector.PlayerDatabase
         public const int Strength = 4;
         public const int Stamina = 5;
 
-        // -- Technical (8) --
+        // -- Technical (7) --
         public const int Passing = 6;      // Pass Mechanics #5
         public const int Technique = 7;    // Pass Mechanics #5 / Shot Mechanics #6
         public const int Finishing = 8;    // Shot Mechanics #6
@@ -63,6 +63,10 @@ namespace TacticalDirector.PlayerDatabase
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                    |
-// | 1.0     | 2026-07-15 | —      | Initial implementation.  |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-07-15 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-07-16 | —      | AR-4 L (doc-only): Technical group-count comment 8 → 7 (it     |
+// |         |            |        | lists Passing..Heading = 7 members; the 31 total and every     |
+// |         |            |        | ordinal were already correct, matching PlayerAttributes' own   |
+// |         |            |        | "Technical (7)" grouping).                                     |
 #endregion
