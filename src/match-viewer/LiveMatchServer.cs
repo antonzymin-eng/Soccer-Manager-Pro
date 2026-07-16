@@ -1,6 +1,6 @@
 // File:     src/match-viewer/LiveMatchServer.cs
 // Created:  2026-07-15
-// Modified: 2026-07-15
+// Modified: 2026-07-16 (AR-7 fix pass: viewer clock rounds seconds before the minute split (L-3); post-Stop connection threads refused via a volatile shutdown flag + 503 (L-4))
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Code Standards #20
 // Purpose:  A minimal loopback-only HTTP server (hand-rolled over TcpListener — no package
@@ -36,6 +36,13 @@ namespace TacticalDirector.MatchViewer
         private Thread _acceptThread;
         private readonly object _lifecycleLock = new object();
         private bool _running;
+
+        // AR-7 L-4: Stop() joins only the ACCEPT thread — per-connection threads spawned before the
+        // listener closed may still be mid-request. This volatile flag makes Route() refuse them
+        // (503) so a straggling /control request cannot pause or re-speed the streamer after Stop()
+        // has returned. Volatile (not the lifecycle lock) because Route() runs on connection
+        // threads and must never block on, or race, the lifecycle transition.
+        private volatile bool _shuttingDown;
 
         /// <summary>
         /// Binds the well-known <see cref="MatchViewerConstants.LiveServerDefaultPort"/>. Explicit
@@ -89,6 +96,7 @@ namespace TacticalDirector.MatchViewer
                 // fresh accept thread against an already-stopped listener (Start() would silently
                 // "succeed" while the server never actually served a request).
                 _acceptThread = new Thread(AcceptLoop) { IsBackground = true, Name = "LiveMatchServer.Accept" };
+                _shuttingDown = false; // a restarted server serves again (Start after Stop binds a fresh listener)
                 _running = true;
                 _acceptThread.Start();
             }
@@ -101,6 +109,7 @@ namespace TacticalDirector.MatchViewer
             lock (_lifecycleLock)
             {
                 if (!_running) { return; }
+                _shuttingDown = true; // AR-7 L-4 — in-flight connection threads refuse from here on
                 _running = false;
                 threadToJoin = _acceptThread;
                 _listener.Stop();
@@ -205,6 +214,14 @@ namespace TacticalDirector.MatchViewer
 
         private void Route(Stream stream, string method, string pathAndQuery)
         {
+            // AR-7 L-4: a connection thread that outlived Stop() must not act — in particular a
+            // straggling /control request must not mutate the streamer after the server reports stopped.
+            if (_shuttingDown)
+            {
+                WriteHttp(stream, 503, "text/plain; charset=utf-8", "Service Unavailable: server is stopping");
+                return;
+            }
+
             if (method != "GET")
             {
                 WriteHttp(stream, 405, "text/plain; charset=utf-8", "Method Not Allowed");
@@ -414,6 +431,7 @@ namespace TacticalDirector.MatchViewer
                 case 400: return "Bad Request";
                 case 404: return "Not Found";
                 case 405: return "Method Not Allowed";
+                case 503: return "Service Unavailable";
                 default:  return "Error";
             }
         }
@@ -540,8 +558,10 @@ function drawFrame(data){
   const b=data.ball;
   ctx.beginPath();ctx.arc(px(b[0]),py(b[1]),Math.max(1,BALL_R+b[2]*BALL_RZ),0,2*Math.PI);
   ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.stroke();
-  const secs=data.tick/60,mins=Math.floor(secs/60);
-  clockEl.textContent='t '+data.tick+' ('+mins+':'+(secs%60).toFixed(0).padStart(2,'0')+')';
+  // Round to whole seconds BEFORE the minute split (AR-7 L-3 — the same class of clock bug
+  // HtmlReplayExporter's AR-1 fixed: rounding the remainder after splitting shows 'm:60').
+  const totalSecs=Math.round(data.tick/60),mins=Math.floor(totalSecs/60);
+  clockEl.textContent='t '+data.tick+' ('+mins+':'+String(totalSecs%60).padStart(2,'0')+')';
   scoreEl.textContent=data.homeScore+' – '+data.awayScore;
   possEl.textContent=poss<0?'ball loose':'possession: agent '+poss+' ('+(data.roster[poss].team===0?'home':'away')+')';
   statusEl.textContent=data.matchEnded?'full time':(data.paused?'paused':'live');
@@ -598,4 +618,14 @@ poll();
 // |         |            |        | cannot be a C# default parameter (the same constraint            |
 // |         |            |        | MatchReplayRecorder's AR-2 M-3 fix already hit in this            |
 // |         |            |        | assembly); split into an explicit no-port overload.               |
+// | 1.1     | 2026-07-16 | —      | AR-7 fix pass. L-3: the viewer clock reintroduced the exact      |
+// |         |            |        | rounding bug HtmlReplayExporter's AR-1 fixed — (secs%60)         |
+// |         |            |        | .toFixed(0) rendered "m:60" when the remainder rounded up; now   |
+// |         |            |        | rounds to whole seconds BEFORE the minute split. L-4: Stop()     |
+// |         |            |        | joins only the accept thread, so per-connection threads could    |
+// |         |            |        | outlive it and a straggling /control request could still pause/  |
+// |         |            |        | re-speed the streamer after the server reported stopped; a       |
+// |         |            |        | volatile _shuttingDown flag (set in Stop() before the listener   |
+// |         |            |        | closes, cleared on a fresh Start()) now makes Route() answer     |
+// |         |            |        | 503 instead of acting.                                           |
 #endregion

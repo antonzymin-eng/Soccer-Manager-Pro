@@ -1,6 +1,6 @@
 // File:     src/player-database/tests/SquadFileLoaderTests.cs
 // Created:  2026-07-15
-// Modified: 2026-07-15
+// Modified: 2026-07-16 (AR-3 M-2: age-bounds regression locks — out-of-range throws, boundary values parse)
 // Author:   —
 // Spec:     Squad/Player Data Layer design supplement (docs/tracking/squad-player-data-design.md) §5
 // Purpose:  SquadFileLoader grammar round-trip, empty-file default squad, and every fail-loud gate.
@@ -120,6 +120,26 @@ namespace TacticalDirector.PlayerDatabase.Tests
         }
 
         [Test]
+        public void Parse_OutOfRangeAge_Throws()
+        {
+            // AR-3 M-2 regression lock: age was the one numeric key without a range check — a squad
+            // file could author age = -3 or 99999 despite the "out-of-range int all throw" contract.
+            string below = $"[player 0]\nage = {PlayerDatabaseConstants.AgeMin - 1}\n";
+            string above = $"[player 0]\nage = {PlayerDatabaseConstants.AgeMax + 1}\n";
+            Assert.Throws<FormatException>(() => SquadFileLoader.Parse(below, 0));
+            Assert.Throws<FormatException>(() => SquadFileLoader.Parse(above, 0));
+        }
+
+        [Test]
+        public void Parse_AgeAtBounds_Parses()
+        {
+            string text = $"[player 0]\nage = {PlayerDatabaseConstants.AgeMin}\n[player 1]\nage = {PlayerDatabaseConstants.AgeMax}\n";
+            Squad squad = SquadFileLoader.Parse(text, 0);
+            Assert.AreEqual(PlayerDatabaseConstants.AgeMin, squad.GetPlayer(0).Age);
+            Assert.AreEqual(PlayerDatabaseConstants.AgeMax, squad.GetPlayer(1).Age);
+        }
+
+        [Test]
         public void Parse_UnknownPosition_Throws()
         {
             Assert.Throws<FormatException>(() => SquadFileLoader.Parse("[player 0]\nposition = Striker\n", 0));
@@ -150,6 +170,8 @@ namespace TacticalDirector.PlayerDatabase.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                    |
-// | 1.0     | 2026-07-15 | —      | Initial implementation.  |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-07-15 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-07-16 | —      | AR-3 M-2 locks: out-of-range age throws (both sides), and the |
+// |         |            |        | [AgeMin, AgeMax] boundary values parse.                        |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/player-database/RosterGenerator.cs
 // Created:  2026-07-15
-// Modified: 2026-07-15
+// Modified: 2026-07-16 (AR-3 L-6, doc-only: DrawBounded's modulo-bias acceptance + fixed-budget rationale recorded)
 // Author:   —
 // Spec:     Squad/Player Data Layer design supplement (docs/tracking/squad-player-data-design.md) §3, KD-5
 // Purpose:  Deterministic squad generation over DeterministicRngService — no System.Random anywhere
@@ -115,7 +115,12 @@ namespace TacticalDirector.PlayerDatabase
         }
 
         // Maps one reserved draw to a value in [0, bound). bound must be > 0 (caller-guaranteed —
-        // every call site here uses a fixed positive catalogue length or span).
+        // every call site here uses a fixed positive catalogue length or span). AR-3 L-6: the plain
+        // `value % bound` mapping carries modulo bias, deliberately accepted — over a u64 draw the
+        // bias for every bound used here (≤ 32) is < 2^-59, generation is not a statistically
+        // load-bearing surface (unlike the pinned RNG-quality work in PassErrorCalculator), and the
+        // mapping is deterministic either way. Do NOT "fix" this with rejection sampling: a
+        // variable draw count per field would break the FIELDS_PER_PLAYER fixed-budget reservation.
         private static int DrawBounded(DeterministicRngService rng, int streamIndex, int drawIndex, int bound)
         {
             ushort err = rng.DrawReserved(streamIndex, drawIndex, out ulong value);
@@ -149,4 +154,7 @@ namespace TacticalDirector.PlayerDatabase
 // |         |            |        | draw (PlayerRecord.Position previously had no generation       |
 // |         |            |        | input at all); WeakFootRating jitter now uses its own          |
 // |         |            |        | WeakFootSpread instead of the much-wider AttributeSpread.      |
+// | 1.2     | 2026-07-16 | —      | AR-3 L-6 (doc-only): DrawBounded's `value % bound` modulo bias |
+// |         |            |        | recorded as deliberate (< 2^-59 for bounds ≤ 32; rejection     |
+// |         |            |        | sampling would break the fixed FIELDS_PER_PLAYER reservation). |
 #endregion

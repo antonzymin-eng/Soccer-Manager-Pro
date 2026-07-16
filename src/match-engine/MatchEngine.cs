@@ -12,6 +12,7 @@
 // Modified: 2026-07-11 (engine substrate: Resolve-phase goal detection + score state + GoalAwardedEvent + centre-spot restart; #26 live goalDiff/clock inputs + half-time trigger; SNAPSHOT_SCHEMA_VERSION 13 → 14)
 // Modified: 2026-07-14 (match-flow completion: throw-in/corner/goal-kick restarts, fouls/cards, offside, substitutions, half-time ends-swap, full-time freeze; SNAPSHOT_SCHEMA_VERSION 14 → 15 — see docs/tracking/match-flow-completion-design.md)
 // Modified: 2026-07-15 (interactive match view: observation-surface extension — HomeScore/AwayScore/MatchEnded; no schema change; see docs/tracking/interactive-match-view-design.md)
+// Modified: 2026-07-16 (match-flow AR-7 fix pass: substitution yellow-card reset (M-1) + post-full-time SubstitutePlayer refusal (L-2) + last-holder-vs-last-toucher approximation documented at the restart seam (L-1))
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -760,13 +761,24 @@ namespace TacticalDirector.MatchEngine
         /// stride (reuses the existing possession-change seam). Publishes a Tier A
         /// <see cref="SubstitutionEvent"/> with a synthetic incoming-player id
         /// (<c>SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex</c>) distinct from any on-pitch
-        /// slot index. Fails loud (boot/manager-decision-time call, not hot-path) on: an out-of-range
-        /// team/slot/bench index; a slot not belonging to <paramref name="teamId"/>; a sent-off or
-        /// already-substituted slot; a bench index already used this match for the team; or the
-        /// team's <see cref="MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM"/> cap already reached.
+        /// slot index. Fails loud (boot/manager-decision-time call, not hot-path) on: a call after
+        /// full time (AR-7 L-2 — the state effects would apply to a frozen match while the queued
+        /// <see cref="SubstitutionEvent"/> could never flush, RunResolvePhase returning before
+        /// <see cref="PublishPendingSubstitutions"/> once <see cref="_matchEnded"/> is set); an
+        /// out-of-range team/slot/bench index; a slot not belonging to <paramref name="teamId"/>; a
+        /// sent-off or already-substituted slot; a bench index already used this match for the team;
+        /// or the team's <see cref="MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM"/> cap already
+        /// reached. The outgoing slot's yellow-card count resets to 0 (AR-7 M-1 — discipline attaches
+        /// to the PLAYER, and the slot now holds a different player; without the reset a substitute
+        /// replacing a booked player would be sent off on their own first yellow).
         /// </summary>
         public void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
         {
+            if (_matchEnded)
+            {
+                throw new System.InvalidOperationException(
+                    "SubstitutePlayer: the match has ended (full time) — no further substitutions.");
+            }
             if (teamId < 0 || teamId >= MatchEngineConstants.TEAM_COUNT)
             {
                 throw new System.ArgumentOutOfRangeException(
@@ -810,6 +822,12 @@ namespace TacticalDirector.MatchEngine
             _attrs[outSlotIndex]        = _benchAttrs[teamId][benchIndex];
             _perfs[outSlotIndex]        = _benchPerfs[teamId][benchIndex];
             _isGoalkeeper[outSlotIndex] = _benchIsGoalkeeper[teamId][benchIndex];
+            // AR-7 M-1: discipline attaches to the player, not the slot — the incoming substitute
+            // starts on zero yellows (the outgoing player's booking leaves the pitch with them;
+            // Stage 0 has no persistent player identity to carry it to, and the slot's serialized
+            // v15 count now describes the player actually occupying it). _isSentOff needs no
+            // parallel reset: a sent-off slot refuses substitution above (red card ≠ substitution).
+            _yellowCards[outSlotIndex] = 0;
             _decisionTrees[outSlotIndex].NotifyInterrupt();
             _activeBenchSlot[outSlotIndex] = benchIndex;
             _substitutionsUsed[teamId]++;
@@ -2226,6 +2244,14 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void CheckRestartAndApply()
         {
+            // AR-7 L-1 — documented Stage-0 approximation at this seam: "last touch" is derived from
+            // the last settled HOLDER (_lastHolderAgentId), not the last physical toucher — a
+            // deflection or uncontrolled touch never updates the tracker, so a ball deflected out
+            // off a defender is still classified against the last possession (affecting the
+            // throw-in/corner/goal-kick award direction and the corner-vs-goal-kick split inside
+            // CheckBoundaries). Before any possession has ever settled the tracker is −1 and team 0
+            // is assumed. A true last-toucher tracker is a Stage-1+ refinement (it needs a
+            // physical-contact event this engine does not yet consume).
             int lastTouchTeam = _lastHolderAgentId >= 0 ? _teamIds[_lastHolderAgentId] : 0;
             (bool isOut, RestartType restart) = BallCollision.CheckBoundaries(_ball, lastTouchTeam);
             if (!isOut || restart == RestartType.None)
@@ -4183,4 +4209,23 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | match happen"). Full dotnet gate not runnable in this            |
 // |         |            |        | environment (no SDK reachable) — verified by exhaustive manual   |
 // |         |            |        | review in place of dotnet test.                                  |
+// | 1.33    | 2026-07-16 | —      | Match-flow AR-7 fix pass (fresh-eyes adversarial review of the   |
+// |         |            |        | July-14/15 landings). M-1: SubstitutePlayer resets                |
+// |         |            |        | _yellowCards[outSlotIndex] — discipline attaches to the player,  |
+// |         |            |        | not the slot; without the reset a substitute replacing a booked  |
+// |         |            |        | player was sent off on their own first yellow via the            |
+// |         |            |        | second-yellow promotion (nothing tested or documented the        |
+// |         |            |        | inheritance). No schema change — v15 already serializes the      |
+// |         |            |        | count; only its value at substitution time changes. L-2:         |
+// |         |            |        | SubstitutePlayer refuses a post-full-time call — it previously   |
+// |         |            |        | mutated state and queued a SubstitutionEvent that could never    |
+// |         |            |        | flush (RunResolvePhase returns before                            |
+// |         |            |        | PublishPendingSubstitutions once _matchEnded is set), silently   |
+// |         |            |        | losing the event while the swap applied to a frozen match. L-1   |
+// |         |            |        | (doc): CheckRestartAndApply's lastTouchTeam documented as the    |
+// |         |            |        | last settled HOLDER, not the last physical toucher (deflections  |
+// |         |            |        | never update the tracker; −1 ⇒ team 0 assumed) — RestartResolver |
+// |         |            |        | 's param doc claimed "touched last", a contract drift against    |
+// |         |            |        | what the caller actually passes (its doc patched in the same     |
+// |         |            |        | commit, v1.1).                                                   |
 #endregion
