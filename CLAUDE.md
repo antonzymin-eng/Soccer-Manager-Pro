@@ -33,8 +33,8 @@
 > `ApplyRestart` (no sent-off-possessor deadlock vector); the Interception case maps the Stage-0
 > unresolved interceptor to NO_POSSESSION. Full dotnet gate re-run: PASSED, 0 failures. See
 > src/CLAUDE.md v2.22.)
-> **Last Updated (prior):** July 16, 2026, later same day (**Repeat adversarial review (AR-2 of the cycle) — 1 M
-> + 1 L found, both fixed; the pass otherwise re-verified the first round's fixes and swept the
+> **Last Updated (prior):** July 16, 2026, later same day (**Repeat adversarial review (AR-2 of the cycle) — 1 M + 1 L
+> found, both fixed; the pass otherwise re-verified the first round's fixes and swept the
 > surfaces the first round had only skimmed** (LiveMatchFrame, AttrIdx/NameCatalogue, the four
 > live-viewer/player-database test suites, RunPhysicsPhase freeze, RunFirstTouch gates). **M-1:**
 > sent-off agents could still RECEIVE the ball — `RunFirstTouch`'s gate-4 receiver scan was the one

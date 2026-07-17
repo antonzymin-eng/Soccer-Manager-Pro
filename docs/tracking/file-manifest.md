@@ -45,8 +45,8 @@ runs in CI on push.)
 **Last Updated (prior):** July 11, 2026, latest same day (**Engine substrate landed — goal detection +
 score state + match-length/halves model; #26 half-time trigger + live ladder inputs activated.**
 New file: `src/match-engine/tests/MatchEngineGoalTests.cs` (6 tests). Modified:
-`match-engine/{MatchEngine.cs v1.30 (Resolve-phase CheckGoalAndRestart + _goals/_lastHolderAgentId
-+ v14 serialization + RunManagerDecisionPoints live inputs + 4 TestOnly seams),
+`match-engine/{MatchEngine.cs v1.30 (Resolve-phase CheckGoalAndRestart + _goals/_lastHolderAgentId +
+v14 serialization + RunManagerDecisionPoints live inputs + 4 TestOnly seams),
 MatchEngineConstants.cs v1.20 (MATCH_LENGTH_MINUTES / MATCH_TICKS_TOTAL / HALF_TIME_BOUNDARY_TICK;
 SNAPSHOT_SCHEMA_VERSION 13 → 14), ManagerDecisionGate.cs v1.1 (half-time trigger active),
 ManagerAdaptation.cs (docs), tests/ManagerAITests.cs v1.1 (+4),
