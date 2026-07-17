@@ -1,7 +1,20 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 17, 2026 (v2.22 — **Third repeat adversarial review (AR-3 of the July-16 cycle):
+> **Last Updated:** July 17, 2026, later same day (v2.23 — **Fourth repeat adversarial review (AR-4 of the
+> July-16 cycle): 0H+0M+1L (doc-only), fixed — CONVERGENCE, cycle CLOSED** per the L-only-round
+> convention (match-viewer AR-4 precedent). The pass walked the complete sent-off participation
+> matrix (dispatch skip / 4 snapshot fills / forced-stop / offside line / AR-8 receiver scan /
+> AR-9 foul interpretation / substitution refusal / half+full-time one-shots) plus the in-flight
+> compositions the prior rounds never checked together: a card's `ApplyRestart` clears possession
+> BEFORE the executor advance and the adapters' `IsBallPossessedBy` reads the live value, so a
+> just-sent-off agent's mid-windup pass/shot self-cancels at CONTACT (FM-08/FM-05) — no leak
+> through in-flight executors. L: `_lastHolderAgentId` writer comment overclaimed the
+> `GoalAwardedEvent` credit ("names the agent whose kick scored") — a deflection-chain goal
+> credits the last SETTLED holder (deflections never update the tracker, the RestartResolver-seam
+> approximation), possibly not the kicker and possibly sent off since; aligned, doc-only
+> (`MatchEngine.cs` v1.36). Full dotnet gate re-run: PASSED, 0 failures.)
+> **Last Updated (prior):** July 17, 2026 (v2.22 — **Third repeat adversarial review (AR-3 of the July-16 cycle):
 > 1 M, fixed.** M-1: `ApplyFoulIfCaptured` never checked `_isSentOff` on either foul participant —
 > the foul/card/restart interpretation is itself a participation surface, and sent-off agents
 > remain collision bodies (the physics forced-stop decelerates them, then they stand frozen in the
@@ -1528,6 +1541,7 @@ Update this file when those items are resolved.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.23 | 2026-07-17 | — | **Fourth repeat adversarial review (AR-4): 0H+0M+1L doc-only, fixed — CONVERGENCE, cycle closed** — see the v2.23 Last-Updated header entry. Complete sent-off participation matrix walked clean (incl. the in-flight executor composition: card ⇒ `ApplyRestart` clears possession before the executor advance; adapters read the live `_possessingAgentId`, so FM-08/FM-05 cancel at CONTACT). L: `_lastHolderAgentId` writer comment aligned to the last-settled-holder approximation (deflection-chain goal may credit a non-kicker, possibly sent off since). Files: MatchEngine.cs v1.36 (doc-only), file-manifest.md, root CLAUDE.md. Full dotnet gate re-run: PASSED, 0 failures. |
 | 2.22 | 2026-07-17 | — | **Third repeat adversarial review (AR-3 of the July-16 cycle): 1M, fixed** — see the v2.22 Last-Updated header entry. M-1: `ApplyFoulIfCaptured` discards a foul candidate when either participant is sent off (pre-fix a frozen red-carded agent repeatedly won free kicks and drew cards against opponents who ran into them — the foul interpretation was the remaining participation surface without the `_isSentOff` gate; physical collision response deliberately unchanged). Gated at the application site (timing-equivalent; covers the injection seam; single gate avoids sibling drift). Files: MatchEngine.cs v1.35, tests/MatchEngineFoulCardTests.cs v1.1 (+2), file-manifest.md, root CLAUDE.md. Full dotnet gate re-run: PASSED, 0 failures. |
 | 2.21 | 2026-07-16 | — | **Repeat adversarial review (AR-2 of the July-16 cycle): 1M+1L, both fixed** — see the v2.21 Last-Updated header entry. M-1: `_isSentOff` exclusion added to `RunFirstTouch`'s receiver scan (a sent-off agent could receive the ball into un-releasable possession, deadlocking play); regression-locked against the exact CONTROLLED-receive geometry. L (doc): `AttrIdx` Technical group-count comment 8 → 7. Files: MatchEngine.cs v1.34, tests/MatchEngineFirstTouchTests.cs v1.1 (+1), AttrIdx.cs v1.1, file-manifest.md, root CLAUDE.md. Full dotnet gate re-run: PASSED, 0 failures. |
 | 2.20 | 2026-07-16 | — | **Adversarial-review fix pass over the v2.17/v2.18/v2.19 landings (2M+4L, all fixed)** — see the v2.20 Last-Updated header entry for the full description. M-1: `SubstitutePlayer` resets the slot's yellow-card count (discipline attaches to the player, not the slot; pre-fix a substitute inherited the outgoing player's booking and was sent off on their own first yellow). M-2: `SquadFileLoader` age range-checked to [AgeMin, AgeMax] (was the one unbounded numeric key). L: post-full-time `SubstitutePlayer` refusal (queued event could never flush); `RestartResolver` lastTouchTeam doc aligned to the actual caller input (last settled holder, not last toucher); live-viewer clock rounds seconds before the minute split (the `m:60` class `HtmlReplayExporter` AR-1 fixed, reintroduced); `LiveMatchServer` post-Stop connection threads answer 503 via a volatile shutdown flag; `RosterGenerator.DrawBounded` modulo-bias doc note. Files: MatchEngine.cs v1.33, RestartResolver.cs v1.1, tests/MatchEngineSubstitutionTests.cs v1.1 (+2), LiveMatchServer.cs v1.1, SquadFileLoader.cs v1.2, tests/SquadFileLoaderTests.cs v1.1 (+2), RosterGenerator.cs v1.2, file-manifest.md, root CLAUDE.md. |

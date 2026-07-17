@@ -1,7 +1,24 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 17, 2026 (**Third repeat adversarial review (AR-3 of the cycle) — 1 M found,
+> **Last Updated:** July 17, 2026, later same day (**Fourth repeat adversarial review (AR-4 of the cycle) —
+> 0 H + 0 M + 1 L (doc-only), fixed. CONVERGENCE — the review cycle over the July 14–15 landings is
+> CLOSED** per the project convention (an L-only round ends the cycle; match-viewer AR-4 precedent).
+> Instead of another piecemeal sweep, the pass walked the COMPLETE sent-off participation matrix —
+> AI dispatch skip / all four Mechanics-AI `IsActive` snapshot fills / physics forced-stop / offside
+> line / first-touch receiver scan (AR-2's fix) / foul-card-restart interpretation (AR-3's fix) /
+> substitution refusal / half+full-time one-shots — plus the in-flight-state interactions the
+> earlier rounds never composed: a card's `ApplyRestart` clears possession BEFORE the Resolve-phase
+> executor advance, and the executor adapters' `IsBallPossessedBy` reads the live
+> `_possessingAgentId`, so a just-sent-off agent's mid-windup pass/shot self-cancels at CONTACT via
+> the FM-08/FM-05 possession recheck (no participation leak through in-flight executors). **L
+> (doc):** the `_lastHolderAgentId` writer comment claimed the `GoalAwardedEvent` credit "names the
+> agent whose kick scored" — deflections never update the tracker (the approximation already
+> documented at the `RestartResolver` seam by AR-1), so a deflection-chain goal credits the last
+> SETTLED holder, possibly not the kicker and possibly sent off since; comment aligned
+> (`MatchEngine.cs` v1.36, doc-only — scoring-TEAM classification is pure geometry and unaffected).
+> Full dotnet gate re-run: PASSED, 0 failures. See src/CLAUDE.md v2.23.)
+> **Last Updated (prior):** July 17, 2026 (**Third repeat adversarial review (AR-3 of the cycle) — 1 M found,
 > fixed.** The pass re-verified all six AR-1/AR-2 fixes and swept the card/restart/possession
 > interaction paths the earlier rounds had cleared piecemeal. **M-1:** foul candidates involving a
 > sent-off participant were still applied — `ApplyFoulIfCaptured` checked contact type, force, and

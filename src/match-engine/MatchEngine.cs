@@ -15,6 +15,7 @@
 // Modified: 2026-07-16 (match-flow AR-7 fix pass: substitution yellow-card reset (M-1) + post-full-time SubstitutePlayer refusal (L-2) + last-holder-vs-last-toucher approximation documented at the restart seam (L-1))
 // Modified: 2026-07-16 (AR-8 M-1, later same day: sent-off agents excluded from first-touch reception — the one participation surface missing the exclusion; a red-carded agent could receive the ball and deadlock possession)
 // Modified: 2026-07-17 (AR-9 M-1: foul candidates involving a sent-off participant discarded at ApplyFoulIfCaptured — a frozen red-carded agent could repeatedly win free kicks and draw cards against opponents running into them)
+// Modified: 2026-07-17 (AR-10, doc-only: _lastHolderAgentId writer comment aligned to the last-settled-holder approximation — a deflection-chain goal credits the last settled holder, not necessarily the kicker; CONVERGENCE round)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -2207,8 +2208,14 @@ namespace TacticalDirector.MatchEngine
             UpdateMatchContext();
 
             // Engine substrate — record the last settled HOLDER (v14). Updated after C4 so it tracks the
-            // same settled value MatchContext folds in; only ever overwritten by a real holder, so at goal
-            // time (ball loose) it still names the agent whose kick scored (the GoalAwardedEvent credit).
+            // same settled value MatchContext folds in; only ever overwritten by a real holder. In the
+            // common case a goal follows the holder's own kick, so the GoalAwardedEvent credit names the
+            // scorer — but this is the same last-settled-holder APPROXIMATION documented at the
+            // RestartResolver seam (AR-7 L-1): deflections never update the tracker, so a goal reached
+            // through an uncontrolled deflection chain credits the last settled holder, who may not have
+            // kicked the scoring ball (and may even have been sent off since — every card path clears
+            // possession via ApplyRestart without touching this tracker). Scoring-TEAM classification is
+            // pure geometry and unaffected (AR-9/AR-4 doc alignment).
             if (_possessingAgentId >= 0)
             {
                 _lastHolderAgentId = _possessingAgentId;
@@ -4286,4 +4293,17 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | capture site; covers the TestOnly injection seam; single gate    |
 // |         |            |        | avoids sibling drift). No event, no cooldown, no restart on a    |
 // |         |            |        | discarded candidate. Physical collision response unchanged.      |
+// | 1.36    | 2026-07-17 | —      | AR-10 sweep (fourth repeat review): 0H+0M+1L, doc-only —         |
+// |         |            |        | CONVERGENCE. L: the _lastHolderAgentId writer comment claimed    |
+// |         |            |        | the GoalAwardedEvent credit "names the agent whose kick scored"; |
+// |         |            |        | deflections never update the tracker (the approximation the      |
+// |         |            |        | RestartResolver seam documents, AR-7 L-1), so a deflection-chain |
+// |         |            |        | goal credits the last SETTLED holder — possibly not the kicker,  |
+// |         |            |        | possibly sent off since. Comment aligned; no code change. Full   |
+// |         |            |        | participation matrix re-walked clean: dispatch skip / 4 snapshot |
+// |         |            |        | fills / forced-stop / offside line / receiver scan (AR-8) / foul |
+// |         |            |        | interpretation (AR-9) / in-flight executors (card ⇒ ApplyRestart |
+// |         |            |        | clears possession BEFORE the executor advance, and the adapters' |
+// |         |            |        | IsBallPossessedBy reads the live value, so FM-08/FM-05 cancel at |
+// |         |            |        | CONTACT) / substitution refusal / half+full-time one-shots.      |
 #endregion

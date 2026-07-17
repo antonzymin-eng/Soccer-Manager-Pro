@@ -1,7 +1,11 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 17, 2026 (**Third repeat adversarial review (AR-3): 1M, fixed — no new files,
+**Last Updated:** July 17, 2026, later same day (**Fourth repeat adversarial review (AR-4): 0H+0M+1L
+doc-only — CONVERGENCE, cycle closed. No new files, modified only:** `src/match-engine/MatchEngine.cs`
+v1.36 (L — `_lastHolderAgentId` writer comment aligned to the last-settled-holder approximation;
+no code change), root + src `CLAUDE.md`. Full dotnet gate re-run: PASSED, 0 failures.)
+**Last Updated (prior):** July 17, 2026 (**Third repeat adversarial review (AR-3): 1M, fixed — no new files,
 modified only:** `src/match-engine/MatchEngine.cs` v1.35 (M-1 — foul candidates involving a
 sent-off participant discarded at `ApplyFoulIfCaptured`; pre-fix a frozen red-carded agent
 repeatedly won free kicks and drew cards against opponents running into them),
