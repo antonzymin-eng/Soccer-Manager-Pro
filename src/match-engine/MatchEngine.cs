@@ -12,6 +12,7 @@
 // Modified: 2026-07-11 (engine substrate: Resolve-phase goal detection + score state + GoalAwardedEvent + centre-spot restart; #26 live goalDiff/clock inputs + half-time trigger; SNAPSHOT_SCHEMA_VERSION 13 → 14)
 // Modified: 2026-07-14 (match-flow completion: throw-in/corner/goal-kick restarts, fouls/cards, offside, substitutions, half-time ends-swap, full-time freeze; SNAPSHOT_SCHEMA_VERSION 14 → 15 — see docs/tracking/match-flow-completion-design.md)
 // Modified: 2026-07-15 (interactive match view: observation-surface extension — HomeScore/AwayScore/MatchEnded; no schema change; see docs/tracking/interactive-match-view-design.md)
+// Modified: 2026-07-17 (#27 T1/T2: attribute seeding sourced from canonical player records via PlayerAttributeProjection + ConfigureSquads; default path byte-identical, no schema change — see docs/tracking/player-attribute-projection-design.md)
 // Modified: 2026-07-16 (match-flow AR-7 fix pass: substitution yellow-card reset (M-1) + post-full-time SubstitutePlayer refusal (L-2) + last-holder-vs-last-toucher approximation documented at the restart seam (L-1))
 // Modified: 2026-07-16 (AR-8 M-1, later same day: sent-off agents excluded from first-touch reception — the one participation surface missing the exclusion; a red-carded agent could receive the ball and deadlock possession)
 // Modified: 2026-07-17 (AR-9 M-1: foul candidates involving a sent-off participant discarded at ApplyFoulIfCaptured — a frozen red-carded agent could repeatedly win free kicks and draw cards against opponents running into them)
@@ -252,6 +253,10 @@ namespace TacticalDirector.MatchEngine
         private readonly PlayerAttributes[][]   _benchAttrs;        // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
         private readonly PerformanceContext[][] _benchPerfs;        // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
         private readonly bool[][]               _benchIsGoalkeeper; // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
+        // #27 T1: canonical bench records (the _canonicalAttrs sibling; _benchAttrs is its #2
+        // projection). Substitution copies the canonical record onto the outgoing slot and
+        // re-projects every per-slot surface — see SubstitutePlayer. Fully qualified per KD-P6.
+        private readonly TacticalDirector.PlayerDatabase.PlayerAttributes[][] _benchCanonicalAttrs; // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
 
         // Match-flow clock (design note §7): half-time ends-swap and full-time gameplay freeze, each
         // fired exactly once (guarded by these flags). Serialized at v15 (cross-tick).
@@ -329,6 +334,14 @@ namespace TacticalDirector.MatchEngine
         private readonly AgentState[]         _agents;       // [SQUAD_SIZE]
         private readonly PlayerAttributes[]   _attrs;        // per-agent attribute snapshot (default)
         private readonly PerformanceContext[] _perfs;        // per-agent form/context modifiers (neutral)
+        // #27 T1 (projection design KD-P2/KD-P6): the canonical per-slot player record every per-spec
+        // attribute surface projects from (PlayerAttributeProjection). Defaults to CreateDefault()
+        // (all-neutral — projects byte-identically to the pre-T1 seeds, KD-P7); ConfigureSquads
+        // overwrites it pre-kickoff from a real Squad. Fully qualified — the bare type name collides
+        // with AgentMovement.PlayerAttributes (CS0104, KD-P6). Boot-deterministic on the default
+        // path, NOT serialized (same B3 exclusion class as _attrs; distinct-squad restore is the T3
+        // roster-reference deliverable — KD-P10, see the exclusion proof in SerializeWorldState).
+        private readonly TacticalDirector.PlayerDatabase.PlayerAttributes[] _canonicalAttrs; // [SQUAD_SIZE]
         private readonly MovementCommand[]    _commands;     // per-agent held command (AI owns it at Phase D)
         private readonly int[]                _teamIds;
         private readonly bool[]               _isGoalkeeper;
@@ -386,6 +399,14 @@ namespace TacticalDirector.MatchEngine
             _isGoalkeeper         = new bool[MatchEngineConstants.SQUAD_SIZE];
             _isCollisionKnockdown = new bool[MatchEngineConstants.SQUAD_SIZE];   // default false (standing at rest)
             _collisionForces      = new float[MatchEngineConstants.SQUAD_SIZE];  // default 0    (standing at rest)
+
+            // #27 T1 — canonical player records default to all-neutral; every attribute surface below
+            // is a projection of this array (allocated before InitializeKickoffState, its first reader).
+            _canonicalAttrs = new TacticalDirector.PlayerDatabase.PlayerAttributes[MatchEngineConstants.SQUAD_SIZE];
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _canonicalAttrs[i] = TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
+            }
 
             // §4 step 4 — initialise kickoff world state (deterministic; no RNG).
             InitializeKickoffState();
@@ -510,17 +531,22 @@ namespace TacticalDirector.MatchEngine
             // precedent — the on-disk loader is a Stage 1+ parser swap. Every slot defaults to the
             // neutral identity attributes/perf/GK-flag; a real per-competition bench is a config-loader
             // follow-up, not a Stage-0 requirement.
-            _benchAttrs        = new PlayerAttributes[MatchEngineConstants.TEAM_COUNT][];
-            _benchPerfs        = new PerformanceContext[MatchEngineConstants.TEAM_COUNT][];
-            _benchIsGoalkeeper = new bool[MatchEngineConstants.TEAM_COUNT][];
+            _benchAttrs          = new PlayerAttributes[MatchEngineConstants.TEAM_COUNT][];
+            _benchPerfs          = new PerformanceContext[MatchEngineConstants.TEAM_COUNT][];
+            _benchIsGoalkeeper   = new bool[MatchEngineConstants.TEAM_COUNT][];
+            _benchCanonicalAttrs = new TacticalDirector.PlayerDatabase.PlayerAttributes[MatchEngineConstants.TEAM_COUNT][];
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
-                _benchAttrs[t]        = new PlayerAttributes[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
-                _benchPerfs[t]        = new PerformanceContext[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
-                _benchIsGoalkeeper[t] = new bool[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                _benchAttrs[t]          = new PlayerAttributes[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                _benchPerfs[t]          = new PerformanceContext[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                _benchIsGoalkeeper[t]   = new bool[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                _benchCanonicalAttrs[t] = new TacticalDirector.PlayerDatabase.PlayerAttributes[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
                 for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
                 {
-                    _benchAttrs[t][b] = PlayerAttributes.CreateDefault();
+                    // #27 T1: bench attrs are the #2 projection of the canonical bench record
+                    // (all-neutral by default — projects to exactly the pre-T1 CreateDefault()).
+                    _benchCanonicalAttrs[t][b] = TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
+                    _benchAttrs[t][b] = PlayerAttributeProjection.ToAgentMovement(in _benchCanonicalAttrs[t][b]);
                     _benchPerfs[t][b] = PerformanceContext.CreateNeutral();
                     _benchIsGoalkeeper[t][b] = false;
                 }
@@ -674,7 +700,9 @@ namespace TacticalDirector.MatchEngine
 
                     _agents[i] = AgentState.CreateAtPosition(
                         new Vector2(lineX, spreadY), FacingFromHeading(headingDeg));
-                    _attrs[i]  = PlayerAttributes.CreateDefault();
+                    // #27 T1: the #2 locomotion attrs are a projection of the canonical record
+                    // (all-neutral at boot ⇒ byte-identical to the pre-T1 CreateDefault() seed).
+                    _attrs[i]  = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
                     _perfs[i]  = PerformanceContext.CreateNeutral();
 
                     // Boot-time command: hold formation position. The AI phase (Phase D) replaces
@@ -825,6 +853,19 @@ namespace TacticalDirector.MatchEngine
             _attrs[outSlotIndex]        = _benchAttrs[teamId][benchIndex];
             _perfs[outSlotIndex]        = _benchPerfs[teamId][benchIndex];
             _isGoalkeeper[outSlotIndex] = _benchIsGoalkeeper[teamId][benchIndex];
+            // #27 T1: the slot now holds a different PLAYER — copy the canonical bench record and
+            // re-project the boot-seeded per-slot AI surfaces (#8 / #7), which are otherwise only
+            // written at InitializeAiSnapshots (pre-T1 this was a no-op: every record was neutral;
+            // the root-CLAUDE.md v2.20 substitution-attrs hazard's on-pitch half). The per-call
+            // surfaces (Pass/Shot builders, snapshot fills, FirstTouchContext) read _canonicalAttrs
+            // live and need no re-seed. TeamId is slot identity (unchanged); IsHalfTurned is runtime
+            // stance, preserved. Restore scope: _canonicalAttrs is not serialized — a distinct-squad
+            // substitution is reconstructible only via the T3 roster reference (KD-P10).
+            _canonicalAttrs[outSlotIndex] = _benchCanonicalAttrs[teamId][benchIndex];
+            _dtAttrs[outSlotIndex] = PlayerAttributeProjection.ToDecisionTree(
+                in _canonicalAttrs[outSlotIndex], teamId);
+            _perceptionAttrs[outSlotIndex] = PlayerAttributeProjection.ToPerception(
+                in _canonicalAttrs[outSlotIndex], teamId, _perceptionAttrs[outSlotIndex].IsHalfTurned);
             // AR-7 M-1: discipline attaches to the player, not the slot — the incoming substitute
             // starts on zero yellows (the outgoing player's booking leaves the pitch with them;
             // Stage 0 has no persistent player identity to carry it to, and the slot's serialized
@@ -861,6 +902,122 @@ namespace TacticalDirector.MatchEngine
                 EventBus.Publish(in evt);
             }
             _pendingSubCount = 0;
+        }
+
+        /// <summary>
+        /// Sources both teams' player attributes from real club squads (#27 T1 — the
+        /// player-attribute projection design doc). Stage-0 roster-order lineup mapping (lineup
+        /// selection proper is a deferred follow-up, Plan-3): squad players
+        /// <c>0..PLAYERS_PER_TEAM−1</c> fill the on-pitch slots in order (player 0 occupies the
+        /// goalkeeper slot — the caller orders the roster), players
+        /// <c>PLAYERS_PER_TEAM..PLAYERS_PER_TEAM+SUBSTITUTES_PER_TEAM−1</c> fill the bench.
+        /// Overwrites the canonical per-slot records and re-projects every boot-seeded attribute
+        /// surface (#2 <c>_attrs</c>, #8 <c>_dtAttrs</c>, #7 <c>_perceptionAttrs</c>, bench attrs);
+        /// the per-call surfaces (Pass/Shot builders, Mechanics-AI snapshot fills,
+        /// FirstTouchContext) read the canonical records live. Deliberately NOT behaviour-neutral
+        /// for a non-neutral squad — that is the point of T1; an all-<c>CreateDefault</c> squad
+        /// (or never calling this) is byte-identical to pre-T1 (KD-P7, digest-locked). Fails loud
+        /// (boot-time call, not hot-path): null squads; a squad smaller than
+        /// <c>PLAYERS_PER_TEAM + SUBSTITUTES_PER_TEAM</c>; any consumed player's attribute outside
+        /// <c>[1,20]</c> (WeakFootRating <c>[1,5]</c>) — the FR-TP-014-style gate at the consuming
+        /// seam, since <see cref="TacticalDirector.PlayerDatabase.Squad"/> accepts hand-built
+        /// records; or a call after the first tick (a mid-match attribute swap is neither
+        /// stride-aligned nor restore-coherent). RESTORE SCOPE (KD-P10): the canonical records are
+        /// NOT serialized — a distinct-squad match is not restore-deterministic until the T3
+        /// snapshot roster reference lands; no restore path exists today, so the limitation is
+        /// documentation, not a silent divergence vector.
+        /// </summary>
+        /// <param name="homeSquad">Club squad for team 0 (home).</param>
+        /// <param name="awaySquad">Club squad for team 1 (away).</param>
+        public void ConfigureSquads(
+            TacticalDirector.PlayerDatabase.Squad homeSquad,
+            TacticalDirector.PlayerDatabase.Squad awaySquad)
+        {
+            if (homeSquad == null)
+            {
+                throw new System.ArgumentNullException(nameof(homeSquad));
+            }
+            if (awaySquad == null)
+            {
+                throw new System.ArgumentNullException(nameof(awaySquad));
+            }
+            if (_clock.CurrentTick != 0UL)
+            {
+                throw new System.InvalidOperationException(
+                    "ConfigureSquads: pre-kickoff only — the match has already ticked (#27 T1).");
+            }
+            // Validate BOTH squads completely BEFORE any state is written, so a refused call leaves
+            // the engine untouched — validating inside the per-team apply would let an invalid away
+            // squad refuse only after the home squad had already landed (a half-applied
+            // configuration; self-review AR-1 M-1 of this landing).
+            ValidateSquad(0, homeSquad);
+            ValidateSquad(1, awaySquad);
+            ApplySquad(0, homeSquad);
+            ApplySquad(1, awaySquad);
+        }
+
+        /// <summary>Fail-loud gates on one squad's size + every consumed record (see <see cref="ConfigureSquads"/>).</summary>
+        private static void ValidateSquad(int teamId, TacticalDirector.PlayerDatabase.Squad squad)
+        {
+            int needed = MatchEngineConstants.PLAYERS_PER_TEAM + MatchEngineConstants.SUBSTITUTES_PER_TEAM;
+            if (squad.Count < needed)
+            {
+                throw new System.ArgumentException(
+                    $"ConfigureSquads: team {teamId} squad has {squad.Count} players; "
+                    + $"need at least {needed} (starters + bench).");
+            }
+            for (int k = 0; k < needed; k++)
+            {
+                ValidateCanonicalRecord(teamId, k, squad.GetPlayer(k).Attributes);
+            }
+        }
+
+        /// <summary>Applies one validated squad to one team's on-pitch + bench slots (see <see cref="ConfigureSquads"/>).</summary>
+        private void ApplySquad(int teamId, TacticalDirector.PlayerDatabase.Squad squad)
+        {
+            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            {
+                int i = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                _canonicalAttrs[i] = squad.GetPlayer(k).Attributes;
+                _attrs[i]          = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
+                _dtAttrs[i]        = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
+                _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
+                    in _canonicalAttrs[i], teamId, _perceptionAttrs[i].IsHalfTurned);
+            }
+            for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
+            {
+                _benchCanonicalAttrs[teamId][b] =
+                    squad.GetPlayer(MatchEngineConstants.PLAYERS_PER_TEAM + b).Attributes;
+                _benchAttrs[teamId][b] =
+                    PlayerAttributeProjection.ToAgentMovement(in _benchCanonicalAttrs[teamId][b]);
+            }
+        }
+
+        /// <summary>
+        /// Fail-loud bounds gate on a consumed canonical record: all 31 fields in [1,20],
+        /// WeakFootRating in [1,5] (boot-time call — the ToArray() allocation is off the hot path).
+        /// </summary>
+        private static void ValidateCanonicalRecord(
+            int teamId, int localIndex, TacticalDirector.PlayerDatabase.PlayerAttributes attributes)
+        {
+            int[] values = attributes.ToArray();
+            for (int f = 0; f < values.Length; f++)
+            {
+                if (values[f] < TacticalDirector.PlayerDatabase.PlayerDatabaseConstants.ATTRIBUTE_MIN
+                    || values[f] > TacticalDirector.PlayerDatabase.PlayerDatabaseConstants.ATTRIBUTE_MAX)
+                {
+                    throw new System.ArgumentException(
+                        $"ConfigureSquads: team {teamId} squad player {localIndex} attribute ordinal {f} "
+                        + $"= {values[f]} is outside [1,20].");
+                }
+            }
+            if (attributes.WeakFootRating < TacticalDirector.PlayerDatabase.PlayerDatabaseConstants.WEAK_FOOT_MIN
+                || attributes.WeakFootRating > TacticalDirector.PlayerDatabase.PlayerDatabaseConstants.WEAK_FOOT_MAX)
+            {
+                throw new System.ArgumentException(
+                    $"ConfigureSquads: team {teamId} squad player {localIndex} WeakFootRating "
+                    + $"= {attributes.WeakFootRating} is outside [1,5].");
+            }
         }
 
         /// <summary>
@@ -1149,6 +1306,25 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: whether the agent at the given roster index is a goalkeeper
         /// (UpdateAllAgents skips goalkeepers at Stage 0).</summary>
         internal bool TestOnly_IsGoalkeeper(int index) => _isGoalkeeper[index];
+
+        /// <summary>Test-only seam: a slot's canonical #27 player record (T1 wiring assertions).</summary>
+        internal TacticalDirector.PlayerDatabase.PlayerAttributes TestOnly_CanonicalAttributes(int index) =>
+            _canonicalAttrs[index];
+
+        /// <summary>Test-only seam: a slot's projected #2 locomotion attributes (T1 wiring assertions).</summary>
+        internal PlayerAttributes TestOnly_MovementAttributes(int index) => _attrs[index];
+
+        /// <summary>Test-only seam: a slot's projected #8 DecisionTree attributes (T1 wiring assertions).</summary>
+        internal DtAgentAttributes TestOnly_DtAttributes(int index) => _dtAttrs[index];
+
+        /// <summary>Test-only seam: a slot's projected #7 Perception attributes (T1 wiring assertions).</summary>
+        internal PerceptionAgentAttributes TestOnly_PerceptionAttributes(int index) => _perceptionAttrs[index];
+
+        /// <summary>Test-only seam: a slot's live #5 pass-attribute projection (BuildPassAttributes).</summary>
+        internal PassAgentAttributes TestOnly_PassAttributes(int index) => BuildPassAttributes(index);
+
+        /// <summary>Test-only seam: a slot's live #6 shot-attribute projection (BuildShotAttributes).</summary>
+        internal ShotAgentAttributes TestOnly_ShotAttributes(int index) => BuildShotAttributes(index);
 
         /// <summary>
         /// Test-only seam: sets authoritative possession to an agent (or NO_POSSESSION). The production
@@ -1571,10 +1747,14 @@ namespace TacticalDirector.MatchEngine
             {
                 int teamId = _teamIds[i];
 
-                _perceptionAttrs[i]        = PerceptionAgentAttributes.CreateDefault();
-                _perceptionAttrs[i].TeamId = teamId;
+                // #27 T1: both AI attribute snapshots are projections of the canonical record
+                // (all-neutral at boot ⇒ byte-identical to the pre-T1 CreateDefault seeds).
+                // TeamId is match-scoped runtime identity; IsHalfTurned is runtime body stance
+                // (false at boot, exactly the pre-T1 CreateDefault value) — KD-P4.
+                _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
+                    in _canonicalAttrs[i], teamId, isHalfTurned: false);
 
-                _dtAttrs[i]          = DtAgentAttributes.CreateDefault(teamId);
+                _dtAttrs[i]          = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
                 _tacticalContexts[i] = TacticalContext.Stage0Default(_agents[i].Position);
                 _hasPossession[i]    = false;
             }
@@ -1869,7 +2049,9 @@ namespace TacticalDirector.MatchEngine
                     Velocity            = MirrorVelocityIfAway(team, _agents[i].Velocity),
                     Facing              = MirrorVelocityIfAway(team, _agents[i].FacingDirection),
                     Fatigue             = 1f - _agents[i].AerobicPool,
-                    FirstTouchAttribute = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
+                    // #27 T1 (projection design §3.5a / KD-P9): canonical FirstTouchAbility, every
+                    // agent (no GK gate — KD-P5). Neutral record ⇒ 10 = the pre-T1 STAGE0 seed.
+                    FirstTouchAttribute = PlayerAttributeProjection.FirstTouchAbility(in _canonicalAttrs[i]),
                     LastTouchQuality    = 1f,   // perfect touch ⇒ no Stage-0 BadTouch trigger
                     PostTouchBallSpeed  = 0f,
                     IsGoalkeeper        = _isGoalkeeper[i],
@@ -1974,7 +2156,10 @@ namespace TacticalDirector.MatchEngine
                                                 : MirrorPitchIfAway(team, _agents[i].Position),
                     Line                = isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
                     PressRole           = _pressing[team].GetAssignment(i).Role,
-                    PerceivedFirstTouch = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
+                    // #27 T1 (projection design §3.5a): canonical FirstTouchAbility (see the
+                    // Pressing fill note). Stage-0 approximation: the true attribute stands in
+                    // for a perceived estimate, exactly as the neutral placeholder did.
+                    PerceivedFirstTouch = PlayerAttributeProjection.FirstTouchAbility(in _canonicalAttrs[i]),
                 };
             }
         }
@@ -2022,9 +2207,12 @@ namespace TacticalDirector.MatchEngine
                     isGoalkeeper: _isGoalkeeper[i],
                     hasBall:      i == owner,
                     isActive:     !_isSentOff[i], // match-flow completion: red-carded agents excluded
-                    pace:         MatchEngineConstants.STAGE0_NEUTRAL_NORMALIZED,
+                    // #27 T1 (projection design §3.8 / KD-P3): the one pre-normalized target —
+                    // canonical Pace/Dribbling ÷ ATTRIBUTE_MAX, so the neutral record ⇒ 0.5 =
+                    // the pre-T1 STAGE0_NEUTRAL_NORMALIZED seed.
+                    pace:         PlayerAttributeProjection.ToNormalized(_canonicalAttrs[i].Pace),
                     stamina:      1f - _agents[i].AerobicPool,
-                    dribbling:    MatchEngineConstants.STAGE0_NEUTRAL_NORMALIZED);
+                    dribbling:    PlayerAttributeProjection.ToNormalized(_canonicalAttrs[i].Dribbling));
             }
         }
 
@@ -2764,15 +2952,18 @@ namespace TacticalDirector.MatchEngine
             Vector2 ballVelXY = new Vector2(_ball.Velocity.x, _ball.Velocity.y);
             bool isHalfTurn = OrientationDetector.IsHalfTurnOriented(facing, ballVelXY);
 
-            int neutralAttr = Mathf.RoundToInt(MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE);
             Vector3 facing3 = new Vector3(facing.x, facing.y, 0f);
 
+            // #27 T1 (projection design §3.5a): canonical FirstTouchAbility + Technique, raw int
+            // copies (the canonical record is already int, so the pre-T1 RoundToInt of the neutral
+            // float seed reduces to the same value — implementation-time inventory addition for
+            // Technique recorded in the projection design doc's version history). Neutral ⇒ 10 each.
             return new FirstTouchContext
             {
                 AgentID                   = i,
                 TeamID                    = teamId,
-                Technique                 = neutralAttr,
-                FirstTouchAttribute       = neutralAttr,
+                Technique                 = _canonicalAttrs[i].Technique,
+                FirstTouchAttribute       = PlayerAttributeProjection.FirstTouchAbility(in _canonicalAttrs[i]),
                 AgentPosition             = new Vector3(agentPosXY.x, agentPosXY.y, 0f),
                 AgentVelocity             = new Vector3(_agents[i].Velocity.x, _agents[i].Velocity.y, 0f),
                 AgentFacing               = facing3,
@@ -2847,10 +3038,17 @@ namespace TacticalDirector.MatchEngine
             int o = payload.BytesWritten;
 
             // EXCLUSION PROOF (design note §2.6 "proof must be recorded per field"): _attrs and
-            // _perfs are NOT serialized. At Stage 0 both are boot-deterministic constants —
-            // PlayerAttributes.CreateDefault() / PerformanceContext.CreateNeutral(), passed to
-            // UpdateAllAgents by `in` (read-only, never mutated mid-sim) — so a save/restore
-            // reconstructs them identically at boot and their omission cannot diverge replay. The
+            // _perfs are NOT serialized. Both are boot-deterministic on the default path — since
+            // #27 T1, _attrs (and _dtAttrs/_perceptionAttrs/bench attrs) are projections of the
+            // _canonicalAttrs records, which default to CreateDefault() and are only overwritten by
+            // the pre-kickoff ConfigureSquads (never mutated mid-sim except the substitution bench
+            // copy, itself a pure function of the boot-configured bench records + the serialized
+            // _activeBenchSlot) — so a default-path save/restore reconstructs them identically at
+            // boot and their omission cannot diverge replay. DISTINCT-SQUAD SCOPE (projection
+            // design KD-P10): a match booted through ConfigureSquads with non-neutral records is
+            // NOT restore-deterministic — a fresh process has no Squad to re-project from; that
+            // fidelity is the T3 snapshot roster-reference deliverable (a roster id in the header
+            // + restore-time re-projection keyed by _activeBenchSlot), deliberately out of T1. The
             // Phase-A observation counters (_aiPhaseRanThisTick/_aiPhaseRunCount) are likewise
             // excluded — instrumentation derivable from the tick number, not gameplay state.
             // PHASE-D FLAG: the AI phase still does NOT write per-agent form/fatigue context into
@@ -3544,22 +3742,18 @@ namespace TacticalDirector.MatchEngine
         }
 
         // ── Executor world-state mappers (Phase C C1a) ────────────────────────────────
-        // Translate the host's AgentState / PlayerAttributes into the per-spec query DTOs the
-        // executors consume. Attribute fields Agent Movement does not yet carry (passing / finishing /
-        // technique / weak-foot — ERR-007) are Stage-0 neutral placeholders; fatigue is derived from
-        // the agent's AerobicPool (0 = spent → 1 fatigued) so it is real, not a placeholder.
+        // Translate the host's AgentState + canonical player record into the per-spec query DTOs the
+        // executors consume. Since #27 T1, the attribute halves are PlayerAttributeProjection reads
+        // of _canonicalAttrs (the former Stage-0 neutral placeholders are the projection of the
+        // default record — the ERR-007 proxies now compute from real attributes); fatigue is derived
+        // from the agent's AerobicPool (0 = spent → 1 fatigued) so it is live runtime state (KD-P4).
 
         private PassAgentAttributes BuildPassAttributes(int i)
         {
-            return new PassAgentAttributes
-            {
-                Passing        = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
-                Technique      = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
-                KickPower      = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
-                WeakFootRating = MatchEngineConstants.STAGE0_NEUTRAL_WEAK_FOOT,
-                Crossing       = MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE,
-                Fatigue        = 1f - _agents[i].AerobicPool
-            };
+            // #27 T1/T2 (projection design §3.4): canonical projection; KickPower derived
+            // (Passing+Technique)×0.5 per KD-P1 — the [TEMPORARY-PROXY-ERR-007] formula computed
+            // from real varied attributes. Neutral record ⇒ every field = the pre-T1 seed.
+            return PlayerAttributeProjection.ToPass(in _canonicalAttrs[i], 1f - _agents[i].AerobicPool);
         }
 
         private PassAgentState BuildPassState(int i)
@@ -3574,17 +3768,9 @@ namespace TacticalDirector.MatchEngine
 
         private ShotAgentAttributes BuildShotAttributes(int i)
         {
-            int neutral = Mathf.RoundToInt(MatchEngineConstants.STAGE0_NEUTRAL_ATTRIBUTE);
-            return new ShotAgentAttributes
-            {
-                Finishing      = neutral,
-                LongShots      = neutral,
-                Composure      = neutral,
-                KickPower      = neutral,
-                Technique      = neutral,
-                WeakFootRating = MatchEngineConstants.STAGE0_NEUTRAL_WEAK_FOOT,
-                Fatigue        = 1f - _agents[i].AerobicPool
-            };
+            // #27 T1/T2 (projection design §3.5): canonical projection; KickPower derived
+            // RoundToInt((Finishing+LongShots)×0.5) per KD-P1/§4 L-1. Neutral ⇒ pre-T1 seeds.
+            return PlayerAttributeProjection.ToShot(in _canonicalAttrs[i], 1f - _agents[i].AerobicPool);
         }
 
         private ShotAgentState BuildShotState(int i)
@@ -4306,4 +4492,18 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | clears possession BEFORE the executor advance, and the adapters' |
 // |         |            |        | IsBallPossessedBy reads the live value, so FM-08/FM-05 cancel at |
 // |         |            |        | CONTACT) / substitution refusal / half+full-time one-shots.      |
+// | 1.37    | 2026-07-17 | —      | #27 T1/T2 (projection design v0.3): every attribute-seeding      |
+// |         |            |        | surface now projects from new canonical per-slot player records  |
+// |         |            |        | (_canonicalAttrs/_benchCanonicalAttrs, default CreateDefault) via|
+// |         |            |        | PlayerAttributeProjection — _attrs/_dtAttrs/_perceptionAttrs/    |
+// |         |            |        | bench seeds, Build{Pass,Shot}Attributes (KickPower derived, KD-P1|
+// |         |            |        | — the ERR-007 proxies now compute from real attributes), the 3   |
+// |         |            |        | FirstTouchAbility sites (#13/#14/#4 — KD-P9) + FirstTouchContext |
+// |         |            |        | .Technique, Attacking pace/dribbling ÷ATTRIBUTE_MAX (KD-P3). New |
+// |         |            |        | public ConfigureSquads (pre-kickoff, roster-order lineup, fail-  |
+// |         |            |        | loud bounds gate); SubstitutePlayer copies the canonical bench   |
+// |         |            |        | record + re-projects _dtAttrs/_perceptionAttrs (the v2.20 hazard'|
+// |         |            |        | s on-pitch half). Default path byte-identical (KD-P7, digest-    |
+// |         |            |        | locked); distinct-squad restore deferred to T3 (KD-P10, exclusion|
+// |         |            |        | proof updated). No schema change. +6 TestOnly attribute seams.   |
 #endregion

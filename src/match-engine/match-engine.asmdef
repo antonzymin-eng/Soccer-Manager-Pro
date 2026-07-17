@@ -17,7 +17,8 @@
         "TacticalDirector.DefensiveAI",
         "TacticalDirector.AttackingAI",
         "TacticalDirector.TacticalInstructions",
-        "TacticalDirector.ProjectConstants"
+        "TacticalDirector.ProjectConstants",
+        "TacticalDirector.PlayerDatabase"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
