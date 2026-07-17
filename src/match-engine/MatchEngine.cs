@@ -12,6 +12,10 @@
 // Modified: 2026-07-11 (engine substrate: Resolve-phase goal detection + score state + GoalAwardedEvent + centre-spot restart; #26 live goalDiff/clock inputs + half-time trigger; SNAPSHOT_SCHEMA_VERSION 13 → 14)
 // Modified: 2026-07-14 (match-flow completion: throw-in/corner/goal-kick restarts, fouls/cards, offside, substitutions, half-time ends-swap, full-time freeze; SNAPSHOT_SCHEMA_VERSION 14 → 15 — see docs/tracking/match-flow-completion-design.md)
 // Modified: 2026-07-15 (interactive match view: observation-surface extension — HomeScore/AwayScore/MatchEnded; no schema change; see docs/tracking/interactive-match-view-design.md)
+// Modified: 2026-07-16 (match-flow AR-7 fix pass: substitution yellow-card reset (M-1) + post-full-time SubstitutePlayer refusal (L-2) + last-holder-vs-last-toucher approximation documented at the restart seam (L-1))
+// Modified: 2026-07-16 (AR-8 M-1, later same day: sent-off agents excluded from first-touch reception — the one participation surface missing the exclusion; a red-carded agent could receive the ball and deadlock possession)
+// Modified: 2026-07-17 (AR-9 M-1: foul candidates involving a sent-off participant discarded at ApplyFoulIfCaptured — a frozen red-carded agent could repeatedly win free kicks and draw cards against opponents running into them)
+// Modified: 2026-07-17 (AR-10, doc-only: _lastHolderAgentId writer comment aligned to the last-settled-holder approximation — a deflection-chain goal credits the last settled holder, not necessarily the kicker; CONVERGENCE round)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -760,13 +764,24 @@ namespace TacticalDirector.MatchEngine
         /// stride (reuses the existing possession-change seam). Publishes a Tier A
         /// <see cref="SubstitutionEvent"/> with a synthetic incoming-player id
         /// (<c>SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex</c>) distinct from any on-pitch
-        /// slot index. Fails loud (boot/manager-decision-time call, not hot-path) on: an out-of-range
-        /// team/slot/bench index; a slot not belonging to <paramref name="teamId"/>; a sent-off or
-        /// already-substituted slot; a bench index already used this match for the team; or the
-        /// team's <see cref="MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM"/> cap already reached.
+        /// slot index. Fails loud (boot/manager-decision-time call, not hot-path) on: a call after
+        /// full time (AR-7 L-2 — the state effects would apply to a frozen match while the queued
+        /// <see cref="SubstitutionEvent"/> could never flush, RunResolvePhase returning before
+        /// <see cref="PublishPendingSubstitutions"/> once <see cref="_matchEnded"/> is set); an
+        /// out-of-range team/slot/bench index; a slot not belonging to <paramref name="teamId"/>; a
+        /// sent-off or already-substituted slot; a bench index already used this match for the team;
+        /// or the team's <see cref="MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM"/> cap already
+        /// reached. The outgoing slot's yellow-card count resets to 0 (AR-7 M-1 — discipline attaches
+        /// to the PLAYER, and the slot now holds a different player; without the reset a substitute
+        /// replacing a booked player would be sent off on their own first yellow).
         /// </summary>
         public void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
         {
+            if (_matchEnded)
+            {
+                throw new System.InvalidOperationException(
+                    "SubstitutePlayer: the match has ended (full time) — no further substitutions.");
+            }
             if (teamId < 0 || teamId >= MatchEngineConstants.TEAM_COUNT)
             {
                 throw new System.ArgumentOutOfRangeException(
@@ -810,6 +825,12 @@ namespace TacticalDirector.MatchEngine
             _attrs[outSlotIndex]        = _benchAttrs[teamId][benchIndex];
             _perfs[outSlotIndex]        = _benchPerfs[teamId][benchIndex];
             _isGoalkeeper[outSlotIndex] = _benchIsGoalkeeper[teamId][benchIndex];
+            // AR-7 M-1: discipline attaches to the player, not the slot — the incoming substitute
+            // starts on zero yellows (the outgoing player's booking leaves the pitch with them;
+            // Stage 0 has no persistent player identity to carry it to, and the slot's serialized
+            // v15 count now describes the player actually occupying it). _isSentOff needs no
+            // parallel reset: a sent-off slot refuses substitution above (red card ≠ substitution).
+            _yellowCards[outSlotIndex] = 0;
             _decisionTrees[outSlotIndex].NotifyInterrupt();
             _activeBenchSlot[outSlotIndex] = benchIndex;
             _substitutionsUsed[teamId]++;
@@ -2187,8 +2208,14 @@ namespace TacticalDirector.MatchEngine
             UpdateMatchContext();
 
             // Engine substrate — record the last settled HOLDER (v14). Updated after C4 so it tracks the
-            // same settled value MatchContext folds in; only ever overwritten by a real holder, so at goal
-            // time (ball loose) it still names the agent whose kick scored (the GoalAwardedEvent credit).
+            // same settled value MatchContext folds in; only ever overwritten by a real holder. In the
+            // common case a goal follows the holder's own kick, so the GoalAwardedEvent credit names the
+            // scorer — but this is the same last-settled-holder APPROXIMATION documented at the
+            // RestartResolver seam (AR-7 L-1): deflections never update the tracker, so a goal reached
+            // through an uncontrolled deflection chain credits the last settled holder, who may not have
+            // kicked the scoring ball (and may even have been sent off since — every card path clears
+            // possession via ApplyRestart without touching this tracker). Scoring-TEAM classification is
+            // pure geometry and unaffected (AR-9/AR-4 doc alignment).
             if (_possessingAgentId >= 0)
             {
                 _lastHolderAgentId = _possessingAgentId;
@@ -2226,6 +2253,14 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void CheckRestartAndApply()
         {
+            // AR-7 L-1 — documented Stage-0 approximation at this seam: "last touch" is derived from
+            // the last settled HOLDER (_lastHolderAgentId), not the last physical toucher — a
+            // deflection or uncontrolled touch never updates the tracker, so a ball deflected out
+            // off a defender is still classified against the last possession (affecting the
+            // throw-in/corner/goal-kick award direction and the corner-vs-goal-kick split inside
+            // CheckBoundaries). Before any possession has ever settled the tracker is −1 and team 0
+            // is assumed. A true last-toucher tracker is a Stage-1+ refinement (it needs a
+            // physical-contact event this engine does not yet consume).
             int lastTouchTeam = _lastHolderAgentId >= 0 ? _teamIds[_lastHolderAgentId] : 0;
             (bool isOut, RestartType restart) = BallCollision.CheckBoundaries(_ball, lastTouchTeam);
             if (!isOut || restart == RestartType.None)
@@ -2288,7 +2323,8 @@ namespace TacticalDirector.MatchEngine
         /// from the <c>match-flow.card-severity</c> RNG stream, issues a card if the draw qualifies
         /// (second yellow promotes to red), sends the offender off on any red, re-arms the global
         /// cooldown, and awards a free kick to the victim's team at the foul location. No-op if no
-        /// candidate was captured this tick.
+        /// candidate was captured this tick, or if either participant is already sent off (AR-9
+        /// M-1 — a sent-off agent cannot commit or win a foul; see the inline comment).
         /// </summary>
         private void ApplyFoulIfCaptured()
         {
@@ -2300,6 +2336,26 @@ namespace TacticalDirector.MatchEngine
 
             int offender = _foulCandidateOffender;
             int victim   = _foulCandidateVictim;
+
+            // AR-9 M-1: a sent-off agent is not a participant in play — contact with (or by) one
+            // cannot produce a foul, a card, or a restart. The physical collision itself still
+            // resolves in the collision system (momentum exchange, fall/stumble — the documented
+            // physical-presence minimalism); only the match-flow FOUL interpretation is discarded.
+            // Pre-fix, a frozen red-carded agent standing in the path of play repeatedly "won"
+            // free kicks (ApplyRestart teleported the ball to their feet) and drew cards against
+            // opponents who ran into their back — for the rest of the match. Gated HERE (the
+            // application site) rather than in MatchFlowCollisionConsumer: capture and application
+            // happen in the same tick and cards are issued only here, so the timing is equivalent;
+            // a single gate avoids the sibling-drift class (PM AR-7 M-1), and this site also covers
+            // the TestOnly_InjectFoulCandidate seam. Cost: a discarded candidate still consumed the
+            // tick's single capture slot, shadowing a same-tick genuine foul — negligible (at most
+            // one 60 Hz tick's delay for an already-rare event). No cooldown is armed and no
+            // FoulCommittedEvent is published: a non-foul must not suppress or announce anything.
+            if (_isSentOff[offender] || _isSentOff[victim])
+            {
+                return;
+            }
+
             Vector2 victimPos = _agents[victim].Position;
             Vector3 location  = new Vector3(victimPos.x, victimPos.y, 0f);
 
@@ -2549,6 +2605,17 @@ namespace TacticalDirector.MatchEngine
             float bestSq  = acceptanceSq;
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
+                // AR-8 M-1: a sent-off agent no longer participates and must not receive the ball.
+                // This was the ONE participation surface without the exclusion (AI dispatch, all four
+                // Mechanics-AI snapshot fills, the physics forced-stop, and the offside line all have
+                // it) — a ball rolling past the frozen agent handed them possession, which they could
+                // never release (no AI dispatch ⇒ no kick), deadlocking play until half/full time.
+                // They remain a PHYSICAL presence (collision, perception, pressure) — that is the
+                // documented agents-keep-positions minimalism, distinct from participating in play.
+                if (_isSentOff[i])
+                {
+                    continue;
+                }
                 Vector2 toAgent = _agents[i].Position - ballPosXY;
                 float distSq = toAgent.sqrMagnitude;
                 if (distSq > bestSq)
@@ -3609,8 +3676,10 @@ namespace TacticalDirector.MatchEngine
         /// tick into scalar fields on the host — no buffer, since only the first qualifying collision
         /// is ever acted on (cards are rare). Qualification: AGENT_AGENT, ContactType.FROM_BEHIND,
         /// ForceMagnitude ≥ FoulImpactForceThresholdN, opposite teams, and the host's foul cooldown is
-        /// closed. <see cref="MatchEngine.ApplyFoulIfCaptured"/> reads + resets this state immediately
-        /// after <c>UpdateCollisions</c> returns.
+        /// closed. Sent-off participation is deliberately NOT checked here — that gate lives at the
+        /// application site (<see cref="MatchEngine.ApplyFoulIfCaptured"/>, AR-9 M-1), which also
+        /// covers the test-injection seam. <see cref="MatchEngine.ApplyFoulIfCaptured"/> reads +
+        /// resets this state immediately after <c>UpdateCollisions</c> returns.
         /// </summary>
         private sealed class MatchFlowCollisionConsumer : ICollisionEventConsumer
         {
@@ -4183,4 +4252,58 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | match happen"). Full dotnet gate not runnable in this            |
 // |         |            |        | environment (no SDK reachable) — verified by exhaustive manual   |
 // |         |            |        | review in place of dotnet test.                                  |
+// | 1.33    | 2026-07-16 | —      | Match-flow AR-7 fix pass (fresh-eyes adversarial review of the   |
+// |         |            |        | July-14/15 landings). M-1: SubstitutePlayer resets                |
+// |         |            |        | _yellowCards[outSlotIndex] — discipline attaches to the player,  |
+// |         |            |        | not the slot; without the reset a substitute replacing a booked  |
+// |         |            |        | player was sent off on their own first yellow via the            |
+// |         |            |        | second-yellow promotion (nothing tested or documented the        |
+// |         |            |        | inheritance). No schema change — v15 already serializes the      |
+// |         |            |        | count; only its value at substitution time changes. L-2:         |
+// |         |            |        | SubstitutePlayer refuses a post-full-time call — it previously   |
+// |         |            |        | mutated state and queued a SubstitutionEvent that could never    |
+// |         |            |        | flush (RunResolvePhase returns before                            |
+// |         |            |        | PublishPendingSubstitutions once _matchEnded is set), silently   |
+// |         |            |        | losing the event while the swap applied to a frozen match. L-1   |
+// |         |            |        | (doc): CheckRestartAndApply's lastTouchTeam documented as the    |
+// |         |            |        | last settled HOLDER, not the last physical toucher (deflections  |
+// |         |            |        | never update the tracker; −1 ⇒ team 0 assumed) — RestartResolver |
+// |         |            |        | 's param doc claimed "touched last", a contract drift against    |
+// |         |            |        | what the caller actually passes (its doc patched in the same     |
+// |         |            |        | commit, v1.1).                                                   |
+// | 1.34    | 2026-07-16 | —      | AR-8 fix pass (repeat review, later same day). M-1: sent-off     |
+// |         |            |        | agents excluded from RunFirstTouch's receiver scan — every       |
+// |         |            |        | other participation surface had the exclusion (AI dispatch, the  |
+// |         |            |        | four Mechanics-AI snapshot IsActive fills, the physics forced-   |
+// |         |            |        | stop, the offside line) but the gate-4 loop did not, so a ball   |
+// |         |            |        | rolling past a frozen red-carded agent handed them possession    |
+// |         |            |        | they could never release (no AI dispatch ⇒ no kick),             |
+// |         |            |        | deadlocking play until the next half/full-time ball reset.       |
+// |         |            |        | Physical presence (collision/perception/pressure sources) is     |
+// |         |            |        | deliberately unchanged — agents-keep-positions minimalism.       |
+// | 1.35    | 2026-07-17 | —      | AR-9 fix pass (third repeat review). M-1: ApplyFoulIfCaptured    |
+// |         |            |        | discards a foul candidate when EITHER participant is sent off —  |
+// |         |            |        | the foul/card/restart interpretation is a participation surface, |
+// |         |            |        | and sent-off agents remain collision bodies (physics forced-stop |
+// |         |            |        | decelerates them; they then stand frozen in the path of play),   |
+// |         |            |        | so pre-fix a red-carded agent repeatedly "won" free kicks        |
+// |         |            |        | (ApplyRestart teleported the ball to their feet) and drew cards  |
+// |         |            |        | against opponents who ran into their back, for the rest of the   |
+// |         |            |        | match. Gated at the application site (timing-equivalent to the   |
+// |         |            |        | capture site; covers the TestOnly injection seam; single gate    |
+// |         |            |        | avoids sibling drift). No event, no cooldown, no restart on a    |
+// |         |            |        | discarded candidate. Physical collision response unchanged.      |
+// | 1.36    | 2026-07-17 | —      | AR-10 sweep (fourth repeat review): 0H+0M+1L, doc-only —         |
+// |         |            |        | CONVERGENCE. L: the _lastHolderAgentId writer comment claimed    |
+// |         |            |        | the GoalAwardedEvent credit "names the agent whose kick scored"; |
+// |         |            |        | deflections never update the tracker (the approximation the      |
+// |         |            |        | RestartResolver seam documents, AR-7 L-1), so a deflection-chain |
+// |         |            |        | goal credits the last SETTLED holder — possibly not the kicker,  |
+// |         |            |        | possibly sent off since. Comment aligned; no code change. Full   |
+// |         |            |        | participation matrix re-walked clean: dispatch skip / 4 snapshot |
+// |         |            |        | fills / forced-stop / offside line / receiver scan (AR-8) / foul |
+// |         |            |        | interpretation (AR-9) / in-flight executors (card ⇒ ApplyRestart |
+// |         |            |        | clears possession BEFORE the executor advance, and the adapters' |
+// |         |            |        | IsBallPossessedBy reads the live value, so FM-08/FM-05 cancel at |
+// |         |            |        | CONTACT) / substitution refusal / half+full-time one-shots.      |
 #endregion

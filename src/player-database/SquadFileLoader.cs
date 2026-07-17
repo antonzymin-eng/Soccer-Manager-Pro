@@ -1,6 +1,6 @@
 // File:     src/player-database/SquadFileLoader.cs
 // Created:  2026-07-15
-// Modified: 2026-07-15
+// Modified: 2026-07-16 (AR-3 fix pass: age range-checked to [AgeMin, AgeMax] (M-2); index-gap identity-fill behaviour documented, stale "contiguous" claim dropped (L-5))
 // Author:   —
 // Spec:     Squad/Player Data Layer design supplement (docs/tracking/squad-player-data-design.md) §3, KD-8
 // Purpose:  The Stage-0 human-authoring text -> Squad parser (mirrors TeamTacticFileLoader /
@@ -18,9 +18,13 @@ namespace TacticalDirector.PlayerDatabase
     /// </summary>
     /// <remarks>
     /// FORMAT: a line-oriented, case-insensitive <c>key = value</c> grammar under <c>[player N]</c>
-    /// section headers (N = roster index, 0-based, contiguous). <c>#</c> comments and blank lines are
-    /// ignored. Keys: <c>firstName</c>/<c>lastName</c> (string), <c>age</c> (int), <c>position</c>
-    /// (enum member name), <c>weakFoot</c> (int [1,5]), and one key per <see cref="AttrIdx"/> field
+    /// section headers (N = roster index, 0-based; the squad length is the highest authored index
+    /// + 1, and an index gap parses as a full-identity player — the per-section analogue of the
+    /// omitted-key rule below, AR-3 L-5: the earlier "contiguous" wording contradicted this
+    /// deliberate, test-locked behaviour). <c>#</c> comments and blank lines are ignored. Keys:
+    /// <c>firstName</c>/<c>lastName</c> (string), <c>age</c> (int
+    /// [<see cref="PlayerDatabaseConstants.AgeMin"/>, <see cref="PlayerDatabaseConstants.AgeMax"/>]),
+    /// <c>position</c> (enum member name), <c>weakFoot</c> (int [1,5]), and one key per <see cref="AttrIdx"/> field
     /// name (int [1,20], e.g. <c>pace = 14</c>). An omitted key inherits the mid-range identity
     /// (<see cref="PlayerRecord.CreateDefault"/> field value); an omitted/empty file parses to an
     /// all-identity squad of <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/> players. Unknown
@@ -142,7 +146,11 @@ namespace TacticalDirector.PlayerDatabase
 
             string firstName = StringVal(kv, "firstName", d.FirstName);
             string lastName = StringVal(kv, "lastName", d.LastName);
-            int age = IntVal(kv, "age", d.Age, int.MinValue, int.MaxValue);
+            // AR-3 M-2: age is range-checked like every other numeric key ([AgeMin, AgeMax] — the
+            // same bounds RosterGenerator draws within); it previously accepted any int, silently
+            // contradicting this class's own "out-of-range int all throw" contract.
+            int age = IntVal(kv, "age", d.Age,
+                PlayerDatabaseConstants.AgeMin, PlayerDatabaseConstants.AgeMax);
             var position = EnumVal(kv, "position", d.Position);
             int weakFoot = IntVal(kv, "weakFoot", d.Attributes.WeakFootRating,
                 PlayerDatabaseConstants.WEAK_FOOT_MIN, PlayerDatabaseConstants.WEAK_FOOT_MAX);
@@ -249,4 +257,13 @@ namespace TacticalDirector.PlayerDatabase
 // |         |            |        | PlayerRecord.CreateDefault(localIndex), diverging from         |
 // |         |            |        | RosterGenerator's KD-3 convention (caught by a round-trip      |
 // |         |            |        | test that would have failed against the bug).                  |
+// | 1.2     | 2026-07-16 | —      | AR-3 fix pass. M-2: age was the ONE numeric key with no range  |
+// |         |            |        | check (int.MinValue/MaxValue bounds) — contradicting both the  |
+// |         |            |        | class remarks ("out-of-range int all throw") and the           |
+// |         |            |        | generator's [AgeMin, AgeMax] model; now bounded the same way   |
+// |         |            |        | weakFoot and every attribute already were. L-5 (doc): the      |
+// |         |            |        | remarks claimed section indices are "contiguous" while the     |
+// |         |            |        | parser deliberately identity-fills gaps (test-locked by        |
+// |         |            |        | Parse_OmittedSection_IsFullIdentity) — doc now states the      |
+// |         |            |        | gap-fill rule instead.                                         |
 #endregion

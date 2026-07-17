@@ -1,7 +1,34 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 13, 2026 (**P1 real perf harness LANDED (cert-run-runbook.md P1 Tier A) —
+**Last Updated:** July 17, 2026, later same day (**Fourth repeat adversarial review (AR-4): 0H+0M+1L
+doc-only — CONVERGENCE, cycle closed. No new files, modified only:** `src/match-engine/MatchEngine.cs`
+v1.36 (L — `_lastHolderAgentId` writer comment aligned to the last-settled-holder approximation;
+no code change), root + src `CLAUDE.md`. Full dotnet gate re-run: PASSED, 0 failures.)
+**Last Updated (prior):** July 17, 2026 (**Third repeat adversarial review (AR-3): 1M, fixed — no new files,
+modified only:** `src/match-engine/MatchEngine.cs` v1.35 (M-1 — foul candidates involving a
+sent-off participant discarded at `ApplyFoulIfCaptured`; pre-fix a frozen red-carded agent
+repeatedly won free kicks and drew cards against opponents running into them),
+`src/match-engine/tests/MatchEngineFoulCardTests.cs` v1.1 (+2 regression locks), root + src
+`CLAUDE.md`. Full dotnet gate re-run: PASSED, 0 failures.)
+**Last Updated (prior):** July 16, 2026, later same day (**Repeat adversarial review (AR-2): 1M+1L, both fixed —
+no new files, modified only:** `src/match-engine/MatchEngine.cs` v1.34 (M-1 — sent-off agents
+excluded from the first-touch receiver scan; pre-fix a red-carded agent could receive into
+un-releasable possession, deadlocking play), `src/match-engine/tests/MatchEngineFirstTouchTests.cs`
+v1.1 (+1 regression lock), `src/player-database/AttrIdx.cs` v1.1 (L — group-count doc comment),
+root + src `CLAUDE.md`. Full dotnet gate re-run: PASSED, 0 failures.)
+**Last Updated (prior):** July 16, 2026 (**Adversarial-review fix pass over the July 14–15 landings (match-flow
+completion / interactive match view / squad-player data layer) — no new files, modified only:**
+`src/match-engine/MatchEngine.cs` v1.33 (M-1 substitution yellow-card reset + L-2 post-full-time
+`SubstitutePlayer` refusal + L-1 last-holder-approximation doc at the restart seam),
+`src/match-engine/RestartResolver.cs` v1.1 (L-1 doc), `src/match-engine/tests/MatchEngineSubstitutionTests.cs`
+v1.1 (+2 regression locks), `src/match-viewer/LiveMatchServer.cs` v1.1 (L-3 viewer clock rounds
+before the minute split + L-4 post-Stop connection threads answer 503),
+`src/player-database/SquadFileLoader.cs` v1.2 (M-2 age range-checked to [AgeMin, AgeMax] + L-5
+gap-fill doc), `src/player-database/tests/SquadFileLoaderTests.cs` v1.1 (+2 age-bounds locks),
+`src/player-database/RosterGenerator.cs` v1.2 (L-6 modulo-bias doc note), root + src `CLAUDE.md`.
+dotnet gate runs in CI on push.)
+**Last Updated (prior):** July 13, 2026 (**P1 real perf harness LANDED (cert-run-runbook.md P1 Tier A) —
 replaces the synthetic `tools/perf-harness/run.sh` `p50=0.000` stub with a harness that boots the
 real `MatchEngine` capstone.** New files: `src/performance-optimization/StopwatchPerfHarness.cs`
 (concrete `IPerfHarness`, §3.3.5 manual Stopwatch capture; nearest-rank p50/p99),
@@ -18,8 +45,8 @@ runs in CI on push.)
 **Last Updated (prior):** July 11, 2026, latest same day (**Engine substrate landed — goal detection +
 score state + match-length/halves model; #26 half-time trigger + live ladder inputs activated.**
 New file: `src/match-engine/tests/MatchEngineGoalTests.cs` (6 tests). Modified:
-`match-engine/{MatchEngine.cs v1.30 (Resolve-phase CheckGoalAndRestart + _goals/_lastHolderAgentId
-+ v14 serialization + RunManagerDecisionPoints live inputs + 4 TestOnly seams),
+`match-engine/{MatchEngine.cs v1.30 (Resolve-phase CheckGoalAndRestart + _goals/_lastHolderAgentId +
+v14 serialization + RunManagerDecisionPoints live inputs + 4 TestOnly seams),
 MatchEngineConstants.cs v1.20 (MATCH_LENGTH_MINUTES / MATCH_TICKS_TOTAL / HALF_TIME_BOUNDARY_TICK;
 SNAPSHOT_SCHEMA_VERSION 13 → 14), ManagerDecisionGate.cs v1.1 (half-time trigger active),
 ManagerAdaptation.cs (docs), tests/ManagerAITests.cs v1.1 (+4),

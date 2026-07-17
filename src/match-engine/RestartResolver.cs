@@ -1,6 +1,6 @@
 // File:     src/match-engine/RestartResolver.cs
 // Created:  2026-07-14
-// Modified: 2026-07-14
+// Modified: 2026-07-16 (AR-7 L-1 — lastTouchTeam param doc aligned to what the caller actually passes: the last settled holder, not the last physical toucher)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-flow-completion-design.md) §5, Code Standards #20
 // Purpose:  Pure restart-position / awarded-team resolution for the three non-goal RestartType
@@ -32,7 +32,12 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         /// <param name="type">The non-goal restart type (ThrowIn/Corner/GoalKick).</param>
         /// <param name="ballPosition">The ball's position at the moment it left the field of play.</param>
-        /// <param name="lastTouchTeam">Team id (0/1) of the agent who touched the ball last.</param>
+        /// <param name="lastTouchTeam">Team id (0/1) charged with the last touch. AR-7 L-1 — this is
+        /// the CALLER's best available approximation, and the production caller
+        /// (<c>MatchEngine.CheckRestartAndApply</c>) passes the last settled possession HOLDER, not
+        /// the last physical toucher (deflections and uncontrolled touches never update that
+        /// tracker; before any possession has settled, team 0 is assumed) — a documented Stage-0
+        /// approximation recorded at the call seam.</param>
         /// <returns>The restart position (pitch-plane, m) and the awarded team id (0/1).</returns>
         public static (Vector2 position, int awardedTeam) Resolve(
             RestartType type, Vector2 ballPosition, int lastTouchTeam)
@@ -98,6 +103,10 @@ namespace TacticalDirector.MatchEngine
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-07-14 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-07-14 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-07-16 | —      | AR-7 L-1 (doc-only): the lastTouchTeam param doc claimed "the  |
+// |         |            |        | agent who touched the ball last" while the production caller   |
+// |         |            |        | passes the last settled HOLDER (deflections never update it;   |
+// |         |            |        | −1 ⇒ team 0) — doc now states the approximation explicitly.    |
 #endregion

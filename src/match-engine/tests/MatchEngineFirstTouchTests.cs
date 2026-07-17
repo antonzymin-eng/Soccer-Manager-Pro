@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineFirstTouchTests.cs
 // Created:  2026-06-22
-// Modified: 2026-06-22
+// Modified: 2026-07-16 (AR-8 M-1: sent-off agents cannot receive — regression lock)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §5 Phase D (D3), Code Standards #20
 // Purpose:  Phase D D3 tests — the Resolve-phase first-touch trigger. A loose, ground-level, moving ball
@@ -140,6 +140,27 @@ namespace TacticalDirector.MatchEngine
                 "A possessed ball must not be re-acquired by a bystander via first touch.");
         }
 
+        [Test]
+        public void SentOffAgent_CannotReceive_BallStaysLoose()
+        {
+            // AR-8 M-1 regression lock: the receiver scan must exclude sent-off agents — every other
+            // participation surface (AI dispatch, snapshot IsActive fills, physics forced-stop,
+            // offside line) already did, but pre-fix the gate-4 loop let a frozen red-carded agent
+            // receive the ball into possession it could never release (no AI dispatch ⇒ no kick),
+            // deadlocking play. Identical geometry to LooseBall_ArrivingAtAgent_GainsPossession
+            // (which proves this setup DOES receive when the agent is active).
+            var engine = new MatchEngine(MatchSeed);
+
+            ParkAgentAt(engine, HomeAgent, OpenSpot);
+            engine.TestOnly_SetIsSentOff(HomeAgent, true);
+            engine.TestOnly_SetBall(RollingBall(new Vector2(OpenSpot.x - 0.6f, OpenSpot.y), new Vector2(2f, 0f)));
+
+            engine.RunTick();
+
+            Assert.AreEqual(MatchEngineConstants.NO_POSSESSION, engine.TestOnly_PossessingAgentId,
+                "A sent-off agent must not receive the ball — it stays loose and rolls on.");
+        }
+
         // ── Determinism ───────────────────────────────────────────────────────────────
 
         [Test]
@@ -172,4 +193,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | receive gains possession (home + away), receding / high /       |
 // |         |            |        | possessed balls are not touched, and a scripted receive is      |
 // |         |            |        | deterministic across two same-seed runs.                        |
+// | 1.1     | 2026-07-16 | —      | AR-8 M-1 lock: a sent-off agent in the exact receiving geometry |
+// |         |            |        | of the CONTROLLED-receive test does NOT gain possession — the   |
+// |         |            |        | ball stays loose (pre-fix it deadlocked on the frozen agent).   |
 #endregion
