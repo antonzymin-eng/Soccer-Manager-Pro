@@ -1,7 +1,13 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 16, 2026, later same day (**Repeat adversarial review (AR-2): 1M+1L, both fixed —
+**Last Updated:** July 17, 2026 (**Third repeat adversarial review (AR-3): 1M, fixed — no new files,
+modified only:** `src/match-engine/MatchEngine.cs` v1.35 (M-1 — foul candidates involving a
+sent-off participant discarded at `ApplyFoulIfCaptured`; pre-fix a frozen red-carded agent
+repeatedly won free kicks and drew cards against opponents running into them),
+`src/match-engine/tests/MatchEngineFoulCardTests.cs` v1.1 (+2 regression locks), root + src
+`CLAUDE.md`. Full dotnet gate re-run: PASSED, 0 failures.)
+**Last Updated (prior):** July 16, 2026, later same day (**Repeat adversarial review (AR-2): 1M+1L, both fixed —
 no new files, modified only:** `src/match-engine/MatchEngine.cs` v1.34 (M-1 — sent-off agents
 excluded from the first-touch receiver scan; pre-fix a red-carded agent could receive into
 un-releasable possession, deadlocking play), `src/match-engine/tests/MatchEngineFirstTouchTests.cs`

@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineFoulCardTests.cs
 // Created:  2026-07-14
-// Modified: 2026-07-14
+// Modified: 2026-07-17 (AR-9 M-1: sent-off participants cannot commit or win fouls — discard locks)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-flow-completion-design.md) §3, Code Standards #20
 // Purpose:  Locks the pure card-severity band lookup + promotion logic (deterministic, independent of
@@ -109,6 +109,50 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void InjectedFoul_SentOffVictim_DiscardedWithoutRestartOrCooldown()
+        {
+            // AR-9 M-1 regression lock: a sent-off agent cannot WIN a foul. Identical setup to
+            // InjectedFoul_AwardsFreeKickAtVictimPosition_AndArmsCooldown (which proves this exact
+            // candidate IS applied when the victim is active) except the victim is sent off — the
+            // candidate must be discarded: no free kick at the victim's feet, no cooldown armed.
+            var engine = new MatchEngine(MatchSeed);
+            int offender = 0;
+            int victim   = 12;
+            Vector2 victimPos = new Vector2(40f, 20f);
+            engine.TestOnly_SetAgent(victim, AgentState.CreateAtPosition(victimPos, new Vector2(1f, 0f)));
+            engine.TestOnly_SetCommand(victim, MovementCommand.Stop(victimPos));
+            engine.TestOnly_SetIsSentOff(victim, true);
+
+            engine.TestOnly_InjectFoulCandidate(offender, victim);
+            engine.RunTick();
+
+            BallState ball = engine.TestOnly_BallSnapshot;
+            Assert.IsFalse(Mathf.Abs(ball.Position.x - 40f) < 1e-4f && Mathf.Abs(ball.Position.y - 20f) < 1e-4f,
+                "A discarded candidate must not award a free kick at the sent-off victim's position.");
+            Assert.AreEqual(0, engine.TestOnly_FoulCooldownRemaining,
+                "A discarded candidate must not arm the foul cooldown.");
+        }
+
+        [Test]
+        public void InjectedFoul_SentOffOffender_DiscardedWithoutCardOrCooldown()
+        {
+            // AR-9 M-1 regression lock, offender direction: a sent-off agent cannot COMMIT a foul
+            // (reachable while the forced-stop is still decelerating a just-sent-off agent). The
+            // candidate is discarded before the card draw, so the offender's discipline state is
+            // untouched and no cooldown is armed.
+            var engine = new MatchEngine(MatchSeed);
+            engine.TestOnly_SetIsSentOff(0, true);
+
+            engine.TestOnly_InjectFoulCandidate(offender: 0, victim: 12);
+            engine.RunTick();
+
+            Assert.AreEqual(0, engine.TestOnly_FoulCooldownRemaining,
+                "A discarded candidate must not arm the foul cooldown.");
+            Assert.AreEqual((byte)0, engine.TestOnly_YellowCards(0),
+                "A discarded candidate must not reach the card draw.");
+        }
+
+        [Test]
         public void FoulCooldown_DecrementsEachTick()
         {
             var engine = new MatchEngine(MatchSeed);
@@ -167,4 +211,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   yellow, straight red) + MatchEngine integration (free-kick   |
 // |         |            |        |   placement, cooldown arm/decrement, sent-off deceleration     |
 // |         |            |        |   freeze) + two-run determinism.                               |
+// | 1.1     | 2026-07-17 | —      | AR-9 M-1 locks: a foul candidate with a sent-off VICTIM (the   |
+// |         |            |        |   exact geometry of the positive free-kick test) or a sent-off |
+// |         |            |        |   OFFENDER is discarded — no restart at the victim's feet, no  |
+// |         |            |        |   cooldown armed, no card draw reached.                        |
 #endregion

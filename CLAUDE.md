@@ -1,7 +1,22 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 16, 2026, later same day (**Repeat adversarial review (AR-2 of the cycle) — 1 M
+> **Last Updated:** July 17, 2026 (**Third repeat adversarial review (AR-3 of the cycle) — 1 M found,
+> fixed.** The pass re-verified all six AR-1/AR-2 fixes and swept the card/restart/possession
+> interaction paths the earlier rounds had cleared piecemeal. **M-1:** foul candidates involving a
+> sent-off participant were still applied — `ApplyFoulIfCaptured` checked contact type, force, and
+> opposite teams but not `_isSentOff`, and sent-off agents deliberately remain collision bodies, so
+> a frozen red-carded agent standing in the path of play repeatedly WON free kicks (`ApplyRestart`
+> teleported the ball to their feet) and drew cards against opponents who ran into their back, for
+> the rest of the match — the foul/card/restart interpretation was the remaining participation
+> surface without the exclusion. Fixed (`MatchEngine.cs` v1.35 — candidate discarded at the
+> application site: no event, no cooldown, no restart; physical collision response unchanged) + 2
+> regression locks (`MatchEngineFoulCardTests` v1.1 — sent-off victim in the exact positive
+> free-kick geometry, and sent-off offender). Verified clean: every card path clears possession via
+> `ApplyRestart` (no sent-off-possessor deadlock vector); the Interception case maps the Stage-0
+> unresolved interceptor to NO_POSSESSION. Full dotnet gate re-run: PASSED, 0 failures. See
+> src/CLAUDE.md v2.22.)
+> **Last Updated (prior):** July 16, 2026, later same day (**Repeat adversarial review (AR-2 of the cycle) — 1 M
 > + 1 L found, both fixed; the pass otherwise re-verified the first round's fixes and swept the
 > surfaces the first round had only skimmed** (LiveMatchFrame, AttrIdx/NameCatalogue, the four
 > live-viewer/player-database test suites, RunPhysicsPhase freeze, RunFirstTouch gates). **M-1:**

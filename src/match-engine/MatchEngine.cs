@@ -14,6 +14,7 @@
 // Modified: 2026-07-15 (interactive match view: observation-surface extension — HomeScore/AwayScore/MatchEnded; no schema change; see docs/tracking/interactive-match-view-design.md)
 // Modified: 2026-07-16 (match-flow AR-7 fix pass: substitution yellow-card reset (M-1) + post-full-time SubstitutePlayer refusal (L-2) + last-holder-vs-last-toucher approximation documented at the restart seam (L-1))
 // Modified: 2026-07-16 (AR-8 M-1, later same day: sent-off agents excluded from first-touch reception — the one participation surface missing the exclusion; a red-carded agent could receive the ball and deadlock possession)
+// Modified: 2026-07-17 (AR-9 M-1: foul candidates involving a sent-off participant discarded at ApplyFoulIfCaptured — a frozen red-carded agent could repeatedly win free kicks and draw cards against opponents running into them)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -2315,7 +2316,8 @@ namespace TacticalDirector.MatchEngine
         /// from the <c>match-flow.card-severity</c> RNG stream, issues a card if the draw qualifies
         /// (second yellow promotes to red), sends the offender off on any red, re-arms the global
         /// cooldown, and awards a free kick to the victim's team at the foul location. No-op if no
-        /// candidate was captured this tick.
+        /// candidate was captured this tick, or if either participant is already sent off (AR-9
+        /// M-1 — a sent-off agent cannot commit or win a foul; see the inline comment).
         /// </summary>
         private void ApplyFoulIfCaptured()
         {
@@ -2327,6 +2329,26 @@ namespace TacticalDirector.MatchEngine
 
             int offender = _foulCandidateOffender;
             int victim   = _foulCandidateVictim;
+
+            // AR-9 M-1: a sent-off agent is not a participant in play — contact with (or by) one
+            // cannot produce a foul, a card, or a restart. The physical collision itself still
+            // resolves in the collision system (momentum exchange, fall/stumble — the documented
+            // physical-presence minimalism); only the match-flow FOUL interpretation is discarded.
+            // Pre-fix, a frozen red-carded agent standing in the path of play repeatedly "won"
+            // free kicks (ApplyRestart teleported the ball to their feet) and drew cards against
+            // opponents who ran into their back — for the rest of the match. Gated HERE (the
+            // application site) rather than in MatchFlowCollisionConsumer: capture and application
+            // happen in the same tick and cards are issued only here, so the timing is equivalent;
+            // a single gate avoids the sibling-drift class (PM AR-7 M-1), and this site also covers
+            // the TestOnly_InjectFoulCandidate seam. Cost: a discarded candidate still consumed the
+            // tick's single capture slot, shadowing a same-tick genuine foul — negligible (at most
+            // one 60 Hz tick's delay for an already-rare event). No cooldown is armed and no
+            // FoulCommittedEvent is published: a non-foul must not suppress or announce anything.
+            if (_isSentOff[offender] || _isSentOff[victim])
+            {
+                return;
+            }
+
             Vector2 victimPos = _agents[victim].Position;
             Vector3 location  = new Vector3(victimPos.x, victimPos.y, 0f);
 
@@ -3647,8 +3669,10 @@ namespace TacticalDirector.MatchEngine
         /// tick into scalar fields on the host — no buffer, since only the first qualifying collision
         /// is ever acted on (cards are rare). Qualification: AGENT_AGENT, ContactType.FROM_BEHIND,
         /// ForceMagnitude ≥ FoulImpactForceThresholdN, opposite teams, and the host's foul cooldown is
-        /// closed. <see cref="MatchEngine.ApplyFoulIfCaptured"/> reads + resets this state immediately
-        /// after <c>UpdateCollisions</c> returns.
+        /// closed. Sent-off participation is deliberately NOT checked here — that gate lives at the
+        /// application site (<see cref="MatchEngine.ApplyFoulIfCaptured"/>, AR-9 M-1), which also
+        /// covers the test-injection seam. <see cref="MatchEngine.ApplyFoulIfCaptured"/> reads +
+        /// resets this state immediately after <c>UpdateCollisions</c> returns.
         /// </summary>
         private sealed class MatchFlowCollisionConsumer : ICollisionEventConsumer
         {
@@ -4250,4 +4274,16 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | deadlocking play until the next half/full-time ball reset.       |
 // |         |            |        | Physical presence (collision/perception/pressure sources) is     |
 // |         |            |        | deliberately unchanged — agents-keep-positions minimalism.       |
+// | 1.35    | 2026-07-17 | —      | AR-9 fix pass (third repeat review). M-1: ApplyFoulIfCaptured    |
+// |         |            |        | discards a foul candidate when EITHER participant is sent off —  |
+// |         |            |        | the foul/card/restart interpretation is a participation surface, |
+// |         |            |        | and sent-off agents remain collision bodies (physics forced-stop |
+// |         |            |        | decelerates them; they then stand frozen in the path of play),   |
+// |         |            |        | so pre-fix a red-carded agent repeatedly "won" free kicks        |
+// |         |            |        | (ApplyRestart teleported the ball to their feet) and drew cards  |
+// |         |            |        | against opponents who ran into their back, for the rest of the   |
+// |         |            |        | match. Gated at the application site (timing-equivalent to the   |
+// |         |            |        | capture site; covers the TestOnly injection seam; single gate    |
+// |         |            |        | avoids sibling drift). No event, no cooldown, no restart on a    |
+// |         |            |        | discarded candidate. Physical collision response unchanged.      |
 #endregion
