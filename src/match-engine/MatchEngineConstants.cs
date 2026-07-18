@@ -5,6 +5,7 @@
 // Modified: 2026-07-11 (engine substrate — match-length/halves model + SNAPSHOT_SCHEMA_VERSION 13 → 14)
 // Modified: 2026-07-14 (match-flow completion — restart/foul-card/offside/substitution/half-full-time constants; SNAPSHOT_SCHEMA_VERSION 14 → 15)
 // Modified: 2026-07-17 (#27 T1 AR-4, doc-only — STAGE0_NEUTRAL_* stale ERR-007 TODOs retired: production-unconsumed since T1, retained as the KD-P7 neutral-equivalence references)
+// Modified: 2026-07-18 (#27 T3 — NO_ROSTER_CLUB_ID sentinel + SNAPSHOT_SCHEMA_VERSION 15 → 16, v16 per-team roster reference)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -59,6 +60,13 @@ namespace TacticalDirector.MatchEngine
         /// Mirrors the Decision Tree #8 MatchContext.PossessingAgentId convention (−1 = loose);
         /// the C4 step folds host possession into MatchContext.</summary>
         public const int NO_POSSESSION = -1;
+
+        /// <summary>[FIXED] Per-team roster-reference sentinel for "no <c>Squad</c> configured" (the
+        /// default / all-neutral path). A real roster's <c>Squad.ClubId</c> is non-negative (the
+        /// <c>PlayerId = clubId * CLUB_SQUAD_SIZE + localIndex</c> formula assumes it), so this −1
+        /// sentinel does not collide in practice. #27 T3 (squad-roster-reference-design.md, KD-T3-1);
+        /// mirrors the −1 sentinel convention (<see cref="NO_POSSESSION"/>).</summary>
+        public const int NO_ROSTER_CLUB_ID = -1;
 
         /// <summary>[FIXED] Reason ordinal written into the Phase E PossessionChangedEvent (#17 ordinal
         /// 0x04) payload. Stage 0 has no possession-change reason taxonomy (a kick release, a first-touch
@@ -177,8 +185,21 @@ namespace TacticalDirector.MatchEngine
         /// ×SQUAD_SIZE, −1 = original starter); per-team substitutions-used count (i32 ×TEAM_COUNT);
         /// and the half-time / full-time transition flags (bool, bool). All cross-tick, digest-load-
         /// bearing — a mid-match card, substitution, or half/full-time transition now feeds the
-        /// digest chain, matching every prior field-set addition in this history.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 15;
+        /// digest chain, matching every prior field-set addition in this history.
+        ///
+        /// v16 (2026-07-18, #27 T3 — squad-roster-reference-design.md) appends the per-team roster
+        /// reference (i32 ×TEAM_COUNT — the loaded <c>Squad.ClubId</c>, or
+        /// <see cref="NO_ROSTER_CLUB_ID"/> = −1 when no squad was configured). Boot-constant identity
+        /// (the same lifecycle class as the already-serialized <c>_teamIds</c>/<c>_isGoalkeeper</c>):
+        /// a save now records WHICH squad each team loaded, so a future restore path can re-project the
+        /// per-slot attribute records (excluded from the snapshot by the boot-deterministic proof) —
+        /// keyed by the v15 <c>_activeBenchSlot</c> for substitution bench-swaps. A match configured
+        /// with a real ClubId is deliberately digest-distinguishable from an unconfigured one (KD-T3-2 —
+        /// the reference is identity, not attributes; this supersedes the T1 KD-P7 all-default byte-
+        /// identity lock, which was a T1-only property). Behavioural neutrality is unchanged: an
+        /// all-CreateDefault squad still moves agents identically — the ONLY digest difference is this
+        /// reference field.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 16;
 
         /// <summary>[FIXED] Regulation match length, minutes (Laws of the Game — two 45-minute
         /// halves). Stage 0 models no stoppage time and no extra time; the engine's match-length
@@ -497,4 +518,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | (#27 T1); stale TODOs retired, constants re-documented as        |
 // |         |            |        | production-unconsumed pre-T1 seed REFERENCES retained for the    |
 // |         |            |        | KD-P7 neutral-equivalence locks. Values unchanged.               |
+// | 1.23    | 2026-07-18 | —      | #27 T3 (squad-roster-reference-design.md): [FIXED]              |
+// |         |            |        | NO_ROSTER_CLUB_ID (−1 sentinel, KD-T3-1) added; SNAPSHOT_SCHEMA_ |
+// |         |            |        | VERSION 15 → 16 (v16 doc paragraph — per-team roster reference,  |
+// |         |            |        | the loaded Squad.ClubId, a boot-constant identity field so a save|
+// |         |            |        | records which squad each team loaded; KD-T3-2 configured ≠       |
+// |         |            |        | unconfigured by design).                                        |
 #endregion
