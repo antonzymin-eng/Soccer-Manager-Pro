@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/AttackingAgentSnapshot.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-07-17 (#27 T1 AR-4, doc-only — Pace/Dribbling normalization convention aligned to the live KD-P3 ÷ATTRIBUTE_MAX writer)
 // Author:   —
 // Spec:     Attacking AI #15 §2.3, Code Standards #20
 // Purpose:  Per-agent read-only tick input. Orchestrator pre-fills BaselineSlot and Line
@@ -53,7 +53,13 @@ namespace TacticalDirector.AttackingAI
         public bool    IsActive     { get; }
 
         /// <summary>
-        /// Normalised pace attribute [0, 1]. Convention: (raw − 1) / 19. Declared for Stage 1+
+        /// Normalised pace attribute [0, 1]. LIVE convention (what the MatchEngine writer actually
+        /// supplies since #27 T1): raw ÷ ATTRIBUTE_MAX (÷20; neutral 10 → 0.5) per the
+        /// player-attribute projection design KD-P3 — pinned to preserve the pre-T1 0.5 seed
+        /// byte-identically. The originally-documented (raw − 1) / 19 convention was never what any
+        /// writer produced (the flagged pre-existing doc-vs-seed mismatch, projection design §2);
+        /// switching to it is a recorded deferred design question, NOT the current contract — do not
+        /// derive raw values from this field with the /19 formula. Declared for Stage 1+
         /// use in runTriggerTick calibration; Stage 0 algorithm does not consume it. §2.3.
         /// </summary>
         public float   Pace         { get; }
@@ -65,7 +71,9 @@ namespace TacticalDirector.AttackingAI
         public float   Stamina      { get; }
 
         /// <summary>
-        /// Normalised dribbling attribute [0, 1]. Declared for Stage 1+ RUNNER eligibility
+        /// Normalised dribbling attribute [0, 1]. LIVE convention: raw ÷ ATTRIBUTE_MAX (÷20) since
+        /// #27 T1 — see the <see cref="Pace"/> doc for the pinned KD-P3 convention and the deferred
+        /// (raw − 1) / 19 question. Declared for Stage 1+ RUNNER eligibility
         /// weighting; Stage 0 algorithm does not consume it. §2.3.
         /// </summary>
         public float   Dribbling    { get; }
@@ -94,4 +102,5 @@ namespace TacticalDirector.AttackingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-07-17 | —      | #27 T1 repeat-AR (doc-only): Pace/Dribbling docs stated the (raw−1)/19 convention while the T1 MatchEngine writer populates them raw ÷ ATTRIBUTE_MAX (projection design KD-P3, preserving the 0.5 neutral seed) — pre-T1 the mismatch was against an unconsumed 0.5 placeholder (the design §2 flagged it); post-T1 it misdescribed live data. Docs aligned to the live convention; the (raw−1)/19 switch stays a recorded deferred design question. |
 #endregion

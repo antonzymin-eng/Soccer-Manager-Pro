@@ -18,6 +18,7 @@
         "TacticalDirector.TestingStrategy",
         "TacticalDirector.PerformanceOptimization",
         "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.PlayerDatabase",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

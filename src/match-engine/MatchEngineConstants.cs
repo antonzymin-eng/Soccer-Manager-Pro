@@ -4,6 +4,7 @@
 // Modified: 2026-07-11 (#26 manager-AI wiring — SNAPSHOT_SCHEMA_VERSION 12 → 13, v13 ManagerState doc)
 // Modified: 2026-07-11 (engine substrate — match-length/halves model + SNAPSHOT_SCHEMA_VERSION 13 → 14)
 // Modified: 2026-07-14 (match-flow completion — restart/foul-card/offside/substitution/half-full-time constants; SNAPSHOT_SCHEMA_VERSION 14 → 15)
+// Modified: 2026-07-17 (#27 T1 AR-4, doc-only — STAGE0_NEUTRAL_* stale ERR-007 TODOs retired: production-unconsumed since T1, retained as the KD-P7 neutral-equivalence references)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -272,18 +273,22 @@ namespace TacticalDirector.MatchEngine
         #region GT
 
         /// <summary>
-        /// [GT] Stage-0 neutral mid-scale player attribute [1–20] supplied to the pass/shot executor
-        /// adapters (Phase C C1a). Agent Movement #2 PlayerAttributes carries no passing/finishing/
-        /// technique fields yet (ERR-007 attribute split), so the executor query adapters synthesise a
-        /// neutral value until the AI phase wires real attributes in (Phase D).
+        /// [GT] Stage-0 neutral mid-scale player attribute [1–20] — the pre-#27-T1 seed the pass/shot
+        /// executor adapters synthesised while Agent Movement #2 carried no passing/finishing/
+        /// technique fields (ERR-007). DECLARED-BUT-UNCONSUMED in production since #27 T1 (the
+        /// attribute split landed — every seeding site now projects from the canonical player record
+        /// via PlayerAttributeProjection, whose neutral projection equals this value); retained as
+        /// the pre-T1 seed REFERENCE the KD-P7 neutral-equivalence locks assert against
+        /// (PlayerAttributeProjectionTests) — the byte-identity contract anchor, not dead weight.
         /// </summary>
-        public static readonly float STAGE0_NEUTRAL_ATTRIBUTE = 10f; // TODO: replace when ERR-007 attribute split lands (Phase D)
+        public static readonly float STAGE0_NEUTRAL_ATTRIBUTE = 10f;
 
         /// <summary>
-        /// [GT] Stage-0 neutral weak-foot rating [1–5] supplied to the pass/shot executor adapters
-        /// (Phase C C1a). Mid-scale placeholder until the ERR-007 attribute split (Phase D).
+        /// [GT] Stage-0 neutral weak-foot rating [1–5] — the pre-#27-T1 pass/shot adapter seed.
+        /// DECLARED-BUT-UNCONSUMED in production since #27 T1 (see STAGE0_NEUTRAL_ATTRIBUTE);
+        /// retained as the KD-P7 neutral-equivalence reference value.
         /// </summary>
-        public static readonly int STAGE0_NEUTRAL_WEAK_FOOT = 3; // TODO: replace when ERR-007 attribute split lands (Phase D)
+        public static readonly int STAGE0_NEUTRAL_WEAK_FOOT = 3;
 
         /// <summary>
         /// [GT] Stage-0 formation archetype assigned to BOTH teams (Phase D D2). The Positioning AI
@@ -316,11 +321,13 @@ namespace TacticalDirector.MatchEngine
         public static readonly float STAGE0_DEFENSIVE_LINE_DEPTH = Config.GetFloat("match-engine", "STAGE0_DEFENSIVE_LINE_DEPTH", 0.5f);
 
         /// <summary>
-        /// [GT] Stage-0 neutral normalised attribute [0,1] for the Mechanics-AI snapshot fields the Stage-0
-        /// algorithms do not consume (Attacking #15 Pace / Dribbling — §2.3 "declared for Stage 1+ use").
-        /// Replaced by real normalised attributes once the ERR-007 attribute split lands.
+        /// [GT] Stage-0 neutral normalised attribute [0,1] — the pre-#27-T1 seed for the Attacking #15
+        /// Pace / Dribbling snapshot fields (§2.3 "declared for Stage 1+ use"). DECLARED-BUT-UNCONSUMED
+        /// in production since #27 T1 (the fields now carry canonical Pace/Dribbling ÷ ATTRIBUTE_MAX
+        /// per projection-design KD-P3, whose neutral projection equals this 0.5); retained as the
+        /// KD-P7 neutral-equivalence reference value.
         /// </summary>
-        public static readonly float STAGE0_NEUTRAL_NORMALIZED = 0.5f; // TODO: replace when ERR-007 attribute split lands (Phase D+)
+        public static readonly float STAGE0_NEUTRAL_NORMALIZED = 0.5f;
 
         /// <summary>
         /// [GT] Host reach (m) within which a loose, approaching ground ball triggers a first-touch
@@ -485,4 +492,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | see MatchEngine.CheckMatchFlowTransitions). SNAPSHOT_SCHEMA_     |
 // |         |            |        | VERSION 14 → 15 (v15 doc paragraph — discipline/substitution/    |
 // |         |            |        | match-flow-clock cross-tick fields).                             |
+// | 1.22    | 2026-07-17 | —      | #27 T1 repeat-AR (doc-only): the three STAGE0_NEUTRAL_* docs     |
+// |         |            |        | still said "until the ERR-007 attribute split lands" — it landed |
+// |         |            |        | (#27 T1); stale TODOs retired, constants re-documented as        |
+// |         |            |        | production-unconsumed pre-T1 seed REFERENCES retained for the    |
+// |         |            |        | KD-P7 neutral-equivalence locks. Values unchanged.               |
 #endregion

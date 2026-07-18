@@ -1,6 +1,6 @@
 // File:     src/player-database/PlayerAttributes.cs
 // Created:  2026-07-15
-// Modified: 2026-07-15
+// Modified: 2026-07-17 (#27 T1 — FirstTouchAbility doc corrected RESERVED → CONSUMED per projection-design KD-P9)
 // Author:   —
 // Spec:     Squad/Player Data Layer design supplement (docs/tracking/squad-player-data-design.md) §3, Code Standards #20
 // Purpose:  Canonical player attribute record reconciling the seven per-spec attribute structs
@@ -89,7 +89,14 @@ namespace TacticalDirector.PlayerDatabase
         public int Concentration;
         /// <summary>RESERVED [1,20]. Master plan §4.2; not yet consumed by any Stage-0 spec.</summary>
         public int Teamwork;
-        /// <summary>RESERVED [1,20]. Master plan §4.2 "First Touch" trait; distinct from the First Touch Mechanics spec (#4). Not yet consumed by any Stage-0 spec.</summary>
+        /// <summary>
+        /// First-touch ability [1,20]. Master plan §4.2 "First Touch" trait; distinct from the First
+        /// Touch Mechanics spec (#4) itself. CONSUMED since #27 T1 (projection design KD-P9 — the
+        /// original RESERVED classification was inaccurate): three live MatchEngine sites read it —
+        /// Pressing #13 <c>FirstTouchAttribute</c>, Defensive #14 <c>PerceivedFirstTouch</c>, and
+        /// First Touch #4 <c>FirstTouchContext.FirstTouchAttribute</c>, via
+        /// <c>PlayerAttributeProjection.FirstTouchAbility</c>.
+        /// </summary>
         public int FirstTouchAbility;
 
         // -- Special scale --
@@ -197,4 +204,5 @@ namespace TacticalDirector.PlayerDatabase
 #region VersionHistory
 // | Version | Date       | Author | Notes                    |
 // | 1.0     | 2026-07-15 | —      | Initial implementation.  |
+// | 1.1     | 2026-07-17 | —      | #27 T1 (doc-only): FirstTouchAbility RESERVED → CONSUMED — three live MatchEngine sites (#13/#14/#4) read it via PlayerAttributeProjection (projection design KD-P9; the reserved classification was inaccurate). |
 #endregion
