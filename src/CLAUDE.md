@@ -1,7 +1,20 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 17, 2026, latest same day (v2.24 — **Squad/Player Data Layer T1/T2 landed** —
+> **Last Updated:** July 17, 2026, latest same day (v2.25 — **Repeat adversarial review of the T1/T2
+> landing (AR-4): 1 M + 3 L, all doc-only, fixed; AR-5 sweep 0H+0M+1L (doc) — CONVERGENCE, cycle
+> CLOSED.** Full-surface re-walk verified clean: writer completeness of every projected array,
+> the 3-site FirstTouchAbility inventory, no Perception-side `_perceptionAttrs` mutation, DT's
+> internal `(raw−1)/19` normalization correctly untouched (KD-P2), and the #13 WeakReceiver
+> trigger's T1-activated distinct-squad path (default unchanged). M-1: `AttackingAgentSnapshot.
+> Pace/Dribbling` docs claimed the `(raw−1)/19` convention while the T1 writer populates ÷20
+> (KD-P3) — post-T1 that misdescribed LIVE data; aligned (v1.1), math switch stays deferred. L:
+> three stale "neutral placeholder" comments in `MatchEngine.cs` (v1.38, doc-only); the
+> `STAGE0_NEUTRAL_*` stale ERR-007 TODOs retired — production-unconsumed since T1, kept as the
+> KD-P7 neutral-equivalence references (`MatchEngineConstants.cs` v1.22); `ConfigureSquads` doc
+> notes players beyond the consumed 18 are ignored (AR-5). `PlayerAttributeProjection.cs` v1.1
+> (ToNormalized note updated). Full dotnet gate re-run: PASSED, 0 failures.)
+> **Last Updated (prior):** July 17, 2026, latest same day (v2.24 — **Squad/Player Data Layer T1/T2 landed** —
 > `MatchEngine` attribute seeding sourced from canonical player records per the converged
 > `docs/tracking/player-attribute-projection-design.md` (v0.3). New
 > `src/match-engine/PlayerAttributeProjection.cs` (pure static, one method per LIVE target — KD-P8
@@ -1572,6 +1585,7 @@ Update this file when those items are resolved.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.25 | 2026-07-17 | — | **T1/T2 repeat adversarial review (AR-4 + AR-5 sweep) — 1M+4L total, all doc-only, all fixed; CONVERGENCE, cycle closed** — see the v2.25 Last-Updated header entry. M-1: `AttackingAgentSnapshot.cs` v1.1 (Pace/Dribbling docs aligned to the live KD-P3 ÷ATTRIBUTE_MAX writer convention; the (raw−1)/19 math switch stays a recorded deferred question). L: `MatchEngine.cs` v1.38 (three stale neutral-placeholder comments), `MatchEngineConstants.cs` v1.22 (STAGE0_NEUTRAL_* stale ERR-007 TODOs retired — production-unconsumed since T1, retained as KD-P7 references), `PlayerAttributeProjection.cs` v1.1 (ToNormalized note), `ConfigureSquads` extra-players doc note (AR-5). Verified clean, no change: projected-array writer completeness, 3-site FirstTouchAbility inventory, Perception non-mutation of `_perceptionAttrs`, DT internal normalization (KD-P2), #13 WeakReceiver distinct-squad activation (default path unchanged). Full dotnet gate re-run: PASSED, 0 failures. |
 | 2.24 | 2026-07-17 | — | **Squad/Player Data Layer T1/T2 landed** — see the v2.24 Last-Updated header entry for the full description. New `src/match-engine/PlayerAttributeProjection.cs` (pure canonical→per-spec projections; KD-P1 derived KickPower; KD-P3 `÷ATTRIBUTE_MAX` normalization; KD-P8 no GK/Heading phantom targets); `MatchEngine.cs` v1.37 (`_canonicalAttrs`/`_benchCanonicalAttrs` + every seeding site converted + public `ConfigureSquads` + `SubstitutePlayer` canonical swap/re-projection + 6 TestOnly seams; no schema change — default path byte-identical, KD-P7; distinct-squad restore deferred to T3, KD-P10); `match-engine(.tests).asmdef` +PlayerDatabase. Self-AR: 1 M fixed (both-squads validate-before-write) + clean sweeps. New: `tests/PlayerAttributeProjectionTests.cs`, `tests/MatchEngineSquadTests.cs`. Docs: projection design v0.4 (Technique inventory addition), #27 design v0.5 + `PlayerAttributes.cs` v1.1 (KD-P9 reserved→consumed). Full dotnet gate: PASSED, 0 failures. |
 | 2.23 | 2026-07-17 | — | **Fourth repeat adversarial review (AR-4): 0H+0M+1L doc-only, fixed — CONVERGENCE, cycle closed** — see the v2.23 Last-Updated header entry. Complete sent-off participation matrix walked clean (incl. the in-flight executor composition: card ⇒ `ApplyRestart` clears possession before the executor advance; adapters read the live `_possessingAgentId`, so FM-08/FM-05 cancel at CONTACT). L: `_lastHolderAgentId` writer comment aligned to the last-settled-holder approximation (deflection-chain goal may credit a non-kicker, possibly sent off since). Files: MatchEngine.cs v1.36 (doc-only), file-manifest.md, root CLAUDE.md. Full dotnet gate re-run: PASSED, 0 failures. |
 | 2.22 | 2026-07-17 | — | **Third repeat adversarial review (AR-3 of the July-16 cycle): 1M, fixed** — see the v2.22 Last-Updated header entry. M-1: `ApplyFoulIfCaptured` discards a foul candidate when either participant is sent off (pre-fix a frozen red-carded agent repeatedly won free kicks and drew cards against opponents who ran into them — the foul interpretation was the remaining participation surface without the `_isSentOff` gate; physical collision response deliberately unchanged). Gated at the application site (timing-equivalent; covers the injection seam; single gate avoids sibling drift). Files: MatchEngine.cs v1.35, tests/MatchEngineFoulCardTests.cs v1.1 (+2), file-manifest.md, root CLAUDE.md. Full dotnet gate re-run: PASSED, 0 failures. |

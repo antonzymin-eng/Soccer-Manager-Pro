@@ -13,6 +13,7 @@
 // Modified: 2026-07-14 (match-flow completion: throw-in/corner/goal-kick restarts, fouls/cards, offside, substitutions, half-time ends-swap, full-time freeze; SNAPSHOT_SCHEMA_VERSION 14 → 15 — see docs/tracking/match-flow-completion-design.md)
 // Modified: 2026-07-15 (interactive match view: observation-surface extension — HomeScore/AwayScore/MatchEnded; no schema change; see docs/tracking/interactive-match-view-design.md)
 // Modified: 2026-07-17 (#27 T1/T2: attribute seeding sourced from canonical player records via PlayerAttributeProjection + ConfigureSquads; default path byte-identical, no schema change — see docs/tracking/player-attribute-projection-design.md)
+// Modified: 2026-07-17 (#27 T1 AR-4, doc-only — three stale "Stage-0 neutral placeholder" comments aligned to the T1 canonical-projection sourcing)
 // Modified: 2026-07-16 (match-flow AR-7 fix pass: substitution yellow-card reset (M-1) + post-full-time SubstitutePlayer refusal (L-2) + last-holder-vs-last-toucher approximation documented at the restart seam (L-1))
 // Modified: 2026-07-16 (AR-8 M-1, later same day: sent-off agents excluded from first-touch reception — the one participation surface missing the exclusion; a red-carded agent could receive the ball and deadlock possession)
 // Modified: 2026-07-17 (AR-9 M-1: foul candidates involving a sent-off participant discarded at ApplyFoulIfCaptured — a frozen red-carded agent could repeatedly win free kicks and draw cards against opponents running into them)
@@ -910,7 +911,9 @@ namespace TacticalDirector.MatchEngine
         /// selection proper is a deferred follow-up, Plan-3): squad players
         /// <c>0..PLAYERS_PER_TEAM−1</c> fill the on-pitch slots in order (player 0 occupies the
         /// goalkeeper slot — the caller orders the roster), players
-        /// <c>PLAYERS_PER_TEAM..PLAYERS_PER_TEAM+SUBSTITUTES_PER_TEAM−1</c> fill the bench.
+        /// <c>PLAYERS_PER_TEAM..PLAYERS_PER_TEAM+SUBSTITUTES_PER_TEAM−1</c> fill the bench;
+        /// squad players beyond those 18 are ignored (unvalidated — a full 25-player club roster is
+        /// accepted, only the consumed prefix matters at Stage 0).
         /// Overwrites the canonical per-slot records and re-projects every boot-seeded attribute
         /// surface (#2 <c>_attrs</c>, #8 <c>_dtAttrs</c>, #7 <c>_perceptionAttrs</c>, bench attrs);
         /// the per-call surfaces (Pass/Shot builders, Mechanics-AI snapshot fills,
@@ -2061,8 +2064,10 @@ namespace TacticalDirector.MatchEngine
                                                 : MirrorPitchIfAway(team, _agents[i].Position),
                     Line                = isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
                     // Cheap-item addition (new §7.12): cover-shadow curve attributes, sourced from
-                    // the same _dtAttrs the Decision Tree already reads (Stage 0: neutral defaults
-                    // for every agent; Stage 1+ real rosters will differentiate this).
+                    // the same _dtAttrs the Decision Tree already reads — since #27 T1 these are
+                    // canonical-record projections (real values under a configured squad; the
+                    // no-squad default stays all-neutral), so they flow transitively with no
+                    // separate projection row (projection design §1 "derived consumers").
                     DefensivePositioningAttribute = _dtAttrs[i].Positioning,
                     PhysicalEffortAttribute       = (_dtAttrs[i].WorkRate + _dtAttrs[i].Pace + _dtAttrs[i].Stamina) / 3f,
                     MentalSharpnessAttribute      = (_dtAttrs[i].Decisions + _dtAttrs[i].Anticipation) / 2f,
@@ -2167,8 +2172,10 @@ namespace TacticalDirector.MatchEngine
         /// <summary>
         /// Fills team <paramref name="team"/>'s reused <see cref="AttackingSnapshot"/> (Phase D D2b). All 22
         /// agents are carried in the acting team's canonical attack-+X frame, so the team attack angle is 0.
-        /// Stamina is the live fatigue (1 − AerobicPool); pace / dribbling are the Stage-0 neutral normalised
-        /// placeholder (§2.3 — not consumed by the Stage-0 RUNNER algorithm).
+        /// Stamina is the live fatigue (1 − AerobicPool); pace / dribbling are the canonical record's
+        /// Pace/Dribbling normalised ÷ ATTRIBUTE_MAX since #27 T1 (projection design §3.8 / KD-P3 —
+        /// neutral record ⇒ 0.5, the pre-T1 placeholder; still not consumed by the Stage-0 RUNNER
+        /// algorithm, §2.3).
         /// </summary>
         private void FillAttackingSnapshot(int team, int tickIndex)
         {
@@ -2914,8 +2921,9 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>
         /// Assembles the <see cref="FirstTouchContext"/> for the receiving agent (Phase D D3). Player
-        /// touch attributes (Technique / FirstTouch) are Stage-0 neutral placeholders — Agent Movement #2
-        /// PlayerAttributes carries no such fields yet (ERR-007), the same synthesis the pass/shot
+        /// touch attributes (Technique / FirstTouchAbility) are canonical-record projections since
+        /// #27 T1 (projection design §3.5a — the former Stage-0 neutral placeholders were the
+        /// projection of the default record), the same sourcing the pass/shot
         /// adapters use. Pressure / nearest-opponent data come from a <c>PressureEvaluator</c> pass over
         /// the opposing team (filling <see cref="_opponentScratch"/>, zero alloc), and
         /// <see cref="OrientationDetector.IsHalfTurnOriented"/> supplies the half-turn flag against the
@@ -4506,4 +4514,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | s on-pitch half). Default path byte-identical (KD-P7, digest-    |
 // |         |            |        | locked); distinct-squad restore deferred to T3 (KD-P10, exclusion|
 // |         |            |        | proof updated). No schema change. +6 TestOnly attribute seams.   |
+// | 1.38    | 2026-07-17 | —      | #27 T1 repeat-AR (AR-4, doc-only): three comments the T1 code    |
+// |         |            |        | edits outdated — the FillPressingSnapshot CoverShadowCurve note  |
+// |         |            |        | ("Stage 0: neutral defaults"), the FillAttackingSnapshot summary |
+// |         |            |        | ("neutral normalised placeholder"), and the BuildFirstTouch-     |
+// |         |            |        | Context summary ("neutral placeholders — ERR-007") — aligned to  |
+// |         |            |        | the canonical-projection sourcing. No code change.               |
 #endregion

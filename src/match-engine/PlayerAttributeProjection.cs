@@ -1,6 +1,6 @@
 // File:     src/match-engine/PlayerAttributeProjection.cs
 // Created:  2026-07-17
-// Modified: 2026-07-17
+// Modified: 2026-07-17 (AR-4, doc-only — ToNormalized note updated for the AttackingAgentSnapshot doc alignment)
 // Author:   —
 // Spec:     Player-attribute projection design supplement (docs/tracking/player-attribute-projection-design.md)
 //           §3 (field-by-field mapping), §4 (KickPower derivation, KD-P1), §5 (runtime split, KD-P4);
@@ -163,8 +163,10 @@ namespace TacticalDirector.MatchEngine
         /// The sole <c>[1,20] → [0,1]</c> scale conversion (projection design §2 / KD-P3), for the
         /// pre-normalized <c>AttackingAgentSnapshot</c> pace/dribbling pair: <c>÷ ATTRIBUTE_MAX</c>
         /// (20), so neutral 10 → 0.5 — exactly the pre-T1 <c>STAGE0_NEUTRAL_NORMALIZED</c> seed.
-        /// (The struct-doc <c>(raw−1)/19</c> convention mismatch is a flagged pre-existing,
-        /// unconsumed defect handled in its own pass — design §2.)
+        /// (The struct's original <c>(raw−1)/19</c> doc convention — the flagged pre-existing
+        /// mismatch, design §2 — was aligned to this live ÷20 convention in the T1 repeat-AR
+        /// (<c>AttackingAgentSnapshot.cs</c> v1.1); switching the MATH to <c>(raw−1)/19</c> remains a
+        /// recorded deferred design question, since it moves the neutral off 0.5.)
         /// </summary>
         public static float ToNormalized(int canonical1To20)
         {
@@ -176,4 +178,8 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-17 | —      | Initial implementation (#27 T1/T2 — projection design v0.3).   |
+// | 1.1     | 2026-07-17 | —      | AR-4 (doc-only): ToNormalized note updated — the Attacking     |
+// |         |            |        | struct's (raw−1)/19 doc mismatch is now aligned to the live    |
+// |         |            |        | ÷20 convention (AttackingAgentSnapshot.cs v1.1); the math      |
+// |         |            |        | switch stays a deferred design question.                       |
 #endregion

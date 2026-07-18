@@ -1,7 +1,32 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 17, 2026, latest same day (**Squad/Player Data Layer T1/T2 LANDED** — `MatchEngine`
+> **Last Updated:** July 17, 2026, latest same day (**Repeat adversarial review of the T1/T2 landing
+> (AR-4 of its cycle, run at the user's request) — 1 M + 3 L, all doc-only, all fixed; then AR-5
+> sweep 0H+0M+1L (doc) — CONVERGENCE, cycle CLOSED** per the L-only-round convention. The pass
+> re-walked the full touched surface against source: writer-completeness sweep of every projected
+> array (`_canonicalAttrs`/`_attrs`/`_dtAttrs`/`_perceptionAttrs`/bench — exactly boot seed +
+> `ConfigureSquads` + `SubstitutePlayer`, no stray writer), the FirstTouchAbility site inventory
+> (exactly 3), Perception-side mutation of `_perceptionAttrs` (none — the IsHalfTurned preserve is
+> defensive-only), and the downstream #13 WeakReceiver/threat-score consumers (T1 activates the
+> previously-dormant WeakReceiver press trigger for genuinely below-average receivers under a
+> distinct squad — designed behaviour, default path unchanged at 10 ≥ threshold). **M-1 (doc,
+> cross-assembly contract):** `AttackingAgentSnapshot.Pace/Dribbling` XML still documented the
+> `(raw−1)/19` normalization while the T1 writer populates them live ÷`ATTRIBUTE_MAX` (KD-P3) —
+> pre-T1 the mismatch was against an unconsumed 0.5 placeholder (flagged in the projection design
+> §2); post-T1 it misdescribed real data a consumer could mis-derive raw values from. Docs aligned
+> to the live ÷20 convention (`AttackingAgentSnapshot.cs` v1.1); switching the MATH stays a
+> recorded deferred design question (it moves the neutral off 0.5). **L:** three `MatchEngine.cs`
+> comments the T1 code edits outdated ("Stage-0 neutral placeholder" claims at the
+> CoverShadowCurve fill / FillAttackingSnapshot summary / BuildFirstTouchContext summary —
+> v1.38, doc-only); the three `STAGE0_NEUTRAL_*` constants' stale "TODO: replace when ERR-007
+> attribute split lands" markers retired (`MatchEngineConstants.cs` v1.22 — the split landed;
+> production-unconsumed since T1, retained as the KD-P7 neutral-equivalence references); AR-5's
+> L — `ConfigureSquads` doc now states players beyond the consumed 18 are ignored. The
+> decision-tree `(raw−1)/19` hits are #8's own spec-pinned INTERNAL normalization of the raw
+> values T1 feeds it — KD-P2-consistent, not a finding. Full dotnet gate re-run: PASSED, 0
+> failures. See src/CLAUDE.md v2.25.)
+> **Last Updated (prior):** July 17, 2026, latest same day (**Squad/Player Data Layer T1/T2 LANDED** — `MatchEngine`
 > attribute seeding now sources from canonical player records per the converged
 > `docs/tracking/player-attribute-projection-design.md` (v0.3, AR-1..AR-3 CONVERGED; PR #225). New
 > `src/match-engine/PlayerAttributeProjection.cs` (pure per-target projections: #2/#8/#7 raw copies;

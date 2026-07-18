@@ -1,7 +1,16 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 17, 2026, latest same day (**Squad/Player Data Layer T1/T2 landed** — `MatchEngine`
+**Last Updated:** July 17, 2026, latest same day (**T1/T2 repeat adversarial review (AR-4 + AR-5 sweep):
+1M+4L, all doc-only, all fixed — CONVERGENCE, cycle closed. No new files, modified only:**
+`src/attacking-ai/AttackingAgentSnapshot.cs` v1.1 (M-1 — Pace/Dribbling docs aligned to the live
+KD-P3 ÷ATTRIBUTE_MAX convention the T1 writer actually supplies; the (raw−1)/19 math switch stays a
+recorded deferred question), `src/match-engine/MatchEngine.cs` v1.38 (three stale neutral-placeholder
+comments aligned + the ConfigureSquads extra-players note), `src/match-engine/MatchEngineConstants.cs`
+v1.22 (STAGE0_NEUTRAL_* stale ERR-007 TODOs retired — production-unconsumed since T1, retained as the
+KD-P7 neutral-equivalence references), `src/match-engine/PlayerAttributeProjection.cs` v1.1
+(ToNormalized note), root + src `CLAUDE.md`. Full dotnet gate re-run: PASSED, 0 failures.)
+**Last Updated (prior):** July 17, 2026, latest same day (**Squad/Player Data Layer T1/T2 landed** — `MatchEngine`
 attribute seeding sourced from canonical player records per `player-attribute-projection-design.md`
 v0.3. **New files:** `src/match-engine/PlayerAttributeProjection.cs` v1.0 (pure canonical→per-spec
 projections; KD-P1 derived KickPower; KD-P3 normalization; KD-P8 no GK/Heading targets),
