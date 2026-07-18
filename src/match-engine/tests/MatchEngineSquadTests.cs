@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineSquadTests.cs
 // Created:  2026-07-17
 // Modified: 2026-07-18 (#27 T3 — roster-reference locks; the T1 KD-P7 all-default byte-identity lock superseded by KD-T3-2)
+// Modified: 2026-07-18 (#27 T3 post-landing code AR — observable-state behavioural-neutrality lock restored)
 // Author:   —
 // Spec:     Player-attribute projection design supplement §7/§7.1/§9 (KD-P7/KD-P10); Squad/Player
 //           Data Layer design supplement (#27) §4 T1/T3; squad-roster-reference-design.md (T3,
@@ -100,6 +101,38 @@ namespace TacticalDirector.MatchEngine
             CollectionAssert.AreNotEqual(unconfigured[0], configured[0],
                 "A configured squad was digest-identical to unconfigured at tick 1 — the v16 roster " +
                 "reference is not captured (KD-T3-2).");
+        }
+
+        [Test]
+        public void ConfiguredDefaultSquad_IsBehaviourNeutral_ObservableStateMatchesUnconfigured()
+        {
+            // KD-T3-2 behavioural half: T3 makes the config-default DIGEST diverge from unconfigured
+            // (the roster reference), but that difference must be NON-behavioural — an all-CreateDefault
+            // squad projects to the neutral seeds (KD-P7), so gameplay is unchanged. Locked here at the
+            // observable level (stronger than the digest, which the roster field deliberately perturbs):
+            // ball + every agent position match tick-for-tick. This restores the behavioural-neutrality
+            // guarantee the superseded T1 byte-identity digest lock provided — minus the roster field a
+            // digest comparison can no longer exclude. (Vector Equals is exact; two same-seed, same-
+            // neutral-attribute runs are bit-identical, so exact equality holds.)
+            const int ticks = 2 * 6 * 2;
+
+            var unconfigured = new MatchEngine(MatchSeed);
+            var configured   = new MatchEngine(MatchSeed);
+            configured.ConfigureSquads(DefaultSquad(7), DefaultSquad(8));
+
+            for (int i = 0; i < ticks; i++)
+            {
+                unconfigured.RunTick();
+                configured.RunTick();
+
+                Assert.AreEqual(unconfigured.BallView.Position, configured.BallView.Position,
+                    $"Ball position diverged at tick {i + 1} — a config-default squad is not behaviour-neutral.");
+                for (int a = 0; a < MatchEngineConstants.SQUAD_SIZE; a++)
+                {
+                    Assert.AreEqual(unconfigured.AgentView(a).Position, configured.AgentView(a).Position,
+                        $"Agent {a} position diverged at tick {i + 1} — a config-default squad is not behaviour-neutral.");
+                }
+            }
         }
 
         [Test]
@@ -358,4 +391,14 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | DistinctClubIds_DivergeAtTick1, RosterReference_SentinelBefore- |
 // |         |            |        | Configure_ClubIdAfterConfigure; the invalid-away refusal test   |
 // |         |            |        | also asserts the reference stays the sentinel.                 |
+// | 1.2     | 2026-07-18 | —      | #27 T3 post-landing code AR (0H+0M+1L): replacing the T1        |
+// |         |            |        | byte-identity digest lock dropped the DIRECT match-level proof  |
+// |         |            |        | that config-default is behaviourally identical to unconfigured  |
+// |         |            |        | (the roster field is the SOLE, non-behavioural difference — the |
+// |         |            |        | new digest-divergence tests prove divergence, not that it is    |
+// |         |            |        | non-behavioural). Added ConfiguredDefaultSquad_IsBehaviour-     |
+// |         |            |        | Neutral_ObservableStateMatchesUnconfigured — ball + every agent |
+// |         |            |        | position match tick-for-tick (observable level, which the       |
+// |         |            |        | roster field does not touch), restoring the KD-T3-2 neutrality  |
+// |         |            |        | half at a signal a digest comparison can no longer isolate.     |
 #endregion

@@ -9,10 +9,12 @@ serialized at v16; `TestOnly_RosterClubId` seam; exclusion-proof + restore-scope
 `src/match-engine/MatchEngineConstants.cs` v1.23 (`[FIXED] NO_ROSTER_CLUB_ID = -1`; **`SNAPSHOT_SCHEMA_VERSION`
 15 → 16** + v16 doc paragraph), `src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs` v1.13 (pin
 15 → 16 + `RosterReference_FeedsSnapshotDigest` probe), `src/match-engine/tests/MatchEngineSquadTests.cs`
-v1.1 (T1 neutrality lock superseded by the KD-T3-2 identity-capture / same-config-determinism /
-distinct-ClubId / sentinel-seam locks), `docs/tracking/squad-player-data-design.md` v0.6 +
-`docs/tracking/player-attribute-projection-design.md` (T3-landed notes), root + src `CLAUDE.md`.
-Full dotnet gate re-run: PASSED, 0 failures (236 match-engine tests).)
+v1.2 (T1 neutrality lock superseded by the KD-T3-2 identity-capture / same-config-determinism /
+distinct-ClubId / sentinel-seam locks; post-landing code AR 0H+0M+1L added
+`ConfiguredDefaultSquad_IsBehaviourNeutral_ObservableStateMatchesUnconfigured`), `docs/tracking/
+squad-roster-reference-design.md` v0.3 (code-AR round), `docs/tracking/squad-player-data-design.md`
+v0.6 + `docs/tracking/player-attribute-projection-design.md` (T3-landed notes), root + src `CLAUDE.md`.
+Full dotnet gate re-run: PASSED, 0 failures (237 match-engine tests).)
 **Last Updated (prior):** July 17, 2026, latest same day (**T1/T2 repeat adversarial review (AR-4 + AR-5 sweep):
 1M+4L, all doc-only, all fixed — CONVERGENCE, cycle closed. No new files, modified only:**
 `src/attacking-ai/AttackingAgentSnapshot.cs` v1.1 (M-1 — Pace/Dribbling docs aligned to the live
