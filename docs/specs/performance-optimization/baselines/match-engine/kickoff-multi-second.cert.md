@@ -1,22 +1,30 @@
 # Certified Perf Baseline — `match-engine-kickoff-multi-second`
 
 **Created:** June 28, 2026
-**Status:** ⏳ **PENDING — measurement captured on the pinned platform; NOT promotable to CERTIFIED
-until the `floatModelHash` gap below is resolved by the Platform Certification owner.**
+**Status:** ✅ **CERTIFIED (FR-PO-052 per-tick perf baseline).** 100-run capture executed on the
+pinned Windows 11 / Unity 6000.4.9f1 / Mono host (2026-07-19); the `floatModelHash` gap that
+previously blocked promotion was resolved by ERR-016-006 Option A (the §4.8.3 Mono mapping +
+`CreateStage0MonoCertified` hasher). Platform Certification owner sign-off is recorded via the PR
+merge (see Version History v1.2).
+**Scope:** this certifies the FR-PO-052 **per-tick perf baseline** for this one scenario. It is NOT
+the full platform determinism certification — `docs/tracking/certification-platform.md` stays
+**⏳ RECERT REQUIRED** because the §4.8.2 runtime MXCSR validation and the determinism-KAT run on
+the pinned host are separate, still-host-blocked deliverables (see "Residual" below).
 **Spec:** Performance Optimization Strategy #18 §3.4.4 / §4.3.2 / FR-PO-031 / FR-PO-052;
 `docs/tracking/certification-platform.md` (Stage 0 host pin).
 
 This is the FR-PO-052 per-tick certified baseline corpus entry for the Match Engine capstone
-scenario (`MatchEngineCapstoneScenarios.KickoffMultiSecondPath`). It is the authoritative
-per-PR regression reference (FR-PO-031, +5%) **once fully certified**.
+scenario (`MatchEngineCapstoneScenarios.KickoffMultiSecondPath`) — the authoritative per-PR
+regression reference (FR-PO-031, +5%) on the pinned host.
 
-The code-side entry remains `CertifiedPerfBaseline.Pending(...)` (see
-`src/performance-optimization/CertifiedPerfBaseline.cs` and
-`src/match-engine/tests/CertifiedPerfBaselineTests.cs`) — unchanged by this capture, and
-correctly so: `CertificationStatus` has only `Pending`/`Certified` (no partial state), and this
-entry is not yet eligible for `Certified(...)` per the gap below. `TryBuildBaselineRecord` still
-correctly refuses to build a `BaselineRecord`, so no unresolved-gap number can leak into the
-FR-PO-031 regression gate.
+The code-side entry is now `CertifiedPerfBaseline.Certified(...)` (see
+`src/performance-optimization/CertifiedPerfBaseline.cs` and the `KickoffCertified()` helper in
+`src/match-engine/tests/CertifiedPerfBaselineTests.cs`): the manifest below (with a genuine
+`EnvironmentFingerprint` built via `CreateStage0MonoCertified`) + the measured p50/p99 project to a
+`BaselineRecord` via `TryBuildBaselineRecord`, which the certified-projection test flows through
+`PerfGateRunner` as an FR-PO-031 self-compare. The +5% regression check against a live measurement
+runs on the **pinned host** (a Linux measurement vs a Windows-certified number is apples-to-oranges,
+so the non-certifying Linux capstone gate keeps its generous Stage-0 anchor).
 
 ## Intent (known now)
 
@@ -64,7 +72,7 @@ capstone on the real pinned host — **not** the Linux `dotnet-ci` non-certifyin
 | `HardwareCounters.ThermalState` | `idle, no sustained load prior to run (no monitoring tool used)` |
 | `HarnessVersion` | `1.0` (no formal semver scheme exists yet for this harness in the codebase; this is its first real capture) |
 
-### `EnvironmentFingerprint` (#16 §4.8) — 5 of 6 fields captured; 1 field BLOCKED
+### `EnvironmentFingerprint` (#16 §4.8) — all 6 fields captured
 
 | Field | Value |
 |-------|-------|
@@ -73,32 +81,36 @@ capstone on the real pinned host — **not** the Linux `dotnet-ci` non-certifyin
 | `ReductionTopology` | `Serial` |
 | `SimdFeatureLevel` | `SSE4.2` |
 | `UnicodeNormalizationVersion` | `15.1` |
-| `FloatModelHash` | **NOT COMPUTABLE — see gap below** |
+| `FloatModelHash` | `73c47ad54d3a81408b46694b513634fd244f25262aa4104614712134b6bb756a` |
 
-## OPEN GAP — `FloatModelHash` cannot be honestly computed for this host
+Built via `EnvironmentFingerprint.CreateStage0MonoCertified(monoRuntimeVersion)` (ERR-016-006
+Option A). The §4.8.3 float-flag tuple's field 2 (`compilerVersion` = Mono runtime version) is the
+one host-supplied value: recorded as **`mono-bundled-unity6000.4.9f1`** — the honest identifier for
+Unity's forked Mono runtime, which Unity versions by editor release rather than a standalone Mono
+semver (option A of the two the owner was offered; the alternative was a distinct `mono --version`
+string the host does not expose separately). The remaining tuple fields are the pinned Stage-0 Mono
+mapping (`Mono` / `win-x64` / `MONO` sentinel) + the §4.8.3 Required Stage-0 float-mode flag values
+(denormals off, FTZ off, rounding NearestEven, fp-contract off, FMA off, fast-math off, SIMD SSE4.2).
+The hash was computed by `FloatFlagTuple.ComputeHash()` and independently reproduced by a Python
+mirror of `CanonicalSerializer`, validated byte-for-byte against the pinned golden vector
+(`89f50a31…f343e7` for the `"6.13.0"` test input) before recording this value.
 
-Per `deterministic-sim/section-4.md` §4.8.3, `FloatModelHash` is a SHA-256 over an 11-field
-tuple — `compilerToolchain` (enum-constrained to `"MSVC"` / `"Clang"` / `"AppleClang"` /
-`"GCC"`), `compilerVersion`, `targetTriple`, plus denormals/flush-to-zero/rounding-mode/
-fp-contract/FMA flags and others. This tuple's shape assumes a **natively AOT-compiled** binary
-(e.g. an IL2CPP build) with an actual compiler-toolchain invocation whose version and target
-triple can be cited.
+## Residual — still host-blocked (NOT part of this perf certification)
 
-This capture ran on **Mono / JIT** — the Stage 0 backend per `certification-platform.md`'s own
-pin. Mono JIT-compiles IL to machine code at runtime; there is no ahead-of-time
-`compilerToolchain` invocation to cite, and the spec's enum has no "N/A" / JIT member. Inventing
-a plausible-looking value here (e.g. citing the toolchain Mono's own runtime binary happened to
-be built with) would misrepresent what is actually being measured, and would silently defeat the
-`ERR_DS_REPLAY_ENV_MISMATCH` divergence check this field exists to support if the project later
-migrates to IL2CPP.
+Two items remain and are deliberately outside the scope of this FR-PO-052 perf-baseline
+certification; they gate `certification-platform.md`'s broader ✅ PINNED status, which stays
+**⏳ RECERT REQUIRED**:
 
-**This entry stays PENDING (not Certified) until a Platform Certification owner decides:**
-(a) define a Mono/JIT-specific substitute tuple for `floatModelHash`, or
-(b) formally exempt JIT-runtime captures from this field with documented rationale in #16 §4.8.3.
+1. **§4.8.2 runtime MXCSR validation** — querying the live host float-mode flags at match start and
+   rejecting on mismatch is unimplemented (needs native interop on the pinned host). The recorded
+   tuple above uses the pinned Stage-0 flag values, which is exactly what §4.8.2 validates against;
+   until the live check exists, the recorded flags are asserted, not runtime-verified.
+2. **Full platform determinism certification** — the determinism KAT run on the pinned
+   Windows/Unity/Mono host (distinct from this per-tick perf capture). Owner-scheduled per
+   `cert-run-runbook.md`.
 
-Everything else required for certification (the p50/p99 measurement, git SHA, seed, platform
-pin, timestamps, hardware counters, and 5/6 `EnvironmentFingerprint` fields) is captured and
-ready the moment this gap resolves.
+Neither blocks the FR-PO-052 perf baseline: the per-tick measurement, git SHA, seed, platform pin,
+timestamps, hardware counters, and now all 6 `EnvironmentFingerprint` fields are complete.
 
 ## Runbook — promoting PENDING → CERTIFIED
 
@@ -108,18 +120,20 @@ ready the moment this gap resolves.
 
 1. ✅ On the pinned platform (`certification-platform.md` Stage 0 tuple), run the capstone
    scenario under the perf harness for `BaselineSampleCount` (= 100) runs. — Done 2026-07-19.
-2. ⏳ Record the measured per-tick `p50`/`p99` (ms) and the full `SessionManifest` — Done except
-   `EnvironmentFingerprint.FloatModelHash` (see OPEN GAP above).
-3. ⏳ Replace the metric placeholders above; flip Status to **CERTIFIED**. — Blocked on the gap.
-4. ⏳ In code, swap the `Pending(...)` entry for `CertifiedPerfBaseline.Certified(manifest, loop,
-   p50, p99, "FR-PO-052")` and unskip / extend the certified-projection assertions. — Blocked;
-   `Certified(...)` should not be called with a fabricated `FloatModelHash`.
-5. ⏳ Obtain Platform Certification owner sign-off (Spec #16 §1.7 Governance Artifacts) — sign-off
-   must additionally resolve the `FloatModelHash` gap, not just approve the measured numbers.
+2. ✅ Record the measured per-tick `p50`/`p99` (ms) and the full `SessionManifest`, including all 6
+   `EnvironmentFingerprint` fields (the `FloatModelHash` gap resolved by ERR-016-006 Option A).
+3. ✅ Replace the metric placeholders above; flip Status to **CERTIFIED**.
+4. ✅ In code, swap the `Pending(...)` entry for `CertifiedPerfBaseline.Certified(manifest, loop,
+   p50, p99, "FR-PO-052")` (the `KickoffCertified()` helper) and unskip / extend the
+   certified-projection assertions.
+5. ⏳ Platform Certification owner sign-off (Spec #16 §1.7 Governance Artifacts) — recorded via the
+   PR merge that lands this promotion (solo-project governance). Does NOT close the separate
+   §4.8.2 MXCSR validation / platform-determinism cert (see Residual).
 
 ## Version History
 
 | Version | Date       | Author | Notes                                                        |
 |---------|------------|--------|--------------------------------------------------------------|
 | 1.0     | 2026-06-28 | —      | Created PENDING. First corpus entry under `baselines/`.       |
-| 1.1     | 2026-07-19 | —      | Real 100-run capture on the pinned Windows 11 / Unity 6000.4.9f1 host: p50=0.4768ms / p99=2.5669ms, full SessionManifest except `EnvironmentFingerprint.FloatModelHash`. Status stays PENDING — §4.8.3's `floatModelHash` tuple assumes native AOT compilation and has no defined meaning for this project's Mono/JIT Stage-0 backend; flagged as an open gap requiring a Platform Certification owner decision rather than fabricated. Code-side entry unchanged (`CertifiedPerfBaseline.Pending(...)`; `CertificationStatus` has no partial state). |
+| 1.1     | 2026-07-19 | —      | Real 100-run capture on the pinned Windows 11 / Unity 6000.4.9f1 host: p50=0.4768ms / p99=2.5669ms, full SessionManifest except `EnvironmentFingerprint.FloatModelHash`. Status stayed PENDING — §4.8.3's `floatModelHash` tuple was IL2CPP/AOT-shaped with no defined Mono/JIT meaning; flagged as an open gap requiring a Platform Certification owner decision rather than fabricated. |
+| 1.2     | 2026-07-19 | —      | **Promoted PENDING → CERTIFIED.** The `floatModelHash` gap is resolved by ERR-016-006 Option A (§4.8.3 Mono mapping + `CreateStage0MonoCertified` hasher): field 2 = host-supplied Mono runtime version, recorded `mono-bundled-unity6000.4.9f1`; `FloatModelHash = 73c47ad5…b6bb756a` (golden-vector-validated Python mirror). All 6 fingerprint fields now captured. Code-side entry swapped `Pending(...)` → `Certified(...)` (`KickoffCertified()`). Platform Certification owner sign-off recorded via PR merge. Scope: FR-PO-052 perf baseline only — the §4.8.2 MXCSR runtime validation + the platform-determinism cert stay host-blocked and `certification-platform.md` remains ⏳ RECERT REQUIRED (see Residual). |
