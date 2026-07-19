@@ -9,6 +9,7 @@
 //           Fields are readonly, so the §4.8.1 no-mutation invariant is enforced structurally.
 //           Replay-side mismatch triggers ERR_DS_REPLAY_ENV_MISMATCH.
 
+using System;
 using System.Security.Cryptography;
 
 namespace TacticalDirector.DeterministicSim
