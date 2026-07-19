@@ -62,6 +62,7 @@ Recommended module ownership:
 - `sim/determinism/*` — digest protocol, tolerance matrix, divergence tooling.
 
 ## 4.5 Version History
+- **v1.1 (July 19, 2026):** ERR-016-006 (Option A, owner sign-off). §4.8.3 reconciled to the pinned Stage-0 **Mono** backend: `compilerToolchain` gains `"Mono"` (field 1); the field-4 `il2cppVersion` note flips so Stage-0 certification ACCEPTS the `"MONO"` sentinel (the reject-MONO / IL2CPP-required rules move to Stage 5+), resolving the contradiction with `certification-platform.md`; a new "Stage-0 Mono backend mapping" paragraph pins fields 1–4 under Mono and records that the live-host hasher now exists (`FloatFlagTuple.ComputeHash()` / `EnvironmentFingerprint.CreateStage0MonoCertified`). The §4.8.2 runtime MXCSR validation stays a Stage-1+/host task. Proposal: `docs/tracking/env-fingerprint-float-model-hash-mono-mapping.md`.
 - **v1.0 (May 4, 2026):** Pass 4 / Pass 5 critique resolution. (a) Pass 4 M-3: §4.8.1 mid-match mutation now fails with `ERR_DS_ENV_MUTATION` (0x160D), distinct from replay-side `ERR_DS_REPLAY_ENV_MISMATCH`; EC-016-013 paired in §3.10. (b) Pass 4 M-4: §4.8.3 `il2cppVersion` row clarified — Mono fallback uses sentinel `"MONO"` so cross-backend replay deterministically fails; certification rejects `"MONO"` snapshots. (c) Pass 4 M-5: on-disk snapshot record layout moved to §3.9.2 (normative); §4.8 fingerprint table extended with `unicodeNormalizationVersion` row (Pass 4 L-1 binding).
 - **v0.9 (May 3, 2026):** Third-pass critique fixes. (a) M-I: §4.6.1.1 atomic-write contract bound (same-volume write-then-rename, fsync barrier, atomic rename, directory fsync, partial-save forbidden); paired with `ERR_DS_STORAGE_ATOMICITY`. (b) H-D: §4.8 `floatModelHash` row pointed to new §4.8.3 normative composition (SHA-256 over canonical 11-field tuple of compiler/runtime float-mode flags); Stage-0 required values listed; flag strings cross-referenced to §5.5.1.
 - **v0.8 (May 2, 2026):** §4.2.2 step 7 reworded to clarify cursor-at-EndOfSnapshot[T] assertion and replaced `ERR_DS_SAVE_BOUNDARY` with `ERR_DS_REPLAY_BOUNDARY` (A-4). §4.6.2 sequence diagram replaced with 8-step diagram matching normative §4.2.2 lifecycle (A-6).
@@ -129,10 +130,10 @@ The tuple fields, in this exact serialization order, are:
 
 | # | Field | Type | Source |
 |---|---|---|---|
-| 1 | `compilerToolchain` | `string` | One of `"MSVC"`, `"Clang"`, `"AppleClang"`, `"GCC"` (UTF-8) |
+| 1 | `compilerToolchain` | `string` | One of `"MSVC"`, `"Clang"`, `"AppleClang"`, `"GCC"` (IL2CPP, Stage 5+), or `"Mono"` (the Stage-0 backend — Option A / ERR-016-006) (UTF-8) |
 | 2 | `compilerVersion` | `string` | Major.Minor.Patch as reported by the toolchain (e.g. `"19.38.33135"`) |
 | 3 | `targetTriple` | `string` | LLVM-style target triple (e.g. `"x86_64-pc-windows-msvc"`) |
-| 4 | `il2cppVersion` | `string` | Unity IL2CPP version string. Stage-0 certification REQUIRES IL2CPP per §5.5; a non-empty value is mandatory at certification time. For editor / dev / Mono builds (replay-on-developer-machines, not certification), the sentinel value `"MONO"` MUST be used — this binds the Mono backend into the fingerprint deterministically and fails any cross-backend replay (Mono recording vs IL2CPP replay) with `ERR_DS_REPLAY_ENV_MISMATCH` instead of producing silent digest drift. Stage-0 certification runs MUST reject any snapshot whose fingerprint contains `"MONO"` as `ERR_DS_REPLAY_ENV_MISMATCH` |
+| 4 | `il2cppVersion` | `string` | IL2CPP version string (Stage 5+), or the sentinel `"MONO"` for the Stage-0 Mono backend (Option A / ERR-016-006). **Stage-0 certification runs on the Mono backend and ACCEPTS `"MONO"` as the certified value** (the Stage-0 host pin in `certification-platform.md` is Mono; the reverse — requiring IL2CPP at Stage 0 — was the contradiction ERR-016-006 resolved). The sentinel still binds the backend into the fingerprint, so a cross-backend replay (Mono recording vs IL2CPP replay) fails with `ERR_DS_REPLAY_ENV_MISMATCH` rather than drifting digests. **From Stage 5+**, when the backend pin becomes IL2CPP, a non-empty IL2CPP version is mandatory at certification and a certification run MUST reject any `"MONO"` fingerprint as `ERR_DS_REPLAY_ENV_MISMATCH`. |
 | 5 | `denormalsAreZero` | `bool` | Runtime CSR/MXCSR denormals-are-zero bit |
 | 6 | `flushToZero` | `bool` | Runtime CSR/MXCSR flush-to-zero bit |
 | 7 | `roundingMode` | `u8` | `0=NearestEven, 1=ToZero, 2=Upward, 3=Downward` |
@@ -149,3 +150,11 @@ The tuple fields, in this exact serialization order, are:
 - `fastMath = false`
 
 Concrete compiler flag strings to achieve this are listed in §5.5.1. The runtime MUST query MXCSR (or platform equivalent) at match start and reject the run with `ERR_DS_REPLAY_ENV_MISMATCH` if observed flags do not match the recorded tuple.
+
+**Stage-0 Mono backend mapping (Option A; ERR-016-006).** Tuple fields 1–4 were originally written for a natively-compiled IL2CPP build, which contradicted the Stage-0 **Mono** host pin in `docs/tracking/certification-platform.md` (§4.8.3/§5.5 predate that pin). Under the pinned Mono backend the fields map as:
+- `compilerToolchain` = `"Mono"`.
+- `compilerVersion` = the Mono runtime / BCL version string, supplied by the certification host at capture time and recorded in the pinned tuple in `certification-platform.md` (it is not synthesised — see ERR-016-006).
+- `targetTriple` = the .NET RID for the pinned host (Windows x64 ⇒ `"win-x64"`), in lieu of an LLVM triple.
+- `il2cppVersion` = `"MONO"` (per field 4 above).
+
+Fields 5–11 use the Required Stage-0 values above plus the pinned SIMD level (`"SSE4.2"`). The **live-host hasher** is implemented: `FloatFlagTuple.ComputeHash()` computes `SHA-256(SerializeCanonical(0x14 ‖ tuple))`, and `EnvironmentFingerprint.CreateStage0MonoCertified(monoRuntimeVersion)` assembles the Stage-0 Mono tuple and stamps the result (a genuine, non-placeholder fingerprint). The §4.8.2 runtime MXCSR *validation* (querying the live float-mode flags and rejecting on mismatch) remains a Stage-1+/host engineering task (native interop) tracked in ERR-016-006; the recorded tuple uses the pinned Stage-0 flag values, which is what §4.8.2 validates against.

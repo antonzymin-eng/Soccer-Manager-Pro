@@ -1711,6 +1711,32 @@ Spec #20 §3.2.3 (Tag → C# Storage Class Mapping) is the authoritative naming 
 
 ---
 
+## ERR-016-006: Deterministic Sim #16 §4.8.3 floatModelHash tuple is IL2CPP-shaped and contradicts the Stage-0 Mono pin; no live-host hasher exists
+
+**Spec:** Deterministic Simulation #16 (tuple defect); Platform Certification #16 §5.5 / `docs/tracking/certification-platform.md` (contradiction)
+**Section:** §4.8 (EnvironmentFingerprint) / §4.8.3 (floatModelHash composition) / §5.5 (certification matrix) / §5.5.1 (deterministic flag strings)
+**Severity:** Medium (latent — not currently blocking; the fingerprint is unwired at Stage 0, see below)
+**Detected During:** Review of `EnvironmentFingerprint` against §4.8.3 (July 19, 2026) while assessing `SessionManifest`'s fingerprint requirement.
+**Status:** ✅ Spec resolved (Option A, owner sign-off July 19, 2026) + live-host hasher landed. Host-blocked remainder (§4.8.2 runtime MXCSR validation; certified capture) tracked below and in the root `CLAUDE.md` OPEN ISSUES.
+
+**Problem:** Three linked issues.
+
+1. **No live-host hasher.** §4.8.3 defines `floatModelHash = SHA-256(SerializeCanonical(0x14 ‖ floatFlagTuple))` over an 11-field tuple of compiler/runtime float-mode flags. No code computes it: `EnvironmentFingerprint.FloatModelHash` is a plain `string` constructor argument, and the class's own `ComputeDigest()` hashes the *outer* 6-field fingerprint for the §3.2.3 snapshot-header preimage — a different digest. The 11-field float-flag tuple has no implementation anywhere.
+
+2. **Spec-vs-pin contradiction on the tuple's own fields.** Tuple fields 1–4 (`compilerToolchain` ∈ {MSVC,Clang,AppleClang,GCC}, `compilerVersion`, `targetTriple` LLVM-style, `il2cppVersion`) are native-compilation / IL2CPP concepts. §5.5 row 0 pins the **Stage-0 developer host to "IL2CPP (MSVC backend)"** and §4.8.3 field 4 states "Stage-0 certification REQUIRES IL2CPP … MUST reject any snapshot whose fingerprint contains `"MONO"`". But `docs/tracking/certification-platform.md` v1.3 pins the Stage-0 backend to **Mono** ("IL2CPP migration is a Stage 5+ concern"), with an explicit `IL2CPP version | N/A (Mono backend)` row. §4.8.3/§5.5 (May 3–4, 2026) predate the platform pin (June 7, 2026). Consequently fields 1–4 have no defined meaning for the runtime actually pinned — a live hasher cannot be written respectably until the spec decides what the tuple means under Mono JIT (or the pin flips to IL2CPP).
+
+3. **Placeholder factory was wrong on `simdFeatureLevel`.** `CreateStage0Dev()` — the sole factory, used by MatchEngine boot and every perf-harness/scenario test — stamped `simdFeatureLevel: "SSE2"`, matching neither the pinned SSE4.2 baseline (certification-platform.md §4.8) nor any other pin. (§4.8.3 field 11 `simdLevel` must equal `simdFeatureLevel`; the dev factory was at least self-consistent at SSE2, but both were wrong.)
+
+**Current blast radius (why Medium, not High):** latent. `SaveManager` writes `headerOut.Fingerprint = null` (not yet wired into the save path), and the fingerprint is load-bearing only at a real certification run, which is independently blocked (no Unity host; `certification-platform.md` is `⏳ RECERT REQUIRED`). Nothing is silently drifting; the risk is that an honest-but-wrong placeholder papers over the undecided spec. Related: ERR-016-005's follow-up already flagged that the *outer* envFp preimage needs a golden vector when the §4.8 corpus row lands; that is distinct from this inner §4.8.3 tuple.
+
+**Resolution (code side, this pass — no fabrication):** `EnvironmentFingerprint.cs` v1.2 — `CreateStage0Dev()` `simdFeatureLevel` `"SSE2"` → `"SSE4.2"` (matches the pin); the placeholder `floatModelHash` lifted to a named `FloatModelHashDevPlaceholder` sentinel; a new `IsDevPlaceholder` property lets a future cert-run gate reject a placeholder fingerprint (the analogue of §4.8.3's "reject MONO" rule for the unimplemented hasher); `FloatModelHash`/`CreateStage0Dev` docs now flag the missing hasher and the IL2CPP/Mono gap. **Deliberately NOT done:** synthesising fields 1–4 or writing a live-host hasher — that is blocked on the spec decision (fabricating those values is precisely what this ERR exists to prevent).
+
+**Resolution (Option A, July 19, 2026 — owner sign-off in `env-fingerprint-float-model-hash-mono-mapping.md` v0.2):** the §4.8.3 tuple is mapped onto the pinned Stage-0 Mono backend, keeping the 11-field shape. **Spec:** `section-4.md` v1.1 — field 1 gains `"Mono"`; field 4 flips so Stage-0 certification ACCEPTS `"MONO"` (reject-MONO / IL2CPP-required move to Stage 5+); a "Stage-0 Mono backend mapping" paragraph pins fields 1–4 (compilerToolchain `"Mono"`, compilerVersion = host-supplied Mono version, targetTriple = RID `"win-x64"`, il2cppVersion `"MONO"`). `section-5.md` v1.1 — §5.5 row 0 backend → Mono; §5.5.1 Mono flag-strings note. **Code:** new `FloatFlagTuple.cs` (`ComputeHash()` = `SHA-256(SerializeCanonical(0x14 ‖ tuple))`) + `EnvironmentFingerprint.CreateStage0MonoCertified(monoRuntimeVersion)` (v1.3) — a genuine, non-placeholder fingerprint from the Option-A fields + the §4.8.3 Required Stage-0 flag values; golden vector + determinism/sensitivity tests in `DeterministicSimTests`.
+
+**Still host-blocked (Stage-1+ / cert-run, NOT done here):** (a) the §4.8.2 runtime MXCSR validation (query live float-mode flags at match start, reject on mismatch) — needs native interop on the pinned host; (b) the certified capture — supplying the real Mono runtime version and running on the pinned Windows/Unity/Mono host (`cert-run-runbook.md` P2), unrunnable in the current Linux/no-Unity environment. The recorded tuple already uses the pinned Stage-0 flag values, which is exactly what (a) validates against.
+
+---
+
 ## ERR-021-005 … ERR-021-007, ERR-012-007 … ERR-012-009, ERR-008-012: #23/#24/#25 approval back-props (July 10, 2026)
 
 **Specs:** Tactical Instructions #21, Positioning AI #12, Decision Tree #8 (targets); Dismarking AI #23, Build-Up Structures #24, Positional Rotations #25 (owners)

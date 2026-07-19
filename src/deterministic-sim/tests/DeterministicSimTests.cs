@@ -352,16 +352,100 @@ namespace TacticalDirector.DeterministicSim
         {
             var recorded = EnvironmentFingerprint.CreateStage0Dev();
             var live = new EnvironmentFingerprint(
-                workerCount:               2, // differs
+                workerCount:               2, // differs — the only field that should differ from CreateStage0Dev
                 schedulerPolicy:           "Stage0-SingleThread-v1",
                 reductionTopology:         "Serial",
-                simdFeatureLevel:          "SSE2",
-                floatModelHash:            "STAGE0_DEV_PLACEHOLDER",
+                simdFeatureLevel:          "SSE4.2",
+                floatModelHash:            EnvironmentFingerprint.FloatModelHashDevPlaceholder,
                 unicodeNormalizationVersion: DeterministicSimConstants.UNICODE_NFC_VERSION);
 
             ushort err = recorded.ValidateAgainst(live);
             Assert.AreEqual(DeterministicSimConstants.ERR_DS_REPLAY_ENV_MISMATCH, err,
                 "T-DS-FAULT-013: workerCount mismatch must return ERR_DS_REPLAY_ENV_MISMATCH");
+        }
+
+        /// <summary>
+        /// ERR-016-006: the Stage-0 dev fingerprint is flagged as a placeholder (its floatModelHash is
+        /// the sentinel, not a real §4.8.3 hash) and its simdFeatureLevel matches the pinned SSE4.2
+        /// baseline (was "SSE2", which matched no pin). A genuine (non-placeholder) fingerprint reports
+        /// IsDevPlaceholder == false.
+        /// </summary>
+        [Test]
+        public void EnvironmentFingerprint_Stage0Dev_IsPlaceholder_AndMatchesPinnedSimdLevel()
+        {
+            var dev = EnvironmentFingerprint.CreateStage0Dev();
+            Assert.IsTrue(dev.IsDevPlaceholder,
+                "ERR-016-006: CreateStage0Dev must be flagged as a non-certification placeholder");
+            Assert.AreEqual(EnvironmentFingerprint.FloatModelHashDevPlaceholder, dev.FloatModelHash);
+            Assert.AreEqual("SSE4.2", dev.SimdFeatureLevel,
+                "ERR-016-006: the dev fingerprint's SIMD level must match the pinned SSE4.2 baseline");
+
+            var genuine = new EnvironmentFingerprint(
+                workerCount:               1,
+                schedulerPolicy:           "Stage0-SingleThread-v1",
+                reductionTopology:         "Serial",
+                simdFeatureLevel:          "SSE4.2",
+                floatModelHash:            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                unicodeNormalizationVersion: DeterministicSimConstants.UNICODE_NFC_VERSION);
+            Assert.IsFalse(genuine.IsDevPlaceholder,
+                "ERR-016-006: a fingerprint carrying a real hash must not report IsDevPlaceholder");
+        }
+
+        /// <summary>
+        /// ERR-016-006 (Option A): FloatFlagTuple.ComputeHash produces the §4.8.3 floatModelHash =
+        /// SHA-256(SerializeCanonical(0x14 ‖ tuple)). Golden vector for the Stage-0 Mono tuple with a
+        /// test compilerVersion, independently computed by a Python mirror of CanonicalSerializer.
+        /// </summary>
+        [Test]
+        public void FloatFlagTuple_Stage0Mono_ComputeHash_MatchesGoldenVector()
+        {
+            var tuple = new FloatFlagTuple(
+                compilerToolchain: EnvironmentFingerprint.Stage0MonoToolchain,
+                compilerVersion:   "6.13.0", // test input, not a claim about the real host
+                targetTriple:      EnvironmentFingerprint.Stage0MonoTargetTriple,
+                il2cppVersion:     EnvironmentFingerprint.Stage0MonoIl2cppSentinel,
+                denormalsAreZero:  false, flushToZero: false,
+                roundingMode:      0, fpContractMode: 0,
+                fmaEnabled:        false, fastMath: false,
+                simdLevel:         EnvironmentFingerprint.Stage0SimdLevel);
+
+            Assert.AreEqual(
+                "89f50a313db7544e78942b6c7cb62ee736d9eb2ee863feb2abbd175309f343e7",
+                tuple.ComputeHash());
+        }
+
+        /// <summary>
+        /// ERR-016-006: ComputeHash is deterministic and sensitive to every field (a version change and a
+        /// float-mode flag flip both change the hash).
+        /// </summary>
+        [Test]
+        public void FloatFlagTuple_ComputeHash_IsDeterministicAndSensitive()
+        {
+            FloatFlagTuple Tuple(string ver, bool daz) => new FloatFlagTuple(
+                "Mono", ver, "win-x64", "MONO", daz, false, 0, 0, false, false, "SSE4.2");
+
+            Assert.AreEqual(Tuple("6.13.0", false).ComputeHash(), Tuple("6.13.0", false).ComputeHash(),
+                "same tuple ⇒ same hash");
+            Assert.AreNotEqual(Tuple("6.13.0", false).ComputeHash(), Tuple("6.14.0", false).ComputeHash(),
+                "a compilerVersion change must change the hash");
+            Assert.AreNotEqual(Tuple("6.13.0", false).ComputeHash(), Tuple("6.13.0", true).ComputeHash(),
+                "a float-mode flag flip must change the hash");
+        }
+
+        /// <summary>
+        /// ERR-016-006 (Option A): CreateStage0MonoCertified builds a NON-placeholder fingerprint carrying
+        /// the real §4.8.3 hash, and rejects a missing host-supplied Mono version rather than inventing one.
+        /// </summary>
+        [Test]
+        public void EnvironmentFingerprint_Stage0MonoCertified_CarriesRealHash_NotPlaceholder()
+        {
+            var fp = EnvironmentFingerprint.CreateStage0MonoCertified("6.13.0");
+            Assert.IsFalse(fp.IsDevPlaceholder, "a certified Mono fingerprint must not report IsDevPlaceholder");
+            Assert.AreEqual(
+                "89f50a313db7544e78942b6c7cb62ee736d9eb2ee863feb2abbd175309f343e7", fp.FloatModelHash);
+            Assert.AreEqual("SSE4.2", fp.SimdFeatureLevel);
+            Assert.Throws<ArgumentException>(() => EnvironmentFingerprint.CreateStage0MonoCertified(null));
+            Assert.Throws<ArgumentException>(() => EnvironmentFingerprint.CreateStage0MonoCertified(string.Empty));
         }
 
         /// <summary>

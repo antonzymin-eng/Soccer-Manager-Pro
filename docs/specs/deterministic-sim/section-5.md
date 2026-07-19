@@ -52,7 +52,7 @@ Error-code → fault-injection traceability (§9.5 acceptance criterion #2):
 ## 5.5 Certification Matrix (minimum)
 | Stage | Platform | OS / runtime | Build | Compiler mode | Required result |
 |---|---|---|---|---|---|
-| 0 | Windows x64 (developer host) | Windows 10/11, Unity 2022 LTS, IL2CPP (MSVC backend) | Release | Deterministic flags (see §5.5.1) | PASS |
+| 0 | Windows x64 (developer host) | Windows 10/11, Unity 2022 LTS, **Mono backend** (Stage-0; Option A / ERR-016-006 — was "IL2CPP (MSVC backend)", which contradicted the Mono host pin in `certification-platform.md`) | Release | Deterministic flags (see §5.5.1) | PASS |
 | 5+ | Windows x64 | Windows 10/11, Unity 2022 LTS, IL2CPP | Release | Deterministic flags | PASS |
 | 5+ | Linux x64 | Ubuntu 22.04 LTS, Unity 2022 LTS, IL2CPP | Release | Deterministic flags | PASS |
 | 5+ | macOS ARM64 | macOS 13+, Unity 2022 LTS, IL2CPP | Release | Deterministic flags | PASS |
@@ -85,7 +85,9 @@ Runtime MXCSR setup at process start: `_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OF
 ```
 Runtime: equivalent MXCSR/`fesetround(FE_TONEAREST)` setup.
 
-**IL2CPP-emitted C++:** the same flags MUST be propagated to IL2CPP's `il2cpp_codegen` invocation via `Il2CppNativeCodeBuilder` configuration. Unity project setting `Player → Other Settings → C++ Compiler Configuration = Release` plus `Allow Unsafe Code = false` is required. Any deviation breaks `floatModelHash` and is a `ERR_DS_REPLAY_ENV_MISMATCH` on resume.
+**IL2CPP-emitted C++:** the same flags MUST be propagated to IL2CPP's `il2cpp_codegen` invocation via `Il2CppNativeCodeBuilder` configuration. Unity project setting `Player → Other Settings → C++ Compiler Configuration = Release` plus `Allow Unsafe Code = false` is required. Any deviation breaks `floatModelHash` and is a `ERR_DS_REPLAY_ENV_MISMATCH` on resume. (Stage 5+ backend — see §5.5 row 5+.)
+
+**Mono backend (Stage-0; Option A / ERR-016-006):** the Stage-0 host runs the Mono backend (`certification-platform.md`), not IL2CPP. The Mono JIT honors the deterministic float-mode flags via Unity project settings — there is no native `/fp` flag because the runtime is Mono, not native C++ (`certification-platform.md` §"Compiler flags" records the equivalent DAZ/FTZ/fp-contract/FMA-off set). The recorded `floatModelHash` tuple (§4.8.3) uses the Required Stage-0 values for the float-mode flags (fields 5–10); the §4.8.2 runtime MXCSR check that validates the *live* flags against them at match start is a Stage-1+/host task (native interop), tracked in ERR-016-006. The `floatModelHash` itself is computed by `FloatFlagTuple.ComputeHash()` (see §4.8.3).
 
 ### 5.5.2 Save/load equivalence sample protocol (normative)
 `T-DS-REPLAY-004` and `T-DS-SAVE-005` are gated on the following minimum sample protocol; the test fixtures in §5.7 reference but do not bind these counts:
@@ -102,6 +104,7 @@ Runtime: equivalent MXCSR/`fesetround(FE_TONEAREST)` setup.
 The "randomized" qualifier refers to *sample selection of save ticks*, not to a probabilistic pass criterion — every selected save MUST replay bit-exact (or within bound for Tier B) for the run to pass. A sample protocol document MUST be retained as a CI artifact per §5.12.
 
 ## 5.6 Version History
+- **v1.1 (July 19, 2026):** ERR-016-006 (Option A, owner sign-off). §5.5 row 0 (Stage-0 developer host) backend `IL2CPP (MSVC backend)` → **Mono**, aligning the certification matrix with the Mono host pin in `certification-platform.md`; §5.5.1 gains a "Mono backend (Stage-0)" flag-strings note (Mono JIT honors the deterministic flags via project settings; the recorded `floatModelHash` uses the §4.8.3 Required Stage-0 flag values; the §4.8.2 runtime MXCSR check stays a Stage-1+/host task). Paired with the §4.8.3 v1.1 amendment.
 - **v1.0 (May 4, 2026):** Pass 4 / Pass 5 critique resolution. (a) Pass 4 C-2: `T-DS-ENV-010` defined in §5.3 + §5.11.7-equivalent fault-injection card; FR-DS-013 traceability now points at a real card. (b) Pass 4 C-3b: T-DS-FAULT-010..014 added covering the orphaned error codes (`ERR_DS_REPLAY_BOUNDARY`, `ERR_DS_TIERB_NONFINITE`, `ERR_DS_RNG_BUDGET_MISMATCH`, `ERR_DS_STORAGE_ATOMICITY`, and the new `ERR_DS_ENV_MUTATION`). §5.2 grew an error-code → fault-injection traceability block to bind §9.5 #2. (c) Pass 4 M-1: §5.5.2 `Save-tick seed` formula corrected — SipHash key argument is `(k0, k1) = matchSeedKey` (128-bit, HKDF-derived per §3.2.4), not raw variable-length `matchSeed`; `"T-DS-REPLAY-004"` is fed as raw ASCII bytes per the §3.2.4 HKDF-`info` rule.
 - **v0.9 (May 3, 2026):** Third-pass critique fixes. (a) L-M: §5.5.1 added — concrete MSVC and Clang flag strings, MXCSR runtime setup, IL2CPP propagation requirements; replaces the prior prose "deterministic flags" cell. (b) M-E: §5.5.2 added — normative save/load equivalence sample protocol (≥12 scenarios × ≥50 save ticks/scenario × ≥600 ticks replay; SipHash-derived save-tick seed; deterministic pass criterion, not statistical). T-DS-REPLAY-004 and T-DS-SAVE-005 are now bound to a falsifiable protocol.
 - **v0.7 (May 2, 2026):** Stage 0 host platform pinned (Windows x64, Unity 2022 LTS); FR-DS-009-GATE split by stage with explicit "Stage 0 cross-platform NOT a gate" note. Digest rollup ordering bound to canonical (tick, phaseOrdinal) sort.
