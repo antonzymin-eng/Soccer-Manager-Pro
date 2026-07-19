@@ -13,6 +13,7 @@
 // Modified: 2026-07-14 (match-flow completion: throw-in/corner/goal-kick restarts, fouls/cards, offside, substitutions, half-time ends-swap, full-time freeze; SNAPSHOT_SCHEMA_VERSION 14 → 15 — see docs/tracking/match-flow-completion-design.md)
 // Modified: 2026-07-15 (interactive match view: observation-surface extension — HomeScore/AwayScore/MatchEnded; no schema change; see docs/tracking/interactive-match-view-design.md)
 // Modified: 2026-07-17 (#27 T1/T2: attribute seeding sourced from canonical player records via PlayerAttributeProjection + ConfigureSquads; default path byte-identical, no schema change — see docs/tracking/player-attribute-projection-design.md)
+// Modified: 2026-07-18 (#27 T3: per-team roster reference (_rosterClubId) serialized at SNAPSHOT_SCHEMA_VERSION 15 → 16; a configured squad is digest-distinguishable from unconfigured by design — see docs/tracking/squad-roster-reference-design.md)
 // Modified: 2026-07-17 (#27 T1 AR-4, doc-only — three stale "Stage-0 neutral placeholder" comments aligned to the T1 canonical-projection sourcing)
 // Modified: 2026-07-16 (match-flow AR-7 fix pass: substitution yellow-card reset (M-1) + post-full-time SubstitutePlayer refusal (L-2) + last-holder-vs-last-toucher approximation documented at the restart seam (L-1))
 // Modified: 2026-07-16 (AR-8 M-1, later same day: sent-off agents excluded from first-touch reception — the one participation surface missing the exclusion; a red-carded agent could receive the ball and deadlock possession)
@@ -236,6 +237,17 @@ namespace TacticalDirector.MatchEngine
         // config — same B3 exclusion proof as _attrs/_perfs — so it is NOT serialized.
         private readonly int[] _activeBenchSlot;    // [SQUAD_SIZE], -1 = original starter
         private readonly int[] _substitutionsUsed;  // [TEAM_COUNT]
+
+        // #27 T3 (squad-roster-reference-design.md): per-team roster reference — the ClubId of the
+        // Squad ConfigureSquads loaded for the team, or NO_ROSTER_CLUB_ID (-1) when no squad was
+        // configured. Boot-constant identity (the same lifecycle as _teamIds — set at boot, never
+        // mutated mid-match), serialized at v16 so a save records WHICH squad each team loaded; a
+        // future restore path re-projects the per-slot attribute records (excluded by the
+        // boot-deterministic proof) from the referenced roster, keyed by the serialized
+        // _activeBenchSlot for substitution bench-swaps (KD-T3-3 — the re-projection itself is future
+        // work; no snapshot-deserialize path exists yet, so building the consumer now would be a
+        // phantom). A real ClubId is deliberately digest-distinguishable from the sentinel (KD-T3-2).
+        private readonly int[] _rosterClubId;       // [TEAM_COUNT]
 
         // Pending substitution-event queue (design note §6, AR-5 finding): SubstitutePlayer is a
         // public API a caller may invoke BETWEEN ticks, when EventBus.CurrentPhase is the post-
@@ -521,6 +533,12 @@ namespace TacticalDirector.MatchEngine
                 _activeBenchSlot[i] = -1;
             }
             _substitutionsUsed = new int[MatchEngineConstants.TEAM_COUNT];
+            // #27 T3: no squad configured yet — both teams reference the sentinel until ConfigureSquads.
+            _rosterClubId = new int[MatchEngineConstants.TEAM_COUNT];
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _rosterClubId[t] = MatchEngineConstants.NO_ROSTER_CLUB_ID;
+            }
             int maxPendingSubs = MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM * MatchEngineConstants.TEAM_COUNT;
             _pendingSubOutgoing = new int[maxPendingSubs];
             _pendingSubIncoming = new int[maxPendingSubs];
@@ -861,7 +879,8 @@ namespace TacticalDirector.MatchEngine
             // surfaces (Pass/Shot builders, snapshot fills, FirstTouchContext) read _canonicalAttrs
             // live and need no re-seed. TeamId is slot identity (unchanged); IsHalfTurned is runtime
             // stance, preserved. Restore scope: _canonicalAttrs is not serialized — a distinct-squad
-            // substitution is reconstructible only via the T3 roster reference (KD-P10).
+            // substitution's bench record is reconstructible from the v16 roster reference (#27 T3)
+            // + the serialized _activeBenchSlot, once a snapshot-deserialize path exists (KD-P10/KD-T3-3).
             _canonicalAttrs[outSlotIndex] = _benchCanonicalAttrs[teamId][benchIndex];
             _dtAttrs[outSlotIndex] = PlayerAttributeProjection.ToDecisionTree(
                 in _canonicalAttrs[outSlotIndex], teamId);
@@ -925,10 +944,13 @@ namespace TacticalDirector.MatchEngine
         /// <c>[1,20]</c> (WeakFootRating <c>[1,5]</c>) — the FR-TP-014-style gate at the consuming
         /// seam, since <see cref="TacticalDirector.PlayerDatabase.Squad"/> accepts hand-built
         /// records; or a call after the first tick (a mid-match attribute swap is neither
-        /// stride-aligned nor restore-coherent). RESTORE SCOPE (KD-P10): the canonical records are
-        /// NOT serialized — a distinct-squad match is not restore-deterministic until the T3
-        /// snapshot roster reference lands; no restore path exists today, so the limitation is
-        /// documentation, not a silent divergence vector.
+        /// stride-aligned nor restore-coherent). RESTORE SCOPE (KD-P10 / #27 T3): the canonical
+        /// attribute records are NOT serialized (re-derivable from the roster), but since T3 the
+        /// per-team roster REFERENCE (each squad's <c>ClubId</c>) IS serialized (v16), so a save now
+        /// records which squad each team loaded. Full distinct-squad restore still needs a
+        /// snapshot-deserialize path to re-project the records from the referenced roster (keyed by
+        /// the serialized <c>_activeBenchSlot</c> for substitutions) — none exists in the engine yet
+        /// (KD-T3-3), so this remains a fidelity deliverable, not a silent divergence vector.
         /// </summary>
         /// <param name="homeSquad">Club squad for team 0 (home).</param>
         /// <param name="awaySquad">Club squad for team 1 (away).</param>
@@ -957,6 +979,11 @@ namespace TacticalDirector.MatchEngine
             ValidateSquad(1, awaySquad);
             ApplySquad(0, homeSquad);
             ApplySquad(1, awaySquad);
+            // #27 T3: record which roster each team loaded (the identity half of restore fidelity),
+            // set only after both squads validated-and-applied so a refused call leaves the reference
+            // at the sentinel (validate-before-write, matching the AR-1 M-1 both-squads rule above).
+            _rosterClubId[0] = homeSquad.ClubId;
+            _rosterClubId[1] = awaySquad.ClubId;
         }
 
         /// <summary>Fail-loud gates on one squad's size + every consumed record (see <see cref="ConfigureSquads"/>).</summary>
@@ -1130,6 +1157,10 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Test-only: a team's substitutions-used count (design note §6; v15).</summary>
         internal int TestOnly_SubstitutionsUsed(int teamId) => _substitutionsUsed[teamId];
+
+        /// <summary>Test-only: a team's roster reference — the configured <c>Squad.ClubId</c>, or
+        /// <see cref="MatchEngineConstants.NO_ROSTER_CLUB_ID"/> if no squad was configured (#27 T3; v16).</summary>
+        internal int TestOnly_RosterClubId(int teamId) => _rosterClubId[teamId];
 
         /// <summary>Test-only: the half-time-fired flag (design note §7; v15).</summary>
         internal bool TestOnly_SecondHalfStarted => _secondHalfStarted;
@@ -3053,10 +3084,14 @@ namespace TacticalDirector.MatchEngine
             // copy, itself a pure function of the boot-configured bench records + the serialized
             // _activeBenchSlot) — so a default-path save/restore reconstructs them identically at
             // boot and their omission cannot diverge replay. DISTINCT-SQUAD SCOPE (projection
-            // design KD-P10): a match booted through ConfigureSquads with non-neutral records is
-            // NOT restore-deterministic — a fresh process has no Squad to re-project from; that
-            // fidelity is the T3 snapshot roster-reference deliverable (a roster id in the header
-            // + restore-time re-projection keyed by _activeBenchSlot), deliberately out of T1. The
+            // design KD-P10 / #27 T3): the attribute VALUES stay excluded (re-projectable from the
+            // roster), but since T3 the per-team roster REFERENCE (each Squad's ClubId) IS serialized
+            // below (v16) — the identity half of restore fidelity, so a save records which squad each
+            // team loaded. Full distinct-squad restore still needs a snapshot-deserialize path to
+            // re-project the records from the referenced roster (keyed by _activeBenchSlot for
+            // substitution bench-swaps); none exists in the engine yet (KD-T3-3), so building the
+            // re-projection consumer now would be a phantom. The reference is captured; the restore
+            // that would consume it is future work, unblocked on the data side. The
             // Phase-A observation counters (_aiPhaseRanThisTick/_aiPhaseRunCount) are likewise
             // excluded — instrumentation derivable from the tick number, not gameplay state.
             // PHASE-D FLAG: the AI phase still does NOT write per-agent form/fatigue context into
@@ -3265,6 +3300,20 @@ namespace TacticalDirector.MatchEngine
             }
             CanonicalSerializer.WriteBool(buf, ref o, _secondHalfStarted);
             CanonicalSerializer.WriteBool(buf, ref o, _matchEnded);
+
+            // v16 (#27 T3 — squad-roster-reference-design.md) — the per-team roster reference: the
+            // ClubId of the Squad ConfigureSquads loaded, or NO_ROSTER_CLUB_ID (−1) when unconfigured.
+            // Boot-constant identity (the same class as _teamIds/_isGoalkeeper above), captured so a
+            // save records WHICH squad each team loaded — the identity half of distinct-squad restore
+            // fidelity (the attribute VALUES stay excluded above, re-projectable from the roster). A
+            // real ClubId is deliberately digest-distinguishable from the sentinel (KD-T3-2): a
+            // configured all-neutral squad still moves agents identically to an unconfigured match, so
+            // this field is the sole digest difference — the reference does its job even when the
+            // behaviour is neutral.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                CanonicalSerializer.WriteI32(buf, ref o, _rosterClubId[t]);
+            }
 
             payload.BytesWritten = o;
         }
@@ -4520,4 +4569,19 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | ("neutral normalised placeholder"), and the BuildFirstTouch-     |
 // |         |            |        | Context summary ("neutral placeholders — ERR-007") — aligned to  |
 // |         |            |        | the canonical-projection sourcing. No code change.               |
+// | 1.39    | 2026-07-18 | —      | #27 T3 (squad-roster-reference-design.md): per-team roster       |
+// |         |            |        | reference (_rosterClubId[TEAM_COUNT], the loaded Squad.ClubId or |
+// |         |            |        | NO_ROSTER_CLUB_ID) — boot-constant identity set by ConfigureSquads|
+// |         |            |        | after validate-and-apply, serialized at SNAPSHOT_SCHEMA_VERSION  |
+// |         |            |        | 15 → 16. A save now records which squad each team loaded (the    |
+// |         |            |        | identity half of distinct-squad restore fidelity; the attribute |
+// |         |            |        | VALUES stay excluded, re-projectable from the roster). KD-T3-2:  |
+// |         |            |        | a configured squad is digest-distinguishable from unconfigured   |
+// |         |            |        | by design (the reference is identity, not attributes) —          |
+// |         |            |        | supersedes the T1 KD-P7 all-default byte-identity lock; behaviour|
+// |         |            |        | stays neutral (a config-default squad moves agents identically,  |
+// |         |            |        | the roster field is the sole digest difference). KD-T3-3: the    |
+// |         |            |        | restore re-projection is future (no snapshot-deserialize path    |
+// |         |            |        | exists). +TestOnly_RosterClubId seam; exclusion-proof + Configure|
+// |         |            |        | Squads/substitution restore-scope docs updated.                 |
 #endregion

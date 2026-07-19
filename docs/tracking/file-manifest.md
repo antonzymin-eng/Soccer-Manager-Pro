@@ -1,7 +1,21 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 17, 2026, latest same day (**T1/T2 repeat adversarial review (AR-4 + AR-5 sweep):
+**Last Updated:** July 18, 2026 (**Squad/Player Data Layer #27 T3 landed** — the snapshot roster-reference
+field. **New file:** `docs/tracking/squad-roster-reference-design.md` v0.2 (T3 design supplement, AR-1..AR-2
+CONVERGED). **Modified:** `src/match-engine/MatchEngine.cs` v1.39 (per-team `_rosterClubId[TEAM_COUNT]` —
+the loaded `Squad.ClubId` or `NO_ROSTER_CLUB_ID`; set by `ConfigureSquads` after validate-and-apply;
+serialized at v16; `TestOnly_RosterClubId` seam; exclusion-proof + restore-scope docs updated),
+`src/match-engine/MatchEngineConstants.cs` v1.23 (`[FIXED] NO_ROSTER_CLUB_ID = -1`; **`SNAPSHOT_SCHEMA_VERSION`
+15 → 16** + v16 doc paragraph), `src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs` v1.13 (pin
+15 → 16 + `RosterReference_FeedsSnapshotDigest` probe), `src/match-engine/tests/MatchEngineSquadTests.cs`
+v1.2 (T1 neutrality lock superseded by the KD-T3-2 identity-capture / same-config-determinism /
+distinct-ClubId / sentinel-seam locks; post-landing code AR 0H+0M+1L added
+`ConfiguredDefaultSquad_IsBehaviourNeutral_ObservableStateMatchesUnconfigured`), `docs/tracking/
+squad-roster-reference-design.md` v0.3 (code-AR round), `docs/tracking/squad-player-data-design.md`
+v0.6 + `docs/tracking/player-attribute-projection-design.md` (T3-landed notes), root + src `CLAUDE.md`.
+Full dotnet gate re-run: PASSED, 0 failures (237 match-engine tests).)
+**Last Updated (prior):** July 17, 2026, latest same day (**T1/T2 repeat adversarial review (AR-4 + AR-5 sweep):
 1M+4L, all doc-only, all fixed — CONVERGENCE, cycle closed. No new files, modified only:**
 `src/attacking-ai/AttackingAgentSnapshot.cs` v1.1 (M-1 — Pace/Dribbling docs aligned to the live
 KD-P3 ÷ATTRIBUTE_MAX convention the T1 writer actually supplies; the (raw−1)/19 math switch stays a

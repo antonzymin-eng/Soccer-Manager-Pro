@@ -1,7 +1,30 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 17, 2026, latest same day (v2.25 — **Repeat adversarial review of the T1/T2
+> **Last Updated:** July 18, 2026 (v2.26 — **Squad/Player Data Layer #27 T3 landed** — the snapshot
+> roster-reference field, per the converged `docs/tracking/squad-roster-reference-design.md` (v0.2,
+> AR-1..AR-2). New per-team `MatchEngine._rosterClubId[TEAM_COUNT]` (the loaded `Squad.ClubId`, or
+> `[FIXED] NO_ROSTER_CLUB_ID = -1`; `MatchEngineConstants.cs` v1.23), set by `ConfigureSquads` after
+> both squads validate-and-apply, serialized at **`SNAPSHOT_SCHEMA_VERSION` 15 → 16** (`MatchEngine.cs`
+> v1.39). Boot-constant identity (the `_teamIds`/`_isGoalkeeper` class — non-phantom despite no restore
+> consumer): a save records which squad each team loaded (the identity half of restore fidelity); the
+> per-slot attribute VALUES stay excluded, re-projectable from the roster keyed by the serialized
+> `_activeBenchSlot`. KD-T3-2: a configured squad is digest-distinguishable from unconfigured by design
+> (identity, not attributes) — supersedes the T1 KD-P7 all-default byte-identity lock; behaviour stays
+> neutral (a config-default run diverges from unconfigured at tick 1 = the roster field alone). KD-T3-3:
+> the restore re-projection is future (no snapshot-deserialize path exists in `MatchEngine.cs` —
+> verified). New `TestOnly_RosterClubId` seam; exclusion-proof + `ConfigureSquads`/substitution
+> restore-scope docs updated. Tests: `MatchEngineSnapshotSchemaTests` v1.13 (pin 15 → 16 +
+> `RosterReference_FeedsSnapshotDigest` probe), `MatchEngineSquadTests` v1.2 (T1 neutrality lock
+> replaced with KD-T3-2 identity-capture + same-config-determinism + distinct-ClubId + sentinel-seam
+> locks). **Post-landing code AR (fresh-eyes over the shipped diff): 0H+0M+1L — replacing the T1
+> byte-identity lock dropped the direct match-level proof that a config-default match is BEHAVIOURALLY
+> identical to unconfigured; added `ConfiguredDefaultSquad_IsBehaviourNeutral_ObservableStateMatches-
+> Unconfigured` (ball + every agent position match tick-for-tick — the observable signal a digest can
+> no longer isolate from the roster field). Re-verified: field appended last, no payload-offset
+> decoder exists.** **Full dotnet gate re-run locally (SDK via apt after `apt-get update`): PASSED, 0
+> failures (237 match-engine tests).** See the root `CLAUDE.md` July-18 Last-Updated header entry.)
+> **Last Updated (prior):** July 17, 2026, latest same day (v2.25 — **Repeat adversarial review of the T1/T2
 > landing (AR-4): 1 M + 3 L, all doc-only, fixed; AR-5 sweep 0H+0M+1L (doc) — CONVERGENCE, cycle
 > CLOSED.** Full-surface re-walk verified clean: writer completeness of every projected array,
 > the 3-site FirstTouchAbility inventory, no Perception-side `_perceptionAttrs` mutation, DT's

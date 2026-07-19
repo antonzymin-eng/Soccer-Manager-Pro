@@ -199,7 +199,16 @@ Listed for sequencing only; none of this is implemented here:
 - **T2** — per-spec projections (`BuildPassAttributes`, `BuildShotAttributes`, `_dtAttrs`, GK
   attrs) read real `Crossing`/`KickPower`(derived)/`WeakFootRating`/etc. from the canonical record
   instead of `STAGE0_NEUTRAL_ATTRIBUTE` — closes `ERR-007` for real.
-- **T3** — snapshot header roster-reference field for save/restore fidelity (KD-7).
+- **T3** — snapshot header roster-reference field for save/restore fidelity (KD-7). **LANDED
+  July 18, 2026** (`docs/tracking/squad-roster-reference-design.md`): a per-team `_rosterClubId`
+  (the loaded `Squad.ClubId`, sentinel `NO_ROSTER_CLUB_ID = -1`) serialized at
+  `SNAPSHOT_SCHEMA_VERSION` 15 → 16 — a save now records which squad each team loaded, so a future
+  restore path can re-project the (still-excluded, re-derivable) per-slot attribute records keyed by
+  the serialized `_activeBenchSlot`. Per KD-T3-2 a configured squad is digest-distinguishable from an
+  unconfigured one by design (the reference is identity, not attributes; behaviour stays neutral, so
+  the roster field is the sole digest difference). The restore re-projection itself stays future work
+  (KD-T3-3 — the match engine has no snapshot-deserialize path yet; building the consumer now would
+  be a phantom).
 - **Stage-1+** — on-disk save-format squad persistence, transfer market, aging/training (master
   plan §4.3/§4.4, explicitly out of scope per §0).
 
@@ -254,3 +263,4 @@ test fails immediately and deterministically rather than probabilistically. No f
 | 0.3 | 2026-07-15 | AR-2: position-bias table test strategy (direct constant assertions, not statistical). Converged. |
 | 0.4 | 2026-07-15 | Implementation-time corrections (T0 code review, not a design-stage AR round — caught while writing `RosterGenerator`/tests): (1) `PlayerRecord.Position` had no generation input at all in v0.3 — `FIELDS_PER_PLAYER` undercounted by one draw (35 → 36; `IDENTITY_DRAWS_PER_PLAYER` 4 → 5). (2) `WeakFootRating`'s jitter reused `ATTRIBUTE_SPREAD` (±4) against its own much narrower [1,5] range, clamping most draws to the boundary instead of spreading around `WeakFootBase`; given its own `WeakFootSpread`=2 (exactly spans [1,5], no clamp). (3) `SquadFileLoader`'s identity default computed `PlayerId` from the raw section-local index instead of the club-scoped `clubId * CLUB_SQUAD_SIZE + localIndex` formula RosterGenerator uses (KD-3) — caught by a round-trip test that would have failed against the bug. All three fixed in code before this pass's own review closed. |
 | 0.5 | 2026-07-17 | T1/T2 LANDED (see `player-attribute-projection-design.md` + `MatchEngine.cs` v1.37): §3's reserved-list row corrected per projection-design KD-P9 — `FirstTouchAbility` is consumed by three live `MatchEngine` sites, not reserved. §4's T1/T2 rows are now implemented (`PlayerAttributeProjection` + `ConfigureSquads`); T3 (snapshot roster reference) and Stage-1+ remain open. |
+| 0.6 | 2026-07-18 | T3 LANDED (see `squad-roster-reference-design.md` + `MatchEngine.cs` v1.39): §4's T3 row implemented — per-team roster reference (`_rosterClubId`, `Squad.ClubId`) serialized at `SNAPSHOT_SCHEMA_VERSION` 16; a save records which squad each team loaded (the identity half of restore fidelity), configured ≠ unconfigured by design (KD-T3-2). The restore re-projection stays future (no deserialize path). Stage-1+ (on-disk persistence / transfers / aging) + lineup selection (Plan-3) remain open. |

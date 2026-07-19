@@ -1,7 +1,45 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 17, 2026, latest same day (**Repeat adversarial review of the T1/T2 landing
+> **Last Updated:** July 18, 2026 (**Squad/Player Data Layer #27 T3 LANDED** — the snapshot roster-reference
+> field for distinct-squad save/restore fidelity, per the new converged
+> `docs/tracking/squad-roster-reference-design.md` (v0.2, AR-1..AR-2 CONVERGED). New per-team
+> `MatchEngine._rosterClubId[TEAM_COUNT]` (the loaded `Squad.ClubId`, or `[FIXED] NO_ROSTER_CLUB_ID = -1`
+> when no squad is configured), set by `ConfigureSquads` **after** both squads validate-and-apply (so a
+> refused call leaves the sentinel), serialized at **`SNAPSHOT_SCHEMA_VERSION` 15 → 16** (`MatchEngine.cs`
+> v1.39 / `MatchEngineConstants.cs` v1.23). Boot-constant identity — the same lifecycle class as the
+> already-serialized `_teamIds`/`_isGoalkeeper`, which is what makes it non-phantom despite no restore
+> consumer: a save now records **which squad each team loaded** — the identity half of restore fidelity;
+> the per-slot attribute VALUES stay excluded (re-projectable from the roster, keyed by the serialized
+> `_activeBenchSlot` for substitution bench-swaps). **KD-T3-2 design decision:** a configured squad —
+> even all-`CreateDefault` — is now digest-distinguishable from an unconfigured one **by design** (the
+> reference is identity, not attributes: club 7 all-neutral ≠ frozen neutral, because club 7 is a
+> persistent roster to reload on restore). This **supersedes** the T1 KD-P7 all-default byte-identity
+> lock (a T1-only property — T1 added no serialized field); behavioural neutrality still holds and is
+> re-locked as "a config-default run diverges from unconfigured **at tick 1**, before any behavioural
+> divergence could exist, so the roster field is the sole difference." A non-digest "header" alternative
+> was rejected (KD-T3-4 — the match engine has no save/restore surface distinct from the digest payload,
+> so a header field would be a zero-consumer phantom that also would not do the job; the payload is the
+> project's established boot-constant-identity surface). **KD-T3-3:** the restore re-projection itself is
+> future work — the match engine has **no snapshot-deserialize path** (verified: no `Read`/`Deserialize`
+> in `MatchEngine.cs`), so building the consumer now would be a phantom; T3 lands the reference and
+> unblocks that work on the data side. New `TestOnly_RosterClubId` seam; exclusion-proof +
+> `ConfigureSquads`/substitution restore-scope docs updated. Tests: `MatchEngineSnapshotSchemaTests` v1.13
+> (pin 15 → 16 + `RosterReference_FeedsSnapshotDigest` single-field probe), `MatchEngineSquadTests`
+> v1.2 (T1 neutrality lock replaced with the KD-T3-2 identity-capture / same-config-determinism /
+> distinct-ClubId / sentinel-seam locks). **Post-landing code AR (fresh-eyes over the shipped diff):
+> 0H+0M+1L — L: replacing the T1 byte-identity lock dropped the direct match-level proof that a
+> config-default match is *behaviourally* identical to unconfigured (the new tests prove the roster
+> field feeds the digest, not that the divergence is non-behavioural); fixed by adding
+> `ConfiguredDefaultSquad_IsBehaviourNeutral_ObservableStateMatchesUnconfigured` (ball + every agent
+> position match tick-for-tick — the observable level a digest can no longer isolate). Re-verified
+> clean: field appended last (no offset move), no snapshot decoder reads the payload by offset (only
+> the opaque digest), CROSS-TICK-COVERAGE excluded-set claim survives.** **Full dotnet gate re-run:
+> PASSED, 0 failures (237 match-engine tests).** See src/CLAUDE.md v2.26. **Remaining #27:** lineup selection proper (Plan-3 —
+> the Stage-0 mapping is roster-order), the per-spec GK (#11)/Heading (#10) projections (deferred until
+> those specs are engine-wired, KD-P8), the distinct-squad restore re-projection (gated on a
+> snapshot-deserialize path existing), and on-disk persistence / transfers / aging (Stage 1+).)
+> **Last Updated (prior):** July 17, 2026, latest same day (**Repeat adversarial review of the T1/T2 landing
 > (AR-4 of its cycle, run at the user's request) — 1 M + 3 L, all doc-only, all fixed; then AR-5
 > sweep 0H+0M+1L (doc) — CONVERGENCE, cycle CLOSED** per the L-only-round convention. The pass
 > re-walked the full touched surface against source: writer-completeness sweep of every projected
