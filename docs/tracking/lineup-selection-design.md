@@ -1,8 +1,8 @@
 # Lineup Selection (Plan-3) — Design Supplement
 
 > **Created:** July 19, 2026
-> **Status:** DESIGN SUPPLEMENT (pre-implementation — no code yet; self-adversarial-reviewed to
-> convergence below). Extends the Squad/Player Data Layer (candidate spec **#27**,
+> **Status:** **LANDED** July 19, 2026 (design converged AR-1/AR-2 below; implemented + code-reviewed —
+> see §5). Extends the Squad/Player Data Layer (candidate spec **#27**,
 > `docs/tracking/squad-player-data-design.md`) — it does not open a new candidate number.
 > **Purpose:** Replace the Stage-0 **roster-order** lineup mapping in `MatchEngine.ConfigureSquads`
 > (player `k` → on-pitch slot `k`; caller must pre-order so player 0 is the GK) with a **proper
@@ -157,7 +157,43 @@ correctly gated on the absent snapshot-deserialize path and is not touched here.
 
 ---
 
+## 5. Implementation (landed July 19, 2026)
+
+New `src/match-engine/LineupSelector.cs` (`internal static LineupSelector.Select(Squad, FormationFamily)
+→ LineupPlan`; `LineupPlan` = `int[11] StarterLocalIndices` + `int[7] BenchLocalIndices` +
+`bool[11] StarterIsGoalkeeper` + `bool[7] BenchIsGoalkeeper`), exactly per §2/§3: KD-L1 `DefaultLine →
+PlayerPosition` bridge lives here, KD-L2 per-line greedy by `MeanAttribute` (31-field average) with
+`PlayerId` tie-break (no RNG), KD-L3 fail-loud on a short starter line + best-remaining bench.
+`MatchEngine.ConfigureSquads` now runs **size-gate (both) → `Select` (both) → bounds-gate the SELECTED
+records (both) → apply (both) → set roster refs** — every fail-loud step precedes any write (the T1
+AR-1 M-1 validate-before-write rule, preserved); `ApplySquad` indexes through the plan and writes
+`_isGoalkeeper` / `_benchIsGoalkeeper` from it (KD-L4). **No `SNAPSHOT_SCHEMA_VERSION` bump** — selection
+changes *which* boot-constant records seed each slot + the GK flags, not the serialized surface.
+New `LineupSelectorTests` (11 locks: line greedy + `PlayerId` tie-break, KD-L1 mapping across
+F442/F433/F4231, short-line fail-loud, best-remaining bench + bench-GK flag, KD-L5 roster-order
+reproduction, mean rating, determinism).
+
+**Code self-review (0 H · 0 M · 2 findings folded in during authoring):**
+- **F1 (compile) — named-then-positional argument in the starter `FindBest` call** (`matchPosition:
+  true, required`) is illegal C# (a positional arg cannot follow a named one out of order); made both
+  trailing args named. Caught before landing.
+- **F2 (test-fixture impact, real) — proper selection is not roster-order, so every existing
+  `ConfigureSquads` test that fed an all-`CreateDefault` squad (all `Midfielder`, no goalkeeper) now
+  fails at selection (KD-L3), not silently maps index→slot.** Fixed by making the test squads
+  **position-coherent** (`MatchEngineSquadTests` `PosFor`/`CoherentPlayers`, `MatchEngineSnapshotSchemaTests`
+  `NeutralSquad`): a coherent all-neutral squad reproduces roster order (KD-L5), so the T1/T3
+  behaviour-neutrality + roster-reference digest locks still hold (config-default is boot-identical
+  except the roster reference). Three affected T1 tests re-anchored to the new mapping: the distinct
+  defender now lands on its line's first slot (pitch slot 1, not roster slot 2); the substitution lock
+  forces the distinct record onto the bench via two stronger starter forwards (a high-rated player
+  *starts* under proper selection, so this is the correct way to bench a recognizable record); the
+  fail-loud attribute/weak-foot gates use coherent squads so the *bounds* gate fires, not the position
+  gate. Added `MisOrderedSquad_SelectsGoalkeeperForGkSlot_NotIndexZero` (KD-L4).
+
+`dotnet` gate not runnable in this environment (no SDK) — verified by manual review; CI runs on push.
+
 ## Version History
 | Version | Date | Notes |
 |---|---|---|
 | 0.1 | 2026-07-19 | Initial draft + AR-1 (2 M + 1 L, folded in) + AR-2 (clean, CONVERGED). Opens lineup selection (Plan-3) under #27; scopes Stage-1 persistence/transfers/aging and the §4.8.2-MXCSR + replay-re-projection pair as future pieces gated on a snapshot-deserialize path. |
+| 1.0 | 2026-07-19 | **LANDED** — §5 implementation: `LineupSelector`/`LineupPlan` + `ConfigureSquads`/`ApplySquad` wiring + `LineupSelectorTests`; test squads made position-coherent (code self-review F1/F2). No schema bump. |
