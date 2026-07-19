@@ -980,6 +980,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `docs/tracking/file-manifest.md` | This manifest |
 | `docs/tracking/advanced-positional-behaviors-design.md` | Design supplement (v0.4, Jul 8, 2026 — PROMOTED) — dismarking, scripted build-up structures, positional rotations; promoted to specs #23–#25 (`dismarking-ai/`, `build-up-structures/`, `positional-rotations/`, all APPROVED Jul 10, 2026); superseded by the specs on deviation |
 | `docs/tracking/game-model-ai-manager-design.md` | Design supplement (v0.5, Jul 8, 2026 — PROMOTED) — tactical preset library + AI-manager selection/adaptation; promoted to spec #26 (`tactical-presets/`, APPROVED Jul 10, 2026); superseded by the spec on deviation |
+| `docs/tracking/env-fingerprint-float-model-hash-mono-mapping.md` | Proposal (v0.1, Jul 19, 2026 — AWAITING SIGN-OFF) — resolves the #16 §4.8.3 `floatModelHash` tuple vs. the Stage-0 Mono pin (ERR-016-006); options A/B/C + owner sign-off block. §4.8.3 spec edit + live-host hasher land only after sign-off |
 | `docs/tracking/stress-test-strategy.md` | Tier A/B/C spec stress-test probe strategy (v1.0, May 18, 2026) |
 | `docs/tracking/stress-reports/INDEX.md` | Index of all stress-test run reports |
 | `docs/tracking/stress-reports/2026-05-18-tier-a-run-1.md` | Tier A Run 1 report (May 18, 2026) — 3 FAIL, 2 WARN; all 3 FAILs resolved before Run 2 |

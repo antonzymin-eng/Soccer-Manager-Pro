@@ -352,16 +352,43 @@ namespace TacticalDirector.DeterministicSim
         {
             var recorded = EnvironmentFingerprint.CreateStage0Dev();
             var live = new EnvironmentFingerprint(
-                workerCount:               2, // differs
+                workerCount:               2, // differs — the only field that should differ from CreateStage0Dev
                 schedulerPolicy:           "Stage0-SingleThread-v1",
                 reductionTopology:         "Serial",
-                simdFeatureLevel:          "SSE2",
-                floatModelHash:            "STAGE0_DEV_PLACEHOLDER",
+                simdFeatureLevel:          "SSE4.2",
+                floatModelHash:            EnvironmentFingerprint.FloatModelHashDevPlaceholder,
                 unicodeNormalizationVersion: DeterministicSimConstants.UNICODE_NFC_VERSION);
 
             ushort err = recorded.ValidateAgainst(live);
             Assert.AreEqual(DeterministicSimConstants.ERR_DS_REPLAY_ENV_MISMATCH, err,
                 "T-DS-FAULT-013: workerCount mismatch must return ERR_DS_REPLAY_ENV_MISMATCH");
+        }
+
+        /// <summary>
+        /// ERR-016-006: the Stage-0 dev fingerprint is flagged as a placeholder (its floatModelHash is
+        /// the sentinel, not a real §4.8.3 hash) and its simdFeatureLevel matches the pinned SSE4.2
+        /// baseline (was "SSE2", which matched no pin). A genuine (non-placeholder) fingerprint reports
+        /// IsDevPlaceholder == false.
+        /// </summary>
+        [Test]
+        public void EnvironmentFingerprint_Stage0Dev_IsPlaceholder_AndMatchesPinnedSimdLevel()
+        {
+            var dev = EnvironmentFingerprint.CreateStage0Dev();
+            Assert.IsTrue(dev.IsDevPlaceholder,
+                "ERR-016-006: CreateStage0Dev must be flagged as a non-certification placeholder");
+            Assert.AreEqual(EnvironmentFingerprint.FloatModelHashDevPlaceholder, dev.FloatModelHash);
+            Assert.AreEqual("SSE4.2", dev.SimdFeatureLevel,
+                "ERR-016-006: the dev fingerprint's SIMD level must match the pinned SSE4.2 baseline");
+
+            var genuine = new EnvironmentFingerprint(
+                workerCount:               1,
+                schedulerPolicy:           "Stage0-SingleThread-v1",
+                reductionTopology:         "Serial",
+                simdFeatureLevel:          "SSE4.2",
+                floatModelHash:            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                unicodeNormalizationVersion: DeterministicSimConstants.UNICODE_NFC_VERSION);
+            Assert.IsFalse(genuine.IsDevPlaceholder,
+                "ERR-016-006: a fingerprint carrying a real hash must not report IsDevPlaceholder");
         }
 
         /// <summary>
