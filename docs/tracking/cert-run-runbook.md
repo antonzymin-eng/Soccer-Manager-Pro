@@ -12,10 +12,27 @@ corpus machinery, and the Match Engine Phase-F capstone scenario.
 
 ---
 
-## Status: BLOCKED (prep complete)
+## Status: FR-PO-052 PERF BASELINE CERTIFIED (2026-07-19); platform-determinism cert still blocked
 
-This runbook is **ready to execute** but the run itself is blocked on two hard
-prerequisites that do not exist in the current tree:
+**Update (2026-07-19):** the **FR-PO-052 per-tick perf baseline** half of this run is DONE. A
+100-run capture executed on the pinned Windows 11 / Unity 6000.4.9f1 / Mono host
+(p50=0.4768 / p99=2.5669 ms/tick) and was promoted PENDING → CERTIFIED:
+`docs/specs/performance-optimization/baselines/match-engine/kickoff-multi-second.cert.md` v1.2 +
+`CertifiedPerfBaselineTests.KickoffCertified()`. The `floatModelHash` prerequisite that previously
+blocked promotion was cleared by ERR-016-006 Option A (`CreateStage0MonoCertified`, host-supplied
+Mono version `mono-bundled-unity6000.4.9f1`). Platform Certification owner sign-off is recorded via
+the PR merge. **Note on Step 3.3:** the certified baseline's live-measurement +5% comparison runs on
+the pinned host only — a Linux measurement vs a Windows-certified number is apples-to-oranges, so the
+non-certifying Linux capstone gate (`MatchEngineCapstoneTests`) keeps its generous Stage-0 anchor
+(unchanged); the certified record's FR-PO-031 usability is proven by the self-compare in
+`CertifiedPerfBaselineTests`.
+
+**Still blocked** (the broader platform-determinism certification, distinct from the perf baseline):
+the §4.8.2 runtime MXCSR validation (native interop, unbuilt) and the determinism-KAT run on the
+pinned host — `certification-platform.md` stays `⏳ RECERT REQUIRED`.
+
+The original prerequisites P1/P2 below cleared for the perf capture; they still gate the
+determinism-cert run:
 
 | # | Prerequisite | Why it blocks | Tracked in |
 |---|--------------|---------------|------------|

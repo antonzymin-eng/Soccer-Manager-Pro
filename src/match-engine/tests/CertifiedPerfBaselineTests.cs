@@ -1,15 +1,15 @@
 // File:     src/match-engine/tests/CertifiedPerfBaselineTests.cs
 // Created:  2026-06-28
+// Modified: 2026-07-19
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.4.4 / §4.3.2 / FR-PO-031 / FR-PO-052,
 //           certification-platform.md (Stage 0 host pin), Testing Strategy & Framework #19,
-//           Code Standards #20
-// Purpose:  Locks the FR-PO-052 certified perf baseline for the match-engine kickoff scenario.
-//           At Stage 0 the corpus entry is PENDING (no run on the pinned certification platform —
-//           the Linux gate is NON-certifying), so it must carry no measured metric and refuse to
-//           build a corpus record. Also proves the certified projection: once a real run on the
-//           pinned platform supplies metrics, the entry builds a complete BaselineRecord that flows
-//           through PerfGateRunner.
+//           Deterministic Simulation #16 §4.8 (EnvironmentFingerprint / ERR-016-006), Code Standards #20
+// Purpose:  Locks the FR-PO-052 CERTIFIED perf baseline for the match-engine kickoff scenario. The
+//           corpus entry (KickoffCertified()) carries the pinned-host 100-run capture manifest with a
+//           genuine CreateStage0MonoCertified fingerprint + the measured p50/p99, and builds a complete
+//           BaselineRecord that flows through PerfGateRunner. Also exercises the generic Pending() /
+//           Certified() API surface + fail-closed invariants + platform-pin tokens.
 
 using System;
 
@@ -30,19 +30,49 @@ namespace TacticalDirector.MatchEngine
     {
         private const string Threshold = "FR-PO-052";
 
-        // Illustrative certified number used ONLY to exercise the certified projection path in-test.
-        // This is NOT a real certification measurement (the pinned platform is Windows/Unity, not
-        // reachable from the Linux gate) — the on-disk corpus entry stays PENDING.
+        // Illustrative certified number used ONLY to exercise the generic certified projection path
+        // in-test (paired with CertManifest() below, which uses the dev fingerprint).
         private const float SampleCertP50Ms = 4.0f;
         private const float SampleCertP99Ms = 6.0f;
 
-        private static CertifiedPerfBaseline KickoffPending()
+        // ── The real certified kickoff baseline ───────────────────────────────────────────
+        // Transcribed from the certified 100-run capture on the pinned Windows 11 / Unity 6000.4.9f1
+        // / Mono host (2026-07-19); see
+        // docs/specs/performance-optimization/baselines/match-engine/kickoff-multi-second.cert.md.
+        private const float KickoffCertP50Ms = 0.4768f;
+        private const float KickoffCertP99Ms = 2.5669f;
+        private const string KickoffGitSha = "224ee7eb8d2647ab1e75a5e69cafee534dbdca8b";
+        // Host-supplied Mono runtime version (§4.8.3 field 2). Unity versions its forked Mono runtime
+        // by editor release, so this identifies "the Mono bundled with Unity 6000.4.9f1" — ERR-016-006
+        // Option A. The resulting FloatModelHash is golden-vector-validated in the .cert.md.
+        private const string KickoffMonoRuntimeVersion = "mono-bundled-unity6000.4.9f1";
+        private const string KickoffFloatModelHash =
+            "73c47ad54d3a81408b46694b513634fd244f25262aa4104614712134b6bb756a";
+
+        /// <summary>
+        /// The real CERTIFIED kickoff baseline: the pinned-host capture manifest (with a genuine
+        /// <see cref="EnvironmentFingerprint.CreateStage0MonoCertified"/> fingerprint) + the measured
+        /// p50/p99. Matches the on-disk `kickoff-multi-second.cert.md` corpus entry.
+        /// </summary>
+        private static CertifiedPerfBaseline KickoffCertified()
         {
-            return CertifiedPerfBaseline.Pending(
-                MatchEngineCapstoneScenarios.KickoffMultiSecondPath,
-                LoopTag.PhysicsSixtyHz,
-                CertifiedPerfBaseline.Stage0CertPlatformPin,
-                Threshold);
+            var manifest = new SessionManifest(
+                gitSha: KickoffGitSha,
+                seed: MatchEngineCapstoneScenarios.KickoffMultiSecondSeed,
+                environmentFingerprint:
+                    EnvironmentFingerprint.CreateStage0MonoCertified(KickoffMonoRuntimeVersion),
+                platformPin: CertifiedPerfBaseline.Stage0CertPlatformPin,
+                scenarioManifestId: MatchEngineCapstoneScenarios.KickoffMultiSecondPath,
+                sessionStartUtc: "2026-07-19T00:11:19Z",
+                sessionEndUtc: "2026-07-19T00:12:04Z",
+                hardwareCounters: new HardwareCounterSnapshot(
+                    "Intel(R) Core(TM) i5-9300H CPU @ 2.40GHz",
+                    4,
+                    "idle, no sustained load prior to run (no monitoring tool used)"),
+                harnessVersion: "1.0");
+
+            return CertifiedPerfBaseline.Certified(
+                manifest, LoopTag.PhysicsSixtyHz, KickoffCertP50Ms, KickoffCertP99Ms, Threshold);
         }
 
         private static SessionManifest CertManifest()
@@ -59,32 +89,72 @@ namespace TacticalDirector.MatchEngine
                 harnessVersion: "cert-baseline-1.0");
         }
 
-        // ── Pending (Stage 0) ─────────────────────────────────────────────────────────────
+        // ── Certified kickoff baseline (matches the on-disk .cert.md) ──────────────────────
 
         [Test]
-        public void KickoffBaseline_IsPending_CarriesNoMetric()
+        public void KickoffBaseline_IsCertified_CarriesRealMetric()
         {
-            CertifiedPerfBaseline cb = KickoffPending();
+            CertifiedPerfBaseline cb = KickoffCertified();
 
-            Assert.AreEqual(CertificationStatus.Pending, cb.Status);
+            Assert.AreEqual(CertificationStatus.Certified, cb.Status);
             Assert.AreEqual(MatchEngineCapstoneScenarios.KickoffMultiSecondPath, cb.ScenarioManifestId);
             Assert.AreEqual(LoopTag.PhysicsSixtyHz, cb.Loop);
             Assert.AreEqual(CertifiedPerfBaseline.Stage0CertPlatformPin, cb.PlatformPin);
             Assert.AreEqual(Threshold, cb.ThresholdCited);
-            Assert.IsNull(cb.Manifest, "A pending entry must not carry a session manifest.");
-            Assert.IsNaN(cb.CertifiedP50Ms, "A pending entry must not carry a measured p50.");
-            Assert.IsNaN(cb.CertifiedP99Ms, "A pending entry must not carry a measured p99.");
+            Assert.AreEqual(KickoffCertP50Ms, cb.CertifiedP50Ms);
+            Assert.AreEqual(KickoffCertP99Ms, cb.CertifiedP99Ms);
+            Assert.IsNotNull(cb.Manifest, "A certified entry must carry its session manifest.");
+            Assert.IsTrue(cb.Manifest.IsComplete(), "The certified capture manifest must be complete.");
         }
 
         [Test]
-        public void PendingBaseline_RefusesToBuildRecord()
+        public void KickoffBaseline_CarriesRealMonoFloatModelHash_NotPlaceholder()
         {
-            CertifiedPerfBaseline cb = KickoffPending();
+            // ERR-016-006 Option A: the certified fingerprint carries a genuine §4.8.3 hash, not the
+            // CreateStage0Dev placeholder — this is the datum that gated promotion to CERTIFIED.
+            CertifiedPerfBaseline cb = KickoffCertified();
+
+            EnvironmentFingerprint fp = cb.Manifest.EnvironmentFingerprint;
+            Assert.IsFalse(fp.IsDevPlaceholder,
+                "The certified baseline must not carry a placeholder floatModelHash.");
+            Assert.AreEqual(KickoffFloatModelHash, fp.FloatModelHash,
+                "floatModelHash must match the golden-vector-validated value in the .cert.md.");
+            Assert.AreEqual("SSE4.2", fp.SimdFeatureLevel);
+        }
+
+        [Test]
+        public void CertifiedKickoffBaseline_BuildsRecord()
+        {
+            CertifiedPerfBaseline cb = KickoffCertified();
 
             bool built = cb.TryBuildBaselineRecord(out BaselineRecord record);
 
-            Assert.IsFalse(built, "A pending baseline must not project to a corpus record (no measured metric).");
-            Assert.IsNull(record);
+            Assert.IsTrue(built, "A certified baseline must project to a corpus record.");
+            Assert.IsNotNull(record);
+            Assert.AreEqual(KickoffCertP50Ms, record.P50Ms);
+            Assert.AreEqual(KickoffCertP99Ms, record.P99Ms);
+        }
+
+        [Test]
+        public void CertifiedKickoffRecord_FlowsThroughPerfGate_SelfComparePasses()
+        {
+            // FR-PO-031 self-compare: the certified baseline vs itself ⇒ 0% delta ⇒ within +5%.
+            // The real live-measurement comparison runs on the pinned host (a Linux measurement vs a
+            // Windows-certified number is apples-to-oranges), so this proves the certified record is a
+            // usable FR-PO-031 reference without asserting a cross-platform number.
+            CertifiedPerfBaseline cb = KickoffCertified();
+            Assert.IsTrue(cb.TryBuildBaselineRecord(out BaselineRecord record));
+
+            PerfGateReport report = PerfGateRunner.Run(
+                specId: 16,
+                loopTag: PerformanceOptimizationConstants.LOOP_TAG_PHYSICS_60HZ,
+                baseline: record,
+                current: record,
+                milestoneMs: float.NaN);
+
+            Assert.AreEqual(
+                MatchEngineCapstoneScenarios.KickoffMultiSecondPath, report.ScenarioManifestId);
+            Assert.IsTrue(report.AllPassed, "Certified kickoff baseline self-comparison must pass the gate.");
         }
 
         // ── Certified projection ──────────────────────────────────────────────────────────
@@ -193,4 +263,11 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-06-28 | —      | Initial implementation. Locks the kickoff certified baseline as    |
 // |         |            |        | PENDING (no metric, refuses to build) and proves the certified     |
 // |         |            |        | projection + fail-closed invariants + platform-pin tokens.         |
+// | 1.1     | 2026-07-19 | —      | Kickoff corpus entry promoted PENDING -> CERTIFIED (ERR-016-006     |
+// |         |            |        | Option A resolved the floatModelHash gap). KickoffPending() ->      |
+// |         |            |        | KickoffCertified() (real pinned-host manifest via                   |
+// |         |            |        | CreateStage0MonoCertified + p50=0.4768/p99=2.5669). New tests:      |
+// |         |            |        | IsCertified_CarriesRealMetric, CarriesRealMonoFloatModelHash_Not-   |
+// |         |            |        | Placeholder, BuildsRecord, SelfComparePasses. Generic Pending()/    |
+// |         |            |        | Certified() API tests (incl. Pending_RejectsEmptyArguments) kept.   |
 #endregion
