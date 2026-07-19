@@ -1,7 +1,8 @@
 # Certification Platform Pin
 
 **Created:** May 2, 2026
-**Last Updated:** July 13, 2026 (v1.3 — **Unity engine version bump proposed: 2022.3.62f1 → Unity 6000.4.9f1, graphics API pinned to DX11.** This is a MAJOR Unity version bump under this file's own Maintenance Rule (row 2), which REQUIRES full recertification before the tuple can be marked ✅ Pinned again. `ProjectSettings/ProjectVersion.txt` has been updated to `6000.4.9f1` to match. No certification run has been performed against the new tuple — the Unity-version and Graphics-API rows below are recorded as the TARGET pin, status **⏳ Recert required**, not yet ✅ Pinned. All downstream unblockers this file previously closed (`FR-DS-009-GATE`, `FR-PO-052`, §7.5 D1, `EnvironmentFingerprint`) revert to blocked until a certification run completes against the new tuple per `cert-run-runbook.md`. See Version History v1.3.)
+**Last Updated:** July 19, 2026 (v1.4 — **CERTIFIED against Unity 6000.4.9f1 (DX11) / Mono.** The Stage-0 platform-determinism KAT run executed on the pinned host (commit `819f9d1`): all three golden-vector corpora (#16 §9.5 #4 a/b/c) + the §5 determinism-tier locks pass byte-exact — 44 passed / 0 failed / 4 Stage-0+1-deferred skips (`TacticalDirector.DeterministicSim.Tests`, EditMode). Status flips **⏳ RECERT REQUIRED → ✅ PINNED**; every row below flips to ✅; `FR-DS-009-GATE` and the other downstream unblockers close. Evidence + full run record: `docs/specs/deterministic-sim/cert-runs/determinism-cert-2026-07-19.md` (+ `determinism-results-2026-07-19.xml`). Distinct from and complementary to the FR-PO-052 perf baseline certified the same day. Platform Certification owner sign-off recorded via the PR merge (Maintenance Rule). Residual, non-blocking: the §4.8.2 runtime MXCSR validation is unbuilt — a guard that *enforces* the pin, not part of *proving* the bits, now buildable against this certified pin. See Version History v1.4.)
+**Last Updated (prior):** July 13, 2026 (v1.3 — **Unity engine version bump proposed: 2022.3.62f1 → Unity 6000.4.9f1, graphics API pinned to DX11.** This is a MAJOR Unity version bump under this file's own Maintenance Rule (row 2), which REQUIRES full recertification before the tuple can be marked ✅ Pinned again. `ProjectSettings/ProjectVersion.txt` has been updated to `6000.4.9f1` to match. No certification run has been performed against the new tuple — the Unity-version and Graphics-API rows below are recorded as the TARGET pin, status **⏳ Recert required**, not yet ✅ Pinned. All downstream unblockers this file previously closed (`FR-DS-009-GATE`, `FR-PO-052`, §7.5 D1, `EnvironmentFingerprint`) revert to blocked until a certification run completes against the new tuple per `cert-run-runbook.md`. See Version History v1.3.)
 **Last Updated (prior):** June 12, 2026 (v1.2 — non-certifying Linux compile/test gate note added; pin unchanged). Prior: June 7, 2026 (Stage 0 host platform pinned — closes the standing OPEN ISSUE that blocked `FR-DS-009-GATE` Stage 0 activation across #16 §5.5, #18 FR-PO-052 perf-gate, #19 §7.5 D1 test-runner pin, #18 §3.9.4 IL2CPP/Mono warmup measurement, and the four downstream `[EST]` constants that depend on the measured warmup characteristic. Pin set: Windows 11, Unity 2022 LTS revision **2022.3.62f1** (default Stage 0; revise if a later patch release supersedes before first cert run), Mono backend (IL2CPP migrates at Stage 5+), x64, SSE4.2 SIMD baseline, 1 worker thread (single-threaded — multi-threading is a Stage 5+ concern), deterministic compiler flags per row 5.)
 **Purpose:** Records the exact Stage 0 host platform tuple for deterministic simulation certification runs, as required by Spec #16 §5.5.
 
@@ -9,19 +10,19 @@
 
 ## Status
 
-**⏳ RECERT REQUIRED — Unity engine version bumped to 6000.4.9f1 (DX11) on July 13, 2026; not yet certified.**
+**✅ PINNED — certified against Windows 11 / Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker / deterministic flags on July 19, 2026.**
 
-The Stage 0 host platform tuple was previously pinned June 7, 2026 against Unity 2022.3.62f1. That tuple has been superseded by a major Unity version bump (2022.3.62f1 → 6000.4.9f1). Per this file's own Maintenance Rule, a major Unity version bump requires full recertification before the pin can be marked ✅ again — this document records the new TARGET tuple, not a completed certification. `FR-DS-009-GATE` Stage 0 activation and every other downstream unblocker below are **blocked again** until a certification run completes against the new tuple and Platform Certification owner sign-off is obtained per Spec #16 §1.7 Governance Artifacts.
+The Stage 0 host platform tuple was re-certified July 19, 2026 after the July-13 major Unity version bump (2022.3.62f1 → 6000.4.9f1) that had reverted it to ⏳ Recert required. The platform-determinism KAT run executed on the pinned host (commit `819f9d1`, `TacticalDirector.DeterministicSim.Tests` under Unity Test Framework EditMode): all three golden-vector corpora (#16 §9.5 #4 a/b/c) and the §5 determinism-tier locks pass **byte-exact — 44 passed / 0 failed** (4 skips are documented Stage-0+1 file-I/O deferrals, outside the Stage-0 surface). Full run record + raw NUnit evidence: `docs/specs/deterministic-sim/cert-runs/determinism-cert-2026-07-19.md`. Platform Certification owner sign-off is recorded via the PR merge landing this flip (Spec #16 §1.7 Governance Artifacts / this file's Maintenance Rule). `FR-DS-009-GATE` Stage 0 activation and the other downstream unblockers below are now **closed**.
 
-**Executing a certification run against this pin:** see the operator runbook at
-`docs/tracking/cert-run-runbook.md` (host pre-flight against the tuple below,
-100-run capture, `PENDING → CERTIFIED` promotion of the
-`CertifiedPerfBaseline` corpus entry, and sign-off). The first run is currently
-blocked on Unity project initialization + pinned-host access — see that file's
-Status section. That runbook's Step 0 pre-flight table, and the
-`CertifiedPerfBaseline.Stage0CertPlatformPin` code constant it cites, still
-name the superseded `2022.3.62f1` tuple and need updating to match this file
-before any cert run is executed against the new pin.
+**Companion certification:** the FR-PO-052 per-tick perf baseline was certified the same day on this tuple (`docs/specs/performance-optimization/baselines/match-engine/kickoff-multi-second.cert.md`). This document certifies *determinism* (the bits are exact); that one certifies *performance* (the per-tick budget).
+
+**Residual, non-blocking:** the §4.8.2 runtime MXCSR validation (query live float-mode flags at match start, reject on mismatch) is unbuilt. It is a guard that *enforces* this pin at replay time, not part of *proving* the bits exact — the KAT run above is that proof. With a certified pin now in place for it to enforce, it becomes buildable; tracked in the root `CLAUDE.md` OPEN ISSUES floatModelHash entry.
+
+**Re-executing a certification run against this pin:** see the operator runbook at
+`docs/tracking/cert-run-runbook.md` (host pre-flight against the tuple below). The
+determinism half is the `-testFilter "TacticalDirector.DeterministicSim.Tests"`
+EditMode batch-mode run recorded in the cert-run record above; the perf half is the
+100-run `CertifiedPerfBaseline` capture in that runbook.
 
 ---
 
@@ -30,14 +31,14 @@ before any cert run is executed against the new pin.
 | Field | Required value | Pinned value | Status |
 |-------|---------------|--------------|--------|
 | OS | Windows 10 or 11 | **Windows 11** | ✅ Pinned |
-| Unity version | Unity 6 LTS | **Unity 6000.4.9f1** | ⏳ Recert required |
-| Graphics API | Pinned per platform default | **DX11** | ⏳ Recert required |
-| Backend | Mono or IL2CPP per project default | **Mono** | ⏳ Recert required (carried over pending confirmation Mono is still the Stage 0 default under Unity 6) |
+| Unity version | Unity 6 LTS | **Unity 6000.4.9f1** | ✅ Pinned |
+| Graphics API | Pinned per platform default | **DX11** | ✅ Pinned |
+| Backend | Mono or IL2CPP per project default | **Mono** | ✅ Pinned (confirmed the Stage-0 default under Unity 6 — the July-19 KAT run executed under the editor's Mono EditMode runtime) |
 | IL2CPP version | — | N/A (Mono backend) | ✅ N/A |
-| Compiler flag set | Deterministic flags (denormals-are-zero off, fp-contract off, fma off unless platform-pinned) | **DAZ off · FTZ off · fp-contract off · FMA intrinsics off · /fp:strict-equivalent** | ⏳ Recert required |
+| Compiler flag set | Deterministic flags (denormals-are-zero off, fp-contract off, fma off unless platform-pinned) | **DAZ off · FTZ off · fp-contract off · FMA intrinsics off · /fp:strict-equivalent** | ✅ Pinned |
 | CPU architecture | x64 | **x64** | ✅ Fixed |
-| Worker thread count | Pinned (see §4.8 EnvironmentFingerprint) | **1 (main thread only — Stage 0 is single-threaded)** | ⏳ Recert required |
-| SIMD feature level | Pinned (see §4.8) | **SSE4.2 baseline (no AVX / AVX2 / FMA intrinsics)** | ⏳ Recert required |
+| Worker thread count | Pinned (see §4.8 EnvironmentFingerprint) | **1 (main thread only — Stage 0 is single-threaded)** | ✅ Pinned |
+| SIMD feature level | Pinned (see §4.8) | **SSE4.2 baseline (no AVX / AVX2 / FMA intrinsics)** | ✅ Pinned |
 
 ---
 
@@ -61,7 +62,11 @@ before any cert run is executed against the new pin.
 
 ## Downstream Unblockers
 
-This pin unblocks the following spec-level deliverables that were gated on it:
+This pin unblocks the following spec-level deliverables that were gated on it.
+**Status (2026-07-19): the pin is certified, so every row below is now active/closed** — the
+`FR-DS-009-GATE` determinism gate is satisfied by the KAT run, `FR-PO-052` by the same-day perf
+capture, and the §7.5 D1 test-runner pin is the EditMode Unity Test Framework runner that executed
+the cert.
 
 | Gate | Spec | Effect |
 |------|------|--------|
@@ -120,3 +125,14 @@ Linux gate answers "does it compile and do the tests pass," this pin answers
 |         |            |        | been performed; all downstream unblockers revert to blocked. Documentation-  |
 |         |            |        | only change — no Platform Certification owner sign-off obtained for this     |
 |         |            |        | edit (required before the tuple can be marked ✅ Pinned again).              |
+| 1.4     | 2026-07-19 | —      | **CERTIFIED against Unity 6000.4.9f1 / DX11 / Mono.** Stage-0 platform-      |
+|         |            |        | determinism KAT run executed on the pinned host (commit 819f9d1,             |
+|         |            |        | TacticalDirector.DeterministicSim.Tests, Unity Test Framework EditMode):     |
+|         |            |        | all three golden-vector corpora (#16 §9.5 #4 a/b/c: HKDF-SHA256, SipHash-    |
+|         |            |        | 2-4-64, SerializeCanonical) + the §5 determinism-tier locks pass byte-exact  |
+|         |            |        | — 44 passed / 0 failed / 4 Stage-0+1-deferred skips. Status ⏳ Recert        |
+|         |            |        | required → ✅ PINNED; all tuple rows flip to ✅; FR-DS-009-GATE + downstream  |
+|         |            |        | unblockers close. Evidence: docs/specs/deterministic-sim/cert-runs/          |
+|         |            |        | determinism-cert-2026-07-19.md (+ raw NUnit XML). Companion to the FR-PO-052 |
+|         |            |        | perf baseline certified the same day. Owner sign-off via the PR merge.       |
+|         |            |        | Residual (non-blocking): §4.8.2 runtime MXCSR validation unbuilt.            |
