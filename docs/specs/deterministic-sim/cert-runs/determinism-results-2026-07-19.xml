@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="48" result="Skipped:Ignored" total="48" passed="44" failed="0" inconclusive="0" skipped="4" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-07-19 19:13:03Z" end-time="2026-07-19 19:13:04Z" duration="0.1217854">
+  <test-suite type="TestSuite" id="1000" name="Soccer-Manager-Pro" fullname="Soccer-Manager-Pro" runstate="Runnable" testcasecount="1820" result="Skipped" label="Ignored" start-time="2026-07-19 19:13:03Z" end-time="2026-07-19 19:13:04Z" duration="0.121785" total="48" passed="44" failed="0" inconclusive="0" skipped="4" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <reason>
+      <message><![CDATA[One or more child tests were ignored]]></message>
+    </reason>
+    <test-suite type="Assembly" id="1632" name="TacticalDirector.DeterministicSim.Tests.dll" fullname="C:/Users/azymi/Desktop/Soccer-Manager-Pro/Library/ScriptAssemblies/TacticalDirector.DeterministicSim.Tests.dll" runstate="Runnable" testcasecount="48" result="Skipped" label="Ignored" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.083771" total="48" passed="44" failed="0" inconclusive="0" skipped="4" asserts="0">
+      <properties>
+        <property name="_PID" value="12308" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <reason>
+        <message><![CDATA[One or more child tests were ignored]]></message>
+      </reason>
+      <test-suite type="TestSuite" id="1633" name="TacticalDirector" fullname="TacticalDirector" runstate="Runnable" testcasecount="48" result="Skipped" label="Ignored" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.082794" total="48" passed="44" failed="0" inconclusive="0" skipped="4" asserts="0">
+        <properties />
+        <reason>
+          <message><![CDATA[One or more child tests were ignored]]></message>
+        </reason>
+        <test-suite type="TestSuite" id="1634" name="DeterministicSim" fullname="TacticalDirector.DeterministicSim" runstate="Runnable" testcasecount="48" result="Skipped" label="Ignored" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.082015" total="48" passed="44" failed="0" inconclusive="0" skipped="4" asserts="0">
+          <properties />
+          <reason>
+            <message><![CDATA[One or more child tests were ignored]]></message>
+          </reason>
+          <test-suite type="TestFixture" id="1609" name="DeterministicSimAdversarialRegressionTests" fullname="TacticalDirector.DeterministicSim.DeterministicSimAdversarialRegressionTests" classname="TacticalDirector.DeterministicSim.DeterministicSimAdversarialRegressionTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.043491" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1611" name="RngService_Skip_DuringOpenReservation_ReturnsBudgetMismatch" fullname="TacticalDirector.DeterministicSim.DeterministicSimAdversarialRegressionTests.RngService_Skip_DuringOpenReservation_ReturnsBudgetMismatch" methodname="RngService_Skip_DuringOpenReservation_ReturnsBudgetMismatch" classname="TacticalDirector.DeterministicSim.DeterministicSimAdversarialRegressionTests" runstate="Runnable" seed="1144838458" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.019557" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1610" name="RngService_Skip_PreservesActionOrdinalParity_WithReserveBranch" fullname="TacticalDirector.DeterministicSim.DeterministicSimAdversarialRegressionTests.RngService_Skip_PreservesActionOrdinalParity_WithReserveBranch" methodname="RngService_Skip_PreservesActionOrdinalParity_WithReserveBranch" classname="TacticalDirector.DeterministicSim.DeterministicSimAdversarialRegressionTests" runstate="Runnable" seed="693249675" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.001864" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1613" name="SnapshotCodec_Encode_DigestChain_DependsOnPrevDigest" fullname="TacticalDirector.DeterministicSim.DeterministicSimAdversarialRegressionTests.SnapshotCodec_Encode_DigestChain_DependsOnPrevDigest" methodname="SnapshotCodec_Encode_DigestChain_DependsOnPrevDigest" classname="TacticalDirector.DeterministicSim.DeterministicSimAdversarialRegressionTests" runstate="Runnable" seed="1398194287" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.003932" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1612" name="SnapshotCodec_Encode_ProducesSpecChainedDigest" fullname="TacticalDirector.DeterministicSim.DeterministicSimAdversarialRegressionTests.SnapshotCodec_Encode_ProducesSpecChainedDigest" methodname="SnapshotCodec_Encode_ProducesSpecChainedDigest" classname="TacticalDirector.DeterministicSim.DeterministicSimAdversarialRegressionTests" runstate="Runnable" seed="558259386" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000458" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1603" name="DeterministicSimSaveLoadTests" fullname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests" classname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests" runstate="Runnable" testcasecount="5" result="Skipped" label="Ignored" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.007315" total="5" passed="1" failed="0" inconclusive="0" skipped="4" asserts="0">
+            <properties />
+            <reason>
+              <message><![CDATA[One or more child tests were ignored]]></message>
+            </reason>
+            <test-case id="1608" name="ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero" fullname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests.ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero" methodname="ReplayEngine_PrepareReplay_WellFormedSnapshot_ReturnsZero" classname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests" runstate="Runnable" seed="1328051160" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.001398" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1606" name="SaveLoad_ConsecutiveSaves_SecondOverwriteDoesNotCorruptFirstDigest" fullname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests.SaveLoad_ConsecutiveSaves_SecondOverwriteDoesNotCorruptFirstDigest" methodname="SaveLoad_ConsecutiveSaves_SecondOverwriteDoesNotCorruptFirstDigest" classname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests" runstate="Runnable" seed="964271115" result="Skipped" label="Ignored" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.003214" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <reason>
+                <message><![CDATA[Stage 0+1: requires temp-directory fixture and multi-tick SnapshotPayload serialization — activate when Stage 1 CI infrastructure supports file I/O in EditMode tests (§5.3 T-DS-006).]]></message>
+              </reason>
+            </test-case>
+            <test-case id="1604" name="SaveLoad_Encode_CommitAtomic_Load_ValidateHeader_DigestMatches" fullname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests.SaveLoad_Encode_CommitAtomic_Load_ValidateHeader_DigestMatches" methodname="SaveLoad_Encode_CommitAtomic_Load_ValidateHeader_DigestMatches" classname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests" runstate="Runnable" seed="934210875" result="Skipped" label="Ignored" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000227" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <reason>
+                <message><![CDATA[Stage 0+1: requires temp-directory fixture and full SnapshotPayload serialization — activate when Stage 1 CI infrastructure supports file I/O in EditMode tests (§5.3 T-DS-REPLAY-004 / §5.5.2).]]></message>
+              </reason>
+            </test-case>
+            <test-case id="1605" name="SaveLoad_MidTickSnapshot_SaveAndLoad" fullname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests.SaveLoad_MidTickSnapshot_SaveAndLoad" methodname="SaveLoad_MidTickSnapshot_SaveAndLoad" classname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests" runstate="Runnable" seed="1340434668" result="Skipped" label="Ignored" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000170" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <reason>
+                <message><![CDATA[Stage 0+1: SaveManager.SaveAtomicMidTick does not exist at Stage 0 — activate when the mid-tick save overload is added at Stage 1 (§5.3 T-DS-005 / §4.6.1).]]></message>
+              </reason>
+            </test-case>
+            <test-case id="1607" name="SaveLoad_ValidateHeader_RejectsTamperedDigest" fullname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests.SaveLoad_ValidateHeader_RejectsTamperedDigest" methodname="SaveLoad_ValidateHeader_RejectsTamperedDigest" classname="TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests" runstate="Runnable" seed="25129584" result="Skipped" label="Ignored" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000174" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <reason>
+                <message><![CDATA[Stage 0+1: requires temp-directory fixture and structured header binary re-read to flip a digest byte — activate when Stage 1 CI infrastructure supports file I/O in EditMode tests (§5.3 T-DS-007).]]></message>
+              </reason>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1578" name="DeterministicSimTests" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" testcasecount="24" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.014446" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1598" name="Constants_AiPhaseStride_Is6" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.Constants_AiPhaseStride_Is6" methodname="Constants_AiPhaseStride_Is6" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="945465840" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000423" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1599" name="Constants_FrameSeconds_IsFrameMsOverThousand" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.Constants_FrameSeconds_IsFrameMsOverThousand" methodname="Constants_FrameSeconds_IsFrameMsOverThousand" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="1946702040" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000637" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1602" name="DespawnLog_AppendAndContains_Correct" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.DespawnLog_AppendAndContains_Correct" methodname="DespawnLog_AppendAndContains_Correct" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="467380687" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000854" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1591" name="DivergenceDetector_TierA_NaN_TriggersNonFiniteError" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.DivergenceDetector_TierA_NaN_TriggersNonFiniteError" methodname="DivergenceDetector_TierA_NaN_TriggersNonFiniteError" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="1506710501" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.001288" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1592" name="DivergenceDetector_TierB_NonCanonicalNaN_TriggersError" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.DivergenceDetector_TierB_NonCanonicalNaN_TriggersError" methodname="DivergenceDetector_TierB_NonCanonicalNaN_TriggersError" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="934974577" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000316" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1594" name="EnvironmentFingerprint_WorkerCountMismatch_ReturnsEnvMismatch" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.EnvironmentFingerprint_WorkerCountMismatch_ReturnsEnvMismatch" methodname="EnvironmentFingerprint_WorkerCountMismatch_ReturnsEnvMismatch" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="719807607" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000155" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1579" name="HkdfSha256_RfcTestCase1_ByteExact" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.HkdfSha256_RfcTestCase1_ByteExact" methodname="HkdfSha256_RfcTestCase1_ByteExact" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="282686323" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000233" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1600" name="MatchClock_CurrentMatchTimeSeconds_TracksTicks" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.MatchClock_CurrentMatchTimeSeconds_TracksTicks" methodname="MatchClock_CurrentMatchTimeSeconds_TracksTicks" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="616865543" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000856" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1597" name="MatchClock_IsAiStrideTick_FiresEveryStride" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.MatchClock_IsAiStrideTick_FiresEveryStride" methodname="MatchClock_IsAiStrideTick_FiresEveryStride" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="1332329479" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000173" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1587" name="MatchClock_SameSeed_IdenticalTicks" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.MatchClock_SameSeed_IdenticalTicks" methodname="MatchClock_SameSeed_IdenticalTicks" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="1581089384" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000308" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1601" name="MatchClock_SecondsAndMs_Agree" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.MatchClock_SecondsAndMs_Agree" methodname="MatchClock_SecondsAndMs_Agree" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="1873136913" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000166" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1586" name="PhysicsDt_BitPattern_MatchesPinnedConstant" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.PhysicsDt_BitPattern_MatchesPinnedConstant" methodname="PhysicsDt_BitPattern_MatchesPinnedConstant" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="18293433" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000452" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1596" name="ReplayCursor_AtEndOfSnapshot_IsAtEndOfSnapshotReturnsTrue" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.ReplayCursor_AtEndOfSnapshot_IsAtEndOfSnapshotReturnsTrue" methodname="ReplayCursor_AtEndOfSnapshot_IsAtEndOfSnapshotReturnsTrue" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="1559964343" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000200" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1595" name="ReplayCursor_NotAtEndOfSnapshot_IsAtEndOfSnapshotReturnsFalse" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.ReplayCursor_NotAtEndOfSnapshot_IsAtEndOfSnapshotReturnsFalse" methodname="ReplayCursor_NotAtEndOfSnapshot_IsAtEndOfSnapshotReturnsFalse" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="1239449384" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000235" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1588" name="RngService_BranchCursorParity" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.RngService_BranchCursorParity" methodname="RngService_BranchCursorParity" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="614475803" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000471" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1590" name="RngService_DoubleReserve_ReturnsBudgetMismatch" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.RngService_DoubleReserve_ReturnsBudgetMismatch" methodname="RngService_DoubleReserve_ReturnsBudgetMismatch" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="372669928" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000323" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1581" name="Serialize_BoolFalse_IsZero" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.Serialize_BoolFalse_IsZero" methodname="Serialize_BoolFalse_IsZero" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="413881513" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000214" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1582" name="Serialize_BoolTrue_IsOne" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.Serialize_BoolTrue_IsOne" methodname="Serialize_BoolTrue_IsOne" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="1637729780" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000159" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1585" name="Serialize_NegativeZeroFloat_NormalizesToPositiveZero" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.Serialize_NegativeZeroFloat_NormalizesToPositiveZero" methodname="Serialize_NegativeZeroFloat_NormalizesToPositiveZero" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="623067721" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000212" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1583" name="Serialize_U32_LittleEndian" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.Serialize_U32_LittleEndian" methodname="Serialize_U32_LittleEndian" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="1005622386" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000242" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1584" name="Serialize_U64_LittleEndian" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.Serialize_U64_LittleEndian" methodname="Serialize_U64_LittleEndian" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="1985134360" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000172" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1589" name="Serialize_U64_RoundTrip" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.Serialize_U64_RoundTrip" methodname="Serialize_U64_RoundTrip" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="1138265675" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000205" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1580" name="SipHash24_ReferenceVectors_ByteExact" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.SipHash24_ReferenceVectors_ByteExact" methodname="SipHash24_ReferenceVectors_ByteExact" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="735454415" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000305" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1593" name="SnapshotCodec_DigestChainBreak_ReturnsError" fullname="TacticalDirector.DeterministicSim.DeterministicSimTests.SnapshotCodec_DigestChainBreak_ReturnsError" methodname="SnapshotCodec_DigestChainBreak_ReturnsError" classname="TacticalDirector.DeterministicSim.DeterministicSimTests" runstate="Runnable" seed="576470500" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000214" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1614" name="HkdfSha256KatTests" fullname="TacticalDirector.DeterministicSim.HkdfSha256KatTests" classname="TacticalDirector.DeterministicSim.HkdfSha256KatTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.003427" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1618" name="Hkdf_ProjectCase4_RngKdfInvocationPattern_Pinned" fullname="TacticalDirector.DeterministicSim.HkdfSha256KatTests.Hkdf_ProjectCase4_RngKdfInvocationPattern_Pinned" methodname="Hkdf_ProjectCase4_RngKdfInvocationPattern_Pinned" classname="TacticalDirector.DeterministicSim.HkdfSha256KatTests" runstate="Runnable" seed="698925073" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.001292" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1615" name="Hkdf_RfcA1_PrkAndOkm_ByteExact" fullname="TacticalDirector.DeterministicSim.HkdfSha256KatTests.Hkdf_RfcA1_PrkAndOkm_ByteExact" methodname="Hkdf_RfcA1_PrkAndOkm_ByteExact" classname="TacticalDirector.DeterministicSim.HkdfSha256KatTests" runstate="Runnable" seed="18379271" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000248" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1616" name="Hkdf_RfcA2_LongInputs_PrkAndOkm_ByteExact" fullname="TacticalDirector.DeterministicSim.HkdfSha256KatTests.Hkdf_RfcA2_LongInputs_PrkAndOkm_ByteExact" methodname="Hkdf_RfcA2_LongInputs_PrkAndOkm_ByteExact" classname="TacticalDirector.DeterministicSim.HkdfSha256KatTests" runstate="Runnable" seed="1212189974" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000291" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1617" name="Hkdf_RfcA3_EmptySaltAndInfo_PrkAndOkm_ByteExact" fullname="TacticalDirector.DeterministicSim.HkdfSha256KatTests.Hkdf_RfcA3_EmptySaltAndInfo_PrkAndOkm_ByteExact" methodname="Hkdf_RfcA3_EmptySaltAndInfo_PrkAndOkm_ByteExact" classname="TacticalDirector.DeterministicSim.HkdfSha256KatTests" runstate="Runnable" seed="1260119228" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000325" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1619" name="SerializeCanonicalCorpusTests" fullname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests" classname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests" runstate="Runnable" testcasecount="9" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.008737" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1624" name="Corpus_Arrays_A01toA05" fullname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests.Corpus_Arrays_A01toA05" methodname="Corpus_Arrays_A01toA05" classname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests" runstate="Runnable" seed="84135791" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000874" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1621" name="Corpus_Floats_F01toF09" fullname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests.Corpus_Floats_F01toF09" methodname="Corpus_Floats_F01toF09" classname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests" runstate="Runnable" seed="1755191756" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000953" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1623" name="Corpus_OptionalsAndEnums_O01toE02" fullname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests.Corpus_OptionalsAndEnums_O01toE02" methodname="Corpus_OptionalsAndEnums_O01toE02" classname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests" runstate="Runnable" seed="186530843" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000357" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1626" name="Corpus_PhaseDigestPreimages_D01toD02" fullname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests.Corpus_PhaseDigestPreimages_D01toD02" methodname="Corpus_PhaseDigestPreimages_D01toD02" classname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests" runstate="Runnable" seed="154212369" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000210" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1620" name="Corpus_Primitives_P01toP10" fullname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests.Corpus_Primitives_P01toP10" methodname="Corpus_Primitives_P01toP10" classname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests" runstate="Runnable" seed="1800556746" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000483" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1627" name="Corpus_RngDrawPreimage_D03" fullname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests.Corpus_RngDrawPreimage_D03" methodname="Corpus_RngDrawPreimage_D03" classname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests" runstate="Runnable" seed="1880775514" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000153" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1628" name="Corpus_SnapshotDigestChain_D04toD07" fullname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests.Corpus_SnapshotDigestChain_D04toD07" methodname="Corpus_SnapshotDigestChain_D04toD07" classname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests" runstate="Runnable" seed="1299891172" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000377" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1622" name="Corpus_StringsAndBytes_S01toB02" fullname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests.Corpus_StringsAndBytes_S01toB02" methodname="Corpus_StringsAndBytes_S01toB02" classname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests" runstate="Runnable" seed="1965607275" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000238" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1625" name="Corpus_Structs_ST01toST03" fullname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests.Corpus_Structs_ST01toST03" methodname="Corpus_Structs_ST01toST03" classname="TacticalDirector.DeterministicSim.SerializeCanonicalCorpusTests" runstate="Runnable" seed="105512511" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000254" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1629" name="SipHash24KatTests" fullname="TacticalDirector.DeterministicSim.SipHash24KatTests" classname="TacticalDirector.DeterministicSim.SipHash24KatTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.001905" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1630" name="SipHash24_All64ReferenceVectors_ByteExact" fullname="TacticalDirector.DeterministicSim.SipHash24KatTests.SipHash24_All64ReferenceVectors_ByteExact" methodname="SipHash24_All64ReferenceVectors_ByteExact" classname="TacticalDirector.DeterministicSim.SipHash24KatTests" runstate="Runnable" seed="985189906" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000485" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1631" name="SipHash24_ProjectDrawPreimage_Pinned" fullname="TacticalDirector.DeterministicSim.SipHash24KatTests.SipHash24_ProjectDrawPreimage_Pinned" methodname="SipHash24_ProjectDrawPreimage_Pinned" classname="TacticalDirector.DeterministicSim.SipHash24KatTests" runstate="Runnable" seed="997888205" result="Passed" start-time="2026-07-19 19:13:04Z" end-time="2026-07-19 19:13:04Z" duration="0.000280" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: .\determinism-results.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

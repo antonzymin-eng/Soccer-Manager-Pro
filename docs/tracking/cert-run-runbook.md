@@ -12,7 +12,7 @@ corpus machinery, and the Match Engine Phase-F capstone scenario.
 
 ---
 
-## Status: FR-PO-052 PERF BASELINE CERTIFIED (2026-07-19); platform-determinism cert still blocked
+## Status: FULLY CERTIFIED (2026-07-19) — perf baseline + platform determinism
 
 **Update (2026-07-19):** the **FR-PO-052 per-tick perf baseline** half of this run is DONE. A
 100-run capture executed on the pinned Windows 11 / Unity 6000.4.9f1 / Mono host
@@ -27,9 +27,17 @@ non-certifying Linux capstone gate (`MatchEngineCapstoneTests`) keeps its genero
 (unchanged); the certified record's FR-PO-031 usability is proven by the self-compare in
 `CertifiedPerfBaselineTests`.
 
-**Still blocked** (the broader platform-determinism certification, distinct from the perf baseline):
-the §4.8.2 runtime MXCSR validation (native interop, unbuilt) and the determinism-KAT run on the
-pinned host — `certification-platform.md` stays `⏳ RECERT REQUIRED`.
+**Update (2026-07-19, later same day):** the **platform-determinism certification** — the other half —
+is now DONE too. The determinism-KAT run executed on the pinned host (commit `819f9d1`,
+`-testFilter "TacticalDirector.DeterministicSim.Tests"`, Unity Test Framework EditMode): all three
+golden-vector corpora (#16 §9.5 #4 a/b/c) + the §5 determinism-tier locks pass byte-exact — 44 passed /
+0 failed / 4 Stage-0+1-deferred skips. `certification-platform.md` → v1.4 **✅ PINNED** (all tuple rows),
+`FR-DS-009-GATE` closed. Run record + raw NUnit evidence:
+`docs/specs/deterministic-sim/cert-runs/determinism-cert-2026-07-19.md`.
+
+**Only residual** (non-blocking, not a cert gate): the §4.8.2 runtime MXCSR validation (native interop,
+unbuilt) — a guard that *enforces* the now-certified pin at replay time, not part of *proving* the bits
+exact. Buildable against the certified pin; also awaits a snapshot-deserialize/replay consumer path.
 
 The original prerequisites P1/P2 below cleared for the perf capture; they still gate the
 determinism-cert run:
