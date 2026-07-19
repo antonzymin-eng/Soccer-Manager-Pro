@@ -366,7 +366,11 @@ scenarios (their digests are the neutrality oracle); a varied-squad scenario is 
   inaccurate (separate one-line correction).
 - **KD-P10 (restore scope — AR-2 M-2).** T1's byte-identical + restore guarantee is the default path
   only; distinct-squad restore (incl. substitution bench-swaps via `_activeBenchSlot`) needs the T3
-  roster reference and is out of scope here.
+  roster reference and is out of scope here. **(T3 LANDED July 18, 2026 —
+  `squad-roster-reference-design.md`: the per-team roster reference `Squad.ClubId` is now serialized
+  at `SNAPSHOT_SCHEMA_VERSION` 16, so the identity half of the re-projection is captured; the restore
+  re-projection keyed by `_activeBenchSlot` stays future work — the match engine has no
+  snapshot-deserialize path yet.)**
 
 ---
 

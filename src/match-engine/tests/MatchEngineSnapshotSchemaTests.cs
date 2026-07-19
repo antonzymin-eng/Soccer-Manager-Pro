@@ -3,6 +3,7 @@
 // Modified: 2026-06-27 (Phase D D4 — schema pin 8 + DT + 4 mechanics-AI + perception probes)
 // Modified: 2026-07-11 (engine substrate — schema pin 13 → 14 + ScoreState probe)
 // Modified: 2026-07-14 (match-flow completion — schema pin 14 → 15 + discipline/substitution probes)
+// Modified: 2026-07-18 (#27 T3 — schema pin 15 → 16 + roster-reference probe)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
 // Purpose:  Phase B step B3 tests — proves the full §2.6 world-state field set (not just the B2
@@ -52,8 +53,9 @@ namespace TacticalDirector.MatchEngine
             // (Appendix C order, FR-TP-012), v14 engine score state (per-team goals + the
             // last-holder tracker — the goal-detection substrate), v15 match-flow completion
             // (per-agent yellow-card count + sent-off flag, the global foul cooldown, per-agent
-            // active bench slot, per-team substitutions-used count, half-time/full-time flags).
-            Assert.AreEqual(15u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // active bench slot, per-team substitutions-used count, half-time/full-time flags),
+            // v16 #27 T3 per-team roster reference (the loaded Squad.ClubId or NO_ROSTER_CLUB_ID).
+            Assert.AreEqual(16u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
         }
 
@@ -89,6 +91,42 @@ namespace TacticalDirector.MatchEngine
             CollectionAssert.AreNotEqual(
                 baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
                 "A substitution left the digest unchanged — the v15 substitution block must feed the preimage.");
+        }
+
+        /// <summary>An all-<c>CreateDefault</c> squad of exactly the consumed size (starters + bench).
+        /// Fully-qualifies the PlayerDatabase types (this file's <c>using TacticalDirector.AgentMovement</c>
+        /// also imports a <c>PlayerAttributes</c> — the KD-P6 CS0104 discipline).</summary>
+        private static TacticalDirector.PlayerDatabase.Squad NeutralSquad(int clubId)
+        {
+            int count = MatchEngineConstants.PLAYERS_PER_TEAM + MatchEngineConstants.SUBSTITUTES_PER_TEAM;
+            var players = new TacticalDirector.PlayerDatabase.PlayerRecord[count];
+            for (int k = 0; k < count; k++)
+            {
+                players[k] = TacticalDirector.PlayerDatabase.PlayerRecord.CreateDefault(
+                    clubId * TacticalDirector.PlayerDatabase.PlayerDatabaseConstants.CLUB_SQUAD_SIZE + k);
+            }
+            return new TacticalDirector.PlayerDatabase.Squad(clubId, players);
+        }
+
+        [Test]
+        public void RosterReference_FeedsSnapshotDigest()
+        {
+            // v16 (#27 T3): the per-team roster reference reaches the digest preimage. The configured
+            // squad is all-CreateDefault (neutral attributes), so agents move identically to the
+            // unconfigured baseline — the ONLY difference is the roster reference (each team's ClubId),
+            // present at the very first tick, before any behavioural divergence could exist. A restored
+            // save must know which squad was loaded, so the reference must move the digest (KD-T3-2).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.ConfigureSquads(NeutralSquad(7), NeutralSquad(8));
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "A configured (all-neutral) squad left the digest unchanged — the v16 roster reference " +
+                "is not in the digest preimage.");
         }
 
         [Test]
@@ -535,4 +573,8 @@ namespace TacticalDirector.MatchEngine
 // | 1.12    | 2026-07-14 | —      | Match-flow completion: schema pin 14 → 15; new MatchFlowCompletion- |
 // |         |            |        | State_FeedsSnapshotDigest (sent-off flag) + SubstitutionState_      |
 // |         |            |        | FeedsSnapshotDigest (bench-slot/count bookkeeping) probes.          |
+// | 1.13    | 2026-07-18 | —      | #27 T3: schema pin 15 → 16; new RosterReference_FeedsSnapshotDigest |
+// |         |            |        | probe — a configured all-neutral squad (behaviour identical to the |
+// |         |            |        | unconfigured baseline) moves the digest, isolating the v16 per-team |
+// |         |            |        | roster reference (KD-T3-2).                                         |
 #endregion
