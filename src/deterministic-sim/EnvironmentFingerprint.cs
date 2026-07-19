@@ -1,7 +1,8 @@
 // File:     src/deterministic-sim/EnvironmentFingerprint.cs
 // Created:  2026-05-29
-// Modified: 2026-07-19 (ERR-016-006: SSE2->SSE4.2 pin fix on the dev placeholder; placeholder made
-//           assertable via IsDevPlaceholder + a named sentinel; docs flag the missing live §4.8.3 hasher)
+// Modified: 2026-07-19 (ERR-016-006: SSE2->SSE4.2 pin fix; placeholder made assertable via IsDevPlaceholder;
+//           then Option-A landing — CreateStage0MonoCertified() builds a REAL §4.8.3 floatModelHash via
+//           FloatFlagTuple.ComputeHash())
 // Author:   —
 // Spec:     Deterministic Simulation #16 §4.8, §4.8.1–§4.8.3, §3.4, Code Standards #20
 // Purpose:  Records the runtime environment at match start and embeds it in every snapshot header.
@@ -28,6 +29,18 @@ namespace TacticalDirector.DeterministicSim
         /// a placeholder fingerprint via <see cref="IsDevPlaceholder"/>. See ERR-016-006.
         /// </summary>
         public const string FloatModelHashDevPlaceholder = "STAGE0_DEV_PLACEHOLDER";
+
+        /// <summary>Pinned Stage-0 SIMD baseline (certification-platform.md). §4.8.3 field 11 / §4.8.</summary>
+        public const string Stage0SimdLevel = "SSE4.2";
+
+        /// <summary>[Option A] §4.8.3 field 1 for the pinned Stage-0 Mono backend. See ERR-016-006.</summary>
+        public const string Stage0MonoToolchain = "Mono";
+
+        /// <summary>[Option A] §4.8.3 field 3 for the pinned Stage-0 host (Windows x64): the .NET RID. See ERR-016-006.</summary>
+        public const string Stage0MonoTargetTriple = "win-x64";
+
+        /// <summary>[Option A] §4.8.3 field 4 sentinel for the Mono backend. Accepted at Stage-0 certification; rejected from Stage 5+. See ERR-016-006.</summary>
+        public const string Stage0MonoIl2cppSentinel = "MONO";
 
         // ── Fields (all captured at match start; immutable thereafter) ────────────────
 
@@ -191,10 +204,61 @@ namespace TacticalDirector.DeterministicSim
                 workerCount:               1,
                 schedulerPolicy:           "Stage0-SingleThread-v1",
                 reductionTopology:         "Serial",
-                simdFeatureLevel:          "SSE4.2", // ERR-016-006: match the pinned SSE4.2 baseline (was "SSE2")
+                simdFeatureLevel:          Stage0SimdLevel, // ERR-016-006: match the pinned SSE4.2 baseline (was "SSE2")
                 floatModelHash:            FloatModelHashDevPlaceholder,
                 unicodeNormalizationVersion: DeterministicSimConstants.UNICODE_NFC_VERSION);
             fp.Lock(); // §4.8.1 lifecycle: dev fingerprint is sealed at construction
+            return fp;
+        }
+
+        /// <summary>
+        /// Constructs a Stage-0 Mono-backend fingerprint with a REAL §4.8.3 <see cref="FloatModelHash"/>
+        /// (ERR-016-006, Option A — see <c>docs/tracking/env-fingerprint-float-model-hash-mono-mapping.md</c>).
+        /// The float-flag tuple uses the Option-A Mono mapping (<see cref="Stage0MonoToolchain"/> /
+        /// <see cref="Stage0MonoTargetTriple"/> / <see cref="Stage0MonoIl2cppSentinel"/> /
+        /// <see cref="Stage0SimdLevel"/>) plus the §4.8.3 "Required Stage-0 values" for the float-mode flags
+        /// (denormals/FTZ off, rounding NearestEven, fp-contract off, FMA off, fast-math off), and the hash
+        /// is computed by <see cref="FloatFlagTuple.ComputeHash"/>. Unlike <see cref="CreateStage0Dev"/> the
+        /// result is NOT a placeholder (<see cref="IsDevPlaceholder"/> is false).
+        /// <para>
+        /// <paramref name="monoRuntimeVersion"/> (§4.8.3 field 2) is the one field that varies by host, so it
+        /// is supplied by the caller at a real certification run (recorded in the pinned tuple in
+        /// <c>certification-platform.md</c>) — this factory does not invent it. NOTE: the §4.8.2 runtime
+        /// MXCSR validation (query the live float-mode flags and reject on mismatch) is a separate, still-
+        /// deferred concern requiring native interop on the pinned host; the recorded tuple here uses the
+        /// §4.8.3 pinned Stage-0 flag values, which is what §4.8.2 validates against.
+        /// </para>
+        /// </summary>
+        public static EnvironmentFingerprint CreateStage0MonoCertified(string monoRuntimeVersion)
+        {
+            if (string.IsNullOrEmpty(monoRuntimeVersion))
+            {
+                throw new ArgumentException(
+                    "monoRuntimeVersion (§4.8.3 field 2) must be supplied from the pinned certification host.",
+                    nameof(monoRuntimeVersion));
+            }
+
+            var tuple = new FloatFlagTuple(
+                compilerToolchain: Stage0MonoToolchain,
+                compilerVersion:   monoRuntimeVersion,
+                targetTriple:      Stage0MonoTargetTriple,
+                il2cppVersion:     Stage0MonoIl2cppSentinel,
+                denormalsAreZero:  false,
+                flushToZero:       false,
+                roundingMode:      0, // NearestEven
+                fpContractMode:    0, // Off
+                fmaEnabled:        false,
+                fastMath:          false,
+                simdLevel:         Stage0SimdLevel);
+
+            var fp = new EnvironmentFingerprint(
+                workerCount:               1,
+                schedulerPolicy:           "Stage0-SingleThread-v1",
+                reductionTopology:         "Serial",
+                simdFeatureLevel:          Stage0SimdLevel,
+                floatModelHash:            tuple.ComputeHash(),
+                unicodeNormalizationVersion: DeterministicSimConstants.UNICODE_NFC_VERSION);
+            fp.Lock(); // §4.8.1 lifecycle: sealed at construction
             return fp;
         }
     }
@@ -214,4 +278,11 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | IsDevPlaceholder property so cert-run code can reject it; docs   |
 // |         |            |        | flag the missing live §4.8.3 hasher + the IL2CPP/Mono spec gap. |
 // |         |            |        | No live-host hasher added (blocked on the spec decision).       |
+// | 1.3     | 2026-07-19 | —      | ERR-016-006 Option A (owner sign-off): §4.8.3/§5.5 reconciled  |
+// |         |            |        | to the Stage-0 Mono backend. New CreateStage0MonoCertified()   |
+// |         |            |        | builds a REAL floatModelHash via FloatFlagTuple.ComputeHash()  |
+// |         |            |        | over the Option-A Mono tuple + the §4.8.3 pinned Stage-0 flag  |
+// |         |            |        | values (Stage0Mono* / Stage0SimdLevel consts). monoRuntime-    |
+// |         |            |        | Version is host-supplied; §4.8.2 runtime MXCSR validation +    |
+// |         |            |        | the certified capture stay host-blocked.                       |
 #endregion

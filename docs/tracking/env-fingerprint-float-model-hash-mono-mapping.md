@@ -2,7 +2,7 @@
 
 > **File:** docs/tracking/env-fingerprint-float-model-hash-mono-mapping.md
 > **Created:** 2026-07-19
-> **Status:** PROPOSAL — NOT APPROVED. No spec text or production hasher changes until the owners in §7 sign off.
+> **Status:** APPROVED — **Option A** selected (owner sign-off, July 19, 2026; §7). The §4.8.3/§5.5 spec edits and the live-host hasher (`FloatFlagTuple.ComputeHash` / `EnvironmentFingerprint.CreateStage0MonoCertified`) have landed. Host-blocked remainder: the §4.8.2 runtime MXCSR validation and the certified capture (needs the pinned Unity/Mono host).
 > **Tracks:** ERR-016-006 (`docs/tracking/spec-error-log.md`); root `CLAUDE.md` OPEN ISSUES.
 > **Purpose:** Resolve how Deterministic Simulation #16 §4.8.3's `floatModelHash` tuple is populated under
 > the pinned Stage-0 **Mono** backend, so a live-host fingerprint can be computed without fabricating values.
@@ -134,26 +134,35 @@ only substantive spec change is making the reject-MONO / IL2CPP-required clause 
 aligns §4.8.3/§5.5 with the platform pin that already superseded them. Fall back to **Option C** if the
 owners prefer not to overload the native-compiler fields with Mono/RID values.
 
-## 6. What lands after sign-off (deferred — not in this proposal)
+## 6. Landing status (Option A)
 
-1. **Spec edit** to §4.8.3 (+ §5.5/§5.5.1) per the chosen option, with a `spec-error-log` closure note on
-   ERR-016-006.
-2. **Live-host hasher**: implement `SHA-256(SerializeCanonical(0x14 ‖ floatFlagTuple))` — fields 5–10 from an
-   MXCSR/CSR read at match start (the value §4.8.2's "reject if observed ≠ recorded" clause enforces), fields
-   1–4/11 per the chosen mapping. Replaces the placeholder in a new certification factory alongside
-   `CreateStage0Dev()`.
-3. **Golden vector** pinning the §4.8.3 tuple hash (parallel to the ERR-016-005 outer-envFp follow-up).
-4. **Verification** requires a Unity host on the pinned tuple (`cert-run-runbook.md` P2) — cannot run in the
-   current Linux/no-Unity environment.
+1. **Spec edit — DONE (July 19, 2026).** §4.8.3 field 1 gains `"Mono"`; field 4 flips to accept `"MONO"` at
+   Stage-0 (reject-MONO / IL2CPP-required → Stage 5+); a "Stage-0 Mono backend mapping" paragraph pins fields
+   1–4. §5.5 row 0 backend → Mono; §5.5.1 gains a Mono flag-strings note. (`section-4.md` v1.1, `section-5.md`
+   v1.1.) ERR-016-006 status updated in `spec-error-log.md`.
+2. **Live-host hasher — DONE (July 19, 2026).** `FloatFlagTuple.ComputeHash()` computes
+   `SHA-256(SerializeCanonical(0x14 ‖ floatFlagTuple))`; `EnvironmentFingerprint.CreateStage0MonoCertified(monoRuntimeVersion)`
+   assembles the Stage-0 Mono tuple (Option-A fields 1–4/11 + the §4.8.3 Required Stage-0 flag values) and stamps
+   a genuine, non-placeholder fingerprint. `monoRuntimeVersion` (field 2) is host-supplied — not synthesised.
+3. **Golden vector — DONE (July 19, 2026).** The Stage-0 Mono tuple hash (test `compilerVersion` `6.13.0`)
+   is pinned in `DeterministicSimTests` (`89f50a31…f343e7`), computed by an independent Python mirror of
+   `CanonicalSerializer`, alongside determinism + per-field-sensitivity tests.
+4. **Still host-blocked (not in scope here):** (a) the §4.8.2 **runtime MXCSR validation** — querying the live
+   float-mode flags at match start and rejecting on mismatch — needs native interop on the pinned host (a
+   Stage-1+ engineering task); (b) the **certified capture** — supplying the real Mono runtime version and
+   running on the pinned Windows/Unity/Mono host (`cert-run-runbook.md` P2), which cannot run in the current
+   Linux/no-Unity environment. The recorded tuple already uses the pinned Stage-0 flag values, which is exactly
+   what the §4.8.2 check validates against.
 
 ## 7. Sign-off
 
 Per Spec #16 §1.7 (platform / determinism changes require owner sign-off):
 
-- [ ] **Deterministic-Sim spec owner** — approves the chosen option's §4.8.3 tuple semantics.
-- [ ] **Platform-Certification owner** — approves the §5.5 / `certification-platform.md` reconciliation.
+- [x] **Deterministic-Sim spec owner** — approves the chosen option's §4.8.3 tuple semantics.
+- [x] **Platform-Certification owner** — approves the §5.5 / `certification-platform.md` reconciliation.
 
-Decision recorded: __________ (option) on __________ (date) by __________.
+Decision recorded: **Option A** on **2026-07-19** by the project owner (solo-developed project; the owner
+holds both roles). The §4.8.3/§5.5 edits and the live-host hasher landed the same day (see §6).
 
 ---
 
@@ -162,3 +171,4 @@ Decision recorded: __________ (option) on __________ (date) by __________.
 | Version | Date       | Author | Notes                                                                    |
 |---------|------------|--------|--------------------------------------------------------------------------|
 | 0.1     | 2026-07-19 | —      | Initial proposal. Problem statement, options A/B/C, recommendation (A), deferred implementation plan, sign-off block. Tracks ERR-016-006. |
+| 0.2     | 2026-07-19 | —      | Option A APPROVED (owner sign-off). §4.8.3/§5.5 edits + the live-host hasher (`FloatFlagTuple.ComputeHash` / `CreateStage0MonoCertified`) + golden vector landed same day; §6 rewritten as a landing-status list; §7 signed. Host-blocked remainder: §4.8.2 runtime MXCSR validation + the certified capture. |

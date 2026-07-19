@@ -392,6 +392,63 @@ namespace TacticalDirector.DeterministicSim
         }
 
         /// <summary>
+        /// ERR-016-006 (Option A): FloatFlagTuple.ComputeHash produces the §4.8.3 floatModelHash =
+        /// SHA-256(SerializeCanonical(0x14 ‖ tuple)). Golden vector for the Stage-0 Mono tuple with a
+        /// test compilerVersion, independently computed by a Python mirror of CanonicalSerializer.
+        /// </summary>
+        [Test]
+        public void FloatFlagTuple_Stage0Mono_ComputeHash_MatchesGoldenVector()
+        {
+            var tuple = new FloatFlagTuple(
+                compilerToolchain: EnvironmentFingerprint.Stage0MonoToolchain,
+                compilerVersion:   "6.13.0", // test input, not a claim about the real host
+                targetTriple:      EnvironmentFingerprint.Stage0MonoTargetTriple,
+                il2cppVersion:     EnvironmentFingerprint.Stage0MonoIl2cppSentinel,
+                denormalsAreZero:  false, flushToZero: false,
+                roundingMode:      0, fpContractMode: 0,
+                fmaEnabled:        false, fastMath: false,
+                simdLevel:         EnvironmentFingerprint.Stage0SimdLevel);
+
+            Assert.AreEqual(
+                "89f50a313db7544e78942b6c7cb62ee736d9eb2ee863feb2abbd175309f343e7",
+                tuple.ComputeHash());
+        }
+
+        /// <summary>
+        /// ERR-016-006: ComputeHash is deterministic and sensitive to every field (a version change and a
+        /// float-mode flag flip both change the hash).
+        /// </summary>
+        [Test]
+        public void FloatFlagTuple_ComputeHash_IsDeterministicAndSensitive()
+        {
+            FloatFlagTuple Tuple(string ver, bool daz) => new FloatFlagTuple(
+                "Mono", ver, "win-x64", "MONO", daz, false, 0, 0, false, false, "SSE4.2");
+
+            Assert.AreEqual(Tuple("6.13.0", false).ComputeHash(), Tuple("6.13.0", false).ComputeHash(),
+                "same tuple ⇒ same hash");
+            Assert.AreNotEqual(Tuple("6.13.0", false).ComputeHash(), Tuple("6.14.0", false).ComputeHash(),
+                "a compilerVersion change must change the hash");
+            Assert.AreNotEqual(Tuple("6.13.0", false).ComputeHash(), Tuple("6.13.0", true).ComputeHash(),
+                "a float-mode flag flip must change the hash");
+        }
+
+        /// <summary>
+        /// ERR-016-006 (Option A): CreateStage0MonoCertified builds a NON-placeholder fingerprint carrying
+        /// the real §4.8.3 hash, and rejects a missing host-supplied Mono version rather than inventing one.
+        /// </summary>
+        [Test]
+        public void EnvironmentFingerprint_Stage0MonoCertified_CarriesRealHash_NotPlaceholder()
+        {
+            var fp = EnvironmentFingerprint.CreateStage0MonoCertified("6.13.0");
+            Assert.IsFalse(fp.IsDevPlaceholder, "a certified Mono fingerprint must not report IsDevPlaceholder");
+            Assert.AreEqual(
+                "89f50a313db7544e78942b6c7cb62ee736d9eb2ee863feb2abbd175309f343e7", fp.FloatModelHash);
+            Assert.AreEqual("SSE4.2", fp.SimdFeatureLevel);
+            Assert.Throws<ArgumentException>(() => EnvironmentFingerprint.CreateStage0MonoCertified(null));
+            Assert.Throws<ArgumentException>(() => EnvironmentFingerprint.CreateStage0MonoCertified(string.Empty));
+        }
+
+        /// <summary>
         /// T-DS-FAULT-014: ERR_DS_REPLAY_BOUNDARY fires when ReplayCursor is not at EndOfSnapshot.
         /// §5 / §4.2.2 step 7.
         /// </summary>
