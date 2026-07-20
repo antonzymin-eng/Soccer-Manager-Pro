@@ -5,6 +5,7 @@
 // Modified: 2026-07-14 (match-flow completion — schema pin 14 → 15 + discipline/substitution probes)
 // Modified: 2026-07-18 (#27 T3 — schema pin 15 → 16 + roster-reference probe)
 // Modified: 2026-07-19 (#27 lineup selection Plan-3 — NeutralSquad made position-coherent so proper selection succeeds; no schema change)
+// Modified: 2026-07-20 (snapshot-deserialize KD-8 — schema pin 16 → 17 + CardSeverityRngCursor probe)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
 // Purpose:  Phase B step B3 tests — proves the full §2.6 world-state field set (not just the B2
@@ -55,9 +56,32 @@ namespace TacticalDirector.MatchEngine
             // last-holder tracker — the goal-detection substrate), v15 match-flow completion
             // (per-agent yellow-card count + sent-off flag, the global foul cooldown, per-agent
             // active bench slot, per-team substitutions-used count, half-time/full-time flags),
-            // v16 #27 T3 per-team roster reference (the loaded Squad.ClubId or NO_ROSTER_CLUB_ID).
-            Assert.AreEqual(16u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v16 #27 T3 per-team roster reference (the loaded Squad.ClubId or NO_ROSTER_CLUB_ID),
+            // v17 snapshot-deserialize KD-8 (the match-flow.card-severity RNG stream cursor — RngCursor +
+            // ActionOrdinal, the engine's only mutable RNG stream).
+            Assert.AreEqual(17u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void CardSeverityRngCursor_FeedsSnapshotDigest()
+        {
+            // v17 (snapshot-deserialize KD-8): the match-flow.card-severity RNG stream cursor reaches the
+            // digest preimage. The first processed tick captures no foul (no card-severity draw), so the
+            // injected cursor passes through to the snapshot unchanged — a clean single-field probe. Without
+            // this in the digest a save taken after a booking would restore the stream at cursor 0 and the
+            // next card draw would diverge, silently breaking round-trip determinism (the writer half of KD-8).
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_SetCardSeverityStreamCursor(rngCursor: 3, actionOrdinal: 2);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Advancing the card-severity RNG stream cursor left the digest unchanged — the v17 RNG " +
+                "stream state is not in the digest preimage (round-trip determinism would silently break).");
         }
 
         [Test]
@@ -599,4 +623,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | probe — a configured all-neutral squad (behaviour identical to the |
 // |         |            |        | unconfigured baseline) moves the digest, isolating the v16 per-team |
 // |         |            |        | roster reference (KD-T3-2).                                         |
+// | 1.14    | 2026-07-20 | —      | Snapshot-deserialize KD-8 (writer half): schema pin 16 → 17; new   |
+// |         |            |        | CardSeverityRngCursor_FeedsSnapshotDigest probe — advancing the    |
+// |         |            |        | match-flow.card-severity RNG stream cursor (the engine's only      |
+// |         |            |        | mutable RNG stream) moves the digest, so a save after a booking    |
+// |         |            |        | round-trips deterministically.                                     |
 #endregion
