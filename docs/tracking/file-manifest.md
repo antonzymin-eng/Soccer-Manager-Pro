@@ -1,7 +1,21 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 18, 2026 (**Squad/Player Data Layer #27 T3 landed** — the snapshot roster-reference
+**Last Updated:** July 19, 2026 (**Squad/Player Data Layer #27 lineup selection Plan-3 landed** — proper
+lineup selection replaces the roster-order trust mapping in `ConfigureSquads`. **New files:**
+`src/match-engine/LineupSelector.cs` v1.0 (pure `Select(Squad, FormationFamily) → LineupPlan`: KD-L1
+`DefaultLine → PlayerPosition` bridge, KD-L2 per-line greedy by mean-attribute rating + `PlayerId`
+tie-break (no RNG), KD-L3 fail-loud on a short starter line + best-remaining bench, KD-L4 GK flags from
+the selection), `src/match-engine/tests/LineupSelectorTests.cs` v1.0 (11 locks),
+`docs/tracking/lineup-selection-design.md` v1.0 (design + §5 implementation/code-review). **Modified:**
+`src/match-engine/MatchEngine.cs` (`ConfigureSquads` size-gate → `Select` → bounds-gate-selected → apply,
+all fail-loud before any write; `ApplySquad`/`ValidateSelectedRecords`/`ValidateSquadSize` index through
+the plan + write `_isGoalkeeper`/`_benchIsGoalkeeper` from it; **no `SNAPSHOT_SCHEMA_VERSION` bump**),
+`src/match-engine/tests/MatchEngineSquadTests.cs` v1.3 (position-coherent fixtures, KD-L5; distinct-player
+routing follows selection; substitution forces the distinct record onto the bench;
+`MisOrderedSquad_SelectsGoalkeeperForGkSlot` KD-L4), `src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs`
+(`NeutralSquad` made position-coherent). `CLAUDE.md` OPEN ISSUES #27 updated. — prior:
+**Squad/Player Data Layer #27 T3 landed** — the snapshot roster-reference
 field. **New file:** `docs/tracking/squad-roster-reference-design.md` v0.2 (T3 design supplement, AR-1..AR-2
 CONVERGED). **Modified:** `src/match-engine/MatchEngine.cs` v1.39 (per-team `_rosterClubId[TEAM_COUNT]` —
 the loaded `Squad.ClubId` or `NO_ROSTER_CLUB_ID`; set by `ConfigureSquads` after validate-and-apply;

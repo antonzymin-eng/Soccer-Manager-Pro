@@ -14,6 +14,7 @@
 // Modified: 2026-07-15 (interactive match view: observation-surface extension — HomeScore/AwayScore/MatchEnded; no schema change; see docs/tracking/interactive-match-view-design.md)
 // Modified: 2026-07-17 (#27 T1/T2: attribute seeding sourced from canonical player records via PlayerAttributeProjection + ConfigureSquads; default path byte-identical, no schema change — see docs/tracking/player-attribute-projection-design.md)
 // Modified: 2026-07-18 (#27 T3: per-team roster reference (_rosterClubId) serialized at SNAPSHOT_SCHEMA_VERSION 15 → 16; a configured squad is digest-distinguishable from unconfigured by design — see docs/tracking/squad-roster-reference-design.md)
+// Modified: 2026-07-19 (#27 lineup selection Plan-3: ConfigureSquads assigns starters/bench via LineupSelector (position + rating), GK flags from the selection (KD-L4); no schema change — see docs/tracking/lineup-selection-design.md)
 // Modified: 2026-07-17 (#27 T1 AR-4, doc-only — three stale "Stage-0 neutral placeholder" comments aligned to the T1 canonical-projection sourcing)
 // Modified: 2026-07-16 (match-flow AR-7 fix pass: substitution yellow-card reset (M-1) + post-full-time SubstitutePlayer refusal (L-2) + last-holder-vs-last-toucher approximation documented at the restart seam (L-1))
 // Modified: 2026-07-16 (AR-8 M-1, later same day: sent-off agents excluded from first-touch reception — the one participation surface missing the exclusion; a red-carded agent could receive the ball and deadlock possession)
@@ -926,13 +927,17 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>
         /// Sources both teams' player attributes from real club squads (#27 T1 — the
-        /// player-attribute projection design doc). Stage-0 roster-order lineup mapping (lineup
-        /// selection proper is a deferred follow-up, Plan-3): squad players
-        /// <c>0..PLAYERS_PER_TEAM−1</c> fill the on-pitch slots in order (player 0 occupies the
-        /// goalkeeper slot — the caller orders the roster), players
-        /// <c>PLAYERS_PER_TEAM..PLAYERS_PER_TEAM+SUBSTITUTES_PER_TEAM−1</c> fill the bench;
-        /// squad players beyond those 18 are ignored (unvalidated — a full 25-player club roster is
-        /// accepted, only the consumed prefix matters at Stage 0).
+        /// player-attribute projection design doc), assigning each to its formation slot by
+        /// <b>proper lineup selection</b> (Plan-3, <c>docs/tracking/lineup-selection-design.md</c>):
+        /// <see cref="LineupSelector"/> picks the eleven starters by coarse position + rating (KD-L2)
+        /// and fills the seven bench slots best-remaining, replacing the earlier roster-order trust
+        /// mapping. A starter slot with no eligible player for its required position fails loud
+        /// (KD-L3); the per-slot goalkeeper flags flow from the selection, not the boot
+        /// <c>k == 0</c> seed (KD-L4). Squad players beyond the consumed lineup are unused (a full
+        /// 25-player club roster is accepted; only the selected 18 are validated + applied). A squad
+        /// pre-ordered coherently (a goalkeeper, then each line best-rated first) reproduces the old
+        /// roster-order mapping (KD-L5); selection is otherwise not roster-order — that is the point
+        /// of "proper" selection.
         /// Overwrites the canonical per-slot records and re-projects every boot-seeded attribute
         /// surface (#2 <c>_attrs</c>, #8 <c>_dtAttrs</c>, #7 <c>_perceptionAttrs</c>, bench attrs);
         /// the per-call surfaces (Pass/Shot builders, Mechanics-AI snapshot fills,
@@ -971,14 +976,21 @@ namespace TacticalDirector.MatchEngine
                 throw new System.InvalidOperationException(
                     "ConfigureSquads: pre-kickoff only — the match has already ticked (#27 T1).");
             }
-            // Validate BOTH squads completely BEFORE any state is written, so a refused call leaves
-            // the engine untouched — validating inside the per-team apply would let an invalid away
-            // squad refuse only after the home squad had already landed (a half-applied
-            // configuration; self-review AR-1 M-1 of this landing).
-            ValidateSquad(0, homeSquad);
-            ValidateSquad(1, awaySquad);
-            ApplySquad(0, homeSquad);
-            ApplySquad(1, awaySquad);
+            // Every fail-loud step for BOTH squads runs BEFORE any state is written, so a refused call
+            // leaves the engine untouched — validating inside the per-team apply would let an invalid
+            // away squad refuse only after the home squad had already landed (a half-applied
+            // configuration; self-review AR-1 M-1 of the T1 landing, preserved here).
+            // (1) Size gate first (a clear message before selection); (2) lineup selection, which fails
+            // loud on a starter slot with no eligible player (KD-L3); (3) bounds gate on the SELECTED
+            // consumed records (not a fixed prefix — the plan chooses which 18 are consumed).
+            ValidateSquadSize(0, homeSquad);
+            ValidateSquadSize(1, awaySquad);
+            LineupPlan homePlan = LineupSelector.Select(homeSquad, MatchEngineConstants.STAGE0_FORMATION);
+            LineupPlan awayPlan = LineupSelector.Select(awaySquad, MatchEngineConstants.STAGE0_FORMATION);
+            ValidateSelectedRecords(0, homeSquad, in homePlan);
+            ValidateSelectedRecords(1, awaySquad, in awayPlan);
+            ApplySquad(0, homeSquad, in homePlan);
+            ApplySquad(1, awaySquad, in awayPlan);
             // #27 T3: record which roster each team loaded (the identity half of restore fidelity),
             // set only after both squads validated-and-applied so a refused call leaves the reference
             // at the sentinel (validate-before-write, matching the AR-1 M-1 both-squads rule above).
@@ -986,8 +998,8 @@ namespace TacticalDirector.MatchEngine
             _rosterClubId[1] = awaySquad.ClubId;
         }
 
-        /// <summary>Fail-loud gates on one squad's size + every consumed record (see <see cref="ConfigureSquads"/>).</summary>
-        private static void ValidateSquad(int teamId, TacticalDirector.PlayerDatabase.Squad squad)
+        /// <summary>Fail-loud gate on one squad's size — enough players for the starters + bench (see <see cref="ConfigureSquads"/>).</summary>
+        private static void ValidateSquadSize(int teamId, TacticalDirector.PlayerDatabase.Squad squad)
         {
             int needed = MatchEngineConstants.PLAYERS_PER_TEAM + MatchEngineConstants.SUBSTITUTES_PER_TEAM;
             if (squad.Count < needed)
@@ -996,30 +1008,50 @@ namespace TacticalDirector.MatchEngine
                     $"ConfigureSquads: team {teamId} squad has {squad.Count} players; "
                     + $"need at least {needed} (starters + bench).");
             }
-            for (int k = 0; k < needed; k++)
+        }
+
+        /// <summary>Fail-loud bounds gate on every SELECTED consumed record — the plan chooses which
+        /// 18 of the roster are consumed, so validation follows the selection, not a fixed prefix
+        /// (see <see cref="ConfigureSquads"/>).</summary>
+        private static void ValidateSelectedRecords(
+            int teamId, TacticalDirector.PlayerDatabase.Squad squad, in LineupPlan plan)
+        {
+            for (int k = 0; k < plan.StarterLocalIndices.Length; k++)
             {
-                ValidateCanonicalRecord(teamId, k, squad.GetPlayer(k).Attributes);
+                int local = plan.StarterLocalIndices[k];
+                ValidateCanonicalRecord(teamId, local, squad.GetPlayer(local).Attributes);
+            }
+            for (int b = 0; b < plan.BenchLocalIndices.Length; b++)
+            {
+                int local = plan.BenchLocalIndices[b];
+                ValidateCanonicalRecord(teamId, local, squad.GetPlayer(local).Attributes);
             }
         }
 
-        /// <summary>Applies one validated squad to one team's on-pitch + bench slots (see <see cref="ConfigureSquads"/>).</summary>
-        private void ApplySquad(int teamId, TacticalDirector.PlayerDatabase.Squad squad)
+        /// <summary>Applies one validated squad to one team's on-pitch + bench slots through the
+        /// selected lineup (see <see cref="ConfigureSquads"/>). The per-slot goalkeeper flags come
+        /// from the selection (KD-L4), replacing the boot <c>k == 0</c> seed.</summary>
+        private void ApplySquad(
+            int teamId, TacticalDirector.PlayerDatabase.Squad squad, in LineupPlan plan)
         {
             for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
             {
-                int i = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + k;
-                _canonicalAttrs[i] = squad.GetPlayer(k).Attributes;
+                int i     = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                int local = plan.StarterLocalIndices[k];
+                _canonicalAttrs[i] = squad.GetPlayer(local).Attributes;
                 _attrs[i]          = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
                 _dtAttrs[i]        = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
                 _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
                     in _canonicalAttrs[i], teamId, _perceptionAttrs[i].IsHalfTurned);
+                _isGoalkeeper[i]   = plan.StarterIsGoalkeeper[k];
             }
             for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
             {
-                _benchCanonicalAttrs[teamId][b] =
-                    squad.GetPlayer(MatchEngineConstants.PLAYERS_PER_TEAM + b).Attributes;
+                int local = plan.BenchLocalIndices[b];
+                _benchCanonicalAttrs[teamId][b] = squad.GetPlayer(local).Attributes;
                 _benchAttrs[teamId][b] =
                     PlayerAttributeProjection.ToAgentMovement(in _benchCanonicalAttrs[teamId][b]);
+                _benchIsGoalkeeper[teamId][b] = plan.BenchIsGoalkeeper[b];
             }
         }
 

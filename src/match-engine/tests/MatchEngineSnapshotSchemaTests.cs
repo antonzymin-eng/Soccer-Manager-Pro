@@ -4,6 +4,7 @@
 // Modified: 2026-07-11 (engine substrate — schema pin 13 → 14 + ScoreState probe)
 // Modified: 2026-07-14 (match-flow completion — schema pin 14 → 15 + discipline/substitution probes)
 // Modified: 2026-07-18 (#27 T3 — schema pin 15 → 16 + roster-reference probe)
+// Modified: 2026-07-19 (#27 lineup selection Plan-3 — NeutralSquad made position-coherent so proper selection succeeds; no schema change)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
 // Purpose:  Phase B step B3 tests — proves the full §2.6 world-state field set (not just the B2
@@ -93,19 +94,40 @@ namespace TacticalDirector.MatchEngine
                 "A substitution left the digest unchanged — the v15 substitution block must feed the preimage.");
         }
 
-        /// <summary>An all-<c>CreateDefault</c> squad of exactly the consumed size (starters + bench).
-        /// Fully-qualifies the PlayerDatabase types (this file's <c>using TacticalDirector.AgentMovement</c>
-        /// also imports a <c>PlayerAttributes</c> — the KD-P6 CS0104 discipline).</summary>
+        /// <summary>An all-<c>CreateDefault</c> (neutral-attribute), position-coherent squad of exactly
+        /// the consumed size (starters + bench). Positions are ordered [GK, Def×4, Mid×4, Fwd×2, bench]
+        /// so proper lineup selection (#27 Plan-3) succeeds AND reproduces roster order (KD-L5) — the
+        /// agents still move identically to the unconfigured baseline, so this squad isolates the roster
+        /// reference in the digest. Fully-qualifies the PlayerDatabase types (this file's
+        /// <c>using TacticalDirector.AgentMovement</c> also imports a <c>PlayerAttributes</c> — the KD-P6
+        /// CS0104 discipline).</summary>
         private static TacticalDirector.PlayerDatabase.Squad NeutralSquad(int clubId)
         {
             int count = MatchEngineConstants.PLAYERS_PER_TEAM + MatchEngineConstants.SUBSTITUTES_PER_TEAM;
             var players = new TacticalDirector.PlayerDatabase.PlayerRecord[count];
             for (int k = 0; k < count; k++)
             {
-                players[k] = TacticalDirector.PlayerDatabase.PlayerRecord.CreateDefault(
+                var p = TacticalDirector.PlayerDatabase.PlayerRecord.CreateDefault(
                     clubId * TacticalDirector.PlayerDatabase.PlayerDatabaseConstants.CLUB_SQUAD_SIZE + k);
+                p.Position = CoherentPosition(k);
+                players[k] = p;
             }
             return new TacticalDirector.PlayerDatabase.Squad(clubId, players);
+        }
+
+        /// <summary>Coarse position for the [GK, Def×4, Mid×4, Fwd×2, bench] coherent layout (KD-L5).</summary>
+        private static TacticalDirector.PlayerDatabase.PlayerPosition CoherentPosition(int localIndex)
+        {
+            if (localIndex == 0)  return TacticalDirector.PlayerDatabase.PlayerPosition.Goalkeeper;
+            if (localIndex <= 4)  return TacticalDirector.PlayerDatabase.PlayerPosition.Defender;
+            if (localIndex <= 8)  return TacticalDirector.PlayerDatabase.PlayerPosition.Midfielder;
+            if (localIndex <= 10) return TacticalDirector.PlayerDatabase.PlayerPosition.Forward;
+            switch ((localIndex - 11) % 3)   // bench filler: Def / Mid / Fwd, no GK
+            {
+                case 0:  return TacticalDirector.PlayerDatabase.PlayerPosition.Defender;
+                case 1:  return TacticalDirector.PlayerDatabase.PlayerPosition.Midfielder;
+                default: return TacticalDirector.PlayerDatabase.PlayerPosition.Forward;
+            }
         }
 
         [Test]
