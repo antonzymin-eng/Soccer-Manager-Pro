@@ -20,6 +20,7 @@
 // Modified: 2026-07-16 (AR-8 M-1, later same day: sent-off agents excluded from first-touch reception — the one participation surface missing the exclusion; a red-carded agent could receive the ball and deadlock possession)
 // Modified: 2026-07-17 (AR-9 M-1: foul candidates involving a sent-off participant discarded at ApplyFoulIfCaptured — a frozen red-carded agent could repeatedly win free kicks and draw cards against opponents running into them)
 // Modified: 2026-07-17 (AR-10, doc-only: _lastHolderAgentId writer comment aligned to the last-settled-holder approximation — a deflection-chain goal credits the last settled holder, not necessarily the kicker; CONVERGENCE round)
+// Modified: 2026-07-20 (snapshot-deserialize Phase 1 KD-8 writer half: match-flow.card-severity RngStreamState cursor serialized at SNAPSHOT_SCHEMA_VERSION 16 → 17 — the engine's only mutable RNG stream; a save after a booking now round-trips deterministically. See docs/tracking/snapshot-deserialize-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -1170,6 +1171,19 @@ namespace TacticalDirector.MatchEngine
         {
             _goals[0] = homeGoals;
             _goals[1] = awayGoals;
+        }
+
+        /// <summary>Test-only seam (snapshot-deserialize KD-8, v17): advances the match-flow.card-severity
+        /// RNG stream cursor without issuing a card, so a test can prove the serialized RngStreamState cursor
+        /// (RngCursor + ActionOrdinal) is in the snapshot digest preimage. Reads the boot-registered stream,
+        /// overwrites only the two mutable cursor fields, and restores it via
+        /// <see cref="DeterministicRngService.RestoreStream"/> — the values the writer serializes.</summary>
+        internal void TestOnly_SetCardSeverityStreamCursor(ulong rngCursor, ulong actionOrdinal)
+        {
+            RngStreamState s = _rng.GetStreamState(_cardSeverityStreamIndex);
+            s.RngCursor     = rngCursor;
+            s.ActionOrdinal = actionOrdinal;
+            _rng.RestoreStream(_cardSeverityStreamIndex, in s);
         }
 
         /// <summary>Test-only: the last settled possession holder (v14; −1 = no agent has held yet).</summary>
@@ -3130,7 +3144,13 @@ namespace TacticalDirector.MatchEngine
             // _perfs (it stays the boot-neutral constant) — when it begins to, _perfs becomes
             // cross-tick state and MUST be serialized here (bump SNAPSHOT_SCHEMA_VERSION at that point).
             //
-            // CROSS-TICK COVERAGE COMPLETE (D4, v8): every cross-tick gameplay surface is now serialized.
+            // CROSS-TICK COVERAGE (D4 v8, completed by v17): every cross-tick gameplay surface is serialized.
+            // NOTE (snapshot-deserialize-design.md KD-8): the v8-era "no cross-tick state is excluded" claim
+            // below became STALE at v15, when match-flow completion added the match-flow.card-severity
+            // DeterministicRngService stream — a mutable RNG cursor that IS cross-tick state and was NOT then
+            // serialized. v17 (the last block of this method) closes that gap; the claim is true as written
+            // only from v17 onward. The lesson: a new DeterministicRngService draw site is cross-tick state
+            // and must land in the snapshot in the same change that adds the draw.
             // The four mechanics-AI hysteresis surfaces — Positioning (#12, v4), Pressing (#13, v5),
             // Defensive (#14, v6), Attacking (#15, v7) — and the Perception (#7, v8) internal state
             // (RecognitionLatencyTracker / ShoulderCheckScheduler / ball-prev arrays) are all serialized
@@ -3346,6 +3366,26 @@ namespace TacticalDirector.MatchEngine
             {
                 CanonicalSerializer.WriteI32(buf, ref o, _rosterClubId[t]);
             }
+
+            // v17 (snapshot-deserialize-design.md KD-8) — the match-flow.card-severity RNG stream cursor.
+            // This DeterministicRngService stream is the match engine's ONLY mutable RNG stream (collision
+            // self-seeds from matchSeed ^ frameNumber; pass/shot error is hash-based on the tick — both pure
+            // functions of the tick, reconstructible with no stored state), so it is the whole of the RNG
+            // cross-tick surface. Its cursor advances on every card-severity draw (one per issued card), so
+            // WITHOUT this field a restore would re-register the stream at ActionOrdinal 0 and the next card
+            // draw after any prior booking would diverge from the saved run — the round-trip determinism
+            // contract (KD-5) silently failed for any match with a card. Only the two mutable fields at rest
+            // are serialized: RngCursor and ActionOrdinal. The draw is reservation-atomic
+            // (Reserve…CloseReservation inside ApplyFoulIfCaptured, no yield) and snapshots are taken in the
+            // Snapshot phase after Resolve, so the reservation is always closed at snapshot time — the other
+            // RngStreamState fields (StreamKey/SiteId/SubsystemOrdinal/EntityId/StreamVersion +
+            // BudgetRemaining/DeclaredBudget/DrawIndex) are boot-reconstructed by the RegisterStream call and
+            // need not be stored (the WorldStore world.text-cursor precedent). This is the RNG half of the
+            // "CROSS-TICK COVERAGE" claim above: that claim (written at v8) predated the v15 card-severity
+            // stream and is only made true here — a new DeterministicRngService draw site is cross-tick state.
+            ref readonly RngStreamState cardStream = ref _rng.GetStreamState(_cardSeverityStreamIndex);
+            CanonicalSerializer.WriteU64(buf, ref o, cardStream.RngCursor);
+            CanonicalSerializer.WriteU64(buf, ref o, cardStream.ActionOrdinal);
 
             payload.BytesWritten = o;
         }
@@ -4616,4 +4656,15 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | restore re-projection is future (no snapshot-deserialize path    |
 // |         |            |        | exists). +TestOnly_RosterClubId seam; exclusion-proof + Configure|
 // |         |            |        | Squads/substitution restore-scope docs updated.                 |
+// | 1.40    | 2026-07-20 | —      | Snapshot-deserialize (snapshot-deserialize-design.md) Phase 1   |
+// |         |            |        | KD-8 writer half: the match-flow.card-severity RngStreamState   |
+// |         |            |        | cursor (RngCursor + ActionOrdinal) is serialized at SNAPSHOT_    |
+// |         |            |        | SCHEMA_VERSION 16 → 17 — the engine's only mutable RNG stream    |
+// |         |            |        | and the one cross-tick surface the writer omitted, so a save     |
+// |         |            |        | after any booking now round-trips deterministically (the KD-5   |
+// |         |            |        | contract, previously silently broken for any carded match). The |
+// |         |            |        | stale v8 "no cross-tick state excluded" note corrected. Restore  |
+// |         |            |        | via DeterministicRngService.RestoreStream, plus the reader /     |
+// |         |            |        | RestoreFromSnapshot factory / G3 round-trip test, are the        |
+// |         |            |        | remaining Phase-1 slices.                                        |
 #endregion

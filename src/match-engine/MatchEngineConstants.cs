@@ -198,8 +198,23 @@ namespace TacticalDirector.MatchEngine
         /// the reference is identity, not attributes; this supersedes the T1 KD-P7 all-default byte-
         /// identity lock, which was a T1-only property). Behavioural neutrality is unchanged: an
         /// all-CreateDefault squad still moves agents identically — the ONLY digest difference is this
-        /// reference field.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 16;
+        /// reference field.
+        ///
+        /// v17 (2026-07-20, snapshot-deserialize-design.md KD-8) appends the <c>match-flow.card-severity</c>
+        /// <c>DeterministicRngService</c> stream cursor — its <c>RngCursor</c> and
+        /// <c>ActionOrdinal</c> (u64 each), the two mutable fields the reservation-atomic card-severity draw
+        /// leaves at rest. This stream is the match engine's ONLY mutable RNG stream (collision self-seeds
+        /// from <c>matchSeed ^ frameNumber</c> and pass/shot error is hash-based on the tick, both pure
+        /// functions of the tick reconstructible with no stored state), so it is the whole of the RNG
+        /// cross-tick surface. It advances on every card-severity draw (one per issued card), so before v17 a
+        /// save taken AFTER any booking would restore a fresh engine at cursor 0 and the next card draw would
+        /// diverge from the saved run — the round-trip determinism contract (KD-5) silently failed for any
+        /// match with a card. v17 closes it (restore via <c>DeterministicRngService.RestoreStream</c>, the
+        /// <c>WorldStore</c> world.text-cursor precedent). This corrects the stale v8 "no cross-tick gameplay
+        /// state is excluded" claim in <see cref="MatchEngine.SerializeWorldState"/> — that note predates the
+        /// v15 card-severity stream; a new <c>DeterministicRngService</c> draw site is cross-tick state and
+        /// must land in the snapshot in the same change that adds it.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 17;
 
         /// <summary>[FIXED] Regulation match length, minutes (Laws of the Game — two 45-minute
         /// halves). Stage 0 models no stoppage time and no extra time; the engine's match-length
@@ -524,4 +539,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | the loaded Squad.ClubId, a boot-constant identity field so a save|
 // |         |            |        | records which squad each team loaded; KD-T3-2 configured ≠       |
 // |         |            |        | unconfigured by design).                                        |
+// | 1.24    | 2026-07-20 | —      | Snapshot-deserialize (snapshot-deserialize-design.md) Phase 1   |
+// |         |            |        | KD-8 writer half: SNAPSHOT_SCHEMA_VERSION 16 → 17 — the         |
+// |         |            |        | match-flow.card-severity RngStreamState cursor (RngCursor +      |
+// |         |            |        | ActionOrdinal, u64 each) is now serialized; it is the engine's   |
+// |         |            |        | only mutable RNG stream and was the one cross-tick surface the   |
+// |         |            |        | writer omitted, so a save after any booking now round-trips      |
+// |         |            |        | deterministically. v17 doc paragraph added; the stale v8         |
+// |         |            |        | "no cross-tick state excluded" note corrected.                  |
 #endregion
