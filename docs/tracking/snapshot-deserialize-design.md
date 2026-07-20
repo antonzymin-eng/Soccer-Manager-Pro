@@ -1,11 +1,14 @@
 # Snapshot Deserialize / Replay Path — Match Engine (Design Supplement)
 
 > **Created:** July 20, 2026
-> **Last Updated:** July 20, 2026 (v0.3 — self-adversarial reviews AR-1 (0H+3M+2L) and AR-2
-> (0H+1M+2L) folded in, all resolved; see §9 Version History. AR-2's M-1 was a real contract gap
-> — the restore entry point needs the `SnapshotHeader` (fingerprint + digest chain), not the
-> `SnapshotPayload` alone. One more fresh-eyes pass (AR-3) is the remaining gate before promotion
-> to a match-engine-design.md phase.)
+> **Last Updated:** July 20, 2026 (v0.4 — self-adversarial reviews AR-1 (0H+3M+2L), AR-2
+> (0H+1M+2L), and **AR-3 (1H+0M+1L)** folded in, all resolved; see §9 Version History. AR-3's
+> **H-1 is load-bearing**: the engine owns a `DeterministicRngService` card-severity stream whose
+> cursor is cross-tick state the current writer does **not** serialize, so KD-5 round-trip
+> determinism could not hold after the first foul draw — Phase 1 must add RNG stream state to the
+> writer (a `SNAPSHOT_SCHEMA_VERSION` bump, not a read-only addition), per new KD-8. Every cited
+> engine/deterministic-sim seam was verified against source this round. Because a High was found,
+> the cycle is not yet converged; AR-4 is the remaining gate before promotion.)
 > **Status:** DESIGN SUPPLEMENT (Stage 0+1 integration scaffolding — pre-implementation; NOT a
 > numbered spec, same governance class as `match-engine-design.md` and
 > `squad-roster-reference-design.md`). No code has been written against this note yet.
@@ -74,7 +77,12 @@ The reader is not building from nothing. Two things are already in place:
    | Pressing/Defensive/Attacking tick state (×2 each) | `CaptureState()` | **none** | add `RestoreState` |
    | Perception internal (×1) | `CaptureState()` | **none** | add `RestoreState` |
    | `RotationController` (×2) | `CaptureRotationState()` | **none** | add restore |
+   | `DeterministicRngService` card-severity stream | `GetStreamState(idx)` | `RestoreStream(idx, in state)` ✓ | **writer** must serialize the stream (KD-8) |
    | Ball / agents / tactics / dwell / manager / score / discipline / roster | direct field writes | `TestOnly_Set*` (internal, test-only) | promote to production restore (KD-3) |
+
+   The RNG row is the exception to "the writer already writes everything": the restore *seams*
+   exist (`GetStreamState`/`RestoreStream`, the `WorldStore` world.text precedent), but the
+   **writer omits the stream** — the one genuine gap AR-3 found (KD-8).
 
    The `TestOnly_Set*` seams (`TestOnly_SetAgent`, `TestOnly_SetBall`, `TestOnly_SetGoals`, …) prove
    the fields are individually settable but are test-only by contract and cover only a subset; the
@@ -228,8 +236,16 @@ from the read side).
 `#16 §4.8.2` runtime float-mode (MXCSR) validation — reject a snapshot whose
 `EnvironmentFingerprint` does not match the live host's float mode — is a **load-time gate**: it
 runs when a snapshot crosses into a process, which is exactly this reader. The factory validates the
-`header.Fingerprint` against the live host as **step 0** of restore (KD-4), before any state is
-touched (`EnvironmentFingerprint.ValidateAgainst` → `ERR_DS_REPLAY_ENV_MISMATCH`). The **native MXCSR query**
+`header.Fingerprint` against a **live** fingerprint as **step 0** of restore (KD-4), before any
+state is touched (`EnvironmentFingerprint.ValidateAgainst(live)` returns
+`ERR_DS_REPLAY_ENV_MISMATCH` on any field difference, `0` on match — a return code, so the factory
+checks it and refuses; it does not throw on its own). **Caveat (AR-3 L-1):** the gate is only as
+strong as the *live* fingerprint it compares against, and constructing a truthful live fingerprint
+requires reading the host's actual float mode — which is the same native MXCSR query below that
+stays host-blocked. Until that lands, Phase 1 can wire the call against the recorded / dev
+fingerprint factory (`CreateStage0Dev` / `CreateStage0MonoCertified`), where it functions as a
+self-consistency check (schema/tuple sanity), and it becomes a real float-mode gate only once the
+live source exists. The **native MXCSR query**
 (reading live float-mode flags) is the still-unbuilt half (native interop, host-blocked); this note
 **defines the seam and the call site** so that when the query lands it has a consumer, and does not
 build the query itself (that stays the root-`CLAUDE.md` host-blocked item). Fingerprint validation
@@ -247,18 +263,50 @@ digest payload. Recommendation: **(a) for Phase 1** (explicit params — no form
 Stage-0 authors config in code), with (b) revisited when the on-disk save-file root (N1) is designed,
 since that is where a boot-header naturally lives. Recorded as a decision to make at N1, not now.
 
+### KD-8 — RNG stream cursor is cross-tick state the current writer omits; Phase 1 must add it (schema bump)
+
+`MatchEngine` owns a `DeterministicRngService _rng` seeded from `matchSeed`, with one registered
+mutable stream: **`match-flow.card-severity`** (`_cardSeverityStreamIndex`), drawn from when a foul
+issues a card. Its `RngStreamState` (`RngCursor` + `ActionOrdinal`) advances on each draw and is
+**cross-tick mutable state**. `SerializeWorldState` (v16) does **not** serialize it — verified: no
+`RngStreamState`/`RngCursor`/`GetStreamState` in the writer. Consequence: on restore, the fresh
+engine re-registers the stream at `ActionOrdinal 0`, so the **next card-severity draw after a
+restore diverges from the saved run** the moment any foul draw happened before the snapshot — i.e.
+the KD-5 round-trip determinism contract silently fails for any match with a booking. (This also
+makes the writer's own "CROSS-TICK COVERAGE COMPLETE (D4) — no cross-tick gameplay state is
+excluded" exclusion note stale: it predates the card-severity stream added with match-flow
+completion, v15.)
+
+The other match-engine randomness sources are **not** affected — they are pure functions of the
+tick, reconstructible at the restored tick with no stored state: collision self-seeds from
+`matchSeed ^ frameNumber`, and pass/shot error is hash-based on `(agentId, frameNumber, …)`
+(match-engine design Phase C: "registers NO `DeterministicRngService` draw sites"). The
+card-severity stream is the **only** `DeterministicRngService` stream with a mutable cursor, so it
+is the whole of the gap.
+
+**Decision:** Phase 1 adds the card-severity `RngStreamState` (`RngCursor` + `ActionOrdinal`, the
+two fields the reservation-atomic draw leaves at rest — the exact `WorldStore.Snapshot` precedent)
+to `SerializeWorldState`, and the reader restores it via `DeterministicRngService.RestoreStream`.
+This is a **`SNAPSHOT_SCHEMA_VERSION` bump (16 → 17)** and updates the writer's exclusion proof — so
+**Phase 1 is not a pure read-only addition**; it carries this one writer change. The bump is
+harmless to existing digests (a new field appended last; two same-seed runs still serialize the
+identical stream state each tick, so the default digest chain simply gains a field, and the existing
+match-engine determinism tests re-baseline exactly as every prior schema bump did).
+
 ---
 
 ## 3. Phased implementation plan
 
 **Phase 1 — neutral-path reader + round-trip determinism (the keystone).**
-Add the missing `RestoreState` counterparts (§0.1 table); write `DeserializeWorldState` as the
-symmetric mirror of `SerializeWorldState` (KD-1/KD-2); add `RestoreFromSnapshot` factory (KD-4) with
-EventBus reset + digest-chain restore (KD-5); fingerprint validation against a recorded tuple (KD-6,
+Add the card-severity RNG stream state to the writer (KD-8, `SNAPSHOT_SCHEMA_VERSION` 16 → 17); add
+the missing `RestoreState` counterparts (§0.1 table); write `DeserializeWorldState` as the symmetric
+mirror of `SerializeWorldState` (KD-1/KD-2); add `RestoreFromSnapshot` factory (KD-4) with EventBus
+reset + digest-chain restore (KD-5); fingerprint validation against a recorded tuple (KD-6,
 recorded-tuple half). **Acceptance:** the G3 round-trip determinism test passes for default/neutral
-matches (every match that never calls `ConfigureSquads`), plus the trailing-byte/version-gate
-fail-loud guards. No schema bump (read-only addition). This phase alone unblocks save/load and
-replay for the default path — the bulk of the MVP value.
+matches (every match that never calls `ConfigureSquads`) **including a match with a foul/booking
+before the snapshot** (the direct H-1 regression), plus the trailing-byte/version-gate fail-loud
+guards. One writer change + schema bump (KD-8); the reader is otherwise a pure addition. This phase
+alone unblocks save/load and replay for the default path — the bulk of the MVP value.
 
 **Phase 2 — distinct-squad re-projection (#27 T3 consumer).**
 Add the `ISquadProvider` seam + roster re-projection keyed by `_activeBenchSlot` (KD-3); extend the
@@ -286,7 +334,11 @@ Wire the native float-mode query into the KD-6 seam (host-blocked today); then N
   one of those cross-tick (the PHASE-D `_perfs` note in the exclusion proof), it must be added to
   *both* writer and reader, and Phase 1's neutral-path exactness would otherwise silently break. The
   G3 test catches it; the exclusion proof must stay the single source of truth for what is / isn't in
-  the payload.
+  the payload. **AR-3 already found one instance of this rot**: the card-severity RNG stream (added
+  v15) became cross-tick but was never added to the writer or the exclusion proof, which still
+  claims "no cross-tick gameplay state is excluded" (KD-8). Phase 1 closes it and re-verifies the
+  proof; the lesson is that a new `DeterministicRngService` draw site is cross-tick state and must
+  land in the snapshot in the same change that adds it.
 - **R3 — EventBus process-static state.** Restore into a process that already ran a match must
   `ResetForNewMatch` (KD-4 step 2) or stale subscriber tables corrupt the restored match. Already the
   match-engine Risk #4 pattern; called out so the factory does not skip it.
@@ -297,9 +349,10 @@ Wire the native float-mode query into the KD-6 seam (host-blocked today); then N
 
 ## 5. Acceptance criteria (definition of done, per phase)
 
-- **Phase 1:** G3 round-trip determinism test green for ≥2 neutral scenarios (kickoff-multi-second
-  capstone + a mid-match-with-tactics-changed case); version-gate + trailing-byte fail-loud tests;
-  no `SNAPSHOT_SCHEMA_VERSION` bump; full dotnet gate PASSED.
+- **Phase 1:** G3 round-trip determinism test green for ≥3 neutral scenarios (kickoff-multi-second
+  capstone + a mid-match-with-tactics-changed case + **a match with a booking before the snapshot**,
+  the KD-8/H-1 regression); version-gate + trailing-byte fail-loud tests; `SNAPSHOT_SCHEMA_VERSION`
+  16 → 17 (KD-8) with the existing schema-pin test re-baselined; full dotnet gate PASSED.
 - **Phase 2:** G3 green for a distinct-squad `ConfigureSquads` match; fail-loud test for
   non-sentinel roster reference with no provider; bench-swap fidelity test (a substituted match
   restores the swapped-in player's attributes on the correct slot).
@@ -356,3 +409,4 @@ the writer's exclusion proofs were written to prevent, now checked from the read
 | 0.1 | 2026-07-20 | — | Initial design supplement. Scope (snapshot-deserialize / restore path), KD-1..KD-7, phased plan, risks, acceptance criteria, open questions. |
 | 0.2 | 2026-07-20 | — | **Self-adversarial review AR-1: 0H + 3M + 2L, all resolved.** M-1: v0.1 KD-4 had the factory validating the fingerprint (KD-6) but never said *when* relative to `ResetForNewMatch` / deserialize — a validation that runs after state is applied wastes the reject; ordered it as step-0-of-restore in KD-6 and O3, before any state mutation. M-2: v0.1 claimed Phase 1 "restores default matches exactly" but did not state that `_activeBenchSlot` is *always* serialized (v15) and therefore available to Phase 1 even though Phase 1 does not re-project — clarified in KD-3 that Phase 1 restores the slot value (so a neutral substituted match round-trips) and only the *attribute re-projection* waits for Phase 2. M-3: v0.1 did not address that `SerializeWorldState` omits the boot RNG seed / formation, so a payload alone cannot rebuild a tickable engine — added KD-7 + O1 (the payload is state, not boot constants). L-1: R1 originally implied the schema-version gate catches writer/reader drift; corrected — same-version drift is caught by the trailing-byte guard + G3, not the version gate. L-2: added the §0.1 restore-seam inventory table so the Phase-1 "add `RestoreState` counterparts" work is enumerated, not hand-waved. |
 | 0.3 | 2026-07-20 | — | **Self-adversarial review AR-2: 0H + 1M + 2L, all resolved.** M-1 (contract gap): the KD-4 factory signature took `SnapshotPayload payload` alone, but the `EnvironmentFingerprint` (KD-6) and the digest chain (KD-5) live in `SnapshotHeader`, not the payload — the entry point cannot validate or continue the chain without it. Signature now `RestoreFromSnapshot(in SnapshotHeader header, SnapshotPayload payload, …)`; a save artifact is the (header, payload) pair. L-1: KD-4's numbered step list referenced fingerprint validation (KD-6) and digest restore (KD-5) but did not enumerate them — added as explicit step 0 and step 4. L-2: the KD-5 (G3) acceptance-test description carried a redundant "separately boot the same match, tick to N" step that contradicted "the factory produces a fresh engine C"; rewritten so A is kept running only as the reference chain and C comes solely from `RestoreFromSnapshot`. |
+| 0.4 | 2026-07-20 | — | **Self-adversarial review AR-3: 1H + 0M + 1L, all resolved. Every cited engine / deterministic-sim seam verified against source** (`SnapshotCodec.CommitLoadedDigest`, `SnapshotHeader.Fingerprint`, `EnvironmentFingerprint.ValidateAgainst`, `MatchClock.RestoreFromSnapshot`, `EventBus.ResetForNewMatch`, the `CanonicalSerializer.Read*` primitives, and `DeterministicRngService.GetStreamState`/`RestoreStream`) — all present with the claimed shapes; no phantom API cited. **H-1 (load-bearing):** the engine owns a `DeterministicRngService` `match-flow.card-severity` stream whose `RngStreamState` (`RngCursor`+`ActionOrdinal`) is cross-tick mutable state the current writer does NOT serialize (grep-confirmed), so KD-5 round-trip determinism silently fails for any match with a booking before the snapshot — added KD-8 (Phase 1 serializes the stream, `SNAPSHOT_SCHEMA_VERSION` 16 → 17, restore via `RestoreStream`, the `WorldStore` world.text precedent), corrected the Phase-1 "no schema bump / read-only" claim in §3 + §5, added the booking-before-snapshot acceptance case, and updated R2 (the writer's "cross-tick coverage complete" exclusion proof is stale — it predates the v15 card-severity stream; a new `DeterministicRngService` draw site is cross-tick state that must land in the snapshot in the same change that adds it). Scope pinned: card-severity is the *only* mutable RNG stream — collision (`matchSeed^frameNumber`) and pass/shot error (hash-based) are pure functions of the tick, reconstructible with no stored state. L-1: KD-6 said the factory "validates against the live host" without noting that constructing a truthful *live* `EnvironmentFingerprint` is itself the host-blocked MXCSR half; clarified that Phase 1 wires the call against the recorded/dev factory (self-consistency check) and it becomes a real float-mode gate only once the live source exists, and that `ValidateAgainst` returns a code (not a throw). **Because a High was found, the cycle is not converged — AR-4 (fresh-eyes) is the remaining gate before promotion.** |
