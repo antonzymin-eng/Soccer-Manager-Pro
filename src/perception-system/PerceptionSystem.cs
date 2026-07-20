@@ -137,6 +137,55 @@ namespace TacticalDirector.PerceptionSystem
         }
 
         /// <summary>
+        /// Restores the cross-tick perception state from a snapshot produced by <see cref="CaptureState"/>
+        /// (deterministic save/restore — snapshot-deserialize design note KD-2, the perception analogue of
+        /// the mechanics-AI / executor / DecisionTree <c>RestoreState</c> seams). The recognition-latency
+        /// counters, shoulder-check scheduling arrays, and per-agent ball-perception carry-over are copied
+        /// element-wise into the live, allocated-once containers (the caller supplies a freshly-built
+        /// <paramref name="state"/> with matching capacities). The per-tick FilteredView / diagnostics /
+        /// candidate scratch is overwritten each heartbeat before any read and is not part of the captured
+        /// state, so forward replay from the restored tick is byte-identical.
+        /// </summary>
+        public void RestoreState(in PerceptionTickState state)
+        {
+            // The tracker/scheduler arrays are restored through their live CaptureState() references
+            // (the authoritative allocated-once instances); the ball-prev arrays are owned directly here.
+            PerceptionTickState live = CaptureState();
+
+            int pairCap = live.Latency.PairCapacity;
+            for (int i = 0; i < pairCap; i++)
+            {
+                live.Latency.LatencyCounters[i] = state.Latency.LatencyCounters[i];
+                live.Latency.Confirmed[i]       = state.Latency.Confirmed[i];
+                live.Latency.ExpiryCounters[i]  = state.Latency.ExpiryCounters[i];
+            }
+
+            int agentCap = live.ShoulderCheck.AgentCapacity;
+            for (int i = 0; i < agentCap; i++)
+            {
+                live.ShoulderCheck.NextCheckFrame[i]    = state.ShoulderCheck.NextCheckFrame[i];
+                live.ShoulderCheck.WindowExpiryFrame[i] = state.ShoulderCheck.WindowExpiryFrame[i];
+                live.ShoulderCheck.WindowActive[i]      = state.ShoulderCheck.WindowActive[i];
+                live.ShoulderCheck.AnimData[i]          = state.ShoulderCheck.AnimData[i];
+            }
+
+            int scPairCap = live.ShoulderCheck.PairCapacity;
+            for (int i = 0; i < scPairCap; i++)
+            {
+                live.ShoulderCheck.BlindSideLatency[i]   = state.ShoulderCheck.BlindSideLatency[i];
+                live.ShoulderCheck.BlindSideConfirmed[i] = state.ShoulderCheck.BlindSideConfirmed[i];
+            }
+
+            int agentCount = live.AgentCount;
+            for (int i = 0; i < agentCount; i++)
+            {
+                _ballVisiblePrev[i]           = state.BallVisiblePrev[i];
+                _ballPerceivedPositionPrev[i] = state.BallPerceivedPositionPrev[i];
+                _ballStalenessFramesPrev[i]   = state.BallStalenessFramesPrev[i];
+            }
+        }
+
+        /// <summary>
         /// 10Hz heartbeat entry point. Runs the full perception pipeline for all 22 agents
         /// in ascending agent ID order (0→21). Populates FilteredView and PerceptionDiagnostics
         /// for each agent. Read results via GetFilteredView / GetDiagnostics.
@@ -514,4 +563,6 @@ namespace TacticalDirector.PerceptionSystem
 // | 1.5     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam bundles the cross-tick state (recognition-latency tracker, shoulder-check scheduler,    |
 // |         |            |        | per-agent ball-perception carry-over) into a PerceptionTickState view for the host snapshot layer; per-tick FilteredView/diagnostics/candidate scratch  |
 // |         |            |        | and the host-populated spatial-hash grid excluded. Read-only; no behaviour change.                                                                     |
+// | 1.6     | 2026-07-20 | —      | Snapshot-deserialize Phase 1 (KD-2): RestoreState(in PerceptionTickState) — the read counterpart to CaptureState; copies the recognition-latency /       |
+// |         |            |        | shoulder-check / ball-perception carry-over arrays element-wise into the live containers (via the live capture references). No behaviour change.          |
 #endregion

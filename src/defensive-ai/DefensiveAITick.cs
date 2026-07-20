@@ -329,6 +329,29 @@ namespace TacticalDirector.DefensiveAI
             new DefensiveTickState(_hysteresisByEntity, _prevAssignByEntity, in _offsideState);
 
         /// <summary>
+        /// Restores this tick's cross-tick state from a snapshot produced by <see cref="CaptureState"/>
+        /// (deterministic save/restore — snapshot-deserialize design note KD-2, the defensive analogue of
+        /// the executor / DecisionTree / OscillationGuard <c>RestoreState</c> seams). The per-entity mark
+        /// hysteresis and last-committed-assignment arrays are copied element-wise into the live,
+        /// allocated-once containers (the caller supplies a freshly-built <paramref name="state"/> with
+        /// matching EntityId-space length); the value-type per-team offside-line state is assigned. The
+        /// per-tick output/scratch buffers (<c>_lastDirective</c>, pool buffers, <c>_lastProcessedTick</c>)
+        /// are recomputed by the next <see cref="Tick"/> and are not part of the captured state, so forward
+        /// replay from the restored tick is byte-identical.
+        /// </summary>
+        public void RestoreState(in DefensiveTickState state)
+        {
+            int cap = _hysteresisByEntity.Length;
+            for (int i = 0; i < cap; i++)
+            {
+                _hysteresisByEntity[i] = state.Hysteresis[i];
+                _prevAssignByEntity[i] = state.PrevAssignments[i];
+            }
+
+            _offsideState = state.Offside;
+        }
+
+        /// <summary>
         /// Returns a read-only span of the tackle intent requests produced by the most recent Tick().
         /// Length == <see cref="TackleCount"/>.
         /// </summary>
@@ -418,4 +441,7 @@ namespace TacticalDirector.DefensiveAI
 // | 1.3     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam bundles the cross-tick    |
 // |         |            |        |   state (per-entity mark hysteresis, per-entity last assignment, per-team offside state)  |
 // |         |            |        |   into a DefensiveTickState view for the host snapshot layer. Read-only; no behaviour change. |
+// | 1.4     | 2026-07-20 | —      | Snapshot-deserialize Phase 1 (KD-2): RestoreState(in DefensiveTickState) — the read        |
+// |         |            |        |   counterpart to CaptureState; copies the per-entity mark hysteresis + last assignment into |
+// |         |            |        |   the live arrays and assigns the per-team offside-line state. No behaviour change.         |
 #endregion

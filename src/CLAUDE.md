@@ -1,7 +1,29 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 18, 2026 (v2.26 — **Squad/Player Data Layer #27 T3 landed** — the snapshot
+> **Last Updated:** July 20, 2026 (v2.27 — **Snapshot-deserialize Phase 1 reader landed** — the read
+> half of the save/load/replay path, per `docs/tracking/snapshot-deserialize-design.md` v0.7 (Phase 1
+> complete). New `MatchEngine.DeserializeWorldState` (`MatchEngine.cs` v1.41) — the symmetric line-for-line
+> mirror of `SerializeWorldState` + per-block `Read*` helpers, reconstructing each subsystem's cross-tick
+> state through its `RestoreState` seam (KD-1/KD-2), with a version-gate first-field check and an
+> event-ledger-boundary trailing guard (R1). New static `MatchEngine.RestoreFromSnapshot(in SnapshotHeader,
+> SnapshotPayload, ulong matchSeed)` factory (KD-4/KD-6: `EnvironmentFingerprint.ValidateAgainst` gate step 0
+> against `CreateStage0Dev` → `new MatchEngine` boot + `EventBus.ResetForNewMatch` → `DeserializeWorldState`
+> → KD-3 non-sentinel-roster fail-loud → `SnapshotCodec.CommitLoadedDigest` + `MatchClock.RestoreFromSnapshot`,
+> KD-5). New `RestoreState` counterparts: `PressingAITick`/`DefensiveAITick`/`AttackingAITick`
+> `RestoreState(in XxxTickState)`, `PerceptionSystem.RestoreState(in PerceptionTickState)`,
+> `PositioningAITick.RestoreState(HysteresisState)`, `MovementCommand.ReconstructFromSnapshot` (v1.5) — the
+> RotationController `Restore*` / executor / DecisionTree / OscillationGuard / clock / RNG restore seams
+> pre-existed. The reader reconstructs `_possessingAgentId`/`_prevPossessingAgentId` from the restored
+> `MatchContext.PossessingAgentId` (they are excluded per the writer's exclusion proof but read at the next
+> tick's start; the `_prev == _poss == MatchContext.PossessingAgentId` snapshot-time invariant makes one
+> field sufficient), and validates the world-state read ends at the appended event-ledger boundary rather
+> than restoring the ledger (replayed forward; baked into the header digest). New `TestOnly_CaptureDurable-
+> Header/Payload` seams + `MatchEngineSnapshotRestoreTests` (G3 round-trip determinism: neutral / mid-match-
+> tactics / KD-8 booking-cursor + version-gate/trailing-byte/distinct-squad fail-loud). No `SNAPSHOT_SCHEMA_
+> VERSION` change. **Full dotnet gate run locally (SDK via apt): PASSED, 0 failures (257 match-engine tests;
+> whole tree green).** Remaining: Phase 2 (#27 T3 distinct-squad re-projection) + Phase 3 (MXCSR/on-disk).)
+> **Last Updated (prior):** July 18, 2026 (v2.26 — **Squad/Player Data Layer #27 T3 landed** — the snapshot
 > roster-reference field, per the converged `docs/tracking/squad-roster-reference-design.md` (v0.2,
 > AR-1..AR-2). New per-team `MatchEngine._rosterClubId[TEAM_COUNT]` (the loaded `Squad.ClubId`, or
 > `[FIXED] NO_ROSTER_CLUB_ID = -1`; `MatchEngineConstants.cs` v1.23), set by `ConfigureSquads` after

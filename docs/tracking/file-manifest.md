@@ -1,7 +1,20 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 19, 2026 (**Squad/Player Data Layer #27 lineup selection Plan-3 landed** — proper
+**Last Updated:** July 20, 2026 (**Snapshot-deserialize Phase 1 reader landed** — the read half of the
+save/load/replay path (`docs/tracking/snapshot-deserialize-design.md` v0.7). **New file:**
+`src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs` v1.0 (+ `.meta`) — G3 round-trip determinism
+(neutral kickoff / mid-match tactics changed / KD-8 booking-cursor regression) + version-gate /
+trailing-byte / distinct-squad fail-loud. **Modified:** `src/match-engine/MatchEngine.cs` v1.41
+(`DeserializeWorldState` + `Read*` helpers, the static `RestoreFromSnapshot` factory,
+`TestOnly_CaptureDurableHeader/Payload` seams, `_possessingAgentId`/`_prevPossessingAgentId`
+reconstruction, event-ledger-boundary trailing guard); `src/pressing-ai/PressingAITick.cs` v1.6 /
+`src/defensive-ai/DefensiveAITick.cs` v1.4 / `src/attacking-ai/AttackingAITick.cs` v1.4 /
+`src/perception-system/PerceptionSystem.cs` v1.6 / `src/positioning-ai/PositioningAITick.cs` v1.4
+(new `RestoreState` counterparts to their CaptureState seams); `src/agent-movement/MovementCommand.cs`
+v1.5 (`ReconstructFromSnapshot` factory). No `SNAPSHOT_SCHEMA_VERSION` change (a pure reader over the
+v17 writer). Full dotnet gate: PASSED, 0 failures (257 match-engine tests; whole tree green).)
+**Last Updated (prior):** July 19, 2026 (**Squad/Player Data Layer #27 lineup selection Plan-3 landed** — proper
 lineup selection replaces the roster-order trust mapping in `ConfigureSquads`. **New files:**
 `src/match-engine/LineupSelector.cs` v1.0 (pure `Select(Squad, FormationFamily) → LineupPlan`: KD-L1
 `DefaultLine → PlayerPosition` bridge, KD-L2 per-line greedy by mean-attribute rating + `PlayerId`

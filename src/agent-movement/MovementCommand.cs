@@ -72,6 +72,31 @@ namespace TacticalDirector.AgentMovement
                 false);
         }
 
+        /// <summary>
+        /// Reconstructs a held command verbatim from its serialized field set (deterministic save/restore —
+        /// snapshot-deserialize design note KD-2, the movement-command analogue of the executor-state DTO
+        /// constructors). The held <see cref="MovementCommand"/> is cross-tick state (produced on a stride
+        /// tick, consumed every tick), so a snapshot loader must be able to restore an arbitrary field
+        /// combination — the intent-shaped factories above cannot express every combination. Use only on a
+        /// snapshot restore path; production AI must construct commands through the intent factories.
+        /// </summary>
+        public static MovementCommand ReconstructFromSnapshot(
+            Vector2 targetPosition,
+            AgentMovementState desiredState,
+            DecelerationMode decelerationMode,
+            FacingMode facingMode,
+            Vector2 facingTarget,
+            bool overrideSafetyConstraints)
+        {
+            return new MovementCommand(
+                targetPosition,
+                desiredState,
+                decelerationMode,
+                facingMode,
+                facingTarget,
+                overrideSafetyConstraints);
+        }
+
         /// <summary>Move to position at whatever speed the state machine allows.</summary>
         public static MovementCommand MoveTo(Vector2 target)
         {
@@ -190,4 +215,7 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | (SPRINTING/EMERGENCY/TARGET_LOCK, DT §3.5.7) and SprintWhileWatching                |
 // |         |            |        | (SPRINTING/CONTROLLED/TARGET_LOCK, DT §3.5.8) factories — the DT dispatch          |
 // |         |            |        | profiles for PRESS and INTERCEPT were not expressible with the existing set.        |
+// | 1.5     | 2026-07-20 | —      | Snapshot-deserialize Phase 1 (KD-2): ReconstructFromSnapshot factory — restores an  |
+// |         |            |        | arbitrary held command verbatim from its serialized field set (the intent factories |
+// |         |            |        | cannot express every combination). Snapshot-restore path only.                      |
 #endregion

@@ -21,6 +21,7 @@
 // Modified: 2026-07-17 (AR-9 M-1: foul candidates involving a sent-off participant discarded at ApplyFoulIfCaptured — a frozen red-carded agent could repeatedly win free kicks and draw cards against opponents running into them)
 // Modified: 2026-07-17 (AR-10, doc-only: _lastHolderAgentId writer comment aligned to the last-settled-holder approximation — a deflection-chain goal credits the last settled holder, not necessarily the kicker; CONVERGENCE round)
 // Modified: 2026-07-20 (snapshot-deserialize Phase 1 KD-8 writer half: match-flow.card-severity RngStreamState cursor serialized at SNAPSHOT_SCHEMA_VERSION 16 → 17 — the engine's only mutable RNG stream; a save after a booking now round-trips deterministically. See docs/tracking/snapshot-deserialize-design.md)
+// Modified: 2026-07-20 (snapshot-deserialize Phase 1 READER: DeserializeWorldState + Read* helpers (symmetric mirror, restore-seam reconstruction, version-gate + ledger-boundary trailing guard) + static RestoreFromSnapshot factory (fingerprint gate + boot + digest-chain/clock restore + KD-3 distinct-squad fail-loud). No schema change. See docs/tracking/snapshot-deserialize-design.md §5 Phase 1.)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -685,6 +686,95 @@ namespace TacticalDirector.MatchEngine
                 RunResolvePhase,
                 RunEventsPhase,
                 RunSnapshotPhase);
+        }
+
+        /// <summary>
+        /// Restore factory (snapshot-deserialize design note KD-4): produces a ready-to-tick
+        /// <see cref="MatchEngine"/> from a saved snapshot — the (header, payload) pair
+        /// <see cref="SerializeWorldState"/> writes. A static factory (rather than a Load() on a running
+        /// instance) is chosen because boot does load-bearing wiring that must happen exactly once, before
+        /// any state is applied, and a "half-booted, half-restored" instance is not a valid state to expose.
+        ///
+        /// Step 0 (KD-6) — validate the header's <see cref="EnvironmentFingerprint"/> against the live host
+        /// BEFORE any state is touched, so a rejected restore mutates nothing. Only when the header carries a
+        /// fingerprint (O3: <c>SaveManager</c> writes <c>Fingerprint = null</c> until the on-disk root lands,
+        /// so a null fingerprint is skipped-with-intent). The live fingerprint is the recorded/dev tuple
+        /// (<see cref="EnvironmentFingerprint.CreateStage0Dev"/>) — at Stage 0 this is a self-consistency
+        /// (schema/tuple) check; it becomes a real float-mode (MXCSR) gate only once the native live-mode
+        /// query lands (the root-CLAUDE.md host-blocked item — the seam is defined here so that query has a
+        /// consumer).
+        ///
+        /// Step 1 — construct a fresh engine through the normal boot path (which also runs step 2:
+        /// <see cref="EventBus.ResetForNewMatch"/>, so the process-static bus is clean for the restored
+        /// match). Step 3 — <see cref="DeserializeWorldState"/> overwrites the boot-seeded cross-tick state
+        /// with the saved state (and restores the clock + card-severity RNG cursor). Step 4 — restore the
+        /// digest chain from the header so the NEXT tick's digest equals what an uninterrupted run would
+        /// produce (KD-5, the round-trip determinism contract).
+        /// </summary>
+        /// <param name="header">The saved snapshot header (fingerprint + digest chain + tick + versions).</param>
+        /// <param name="payload">The saved snapshot payload (the cross-tick world-state bytes).</param>
+        /// <param name="matchSeed">The boot match seed the payload does not carry (KD-7 O1 — the caller
+        /// persists it alongside the payload; an on-disk boot-header is revisited at the save-file root).</param>
+        public static MatchEngine RestoreFromSnapshot(in SnapshotHeader header, SnapshotPayload payload, ulong matchSeed)
+        {
+            if (header == null)
+            {
+                throw new ArgumentNullException(nameof(header));
+            }
+            if (payload == null)
+            {
+                throw new ArgumentNullException(nameof(payload));
+            }
+
+            // Step 0 (KD-6 / O3) — fingerprint gate, before any state is touched.
+            if (header.Fingerprint != null)
+            {
+                EnvironmentFingerprint live = EnvironmentFingerprint.CreateStage0Dev();
+                ushort code = header.Fingerprint.ValidateAgainst(live);
+                if (code != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Snapshot environment fingerprint mismatch (code 0x{code:X4}) — refusing to restore " +
+                        "a snapshot captured under a different float/runtime environment (KD-6 / #16 §4.8.2).");
+                }
+            }
+
+            // Step 1 (+2) — fresh boot (allocations, EventBus.ResetForNewMatch, boot-constant seeding).
+            MatchEngine engine = new MatchEngine(matchSeed);
+
+            // Step 3 — overwrite the boot-seeded cross-tick state with the saved state.
+            engine.DeserializeWorldState(payload);
+
+            // KD-3 fail-loud (R4): a match booted through ConfigureSquads with a DISTINCT squad carries a
+            // non-sentinel roster reference, and its per-slot attribute records (the boot-constant exclusion)
+            // must be re-projected from the actual Squad — the reader cannot do that without the roster, and a
+            // silent fall-back to CreateDefault() would produce a match that diverges from the saved one on
+            // the very next tick. That re-projection is the #27 T3 consumer, deferred to Phase 2 (the
+            // ISquadProvider seam); Phase 1 restores the neutral path (every match that never calls
+            // ConfigureSquads) exactly and refuses distinct-squad restore rather than silently diverging.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                if (engine._rosterClubId[t] != MatchEngineConstants.NO_ROSTER_CLUB_ID)
+                {
+                    throw new NotSupportedException(
+                        $"Snapshot references a distinct squad for team {t} (ClubId {engine._rosterClubId[t]}); " +
+                        "restoring its per-slot attribute records requires the #27 T3 roster re-projection " +
+                        "(snapshot-deserialize Phase 2). Phase 1 restores the neutral (unconfigured-squad) path.");
+                }
+            }
+
+            // Step 4 (KD-5) — continue the digest chain from the saved link so the next tick's digest matches
+            // an uninterrupted run. The clock was restored to the saved tick inside DeserializeWorldState.
+            engine._codec.CommitLoadedDigest(header);
+
+            if (engine._clock.CurrentTick != header.Tick)
+            {
+                throw new InvalidOperationException(
+                    $"Restored clock tick {engine._clock.CurrentTick} != header tick {header.Tick} " +
+                    "— payload/header tick disagreement.");
+            }
+
+            return engine;
         }
 
         /// <summary>
@@ -1579,6 +1669,38 @@ namespace TacticalDirector.MatchEngine
                     DeterministicSimConstants.SHA256_BYTES);
                 return copy;
             }
+        }
+
+        /// <summary>Test-only (snapshot-deserialize G3): returns a DURABLE deep copy of the current snapshot
+        /// header (the orchestrator's live header is reused each tick, so a save must snapshot it). Pairs with
+        /// <see cref="TestOnly_CaptureDurablePayload"/> to form the (header, payload) save artifact that
+        /// <see cref="RestoreFromSnapshot"/> consumes.</summary>
+        internal SnapshotHeader TestOnly_CaptureDurableHeader()
+        {
+            SnapshotHeader live = _orchestrator.CurrentHeader;
+            SnapshotHeader copy = new SnapshotHeader
+            {
+                SchemaVersion = live.SchemaVersion,
+                DigestVersion = live.DigestVersion,
+                Tick          = live.Tick,
+                Fingerprint   = live.Fingerprint,
+                Cursor        = live.Cursor,
+            };
+            Array.Copy(live.PrevSnapshotDigest,    0, copy.PrevSnapshotDigest,    0, DeterministicSimConstants.SHA256_BYTES);
+            Array.Copy(live.CurrentSnapshotDigest, 0, copy.CurrentSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
+            return copy;
+        }
+
+        /// <summary>Test-only (snapshot-deserialize G3): returns a DURABLE deep copy of the current snapshot
+        /// payload (the orchestrator's live payload is reused each tick). Pairs with
+        /// <see cref="TestOnly_CaptureDurableHeader"/>.</summary>
+        internal SnapshotPayload TestOnly_CaptureDurablePayload()
+        {
+            SnapshotPayload live = _orchestrator.CurrentPayload;
+            SnapshotPayload copy = new SnapshotPayload();
+            Array.Copy(live.PayloadBytes, 0, copy.PayloadBytes, 0, live.BytesWritten);
+            copy.BytesWritten = live.BytesWritten;
+            return copy;
         }
 
         // ── Phase callbacks (design note §2.4 / §3) ───────────────────────────────────
@@ -3390,6 +3512,722 @@ namespace TacticalDirector.MatchEngine
             payload.BytesWritten = o;
         }
 
+        /// <summary>
+        /// The symmetric reader for <see cref="SerializeWorldState"/> (snapshot-deserialize design note
+        /// KD-1): reads the exact field set the writer wrote, in the same canonical order, through the
+        /// <see cref="CanonicalSerializer"/> read primitives, and reconstructs the engine's full cross-tick
+        /// world state. This method is the line-for-line mirror of the writer and is kept adjacent to it so a
+        /// future field addition is edited in both places in one diff (design note R1).
+        ///
+        /// The FIRST field read is the schema version — if it does not equal the build's
+        /// <see cref="MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION"/> the reader throws (fail-loud; there is
+        /// no cross-version migration at Stage 0, exactly as <see cref="SnapshotCodec.ValidateHeader"/> and
+        /// the living-world <c>WorldStateSerializer</c> version gate). AFTER the full payload is read, the
+        /// reader asserts the cursor consumed exactly <see cref="SnapshotPayload.BytesWritten"/> bytes — the
+        /// trailing-byte / short-read guard that turns a writer/reader field drift within one schema version
+        /// into a fail-loud rather than a silent partial restore (design note R1).
+        ///
+        /// Ownership boundary (KD-2): subsystem-internal state is reconstructed through each subsystem's
+        /// <c>RestoreState</c> counterpart (executors / DecisionTree / OscillationGuard / the four
+        /// Mechanics-AI hysteresis surfaces / Perception / RotationController), never by reaching inside
+        /// their private fields. Engine-owned arrays/scalars are assigned directly (they are this engine's
+        /// own state). The card-severity RNG stream cursor and the clock are restored here (they are
+        /// cross-tick state carried in the payload); the digest-chain continuity is restored by the
+        /// <see cref="RestoreFromSnapshot"/> factory (it lives in the header, not the payload).
+        /// </summary>
+        private void DeserializeWorldState(SnapshotPayload payload)
+        {
+            byte[] buf = payload.PayloadBytes;
+            int o = 0;
+
+            uint schema = CanonicalSerializer.ReadU32(buf, ref o);
+            if (schema != MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION)
+            {
+                throw new InvalidOperationException(
+                    $"Snapshot schema version {schema} != build version " +
+                    $"{MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION} — no cross-version migration at Stage 0 (KD-1).");
+            }
+
+            // Tick (the payload's self-describing copy) — restore the clock to the saved tick so the next
+            // RunTick advances to tick+1, continuing the run exactly where the save was taken.
+            ulong tick = CanonicalSerializer.ReadU64(buf, ref o);
+            _clock.RestoreFromSnapshot(tick);
+
+            ReadBallState(buf, ref o, ref _ball);
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _agents[i] = ReadAgentState(buf, ref o);
+
+                _teamIds[i]              = CanonicalSerializer.ReadI32 (buf, ref o);
+                _isGoalkeeper[i]         = CanonicalSerializer.ReadBool(buf, ref o);
+                _isCollisionKnockdown[i] = CanonicalSerializer.ReadBool(buf, ref o);
+                _collisionForces[i]      = CanonicalSerializer.ReadF32 (buf, ref o);
+                _commands[i]             = ReadMovementCommand(buf, ref o);
+
+                PassExecutorState passState = ReadPassExecutorState(buf, ref o);
+                _passExecutors[i].RestoreState(in passState);
+                ShotExecutorState shotState = ReadShotExecutorState(buf, ref o);
+                _shotExecutors[i].RestoreState(in shotState);
+
+                DecisionTreeState dtState = ReadDecisionTreeState(buf, ref o);
+                _decisionTrees[i].RestoreState(in dtState);
+            }
+
+            ReadMatchContext(buf, ref o, ref _matchContext);
+
+            // Reconstruct the excluded _possessingAgentId / _prevPossessingAgentId from the restored
+            // MatchContext (the writer's exclusion proof: _possessingAgentId is "captured under a different
+            // field" — MatchContext.PossessingAgentId, authored each Resolve at C4). Both are read at the
+            // start of the next tick — _possessingAgentId by the Resolve executors' IsBallPossessedBy and
+            // RunFirstTouch, _prevPossessingAgentId by the possession-change producer — so leaving them at the
+            // boot NO_POSSESSION would diverge the round-trip for any match that has developed possession (a
+            // first-touch control). At snapshot time (Snapshot phase, after Resolve authors the context and
+            // the possession producer runs) the invariant
+            // _prevPossessingAgentId == _possessingAgentId == MatchContext.PossessingAgentId holds, so both
+            // restore from the one serialized field.
+            _possessingAgentId     = _matchContext.PossessingAgentId;
+            _prevPossessingAgentId = _matchContext.PossessingAgentId;
+
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                ReadPositioningHysteresis(buf, ref o, _positioning[t]);
+            }
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                ReadPressingTickState(buf, ref o, _pressing[t]);
+            }
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                ReadDefensiveTickState(buf, ref o, _defensive[t]);
+            }
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                ReadAttackingTickState(buf, ref o, _attacking[t]);
+            }
+            ReadPerceptionTickState(buf, ref o);
+
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _activeTeamTactics[t]  = ReadTeamTactic(buf, ref o);
+                _pendingTeamTactics[t] = ReadTeamTactic(buf, ref o);
+            }
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _activePlayerTactics[i]  = ReadPlayerTactic(buf, ref o);
+                _pendingPlayerTactics[i] = ReadPlayerTactic(buf, ref o);
+            }
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _markingDwell[i].DwellTicks   = CanonicalSerializer.ReadI32(buf, ref o);
+                _markingDwell[i].LastMarkerId = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _buildUpStates[t].CommittedZone          = (BuildUpZone)CanonicalSerializer.ReadU8(buf, ref o);
+                _buildUpStates[t].SuppressTicksRemaining = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+            _settledPossessionTeam = CanonicalSerializer.ReadI32(buf, ref o);
+
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                ReadRotationState(buf, ref o, _positioning[t]);
+            }
+
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _managerStates[t].Mode                   = (ManagerMode)CanonicalSerializer.ReadU8(buf, ref o);
+                _managerStates[t].ProfileOrdinal         = CanonicalSerializer.ReadU8 (buf, ref o);
+                _managerStates[t].CurrentPresetOrdinal   = CanonicalSerializer.ReadU8 (buf, ref o);
+                _managerStates[t].HoldIntervalsRemaining = CanonicalSerializer.ReadI32(buf, ref o);
+                _managerStates[t].LastDecisionTick       = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _goals[t] = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+            _lastHolderAgentId = CanonicalSerializer.ReadI32(buf, ref o);
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _yellowCards[i] = CanonicalSerializer.ReadU8 (buf, ref o);
+                _isSentOff[i]   = CanonicalSerializer.ReadBool(buf, ref o);
+            }
+            _foulCooldownRemaining = CanonicalSerializer.ReadI32(buf, ref o);
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _activeBenchSlot[i] = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _substitutionsUsed[t] = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+            _secondHalfStarted = CanonicalSerializer.ReadBool(buf, ref o);
+            _matchEnded        = CanonicalSerializer.ReadBool(buf, ref o);
+
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _rosterClubId[t] = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+
+            // v17 — restore the match-flow.card-severity RNG stream cursor (RngCursor + ActionOrdinal, the
+            // two mutable fields the reservation-atomic draw leaves at rest). Read the boot-registered stream
+            // (its StreamKey / SiteId / SubsystemOrdinal / etc. were reconstructed by the RegisterStream call
+            // at boot), overwrite only the two cursor fields, and restore it — the mirror of the writer and of
+            // the TestOnly_SetCardSeverityStreamCursor seam.
+            ulong cardCursor  = CanonicalSerializer.ReadU64(buf, ref o);
+            ulong cardOrdinal = CanonicalSerializer.ReadU64(buf, ref o);
+            RngStreamState cardStreamRestore = _rng.GetStreamState(_cardSeverityStreamIndex);
+            cardStreamRestore.RngCursor     = cardCursor;
+            cardStreamRestore.ActionOrdinal = cardOrdinal;
+            _rng.RestoreStream(_cardSeverityStreamIndex, in cardStreamRestore);
+
+            // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
+            // (EventBus.SerializeLedger — a 1-byte domain tag + u32 count, then any Tier A records) AFTER the
+            // world state, and they are part of the digest preimage. The reader does NOT restore the ledger —
+            // after restore the engine replays forward, producing its own per-tick ledger, and the saved
+            // tick's ledger is already baked into the digest the factory inherits via the header (KD-5) — but
+            // it MUST account for those bytes. The world-state read must end exactly at the ledger boundary:
+            // the next byte is the ledger domain tag, so a world-state read that drifted by even one byte
+            // would not land on it (R1 drift check, stronger than a bare length compare on the boundary).
+            byte ledgerTag = CanonicalSerializer.ReadU8(buf, ref o);
+            if (ledgerTag != EventSystemConstants.DomainTagEventLedger)
+            {
+                throw new InvalidOperationException(
+                    $"World-state read did not end at the event-ledger boundary (found 0x{ledgerTag:X2}, " +
+                    $"expected the ledger domain tag 0x{EventSystemConstants.DomainTagEventLedger:X2}) — " +
+                    "writer/reader field drift (R1). The reader must mirror SerializeWorldState exactly.");
+            }
+            uint ledgerCount = CanonicalSerializer.ReadU32(buf, ref o);
+            // The empty ledger (no possession transition this tick — the Stage-0 common case) is exactly the
+            // 5-byte header, so its byte account is exact. A non-empty ledger's Tier A records are not parsed
+            // here (that needs the event registry, and the records are not restored); the G3 round-trip digest
+            // test covers their content. Either way the reader must not have overrun the payload.
+            if (ledgerCount == 0u && o != payload.BytesWritten)
+            {
+                throw new InvalidOperationException(
+                    $"Empty-ledger payload has unexpected trailing bytes: consumed {o}, payload holds " +
+                    $"{payload.BytesWritten} (R1).");
+            }
+            if (o > payload.BytesWritten)
+            {
+                throw new InvalidOperationException(
+                    $"DeserializeWorldState overran the payload (consumed {o}, payload holds {payload.BytesWritten}).");
+            }
+        }
+
+        /// <summary>Reads a <see cref="BallState"/> in the <see cref="WriteBallState"/> field order.</summary>
+        private static void ReadBallState(byte[] buf, ref int o, ref BallState ball)
+        {
+            ball.Position        = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            ball.Velocity        = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            ball.AngularVelocity = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            ball.State           = (BallStateType)CanonicalSerializer.ReadI32(buf, ref o);
+            ball.LastValidPosition = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            ball.LastValidVelocity = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+        }
+
+        /// <summary>Reads an <see cref="AgentState"/> in the <see cref="WriteAgentState"/> field order,
+        /// restoring the embedded <see cref="OscillationGuard"/> via its B0 <c>RestoreState</c> seam.</summary>
+        private static AgentState ReadAgentState(byte[] buf, ref int o)
+        {
+            AgentState a = default;
+
+            a.Position        = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            a.Velocity        = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            a.FacingDirection = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+
+            a.CurrentState    = (AgentMovementState)CanonicalSerializer.ReadI32(buf, ref o);
+            a.PreviousState   = (AgentMovementState)CanonicalSerializer.ReadI32(buf, ref o);
+            a.TimeInState     = CanonicalSerializer.ReadF32(buf, ref o);
+            a.GroundedReason  = (GroundedReason)CanonicalSerializer.ReadI32(buf, ref o);
+            a.CollisionForce  = CanonicalSerializer.ReadF32(buf, ref o);
+
+            a.LeanAngle       = CanonicalSerializer.ReadF32(buf, ref o);
+            a.CurrentTurnRate = CanonicalSerializer.ReadF32(buf, ref o);
+
+            a.AerobicPool     = CanonicalSerializer.ReadF32(buf, ref o);
+            a.SprintReservoir = CanonicalSerializer.ReadF32(buf, ref o);
+
+            a.LastValidPosition = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            a.LastValidVelocity = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            a.LastValidFacing   = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            a.Speed             = CanonicalSerializer.ReadF32(buf, ref o);
+
+            float t0 = CanonicalSerializer.ReadF32(buf, ref o);
+            float t1 = CanonicalSerializer.ReadF32(buf, ref o);
+            float t2 = CanonicalSerializer.ReadF32(buf, ref o);
+            float t3 = CanonicalSerializer.ReadF32(buf, ref o);
+            float t4 = CanonicalSerializer.ReadF32(buf, ref o);
+            float t5 = CanonicalSerializer.ReadF32(buf, ref o);
+            float t6 = CanonicalSerializer.ReadF32(buf, ref o);
+            float t7 = CanonicalSerializer.ReadF32(buf, ref o);
+            int writeIndex    = CanonicalSerializer.ReadI32 (buf, ref o);
+            bool isLocked     = CanonicalSerializer.ReadBool(buf, ref o);
+            float lockUntil   = CanonicalSerializer.ReadF32 (buf, ref o);
+            var guardState = new OscillationGuardState(t0, t1, t2, t3, t4, t5, t6, t7, writeIndex, isLocked, lockUntil);
+            a.OscillationGuard.RestoreState(in guardState);
+
+            return a;
+        }
+
+        /// <summary>Reads a <see cref="MovementCommand"/> in the <see cref="WriteMovementCommand"/> field
+        /// order, reconstructing it verbatim via the snapshot-restore factory (it is a readonly struct).</summary>
+        private static MovementCommand ReadMovementCommand(byte[] buf, ref int o)
+        {
+            Vector2 target = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            AgentMovementState desiredState = (AgentMovementState)CanonicalSerializer.ReadI32(buf, ref o);
+            DecelerationMode decel = (DecelerationMode)CanonicalSerializer.ReadI32(buf, ref o);
+            FacingMode facing = (FacingMode)CanonicalSerializer.ReadI32(buf, ref o);
+            Vector2 facingTarget = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            bool overrideSafety = CanonicalSerializer.ReadBool(buf, ref o);
+            return MovementCommand.ReconstructFromSnapshot(target, desiredState, decel, facing, facingTarget, overrideSafety);
+        }
+
+        /// <summary>Reads a <see cref="PassExecutorState"/> in the <see cref="WritePassExecutorState"/>
+        /// field order (the internal PhysicalProfile is recomputed by RestoreState, not serialized).</summary>
+        private static PassExecutorState ReadPassExecutorState(byte[] buf, ref int o)
+        {
+            int state = CanonicalSerializer.ReadI32(buf, ref o);
+
+            PassRequest req = new PassRequest
+            {
+                AgentId          = CanonicalSerializer.ReadI32(buf, ref o),
+                PassType         = (PassType)CanonicalSerializer.ReadI32(buf, ref o),
+                CrossSubType     = (CrossSubType)CanonicalSerializer.ReadI32(buf, ref o),
+                TargetAgentId    = CanonicalSerializer.ReadI32(buf, ref o),
+                TargetPosition   = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                IntendedDistance = CanonicalSerializer.ReadF32(buf, ref o),
+                Urgency          = CanonicalSerializer.ReadF32(buf, ref o),
+                IsWeakFoot       = CanonicalSerializer.ReadBool(buf, ref o),
+                TeamId           = CanonicalSerializer.ReadI32(buf, ref o),
+                FrameNumber      = CanonicalSerializer.ReadI32(buf, ref o),
+            };
+
+            CrossSubType effectiveSubType = (CrossSubType)CanonicalSerializer.ReadI32(buf, ref o);
+            float kickSpeed      = CanonicalSerializer.ReadF32(buf, ref o);
+            float launchAngleDeg = CanonicalSerializer.ReadF32(buf, ref o);
+            Vector3 spinVector       = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            Vector3 baseKickDir      = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            Vector3 aimPoint         = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            float leadDistance   = CanonicalSerializer.ReadF32(buf, ref o);
+            float cachedPassing  = CanonicalSerializer.ReadF32(buf, ref o);
+            float cachedFatigue  = CanonicalSerializer.ReadF32(buf, ref o);
+            float cachedBodyAng  = CanonicalSerializer.ReadF32(buf, ref o);
+            bool cachedIsWeak    = CanonicalSerializer.ReadBool(buf, ref o);
+            int cachedWeakRating = CanonicalSerializer.ReadI32(buf, ref o);
+            int windupRemaining  = CanonicalSerializer.ReadI32(buf, ref o);
+            int followRemaining  = CanonicalSerializer.ReadI32(buf, ref o);
+
+            PassResult lastResult = new PassResult
+            {
+                Outcome          = (PassOutcome)CanonicalSerializer.ReadI32(buf, ref o),
+                FinalVelocity    = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                FinalSpin        = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                AimPoint         = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                ErrorAngleDeg    = CanonicalSerializer.ReadF32(buf, ref o),
+                LeadDistance     = CanonicalSerializer.ReadF32(buf, ref o),
+                PassType         = (PassType)CanonicalSerializer.ReadI32(buf, ref o),
+                ContactFrame     = CanonicalSerializer.ReadI32(buf, ref o),
+                ContactMatchTime = CanonicalSerializer.ReadF32(buf, ref o),
+            };
+
+            return new PassExecutorState(
+                state, in req, effectiveSubType, kickSpeed, launchAngleDeg, spinVector, baseKickDir, aimPoint,
+                leadDistance, cachedPassing, cachedFatigue, cachedBodyAng, cachedIsWeak, cachedWeakRating,
+                windupRemaining, followRemaining, in lastResult);
+        }
+
+        /// <summary>Reads a <see cref="ShotExecutorState"/> in the <see cref="WriteShotExecutorState"/> field order.</summary>
+        private static ShotExecutorState ReadShotExecutorState(byte[] buf, ref int o)
+        {
+            int state = CanonicalSerializer.ReadI32(buf, ref o);
+
+            ShotRequest req = new ShotRequest
+            {
+                AgentId        = CanonicalSerializer.ReadI32(buf, ref o),
+                PowerIntent    = CanonicalSerializer.ReadF32(buf, ref o),
+                ContactZone    = (ContactZone)CanonicalSerializer.ReadI32(buf, ref o),
+                SpinIntent     = CanonicalSerializer.ReadF32(buf, ref o),
+                PlacementTarget = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                IsWeakFoot     = CanonicalSerializer.ReadBool(buf, ref o),
+                DistanceToGoal = CanonicalSerializer.ReadF32(buf, ref o),
+                TeamId         = CanonicalSerializer.ReadI32(buf, ref o),
+                FrameNumber    = CanonicalSerializer.ReadI32(buf, ref o),
+            };
+
+            float kickSpeed      = CanonicalSerializer.ReadF32(buf, ref o);
+            float launchAngleDeg = CanonicalSerializer.ReadF32(buf, ref o);
+            Vector3 spinVector    = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            Vector3 intendedAim   = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+
+            BodyMechanicsResult bodyMech = new BodyMechanicsResult
+            {
+                Score                  = CanonicalSerializer.ReadF32(buf, ref o),
+                ContactQualityModifier = CanonicalSerializer.ReadF32(buf, ref o),
+                StumbleTriggered       = CanonicalSerializer.ReadBool(buf, ref o),
+            };
+
+            float weakFootErrMult = CanonicalSerializer.ReadF32(buf, ref o);
+            int windupFrames      = CanonicalSerializer.ReadI32(buf, ref o);
+            Vector3 cachedAgentPos = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            float cachedFinishing = CanonicalSerializer.ReadF32(buf, ref o);
+            float cachedLongShots = CanonicalSerializer.ReadF32(buf, ref o);
+            float cachedComposure = CanonicalSerializer.ReadF32(buf, ref o);
+            float cachedFatigue   = CanonicalSerializer.ReadF32(buf, ref o);
+            int windupRemaining   = CanonicalSerializer.ReadI32(buf, ref o);
+            int followRemaining   = CanonicalSerializer.ReadI32(buf, ref o);
+
+            ShotResult lastResult = new ShotResult
+            {
+                Outcome            = (ShotOutcome)CanonicalSerializer.ReadI32(buf, ref o),
+                FinalVelocity      = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                FinalSpin          = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                IntendedDirection  = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                FinalDirection     = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                ErrorOffset        = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                BodyMechanicsScore = CanonicalSerializer.ReadF32(buf, ref o),
+                PowerPenaltyApplied = CanonicalSerializer.ReadF32(buf, ref o),
+                KickSpeed          = CanonicalSerializer.ReadF32(buf, ref o),
+                LaunchAngleDeg     = CanonicalSerializer.ReadF32(buf, ref o),
+                StumbleTriggered   = CanonicalSerializer.ReadBool(buf, ref o),
+                ContactFrame       = CanonicalSerializer.ReadI32(buf, ref o),
+            };
+
+            return new ShotExecutorState(
+                state, in req, kickSpeed, launchAngleDeg, spinVector, intendedAim, in bodyMech,
+                weakFootErrMult, windupFrames, cachedAgentPos, cachedFinishing, cachedLongShots,
+                cachedComposure, cachedFatigue, windupRemaining, followRemaining, in lastResult);
+        }
+
+        /// <summary>Reads a <see cref="DecisionTreeState"/> in the <see cref="WriteDecisionTreeState"/> field order.</summary>
+        private static DecisionTreeState ReadDecisionTreeState(byte[] buf, ref int o)
+        {
+            int state = CanonicalSerializer.ReadI32(buf, ref o);
+            bool hasDispatched = CanonicalSerializer.ReadBool(buf, ref o);
+
+            int agentId = CanonicalSerializer.ReadI32(buf, ref o);
+            ActionType type = (ActionType)CanonicalSerializer.ReadI32(buf, ref o);
+            int targetAgentId = CanonicalSerializer.ReadI32(buf, ref o);
+            Vector2 targetPosition = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+
+            PassRequest passParams = new PassRequest
+            {
+                AgentId          = CanonicalSerializer.ReadI32(buf, ref o),
+                PassType         = (PassType)CanonicalSerializer.ReadI32(buf, ref o),
+                CrossSubType     = (CrossSubType)CanonicalSerializer.ReadI32(buf, ref o),
+                TargetAgentId    = CanonicalSerializer.ReadI32(buf, ref o),
+                TargetPosition   = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                IntendedDistance = CanonicalSerializer.ReadF32(buf, ref o),
+                Urgency          = CanonicalSerializer.ReadF32(buf, ref o),
+                IsWeakFoot       = CanonicalSerializer.ReadBool(buf, ref o),
+                TeamId           = CanonicalSerializer.ReadI32(buf, ref o),
+                FrameNumber      = CanonicalSerializer.ReadI32(buf, ref o),
+            };
+
+            ShotRequest shotParams = new ShotRequest
+            {
+                AgentId        = CanonicalSerializer.ReadI32(buf, ref o),
+                PowerIntent    = CanonicalSerializer.ReadF32(buf, ref o),
+                ContactZone    = (ContactZone)CanonicalSerializer.ReadI32(buf, ref o),
+                SpinIntent     = CanonicalSerializer.ReadF32(buf, ref o),
+                PlacementTarget = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                IsWeakFoot     = CanonicalSerializer.ReadBool(buf, ref o),
+                DistanceToGoal = CanonicalSerializer.ReadF32(buf, ref o),
+                TeamId         = CanonicalSerializer.ReadI32(buf, ref o),
+                FrameNumber    = CanonicalSerializer.ReadI32(buf, ref o),
+            };
+
+            float utilityScore = CanonicalSerializer.ReadF32(buf, ref o);
+            int heartbeatTick = CanonicalSerializer.ReadI32(buf, ref o);
+
+            AgentAction action = new AgentAction(
+                agentId, type, targetAgentId, targetPosition, passParams, shotParams, utilityScore, heartbeatTick);
+            return new DecisionTreeState(state, in action, hasDispatched);
+        }
+
+        /// <summary>Reads a <see cref="MatchContext"/> in the <see cref="WriteMatchContext"/> field order.</summary>
+        private static void ReadMatchContext(byte[] buf, ref int o, ref MatchContext m)
+        {
+            m.HomeScore         = CanonicalSerializer.ReadI32(buf, ref o);
+            m.AwayScore         = CanonicalSerializer.ReadI32(buf, ref o);
+            m.MatchTimeSeconds  = CanonicalSerializer.ReadF32(buf, ref o);
+            m.Possession        = (PossessionState)CanonicalSerializer.ReadI32(buf, ref o);
+            m.PossessingAgentId = CanonicalSerializer.ReadI32(buf, ref o);
+            m.Phase             = (MatchPhase)CanonicalSerializer.ReadI32(buf, ref o);
+            m.BallPosition      = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            m.BallVelocity      = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            m.BallZone          = (FieldZone)CanonicalSerializer.ReadI32(buf, ref o);
+        }
+
+        /// <summary>Reads one team's Positioning AI (#12) hysteresis in the
+        /// <see cref="WritePositioningHysteresis"/> field order and restores it through
+        /// <see cref="PositioningAITick.RestoreState"/>.</summary>
+        private static void ReadPositioningHysteresis(byte[] buf, ref int o, PositioningAITick tick)
+        {
+            HysteresisState live = tick.CaptureState();
+            HysteresisState src  = new HysteresisState(live.SquadSize);
+
+            src.CurrentPhase    = (Phase)CanonicalSerializer.ReadI32(buf, ref o);
+            src.CandidatePhase  = (Phase)CanonicalSerializer.ReadI32(buf, ref o);
+            src.PhaseDwellCount = CanonicalSerializer.ReadI32(buf, ref o);
+
+            AgentHysteresisState[] agents = src.Agents;
+            for (int i = 0; i < agents.Length; i++)
+            {
+                agents[i].CurrentLine    = (LineId)CanonicalSerializer.ReadI32(buf, ref o);
+                agents[i].CandidateLine  = (LineId)CanonicalSerializer.ReadI32(buf, ref o);
+                agents[i].LineDwellCount = CanonicalSerializer.ReadI32(buf, ref o);
+                agents[i].CurrentLane    = (LaneId)CanonicalSerializer.ReadI32(buf, ref o);
+                agents[i].CandidateLane  = (LaneId)CanonicalSerializer.ReadI32(buf, ref o);
+                agents[i].LaneDwellCount = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+
+            tick.RestoreState(src);
+        }
+
+        /// <summary>Reads one team's #25 rotation state in the writer's block order and restores it through
+        /// the <see cref="RotationController"/>'s validating restore seams (RestoreBinding / RestorePairState /
+        /// RestoreLastComposedTarget).</summary>
+        private static void ReadRotationState(byte[] buf, ref int o, PositioningAITick tick)
+        {
+            RotationController rot = tick.CaptureRotationState();
+
+            int squadSize = rot.SquadSize;
+            int[] binding = new int[squadSize];
+            for (int k = 0; k < squadSize; k++)
+            {
+                binding[k] = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+            rot.RestoreBinding(binding);
+
+            for (int k = 0; k < squadSize; k++)
+            {
+                Vector2 target = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                rot.RestoreLastComposedTarget(k, target);
+            }
+
+            int pairCount = rot.PairCount;
+            for (int r = 0; r < pairCount; r++)
+            {
+                RotationPairState pair = default;
+                pair.TriggerDwellTicks  = CanonicalSerializer.ReadI32 (buf, ref o);
+                pair.Rotated            = CanonicalSerializer.ReadBool(buf, ref o);
+                pair.HoldTicksRemaining = CanonicalSerializer.ReadI32 (buf, ref o);
+                rot.RestorePairState(r, in pair);
+            }
+        }
+
+        /// <summary>Reads one team's Pressing AI (#13) state in the <see cref="WritePressingTickState"/>
+        /// field order and restores it through <see cref="PressingAITick.RestoreState"/>.</summary>
+        private static void ReadPressingTickState(byte[] buf, ref int o, PressingAITick tick)
+        {
+            PressingTickState live = tick.CaptureState();
+            int cap = live.Roles.Capacity;
+
+            PressTrigger trigger = default;
+            trigger.BadTouchDwell       = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.BadTouchRelease     = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.BackwardPassDwell   = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.BackwardPassRelease = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.SidelineTrapDwell   = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.SidelineTrapRelease = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.WeakReceiverDwell   = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.WeakReceiverRelease = CanonicalSerializer.ReadI32(buf, ref o);
+
+            int disengageDwell = CanonicalSerializer.ReadI32(buf, ref o);
+            int cooldownTicks  = CanonicalSerializer.ReadI32(buf, ref o);
+
+            RoleHysteresisState roles = new RoleHysteresisState(cap);
+            float[] fatigue = new float[cap];
+            for (int i = 0; i < cap; i++)
+            {
+                roles.LastRole[i]    = (PressRole)CanonicalSerializer.ReadI32(buf, ref o);
+                roles.PendingRole[i] = (PressRole)CanonicalSerializer.ReadI32(buf, ref o);
+                roles.RoleDwell[i]   = CanonicalSerializer.ReadI32(buf, ref o);
+                fatigue[i]           = CanonicalSerializer.ReadF32(buf, ref o);
+            }
+
+            tick.RestoreState(new PressingTickState(roles, in trigger, disengageDwell, cooldownTicks, fatigue));
+        }
+
+        /// <summary>Reads one team's Defensive AI (#14) state in the <see cref="WriteDefensiveTickState"/>
+        /// field order and restores it through <see cref="DefensiveAITick.RestoreState"/>.</summary>
+        private static void ReadDefensiveTickState(byte[] buf, ref int o, DefensiveAITick tick)
+        {
+            DefensiveTickState live = tick.CaptureState();
+            int cap = live.Hysteresis.Length;
+
+            OffsideLineState offside = default;
+            offside.CurrentLineDepth       = CanonicalSerializer.ReadF32(buf, ref o);
+            offside.StepUpDwellCounter     = CanonicalSerializer.ReadI32(buf, ref o);
+            offside.CooldownTicksRemaining = CanonicalSerializer.ReadI32(buf, ref o);
+            offside.CoverGkZoneActiveTicks = CanonicalSerializer.ReadI32(buf, ref o);
+
+            MarkHysteresisState[] hyst = new MarkHysteresisState[cap];
+            MarkAssignment[] prev = new MarkAssignment[cap];
+            for (int i = 0; i < cap; i++)
+            {
+                hyst[i].DwellCounter            = CanonicalSerializer.ReadI32(buf, ref o);
+                hyst[i].CandidateMode           = (MarkMode)CanonicalSerializer.ReadI32(buf, ref o);
+                hyst[i].CandidateTargetEntityId = CanonicalSerializer.ReadI32(buf, ref o);
+                hyst[i].HoldTicks               = CanonicalSerializer.ReadI32(buf, ref o);
+
+                prev[i].AgentEntityId      = CanonicalSerializer.ReadI32 (buf, ref o);
+                prev[i].Mode               = (MarkMode)CanonicalSerializer.ReadI32(buf, ref o);
+                prev[i].TargetEntityId     = CanonicalSerializer.ReadI32 (buf, ref o);
+                prev[i].TargetPosition     = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                prev[i].ValidThroughTick   = CanonicalSerializer.ReadI32 (buf, ref o);
+                prev[i].OverriddenThisTick = CanonicalSerializer.ReadBool(buf, ref o);
+                prev[i].IsManuallyAssigned = CanonicalSerializer.ReadBool(buf, ref o);
+            }
+
+            tick.RestoreState(new DefensiveTickState(hyst, prev, in offside));
+        }
+
+        /// <summary>Reads one team's Attacking AI (#15) state in the <see cref="WriteAttackingTickState"/>
+        /// field order and restores it through <see cref="AttackingAITick.RestoreState"/>.</summary>
+        private static void ReadAttackingTickState(byte[] buf, ref int o, AttackingAITick tick)
+        {
+            AttackingTickState live = tick.CaptureState();
+            int cap = live.Hysteresis.Length;
+
+            TransitionHoldState transition = default;
+            transition.TransitionHoldTick = CanonicalSerializer.ReadI32(buf, ref o);
+            transition.PrevPhase          = (Phase)CanonicalSerializer.ReadI32(buf, ref o);
+
+            int dirTeamId       = CanonicalSerializer.ReadI32 (buf, ref o);
+            bool dirOverload    = CanonicalSerializer.ReadBool(buf, ref o);
+            Flank dirFlank      = (Flank)CanonicalSerializer.ReadI32(buf, ref o);
+            int dirHoldTick     = CanonicalSerializer.ReadI32 (buf, ref o);
+            AttackDirective directive = new AttackDirective(dirTeamId, dirOverload, dirFlank, dirHoldTick);
+
+            AttackHysteresisState[] hyst = new AttackHysteresisState[cap];
+            for (int i = 0; i < cap; i++)
+            {
+                hyst[i].CurrentRole   = (AttackRole)CanonicalSerializer.ReadI32(buf, ref o);
+                hyst[i].DwellCounter  = CanonicalSerializer.ReadI32(buf, ref o);
+                hyst[i].CandidateRole = (AttackRole)CanonicalSerializer.ReadI32(buf, ref o);
+                hyst[i].CandidateDwell = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+
+            tick.RestoreState(new AttackingTickState(hyst, in transition, in directive));
+        }
+
+        /// <summary>Reads the Perception (#7) state in the <see cref="WritePerceptionTickState"/> field
+        /// order and restores it through <see cref="PerceptionSubsystem.RestoreState"/>.</summary>
+        private void ReadPerceptionTickState(byte[] buf, ref int o)
+        {
+            PerceptionTickState live = _perception.CaptureState();
+
+            int pairCap = live.Latency.PairCapacity;
+            int[] latCounters = new int[pairCap];
+            bool[] latConfirmed = new bool[pairCap];
+            int[] latExpiry = new int[pairCap];
+            for (int i = 0; i < pairCap; i++)
+            {
+                latCounters[i]  = CanonicalSerializer.ReadI32 (buf, ref o);
+                latConfirmed[i] = CanonicalSerializer.ReadBool(buf, ref o);
+                latExpiry[i]    = CanonicalSerializer.ReadI32 (buf, ref o);
+            }
+
+            int agentCap = live.ShoulderCheck.AgentCapacity;
+            int[] nextCheck = new int[agentCap];
+            int[] windowExpiry = new int[agentCap];
+            bool[] windowActive = new bool[agentCap];
+            ShoulderCheckAnimData[] anim = new ShoulderCheckAnimData[agentCap];
+            for (int i = 0; i < agentCap; i++)
+            {
+                nextCheck[i]    = CanonicalSerializer.ReadI32 (buf, ref o);
+                windowExpiry[i] = CanonicalSerializer.ReadI32 (buf, ref o);
+                windowActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
+                anim[i].AgentId            = CanonicalSerializer.ReadI32 (buf, ref o);
+                anim[i].FireFrame          = CanonicalSerializer.ReadI32 (buf, ref o);
+                anim[i].CheckDirection     = CanonicalSerializer.ReadF32 (buf, ref o);
+                anim[i].AnyEntityConfirmed = CanonicalSerializer.ReadBool(buf, ref o);
+            }
+
+            int scPairCap = live.ShoulderCheck.PairCapacity;
+            int[] blindLatency = new int[scPairCap];
+            bool[] blindConfirmed = new bool[scPairCap];
+            for (int i = 0; i < scPairCap; i++)
+            {
+                blindLatency[i]   = CanonicalSerializer.ReadI32 (buf, ref o);
+                blindConfirmed[i] = CanonicalSerializer.ReadBool(buf, ref o);
+            }
+
+            int agentCount = live.AgentCount;
+            bool[] ballVisible = new bool[agentCount];
+            Vector2[] ballPos = new Vector2[agentCount];
+            int[] ballStale = new int[agentCount];
+            for (int i = 0; i < agentCount; i++)
+            {
+                ballVisible[i] = CanonicalSerializer.ReadBool(buf, ref o);
+                ballPos[i]     = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                ballStale[i]   = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+
+            RecognitionLatencyState latency = new RecognitionLatencyState(latCounters, latConfirmed, latExpiry);
+            ShoulderCheckState shoulderCheck = new ShoulderCheckState(nextCheck, windowExpiry, windowActive, anim, blindLatency, blindConfirmed);
+            _perception.RestoreState(new PerceptionTickState(in latency, in shoulderCheck, ballVisible, ballPos, ballStale));
+        }
+
+        /// <summary>Reads a <see cref="TeamTactic"/> in the <see cref="WriteTeamTactic"/> (Appendix B) field order.</summary>
+        private static TeamTactic ReadTeamTactic(byte[] buf, ref int o)
+        {
+            Mentality mentality           = (Mentality)CanonicalSerializer.ReadI32(buf, ref o);
+            TacticFormation formation     = (TacticFormation)CanonicalSerializer.ReadI32(buf, ref o);
+            Tempo tempo                   = (Tempo)CanonicalSerializer.ReadI32(buf, ref o);
+            TacticWidth width             = (TacticWidth)CanonicalSerializer.ReadI32(buf, ref o);
+            TacticPassing passing         = (TacticPassing)CanonicalSerializer.ReadI32(buf, ref o);
+            TacticPressing pressing       = (TacticPressing)CanonicalSerializer.ReadI32(buf, ref o);
+            LineOfEngagement line         = (LineOfEngagement)CanonicalSerializer.ReadI32(buf, ref o);
+            float defensiveLine           = CanonicalSerializer.ReadF32(buf, ref o);
+            TacticDefWidth defWidth       = (TacticDefWidth)CanonicalSerializer.ReadI32(buf, ref o);
+            TransitionPlan transitionWon  = (TransitionPlan)CanonicalSerializer.ReadI32(buf, ref o);
+            TransitionPlan transitionLost = (TransitionPlan)CanonicalSerializer.ReadI32(buf, ref o);
+            bool offsideTrap              = CanonicalSerializer.ReadBool(buf, ref o);
+            TacticTriggerMask triggerMask = (TacticTriggerMask)CanonicalSerializer.ReadI32(buf, ref o);
+            FocusPlay focusPlay           = (FocusPlay)CanonicalSerializer.ReadI32(buf, ref o);
+            GkDistributionPolicy gkDist   = (GkDistributionPolicy)CanonicalSerializer.ReadI32(buf, ref o);
+            byte timeWasting              = CanonicalSerializer.ReadU8(buf, ref o);
+            MarkingOrientation marking    = (MarkingOrientation)CanonicalSerializer.ReadI32(buf, ref o);
+            DismarkIntensity dismark      = (DismarkIntensity)CanonicalSerializer.ReadI32(buf, ref o);
+            BuildUpStructure buildUp      = (BuildUpStructure)CanonicalSerializer.ReadI32(buf, ref o);
+            RotationFreedom rotation      = (RotationFreedom)CanonicalSerializer.ReadI32(buf, ref o);
+
+            return new TeamTactic(
+                mentality, formation, tempo, width, passing, pressing, line, defensiveLine, defWidth,
+                transitionWon, transitionLost, offsideTrap, triggerMask, focusPlay, gkDist, timeWasting,
+                marking, dismark, buildUp, rotation);
+        }
+
+        /// <summary>Reads a <see cref="PlayerTactic"/> in the <see cref="WritePlayerTactic"/> (Appendix B) field order.</summary>
+        private static PlayerTactic ReadPlayerTactic(byte[] buf, ref int o)
+        {
+            PlayerRole role = (PlayerRole)CanonicalSerializer.ReadI32(buf, ref o);
+            Duty duty       = (Duty)CanonicalSerializer.ReadI32(buf, ref o);
+
+            InstrBias riskyPasses       = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
+            InstrBias shootTendency     = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
+            InstrBias dribbleTendency   = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
+            InstrBias crossTendency     = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
+            InstrBias positioningFreedom = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
+            InstrBias closeDown         = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
+            bool tightMarking           = CanonicalSerializer.ReadBool(buf, ref o);
+            int markTargetEntityId      = CanonicalSerializer.ReadI32(buf, ref o);
+            SetPieceDutyFlags setPieces = (SetPieceDutyFlags)CanonicalSerializer.ReadI32(buf, ref o);
+
+            PlayerInstructions instructions = new PlayerInstructions(
+                riskyPasses, shootTendency, dribbleTendency, crossTendency, positioningFreedom, closeDown,
+                tightMarking, markTargetEntityId, setPieces);
+            return new PlayerTactic(role, duty, instructions);
+        }
+
         /// <summary>Serializes a <see cref="PlayerTactic"/> in canonical (Appendix B) field order: the
         /// behavioural <c>Role</c> and <c>Duty</c> as i32 ordinals, then the embedded
         /// <see cref="PlayerInstructions"/> (six <see cref="InstrBias"/> ordinals as i32, the TightMarking
@@ -4667,4 +5505,15 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | via DeterministicRngService.RestoreStream, plus the reader /     |
 // |         |            |        | RestoreFromSnapshot factory / G3 round-trip test, are the        |
 // |         |            |        | remaining Phase-1 slices.                                        |
+// | 1.41    | 2026-07-20 | —      | Snapshot-deserialize Phase 1 reader LANDED (KD-1/KD-2/KD-4/KD-5):|
+// |         |            |        | DeserializeWorldState (the symmetric mirror of SerializeWorld-   |
+// |         |            |        | State + per-block Read* helpers, reconstructing subsystem state  |
+// |         |            |        | through each RestoreState seam; version-gate + event-ledger-     |
+// |         |            |        | boundary trailing guard, R1); the static RestoreFromSnapshot     |
+// |         |            |        | factory (fingerprint gate step 0 → boot+EventBus reset →         |
+// |         |            |        | deserialize → KD-3 distinct-squad fail-loud → digest-chain       |
+// |         |            |        | CommitLoadedDigest + clock restore); _possessingAgentId /        |
+// |         |            |        | _prevPossessingAgentId reconstructed from the restored Match-    |
+// |         |            |        | Context; TestOnly_CaptureDurableHeader/Payload seams. No schema  |
+// |         |            |        | change (reader over the v17 writer). Full dotnet gate: PASSED.   |
 #endregion

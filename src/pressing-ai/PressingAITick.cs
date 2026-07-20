@@ -257,6 +257,33 @@ namespace TacticalDirector.PressingAI
         public PressingTickState CaptureState() =>
             new PressingTickState(_hystState, in _triggerState, _disengageDwell, _cooldownTicks, _pressFatigue);
 
+        /// <summary>
+        /// Restores this tick's cross-tick state from a snapshot produced by <see cref="CaptureState"/>
+        /// (deterministic save/restore — snapshot-deserialize design note KD-2, the pressing analogue of
+        /// the executor / DecisionTree / OscillationGuard <c>RestoreState</c> seams). The role-hysteresis
+        /// and press-fatigue arrays are copied element-wise into the live, allocated-once containers (the
+        /// caller supplies a freshly-built <paramref name="state"/> with matching capacity — the internal
+        /// containers stay the authoritative instances); the value-type trigger-debounce, disengage, and
+        /// cooldown counters are assigned. The per-tick output buffers (<c>_lastDirective</c>,
+        /// <c>_lastProcessedTick</c>, assignment scratch) are recomputed by the next <see cref="Tick"/> and
+        /// are not part of the captured state, so forward replay from the restored tick is byte-identical.
+        /// </summary>
+        public void RestoreState(in PressingTickState state)
+        {
+            int cap = _hystState.Capacity;
+            for (int i = 0; i < cap; i++)
+            {
+                _hystState.LastRole[i]    = state.Roles.LastRole[i];
+                _hystState.PendingRole[i] = state.Roles.PendingRole[i];
+                _hystState.RoleDwell[i]   = state.Roles.RoleDwell[i];
+                _pressFatigue[i]          = state.PressFatigue[i];
+            }
+
+            _triggerState   = state.Trigger;
+            _disengageDwell = state.DisengageDwell;
+            _cooldownTicks  = state.CooldownTicks;
+        }
+
         // ── Private helpers ───────────────────────────────────────────────────
 
         /// <summary>
@@ -389,4 +416,5 @@ namespace TacticalDirector.PressingAI
 // | 1.3     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam bundles the cross-tick state (role hysteresis, trigger debounce, disengage/cooldown dwell, press-fatigue ledger) into a PressingTickState view for the host snapshot layer. Read-only serialization use; no behaviour change. |
 // | 1.4     | 2026-07-07 | —      | Cheap-item addition: Step 3 result biased via BlindSideApproach.ApplyBias (new §3.3/§7.12) — nudges the primary presser's target toward the ball carrier's blind side; who is selected as presser is unaffected. |
 // | 1.5     | 2026-07-07 | —      | Redesign after user review: BlindSideApproach.ApplyBias → CoverShadowCurve.ApplyCurve — curves the target toward the nearest cover-shadow lane point instead of an arbitrary blind-side offset, gated by the presser's own PressingAgentSnapshot attributes (looked up by EntityId). |
+// | 1.6     | 2026-07-20 | —      | Snapshot-deserialize Phase 1 (KD-2): RestoreState(in PressingTickState) — the read counterpart to CaptureState; copies role hysteresis + press fatigue into the live containers and assigns the trigger/disengage/cooldown scalars. No behaviour change. |
 #endregion
