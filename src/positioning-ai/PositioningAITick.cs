@@ -229,6 +229,33 @@ namespace TacticalDirector.PositioningAI
         /// </summary>
         public RotationController CaptureRotationState() => _rotation;
 
+        /// <summary>
+        /// Restores the team-level <see cref="HysteresisState"/> (phase dwell + per-agent line/lane
+        /// membership) from a snapshot produced by <see cref="CaptureState"/> (deterministic save/restore —
+        /// snapshot-deserialize design note KD-2, the positioning analogue of the mechanics-AI / executor /
+        /// DecisionTree <c>RestoreState</c> seams). The caller supplies a freshly-built
+        /// <paramref name="source"/> of matching squad size; its phase fields and per-agent membership are
+        /// copied into the live, allocated-once <c>_hyst</c> (the authoritative instance). The rotation
+        /// binding / cache / pair state is restored separately through
+        /// <see cref="CaptureRotationState"/>'s own <c>RestoreBinding</c> / <c>RestorePairState</c> /
+        /// <c>RestoreLastComposedTarget</c> seams (FR-RO-013). The per-tick composed slots and
+        /// <c>_entityToSlotIndex</c> map are recomputed by the next <see cref="Tick"/>, so forward replay
+        /// from the restored tick is byte-identical.
+        /// </summary>
+        public void RestoreState(HysteresisState source)
+        {
+            _hyst.CurrentPhase    = source.CurrentPhase;
+            _hyst.CandidatePhase  = source.CandidatePhase;
+            _hyst.PhaseDwellCount = source.PhaseDwellCount;
+
+            AgentHysteresisState[] dst = _hyst.Agents;
+            AgentHysteresisState[] src = source.Agents;
+            for (int i = 0; i < dst.Length; i++)
+            {
+                dst[i] = src[i];
+            }
+        }
+
         // ── Private helpers ───────────────────────────────────────────────────
 
         private int GetSlotIndex(int entityId)
@@ -254,4 +281,8 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        |   from the (possibly rebound) snapshot rows each tick; post-compose      |
 // |         |            |        |   LastComposedTarget cache write-back; SeedFromFormation resets the      |
 // |         |            |        |   controller + boot-seeds the cache. CaptureRotationState() seam.        |
+// | 1.4     | 2026-07-20 | —      | Snapshot-deserialize Phase 1 (KD-2): RestoreState(HysteresisState) — the |
+// |         |            |        |   read counterpart to CaptureState; copies phase + per-agent line/lane    |
+// |         |            |        |   membership into the live _hyst. Rotation restores via the existing      |
+// |         |            |        |   RotationController.Restore* seams. No behaviour change.                 |
 #endregion

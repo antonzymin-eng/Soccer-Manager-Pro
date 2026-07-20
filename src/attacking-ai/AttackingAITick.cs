@@ -248,6 +248,29 @@ namespace TacticalDirector.AttackingAI
         public AttackingTickState CaptureState() =>
             new AttackingTickState(_hysteresis, in _transitionState, in _lastInPossDirective);
 
+        /// <summary>
+        /// Restores this tick's cross-tick state from a snapshot produced by <see cref="CaptureState"/>
+        /// (deterministic save/restore — snapshot-deserialize design note KD-2, the attacking analogue of
+        /// the executor / DecisionTree / OscillationGuard <c>RestoreState</c> seams). The per-entity role
+        /// hysteresis array is copied element-wise into the live, allocated-once container (the caller
+        /// supplies a freshly-built <paramref name="state"/> with matching EntityId-space length); the
+        /// value-type transition-hold state and frozen in-possession directive are assigned. The per-tick
+        /// output buffers (<c>_lastDirective</c>, intent scratch, <c>_lastProcessedTick</c>) are recomputed
+        /// by the next <see cref="Tick"/> and are not part of the captured state, so forward replay from the
+        /// restored tick is byte-identical.
+        /// </summary>
+        public void RestoreState(in AttackingTickState state)
+        {
+            int cap = _hysteresis.Length;
+            for (int i = 0; i < cap; i++)
+            {
+                _hysteresis[i] = state.Hysteresis[i];
+            }
+
+            _transitionState     = state.Transition;
+            _lastInPossDirective = state.LastInPossDirective;
+        }
+
         // ── Private helpers ───────────────────────────────────────────────────
 
         private void SetEmpty(int tickIndex, Phase phase)
@@ -294,4 +317,5 @@ namespace TacticalDirector.AttackingAI
 // | 1.1     | 2026-05-29 | —      | AR-1 M-4: removed dead firstLossThisTick variable and || clause (OutOfPoss already caught above; remaining non-InPoss phases are TransToAtk/TransToDef, covered by isTransition). |
 // | 1.2     | 2026-06-15 | —      | AR-5 M-2 (ERR-015-011): added the FR-AT-008 loose-ball guard — an IN_POSSESSION phase with BallCarrierEntityId < 0 now emits an empty directive instead of running the pipeline against an undefined BallCarrierPosition. |
 // | 1.3     | 2026-06-27 | —      | Match Engine Phase D D4 follow-up: CaptureState() snapshot seam bundles the cross-tick state (per-agent role hysteresis, transition-hold state, frozen in-possession directive) into an AttackingTickState view for the host snapshot layer. Read-only; no behaviour change. |
+// | 1.4     | 2026-07-20 | —      | Snapshot-deserialize Phase 1 (KD-2): RestoreState(in AttackingTickState) — the read counterpart to CaptureState; copies the per-agent role hysteresis into the live array and assigns the transition-hold state + frozen in-possession directive. No behaviour change. |
 #endregion
