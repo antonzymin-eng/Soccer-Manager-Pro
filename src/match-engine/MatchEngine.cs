@@ -24,6 +24,7 @@
 // Modified: 2026-07-20 (snapshot-deserialize Phase 1 READER: DeserializeWorldState + Read* helpers (symmetric mirror, restore-seam reconstruction, version-gate + ledger-boundary trailing guard) + static RestoreFromSnapshot factory (fingerprint gate + boot + digest-chain/clock restore + KD-3 distinct-squad fail-loud). No schema change. See docs/tracking/snapshot-deserialize-design.md §5 Phase 1.)
 // Modified: 2026-07-20 (snapshot-deserialize Phase 2: distinct-squad re-projection (#27 T3 / KD-3) — new ISquadProvider seam threaded into RestoreFromSnapshot; ReprojectDistinctSquads re-derives each configured team's per-slot attribute records (base lineup via LineupSelector + substitutions replayed from the serialized _activeBenchSlot), fail-loud on absent/unresolvable/mismatched roster. No schema change. See docs/tracking/snapshot-deserialize-design.md §5 Phase 2.)
 // Modified: 2026-07-21 (snapshot-deserialize Phase 3 on-disk fold: public MatchSeed property (the boot seed a save persists) + the durable-capture seams promoted TestOnly_ → production internal (CaptureDurableHeader/Payload) for MatchSaveManager. No schema change. See docs/tracking/match-save-file-design.md)
+// Modified: 2026-07-21 (§4.8.2 runtime MXCSR float-mode gate wired into boot + RestoreFromSnapshot step 0 via MxcsrValidator; native shim in deterministic-sim/native/mxcsr_query.c. No-op where the shim is absent (Linux CI); enforces on the pinned cert host. No schema change.)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -404,6 +405,12 @@ namespace TacticalDirector.MatchEngine
             _codec       = new SnapshotCodec();
             _fingerprint = EnvironmentFingerprint.CreateStage0Dev();
 
+            // §4.8.2 runtime float-mode gate — read the live MXCSR on the sim thread at boot and reject a
+            // host whose DAZ/FTZ/rounding bits diverge from the Stage-0 pin (defense-in-depth over the
+            // certified fingerprint). A no-op where the native shim is absent (Linux CI / dev / no plugin);
+            // enforces only where it loads (the pinned cert host). See native/mxcsr_query.c + MxcsrValidator.
+            MxcsrValidator.ValidateStage0FloatMode();
+
             // §4 step 3 — physics subsystems. AgentMovementSystem is pinned to the 60 Hz physics
             // tick (deterministic; never wall-clock-derived).
             _movement = new AgentMovementSystem(DeterministicSimConstants.PHYSICS_TICK_HZ);
@@ -697,14 +704,17 @@ namespace TacticalDirector.MatchEngine
         /// instance) is chosen because boot does load-bearing wiring that must happen exactly once, before
         /// any state is applied, and a "half-booted, half-restored" instance is not a valid state to expose.
         ///
-        /// Step 0 (KD-6) — validate the header's <see cref="EnvironmentFingerprint"/> against the live host
-        /// BEFORE any state is touched, so a rejected restore mutates nothing. Only when the header carries a
-        /// fingerprint (O3: <c>SaveManager</c> writes <c>Fingerprint = null</c> until the on-disk root lands,
-        /// so a null fingerprint is skipped-with-intent). The live fingerprint is the recorded/dev tuple
-        /// (<see cref="EnvironmentFingerprint.CreateStage0Dev"/>) — at Stage 0 this is a self-consistency
-        /// (schema/tuple) check; it becomes a real float-mode (MXCSR) gate only once the native live-mode
-        /// query lands (the root-CLAUDE.md host-blocked item — the seam is defined here so that query has a
-        /// consumer).
+        /// Step 0 (KD-6 / §4.8.2) — validate the runtime float mode AND the header's
+        /// <see cref="EnvironmentFingerprint"/> BEFORE any state is touched, so a rejected restore mutates
+        /// nothing. The float-mode half reads the live MXCSR via <see cref="MxcsrValidator"/> (rejecting a
+        /// host whose DAZ/FTZ/rounding bits diverge from the Stage-0 pin; a no-op where the native shim is
+        /// absent, e.g. the Linux CI gate). The fingerprint half runs only when the header carries a
+        /// fingerprint (O3: the deterministic-sim <c>SaveManager</c> writes <c>Fingerprint = null</c>, so a
+        /// null fingerprint is skipped-with-intent; the on-disk <c>MatchSaveManager</c> serializes a real
+        /// one). The live fingerprint is the recorded/dev tuple
+        /// (<see cref="EnvironmentFingerprint.CreateStage0Dev"/>) — at Stage 0 a self-consistency
+        /// (schema/tuple) check. The MXCSR query enforces the (already-certified) pin as defense-in-depth;
+        /// it is not the proof the bits are exact (the determinism-KAT run is).
         ///
         /// Step 1 — construct a fresh engine through the normal boot path (which also runs step 2:
         /// <see cref="EventBus.ResetForNewMatch"/>, so the process-static bus is clean for the restored
@@ -736,6 +746,12 @@ namespace TacticalDirector.MatchEngine
             {
                 throw new ArgumentNullException(nameof(payload));
             }
+
+            // Step 0 (KD-6 / §4.8.2) — runtime float-mode gate, before any state is touched. Read the live
+            // MXCSR on the sim thread and reject a host whose DAZ/FTZ/rounding bits diverge from the Stage-0
+            // pin, so a restore never resumes a certified snapshot under a divergent float mode. A no-op
+            // where the native shim is absent; enforces only where it loads. See MxcsrValidator.
+            MxcsrValidator.ValidateStage0FloatMode();
 
             // Step 0 (KD-6 / O3) — fingerprint gate, before any state is touched.
             if (header.Fingerprint != null)

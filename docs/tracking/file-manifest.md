@@ -708,7 +708,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/attacking-ai/TacticTranslation.cs` | #21 T2 consumer seam: FocusPlay → preferred Flank? (Mixed/ThroughMiddle → null identity; FR-TI-021); pure, translate-once (FR-TI-025) |
 | `src/attacking-ai/Tests/TacticTranslationTests.cs` | #21 T2 seam locks: FocusPlay → preferred-flank mapping + AttackingSnapshot Mixed-zero-value identity (FR-TI-031); tests asmdef gains tactical-instructions ref |
 
-### `src/deterministic-sim/` — Spec #16 (27 files: 25 .cs + 2 asmdef)
+### `src/deterministic-sim/` — Spec #16 (30 files: 27 .cs + 2 asmdef + 1 native; native/ C shim)
 
 > Cross-cutting foundation assembly; all gameplay layers reference it; it references no other gameplay assembly.
 > AR-1 (4H+4M) + AR-2 (1L) + AR-3 (1L) adversarial review cycles complete (AR-3 clean). Implementation date: May 29, 2026.
@@ -727,6 +727,10 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/deterministic-sim/DespawnLog.cs` | Pre-allocated tombstone list: Append / ContainsEntity / GetEntry / Clear; capacity = MaxDespawnEntries (512) |
 | `src/deterministic-sim/EnvironmentFingerprint.cs` | Sealed class: 6 readonly fields (WorkerCount, SchedulerPolicy, ReductionTopology, SimdFeatureLevel, FloatModelHash, UnicodeNormalizationVersion); Lock(); ValidateAgainst() → ERR_DS_REPLAY_ENV_MISMATCH; CreateStage0Dev() placeholder factory + IsDevPlaceholder gate; CreateStage0MonoCertified() real-hash factory (ERR-016-006 Option A) + Stage0Mono*/Stage0SimdLevel consts |
 | `src/deterministic-sim/FloatFlagTuple.cs` | Readonly struct: the §4.8.3 11-field float-flag tuple + ComputeHash() = SHA-256(SerializeCanonical(0x14 ‖ tuple)) — the live-host floatModelHash hasher (ERR-016-006 Option A) |
+| `src/deterministic-sim/MxcsrNative.cs` | Internal static: P/Invoke boundary (`[DllImport("td_mxcsr")]`) to the native MXCSR shim; TryQuery(out uint) reads the calling thread's SSE control/status register, returns false (probe unavailable) when the library is absent (§4.8.2) |
+| `src/deterministic-sim/MxcsrValidator.cs` | Public static: §4.8.2 runtime float-mode gate — decode DAZ (bit 6) / FTZ (bit 15) / RC (bits 13–14), MatchesStage0Pin(uint) pure check, ValidateStage0FloatMode() → ProbeStatus (Unavailable off-host / Validated / throws on divergence); mirrors FloatFlagTuple's Stage-0 pinned fields 5/6/7 |
+| `src/deterministic-sim/native/mxcsr_query.c` | Native C shim: exports `td_get_mxcsr()` = `_mm_getcsr()` (single STMXCSR). Built to td_mxcsr.dll / libtd_mxcsr.so; the managed intrinsic .NET/Mono lacks. Build instructions in native/README.md |
+| `src/deterministic-sim/native/README.md` | Build + availability-policy doc for the td_mxcsr shim (MSVC/GCC build lines, Assets/Plugins/x86_64 placement, off-host no-op semantics, certified-capture host-block note) |
 | `src/deterministic-sim/RngStreamState.cs` | Mutable struct: StreamKey/RngCursor/ActionOrdinal (ulong), BudgetRemaining/DeclaredBudget/DrawIndex (int), SiteId (string), StreamVersion (ushort), SubsystemOrdinal (int), EntityId (int); ClearReservation() |
 | `src/deterministic-sim/MatchClock.cs` | Sealed class: CurrentTick / CurrentTacticalTick (÷AI_PHASE_STRIDE) / CurrentMatchTimeMs (×FrameMs) / CurrentMatchTimeSeconds (×FrameSeconds; B1 seconds-clock) / IsAiStrideTick; Advance(); RestoreFromSnapshot(tick) for replay step 5 — no System.DateTime (FR-CS-042) |
 | `src/deterministic-sim/DeterministicRngService.cs` | Sealed class: HKDF-SHA256 key derivation at construction; SipHash-2-4-64 per-draw hash; RegisterStream / Reserve / DrawReserved / CloseReservation / Skip / RestoreStream; zero-alloc hot path (stackalloc Span<byte>[21]; AR-1 H-3) |
@@ -744,6 +748,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/deterministic-sim/tests/HkdfSha256KatTests.cs` | Full HKDF-SHA256 KAT suite (§9.5 #4(a)): RFC 5869 A.1–A.3 PRK + full OKM byte-exact (L=42/82 locks multi-block Expand) + pinned project Test Case 4 (RNG_KDF invocation pattern → (k0,k1)) per hkdf-sha256-kat.md v1.2 |
 | `src/deterministic-sim/tests/SipHash24KatTests.cs` | Full SipHash-2-4-64 KAT suite (§9.5 #4(b)): all 64 Aumasson & Bernstein 2012 Appendix A vectors + pinned project RNG_STREAM_HASH 21-byte draw-preimage case per siphash-2-4-kat.md v1.2 |
 | `src/deterministic-sim/tests/SerializeCanonicalCorpusTests.cs` | Full canonical-serialization corpus suite (§9.5 #4(c)): all 41 serialize-canonical-corpus.md entries (P/F/S/B/O/E/A/ST/D incl. chained SnapshotDigest D-07), encoded bytes + SHA-256 asserted per entry |
+| `src/deterministic-sim/tests/MxcsrValidatorTests.cs` | Pure-decode locks for MxcsrValidator (§4.8.2): DAZ/FTZ/RC extraction from synthetic MXCSR values, Stage-0 pin match, exception-flag independence, ValidateStage0FloatMode non-throwing off-host (Unavailable). Native-shim-free — runs on the Linux gate |
 
 ### `src/event-system/` — Spec #17 (21 files: 19 .cs + 2 asmdef)
 
