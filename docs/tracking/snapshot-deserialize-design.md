@@ -43,16 +43,31 @@
 > the factory. An L-only round closes the cycle per the project convention. **Ready to promote** into
 > `match-engine-design.md` as a phase and open the implementing work.)
 > **Status:** DESIGN SUPPLEMENT — **AR-CONVERGED; PROMOTED to `match-engine-design.md` Phase G;
-> Phase 1 LANDED** (Stage 0+1 integration scaffolding; NOT a numbered spec, same governance
+> Phases 1 + 2 LANDED** (Stage 0+1 integration scaffolding; NOT a numbered spec, same governance
 > class as `match-engine-design.md` and `squad-roster-reference-design.md`). The **KD-8 writer half
 > landed July 20, 2026** (`SNAPSHOT_SCHEMA_VERSION` 16 → 17 — the `match-flow.card-severity`
 > `RngStreamState` cursor; `MatchEngine.cs` v1.40 / `MatchEngineConstants.cs` v1.24). The **reader half
 > landed July 20, 2026** (`MatchEngine.cs` v1.41 — `DeserializeWorldState`, the `RestoreState` counterpart
 > seams on Pressing/Defensive/Attacking/Perception/Positioning + `MovementCommand.ReconstructFromSnapshot`,
 > the `RestoreFromSnapshot` factory, and the G3 round-trip determinism test suite); no schema change.
-> **Phase 1 is complete.** **Remaining:** Phase 2 (#27 T3 distinct-squad re-projection via the
-> `ISquadProvider` seam — Phase 1 fails loud on a non-sentinel roster reference) and Phase 3 (native
-> MXCSR query + on-disk `SaveManager` fold — host/upstream-gated).
+> **Phase 1 is complete.** **Phase 2 LANDED July 20, 2026** (`MatchEngine.cs` v1.42): the `ISquadProvider`
+> seam (`ISquadProvider.cs`) threaded into `RestoreFromSnapshot(…, ISquadProvider squads = null)`, and
+> `ReprojectDistinctSquads` replacing the Phase-1 fail-loud — for each team with a non-sentinel
+> `_rosterClubId` it resolves the roster (ClubId-checked, size/record validated, both teams before any
+> apply), re-runs `LineupSelector` + `PlayerAttributeProjection` for the base lineup (attribute arrays
+> only; the bench GK flags re-projected too since `_benchIsGoalkeeper` is a boot-constant NOT serialized;
+> the on-pitch serialized GK flags stay the restored value), then replays the substitutions the serialized
+> `_activeBenchSlot` records. Fail-loud on absent/unresolvable/mismatched roster (R4). G3 round-trip
+> determinism green for a distinct (varied-attribute) squad, a mid-match substitution, a post-restore
+> substitution, and a post-restore keeper-for-keeper substitution; no schema change; full dotnet gate
+> PASSED (263 match-engine tests; whole tree green). **Remaining:** Phase 3 (native MXCSR query + on-disk
+> `SaveManager` fold — host/upstream-gated). **Discovered (out of scope, recorded as a Phase-1
+> snapshot-completeness follow-up):** a post-restore substitution that FLIPS a pitch slot's goalkeeper
+> status — subbing a keeper onto an OUTFIELD slot, which realistic play never does — diverges, traced to
+> the Positioning AI (#12) producing a different formation slot for that agent after restore (an un-captured
+> interaction of the GK-flag flip with the Positioning/rotation state; two fresh engines with the same
+> substitution are deterministic, and the base distinct-squad round-trip + realistic keeper-for-keeper and
+> outfielder substitutions all round-trip). The Phase 2 attribute re-projection is unaffected.
 > **Author:** —
 > **Purpose:** Authoritative design for adding a **snapshot-deserialize (load/restore) path** to
 > `MatchEngine` — the reader that reconstructs full engine state from the payload
@@ -351,10 +366,13 @@ before the snapshot** (the direct H-1 regression), plus the trailing-byte/versio
 guards. One writer change + schema bump (KD-8); the reader is otherwise a pure addition. This phase
 alone unblocks save/load and replay for the default path — the bulk of the MVP value.
 
-**Phase 2 — distinct-squad re-projection (#27 T3 consumer).**
-Add the `ISquadProvider` seam + roster re-projection keyed by `_activeBenchSlot` (KD-3); extend the
-G3 test to a `ConfigureSquads`-booted distinct-squad match. Closes the last open #27 T3 item on the
-data side.
+**Phase 2 — distinct-squad re-projection (#27 T3 consumer). ✅ LANDED July 20, 2026.**
+Added the `ISquadProvider` seam + `ReprojectDistinctSquads` (base lineup via `LineupSelector` +
+`PlayerAttributeProjection`, then the substitutions replayed keyed by `_activeBenchSlot`) (KD-3); extended the
+G3 test to a `ConfigureSquads`-booted distinct-squad match (+ mid-match / post-restore / keeper-for-keeper
+substitutions and the provider fail-loud gates). Closes the last open #27 T3 item on the data side.
+(Implementation note: `_benchIsGoalkeeper` is NOT serialized — only the on-pitch `_isGoalkeeper` is — so it
+is re-projected in `ReprojectBaseLineup`, not left to the payload.)
 
 **Phase 3 — native MXCSR query + on-disk fold (host / upstream-gated).**
 Wire the native float-mode query into the KD-6 seam (host-blocked today); then N1/N2 (on-disk
@@ -396,9 +414,11 @@ Wire the native float-mode query into the KD-6 seam (host-blocked today); then N
   capstone + a mid-match-with-tactics-changed case + **a match with a booking before the snapshot**,
   the KD-8/H-1 regression); version-gate + trailing-byte fail-loud tests; `SNAPSHOT_SCHEMA_VERSION`
   16 → 17 (KD-8) with the existing schema-pin test re-baselined; full dotnet gate PASSED.
-- **Phase 2:** G3 green for a distinct-squad `ConfigureSquads` match; fail-loud test for
-  non-sentinel roster reference with no provider; bench-swap fidelity test (a substituted match
-  restores the swapped-in player's attributes on the correct slot).
+- **Phase 2:** ✅ MET (July 20, 2026). G3 green for a distinct-squad `ConfigureSquads` match; fail-loud
+  tests for a non-sentinel roster reference with no provider, an unresolvable ClubId, and a mismatched
+  returned roster; bench-swap fidelity tests (a mid-match and a post-restore substitution restore the
+  swapped-in player's attributes on the correct slot, and a keeper-for-keeper substitution restores the
+  un-serialized bench-GK flag).
 - **Phase 3:** out of scope for the first landings (host / N1-gated).
 
 ---
@@ -449,6 +469,7 @@ the writer's exclusion proofs were written to prevent, now checked from the read
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.8 | 2026-07-20 | — | **Phase 2 LANDED — distinct-squad re-projection (#27 T3 / KD-3).** New `ISquadProvider` seam (`src/match-engine/ISquadProvider.cs`) threaded into `RestoreFromSnapshot(…, ISquadProvider squads = null)`. `ReprojectDistinctSquads` (`MatchEngine.cs` v1.42) replaces the Phase-1 fail-loud: neutral fast-path returns immediately; each distinct team resolves its roster (ClubId-check + size/record validation, both teams before any apply — the ConfigureSquads validate-both-before-write discipline), `ReprojectBaseLineup` re-runs `LineupSelector` + `PlayerAttributeProjection` for the base lineup (attribute arrays only; also re-projects the bench GK flags `_benchIsGoalkeeper`, a boot-constant NOT serialized — the on-pitch `_isGoalkeeper` stays the restored serialized value), and `ReprojectSubstitutions` replays the attribute half of each substitution the serialized `_activeBenchSlot` records. Fail-loud on absent provider / unresolvable ClubId / mismatched returned ClubId (R4). `MatchEngineSnapshotRestoreTests` v1.1: G3 round-trip for a distinct squad + mid-match substitution + post-restore substitution + post-restore keeper-for-keeper substitution, plus the three fail-loud provider gates. No `SNAPSHOT_SCHEMA_VERSION` change. **Full dotnet gate PASSED (263 match-engine tests; whole tree green).** Implementation-time finding folded in: `_benchIsGoalkeeper` is NOT serialized (only the on-pitch `_isGoalkeeper` is), so it must be re-projected for a post-restore substitution to bring a bench keeper on with the correct flag — added, locked by the keeper-for-keeper test. Also surfaced (out of scope, recorded above + in the root CLAUDE.md OPEN ISSUES): a post-restore substitution that FLIPS a slot's GK status (keeper → outfield slot, never done in realistic play) diverges via a Positioning-AI (#12) formation-slot interaction with the GK-flag flip — a Phase-1 snapshot-completeness edge, not a Phase-2 re-projection defect. Only Phase 3 (native MXCSR + on-disk fold) remains. |
 | 0.1 | 2026-07-20 | — | Initial design supplement. Scope (snapshot-deserialize / restore path), KD-1..KD-7, phased plan, risks, acceptance criteria, open questions. |
 | 0.2 | 2026-07-20 | — | **Self-adversarial review AR-1: 0H + 3M + 2L, all resolved.** M-1: v0.1 KD-4 had the factory validating the fingerprint (KD-6) but never said *when* relative to `ResetForNewMatch` / deserialize — a validation that runs after state is applied wastes the reject; ordered it as step-0-of-restore in KD-6 and O3, before any state mutation. M-2: v0.1 claimed Phase 1 "restores default matches exactly" but did not state that `_activeBenchSlot` is *always* serialized (v15) and therefore available to Phase 1 even though Phase 1 does not re-project — clarified in KD-3 that Phase 1 restores the slot value (so a neutral substituted match round-trips) and only the *attribute re-projection* waits for Phase 2. M-3: v0.1 did not address that `SerializeWorldState` omits the boot RNG seed / formation, so a payload alone cannot rebuild a tickable engine — added KD-7 + O1 (the payload is state, not boot constants). L-1: R1 originally implied the schema-version gate catches writer/reader drift; corrected — same-version drift is caught by the trailing-byte guard + G3, not the version gate. L-2: added the §0.1 restore-seam inventory table so the Phase-1 "add `RestoreState` counterparts" work is enumerated, not hand-waved. |
 | 0.3 | 2026-07-20 | — | **Self-adversarial review AR-2: 0H + 1M + 2L, all resolved.** M-1 (contract gap): the KD-4 factory signature took `SnapshotPayload payload` alone, but the `EnvironmentFingerprint` (KD-6) and the digest chain (KD-5) live in `SnapshotHeader`, not the payload — the entry point cannot validate or continue the chain without it. Signature now `RestoreFromSnapshot(in SnapshotHeader header, SnapshotPayload payload, …)`; a save artifact is the (header, payload) pair. L-1: KD-4's numbered step list referenced fingerprint validation (KD-6) and digest restore (KD-5) but did not enumerate them — added as explicit step 0 and step 4. L-2: the KD-5 (G3) acceptance-test description carried a redundant "separately boot the same match, tick to N" step that contradicted "the factory produces a fresh engine C"; rewritten so A is kept running only as the reference chain and C comes solely from `RestoreFromSnapshot`. |

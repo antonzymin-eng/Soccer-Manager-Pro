@@ -22,6 +22,7 @@
 // Modified: 2026-07-17 (AR-10, doc-only: _lastHolderAgentId writer comment aligned to the last-settled-holder approximation — a deflection-chain goal credits the last settled holder, not necessarily the kicker; CONVERGENCE round)
 // Modified: 2026-07-20 (snapshot-deserialize Phase 1 KD-8 writer half: match-flow.card-severity RngStreamState cursor serialized at SNAPSHOT_SCHEMA_VERSION 16 → 17 — the engine's only mutable RNG stream; a save after a booking now round-trips deterministically. See docs/tracking/snapshot-deserialize-design.md)
 // Modified: 2026-07-20 (snapshot-deserialize Phase 1 READER: DeserializeWorldState + Read* helpers (symmetric mirror, restore-seam reconstruction, version-gate + ledger-boundary trailing guard) + static RestoreFromSnapshot factory (fingerprint gate + boot + digest-chain/clock restore + KD-3 distinct-squad fail-loud). No schema change. See docs/tracking/snapshot-deserialize-design.md §5 Phase 1.)
+// Modified: 2026-07-20 (snapshot-deserialize Phase 2: distinct-squad re-projection (#27 T3 / KD-3) — new ISquadProvider seam threaded into RestoreFromSnapshot; ReprojectDistinctSquads re-derives each configured team's per-slot attribute records (base lineup via LineupSelector + substitutions replayed from the serialized _activeBenchSlot), fail-loud on absent/unresolvable/mismatched roster. No schema change. See docs/tracking/snapshot-deserialize-design.md §5 Phase 2.)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -707,15 +708,24 @@ namespace TacticalDirector.MatchEngine
         /// Step 1 — construct a fresh engine through the normal boot path (which also runs step 2:
         /// <see cref="EventBus.ResetForNewMatch"/>, so the process-static bus is clean for the restored
         /// match). Step 3 — <see cref="DeserializeWorldState"/> overwrites the boot-seeded cross-tick state
-        /// with the saved state (and restores the clock + card-severity RNG cursor). Step 4 — restore the
-        /// digest chain from the header so the NEXT tick's digest equals what an uninterrupted run would
-        /// produce (KD-5, the round-trip determinism contract).
+        /// with the saved state (and restores the clock + card-severity RNG cursor). Step 3b (#27 T3 / KD-3,
+        /// Phase 2) — <see cref="ReprojectDistinctSquads"/> re-derives the per-slot attribute records for any
+        /// team that loaded a distinct squad (the payload carries only the roster IDENTITY, not the attribute
+        /// VALUES) from <paramref name="squads"/>, failing loud if a referenced roster is unresolvable; a
+        /// neutral / unconfigured-squad match skips this and needs no provider. Step 4 — restore the digest
+        /// chain from the header so the NEXT tick's digest equals what an uninterrupted run would produce
+        /// (KD-5, the round-trip determinism contract).
         /// </summary>
         /// <param name="header">The saved snapshot header (fingerprint + digest chain + tick + versions).</param>
         /// <param name="payload">The saved snapshot payload (the cross-tick world-state bytes).</param>
         /// <param name="matchSeed">The boot match seed the payload does not carry (KD-7 O1 — the caller
         /// persists it alongside the payload; an on-disk boot-header is revisited at the save-file root).</param>
-        public static MatchEngine RestoreFromSnapshot(in SnapshotHeader header, SnapshotPayload payload, ulong matchSeed)
+        /// <param name="squads">Resolver for the club rosters a distinct-squad match loaded (#27 T3 / KD-3).
+        /// Required (non-null, resolving every referenced <c>ClubId</c>) when the snapshot was taken after
+        /// <see cref="ConfigureSquads"/>; ignored for a neutral / unconfigured-squad match. Must return the
+        /// SAME rosters the saved match loaded — see <see cref="ISquadProvider"/>.</param>
+        public static MatchEngine RestoreFromSnapshot(
+            in SnapshotHeader header, SnapshotPayload payload, ulong matchSeed, ISquadProvider squads = null)
         {
             if (header == null)
             {
@@ -745,23 +755,16 @@ namespace TacticalDirector.MatchEngine
             // Step 3 — overwrite the boot-seeded cross-tick state with the saved state.
             engine.DeserializeWorldState(payload);
 
-            // KD-3 fail-loud (R4): a match booted through ConfigureSquads with a DISTINCT squad carries a
-            // non-sentinel roster reference, and its per-slot attribute records (the boot-constant exclusion)
-            // must be re-projected from the actual Squad — the reader cannot do that without the roster, and a
-            // silent fall-back to CreateDefault() would produce a match that diverges from the saved one on
-            // the very next tick. That re-projection is the #27 T3 consumer, deferred to Phase 2 (the
-            // ISquadProvider seam); Phase 1 restores the neutral path (every match that never calls
-            // ConfigureSquads) exactly and refuses distinct-squad restore rather than silently diverging.
-            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
-            {
-                if (engine._rosterClubId[t] != MatchEngineConstants.NO_ROSTER_CLUB_ID)
-                {
-                    throw new NotSupportedException(
-                        $"Snapshot references a distinct squad for team {t} (ClubId {engine._rosterClubId[t]}); " +
-                        "restoring its per-slot attribute records requires the #27 T3 roster re-projection " +
-                        "(snapshot-deserialize Phase 2). Phase 1 restores the neutral (unconfigured-squad) path.");
-                }
-            }
+            // KD-3 (#27 T3, Phase 2): a match booted through ConfigureSquads with a DISTINCT squad carries a
+            // non-sentinel roster reference (v16) whose per-slot attribute records (the boot-constant
+            // exclusion) must be re-projected from the actual Squad — the payload carries only the roster
+            // IDENTITY (its ClubId), not the attribute VALUES. ReprojectDistinctSquads re-derives them from
+            // the caller-supplied ISquadProvider, keyed by the serialized _activeBenchSlot for substitutions,
+            // and fails loud (rather than silently falling back to CreateDefault() and diverging on the very
+            // next tick, R4) if the provider is absent or cannot resolve a referenced ClubId. The neutral
+            // path (every _rosterClubId == NO_ROSTER_CLUB_ID — every match that never calls ConfigureSquads)
+            // needs no provider and returns immediately.
+            engine.ReprojectDistinctSquads(squads);
 
             // Step 4 (KD-5) — continue the digest chain from the saved link so the next tick's digest matches
             // an uninterrupted run. The clock was restored to the saved tick inside DeserializeWorldState.
@@ -775,6 +778,159 @@ namespace TacticalDirector.MatchEngine
             }
 
             return engine;
+        }
+
+        /// <summary>
+        /// Snapshot-deserialize Phase 2 (#27 T3 / KD-3): re-derives every distinct-squad team's per-slot
+        /// attribute records from the roster its serialized <c>_rosterClubId</c> (v16) names. The payload
+        /// carries only the roster IDENTITY (each team's <c>ClubId</c>), not the attribute VALUES (the
+        /// boot-constant exclusion — <c>_canonicalAttrs</c> / <c>_attrs</c> / <c>_dtAttrs</c> /
+        /// <c>_perceptionAttrs</c> / bench attrs are NOT serialized), so a distinct-squad match cannot be
+        /// restored faithfully without its rosters back. Both teams' resolved squads are resolved,
+        /// ClubId-checked, size-checked, lineup-selected, and record-validated BEFORE any is applied (the
+        /// <see cref="ConfigureSquads"/> validate-both-before-write discipline); then the base lineup is
+        /// re-projected and the substitution swaps the serialized <c>_activeBenchSlot</c> records are
+        /// replayed. The neutral / unconfigured-squad path (both <c>_rosterClubId == NO_ROSTER_CLUB_ID</c>)
+        /// returns immediately and needs no provider. Fails loud on an absent provider, an unresolvable
+        /// ClubId, or a provider that returns a mismatched roster — a distinct-squad match must not silently
+        /// fall back to <c>CreateDefault()</c> and diverge from the saved run (R4). Determinism rests on the
+        /// provider returning the SAME roster the saved match loaded: <see cref="LineupSelector.Select"/> and
+        /// <see cref="PlayerAttributeProjection"/> are pure, so an identical roster reproduces the exact
+        /// per-slot records the save held.
+        /// </summary>
+        /// <param name="squads">The caller-supplied ClubId -> Squad resolver, or <c>null</c> for a neutral
+        /// restore (fails loud if any team is distinct-squad).</param>
+        private void ReprojectDistinctSquads(ISquadProvider squads)
+        {
+            bool anyDistinct = false;
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                if (_rosterClubId[t] != MatchEngineConstants.NO_ROSTER_CLUB_ID)
+                {
+                    anyDistinct = true;
+                }
+            }
+            if (!anyDistinct)
+            {
+                return;  // Phase-1 neutral path: no ConfigureSquads was called, nothing to re-project.
+            }
+
+            // Resolve + validate + select for EVERY distinct team BEFORE applying any — a failure leaves the
+            // engine un-re-projected (and the throwing factory discards it), mirroring ConfigureSquads'
+            // validate-both-before-write rule so there is no half-re-projected intermediate.
+            var resolved = new TacticalDirector.PlayerDatabase.Squad[MatchEngineConstants.TEAM_COUNT];
+            var plans    = new LineupPlan[MatchEngineConstants.TEAM_COUNT];
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                if (_rosterClubId[t] == MatchEngineConstants.NO_ROSTER_CLUB_ID)
+                {
+                    continue;
+                }
+                if (squads == null)
+                {
+                    throw new System.NotSupportedException(
+                        $"RestoreFromSnapshot: the snapshot references a distinct squad for team {t} "
+                        + $"(ClubId {_rosterClubId[t]}) but no ISquadProvider was supplied — its per-slot "
+                        + "attribute records cannot be re-projected (#27 T3 / KD-3). Pass the rosters the "
+                        + "saved match loaded.");
+                }
+                TacticalDirector.PlayerDatabase.Squad squad = squads.ResolveByClubId(_rosterClubId[t]);
+                if (squad == null)
+                {
+                    throw new System.NotSupportedException(
+                        $"RestoreFromSnapshot: the ISquadProvider returned no Squad for team {t}'s ClubId "
+                        + $"{_rosterClubId[t]} — a distinct-squad match cannot be faithfully restored without "
+                        + "its roster (#27 T3 / KD-3).");
+                }
+                if (squad.ClubId != _rosterClubId[t])
+                {
+                    throw new System.InvalidOperationException(
+                        $"RestoreFromSnapshot: the ISquadProvider returned a Squad with ClubId {squad.ClubId} "
+                        + $"for the requested ClubId {_rosterClubId[t]} (team {t}) — resolver contract "
+                        + "violation.");
+                }
+                ValidateSquadSize(t, squad);
+                LineupPlan plan = LineupSelector.Select(squad, MatchEngineConstants.STAGE0_FORMATION);
+                ValidateSelectedRecords(t, squad, in plan);
+                resolved[t] = squad;
+                plans[t]    = plan;
+            }
+
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                if (_rosterClubId[t] == MatchEngineConstants.NO_ROSTER_CLUB_ID)
+                {
+                    continue;
+                }
+                ReprojectBaseLineup(t, resolved[t], in plans[t]);
+                ReprojectSubstitutions(t);
+            }
+        }
+
+        /// <summary>
+        /// Re-projects one team's base-lineup attribute arrays from its resolved squad + selected lineup
+        /// (the attribute half of <see cref="ApplySquad"/>). Deliberately does NOT write the ON-PITCH
+        /// goalkeeper flags (<c>_isGoalkeeper</c>) — those are serialized (a v-restored value that already
+        /// reflects any substitution, so re-writing from the plan would clobber a substituted slot's restored
+        /// bench-GK flag with the starter's). It DOES re-project the BENCH goalkeeper flags
+        /// (<c>_benchIsGoalkeeper</c>): unlike the on-pitch array those are a boot-constant NOT serialized,
+        /// so a fresh boot leaves them all-<c>false</c>, and a substitution made AFTER the restore must be
+        /// able to bring a bench goalkeeper on with the correct flag. Used only by
+        /// <see cref="ReprojectDistinctSquads"/> at restore.
+        /// </summary>
+        private void ReprojectBaseLineup(
+            int teamId, TacticalDirector.PlayerDatabase.Squad squad, in LineupPlan plan)
+        {
+            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            {
+                int i     = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                int local = plan.StarterLocalIndices[k];
+                _canonicalAttrs[i]  = squad.GetPlayer(local).Attributes;
+                _attrs[i]           = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
+                _dtAttrs[i]         = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
+                _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
+                    in _canonicalAttrs[i], teamId, _perceptionAttrs[i].IsHalfTurned);
+            }
+            for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
+            {
+                int local = plan.BenchLocalIndices[b];
+                _benchCanonicalAttrs[teamId][b] = squad.GetPlayer(local).Attributes;
+                _benchAttrs[teamId][b] =
+                    PlayerAttributeProjection.ToAgentMovement(in _benchCanonicalAttrs[teamId][b]);
+                _benchIsGoalkeeper[teamId][b] = plan.BenchIsGoalkeeper[b];
+            }
+        }
+
+        /// <summary>
+        /// Replays the attribute half of every substitution the serialized <c>_activeBenchSlot</c> records
+        /// for team <paramref name="teamId"/>: after <see cref="ReprojectBaseLineup"/> re-seeds the base
+        /// lineup, a slot that was substituted must again hold the bench player's re-projected attributes,
+        /// not the starter's (the attribute half of <see cref="SubstitutePlayer"/>). The serialized-state
+        /// half of a substitution (<c>_isGoalkeeper</c>, <c>_yellowCards</c>, <c>_activeBenchSlot</c>,
+        /// <c>_substitutionsUsed</c>) is already restored from the payload, and <c>_perfs</c> is the
+        /// boot-neutral constant on both sides (it would become serialized, not re-projected, if it ever
+        /// went non-neutral — the exclusion-proof PHASE-D note), so only the boot-constant attribute arrays
+        /// are re-derived here. Used only by <see cref="ReprojectDistinctSquads"/> at restore.
+        /// </summary>
+        private void ReprojectSubstitutions(int teamId)
+        {
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (_teamIds[i] != teamId)
+                {
+                    continue;
+                }
+                int benchIndex = _activeBenchSlot[i];
+                if (benchIndex == -1)
+                {
+                    continue;
+                }
+                _attrs[i]           = _benchAttrs[teamId][benchIndex];
+                _canonicalAttrs[i]  = _benchCanonicalAttrs[teamId][benchIndex];
+                _dtAttrs[i]         = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
+                _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
+                    in _canonicalAttrs[i], teamId, _perceptionAttrs[i].IsHalfTurned);
+            }
         }
 
         /// <summary>
@@ -1290,6 +1446,11 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Test-only: an agent's active bench slot, −1 = original starter (design note §6; v15).</summary>
         internal int TestOnly_ActiveBenchSlot(int agentId) => _activeBenchSlot[agentId];
+
+        /// <summary>Test-only: a team's bench-slot goalkeeper flag (re-projected at restore per Phase 2 /
+        /// KD-3; a boot-constant NOT serialized, so a substitution after restore relies on it being
+        /// re-derived).</summary>
+        internal bool TestOnly_BenchIsGoalkeeper(int teamId, int benchIndex) => _benchIsGoalkeeper[teamId][benchIndex];
 
         /// <summary>Test-only: a team's substitutions-used count (design note §6; v15).</summary>
         internal int TestOnly_SubstitutionsUsed(int teamId) => _substitutionsUsed[teamId];
@@ -5516,4 +5677,16 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | _prevPossessingAgentId reconstructed from the restored Match-    |
 // |         |            |        | Context; TestOnly_CaptureDurableHeader/Payload seams. No schema  |
 // |         |            |        | change (reader over the v17 writer). Full dotnet gate: PASSED.   |
+// | 1.42    | 2026-07-20 | —      | Snapshot-deserialize Phase 2: distinct-squad re-projection (#27  |
+// |         |            |        | T3 / KD-3). New ISquadProvider seam (ISquadProvider.cs); Restore-|
+// |         |            |        | FromSnapshot gains an optional squads param; ReprojectDistinct-  |
+// |         |            |        | Squads replaces the Phase-1 fail-loud — for each team with a     |
+// |         |            |        | non-sentinel _rosterClubId it resolves the roster (ClubId-check +|
+// |         |            |        | size/record validation, both teams before any apply), re-runs    |
+// |         |            |        | LineupSelector + PlayerAttributeProjection for the base lineup   |
+// |         |            |        | (ReprojectBaseLineup, attribute arrays only — GK flags stay the  |
+// |         |            |        | restored serialized value), then replays the substitutions the  |
+// |         |            |        | serialized _activeBenchSlot records (ReprojectSubstitutions).    |
+// |         |            |        | Fail-loud on absent/unresolvable/mismatched roster (R4). Neutral |
+// |         |            |        | path unchanged. No schema change. Full dotnet gate: PASSED.      |
 #endregion

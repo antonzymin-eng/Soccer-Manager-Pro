@@ -1,7 +1,19 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 20, 2026 (**Snapshot-deserialize Phase 1 reader landed** — the read half of the
+**Last Updated:** July 20, 2026 (**Snapshot-deserialize Phase 2 landed — distinct-squad restore
+re-projection (#27 T3 / KD-3).** **New file:** `src/match-engine/ISquadProvider.cs` v1.0 (+ `.meta`) — the
+public `ClubId → Squad` resolver the `RestoreFromSnapshot` factory threads into re-projection. **Modified:**
+`src/match-engine/MatchEngine.cs` v1.42 (`RestoreFromSnapshot(…, ISquadProvider squads = null)`;
+`ReprojectDistinctSquads` / `ReprojectBaseLineup` / `ReprojectSubstitutions` replacing the Phase-1
+distinct-squad fail-loud; re-projects `_benchIsGoalkeeper`, a boot-constant NOT serialized;
+`TestOnly_BenchIsGoalkeeper` seam); `src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs` v1.1
+(distinct-squad G3 round-trip — base / mid-match sub / post-restore sub / post-restore keeper-for-keeper
+sub — + three provider fail-loud gates). No `SNAPSHOT_SCHEMA_VERSION` change. Full dotnet gate: PASSED, 0
+failures (263 match-engine tests; whole tree green). Discovered out-of-scope (Phase-1 completeness
+follow-up, root `CLAUDE.md` OPEN ISSUES): a keeper-onto-outfield-slot substitution post-restore diverges
+via a Positioning-AI GK-flag-flip interaction.)
+**Last Updated (prior):** July 20, 2026 (**Snapshot-deserialize Phase 1 reader landed** — the read half of the
 save/load/replay path (`docs/tracking/snapshot-deserialize-design.md` v0.7). **New file:**
 `src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs` v1.0 (+ `.meta`) — G3 round-trip determinism
 (neutral kickoff / mid-match tactics changed / KD-8 booking-cursor regression) + version-gate /
