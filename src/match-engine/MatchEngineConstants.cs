@@ -216,6 +216,22 @@ namespace TacticalDirector.MatchEngine
         /// must land in the snapshot in the same change that adds it.</summary>
         public const uint SNAPSHOT_SCHEMA_VERSION = 17;
 
+        /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
+        /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
+        /// loud (no cross-version migration at Stage 0 — the same posture as the two snapshot schema
+        /// versions and <c>WorldStateSerializer</c>'s version gate).
+        ///
+        /// This is a THIRD version, distinct from both snapshot schema versions it frames:
+        /// <see cref="SNAPSHOT_SCHEMA_VERSION"/> versions the world-state BODY inside the payload;
+        /// <c>DeterministicSimConstants.SNAPSHOT_SCHEMA_VERSION</c> versions the #16 <c>SnapshotHeader</c>
+        /// FRAMING that wraps the payload; this one versions the FILE frame (boot-header + header +
+        /// payload) that packs a whole save. Bump it on any change to the on-disk layout in
+        /// <c>MatchSaveCodec</c> (a new boot-header field, a header/fingerprint field, or a reorder) —
+        /// the two inner schema versions ride inside the blob and are re-checked by
+        /// <see cref="MatchEngine.RestoreFromSnapshot"/> itself, so this one need only track the OUTER
+        /// file frame.</summary>
+        public const uint MATCH_SAVE_FORMAT_VERSION = 1;
+
         /// <summary>[FIXED] Regulation match length, minutes (Laws of the Game — two 45-minute
         /// halves). Stage 0 models no stoppage time and no extra time; the engine's match-length
         /// model is exactly this many minutes of 60 Hz ticks (see <see cref="MATCH_TICKS_TOTAL"/>).

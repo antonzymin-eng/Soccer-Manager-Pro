@@ -1,7 +1,23 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 20, 2026 (**Snapshot-deserialize Phase 2 landed — distinct-squad restore
+**Last Updated:** July 21, 2026 (**On-disk match save format landed — snapshot-deserialize Phase 3
+`SaveManager` fold (N1)**, per `docs/tracking/match-save-file-design.md` v0.3. **New files:**
+`src/match-engine/MatchSaveCodec.cs` v1.0 (+ `.meta`) — pure static `Encode`/`Decode` of the on-disk
+save blob (KD-7 boot-`matchSeed` boot-header + `SnapshotHeader` incl. `EnvironmentFingerprint` +
+`SnapshotPayload`; `MATCH_SAVE_FORMAT_VERSION`-gated; fail-loud decode with an overflow-safe bound
+guard), `src/match-engine/MatchSaveContents.cs` v1.0 (+ `.meta`) — the decode-result readonly struct,
+`src/match-engine/MatchSaveManager.cs` v1.0 (+ `.meta`) — static atomic `Save(engine, path)` /
+`Load(path, ISquadProvider squads = null) → MatchEngine`, `src/match-engine/tests/MatchSaveManagerTests.cs`
+v1.0 (+ `.meta`) — 16 tests (disk round-trip determinism neutral/booking/distinct-squad, codec
+round-trip + fail-loud gates, manager fail-loud + overwrite). **Modified:** `src/match-engine/MatchEngine.cs`
+v1.43 (public `MatchSeed` property; `TestOnly_CaptureDurableHeader/Payload` → production internal
+`CaptureDurableHeader/Payload`), `src/match-engine/MatchEngineConstants.cs` (`[FIXED]
+MATCH_SAVE_FORMAT_VERSION = 1`), `src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs` (capture-seam
+call sites repointed to the production names). No `SNAPSHOT_SCHEMA_VERSION` change; no asmdef change. Full
+dotnet gate: PASSED, 0 failures (279 match-engine tests; whole tree green). Remaining Phase 3: native MXCSR
+query (host-blocked) + N2 unified season save.)
+**Last Updated (prior):** July 20, 2026 (**Snapshot-deserialize Phase 2 landed — distinct-squad restore
 re-projection (#27 T3 / KD-3).** **New file:** `src/match-engine/ISquadProvider.cs` v1.0 (+ `.meta`) — the
 public `ClubId → Squad` resolver the `RestoreFromSnapshot` factory threads into re-projection. **Modified:**
 `src/match-engine/MatchEngine.cs` v1.42 (`RestoreFromSnapshot(…, ISquadProvider squads = null)`;

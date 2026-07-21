@@ -379,6 +379,22 @@ Wire the native float-mode query into the KD-6 seam (host-blocked today); then N
 `SaveManager` fold + unified season save) consume the reader. These are separate deliverables that
 *call* Phase 1/2; listed here only to show where the reader plugs in.
 
+**The on-disk `SaveManager` fold (N1) LANDED July 21, 2026** — see the companion design supplement
+`docs/tracking/match-save-file-design.md` (v0.3, AR-CONVERGED). New `src/match-engine/`
+`MatchSaveManager` (atomic `Save(engine, path)` / `Load(path, squads) → MatchEngine`) + the pure
+`MatchSaveCodec` (a version-gated blob = the KD-7 boot-`matchSeed` boot-header + the `SnapshotHeader`
+incl. its `EnvironmentFingerprint` + the `SnapshotPayload`, fail-loud on version/length-bound/
+trailing-byte violation) + `MatchSaveContents`. `MatchEngine` gains a public `MatchSeed` property and
+the durable-capture seams promoted `TestOnly_` → production internal (`CaptureDurableHeader/Payload`).
+Disk round-trip determinism (the on-disk G3) is green for the neutral path, a booking-before-save
+match, and a distinct-squad `ConfigureSquads` match through an `ISquadProvider`; the KD-6 fingerprint
+gate now runs end-to-end through disk (O3 closed for the on-disk path — the on-disk header no longer
+writes `Fingerprint = null` the way the deterministic-sim `SaveManager` does). No `SNAPSHOT_SCHEMA_
+VERSION` change (a file frame around the unchanged reader/writer). Full dotnet gate PASSED (279
+match-engine tests; whole tree green). **Remaining in Phase 3:** the native MXCSR live-mode query
+(host-blocked) and N2 (the unified match/season save, blocked on FR-LW-003 + the season save-file
+root).
+
 ---
 
 ## 4. Risks
