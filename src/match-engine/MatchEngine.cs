@@ -23,6 +23,7 @@
 // Modified: 2026-07-20 (snapshot-deserialize Phase 1 KD-8 writer half: match-flow.card-severity RngStreamState cursor serialized at SNAPSHOT_SCHEMA_VERSION 16 → 17 — the engine's only mutable RNG stream; a save after a booking now round-trips deterministically. See docs/tracking/snapshot-deserialize-design.md)
 // Modified: 2026-07-20 (snapshot-deserialize Phase 1 READER: DeserializeWorldState + Read* helpers (symmetric mirror, restore-seam reconstruction, version-gate + ledger-boundary trailing guard) + static RestoreFromSnapshot factory (fingerprint gate + boot + digest-chain/clock restore + KD-3 distinct-squad fail-loud). No schema change. See docs/tracking/snapshot-deserialize-design.md §5 Phase 1.)
 // Modified: 2026-07-20 (snapshot-deserialize Phase 2: distinct-squad re-projection (#27 T3 / KD-3) — new ISquadProvider seam threaded into RestoreFromSnapshot; ReprojectDistinctSquads re-derives each configured team's per-slot attribute records (base lineup via LineupSelector + substitutions replayed from the serialized _activeBenchSlot), fail-loud on absent/unresolvable/mismatched roster. No schema change. See docs/tracking/snapshot-deserialize-design.md §5 Phase 2.)
+// Modified: 2026-07-21 (snapshot-deserialize Phase 3 on-disk fold: public MatchSeed property (the boot seed a save persists) + the durable-capture seams promoted TestOnly_ → production internal (CaptureDurableHeader/Payload) for MatchSaveManager. No schema change. See docs/tracking/match-save-file-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -1517,6 +1518,12 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Current 60 Hz physics tick (0 before the first <see cref="RunTick"/>).</summary>
         public ulong CurrentTick => _clock.CurrentTick;
 
+        /// <summary>The boot match seed (the RNG seed this engine was constructed with). The world-state
+        /// payload does not carry it (it is a boot constant, not cross-tick state — snapshot-deserialize
+        /// KD-7), so an on-disk save persists it alongside the payload and feeds it back to
+        /// <see cref="RestoreFromSnapshot"/>. Consumed by <c>MatchSaveManager</c>.</summary>
+        public ulong MatchSeed => _matchSeed;
+
         /// <summary>
         /// True if the AI phase body executed during the most recent <see cref="RunTick"/>.
         /// The orchestrator runs the AI phase only on stride ticks (tick % AI_PHASE_STRIDE == 0);
@@ -1832,11 +1839,12 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
-        /// <summary>Test-only (snapshot-deserialize G3): returns a DURABLE deep copy of the current snapshot
-        /// header (the orchestrator's live header is reused each tick, so a save must snapshot it). Pairs with
-        /// <see cref="TestOnly_CaptureDurablePayload"/> to form the (header, payload) save artifact that
-        /// <see cref="RestoreFromSnapshot"/> consumes.</summary>
-        internal SnapshotHeader TestOnly_CaptureDurableHeader()
+        /// <summary>Returns a DURABLE deep copy of the current snapshot header (the orchestrator's live
+        /// header is reused each tick, so a save must snapshot it). Pairs with
+        /// <see cref="CaptureDurablePayload"/> to form the (header, payload) save artifact that
+        /// <see cref="RestoreFromSnapshot"/> consumes and that <c>MatchSaveManager</c> writes to disk.
+        /// Not on the hot path (a save is a host action, not per-tick), so the copy allocation is fine.</summary>
+        internal SnapshotHeader CaptureDurableHeader()
         {
             SnapshotHeader live = _orchestrator.CurrentHeader;
             SnapshotHeader copy = new SnapshotHeader
@@ -1852,10 +1860,10 @@ namespace TacticalDirector.MatchEngine
             return copy;
         }
 
-        /// <summary>Test-only (snapshot-deserialize G3): returns a DURABLE deep copy of the current snapshot
-        /// payload (the orchestrator's live payload is reused each tick). Pairs with
-        /// <see cref="TestOnly_CaptureDurableHeader"/>.</summary>
-        internal SnapshotPayload TestOnly_CaptureDurablePayload()
+        /// <summary>Returns a DURABLE deep copy of the current snapshot payload (the orchestrator's live
+        /// payload is reused each tick). Pairs with <see cref="CaptureDurableHeader"/>. Not on the hot
+        /// path (a save is a host action, not per-tick), so the copy allocation is fine.</summary>
+        internal SnapshotPayload CaptureDurablePayload()
         {
             SnapshotPayload live = _orchestrator.CurrentPayload;
             SnapshotPayload copy = new SnapshotPayload();
@@ -5689,4 +5697,15 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | serialized _activeBenchSlot records (ReprojectSubstitutions).    |
 // |         |            |        | Fail-loud on absent/unresolvable/mismatched roster (R4). Neutral |
 // |         |            |        | path unchanged. No schema change. Full dotnet gate: PASSED.      |
+// | 1.43    | 2026-07-21 | —      | Snapshot-deserialize Phase 3 on-disk fold (match-save-file-      |
+// |         |            |        | design.md): public MatchSeed property (the boot seed the save    |
+// |         |            |        | persists — the payload does not carry it, KD-2/KD-7) and the two |
+// |         |            |        | durable-capture seams promoted TestOnly_CaptureDurableHeader/    |
+// |         |            |        | Payload → production internal CaptureDurableHeader/Payload (they |
+// |         |            |        | now have a production consumer, MatchSaveManager; the restore    |
+// |         |            |        | tests are repointed to the production names). New src/match-     |
+// |         |            |        | engine files MatchSaveContents/MatchSaveCodec/MatchSaveManager   |
+// |         |            |        | wire SerializeWorldState + RestoreFromSnapshot to an on-disk     |
+// |         |            |        | save file (boot-header + header + payload, atomic write). No     |
+// |         |            |        | schema change. Full dotnet gate: PASSED (279 match-engine tests).|
 #endregion

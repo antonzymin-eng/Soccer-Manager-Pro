@@ -744,7 +744,16 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
     out-of-scope (a Phase-1 completeness follow-up): a keeper-onto-outfield-slot substitution post-restore
     diverges via a Positioning-AI (#12) GK-flag-flip formation-slot interaction.
   - **G-Phase 3 (native MXCSR + on-disk fold).** The native float-mode query into the KD-6 seam
-    (host-blocked), then the on-disk `SaveManager` fold + unified season save consume the reader.
+    (host-blocked). ✅ **The on-disk `SaveManager` fold (N1) LANDED July 21, 2026** — governed by its
+    own converged supplement `docs/tracking/match-save-file-design.md` (v0.3). New `src/match-engine/`
+    `MatchSaveManager` (atomic `Save`/`Load`) + `MatchSaveCodec` (the pure version-gated blob codec:
+    boot-`matchSeed` boot-header + `SnapshotHeader` incl. `EnvironmentFingerprint` + `SnapshotPayload`,
+    fail-loud on version/length-bound/trailing-byte) + `MatchSaveContents`; `MatchEngine` gains a public
+    `MatchSeed` property + production `CaptureDurableHeader/Payload` (promoted from `TestOnly_`). Disk
+    round-trip determinism green (neutral / booking-before-save / distinct-squad via `ISquadProvider`);
+    the KD-6 fingerprint gate runs end-to-end through disk. No schema change. Full dotnet gate PASSED
+    (279 match-engine tests). **Remaining:** the native MXCSR query (host-blocked) + the N2 unified
+    season save (FR-LW-003 + season save-file root).
 
 ---
 

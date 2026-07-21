@@ -73,8 +73,8 @@ namespace TacticalDirector.MatchEngine
             }
             Assert.AreEqual((ulong)n, a.CurrentTick, "Engine A must be at tick N after N ticks.");
 
-            SnapshotHeader header = a.TestOnly_CaptureDurableHeader();
-            SnapshotPayload payload = a.TestOnly_CaptureDurablePayload();
+            SnapshotHeader header = a.CaptureDurableHeader();
+            SnapshotPayload payload = a.CaptureDurablePayload();
 
             // afterSaveBoth applies the SAME action to the reference engine A (at tick N) and to the restored
             // engine C (at tick N, post-restore), so the compared chains stay aligned — it exercises
@@ -145,8 +145,8 @@ namespace TacticalDirector.MatchEngine
             MatchEngine a = new MatchEngine(MatchSeed);
             for (int i = 0; i < 60; i++) a.RunTick();
 
-            SnapshotHeader header = a.TestOnly_CaptureDurableHeader();
-            SnapshotPayload payload = a.TestOnly_CaptureDurablePayload();
+            SnapshotHeader header = a.CaptureDurableHeader();
+            SnapshotPayload payload = a.CaptureDurablePayload();
 
             // Corrupt the schema version (the first u32 of the payload) — the reader's first read.
             payload.PayloadBytes[0] ^= 0xFF;
@@ -162,8 +162,8 @@ namespace TacticalDirector.MatchEngine
             MatchEngine a = new MatchEngine(MatchSeed);
             for (int i = 0; i < 60; i++) a.RunTick();
 
-            SnapshotHeader header = a.TestOnly_CaptureDurableHeader();
-            SnapshotPayload payload = a.TestOnly_CaptureDurablePayload();
+            SnapshotHeader header = a.CaptureDurableHeader();
+            SnapshotPayload payload = a.CaptureDurablePayload();
 
             // Claim one extra byte — the reader consumes the true field set (o < BytesWritten) and must
             // fail loud rather than silently accept a short/long read (KD-1 / R1 trailing-byte guard).
@@ -366,7 +366,7 @@ namespace TacticalDirector.MatchEngine
             MatchEngine a = new MatchEngine(MatchSeed);
             a.ConfigureSquads(DistinctSquad(1), DistinctSquad(2));
             for (int i = 0; i < 30; i++) a.RunTick();
-            return (a.TestOnly_CaptureDurableHeader(), a.TestOnly_CaptureDurablePayload());
+            return (a.CaptureDurableHeader(), a.CaptureDurablePayload());
         }
 
         // ── ISquadProvider test doubles ───────────────────────────────────────────
