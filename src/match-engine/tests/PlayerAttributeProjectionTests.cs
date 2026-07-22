@@ -227,10 +227,59 @@ namespace TacticalDirector.MatchEngine
                 PlayerAttributeProjection.ToNormalized(n.Pace), 0f,
                 "Neutral ÷ ATTRIBUTE_MAX must equal the pre-T1 normalized seed exactly (KD-P3).");
         }
+
+        // ── §3.6 Heading (#10): raw int copy + runtime TeamId/Fatigue ──────────────────
+
+        [Test]
+        public void ToHeading_CopiesRawValues_AndRuntimeFields()
+        {
+            var c = TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
+            c.Heading = 5; c.Strength = 14; c.Balance = 15;   // distinct, no shared value in the set
+
+            TacticalDirector.HeadingMechanics.HeadingAgentAttributes h =
+                PlayerAttributeProjection.ToHeading(in c, teamId: 1, fatigue: 0.25f);
+
+            Assert.AreEqual(5,  h.Heading);
+            Assert.AreEqual(14, h.Strength);
+            Assert.AreEqual(15, h.Balance);
+            Assert.AreEqual(1,  h.TeamId, "TeamId is caller-supplied runtime identity (KD-P4).");
+            Assert.AreEqual(0.25f, h.Fatigue, 0f, "Fatigue is caller-supplied runtime state (KD-P4).");
+        }
+
+        // ── §3.7 Goalkeeper (#11): int→float widening + runtime TeamId/Fatigue ─────────
+
+        [Test]
+        public void ToGoalkeeper_WidensRawValues_AndRuntimeFields()
+        {
+            var c = TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
+            // A distinct value in every GK-consumed field (no accidental swap within the set).
+            c.Reflexes = 18; c.Handling = 17; c.Composure = 16; c.Strength = 14; c.Aerial = 13;
+            c.Balance = 12; c.OneVsOne = 11; c.Pace = 9; c.Throwing = 8; c.Kicking = 7;
+
+            TacticalDirector.GoalkeeperMechanics.GoalkeeperAgentAttributes g =
+                PlayerAttributeProjection.ToGoalkeeper(in c, teamId: 1, fatigue: 0.5f);
+
+            Assert.AreEqual(18f, g.Reflexes,  0f);
+            Assert.AreEqual(17f, g.Handling,  0f);
+            Assert.AreEqual(16f, g.Composure, 0f);
+            Assert.AreEqual(14f, g.Strength,  0f);
+            Assert.AreEqual(13f, g.Aerial,    0f);
+            Assert.AreEqual(12f, g.Balance,   0f);
+            Assert.AreEqual(11f, g.OneVsOne,  0f);
+            Assert.AreEqual(9f,  g.Pace,      0f);
+            Assert.AreEqual(8f,  g.Throwing,  0f);
+            Assert.AreEqual(7f,  g.Kicking,   0f);
+            Assert.AreEqual(1,   g.TeamId, "TeamId is caller-supplied runtime identity (KD-P4).");
+            Assert.AreEqual(0.5f, g.Fatigue, 0f, "Fatigue is caller-supplied runtime state (KD-P4).");
+            // The struct's own ÷ ATTR_MAX accessor is the struct's concern; the projection writes raw.
+            Assert.AreEqual(18f / 20f, g.ReflexesNorm, 1e-6f);
+        }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-17 | —      | Initial implementation (#27 T1/T2 projection locks).           |
+// | 1.1     | 2026-07-22 | —      | GK/Heading engine integration: ToHeading (#10 raw copy) +      |
+// |         |            |        | ToGoalkeeper (#11 int→float widen) per-field scale locks.      |
 #endregion

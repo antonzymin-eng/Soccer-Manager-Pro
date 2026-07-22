@@ -25,6 +25,7 @@
 // Modified: 2026-07-20 (snapshot-deserialize Phase 2: distinct-squad re-projection (#27 T3 / KD-3) — new ISquadProvider seam threaded into RestoreFromSnapshot; ReprojectDistinctSquads re-derives each configured team's per-slot attribute records (base lineup via LineupSelector + substitutions replayed from the serialized _activeBenchSlot), fail-loud on absent/unresolvable/mismatched roster. No schema change. See docs/tracking/snapshot-deserialize-design.md §5 Phase 2.)
 // Modified: 2026-07-21 (snapshot-deserialize Phase 3 on-disk fold: public MatchSeed property (the boot seed a save persists) + the durable-capture seams promoted TestOnly_ → production internal (CaptureDurableHeader/Payload) for MatchSaveManager. No schema change. See docs/tracking/match-save-file-design.md)
 // Modified: 2026-07-21 (§4.8.2 runtime MXCSR float-mode gate wired into boot + RestoreFromSnapshot step 0 via MxcsrValidator; native shim in deterministic-sim/native/mxcsr_query.c. No-op where the shim is absent (Linux CI); enforces on the pinned cert host. No schema change.)
+// Modified: 2026-07-22 (GK #11 / Heading #10 engine integration, Phase 1 — opt-in: construct + drive both orchestrators + 4 stateless adapters + 2 RNG streams; EnableGkHeading() gates the 10 Hz/60 Hz drive + §4 save/header triggers seeded from PlayerAttributeProjection.ToGoalkeeper/ToHeading; durable-capture seams fail loud when on. Default engine byte-identical (no schema change). See docs/tracking/gk-heading-engine-integration-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -48,6 +49,8 @@ using TacticalDirector.DefensiveAI;
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 using TacticalDirector.FirstTouch;
+using TacticalDirector.GoalkeeperMechanics;
+using TacticalDirector.HeadingMechanics;
 using TacticalDirector.PassMechanics;
 using TacticalDirector.PerceptionSystem;
 using TacticalDirector.PositioningAI;
@@ -236,6 +239,34 @@ namespace TacticalDirector.MatchEngine
         // none; collision self-seeds and pass/shot error is hash-based). entityId -1 = the world-scoped
         // (non-entity) stream, matching the InteractionTextGenerator (#22) convention.
         private readonly int _cardSeverityStreamIndex;
+
+        // GK (#11) / Heading (#10) engine integration (gk-heading-engine-integration-design.md, Phase 1).
+        // Both orchestrators are CONSTRUCTED at boot (cheap array allocation; does not touch _ball or any
+        // serialized world state, so the default engine stays byte-identical) but are only DRIVEN + their
+        // §4 triggers fired when the opt-in _gkHeadingEnabled flag is set (KD-11 — default off). Their two
+        // RNG streams are registered at boot in a fixed order (stable indices), the card-severity
+        // precedent (KD-1); they are inert until a draw fires (only under the flag).
+        // NOTE: the orchestrator class names collide with their own namespace names, so they are
+        // fully qualified here and at construction (CS0118) — the same namespace-vs-type hazard the
+        // projection design flagged. The interfaces / intent / attribute types are uniquely named.
+        private readonly TacticalDirector.HeadingMechanics.HeadingMechanics       _heading;
+        private readonly TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics _goalkeeper;
+        private readonly int _headingStreamIndex;
+        private readonly int _goalkeeperStreamIndex;
+        private readonly int[] _gkAgentIds;      // [MaxGkAgents] — agentId of each keeper (keeper index → agentId)
+        private bool _gkHeadingEnabled;          // KD-11 opt-in flag; false = byte-identical default engine
+        // §4 trigger latches (Phase 1): at most one save per ball episode per keeper, one header per
+        // airborne episode per agent. Cleared when the ball leaves the triggering condition. NOT
+        // serialized (Phase 1 is opt-in / not snapshot-safe when on — KD-11 / §6; the durable-capture
+        // seams fail loud when the flag is on).
+        private readonly bool[] _saveCommittedForGk;         // [MaxGkAgents]
+        private readonly bool[] _headerCommittedThisEpisode; // [SQUAD_SIZE]
+        // TestOnly observation: the attributes the engine last handed to CommitSaveIntent / CommitIntent —
+        // the projection-reached-orchestrator proof (§7). Recorded at the engine-side commit site.
+        private GoalkeeperAgentAttributes _lastCommittedSaveAttrs;
+        private bool _lastSaveAttrsValid;
+        private HeadingAgentAttributes _lastCommittedHeaderAttrs;
+        private bool _lastHeaderAttrsValid;
 
         // Substitutions (design note §6): per-agent active bench slot (-1 = original starter) + per-team
         // substitutions-used count are cross-tick, serialized at v15. The bench roster itself
@@ -585,6 +616,31 @@ namespace TacticalDirector.MatchEngine
 
             _secondHalfStarted = false;
             _matchEnded        = false;
+
+            // GK (#11) / Heading (#10) engine integration (gk-heading-engine-integration-design.md §3.1,
+            // Phase 1). Construct both orchestrators + their stateless ball/RNG adapters, and register the
+            // two subsystem RNG streams (fixed order → stable indices; the card-severity precedent, KD-1).
+            // Constructed unconditionally — this only allocates arrays, touching no serialized world state,
+            // so the default (flag-off) engine stays byte-identical. Both are DRIVEN and their §4 triggers
+            // fired only under _gkHeadingEnabled (KD-11), which starts false.
+            var headingBall    = new HeadingBallWorldAdapter(this);
+            var headingRng     = new HeadingRngWorldAdapter(this);
+            var goalkeeperBall = new GoalkeeperBallWorldAdapter(this);
+            var goalkeeperRng  = new GoalkeeperRngWorldAdapter(this);
+            _headingStreamIndex = _rng.RegisterStream(
+                "heading.mechanics", SubsystemOrdinals.HeadingMechanics, entityId: -1, streamVersion: 1);
+            _goalkeeperStreamIndex = _rng.RegisterStream(
+                "goalkeeper.mechanics", SubsystemOrdinals.GoalkeeperMechanics, entityId: -1, streamVersion: 1);
+            _heading    = new TacticalDirector.HeadingMechanics.HeadingMechanics(headingBall, headingRng);
+            _goalkeeper = new TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics(goalkeeperBall, goalkeeperRng);
+
+            // Keeper roster: GoalkeeperConstants.MaxGkAgents == TEAM_COUNT == 2, so keeper index == team id
+            // (keeper t is team t's goalkeeper). _teamIds / _isGoalkeeper are boot-populated above.
+            _gkAgentIds = new int[GoalkeeperConstants.MaxGkAgents];
+            RefreshGkAgentIds();   // refreshed each drive too (ConfigureSquads / substitutions move the GK slot)
+            _saveCommittedForGk         = new bool[GoalkeeperConstants.MaxGkAgents];
+            _headerCommittedThisEpisode = new bool[MatchEngineConstants.SQUAD_SIZE];
+            _gkHeadingEnabled = false;
 
             InitializeAiSnapshots();
 
@@ -1862,6 +1918,7 @@ namespace TacticalDirector.MatchEngine
         /// Not on the hot path (a save is a host action, not per-tick), so the copy allocation is fine.</summary>
         internal SnapshotHeader CaptureDurableHeader()
         {
+            RequireGkHeadingSnapshotSafe();
             SnapshotHeader live = _orchestrator.CurrentHeader;
             SnapshotHeader copy = new SnapshotHeader
             {
@@ -1881,12 +1938,73 @@ namespace TacticalDirector.MatchEngine
         /// path (a save is a host action, not per-tick), so the copy allocation is fine.</summary>
         internal SnapshotPayload CaptureDurablePayload()
         {
+            RequireGkHeadingSnapshotSafe();
             SnapshotPayload live = _orchestrator.CurrentPayload;
             SnapshotPayload copy = new SnapshotPayload();
             Array.Copy(live.PayloadBytes, 0, copy.PayloadBytes, 0, live.BytesWritten);
             copy.BytesWritten = live.BytesWritten;
             return copy;
         }
+
+        // ── GK (#11) / Heading (#10) engine integration — public + test surface (design §1.2a / §7) ──
+
+        /// <summary>Opts this engine into the GK (#11) / Heading (#10) wiring
+        /// (gk-heading-engine-integration-design.md, Phase 1 / KD-11). While OFF (the default) the engine
+        /// is byte-identical to a pre-wiring engine — the orchestrators are constructed but never driven,
+        /// their RNG streams never drawn, no save/header intent committed. Turning it ON drives both
+        /// orchestrators and fires the §4 Stage-0 triggers seeded from the projections; a flag-on engine is
+        /// deterministic FORWARD but not yet snapshot-safe, so the durable-capture seams fail loud (§6).
+        /// Intended to be set once before ticking (a host activation, not a per-tick toggle).</summary>
+        public void EnableGkHeading()
+        {
+            _gkHeadingEnabled = true;
+        }
+
+        /// <summary>Fails loud if the durable snapshot / restore path is used on a flag-on engine
+        /// (Phase 1 does not serialize the GK/heading cross-tick state — KD-11 / §6). The honest,
+        /// explicit boundary: a flag-on engine refuses to be saved rather than silently mis-restoring.</summary>
+        private void RequireGkHeadingSnapshotSafe()
+        {
+            if (_gkHeadingEnabled)
+            {
+                throw new NotSupportedException(
+                    "MatchEngine: GK/Heading wiring is enabled — the durable snapshot/restore path does not " +
+                    "yet serialize its cross-tick state (gk-heading-engine-integration-design.md Phase 1). " +
+                    "Save/restore of a GK/Heading-enabled engine is a Phase-2 deliverable.");
+            }
+        }
+
+        /// <summary>Test-only (§7 projection proof): the <see cref="GoalkeeperAgentAttributes"/> the engine
+        /// last handed to <c>CommitSaveIntent</c> (the live consumer of
+        /// <see cref="PlayerAttributeProjection.ToGoalkeeper"/>), or <c>null</c> if no save has been
+        /// committed since boot.</summary>
+        internal GoalkeeperAgentAttributes? TestOnly_LastCommittedSaveAttrs =>
+            _lastSaveAttrsValid ? _lastCommittedSaveAttrs : (GoalkeeperAgentAttributes?)null;
+
+        /// <summary>Test-only (§7 projection proof): the <see cref="HeadingAgentAttributes"/> the engine
+        /// last handed to <c>CommitIntent</c> (the live consumer of
+        /// <see cref="PlayerAttributeProjection.ToHeading"/>), or <c>null</c> if no header has been
+        /// committed since boot.</summary>
+        internal HeadingAgentAttributes? TestOnly_LastCommittedHeaderAttrs =>
+            _lastHeaderAttrsValid ? _lastCommittedHeaderAttrs : (HeadingAgentAttributes?)null;
+
+        /// <summary>Test-only: whether the GK/Heading opt-in wiring is enabled on this engine.</summary>
+        internal bool TestOnly_GkHeadingEnabled => _gkHeadingEnabled;
+
+        /// <summary>Test-only (§7): force the ball into a loose, given position/velocity so a §4 trigger's
+        /// world-state gate can be exercised deterministically without a full match developing the geometry
+        /// naturally. Clears possession (loose ball).</summary>
+        internal void TestOnly_ForceBallLoose(Vector3 position, Vector3 velocity)
+        {
+            _ball.Position = position;
+            _ball.Velocity = velocity;
+            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+        }
+
+        /// <summary>Test-only (§7): run the GK/Heading 10 Hz tactical drive (baselines + state machine +
+        /// §4 triggers) directly, bypassing the stride gate, so a forced ball geometry can be turned into a
+        /// committed intent in one deterministic step. No-op unless the wiring is enabled.</summary>
+        internal void TestOnly_DriveGkHeadingTactical() => DriveGkHeadingTactical();
 
         // ── Phase callbacks (design note §2.4 / §3) ───────────────────────────────────
         // Each callback drives the EventBus phase lifecycle. Physics (B2) drives ball + agent-movement;
@@ -2055,6 +2173,12 @@ namespace TacticalDirector.MatchEngine
             // HOLD anchor is this tick's Positioning AI (#12) slot and its DefensiveLineDepth / Mark / Attack
             // carriers are this tick's Defensive (#14) / Attacking (#15) output rather than the boot scaffold.
             RunMechanicsAI(heartbeat);
+
+            // GK (#11) / Heading (#10) 10 Hz tactical drive (design §3.4): advance the GK state machine and
+            // fire the §4 save/header triggers (committed at the tactical tick, KD-17). No-op unless the
+            // opt-in flag is set (KD-11). Placed after the mechanics AI so the orchestrators read the same
+            // tick's settled positions.
+            DriveGkHeadingTactical();
 
             _perception.OnHeartbeat(heartbeat, _agents, _ball, _perceptionAttrs, _hasPossession);
 
@@ -2667,6 +2791,218 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Phase 3 — Physics. Integrates the ball (#1) and the 22 agents (#2) one 60 Hz
         /// step. Consumes the previous tick's collision-feedback buffers per the §3 one-tick-lag
         /// contract (those buffers are written by the Resolve phase, which is still a stub at B2).</summary>
+        // ── GK (#11) / Heading (#10) drive + Stage-0 triggers (design §3.3/§3.4/§4, Phase 1) ──
+        // All of the below runs ONLY under _gkHeadingEnabled (KD-11). The two RNG adapters draw from the
+        // single per-subsystem stream via these helpers, converting the ulong draw to the [0,1) / Gaussian
+        // shapes the stubs use (KD-3). Fail-loud on a reservation-order violation (the card-severity posture).
+
+        private float DrawStreamFloat01(int streamIndex)
+        {
+            if (_rng.Reserve(streamIndex, 1) != 0)
+            {
+                throw new InvalidOperationException(
+                    "MatchEngine GK/Heading RNG: a reservation is already open (draw-site misuse).");
+            }
+            if (_rng.DrawReserved(streamIndex, 0, out ulong draw) != 0)
+            {
+                _rng.CloseReservation(streamIndex);
+                throw new InvalidOperationException(
+                    "MatchEngine GK/Heading RNG: draw failed — corrupt reservation state (internal invariant).");
+            }
+            _rng.CloseReservation(streamIndex);
+            // Top 24 bits → [0, 1); the HeadingRngServiceStub conversion (24-bit mantissa window).
+            return (float)((draw >> 40) * (1.0 / (1UL << 24)));
+        }
+
+        private float DrawStreamGaussian(int streamIndex)
+        {
+            // Box-Muller (the stub's method): two uniforms → one standard-normal sample.
+            float u1 = DrawStreamFloat01(streamIndex);
+            float u2 = DrawStreamFloat01(streamIndex);
+            if (u1 < HeadingMechanicsConstants.RNG_GUARD_EPSILON)
+            {
+                u1 = HeadingMechanicsConstants.RNG_GUARD_EPSILON;
+            }
+            return Mathf.Sqrt(-2f * Mathf.Log(u1)) * Mathf.Cos(2f * Mathf.PI * u2);
+        }
+
+        /// <summary>Refills <see cref="_gkAgentIds"/> (keeper index == team id → that team's GK agent index,
+        /// −1 if none) from the current <c>_isGoalkeeper</c>/<c>_teamIds</c>. Called at boot and at the top of
+        /// each drive so ConfigureSquads (which reassigns <c>_isGoalkeeper</c>) and GK substitutions are
+        /// tracked. Cheap (SQUAD_SIZE loop) and only runs under the flag after boot.</summary>
+        private void RefreshGkAgentIds()
+        {
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                _gkAgentIds[k] = -1;
+            }
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (_isGoalkeeper[i])
+                {
+                    int t = _teamIds[i];
+                    if (t >= 0 && t < _gkAgentIds.Length)
+                    {
+                        _gkAgentIds[t] = i;
+                    }
+                }
+            }
+        }
+
+        /// <summary>GK/Heading 10 Hz tactical drive (design §3.4): anchor keeper baselines, advance the GK
+        /// state machine, then fire the §4 save/header triggers (committed at the tactical tick per KD-17).
+        /// Called from <see cref="RunAiPhase"/> on the stride; no-op unless <c>_gkHeadingEnabled</c>.</summary>
+        private void DriveGkHeadingTactical()
+        {
+            if (!_gkHeadingEnabled)
+            {
+                return;
+            }
+            RefreshGkAgentIds();
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                int agentId = _gkAgentIds[k];
+                if (agentId >= 0 && !_isSentOff[agentId])
+                {
+                    _goalkeeper.UpdateBaselineSlot(k, _agents[agentId].Position);
+                }
+            }
+            _goalkeeper.TacticalTick((int)_clock.CurrentTick, _agents, _ball, _gkAgentIds);
+            TryCommitSaveIntents();
+            TryCommitHeaderIntents();
+        }
+
+        /// <summary>GK/Heading 60 Hz physics drive (design §3.4): advance both orchestrators against the
+        /// current ball. Runs in <see cref="RunPhysicsPhase"/> (before the Resolve-phase goal check), so a
+        /// committed save/header can deflect the ball before goal detection. No-op unless the flag is on.</summary>
+        private void DriveGkHeadingPhysics()
+        {
+            if (!_gkHeadingEnabled)
+            {
+                return;
+            }
+            RefreshGkAgentIds();
+            int   frameNumber = (int)_clock.CurrentTick;
+            float matchTimeS  = _clock.CurrentMatchTimeSeconds;
+            float matchTimeMs = _clock.CurrentMatchTimeMs;
+            _heading.Update(_agents, _ball, frameNumber, matchTimeS);
+            _goalkeeper.Update(frameNumber, matchTimeMs, _agents, _ball, _gkAgentIds);
+        }
+
+        /// <summary>§4.1 save trigger: for each keeper, if a loose ball is moving fast toward the defended
+        /// goal within range, commit a save intent seeded from <see cref="PlayerAttributeProjection.ToGoalkeeper"/>
+        /// (the projection's live consumer, KD-8). At most one commit per ball episode (latch cleared when the
+        /// condition clears, KD-6). Records the committed attrs for the <c>TestOnly_</c> projection proof.</summary>
+        private void TryCommitSaveIntents()
+        {
+            int tacticalTick = (int)_clock.CurrentTacticalTick;
+            for (int t = 0; t < _gkAgentIds.Length; t++)   // keeper index == team id
+            {
+                int gkAgentId = _gkAgentIds[t];
+                if (gkAgentId < 0 || _isSentOff[gkAgentId])
+                {
+                    continue;
+                }
+                // Team t defends the goal at x = 0 (team 0) or x = PITCH_LENGTH_M (team 1).
+                float goalX = t == 0 ? 0f : MatchEngineConstants.PITCH_LENGTH_M;
+                Vector3 bp = _ball.Position;
+                Vector3 bv = _ball.Velocity;
+                float distToGoalLine = Mathf.Abs(bp.x - goalX);
+                float towardGoal = (goalX - bp.x) * bv.x;   // > 0 when the ball moves toward the goal line
+                float speed = new Vector2(bv.x, bv.y).magnitude;
+                bool armed = _possessingAgentId == MatchEngineConstants.NO_POSSESSION
+                             && distToGoalLine <= MatchEngineConstants.GkSaveTriggerRangeM
+                             && towardGoal > 0f
+                             && speed >= MatchEngineConstants.GkSaveTriggerMinBallSpeedMps;
+                if (!armed)
+                {
+                    _saveCommittedForGk[t] = false;
+                    continue;
+                }
+                if (_saveCommittedForGk[t])
+                {
+                    continue;
+                }
+                GoalkeeperAgentAttributes attrs =
+                    PlayerAttributeProjection.ToGoalkeeper(in _canonicalAttrs[gkAgentId], t, fatigue: 0f);
+                var intent = new SaveIntent
+                {
+                    TargetHand           = HandEnum.Either,
+                    ClutchFirmness       = MatchEngineConstants.SaveTriggerClutchFirmness,
+                    DeflectionTarget     = null,
+                    AttemptCommittedTick = tacticalTick,
+                };
+                _goalkeeper.CommitSaveIntent(t, intent, attrs);
+                _lastCommittedSaveAttrs = attrs;
+                _lastSaveAttrsValid = true;
+                _saveCommittedForGk[t] = true;
+            }
+        }
+
+        /// <summary>§4.2 header trigger: the single nearest active outfield agent within head range of a
+        /// loose airborne ball commits a header seeded from <see cref="PlayerAttributeProjection.ToHeading"/>
+        /// (the projection's live consumer). At most one per airborne episode per agent (KD-7). Records the
+        /// committed attrs for the <c>TestOnly_</c> projection proof.</summary>
+        private void TryCommitHeaderIntents()
+        {
+            Vector3 bp = _ball.Position;
+            bool airborne = bp.z >= MatchEngineConstants.HeaderTriggerMinBallHeightM
+                            && _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+
+            int nearest = -1;
+            float nearestSq = MatchEngineConstants.HeaderTriggerRangeM * MatchEngineConstants.HeaderTriggerRangeM;
+            if (airborne)
+            {
+                for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+                {
+                    if (_isGoalkeeper[i] || _isSentOff[i])
+                    {
+                        continue;
+                    }
+                    Vector2 ap = _agents[i].Position;
+                    float dx = ap.x - bp.x;
+                    float dy = ap.y - bp.y;
+                    float dSq = dx * dx + dy * dy;
+                    if (dSq <= nearestSq)
+                    {
+                        nearestSq = dSq;
+                        nearest = i;
+                    }
+                }
+            }
+
+            // Clear the per-agent episode latch for every agent that is not the current nearest candidate.
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (i != nearest)
+                {
+                    _headerCommittedThisEpisode[i] = false;
+                }
+            }
+            if (nearest < 0 || _headerCommittedThisEpisode[nearest])
+            {
+                return;
+            }
+
+            int t = _teamIds[nearest];
+            // Opponent goal: team 0 attacks +X (goal at PITCH_LENGTH_M), team 1 attacks −X (goal at 0).
+            float oppGoalX = t == 0 ? MatchEngineConstants.PITCH_LENGTH_M : 0f;
+            var intent = new HeaderIntent
+            {
+                PowerIntent          = MatchEngineConstants.HeaderTriggerPowerIntent,
+                ContactPointIntent   = Vector2.zero,
+                TargetIntent         = new Vector3(oppGoalX, MatchEngineConstants.PITCH_WIDTH_M / 2f, 0f),
+                AttemptCommittedTick = (int)_clock.CurrentTacticalTick,
+                SetPieceContext      = SetPieceContext.OpenPlay,
+            };
+            HeadingAgentAttributes attrs =
+                PlayerAttributeProjection.ToHeading(in _canonicalAttrs[nearest], t, fatigue: 0f);
+            _heading.CommitIntent(nearest, intent, attrs, _ball, (int)_clock.CurrentTick);
+            _lastCommittedHeaderAttrs = attrs;
+            _lastHeaderAttrsValid = true;
+            _headerCommittedThisEpisode[nearest] = true;
+        }
+
         private void RunPhysicsPhase()
         {
             EventBus.BeginPhase(PhaseId.Physics);
@@ -2700,6 +3036,12 @@ namespace TacticalDirector.MatchEngine
             _movement.UpdateAllAgents(
                 _agents, _attrs, _perfs, _commands, _isGoalkeeper,
                 _isCollisionKnockdown, _collisionForces, dt, _clock.CurrentMatchTimeSeconds);
+
+            // GK (#11) / Heading (#10) 60 Hz drive (design §3.4). After the ball + agents are integrated so
+            // the orchestrators see the current world, and — since this is the Physics phase — strictly
+            // before the Resolve-phase goal check (a committed save/header can deflect the ball first).
+            // No-op unless _gkHeadingEnabled (KD-11 — the default engine is byte-identical).
+            DriveGkHeadingPhysics();
         }
 
         /// <summary>Phase 4 — Resolve. Runs collision (×22), advances the in-flight pass/shot executor
@@ -5009,6 +5351,79 @@ namespace TacticalDirector.MatchEngine
             public float ComputePressureScalar(Vector3 shooterPosition, int shooterTeamId) => 0f;
         }
 
+        // ── GK (#11) / Heading (#10) boundary adapters (gk-heading-engine-integration-design.md §3.2/§3.3) ──
+        // Stateless bridges to the host, exactly like PassWorldAdapter/ShotWorldAdapter. All ball mutation
+        // flows through BallCollision.ApplyKick(ref _engine._ball, …) — the one seam whose NaN gate +
+        // possession bookkeeping already apply. The RNG adapters draw from the single per-subsystem stream
+        // registered at boot and accept-and-ignore drawSiteId/domainTag for stream selection (KD-3 — the
+        // Stage-0 posture of HeadingRngServiceStub; the #16 §4.5 per-draw-site registry is Stage-1 work).
+
+        private sealed class HeadingBallWorldAdapter : IHeadingBallSystem
+        {
+            private readonly MatchEngine _engine;
+
+            public HeadingBallWorldAdapter(MatchEngine engine)
+            {
+                _engine = engine;
+            }
+
+            public BallState GetBallState(float matchTime) => _engine._ball;
+
+            public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTime)
+            {
+                BallCollision.ApplyKick(ref _engine._ball, velocity, spin, agentId, matchTime, logger: null);
+            }
+        }
+
+        private sealed class GoalkeeperBallWorldAdapter : IGoalkeeperBallSystem
+        {
+            private readonly MatchEngine _engine;
+
+            public GoalkeeperBallWorldAdapter(MatchEngine engine)
+            {
+                _engine = engine;
+            }
+
+            public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTimeMs)
+            {
+                BallCollision.ApplyKick(ref _engine._ball, velocity, spin, agentId, matchTimeMs, logger: null);
+            }
+
+            public void SetPossessor(int agentId) => _engine._possessingAgentId = agentId;
+
+            public int GetBallPossessorId() => _engine._possessingAgentId;
+        }
+
+        private sealed class HeadingRngWorldAdapter : IHeadingRngService
+        {
+            private readonly MatchEngine _engine;
+
+            public HeadingRngWorldAdapter(MatchEngine engine)
+            {
+                _engine = engine;
+            }
+
+            public float NextFloat(int drawSiteId) => _engine.DrawStreamFloat01(_engine._headingStreamIndex);
+
+            public float NextGaussian(int drawSiteId) => _engine.DrawStreamGaussian(_engine._headingStreamIndex);
+        }
+
+        private sealed class GoalkeeperRngWorldAdapter : IGoalkeeperRngService
+        {
+            private readonly MatchEngine _engine;
+
+            public GoalkeeperRngWorldAdapter(MatchEngine engine)
+            {
+                _engine = engine;
+            }
+
+            public float NextFloat(int drawSiteId, uint domainTag) =>
+                _engine.DrawStreamFloat01(_engine._goalkeeperStreamIndex);
+
+            public float NextGaussian(int drawSiteId, uint domainTag) =>
+                _engine.DrawStreamGaussian(_engine._goalkeeperStreamIndex);
+        }
+
         /// <summary>
         /// Collision-event consumer (design note §3): captures AT MOST ONE foul candidate per Resolve
         /// tick into scalar fields on the host — no buffer, since only the first qualifying collision
@@ -5724,4 +6139,19 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | wire SerializeWorldState + RestoreFromSnapshot to an on-disk     |
 // |         |            |        | save file (boot-header + header + payload, atomic write). No     |
 // |         |            |        | schema change. Full dotnet gate: PASSED (279 match-engine tests).|
+// | 1.44    | 2026-07-22 | —      | GK #11 / Heading #10 engine integration, Phase 1 (opt-in). Boot |
+// |         |            |        | constructs both sealed orchestrators + 4 stateless ball/RNG     |
+// |         |            |        | adapters (HeadingBallWorldAdapter / GoalkeeperBallWorldAdapter /|
+// |         |            |        | HeadingRngWorldAdapter / GoalkeeperRngWorldAdapter) and         |
+// |         |            |        | registers heading.mechanics + goalkeeper.mechanics RNG streams. |
+// |         |            |        | EnableGkHeading() opts in: DriveGkHeadingTactical (10 Hz, in    |
+// |         |            |        | RunAiPhase) + DriveGkHeadingPhysics (60 Hz, in RunPhysicsPhase  |
+// |         |            |        | before the Resolve goal check) drive both, and the §4 save/     |
+// |         |            |        | header Stage-0 triggers commit intents seeded from ToGoalkeeper |
+// |         |            |        | / ToHeading (the projections' live consumer). RefreshGkAgentIds |
+// |         |            |        | tracks the GK slot across ConfigureSquads/subs. CaptureDurable- |
+// |         |            |        | Header/Payload fail loud (NotSupportedException) when the flag  |
+// |         |            |        | is on (Phase-1 not snapshot-safe; §6). Flag off = byte-         |
+// |         |            |        | identical default (no SNAPSHOT_SCHEMA_VERSION change). Full     |
+// |         |            |        | dotnet gate: PASSED (290 match-engine tests; whole tree green). |
 #endregion

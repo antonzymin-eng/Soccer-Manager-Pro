@@ -11,6 +11,8 @@
         "TacticalDirector.PassMechanics",
         "TacticalDirector.ShotMechanics",
         "TacticalDirector.PerceptionSystem",
+        "TacticalDirector.HeadingMechanics",
+        "TacticalDirector.GoalkeeperMechanics",
         "TacticalDirector.DecisionTree",
         "TacticalDirector.PositioningAI",
         "TacticalDirector.PressingAI",
