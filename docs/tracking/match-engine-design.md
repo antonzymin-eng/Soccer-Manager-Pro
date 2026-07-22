@@ -752,8 +752,13 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
     `MatchSeed` property + production `CaptureDurableHeader/Payload` (promoted from `TestOnly_`). Disk
     round-trip determinism green (neutral / booking-before-save / distinct-squad via `ISquadProvider`);
     the KD-6 fingerprint gate runs end-to-end through disk. No schema change. Full dotnet gate PASSED
-    (279 match-engine tests). **Remaining:** the native MXCSR query (host-blocked) + the N2 unified
-    season save (FR-LW-003 + season save-file root).
+    (279 match-engine tests). The native MXCSR query landed July 21–22, 2026 (host-block cleared). **The
+    N2 unified season save LANDED July 22, 2026** via the new season save-file root
+    (`docs/tracking/unified-season-save-design.md`; `src/season-save/` — `TacticalDirector.SeasonSave`
+    above both `match-engine` and `living-world`, resolving FR-LW-003): one file bundling the
+    `WorldStore` composite + an optional match save blob as two opaque, version-gated sub-blobs.
+    `MatchSaveManager` gained public `Encode`/`Restore` (the "match save as a value" blob API the season
+    root composes). **Phase G-Phase 3 is complete.**
 
 ---
 

@@ -166,7 +166,11 @@ The reader is not building from nothing. Two things are already in place:
   header `Fingerprint = null` and there is no season save-file root; this note produces the
   *in-memory* reader those will call.
 - **N2** — The unified match/season save (folds the living-world `WorldStore` composite into the
-  same file). Blocked on N1 + FR-LW-003.
+  same file). **LANDED July 22, 2026** via the new season save-file root
+  (`docs/tracking/unified-season-save-design.md`; `src/season-save/`) — one file bundling the
+  `WorldStore.Snapshot()` composite + an optional match save blob as two opaque, independently
+  version-gated sub-blobs, resolving FR-LW-003 by putting the root **above** both assemblies (neither
+  references the other).
 - **N3** — Replay *scrubbing / rewind UI*. The reader enables it; the presentation is Stage-1 UI.
 - **N4** — Transfer market, aging, career progression (`#27` Stage-1+, master plan §4.3/§4.4).
 
@@ -391,9 +395,10 @@ match, and a distinct-squad `ConfigureSquads` match through an `ISquadProvider`;
 gate now runs end-to-end through disk (O3 closed for the on-disk path — the on-disk header no longer
 writes `Fingerprint = null` the way the deterministic-sim `SaveManager` does). No `SNAPSHOT_SCHEMA_
 VERSION` change (a file frame around the unchanged reader/writer). Full dotnet gate PASSED (279
-match-engine tests; whole tree green). **Remaining in Phase 3:** the native MXCSR live-mode query
-(host-blocked) and N2 (the unified match/season save, blocked on FR-LW-003 + the season save-file
-root).
+match-engine tests; whole tree green). **Phase 3 is now complete:** the native MXCSR live-mode query
+landed July 21–22, 2026 (host-block cleared), and **N2 (the unified match/season save) landed July 22,
+2026** via the new season save-file root (`unified-season-save-design.md`; `src/season-save/`) — the
+FR-LW-003 + season-save-file-root blockers are resolved.
 
 ---
 

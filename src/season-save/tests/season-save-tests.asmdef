@@ -1,0 +1,26 @@
+{
+    "name": "TacticalDirector.SeasonSave.Tests",
+    "rootNamespace": "TacticalDirector.SeasonSave",
+    "references": [
+        "TacticalDirector.SeasonSave",
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.LivingWorld",
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.PlayerDatabase",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
