@@ -1,8 +1,9 @@
 // File:     src/match-engine/MatchSaveManager.cs
 // Created:  2026-07-21
-// Modified: 2026-07-21
+// Modified: 2026-07-22
 // Author:   —
 // Spec:     On-disk match save file (docs/tracking/match-save-file-design.md) §4 / KD-5 / KD-6;
+//           Unified season save file (docs/tracking/unified-season-save-design.md) KD-5 (public blob API);
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §4.6.1.1
 //           (atomic-write contract); Code Standards #20
 // Purpose:  Writes a running MatchEngine to disk as a single save file and reconstructs it. Save
@@ -37,6 +38,41 @@ namespace TacticalDirector.MatchEngine
         private static readonly ProfilerMarker s_loadMarker = new ProfilerMarker("MatchEngine.Load");
 
         /// <summary>
+        /// Captures a durable snapshot of <paramref name="engine"/> at its current tick and encodes it as
+        /// a match save blob (<see cref="MatchSaveCodec.Encode"/>) — the "match save as a value" surface.
+        /// This is the encode half of <see cref="Save"/> without the file I/O: the season save-file root
+        /// (<c>TacticalDirector.SeasonSave</c>) composes this blob into the unified season save, treating
+        /// it as opaque, without reaching the internal capture seams (match-save-file-design.md KD-5 /
+        /// unified-season-save-design.md KD-5).
+        /// </summary>
+        public static byte[] Encode(MatchEngine engine)
+        {
+            if (engine == null)
+            {
+                throw new ArgumentNullException(nameof(engine));
+            }
+            SnapshotHeader  header  = engine.CaptureDurableHeader();
+            SnapshotPayload payload = engine.CaptureDurablePayload();
+            return MatchSaveCodec.Encode(engine.MatchSeed, header, payload);
+        }
+
+        /// <summary>
+        /// Reconstructs a ready-to-tick <see cref="MatchEngine"/> from a match save blob produced by
+        /// <see cref="Encode"/> (or <see cref="MatchSaveCodec.Encode"/>): decodes it and hands the
+        /// (seed, header, payload) triple to <see cref="MatchEngine.RestoreFromSnapshot"/>. The decode
+        /// half of <see cref="Load"/> without the file I/O — the season save-file root uses it to
+        /// reconstruct the match half of the unified save. Fail-loud: a corrupt / version-mismatched /
+        /// trailing-byte blob throws from <see cref="MatchSaveCodec.Decode"/>; a distinct-squad blob with
+        /// a missing / incomplete <paramref name="squads"/> throws from the restore factory (KD-4 / R4).
+        /// </summary>
+        public static MatchEngine Restore(byte[] blob, ISquadProvider squads = null)
+        {
+            MatchSaveContents contents = MatchSaveCodec.Decode(blob);
+            return MatchEngine.RestoreFromSnapshot(
+                contents.Header, contents.Payload, contents.MatchSeed, squads);
+        }
+
+        /// <summary>
         /// Captures a durable snapshot of <paramref name="engine"/> at its current tick and writes it to
         /// <paramref name="path"/> atomically (the §4.6.1.1 temp -> fsync -> rename contract). The temp
         /// file is <c>path + ".tmp"</c> in the same directory (= same volume, §4.6.1.1 requirement 1);
@@ -44,6 +80,8 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         public static void Save(MatchEngine engine, string path)
         {
+            // Guard engine before path so the argument-validation order is identical to the pre-Encode
+            // refactor (a both-invalid call still throws ArgumentNullException, not ArgumentException).
             if (engine == null)
             {
                 throw new ArgumentNullException(nameof(engine));
@@ -55,9 +93,7 @@ namespace TacticalDirector.MatchEngine
 
             using var _ = s_saveMarker.Auto();
 
-            SnapshotHeader  header  = engine.CaptureDurableHeader();
-            SnapshotPayload payload = engine.CaptureDurablePayload();
-            byte[] blob = MatchSaveCodec.Encode(engine.MatchSeed, header, payload);
+            byte[] blob = Encode(engine); // Encode re-guards engine (harmless backstop).
 
             string tempPath = path + ".tmp";
             try
@@ -114,9 +150,7 @@ namespace TacticalDirector.MatchEngine
             using var _ = s_loadMarker.Auto();
 
             byte[] blob = File.ReadAllBytes(path);
-            MatchSaveContents contents = MatchSaveCodec.Decode(blob);
-            return MatchEngine.RestoreFromSnapshot(
-                contents.Header, contents.Payload, contents.MatchSeed, squads);
+            return Restore(blob, squads);
         }
 
         private static void TryDelete(string path)
@@ -127,6 +161,15 @@ namespace TacticalDirector.MatchEngine
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-07-21 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-07-21 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-07-22 | —      | Public blob API (unified-season-save-design.md KD-5): Encode   |
+// |         |            |        | (capture + MatchSaveCodec.Encode) + Restore (Decode +          |
+// |         |            |        | RestoreFromSnapshot) exposed so the season save-file root can  |
+// |         |            |        | compose the match blob without the internal capture seams;     |
+// |         |            |        | Save/Load refactored to delegate (behaviour-identical).        |
+// | 1.2     | 2026-07-22 | —      | Code AR L-1: restore the engine-before-path argument-guard     |
+// |         |            |        | order in Save (the v1.1 delegation had flipped it — a both-    |
+// |         |            |        | invalid call must throw ArgumentNullException, not Argument-   |
+// |         |            |        | Exception), keeping the refactor exactly behaviour-identical.  |
 #endregion

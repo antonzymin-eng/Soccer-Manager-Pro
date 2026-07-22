@@ -1043,6 +1043,19 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-viewer/tests/match-viewer-tests.asmdef` | Test assembly definition (EditMode; references match-viewer + match-engine + deterministic-sim + ball-physics + agent-movement) |
 | `src/match-viewer/tests/MatchViewerTests.cs` | Frame cadence; on-pitch finiteness; bitwise two-run determinism; observer-neutrality digest lock; fail-loud guards; exporter structure/no-NaN locks |
 
+### Season Save (`src/season-save/`) — unified season save-file root (not a numbered spec; `unified-season-save-design.md`)
+
+| File | Purpose |
+|------|---------|
+| `src/season-save/season-save.asmdef` | `TacticalDirector.SeasonSave` — the composition/persistence root ABOVE both match-engine and living-world (references MatchEngine + LivingWorld + DeterministicSim); the only assembly that may see both blobs, resolving FR-LW-003 |
+| `src/season-save/SeasonSaveConstants.cs` | `[FIXED] SEASON_SAVE_FORMAT_VERSION = 1` — the fourth format version, distinct from the two snapshot schema versions + MATCH_SAVE_FORMAT_VERSION + WORLD_STORE_FORMAT_VERSION (KD-4) |
+| `src/season-save/SeasonSaveBlobs.cs` | Deframe result: `WorldBlob` (always) + `MatchBlob` (null if no in-progress match) — two opaque byte sub-blobs (KD-2/KD-3) |
+| `src/season-save/SeasonSaveCodec.cs` | Pure static frame codec: `Encode(worldBlob, matchBlobOrNull)` / `Decode(byte[]) → SeasonSaveBlobs` — a SEASON_SAVE_FORMAT_VERSION-gated frame + matchPresent flag + two length-prefixed opaque sub-blobs (each keeps its own version gate); overflow-safe `Require` bound + fail-loud on null/version/flag/length/trailing (KD-7/KD-8) |
+| `src/season-save/SeasonSaveContents.cs` | `Load` result: reconstructed `WorldStore` (never null) + nullable `MatchEngine` |
+| `src/season-save/SeasonSaveManager.cs` | Static: `Save(world, matchOrNull, path)` (capture both → Encode → atomic temp→fsync→rename) / `Load(path, ISquadProvider = null) → SeasonSaveContents` (Decode → WorldStore.Restore +, when present, MatchSaveManager.Restore) — KD-1/KD-5/KD-6/KD-8 |
+| `src/season-save/tests/season-save-tests.asmdef` | Test assembly (EditMode; references season-save + match-engine + living-world + deterministic-sim + player-database) |
+| `src/season-save/tests/SeasonSaveManagerTests.cs` | Disk round-trip determinism (no-match season; season with neutral / distinct-squad match via ISquadProvider) + SeasonSaveCodec round-trip/fail-loud + manager fail-loud paths incl. the R4 no-match-with-provider lock (19 tests) |
+
 ## Tracking Documents
 
 | File | Purpose |
