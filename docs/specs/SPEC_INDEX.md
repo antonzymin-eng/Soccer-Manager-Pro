@@ -1,7 +1,23 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 22, 2026, later same day (**Season & Competition Loop #30 advanced `IN REVIEW → APPROVED`**
+> **Last Updated:** July 22, 2026, later same day (**Match Analytics & Statistics #37 authored + advanced
+> `→ IN REVIEW → APPROVED`** — Wave 1 read-only presentation prerequisite. Promoted from the converged
+> design supplement (`docs/tracking/match-analytics-statistics-design.md` v0.2, AR-1 1M → AR-2 clean) to
+> a full 11-file section set (FR-AN-001..021), then section-file PASS-1 (0H+2M+3L) → AR-2 convergence
+> (0H+0M, L-only ⇒ CONVERGENCE). **KD-1 settled against verified source:** the match engine publishes
+> only **8 Tier A record types** into the digest-bearing ledger (Possession/Foul/Card/Goal/Substitution/
+> Offside/Restart/MatchPhaseChanged) and **no shot/pass/tackle/save event** (those ordinals are
+> registered but have no producer), and `SerializeLedger` is write-only (no reader) — so #37's scope is
+> exactly the derivable set + the observational positional sample, and shots/passes/tackles/shot-geometry
+> xG are a **named, producer-gated match-engine follow-up** (Appendix D), never a phantom consumer
+> (FR-LW-031). The PASS-1 M-1 fix was structural (the ledger tap must be consumed **every tick**
+> losslessly — a sampling reader would drop a tick's foul/goal; enforced by the new F6 fail-loud). #37
+> registers **no domain tag / ordinal / RNG** (KD-5, the `match-viewer` class) so **no #16 §3.4 cross-cite
+> is needed** — a positive property, not a deferred allocation. R-01..R-05 signed (§9 checklist v0.3); all
+> 11 section files at `Status: APPROVED`. **Approves the forward design** (the #21–#30 pre-T0 precedent).
+> Count: **29 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 22, 2026, later same day (**Season & Competition Loop #30 advanced `IN REVIEW → APPROVED`**
 > — Wave 1 critical-path spine spec complete. Section-file PASS-1 (1H+2M+2L) + AR-2 convergence sweep
 > (0H+0M, L-only ⇒ CONVERGENCE) both resolved — the H-1 fix was structural (the loop resolved one
 > fixture per fixture-day and skipped the round's other `N/2−1`, leaving the league table undefined for
@@ -130,6 +146,7 @@
 | 26 | Tactical Presets & AI-Manager Selection | `tactical-presets/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 27 | Squad / Player Data Layer | `squad-player-data/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 30 | Season & Competition Loop | `season-competition-loop/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 37 | Match Analytics & Statistics | `match-analytics-statistics/` | 6¹ | APPROVED | Jul 22, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
