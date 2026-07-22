@@ -1,0 +1,77 @@
+# .gitattributes — Unity 6 project (Tactical Director)
+# Created: July 22, 2026
+#
+# Purpose:
+#   1. Normalize line endings on text assets so Unity YAML (.unity/.prefab/.asset/
+#      .meta/.asmdef) does not corrupt on cross-platform merges.
+#   2. Route Unity YAML through Unity's Smart Merge tool (UnityYAMLMerge / "merge=unityyamlmerge").
+#      Configure once per clone:  git config merge.unityyamlmerge.driver \
+#      '"<Unity>/Tools/UnityYAMLMerge" merge -p %O %B %A %A'
+#   3. Track binary game assets with Git LFS so the repo does not bloat and the
+#      CI binary guard (tools/unity-ci/check-binaries.sh) stays green.
+#
+# NOTE: LFS lines take effect only where Git LFS is installed. The CI checkout
+# (game-ci/unity-test-runner) sets lfs: true. Run `git lfs install` locally.
+
+# ---- Default: auto-normalize line endings, let git detect text vs binary ----
+* text=auto
+
+# ---- Unity source & YAML text assets (force LF, enable smart merge) ----
+*.cs        text diff=csharp eol=lf
+*.meta      text eol=lf merge=unityyamlmerge
+*.asmdef    text eol=lf
+*.asmref    text eol=lf
+*.unity     text eol=lf merge=unityyamlmerge
+*.prefab    text eol=lf merge=unityyamlmerge
+*.asset     text eol=lf merge=unityyamlmerge
+*.mat       text eol=lf merge=unityyamlmerge
+*.anim      text eol=lf merge=unityyamlmerge
+*.controller text eol=lf merge=unityyamlmerge
+*.physicMaterial text eol=lf merge=unityyamlmerge
+*.mask      text eol=lf merge=unityyamlmerge
+*.shadergraph text eol=lf
+*.shadersubgraph text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.sh        text eol=lf
+*.py        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# ---- Binary game assets: Git LFS (also marked binary so git never merges them) ----
+# Textures
+*.png   filter=lfs diff=lfs merge=lfs -text
+*.jpg   filter=lfs diff=lfs merge=lfs -text
+*.jpeg  filter=lfs diff=lfs merge=lfs -text
+*.tga   filter=lfs diff=lfs merge=lfs -text
+*.psd   filter=lfs diff=lfs merge=lfs -text
+*.tif   filter=lfs diff=lfs merge=lfs -text
+*.tiff  filter=lfs diff=lfs merge=lfs -text
+*.exr   filter=lfs diff=lfs merge=lfs -text
+*.hdr   filter=lfs diff=lfs merge=lfs -text
+# 3D models
+*.fbx   filter=lfs diff=lfs merge=lfs -text
+*.obj   filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.dae   filter=lfs diff=lfs merge=lfs -text
+*.3ds   filter=lfs diff=lfs merge=lfs -text
+# Audio
+*.wav   filter=lfs diff=lfs merge=lfs -text
+*.mp3   filter=lfs diff=lfs merge=lfs -text
+*.ogg   filter=lfs diff=lfs merge=lfs -text
+*.aif   filter=lfs diff=lfs merge=lfs -text
+*.aiff  filter=lfs diff=lfs merge=lfs -text
+# Video
+*.mp4   filter=lfs diff=lfs merge=lfs -text
+*.mov   filter=lfs diff=lfs merge=lfs -text
+*.webm  filter=lfs diff=lfs merge=lfs -text
+# Fonts
+*.ttf   filter=lfs diff=lfs merge=lfs -text
+*.otf   filter=lfs diff=lfs merge=lfs -text
+# Packaged / prebuilt binaries
+*.unitypackage filter=lfs diff=lfs merge=lfs -text
+*.dll   filter=lfs diff=lfs merge=lfs -text
+*.so    filter=lfs diff=lfs merge=lfs -text
+*.dylib filter=lfs diff=lfs merge=lfs -text
+*.a     filter=lfs diff=lfs merge=lfs -text
+*.bytes filter=lfs diff=lfs merge=lfs -text

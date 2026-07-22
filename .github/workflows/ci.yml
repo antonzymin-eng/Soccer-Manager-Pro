@@ -198,19 +198,79 @@ jobs:
       - name: Run gate (generate projects, build, test)
         run: bash tools/dotnet-ci/run-gate.sh
 
-  unity-tests-placeholder:
-    name: Unity tests (placeholder)
+  unity-meta-integrity:
+    name: Unity .meta integrity
     runs-on: ubuntu-latest
-    if: false  # disabled until UNITY_LICENSE / UNITY_EMAIL / UNITY_PASSWORD secrets are configured
+    steps:
+      - uses: actions/checkout@v4
+      # Every tracked file/folder under src/ must have a committed .meta, no
+      # orphan metas, no duplicate GUIDs. A missing .cs.meta makes Unity assign
+      # a fresh random GUID on checkout, silently breaking every reference to it.
+      - name: Check meta integrity
+        run: bash tools/unity-ci/check-meta-integrity.sh
+
+  unity-asset-hygiene:
+    name: Unity asset hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: .gitattributes present (LFS + YAML merge routing)
+        run: test -f .gitattributes
+      # Large binaries must be routed to Git LFS by .gitattributes.
+      - name: Binary / LFS guard
+        run: bash tools/unity-ci/check-binaries.sh
+
+  # Gate the Unity Test Runner on the license secret being configured, so the
+  # job runs EditMode + PlayMode inside real Unity 6 once secrets exist and is
+  # cleanly SKIPPED (not failed) until then. Set repo secrets UNITY_LICENSE,
+  # UNITY_EMAIL, UNITY_PASSWORD to activate.
+  unity-license-check:
+    name: Unity license configured?
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          if [ -n "$UNITY_LICENSE" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::UNITY_LICENSE not set — Unity Test Runner skipped. Configure secrets to enable EditMode/PlayMode tests."
+          fi
+
+  unity-tests:
+    name: Unity tests (${{ matrix.testMode }})
+    needs: unity-license-check
+    if: needs.unity-license-check.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        testMode: [editmode, playmode]
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: true
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ matrix.testMode }}-${{ hashFiles('Packages/manifest.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: |
+            Library-${{ matrix.testMode }}-
+            Library-
       - uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          testMode: editmode
+          testMode: ${{ matrix.testMode }}
           githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unity-test-results-${{ matrix.testMode }}
+          path: artifacts
