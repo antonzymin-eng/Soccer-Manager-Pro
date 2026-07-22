@@ -1,10 +1,12 @@
 # Season & Competition Loop — Design Supplement
 
 > **Created:** July 22, 2026
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row).
-> Candidate spec **#30** (proposed in `management-layer-spec-roadmap.md` / `spec-plans/spec-30-…`,
-> not yet reserved). FR prefix (proposed): **FR-SN**. This is the same pre-section-file stage
-> `tactical-instruction-layer-design.md` / `squad-player-data-design.md` occupied before #21/#27.
+> **Status:** PROMOTED (July 22, 2026) — advanced to a full 11-file section-file set at
+> `docs/specs/season-competition-loop/` (Spec **#30**, `IN REVIEW`; `SPEC_INDEX.md` row added; FR
+> prefix **FR-SN**), per the #21–#27 precedent. This supplement is retained as the design-history
+> record; the section files are now authoritative. Remaining gates: section-file PASS-1 → AR-2
+> convergence; the #16 §3.4 `0x22`/84 cross-cite (+ any #22 back-prop); lead-developer R-01..R-05
+> sign-off (§9.3 of the promoted spec).
 > **Master-plan home:** §4.1 (fixtures/season) / §4.5 (career continuity) · **Tier:** Stage 2 ·
 > **Wave:** 1 (Spine).
 > **Purpose:** Design the playable career/season spine — deterministic round-robin fixtures, a live
@@ -337,4 +339,5 @@ Same path #21–#27 followed, recorded here so the section-file pass has a check
 | Version | Date | Notes |
 |---|---|---|
 | 0.1 | 2026-07-22 | Initial draft from the `spec-plans/spec-30-…` high-level plan + the roadmap, grounded in the actual `SeasonSaveCodec`/`SeasonSaveManager`/`WorldStore` APIs. KD-1..KD-8 pinned; §9 risks map to the plan's own open questions. Pre-promotion — no section files, no `SPEC_INDEX.md` row. |
+| 0.3 | 2026-07-22 | **PROMOTED** to section files at `docs/specs/season-competition-loop/` (Spec #30, `IN REVIEW`; `SPEC_INDEX.md` row added; FR prefix FR-SN; FR-SN-001..034). Forward-design spec — nothing built yet (the #21–#26 posture). This supplement is now the design-history record; the section files are authoritative. |
 | 0.2 | 2026-07-22 | **AR-1: 1M+3L, all fixed** (findings verified against real source, not narrated). **M-1:** KD-3/T2 over-committed #30 to *activating* #22's phase-1 ingest — contradicts `FR-LW-032` (MUST — Stage-1 activation gated on match-outcome events **and** vol-2/vol-3 impl., i.e. #33) + roadmap §4 ("do not activate before #30 **and** #33 land"), and `WorldLoop.cs` phase-1 has no interface (FR-LW-031); reframed — #30 is the phase-1 **producer** (emits + records the event), ingest activation is deferred to #33's landing and is out of the spine's scope (which needs none of #22's memory model); T2/§6/§9 aligned. **L-1:** stale cross-ref "#22 §2.1/§3.1" (vol-2 social-graph) → the real anchors `FR-LW-027`/`FR-LW-032`/KD-9/KD-10. **L-2:** KD-1 now states the `SeasonSaveCodec`/`SeasonSaveManager` signature change the third sub-blob forces. **L-3:** domain-tag gap honesty — file only `0x22`/84, leave `0x20`/`0x21` as gaps (not phantom pre-allocations for absent #28/#29), the `ERR-016-003` precedent. **AR-2: clean sweep** (0H+0M+2L, doc-only, fixed in place) — KD-4 label collision in §1 (living-world's KD-4 vs this doc's KD-4) disambiguated; §1 phase-1 gap cell updated to reflect #30-as-producer. **CONVERGED** (an L-only round closes it, the #21–#27 convention). |

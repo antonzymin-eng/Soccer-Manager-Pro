@@ -1,7 +1,20 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 22, 2026, later same day (**Squad / Player Data Layer #27 advanced `IN REVIEW → APPROVED`**
+> **Last Updated:** July 22, 2026, later same day (**Season & Competition Loop #30 promoted `→ IN REVIEW`**
+> — Wave 1 of the management-layer roadmap (the critical-path career spine `#27 → #30 → #33 → #31 → #38
+> → #39`) begun. Promoted from the converged design supplement `docs/tracking/season-competition-loop-design.md`
+> v0.2 (AR-1 1M+3L → AR-2 clean) to a full 11-file section-file set at `docs/specs/season-competition-loop/`
+> (FR prefix **FR-SN**; FR-SN-001..034). Forward-design spec (nothing built yet — the #21–#26 IN-REVIEW
+> posture, unlike #27 which documented already-built code): defines deterministic round-robin fixtures, a
+> live league table, a calendar/match-day loop, board objectives, and multi-season continuity, owning the
+> `SeasonSaveManager` composition root (season state as a third opaque sub-blob; `SEASON_SAVE_FORMAT_VERSION`
+> 1 → 2). The load-bearing design decision (AR-1 M-1): #30 is the #22 phase-1 **producer** only — ingest
+> activation is deferred to #33 per `FR-LW-032` (a MUST gating activation on match-outcome events **and**
+> the human-systems model), not wired here. Registry row #30 added; the `0x22`/84 back-prop + R-01..R-05
+> sign-off are the remaining gates (§9.3). #28/#29 (Wave 2) remain unpromoted (no rows). Count: **27
+> APPROVED / 1 IN REVIEW (#30) / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 22, 2026, later same day (**Squad / Player Data Layer #27 advanced `IN REVIEW → APPROVED`**
 > — Wave 0 of the management-layer roadmap complete. Section-file PASS-1 (0H+1M+2L) + AR-2 convergence
 > sweep (0H+1M — the §7.2 GK/Heading projection deferral was stale, since `PlayerAttributeProjection.cs`
 > v1.2 landed `ToGoalkeeper`/`ToHeading` the same day; new §7.3 records LANDED — L-only otherwise ⇒
@@ -103,6 +116,7 @@
 | 25 | Positional Rotations | `positional-rotations/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 26 | Tactical Presets & AI-Manager Selection | `tactical-presets/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 27 | Squad / Player Data Layer | `squad-player-data/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 30 | Season & Competition Loop | `season-competition-loop/` | 6¹ | IN REVIEW | Jul 22, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
