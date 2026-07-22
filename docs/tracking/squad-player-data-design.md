@@ -1,10 +1,11 @@
 # Squad / Player Data Layer — Design Supplement
 
 > **Created:** July 15, 2026
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row yet).
-> Candidate spec number **#27** (next free per `SPEC_INDEX.md`), reserved informally in this
-> doc only; not added to the registry until/if this promotes to section files, per the #21–#26
-> precedent (registry rows land at promotion, not at design-note stage).
+> **Status:** PROMOTED (July 22, 2026) — advanced to a full section-file spec set at
+> `docs/specs/squad-player-data/` (Spec **#27**, `IN REVIEW`; `SPEC_INDEX.md` row added; FR prefix
+> **FR-SQ**), per the #21–#26 precedent. This supplement is retained as the design-history record;
+> the section files are now authoritative. Remaining gates: section-file PASS-1 adversarial review
+> + lead-developer R-01..R-05 sign-off (§9.3 of the promoted spec).
 > **Purpose:** Scope and design a Squad/Player data layer — a canonical player attribute record,
 > deterministic roster generation, and a Stage-0 text-import format — to replace the match
 > engine's current all-synthetic, all-neutral agent seeding.
@@ -264,3 +265,4 @@ test fails immediately and deterministically rather than probabilistically. No f
 | 0.4 | 2026-07-15 | Implementation-time corrections (T0 code review, not a design-stage AR round — caught while writing `RosterGenerator`/tests): (1) `PlayerRecord.Position` had no generation input at all in v0.3 — `FIELDS_PER_PLAYER` undercounted by one draw (35 → 36; `IDENTITY_DRAWS_PER_PLAYER` 4 → 5). (2) `WeakFootRating`'s jitter reused `ATTRIBUTE_SPREAD` (±4) against its own much narrower [1,5] range, clamping most draws to the boundary instead of spreading around `WeakFootBase`; given its own `WeakFootSpread`=2 (exactly spans [1,5], no clamp). (3) `SquadFileLoader`'s identity default computed `PlayerId` from the raw section-local index instead of the club-scoped `clubId * CLUB_SQUAD_SIZE + localIndex` formula RosterGenerator uses (KD-3) — caught by a round-trip test that would have failed against the bug. All three fixed in code before this pass's own review closed. |
 | 0.5 | 2026-07-17 | T1/T2 LANDED (see `player-attribute-projection-design.md` + `MatchEngine.cs` v1.37): §3's reserved-list row corrected per projection-design KD-P9 — `FirstTouchAbility` is consumed by three live `MatchEngine` sites, not reserved. §4's T1/T2 rows are now implemented (`PlayerAttributeProjection` + `ConfigureSquads`); T3 (snapshot roster reference) and Stage-1+ remain open. |
 | 0.6 | 2026-07-18 | T3 LANDED (see `squad-roster-reference-design.md` + `MatchEngine.cs` v1.39): §4's T3 row implemented — per-team roster reference (`_rosterClubId`, `Squad.ClubId`) serialized at `SNAPSHOT_SCHEMA_VERSION` 16; a save records which squad each team loaded (the identity half of restore fidelity), configured ≠ unconfigured by design (KD-T3-2). The restore re-projection stays future (no deserialize path). Stage-1+ (on-disk persistence / transfers / aging) + lineup selection (Plan-3) remain open. |
+| 0.7 | 2026-07-22 | **PROMOTED** to section files at `docs/specs/squad-player-data/` (Spec #27, `IN REVIEW`; `SPEC_INDEX.md` row added; FR prefix FR-SQ). Since v0.6 all forward T-phases have also landed (Phase-2 distinct-squad restore re-projection via `ISquadProvider`; `LineupSelector` proper selection), so the section files document a fully-built, fully-wired layer and record the wiring status in §7. This supplement is now the design-history record; the section files are authoritative. |
