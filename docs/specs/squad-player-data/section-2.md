@@ -48,7 +48,7 @@ All requirements describe the **landed** implementation (present tense).
 
 | FR | Subject | Conformance | Source |
 |---|---|---|---|
-| FR-SQ-018 | `SquadFileLoader.Parse(text, clubId)` reads a `[player N]` `key = value` grammar (`#` comments, InvariantCulture numeric parsing); an omitted key inherits the mid-range default (`CreateDefault` value / `"Player N"` / `Midfielder` / age 25). | MUST | KD-8 |
+| FR-SQ-018 | `SquadFileLoader.Parse(text, clubId)` reads a `[player N]` `key = value` grammar (`#` comments, InvariantCulture numeric parsing); an omitted key inherits the mid-range default (`CreateDefault` value / `FirstName "Player"`, `LastName = playerId` / `Midfielder` / age 25). | MUST | KD-8 |
 | FR-SQ-019 | The text import is not a determinism-pinned wire format — only the resulting `PlayerRecord` values feed the sim, never the grammar; a future richer/binary encoding is a pure parser swap. | MUST | KD-8 |
 
 ### Integration and exclusion (FR-SQ-020..021)
@@ -140,4 +140,5 @@ re-projectable from the roster keyed by the serialized `_activeBenchSlot` (§7).
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial FR set (FR-SQ-001..026), data structures (confirmed against `src/player-database/`), failure modes F1–F5. |
+| 0.2 | 2026-07-22 | — | PASS-1 L: FR-SQ-018 omitted-key default-name corrected to `FirstName "Player"` / `LastName = playerId` (was the imprecise "Player N"; `PlayerRecord.CreateDefault` sets `LastName = playerId.ToString()`). |
 #endregion

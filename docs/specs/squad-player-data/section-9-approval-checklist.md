@@ -35,8 +35,14 @@ implementation gates are checked and the review/sign-off gates remain open by co
 
 ## 9.3 Review gates — OPEN
 
-- [ ] **PASS-1 adversarial review of section files + v0.2 fix pass — NOT yet run.**
-- [ ] PASS-2 (only if PASS-1 finds a High)
+- [x] **PASS-1 adversarial review of section files — RUN July 22, 2026 (0H+1M+2L); v0.2 fix pass
+      applied.** M-1: the `Squad` constructor's F3 guards (null/empty/oversize) + the §2.2.4
+      snapshot-copy invariant had no direct test (both callers pre-guard) — added `SquadTests.cs`
+      + corrected the §5 F3 labels. L: FR-SQ-018 default-name (`FirstName "Player"` / `LastName =
+      playerId`, was "Player N"); §9.4 prefix list gained the missing `PR`.
+- [ ] **AR-2 convergence sweep — pending** (re-review after the v0.2 fixes; the cycle closes on an
+      L-only or clean round per the #21–#26 convention).
+- [ ] PASS-2 (only if a sweep finds a High)
 - [ ] **Formal `DOMAIN_TAG_PLAYER_DATABASE = 0x1F` / `SubsystemOrdinals.PlayerDatabase = 81`
       cross-cite confirmation in Deterministic Sim #16 §3.4 — code allocation verified
       (`DeterministicSimConstants.cs`, `SubsystemOrdinals.cs`); the #16 spec-text row + back-prop
@@ -46,7 +52,7 @@ implementation gates are checked and the review/sign-off gates remain open by co
 ## 9.4 Consistency gates
 
 - [x] FR prefix `FR-SQ-` verified unclaimed by grep over `docs/specs/**/*.md` (existing prefixes:
-      AT, BU, CS, DA, DM, DS, EVT, GK, HE, LW, PA, PO, RO, TI, TP, TS)
+      AT, BU, CS, DA, DM, DS, EVT, GK, HE, LW, PA, PO, PR, RO, TI, TP, TS)
 - [x] Candidate number #27 matches the design-supplement reservation
 - [x] `SPEC_INDEX.md` row added (`IN REVIEW`)
 
@@ -73,4 +79,5 @@ approval is claimed.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial checklist. Implementation gates checked (code precedes the spec); PASS-1, #16 cross-cite confirmation, and R-01..R-05 sign-off OPEN. Status IN REVIEW. |
+| 0.2 | 2026-07-22 | — | PASS-1 run (0H+1M+2L); §9.3 updated — PASS-1 checked, AR-2 sweep pending. §9.4 prefix list gained `PR`. |
 #endregion

@@ -24,9 +24,16 @@ WeakFoot = 3); `AttrIdx_Count_MatchesConstant`; `ToArray_FromArray_RoundTrips`;
 `Generate_PlayerIds_AreClubScopedAndSequential` / `Generate_PlayerIds_NoCollisionAcrossClubs` (KD-3);
 `Generate_AllGeneratedValues_WithinDeclaredBounds` (`[1,20]` attrs, `[1,5]` weak foot, `[AgeMin,AgeMax]`,
 defined position — the clamp/spread locks); `Generate_RngCursor_AdvancesByExactBudgetPerPlayer` (the
-F4 `FIELDS_PER_PLAYER = 36` budget lock); `Generate_InvalidCount_Throws` (F3); `Generate_NullRng_Throws`.
+F4 `FIELDS_PER_PLAYER = 36` budget lock); `Generate_InvalidCount_Throws` (the generator's own `count`
+guard — distinct from the Squad-ctor F3 below); `Generate_NullRng_Throws`.
 The `NewRng` helper registers the stream (siteId `"player-database.roster-generation"`,
 `SubsystemOrdinals.PlayerDatabase`, `entityId: clubId`), exercising FR-SQ-013 on every case.
+
+**`SquadTests.cs`** — direct `Squad`-constructor coverage (F3): `Constructor_NullPlayers_ThrowsArgumentNull`,
+`Constructor_EmptyPlayers_ThrowsArgument`, `Constructor_ExceedsClubSquadSize_ThrowsArgument`,
+`Constructor_AtClubSquadSize_Builds`, `Constructor_SnapshotsPlayers_PostConstructionMutationDoesNotReachInstance`
+(the §2.2.4 defensive-copy invariant), `GetPlayer_OutOfRange_Throws`. Both production callers pre-guard
+size, so these lock the public ctor guards + snapshot copy directly.
 
 **`SquadFileLoaderTests.cs`** — `Parse_{NullText,EmptyOrCommentOnly}_AllDefaultSquad` (omitted ⇒ default,
 KD-8); `Parse_FullRecord_RoundTrips` (every field + club-scoped `PlayerId` + omitted-key inheritance);
@@ -49,7 +56,7 @@ KD-8); `Parse_FullRecord_RoundTrips` (every field + club-scoped `PlayerId` + omi
 | FR-SQ-006 | `ToArray_FromArray_RoundTrips` + `AttrIdx_Count_MatchesConstant` + `FromArray_WrongLength_Throws` |
 | FR-SQ-007 | `Generate_AllGeneratedValues_*` (`Enum.IsDefined`) + `Parse_UnknownPosition_Throws`; ordinal used in `PositionBias_*` |
 | FR-SQ-008 | `Parse_FullRecord_RoundTrips` + `Generate_SameSeed_*` (every `PlayerRecord` field) |
-| FR-SQ-009 | `Parse_NullText_AllDefaultSquad` (Count), `Generate_*` (GetPlayer), `Parse_IndexExceedsClubSquadSize_Throws` (F3) |
+| FR-SQ-009 | `SquadTests.Constructor_*` (F3 null/empty/oversize + `GetPlayer_OutOfRange` + snapshot-copy) + `Parse_NullText_AllDefaultSquad` (Count) + `Parse_IndexExceedsClubSquadSize_Throws` (loader pre-guard) |
 | FR-SQ-010 | `Generate_PlayerIds_AreClubScopedAndSequential` + `_NoCollisionAcrossClubs` + `Parse_FullRecord_RoundTrips` (PlayerId) |
 | FR-SQ-011 | Every suite consumes the constants by name (no magic literals); `PositionBias_*` assert the table values/tags |
 | FR-SQ-012 | `Generate_RngCursor_AdvancesByExactBudgetPerPlayer` (F4) |
@@ -75,4 +82,5 @@ governing evidence, not a hot-path budget assertion.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial test plan + complete FR-SQ-001..026 traceability over the three landed T0 suites + the T-phase match-engine suites. |
+| 0.2 | 2026-07-22 | — | PASS-1 M-1: added `SquadTests.cs` (§5.1) — direct `Squad`-ctor F3 + snapshot-copy coverage the two pre-guarding callers left untested; FR-SQ-009 + §5.1 F3 labels corrected (generator `count` / loader index guards are distinct from the Squad-ctor F3). |
 #endregion
