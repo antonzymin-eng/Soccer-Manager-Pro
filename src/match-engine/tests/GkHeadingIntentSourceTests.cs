@@ -121,7 +121,9 @@ namespace TacticalDirector.MatchEngine
         {
             // Two eligible agents at EXACTLY equal squared distance to the ball (symmetric about x = 50):
             // the documented tie-break is the later index (the <= compare), matching the engine's original scan.
-            var agents = new[] { AgentAt(49f, 34f), AgentAt(51f, 34f) };
+            // Halves are exactly representable, so ±0.5 squares to a bit-exact 0.25 tie; 0.5 m sits well inside
+            // HeaderTriggerRangeM (default 1.5 m) so the assertion is not coupled to that tunable [GT] value.
+            var agents = new[] { AgentAt(49.5f, 34f), AgentAt(50.5f, 34f) };
             var gk = new[] { false, false };
             var off = new[] { false, false };
             int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
