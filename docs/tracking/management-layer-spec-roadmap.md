@@ -367,29 +367,53 @@ domain tag, consistent with `match-viewer`/analytics being observational.)
 
 ---
 
-## 7. Recommended authoring sequence
+## 7. Authoring sequence (waves)
 
-1. **Promote #27** (design supplement → section files) — the foundation everything else needs; it
-   is the furthest along.
-2. **Open #30 (Season loop) and #37 (Analytics) design supplements in parallel** — #30 is the spine,
-   #37 is cheap, read-only, and unblocks post-match UI.
-3. **#28 + #29** (progression + training) — attach to #27/#30.
-4. **#33 (human-systems model)** — the #22-unblocker; do this before #31/#35 need real psychology.
-5. **#34 (staff) → #31 (transfers) → #32 (scouting)** — the recruitment/economy cluster.
-6. **#38 (UI framework first, then screens)** — starts against tactics/match/#37 early, deepens as
-   the data specs land.
-7. **#35 (media), #36 (national teams)** — later-stage consumers.
-8. **#39 (Steam packaging)** — last, against a shippable build.
-
-**Gap-fill placement:** #41 Injuries/Medical and #40 Finances land alongside the spine (with
-#29/#30/#31); #43 Competition Structure and #44 Discipline extend #30; #42 Youth Academy and #45
-Board/Ownership join the Stage-3 cluster (with #34); #46 News/Inbox and #48 Match-Presentation join
-the UI cluster (#38); #47 setup/editor, #49 localization, and #50 save-migration are release-adjacent
-(with #38/#39).
-
-Each step is a full pipeline run (design supplement → adversarial review to convergence →
+Each candidate is a full pipeline run (design supplement → adversarial review to convergence →
 section files → sign-off), and each should record its own OPEN ISSUES entry in root `CLAUDE.md`
-the way #21–#27 did.
+the way #21–#27 did. Items **within a wave** can be authored in parallel; a wave's dependencies are
+satisfied by the waves above it. **Per-spec high-level plans live in `spec-plans/`** (one file per
+candidate).
+
+**Wave 0 — Foundation**
+- **#27 Squad/Player Data** — promote the existing supplement first; every data spec keys off its
+  canonical attributes.
+
+**Wave 1 — Spine + cheap read-only (parallel)**
+- **#30 Season & Competition Loop** — the career spine; owns the `SeasonSave` root.
+- **#37 Match Analytics** — read-only over the event ledger; unblocks post-match UI.
+- **#38 UI *framework* only** — the framework / view-model contract can start now against tactics +
+  #37; screen specs wait for their data specs (Wave 7).
+
+**Wave 2 — Attach to #27 / #30**
+- **#28 Progression** · **#29 Training** · **#41 Injuries/Medical** · **#40 Finances** — all need
+  #27 data + #30's day-advance loop; #40/#41 must precede #31.
+
+**Wave 3 — Human-systems unblocker (gating)**
+- **#33 Personalities, Morale & Dynamics** — author before #22's dormant seams, #31, and #35 need
+  real psychology (phantom-interface rule, §4).
+
+**Wave 4 — Recruitment / economy cluster**
+- **#34 Staff → #31 Transfers/Contracts → #32 Scouting** — #34 before #32 (scouts are staff); #31
+  needs #40 economy + #33 negotiation psychology.
+
+**Wave 5 — Season extensions**
+- **#43 Competition Structure** · **#44 Discipline** (extend #30) · **#42 Youth Academy**
+  (needs #34/#40) · **#45 Board/Ownership** (needs #33 shape; feeds #40/#30).
+
+**Wave 6 — World / comms consumers**
+- **#46 News/Inbox & Man-Management** · **#35 Media** · **#36 National Teams** — consume #30 events
+  + #33 morale + #22's text generator.
+
+**Wave 7 — Presentation / UI**
+- **#38 UI screens** (deepen as data specs land) · **#48 Match Presentation Depth** ·
+  **#47 New-Game Setup / DB Editor**.
+
+**Wave 8 — Release / cross-cutting (last)**
+- **#49 Localization/Accessibility** · **#50 Save Migration** · **#39 Steam Packaging** — against a
+  genuinely shippable build.
+
+**Critical path:** #27 → #30 → #33 → #31 → #38 → #39.
 
 ---
 
