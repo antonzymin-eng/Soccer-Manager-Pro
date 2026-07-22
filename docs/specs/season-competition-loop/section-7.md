@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 7: Future Extensions & T-phase Plan
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 reconciliation, §9.3)
+**Version:** 0.2
 **Status:** IN REVIEW
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -24,7 +24,7 @@ Unlike #27, **nothing is built yet** — §7.1 is a forward T-phase plan; §7.2 
   tests. The world and match blobs stay byte-untouched (FR-SN-020).
 - **T2 — the day-advance loop + the match-outcome producer.** `SeasonLoop` composition root;
   `AdvanceToNextFixtureDay` (KD-2 fixed tick order, only the world tick live);
-  `PlayNextFixture(ISquadProvider)` (drives a real `MatchEngine`, applies the result, emits the
+  `AdvanceAndPlayNextRound(ISquadProvider)` (resolves the whole round, KD-9 — the managed fixture through a real `MatchEngine`, the rest via the round-resolution model, applies every result, emits the
   producer event — **not** #22 ingest, KD-3); the §16 §3.4 back-prop (`DOMAIN_TAG_SEASON_LOOP = 0x22`
   / `SubsystemOrdinals.SeasonLoop = 84`, only #30's row — `0x20`/`0x21` stay gaps for #28/#29).
   Behaviour-neutral floor test (FR-SN-026). The `#19 ScenarioRunner` `season-multi-fixture` capstone.
@@ -35,7 +35,7 @@ Unlike #27, **nothing is built yet** — §7.1 is a forward T-phase plan; §7.2 
 
 - **#22 phase-1 ingest activation** — deferred to #33's landing per `FR-LW-032` (activation needs
   match-outcome events **and** vol-2/vol-3). #30 is the producer only (KD-3). The ingest entry point
-  is a #22 wiring change, co-defining the payload against `FR-LW-027`/`FR-LW-032`/KD-9/KD-10 — filed
+  is a #22 wiring change, co-defining the payload against `FR-LW-027`/`FR-LW-032`/living-world KD-9/KD-10 — filed
   as a #22 back-prop then, not invented now (FR-LW-031).
 - **Finances (#40)** — budget-from-league-finish attaches to the KD-6 boundary roll; not here.
 - **Cups / continental / promotion-relegation (#43)** — the multiple-competition + knockout-draw
@@ -64,4 +64,5 @@ world tick live — avoids a re-pin across every Wave-2+ spec.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial forward T-phase plan (T0..T3), deferrals, and the #43/#40/#33/#37/#44 generalization seams. |
+| 0.2 | 2026-07-22 | — | Section-file PASS-1 reconciliation (whole-round KD-9 command/API rename, living-world-KD disambiguation, KD/FR label fixes). See section-9 §9.3. |
 #endregion

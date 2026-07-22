@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
+**Version:** 0.2
 **Status:** IN REVIEW
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -99,9 +99,9 @@ read-only sorted copy (FR-SN-033 observer-neutrality — sorting a copy never mu
 ```
 AdvanceToNextFixtureDay():
     targetDay := Calendar.dayOf(Calendar.NextRoundIndex)
-    while WorldStore.CurrentWorldTick < targetDay:
+    while WorldStore.CurrentWorldTick < targetDay:       # CurrentWorldTick is uint (WorldStore)
         RunWorldTickInFixedOrder()          # KD-2 — one calendar day
-    # cursor is now AT the fixture day; the caller runs PlayNextFixture (§3.4)
+    # cursor is now AT the fixture day; the caller runs AdvanceAndPlayNextRound (§3.4)
 
 RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned order
     # 1. progression   (#28)  — NULL SEAM today (FR-SN-034)
@@ -117,25 +117,56 @@ interfaces — #28/#29/#33 each slot into a pre-declared slot when they land, so
 would force a re-pin across every Wave-2+ spec (§7). With only step 4 live, a no-fixture day's advance
 is **byte-identical** to a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8).
 
-## 3.4 Playing a fixture (FR-SN-012..013)
+## 3.4 Playing a round (FR-SN-012..013b / KD-9)
+
+A fixture-day resolves the **whole round** — every one of its `N/2` fixtures — and applies **all**
+their results to the table. Resolving only a subset would leave the unplayed clubs' rows undefined
+(the App. C 4-club round 0 = {10v13, 11v12}; playing only 10v13 never gives 11/12 a round-0 result).
+The managed club's fixture runs through the full `MatchEngine`; the rest through the round-resolution
+model (§3.4.1).
 
 ```
-PlayNextFixture(squads: ISquadProvider):
-    f := Fixtures.at(Calendar.NextRoundIndex fixture) or throw   # F5 if season complete
-    engine := new MatchEngine(...)
-    engine.ConfigureSquads(squads.Resolve(f.HomeClubId), squads.Resolve(f.AwayClubId))  # F6 fail-loud
-    engine.RunToFullTime()                                       # the match loop (10/60 Hz) — off the world tick
-    result := MatchResult{ f.Home, f.Away, engine.HomeScore, engine.AwayScore, f.Round, WorldStore.CurrentWorldTick }
-    Table.ApplyResult(result)                # (1) table  — FR-SN-013 order
-    EmitMatchOutcome(result)                 # (2) event  — producer only (KD-3), NOT #22 ingest
-    f.Played := true
-    Calendar.NextRoundIndex := next unplayed round
+AdvanceAndPlayNextRound(squads: ISquadProvider):
+    round := Calendar.NextRoundIndex
+    roundFixtures := [ f in Fixtures where f.RoundIndex == round and not f.Played ]
+    if roundFixtures is empty: throw          # F5 — season complete; caller runs the boundary roll
+    for f in roundFixtures:                    # ALL N/2 fixtures (FR-SN-012)
+        if f.HomeClubId == ManagedClubId or f.AwayClubId == ManagedClubId:
+            result := PlayThroughEngine(f, squads)       # managed fixture — full MatchEngine
+        else:
+            result := ResolveRound(f)                    # §3.4.1 — deterministic (FR-SN-013a)
+        Table.ApplyResult(result)              # (1) table  — FR-SN-013 order, every fixture
+        EmitMatchOutcome(result)               # (2) event  — producer only (KD-3), one per fixture
+        f.Played := true
+    Calendar.NextRoundIndex := round + 1
+
+PlayThroughEngine(f, squads):
+    engine := new MatchEngine(...)             # SeasonLoop._activeMatch — restart-visible for save
+    engine.ConfigureSquads(squads.ResolveByClubId(f.HomeClubId),    # F6 fail-loud
+                           squads.ResolveByClubId(f.AwayClubId))
+    while not engine.MatchEnded: engine.RunTick()   # the 10/60 Hz match loop — off the world tick
+    return MatchResult{ f.HomeClubId, f.AwayClubId, engine.HomeScore, engine.AwayScore,
+                        f.RoundIndex, WorldStore.CurrentWorldTick }
 ```
 
-The match itself runs on the 10 Hz/60 Hz loops (`MatchEngine`), but `PlayNextFixture` is invoked
-*from* the world-tick loop — the two clocks stay disjoint (FR-SN-025). `EmitMatchOutcome` records
-the event in season state and (later, with #33) hands it to #22's ingest; today it is producer-only
-(KD-3 / FR-SN-017).
+The match runs on the 10 Hz/60 Hz loops (`MatchEngine.RunTick` to `MatchEnded` — the real engine
+API), but `AdvanceAndPlayNextRound` is invoked *from* the world-tick loop, so the two clocks stay
+disjoint (FR-SN-025). `EmitMatchOutcome` records the event in season state and is producer-only —
+#22 ingest activates with #33 (KD-3 / FR-SN-017).
+
+### 3.4.1 Round-resolution model for non-managed fixtures (FR-SN-013a)
+
+The **minimal-first identity** MAY run *every* fixture through the full `MatchEngine` (`ResolveRound`
+== `PlayThroughEngine` with a neutral/AI tactic): correct and deterministic, but `N·(N−1)` full
+matches per season. The **quick-sim deepening** resolves a non-managed fixture through a deterministic
+result model — a scoreline drawn from the `DOMAIN_TAG_SEASON_LOOP` sub-stream (FR-SN-027), keyed on
+`(seed, seasonNumber, roundIndex, homeClubId, awayClubId)` so it is replay-stable and independent of
+draw order — giving the reserved RNG sub-stream its concrete consumer. Both produce a `MatchResult`
+applied to the table identically (FR-SN-012); the choice is a `SeasonState`/config dial, not a
+rewrite, and a later spec may upgrade quick-sim to a fuller AI-vs-AI simulation. **Determinism note:**
+because the managed fixture consumes the match RNG (its own streams) and non-managed fixtures consume
+the season sub-stream by *key* (not by cursor position), the two are order-independent — the same
+final table results regardless of the order fixtures within a round are resolved (a §5 lock).
 
 ## 3.5 Season-boundary roll (FR-SN-029 / KD-6)
 
@@ -206,4 +237,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial algorithms: circle-method fixtures, table + tie-break, day-advance order, boundary roll, season codec, worked 4-club schedule. |
+| 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 #endregion

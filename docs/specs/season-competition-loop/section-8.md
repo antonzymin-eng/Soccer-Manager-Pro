@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 8: References
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 reconciliation, §9.3)
+**Version:** 0.2
 **Status:** IN REVIEW
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -13,7 +13,7 @@
 | Ref | Anchor | Used for |
 |---|---|---|
 | Unified Season Save | `docs/tracking/unified-season-save-design.md`; `src/season-save/SeasonSaveCodec.cs`, `SeasonSaveManager.cs`, `SeasonSaveConstants.cs` | the composition root #30 owns/extends; the opaque-sub-blob frame pattern; `SEASON_SAVE_FORMAT_VERSION` |
-| Living World #22 | `docs/specs/living-world/section-2.md` (FR-LW-003 / FR-LW-027 / FR-LW-031 / FR-LW-032 / KD-9 / KD-10); `src/living-world/WorldStore.cs`, `WorldLoop.cs` | the day-advance substrate; the phase-1 producer boundary; the ingest-deferral gate |
+| Living World #22 | `docs/specs/living-world/section-2.md` (FR-LW-003 / FR-LW-027 / FR-LW-031 / FR-LW-032 / living-world KD-9 / KD-10); `src/living-world/WorldStore.cs`, `WorldLoop.cs` | the day-advance substrate; the phase-1 producer boundary; the ingest-deferral gate |
 | Squad/Player Data #27 | `docs/specs/squad-player-data/`; `src/match-engine/ISquadProvider.cs` | the roster world; `ConfigureSquads` / `ISquadProvider` per fixture |
 | Match Engine (design note) | `docs/tracking/match-engine-design.md`; `src/match-engine/MatchSaveManager.cs`, `MatchEngine.cs` | plays each fixture; the match blob; the round-trip determinism contract |
 | Deterministic Sim #16 | `docs/specs/deterministic-sim/section-3.md` §3.4; `src/deterministic-sim/DeterministicSimConstants.cs`, `SubsystemOrdinals.cs` | the season RNG sub-stream; `DOMAIN_TAG_SEASON_LOOP = 0x22` / `SubsystemOrdinals.SeasonLoop = 84` (back-prop at approval) |
@@ -43,4 +43,5 @@ tests, not on an external empirical value.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial references (internal anchors + the circle-method / points-system convention). |
+| 0.2 | 2026-07-22 | — | Section-file PASS-1 reconciliation (whole-round KD-9 command/API rename, living-world-KD disambiguation, KD/FR label fixes). See section-9 §9.3. |
 #endregion

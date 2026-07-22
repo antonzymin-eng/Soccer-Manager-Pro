@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 4: Architecture
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 reconciliation, §9.3)
+**Version:** 0.2
 **Status:** IN REVIEW
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -73,9 +73,10 @@ src/season-save/
   matchPresent flag).
 
 Public command API (the only mutation path, FR-SN-032): `AdvanceToNextFixtureDay()`,
-`PlayNextFixture(ISquadProvider)`, `RollToNextSeason()`, plus read-only `View()` → `SeasonViewModel`
+`AdvanceAndPlayNextRound(ISquadProvider)` (resolves the whole round, KD-9), `RollToNextSeason()`, plus
+read-only `View()` → `SeasonViewModel`
 (FR-SN-033) and `Snapshot()` / `Restore(...)` for the season sub-blob. It is **not** on the 60 Hz hot
-path (KD-6 world-tick cadence), so allocation / `new` / exceptions are permitted — the
+path (§1.2 world-tick cadence), so allocation / `new` / exceptions are permitted — the
 `SeasonSaveManager` / `WorldStore` precedent.
 
 ## 4.4 The `SeasonSaveManager` / `SeasonSaveCodec` signature change (FR-SN-019..021)
@@ -132,7 +133,7 @@ at approval (only #30's row; `0x20`/`0x21` stay gaps for #28/#29 per KD-5's hone
 interface, FR-LW-031), and #30 **must not add one** (FR-SN-017). The only #22 surface #30 touches is
 `WorldStore`'s public API (`AdvanceDay`/`Snapshot`/`Restore`/`CurrentWorldTick`), never `living-world`
 internals (FR-SN-018 / FR-LW-003). The eventual ingest is a #22 wiring change at #33's landing
-(`FR-LW-032`), co-defining the payload against `FR-LW-027`/`FR-LW-032`/KD-9/KD-10 — a #22 edit, not a
+(`FR-LW-032`), co-defining the payload against `FR-LW-027`/`FR-LW-032`/living-world KD-9/KD-10 — a #22 edit, not a
 #30 one.
 
 ## 4.7 The CS0104 hazard note (carried from #27 T1)
@@ -149,4 +150,5 @@ fully-qualify `MatchEngine` and any `player-database` type that shares a bare na
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial architecture: SeasonSave-assembly extension, file layout, SeasonLoop root, the codec/manager signature change, RNG registration, the #22 producer boundary, CS0104 hazard. |
+| 0.2 | 2026-07-22 | — | Section-file PASS-1 reconciliation (whole-round KD-9 command/API rename, living-world-KD disambiguation, KD/FR label fixes). See section-9 §9.3. |
 #endregion

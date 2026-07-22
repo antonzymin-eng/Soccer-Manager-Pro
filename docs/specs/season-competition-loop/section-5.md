@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 5: Test Plan
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
+**Version:** 0.2
 **Status:** IN REVIEW
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -10,7 +10,7 @@
 
 ## 5.1 Test layers
 
-The layer runs on the world tick (KD-6 / FR-SN-025), so its tests are Unit + Determinism + (at T2+)
+The layer runs on the world tick (§1.2 / FR-SN-025), so its tests are Unit + Determinism + (at T2+)
 a Simulation-layer `#19 ScenarioRunner` capstone. No 60 Hz hot-path perf gate applies here (§6).
 
 ## 5.2 Fixture generation (FR-SN-001..004)
@@ -41,10 +41,13 @@ a Simulation-layer `#19 ScenarioRunner` capstone. No 60 Hz hot-path perf gate ap
 |---|---|
 | T-SN-CAL-001 | `AdvanceToNextFixtureDay` advances the world exactly `(targetDay − currentDay)` times. |
 | T-SN-CAL-002 | **Behaviour-neutral floor (KD-8 / FR-SN-026):** a no-fixture day's advance produces a world snapshot byte-identical to a bare `WorldStore.AdvanceDay()` on an equal starting world. |
-| T-SN-CAL-003 | `PlayNextFixture` plays the fixture, applies the result to the table, advances the cursor, and emits exactly one match-outcome event (FR-SN-016). |
+| T-SN-CAL-003 | `AdvanceAndPlayNextRound` resolves **all** `N/2` fixtures in the round, applies every result to the table, advances the cursor one round, and emits one match-outcome event per fixture (FR-SN-012/016). |
+| T-SN-CAL-003a | **Round completeness (KD-9):** after a full round, every club **that has a fixture in that round** has `Played` incremented by exactly 1 (for odd `N`, the one bye club that round does not — the N>2 broken-table regression lock, bye-aware). |
+| T-SN-CAL-003b | **Managed-club routing (FR-SN-013b):** the `ManagedClubId` fixture runs through the `MatchEngine` (its result reflects the engine score); non-managed fixtures resolve through the round-resolution model. |
+| T-SN-CAL-003c | **Order-independence (§3.4.1):** resolving a round's fixtures in a permuted order yields the byte-identical final table (non-managed quick-sim draws by key, not cursor). |
 | T-SN-CAL-004 | KD-4 invariant: next-fixture-day ≥ current WorldClock day after each advance. |
-| T-SN-CAL-005 | `PlayNextFixture` past the last fixture throws / documented no-op (F5). |
-| T-SN-CAL-006 | `PlayNextFixture` with an unresolvable `ClubId` fails loud (F6). |
+| T-SN-CAL-005 | `AdvanceAndPlayNextRound` past the last round throws / documented no-op (F5). |
+| T-SN-CAL-006 | `AdvanceAndPlayNextRound` with an unresolvable `ClubId` fails loud (F6). |
 
 ## 5.5 Save / restore round-trip (FR-SN-019..024)
 
@@ -62,7 +65,7 @@ a Simulation-layer `#19 ScenarioRunner` capstone. No 60 Hz hot-path perf gate ap
 | ID | Test |
 |---|---|
 | T-SN-DET-001 | **Mid-sequence restore (KD-2):** save@day-N mid-advance → restore → advance to N+K == an uninterrupted advance (world + season byte-identical). |
-| T-SN-DET-002 | **Two-run season:** the same seed drives a full simulated season (all fixtures played via a fixed `ISquadProvider`) to a byte-identical final table. |
+| T-SN-DET-002 | **Two-run season:** the same seed + `ManagedClubId` drives a full simulated season (every round resolved via a fixed `ISquadProvider`, non-managed fixtures via the round-resolution model) to a byte-identical final table — every club's row populated (the KD-9 completeness lock at season scale). |
 | T-SN-DET-003 | Season-boundary roll (KD-6): `RollToNextSeason` is two-run deterministic and restartable (save mid-roll → restore → same continuation). |
 
 ## 5.7 Capstone scenario (T2+, `#19 ScenarioRunner`)
@@ -76,7 +79,7 @@ required at the design stage; the natural §5 addition once T2 wires the loop.
 
 ## 5.8 FR traceability
 
-Every FR-SN-001..034 maps to at least one test above (fixture: 001–007; table: TAB-001..005; calendar
+Every FR-SN-001..034 + 013a/013b maps to at least one test above (fixture: 001–007; table: TAB-001..005; calendar
 / flow / producer: CAL-001..006; save: SAVE-001..006; determinism / continuity / neutrality:
 DET-001..003 + CAL-002; view-model / command discipline: TAB-004 + CAL-003). The Wave-2+ null-seam
 FR (FR-SN-034) is verified structurally (the KD-2 order has documented empty slots, no interface),
@@ -86,4 +89,5 @@ not by an execution test — nothing ticks there yet.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial test plan: fixture / table / calendar / save / determinism / capstone + FR traceability. |
+| 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 #endregion

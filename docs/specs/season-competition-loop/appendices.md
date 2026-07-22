@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
+**Version:** 0.2
 **Status:** IN REVIEW
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -37,11 +37,12 @@ The season block, in order (all via `CanonicalSerializer`; every length prefix v
 | 1 | version | u32 | `SEASON_STATE_FORMAT_VERSION`; gate first (F3) |
 | 2 | seed | u64 | the season seed |
 | 3 | seasonNumber | i32 | multi-season counter |
+| 3a | managedClubId | i32 | the human manager's club (KD-9 / FR-SN-013b) |
 | 4 | clubCount | count | `ReadCount` |
 | 5 | clubIds[] | i32 × clubCount | the roster world |
 | 6 | fixtureCount | count | `N·(N−1)` |
 | 7 | fixtures[] | (round i32, home i32, away i32, played u8) × fixtureCount | the serialized schedule (KD-5) |
-| 8 | calendar | (nextRoundIndex i32, roundCount count, roundToDay[] i32) | the cursor (KD-4) |
+| 8 | calendar | (nextRoundIndex i32, roundCount count, roundToDay[] u32) | the cursor (KD-4); day values are `uint` to match `WorldStore.CurrentWorldTick` |
 | 9 | tableRowCount | count | = clubCount |
 | 10 | tableRows[] | (clubId, P, W, D, L, GF, GA, GD, Pts) i32 × 9 × rows | ClubId order |
 | 11 | board | (targetPosition i32, jobSecurity f32/u8) | the objective + security |
@@ -86,4 +87,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial appendices: constant catalogue, season-state byte layout, worked 4-club schedule, tie-break worked example. |
+| 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 #endregion

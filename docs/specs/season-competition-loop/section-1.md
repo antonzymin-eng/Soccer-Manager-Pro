@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 1: Introduction, Scope, Dependencies
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
+**Version:** 0.2
 **Status:** IN REVIEW
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -41,7 +41,7 @@ Inherits the project conventions verbatim: corner-origin pitch (Ball Physics #1 
 carries exactly one `[FIXED]/[DERIVED]/[GT]/[CROSS]` tag; deterministic RNG only (HKDF-SipHash via #16
 — no `System.Random`, no `DateTime.Now`). The loop runs on the **world tick** (`WorldClock`: one
 `worldTick` = one calendar day, living-world KD-4) — **never** the 10 Hz tactical / 60 Hz physics
-match loops (FR-SN-030). Save/restore obeys the project's round-trip determinism contract ("save@N →
+match loops (FR-SN-025). Save/restore obeys the project's round-trip determinism contract ("save@N →
 restore → advance == uninterrupted run", byte-identical), lifted from the match engine to the season
 loop.
 
@@ -72,9 +72,19 @@ existing composition root; it introduces no new cross-layer reference direction.
 - **KD-2 — The day-advance tick order is the integration choke point.** `AdvanceToNextFixtureDay` is
   one restartable, round-trip-deterministic step: for each intervening calendar day, run the
   world-tick spec ticks in a **fixed, documented order** (Wave-2+ specs #28/#29/#33 slot in as null
-  seams; `WorldStore.AdvanceDay()` is the only live tick today), then, on a fixture day, play/ingest
-  the fixture. This order is **load-bearing for all of Wave 2+**, so it is pinned here even with only
-  the world tick live; a save may land mid-sequence and restore must equal an uninterrupted advance.
+  seams; `WorldStore.AdvanceDay()` is the only live tick today), then, on a fixture day, play the
+  **whole round** (KD-9). This order is **load-bearing for all of Wave 2+**, so it is pinned here even
+  with only the world tick live; a save may land mid-sequence and restore must equal an uninterrupted
+  advance.
+- **KD-9 — A fixture-day resolves the whole round; the managed club plays in full, the rest
+  deterministically.** A round holds `N/2` fixtures (every club plays), so a fixture-day MUST resolve
+  **all** of them and apply every result to the table — resolving a subset leaves the unplayed clubs'
+  rows undefined, and "a league table" that reflects only one club's matches is not a league table.
+  `SeasonState.ManagedClubId` selects the one fixture that runs through the full `MatchEngine` (under
+  the human's tactical influence, #21); the others resolve through a deterministic round-resolution
+  model (§3.4.1). The **minimal identity** may full-sim every fixture; the **quick-sim** deepening
+  resolves non-managed fixtures from the `DOMAIN_TAG_SEASON_LOOP` sub-stream — a `SeasonState`/config
+  dial, not a rewrite, and the concrete consumer of the reserved season RNG stream.
 - **KD-3 — #30 is the phase-1 *producer*; ingest activation is deferred to #33.** #30 defines and
   emits the structured match-outcome event, becoming the producer #22's `WorldLoop` phase-1 seam was
   written for. It does **not** wire the event into #22's ingest: `FR-LW-032` (a MUST) gates Stage-1
@@ -82,7 +92,7 @@ existing composition root; it introduces no new cross-layer reference direction.
   implementation (#33), and phase-1 has no interface today (FR-LW-031). A match outcome has no meaning
   on the manager↔player memory edges until #33 defines it, so building the ingest now would wire a
   consumer ahead of its producer. The ingest entry point is **not added here**; the payload shape is
-  co-defined at #33's landing, cross-checked against `FR-LW-027`/`FR-LW-032`/KD-9/KD-10.
+  co-defined at #33's landing, cross-checked against `FR-LW-027`/`FR-LW-032`/living-world KD-9/KD-10.
 - **KD-4 — Calendar cursor lives in the season blob, not `WorldStore`.** `WorldStore` owns `WorldClock`
   (the calendar *day*). The **fixture calendar cursor** (which match-day slot / fixture round is next)
   is **season-scoped state, not world-time** — the world clock advances continuously; the fixture
@@ -105,7 +115,7 @@ existing composition root; it introduces no new cross-layer reference direction.
   season state; `SeasonViewModel` is a read-only value-copy surface for #37/#38 (the `match-viewer` /
   `MatchEngine.BallView` observer-neutral posture — reading never mutates, the round-trip is
   unaffected). UI/tests mutate season state **only** through the public command API
-  (`AdvanceToNextFixtureDay`, `PlayNextFixture`, the boundary roll) — the `SetTeamTactic` command-seam
+  (`AdvanceToNextFixtureDay`, `AdvanceAndPlayNextRound`, the boundary roll) — the `SetTeamTactic` command-seam
   precedent — never by poking fields.
 - **KD-8 — Behaviour-neutral world-advance floor.** A no-fixture day advances the world
   **byte-identically** to a bare `WorldStore.AdvanceDay()` — the loop adds scheduling and result
@@ -138,5 +148,6 @@ season-boundary roll. #22 ingest activation, finances (#40), promotion-relegatio
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 0.1 | 2026-07-22 | — | Initial section from supplement v0.2; forward-design plan; KD-1..KD-8 carried from supplement §7. |
+| 0.1 | 2026-07-22 | — | Initial section from supplement v0.2; forward-design plan; KD-1..KD-8 carried from supplement §7; KD-9 (whole-round resolution) added at section-file PASS-1. |
+| 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 #endregion

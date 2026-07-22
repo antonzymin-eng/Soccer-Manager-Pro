@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 6: Performance
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
+**Version:** 0.2
 **Status:** IN REVIEW
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -12,15 +12,18 @@
 
 The entire loop runs at **world-tick cadence** (`WorldClock`: one `worldTick` = one calendar day) or
 on explicit host commands (advance, play, save, roll) — **never** the 10 Hz tactical / 60 Hz physics
-match loops (KD-6 / FR-SN-025). The CLAUDE.md zero-allocation, struct-only, `ProfilerMarker` game-loop
+match loops (§1.2 / FR-SN-025). The CLAUDE.md zero-allocation, struct-only, `ProfilerMarker` game-loop
 rules govern the 60 Hz path and **do not apply** here, exactly as they do not for `WorldStore`,
 `SeasonSaveManager`, `TeamTacticFileLoader`, or `RosterGenerator`. `SeasonLoop` may allocate, use
 `new`, throw, and hold plain classes.
 
-The one place a 60 Hz cost appears is *inside* `PlayNextFixture`, which runs a real `MatchEngine` to
-full time — but that cost is the match engine's, governed by its own FR-PO-052 budget; the season
-loop's own per-command work (schedule lookup, one `ApplyResult`, one event record, the codec) is
-trivially bounded.
+The 60 Hz cost appears *inside* `AdvanceAndPlayNextRound` (KD-9), which resolves a round's `N/2`
+fixtures. This is the load that motivates the quick-sim seam (§3.4.1): the **quick-sim** identity runs
+exactly **one** full `MatchEngine` match (the managed club's) per round + `N/2−1` cheap deterministic
+draws, so a 20-club season is ~380 cheap resolutions + ~38 full matches; the **full-sim** minimal
+identity runs all `N/2` matches per round (~380 full matches/season — correct but expensive, the
+reason quick-sim exists). Each full match's cost is the match engine's, governed by its own FR-PO-052
+budget; the season loop's own per-fixture work (`ApplyResult`, one event record) is trivially bounded.
 
 ## 6.2 Sizing
 
@@ -47,4 +50,5 @@ determinism lock, not a perf gate).
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial performance analysis: world-tick cadence, sizing, no per-tick perf gate. |
+| 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 #endregion

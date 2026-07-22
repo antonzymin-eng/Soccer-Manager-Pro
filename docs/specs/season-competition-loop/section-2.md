@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
+**Version:** 0.2
 **Status:** IN REVIEW
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -38,8 +38,10 @@ forward design (nothing is built yet).
 | FR-SN-009 | `SeasonCalendar` MUST hold a cursor over the fixture rounds (which round is next) and the mapping from round → calendar day. | MUST | KD-4 |
 | FR-SN-010 | `AdvanceToNextFixtureDay()` MUST advance the world one `WorldStore.AdvanceDay()` per intervening calendar day up to (and including) the next fixture day, in the fixed KD-2 tick order. | MUST | KD-2 |
 | FR-SN-011 | The calendar cursor's "next fixture day" MUST always be `≥` the current `WorldClock` day; a restore MUST re-validate this invariant and fail-loud on violation. | MUST | KD-4 |
-| FR-SN-012 | `PlayNextFixture(ISquadProvider)` MUST play the fixture at the cursor through a real `MatchEngine`, resolve each club's `Squad` via the provider (`ConfigureSquads`), and advance the cursor by one. | MUST | KD-2 |
-| FR-SN-013 | Playing a fixture MUST derive a `MatchResult` (scoreline + per-club goals) from the match engine's authoritative score state / event ledger, `ApplyResult` it to the table, and emit the FR-SN-018 match-outcome event — in that order. | MUST | — |
+| FR-SN-012 | `AdvanceAndPlayNextRound(ISquadProvider)` MUST resolve **every** fixture in the round at the cursor (all `N/2` of them) and apply **all** their results to the table, then advance the cursor by one round. Resolving a strict subset of a round's fixtures is forbidden — the table would be undefined for the unplayed clubs. | MUST | KD-2 / KD-9 |
+| FR-SN-013 | Each fixture in the round MUST be resolved to a `MatchResult` (scoreline + per-club goals), `ApplyResult`-ed to the table, and emit the FR-SN-016 match-outcome event — the managed club's fixture (`SeasonState.ManagedClubId`) through the real `MatchEngine` (squads via `ISquadProvider.ResolveByClubId` → `ConfigureSquads`), the others through the round-resolution model (FR-SN-013a). | MUST | KD-9 |
+| FR-SN-013a | Non-managed fixtures MUST be resolved by a **deterministic** round-resolution model. The Stage-2 minimal identity MAY resolve every fixture (managed and non-managed) through the full `MatchEngine`; the **quick-sim** deepening resolves non-managed fixtures via a deterministic result model drawing from the `DOMAIN_TAG_SEASON_LOOP` sub-stream (FR-SN-027) — a documented Stage-2+ seam, not a rewrite. Either way, all `N/2` results apply to the table (FR-SN-012). | MUST | KD-9 |
+| FR-SN-013b | `SeasonState` MUST carry a `ManagedClubId` (the human manager's club); it selects which of the round's fixtures runs through the full `MatchEngine` under the human's tactical influence (`SetTeamTactic`, #21), the rest through the round-resolution model. `ManagedClubId` MUST be serialized in the season blob. | MUST | KD-9 |
 
 ### Board objectives & job-security
 
@@ -71,7 +73,7 @@ forward design (nothing is built yet).
 
 | ID | Requirement | Level | KD |
 |---|---|---|---|
-| FR-SN-025 | The whole loop MUST run on the world tick (`WorldClock`), never the 10 Hz / 60 Hz match loops. | MUST | KD-8 |
+| FR-SN-025 | The whole loop MUST run on the world tick (`WorldClock`), never the 10 Hz / 60 Hz match loops (the world-tick-cadence convention, §1.2). | MUST | §1.2 |
 | FR-SN-026 | A no-fixture day MUST advance the world **byte-identically** to a bare `WorldStore.AdvanceDay()` (behaviour-neutral world floor). | MUST | KD-8 |
 | FR-SN-027 | Any genuinely stochastic season event MUST draw through a dedicated season RNG sub-stream (`DOMAIN_TAG_SEASON_LOOP = 0x22`, `SubsystemOrdinals.SeasonLoop = 84`); fixture generation is deterministic-from-seed and needs no draw for the single-league case. | MUST | KD-5 |
 | FR-SN-028 | The concrete fixture list MUST be serialized in the season blob (not regenerated on load), so a loaded season is independent of generator-version drift. | MUST | KD-5 |
@@ -88,7 +90,7 @@ forward design (nothing is built yet).
 
 | ID | Requirement | Level | KD |
 |---|---|---|---|
-| FR-SN-032 | `SeasonLoop` MUST be the sole writer of season state; season state MUST be mutable only through the public command API (`AdvanceToNextFixtureDay`, `PlayNextFixture`, the boundary roll), never by field access. | MUST | KD-7 |
+| FR-SN-032 | `SeasonLoop` MUST be the sole writer of season state; season state MUST be mutable only through the public command API (`AdvanceToNextFixtureDay`, `AdvanceAndPlayNextRound`, the boundary roll), never by field access. | MUST | KD-7 |
 | FR-SN-033 | `SeasonViewModel` MUST expose the table + fixture list + calendar position as **read-only value copies** for #37/#38; reading MUST NOT mutate season state or affect the save digest (observer-neutral). | MUST | KD-7 |
 | FR-SN-034 | Every world-tick spec #30 must tick that does not exist yet (#28/#29/#33) MUST be a **documented null seam** in the KD-2 tick order, never an invented interface (FR-LW-031). | MUST | KD-2 |
 
@@ -107,12 +109,13 @@ forward design (nothing is built yet).
 - **`BoardState`** (value type): `Objective (BoardObjective)`, `JobSecurity (float/enum)`.
 - **`MatchResult`** (readonly struct): `HomeClubId`, `AwayClubId`, `HomeGoals`, `AwayGoals`,
   `RoundIndex`, `WorldDay` — the match-outcome producer payload (KD-3).
-- **`SeasonState`** (sealed class): `Seed (ulong)`, `ClubIds (int[])`, `Fixtures (Fixture[])`,
-  `Table (LeagueTable)`, `Calendar (SeasonCalendar)`, `Board (BoardState)`, `SeasonNumber (int)` —
-  the season sub-blob's serialized surface.
+- **`SeasonState`** (sealed class): `Seed (ulong)`, `ManagedClubId (int)`, `ClubIds (int[])`,
+  `Fixtures (Fixture[])`, `Table (LeagueTable)`, `Calendar (SeasonCalendar)`, `Board (BoardState)`,
+  `SeasonNumber (int)` — the season sub-blob's serialized surface.
 - **`SeasonLoop`** (sealed class, the composition root): owns `SeasonState`; holds references to the
-  `WorldStore` and the active-or-null `MatchEngine`; exposes the command API + `Snapshot()`/`Restore()`
-  for the season sub-blob.
+  `WorldStore` and the active-or-null `MatchEngine` (the managed club's in-progress fixture); exposes
+  the command API (`AdvanceToNextFixtureDay`, `AdvanceAndPlayNextRound(ISquadProvider)`,
+  `RollToNextSeason`, `View`) + `Snapshot()`/`Restore()` for the season sub-blob.
 - **`SeasonViewModel`** (readonly struct): read-only value copies of the table view, fixture list, and
   calendar position for #37/#38.
 
@@ -124,11 +127,12 @@ forward design (nothing is built yet).
 | F2 | `ApplyResult` with unknown club / self-fixture / negative goals | throw; table unchanged |
 | F3 | Season codec: bad format version / out-of-bounds length prefix / trailing bytes | throw from `Decode`; no partial restore (the `MatchSaveCodec` posture) |
 | F4 | Restore with "next fixture day < current WorldClock day" (KD-4 invariant violated) | throw; corrupt/inconsistent save rejected |
-| F5 | `PlayNextFixture` when the cursor is past the last fixture (season already complete) | throw / documented no-op per §3 — the caller must run the boundary roll first |
-| F6 | `PlayNextFixture` with an `ISquadProvider` that cannot resolve a fixture's `ClubId` | throw from the match restore/config path (the #27 `ISquadProvider` fail-loud contract) |
+| F5 | `AdvanceAndPlayNextRound` when the cursor is past the last round (season already complete) | throw / documented no-op per §3 — the caller must run the boundary roll first |
+| F6 | `AdvanceAndPlayNextRound` with an `ISquadProvider.ResolveByClubId` that cannot resolve the managed fixture's `ClubId` (or a non-managed fixture, when the minimal identity full-sims every fixture) | throw from the config/resolve path (the #27 `ISquadProvider` fail-loud contract) |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial FR set FR-SN-001..034, data structures, failure modes F1–F6, from supplement v0.2. |
+| 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 #endregion
