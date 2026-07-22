@@ -3,7 +3,7 @@
 **Created:** July 22, 2026
 **Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
 **Version:** 0.2
-**Status:** IN REVIEW
+**Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
 ---
