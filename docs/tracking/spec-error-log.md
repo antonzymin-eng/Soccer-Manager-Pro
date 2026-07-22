@@ -6,8 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.31
-**Updated:** July 10, 2026, later same day (ERR-024-001 filed and RESOLVED at #23–#26 T0 implementation: Build-Up Structures #24 Appendix A v0.2's PASS-1 M-3 "lane-key correction" keyed every overlay row to lane values NO slot occupies — FR-BU-007 keys rows by the RECORDED `FormationSlotRecord.DefaultLine`/`DefaultLane`, and all three `PositioningAIConstants.Family*` tables record fullbacks at `LH`/`RH` (half-space) and central mids/forwards at `C`, so the catalogue as spec'd was a structural no-op. M-3 verified lane GEOMETRY (LB at y = 10.2 m is in the wide bin) but not the recorded seed values the key actually uses. Appendix A v0.3 + §3.2 v0.3 re-keyed with magnitudes/intents unchanged; `BuildUpOverlayCatalogue.cs` implements the corrected keys; `BuildUpStructureTests.Catalogue_RowKeys_HitEveryFamily_Err024001Regression` locks that every family receives a non-zero own-third offset per structure.)
+**Version:** 1.32
+**Updated:** July 22, 2026 (ERR-027-001 + ERR-022-001 filed and RESOLVED at #27 promotion: the off-pitch determinism allocations `DOMAIN_TAG_PLAYER_DATABASE = 0x1F` / `SubsystemOrdinals.PlayerDatabase = 81` (#27) and `DOMAIN_TAG_LIVING_WORLD = 0x1E` / `SubsystemOrdinals.LivingWorld = 80` (#22) — both landed in code but never recorded in the #16 §3.4 spec text — are now filed there and in this log. `deterministic-sim/section-3.md` §3.4 gains both rows (v1.0.7); pure namespace allocations, no `DETERMINISM_DIGEST_VERSION` bump. Prior update below.)
+**Updated (prior):** July 10, 2026, later same day (ERR-024-001 filed and RESOLVED at #23–#26 T0 implementation: Build-Up Structures #24 Appendix A v0.2's PASS-1 M-3 "lane-key correction" keyed every overlay row to lane values NO slot occupies — FR-BU-007 keys rows by the RECORDED `FormationSlotRecord.DefaultLine`/`DefaultLane`, and all three `PositioningAIConstants.Family*` tables record fullbacks at `LH`/`RH` (half-space) and central mids/forwards at `C`, so the catalogue as spec'd was a structural no-op. M-3 verified lane GEOMETRY (LB at y = 10.2 m is in the wide bin) but not the recorded seed values the key actually uses. Appendix A v0.3 + §3.2 v0.3 re-keyed with magnitudes/intents unchanged; `BuildUpOverlayCatalogue.cs` implements the corrected keys; `BuildUpStructureTests.Catalogue_RowKeys_HitEveryFamily_Err024001Regression` locks that every family receives a non-zero own-third offset per structure.)
 **Updated (prior):** July 10, 2026 (ERR-021-005 through ERR-021-007, ERR-012-007 through ERR-012-009, and ERR-008-012 filed and RESOLVED same commit — the seven cross-spec back-props landed atomically with specs #23 Dismarking / #24 Build-Up Structures / #25 Positional Rotations reaching `APPROVED` (each spec's §2.3/§2.4 pending-ERR table, per its own pipeline step 6; #26 Tactical Presets declares no back-props at T0–T3). #21-side: `TeamTactic` gains `DismarkIntensity`/`BuildUpStructure`/`RotationFreedom` field rows + Appendix B canonical-order appends in pinned approval order #23 → #24 → #25 after `MarkingOrientation` (`tactical-instructions/section-2.md` v0.5 + `appendices.md` v0.5); serialization enters `WriteTeamTactic` with a `SNAPSHOT_SCHEMA_VERSION` bump only when each owning spec's wiring lands. #12-side: new `positioning-ai/section-3.md` §3.7.1 (v0.6) records the build-up overlay stage (ContextModifier → spacing), the dismark offset stage (spacing → pitch clamp, FR-DM-008), the `RotationController` pre-composition tick position, and the `AgentPositioningData.SlotIndex` single-writer contract amendment (no longer immutable after `SeedFromFormation`; `RotationController` sole post-seed writer). #8-side: `decision-tree/section-3-2.md` v1.5 §3.2.2.1 anchors the FM-DM-03 marked-pass-target multiplier in the external tactical-multiplier product before the final clamp. All amendments identity-preserving at zero-value dials; ERR-012-004..006 remain soft-reserved for the June-13 quarantine adjudication cluster and were deliberately skipped.)
 **Updated (prior):** June 16, 2026 (ERR-016-006 through ERR-016-008 + ERR-017-003 filed from the `src/deterministic-sim/` + `src/event-system/` foundation adversarial review. ERR-016-006 (H) RESOLVED same commit — `SaveManager.Load` discarded the on-disk header so the digest chain was unverifiable on reload + `ReplayEngine` step-3 null-fingerprint NRE; `SaveManager.cs` v1.5 (`ReadHeaderBytes` + header-reconstructing `Load` overload) and `ReplayEngine.cs` v1.3 (fail-closed env guard). ERR-016-007 (M, open) fingerprint not on the on-disk header — cross-process digest/env verification blocked, needs a `SNAPSHOT_SCHEMA_VERSION` bump. ERR-016-008 (M, open) RNG zero-count `Reserve` ambiguity + `Skip`/`Reserve` by-convention parity. ERR-017-003 (M, open) `EventBus` producer-phase enforcement is debug-only → debug/release digest divergence on a mis-phased publish. The three open items are deferred for gate-verified follow-up — they are digest/wire-format-sensitive and the remote review environment has no .NET SDK.)
 **Updated (prior):** June 13, 2026 (ERR-007-001 through ERR-007-003 filed from the Perception System #7 implementation AR-3 adversarial review (1H+1M+1L-cluster); all patched and CLOSED same commit — forced-refresh double-advance of cross-heartbeat state, pre-dedup candidate-buffer truncation, DeterministicHash Mathf.Abs overflow)
@@ -103,6 +104,8 @@ authoritative remediation backlog.
 | ERR-012-009 | Positional Rotations #25 back-prop: #12 contract amendment — `RotationController` runs before slot composition, and `AgentPositioningData.SlotIndex` is no longer immutable after `SeedFromFormation` (the `RotationController` is its sole post-seed writer; single-writer rule per #25 §4.4) | Medium | 1 | ✅ Resolved July 10, 2026 — `positioning-ai/section-3.md` v0.6 §3.7.1 (numbers ERR-012-004..006 deliberately skipped — soft-reserved by the June-13 dotnet-CI quarantine adjudication cluster, whose ERR-012-003 citation is already live in section-3.md v0.5) |
 | ERR-008-012 | Dismarking AI #23 back-prop: #8 §3.2 `UtilityScorer` gains the FM-DM-03 marked-pass-target multiplier row in the external tactical-multiplier product, applied before the single final clamp (identity ×1.0 at `Off`) | Medium | 1 | ✅ Resolved July 10, 2026 — `decision-tree/section-3-2.md` v1.5 §3.2.2.1 back-prop anchor note; #23 owns formula/constants/tests |
 | ERR-024-001 | Build-Up Structures #24 Appendix A v0.2 keyed every overlay row to lane values no slot occupies (fullbacks recorded `LH`/`RH` in every family table, not wide L/R; central mids `C`, not LH/RH) — the whole FR-BU-007 catalogue was a structural no-op; the PASS-1 M-3 "correction" checked lane geometry, not the recorded `DefaultLane` key values | High | 3 | ✅ Resolved July 10, 2026 (T0 implementation) — `build-up-structures/appendices.md` v0.3 + `section-3.md` v0.3 re-keyed to the recorded values (magnitudes/intents unchanged); `BuildUpOverlayCatalogue.cs` v1.0 implements the corrected keys; regression test locks non-zero own-third coverage in every family |
+| ERR-022-001 | Living World #22 back-prop: `DOMAIN_TAG_LIVING_WORLD = 0x1E` + `SubsystemOrdinals.LivingWorld = 80` (first entry of the off-pitch 80–99 band) allocation needed in Deterministic Simulation #16 §3.4 for the `world.text` / `world.arcs` sub-streams. | Medium | 1 | ✅ Resolved July 22, 2026 — the `0x1E` / `80` allocation landed in code with #22's slice-3 wiring (`DeterministicSimConstants` / `SubsystemOrdinals`); the #16 §3.4 spec-text row + this ERR were filed retroactively (the code back-prop had preceded the doc back-prop). Pure namespace allocation; no `DETERMINISM_DIGEST_VERSION` bump. |
+| ERR-027-001 | Squad/Player Data Layer #27 back-prop: `DOMAIN_TAG_PLAYER_DATABASE = 0x1F` + `SubsystemOrdinals.PlayerDatabase = 81` allocation needed in Deterministic Simulation #16 §3.4 (the `RosterGenerator` RNG stream, KD-5). | Medium | 1 | ✅ Resolved July 22, 2026 — allocated in `deterministic-sim/section-3.md` §3.4 (`0x1F`, next after `DOMAIN_TAG_LIVING_WORLD = 0x1E`); the code allocation (`DeterministicSimConstants.DOMAIN_TAG_PLAYER_DATABASE` / `SubsystemOrdinals.PlayerDatabase`) landed with #27 T0; #27 Appendix A `[CROSS]` cross-cite confirmed. Pure namespace allocation; no `DETERMINISM_DIGEST_VERSION` bump. |
 
 ---
 
@@ -1783,4 +1786,32 @@ per structure, so a future table/key drift of this class fails the suite immedia
 
 ---
 
-*End of Spec Error Log v1.31 — July 10, 2026.*
+---
+
+## ERR-022-001, ERR-027-001: off-pitch domain-tag / subsystem-ordinal back-props (July 22, 2026)
+
+Two off-pitch determinism allocations that had landed in **code** but were never recorded in the
+#16 §3.4 spec text or this log. Both are pure namespace allocations — no `DETERMINISM_DIGEST_VERSION`
+bump, matching every other §3.4 tag row.
+
+1. **Living World #22 (ERR-022-001):** `DOMAIN_TAG_LIVING_WORLD = 0x1E` + `SubsystemOrdinals.LivingWorld
+   = 80` opened the off-pitch subsystem-ordinal band (80–99, disjoint from the match
+   Physics/Mechanics/AI bands) with #22's slice-3 `world.text` wiring. The code (`DeterministicSimConstants`
+   / `SubsystemOrdinals`) had it since July 2, 2026; the §3.4 spec-text row and this ERR were filed
+   retroactively so the table is honest about `0x1E` being taken (a future "next-free-after-the-table"
+   reader would otherwise have re-grabbed it).
+
+2. **Squad/Player Data Layer #27 (ERR-027-001):** `DOMAIN_TAG_PLAYER_DATABASE = 0x1F` +
+   `SubsystemOrdinals.PlayerDatabase = 81` (next after `LivingWorld`), the deterministic
+   `RosterGenerator` roster-generation stream (siteId `player-database.roster-generation`,
+   `entityId = clubId`; a boot / off-match-tick draw site). Filed as part of #27's promotion
+   review to confirm the Appendix A `[CROSS]` cross-cite (the R-03 gate).
+
+**Resolution:** `deterministic-sim/section-3.md` §3.4 gains a `DOMAIN_TAG_LIVING_WORLD` (`0x1E`) row
+and a `DOMAIN_TAG_PLAYER_DATABASE` (`0x1F`) row, each citing its off-pitch subsystem ordinal and its
+resolving ERR. The #27 Appendix A `DOMAIN_TAG_PLAYER_DATABASE` / `SubsystemOrdinals.PlayerDatabase`
+`[CROSS]` rows are now a confirmed cross-cite against §3.4.
+
+---
+
+*End of Spec Error Log v1.32 — July 22, 2026.*

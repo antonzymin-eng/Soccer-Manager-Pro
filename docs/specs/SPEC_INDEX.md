@@ -1,7 +1,16 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 22, 2026 (**Squad / Player Data Layer #27 promoted `→ IN REVIEW`** — the
+> **Last Updated:** July 22, 2026, later same day (**Squad / Player Data Layer #27 advanced `IN REVIEW → APPROVED`**
+> — Wave 0 of the management-layer roadmap complete. Section-file PASS-1 (0H+1M+2L) + AR-2 convergence
+> sweep (0H+1M — the §7.2 GK/Heading projection deferral was stale, since `PlayerAttributeProjection.cs`
+> v1.2 landed `ToGoalkeeper`/`ToHeading` the same day; new §7.3 records LANDED — L-only otherwise ⇒
+> CONVERGENCE) both resolved; the #16 §3.4 cross-cite is filed (`deterministic-sim/section-3.md` §3.4
+> gains `DOMAIN_TAG_PLAYER_DATABASE = 0x1F` + the retroactive `DOMAIN_TAG_LIVING_WORLD = 0x1E` row the
+> `0x1F` allocation follows; back-props ERR-027-001 + ERR-022-001, `spec-error-log.md` v1.32); and
+> lead-developer R-01..R-05 sign-off is granted (§9 checklist v0.3). All 11 section files flip
+> `Status: APPROVED`. Count: **27 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 22, 2026 (**Squad / Player Data Layer #27 promoted `→ IN REVIEW`** — the
 > data-layer design supplement `docs/tracking/squad-player-data-design.md` v0.6 (converged AR-1..AR-2)
 > promoted to a full 11-file section-file set at `docs/specs/squad-player-data/` (FR-SQ-001..026),
 > per the #21–#26 precedent. Unusually, the implementation already exists and is wired
@@ -93,7 +102,7 @@
 | 24 | Scripted Build-Up Structures | `build-up-structures/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 25 | Positional Rotations | `positional-rotations/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 26 | Tactical Presets & AI-Manager Selection | `tactical-presets/` | 6¹ | APPROVED | Jul 10, 2026 |
-| 27 | Squad / Player Data Layer | `squad-player-data/` | 6¹ | IN REVIEW | — |
+| 27 | Squad / Player Data Layer | `squad-player-data/` | 6¹ | APPROVED | Jul 22, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
@@ -172,6 +181,14 @@ consistent with #23 having been free to reserve and now promote.
   adversarial review + v0.2 fix pass; formal `SubsystemOrdinals.PlayerDatabase = 81` /
   `DOMAIN_TAG_PLAYER_DATABASE = 0x1F` cross-cite confirmation in DeterministicSim #16 §3.4;
   lead-developer R-01..R-05 sign-off. Count: **26 APPROVED, 1 IN REVIEW (#27), 0 NOT STARTED.**
+- **July 22, 2026 (later same day) — Squad / Player Data Layer (#27) advanced `IN REVIEW → APPROVED`.**
+  Wave 0 of the management-layer roadmap complete. PASS-1 (0H+1M+2L) + AR-2 convergence sweep
+  (0H+1M — §7.2 GK/Heading projection deferral stale; new §7.3 records `ToGoalkeeper`/`ToHeading`
+  LANDED — L-only otherwise ⇒ CONVERGENCE) resolved; the #16 §3.4 cross-cite filed
+  (`DOMAIN_TAG_PLAYER_DATABASE = 0x1F` + the retroactive `DOMAIN_TAG_LIVING_WORLD = 0x1E` it follows;
+  ERR-027-001 + ERR-022-001, `spec-error-log.md` v1.32); lead-developer R-01..R-05 sign-off granted
+  (§9 checklist v0.3). All 11 section files `Status: APPROVED`. Count: **27 APPROVED, 0 IN REVIEW,
+  0 NOT STARTED.**
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 
 ---
