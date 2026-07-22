@@ -1054,7 +1054,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/season-save/SeasonSaveContents.cs` | `Load` result: reconstructed `WorldStore` (never null) + nullable `MatchEngine` |
 | `src/season-save/SeasonSaveManager.cs` | Static: `Save(world, matchOrNull, path)` (capture both → Encode → atomic temp→fsync→rename) / `Load(path, ISquadProvider = null) → SeasonSaveContents` (Decode → WorldStore.Restore +, when present, MatchSaveManager.Restore) — KD-1/KD-5/KD-6/KD-8 |
 | `src/season-save/tests/season-save-tests.asmdef` | Test assembly (EditMode; references season-save + match-engine + living-world + deterministic-sim + player-database) |
-| `src/season-save/tests/SeasonSaveManagerTests.cs` | Disk round-trip determinism (no-match season; season with neutral / distinct-squad match via ISquadProvider) + SeasonSaveCodec round-trip/fail-loud + manager fail-loud paths (18 tests) |
+| `src/season-save/tests/SeasonSaveManagerTests.cs` | Disk round-trip determinism (no-match season; season with neutral / distinct-squad match via ISquadProvider) + SeasonSaveCodec round-trip/fail-loud + manager fail-loud paths incl. the R4 no-match-with-provider lock (19 tests) |
 
 ## Tracking Documents
 

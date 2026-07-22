@@ -80,6 +80,12 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         public static void Save(MatchEngine engine, string path)
         {
+            // Guard engine before path so the argument-validation order is identical to the pre-Encode
+            // refactor (a both-invalid call still throws ArgumentNullException, not ArgumentException).
+            if (engine == null)
+            {
+                throw new ArgumentNullException(nameof(engine));
+            }
             if (string.IsNullOrEmpty(path))
             {
                 throw new ArgumentException("Save path must be non-empty.", nameof(path));
@@ -87,7 +93,7 @@ namespace TacticalDirector.MatchEngine
 
             using var _ = s_saveMarker.Auto();
 
-            byte[] blob = Encode(engine); // guards engine == null
+            byte[] blob = Encode(engine); // Encode re-guards engine (harmless backstop).
 
             string tempPath = path + ".tmp";
             try
@@ -162,4 +168,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | RestoreFromSnapshot) exposed so the season save-file root can  |
 // |         |            |        | compose the match blob without the internal capture seams;     |
 // |         |            |        | Save/Load refactored to delegate (behaviour-identical).        |
+// | 1.2     | 2026-07-22 | —      | Code AR L-1: restore the engine-before-path argument-guard     |
+// |         |            |        | order in Save (the v1.1 delegation had flipped it — a both-    |
+// |         |            |        | invalid call must throw ArgumentNullException, not Argument-   |
+// |         |            |        | Exception), keeping the refactor exactly behaviour-identical.  |
 #endregion

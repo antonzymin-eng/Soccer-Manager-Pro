@@ -182,6 +182,21 @@ namespace TacticalDirector.SeasonSave
         // ── SeasonSaveManager fail-loud ─────────────────────────────────────────────
 
         [Test]
+        public void Load_NoMatchSeason_WithProvider_IgnoresProvider()
+        {
+            // R4: a provider supplied for a no-match season is harmless — Load reconstructs the world and
+            // never touches the (absent) match, returning a null Match.
+            WorldStore world = PopulatedStore();
+            string path = TempPath("nomatch-provider.save");
+            SeasonSaveManager.Save(world, matchOrNull: null, path);
+
+            SeasonSaveContents contents = SeasonSaveManager.Load(path, Provider(DistinctSquad(1)));
+            Assert.IsNull(contents.Match,
+                "A no-match season Loaded with a provider must ignore it and return a null Match (R4).");
+            Assert.IsNotNull(contents.World);
+        }
+
+        [Test]
         public void Load_MissingFile_Throws()
         {
             Assert.Throws<FileNotFoundException>(
@@ -395,4 +410,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | determinism (no-match season; season with neutral / distinct-  |
 // |         |            |        | squad match via ISquadProvider), SeasonSaveCodec round-trip +  |
 // |         |            |        | fail-loud guards, SeasonSaveManager fail-loud paths.           |
+// | 1.1     | 2026-07-22 | —      | Code AR L-2: + Load_NoMatchSeason_WithProvider_IgnoresProvider |
+// |         |            |        | (locks R4 — a provider on a no-match season is ignored).       |
 #endregion
