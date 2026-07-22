@@ -1,6 +1,6 @@
 // File: src/positioning-ai/SlotComposer.cs
 // Created: 2026-05-29
-// Modified: 2026-07-11
+// Modified: 2026-07-22
 // Author: —
 // Spec: #12 Positioning AI §3.7 (§3.7.1 as amended by ERR-012-007/008); Build-Up #24 §3.2 (FM-BU-02);
 //       Dismarking #23 §3.3 (FM-DM-02)
@@ -74,7 +74,26 @@ namespace TacticalDirector.PositioningAI
                 ref readonly AgentPositioningData agent = ref snapshot.Agents[i];
                 int idx = agent.SlotIndex;
 
-                if (agent.IsGoalkeeper) continue;  // GK handled above.
+                if (agent.IsGoalkeeper)
+                {
+                    // The goalkeeper slot is composed once, above, into outSlots[0] (formation
+                    // convention: slot 0 is the GK). A GK flag on any OTHER slot only arises from the
+                    // snapshot-completeness edge — a keeper substituted onto an outfield slot, which
+                    // realistic play never does. Give it the same stateless GK formula (a pure function
+                    // of ball position) rather than skipping it: skipping would leave outSlots[idx] at
+                    // the stale value carried in the (un-serialized) caller buffer from before the flip,
+                    // so forward replay from a restore — which boot-seeds that buffer differently —
+                    // diverges (Positioning GK-flag-flip edge). Writing a stateless value makes the slot
+                    // reproducible from the serialized _isGoalkeeper flag alone. For a GK at slot 0
+                    // (every realistic case) this branch never runs, so the default pipeline is
+                    // byte-identical.
+                    if (idx != 0)
+                    {
+                        outSlots[idx]     = gkSlot;
+                        anchorBuffer[idx] = gkSlot;
+                    }
+                    continue;
+                }
 
                 // FR-PA-036: inactive agents → SENTINEL; skip all further computation.
                 if (!agent.IsActive)
@@ -210,4 +229,9 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        | (FM-BU-02, after ContextModifier / before spacing) + Step 4b dismark offset (FM-DM-02, after       |
 // |         |            |        | spacing / before the pitch clamp). Both exact no-ops at the zero-value dials — byte-identical      |
 // |         |            |        | default pipeline.                                                                                  |
+// | 1.3     | 2026-07-22 | —      | Positioning GK-flag-flip snapshot-completeness edge: a GK-flagged agent at a non-zero slot index   |
+// |         |            |        | (a keeper substituted onto an outfield slot — never in realistic play) is now given the stateless  |
+// |         |            |        | GK slot instead of being skipped. Skipping left outSlots[idx] at the stale carried buffer value,   |
+// |         |            |        | which is not serialized, so forward replay from a restore diverged. GK at slot 0 (every realistic  |
+// |         |            |        | case) is unaffected — byte-identical default pipeline.                                              |
 #endregion

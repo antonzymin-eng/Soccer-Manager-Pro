@@ -240,6 +240,26 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic()
+        {
+            // Positioning GK-flag-flip snapshot-completeness edge (Phase 1). A keeper substituted onto an
+            // OUTFIELD slot (never done in realistic play) flips that slot's serialized _isGoalkeeper flag.
+            // SlotComposer composes the GK into slot 0 and skips every GK-flagged agent, so before the fix a
+            // GK flag on a non-zero slot left that slot's composed position frozen at the stale value carried
+            // in the (un-serialized) positioning slot buffer from before the flip. A restored engine
+            // boot-seeds that buffer differently and never recomputes the skipped slot, so its BaselineSlot
+            // for that agent diverged, cascading through the mechanics-AI snapshots into the digest chain.
+            // The fix gives a GK-flagged non-zero slot the stateless GK formula, so it is reproducible from
+            // the serialized flag alone. Neutral path (no provider) — the bench GK flag is the only setup
+            // needed; the substitution is baked into the save via _isGoalkeeper + _activeBenchSlot.
+            AssertRoundTripDeterministic(
+                setup: e => e.TestOnly_SetBenchSlot(0, benchIndex: 0, isGoalkeeper: true),
+                n: 150, k: 90,
+                midRun: e => e.SubstitutePlayer(0, outSlotIndex: 5, benchIndex: 0, SubstitutionReason.Tactical),
+                midRunTick: 50);
+        }
+
+        [Test]
         public void RestoreFromSnapshot_DistinctSquadNoProvider_FailsLoud()
         {
             // A ConfigureSquads-booted match references a distinct roster; restoring without a provider
