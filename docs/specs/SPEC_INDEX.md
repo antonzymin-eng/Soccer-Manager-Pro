@@ -1,7 +1,17 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 10, 2026, later same day (**Specs #23–#26 all advanced `IN REVIEW → APPROVED`** —
+> **Last Updated:** July 22, 2026 (**Squad / Player Data Layer #27 promoted `→ IN REVIEW`** — the
+> data-layer design supplement `docs/tracking/squad-player-data-design.md` v0.6 (converged AR-1..AR-2)
+> promoted to a full 11-file section-file set at `docs/specs/squad-player-data/` (FR-SQ-001..026),
+> per the #21–#26 precedent. Unusually, the implementation already exists and is wired
+> (`src/player-database/` + T1/T2/T3 + LineupSelector landed), so the section files DOCUMENT a
+> landed layer and record its T-phase wiring status in §7. Governed forward by the sibling design
+> docs (`player-attribute-projection-design.md`, `squad-roster-reference-design.md`,
+> `lineup-selection-design.md`). Section-file PASS-1 adversarial review + lead-developer R-01..R-05
+> sign-off are the remaining gates (§9.3). Count: **26 APPROVED / 1 IN REVIEW (#27) / 0 NOT
+> STARTED.**)
+> **Last Updated (prior):** July 10, 2026, later same day (**Specs #23–#26 all advanced `IN REVIEW → APPROVED`** —
 > lead-developer R-01..R-05 sign-off granted on all four (each spec's §9 checklist v0.4); the last
 > closable gates closed in the same pass: the #26 Bradley citation VERIFIED (Bradley & Noakes 2013,
 > *J Sports Sci* 31(15):1627–1638, DOI 10.1080/02640414.2013.796062, PMID 23808376 — index-level
@@ -83,6 +93,7 @@
 | 24 | Scripted Build-Up Structures | `build-up-structures/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 25 | Positional Rotations | `positional-rotations/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 26 | Tactical Presets & AI-Manager Selection | `tactical-presets/` | 6¹ | APPROVED | Jul 10, 2026 |
+| 27 | Squad / Player Data Layer | `squad-player-data/` | 6¹ | IN REVIEW | — |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
@@ -149,6 +160,18 @@ consistent with #23 having been free to reserve and now promote.
 - **June 20, 2026 (later same day) — Tactical Instructions (#21) advanced `IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted (§9.4). Section files at v0.3 after two adversarial passes — PASS-1 (`adversarial-review-section-files-v1.md`, 2H+4M+4L) and PASS-2 (`…-v2.md`, 1H+4M+1L), all resolved; PASS-2 H-1 (digest-identity vs FR-TI-028) and PASS-1 H-1/H-2 (Tempo phantom hook, StyleProfile double-drive) were the load-bearing finds, each caught by fact-checking the seam claims against source. **Post-APPROVED follow-up (non-blocking):** G2 `RoleWeightModifiers`/§3.2 **balance pass** — the `[GT]` values in §3/Appendix A are illustrative until a numerical-mirror + balance review pins them at Stage-1 implementation time; tests assert shape/direction, not magnitude (§5.6). This deferral follows the #8 (draft-level) / #9 (§9.8) / #16 (post-approved items) precedent and does **not** gate sign-off. ERR-021-001..004 remain Stage-1 implementation-time back-props (§8.3). Runtime activation stays gated on the `[GT]` config-loader + match-engine Phase C/D (KD-8). **Counts: 21 APPROVED, 0 SUSPENDED, 0 IN REVIEW, 0 IN PROGRESS, 0 NOT STARTED.**
 - **June 22, 2026 — Living World System (#22) advanced `IN REVIEW → APPROVED`.** Second Stage-1 forward spec (Priority 6); lead-developer R-01..R-05 sign-off granted (§9.4); §9.5 decision APPROVED; all 11 section files at status APPROVED (checklist v1.0). Off-pitch interaction-generation layer that consumes the vol-2/vol-3 human-systems model **read-only** and adds the three constructs canon lacks: per-edge episodic memory, deterministic procedural text (`InteractionIntent` ≠ surface), and emergent narrative arcs. Ten section-file adversarial passes (no High in any; 4M+3L → … → 2M+1L, all resolved) — load-bearing finds: PASS-3 `PlayerEdge` double-authority (now a read-only mirror of vol-2 §2.1), PASS-6 RNG `world.arcs`/`world.text` sub-stream split (aperiodic draw interleaving), PASS-10 `ColdSummary.NextEpisodeId` (episodeId monotonicity across cold-store). 34 FRs (FR-LW-001..034); XC-022-001..014; ERR-022-001..004 Stage-1 back-props (non-blocking); ≥75 tests. **T0 `src/living-world/` scaffolding landed:** data types + `LivingWorldMath` (§3.1 update/decay + FR-LW-021 eviction tiebreak) + ordinal/determinism unit tests (self-contained, engine-free; asmdefs CI-gen-validated). **Post-APPROVED (non-blocking):** G2 `[GT]` balance pass — §3/Appendix A magnitudes illustrative, tests assert shape/direction not value (precedent #21 G2 / #8 draft-level / #9 §9.8 / #16). Runtime activation gated on KD-10 (world store + season loop; vol-2/vol-3 impl.; `[GT]` config-loader; match-outcome events). **Counts: 22 APPROVED, 0 SUSPENDED, 0 IN REVIEW, 0 IN PROGRESS, 0 NOT STARTED.**
 - **June 20, 2026 — Tactical Instructions (#21) added `NOT STARTED → IN REVIEW`.** First spec beyond the Stage-0 set of 20; a Stage-1 forward spec for the manager-facing tactical instruction input layer (formation/mentality/team instructions/player roles+duties/individual instructions) that drives the existing AI subsystems (#8/#11–#15). Promoted from `docs/tracking/tactical-instruction-layer-design.md` v0.3 (three adversarial passes). 11 section files at v0.1; 32 FRs (FR-TI-001..032); ≥78 tests; XC-021-001..014; ERR-021-001..004 (all Stage-1 implementation-time, non-blocking for approval). **Outstanding gates (§9.2):** formal section-file PASS-1 + fix pass; `RoleWeightModifiers`/§3.2 balance pass (values currently illustrative); lead-developer R-01..R-05 sign-off. **Runtime activation** separately gated on the `[GT]` config-loader + match-engine Phase C/D (KD-8). Counts: **20 APPROVED, 0 SUSPENDED, 1 IN REVIEW (#21), 0 IN PROGRESS, 0 NOT STARTED.**
+- **July 22, 2026 — Squad / Player Data Layer (#27) added `→ IN REVIEW`.** First management-layer
+  spec promoted (candidate set #27–#50 scoped in `docs/tracking/management-layer-spec-roadmap.md` +
+  `spec-plans/`). Section files v0.1 authored from `docs/tracking/squad-player-data-design.md` v0.6
+  (converged AR-1..AR-2 + T0 implementation-time corrections). FR-SQ-001..026; the canonical
+  `PlayerAttributes` record + deterministic `RosterGenerator` + `SquadFileLoader` in
+  `src/player-database/` are already built, and T1/T2 (attribute projection / `ConfigureSquads`,
+  closing `ERR-007`), T3 (roster-reference snapshot field), the Phase-2 distinct-squad restore
+  re-projection, and `LineupSelector` are already wired — so the section files document a landed
+  layer and record wiring status in §7. **Outstanding gates (§9.3):** section-file PASS-1
+  adversarial review + v0.2 fix pass; formal `SubsystemOrdinals.PlayerDatabase = 81` /
+  `DOMAIN_TAG_PLAYER_DATABASE = 0x1F` cross-cite confirmation in DeterministicSim #16 §3.4;
+  lead-developer R-01..R-05 sign-off. Count: **26 APPROVED, 1 IN REVIEW (#27), 0 NOT STARTED.**
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 
 ---
