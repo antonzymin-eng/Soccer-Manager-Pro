@@ -117,6 +117,19 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void NearestHeaderCandidate_ExactTie_LaterIndexWins()
+        {
+            // Two eligible agents at EXACTLY equal squared distance to the ball (symmetric about x = 50):
+            // the documented tie-break is the later index (the <= compare), matching the engine's original scan.
+            var agents = new[] { AgentAt(49f, 34f), AgentAt(51f, 34f) };
+            var gk = new[] { false, false };
+            var off = new[] { false, false };
+            int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
+                new Vector3(50f, 34f, 1.0f), airborneLoose: true, agents, gk, off, agents.Length);
+            Assert.AreEqual(1, nearest, "On an exact distance tie the later index wins (the <= compare).");
+        }
+
+        [Test]
         public void NearestHeaderCandidate_AllOutOfRange_ReturnsMinusOne()
         {
             float far = MatchEngineConstants.HeaderTriggerRangeM + 5f;
@@ -132,4 +145,6 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-22 | —      | Initial — pure §4 save/header trigger geometry locks.          |
+// | 1.1     | 2026-07-22 | —      | +NearestHeaderCandidate_ExactTie_LaterIndexWins — locks the    |
+// |         |            |        | documented <= later-index-wins tie-break (code-AR follow-up).  |
 #endregion
