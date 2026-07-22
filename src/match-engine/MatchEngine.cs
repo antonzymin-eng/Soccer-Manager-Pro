@@ -26,6 +26,7 @@
 // Modified: 2026-07-21 (snapshot-deserialize Phase 3 on-disk fold: public MatchSeed property (the boot seed a save persists) + the durable-capture seams promoted TestOnly_ → production internal (CaptureDurableHeader/Payload) for MatchSaveManager. No schema change. See docs/tracking/match-save-file-design.md)
 // Modified: 2026-07-21 (§4.8.2 runtime MXCSR float-mode gate wired into boot + RestoreFromSnapshot step 0 via MxcsrValidator; native shim in deterministic-sim/native/mxcsr_query.c. No-op where the shim is absent (Linux CI); enforces on the pinned cert host. No schema change.)
 // Modified: 2026-07-22 (GK #11 / Heading #10 engine integration, Phase 1 — opt-in: construct + drive both orchestrators + 4 stateless adapters + 2 RNG streams; EnableGkHeading() gates the 10 Hz/60 Hz drive + §4 save/header triggers seeded from PlayerAttributeProjection.ToGoalkeeper/ToHeading; durable-capture seams fail loud when on. Default engine byte-identical (no schema change). See docs/tracking/gk-heading-engine-integration-design.md)
+// Modified: 2026-07-22 (GK/Heading cleaner-architecture pass — behaviour-identical: the four nested ball/RNG adapters collapsed into ONE GkHeadingWorldAdapter (both ball systems share ApplyKick; the two RNG services disambiguate by arity); the §4 trigger geometry extracted to the pure, unit-testable GkHeadingIntentSource (TryCommitSaveIntents/HeaderIntents keep only latch + projection + commit). No schema change.)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -623,16 +624,13 @@ namespace TacticalDirector.MatchEngine
             // Constructed unconditionally — this only allocates arrays, touching no serialized world state,
             // so the default (flag-off) engine stays byte-identical. Both are DRIVEN and their §4 triggers
             // fired only under _gkHeadingEnabled (KD-11), which starts false.
-            var headingBall    = new HeadingBallWorldAdapter(this);
-            var headingRng     = new HeadingRngWorldAdapter(this);
-            var goalkeeperBall = new GoalkeeperBallWorldAdapter(this);
-            var goalkeeperRng  = new GoalkeeperRngWorldAdapter(this);
+            var gkHeadingWorld = new GkHeadingWorldAdapter(this);   // one adapter, all four boundary interfaces
             _headingStreamIndex = _rng.RegisterStream(
                 "heading.mechanics", SubsystemOrdinals.HeadingMechanics, entityId: -1, streamVersion: 1);
             _goalkeeperStreamIndex = _rng.RegisterStream(
                 "goalkeeper.mechanics", SubsystemOrdinals.GoalkeeperMechanics, entityId: -1, streamVersion: 1);
-            _heading    = new TacticalDirector.HeadingMechanics.HeadingMechanics(headingBall, headingRng);
-            _goalkeeper = new TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics(goalkeeperBall, goalkeeperRng);
+            _heading    = new TacticalDirector.HeadingMechanics.HeadingMechanics(gkHeadingWorld, gkHeadingWorld);
+            _goalkeeper = new TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics(gkHeadingWorld, gkHeadingWorld);
 
             // Keeper roster: GoalkeeperConstants.MaxGkAgents == TEAM_COUNT == 2, so keeper index == team id
             // (keeper t is team t's goalkeeper). _teamIds / _isGoalkeeper are boot-populated above.
@@ -2896,6 +2894,9 @@ namespace TacticalDirector.MatchEngine
         private void TryCommitSaveIntents()
         {
             int tacticalTick = (int)_clock.CurrentTacticalTick;
+            bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+            Vector3 bp = _ball.Position;
+            Vector3 bv = _ball.Velocity;
             for (int t = 0; t < _gkAgentIds.Length; t++)   // keeper index == team id
             {
                 int gkAgentId = _gkAgentIds[t];
@@ -2903,17 +2904,8 @@ namespace TacticalDirector.MatchEngine
                 {
                     continue;
                 }
-                // Team t defends the goal at x = 0 (team 0) or x = PITCH_LENGTH_M (team 1).
-                float goalX = t == 0 ? 0f : MatchEngineConstants.PITCH_LENGTH_M;
-                Vector3 bp = _ball.Position;
-                Vector3 bv = _ball.Velocity;
-                float distToGoalLine = Mathf.Abs(bp.x - goalX);
-                float towardGoal = (goalX - bp.x) * bv.x;   // > 0 when the ball moves toward the goal line
-                float speed = new Vector2(bv.x, bv.y).magnitude;
-                bool armed = _possessingAgentId == MatchEngineConstants.NO_POSSESSION
-                             && distToGoalLine <= MatchEngineConstants.GkSaveTriggerRangeM
-                             && towardGoal > 0f
-                             && speed >= MatchEngineConstants.GkSaveTriggerMinBallSpeedMps;
+                // §4.1 geometry decision (pure): is a loose ball driving toward the goal team t defends?
+                bool armed = GkHeadingIntentSource.SaveArmed(t, in bp, in bv, loose);
                 if (!armed)
                 {
                     _saveCommittedForGk[t] = false;
@@ -2946,30 +2938,12 @@ namespace TacticalDirector.MatchEngine
         private void TryCommitHeaderIntents()
         {
             Vector3 bp = _ball.Position;
-            bool airborne = bp.z >= MatchEngineConstants.HeaderTriggerMinBallHeightM
-                            && _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+            bool airborneLoose = bp.z >= MatchEngineConstants.HeaderTriggerMinBallHeightM
+                                 && _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
 
-            int nearest = -1;
-            float nearestSq = MatchEngineConstants.HeaderTriggerRangeM * MatchEngineConstants.HeaderTriggerRangeM;
-            if (airborne)
-            {
-                for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
-                {
-                    if (_isGoalkeeper[i] || _isSentOff[i])
-                    {
-                        continue;
-                    }
-                    Vector2 ap = _agents[i].Position;
-                    float dx = ap.x - bp.x;
-                    float dy = ap.y - bp.y;
-                    float dSq = dx * dx + dy * dy;
-                    if (dSq <= nearestSq)
-                    {
-                        nearestSq = dSq;
-                        nearest = i;
-                    }
-                }
-            }
+            // §4.2 candidate selection (pure): nearest active outfielder to a loose airborne ball, or −1.
+            int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
+                in bp, airborneLoose, _agents, _isGoalkeeper, _isSentOff, MatchEngineConstants.SQUAD_SIZE);
 
             // Clear the per-agent episode latch for every agent that is not the current nearest candidate.
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
@@ -5351,72 +5325,43 @@ namespace TacticalDirector.MatchEngine
             public float ComputePressureScalar(Vector3 shooterPosition, int shooterTeamId) => 0f;
         }
 
-        // ── GK (#11) / Heading (#10) boundary adapters (gk-heading-engine-integration-design.md §3.2/§3.3) ──
-        // Stateless bridges to the host, exactly like PassWorldAdapter/ShotWorldAdapter. All ball mutation
-        // flows through BallCollision.ApplyKick(ref _engine._ball, …) — the one seam whose NaN gate +
-        // possession bookkeeping already apply. The RNG adapters draw from the single per-subsystem stream
-        // registered at boot and accept-and-ignore drawSiteId/domainTag for stream selection (KD-3 — the
-        // Stage-0 posture of HeadingRngServiceStub; the #16 §4.5 per-draw-site registry is Stage-1 work).
-
-        private sealed class HeadingBallWorldAdapter : IHeadingBallSystem
+        // ── GK (#11) / Heading (#10) boundary adapter (gk-heading-engine-integration-design.md §3.2/§3.3) ──
+        // ONE stateless bridge implements all four boundary interfaces — the two ball systems share an
+        // identical ApplyKick signature, and the two RNG services disambiguate by arity (NextFloat(int) →
+        // heading, NextFloat(int, uint) → goalkeeper), so a single instance is injected into both
+        // orchestrators' ctors. All ball mutation flows through BallCollision.ApplyKick(ref _engine._ball,
+        // …) — the one seam whose NaN gate + possession bookkeeping already apply. The RNG methods draw from
+        // the single per-subsystem stream registered at boot and accept-and-ignore drawSiteId/domainTag for
+        // stream selection (KD-3 — the Stage-0 posture of HeadingRngServiceStub; the #16 §4.5 per-draw-site
+        // registry is Stage-1 work).
+        private sealed class GkHeadingWorldAdapter
+            : IHeadingBallSystem, IGoalkeeperBallSystem, IHeadingRngService, IGoalkeeperRngService
         {
             private readonly MatchEngine _engine;
 
-            public HeadingBallWorldAdapter(MatchEngine engine)
+            public GkHeadingWorldAdapter(MatchEngine engine)
             {
                 _engine = engine;
             }
 
+            // Ball systems (#10 IHeadingBallSystem + #11 IGoalkeeperBallSystem — shared ApplyKick signature).
             public BallState GetBallState(float matchTime) => _engine._ball;
 
             public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTime)
             {
                 BallCollision.ApplyKick(ref _engine._ball, velocity, spin, agentId, matchTime, logger: null);
             }
-        }
-
-        private sealed class GoalkeeperBallWorldAdapter : IGoalkeeperBallSystem
-        {
-            private readonly MatchEngine _engine;
-
-            public GoalkeeperBallWorldAdapter(MatchEngine engine)
-            {
-                _engine = engine;
-            }
-
-            public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTimeMs)
-            {
-                BallCollision.ApplyKick(ref _engine._ball, velocity, spin, agentId, matchTimeMs, logger: null);
-            }
 
             public void SetPossessor(int agentId) => _engine._possessingAgentId = agentId;
 
             public int GetBallPossessorId() => _engine._possessingAgentId;
-        }
 
-        private sealed class HeadingRngWorldAdapter : IHeadingRngService
-        {
-            private readonly MatchEngine _engine;
-
-            public HeadingRngWorldAdapter(MatchEngine engine)
-            {
-                _engine = engine;
-            }
-
+            // Heading RNG (#10 IHeadingRngService — arity 1 → heading stream).
             public float NextFloat(int drawSiteId) => _engine.DrawStreamFloat01(_engine._headingStreamIndex);
 
             public float NextGaussian(int drawSiteId) => _engine.DrawStreamGaussian(_engine._headingStreamIndex);
-        }
 
-        private sealed class GoalkeeperRngWorldAdapter : IGoalkeeperRngService
-        {
-            private readonly MatchEngine _engine;
-
-            public GoalkeeperRngWorldAdapter(MatchEngine engine)
-            {
-                _engine = engine;
-            }
-
+            // Goalkeeper RNG (#11 IGoalkeeperRngService — arity 2 → goalkeeper stream).
             public float NextFloat(int drawSiteId, uint domainTag) =>
                 _engine.DrawStreamFloat01(_engine._goalkeeperStreamIndex);
 
@@ -6154,4 +6099,14 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | is on (Phase-1 not snapshot-safe; §6). Flag off = byte-         |
 // |         |            |        | identical default (no SNAPSHOT_SCHEMA_VERSION change). Full     |
 // |         |            |        | dotnet gate: PASSED (290 match-engine tests; whole tree green). |
+// | 1.45    | 2026-07-22 | —      | GK/Heading cleaner-architecture pass (behaviour-identical). The |
+// |         |            |        | four nested adapters collapsed into ONE GkHeadingWorldAdapter   |
+// |         |            |        | implementing all four boundary interfaces (both ball systems    |
+// |         |            |        | share ApplyKick; the two RNG services disambiguate by arity).   |
+// |         |            |        | The §4 trigger geometry extracted to the pure static            |
+// |         |            |        | GkHeadingIntentSource (SaveArmed / NearestHeaderCandidate);     |
+// |         |            |        | TryCommitSaveIntents/HeaderIntents keep only the latch +        |
+// |         |            |        | projection + orchestrator commit. New GkHeadingIntentSource-    |
+// |         |            |        | Tests (10). No schema change. Full dotnet gate: PASSED (300     |
+// |         |            |        | match-engine tests; whole tree green).                          |
 #endregion

@@ -498,6 +498,40 @@ determinism; durable-capture fails loud on/succeeds off). **Full dotnet gate: PA
 `SNAPSHOT_SCHEMA_VERSION` change (Phase 1 adds no serialized state — default engine byte-identical,
 verified by the unchanged existing snapshot/determinism/restore suite).
 
+## 9b. Cleaner-architecture pass (2026-07-22) — LANDED (behaviour-identical)
+
+A code-review of the Phase-1 landing (see §11) flagged the shape as harder to test/read than needed.
+Two structural improvements, both behaviour-identical (the existing 290 tests + the 8
+`MatchEngineGkHeadingTests` still pass unchanged):
+
+- **One adapter, not four.** The four nested `*BallWorldAdapter` / `*RngWorldAdapter` classes collapsed
+  into a single `GkHeadingWorldAdapter` implementing all four boundary interfaces — the two ball systems
+  share an identical `ApplyKick` signature, and the two RNG services disambiguate by arity
+  (`NextFloat(int)` → heading stream, `NextFloat(int, uint)` → goalkeeper stream). One instance is
+  injected into both orchestrators' ctors. ~70 lines of boilerplate removed.
+- **Pure, injected trigger producer.** The §4 "when does a save/header happen" geometry moved out of
+  `MatchEngine` into a pure static `GkHeadingIntentSource` (`SaveArmed` / `NearestHeaderCandidate`, the
+  `MatchFlowCollisionConsumer` heuristic-foul precedent). `TryCommitSaveIntents` / `TryCommitHeaderIntents`
+  now keep only the per-episode latch + the `ToGoalkeeper`/`ToHeading` projection + the orchestrator
+  commit. New `GkHeadingIntentSourceTests` (10 — the heuristic is now unit-testable without a booted
+  engine: loose/toward-goal/range/speed gates; nearest-outfielder selection incl. GK + sent-off
+  exclusion).
+
+**Full dotnet gate: PASSED, 0 failures (300 match-engine tests; whole tree green).** No schema change.
+
+## 9c. Phase 2 (deferred, the flag-removal epic)
+
+The reviewer's cleaner-architecture goal also called for **dropping the opt-in flag entirely by doing the
+Phase-2 serialization first**, so the wiring is always-on and snapshot-safe with no fail-loud fork. That
+is a large, high-care change deliberately **not** bundled here — it spans three assemblies
+(`goalkeeper-mechanics` + `heading-mechanics` need `CaptureState`/`RestoreState` seams over ~25 mutable
+arrays + the nested `GkContactState`/`HeaderContactState` + the two duel sub-resolvers; `match-engine`
+threads them through `SerializeWorldState`/`DeserializeWorldState` at **`SNAPSHOT_SCHEMA_VERSION` 17 →
+18**), flips the default on (every match now develops saves/headers — a genuine gameplay change, not a
+neutral one), and takes a digest rebaseline. It is best landed as its own reviewed change (§6 is its
+plan). Until then the flag + fail-loud guard remain — but they are now the *only* thing the flag gates,
+since the heuristic is pure and the adapter is single.
+
 ## 10. Adversarial review log
 
 **AR-1 (2026-07-22): 0H + 1M + 2L, all resolved. Claims verified against source.**

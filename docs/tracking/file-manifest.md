@@ -17,6 +17,17 @@ v1.25 (+6 `[GT]` trigger constants), `src/match-engine/match-engine.asmdef` + `s
 (+ HeadingMechanics + GoalkeeperMechanics refs), `src/match-engine/tests/PlayerAttributeProjectionTests.cs`
 v1.1 (+2 ToHeading/ToGoalkeeper field-scale locks). No `SNAPSHOT_SCHEMA_VERSION` change (default engine
 byte-identical). **Full dotnet gate: PASSED, 0 failures (whole tree green; 290 match-engine tests).**)
+**Last Updated:** July 22, 2026 (**GK/Heading cleaner-architecture pass — behaviour-identical.** **New
+files:** `src/match-engine/GkHeadingIntentSource.cs` v1.0 (pure static §4 save/header trigger geometry —
+`SaveArmed` / `NearestHeaderCandidate` — extracted out of `MatchEngine` so the "when" heuristic is
+unit-testable, the `MatchFlowCollisionConsumer` precedent); `src/match-engine/tests/GkHeadingIntentSourceTests.cs`
+v1.0 (10 pure-function locks). **Modified:** `src/match-engine/MatchEngine.cs` v1.45 — the four nested
+ball/RNG adapters collapsed into ONE `GkHeadingWorldAdapter` (both ball systems share `ApplyKick`; the
+two RNG services disambiguate by arity), and `TryCommitSaveIntents`/`TryCommitHeaderIntents` delegate
+their geometry to `GkHeadingIntentSource` (keeping only latch + projection + commit).
+`gk-heading-engine-integration-design.md` §9b/§9c (cleaner-architecture pass + the deferred Phase-2
+flag-removal epic). No `SNAPSHOT_SCHEMA_VERSION` change. **Full dotnet gate: PASSED, 0 failures (whole
+tree green; 300 match-engine tests).**)
 **Last Updated (prior):** July 21, 2026 (**On-disk match save format landed — snapshot-deserialize Phase 3
 `SaveManager` fold (N1)**, per `docs/tracking/match-save-file-design.md` v0.3. **New files:**
 `src/match-engine/MatchSaveCodec.cs` v1.0 (+ `.meta`) — pure static `Encode`/`Decode` of the on-disk
