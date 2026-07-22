@@ -44,7 +44,7 @@ loop layers are pulled forward minimal-first and deepened later.
 
 ---
 
-## 1. Proposed candidate spec set (#27–#39)
+## 1. Proposed candidate spec set (#27–#50)
 
 | # | Working title | Feature bullet(s) covered | Master-plan home | Tier¹ |
 |---|---------------|---------------------------|------------------|-------|
@@ -61,11 +61,28 @@ loop layers are pulled forward minimal-first and deepened later.
 | 37 | **Match Analytics & Statistics** | (prerequisite for UI + post-match reports) possession/shots/xG/PPDA/heatmaps | §3.3 | S1 |
 | 38 | **UI / Client Framework & Screens** *(cluster — likely splits)* | Menus, tactics screen, match view, squad/transfer/training/scouting screens | §3.1/§3.4, §4 | S1 min → S2 full |
 | 39 | **Steam Packaging & Release Engineering** | Build pipeline, store page, achievements, Steam Cloud save, QA/cert pass | §4.6, §4.7 release | S2 |
+| 40 | **Club Finances & Economy** ² | Budgets, wages, FFP, revenue/sponsorship (split from #31) | §5 Stage 3 financials | S2 min → S3 deep |
+| 41 | **Injuries & Medical** ² | Injury model, treatment, physio/medical-staff effects | §4.2 injury mgmt | S2 min → S3 deep |
+| 42 | **Youth Academy & Intake** ² | Academy pipeline, bio-banding intake, youth contracts | §5 Stage 3 youth | S3 |
+| 43 | **Competition Structure** ² | Cups, continental competitions, promotion/relegation | §4.1, §5 | S2 min → S5 deep |
+| 44 | **Discipline & Suspensions** ² | Season-level card accumulation, bans | §4.1 | S2 |
+| 45 | **Board & Ownership Dynamics** ² | Ownership types, takeovers, board confidence | §5 Stage 3 board | S3 |
+| 46 | **News, Inbox & Man-Management** ² | Manager comms hub; talk-to-player interactions | §4.5, §5 Stage 4 | S2 min → S4 deep |
+| 47 | **New-Game Setup & Database Editor** ² | League/start selection, custom DB, data-authoring surface | (tooling) | S2 |
+| 48 | **Match Presentation Depth** ² | Commentary, animation/3D, audio | §3.1 | S1 min → S2+ deep |
+| 49 | **Localization & Accessibility** ² | i18n, a11y | (cross-cutting) | S2 |
+| 50 | **Save Migration & Versioning** ² | Live-save migration across game updates | §4.6 | S2 |
 
 ¹ **Tier** = master-plan staging. "S2 min → S3 deep" means the spec is authored with an explicit
 minimal-first Stage-2 surface and a deeper Stage-3+ extension, mirroring how #27 is a Stage-2
 player-database pulled forward as a Stage-1 data layer. Numbers are **proposed** and may compress
 (e.g. #37 could fold into #38) or expand (#38 will almost certainly split — see §5).
+
+² **Gap-fill (added v0.2).** #40–#50 were surfaced by a follow-up "what else lacks a spec" review
+of the master plan against the original feature list. Numbers are stable IDs, not authoring order —
+the table is roughly numeric; dependency/authoring order is §2/§7. The load-bearing gap-fills are
+**#40 Finances**, **#41 Injuries/Medical**, and **#43 Competition Structure** — the season loop
+(#30) is thin without them.
 
 ---
 
@@ -221,6 +238,64 @@ Build/packaging pipeline, store-page assets checklist, achievements, **Steam Clo
 
 ---
 
+### #40 Club Finances & Economy *(Stage 2 min → Stage 3 deep)* — split from #31
+Budgets, wages, revenue/sponsorship, FFP. **KD:** author the Stage-2 minimal "budget from league
+finish" as the identity the Stage-3 revenue/FFP model modulates; it is the counterparty-constraint
+#31 negotiation reads. New world-state block; deterministic per-day/per-season accounting.
+
+### #41 Injuries & Medical *(Stage 2 min → Stage 3 deep)* — split from #29
+Injury occurrence/severity/recovery + physio/medical-staff modulation. **KD:** injury draws are a
+world-tick **and** match-tick concern — define which layer owns occurrence (match incident vs.
+training/fatigue accumulation) and reconcile with #29's fatigue accumulator. Dedicated RNG stream.
+
+### #42 Youth Academy & Intake *(Stage 3)* — distinct from #28 regens
+The academy pipeline: annual intake generation (bio-banding, Master Vol 1), youth contracts,
+promotion to senior squad. **KD:** intake generation reuses #28's regen/generation machinery keyed
+to club/nation, but the academy *structure* (facilities, coaching → intake quality) is #34/#40-coupled.
+
+### #43 Competition Structure *(Stage 2 min → Stage 5 deep)*
+Cups, continental competitions, promotion/relegation. **KD:** #30 ships single-league (master plan
+§4.1); this generalises #30's fixture/table machinery to multiple concurrent competitions and adds
+knockout draws (deterministic from the world seed). Promotion/relegation is a season-boundary
+transform on #30's league state. RNG stream for draws.
+
+### #44 Discipline & Suspensions *(Stage 2)*
+Season-level card accumulation, thresholds, bans. **KD:** read-only derivation over the match
+engine's already-emitted card events (like #37 analytics) → a suspension-availability view #30's
+squad selection consumes. No new RNG.
+
+### #45 Board & Ownership Dynamics *(Stage 3)*
+Ownership types, takeovers, board confidence beyond #30's season objectives. **KD:** board confidence
+is a morale-model analogue (reuse #33's shape); takeover events draw from a dedicated stream. Feeds
+#40 budgets and #30's sacking/job-security state.
+
+### #46 News, Inbox & Man-Management *(Stage 2 min → Stage 4 deep)*
+The manager's inbox/comms hub + talk-to-player interactions (distinct from media #35). **KD:** the
+inbox is a **read-only aggregator** of season/transfer/board/media events; man-management writes to
+#33 morale. A natural consumer of #22's `InteractionTextGenerator` — build on it, don't fork it.
+
+### #47 New-Game Setup & Database Editor *(Stage 2)*
+Start/league selection, custom database, the data-authoring surface. **KD:** the editor is the
+authoring front-end over #27's roster/text-import format (the Stage-0 text loaders are its parser
+seam). Tooling layer — no RNG, no sim reference.
+
+### #48 Match Presentation Depth *(Stage 1 min → Stage 2+ deep)*
+Commentary, animation/3D, audio — upgrading the bare live viewer. **KD:** presentation layer,
+observation-only (the `match-viewer` contract). Commentary text can consume #22's deterministic
+generator. No sim mutation, no RNG in the determinism-relevant sense.
+
+### #49 Localization & Accessibility *(Stage 2)*
+i18n string catalogue + a11y. **KD:** cross-cutting presentation concern; all user-facing text
+(including #22/#35/#46 generated text) routes through one localization seam. No sim reference.
+
+### #50 Save Migration & Versioning *(Stage 2)*
+Migrating live player saves across shipped game updates (distinct from the determinism format
+versions, which gate corruption, not forward-migration). **KD:** defines the migration contract over
+`SEASON_SAVE_FORMAT_VERSION`/`WORLD_STORE_FORMAT_VERSION` bumps — how a v(N) save opens in a v(N+1)
+build. Infra/process spec; pairs with #39 Steam Cloud.
+
+---
+
 ## 4. The #22 / #33 sequencing constraint (call-out)
 
 Living World #22 is APPROVED and its T0 services are landed, but its `WorldLoop` phase-1 (structured
@@ -280,9 +355,15 @@ Simulation #16 §3.4 + `SubsystemOrdinals` at each spec's promotion (not now):
 | #34 Staff | `0x26` | 88 |
 | #35 Media | `0x27` | 89 |
 | #36 National teams | `0x28` | 90 |
+| #40 Finances | `0x29` | 91 |
+| #41 Injuries/Medical | `0x2A` | 92 |
+| #42 Youth academy | `0x2B` | 93 |
+| #43 Competition draws | `0x2C` | 94 |
+| #45 Board/ownership | `0x2D` | 95 |
 
-(#37 analytics / #38 UI / #39 packaging are **read-only or presentation** — no RNG stream, no
-domain tag, consistent with `match-viewer`/`match-analytics` being observational.)
+(#37 analytics, #44 discipline, #46 news/inbox, #38/#48 presentation, #47 editor, #39 packaging,
+#49 localization, #50 migration are **read-only, presentation, or infra** — no RNG stream, no
+domain tag, consistent with `match-viewer`/analytics being observational.)
 
 ---
 
@@ -300,6 +381,12 @@ domain tag, consistent with `match-viewer`/`match-analytics` being observational
 7. **#35 (media), #36 (national teams)** — later-stage consumers.
 8. **#39 (Steam packaging)** — last, against a shippable build.
 
+**Gap-fill placement:** #41 Injuries/Medical and #40 Finances land alongside the spine (with
+#29/#30/#31); #43 Competition Structure and #44 Discipline extend #30; #42 Youth Academy and #45
+Board/Ownership join the Stage-3 cluster (with #34); #46 News/Inbox and #48 Match-Presentation join
+the UI cluster (#38); #47 setup/editor, #49 localization, and #50 save-migration are release-adjacent
+(with #38/#39).
+
 Each step is a full pipeline run (design supplement → adversarial review to convergence →
 section files → sign-off), and each should record its own OPEN ISSUES entry in root `CLAUDE.md`
 the way #21–#27 did.
@@ -311,3 +398,4 @@ the way #21–#27 did.
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial roadmap: candidate spec set #27–#39 for the management/off-pitch feature areas; dependency graph; per-spec scope sketches; cross-cutting concerns; #22/#33 sequencing call-out; proposed off-pitch determinism block; recommended authoring order. |
+| v0.2 | July 22, 2026 | Folded in gap-fill candidates #40–#50 (Finances, Injuries/Medical, Youth Academy, Competition Structure, Discipline/Suspensions, Board/Ownership, News/Inbox & Man-Management, New-Game Setup/DB Editor, Match Presentation Depth, Localization/Accessibility, Save Migration) surfaced by a follow-up master-plan gap review; extended the determinism block (5 new tags), §3 scope sketches, and §7 authoring placement. |
