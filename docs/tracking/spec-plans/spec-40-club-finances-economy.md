@@ -40,10 +40,11 @@ Behaviour-neutral identity: an S3-revenue-unconfigured club yields exactly the m
 
 ## 9. Open questions / risks
 - Projection-direction (KD-3) with #31 is the coupling risk; a two-way write coupling breaks the layer taxonomy.
-- #40 must precede #31 in Wave 4 authoring (roadmap §7) — #31's counterparty constraint reads it; building #31 first phantoms the economy.
+- #40 (Wave 2) must precede #31 (Wave 4) in authoring (roadmap §7) — #31's counterparty constraint reads it; building #31 first phantoms the economy. The wave ordering already guarantees this.
 - Cadence (KD-1) interacts with save-size budget; per-day accrual multiplies serialized state.
 
 ## Version History
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial high-level plan. |
+| v0.2 | July 22, 2026 | AR fix: §9 wave labels corrected — #40 is Wave 2, #31 is Wave 4; the precedence is guaranteed by wave order (prior text mislabelled it "Wave 4 authoring"). |

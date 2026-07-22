@@ -40,10 +40,11 @@ Behaviour-neutral identity: no-staff (×1.0) baseline reproduces the minimal fix
 
 ## 9. Open questions / risks
 - The dual-clock occurrence ownership (KD-1) is the headline risk — the match loop's determinism contract (serialized RNG cursor) and the world store's stream must not clobber each other.
-- #41 must precede #31 in Wave 2 (availability feeds squad value / transfer decisions) and pairs tightly with #29 — authoring order matters.
+- #41 (Wave 2) must precede #31 (Wave 4) — availability feeds squad value / transfer decisions — and pairs tightly with #29 (same Wave 2, authored just before it); the wave ordering already guarantees the #31 precedence.
 - Match-incident coupling (KD-3): a new match-engine producer vs. read-only ledger derivation is a layer-taxonomy fork (phantom-interface caution if built ahead of the producer).
 
 ## Version History
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial high-level plan. |
+| v0.2 | July 22, 2026 | AR fix: §9 wave labels corrected — #41 is Wave 2, #31 is Wave 4 (prior text said "in Wave 2" of #31, which is wrong); precedence guaranteed by wave order. |

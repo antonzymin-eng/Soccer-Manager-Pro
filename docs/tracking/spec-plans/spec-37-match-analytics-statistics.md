@@ -10,7 +10,7 @@
 Match statistics derived **read-only** from the match engine's already-emitted event ledger (Event System #17 — the Tier A records `EventBus` serializes): basic stats (possession, shots/on-target, pass completion, tackles) and advanced ones (xG via a shot-location model, PPDA, territorial %, heatmaps). It mirrors `match-viewer`'s observational read — it adds no match-engine surface and mutates nothing. **Out of scope:** any new engine event or producer (if a stat needs an event the ledger doesn't emit, that is a match-engine change, not #37); the UI that renders the report (#38); news/inbox consumption (#46).
 
 ## 2. Staging (minimal-first → deep)
-Stage-1 minimal = the basic counting stats read straight off the ledger (possession share, shot/pass/tackle tallies) — pure aggregation. The advanced layer (xG location model, PPDA, territorial %, heatmaps) is the same read-only aggregation deepened: one derivation path over the same ledger, with the advanced metrics as additional projections rather than a re-read. The xG location model is the only non-trivial computation and it is a pure function of shot-event geometry already in the ledger.
+Stage-1 minimal = the basic counting stats read straight off the ledger (possession share, shot/pass/tackle tallies) — pure aggregation. The advanced layer (xG location model, PPDA, territorial %, heatmaps) is the same read-only aggregation deepened: one derivation path over the same ledger, with the advanced metrics as additional projections rather than a re-read. The xG location model is the only non-trivial computation and it is a pure function of shot-event geometry the ledger is expected to carry — whether that geometry is fully present today, or needs a read-only match-engine event addition, is exactly the open question KD-1 must settle before #37 can claim to stay in the observational class.
 
 ## 3. Dependencies
 - **Upstream (needs):** the match engine's event ledger / Event System #17 (`EventBus` Tier A records) — read-only. No dependency on #27/#30 for the derivation itself.
@@ -43,3 +43,4 @@ Determinism of derivation: the same match snapshot/ledger yields byte-identical 
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial high-level plan. |
+| v0.2 | July 22, 2026 | AR fix: §2 xG shot-geometry claim reconciled with KD-1 (whether the ledger carries the geometry today, or needs a read-only match-engine event addition, is the open question — no longer asserted as settled). |

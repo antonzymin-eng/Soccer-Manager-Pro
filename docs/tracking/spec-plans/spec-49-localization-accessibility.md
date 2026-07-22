@@ -2,7 +2,7 @@
 
 > **Created:** July 22, 2026
 > **Status:** PLAN (pre-design-supplement — no section files, no `SPEC_INDEX.md` row). Candidate spec number **#49** (proposed in `management-layer-spec-roadmap.md`, not reserved).
-> **Master-plan home:** (cross-cutting) · **Tier:** S2 · **Wave:** 8 · **FR prefix (proposed):** FR-LC
+> **Master-plan home:** (cross-cutting) · **Tier:** S2 · **Wave:** 1 (seam + template contract) / 8 (locales + a11y content) · **FR prefix (proposed):** FR-LC
 > **Determinism:** read-only / presentation-content — none (no RNG stream, no domain tag; no sim reference)
 > **Purpose:** One localization seam routing all user-facing text (including procedurally generated text) through an i18n string catalogue, plus the accessibility surface.
 
@@ -10,7 +10,7 @@
 The internationalization string catalogue and the accessibility (a11y) surface for the client. The load-bearing contract: **all** user-facing text — static UI strings and procedurally generated text alike (including #22's `InteractionTextGenerator` output, #35 media/press text, #46 news/inbox text) — routes through one localization seam. Accessibility covers the presentation-side concerns (text scaling, colour/contrast, input assist). **Out of scope:** the text *producers* (owned by #22/#35/#46 — #49 supplies the routing seam they emit through, it does not generate content); the UI framework hosting the localized strings (#38); the sim, which produces no user-facing text directly. #49 owns the seam and the catalogue, not the copy.
 
 ## 2. Staging (minimal-first → deep)
-Minimal identity = a single catalogue + lookup seam with the base locale, where an un-added key falls through to a stable default (the identity: today's English text, byte-for-byte). The deep tier adds locales and a11y options on that same seam — every producer already emits through the one lookup, so adding a locale is data, not new plumbing. One text-routing code path; the base locale is the identity later locales modulate.
+**The spec splits across two waves, mirroring #38 (framework early / content late)** — because the load-bearing invariant is that *every* text producer emits through the one seam, and those producers land across Waves 1–7. The **seam + template contract** (Wave 1) is the framework the producers bind to as they are authored; the **locales + a11y content** (Wave 8) is data added later. Minimal identity for the Wave-1 contract = a single catalogue + lookup seam with the base locale, where an un-added key falls through to a stable default (the identity: today's English text, byte-for-byte). Publishing the seam in Wave 1 means #38 (framework, Wave 1), #35/#46 (Wave 6), and #38 screens (Wave 7) emit through it from the start — only #22's already-built `InteractionTextGenerator` needs a retrofit, not every producer. The Wave-8 content tier adds locales and a11y options on that same seam — adding a locale is data, not new plumbing. One text-routing code path; the base locale is the identity later locales modulate.
 
 ## 3. Dependencies
 - **Upstream (needs):** all user-facing text producers — #22 `InteractionTextGenerator` (procedural interaction/commentary text off `world.text`), #35 media/press, #46 news/inbox, and #38's static UI strings. The seam must accept both static keys and the slot-expanded procedural text these emit.
@@ -42,9 +42,10 @@ Coverage lock: no user-facing string bypasses the seam (a producer emitting a ba
 - The single-seam invariant (KD-1) is only as good as producer discipline — a generator that bakes a localized string forks the catalogue; enforce emit-through-seam at each producer's spec.
 - Localize-after-generate (KD-2) is a determinism-adjacent trap: localizing before/inside generation would make `world.text` output locale-dependent and break save round-trip.
 - Procedural grammar depth (KD-3) can balloon; Stage 2 must pick a bounded template model.
-- Wave 8 (cross-cutting, late) means many producers exist by then — retrofitting the seam across #22/#35/#46/#38 is the integration risk; the seam contract should be published early so producers emit through it as they land.
+- The retrofit risk is the reason for the two-wave split: a single Wave-8 spec would force retrofitting the seam across #22/#35/#46/#38 after they had all baked non-keyed strings. Splitting the **seam + template contract into Wave 1** (published before its producers author emission) reduces that to a single retrofit of #22 (already built); every producer authored afterward emits through the seam from the start. (Contrast #50, which correctly stays Wave-8-whole: its per-bump migration steps are a *post-ship* concern, so pre-ship format bumps need no step and there is no continuous-emission retrofit to front-load.) The Wave-8 content tier can then be pure data.
 
 ## Version History
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial high-level plan. |
+| v0.2 | July 22, 2026 | AR fix: split into a **Wave-1 seam + template contract** tier and a **Wave-8 locales + a11y content** tier (mirrors #38's framework/screens split) so text producers bind to the localization seam as they land instead of being retrofitted after Wave 8; header/§2/§9 updated; README + roadmap §7 reordered to match. |

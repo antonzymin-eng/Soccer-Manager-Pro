@@ -14,7 +14,7 @@ Out of scope: #22's interaction/memory/arc layer (already built over this model)
 Stage-2/minimal surface is a small per-player trait vector + a scalar morale value updated by a deterministic daily projection — the **identity** the deep tier modulates. The Stage-4 deep model (H-Gate confidence/self-efficacy split, cliques/chemistry graph, mentoring propagation) is the same daily-update code path with config dials enabled, never a rewrite of the minimal one.
 
 ## 3. Dependencies
-- **Upstream (needs):** #27 Squad/Player Data (canonical records keyed by player; morale/personality attach to the canonical record shape).
+- **Upstream (needs):** #27 Squad/Player Data (canonical records keyed by player; morale/personality attach to the canonical record shape), #30 Season & Competition Loop (the day-advance loop that ticks the daily morale/personality projection forward — the sibling world-tick convention #28/#29/#40/#41 all follow; §7's daily-advance entry point is driven by it).
 - **Downstream (consumers):** #22 Living World (dormant phase-2 read + `PlayerEdge` mirror light up **without a #22 rewrite**), #31 Transfers (negotiation willingness), #35 Media, #45 Board (morale-analogue shape reuse), #46 News/Inbox (man-management writes morale), #29 cohesion, match-engine input via the #27 attribute-projection seam.
 
 ## 4. Persistent state & save impact
@@ -49,3 +49,4 @@ Round-trip determinism (save@N → restore → advance == uninterrupted run) ove
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial high-level plan. |
+| v0.2 | July 22, 2026 | AR fix: added #30 (day-advance loop) to §3 Upstream — the sibling world-tick dependency convention (#28/#29/#40/#41) this gating spec had omitted. |

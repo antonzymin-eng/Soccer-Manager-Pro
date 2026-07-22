@@ -36,7 +36,7 @@ Presentation/infra — no RNG stream, no domain tag (the `match-viewer` preceden
 - All bound through the same observation-only contract `match-viewer` established (proposed) — no reverse sim reference.
 
 ## 8. Test focus
-Observer neutrality: a match rendered with full presentation depth is byte-identical to an unobserved same-seed run (the `MatchViewerTests` digest-lock class extended to commentary/animation/audio). Layer-taxonomy lock: no sim assembly references the presentation-depth assembly. Where commentary consumes `world.text`, save-boundary generation determinism (the `WorldStore` `Snapshot`/`Restore` text-resume property). Fail-loud on malformed observation/ledger input; presentation must not mutate sim.
+Observer neutrality: a match rendered with full presentation depth is byte-identical to an unobserved same-seed run (the `MatchViewerTests` digest-lock class extended to animation/audio, and to commentary **only if KD-2 resolves commentary to display-only / non-`world.text` text** — commentary that draws from the serialized `world.text` stream advances persisted state and therefore cannot be observer-neutral; this test is conditioned on that KD-2 decision, not asserted over a world.text-backed commentary path). Layer-taxonomy lock: no sim assembly references the presentation-depth assembly. Where commentary consumes `world.text`, save-boundary generation determinism (the `WorldStore` `Snapshot`/`Restore` text-resume property). Fail-loud on malformed observation/ledger input; presentation must not mutate sim.
 
 ## 9. Open questions / risks
 - Commentary determinism scope (KD-2): if commentary rides `world.text`, its draws must not perturb #22's arc cursor — reuse the aperiodic-sub-stream discipline #22 already established, or keep commentary display-only (non-pinned).
@@ -48,3 +48,4 @@ Observer neutrality: a match rendered with full presentation depth is byte-ident
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial high-level plan. |
+| v0.2 | July 22, 2026 | AR fix: §8 observer-neutrality lock conditioned on KD-2 — commentary that draws from the serialized `world.text` stream advances persisted state and cannot be observer-neutral; the byte-identical claim now applies to animation/audio unconditionally and to commentary only if KD-2 keeps it display-only. |

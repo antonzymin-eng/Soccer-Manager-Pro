@@ -13,7 +13,7 @@ Season-level discipline: accumulate the yellow/red cards the match engine alread
 Stage-2 minimal = one accumulation counter per player over the single #30 league with literal thresholds; a suspended player is simply unavailable for the next fixture. This is the identity a deeper tier modulates: competition-scoped accumulation (yellows reset per competition, #43-coupled), varying ban lengths by offence, and cup-vs-league carry rules — all extensions of the same read-only derivation, not a rewrite.
 
 ## 3. Dependencies
-- **Upstream (needs):** the match engine's already-emitted **card events** — `CardIssuedEvent` (ordinal 0x08, published in the Resolve phase; carries offender + card kind) plus the engine's `_yellowCards`/`_isSentOff` discipline state, surfaced via the `EventBus` ledger (`EventBus.SerializeLedger`), read the same observational way #37 analytics reads the ledger; #30 (the season loop that owns the day-advance and squad selection).
+- **Upstream (needs):** the match engine's already-emitted **card events** — `CardIssuedEvent` (ordinal 0x06 — `EventRegistry.cs`; published by the match engine, `MatchEngine.cs`; carries recipient + card kind) plus the engine's `_yellowCards`/`_isSentOff` discipline state, surfaced via the `EventBus` ledger (`EventBus.SerializeLedger`), read the same observational way #37 analytics reads the ledger; #30 (the season loop that owns the day-advance and squad selection).
 - **Downstream (consumers):** #30 squad selection (a suspended player is filtered from the available set), #38 UI (a suspensions/availability screen), #43 (competition-scoped variants).
 
 ## 4. Persistent state & save impact
@@ -44,3 +44,4 @@ Behaviour-neutral / read-only proof that observing card events does not alter ma
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial high-level plan. |
+| v0.2 | July 22, 2026 | AR fix: `CardIssuedEvent` ordinal 0x08 → 0x06 (verified `EventRegistry.cs:67`; 0x08 is `SubstitutionEvent`). Confirmed the engine publishes it (`MatchEngine.cs`), so the read-only-derivation premise holds. |

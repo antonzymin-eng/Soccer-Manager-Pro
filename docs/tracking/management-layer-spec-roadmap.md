@@ -76,7 +76,8 @@ loop layers are pulled forward minimal-first and deepened later.
 ¹ **Tier** = master-plan staging. "S2 min → S3 deep" means the spec is authored with an explicit
 minimal-first Stage-2 surface and a deeper Stage-3+ extension, mirroring how #27 is a Stage-2
 player-database pulled forward as a Stage-1 data layer. Numbers are **proposed** and may compress
-(e.g. #37 could fold into #38) or expand (#38 will almost certainly split — see §5).
+(e.g. #37 could fold into #38) or expand: **#38 and #49 each split into an early framework/seam tier
+and a late screens/content tier** across waves (one file, two wave rows — see §7).
 
 ² **Gap-fill (added v0.2).** #40–#50 were surfaced by a follow-up "what else lacks a spec" review
 of the master plan against the original feature list. Numbers are stable IDs, not authoring order —
@@ -120,7 +121,9 @@ the table is roughly numeric; dependency/authoring order is §2/§7. The load-be
    #39 Steam Packaging (last; needs a shippable build + save/cloud + QA)
 ```
 
-**Critical-path spine:** #27 → #30 → #31 → #38 → #39. Everything else attaches to that spine.
+**Critical-path spine:** #27 → #30 → #33 → #31 → #38 → #39. Everything else attaches to that spine.
+(#33 is on the spine because the §4 sequencing constraint puts it before #31's psychology-driven
+negotiation and #22's dormant-seam activation — see §7 and §4.)
 **The one non-obvious ordering constraint:** #33 (human-systems model) must land before #22's
 dormant `WorldLoop` phase-1/2/5 seams and before #31/#35's psychology-driven behaviour can be
 anything but a stub — do not build those consumers first (FR-LW-031 phantom-interface rule).
@@ -365,6 +368,11 @@ Simulation #16 §3.4 + `SubsystemOrdinals` at each spec's promotion (not now):
 #49 localization, #50 migration are **read-only, presentation, or infra** — no RNG stream, no
 domain tag, consistent with `match-viewer`/analytics being observational.)
 
+**Headroom:** the 14 rows above consume `0x20`–`0x2D` / 82–95 exactly — zero slack. The next free
+slot is **`0x2E` / 96**; reserve **`0x2E`–`0x2F` / 96–97** as slack so that if a candidate currently
+classified read-only/presentation/infra later discovers it needs a draw, it extends from `0x2E`/96
+onward and never has to fragment or renumber the contiguous 82–95 block.
+
 ---
 
 ## 7. Authoring sequence (waves)
@@ -384,6 +392,11 @@ candidate).
 - **#37 Match Analytics** — read-only over the event ledger; unblocks post-match UI.
 - **#38 UI *framework* only** — the framework / view-model contract can start now against tactics +
   #37; screen specs wait for their data specs (Wave 7).
+- **#49 Localization *seam + template contract* only** — the localization lookup seam + procedural-text
+  template contract publishes now, so every text producer authored afterward (#38 framework here,
+  #35/#46 in Wave 6, #38 screens in Wave 7) emits through it from the start; only #22's already-built
+  `InteractionTextGenerator` needs a retrofit. Locales + a11y *content* is Wave 8. (This is the
+  framework/content split that #38 also uses; the file is shared.)
 
 **Wave 2 — Attach to #27 / #30**
 - **#28 Progression** · **#29 Training** · **#41 Injuries/Medical** · **#40 Finances** — all need
@@ -394,24 +407,30 @@ candidate).
   real psychology (phantom-interface rule, §4).
 
 **Wave 4 — Recruitment / economy cluster**
-- **#34 Staff → #31 Transfers/Contracts → #32 Scouting** — #34 before #32 (scouts are staff); #31
-  needs #40 economy + #33 negotiation psychology.
+- **#31 Transfers/Contracts → #34 Staff → #32 Scouting** — #31 first because it owns the reusable
+  negotiation seam that #34 (hiring) and #32 (bids) may consume (authoring #34 first would reference
+  a seam #31 has not defined; #31's own #34-influence is a deferred ×1.0 routing seam, the established
+  identity-until-producer pattern). #34 before #32 (scouts are staff). #31 needs #40 economy (Wave 2) +
+  #33 negotiation psychology (Wave 3).
 
 **Wave 5 — Season extensions**
 - **#43 Competition Structure** · **#44 Discipline** (extend #30) · **#42 Youth Academy**
   (needs #34/#40) · **#45 Board/Ownership** (needs #33 shape; feeds #40/#30).
 
 **Wave 6 — World / comms consumers**
-- **#46 News/Inbox & Man-Management** · **#35 Media** · **#36 National Teams** — consume #30 events
-  + #33 morale + #22's text generator.
+- **#35 Media → #46 News/Inbox & Man-Management → #36 National Teams** — #35 before #46 because #46's
+  inbox aggregates #35's media events (producer before consumer, even though #46's aggregator is
+  producer-generic). All three consume #30 events + #33 morale + #22's text generator.
 
 **Wave 7 — Presentation / UI**
 - **#38 UI screens** (deepen as data specs land) · **#48 Match Presentation Depth** ·
   **#47 New-Game Setup / DB Editor**.
 
 **Wave 8 — Release / cross-cutting (last)**
-- **#49 Localization/Accessibility** · **#50 Save Migration** · **#39 Steam Packaging** — against a
-  genuinely shippable build.
+- **#49 Localization *locales + a11y content*** (the seam contract landed in Wave 1) · **#50 Save
+  Migration** · **#39 Steam Packaging** — against a genuinely shippable build. (#50 stays whole in
+  Wave 8, not split like #49: its per-bump migration steps are a *post-ship* concern, so pre-ship
+  format bumps need no step and there is no continuous-emission retrofit to front-load.)
 
 **Critical path:** #27 → #30 → #33 → #31 → #38 → #39.
 
@@ -423,3 +442,4 @@ candidate).
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial roadmap: candidate spec set #27–#39 for the management/off-pitch feature areas; dependency graph; per-spec scope sketches; cross-cutting concerns; #22/#33 sequencing call-out; proposed off-pitch determinism block; recommended authoring order. |
 | v0.2 | July 22, 2026 | Folded in gap-fill candidates #40–#50 (Finances, Injuries/Medical, Youth Academy, Competition Structure, Discipline/Suspensions, Board/Ownership, News/Inbox & Man-Management, New-Game Setup/DB Editor, Match Presentation Depth, Localization/Accessibility, Save Migration) surfaced by a follow-up master-plan gap review; extended the determinism block (5 new tags), §3 scope sketches, and §7 authoring placement. |
+| v0.3 | July 22, 2026 | Adversarial-review consistency pass over the roadmap + `spec-plans/`: §2 critical-path spine corrected to include #33 (matched §7/README); §7 intra-wave order set producer-before-consumer (Wave 4 → #31, #34, #32; Wave 6 → #35, #46, #36); **#49 localization split into a Wave-1 seam+template contract tier + Wave-8 content tier** (mirrors #38) so text producers bind to the seam as they land; §6 gained a determinism-block-headroom note (next free `0x2E`/96; reserve `0x2E`–`0x2F`/96–97 slack); §1 footnote updated (#38 + #49 both split; stale §5 pointer fixed). |
