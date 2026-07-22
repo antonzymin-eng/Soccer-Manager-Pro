@@ -20,7 +20,7 @@ All requirements describe the **landed** implementation (present tense).
 | FR-SQ-002 | `PlayerAttributes` carries 31 `int [1,20]` fields grouped Physical(6)/Technical(7)/Mental(7)/Goalkeeping(6)/Reserved(5); each field's doc cites its real consumer spec or is marked `RESERVED`. | MUST | §2.2.1 |
 | FR-SQ-003 | `WeakFootRating` is `[1,5]`, a separate field on a distinct scale, excluded from the `[1,20]` array (`ToArray`/`FromArray`) and the `[1,20]` clamp helpers. | MUST | KD-2 |
 | FR-SQ-004 | All 31 `[1,20]` attributes are `int`; a clamp helper enforces the `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` range at generation. | MUST | KD-2 / §3 |
-| FR-SQ-005 | `CreateDefault()` sets every `[1,20]` field to `10` (`ATTRIBUTE_BASE_MEAN`) and `WeakFootRating` to `3` (`WEAK_FOOT_BASE`). | MUST | §2.2.1 |
+| FR-SQ-005 | `CreateDefault()` sets every `[1,20]` field to `10` (`AttributeBaseMean`) and `WeakFootRating` to `3` (`WeakFootBase`). | MUST | §2.2.1 |
 | FR-SQ-006 | `ToArray()`/`FromArray(int[31])` round-trip the 31 `[1,20]` fields through a single named `AttrIdx` ordinal map shared by the generator and the loader (no duplicated 31-way switch); `FromArray` fails loud on a non-31 length. | MUST | §3 / F1 |
 
 ### Identity and containers (FR-SQ-007..011)
@@ -40,7 +40,7 @@ All requirements describe the **landed** implementation (present tense).
 | FR-SQ-012 | `RosterGenerator.Generate(rng, streamIndex, clubId, count)` draws exactly `FIELDS_PER_PLAYER = 36` values per player via `Reserve(FIELDS_PER_PLAYER)` → 36× `DrawReserved` → `CloseReservation`. | MUST | §3 / F4 |
 | FR-SQ-013 | The **caller** registers the RNG stream (`RosterGenerator` is stateless): siteId `"player-database.roster-generation"`, `SubsystemOrdinals.PlayerDatabase`, `entityId = clubId` — so generation is unit-testable without booting a match. | MUST | KD-5 |
 | FR-SQ-014 | A `[4][31]` position-bias table (array-valued `[GT]`) adds a per-attribute bias, non-zero only at each position's signature attributes; applied inside the per-attribute clamp. | MUST | §3 / KD-5 |
-| FR-SQ-015 | `WeakFootRating` is drawn with its own `WEAK_FOOT_SPREAD = 2` jitter (base 3 ± 2 spans `[1,5]` with no clamp), NOT `ATTRIBUTE_SPREAD`. | MUST | KD-2 / F2 |
+| FR-SQ-015 | `WeakFootRating` is drawn with its own `WeakFootSpread = 2` jitter (base 3 ± 2 spans `[1,5]` with no clamp), NOT `AttributeSpread`. | MUST | KD-2 / F2 |
 | FR-SQ-016 | Two-run determinism: the same seed + `streamIndex` + `clubId` + `count` yields a byte-identical `Squad`. | MUST | KD-5 |
 | FR-SQ-017 | `NameCatalogue` provides Stage-0 in-code first/last-name arrays (32 each), APPEND-only for ordinal stability. | MUST | KD-8 |
 
@@ -113,8 +113,8 @@ refuses a null / empty / `> CLUB_SQUAD_SIZE` roster (F3). `GetPlayer` throws
 
 The constant catalogue (Appendix). `[FIXED]` `ATTRIBUTE_MIN=1` / `ATTRIBUTE_MAX=20` /
 `WEAK_FOOT_MIN=1` / `WEAK_FOOT_MAX=5` / `CLUB_SQUAD_SIZE=25`. `[DERIVED]` `ATTRIBUTE_COUNT=31` /
-`IDENTITY_DRAWS_PER_PLAYER=5` / `FIELDS_PER_PLAYER=36`. `[GT]` `ATTRIBUTE_BASE_MEAN=10` /
-`ATTRIBUTE_SPREAD=4` / `AGE_MIN=17` / `AGE_MAX=35` / `WEAK_FOOT_BASE=3` / `WEAK_FOOT_SPREAD=2` + the
+`IDENTITY_DRAWS_PER_PLAYER=5` / `FIELDS_PER_PLAYER=36`. `[GT]` `AttributeBaseMean=10` /
+`AttributeSpread=4` / `AgeMin=17` / `AgeMax=35` / `WeakFootBase=3` / `WeakFootSpread=2` + the
 `[4][31]` position-bias table. `[CROSS]` `DOMAIN_TAG_PLAYER_DATABASE=0x1F` /
 `SubsystemOrdinals.PlayerDatabase=81` (mirrored from Deterministic Simulation #16 §3.4).
 
@@ -131,7 +131,7 @@ re-projectable from the roster keyed by the serialized `_activeBenchSlot` (§7).
 | F | Mode | Handling |
 |---|---|---|
 | F1 | `FromArray` receives a non-31-length array, or an attribute value reaches a consumer outside `[1,20]` | fail loud (`ArgumentException`) at the array seam; generation clamps to `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` before assignment |
-| F2 | `WeakFootRating` outside `[1,5]` | fail loud; the `WEAK_FOOT_SPREAD = 2` jitter around base 3 spans `[1,5]` exactly so a correct draw never clamps (KD-2) |
+| F2 | `WeakFootRating` outside `[1,5]` | fail loud; the `WeakFootSpread = 2` jitter around base 3 spans `[1,5]` exactly so a correct draw never clamps (KD-2) |
 | F3 | A `Squad` is built with a null / empty / `> CLUB_SQUAD_SIZE` roster | ctor throws (`ArgumentNullException` / `ArgumentException`) — never truncates silently |
 | F4 | `RosterGenerator`'s per-player `Reserve` budget ≠ `FIELDS_PER_PLAYER` | locked count assertion (a future field addition that desyncs the budget fails the test, not the run) |
 | F5 | `SquadFileLoader` meets an unknown section/key, a duplicate key/section, an out-of-range or unparsable value | `FormatException` (fail loud, never silent fallback); an omitted key inherits the mid-range default |
