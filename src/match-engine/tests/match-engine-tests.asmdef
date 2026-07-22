@@ -15,6 +15,8 @@
         "TacticalDirector.DefensiveAI",
         "TacticalDirector.AttackingAI",
         "TacticalDirector.PerceptionSystem",
+        "TacticalDirector.HeadingMechanics",
+        "TacticalDirector.GoalkeeperMechanics",
         "TacticalDirector.TestingStrategy",
         "TacticalDirector.PerformanceOptimization",
         "TacticalDirector.TacticalInstructions",

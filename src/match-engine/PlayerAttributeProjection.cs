@@ -1,6 +1,6 @@
 // File:     src/match-engine/PlayerAttributeProjection.cs
 // Created:  2026-07-17
-// Modified: 2026-07-17 (AR-4, doc-only — ToNormalized note updated for the AttackingAgentSnapshot doc alignment)
+// Modified: 2026-07-22 (GK/Heading engine integration — ToGoalkeeper/ToHeading added, KD-P8 phantom bar lifted)
 // Author:   —
 // Spec:     Player-attribute projection design supplement (docs/tracking/player-attribute-projection-design.md)
 //           §3 (field-by-field mapping), §4 (KickPower derivation, KD-P1), §5 (runtime split, KD-P4);
@@ -12,6 +12,8 @@
 using UnityEngine;
 
 using TacticalDirector.DecisionTree;
+using TacticalDirector.GoalkeeperMechanics;
+using TacticalDirector.HeadingMechanics;
 using TacticalDirector.PassMechanics;
 using TacticalDirector.PerceptionSystem;
 using TacticalDirector.ShotMechanics;
@@ -32,9 +34,10 @@ namespace TacticalDirector.MatchEngine
     /// CS0104 note (KD-P6): the canonical record's bare type name collides with
     /// <c>AgentMovement.PlayerAttributes</c>, so the canonical type is fully qualified throughout —
     /// this assembly must never add a <c>using TacticalDirector.PlayerDatabase;</c> directive.
-    /// GK (#11) / Heading (#10) projections are deliberately ABSENT: MatchEngine builds neither
-    /// struct today, and writing them here would be a phantom consumer (KD-P8); they land with
-    /// those specs' engine integration per the design doc §3.6/§3.7 forward-compat mappings.
+    /// GK (#11) / Heading (#10) projections landed 2026-07-22 with the #10/#11 engine wiring
+    /// (docs/tracking/gk-heading-engine-integration-design.md) — the KD-P8 phantom-consumer bar is
+    /// lifted now that <c>MatchEngine</c> constructs and drives both orchestrators and commits intents
+    /// seeded from <see cref="ToGoalkeeper"/> / <see cref="ToHeading"/>.
     /// </summary>
     public static class PlayerAttributeProjection
     {
@@ -160,6 +163,56 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// Projection into Heading Mechanics #10 attributes (projection design §3.6). Raw <c>int</c>
+        /// copy of the three identically-named fields <c>Heading</c> / <c>Strength</c> / <c>Balance</c>;
+        /// <paramref name="teamId"/> is match-scoped runtime identity from the caller and
+        /// <paramref name="fatigue"/> is live runtime state, never sourced from the roster (KD-P4).
+        /// Called for any outfield agent that heads the ball (GK/Heading engine-integration KD-8).
+        /// </summary>
+        public static HeadingAgentAttributes ToHeading(
+            in TacticalDirector.PlayerDatabase.PlayerAttributes c, int teamId, float fatigue)
+        {
+            return new HeadingAgentAttributes
+            {
+                Heading  = c.Heading,
+                Strength = c.Strength,
+                Balance  = c.Balance,
+                Fatigue  = fatigue,
+                TeamId   = teamId
+            };
+        }
+
+        /// <summary>
+        /// Projection into Goalkeeper Mechanics #11 attributes (projection design §3.7). Lossless
+        /// <c>int → float</c> widening of the ten identically-named canonical <c>[1,20]</c> fields
+        /// (<c>Reflexes</c> / <c>Handling</c> / <c>Composure</c> / <c>Strength</c> / <c>Aerial</c> /
+        /// <c>Balance</c> / <c>OneVsOne</c> / <c>Pace</c> / <c>Throwing</c> / <c>Kicking</c>); the
+        /// struct's own <c>*Norm</c> accessors do the ÷ ATTR_MAX (20) conversion, so the projection
+        /// writes raw values like every other <c>To*</c> here. <paramref name="teamId"/> is
+        /// match-scoped runtime identity and <paramref name="fatigue"/> is live runtime state (KD-P4).
+        /// Called ONLY for the goalkeeper slot (GK routing gate, engine-integration KD-8 / design §6).
+        /// </summary>
+        public static GoalkeeperAgentAttributes ToGoalkeeper(
+            in TacticalDirector.PlayerDatabase.PlayerAttributes c, int teamId, float fatigue)
+        {
+            return new GoalkeeperAgentAttributes
+            {
+                Reflexes  = c.Reflexes,
+                Handling  = c.Handling,
+                Composure = c.Composure,
+                Strength  = c.Strength,
+                Aerial    = c.Aerial,
+                Balance   = c.Balance,
+                OneVsOne  = c.OneVsOne,
+                Pace      = c.Pace,
+                Throwing  = c.Throwing,
+                Kicking   = c.Kicking,
+                Fatigue   = fatigue,
+                TeamId    = teamId
+            };
+        }
+
+        /// <summary>
         /// The sole <c>[1,20] → [0,1]</c> scale conversion (projection design §2 / KD-P3), for the
         /// pre-normalized <c>AttackingAgentSnapshot</c> pace/dribbling pair: <c>÷ ATTRIBUTE_MAX</c>
         /// (20), so neutral 10 → 0.5 — exactly the pre-T1 <c>STAGE0_NEUTRAL_NORMALIZED</c> seed.
@@ -182,4 +235,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | struct's (raw−1)/19 doc mismatch is now aligned to the live    |
 // |         |            |        | ÷20 convention (AttackingAgentSnapshot.cs v1.1); the math      |
 // |         |            |        | switch stays a deferred design question.                       |
+// | 1.2     | 2026-07-22 | —      | GK/Heading engine integration: ToHeading (#10, raw int copy    |
+// |         |            |        | Heading/Strength/Balance) + ToGoalkeeper (#11, int→float widen |
+// |         |            |        | of the ten GK fields) added; KD-P8 "deliberately ABSENT" note  |
+// |         |            |        | removed now that MatchEngine gives both a live consumer.       |
 #endregion

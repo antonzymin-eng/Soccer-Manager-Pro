@@ -6,6 +6,7 @@
 // Modified: 2026-07-14 (match-flow completion — restart/foul-card/offside/substitution/half-full-time constants; SNAPSHOT_SCHEMA_VERSION 14 → 15)
 // Modified: 2026-07-17 (#27 T1 AR-4, doc-only — STAGE0_NEUTRAL_* stale ERR-007 TODOs retired: production-unconsumed since T1, retained as the KD-P7 neutral-equivalence references)
 // Modified: 2026-07-18 (#27 T3 — NO_ROSTER_CLUB_ID sentinel + SNAPSHOT_SCHEMA_VERSION 15 → 16, v16 per-team roster reference)
+// Modified: 2026-07-22 (GK #11 / Heading #10 engine integration Phase 1 — +6 [GT] Stage-0 save/header trigger constants; no schema change)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -429,6 +430,36 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         public static readonly int FoulCooldownTicks = Config.GetInt("match-engine", "FoulCooldownTicks", 60);
 
+        // ── GK (#11) / Heading (#10) Stage-0 trigger heuristics ──────────────────────────
+        // gk-heading-engine-integration-design.md §4. Conservative world-state gates that fire the
+        // save / header intents (seeded from the projections) when no Decision-Tree producer exists —
+        // the MatchFlowCollisionConsumer heuristic-foul precedent. Illustrative pending a balance pass
+        // (the #21 G2 precedent); the contract under review is the wiring, not the tuned magnitude.
+
+        /// <summary>[GT] Head-contact range (m): the nearest active outfield agent within this radius of
+        /// an airborne ball may commit a header (design §4.2). Config key [match-engine] HeaderTriggerRangeM.</summary>
+        public static readonly float HeaderTriggerRangeM = Config.GetFloat("match-engine", "HeaderTriggerRangeM", 1.5f);
+
+        /// <summary>[GT] Minimum ball height (m) above ground for the header trigger to consider the ball
+        /// airborne (design §4.2). Config key [match-engine] HeaderTriggerMinBallHeightM.</summary>
+        public static readonly float HeaderTriggerMinBallHeightM = Config.GetFloat("match-engine", "HeaderTriggerMinBallHeightM", 0.5f);
+
+        /// <summary>[GT] PowerIntent [0,1] the Stage-0 header trigger commits (design §4.2).
+        /// Config key [match-engine] HeaderTriggerPowerIntent.</summary>
+        public static readonly float HeaderTriggerPowerIntent = Config.GetFloat("match-engine", "HeaderTriggerPowerIntent", 0.7f);
+
+        /// <summary>[GT] Distance (m) from the defended goal line within which a loose on-target ball
+        /// arms the keeper's save trigger (design §4.1). Config key [match-engine] GkSaveTriggerRangeM.</summary>
+        public static readonly float GkSaveTriggerRangeM = Config.GetFloat("match-engine", "GkSaveTriggerRangeM", 16.5f);
+
+        /// <summary>[GT] Minimum ball speed (m/s) toward the defended goal for the save trigger to fire
+        /// (design §4.1). Config key [match-engine] GkSaveTriggerMinBallSpeedMps.</summary>
+        public static readonly float GkSaveTriggerMinBallSpeedMps = Config.GetFloat("match-engine", "GkSaveTriggerMinBallSpeedMps", 3.0f);
+
+        /// <summary>[GT] ClutchFirmness [0,1] the Stage-0 save trigger commits (design §4.1).
+        /// Config key [match-engine] SaveTriggerClutchFirmness.</summary>
+        public static readonly float SaveTriggerClutchFirmness = Config.GetFloat("match-engine", "SaveTriggerClutchFirmness", 0.8f);
+
         #endregion
     }
 }
@@ -563,4 +594,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | writer omitted, so a save after any booking now round-trips      |
 // |         |            |        | deterministically. v17 doc paragraph added; the stale v8         |
 // |         |            |        | "no cross-tick state excluded" note corrected.                  |
+// | 1.25    | 2026-07-22 | —      | GK #11 / Heading #10 engine integration (Phase 1): +6 [GT]      |
+// |         |            |        | Stage-0 trigger constants (HeaderTriggerRangeM /                |
+// |         |            |        | HeaderTriggerMinBallHeightM / HeaderTriggerPowerIntent /        |
+// |         |            |        | GkSaveTriggerRangeM / GkSaveTriggerMinBallSpeedMps /            |
+// |         |            |        | SaveTriggerClutchFirmness). No SNAPSHOT_SCHEMA_VERSION change.  |
 #endregion

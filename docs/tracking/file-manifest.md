@@ -1,7 +1,34 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 21, 2026 (**On-disk match save format landed — snapshot-deserialize Phase 3
+**Last Updated:** July 22, 2026 (**Goalkeeper #11 + Heading #10 engine integration, Phase 1 (opt-in)** —
+the GK/Heading attribute projections landed with a live consumer, per the new supplement
+`docs/tracking/gk-heading-engine-integration-design.md` (new). **New files:**
+`docs/tracking/gk-heading-engine-integration-design.md` (converged design supplement — AR-1/AR-2/AR-3 +
+code-AR + Phase-1 landing note); `src/match-engine/tests/MatchEngineGkHeadingTests.cs` v1.0 (+ `.meta`) —
+8 Phase-1 integration locks (flag semantics; flag-off default determinism + commits-nothing; save/header
+commit the projection; distinct-squad roster GK Pace flows through; flag-on forward determinism;
+durable-capture fails-loud-on / succeeds-off). **Modified:** `src/match-engine/MatchEngine.cs` v1.44
+(construct + drive both orchestrators + 4 stateless adapters + 2 RNG streams; `EnableGkHeading()` opt-in;
+`DriveGkHeadingTactical`/`DriveGkHeadingPhysics` + §4 save/header triggers seeded from the projections;
+`RefreshGkAgentIds`; durable-capture fail-loud guard; `TestOnly_` seams), `src/match-engine/PlayerAttributeProjection.cs`
+v1.2 (`ToGoalkeeper` + `ToHeading` added, KD-P8 note removed), `src/match-engine/MatchEngineConstants.cs`
+v1.25 (+6 `[GT]` trigger constants), `src/match-engine/match-engine.asmdef` + `src/match-engine/tests/match-engine-tests.asmdef`
+(+ HeadingMechanics + GoalkeeperMechanics refs), `src/match-engine/tests/PlayerAttributeProjectionTests.cs`
+v1.1 (+2 ToHeading/ToGoalkeeper field-scale locks). No `SNAPSHOT_SCHEMA_VERSION` change (default engine
+byte-identical). **Full dotnet gate: PASSED, 0 failures (whole tree green; 290 match-engine tests).**)
+**Last Updated:** July 22, 2026 (**GK/Heading cleaner-architecture pass — behaviour-identical.** **New
+files:** `src/match-engine/GkHeadingIntentSource.cs` v1.0 (pure static §4 save/header trigger geometry —
+`SaveArmed` / `NearestHeaderCandidate` — extracted out of `MatchEngine` so the "when" heuristic is
+unit-testable, the `MatchFlowCollisionConsumer` precedent); `src/match-engine/tests/GkHeadingIntentSourceTests.cs`
+v1.0 (10 pure-function locks). **Modified:** `src/match-engine/MatchEngine.cs` v1.45 — the four nested
+ball/RNG adapters collapsed into ONE `GkHeadingWorldAdapter` (both ball systems share `ApplyKick`; the
+two RNG services disambiguate by arity), and `TryCommitSaveIntents`/`TryCommitHeaderIntents` delegate
+their geometry to `GkHeadingIntentSource` (keeping only latch + projection + commit).
+`gk-heading-engine-integration-design.md` §9b/§9c (cleaner-architecture pass + the deferred Phase-2
+flag-removal epic). No `SNAPSHOT_SCHEMA_VERSION` change. **Full dotnet gate: PASSED, 0 failures (whole
+tree green; 300 match-engine tests).**)
+**Last Updated (prior):** July 21, 2026 (**On-disk match save format landed — snapshot-deserialize Phase 3
 `SaveManager` fold (N1)**, per `docs/tracking/match-save-file-design.md` v0.3. **New files:**
 `src/match-engine/MatchSaveCodec.cs` v1.0 (+ `.meta`) — pure static `Encode`/`Decode` of the on-disk
 save blob (KD-7 boot-`matchSeed` boot-header + `SnapshotHeader` incl. `EnvironmentFingerprint` +
