@@ -64,6 +64,10 @@ namespace TacticalDirector.DecisionTree
         public const float U_BASE_MOVE      = 0.40f;  // [GT] positional duty; moderate urgency
         public const float U_BASE_PRESS     = 0.50f;  // [GT] active defence; moderate baseline
         public const float U_BASE_INTERCEPT = 0.55f;  // [GT] best active defensive action
+        // [GT] SAVE base utility (ERR-008-013). NOT load-bearing for selection — SAVE is the SOLE
+        // off-ball option when TacticalContext.SaveAvailable (OptionGenerator), so it is always
+        // selected regardless of this value; it only feeds AgentAction.UtilityScore / DecisionMadeEvent.
+        public const float U_BASE_SAVE      = 1.00f;
 
         // ── Attribute Exponents ─────────────────────────────────────────────────────
 

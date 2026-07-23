@@ -46,6 +46,33 @@ namespace TacticalDirector.DecisionTree.Tests
             Assert.IsTrue(hasMove, "MOVE_TO_POSITION must always be generated in off-ball branch");
         }
 
+        // ── ERR-008-013: SAVE is the sole off-ball option when available ──────
+
+        [Test]
+        public void OffBallBranch_SaveAvailable_YieldsExactlyOneSaveOption()
+        {
+            // The threatened keeper (SaveAvailable set only under the flag) commits to the save: the
+            // off-ball branch short-circuits to SAVE alone, so it is selected regardless of composure
+            // noise / mentality / role tiebreak (AR-4 — a must-happen action must not depend on
+            // out-scoring INTERCEPT, which can reach the clamp ceiling under an aggressive tactic).
+            DecisionContext ctx = BuildOffBallContext();
+            ctx.TacticalContext.SaveAvailable = true;
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+            Assert.AreEqual(1, count, "SaveAvailable must yield exactly one off-ball option.");
+            Assert.AreEqual(ActionType.SAVE, Buffer[0].Type, "That sole option must be SAVE.");
+        }
+
+        [Test]
+        public void OffBallBranch_SaveNotAvailable_GeneratesNoSave()
+        {
+            // Flag-off / non-keeper: the off-ball branch is byte-identical to pre-integration — no SAVE.
+            DecisionContext ctx = BuildOffBallContext();   // SaveAvailable defaults false (Stage0Default)
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+            for (int i = 0; i < count; i++)
+                Assert.AreNotEqual(ActionType.SAVE, Buffer[i].Type,
+                    "SAVE must never be generated when a save is not available.");
+        }
+
         // ── UT-03: No PASS when no visible teammates ──────────────────────────
 
         [Test]

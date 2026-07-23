@@ -63,9 +63,44 @@ namespace TacticalDirector.DecisionTree
             ActionOption[] buf,
             int count)
         {
+            // #11/#10 (ERR-008-013): a threatened keeper commits to the save — SAVE is the SOLE
+            // off-ball option so it is selected regardless of composure noise / mentality / role
+            // tiebreak (a must-happen, geometry-gated action must not depend on out-scoring a
+            // tiebreak-disadvantaged competitor; AR-4). SaveAvailable is true only for the flag-on
+            // keeper (MatchEngine.RunMechanicsAI under EnableGkHeading), so every other agent /
+            // flag-off path is byte-identical to pre-integration.
+            if (ctx.TacticalContext.SaveAvailable)
+                return GenerateSaveCandidate(in ctx, buf, count); // §3.1.10 (new)
+
             count = GenerateMoveCandidate(in ctx, buf, count);      // §3.1.7
             count = GeneratePressCandidate(in ctx, buf, count);     // §3.1.8
             count = GenerateInterceptCandidate(in ctx, buf, count); // §3.1.9
+            return count;
+        }
+
+        // ── §3.1.10 SAVE (ERR-008-013) ──────────────────────────────────────────
+
+        /// <summary>
+        /// Emits the single SAVE candidate for a threatened goalkeeper (gated by
+        /// <see cref="TacticalContext.SaveAvailable"/>, set only under the opt-in GK/Heading flag).
+        /// TargetPosition carries the perceived ball position for observability only — the save
+        /// intent parameters are Stage-0 constants applied by the match-engine dispatch sink
+        /// (the #11 SaveIntent doc's anticipated "DT commits the save" path). §3.1.10.
+        /// </summary>
+        private static int GenerateSaveCandidate(
+            in DecisionContext ctx,
+            ActionOption[] buf,
+            int count)
+        {
+            if (count >= buf.Length) return count;
+
+            buf[count++] = new ActionOption
+            {
+                Type           = ActionType.SAVE,
+                TargetAgentId  = -1,
+                TargetPosition = ctx.Snapshot.BallPerceivedPosition
+            };
+
             return count;
         }
 

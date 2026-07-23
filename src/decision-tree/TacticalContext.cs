@@ -1,6 +1,6 @@
 // File:     src/decision-tree/TacticalContext.cs
 // Created:  2026-05-29
-// Modified: 2026-07-07
+// Modified: 2026-07-23
 // Author:   —
 // Spec:     Decision Tree #8 §2.2.6, new §3.2/§7.7, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Team tactical instructions delivered to each agent's Decision Tree.
@@ -90,6 +90,18 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public bool RestDefenseSufficient;
 
+        /// <summary>
+        /// #11/#10 GK/Heading integration (ERR-008-013): true only for the goalkeeper of the team a
+        /// loose on-target ball threatens this tick — the DT-emitted-SAVE gate. Set solely by
+        /// <c>MatchEngine.RunMechanicsAI</c> under the opt-in <c>EnableGkHeading()</c> flag (from
+        /// <c>GkHeadingIntentSource.SaveArmed</c>); when set, <c>OptionGenerator</c> emits SAVE as the
+        /// SOLE off-ball option so the keeper reliably commits. Zero value <c>false</c> = identity
+        /// (no save available) — safe unseeded like <see cref="DismarkIntensity"/>.Off;
+        /// <see cref="Stage0Default"/> seeds <c>false</c> explicitly for symmetry. Flag-off / non-keeper
+        /// ⇒ <c>false</c>, so the off-ball branch is byte-identical to pre-integration.
+        /// </summary>
+        public bool SaveAvailable;
+
         // ── Formation Slot ────────────────────────────────────────────────────
 
         /// <summary>
@@ -129,6 +141,7 @@ namespace TacticalDirector.DecisionTree
                 PlayerTactic       = PlayerTactic.Default(PlayerRole.Default),
                 DismarkIntensity   = DismarkIntensity.Off,
                 RestDefenseSufficient = true,
+                SaveAvailable      = false,
                 _formationSlot     = formationSlot,
                 HasMarkDirective   = false,
                 HasAttackIntent    = false
@@ -191,4 +204,7 @@ namespace TacticalDirector.DecisionTree
 // | 1.7     | 2026-07-11 | —      | #23 wiring (FR-DM-015): + DismarkIntensity routing field (zero value = Off  |
 // |         |            |        |   = identity, safe unseeded; Stage0Default seeds Off explicitly). Drives    |
 // |         |            |        |   the FM-DM-03 marked-pass-target penalty in UtilityScorer.                 |
+// | 1.8     | 2026-07-23 | —      | #11/#10 (ERR-008-013): + SaveAvailable routing field (zero value false =    |
+// |         |            |        |   identity; Stage0Default seeds false). Set only by MatchEngine under the   |
+// |         |            |        |   EnableGkHeading flag; gates the DT-emitted SAVE (sole off-ball option).   |
 #endregion

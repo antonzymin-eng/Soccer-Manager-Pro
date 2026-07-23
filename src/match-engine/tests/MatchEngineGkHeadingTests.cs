@@ -113,18 +113,37 @@ namespace TacticalDirector.MatchEngine
 
         // ── flag ON: the projections are a LIVE consumer ──────────────────────────────
 
+        /// <summary>Team 0's keeper defends x = 0: a loose ball 5 m out driving at the goal at 10 m/s.</summary>
+        private static readonly Vector3 SaveBallPos = new Vector3(5f, 34f, 0.11f);
+        private static readonly Vector3 SaveBallVel = new Vector3(-10f, 0f, 0f);
+
+        /// <summary>ERR-008-013: the save is now a DT-emitted action, committed inside the AI phase of a
+        /// natural <see cref="MatchEngine.RunTick"/> (RunMechanicsAI sets SaveAvailable → the keeper's
+        /// DecisionTree emits SAVE → HostSaveDispatch commits). Re-force the loose ball each tick (physics
+        /// integrates it / first-touch could claim it otherwise) and tick until the commit lands or a bound
+        /// of two AI strides elapses — guaranteeing a stride tick runs RunAiPhase. Returns true if committed.</summary>
+        private static bool DriveUntilSaveCommitted(MatchEngine engine)
+        {
+            for (int i = 0; i < 2 * DeterministicSimConstants.AI_PHASE_STRIDE; i++)
+            {
+                engine.TestOnly_ForceBallLoose(SaveBallPos, SaveBallVel);
+                engine.RunTick();
+                if (engine.TestOnly_LastCommittedSaveAttrs.HasValue)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         [Test]
         public void SaveTrigger_CommitsGoalkeeperProjection()
         {
             var engine = new MatchEngine(MatchSeed);
             engine.EnableGkHeading();
 
-            // Team 0's keeper defends x = 0. Loose ball 5 m out, driving at the goal at 10 m/s.
-            engine.TestOnly_ForceBallLoose(new Vector3(5f, 34f, 0.11f), new Vector3(-10f, 0f, 0f));
-            engine.TestOnly_DriveGkHeadingTactical();
-
-            Assert.IsTrue(engine.TestOnly_LastCommittedSaveAttrs.HasValue,
-                "The save trigger must commit a SaveIntent seeded from ToGoalkeeper (the live consumer).");
+            Assert.IsTrue(DriveUntilSaveCommitted(engine),
+                "The keeper's DT must emit SAVE and commit a SaveIntent seeded from ToGoalkeeper (the live consumer).");
             TacticalDirector.GoalkeeperMechanics.GoalkeeperAgentAttributes committed =
                 engine.TestOnly_LastCommittedSaveAttrs.Value;
             TacticalDirector.GoalkeeperMechanics.GoalkeeperAgentAttributes expected =
@@ -134,6 +153,37 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(expected.Handling, committed.Handling, 0f);
             Assert.AreEqual(expected.Kicking,  committed.Kicking,  0f);
             Assert.AreEqual(0, committed.TeamId, "Team 0's keeper committed the save.");
+        }
+
+        [Test]
+        public void SaveDecision_SurvivesAdversarialTactic()
+        {
+            // AR-4 regression lock (integration level): SAVE is the SOLE off-ball option when available,
+            // so it is selected regardless of a non-identity per-agent tactic. A BallWinningMid role
+            // weights INTERCEPT high (RoleWeightModifiers up to 2.0) — exactly the input that, under the
+            // rejected scoring-dominance approach, would have lifted INTERCEPT to the clamp ceiling and
+            // won the lower-ordinal tiebreak (a missed save). The keeper must still commit the save.
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+            int homeKeeper = HomeGoalkeeper(engine);
+            Assert.GreaterOrEqual(homeKeeper, 0);
+            engine.SetPlayerTactic(homeKeeper, TacticalDirector.TacticalInstructions.PlayerTactic.Default(
+                TacticalDirector.TacticalInstructions.PlayerRole.BallWinningMid));
+
+            Assert.IsTrue(DriveUntilSaveCommitted(engine),
+                "SAVE (sole off-ball option) must win regardless of tactic — no missed save under an INTERCEPT-weighted role.");
+        }
+
+        private static int HomeGoalkeeper(MatchEngine engine)
+        {
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (engine.AgentIsGoalkeeper(i) && engine.AgentTeamId(i) == 0)
+                {
+                    return i;
+                }
+            }
+            return -1;
         }
 
         [Test]
@@ -170,10 +220,7 @@ namespace TacticalDirector.MatchEngine
             engine.ConfigureSquads(SquadWithDistinctGoalkeeper(7), DefaultSquad(8));   // home GK Pace = 19
             engine.EnableGkHeading();
 
-            engine.TestOnly_ForceBallLoose(new Vector3(5f, 34f, 0.11f), new Vector3(-10f, 0f, 0f));
-            engine.TestOnly_DriveGkHeadingTactical();
-
-            Assert.IsTrue(engine.TestOnly_LastCommittedSaveAttrs.HasValue);
+            Assert.IsTrue(DriveUntilSaveCommitted(engine));
             TacticalDirector.GoalkeeperMechanics.GoalkeeperAgentAttributes committed =
                 engine.TestOnly_LastCommittedSaveAttrs.Value;
             Assert.AreEqual(19f, committed.Pace, 0f,
@@ -247,4 +294,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | FlagOn_DurableCapture_Succeeds (the guard is removed; a flag-  |
 // |         |            |        | on engine is now snapshot-safe). Round-trip determinism is     |
 // |         |            |        | locked in MatchEngineSnapshotRestoreTests.                      |
+// | 1.2     | 2026-07-23 | —      | ERR-008-013: the save is now a DT-emitted SAVE action. The two |
+// |         |            |        | save-commit tests drive through the natural RunTick DT path    |
+// |         |            |        | (DriveUntilSaveCommitted); + SaveDecision_SurvivesAdversarial-  |
+// |         |            |        | Tactic (the AR-4 sole-option missed-save regression lock).     |
 #endregion

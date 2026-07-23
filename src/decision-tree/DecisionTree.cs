@@ -40,30 +40,34 @@ namespace TacticalDirector.DecisionTree
         private readonly IDtMovementController _movementController;
         private readonly PassExecutor _passExecutor;
         private readonly ShotExecutor _shotExecutor;
+        private readonly IDtSaveDispatch _saveDispatch;
         private readonly int _agentId;
         private ulong _matchSeed;
 
         /// <summary>
         /// Creates the per-agent Decision Tree. The executors are this agent's
         /// PassExecutor / ShotExecutor instances (Pass #5 §4.1 / Shot #6 §4.1 — both
-        /// are per-agent stateful windup machines). They may be null in unit-test or
-        /// bootstrap contexts where PASS/SHOOT will never be dispatched or where a
-        /// dropped dispatch is acceptable; ActionDispatcher logs the wiring failure.
-        /// AR-2 H-1: the previous revision invoked the executors statically, which
-        /// never compiled.
+        /// are per-agent stateful windup machines). <paramref name="saveDispatch"/> is the
+        /// goalkeeper save sink (ERR-008-013) — one shared instance across all agents. All three
+        /// may be null in unit-test or bootstrap contexts where the corresponding action will never
+        /// be dispatched or where a dropped dispatch is acceptable; ActionDispatcher logs the wiring
+        /// failure. AR-2 H-1: the previous revision invoked the executors statically, which never
+        /// compiled.
         /// </summary>
         public DecisionTree(
             int agentId,
             IDtMovementController movementController,
             ulong matchSeed,
             PassExecutor passExecutor = null,
-            ShotExecutor shotExecutor = null)
+            ShotExecutor shotExecutor = null,
+            IDtSaveDispatch saveDispatch = null)
         {
             _agentId            = agentId;
             _movementController = movementController;
             _matchSeed          = matchSeed;
             _passExecutor       = passExecutor;
             _shotExecutor       = shotExecutor;
+            _saveDispatch       = saveDispatch;
         }
 
         // ── Public API ─────────────────────────────────────────────────────────
@@ -199,7 +203,7 @@ namespace TacticalDirector.DecisionTree
 
             // ── Step 6: Dispatch (§3.5) ───────────────────────────────────────
             ActionDispatcher.Dispatch(selected, in ctx, _movementController,
-                _passExecutor, _shotExecutor);
+                _passExecutor, _shotExecutor, _saveDispatch);
         }
 
         /// <summary>

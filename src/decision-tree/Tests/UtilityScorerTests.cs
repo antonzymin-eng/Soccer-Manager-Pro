@@ -24,6 +24,27 @@ namespace TacticalDirector.DecisionTree.Tests
     {
         private static readonly ActionOption[] Buffer = new ActionOption[DecisionTreeConstants.MaxOptions];
 
+        // ── ERR-008-013: scoring SAVE must not crash on the 7-wide tactic tables ──
+
+        [Test]
+        public void Save_ScoredUnderNonIdentityTactic_DoesNotThrow_AndYieldsFiniteBase()
+        {
+            // ComputeUtility exempts SAVE from PlayerTacticActionMultiplier — which indexes the 7-wide
+            // RoleWeightModifiers/TempoActionBias tables by the action ordinal. Without that guard,
+            // scoring a SAVE option (a = 7) reads out of bounds → IndexOutOfRangeException. A non-identity
+            // per-agent tactic is set to prove the guard, not the table, is what runs.
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            ctx.TacticalContext.PlayerTactic = TacticalDirector.TacticalInstructions.PlayerTactic.Default(
+                TacticalDirector.TacticalInstructions.PlayerRole.BallWinningMid);
+            ctx.TacticalContext.Tempo = TacticalDirector.TacticalInstructions.Tempo.VeryFast;
+
+            Buffer[0] = new ActionOption { Type = ActionType.SAVE, TargetPosition = Vector2.zero };
+            Assert.DoesNotThrow(() => UtilityScorer.ScoreOptions(Buffer, 1, in ctx),
+                "Scoring SAVE must not index the 7-wide per-agent tactic tables out of bounds.");
+            Assert.IsTrue(Buffer[0].BaseUtility > 0f && float.IsFinite(Buffer[0].BaseUtility),
+                "SAVE yields a finite positive base utility (U_BASE_SAVE), not the floor or NaN.");
+        }
+
         // ── UT-US-01: PASS utility matches formula — finite and bounded ──────
 
         [Test]

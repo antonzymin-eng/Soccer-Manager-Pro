@@ -245,14 +245,16 @@ namespace TacticalDirector.DecisionTree.Tests
             // Mechanical coupling guard, the analogue of the B0 OscillationGuard BufferSize assert and the
             // C0 executor field-count locks: adding cross-tick state without extending DecisionTreeState /
             // CaptureState / RestoreState would silently drop it from the snapshot and diverge replay
-            // (§2.6 trap). 9 instance fields = 5 injected/identity (_movementController / _passExecutor /
-            // _shotExecutor / _agentId / _matchSeed) + 1 scratch (_optionBuffer) + 3 captured cross-tick
-            // (_state / _lastAction / _hasDispatchedAction).
+            // (§2.6 trap). 10 instance fields = 6 injected/identity (_movementController / _passExecutor /
+            // _shotExecutor / _saveDispatch (ERR-008-013) / _agentId / _matchSeed) + 1 scratch
+            // (_optionBuffer) + 3 captured cross-tick (_state / _lastAction / _hasDispatchedAction).
+            // _saveDispatch is an injected dependency (the GK save sink), NOT cross-tick state — the same
+            // legitimately-excluded class as the executors.
             int fieldCount = typeof(DecisionTree)
                 .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
                 .Length;
 
-            Assert.AreEqual(9, fieldCount,
+            Assert.AreEqual(10, fieldCount,
                 "DecisionTree instance field count changed. If you added cross-tick state, extend " +
                 "DecisionTreeState + CaptureState + RestoreState, then update this count (and confirm " +
                 "_matchSeed / _optionBuffer remain the only legitimately excluded fields).");
