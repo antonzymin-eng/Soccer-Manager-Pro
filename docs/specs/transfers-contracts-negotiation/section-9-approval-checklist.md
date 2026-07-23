@@ -1,8 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.4 — AR-6 (2M+1L) fix pass + AR-7 convergence; prior v0.3 AR-3/AR-4, v0.2 AR-1/AR-2 + sign-off, v0.1 initial)
-**Version:** 0.4
+**Last Updated:** July 23, 2026 (v0.5 — AR-8 (3L doc, non-gating); prior v0.4 AR-6 + AR-7 convergence, v0.3 AR-3/AR-4, v0.2 AR-1/AR-2 + sign-off, v0.1 initial)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -58,9 +58,10 @@ no #16 change); #40/#33/#27 unchanged (their existing seams already name #31 the
 
 ## 9.5 Open gates before APPROVED — CLEARED
 
-- Section-file AR-1 (3M+1L) → AR-2 (1L) → AR-3 (1H+3M+5L) → AR-4 (1M + 1 regression + 3L) → AR-6 (2M — a
-  stale re-key test still asserting the AR-3-removed hook-move, + the AR-4 seeding fix left the load lifecycle
-  undefined; +1L, all resolved) → AR-7 → **converged**.
+- Section-file AR-1 (3M+1L) → AR-2 (1L) → AR-3 (1H+3M+5L) → AR-4 (1M + 1 regression + 3L) → **AR-5 (declared
+  clean — premature)** → AR-6 (2M+1L, reopened the AR-4 regressions: a stale re-key test still asserting the
+  AR-3-removed hook-move, + the AR-4 seeding fix left the load lifecycle undefined; all resolved) → AR-7 →
+  **converged** → AR-8 (0H+0M+3L doc, non-gating — applied).
 - R-01..R-05 sign-off — **granted July 23, 2026** (re-affirmed after the AR-3 fixes).
 - ERR-030-004 (the #30 transfers tick-order step-5 null seam) — **filed atomically at approval**
   (`spec-error-log.md` v1.36; `season-competition-loop/section-2.md` + `section-3.md` v0.5).
@@ -74,4 +75,5 @@ no #16 change); #40/#33/#27 unchanged (their existing seams already name #31 the
 | 0.2 | 2026-07-23 | — | AR-1 (3M+1L) → AR-2 (1L) converged; G-items ✅; R-01..R-05 signed; Status APPROVED; ERR-030-004 filed. |
 | 0.3 | 2026-07-23 | — | AR-3 (1H+3M+5L) fix pass (H: wage deferral; M: sell double-handle, club-need, aging-vs-F7; L×5) all resolved; AR-4 fix pass (1M: career-start contract seeding §3.8; regression: `counterpartyView` double-application; L: §6 post-count, §7 T1/T2 cites, §1.2 accessor) all resolved → AR-5 convergence; new G17 (wage deferral), G14 seeding; ERR-040/ERR-033 recorded as T3 deferrals; sign-off re-affirmed. |
 | 0.4 | 2026-07-23 | — | AR-6 (2M+1L) fix pass: T-TX-REKEY-001 corrected to the insert/remove-via-`SubmitBid` model (was still asserting the AR-3-removed hook-move); §3.8/§4.5/FR-TX-028 scope seeding to new-career genesis only (a load decodes from the sub-blob, never re-seeds) + T-TX-DET-001 lock; T-TX-REKEY-003 wording (L) → AR-7 convergence. |
+| 0.5 | 2026-07-23 | — | AR-8 (0H+0M+3L, non-gating doc): §9.5 chain corrected to record AR-5 as a premature false-clean (was skipped AR-4→AR-6); §3.3 note that sell income does not raise in-window buy headroom (static ceiling, `committedSpendThisWindow` is buy-side only); §3.7 `ResetWindow()` re-derives from the calendar. Loop remains converged (Lows do not gate). |
 #endregion

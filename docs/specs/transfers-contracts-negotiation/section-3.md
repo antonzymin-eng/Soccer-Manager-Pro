@@ -1,8 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.4 — AR-6 fix pass; prior v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.4
+**Last Updated:** July 23, 2026 (v0.5 — AR-8 doc; prior v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -103,6 +103,13 @@ magnitudes are pre-validated; a `Credit` cannot fail on affordability), so the c
 player it does not receive, and the sell's `RemoveContract` (before the infallible re-key) never strands a
 half-removed contract.
 
+**Static-ceiling consequence (KD-2).** A sell posts a `Credit` to #40's `Balance` but does **not** touch
+`committedSpendThisWindow` (a **buy-side accumulator only** — the sell branch issues no `AddCommittedSpend`)
+and does **not** raise `AvailableTransferBudget` (the `TransferBudget` ceiling is `SettleFinances`-only,
+FR-FN-003/004). So **sell proceeds do not increase in-window buy headroom** at minimal — this is the faithful
+inheritance of #40's no-net-budget model (KD-2), not an omission. A deep-tier net-budget refinement, if ever
+wanted, is a #40 concern, not a #31 parallel ledger (FR-TX-006).
+
 ## 3.4 The #30 boundary — the roster-commit re-key (KD-7)
 
 `RequestRosterCommit(fromClubId, toClubId, playerId)` is a **genuinely new #30-owned mid-season entry point**
@@ -166,6 +173,8 @@ AgeContractsAtBoundary(ref TransfersState txState):        # invoked from #30's 
         else:            txState.SetContractLength(playerId, newLen)   # write the decrement back to the store
     for each playerId in expired:  txState.RemoveContract(playerId)    # remove AFTER iterating (no modify-during-foreach)
     txState.ResetWindow(); txState.ResetCommittedSpend()   # season-scoped state resets (FR-TX-007/028)
+    #   ResetWindow RE-DERIVES ActiveWindow from the new season's SeasonCalendar via DeriveSummerWindow (§3.5) —
+    #   the calendar is the source of truth (§3.5); it does not zero the cursor. ResetCommittedSpend sets it 0.
 ```
 
 An expired contract is **removed** — the player becomes un-contracted; at minimal it simply leaves #31's
@@ -210,4 +219,5 @@ field-identical: the restored contracts come from the sub-blob, not from a re-ru
 | 0.2 | 2026-07-23 | — | AR-1: `SubmitBid` pipeline resolves `fromClub`/`toClub` from the explicit `Offer.CounterpartyClubId` + cross-checks `ClubOf(playerId) == fromClub` (M1); sell branch defines `outgoingWage` + buyer free-slot gate + managed-club-only contract scope (M2/L1). |
 | 0.3 | 2026-07-23 | — | AR-3: commit is fee-only at minimal, wage posts deep (H); sell `RemoveContract` moved BEFORE `RequestRosterCommit` + §3.4 hook made direction-aware/no-op (sell double-handle — M); §3.1 drops club-need to the deep bias + defines `counterpartyView` (M); new §3.7 decrement-and-remove contract aging (F7 — M); §3.4 corrects the "#30 churns rosters" claim + fixes the T2 build cite to ERR-030-005 (L); §3.6 fee-post count corrected to one. AR-4: fixed the `counterpartyView` double-application in §3.3 (regression from §3.1's redefinition), made §3.7 aging struct-safe (iterate keys, remove after the loop), and added §3.8 career-start contract seeding (M — the sell/aging flows previously had no initial contract set). |
 | 0.4 | 2026-07-23 | — | AR-6 (M): §3.8 scopes seeding to **new-career genesis only** — a load reconstructs from the sub-blob and must not re-seed (a re-seed would overwrite/collide with the restored career; the AR-4 §3.8 addition had left this undefined). |
+| 0.5 | 2026-07-23 | — | AR-8 (2L doc, non-gating): §3.3 records the static-ceiling consequence (sell income does not raise in-window buy headroom; `committedSpendThisWindow` is buy-side only — KD-2/FR-FN-003/004); §3.7 pins `ResetWindow()` as re-deriving `ActiveWindow` from the calendar (§3.5), not zeroing. |
 #endregion
