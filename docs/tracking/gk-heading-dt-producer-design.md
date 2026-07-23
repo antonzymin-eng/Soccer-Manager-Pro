@@ -260,12 +260,14 @@ alternatives — no longer an unconditional geometry reflex. This is the intende
 
 ## 6. Test plan (outline)
 
+> **§11.5 is authoritative** — the detailed plan refined the tests (no crossing-point helper: `SaveTarget`
+> was dropped in §11.0, `ScoreSave` is a dominant constant not an attribute-shaped value). This section
+> is the high-level intent; implement per §11.5.
+
 - **`OptionGeneratorTests` / `UtilityScorerTests` / `ActionSelectorTests`** (#8, extend) — SAVE
-  generated iff `SaveAvailable`; `ScoreSave` shape (better keeper ⇒ higher); SAVE=7 noise-field
-  packing unchanged for ordinals 0–6 (a byte-for-byte lock that adding SAVE did not perturb existing
-  noise).
-- **`GkHeadingIntentSource` crossing-point helper** (new pure fn) — unit tests for the SaveTarget
-  geometry.
+  generated iff `SaveAvailable`; the `ScoreSave`-dominates-off-ball no-flicker lock; the
+  `PlayerTacticActionMultiplier`-not-applied-to-SAVE crash-regression lock; SAVE=7 noise-field packing
+  unchanged for ordinals 0–6.
 - **`MatchEngineGkHeadingTests`** (extend) — flag-on: a keeper facing an on-target shot dispatches
   SAVE and the projection reaches the orchestrator (`TestOnly_LastCommittedSaveAttrs`); flag-off:
   byte-identical to a pre-change engine; two-run forward determinism; the once-per-episode latch
@@ -343,13 +345,143 @@ against `UtilityScorer.cs` / `TacticTranslation.cs` / `ActionSelector.cs`.
   primitive-only `IDtSaveDispatch` keeps it dormant); `SaveUrgency` scratch field dropped (ScoreSave
   reads `ctx`); the commit-ordering shift (2181 → 2221, same phase) stated explicitly (§3.7).
 
-**AR-3 (2026-07-23) — CONVERGENCE, cycle closed.** Full re-read of the fixed outline against the same
-source. The H-1 guard (`if (opt.Type != ActionType.SAVE)`) is confirmed to neutralise the only
-crashing consumer without touching the #21 tables; the §3.4a audit checklist covers every
-action-ordinal-indexed surface (noise field, player-tactic tables, the two scoring switches, the
-gated rest-defense/dismark multipliers, `TacticalModifierResolver`, serialization); the `SaveTarget →
-TargetHand` mapping and `DeflectionTarget = null` are internally consistent with the heuristic parity
-claim; the GK-movement-skip dependency + the >2×-noise margin close the flicker path; no new High or
-Medium. Low remaining (non-gating): the exact `ScoreSave` scale and the `TacticalModifierResolver`
-disposition are deferred to the detailed plan by design (that is the plan's job, not the outline's).
-Outline is ready to expand.
+**AR-3 (2026-07-23) — CONVERGENCE of the outline, cycle closed.** Full re-read of the fixed outline
+against the same source. The H-1 guard (`if (opt.Type != ActionType.SAVE)`) neutralises the only
+crashing consumer without touching the #21 tables; the §3.4a audit covers every action-ordinal-indexed
+surface; the `DeflectionTarget = null` / heuristic-parity intent is consistent; the flicker path is
+closed; no new High or Medium. Outline ready to expand.
+
+**AR-4 (2026-07-23) — on the §11 detailed plan: 1 Medium (structural) + 2 Low, all resolved.**
+Verified against source.
+- **M-1 (correctness/structural):** the `ScoreSave = UTILITY_CEILING` dominance mechanism was not
+  robust — `ComputeUtility` clamps SAVE at 1.00 while `INTERCEPT` (base 0.55) can be lifted to 1.00 by
+  `MentalityRiskMult` (max 1.20) × `RoleWeightModifiers` (up to 2.0), tying at the ceiling; the
+  lowest-ordinal tiebreak then picks `INTERCEPT(6)` over `SAVE(7)` ⇒ a **missed save** under a
+  supported flag-on per-agent keeper tactic, which the plan's default-tactic dominance test would not
+  catch. Resolved by making SAVE the **sole** off-ball option when `SaveAvailable`
+  (`OptionGenerator.GenerateOffBallBranch` short-circuit) — robust selection independent of
+  noise/mentality/role/tiebreak; the `U_BASE_SAVE`/2×noise dominance analysis is dropped, the
+  `PlayerTacticActionMultiplier` guard kept.
+- **L:** §11.3.3 write-site pinned to `MatchEngine.cs:2344–2395` (before `_tacticalContexts[i] = ctx`)
+  with the exact statement; §11.5 dominance test replaced by the sole-option selection lock.
+
+**AR-5 (2026-07-23) — CONVERGENCE, plan cycle closed.** Full re-read of §11 after the fix. The
+sole-option branch touches only the flag-on threatened keeper (`SaveAvailable` false elsewhere) ⇒
+flag-off byte-identity + the §11.1 audit + no-schema-bump all survive; SAVE is still scored as the
+sole option so the `PlayerTacticActionMultiplier` guard remains load-bearing and is kept; the §11.5
+locks now assert the robust property (exactly-one-SAVE-option + selection under adversarial
+tactic/mentality). No new High or Medium. Plan ready to implement.
+
+---
+
+## 11. Detailed implementation plan
+
+### 11.0 Source-grounded refinements to §3 (all *reduce* scope/risk; verified against source)
+
+Reading the actual #8 / #11 source tightened three §3 sketches — the plan supersedes the outline on these:
+
+- **Drop `SaveTarget` entirely; `TacticalContext` gains only `SaveAvailable` (bool).** `SaveIntent.
+  TargetHand` is "anatomy-lookup only; no formula gating (KD-1)" (`SaveIntent.cs:20`) and
+  `DeflectionTarget` is future parry-intent (`:29`) — at Stage 0 **neither is load-bearing**, and the
+  orchestrator reads the ball directly for the dive. So the crossing point is unused; the DT needs only
+  the **boolean availability**. This fully dissolves AR-2 M-1 (no crossing point ⇒ nothing to misplace
+  into `DeflectionTarget`). The sink builds the *same* intent the heuristic built:
+  `{ TargetHand = Either, ClutchFirmness = SaveTriggerClutchFirmness, DeflectionTarget = null,
+  AttemptCommittedTick = CurrentTacticalTick }`.
+- **No state-machine edit.** `DecisionTreeStateMachine.IsContinuousAction(type) => type != PASS &&
+  type != SHOOT` (`:34`) — `SAVE` is continuous **for free**; §3.6 is a no-op. (SAVE re-dispatched each
+  stride; the sink latch dedupes — the SAVE/MOVE flicker AR-2 M-2 raised is now impossible anyway, see
+  the score below.)
+- **SAVE is the SOLE off-ball option when `SaveAvailable` — not a scored contest (AR-4 fix).** A
+  utility-dominance approach (`ScoreSave = ceiling`) is NOT robust: `ComputeUtility` clamps SAVE at
+  `UTILITY_CEILING` while `INTERCEPT` (base 0.55) can be lifted to the ceiling too by
+  `MentalityRiskMult` (max 1.20) × `RoleWeightModifiers` (up to 2.0) → both tie at 1.00 → the
+  lowest-ordinal tiebreak picks `INTERCEPT(6)` over `SAVE(7)` → **missed save** under a supported
+  flag-on per-agent keeper tactic. A must-happen, geometry-gated action must not depend on
+  out-scoring a tiebreak-disadvantaged competitor. **Instead:** when `ctx.TacticalContext.
+  SaveAvailable`, `OptionGenerator.GenerateOffBallBranch` emits the **SAVE candidate alone** (skips
+  MOVE/PRESS/INTERCEPT). SAVE is then selected regardless of noise / mentality / role / tiebreak — no
+  missed save, no flicker, no dependence on the GK-movement-skip (the keeper issues no competing
+  movement command at all while a save is available). It stays "DT-emits-SAVE" (generated → scored →
+  selected → dispatched) and is semantically correct (a keeper committing to a save is not
+  simultaneously repositioning or intercepting). `ScoreSave`'s value is no longer load-bearing for
+  selection; `U_BASE_SAVE = UTILITY_CEILING` is kept only so the `AgentAction.UtilityScore` /
+  `DecisionMadeEvent` reads sensibly. The `PlayerTacticActionMultiplier` SAVE guard (§11.1) is still
+  required — SAVE is still *scored* (as the sole option), so scoring it without the guard still
+  crashes. **Behaviour:** the keeper commits whenever a save is available (heuristic-equivalent, now
+  DT-emitted); attribute-modulated / hesitant commit is the named next refinement.
+
+### 11.1 Completed §3.4a `ActionType`-consumer audit (every ordinal-indexed surface, verified)
+
+| Consumer | Site | SAVE=7 disposition |
+|---|---|---|
+| `ComputeOptionNoise` 3-bit field | `ActionSelector.cs:113` | Fits `[0,7]`. **Safe.** |
+| `MentalityRiskMultiplier` | `UtilityScorer.cs:59` | Indexed by `Mentality`, not action. **Safe.** |
+| `PlayerTacticActionMultiplier` | `TacticTranslation.cs:79,83` (7-wide `[role/tempo][action]` tables) | **CRASHES** (OOB at a=7). **Guard:** `if (opt.Type != ActionType.SAVE) u *= PlayerTacticActionMultiplier(...)` in `ComputeUtility`. Do NOT widen the #21 tables. |
+| `ComputeUtility` action switch | `UtilityScorer.cs:42–52` | `default → UTILITY_FLOOR`. **Add `ScoreSave` case** (else SAVE floors, never wins). |
+| RestDefense / Dismark multipliers | `UtilityScorer.cs:78,93` | Gated on explicit PASS/SHOOT/DRIBBLE membership. **Safe** (SAVE untouched). |
+| `TacticalModifierResolver.Resolve` | `TacticalModifierResolver.cs` (per-`ScoreXxx`) | Every `switch(type)` has `default → 1.0f`. **Safe** (and `ScoreSave` won't call it). |
+| `ActionDispatcher.Dispatch` switch | `ActionDispatcher.cs:44–85` | `default → HOLD-safe strafe`. **Add SAVE case** → the sink. |
+| Serialization round-trip | `AgentAction` ctor (`:55` plain assign), `Write/ReadDecisionTreeState` (i32 `Type`) | No `Type ∈ {0..6}` validation. **Safe** — `Type=7` round-trips. |
+
+### 11.2 `decision-tree` assembly edits (the #8 change)
+
+1. **`ActionType.cs`** — append `SAVE = 7`. Update the ordinal-stability header note (7 remains the max that fits the 3-bit noise field; HEADER would be 8 → deferred).
+2. **`TacticalContext.cs`** — add `public bool SaveAvailable;` (zero-value `false` = identity, safe like `DismarkIntensity.Off`; `Stage0Default` seeds `false` explicitly for symmetry). Doc it as the #11-anticipated DT-save gate.
+3. **`ActionOption.cs`** — no new field (SAVE reuses `Type`/`TargetPosition`; `ScoreSave` reads `ctx`).
+4. **`OptionGenerator.cs`** — `GenerateOffBallBranch` **short-circuits to SAVE alone** when a save is available (AR-4 fix — robust selection, not a scored contest):
+   ```
+   private static int GenerateOffBallBranch(in DecisionContext ctx, ActionOption[] buf, int count)
+   {
+       if (ctx.TacticalContext.SaveAvailable)          // flag-on threatened keeper only
+           return GenerateSaveCandidate(in ctx, buf, count);
+       count = GenerateMoveCandidate(in ctx, buf, count);
+       count = GeneratePressCandidate(in ctx, buf, count);
+       count = GenerateInterceptCandidate(in ctx, buf, count);
+       return count;
+   }
+   ```
+   `GenerateSaveCandidate` emits one `{ Type = SAVE, TargetPosition = ctx.Snapshot.BallPerceivedPosition (observability only), TargetAgentId = -1 }`. Because `SaveAvailable` is only ever set for the flag-on threatened keeper (§11.3.3), no other agent / flag-off path is affected — the off-ball branch is byte-identical otherwise.
+5. **`UtilityWeights.cs`** — add `public const float U_BASE_SAVE = 1.00f; // [GT] SAVE base utility (= UTILITY_CEILING). NOT load-bearing for selection — SAVE is the sole off-ball option when available (OptionGenerator); this only feeds AgentAction.UtilityScore / DecisionMadeEvent.`
+6. **`UtilityScorer.cs`** — (a) add `case ActionType.SAVE: u = ScoreSave(ref opt, in ctx); break;`; (b) new `ScoreSave` = `U_BASE_SAVE` (no AM/risk/tactM); (c) **guard** the `PlayerTacticActionMultiplier` call with `if (opt.Type != ActionType.SAVE)` — still required, since SAVE is *scored* (as the sole option) and would otherwise crash at the 7-wide-table lookup (§11.1).
+7. **`IDtSaveDispatch.cs`** (new) — `public interface IDtSaveDispatch { void CommitSave(int agentId); }` (primitives only; `agentId` suffices — the sink owns geometry/projection). No `Vector2` param (SaveTarget dropped).
+8. **`ActionDispatcher.cs`** — add `IDtSaveDispatch saveDispatch` param + `case ActionType.SAVE: saveDispatch?.CommitSave(action.AgentId); break;` (null sink ⇒ FR-DT-14-style logged drop, the null-executor precedent).
+9. **`DecisionTree.cs`** — ctor gains `IDtSaveDispatch saveDispatch = null` (parallel to `passExecutor`/`shotExecutor`); stored `_saveDispatch`; threaded into the `ActionDispatcher.Dispatch` call (`:201`).
+
+### 11.3 `match-engine` assembly edits
+
+1. **`HostSaveDispatch`** (new nested class in `MatchEngine`, parallel to `HostMovementController`): `CommitSave(int agentId)` → map `agentId → (teamId, gkIndex)` via `_teamIds`/`_gkAgentIds`; if not a current keeper or sent-off, drop; apply the v18 `_saveCommittedForGk[teamId]` latch (commit once per episode); `attrs = PlayerAttributeProjection.ToGoalkeeper(in _canonicalAttrs[agentId], teamId, fatigue: 0f)`; `_goalkeeper.CommitSaveIntent(teamId, new SaveIntent { TargetHand = HandEnum.Either, ClutchFirmness = MatchEngineConstants.SaveTriggerClutchFirmness, DeflectionTarget = null, AttemptCommittedTick = (int)_clock.CurrentTacticalTick }, attrs)`; set `_lastCommittedSaveAttrs`/`_lastSaveAttrsValid` (the existing `TestOnly_` proof).
+2. **Boot** — construct `_saveDispatch = new HostSaveDispatch(this)` and pass it into every `new DecisionTreeAI(i, movementController, matchSeed, _passExecutors[i], _shotExecutors[i], _saveDispatch)` (`:696`). Unconditional injection; only *called* when a SAVE option exists (flag-on).
+3. **`RunMechanicsAI`** — the per-agent loop that builds `ctx` and writes `_tacticalContexts[i] = ctx` is at `MatchEngine.cs:2344–2395`. Immediately **before** line 2395 add:
+   ```
+   ctx.SaveAvailable = _gkHeadingEnabled && _isGoalkeeper[i]
+       && GkHeadingIntentSource.SaveArmed(
+              t, in _ball.Position, in _ball.Velocity,
+              _possessingAgentId == MatchEngineConstants.NO_POSSESSION);
+   ```
+   `t` is the team, `i` the agent index; the `_isGoalkeeper[i]` gate makes only the keeper's context carry `true`, and only under the flag. This loop runs in `RunMechanicsAI` (`:2175`) before the DT loop reads `_tacticalContexts[i]` (`:2221–2222`), so the fact is fresh. Flag-off / non-keeper ⇒ `false` (the `Stage0Default` seed), so the off-ball branch is unchanged.
+4. **`DriveGkHeadingTactical`** — **remove** the `TryCommitSaveIntents()` call (and the method, if unused). Keep `TacticalTick` (baselines + GK state machine) and `TryCommitHeaderIntents()` (header stays heuristic). `_saveCommittedForGk` + `GkHeadingIntentSource.SaveArmed` are now consumed by `RunMechanicsAI` + `HostSaveDispatch`.
+5. **`GkHeadingIntentSource.SaveArmed`** — unchanged (now called from `RunMechanicsAI` to set `SaveAvailable`). No crossing-point helper needed (SaveTarget dropped).
+
+### 11.4 Spec #8 section edits + ERR-008 back-prop
+
+- File **`ERR-008-013`** in `spec-error-log.md`: "#8 gains a `SAVE` action (ordinal 7) — the DT-emitted goalkeeper save the #11 `SaveIntent` doc always anticipated; supersedes the `MatchEngine` heuristic save trigger. Off-ball-branch-only, gated on `TacticalContext.SaveAvailable`; `PlayerTacticActionMultiplier` guarded (not table-widened)."
+- **`decision-tree/section-3-1.md`** (§3.1): new §3.1.x SAVE generation (off-ball, `SaveAvailable` gate).
+- **`decision-tree/section-3-2.md`** (§3.2): new `ScoreSave` = `U_BASE_SAVE` ceiling constant; note the `PlayerTacticActionMultiplier` SAVE exemption.
+- **`decision-tree/section-3-5.md`** (§3.5): new SAVE dispatch case + `IDtSaveDispatch` seam.
+- **`ActionType`/§2.2.x**: document `SAVE = 7` + the ordinal-stability / noise-field-ceiling note.
+- No #21 spec change (the tables are NOT widened — the guard exempts SAVE).
+
+### 11.5 Tests
+
+- **`OptionGeneratorTests`** — when `SaveAvailable`, the off-ball branch yields **exactly one** option and it is SAVE (the sole-option lock — robust selection); when `!SaveAvailable`, the off-ball branch is unchanged (MOVE/PRESS/INTERCEPT, no SAVE). `SelectAction` over that single-option buffer returns SAVE regardless of a non-Balanced `Mentality` / non-identity `PlayerTactic` context (the AR-4 missed-save regression lock — the case that broke the scoring-dominance approach).
+- **`UtilityScorerTests`** — **`PlayerTacticActionMultiplier` not applied to SAVE**: scoring a SAVE option under a non-identity `PlayerTactic`/`Tempo` context does not throw (the §11.1 OOB-crash regression lock) and yields the finite `U_BASE_SAVE` (no attribute/tactic modulation).
+- **`ActionSelectorTests`** — SAVE=7 noise packing leaves ordinals 0–6 byte-identical (adding SAVE perturbs no existing option's noise).
+- **`MatchEngineGkHeadingTests`** (extend): flag-on — a keeper facing an on-target loose ball **dispatches SAVE** and `ToGoalkeeper` reaches the orchestrator (`TestOnly_LastCommittedSaveAttrs`); the once-per-episode latch holds (SAVE re-picked each stride ⇒ one commit); **multi-stride** the keeper stays on SAVE (no flicker); flag-off — digest byte-identical to a pre-change engine; two-run forward determinism.
+- **Snapshot/restore** — `MatchEngineSnapshotRestoreTests` flag-on: a keeper mid-save (LastAction=SAVE, latch set) round-trips at v18 (no schema change; the DT-state + latch + orchestrator state already serialize).
+- **Full dotnet gate** — PASSED, 0 failures. No `SNAPSHOT_SCHEMA_VERSION` change; flag-off default byte-identical (no rebaseline); flag-on GK-test expectations updated to the DT-decision condition.
+
+### 11.6 Determinism / versions
+
+No `SNAPSHOT_SCHEMA_VERSION` bump (SAVE adds no serialized field; `Type=7` rides the existing i32). `MatchEngineConstants` unchanged except possibly removing the now-unused save-trigger-min-speed constant only if `SaveArmed` no longer references it (it still does — keep). `MatchEngine.cs` / `UtilityScorer.cs` / `ActionSelector`-adjacent version-history rows appended.
+
