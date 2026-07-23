@@ -1,7 +1,23 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 22, 2026, later same day (**Match Analytics & Statistics #37 authored + advanced
+> **Last Updated:** July 22, 2026, later same day (**UI / Client Framework #38 (framework slice) authored +
+> advanced `→ IN REVIEW → APPROVED`** — Wave 1 presentation substrate. Promoted from the converged design
+> supplement (`docs/tracking/ui-client-framework-design.md` v0.2, AR-1 2M → AR-2 clean) to a full 11-file
+> section set (FR-UI-001..023), then section-file PASS-1 (0H+2M+2L) → AR-2 convergence. **KD-2 split
+> settled:** the FRAMEWORK slice only — the view-model contract (immutable read-only projections), the
+> navigation shell (a pure UGUI-free state machine), the command-dispatch discipline (mutation ONLY
+> through existing public seams), and the one concrete match-view surface over `LiveMatchStreamer`; the
+> tactics + management **screens** are deferred to Wave-7 screen specs, each gated on its data spec (the
+> phantom-consumer trap). **KD-1 layer contract** grounded in the verified `match-viewer` no-reverse-
+> reference lock + the `LiveMatchServer` disjoint-surface precedent (playback holds no `MatchEngine`). The
+> PASS-1 M-2 fix was structural: a live-match command must be **marshaled onto the streamer's sim thread**
+> (FR-UI-023 / F6 / a presentation-side `EnqueueIntent`), not called cross-thread — the write-side of
+> KD-3's decoupling. #38 registers **no domain tag / ordinal / RNG** (FR-UI-022, the `match-viewer`
+> class), so **no #16 §3.4 cross-cite**. R-01..R-05 signed (§9 checklist v0.3); all 11 files
+> `Status: APPROVED`. **Approves the forward design** (the #21–#37 pre-T0 precedent); the UGUI rendering
+> binding stays Unity-host-gated. Count: **30 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 22, 2026, later same day (**Match Analytics & Statistics #37 authored + advanced
 > `→ IN REVIEW → APPROVED`** — Wave 1 read-only presentation prerequisite. Promoted from the converged
 > design supplement (`docs/tracking/match-analytics-statistics-design.md` v0.2, AR-1 1M → AR-2 clean) to
 > a full 11-file section set (FR-AN-001..021), then section-file PASS-1 (0H+2M+3L) → AR-2 convergence
@@ -147,6 +163,7 @@
 | 27 | Squad / Player Data Layer | `squad-player-data/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 30 | Season & Competition Loop | `season-competition-loop/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 37 | Match Analytics & Statistics | `match-analytics-statistics/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 38 | UI / Client Framework (framework slice) | `ui-client-framework/` | 6¹ | APPROVED | Jul 22, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
