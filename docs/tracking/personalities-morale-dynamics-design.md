@@ -1,8 +1,14 @@
 # Personalities, Morale & Squad Dynamics #33 — Design Supplement
 
 > **Created:** July 23, 2026
-> **Last Updated:** July 23, 2026 (v0.2 — AR-1 fix pass: 1H+3M+2L, see Version History)
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row).
+> **Last Updated:** July 23, 2026 (v0.3 — **PROMOTED**; prior v0.2 AR-1 fix pass 1H+3M+2L)
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** (July 23, 2026) — 11-file section set authored at
+> `docs/specs/personalities-morale-dynamics/` (FR-HS-001..028) → section-file AR-1 (5M+4L) → AR-2 (1M+2L) →
+> CONVERGENCE → R-01..R-05 signed → **APPROVED**; `SPEC_INDEX.md` row 33 added (36 APPROVED). **Zero
+> approval-time cross-spec back-props** (0x25/87 stays reserved; #30 slot 3 + FR-SN-017 + #22
+> FR-LW-004/FR-LW-032 pre-declared). Section files are authoritative; this supplement is the design-history
+> record. (Original status line follows for history.)
+> DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row).
 > **Candidate spec:** #33 · **FR prefix:** FR-HS (grep-verified unclaimed across `docs/specs/**`).
 > **Master-plan home:** §5 Stage 4 / Master Vol 2 · **Wave:** 3 (GATING — the critical-path spine, §4 of the roadmap).
 > **Determinism (proposed):** `DOMAIN_TAG_HUMAN_SYSTEMS` / `SubsystemOrdinals.HumanSystems` = `0x25` / `87`
@@ -416,4 +422,5 @@ critical-path spine — every landing spot was reserved ahead of it:
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 23, 2026 | Initial design supplement from spec-plan v0.2, grounded on the verbatim #22 FR-LW-004 / `ApplyEvent` / `WorldLoop` phase-2 read contract. |
+| v0.3 | July 23, 2026 | PROMOTED — 11-file section set authored + APPROVED (section-file AR-1 5M+4L → AR-2 1M+2L → CONVERGENCE). Notable section-file fixes beyond the supplement: `SetPlayerEdgeMirror` written in `MemoryStore`'s real `FindEdgeIndex(.., out found)` + ordered `_edges.Insert` idiom; the clique rule made **mutual** (matching #22); `default(MoraleState)` fail-loud scoped to the paired `PersonalityProfile` + insertion-time validation; `CLIQUE_THRESHOLD_PERMILLE` tagged `[DERIVED]`. |
 | v0.2 | July 23, 2026 | AR-1 (1H+3M+2L). **H1** — dropped the per-entity `baseline b` from the KD-1 read surface: #22 never decays `PlayerEdge` toward a baseline, and the `x'=x+r(b−x)` relaxation is on #22's own `Affinity`/`Trust` with a #22-owned, deferred `b`; #33 supplies **only** the pairwise `PlayerEdge` scalar. `MoraleState.BaselinePermille` → internal `EquilibriumPermille` (not routed); `HumanSystemsView` drops the baseline array. **M2** — the router is the `TacticalDirector.SeasonSave` root (references both assemblies), **not** #30 (producer-only, FR-SN-017); §3 corrected. **M3** — no `MemoryStore` seam sets `PlayerEdge` on a live edge today; T-phase adds a `SetPlayerEdgeMirror` public method — a #22 code addition (no schema/arc-logic change); "no #22 redesign" re-scoped; KD-7 coherence argument now rests on that seam. **M4** — made the wire-neutral (empty view, #33 minimal) vs flow-behavioural (real canon, separate named activation) boundary explicit in §0/KD-8/§11; softened "lights up the seams". **L1** — corrected the phase-3 (salience decay) mislabel. **L2** — added the clique int/float boundary lock (permille 600/601) to §9. |

@@ -1,7 +1,19 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 23, 2026, latest same day (**Club Finances & Economy #40 authored + advanced
+> **Last Updated:** July 23, 2026, latest same day (**Personalities, Morale & Squad Dynamics #33 authored +
+> advanced `→ IN REVIEW → APPROVED`** — Wave 3's gating spec (the vol-2 human-systems producer #22 was built
+> to consume read-only). **KD-1 (headline):** #33's #22 read surface is matched **verbatim** to the FR-LW-004
+> `PlayerEdge` contract — exactly the pairwise scalar `∈ [0,1]` per player↔player ordered pair (no baseline;
+> #22 owns the `Affinity`/`Trust` `b`); one-directional (#33 writes canon, #22 mirrors, refuses via
+> `ApplyEvent`), and the mirror write needs **one new** `MemoryStore.SetPlayerEdgeMirror` seam (a #22 T-phase
+> code addition, no schema/arc-logic change; `T-LW-U-035` green). **KD-4:** cliques are a **derived** read
+> (mutual `> 600‰` = #22's `0.6`) — no double-truth. **KD-6:** minimal is draw-free ⇒ `_RESERVED_0x25_` /
+> ordinal 87 **stay reserved** (the #40 precedent). **KD-7:** `HUMAN_SYSTEMS_SAVE_FORMAT_VERSION` season-save
+> sub-blob, **no** `WORLD_STORE` bump. **Zero approval-time cross-spec back-props** — #30 slot 3 + FR-SN-017 +
+> #22 FR-LW-004/FR-LW-032 were all pre-declared (the roadmap §4 sequencing payoff). Section-file AR-1 (5M+4L)
+> → AR-2 (1M+2L) → CONVERGENCE. Count: **36 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Club Finances & Economy #40 authored + advanced
 > `→ IN REVIEW → APPROVED`** — Wave 2's fourth spec (per-club budgets/wage ledger/prize money; the
 > counterparty-constraint layer #31 reads). Promoted from the converged design supplement
 > (`docs/tracking/club-finances-economy-design.md` v0.2, design-AR 1M+1L → clean) to an 11-file section set
@@ -265,6 +277,7 @@
 | 38 | UI / Client Framework (framework slice) | `ui-client-framework/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 40 | Club Finances & Economy | `club-finances-economy/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 41 | Injuries & Medical | `injuries-medical/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 33 | Personalities, Morale & Squad Dynamics | `personalities-morale-dynamics/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
