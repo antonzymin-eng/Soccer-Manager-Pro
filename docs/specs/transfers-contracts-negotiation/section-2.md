@@ -1,8 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — AR-3 fix pass; prior v0.2 AR-1, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** July 23, 2026 (v0.4 — AR-6 fix pass; prior v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -38,7 +38,7 @@
 | FR-TX-025 | A manager transfer command (`SubmitBid`) MUST be the only initiator of a minimal transfer; it MUST be window- and budget-gated (FR-TX-008/020). The UI MUST drive it through this command seam, never mutate #31 state directly. | MUST | KD-8 |
 | FR-TX-026 | A bid on a `PlayerId` outside #27's club universe, or a malformed `Contract`/`Offer` (negative fee/wage, non-positive length), MUST fail loud (F6) at the consuming seam. | MUST | F6 |
 | FR-TX-027 | Round-trip save→restore MUST be field-identical for `Contract` + window cursor + `committedSpendThisWindow`, including a mid-window save (and, deep, a mid-negotiation save); a full window's activity MUST be two-run deterministic from a fixed world seed. | MUST | KD-4/KD-8 |
-| FR-TX-028 | At career start the managed club's #27 squad MUST be seeded with one `Contract` per player (default `[GT]` terms, F6/F7-valid — §3.8) so the sell/aging flows have a populated set. Contracts MUST survive `RollToNextSeason` (durable career state); at the roll each managed contract's `LengthSeasons` MUST be decremented, and a contract that **would** reach `0` MUST be **removed** (never stored as `0` — F7), the player becoming un-contracted (deep-tier re-signing/free-agency handles the sequel; §3.7). The window cursor + `committedSpendThisWindow` MUST reset at the season boundary; a retired/regenerated `PlayerId`'s contract MUST be removed/inserted in lockstep with #28's roster lifecycle. | MUST | KD-4/KD-7 |
+| FR-TX-028 | At **new-career genesis** (never on load — a load reconstructs from the sub-blob) the managed club's #27 squad MUST be seeded with one `Contract` per player (default `[GT]` terms, F6/F7-valid — §3.8) so the sell/aging flows have a populated set. Contracts MUST survive `RollToNextSeason` (durable career state); at the roll each managed contract's `LengthSeasons` MUST be decremented, and a contract that **would** reach `0` MUST be **removed** (never stored as `0` — F7), the player becoming un-contracted (deep-tier re-signing/free-agency handles the sequel; §3.7). The window cursor + `committedSpendThisWindow` MUST reset at the season boundary; a retired/regenerated `PlayerId`'s contract MUST be removed/inserted in lockstep with #28's roster lifecycle. | MUST | KD-4/KD-7 |
 
 ## 2.2 Data structures
 
@@ -97,5 +97,5 @@ constructed by the command seam with an explicit direction, so the default is ne
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §2 (FR-TX-001..028, data structures, F1..F8). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1: `Offer` gains `CounterpartyClubId` (M1); `Contract` drops `ExpiryWorldDay` → single contract-end truth `LengthSeasons` (M3); `TransfersState` scoped to the managed club (M2); F7 note tightened. |
-| 0.3 | 2026-07-23 | — | AR-3: wage posting deferred to deep (FR-TX-005 fee-only at minimal, F8 deep-gated — H); FR-TX-023 makes `OnPlayerRekeyed` a no-op for managed↔external transfers (sell double-handling — M); FR-TX-001/002 drop club-need from the minimal function (deep bias — M); FR-TX-028 + `Contract` comment specify decrement-and-remove aging vs F7 (M); FR-TX-004 `→ long` (L); FR-TX-007 reset at the season boundary (L). AR-4: FR-TX-028 gains career-start contract seeding (§3.8 — M). |
+| 0.3 | 2026-07-23 | — | AR-3: wage posting deferred to deep (FR-TX-005 fee-only at minimal, F8 deep-gated — H); FR-TX-023 makes `OnPlayerRekeyed` a no-op for managed↔external transfers (sell double-handling — M); FR-TX-001/002 drop club-need from the minimal function (deep bias — M); FR-TX-028 + `Contract` comment specify decrement-and-remove aging vs F7 (M); FR-TX-004 `→ long` (L); FR-TX-007 reset at the season boundary (L). AR-4: FR-TX-028 gains career-start contract seeding (§3.8 — M). AR-6: FR-TX-028 scopes seeding to **new-career genesis** (never on load — M). |
 #endregion

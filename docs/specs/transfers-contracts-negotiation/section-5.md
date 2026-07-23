@@ -1,8 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — AR-6 fix pass; prior v0.2 AR-3/AR-4, v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -41,11 +41,13 @@
 
 ## 5.3 Roster re-key (KD-7)
 
-- **T-TX-REKEY-001** — a committed transfer re-keys `PlayerId` to `toClub*CLUB_SQUAD_SIZE+freeLocalIndex` and
-  moves the `Contract` from old→new id via `OnPlayerRekeyed` with no orphaned/duplicated contract.
+- **T-TX-REKEY-001** — a committed transfer re-keys `PlayerId` to `toClub*CLUB_SQUAD_SIZE+freeLocalIndex`;
+  #31's managed `Contract` is handled by `SubmitBid` (buy → **inserted** at the new id; sell → **removed**), and
+  `OnPlayerRekeyed` is a **no-op** for the managed↔AI case (FR-TX-023) — no orphaned or duplicated contract
+  survives. (An intra-managed re-key — deep only — is the one case the hook moves the contract old→new.)
 - **T-TX-REKEY-002 (F5)** — a full destination `Squad` fails loud at `AllocateFreeLocalIndex` before any
   finance post.
-- **T-TX-REKEY-003** — #31 migrates only its own `Contract` in the hook; the #28/#33 migrations are dispatched
+- **T-TX-REKEY-003** — #31 migrates only its own `Contract` on a re-key; the #28/#33 migrations are dispatched
   by #30, not by #31 (assert #31 has no reference to #28/#33 state).
 
 ## 5.4 Window (KD-6)
@@ -56,7 +58,9 @@
 ## 5.5 Save round-trip & determinism (KD-4/KD-8)
 
 - **T-TX-DET-001** — `Contract` + `ClubTransferState` (window cursor + `committedSpendThisWindow`) restore
-  **field-identical** across a mid-window save.
+  **field-identical** across a mid-window save; the restored contracts come from the sub-blob decode and the
+  load path does **not** re-run `SeedInitialContracts` (seeding is genesis-only — §3.8; a re-seed on load would
+  overwrite the saved state).
 - **T-TX-DET-002** — contracts survive a `RollToNextSeason` boundary; each `LengthSeasons` decrements, and a
   contract that would decrement to `0` is **removed** (never stored as `0` — the §3.7 / F7 lock, no zero-length
   contract persists); the window cursor + spend counter reset; a retired/regenerated `PlayerId`'s contract is
@@ -94,4 +98,5 @@ now (the `deepTransfersEnabled`-off equality) and fully at the deep T-phase.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §5 (valuation/offer units, atomic bid integration, roster re-key, window, save/determinism/neutrality, fail-loud, traceability). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-3: T-TX-BID-001/002 fee-only + sell no-orphan lock; new T-TX-BID-006 (FR-FN-015 `WageBillAggregate` unchanged); T-TX-VAL-001/003 drop club-need / add `needMult` identity; T-TX-DET-002 covers decrement-and-remove aging. AR-4: new T-TX-INIT-001 (career-start contract seeding, §3.8 — M). |
+| 0.3 | 2026-07-23 | — | AR-6: T-TX-REKEY-001 corrected to the fixed insert/remove-via-`SubmitBid` model (`OnPlayerRekeyed` no-op — was still asserting the AR-3-removed hook-move, M); T-TX-DET-001 locks load-decodes-not-reseeds (M); T-TX-REKEY-003 "in the hook" → "on a re-key" (L). |
 #endregion

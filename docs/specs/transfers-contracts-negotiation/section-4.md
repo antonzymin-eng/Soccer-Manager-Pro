@@ -1,8 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — AR-6 fix pass; prior v0.2 AR-3, v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -64,7 +64,9 @@ stay byte-untouched (FR-SN-020 preserved). Layout in Appendix B.
 
 - **The composition root** (season loop) MUST: invoke #31's world-tick step at #30's new tick-order slot;
   route `SubmitBid`/transfer commands from the UI to #31; supply committed season/calendar values by copy;
-  and route `RequestRosterCommit` to #30's roster owner. It MUST NOT let the UI mutate #31 state directly.
+  and route `RequestRosterCommit` to #30's roster owner. It MUST NOT let the UI mutate #31 state directly. It
+  MUST call `SeedInitialContracts` (§3.8) **only at new-career genesis** and reconstruct `TransfersState` from
+  the sub-blob on **load** — never both (re-seeding a loaded career would destroy restored contracts).
 - **#30** MUST, at the T-phase: (a) add the transfers tick-order null-seam slot (ERR-030-004, at approval —
   §8); (b) build the mid-season `RequestRosterCommit` entry point + `DispatchRosterMoveHook` (KD-7, at T2 —
   ERR-030-005); (c) bump `SEASON_SAVE_FORMAT_VERSION` (exact version coordinated at T1) composing the sub-blob.
@@ -78,4 +80,5 @@ stay byte-untouched (FR-SN-020 preserved). Layout in Appendix B.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §4 (assembly/reference direction, file layout, the reusable seam, save composition, root/#30/#40 interface contracts). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-3 (L): outer `SEASON_SAVE_FORMAT_VERSION` no longer hardcoded "2 → 3" (coordinated at T1, exact version TBD — §4.4/§4.5); the T2 mid-season build cites ERR-030-005. |
+| 0.3 | 2026-07-23 | — | AR-6 (M): §4.5 composition-root contract now pins `SeedInitialContracts` at new-career genesis vs sub-blob decode on load (never both). |
 #endregion

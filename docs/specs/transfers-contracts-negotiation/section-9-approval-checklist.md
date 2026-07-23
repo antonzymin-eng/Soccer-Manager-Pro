@@ -1,8 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — AR-3 (1H+3M+5L) fix pass + AR-4 convergence; prior v0.2 AR-1/AR-2 + sign-off, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** July 23, 2026 (v0.4 — AR-6 (2M+1L) fix pass + AR-7 convergence; prior v0.3 AR-3/AR-4, v0.2 AR-1/AR-2 + sign-off, v0.1 initial)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -24,7 +24,7 @@
 | G11 | KD-8 behaviour-neutral: zero manager action ⇒ zero transfers ⇒ byte-identical season; a bid is an explicit command; no stream registered | ✅ | §3.6, FR-TX-024/025, T-TX-NEU-001 |
 | G12 | Integer posture: no float in #31 (only integer `long` exchanged with #40); serialized block has no `RngCursor` (draw-free) | ✅ | §1.5, FR-TX-018, T-TX-INT-001/SHAPE-001 |
 | G13 | Zero-value-trap hygiene: `default(Contract)` (`LengthSeasons = 0`) fails loud at insertion validation (F7); boundary aging **removes** a contract that would decrement to 0 (never stores 0), so F7 never collides with a legitimately-aged contract | ✅ | §2.3, §3.7, F7, T-TX-FAIL-003, T-TX-DET-002 |
-| G14 | Roster lifecycle in lockstep with #28/#30 (career-start seeding of the managed squad; regen-insert / retire-remove of contracts; transfer re-key; boundary decrement-and-remove aging) — every managed player has a contract the sell/aging flows operate on | ✅ | FR-TX-028, §3.7, §3.8, T-TX-DET-002, T-TX-INIT-001 |
+| G14 | Roster lifecycle in lockstep with #28/#30 (genesis-only seeding of the managed squad — a load decodes from the sub-blob, never re-seeds; regen-insert / retire-remove; transfer re-key; boundary decrement-and-remove aging) — every managed player has a contract the sell/aging flows operate on | ✅ | FR-TX-028, §3.7, §3.8, §4.5, T-TX-DET-001/002, T-TX-INIT-001 |
 | G15 | FR-TX-001..028 each traceable to a T-TX-* test **or** a recorded §7 deferral | ✅ | §5.7 |
 | G16 | FR prefix FR-TX unclaimed across `docs/specs/**`; XC-031-* allocated; the #40 §7.3 / #33 §7.3 consumer sides named | ✅ | grep-verified; §8.1 |
 | G17 | Wage deferral: minimal is **fee-only** (no `PlayerWage` post), so #40 FR-FN-015 (`WageBillAggregate ≡ 0` at Stage 2) is preserved with **no #40 back-prop at approval**; the wage producer + `WageBudget` gate are deep (ERR-040, T3) | ✅ | FR-TX-005, §7.3, §8.3, T-TX-BID-006 |
@@ -58,8 +58,9 @@ no #16 change); #40/#33/#27 unchanged (their existing seams already name #31 the
 
 ## 9.5 Open gates before APPROVED — CLEARED
 
-- Section-file AR-1 (3M+1L) → AR-2 (1L) → AR-3 (1H+3M+5L) → AR-4 (1M initial-contract-seeding gap + 1
-  regression + 3L, all resolved) → AR-5 → **converged**.
+- Section-file AR-1 (3M+1L) → AR-2 (1L) → AR-3 (1H+3M+5L) → AR-4 (1M + 1 regression + 3L) → AR-6 (2M — a
+  stale re-key test still asserting the AR-3-removed hook-move, + the AR-4 seeding fix left the load lifecycle
+  undefined; +1L, all resolved) → AR-7 → **converged**.
 - R-01..R-05 sign-off — **granted July 23, 2026** (re-affirmed after the AR-3 fixes).
 - ERR-030-004 (the #30 transfers tick-order step-5 null seam) — **filed atomically at approval**
   (`spec-error-log.md` v1.36; `season-competition-loop/section-2.md` + `section-3.md` v0.5).
@@ -72,4 +73,5 @@ no #16 change); #40/#33/#27 unchanged (their existing seams already name #31 the
 | 0.1 | 2026-07-23 | — | Initial approval checklist. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (3M+1L) → AR-2 (1L) converged; G-items ✅; R-01..R-05 signed; Status APPROVED; ERR-030-004 filed. |
 | 0.3 | 2026-07-23 | — | AR-3 (1H+3M+5L) fix pass (H: wage deferral; M: sell double-handle, club-need, aging-vs-F7; L×5) all resolved; AR-4 fix pass (1M: career-start contract seeding §3.8; regression: `counterpartyView` double-application; L: §6 post-count, §7 T1/T2 cites, §1.2 accessor) all resolved → AR-5 convergence; new G17 (wage deferral), G14 seeding; ERR-040/ERR-033 recorded as T3 deferrals; sign-off re-affirmed. |
+| 0.4 | 2026-07-23 | — | AR-6 (2M+1L) fix pass: T-TX-REKEY-001 corrected to the insert/remove-via-`SubmitBid` model (was still asserting the AR-3-removed hook-move); §3.8/§4.5/FR-TX-028 scope seeding to new-career genesis only (a load decodes from the sub-blob, never re-seeds) + T-TX-DET-001 lock; T-TX-REKEY-003 wording (L) → AR-7 convergence. |
 #endregion

@@ -1,8 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — AR-3 fix pass; prior v0.2 AR-1, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** July 23, 2026 (v0.4 — AR-6 fix pass; prior v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -176,7 +176,8 @@ it *would* decrement to `0`, a stored `LengthSeasons` is always `> 0`, so the F7
 
 ## 3.8 Initial contract population (career start)
 
-At T0 construction the managed club's #27 squad is seeded with **one `Contract` per rostered player**, so every
+At **new-career genesis** (the T0 construction of a fresh career — *not* a load, see below) the managed club's
+#27 squad is seeded with **one `Contract` per rostered player**, so every
 managed player has a contract the sell path (§3.3) and boundary aging (§3.7) can operate on — a career never
 starts with an un-contracted squad, and FR-TX-028's "durable career state" has an initial set to be durable
 across:
@@ -195,10 +196,18 @@ at minimal, §2.2). Seeding mutates only `TransfersState` and is **not read by t
 posting, no autonomous producer), so it does not perturb the byte-identical season advance (FR-TX-024) — it
 only populates the transfers sub-blob that exists because #31 exists.
 
+**Seeding runs once, at new-career genesis ONLY.** A load-from-save reconstructs `TransfersState` from the
+transfers sub-blob (§4.4, F3-gated) and MUST NOT re-seed — re-seeding a loaded career would collide with the
+already-present ids (`InsertContract` throws F7-style) or overwrite the restored, aged/traded contracts, silently
+destroying career progress. The composition root invokes `SeedInitialContracts` at career creation and the
+sub-blob decode on load — **never both** (§4.5). This is why the T-TX-DET-001 / FR-TX-027 round-trip is
+field-identical: the restored contracts come from the sub-blob, not from a re-run of the seeder.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §3 (valuation, offer evaluation, atomic bid pipeline, the #30 roster re-key, the window model, worked example). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1: `SubmitBid` pipeline resolves `fromClub`/`toClub` from the explicit `Offer.CounterpartyClubId` + cross-checks `ClubOf(playerId) == fromClub` (M1); sell branch defines `outgoingWage` + buyer free-slot gate + managed-club-only contract scope (M2/L1). |
 | 0.3 | 2026-07-23 | — | AR-3: commit is fee-only at minimal, wage posts deep (H); sell `RemoveContract` moved BEFORE `RequestRosterCommit` + §3.4 hook made direction-aware/no-op (sell double-handle — M); §3.1 drops club-need to the deep bias + defines `counterpartyView` (M); new §3.7 decrement-and-remove contract aging (F7 — M); §3.4 corrects the "#30 churns rosters" claim + fixes the T2 build cite to ERR-030-005 (L); §3.6 fee-post count corrected to one. AR-4: fixed the `counterpartyView` double-application in §3.3 (regression from §3.1's redefinition), made §3.7 aging struct-safe (iterate keys, remove after the loop), and added §3.8 career-start contract seeding (M — the sell/aging flows previously had no initial contract set). |
+| 0.4 | 2026-07-23 | — | AR-6 (M): §3.8 scopes seeding to **new-career genesis only** — a load reconstructs from the sub-blob and must not re-seed (a re-seed would overwrite/collide with the restored career; the AR-4 §3.8 addition had left this undefined). |
 #endregion
