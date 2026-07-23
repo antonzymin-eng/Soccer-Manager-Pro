@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
-**Version:** 0.2
+**Last Updated:** July 22, 2026 (v0.3 — back-prop ERR-030-002 tick-order injuries seam; prior v0.2 PASS-1)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -92,7 +92,7 @@ forward design (nothing is built yet).
 |---|---|---|---|
 | FR-SN-032 | `SeasonLoop` MUST be the sole writer of season state; season state MUST be mutable only through the public command API (`AdvanceToNextFixtureDay`, `AdvanceAndPlayNextRound`, the boundary roll), never by field access. | MUST | KD-7 |
 | FR-SN-033 | `SeasonViewModel` MUST expose the table + fixture list + calendar position as **read-only value copies** for #37/#38; reading MUST NOT mutate season state or affect the save digest (observer-neutral). | MUST | KD-7 |
-| FR-SN-034 | Every world-tick spec #30 must tick that does not exist yet (#28/#29/#33) MUST be a **documented null seam** in the KD-2 tick order, never an invented interface (FR-LW-031). | MUST | KD-2 |
+| FR-SN-034 | Every world-tick spec #30 must tick that does not exist yet (#28/#29/#33/#41) MUST be a **documented null seam** in the KD-2 tick order, never an invented interface (FR-LW-031). The injuries seam (#41) was appended as step 4 by ERR-030-002 at #41's approval. | MUST | KD-2 |
 
 ## 2.2 Data structures
 
@@ -135,4 +135,5 @@ forward design (nothing is built yet).
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial FR set FR-SN-001..034, data structures, failure modes F1–F6, from supplement v0.2. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
+| 0.3 | 2026-07-23 | — | Back-prop ERR-030-002 (at #41 approval): FR-SN-034 tick-order null-seam enumeration extended to include Injuries #41 (appended as step 4). |
 #endregion

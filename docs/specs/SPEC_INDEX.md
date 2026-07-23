@@ -1,7 +1,20 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 23, 2026, latest same day (**Training System #29 authored + advanced
+> **Last Updated:** July 23, 2026, latest same day (**Injuries & Medical #41 authored + advanced
+> `→ IN REVIEW → APPROVED`** — Wave 2's third spec (injury occurrence/severity/recovery on the world
+> tick). Promoted from the converged design supplement (`docs/tracking/injuries-medical-design.md` v0.2,
+> design-AR 2M+2L → clean) to a full 11-file section set (FR-MD-001..027); section-file **AR-1 (1M — float
+> arithmetic → integer per-mille throughout) → AR-2 (1M — fixed-radix action-ordinal for append parity) →
+> AR-3 clean, CONVERGENCE.** **KD-1:** all draws on ONE world-tick `injuries.occurrence` stream, keyed
+> position-independently on `(playerId, worldDay, purpose)` — no free-running cursor, nothing to persist,
+> the match tick never draws (the plan's dual-clock hazard dissolved). **KD-6:** a #30 tick-order back-prop
+> (ERR-030-002) appends the injuries null seam as step 4. **KD-7:** a `MEDICAL_SAVE_FORMAT_VERSION`
+> season-save sub-blob (not `WORLD_STORE_FORMAT_VERSION`). #16 §3.4 promotes `DOMAIN_TAG_INJURIES_MEDICAL =
+> 0x2A` / `SubsystemOrdinals` 92 (ERR-041-001, spec-text-first). Reads #29's `InjuryRiskContribution`
+> read-only; staff (#34) via an identity `MedicalModifier`; #34/#27-injury-proneness deferred. Count:
+> **34 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Training System #29 authored + advanced
 > `→ IN REVIEW → APPROVED`** — Wave 2's second spec (the training seam #28 KD-2 reserved and #30's
 > day-advance slot-2 null seam). Promoted from the converged design supplement
 > (`docs/tracking/training-system-design.md` v0.4, design-AR **1H+1M+2L** → AR-2/AR-3 clean) to a full
@@ -237,6 +250,7 @@
 | 30 | Season & Competition Loop | `season-competition-loop/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 37 | Match Analytics & Statistics | `match-analytics-statistics/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 38 | UI / Client Framework (framework slice) | `ui-client-framework/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 41 | Injuries & Medical | `injuries-medical/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.

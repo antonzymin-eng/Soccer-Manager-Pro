@@ -1,7 +1,12 @@
 # Injuries & Medical #41 — Design Supplement
 
 > **Created:** July 23, 2026
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row).
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** (July 23, 2026) — 11-file section set authored at
+> `docs/specs/injuries-medical/` (FR-MD-001..027) → section-file AR-1 (1M float→integer) → AR-2 (1M
+> fixed-radix append parity) → AR-3 CONVERGENCE → R-01..R-05 signed → **APPROVED**; `SPEC_INDEX.md` row 41
+> added; ERR-041-001 (`0x2A`/92) + ERR-030-002 (#30 tick-order step 4) filed. Section files are
+> authoritative; this supplement is the design-history record. (Original status line follows for history.)
+> DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row).
 > **Candidate spec:** #41 · **FR prefix:** FR-MD (grep-verified unclaimed across `docs/specs/**`).
 > **Master-plan home:** §4.2 (injury management) · **Wave:** 2.
 > **Determinism (proposed, promoting the roadmap-reserved row):** `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A`,
@@ -311,4 +316,5 @@ public readonly struct MedicalViewModel { /* severity / recovery-remaining / inj
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 23, 2026 | Initial design supplement from spec-plan v0.2. |
+| v0.3 | July 23, 2026 | PROMOTED — 11-file section set authored + APPROVED (section-file AR-1 1M float→integer → AR-2 1M fixed-radix → AR-3 CONVERGENCE). |
 | v0.2 | July 23, 2026 | AR-1 (2M+2L): **M1 (contract)** — KD-6 said append injuries "as slot 4", but #30 §3.3 slot 4 is the live `WorldStore.AdvanceDay()`; corrected to a NEW step inserted after #28/#29/#33 and before `AdvanceDay` (`1·2·3·4-injuries·5-AdvanceDay`), shifting only the terminal live tick's ordinal. **M2 (architecture/consistency)** — KD-1/KD-7/§5 persisted an `injuries.occurrence` `RngStreamState` (the match-tick card-severity precedent); switched to **position-independent keyed draws** on `(playerId, worldDay, purpose)` (the #28 regen / #30 quick-sim off-pitch precedent) → no persisted cursor, simpler sub-blob, dual-clock hazard dissolved twice over. L1 KD-1/§5 fixture-timing wording (injuries surface at a world-tick *following* the fixture). L2 §2/§6 match-load dependency made explicit (`MatchLoad.AppearanceDays` from #30's fixture result at Stage 2; ledger `HardContacts` deep-tier). |

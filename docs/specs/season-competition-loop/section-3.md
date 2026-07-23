@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
-**Version:** 0.2
+**Last Updated:** July 22, 2026 (v0.3 — back-prop ERR-030-002 tick-order injuries seam; prior v0.2 PASS-1)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -107,15 +107,19 @@ RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned or
     # 1. progression   (#28)  — NULL SEAM today (FR-SN-034)
     # 2. training      (#29)  — NULL SEAM today
     # 3. human-systems (#33)  — NULL SEAM today
-    # 4. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
+    # 4. injuries      (#41)  — NULL SEAM today (ERR-030-002 — after #28/#29 so the injury-risk
+    #                           assembly reads the day's updated fatigue/condition; before the world-day tick)
+    # 5. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
     WorldStore.AdvanceDay()
 ```
 
 **KD-4 invariant:** `Calendar.dayOf(NextRoundIndex) ≥ WorldStore.CurrentWorldTick` always; a restore
-re-checks this and fails loud (F4). The Wave-2+ seams (steps 1–3) are **documented positions**, not
-interfaces — #28/#29/#33 each slot into a pre-declared slot when they land, so a wrong order here
-would force a re-pin across every Wave-2+ spec (§7). With only step 4 live, a no-fixture day's advance
-is **byte-identical** to a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8).
+re-checks this and fails loud (F4). The Wave-2+ seams (steps 1–4) are **documented positions**, not
+interfaces — #28/#29/#33/#41 each slot into a pre-declared slot when they land, so a wrong order here
+would force a re-pin across every Wave-2+ spec (§7). The injuries seam (step 4, appended by ERR-030-002 at
+#41's approval) is positioned after #28/#29 so its occurrence-risk assembly reads the day's updated
+training-fatigue / condition, and before the live world-day tick. With only the world-day tick live, a
+no-fixture day's advance is **byte-identical** to a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8).
 
 ## 3.4 Playing a round (FR-SN-012..013b / KD-9)
 
@@ -238,4 +242,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial algorithms: circle-method fixtures, table + tie-break, day-advance order, boundary roll, season codec, worked 4-club schedule. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
+| 0.3 | 2026-07-23 | — | Back-prop ERR-030-002 (at #41 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the injuries null seam as step 4 (after #28/#29, before the world-day tick); prose updated (steps 1–4). |
 #endregion
