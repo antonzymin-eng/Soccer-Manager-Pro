@@ -1,7 +1,7 @@
 # Spec #34 — Staff & Backroom — High-Level Plan
 
 > **Created:** July 22, 2026
-> **Status:** PLAN (pre-design-supplement — no section files, no `SPEC_INDEX.md` row). Candidate spec number **#34** (proposed in `management-layer-spec-roadmap.md`, not reserved).
+> **Status:** **PROMOTED** (July 23, 2026) — design supplement `docs/tracking/staff-backroom-design.md` (AR-converged v0.4) → 11-file section set at `docs/specs/staff-backroom/` → **APPROVED**; `SPEC_INDEX.md` row 34 added. (Original PLAN status follows for history.) PLAN (pre-design-supplement). Candidate spec number **#34** (proposed in `management-layer-spec-roadmap.md`, not reserved).
 > **Master-plan home:** §5 Stage 3 · **Tier:** S3 · **Wave:** 4 · **FR prefix (proposed):** FR-ST
 > **Determinism:** domain tag `0x26` / SubsystemOrdinal 88 (proposed off-pitch block, §6 — pinned only at promotion)
 > **Purpose:** Coaches, scouts, and physios as attributed entities that modulate coaching, scouting, and injury/development outcomes.

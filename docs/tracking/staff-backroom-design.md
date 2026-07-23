@@ -1,8 +1,14 @@
 # Staff & Backroom #34 — Design Supplement
 
 > **Created:** July 23, 2026
-> **Last Updated:** July 23, 2026 (v0.4 — AR-3 0H+0M+1L + **CONVERGENCE**; prior v0.3 AR-2 1M+1L, v0.2 AR-1 1H+4M+1L, v0.1 initial).
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row).
+> **Last Updated:** July 23, 2026 (v0.4 — AR-3 0H+0M+1L + **CONVERGENCE** → **PROMOTED**; prior v0.3 AR-2 1M+1L, v0.2 AR-1 1H+4M+1L, v0.1 initial).
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** (July 23, 2026) — 11-file section set authored at
+> `docs/specs/staff-backroom/` (FR-ST-001..024) → section-file AR PASS-1 (2M) → PASS-2 (1M regression) →
+> CONVERGENCE → R-01..R-05 signed → **APPROVED**; `SPEC_INDEX.md` row 34 added (**38 APPROVED**). **One
+> approval-time cross-spec back-prop:** ERR-030-006 (the #30 staff tick-order step-6 null seam); `0x26`/88 stays
+> reserved (draw-free); #41/#29/#40/#33/#31/#27/#16 unchanged. Section files are authoritative; this supplement
+> is the design-history record. (Original status line follows for history.)
+> DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row).
 > **Candidate spec:** #34 · **FR prefix:** FR-ST (grep-verified unclaimed across `docs/specs/**` — only the roadmap/plan proposal cites it).
 > **Master-plan home:** §5 Stage 3 · **Tier:** S3 (an identity scaffold pulled forward + the Stage-3 deep system) · **Wave:** 4 (recruitment/economy cluster — after #31, which owns the reusable negotiation seam; before #32, since scouts are staff).
 > **Determinism (proposed):** `DOMAIN_TAG_STAFF` / `SubsystemOrdinals.Staff` = `0x26` / `88` — the roadmap §6 off-pitch reservation, **already present as the `_RESERVED_0x26_` placeholder row** in #16 §3.4 (verified `deterministic-sim/section-3.md:270`). **Stays RESERVED at approval** (the scaffold tier is draw-free — the #40 ERR-040-001 / #31 reservation precedent); promotes at the deep tier's first stochastic draw (candidate-pool generation).

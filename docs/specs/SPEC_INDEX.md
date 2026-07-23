@@ -1,7 +1,24 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 23, 2026, latest same day (**Transfers, Contracts & Negotiation #31 authored +
+> **Last Updated:** July 23, 2026, latest same day (**Staff & Backroom #34 authored + advanced `→ IN REVIEW →
+> APPROVED`** — Wave 4's second spec (coaches/scouts/physios as attributed entities that modulate #29/#41/#33/#31).
+> A **Stage-3 system with a pulled-forward identity scaffold**: the managed club holds a real neutral-baseline
+> staff roster whose quality **projections return each consumer's own identity type** (`MedicalModifier` #41 /
+> `CoachingModifier` #29 / `staffMult` #31 / `MentoringPlan` #33), neutral ⇒ each type's exact `Identity`, so a
+> neutral-staff season is **byte-identical to pre-#34** (KD-3/KD-5/KD-8). **KD-1:** hiring reuses #31's
+> `NegotiationOutcome` + the atomic-commit pattern but a thin staff `StaffOffer`/`EvaluateStaffOffer` — the
+> negotiated quantity is a **wage, not a fee** (#31's `EvaluateOffer` tests fee), year-round (no window).
+> **KD-2:** a fresh staff data layer (distinct skill vocabulary; per-club **role slots** 1:1 with `StaffRole`;
+> stable monotonic `StaffId`). **KD-6:** the scaffold posts no `StaffWage` (FR-FN-015 preserved verbatim, no #40
+> back-prop at approval); the deep wage gate reads #40's running `WageBillAggregate + wage ≤ WageBudget` — **no
+> #34 wage counter** (a counter would be the parallel wage total FR-FN-015 forbids). **KD-7:** a hire changes a
+> mutable `EmployerClubId`, so `StaffId` never re-keys — **no #30 roster-commit, no migration hook** (a simpler
+> divergence from #31's KD-7). **One approval-time back-prop:** ERR-030-006 (the #30 staff tick-order step-6
+> null seam; `AdvanceDay` → step 7); `0x26`/88 stays reserved (draw-free). Supplement AR-1 (1H+4M+1L) → AR-2
+> (1M+1L) → AR-3 CONVERGENCE; section-file AR PASS-1 (2M) → PASS-2 (1M regression) → CONVERGENCE. Count:
+> **38 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Transfers, Contracts & Negotiation #31 authored +
 > advanced `→ IN REVIEW → APPROVED`** — Wave 4's first spec (the recruitment engine; owns the reusable
 > negotiation seam #32/#34 consume). **KD-1:** the Stage-2 counterparty valuation is a **pure deterministic
 > integer function** over #27 attributes + age + club-need — the identity #33 personality (a multiplicative
@@ -297,6 +314,7 @@
 | 33 | Personalities, Morale & Squad Dynamics | `personalities-morale-dynamics/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 31 | Transfers, Contracts & Negotiation | `transfers-contracts-negotiation/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 34 | Staff & Backroom | `staff-backroom/` | 6¹ | APPROVED | Jul 23, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
