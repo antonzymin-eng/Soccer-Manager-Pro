@@ -1,7 +1,24 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 23, 2026, latest same day (**Personalities, Morale & Squad Dynamics #33 authored +
+> **Last Updated:** July 23, 2026, latest same day (**Transfers, Contracts & Negotiation #31 authored +
+> advanced `→ IN REVIEW → APPROVED`** — Wave 4's first spec (the recruitment engine; owns the reusable
+> negotiation seam #32/#34 consume). **KD-1:** the Stage-2 counterparty valuation is a **pure deterministic
+> integer function** over #27 attributes + age + club-need — the identity #33 personality (a multiplicative
+> bias) and #28 CA modulate at the deep tier, never a replacement path. **KD-2:** the #40 boundary — read
+> `AvailableTransferBudget`, commit via `ApplyTransaction`, #31 owns a `committedSpendThisWindow` counter
+> (FR-FN-004 gives #40 none), no parallel ledger, **validate-all-before-commit atomicity** (no half-written
+> deal). **KD-3:** the offer/response seam is counterparty-generic (authored once for #32/#34). **KD-4:** one
+> `TRANSFERS_SAVE_FORMAT_VERSION` season-save sub-blob (durable contracts + season-scoped window/spend), **no**
+> `WORLD_STORE` bump. **KD-5:** draw-free minimal ⇒ `_RESERVED_0x23_` / ordinal 85 **stay reserved** (the #40
+> ERR-040-001 precedent); rival bidding is the deep-tier first draw. **KD-6:** the transfer-window model is
+> #31-owned (#30 has none), derived read-only from `SeasonCalendar`. **KD-7:** a transfer **re-keys** the
+> club-scoped `PlayerId` through a NEW #30 mid-season roster-commit entry point + roster-move hook; #31
+> migrates only its own `Contract`. **One approval-time back-prop:** ERR-030-004 (the #30 transfers tick-order
+> step-5 null seam, the #41 ERR-030-002 precedent — a deep-tier position reservation, empty at minimal); #16
+> unchanged (draw-free). Section-file AR-1 (3M+1L) → AR-2 (1L) → CONVERGENCE. Count: **37 APPROVED / 0 IN
+> REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Personalities, Morale & Squad Dynamics #33 authored +
 > advanced `→ IN REVIEW → APPROVED`** — Wave 3's gating spec (the vol-2 human-systems producer #22 was built
 > to consume read-only). **KD-1 (headline):** #33's #22 read surface is matched **verbatim** to the FR-LW-004
 > `PlayerEdge` contract — exactly the pairwise scalar `∈ [0,1]` per player↔player ordered pair (no baseline;
@@ -279,6 +296,7 @@
 | 41 | Injuries & Medical | `injuries-medical/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 33 | Personalities, Morale & Squad Dynamics | `personalities-morale-dynamics/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 31 | Transfers, Contracts & Negotiation | `transfers-contracts-negotiation/` | 6¹ | APPROVED | Jul 23, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 

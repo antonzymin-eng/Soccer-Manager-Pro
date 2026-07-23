@@ -1,7 +1,7 @@
 # Season & Competition Loop Specification #30 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.4 — back-prop ERR-030-003 boundary-roll finance seam; prior v0.3 ERR-030-002, v0.2 PASS-1)
+**Last Updated:** July 23, 2026 (v0.5 — back-prop ERR-030-004 transfers tick-order enumeration; prior v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
@@ -92,7 +92,7 @@ forward design (nothing is built yet).
 |---|---|---|---|
 | FR-SN-032 | `SeasonLoop` MUST be the sole writer of season state; season state MUST be mutable only through the public command API (`AdvanceToNextFixtureDay`, `AdvanceAndPlayNextRound`, the boundary roll), never by field access. | MUST | KD-7 |
 | FR-SN-033 | `SeasonViewModel` MUST expose the table + fixture list + calendar position as **read-only value copies** for #37/#38; reading MUST NOT mutate season state or affect the save digest (observer-neutral). | MUST | KD-7 |
-| FR-SN-034 | Every world-tick spec #30 must tick that does not exist yet (#28/#29/#33/#41) MUST be a **documented null seam** in the KD-2 tick order, never an invented interface (FR-LW-031). The injuries seam (#41) was appended as step 4 by ERR-030-002 at #41's approval. | MUST | KD-2 |
+| FR-SN-034 | Every world-tick spec #30 must tick that does not exist yet (#28/#29/#33/#41/#31) MUST be a **documented null seam** in the KD-2 tick order, never an invented interface (FR-LW-031). The injuries seam (#41) was appended as step 4 by ERR-030-002 at #41's approval; the transfers seam (#31) was appended as step 5 by ERR-030-004 at #31's approval (a deep-tier position reservation — empty at minimal). | MUST | KD-2 |
 
 ## 2.2 Data structures
 
@@ -137,4 +137,5 @@ forward design (nothing is built yet).
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 | 0.3 | 2026-07-23 | — | Back-prop ERR-030-002 (at #41 approval): FR-SN-034 tick-order null-seam enumeration extended to include Injuries #41 (appended as step 4). |
 | 0.4 | 2026-07-23 | — | Back-prop ERR-030-003 (at #40 approval): FR-SN-031 now enumerates two insertion points — (a') #43 promo/rel and (b') #40 finance settlement (after (a')). |
+| 0.5 | 2026-07-23 | — | Back-prop ERR-030-004 (at #31 approval): FR-SN-034 tick-order null-seam enumeration extended to include Transfers #31 (appended as step 5, a deep-tier position reservation). |
 #endregion
