@@ -155,6 +155,74 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(0, committed.TeamId, "Team 0's keeper committed the save.");
         }
 
+        /// <summary>A ball parked deep in the keeper's ATTACKING half (far from the x = 0 goal team 0
+        /// defends), loose and stationary — <see cref="GkHeadingIntentSource.SaveArmed"/> returns false, so
+        /// <c>RunMechanicsAI</c> clears the per-episode latch. Re-forced each tick so physics / first-touch
+        /// cannot re-develop an armed geometry.</summary>
+        private static readonly Vector3 DisarmBallPos = new Vector3(95f, 34f, 0.11f);
+
+        /// <summary>Ticks with the ball held in a not-save-armed geometry until the per-episode latch clears
+        /// (RunMechanicsAI runs on the AI stride), bounded by two AI strides. Returns true if it cleared.</summary>
+        private static bool DriveUntilLatchClears(MatchEngine engine)
+        {
+            for (int i = 0; i < 2 * DeterministicSimConstants.AI_PHASE_STRIDE; i++)
+            {
+                engine.TestOnly_ForceBallLoose(DisarmBallPos, Vector3.zero);
+                engine.RunTick();
+                if (!engine.TestOnly_SaveCommittedForGk(0))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>Ticks with the save-armed geometry until the team-0 per-episode latch is SET, bounded by
+        /// two AI strides. The latch is set ONLY inside <c>HostSaveDispatch.CommitSave</c> after its
+        /// latch-is-clear check, so a false → true transition is a genuine commit (unlike the sticky
+        /// <see cref="MatchEngine.TestOnly_LastCommittedSaveAttrs"/>, which never resets between episodes).</summary>
+        private static bool DriveUntilLatchSet(MatchEngine engine)
+        {
+            for (int i = 0; i < 2 * DeterministicSimConstants.AI_PHASE_STRIDE; i++)
+            {
+                engine.TestOnly_ForceBallLoose(SaveBallPos, SaveBallVel);
+                engine.RunTick();
+                if (engine.TestOnly_SaveCommittedForGk(0))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        [Test]
+        public void SaveEpisode_ReArmsAfterBallResolves_CommitsAgain()
+        {
+            // Regression lock for the latch-clear → re-commit path (the `if (!armed) _saveCommittedForGk[t]
+            // = false;` line in RunMechanicsAI): SAVE is a CONTINUOUS DT action, so the per-episode latch is
+            // the sole guard against a re-commit. A keeper must save a first shot, then — once that ball
+            // resolves (no longer armed) and a second shot arrives — save AGAIN. Without the latch clear the
+            // keeper would commit once and never again. The commit signal is the latch false → true edge (set
+            // only inside CommitSave); TestOnly_LastCommittedSaveAttrs is sticky and cannot distinguish a
+            // second commit from the first.
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+
+            // Episode 1: shot arrives, keeper commits, latch set (from the boot-clear false).
+            Assert.IsTrue(DriveUntilLatchSet(engine), "First shot must commit a save (latch set).");
+            Assert.IsTrue(engine.TestOnly_LastCommittedSaveAttrs.HasValue,
+                "The first commit must have projected and stored the GK attrs.");
+
+            // Ball resolves (moves out of the armed geometry): RunMechanicsAI must clear the latch.
+            Assert.IsTrue(DriveUntilLatchClears(engine),
+                "Once the ball is no longer save-armed, RunMechanicsAI must clear the per-episode latch.");
+
+            // Episode 2: a fresh shot arrives — the keeper must re-arm and commit a SECOND save (latch set
+            // again, which can only happen through a fresh CommitSave now that the latch was cleared).
+            Assert.IsTrue(DriveUntilLatchSet(engine),
+                "A second shot after the latch cleared must commit again — the keeper saves more than once.");
+        }
+
         [Test]
         public void SaveDecision_SurvivesAdversarialTactic()
         {
@@ -298,4 +366,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | save-commit tests drive through the natural RunTick DT path    |
 // |         |            |        | (DriveUntilSaveCommitted); + SaveDecision_SurvivesAdversarial-  |
 // |         |            |        | Tactic (the AR-4 sole-option missed-save regression lock).     |
+// | 1.3     | 2026-07-23 | —      | + SaveEpisode_ReArmsAfterBallResolves_CommitsAgain (AR follow- |
+// |         |            |        | up): locks the per-episode latch clear → re-commit path (SAVE  |
+// |         |            |        | is continuous, so the latch is the sole re-commit guard). Uses |
+// |         |            |        | the new TestOnly_SaveCommittedForGk latch seam via the false → |
+// |         |            |        | true edge (the sticky LastCommittedSaveAttrs cannot distinguish|
+// |         |            |        | a second commit).                                              |
 #endregion

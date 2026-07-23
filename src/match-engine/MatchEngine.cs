@@ -31,6 +31,7 @@
 //           GK (#11) / Heading (#10) cross-tick state (opt-in flag + 2 subsystem RNG cursors + 2 §4 trigger
 //           latches + both orchestrators' in-flight arrays via CaptureState/RestoreState seams), making a
 //           flag-on engine snapshot-safe. The Phase-1 durable-capture fail-loud guard is removed.)
+// Modified: 2026-07-23 (DT-emitted goalkeeper SAVE (ERR-008-013) + AR follow-up TestOnly_SaveCommittedForGk latch seam)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -1983,6 +1984,13 @@ namespace TacticalDirector.MatchEngine
         /// committed since boot.</summary>
         internal GoalkeeperAgentAttributes? TestOnly_LastCommittedSaveAttrs =>
             _lastSaveAttrsValid ? _lastCommittedSaveAttrs : (GoalkeeperAgentAttributes?)null;
+
+        /// <summary>Test-only (ERR-008-013): the per-episode save commit latch for a team's keeper
+        /// (<c>_saveCommittedForGk</c>, serialized at v18). True once <see cref="HostSaveDispatch.CommitSave"/>
+        /// has committed this episode; cleared in <c>RunMechanicsAI</c> once the ball is no longer save-armed,
+        /// so a fresh shot re-arms and re-commits. Lets a test observe the arm → commit → clear → re-commit
+        /// episode cycle.</summary>
+        internal bool TestOnly_SaveCommittedForGk(int teamId) => _saveCommittedForGk[teamId];
 
         /// <summary>Test-only (§7 projection proof): the <see cref="HeadingAgentAttributes"/> the engine
         /// last handed to <c>CommitIntent</c> (the live consumer of
@@ -6587,4 +6595,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | longer armed; DriveGkHeadingTactical keeps only the header      |
 // |         |            |        | trigger. No SNAPSHOT_SCHEMA_VERSION change; flag-off byte-      |
 // |         |            |        | identical. New SaveDecision_SurvivesAdversarialTactic lock.     |
+// | 1.48    | 2026-07-23 | —      | AR follow-up: + internal TestOnly_SaveCommittedForGk(teamId)    |
+// |         |            |        | seam over the _saveCommittedForGk per-episode latch, so a test |
+// |         |            |        | can observe the arm → commit → clear → re-commit episode cycle  |
+// |         |            |        | (the latch clear is the sole re-commit guard for the continuous|
+// |         |            |        | SAVE action). Test-only read; no behaviour change.             |
 #endregion
