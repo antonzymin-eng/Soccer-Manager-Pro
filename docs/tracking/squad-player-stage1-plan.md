@@ -85,9 +85,10 @@ The word "persistence" in #27 §4 hides two different artifacts the roadmap deli
    `PlayerRecord` set under `PROGRESSION_SAVE_FORMAT_VERSION`) and **composed by #30** into the season
    save via `SeasonSaveCodec`'s opaque-sub-blob pattern. **Design complete; lands with #28 T1 + #30.**
 2. **Initial / reference / shipped-database roster** (the "new game" starting world — which clubs and
-   players exist before any career state accumulates). **This is the genuine #27 residual.** #28 §9
-   explicitly hands it off: *"A future shipped-database / on-disk-roster pass (#47 / a #27 Stage-1+
-   deliverable) supplies the initial roster; #28 remains the owner of the career-state roster."* Today
+   players exist before any career state accumulates). **This is the genuine #27 residual.** #28 §4
+   (KD-4) explicitly hands it off: *"A future shipped-database / on-disk-roster pass (#47 / a #27
+   Stage-1+ deliverable) supplies the initial roster; #28 remains the owner of the career-state
+   roster…"* Today
    the initial roster is a **boot-time `RosterGenerator` draw or a per-squad `SquadFileLoader` text
    import** — there is no shipped, editable, full-world on-disk *database* format yet; that format
    decision is #47's (master plan §4.2 squad management / the DB-editor pass), separate from the #30
