@@ -122,8 +122,9 @@ byte-for-byte; cursor accrual/spend integer-exact; PA ceiling respected); `Regen
 
 ### A.2 — T1: the persistence sub-blob (needs Track B §4)
 
-`ProgressionEngine.cs` (sealed) gains `byte[] Snapshot()` / `static ProgressionEngine Restore(byte[])`
-under `PROGRESSION_SAVE_FORMAT_VERSION`, serialized via #16 `CanonicalSerializer`, layout:
+Introduce `ProgressionEngine.cs` (sealed) with `byte[] Snapshot()` / `static ProgressionEngine
+Restore(byte[])` under `PROGRESSION_SAVE_FORMAT_VERSION`, serialized via #16 `CanonicalSerializer`,
+layout:
 
 ```
 u32  PROGRESSION_SAVE_FORMAT_VERSION           # version gate (fail-loud on mismatch)
@@ -133,13 +134,26 @@ repeat managedCount:
      PlayerRecord (PlayerId, names, Age, Position, PlayerAttributes[31]+WeakFoot)   # the evolving career-state record (KD-4 — serialize, don't regenerate)
      int PotentialAbility; int GrowthCursor; u32 AgeAnchorDay; byte RetirementFlag; u32 RetirementDay
 int  NextPlayerId                              # monotonic regen-id cursor (KD-3)
-RngStreamState progressionStream               # cursor + actionOrdinal (GetStreamState/RestoreStream) — a mid-boundary regen resumes byte-exact
+byte regenStreamRegistered                     # 0 until the first regen registers the stream (A.3 / §8); see note
+[if regenStreamRegistered] RngStreamState progressionStream   # cursor + actionOrdinal (GetStreamState/RestoreStream) — a mid-boundary regen resumes byte-exact
 # trailing-byte guard: read must end exactly at buffer end
 ```
+**Regen-stream registration timing (the presence flag exists for this):** the `player-progression.regen`
+stream registers **lazily at the first season-boundary regen** (A.3 — the FR-LW-031 no-zero-draw-stream
+rule), so a save taken **before any player has retired** has no stream to serialize; `regenStreamRegistered`
+= 0 handles it. *(Section-file alternative: register the stream at `ProgressionEngine` construction —
+a boundary regen is a **guaranteed** future draw, unlike the truly-phantom `world.arcs`, so this may
+not be a phantom-surface violation; if the section files take that path, the flag is always 1 and can be
+dropped. Confirm vs. #28 section files.)*
+
+**Cross-assembly note:** this blob **API** lands in `player-progression` (#28); the `SeasonSaveCodec`
+**composition** that consumes it lands in `season-save` (#30's assembly, Track B §4) — two PRs across
+two assemblies, sequenced after the #30 spine.
+
 **Invariant (KD-4 / §9):** `|managed block| == |managed roster|` — a vacancy is filled 1:1, so the blob
-is size-stable across seasons. **Tests:** `ProgressionSaveTests` — round-trip field-identity; fail-loud
-on bad version / out-of-bounds length prefix / trailing bytes. **Commit:** `feat(progression): #28 T1
-PROGRESSION_SAVE_FORMAT_VERSION block`. *(Composition into the season frame is Track B.)*
+is size-stable across seasons. **Tests:** `ProgressionSaveTests` — round-trip field-identity (with and
+without a registered regen stream); fail-loud on bad version / out-of-bounds length prefix / trailing
+bytes. **Commit:** `feat(progression): #28 T1 PROGRESSION_SAVE_FORMAT_VERSION block`.
 
 ### A.3 — T2: wire the world-tick steps + register the RNG stream (needs #30 loop)
 
