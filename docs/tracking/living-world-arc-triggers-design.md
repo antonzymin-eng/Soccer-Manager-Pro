@@ -242,8 +242,307 @@ per the project convention.
 
 ---
 
+## 8. Detailed implementation plan — item 1 (Path B)
+
+Everything below is verified against the current tree (`ArcEngine.cs`, `WorldLoop.cs`,
+`WorldStore.cs`, `InteractionTextGenerator.cs`, `WorldStateSerializer.cs`,
+`DeterministicRngService.cs`, `LivingWorldConstants.cs`) so the signatures and byte layouts are the
+real ones, not sketches.
+
+### 8.1 File inventory
+
+**New files** (all in `src/living-world/`):
+
+| File | Type | Purpose |
+|------|------|---------|
+| `ArcCanonSource.cs` | `public abstract class` (Stage-0 stub subclass alongside) | The §2.2/§2.3 nullable canon-input seam the evaluator reads. Concrete, not an interface. |
+| `Stage0ArcCanonSource.cs` | `public sealed class : ArcCanonSource` | Deterministic in-code Stage-0 producer (the `ScenarioIndex`/`TeamTacticConfig` parser-swap precedent). |
+| `ArcTrigger.cs` | `public readonly struct` | One catalogue row: `TriggerId` + target `ArcKind` + `[GT]` threshold + input-capture rule. |
+| `ArcTriggerCatalogue.cs` | `public static class` | The Stage-0 in-code trigger table (APPEND-only, like `InteractionTextCorpus`). |
+| `ArcTriggerEvaluator.cs` | `public sealed class` | Registers `world.arcs`, walks canon in FR-LW-017/021 order, draws the stochastic component, calls `ArcEngine.SpawnArc`. Owns the stream (the `InteractionTextGenerator` role). |
+| `Tests/ArcTriggerTests.cs` | test fixture | §9 case list. |
+
+**Modified files:**
+
+| File | Change |
+|------|--------|
+| `LivingWorldConstants.cs` | +Fixed region rows (§8.2). |
+| `WorldStore.cs` | Construct the evaluator at boot; wire it into the loop; E1/E2 serialization; `Restore` canon-source param. |
+| `WorldLoop.cs` | Phase-4 evaluator call, null-guarded (a fifth nullable seam arg). |
+| `LivingWorldConstants.cs` version history + `WorldStore.cs`/`WorldLoop.cs` version history | Append rows per FR-CS-056. |
+
+**Deliberately NOT modified:** `ArcEngine.cs` (its `SpawnArc`/`AdvanceState`/`ResolveArc`/`Update`
+surface is already the exact seam the evaluator calls — the class doc even names this landing);
+`WorldStateSerializer.cs` (the `world.arcs` cursor is a `WorldStore`-composite field, not a
+four-store field — so `WORLD_SNAPSHOT_FORMAT_VERSION` stays 1).
+
+### 8.2 Constants — `LivingWorldConstants.cs`, `#region Fixed`
+
+```csharp
+/// <summary>[FIXED] Stable siteId of the periodic tick-driven world.arcs RNG sub-stream
+/// (#22 §3.4 / FR-LW-020). Registered by ArcTriggerEvaluator. #16 §3.2.5.1: never change it.</summary>
+public const string WORLD_ARCS_STREAM_SITE_ID = "world.arcs";
+
+/// <summary>[FIXED] world.arcs stream version (#16 §3.2.5.1). Bump only on a draw-site
+/// reordering; a bump invalidates arc replay parity by design.</summary>
+public const ushort WORLD_ARCS_STREAM_VERSION = 1;
+
+// World-scoped LivingWorld RNG sub-stream entity-id sentinels. ComputeStreamKey hashes
+// (subsystemOrdinal ‖ entityId ‖ streamVersion) and EXCLUDES siteId, so two world-scoped streams
+// in subsystemOrdinal 80 MUST differ here to get distinct keys. Real entity ids are >= 0.
+public const int WORLD_STREAM_ENTITY_TEXT       = -1; // world.text (existing — replaces the bare -1)
+public const int WORLD_STREAM_ENTITY_ARCS       = -2; // world.arcs (this item)
+public const int WORLD_STREAM_ENTITY_BACKGROUND = -3; // world.background (reserved for item 2, §3)
+```
+
+`WORLD_STORE_FORMAT_VERSION` stays `2` at E1 and becomes `3` only at E2 (§8.6). `InteractionTextGenerator`'s
+`entityId: -1` (line 60) is updated to `WORLD_STREAM_ENTITY_TEXT` (behaviour-identical — same value —
+but cataloged). Per-kind `[GT]` trigger thresholds + `ARC_TRIGGER_*` lifetime rows go in `#region GT`.
+
+### 8.3 `ArcCanonSource` (KD-2 — concrete, nullable seam)
+
+```csharp
+public abstract class ArcCanonSource
+{
+    // Canon read in FR-LW-017/021 order. Entity-scoped signals iterated by ascending entity id;
+    // board/squad-level signals keyed by ArcKind ordinal. Scalars only — they map 1:1 onto
+    // SpawnCause.Input { short Key; float Value }. Every value MUST be finite (WriteF32 is Tier-A
+    // no-NaN); the evaluator gates before capture.
+    public abstract int EntitySignalCount { get; }
+    public abstract int EntityIdAt(int index);                 // ascending
+    public abstract float EntitySignal(int index, short key);  // e.g. pulse divergence, ego clash
+    public abstract float BoardSignal(ArcKind kind, short key);// board patience etc.
+}
+```
+
+`Stage0ArcCanonSource` is a deterministic pure function of the world state it is handed (no
+`System.Random`, no clock) — e.g. derived from `MemoryStore` edge salience/relationship values, so
+it is reproducible across `Snapshot`/`Restore`. It is the drop-in slot for the real vol-2/vol-3
+producer; **null is the default and means "skip phase-4 trigger evaluation"** (§2.2).
+
+### 8.4 `ArcTrigger` + evaluator core
+
+```csharp
+public readonly struct ArcTrigger
+{
+    public readonly ushort TriggerId;     // -> SpawnCause.TriggerId
+    public readonly ArcKind Kind;
+    public readonly bool IsEntityScoped;  // entity-scoped vs board/squad-level (FR-LW-017)
+    public readonly short SignalKey;      // which canon scalar this trigger thresholds
+    public readonly float Threshold;      // [GT]
+    public readonly uint MaxLifetimeDays; // [GT], in [1, ARC_MAX_LIFETIME_DAYS]
+}
+```
+
+Evaluation order (fixed, deterministic — the load-bearing determinism property):
+
+1. **Entity-scoped triggers**, outer loop over `ArcCanonSource.EntityIdAt(i)` ascending, inner loop
+   over the entity-scoped catalogue rows in catalogue (ordinal) order.
+2. **Board/squad-level triggers**, iterated by `ArcKind` ordinal.
+
+On a crossing (`signal >= Threshold`, NaN fails closed via a negated compare — the store-seam
+precedent), draw **one** `world.arcs` value for the stochastic accept/shape component, build the
+`SpawnCause` inline (`TriggerId`, the captured `Input[]` scalars, `Cause.WorldTick =
+_clock.CurrentWorldTick`), resolve the pinned source episodes from `MemoryStore`, and call
+`ArcEngine.SpawnArc(kind, in cause, pins, spawnTick, maxLifetimeDays)`. `SpawnArc` already does the
+atomic FR-LW-018 pinning + rollback, the `ArcKind` gate, and the lifetime/overflow gates — the
+evaluator adds no new validation there.
+
+### 8.5 `world.arcs` RNG registration + draw discipline (KD-4)
+
+Registration mirrors `InteractionTextGenerator` exactly, with the **distinct entity sentinel**:
+
+```csharp
+public ArcTriggerEvaluator(DeterministicRngService rng)
+{
+    _rng = rng ?? throw new ArgumentNullException(nameof(rng));
+    _streamIndex = rng.RegisterStream(
+        LivingWorldConstants.WORLD_ARCS_STREAM_SITE_ID,
+        SubsystemOrdinals.LivingWorld,               // 80
+        LivingWorldConstants.WORLD_STREAM_ENTITY_ARCS, // -2  (NOT -1 — else key == world.text)
+        LivingWorldConstants.WORLD_ARCS_STREAM_VERSION);
+}
+public int StreamIndex => _streamIndex;
+```
+
+Per-crossing draw (the `InteractionTextGenerator.Generate` discipline — all validation/canon reads
+run BEFORE the draw so a no-crossing tick consumes no cursor):
+
+```csharp
+if (_rng.Reserve(_streamIndex, 1) != 0) throw new InvalidOperationException(...);
+if (_rng.DrawReserved(_streamIndex, 0, out ulong draw) != 0) { _rng.CloseReservation(_streamIndex); throw ...; }
+_rng.CloseReservation(_streamIndex);   // advances RngCursor by DeclaredBudget (verified line 124-127)
+```
+
+**One draw per crossing, not per tick** — a tick with no crossings leaves the cursor untouched, so a
+flag-off (null canon source) run never advances it (E1 byte-identity). Registration is
+**unconditional at boot** in a fixed position (after `world.text`) so the stream index is
+positionally stable across save/restore whether or not a canon source is present.
+
+### 8.6 `WorldStore` diffs
+
+**Fields + ctor** (both public ctors flow through `WorldStore(int, ulong)`):
+
+```csharp
+private ArcTriggerEvaluator _arcTriggers;   // owns world.arcs; constructed unconditionally
+private ArcCanonSource _canon;              // nullable; null => no evaluation (default)
+// in WorldStore(int managerId, ulong worldSeed):
+_arcTriggers = new ArcTriggerEvaluator(_rng);   // registers world.arcs AFTER _text (index order fixed)
+_canon = null;
+_loop = new WorldLoop(_clock, _memory, _arcs, _membership, _arcTriggers /* + _canon via a setter or field */);
+```
+
+Add `public void SetArcCanon(ArcCanonSource canon)` (the opt-in). A new
+`WorldStore(int managerId, ulong worldSeed, ArcCanonSource canon)` overload is the ergonomic form.
+
+**Snapshot()** — E2 inserts the `world.arcs` block between the `world.text` block and the membership
+roster (keeping membership last so no existing byte-offset test moves). Current writer order
+(`WorldStore.cs:268-288`): header → store block → world.text (seed/cursor/ordinal) → membership. E2:
+
+```csharp
+// ... after the world.text WriteU64 x3 ...
+RngStreamState arcStream = _rng.GetStreamState(_arcTriggers.StreamIndex);
+CanonicalSerializer.WriteU64(payload, ref offset, arcStream.RngCursor);
+CanonicalSerializer.WriteU64(payload, ref offset, arcStream.ActionOrdinal);
+// ... then membership roster (unchanged) ...
+```
+
+`ComputeSize` gains `+ 8 + 8`. Bump `WORLD_STORE_FORMAT_VERSION` 2 → 3 with the v2→v3 doc note.
+
+**Restore(byte[] payload, ArcCanonSource canon = null)** — the canon source is a **Load-time
+parameter, never persisted** (the season-save `ISquadProvider` precedent). After re-deriving `_rng`
+and reconstructing `_text`, reconstruct `_arcTriggers = new ArcTriggerEvaluator(rng)` (re-registers
+`world.arcs` at the same positional index), then read the cursor/ordinal and `RestoreStream`
+(fail-loud on a non-zero code, the `world.text` slice-5 AR-1 L-1 precedent):
+
+```csharp
+RngStreamState arcStream = rng.GetStreamState(arcTriggers.StreamIndex);
+arcStream.RngCursor = CanonicalSerializer.ReadU64(payload, ref offset);
+arcStream.ActionOrdinal = CanonicalSerializer.ReadU64(payload, ref offset);
+if (rng.RestoreStream(arcTriggers.StreamIndex, in arcStream) != 0) throw new InvalidOperationException(...);
+```
+
+**E1 (no schema bump)** ships everything above EXCEPT the two `WriteU64`/`ReadU64` pairs and the
+version bump: the stream is registered and the evaluator wired, but `Snapshot()` **fails loud** when
+`arcStream.RngCursor != 0` (a flag-on save is not yet snapshot-safe — the `EnableGkHeading` Phase-1
+`NotSupportedException` durable-capture precedent). A null-canon run keeps the cursor at 0, so
+`Snapshot()` succeeds and is byte-identical to today at `WORLD_STORE_FORMAT_VERSION` 2.
+
+### 8.7 `WorldLoop` diff (phase-4)
+
+`WorldLoop` gains a fifth nullable seam arg (`ArcTriggerEvaluator arcTriggers` + the canon source, or
+an `IArcPhase`-free plain call). Phase 4 currently runs only `_arcs.Update(...)` (`WorldLoop.cs:79-82`).
+The evaluator call slots in **before** the expiry sweep so a same-tick-spawned arc is subject to this
+tick's expiry bound only if already expired (matches `SpawnArc`'s own `spawnTick`):
+
+```csharp
+// Phase 4 — arc evaluation (§3.4).
+if (_arcs != null)
+{
+    if (_arcTriggers != null && _canon != null)
+        _arcTriggers.Evaluate(_canon, _memory, _arcs, _clock.CurrentWorldTick);  // trigger evaluation
+    _arcs.Update(_clock.CurrentWorldTick);                                       // §6.2 expiry sweep
+}
+```
+
+Null canon ⇒ the evaluate call is skipped ⇒ byte-identical to today. The 2-arg / 4-arg `WorldLoop`
+ctors stay (slice-1 hosts unchanged); add a 5-arg ctor.
+
+### 8.8 Fail-loud gates (item 1)
+
+- `WORLD_STORE_FORMAT_VERSION` mismatch on `Restore` → `ArgumentException` (existing gate; v2 payloads
+  are rejected fail-loud at E2, **no in-place migration** at Stage 0).
+- `Snapshot()` at E1 with a non-zero `world.arcs` cursor → `NotSupportedException` (flag-on not yet
+  snapshot-safe).
+- `RestoreStream` non-zero return → `InvalidOperationException` (registration-order drift).
+- Non-finite `SpawnCause.Input.Value` → already gated in `WorldStateSerializer.Serialize`
+  (`:102-111`); the evaluator additionally gates at capture time.
+- `ArcCanonSource` returning a non-finite signal → the evaluator's negated-compare threshold fails
+  closed (no crossing, no draw).
+
+## 9. Test plan — `Tests/ArcTriggerTests.cs` (item 1)
+
+Mirrors the `ArcMembershipTests` / `WorldStoreTests` style (field-identity round-trips, two-run
+determinism, fail-loud gates):
+
+1. **`key(world.arcs) != key(world.text)`** — register both on one `DeterministicRngService`, assert
+   distinct `StreamKey` (the §2.5/KD-4 lock; fails if `world.arcs` reuses `entityId: -1`).
+2. **Null-canon byte-identity (E1)** — a `WorldStore` with no canon source produces a `Snapshot()`
+   byte-identical to a pre-change store at `WORLD_STORE_FORMAT_VERSION` 2; the existing
+   `WorldStoreTests` determinism suite is unchanged.
+3. **Flag-off no-op through the loop** — `AdvanceDay()` with null canon spawns no arcs and leaves the
+   `world.arcs` cursor at 0.
+4. **Stub-canon spawns deterministically** — inject a `Stage0ArcCanonSource` primed to cross one
+   threshold; assert `ArcEngine.ArcCount` increments, the `SpawnCause.TriggerId`/`Input[]` match, and
+   two same-seed runs produce byte-identical world state.
+5. **E1 fail-loud** — a flag-on store (canon set, a crossing driven) refuses `Snapshot()` with
+   `NotSupportedException` while the cursor is non-zero.
+6. **E2 acceptance predicate** — save@N of a flag-on run → `WorldStore.Restore(payload, canon)` →
+   `AdvanceDay` to N+K; the resulting `Snapshot()` (and every intermediate arc/cursor) is
+   byte-identical to an uninterrupted flag-on run advanced N→N+K. This is the §2.7 named lock.
+7. **Trigger-order determinism** — a canon source exposing two entities + one board trigger that all
+   cross on the same tick spawn in the pinned (entity-id ascending, then `ArcKind` ordinal) order.
+8. **Restore fail-loud gates** — v2-format payload rejected at E2; truncated arcs block rejected;
+   `RestoreStream` drift rejected.
+
+## 10. Sequencing (two landing slices, each its own AR + gate)
+
+- **Slice 1 — E1 (no schema bump).** New files §8.1, constants §8.2, evaluator + registration
+  §8.4/§8.5, `WorldStore`/`WorldLoop` wiring §8.6/§8.7 minus the two serialize pairs, tests 1–5 + 7.
+  Ship byte-identical flag-off; flag-on deterministic-forward but `Snapshot()` fails loud. This is the
+  reviewable, byte-neutral landing.
+- **Slice 2 — E2 (`WORLD_STORE_FORMAT_VERSION` 2 → 3).** Add the cursor serialize/restore §8.6, drop
+  the E1 fail-loud, add tests 6 + 8. Comparative round-trip, no absolute rebaseline. The season save
+  frames the world blob opaquely, so `SEASON_SAVE_FORMAT_VERSION` is untouched (re-verify with one
+  season-save round-trip test through a flag-on `WorldStore`).
+
+Each slice runs its own adversarial-review cycle to convergence (the project convention) before the
+full dotnet gate.
+
+## 11. Item 2 — BackgroundTierSim phase-5 activation checklist (NOT built)
+
+Recorded so the seam is precise (replacing the one-line `WorldLoop.cs:84-85` comment). When the
+upstream producers land, build in this order:
+
+1. **Producer gate.** Requires: abstracted club-AI outcomes, vol-3 §2 transfers, vol-3 §4 governance
+   (sackings), structured match-outcome events. Until all exist, do not author the interface
+   (FR-LW-031).
+2. **`BackgroundTierSim` as the fifth nullable WorldLoop seam** (mirrors `arcs`/`membership`/the new
+   `arcTriggers`): null ⇒ phase 5 skipped ⇒ byte-identical.
+3. **`world.background` RNG stream** — its own distinct key via `WORLD_STREAM_ENTITY_BACKGROUND = -3`
+   (§8.2, already reserved). Its cursor is a **future `WORLD_STORE_FORMAT_VERSION` bump** (a third
+   world-scoped cursor block, same shape as §8.6).
+4. **Summary-update target.** Phase-5 mutates `ColdSummary` (`NetRelationship`, `RetainedEpisodes`,
+   `NextEpisodeId`) in place while a contact sits cold — the value fields are already serialized
+   (`WorldStateSerializer.cs:132-135`), so updating them is **no schema change for those fields**; only
+   the new stream cursor bumps the version. Bounded per-tick cost per FR-LW-024.
+5. **Do not stub the producers.** Stubbing would invent the club-AI outcome model (premature). Item 2
+   stays a sharpened seam this document owns.
+
+## 12. Acceptance criteria
+
+- Full dotnet gate PASSED, 0 failures, whole tree green (SDK via apt, the current local-gate posture).
+- Slice 1: the existing living-world determinism suite is **unchanged** (byte-identical flag-off);
+  `key(world.arcs) != key(world.text)` locked.
+- Slice 2: the §2.7 comparative round-trip predicate passes; a flag-on `WorldStore` round-trips
+  through the unified season save with no `SEASON_SAVE_FORMAT_VERSION` change.
+- No `ArcEngine.cs` or `WorldStateSerializer.cs` production change (the arc cursor is a `WorldStore`
+  composite field).
+
+---
+
 ## Version History
 
+- **v0.2 (2026-07-23):** Expanded into a detailed implementation plan (§§8–12) — verified against the
+  live tree (`ArcEngine`/`WorldLoop`/`WorldStore`/`InteractionTextGenerator`/`WorldStateSerializer`/
+  `DeterministicRngService`): file inventory + exact constant declarations, the concrete
+  `ArcCanonSource`/`ArcTrigger`/`ArcTriggerEvaluator` signatures, the `world.arcs` registration +
+  per-crossing draw discipline, the `WorldStore`/`WorldLoop` diffs with the E1(no-bump)/E2(2→3)
+  serialization byte layout, the fail-loud gate set, an 8-case test list, a two-slice landing
+  sequence, the item-2 phase-5 activation checklist, and acceptance criteria. Confirmed the
+  `world.arcs` cursor is a `WorldStore`-composite field (`WORLD_STORE_FORMAT_VERSION`), so
+  `WorldStateSerializer` / `WORLD_SNAPSHOT_FORMAT_VERSION` are untouched, and that `Restore` threads
+  the canon source as a Load-time parameter (the season-save `ISquadProvider` precedent).
 - **v0.1 (2026-07-23):** Created. Records item 3 (season-save fold) as already shipped; designs item 1
   (arc trigger evaluators + `world.arcs`) as an opt-in, default-off build behind a nullable
   `ArcCanonSource` seam with a distinct-key `world.arcs` stream and two-phase serialization; sharpens
