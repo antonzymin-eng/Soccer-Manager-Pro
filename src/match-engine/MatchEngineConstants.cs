@@ -214,8 +214,19 @@ namespace TacticalDirector.MatchEngine
         /// <c>WorldStore</c> world.text-cursor precedent). This corrects the stale v8 "no cross-tick gameplay
         /// state is excluded" claim in <see cref="MatchEngine.SerializeWorldState"/> — that note predates the
         /// v15 card-severity stream; a new <c>DeterministicRngService</c> draw site is cross-tick state and
-        /// must land in the snapshot in the same change that adds it.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 17;
+        /// must land in the snapshot in the same change that adds it.
+        ///
+        /// v18 (2026-07-23, gk-heading-engine-integration-design.md Phase 2) appends the GK (#11) / Heading
+        /// (#10) cross-tick state, making a flag-on engine (<c>EnableGkHeading</c>) snapshot-safe (KD-11): the
+        /// two subsystem RNG-stream cursors (<c>heading.mechanics</c> / <c>goalkeeper.mechanics</c>, the
+        /// card-severity precedent), the two §4 trigger latches (<c>_saveCommittedForGk</c> /
+        /// <c>_headerCommittedThisEpisode</c> — engine-level cross-tick state gating trigger re-commits), and
+        /// both orchestrators' in-flight arrays via their <c>CaptureState</c>/<c>RestoreState</c> seams. Written
+        /// UNCONDITIONALLY (both streams register at boot regardless of the flag; while off the latch/orchestrator
+        /// arrays sit at boot-init values, so a flag-off engine round-trips this block as a deterministic no-op —
+        /// the version bump is what moves the digest, and the contract is comparative round-trip determinism, not
+        /// an absolute golden). The Phase-1 durable-capture fail-loud guard is removed with this change.</summary>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 18;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails

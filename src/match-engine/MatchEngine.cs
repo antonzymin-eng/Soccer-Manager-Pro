@@ -27,6 +27,10 @@
 // Modified: 2026-07-21 (§4.8.2 runtime MXCSR float-mode gate wired into boot + RestoreFromSnapshot step 0 via MxcsrValidator; native shim in deterministic-sim/native/mxcsr_query.c. No-op where the shim is absent (Linux CI); enforces on the pinned cert host. No schema change.)
 // Modified: 2026-07-22 (GK #11 / Heading #10 engine integration, Phase 1 — opt-in: construct + drive both orchestrators + 4 stateless adapters + 2 RNG streams; EnableGkHeading() gates the 10 Hz/60 Hz drive + §4 save/header triggers seeded from PlayerAttributeProjection.ToGoalkeeper/ToHeading; durable-capture seams fail loud when on. Default engine byte-identical (no schema change). See docs/tracking/gk-heading-engine-integration-design.md)
 // Modified: 2026-07-22 (GK/Heading cleaner-architecture pass — behaviour-identical: the four nested ball/RNG adapters collapsed into ONE GkHeadingWorldAdapter (both ball systems share ApplyKick; the two RNG services disambiguate by arity); the §4 trigger geometry extracted to the pure, unit-testable GkHeadingIntentSource (TryCommitSaveIntents/HeaderIntents keep only latch + projection + commit). No schema change.)
+// Modified: 2026-07-23 (GK/Heading engine-integration Phase 2 — SNAPSHOT_SCHEMA_VERSION 17 → 18: serialize the
+//           GK (#11) / Heading (#10) cross-tick state (opt-in flag + 2 subsystem RNG cursors + 2 §4 trigger
+//           latches + both orchestrators' in-flight arrays via CaptureState/RestoreState seams), making a
+//           flag-on engine snapshot-safe. The Phase-1 durable-capture fail-loud guard is removed.)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -256,10 +260,11 @@ namespace TacticalDirector.MatchEngine
         private readonly int _goalkeeperStreamIndex;
         private readonly int[] _gkAgentIds;      // [MaxGkAgents] — agentId of each keeper (keeper index → agentId)
         private bool _gkHeadingEnabled;          // KD-11 opt-in flag; false = byte-identical default engine
-        // §4 trigger latches (Phase 1): at most one save per ball episode per keeper, one header per
-        // airborne episode per agent. Cleared when the ball leaves the triggering condition. NOT
-        // serialized (Phase 1 is opt-in / not snapshot-safe when on — KD-11 / §6; the durable-capture
-        // seams fail loud when the flag is on).
+        // §4 trigger latches: at most one save per ball episode per keeper, one header per airborne episode
+        // per agent. Cleared when the ball leaves the triggering condition. These are engine-level cross-tick
+        // state that GATES whether a save/header re-commits, so they are serialized at v18 (Phase 2) alongside
+        // the two orchestrators' in-flight state — without them a restore would re-fire a trigger the
+        // uninterrupted run suppressed and diverge (see the v18 block in SerializeWorldState).
         private readonly bool[] _saveCommittedForGk;         // [MaxGkAgents]
         private readonly bool[] _headerCommittedThisEpisode; // [SQUAD_SIZE]
         // TestOnly observation: the attributes the engine last handed to CommitSaveIntent / CommitIntent —
@@ -1503,6 +1508,18 @@ namespace TacticalDirector.MatchEngine
             _rng.RestoreStream(_cardSeverityStreamIndex, in s);
         }
 
+        /// <summary>Test-only seam (gk-heading-engine-integration Phase 2, v18): advances the
+        /// goalkeeper.mechanics RNG stream cursor without drawing, so a test can prove the serialized v18
+        /// GK/Heading block reaches the snapshot digest preimage (the analogue of
+        /// <see cref="TestOnly_SetCardSeverityStreamCursor"/>).</summary>
+        internal void TestOnly_SetGoalkeeperStreamCursor(ulong rngCursor, ulong actionOrdinal)
+        {
+            RngStreamState s = _rng.GetStreamState(_goalkeeperStreamIndex);
+            s.RngCursor     = rngCursor;
+            s.ActionOrdinal = actionOrdinal;
+            _rng.RestoreStream(_goalkeeperStreamIndex, in s);
+        }
+
         /// <summary>Test-only: the last settled possession holder (v14; −1 = no agent has held yet).</summary>
         internal int TestOnly_LastHolderAgentId => _lastHolderAgentId;
 
@@ -1916,7 +1933,6 @@ namespace TacticalDirector.MatchEngine
         /// Not on the hot path (a save is a host action, not per-tick), so the copy allocation is fine.</summary>
         internal SnapshotHeader CaptureDurableHeader()
         {
-            RequireGkHeadingSnapshotSafe();
             SnapshotHeader live = _orchestrator.CurrentHeader;
             SnapshotHeader copy = new SnapshotHeader
             {
@@ -1936,7 +1952,6 @@ namespace TacticalDirector.MatchEngine
         /// path (a save is a host action, not per-tick), so the copy allocation is fine.</summary>
         internal SnapshotPayload CaptureDurablePayload()
         {
-            RequireGkHeadingSnapshotSafe();
             SnapshotPayload live = _orchestrator.CurrentPayload;
             SnapshotPayload copy = new SnapshotPayload();
             Array.Copy(live.PayloadBytes, 0, copy.PayloadBytes, 0, live.BytesWritten);
@@ -1950,26 +1965,13 @@ namespace TacticalDirector.MatchEngine
         /// (gk-heading-engine-integration-design.md, Phase 1 / KD-11). While OFF (the default) the engine
         /// is byte-identical to a pre-wiring engine — the orchestrators are constructed but never driven,
         /// their RNG streams never drawn, no save/header intent committed. Turning it ON drives both
-        /// orchestrators and fires the §4 Stage-0 triggers seeded from the projections; a flag-on engine is
-        /// deterministic FORWARD but not yet snapshot-safe, so the durable-capture seams fail loud (§6).
+        /// orchestrators and fires the §4 Stage-0 triggers seeded from the projections. Since Phase 2 the
+        /// GK/Heading cross-tick state is serialized at SNAPSHOT_SCHEMA_VERSION 18, so a flag-on engine is
+        /// both deterministic FORWARD and snapshot-safe (save/restore round-trips deterministically).
         /// Intended to be set once before ticking (a host activation, not a per-tick toggle).</summary>
         public void EnableGkHeading()
         {
             _gkHeadingEnabled = true;
-        }
-
-        /// <summary>Fails loud if the durable snapshot / restore path is used on a flag-on engine
-        /// (Phase 1 does not serialize the GK/heading cross-tick state — KD-11 / §6). The honest,
-        /// explicit boundary: a flag-on engine refuses to be saved rather than silently mis-restoring.</summary>
-        private void RequireGkHeadingSnapshotSafe()
-        {
-            if (_gkHeadingEnabled)
-            {
-                throw new NotSupportedException(
-                    "MatchEngine: GK/Heading wiring is enabled — the durable snapshot/restore path does not " +
-                    "yet serialize its cross-tick state (gk-heading-engine-integration-design.md Phase 1). " +
-                    "Save/restore of a GK/Heading-enabled engine is a Phase-2 deliverable.");
-            }
         }
 
         /// <summary>Test-only (§7 projection proof): the <see cref="GoalkeeperAgentAttributes"/> the engine
@@ -4010,6 +4012,45 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteU64(buf, ref o, cardStream.RngCursor);
             CanonicalSerializer.WriteU64(buf, ref o, cardStream.ActionOrdinal);
 
+            // v18 (gk-heading-engine-integration-design.md Phase 2) — the GK (#11) / Heading (#10) cross-tick
+            // state, so a flag-on engine (EnableGkHeading) is snapshot-safe (KD-11 / §6). Written
+            // UNCONDITIONALLY: both RNG streams are registered at boot regardless of the flag, and the
+            // latch/orchestrator arrays sit at their boot-init values while off — so a flag-off engine
+            // round-trips this block as a deterministic no-op (the schema-version bump 17 → 18 is what moves
+            // the digest; there is no absolute-golden rebaseline, only the comparative two-run/round-trip
+            // contract). (1) The two subsystem RNG-stream cursors (RngCursor + ActionOrdinal, the card-severity
+            // precedent — draws are reservation-atomic in DrawStreamFloat01 with no yield, and snapshots are
+            // taken in the Snapshot phase after Resolve, so the reservation is always closed at snapshot time;
+            // the other RngStreamState fields are boot-reconstructed by RegisterStream). (2) The two §4
+            // trigger latches (_saveCommittedForGk / _headerCommittedThisEpisode) — engine-level cross-tick
+            // state that gates whether a save/header re-commits; WITHOUT these a restore would re-fire a
+            // trigger the uninterrupted run suppressed, diverging the orchestrator state. (3) Both orchestrators'
+            // in-flight arrays via their CaptureState seams. (_gkAgentIds is rebuilt each drive by
+            // RefreshGkAgentIds, so it is reconstructed not serialized; the _lastCommitted*Attrs TestOnly
+            // observation fields are write-only and never read by the drive, so excluded.) The opt-in flag
+            // itself is cross-tick state that gates the drive, so it is serialized FIRST — a restore reproduces
+            // the engine's mode (a flag-on save restores into a flag-on engine and continues deterministically;
+            // without this the fresh restored engine would boot flag-off and stop driving the orchestrators).
+            CanonicalSerializer.WriteBool(buf, ref o, _gkHeadingEnabled);
+            ref readonly RngStreamState headStream = ref _rng.GetStreamState(_headingStreamIndex);
+            CanonicalSerializer.WriteU64(buf, ref o, headStream.RngCursor);
+            CanonicalSerializer.WriteU64(buf, ref o, headStream.ActionOrdinal);
+            ref readonly RngStreamState gkStream = ref _rng.GetStreamState(_goalkeeperStreamIndex);
+            CanonicalSerializer.WriteU64(buf, ref o, gkStream.RngCursor);
+            CanonicalSerializer.WriteU64(buf, ref o, gkStream.ActionOrdinal);
+
+            for (int k = 0; k < GoalkeeperConstants.MaxGkAgents; k++)
+            {
+                CanonicalSerializer.WriteBool(buf, ref o, _saveCommittedForGk[k]);
+            }
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                CanonicalSerializer.WriteBool(buf, ref o, _headerCommittedThisEpisode[i]);
+            }
+
+            WriteGoalkeeperState(buf, ref o, _goalkeeper.CaptureState());
+            WriteHeadingState(buf, ref o, _heading.CaptureState());
+
             payload.BytesWritten = o;
         }
 
@@ -4186,6 +4227,39 @@ namespace TacticalDirector.MatchEngine
             cardStreamRestore.RngCursor     = cardCursor;
             cardStreamRestore.ActionOrdinal = cardOrdinal;
             _rng.RestoreStream(_cardSeverityStreamIndex, in cardStreamRestore);
+
+            // v18 — restore the GK/Heading cross-tick state (the symmetric mirror of the writer's v18 block).
+            // The heading + goalkeeper RNG cursors first (overwrite only the two cursor fields on the
+            // boot-registered stream, the card-severity restore pattern), then the two §4 trigger latches, then
+            // both orchestrators' in-flight arrays through their RestoreState seams. Written unconditionally by
+            // the writer, so read unconditionally here — a flag-off save round-trips this as a no-op. The opt-in
+            // flag is restored FIRST (mirror of the writer), so the restored engine resumes in the saved mode.
+            _gkHeadingEnabled = CanonicalSerializer.ReadBool(buf, ref o);
+            ulong headCursor  = CanonicalSerializer.ReadU64(buf, ref o);
+            ulong headOrdinal = CanonicalSerializer.ReadU64(buf, ref o);
+            RngStreamState headStreamRestore = _rng.GetStreamState(_headingStreamIndex);
+            headStreamRestore.RngCursor     = headCursor;
+            headStreamRestore.ActionOrdinal = headOrdinal;
+            _rng.RestoreStream(_headingStreamIndex, in headStreamRestore);
+
+            ulong gkCursor  = CanonicalSerializer.ReadU64(buf, ref o);
+            ulong gkOrdinal = CanonicalSerializer.ReadU64(buf, ref o);
+            RngStreamState gkStreamRestore = _rng.GetStreamState(_goalkeeperStreamIndex);
+            gkStreamRestore.RngCursor     = gkCursor;
+            gkStreamRestore.ActionOrdinal = gkOrdinal;
+            _rng.RestoreStream(_goalkeeperStreamIndex, in gkStreamRestore);
+
+            for (int k = 0; k < GoalkeeperConstants.MaxGkAgents; k++)
+            {
+                _saveCommittedForGk[k] = CanonicalSerializer.ReadBool(buf, ref o);
+            }
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _headerCommittedThisEpisode[i] = CanonicalSerializer.ReadBool(buf, ref o);
+            }
+
+            ReadGoalkeeperState(buf, ref o, _goalkeeper);
+            ReadHeadingState(buf, ref o, _heading);
 
             // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
             // (EventBus.SerializeLedger — a 1-byte domain tag + u32 count, then any Tier A records) AFTER the
@@ -5077,6 +5151,334 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteI32(buf, ref o, (int)agents[i].CandidateLane);
                 CanonicalSerializer.WriteI32(buf, ref o, agents[i].LaneDwellCount);
             }
+        }
+
+        // ── GK (#11) / Heading (#10) engine-integration Phase 2 snapshot helpers (v18) ──
+        // MatchEngine owns 100% of the byte layout (the WritePressingTickState / ReadPressingTickState
+        // Option-B convention); the orchestrators expose only typed CaptureState/RestoreState carriers.
+        // Enum fields are written as u8 ordinals (all fit in a byte — the manager/build-up precedent); Vector2/
+        // Vector3 component-by-component as f32; the two nullables (SaveIntent.DeflectionTarget,
+        // DistributeIntent.TargetReceiverId) as a present-flag bool + value-iff-present. The per-GK / per-agent
+        // count is the fixed orchestrator capacity (MaxGkAgents / MaxAgents), stable for the match.
+
+        /// <summary>Serializes the GK (#11) orchestrator's per-GK cross-tick state
+        /// (<see cref="GoalkeeperTickState"/>) in the field order the reader mirrors.</summary>
+        private static void WriteGoalkeeperState(byte[] buf, ref int o, in GoalkeeperTickState s)
+        {
+            for (int i = 0; i < GoalkeeperConstants.MaxGkAgents; i++)
+            {
+                CanonicalSerializer.WriteU8(buf, ref o, (byte)s.States[i]);
+
+                GoalkeeperAgentAttributes a = s.Attrs[i];
+                CanonicalSerializer.WriteF32(buf, ref o, a.Reflexes);
+                CanonicalSerializer.WriteF32(buf, ref o, a.Handling);
+                CanonicalSerializer.WriteF32(buf, ref o, a.Composure);
+                CanonicalSerializer.WriteF32(buf, ref o, a.Strength);
+                CanonicalSerializer.WriteF32(buf, ref o, a.Aerial);
+                CanonicalSerializer.WriteF32(buf, ref o, a.Balance);
+                CanonicalSerializer.WriteF32(buf, ref o, a.OneVsOne);
+                CanonicalSerializer.WriteF32(buf, ref o, a.Pace);
+                CanonicalSerializer.WriteF32(buf, ref o, a.Throwing);
+                CanonicalSerializer.WriteF32(buf, ref o, a.Kicking);
+                CanonicalSerializer.WriteF32(buf, ref o, a.Fatigue);
+                CanonicalSerializer.WriteI32(buf, ref o, a.TeamId);
+
+                GkContactState cs = s.ContactStates[i];
+                CanonicalSerializer.WriteI32(buf, ref o, cs.PredictedContactFrame);
+                CanonicalSerializer.WriteI32(buf, ref o, cs.ActualContactFrame);
+                CanonicalSerializer.WriteF32(buf, ref o, cs.ReactionWindowAchieved);
+                CanonicalSerializer.WriteF32(buf, ref o, cs.HandlingQualityScalar);
+                CanonicalSerializer.WriteF32(buf, ref o, cs.ContactPointError.x);
+                CanonicalSerializer.WriteF32(buf, ref o, cs.ContactPointError.y);
+                CanonicalSerializer.WriteU8 (buf, ref o, (byte)cs.HandChoice);
+                CanonicalSerializer.WriteF32(buf, ref o, cs.ClutchFirmness);
+
+                SaveIntent si = s.SaveIntents[i];
+                CanonicalSerializer.WriteU8 (buf, ref o, (byte)si.TargetHand);
+                CanonicalSerializer.WriteF32(buf, ref o, si.ClutchFirmness);
+                bool hasDefl = si.DeflectionTarget.HasValue;
+                CanonicalSerializer.WriteBool(buf, ref o, hasDefl);
+                if (hasDefl)
+                {
+                    Vector3 d = si.DeflectionTarget.Value;
+                    CanonicalSerializer.WriteF32(buf, ref o, d.x);
+                    CanonicalSerializer.WriteF32(buf, ref o, d.y);
+                    CanonicalSerializer.WriteF32(buf, ref o, d.z);
+                }
+                CanonicalSerializer.WriteI32(buf, ref o, si.AttemptCommittedTick);
+                CanonicalSerializer.WriteBool(buf, ref o, s.SaveIntentActive[i]);
+
+                RushIntent ri = s.RushIntents[i];
+                CanonicalSerializer.WriteF32(buf, ref o, ri.RushTarget.x);
+                CanonicalSerializer.WriteF32(buf, ref o, ri.RushTarget.y);
+                CanonicalSerializer.WriteF32(buf, ref o, ri.RushTarget.z);
+                CanonicalSerializer.WriteF32(buf, ref o, ri.CommitmentLevel);
+                CanonicalSerializer.WriteI32(buf, ref o, ri.AttemptCommittedTick);
+                CanonicalSerializer.WriteBool(buf, ref o, s.RushIntentActive[i]);
+
+                DistributeIntent di = s.DistributeIntents[i];
+                CanonicalSerializer.WriteU8 (buf, ref o, (byte)di.DeliveryKind);
+                bool hasRcv = di.TargetReceiverId.HasValue;
+                CanonicalSerializer.WriteBool(buf, ref o, hasRcv);
+                if (hasRcv)
+                {
+                    CanonicalSerializer.WriteI32(buf, ref o, di.TargetReceiverId.Value);
+                }
+                CanonicalSerializer.WriteF32(buf, ref o, di.TargetPoint.x);
+                CanonicalSerializer.WriteF32(buf, ref o, di.TargetPoint.y);
+                CanonicalSerializer.WriteF32(buf, ref o, di.TargetPoint.z);
+                CanonicalSerializer.WriteF32(buf, ref o, di.PowerIntent);
+                CanonicalSerializer.WriteF32(buf, ref o, di.SpinIntent.x);
+                CanonicalSerializer.WriteF32(buf, ref o, di.SpinIntent.y);
+                CanonicalSerializer.WriteF32(buf, ref o, di.SpinIntent.z);
+                CanonicalSerializer.WriteBool(buf, ref o, s.DistributeIntentActive[i]);
+
+                GoalkeeperPositioningContract pc = s.PositioningContracts[i];
+                CanonicalSerializer.WriteF32(buf, ref o, pc.GkBaselineSlot.x);
+                CanonicalSerializer.WriteF32(buf, ref o, pc.GkBaselineSlot.y);
+
+                CanonicalSerializer.WriteI32(buf, ref o, s.DiveLaunchFrames[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, s.DiveDurationFrames[i]);
+                CanonicalSerializer.WriteF32(buf, ref o, s.DivePeakHandZ[i]);
+                CanonicalSerializer.WriteF32(buf, ref o, s.DiveDirectionLateral[i]);
+                CanonicalSerializer.WriteF32(buf, ref o, s.RushLaunchMps[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, s.RushInitialAttackerId[i]);
+                CanonicalSerializer.WriteF32(buf, ref o, s.ShotDetectedTickMs[i]);
+                CanonicalSerializer.WriteF32(buf, ref o, s.RequiredReactionMs[i]);
+                CanonicalSerializer.WriteBool(buf, ref o, s.ShotEventPending[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, s.ClaimTick[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, s.ReleaseTickEarliest[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, s.RecoveryCooldownEndTick[i]);
+            }
+        }
+
+        /// <summary>Reads the GK (#11) orchestrator's per-GK cross-tick state in the
+        /// <see cref="WriteGoalkeeperState"/> field order and restores it through
+        /// <see cref="TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics.RestoreState"/>. Fresh arrays
+        /// are allocated to the captured capacity and handed to RestoreState, which copies them into the live
+        /// containers (the KD-2 reconstruct-through-the-seam contract; the ReadPressingTickState pattern).</summary>
+        private static void ReadGoalkeeperState(
+            byte[] buf, ref int o, TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics tick)
+        {
+            GoalkeeperTickState live = tick.CaptureState();
+            int cap = live.States.Length;
+
+            var states                  = new GoalkeeperState[cap];
+            var attrs                   = new GoalkeeperAgentAttributes[cap];
+            var contactStates           = new GkContactState[cap];
+            var saveIntents             = new SaveIntent[cap];
+            var saveIntentActive        = new bool[cap];
+            var rushIntents             = new RushIntent[cap];
+            var rushIntentActive        = new bool[cap];
+            var distributeIntents       = new DistributeIntent[cap];
+            var distributeIntentActive  = new bool[cap];
+            var positioningContracts    = new GoalkeeperPositioningContract[cap];
+            var diveLaunchFrames        = new int[cap];
+            var diveDurationFrames      = new int[cap];
+            var divePeakHandZ           = new float[cap];
+            var diveDirectionLateral    = new float[cap];
+            var rushLaunchMps           = new float[cap];
+            var rushInitialAttackerId   = new int[cap];
+            var shotDetectedTickMs      = new float[cap];
+            var requiredReactionMs      = new float[cap];
+            var shotEventPending        = new bool[cap];
+            var claimTick               = new int[cap];
+            var releaseTickEarliest     = new int[cap];
+            var recoveryCooldownEndTick = new int[cap];
+
+            for (int i = 0; i < cap; i++)
+            {
+                states[i] = (GoalkeeperState)CanonicalSerializer.ReadU8(buf, ref o);
+
+                GoalkeeperAgentAttributes a = default;
+                a.Reflexes  = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Handling  = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Composure = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Strength  = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Aerial    = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Balance   = CanonicalSerializer.ReadF32(buf, ref o);
+                a.OneVsOne  = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Pace      = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Throwing  = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Kicking   = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Fatigue   = CanonicalSerializer.ReadF32(buf, ref o);
+                a.TeamId    = CanonicalSerializer.ReadI32(buf, ref o);
+                attrs[i] = a;
+
+                GkContactState cs = default;
+                cs.PredictedContactFrame  = CanonicalSerializer.ReadI32(buf, ref o);
+                cs.ActualContactFrame     = CanonicalSerializer.ReadI32(buf, ref o);
+                cs.ReactionWindowAchieved = CanonicalSerializer.ReadF32(buf, ref o);
+                cs.HandlingQualityScalar  = CanonicalSerializer.ReadF32(buf, ref o);
+                cs.ContactPointError      = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                cs.HandChoice             = (HandEnum)CanonicalSerializer.ReadU8(buf, ref o);
+                cs.ClutchFirmness         = CanonicalSerializer.ReadF32(buf, ref o);
+                contactStates[i] = cs;
+
+                SaveIntent si = default;
+                si.TargetHand     = (HandEnum)CanonicalSerializer.ReadU8(buf, ref o);
+                si.ClutchFirmness = CanonicalSerializer.ReadF32(buf, ref o);
+                bool hasDefl = CanonicalSerializer.ReadBool(buf, ref o);
+                si.DeflectionTarget = hasDefl
+                    ? new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o))
+                    : (Vector3?)null;
+                si.AttemptCommittedTick = CanonicalSerializer.ReadI32(buf, ref o);
+                saveIntents[i] = si;
+                saveIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
+
+                RushIntent ri = default;
+                ri.RushTarget           = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                ri.CommitmentLevel      = CanonicalSerializer.ReadF32(buf, ref o);
+                ri.AttemptCommittedTick = CanonicalSerializer.ReadI32(buf, ref o);
+                rushIntents[i] = ri;
+                rushIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
+
+                DistributeIntent di = default;
+                di.DeliveryKind = (DeliveryKind)CanonicalSerializer.ReadU8(buf, ref o);
+                bool hasRcv = CanonicalSerializer.ReadBool(buf, ref o);
+                di.TargetReceiverId = hasRcv ? CanonicalSerializer.ReadI32(buf, ref o) : (int?)null;
+                di.TargetPoint  = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                di.PowerIntent  = CanonicalSerializer.ReadF32(buf, ref o);
+                di.SpinIntent   = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                distributeIntents[i] = di;
+                distributeIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
+
+                GoalkeeperPositioningContract pc = default;
+                pc.GkBaselineSlot = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                positioningContracts[i] = pc;
+
+                diveLaunchFrames[i]        = CanonicalSerializer.ReadI32(buf, ref o);
+                diveDurationFrames[i]      = CanonicalSerializer.ReadI32(buf, ref o);
+                divePeakHandZ[i]           = CanonicalSerializer.ReadF32(buf, ref o);
+                diveDirectionLateral[i]    = CanonicalSerializer.ReadF32(buf, ref o);
+                rushLaunchMps[i]           = CanonicalSerializer.ReadF32(buf, ref o);
+                rushInitialAttackerId[i]   = CanonicalSerializer.ReadI32(buf, ref o);
+                shotDetectedTickMs[i]      = CanonicalSerializer.ReadF32(buf, ref o);
+                requiredReactionMs[i]      = CanonicalSerializer.ReadF32(buf, ref o);
+                shotEventPending[i]        = CanonicalSerializer.ReadBool(buf, ref o);
+                claimTick[i]               = CanonicalSerializer.ReadI32(buf, ref o);
+                releaseTickEarliest[i]     = CanonicalSerializer.ReadI32(buf, ref o);
+                recoveryCooldownEndTick[i] = CanonicalSerializer.ReadI32(buf, ref o);
+            }
+
+            tick.RestoreState(new GoalkeeperTickState(
+                states: states,
+                attrs: attrs,
+                contactStates: contactStates,
+                saveIntents: saveIntents,
+                saveIntentActive: saveIntentActive,
+                rushIntents: rushIntents,
+                rushIntentActive: rushIntentActive,
+                distributeIntents: distributeIntents,
+                distributeIntentActive: distributeIntentActive,
+                positioningContracts: positioningContracts,
+                diveLaunchFrames: diveLaunchFrames,
+                diveDurationFrames: diveDurationFrames,
+                divePeakHandZ: divePeakHandZ,
+                diveDirectionLateral: diveDirectionLateral,
+                rushLaunchMps: rushLaunchMps,
+                rushInitialAttackerId: rushInitialAttackerId,
+                shotDetectedTickMs: shotDetectedTickMs,
+                requiredReactionMs: requiredReactionMs,
+                shotEventPending: shotEventPending,
+                claimTick: claimTick,
+                releaseTickEarliest: releaseTickEarliest,
+                recoveryCooldownEndTick: recoveryCooldownEndTick));
+        }
+
+        /// <summary>Serializes the Heading (#10) orchestrator's per-agent cross-tick state
+        /// (<see cref="HeadingTickState"/>) in the field order the reader mirrors.</summary>
+        private static void WriteHeadingState(byte[] buf, ref int o, in HeadingTickState s)
+        {
+            for (int i = 0; i < HeadingMechanicsConstants.MaxAgents; i++)
+            {
+                HeaderIntent hi = s.Intents[i];
+                CanonicalSerializer.WriteF32(buf, ref o, hi.PowerIntent);
+                CanonicalSerializer.WriteF32(buf, ref o, hi.ContactPointIntent.x);
+                CanonicalSerializer.WriteF32(buf, ref o, hi.ContactPointIntent.y);
+                CanonicalSerializer.WriteF32(buf, ref o, hi.TargetIntent.x);
+                CanonicalSerializer.WriteF32(buf, ref o, hi.TargetIntent.y);
+                CanonicalSerializer.WriteF32(buf, ref o, hi.TargetIntent.z);
+                CanonicalSerializer.WriteI32(buf, ref o, hi.AttemptCommittedTick);
+                CanonicalSerializer.WriteU8 (buf, ref o, (byte)hi.SetPieceContext);
+
+                HeaderContactState hc = s.ContactStates[i];
+                CanonicalSerializer.WriteI32(buf, ref o, hc.JumpStartFrame);
+                CanonicalSerializer.WriteI32(buf, ref o, hc.PredictedContactFrame);
+                CanonicalSerializer.WriteI32(buf, ref o, hc.IdealContactFrame);
+                CanonicalSerializer.WriteI32(buf, ref o, hc.ActualContactFrame);
+                CanonicalSerializer.WriteF32(buf, ref o, hc.TimingOffsetMs);
+                CanonicalSerializer.WriteF32(buf, ref o, hc.ContactPointError.x);
+                CanonicalSerializer.WriteF32(buf, ref o, hc.ContactPointError.y);
+                CanonicalSerializer.WriteF32(buf, ref o, hc.ContactQualityScalar);
+                CanonicalSerializer.WriteF32(buf, ref o, hc.DisturbanceFactor);
+                CanonicalSerializer.WriteF32(buf, ref o, hc.JumpReachM);
+                CanonicalSerializer.WriteF32(buf, ref o, hc.PrevFrameFacingDirection.x);
+                CanonicalSerializer.WriteF32(buf, ref o, hc.PrevFrameFacingDirection.y);
+
+                CanonicalSerializer.WriteBool(buf, ref o, s.IntentActive[i]);
+                CanonicalSerializer.WriteI32 (buf, ref o, s.BallSnapshotFrames[i]);
+
+                HeadingAgentAttributes ha = s.AgentAttrs[i];
+                CanonicalSerializer.WriteI32(buf, ref o, ha.Heading);
+                CanonicalSerializer.WriteI32(buf, ref o, ha.Strength);
+                CanonicalSerializer.WriteI32(buf, ref o, ha.Balance);
+                CanonicalSerializer.WriteF32(buf, ref o, ha.Fatigue);
+                CanonicalSerializer.WriteI32(buf, ref o, ha.TeamId);
+            }
+        }
+
+        /// <summary>Reads the Heading (#10) orchestrator's per-agent cross-tick state in the
+        /// <see cref="WriteHeadingState"/> field order and restores it through
+        /// <see cref="TacticalDirector.HeadingMechanics.HeadingMechanics.RestoreState"/>.</summary>
+        private static void ReadHeadingState(
+            byte[] buf, ref int o, TacticalDirector.HeadingMechanics.HeadingMechanics tick)
+        {
+            HeadingTickState live = tick.CaptureState();
+            int cap = live.Intents.Length;
+
+            var intents            = new HeaderIntent[cap];
+            var contactStates      = new HeaderContactState[cap];
+            var intentActive       = new bool[cap];
+            var ballSnapshotFrames = new int[cap];
+            var agentAttrs         = new HeadingAgentAttributes[cap];
+
+            for (int i = 0; i < cap; i++)
+            {
+                HeaderIntent hi = default;
+                hi.PowerIntent        = CanonicalSerializer.ReadF32(buf, ref o);
+                hi.ContactPointIntent = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                hi.TargetIntent       = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                hi.AttemptCommittedTick = CanonicalSerializer.ReadI32(buf, ref o);
+                hi.SetPieceContext    = (SetPieceContext)CanonicalSerializer.ReadU8(buf, ref o);
+                intents[i] = hi;
+
+                HeaderContactState hc = default;
+                hc.JumpStartFrame           = CanonicalSerializer.ReadI32(buf, ref o);
+                hc.PredictedContactFrame    = CanonicalSerializer.ReadI32(buf, ref o);
+                hc.IdealContactFrame        = CanonicalSerializer.ReadI32(buf, ref o);
+                hc.ActualContactFrame       = CanonicalSerializer.ReadI32(buf, ref o);
+                hc.TimingOffsetMs           = CanonicalSerializer.ReadF32(buf, ref o);
+                hc.ContactPointError        = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                hc.ContactQualityScalar     = CanonicalSerializer.ReadF32(buf, ref o);
+                hc.DisturbanceFactor        = CanonicalSerializer.ReadF32(buf, ref o);
+                hc.JumpReachM               = CanonicalSerializer.ReadF32(buf, ref o);
+                hc.PrevFrameFacingDirection = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                contactStates[i] = hc;
+
+                intentActive[i]       = CanonicalSerializer.ReadBool(buf, ref o);
+                ballSnapshotFrames[i] = CanonicalSerializer.ReadI32(buf, ref o);
+
+                HeadingAgentAttributes ha = default;
+                ha.Heading  = CanonicalSerializer.ReadI32(buf, ref o);
+                ha.Strength = CanonicalSerializer.ReadI32(buf, ref o);
+                ha.Balance  = CanonicalSerializer.ReadI32(buf, ref o);
+                ha.Fatigue  = CanonicalSerializer.ReadF32(buf, ref o);
+                ha.TeamId   = CanonicalSerializer.ReadI32(buf, ref o);
+                agentAttrs[i] = ha;
+            }
+
+            tick.RestoreState(new HeadingTickState(intents, contactStates, intentActive, ballSnapshotFrames, agentAttrs));
         }
 
         /// <summary>Serializes one team's Pressing AI (#13) <see cref="PressingTickState"/> (D4) in canonical
@@ -6109,4 +6511,20 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | projection + orchestrator commit. New GkHeadingIntentSource-    |
 // |         |            |        | Tests (10). No schema change. Full dotnet gate: PASSED (300     |
 // |         |            |        | match-engine tests; whole tree green).                          |
+// | 1.46    | 2026-07-23 | —      | GK/Heading engine-integration Phase 2 — SNAPSHOT_SCHEMA_VERSION |
+// |         |            |        | 17 → 18: serialize the GK (#11) / Heading (#10) cross-tick      |
+// |         |            |        | state so a flag-on engine (EnableGkHeading) is snapshot-safe.   |
+// |         |            |        | The v18 block (written unconditionally, after the v17 card      |
+// |         |            |        | cursor) = the opt-in flag + the two subsystem RNG cursors       |
+// |         |            |        | (heading/goalkeeper .mechanics) + the two §4 trigger latches    |
+// |         |            |        | (_saveCommittedForGk / _headerCommittedThisEpisode, engine-     |
+// |         |            |        | level cross-tick state gating trigger re-commits) + both        |
+// |         |            |        | orchestrators' in-flight arrays via new GoalkeeperTickState /   |
+// |         |            |        | HeadingTickState CaptureState/RestoreState seams (MatchEngine   |
+// |         |            |        | owns the byte layout: WriteGoalkeeperState/ReadGoalkeeperState  |
+// |         |            |        | + WriteHeadingState/ReadHeadingState). RestoreFromSnapshot      |
+// |         |            |        | reproduces the flag, so a flag-on save restores into a flag-on  |
+// |         |            |        | engine. The Phase-1 RequireGkHeadingSnapshotSafe fail-loud      |
+// |         |            |        | guard + its two call sites removed. New round-trip + schema     |
+// |         |            |        | probe tests; default flag stays OFF (flip is a follow-up).      |
 #endregion

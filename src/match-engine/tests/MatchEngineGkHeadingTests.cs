@@ -209,18 +209,20 @@ namespace TacticalDirector.MatchEngine
             return chain;
         }
 
-        // ── flag ON: durable snapshot refuses (§6 / KD-11) ────────────────────────────
+        // ── flag ON: durable snapshot is now supported (Phase 2 — the guard is removed) ─
 
         [Test]
-        public void FlagOn_DurableCapture_FailsLoud()
+        public void FlagOn_DurableCapture_Succeeds()
         {
+            // Phase 2 (v18): the GK/Heading cross-tick state is serialized, so a flag-on engine is
+            // snapshot-safe — the durable-capture seams no longer fail loud (the KD-11 Phase-1 guard is gone).
             var engine = new MatchEngine(MatchSeed);
             engine.EnableGkHeading();
             engine.RunTick();
-            Assert.Throws<System.NotSupportedException>(() => engine.CaptureDurableHeader(),
-                "A flag-on engine must refuse the durable header capture (Phase-1 not snapshot-safe).");
-            Assert.Throws<System.NotSupportedException>(() => engine.CaptureDurablePayload(),
-                "A flag-on engine must refuse the durable payload capture (Phase-1 not snapshot-safe).");
+            Assert.DoesNotThrow(() => engine.CaptureDurableHeader(),
+                "A flag-on engine must support the durable header capture at Phase 2.");
+            Assert.DoesNotThrow(() => engine.CaptureDurablePayload(),
+                "A flag-on engine must support the durable payload capture at Phase 2.");
         }
 
         [Test]
@@ -241,4 +243,8 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-22 | —      | Initial — Phase-1 GK/Heading opt-in wiring integration locks.  |
+// | 1.1     | 2026-07-23 | —      | Phase 2 (v18): the durable-capture-fails-loud lock replaced by |
+// |         |            |        | FlagOn_DurableCapture_Succeeds (the guard is removed; a flag-  |
+// |         |            |        | on engine is now snapshot-safe). Round-trip determinism is     |
+// |         |            |        | locked in MatchEngineSnapshotRestoreTests.                      |
 #endregion

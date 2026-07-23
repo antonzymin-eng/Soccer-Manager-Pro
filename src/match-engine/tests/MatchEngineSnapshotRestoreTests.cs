@@ -112,6 +112,31 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void RoundTrip_GkHeadingEnabled_IsDeterministic()
+        {
+            // v18 (GK/Heading Phase 2): a flag-on engine is snapshot-safe. The serialized opt-in flag +
+            // the two subsystem RNG cursors + the two §4 trigger latches + both orchestrators' in-flight
+            // arrays must all round-trip — the restored engine resumes in flag-on mode and continues the
+            // chain byte-for-byte. Any omitted/mis-ordered GK/Heading field diverges within K ticks.
+            AssertRoundTripDeterministic(setup: e => e.EnableGkHeading(), n: 300, k: 120);
+        }
+
+        [Test]
+        public void RoundTrip_GkHeadingEnabled_WithCommittedSave_IsDeterministic()
+        {
+            // Guarantees NON-trivial GK/Heading state in the snapshot: a loose ball driven on-goal before
+            // the save point arms the §4 save trigger, so the committed SaveIntent + set latch + advanced
+            // goalkeeper.mechanics RNG cursor (dive-timing draws) + the evolving GkContactState arrays are
+            // all baked into the saved payload. The restore must reproduce every one of them.
+            AssertRoundTripDeterministic(
+                setup: e => e.EnableGkHeading(),
+                n: 180, k: 120,
+                midRun: e => e.TestOnly_ForceBallLoose(
+                    new UnityEngine.Vector3(5f, 34f, 0.11f), new UnityEngine.Vector3(-10f, 0f, 0f)),
+                midRunTick: 60);
+        }
+
+        [Test]
         public void RoundTrip_MidMatchTacticsChanged_IsDeterministic()
         {
             // Exercises the active + pending TeamTactic / PlayerTactic serialization (v9/v10): a tactic
@@ -428,4 +453,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | roster. AssertRoundTripDeterministic gains an ISquadProvider + |
 // |         |            |        | mid-run + after-save hooks; DistinctSquad / SquadWithBench-    |
 // |         |            |        | Goalkeeper + provider test doubles added.                      |
+// | 1.2     | 2026-07-23 | —      | GK/Heading Phase 2 (v18): RoundTrip_GkHeadingEnabled_Is-       |
+// |         |            |        | Deterministic + _WithCommittedSave_IsDeterministic — a flag-on |
+// |         |            |        | engine (incl. a committed save advancing the GK RNG cursor +   |
+// |         |            |        | latches + GkContactState arrays) restores and continues the    |
+// |         |            |        | chain byte-for-byte.                                            |
 #endregion
