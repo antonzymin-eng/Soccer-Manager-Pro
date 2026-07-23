@@ -43,10 +43,10 @@ version.** Those actions land in the owning specs at their own promotion/impleme
 |---|---|---|---|---|
 | **Aging** (age advance, decline, growth, retirement, regens) | **#28 Player Progression & Lifecycle** (`FR-PG`) | **APPROVED** — supplement + 11 section files + R-01..R-05 signed | `0x20` / ord 82 (promoted at approval, ERR-028-001) | `PROGRESSION_SAVE_FORMAT_VERSION` sub-blob composed by #30 root |
 | **On-disk save-format squad persistence** (the *evolving/career-state* roster) | **#30 Season & Competition Loop** (composition root) + **#28** (career-state serialize) | **#30 APPROVED**; **#28 APPROVED** | #30 `0x22` / 84; #28 `0x20` / 82 | `SEASON_SAVE_FORMAT_VERSION` bump (#30 season block); #28 sub-blob composed into it |
-| **On-disk save-format squad persistence** (the *initial/reference/shipped* roster) | **#27 residual → #47 New-Game Setup & DB Editor** | **#27 residual open; #47 PLAN** (Wave 7) | none (import, not a draw) | Not a save-version item — a load-time *source*, master plan §4.6 "JSON for V1" |
+| **On-disk save-format squad persistence** (the *initial/reference/shipped* roster) | **#27 residual → #47 New-Game Setup & DB Editor** | **#27 residual open; #47 PLAN** (Wave 7) | none (import, not a draw) | Not a save-version item — a load-time *source* (shipped starting DB, #47's format call), distinct from the season save format |
 | **Transfer market** (windows, bids, contracts, negotiation) | **#31 Transfers, Contracts & Negotiation** (`FR-TX`) | **PLAN** (Wave 4; pre-supplement) | `0x23` / 85 (proposed) | Season + world sub-blobs (contracts durable; window/negotiation season-scoped) |
-| *(adjacent, roadmap-split)* transfer **budgets/wages** constraint | **#40 Club Finances & Economy** (`FR-FN`) | PLAN (Wave 2) | `0x29` / 91 | world-state economy block |
-| *(adjacent, roadmap-split)* **training** growth input | **#29 Training System** (`FR-TR`) | **APPROVED** | `0x21` / 83 | writes #28's `TrainingInput` seam |
+| *(adjacent, roadmap-split)* transfer **budgets/wages** constraint | **#40 Club Finances & Economy** (`FR-FN`) | PLAN (Wave 2) | `0x29` / 91 *(roadmap §6 proposed — no #16 catalogue row yet)* | world-state economy block |
+| *(adjacent, roadmap-split)* **training** growth input | **#29 Training System** (`FR-TR`) | **APPROVED** | none — fully deterministic; `_RESERVED_0x21_`/83 held but **not** promoted (ERR-029-001, draws nothing) | writes #28's `TrainingInput` seam |
 
 **Key structural fact:** the roadmap chose to keep **#27's canonical `PlayerAttributes` / `PlayerRecord`
 struct frozen** (KD-4 of #28) — no CA/PA fields, no #27 record schema ripple. The *evolving* roster
@@ -88,8 +88,10 @@ The word "persistence" in #27 §4 hides two different artifacts the roadmap deli
    players exist before any career state accumulates). **This is the genuine #27 residual.** #28 §9
    explicitly hands it off: *"A future shipped-database / on-disk-roster pass (#47 / a #27 Stage-1+
    deliverable) supplies the initial roster; #28 remains the owner of the career-state roster."* Today
-   the initial roster is a **boot-time `RosterGenerator` draw or a `SquadFileLoader` text import** —
-   there is no shipped, editable, on-disk *database* format (master plan §4.6 "JSON-based for V1").
+   the initial roster is a **boot-time `RosterGenerator` draw or a per-squad `SquadFileLoader` text
+   import** — there is no shipped, editable, full-world on-disk *database* format yet; that format
+   decision is #47's (master plan §4.2 squad management / the DB-editor pass), separate from the #30
+   season save format.
 
 So the only persistence work still needing a **new** owner/design is the **initial-roster on-disk
 database format + editor** — and the roadmap already parks it at **#47 New-Game Setup & DB Editor**
@@ -162,10 +164,19 @@ Each is already pinned in an owning spec; listed here so a future implementer se
   frame bump needs sequencing — the collision surface is one integer, guarded by fail-loud gates.
 - **C-6 — command-seam discipline for the UI.** Transfers/lifecycle expose public command APIs
   (`SetTeamTactic`-style); #38 UI drives them, never mutates state directly (#31 §7, #28 KD-7).
-- **C-7 — determinism band is contiguous and reserved.** Off-pitch tags/ordinals are pre-reserved:
-  #28 `0x20`/82, #29 `0x21`/83, #30 `0x22`/84, #31 `0x23`/85, #40 `0x29`/91 (roadmap §6). Register a
-  stream only at its first draw site (never earlier — the `world.arcs` phantom-surface rule,
-  FR-LW-031). Aging is draw-free except regen; the minimal transfer valuation is draw-free.
+- **C-7 — determinism band is contiguous; know what is actually reserved vs. merely proposed.**
+  Off-pitch allocations fall in three states — do not treat them as interchangeable:
+  - **In #16's §3.4 catalogue:** #28 `DOMAIN_TAG_PLAYER_PROGRESSION = 0x20` / ord 82 (**promoted** at
+    #28 approval, ERR-028-001 — covers regen generation *only*; the const + per-club stream register at
+    #28 T2, the first regen); #29 `_RESERVED_0x21_` / ord 83 (a **placeholder deliberately NOT
+    promoted** — #29 is fully deterministic and registers no stream, ERR-029-001); #30
+    `DOMAIN_TAG_SEASON_LOOP = 0x22` / ord 84 (reserved at #30 approval; const + stream at #30 T2).
+  - **Roadmap §6 proposed, no catalogue row yet:** #31 `0x23` / 85, #40 `0x29` / 91 — these are
+    *proposed* in `management-layer-spec-roadmap.md §6` ("to be pinned in Deterministic Simulation")
+    and must be allocated in #16 §3.4 **at each spec's promotion**, not assumed reserved now.
+  - **Rule:** register a stream only at its first *draw site*, never earlier (the `world.arcs`
+    phantom-surface rule, FR-LW-031). Aging is draw-free except regen; #29 draws nothing; the minimal
+    transfer valuation is draw-free — so most of this band stays dormant until a deep tier lands.
 
 ---
 
