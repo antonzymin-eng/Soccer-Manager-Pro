@@ -1,10 +1,14 @@
 // File:     src/heading-mechanics/HeadingMechanics.cs
 // Created:  2026-05-28
 // Modified: 2026-06-14
+// Modified: 2026-07-23 (GK/Heading engine-integration Phase 2: CaptureState/RestoreState snapshot seam over
+//           the per-agent cross-tick arrays, for the Match Engine v18 save/restore path)
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.2–§3.9 dispatch, §4.6, KD-9, KD-17, KD-18, Code Standards #20
 // Purpose:  60 Hz physics-tick orchestrator. Manages per-agent intent tracking, jump kinematics,
 //           contact resolution, duel dispatch, event publication, and failed-attempt handling.
+
+using System;
 
 using UnityEngine;
 using Unity.Profiling;
@@ -116,6 +120,37 @@ namespace TacticalDirector.HeadingMechanics
             }
 
             _intentActive[agentId] = false;
+        }
+
+        // ── Snapshot seam (design note §2.6 / GK-Heading Phase 2) ─────────────────────
+
+        /// <summary>
+        /// Snapshot seam: bundles this orchestrator's full per-agent cross-tick state (intents + active
+        /// latches, per-frame contact state, ball-snapshot frames, attributes) into a
+        /// <see cref="HeadingTickState"/> view so a host snapshot layer can serialize it canonically for
+        /// deterministic save/restore (parallel to the Pressing
+        /// <see cref="TacticalDirector.PressingAI.PressingTickState"/> seam). The bundled arrays are the
+        /// live, allocated-once instances (read-only serialization use only).
+        /// </summary>
+        public HeadingTickState CaptureState() =>
+            new HeadingTickState(_intents, _contactStates, _intentActive, _ballSnapshotFrames, _agentAttrs);
+
+        /// <summary>
+        /// Restores this orchestrator's cross-tick state from a snapshot produced by
+        /// <see cref="CaptureState"/> (deterministic save/restore — the heading analogue of the Pressing /
+        /// Defensive <c>RestoreState</c> seams). Each array in <paramref name="state"/> is copied element-wise
+        /// into the live, allocated-once container (the caller supplies a freshly-built view with matching
+        /// <c>MaxAgents</c> length — the internal containers stay the authoritative instances). No per-tick
+        /// output buffers exist outside these arrays, so forward replay from the restored tick is
+        /// byte-identical.
+        /// </summary>
+        public void RestoreState(in HeadingTickState state)
+        {
+            Array.Copy(state.Intents,            _intents,            _intents.Length);
+            Array.Copy(state.ContactStates,      _contactStates,      _contactStates.Length);
+            Array.Copy(state.IntentActive,       _intentActive,       _intentActive.Length);
+            Array.Copy(state.BallSnapshotFrames, _ballSnapshotFrames, _ballSnapshotFrames.Length);
+            Array.Copy(state.AgentAttrs,         _agentAttrs,         _agentAttrs.Length);
         }
 
         /// <summary>
@@ -547,4 +582,7 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | vertically for off-centre headers; now reconstructed on the (-facing.y,facing.x)  |
 // |         |            |        | left axis, exactly inverting ComputeContactPointHeadLocal. Centred headers        |
 // |         |            |        | unaffected (why unit tests passed).                                               |
+// | 1.6     | 2026-07-23 | —      | GK/Heading engine-integration Phase 2: CaptureState() bundles the per-agent       |
+// |         |            |        | cross-tick arrays into a HeadingTickState view; RestoreState(in) copies them      |
+// |         |            |        | back into the live containers (the Match Engine v18 snapshot seam).               |
 #endregion

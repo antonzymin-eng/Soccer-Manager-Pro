@@ -1,10 +1,14 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperMechanics.cs
 // Created:  2026-05-28
 // Modified: 2026-06-14
+// Modified: 2026-07-23 (GK/Heading engine-integration Phase 2: CaptureState/RestoreState snapshot seam over
+//           the per-GK cross-tick arrays, for the Match Engine v18 save/restore path)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
 // Purpose:  Main 10 Hz + 60 Hz orchestrator. Manages per-GK state, dive kinematics, reaction pipeline,
 //           handling quality, cross-claim duels, rush dispatch, and distribution. Constructor-injected.
+
+using System;
 
 using UnityEngine;
 using Unity.Profiling;
@@ -212,6 +216,62 @@ namespace TacticalDirector.GoalkeeperMechanics
 
             _distributeIntents[gkIndex]      = intent;
             _distributeIntentActive[gkIndex] = true;
+        }
+
+        // ── Snapshot seam (design note §2.6 / GK-Heading Phase 2) ─────────────────────
+
+        /// <summary>
+        /// Snapshot seam: bundles this orchestrator's full per-GK cross-tick state (state machine, intents +
+        /// active latches, dive / reaction / hold-rule buffers) into a <see cref="GoalkeeperTickState"/> view
+        /// so a host snapshot layer can serialize it canonically for deterministic save/restore (parallel to
+        /// the Pressing <see cref="TacticalDirector.PressingAI.PressingTickState"/> seam). The bundled arrays
+        /// are the live, allocated-once instances (read-only serialization use only).
+        /// </summary>
+        public GoalkeeperTickState CaptureState() =>
+            new GoalkeeperTickState(
+                _states, _attrs, _contactStates,
+                _saveIntents, _saveIntentActive,
+                _rushIntents, _rushIntentActive,
+                _distributeIntents, _distributeIntentActive,
+                _positioningContracts,
+                _diveLaunchFrames, _diveDurationFrames, _divePeakHandZ, _diveDirectionLateral,
+                _rushLaunchMps, _rushInitialAttackerId,
+                _shotDetectedTickMs, _requiredReactionMs, _shotEventPending,
+                _claimTick, _releaseTickEarliest, _recoveryCooldownEndTick);
+
+        /// <summary>
+        /// Restores this orchestrator's cross-tick state from a snapshot produced by
+        /// <see cref="CaptureState"/> (deterministic save/restore — the goalkeeper analogue of the Pressing /
+        /// Defensive <c>RestoreState</c> seams). Each array in <paramref name="state"/> is copied element-wise
+        /// into the live, allocated-once container (the caller supplies a freshly-built view with matching
+        /// <c>MaxGkAgents</c> length — the internal containers stay the authoritative instances). No
+        /// per-tick output buffers exist outside these arrays, so forward replay from the restored tick is
+        /// byte-identical.
+        /// </summary>
+        public void RestoreState(in GoalkeeperTickState state)
+        {
+            Array.Copy(state.States,                  _states,                  _states.Length);
+            Array.Copy(state.Attrs,                   _attrs,                   _attrs.Length);
+            Array.Copy(state.ContactStates,           _contactStates,           _contactStates.Length);
+            Array.Copy(state.SaveIntents,             _saveIntents,             _saveIntents.Length);
+            Array.Copy(state.SaveIntentActive,        _saveIntentActive,        _saveIntentActive.Length);
+            Array.Copy(state.RushIntents,             _rushIntents,             _rushIntents.Length);
+            Array.Copy(state.RushIntentActive,        _rushIntentActive,        _rushIntentActive.Length);
+            Array.Copy(state.DistributeIntents,       _distributeIntents,       _distributeIntents.Length);
+            Array.Copy(state.DistributeIntentActive,  _distributeIntentActive,  _distributeIntentActive.Length);
+            Array.Copy(state.PositioningContracts,    _positioningContracts,    _positioningContracts.Length);
+            Array.Copy(state.DiveLaunchFrames,        _diveLaunchFrames,        _diveLaunchFrames.Length);
+            Array.Copy(state.DiveDurationFrames,      _diveDurationFrames,      _diveDurationFrames.Length);
+            Array.Copy(state.DivePeakHandZ,           _divePeakHandZ,           _divePeakHandZ.Length);
+            Array.Copy(state.DiveDirectionLateral,    _diveDirectionLateral,    _diveDirectionLateral.Length);
+            Array.Copy(state.RushLaunchMps,           _rushLaunchMps,           _rushLaunchMps.Length);
+            Array.Copy(state.RushInitialAttackerId,   _rushInitialAttackerId,   _rushInitialAttackerId.Length);
+            Array.Copy(state.ShotDetectedTickMs,      _shotDetectedTickMs,      _shotDetectedTickMs.Length);
+            Array.Copy(state.RequiredReactionMs,      _requiredReactionMs,      _requiredReactionMs.Length);
+            Array.Copy(state.ShotEventPending,        _shotEventPending,        _shotEventPending.Length);
+            Array.Copy(state.ClaimTick,               _claimTick,               _claimTick.Length);
+            Array.Copy(state.ReleaseTickEarliest,     _releaseTickEarliest,     _releaseTickEarliest.Length);
+            Array.Copy(state.RecoveryCooldownEndTick, _recoveryCooldownEndTick, _recoveryCooldownEndTick.Length);
         }
 
         // ── 10 Hz tactical loop ──────────────────────────────────────────────────────
@@ -848,4 +908,8 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |         |            |        | the smother trigger; rush-intent clear broadened to the whole      |
 // |         |            |        | Rushing/OneOnOne/Smothered chain so a stale intent cannot          |
 // |         |            |        | re-trigger Set → Rushing.                                          |
+// | 1.6     | 2026-07-23 | —      | GK/Heading engine-integration Phase 2: CaptureState() bundles the |
+// |         |            |        | per-GK cross-tick arrays into a GoalkeeperTickState view;          |
+// |         |            |        | RestoreState(in) copies them back into the live containers (the    |
+// |         |            |        | Match Engine v18 snapshot seam, the PressingTickState pattern).    |
 #endregion

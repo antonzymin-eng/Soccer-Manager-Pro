@@ -58,9 +58,30 @@ namespace TacticalDirector.MatchEngine
             // active bench slot, per-team substitutions-used count, half-time/full-time flags),
             // v16 #27 T3 per-team roster reference (the loaded Squad.ClubId or NO_ROSTER_CLUB_ID),
             // v17 snapshot-deserialize KD-8 (the match-flow.card-severity RNG stream cursor — RngCursor +
-            // ActionOrdinal, the engine's only mutable RNG stream).
-            Assert.AreEqual(17u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // ActionOrdinal, the engine's only mutable RNG stream), v18 GK/Heading engine-integration Phase 2
+            // (the two subsystem RNG-stream cursors + the two §4 trigger latches + both orchestrators'
+            // in-flight state via their CaptureState seams — making a flag-on engine snapshot-safe).
+            Assert.AreEqual(18u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
+        }
+
+        [Test]
+        public void GkHeadingState_FeedsSnapshotDigest()
+        {
+            // v18 (GK/Heading Phase 2): the goalkeeper.mechanics RNG stream cursor — a field in the v18
+            // GK/Heading block — reaches the digest preimage. The block is written UNCONDITIONALLY (the flag
+            // need not be on), so a clean single-field probe: perturbing the cursor alone must move the digest.
+            var baseline = new MatchEngine(MatchSeed);
+            baseline.RunTick();
+
+            var perturbed = new MatchEngine(MatchSeed);
+            perturbed.TestOnly_SetGoalkeeperStreamCursor(rngCursor: 5, actionOrdinal: 4);
+            perturbed.RunTick();
+
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Advancing the goalkeeper.mechanics RNG stream cursor left the digest unchanged — the v18 " +
+                "GK/Heading block is not in the digest preimage (round-trip determinism would silently break).");
         }
 
         [Test]
@@ -628,4 +649,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | match-flow.card-severity RNG stream cursor (the engine's only      |
 // |         |            |        | mutable RNG stream) moves the digest, so a save after a booking    |
 // |         |            |        | round-trips deterministically.                                     |
+// | 1.15    | 2026-07-23 | —      | Pin 17 → 18 (GK/Heading Phase 2) + GkHeadingState_FeedsSnapshot-   |
+// |         |            |        | Digest probe (the goalkeeper.mechanics RNG cursor — a v18 field —  |
+// |         |            |        | moves the digest, written unconditionally so the flag need not be  |
+// |         |            |        | on).                                                               |
 #endregion
