@@ -285,4 +285,7 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   branch now produces the §3.5.9 HOLD-safe command under FM-DT-14 (renumbered  |
 // |         |            |        |   from the double-allocated FM-DT-09, ERR-008-007). All emits FR-CS-031 gated. |
 // |         |            |        |   L: HOLD JOGGING-strafe SPEC-DEVIATION NOTE (AM AR-13 accommodation).         |
+// | 1.2     | 2026-07-23 | —      | ERR-008-013: + SAVE case → IDtSaveDispatch.CommitSave (optional param,        |
+// |         |            |        |   null-tolerant like the executors — dev-logged wiring drop). The GK save     |
+// |         |            |        |   sink; primitives only (no GoalkeeperMechanics type crosses the seam).       |
 #endregion

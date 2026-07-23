@@ -200,4 +200,7 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   (ERR-008-009); LONG_SHOT_THRESHOLD doc states the shifted-form comparison    |
 // |         |            |        |   (M-4 companion); MOVE_ZONE_* gain [GT] tags (now consumed via               |
 // |         |            |        |   GetZoneModifier).                                                            |
+// | 1.3     | 2026-07-23 | —      | ERR-008-013: + U_BASE_SAVE (= UTILITY_CEILING). Not load-bearing for          |
+// |         |            |        |   selection (SAVE is the sole off-ball option when available); feeds only      |
+// |         |            |        |   AgentAction.UtilityScore / DecisionMadeEvent.                                |
 #endregion

@@ -258,4 +258,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   LastAction) so a host can verify the pipeline produced a decision rather    |
 // |         |            |        |   than aborting at SnapshotValidator. Read-only over the existing field; no    |
 // |         |            |        |   behaviour change.                                                            |
+// | 1.4     | 2026-07-23 | —      | ERR-008-013: ctor gains an optional IDtSaveDispatch saveDispatch (the GK save |
+// |         |            |        |   sink, parallel to the executors), threaded into ActionDispatcher.Dispatch.  |
+// |         |            |        |   _saveDispatch is an injected dependency, not cross-tick state (excluded from |
+// |         |            |        |   CaptureState, like the executors).                                           |
 #endregion

@@ -460,4 +460,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   pass-target multiplier (target proximity to passer-perceived opponents ×   |
 // |         |            |        |   passer awareness), before the clamp. Off dial ⇒ exact ×1.0 identity        |
 // |         |            |        |   (FR-DM-012) — a default match is byte-identical.                           |
+// | 1.11    | 2026-07-23 | —      | ERR-008-013: + ScoreSave (returns U_BASE_SAVE; SAVE reaches the scorer only  |
+// |         |            |        |   as the sole off-ball option, so not load-bearing for selection); SAVE is   |
+// |         |            |        |   EXEMPTED from PlayerTacticActionMultiplier in ComputeUtility — its 7-wide  |
+// |         |            |        |   #21 tables are indexed by the action ordinal, so a=SAVE(7) would read OOB. |
 #endregion

@@ -680,4 +680,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   teamId); L INV-GEN-06 ClampToPitch on dribble/intercept/move targets; L dead  |
 // |         |            |        |   DerivePassType params dropped with §3.1.3.4 WIDE_ZONE deviation note; L       |
 // |         |            |        |   intercept scan breaks at first feasible t.                                    |
+// | 1.3     | 2026-07-23 | —      | ERR-008-013: GenerateOffBallBranch short-circuits to GenerateSaveCandidate      |
+// |         |            |        |   (SAVE alone) when TacticalContext.SaveAvailable — the DT-emitted goalkeeper   |
+// |         |            |        |   save, robustly selected. SaveAvailable is flag-gated (keeper only), so the    |
+// |         |            |        |   default off-ball branch is byte-identical.                                    |
 #endregion

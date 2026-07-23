@@ -372,6 +372,37 @@ sole option so the `PlayerTacticActionMultiplier` guard remains load-bearing and
 locks now assert the robust property (exactly-one-SAVE-option + selection under adversarial
 tactic/mentality). No new High or Medium. Plan ready to implement.
 
+**AR-6 (2026-07-23) — on the implementation: 0 High + 0 Medium + 3 Low — CONVERGENCE, cycle closed.**
+Full re-read of the shipped code against source. Verified: SAVE re-evaluates each heartbeat
+(`IsContinuousAction(SAVE)` = true ⇒ the ball-resolves-then-re-arms cycle re-commits); `SaveArmed`
+uses raw world coordinates with the team index (no home/away mirror bug — matches the removed
+heuristic); the latch is team-keyed consistently on both the clear (`RunMechanicsAI`) and set
+(`HostSaveDispatch`) sides; no RNG stream cursor is perturbed by emitting SAVE (composure noise is a
+stateless `SplitMix64` hash); flag-off is byte-identical by construction; keeper-with-ball is excluded
+(`!loose` ⇒ `SaveArmed` false + possession branch). The three Low: (1) `RunMechanicsAI` set
+`SaveAvailable` on a sent-off keeper (harmless — the DT loop skips sent-off agents and the sink
+re-checks — **fixed** anyway with a `!_isSentOff[i]` gate for participation-convention consistency);
+(2) the latch lifecycle is split clear/set across two files (inherent to the design — the clear must
+run every armed-check stride, documented at both sites); (3) `SaveDecision_SurvivesAdversarialTactic`
+passes trivially under the sole-option design (a valid regression lock against the *rejected* scoring
+approach; the precise lock is the `OptionGeneratorTests` sole-option test). **Full dotnet gate:
+PASSED, 0 failures (whole tree green; DecisionTree 84, MatchEngine 306; SDK 8.0.129 via apt).**
+
+## 12. Implementation outcome (2026-07-23) — LANDED
+
+Implemented per §11 (SAVE-only, sole-option). `decision-tree`: `ActionType.SAVE = 7`,
+`TacticalContext.SaveAvailable`, `OptionGenerator` sole-option short-circuit + `GenerateSaveCandidate`,
+`UtilityScorer` `ScoreSave` + `PlayerTacticActionMultiplier` SAVE exemption, `IDtSaveDispatch` +
+`ActionDispatcher` SAVE case + `DecisionTree` ctor param. `match-engine`: `HostSaveDispatch` sink
+(agent→GK map + v18 latch + `ToGoalkeeper` + commit), `RunMechanicsAI` `SaveAvailable`/latch-clear,
+`DriveGkHeadingTactical` drops `TryCommitSaveIntents`. No state-machine edit (SAVE continuous for
+free); no `SNAPSHOT_SCHEMA_VERSION` change. Spec back-prop: `ERR-008-013` +
+`decision-tree/section-3-1.md`/`section-3-2.md` anchor notes. Tests: `OptionGeneratorTests`
+sole-option lock, `UtilityScorerTests` crash-guard lock, `MatchEngineGkHeadingTests` DT-path
+save-commit + `SaveDecision_SurvivesAdversarialTactic`. **Still deferred:** a DT-emitted HEADER
+(ordinal 8 overflows the noise field → rebaseline), attribute-modulated/hesitant save commit, flip the
+`EnableGkHeading` default on + flag-on digest rebaseline.
+
 ---
 
 ## 11. Detailed implementation plan

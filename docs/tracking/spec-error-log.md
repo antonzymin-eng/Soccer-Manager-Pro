@@ -106,6 +106,7 @@ authoritative remediation backlog.
 | ERR-012-008 | Build-Up Structures #24 back-prop: #12 `SlotComposer` pipeline gains the build-up overlay stage between `ContextModifier` and spacing + per-team `BuildUpZoneState` classifier state (identity no-op at `None`) | Medium | 1 | ✅ Resolved July 10, 2026 — `positioning-ai/section-3.md` v0.6 §3.7.1 |
 | ERR-012-009 | Positional Rotations #25 back-prop: #12 contract amendment — `RotationController` runs before slot composition, and `AgentPositioningData.SlotIndex` is no longer immutable after `SeedFromFormation` (the `RotationController` is its sole post-seed writer; single-writer rule per #25 §4.4) | Medium | 1 | ✅ Resolved July 10, 2026 — `positioning-ai/section-3.md` v0.6 §3.7.1 (numbers ERR-012-004..006 deliberately skipped — soft-reserved by the June-13 dotnet-CI quarantine adjudication cluster, whose ERR-012-003 citation is already live in section-3.md v0.5) |
 | ERR-008-012 | Dismarking AI #23 back-prop: #8 §3.2 `UtilityScorer` gains the FM-DM-03 marked-pass-target multiplier row in the external tactical-multiplier product, applied before the single final clamp (identity ×1.0 at `Off`) | Medium | 1 | ✅ Resolved July 10, 2026 — `decision-tree/section-3-2.md` v1.5 §3.2.2.1 back-prop anchor note; #23 owns formula/constants/tests |
+| ERR-008-013 | GK/Heading #11/#10 integration: #8 gains a DT-emitted `SAVE` action (ordinal 7) — the goalkeeper save the #11 `SaveIntent` doc always anticipated the DT committing. Supersedes the `MatchEngine` heuristic save trigger. Off-ball-branch-only, gated on a new `TacticalContext.SaveAvailable` fact (set only under the opt-in `EnableGkHeading` flag); emitted as the SOLE off-ball option so selection is robust; `PlayerTacticActionMultiplier` exempts SAVE (its #21 tables are 7-wide) | Medium | 1 | ✅ Resolved July 23, 2026 — see the ERR-008-013 detailed section; `decision-tree/section-2.md`/`section-3-1.md`/`section-3-2.md`/`section-3-5.md` notes; code landed (`ActionType.cs` v1.1, `OptionGenerator`/`UtilityScorer`/`ActionDispatcher`/`DecisionTree`/`IDtSaveDispatch`, `MatchEngine.cs` `HostSaveDispatch`) |
 | ERR-024-001 | Build-Up Structures #24 Appendix A v0.2 keyed every overlay row to lane values no slot occupies (fullbacks recorded `LH`/`RH` in every family table, not wide L/R; central mids `C`, not LH/RH) — the whole FR-BU-007 catalogue was a structural no-op; the PASS-1 M-3 "correction" checked lane geometry, not the recorded `DefaultLane` key values | High | 3 | ✅ Resolved July 10, 2026 (T0 implementation) — `build-up-structures/appendices.md` v0.3 + `section-3.md` v0.3 re-keyed to the recorded values (magnitudes/intents unchanged); `BuildUpOverlayCatalogue.cs` v1.0 implements the corrected keys; regression test locks non-zero own-third coverage in every family |
 | ERR-022-001 | Living World #22 back-prop: `DOMAIN_TAG_LIVING_WORLD = 0x1E` + `SubsystemOrdinals.LivingWorld = 80` (first entry of the off-pitch 80–99 band) allocation needed in Deterministic Simulation #16 §3.4 for the `world.text` / `world.arcs` sub-streams. | Medium | 1 | ✅ Resolved July 22, 2026 — the `0x1E` / `80` allocation landed in code with #22's slice-3 wiring (`DeterministicSimConstants` / `SubsystemOrdinals`); the #16 §3.4 spec-text row + this ERR were filed retroactively (the code back-prop had preceded the doc back-prop). Pure namespace allocation; no `DETERMINISM_DIGEST_VERSION` bump. |
 | ERR-027-001 | Squad/Player Data Layer #27 back-prop: `DOMAIN_TAG_PLAYER_DATABASE = 0x1F` + `SubsystemOrdinals.PlayerDatabase = 81` allocation needed in Deterministic Simulation #16 §3.4 (the `RosterGenerator` RNG stream, KD-5). | Medium | 1 | ✅ Resolved July 22, 2026 — allocated in `deterministic-sim/section-3.md` §3.4 (`0x1F`, next after `DOMAIN_TAG_LIVING_WORLD = 0x1E`); the code allocation (`DeterministicSimConstants.DOMAIN_TAG_PLAYER_DATABASE` / `SubsystemOrdinals.PlayerDatabase`) landed with #27 T0; #27 Appendix A `[CROSS]` cross-cite confirmed. Pure namespace allocation; no `DETERMINISM_DIGEST_VERSION` bump. |
@@ -1842,4 +1843,50 @@ promotion; no `DETERMINISM_DIGEST_VERSION` bump. Fully resolves when the T2 code
 
 ---
 
-*End of Spec Error Log v1.33 — July 23, 2026.*
+## ERR-008-013: Decision Tree #8 gains a DT-emitted goalkeeper SAVE action (July 23, 2026)
+
+**Context.** The GK (#11) / Heading (#10) engine integration (`gk-heading-engine-integration-design.md`)
+landed the save/header intents fired from **engine-side world-state heuristics**
+(`MatchEngine.TryCommitSaveIntents` → `GkHeadingIntentSource.SaveArmed`), listing "a DT-driven
+GK/heading decision layer" as future work. The #11 `SaveIntent` doc, however, already states the intent
+is "committed by the Decision Tree at the 10 Hz tactical tick" — i.e. #8 was always meant to own the
+save decision. This ERR files the #8 change that realizes it, for the **SAVE** case (a DT-emitted
+HEADER is deferred — ordinal 8 would overflow the 3-bit composure-noise field and force a rebaseline).
+Governed by `docs/tracking/gk-heading-dt-producer-design.md` (outline + detailed plan, each
+AR-converged; implementation AR-6 clean).
+
+**The change (additive, off-ball-branch-only, opt-in-gated).**
+1. `ActionType.SAVE = 7` — the last ordinal that fits the 3-bit `ActionSelector.ComputeOptionNoise`
+   field. Ordinals 0–6 unchanged (no composure-noise rebaseline).
+2. `TacticalContext.SaveAvailable` (bool; zero value `false` = identity) — set only for the threatened
+   keeper, only under `MatchEngine.EnableGkHeading()`, from `GkHeadingIntentSource.SaveArmed`.
+3. `OptionGenerator.GenerateOffBallBranch` short-circuits to **SAVE alone** when `SaveAvailable`, so
+   the keeper's save is selected robustly (independent of composure noise / mentality / role tiebreak
+   — a must-happen, geometry-gated action must not depend on out-scoring INTERCEPT, which can reach the
+   utility ceiling under an aggressive per-agent tactic).
+4. `UtilityScorer.ComputeUtility` scores SAVE = `U_BASE_SAVE` and **exempts SAVE from
+   `PlayerTacticActionMultiplier`** — that multiplier indexes the #21 `RoleWeightModifiers` /
+   `TempoActionBias` tables (7-wide, ordinals 0–6) by the action ordinal, so scoring `a = SAVE(7)`
+   without the exemption reads out of bounds. **No #21 table is widened.**
+5. `IDtSaveDispatch` seam (primitives only) + `ActionDispatcher` SAVE case + `DecisionTree` ctor param;
+   `MatchEngine.HostSaveDispatch` maps agent→GK slot, applies the v18 per-episode latch, projects
+   `PlayerAttributeProjection.ToGoalkeeper`, and commits the same Stage-0 `SaveIntent` the removed
+   heuristic built. `MatchEngine.DriveGkHeadingTactical` drops `TryCommitSaveIntents`.
+
+**Determinism / scope.** No `SNAPSHOT_SCHEMA_VERSION` change (SAVE reuses `AgentAction.Type`/
+`TargetPosition`; no new serialized field). Flag-off is byte-identical (SaveAvailable false ⇒ off-ball
+branch untouched, SAVE=7 never enters the noise field, the `!= SAVE` guard is always-true so
+`PlayerTacticActionMultiplier` runs identically). Flag-on differs from the pre-change heuristic only in
+the keeper's serialized DecisionTree `LastAction` (now SAVE) — expected, KD-11 non-neutral. **Full
+dotnet gate PASSED, 0 failures.**
+
+**Resolution.** `decision-tree/section-3-1.md` (§3.1 SAVE generation — off-ball, `SaveAvailable`-gated,
+sole-option) and `section-3-2.md` (§3.2 `ScoreSave` + the `PlayerTacticActionMultiplier` SAVE
+exemption) gain concise ERR-008-013 back-prop anchor notes (the ERR-008-012 anchor-note precedent — the
+formula/behaviour is owned by this ERR + the code, the section note points to it). The `ActionType`
+enum member (§2.2.1) and the dispatch seam (§3.5) are described here; their section files carry the
+note by reference. Additive to an APPROVED spec via the established ERR-008 back-prop pattern.
+
+---
+
+*End of Spec Error Log v1.34 — July 23, 2026.*

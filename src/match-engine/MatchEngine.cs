@@ -2404,7 +2404,7 @@ namespace TacticalDirector.MatchEngine
                     // TryCommitSaveIntents cleared it the same way), so a new shot re-arms and re-commits.
                     // Flag-off / non-keeper leaves SaveAvailable at the Stage0Default false ⇒ the off-ball
                     // branch is byte-identical to pre-integration.
-                    if (_gkHeadingEnabled && _isGoalkeeper[i])
+                    if (_gkHeadingEnabled && _isGoalkeeper[i] && !_isSentOff[i])
                     {
                         bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
                         bool armed = GkHeadingIntentSource.SaveArmed(
@@ -6576,4 +6576,15 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | engine. The Phase-1 RequireGkHeadingSnapshotSafe fail-loud      |
 // |         |            |        | guard + its two call sites removed. New round-trip + schema     |
 // |         |            |        | probe tests; default flag stays OFF (flip is a follow-up).      |
+// | 1.47    | 2026-07-23 | —      | DT-emitted goalkeeper SAVE (ERR-008-013). The save decision    |
+// |         |            |        | moves from the heuristic TryCommitSaveIntents (removed) into    |
+// |         |            |        | the DecisionTree as ActionType.SAVE. New HostSaveDispatch sink  |
+// |         |            |        | (IDtSaveDispatch): maps agent→GK slot, applies the v18 latch,   |
+// |         |            |        | projects ToGoalkeeper, commits the same Stage-0 SaveIntent.     |
+// |         |            |        | RunMechanicsAI sets TacticalContext.SaveAvailable for the       |
+// |         |            |        | threatened keeper under EnableGkHeading (from                   |
+// |         |            |        | GkHeadingIntentSource.SaveArmed) + clears the latch when no     |
+// |         |            |        | longer armed; DriveGkHeadingTactical keeps only the header      |
+// |         |            |        | trigger. No SNAPSHOT_SCHEMA_VERSION change; flag-off byte-      |
+// |         |            |        | identical. New SaveDecision_SurvivesAdversarialTactic lock.     |
 #endregion

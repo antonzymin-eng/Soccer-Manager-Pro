@@ -829,6 +829,21 @@ PressOption pressOption = new PressOption
 
 ---
 
+## 3.1.13 SAVE generation (ERR-008-013 back-prop anchor)
+
+The off-ball branch generates one additional candidate, `ActionType.SAVE = 7` (the DT-emitted
+goalkeeper save the #11 `SaveIntent` doc anticipates the DT committing). It is gated on the new
+`TacticalContext.SaveAvailable` fact — set only for the threatened keeper, only under the match
+engine's opt-in `EnableGkHeading` flag (from `GkHeadingIntentSource.SaveArmed` geometry). When
+`SaveAvailable`, the off-ball branch emits **SAVE alone** (MOVE/PRESS/INTERCEPT suppressed), so the
+keeper's save is selected robustly rather than competing on utility (a must-happen, geometry-gated
+action must not depend on out-scoring INTERCEPT, which can reach the utility ceiling under an
+aggressive tactic). Flag-off / non-keeper ⇒ `SaveAvailable` false ⇒ this section is inert and the
+off-ball branch is byte-identical to §3.1.7–§3.1.9. Owned by ERR-008-013 + the code
+(`OptionGenerator.GenerateSaveCandidate`); scoring is §3.2, dispatch §3.5.
+
+---
+
 ## 3.1.12 Version History
 
 | Version | Date | Author | Changes |
