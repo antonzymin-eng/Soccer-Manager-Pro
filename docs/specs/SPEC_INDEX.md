@@ -1,7 +1,145 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 22, 2026 (**Squad / Player Data Layer #27 promoted `→ IN REVIEW`** — the
+> **Last Updated:** July 23, 2026, latest same day (**Training System #29 authored + advanced
+> `→ IN REVIEW → APPROVED`** — Wave 2's second spec (the training seam #28 KD-2 reserved and #30's
+> day-advance slot-2 null seam). Promoted from the converged design supplement
+> (`docs/tracking/training-system-design.md` v0.4, design-AR **1H+1M+2L** → AR-2/AR-3 clean) to a full
+> 11-file section set (FR-TR-001..024), then section-file PASS-1 (**0H+1M**) → AR-2 → AR-3 convergence.
+> **Scope:** weekly-directed, **daily-accrued** training on the **world tick** — a per-player focus drives
+> a deterministic **conditioning** cursor + a **training-fatigue** accumulator, and (deep tier) a granular
+> per-attribute growth **input to #28's curve** — as one code path with a dial (Stage-2 minimal = the
+> identity the deep tier extends, KD-8). **KD-1 (headline)** reconciles world-tick training-fatigue with
+> match-tick fatigue (`1 − AerobicPool`) via a **single accumulator + a pure one-directional projection**
+> into the match-boot caller-supplied starting fatigue (the `PlayerAttributeProjection` KD-P4 seam) — no
+> shared counter, no write-back, not stored (save-exact). **KD-2** keeps attribute mutation single-owned by
+> #28: a **pure `ComputeTrainingInput`** feeds #28's `GrowthProjection` at #30's slot-1 seam (no reorder, no
+> staleness); #29 never writes `PlayerAttributes` and #28's assembly stays schema-untouched. **KD-6:** #29
+> is **fully deterministic — NO RNG stream**, so `_RESERVED_0x21_` / `SubsystemOrdinals` 83 **stay reserved**
+> (deliberately NOT promoted, unlike #28's `0x20` — #29 has no genuine draw site; a zero-draw stream would
+> be the FR-LW-031 phantom class). The design-AR caught this self-contradiction (H — the draft invented a
+> `training.session` stream while citing FR-LW-031) and a Form/Fitness two-cursor muddle (M — collapsed to
+> one `Condition` cursor; match-driven "form" deferred to its owner); the section-file PASS-1 caught a day-0
+> idempotency sentinel collision (M — fixed with a `uint.MaxValue` NOT_ADVANCED sentinel + `Create` factory).
+> #16 §3.4 (v1.0.10) records the no-promotion (ERR-029-001, RESOLVED); no `DETERMINISM_DIGEST_VERSION` bump.
+> R-01..R-05 signed (§9 checklist v0.2); all 11 files `Status: APPROVED`. **Approves the forward design**
+> (the #21–#30 pre-T0 precedent); the §7 T-phase plan is post-APPROVED. Count: **33 APPROVED / 0 IN REVIEW
+> / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, later same day (**Player Progression & Lifecycle #28 authored +
+> advanced `→ IN REVIEW → APPROVED`** — Wave 2's first spec (the aging/lifecycle seam #30 KD-2/KD-6
+> already reserved a null slot for). Promoted from the converged design supplement
+> (`docs/tracking/player-progression-lifecycle-design.md` v0.3, AR-1 2M+2L → AR-2 3M → AR-3 clean) to a
+> full 11-file section set (FR-PG-001..024), then section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) →
+> AR-3 convergence. **Scope:** player lifecycle on the **world tick** — aging/decline/growth via a
+> CA/PA model over #27's `PlayerAttributes`, retirement, and regen/newgen production — as **one code
+> path with a config dial** (the deep curve reduces to the literal master-plan §4.3 step when off,
+> KD-8), driven by #30's day-advance loop + season-boundary roll at the seams #30 reserved. **KD-1**
+> pins a byte-exact **integer fixed-point** growth model: `[1,20]` attributes are the single source of
+> truth, `GrowthCursor` the only accumulator, CA a derived summary, PA the ceiling, and age is derived
+> from a single serialized `BirthWorldDay` (no discrete rollover — the PASS-1 M-1 fix collapsed a
+> two-representation age muddle). **KD-2** makes the #29 training seam a **method input defaulted to
+> neutral** (training is an *input* to #28's single growth function, no phantom interface). **KD-4**
+> keeps CA/PA in a #28-owned career-state block keyed by `PlayerId` (the complete `PlayerRecord` +
+> lifecycle overlay, serialize-don't-regenerate); **#27's canonical struct stays schema-untouched.**
+> **KD-5** flags retirement on the world tick but applies roster removal + regens only at the season
+> boundary (never mid-fixture). The #16 §3.4 cross-cite **promotes** the reserved `_RESERVED_0x20_` /
+> `SubsystemOrdinals` 82 rows → `DOMAIN_TAG_PLAYER_PROGRESSION = 0x20` (per-club `progression.regen`
+> stream, the #27 pattern; PASS-1 M-2 fix), ERR-028-001, filed at approval — no
+> `DETERMINISM_DIGEST_VERSION` bump. R-01..R-05 signed (§9 checklist v0.2); all 11 files
+> `Status: APPROVED`. **Approves the forward design** (the #21–#30 pre-T0 precedent); the §7 T-phase
+> plan is post-APPROVED. Count: **32 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026 (**Localization & Accessibility #49 (seam + template-contract slice)
+> authored + advanced `→ IN REVIEW → APPROVED`** — Wave 1's final item (the seam #38's KD-5 was written
+> against). Promoted from the converged design supplement (`docs/tracking/localization-seam-template-design.md`
+> v0.2, AR-1 2H+1M+1L → AR-2 clean) to a full 11-file section set (FR-LC-001..020 + FR-LC-008a), then
+> section-file PASS-1 (1H+1M+1L) → AR-2 convergence. **Scope: the seam + template contract only** (the #38
+> framework/screens precedent) — the single `ILocalizer` routing point (static `Resolve(LocalizationKey)` +
+> procedural `Render(LocalizedTextRequest)`), the template model (named-placeholder + a bounded plural/gender
+> selector), the **localize-after-generate** determinism boundary (KD-2 — the transform is display-side, so
+> #22's `world.text` draw + serialized memory stay locale-independent and a save round-trips byte-identically
+> across display locales), the one-way reference direction, the fallback policy, and the **retrofit of the
+> one built producer** (#22 `InteractionTextGenerator`); translated **locales** + the **a11y content surface**
+> are Wave 8. **PASS-1 H-1 fix was structural:** the generic seam was coupled to the concrete #22 producer on
+> its core contract (an `InteractionIntent` overload + `ForInteraction` factory + fixed subject/opponent/score
+> slots), forcing a core rewrite when #35/#46 land — split into a **producer-agnostic core** (references
+> nothing sim-side) + a **per-producer boundary adapter** (`LivingWorldTextBoundary`, the only sim-side
+> reference), the #38 generic-substrate rule the spec cited but had violated. **M-1 fix:** the corpus
+> migration split the pre-draw gate — the sim-side gate is now an intent-VALUE roster check, and new
+> FR-LC-008a asserts construction-time roster coverage (every defined intent has ≥1 base template) so
+> `variantCount ≥ 1` holds by construction (preserving #22's no-cursor-on-refusal invariant). #49 registers
+> **no domain tag / ordinal / RNG** (FR-LC-017, the `match-viewer`/#37/#38 class), so **no #16 §3.4
+> cross-cite**. R-01..R-05 signed (§9 checklist v0.3); all 11 files `Status: APPROVED`. **Approves the
+> forward design** (the #21–#38 pre-T0 precedent); the #22 retrofit + Wave-8 content are post-APPROVED.
+> **This completes Wave 1** (#30 spine + #37 analytics + #38 UI framework + #49 localization seam). Count:
+> **31 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 22, 2026, later same day (**UI / Client Framework #38 (framework slice) authored +
+> advanced `→ IN REVIEW → APPROVED`** — Wave 1 presentation substrate. Promoted from the converged design
+> supplement (`docs/tracking/ui-client-framework-design.md` v0.2, AR-1 2M → AR-2 clean) to a full 11-file
+> section set (FR-UI-001..023), then section-file PASS-1 (0H+2M+2L) → AR-2 convergence. **KD-2 split
+> settled:** the FRAMEWORK slice only — the view-model contract (immutable read-only projections), the
+> navigation shell (a pure UGUI-free state machine), the command-dispatch discipline (mutation ONLY
+> through existing public seams), and the one concrete match-view surface over `LiveMatchStreamer`; the
+> tactics + management **screens** are deferred to Wave-7 screen specs, each gated on its data spec (the
+> phantom-consumer trap). **KD-1 layer contract** grounded in the verified `match-viewer` no-reverse-
+> reference lock + the `LiveMatchServer` disjoint-surface precedent (playback holds no `MatchEngine`). The
+> PASS-1 M-2 fix was structural: a live-match command must be **marshaled onto the streamer's sim thread**
+> (FR-UI-023 / F6 / a presentation-side `EnqueueIntent`), not called cross-thread — the write-side of
+> KD-3's decoupling. #38 registers **no domain tag / ordinal / RNG** (FR-UI-022, the `match-viewer`
+> class), so **no #16 §3.4 cross-cite**. R-01..R-05 signed (§9 checklist v0.3); all 11 files
+> `Status: APPROVED`. **Approves the forward design** (the #21–#37 pre-T0 precedent); the UGUI rendering
+> binding stays Unity-host-gated. Count: **30 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 22, 2026, later same day (**Match Analytics & Statistics #37 authored + advanced
+> `→ IN REVIEW → APPROVED`** — Wave 1 read-only presentation prerequisite. Promoted from the converged
+> design supplement (`docs/tracking/match-analytics-statistics-design.md` v0.2, AR-1 1M → AR-2 clean) to
+> a full 11-file section set (FR-AN-001..021), then section-file PASS-1 (0H+2M+3L) → AR-2 convergence
+> (0H+0M, L-only ⇒ CONVERGENCE). **KD-1 settled against verified source:** the match engine publishes
+> only **8 Tier A record types** into the digest-bearing ledger (Possession/Foul/Card/Goal/Substitution/
+> Offside/Restart/MatchPhaseChanged) and **no shot/pass/tackle/save event** (those ordinals are
+> registered but have no producer), and `SerializeLedger` is write-only (no reader) — so #37's scope is
+> exactly the derivable set + the observational positional sample, and shots/passes/tackles/shot-geometry
+> xG are a **named, producer-gated match-engine follow-up** (Appendix D), never a phantom consumer
+> (FR-LW-031). The PASS-1 M-1 fix was structural (the ledger tap must be consumed **every tick**
+> losslessly — a sampling reader would drop a tick's foul/goal; enforced by the new F6 fail-loud). #37
+> registers **no domain tag / ordinal / RNG** (KD-5, the `match-viewer` class) so **no #16 §3.4 cross-cite
+> is needed** — a positive property, not a deferred allocation. R-01..R-05 signed (§9 checklist v0.3); all
+> 11 section files at `Status: APPROVED`. **Approves the forward design** (the #21–#30 pre-T0 precedent).
+> Count: **29 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 22, 2026, later same day (**Season & Competition Loop #30 advanced `IN REVIEW → APPROVED`**
+> — Wave 1 critical-path spine spec complete. Section-file PASS-1 (1H+2M+2L) + AR-2 convergence sweep
+> (0H+0M, L-only ⇒ CONVERGENCE) both resolved — the H-1 fix was structural (the loop resolved one
+> fixture per fixture-day and skipped the round's other `N/2−1`, leaving the league table undefined for
+> N>2; new KD-9 makes a fixture-day resolve the whole round, managed club through the full `MatchEngine`
+> + the rest through a deterministic round-resolution model, `SeasonState.ManagedClubId` added). The #16
+> §3.4 cross-cite is filed (`deterministic-sim/section-3.md` §3.4 v1.0.8 gains `DOMAIN_TAG_SEASON_LOOP =
+> 0x22` + the `_RESERVED_0x20_`/`_RESERVED_0x21_` placeholders for #28/#29 — the roadmap §6 contiguous
+> block; spec-text-first per ERR-030-001, `spec-error-log.md` v1.33 — code const at #30 T2, no phantom
+> stream); the #22 phase-1 cross-check found no contract to violate (producer-only, ingest gated on #33
+> per `FR-LW-032`); and R-01..R-05 sign-off is granted (§9 checklist v0.3). All 11 section files flip
+> `Status: APPROVED`. **Approves the forward design** (the #21–#26 pre-T0 precedent — nothing built; §7
+> T-phase plan is the implementation sequence). Count: **28 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 22, 2026, later same day (**Season & Competition Loop #30 promoted `→ IN REVIEW`**
+> — Wave 1 of the management-layer roadmap (the critical-path career spine `#27 → #30 → #33 → #31 → #38
+> → #39`) begun. Promoted from the converged design supplement `docs/tracking/season-competition-loop-design.md`
+> v0.2 (AR-1 1M+3L → AR-2 clean) to a full 11-file section-file set at `docs/specs/season-competition-loop/`
+> (FR prefix **FR-SN**; FR-SN-001..034). Forward-design spec (nothing built yet — the #21–#26 IN-REVIEW
+> posture, unlike #27 which documented already-built code): defines deterministic round-robin fixtures, a
+> live league table, a calendar/match-day loop, board objectives, and multi-season continuity, owning the
+> `SeasonSaveManager` composition root (season state as a third opaque sub-blob; `SEASON_SAVE_FORMAT_VERSION`
+> 1 → 2). The load-bearing design decision (AR-1 M-1): #30 is the #22 phase-1 **producer** only — ingest
+> activation is deferred to #33 per `FR-LW-032` (a MUST gating activation on match-outcome events **and**
+> the human-systems model), not wired here. Registry row #30 added; the `0x22`/84 back-prop + R-01..R-05
+> sign-off are the remaining gates (§9.3). #28/#29 (Wave 2) remain unpromoted (no rows). Count: **27
+> APPROVED / 1 IN REVIEW (#30) / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 22, 2026, later same day (**Squad / Player Data Layer #27 advanced `IN REVIEW → APPROVED`**
+> — Wave 0 of the management-layer roadmap complete. Section-file PASS-1 (0H+1M+2L) + AR-2 convergence
+> sweep (0H+1M — the §7.2 GK/Heading projection deferral was stale, since `PlayerAttributeProjection.cs`
+> v1.2 landed `ToGoalkeeper`/`ToHeading` the same day; new §7.3 records LANDED — L-only otherwise ⇒
+> CONVERGENCE) both resolved; the #16 §3.4 cross-cite is filed (`deterministic-sim/section-3.md` §3.4
+> gains `DOMAIN_TAG_PLAYER_DATABASE = 0x1F` + the retroactive `DOMAIN_TAG_LIVING_WORLD = 0x1E` row the
+> `0x1F` allocation follows; back-props ERR-027-001 + ERR-022-001, `spec-error-log.md` v1.32); and
+> lead-developer R-01..R-05 sign-off is granted (§9 checklist v0.3). All 11 section files flip
+> `Status: APPROVED`. Count: **27 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 22, 2026 (**Squad / Player Data Layer #27 promoted `→ IN REVIEW`** — the
 > data-layer design supplement `docs/tracking/squad-player-data-design.md` v0.6 (converged AR-1..AR-2)
 > promoted to a full 11-file section-file set at `docs/specs/squad-player-data/` (FR-SQ-001..026),
 > per the #21–#26 precedent. Unusually, the implementation already exists and is wired
@@ -93,7 +231,13 @@
 | 24 | Scripted Build-Up Structures | `build-up-structures/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 25 | Positional Rotations | `positional-rotations/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 26 | Tactical Presets & AI-Manager Selection | `tactical-presets/` | 6¹ | APPROVED | Jul 10, 2026 |
-| 27 | Squad / Player Data Layer | `squad-player-data/` | 6¹ | IN REVIEW | — |
+| 27 | Squad / Player Data Layer | `squad-player-data/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 28 | Player Progression & Lifecycle | `player-progression-lifecycle/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 29 | Training System | `training-system/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 30 | Season & Competition Loop | `season-competition-loop/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 37 | Match Analytics & Statistics | `match-analytics-statistics/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 38 | UI / Client Framework (framework slice) | `ui-client-framework/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
@@ -172,6 +316,14 @@ consistent with #23 having been free to reserve and now promote.
   adversarial review + v0.2 fix pass; formal `SubsystemOrdinals.PlayerDatabase = 81` /
   `DOMAIN_TAG_PLAYER_DATABASE = 0x1F` cross-cite confirmation in DeterministicSim #16 §3.4;
   lead-developer R-01..R-05 sign-off. Count: **26 APPROVED, 1 IN REVIEW (#27), 0 NOT STARTED.**
+- **July 22, 2026 (later same day) — Squad / Player Data Layer (#27) advanced `IN REVIEW → APPROVED`.**
+  Wave 0 of the management-layer roadmap complete. PASS-1 (0H+1M+2L) + AR-2 convergence sweep
+  (0H+1M — §7.2 GK/Heading projection deferral stale; new §7.3 records `ToGoalkeeper`/`ToHeading`
+  LANDED — L-only otherwise ⇒ CONVERGENCE) resolved; the #16 §3.4 cross-cite filed
+  (`DOMAIN_TAG_PLAYER_DATABASE = 0x1F` + the retroactive `DOMAIN_TAG_LIVING_WORLD = 0x1E` it follows;
+  ERR-027-001 + ERR-022-001, `spec-error-log.md` v1.32); lead-developer R-01..R-05 sign-off granted
+  (§9 checklist v0.3). All 11 section files `Status: APPROVED`. Count: **27 APPROVED, 0 IN REVIEW,
+  0 NOT STARTED.**
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 
 ---

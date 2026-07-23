@@ -1,0 +1,146 @@
+# Player Progression & Lifecycle #28 — Section 2: Functional Requirements, Data Structures, Failure Modes
+
+**Created:** July 23, 2026
+**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
+**Version:** 0.2
+**Status:** APPROVED
+
+---
+
+## 2.1 Functional requirements
+
+**Cadence & determinism (KD-1)**
+- **FR-PG-001** — All player lifecycle mutation MUST run on the world tick (`WorldClock` day), never
+  the 10 Hz/60 Hz match loops.
+- **FR-PG-002** — Aging, decline, and growth of existing players MUST be a pure deterministic integer
+  projection with **no RNG draw**. Growth MUST accumulate in an **integer fixed-point `GrowthCursor`**,
+  never a float accumulator.
+- **FR-PG-003** — The `[1,20]` `PlayerAttributes` values MUST be the **single source of truth** for a
+  player's ability; `CurrentAbility` MUST be a **derived** summary (never a second accumulator);
+  `PotentialAbility` MUST be the ceiling; the `GrowthCursor` MUST be the only accumulator.
+- **FR-PG-004** — The daily step MUST accrue `dailyPoints` to the cursor and, when it crosses
+  `POINT_COST`, spend one attribute-point on the next attribute in a **deterministic weighted order**,
+  respecting the `PotentialAbility` ceiling; decline MUST be the symmetric drain.
+- **FR-PG-005** — Age MUST be **derived** from a serialized `BirthWorldDay`: `AgeYears = (worldDay −
+  BirthWorldDay) / DAYS_PER_YEAR` (integer division). There MUST be **no** discrete per-year attribute
+  step — all attribute change is the `GrowthCursor` (FR-PG-004) — so nothing can be double-counted at
+  a year boundary. #28 MUST keep the career-state `PlayerRecord.Age` current as a derived cache (like
+  `CurrentAbility`), so a consumer reading `record.Age` gets **current** age, never the new-game seed.
+- **FR-PG-006** — A mid-year save→restore MUST reproduce the identical continuation (byte-exact); no
+  step MUST be double-counted across a save boundary.
+- **FR-PG-007** — With `curveEnabled` off, `GrowthProjection` MUST reproduce the literal §4.3 step
+  exactly (the behaviour-neutral identity, KD-8).
+
+**The #29 training seam (KD-2)**
+- **FR-PG-008** — `GrowthProjection` MUST be the **sole** attribute-mutation path; the daily step
+  MUST take a per-player `TrainingInput` it **reads** — training is an input, never a parallel
+  mutation of the same attributes.
+- **FR-PG-009** — `TrainingInput` MUST default to `Neutral`; a `Neutral` input MUST leave the daily
+  step byte-identical to no training input. #28 MUST NOT declare an interface against the absent #29
+  producer (FR-LW-031).
+
+**Regens (KD-3)**
+- **FR-PG-010** — A regen MUST be produced deterministically from the `progression.regen` stream,
+  reusing #27's fixed-budget Reserve/DrawReserved/CloseReservation draw pattern (so a regen is
+  byte-reproducible from `(seed, clubId, stream position)`).
+- **FR-PG-011** — A regen MUST receive a **fresh, monotonically-allocated `PlayerId`** (never a
+  retiree's — the career-state block keys on `PlayerId`, so reuse would leak stale lifecycle state);
+  the retiree's block entry MUST be removed as the regen's fresh entry is inserted.
+- **FR-PG-012** — Regen club/nation MUST be read from #27's roster world (read-only); #28 MUST NOT
+  mutate #27's `Squad` directly — it emits a `RegenResult` the roster owner (#30/#27) applies.
+
+**Retirement (KD-5)**
+- **FR-PG-013** — Retirement MUST be evaluated on the world tick, **hard at `RETIREMENT_AGE`** (the
+  §4.3 literal); a retiring player MUST be **flagged** (`RetirementFlag` + `RetirementDay`), not
+  removed.
+- **FR-PG-014** — A flagged-retiring player MUST remain selectable until the season boundary (an
+  in-progress season's fixtures/selection MUST NOT be disrupted).
+- **FR-PG-015** — Roster removal + regen replacement MUST happen **only at the season boundary** via
+  `RetirementResult` / `RegenResult`, never mid-fixture.
+
+**Persistence (KD-4)**
+- **FR-PG-016** — #28 MUST serialize the complete career-state `PlayerRecord` set + the lifecycle
+  overlay under its own **`PROGRESSION_SAVE_FORMAT_VERSION`**; #27's canonical `PlayerRecord` /
+  `PlayerAttributes` struct MUST gain **no** CA/PA fields.
+- **FR-PG-017** — The block MUST be composed by the season-save root as an **opaque, independently
+  version-gated sub-blob** (`SeasonSaveCodec` pattern); the world blob (`WORLD_STORE_FORMAT_VERSION`)
+  and match blob (`MATCH_SAVE_FORMAT_VERSION`) MUST stay byte-untouched.
+- **FR-PG-018** — The codec MUST fail loud on a bad `PROGRESSION_SAVE_FORMAT_VERSION`, an out-of-bounds
+  length prefix (overflow-safe bound), or trailing bytes (the `MatchSaveCodec`/`WorldStateSerializer`
+  posture).
+- **FR-PG-019** — The lifecycle-block entry count MUST equal the managed roster size (a vacancy is
+  filled 1:1); the blob MUST NOT grow unboundedly across seasons.
+
+**Determinism identifiers (KD-7 / §4.3)**
+- **FR-PG-020** — #28 MUST register a `player-progression.regen` RNG stream **per club**
+  (`entityId = clubId` — the #27 `RosterGenerator.RegisterStream(..., entityId: clubId, ...)` pattern,
+  so each club's newgen sequence is an independent reproducible sub-stream), under
+  `DOMAIN_TAG_PLAYER_PROGRESSION = 0x20` / `SubsystemOrdinals.PlayerProgression = 82`. A club's stream
+  registers at the **first regen for that club** (T-phase), never earlier — registering a stream with
+  zero draw sites is the phantom-surface class FR-LW-031 forbids. Draw sites MUST be APPEND-only.
+
+**Invocation & discipline (KD-6 / KD-7)**
+- **FR-PG-021** — #28 MUST expose `AdvanceDay(worldDay, in trainingInputs)` + `RunSeasonBoundary(...)`
+  invoked by #30; #28 MUST NOT reference #30 / the season assembly.
+- **FR-PG-022** — `ProgressionEngine` MUST be the **sole writer** of lifecycle state and the sole
+  mutator of the managed roster's attributes; #30/tests MUST mutate only through the public step API,
+  never by poking fields.
+- **FR-PG-023** — The `LifecycleViewModel` MUST be a read-only value-copy surface; reading it MUST NOT
+  mutate state (observer-neutral — the digest/round-trip is unaffected by observation).
+- **FR-PG-024** — `RunSeasonBoundary` MUST NOT re-bank growth (banked daily, KD-1); it applies the
+  deferred retirements + produces regens, and MUST be restartable (a mid-boundary save restores to
+  the same continuation, idempotent per boundary).
+
+## 2.2 Data structures
+
+```csharp
+// The per-player lifecycle overlay #28 alone owns (the [1,20] attributes live on the career-state
+// PlayerRecord the block also holds — KD-1/KD-4; NOT duplicated here).
+public struct PlayerLifecycle
+{
+    public int PotentialAbility;   // the ceiling, wide integer [0, ABILITY_MAX]
+    public int CurrentAbility;     // DERIVED summary of the [1,20] attributes (cache; recomputed)
+    public long GrowthCursor;      // the ONLY accumulator — integer fixed-point points pool
+    public uint BirthWorldDay;     // the authoritative age anchor — the world-day this player was "born"
+                                   //   (= newGameDay − Age0·DAYS_PER_YEAR at new-game); age is DERIVED
+                                   //   from it, so there is no discrete "rollover" step to double-count
+    public bool RetirementFlag;    // set on the world tick at RETIREMENT_AGE (KD-5)
+    public uint RetirementDay;     // the world-day the flag was set (0 if not flagged)
+}
+
+// The per-player growth contribution #29 writes (KD-2). Neutral == no training (FR-PG-009).
+public readonly struct TrainingInput
+{
+    public static TrainingInput Neutral => default;  // all-zero = the identity contribution
+    // Stage-3 #29 fields (focus/intensity/coach quality) append here; the daily step reads them.
+}
+
+// The season-boundary signals #28 emits (KD-5); #30/#27 apply the Squad mutation.
+public readonly struct RetirementResult { /* retiree PlayerIds, per club */ }
+public readonly struct RegenResult      { /* new PlayerRecords + their fresh PlayerIds, per club */ }
+
+// Read-only observer surface for #31/#38 (KD-7).
+public readonly struct LifecycleViewModel { /* age / CA / PA / retirement (value copies) */ }
+```
+
+The **career-state block** persisted under `PROGRESSION_SAVE_FORMAT_VERSION` is, per `PlayerId`:
+the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) **and** its
+`PlayerLifecycle` overlay, plus a store-level `NextPlayerId` monotonic cursor (FR-PG-011).
+
+## 2.3 Failure modes
+
+| ID | Condition | Handling |
+|---|---|---|
+| **F1** | A growth spend would exceed the `PotentialAbility` ceiling | The spend is a no-op (clamped at the ceiling), deterministic; the cursor is not consumed past the ceiling. |
+| **F2** | A regen is requested for a club with no vacancy (roster already full) | Refused / no-op — the bounded-roster invariant (FR-PG-019); a regen is produced only for an actual retirement vacancy. |
+| **F3** | `PROGRESSION_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`ArgumentException`), the `MatchSaveCodec` posture. |
+| **F4** | A `TrainingInput` carries an out-of-contract value | **Fail loud** at the consuming seam (the #27 `SquadFileLoader` bounds-gate precedent) — an invalid input from the future #29 producer is a bug, not silently clamped. |
+| **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
+| **F6** | `RunSeasonBoundary` invoked twice for one season boundary | Idempotent per boundary (FR-PG-024) — the second invocation is a no-op (guarded by the boundary marker), so a mid-roll save→restore→re-run does not double-apply. |
+
+#region VersionHistory
+| Version | Date | Author | Notes |
+|---|---|---|---|
+| 0.1 | 2026-07-23 | — | Initial FR set (FR-PG-001..024), data structures, failure modes F1..F6. Status IN REVIEW. |
+| 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
+#endregion

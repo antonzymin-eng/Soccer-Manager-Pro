@@ -3,7 +3,7 @@
 **Created:** July 22, 2026
 **Last Updated:** July 22, 2026 (v0.1 — promoted from `docs/tracking/squad-player-data-design.md` v0.6)
 **Version:** 0.1
-**Status:** IN REVIEW
+**Status:** APPROVED
 **Source:** `docs/tracking/squad-player-data-design.md` v0.6 (July 18, 2026), AR-1..AR-2 converged + T0/T1/T2/T3 implementation-time corrections
 
 ---

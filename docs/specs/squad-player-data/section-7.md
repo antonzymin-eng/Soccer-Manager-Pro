@@ -3,7 +3,7 @@
 **Created:** July 22, 2026
 **Last Updated:** July 22, 2026 (v0.1)
 **Version:** 0.1
-**Status:** IN REVIEW
+**Status:** APPROVED
 
 ---
 
@@ -52,11 +52,23 @@ A coherently-ordered squad reproduces roster order, so the default path stays ne
 - **On-disk save-format squad persistence, transfer market, aging/training** — Stage-1+/Stage-2
   economy features (master development plan §4.3/§4.4), out of scope per §0. The Stage-0
   `SquadFileLoader` text import is human-authoring only, not a determinism-pinned wire format.
-- **Per-spec GK #11 / Heading #10 projections** — deferred until those specs are engine-wired
-  (projection-design KD-P8); forward-compatible field mappings are recorded but not projected.
+
+## 7.3 Update — GK #11 / Heading #10 projections LANDED (July 22, 2026)
+
+The KD-P8 deferral above (recorded at T1/T2, when `MatchEngine` built neither the GK nor the
+Heading orchestrator, so a `ToGoalkeeper`/`ToHeading` projection would have been a phantom consumer)
+is **closed**: Goalkeeper Mechanics #11 and Heading Mechanics #10 are now wired into the engine
+(opt-in Phase 1, default OFF), and `src/match-engine/PlayerAttributeProjection.cs` v1.2 adds
+`ToGoalkeeper` (int→float widen of the ten canonical GK fields) + `ToHeading` (raw
+`Heading`/`Strength`/`Balance` copy) — the projections are a live consumer of both orchestrators'
+`Commit*Intent` seams. Governed by `docs/tracking/gk-heading-engine-integration-design.md` (AR-1..AR-3
+converged). This makes the canonical record the source of truth for **every** per-spec attribute
+struct (#2/#5/#6/#7/#8/#10/#11/#13/#14), completing FR-SQ-001's single-source-of-truth guarantee for
+the GK/Heading structs the T1/T2 landing had left on the neutral seed.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial wiring status: T1/T2/T3/Phase-2/LineupSelector all LANDED; KD-4 mapping + Stage-1+ persistence deferred. |
+| 0.2 | 2026-07-22 | — | AR-2 M-1: the GK #11 / Heading #10 projection deferral (KD-P8) is stale — `PlayerAttributeProjection.cs` v1.2 landed `ToGoalkeeper`/`ToHeading` July 22 with the opt-in #10/#11 engine integration; new §7.3 records LANDED. Status APPROVED. |
 #endregion
