@@ -1,7 +1,30 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 23, 2026 (**Localization & Accessibility #49 (seam + template-contract slice)
+> **Last Updated:** July 23, 2026, later same day (**Player Progression & Lifecycle #28 authored +
+> advanced `→ IN REVIEW → APPROVED`** — Wave 2's first spec (the aging/lifecycle seam #30 KD-2/KD-6
+> already reserved a null slot for). Promoted from the converged design supplement
+> (`docs/tracking/player-progression-lifecycle-design.md` v0.3, AR-1 2M+2L → AR-2 3M → AR-3 clean) to a
+> full 11-file section set (FR-PG-001..024), then section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) →
+> AR-3 convergence. **Scope:** player lifecycle on the **world tick** — aging/decline/growth via a
+> CA/PA model over #27's `PlayerAttributes`, retirement, and regen/newgen production — as **one code
+> path with a config dial** (the deep curve reduces to the literal master-plan §4.3 step when off,
+> KD-8), driven by #30's day-advance loop + season-boundary roll at the seams #30 reserved. **KD-1**
+> pins a byte-exact **integer fixed-point** growth model: `[1,20]` attributes are the single source of
+> truth, `GrowthCursor` the only accumulator, CA a derived summary, PA the ceiling, and age is derived
+> from a single serialized `BirthWorldDay` (no discrete rollover — the PASS-1 M-1 fix collapsed a
+> two-representation age muddle). **KD-2** makes the #29 training seam a **method input defaulted to
+> neutral** (training is an *input* to #28's single growth function, no phantom interface). **KD-4**
+> keeps CA/PA in a #28-owned career-state block keyed by `PlayerId` (the complete `PlayerRecord` +
+> lifecycle overlay, serialize-don't-regenerate); **#27's canonical struct stays schema-untouched.**
+> **KD-5** flags retirement on the world tick but applies roster removal + regens only at the season
+> boundary (never mid-fixture). The #16 §3.4 cross-cite **promotes** the reserved `_RESERVED_0x20_` /
+> `SubsystemOrdinals` 82 rows → `DOMAIN_TAG_PLAYER_PROGRESSION = 0x20` (per-club `progression.regen`
+> stream, the #27 pattern; PASS-1 M-2 fix), ERR-028-001, filed at approval — no
+> `DETERMINISM_DIGEST_VERSION` bump. R-01..R-05 signed (§9 checklist v0.2); all 11 files
+> `Status: APPROVED`. **Approves the forward design** (the #21–#30 pre-T0 precedent); the §7 T-phase
+> plan is post-APPROVED. Count: **32 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026 (**Localization & Accessibility #49 (seam + template-contract slice)
 > authored + advanced `→ IN REVIEW → APPROVED`** — Wave 1's final item (the seam #38's KD-5 was written
 > against). Promoted from the converged design supplement (`docs/tracking/localization-seam-template-design.md`
 > v0.2, AR-1 2H+1M+1L → AR-2 clean) to a full 11-file section set (FR-LC-001..020 + FR-LC-008a), then
@@ -185,6 +208,7 @@
 | 25 | Positional Rotations | `positional-rotations/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 26 | Tactical Presets & AI-Manager Selection | `tactical-presets/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 27 | Squad / Player Data Layer | `squad-player-data/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 28 | Player Progression & Lifecycle | `player-progression-lifecycle/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 30 | Season & Competition Loop | `season-competition-loop/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 37 | Match Analytics & Statistics | `match-analytics-statistics/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 38 | UI / Client Framework (framework slice) | `ui-client-framework/` | 6¹ | APPROVED | Jul 22, 2026 |
