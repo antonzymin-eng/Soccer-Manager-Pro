@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.3 — back-prop ERR-030-002 tick-order injuries seam; prior v0.2 PASS-1)
-**Version:** 0.3
+**Last Updated:** July 22, 2026 (v0.4 — back-prop ERR-030-003 boundary-roll finance seam; prior v0.3 ERR-030-002, v0.2 PASS-1)
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -179,6 +179,9 @@ RollToNextSeason():
     finalTable := Table.OrderedView()                 # (a) finalize
     Board.Evaluate(finalTable)                         # (b) board pass/fail + job-security
     # (a')  <-- #43 promotion/relegation transform inserts HERE (FR-SN-031), not built now
+    # (b')  <-- #40 finance settlement inserts HERE (ERR-030-003) — after (a') so budgets reflect the
+    #           post-promotion division; SettleFinances(financeState[club], position, clubCount, board)
+    #           per club. NULL SEAM until #40 T2 wires it; #40 references #30 never (one-way #30 → #40).
     nextSeed := DeriveNextSeasonSeed(Seed, SeasonNumber)
     Fixtures := FixtureScheduler.Generate(ClubIds, nextSeed)   # (c) regenerate
     AdvanceAges()                                       # (d) #28 — NULL SEAM today
@@ -190,7 +193,10 @@ RollToNextSeason():
 Each step mutates a well-defined slice of `SeasonState`; the whole transform is a pure function of
 the prior `SeasonState` + `nextSeed`, so a save taken mid-roll restores to the same continuation
 (restartable, FR-SN-029). #43's promotion/relegation is a transform inserted at (a'), between
-finalize and regenerate, leaving (a)/(b)/(c)/(d)/(e) unchanged (FR-SN-031).
+finalize and regenerate, leaving (a)/(b)/(c)/(d)/(e) unchanged (FR-SN-031). #40's finance settlement
+(ERR-030-003, at #40's approval) is a NULL SEAM inserted at (b'), after (a') so budgets reflect the
+post-promotion division and before (c); it too leaves the surrounding steps unchanged and keeps the
+transform a pure function of `SeasonState + nextSeed` (per-club `ClubFinances` prior state carried in).
 
 ## 3.6 Season-state sub-blob codec (FR-SN-019..023)
 
@@ -243,4 +249,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 0.1 | 2026-07-22 | — | Initial algorithms: circle-method fixtures, table + tie-break, day-advance order, boundary roll, season codec, worked 4-club schedule. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 | 0.3 | 2026-07-23 | — | Back-prop ERR-030-002 (at #41 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the injuries null seam as step 4 (after #28/#29, before the world-day tick); prose updated (steps 1–4). |
+| 0.4 | 2026-07-23 | — | Back-prop ERR-030-003 (at #40 approval): §3.5 `RollToNextSeason` gains the #40 finance-settlement null seam at (b') (after (a') #43 point, before (c) regenerate); prose updated. |
 #endregion

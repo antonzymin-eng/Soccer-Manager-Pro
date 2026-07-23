@@ -1,7 +1,20 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 23, 2026, latest same day (**Injuries & Medical #41 authored + advanced
+> **Last Updated:** July 23, 2026, latest same day (**Club Finances & Economy #40 authored + advanced
+> `→ IN REVIEW → APPROVED`** — Wave 2's fourth spec (per-club budgets/wage ledger/prize money; the
+> counterparty-constraint layer #31 reads). Promoted from the converged design supplement
+> (`docs/tracking/club-finances-economy-design.md` v0.2, design-AR 1M+1L → clean) to an 11-file section set
+> (FR-FN-001..028); section-file **AR-1 (1M — wage `ApplyTransaction` conflated cash with commitment; now a
+> wage transaction moves the `WageBillAggregate` liability only, cash items move `Balance` only) → AR-2 →
+> AR-3 clean, CONVERGENCE.** **KD-1/KD-6:** `SettleFinances` is a season-boundary step (`budget =
+> f(finalTablePosition, prizeMoney)`, pure integer, no per-day step) inserted at #30's `RollToNextSeason()`
+> step (b') after the (a') #43 point (ERR-030-003). **KD-2:** minimal tier is draw-free, so `_RESERVED_0x29_`
+> / `SubsystemOrdinals` 91 **stay RESERVED, not promoted** (ERR-040-001, the #29 `0x21` precedent). **KD-3:**
+> one-way #31→#40 read-only budget query + a #40-owned `ApplyTransaction`. **KD-7:** `FINANCE_SAVE_FORMAT_
+> VERSION` season-save sub-blob (not `WORLD_STORE_FORMAT_VERSION`). Integer currency throughout; #34/#45
+> deferred via identity `BoardModifier`. Count: **35 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Injuries & Medical #41 authored + advanced
 > `→ IN REVIEW → APPROVED`** — Wave 2's third spec (injury occurrence/severity/recovery on the world
 > tick). Promoted from the converged design supplement (`docs/tracking/injuries-medical-design.md` v0.2,
 > design-AR 2M+2L → clean) to a full 11-file section set (FR-MD-001..027); section-file **AR-1 (1M — float
@@ -250,6 +263,7 @@
 | 30 | Season & Competition Loop | `season-competition-loop/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 37 | Match Analytics & Statistics | `match-analytics-statistics/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 38 | UI / Client Framework (framework slice) | `ui-client-framework/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 40 | Club Finances & Economy | `club-finances-economy/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 41 | Injuries & Medical | `injuries-medical/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
 

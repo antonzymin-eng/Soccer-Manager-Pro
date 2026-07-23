@@ -1,7 +1,12 @@
 # Club Finances & Economy #40 — Design Supplement
 
 > **Created:** July 23, 2026
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row).
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** (July 23, 2026) — 11-file section set at
+> `docs/specs/club-finances-economy/` (FR-FN-001..028) → section-file AR-1 (1M wage cash/liability split) →
+> AR-2 → AR-3 CONVERGENCE → R-01..R-05 signed → **APPROVED**; `SPEC_INDEX.md` row 40 added; ERR-040-001
+> (`_RESERVED_0x29_`/91 reserved) + ERR-030-003 (#30 boundary-roll step (b')) filed. Section files are
+> authoritative; this supplement is the design-history record. (Original status line follows for history.)
+> DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row).
 > **Candidate spec:** #40 · **FR prefix:** FR-FN (grep-verified unclaimed across `docs/specs/**`).
 > **Master-plan home:** §5 Stage 3 financials · **Wave:** 2.
 > **Determinism:** **minimal tier is fully deterministic — no draw. `_RESERVED_0x29_` / `SubsystemOrdinals`
@@ -264,4 +269,5 @@ public readonly struct FinancesViewModel { /* balance / budgets / wage bill */ }
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 23, 2026 | Initial design supplement from spec-plan v0.2. |
+| v0.3 | July 23, 2026 | PROMOTED — 11-file section set authored + APPROVED (section-file AR-1 1M wage cash/liability split → AR-2 → AR-3 CONVERGENCE). |
 | v0.2 | July 23, 2026 | AR-1 (1M+1L): **M1 (extensibility/ordering)** — KD-6 placed #40's settlement in the same finalize→regenerate region FR-SN-031 reserves for #43 promotion/relegation without pinning order; since budget depends on post-promotion division, the finance step (b') is now explicitly positioned AFTER the (a') #43 point (`board → #43 (a') → finance (b') → regenerate`), forward-compatible and collision-free. L1 §6 `SettleFinances` doc — clarified it carries Balance forward + adds position-keyed prize money + sets budget ceilings. |

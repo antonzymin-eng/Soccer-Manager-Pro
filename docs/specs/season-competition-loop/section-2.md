@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.3 — back-prop ERR-030-002 tick-order injuries seam; prior v0.2 PASS-1)
-**Version:** 0.3
+**Last Updated:** July 22, 2026 (v0.4 — back-prop ERR-030-003 boundary-roll finance seam; prior v0.3 ERR-030-002, v0.2 PASS-1)
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -84,7 +84,7 @@ forward design (nothing is built yet).
 |---|---|---|---|
 | FR-SN-029 | The season-boundary roll MUST be a single restartable, round-trip-deterministic transform (finalize table → evaluate board → regenerate fixtures for the next season → advance ages [null seam] → reset table). | MUST | KD-6 |
 | FR-SN-030 | A two-run simulated season from the same seed MUST reach a byte-identical final table (end-to-end determinism). | MUST | — |
-| FR-SN-031 | The boundary roll MUST preserve a well-defined insertion point for #43's promotion/relegation transform (between "finalize table" and "regenerate fixtures") without changing the surrounding steps. | SHOULD | KD-6 |
+| FR-SN-031 | The boundary roll MUST preserve well-defined insertion points between "finalize table" and "regenerate fixtures" without changing the surrounding steps: (a') #43's promotion/relegation transform, and (b') #40's finance-settlement step (appended by ERR-030-003 at #40's approval, positioned after (a') so budgets reflect the post-promotion division). | SHOULD | KD-6 |
 
 ### Command surface & view model
 
@@ -136,4 +136,5 @@ forward design (nothing is built yet).
 | 0.1 | 2026-07-22 | — | Initial FR set FR-SN-001..034, data structures, failure modes F1–F6, from supplement v0.2. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 | 0.3 | 2026-07-23 | — | Back-prop ERR-030-002 (at #41 approval): FR-SN-034 tick-order null-seam enumeration extended to include Injuries #41 (appended as step 4). |
+| 0.4 | 2026-07-23 | — | Back-prop ERR-030-003 (at #40 approval): FR-SN-031 now enumerates two insertion points — (a') #43 promo/rel and (b') #40 finance settlement (after (a')). |
 #endregion
