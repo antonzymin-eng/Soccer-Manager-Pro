@@ -1,7 +1,31 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 23, 2026, later same day (**Player Progression & Lifecycle #28 authored +
+> **Last Updated:** July 23, 2026, latest same day (**Training System #29 authored + advanced
+> `→ IN REVIEW → APPROVED`** — Wave 2's second spec (the training seam #28 KD-2 reserved and #30's
+> day-advance slot-2 null seam). Promoted from the converged design supplement
+> (`docs/tracking/training-system-design.md` v0.4, design-AR **1H+1M+2L** → AR-2/AR-3 clean) to a full
+> 11-file section set (FR-TR-001..024), then section-file PASS-1 (**0H+1M**) → AR-2 → AR-3 convergence.
+> **Scope:** weekly-directed, **daily-accrued** training on the **world tick** — a per-player focus drives
+> a deterministic **conditioning** cursor + a **training-fatigue** accumulator, and (deep tier) a granular
+> per-attribute growth **input to #28's curve** — as one code path with a dial (Stage-2 minimal = the
+> identity the deep tier extends, KD-8). **KD-1 (headline)** reconciles world-tick training-fatigue with
+> match-tick fatigue (`1 − AerobicPool`) via a **single accumulator + a pure one-directional projection**
+> into the match-boot caller-supplied starting fatigue (the `PlayerAttributeProjection` KD-P4 seam) — no
+> shared counter, no write-back, not stored (save-exact). **KD-2** keeps attribute mutation single-owned by
+> #28: a **pure `ComputeTrainingInput`** feeds #28's `GrowthProjection` at #30's slot-1 seam (no reorder, no
+> staleness); #29 never writes `PlayerAttributes` and #28's assembly stays schema-untouched. **KD-6:** #29
+> is **fully deterministic — NO RNG stream**, so `_RESERVED_0x21_` / `SubsystemOrdinals` 83 **stay reserved**
+> (deliberately NOT promoted, unlike #28's `0x20` — #29 has no genuine draw site; a zero-draw stream would
+> be the FR-LW-031 phantom class). The design-AR caught this self-contradiction (H — the draft invented a
+> `training.session` stream while citing FR-LW-031) and a Form/Fitness two-cursor muddle (M — collapsed to
+> one `Condition` cursor; match-driven "form" deferred to its owner); the section-file PASS-1 caught a day-0
+> idempotency sentinel collision (M — fixed with a `uint.MaxValue` NOT_ADVANCED sentinel + `Create` factory).
+> #16 §3.4 (v1.0.10) records the no-promotion (ERR-029-001, RESOLVED); no `DETERMINISM_DIGEST_VERSION` bump.
+> R-01..R-05 signed (§9 checklist v0.2); all 11 files `Status: APPROVED`. **Approves the forward design**
+> (the #21–#30 pre-T0 precedent); the §7 T-phase plan is post-APPROVED. Count: **33 APPROVED / 0 IN REVIEW
+> / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, later same day (**Player Progression & Lifecycle #28 authored +
 > advanced `→ IN REVIEW → APPROVED`** — Wave 2's first spec (the aging/lifecycle seam #30 KD-2/KD-6
 > already reserved a null slot for). Promoted from the converged design supplement
 > (`docs/tracking/player-progression-lifecycle-design.md` v0.3, AR-1 2M+2L → AR-2 3M → AR-3 clean) to a
@@ -209,6 +233,7 @@
 | 26 | Tactical Presets & AI-Manager Selection | `tactical-presets/` | 6¹ | APPROVED | Jul 10, 2026 |
 | 27 | Squad / Player Data Layer | `squad-player-data/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 28 | Player Progression & Lifecycle | `player-progression-lifecycle/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 29 | Training System | `training-system/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 30 | Season & Competition Loop | `season-competition-loop/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 37 | Match Analytics & Statistics | `match-analytics-statistics/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 38 | UI / Client Framework (framework slice) | `ui-client-framework/` | 6¹ | APPROVED | Jul 22, 2026 |
