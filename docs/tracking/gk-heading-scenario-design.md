@@ -150,10 +150,127 @@ DeterministicSim, PlayerDatabase, HeadingMechanics, GoalkeeperMechanics.
   invariants, and the flag-off no-commit contrast are all locked.
 - Full dotnet gate green; no production `MatchEngine.cs` change; no `SNAPSHOT_SCHEMA_VERSION` change.
 
+---
+
+## 5. Detailed implementation plan
+
+### 5.1 Files (mirror the `MatchEngineAwayTeam*` pair)
+
+- `src/match-engine/tests/MatchEngineGkHeadingScenarios.cs` — `internal static class
+  MatchEngineGkHeadingScenarios`, namespace `TacticalDirector.MatchEngine`. `BuildIndex()` returns a
+  `ScenarioIndex` with **one** registered `ClosedLoopScenario` (R3 decided: one scenario, multiple runs
+  in its body — the away-team single-scenario pattern; cross-spec arity ≥2 satisfied by 5 owning specs).
+- `src/match-engine/tests/MatchEngineGkHeadingScenarioTests.cs` — `[TestFixture] public sealed class
+  MatchEngineGkHeadingScenarioTests`: (1) runs the scenario through `ScenarioRunner.Run(path, seed)` →
+  `Assert.AreEqual(ScenarioStatus.Passed, …)`; (2) direct two-run flag-on determinism digest test;
+  (3) direct flag-on restore-continuity test; (4) direct save-trigger + header-trigger commit + flag-off
+  no-commit tests (clear per-predicate failure messages, the capstone/away-team convention).
+
+No asmdef change — `match-engine-tests.asmdef` already references TestingStrategy, DeterministicSim,
+PlayerDatabase, HeadingMechanics, GoalkeeperMechanics, AgentMovement.
+
+### 5.2 Registration constants
+
+```
+Path  = SCENARIO_PATH_CROSS_SPEC_PREFIX + "gk-heading-flag-on-composition"
+Seed  = 0x11ED9A5EC0DEBA5EUL         // distinct from the away-team/capstone seeds
+Tier  = TestTier.TierB               // Simulation layer
+Owning specs = { 2, 10, 11, 16, 19 } // #2 for the on-pitch bound (KD-2)
+NumTicks = 300                       // 5 s @ 60 Hz; 300 / AI_PHASE_STRIDE = 50 strides
+RestoreSaveTick = 180 ; RestoreContinueTicks = 120   // 180 + 120 = 300
+```
+
+### 5.3 Scenario body — the runs (each builds a fresh engine; only the trigger/flag-off runs mutate)
+
+- **`RunFreePlayFlagOn(seed, ticks)` → `byte[][]` digest chain + structural observations.** Pure:
+  `new MatchEngine(seed)` → `EnableGkHeading()` → loop `RunTick()`, record `CurrentSnapshotDigest`,
+  and per tick track (a) ball finite + on-pitch, (b) every agent finite + on-pitch (the away-team
+  `AgentView` bound, ± `AgentBufferM` + `BoundsEpsilonM`). **No `TestOnly_*` mutation** (KD-4).
+- **`FireTriggerThroughPipeline(seed, kind)` → bool committed.** The KD-3 natural-pipeline driver, and
+  the whole reason this is a *composition* lock rather than a re-run of the unit seam test:
+  ```
+  var e = new MatchEngine(seed); e.EnableGkHeading();
+  for (int i = 0; i < AI_PHASE_STRIDE; i++) {         // ≤6 ticks ⇒ exactly one stride tick
+      ForceStimulus(e, kind);                          // re-forced each tick so physics drift can't
+      e.RunTick();                                     //   move the loose ball out of trigger range
+      if (Committed(e, kind)) return true;             //   before the stride tick's AI phase reads it
+  }
+  return false;
+  ```
+  The commit happens **inside `RunTick`'s `RunAiPhase → DriveGkHeadingTactical`** (verified at
+  `MatchEngine.cs:2181`) — the phase pipeline, not a directly-called drive. Phase order (AI=2 before
+  Physics=3) guarantees the forced ball is read before physics moves it.
+  - Save stimulus: `ForceBallLoose((5, 34, 0.11), (-10, 0, 0))` (team-0 keeper defends x=0; the unit
+    test's proven geometry). `Committed` = `TestOnly_LastCommittedSaveAttrs.HasValue`.
+  - Header stimulus: `ForceBallLoose((agentPos.x, agentPos.y, 1.0), zero)` for the first outfield
+    agent, recomputed at that agent's **current** position each tick. `Committed` =
+    `TestOnly_LastCommittedHeaderAttrs.HasValue`.
+- **`FlagOffIgnoresStimulus(seed, kind)` → bool committed.** Identical loop, `MatchEngine` **without**
+  `EnableGkHeading()`. Must return **false** — `DriveGkHeadingTactical` is a no-op while the flag is
+  off, so the same stimulus commits nothing (KD-6 non-vacuous contrast: same stimulus, opposite flag).
+- **`RestoreContinuityMatches(seed, N, K)` → bool.** Reference = `RunFreePlayFlagOn(seed, N+K)` digest
+  chain. Split run: build a fresh flag-on engine, tick to N, `blob = MatchSaveManager.Encode(engine)`,
+  `restored = MatchSaveManager.Restore(blob)` (in-memory, disk-free — R2; Phase-2 restore reproduces
+  the flag-on mode), tick `restored` for K more, record its digests. Assert the split run's
+  digests[N+1 .. N+K] equal the reference's byte-for-byte.
+
+### 5.4 Envelope predicates (all in the scenario body; count > 0, FR-TS-030)
+
+| id | assertion |
+|----|-----------|
+| `tick-count` | `RunFreePlayFlagOn` advanced exactly `NumTicks` (`CurrentTick == NumTicks`) |
+| `ai-stride-cadence` | `AiPhaseRunCount == NumTicks / AI_PHASE_STRIDE` (10 Hz/60 Hz separation, flag on) |
+| `flagon-ball-on-pitch` | ball finite + within pitch±buffer every tick |
+| `flagon-agents-on-pitch` | every agent finite + within pitch±buffer every tick (#2) |
+| `flagon-two-run-determinism` | two `RunFreePlayFlagOn(seed)` chains byte-identical (harness echo) |
+| `save-trigger-commits-via-pipeline` | `FireTriggerThroughPipeline(seed, Save) == true` |
+| `header-trigger-commits-via-pipeline` | `FireTriggerThroughPipeline(seed, Header) == true` |
+| `flagoff-save-stimulus-no-commit` | `FlagOffIgnoresStimulus(seed, Save) == false` |
+| `flagoff-header-stimulus-no-commit` | `FlagOffIgnoresStimulus(seed, Header) == false` |
+| `flagon-restore-continuity` | `RestoreContinuityMatches(seed, 180, 120) == true` |
+
+Each predicate carries a diagnostic detail string (first-bad tick / agent) on failure, InvariantCulture
+(the away-team convention). Every value is read through existing public / `internal TestOnly_*` seams —
+**no new production surface** (KD-1). The `context.RunSeed` is the KD-7-seeded run seed; each helper is
+handed that seed so the whole scenario is reproducible and its two-run predicates compare like with like.
+
+### 5.5 Test file assertion (runner-only, the away-team precedent)
+
+One test — `sim_crossspec_gk_heading_flag_on_composition` — runs the scenario through
+`ScenarioRunner.Run(CompositionPath, CompositionSeed)` and asserts `ScenarioStatus.Passed`, mirroring
+`MatchEngineAwayTeamTests` exactly (§2). Legibility on failure is covered by the ScenarioRunner: a
+failed predicate returns via `result.Diagnostics` naming the exact predicate id + its detail string
+(first-bad tick / diverge tick), so a separate direct-mirror test per predicate adds no failure-signal
+the diagnostics don't already carry. (An earlier draft of this §5.5 listed five direct mirror tests;
+that contradicted §2's "mirror the away-team pair exactly" — reconciled to runner-only, the code's
+choice, at implementation.)
+
+### 5.6 Non-goals / invariants held
+
+- No production `MatchEngine.cs` edit; no `SNAPSHOT_SCHEMA_VERSION` change; no asmdef change.
+- The scenario adds Simulation-layer composition coverage; the unit suite (`MatchEngineGkHeadingTests`,
+  `MatchEngineSnapshotRestoreTests`) is unchanged and remains the per-function authority.
+- Determinism/restore runs never touch a `TestOnly_*` mutation seam; only the trigger/flag-off runs do,
+  and they are isolated engines.
+
+### 5.7 Edge cases the plan pins
+
+- **Stride alignment** (R1): the ≤`AI_PHASE_STRIDE`-iteration re-forcing loop is offset-independent — it
+  does not assume which residue of `CurrentTick` is a stride tick; it simply keeps the stimulus fresh
+  until one AI phase runs. If the loop exits without a commit, the predicate fails loud (not a silent
+  pass) — surfacing a real regression if the trigger geometry ever stops firing.
+- **Latch semantics**: `TestOnly_LastCommitted*Attrs` is a latched observation; `HasValue` stays true
+  after the first commit, so the loop's early-return is correct and re-forcing cannot un-commit it.
+- **Restore boundary**: the save at tick N is taken on a pure free-play engine (no pending stimulus), so
+  the inject-vs-save ordering hazard the AR-1 flagged cannot arise (KD-4 keeps stimulus out of this run).
+
 #region VersionHistory
 <!--
 | Version | Date       | Author | Notes                                            |
 | 0.1     | 2026-07-23 | —      | Initial high-level outline (pre-adversarial-review). |
 | 0.2     | 2026-07-23 | —      | AR-1 (0H+3M+2L): separated determinism/restore (free-play, no mutation) from the trigger stimulus; trigger now fires through the natural RunTick AI phase (composition, not the TestOnly_Drive seam); flag-off contrast bound to the same stimulus (was vacuous); owning specs +#2 for the on-pitch bound; net-new-vs-unit-suite delta stated. AR-2 sweep clean — CONVERGENCE. |
+| 0.3     | 2026-07-23 | —      | §5 detailed implementation plan added: files, registration constants, run helpers (free-play / trigger-through-pipeline / flag-off / restore-continuity), the 10-predicate envelope table, test-file assertions, and the pinned edge cases (offset-independent stride loop, latch semantics, restore boundary). |
+| 0.4     | 2026-07-23 | —      | Plan AR-1 (0H+0M+3L) — CONVERGENCE. Core mechanism verified against source: DriveGkHeadingTactical (RunAiPhase:2181) reads live _ball/_possessingAgentId, and nothing between AI-phase entry and the drive mutates them, so a forced ball fires the trigger through the pipeline. Lows folded into the implementation: trigger loop uses 2×AI_PHASE_STRIDE for margin; restore compares reference[N+j] vs split[j]; header red-card edge accepted (fails loud). |
+| 1.0     | 2026-07-23 | —      | IMPLEMENTED + code AR-1 (0H+0M+3L) — CONVERGENCE. New tests/MatchEngineGkHeadingScenarios.cs + MatchEngineGkHeadingScenarioTests.cs. Full dotnet gate (SDK 8.0.129 via apt): PASSED, 0 failures (305 match-engine tests; whole tree green). Code AR verified against source: the commit-attr writers are reachable only via RunTick's AI phase (non-tautological trigger predicates), the flag-off contrast is non-vacuous (same stimulus commits flag-on), flagon-restore-continuity genuinely locks Phase-2 v18 flag-on snapshot completeness, and no state leaks across the sequential engine boots. Lows: §5.5 reconciled to the away-team runner-only precedent (this row); reference-chain recompute in RestoreContinuityMatches (correct, minor) + FirstOutfieldAgent -1 fail-loud (can't happen at kickoff) left as-is. |
 -->
 #endregion
