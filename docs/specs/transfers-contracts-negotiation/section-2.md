@@ -1,8 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-1 fix pass; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — AR-3 fix pass; prior v0.2 AR-1, v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -11,13 +11,13 @@
 
 | ID | Requirement | Level | KD |
 |---|---|---|---|
-| FR-TX-001 | The Stage-2 counterparty valuation MUST be a **pure deterministic integer function** of #27 `PlayerAttributes` + `Age` + a club-need signal — no RNG, no #33 read, no #28 CA read. | MUST | KD-1 |
-| FR-TX-002 | Personality (#33) and CA/PA (#28) MUST enter only at the deep tier as a **multiplicative** bias on the FR-TX-001 identity; with `deepTransfersEnabled` off the bias MUST be exactly `1000‰` (identity). | MUST | KD-1 |
+| FR-TX-001 | The Stage-2 counterparty valuation MUST be a **pure deterministic integer function** of #27 `PlayerAttributes` + `Age` — no RNG, no #33 read, no #28 CA read, no club-need input at minimal. | MUST | KD-1 |
+| FR-TX-002 | Club-need, personality (#33), and CA/PA (#28) MUST enter only at the deep tier as a **multiplicative** bias on the FR-TX-001 identity; with `deepTransfersEnabled` off every bias (`needMult`, `personalityMult`, CA-swap) MUST be exactly `1000‰` / the #27 mean (identity). | MUST | KD-1 |
 | FR-TX-003 | `EvaluateOffer(in Offer, long counterpartyValuation)` MUST resolve accept/reject deterministically at minimal (no draw); a `#33`-unconfigured negotiation MUST reproduce the FR-TX-001 valuation exactly. | MUST | KD-1 |
-| FR-TX-004 | #31 MUST read the club spending ceiling only via #40's `AvailableTransferBudget(in ClubFinances) → TransferBudget` (read-only). | MUST | KD-2 |
-| FR-TX-005 | #31 MUST commit an accepted deal's money only via #40's `ApplyTransaction` — a buy posts `{Debit,TransferFee,fee}` + `{Debit,PlayerWage,inWage}`; a sell posts `{Credit,TransferFee,fee}` + `{Credit,PlayerWage,outWage}`. #31 MUST NOT write `ClubFinances` fields directly. | MUST | KD-2 |
+| FR-TX-004 | #31 MUST read the club spending ceiling only via #40's `AvailableTransferBudget(in ClubFinances) → long` (read-only; returns the static `TransferBudget` field). | MUST | KD-2 |
+| FR-TX-005 | #31 MUST commit an accepted deal's money only via #40's `ApplyTransaction` — at minimal a buy posts **only** `{Debit,TransferFee,fee}` and a sell posts **only** `{Credit,TransferFee,fee}` (fee-only, preserving #40 FR-FN-015). The `PlayerWage` posts (buy `{Debit,PlayerWage,inWage}` / sell `{Credit,PlayerWage,outWage}`) are **deep-tier** (behind `deepTransfersEnabled`, §7). #31 MUST NOT write `ClubFinances` fields directly. | MUST | KD-2 |
 | FR-TX-006 | #31 MUST NOT maintain a parallel cash ledger and MUST NOT expect `TransferBudget` to decrement as `ApplyTransaction` calls accumulate (the ceiling is `SettleFinances`-only, FR-FN-003/004). | MUST | KD-2 |
-| FR-TX-007 | #31 MUST own a per-club `committedSpendThisWindow` counter (a spend-against-ceiling accumulator, distinct from #40's `Balance`/`WageBillAggregate`) for the affordability gate, reset to `0` each window open. | MUST | KD-2 |
+| FR-TX-007 | #31 MUST own a per-club `committedSpendThisWindow` counter (a spend-against-ceiling accumulator, distinct from #40's `Balance`/`WageBillAggregate`) for the affordability gate, reset to `0` at the **season boundary** (one window at minimal ⇒ boundary = window open; a deep winter window resets it at each window open). | MUST | KD-2 |
 | FR-TX-008 | A buy MUST fail loud (F1) when `fee > AvailableTransferBudget − committedSpendThisWindow`. | MUST | KD-2/F1 |
 | FR-TX-009 | Every gate (window open, counterparty accepts, destination `Squad` free slot, affordability) MUST pass **before any mutation**; the commit (finance posts + roster move + hook) MUST be a single atomic block leaving finances and roster untouched on any failed gate (F2). | MUST | KD-2/KD-7/F2 |
 | FR-TX-010 | The offer/response seam (`Offer`, `NegotiationOutcome`, `EvaluateOffer`) MUST be **counterparty-generic** (keyed on a caller-supplied valuation input) so #32/#34 reuse it without duplication. | MUST | KD-3 |
@@ -33,19 +33,21 @@
 | FR-TX-020 | A transfer action outside an open window MUST fail loud (F4, `IsWindowOpen`). | MUST | KD-6/F4 |
 | FR-TX-021 | A committed transfer MUST re-key the moved player's club-scoped `PlayerId` via a #30-owned mid-season roster-commit entry point; #31 MUST NOT mutate #27 `Squad`/`PlayerRecord` directly. | MUST | KD-7 |
 | FR-TX-022 | The #30 roster-commit MUST (a) allocate a free `localIndex` in the destination `Squad` — **fail loud (F5)** if full — (b) move the `PlayerRecord`, (c) dispatch a roster-move hook each per-`PlayerId` system subscribes to. | MUST | KD-7/F5 |
-| FR-TX-023 | #31 MUST migrate **only** its own `Contract` in the roster-move hook (`OnPlayerRekeyed`); #28 CA/PA and #33 morale MUST migrate their own keyed state; #31 MUST NOT migrate another system's state. | MUST | KD-7 |
+| FR-TX-023 | #31 MUST migrate **only** its own `Contract` state on a re-key; #28 CA/PA and #33 morale MUST migrate their own keyed state; #31 MUST NOT migrate another system's state. For a managed↔external transfer (every minimal case) the managed `Contract` is created (buy, post-commit `InsertContract`) or removed (sell, **pre-commit** `RemoveContract`) by `SubmitBid`, so `OnPlayerRekeyed` is a **no-op** for #31 — it moves a `Contract` old→new **only** for an intra-managed-club re-key (both ids in the managed club; not reached at minimal). This avoids double-handling the contract the sell branch is removing. | MUST | KD-7 |
 | FR-TX-024 | A season with **no** manager transfer action MUST advance byte-identical to pre-#31 (no autonomous transfer producer at minimal). | MUST | KD-8 |
 | FR-TX-025 | A manager transfer command (`SubmitBid`) MUST be the only initiator of a minimal transfer; it MUST be window- and budget-gated (FR-TX-008/020). The UI MUST drive it through this command seam, never mutate #31 state directly. | MUST | KD-8 |
 | FR-TX-026 | A bid on a `PlayerId` outside #27's club universe, or a malformed `Contract`/`Offer` (negative fee/wage, non-positive length), MUST fail loud (F6) at the consuming seam. | MUST | F6 |
 | FR-TX-027 | Round-trip save→restore MUST be field-identical for `Contract` + window cursor + `committedSpendThisWindow`, including a mid-window save (and, deep, a mid-negotiation save); a full window's activity MUST be two-run deterministic from a fixed world seed. | MUST | KD-4/KD-8 |
-| FR-TX-028 | Contracts MUST survive `RollToNextSeason` (durable career state); the window cursor + `committedSpendThisWindow` MUST reset at the season boundary; a retired/regenerated `PlayerId`'s contract MUST be removed/inserted in lockstep with #28's roster lifecycle. | MUST | KD-4/KD-7 |
+| FR-TX-028 | At career start the managed club's #27 squad MUST be seeded with one `Contract` per player (default `[GT]` terms, F6/F7-valid — §3.8) so the sell/aging flows have a populated set. Contracts MUST survive `RollToNextSeason` (durable career state); at the roll each managed contract's `LengthSeasons` MUST be decremented, and a contract that **would** reach `0` MUST be **removed** (never stored as `0` — F7), the player becoming un-contracted (deep-tier re-signing/free-agency handles the sequel; §3.7). The window cursor + `committedSpendThisWindow` MUST reset at the season boundary; a retired/regenerated `PlayerId`'s contract MUST be removed/inserted in lockstep with #28's roster lifecycle. | MUST | KD-4/KD-7 |
 
 ## 2.2 Data structures
 
 ```csharp
 // Durable contract state (serialized, KD-4). Integer amounts; deep clauses APPEND (FR-TX-015).
 // Contract END is a SINGLE source of truth — LengthSeasons (remaining seasons, decremented at
-// RollToNextSeason, expires at 0). Absolute-world-day precise expiry is a deep-tier option, NOT dual-stored.
+// RollToNextSeason; a contract that WOULD reach 0 is REMOVED, never stored as 0 — F7 / §3.7). WagePerPeriod
+// is the negotiated term (recorded here), NOT posted to #40's wage bill at minimal (deep-tier, FR-TX-005).
+// Absolute-world-day precise expiry is a deep-tier option, NOT dual-stored.
 public struct Contract
 {
     public int  PlayerId;          // #27 club-scoped id (clubId*CLUB_SQUAD_SIZE+localIndex)
@@ -83,7 +85,7 @@ public sealed class TransfersState { /* managed-club contracts keyed by PlayerId
 | **F5** | Destination `Squad` full (no free `localIndex`) at roster commit | **Fail loud** — a squad-size-cap violation is a bug, caught before any finance post (FR-TX-022). |
 | **F6** | Bid on a `PlayerId` outside #27's club universe, or malformed `Contract`/`Offer` (negative fee/wage, `LengthSeasons ≤ 0`) | **Fail loud** — magnitude/identity validity is a caller-contract bug (the #27 `SquadFileLoader` / #40 F2 precedent). |
 | **F7** | `default(Contract)` (`LengthSeasons = 0`) reaching a consuming seam | **Fail loud** — `LengthSeasons = 0 ∉ (0,∞)` catches a zero-value-trap default record at insertion validation (the #33 F4 precedent). `PlayerId = 0` alone is not the trap (it is a real club-0/local-0 id); `LengthSeasons` is the discriminator. |
-| **F8** | `ApplyTransaction` reversal larger than the current aggregate (a sell Credit-off exceeding `WageBillAggregate`) | Delegated to #40's F1 (fail loud) — #31 does not repair #40 state. |
+| **F8** | *(deep-tier)* `ApplyTransaction` wage reversal larger than the current aggregate (a sell Credit-off exceeding `WageBillAggregate`) | Delegated to #40's F1 (fail loud) — #31 does not repair #40 state. Only reachable once deep-tier wage posting is on (minimal is fee-only, FR-TX-005). |
 
 **Zero-value-trap discipline (KD-8/F7):** `Contract` has no `Create()` neutral (a contract is only ever
 constructed from an accepted `Offer`), so `default(Contract)` is invalid by design — `LengthSeasons = 0`
@@ -95,4 +97,5 @@ constructed by the command seam with an explicit direction, so the default is ne
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §2 (FR-TX-001..028, data structures, F1..F8). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1: `Offer` gains `CounterpartyClubId` (M1); `Contract` drops `ExpiryWorldDay` → single contract-end truth `LengthSeasons` (M3); `TransfersState` scoped to the managed club (M2); F7 note tightened. |
+| 0.3 | 2026-07-23 | — | AR-3: wage posting deferred to deep (FR-TX-005 fee-only at minimal, F8 deep-gated — H); FR-TX-023 makes `OnPlayerRekeyed` a no-op for managed↔external transfers (sell double-handling — M); FR-TX-001/002 drop club-need from the minimal function (deep bias — M); FR-TX-028 + `Contract` comment specify decrement-and-remove aging vs F7 (M); FR-TX-004 `→ long` (L); FR-TX-007 reset at the season boundary (L). AR-4: FR-TX-028 gains career-start contract seeding (§3.8 — M). |
 #endregion

@@ -1,8 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -51,9 +51,10 @@ produces a non-identity value (the #21 `TacticTranslation` / #41 `MedicalModifie
 ## 4.4 Save composition (KD-4)
 
 `TransfersSaveCodec.Encode(in TransfersState) → byte[]` produces the opaque sub-blob; the composition root
-appends it to #30's `SeasonSaveCodec` frame (a fourth sub-blob after world/season/match), and the outer
-`SEASON_SAVE_FORMAT_VERSION` bump (2 → 3) is coordinated with #30 at T1 (as #28/#29/#40/#41/#33 defer their
-outer bump). The codec mirrors the `SeasonSaveCodec` fail-loud posture exactly: version-gate first
+appends it to #30's `SeasonSaveCodec` frame as an additional opaque sub-blob, and the outer
+`SEASON_SAVE_FORMAT_VERSION` bump is coordinated with #30 at T1 (**exact version TBD** — #28/#29/#33/#40/#41
+each also defer an outer bump, so the number is assigned by whichever T-phase lands first, not hardcoded here).
+The codec mirrors the `SeasonSaveCodec` fail-loud posture exactly: version-gate first
 (`TRANSFERS_SAVE_FORMAT_VERSION`, F3), an overflow-safe `Require(offset, need, total)` bound against
 `total − offset` on every length-prefixed read, and a trailing-byte guard. The block is **opaque to
 `SeasonSaveCodec`** (it never parses it) and carries its own inner version gate — the world/season/match blobs
@@ -65,8 +66,9 @@ stay byte-untouched (FR-SN-020 preserved). Layout in Appendix B.
   route `SubmitBid`/transfer commands from the UI to #31; supply committed season/calendar values by copy;
   and route `RequestRosterCommit` to #30's roster owner. It MUST NOT let the UI mutate #31 state directly.
 - **#30** MUST, at the T-phase: (a) add the transfers tick-order null-seam slot (ERR-030-004, at approval —
-  §8); (b) build the mid-season `RequestRosterCommit` entry point + `DispatchRosterMoveHook` (KD-7, at T2);
-  (c) bump `SEASON_SAVE_FORMAT_VERSION` to 3 composing the sub-blob (T1). #30 stays producer-only for #22
+  §8); (b) build the mid-season `RequestRosterCommit` entry point + `DispatchRosterMoveHook` (KD-7, at T2 —
+  ERR-030-005); (c) bump `SEASON_SAVE_FORMAT_VERSION` (exact version coordinated at T1) composing the sub-blob.
+  #30 stays producer-only for #22
   (FR-SN-017 unaffected — #31 adds no #22 surface).
 - **#40** is consumed read-only (`AvailableTransferBudget`) + through its one mutation path
   (`ApplyTransaction`); #31 adds nothing to #40 (FR-FN-013 already names #31 the `ApplyTransaction` caller).
@@ -75,4 +77,5 @@ stay byte-untouched (FR-SN-020 preserved). Layout in Appendix B.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §4 (assembly/reference direction, file layout, the reusable seam, save composition, root/#30/#40 interface contracts). Status IN REVIEW. |
+| 0.2 | 2026-07-23 | — | AR-3 (L): outer `SEASON_SAVE_FORMAT_VERSION` no longer hardcoded "2 → 3" (coordinated at T1, exact version TBD — §4.4/§4.5); the T2 mid-season build cites ERR-030-005. |
 #endregion

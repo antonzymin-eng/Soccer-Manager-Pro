@@ -1,8 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 6: Performance
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** July 23, 2026 (v0.2 — AR-4 fix pass; prior v0.1 initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -20,9 +20,9 @@ command time), so a day with no manager action costs **zero** #31 work. `SubmitB
   a fixed number of integer ops, no allocation, no RNG.
 - **`EvaluateOffer`** — one integer comparison.
 - **`SubmitBid`** — the validate-all-first gate chain (window predicate, universe check, valuation,
-  affordability) + two `ApplyTransaction` posts + one `RequestRosterCommit` (a squad-slot allocation + a
-  record move + the hook dispatch): a fixed number of integer ops + one bounded roster mutation. No allocation
-  in the common path (the `Contract` insert is amortized).
+  affordability) + **one** `ApplyTransaction` post (the transfer fee — wages are deep, FR-TX-005) + one
+  `RequestRosterCommit` (a squad-slot allocation + a record move + the hook dispatch): a fixed number of integer
+  ops + one bounded roster mutation. No allocation in the common path (the `Contract` insert is amortized).
 - **`DeriveCliques`-style scans:** none — #31 has no graph derivation.
 
 ## 6.3 Player search
@@ -45,4 +45,5 @@ budget concern. No RNG stream registered at minimal (KD-5), so no stream-advance
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §6 (cadence, per-operation cost, player search, save cost, budget). Status IN REVIEW. |
+| 0.2 | 2026-07-23 | — | AR-4: `SubmitBid` cost corrected to **one** `ApplyTransaction` post (fee-only at minimal; wages deep, FR-TX-005). |
 #endregion

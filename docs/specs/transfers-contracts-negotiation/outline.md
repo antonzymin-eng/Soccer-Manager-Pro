@@ -1,8 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Outline
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial section-file set from design supplement v0.2)
-**Version:** 0.1
+**Last Updated:** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -32,8 +32,9 @@ agents/clauses/loans/wage-structures/rival bidding on one code path.
 
 ## Governing decisions (see §1)
 
-- **KD-1** — the Stage-2 valuation is a pure deterministic integer function over #27 attributes + age +
-  club-need; #33 personality / #28 CA enter the deep tier as multiplicative bias, never a replacement path.
+- **KD-1** — the Stage-2 valuation is a pure deterministic integer function over #27 attributes + age;
+  club-need, #33 personality, and #28 CA all enter the deep tier as multiplicative bias, never a replacement
+  path (each defaulting to `1000‰` / the #27 mean identity with `deepTransfersEnabled` off).
 - **KD-2** — #40 boundary: read `AvailableTransferBudget`; commit via `ApplyTransaction`; #31 owns a
   `committedSpendThisWindow` counter (FR-FN-004 gives #40 no such concept); no parallel cash ledger; validate
   all gates before any mutation (atomic commit).
@@ -58,4 +59,5 @@ agents/clauses/loans/wage-structures/rival bidding on one code path.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial outline from design supplement v0.2. Status IN REVIEW. |
+| 0.2 | 2026-07-23 | — | AR-3: KD-1 folds club-need into the deep multiplicative bias (minimal = attributes+age). |
 #endregion
