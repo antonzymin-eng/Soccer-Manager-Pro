@@ -24,12 +24,14 @@ any order or in parallel branches. Recommended sequence by cost/leverage:
 | Order | Workstream | Rough size | Gating on anything? |
 |-------|------------|-----------|---------------------|
 | 1 | **WS-3** shim verification | Small (analysis + a doc/comment refresh; possibly one probe test) | No — the authoritative on-disk artifact is already present in the repo (see WS-3) |
-| 2 | **WS-1** on-disk preset format | Medium (one new loader + tests, mirrors an existing precedent) | No |
+| 2 | **WS-1** on-disk preset format | Medium–Large (new loader + tests **plus** a static→injectable refactor of `TacticPresetLibrary` — see §1.3/§1.4) | No |
 | 3 | **WS-2** `[GT]` balance passes (#23/#24/#25/#26) | Medium×4 (one lock suite per spec, no new production behaviour) | No (#21 already complete) |
 
 All three preserve the project's hard invariants: **default-behaviour-neutral** (no digest change
 unless a version bump is explicitly justified), **fail-loud** parsing/validation, and **no phantom
-interfaces**. None of the three changes match behaviour or the `SNAPSHOT_SCHEMA_VERSION`.
+interfaces**. None of the three is expected to change match behaviour or `SNAPSHOT_SCHEMA_VERSION`
+(WS-1's step-0(a) refactor touches `ManagerAdaptation`/`MatchEngine` but is digest-*proven* neutral,
+not neutral by omission; WS-2 stays neutral only if it keeps current magnitudes — §2.6).
 
 Each workstream follows the standard cycle: **design note → adversarial review to convergence →
 implement → code adversarial review → full `dotnet` gate green → commit.**
@@ -75,14 +77,47 @@ deliverable — building it now is the promotion, and the plan should record tha
 explicitly (the spec's §7.3 anticipates it, so it is a deferral being fulfilled, not a spec
 violation).
 
-### 1.3 The seam
+### 1.3 The seam — and why it is NOT a free "input swap"
 
-Nothing downstream of `TacticPreset` values changes. The loader produces the same
-`IReadOnlyList<TacticPreset>` / `TacticPreset[]` the static catalogue exposes;
-`TacticPresetProjection.Project` and the two appliers consume it unchanged.
+The spec's §4.4 frames the loader as "a construction-time input swap, not an interface." That is true
+for the *projection* half — `TacticPresetProjection.Project(in TacticPreset preset, …)` consumes a
+single preset **value** — but it is **false for the selection half**, and the plan must be honest
+about that.
+
+`TacticPresetLibrary` is a **`public static class`** (`TacticPresetLibrary.cs:25`) whose catalogue is
+consumed by **static reference** at live, determinism-load-bearing sites:
+
+- `ManagerAdaptation.cs:189` / `:247` — `TacticPreset preset = TacticPresetLibrary.Presets[ordinal];`
+  (the running manager AI resolves its selected/adapted preset by ordinal against the static library).
+- `ManagerAdaptation.cs:44/:63/:85/:92` — `TacticPresetLibrary.Count` (ladder bounds).
+- `MatchEngine.cs:1453/:1473` — `TacticPresetLibrary.BalancedOrdinal` / `.Count`.
+
+A disk-loaded catalogue therefore **cannot reach the consumers by producing a list** — the consumers
+do not take a list, they read a static singleton. Delivering disk-authored presets to the running
+manager requires changing how the catalogue is *sourced*, not just adding a parser. The precedent
+(`TeamTacticFileLoader → TeamTacticConfig`) is a **weaker analogy than it looks**: `TeamTacticConfig`
+was always an *instance consumed by value*, so its loader genuinely was a construction-time swap;
+`TacticPresetLibrary` is a *static catalogue consumed by static reference*, so its loader is not.
+
+**This static→injectable decision is the real WS-1 work; the file grammar is the easy half.**
 
 ### 1.4 Proposed implementation
 
+0. **Catalogue-sourcing decision (the load-bearing step — settle FIRST, in the design note).** Choose
+   how a disk-loaded catalogue reaches the static consumers in §1.3. Two viable shapes:
+   - **(a) Injectable catalogue (recommended).** Refactor `TacticPresetLibrary` into a constructible
+     catalogue — an instance (or interface `ITacticPresetCatalogue`) with the in-code presets as the
+     default — and thread it through `ManagerAdaptation` and `MatchEngine` (the two `Presets[]`/`Count`/
+     `BalancedOrdinal` consumers). The loader then constructs one from parsed text. This is the honest
+     "construction-time swap," but it is a real refactor of a type read at the sites listed in §1.3,
+     **not** a behaviour-neutral no-op — it must carry its own before/after digest-equality proof
+     (default catalogue ⇒ byte-identical to the current static path).
+   - **(b) Offline codegen.** The Stage-1 loader runs at build time and regenerates the `s_presets`
+     initializer; the class stays static and runtime consumers are untouched. Simpler, but it is not
+     the runtime `[GT]` config-loader FR-CS-019 anticipates, so pick this only if runtime authoring is
+     genuinely not required at Stage 1.
+
+   Do not start the parser until this is chosen; the parser's output type falls out of it.
 1. **`src/match-engine/TacticPresetFileLoader.cs`** (new) — `static class`,
    `TacticPresetLibraryData Parse(string text)` (or `IReadOnlyList<TacticPreset> Parse(...)`),
    mirroring `TeamTacticFileLoader` exactly:
@@ -99,34 +134,62 @@ Nothing downstream of `TacticPreset` values changes. The loader produces the sam
      preserve/verify ordinal↔name mapping (fail-loud on a re-ordering or a gap), because the ordinal
      is the serialized preset identity (`TacticPresetLibrary.Count` is the F2 restore-seam bound).
 2. **A round-trip fixture:** author the five Appendix A.1 presets as a canonical text file, parse it,
-   and assert the result is **value-equal to `TacticPresetLibrary.Presets`** (the "parser swap
-   produces the same catalogue" contract). This is the load-bearing acceptance test.
-3. **Wiring is optional and out of scope for the loader itself** — the loader is a construction-time
-   input; whether/where the engine boot reads a preset file from disk is a separate composition
-   decision (the appliers already exist). Keep this change to *the loader + its tests* to stay
-   minimal, exactly as `TeamTacticFileLoader` landed before any disk-read wiring.
+   and assert the result **deep-equals the default catalogue** (the "parser swap produces the same
+   catalogue" contract). **"Deep-equal" must be specified, not left to `==`:** `TacticPreset` is a
+   `readonly struct` with a `PlayerTactic[] Players` reference field and **no** `Equals`/`IEquatable`
+   override (`TacticPreset.cs:41`), so default struct equality compares the `Players` array **by
+   reference** (two content-equal presets compare *unequal*) and also compares `Name`. The test must
+   use an explicit comparator: `Team` field-by-field; `Players` null-or-elementwise-equal; and `Name`
+   handled deliberately — since Name is authoring-only (§1.1), either require the file to carry the
+   library's names and assert they match, or exclude Name from the comparison and document that the
+   file need not reproduce it. This is the load-bearing acceptance test; getting the equality wrong
+   makes it tautological or always-failing.
+3. **Boot disk-READ wiring is separately optional** — distinct from the sourcing refactor in step 0.
+   The WS-1 deliverable is *the sourcing choice (step 0a refactor or 0b codegen) + the loader + its
+   tests*; **whether/where the engine boot actually reads a preset file from disk at startup** is a
+   further composition decision that can be deferred (the appliers already exist), exactly as
+   `TeamTacticFileLoader` landed before any disk-read wiring. Note the "minimal, loader + tests only"
+   sizing applies **only** under step 0(b); under the recommended 0(a) the change also includes the
+   injectable-catalogue refactor and its digest-neutrality proof (§1.6).
 
 ### 1.5 Decisions to settle in the design note
 
-- **D1 — Format-version constant?** The precedent (`TeamTacticFileLoader`) has **none**, precisely
-  because the grammar is not a determinism-pinned wire format and §7.3 frames this as the same
-  contract. **Recommendation: no `PRESET_FORMAT_VERSION` constant** — matching the precedent. (A
-  `[FIXED] *_FORMAT_VERSION` is only introduced for binary/digest-pinned formats, e.g.
-  `MATCH_SAVE_FORMAT_VERSION`, `SEASON_SAVE_FORMAT_VERSION`.) Record the rationale so a future
-  reviewer does not "add the missing version."
+- **D1 — Ordinal↔content stability (the real versioning question), not "format version by
+  analogy."** The team-tactic loader needs no version constant because it serializes full tactic
+  **values**. Presets are different: `ManagerState.CurrentPresetOrdinal` is serialized, and a running
+  or restored match resolves its preset by **ordinal** against the catalogue —
+  `TacticPresetLibrary.Presets[ordinal]` at `ManagerAdaptation.cs:189`/`:247`. So the **ordinal→content
+  mapping is digest-load-bearing across save/restore**: a disk-authored catalogue that changes what
+  preset *N contains* under a fixed ordinal makes a restored match resolve a different tactic and
+  diverge — a failure mode the compiled static catalogue structurally cannot have. The grammar text
+  itself is still not a digest-pinned wire format (so a literal `PRESET_FORMAT_VERSION` on the *file*
+  may be unnecessary, matching `TeamTacticFileLoader`), but the **catalogue's ordinal↔content map is a
+  save-compatibility surface** the precedent does not carry. Decide the guard: at minimum a fail-loud
+  check that the loaded catalogue's `Count` and ladder ordering match the ordinal contract
+  (FR-TP-013 APPEND-only); consider an ordinal-content fingerprint stamped into the save so a restore
+  against a changed catalogue fails loud instead of diverging silently. Justify any "no version
+  constant" conclusion against *this* coupling, not against the team-tactic loader.
 - **D2 — File section grammar.** Exact header shape for presets and their optional per-player blocks.
   Prefer maximal reuse of the two existing loaders' grammars over inventing a third dialect.
 - **D3 — Assembly placement.** `src/match-engine/` (alongside the two precedent loaders and
   `TacticPresetProjection`) vs `src/tactical-instructions/`. Recommendation: **`src/match-engine/`**,
-  matching the precedent and avoiding a new dependency edge from the tactics assembly.
+  matching the precedent and avoiding a new dependency edge from the tactics assembly. Note this
+  interacts with step 0(a): if `TacticPresetLibrary` becomes an injectable catalogue, the catalogue type
+  stays in `src/tactical-instructions/` (its consumers `ManagerAdaptation`/`MatchEngine` already
+  reference that assembly), while only the file *loader* lives in `src/match-engine/`.
 
 ### 1.6 Acceptance
 
 - New `TacticPresetFileLoaderTests`: empty/comment-only ⇒ the identity/Balanced catalogue; the
-  canonical five-preset file round-trips **value-equal to `TacticPresetLibrary.Presets`**; every
-  fail-loud gate (unknown key/section, unparsable value, duplicate, ordinal re-order/gap,
-  roster-size mismatch via `ValidatePlayers`) throws `FormatException`.
-- No `SNAPSHOT_SCHEMA_VERSION` change; no behaviour change (loader is not yet wired into boot).
+  canonical five-preset file round-trips **deep-equal to the default catalogue** (via the explicit
+  comparator specified in §1.4 step 2, not struct `==`); every fail-loud gate (unknown key/section,
+  unparsable value, duplicate, ordinal re-order/gap, roster-size mismatch via `ValidatePlayers`)
+  throws `FormatException`.
+- If step 0(a) is chosen: the injectable-catalogue refactor carries a **before/after digest-equality
+  proof** — a match run against the default catalogue is byte-identical to the current static path
+  (the refactor is behaviour-neutral even though it touches `ManagerAdaptation`/`MatchEngine`).
+- No `SNAPSHOT_SCHEMA_VERSION` change; no behaviour change (loader is not yet wired into boot, and the
+  step 0(a) refactor is digest-neutral on the default catalogue).
 - Full `dotnet` gate green.
 - Spec touch: flip FR-TP-002/§7.3's "Stage 0+1 has no disk format" to record the Stage-1 loader as
   landed (version-history row), leaving the FR text's Stage-0+1 scope intact.
@@ -159,6 +222,10 @@ rows exactly neutral (FR-TI-031), (3) strict monotonicity of the scalar tables, 
 directional shapes of the jagged role table.
 
 ### 2.3 Constant catalogues in scope
+
+> Line numbers below are indicative (region locators from a research sweep, not re-verified
+> line-by-line in this plan); confirm them at each spec's design-note time. `TacticalInstructionsConstants.cs:150`
+> (WS-2's #21 nit) and `generate_projects.py:100/:102` (WS-3) are the only line refs verified exact here.
 
 - **#23:** `src/positioning-ai/PositioningAIConstants.cs` (dismarking region ~L222–248:
   `MARKING_RADIUS_M`, dwell saturation/decay, pressure floor, max dismark offset, the
@@ -234,9 +301,12 @@ The Unity-6 bump is otherwise recertified; **item (4) is the sole remaining open
 The open issue assumes the authoritative artifact is host-generated and absent from this checkout.
 **That is now outdated — the artifact is present and populated:**
 
-- `ProjectSettings/ProjectSettings.asset` → `apiCompatibilityLevel: 6`. In Unity's
-  `ApiCompatibilityLevel` enum, **6 = `.NET_Standard` (2.1)** — the direct on-disk analogue of the
-  `netstandard2.1` TFM pin. **Confirmed from the repo.**
+- `ProjectSettings/ProjectSettings.asset` → `apiCompatibilityLevel: 6`, with
+  `apiCompatibilityLevelPerPlatform: {}` empty (no per-platform override, so the global applies). In
+  Unity's `ApiCompatibilityLevel` enum, **6 = `NET_Standard` (.NET Standard 2.1)** and **3 =
+  `NET_Framework`** — the design note should cite the enum mapping (Unity Scripting API
+  `UnityEditor.ApiCompatibilityLevel`) so the `6 → 2.1` inference is auditable. Value 6 is the direct
+  on-disk analogue of the `netstandard2.1` TFM pin. **Confirmed from the repo.**
 - `scriptingBackend:` has only an `Android: 1` (IL2CPP) override and **no Standalone entry**, so the
   desktop/Standalone build (the Stage-0 Windows pin) uses the **default = Mono**. Matches the
   certification pin.
@@ -265,8 +335,9 @@ are now verifiable **directly from the committed project**, no live Unity instal
 1. **Repo-verifiable half (do now):** read and record `apiCompatibilityLevel: 6` (.NET Standard 2.1)
    and the Mono-by-default backend from `ProjectSettings.asset`; confirm no `csc.rsp` /
    `Directory.Build.props` `LangVersion` override exists. This alone closes the "against a real
-   install" concern for the **TFM/BCL-target and backend** claims, since the settings file is the
-   Unity-authored artifact.
+   install" concern for the **API-compatibility-target and backend** claims, since the settings file
+   is the Unity-authored artifact. (It does **not** close the BCL reference-assembly *surface*
+   equivalence — that is the separate §3.4 spot-check that still needs the install.)
 2. **Docs-verifiable half:** confirm Unity 6000.4.9f1's default C# language version is **C# 9** for
    the Mono/.NET Standard 2.1 profile via official Unity 6 documentation (cite the page + bundled
    Roslyn version). Record the citation.
@@ -297,10 +368,14 @@ are now verifiable **directly from the committed project**, no live Unity instal
 
 - **Design-first.** Each workstream opens its own `docs/tracking/*-design.md` (or folds into an
   existing one) and converges through adversarial review before code, per project convention.
-- **Determinism neutrality.** WS-1 and WS-3 are behaviour-neutral by construction. WS-2 is
+- **Determinism neutrality.** WS-3 is behaviour-neutral by construction. WS-1's *loader + tests* are
+  neutral by construction, but its step-0(a) injectable-catalogue refactor touches live consumers and
+  must **prove** neutrality with a before/after digest-equality run (§1.6), not assert it. WS-2 is
   behaviour-neutral **only if** the balance passes keep the current magnitudes (the expected #21-style
   outcome); any re-tune must be flagged and its determinism tests rebaselined.
-- **No phantom interfaces.** WS-1's loader is a construction-time input swap, not a new interface
-  (FR-TP-017 / §4.4) — do not pre-declare a disk-read interface the boot path does not yet call.
+- **No phantom interfaces.** WS-1's *file loader* is a construction-time input, not a new runtime
+  interface (FR-TP-017 / §4.4) — do not pre-declare a disk-read interface the boot path does not yet
+  call. (An `ITacticPresetCatalogue` seam from step 0(a) is an internal injection point with a real
+  consumer, not a phantom.)
 - **Full gate.** Each change ends on a green whole-tree `dotnet test` run (SDK installable via apt in
   this environment, per recent landings).
