@@ -117,6 +117,10 @@ namespace TacticalDirector.DecisionTree.Tests
             // for every action (FR-TI-031) — the seam is a no-op for a default-tactic match.
             foreach (ActionType action in System.Enum.GetValues(typeof(ActionType)))
             {
+                // ERR-008-013: SAVE is not a tactic-modulated action — UtilityScorer.ComputeUtility
+                // exempts it from this multiplier, whose #21 RoleWeightModifiers / TempoActionBias tables
+                // are 7-wide (ordinals 0–6). It is never called with SAVE in production.
+                if (action == ActionType.SAVE) continue;
                 Assert.AreEqual(1.0f,
                     TacticTranslation.PlayerTacticActionMultiplier(Identity, Tempo.Standard, action),
                     $"Identity PlayerTactic must resolve to ×1.0 for {action}.");

@@ -1,11 +1,11 @@
 // File:     src/decision-tree/ActionDispatcher.cs
 // Created:  2026-05-29
-// Modified: 2026-06-11 (audit AR-2 fix pass)
+// Modified: 2026-07-23 (ERR-008-013: SAVE → IDtSaveDispatch)
 // Author:   —
 // Spec:     Decision Tree #8 §3.5, Code Standards #20
 // Purpose:  Step 6 of the 6-step pipeline. Routes the selected AgentAction to the
 //           appropriate execution system: PassExecutor (PASS), ShotExecutor (SHOOT),
-//           or IDtMovementController (DRIBBLE/HOLD/MOVE/PRESS/INTERCEPT). §3.5.1.
+//           IDtSaveDispatch (SAVE), or IDtMovementController (DRIBBLE/HOLD/MOVE/PRESS/INTERCEPT). §3.5.1.
 
 using UnityEngine;
 using TacticalDirector.AgentMovement;
@@ -39,7 +39,8 @@ namespace TacticalDirector.DecisionTree
             in DecisionContext ctx,
             IDtMovementController movementController,
             PassExecutor passExecutor,
-            ShotExecutor shotExecutor)
+            ShotExecutor shotExecutor,
+            IDtSaveDispatch saveDispatch = null)
         {
             switch (action.Type)
             {
@@ -49,6 +50,22 @@ namespace TacticalDirector.DecisionTree
 
                 case ActionType.SHOOT:
                     DispatchShoot(action, in ctx, shotExecutor);
+                    break;
+
+                case ActionType.SAVE:
+                    // ERR-008-013: the keeper committed to a save — hand off to the GK sink, which
+                    // maps agent→GK slot, projects the attributes, and commits the SaveIntent. A null
+                    // sink is a wiring drop (dev-logged), the null-executor precedent above.
+                    if (saveDispatch != null)
+                    {
+                        saveDispatch.CommitSave(action.AgentId);
+                    }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    else
+                    {
+                        Debug.LogError($"[DT] {DecisionTreeConstants.WarnFmDt14} SAVE with no save sink for agent {action.AgentId}");
+                    }
+#endif
                     break;
 
                 case ActionType.DRIBBLE:
@@ -268,4 +285,7 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   branch now produces the §3.5.9 HOLD-safe command under FM-DT-14 (renumbered  |
 // |         |            |        |   from the double-allocated FM-DT-09, ERR-008-007). All emits FR-CS-031 gated. |
 // |         |            |        |   L: HOLD JOGGING-strafe SPEC-DEVIATION NOTE (AM AR-13 accommodation).         |
+// | 1.2     | 2026-07-23 | —      | ERR-008-013: + SAVE case → IDtSaveDispatch.CommitSave (optional param,        |
+// |         |            |        |   null-tolerant like the executors — dev-logged wiring drop). The GK save     |
+// |         |            |        |   sink; primitives only (no GoalkeeperMechanics type crosses the seam).       |
 #endregion

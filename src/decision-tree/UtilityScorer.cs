@@ -48,6 +48,7 @@ namespace TacticalDirector.DecisionTree
                 case ActionType.MOVE_TO_POSITION: u = ScoreMove(ref opt, in ctx);    break;
                 case ActionType.PRESS:           u = ScorePress(ref opt, in ctx);     break;
                 case ActionType.INTERCEPT:       u = ScoreIntercept(ref opt, in ctx); break;
+                case ActionType.SAVE:            u = ScoreSave(ref opt, in ctx);      break;
                 default:                         u = UtilityWeights.UTILITY_FLOOR;    break;
             }
 
@@ -63,8 +64,14 @@ namespace TacticalDirector.DecisionTree
             // Default / Duty.Support / every InstrBias.Default at Tempo.Standard) resolve to exactly ×1.0
             // (FR-TI-031), so this is byte-identical to today's behaviour until the Phase-D writer routes a
             // live per-agent PlayerTactic / team Tempo. Magnitudes are the §5.6 / G2-pinned defaults.
-            u *= TacticTranslation.PlayerTacticActionMultiplier(
-                ctx.TacticalContext.PlayerTactic, ctx.TacticalContext.Tempo, opt.Type);
+            // ERR-008-013: SAVE is exempt from the per-agent tactic product. A keeper's save is not
+            // shaped by RiskyPasses / attacking tempo, and — load-bearing — RoleWeightModifiers /
+            // TempoActionBias are 7-wide [role/tempo][action] tables indexed by the action ordinal, so
+            // a=SAVE(7) would read out of bounds (IndexOutOfRangeException). Skipping is both correct
+            // and safe. SAVE reaches this scorer only as the sole off-ball option (OptionGenerator).
+            if (opt.Type != ActionType.SAVE)
+                u *= TacticTranslation.PlayerTacticActionMultiplier(
+                    ctx.TacticalContext.PlayerTactic, ctx.TacticalContext.Tempo, opt.Type);
 
             // Cheap-item addition (new §3.2/§7.7, redesigned after user review): Positioning AI #12's
             // rest-defense coverage check only matters if THIS agent — the ball carrier, since PASS/
@@ -354,6 +361,21 @@ namespace TacticalDirector.DecisionTree
             return baseU * am * contextM * tactM * (1.0f - risk);
         }
 
+        // ── §3.2.10 SAVE (ERR-008-013) ────────────────────────────────────────
+
+        /// <summary>
+        /// Scores the goalkeeper SAVE option. SAVE reaches this method only as the SOLE off-ball
+        /// option (OptionGenerator gates it on <see cref="TacticalContext.SaveAvailable"/>), so the
+        /// value is not load-bearing for selection — it is always chosen. Returns the flat
+        /// <see cref="UtilityWeights.U_BASE_SAVE"/> ceiling (no attribute / risk / tactical modulation
+        /// at Stage 0; attribute-modulated commit is a named future refinement). The ComputeUtility
+        /// caller exempts SAVE from the per-agent tactic product (the 7-wide-table OOB guard).
+        /// </summary>
+        private static float ScoreSave(ref ActionOption opt, in DecisionContext ctx)
+        {
+            return UtilityWeights.U_BASE_SAVE;
+        }
+
         // ── Zone modifier table (§3.2.1.3) ────────────────────────────────────
 
         private static float GetZoneModifier(ActionType type, FieldZone zone)
@@ -438,4 +460,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   pass-target multiplier (target proximity to passer-perceived opponents ×   |
 // |         |            |        |   passer awareness), before the clamp. Off dial ⇒ exact ×1.0 identity        |
 // |         |            |        |   (FR-DM-012) — a default match is byte-identical.                           |
+// | 1.11    | 2026-07-23 | —      | ERR-008-013: + ScoreSave (returns U_BASE_SAVE; SAVE reaches the scorer only  |
+// |         |            |        |   as the sole off-ball option, so not load-bearing for selection); SAVE is   |
+// |         |            |        |   EXEMPTED from PlayerTacticActionMultiplier in ComputeUtility — its 7-wide  |
+// |         |            |        |   #21 tables are indexed by the action ordinal, so a=SAVE(7) would read OOB. |
 #endregion

@@ -31,6 +31,7 @@
 //           GK (#11) / Heading (#10) cross-tick state (opt-in flag + 2 subsystem RNG cursors + 2 §4 trigger
 //           latches + both orchestrators' in-flight arrays via CaptureState/RestoreState seams), making a
 //           flag-on engine snapshot-safe. The Phase-1 durable-capture fail-loud guard is removed.)
+// Modified: 2026-07-23 (DT-emitted goalkeeper SAVE (ERR-008-013) + AR follow-up TestOnly_SaveCommittedForGk latch seam)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -690,11 +691,14 @@ namespace TacticalDirector.MatchEngine
             // backs all 22 DecisionTrees. Each DecisionTree is constructed with its agent id, this
             // agent's Pass/Shot executor (the dispatch target for PASS/SHOOT), and the match seed.
             var movementController = new HostMovementController(this);
+            // ERR-008-013: the GK save sink. One instance backs all 22 trees; only ever called for the
+            // flag-on threatened keeper (SAVE is generated only under TacticalContext.SaveAvailable).
+            var saveDispatch = new HostSaveDispatch(this);
             _decisionTrees = new DecisionTreeAI[MatchEngineConstants.SQUAD_SIZE];
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 _decisionTrees[i] = new DecisionTreeAI(
-                    i, movementController, matchSeed, _passExecutors[i], _shotExecutors[i]);
+                    i, movementController, matchSeed, _passExecutors[i], _shotExecutors[i], saveDispatch);
             }
 
             // §4 step 2 (Phase E) — reset the process-static EventBus for THIS match before booting the
@@ -1981,6 +1985,13 @@ namespace TacticalDirector.MatchEngine
         internal GoalkeeperAgentAttributes? TestOnly_LastCommittedSaveAttrs =>
             _lastSaveAttrsValid ? _lastCommittedSaveAttrs : (GoalkeeperAgentAttributes?)null;
 
+        /// <summary>Test-only (ERR-008-013): the per-episode save commit latch for a team's keeper
+        /// (<c>_saveCommittedForGk</c>, serialized at v18). True once <see cref="HostSaveDispatch.CommitSave"/>
+        /// has committed this episode; cleared in <c>RunMechanicsAI</c> once the ball is no longer save-armed,
+        /// so a fresh shot re-arms and re-commits. Lets a test observe the arm → commit → clear → re-commit
+        /// episode cycle.</summary>
+        internal bool TestOnly_SaveCommittedForGk(int teamId) => _saveCommittedForGk[teamId];
+
         /// <summary>Test-only (§7 projection proof): the <see cref="HeadingAgentAttributes"/> the engine
         /// last handed to <c>CommitIntent</c> (the live consumer of
         /// <see cref="PlayerAttributeProjection.ToHeading"/>), or <c>null</c> if no header has been
@@ -2392,6 +2403,27 @@ namespace TacticalDirector.MatchEngine
                     // Cheap-item addition (new §3.2/§7.7): Positioning AI #12's rest-defense coverage
                     // check, computed once per team per stride, routed to every agent's context.
                     ctx.RestDefenseSufficient = _positioning[t].GetRestDefenseSufficient();
+
+                    // #11/#10 (ERR-008-013): the DT-emitted-SAVE gate. Under the opt-in flag, the
+                    // threatened keeper's context carries SaveAvailable = true, and the DecisionTree
+                    // emits SAVE as its sole off-ball option this stride. Geometry from the proven pure
+                    // GkHeadingIntentSource (the former heuristic's own gate). The per-episode commit
+                    // latch is cleared here when the ball is no longer armed (the former
+                    // TryCommitSaveIntents cleared it the same way), so a new shot re-arms and re-commits.
+                    // Flag-off / non-keeper leaves SaveAvailable at the Stage0Default false ⇒ the off-ball
+                    // branch is byte-identical to pre-integration.
+                    if (_gkHeadingEnabled && _isGoalkeeper[i] && !_isSentOff[i])
+                    {
+                        bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+                        bool armed = GkHeadingIntentSource.SaveArmed(
+                            t, in _ball.Position, in _ball.Velocity, loose);
+                        ctx.SaveAvailable = armed;
+                        if (!armed)
+                        {
+                            _saveCommittedForGk[t] = false;
+                        }
+                    }
+
                     _tacticalContexts[i]   = ctx;
                 }
             }
@@ -2850,8 +2882,12 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>GK/Heading 10 Hz tactical drive (design §3.4): anchor keeper baselines, advance the GK
-        /// state machine, then fire the §4 save/header triggers (committed at the tactical tick per KD-17).
-        /// Called from <see cref="RunAiPhase"/> on the stride; no-op unless <c>_gkHeadingEnabled</c>.</summary>
+        /// state machine, then fire the §4.2 header trigger (committed at the tactical tick per KD-17). The
+        /// SAVE decision is NO LONGER fired here — it is a DT-emitted action (ERR-008-013): RunMechanicsAI
+        /// sets <see cref="TacticalContext.SaveAvailable"/> for the threatened keeper and the DecisionTree
+        /// emits SAVE → <see cref="HostSaveDispatch"/> (which maps agent→team directly, independent of
+        /// <c>_gkAgentIds</c>). Called from <see cref="RunAiPhase"/> on the stride, after RunMechanicsAI;
+        /// no-op unless <c>_gkHeadingEnabled</c>.</summary>
         private void DriveGkHeadingTactical()
         {
             if (!_gkHeadingEnabled)
@@ -2868,7 +2904,6 @@ namespace TacticalDirector.MatchEngine
                 }
             }
             _goalkeeper.TacticalTick((int)_clock.CurrentTick, _agents, _ball, _gkAgentIds);
-            TryCommitSaveIntents();
             TryCommitHeaderIntents();
         }
 
@@ -2889,49 +2924,12 @@ namespace TacticalDirector.MatchEngine
             _goalkeeper.Update(frameNumber, matchTimeMs, _agents, _ball, _gkAgentIds);
         }
 
-        /// <summary>§4.1 save trigger: for each keeper, if a loose ball is moving fast toward the defended
-        /// goal within range, commit a save intent seeded from <see cref="PlayerAttributeProjection.ToGoalkeeper"/>
-        /// (the projection's live consumer, KD-8). At most one commit per ball episode (latch cleared when the
-        /// condition clears, KD-6). Records the committed attrs for the <c>TestOnly_</c> projection proof.</summary>
-        private void TryCommitSaveIntents()
-        {
-            int tacticalTick = (int)_clock.CurrentTacticalTick;
-            bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
-            Vector3 bp = _ball.Position;
-            Vector3 bv = _ball.Velocity;
-            for (int t = 0; t < _gkAgentIds.Length; t++)   // keeper index == team id
-            {
-                int gkAgentId = _gkAgentIds[t];
-                if (gkAgentId < 0 || _isSentOff[gkAgentId])
-                {
-                    continue;
-                }
-                // §4.1 geometry decision (pure): is a loose ball driving toward the goal team t defends?
-                bool armed = GkHeadingIntentSource.SaveArmed(t, in bp, in bv, loose);
-                if (!armed)
-                {
-                    _saveCommittedForGk[t] = false;
-                    continue;
-                }
-                if (_saveCommittedForGk[t])
-                {
-                    continue;
-                }
-                GoalkeeperAgentAttributes attrs =
-                    PlayerAttributeProjection.ToGoalkeeper(in _canonicalAttrs[gkAgentId], t, fatigue: 0f);
-                var intent = new SaveIntent
-                {
-                    TargetHand           = HandEnum.Either,
-                    ClutchFirmness       = MatchEngineConstants.SaveTriggerClutchFirmness,
-                    DeflectionTarget     = null,
-                    AttemptCommittedTick = tacticalTick,
-                };
-                _goalkeeper.CommitSaveIntent(t, intent, attrs);
-                _lastCommittedSaveAttrs = attrs;
-                _lastSaveAttrsValid = true;
-                _saveCommittedForGk[t] = true;
-            }
-        }
+        /// <summary>§4.1 save decision — REMOVED (ERR-008-013). The keeper's save is now a DT-emitted
+        /// <c>ActionType.SAVE</c>: <see cref="RunMechanicsAI"/> sets <see cref="TacticalContext.SaveAvailable"/>
+        /// (from <see cref="GkHeadingIntentSource.SaveArmed"/>) for the threatened keeper under the flag, the
+        /// DecisionTree emits SAVE as its sole off-ball option, and <see cref="HostSaveDispatch"/> applies the
+        /// per-episode latch + <see cref="PlayerAttributeProjection.ToGoalkeeper"/> projection + commit.
+        /// RunMechanicsAI clears the latch when the ball is no longer armed. The former heuristic is gone.</summary>
 
         /// <summary>§4.2 header trigger: the single nearest active outfield agent within head range of a
         /// loose airborne ball commits a header seeded from <see cref="PlayerAttributeProjection.ToHeading"/>
@@ -5844,6 +5842,65 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// GK save dispatch sink (ERR-008-013): the <see cref="TacticalDirector.DecisionTree.IDtSaveDispatch"/>
+        /// the DecisionTree calls when a keeper selects SAVE. Maps the keeper's agent id to its GK slot
+        /// (slot index == team id at Stage 0, <see cref="GoalkeeperConstants.MaxGkAgents"/> == TEAM_COUNT),
+        /// applies the per-episode commit latch (<c>_saveCommittedForGk</c>, serialized at v18 — a SAVE
+        /// re-selected each stride commits once), projects <see cref="PlayerAttributeProjection.ToGoalkeeper"/>,
+        /// and commits the same Stage-0 <see cref="SaveIntent"/> the former heuristic
+        /// <c>TryCommitSaveIntents</c> built. One instance backs all 22 DecisionTrees (routes by agentId).
+        /// Only ever called for the flag-on threatened keeper (SAVE is generated solely under
+        /// <see cref="TacticalContext.SaveAvailable"/>, set only under <see cref="EnableGkHeading"/>).
+        /// </summary>
+        private sealed class HostSaveDispatch : TacticalDirector.DecisionTree.IDtSaveDispatch
+        {
+            private readonly MatchEngine _engine;
+
+            public HostSaveDispatch(MatchEngine engine)
+            {
+                _engine = engine;
+            }
+
+            public void CommitSave(int agentId)
+            {
+                // Defensive: SAVE is only generated for a non-sent-off keeper (SaveAvailable gate), but
+                // the sink must not trust its caller — mirror the participation gates the heuristic had.
+                if (agentId < 0 || agentId >= MatchEngineConstants.SQUAD_SIZE
+                    || !_engine._isGoalkeeper[agentId] || _engine._isSentOff[agentId])
+                {
+                    return;
+                }
+
+                int teamId = _engine._teamIds[agentId];   // GK slot index == team id (KD-1, MaxGkAgents==2)
+                if (teamId < 0 || teamId >= GoalkeeperConstants.MaxGkAgents)
+                {
+                    return;
+                }
+
+                // Per-episode latch (KD-6): commit once until the episode clears (RunMechanicsAI clears
+                // the latch when the ball is no longer armed).
+                if (_engine._saveCommittedForGk[teamId])
+                {
+                    return;
+                }
+
+                GoalkeeperAgentAttributes attrs =
+                    PlayerAttributeProjection.ToGoalkeeper(in _engine._canonicalAttrs[agentId], teamId, fatigue: 0f);
+                var intent = new SaveIntent
+                {
+                    TargetHand           = HandEnum.Either,
+                    ClutchFirmness       = MatchEngineConstants.SaveTriggerClutchFirmness,
+                    DeflectionTarget     = null,
+                    AttemptCommittedTick = (int)_engine._clock.CurrentTacticalTick,
+                };
+                _engine._goalkeeper.CommitSaveIntent(teamId, intent, attrs);
+                _engine._lastCommittedSaveAttrs = attrs;
+                _engine._lastSaveAttrsValid = true;
+                _engine._saveCommittedForGk[teamId] = true;
+            }
+        }
+
+        /// <summary>
         /// First-touch world adapter (Phase D D3): implements both First Touch (#4) write boundaries over
         /// the host world state. <see cref="IBallPhysicsSystem.SetBallState"/> writes the displaced ball
         /// position + velocity straight into <c>_ball</c> (the logical BallState enum is left unchanged —
@@ -6527,4 +6584,20 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | engine. The Phase-1 RequireGkHeadingSnapshotSafe fail-loud      |
 // |         |            |        | guard + its two call sites removed. New round-trip + schema     |
 // |         |            |        | probe tests; default flag stays OFF (flip is a follow-up).      |
+// | 1.47    | 2026-07-23 | —      | DT-emitted goalkeeper SAVE (ERR-008-013). The save decision    |
+// |         |            |        | moves from the heuristic TryCommitSaveIntents (removed) into    |
+// |         |            |        | the DecisionTree as ActionType.SAVE. New HostSaveDispatch sink  |
+// |         |            |        | (IDtSaveDispatch): maps agent→GK slot, applies the v18 latch,   |
+// |         |            |        | projects ToGoalkeeper, commits the same Stage-0 SaveIntent.     |
+// |         |            |        | RunMechanicsAI sets TacticalContext.SaveAvailable for the       |
+// |         |            |        | threatened keeper under EnableGkHeading (from                   |
+// |         |            |        | GkHeadingIntentSource.SaveArmed) + clears the latch when no     |
+// |         |            |        | longer armed; DriveGkHeadingTactical keeps only the header      |
+// |         |            |        | trigger. No SNAPSHOT_SCHEMA_VERSION change; flag-off byte-      |
+// |         |            |        | identical. New SaveDecision_SurvivesAdversarialTactic lock.     |
+// | 1.48    | 2026-07-23 | —      | AR follow-up: + internal TestOnly_SaveCommittedForGk(teamId)    |
+// |         |            |        | seam over the _saveCommittedForGk per-episode latch, so a test |
+// |         |            |        | can observe the arm → commit → clear → re-commit episode cycle  |
+// |         |            |        | (the latch clear is the sole re-commit guard for the continuous|
+// |         |            |        | SAVE action). Test-only read; no behaviour change.             |
 #endregion
