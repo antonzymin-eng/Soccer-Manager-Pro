@@ -1,7 +1,79 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 23, 2026, latest same day (**Training System #29 authored + advanced
+> **Last Updated:** July 23, 2026, latest same day (**Staff & Backroom #34 authored + advanced `→ IN REVIEW →
+> APPROVED`** — Wave 4's second spec (coaches/scouts/physios as attributed entities that modulate #29/#41/#33/#31).
+> A **Stage-3 system with a pulled-forward identity scaffold**: the managed club holds a real neutral-baseline
+> staff roster whose quality **projections return each consumer's own identity type** (`MedicalModifier` #41 /
+> `CoachingModifier` #29 / `staffMult` #31 / `MentoringPlan` #33), neutral ⇒ each type's exact `Identity`, so a
+> neutral-staff season is **byte-identical to pre-#34** (KD-3/KD-5/KD-8). **KD-1:** hiring reuses #31's
+> `NegotiationOutcome` + the atomic-commit pattern but a thin staff `StaffOffer`/`EvaluateStaffOffer` — the
+> negotiated quantity is a **wage, not a fee** (#31's `EvaluateOffer` tests fee), year-round (no window).
+> **KD-2:** a fresh staff data layer (distinct skill vocabulary; per-club **role slots** 1:1 with `StaffRole`;
+> stable monotonic `StaffId`). **KD-6:** the scaffold posts no `StaffWage` (FR-FN-015 preserved verbatim, no #40
+> back-prop at approval); the deep wage gate reads #40's running `WageBillAggregate + wage ≤ WageBudget` — **no
+> #34 wage counter** (a counter would be the parallel wage total FR-FN-015 forbids). **KD-7:** a hire changes a
+> mutable `EmployerClubId`, so `StaffId` never re-keys — **no #30 roster-commit, no migration hook** (a simpler
+> divergence from #31's KD-7). **One approval-time back-prop:** ERR-030-006 (the #30 staff tick-order step-6
+> null seam; `AdvanceDay` → step 7); `0x26`/88 stays reserved (draw-free). Supplement AR-1 (1H+4M+1L) → AR-2
+> (1M+1L) → AR-3 CONVERGENCE; section-file AR PASS-1 (2M) → PASS-2 (1M regression) → CONVERGENCE. Count:
+> **38 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Transfers, Contracts & Negotiation #31 authored +
+> advanced `→ IN REVIEW → APPROVED`** — Wave 4's first spec (the recruitment engine; owns the reusable
+> negotiation seam #32/#34 consume). **KD-1:** the Stage-2 counterparty valuation is a **pure deterministic
+> integer function** over #27 attributes + age + club-need — the identity #33 personality (a multiplicative
+> bias) and #28 CA modulate at the deep tier, never a replacement path. **KD-2:** the #40 boundary — read
+> `AvailableTransferBudget`, commit via `ApplyTransaction`, #31 owns a `committedSpendThisWindow` counter
+> (FR-FN-004 gives #40 none), no parallel ledger, **validate-all-before-commit atomicity** (no half-written
+> deal). **KD-3:** the offer/response seam is counterparty-generic (authored once for #32/#34). **KD-4:** one
+> `TRANSFERS_SAVE_FORMAT_VERSION` season-save sub-blob (durable contracts + season-scoped window/spend), **no**
+> `WORLD_STORE` bump. **KD-5:** draw-free minimal ⇒ `_RESERVED_0x23_` / ordinal 85 **stay reserved** (the #40
+> ERR-040-001 precedent); rival bidding is the deep-tier first draw. **KD-6:** the transfer-window model is
+> #31-owned (#30 has none), derived read-only from `SeasonCalendar`. **KD-7:** a transfer **re-keys** the
+> club-scoped `PlayerId` through a NEW #30 mid-season roster-commit entry point + roster-move hook; #31
+> migrates only its own `Contract`. **One approval-time back-prop:** ERR-030-004 (the #30 transfers tick-order
+> step-5 null seam, the #41 ERR-030-002 precedent — a deep-tier position reservation, empty at minimal); #16
+> unchanged (draw-free). Section-file AR-1 (3M+1L) → AR-2 (1L) → CONVERGENCE. Count: **37 APPROVED / 0 IN
+> REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Personalities, Morale & Squad Dynamics #33 authored +
+> advanced `→ IN REVIEW → APPROVED`** — Wave 3's gating spec (the vol-2 human-systems producer #22 was built
+> to consume read-only). **KD-1 (headline):** #33's #22 read surface is matched **verbatim** to the FR-LW-004
+> `PlayerEdge` contract — exactly the pairwise scalar `∈ [0,1]` per player↔player ordered pair (no baseline;
+> #22 owns the `Affinity`/`Trust` `b`); one-directional (#33 writes canon, #22 mirrors, refuses via
+> `ApplyEvent`), and the mirror write needs **one new** `MemoryStore.SetPlayerEdgeMirror` seam (a #22 T-phase
+> code addition, no schema/arc-logic change; `T-LW-U-035` green). **KD-4:** cliques are a **derived** read
+> (mutual `> 600‰` = #22's `0.6`) — no double-truth. **KD-6:** minimal is draw-free ⇒ `_RESERVED_0x25_` /
+> ordinal 87 **stay reserved** (the #40 precedent). **KD-7:** `HUMAN_SYSTEMS_SAVE_FORMAT_VERSION` season-save
+> sub-blob, **no** `WORLD_STORE` bump. **Zero approval-time cross-spec back-props** — #30 slot 3 + FR-SN-017 +
+> #22 FR-LW-004/FR-LW-032 were all pre-declared (the roadmap §4 sequencing payoff). Section-file AR-1 (5M+4L)
+> → AR-2 (1M+2L) → CONVERGENCE. Count: **36 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Club Finances & Economy #40 authored + advanced
+> `→ IN REVIEW → APPROVED`** — Wave 2's fourth spec (per-club budgets/wage ledger/prize money; the
+> counterparty-constraint layer #31 reads). Promoted from the converged design supplement
+> (`docs/tracking/club-finances-economy-design.md` v0.2, design-AR 1M+1L → clean) to an 11-file section set
+> (FR-FN-001..028); section-file **AR-1 (1M — wage `ApplyTransaction` conflated cash with commitment; now a
+> wage transaction moves the `WageBillAggregate` liability only, cash items move `Balance` only) → AR-2 →
+> AR-3 clean, CONVERGENCE.** **KD-1/KD-6:** `SettleFinances` is a season-boundary step (`budget =
+> f(finalTablePosition, prizeMoney)`, pure integer, no per-day step) inserted at #30's `RollToNextSeason()`
+> step (b') after the (a') #43 point (ERR-030-003). **KD-2:** minimal tier is draw-free, so `_RESERVED_0x29_`
+> / `SubsystemOrdinals` 91 **stay RESERVED, not promoted** (ERR-040-001, the #29 `0x21` precedent). **KD-3:**
+> one-way #31→#40 read-only budget query + a #40-owned `ApplyTransaction`. **KD-7:** `FINANCE_SAVE_FORMAT_
+> VERSION` season-save sub-blob (not `WORLD_STORE_FORMAT_VERSION`). Integer currency throughout; #34/#45
+> deferred via identity `BoardModifier`. Count: **35 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Injuries & Medical #41 authored + advanced
+> `→ IN REVIEW → APPROVED`** — Wave 2's third spec (injury occurrence/severity/recovery on the world
+> tick). Promoted from the converged design supplement (`docs/tracking/injuries-medical-design.md` v0.2,
+> design-AR 2M+2L → clean) to a full 11-file section set (FR-MD-001..027); section-file **AR-1 (1M — float
+> arithmetic → integer per-mille throughout) → AR-2 (1M — fixed-radix action-ordinal for append parity) →
+> AR-3 clean, CONVERGENCE.** **KD-1:** all draws on ONE world-tick `injuries.occurrence` stream, keyed
+> position-independently on `(playerId, worldDay, purpose)` — no free-running cursor, nothing to persist,
+> the match tick never draws (the plan's dual-clock hazard dissolved). **KD-6:** a #30 tick-order back-prop
+> (ERR-030-002) appends the injuries null seam as step 4. **KD-7:** a `MEDICAL_SAVE_FORMAT_VERSION`
+> season-save sub-blob (not `WORLD_STORE_FORMAT_VERSION`). #16 §3.4 promotes `DOMAIN_TAG_INJURIES_MEDICAL =
+> 0x2A` / `SubsystemOrdinals` 92 (ERR-041-001, spec-text-first). Reads #29's `InjuryRiskContribution`
+> read-only; staff (#34) via an identity `MedicalModifier`; #34/#27-injury-proneness deferred. Count:
+> **34 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Training System #29 authored + advanced
 > `→ IN REVIEW → APPROVED`** — Wave 2's second spec (the training seam #28 KD-2 reserved and #30's
 > day-advance slot-2 null seam). Promoted from the converged design supplement
 > (`docs/tracking/training-system-design.md` v0.4, design-AR **1H+1M+2L** → AR-2/AR-3 clean) to a full
@@ -237,7 +309,12 @@
 | 30 | Season & Competition Loop | `season-competition-loop/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 37 | Match Analytics & Statistics | `match-analytics-statistics/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 38 | UI / Client Framework (framework slice) | `ui-client-framework/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 40 | Club Finances & Economy | `club-finances-economy/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 41 | Injuries & Medical | `injuries-medical/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 33 | Personalities, Morale & Squad Dynamics | `personalities-morale-dynamics/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 31 | Transfers, Contracts & Negotiation | `transfers-contracts-negotiation/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 34 | Staff & Backroom | `staff-backroom/` | 6¹ | APPROVED | Jul 23, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 

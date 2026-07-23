@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.6 — back-prop ERR-030-006 staff tick-order seam; prior v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Version:** 0.6
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -107,15 +107,34 @@ RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned or
     # 1. progression   (#28)  — NULL SEAM today (FR-SN-034)
     # 2. training      (#29)  — NULL SEAM today
     # 3. human-systems (#33)  — NULL SEAM today
-    # 4. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
+    # 4. injuries      (#41)  — NULL SEAM today (ERR-030-002 — after #28/#29 so the injury-risk
+    #                           assembly reads the day's updated fatigue/condition; before the world-day tick)
+    # 5. transfers     (#31)  — NULL SEAM today (ERR-030-004 — a deep-tier position reservation: minimal
+    #                           transfers are command-driven (SubmitBid), so this seam is empty until the
+    #                           deep tier's daily in-flight-negotiation / rival-bid processing; positioned
+    #                           after the per-player systems and before the world-day tick)
+    # 6. staff         (#34)  — NULL SEAM today (ERR-030-006 — a deep-tier position reservation: #34's
+    #                           scaffold projections are pull-based (threaded into #29/#41 when their inputs
+    #                           are built), so this seam is empty until the deep tier's daily candidate-pool /
+    #                           in-flight-hiring processing; positioned after transfers and before the tick)
+    # 7. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
     WorldStore.AdvanceDay()
 ```
 
 **KD-4 invariant:** `Calendar.dayOf(NextRoundIndex) ≥ WorldStore.CurrentWorldTick` always; a restore
-re-checks this and fails loud (F4). The Wave-2+ seams (steps 1–3) are **documented positions**, not
-interfaces — #28/#29/#33 each slot into a pre-declared slot when they land, so a wrong order here
-would force a re-pin across every Wave-2+ spec (§7). With only step 4 live, a no-fixture day's advance
-is **byte-identical** to a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8).
+re-checks this and fails loud (F4). The Wave-2+ seams (steps 1–6) are **documented positions**, not
+interfaces — #28/#29/#33/#41/#31/#34 each slot into a pre-declared slot when they land, so a wrong order here
+would force a re-pin across every Wave-2+ spec (§7). The injuries seam (step 4, appended by ERR-030-002 at
+#41's approval) is positioned after #28/#29 so its occurrence-risk assembly reads the day's updated
+training-fatigue / condition, and before the live world-day tick. The transfers seam (step 5, appended by
+ERR-030-004 at #31's approval) is a **deep-tier position reservation** — minimal #31 transfers are
+command-driven (`SubmitBid`), so the seam is empty until the deep tier's daily negotiation/rival-bid
+processing; it is positioned after the per-player systems and before the world-day tick. The staff seam
+(step 6, appended by ERR-030-006 at #34's approval) is likewise a **deep-tier position reservation** — #34's
+scaffold projections are pull-based (threaded into #29/#41 when their inputs are built), so the seam is empty
+until the deep tier's daily candidate-pool / in-flight-hiring processing; it too sits after transfers and
+before the world-day tick. With only the world-day tick live, a no-fixture day's advance is
+**byte-identical** to a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8).
 
 ## 3.4 Playing a round (FR-SN-012..013b / KD-9)
 
@@ -175,6 +194,9 @@ RollToNextSeason():
     finalTable := Table.OrderedView()                 # (a) finalize
     Board.Evaluate(finalTable)                         # (b) board pass/fail + job-security
     # (a')  <-- #43 promotion/relegation transform inserts HERE (FR-SN-031), not built now
+    # (b')  <-- #40 finance settlement inserts HERE (ERR-030-003) — after (a') so budgets reflect the
+    #           post-promotion division; SettleFinances(financeState[club], position, clubCount, board)
+    #           per club. NULL SEAM until #40 T2 wires it; #40 references #30 never (one-way #30 → #40).
     nextSeed := DeriveNextSeasonSeed(Seed, SeasonNumber)
     Fixtures := FixtureScheduler.Generate(ClubIds, nextSeed)   # (c) regenerate
     AdvanceAges()                                       # (d) #28 — NULL SEAM today
@@ -186,7 +208,10 @@ RollToNextSeason():
 Each step mutates a well-defined slice of `SeasonState`; the whole transform is a pure function of
 the prior `SeasonState` + `nextSeed`, so a save taken mid-roll restores to the same continuation
 (restartable, FR-SN-029). #43's promotion/relegation is a transform inserted at (a'), between
-finalize and regenerate, leaving (a)/(b)/(c)/(d)/(e) unchanged (FR-SN-031).
+finalize and regenerate, leaving (a)/(b)/(c)/(d)/(e) unchanged (FR-SN-031). #40's finance settlement
+(ERR-030-003, at #40's approval) is a NULL SEAM inserted at (b'), after (a') so budgets reflect the
+post-promotion division and before (c); it too leaves the surrounding steps unchanged and keeps the
+transform a pure function of `SeasonState + nextSeed` (per-club `ClubFinances` prior state carried in).
 
 ## 3.6 Season-state sub-blob codec (FR-SN-019..023)
 
@@ -238,4 +263,8 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial algorithms: circle-method fixtures, table + tie-break, day-advance order, boundary roll, season codec, worked 4-club schedule. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
+| 0.3 | 2026-07-23 | — | Back-prop ERR-030-002 (at #41 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the injuries null seam as step 4 (after #28/#29, before the world-day tick); prose updated (steps 1–4). |
+| 0.4 | 2026-07-23 | — | Back-prop ERR-030-003 (at #40 approval): §3.5 `RollToNextSeason` gains the #40 finance-settlement null seam at (b') (after (a') #43 point, before (c) regenerate); prose updated. |
+| 0.5 | 2026-07-23 | — | Back-prop ERR-030-004 (at #31 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the transfers null seam as step 5 (after injuries, before the world-day tick; `AdvanceDay` → step 6); a deep-tier position reservation, empty at minimal. Prose + FR-SN-034 enumeration updated. |
+| 0.6 | 2026-07-23 | — | Back-prop ERR-030-006 (at #34 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the staff null seam as step 6 (after transfers, before the world-day tick; `AdvanceDay` → step 7); a deep-tier position reservation, empty at minimal. Prose + FR-SN-034 enumeration updated. |
 #endregion
