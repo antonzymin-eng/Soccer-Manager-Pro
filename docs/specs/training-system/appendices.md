@@ -1,8 +1,8 @@
 # Training System #29 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — APPROVED)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — PASS-2 re-review; prior APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -21,7 +21,8 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 | `TRAINING_FATIGUE_MAX` | 10000 | [GT] | World-tick accumulator ceiling (distinct from match fatigue). |
 | `TRAINING_NOT_ADVANCED_SENTINEL` | `uint.MaxValue` | [FIXED] | "Never advanced" seed for `LastAdvancedWorldDay` — chosen so a legitimate world-day 0 cannot collide with the fresh-state value (the day-0 double-accrual trap, F6). |
 | `FocusConditionDelta[Focus]` | table | [GT] | Per-focus daily conditioning delta (Rest small +, Fitness large +, Balanced mid). |
-| `FocusFatigueDelta[Focus]` | table | [GT] | Per-focus daily training-fatigue delta (Rest negative = recovery). |
+| `FocusFatigueDelta[Focus]` | table | [GT] | Per-focus daily training **load** (before recovery). Rest is 0 or small; Fitness/Physical are large. |
+| `FATIGUE_DAILY_RECOVERY` | 200 | [GT] | Passive daily fatigue recovery, applied **every** day regardless of focus (§3.1). Net daily fatigue = `FocusFatigueDelta − FATIGUE_DAILY_RECOVERY`, so a non-Rest regime reaches a sub-max equilibrium instead of saturating; Rest (load ≈ 0) nets strongly negative. |
 | `MATCH_ENTRY_FATIGUE_SCALE` | 1.0 | [GT] | KD-1 projection scale: training-fatigue fraction → starting-fatigue offset. |
 | `AttributeConditioningBonus` weights | table | [GT] | Deterministic own-attribute (e.g. `WorkRate`/`Stamina`) bonus — never RNG (FR-TR-009). |
 | `FatigueRiskWeight` / `LowConditionRiskWeight` | table | [GT] | KD-5 injury-risk weights. |
@@ -34,29 +35,32 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 ## Appendix B — Worked example: a Fitness week, mid-week save
 
 Seed: `Condition = 7000`, `TrainingFatigue = 2000`, `Focus = Fitness`, `LastAdvancedWorldDay = 100`.
-`FocusConditionDelta[Fitness] = +120`, `FocusFatigueDelta[Fitness] = +300`, `AttributeConditioningBonus = +20`,
-`CoachingModifier.Identity`.
+`FocusConditionDelta[Fitness] = +120`, `FocusFatigueDelta[Fitness] = +300` (load), `FATIGUE_DAILY_RECOVERY =
+200`, so net fatigue = `+300 − 200 = +100`/day; `AttributeConditioningBonus = +20`, `CoachingModifier.Identity`.
 
-- Day 101: `Condition = 7000 + 120 + 20 = 7140`; `TrainingFatigue = 2000 + 300 = 2300`; `LastAdvancedWorldDay = 101`.
-- Day 102: `Condition = 7280`; `TrainingFatigue = 2600`; day = 102.
-- Day 103: `Condition = 7420`; `TrainingFatigue = 2900`; day = 103.
+- Day 101: `Condition = 7000 + 120 + 20 = 7140`; `TrainingFatigue = 2000 + 100 = 2100`; `LastAdvancedWorldDay = 101`.
+- Day 102: `Condition = 7280`; `TrainingFatigue = 2200`; day = 102.
+- Day 103: `Condition = 7420`; `TrainingFatigue = 2300`; day = 103.
 - **Save after day 103**, restore → all four fields restore field-identical; re-running day 104 gives
-  `Condition = 7560`, `TrainingFatigue = 3200` — identical to an uninterrupted run (T-TR-DET-001).
-- `ProjectMatchEntryFatigue = Clamp01(2900/10000 × 1.0) = 0.29` after day 103 — the same value before and
+  `Condition = 7560`, `TrainingFatigue = 2400` — identical to an uninterrupted run (T-TR-DET-001).
+- `ProjectMatchEntryFatigue = Clamp01(2300/10000 × 1.0) = 0.23` after day 103 — the same value before and
   after the save (pure over the accumulator; not stored, KD-1).
 
-Re-running day 103 (already advanced) is a no-op (F6): cursors unchanged.
+Re-running day 103 (already advanced) is a no-op (F6); calling day 106 (a gap over the last-advanced 103)
+**fails loud** (F7), not a silent skip.
 
 ## Appendix C — Worked example: behaviour-neutral identity (KD-8)
 
-Dial off (Stage-2 minimal). For every `TrainingFocus`, `ComputeTrainingInput(state, attrs, Identity) ==
-TrainingInput.Neutral`. Feeding `Neutral` into #28's `GrowthProjection` yields the exact no-training growth
-step — attributes/CA/PA byte-identical (T-TR-NEU-001). `AdvanceTrainingDay` changes only `Condition` /
-`TrainingFatigue`, never a `PlayerAttributes` field (T-TR-NEU-002) — #29 is not a second attribute writer.
+`deepTrainingEnabled` off (Stage-2 minimal). For every `TrainingFocus`, `ComputeTrainingInput(state, attrs,
+Identity) == TrainingInput.Neutral`. Feeding a `Neutral` batch into #28's `AdvanceDay(worldDay,
+trainingInputs)` yields the exact no-training growth step — attributes/CA/PA byte-identical (T-TR-NEU-001).
+`AdvanceTrainingDay` changes only `Condition` / `TrainingFatigue`, never a `PlayerAttributes` field
+(T-TR-NEU-002) — #29 is not a second attribute writer.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial constant catalogue + worked examples. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | APPROVED. |
+| 0.3 | 2026-07-23 | — | PASS-2: +`FATIGUE_DAILY_RECOVERY` constant; App. B recomputed (net +100/day, projection 0.23) + F7 gap note; App. C `deepTrainingEnabled` + batch `AdvanceDay`; schedule-not-persisted note. |
 #endregion

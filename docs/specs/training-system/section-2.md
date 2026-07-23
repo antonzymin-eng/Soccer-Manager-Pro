@@ -1,8 +1,8 @@
 # Training System #29 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — PASS-1 → AR-2 → AR-3; APPROVED)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — PASS-2 re-review; prior PASS-1 → AR-2 → AR-3; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -14,17 +14,27 @@
   the 10 Hz/60 Hz match loops.
 - **FR-TR-002** — Per-player `TrainingState` (focus, conditioning, training-fatigue, last-advanced day) is
   #29-owned state, serialized under #29's sub-blob (KD-7).
-- **FR-TR-003** — A team `TrainingSchedule` holds the per-player focus assignments; focus is a **persistent**
-  field, changed only by the weekly `SetFocus` command (FR-TR-023).
+- **FR-TR-003** — Focus is a **persistent per-player field** living on `TrainingState.Focus` — the **single
+  source of truth**, changed only by the weekly `SetFocus` command (FR-TR-023). `TrainingSchedule` is a
+  **read-only view / iteration** over the per-player `TrainingState.Focus` values; it MUST NOT store focus
+  separately (no duplicate, drift-prone copy) and is NOT independently serialized.
 - **FR-TR-004** — #29 exposes a **pure** `ComputeTrainingInput` (feeds #28 at #30's slot-1 seam) and a
   **mutating** `AdvanceTrainingDay` (the slot-2 world-day step); the two MUST be distinct entry points.
 
 **Single-owner attribute mutation**
 - **FR-TR-005** — #29 MUST write attributes **only** by populating #28's `TrainingInput`; it MUST NOT add a
   second attribute-mutation path (#28's `GrowthProjection` stays the sole writer, FR-PG-008).
-- **FR-TR-006** — `ComputeTrainingInput` MUST be pure and deterministic — no mutation, no RNG, no jitter.
-- **FR-TR-007** — With the attribute-growth dial off, `ComputeTrainingInput` MUST return `TrainingInput.
-  Neutral`, so #28's `GrowthProjection` is byte-identical to the no-training path (KD-8).
+- **FR-TR-006** — `ComputeTrainingInput` MUST be pure and deterministic — no mutation, no RNG, no jitter —
+  and MUST read **only** fields `AdvanceTrainingDay` does not mutate (`Focus`, the player's attributes, and
+  the `CoachingModifier`). It MUST NOT read `Condition` / `TrainingFatigue` / `LastAdvancedWorldDay`. This
+  field-independence — not purity alone — is what makes the slot-1 read order-independent of the slot-2
+  mutation (KD-2); a future growth term that reads a mutated field would reintroduce a slot ordering hazard.
+- **FR-TR-007** — `ComputeTrainingInput` MUST be gated by a **#29-owned** `deepTrainingEnabled` flag (the
+  Stage-2/Stage-3 dial), **not** #28's `curveEnabled`: with `deepTrainingEnabled` off it MUST return
+  `TrainingInput.Neutral`, so #28's growth is byte-identical to the no-training path (KD-8). Because #28's
+  literal §4.3 step (its `curveEnabled` off) ignores the `TrainingInput` magnitude, #29's Stage-3
+  contribution is realized by #28 **only** when #28's own `curveEnabled` is on — an independent dial #29 does
+  not set.
 - **FR-TR-008** — #29 MUST be fully deterministic and register **no** RNG stream; `_RESERVED_0x21_` /
   `SubsystemOrdinals` 83 remain reserved (KD-6).
 - **FR-TR-009** — Any per-player training variation MUST be a deterministic function of the player's own
@@ -47,14 +57,16 @@
 **Seams**
 - **FR-TR-016** — The step MUST take `in CoachingModifier` defaulting to `Identity` (×1.0); no #34 interface
   is built (KD-3).
-- **FR-TR-017** — #29 MUST expose a read-only `InjuryRiskContribution` per player (from intensity +
-  training-fatigue + conditioning); #41 reads it; #29 owns no injury model; no #41 interface is built (KD-5).
+- **FR-TR-017** — #29 MUST expose a read-only `InjuryRiskContribution` per player (computed by
+  `ComputeInjuryRisk` from `TrainingFatigue` + low `Condition`, mitigated by the player's own robustness
+  attributes — §3.4); #41 reads it; #29 owns no injury model; no #41 interface is built (KD-5).
 
 **Persistence**
 - **FR-TR-018** — `TRAINING_SAVE_FORMAT_VERSION` [FIXED] = 1; #29's state lands as an opaque, independently
   version-gated sub-blob under #30's season save (`SeasonSaveCodec` pattern).
-- **FR-TR-019** — Every `TrainingState` field + the schedule MUST be serialized and round-trip
-  field-identical; **serialize, don't regenerate** (#30 KD-5).
+- **FR-TR-019** — Every `TrainingState` field (per club, keyed by `PlayerId`) MUST be serialized and
+  round-trip field-identical; **serialize, don't regenerate** (#30 KD-5). `TrainingSchedule` is derived from
+  the per-player focus and MUST NOT be serialized separately (FR-TR-003).
 - **FR-TR-020** — Restore MUST **fail loud** on version mismatch / out-of-bounds length prefix
   (overflow-safe `ReadCount`) / trailing bytes (F3/F5).
 
@@ -66,6 +78,19 @@
   value or an unknown player (F2/F4).
 - **FR-TR-024** — The reference direction MUST stay one-way: `#30 → #29 → #28 → {#27,#16}`; #28's assembly
   stays schema-untouched.
+
+**Roster-membership lifecycle (co-designed with #28's churning roster)**
+- **FR-TR-025** — The per-club `TrainingState` set MUST track roster membership in lockstep with #28's
+  season-boundary roster mutation (FR-PG-011/015): on a #28 `RegenResult`, a `TrainingState.Create(Balanced)`
+  MUST be inserted for each **fresh `PlayerId`** (never `default(TrainingState)` — that reintroduces the
+  day-0 trap); on a `RetirementResult`, the retiree's `TrainingState` entry MUST be **removed**. This is the
+  FR-PG-011 "remove-retiree / insert-regen" parallel, keyed by `PlayerId`, applied at the season boundary by
+  the roster owner (#30). Without it the block leaks retired entries unboundedly across seasons and regens
+  have no defined training state (F7 — the day-0 hazard).
+- **FR-TR-026** — In normal operation `AdvanceTrainingDay` MUST be called with `worldDay == LastAdvanced +
+  1` (post-`Create`, the first advance is the player's first world day). A gap (`worldDay > LastAdvanced +
+  1`, post-sentinel) MUST **fail loud** (`ArgumentException`) rather than silently skip the intervening
+  days' accrual — #29 does not batch-replay a gap (KD-4, no rollover loop; #30 advances one day at a time).
 
 ## 2.2 Data structures
 
@@ -96,8 +121,9 @@ public struct TrainingState
                 LastAdvancedWorldDay = TRAINING_NOT_ADVANCED_SENTINEL };
 }
 
-// The team schedule = per-player focus, keyed by the club-scoped PlayerId (#27).
-public readonly struct TrainingSchedule { /* PlayerId → TrainingFocus, per club */ }
+// A read-only VIEW over the per-club players' TrainingState.Focus (FR-TR-003) — NOT a stored copy and
+// NOT separately serialized. Focus lives only on TrainingState.Focus (single source of truth).
+public readonly struct TrainingSchedule { /* iterates PlayerId → state.Focus over the club's states */ }
 
 // KD-3 coaching routing seam — identity until #34 lands.
 public readonly struct CoachingModifier { public static CoachingModifier Identity => default; }
@@ -110,10 +136,13 @@ public readonly struct TrainingViewModel { /* focus / condition / training-fatig
 ```
 
 The **training block** persisted under `TRAINING_SAVE_FORMAT_VERSION` is, per club: each player's
-`TrainingState` (keyed by `PlayerId`) + the club's `TrainingSchedule`.
+`TrainingState` keyed by `PlayerId` (focus included — the single source of truth). `TrainingSchedule` is
+**not** persisted (it is derived from those states, FR-TR-003/019). The `TrainingState` set tracks roster
+membership per FR-TR-025 (regen inserts, retiree removes).
 
 `ComputeTrainingInput` (pure) and `AdvanceTrainingDay` (mutating) both take `in CoachingModifier`; the
-former returns a `TrainingInput` (#28's type), the latter accrues `Condition` + `TrainingFatigue`. See §3.
+former returns a `TrainingInput` (#28's type) gated by the #29-owned `deepTrainingEnabled` flag (FR-TR-007),
+the latter accrues `Condition` + `TrainingFatigue`. See §3.
 
 ## 2.3 Failure modes
 
@@ -124,11 +153,13 @@ former returns a `TrainingInput` (#28's type), the latter accrues `Condition` + 
 | **F3** | `TRAINING_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`ArgumentException`), the `MatchSaveCodec` posture. |
 | **F4** | An out-of-contract `TrainingFocus` / `TrainingInput` reaches a consuming seam | **Fail loud** — an invalid value is a bug, not silently clamped (FR-TR-021). |
 | **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
-| **F6** | `AdvanceTrainingDay` invoked twice for one world day | Idempotent no-op guarded by `LastAdvancedWorldDay` — a mid-week save→restore→re-run does not double-accrue. |
+| **F6** | `AdvanceTrainingDay` invoked twice for one world day (`worldDay <= LastAdvanced`) | Idempotent no-op guarded by `LastAdvancedWorldDay` — a mid-week save→restore→re-run does not double-accrue. |
+| **F7** | `AdvanceTrainingDay` called with a **day gap** (`worldDay > LastAdvanced + 1`, post-sentinel), or a player with no `TrainingState` (a regen never inserted per FR-TR-025) | **Fail loud** (`ArgumentException`) — a gap silently under-accrues and a missing state is a lifecycle bug (the day-0 hazard); neither is clamped or defaulted. |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-TR-001..024), data structures, F1..F6. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | PASS-1 M-1 (single `Condition` cursor) / M-2 (no stream) folded from the supplement; AR-2/AR-3 clean; APPROVED. |
+| 0.3 | 2026-07-23 | — | PASS-2: +FR-TR-025 (regen/retire lifecycle) / FR-TR-026 (day-gap fail-loud); FR-TR-003 (focus single-source, schedule = derived view) / 006 (field-independence invariant) / 007 (#29-owned `deepTrainingEnabled`) / 019 (schedule not serialized); +F7. |
 #endregion

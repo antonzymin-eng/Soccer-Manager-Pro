@@ -1,8 +1,8 @@
 # Training System #29 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — APPROVED)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — PASS-2 re-review; prior APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -15,9 +15,11 @@
   `ProjectMatchEntryFatigue`, `TrainingSystemConstants`. Behaviour-neutral vs #28 by construction (KD-8).
 - **T1** — `TrainingSaveCodec` (`TRAINING_SAVE_FORMAT_VERSION` = 1) + composition into #30's season save
   (the `SeasonSaveCodec` sub-blob; #30's composing format-version bump coordinated here). Fail-loud gates.
-- **T2** — Wire `ComputeTrainingInput` at #30's **slot-1** progression seam (feeding #28) and
-  `AdvanceTrainingDay` at the **slot-2** training seam; wire `ProjectMatchEntryFatigue` into the match-boot
-  fatigue seam. No #30 tick-order change (KD-2).
+- **T2** — Wire `ComputeTrainingInput` (gathered into the batch #28's `AdvanceDay(worldDay, trainingInputs)`
+  consumes) at #30's **slot-1** progression seam and `AdvanceTrainingDay` at the **slot-2** training seam;
+  wire `ProjectMatchEntryFatigue` into the match-boot fatigue seam; wire the FR-TR-025 roster-membership
+  handoff (regen inserts `TrainingState.Create`, retiree removes) at #30's season boundary. No #30
+  tick-order change (KD-2).
 - **T3** — Deep tier: the per-attribute growth contribution (deterministic `BuildTrainingInput`) populating
   #28's `TrainingInput` fields; consume a non-identity `CoachingModifier` when #34 lands.
 
@@ -46,4 +48,5 @@
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial T-phase plan + downstream seam contracts. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | APPROVED. |
+| 0.3 | 2026-07-23 | — | PASS-2: T2 gains the FR-TR-025 regen/retire roster-membership handoff wiring; batch `AdvanceDay` composition. |
 #endregion

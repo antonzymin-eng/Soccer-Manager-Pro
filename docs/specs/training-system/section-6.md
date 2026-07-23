@@ -1,8 +1,8 @@
 # Training System #29 — Section 6: Performance & Cadence
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — APPROVED)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — PASS-2 re-review; prior APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -32,4 +32,5 @@ at Stage 0/1; the FR-PO-052 per-tick gate is a match-loop concern and does not a
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial performance analysis. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | APPROVED. |
+| 0.3 | 2026-07-23 | — | PASS-2: §6.2 "gap-independent" wording softened to "one day at a time; a gap fails loud" (F7). |
 #endregion

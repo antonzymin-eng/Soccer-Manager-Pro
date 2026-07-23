@@ -1,8 +1,8 @@
 # Training System #29 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — APPROVED)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — PASS-2 re-review; prior APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -43,6 +43,7 @@ and the persistent training sub-blob under #30's season save.
 | #30 Season & Competition Loop | #30's day-advance loop invokes #29's step + the pure read | #30 → #29 |
 | #34 Coaching (future) | supplies a non-identity `CoachingModifier` when it lands | #34 → #29 |
 | #41 Injuries (future) | reads the `InjuryRiskContribution` output | #41 reads #29 |
+| #31 / #38 (future) | read the `TrainingViewModel` observer (value copies, KD-7) | #31/#38 read #29 |
 
 Reference DAG: `#30 → {#28, #29}`, `#29 → #28`, `{#28,#29} → {#27,#16}`. **Acyclic.** #28's assembly stays
 schema-untouched (the `TrainingInput` append point is #28's own reserved extension).
@@ -58,10 +59,12 @@ schema-untouched (the `TrainingInput` append point is #28's own reserved extensi
   representable — one accumulator, one read.
 
 - **KD-2 (growth seam — single-owner attribute mutation).** #29 writes attributes **only** by populating
-  #28's `TrainingInput`; `GrowthProjection` stays the sole attribute writer. `ComputeTrainingInput` is
-  **pure and deterministic**, so #30 can call it at the **slot-1** progression seam to feed #28 the same
-  world day while the mutating `AdvanceTrainingDay` runs at **slot-2** — #30's documented tick order is
-  honored, with no staleness and no reorder.
+  #28's `TrainingInput`; `GrowthProjection` stays the sole attribute writer. #30 gathers each player's
+  `ComputeTrainingInput` result into the batch #28's public `AdvanceDay(worldDay, in trainingInputs)`
+  consumes (FR-PG-021) at the **slot-1** progression seam, while the mutating `AdvanceTrainingDay` runs at
+  **slot-2** — #30's documented tick order is honored, with no reorder. The slot-1 read is order-independent
+  of the slot-2 mutation because `ComputeTrainingInput` reads only fields `AdvanceTrainingDay` does not
+  mutate (`Focus`/attributes/coach — the FR-TR-006 invariant), **not** merely because it is pure.
 
 - **KD-3 (coaching modulation — identity routing seam).** The step takes `in CoachingModifier`, default
   `Identity` (×1.0). No #34 interface is built (FR-LW-031) — the routing-seam-as-identity pattern
@@ -81,8 +84,13 @@ schema-untouched (the `TrainingInput` append point is #28's own reserved extensi
   `0x20` only because **regen is a genuine draw site**; #29 has no analogous #29-owned stochastic outcome, so
   a named stream would be the phantom-surface class FR-LW-031 forbids.
 
-- **KD-7 (persistence).** Opaque `TRAINING_SAVE_FORMAT_VERSION` sub-blob under #30's season save
-  (`SeasonSaveCodec` pattern); fail-loud gates; serialize-don't-regenerate (#30 KD-5).
+- **KD-7 (persistence + roster-membership lifecycle).** Opaque `TRAINING_SAVE_FORMAT_VERSION` sub-blob under
+  #30's season save (`SeasonSaveCodec` pattern); fail-loud gates; serialize-don't-regenerate (#30 KD-5). The
+  per-club `TrainingState` set (keyed by `PlayerId`, focus is the single source of truth on
+  `TrainingState.Focus` — no duplicate schedule copy) tracks roster membership **in lockstep with #28's
+  season-boundary churn** (FR-TR-025): a #28 regen inserts a `TrainingState.Create(Balanced)` for the fresh
+  `PlayerId`; a retirement removes the retiree's entry — the FR-PG-011 remove/insert parallel. Regens use
+  `Create` (never `default`), so the day-0 sentinel invariant holds for new players too.
 
 - **KD-8 (behaviour-neutral identity).** Attribute-growth dial off + `CoachingModifier.Identity` +
   `TrainingInput.Neutral` ⇒ #29 evolves only its own conditioning / training-fatigue and never touches #28's
@@ -99,4 +107,5 @@ recomputed, not stored (KD-1).
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | PASS-1 → AR-2 → AR-3; APPROVED. |
+| 0.3 | 2026-07-23 | — | PASS-2: §1.3 +#31/#38 observer row; KD-7 gains the FR-TR-025 regen/retire roster-membership lifecycle clause. |
 #endregion

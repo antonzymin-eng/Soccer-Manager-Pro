@@ -1,8 +1,9 @@
 # Training System #29 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — PASS-1 → AR-2 → AR-3 recorded in §9.3.1; R-01..R-05 signed; APPROVED)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — PASS-2 hostile re-review 1H+6M+2L recorded in §9.3.1, all fixed →
+re-converged; FR set 24 → 26; re-affirmed APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/training-system-design.md` v0.4
 
@@ -26,7 +27,7 @@ gates are open by construction (nothing is built yet); review gates track the pi
 
 ## 9.2 Implementation status (forward design — nothing built yet)
 
-- [x] FR set complete + stable: FR-TR-001..024 (grep-verified: 24 unique, contiguous, in §2).
+- [x] FR set complete + stable: FR-TR-001..026 (grep-verified: 26 unique, contiguous, in §2; +FR-TR-025/026 from PASS-2).
 - [ ] `TacticalDirector.TrainingSystem` assembly (value types + deterministic Stage-2 step) — **NOT
       STARTED** (T0).
 - [ ] `TrainingSaveCodec` + season-save composition (a #30 change) — NOT STARTED (T1).
@@ -60,14 +61,44 @@ gates are open by construction (nothing is built yet); review gates track the pi
   `TrainingState.Create` factory; the guard is `!= SENTINEL && worldDay <= last`. `default(TrainingState)`
   is documented as not a valid runtime state. Locked by new T-TR-DET-004 (§5).
 
-**AR-2 → AR-3 — July 23, 2026 (0H+0M; CONVERGENCE).** Regression sweep of the M-1 fix: the sentinel is
-referenced consistently across §2.2 (struct + factory), §3.1 (guard), Appendix A (const), §5 (T-TR-DET-004);
-Appendix B's mid-game seed (`LastAdvancedWorldDay = 100`) is consistent (the sentinel is only the fresh-state
-seed). §6.2 "gap-independent" wording (which implied skips occur) softened to "one day at a time, no gap to
-batch-replay" (L). Full grep sweep: no phantom-stream / two-cursor residue (the only `DOMAIN_TAG_TRAINING`
-hits are the "no constant is defined" absence statement and the §7.2 deferred-extension note; `Fitness` is a
-`TrainingFocus` enum member); FR-TR-001..024 contiguous. No new High/Medium — the cycle closes (the #21–#30
-L-only/clean convention).
+**AR-2 → AR-3 (closing the original PASS-1 cycle) — July 23, 2026 (0H+0M; CONVERGENCE).** Regression sweep
+of the day-0 fix: the sentinel is referenced consistently across §2.2 (struct + factory), §3.1 (guard),
+Appendix A (const), §5 (T-TR-DET-004); Appendix B's mid-game seed (`LastAdvancedWorldDay = 100`) is
+consistent (the sentinel is only the fresh-state seed). §6.2 "gap-independent" wording (which implied skips
+occur) softened. Full grep sweep: no phantom-stream / two-cursor residue; FR-TR-001..024 contiguous (this was
+the pre-PASS-2 count). No new High/Medium at this round — the original cycle closed here; **PASS-2 below then
+re-opened it.**
+
+**PASS-2 (post-approval hostile re-review, /adversarial-review) — July 23, 2026 (1H+6M+2L); all fixed →
+re-converged.** The original PASS-1 was too lenient on freshly-authored work; a full re-read against the
+actual #28/#30 APIs surfaced real defects (FR count 24 → 26):
+- **H — regen/retire `TrainingState` membership handoff missing.** #28 churns the roster every season
+  (FR-PG-011/015: fresh `PlayerId` per regen, retiree block entry removed), but #29 had no parallel rule —
+  retired entries would leak unboundedly and regens would have no state (a `default(TrainingState)` reviving
+  the day-0 trap). Fixed: **FR-TR-025** (regen inserts `TrainingState.Create(Balanced)`, retiree removes) +
+  KD-7 lifecycle clause + §3.5 note + T-TR-LIFE-001; F7 covers the missing-state case.
+- **M — §3.5 cited a non-existent #28 API** (`GrowthProjection.Step`, per-player) vs #28's real batch
+  `AdvanceDay(worldDay, in trainingInputs)` (FR-PG-021). §3.5/§4.3/§7/App. C rewritten to the batch shape.
+- **M — `ComputeTrainingInput` gated on #28's `curveEnabled`.** Now a #29-owned `deepTrainingEnabled`
+  parameter (FR-TR-007), with the stated coupling that #28 realizes the input only under its own curve.
+- **M — focus double-stored** (`TrainingState.Focus` + a serialized `TrainingSchedule`). Collapsed:
+  `TrainingState.Focus` is the single source of truth; `TrainingSchedule` is a derived read-only view, not
+  serialized (FR-TR-003/019, §2.2/§4/§5 realigned) — this also removes the readonly-struct-over-mutable-map
+  footgun.
+- **M — silent day-gap under-accrual.** `AdvanceTrainingDay` now **fails loud** on `worldDay > LastAdvanced
+  + 1` (FR-TR-026 / F7 / T-TR-DET-005) instead of skipping days.
+- **M — no passive fatigue recovery** (match-entry fatigue saturated to 1.0 under any non-Rest regime).
+  Added `FATIGUE_DAILY_RECOVERY` (net = load − recovery); §3.1 + Appendix A/B recomputed.
+- **M — "no staleness" mis-justified** ("pure" ≠ order-safe). Restated as the load-bearing FR-TR-006
+  invariant: `ComputeTrainingInput` reads only fields slot-2 does not mutate.
+- **L — `InjuryRiskContribution` named both the type and its function** → method renamed `ComputeInjuryRisk`.
+- **L — #31/#38 absent from the §1.3 dependency table** → observer-consumer row added.
+
+**PASS-2 convergence — July 23, 2026 (0H+0M; CONVERGENCE).** Post-fix sweep: FR-TR-001..026 contiguous (26
+unique); `deepTrainingEnabled` / `FATIGUE_DAILY_RECOVERY` / F7 / `ComputeInjuryRisk` / the batch
+`AdvanceDay(worldDay, …)` and the FR-TR-025 lifecycle referenced consistently across §1–§7 + appendices; no
+stale `GrowthProjection.Step` / per-day `+300` arithmetic / separately-serialized-`TrainingSchedule` residue;
+Appendix B recomputed (net +100/day, projection 0.23). No new High/Medium — the cycle re-closes.
 
 ## 9.4 Consistency gates
 
@@ -78,31 +109,37 @@ L-only/clean convention).
 - [x] Cited source APIs verified against real files: `PlayerAttributes` (31 `int[1,20]` + `WeakFootRating`;
       **no Form/Fitness/Condition field**), `PlayerAttributeProjection` (caller-supplied `float fatigue`,
       KD-P4 — the KD-1 target), #28 `GrowthProjection` sole writer + `TrainingInput.Neutral` append point
-      (FR-PG-008/009), #30 `WorldStore.AdvanceDay` slot-1/slot-2 reserved null seams + `SeasonSaveCodec`
-      sub-blob, `CanonicalSerializer`.
+      (FR-PG-008/009) + the **batch** public entry `AdvanceDay(worldDay, in trainingInputs)` (FR-PG-021 —
+      the §3.5 composition cites this real API, not a per-player `GrowthProjection.Step`) + the regen/retire
+      roster churn (FR-PG-011/015, the FR-TR-025 handoff mirror), #30 `WorldStore.AdvanceDay` slot-1/slot-2
+      reserved null seams + `SeasonSaveCodec` sub-blob, `CanonicalSerializer`.
 - [x] `SPEC_INDEX.md` row added at promotion (`IN REVIEW`), flipped `IN REVIEW → APPROVED` at sign-off.
 - [x] #16 §3.4: a **note** (ERR-029-001) records #29 confirmed deterministic — `_RESERVED_0x21_` / 83 stay
       reserved (no promotion, no code const, no `DETERMINISM_DIGEST_VERSION` bump).
 
 ## 9.5 Lead-developer review gates (R-01..R-05)
 
-> **Status: SIGNED — July 23, 2026.** Design-supplement AR (1H+1M+2L) + section-file PASS-1 (1M) → AR-2 →
-> AR-3 converged (§9.3.1, 0H unresolved). Forward design (nothing built) — sign-off approves the DESIGN, as
+> **Status: SIGNED — July 23, 2026 (re-affirmed at v0.3 after PASS-2).** Design-supplement AR (1H+1M+2L) +
+> section-file PASS-1 (1M) → AR-2 → AR-3, then **PASS-2 hostile re-review (1H+6M+2L) → PASS-2 convergence**,
+> all resolved (§9.3.1, 0H unresolved). Forward design (nothing built) — sign-off approves the DESIGN, as
 > #21–#30 were approved before their T0 code; the §7 roadmap is the post-APPROVED sequence.
 
 | # | Review gate | Evidence | Status |
 |---|---|---|---|
 | R-01 | **Content completeness** — §1–§9 + appendices per the template | all files | ☑ |
-| R-02 | **Technical accuracy** — ONE `Condition` cursor + ONE fatigue accumulator (no muddle); the KD-1 pure/no-write-back projection; KD-2 pure-read single-owner seam; the day-0 sentinel fix; 24 FRs; constants one tag each, no `[EST]`; cited #27/#28/#30/#16 APIs verified | §2/§3/§4/App. A/B/C | ☑ |
-| R-03 | **Cross-spec consistency** — no-stream determinism (0x21/83 stay reserved, not a phantom); the no-reverse-reference invariant (#29 references #27/#28/#16 only; #28 schema-untouched); the KD-3 identity routing seam (no phantom #34) and KD-5 injury output (no phantom #41); #30's tick order honored (no reorder, no staleness) | §1 / §4 / §7 | ☑ |
+| R-02 | **Technical accuracy** — ONE `Condition` cursor + ONE fatigue accumulator; the KD-1 pure/no-write-back projection; KD-2 pure-read single-owner seam citing #28's real batch `AdvanceDay` API; the day-0 sentinel + day-gap fail-loud; passive fatigue recovery; the #29-owned `deepTrainingEnabled` gate; **26 FRs**; constants one tag each, no `[EST]`; cited #27/#28/#30/#16 APIs verified (PASS-2) | §2/§3/§4/App. A/B/C | ☑ |
+| R-03 | **Cross-spec consistency** — no-stream determinism (0x21/83 stay reserved); the no-reverse-reference invariant (#29 references #27/#28/#16 only; #28 schema-untouched); **the FR-TR-025 regen/retire roster-membership handoff mirroring #28 FR-PG-011/015** (PASS-2 High fix); the KD-3 identity seam (no phantom #34) + KD-5 injury output (no phantom #41); #30's tick order honored (no reorder, no staleness — the FR-TR-006 field-independence invariant) | §1 / §4 / §7 | ☑ |
 | R-04 | **Stage-binding correctness** — world-tick off-pitch cadence (not the match loops); byte-exact save/restore; training-fatigue ≠ match-fatigue (no shared counter); the `[GT]` magnitudes honestly illustrative | §1 / §3 / §6 | ☑ |
 | R-05 | **Approval granted** — all AR resolved; `SPEC_INDEX.md` flipped `IN REVIEW → APPROVED` | | ☑ |
 
 ## 9.6 Decision
 
-**APPROVED — July 23, 2026.** The section files are authored from the converged design supplement (v0.4,
-design-AR 1H+1M+2L); the section-file PASS-1 (0H+1M day-0 sentinel) → AR-2 → AR-3 convergence is resolved
-(§9.3.1); #29 is confirmed **fully deterministic** (no RNG stream — `_RESERVED_0x21_` / 83 stay reserved,
+**APPROVED — July 23, 2026 (re-affirmed at v0.3 after PASS-2).** The section files are authored from the
+converged design supplement (v0.4, design-AR 1H+1M+2L); the section-file PASS-1 (0H+1M day-0 sentinel) →
+AR-2 → AR-3, then a post-approval hostile **PASS-2 (1H+6M+2L — the regen/retire lifecycle High, the #28
+batch-API citation, the `curveEnabled` conflation, the focus duplication, the day-gap fail-loud, the fatigue
+recovery, the staleness invariant) → PASS-2 convergence**, are all resolved (§9.3.1); #29 is confirmed
+**fully deterministic** (no RNG stream — `_RESERVED_0x21_` / 83 stay reserved,
 ERR-029-001, no `DETERMINISM_DIGEST_VERSION` bump); and lead-developer R-01..R-05 sign-off is granted
 (§9.5). `SPEC_INDEX.md` row 29 flips `IN REVIEW → APPROVED`. This approves the **forward design** (the
 #21–#30 pre-T0 precedent); the §7 plan (T0 value types + deterministic Stage-2 step → T1
@@ -115,4 +152,5 @@ post-APPROVED sequence.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial checklist. Content/consistency gates checked; review gates OPEN by construction. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Design-AR (1H+1M+2L) + PASS-1 (1M) → AR-2 → AR-3 recorded (§9.3.1); R-01..R-05 signed; §9.6 APPROVED. |
+| 0.3 | 2026-07-23 | — | PASS-2 hostile re-review (1H regen/retire lifecycle + 6M + 2L) → PASS-2 convergence; FR set 24 → 26 (FR-TR-025/026); R-02/R-03 + §9.6 updated; re-affirmed APPROVED. |
 #endregion
