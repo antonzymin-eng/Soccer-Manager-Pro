@@ -1,8 +1,8 @@
 # Localization & Accessibility #49 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — PASS-1 (1H+1M+1L) → AR-2 convergence; R-01..R-05 signed; APPROVED)
-**Version:** 0.3
+**Last Updated:** July 23, 2026 (v0.4 — repeat AR-3 (1H+1L) fix pass recorded in §9.3.1; APPROVED)
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/localization-seam-template-design.md` v0.2
 
@@ -70,7 +70,24 @@ split is consistent across §2.2/§2.2.1/§4.1/§4.2/§7.3/App. B/D and now MATC
 core references nothing sim-side; the sole `living-world` reference is the adapter); FR-LC-008a ↔ F5 ↔ §3.4
 ↔ T-LC-PREDRAW-001 are wired end to end; `{score}` derivation is pinned everywhere it appears. The only
 residual is the intentional out-of-sequence `FR-LC-008a` label (placed next to its consumer FR-LC-015) — a
-Low doc nicety, not gating. Cycle closes per the #21–#38 L-only-round convention.
+Low doc nicety, not gating.
+
+**AR-3 (repeat pass over the landed spec) — July 23, 2026 (1H+1L); both fixed.** A fresh hostile re-read
+caught a **cross-fix regression** the AR-2 sweep missed: PASS-1's H-1 (make the core producer-agnostic) and
+L-1 (`{score}` derived) had **collided**. **H (AR-3):** §3.5 put `{score}` derivation
+(`HomeGoals.ToString(InvariantCulture) + "-" + AwayGoals…` — #22-specific score-format knowledge) in the
+**generic renderer**, re-leaking producer logic into the core H-1 had just cleaned; and the generic
+`NamedSlotSet` was left with **undefined value typing**, so FR-LC-016 byte-identity was unimplementable as
+written (the renderer can't `.ToString(InvariantCulture)` an untyped slot). Fixed: `{score}` is derived in
+the **boundary adapter** (which owns the typed `InteractionSlots`) into a plain `score` **string** slot;
+`NamedSlotSet` is defined as an immutable `name → string` map; the generic `Expand` does **pure string**
+substitution with no producer-specific formatting — byte-identity holds (the boundary formats exactly as
+`InteractionTextGenerator.Expand`) and the core stays producer-agnostic (§2.2/§3.2/§3.5/§4.2/App. B/C).
+**L (AR-3):** the clause lookup was keyed by a bare `int CitationKind` while templates are producer-scoped
+by `TextTemplateId.ProducerTag` — a second producer's clause keys would collide; scoped to
+`clause(Id.ProducerTag, CitationKind)` (§2.2/§3.2/FR-LC-010/App. C). A re-read after these fixes surfaces no
+new High/Medium — the core is producer-agnostic on every axis (id, slots, clauses, formatting). Cycle
+closes.
 
 ## 9.4 Consistency gates
 
@@ -115,4 +132,5 @@ each producer's boundary adapter (#35/#46/#38-static), and the Wave-8 locale + a
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial checklist. Content/consistency gates checked; review + implementation gates OPEN by construction (forward design). Status IN REVIEW. |
 | 0.3 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L: H-1 generic-core / per-producer boundary-adapter split; M-1 FR-LC-008a construction-time roster-coverage invariant; L-1 `{score}` derived) → AR-2 convergence recorded (§9.3.1); R-01..R-05 signed; §9.6 APPROVED. Status APPROVED. |
+| 0.4 | 2026-07-23 | — | Repeat AR-3 (1H+1L) recorded in §9.3.1: `{score}` derivation relocated to the boundary adapter + `NamedSlotSet` typed (name→string) + producer-scoped clause lookup. Still APPROVED. |
 #endregion

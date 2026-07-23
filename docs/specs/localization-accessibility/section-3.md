@@ -1,8 +1,8 @@
 # Localization & Accessibility #49 — Section 3: The Seam, the Determinism Boundary, the Template Model
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -39,9 +39,11 @@ Render(req):
     n        = catalogue[BaseLocale].variantCount(req.Id)          # locale-INDEPENDENT count (KD-2); n >= 1 (§3.4)
     variant  = (int)(req.SelectionDraw % (ulong)n)                # the selection, reproduced display-side
     template = catalogue[currentLocale].template(req.Id, variant) # KD-5 fallback to BaseLocale per (Id, variant)
-    text     = Expand(template, req.slots)                        # named-placeholder + plural/gender (§3.5)
+    text     = Expand(template, req.Slots)                        # pure string placeholder substitution over the NamedSlotSet (§3.5)
     if req.HasCitedEpisode:                                       # citation clause — selected by EventKind, NOT the draw
-        clause = catalogue[currentLocale].clause(req.CitationKind) ?? catalogue[BaseLocale].clause(req.CitationKind)
+        # producer-scoped by req.Id.ProducerTag so two producers' clause keys never collide:
+        clause = catalogue[currentLocale].clause(req.Id.ProducerTag, req.CitationKind)
+              ?? catalogue[BaseLocale].clause(req.Id.ProducerTag, req.CitationKind)
         text   = text + " " + clause                             # matches InteractionTextGenerator's `text + " " + clause`
     return text
 ```
@@ -89,18 +91,25 @@ Two properties of the one built producer bind the contract:
   optionally appends `EpisodeClause(slots.CitedEpisode.Kind)` — a full authored sentence per `EventKind`
   (six defined kinds). This clause content **also migrates to #49** (a per-`EventKind` clause table) and
   localizes independently of the main template. The emission carries `(hasCitedEpisode, citationKind)`; the
-  renderer appends `clause(citationKind)` (base-locale fallback, KD-5). Because the clause is keyed by
+  renderer appends `clause(Id.ProducerTag, citationKind)` — **producer-scoped** (§3.2), so a second
+  producer's clause keys never collide with #22's, base-locale fallback KD-5. Because the clause is keyed by
   `EventKind` (a sim fact, not the draw), it is locale-independent selection — KD-2-safe (FR-LC-010).
 
 ## 3.5 The template model (KD-3)
 
-`Expand(template, slots)` performs named-placeholder substitution — the `{subject}`/`{opponent}`/`{score}`
-set today, extensible with new placeholders. **`{score}` is a *derived* placeholder**, not a raw slot:
-today `InteractionTextGenerator.Expand` computes it as `HomeGoals.ToString(InvariantCulture) + "-" +
-AwayGoals.ToString(InvariantCulture)` from the two numeric slots. The renderer MUST derive it identically
-(InvariantCulture, `"{home}-{away}"`) so base-locale expansion is byte-identical (FR-LC-016); locales
-localize the surrounding text, **not** the numeric score glyph. Beyond substitution, `Expand` applies **plus**
-an optional bounded grammatical selector: a template
+`Expand(template, slots)` performs **pure string** named-placeholder substitution over the
+producer-agnostic `NamedSlotSet` (an immutable `name → string` map) — the `{subject}`/`{opponent}`/`{score}`
+set today, extensible with new placeholders. The generic expander does **no** producer-specific formatting:
+each placeholder is replaced by its already-formatted string slot value. **`{score}` is a *derived*
+placeholder, derived in the boundary adapter, not the renderer** — `LivingWorldTextBoundary` (§2.2.1), which
+holds the typed `InteractionSlots` and owns the #22 score-format knowledge, computes `score =
+HomeGoals.ToString(InvariantCulture) + "-" + AwayGoals.ToString(InvariantCulture)` and puts a plain `score`
+string slot into the `NamedSlotSet`. So the generic `Expand` substitutes `{score}` like any other string
+slot, base-locale expansion is byte-identical to today's `Expand` (FR-LC-016 — the boundary formats exactly
+as `InteractionTextGenerator.Expand` did), and the numeric-score formatting stays with the producer that
+owns the concept (not leaked into the generic core — the KD-6 / #38 boundary this spec pins). Locales
+localize the surrounding template text, **not** the numeric score glyph. Beyond substitution, `Expand`
+applies an optional bounded grammatical selector: a template
 MAY declare a plural/gender category keyed on a slot (CLDR-style `one`/`few`/`many`/`other` + a small gender
 set) so a locale chooses among sub-forms of the same variant. It MUST NOT require arbitrary runtime
 morphology. Base-locale English declares no categories, so `Expand` reduces to today's `.Replace` behaviour
@@ -124,4 +133,5 @@ the migrated corpus preserves the template row and count and the draw is unchang
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial contracts: the seam (Resolve/Render), localize-after-generate boundary, pre-draw validation split + citation clause, template model, worked render. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
 #endregion

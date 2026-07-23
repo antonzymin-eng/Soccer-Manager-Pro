@@ -1,8 +1,8 @@
 # Localization & Accessibility #49 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -38,7 +38,7 @@ src/localization/                  // CORE assembly — references NO sim assemb
 ├── LocalizationKey.cs             // stable identity for a static string
 ├── TextTemplateId.cs              // GENERIC (producerTag, localOrdinal) identity — no producer enum
 ├── LocalizedTextRequest.cs        // template id + ulong draw + producer-agnostic NamedSlotSet + (hasCitedEpisode, citationKind)
-├── NamedSlotSet.cs                // producer-agnostic named-value slot payload
+├── NamedSlotSet.cs                // producer-agnostic immutable name -> STRING map (values pre-formatted by the boundary adapter)
 ├── LocaleId.cs                    // base + (Wave-8) locale identities; BaseLocale constant
 ├── TemplateCatalogue.cs           // per-locale static strings + per-(Id, variant) templates + variantCount + per-clause-key clauses; FR-LC-008a coverage assert at construction
 ├── TemplateExpander.cs            // named-placeholder substitution + bounded plural/gender selector (KD-3)
@@ -81,4 +81,5 @@ same-named type into a shared scope, fully-qualify from line one (the KD-P6 disc
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial architecture: assembly placement + one-way reference direction, file layout, the #22 retrofit, no RNG/tag/ordinal, CS0104 note. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
 #endregion

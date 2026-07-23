@@ -1,8 +1,8 @@
 # Localization & Accessibility #49 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -38,7 +38,9 @@
   runtime morphology. Base-locale English declares no categories (identity with `.Replace`).
 - **FR-LC-010** — The episode citation clause MUST be a per-`EventKind` localizable string, selected by
   `EventKind` (a sim fact), **not** by the draw, and appended when `hasCitedEpisode` — matching
-  `InteractionTextGenerator`'s `text + " " + clause`. The clause table migrates to the base-locale catalogue.
+  `InteractionTextGenerator`'s `text + " " + clause`. The clause table migrates to the base-locale catalogue
+  and is looked up **producer-scoped** by `(Id.ProducerTag, CitationKind)` (so a second producer's clause
+  keys never collide with #22's — the clause namespace is scoped like the template namespace).
 
 **Fallback (KD-5)**
 - **FR-LC-011** — A missing key, locale, `(Id, variant)`, or clause MUST render the base-locale identity;
@@ -104,20 +106,25 @@ public readonly struct TextTemplateId
     public readonly int LocalOrdinal;     // the producer's own id within that family
 }
 
+public readonly struct NamedSlotSet
+{
+    // producer-AGNOSTIC: an immutable name -> STRING map (NOT fixed subject/opponent/score fields — those
+    // are #22-specific; #35/#46 carry disjoint slots). Every value is ALREADY formatted to a string by the
+    // boundary adapter (§2.2.1): {score} is derived THERE via InvariantCulture (§3.5), so the generic
+    // expander does pure string substitution and no producer-specific formatting.
+}
+
 public readonly struct LocalizedTextRequest
 {
-    public readonly TextTemplateId Id;
+    public readonly TextTemplateId Id;        // carries ProducerTag — scopes both template AND clause lookups
     public readonly ulong SelectionDraw;      // the world.text draw, verbatim (FR-LC-020)
-    // producer-AGNOSTIC slot representation (a small named-value set) — NOT fixed subject/opponent/score
-    // fields (those are #22-specific; #35/#46 carry disjoint slots). {score} is DERIVED at render from
-    // the numeric slots via InvariantCulture (§3.5), not a pre-formatted string.
-    public readonly NamedSlotSet Slots;
+    public readonly NamedSlotSet Slots;       // name -> string (already formatted; §3.5)
     public readonly bool HasCitedEpisode;
-    public readonly int CitationKind;         // the producer's clause key (e.g. #22 EventKind ordinal); selects the clause (FR-LC-010)
+    public readonly int CitationKind;         // the producer's clause key (e.g. #22 EventKind ordinal); looked up PRODUCER-SCOPED by (Id.ProducerTag, CitationKind) (FR-LC-010)
 }
 
 // content (in TacticalDirector.Localization): per-locale keyed static strings + per-(Id, variant) templates
-// + variantCount(Id) + per-clause-key clauses. Base-locale = the migrated InteractionTextCorpus content.
+// + variantCount(Id) + per-(ProducerTag, clauseKey) clauses. Base-locale = the migrated InteractionTextCorpus content.
 public sealed class TemplateCatalogue { /* ... */ }
 ```
 
@@ -152,4 +159,5 @@ public static class LivingWorldTextBoundary
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-LC-001..020), data structures, failure modes F1–F6. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 fixes: H-1 generic core / per-producer boundary-adapter split (§2.2 core references nothing sim-side; §2.2.1 `LivingWorldTextBoundary`); M-1 FR-LC-008a construction-time roster-coverage invariant + F1/F5 rewrite + FR-LC-015 intent-value gate; L-1 `{score}` derived → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
 #endregion

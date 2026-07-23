@@ -1,8 +1,8 @@
 # Localization & Accessibility #49 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -29,8 +29,8 @@ The producer emits only its own native values; the **per-producer boundary adapt
 |---|---|
 | `InteractionIntent intent` | `Id = LivingWorldTextBoundary.ForInteraction(intent)` → generic `TextTemplateId (producerTag, localOrdinal)` |
 | `ulong draw` (the `world.text` reservation) | `SelectionDraw = draw` (verbatim, FR-LC-020) |
-| `InteractionSlots.SubjectName` / `.OpponentName` | named slots `subject` / `opponent` in the producer-agnostic `NamedSlotSet` |
-| `InteractionSlots.HomeGoals` / `.AwayGoals` | numeric slots `home` / `away`; **`{score}` is DERIVED at render** as `"{home}-{away}"` via InvariantCulture (§3.5), not a pre-formatted string |
+| `InteractionSlots.SubjectName` / `.OpponentName` | `subject` / `opponent` **string** slots in the producer-agnostic `NamedSlotSet` |
+| `InteractionSlots.HomeGoals` / `.AwayGoals` | the **boundary adapter derives** the `score` **string** slot as `HomeGoals.ToString(InvariantCulture) + "-" + AwayGoals.ToString(InvariantCulture)` (§3.5) — the #22 score-format knowledge stays with the producer, not the generic renderer |
 | `InteractionSlots.HasCitedEpisode` | `HasCitedEpisode` |
 | `InteractionSlots.CitedEpisode.Kind` | `CitationKind` (the `EventKind` clause key; selects the clause, not the draw — FR-LC-010) |
 
@@ -50,8 +50,9 @@ For a fixed `(intent, draw, slots)`, base locale only:
 | Variant count | `TemplatesFor(intent).Length` | `variantCount(BaseLocale, Id)` (migrated corpus preserves counts) | yes |
 | Variant index | `draw % (ulong)length` | `draw % (ulong)variantCount` | yes |
 | Template | the English template row | the **migrated** English template row (base-locale catalogue) | yes |
-| Slot expansion | `.Replace({subject}/{opponent}/{score})` | `Expand` over the same placeholder set (no categories at base) | yes |
-| Clause | `EpisodeClause(CitedEpisode.Kind)`, appended `text + " " + clause` | `clause(CitationKind)` (migrated table), appended `text + " " + clause` | yes |
+| `{score}` derivation | in `Expand`: `HomeGoals.ToString(InvariantCulture) + "-" + AwayGoals…` | in the **boundary adapter**: same InvariantCulture formatting → `score` string slot | yes (same bytes; just relocated to the producer-owning adapter, §3.5) |
+| Slot expansion | `.Replace({subject}/{opponent}/{score})` | generic `Expand` — pure string substitution over the `NamedSlotSet` (no categories at base) | yes |
+| Clause | `EpisodeClause(CitedEpisode.Kind)`, appended `text + " " + clause` | `clause(Id.ProducerTag, CitationKind)` (migrated table, producer-scoped), appended `text + " " + clause` | yes |
 | Serialized state | `world.text` cursor + memory | **unchanged** | yes |
 
 **Base-locale identity is a mechanical property of preserving the corpus + the clause table + the draw + the
@@ -78,4 +79,5 @@ pre-draw gates** (T-LC-IDENTITY-001). The retrofit is behaviour-neutral at the b
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial appendices: constant catalogue, producer-emission→renderer-input mapping, the #22-retrofit byte-identity table, a worked render transition. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
 #endregion
