@@ -1,7 +1,31 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 22, 2026, later same day (**UI / Client Framework #38 (framework slice) authored +
+> **Last Updated:** July 23, 2026 (**Localization & Accessibility #49 (seam + template-contract slice)
+> authored + advanced `→ IN REVIEW → APPROVED`** — Wave 1's final item (the seam #38's KD-5 was written
+> against). Promoted from the converged design supplement (`docs/tracking/localization-seam-template-design.md`
+> v0.2, AR-1 2H+1M+1L → AR-2 clean) to a full 11-file section set (FR-LC-001..020 + FR-LC-008a), then
+> section-file PASS-1 (1H+1M+1L) → AR-2 convergence. **Scope: the seam + template contract only** (the #38
+> framework/screens precedent) — the single `ILocalizer` routing point (static `Resolve(LocalizationKey)` +
+> procedural `Render(LocalizedTextRequest)`), the template model (named-placeholder + a bounded plural/gender
+> selector), the **localize-after-generate** determinism boundary (KD-2 — the transform is display-side, so
+> #22's `world.text` draw + serialized memory stay locale-independent and a save round-trips byte-identically
+> across display locales), the one-way reference direction, the fallback policy, and the **retrofit of the
+> one built producer** (#22 `InteractionTextGenerator`); translated **locales** + the **a11y content surface**
+> are Wave 8. **PASS-1 H-1 fix was structural:** the generic seam was coupled to the concrete #22 producer on
+> its core contract (an `InteractionIntent` overload + `ForInteraction` factory + fixed subject/opponent/score
+> slots), forcing a core rewrite when #35/#46 land — split into a **producer-agnostic core** (references
+> nothing sim-side) + a **per-producer boundary adapter** (`LivingWorldTextBoundary`, the only sim-side
+> reference), the #38 generic-substrate rule the spec cited but had violated. **M-1 fix:** the corpus
+> migration split the pre-draw gate — the sim-side gate is now an intent-VALUE roster check, and new
+> FR-LC-008a asserts construction-time roster coverage (every defined intent has ≥1 base template) so
+> `variantCount ≥ 1` holds by construction (preserving #22's no-cursor-on-refusal invariant). #49 registers
+> **no domain tag / ordinal / RNG** (FR-LC-017, the `match-viewer`/#37/#38 class), so **no #16 §3.4
+> cross-cite**. R-01..R-05 signed (§9 checklist v0.3); all 11 files `Status: APPROVED`. **Approves the
+> forward design** (the #21–#38 pre-T0 precedent); the #22 retrofit + Wave-8 content are post-APPROVED.
+> **This completes Wave 1** (#30 spine + #37 analytics + #38 UI framework + #49 localization seam). Count:
+> **31 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 22, 2026, later same day (**UI / Client Framework #38 (framework slice) authored +
 > advanced `→ IN REVIEW → APPROVED`** — Wave 1 presentation substrate. Promoted from the converged design
 > supplement (`docs/tracking/ui-client-framework-design.md` v0.2, AR-1 2M → AR-2 clean) to a full 11-file
 > section set (FR-UI-001..023), then section-file PASS-1 (0H+2M+2L) → AR-2 convergence. **KD-2 split
@@ -164,6 +188,7 @@
 | 30 | Season & Competition Loop | `season-competition-loop/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 37 | Match Analytics & Statistics | `match-analytics-statistics/` | 6¹ | APPROVED | Jul 22, 2026 |
 | 38 | UI / Client Framework (framework slice) | `ui-client-framework/` | 6¹ | APPROVED | Jul 22, 2026 |
+| 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
