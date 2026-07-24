@@ -180,7 +180,9 @@ namespace TacticalDirector.MatchViewer
         /// ticking (§6.3 of the Unity-client note). Serialized against any in-flight tick via the
         /// same <c>_tickGate</c> the tick holds, so the engine is never touched by two paths at once;
         /// a no-op when no hook is installed. The running path and this off-tick path share the one
-        /// hook, so there is no second servicing routine to keep in sync.
+        /// hook, so there is no second servicing routine to keep in sync. Intended for the paused /
+        /// full-time path: calling it during live playback is still thread-safe but services the hook
+        /// off a tick boundary, which is rarely what a caller wants while the pacing loop is ticking.
         /// </summary>
         public void ServiceOnce()
         {

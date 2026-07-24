@@ -7,6 +7,7 @@
 //           order, per-batch tick-stamping, the sim-side post-MatchEnded drop, and log-driven
 //           determinism — all proven against a fake mutation surface, no Unity host / real engine.
 
+using System;
 using System.Collections.Generic;
 
 using NUnit.Framework;
@@ -21,6 +22,16 @@ namespace TacticalDirector.MatchClientCore.Tests
     public sealed class MatchClientDriverTests
     {
         private static MatchClientDriver NewDriver() => new MatchClientDriver(new ManagerCommandQueue());
+
+        [Test]
+        public void DefaultCommand_Apply_ThrowsFailLoud()
+        {
+            // Defense in depth: even bypassing the queue, applying a default command fails loud
+            // instead of staging a malformed team tactic (AR pass-1 Medium).
+            var m = new RecordingMutations();
+            Assert.Throws<InvalidOperationException>(() => default(ManagerCommand).Apply(m));
+            Assert.AreEqual(0, m.Calls.Count);
+        }
 
         [Test]
         public void Service_EmptyQueue_IsNoOp()
@@ -56,6 +67,27 @@ namespace TacticalDirector.MatchClientCore.Tests
             Assert.AreEqual(ManagerCommandKind.SetTeamTactic, driver.Log[0].Command.Kind);
             Assert.AreEqual(ManagerCommandKind.SetPlayerTactic, driver.Log[1].Command.Kind);
             Assert.AreEqual(ManagerCommandKind.Substitute, driver.Log[2].Command.Kind);
+        }
+
+        [Test]
+        public void Service_CommandRefusedByEngine_IsIsolated_BatchContinues_NoEscape()
+        {
+            // A mutator that fails loud mid-batch must not escape Service (which would kill the pacing
+            // thread) and must not stop the rest of the batch (AR pass-2 Medium).
+            MatchClientDriver driver = NewDriver();
+            driver.Commands.Enqueue(ManagerCommand.SetTeamTactic(0, TeamTactic.Balanced));
+            driver.Commands.Enqueue(ManagerCommand.SetPlayerTactic(5, PlayerTactic.Default(PlayerRole.Default)));  // refused
+            driver.Commands.Enqueue(ManagerCommand.Substitute(1, 2, 12, SubstitutionReason.Tactical));
+
+            var m = new RecordingMutations { CurrentTickValue = 8UL, ThrowOnSetPlayerAgentId = 5 };
+            Assert.DoesNotThrow(() => driver.Service(m));
+
+            // The good commands before and AFTER the refused one both applied.
+            CollectionAssert.AreEqual(new[] { "team:0", "sub:1:2:12:Tactical" }, m.Calls);
+            Assert.AreEqual(2, driver.Log.Count, "only the applied commands are logged");
+            Assert.AreEqual(1, driver.FailedCommands.Count, "the refused command is recorded, not vanished");
+            Assert.AreEqual(ManagerCommandKind.SetPlayerTactic, driver.FailedCommands[0].Command.Kind);
+            Assert.AreEqual(8UL, driver.FailedCommands[0].AppliedTick);
         }
 
         [Test]

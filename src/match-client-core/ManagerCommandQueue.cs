@@ -8,6 +8,7 @@
 //           the sim thread (which drains them at the top of a tick). Enqueue is the only surface the
 //           View touches; the drain is internal, driven by MatchClientDriver on the sim thread.
 
+using System;
 using System.Collections.Generic;
 
 namespace TacticalDirector.MatchClientCore
@@ -22,9 +23,20 @@ namespace TacticalDirector.MatchClientCore
         private readonly object _lock = new object();
         private readonly Queue<ManagerCommand> _pending = new Queue<ManagerCommand>();
 
-        /// <summary>Enqueues a command (thread-safe; UI thread). Applied on the sim thread at the top of the next tick.</summary>
+        /// <summary>
+        /// Enqueues a command (thread-safe; UI thread). Applied on the sim thread at the top of the next
+        /// tick. An uninitialized (<see cref="ManagerCommandKind.None"/> / <c>default</c>) command is
+        /// refused fail-loud here, at the misuse site, so it can never reach a mutator.
+        /// </summary>
+        /// <exception cref="ArgumentException"><paramref name="command"/> is the uninitialized default value.</exception>
         public void Enqueue(in ManagerCommand command)
         {
+            if (command.Kind == ManagerCommandKind.None)
+            {
+                throw new ArgumentException(
+                    "Cannot enqueue an uninitialized (default) ManagerCommand; construct it via a factory.",
+                    nameof(command));
+            }
             lock (_lock)
             {
                 _pending.Enqueue(command);
@@ -60,4 +72,6 @@ namespace TacticalDirector.MatchClientCore
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-24 | —      | Initial creation (P2): lock-guarded FIFO; UI-thread Enqueue +  |
 // |         |            |        | sim-thread internal DrainInto.                                 |
+// | 1.1     | 2026-07-24 | —      | AR pass-1 Medium: Enqueue refuses the None (default) command   |
+// |         |            |        | fail-loud at the misuse site.                                  |
 #endregion

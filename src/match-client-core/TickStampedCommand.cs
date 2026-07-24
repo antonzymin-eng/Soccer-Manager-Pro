@@ -18,7 +18,12 @@ namespace TacticalDirector.MatchClientCore
     /// </summary>
     public readonly struct TickStampedCommand
     {
-        /// <summary>The engine tick the command was applied at (read at the top of the applying tick).</summary>
+        /// <summary>
+        /// The engine's <c>CurrentTick</c> read at the top of the applying tick, before <c>RunTick</c>
+        /// advances it — i.e. the last completed tick. In §6.2's prose the command takes effect "at the
+        /// top of tick N+1"; this value is that N. Deterministic and replay-consistent (a replay
+        /// re-applies the command at the same pre-<c>RunTick</c> point).
+        /// </summary>
         public readonly ulong AppliedTick;
 
         /// <summary>The applied command.</summary>

@@ -7,6 +7,7 @@
 //           tick and match-ended flag that records each applied command. Lets the command-channel
 //           determinism tests run without a Unity host or a real MatchEngine (§5-P2).
 
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 
@@ -19,11 +20,14 @@ namespace TacticalDirector.MatchClientCore.Tests
     /// <summary>
     /// Records every mutator call as a string and exposes controllable <see cref="CurrentTick"/> /
     /// <see cref="MatchEnded"/> so a test can drive the driver's drain deterministically.
+    /// <see cref="ThrowOnSetPlayerAgentId"/> makes one mutator refuse a specific agent id — the way the
+    /// real engine fails loud on a bad index — so the driver's apply-time isolation can be exercised.
     /// </summary>
     internal sealed class RecordingMutations : ILiveMatchMutations
     {
         public ulong CurrentTickValue;
         public bool MatchEndedValue;
+        public int ThrowOnSetPlayerAgentId = -1;
         public readonly List<string> Calls = new List<string>();
 
         public ulong CurrentTick => CurrentTickValue;
@@ -36,6 +40,11 @@ namespace TacticalDirector.MatchClientCore.Tests
 
         public void SetPlayerTactic(int agentId, in PlayerTactic tactic)
         {
+            if (agentId == ThrowOnSetPlayerAgentId)
+            {
+                // Mirrors MatchEngine.SetPlayerTactic: fail loud BEFORE recording/mutating.
+                throw new ArgumentOutOfRangeException(nameof(agentId), agentId, "test-refused agent id");
+            }
             Calls.Add("player:" + agentId.ToString(CultureInfo.InvariantCulture));
         }
 

@@ -22,19 +22,39 @@ namespace TacticalDirector.MatchClientCore.Tests
     public sealed class ManagerCommandQueueTests
     {
         [Test]
-        public void Kinds_AreExactlyThreeGameCommands_NoPlaybackKind()
+        public void Kinds_AreExactlyThreeGameCommandsPlusNoneSentinel_NoPlaybackKind()
         {
-            // §6.4: pause/speed are presentation pacing, never commands. The closed set is three.
+            // §6.4: pause/speed are presentation pacing, never commands. The closed set is three game
+            // kinds plus the None=0 zero-value sentinel (AR pass-1 Medium).
             ManagerCommandKind[] kinds = (ManagerCommandKind[])Enum.GetValues(typeof(ManagerCommandKind));
-            Assert.AreEqual(3, kinds.Length);
             CollectionAssert.AreEquivalent(
                 new[]
                 {
+                    ManagerCommandKind.None,
                     ManagerCommandKind.SetTeamTactic,
                     ManagerCommandKind.SetPlayerTactic,
                     ManagerCommandKind.Substitute,
                 },
                 kinds);
+            Assert.AreEqual(0, (int)ManagerCommandKind.None, "None is the zero value");
+            Assert.AreNotEqual(0, (int)ManagerCommandKind.SetTeamTactic, "no game kind is the zero value");
+            Assert.AreNotEqual(0, (int)ManagerCommandKind.SetPlayerTactic);
+            Assert.AreNotEqual(0, (int)ManagerCommandKind.Substitute);
+        }
+
+        [Test]
+        public void DefaultCommand_KindIsNone()
+        {
+            // A default(ManagerCommand) must read as the sentinel, not as a real mutator.
+            Assert.AreEqual(ManagerCommandKind.None, default(ManagerCommand).Kind);
+        }
+
+        [Test]
+        public void Enqueue_DefaultCommand_ThrowsFailLoud()
+        {
+            var queue = new ManagerCommandQueue();
+            Assert.Throws<ArgumentException>(() => queue.Enqueue(default));
+            Assert.AreEqual(0, queue.Count, "a refused command never enters the queue");
         }
 
         [Test]

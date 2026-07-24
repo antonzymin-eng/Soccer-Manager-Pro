@@ -88,6 +88,12 @@ namespace TacticalDirector.MatchClientCore
             if (mutations == null) { throw new ArgumentNullException(nameof(mutations)); }
             switch (Kind)
             {
+                case ManagerCommandKind.None:
+                    // Defense in depth: an uninitialized (default-valued) command must never reach a
+                    // mutator. ManagerCommandQueue.Enqueue rejects it at the misuse site; this guards
+                    // any path that bypasses the queue.
+                    throw new InvalidOperationException(
+                        "ManagerCommand is uninitialized (default value); construct it via a factory.");
                 case ManagerCommandKind.SetTeamTactic:
                 {
                     TeamTactic tactic = NewTeamTactic;
@@ -114,4 +120,6 @@ namespace TacticalDirector.MatchClientCore
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-24 | —      | Initial creation (P2): value-type discriminated command with   |
 // |         |            |        | one factory + Apply path per live mutator.                     |
+// | 1.1     | 2026-07-24 | —      | AR pass-1 Medium: Apply fails loud on the None (default) kind   |
+// |         |            |        | instead of falling through to a malformed mutator payload.     |
 #endregion

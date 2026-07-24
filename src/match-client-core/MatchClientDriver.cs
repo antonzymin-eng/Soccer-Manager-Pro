@@ -11,7 +11,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace TacticalDirector.MatchClientCore
 {
@@ -29,23 +28,44 @@ namespace TacticalDirector.MatchClientCore
         // Reused drain scratch (sim-thread only — Service is never re-entered concurrently because the
         // streamer's _tickGate serializes tick and ServiceOnce). Not the 60 Hz hot path.
         private readonly List<ManagerCommand> _drainBuffer = new List<ManagerCommand>();
+
+        // The log is appended on the sim thread (via the hook) and may be read from any thread (a UI
+        // consumer, a save). List<T> is not safe for concurrent read+write, so every append and every
+        // read is guarded by _logLock, and Log returns a point-in-time snapshot copy rather than a view
+        // aliasing the live list.
+        private readonly object _logLock = new object();
         private readonly List<TickStampedCommand> _log = new List<TickStampedCommand>();
-        private readonly ReadOnlyCollection<TickStampedCommand> _logView;
+        private readonly List<TickStampedCommand> _failedLog = new List<TickStampedCommand>();
 
         /// <summary>Constructs a driver over <paramref name="queue"/>. Must not be null.</summary>
         public MatchClientDriver(ManagerCommandQueue queue)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
-            // Wraps the live list (reflects appends) but is not castable back to a mutable List, so a
-            // caller cannot mutate the log through the Log surface (the project's read-only-list rule).
-            _logView = new ReadOnlyCollection<TickStampedCommand>(_log);
         }
 
         /// <summary>The enqueue-only command surface handed to the View.</summary>
         public ManagerCommandQueue Commands => _queue;
 
-        /// <summary>The tick-stamped command log — the record a live match is reproducible from (§6.1). Read-only view; in-memory only (§11).</summary>
-        public IReadOnlyList<TickStampedCommand> Log => _logView;
+        /// <summary>
+        /// A thread-safe point-in-time snapshot of the tick-stamped command log — the record a live
+        /// match is reproducible from (§6.1). Safe to read from any thread (it copies under the log
+        /// lock); in-memory only (§11).
+        /// </summary>
+        public IReadOnlyList<TickStampedCommand> Log
+        {
+            get { lock (_logLock) { return _log.ToArray(); } }
+        }
+
+        /// <summary>
+        /// A thread-safe snapshot of commands the engine REFUSED at apply time (an out-of-range index, a
+        /// substitution over the cap or of an already-used bench slot, etc.). Each is dropped — not
+        /// applied, not in <see cref="Log"/> — and recorded here (stamped with the tick it was attempted
+        /// at) so the failure is observable rather than crashing the sim loop. In-memory only.
+        /// </summary>
+        public IReadOnlyList<TickStampedCommand> FailedCommands
+        {
+            get { lock (_logLock) { return _failedLog.ToArray(); } }
+        }
 
         /// <summary>
         /// Drains the queue and applies each command through <paramref name="mutations"/> on the sim
@@ -78,8 +98,35 @@ namespace TacticalDirector.MatchClientCore
             for (int i = 0; i < _drainBuffer.Count; i++)
             {
                 ManagerCommand command = _drainBuffer[i];
-                command.Apply(mutations);
-                _log.Add(new TickStampedCommand(appliedTick, in command));
+
+                // A live mutator fails loud on a refused command (an out-of-range index, a substitution
+                // over the cap / of an already-used or sent-off slot). This runs inside the streamer's
+                // pre-tick hook on the background pacing thread, so an escaping exception would kill that
+                // thread and silently freeze the match. Isolate it: the failing command is dropped (not
+                // applied, not logged as applied) and recorded in FailedCommands; the rest of the batch
+                // and the sim loop carry on. The try/catch is permitted here — this is the presentation
+                // command-drain path, not the 60 Hz zero-alloc game loop (same carve-out the streamer
+                // documents). A refused command never mutated the engine (mutators validate before
+                // writing), so dropping it leaves no partial state, and never entering Log keeps the
+                // reproducible-from-the-log contract intact.
+                bool applied;
+                try
+                {
+                    command.Apply(mutations);
+                    applied = true;
+                }
+                catch (Exception)
+                {
+                    applied = false;
+                }
+
+                // Brief per-command lock (uncontended on the sim thread; readers are rare) so a
+                // concurrent Log / FailedCommands snapshot never races this append.
+                lock (_logLock)
+                {
+                    if (applied) { _log.Add(new TickStampedCommand(appliedTick, in command)); }
+                    else { _failedLog.Add(new TickStampedCommand(appliedTick, in command)); }
+                }
             }
             _drainBuffer.Clear();
         }
@@ -90,4 +137,12 @@ namespace TacticalDirector.MatchClientCore
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-24 | —      | Initial creation (P2): drain-and-apply Service (the pre-tick   |
 // |         |            |        | hook body) + tick-stamped log + sim-side post-end drop.        |
+// | 1.1     | 2026-07-24 | —      | AR pass-1 Medium: the log append (sim thread) and the Log read  |
+// |         |            |        | (any thread) are now guarded by _logLock; Log returns a        |
+// |         |            |        | snapshot copy instead of a view aliasing the live list, so a   |
+// |         |            |        | UI-thread read during a running match no longer races.         |
+// | 1.2     | 2026-07-24 | —      | AR pass-2 Medium: a command whose Apply is refused by the       |
+// |         |            |        | engine (bad index / sub cap / used slot) is now isolated —      |
+// |         |            |        | dropped + recorded in FailedCommands — instead of escaping the  |
+// |         |            |        | pre-tick hook and killing the background pacing thread.         |
 #endregion
