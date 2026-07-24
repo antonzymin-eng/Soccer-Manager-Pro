@@ -45,8 +45,12 @@ namespace TacticalDirector.PlayerProgression
         /// (which carries the drawn PotentialAbility — a record-only return would drop the ceiling).
         /// </summary>
         /// <param name="rng">The deterministic RNG service (the caller has registered the regen stream).</param>
-        /// <param name="streamIndex">The registered <c>player-progression.regen</c> stream index.</param>
-        /// <param name="clubId">The club the regen joins (scopes the stream + informs the id).</param>
+        /// <param name="streamIndex">The registered <c>player-progression.regen</c> stream index — this alone scopes the draw to the club's stream (the caller registered it with <c>entityId = clubId</c>).</param>
+        /// <param name="clubId">
+        /// The club the regen joins. Retained for the §3.3 signature and T2 use (the <c>RegenResult</c>
+        /// per-club grouping and nation-from-the-reference-roster). NOT consumed at T0 — the stream is
+        /// already scoped by <paramref name="streamIndex"/> and the id is the explicit <paramref name="newPlayerId"/>.
+        /// </param>
         /// <param name="newPlayerId">The fresh, monotonically-allocated PlayerId (FR-PG-011).</param>
         /// <param name="worldDay">The current world-day (anchors <see cref="PlayerLifecycle.BirthWorldDay"/>).</param>
         /// <exception cref="ArgumentNullException"><paramref name="rng"/> is null.</exception>
@@ -171,6 +175,10 @@ namespace TacticalDirector.PlayerProgression
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-07-24 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-07-24 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-07-24 | —      | Adversarial-review L (doc-only): corrected the `clubId`        |
+// |         |            |        | `<param>` doc — it is inert at T0 (retained for the §3.3       |
+// |         |            |        | signature / T2 use), not the stream/id scoper the old doc      |
+// |         |            |        | claimed (streamIndex scopes; newPlayerId is the id).           |
 #endregion
