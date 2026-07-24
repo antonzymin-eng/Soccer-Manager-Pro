@@ -1,7 +1,37 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 22, 2026 (**Goalkeeper #11 + Heading #10 engine integration, Phase 1 (opt-in)** —
+**Last Updated:** July 24, 2026 (**#28 T0 adversarial-review follow-ups + CI `.meta` fix.** **New files:**
+`src/player-database/PlayerGenerationRng.cs` v1.0 (+ `.meta`) — shared `DrawBounded` (the biased-but-accepted
+generation modulo mapping + rationale) + `Clamp`, extracted from the duplicated copies in `RosterGenerator`
+(#27) / `RegenGenerator` (#28); plus the 15 Unity `.meta` sidecars for the new `player-progression/`
+assembly + `PlayerGenerationRng.cs` (deterministic `md5(path)` GUIDs via `tools/unity-ci/generate-missing-metas.sh`
+— the "Unity .meta integrity" PR check on #250 had failed with 14 missing metas; all other checks passed).
+**Modified:** `src/player-database/RosterGenerator.cs` v1.3 + `src/player-progression/RegenGenerator.cs` v1.2
+(delegate to `PlayerGenerationRng`; byte-identical — verified by the unchanged PlayerDatabase/PlayerProgression/
+MatchEngine suites), `src/player-progression/RegenGenerator.cs` also v1.1 (clubId `<param>` doc corrected —
+inert at T0), `src/CLAUDE.md` v2.35. **Full dotnet gate: PASSED, 0 failures (whole tree green).**)
+**Last Updated (prior):** July 24, 2026 (**Player Progression & Lifecycle #28 T0 landed** — the new
+`src/player-progression/` assembly (`TacticalDirector.PlayerProgression`; references `PlayerDatabase` +
+`DeterministicSim` only), the draw-free aging core + the pure single-player regen generator, per
+`docs/tracking/progression-t0-implementation-plan.md`. **New files:**
+`src/player-progression/player-progression.asmdef`; `src/player-progression/PlayerProgressionConstants.cs`
+v1.0 (Appendix A catalogue, region order Fixed→Derived→Cross→GT; the `0x20`/82 RNG mirrors deferred to
+T2, KD-B); `src/player-progression/PlayerLifecycle.cs` v1.0 (the §2.2 overlay — PA / CA-cache / `long`
+GrowthCursor / `BirthWorldDay` KD-A anchor / retirement); `src/player-progression/TrainingInput.cs` v1.0
+(the #29 seam value type, `Neutral` identity — no phantom interface); `src/player-progression/AbilityModel.cs`
+v1.0 (integer `ComputeCA` + `ClassifyAgeBand` + weighted `TrySpendOnePoint`/`DrainOnePoint` + the `AgeBand`
+enum); `src/player-progression/GrowthProjection.cs` v1.0 (the §3.1 daily step, the sole attribute-mutation
+path, curve-off KD-8 identity); `src/player-progression/RegenGenerator.cs` v1.0 (the §3.3 pure regen,
+fixed `PROGRESSION_REGEN_FIELDS`=37 budget, returns `(PlayerRecord, PlayerLifecycle)` carrying the drawn
+PA); `src/player-progression/tests/player-progression-tests.asmdef` + `PlayerProgressionConstantsTests.cs`
+/ `AbilityModelTests.cs` (T-PG-CA-*) / `GrowthProjectionTests.cs` (T-PG-DET-*/ID-*) / `RegenGeneratorTests.cs`
+(T-PG-REG-*), 24 tests total. **Modified:** `docs/tracking/progression-t0-implementation-plan.md`
+(→ IMPLEMENTED), `docs/tracking/squad-player-stage1-plan.md` v0.5 (A.1 LANDED), `src/CLAUDE.md` v2.34,
+root `CLAUDE.md` (Squad/Player OPEN ISSUES — aging #28 T0). Behaviour-neutral (nothing wired into
+`MatchEngine`); no `SNAPSHOT_SCHEMA_VERSION` change. **Full dotnet gate: PASSED, 0 failures (whole tree
+green; 24 new player-progression tests; SDK 8.0.129 via apt).**)
+**Last Updated (prior):** July 22, 2026 (**Goalkeeper #11 + Heading #10 engine integration, Phase 1 (opt-in)** —
 the GK/Heading attribute projections landed with a live consumer, per the new supplement
 `docs/tracking/gk-heading-engine-integration-design.md` (new). **New files:**
 `docs/tracking/gk-heading-engine-integration-design.md` (converged design supplement — AR-1/AR-2/AR-3 +
