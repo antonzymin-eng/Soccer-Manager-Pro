@@ -2,7 +2,7 @@
 
 > **Created:** July 24, 2026
 > **Status:** PLAN (pre-design-supplement — no section files, no `SPEC_INDEX.md` row). Candidate spec number **#52** (proposed in `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md` §3, not reserved). **Stage-6 gated:** the design supplement is deliberately NOT authored before the Stage-5 Fixed64 migration (#9) — see §9 first risk; only the §5 guardrails bind before then.
-> **Master-plan home:** §5 Stage 6 ("Deterministic netcode" bullet, owned by Amendment 01 §3) · **Tier:** S6 · **Wave:** 9 (post-roadmap) · **FR prefix (proposed):** FR-NET
+> **Master-plan home:** §5 Stage 6 ("Deterministic netcode" bullet, owned by Amendment 01 §3) · **Tier:** S6 · **Wave:** 9 (roadmap §7, Stage-6 gated) · **FR prefix (proposed):** FR-NET
 > **Determinism:** transport — none (no RNG stream, no domain tag; the sim's existing streams are the only randomness, replicated implicitly by seed + intents)
 > **Purpose:** Head-to-head online play as lockstep intent-replication over the unmodified deterministic sim — both peers run the full engine; only manager intents cross the wire.
 
@@ -51,3 +51,4 @@ A two-engine in-process lockstep harness (no real network — the transport fake
 |---------|------|--------|
 | v0.1 | July 24, 2026 | Initial high-level plan, per Master Plan Amendment 01 §3. Stage-6 gate + pre-Stage-5 guardrails recorded. |
 | v0.2 | July 24, 2026 | AR-1 fixes: §3 seam-commit contract corrected against source (`SubstitutePlayer` applies immediately — only its notification event queues; Set\*Tactic are the stride-committed pair) and the tick-scheduled-command-layer requirement made explicit here and in the §5 guardrails; §8 no longer overstates the guardrails as existing automated locks. |
+| v0.3 | July 24, 2026 | AR-2 (L-only, convergence): header wave label "(post-roadmap)" corrected to "(roadmap §7, Stage-6 gated)" — stale the moment roadmap v0.4 added the Wave-9 block. |
