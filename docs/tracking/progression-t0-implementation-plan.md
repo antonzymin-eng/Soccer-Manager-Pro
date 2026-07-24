@@ -1,6 +1,7 @@
 # #28 Player Progression — T0 Implementation Plan (file-by-file)
 
-> **Created:** July 23, 2026 · **Status:** PLAN (implementation-ready, file-by-file).
+> **Created:** July 23, 2026 · **Status:** IMPLEMENTED July 24, 2026 (this plan is the build record; the
+> code landed in `src/player-progression/` — full dotnet gate green, 24 tests). Originally: PLAN (implementation-ready, file-by-file).
 > **Drills:** `squad-player-stage1-plan.md` §3 Track A.1 (the buildable-now, no-new-dependency slice).
 > **Authoritative contract:** `docs/specs/player-progression-lifecycle/` (Spec #28, APPROVED) —
 > section-2 (FRs), section-3 (algorithms), section-4 (architecture/file layout), section-5 (tests),
@@ -293,3 +294,4 @@ each PR (the project's build-loop discipline) before merge. **Next:** T1 (`Progr
 |---|---|---|
 | 0.1 | 2026-07-23 | Initial file-by-file T0 plan, grounded in #28 section-2/3/4/5/6 + appendices (APPROVED) and verified #27/#16 source. Surfaces KD-A (BirthWorldDay supersedes the supplement's AgeAnchorDay; `GrowthCursor` is `long`) and KD-B (regen stream-const timing). Per-file signatures, constants (Appendix A tags), FR mapping, `T-PG-*` test assignment, 2-PR commit slice. |
 | 0.2 | 2026-07-24 | Adversarial-review pass 4 (fresh ground-truth against APPROVED #28 section-2/3/4/appendices + real #27 `PlayerDatabaseConstants`): M-2 `ClassifyAgeBand` decline boundary `>= DECLINE_AGE` → `> DECLINE_AGE` (Appendix A "age above which… >30"; age 30 stays Stable — was declining a year early, and asymmetric with the correct `< GROWTH_AGE` growth side); L-1 `TrySpendOnePoint`/`DrainOnePoint` signatures aligned to the §3.1 pseudocode's `(ref record, ref lifecycle)` + call sites; L-2 `PA_MIN` named in the §3.7 note as an intentional unpinned `[GT]` (not a missing §3.2 constant); L-3 §3.2 region order corrected to Spec #20's Fixed → Derived → Cross → GT (Cross was before Derived) + heading. |
+| — | 2026-07-24 | **IMPLEMENTED.** Landed the 6 production files + asmdef + 4 test files (24 tests) in `src/player-progression/` exactly per this plan. Implementation refinements (none contradict the plan): `[GT]` constants declared `static readonly` (config-loadable per Spec #20 / the #27 precedent, not `const`); `PA_MIN`/`REGEN_PA_HEADROOM`/`REGEN_AGE_MIN`/`REGEN_AGE_MAX` added as illustrative `[GT]` regen-balance constants (FR-CS-016 — no magic numbers), so `PA_MIN` is a real catalogue constant rather than the L-2 inline value; `ComputeCA` implemented as an integer position-weighted mean (weight = 1 + `PositionAttributeBias`) mapped [1,20]→[0,ABILITY_MAX]; regen draws attrs then PA (PA floored above CA) to guarantee "room to grow". Full dotnet gate PASSED (whole tree green; 24 new tests). See `src/CLAUDE.md` v2.34. |

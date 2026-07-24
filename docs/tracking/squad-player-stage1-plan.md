@@ -101,7 +101,12 @@ upstreams; it references **neither** season-save nor match-engine — the season
   blob). **T2 needs #30's day-advance loop implemented** (#28 §10 L-2 — wiring T2 before #30's seam
   code exists binds a phantom). **T3 needs #29's producer** (APPROVED; consumed as a neutral-defaulted input).
 
-### A.1 — T0: lifecycle value types + pure projections (behaviour-neutral, buildable now)
+### A.1 — T0: lifecycle value types + pure projections (behaviour-neutral, buildable now) — **LANDED July 24, 2026**
+
+> **Status: IMPLEMENTED.** The `src/player-progression/` assembly + the 6 T0 production files + 4 test
+> files (24 tests) landed July 24, 2026 exactly per the drill-down; full dotnet gate green. See
+> `progression-t0-implementation-plan.md` (IMPLEMENTED) + `src/CLAUDE.md` v2.34. Next: A.2 (T1 save
+> codec, gated on Track B's #30 season frame) then A.3 (T2 world-tick wiring + the production regen stream).
 
 > **Drilled to the file level:** `docs/tracking/progression-t0-implementation-plan.md` — the per-file
 > build list (headers, signatures, constants with tags, `T-PG-*` test assignment, 2-PR commit slice),
@@ -377,4 +382,5 @@ implementation against approved specs.
 | — | 2026-07-23 | AR-1 (2M+1L) + AR-3 (1L) fixes: #29 determinism (reserved-not-promoted), #31/#40 tags (proposed, no catalogue row), §4.6 mis-citation, #28 handoff citation (§4). Converged. |
 | 0.2 | 2026-07-23 | **Expanded to a detailed implementation plan.** Added §2 grounded-API reference (verified against `SeasonSaveCodec`/`DeterministicRngService`/`RosterGenerator`/`WorldStore` source); four implementation tracks (A aging #28 T0–T3 with file lists + signatures + the `PROGRESSION_SAVE_FORMAT_VERSION` blob layout + RNG registration; B season-frame codec extension + version-sequencing table; C #31 promotion pipeline + first-cut T-phases; D #27/#47 initial-DB format-only pass); §7 cross-track sequence diagram; §8 consolidated determinism/save-version ledger; §9 test/CI strategy incl. the `multi-season-aging` capstone; §10 risks; §11 condensed contracts. Section files remain authoritative for #28/#30/#31 internals; proposed-beyond-section-file surfaces are flagged. |
 | 0.4 | 2026-07-24 | Adversarial-review pass 4: M-1 — the §3 A.1 `RegenGenerator` row was left on the pre-drill `GenerateOne(...) → PlayerRecord` signature (the v0.3 realignment fixed `GrowthProjection`'s row but not this one); realigned to the authoritative drill-down §3.7 / #28 §3.3 `GenerateRegen(...) → (PlayerRecord, PlayerLifecycle)` — a record-only return silently drops the drawn `PotentialAbility`; also `FIELDS_PER_PLAYER` → `PROGRESSION_REGEN_FIELDS` (a regen draws PA too). Pass-5 rerun L: tightened the §4.2 A.2 regen-stream-timing hedge — §4.3 / FR-PG-020 already foreclose construction-time registration, so the `regenStreamRegistered` flag is load-bearing (not a droppable "always 1" case). |
+| 0.5 | 2026-07-24 | **Track A.1 (#28 T0) IMPLEMENTED** — the `src/player-progression/` assembly landed (6 production + 4 test files, 24 tests) per the drill-down; full dotnet gate green. §3 A.1 marked LANDED. Tracks A.2/A.3/A.4 + B/C/D remain as planned. |
 | 0.3 | 2026-07-23 | **Track A.1 drilled to the file level** (`progression-t0-implementation-plan.md`). Reading the APPROVED #28 section files to ground that drill surfaced that they **supersede the design supplement's age model**: FR-PG-005/§3.1.1 use `BirthWorldDay` (age derived, no `AgeAnchorDay`, no rollover step) and `GrowthCursor` is `long`, not `int` — corrected in §3 A.1 (the `PlayerLifecycle` field list) + A.2 (the blob layout); the `GrowthProjection.cs` summary row realigned to the section files' in-place `AdvanceDayForPlayer(ref …)` signature + the split-out `AbilityModel.cs`. Added the A.1 pointer to the file-level drill-down. AR: 1M+2L on the drill-down (KD-B kept faithful to §4.3; T0 restore is a value-copy not a codec; `PROGRESSION_REGEN_FIELDS` asserted as its derivation) — converged. |
