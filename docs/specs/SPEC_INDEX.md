@@ -1,7 +1,27 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 24, 2026 (**Scouting & Player Knowledge #32 authored + advanced `→ IN REVIEW →
+> **Last Updated:** July 24, 2026, later same day (**Competition Structure #43 authored + advanced `→ IN
+> REVIEW → APPROVED`** — Wave 5's first spec (cups/continental/promotion-relegation over #30's loop).
+> **KD-1:** a league IS a competition instance (`CompetitionFormat.RoundRobin`); **instance 0 is a binding
+> row** — an id/tag recording "the league lives in #30", no stored #30 object (FR-SN-032/033 respected), so
+> the minimal singleton collection executes **no code on the season path** and a season is byte-identical
+> to bare #30. **KD-2 (headline revision):** knockout/group draws are **position-independent keyed draws**
+> (`competition.draws`, `entityId = competitionId`, fixed-radix ordinals over `(seasonNumber, roundIndex,
+> slotIndex, purpose)`) — the plan's serialized-cursor proposal dropped (a match-tick pattern that would
+> race across same-day competitions); nothing RNG-serialized. **KD-3:** brackets persisted
+> (serialize-don't-regenerate) with fail-loud coherence gates; a restore never re-rolls. **KD-4:**
+> promotion/relegation is a membership-only transform at #30's **pre-declared (a')** (FR-SN-031), before
+> #40's (b') — `ClubId`s never re-key; the code-side (a') hook + deep fixture-day driver are soft-reserved
+> **ERR-030-008** T-phase coordinations. **KD-7:** canonical ascending-`ClubId` order at every draw-feeding
+> surface (keyed Fisher–Yates; shuffled-input equivalence locked). **One approval-time back-prop:**
+> ERR-043-001 — the #16 §3.4 **A-04 placeholder sweep** (`_RESERVED_0x2B_` #42 / `_RESERVED_0x2C_` #43 /
+> `_RESERVED_0x2D_` #45, completing the roadmap §6 block `0x20`–`0x2D`; `deterministic-sim/section-3.md`
+> v1.0.14, `spec-error-log.md` v1.39); `0x2C` stays reserved (draw-free minimal). **No #30/#40 change** —
+> #43 is the first management spec whose #30 spec-text seams (the (a') point, the §7 generalization row)
+> were all reserved ahead. Supplement AR-1 (2M+1L) → AR-2 (2L) → CONVERGENCE; section-file AR PASS-1
+> (1M+1L) → PASS-2 clean → CONVERGENCE. Count: **40 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 24, 2026 (**Scouting & Player Knowledge #32 authored + advanced `→ IN REVIEW →
 > APPROVED`** — Wave 4's third and final spec (per-manager attribute fog-of-war over #27 truth; scout
 > assignments/reports/recommendations). **The governing invariant** (roadmap §5): knowledge is a **VIEW over
 > #27's true attributes, NEVER a mutation** — enforced structurally (`EstimateFor` takes `in PlayerRecord`
@@ -340,6 +360,7 @@
 | 31 | Transfers, Contracts & Negotiation | `transfers-contracts-negotiation/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 34 | Staff & Backroom | `staff-backroom/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 32 | Scouting & Player Knowledge | `scouting-player-knowledge/` | 6¹ | APPROVED | Jul 24, 2026 |
+| 43 | Competition Structure | `competition-structure/` | 6¹ | APPROVED | Jul 24, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
