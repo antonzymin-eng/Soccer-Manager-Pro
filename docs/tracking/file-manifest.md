@@ -1,7 +1,15 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 24, 2026 (**#28 T0 adversarial-review follow-ups + CI `.meta` fix.** **New files:**
+**Last Updated:** July 24, 2026, later same day (**Master Plan Amendment 01 — audio + multiplayer transport.**
+**New file:** `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md` v0.1 — planning-level
+amendment covering the two feature areas the July-2026 coverage review found named in the master plan but
+scoped nowhere (audio/sound design → candidate #48 slice + proposed #51; Stage-6 multiplayer transport /
+deterministic netcode → proposed #52, lockstep intent-replication model pinned, no pull-forward before
+Stage 5). **Modified:** `docs/planning/master-development-plan.md` (header Amendments pointer only — base
+text verbatim), this file (Planning Documents table row). No spec, registry, or code change; #51/#52 are
+proposed, not reserved in `SPEC_INDEX.md` (the `spec-plans/README.md` precedent).)
+**Last Updated (prior):** July 24, 2026 (**#28 T0 adversarial-review follow-ups + CI `.meta` fix.** **New files:**
 `src/player-database/PlayerGenerationRng.cs` v1.0 (+ `.meta`) — shared `DrawBounded` (the biased-but-accepted
 generation modulo mapping + rationale) + `Clamp`, extracted from the duplicated copies in `RosterGenerator`
 (#27) / `RegenGenerator` (#28); plus the 15 Unity `.meta` sidecars for the new `player-progression/`
@@ -1145,6 +1153,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | File |
 |------|
 | `docs/planning/master-development-plan.md` |
+| `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md` |
 | `docs/planning/master-vol-1-physics-core.md` |
 | `docs/planning/master-vol-2-human-systems.md` |
 | `docs/planning/master-vol-3-club-operations.md` |
