@@ -1,14 +1,18 @@
 // File:     src/match-viewer/LiveMatchStreamer.cs
 // Created:  2026-07-15
-// Modified: 2026-07-15
+// Modified: 2026-07-24
 // Author:   —
-// Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Code Standards #20
+// Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md) +
+//           interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P0/§6),
+//           Code Standards #20
 // Purpose:  Paces a real MatchEngine at wall-clock speed on a background thread, observing it
 //           between ticks exactly like MatchReplayRecorder (never mutates state beyond calling
 //           RunTick()), and exposes the latest captured frame through a lock-protected surface for
 //           LiveMatchServer to serve. Presentation tooling — not the 60 Hz simulation hot path, so
 //           the zero-allocation / no-Thread / no-try-catch game-loop rules do not apply here (same
-//           carve-out MatchReplayRecorder / HtmlReplayExporter already use).
+//           carve-out MatchReplayRecorder / HtmlReplayExporter already use). Optionally carries a
+//           single sim-thread pre-tick hook (the interactive Unity client's command-drain / save
+//           servicing seam) — the browser viewer installs none, keeping its playback-only invariant.
 
 using System;
 using System.Diagnostics;
@@ -35,8 +39,21 @@ namespace TacticalDirector.MatchViewer
         private readonly MatchEngine.MatchEngine _engine;
         private readonly int _ticksPerSecond;
         private readonly object _lock = new object();
+
+        // Serializes a tick (RunTick + capture) against an off-tick ServiceOnce() call so the
+        // optional pre-tick hook — which may mutate the engine — never interleaves with a tick.
+        // Distinct from _lock (the brief frame-handoff lock) to keep frame reads non-blocking.
+        // Lock order is always _tickGate then _lock, never the reverse.
+        private readonly object _tickGate = new object();
         private readonly int[]  _teamIds;
         private readonly bool[] _isGoalkeeper;
+
+        // Optional sim-thread hook run at the top of every tick, ahead of RunTick() (and by
+        // ServiceOnce() off-tick). Null for the browser viewer, which supplies none — so its
+        // playback-only / disjoint-by-construction invariant is preserved by construction, not
+        // convention. Volatile: written once under _lock before Start(), read under _tickGate
+        // (which may be a different thread via ServiceOnce()).
+        private volatile Action _preTickHook;
 
         private LifecycleState _state = LifecycleState.NotStarted;
         private Thread _thread;
@@ -118,10 +135,61 @@ namespace TacticalDirector.MatchViewer
         /// </summary>
         internal LiveMatchFrame TickOnce()
         {
-            _engine.RunTick();
-            LiveMatchFrame frame = CaptureFrame();
-            ApplyCapturedFrame(frame);
-            return frame;
+            lock (_tickGate)
+            {
+                // Pre-tick hook (if any) runs on the sim thread at the top of the tick, ahead of the
+                // AI phase, so a command it applies takes effect this tick (§6.2 of the Unity-client
+                // note). Firing it inside TickOnce() — not the pacing-loop wrapper — is what lets the
+                // head-less command-drain test exercise the same drain the live loop does.
+                _preTickHook?.Invoke();
+                _engine.RunTick();
+                LiveMatchFrame frame = CaptureFrame();
+                ApplyCapturedFrame(frame);
+                return frame;
+            }
+        }
+
+        /// <summary>
+        /// Installs the optional sim-thread pre-tick hook (the interactive Unity client's
+        /// command-drain / save-servicing seam). Must be called once, before <see cref="Start"/>;
+        /// the browser viewer never calls it. The hook runs on the sim thread at the top of every
+        /// tick (and via <see cref="ServiceOnce"/>) and MUST NOT block or start/stop this streamer.
+        /// </summary>
+        /// <param name="hook">The pre-tick action. Must not be null.</param>
+        public void SetPreTickHook(Action hook)
+        {
+            if (hook == null) { throw new ArgumentNullException(nameof(hook)); }
+            lock (_lock)
+            {
+                if (_state != LifecycleState.NotStarted)
+                {
+                    throw new InvalidOperationException("SetPreTickHook must be called before Start().");
+                }
+                if (_preTickHook != null)
+                {
+                    throw new InvalidOperationException("A pre-tick hook is already installed (set-once).");
+                }
+                _preTickHook = hook;
+            }
+        }
+
+        /// <summary>
+        /// Runs one pass of the pre-tick hook WITHOUT advancing a tick — the seam for servicing a
+        /// save request (or draining queued commands) while the streamer is paused or at full time,
+        /// the exact states where the pre-tick hook never fires because the pacing loop is not
+        /// ticking (§6.3 of the Unity-client note). Serialized against any in-flight tick via the
+        /// same <c>_tickGate</c> the tick holds, so the engine is never touched by two paths at once;
+        /// a no-op when no hook is installed. The running path and this off-tick path share the one
+        /// hook, so there is no second servicing routine to keep in sync. Intended for the paused /
+        /// full-time path: calling it during live playback is still thread-safe but services the hook
+        /// off a tick boundary, which is rarely what a caller wants while the pacing loop is ticking.
+        /// </summary>
+        public void ServiceOnce()
+        {
+            lock (_tickGate)
+            {
+                _preTickHook?.Invoke();
+            }
         }
 
         /// <summary>
@@ -356,4 +424,12 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | creation + assignment + .Start() now all happen inside the same  |
 // |         |            |        | lock as the _state flip (the same defect class as                |
 // |         |            |        | LiveMatchServer.Start()/Stop(), fixed there first).               |
+// | 1.1     | 2026-07-24 | —      | Interactive Unity client §4/§5-P0/§6: optional sim-thread       |
+// |         |            |        | pre-tick hook (SetPreTickHook, set-once, pre-Start) run at the  |
+// |         |            |        | top of every TickOnce ahead of RunTick, plus ServiceOnce() to  |
+// |         |            |        | run that hook off-tick (save/drain while paused or at full     |
+// |         |            |        | time). New _tickGate serializes a tick against ServiceOnce so  |
+// |         |            |        | the hook (which may mutate the engine) never interleaves with  |
+// |         |            |        | a tick. Browser viewer installs no hook — playback-only        |
+// |         |            |        | invariant preserved by construction.                           |
 #endregion

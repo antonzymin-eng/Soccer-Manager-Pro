@@ -1,0 +1,21 @@
+{
+    "name": "TacticalDirector.MatchClientCore",
+    "rootNamespace": "TacticalDirector.MatchClientCore",
+    "references": [
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.MatchViewer",
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.ProjectConstants"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

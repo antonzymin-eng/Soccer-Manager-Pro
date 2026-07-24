@@ -1,9 +1,10 @@
 // File:     src/match-viewer/MatchViewerConstants.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02
+// Modified: 2026-07-24
 // Author:   —
 // Spec:     Match viewer (presentation tooling; not a numbered spec — see docs/tracking/match-engine-design.md
-//           for the engine it observes), Code Standards #20 (constant catalogue; no magic numbers)
+//           for the engine it observes) + interactive Unity client (docs/tracking/interactive-unity-client-design.md
+//           §5-P0), Code Standards #20 (constant catalogue; no magic numbers)
 // Purpose:  Constant catalogue for the minimal match viewer: recording defaults plus the HTML replay
 //           exporter's pitch-marking geometry and canvas presentation values.
 
@@ -86,8 +87,13 @@ namespace TacticalDirector.MatchViewer
         /// <summary>[GT] Slowest allowed <c>LiveMatchStreamer</c> playback-speed multiplier.</summary>
         public static readonly float MinLiveSpeedMultiplier = Config.GetFloat("match-viewer", "MinLiveSpeedMultiplier", 0.25f);
 
-        /// <summary>[GT] Fastest allowed <c>LiveMatchStreamer</c> playback-speed multiplier.</summary>
-        public static readonly float MaxLiveSpeedMultiplier = Config.GetFloat("match-viewer", "MaxLiveSpeedMultiplier", 8f);
+        /// <summary>
+        /// [GT] Fastest allowed <c>LiveMatchStreamer</c> playback-speed multiplier. Default 10 so the
+        /// interactive Unity client's master-plan speed set {Pause, 1, 3, 5, 10} is deliverable — the
+        /// streamer clamps <c>SetSpeedMultiplier</c> to this cap, so a lower cap silently ran 10× as
+        /// the cap value (interactive-unity-client-design.md §2 item 2 / §5-P0).
+        /// </summary>
+        public static readonly float MaxLiveSpeedMultiplier = Config.GetFloat("match-viewer", "MaxLiveSpeedMultiplier", 10f);
 
         /// <summary>[GT] Maximum bytes <c>LiveMatchServer</c> will read while looking for the end of an HTTP request line before abandoning the connection (abuse/hang guard against a client that never sends CRLF).</summary>
         public static readonly int MaxHttpRequestLineBytes = Config.GetInt("match-viewer", "MaxHttpRequestLineBytes", 8192);
@@ -113,4 +119,7 @@ namespace TacticalDirector.MatchViewer
 // | 1.3     | 2026-07-15 | —      | Interactive match view: new [GT] region for LiveMatchServer /  |
 // |         |            |        | LiveMatchStreamer — default port, browser poll cadence, min/  |
 // |         |            |        | max speed multiplier, max HTTP request-line bytes.             |
+// | 1.4     | 2026-07-24 | —      | Interactive Unity client §5-P0: MaxLiveSpeedMultiplier default |
+// |         |            |        | 8 → 10 so the master-plan speed set {Pause,1,3,5,10} is         |
+// |         |            |        | deliverable (the streamer clamps to this cap).                 |
 #endregion
