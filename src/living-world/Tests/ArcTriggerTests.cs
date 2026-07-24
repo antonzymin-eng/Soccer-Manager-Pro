@@ -1,13 +1,14 @@
 // File:     src/living-world/Tests/ArcTriggerTests.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-07-24 (arc-triggers Low-2: non-zero-cursor post-restore resume test)
 // Author:   —
 // Spec:     Living World System #22 §3.4, §6.2, FR-LW-016/017/018/020/021, arc-triggers-design §9 (tests
 //           1-4, 6-11), Testing Strategy #19 §3.1.4, Code Standards #20
 // Purpose:  Arc-triggers Slice 1/E1 + Slice 2/E2 tests: distinct world.arcs stream key, flag-off
 //           round-trip, stub-canon deterministic spawn (incl. KD-7 single-fire + re-arm), FR-LW-017/021
-//           trigger-order determinism, the E2 save@N→restore→advance acceptance predicate, v2-payload
-//           rejection, and the KD-7 re-fire-after-restore completeness lock.
+//           trigger-order determinism, the E2 save@N→restore→advance acceptance predicate (both a latched
+//           post-restore run and a non-zero-cursor post-restore DRAW resume), v2-payload rejection, and
+//           the KD-7 re-fire-after-restore completeness lock.
 
 using System;
 
@@ -194,6 +195,55 @@ namespace TacticalDirector.LivingWorld.Tests
             }
             Assert.AreEqual(uninterrupted, restored.Snapshot(),
                 "§2.7: save@N → Restore(canon) → advance to N+K is byte-identical to the uninterrupted run");
+        }
+
+        // ── Test 6b: E2 resume — a post-restore rising edge DRAWS from a resumed NON-ZERO cursor ──
+        //
+        // Test 6 saves from a non-zero cursor but the post-restore days are all latched, so no draw
+        // occurs after restore — it exercises cursor PRESERVATION, not cursor RESUMPTION. This test
+        // saves after firing once (cursor 1) and then dropping below to re-arm the latch, so the FIRST
+        // post-restore rising edge actually draws the world.arcs stream (cursor 1 → 2). It proves the
+        // resumed stream keys on the restored cursor + ActionOrdinal, not on a fresh registration at 0.
+
+        [Test]
+        public void FlagOn_RestoreFromNonZeroCursor_ResumesArcStreamDeterministically()
+        {
+            ArcCanonSource above = EgoClashCanon(ContactA, 0.90f);
+            ArcCanonSource below = EgoClashCanon(ContactA, 0.50f);
+
+            WorldStore run = new WorldStore(Manager, Seed);
+            run.RecordInteraction(ContactA, false, OwnedLayers(), EventKind.ManagerCriticism, 1);
+
+            // Fire once (cursor 0 → 1), then drop below to re-arm the latch.
+            run.SetArcCanon(above);
+            run.AdvanceDay();
+            run.SetArcCanon(below);
+            run.AdvanceDay();
+            Assert.AreEqual(1, run.Arcs.ArcCount);
+            Assert.AreEqual(1UL, run.ArcTriggers.RngCursor, "the save is taken from a NON-ZERO world.arcs cursor");
+            Assert.AreEqual(0, run.ArcTriggers.LatchedCount, "and a re-armed (empty) latch, so the next rising edge draws");
+
+            byte[] save = run.Snapshot();
+
+            // Uninterrupted continuation: a fresh rising edge fires arc #2, drawing the cursor 1 → 2.
+            run.SetArcCanon(above);
+            run.AdvanceDay();
+            Assert.AreEqual(2, run.Arcs.ArcCount);
+            Assert.AreEqual(2UL, run.ArcTriggers.RngCursor, "the post-save rising edge advanced the cursor from 1 to 2");
+            Arc uninterruptedArc2 = run.Arcs.GetArcAt(1);
+            byte[] uninterrupted = run.Snapshot();
+
+            // Restore from the non-zero cursor, then drive the same rising edge.
+            WorldStore restored = WorldStore.Restore(save, above);
+            Assert.AreEqual(1UL, restored.ArcTriggers.RngCursor, "the non-zero cursor is restored verbatim");
+            restored.AdvanceDay();
+            Assert.AreEqual(2, restored.Arcs.ArcCount, "the post-restore rising edge spawns arc #2");
+            Arc restoredArc2 = restored.Arcs.GetArcAt(1);
+
+            Assert.AreEqual(uninterruptedArc2.Cause.SnapshotRef, restoredArc2.Cause.SnapshotRef,
+                "the post-restore draw resumes from cursor 1 (+ ActionOrdinal), so arc #2's stochastic component matches");
+            Assert.AreEqual(uninterrupted, restored.Snapshot(),
+                "save-from-non-zero-cursor → Restore → rising edge is byte-identical to the uninterrupted run");
         }
 
         // ── Test 8: E2 restore rejects a v2-format payload (no in-place migration) ───────────────

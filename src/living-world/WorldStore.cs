@@ -1,5 +1,6 @@
 // File:     src/living-world/WorldStore.cs
 // Created:  2026-07-03
+// Modified: 2026-07-24 (arc-triggers Low-1: IsMoreCitable delegates to MemoryEpisode.MoreSalientThan)
 // Modified: 2026-07-24 (arc-triggers Slice 2/E2: Snapshot/Restore serialize the world.arcs cursor +
 //           the KD-7 latch (WORLD_STORE_FORMAT_VERSION 2 → 3); the E1 flag-on fail-loud is dropped —
 //           a flag-on run now round-trips deterministically)
@@ -261,28 +262,15 @@ namespace TacticalDirector.LivingWorld
                 {
                     continue;
                 }
-                if (!found || IsMoreCitable(in e, in best))
+                // Shared canonical (salience → worldTick → episodeId) order — the same total order
+                // ArcTriggerEvaluator's pin selection uses, so both pick the same source episode.
+                if (!found || MemoryEpisode.MoreSalientThan(in e, in best))
                 {
                     best = e;
                     found = true;
                 }
             }
             return found;
-        }
-
-        /// <summary>True if <paramref name="a"/> outranks <paramref name="b"/> as a citation candidate
-        /// under the deterministic (salience, worldTick, episodeId) order.</summary>
-        private static bool IsMoreCitable(in MemoryEpisode a, in MemoryEpisode b)
-        {
-            if (a.Salience != b.Salience)
-            {
-                return a.Salience > b.Salience;
-            }
-            if (a.WorldTick != b.WorldTick)
-            {
-                return a.WorldTick > b.WorldTick;
-            }
-            return a.EpisodeId > b.EpisodeId;
         }
 
         // ── persistence (§4.6 / FR-LW-022) ──────────────────────────────────────────────────
@@ -536,4 +524,8 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | Snapshot fail-loud is removed — a flag-on run round-trips      |
 // |         |            |        | deterministically and a still-latched trigger does not        |
 // |         |            |        | re-fire on restore.                                           |
+// | 1.6     | 2026-07-24 | —      | arc-triggers Low-1 (maintainability): the private IsMoreCitable|
+// |         |            |        | comparator (a copy of ArcTriggerEvaluator's IsMoreSalient) is  |
+// |         |            |        | removed; the auto-cite scan now delegates to the shared static |
+// |         |            |        | MemoryEpisode.MoreSalientThan. No behaviour change.            |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/living-world/ArcTriggerEvaluator.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-07-24 (arc-triggers Low-1: delegate to MemoryEpisode.MoreSalientThan)
 // Author:   —
 // Spec:     Living World System #22 §3.4, §6.2, FR-LW-016/017/018/020/021/031, arc-triggers-design
 //           KD-3/KD-4/KD-5/KD-7, Code Standards #20
@@ -255,26 +255,14 @@ namespace TacticalDirector.LivingWorld
             MemoryEpisode best = mem[0];
             for (int i = 1; i < mem.Length; i++)
             {
-                if (IsMoreSalient(in mem[i], in best))
+                // Shared canonical (salience → worldTick → episodeId) order — the same total order
+                // WorldStore's §3.2 auto-cite selection uses, so both pick the same source episode.
+                if (MemoryEpisode.MoreSalientThan(in mem[i], in best))
                 {
                     best = mem[i];
                 }
             }
             return new[] { new Arc.PinnedEpisode(edge.FromId, edge.ToId, best.EpisodeId) };
-        }
-
-        // Deterministic (salience → worldTick → episodeId) order — the WorldStore.IsMoreCitable order.
-        private static bool IsMoreSalient(in MemoryEpisode a, in MemoryEpisode b)
-        {
-            if (a.Salience != b.Salience)
-            {
-                return a.Salience > b.Salience;
-            }
-            if (a.WorldTick != b.WorldTick)
-            {
-                return a.WorldTick > b.WorldTick;
-            }
-            return a.EpisodeId > b.EpisodeId;
         }
 
         /// <summary>
@@ -313,4 +301,7 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | fail-loud restore). WorldStore now serializes the cursor +    |
 // |         |            |        | latch (WORLD_STORE_FORMAT_VERSION 3); no forward-behaviour    |
 // |         |            |        | change.                                                       |
+// | 1.2     | 2026-07-24 | —      | arc-triggers Low-1 (maintainability): the private IsMoreSalient|
+// |         |            |        | comparator was a copy of WorldStore's IsMoreCitable; both now  |
+// |         |            |        | delegate to the shared static MemoryEpisode.MoreSalientThan.   |
 #endregion
