@@ -1,8 +1,10 @@
-# Management-Layer Spec Plans (candidate #27–#50)
+# Management-Layer Spec Plans (candidate #27–#52)
 
 > **Created:** July 22, 2026
 > **Status:** PLANS (pre-design-supplement). One high-level plan per candidate spec, governed by
-> `../management-layer-spec-roadmap.md`. Numbers are **proposed, not reserved** — nothing here
+> `../management-layer-spec-roadmap.md` (v0.4; #51–#52 were added there July 24, 2026 from
+> `../../planning/master-plan-amendment-01-audio-multiplayer-transport.md`, which remains their
+> governing feature definition). Numbers are **proposed, not reserved** — nothing here
 > changes `SPEC_INDEX.md`; registry rows land only at design-supplement promotion (the #21–#27
 > precedent).
 > **Purpose:** For each candidate management/off-pitch spec, a consistent one-page plan — scope,
@@ -44,6 +46,12 @@ does not exist yet; only confirmed existing seams are named bare.
 | 8 | 49 | [Localization & Accessibility — locales + a11y](spec-49-localization-accessibility.md) *(same file; content tier)* | FR-LC | presentation — none |
 | 8 | 50 | [Save Migration & Versioning](spec-50-save-migration-versioning.md) | FR-MG | infra — none |
 | 8 | 39 | [Steam Packaging & Release](spec-39-steam-packaging-release.md) | FR-PK | infra — none |
+| 8 | 51 | [Audio & Sound Design](spec-51-audio-sound-design.md) *(framework; #48 owns the match-audio slice)* | FR-AU | presentation — none |
+| 9¹ | 52 | [Multiplayer Transport & Netcode](spec-52-multiplayer-transport-netcode.md) *(Stage-6 gated — supplement not before the Stage-5 Fixed64 migration)* | FR-NET | transport — none |
+
+¹ Wave 9 is Stage-6-gated (Amendment 01; roadmap §7): #52's plan exists now only to record the lockstep
+architecture decision and the pre-Stage-5 guardrails; its design supplement is deliberately
+deferred (phantom-interface rule).
 
 **Critical path:** #27 → #30 → #33 → #31 → #38 → #39.
 
@@ -57,13 +65,17 @@ producers bind to as they land; the file is shared.
 **Determinism block headroom:** the 14 stochastic candidates consume tags `0x20`–`0x2D` /
 ordinals 82–95 exactly (the roadmap §6 block), leaving zero slack. The next free slot is
 **`0x2E` / 96**; if a currently read-only/presentation candidate (#37/#44/#46/#48/#47/#39/#50, or
-the #38/#49 presentation tiers) later needs a draw, it takes `0x2E`/96 onward — it does not
-fragment the contiguous 82–95 block. Reserve `0x2E`–`0x2F` / 96–97 as that slack.
+the #38/#49 presentation tiers, or the Amendment-01 additions #51/#52) later needs a draw, it
+takes `0x2E`/96 onward — it does not fragment the contiguous 82–95 block. Reserve
+`0x2E`–`0x2F` / 96–97 as that slack. #51 (presentation) and #52 (transport — both peers run the
+full sim, so the sim's existing streams are the only randomness) declare none.
 
 ## Next step
 
 Promote in wave order: open a full design supplement (`docs/tracking/<name>-design.md`) per
 candidate, run it through adversarial review to convergence, author section files at `IN REVIEW`,
-and register the row in `SPEC_INDEX.md` at promotion — the same pipeline #21–#26 followed. #27 is
-furthest along (design supplement + partial `src/player-database/` already exist) and is the
-recommended first promotion.
+and register the row in `SPEC_INDEX.md` at promotion — the same pipeline #21–#26 followed.
+**Status (July 24, 2026):** promoted and APPROVED so far: #27 (Wave 0); #30/#37/#38-framework/
+#49-seam (Wave 1); #28/#29/#40/#41 (Wave 2); #33 (Wave 3); #31/#34 (Wave 4) — see `SPEC_INDEX.md`,
+which overrides this note. Next unpromoted per wave order: **#32 (Wave 4 remainder), then Wave 5
+(#43 → #44 → #42 → #45).**

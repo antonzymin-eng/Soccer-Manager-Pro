@@ -1,7 +1,44 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 24, 2026 (**#28 T0 adversarial-review follow-ups + CI `.meta` fix.** **New files:**
+**Last Updated:** July 24, 2026, latest same day (**AR-3 fresh-eyes pass over the Amendment-01 surface (repeat
+review, user-requested): 0H+2M+1L, all fixed.** The pass read roadmap §2–§6 in full for the first time —
+both M findings came from there. M-1: `spec-plans/spec-48-match-presentation-depth.md` v0.3 — the one file
+a Wave-7 #48 supplement author starts from carried no pointer to the Amendment-01 audio split; §1 now
+records the boundary (#48 = event→cue mapping only; the playback framework — mixer/buses/catalogue/
+settings — is #51, with the stub-bus/rehoming option per spec-51 KD-1). M-2: `management-layer-spec-roadmap.md`
+→ **v0.5** — v0.4 had added §1 rows without §3 scope sketches (breaking the v0.2 rows+sketches precedent;
+§1 claimed #27–#52 while §3 stopped at #50); §3 sketches added for #51/#52. L: roadmap §6 no-RNG
+parenthetical extended to include #51/#52 (footnote ³ covered them, §6 read alone undercounted). AR-4
+sweep over the changed surface: 0H+0M — CONVERGENCE, cycle closed.)
+**Last Updated (prior):** July 24, 2026, latest same day (**AR-1 over Amendment 01 + the #51/#52 plans: 0H+5M+3L, all
+fixed.** M-1 seam-commit contract corrected against source — `SubstitutePlayer` applies immediately
+(`MatchEngine.cs` queues only the notification event), Set\*Tactic are the stride-committed pair, and
+remote-intents-via-tick-scheduled-command-layer is now an explicit guardrail (amendment §3.2/§3.3 + spec-52
+§3/§5); M-2 #48 wave mislabel (amendment §2.4, Wave 8 → "one wave after #48's Wave-7 slice"); M-3 the
+"Sound effects" master-plan anchor corrected §3.4 → §3 Month-11–12 "UI & Polish" across amendment /
+base-plan pointer / spec-51; M-4 `management-layer-spec-roadmap.md` → **v0.4** (the v0.2 gap-fill
+precedent): §1 heading #27–#52 + rows #51/#52 + footnote ³, §7 Wave-8 #51 entry + new Wave-9 block; M-5
+`spec-plans/README.md` "Next step" de-staled (promoted-through list per `SPEC_INDEX.md`; next = #32, then
+Wave 5) + governance header aligned to roadmap v0.4. L: README footnote ² → ¹; spec-52 §8 guardrails no
+longer overstated as automated locks; spec-51 §3 marks #48's mapper "(proposed)". Amendment v0.2,
+spec-51/52 plans v0.2.)
+**Last Updated (prior):** July 24, 2026, later same day (**#51/#52 spec-plan files authored** — the Amendment-01 §5
+next step. **New files:** `docs/tracking/spec-plans/spec-51-audio-sound-design.md` v0.1 (Wave 8, FR-AU,
+presentation — none; game-wide audio framework, boundary with #48's match-audio slice pinned as KD-1) +
+`docs/tracking/spec-plans/spec-52-multiplayer-transport-netcode.md` v0.1 (Wave 9 post-roadmap, FR-NET,
+transport — none; lockstep intent-replication surfaces + Stage-6 gate + pre-Stage-5 guardrails recorded).
+**Modified:** `docs/tracking/spec-plans/README.md` (title range #27–#52, index rows, Wave-9 footnote,
+determinism-headroom note), this file. No `SPEC_INDEX.md` change — numbers proposed, not reserved.)
+**Last Updated (prior):** July 24, 2026, later same day (**Master Plan Amendment 01 — audio + multiplayer transport.**
+**New file:** `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md` v0.1 — planning-level
+amendment covering the two feature areas the July-2026 coverage review found named in the master plan but
+scoped nowhere (audio/sound design → candidate #48 slice + proposed #51; Stage-6 multiplayer transport /
+deterministic netcode → proposed #52, lockstep intent-replication model pinned, no pull-forward before
+Stage 5). **Modified:** `docs/planning/master-development-plan.md` (header Amendments pointer only — base
+text verbatim), this file (Planning Documents table row). No spec, registry, or code change; #51/#52 are
+proposed, not reserved in `SPEC_INDEX.md` (the `spec-plans/README.md` precedent).)
+**Last Updated (prior):** July 24, 2026 (**#28 T0 adversarial-review follow-ups + CI `.meta` fix.** **New files:**
 `src/player-database/PlayerGenerationRng.cs` v1.0 (+ `.meta`) — shared `DrawBounded` (the biased-but-accepted
 generation modulo mapping + rationale) + `Clamp`, extracted from the duplicated copies in `RosterGenerator`
 (#27) / `RegenGenerator` (#28); plus the 15 Unity `.meta` sidecars for the new `player-progression/`
@@ -1145,6 +1182,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | File |
 |------|
 | `docs/planning/master-development-plan.md` |
+| `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md` |
 | `docs/planning/master-vol-1-physics-core.md` |
 | `docs/planning/master-vol-2-human-systems.md` |
 | `docs/planning/master-vol-3-club-operations.md` |
