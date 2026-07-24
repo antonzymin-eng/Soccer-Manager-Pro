@@ -156,8 +156,8 @@ seam exactly as phases 4/6 guard `_arcs` / `_membership`.
   **not** serialized and `WORLD_STORE_FORMAT_VERSION` stays 2. A null-source run draws nothing
   (cursor 0) ⇒ **byte-identical to today; the existing living-world determinism suite is unchanged**.
   A non-null-source (flag-on) run is deterministic *forward* but not yet snapshot-safe, so
-  `WorldStore.Snapshot()` **fails loud** when the `world.arcs` cursor is non-zero (the
-  `EnableGkHeading` Phase-1 durable-capture-fails-loud precedent).
+  `WorldStore.Snapshot()` **fails loud** when the `world.arcs` cursor is non-zero (`RngCursor` or
+  `ActionOrdinal` — both checked; the `EnableGkHeading` Phase-1 durable-capture-fails-loud precedent).
 - **Phase E2 (bump 2 → 3).** Serialize `world.arcs` `RngCursor` + `ActionOrdinal` into the composite
   in fixed order **after** the `world.text` RNG block; flag-on becomes snapshot-safe. **v2 payloads
   are rejected fail-loud at the `WORLD_STORE_FORMAT_VERSION` gate — no in-place migration at Stage 0.**
@@ -237,8 +237,16 @@ Planning-stage AR run over the plan text this document formalizes: pass 1 found 
 (Path B item 1 not behaviour-neutral — resolved by the §2.2 null-seam opt-in + §2.7 two-phase
 serialization) + 1 Medium (the §2.5 `world.arcs` stream-key collision, verified in source) + 3 Low;
 pass 2 found 0 High / 0 Medium / 2 Low (the §2.5 sentinel-block catalogue + the §2.7 named E2
-predicate, both folded in here) — **CONVERGENCE**. Section-file/code AR cycles run at implementation
-per the project convention.
+predicate, both folded into v0.1). A third pass over the expanded implementation plan (§§8–12) found
+0 High / 3 Medium / 2 Low, all applied in v0.3: M-1 the §8.3 `ArcCanonSource` concrete-class fix (an
+abstract base + one subclass reintroduced the one-implementation abstraction §2.3/KD-2 rejects); M-2
+the §8.9 season-save flag-on canon-threading gap (a flag-on season restore silently stopped
+evaluating — `SeasonSaveManager.Load` did not thread the canon source); M-3 the §8.4/§8.5
+draw-after-decide reorder + missing-episode skip-no-draw contract (the plan drew the `world.arcs`
+cursor before pin resolution, violating the validate-before-draw discipline it cites); L-1 the §8.6/§8.8
+E1 fail-loud guard checks `ActionOrdinal` too; L-2 the §8.5 `MaxRngStreams`-headroom note. Post-v0.3
+the plan is **CONVERGED**. Section-file/code AR cycles run at implementation per the project
+convention.
 
 ---
 
@@ -255,8 +263,7 @@ real ones, not sketches.
 
 | File | Type | Purpose |
 |------|------|---------|
-| `ArcCanonSource.cs` | `public abstract class` (Stage-0 stub subclass alongside) | The §2.2/§2.3 nullable canon-input seam the evaluator reads. Concrete, not an interface. |
-| `Stage0ArcCanonSource.cs` | `public sealed class : ArcCanonSource` | Deterministic in-code Stage-0 producer (the `ScenarioIndex`/`TeamTacticConfig` parser-swap precedent). |
+| `ArcCanonSource.cs` | `public sealed class` | The §2.2/§2.3 nullable canon-input seam the evaluator reads — a single concrete type (the deterministic in-code Stage-0 producer IS this class; the `ScenarioIndex`/`TeamTacticConfig` parser-swap precedent). NOT an abstract base + one subclass — that reintroduces the one-implementation abstraction KD-2 rejects. The real vol-2/vol-3 producer becomes a *second* concrete type; extract a base/interface only then. |
 | `ArcTrigger.cs` | `public readonly struct` | One catalogue row: `TriggerId` + target `ArcKind` + `[GT]` threshold + input-capture rule. |
 | `ArcTriggerCatalogue.cs` | `public static class` | The Stage-0 in-code trigger table (APPEND-only, like `InteractionTextCorpus`). |
 | `ArcTriggerEvaluator.cs` | `public sealed class` | Registers `world.arcs`, walks canon in FR-LW-017/021 order, draws the stochastic component, calls `ArcEngine.SpawnArc`. Owns the stream (the `InteractionTextGenerator` role). |
@@ -269,7 +276,8 @@ real ones, not sketches.
 | `LivingWorldConstants.cs` | +Fixed region rows (§8.2). |
 | `WorldStore.cs` | Construct the evaluator at boot; wire it into the loop; E1/E2 serialization; `Restore` canon-source param. |
 | `WorldLoop.cs` | Phase-4 evaluator call, null-guarded (a fifth nullable seam arg). |
-| `LivingWorldConstants.cs` version history + `WorldStore.cs`/`WorldLoop.cs` version history | Append rows per FR-CS-056. |
+| `season-save/SeasonSaveManager.cs` | **Slice 2 only** (§8.9 fix (a)): `Load` gains `ArcCanonSource canon = null`, passed into `WorldStore.Restore(blobs.WorldBlob, canon)` — the `ISquadProvider` Load-time-parameter precedent. Needed so a flag-on world round-trips through the season file; without it the restored season silently stops evaluating (§8.9). `season-save.asmdef` already references `TacticalDirector.LivingWorld`, so no asmdef change. |
+| `LivingWorldConstants.cs` version history + `WorldStore.cs`/`WorldLoop.cs`/`SeasonSaveManager.cs` version history | Append rows per FR-CS-056. |
 
 **Deliberately NOT modified:** `ArcEngine.cs` (its `SpawnArc`/`AdvanceState`/`ResolveArc`/`Update`
 surface is already the exact seam the evaluator calls — the class doc even names this landing);
@@ -299,26 +307,34 @@ public const int WORLD_STREAM_ENTITY_BACKGROUND = -3; // world.background (reser
 `entityId: -1` (line 60) is updated to `WORLD_STREAM_ENTITY_TEXT` (behaviour-identical — same value —
 but cataloged). Per-kind `[GT]` trigger thresholds + `ARC_TRIGGER_*` lifetime rows go in `#region GT`.
 
-### 8.3 `ArcCanonSource` (KD-2 — concrete, nullable seam)
+### 8.3 `ArcCanonSource` (KD-2 — a single concrete, nullable seam)
+
+**Concrete `sealed class`, NOT `abstract` + one subclass.** An abstract base with a single concrete
+subclass is the same one-implementation abstraction §2.3/KD-2 rejects (it differs from a phantom
+interface only in keyword). Ship one concrete class; the Stage-0 in-code producer *is* this class.
+The real vol-2/vol-3 producer, when it lands, is a *second* concrete type — extract a base or
+interface at that point, not before.
 
 ```csharp
-public abstract class ArcCanonSource
+public sealed class ArcCanonSource
 {
     // Canon read in FR-LW-017/021 order. Entity-scoped signals iterated by ascending entity id;
     // board/squad-level signals keyed by ArcKind ordinal. Scalars only — they map 1:1 onto
     // SpawnCause.Input { short Key; float Value }. Every value MUST be finite (WriteF32 is Tier-A
     // no-NaN); the evaluator gates before capture.
-    public abstract int EntitySignalCount { get; }
-    public abstract int EntityIdAt(int index);                 // ascending
-    public abstract float EntitySignal(int index, short key);  // e.g. pulse divergence, ego clash
-    public abstract float BoardSignal(ArcKind kind, short key);// board patience etc.
+    //
+    // Stage 0: constructed as a deterministic pure function of the world state it is handed (no
+    // System.Random, no clock) — e.g. from MemoryStore edge salience/relationship values — so it is
+    // reproducible across Snapshot/Restore. The reads below are backed by that captured state.
+    public int EntitySignalCount { get; }
+    public int EntityIdAt(int index);                 // ascending
+    public float EntitySignal(int index, short key);  // e.g. pulse divergence, ego clash
+    public float BoardSignal(ArcKind kind, short key);// board patience etc.
 }
 ```
 
-`Stage0ArcCanonSource` is a deterministic pure function of the world state it is handed (no
-`System.Random`, no clock) — e.g. derived from `MemoryStore` edge salience/relationship values, so
-it is reproducible across `Snapshot`/`Restore`. It is the drop-in slot for the real vol-2/vol-3
-producer; **null is the default and means "skip phase-4 trigger evaluation"** (§2.2).
+**null is the default and means "skip phase-4 trigger evaluation"** (§2.2). This class is the drop-in
+slot for the real vol-2/vol-3 producer.
 
 ### 8.4 `ArcTrigger` + evaluator core
 
@@ -341,12 +357,28 @@ Evaluation order (fixed, deterministic — the load-bearing determinism property
 2. **Board/squad-level triggers**, iterated by `ArcKind` ordinal.
 
 On a crossing (`signal >= Threshold`, NaN fails closed via a negated compare — the store-seam
-precedent), draw **one** `world.arcs` value for the stochastic accept/shape component, build the
-`SpawnCause` inline (`TriggerId`, the captured `Input[]` scalars, `Cause.WorldTick =
-_clock.CurrentWorldTick`), resolve the pinned source episodes from `MemoryStore`, and call
-`ArcEngine.SpawnArc(kind, in cause, pins, spawnTick, maxLifetimeDays)`. `SpawnArc` already does the
-atomic FR-LW-018 pinning + rollback, the `ArcKind` gate, and the lifetime/overflow gates — the
-evaluator adds no new validation there.
+precedent), the evaluator commits the spawn decision **before** drawing, mirroring the
+`InteractionTextGenerator` "all validation runs BEFORE the draw so a refusal consumes no cursor"
+discipline (§8.5). Order per crossing:
+
+1. **Resolve + validate the pinnable source episodes** from `MemoryStore`. If a trigger's target
+   episode does not exist on its edge, this is a **skip — no spawn, no draw** (the crossing does not
+   fire; the `world.arcs` cursor is untouched, exactly as a no-crossing tick). This is a validation
+   refusal, not a corruption: a dangling *pin id passed to a resolved episode* is still `SpawnArc`'s
+   fail-loud (F1), but "no citable episode yet" is a normal skip. Committing this to skip-no-draw (not
+   fail-loud) matches the `world.text` citation-gate precedent and keeps replay parity: whether an
+   episode exists is a pure function of the serialized `MemoryStore`, so the skip/spawn decision — and
+   therefore the cursor — is reproducible across `Snapshot`/`Restore`.
+2. **Draw one** `world.arcs` value for the stochastic accept/shape component (the draw is consumed
+   only once the spawn is committed).
+3. Build the `SpawnCause` inline (`TriggerId`, the captured `Input[]` scalars, `Cause.WorldTick =
+   _clock.CurrentWorldTick`) and call `ArcEngine.SpawnArc(kind, in cause, pins, spawnTick,
+   maxLifetimeDays)`. `SpawnArc` does the atomic FR-LW-018 pinning + rollback, the `ArcKind` gate, and
+   the lifetime/overflow gates — the evaluator adds no new validation there.
+
+The stochastic component may **gate** the spawn (accept/reject) — in that case the draw necessarily
+precedes the accept test, but pin resolution (step 1) still precedes the draw, so a reject after the
+draw is deterministic and a *missing episode* never burns a cursor.
 
 ### 8.5 `world.arcs` RNG registration + draw discipline (KD-4)
 
@@ -366,7 +398,8 @@ public int StreamIndex => _streamIndex;
 ```
 
 Per-crossing draw (the `InteractionTextGenerator.Generate` discipline — all validation/canon reads
-run BEFORE the draw so a no-crossing tick consumes no cursor):
+**and pin resolution** (§8.4 step 1) run BEFORE the draw, so a no-crossing tick *and a crossing whose
+episode is missing* both consume no cursor):
 
 ```csharp
 if (_rng.Reserve(_streamIndex, 1) != 0) throw new InvalidOperationException(...);
@@ -378,6 +411,12 @@ _rng.CloseReservation(_streamIndex);   // advances RngCursor by DeclaredBudget (
 flag-off (null canon source) run never advances it (E1 byte-identity). Registration is
 **unconditional at boot** in a fixed position (after `world.text`) so the stream index is
 positionally stable across save/restore whether or not a canon source is present.
+
+**`MaxRngStreams` headroom.** The unconditional boot registration makes `world.arcs` the *second*
+stream on `WorldStore._rng` (after `world.text`); `RegisterStream` fails loud if the service's
+`MaxRngStreams` cap is exhausted. Confirm the cap has room for two (it does today — the service is a
+service-wide catalogue sized well above two) as a one-line pre-check when landing Slice 1, so the
+unconditional registration can never fail-loud on a tight cap.
 
 ### 8.6 `WorldStore` diffs
 
@@ -424,9 +463,14 @@ if (rng.RestoreStream(arcTriggers.StreamIndex, in arcStream) != 0) throw new Inv
 
 **E1 (no schema bump)** ships everything above EXCEPT the two `WriteU64`/`ReadU64` pairs and the
 version bump: the stream is registered and the evaluator wired, but `Snapshot()` **fails loud** when
-`arcStream.RngCursor != 0` (a flag-on save is not yet snapshot-safe — the `EnableGkHeading` Phase-1
-`NotSupportedException` durable-capture precedent). A null-canon run keeps the cursor at 0, so
-`Snapshot()` succeeds and is byte-identical to today at `WORLD_STORE_FORMAT_VERSION` 2.
+`arcStream.RngCursor != 0 || arcStream.ActionOrdinal != 0` (a flag-on save is not yet snapshot-safe —
+the `EnableGkHeading` Phase-1 `NotSupportedException` durable-capture precedent). Both fields are
+checked, not just `RngCursor`: they are the two-field resumable position serialized at E2, and
+gating on both is robust against a future draw-discipline change that could advance `ActionOrdinal`
+without `RngCursor` (today `CloseReservation` advances `RngCursor` on every draw, so either check
+alone would suffice — checking both costs nothing and removes the dependence on that invariant). A
+null-canon run keeps both at 0, so `Snapshot()` succeeds and is byte-identical to today at
+`WORLD_STORE_FORMAT_VERSION` 2.
 
 ### 8.7 `WorldLoop` diff (phase-4)
 
@@ -452,13 +496,41 @@ ctors stay (slice-1 hosts unchanged); add a 5-arg ctor.
 
 - `WORLD_STORE_FORMAT_VERSION` mismatch on `Restore` → `ArgumentException` (existing gate; v2 payloads
   are rejected fail-loud at E2, **no in-place migration** at Stage 0).
-- `Snapshot()` at E1 with a non-zero `world.arcs` cursor → `NotSupportedException` (flag-on not yet
-  snapshot-safe).
+- `Snapshot()` at E1 with a non-zero `world.arcs` cursor (`RngCursor != 0 || ActionOrdinal != 0`) →
+  `NotSupportedException` (flag-on not yet snapshot-safe).
 - `RestoreStream` non-zero return → `InvalidOperationException` (registration-order drift).
 - Non-finite `SpawnCause.Input.Value` → already gated in `WorldStateSerializer.Serialize`
   (`:102-111`); the evaluator additionally gates at capture time.
 - `ArcCanonSource` returning a non-finite signal → the evaluator's negated-compare threshold fails
   closed (no crossing, no draw).
+
+### 8.9 Season-save flag-on restore — thread the canon source through `SeasonSaveManager.Load`
+
+`WorldStore.Restore(payload, canon)` (§8.6) takes the canon source directly, so the **direct
+`WorldStore` E2 acceptance path (§2.7) is self-contained** — no season-save change is needed to lock
+it. But the item-3 season save (`src/season-save/SeasonSaveManager.cs`, already shipped) restores the
+world blob via `WorldStore world = WorldStore.Restore(blobs.WorldBlob)` — **with no canon argument**.
+Its `Load` signature is `Load(string path, ISquadProvider squads = null)`. So a **flag-on** world
+restored *through the season file* comes back with `_canon == null`, and per §8.7 arc evaluation is
+then silently skipped for the rest of the session — the restored season quietly stops spawning arcs
+with no error. The bytes round-trip; the behaviour does not.
+
+**This is the item-1 ⇄ item-3 boundary the plan must not leave implicit.** Two acceptable fixes; pick
+(a):
+
+- **(a) Thread canon through `SeasonSaveManager.Load` (the `ISquadProvider` precedent).** Change the
+  signature to `Load(string path, ISquadProvider squads = null, ArcCanonSource canon = null)` and pass
+  `canon` into `WorldStore.Restore(blobs.WorldBlob, canon)`. This is the exact Load-time-parameter,
+  never-persisted pattern `ISquadProvider` already establishes (§1 / the match restore). One signature
+  change + one pass-through; `SeasonSaveManager.cs` joins the §8.1 modified-file list, and it lands in
+  **Slice 2** (it is only meaningful once E2 makes flag-on snapshot-safe).
+- **(b) Scope §12 down.** If (a) is deferred, the season-save round-trip claim in §12 MUST be narrowed
+  to "flag-off season saves round-trip (byte-identical); a flag-on world round-trips only through the
+  direct `WorldStore.Restore(payload, canon)` path — flag-on-through-the-season-file requires the (a)
+  `SeasonSaveManager` change, deferred." A flag-off world has `_canon == null` **by design**, so the
+  season file already handles it correctly; only the flag-on case needs (a).
+
+Either way, the plan no longer claims a capability it hasn't wired. §12 below reflects (a).
 
 ## 9. Test plan — `Tests/ArcTriggerTests.cs` (item 1)
 
@@ -484,6 +556,11 @@ determinism, fail-loud gates):
    cross on the same tick spawn in the pinned (entity-id ascending, then `ArcKind` ordinal) order.
 8. **Restore fail-loud gates** — v2-format payload rejected at E2; truncated arcs block rejected;
    `RestoreStream` drift rejected.
+9. **Season-save flag-on round-trip (§8.9(a))** — a flag-on `WorldStore` saved via
+   `SeasonSaveManager.Save`, then `SeasonSaveManager.Load(path, squads: null, canon)`, then advanced
+   N→N+K, is byte-identical to the uninterrupted flag-on run (the §2.7 predicate through the season
+   file). Fails if `Load` is not threaded with `canon` (the restored world stops evaluating). Add in
+   Slice 2 alongside test 6, in `season-save/tests/`.
 
 ## 10. Sequencing (two landing slices, each its own AR + gate)
 
@@ -492,9 +569,11 @@ determinism, fail-loud gates):
   Ship byte-identical flag-off; flag-on deterministic-forward but `Snapshot()` fails loud. This is the
   reviewable, byte-neutral landing.
 - **Slice 2 — E2 (`WORLD_STORE_FORMAT_VERSION` 2 → 3).** Add the cursor serialize/restore §8.6, drop
-  the E1 fail-loud, add tests 6 + 8. Comparative round-trip, no absolute rebaseline. The season save
-  frames the world blob opaquely, so `SEASON_SAVE_FORMAT_VERSION` is untouched (re-verify with one
-  season-save round-trip test through a flag-on `WorldStore`).
+  the E1 fail-loud, thread canon through `SeasonSaveManager.Load` (§8.9(a)), add tests 6 + 8 + 9.
+  Comparative round-trip, no absolute rebaseline. The season save frames the world blob opaquely, so
+  `SEASON_SAVE_FORMAT_VERSION` is untouched — but the `Load` canon threading is required for the
+  flag-on world to keep evaluating after a season restore (test 9); without it the round-trip claim in
+  §12 is unmet.
 
 Each slice runs its own adversarial-review cycle to convergence (the project convention) before the
 full dotnet gate.
@@ -524,8 +603,13 @@ upstream producers land, build in this order:
 - Full dotnet gate PASSED, 0 failures, whole tree green (SDK via apt, the current local-gate posture).
 - Slice 1: the existing living-world determinism suite is **unchanged** (byte-identical flag-off);
   `key(world.arcs) != key(world.text)` locked.
-- Slice 2: the §2.7 comparative round-trip predicate passes; a flag-on `WorldStore` round-trips
-  through the unified season save with no `SEASON_SAVE_FORMAT_VERSION` change.
+- Slice 2: the §2.7 comparative round-trip predicate passes (direct `WorldStore.Restore(payload,
+  canon)`). A flag-on `WorldStore` also round-trips **through the unified season save** with no
+  `SEASON_SAVE_FORMAT_VERSION` change — which requires the §8.9(a) `SeasonSaveManager.Load` canon
+  threading (the season codec frames the v3 world blob opaquely, so the season format itself is
+  untouched; the missing piece is passing `canon` into `WorldStore.Restore`, not the frame). Without
+  §8.9(a) this bullet is unmet — the restored season would stop evaluating — so §8.9(a) is part of
+  Slice 2, not optional.
 - No `ArcEngine.cs` or `WorldStateSerializer.cs` production change (the arc cursor is a `WorldStore`
   composite field).
 
@@ -533,6 +617,21 @@ upstream producers land, build in this order:
 
 ## Version History
 
+- **v0.3 (2026-07-24):** Applied the pass-3 adversarial-review findings over the §§8–12 implementation
+  plan (0H+3M+2L). **M-1:** `ArcCanonSource` is now a single concrete `sealed class`, not an `abstract`
+  base + one `Stage0ArcCanonSource` subclass — the abstract-with-one-impl shape reintroduced exactly
+  the one-implementation abstraction §2.3/KD-2 rejects; the file inventory (§8.1) drops the separate
+  subclass row and §8.3 spells out the reasoning. **M-2:** new §8.9 closes the item-1 ⇄ item-3 boundary
+  gap — a flag-on world restored *through the unified season save* came back with `_canon == null` and
+  silently stopped spawning arcs, because `SeasonSaveManager.Load` never threaded a canon source into
+  `WorldStore.Restore`; the fix threads `ArcCanonSource canon = null` through `Load` (the
+  `ISquadProvider` Load-time-parameter precedent), added to the §8.1 modified-file list, Slice 2 (§10),
+  the §12 acceptance bullet, and a new test 9 (§9). **M-3:** §8.4/§8.5 reorder so pin resolution + the
+  spawn decision precede the `world.arcs` draw (the validate-before-draw discipline the section cites),
+  and pin a missing-episode = skip-no-draw contract so a crossing with no citable episode consumes no
+  cursor. **L-1:** the E1 `Snapshot()` fail-loud guard checks `RngCursor != 0 || ActionOrdinal != 0`
+  (§8.6/§8.8/§2.7). **L-2:** §8.5 adds the `MaxRngStreams`-headroom pre-check note for the
+  unconditional second stream registration. §7 records the pass-3 → CONVERGED status.
 - **v0.2 (2026-07-23):** Expanded into a detailed implementation plan (§§8–12) — verified against the
   live tree (`ArcEngine`/`WorldLoop`/`WorldStore`/`InteractionTextGenerator`/`WorldStateSerializer`/
   `DeterministicRngService`): file inventory + exact constant declarations, the concrete
