@@ -46,7 +46,8 @@ namespace TacticalDirector.TacticalInstructions.Tests
                 Assert.AreEqual(expected.Name, actual.Name, "Name @" + p);
                 Assert.AreSame(expected.Players, actual.Players, "Players @" + p);
 
-                AssertTeamEqual(expected.Team, actual.Team, p);
+                // TeamTactic value equality compares every dial and is drift-proof when a dial is added.
+                Assert.AreEqual(expected.Team, actual.Team, "Team @" + p);
 
                 Assert.AreEqual(expected.BaseFit, actual.BaseFit, "BaseFit @" + p);
                 Assert.AreEqual(expected.AggrAffinity, actual.AggrAffinity, "AggrAffinity @" + p);
@@ -57,30 +58,6 @@ namespace TacticalDirector.TacticalInstructions.Tests
                 Assert.AreEqual(TacticalPresetsConstants.AggrAffinity[p], actual.AggrAffinity, "Aggr==const @" + p);
                 Assert.AreEqual(TacticalPresetsConstants.CautAffinity[p], actual.CautAffinity, "Caut==const @" + p);
             }
-        }
-
-        private static void AssertTeamEqual(in TeamTactic e, in TeamTactic a, int p)
-        {
-            Assert.AreEqual(e.Mentality, a.Mentality, "Mentality @" + p);
-            Assert.AreEqual(e.Formation, a.Formation, "Formation @" + p);
-            Assert.AreEqual(e.Tempo, a.Tempo, "Tempo @" + p);
-            Assert.AreEqual(e.Width, a.Width, "Width @" + p);
-            Assert.AreEqual(e.Passing, a.Passing, "Passing @" + p);
-            Assert.AreEqual(e.Pressing, a.Pressing, "Pressing @" + p);
-            Assert.AreEqual(e.LineOfEngagement, a.LineOfEngagement, "LineOfEngagement @" + p);
-            Assert.AreEqual(e.DefensiveLine, a.DefensiveLine, "DefensiveLine @" + p);
-            Assert.AreEqual(e.DefensiveWidth, a.DefensiveWidth, "DefensiveWidth @" + p);
-            Assert.AreEqual(e.TransitionWon, a.TransitionWon, "TransitionWon @" + p);
-            Assert.AreEqual(e.TransitionLost, a.TransitionLost, "TransitionLost @" + p);
-            Assert.AreEqual(e.OffsideTrap, a.OffsideTrap, "OffsideTrap @" + p);
-            Assert.AreEqual(e.TriggerPressMask, a.TriggerPressMask, "TriggerPressMask @" + p);
-            Assert.AreEqual(e.FocusPlay, a.FocusPlay, "FocusPlay @" + p);
-            Assert.AreEqual(e.GkDistribution, a.GkDistribution, "GkDistribution @" + p);
-            Assert.AreEqual(e.TimeWasting, a.TimeWasting, "TimeWasting @" + p);
-            Assert.AreEqual(e.MarkingOrientation, a.MarkingOrientation, "MarkingOrientation @" + p);
-            Assert.AreEqual(e.DismarkIntensity, a.DismarkIntensity, "DismarkIntensity @" + p);
-            Assert.AreEqual(e.BuildUpStructure, a.BuildUpStructure, "BuildUpStructure @" + p);
-            Assert.AreEqual(e.RotationFreedom, a.RotationFreedom, "RotationFreedom @" + p);
         }
     }
 }

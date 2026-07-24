@@ -197,38 +197,16 @@ namespace TacticalDirector.MatchEngine
                     $"Preset file: {KeyBalancedOrdinal} = {ordinal} does not match the pinned Balanced midpoint " +
                     $"{TacticPresetLibrary.BalancedOrdinal} (FR-TP-013 — the ladder is APPEND-only).");
             }
-            if (!IsBalancedEquivalent(presets[ordinal].Team))
+            // TeamTactic is an all-value-typed readonly struct, so default value equality compares
+            // every dial and auto-covers any future dial (no hand-rolled comparison to drift). This is
+            // a once-per-load check, not a hot path.
+            if (!presets[ordinal].Team.Equals(TeamTactic.Balanced))
             {
                 throw new FormatException(
                     $"Preset file: the preset at {KeyBalancedOrdinal} = {ordinal} ('{presets[ordinal].Name}') " +
                     "is not TeamTactic.Balanced-equivalent.");
             }
             return (byte)ordinal;
-        }
-
-        private static bool IsBalancedEquivalent(in TeamTactic t)
-        {
-            TeamTactic b = TeamTactic.Balanced;
-            return t.Mentality == b.Mentality
-                && t.Formation == b.Formation
-                && t.Tempo == b.Tempo
-                && t.Width == b.Width
-                && t.Passing == b.Passing
-                && t.Pressing == b.Pressing
-                && t.LineOfEngagement == b.LineOfEngagement
-                && t.DefensiveLine == b.DefensiveLine
-                && t.DefensiveWidth == b.DefensiveWidth
-                && t.TransitionWon == b.TransitionWon
-                && t.TransitionLost == b.TransitionLost
-                && t.OffsideTrap == b.OffsideTrap
-                && t.TriggerPressMask == b.TriggerPressMask
-                && t.FocusPlay == b.FocusPlay
-                && t.GkDistribution == b.GkDistribution
-                && t.TimeWasting == b.TimeWasting
-                && t.MarkingOrientation == b.MarkingOrientation
-                && t.DismarkIntensity == b.DismarkIntensity
-                && t.BuildUpStructure == b.BuildUpStructure
-                && t.RotationFreedom == b.RotationFreedom;
         }
     }
 }
@@ -238,4 +216,7 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-07-24 | —      | Initial (WS-1 / #26 KD-6): the on-disk preset-catalogue parser |
 // |         |            |        |   swap — [preset N] sections + required top-level              |
 // |         |            |        |   balancedOrdinal; reuses TacticFileGrammar; fail-loud gates.  |
+// | 1.1     | 2026-07-24 | —      | Code AR (Medium): the Balanced-midpoint check uses             |
+// |         |            |        |   TeamTactic value equality instead of a hand-rolled 20-field  |
+// |         |            |        |   comparison (drift-proof when a dial is appended).            |
 #endregion

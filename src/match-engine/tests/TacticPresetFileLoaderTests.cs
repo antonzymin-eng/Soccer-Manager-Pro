@@ -118,7 +118,8 @@ cautAffinity = 0.00
                 Assert.AreEqual(e.AggrAffinity, a.AggrAffinity, "AggrAffinity @" + p);
                 Assert.AreEqual(e.CautAffinity, a.CautAffinity, "CautAffinity @" + p);
 
-                AssertTeamEqual(e.Team, a.Team, p);
+                // TeamTactic value equality compares every dial and is drift-proof when a dial is added.
+                Assert.AreEqual(e.Team, a.Team, "Team @" + p);
             }
         }
 
@@ -215,30 +216,6 @@ cautAffinity = 0.00
         {
             string bad = MinimalValid.Replace("[preset 0]", "[squad 0]");
             Assert.Throws<FormatException>(() => TacticPresetFileLoader.Parse(bad));
-        }
-
-        private static void AssertTeamEqual(in TeamTactic e, in TeamTactic a, int p)
-        {
-            Assert.AreEqual(e.Mentality, a.Mentality, "Mentality @" + p);
-            Assert.AreEqual(e.Formation, a.Formation, "Formation @" + p);
-            Assert.AreEqual(e.Tempo, a.Tempo, "Tempo @" + p);
-            Assert.AreEqual(e.Width, a.Width, "Width @" + p);
-            Assert.AreEqual(e.Passing, a.Passing, "Passing @" + p);
-            Assert.AreEqual(e.Pressing, a.Pressing, "Pressing @" + p);
-            Assert.AreEqual(e.LineOfEngagement, a.LineOfEngagement, "LineOfEngagement @" + p);
-            Assert.AreEqual(e.DefensiveLine, a.DefensiveLine, "DefensiveLine @" + p);
-            Assert.AreEqual(e.DefensiveWidth, a.DefensiveWidth, "DefensiveWidth @" + p);
-            Assert.AreEqual(e.TransitionWon, a.TransitionWon, "TransitionWon @" + p);
-            Assert.AreEqual(e.TransitionLost, a.TransitionLost, "TransitionLost @" + p);
-            Assert.AreEqual(e.OffsideTrap, a.OffsideTrap, "OffsideTrap @" + p);
-            Assert.AreEqual(e.TriggerPressMask, a.TriggerPressMask, "TriggerPressMask @" + p);
-            Assert.AreEqual(e.FocusPlay, a.FocusPlay, "FocusPlay @" + p);
-            Assert.AreEqual(e.GkDistribution, a.GkDistribution, "GkDistribution @" + p);
-            Assert.AreEqual(e.TimeWasting, a.TimeWasting, "TimeWasting @" + p);
-            Assert.AreEqual(e.MarkingOrientation, a.MarkingOrientation, "MarkingOrientation @" + p);
-            Assert.AreEqual(e.DismarkIntensity, a.DismarkIntensity, "DismarkIntensity @" + p);
-            Assert.AreEqual(e.BuildUpStructure, a.BuildUpStructure, "BuildUpStructure @" + p);
-            Assert.AreEqual(e.RotationFreedom, a.RotationFreedom, "RotationFreedom @" + p);
         }
     }
 }
