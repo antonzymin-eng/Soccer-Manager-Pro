@@ -103,12 +103,18 @@ upstreams; it references **neither** season-save nor match-engine — the season
 
 ### A.1 — T0: lifecycle value types + pure projections (behaviour-neutral, buildable now)
 
+> **Drilled to the file level:** `docs/tracking/progression-t0-implementation-plan.md` — the per-file
+> build list (headers, signatures, constants with tags, `T-PG-*` test assignment, 2-PR commit slice),
+> grounded in the APPROVED #28 section files. It also records **KD-A** (the section files' `BirthWorldDay`
+> age model supersedes the supplement's `AgeAnchorDay`; `GrowthCursor` is `long`) and **KD-B** (the
+> regen-stream const timing). The table below is the summary; that doc is authoritative for T0 detail.
+
 | File | Contents |
 |---|---|
 | `PlayerProgressionConstants.cs` | `[GT]` `RETIREMENT_AGE=36`, `DECLINE_AGE`, `GROWTH_AGE`, `POINT_COST`, `ABILITY_MAX`; `[FIXED]` `DAYS_PER_YEAR`, `PROGRESSION_SAVE_FORMAT_VERSION=1`; balance-pass locks per #28 §8 (values from the section files). |
-| `PlayerLifecycle.cs` | value type keyed by `PlayerId`: `int PotentialAbility`, `int CurrentAbility` *(derived cache, KD-1 — never a second accumulator)*, `int GrowthCursor` *(integer fixed-point, the sole accumulator)*, `uint AgeAnchorDay`, `bool RetirementFlag`, `uint RetirementDay`. |
+| `PlayerLifecycle.cs` | value type (the overlay, held per `PlayerId` by the T2 block): `int PotentialAbility`, `int CurrentAbility` *(derived cache, KD-1 — never a second accumulator)*, `long GrowthCursor` *(integer fixed-point, the sole accumulator)*, `uint BirthWorldDay` *(the authoritative age anchor — age is derived `(worldDay−BirthWorldDay)/DAYS_PER_YEAR`, no rollover step; per the APPROVED #28 FR-PG-005/§3.1.1, which supersede the design supplement's `AgeAnchorDay`)*, `bool RetirementFlag`, `uint RetirementDay`. |
 | `TrainingInput.cs` | value type + `static TrainingInput Neutral` (the KD-2 seam #29 writes; neutral until #29 lands). |
-| `GrowthProjection.cs` | `static Deltas Project(in PlayerLifecycle lc, int age, PlayerPosition pos, bool curveEnabled, in TrainingInput t)` — the sole attribute-mutation function; §4.3 ±1/yr identity when `curveEnabled` off (KD-8), integer fixed-point cursor accrual/spend (KD-1). |
+| `GrowthProjection.cs` + `AbilityModel.cs` | `GrowthProjection.AdvanceDayForPlayer(ref PlayerRecord rec, ref PlayerLifecycle life, uint worldDay, in TrainingInput t, bool curveEnabled)` — the sole attribute-mutation path (§3.1); §4.3 ±1/yr identity when `curveEnabled` off (KD-8), integer fixed-point cursor accrual/spend (KD-1). `AbilityModel` (§4.2 splits it out) holds pure `ComputeCA` / `ClassifyAgeBand` / weighted-spend. *(See the T0 drill-down doc for full signatures.)* |
 | `RegenGenerator.cs` | `static PlayerRecord GenerateOne(DeterministicRngService rng, int streamIndex, int clubId, int newPlayerId, ...)` — the single-player analogue of `RosterGenerator.Generate`; **same** `Reserve(streamIndex, FIELDS_PER_PLAYER)`/`DrawReserved`/`CloseReservation` pattern + `NameCatalogue`; takes an explicit `newPlayerId` (never reuses a retiree's — KD-3). |
 | `RetirementResult.cs` / `RegenResult.cs` | boundary signals (`PlayerId` removed / `PlayerRecord` inserted). |
 | `LifecycleViewModel.cs` | read-only value-copy view (age/CA/PA/retirement) for #31/#38 (observer-neutral, KD-7). |
@@ -132,7 +138,7 @@ byte DOMAIN_TAG_PLAYER_PROGRESSION (0x20)      # tag gate
 u32  managedCount                              # ReadCount-guarded (overflow-safe bound, the SeasonSaveCodec.Require posture)
 repeat managedCount:
      PlayerRecord (PlayerId, names, Age, Position, PlayerAttributes[31]+WeakFoot)   # the evolving career-state record (KD-4 — serialize, don't regenerate)
-     int PotentialAbility; int GrowthCursor; u32 AgeAnchorDay; byte RetirementFlag; u32 RetirementDay
+     int PotentialAbility; long GrowthCursor; u32 BirthWorldDay; byte RetirementFlag; u32 RetirementDay   # BirthWorldDay is the age anchor (FR-PG-005); record.Age is a derived cache, kept current
 int  NextPlayerId                              # monotonic regen-id cursor (KD-3)
 byte regenStreamRegistered                     # 0 until the first regen registers the stream (A.3 / §8); see note
 [if regenStreamRegistered] RngStreamState progressionStream   # cursor + actionOrdinal (GetStreamState/RestoreStream) — a mid-boundary regen resumes byte-exact
@@ -369,3 +375,4 @@ implementation against approved specs.
 | 0.1 | 2026-07-23 | Initial coordination plan — mapping of the three #27 §4 Stage-1+ deferrals to owners (#28/#30/#27-#47/#31), contracts C-1..C-7, wave sequence, residual initial-DB sliver. |
 | — | 2026-07-23 | AR-1 (2M+1L) + AR-3 (1L) fixes: #29 determinism (reserved-not-promoted), #31/#40 tags (proposed, no catalogue row), §4.6 mis-citation, #28 handoff citation (§4). Converged. |
 | 0.2 | 2026-07-23 | **Expanded to a detailed implementation plan.** Added §2 grounded-API reference (verified against `SeasonSaveCodec`/`DeterministicRngService`/`RosterGenerator`/`WorldStore` source); four implementation tracks (A aging #28 T0–T3 with file lists + signatures + the `PROGRESSION_SAVE_FORMAT_VERSION` blob layout + RNG registration; B season-frame codec extension + version-sequencing table; C #31 promotion pipeline + first-cut T-phases; D #27/#47 initial-DB format-only pass); §7 cross-track sequence diagram; §8 consolidated determinism/save-version ledger; §9 test/CI strategy incl. the `multi-season-aging` capstone; §10 risks; §11 condensed contracts. Section files remain authoritative for #28/#30/#31 internals; proposed-beyond-section-file surfaces are flagged. |
+| 0.3 | 2026-07-23 | **Track A.1 drilled to the file level** (`progression-t0-implementation-plan.md`). Reading the APPROVED #28 section files to ground that drill surfaced that they **supersede the design supplement's age model**: FR-PG-005/§3.1.1 use `BirthWorldDay` (age derived, no `AgeAnchorDay`, no rollover step) and `GrowthCursor` is `long`, not `int` — corrected in §3 A.1 (the `PlayerLifecycle` field list) + A.2 (the blob layout); the `GrowthProjection.cs` summary row realigned to the section files' in-place `AdvanceDayForPlayer(ref …)` signature + the split-out `AbilityModel.cs`. Added the A.1 pointer to the file-level drill-down. AR: 1M+2L on the drill-down (KD-B kept faithful to §4.3; T0 restore is a value-copy not a codec; `PROGRESSION_REGEN_FIELDS` asserted as its derivation) — converged. |
