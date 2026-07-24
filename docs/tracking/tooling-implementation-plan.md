@@ -13,6 +13,12 @@
 > `docs/tracking/*-design.md` notes — no section files, no spec-registry change. Each
 > workstream lands as its own reviewed change per the project's design-first / adversarial-review
 > convention.
+>
+> **Detailed expansion:** `docs/tracking/tooling-implementation-plan-detailed.md` is the file-by-file,
+> signature-level, test-by-test implementation plan (injectable-catalogue refactor + loader for WS-1,
+> the four lock-suite specs for WS-2, the verbatim shim edit targets for WS-3). This document stays the
+> high-level umbrella (scope, sequencing, risks, adversarial-review history); read it first, then the
+> detailed note for implementation.
 
 ---
 
