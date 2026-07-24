@@ -1,5 +1,7 @@
 // File:     src/living-world/InteractionTextGenerator.cs
 // Created:  2026-07-02
+// Modified: 2026-07-24 (arc-triggers Slice 1: world.text entityId literal −1 → cataloged
+//           WORLD_STREAM_ENTITY_TEXT sentinel; behaviour-identical, distinct from world.arcs)
 // Modified: 2026-07-03 (slice-3 AR-1 L-3: DrawReserved-failure documented as a corruption abort)
 // Author:   —
 // Spec:     Living World System #22 §3.3 (KD-6), §3.6, FR-LW-011/012/013/016/020, Code Standards #20
@@ -48,8 +50,10 @@ namespace TacticalDirector.LivingWorld
 
         /// <summary>
         /// Registers the <c>world.text</c> sub-stream (FR-LW-020) on the injected deterministic RNG
-        /// service. entityId −1 = the world-scoped (non-entity) stream, matching the project's
-        /// loose/none sentinel.
+        /// service. <see cref="LivingWorldConstants.WORLD_STREAM_ENTITY_TEXT"/> (−1) = the world-scoped
+        /// (non-entity) stream, matching the project's loose/none sentinel. This value is the cataloged
+        /// sentinel — behaviour-identical to the prior literal −1, but distinct from the world.arcs
+        /// stream's sentinel so the two world-scoped streams get distinct ComputeStreamKey values.
         /// </summary>
         public InteractionTextGenerator(DeterministicRngService rng)
         {
@@ -57,7 +61,7 @@ namespace TacticalDirector.LivingWorld
             _streamIndex = rng.RegisterStream(
                 LivingWorldConstants.WORLD_TEXT_STREAM_SITE_ID,
                 SubsystemOrdinals.LivingWorld,
-                entityId: -1,
+                LivingWorldConstants.WORLD_STREAM_ENTITY_TEXT,
                 LivingWorldConstants.WORLD_TEXT_STREAM_VERSION);
         }
 

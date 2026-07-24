@@ -1,5 +1,12 @@
 // File:     src/living-world/WorldStore.cs
 // Created:  2026-07-03
+// Modified: 2026-07-24 (arc-triggers Low-1: IsMoreCitable delegates to MemoryEpisode.MoreSalientThan)
+// Modified: 2026-07-24 (arc-triggers Slice 2/E2: Snapshot/Restore serialize the world.arcs cursor +
+//           the KD-7 latch (WORLD_STORE_FORMAT_VERSION 2 → 3); the E1 flag-on fail-loud is dropped —
+//           a flag-on run now round-trips deterministically)
+// Modified: 2026-07-24 (arc-triggers Slice 1/E1: owns the ArcTriggerEvaluator (world.arcs stream) + a
+//           nullable ArcCanonSource seam; AdvanceDay passes canon per tick; SetArcCanon / a canon ctor
+//           overload / Restore(payload, canon) thread it; Snapshot fails loud on a flag-on run — E1)
 // Modified: 2026-07-03
 // Author:   —
 // Spec:     Living World System #22 §4.2 (KD-4), §4.5, §4.6, §7.1 (KD-10), FR-LW-019/022/023/027/032,
@@ -61,6 +68,8 @@ namespace TacticalDirector.LivingWorld
         private WorldLoop _loop;
         private DeterministicRngService _rng;
         private InteractionTextGenerator _text;
+        private ArcTriggerEvaluator _arcTriggers;
+        private ArcCanonSource _canon;
 
         /// <summary>The manager this world store is scoped to.</summary>
         public int ManagerId => _managerId;
@@ -80,6 +89,9 @@ namespace TacticalDirector.LivingWorld
         /// <summary>The §3.5 active-set membership service.</summary>
         public ActiveSetMembership Membership => _membership;
 
+        /// <summary>Test seam: the arc-trigger evaluator (owns the world.arcs stream + KD-7 latch).</summary>
+        internal ArcTriggerEvaluator ArcTriggers => _arcTriggers;
+
         /// <summary>
         /// Constructs an empty world store for the given manager at calendar day 0, seeding the owned
         /// <c>world.text</c> RNG stream from the manager id (a deterministic default — the same manager
@@ -87,17 +99,31 @@ namespace TacticalDirector.LivingWorld
         /// <see cref="WorldStore(int, ulong)"/> overload to supply the world seed explicitly.
         /// </summary>
         public WorldStore(int managerId)
-            : this(managerId, (ulong)managerId)
+            : this(managerId, (ulong)managerId, null)
+        {
+        }
+
+        /// <summary>
+        /// Constructs an empty world store for the given manager at calendar day 0 with no arc-trigger
+        /// canon source (arc evaluation is skipped — byte-identical to a run with no arcs). Use
+        /// <see cref="SetArcCanon"/> or the canon-taking overload to opt in.
+        /// </summary>
+        public WorldStore(int managerId, ulong worldSeed)
+            : this(managerId, worldSeed, null)
         {
         }
 
         /// <summary>
         /// Constructs an empty world store for the given manager at calendar day 0. All stores are
-        /// freshly allocated and wired: the loop drives arc expiry (phase 4) and the external-cap LRU
-        /// (phase 6) over the same instances, and the <see cref="InteractionTextGenerator"/> registers
-        /// the <c>world.text</c> sub-stream (FR-LW-020) on a service derived from <paramref name="worldSeed"/>.
+        /// freshly allocated and wired: the loop drives arc trigger evaluation + expiry (phase 4) and
+        /// the external-cap LRU (phase 6) over the same instances; the
+        /// <see cref="InteractionTextGenerator"/> registers the aperiodic <c>world.text</c> sub-stream
+        /// and the <see cref="ArcTriggerEvaluator"/> registers the periodic <c>world.arcs</c> sub-stream
+        /// (FR-LW-020), both on a service derived from <paramref name="worldSeed"/>. A <c>null</c>
+        /// <paramref name="canon"/> (the default via the other ctors) opts out of arc evaluation
+        /// (arc-triggers-design KD-1) — byte-identical to a run with no arcs.
         /// </summary>
-        public WorldStore(int managerId, ulong worldSeed)
+        public WorldStore(int managerId, ulong worldSeed, ArcCanonSource canon)
         {
             if (managerId < 0)
             {
@@ -111,15 +137,19 @@ namespace TacticalDirector.LivingWorld
             _cold = new ColdStore();
             _arcs = new ArcEngine(_memory);
             _membership = new ActiveSetMembership(managerId, _memory, _cold);
-            _loop = new WorldLoop(_clock, _memory, _arcs, _membership);
             _rng = new DeterministicRngService(worldSeed);
+            // world.text registers FIRST, then world.arcs — a fixed boot order so the two stream indices
+            // are positionally stable across save/restore (KD-4/KD-5).
             _text = new InteractionTextGenerator(_rng);
+            _arcTriggers = new ArcTriggerEvaluator(_rng, managerId);
+            _loop = new WorldLoop(_clock, _memory, _arcs, _membership, _arcTriggers);
+            _canon = canon;
         }
 
         // Private ctor used by Restore — takes already-rebuilt, already-wired stores.
         private WorldStore(int managerId, ulong worldSeed, WorldClock clock, MemoryStore memory,
             ColdStore cold, ArcEngine arcs, ActiveSetMembership membership, WorldLoop loop,
-            DeterministicRngService rng, InteractionTextGenerator text)
+            DeterministicRngService rng, InteractionTextGenerator text, ArcTriggerEvaluator arcTriggers)
         {
             _managerId = managerId;
             _worldSeed = worldSeed;
@@ -131,6 +161,20 @@ namespace TacticalDirector.LivingWorld
             _loop = loop;
             _rng = rng;
             _text = text;
+            _arcTriggers = arcTriggers;
+            _canon = null;
+        }
+
+        /// <summary>
+        /// Sets (or clears, with <c>null</c>) the arc-trigger canon source live for all subsequent
+        /// <see cref="AdvanceDay"/> calls (arc-triggers-design KD-1). The store is the single source of
+        /// truth for the live canon — <see cref="AdvanceDay"/> passes it into the loop each tick, so a
+        /// post-construction change (or a change after <see cref="Restore"/>) is always in effect. The
+        /// canon source is never persisted (a Load-time parameter, the <c>ISquadProvider</c> precedent).
+        /// </summary>
+        public void SetArcCanon(ArcCanonSource canon)
+        {
+            _canon = canon;
         }
 
         /// <summary>
@@ -140,7 +184,7 @@ namespace TacticalDirector.LivingWorld
         /// </summary>
         public void AdvanceDay()
         {
-            _loop.RunWorldTick();
+            _loop.RunWorldTick(_canon);
         }
 
         /// <summary>
@@ -218,7 +262,9 @@ namespace TacticalDirector.LivingWorld
                 {
                     continue;
                 }
-                if (!found || IsMoreCitable(in e, in best))
+                // Shared canonical (salience → worldTick → episodeId) order — the same total order
+                // ArcTriggerEvaluator's pin selection uses, so both pick the same source episode.
+                if (!found || MemoryEpisode.MoreSalientThan(in e, in best))
                 {
                     best = e;
                     found = true;
@@ -227,38 +273,29 @@ namespace TacticalDirector.LivingWorld
             return found;
         }
 
-        /// <summary>True if <paramref name="a"/> outranks <paramref name="b"/> as a citation candidate
-        /// under the deterministic (salience, worldTick, episodeId) order.</summary>
-        private static bool IsMoreCitable(in MemoryEpisode a, in MemoryEpisode b)
-        {
-            if (a.Salience != b.Salience)
-            {
-                return a.Salience > b.Salience;
-            }
-            if (a.WorldTick != b.WorldTick)
-            {
-                return a.WorldTick > b.WorldTick;
-            }
-            return a.EpisodeId > b.EpisodeId;
-        }
-
         // ── persistence (§4.6 / FR-LW-022) ──────────────────────────────────────────────────
 
         /// <summary>
         /// Serializes the whole store to one canonical payload: a fail-loud composite header
         /// (version + domain tag + manager id), the §4.6 four-store block, the world.text RNG block
-        /// (world seed + stream cursor + action ordinal), then the membership roster. A round-trip
-        /// through <see cref="Restore"/> reproduces field-identical state, including the text stream's
-        /// position so generation resumes deterministically.
+        /// (world seed + stream cursor + action ordinal), the world.arcs RNG block (cursor + action
+        /// ordinal) + the KD-7 armed-off latch (E2), then the membership roster. A round-trip through
+        /// <see cref="Restore"/> reproduces field-identical state, including both stream positions so
+        /// text generation and arc-trigger firing resume deterministically.
         /// </summary>
         public byte[] Snapshot()
         {
             byte[] storeBlock = WorldStateSerializer.Serialize(_clock, _memory, _arcs, _cold);
             RngStreamState textStream = _rng.GetStreamState(_text.StreamIndex);
+            RngStreamState arcStream = _rng.GetStreamState(_arcTriggers.StreamIndex);
+            // Enumerate the KD-7 latch once (canonical order) so writer and sizer never disagree.
+            ArcTriggerEvaluator.LatchEntry[] latched = _arcTriggers.EnumerateLatchedCanonical();
 
             int size = 2 + 1 + 4;                 // version, domain tag, manager id
             size += 4 + storeBlock.Length;        // store-block length prefix + block
             size += 8 + 8 + 8;                    // world seed + world.text cursor + action ordinal
+            size += 8 + 8;                        // world.arcs cursor + action ordinal (E2)
+            size += 4 + latched.Length * (4 + 2); // latch count + (scopeKey i32 + triggerId u16) each (E2)
             size += 4;                            // member count
             size += _membership.MemberCount * (4 + 1); // entityId + isOwnClub flag per member
 
@@ -278,6 +315,20 @@ namespace TacticalDirector.LivingWorld
             CanonicalSerializer.WriteU64(payload, ref offset, _worldSeed);
             CanonicalSerializer.WriteU64(payload, ref offset, textStream.RngCursor);
             CanonicalSerializer.WriteU64(payload, ref offset, textStream.ActionOrdinal);
+
+            // world.arcs RNG block (E2): cursor + action ordinal resume the arc-trigger stream (the same
+            // atomic-reservation-at-rest invariant as world.text lets us omit the reservation fields).
+            CanonicalSerializer.WriteU64(payload, ref offset, arcStream.RngCursor);
+            CanonicalSerializer.WriteU64(payload, ref offset, arcStream.ActionOrdinal);
+
+            // KD-7 latch block (E2): the armed-off (scopeKey, TriggerId) set in canonical order, so a
+            // still-latched trigger does NOT re-fire on restore (the §2.7 completeness lock).
+            CanonicalSerializer.WriteI32(payload, ref offset, latched.Length);
+            for (int i = 0; i < latched.Length; i++)
+            {
+                CanonicalSerializer.WriteI32(payload, ref offset, latched[i].ScopeKey);
+                CanonicalSerializer.WriteU16(payload, ref offset, latched[i].TriggerId);
+            }
 
             CanonicalSerializer.WriteI32(payload, ref offset, _membership.MemberCount);
             for (int i = 0; i < _membership.MemberCount; i++)
@@ -301,7 +352,7 @@ namespace TacticalDirector.LivingWorld
         /// payload violates (edges/arcs/summaries via <see cref="WorldStateSerializer"/>, roster via
         /// <see cref="ActiveSetMembership.RestoreMember"/>).
         /// </summary>
-        public static WorldStore Restore(byte[] payload)
+        public static WorldStore Restore(byte[] payload, ArcCanonSource canon = null)
         {
             if (payload == null)
             {
@@ -357,6 +408,35 @@ namespace TacticalDirector.LivingWorld
                     "WorldStore.Restore: world.text stream index invalid on restore (internal invariant — registration order changed).");
             }
 
+            // Reconstruct the arc-trigger evaluator: registering it AFTER the text generator re-registers
+            // world.arcs at the same positional stream index (1) it held at save (KD-4/KD-5).
+            ArcTriggerEvaluator arcTriggers = new ArcTriggerEvaluator(rng, managerId);
+
+            // world.arcs RNG block (E2): resume the arc-trigger stream cursor + action ordinal (the
+            // world.text RestoreStream precedent — fail loud on a non-zero code = registration drift).
+            ulong arcCursor = CanonicalSerializer.ReadU64(payload, ref offset);
+            ulong arcActionOrdinal = CanonicalSerializer.ReadU64(payload, ref offset);
+            RngStreamState arcStream = rng.GetStreamState(arcTriggers.StreamIndex);
+            arcStream.RngCursor = arcCursor;
+            arcStream.ActionOrdinal = arcActionOrdinal;
+            if (rng.RestoreStream(arcTriggers.StreamIndex, in arcStream) != 0)
+            {
+                throw new InvalidOperationException(
+                    "WorldStore.Restore: world.arcs stream index invalid on restore (internal invariant — registration order changed).");
+            }
+
+            // KD-7 latch block (E2): the armed-off (scopeKey, TriggerId) set. ReadCount fails loud on a
+            // corrupt/oversize prefix; RestoreLatched fails loud on a non-canonical / duplicate ordering.
+            int latchCount = ReadCount(payload, ref offset);
+            ArcTriggerEvaluator.LatchEntry[] latched = new ArcTriggerEvaluator.LatchEntry[latchCount];
+            for (int i = 0; i < latchCount; i++)
+            {
+                int scopeKey = CanonicalSerializer.ReadI32(payload, ref offset);
+                ushort triggerId = CanonicalSerializer.ReadU16(payload, ref offset);
+                latched[i] = new ArcTriggerEvaluator.LatchEntry(scopeKey, triggerId);
+            }
+            arcTriggers.RestoreLatched(latched);
+
             ActiveSetMembership membership = new ActiveSetMembership(managerId, memory, cold);
             int memberCount = ReadCount(payload, ref offset);
             for (int i = 0; i < memberCount; i++)
@@ -375,8 +455,14 @@ namespace TacticalDirector.LivingWorld
                 throw new ArgumentException("WorldStore.Restore: trailing bytes after the membership roster.", nameof(payload));
             }
 
-            WorldLoop loop = new WorldLoop(clock, memory, arcs, membership);
-            return new WorldStore(managerId, worldSeed, clock, memory, cold, arcs, membership, loop, rng, text);
+            WorldLoop loop = new WorldLoop(clock, memory, arcs, membership, arcTriggers);
+            WorldStore store = new WorldStore(managerId, worldSeed, clock, memory, cold, arcs, membership,
+                loop, rng, text, arcTriggers);
+            // The canon source is a Load-time parameter, never persisted (the ISquadProvider precedent),
+            // threaded into the same live _canon path SetArcCanon uses so a restored world keeps
+            // evaluating (§8.9).
+            store._canon = canon;
+            return store;
         }
 
         /// <summary>
@@ -422,4 +508,24 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | salience→worldTick→episodeId tiebreak) and cites it, else no   |
 // |         |            |        | citation. No serialized-state / format change (the episode is  |
 // |         |            |        | read from the already-serialized memory; still one draw).     |
+// | 1.4     | 2026-07-24 | —      | Arc-triggers Slice 1/E1: owns an ArcTriggerEvaluator (the     |
+// |         |            |        | world.arcs sub-stream, registered after world.text) + a       |
+// |         |            |        | nullable ArcCanonSource. AdvanceDay passes _canon into the    |
+// |         |            |        | loop each tick; SetArcCanon / a canon ctor overload /         |
+// |         |            |        | Restore(payload, canon) thread it (never persisted). Snapshot |
+// |         |            |        | fails loud (NotSupportedException) on a flag-on run (non-zero  |
+// |         |            |        | world.arcs cursor/ordinal or non-empty latch) — E1 not yet    |
+// |         |            |        | snapshot-safe; serialization + the version bump land at E2.   |
+// | 1.5     | 2026-07-24 | —      | Arc-triggers Slice 2/E2: Snapshot serializes the world.arcs   |
+// |         |            |        | cursor + action ordinal + the KD-7 latch (canonical order)    |
+// |         |            |        | between the world.text block and the membership roster;       |
+// |         |            |        | Restore reads them + RestoreStream + RestoreLatched (fail-     |
+// |         |            |        | loud gates). WORLD_STORE_FORMAT_VERSION 2 → 3; the E1 flag-on  |
+// |         |            |        | Snapshot fail-loud is removed — a flag-on run round-trips      |
+// |         |            |        | deterministically and a still-latched trigger does not        |
+// |         |            |        | re-fire on restore.                                           |
+// | 1.6     | 2026-07-24 | —      | arc-triggers Low-1 (maintainability): the private IsMoreCitable|
+// |         |            |        | comparator (a copy of ArcTriggerEvaluator's IsMoreSalient) is  |
+// |         |            |        | removed; the auto-cite scan now delegates to the shared static |
+// |         |            |        | MemoryEpisode.MoreSalientThan. No behaviour change.            |
 #endregion

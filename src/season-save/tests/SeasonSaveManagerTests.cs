@@ -1,5 +1,7 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
+// Modified: 2026-07-24 (arc-triggers E2 §8.9(a): flag-on world resumes evaluating through the season
+//           file when Load threads a canon source, with a null-canon negative control)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
 //           Match Engine design note §5 Phase G-Phase 3; Living World #22 §4.6/§7.1; Code Standards #20
@@ -112,6 +114,43 @@ namespace TacticalDirector.SeasonSave
                 "The Loaded world must resume field-identical (re-Snapshot byte-equal) after an identical advance.");
             Assert.AreEqual(refText, gotText,
                 "The Loaded world.text stream must resume byte-identically across the season file.");
+        }
+
+        // ── Arc-triggers E2 §8.9(a): a flag-on world keeps evaluating after a season restore ─────
+
+        [Test]
+        public void DiskRoundTrip_FlagOnWorld_ResumesEvaluating_ThroughSeasonFile()
+        {
+            // A flag-on canon whose ego-clash signal crosses the WonderkidVsVeteran threshold for the
+            // manager→5 contact (entity 5 is populated by PopulatedStore).
+            ArcCanonSource above = new ArcCanonSource.Builder()
+                .SetEntitySignal(5, LivingWorldConstants.ARC_SIGNAL_KEY_EGO_CLASH, 0.9f)
+                .Build();
+
+            WorldStore world = PopulatedStore();
+            world.SetArcCanon(above);   // canon set but NOT yet advanced ⇒ the trigger has not fired
+            Assert.AreEqual(1, world.Arcs.ArcCount, "only PopulatedStore's manual arc exists; the trigger has not fired yet");
+
+            string path = TempPath("season-flagon.save");
+            SeasonSaveManager.Save(world, matchOrNull: null, path);
+
+            // Uninterrupted reference: the saved (non-mutated) world advances one day and fires.
+            world.AdvanceDay();
+            byte[] refSnap = world.Snapshot();
+            Assert.AreEqual(2, world.Arcs.ArcCount, "the uninterrupted flag-on world fires the WonderkidVsVeteran trigger on the next day");
+
+            // Load WITH the canon threaded (§8.9(a)) → the restored world fires identically.
+            SeasonSaveContents contents = SeasonSaveManager.Load(path, squads: null, canon: above);
+            contents.World.AdvanceDay();
+            CollectionAssert.AreEqual(refSnap, contents.World.Snapshot(),
+                "§8.9(a): a flag-on world keeps evaluating after a season restore when Load threads the canon source.");
+
+            // Negative control: Load WITHOUT the canon ⇒ arc evaluation is skipped ⇒ the world diverges
+            // (the exact silent-stop-evaluating regression §8.9(a) prevents).
+            SeasonSaveContents noCanon = SeasonSaveManager.Load(path);   // canon defaults to null
+            noCanon.World.AdvanceDay();
+            CollectionAssert.AreNotEqual(refSnap, noCanon.World.Snapshot(),
+                "a season Load without the canon source stops evaluating and diverges from the uninterrupted run.");
         }
 
         /// <summary>

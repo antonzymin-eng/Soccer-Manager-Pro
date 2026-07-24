@@ -1,6 +1,8 @@
 // File:     src/living-world/WorldLoop.cs
 // Created:  2026-07-02
-// Modified: 2026-07-02 (slice-2 AR-3 L-2: Spec header citations aligned to the wired phases)
+// Modified: 2026-07-24 (arc-triggers Slice 1/E1: 5-arg ctor carries the nullable ArcTriggerEvaluator;
+//           RunWorldTick takes canon as a per-tick argument; phase 4 evaluates triggers before the
+//           expiry sweep when both the evaluator and canon are non-null — KD-5)
 // Author:   —
 // Spec:     Living World System #22 §4.2 (KD-4), FR-LW-014/019/023/027/032/034, Code Standards #20
 // Purpose:  The season-calendar world loop orchestrator: advances the WorldClock one calendar day and
@@ -31,26 +33,41 @@ namespace TacticalDirector.LivingWorld
         private readonly MemoryStore _memory;
         private readonly ArcEngine _arcs;
         private readonly ActiveSetMembership _membership;
+        private readonly ArcTriggerEvaluator _arcTriggers;
 
         /// <summary>Current calendar day (passthrough to the injected clock).</summary>
         public uint CurrentWorldTick => _clock.CurrentWorldTick;
 
         /// <summary>Boots without the phase-4/phase-6 subsystems (slice-1 shape; both seams skip).</summary>
         public WorldLoop(WorldClock clock, MemoryStore memory)
-            : this(clock, memory, null, null)
+            : this(clock, memory, null, null, null)
         {
         }
 
         /// <summary>
-        /// Full wiring. <paramref name="arcs"/> / <paramref name="membership"/> may be null — the
-        /// sanctioned not-wired seam; the corresponding phase is skipped.
+        /// Full wiring without the arc-trigger evaluator. <paramref name="arcs"/> /
+        /// <paramref name="membership"/> may be null — the sanctioned not-wired seam; the corresponding
+        /// phase is skipped.
         /// </summary>
         public WorldLoop(WorldClock clock, MemoryStore memory, ArcEngine arcs, ActiveSetMembership membership)
+            : this(clock, memory, arcs, membership, null)
+        {
+        }
+
+        /// <summary>
+        /// Full wiring incl. the arc-trigger evaluator (arc-triggers-design KD-5). Every subsystem
+        /// argument (<paramref name="arcs"/> / <paramref name="membership"/> / <paramref name="arcTriggers"/>)
+        /// may be null — the sanctioned not-wired seam; the corresponding phase (or, for the evaluator,
+        /// trigger evaluation within phase 4) is skipped.
+        /// </summary>
+        public WorldLoop(WorldClock clock, MemoryStore memory, ArcEngine arcs,
+            ActiveSetMembership membership, ArcTriggerEvaluator arcTriggers)
         {
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _memory = memory ?? throw new ArgumentNullException(nameof(memory));
             _arcs = arcs;
             _membership = membership;
+            _arcTriggers = arcTriggers;
         }
 
         /// <summary>
@@ -58,7 +75,13 @@ namespace TacticalDirector.LivingWorld
         /// §2.2 propagation) is a PRIOR season-loop phase owned outside this layer — callers run it
         /// before this method; the world loop only reads its committed output (FR-LW-027 / KD-9).
         /// </summary>
-        public void RunWorldTick()
+        /// <param name="canon">
+        /// The arc-trigger canon source (arc-triggers-design KD-1) — <c>null</c> (the default) skips
+        /// phase-4 trigger evaluation entirely (byte-identical to a run with no arcs). Passed as a
+        /// per-tick argument, NOT held as a field, so the owning <see cref="WorldStore"/> is the single
+        /// source of truth for the live canon and no stale-canon seam can form.
+        /// </param>
+        public void RunWorldTick(ArcCanonSource canon = null)
         {
             _clock.Advance();
 
@@ -73,11 +96,17 @@ namespace TacticalDirector.LivingWorld
             //           the rule is a no-op identity until an event/baseline exists (FR-LW-034).
             _memory.DecayEpisodeSalience(LivingWorldConstants.SALIENCE_DECAY_RATE);
 
-            // Phase 4 — arc evaluation (§3.4): the lifecycle duties that exist run here (§6.2 expiry
-            //           sweep). Trigger evaluation + its world.arcs RNG draws (FR-LW-020) stay the
-            //           ArcEngine's documented KD-10 seam.
+            // Phase 4 — arc evaluation (§3.4): trigger evaluation (rising-edge spawn, FR-LW-020 draws)
+            //           runs BEFORE the §6.2 expiry sweep, so a same-tick-spawned arc is subject to this
+            //           tick's expiry only if already expired (it cannot be — lifetime >= 1). Trigger
+            //           evaluation is skipped when either the evaluator or the canon source is null (the
+            //           sanctioned not-wired seam / opt-out, arc-triggers-design KD-5).
             if (_arcs != null)
             {
+                if (_arcTriggers != null && canon != null)
+                {
+                    _arcTriggers.Evaluate(canon, _memory, _arcs, _clock.CurrentWorldTick);
+                }
                 _arcs.Update(_clock.CurrentWorldTick);
             }
 
@@ -106,4 +135,9 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | injectable as null = not-wired seam (2-arg ctor kept).        |
 // | 1.2     | 2026-07-02 | —      | Slice-2 AR-3 L-2 (doc-only): Spec header gains FR-LW-014/023  |
 // |         |            |        | — the citations had drifted from the wired phases 4/6.       |
+// | 1.3     | 2026-07-24 | —      | Arc-triggers Slice 1/E1 (KD-5): 5-arg ctor carries the        |
+// |         |            |        | nullable ArcTriggerEvaluator; RunWorldTick(canon) evaluates   |
+// |         |            |        | triggers in phase 4 before the expiry sweep (skipped when     |
+// |         |            |        | evaluator or canon is null). 2-arg/4-arg ctors + arg-less     |
+// |         |            |        | RunWorldTick preserved (existing hosts unchanged).           |
 #endregion
