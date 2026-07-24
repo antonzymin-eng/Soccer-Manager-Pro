@@ -206,6 +206,13 @@ namespace TacticalDirector.MatchEngine
         // last-decision tick, current preset) is restore-deterministic.
         private readonly ManagerState[] _managerStates;  // [TEAM_COUNT]
 
+        // The #26 preset catalogue the manager AI resolves ordinals against (WS-1). The default is
+        // the in-code catalogue (byte-identical to the pre-refactor static path); a disk-loaded
+        // catalogue would be injected here. Read-only after boot; NOT serialized (a boot-constant
+        // reference, the _teamIds/_isGoalkeeper class — the ordinal it produces IS serialized via
+        // ManagerState.CurrentPresetOrdinal, and restore resolves it against this catalogue).
+        private readonly TacticalDirector.TacticalInstructions.ITacticPresetCatalogue _presetCatalogue;
+
         // ── Score state (engine substrate — the #26 §9.3 upstream deliverable) ────────
         // Per-team goal counts, incremented by the Resolve-phase goal check (CheckRestartAndApply)
         // when the ball fully crosses a goal line between the posts under the crossbar
@@ -565,6 +572,10 @@ namespace TacticalDirector.MatchEngine
             // the inert identity (no gate fire, no adaptation), so a default match is byte-identical
             // to pre-#26. ConfigureManager opts a team into AI mode.
             _managerStates = new ManagerState[MatchEngineConstants.TEAM_COUNT];
+
+            // WS-1: the default in-code preset catalogue (byte-identical to the pre-refactor static
+            // path — it wraps the unchanged TacticPresetLibrary).
+            _presetCatalogue = new TacticalDirector.TacticalInstructions.InCodeTacticPresetCatalogue();
 
             // Engine score state (v14): 0–0 at kickoff; no agent has held possession yet.
             _goals             = new int[MatchEngineConstants.TEAM_COUNT];
@@ -1450,7 +1461,7 @@ namespace TacticalDirector.MatchEngine
             {
                 Mode = ManagerMode.AI,
                 ProfileOrdinal = profileOrdinal,
-                CurrentPresetOrdinal = TacticPresetLibrary.BalancedOrdinal,
+                CurrentPresetOrdinal = _presetCatalogue.BalancedOrdinal,
                 HoldIntervalsRemaining = 0,
                 LastDecisionTick = -1,
             };
@@ -1470,7 +1481,7 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         internal void SeedManagerKickoff(int teamId, byte presetOrdinal)
         {
-            if (presetOrdinal >= TacticPresetLibrary.Count)
+            if (presetOrdinal >= _presetCatalogue.Count)
             {
                 throw new System.ArgumentOutOfRangeException(
                     nameof(presetOrdinal), presetOrdinal,
@@ -2123,7 +2134,7 @@ namespace TacticalDirector.MatchEngine
                     int goalDiff = _goals[t] - _goals[1 - t];
                     ManagerAdaptation.RunDecisionPoint(
                         this, t, ref _managerStates[t], decisionTick,
-                        goalDiff, ticksRemaining, MatchEngineConstants.MATCH_TICKS_TOTAL);
+                        goalDiff, ticksRemaining, MatchEngineConstants.MATCH_TICKS_TOTAL, _presetCatalogue);
                 }
             }
         }
@@ -6600,4 +6611,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | can observe the arm → commit → clear → re-commit episode cycle  |
 // |         |            |        | (the latch clear is the sole re-commit guard for the continuous|
 // |         |            |        | SAVE action). Test-only read; no behaviour change.             |
+// | 1.49    | 2026-07-24 | —      | WS-1 (#26 KD-6 on-disk preset format): the manager AI now       |
+// |         |            |        | resolves preset ordinals against an injected                   |
+// |         |            |        | ITacticPresetCatalogue (_presetCatalogue, defaulting to the    |
+// |         |            |        | in-code catalogue) instead of reading TacticPresetLibrary by   |
+// |         |            |        | static reference — the ConfigureManager/SeedManagerKickoff     |
+// |         |            |        | BalancedOrdinal/Count reads + the RunDecisionPoint call now go |
+// |         |            |        | through it. Boot-constant reference, NOT serialized; default   |
+// |         |            |        | path byte-identical, no SNAPSHOT_SCHEMA_VERSION change.        |
 #endregion

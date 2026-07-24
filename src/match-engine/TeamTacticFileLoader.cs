@@ -9,7 +9,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 using TacticalDirector.TacticalInstructions;
 
@@ -56,7 +55,7 @@ namespace TacticalDirector.MatchEngine
             string[] lines = (text ?? string.Empty).Split('\n');
             for (int n = 0; n < lines.Length; n++)
             {
-                string line = StripComment(lines[n]).Trim();
+                string line = TacticFileGrammar.StripComment(lines[n]).Trim();
                 if (line.Length == 0)
                 {
                     continue;
@@ -114,106 +113,19 @@ namespace TacticalDirector.MatchEngine
             throw new FormatException($"Tactic file line {n + 1}: unknown section '[{name}]' (expected [home] or [away]).");
         }
 
-        private static string StripComment(string line)
-        {
-            int hash = line.IndexOf('#');
-            return hash < 0 ? line : line.Substring(0, hash);
-        }
-
-        // Builds one TeamTactic from a section's key/value map. Each field defaults to the Balanced
-        // identity value when its key is absent (FR-TI-031), so a partial section is well-defined and an
-        // empty section reproduces TeamTactic.Balanced exactly. Every consumed key is removed; any key
-        // left over is an unknown field and fails loudly.
+        // Builds one TeamTactic from a section's key/value map via the shared grammar (WS-1). Each
+        // field defaults to the Balanced identity when its key is absent (FR-TI-031), so a partial
+        // section is well-defined and an empty section reproduces Balanced exactly; any key left over
+        // after the TeamTactic fields are consumed is an unknown field and fails loudly.
         private static TeamTactic BuildTactic(Dictionary<string, string> kv)
         {
-            TeamTactic d = TeamTactic.Balanced;
-
-            var tactic = new TeamTactic(
-                mentality:        ParseEnum(kv, "mentality",        d.Mentality),
-                formation:        ParseEnum(kv, "formation",        d.Formation),
-                tempo:            ParseEnum(kv, "tempo",            d.Tempo),
-                width:            ParseEnum(kv, "width",            d.Width),
-                passing:          ParseEnum(kv, "passing",          d.Passing),
-                pressing:         ParseEnum(kv, "pressing",         d.Pressing),
-                lineOfEngagement: ParseEnum(kv, "lineOfEngagement", d.LineOfEngagement),
-                defensiveLine:    Float(kv, "defensiveLine",   d.DefensiveLine),
-                defensiveWidth:   ParseEnum(kv, "defensiveWidth",   d.DefensiveWidth),
-                transitionWon:    ParseEnum(kv, "transitionWon",    d.TransitionWon),
-                transitionLost:   ParseEnum(kv, "transitionLost",   d.TransitionLost),
-                offsideTrap:      Bool(kv, "offsideTrap",      d.OffsideTrap),
-                triggerPressMask: ParseEnum(kv, "triggerPressMask", d.TriggerPressMask),
-                focusPlay:        ParseEnum(kv, "focusPlay",        d.FocusPlay),
-                gkDistribution:   ParseEnum(kv, "gkDistribution",   d.GkDistribution),
-                timeWasting:      TimeWasting(kv, "timeWasting", d.TimeWasting),
-                markingOrientation: ParseEnum(kv, "markingOrientation", d.MarkingOrientation),
-                dismarkIntensity:   ParseEnum(kv, "dismarkIntensity",   d.DismarkIntensity),
-                buildUpStructure:   ParseEnum(kv, "buildUpStructure",   d.BuildUpStructure),
-                rotationFreedom:    ParseEnum(kv, "rotationFreedom",    d.RotationFreedom));
-
+            TeamTactic tactic = TacticFileGrammar.BuildTeamTactic(kv);
             if (kv.Count > 0)
             {
                 var unknown = new List<string>(kv.Keys);
                 throw new FormatException($"Tactic file: unknown key(s) '{string.Join(", ", unknown)}'.");
             }
             return tactic;
-        }
-
-        private static T ParseEnum<T>(Dictionary<string, string> kv, string key, T fallback) where T : struct
-        {
-            if (!kv.TryGetValue(key, out string raw))
-            {
-                return fallback;
-            }
-            kv.Remove(key);
-            if (System.Enum.TryParse(raw, ignoreCase: true, out T parsed) && System.Enum.IsDefined(typeof(T), parsed))
-            {
-                return parsed;
-            }
-            throw new FormatException($"Tactic file: '{raw}' is not a valid {typeof(T).Name} for key '{key}'.");
-        }
-
-        private static float Float(Dictionary<string, string> kv, string key, float fallback)
-        {
-            if (!kv.TryGetValue(key, out string raw))
-            {
-                return fallback;
-            }
-            kv.Remove(key);
-            if (float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed))
-            {
-                return parsed;
-            }
-            throw new FormatException($"Tactic file: '{raw}' is not a valid number for key '{key}'.");
-        }
-
-        private static bool Bool(Dictionary<string, string> kv, string key, bool fallback)
-        {
-            if (!kv.TryGetValue(key, out string raw))
-            {
-                return fallback;
-            }
-            kv.Remove(key);
-            if (bool.TryParse(raw, out bool parsed))
-            {
-                return parsed;
-            }
-            throw new FormatException($"Tactic file: '{raw}' is not a valid bool (true/false) for key '{key}'.");
-        }
-
-        private static byte TimeWasting(Dictionary<string, string> kv, string key, byte fallback)
-        {
-            if (!kv.TryGetValue(key, out string raw))
-            {
-                return fallback;
-            }
-            kv.Remove(key);
-            if (byte.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out byte parsed)
-                && parsed <= TacticalInstructionsConstants.TIME_WASTING_MAX)
-            {
-                return parsed;
-            }
-            throw new FormatException(
-                $"Tactic file: '{raw}' is not a valid TimeWasting dial [0..{TacticalInstructionsConstants.TIME_WASTING_MAX}] for key '{key}'.");
         }
     }
 }
@@ -225,4 +137,7 @@ namespace TacticalDirector.MatchEngine
 // | 1.2     | 2026-07-10 | —      | + dismarkIntensity/buildUpStructure/rotationFreedom keys (back-props         |
 // |         |            |        |   ERR-021-005/006/007; omitted ⇒ Off/None/Off identities — keeps the         |
 // |         |            |        |   "every TeamTactic field has a key" contract after the field appends).      |
+// | 1.3     | 2026-07-24 | —      | WS-1: the parse helpers (StripComment/ParseEnum/Float/Bool/TimeWasting +     |
+// |         |            |        |   the 20-field TeamTactic build) moved to the shared TacticFileGrammar so    |
+// |         |            |        |   TacticPresetFileLoader reuses them; behaviour-identical (delegation only). |
 #endregion
