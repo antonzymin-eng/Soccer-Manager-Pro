@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/ManagerAITests.cs
 // Created:  2026-07-11
-// Modified: 2026-07-11 (later same day — +4 live-input tests: half-time trigger + live goalDiff ladder)
+// Modified: 2026-07-24 (WS-1: the six ManagerAdaptation functions take an ITacticPresetCatalogue —
+//           call sites thread the in-code default; expected values unchanged = the neutrality proof)
 // Author:   —
 // Spec:     Tactical Presets #26 §3.1–§3.4, §5 (T-TP-U-002..012, T-TP-I-001/003/004, T-TP-DET-001/002),
 //           Appendix B/C; Code Standards #20
@@ -23,6 +24,10 @@ namespace TacticalDirector.MatchEngine
     {
         private const ulong MatchSeed = 0x0123456789ABCDEFUL;
         private const float Tol = 1e-4f;
+
+        // WS-1: the default in-code catalogue — the same object the engine boots with, so the
+        // expected scoring/ladder values below are unchanged (the faithful-pass-through proof).
+        private static readonly ITacticPresetCatalogue Catalogue = new InCodeTacticPresetCatalogue();
 
         private static int HomeAgent => 0;
         private static int AwayAgent => MatchEngineConstants.PLAYERS_PER_TEAM;
@@ -117,12 +122,12 @@ namespace TacticalDirector.MatchEngine
             // Appendix B.1 (authoritative derivation): Gegenpress 0.66, Balanced 0.50,
             // Possession 0.42, CounterAttack 0.24, ParkTheBus −0.58 → selects Gegenpress.
             ManagerProfile p = Aggressive;
-            Assert.AreEqual(0.66f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.GegenpressOrdinal), Tol);
-            Assert.AreEqual(0.50f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.BalancedOrdinal), Tol);
-            Assert.AreEqual(0.42f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.PossessionOrdinal), Tol);
-            Assert.AreEqual(0.24f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.CounterAttackOrdinal), Tol);
-            Assert.AreEqual(-0.58f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.ParkTheBusOrdinal), Tol);
-            Assert.AreEqual(TacticPresetLibrary.GegenpressOrdinal, ManagerAdaptation.SelectKickoffPreset(in p));
+            Assert.AreEqual(0.66f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.GegenpressOrdinal, Catalogue), Tol);
+            Assert.AreEqual(0.50f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.BalancedOrdinal, Catalogue), Tol);
+            Assert.AreEqual(0.42f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.PossessionOrdinal, Catalogue), Tol);
+            Assert.AreEqual(0.24f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.CounterAttackOrdinal, Catalogue), Tol);
+            Assert.AreEqual(-0.58f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.ParkTheBusOrdinal, Catalogue), Tol);
+            Assert.AreEqual(TacticPresetLibrary.GegenpressOrdinal, ManagerAdaptation.SelectKickoffPreset(in p, Catalogue));
         }
 
         [Test]
@@ -131,10 +136,10 @@ namespace TacticalDirector.MatchEngine
             // Appendix B.1: Balanced 0.50 top (CounterAttack 0.34, Possession 0.22, Gegenpress 0.06,
             // ParkTheBus −0.03) → selects Balanced.
             ManagerProfile p = Pragmatic;
-            Assert.AreEqual(0.50f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.BalancedOrdinal), Tol);
-            Assert.AreEqual(0.34f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.CounterAttackOrdinal), Tol);
-            Assert.AreEqual(0.06f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.GegenpressOrdinal), Tol);
-            Assert.AreEqual(TacticPresetLibrary.BalancedOrdinal, ManagerAdaptation.SelectKickoffPreset(in p));
+            Assert.AreEqual(0.50f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.BalancedOrdinal, Catalogue), Tol);
+            Assert.AreEqual(0.34f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.CounterAttackOrdinal, Catalogue), Tol);
+            Assert.AreEqual(0.06f, ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.GegenpressOrdinal, Catalogue), Tol);
+            Assert.AreEqual(TacticPresetLibrary.BalancedOrdinal, ManagerAdaptation.SelectKickoffPreset(in p, Catalogue));
         }
 
         [Test]
@@ -144,10 +149,25 @@ namespace TacticalDirector.MatchEngine
             // Gegenpress = 0.1 + 0.5×0.8 = 0.5 == Balanced = 0.5 — an exact float tie
             // (0.8f × 0.5f and 0.1f + 0.4f both round exactly). The lower ordinal must win.
             ManagerProfile p = new ManagerProfile(0.5f, 0f, 1);
-            float gegen = ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.GegenpressOrdinal);
-            float balanced = ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.BalancedOrdinal);
+            float gegen = ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.GegenpressOrdinal, Catalogue);
+            float balanced = ManagerAdaptation.KickoffScore(in p, TacticPresetLibrary.BalancedOrdinal, Catalogue);
             Assert.AreEqual(balanced, gegen, "Precondition: the two scores must tie exactly for this lock.");
-            Assert.AreEqual(TacticPresetLibrary.BalancedOrdinal, ManagerAdaptation.SelectKickoffPreset(in p));
+            Assert.AreEqual(TacticPresetLibrary.BalancedOrdinal, ManagerAdaptation.SelectKickoffPreset(in p, Catalogue));
+        }
+
+        [Test]
+        public void KickoffScore_NullCatalogue_FailsLoud()
+        {
+            // WS-1: the catalogue is a required dependency (no hidden default that could mask a
+            // behaviour change) — every seam null-guards it.
+            ManagerProfile p = Aggressive;
+            Assert.Throws<ArgumentNullException>(() => ManagerAdaptation.KickoffScore(in p, 0, null));
+            Assert.Throws<ArgumentNullException>(() => ManagerAdaptation.SelectKickoffPreset(in p, null));
+            Assert.Throws<ArgumentNullException>(() => ManagerAdaptation.StepToward(true, 0, null));
+            Assert.Throws<ArgumentNullException>(
+                () => ManagerAdaptation.EvaluateLadder(in p, 0, -1, 72000L, 324000L, null));
+            Assert.Throws<ArgumentNullException>(
+                () => ManagerAdaptation.ApplyKickoff(new MatchEngine(MatchSeed), null));
         }
 
         // ── §3.4 StepToward + FM-TP-04 ladder (T-TP-U-006/007/009) ────────────────────
@@ -155,14 +175,14 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void StepToward_OneRungAndSaturates()
         {
-            Assert.AreEqual(3, ManagerAdaptation.StepToward(true, 2));
-            Assert.AreEqual(1, ManagerAdaptation.StepToward(false, 2));
+            Assert.AreEqual(3, ManagerAdaptation.StepToward(true, 2, Catalogue));
+            Assert.AreEqual(1, ManagerAdaptation.StepToward(false, 2, Catalogue));
             Assert.AreEqual(TacticPresetLibrary.GegenpressOrdinal,
-                ManagerAdaptation.StepToward(true, TacticPresetLibrary.GegenpressOrdinal));
+                ManagerAdaptation.StepToward(true, TacticPresetLibrary.GegenpressOrdinal, Catalogue));
             Assert.AreEqual(TacticPresetLibrary.ParkTheBusOrdinal,
-                ManagerAdaptation.StepToward(false, TacticPresetLibrary.ParkTheBusOrdinal));
+                ManagerAdaptation.StepToward(false, TacticPresetLibrary.ParkTheBusOrdinal, Catalogue));
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => ManagerAdaptation.StepToward(true, (byte)TacticPresetLibrary.Count));
+                () => ManagerAdaptation.StepToward(true, (byte)TacticPresetLibrary.Count, Catalogue));
         }
 
         [Test]
@@ -174,9 +194,9 @@ namespace TacticalDirector.MatchEngine
             ManagerProfile agg = Aggressive;
             ManagerProfile prg = Pragmatic;
             Assert.AreEqual(TacticPresetLibrary.PossessionOrdinal,
-                ManagerAdaptation.EvaluateLadder(in agg, TacticPresetLibrary.BalancedOrdinal, -1, 72000L, 324000L));
+                ManagerAdaptation.EvaluateLadder(in agg, TacticPresetLibrary.BalancedOrdinal, -1, 72000L, 324000L, Catalogue));
             Assert.AreEqual(TacticPresetLibrary.BalancedOrdinal,
-                ManagerAdaptation.EvaluateLadder(in prg, TacticPresetLibrary.BalancedOrdinal, -1, 72000L, 324000L));
+                ManagerAdaptation.EvaluateLadder(in prg, TacticPresetLibrary.BalancedOrdinal, -1, 72000L, 324000L, Catalogue));
         }
 
         [Test]
@@ -186,7 +206,7 @@ namespace TacticalDirector.MatchEngine
             // → steps one rung defensive (Balanced → CounterAttack).
             ManagerProfile prg = Pragmatic;
             Assert.AreEqual(TacticPresetLibrary.CounterAttackOrdinal,
-                ManagerAdaptation.EvaluateLadder(in prg, TacticPresetLibrary.BalancedOrdinal, +1, 36000L, 324000L));
+                ManagerAdaptation.EvaluateLadder(in prg, TacticPresetLibrary.BalancedOrdinal, +1, 36000L, 324000L, Catalogue));
         }
 
         [Test]
@@ -195,8 +215,8 @@ namespace TacticalDirector.MatchEngine
             // T-TP-U-009: min(−goalDiff, URGENCY_DIFF_CAP) — a −3 deficit is exactly a −2 deficit,
             // and either way the step is ONE rung.
             ManagerProfile agg = Aggressive;
-            byte atMinus2 = ManagerAdaptation.EvaluateLadder(in agg, TacticPresetLibrary.BalancedOrdinal, -2, 72000L, 324000L);
-            byte atMinus3 = ManagerAdaptation.EvaluateLadder(in agg, TacticPresetLibrary.BalancedOrdinal, -3, 72000L, 324000L);
+            byte atMinus2 = ManagerAdaptation.EvaluateLadder(in agg, TacticPresetLibrary.BalancedOrdinal, -2, 72000L, 324000L, Catalogue);
+            byte atMinus3 = ManagerAdaptation.EvaluateLadder(in agg, TacticPresetLibrary.BalancedOrdinal, -3, 72000L, 324000L, Catalogue);
             Assert.AreEqual(atMinus2, atMinus3);
             Assert.AreEqual(TacticPresetLibrary.PossessionOrdinal, atMinus3, "One rung per decision, never more.");
         }
@@ -206,7 +226,7 @@ namespace TacticalDirector.MatchEngine
         {
             ManagerProfile agg = Aggressive;
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => ManagerAdaptation.EvaluateLadder(in agg, TacticPresetLibrary.BalancedOrdinal, -1, 0L, 0L));
+                () => ManagerAdaptation.EvaluateLadder(in agg, TacticPresetLibrary.BalancedOrdinal, -1, 0L, 0L, Catalogue));
         }
 
         // ── FM-TP-02 gate (T-TP-U-003/004) ────────────────────────────────────────────
@@ -292,7 +312,7 @@ namespace TacticalDirector.MatchEngine
         {
             // F1 / FR-TP-014: a present Players array must be exactly PLAYERS_PER_TEAM long.
             PlayerTactic[] wrongLength = new PlayerTactic[3];
-            TacticPreset bad = new TacticPreset("bad", TeamTactic.Balanced, wrongLength);
+            TacticPreset bad = new TacticPreset("bad", TeamTactic.Balanced, 0f, 0f, 0f, wrongLength);
             TeamTactic other = TeamTactic.Balanced;
             Assert.Throws<ArgumentException>(() => TacticPresetProjection.Project(
                 in bad, 0, in other, out _, out _));
@@ -303,7 +323,7 @@ namespace TacticalDirector.MatchEngine
             {
                 eleven[k] = PlayerTactic.Default(PlayerRole.Poacher);
             }
-            TacticPreset withPlayers = new TacticPreset("with-players", TeamTactic.Balanced, eleven);
+            TacticPreset withPlayers = new TacticPreset("with-players", TeamTactic.Balanced, 0f, 0f, 0f, eleven);
             TacticPresetProjection.Project(in withPlayers, 0, in other,
                 out _, out PlayerTacticConfig playerConfig);
             Assert.AreEqual(PlayerRole.Poacher, playerConfig.ForAgent(0).Role);
@@ -329,19 +349,19 @@ namespace TacticalDirector.MatchEngine
             };
 
             // 70′ — trailing 0–1: urgency 0.622 → step Balanced → Possession; hold = 2 × 1.
-            ManagerAdaptation.RunDecisionPoint(engine, 0, ref st, 252000, -1, 72000L, 324000L);
+            ManagerAdaptation.RunDecisionPoint(engine, 0, ref st, 252000, -1, 72000L, 324000L, Catalogue);
             Assert.AreEqual(TacticPresetLibrary.PossessionOrdinal, st.CurrentPresetOrdinal);
             Assert.AreEqual(2, st.HoldIntervalsRemaining);
             Assert.AreEqual(252000, st.LastDecisionTick);
 
             // 75′ — still down, but held (hold 2 → 1, no evaluation).
-            ManagerAdaptation.RunDecisionPoint(engine, 0, ref st, 270000, -1, 54000L, 324000L);
+            ManagerAdaptation.RunDecisionPoint(engine, 0, ref st, 270000, -1, 54000L, 324000L, Catalogue);
             Assert.AreEqual(TacticPresetLibrary.PossessionOrdinal, st.CurrentPresetOrdinal);
             Assert.AreEqual(1, st.HoldIntervalsRemaining);
 
             // 80′ — hold reaches 0 at this decision point: evaluable now → steps Possession →
             // Gegenpress (urgency 0.8 × 0.889 ≈ 0.711) and re-arms the hold.
-            ManagerAdaptation.RunDecisionPoint(engine, 0, ref st, 288000, -1, 36000L, 324000L);
+            ManagerAdaptation.RunDecisionPoint(engine, 0, ref st, 288000, -1, 36000L, 324000L, Catalogue);
             Assert.AreEqual(TacticPresetLibrary.GegenpressOrdinal, st.CurrentPresetOrdinal);
             Assert.AreEqual(2, st.HoldIntervalsRemaining);
 
@@ -363,7 +383,7 @@ namespace TacticalDirector.MatchEngine
                 CurrentPresetOrdinal = TacticPresetLibrary.BalancedOrdinal,
             };
             // Two down late: Pragmatic urgency = 0.3 × 0.889 × 2 ≈ 0.533 ≥ 0.35 → steps; hold = 4.
-            ManagerAdaptation.RunDecisionPoint(engine, 0, ref st, 288000, -2, 36000L, 324000L);
+            ManagerAdaptation.RunDecisionPoint(engine, 0, ref st, 288000, -2, 36000L, 324000L, Catalogue);
             Assert.AreEqual(TacticPresetLibrary.PossessionOrdinal, st.CurrentPresetOrdinal);
             Assert.AreEqual(4, st.HoldIntervalsRemaining);
         }
@@ -398,7 +418,7 @@ namespace TacticalDirector.MatchEngine
             // decision (LastDecisionTick = 0, so the tick-0 gate does not re-fire).
             var engine = new MatchEngine(MatchSeed);
             engine.ConfigureManager(0, ManagerMode.AI, TacticalPresetsConstants.ARCHETYPE_AGGRESSIVE);
-            ManagerAdaptation.ApplyKickoff(engine);
+            ManagerAdaptation.ApplyKickoff(engine, Catalogue);
 
             ManagerState st = engine.TestOnly_ManagerState(0);
             Assert.AreEqual(TacticPresetLibrary.GegenpressOrdinal, st.CurrentPresetOrdinal);
@@ -419,7 +439,7 @@ namespace TacticalDirector.MatchEngine
             var engine = new MatchEngine(MatchSeed);
             engine.ConfigureManager(0, ManagerMode.AI, TacticalPresetsConstants.ARCHETYPE_AGGRESSIVE);
             engine.ConfigureManager(1, ManagerMode.AI, TacticalPresetsConstants.ARCHETYPE_PRAGMATIC);
-            ManagerAdaptation.ApplyKickoff(engine);
+            ManagerAdaptation.ApplyKickoff(engine, Catalogue);
             TickToFirstStride(engine);
 
             Assert.AreEqual(Mentality.Attacking, engine.TestOnly_Mentality(HomeAgent));
@@ -441,7 +461,7 @@ namespace TacticalDirector.MatchEngine
 
             var engine = new MatchEngine(MatchSeed);
             engine.ConfigureManager(0, ManagerMode.AI, TacticalPresetsConstants.ARCHETYPE_AGGRESSIVE);
-            ManagerAdaptation.ApplyKickoff(engine, new TeamTacticConfig(TeamTactic.Balanced, humanAway));
+            ManagerAdaptation.ApplyKickoff(engine, Catalogue, new TeamTacticConfig(TeamTactic.Balanced, humanAway));
             TickToFirstStride(engine);
 
             Assert.AreEqual(Mentality.Attacking, engine.TestOnly_Mentality(HomeAgent));
@@ -550,7 +570,7 @@ namespace TacticalDirector.MatchEngine
             var explicitHuman = new MatchEngine(MatchSeed);
             explicitHuman.ConfigureManager(0, ManagerMode.Human);
             explicitHuman.ConfigureManager(1, ManagerMode.Human);
-            ManagerAdaptation.ApplyKickoff(explicitHuman);
+            ManagerAdaptation.ApplyKickoff(explicitHuman, Catalogue);
 
             for (int i = 0; i < 30; i++)
             {
@@ -565,7 +585,7 @@ namespace TacticalDirector.MatchEngine
             var engine = new MatchEngine(MatchSeed);
             engine.ConfigureManager(0, ManagerMode.AI, TacticalPresetsConstants.ARCHETYPE_AGGRESSIVE);
             engine.ConfigureManager(1, ManagerMode.AI, TacticalPresetsConstants.ARCHETYPE_PRAGMATIC);
-            ManagerAdaptation.ApplyKickoff(engine);
+            ManagerAdaptation.ApplyKickoff(engine, Catalogue);
             for (int i = 0; i < 60; i++)
             {
                 engine.RunTick();
@@ -587,4 +607,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   half-time through the engine's live seam + live-goalDiff     |
 // |         |            |        |   urgency (trailing → Possession) and protect (leading →       |
 // |         |            |        |   CounterAttack) ladder steps committed at the stride.         |
+// | 1.2     | 2026-07-24 | —      | WS-1 (#26 KD-6): every ManagerAdaptation call threads the      |
+// |         |            |        |   in-code catalogue; expected scoring/ladder VALUES unchanged  |
+// |         |            |        |   (the faithful-pass-through neutrality proof) + a new         |
+// |         |            |        |   null-catalogue fail-loud lock. TacticPreset ctor sites pass  |
+// |         |            |        |   the three affinity scalars.                                 |
 #endregion

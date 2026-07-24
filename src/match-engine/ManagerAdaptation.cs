@@ -38,17 +38,25 @@ namespace TacticalDirector.MatchEngine
         /// the Aggressive archetype scores Gegenpress 0.66 / Balanced 0.50 / ParkTheBus −0.58.
         /// </summary>
         /// <param name="profile">The manager's own profile (KD-5 — the only disposition input).</param>
-        /// <param name="presetOrdinal">A <see cref="TacticPresetLibrary"/> ordinal.</param>
-        public static float KickoffScore(in ManagerProfile profile, int presetOrdinal)
+        /// <param name="presetOrdinal">A <paramref name="catalogue"/> ordinal.</param>
+        /// <param name="catalogue">The active preset catalogue (in-code default or disk-loaded).</param>
+        public static float KickoffScore(in ManagerProfile profile, int presetOrdinal, ITacticPresetCatalogue catalogue)
         {
-            if (presetOrdinal < 0 || presetOrdinal >= TacticPresetLibrary.Count)
+            if (catalogue == null)
+            {
+                throw new ArgumentNullException(nameof(catalogue));
+            }
+            if (presetOrdinal < 0 || presetOrdinal >= catalogue.Count)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(presetOrdinal), presetOrdinal, "Preset ordinal beyond the A.1 catalogue (#26 F2).");
             }
-            return TacticalPresetsConstants.BaseFit[presetOrdinal]
-                 + profile.Aggression * TacticalPresetsConstants.AggrAffinity[presetOrdinal]
-                 + profile.Caution * TacticalPresetsConstants.CautAffinity[presetOrdinal];
+            // The A.3 scoring row travels with the preset (WS-1), so a Count-of-any catalogue scores
+            // every preset from its own row — no fixed-length side-table to overrun.
+            TacticPreset preset = catalogue.Presets[presetOrdinal];
+            return preset.BaseFit
+                 + profile.Aggression * preset.AggrAffinity
+                 + profile.Caution * preset.CautAffinity;
         }
 
         /// <summary>
@@ -56,13 +64,17 @@ namespace TacticalDirector.MatchEngine
         /// ties break to the lowest ordinal (KD-8 — the ascending scan with a strict
         /// greater-than compare keeps the first maximum).
         /// </summary>
-        public static byte SelectKickoffPreset(in ManagerProfile profile)
+        public static byte SelectKickoffPreset(in ManagerProfile profile, ITacticPresetCatalogue catalogue)
         {
+            if (catalogue == null)
+            {
+                throw new ArgumentNullException(nameof(catalogue));
+            }
             int best = 0;
             float bestScore = float.NegativeInfinity;
-            for (int p = 0; p < TacticPresetLibrary.Count; p++)
+            for (int p = 0; p < catalogue.Count; p++)
             {
-                float score = KickoffScore(in profile, p);
+                float score = KickoffScore(in profile, p, catalogue);
                 if (score > bestScore)
                 {
                     bestScore = score;
@@ -80,16 +92,21 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         /// <param name="moreAttacking">True steps toward Gegenpress, false toward ParkTheBus.</param>
         /// <param name="current">The current preset ordinal.</param>
-        public static byte StepToward(bool moreAttacking, byte current)
+        /// <param name="catalogue">The active preset catalogue (bounds the ladder).</param>
+        public static byte StepToward(bool moreAttacking, byte current, ITacticPresetCatalogue catalogue)
         {
-            if (current >= TacticPresetLibrary.Count)
+            if (catalogue == null)
+            {
+                throw new ArgumentNullException(nameof(catalogue));
+            }
+            if (current >= catalogue.Count)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(current), current, "Preset ordinal beyond the A.1 catalogue (#26 F2).");
             }
             if (moreAttacking)
             {
-                return current == TacticPresetLibrary.Count - 1 ? current : (byte)(current + 1);
+                return current == catalogue.Count - 1 ? current : (byte)(current + 1);
             }
             return current == 0 ? current : (byte)(current - 1);
         }
@@ -119,9 +136,15 @@ namespace TacticalDirector.MatchEngine
         /// <param name="goalDiff">Own goals − opponent goals.</param>
         /// <param name="ticksRemaining">60 Hz ticks left in the match.</param>
         /// <param name="matchTicksTotal">Total 60 Hz ticks in the match (must be positive).</param>
+        /// <param name="catalogue">The active preset catalogue (forwarded to <see cref="StepToward"/>).</param>
         public static byte EvaluateLadder(
-            in ManagerProfile profile, byte current, int goalDiff, long ticksRemaining, long matchTicksTotal)
+            in ManagerProfile profile, byte current, int goalDiff, long ticksRemaining, long matchTicksTotal,
+            ITacticPresetCatalogue catalogue)
         {
+            if (catalogue == null)
+            {
+                throw new ArgumentNullException(nameof(catalogue));
+            }
             if (matchTicksTotal <= 0)
             {
                 throw new ArgumentOutOfRangeException(
@@ -137,11 +160,11 @@ namespace TacticalDirector.MatchEngine
 
             if (urgency >= TacticalPresetsConstants.AdaptStepThreshold)
             {
-                return StepToward(moreAttacking: true, current);
+                return StepToward(moreAttacking: true, current, catalogue);
             }
             if (protect >= TacticalPresetsConstants.AdaptStepThreshold)
             {
-                return StepToward(moreAttacking: false, current);
+                return StepToward(moreAttacking: false, current, catalogue);
             }
             return current;
         }
@@ -163,10 +186,15 @@ namespace TacticalDirector.MatchEngine
         /// <param name="goalDiff">Own score differential (live from the v14 engine score state).</param>
         /// <param name="ticksRemaining">60 Hz ticks left in the match.</param>
         /// <param name="matchTicksTotal">Total 60 Hz ticks in the match.</param>
+        /// <param name="catalogue">The active preset catalogue (ladder bounds + target resolution).</param>
         internal static void RunDecisionPoint(
             MatchEngine engine, int teamId, ref ManagerState state, int tick,
-            int goalDiff, long ticksRemaining, long matchTicksTotal)
+            int goalDiff, long ticksRemaining, long matchTicksTotal, ITacticPresetCatalogue catalogue)
         {
+            if (catalogue == null)
+            {
+                throw new ArgumentNullException(nameof(catalogue));
+            }
             state.LastDecisionTick = tick;
 
             if (state.HoldIntervalsRemaining > 0)
@@ -180,13 +208,14 @@ namespace TacticalDirector.MatchEngine
             }
 
             ManagerProfile profile = ManagerProfile.FromArchetype(state.ProfileOrdinal);
-            byte target = EvaluateLadder(in profile, state.CurrentPresetOrdinal, goalDiff, ticksRemaining, matchTicksTotal);
+            byte target = EvaluateLadder(
+                in profile, state.CurrentPresetOrdinal, goalDiff, ticksRemaining, matchTicksTotal, catalogue);
             if (target == state.CurrentPresetOrdinal)
             {
                 return;
             }
 
-            TacticPreset preset = TacticPresetLibrary.Presets[target];
+            TacticPreset preset = catalogue.Presets[target];
             preset.ValidatePlayers(MatchEngineConstants.PLAYERS_PER_TEAM);
             engine.SetTeamTactic(teamId, preset.Team);
             if (preset.Players != null)
@@ -215,14 +244,20 @@ namespace TacticalDirector.MatchEngine
         /// pre-kickoff-only (KD-1). With no AI-managed team this applies the baselines unchanged.
         /// </summary>
         /// <param name="engine">The engine to configure (before its first tick).</param>
+        /// <param name="catalogue">The active preset catalogue (in-code default or disk-loaded).</param>
         /// <param name="teamBaseline">Per-team human/config tactics (null ⇒ <see cref="TeamTacticConfig.Default"/>).</param>
         /// <param name="playerBaseline">Per-agent human/config tactics (null ⇒ <see cref="PlayerTacticConfig.Identity"/>).</param>
         public static void ApplyKickoff(
-            MatchEngine engine, TeamTacticConfig teamBaseline = null, PlayerTacticConfig playerBaseline = null)
+            MatchEngine engine, ITacticPresetCatalogue catalogue,
+            TeamTacticConfig teamBaseline = null, PlayerTacticConfig playerBaseline = null)
         {
             if (engine == null)
             {
                 throw new ArgumentNullException(nameof(engine));
+            }
+            if (catalogue == null)
+            {
+                throw new ArgumentNullException(nameof(catalogue));
             }
             teamBaseline = teamBaseline ?? TeamTacticConfig.Default;
             playerBaseline = playerBaseline ?? PlayerTacticConfig.Identity;
@@ -243,8 +278,8 @@ namespace TacticalDirector.MatchEngine
                     continue;
                 }
                 ManagerProfile profile = ManagerProfile.FromArchetype(state.ProfileOrdinal);
-                byte selected = SelectKickoffPreset(in profile);
-                TacticPreset preset = TacticPresetLibrary.Presets[selected];
+                byte selected = SelectKickoffPreset(in profile, catalogue);
+                TacticPreset preset = catalogue.Presets[selected];
                 preset.ValidatePlayers(MatchEngineConstants.PLAYERS_PER_TEAM);
 
                 if (t == 0)
@@ -276,4 +311,10 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-07-11 | —      | Initial implementation (#26 T3/T4 — FM-TP-03 scoring, FM-TP-04     |
 // |         |            |        |   ladder + decrement-then-check hold, boot + mid-match apply paths). |
+// | 1.1     | 2026-07-24 | —      | WS-1 (#26 KD-6 on-disk preset format): the six functions take an   |
+// |         |            |        |   ITacticPresetCatalogue instead of reading TacticPresetLibrary by |
+// |         |            |        |   static reference, so a disk-loaded catalogue can drive the       |
+// |         |            |        |   manager AI. KickoffScore reads the A.3 scoring row off the       |
+// |         |            |        |   resolved preset (now on TacticPreset), not a fixed side-table.   |
+// |         |            |        |   Default (InCodeTacticPresetCatalogue) path is byte-identical.    |
 #endregion

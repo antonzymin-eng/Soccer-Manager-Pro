@@ -151,15 +151,30 @@ namespace TacticalDirector.TacticalInstructions.Tests
             }
         }
 
+        [Test]
+        public void EveryPreset_SeedsA3ScoringRowFromConstants()
+        {
+            // WS-1: each preset's A.3 kickoff-scoring row is seeded from the ordinal-indexed
+            // TacticalPresetsConstants tables — the values are unchanged, so the default kickoff
+            // selection is byte-identical (the faithful-pass-through of the affinity move).
+            for (int p = 0; p < TacticPresetLibrary.Count; p++)
+            {
+                TacticPreset preset = TacticPresetLibrary.Presets[p];
+                Assert.AreEqual(TacticalPresetsConstants.BaseFit[p], preset.BaseFit, preset.Name);
+                Assert.AreEqual(TacticalPresetsConstants.AggrAffinity[p], preset.AggrAffinity, preset.Name);
+                Assert.AreEqual(TacticalPresetsConstants.CautAffinity[p], preset.CautAffinity, preset.Name);
+            }
+        }
+
         // ---------- TacticPreset gates ----------
 
         [Test]
         public void Preset_RefusesEmptyName_AndWrongRosterLength()
         {
-            Assert.Throws<ArgumentException>(() => new TacticPreset(null, TeamTactic.Balanced));
-            Assert.Throws<ArgumentException>(() => new TacticPreset(string.Empty, TeamTactic.Balanced));
+            Assert.Throws<ArgumentException>(() => new TacticPreset(null, TeamTactic.Balanced, 0f, 0f, 0f));
+            Assert.Throws<ArgumentException>(() => new TacticPreset(string.Empty, TeamTactic.Balanced, 0f, 0f, 0f));
 
-            var preset = new TacticPreset("X", TeamTactic.Balanced, new PlayerTactic[5]);
+            var preset = new TacticPreset("X", TeamTactic.Balanced, 0f, 0f, 0f, new PlayerTactic[5]);
             Assert.Throws<ArgumentException>(() => preset.ValidatePlayers(11));
             preset.ValidatePlayers(5); // exact length passes.
         }
@@ -175,7 +190,7 @@ namespace TacticalDirector.TacticalInstructions.Tests
                 PlayerTactic.Default(PlayerRole.Default),
                 PlayerTactic.Default(PlayerRole.Default),
             };
-            var preset = new TacticPreset("X", TeamTactic.Balanced, source);
+            var preset = new TacticPreset("X", TeamTactic.Balanced, 0f, 0f, 0f, source);
 
             source[1] = new PlayerTactic(
                 PlayerRole.Default, Duty.Attack, PlayerInstructions.Default);
@@ -217,4 +232,7 @@ namespace TacticalDirector.TacticalInstructions.Tests
 // | 1.1     | 2026-07-10 | —      | T0 AR-1: composition tests gain inherited-dial == Balanced locks (L-1 —  |
 // |         |            |        |   the Compose-defaults coherence was claimed but unlocked for dials some |
 // |         |            |        |   presets touch); + Preset_SnapshotsPlayersAtConstruction (M-1 lock).    |
+// | 1.2     | 2026-07-24 | —      | WS-1 (#26 KD-6): TacticPreset ctor sites pass the three affinity        |
+// |         |            |        |   scalars; + EveryPreset_SeedsA3ScoringRowFromConstants (the affinity   |
+// |         |            |        |   move is a faithful seed from TacticalPresetsConstants).                |
 #endregion

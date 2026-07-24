@@ -39,6 +39,12 @@ namespace TacticalDirector.TacticalInstructions
         /// <summary>Ordinal 4 — the attacking end of the ladder.</summary>
         public const byte GegenpressOrdinal = 4;
 
+        // Each preset carries its own A.3 kickoff-scoring row (BaseFit/AggrAffinity/CautAffinity),
+        // seeded here from the ordinal-indexed TacticalPresetsConstants tables (WS-1 — completes the
+        // injectable catalogue so KickoffScore reads the row off the resolved preset, never a fixed
+        // 5-element side-table). The values are unchanged, so the default kickoff selection is
+        // byte-identical. TacticalPresetsConstants is the same assembly; the cross-type static read
+        // triggers its cctor first (no ordering hazard, no cycle).
         private static readonly TacticPreset[] s_presets = new TacticPreset[]
         {
             // 0 — ParkTheBus (A.1): VeryDefensive, low press, low engagement, deep line, heavy
@@ -49,7 +55,10 @@ namespace TacticalDirector.TacticalInstructions
                 lineOfEngagement: LineOfEngagement.Low,
                 defensiveLine: 0.30f,
                 timeWasting: 3,
-                transitionWon: TransitionPlan.HoldShape)),
+                transitionWon: TransitionPlan.HoldShape),
+                TacticalPresetsConstants.BaseFit[ParkTheBusOrdinal],
+                TacticalPresetsConstants.AggrAffinity[ParkTheBusOrdinal],
+                TacticalPresetsConstants.CautAffinity[ParkTheBusOrdinal]),
 
             // 1 — CounterAttack (A.1): Defensive, counter on regain, fast+direct, deep-ish line.
             new TacticPreset("CounterAttack", Compose(
@@ -57,10 +66,16 @@ namespace TacticalDirector.TacticalInstructions
                 transitionWon: TransitionPlan.CounterAttack,
                 tempo: Tempo.Fast,
                 passing: TacticPassing.Direct,
-                defensiveLine: 0.40f)),
+                defensiveLine: 0.40f),
+                TacticalPresetsConstants.BaseFit[CounterAttackOrdinal],
+                TacticalPresetsConstants.AggrAffinity[CounterAttackOrdinal],
+                TacticalPresetsConstants.CautAffinity[CounterAttackOrdinal]),
 
             // 2 — Balanced (A.1): TeamTactic.Balanced verbatim (the FR-TI-031 identity).
-            new TacticPreset("Balanced", TeamTactic.Balanced),
+            new TacticPreset("Balanced", TeamTactic.Balanced,
+                TacticalPresetsConstants.BaseFit[BalancedOrdinal],
+                TacticalPresetsConstants.AggrAffinity[BalancedOrdinal],
+                TacticalPresetsConstants.CautAffinity[BalancedOrdinal]),
 
             // 3 — Possession (A.1): Positive, short+slow, wide, slightly advanced line.
             new TacticPreset("Possession", Compose(
@@ -68,7 +83,10 @@ namespace TacticalDirector.TacticalInstructions
                 passing: TacticPassing.Short,
                 tempo: Tempo.Slow,
                 width: TacticWidth.Wide,
-                defensiveLine: 0.55f)),
+                defensiveLine: 0.55f),
+                TacticalPresetsConstants.BaseFit[PossessionOrdinal],
+                TacticalPresetsConstants.AggrAffinity[PossessionOrdinal],
+                TacticalPresetsConstants.CautAffinity[PossessionOrdinal]),
 
             // 4 — Gegenpress (A.1): Attacking, high press, high engagement, counter-press on loss,
             // advanced line.
@@ -77,7 +95,10 @@ namespace TacticalDirector.TacticalInstructions
                 pressing: TacticPressing.High,
                 lineOfEngagement: LineOfEngagement.High,
                 transitionLost: TransitionPlan.CounterPress,
-                defensiveLine: 0.65f)),
+                defensiveLine: 0.65f),
+                TacticalPresetsConstants.BaseFit[GegenpressOrdinal],
+                TacticalPresetsConstants.AggrAffinity[GegenpressOrdinal],
+                TacticalPresetsConstants.CautAffinity[GegenpressOrdinal]),
         };
 
         private static readonly ReadOnlyCollection<TacticPreset> s_presetsRo =
@@ -137,4 +158,7 @@ namespace TacticalDirector.TacticalInstructions
 // | 1.0     | 2026-07-10 | —      | Initial implementation (#26 T0): the five Appendix A.1 presets in pinned ladder order. |
 // | 1.1     | 2026-07-10 | —      | T0 AR-1 L-1: Compose doc no longer overclaims the identity-test coverage — the |
 // |         |            |        |   per-preset inherited-dial == Balanced locks now live in the composition tests. |
+// | 1.2     | 2026-07-24 | —      | WS-1 (#26 KD-6): each preset ctor now seeds its A.3 kickoff-scoring row        |
+// |         |            |        |   (BaseFit/AggrAffinity/CautAffinity) from TacticalPresetsConstants by ordinal — |
+// |         |            |        |   the values are unchanged, so the default kickoff selection is byte-identical.  |
 #endregion

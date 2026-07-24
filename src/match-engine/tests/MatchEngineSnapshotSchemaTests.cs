@@ -227,7 +227,8 @@ namespace TacticalDirector.MatchEngine
             var perturbed = new MatchEngine(MatchSeed);
             perturbed.ConfigureManager(
                 0, ManagerMode.AI, TacticalDirector.TacticalInstructions.TacticalPresetsConstants.ARCHETYPE_PRAGMATIC);
-            ManagerAdaptation.ApplyKickoff(perturbed);
+            ManagerAdaptation.ApplyKickoff(
+                perturbed, new TacticalDirector.TacticalInstructions.InCodeTacticPresetCatalogue());
             perturbed.RunTick();
 
             CollectionAssert.AreNotEqual(
