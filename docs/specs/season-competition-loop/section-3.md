@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** July 23, 2026 (v0.6 — back-prop ERR-030-006 staff tick-order seam; prior v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 0.6
+**Last Updated:** July 24, 2026 (v0.7 — back-prop ERR-030-007 scouting tick-order seam; prior v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Version:** 0.7
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -117,15 +117,20 @@ RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned or
     #                           scaffold projections are pull-based (threaded into #29/#41 when their inputs
     #                           are built), so this seam is empty until the deep tier's daily candidate-pool /
     #                           in-flight-hiring processing; positioned after transfers and before the tick)
-    # 7. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
+    # 7. scouting      (#32)  — NULL SEAM today (ERR-030-007 — a deep-tier position reservation: #32's
+    #                           minimal tier is the fog-off omniscient identity (no assignment can exist),
+    #                           so this seam is empty until the deep tier's daily assignment progress
+    #                           (`AdvanceScoutingDay`); positioned after staff so a scouting day reads the
+    #                           day's staff state (the ChiefScout doing the scouting), before the tick)
+    # 8. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
     WorldStore.AdvanceDay()
 ```
 
 **KD-4 invariant:** `Calendar.dayOf(NextRoundIndex) ≥ WorldStore.CurrentWorldTick` always; a restore
-re-checks this and fails loud (F4). The Wave-2+ seams (steps 1–6) are **documented positions**, not
-interfaces — #28/#29/#33/#41/#31/#34 each slot into a pre-declared slot when they land, so a wrong order here
-would force a re-pin across every Wave-2+ spec (§7). The injuries seam (step 4, appended by ERR-030-002 at
-#41's approval) is positioned after #28/#29 so its occurrence-risk assembly reads the day's updated
+re-checks this and fails loud (F4). The Wave-2+ seams (steps 1–7) are **documented positions**, not
+interfaces — #28/#29/#33/#41/#31/#34/#32 each slot into a pre-declared slot when they land, so a wrong order
+here would force a re-pin across every Wave-2+ spec (§7). The injuries seam (step 4, appended by ERR-030-002
+at #41's approval) is positioned after #28/#29 so its occurrence-risk assembly reads the day's updated
 training-fatigue / condition, and before the live world-day tick. The transfers seam (step 5, appended by
 ERR-030-004 at #31's approval) is a **deep-tier position reservation** — minimal #31 transfers are
 command-driven (`SubmitBid`), so the seam is empty until the deep tier's daily negotiation/rival-bid
@@ -133,8 +138,12 @@ processing; it is positioned after the per-player systems and before the world-d
 (step 6, appended by ERR-030-006 at #34's approval) is likewise a **deep-tier position reservation** — #34's
 scaffold projections are pull-based (threaded into #29/#41 when their inputs are built), so the seam is empty
 until the deep tier's daily candidate-pool / in-flight-hiring processing; it too sits after transfers and
-before the world-day tick. With only the world-day tick live, a no-fixture day's advance is
-**byte-identical** to a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8).
+before the world-day tick. The scouting seam (step 7, appended by ERR-030-007 at #32's approval) is likewise
+a **deep-tier position reservation** — #32's minimal tier is the fog-off omniscient identity (no assignment
+can exist, and `AdvanceScoutingDay` no-ops with fog off), so the seam is empty until the deep tier's daily
+assignment progress; it sits after staff so a scouting day reads the day's staff state (the ChiefScout doing
+the scouting), and before the world-day tick. With only the world-day tick live, a no-fixture day's advance
+is **byte-identical** to a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8).
 
 ## 3.4 Playing a round (FR-SN-012..013b / KD-9)
 
@@ -267,4 +276,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 0.4 | 2026-07-23 | — | Back-prop ERR-030-003 (at #40 approval): §3.5 `RollToNextSeason` gains the #40 finance-settlement null seam at (b') (after (a') #43 point, before (c) regenerate); prose updated. |
 | 0.5 | 2026-07-23 | — | Back-prop ERR-030-004 (at #31 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the transfers null seam as step 5 (after injuries, before the world-day tick; `AdvanceDay` → step 6); a deep-tier position reservation, empty at minimal. Prose + FR-SN-034 enumeration updated. |
 | 0.6 | 2026-07-23 | — | Back-prop ERR-030-006 (at #34 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the staff null seam as step 6 (after transfers, before the world-day tick; `AdvanceDay` → step 7); a deep-tier position reservation, empty at minimal. Prose + FR-SN-034 enumeration updated. |
+| 0.7 | 2026-07-24 | — | Back-prop ERR-030-007 (at #32 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the scouting null seam as step 7 (after staff so a scouting day reads the day's staff state, before the world-day tick; `AdvanceDay` → step 8); a deep-tier position reservation, empty at minimal (fog-off ⇒ no assignment; `AdvanceScoutingDay` no-ops). Prose + FR-SN-034 enumeration updated. |
 #endregion

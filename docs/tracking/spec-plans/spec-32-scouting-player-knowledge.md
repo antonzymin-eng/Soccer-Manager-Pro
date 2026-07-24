@@ -1,7 +1,7 @@
 # Spec #32 — Scouting & Player Knowledge — High-Level Plan
 
 > **Created:** July 22, 2026
-> **Status:** PLAN (pre-design-supplement — no section files, no `SPEC_INDEX.md` row). Candidate spec number **#32** (proposed in `management-layer-spec-roadmap.md`, not reserved).
+> **Status:** **PROMOTED** (July 24, 2026) — design supplement `docs/tracking/scouting-player-knowledge-design.md` (AR-converged v0.3) → 11-file section set at `docs/specs/scouting-player-knowledge/` → **APPROVED**; `SPEC_INDEX.md` row 32 added. Two plan positions were revised at supplement stage with recorded rationale: §4's `WORLD_STORE_FORMAT_VERSION` bump → a `SCOUTING_SAVE_FORMAT_VERSION` season-save sub-blob (KD-6), and §7's optional #22 `InteractionTextGenerator` report prose → rejected (structured reports only, the #49 boundary). (Original PLAN status follows for history.) PLAN (pre-design-supplement — no section files, no `SPEC_INDEX.md` row). Candidate spec number **#32** (proposed in `management-layer-spec-roadmap.md`, not reserved).
 > **Master-plan home:** §5 recruitment · **Tier:** S3 · **Wave:** 4 · **FR prefix (proposed):** FR-SC
 > **Determinism:** domain tag `0x24` / SubsystemOrdinal 86 (proposed off-pitch block, §6 — pinned only at promotion)
 > **Purpose:** Scout assignments, attribute masking / fog-of-war, reports, and recommendations — a per-manager knowledge view over true attributes.
@@ -47,3 +47,4 @@ World tick (`WorldClock`) drives scouting progress (never the match tick). Dedic
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial high-level plan. |
+| v0.2 | July 24, 2026 | PROMOTED — supplement → section files → APPROVED (SPEC_INDEX row 32); status header updated with the two supplement-stage revisions (season-save sub-blob, not a WorldStore bump; structured reports, no #22 prose). |

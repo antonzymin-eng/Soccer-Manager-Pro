@@ -1,7 +1,31 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 23, 2026, latest same day (**Staff & Backroom #34 authored + advanced `→ IN REVIEW →
+> **Last Updated:** July 24, 2026 (**Scouting & Player Knowledge #32 authored + advanced `→ IN REVIEW →
+> APPROVED`** — Wave 4's third and final spec (per-manager attribute fog-of-war over #27 truth; scout
+> assignments/reports/recommendations). **The governing invariant** (roadmap §5): knowledge is a **VIEW over
+> #27's true attributes, NEVER a mutation** — enforced structurally (`EstimateFor` takes `in PlayerRecord`
+> value copies via `ISquadProvider`; no storage reference; readonly view types; the T-SC-VIEW-001
+> byte-identity lock). **KD-1 (headline):** the overlay stores only a per-player **knowledge band**; the
+> per-attribute `[Min,Max]` ranges are **derived on read** (band → strictly-decreasing `[GT]` half-width
+> table, terminal 0 ⇒ `BAND_MAX` collapses to `[truth, truth]` arithmetically) re-centred by **stateless
+> keyed noise** on `(playerId, band, attrIdx)` — deliberately NOT `worldDay`-keyed (stable until a band
+> advance), no cursor, nothing RNG-serialized — dissolving the plan's save-bloat + re-roll risks by
+> construction; freshness is the pinned **live-form window** semantic (width is the scouted quantity).
+> **KD-2:** own-squad omniscience (managed-club players always `BAND_MAX`); fog covers external players' 31
+> attributes only. **KD-3/KD-6:** minimal = fog-off omniscient identity, **draw-free** (zero-width reads
+> short-circuit before any draw) ⇒ `_RESERVED_0x24_`/86 **stays reserved** (promotes at #32 T3's first
+> accuracy draw); one `SCOUTING_SAVE_FORMAT_VERSION` season-save sub-blob (canonical ascending-`PlayerId`
+> order; **no** `WORLD_STORE` bump — a deliberate, argued revision of the plan §4's WorldStore proposal:
+> the composite is #22-owned, five sibling precedents). **KD-4:** #34 `ToScoutQuality` scales assignment
+> **speed only** (`DaysPerBand`), never widths (the retroactivity trap); #32 defines
+> `SCOUT_QUALITY_NEUTRAL_PERMILLE = 1000`, closing #34's open baseline with no #34 edit. **KD-5:** ranking
+> is #32's own pure read-only query; #32 issues no offers (the manager acts via #31 `SubmitBid`).
+> **One approval-time back-prop:** ERR-030-007 (the #30 scouting tick-order step-7 null seam, after staff;
+> `AdvanceDay` → step 8; `spec-error-log.md` v1.38). Supplement AR-1 (3M+2L) → AR-2 (3L) → CONVERGENCE;
+> section-file AR PASS-1 (3M+1L) → PASS-2 (1M+2L) → PASS-3 clean → CONVERGENCE. **This completes Wave 4**
+> (#31 → #34 → #32). Count: **39 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Staff & Backroom #34 authored + advanced `→ IN REVIEW →
 > APPROVED`** — Wave 4's second spec (coaches/scouts/physios as attributed entities that modulate #29/#41/#33/#31).
 > A **Stage-3 system with a pulled-forward identity scaffold**: the managed club holds a real neutral-baseline
 > staff roster whose quality **projections return each consumer's own identity type** (`MedicalModifier` #41 /
@@ -315,6 +339,7 @@
 | 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 31 | Transfers, Contracts & Negotiation | `transfers-contracts-negotiation/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 34 | Staff & Backroom | `staff-backroom/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 32 | Scouting & Player Knowledge | `scouting-player-knowledge/` | 6¹ | APPROVED | Jul 24, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
