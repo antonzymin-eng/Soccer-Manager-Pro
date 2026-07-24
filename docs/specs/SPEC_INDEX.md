@@ -1,7 +1,27 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 24, 2026, later same day (**Competition Structure #43 authored + advanced `→ IN
+> **Last Updated:** July 24, 2026, latest same day (**Discipline & Suspensions #44 authored + advanced `→ IN
+> REVIEW → APPROVED`** — Wave 5's second spec (season-level card accumulation/thresholds/bans as a
+> **read-only derivation** over already-emitted engine events). **The load-bearing verifications:** a
+> promoted second yellow publishes **ONE `CardIssuedEvent` with `CardKind = 2`** (never a yellow-then-red
+> pair — `ApplyCardAndCheckSentOff`, the KD-5 de-dup rule); `Recipient` is a match **agent id**, and the
+> engine's slot discipline resets on substitution (v1.33) — so the read is a **tick-ordered occupancy
+> fold** (lineup + `SubstitutionEvent`s → the occupant at the card's tick), fed by the **#37-class per-tick
+> ledger tap** (FR-AN-002, the approved observational pattern — one tap feeds #37+#44); `SerializeLedger`
+> is write-only and no ledgers are retained, so the tally **persists** (`DISCIPLINE_SAVE_FORMAT_VERSION`
+> sub-blob — recompute is impossible, KD-1 forced). **Availability is a VIEW** (pure predicate + reduced
+> value-copy squads; #27 never written); **live at minimal** (the #41 class — a ban legitimately changes
+> the next lineup; neutrality = observer-neutrality + no-trigger identity + determinism). Hygiene:
+> **bans MIGRATE on a transfer re-key** (they follow the player — the recorded contrast with #32's
+> drop-on-transfer knowledge rule); the `(PlayerId, CompetitionId)` key pre-shapes #43 partitions;
+> immediate `(0,0)`-entry drop (canonical representation). **No RNG stream / domain tag / ordinal**
+> (the #37/#49 read-only positive property — no #16 row). **One approval-time back-prop:** ERR-030-009 —
+> the #30 FR-SN-013 **availability-filter null seam** (resolve → *filter* → configure;
+> `season-competition-loop` section-2/3 v0.8; `spec-error-log.md` v1.40). Supplement AR-1 (2M+1L) → AR-2
+> (2L) → CONVERGENCE; section-file AR PASS-1 (1M) → PASS-2 (2L) → CONVERGENCE. Count: **41 APPROVED / 0
+> IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 24, 2026, later same day (**Competition Structure #43 authored + advanced `→ IN
 > REVIEW → APPROVED`** — Wave 5's first spec (cups/continental/promotion-relegation over #30's loop).
 > **KD-1:** a league IS a competition instance (`CompetitionFormat.RoundRobin`); **instance 0 is a binding
 > row** — an id/tag recording "the league lives in #30", no stored #30 object (FR-SN-032/033 respected), so
@@ -361,6 +381,7 @@
 | 34 | Staff & Backroom | `staff-backroom/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 32 | Scouting & Player Knowledge | `scouting-player-knowledge/` | 6¹ | APPROVED | Jul 24, 2026 |
 | 43 | Competition Structure | `competition-structure/` | 6¹ | APPROVED | Jul 24, 2026 |
+| 44 | Discipline & Suspensions | `discipline-suspensions/` | 6¹ | APPROVED | Jul 24, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 

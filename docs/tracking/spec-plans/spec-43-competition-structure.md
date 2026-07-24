@@ -44,3 +44,4 @@ Save→restore round-trip determinism for the competition collection incl. the s
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial high-level plan. |
+| v0.2 | July 24, 2026 | PROMOTED — supplement → section files → APPROVED (SPEC_INDEX row 43); the keyed-draws revision recorded in the status header. |

@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** July 24, 2026 (v0.7 — back-prop ERR-030-007 scouting tick-order seam; prior v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 0.7
+**Last Updated:** July 24, 2026 (v0.8 — back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Version:** 0.8
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -151,7 +151,8 @@ A fixture-day resolves the **whole round** — every one of its `N/2` fixtures �
 their results to the table. Resolving only a subset would leave the unplayed clubs' rows undefined
 (the App. C 4-club round 0 = {10v13, 11v12}; playing only 10v13 never gives 11/12 a round-0 result).
 The managed club's fixture runs through the full `MatchEngine`; the rest through the round-resolution
-model (§3.4.1).
+model (§3.4.1). The managed squad's resolve→configure path carries the **#44 availability-filter
+null seam** (ERR-030-009 — resolve → *filter* → configure; empty until #44 T2; FR-SN-013).
 
 ```
 AdvanceAndPlayNextRound(squads: ISquadProvider):
@@ -277,4 +278,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 0.5 | 2026-07-23 | — | Back-prop ERR-030-004 (at #31 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the transfers null seam as step 5 (after injuries, before the world-day tick; `AdvanceDay` → step 6); a deep-tier position reservation, empty at minimal. Prose + FR-SN-034 enumeration updated. |
 | 0.6 | 2026-07-23 | — | Back-prop ERR-030-006 (at #34 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the staff null seam as step 6 (after transfers, before the world-day tick; `AdvanceDay` → step 7); a deep-tier position reservation, empty at minimal. Prose + FR-SN-034 enumeration updated. |
 | 0.7 | 2026-07-24 | — | Back-prop ERR-030-007 (at #32 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the scouting null seam as step 7 (after staff so a scouting day reads the day's staff state, before the world-day tick; `AdvanceDay` → step 8); a deep-tier position reservation, empty at minimal (fog-off ⇒ no assignment; `AdvanceScoutingDay` no-ops). Prose + FR-SN-034 enumeration updated. |
+| 0.8 | 2026-07-24 | — | Back-prop ERR-030-009 (at #44 approval): §3.4 notes the #44 availability-filter null seam on the managed squad's resolve→configure path (empty until #44 T2; FR-SN-013). |
 #endregion
