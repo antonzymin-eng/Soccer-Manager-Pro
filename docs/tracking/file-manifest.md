@@ -1,7 +1,17 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 24, 2026, latest same day (**AR-1 over Amendment 01 + the #51/#52 plans: 0H+5M+3L, all
+**Last Updated:** July 24, 2026, latest same day (**AR-3 fresh-eyes pass over the Amendment-01 surface (repeat
+review, user-requested): 0H+2M+1L, all fixed.** The pass read roadmap §2–§6 in full for the first time —
+both M findings came from there. M-1: `spec-plans/spec-48-match-presentation-depth.md` v0.3 — the one file
+a Wave-7 #48 supplement author starts from carried no pointer to the Amendment-01 audio split; §1 now
+records the boundary (#48 = event→cue mapping only; the playback framework — mixer/buses/catalogue/
+settings — is #51, with the stub-bus/rehoming option per spec-51 KD-1). M-2: `management-layer-spec-roadmap.md`
+→ **v0.5** — v0.4 had added §1 rows without §3 scope sketches (breaking the v0.2 rows+sketches precedent;
+§1 claimed #27–#52 while §3 stopped at #50); §3 sketches added for #51/#52. L: roadmap §6 no-RNG
+parenthetical extended to include #51/#52 (footnote ³ covered them, §6 read alone undercounted). AR-4
+sweep over the changed surface: 0H+0M — CONVERGENCE, cycle closed.)
+**Last Updated (prior):** July 24, 2026, latest same day (**AR-1 over Amendment 01 + the #51/#52 plans: 0H+5M+3L, all
 fixed.** M-1 seam-commit contract corrected against source — `SubstitutePlayer` applies immediately
 (`MatchEngine.cs` queues only the notification event), Set\*Tactic are the stride-committed pair, and
 remote-intents-via-tick-scheduled-command-layer is now an explicit guardrail (amendment §3.2/§3.3 + spec-52

@@ -306,6 +306,21 @@ versions, which gate corruption, not forward-migration). **KD:** defines the mig
 `SEASON_SAVE_FORMAT_VERSION`/`WORLD_STORE_FORMAT_VERSION` bumps — how a v(N) save opens in a v(N+1)
 build. Infra/process spec; pairs with #39 Steam Cloud.
 
+### #51 Audio & Sound Design *(Stage 1 min → Stage 2 full)* — Amendment-01 addition (v0.5)
+The game-wide audio *framework*: mixer/bus architecture, cue catalogue + playback API, music, UI
+audio, client-local settings, and a11y cue equivalents (via #49). **KD:** the #48 boundary — #48
+owns event→cue *mapping* (read-only over the event ledger), #51 owns cue *playback*/mixing; pin
+the cue-identifier contract (spec-51 plan KD-1). Presentation layer: observer-neutral, no RNG
+stream/domain tag, settings outside every sim save; playback binding Unity-host-gated.
+
+### #52 Multiplayer Transport & Deterministic Netcode *(Stage 6)* — Amendment-01 addition (v0.5)
+Lockstep intent-replication over the unmodified deterministic sim: session/relay, intent exchange
+through the tick-scheduled command layer, digest-chain desync detection, snapshot resync
+(`MatchSaveManager.Encode`/`Restore`). **KD:** fixed input-delay vs. rollback; desync-recovery
+policy; lockstep's inherent information exposure (intent integrity, not state secrecy). No RNG
+stream — both peers run the full sim. **Supplement deliberately deferred to Stage 5+**
+(phantom-interface rule); only the pre-Stage-5 guardrails bind now (spec-52 plan §5).
+
 ---
 
 ## 4. The #22 / #33 sequencing constraint (call-out)
@@ -374,7 +389,8 @@ Simulation #16 §3.4 + `SubsystemOrdinals` at each spec's promotion (not now):
 | #45 Board/ownership | `0x2D` | 95 |
 
 (#37 analytics, #44 discipline, #46 news/inbox, #38/#48 presentation, #47 editor, #39 packaging,
-#49 localization, #50 migration are **read-only, presentation, or infra** — no RNG stream, no
+#49 localization, #50 migration — and the v0.5 Amendment-01 additions #51 audio (presentation) and
+#52 transport — are **read-only, presentation, or infra** — no RNG stream, no
 domain tag, consistent with `match-viewer`/analytics being observational.)
 
 **Headroom:** the 14 rows above consume `0x20`–`0x2D` / 82–95 exactly — zero slack. The next free
@@ -461,3 +477,4 @@ candidate).
 | v0.2 | July 22, 2026 | Folded in gap-fill candidates #40–#50 (Finances, Injuries/Medical, Youth Academy, Competition Structure, Discipline/Suspensions, Board/Ownership, News/Inbox & Man-Management, New-Game Setup/DB Editor, Match Presentation Depth, Localization/Accessibility, Save Migration) surfaced by a follow-up master-plan gap review; extended the determinism block (5 new tags), §3 scope sketches, and §7 authoring placement. |
 | v0.3 | July 22, 2026 | Adversarial-review consistency pass over the roadmap + `spec-plans/`: §2 critical-path spine corrected to include #33 (matched §7/README); §7 intra-wave order set producer-before-consumer (Wave 4 → #31, #34, #32; Wave 6 → #35, #46, #36); **#49 localization split into a Wave-1 seam+template contract tier + Wave-8 content tier** (mirrors #38) so text producers bind to the seam as they land; §6 gained a determinism-block-headroom note (next free `0x2E`/96; reserve `0x2E`–`0x2F`/96–97 slack); §1 footnote updated (#38 + #49 both split; stale §5 pointer fixed). |
 | v0.4 | July 24, 2026 | Amendment-01 additions folded in (the v0.2 gap-fill precedent): §1 rows #51 Audio & Sound Design (Wave 8) + #52 Multiplayer Transport & Deterministic Netcode (Wave 9, Stage-6 gated) with footnote ³; §7 Wave-8 #51 entry + new Wave-9 block. Governing document: `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md`; one-page plans at `spec-plans/spec-51-…`/`spec-52-…`. Neither declares an RNG stream (§6 block/headroom unchanged). |
+| v0.5 | July 24, 2026 | AR-3 completeness fixes: §3 scope sketches added for #51/#52 (v0.4 had added §1 rows without sketches, breaking the v0.2 rows+sketches precedent — §1 claimed #27–#52 while §3 stopped at #50); §6 no-RNG parenthetical extended to include #51/#52. |
