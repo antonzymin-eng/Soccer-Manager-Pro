@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** July 23, 2026 (v0.6 — back-prop ERR-030-006 staff tick-order enumeration; prior v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 0.6
+**Last Updated:** July 24, 2026 (v0.8 — back-prop ERR-030-009 #44 availability-filter null seam in FR-SN-013; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Version:** 0.8
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -39,7 +39,7 @@ forward design (nothing is built yet).
 | FR-SN-010 | `AdvanceToNextFixtureDay()` MUST advance the world one `WorldStore.AdvanceDay()` per intervening calendar day up to (and including) the next fixture day, in the fixed KD-2 tick order. | MUST | KD-2 |
 | FR-SN-011 | The calendar cursor's "next fixture day" MUST always be `≥` the current `WorldClock` day; a restore MUST re-validate this invariant and fail-loud on violation. | MUST | KD-4 |
 | FR-SN-012 | `AdvanceAndPlayNextRound(ISquadProvider)` MUST resolve **every** fixture in the round at the cursor (all `N/2` of them) and apply **all** their results to the table, then advance the cursor by one round. Resolving a strict subset of a round's fixtures is forbidden — the table would be undefined for the unplayed clubs. | MUST | KD-2 / KD-9 |
-| FR-SN-013 | Each fixture in the round MUST be resolved to a `MatchResult` (scoreline + per-club goals), `ApplyResult`-ed to the table, and emit the FR-SN-016 match-outcome event — the managed club's fixture (`SeasonState.ManagedClubId`) through the real `MatchEngine` (squads via `ISquadProvider.ResolveByClubId` → `ConfigureSquads`), the others through the round-resolution model (FR-SN-013a). | MUST | KD-9 |
+| FR-SN-013 | Each fixture in the round MUST be resolved to a `MatchResult` (scoreline + per-club goals), `ApplyResult`-ed to the table, and emit the FR-SN-016 match-outcome event — the managed club's fixture (`SeasonState.ManagedClubId`) through the real `MatchEngine` (squads via `ISquadProvider.ResolveByClubId` → `ConfigureSquads`), the others through the round-resolution model (FR-SN-013a). **Null seam (ERR-030-009, at #44's approval):** the resolved squad MAY be filtered through the #44 suspension-availability view (a value-copy reduction) **between resolve and configure** — empty until #44 T2 wires it; the flow is then resolve → *filter* → configure. | MUST | KD-9 |
 | FR-SN-013a | Non-managed fixtures MUST be resolved by a **deterministic** round-resolution model. The Stage-2 minimal identity MAY resolve every fixture (managed and non-managed) through the full `MatchEngine`; the **quick-sim** deepening resolves non-managed fixtures via a deterministic result model drawing from the `DOMAIN_TAG_SEASON_LOOP` sub-stream (FR-SN-027) — a documented Stage-2+ seam, not a rewrite. Either way, all `N/2` results apply to the table (FR-SN-012). | MUST | KD-9 |
 | FR-SN-013b | `SeasonState` MUST carry a `ManagedClubId` (the human manager's club); it selects which of the round's fixtures runs through the full `MatchEngine` under the human's tactical influence (`SetTeamTactic`, #21), the rest through the round-resolution model. `ManagedClubId` MUST be serialized in the season blob. | MUST | KD-9 |
 
@@ -92,7 +92,7 @@ forward design (nothing is built yet).
 |---|---|---|---|
 | FR-SN-032 | `SeasonLoop` MUST be the sole writer of season state; season state MUST be mutable only through the public command API (`AdvanceToNextFixtureDay`, `AdvanceAndPlayNextRound`, the boundary roll), never by field access. | MUST | KD-7 |
 | FR-SN-033 | `SeasonViewModel` MUST expose the table + fixture list + calendar position as **read-only value copies** for #37/#38; reading MUST NOT mutate season state or affect the save digest (observer-neutral). | MUST | KD-7 |
-| FR-SN-034 | Every world-tick spec #30 must tick that does not exist yet (#28/#29/#33/#41/#31/#34) MUST be a **documented null seam** in the KD-2 tick order, never an invented interface (FR-LW-031). The injuries seam (#41) was appended as step 4 by ERR-030-002 at #41's approval; the transfers seam (#31) was appended as step 5 by ERR-030-004 at #31's approval; the staff seam (#34) was appended as step 6 by ERR-030-006 at #34's approval (both deep-tier position reservations — empty at minimal, `AdvanceDay` is now step 7). | MUST | KD-2 |
+| FR-SN-034 | Every world-tick spec #30 must tick that does not exist yet (#28/#29/#33/#41/#31/#34/#32) MUST be a **documented null seam** in the KD-2 tick order, never an invented interface (FR-LW-031). The injuries seam (#41) was appended as step 4 by ERR-030-002 at #41's approval; the transfers seam (#31) as step 5 by ERR-030-004 at #31's approval; the staff seam (#34) as step 6 by ERR-030-006 at #34's approval; the scouting seam (#32) as step 7 by ERR-030-007 at #32's approval (all deep-tier position reservations — empty at minimal, `AdvanceDay` is now step 8). | MUST | KD-2 |
 
 ## 2.2 Data structures
 
@@ -139,4 +139,6 @@ forward design (nothing is built yet).
 | 0.4 | 2026-07-23 | — | Back-prop ERR-030-003 (at #40 approval): FR-SN-031 now enumerates two insertion points — (a') #43 promo/rel and (b') #40 finance settlement (after (a')). |
 | 0.5 | 2026-07-23 | — | Back-prop ERR-030-004 (at #31 approval): FR-SN-034 tick-order null-seam enumeration extended to include Transfers #31 (appended as step 5, a deep-tier position reservation). |
 | 0.6 | 2026-07-23 | — | Back-prop ERR-030-006 (at #34 approval): FR-SN-034 tick-order null-seam enumeration extended to include Staff #34 (appended as step 6, a deep-tier position reservation; `AdvanceDay` → step 7). |
+| 0.7 | 2026-07-24 | — | Back-prop ERR-030-007 (at #32 approval): FR-SN-034 tick-order null-seam enumeration extended to include Scouting #32 (appended as step 7, a deep-tier position reservation; `AdvanceDay` → step 8). |
+| 0.8 | 2026-07-24 | — | Back-prop ERR-030-009 (at #44 approval): FR-SN-013 gains the #44 suspension-availability-filter **null seam** between squad resolve and `ConfigureSquads` (resolve → *filter* → configure; a value-copy reduction, empty until #44 T2 — the flow-side sibling of the tick-order pre-declarations). |
 #endregion

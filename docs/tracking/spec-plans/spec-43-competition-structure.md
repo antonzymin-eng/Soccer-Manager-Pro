@@ -1,7 +1,7 @@
 # Spec #43 — Competition Structure — High-Level Plan
 
 > **Created:** July 22, 2026
-> **Status:** PLAN (pre-design-supplement — no section files, no `SPEC_INDEX.md` row). Candidate spec number **#43** (proposed in `management-layer-spec-roadmap.md`, not reserved).
+> **Status:** **PROMOTED** (July 24, 2026) — design supplement `docs/tracking/competition-structure-design.md` (AR-converged v0.3) → 11-file section set at `docs/specs/competition-structure/` → **APPROVED**; `SPEC_INDEX.md` row 43 added. One plan position was revised at supplement stage with recorded rationale: §4/§5's serialized knockout-draw cursor → **position-independent keyed draws** (the off-pitch #41/#32/FR-SN-013a pattern; nothing RNG-serialized, no cross-competition cursor race). (Original PLAN status follows for history.) PLAN (pre-design-supplement — no section files, no `SPEC_INDEX.md` row). Candidate spec number **#43** (proposed in `management-layer-spec-roadmap.md`, not reserved).
 > **Master-plan home:** §4.1 / §5 · **Tier:** Stage 2 min → Stage 5 deep · **Wave:** 5 · **FR prefix (proposed):** FR-CP
 > **Determinism:** domain tag `0x2C` / `SubsystemOrdinal` 94 (proposed — to pin at promotion; the knockout-draw stream).
 > **Purpose:** Generalize #30's single-league fixture/table machinery to multiple concurrent competitions (cups, continental) with deterministic knockout draws, plus promotion/relegation as a season-boundary transform.
@@ -44,3 +44,4 @@ Save→restore round-trip determinism for the competition collection incl. the s
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial high-level plan. |
+| v0.2 | July 24, 2026 | PROMOTED — supplement → section files → APPROVED (SPEC_INDEX row 43); the keyed-draws revision recorded in the status header. |
