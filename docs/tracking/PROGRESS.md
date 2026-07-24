@@ -1,7 +1,30 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
+**Last Updated:** July 24, 2026 (**Documentation sync — this tracker had not been updated since
+July 10, 2026 despite twelve further spec approvals.** #27 Squad/Player Data Layer promoted from
+candidate to a full `APPROVED` spec (Jul 22, 2026 — the design supplement that had existed since
+July 15 was formally promoted through section files; real `src/player-database/` +
+`src/match-engine/` code already existed and is unaffected). Then a new management-layer
+specification wave opened per `docs/tracking/management-layer-spec-roadmap.md` (Jul 22, 2026),
+scoping the manager-facing/off-pitch half of the game as candidate specs #27–#50; twelve have
+already been authored and `APPROVED` through the standard design-supplement → section-files →
+adversarial-review-to-convergence pipeline: #28 Player Progression & Lifecycle (Jul 23), #29
+Training System (Jul 23), #30 Season & Competition Loop (Jul 22), #31 Transfers, Contracts &
+Negotiation (Jul 23), #33 Personalities, Morale & Squad Dynamics (Jul 23), #34 Staff & Backroom
+(Jul 23), #37 Match Analytics & Statistics (Jul 22), #38 UI/Client Framework — framework slice
+(Jul 22), #40 Club Finances & Economy (Jul 23), #41 Injuries & Medical (Jul 23), #49 Localization
+& Accessibility — seam slice (Jul 23). **`SPEC_INDEX.md`: 38 APPROVED / 0 IN REVIEW / 0 NOT
+STARTED** (up from 26). Each new spec's own version history records its own AR-round tally (see
+`docs/specs/SPEC_INDEX.md`'s "Last Updated" chain, which — unlike this file — has been kept
+current throughout). **None of #28–#41/#49 has `src/` code yet** — spec-only, pending each spec's
+own §6 T-phase implementation plan. Cross-spec back-props from this wave are filed in
+`spec-error-log.md` v1.34 (ERR-027-001, ERR-028-001, ERR-029-001, ERR-030-001..006, ERR-040-001,
+ERR-041-001). Separately, a `docs/tracking/living-world-arc-triggers-design.md` design supplement
+opened July 23, 2026 remains mid-AR-cycle (pass-6 as of Jul 24) — not yet promoted, no
+`SPEC_INDEX.md` row. This entry is a documentation-currency reconciliation; no spec/code work was
+performed here.)  
+**Last Updated (prior):** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
 lead-developer R-01..R-05 sign-off granted on all four (checklists v0.4 with §9.5 gate tables +
 §9.6 decisions); the #26 Bradley citation VERIFIED (Bradley & Noakes 2013, *J Sports Sci*
 31(15):1627–1638, DOI 10.1080/02640414.2013.796062, PMID 23808376 — index-level corroboration;

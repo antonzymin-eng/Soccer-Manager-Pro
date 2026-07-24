@@ -1,7 +1,44 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 22, 2026 (v2.32 — **Goalkeeper #11 + Heading #10 engine integration, Phase 1
+> **Last Updated:** July 23, 2026 (v2.33 — **GK/Heading Phase 2 (cross-tick state serialization) + the
+> closed-loop scenario + the DT-emitted goalkeeper SAVE action landed**, completing the Phase-1
+> (opt-in) work v2.32 recorded below. **Phase 2 (`MatchEngine.cs` v1.46):** the GK (#11)/Heading (#10)
+> opt-in flag + both orchestrators' full in-flight state + their two RNG-stream cursors
+> (`heading.mechanics`/`goalkeeper.mechanics`) + the two §4 trigger latches are now serialized —
+> **`SNAPSHOT_SCHEMA_VERSION` 17 → 18** — via new typed carriers `GoalkeeperTickState`
+> (`src/goalkeeper-mechanics/`) and `HeadingTickState` (`src/heading-mechanics/`) with
+> `CaptureState()`/`RestoreState(in …)` seams on both orchestrators (the `PressingTickState` Option-B
+> convention — the orchestrator returns a typed carrier, `MatchEngine` owns the byte layout). A
+> flag-on engine is now snapshot-safe; the Phase-1 `RequireGkHeadingSnapshotSafe` fail-loud guard is
+> removed. **The closed-loop scenario:** new `src/match-engine/tests/MatchEngineGkHeadingScenarios.cs`
+> + `MatchEngineGkHeadingScenarioTests.cs` register `gk-heading-flag-on-composition` on the `#19
+> ScenarioRunner`, locking flag-on forward determinism, flag-on restore-through-the-harness
+> (save→encode→restore→tick, transitively re-locking Phase-2 completeness), structural on-pitch/finite
+> invariants, and both projections firing as a live consumer through the natural `RunTick` AI phase
+> (not a `TestOnly_Drive` seam) plus a same-stimulus flag-off no-commit contrast. **The DT-emitted SAVE
+> action (`ERR-008-013`):** the goalkeeper save is now a first-class Decision Tree (#8) action
+> (`ActionType.SAVE = 7` — the last ordinal fitting the 3-bit composure-noise field; a DT-emitted
+> HEADER stays deferred) instead of an engine-side world-state heuristic. New
+> `TacticalContext.SaveAvailable` (opt-in-gated, `false` = identity) makes `OptionGenerator` emit SAVE
+> as the SOLE off-ball option for the threatened keeper — a must-happen action can't be left to
+> out-score INTERCEPT, which can reach the utility ceiling under an aggressive tactic (the AR-4 missed-
+> save fix). `UtilityScorer.ScoreSave` + a SAVE exemption from the #21 `PlayerTacticActionMultiplier`
+> (its 7-wide tables would read out of bounds at ordinal 7). New `IDtSaveDispatch` seam +
+> `ActionDispatcher` SAVE case + `MatchEngine.HostSaveDispatch` sink (maps agent→GK slot, applies the
+> v18 per-episode latch, projects `PlayerAttributeProjection.ToGoalkeeper`, commits the same Stage-0
+> `SaveIntent` the removed heuristic built); `DriveGkHeadingTactical` drops the now-removed
+> `TryCommitSaveIntents`. No `SNAPSHOT_SCHEMA_VERSION` change for the DT change (SAVE reuses existing
+> `AgentAction.Type`/`TargetPosition` fields); flag-off stays byte-identical throughout both landings.
+> New/extended tests: `MatchEngineSnapshotRestoreTests` flag-on round-trips, `MatchEngineSnapshotSchema
+> Tests` pin-18 probe, `OptionGeneratorTests` sole-option lock, `UtilityScorerTests` crash-guard lock,
+> `MatchEngineGkHeadingTests` DT-path save-commit + `SaveDecision_SurvivesAdversarialTactic`. **Full
+> dotnet gate: PASSED, 0 failures (whole tree green; DecisionTree 84, MatchEngine 306 tests).** Governed
+> by `docs/tracking/gk-heading-engine-integration-design.md` + the new `gk-heading-scenario-design.md`
+> + `gk-heading-dt-producer-design.md` (all AR-converged). See the GK/Heading OPEN ISSUES entry in
+> root `CLAUDE.md` for the full narrative — this entry exists because that OPEN ISSUES section had
+> already been updated for this landing while this file's own version-history chain had not.)
+> **Last Updated (prior):** July 22, 2026 (v2.32 — **Goalkeeper #11 + Heading #10 engine integration, Phase 1
 > (opt-in)** — the GK/Heading attribute projections landed with a live consumer, per the new converged
 > supplement `docs/tracking/gk-heading-engine-integration-design.md`. `MatchEngine.cs` v1.44 constructs
 > both sealed orchestrators + four stateless nested adapters (`HeadingBallWorldAdapter` /

@@ -1,5 +1,21 @@
 # File Manifest (Post-Migration Baseline)
 
+**Last Updated:** July 24, 2026 (**Documentation sync — reconciling three landings this manifest's
+per-file tables had not caught up to (the July 22 narrative entry above only described them in
+prose).** GK/Heading Phase 2 added `src/goalkeeper-mechanics/GoalkeeperTickState.cs` (typed
+cross-tick carrier: `CaptureState()`/`RestoreState(in …)` seam, serialized at
+`SNAPSHOT_SCHEMA_VERSION` 18) and `src/heading-mechanics/HeadingTickState.cs` (same pattern) —
+rows added to their spec's per-file tables below. The DT-emitted SAVE action (`ERR-008-013`)
+added `src/decision-tree/IDtSaveDispatch.cs` (dispatch seam: primitives only) and extended
+`ActionType.cs` with `SAVE = 7` — row added / description corrected below; Decision Tree file
+count corrected from 38 to 39. The closed-loop scenario added
+`src/match-engine/tests/MatchEngineGkHeadingScenarios.cs` +
+`MatchEngineGkHeadingScenarioTests.cs` (registers `gk-heading-flag-on-composition` on the `#19
+ScenarioRunner`) — already named in this file's July 23 narrative entry (top of file) but not yet
+in a static table; noted here since `src/match-engine/` files are tracked narratively rather than
+in a per-file table in this manifest. See root `CLAUDE.md` and `src/CLAUDE.md` v2.33 for the full
+landing description.)
+
 **Created:** April 30, 2026  
 **Last Updated:** July 22, 2026 (**Goalkeeper #11 + Heading #10 engine integration, Phase 1 (opt-in)** —
 the GK/Heading attribute projections landed with a live consumer, per the new supplement
@@ -488,7 +504,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/heading-mechanics/HeadingSpinTransfer.cs` | FM-010-004 head angular-velocity derivation + outgoing spin (§3.6) |
 | `src/heading-mechanics/HeadingDuelResolution.cs` | FM-010-005 duel scoring; ICollisionEventConsumer; pre-allocated buffers |
 | `src/heading-mechanics/HeadingTelemetry.cs` | Stage 0 stub; emits §2.4 heading.* trace-pipeline channels at Stage 0+1 |
-| `src/heading-mechanics/HeadingMechanics.cs` | 60 Hz orchestrator; two-pass per-frame loop (§4.6) |
+| `src/heading-mechanics/HeadingMechanics.cs` | 60 Hz orchestrator; two-pass per-frame loop (§4.6); gains `CaptureState()`/`RestoreState(in HeadingTickState)` (GK/Heading Phase 2, Jul 23, 2026) |
+| `src/heading-mechanics/HeadingTickState.cs` | GK/Heading Phase 2 (Jul 23, 2026): typed cross-tick carrier struct for the orchestrator's in-flight state, serialized by `MatchEngine` at `SNAPSHOT_SCHEMA_VERSION` 18 (Option-B convention, the `PressingTickState` precedent) |
 
 ### Spec #11 — Goalkeeper Mechanics (`src/goalkeeper-mechanics/`)
 
@@ -530,7 +547,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/goalkeeper-mechanics/GoalkeeperTelemetry.cs` | Stage 0 stub; emits §2.4 gk.* trace-pipeline channels at Stage 0+1 (12 channels) |
 | `src/goalkeeper-mechanics/EventBusStub.cs` | Wired to EventBus.Publish; 3-tier generic IEventA/B/C overloads |
 | `src/goalkeeper-mechanics/EventBusRegistrar.cs` | Boot-time RegisterExternalRow<T>() for SaveAttemptedEvent (0x14) + BallClaimedEvent (0x15) + DistributionExecutedEvent (0x16) + GoalkeeperRushEvent (0x17) |
-| `src/goalkeeper-mechanics/GoalkeeperMechanics.cs` | Main 10 Hz + 60 Hz orchestrator: state machine, dive kinematics, handling quality, cross-claim duels, rush, distribution; constructor-injected |
+| `src/goalkeeper-mechanics/GoalkeeperMechanics.cs` | Main 10 Hz + 60 Hz orchestrator: state machine, dive kinematics, handling quality, cross-claim duels, rush, distribution; constructor-injected; gains `CaptureState()`/`RestoreState(in GoalkeeperTickState)` (GK/Heading Phase 2, Jul 23, 2026) |
+| `src/goalkeeper-mechanics/GoalkeeperTickState.cs` | GK/Heading Phase 2 (Jul 23, 2026): typed cross-tick carrier struct for the orchestrator's in-flight state, serialized by `MatchEngine` at `SNAPSHOT_SCHEMA_VERSION` 18 (Option-B convention, the `PressingTickState` precedent) |
 
 ### Perception System (#7) — 14 files
 
@@ -555,7 +573,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/perception-system/PerceptionTickState.cs` | Readonly struct: D4 snapshot bundle (RecognitionLatencyState + ShoulderCheckState + per-agent ball-perception carry-over); returned by PerceptionSystem.CaptureState for the Match Engine snapshot layer |
 | `src/perception-system/PerceptionSystem.cs` | 10Hz orchestrator; 7-step pipeline for all 22 agents; forced-refresh handler; zero heap allocation on hot path (§3.0–§3.8, §4.1, §4.6). v1.2: AR-2 L-1/L-2 — removed prevBallVisible argument; added length guards to HandleForcedRefresh; added agentHasPossession length guard. |
 
-### Decision Tree (#8) — 38 files
+### Decision Tree (#8) — 39 files
 
 | File | Description |
 |------|-------------|
@@ -585,9 +603,10 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/decision-tree/TacticalWeights.cs` | Constants: tactical multipliers for all action types (§3.4) |
 | `src/decision-tree/PitchGeometry.cs` | Static helpers: field zone classification, goal post positions, centre (§3.1.1) |
 | `src/decision-tree/IDtMovementController.cs` | Public interface: dispatch boundary to Agent Movement #2 (§3.5) |
+| `src/decision-tree/IDtSaveDispatch.cs` | Public interface (primitives only): dispatch boundary for the DT-emitted goalkeeper SAVE action to `MatchEngine.HostSaveDispatch` (`ERR-008-013`, Jul 23, 2026) |
 | `src/decision-tree/EventBusStub.cs` | Wired to EventBus.Publish (internal; single-sig for DecisionMadeEvent) |
 | `src/decision-tree/EventBusRegistrar.cs` | Boot-time RegisterExternalRow<T>() for DecisionMadeEvent (0x11) |
-| `src/decision-tree/ActionType.cs` | Enum: PASS/SHOOT/DRIBBLE/HOLD/MOVE_TO_POSITION/PRESS/INTERCEPT |
+| `src/decision-tree/ActionType.cs` | Enum: PASS/SHOOT/DRIBBLE/HOLD/MOVE_TO_POSITION/PRESS/INTERCEPT/SAVE (SAVE=7 added `ERR-008-013`, Jul 23, 2026 — last ordinal fitting the 3-bit composure-noise field; opt-in-gated, off-ball-only) |
 | `src/decision-tree/DtState.cs` | Enum: IDLE/EVALUATING/EXECUTING/INTERRUPTED (§3.7.1) |
 | `src/decision-tree/FieldZone.cs` | Enum: DEFENSIVE/MIDFIELD/ATTACKING |
 | `src/decision-tree/MatchPhase.cs` | Enum: OPEN_PLAY/SET_PIECE_HOME/SET_PIECE_AWAY/KICK_OFF |
@@ -1125,9 +1144,12 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 ## Current Specification Folders
 
-All 26 spec folders now exist in `docs/specs/` (20 Stage-0 + Stage-1 forward specs #21–#26; rows
-21/22 were missing from this table between their June 2026 promotions and July 8, 2026 —
-reconciled). Status reflects authoritative classification in `SPEC_INDEX.md`.
+**38 spec folders now exist in `docs/specs/`** (20 Stage-0 + Stage-1-forward specs #21–#27 + the
+management-layer wave #28–#41/#49 per `docs/tracking/management-layer-spec-roadmap.md`, opened
+July 22, 2026 — see root `CLAUDE.md` OPEN ISSUES for the wave's own tracking entry). Rows 27–41/49
+added July 24, 2026 (this table had not been extended past #26 since July 10, 2026, though
+`SPEC_INDEX.md` itself stayed current throughout). Status reflects authoritative classification in
+`SPEC_INDEX.md`.
 
 | # | Folder | Status |
 |---|--------|--------|
@@ -1157,6 +1179,18 @@ reconciled). Status reflects authoritative classification in `SPEC_INDEX.md`.
 | 24 | `docs/specs/build-up-structures/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+3M+2L resolved Jul 8; back-props ERR-021-006/012-008 filed + landed at approval; append order pinned #23 → #24 → #25; FR-BU-001..016; KD-3 records the deliberate TransitionWon-gating refinement vs the supplement |
 | 25 | `docs/specs/positional-rotations/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 1H+1M+3L resolved Jul 8 + PASS-2 clean at H/M; Appendix A complete for all three `FormationFamily` members; back-props ERR-021-007/012-009 (incl. the #12 `SlotIndex` single-writer amendment) filed + landed at approval; FR-RO-001..018 |
 | 26 | `docs/specs/tactical-presets/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+1M+2L resolved Jul 8; §8.2 fully closed (Bradley & Noakes 2013 verified Jul 10); no back-props (§2.3); engine-substrate gates carried forward upstream-owned; FR-TP-001..020 |
+| 27 | `docs/specs/squad-player-data/` | APPROVED (Jul 22, 2026) — canonical player-attribute/roster data layer replacing the match engine's all-neutral synthetic agents; real `src/player-database/` + `src/match-engine/` code (attribute projection, lineup selection, distinct-squad snapshot restore) |
+| 28 | `docs/specs/player-progression-lifecycle/` | APPROVED (Jul 23, 2026) — aging, retirement, regens/newgens, attribute CA/PA growth-decline; back-prop ERR-028-001; spec-only, no `src/` code |
+| 29 | `docs/specs/training-system/` | APPROVED (Jul 23, 2026) — team + individual training, coaching effect, fitness/injury interplay; design-AR 1H+1M+2L → clean; section-file PASS-1 0H+1M; back-prop ERR-029-001; spec-only |
+| 30 | `docs/specs/season-competition-loop/` | APPROVED (Jul 22, 2026) — career/season game loop, league/fixtures/table/calendar, board objectives, day-advance tick order other Wave 2–4 specs hook into via null seams; back-props ERR-030-001..006; spec-only |
+| 31 | `docs/specs/transfers-contracts-negotiation/` | APPROVED (Jul 23, 2026) — transfer windows, bids, contracts/clauses, wages/budgets; owns the reusable negotiation seam #32/#34 consume; validate-all-before-commit atomicity vs #40 budget; back-prop ERR-030-004; section-file AR-1 3M+1L → AR-2 1L → CONVERGENCE; spec-only |
+| 33 | `docs/specs/personalities-morale-dynamics/` | APPROVED (Jul 23, 2026) — personality model, morale, cliques/chemistry — the vol-2 human-systems producer Living World #22 was built to consume read-only; #22 read surface matched verbatim to the FR-LW-004 PlayerEdge contract; zero approval-time back-props (pre-declared per the roadmap's §4 sequencing); section-file AR-1 5M+4L → AR-2 1M+2L → CONVERGENCE; spec-only |
+| 34 | `docs/specs/staff-backroom/` | APPROVED (Jul 23, 2026) — coaches/scouts/physios as attributed entities modulating #29/#41/#33/#31; quality projections return each consumer's own identity type (neutral-staff season byte-identical to pre-#34); back-prop ERR-030-006; spec-only |
+| 37 | `docs/specs/match-analytics-statistics/` | APPROVED (Jul 22, 2026) — possession/shots/xG/PPDA/heatmaps; spec-only |
+| 38 | `docs/specs/ui-client-framework/` | APPROVED (Jul 22, 2026) — framework slice only (menus/tactics/match-view/squad screens); full screen content is a later wave; spec-only |
+| 40 | `docs/specs/club-finances-economy/` | APPROVED (Jul 23, 2026) — per-club budgets, wage ledger, prize money, the counterparty-constraint layer #31 reads; `SettleFinances` season-boundary step inserted at #30's `RollToNextSeason()`; draw-free minimal tier (`_RESERVED_0x29_` stays reserved); design-AR 1M+1L → clean; section-file AR-1 1M → AR-2 → AR-3 CONVERGENCE; spec-only |
+| 41 | `docs/specs/injuries-medical/` | APPROVED (Jul 23, 2026) — injury occurrence/severity/recovery on the world tick; one world-tick `injuries.occurrence` RNG stream keyed `(playerId, worldDay, purpose)`; `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` allocated (ERR-041-001); back-prop ERR-030-002; spec-only |
+| 49 | `docs/specs/localization-accessibility/` | APPROVED (Jul 23, 2026) — seam + template-contract slice only; full i18n/a11y content is a later wave; spec-only |
 
 **Notes:**
 - Attacking AI (#15) files (May 17–18, 2026): `outline.md` (high-level v1.0), `outline-detailed.md` (v1.1), `adversarial-review-outline-detailed-v1.md`, `section-1.md` through `section-9-approval-checklist.md` + `appendices.md` (all at v0.2). `DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS: #16 §3.4]` (ERR-015-001 CLOSED May 18, 2026). Lead-developer R-01..R-05 signed May 18, 2026. Status: APPROVED.

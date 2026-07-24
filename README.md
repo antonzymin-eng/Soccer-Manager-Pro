@@ -1,7 +1,25 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** July 14, 2026 (**Match-flow model completion LANDED** — throw-ins, corners,
+**Last Updated:** July 24, 2026 (**Documentation sync pass — this file had fallen 10 days behind two
+active work-streams.** (1) **Management-layer specification wave:** a new
+`docs/tracking/management-layer-spec-roadmap.md` (opened Jul 22) scopes the manager-facing/off-pitch
+half of the game as candidate specs #27–#50; fifteen are already authored and **APPROVED**: #27
+Squad/Player Data Layer (Jul 22, has real `src/` code), #28 Player Progression & Lifecycle (Jul 23),
+#29 Training System (Jul 23), #30 Season & Competition Loop (Jul 22), #31 Transfers, Contracts &
+Negotiation (Jul 23), #33 Personalities, Morale & Squad Dynamics (Jul 23), #34 Staff & Backroom (Jul
+23), #37 Match Analytics & Statistics (Jul 22), #38 UI/Client Framework — framework slice (Jul 22),
+#40 Club Finances & Economy (Jul 23), #41 Injuries & Medical (Jul 23), #49 Localization &
+Accessibility — seam slice (Jul 23). `SPEC_INDEX.md` now reads **38 APPROVED / 0 IN REVIEW / 0 NOT
+STARTED**; except for #27, none of these has `src/` code yet — spec-only, same stage the Stage-0 set
+occupied before coding began. (2) On the match-engine side: GK (#11)/Heading (#10) engine integration
+reached **Phase 2** (cross-tick state serialization, `SNAPSHOT_SCHEMA_VERSION` 17 → 18), a closed-loop
+`#19 ScenarioRunner` scenario, and a DT-emitted goalkeeper `SAVE` action (`ERR-008-013`) — all landed
+Jul 23, 2026; the unified season save (`src/season-save/`) and the on-disk match-save format landed
+Jul 21–22. See `docs/tracking/management-layer-spec-roadmap.md`, `docs/specs/SPEC_INDEX.md`, and root
+`CLAUDE.md`'s OPEN ISSUES section for full detail — this entry is a documentation-currency
+reconciliation, no code/spec change.)
+**Last Updated (prior):** July 14, 2026 (**Match-flow model completion LANDED** — throw-ins, corners,
 goal kicks, fouls/cards, offside, substitutions, half-time break, and full-time end (previously
 only kickoff + goal-restart existed). Design doc adversarially reviewed to convergence, then
 implemented, then the code itself adversarially reviewed to convergence (catching an
@@ -78,10 +96,16 @@ see root `CLAUDE.md` OPEN ISSUES and `SPEC_INDEX.md` "RESERVED" section.)
 **Project Type:** Full-scale football management simulation
 **Development Timeline:** Open-ended passion project, staged releases
 **Target:** The Football Manager Killer
-**Current Stage:** Stage 0+1 — Implementation (coding begun May 19, 2026). All 26 approved specs
-(20 Stage-0 + 6 Stage-1 forward specs #21–#26) have active `src/` implementations; the match
-engine composition root now includes goal detection, halves/full-time, and the complete
-match-flow model (throw-ins, corners, goal kicks, fouls/cards, offside, substitutions).
+**Current Stage:** Stage 0+1 — Implementation (coding begun May 19, 2026), with a large Stage-2+
+specification wave running ahead of code. `SPEC_INDEX.md` reads **38 APPROVED / 0 IN REVIEW / 0 NOT
+STARTED** as of July 23, 2026. Specs #1–#27 (the Stage-0 set plus Tactical Instructions, Living
+World, Dismarking, Build-Up Structures, Positional Rotations, Tactical Presets, and Squad/Player
+Data Layer) have active `src/` implementations; the match engine composition root now includes goal
+detection, halves/full-time, the complete match-flow model, snapshot save/restore, on-disk match
+saves, and a unified season save file. Specs #28–#41 and #49 (the manager-facing/off-pitch layer —
+progression, training, season loop, transfers, personalities, staff, finances, injuries, analytics,
+UI framework, localization) are approved specification text only, per
+`docs/tracking/management-layer-spec-roadmap.md` — no `src/` implementation yet.
 
 ---
 
@@ -191,28 +215,39 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 
 **Progress:** Implementation Phase (coding begun May 19, 2026)
 **Spec Phase Started:** February 2, 2026
-**Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED; 6 further Stage-1 forward specs (#21 Jun 20, #22 Jun 22, #23–#26 Jul 10) APPROVED since
-**Deliverables:** 26 comprehensive specification documents + active `src/` implementation for specs #1–#8, #10–#19, #21–#26, plus the unnumbered Match Engine composition root
+**Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED; specification work has
+continued well past Stage 0 since — 18 further specs (#21–#27, #28–#31, #33, #34, #37, #38, #40,
+#41, #49) APPROVED between Jun 20 and Jul 23, 2026
+**Deliverables:** 38 APPROVED specs total (see `SPEC_INDEX.md`); active `src/` implementation for
+specs #1–#8, #10–#19, #21–#27, plus the unnumbered Match Engine / Season Save composition roots.
+Specs #28–#41/#49 are specification-only (no `src/` code yet).
 
-**Summary (July 14, 2026):** All 20 Stage-0 specs APPROVED, plus 6 Stage-1 forward specs — #21
-Tactical Instructions, #22 Living World System, #23 Dismarking & Marker-Awareness AI, #24
-Scripted Build-Up Structures, #25 Positional Rotations, #26 Tactical Presets & AI-Manager
-Selection — all APPROVED. Every spec #1–#20 plus #21–#26 has an active `src/` implementation. A
-non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) compiles the entire `src/`
-tree and runs the full NUnit suite on every push; quarantine list is empty. **Match Engine**
-(`src/match-engine/`, design note at `docs/tracking/match-engine-design.md`) — the composition
-root wiring every subsystem into the deterministic-sim 7-phase tick pipeline — now includes goal
-detection + the match-length/halves model (Jul 11), the #21–#26 tactical wiring (Jul 10–11), and
-the **complete match-flow model** (Jul 14): throw-ins, corners, goal kicks, fouls/cards
-(sent-off tracking), offside, substitutions, and half-time/full-time transitions.
-**`SNAPSHOT_SCHEMA_VERSION` is now 15.** The Unity engine target was bumped 2022.3.62f1 → Unity
-6000.4.9f1 (DX11) on Jul 13 — documentation-only; the Stage-0 platform-certification pin reverted
-to `⏳ RECERT REQUIRED` pending a real cert run on the new tuple. `src/CLAUDE.md` coding guide
-(v2.17) governs all C# authoring.
-**Total specification output:** ~5 MB+ across 120+ files (see file-manifest.md)
-**Implementation active:** #1–#20 implemented; #21–#26 all implemented and wired (behaviour-neutral
-at their identity defaults until a manager/preset sets non-default tactics); match-engine
-composition root includes goal detection, halves/full-time, and the full match-flow model.
+**Summary (July 24, 2026):** All 20 Stage-0 specs APPROVED, plus 7 match-engine-wired Stage-1-forward
+specs — #21 Tactical Instructions, #22 Living World System, #23 Dismarking & Marker-Awareness AI,
+#24 Scripted Build-Up Structures, #25 Positional Rotations, #26 Tactical Presets & AI-Manager
+Selection, #27 Squad/Player Data Layer — all APPROVED and implemented. On top of that, **a
+management-layer specification wave** (`docs/tracking/management-layer-spec-roadmap.md`, opened Jul
+22) has produced 12 further APPROVED specs covering the manager-facing/off-pitch game — #28 Player
+Progression & Lifecycle, #29 Training System, #30 Season & Competition Loop, #31 Transfers, Contracts
+& Negotiation, #33 Personalities, Morale & Squad Dynamics, #34 Staff & Backroom, #37 Match Analytics
+& Statistics, #38 UI/Client Framework (framework slice), #40 Club Finances & Economy, #41 Injuries &
+Medical, #49 Localization & Accessibility (seam slice) — **none of which has `src/` code yet.**
+`SPEC_INDEX.md`: **38 APPROVED / 0 IN REVIEW / 0 NOT STARTED.** A non-certifying Linux dotnet
+compile/test CI gate (`tools/dotnet-ci/`) compiles the entire `src/` tree and runs the full NUnit
+suite on every push; quarantine list is empty. **Match Engine** (`src/match-engine/`, design note at
+`docs/tracking/match-engine-design.md`) now includes goal detection, the match-length/halves model,
+the #21–#26 tactical wiring, the complete match-flow model, snapshot save/restore (Phases 1–3),
+an on-disk match-save file format, a unified season-save file (`src/season-save/`), the Squad/Player
+Data Layer (#27, incl. lineup selection + distinct-squad restore), and GK (#11)/Heading (#10) engine
+integration through Phase 2 (opt-in; cross-tick state now snapshot-safe) plus a DT-emitted
+goalkeeper SAVE action. **`SNAPSHOT_SCHEMA_VERSION` is now 18.** The Unity engine target
+(6000.4.9f1, DX11) was recertified Jul 19, 2026 (`certification-platform.md` v1.4, ✅ PINNED).
+`src/CLAUDE.md` coding guide (v2.33) governs all C# authoring.
+**Total specification output:** well over 5 MB across 150+ files across 38 specs (see
+file-manifest.md).
+**Implementation active:** #1–#27 implemented and wired; #28–#41/#49 approved but uncoded pending
+their own §6 T-phase implementation plans; match-engine composition root includes goal detection,
+halves/full-time, the full match-flow model, snapshot/season save, and opt-in GK/Heading.
 
 ---
 
@@ -255,6 +290,20 @@ composition root includes goal detection, halves/full-time, and the full match-f
 24. ✅ Scripted Build-Up Structures — **APPROVED** Jul 10, 2026 (3-zone team-relative classifier + hysteresis; `SlotComposer` build-up overlay stage wired Jul 11)
 25. ✅ Positional Rotations — **APPROVED** Jul 10, 2026 (adjacency-table two-sided rotation with hysteresis; `RotationController` wired into `PositioningAITick` Jul 11)
 26. ✅ Tactical Presets & AI-Manager Selection — **APPROVED** Jul 10, 2026 (preset library over #21's parameter space + AI-manager kickoff/interval decision gate and adaptation ladder; full T1–T4 stack + the engine-substrate gates it depended on — goal detection, halves model — all landed Jul 11; only the §9.2 `[GT]` balance-pass review remains)
+27. ✅ Squad / Player Data Layer — **APPROVED** Jul 22, 2026 (canonical player-attribute/roster data layer replacing the match engine's all-neutral synthetic agents; wired into `MatchEngine` — attribute projection, lineup selection, distinct-squad snapshot restore all landed; real code in `src/player-database/`)
+
+**Management-Layer Specs (Stage 2–5, spec-authoring ahead of implementation — see `docs/tracking/management-layer-spec-roadmap.md`):**
+28. ✅ Player Progression & Lifecycle — **APPROVED** Jul 23, 2026 (aging, retirement, regens/newgens, attribute CA/PA growth-decline; spec-only, no `src/` code)
+29. ✅ Training System — **APPROVED** Jul 23, 2026 (team + individual training, coaching effect, fitness/injury interplay; spec-only)
+30. ✅ Season & Competition Loop — **APPROVED** Jul 22, 2026 (career/season game loop, league/fixtures/table/calendar, board objectives; spec-only)
+31. ✅ Transfers, Contracts & Negotiation — **APPROVED** Jul 23, 2026 (transfer windows, bids, contracts/clauses, wages/budgets, negotiation seam reused by #32/#34; spec-only)
+33. ✅ Personalities, Morale & Squad Dynamics — **APPROVED** Jul 23, 2026 (personality model, morale, cliques/chemistry — the vol-2 human-systems producer Living World #22 was built to consume read-only; spec-only)
+34. ✅ Staff & Backroom — **APPROVED** Jul 23, 2026 (coaches/scouts/physios as attributed entities modulating #29/#41/#33/#31; spec-only)
+37. ✅ Match Analytics & Statistics — **APPROVED** Jul 22, 2026 (possession/shots/xG/PPDA/heatmaps; spec-only)
+38. ✅ UI / Client Framework — **APPROVED** Jul 22, 2026 (framework slice only — menus/tactics/match-view/squad screens; spec-only)
+40. ✅ Club Finances & Economy — **APPROVED** Jul 23, 2026 (per-club budgets, wage ledger, prize money — the counterparty-constraint layer #31 reads; spec-only)
+41. ✅ Injuries & Medical — **APPROVED** Jul 23, 2026 (injury occurrence/severity/recovery on the world tick; spec-only)
+49. ✅ Localization & Accessibility — **APPROVED** Jul 23, 2026 (seam + template-contract slice only; spec-only)
 
 **Status Key:**
 - ⏳ Not started
@@ -264,7 +313,7 @@ composition root includes goal detection, halves/full-time, and the full match-f
 - ✅ Approved
 - 🔒 Locked (implementation begun)
 
-**Locked (implementation begun):** Ball Physics #1, Agent Movement #2, Collision System #3, First Touch #4, Pass Mechanics #5, Shot Mechanics #6, Perception System #7, Decision Tree #8, Heading Mechanics #10, Goalkeeper Mechanics #11, Positioning AI #12, Pressing AI #13, Defensive AI #14, Attacking AI #15, Deterministic Simulation #16, Event System #17, Performance Optimization #18, Testing Strategy #19, Tactical Instructions #21 (full — T0/T2/runtime activation/per-agent tactics/disk loaders), Living World System #22 (season/world loop, ArcEngine, text generation), Dismarking & Marker-Awareness AI #23, Scripted Build-Up Structures #24, Positional Rotations #25, Tactical Presets & AI-Manager Selection #26. Fixed64 Math Library #9 and Code Standards #20 have no `src/` implementation by design (#9 implementation deferred to Stage 5+; #20 is a style guide, not a coded subsystem). Plus the unnumbered `src/match-engine/` composition root (goal detection, halves/full-time model, and the complete match-flow model — throw-ins, corners, goal kicks, fouls/cards, offside, substitutions).
+**Locked (implementation begun):** Ball Physics #1, Agent Movement #2, Collision System #3, First Touch #4, Pass Mechanics #5, Shot Mechanics #6, Perception System #7, Decision Tree #8, Heading Mechanics #10, Goalkeeper Mechanics #11, Positioning AI #12, Pressing AI #13, Defensive AI #14, Attacking AI #15, Deterministic Simulation #16, Event System #17, Performance Optimization #18, Testing Strategy #19, Tactical Instructions #21 (full — T0/T2/runtime activation/per-agent tactics/disk loaders), Living World System #22 (season/world loop, ArcEngine, text generation), Dismarking & Marker-Awareness AI #23, Scripted Build-Up Structures #24, Positional Rotations #25, Tactical Presets & AI-Manager Selection #26, Squad / Player Data Layer #27 (canonical attributes, lineup selection, distinct-squad snapshot restore). Fixed64 Math Library #9 and Code Standards #20 have no `src/` implementation by design (#9 implementation deferred to Stage 5+; #20 is a style guide, not a coded subsystem). **Approved but not yet coded:** #28, #29, #30, #31, #33, #34, #37, #38, #40, #41, #49 (the management-layer wave — spec-only). Plus the unnumbered `src/match-engine/` composition root (goal detection, halves/full-time model, the complete match-flow model, snapshot save/restore, on-disk match saves, and opt-in GK/Heading integration) and `src/season-save/` (unified season-save file root).
 
 **For detailed progress tracking, see:** [docs/tracking/PROGRESS.md](docs/tracking/PROGRESS.md)
 **For file inventory, see:** [docs/tracking/file-manifest.md](docs/tracking/file-manifest.md)
