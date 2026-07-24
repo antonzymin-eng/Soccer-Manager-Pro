@@ -1,7 +1,17 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 24, 2026 (**Player Progression & Lifecycle #28 T0 landed** — the new
+**Last Updated:** July 24, 2026 (**#28 T0 adversarial-review follow-ups + CI `.meta` fix.** **New files:**
+`src/player-database/PlayerGenerationRng.cs` v1.0 (+ `.meta`) — shared `DrawBounded` (the biased-but-accepted
+generation modulo mapping + rationale) + `Clamp`, extracted from the duplicated copies in `RosterGenerator`
+(#27) / `RegenGenerator` (#28); plus the 15 Unity `.meta` sidecars for the new `player-progression/`
+assembly + `PlayerGenerationRng.cs` (deterministic `md5(path)` GUIDs via `tools/unity-ci/generate-missing-metas.sh`
+— the "Unity .meta integrity" PR check on #250 had failed with 14 missing metas; all other checks passed).
+**Modified:** `src/player-database/RosterGenerator.cs` v1.3 + `src/player-progression/RegenGenerator.cs` v1.2
+(delegate to `PlayerGenerationRng`; byte-identical — verified by the unchanged PlayerDatabase/PlayerProgression/
+MatchEngine suites), `src/player-progression/RegenGenerator.cs` also v1.1 (clubId `<param>` doc corrected —
+inert at T0), `src/CLAUDE.md` v2.35. **Full dotnet gate: PASSED, 0 failures (whole tree green).**)
+**Last Updated (prior):** July 24, 2026 (**Player Progression & Lifecycle #28 T0 landed** — the new
 `src/player-progression/` assembly (`TacticalDirector.PlayerProgression`; references `PlayerDatabase` +
 `DeterministicSim` only), the draw-free aging core + the pure single-player regen generator, per
 `docs/tracking/progression-t0-implementation-plan.md`. **New files:**

@@ -74,17 +74,17 @@ namespace TacticalDirector.PlayerProgression
                     "RegenGenerator.GenerateRegen: RNG reservation failed (a reservation is already open on this stream).");
             }
 
-            int firstNameIdx = DrawBounded(rng, streamIndex, DrawFirstName, NameCatalogue.FirstNames.Length);
-            int lastNameIdx = DrawBounded(rng, streamIndex, DrawLastName, NameCatalogue.LastNames.Length);
+            int firstNameIdx = PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawFirstName, NameCatalogue.FirstNames.Length);
+            int lastNameIdx = PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawLastName, NameCatalogue.LastNames.Length);
             // Nation is not a #27 PlayerRecord field today, so a regen draws name/age/position/weakFoot/
             // attrs/PA only (the §3.3 "club/nation from the reference roster" is a forward reference).
             int ageSpan = PlayerProgressionConstants.REGEN_AGE_MAX - PlayerProgressionConstants.REGEN_AGE_MIN + 1;
-            int age = PlayerProgressionConstants.REGEN_AGE_MIN + DrawBounded(rng, streamIndex, DrawAge, ageSpan);
-            var position = (PlayerPosition)DrawBounded(rng, streamIndex, DrawPosition, PlayerPositionCount);
+            int age = PlayerProgressionConstants.REGEN_AGE_MIN + PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawAge, ageSpan);
+            var position = (PlayerPosition)PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawPosition, PlayerPositionCount);
 
             int weakFootSpan = 2 * PlayerDatabaseConstants.WeakFootSpread + 1;
-            int weakFootJitter = DrawBounded(rng, streamIndex, DrawWeakFoot, weakFootSpan) - PlayerDatabaseConstants.WeakFootSpread;
-            int weakFoot = Clamp(
+            int weakFootJitter = PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawWeakFoot, weakFootSpan) - PlayerDatabaseConstants.WeakFootSpread;
+            int weakFoot = PlayerGenerationRng.Clamp(
                 PlayerDatabaseConstants.WeakFootBase + weakFootJitter,
                 PlayerDatabaseConstants.WEAK_FOOT_MIN,
                 PlayerDatabaseConstants.WEAK_FOOT_MAX);
@@ -94,8 +94,8 @@ namespace TacticalDirector.PlayerProgression
             int jitterSpan = 2 * PlayerDatabaseConstants.AttributeSpread + 1;
             for (int i = 0; i < AttrIdx.Count; i++)
             {
-                int jitter = DrawBounded(rng, streamIndex, AttributeDrawBase + i, jitterSpan) - PlayerDatabaseConstants.AttributeSpread;
-                attrs[i] = Clamp(
+                int jitter = PlayerGenerationRng.DrawBounded(rng, streamIndex, AttributeDrawBase + i, jitterSpan) - PlayerDatabaseConstants.AttributeSpread;
+                attrs[i] = PlayerGenerationRng.Clamp(
                     PlayerDatabaseConstants.AttributeBaseMean + bias[i] + jitter,
                     PlayerDatabaseConstants.ATTRIBUTE_MIN,
                     PlayerDatabaseConstants.ATTRIBUTE_MAX);
@@ -113,7 +113,7 @@ namespace TacticalDirector.PlayerProgression
                 PlayerProgressionConstants.PA_MIN,
                 Math.Min(currentAbility + PlayerProgressionConstants.REGEN_PA_HEADROOM, PlayerProgressionConstants.ABILITY_MAX));
             int paSpan = PlayerProgressionConstants.ABILITY_MAX - paFloor + 1;
-            int potentialAbility = paFloor + DrawBounded(rng, streamIndex, DrawPotentialAbility, paSpan);
+            int potentialAbility = paFloor + PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawPotentialAbility, paSpan);
 
             rng.CloseReservation(streamIndex);
 
@@ -143,34 +143,8 @@ namespace TacticalDirector.PlayerProgression
             return (record, life);
         }
 
-        // Maps one reserved draw to a value in [0, bound). bound must be > 0 (caller-guaranteed — every
-        // call site uses a fixed positive catalogue length or span). The plain `value % bound` modulo
-        // bias is deliberately accepted (the #27 RosterGenerator.DrawBounded rationale: < 2^-59 for the
-        // bounds used here, generation is not a statistically load-bearing surface, and rejection
-        // sampling would break the fixed PROGRESSION_REGEN_FIELDS reservation).
-        private static int DrawBounded(DeterministicRngService rng, int streamIndex, int drawIndex, int bound)
-        {
-            ushort err = rng.DrawReserved(streamIndex, drawIndex, out ulong value);
-            if (err != 0)
-            {
-                throw new InvalidOperationException(
-                    "RegenGenerator.DrawBounded: draw failed — corrupt reservation state (internal invariant).");
-            }
-            return (int)(value % (ulong)bound);
-        }
-
-        private static int Clamp(int value, int min, int max)
-        {
-            if (value < min)
-            {
-                return min;
-            }
-            if (value > max)
-            {
-                return max;
-            }
-            return value;
-        }
+        // DrawBounded (the reserved-draw → [0, bound) modulo mapping + its accepted-bias rationale) and
+        // Clamp live in PlayerDatabase.PlayerGenerationRng, shared with #27's RosterGenerator.
     }
 }
 
@@ -181,4 +155,7 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | `<param>` doc — it is inert at T0 (retained for the §3.3       |
 // |         |            |        | signature / T2 use), not the stream/id scoper the old doc      |
 // |         |            |        | claimed (streamIndex scopes; newPlayerId is the id).           |
+// | 1.2     | 2026-07-24 | —      | Adversarial-review L: DrawBounded + Clamp extracted to the     |
+// |         |            |        | shared PlayerDatabase.PlayerGenerationRng (was duplicated with |
+// |         |            |        | #27's RosterGenerator); byte-identical, call sites delegate.   |
 #endregion
