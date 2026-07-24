@@ -102,24 +102,24 @@ So T0 lands **6 production files + the asmdef + 4 test files + the tests asmdef*
 Mirrors `player-database.asmdef` (no Unity engine ref — pure logic). **Nothing else referenced**
 (FR §4.1: no season assembly, no match engine).
 
-### 3.2 `PlayerProgressionConstants.cs` — Appendix A catalogue (region order Fixed → Derived → GT)
+### 3.2 `PlayerProgressionConstants.cs` — Appendix A catalogue (region order Fixed → Derived → Cross → GT)
 ```csharp
 public static class PlayerProgressionConstants
 {
     // #region Fixed
     public const int  DAYS_PER_YEAR = 365;                       // [FIXED] age-derivation divisor (§3.1.1)
     public const uint PROGRESSION_SAVE_FORMAT_VERSION = 1;       // [FIXED] lifecycle sub-blob version (§3.5) — declared now, consumed at T1
-    // #region Cross  (mirrors of #27 — the authority exists today)
-    public const int ATTRIBUTE_MIN = PlayerDatabaseConstants.ATTRIBUTE_MIN;   // [CROSS] 1
-    public const int ATTRIBUTE_MAX = PlayerDatabaseConstants.ATTRIBUTE_MAX;   // [CROSS] 20
     // #region Derived
     public const int PROGRESSION_REGEN_FIELDS =
         PlayerDatabaseConstants.IDENTITY_DRAWS_PER_PLAYER + PlayerDatabaseConstants.ATTRIBUTE_COUNT + 1; // [DERIVED] 5+31+1(PA) = 37 (§3.3 fixed budget)
+    // #region Cross  (mirrors of #27 — the authority exists today; Spec #20 region order: Cross after Derived)
+    public const int ATTRIBUTE_MIN = PlayerDatabaseConstants.ATTRIBUTE_MIN;   // [CROSS] 1
+    public const int ATTRIBUTE_MAX = PlayerDatabaseConstants.ATTRIBUTE_MAX;   // [CROSS] 20
     // #region GT  (illustrative pending the balance pass; shapes/tags are the contract — Appendix A)
     public const int  ABILITY_MAX          = 10000;             // [GT] wide-integer CA/PA scale ceiling
     public const long POINT_COST           = DAYS_PER_YEAR;     // [GT] cursor points per whole attribute-point ⇒ 1 step/yr with the band step (KD-8)
-    public const int  GROWTH_AGE           = 24;                // [GT] < this ⇒ Growth band (§4.3)
-    public const int  DECLINE_AGE          = 30;                // [GT] >= this ⇒ Decline band
+    public const int  GROWTH_AGE           = 24;                // [GT] < this ⇒ Growth band (§4.3 <24)
+    public const int  DECLINE_AGE          = 30;                // [GT] > this ⇒ Decline band (§4.3 >30 — age 30 stays Stable, Appendix A)
     public const int  RETIREMENT_AGE       = 36;                // [GT] hard retirement, deterministic (§3.4)
     public const int  GROWTH_DAILY_POINTS  = +1;                // [GT] Growth-band daily cursor accrual
     public const int  DECLINE_DAILY_POINTS = -1;                // [GT] Decline-band daily cursor accrual (Stable = 0)
@@ -164,8 +164,8 @@ public static class AbilityModel
     public enum AgeBand { Growth, Stable, Decline }   // no separate AgeBand.cs — §4.2 keeps it here
 
     public static AgeBand ClassifyAgeBand(int ageYears)
-        => ageYears <  PlayerProgressionConstants.GROWTH_AGE  ? AgeBand.Growth
-         : ageYears >= PlayerProgressionConstants.DECLINE_AGE ? AgeBand.Decline
+        => ageYears < PlayerProgressionConstants.GROWTH_AGE  ? AgeBand.Growth   // <24 (Appendix A)
+         : ageYears > PlayerProgressionConstants.DECLINE_AGE ? AgeBand.Decline  // >30, so 30 stays Stable (Appendix A "Age above which"); symmetric with the < growth side
          : AgeBand.Stable;
 
     // Position-weighted mean of the 31 [1,20] attrs scaled to [0, ABILITY_MAX] (§3.2).
@@ -175,11 +175,12 @@ public static class AbilityModel
 
     // Raise the next attribute by the deterministic weighted order (§3.1.2): highest PositionAttributeBias
     // weight first, ties by ascending AttrIdx; SKIP an attr at ATTRIBUTE_MAX or whose raise would push
-    // ComputeCA past potentialAbility (F1). Returns false if none is raisable (caller leaves the cursor).
-    public static bool TrySpendOnePoint(ref PlayerRecord rec, int potentialAbility);
+    // ComputeCA past life.PotentialAbility (F1). Returns false if none is raisable (caller leaves the cursor).
+    // Signature mirrors the §3.1 pseudocode's (ref record, ref lifecycle).
+    public static bool TrySpendOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life);
 
     // Symmetric decline: lower the next attribute by the mirror order (§3.1 drain).
-    public static void DrainOnePoint(ref PlayerRecord rec);
+    public static void DrainOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life);
 }
 ```
 **Satisfies:** FR-PG-003 (CA derived), FR-PG-004 (weighted spend + ceiling). **Tests:** §4.1 `AbilityModelTests`
@@ -199,11 +200,11 @@ public static class GrowthProjection
         var band = AbilityModel.ClassifyAgeBand(age);
         life.GrowthCursor += DailyPoints(band, rec.Position, in training, curveEnabled);
         while (life.GrowthCursor >= PlayerProgressionConstants.POINT_COST) {
-            if (!AbilityModel.TrySpendOnePoint(ref rec, life.PotentialAbility)) break;                // ceiling: leave cursor (no thrash, F1)
+            if (!AbilityModel.TrySpendOnePoint(ref rec, ref life)) break;                             // ceiling: leave cursor (no thrash, F1)
             life.GrowthCursor -= PlayerProgressionConstants.POINT_COST;
         }
         while (life.GrowthCursor <= -PlayerProgressionConstants.POINT_COST) {
-            AbilityModel.DrainOnePoint(ref rec);
+            AbilityModel.DrainOnePoint(ref rec, ref life);
             life.GrowthCursor += PlayerProgressionConstants.POINT_COST;
         }
         life.CurrentAbility = AbilityModel.ComputeCA(in rec.Attributes, rec.Position);                // derived (FR-PG-003)
@@ -234,7 +235,9 @@ public static class RegenGenerator
 ```
 > **Nation** is not a #27 `PlayerRecord` field today, so T0 draws name/age/position/weakFoot/attrs/PA
 > only (the "club/nation from the reference roster" of §3.3 is a forward reference; `clubId` scopes
-> the id). The young-age band + PA distribution are `[GT]` balance details — pin against §3.3.
+> the id). The young-age band + PA distribution (incl. the `PA_MIN` floor referenced in the steps
+> above) are `[GT]` balance details to pin against §3.3 — intentionally *not* T0 catalogue constants
+> in §3.2, so `PA_MIN` reads as an unpinned balance value, not a missing constant.
 
 **Satisfies:** FR-PG-010/011 (+ FR-PG-012's *emit-don't-mutate* is honored by returning a value, not
 touching a `Squad`). **Tests:** §4.1 `RegenGeneratorTests` (`T-PG-REG-001/003`; `T-PG-REG-002`
@@ -289,3 +292,4 @@ each PR (the project's build-loop discipline) before merge. **Next:** T1 (`Progr
 | Version | Date | Notes |
 |---|---|---|
 | 0.1 | 2026-07-23 | Initial file-by-file T0 plan, grounded in #28 section-2/3/4/5/6 + appendices (APPROVED) and verified #27/#16 source. Surfaces KD-A (BirthWorldDay supersedes the supplement's AgeAnchorDay; `GrowthCursor` is `long`) and KD-B (regen stream-const timing). Per-file signatures, constants (Appendix A tags), FR mapping, `T-PG-*` test assignment, 2-PR commit slice. |
+| 0.2 | 2026-07-24 | Adversarial-review pass 4 (fresh ground-truth against APPROVED #28 section-2/3/4/appendices + real #27 `PlayerDatabaseConstants`): M-2 `ClassifyAgeBand` decline boundary `>= DECLINE_AGE` → `> DECLINE_AGE` (Appendix A "age above which… >30"; age 30 stays Stable — was declining a year early, and asymmetric with the correct `< GROWTH_AGE` growth side); L-1 `TrySpendOnePoint`/`DrainOnePoint` signatures aligned to the §3.1 pseudocode's `(ref record, ref lifecycle)` + call sites; L-2 `PA_MIN` named in the §3.7 note as an intentional unpinned `[GT]` (not a missing §3.2 constant); L-3 §3.2 region order corrected to Spec #20's Fixed → Derived → Cross → GT (Cross was before Derived) + heading. |
