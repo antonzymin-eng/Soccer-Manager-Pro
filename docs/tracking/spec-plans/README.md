@@ -76,6 +76,9 @@ Promote in wave order: open a full design supplement (`docs/tracking/<name>-desi
 candidate, run it through adversarial review to convergence, author section files at `IN REVIEW`,
 and register the row in `SPEC_INDEX.md` at promotion — the same pipeline #21–#26 followed.
 **Status (July 24, 2026):** promoted and APPROVED so far: #27 (Wave 0); #30/#37/#38-framework/
-#49-seam (Wave 1); #28/#29/#40/#41 (Wave 2); #33 (Wave 3); #31/#34 (Wave 4) — see `SPEC_INDEX.md`,
-which overrides this note. Next unpromoted per wave order: **#32 (Wave 4 remainder), then Wave 5
-(#43 → #44 → #42 → #45).**
+#49-seam (Wave 1); #28/#29/#40/#41 (Wave 2); #33 (Wave 3); #31/#34 (Wave 4); **#42 (Wave 5)** — see
+`SPEC_INDEX.md`, which overrides this note. **#42 was taken ahead of #43/#44** (the Wave-5 order is
+#43 → #44 → #42 → #45) because its dependencies are #27/#28/#34/#40 — all APPROVED — and it needs
+nothing from competition structure or discipline; the intra-wave order is producer-before-consumer,
+which #42 does not violate. Next: **#45 (Wave 5), then Wave 6 (#35 → #46 → #36)**; #32 (Wave 4
+remainder) and #43/#44 remain unpromoted.

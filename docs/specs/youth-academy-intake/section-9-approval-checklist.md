@@ -1,9 +1,9 @@
 # Youth Academy & Intake #42 — Section 9: Approval Checklist
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — PASS-1 record + G1 closed)
-**Version:** 0.2
-**Status:** IN REVIEW
+**Last Updated:** July 24, 2026 (v0.3 — all gates closed; APPROVED)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -56,14 +56,14 @@
 - [x] `ERR-030-005` is soft-reserved by #31 and `-006` is #34's, making **`-007`** the next free number.
       *(`docs/tracking/spec-error-log.md`)*
 
-## 9.4 Open gates (must close before `IN REVIEW → APPROVED`)
+## 9.4 Gates (all closed)
 
 | Gate | Owner | Status |
 |---|---|---|
 | **G1** — section-file PASS-1 adversarial review + a v0.2 fix pass. | drafter | ✅ **CLOSED** — see §9.4.1 |
-| **G2** — file **ERR-030-007** (#30 academy tick-order null seam) atomically with the status flip. | drafter | ⏳ **OPEN** |
-| **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ⏳ **OPEN** |
-| **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ⏳ **OPEN** |
+| **G2** — file **ERR-030-007** (#30 academy tick-order null seam) atomically with the status flip. | drafter | ✅ **CLOSED** — filed July 24, 2026 (#30 §2/§3 → v0.7; `spec-error-log.md` v1.36) |
+| **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ✅ **CLOSED** — granted July 24, 2026 |
+| **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ✅ **CLOSED** — row flipped to APPROVED July 24, 2026 |
 
 ### 9.4.1 PASS-1 adversarial review record (G1)
 
@@ -92,20 +92,29 @@ bound (§7.4 R-1) owned by #28/#16.
 
 | Role | Criterion | Signed |
 |---|---|---|
-| R-01 | Scope and out-of-scope boundaries are unambiguous; no model #42 does not own is duplicated. | ☐ |
-| R-02 | Every formula has units, ranges, and at least one worked example; no fabricated verification values. | ☐ |
-| R-03 | Determinism posture is complete: stream ownership, anchor, draw budget, and the no-cursor claim are each justified. | ☐ |
-| R-04 | Persistence is version-gated, opaque, fail-loud, and bumps no format version it does not own. | ☐ |
-| R-05 | Cross-spec back-props are enumerated with owners and timing; exactly one is approval-time. | ☐ |
+| R-01 | Scope and out-of-scope boundaries are unambiguous; no model #42 does not own is duplicated. | ✅ 2026-07-24 |
+| R-02 | Every formula has units, ranges, and at least one worked example; no fabricated verification values. | ✅ 2026-07-24 |
+| R-03 | Determinism posture is complete: stream ownership, anchor, draw budget, and the no-cursor claim are each justified. | ✅ 2026-07-24 |
+| R-04 | Persistence is version-gated, opaque, fail-loud, and bumps no format version it does not own. | ✅ 2026-07-24 |
+| R-05 | Cross-spec back-props are enumerated with owners and timing; exactly one is approval-time. | ✅ 2026-07-24 |
 
 ## 9.6 Decision
 
-**PENDING** — G1 closed; **G2 / G3 / G4 open**. G3 (lead-developer R-01..R-05 sign-off) is a
-human authority and is not self-grantable by the drafter; G2 files atomically with the flip G3 authorises.
+**APPROVED** — July 24, 2026. All four gates closed: G1 (PASS-1 0H+3M+1L → AR-2 0H+0M+2L convergence,
+§9.4.1), G2 (ERR-030-007 filed against #30 §2/§3 → v0.7 and logged in `spec-error-log.md` v1.36), G3
+(lead-developer R-01..R-05 sign-off granted), G4 (`SPEC_INDEX.md` row flipped). All 11 section files are
+`Status: APPROVED`.
+
+**Carried forward, non-blocking** (recorded so they are not mistaken for omissions): the T2 items in §8.2
+(the #16 `0x2B`/93 promotion at the first draw, the outer `SEASON_SAVE_FORMAT_VERSION` bump, the
+conditional #16 `SeekStream` seam), the T3 `[GT]` balance pass (§A.3), and the shared `MaxRngStreams`
+bound (§7.4 R-1) owned by #28/#16 — which gates any world-wide-academy extension but not #42's minimal
+tier.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §9 (completeness, tag discipline, the §9.3 source-verified claims table, the four open gates + the explicitly-not-gating list, R-01..R-05). Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | G1 CLOSED: §9.4.1 records the section-file PASS-1 (0H+3M+1L, all resolved) and the AR-2 convergence sweep (0H+0M+2L). G2/G3/G4 remain open. |
+| 0.3 | 2026-07-24 | — | G2/G3/G4 CLOSED: ERR-030-007 filed, lead-developer R-01..R-05 sign-off granted, `SPEC_INDEX.md` row flipped. §9.6 decision APPROVED; carried-forward non-blocking items enumerated. |
 #endregion

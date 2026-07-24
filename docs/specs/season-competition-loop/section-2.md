@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** July 23, 2026 (v0.6 — back-prop ERR-030-006 staff tick-order enumeration; prior v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 0.6
+**Last Updated:** July 24, 2026 (v0.7 — back-prop ERR-030-007 academy tick-order enumeration; prior v0.6 ERR-030-006 staff; prior v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Version:** 0.7
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -92,7 +92,7 @@ forward design (nothing is built yet).
 |---|---|---|---|
 | FR-SN-032 | `SeasonLoop` MUST be the sole writer of season state; season state MUST be mutable only through the public command API (`AdvanceToNextFixtureDay`, `AdvanceAndPlayNextRound`, the boundary roll), never by field access. | MUST | KD-7 |
 | FR-SN-033 | `SeasonViewModel` MUST expose the table + fixture list + calendar position as **read-only value copies** for #37/#38; reading MUST NOT mutate season state or affect the save digest (observer-neutral). | MUST | KD-7 |
-| FR-SN-034 | Every world-tick spec #30 must tick that does not exist yet (#28/#29/#33/#41/#31/#34) MUST be a **documented null seam** in the KD-2 tick order, never an invented interface (FR-LW-031). The injuries seam (#41) was appended as step 4 by ERR-030-002 at #41's approval; the transfers seam (#31) was appended as step 5 by ERR-030-004 at #31's approval; the staff seam (#34) was appended as step 6 by ERR-030-006 at #34's approval (both deep-tier position reservations — empty at minimal, `AdvanceDay` is now step 7). | MUST | KD-2 |
+| FR-SN-034 | Every world-tick spec #30 must tick that does not exist yet (#28/#29/#33/#41/#31/#34/#42) MUST be a **documented null seam** in the KD-2 tick order, never an invented interface (FR-LW-031). The injuries seam (#41) was appended as step 4 by ERR-030-002 at #41's approval; the transfers seam (#31) was appended as step 5 by ERR-030-004 at #31's approval; the staff seam (#34) was appended as step 6 by ERR-030-006 at #34's approval (both deep-tier position reservations — empty at minimal); the academy seam (#42) was appended as step 7 by ERR-030-007 at #42's approval (a latched one-shot that goes live at #42's own T-phase). `AdvanceDay` is now step 8. | MUST | KD-2 |
 
 ## 2.2 Data structures
 
@@ -140,3 +140,4 @@ forward design (nothing is built yet).
 | 0.5 | 2026-07-23 | — | Back-prop ERR-030-004 (at #31 approval): FR-SN-034 tick-order null-seam enumeration extended to include Transfers #31 (appended as step 5, a deep-tier position reservation). |
 | 0.6 | 2026-07-23 | — | Back-prop ERR-030-006 (at #34 approval): FR-SN-034 tick-order null-seam enumeration extended to include Staff #34 (appended as step 6, a deep-tier position reservation; `AdvanceDay` → step 7). |
 #endregion
+| 0.7 | 2026-07-24 | — | Back-prop ERR-030-007 (at #42 approval): FR-SN-034 tick-order null-seam enumeration extended to include Youth Academy #42 (appended as step 7; `AdvanceDay` → step 8). |

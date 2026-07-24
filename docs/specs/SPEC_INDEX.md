@@ -315,7 +315,7 @@
 | 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 31 | Transfers, Contracts & Negotiation | `transfers-contracts-negotiation/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 34 | Staff & Backroom | `staff-backroom/` | 6¹ | APPROVED | Jul 23, 2026 |
-| 42 | Youth Academy & Intake | `youth-academy-intake/` | 6¹ | IN REVIEW | — |
+| 42 | Youth Academy & Intake | `youth-academy-intake/` | 6¹ | APPROVED | Jul 24, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
@@ -402,7 +402,7 @@ consistent with #23 having been free to reserve and now promote.
   ERR-027-001 + ERR-022-001, `spec-error-log.md` v1.32); lead-developer R-01..R-05 sign-off granted
   (§9 checklist v0.3). All 11 section files `Status: APPROVED`. Count: **27 APPROVED, 0 IN REVIEW,
   0 NOT STARTED.**
-- **July 24, 2026 — Youth Academy & Intake (#42) added `→ IN REVIEW`.** First **Wave 5** management-layer
+- **July 24, 2026 — Youth Academy & Intake (#42) added `→ APPROVED`.** First **Wave 5** management-layer
   spec (the roadmap's Wave-5 set is #43 → #44 → #42 → #45; #42/#45 are authorable ahead of #43/#44 because
   neither depends on them). Section files v0.1–v0.2 authored from the AR-converged design supplement
   `docs/tracking/youth-academy-intake-design.md` v0.3 (AR-1 3M+1L → AR-2 2L → CONVERGENCE). FR-YA-001..028.
@@ -415,9 +415,12 @@ consistent with #23 having been free to reserve and now promote.
   so a cohort is a pure function of `(worldSeed, clubId, intakeWorldDay)` and **no RNG cursor is
   persisted**. **KD-4** latches on `LastIntakeWorldDay`, not a season year — #30 exposes no such field.
   Section-file PASS-1: 0H+3M+1L, all resolved (§9.4.1); AR-2 sweep 0H+0M+2L → convergence.
-  **Outstanding gates (§9.4):** G2 file ERR-030-007 (#30 academy tick-order null seam, step 7) atomically
-  with the status flip; G3 lead-developer R-01..R-05 sign-off; G4 flip this row. Count: **27 APPROVED,
-  1 IN REVIEW (#42), 0 NOT STARTED.**
+  **All four gates closed same day:** G1 PASS-1 + AR-2 convergence; **G2 ERR-030-007 filed** (#30 §3.3
+  gains the academy null seam as step 7, `AdvanceDay` → step 8; §2 FR-SN-034 enumeration extended; both
+  #30 files → v0.7; `spec-error-log.md` v1.36); G3 lead-developer R-01..R-05 sign-off granted; G4 this
+  row. **No #16 change** — #42 registers no stream until its T2 first intake, so the roadmap-§6 `0x2B`/93
+  reservation stays unpromoted (FR-LW-031). All 11 section files `Status: APPROVED`. Count:
+  **28 APPROVED, 0 IN REVIEW, 0 NOT STARTED.**
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 
 ---

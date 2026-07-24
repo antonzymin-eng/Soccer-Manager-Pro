@@ -3,7 +3,7 @@
 **Created:** July 24, 2026
 **Last Updated:** July 24, 2026 (v0.1 — initial, promoted from design supplement v0.3)
 **Version:** 0.1
-**Status:** IN REVIEW
+**Status:** APPROVED
 
 ---
 

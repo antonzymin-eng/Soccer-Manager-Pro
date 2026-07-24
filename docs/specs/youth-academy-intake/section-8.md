@@ -1,9 +1,9 @@
 # Youth Academy & Intake #42 — Section 8: References & Cross-References
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial)
-**Version:** 0.1
-**Status:** IN REVIEW
+**Last Updated:** July 24, 2026 (v0.2 — ERR-030-007 filed; APPROVED)
+**Version:** 0.2
+**Status:** APPROVED
 
 ---
 
@@ -30,7 +30,7 @@
 
 | ID | Target | When | Change | Status |
 |---|---|---|---|---|
-| **ERR-030-007** | #30 §2 FR-SN-034 + §3.3 `RunWorldTickInFixedOrder` | **At approval** | Append the **academy null seam** as step 7 (after the staff seam, before the live world-day tick; `WorldStore.AdvanceDay()` → step 8), and extend FR-SN-034's enumeration + the "documented positions" prose. A **position reservation** — empty until #42 T2 (the ERR-030-002 / -004 / -006 precedent). Doc-only; the FR-SN-026 world-floor byte-identity is unaffected by a null seam. *(`ERR-030-005` is soft-reserved by #31's deferred `RequestRosterCommit`; `-006` is #34's — `-007` is the next free number.)* | **Pending — files at approval** |
+| **ERR-030-007** | #30 §2 FR-SN-034 + §3.3 `RunWorldTickInFixedOrder` | **At approval** | Append the **academy null seam** as step 7 (after the staff seam, before the live world-day tick; `WorldStore.AdvanceDay()` → step 8), and extend FR-SN-034's enumeration + the "documented positions" prose. A **position reservation** — empty until #42 T2 (the ERR-030-002 / -004 / -006 precedent). Doc-only; the FR-SN-026 world-floor byte-identity is unaffected by a null seam. *(`ERR-030-005` is soft-reserved by #31's deferred `RequestRosterCommit`; `-006` is #34's — `-007` is the next free number.)* | ✅ **Filed July 24, 2026 at approval** — `season-competition-loop/section-2.md` + `section-3.md` → v0.7; `spec-error-log.md` v1.36. |
 | ERR-016-xxx | #16 §3.4 + `SubsystemOrdinals` | At T2 (first draw) | Promote the roadmap-§6 reservation to `DOMAIN_TAG_YOUTH_ACADEMY = 0x2B` / `SubsystemOrdinals.YouthAcademy = 93`. Spec-text-first (the ERR-030-001 / ERR-028-001 precedent) — the code const + registration land with the first draw site, never earlier (FR-LW-031). No `DETERMINISM_DIGEST_VERSION` bump. | Deferred |
 | ERR-030-xxx | #30 `SEASON_SAVE_FORMAT_VERSION` | At T2 | Bump, composing the academy sub-blob. Exact version coordinated with whichever T-phase lands first. | Deferred |
 | ERR-016-yyy | #16 `DeterministicRngService` | At T2, **conditional** | Add `SeekStream(int streamIndex, ulong actionOrdinal)` so the KD-7 anchor does not re-purpose `RestoreStream` (§4.4). Not required for correctness — the fallback is documented and the invariant is identical. #41 would be a second consumer. | Deferred / conditional |
@@ -57,4 +57,5 @@ confirmed source at that time.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §8 (XC-042-001..014 incl. the XC-042-014 negative contract with #29, the back-prop table with ERR-030-007 as the sole approval-time item, and the explicit no-external-citation / unpinned-bio-banding rationale). Status IN REVIEW. |
+| 0.2 | 2026-07-24 | — | ERR-030-007 filed at approval (the sole approval-time back-prop): #30 §3.3 gains the academy null seam as step 7 (`AdvanceDay` → step 8) + §2 FR-SN-034 enumeration, both → v0.7; logged in `spec-error-log.md` v1.36. Status APPROVED. |
 #endregion
