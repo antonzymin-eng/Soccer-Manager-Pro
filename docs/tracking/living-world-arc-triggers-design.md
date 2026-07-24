@@ -244,9 +244,16 @@ the §8.9 season-save flag-on canon-threading gap (a flag-on season restore sile
 evaluating — `SeasonSaveManager.Load` did not thread the canon source); M-3 the §8.4/§8.5
 draw-after-decide reorder + missing-episode skip-no-draw contract (the plan drew the `world.arcs`
 cursor before pin resolution, violating the validate-before-draw discipline it cites); L-1 the §8.6/§8.8
-E1 fail-loud guard checks `ActionOrdinal` too; L-2 the §8.5 `MaxRngStreams`-headroom note. Post-v0.3
-the plan is **CONVERGED**. Section-file/code AR cycles run at implementation per the project
-convention.
+E1 fail-loud guard checks `ActionOrdinal` too; L-2 the §8.5 `MaxRngStreams`-headroom note. A fourth
+pass caught two regressions the v0.3 fixes themselves introduced (0H+2M+1L), applied in v0.4: M-1 the
+M-3 fix's pin-resolution gate was under-specified AND suppressed legitimate pin-less arcs (a crossing
+on an edge with no citable episode would never spawn) — §8.4/§8.5 rewritten so the threshold is the
+SOLE pre-draw refusal and an empty pin set is a valid pin-less spawn, not a skip; M-2 the canon
+plumbing (`SetArcCanon` / `WorldLoop` / `Restore`) was a `/* setter or field */` hand-wave that could
+ship the opt-in as a dead setter — §8.6/§8.7 pin the per-tick-argument model (`WorldStore` owns
+`_canon`, `RunWorldTick(canon)` reads it live), with a §9 test-4 dead-setter guard; L the §8.3
+signature sketch de-abstract-ified. Post-v0.4 the plan is **CONVERGED**. Section-file/code AR cycles
+run at implementation per the project convention.
 
 ---
 
@@ -325,11 +332,12 @@ public sealed class ArcCanonSource
     //
     // Stage 0: constructed as a deterministic pure function of the world state it is handed (no
     // System.Random, no clock) — e.g. from MemoryStore edge salience/relationship values — so it is
-    // reproducible across Snapshot/Restore. The reads below are backed by that captured state.
-    public int EntitySignalCount { get; }
-    public int EntityIdAt(int index);                 // ascending
-    public float EntitySignal(int index, short key);  // e.g. pulse divergence, ego clash
-    public float BoardSignal(ArcKind kind, short key);// board patience etc.
+    // reproducible across Snapshot/Restore. Signatures only below (a sealed class needs real bodies —
+    // these are backed by the captured state, elided here):
+    public int EntitySignalCount => /* captured count */;
+    public int EntityIdAt(int index) => /* ascending id */;
+    public float EntitySignal(int index, short key) => /* e.g. pulse divergence, ego clash */;
+    public float BoardSignal(ArcKind kind, short key) => /* board patience etc. */;
 }
 ```
 
@@ -356,29 +364,32 @@ Evaluation order (fixed, deterministic — the load-bearing determinism property
    over the entity-scoped catalogue rows in catalogue (ordinal) order.
 2. **Board/squad-level triggers**, iterated by `ArcKind` ordinal.
 
-On a crossing (`signal >= Threshold`, NaN fails closed via a negated compare — the store-seam
-precedent), the evaluator commits the spawn decision **before** drawing, mirroring the
-`InteractionTextGenerator` "all validation runs BEFORE the draw so a refusal consumes no cursor"
-discipline (§8.5). Order per crossing:
+**The threshold crossing is the SOLE pre-draw refusal.** `signal >= Threshold` (NaN fails closed via
+a negated compare — the store-seam precedent) is the only condition that decides whether a crossing
+fires *at all*, and it is evaluated with no draw — a non-crossing leaves the `world.arcs` cursor
+untouched, exactly the `InteractionTextGenerator` "a refusal consumes no cursor" discipline (§8.5).
+Once the threshold crosses, the arc **spawns** — there is no second pre-draw gate that can silently
+suppress it. Order per crossing:
 
-1. **Resolve + validate the pinnable source episodes** from `MemoryStore`. If a trigger's target
-   episode does not exist on its edge, this is a **skip — no spawn, no draw** (the crossing does not
-   fire; the `world.arcs` cursor is untouched, exactly as a no-crossing tick). This is a validation
-   refusal, not a corruption: a dangling *pin id passed to a resolved episode* is still `SpawnArc`'s
-   fail-loud (F1), but "no citable episode yet" is a normal skip. Committing this to skip-no-draw (not
-   fail-loud) matches the `world.text` citation-gate precedent and keeps replay parity: whether an
-   episode exists is a pure function of the serialized `MemoryStore`, so the skip/spawn decision — and
-   therefore the cursor — is reproducible across `Snapshot`/`Restore`.
-2. **Draw one** `world.arcs` value for the stochastic accept/shape component (the draw is consumed
-   only once the spawn is committed).
-3. Build the `SpawnCause` inline (`TriggerId`, the captured `Input[]` scalars, `Cause.WorldTick =
-   _clock.CurrentWorldTick`) and call `ArcEngine.SpawnArc(kind, in cause, pins, spawnTick,
-   maxLifetimeDays)`. `SpawnArc` does the atomic FR-LW-018 pinning + rollback, the `ArcKind` gate, and
-   the lifetime/overflow gates — the evaluator adds no new validation there.
+1. **Draw one** `world.arcs` value for the stochastic accept/shape component.
+2. Build the `SpawnCause` inline (`TriggerId`, the captured `Input[]` scalars, `Cause.WorldTick =
+   _clock.CurrentWorldTick`), **resolve the pinnable episodes** — for an entity-scoped trigger, the
+   firing edge's memory episodes; the set MAY be empty (`Array.Empty`), which is a valid **pin-less
+   spawn**, NOT a skip (`SpawnArc` accepts an empty pin array — verified: its null-check refuses only
+   `null`) — and call `ArcEngine.SpawnArc(kind, in cause, pins, spawnTick, maxLifetimeDays)`.
+   `SpawnArc` does the atomic FR-LW-018 pinning + rollback, the `ArcKind` gate, and the
+   lifetime/overflow gates. These are pure functions of the trigger row + `spawnTick`, so in a correct
+   catalogue they always pass; a mis-authored row that fails one is a **fail-loud corruption abort**
+   (the whole `AdvanceDay` throws), not a graceful skip — so the post-draw cursor advance is moot, and
+   replay parity is not at risk.
 
-The stochastic component may **gate** the spawn (accept/reject) — in that case the draw necessarily
-precedes the accept test, but pin resolution (step 1) still precedes the draw, so a reject after the
-draw is deterministic and a *missing episode* never burns a cursor.
+There is deliberately **no "missing episode ⇒ skip-no-draw" gate**: the pin set is a pure function of
+the serialized `MemoryStore` (so the spawn is reproducible across `Snapshot`/`Restore` regardless of
+whether it pins zero or many), and gating a spawn on episode existence would make an entire arc class
+(a board-level arc firing on an edge with no citable memory) permanently unspawnable. The only place
+the draw precedes a decision is a **stochastic accept/reject** in step 1 — if the catalogue uses the
+draw to accept-or-reject the spawn, the draw necessarily precedes that test, which is a deterministic
+function of the (already-consumed) draw and therefore replay-parity-safe.
 
 ### 8.5 `world.arcs` RNG registration + draw discipline (KD-4)
 
@@ -397,9 +408,9 @@ public ArcTriggerEvaluator(DeterministicRngService rng)
 public int StreamIndex => _streamIndex;
 ```
 
-Per-crossing draw (the `InteractionTextGenerator.Generate` discipline — all validation/canon reads
-**and pin resolution** (§8.4 step 1) run BEFORE the draw, so a no-crossing tick *and a crossing whose
-episode is missing* both consume no cursor):
+Per-crossing draw (the `InteractionTextGenerator.Generate` discipline — the threshold test runs
+BEFORE the draw, so a no-crossing tick consumes no cursor; a crossing always draws and spawns,
+§8.4):
 
 ```csharp
 if (_rng.Reserve(_streamIndex, 1) != 0) throw new InvalidOperationException(...);
@@ -428,11 +439,20 @@ private ArcCanonSource _canon;              // nullable; null => no evaluation (
 // in WorldStore(int managerId, ulong worldSeed):
 _arcTriggers = new ArcTriggerEvaluator(_rng);   // registers world.arcs AFTER _text (index order fixed)
 _canon = null;
-_loop = new WorldLoop(_clock, _memory, _arcs, _membership, _arcTriggers /* + _canon via a setter or field */);
+_loop = new WorldLoop(_clock, _memory, _arcs, _membership, _arcTriggers);  // loop holds the evaluator, NOT canon
 ```
 
-Add `public void SetArcCanon(ArcCanonSource canon)` (the opt-in). A new
-`WorldStore(int managerId, ulong worldSeed, ArcCanonSource canon)` overload is the ergonomic form.
+**Canon is `WorldStore`-owned and passed per tick — `WorldLoop` never captures it (the fix for the
+opt-in being wired as a dead setter).** `WorldStore._canon` is the single source of truth;
+`AdvanceDay` passes it into the loop each tick (`_loop.RunWorldTick(_canon)`, §8.7), so a
+post-construction change is always live. Add `public void SetArcCanon(ArcCanonSource canon)` — it sets
+`_canon` and nothing else (no forwarding needed, because the loop reads canon as a per-tick argument,
+not a field). A `WorldStore(int managerId, ulong worldSeed, ArcCanonSource canon)` overload seeds
+`_canon` at construction. **`Restore(payload, canon)` sets `_canon = canon`** after rebuilding the
+loop, so a season/direct restore threads the caller's canon into the same live path (§8.9). If a
+future refactor instead makes `WorldLoop` hold canon as a field, `SetArcCanon` MUST forward to it and
+`Restore` MUST pass canon into the rebuilt loop's ctor — but the per-tick-argument model above avoids
+both forwarding seams and is the recommended shape.
 
 **Snapshot()** — E2 inserts the `world.arcs` block between the `world.text` block and the membership
 roster (keeping membership last so no existing byte-offset test moves). Current writer order
@@ -474,23 +494,27 @@ null-canon run keeps both at 0, so `Snapshot()` succeeds and is byte-identical t
 
 ### 8.7 `WorldLoop` diff (phase-4)
 
-`WorldLoop` gains a fifth nullable seam arg (`ArcTriggerEvaluator arcTriggers` + the canon source, or
-an `IArcPhase`-free plain call). Phase 4 currently runs only `_arcs.Update(...)` (`WorldLoop.cs:79-82`).
-The evaluator call slots in **before** the expiry sweep so a same-tick-spawned arc is subject to this
-tick's expiry bound only if already expired (matches `SpawnArc`'s own `spawnTick`):
+`WorldLoop` gains **one nullable seam field** (`ArcTriggerEvaluator _arcTriggers`, a fifth ctor arg,
+like `_arcs`/`_membership`) and its tick entry point takes **canon as a per-tick argument** —
+`RunWorldTick(ArcCanonSource canon = null)` (the default keeps the existing arg-less callers, e.g.
+`SeasonWorldLoopTests`, compiling). The loop does NOT hold a canon field, so there is no stale-canon
+seam: `WorldStore.AdvanceDay` calls `_loop.RunWorldTick(_canon)` reading its live `_canon` each tick.
+Phase 4 currently runs only `_arcs.Update(...)` (`WorldLoop.cs:79-82`); the evaluator call slots in
+**before** the expiry sweep so a same-tick-spawned arc is subject to this tick's expiry bound only if
+already expired (matches `SpawnArc`'s own `spawnTick`):
 
 ```csharp
 // Phase 4 — arc evaluation (§3.4).
 if (_arcs != null)
 {
-    if (_arcTriggers != null && _canon != null)
-        _arcTriggers.Evaluate(_canon, _memory, _arcs, _clock.CurrentWorldTick);  // trigger evaluation
-    _arcs.Update(_clock.CurrentWorldTick);                                       // §6.2 expiry sweep
+    if (_arcTriggers != null && canon != null)   // canon is the RunWorldTick parameter
+        _arcTriggers.Evaluate(canon, _memory, _arcs, _clock.CurrentWorldTick);   // trigger evaluation
+    _arcs.Update(_clock.CurrentWorldTick);                                        // §6.2 expiry sweep
 }
 ```
 
 Null canon ⇒ the evaluate call is skipped ⇒ byte-identical to today. The 2-arg / 4-arg `WorldLoop`
-ctors stay (slice-1 hosts unchanged); add a 5-arg ctor.
+ctors stay (slice-1 hosts unchanged); add a 5-arg ctor carrying `arcTriggers`.
 
 ### 8.8 Fail-loud gates (item 1)
 
@@ -544,9 +568,12 @@ determinism, fail-loud gates):
    `WorldStoreTests` determinism suite is unchanged.
 3. **Flag-off no-op through the loop** — `AdvanceDay()` with null canon spawns no arcs and leaves the
    `world.arcs` cursor at 0.
-4. **Stub-canon spawns deterministically** — inject a `Stage0ArcCanonSource` primed to cross one
-   threshold; assert `ArcEngine.ArcCount` increments, the `SpawnCause.TriggerId`/`Input[]` match, and
-   two same-seed runs produce byte-identical world state.
+4. **Stub-canon spawns deterministically** — inject a canon source (`ArcCanonSource` primed to cross
+   one threshold) **via `SetArcCanon` after construction** (guards Medium-2 — the opt-in must be live,
+   not a dead setter captured null at loop construction); assert `ArcEngine.ArcCount` increments after
+   `AdvanceDay`, the `SpawnCause.TriggerId`/`Input[]` match, and two same-seed runs produce
+   byte-identical world state. Also cover a pin-less spawn (a crossing on an edge with no citable
+   episode) — `ArcCount` still increments (Medium-1: no missing-episode suppression).
 5. **E1 fail-loud** — a flag-on store (canon set, a crossing driven) refuses `Snapshot()` with
    `NotSupportedException` while the cursor is non-zero.
 6. **E2 acceptance predicate** — save@N of a flag-on run → `WorldStore.Restore(payload, canon)` →
@@ -617,6 +644,24 @@ upstream producers land, build in this order:
 
 ## Version History
 
+- **v0.4 (2026-07-24):** Applied the pass-4 adversarial-review findings — two regressions the v0.3
+  fixes themselves introduced, plus one Low (0H+2M+1L). **M-1 (regression from v0.3 M-3):** the
+  pin-resolution "missing episode ⇒ skip-no-draw" gate §8.4 added was under-specified (the `ArcTrigger`
+  struct defines no "target episode" to resolve) and wrong (it suppressed valid **pin-less** arcs —
+  `SpawnArc` accepts `Array.Empty`, verified — so a board-level arc firing on an edge with no citable
+  memory could never spawn). §8.4/§8.5 rewritten: the **threshold crossing is the sole pre-draw
+  refusal**; a crossing always draws-then-spawns; an empty pin set is a pin-less spawn, not a skip; the
+  draw-before-decide ordering is kept only for the genuine stochastic accept/reject case. §9 test 4
+  gains a pin-less-spawn assertion. **M-2 (regression from v0.3 M-2 wiring):** the canon plumbing was a
+  `/* + _canon via a setter or field */` hand-wave — `SetArcCanon` (post-construction) plus a
+  `WorldLoop` that read `_canon` as a field could ship the opt-in as a **dead setter** (a store
+  constructed then `SetArcCanon`'d before `AdvanceDay` would spawn nothing while asserting it should),
+  and `Restore` never showed canon reaching the rebuilt loop. §8.6/§8.7 pin the per-tick-argument model
+  (`WorldStore` owns `_canon` as the single source of truth; `WorldLoop.RunWorldTick(ArcCanonSource
+  canon = null)` reads it live each tick; `SetArcCanon` sets `_canon` with no forwarding;
+  `Restore(payload, canon)` sets `_canon = canon`), with a §9 test-4 dead-setter guard. **L:** §8.3's
+  `sealed class` signature sketch used abstract-method syntax (`;`-terminated, uncompilable in a sealed
+  class); switched to elided expression bodies. §7 records the pass-4 → CONVERGED status.
 - **v0.3 (2026-07-24):** Applied the pass-3 adversarial-review findings over the §§8–12 implementation
   plan (0H+3M+2L). **M-1:** `ArcCanonSource` is now a single concrete `sealed class`, not an `abstract`
   base + one `Stage0ArcCanonSource` subclass — the abstract-with-one-impl shape reintroduced exactly
