@@ -1,7 +1,14 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 24, 2026, later same day (**Master Plan Amendment 01 — audio + multiplayer transport.**
+**Last Updated:** July 24, 2026, latest same day (**#51/#52 spec-plan files authored** — the Amendment-01 §5
+next step. **New files:** `docs/tracking/spec-plans/spec-51-audio-sound-design.md` v0.1 (Wave 8, FR-AU,
+presentation — none; game-wide audio framework, boundary with #48's match-audio slice pinned as KD-1) +
+`docs/tracking/spec-plans/spec-52-multiplayer-transport-netcode.md` v0.1 (Wave 9 post-roadmap, FR-NET,
+transport — none; lockstep intent-replication surfaces + Stage-6 gate + pre-Stage-5 guardrails recorded).
+**Modified:** `docs/tracking/spec-plans/README.md` (title range #27–#52, index rows, Wave-9 footnote,
+determinism-headroom note), this file. No `SPEC_INDEX.md` change — numbers proposed, not reserved.)
+**Last Updated (prior):** July 24, 2026, later same day (**Master Plan Amendment 01 — audio + multiplayer transport.**
 **New file:** `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md` v0.1 — planning-level
 amendment covering the two feature areas the July-2026 coverage review found named in the master plan but
 scoped nowhere (audio/sound design → candidate #48 slice + proposed #51; Stage-6 multiplayer transport /
