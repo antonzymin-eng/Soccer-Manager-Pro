@@ -5,8 +5,8 @@
 **Version:** 1.0  
 **Amendments:** Amendment 01 (July 24, 2026) — Audio & Sound Design; Multiplayer Transport &
 Deterministic Netcode. See `master-plan-amendment-01-audio-multiplayer-transport.md`; base text
-below is preserved verbatim, the amendment owns the §3.4/§7-item-29 audio bullets and the Stage-6
-"Deterministic netcode" bullet.  
+below is preserved verbatim, the amendment owns the §3 Month-11–12 "UI & Polish" / §7-item-29
+audio bullets and the Stage-6 "Deterministic netcode" bullet.  
 **Project Type:** Full-Scale Football Management Simulation  
 **Development Approach:** Staged releases over 10+ years  
 **Target:** Dethrone Football Manager as the definitive football sim  

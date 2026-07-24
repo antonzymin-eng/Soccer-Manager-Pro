@@ -2,7 +2,7 @@
 
 > **Created:** July 24, 2026
 > **Status:** PLAN (pre-design-supplement — no section files, no `SPEC_INDEX.md` row). Candidate spec number **#51** (proposed in `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md` §2, not reserved).
-> **Master-plan home:** §3.4 "Sound effects" polish bullet + §7 Stage-1 doc list item 29 "Sound Design", both owned by Amendment 01 §2 · **Tier:** S1 min → S2 full → S3+ deep · **Wave:** 8 · **FR prefix (proposed):** FR-AU
+> **Master-plan home:** §3 Stage 1 Month-11–12 "UI & Polish" Sound-effects bullet + §7 Stage-1 doc list item 29 "Sound Design", both owned by Amendment 01 §2 · **Tier:** S1 min → S2 full → S3+ deep · **Wave:** 8 · **FR prefix (proposed):** FR-AU
 > **Determinism:** presentation — none (no RNG stream, no domain tag; the `match-viewer`/#37/#48 class)
 > **Purpose:** The game-wide audio framework — mixer/buses, music, UI audio, client-local settings, accessibility hooks — that #48's match-audio slice and #38's screens play through.
 
@@ -10,10 +10,10 @@
 The audio *framework*, distinct from match-audio *content*: a mixer/bus architecture (music / SFX / crowd / commentary / UI buses), a cue catalogue + playback API, music playback, UI/menu audio, per-channel client-local settings (volume/mute), ducking rules (e.g. commentary ducks crowd), and the audio-accessibility hooks whose visual/subtitle equivalents route through #49's content tier. **Out of scope:** mapping match events to audio cues — that is #48's audio-event mapper (read-only over the event ledger), which *feeds* #51's buses; commentary text generation (#22/#48); localization of any audio-adjacent strings (#49); anything sim-side — no sim assembly may reference audio.
 
 ## 2. Staging (minimal-first → deep)
-Minimal identity = no mixer: #48's minimal SFX (crowd loop, whistle, ball contact — the master plan's own §3.4 Stage-1 polish bullet) played directly, with #51 absent entirely; a build with the framework disabled sounds exactly like that minimal path (silence where no cue exists). S2 (V1 release) = the full framework: mixer graph, music, UI audio, settings, complete match soundscape routed through buses. S3+ deep = commentary-audio delivery and presentation-depth integration alongside #48's 3D/animation tier. Framework is additive over one playback path — enabling a bus with neutral settings changes nothing audible.
+Minimal identity = no mixer: #48's minimal SFX (crowd loop, whistle, ball contact — the master plan's own Stage-1 Month-11–12 "UI & Polish" bullet) played directly, with #51 absent entirely; a build with the framework disabled sounds exactly like that minimal path (silence where no cue exists). S2 (V1 release) = the full framework: mixer graph, music, UI audio, settings, complete match soundscape routed through buses. S3+ deep = commentary-audio delivery and presentation-depth integration alongside #48's 3D/animation tier. Framework is additive over one playback path — enabling a bus with neutral settings changes nothing audible.
 
 ## 3. Dependencies
-- **Upstream (needs):** #48's audio-event mapper as the match-side cue producer (note the wave inversion: #48 is Wave 7 and may land its trigger mapping against direct playback first; #51 then rehomes playback onto buses — a pure playback-side refactor, since the trigger contract does not change); #38's framework for settings screens and UI-audio trigger points; #49's seam for a11y cue equivalents; the Unity audio host binding (host-gated, the #38 rendering-binding class — the contract is authorable host-free).
+- **Upstream (needs):** #48's audio-event mapper (proposed in #48's plan) as the match-side cue producer (note the wave inversion: #48 is Wave 7 and may land its trigger mapping against direct playback first; #51 then rehomes playback onto buses — a pure playback-side refactor, since the trigger contract does not change); #38's framework for settings screens and UI-audio trigger points; #49's seam for a11y cue equivalents; the Unity audio host binding (host-gated, the #38 rendering-binding class — the contract is authorable host-free).
 - **Downstream (consumers):** #48 and #38 route playback through #51's buses; referenced by no sim assembly.
 
 ## 4. Persistent state & save impact
@@ -48,3 +48,4 @@ Observer neutrality: a full-audio match run is byte-identical to an unobserved s
 | Version | Date | Change |
 |---------|------|--------|
 | v0.1 | July 24, 2026 | Initial high-level plan, per Master Plan Amendment 01 §2. |
+| v0.2 | July 24, 2026 | AR-1 fixes: master-plan anchor corrected §3.4 → §3 Month-11–12 "UI & Polish" (header + §2); §3 marks #48's audio-event mapper "(proposed)" per the README template convention. |

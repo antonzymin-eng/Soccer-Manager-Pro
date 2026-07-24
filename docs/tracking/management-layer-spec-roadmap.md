@@ -44,7 +44,7 @@ loop layers are pulled forward minimal-first and deepened later.
 
 ---
 
-## 1. Proposed candidate spec set (#27–#50)
+## 1. Proposed candidate spec set (#27–#52)
 
 | # | Working title | Feature bullet(s) covered | Master-plan home | Tier¹ |
 |---|---------------|---------------------------|------------------|-------|
@@ -72,6 +72,8 @@ loop layers are pulled forward minimal-first and deepened later.
 | 48 | **Match Presentation Depth** ² | Commentary, animation/3D, audio | §3.1 | S1 min → S2+ deep |
 | 49 | **Localization & Accessibility** ² | i18n, a11y | (cross-cutting) | S2 |
 | 50 | **Save Migration & Versioning** ² | Live-save migration across game updates | §4.6 | S2 |
+| 51 | **Audio & Sound Design** ³ | Game-wide audio framework — mixer/buses, cue catalogue, music, UI audio, client-local settings, a11y hooks (the match-audio slice stays #48) | §3 "UI & Polish" + §7 item 29, via Amendment 01 §2 | S1 min → S2 full |
+| 52 | **Multiplayer Transport & Deterministic Netcode** ³ | Session/relay, lockstep intent-exchange, digest-chain desync detection, snapshot resync | §5 Stage 6, via Amendment 01 §3 | S6 |
 
 ¹ **Tier** = master-plan staging. "S2 min → S3 deep" means the spec is authored with an explicit
 minimal-first Stage-2 surface and a deeper Stage-3+ extension, mirroring how #27 is a Stage-2
@@ -84,6 +86,13 @@ of the master plan against the original feature list. Numbers are stable IDs, no
 the table is roughly numeric; dependency/authoring order is §2/§7. The load-bearing gap-fills are
 **#40 Finances**, **#41 Injuries/Medical**, and **#43 Competition Structure** — the season loop
 (#30) is thin without them.
+
+³ **Amendment-01 additions (added v0.4, July 24, 2026).** #51/#52 close the two feature areas the
+July-24 coverage review found named in the master plan but scoped nowhere, per
+`docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md` (the governing document
+for both). Neither declares an RNG stream/domain tag (§6 headroom note unaffected). #52 is
+**Stage-6 gated** — its plan exists now only to record the lockstep architecture + pre-Stage-5
+guardrails; the design supplement waits for the Stage-5 Fixed64 migration (phantom-interface rule).
 
 ---
 
@@ -431,6 +440,14 @@ candidate).
   Migration** · **#39 Steam Packaging** — against a genuinely shippable build. (#50 stays whole in
   Wave 8, not split like #49: its per-bump migration steps are a *post-ship* concern, so pre-ship
   format bumps need no step and there is no continuous-emission retrofit to front-load.)
+- **#51 Audio & Sound Design** (added v0.4) — the game-wide framework; its consumers (#48
+  match-audio, #38 screens) land in Wave 7 against direct playback / a stub bus API, and #51's
+  rehoming onto buses is a playback-side refactor (spec-51 plan KD-1).
+
+**Wave 9 — Stage-6 gated (post-roadmap horizon)**
+- **#52 Multiplayer Transport & Deterministic Netcode** (added v0.4) — supplement deliberately NOT
+  authored before the Stage-5 Fixed64 migration (#9); only the plan (lockstep architecture +
+  pre-Stage-5 guardrails) exists until then. See footnote ³ in §1.
 
 **Critical path:** #27 → #30 → #33 → #31 → #38 → #39.
 
@@ -443,3 +460,4 @@ candidate).
 | v0.1 | July 22, 2026 | Initial roadmap: candidate spec set #27–#39 for the management/off-pitch feature areas; dependency graph; per-spec scope sketches; cross-cutting concerns; #22/#33 sequencing call-out; proposed off-pitch determinism block; recommended authoring order. |
 | v0.2 | July 22, 2026 | Folded in gap-fill candidates #40–#50 (Finances, Injuries/Medical, Youth Academy, Competition Structure, Discipline/Suspensions, Board/Ownership, News/Inbox & Man-Management, New-Game Setup/DB Editor, Match Presentation Depth, Localization/Accessibility, Save Migration) surfaced by a follow-up master-plan gap review; extended the determinism block (5 new tags), §3 scope sketches, and §7 authoring placement. |
 | v0.3 | July 22, 2026 | Adversarial-review consistency pass over the roadmap + `spec-plans/`: §2 critical-path spine corrected to include #33 (matched §7/README); §7 intra-wave order set producer-before-consumer (Wave 4 → #31, #34, #32; Wave 6 → #35, #46, #36); **#49 localization split into a Wave-1 seam+template contract tier + Wave-8 content tier** (mirrors #38) so text producers bind to the seam as they land; §6 gained a determinism-block-headroom note (next free `0x2E`/96; reserve `0x2E`–`0x2F`/96–97 slack); §1 footnote updated (#38 + #49 both split; stale §5 pointer fixed). |
+| v0.4 | July 24, 2026 | Amendment-01 additions folded in (the v0.2 gap-fill precedent): §1 rows #51 Audio & Sound Design (Wave 8) + #52 Multiplayer Transport & Deterministic Netcode (Wave 9, Stage-6 gated) with footnote ³; §7 Wave-8 #51 entry + new Wave-9 block. Governing document: `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md`; one-page plans at `spec-plans/spec-51-…`/`spec-52-…`. Neither declares an RNG stream (§6 block/headroom unchanged). |

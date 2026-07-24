@@ -2,9 +2,9 @@
 
 > **Created:** July 22, 2026
 > **Status:** PLANS (pre-design-supplement). One high-level plan per candidate spec, governed by
-> `../management-layer-spec-roadmap.md` (#27–#50) and
-> `../../planning/master-plan-amendment-01-audio-multiplayer-transport.md` (#51–#52, added
-> July 24, 2026). Numbers are **proposed, not reserved** — nothing here
+> `../management-layer-spec-roadmap.md` (v0.4; #51–#52 were added there July 24, 2026 from
+> `../../planning/master-plan-amendment-01-audio-multiplayer-transport.md`, which remains their
+> governing feature definition). Numbers are **proposed, not reserved** — nothing here
 > changes `SPEC_INDEX.md`; registry rows land only at design-supplement promotion (the #21–#27
 > precedent).
 > **Purpose:** For each candidate management/off-pitch spec, a consistent one-page plan — scope,
@@ -47,9 +47,9 @@ does not exist yet; only confirmed existing seams are named bare.
 | 8 | 50 | [Save Migration & Versioning](spec-50-save-migration-versioning.md) | FR-MG | infra — none |
 | 8 | 39 | [Steam Packaging & Release](spec-39-steam-packaging-release.md) | FR-PK | infra — none |
 | 8 | 51 | [Audio & Sound Design](spec-51-audio-sound-design.md) *(framework; #48 owns the match-audio slice)* | FR-AU | presentation — none |
-| 9² | 52 | [Multiplayer Transport & Netcode](spec-52-multiplayer-transport-netcode.md) *(Stage-6 gated — supplement not before the Stage-5 Fixed64 migration)* | FR-NET | transport — none |
+| 9¹ | 52 | [Multiplayer Transport & Netcode](spec-52-multiplayer-transport-netcode.md) *(Stage-6 gated — supplement not before the Stage-5 Fixed64 migration)* | FR-NET | transport — none |
 
-² Wave 9 is post-roadmap (Amendment 01): #52's plan exists now only to record the lockstep
+¹ Wave 9 is Stage-6-gated (Amendment 01; roadmap §7): #52's plan exists now only to record the lockstep
 architecture decision and the pre-Stage-5 guardrails; its design supplement is deliberately
 deferred (phantom-interface rule).
 
@@ -74,6 +74,8 @@ full sim, so the sim's existing streams are the only randomness) declare none.
 
 Promote in wave order: open a full design supplement (`docs/tracking/<name>-design.md`) per
 candidate, run it through adversarial review to convergence, author section files at `IN REVIEW`,
-and register the row in `SPEC_INDEX.md` at promotion — the same pipeline #21–#26 followed. #27 is
-furthest along (design supplement + partial `src/player-database/` already exist) and is the
-recommended first promotion.
+and register the row in `SPEC_INDEX.md` at promotion — the same pipeline #21–#26 followed.
+**Status (July 24, 2026):** promoted and APPROVED so far: #27 (Wave 0); #30/#37/#38-framework/
+#49-seam (Wave 1); #28/#29/#40/#41 (Wave 2); #33 (Wave 3); #31/#34 (Wave 4) — see `SPEC_INDEX.md`,
+which overrides this note. Next unpromoted per wave order: **#32 (Wave 4 remainder), then Wave 5
+(#43 → #44 → #42 → #45).**

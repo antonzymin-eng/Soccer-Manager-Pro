@@ -15,7 +15,8 @@
 
 **Audio** appears in the base plan only as scattered fragments:
 
-- §3.4 Month 11–12 polish item: "Sound effects (crowd, whistle, ball kick)".
+- §3 Stage 1, Month 11–12 "UI & Polish" breakdown item: "Sound effects (crowd, whistle, ball
+  kick)" (the month-by-month list under §3; NOT §3.4, which is "User Interface (Basic)").
 - §7 Stage-1 specification list, item 29: "Sound Design (effects, music)" — listed as a required
   document, but never scoped, and absent from the #27–#50 management-layer roadmap numbering.
 - §10 budget line: "Sound effects/music: $1,000".
@@ -49,7 +50,7 @@ Two distinct tiers, which the base plan conflated into one polish bullet:
 
 | Stage | Deliverable |
 |-------|-------------|
-| Stage 1 (Tactical Demo) | Minimal match audio: basic SFX + crowd loop over the live viewer — the base plan's existing §3.4 polish item, now formally owned. |
+| Stage 1 (Tactical Demo) | Minimal match audio: basic SFX + crowd loop over the live viewer — the base plan's existing Month-11–12 "UI & Polish" item, now formally owned. |
 | Stage 2 (V1 release) | Full framework: mixer, music, UI audio, settings, complete match soundscape. |
 | Stage 3+ | Commentary audio + presentation-depth integration alongside #48's 3D/animation tier. |
 
@@ -69,7 +70,7 @@ trigger-mapping contract is authorable host-free.
   scope ("audio (crowd, effects)", KD-4 read-only ledger triggering). No change needed there.
 - **Game-wide audio framework → NEW candidate #51 "Audio & Sound Design"** — realizes the base
   plan's §7 item-29 "Sound Design" document inside the #27+ numbering scheme. Wave placement:
-  alongside #48 (Wave 8 in the roadmap's current wave structure); FR prefix proposed `FR-AU`;
+  Wave 8 — one wave after #48's Wave-7 match-audio slice; FR prefix proposed `FR-AU`;
   determinism: presentation — no domain tag/ordinal (the #37/#38/#49 class).
 - Audio-accessibility content → #49 Wave-8 content tier (unchanged owner).
 
@@ -93,10 +94,14 @@ The Stage-6 online layer, split into what the transport spec owns and what it do
 
 The engine is already shaped for lockstep, and this amendment pins that as the intended model:
 
-- All match mutation flows through tick-stamped public intent seams (`SetTeamTactic`,
-  `SetPlayerTactic`, `SubstitutePlayer`), committed at stride boundaries — and
-  `match-client-core`'s `ManagerCommandQueue`/`TickStampedCommand` is already the intent-queue
-  pattern a remote peer's commands would enter through.
+- All match mutation flows through a small set of public intent seams — `SetTeamTactic` /
+  `SetPlayerTactic` (staged pending, committed at the AI-stride boundary per FR-TI-027) and
+  `SubstitutePlayer` (**applies the roster swap immediately**, with only the notification event
+  queued to the next Resolve phase). Because the seams' apply-timing differs, networked play MUST
+  enter every remote intent through a tick-scheduled command layer that applies it at an agreed
+  tick — never by direct seam calls at unagreed local ticks — and `match-client-core`'s
+  `ManagerCommandQueue` (drained at the top of a sim tick) + `TickStampedCommand` is already that
+  pattern.
 - The per-tick chained snapshot digest is the desync detector; `EnvironmentFingerprint` +
   the MXCSR gate are the join-time compatibility check; snapshot save/restore is the resync path.
 - Therefore multiplayer is **intent replication over an unmodified deterministic sim** — no
@@ -111,7 +116,8 @@ The engine is already shaped for lockstep, and this amendment pins that as the i
    replay compatibility); #30/#43 for competitive seasons; #39 for platform services.
 3. Standing guardrails already in force that the transport depends on (and which this amendment
    makes explicit as MUSTs to preserve): no wall-clock or network timing in game logic; no new
-   mutation surface that bypasses the tick-stamped intent seams; digest chain stays per-tick.
+   mutation surface that bypasses the public intent seams, and remote intents apply only through
+   a tick-scheduled command layer at an agreed tick (§3.2); digest chain stays per-tick.
 
 ### 3.4 Spec mapping
 
@@ -128,8 +134,8 @@ The engine is already shaped for lockstep, and this amendment pins that as the i
 The base `master-development-plan.md` stays v1.0 with historical text verbatim; it gains only a
 header pointer to this amendment. Interpretive deltas this amendment establishes:
 
-1. §3.4's "Sound effects" polish bullet and §7 item 29 "Sound Design" are owned by §2 above
-   (candidates #48 + #51).
+1. §3's Month-11–12 "UI & Polish" Sound-effects bullet and §7 item 29 "Sound Design" are owned
+   by §2 above (candidates #48 + #51).
 2. Stage 6's "Deterministic netcode" bullet is owned by §3 above (candidate #52), with the
    lockstep intent-replication model pinned as the intended architecture.
 
@@ -150,3 +156,4 @@ design supplements at their wave (#51 ~Wave 8; #52 not before Stage 5).
 | Version | Date | Changes |
 |---------|------|---------|
 | v0.1 | July 24, 2026 | Initial amendment: audio & sound design (§2, candidates #48 slice + new #51) and multiplayer transport / deterministic netcode (§3, new candidate #52, lockstep intent-replication model pinned, Stage-6 no-pull-forward decision recorded). |
+| v0.2 | July 24, 2026 | AR-1 fixes (0H+5M+3L across the amendment + #51/#52 plans + README/roadmap): §3.2/§3.3 seam-commit contract corrected against source — `SubstitutePlayer` applies immediately (`MatchEngine.cs` pending-event queue holds only the notification event), Set\*Tactic are the stride-committed pair, and the tick-scheduled-command-layer requirement is now an explicit guardrail; §2.4 #48 wave corrected Wave 8 → Wave 7 ("one wave after"); the "Sound effects" bullet anchor corrected §3.4 → §3 Month-11–12 "UI & Polish" here and in the base-plan header pointer / spec-51 plan. |

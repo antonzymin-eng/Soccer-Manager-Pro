@@ -1,7 +1,19 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 24, 2026, latest same day (**#51/#52 spec-plan files authored** — the Amendment-01 §5
+**Last Updated:** July 24, 2026, latest same day (**AR-1 over Amendment 01 + the #51/#52 plans: 0H+5M+3L, all
+fixed.** M-1 seam-commit contract corrected against source — `SubstitutePlayer` applies immediately
+(`MatchEngine.cs` queues only the notification event), Set\*Tactic are the stride-committed pair, and
+remote-intents-via-tick-scheduled-command-layer is now an explicit guardrail (amendment §3.2/§3.3 + spec-52
+§3/§5); M-2 #48 wave mislabel (amendment §2.4, Wave 8 → "one wave after #48's Wave-7 slice"); M-3 the
+"Sound effects" master-plan anchor corrected §3.4 → §3 Month-11–12 "UI & Polish" across amendment /
+base-plan pointer / spec-51; M-4 `management-layer-spec-roadmap.md` → **v0.4** (the v0.2 gap-fill
+precedent): §1 heading #27–#52 + rows #51/#52 + footnote ³, §7 Wave-8 #51 entry + new Wave-9 block; M-5
+`spec-plans/README.md` "Next step" de-staled (promoted-through list per `SPEC_INDEX.md`; next = #32, then
+Wave 5) + governance header aligned to roadmap v0.4. L: README footnote ² → ¹; spec-52 §8 guardrails no
+longer overstated as automated locks; spec-51 §3 marks #48's mapper "(proposed)". Amendment v0.2,
+spec-51/52 plans v0.2.)
+**Last Updated (prior):** July 24, 2026, later same day (**#51/#52 spec-plan files authored** — the Amendment-01 §5
 next step. **New files:** `docs/tracking/spec-plans/spec-51-audio-sound-design.md` v0.1 (Wave 8, FR-AU,
 presentation — none; game-wide audio framework, boundary with #48's match-audio slice pinned as KD-1) +
 `docs/tracking/spec-plans/spec-52-multiplayer-transport-netcode.md` v0.1 (Wave 9 post-roadmap, FR-NET,
