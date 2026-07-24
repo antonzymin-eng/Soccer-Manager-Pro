@@ -3,13 +3,14 @@
 > **Created:** 2026-07-23
 > **Status:** DESIGN SUPPLEMENT (pre-promotion, pre-code) — high-level plan only; adversarial
 > review CONVERGED (AR-1 3H+2M+1L → AR-2 0H+0M+3L → AR-3 1H+2M+1L → AR-4 clean → AR-5 0H+2M+3L →
-> AR-6 clean, see Version History), no section files, no numbered spec. Same governance class as
-> `interactive-match-view-design.md` and `match-engine-design.md`.
+> AR-6 clean → AR-7 1H+2M+1L → AR-8 clean, see Version History), no section files, no numbered spec.
+> Same governance class as `interactive-match-view-design.md` and `match-engine-design.md`.
 > **Governs (when implemented):** two new presentation assemblies — host-free `src/match-client-core/`
 > (the deterministic session / command-channel / view-state logic) and Unity-only
 > `src/match-client-unity/` (the render/UGUI skin + scene/prefab/host scaffolding); a small exclusion
 > in `tools/dotnet-ci/generate_projects.py` so the Unity-only assembly is not shim-compiled (§5-P0); a
-> modification to `match-viewer/LiveMatchStreamer.cs` (adds one optional pre-tick hook); a raise of
+> modification to `match-viewer/LiveMatchStreamer.cs` (adds one optional pre-tick hook + a `ServiceOnce()`
+> seam for off-tick save servicing, §5-P0/§6.3); a raise of
 > `match-viewer`'s `MaxLiveSpeedMultiplier` config cap (currently 8.0) to ≥ 10 so the 10× control is
 > deliverable (§2 item 2); and read-only observation accessors on `MatchEngine`. The manager-command channel lives in `match-client-core` and
 > drives only pre-existing public mutators — **no new mutator on `MatchEngine`.** Presentation tooling
@@ -59,8 +60,9 @@ Unity, plus live tactical input — reachable from a minimal Main-Menu → Tacti
    streamer clamps to that cap, so without the raise 10× is silently 8×; see §Governs / §5-P0.)
 3. The manager can change team/player tactics and make substitutions **mid-match**; each change is
    applied at a deterministic tick and recorded in a **tick-stamped command log**, so a match is
-   byte-identically reproducible **from that log + the seed within an uninterrupted session** — *not*
-   from human intent, since the wall-clock timing of a live click is not itself reproducible (§6.1).
+   byte-identically reproducible **from that log + the `MatchSetup` (seed + initial squads/tactics/
+   manager config) within an uninterrupted session** — *not* from human intent, since the wall-clock
+   timing of a live click is not itself reproducible (§6.1).
    Across a save/restore the log is not carried (it is in-memory only, §11), so a resumed match
    reproduces from the restored snapshot + the post-restore log; the match remains save/restore-clean
    through the existing snapshot path either way.
@@ -148,8 +150,11 @@ client is a new **View** plus a new **input path back into the Model**.
   streamer — so the command/determinism logic stays shim-testable, §5-P0). The driver's
   `ManagerCommandQueue` accepts typed **game** commands on the UI thread; the driver's drain callback
   (installed by `MatchSession` as the streamer's pre-tick hook, §5-P0) applies them on the sim thread at
-  the tick boundary via the live mutators, and records each in the tick-stamped log. Playback pause/speed are **not**
-  commands — they stay on the streamer's own playback surface (§6.4).
+  the tick boundary via the live mutators, and records each in the tick-stamped log. The same
+  drain-and-service step is reachable off the tick loop through the streamer's `ServiceOnce()` seam
+  (§5-P0/§6.3), so a save requested while the match is paused or finished is serviced on the sim thread
+  without advancing a tick. Playback pause/speed are **not** commands — they stay on the streamer's own
+  playback surface (§6.4).
 
 ## 5. Phased implementation plan
 
@@ -184,10 +189,18 @@ gate — §5-P0). This ordering front-loads everything the host block does *not*
   `MaxLiveSpeedMultiplier` (config default 8.0, `MatchViewerConstants.cs:90`), so the master-plan 10×
   control (§2) is silently 8× until the cap is raised to ≥ 10. Raise the config default; listed in
   §Governs as a change to the reused `match-viewer` assembly.
+- **`LiveMatchStreamer` seams (small `match-viewer` change):** two additions to the reused streamer —
+  (i) the **optional pre-tick hook** the driver's drain installs (§4), and (ii) a **`ServiceOnce()`**
+  method that performs one sim-thread drain-and-service pass (drain the command queue + honour a pending
+  save-capture request) **without advancing a tick**, so a save requested while paused or at full time
+  is serviced on the sim thread rather than hanging on a tick boundary that never arrives (§6.3). Both
+  reuse the streamer's existing single-writer lock; the browser viewer installs no hook and never calls
+  `ServiceOnce()`, so its playback-only / disjoint-by-construction invariant is unchanged.
 - A `MatchSession` façade (in core): constructs/configures the **whole live-match composition** from a
   `MatchSetup` value (home/away squads, tactics, manager config, seed) — the `MatchEngine`, the
   `LiveMatchStreamer`, **and the `MatchClientDriver`** — installing the driver's drain as the streamer's
-  pre-tick hook and exposing the driver's `ManagerCommandQueue` (enqueue-only) to the View. It is the
+  pre-tick hook, wiring the driver's save-request path through the streamer's `ServiceOnce()` seam (§6.3),
+  and exposing the driver's `ManagerCommandQueue` (enqueue-only) to the View. It is the
   single place that owns match lifecycle **and the command-channel wiring**, so the Unity host and any
   head-less test drive the identical composition, input path included. This is the "click Play Match"
   seam the browser design left to Stage-1 UI.
@@ -241,7 +254,7 @@ gate — §5-P0). This ordering front-loads everything the host block does *not*
 
 ### P6 — Integration, cert & closed-loop scenario
 - A `#19 ScenarioRunner` cross-spec scenario: boot via `MatchSession`, inject a scripted
-  tick-stamped command sequence through the queue, assert (a) two runs with the same seed + same
+  tick-stamped command sequence through the queue, assert (a) two runs with the same `MatchSetup` + same
   tick-stamped sequence are digest-identical, and (b) save@N → restore → tick-to-N+K replaying the
   same post-N tick-stamped commands == uninterrupted run. This locks input determinism at the
   composition level, head-less.
@@ -260,7 +273,8 @@ sufficient** for reproducibility: the tick *index* a live click lands on is itse
 wall-clock scheduling, pause state, and speed multiplier, so **a live human-driven match is not
 byte-reproducible from the human's intent** — you cannot replay "the clicks." Reproducibility is
 therefore defined against a **tick-stamped command log** (`(appliedTick, command)`): the match is
-byte-identical given *the same seed + the same log*. This is why the log is a P2 deliverable, not an
+byte-identical given *the same `MatchSetup` (which carries the seed and the initial squads / tactics /
+manager config / GK-heading flag) + the same log*. This is why the log is a P2 deliverable, not an
 optional add-on — without it there is nothing to replay from, and the P6 acceptance test (§5-P6)
 would have no defined "the same commands." A naive "call `SetTeamTactic` from the button handler"
 fails on both axes: it races the sim thread **and** records no applied tick.
@@ -274,31 +288,55 @@ drained batch is FIFO and stable. Every applied command is appended to the tick-
 tick it was applied at. The hook fires **inside `LiveMatchStreamer.TickOnce()`** (not the background
 pacing-loop wrapper around it), so the threaded live loop and a direct head-less `TickOnce()` call
 both exercise the drain — that is what makes the P2 determinism test meaningful. Commands enqueued
-**after `MatchEnded`** are rejected at enqueue: the streamer auto-pauses at full time, so the sim
-thread no longer ticks to drain them; the UI gates tactical input at full time (§5-P5) rather than
-letting a click become a silent no-op.
+**after `MatchEnded`** must not mutate the finished match, and the **sim side is the authority** for
+that (it reads the engine's live `_matchEnded`, not a lagging frame): `SubstitutePlayer` already guards
+`_matchEnded` (`MatchEngine.cs:1155`), and a `SetTeamTactic` / `SetPlayerTactic` staged post-end never
+commits — its pending→active commit runs inside the AI phase, which the engine freezes at full time
+(the match-flow full-time transition freezes AI/Physics/Resolve). The UI's enqueue-time check (from the
+latest frame's `MatchEnded`, which trails the sim by ≥ 1 frame) is therefore a best-effort early-out
+only — it **cannot** be the guarantee, because a command can pass it in the window between the sim
+setting `_matchEnded` and the UI observing it. Such a straggler is harmless: it is either dropped by the
+sim-side guard when next drained, or never drained at all (the auto-paused sim does not tick) — either
+way it never mutates the finished match. The UI also gates tactical input at full time (§5-P5) so a
+click does not silently no-op. **Design requirement (not assumed):** any live command whose applied
+tick would fall at/after `MatchEnded` must be dropped sim-side; where an existing mutator lacks that
+guard, P2 adds it at the drain.
 
-**6.3 Save / restore integrity.** Two distinct guarantees, both required by §2's done-criteria:
+**6.3 Save / restore integrity.** Distinct guarantees, all required by §2's done-criteria:
 - **Live save → restore (from the current point):** covered by the **existing** snapshot
   serialization — a committed tactic (v9/v10 `TeamTactic`/`PlayerTactic`), a substitution
   (`_activeBenchSlot` + counts + on-pitch attributes), and manager/GK-heading state (v13/v18) are all
   already in the snapshot, so restoring from a snapshot taken *after* a change re-ticks identically
   **with no `SNAPSHOT_SCHEMA_VERSION` bump**. **Invariant (new):** a durable capture must run **on the
-  sim thread, at a tick boundary, with the command queue fully drained** — the engine is
-  single-threaded (only the sim thread may touch it, per the `LiveMatchStreamer` single-writer
-  invariant), and a command enqueued-but-not-drained at capture time would be silently lost on restore.
-  So a UI-thread save request **never calls the engine directly**: it sets a request flag, and at the
-  next tick boundary the driver's pre-tick hook drains the queue, takes the capture on the sim thread,
-  and hands the resulting bytes back to the UI thread — the same disjoint-by-construction rule as the
-  frame read (§4). A naive UI-thread `CaptureDurablePayload` call would tear-read mid-tick engine state
-  → corrupt save or crash.
+  sim thread, with the command queue fully drained** — the engine is single-threaded (only the sim
+  thread may touch it, per the `LiveMatchStreamer` single-writer invariant), and a command
+  enqueued-but-not-drained at capture time would be silently lost on restore. So a UI-thread save
+  request **never calls the engine directly**: it sets a request flag serviced on the sim thread, which
+  drains the queue, takes the capture, and hands the resulting bytes back to the UI thread — the same
+  disjoint-by-construction rule as the frame read (§4). A naive UI-thread `CaptureDurablePayload` call
+  would tear-read mid-tick engine state → corrupt save or crash.
+- **Servicing the save when the sim is not ticking (paused / full-time):** the save-request flag must
+  be serviceable **without advancing a tick**. The two states where a user most wants to save — paused,
+  and the auto-pause at full time (§6.2) — are exactly the states where the pre-tick hook never fires,
+  so binding save to "the next tick boundary" would make save-while-paused hang and a completed match
+  unsaveable. The streamer therefore exposes a **`ServiceOnce()`** seam (§4/§5-P0): one controlled
+  sim-thread pass that drains the command queue and honours a pending capture request **without ticking
+  the engine**. The driver invokes it for a save regardless of pause/ended state (the engine is
+  quiescent when paused, so a capture there is clean); while running, the pre-tick hook already performs
+  the same drain-then-service step each tick, so the two paths share **one** servicing routine (no
+  second code path to keep in sync). A completed (`MatchEnded`) match is therefore saveable.
 - **Replay from an earlier point (rewind):** requires the tick-stamped log (post-snapshot commands
   are not in an earlier snapshot). P2 *produces* the log; the on-disk persistence + scrub-back
   *feature* that consumes it is deferred (§11) — but the in-memory log itself is not deferred.
-- **`EnableGkHeading` interaction:** `CaptureDurableHeader`/`CaptureDurablePayload` throw
-  `NotSupportedException` while Gk-heading is on (`MatchEngine.cs:911,920`). Since `EnableGkHeading`
-  is a P0 setup-only toggle (§3-2), the client either leaves it off for a saveable match or **disables
-  the in-match save affordance when it is on** — the plan does not silently produce an unsaveable match.
+- **`EnableGkHeading` interaction:** a GK-heading-on match **is saveable** — no special-casing. Verified
+  against `MatchEngine.cs`: `EnableGkHeading` serializes its cross-tick state at
+  `SNAPSHOT_SCHEMA_VERSION` 18 (its own contract documents "a flag-on engine is … snapshot-safe"), and
+  `CaptureDurableHeader` / `CaptureDurablePayload` do **not** throw on the flag, so the "already in the
+  snapshot" guarantee of the first bullet applies unchanged — no `SNAPSHOT_SCHEMA_VERSION` bump, no
+  save-affordance gating, and `EnableGkHeading` stays the ordinary P0 setup-only toggle (§3-2). (This
+  supersedes an earlier draft that treated GK-heading as save-hostile; that reflected a Phase-1
+  fail-loud the project's Phase-2 v18 serialization has since removed — the one live boundary this plan
+  had against the engine, re-checked against current source.)
 
 **6.4 Boundary with the browser viewer, and with playback controls.** Two separations, both
 load-bearing: (1) the browser `LiveMatchServer` stays playback-only, permanently; this game-command
@@ -335,9 +373,12 @@ render/Update loop to instrument.
 ## 9. Testing strategy
 
 - **Host-free (shim, every push):** command-queue determinism (enqueue/drain ordering, apply-tick,
-  FIFO batch), the drained-empty-queue-before-capture invariant (§6.3), observer-neutrality re-lock
-  for the extended frame, interpolation/camera/stat math unit tests, `MatchSession` lifecycle, and
-  the P6 `ScenarioRunner` cross-spec scenario (same-seed + **same tick-stamped log** ⇒ digest
+  FIFO batch), the drained-empty-queue-before-capture invariant (§6.3), the `ServiceOnce()`
+  save-capture path while **paused and at full time** (§6.3 — a save taken paused/ended round-trips to
+  an uninterrupted run), the sim-side post-`MatchEnded` command discard (§6.2 — a command enqueued in
+  the end-of-match window is dropped, not stranded), observer-neutrality re-lock for the extended
+  frame, interpolation/camera/stat math unit tests, `MatchSession` lifecycle, and
+  the P6 `ScenarioRunner` cross-spec scenario (same `MatchSetup` + **same tick-stamped log** ⇒ digest
   equality + save/restore-with-log round-trip). **This proves the reproducible-from-the-log core —
   apply-tick determinism, drain ordering, and log-driven replay — without a Unity host.** (It does
   *not* claim live wall-clock click timing is reproducible; by §6.1 it is not, and reproducibility is
@@ -388,4 +429,5 @@ follows once the input/determinism core is locked and a cert-host slot is schedu
 | 0.2 | 2026-07-23 | **AR-1 (self-review, 3H+2M+1L, all resolved).** H-1: §5-P2 lumped playback pause/speed into the `ManagerCommandQueue` while §6.2 defined every queue command as an engine mutator — pause/speed are presentation-only and must never touch the digest (the browser viewer's core invariant); removed them from the queue, they stay on the streamer's playback surface (§4/§5-P2/§6.4). H-2: §5-P2 put the command drain *inside the shared* `LiveMatchStreamer.TickOnce()`, which would have given the browser viewer's streamer a live mutation path too, regressing its playback-only / disjoint-by-construction invariant; the drain now lives in a Unity-client-owned `MatchClientDriver` installed as an **optional pre-tick hook** — the shared streamer keeps zero mutation logic and the browser viewer supplies no hook (§4 diagram + prose, §5-P2). H-3: §2/§9 claimed live-input determinism while §6.3 leaned toward *deferring* the command journal, and the P6 acceptance test depended on the deferred mechanism — an internal contradiction; resolved by defining reproducibility against a **tick-stamped command log** that is a P2 deliverable (§6.1), settling Q1, and rewording §2 item-3 / §9 / R2–R3 to match (a live match is reproducible from the log, not from human intent). M-1: §6.3 never stated the drained-empty-queue-before-capture invariant (an enqueued-but-undrained command would be lost on restore) and ignored that `CaptureDurable*` throws when `EnableGkHeading` is on — both now addressed in §6.3. M-2: §3-2/§5-P2 mixed live-safe mutators with pre-kickoff/boot-only ones (`ConfigureSquads` throws once ticked, `MatchEngine.cs:1301`); split into a setup-phase set (P0 `MatchSetup`) and a live set (`SetTeamTactic`/`SetPlayerTactic`/`SubstitutePlayer` only), `SetManagerMode` dropped from the live queue. L-1: `LiveMatchStreamer` mischaracterized as "double-buffered" — corrected to "lock-guarded latest-frame handoff (same guarantee as the vol-4 double-buffer)" (§3-3). |
 | 0.3 | 2026-07-23 | **AR-2 (self-review, 0H+0M+3L, all resolved) — CONVERGENCE.** Full re-read of the whole document; the three High + two Medium from AR-1 verified resolved with no regressions. L-1: §1 still listed "speed control" among manager input "fed back into the running simulation," which the tightened §6.4 (pause/speed never touch the sim) now contradicted — reworded to separate presentation-only speed/pause. L-2: the §4 ASCII diagram was misaligned/hard to follow after the driver was added — redrawn cleanly (streamer's pre-tick hook → driver's drain callback → engine mutators on the sim thread; frame → View; input → queue), and a note added that the hook receives the mutation surface as a parameter so the driver keeps no off-thread-callable engine reference (closes a latent thread-safety footgun). L-3: §5-P6 said "same-command runs" while §9 said "same tick-stamped log" — aligned P6 to "same tick-stamped command sequence." No new High or Medium found; the channel-placement, playback/mutation separation, log-based reproducibility definition, drained-empty-before-capture invariant, and lifecycle-split all hold under a fresh hostile read. Converged. |
 | 0.4 | 2026-07-23 | **AR-3 (self-review, 1H+2M+1L, all resolved).** The first two passes hunted inside §6 (the command channel) and missed the assembly / CI-gate layer entirely. H-1: P0 named a single `src/match-client-unity/` assembly and P4 put the first-ever `MatchClientBehaviour : MonoBehaviour` render skin in it — but `tools/dotnet-ci/generate_projects.py:64` globs every `*.asmdef` under `src/` and compiles it against a shim with no rendering types, with no per-assembly exclusion; so P4 would either redden the whole-tree compile or (if the assembly were excluded) drop the host-free determinism core out of CI. Split into host-free `match-client-core` (P0–P3, shim-gated) + Unity-only `match-client-unity` (P4–P6), and made a `generate_projects.py` exclusion an explicit P0 deliverable (§Governs / §5 header / §5-P0 / §5-P4 / §8 / §4 diagram + command-path prose). M-1: §6.3 asserted "drained before capture" but never marshalled the durable capture onto the sim thread — a UI-thread `CaptureDurablePayload` would tear-read the single-threaded engine; §6.3 now routes save through a sim-thread request flag drained/captured by the pre-tick hook. M-2: §2 item-3's "reproducible from log + seed" was over-broad — the log is in-memory only (§11), so it holds only within an uninterrupted session; qualified item-3 for the save/restore case. L-1: §Governs omitted the `LiveMatchStreamer` pre-tick-hook modification and mislabeled the command channel as "on `MatchEngine`"; corrected. **AR-4 (pass over the AR-3 diff) — CONVERGENCE:** the full re-read caught one regression the AR-3 edit introduced — §5-P2 still called `MatchClientDriver` "(Unity-client-owned)" after §4/§5-P0/§Governs had moved it to host-free `match-client-core`, a contradiction in the "core new work" section; fixed §5-P2 + aligned the §3-7 shorthand ("Unity UI → driver → sim-thread engine"). No other High/Medium; the v0.2 history row's "Unity-client-owned" wording is left verbatim as a frozen record of AR-1's then-state. |
+| 0.6 | 2026-07-24 | **AR-7 (self-review, 1H+2M+1L, all resolved) — verified against current `MatchEngine.cs`, not the prior passes' assumptions.** The first six passes never re-checked §6's engine facts against source; two had moved. H-1: save requests + post-end commands were serviced **only** by the pre-tick hook, which runs only while the sim is ticking — but the streamer pauses (playback) and auto-pauses at full time, so save-while-paused would hang and a completed match would be unsaveable (both against §2's save/restore done-criterion), and the structural root is that the hook's availability window (ticking-only) did not cover the states where its queued work accumulates. Added a `ServiceOnce()` streamer seam (one sim-thread drain-and-service pass **without advancing a tick**), invoked by the driver for save regardless of pause/ended state; the running path (pre-tick hook) and the paused path share one servicing routine (§4/§5-P0/§6.3/§Governs); §9 gains the paused/ended save-capture test. M-1: §6.3's `EnableGkHeading` bullet was stale, self-contradictory, and mis-cited — it claimed `CaptureDurableHeader`/`CaptureDurablePayload` "throw `NotSupportedException` while Gk-heading is on (`MatchEngine.cs:911,920`)" while its *own first bullet* listed **v18** as covering GK/heading save; verified against source: 911/920 are the `RestoreFromSnapshot` squad-provider fail-loud (capture is at 1938/1957 and does **not** throw), and `EnableGkHeading` documents v18 snapshot-safety since Phase 2. Rewrote the bullet — a flag-on match is saveable, no affordance gating, citation dropped. M-2: §6.2's "reject post-`MatchEnded` at enqueue" read a lagging frame, so a command could slip through in the end-of-match window and strand on the auto-paused sim; moved the authority to the sim side (drain + each mutator's live `_matchEnded` guard), with the UI check demoted to best-effort. L-1: §6.1 reproducibility invariant "seed + log" omitted the initial configuration — tightened to "same `MatchSetup` (seed + squads/tactics/manager config/GK-heading flag) + same log" here, §2 item-3, §5-P6, §9. **AR-8 (pass over the AR-7 diff) — CONVERGENCE:** full re-read; the `ServiceOnce()` seam is consistently referenced across §Governs/§4/§5-P0/§6.2/§6.3, the shared-servicing-routine claim removes the second-code-path hazard the fix could have introduced, the GK-heading correction no longer contradicts the v18 first bullet, and the sim-side post-end authority is consistent with the `ServiceOnce()`/drain discard. No new High/Medium. Converged. |
 | 0.5 | 2026-07-23 | **AR-5 (self-review, 0H+2M+3L, all resolved).** The prior "converged" passes never checked the reused streamer's speed clamp against the stated speed set. M-1: done-item 2 requires a 10× control, but `LiveMatchStreamer.SetSpeedMultiplier` clamps to `MaxLiveSpeedMultiplier` (config default 8.0, `MatchViewerConstants.cs:90`) — 10× silently ran at 8×; added the config-cap raise to ≥ 10 as an explicit `match-viewer` change in §Governs / §2 item 2 / §5-P0. M-2: `MatchSession` was billed as the single composition root ("Unity host and any test drive it identically") but the `MatchClientDriver` + pre-tick-hook wiring — the determinism-bearing input path — was left ownerless; put the driver in the façade's charter (§5-P0), so the head-less P2 test drives the exact composition the host ships (§4 command-path updated to "installed by `MatchSession`"). L-1: §5 header now notes P1's accessors land in `match-engine`, not `match-client-core`. L-2: §6.2 now rejects commands enqueued after `MatchEnded` at enqueue (the auto-paused sim thread never drains them). L-3: §6.2 now pins the hook firing **inside `TickOnce()`** (not the pacing-loop wrapper), so the head-less P2 test genuinely exercises the drain. **AR-6 (pass over the AR-5 diff) — CONVERGENCE:** full re-read; the five fixes are internally consistent (the §2 ↔ §Governs ↔ §5-P0 speed-cap cross-refs align; §4 "installed by `MatchSession`" matches the new §5-P0 façade charter; the `MatchSetup` "manager config" addition also closes the prior field-list gap; the §6.2 additions do not conflict with §6.3). No new High/Medium. Converged. |
