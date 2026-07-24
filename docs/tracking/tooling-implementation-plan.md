@@ -96,6 +96,8 @@ consumed by **static reference** at live, determinism-load-bearing sites:
 - `ManagerAdaptation.cs:189` / `:247` — `TacticPreset preset = TacticPresetLibrary.Presets[ordinal];`
   (the running manager AI resolves its selected/adapted preset by ordinal against the static library).
 - `ManagerAdaptation.cs:44/:63/:85/:92` — `TacticPresetLibrary.Count` (ladder bounds).
+- `ManagerAdaptation.cs:49–51` — `TacticalPresetsConstants.BaseFit/AggrAffinity/CautAffinity[presetOrdinal]`,
+  three **fixed 5-element `float[]`** indexed by the same preset ordinal (the A.3 kickoff-scoring rows).
 - `MatchEngine.cs:1453/:1473` — `TacticPresetLibrary.BalancedOrdinal` / `.Count`.
 
 A disk-loaded catalogue therefore **cannot reach the consumers by producing a list** — the consumers
@@ -104,8 +106,13 @@ manager requires changing how the catalogue is *sourced*, not just adding a pars
 (`TeamTacticFileLoader → TeamTacticConfig`) is a **weaker analogy than it looks**: `TeamTacticConfig`
 was always an *instance consumed by value*, so its loader genuinely was a construction-time swap;
 `TacticPresetLibrary` is a *static catalogue consumed by static reference*, so its loader is not.
+**And the A.3 affinity rows are ordinal-parallel to the ladder but live in a fixed-length side-table**
+(`TacticalPresetsConstants`, length 5) — so a disk catalogue with `Count ≠ 5` would crash or mis-score
+`KickoffScore` unless those rows travel *with* the presets (the detailed note folds them onto
+`TacticPreset`; see detailed §1.0/§1.1).
 
-**This static→injectable decision is the real WS-1 work; the file grammar is the easy half.**
+**This static→injectable decision — including moving the affinity rows onto the preset — is the real
+WS-1 work; the file grammar is the easy half.**
 
 ### 1.4 Proposed implementation
 
@@ -113,11 +120,17 @@ was always an *instance consumed by value*, so its loader genuinely was a constr
    how a disk-loaded catalogue reaches the static consumers in §1.3. Two viable shapes:
    - **(a) Injectable catalogue (recommended).** Refactor `TacticPresetLibrary` into a constructible
      catalogue — an instance (or interface `ITacticPresetCatalogue`) with the in-code presets as the
-     default — and thread it through `ManagerAdaptation` and `MatchEngine` (the two `Presets[]`/`Count`/
-     `BalancedOrdinal` consumers). The loader then constructs one from parsed text. This is the honest
-     "construction-time swap," but it is a real refactor of a type read at the sites listed in §1.3,
-     **not** a behaviour-neutral no-op — it must carry its own before/after digest-equality proof
-     (default catalogue ⇒ byte-identical to the current static path).
+     default — and thread it through `ManagerAdaptation` and `MatchEngine` (the `Presets[]`/`Count`/
+     `BalancedOrdinal` consumers). **`TacticPreset` also gains the three A.3 affinity scalars**
+     (`BaseFit`/`AggrAffinity`/`CautAffinity`, seeded from `TacticalPresetsConstants` in the default
+     catalogue) so `KickoffScore` reads them off the resolved preset instead of a fixed side-table —
+     without this the abstraction is incomplete and a `Count ≠ 5` catalogue crashes (detailed §1.0/§1.1).
+     The loader then constructs one from parsed text. This is the honest "construction-time swap," but it
+     is a real refactor of a type read at the sites listed in §1.3, **not** a behaviour-neutral no-op —
+     it must carry a **faithful-pass-through neutrality proof** (a host-independent catalogue-contents-
+     equality test — the default catalogue delivers today's exact preset dials + affinity scalars — plus
+     the existing formula/determinism locks; a same-build two-engine comparison is tautological and an
+     absolute float-physics digest golden is host-fragile — detailed §1.1).
    - **(b) Offline codegen.** The Stage-1 loader runs at build time and regenerates the `s_presets`
      initializer; the class stays static and runtime consumers are untouched. Simpler, but it is not
      the runtime `[GT]` config-loader FR-CS-019 anticipates, so pick this only if runtime authoring is
@@ -148,8 +161,11 @@ was always an *instance consumed by value*, so its loader genuinely was a constr
    use an explicit comparator: `Team` field-by-field; `Players` null-or-elementwise-equal; and `Name`
    handled deliberately — since Name is authoring-only (§1.1), either require the file to carry the
    library's names and assert they match, or exclude Name from the comparison and document that the
-   file need not reproduce it. This is the load-bearing acceptance test; getting the equality wrong
-   makes it tautological or always-failing.
+   file need not reproduce it. The comparator also asserts the three per-preset affinity scalars
+   (`BaseFit`/`AggrAffinity`/`CautAffinity`, from step 0(a)) **exactly**. This is the load-bearing
+   acceptance test; getting the equality wrong makes it tautological or always-failing. Add a negative
+   companion: empty/comment-only input and a section missing a required affinity key each throw
+   `FormatException`.
 3. **Boot disk-READ wiring is separately optional** — distinct from the sourcing refactor in step 0.
    The WS-1 deliverable is *the sourcing choice (step 0a refactor or 0b codegen) + the loader + its
    tests*; **whether/where the engine boot actually reads a preset file from disk at startup** is a
@@ -186,14 +202,19 @@ was always an *instance consumed by value*, so its loader genuinely was a constr
 
 ### 1.6 Acceptance
 
-- New `TacticPresetFileLoaderTests`: empty/comment-only ⇒ the identity/Balanced catalogue; the
-  canonical five-preset file round-trips **deep-equal to the default catalogue** (via the explicit
-  comparator specified in §1.4 step 2, not struct `==`); every fail-loud gate (unknown key/section,
-  unparsable value, duplicate, ordinal re-order/gap, roster-size mismatch via `ValidatePlayers`)
-  throws `FormatException`.
-- If step 0(a) is chosen: the injectable-catalogue refactor carries a **before/after digest-equality
-  proof** — a match run against the default catalogue is byte-identical to the current static path
-  (the refactor is behaviour-neutral even though it touches `ManagerAdaptation`/`MatchEngine`).
+- New `TacticPresetFileLoaderTests`: **empty/comment-only ⇒ fail loud (`FormatException`)** — a preset
+  catalogue has no "identity" default (a catalogue is a variable-length ladder, not a single tactic with
+  a neutral value; detailed §1.3); the canonical five-preset file round-trips **deep-equal to the default
+  catalogue** including the three per-preset affinity scalars (via the explicit comparator specified in
+  §1.4 step 2, not struct `==`); every fail-loud gate (empty catalogue, unknown key/section, unparsable
+  value, duplicate, ordinal re-order/gap, missing/out-of-range affinity, roster-size mismatch via
+  `ValidatePlayers`) throws `FormatException`.
+- If step 0(a) is chosen: the injectable-catalogue refactor carries a **faithful-pass-through neutrality
+  proof** — a host-independent catalogue-contents-equality test (default catalogue == today's exact
+  preset data incl. affinity scalars) plus the existing formula/determinism locks prove byte-identity to
+  the static path by construction (a same-build two-engine comparison is tautological and an absolute
+  float-physics digest golden is host-fragile; detailed §1.1). The refactor is behaviour-neutral even
+  though it touches `ManagerAdaptation`/`MatchEngine`.
 - No `SNAPSHOT_SCHEMA_VERSION` change; no behaviour change (loader is not yet wired into boot, and the
   step 0(a) refactor is digest-neutral on the default catalogue).
 - Full `dotnet` gate green.
@@ -376,9 +397,11 @@ are now verifiable **directly from the committed project**, no live Unity instal
   existing one) and converges through adversarial review before code, per project convention.
 - **Determinism neutrality.** WS-3 is behaviour-neutral by construction. WS-1's *loader + tests* are
   neutral by construction, but its step-0(a) injectable-catalogue refactor touches live consumers and
-  must **prove** neutrality with a before/after digest-equality run (§1.6), not assert it. WS-2 is
-  behaviour-neutral **only if** the balance passes keep the current magnitudes (the expected #21-style
-  outcome); any re-tune must be flagged and its determinism tests rebaselined.
+  must **prove** neutrality by **faithful-pass-through** (§1.6 / detailed §1.1) — a host-independent
+  catalogue-contents-equality test plus the existing formula/determinism locks — not by a same-build
+  two-engine run (tautological) or a host-fragile absolute digest golden. WS-2 is behaviour-neutral
+  **only if** the balance passes keep the current magnitudes (the expected #21-style outcome); any
+  re-tune must be flagged and its determinism tests rebaselined.
 - **No phantom interfaces.** WS-1's *file loader* is a construction-time input, not a new runtime
   interface (FR-TP-017 / §4.4) — do not pre-declare a disk-read interface the boot path does not yet
   call. (An `ITacticPresetCatalogue` seam from step 0(a) is an internal injection point with a real

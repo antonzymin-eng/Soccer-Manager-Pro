@@ -28,6 +28,7 @@ read by **static reference** at live, determinism-load-bearing sites:
 | Consumer | Site | Reads |
 |----------|------|-------|
 | `ManagerAdaptation.KickoffScore` | `ManagerAdaptation.cs:44` | `TacticPresetLibrary.Count` |
+| `ManagerAdaptation.KickoffScore` | `:49–51` | `TacticalPresetsConstants.BaseFit/AggrAffinity/CautAffinity[presetOrdinal]` |
 | `ManagerAdaptation.SelectKickoffPreset` | `:63` | `.Count` |
 | `ManagerAdaptation.StepToward` | `:85`, `:92` | `.Count` |
 | `ManagerAdaptation.RunDecisionPoint` | `:189` | `.Presets[target]` |
@@ -41,21 +42,52 @@ running/restored match resolves its preset via `TacticPresetLibrary.Presets[ordi
 (`ManagerAdaptation.cs:189`). So the **ordinal→content mapping is a save-compatibility surface** the
 compiled static catalogue structurally cannot violate but a disk file can. Both facts drive the design.
 
+**The A.3 kickoff-scoring rows are part of the catalogue, not a separate constant table.**
+`KickoffScore` (`ManagerAdaptation.cs:49–51`) indexes three **5-element `float[]`** arrays —
+`TacticalPresetsConstants.BaseFit`/`AggrAffinity`/`CautAffinity` — **by the same preset ordinal** the
+ladder uses, while `SelectKickoffPreset` (`:63`) loops `p < catalogue.Count`. These arrays are hard-length
+5 and hard-wired to `TacticPresetLibrary`'s five ordinals (`TacticalPresetsConstants.cs:89–104`), so a
+disk-loaded catalogue with `Count > 5` throws `IndexOutOfRangeException` at kickoff (`BaseFit[p]`), and
+one with `Count < 5` silently under-scores the loaded presets. The APPEND-only ladder (FR-TP-013) means
+the *intended* use — appending a preset from disk — is exactly the crash. **Therefore the affinity triple
+is per-preset catalogue data and must travel with the preset, not stay a fixed compiled side-table** (see
+§1.1: `TacticPreset` gains `BaseFit`/`AggrAffinity`/`CautAffinity`). This is the third fact driving the
+design, and the one that makes the abstraction complete rather than half-done.
+
 ### 1.1 Chosen shape (recommended): injectable catalogue behind an interface
 
 Introduce a catalogue abstraction, keep the in-code presets as the default implementation, and thread
-it through the two consumers. The **default path stays byte-identical** (the default catalogue reads
-exactly today's `s_presets`), proven by a digest-equality test.
+it through the consumers (`ManagerAdaptation` + `MatchEngine`). The **default path stays byte-identical**
+(the default catalogue reads exactly today's `s_presets`), proven by the faithful-pass-through argument
+below — not a digest-equality run.
+
+**The affinity triple moves onto the preset (completes the abstraction, §1.0).** `TacticPreset`
+(`src/tactical-instructions/TacticPreset.cs`) gains three `float` properties — `BaseFit`, `AggrAffinity`,
+`CautAffinity` — carried alongside `Team`/`Players`/`Name`. `KickoffScore` then reads them off the
+*resolved preset* (`catalogue.Presets[presetOrdinal].BaseFit + profile.Aggression * …AggrAffinity +
+profile.Caution * …CautAffinity`) instead of indexing a fixed compiled `float[]`. The in-code catalogue
+seeds each preset's scalars from `TacticalPresetsConstants.BaseFit/AggrAffinity/CautAffinity[ordinal]`
+(the values are **unchanged**, so the default path is byte-identical), and a disk-loaded catalogue carries
+its own per-preset scalars — so appending a preset from disk supplies its scoring row *with* it, and
+`Count` can be any value without an out-of-bounds side-table. `TacticalPresetsConstants.{BaseFit,
+AggrAffinity,CautAffinity}` stay in place as the **default source** the in-code catalogue reads at
+construction (this is what keeps them lockable by the WS-2 #26 balance pass — see the cross-workstream
+note in §2.4); only `KickoffScore`'s *access path* changes from `Constants.BaseFit[ordinal]` to
+`preset.BaseFit`. The `ArchetypeAggression`/`ArchetypeCaution`/`ArchetypePatienceIntervals` A.2 rows are
+indexed by **archetype** ordinal (a fixed 3-cardinality `MANAGER_ARCHETYPE_COUNT`), not preset ordinal, so
+they are unaffected and stay in `TacticalPresetsConstants`.
 
 **New file — `src/tactical-instructions/ITacticPresetCatalogue.cs`:**
 ```csharp
 public interface ITacticPresetCatalogue
 {
-    IReadOnlyList<TacticPreset> Presets { get; }
+    IReadOnlyList<TacticPreset> Presets { get; }   // each preset now carries BaseFit/AggrAffinity/CautAffinity
     int Count { get; }
     byte BalancedOrdinal { get; }
 }
 ```
+The interface stays three members: with the affinity scalars on `TacticPreset`, `KickoffScore` reaches
+them through `Presets[ordinal]`, so no parallel `IReadOnlyList<float>` is needed on the catalogue itself.
 
 **New file — `src/tactical-instructions/InCodeTacticPresetCatalogue.cs`:** a sealed
 `ITacticPresetCatalogue` whose members return the existing `TacticPresetLibrary.Presets` / `.Count` /
@@ -64,12 +96,16 @@ consumers reach the catalogue*, not the catalogue contents.
 
 - Keep `TacticPresetLibrary` (static) as the data source `InCodeTacticPresetCatalogue` reads — do NOT
   delete it. Minimizes the diff and gives the default catalogue a provably-unchanged backing store.
+  `TacticPresetLibrary` is where each `TacticPreset` is constructed with its `BaseFit`/`AggrAffinity`/
+  `CautAffinity` seeded from `TacticalPresetsConstants` (so the seeding lives in one place and the
+  default values are provably today's).
 - `TacticPresetLibrary.BalancedOrdinal` / `Count` / `Presets` already exist (used at the sites above),
   so the wrapper is a thin pass-through.
 
-**Modify `ManagerAdaptation.cs` (static class):** its five static methods take an
+**Modify `ManagerAdaptation.cs` (static class):** its **six** static methods take an
 `ITacticPresetCatalogue catalogue` parameter (last param, before the existing trailing params where
-natural) instead of touching `TacticPresetLibrary` directly:
+natural) instead of touching `TacticPresetLibrary` directly (five read the catalogue; `EvaluateLadder`
+forwards it to `StepToward`):
 - `KickoffScore(in ManagerProfile, int presetOrdinal, ITacticPresetCatalogue catalogue)`
 - `SelectKickoffPreset(in ManagerProfile, ITacticPresetCatalogue catalogue)`
 - `StepToward(bool moreAttacking, byte current, ITacticPresetCatalogue catalogue)`
@@ -77,10 +113,10 @@ natural) instead of touching `TacticPresetLibrary` directly:
 - `RunDecisionPoint(MatchEngine engine, int teamId, ref ManagerState, int tick, int goalDiff, long ticksRemaining, long matchTicksTotal, ITacticPresetCatalogue catalogue)`
 - `ApplyKickoff(MatchEngine engine, ITacticPresetCatalogue catalogue, TeamTacticConfig teamBaseline = null, PlayerTacticConfig playerBaseline = null)`
 
-Each `TacticPresetLibrary.X` reference becomes `catalogue.X`. `KickoffScore`'s
-`TacticalPresetsConstants.BaseFit/AggrAffinity/CautAffinity[presetOrdinal]` stays as-is (those tables
-are #26's own `[GT]`s, ordinal-indexed against the same ladder — see the ordinal-stability guard in
-§1.4).
+Each `TacticPresetLibrary.X` reference becomes `catalogue.X`. `KickoffScore`'s three affinity reads
+become `catalogue.Presets[presetOrdinal].BaseFit/AggrAffinity/CautAffinity` (per the move above), so a
+`Count`-divergent catalogue can never index past a fixed side-table — see the ordinal-stability guard in
+§1.3.
 
 **Modify `MatchEngine.cs`:** hold `private readonly ITacticPresetCatalogue _presetCatalogue`
 (defaults to `new InCodeTacticPresetCatalogue()` at boot, or a new optional ctor param for injection);
@@ -89,13 +125,47 @@ into every `ManagerAdaptation.*` call site (there is a `RunManagerDecisionPoints
 the boot `ApplyKickoff` path — both in `MatchEngine`). `ConfigureManager` / `SeedManagerKickoff` are
 where the ordinal/BalancedOrdinal seeding lives.
 
-**Behaviour-neutrality obligation (KD gate):** a match run with the default `InCodeTacticPresetCatalogue`
-must be **byte-identical** to the current static path. Prove it with a digest-equality test
-(`ManagerAITests` / `MatchEngineTacticTests` already have two-run digest infrastructure): boot two
-engines identically (one pre-refactor conceptually — locked by the existing determinism tests staying
-green — one on the refactor), run an AI-managed match, assert identical `CurrentSnapshotDigest` chains.
+**Behaviour-neutrality obligation (KD gate) — proven by faithful-pass-through, NOT by a same-build
+digest comparison and NOT by a host-fragile absolute golden.** A match run with the default
+`InCodeTacticPresetCatalogue` must be **byte-identical** to the current static path. Two tempting proofs
+are both wrong, and the plan must reject them explicitly:
+- **Same-build two-engine equality is tautological.** "Boot two engines, both on the refactor, assert
+  identical digests" — both sides run the refactored code, so they agree even if the refactor changed
+  behaviour. Every existing digest test has this shape:
+  `ManagerAITests.ExplicitHuman_IsBehaviourNeutral_DigestUnchanged` (:544/:560) compares `untouched`
+  vs `explicitHuman` within one build; `MatchEngineDeterminismTests` is two-run same-build;
+  `MatchEngineSnapshotSchemaTests` is `baseline` vs `perturbed` same-build. None pins the *pre-refactor*
+  behaviour, and `ExplicitHuman_…` runs `ManagerMode.Human`, which never scores the catalogue. So
+  "locked by the existing determinism tests staying green" is, on its own, **not** a neutrality proof.
+- **An absolute pinned match-digest golden is host/SDK-fragile.** The digest chain runs float physics;
+  the project's determinism is *single-machine* (cross-platform bit-parity is a Stage-5 concern — root
+  `CLAUDE.md`), which is precisely why every existing digest test is relative. A hex-literal golden
+  captured on one host/SDK can spuriously fail on another **without any behaviour change**, so it must
+  not be the load-bearing proof.
+
+**The correct, host-independent proof rests on the fact that this refactor returns *identical values*
+through a pass-through — so it is neutral by construction, and the proof is to lock that:**
+1. **Catalogue-contents equality (exact, host-independent).** `InCodeTacticPresetCatalogueTests` asserts
+   the default catalogue delivers, for **every ordinal**, the exact pre-refactor data: each `TeamTactic`
+   dial field-by-field, `Players` null-or-elementwise, `Count`, `BalancedOrdinal`, **and** the three
+   affinity scalars `BaseFit`/`AggrAffinity`/`CautAffinity` equal to
+   `TacticalPresetsConstants.{BaseFit,AggrAffinity,CautAffinity}[ordinal]` (the one genuinely new wiring
+   — proves the affinity move is a faithful seed). `TacticPresetLibrary` is kept, so this compares the
+   wrapper's output against the still-present static source directly.
+2. **Formula/composition locks stay green.** The existing `ManagerAITests` B.1/B.2 worked-example unit
+   locks on `KickoffScore`/`EvaluateLadder` (which pin the *formula* against explicit inputs, so they are
+   NOT invariant under a formula change) plus the two-run determinism tests must all still pass. Because
+   every consumer became a pass-through returning the identical value it read before, (1) proves the
+   *data* is unchanged and (2) proves the *formulas and composition* are unchanged — together they
+   establish byte-identity without an absolute digest.
+3. **Optional regression bonus, not the proof:** a single AI-managed-match digest may be recorded on the
+   CI gate as a coarse regression tripwire, but it MUST be labelled host/SDK-sensitive and
+   re-baselineable on an environment change — never cited as the neutrality proof.
+
 No `SNAPSHOT_SCHEMA_VERSION` change (the refactor changes which object supplies boot-constant records,
-not the serialized surface).
+not the serialized surface). This mirrors the project's own precedent for a MatchEngine-touching
+"byte-identical" change (#27 T1/T2, KD-P7: proven by asserting the new path's observable state matches
+the old path's tick-for-tick, not by an absolute golden).
 
 **Alternative (only if runtime authoring is genuinely not needed at Stage 1): offline codegen.** A
 build-time tool regenerates `TacticPresetLibrary.s_presets` from a text file; the static class and all
@@ -125,9 +195,16 @@ fail-loud `FormatException`):**
 - The team dials reuse the **exact key set of `TeamTacticFileLoader`** (every `TeamTactic` field:
   `mentality`, `tempo`, `width`, `defensiveWidth`, `lineOfEngagement`, `pressing`, `passing`,
   `transitionWon`, `transitionLost`, `focusPlay`, `offsideTrap`, `timeWasting`, `markingOrientation`,
-  `dismarkIntensity`, `buildUpStructure`, `rotationFreedom`, `defensiveLine`, …). An omitted key
+  `dismarkIntensity`, `buildUpStructure`, `rotationFreedom`, `defensiveLine`, …). An omitted team-dial key
   inherits the `TeamTactic.Balanced` identity (KD-7), so a minimally-specified preset reproduces the
   Appendix A.1 rows now in `TacticPresetLibrary.Compose(...)`.
+- **The three A.3 scoring keys — `baseFit`, `aggrAffinity`, `cautAffinity` (floats) — are REQUIRED per
+  section** and fail loud (`FormatException`) if absent. Unlike a team dial, an affinity scalar has **no
+  neutral identity** (an omitted-⇒0.0 default would silently change kickoff scoring), so the file must
+  fully specify a preset's scoring row. They map to the `TacticPreset.BaseFit`/`AggrAffinity`/
+  `CautAffinity` properties from §1.1; each is bounded `[−1,+1]` per FR-TP-020 and fails loud out of range.
+  (Recording this "required, no default" decision here is deliberate — it is the one place the preset
+  grammar diverges from the team loader's "omitted ⇒ identity" posture, and for a stated reason.)
 - Optional per-player block for `TacticPreset.Players` (Stage-0 presets set `Players = null`, so this
   can be **deferred**: a preset section with no player block ⇒ `Players = null`, matching the current
   catalogue; document the deferral rather than inventing an unused per-player grammar).
@@ -138,9 +215,13 @@ fail-loud `FormatException`):**
   too invasive for one pass, at minimum the preset loader calls the same public/internal helpers — never
   a second hand-rolled enum parser.
 
-**Fail-loud gates (each throws `FormatException`, matching the precedent):** unknown key / unknown or
-malformed section header / missing `=` / empty key / duplicate key within a section / duplicate section
-/ unparsable enum/float/bool/byte value / out-of-range `timeWasting` / leftover unconsumed keys.
+**Fail-loud gates (each throws `FormatException`, matching the precedent):** **zero sections / empty /
+comment-only / null input** (see §1.3 — a preset file with no presets cannot be a valid catalogue) /
+unknown key / unknown or malformed section header / missing `=` / empty key / duplicate key within a
+section / duplicate section / **missing required `baseFit`/`aggrAffinity`/`cautAffinity` key** /
+unparsable enum/float/bool/byte value / out-of-range `timeWasting` / **out-of-range affinity (∉ [−1,+1])**
+/ **`balancedOrdinal` absent, off the pinned midpoint, or naming a section that is not
+`TeamTactic.Balanced`-equivalent** (§1.3) / leftover unconsumed keys.
 
 ### 1.3 Ordinal↔content stability (the real "versioning")
 
@@ -151,11 +232,39 @@ contract (FR-TP-013, APPEND-only):
 - **`Count` and section coverage:** sections must be exactly `[preset 0]`…`[preset Count-1]` with no
   gap and no re-ordering; fail loud otherwise. The parser fills an array by index, so a missing/extra
   ordinal is caught structurally.
+- **A catalogue must be non-empty (`Count ≥ 1`) — an empty / comment-only / null preset file fails
+  loud, it does NOT default to a "Balanced catalogue."** This is the one deliberate divergence from
+  `TeamTacticFileLoader`, whose "empty ⇒ `TeamTacticConfig.Default`" is well-defined because a team
+  config is a *fixed 2-slot structure* (home/away, each Balanced). A preset catalogue's structure **is**
+  its variable-length ladder — there is no "identity catalogue" (a catalogue is an ordered set with a
+  `BalancedOrdinal` midpoint, not a single tactic with a neutral value), so an empty file has no
+  meaningful default and every downstream consumer (`SelectKickoffPreset` → `Presets[0]`,
+  `BalancedOrdinal`) would break. Refuse it at parse time (`FormatException`). *(Note: "omitted **key**
+  ⇒ Balanced identity" for team dials inside a present section still holds — that is per-field within a
+  section, §1.2; only omitted **sections** — i.e. an empty catalogue — fail loud.)*
+- **`BalancedOrdinal` for a loaded catalogue (do NOT leave it undefined).** The interface exposes
+  `BalancedOrdinal`, consumed at the determinism-load-bearing `MatchEngine.cs:1453` ManagerState seed;
+  the in-code catalogue returns the `TacticPresetLibrary` const 2. A loaded catalogue must establish it
+  explicitly, not inherit the constant by accident. Because the ladder is `[FIXED]` APPEND-only
+  (FR-TP-013) with Balanced pinned as the midpoint (A.1), the disk file re-authors the **same** ladder,
+  so `BalancedOrdinal` stays the pinned value — and the loader MUST **validate** it: fail loud unless the
+  preset at that ordinal is `TeamTactic.Balanced`-equivalent (field-by-field). Prefer a required
+  top-level `balancedOrdinal = N` key (validated against the pinned value and against the section's
+  contents) over silently hardcoding 2, so a mis-authored ladder is refused rather than mis-seeding the
+  manager state. Decide the exact surface (declared key vs. derived-and-validated) in review, but the
+  loaded catalogue's `BalancedOrdinal` must be *validated*, never assumed.
+- **Affinity divergence is structurally impossible now (High-2 fix, §1.1):** because each preset carries
+  its own `BaseFit`/`AggrAffinity`/`CautAffinity`, there is no fixed-length side-table to fall out of
+  sync with `Count` — a `Count`-of-any catalogue scores every preset from its own row. The pre-fix crash
+  (`BaseFit[p]` out of bounds for `Count > 5`) cannot occur.
 - **Ladder monotonicity is a property of the values, not enforceable from the file alone** — the file
   author *is* the ladder. Decide (record the choice in this note during review): either (a) trust the
   file's order as authoritative (simplest; the ordinal is whatever the file says), or (b) add a
-  save-compat guard — stamp an *ordinal-content fingerprint* (a hash over the loaded presets' dials) so
-  a restore against a **changed** catalogue fails loud instead of diverging silently. **Recommendation:**
+  save-compat guard — stamp an *ordinal-content fingerprint* (a hash over the loaded presets' dials
+  **and their per-preset affinity scalars** — affinity is now catalogue content, so a changed
+  `BaseFit`/`AggrAffinity`/`CautAffinity` under a fixed ordinal diverges a restored match's kickoff
+  scoring exactly as a changed dial would) so a restore against a **changed** catalogue fails loud
+  instead of diverging silently. **Recommendation:**
   do NOT add a `PRESET_FORMAT_VERSION` on the file (the grammar is not a digest-pinned wire format,
   matching `TeamTacticFileLoader`), but DO consider option (b)'s fingerprint if/when a disk-loaded
   catalogue can feed a savable match — that is the genuine coupling, and it is orthogonal to the file
@@ -175,34 +284,49 @@ must therefore use an explicit comparator, NOT struct `==`:
   - same `Count` and `BalancedOrdinal`;
   - for each ordinal: `Team` compared **field-by-field** (every `TeamTactic` dial); `Players`
     compared **null-or-elementwise** (both null, or same length and each `PlayerTactic` field-equal);
-    `Name` handled deliberately — either require the file to carry the library's names and assert
-    equality, or exclude `Name` and document that the file need not reproduce it.
+    the three affinity scalars `BaseFit`/`AggrAffinity`/`CautAffinity` compared **exactly** (the canonical
+    file must carry the `TacticalPresetsConstants` values the in-code catalogue seeds — a mismatch here is
+    exactly the divergence the round-trip exists to catch); `Name` handled deliberately — either require
+    the file to carry the library's names and assert equality, or exclude `Name` and document that the
+    file need not reproduce it.
 - Getting this wrong makes the test tautological or always-failing — it is the load-bearing acceptance
   criterion.
+- Add a companion **negative** test: an empty / comment-only preset file throws `FormatException`
+  (§1.3 non-empty guard), and a section missing a required affinity key throws `FormatException`
+  (§1.2) — so the "empty ⇒ fail loud" and "affinity required" contracts are locked, not just documented.
 
 ### 1.5 File inventory & sequencing
 
 **New:** `ITacticPresetCatalogue.cs`, `InCodeTacticPresetCatalogue.cs` (tactical-instructions);
 `TacticPresetFileLoader.cs` (match-engine); `tests/TacticPresetFileLoaderTests.cs`,
 `tests/InCodeTacticPresetCatalogueTests.cs` (deep-equal helper lives here or in a shared test util).
-**Modified:** `ManagerAdaptation.cs` (signatures), `MatchEngine.cs` (field + call sites), possibly
-`TacticFileGrammar` extraction from `TeamTacticFileLoader.cs`.
+**Modified:** `TacticPreset.cs` (gains `BaseFit`/`AggrAffinity`/`CautAffinity` properties + ctor params,
+§1.1), `TacticPresetLibrary.cs` (seeds each preset's affinity scalars from `TacticalPresetsConstants`),
+`ManagerAdaptation.cs` (six signatures + `KickoffScore` reads affinity off the preset),
+`MatchEngine.cs` (field + call sites), possibly `TacticFileGrammar` extraction from
+`TeamTacticFileLoader.cs`.
 
 **Order within the workstream:**
 1. Settle §1.1 shape (injectable vs codegen) in review.
-2. Land the **refactor alone** (interface + default catalogue + threaded consumers) with the
-   digest-equality neutrality proof — no loader yet, no behaviour change. This is a self-contained,
-   reviewable, behaviour-neutral change.
-3. Land the **loader + deep-equal round-trip test** on top.
+2. Land the **refactor** (`TacticPreset` affinity fields + interface + default catalogue + threaded
+   consumers) with the **faithful-pass-through neutrality proof** (§1.1): the `InCodeTacticPresetCatalogue`
+   contents-equality test (exact, host-independent) + the existing `ManagerAITests` formula locks + the
+   two-run determinism tests staying green. No loader yet, no intended behaviour change.
+3. Land the **loader + deep-equal round-trip test + empty/affinity negative tests** on top.
 4. **Boot disk-READ wiring is separately optional/deferred** — whether the engine boot reads a preset
    file at startup is a further composition decision (the `TacticPresetProjection` + appliers already
    exist). The ordinal-content fingerprint (§1.3 option b) lands with that wiring, not before.
 
 ### 1.6 Acceptance (whole workstream)
-- Refactor: default catalogue ⇒ byte-identical match (digest-equality test green); no
-  `SNAPSHOT_SCHEMA_VERSION` change; existing `ManagerAITests`/`MatchEngineTacticTests` still green.
-- Loader: empty/comment-only ⇒ the identity/Balanced catalogue; canonical five-preset file
-  round-trips **deep-equal** to the default catalogue; every fail-loud gate throws `FormatException`.
+- Refactor: default catalogue ⇒ byte-identical match, proven by **faithful-pass-through** (§1.1) — the
+  `InCodeTacticPresetCatalogue` contents-equality test (exact, host-independent, incl. the three affinity
+  scalars) + the existing `ManagerAITests` formula locks + two-run determinism all green — NOT by a
+  same-build two-engine comparison (tautological) or a host-fragile absolute digest golden; no
+  `SNAPSHOT_SCHEMA_VERSION` change.
+- Loader: **empty / comment-only ⇒ fail loud (`FormatException`)** — a preset catalogue has no "identity"
+  default (§1.3); canonical five-preset file round-trips **deep-equal** to the default catalogue
+  (including the three per-preset affinity scalars, §1.4); every fail-loud gate throws `FormatException`
+  (incl. the empty-catalogue and missing/out-of-range-affinity gates).
 - Full `dotnet` gate green (SDK 8.0.129 via apt, per recent landings).
 - Spec touch: record the Stage-1 loader landing in #26 §7.3 / FR-TP-002 version-history, leaving the
   FR text's Stage-0+1 scope intact.
@@ -290,7 +414,15 @@ positive and within documented ranges; the B.1/B.2 worked examples (already unit
 `ManagerAITests`) still hold against any pinned value.
 
 ### 2.4 Sequencing & acceptance
-- Four independent per-spec commits (any order) + the #21 one-liner. No cross-dependency.
+- Four independent per-spec commits (any order) + the #21 one-liner. No cross-dependency **except one
+  contingency with WS-1:** WS-1's High-2 fix (§1.1) has `TacticPreset` carry `BaseFit`/`AggrAffinity`/
+  `CautAffinity`, seeded from `TacticalPresetsConstants.{BaseFit,AggrAffinity,CautAffinity}` — the same
+  three A.3 rows WS-2 #26 pins and lock-suite-locks (§2.3). WS-1 leaves those constants in place as the
+  seed source, so **#26's lock suite still targets `TacticalPresetsConstants`** and the two workstreams
+  do not conflict; but if both land, whichever is second should confirm the #26 lock suite asserts the
+  values at their `TacticalPresetsConstants` source (not only as carried on a preset), and that the
+  §1.4 round-trip's exact-affinity comparison uses the pinned values. Land order is free; the
+  second-lander re-confirms this one alignment.
 - Behaviour-neutral **only if** each pass keeps current magnitudes (the expected #21-style outcome). If a
   review re-tunes a value, that spec's digest is no longer neutral — flag it loudly and rebaseline that
   spec's determinism tests. Call this out in the PR.
@@ -405,8 +537,10 @@ narrowed with a cited evidence trail.
   §1.1 shape, §1.3 fingerprint).
 - **Determinism.** WS-3 is behaviour-neutral by construction. WS-1's *loader + tests* are neutral by
   construction, but the §1.1 injectable refactor touches `ManagerAdaptation`/`MatchEngine` and must
-  **prove** neutrality with a digest-equality run. WS-2 stays neutral only if it keeps current
-  magnitudes; any re-tune is flagged and rebaselined.
+  **prove** neutrality by **faithful-pass-through** (§1.1): a host-independent catalogue-contents-equality
+  test + the existing formula/determinism locks — NOT a same-build two-engine comparison (tautological)
+  nor a host-fragile absolute digest golden. WS-2 stays neutral only if it keeps current magnitudes; any
+  re-tune is flagged and rebaselined.
 - **No phantom interfaces.** WS-1's *file loader* is a construction-time input, not a runtime interface
   (FR-TP-017); an `ITacticPresetCatalogue` from §1.1 is an internal injection point with real consumers,
   not a phantom.
