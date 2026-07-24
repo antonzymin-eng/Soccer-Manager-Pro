@@ -46,6 +46,16 @@ SLN_PATH = TOOLS / "TacticalDirector.gen.sln"
 # Unity-side references that have no .NET-side project; NUnit comes from NuGet.
 UNITY_ONLY_REFS = {"UnityEngine.TestRunner", "UnityEditor.TestRunner"}
 
+# Unity-only assemblies excluded from the shim gate. These carry MonoBehaviour / rendering
+# types the ~9-type UnityShim does not model (Camera, SpriteRenderer, GameObject, ...), so
+# they compile and are verified only on the pinned Unity host at a cert run, not here. Every
+# determinism-bearing thing such an assembly needs lives in a host-free sibling that this gate
+# still compiles + tests — e.g. TacticalDirector.MatchClientUnity's logic lives in
+# TacticalDirector.MatchClientCore (interactive-unity-client-design.md §5-P0). Keep this set
+# minimal: a host-free assembly must NEVER appear here (it would drop it out of CI). Nothing
+# else may reference an excluded assembly, or reference resolution below fails loud.
+SHIM_EXCLUDED_ASMDEFS = {"TacticalDirector.MatchClientUnity"}
+
 NUNIT_VERSION = "3.14.0"
 ADAPTER_VERSION = "4.6.0"
 TEST_SDK_VERSION = "17.11.1"
@@ -64,6 +74,9 @@ def load_asmdefs():
     for path in sorted(SRC.rglob("*.asmdef")):
         data = json.loads(path.read_text(encoding="utf-8"))
         name = data["name"]
+        if name in SHIM_EXCLUDED_ASMDEFS:
+            # Unity-only: never generated, never a compile/reference target here.
+            continue
         if name in asmdefs:
             sys.exit(f"ERROR: duplicate asmdef name {name!r} "
                      f"({path} vs {asmdefs[name]['dir']})")

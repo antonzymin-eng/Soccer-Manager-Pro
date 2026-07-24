@@ -1,6 +1,6 @@
 // File:     src/player-database/RosterGenerator.cs
 // Created:  2026-07-15
-// Modified: 2026-07-16 (AR-3 L-6, doc-only: DrawBounded's modulo-bias acceptance + fixed-budget rationale recorded)
+// Modified: 2026-07-24 (extracted DrawBounded/Clamp to shared PlayerGenerationRng — #28-AR Low; byte-identical)
 // Author:   —
 // Spec:     Squad/Player Data Layer design supplement (docs/tracking/squad-player-data-design.md) §3, KD-5
 // Purpose:  Deterministic squad generation over DeterministicRngService — no System.Random anywhere
@@ -71,16 +71,16 @@ namespace TacticalDirector.PlayerDatabase
                     "RosterGenerator.GenerateOne: RNG reservation failed (a reservation is already open on this stream).");
             }
 
-            int firstNameIdx = DrawBounded(rng, streamIndex, DrawFirstName, NameCatalogue.FirstNames.Length);
-            int lastNameIdx = DrawBounded(rng, streamIndex, DrawLastName, NameCatalogue.LastNames.Length);
+            int firstNameIdx = PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawFirstName, NameCatalogue.FirstNames.Length);
+            int lastNameIdx = PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawLastName, NameCatalogue.LastNames.Length);
             int ageSpan = PlayerDatabaseConstants.AgeMax - PlayerDatabaseConstants.AgeMin + 1;
-            int age = PlayerDatabaseConstants.AgeMin + DrawBounded(rng, streamIndex, DrawAge, ageSpan);
+            int age = PlayerDatabaseConstants.AgeMin + PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawAge, ageSpan);
             // Uniform over the 4 positions is a documented Stage-0 simplification — a real squad's
             // position distribution (few GKs, many outfielders) is a future refinement, not designed here.
-            var position = (PlayerPosition)DrawBounded(rng, streamIndex, DrawPosition, PlayerPositionCount);
+            var position = (PlayerPosition)PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawPosition, PlayerPositionCount);
             int weakFootJitterSpan = 2 * PlayerDatabaseConstants.WeakFootSpread + 1;
-            int weakFootJitter = DrawBounded(rng, streamIndex, DrawWeakFoot, weakFootJitterSpan) - PlayerDatabaseConstants.WeakFootSpread;
-            int weakFoot = Clamp(
+            int weakFootJitter = PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawWeakFoot, weakFootJitterSpan) - PlayerDatabaseConstants.WeakFootSpread;
+            int weakFoot = PlayerGenerationRng.Clamp(
                 PlayerDatabaseConstants.WeakFootBase + weakFootJitter,
                 PlayerDatabaseConstants.WEAK_FOOT_MIN,
                 PlayerDatabaseConstants.WEAK_FOOT_MAX);
@@ -90,8 +90,8 @@ namespace TacticalDirector.PlayerDatabase
             int jitterSpan = 2 * PlayerDatabaseConstants.AttributeSpread + 1;
             for (int i = 0; i < AttrIdx.Count; i++)
             {
-                int jitter = DrawBounded(rng, streamIndex, AttributeDrawBase + i, jitterSpan) - PlayerDatabaseConstants.AttributeSpread;
-                attrs[i] = Clamp(
+                int jitter = PlayerGenerationRng.DrawBounded(rng, streamIndex, AttributeDrawBase + i, jitterSpan) - PlayerDatabaseConstants.AttributeSpread;
+                attrs[i] = PlayerGenerationRng.Clamp(
                     PlayerDatabaseConstants.AttributeBaseMean + bias[i] + jitter,
                     PlayerDatabaseConstants.ATTRIBUTE_MIN,
                     PlayerDatabaseConstants.ATTRIBUTE_MAX);
@@ -114,36 +114,8 @@ namespace TacticalDirector.PlayerDatabase
             };
         }
 
-        // Maps one reserved draw to a value in [0, bound). bound must be > 0 (caller-guaranteed —
-        // every call site here uses a fixed positive catalogue length or span). AR-3 L-6: the plain
-        // `value % bound` mapping carries modulo bias, deliberately accepted — over a u64 draw the
-        // bias for every bound used here (≤ 32) is < 2^-59, generation is not a statistically
-        // load-bearing surface (unlike the pinned RNG-quality work in PassErrorCalculator), and the
-        // mapping is deterministic either way. Do NOT "fix" this with rejection sampling: a
-        // variable draw count per field would break the FIELDS_PER_PLAYER fixed-budget reservation.
-        private static int DrawBounded(DeterministicRngService rng, int streamIndex, int drawIndex, int bound)
-        {
-            ushort err = rng.DrawReserved(streamIndex, drawIndex, out ulong value);
-            if (err != 0)
-            {
-                throw new InvalidOperationException(
-                    "RosterGenerator.DrawBounded: draw failed — corrupt reservation state (internal invariant).");
-            }
-            return (int)(value % (ulong)bound);
-        }
-
-        private static int Clamp(int value, int min, int max)
-        {
-            if (value < min)
-            {
-                return min;
-            }
-            if (value > max)
-            {
-                return max;
-            }
-            return value;
-        }
+        // DrawBounded (the reserved-draw → [0, bound) modulo mapping, incl. its accepted-bias rationale)
+        // and Clamp now live in PlayerGenerationRng, shared with #28's RegenGenerator — see that file.
     }
 }
 
@@ -157,4 +129,7 @@ namespace TacticalDirector.PlayerDatabase
 // | 1.2     | 2026-07-16 | —      | AR-3 L-6 (doc-only): DrawBounded's `value % bound` modulo bias |
 // |         |            |        | recorded as deliberate (< 2^-59 for bounds ≤ 32; rejection     |
 // |         |            |        | sampling would break the fixed FIELDS_PER_PLAYER reservation). |
+// | 1.3     | 2026-07-24 | —      | #28 adversarial-review Low: DrawBounded + Clamp extracted to   |
+// |         |            |        | shared PlayerGenerationRng (was duplicated in #28's            |
+// |         |            |        | RegenGenerator); byte-identical, call sites delegate.          |
 #endregion

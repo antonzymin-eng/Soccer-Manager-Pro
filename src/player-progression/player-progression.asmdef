@@ -1,0 +1,17 @@
+{
+    "name": "TacticalDirector.PlayerProgression",
+    "rootNamespace": "TacticalDirector.PlayerProgression",
+    "references": [
+        "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.DeterministicSim"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
