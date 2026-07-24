@@ -33,10 +33,12 @@ namespace TacticalDirector.LivingWorld
     /// outer over <see cref="ArcCanonSource.EntityIdAt"/> ascending, inner over the entity catalogue
     /// rows in order; then board triggers by ArcKind ordinal.
     ///
-    /// SERIALIZATION (arc-triggers-design KD-6): at Slice-1/E1 the stream is registered and the latch
-    /// runs forward, but neither the <c>world.arcs</c> cursor nor the latch is serialized — a flag-on
-    /// save fails loud (see <see cref="WorldStore.Snapshot"/>). Serialization + the
-    /// <c>WORLD_STORE_FORMAT_VERSION</c> bump land at Slice 2/E2.
+    /// SERIALIZATION (arc-triggers-design KD-6): at Slice-2/E2 the <c>world.arcs</c> cursor + the KD-7
+    /// latch are serialized into the composite world save (<c>WORLD_STORE_FORMAT_VERSION</c> 3), so a
+    /// flag-on <c>save@N → restore → advance</c> round-trips deterministically and does not re-fire a
+    /// still-latched trigger (the completeness lock). The evaluator exposes the latch via
+    /// <see cref="EnumerateLatchedCanonical"/> / <see cref="LatchedCount"/> / <see cref="RestoreLatched"/>
+    /// (it owns the state; <see cref="WorldStore"/> owns the byte layout).
     ///
     /// Day-cadence — not subject to the 60 Hz zero-alloc / ProfilerMarker hot-path rules.
     /// </summary>
@@ -76,6 +78,54 @@ namespace TacticalDirector.LivingWorld
 
         /// <summary>Test seam: the live <c>world.arcs</c> stream cursor (0 for a run that never fired).</summary>
         internal ulong RngCursor => _rng.GetStreamState(_streamIndex).RngCursor;
+
+        /// <summary>
+        /// Enumerates the KD-7 armed-off latch in canonical order (ScopeKey ascending, then TriggerId
+        /// ascending) so the serialized byte stream is deterministic (E2, §8.6). The evaluator owns the
+        /// state; the composition root owns the byte layout (the GK/Heading CaptureState/RestoreState
+        /// split).
+        /// </summary>
+        internal LatchEntry[] EnumerateLatchedCanonical()
+        {
+            LatchEntry[] arr = new LatchEntry[_latched.Count];
+            _latched.CopyTo(arr);
+            Array.Sort(arr, static (a, b) =>
+            {
+                int c = a.ScopeKey.CompareTo(b.ScopeKey);
+                return c != 0 ? c : a.TriggerId.CompareTo(b.TriggerId);
+            });
+            return arr;
+        }
+
+        /// <summary>
+        /// Replaces the latch with a restored set (E2, §8.6). Fails loud if the entries are not in
+        /// strict canonical (ScopeKey, TriggerId) order or contain a duplicate — a tampered/foreign
+        /// block, so the serialized set's canonical-order invariant is enforced on read, not trusted.
+        /// </summary>
+        internal void RestoreLatched(LatchEntry[] entries)
+        {
+            if (entries == null)
+            {
+                throw new ArgumentNullException(nameof(entries));
+            }
+            _latched.Clear();
+            for (int i = 0; i < entries.Length; i++)
+            {
+                if (i > 0)
+                {
+                    LatchEntry prev = entries[i - 1];
+                    LatchEntry cur = entries[i];
+                    bool strictlyAfter = cur.ScopeKey > prev.ScopeKey
+                        || (cur.ScopeKey == prev.ScopeKey && cur.TriggerId > prev.TriggerId);
+                    if (!strictlyAfter)
+                    {
+                        throw new InvalidOperationException(
+                            "ArcTriggerEvaluator.RestoreLatched: latch block is not in strict canonical (scopeKey, triggerId) order — tampered or foreign block.");
+                    }
+                }
+                _latched.Add(entries[i]);
+            }
+        }
 
         /// <summary>
         /// Evaluates every catalogue trigger against <paramref name="canon"/> for the given calendar
@@ -258,4 +308,9 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | evaluation order, KD-7 rising-edge armed-off latch, per-edge  |
 // |         |            |        | draw + pin resolution + SpawnArc. Latch not yet serialized    |
 // |         |            |        | (flag-on save fails loud in WorldStore.Snapshot — E1).        |
+// | 1.1     | 2026-07-24 | —      | Slice 2/E2: EnumerateLatchedCanonical / RestoreLatched latch  |
+// |         |            |        | serialization seams (canonical-order enumerate; strict-order  |
+// |         |            |        | fail-loud restore). WorldStore now serializes the cursor +    |
+// |         |            |        | latch (WORLD_STORE_FORMAT_VERSION 3); no forward-behaviour    |
+// |         |            |        | change.                                                       |
 #endregion

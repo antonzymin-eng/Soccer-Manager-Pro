@@ -116,8 +116,11 @@ namespace TacticalDirector.LivingWorld
         /// and the FR-LW-022 active-set membership roster (none of which the §4.6 block carries).
         /// WorldStore refuses any other value; bump only when the composite field order changes.
         /// v2: added the world.text RNG block (generator wired into the store).
+        /// v3 (arc-triggers E2): added the world.arcs RNG block (cursor + action ordinal) and the KD-7
+        /// armed-off latch, between the world.text block and the membership roster. v2 payloads are
+        /// rejected fail-loud (no in-place migration at Stage 0).
         /// </summary>
-        public const ushort WORLD_STORE_FORMAT_VERSION = 2;
+        public const ushort WORLD_STORE_FORMAT_VERSION = 3;
 
         #endregion
 

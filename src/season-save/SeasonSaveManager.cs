@@ -1,6 +1,7 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-07-22
+// Modified: 2026-07-24 (arc-triggers E2 §8.9(a): Load threads an optional ArcCanonSource into
+//           WorldStore.Restore so a flag-on world keeps evaluating after a season restore)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §4.6.1.1
@@ -115,7 +116,12 @@ namespace TacticalDirector.SeasonSave
         /// <param name="path">The season save file to read.</param>
         /// <param name="squads">The ClubId -> Squad resolver for a distinct-squad match save; ignored
         /// (may be null) for a neutral match or a no-match season (KD-6 / R4).</param>
-        public static SeasonSaveContents Load(string path, ISquadProvider squads = null)
+        /// <param name="canon">The arc-trigger canon source re-attached to the restored world
+        /// (arc-triggers-design §8.9(a)); a Load-time parameter, never persisted (the
+        /// <paramref name="squads"/> precedent). Pass the same source the saved world was evaluating with
+        /// so a flag-on world keeps spawning arcs after the season restore; <c>null</c> (the default)
+        /// restores a flag-off world (arc evaluation stays skipped, its correct state).</param>
+        public static SeasonSaveContents Load(string path, ISquadProvider squads = null, ArcCanonSource canon = null)
         {
             if (string.IsNullOrEmpty(path))
             {
@@ -127,7 +133,7 @@ namespace TacticalDirector.SeasonSave
             byte[] blob = File.ReadAllBytes(path);
             SeasonSaveBlobs blobs = SeasonSaveCodec.Decode(blob);
 
-            WorldStore world = WorldStore.Restore(blobs.WorldBlob);
+            WorldStore world = WorldStore.Restore(blobs.WorldBlob, canon);
             MatchEngine.MatchEngine match = blobs.MatchBlob != null
                 ? MatchSaveManager.Restore(blobs.MatchBlob, squads)
                 : null;
@@ -143,6 +149,10 @@ namespace TacticalDirector.SeasonSave
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-07-22 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                         |
+// | 1.0     | 2026-07-22 | —      | Initial implementation.                                       |
+// | 1.1     | 2026-07-24 | —      | Arc-triggers E2 §8.9(a): Load gains an optional ArcCanonSource |
+// |         |            |        | threaded into WorldStore.Restore (never persisted, the        |
+// |         |            |        | ISquadProvider precedent) so a flag-on world keeps evaluating |
+// |         |            |        | after a season restore.                                       |
 #endregion

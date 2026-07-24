@@ -3,10 +3,11 @@
 // Modified: 2026-07-24
 // Author:   —
 // Spec:     Living World System #22 §3.4, §6.2, FR-LW-016/017/018/020/021, arc-triggers-design §9 (tests
-//           1-5, 7, 10), Testing Strategy #19 §3.1.4, Code Standards #20
-// Purpose:  Arc-triggers Slice 1/E1 tests: distinct world.arcs stream key, flag-off byte-neutrality,
-//           stub-canon deterministic spawn (incl. KD-7 single-fire + re-arm), E1 fail-loud, and
-//           FR-LW-017/021 trigger-order determinism.
+//           1-4, 6-11), Testing Strategy #19 §3.1.4, Code Standards #20
+// Purpose:  Arc-triggers Slice 1/E1 + Slice 2/E2 tests: distinct world.arcs stream key, flag-off
+//           round-trip, stub-canon deterministic spawn (incl. KD-7 single-fire + re-arm), FR-LW-017/021
+//           trigger-order determinism, the E2 save@N→restore→advance acceptance predicate, v2-payload
+//           rejection, and the KD-7 re-fire-after-restore completeness lock.
 
 using System;
 
@@ -51,27 +52,28 @@ namespace TacticalDirector.LivingWorld.Tests
             Assert.AreNotEqual(text.StreamIndex, arcs.StreamIndex, "the two streams occupy distinct registry slots");
         }
 
-        // ── Test 2: null-canon byte-neutrality (E1) ─────────────────────────────────────────────
+        // ── Test 2: null-canon round-trip (E2, WORLD_STORE_FORMAT_VERSION 3) ─────────────────────
 
         [Test]
-        public void NullCanon_Snapshot_IsByteNeutral_AtFormatVersion2()
+        public void NullCanon_Snapshot_RoundTrips_AtFormatVersion3()
         {
             WorldStore store = new WorldStore(Manager, Seed);   // no canon => flag-off
             store.RecordInteraction(ContactA, false, OwnedLayers(), EventKind.ManagerCriticism, 1);
             store.AdvanceDay();
             store.AdvanceDay();
 
-            byte[] snap = store.Snapshot();   // a flag-off (null-canon) run is snapshot-safe at E1
+            byte[] snap = store.Snapshot();
 
             int offset = 0;
             ushort version = CanonicalSerializer.ReadU16(snap, ref offset);
             Assert.AreEqual(LivingWorldConstants.WORLD_STORE_FORMAT_VERSION, version);
-            Assert.AreEqual((ushort)2, version, "E1 does NOT bump WORLD_STORE_FORMAT_VERSION (still 2)");
+            Assert.AreEqual((ushort)3, version, "E2 bumps WORLD_STORE_FORMAT_VERSION to 3 (world.arcs cursor + latch)");
 
-            // Round-trips field-identically (flag-off), and the arc stream never advanced.
+            // A flag-off run round-trips field-identically; the arc stream never advanced and the latch is empty.
             WorldStore restored = WorldStore.Restore(snap);
             Assert.AreEqual(snap, restored.Snapshot(), "flag-off Snapshot/Restore is byte-identical");
             Assert.AreEqual(0UL, store.ArcTriggers.RngCursor, "flag-off never draws the world.arcs stream");
+            Assert.AreEqual(0, restored.ArcTriggers.LatchedCount, "flag-off restores an empty latch");
         }
 
         // ── Test 3: flag-off no-op through the loop ─────────────────────────────────────────────
@@ -158,17 +160,118 @@ namespace TacticalDirector.LivingWorld.Tests
             Assert.AreEqual(0, arc.PinnedEpisodes.Length, "a board arc is pin-less at Stage 0");
         }
 
-        // ── Test 5: E1 fail-loud on a flag-on Snapshot ──────────────────────────────────────────
+        // ── Test 6: E2 acceptance — flag-on save@N → restore(canon) → advance == uninterrupted ───
 
         [Test]
-        public void FlagOn_Snapshot_FailsLoud_AtE1()
+        public void FlagOn_SaveRestoreAdvance_MatchesUninterruptedRun()
         {
-            WorldStore store = new WorldStore(Manager, Seed, EgoClashCanon(ContactA, 0.9f));
-            store.AdvanceDay();   // fires ⇒ world.arcs cursor advances ⇒ not yet snapshot-safe
-            Assert.Greater(store.ArcTriggers.RngCursor, 0UL);
+            const int N = 3, K = 2;
+            ArcCanonSource above = EgoClashCanon(ContactA, 0.9f);
 
-            Assert.Throws<NotSupportedException>(() => store.Snapshot(),
-                "E1: a flag-on run is not snapshot-safe until E2 serializes the cursor + latch");
+            WorldStore run = new WorldStore(Manager, Seed);
+            run.RecordInteraction(ContactA, false, OwnedLayers(), EventKind.ManagerCriticism, 1);
+            run.SetArcCanon(above);
+            for (int i = 0; i < N; i++)
+            {
+                run.AdvanceDay();   // fires on day 1, latched thereafter
+            }
+            Assert.AreEqual(1, run.Arcs.ArcCount);
+            Assert.Greater(run.ArcTriggers.RngCursor, 0UL, "the save carries a non-zero world.arcs cursor");
+            Assert.AreEqual(1, run.ArcTriggers.LatchedCount, "the save carries a non-empty latch");
+
+            byte[] save = run.Snapshot();   // a flag-on save now succeeds (E2)
+
+            for (int i = 0; i < K; i++)
+            {
+                run.AdvanceDay();
+            }
+            byte[] uninterrupted = run.Snapshot();
+
+            WorldStore restored = WorldStore.Restore(save, above);
+            for (int i = 0; i < K; i++)
+            {
+                restored.AdvanceDay();
+            }
+            Assert.AreEqual(uninterrupted, restored.Snapshot(),
+                "§2.7: save@N → Restore(canon) → advance to N+K is byte-identical to the uninterrupted run");
+        }
+
+        // ── Test 8: E2 restore rejects a v2-format payload (no in-place migration) ───────────────
+
+        [Test]
+        public void Restore_RejectsPreE2FormatVersion()
+        {
+            WorldStore store = new WorldStore(Manager, Seed);
+            byte[] snap = store.Snapshot();
+            int o = 0;
+            CanonicalSerializer.WriteU16(snap, ref o, 2);   // stamp the pre-E2 (world.text-only) version
+            Assert.Throws<ArgumentException>(() => WorldStore.Restore(snap),
+                "E2: a v2 payload is rejected fail-loud at the WORLD_STORE_FORMAT_VERSION gate (no migration)");
+        }
+
+        // ── Test 8b: KD-7 latch serialization seam — canonical round-trip + fail-loud on bad order ─
+
+        [Test]
+        public void Latch_EnumerateRestore_RoundTripsCanonically_AndRejectsNonCanonicalOrder()
+        {
+            DeterministicRngService rng = new DeterministicRngService(Seed);
+            ArcTriggerEvaluator ev = new ArcTriggerEvaluator(rng, Manager);
+
+            // Canonical order: ScopeKey ascending (board sentinel int.MinValue sorts first), then TriggerId.
+            ArcTriggerEvaluator.LatchEntry[] canonical =
+            {
+                new ArcTriggerEvaluator.LatchEntry(LivingWorldConstants.ARC_BOARD_SCOPE_KEY, 4),
+                new ArcTriggerEvaluator.LatchEntry(5, 1),
+                new ArcTriggerEvaluator.LatchEntry(5, 2),
+                new ArcTriggerEvaluator.LatchEntry(7, 1),
+            };
+            ev.RestoreLatched(canonical);
+            Assert.AreEqual(4, ev.LatchedCount);
+            CollectionAssert.AreEqual(canonical, ev.EnumerateLatchedCanonical(),
+                "EnumerateLatchedCanonical returns the (scopeKey, triggerId) canonical order");
+
+            // A non-canonical block (descending scope key) is rejected fail-loud.
+            ArcTriggerEvaluator.LatchEntry[] descending =
+            {
+                new ArcTriggerEvaluator.LatchEntry(7, 1),
+                new ArcTriggerEvaluator.LatchEntry(5, 1),
+            };
+            Assert.Throws<InvalidOperationException>(() => ev.RestoreLatched(descending));
+
+            // A duplicate (scopeKey, triggerId) pair is rejected fail-loud.
+            ArcTriggerEvaluator.LatchEntry[] duplicate =
+            {
+                new ArcTriggerEvaluator.LatchEntry(5, 1),
+                new ArcTriggerEvaluator.LatchEntry(5, 1),
+            };
+            Assert.Throws<InvalidOperationException>(() => ev.RestoreLatched(duplicate));
+        }
+
+        // ── Test 11: KD-7 re-fire-after-restore lock (the serialized latch earns its keep) ──────
+
+        [Test]
+        public void FlagOn_StillLatchedTrigger_DoesNotRefireOnRestore()
+        {
+            ArcCanonSource above = EgoClashCanon(ContactA, 0.9f);
+            WorldStore run = new WorldStore(Manager, Seed);
+            run.RecordInteraction(ContactA, false, OwnedLayers(), EventKind.ManagerCriticism, 1);
+            run.SetArcCanon(above);
+            run.AdvanceDay();   // fires; signal stays above ⇒ latched
+            Assert.AreEqual(1, run.Arcs.ArcCount);
+            byte[] save = run.Snapshot();
+
+            WorldStore restored = WorldStore.Restore(save, above);
+            Assert.AreEqual(1, restored.ArcTriggers.LatchedCount, "the armed-off latch is restored");
+            restored.AdvanceDay();
+            Assert.AreEqual(1, restored.Arcs.ArcCount,
+                "KD-7: a still-latched trigger does NOT re-fire on the first post-restore tick");
+
+            // Negative control: drop the restored latch and the SAME trigger re-fires immediately —
+            // proving the serialized latch (not some other restored state) is what suppresses the re-fire.
+            WorldStore control = WorldStore.Restore(save, above);
+            control.ArcTriggers.RestoreLatched(Array.Empty<ArcTriggerEvaluator.LatchEntry>());
+            control.AdvanceDay();
+            Assert.AreEqual(2, control.Arcs.ArcCount, "without the restored latch the trigger re-fires");
         }
 
         // ── Test 7: FR-LW-017/021 trigger-order determinism ─────────────────────────────────────
