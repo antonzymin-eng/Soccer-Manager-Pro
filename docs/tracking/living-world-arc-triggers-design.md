@@ -111,8 +111,10 @@ New `ArcTrigger` value type: `TriggerId` (→ the `SpawnCause.TriggerId` recorde
 `ArcKind` + a `[GT]` threshold + the input-capture rule that populates `SpawnCause.Input[]`. The
 evaluator walks canon in the spec's **fixed deterministic order** — canonical entity-ID order for
 entity-scoped triggers, `ArcKind` ordinal order for board/squad-level triggers (FR-LW-017 / FR-LW-021)
-— fires `SpawnArc` on threshold crossings, and records `SpawnCause` inline (it cannot be
-reconstructed later, per the `SpawnCause` contract). Per-kind `AdvanceState` state machines + the
+— fires `SpawnArc` on the **edge-triggered, latched** threshold crossing (KD-7, §2.8 — a trigger fires
+once when its signal first crosses `Threshold` and re-arms only when it drops back below, so a
+sustained signal spawns exactly one arc, not one per day), and records `SpawnCause` inline (it cannot
+be reconstructed later, per the `SpawnCause` contract). Per-kind `AdvanceState` state machines + the
 per-kind lifetime catalogue (`AdvanceState` does no validation today) land here.
 
 ### 2.5 KD-4 — `world.arcs` stream needs a DISTINCT key (verified hazard)
@@ -169,7 +171,46 @@ seam exactly as phases 4/6 guard `_arcs` / `_membership`.
   uninterrupted flag-on run advanced N→N+K.* This is the GK/Heading Phase-2 lock, not an
   absolute-golden rebaseline.
 
-### 2.8 Not in scope for item 1
+### 2.8 KD-7 — firing semantics: edge-triggered with a per-(entity,trigger) latch
+
+A trigger's threshold test defines *when it may fire*, but not *how often*. The two readings of a bare
+`signal >= Threshold` level test are both wrong at Stage 0:
+
+- **Pure level** (fire on every tick the signal sits `>= Threshold`) floods `ArcEngine` — `SpawnArc`
+  has no dedupe, and a persistently-high signal (a long-running feud, a season-long form slump) would
+  spawn one arc **per day** for the whole duration. That is not what an "arc" is (a bounded narrative
+  episode, §3.4), and it makes the `world.arcs` cursor advance unboundedly.
+- **Pure stateless edge** ("crossing") is undefined without remembering the previous tick.
+
+**Decision — edge-triggered with a latch.** A trigger fires on the tick its signal **first crosses**
+from below `Threshold` to `>= Threshold`, then stays **armed-off** (latched) and does **not** fire
+again until the signal drops back **below** `Threshold`, which **re-arms** it. Concretely the
+evaluator holds a per-scope-key latch:
+
+- **Scope key** = `entityId` for entity-scoped triggers, the `ARC_BOARD_SCOPE_KEY` sentinel (§8.2,
+  `int.MinValue` — never a real entity id) for board/squad-level triggers (so a board trigger latches
+  once globally, disambiguated from its siblings by `TriggerId`, not per entity).
+- **Latch state** = the set of currently **armed-off** `(scopeKey, TriggerId)` pairs. A pair absent
+  from the set is **armed**.
+- **Per evaluated tick, per (scopeKey, trigger):** if armed and `signal >= Threshold` → **fire**
+  (draw + `SpawnArc`) and **add** the pair to the armed-off set; if armed-off and `signal < Threshold`
+  → **remove** the pair (re-arm); otherwise no-op, **no draw**.
+
+**This latch is cross-tick engine state and MUST be serialized (E2).** It is exactly the GK/Heading
+Phase-2 latch precedent this document already cites (`_saveCommittedForGk` /
+`_headerCommittedThisEpisode` — engine-level state that *gates trigger re-commits*, whose omission
+from a snapshot re-fires an already-fired trigger on restore and diverges). Omitting the latch from
+the E2 block would make a flag-on `save@N → restore → advance` re-fire every still-above-threshold
+trigger the instant of restore — the precise completeness-bug class §2.7's acceptance predicate
+exists to catch. §8.4 pins the loop; §8.6 serializes the set; §9 test 10 locks single-fire + re-arm
+and test 11 is the re-fire-after-restore lock.
+
+**Departed-entity latch entries** (an armed-off entity that vanishes from canon) are harmless: they
+sit inert until the entity returns and drops below threshold (re-arm) — a bounded, deterministic set
+under the Stage-0 stub's stable entity roster; a future canon-pruning pass may prune them, but nothing
+requires it for correctness.
+
+### 2.9 Not in scope for item 1
 
 Routing arc *resolution effects* into canon (KD-9/KD-10); WorldLoop phases 1/2/5 producers; the
 real vol-2/vol-3 canon source (the stub's drop-in successor).
@@ -222,6 +263,9 @@ Do not build it. Do the following instead:
 - E2 acceptance predicate (§2.7) + fail-loud version/tag/trailing-byte gates.
 - `key(world.arcs) != key(world.text)` (and, when item 2 lands, `!= key(world.background)`).
 - Trigger-order determinism: entity-ID order / `ArcKind` ordinal order (FR-LW-017/021).
+- Edge-trigger + latch (KD-7): a sustained above-threshold signal fires **once** (not per day);
+  dropping below re-arms; a flag-on `save@N → restore → advance` does **not** re-fire a still-latched
+  trigger (the latch is serialized at E2 — the re-fire completeness lock).
 
 ## 6. Open decision (for the author, not resolved here)
 
@@ -252,8 +296,25 @@ SOLE pre-draw refusal and an empty pin set is a valid pin-less spawn, not a skip
 plumbing (`SetArcCanon` / `WorldLoop` / `Restore`) was a `/* setter or field */` hand-wave that could
 ship the opt-in as a dead setter — §8.6/§8.7 pin the per-tick-argument model (`WorldStore` owns
 `_canon`, `RunWorldTick(canon)` reads it live), with a §9 test-4 dead-setter guard; L the §8.3
-signature sketch de-abstract-ified. Post-v0.4 the plan is **CONVERGED**. Section-file/code AR cycles
-run at implementation per the project convention.
+signature sketch de-abstract-ified. **A sixth pass (a fresh hostile re-read of the core evaluator
+loop, the full-re-review rule) found 1 High the prior five passes missed (1H+0M+0L), applied in
+v0.5:** **H-1 — trigger firing semantics were unspecified and self-contradictory.** §8.4 described the
+threshold as "the SOLE pre-draw refusal" using "crossing" (edge) language over a **stateless level
+test** (`signal >= Threshold`, no previous-tick state). Under the literal level reading a
+persistently-high signal spawns **one arc per day** for the signal's whole duration (`ArcEngine.SpawnArc`
+has no dedupe) — an unbounded `world.arcs` cursor and a flood of arcs; under the intended edge reading
+the loop needs per-(entity,trigger) latch state that **E2's §8.6 serialization (cursor + ordinal
+only) omitted**, so a flag-on `save@N → restore → advance` would **re-fire every still-above-threshold
+trigger** on the first post-restore tick — the exact completeness-bug class the doc itself cites re
+the GK/Heading Phase-2 latch. **Resolution (author decision: edge-triggered + latch, the recommended
+option):** new KD-7 (§2.8) pins edge-triggered firing with a per-scope-key armed-off latch; §8.4
+rewrites the loop as the four-state armed/latched table (rising edge = the sole draw+spawn tick); §8.6
+serializes the `_latched` set as a count-prefixed canonical-order block in the E2 world blob (with the
+E1 fail-loud extended to a non-empty latch and a `RestoreLatched` canonical-order gate); §9 adds test
+10 (single-fire + re-arm) and test 11 (re-fire-after-restore lock, with a drop-the-latch negative
+control); §5/§10/§12 updated. Post-v0.5 the plan is **CONVERGED** (the High is resolved; a full
+re-read surfaced no new High/Medium). Section-file/code AR cycles run at implementation per the
+project convention.
 
 ---
 
@@ -273,7 +334,7 @@ real ones, not sketches.
 | `ArcCanonSource.cs` | `public sealed class` | The §2.2/§2.3 nullable canon-input seam the evaluator reads — a single concrete type (the deterministic in-code Stage-0 producer IS this class; the `ScenarioIndex`/`TeamTacticConfig` parser-swap precedent). NOT an abstract base + one subclass — that reintroduces the one-implementation abstraction KD-2 rejects. The real vol-2/vol-3 producer becomes a *second* concrete type; extract a base/interface only then. |
 | `ArcTrigger.cs` | `public readonly struct` | One catalogue row: `TriggerId` + target `ArcKind` + `[GT]` threshold + input-capture rule. |
 | `ArcTriggerCatalogue.cs` | `public static class` | The Stage-0 in-code trigger table (APPEND-only, like `InteractionTextCorpus`). |
-| `ArcTriggerEvaluator.cs` | `public sealed class` | Registers `world.arcs`, walks canon in FR-LW-017/021 order, draws the stochastic component, calls `ArcEngine.SpawnArc`. Owns the stream (the `InteractionTextGenerator` role). |
+| `ArcTriggerEvaluator.cs` | `public sealed class` | Registers `world.arcs`, walks canon in FR-LW-017/021 order, applies the KD-7 rising-edge latch, draws the stochastic component, calls `ArcEngine.SpawnArc`. Owns the stream **and the `_latched` armed-off set** (the §8.6-serialized cross-tick state), exposing canonical-order enumerate/restore accessors for `WorldStore` (the `InteractionTextGenerator` + GK/Heading-latch role). |
 | `Tests/ArcTriggerTests.cs` | test fixture | §9 case list. |
 
 **Modified files:**
@@ -308,6 +369,11 @@ public const ushort WORLD_ARCS_STREAM_VERSION = 1;
 public const int WORLD_STREAM_ENTITY_TEXT       = -1; // world.text (existing — replaces the bare -1)
 public const int WORLD_STREAM_ENTITY_ARCS       = -2; // world.arcs (this item)
 public const int WORLD_STREAM_ENTITY_BACKGROUND = -3; // world.background (reserved for item 2, §3)
+
+/// <summary>[FIXED] KD-7 latch scope key for board/squad-level triggers (§2.8). Real entity ids are
+/// >= 0, so a negative sentinel never collides; board triggers share it and are disambiguated by
+/// TriggerId. int.MinValue sorts first deterministically in the canonical latch order (§8.6).</summary>
+public const int ARC_BOARD_SCOPE_KEY = int.MinValue;
 ```
 
 `WORLD_STORE_FORMAT_VERSION` stays `2` at E1 and becomes `3` only at E2 (§8.6). `InteractionTextGenerator`'s
@@ -364,12 +430,27 @@ Evaluation order (fixed, deterministic — the load-bearing determinism property
    over the entity-scoped catalogue rows in catalogue (ordinal) order.
 2. **Board/squad-level triggers**, iterated by `ArcKind` ordinal.
 
-**The threshold crossing is the SOLE pre-draw refusal.** `signal >= Threshold` (NaN fails closed via
-a negated compare — the store-seam precedent) is the only condition that decides whether a crossing
-fires *at all*, and it is evaluated with no draw — a non-crossing leaves the `world.arcs` cursor
-untouched, exactly the `InteractionTextGenerator` "a refusal consumes no cursor" discipline (§8.5).
-Once the threshold crosses, the arc **spawns** — there is no second pre-draw gate that can silently
-suppress it. Order per crossing:
+**Firing is edge-triggered against a serialized latch (KD-7, §2.8), not a bare level test.** The
+evaluator owns `_latched` — the set of currently **armed-off** `(scopeKey, TriggerId)` pairs (scopeKey
+= `entityId` for entity-scoped rows, `ARC_BOARD_SCOPE_KEY` for board rows). Per (scopeKey, trigger), with
+`above = signal >= Threshold` (NaN fails closed via a negated compare — the store-seam precedent, so a
+non-finite signal is treated as below threshold):
+
+| armed-off? | `above`? | action |
+|-----------|----------|--------|
+| no (armed) | yes | **FIRE** (draw + `SpawnArc`, below) and **add** the pair to `_latched` |
+| no (armed) | no  | no-op, **no draw** |
+| yes | yes | no-op (still latched), **no draw** |
+| yes | no  | **re-arm**: **remove** the pair from `_latched`, **no draw** |
+
+So the **only tick that draws + spawns is the rising edge** (armed → above); a sustained-high signal
+fires exactly once, and a non-edge tick leaves the `world.arcs` cursor untouched — the
+`InteractionTextGenerator` "a refusal consumes no cursor" discipline (§8.5). Both the fire (add) and
+the re-arm (remove) mutate `_latched`, which is why the set is serialized at E2 (§8.6): a
+`save@N → restore → advance` that dropped the set would re-fire every still-above trigger on the first
+post-restore tick — the KD-7 completeness bug, locked out by §9 test 10.
+
+**On a rising edge**, in order:
 
 1. **Draw one** `world.arcs` value for the stochastic accept/shape component.
 2. Build the `SpawnCause` inline (`TriggerId`, the captured `Input[]` scalars, `Cause.WorldTick =
@@ -380,16 +461,16 @@ suppress it. Order per crossing:
    `SpawnArc` does the atomic FR-LW-018 pinning + rollback, the `ArcKind` gate, and the
    lifetime/overflow gates. These are pure functions of the trigger row + `spawnTick`, so in a correct
    catalogue they always pass; a mis-authored row that fails one is a **fail-loud corruption abort**
-   (the whole `AdvanceDay` throws), not a graceful skip — so the post-draw cursor advance is moot, and
-   replay parity is not at risk.
+   (the whole `AdvanceDay` throws), not a graceful skip. The latch add happens **only after** a
+   successful `SpawnArc` return, so a corruption-abort never leaves a phantom armed-off entry.
 
 There is deliberately **no "missing episode ⇒ skip-no-draw" gate**: the pin set is a pure function of
 the serialized `MemoryStore` (so the spawn is reproducible across `Snapshot`/`Restore` regardless of
 whether it pins zero or many), and gating a spawn on episode existence would make an entire arc class
-(a board-level arc firing on an edge with no citable memory) permanently unspawnable. The only place
-the draw precedes a decision is a **stochastic accept/reject** in step 1 — if the catalogue uses the
-draw to accept-or-reject the spawn, the draw necessarily precedes that test, which is a deterministic
-function of the (already-consumed) draw and therefore replay-parity-safe.
+(a board-level arc firing on an edge with no citable memory) permanently unspawnable. The rising-edge
+test is the sole pre-draw gate; the stochastic `world.arcs` draw feeds only the post-edge
+accept/shape component, a deterministic function of the (already-consumed) draw and therefore
+replay-parity-safe.
 
 ### 8.5 `world.arcs` RNG registration + draw discipline (KD-4)
 
@@ -408,9 +489,9 @@ public ArcTriggerEvaluator(DeterministicRngService rng)
 public int StreamIndex => _streamIndex;
 ```
 
-Per-crossing draw (the `InteractionTextGenerator.Generate` discipline — the threshold test runs
-BEFORE the draw, so a no-crossing tick consumes no cursor; a crossing always draws and spawns,
-§8.4):
+Per-rising-edge draw (the `InteractionTextGenerator.Generate` discipline — the armed+`above` edge test
+runs BEFORE the draw, so a non-edge tick — armed-below, still-latched-above, or re-arming — consumes no
+cursor; a rising edge always draws and spawns, §8.4):
 
 ```csharp
 if (_rng.Reserve(_streamIndex, 1) != 0) throw new InvalidOperationException(...);
@@ -418,8 +499,9 @@ if (_rng.DrawReserved(_streamIndex, 0, out ulong draw) != 0) { _rng.CloseReserva
 _rng.CloseReservation(_streamIndex);   // advances RngCursor by DeclaredBudget (verified line 124-127)
 ```
 
-**One draw per crossing, not per tick** — a tick with no crossings leaves the cursor untouched, so a
-flag-off (null canon source) run never advances it (E1 byte-identity). Registration is
+**One draw per rising edge, not per tick** — a tick with no rising edge (including a re-arm or a
+sustained-latched signal) leaves the cursor untouched, so a flag-off (null canon source) run never
+advances it (E1 byte-identity). Registration is
 **unconditional at boot** in a fixed position (after `world.text`) so the stream index is
 positionally stable across save/restore whether or not a canon source is present.
 
@@ -456,17 +538,36 @@ both forwarding seams and is the recommended shape.
 
 **Snapshot()** — E2 inserts the `world.arcs` block between the `world.text` block and the membership
 roster (keeping membership last so no existing byte-offset test moves). Current writer order
-(`WorldStore.cs:268-288`): header → store block → world.text (seed/cursor/ordinal) → membership. E2:
+(`WorldStore.cs:268-288`): header → store block → world.text (seed/cursor/ordinal) → membership. E2
+appends **two** things to the world.text region: the cursor/ordinal pair **and the KD-7 latch block**.
+The latch is exposed by the evaluator as `LatchEntry[] EnumerateLatchedCanonical()` (an internal
+`readonly struct LatchEntry { int ScopeKey; ushort TriggerId; }`, returned sorted by ScopeKey then
+TriggerId), `int LatchedCount`, and `void RestoreLatched(LatchEntry[])` (validates canonical strict
+ordering + no duplicates, then replaces the set) — the evaluator owns the state; `WorldStore` owns the
+byte layout (the GK/Heading `CaptureState`/`RestoreState` split):
 
 ```csharp
 // ... after the world.text WriteU64 x3 ...
 RngStreamState arcStream = _rng.GetStreamState(_arcTriggers.StreamIndex);
 CanonicalSerializer.WriteU64(payload, ref offset, arcStream.RngCursor);
 CanonicalSerializer.WriteU64(payload, ref offset, arcStream.ActionOrdinal);
+
+// KD-7 latch (§2.8): the armed-off (scopeKey, TriggerId) set, enumerated in canonical order
+// (scopeKey ascending, then TriggerId ascending) so the byte stream is deterministic. Count-prefixed
+// via the WriteI32-count / ReadCount discipline the membership block already uses (WorldStore.cs:282).
+LatchEntry[] latched = _arcTriggers.EnumerateLatchedCanonical();   // sorted, evaluator-owned
+CanonicalSerializer.WriteI32(payload, ref offset, latched.Length);   // WriteI32 count to match ReadCount's ReadI32 (WorldStore.cs:272/282 precedent)
+for (int i = 0; i < latched.Length; i++)
+{
+    CanonicalSerializer.WriteI32(payload, ref offset, latched[i].ScopeKey);   // entityId or board sentinel (may be negative)
+    CanonicalSerializer.WriteU16(payload, ref offset, latched[i].TriggerId);
+}
 // ... then membership roster (unchanged) ...
 ```
 
-`ComputeSize` gains `+ 8 + 8`. Bump `WORLD_STORE_FORMAT_VERSION` 2 → 3 with the v2→v3 doc note.
+`ComputeSize` gains `+ 8 + 8` for the cursor/ordinal **plus** `+ 4 + latched.Length * (4 + 2)` for the
+count-prefixed latch block (size computed from the same enumerated set, so writer and sizer never
+disagree). Bump `WORLD_STORE_FORMAT_VERSION` 2 → 3 with the v2→v3 doc note.
 
 **Restore(byte[] payload, ArcCanonSource canon = null)** — the canon source is a **Load-time
 parameter, never persisted** (the season-save `ISquadProvider` precedent). After re-deriving `_rng`
@@ -479,18 +580,31 @@ RngStreamState arcStream = rng.GetStreamState(arcTriggers.StreamIndex);
 arcStream.RngCursor = CanonicalSerializer.ReadU64(payload, ref offset);
 arcStream.ActionOrdinal = CanonicalSerializer.ReadU64(payload, ref offset);
 if (rng.RestoreStream(arcTriggers.StreamIndex, in arcStream) != 0) throw new InvalidOperationException(...);
+
+// KD-7 latch restore. ReadCount fails loud on a corrupt/oversize prefix (the existing WorldStore.cs:388
+// helper: 0 <= count <= remaining bytes). RestoreLatched replaces the evaluator's set.
+int latchCount = ReadCount(payload, ref offset);   // existing WorldStore-local helper (WorldStore.cs:388), bound = remaining bytes
+var latched = new LatchEntry[latchCount];
+for (int i = 0; i < latchCount; i++)
+{
+    int scopeKey  = CanonicalSerializer.ReadI32(payload, ref offset);
+    ushort trigId = CanonicalSerializer.ReadU16(payload, ref offset);
+    latched[i] = new LatchEntry(scopeKey, trigId);
+}
+arcTriggers.RestoreLatched(latched);   // fail-loud on a non-canonical / duplicate-key ordering
 ```
 
-**E1 (no schema bump)** ships everything above EXCEPT the two `WriteU64`/`ReadU64` pairs and the
-version bump: the stream is registered and the evaluator wired, but `Snapshot()` **fails loud** when
-`arcStream.RngCursor != 0 || arcStream.ActionOrdinal != 0` (a flag-on save is not yet snapshot-safe —
-the `EnableGkHeading` Phase-1 `NotSupportedException` durable-capture precedent). Both fields are
-checked, not just `RngCursor`: they are the two-field resumable position serialized at E2, and
-gating on both is robust against a future draw-discipline change that could advance `ActionOrdinal`
-without `RngCursor` (today `CloseReservation` advances `RngCursor` on every draw, so either check
-alone would suffice — checking both costs nothing and removes the dependence on that invariant). A
-null-canon run keeps both at 0, so `Snapshot()` succeeds and is byte-identical to today at
-`WORLD_STORE_FORMAT_VERSION` 2.
+**E1 (no schema bump)** ships everything above EXCEPT the cursor/ordinal `WriteU64`/`ReadU64` pairs,
+**the KD-7 latch block**, and the version bump: the stream is registered and the evaluator wired, but
+`Snapshot()` **fails loud** when `arcStream.RngCursor != 0 || arcStream.ActionOrdinal != 0 ||
+_arcTriggers.LatchedCount != 0` (a flag-on save is not yet snapshot-safe — the `EnableGkHeading`
+Phase-1 `NotSupportedException` durable-capture precedent). All three are checked: the cursor pair is
+the resumable draw position, and the latch count is the KD-7 armed-off state — a run that fired
+anything advances the cursor (every rising edge draws) so the cursor check alone would catch a fired
+trigger, but a run that only **re-armed** (crossed above then dropped below, net-zero cursor motion is
+impossible since the fire drew — so this is belt-and-suspenders) or any future draw-discipline change
+is covered by gating on the latch too. A null-canon run keeps all three at 0/empty, so `Snapshot()`
+succeeds and is byte-identical to today at `WORLD_STORE_FORMAT_VERSION` 2.
 
 ### 8.7 `WorldLoop` diff (phase-4)
 
@@ -520,9 +634,14 @@ ctors stay (slice-1 hosts unchanged); add a 5-arg ctor carrying `arcTriggers`.
 
 - `WORLD_STORE_FORMAT_VERSION` mismatch on `Restore` → `ArgumentException` (existing gate; v2 payloads
   are rejected fail-loud at E2, **no in-place migration** at Stage 0).
-- `Snapshot()` at E1 with a non-zero `world.arcs` cursor (`RngCursor != 0 || ActionOrdinal != 0`) →
-  `NotSupportedException` (flag-on not yet snapshot-safe).
+- `Snapshot()` at E1 with a non-zero `world.arcs` cursor or a non-empty latch
+  (`RngCursor != 0 || ActionOrdinal != 0 || LatchedCount != 0`) → `NotSupportedException` (flag-on not
+  yet snapshot-safe).
 - `RestoreStream` non-zero return → `InvalidOperationException` (registration-order drift).
+- KD-7 latch (E2): `ReadCount` corrupt/oversize prefix → `ArgumentException` (the ReadCount
+  precedent); `RestoreLatched` given a non-canonical or duplicate-key ordering → `InvalidOperationException`
+  (a tampered/foreign latch block, so the serialized set's canonical-order invariant is enforced on
+  read, not trusted).
 - Non-finite `SpawnCause.Input.Value` → already gated in `WorldStateSerializer.Serialize`
   (`:102-111`); the evaluator additionally gates at capture time.
 - `ArcCanonSource` returning a non-finite signal → the evaluator's negated-compare threshold fails
@@ -572,8 +691,10 @@ determinism, fail-loud gates):
    one threshold) **via `SetArcCanon` after construction** (guards Medium-2 — the opt-in must be live,
    not a dead setter captured null at loop construction); assert `ArcEngine.ArcCount` increments after
    `AdvanceDay`, the `SpawnCause.TriggerId`/`Input[]` match, and two same-seed runs produce
-   byte-identical world state. Also cover a pin-less spawn (a crossing on an edge with no citable
-   episode) — `ArcCount` still increments (Medium-1: no missing-episode suppression).
+   byte-identical world state. Assert a **second** `AdvanceDay` with the signal still above threshold
+   does **not** spawn again (`ArcCount` unchanged — KD-7 single-fire; the latch is armed-off). Also
+   cover a pin-less spawn (a crossing on an edge with no citable episode) — `ArcCount` still increments
+   (Medium-1: no missing-episode suppression).
 5. **E1 fail-loud** — a flag-on store (canon set, a crossing driven) refuses `Snapshot()` with
    `NotSupportedException` while the cursor is non-zero.
 6. **E2 acceptance predicate** — save@N of a flag-on run → `WorldStore.Restore(payload, canon)` →
@@ -588,19 +709,33 @@ determinism, fail-loud gates):
    N→N+K, is byte-identical to the uninterrupted flag-on run (the §2.7 predicate through the season
    file). Fails if `Load` is not threaded with `canon` (the restored world stops evaluating). Add in
    Slice 2 alongside test 6, in `season-save/tests/`.
+10. **Edge-trigger re-arm cycle (KD-7)** — drive a canon signal above threshold (fires, `ArcCount`
+    +1), hold it above across several `AdvanceDay`s (no further spawn — latched), drop it below (no
+    spawn, re-arms — assert `LatchedCount` drops), then raise it above again (fires, `ArcCount` +1).
+    Locks single-fire + re-arm; a bare level test would spawn on every above-threshold day. Slice 1
+    (pure forward behaviour, no serialization).
+11. **Re-fire-after-restore lock (KD-7 completeness)** — save@N a flag-on run whose trigger is
+    **still above threshold and latched**, `WorldStore.Restore(payload, canon)`, then `AdvanceDay`:
+    the trigger does **NOT** re-fire (`ArcCount` unchanged on the first post-restore tick, then
+    identical to the uninterrupted run thereafter). This is the exact completeness bug the serialized
+    latch prevents — a control run that drops the latch bytes on restore re-fires immediately and
+    diverges (the negative assertion the test encodes). Subsumed byte-wise by test 6's digest match,
+    but asserted behaviourally here because that is where the KD-7 latch earns its serialization.
+    Slice 2 (needs the E2 latch block).
 
 ## 10. Sequencing (two landing slices, each its own AR + gate)
 
-- **Slice 1 — E1 (no schema bump).** New files §8.1, constants §8.2, evaluator + registration
-  §8.4/§8.5, `WorldStore`/`WorldLoop` wiring §8.6/§8.7 minus the two serialize pairs, tests 1–5 + 7.
-  Ship byte-identical flag-off; flag-on deterministic-forward but `Snapshot()` fails loud. This is the
-  reviewable, byte-neutral landing.
-- **Slice 2 — E2 (`WORLD_STORE_FORMAT_VERSION` 2 → 3).** Add the cursor serialize/restore §8.6, drop
-  the E1 fail-loud, thread canon through `SeasonSaveManager.Load` (§8.9(a)), add tests 6 + 8 + 9.
-  Comparative round-trip, no absolute rebaseline. The season save frames the world blob opaquely, so
-  `SEASON_SAVE_FORMAT_VERSION` is untouched — but the `Load` canon threading is required for the
-  flag-on world to keep evaluating after a season restore (test 9); without it the round-trip claim in
-  §12 is unmet.
+- **Slice 1 — E1 (no schema bump).** New files §8.1, constants §8.2, evaluator + registration +
+  **KD-7 rising-edge latch (forward behaviour)** §8.4/§8.5, `WorldStore`/`WorldLoop` wiring §8.6/§8.7
+  minus the serialize pairs **and the latch block**, tests 1–5 + 7 + 10. Ship byte-identical flag-off;
+  flag-on deterministic-forward but `Snapshot()` fails loud (on a non-zero cursor **or a non-empty
+  latch**). This is the reviewable, byte-neutral landing.
+- **Slice 2 — E2 (`WORLD_STORE_FORMAT_VERSION` 2 → 3).** Add the cursor **and the KD-7 latch block**
+  serialize/restore §8.6, drop the E1 fail-loud, thread canon through `SeasonSaveManager.Load`
+  (§8.9(a)), add tests 6 + 8 + 9 + 11. Comparative round-trip, no absolute rebaseline. The season save
+  frames the world blob opaquely, so `SEASON_SAVE_FORMAT_VERSION` is untouched — but the `Load` canon
+  threading is required for the flag-on world to keep evaluating after a season restore (test 9);
+  without it the round-trip claim in §12 is unmet.
 
 Each slice runs its own adversarial-review cycle to convergence (the project convention) before the
 full dotnet gate.
@@ -629,9 +764,12 @@ upstream producers land, build in this order:
 
 - Full dotnet gate PASSED, 0 failures, whole tree green (SDK via apt, the current local-gate posture).
 - Slice 1: the existing living-world determinism suite is **unchanged** (byte-identical flag-off);
-  `key(world.arcs) != key(world.text)` locked.
+  `key(world.arcs) != key(world.text)` locked; **KD-7 edge-trigger single-fire + re-arm** locked
+  (test 10 — a sustained signal spawns one arc, not one per day).
 - Slice 2: the §2.7 comparative round-trip predicate passes (direct `WorldStore.Restore(payload,
-  canon)`). A flag-on `WorldStore` also round-trips **through the unified season save** with no
+  canon)`), including the **KD-7 re-fire-after-restore lock** (test 11 — a still-latched trigger does
+  not re-fire on restore because the latch set is serialized in the E2 world blob). A flag-on
+  `WorldStore` also round-trips **through the unified season save** with no
   `SEASON_SAVE_FORMAT_VERSION` change — which requires the §8.9(a) `SeasonSaveManager.Load` canon
   threading (the season codec frames the v3 world blob opaquely, so the season format itself is
   untouched; the missing piece is passing `canon` into `WorldStore.Restore`, not the frame). Without
@@ -644,6 +782,24 @@ upstream producers land, build in this order:
 
 ## Version History
 
+- **v0.5 (2026-07-24):** Applied the pass-6 adversarial-review finding (1H+0M+0L) — the one the prior
+  five passes missed, caught by a fresh hostile re-read of the core evaluator loop. **H-1: trigger
+  firing semantics were unspecified and self-contradictory** — §8.4 used "crossing" (edge) language
+  over a stateless `signal >= Threshold` level test with no previous-tick state, which under the level
+  reading spawns one arc **per day** for a sustained signal (no `SpawnArc` dedupe; unbounded
+  `world.arcs` cursor) and under the edge reading needs per-(entity,trigger) latch state that E2's
+  §8.6 serialization (cursor + ordinal only) omitted — so a flag-on `save@N → restore → advance`
+  re-fires every still-above-threshold trigger on restore (the GK/Heading Phase-2 latch completeness
+  class the doc already cites). **Resolved (author chose edge-triggered + latch):** new **KD-7 (§2.8)**
+  pins edge-triggered firing with a per-scope-key armed-off latch (rising edge = sole draw+spawn; drop
+  below = re-arm; sustained-high = one arc, not per-day); §8.4 rewritten as the four-state
+  armed/latched table; §8.6 serializes the `_latched` set as a count-prefixed canonical-order block in
+  the E2 world blob (evaluator owns the state via `EnumerateLatchedCanonical`/`LatchedCount`/
+  `RestoreLatched`, `WorldStore` owns the byte layout — the `CaptureState`/`RestoreState` split), with
+  the E1 fail-loud extended to a non-empty latch and a `RestoreLatched` canonical-order/no-duplicate
+  gate; §9 adds test 10 (single-fire + re-arm) and test 11 (re-fire-after-restore lock, with a
+  drop-the-latch negative control); §2.4/§5/§8.1/§8.5/§8.8/§10/§12 threaded through. §7 records pass-6
+  → CONVERGED.
 - **v0.4 (2026-07-24):** Applied the pass-4 adversarial-review findings — two regressions the v0.3
   fixes themselves introduced, plus one Low (0H+2M+1L). **M-1 (regression from v0.3 M-3):** the
   pin-resolution "missing episode ⇒ skip-no-draw" gate §8.4 added was under-specified (the `ArcTrigger`
