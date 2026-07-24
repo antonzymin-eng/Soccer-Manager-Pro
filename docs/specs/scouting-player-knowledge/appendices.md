@@ -1,8 +1,8 @@
 # Scouting & Player Knowledge #32 — Appendices
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.4 — cross-set AR; prior v0.3 — section-file AR PASS-2; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.4
+**Last Updated:** July 24, 2026 (v0.5 — cross-set AR pass 3; prior v0.4 cross-set AR, v0.3 PASS-2, v0.2 PASS-1, v0.1 initial)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -53,7 +53,9 @@ preceded by an overflow-safe `Require(offset, need, total)` bound against `total
 **No `RngCursor`/`actionOrdinal` field** — draws are keyed and stateless (FR-SC-014). No estimate,
 range, or per-attribute field appears anywhere in the block (FR-SC-006 — derived on read). Deep
 extensions (multi-lane assignments, coverage overlays) **append** behind the version bump; the
-layout above is never reordered.
+layout above is never reordered. The two own-squad F4 gates assume the **career-constant
+`managedClubId`** (true today — no feature moves it); a future manager job change runs the §7.2
+re-club sweep before the gate can see the new club.
 
 ## Appendix C — Worked estimate example (end to end)
 
@@ -84,4 +86,5 @@ All integer; two runs identical; the #27 record was never written.
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M-3): Appendix B gains the `managedClubId` field (the `StaffSaveCodec` precedent) so the own-squad assignment check is codec-performable; pool resolvability split out as a post-load composition-root validation (the v0.1 note assigned the codec a check it could not perform). |
 | 0.3 | 2026-07-24 | — | Section-file AR PASS-2 (L): overlay entries gain the codec-level not-own-squad coherence gate (F4 — the hygiene rule drops an entry on a buy, so an own-squad entry is incoherent state). |
 | 0.4 | 2026-07-24 | — | Cross-set AR (L): `MAX_ACTIVE_ASSIGNMENTS` retagged `[FIXED]` → `[DERIVED]` (= the #34 scout-slot count — a value the spec expects to track #34's structure is derived, not fixed). |
+| 0.5 | 2026-07-24 | — | Cross-set AR pass 3 (L): Appendix B names the career-constant-`managedClubId` assumption behind the two own-squad F4 gates (→ the new §7.2 job-change deferral row). |
 #endregion

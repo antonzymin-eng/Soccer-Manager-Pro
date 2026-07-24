@@ -1,8 +1,8 @@
 # Competition Structure #43 — Outline
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial, promoted from design supplement v0.3)
-**Version:** 0.1
+**Last Updated:** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -22,7 +22,7 @@ draw-free); the deep tier populates the collection, reusing #30's instance-ready
 | Section | Content |
 |---------|---------|
 | 1 | Introduction, scope, out-of-scope seams, dependencies, key decisions (KD-1..KD-8) |
-| 2 | Functional requirements (FR-CP-001..025), data structures, failure modes (F1..F6) |
+| 2 | Functional requirements (FR-CP-001..027), data structures, failure modes (F1..F6) |
 | 3 | Core algorithms: registry/formats, keyed draws, bracket lifecycle, promotion/relegation, merged calendar |
 | 4 | Architecture, assembly/file layout, the instance-0 binding, save composition |
 | 5 | Test plan (identity + draw determinism + bracket coherence + transform + save/fail-loud) |
@@ -68,4 +68,5 @@ draw-free); the deep tier populates the collection, reusing #30's instance-ready
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial outline, promoted from design supplement v0.3 (AR-converged). Status IN REVIEW. |
+| 0.2 | 2026-07-24 | — | Cross-set AR pass 3: FR range → 027 (FR-CP-026 keyed knockout tie-break; FR-CP-027 power-of-two config gate). |
 #endregion

@@ -1,8 +1,8 @@
 # Competition Structure #43 — Appendices
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -16,7 +16,7 @@
 | `PROMOTION_COUNT` / `RELEGATION_COUNT` | `[GT]` | 3 / 3 (illustrative) | the season-boundary swap sizes; MUST be equal (a squad-size-preserving swap, §3.4); balance-pass-pinned. |
 | `CP_ROUND_RADIX` | `[FIXED]` | 32 | fixed ordinal radix above any bracket's round count (§3.2); never derived from a live count (append-parity). |
 | `CP_SLOT_RADIX` | `[FIXED]` | 256 | fixed ordinal radix above any round's slot count (128-entrant brackets covered). |
-| `CP_PURPOSE_RADIX` | `[FIXED]` | 16 | fixed ordinal radix for `CompetitionDrawPurpose` (APPEND-only; `Pairing = 0`, `GroupAssign = 1`). |
+| `CP_PURPOSE_RADIX` | `[FIXED]` | 16 | fixed ordinal radix for `CompetitionDrawPurpose` (APPEND-only; `Pairing = 0`, `GroupAssign = 1`, `ShootoutTiebreak = 2` — FR-CP-026). |
 | `CUP_ROUND_SPACING_DAYS` | `[GT]` | illustrative | *(deep)* the merged-view slotting spacing (§3.5); balance-pass-pinned. |
 | `CLUB_SQUAD_SIZE` / club-id universe | `[CROSS]` | #27 | entrant identity (stable `ClubId`s). |
 | `_RESERVED_0x2C_` / `SubsystemOrdinals.Competition = 94` | `[CROSS]` | #16 | created by ERR-043-001; RESERVED at approval (draw-free minimal); promotes at the deep first draw. |
@@ -67,4 +67,5 @@ standings ⇒ same swap, two runs identical.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial appendices (constant catalogue, sub-blob layout, worked draw/promotion/identity examples), promoted from design supplement v0.3. Status IN REVIEW. |
+| 0.2 | 2026-07-24 | — | Cross-set AR pass 3 (M-1 follow-through): the `CP_PURPOSE_RADIX` row enumerates `ShootoutTiebreak = 2` (FR-CP-026). |
 #endregion

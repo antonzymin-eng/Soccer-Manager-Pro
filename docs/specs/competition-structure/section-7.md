@@ -1,8 +1,8 @@
 # Competition Structure #43 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -31,9 +31,14 @@
 - **Seeded draws / country protection.** Real cup draws use seeding pots and same-country
   avoidance; the Stage-5 extension adds pot structure over the same keyed mechanism (more
   purposes, APPEND-only).
-- **Two-legged ties / away goals / replays.** Knockout pairings resolve as single matches at the
-  deep entry; multi-leg aggregation is a format extension over `BracketState` (append fields
+- **Two-legged ties / away goals / replays / modelled extra time.** Knockout pairings resolve as
+  single matches at the deep entry, a level scoreline decided by the FR-CP-026 keyed tie-break;
+  multi-leg aggregation, replays, and a modelled extra-time/shootout (replacing the abstract
+  tie-break draw as a reviewed change) are format extensions over `BracketState` (append fields
   behind the version gate).
+- **Byes / preliminary rounds.** FR-CP-027 refuses non-power-of-two knockout entrant/group counts
+  at config validation; bye structure (odd entry lists, staggered entry rounds — the real-cup
+  shape) is the extension that lifts that gate, over the same keyed-draw mechanism.
 - **Continental qualification.** League finish → continental entry is a season-boundary rule
   reading final standings (the (a') neighbourhood); deferred with the continental instance.
 - **Fixture-congestion rescheduling.** The merged view slots deterministically; postponement /
@@ -60,4 +65,5 @@
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §7 (T-phase plan T0–T3, deferred extensions, downstream seam contracts), promoted from design supplement v0.3. Status IN REVIEW. |
+| 0.2 | 2026-07-24 | — | Cross-set AR pass 3 (M-1/M-2 follow-through): the multi-leg deferral row re-anchored on the FR-CP-026 tie-break baseline; new **byes / preliminary rounds** deferral row (the extension lifting the FR-CP-027 power-of-two gate). |
 #endregion

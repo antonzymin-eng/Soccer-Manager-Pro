@@ -1,8 +1,8 @@
 # Discipline & Suspensions #44 — Section 5: Test Plan
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — section-file AR PASS-1; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -37,6 +37,9 @@
   fixtures exactly as on engine-resolved ones (FR-DC-011).
 - **T-DC-BAN-004 (F5)** — a filter reducing the squad below the 18 `ConfigureSquads` consumes
   fails loud.
+- **T-DC-BAN-005 (both squads)** — an **opponent** player banned by accumulation is filtered from
+  the engine-resolved fixture against the managed club (both clubs' resolved squads pass the
+  resolve→configure seam — FR-DC-010); a managed-squad-only filter fails this test.
 
 ## 5.4 The view (KD-4)
 
@@ -72,4 +75,5 @@ synthesis, #43 partitions, the T-phase hygiene wiring — each locked at its min
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §5 (observer-neutrality/identity, fold, thresholds/serving, view, save/boundary/hygiene, traceability), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M follow-through): T-DC-SAV-002 extended to lock the immediate `(0,0)` drop + identical-bytes property. |
+| 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (M follow-through): new **T-DC-BAN-005** locks the both-squads filter coverage (a banned opponent excluded from the engine-resolved fixture — the case the managed-club-only tests never exercised). |
 #endregion

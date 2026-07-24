@@ -1,8 +1,8 @@
 # Competition Structure #43 — Section 5: Test Plan
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — section-file AR PASS-1; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -43,6 +43,14 @@
   (instrumented rng seam asserts zero draw computations during decode — FR-CP-025).
 - **T-CP-BRK-003 (F2)** — drawing a round before the prior round fully resolves, or on a
   non-knockout instance, fails loud.
+- **T-CP-BRK-004 (tie-break)** — a level-scoreline pairing resolves its winner via the keyed
+  `ShootoutTiebreak` draw (`mod 2` over the pairing) — two-run identical, save→restore-stable,
+  call-order-independent; a **decisive** pairing makes **no** tie-break draw (instrumented seam
+  asserts zero `ShootoutTiebreak` computations); the drawn winner passes the F4 winner-∈-pairing
+  gate (FR-CP-026).
+- **T-CP-BRK-005 (F2, config gate)** — a `Knockout` instance configured with a non-power-of-two
+  entrant count (e.g. 12), or a `GroupThenKnockout` with a non-power-of-two group count, fails
+  loud at genesis/config validation (FR-CP-027).
 
 ## 5.4 Promotion/relegation (KD-4, deep)
 
@@ -83,13 +91,14 @@
 
 ## 5.8 Requirement traceability
 
-Every FR-CP-001..025 maps to a T-CP-* test above **or** a recorded §7 deferral. Deep-tier-only
-requirements (FR-CP-007/009/010/011/015..019/024) are locked at their minimal identity boundary
-now (the singleton-collection equality) and fully at the deep T-phase.
+Every FR-CP-001..027 maps to a T-CP-* test above **or** a recorded §7 deferral. Deep-tier-only
+requirements (FR-CP-007/009/010/011/015..019/024/026/027) are locked at their minimal identity
+boundary now (the singleton-collection equality) and fully at the deep T-phase.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §5 (identity, draw determinism, bracket coherence, promotion/relegation, merged calendar, save, fail-loud, traceability), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1: **L** — T-CP-DET-006 rephrased to a stubbed-rng mechanics lock (the v0.1 phrasing asserted illustrative "say"-values no real seed derives); **M follow-through** — new T-CP-DET-007 locks `DeriveInstanceSeed` (pure, draw-free, distinct-instance independence — FR-CP-006). |
+| 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (M-1/M-2 follow-through): new **T-CP-BRK-004** locks the keyed `ShootoutTiebreak` winner on a level pairing (+ zero tie-break draws on decisive results); new **T-CP-BRK-005** locks the FR-CP-027 power-of-two config gate; §5.8 ranges extended to FR-CP-027. |
 #endregion

@@ -1,13 +1,13 @@
 # Competition Structure #43 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — section-file AR PASS-1; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
 
-## 2.1 Functional requirements (FR-CP-001..025)
+## 2.1 Functional requirements (FR-CP-001..027)
 
 | ID | Requirement | Level | KD |
 |---|---|---|---|
@@ -36,6 +36,8 @@
 | FR-CP-023 | Every id/round/slot/count field MUST be integer; #43 MUST introduce **no** float. | MUST | §1.5 |
 | FR-CP-024 | *(deep)* A drawn season MUST be two-run deterministic from one world seed; a draw MUST be stable across call orders and save→restore; two competitions' draws MUST be mutually independent (distinct `entityId`). | MUST | KD-2 |
 | FR-CP-025 | Genesis-vs-load: minimal genesis is the instance-0 binding only; a load MUST reconstruct the registry/brackets/membership from the sub-blob and MUST NOT re-seed or re-draw. | MUST | KD-6 |
+| FR-CP-026 | *(deep)* A knockout pairing whose fixture resolves **level** MUST determine its winner via a **keyed tie-break draw**: `ShootoutTiebreak` purpose, ordinal over `(seasonNumber, roundIndex, pairingIndex, ShootoutTiebreak)`, winner = the pairing entrant at `draw mod 2` — deterministic, cursor-free, stable across call orders and save/restore. A non-level result MUST make no tie-break draw. Extra time / replays / two-legged aggregation are §7 extensions that **replace** this rule as a reviewed change, never silently. | MUST | KD-2/KD-3 |
+| FR-CP-027 | *(deep)* A `Knockout` instance's entrant count — and a `GroupThenKnockout` instance's group count (its knockout-stage entrant count) — MUST be a **power of two ≥ 2**, validated **fail-loud at genesis/config time** (F2); byes/preliminary rounds are a §7 extension. The §3.3 halving/pairing gates presume this validated shape. | MUST | KD-3/F2 |
 
 ## 2.2 Data structures
 
@@ -61,7 +63,7 @@ public sealed class BracketState
 public sealed class CompetitionSet { /* Competition[] (canonical order); division chain (deep, KD-4) */ }
 
 // KD-2 (deep) — draw purposes; APPEND-only, never reorder.
-public enum CompetitionDrawPurpose : byte { Pairing = 0, GroupAssign = 1 /* deep may APPEND */ }
+public enum CompetitionDrawPurpose : byte { Pairing = 0, GroupAssign = 1, ShootoutTiebreak = 2 /* deep may APPEND */ }
 ```
 
 ## 2.3 Failure modes
@@ -69,7 +71,7 @@ public enum CompetitionDrawPurpose : byte { Pairing = 0, GroupAssign = 1 /* deep
 | ID | Condition | Handling |
 |---|---|---|
 | **F1** | An operation naming an unknown `CompetitionId`, or an entrant `ClubId` outside the #27 club universe | **Fail loud** — identity validity is a caller-contract bug (the #31 F6 class). |
-| **F2** | *(deep)* A draw requested on a non-knockout instance / before the prior round fully resolves; a transform invoked with mismatched division tables (a club in neither/both divisions) | **Fail loud** — command/sequencing-contract bugs. |
+| **F2** | *(deep)* A draw requested on a non-knockout instance / before the prior round fully resolves; a transform invoked with mismatched division tables (a club in neither/both divisions); a `Knockout`/`GroupThenKnockout` instance configured with a non-power-of-two entrant/group count (FR-CP-027); merged-view slotting finding **no legal day** for a cup round under the `[GT]` spacing (a config-coherence error, at season-scheduling time) | **Fail loud** — command/sequencing/config-contract bugs. |
 | **F3** | Competition sub-blob: bad `COMPETITION_SAVE_FORMAT_VERSION` / out-of-bounds length prefix / trailing bytes | **Fail loud** — the `SeasonSaveCodec` posture (FR-CP-013). |
 | **F4** | Decoded bracket/registry incoherence: winner ∉ its pairing; non-halving round counts; non-ascending `CompetitionId`s / entrant `ClubId`s; a duplicate entrant | **Fail loud** — corrupt state never repaired silently (FR-CP-011, the #32 F4 / #22 strict-order class). |
 | **F5** | *(deep)* A draw-ordinal input outside its fixed radix bound (`roundIndex`/`slotIndex`/`purpose`) | **Fail loud** — the §3.2 bound guards (the #41/#32 keyed-ordinal discipline). |
@@ -80,4 +82,5 @@ public enum CompetitionDrawPurpose : byte { Pairing = 0, GroupAssign = 1 /* deep
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §2 (FR-CP-001..025, data structures, F1..F6), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M): FR-CP-006 pins the per-instance seed as a **pure draw-free derivation** (`DeriveInstanceSeed(worldSeed, competitionId, seasonNumber)`, distinct instances never share a fixture sequence) — §3.1 introduced it with no FR/test coverage, letting an implementer draw it from a stream and break the draw-free minimal claim. |
+| 0.3 | 2026-07-24 | — | Cross-set AR pass 3: **M-1** — new FR-CP-026 pins the **keyed knockout tie-break** (`ShootoutTiebreak` purpose, winner = entrant at `draw mod 2` on a level result) — a drawn cup match had NO specified winner while F4 required one, an undefined behaviour on a common input. **M-2** — new FR-CP-027 pins the **power-of-two entrant/group-count config gate** (fail-loud at genesis) — the §3.3 halving/pairing gates silently assumed 2^k; byes deferred to §7.2. **L** — F2 gains the non-power-of-two config and merged-view slotting-infeasibility conditions. `ShootoutTiebreak = 2` appended to `CompetitionDrawPurpose`. |
 #endregion

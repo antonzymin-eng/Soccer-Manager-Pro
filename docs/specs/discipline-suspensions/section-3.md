@@ -1,8 +1,8 @@
 # Discipline & Suspensions #44 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — section-file AR PASS-1; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -68,7 +68,9 @@ FilterAvailable(squad, s)  := a reduced VALUE COPY of squad keeping available pl
 N+1's selection runs `FilterAvailable` at #30's resolve→configure seam (ERR-030-009) → the banned
 player is excluded → after fixture N+1 is played, `OnClubFixturePlayed` decrements the ban → the
 player is available for N+2 (a 1-match ban). Serving counts the club's fixtures on **any**
-resolution path; only card *generation* is engine-fixture-only at minimal.
+resolution path; only card *generation* is engine-fixture-only at minimal. The filter covers
+**both clubs' resolved squads** of the engine-resolved fixture (FR-DC-010) — a banned opponent
+does not appear against the managed club mid-ban.
 
 ## 3.4 Boundary & hygiene (FR-DC-013/017)
 
@@ -87,4 +89,5 @@ resolution path; only card *generation* is engine-fixture-only at minimal.
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §3 (occupancy fold, thresholds/bans + worked example, serving + the off-by-one lock, boundary/hygiene), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M follow-through): §3.4 aligns the `(0,0)` drop to **immediate, wherever it occurs** (mid-season serve-out included), citing FR-DC-017. |
+| 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (M follow-through): §3.3's ordering paragraph states the both-squads filter coverage (FR-DC-010 — a banned opponent is excluded from the engine-resolved fixture). |
 #endregion

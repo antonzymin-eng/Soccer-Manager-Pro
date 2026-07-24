@@ -1,8 +1,8 @@
 # Discipline & Suspensions #44 — Appendices
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -44,18 +44,21 @@ classes) **append** behind the version gate.
 
 ## Appendix C — Worked fold example (end to end)
 
-Fixture N (engine-resolved). Lineup seeds slot 7 → PlayerId 183, bench slot 19 → PlayerId 201.
-Tap sequence: tick 4 000 `CardIssuedEvent{Recipient: 7, Kind: 0}` → 183 `Yellows` 4 → 5 ⇒ ban 1,
-`Yellows` 0 (threshold 5). Tick 9 000 `SubstitutionEvent{Outgoing: 7, Incoming: 19}` → occupancy
-7 → 201 (or 19 → 201, absorbed either way). Tick 12 000 `CardIssuedEvent{Recipient: <occupied>,
-Kind: 2}` → **201** `Yellows` +1 **and** ban +1 (one event, one yellow, one dismissal — KD-5).
-Fixture N+1 selection: `FilterAvailable` excludes 183 and 201; after N+1 is played,
-`OnClubFixturePlayed` decrements both to 0 — available for N+2. The engine's slot-7 yellow count
-was reset by the substitution (v1.33) and **never read** — the tally kept 183's card. All
-integer; two runs identical; #27 squads byte-untouched.
+Fixture N (engine-resolved). Lineup seeds slot 7 → PlayerId 183 (club 7 — `183 / 25 = 7`), bench
+slot 19 → PlayerId 191 (club 7, local 16 — same club, as a lineup must be). Tap sequence: tick
+4 000 `CardIssuedEvent{Recipient: 7, Kind: 0}` → 183 `Yellows` 4 → 5 ⇒ ban 1, `Yellows` 0
+(threshold 5). Tick 9 000 `SubstitutionEvent{Outgoing: 7, Incoming: 19}` → occupancy 7 → 191 (or
+19 → 191, absorbed either way). Tick 12 000 `CardIssuedEvent{Recipient: <occupied>, Kind: 2}` →
+**191** `Yellows` +1 **and** ban +1 (one event, one yellow, one dismissal — KD-5). Fixture N+1
+selection: `FilterAvailable` excludes 183 and 191; after N+1 is played,
+`OnClubFixturePlayed(7)` decrements both to 0 (`183 / 25 = 191 / 25 = 7` — the §3.3
+club-derivation rule) — available for N+2. The engine's slot-7 yellow count was reset by the
+substitution (v1.33) and **never read** — the tally kept 183's card. All integer; two runs
+identical; #27 squads byte-untouched.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial appendices (constant catalogue, sub-blob layout, end-to-end worked fold example), promoted from design supplement v0.3. Status IN REVIEW. |
+| 0.2 | 2026-07-24 | — | Cross-set AR pass 3 (M): Appendix C's bench player re-keyed 201 → **191** — 201 derives to club 8 (`201 / 25 = 8`), an impossible teammate of club-7's 183, and `OnClubFixturePlayed(7)` would never have decremented it; the example now derives coherently (`183 / 25 = 191 / 25 = 7`). |
 #endregion

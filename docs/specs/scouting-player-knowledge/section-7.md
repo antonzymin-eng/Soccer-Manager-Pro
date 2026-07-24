@@ -1,8 +1,8 @@
 # Scouting & Player Knowledge #32 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — section-file AR PASS-1; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -49,6 +49,13 @@
   autonomous-AI tier.
 - **Report events into #46.** Band-up events aggregated into the news/inbox when #46 lands
   (FR-LW-031 — no interface built).
+- **Manager job changes (the #45 neighbourhood).** FR-SC-009's own-squad rule and the Appendix-B
+  own-squad codec gates assume **`managedClubId` is career-constant** — true today (no feature
+  moves it). A future job-change feature MUST run a **re-club sweep** before the own-squad rule
+  flips: drop overlay entries for the new club's players (they become omniscient) and cancel an
+  assignment targeting one (the FR-SC-019 semantics applied to manager movement rather than
+  player movement) — otherwise a previously-scouted entry becomes own-squad-incoherent and trips
+  the F4 codec gate. Recorded here so the assumption is named, not discovered.
 
 ## 7.3 Seam contracts recorded for downstream authors
 
@@ -76,4 +83,5 @@
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §7 (T-phase plan T0–T3, deferred extensions, downstream seam contracts), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M-1): T2/T3 reconciled with the fog-off command gate — the T2 slot is a structural null seam and the commands are uncallable until T3 flips `fogEnabled` (the v0.1 text had the commands "landing" usable at T2, contradicting FR-SC-020). |
+| 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (L): new §7.2 **manager job-change** deferral row — the career-constant-`managedClubId` assumption named, with the required re-club sweep (drop new-club entries + cancel a targeting assignment) recorded so a future #45-class feature does not trip the F4 own-squad codec gate. |
 #endregion

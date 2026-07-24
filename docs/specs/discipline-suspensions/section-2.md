@@ -1,8 +1,8 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — section-file AR PASS-1; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -20,7 +20,7 @@
 | FR-DC-007 | When `Yellows ≥ YELLOW_ACCUMULATION_THRESHOLD`, an `ACCUM_BAN_MATCHES` ban MUST be added and `Yellows` MUST be reduced by the threshold (residual kept); bans from any source MUST **stack additively** on `BanMatchesRemaining`. | MUST | §3.2 |
 | FR-DC-008 | A player MUST be unavailable while `BanMatchesRemaining > 0`; `IsAvailable` MUST be a pure predicate over `DisciplineState`. | MUST | KD-4 |
 | FR-DC-009 | `FilterAvailable(in Squad) → Squad` MUST return a **reduced value copy** (available players only) for `ConfigureSquads`; it MUST NOT write #27 state; with no active ban it MUST pass the squad through unchanged. | MUST | KD-4 |
-| FR-DC-010 | The filter MUST act at #30's pre-declared **resolve→configure** seam (ERR-030-009); the fold MUST complete at fixture resolution — so a card in fixture N bans for fixture N+1 (no off-by-one). | MUST | KD-3 |
+| FR-DC-010 | The filter MUST act at #30's pre-declared **resolve→configure** seam (ERR-030-009) and MUST apply to **each** resolved squad of the engine-resolved fixture — the managed club's **and its opponent's** (both pass through `ResolveByClubId` → `ConfigureSquads`, so both pass the seam; a banned opponent is excluded exactly as a banned managed-club player is). The fold MUST complete at fixture resolution — so a card in fixture N bans for fixture N+1 (no off-by-one). | MUST | KD-3 |
 | FR-DC-011 | A ban MUST decrement by exactly one per **played fixture of the player's club**, regardless of resolution path (engine-resolved or quick-sim); serving MUST be reported via `OnClubFixturePlayed`. | MUST | KD-3 |
 | FR-DC-012 | The tally MUST key `(PlayerId, CompetitionId)` with `CompetitionId = 0` at minimal (an `int` key — no #43 assembly reference); #43-scoped accumulation is a partition activation, not a rewrite. | MUST | KD-6 |
 | FR-DC-013 | On a roster **re-key** (#31 transfer) the entry — tally **and** unserved bans — MUST **migrate** old→new `PlayerId` (bans follow the player; the deliberate contrast with #32's drop rule); on **retirement** the entry MUST be dropped. Delivery: the FR-TX-022 hook / #28 lifecycle coordination (T-phase wiring). | MUST | KD-6 |
@@ -73,4 +73,5 @@ public void OnClubFixturePlayed(int clubId /*, int competitionId = 0 */);
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §2 (FR-DC-001..022, data structures, F1..F5), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M): FR-DC-017 gains the **immediate `(0,0)`-drop canonical-minimality rule** (an all-zero entry and an absent entry must never both be encodable — a serialized-representation determinism hazard the v0.1 boundary-only phrasing left open). |
+| 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (M): FR-DC-010 pins **both-squads filter coverage** — the seam applies to each resolved squad of the engine-resolved fixture (managed club AND opponent); the unscoped v0.2 wording let a managed-squad-only implementation pass every test while banned opponents played through their bans. |
 #endregion

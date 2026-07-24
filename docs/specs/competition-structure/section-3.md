@@ -1,8 +1,8 @@
 # Competition Structure #43 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -66,11 +66,21 @@ ResolveKnockoutRound(comp):
     # MatchEngine, others -> the FR-SN-013a model); winners recorded per pairing.
 ```
 
+**Winner determination (FR-CP-026):** a pairing's fixture resolves through the #30 paths to a
+scoreline; a decisive scoreline names the winner directly. A **level** scoreline resolves via one
+keyed tie-break draw — `KeyedDraw(competition.draws, competitionId, DeriveDrawOrdinal(seasonNumber,
+roundIndex, pairingIndex, ShootoutTiebreak)) mod 2` selects the pairing entrant (`0` = the first,
+`1` = the second) — deterministic, cursor-free, save/restore-stable like every #43 draw; a
+non-level result makes **no** tie-break draw. Extra time / replays / two-legged aggregation are §7
+extensions that replace this rule as a reviewed change.
+
 Coherence gates (F4, enforced at decode **and** at each mutation): `Winners[k]` ∈
 `{Entrants[2k], Entrants[2k+1]}`; `|Rounds[r+1].Entrants| == |Rounds[r].Entrants| / 2`; round-0
-entrant multiset == the competition's entrant set. A restored bracket is authoritative — **no draw
-re-rolls on load** (FR-CP-025); the keyed mechanism makes a test-side re-derivation cross-check
-possible (T-CP-DET-004).
+entrant multiset == the competition's entrant set. The halving/pairing structure presumes the
+**FR-CP-027 power-of-two entrant-count config gate** (validated fail-loud at genesis — a
+non-power-of-two knockout is refused, never given implicit byes). A restored bracket is
+authoritative — **no draw re-rolls on load** (FR-CP-025); the keyed mechanism makes a test-side
+re-derivation cross-check possible (T-CP-DET-004).
 
 ## 3.4 Promotion/relegation (deep — FR-CP-015..018, at FR-SN-031's (a'))
 
@@ -97,8 +107,10 @@ untouched. Deterministic: same standings ⇒ same swap, always.
 MergedNextFixtureDay(instances):                           # pure over the per-instance mappings
     candidates := union of each instance's next unresolved round-day
     # deterministic slotting (config-derived, KD-5): cup rounds are ASSIGNED days, at scheduling
-    # time, only from days on which none of their entrants has a league fixture; assignment is a
-    # pure function of (league calendar, cup round count, [GT] spacing) — no search at query time.
+    # time, only from days on which none of the competition's FULL ENTRANT SET has a league
+    # fixture (round-level entrants are unknowable at scheduling time — the conservative full-set
+    # rule is what a pure function of (league calendar, cup round count, [GT] spacing) can see);
+    # no legal day under the spacing => FAIL LOUD at season-scheduling time (F2, config-coherence).
     return min(candidates)                                 # with each day's fixture list
 ```
 
@@ -110,4 +122,5 @@ this view only when `instances.length > 1` — the minimal path never reaches it
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §3 (registry/formats + instance seeds, keyed Fisher–Yates draw + worked example, bracket lifecycle + coherence gates, promotion/relegation + worked example, merged fixture-day view), promoted from design supplement v0.3. Status IN REVIEW. |
+| 0.2 | 2026-07-24 | — | Cross-set AR pass 3: **M-1** — §3.3 gains the FR-CP-026 winner-determination rule (a level scoreline resolves via the keyed `ShootoutTiebreak` draw `mod 2`; no draw on a decisive result) — previously a drawn cup match had no specified winner. **M-2** — the coherence-gate paragraph names the FR-CP-027 power-of-two presumption. **L** — §3.5 disambiguates "entrants" to the **full entrant set** (round-level entrants are unknowable at scheduling time) and adds the slotting-infeasibility fail-loud (F2). |
 #endregion

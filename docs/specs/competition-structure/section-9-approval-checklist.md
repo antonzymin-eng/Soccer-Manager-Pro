@@ -1,8 +1,8 @@
 # Competition Structure #43 — Section 9: Approval Checklist
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — section-file AR PASS-1 (1M+1L) → PASS-2 clean → CONVERGENCE; R-01..R-05 signed; APPROVED; prior v0.1 IN REVIEW)
-**Version:** 0.2
+**Last Updated:** July 24, 2026 (v0.3 — cross-set AR pass 3 (2M+1L fixed); prior v0.2 PASS-1→PASS-2 CONVERGENCE, APPROVED; v0.1 IN REVIEW)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -24,8 +24,9 @@
 | G11 | #43 reuses #30's `FixtureScheduler`/`LeagueTable` per instance (no re-implementation); the #30 §7 generalization row honoured | ✅ | FR-CP-006, XC-043-001 |
 | G12 | `CompetitionId` genesis-assigned, deterministic, never reused; fixtures/results carry it (the #44 scoping surface) | ✅ | FR-CP-004/020 |
 | G13 | Integer posture; no float; no RNG state serialized | ✅ | FR-CP-014/023, T-CP-SHAPE/INT-001 |
-| G14 | FR-CP-001..025 each traceable to a T-CP-* test **or** a recorded §7 deferral | ✅ | §5.8 |
+| G14 | FR-CP-001..027 each traceable to a T-CP-* test **or** a recorded §7 deferral | ✅ | §5.8 |
 | G15 | FR prefix FR-CP unclaimed across `docs/specs/**`; XC-043-* allocated; the #30 FR-SN-031 / #40 §1 / #44-facing sides named | ✅ | grep-verified; §8.1 |
+| G16 | Knockout completeness: a level pairing has a pinned deterministic winner (FR-CP-026 keyed tie-break); entrant/group-count shape gated power-of-two (FR-CP-027) | ✅ | §3.3, T-CP-BRK-004/005 |
 
 ## 9.2 Post-APPROVED follow-ups (non-blocking)
 
@@ -68,4 +69,5 @@ v1.0.14).
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial approval checklist (G1..G15, sign-off pending), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (1M+1L) → PASS-2 clean → CONVERGENCE; G1..G15 ✅; R-01..R-05 signed; ERR-043-001 filed (`spec-error-log.md` v1.39, `deterministic-sim/section-3.md` v1.0.14); Status APPROVED. |
+| 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (2M+1L, all fixed): FR-CP-026 keyed knockout tie-break (undefined winner on a level scoreline) + FR-CP-027 power-of-two config gate (silent 2^k assumption in the halving gates) + the §3.5 entrant-set/infeasibility L. G14 range → 027; new G16. |
 #endregion
