@@ -2,14 +2,18 @@
 
 > **Created:** 2026-07-23
 > **Status:** DESIGN SUPPLEMENT (pre-promotion, pre-code) — high-level plan only; adversarial
-> review CONVERGED (AR-1 3H+2M+1L → AR-2 0H+0M+3L, see Version History), no section files, no
-> numbered spec. Same governance class as `interactive-match-view-design.md` and
-> `match-engine-design.md`.
-> **Governs (when implemented):** a new `src/match-client-unity/` presentation assembly + the Unity
-> project scene/prefab/host scaffolding; a new deterministic manager-command channel on
-> `MatchEngine`. Presentation tooling on top of the match-engine composition root — like
-> `match-viewer`, it observes the engine and (via §6) drives it only through pre-existing
-> stride-committed public APIs.
+> review CONVERGED (AR-1 3H+2M+1L → AR-2 0H+0M+3L → AR-3 1H+2M+1L → AR-4 pass clean, one propagated
+> regression fixed, see Version History), no section files, no numbered spec. Same governance class as
+> `interactive-match-view-design.md` and `match-engine-design.md`.
+> **Governs (when implemented):** two new presentation assemblies — host-free `src/match-client-core/`
+> (the deterministic session / command-channel / view-state logic) and Unity-only
+> `src/match-client-unity/` (the render/UGUI skin + scene/prefab/host scaffolding); a small exclusion
+> in `tools/dotnet-ci/generate_projects.py` so the Unity-only assembly is not shim-compiled (§5-P0); a
+> modification to `match-viewer/LiveMatchStreamer.cs` (adds one optional pre-tick hook); and read-only
+> observation accessors on `MatchEngine`. The manager-command channel lives in `match-client-core` and
+> drives only pre-existing public mutators — **no new mutator on `MatchEngine`.** Presentation tooling
+> on top of the match-engine composition root, like `match-viewer` — it observes the engine and (via
+> §6) drives it only through pre-existing stride-committed public APIs.
 > **Supersedes nothing.** Extends the presentation floor established by `match-viewer` (HTML replay
 > + live browser viewer). This is the "interactive Unity client (live rendering + input)" the
 > presentation OPEN ISSUE names as the next surface above that floor.
@@ -52,9 +56,11 @@ Unity, plus live tactical input — reachable from a minimal Main-Menu → Tacti
 2. Speed controls (Pause / 1× / 3× / 5× / 10×) work — the master plan's exact set.
 3. The manager can change team/player tactics and make substitutions **mid-match**; each change is
    applied at a deterministic tick and recorded in a **tick-stamped command log**, so a match is
-   byte-identically reproducible **from that log + the seed** — *not* from human intent, since the
-   wall-clock timing of a live click is not itself reproducible (§6.1) — and the match remains
-   save/restore-clean through the existing snapshot path.
+   byte-identically reproducible **from that log + the seed within an uninterrupted session** — *not*
+   from human intent, since the wall-clock timing of a live click is not itself reproducible (§6.1).
+   Across a save/restore the log is not carried (it is in-memory only, §11), so a resumed match
+   reproduces from the restored snapshot + the post-restore log; the match remains save/restore-clean
+   through the existing snapshot path either way.
 4. A post-match report screen shows final score + basic stats.
 5. The build compiles and its editor-mode logic tests pass under the `tools/dotnet-ci` shim; the
    scene/rendering half is verified on the pinned Unity host at a cert run.
@@ -95,8 +101,8 @@ These are inherited, not chosen — violating any of them is a defect, not a tra
 6. **Pinned platform.** Unity 6000.4.9f1, DX11, Mono, x64 (`certification-platform.md` v1.4
    ✅ PINNED). UGUI for UI (master plan §3.4), not UI Toolkit, for Stage 1 simplicity.
 7. **Command channel is not a dev toy.** Unlike the browser viewer's deliberately inert `/control`,
-   this client *does* carry gameplay mutations. That channel must be in-process (Unity UI → engine),
-   single-operator, and — if it is ever exposed over a socket — authenticated and separate from the
+   this client *does* carry gameplay mutations. That channel must be in-process (Unity UI → driver →
+   sim-thread engine), single-operator, and — if it is ever exposed over a socket — authenticated and separate from the
    playback stream. Conflating mutation with the bare loopback viewer server is forbidden (§6).
 
 ## 4. Architecture
@@ -105,7 +111,7 @@ MVVM, matching vol-4 §7. The key insight: **the Model and ViewModel already exi
 client is a new **View** plus a new **input path back into the Model**.
 
 ```
- Model (sim thread)        ViewModel: LiveMatchStreamer          View + driver (Unity)
+ Model (sim thread)        ViewModel: LiveMatchStreamer          View (Unity) · driver (host-free core)
                            (shared, observe-only)
  ┌──────────────┐          ┌────────────────────────────┐        ┌──────────────────────────┐
  │ MatchEngine  │  RunTick  │ - paces ticks (wall clock)  │  frame │ MatchClientBehaviour      │
@@ -134,28 +140,46 @@ client is a new **View** plus a new **input path back into the Model**.
 - **Frame path (read):** unchanged and already observer-neutral — the Unity View calls
   `TryGetLatestFrame` (extended in §5-P1 to carry the extra cues Unity can show that the browser
   floor omitted: sent-off / booking / substitution state).
-- **Command path (write):** the one new engine-facing surface, owned by the Unity-client `MatchClientDriver`
-  — **not** the shared streamer. The driver's `ManagerCommandQueue` accepts typed **game** commands on the
-  UI thread; the driver's drain callback (installed as the streamer's pre-tick hook) applies them on the sim
-  thread at the tick boundary via the live mutators, and records each in the tick-stamped log. Playback
-  pause/speed are **not** commands — they stay on the streamer's own playback surface (§6.4).
+- **Command path (write):** the one new engine-facing surface, owned by the **host-free-core**
+  `MatchClientDriver` (in `match-client-core`, **not** the Unity assembly and **not** the shared
+  streamer — so the command/determinism logic stays shim-testable, §5-P0). The driver's
+  `ManagerCommandQueue` accepts typed **game** commands on the UI thread; the driver's drain callback
+  (installed as the streamer's pre-tick hook) applies them on the sim thread at the tick boundary via
+  the live mutators, and records each in the tick-stamped log. Playback pause/speed are **not**
+  commands — they stay on the streamer's own playback surface (§6.4).
 
 ## 5. Phased implementation plan
 
-Each phase is independently shippable and independently testable. Phases P0–P3 are **host-free**
-(compile + logic-test under the shim); P4–P6 are the **Unity-host skin** (verified at a cert run).
-This ordering front-loads everything the host block does *not* prevent.
+Each phase is independently shippable and independently testable. Phases P0–P3 are **host-free** and
+land in `match-client-core` (compile + logic-test under the `tools/dotnet-ci` shim every push); P4–P6
+are the **Unity-host skin** in `match-client-unity` (verified at a cert run, excluded from the shim
+gate — §5-P0). This ordering front-loads everything the host block does *not* prevent.
 
 ### P0 — Foundations & scaffolding (host-free)
-- New `src/match-client-unity/` assembly (`TacticalDirector.MatchClientUnity`), asmdef referencing
-  `match-engine` + `match-viewer` + `deterministic-sim` (+ `tactical-instructions`/`player-database`
-  for command payload types). Tests asmdef alongside.
-- `MatchClientConstants.cs` — the master plan's speed set (`{Pause, 1, 3, 5, 10}`), camera tuning,
-  render-cue sizes ([GT], migrated onto `GameplayConfig` per the June-30 catalogue convention).
-- A `MatchSession` façade: constructs/configures a `MatchEngine` + `LiveMatchStreamer` from a
+- **Two assemblies, split on the host-free/host line** (load-bearing — the split is what lets the
+  determinism core stay CI-gated while the render skin needs a Unity host):
+  - `src/match-client-core/` (`TacticalDirector.MatchClientCore`) — **host-free**; all
+    determinism-bearing logic (P0–P3: `MatchSession`, `ManagerCommandQueue`, `MatchClientDriver`, the
+    live-frame types, interpolation/camera/stats math). asmdef references `match-engine` +
+    `match-viewer` + `deterministic-sim` (+ `tactical-instructions`/`player-database` for command
+    payload types). Uses **no** `UnityEngine` rendering type, so the shim compiles and tests it every
+    push. Tests asmdef alongside.
+  - `src/match-client-unity/` (`TacticalDirector.MatchClientUnity`) — **Unity-only**; the render/UGUI
+    skin (P4–P6: `MatchClientBehaviour` + rendering + screens). References `match-client-core`.
+- **CI-gate deliverable (P0, not optional):** `tools/dotnet-ci/generate_projects.py` globs *every*
+  `*.asmdef` under `src/` (`generate_projects.py:64`) and compiles each against a shim whose entire
+  UnityEngine surface is Profiler / Vector2 / Vector3 / Debug / Mathf — **no** `MonoBehaviour` /
+  `GameObject` / `Camera` / `SpriteRenderer` — with no per-assembly exclusion. So the Unity-only
+  assembly must be **excluded from the generator's walk** (add a skip marker / naming convention it
+  honours; a few lines in `generate_projects.py`), leaving the shim gate compiling+testing
+  `match-client-core` (and the rest of the tree) unchanged. Without this, `MatchClientBehaviour` — the
+  project's first `MonoBehaviour` — turns the whole-tree compile red the moment P4 lands.
+- `MatchClientConstants.cs` (in core) — the master plan's speed set (`{Pause, 1, 3, 5, 10}`), camera
+  tuning, render-cue sizes ([GT], migrated onto `GameplayConfig` per the June-30 catalogue convention).
+- A `MatchSession` façade (in core): constructs/configures a `MatchEngine` + `LiveMatchStreamer` from a
   `MatchSetup` value (home/away squads, tactics, seed) — the single place that owns match lifecycle,
-  so the Unity host and any test drive it identically. This is the "click Play Match" seam the
-  browser design left to Stage-1 UI.
+  so the Unity host and any test drive it identically. This is the "click Play Match" seam the browser
+  design left to Stage-1 UI.
 
 ### P1 — Richer observation frame (host-free)
 - Extend the live frame with the cues a native View can show that the browser floor skipped:
@@ -171,11 +195,11 @@ This ordering front-loads everything the host block does *not* prevent.
   streamer's existing playback surface, §6.4). Pre-kickoff/boot mutators (`ConfigureSquads`,
   `ConfigureManager`, `EnableGkHeading`) are **not** here either — they belong to P0 `MatchSetup`
   (§3-2). No `SetManagerMode` live command: flipping Human⇄AI mid-match has no verified engine path.
-- A **`MatchClientDriver`** (Unity-client-owned) owns the queue and a drain callback. The callback is
-  installed as `LiveMatchStreamer`'s **optional pre-tick hook**, invoked on the sim thread at the top
-  of each tick ahead of the AI phase; the shared streamer itself contains **no** mutation logic and
-  the browser viewer supplies no hook, so its playback-only invariant is preserved by construction
-  (§4). See §6 for the determinism design.
+- A **`MatchClientDriver`** (in host-free `match-client-core`, **not** the Unity assembly — §5-P0)
+  owns the queue and a drain callback. The callback is installed as `LiveMatchStreamer`'s **optional
+  pre-tick hook**, invoked on the sim thread at the top of each tick ahead of the AI phase; the shared
+  streamer itself contains **no** mutation logic and the browser viewer supplies no hook, so its
+  playback-only invariant is preserved by construction (§4). See §6 for the determinism design.
 - Each drained command is written to a **tick-stamped command log** keyed by its applied tick — the
   mechanism that makes a live match replay-reproducible (§6.3). **This log is a P2 deliverable, not a
   deferral**; only the broader on-disk replay/rewind *feature* that consumes it stays deferred (§11).
@@ -190,8 +214,8 @@ This ordering front-loads everything the host block does *not* prevent.
   accumulator (possession %, shots, score) fed off the observation surface. All pure/testable.
 
 ### P4 — Unity render skin (host, cert-verified)
-- `MatchClientBehaviour : MonoBehaviour` — the PlayerLoop host the project currently lacks
-  (src/CLAUDE.md "WHAT IS NOT HERE YET"): owns `MatchSession`, reads `TryGetLatestFrame` each
+- `MatchClientBehaviour : MonoBehaviour` (in `match-client-unity`) — the PlayerLoop host the project
+  currently lacks (src/CLAUDE.md "WHAT IS NOT HERE YET"): owns `MatchSession`, reads `TryGetLatestFrame` each
   `Update`, drives rendering. Master plan Month 1-2: pitch (markings from the existing IFAB
   `[FIXED]` geometry catalogue), agent sprites (team color + jersey + has-ball/pressing/sent-off
   indicator), ball (sprite + shadow for height), follow-ball camera with smoothing/zoom.
@@ -243,10 +267,15 @@ tick it was applied at.
   serialization — a committed tactic (v9/v10 `TeamTactic`/`PlayerTactic`), a substitution
   (`_activeBenchSlot` + counts + on-pitch attributes), and manager/GK-heading state (v13/v18) are all
   already in the snapshot, so restoring from a snapshot taken *after* a change re-ticks identically
-  **with no `SNAPSHOT_SCHEMA_VERSION` bump**. **Invariant (new):** a durable capture may be taken
-  **only at a tick boundary with the command queue fully drained** — a command enqueued-but-not-drained
-  at capture time would be silently lost on restore. The driver enforces this by draining before it
-  permits a capture.
+  **with no `SNAPSHOT_SCHEMA_VERSION` bump**. **Invariant (new):** a durable capture must run **on the
+  sim thread, at a tick boundary, with the command queue fully drained** — the engine is
+  single-threaded (only the sim thread may touch it, per the `LiveMatchStreamer` single-writer
+  invariant), and a command enqueued-but-not-drained at capture time would be silently lost on restore.
+  So a UI-thread save request **never calls the engine directly**: it sets a request flag, and at the
+  next tick boundary the driver's pre-tick hook drains the queue, takes the capture on the sim thread,
+  and hands the resulting bytes back to the UI thread — the same disjoint-by-construction rule as the
+  frame read (§4). A naive UI-thread `CaptureDurablePayload` call would tear-read mid-tick engine state
+  → corrupt save or crash.
 - **Replay from an earlier point (rewind):** requires the tick-stamped log (post-snapshot commands
   are not in an earlier snapshot). P2 *produces* the log; the on-disk persistence + scrub-back
   *feature* that consumes it is deferred (§11) — but the in-memory log itself is not deferred.
@@ -282,9 +311,10 @@ surface — never the `ManagerCommandQueue`, never the tick-stamped log, never t
 `MatchClientBehaviour` is the project's first `MonoBehaviour`/PlayerLoop host. It is deliberately
 **thin**: lifecycle (`Awake` constructs `MatchSession`, `OnDestroy` stops the streamer), a
 per-`Update` frame read + render, and UI-event → command-enqueue. All non-trivial logic stays in the
-host-free P0–P3 code so it remains shim-testable; the `MonoBehaviour` itself is verified only at a
-cert run. This is also where the profiling-marker convention (src/CLAUDE.md §ProfilerMarker) first
-gets a real render/Update loop to instrument.
+host-free `match-client-core` (P0–P3) so it remains shim-testable; the Unity-only `match-client-unity`
+assembly (excluded from the shim gate, §5-P0) and its `MonoBehaviour` are verified only at a cert run.
+This is also where the profiling-marker convention (src/CLAUDE.md §ProfilerMarker) first gets a real
+render/Update loop to instrument.
 
 ## 9. Testing strategy
 
@@ -341,3 +371,4 @@ follows once the input/determinism core is locked and a cert-host slot is schedu
 | 0.1 | 2026-07-23 | Initial high-level implementation plan. Scopes the interactive Unity client (live rendering + input) as the next presentation surface above the `match-viewer` HTML-replay / live-browser floor. MVVM over the existing observer-neutral `LiveMatchStreamer` ViewModel; new engine-facing work confined to a deterministic, stride-committed manager-command channel (§6). Phased P0–P6 with P0–P3 host-free (shim-testable) and P4–P6 the cert-verified Unity skin. Not yet adversarially reviewed. |
 | 0.2 | 2026-07-23 | **AR-1 (self-review, 3H+2M+1L, all resolved).** H-1: §5-P2 lumped playback pause/speed into the `ManagerCommandQueue` while §6.2 defined every queue command as an engine mutator — pause/speed are presentation-only and must never touch the digest (the browser viewer's core invariant); removed them from the queue, they stay on the streamer's playback surface (§4/§5-P2/§6.4). H-2: §5-P2 put the command drain *inside the shared* `LiveMatchStreamer.TickOnce()`, which would have given the browser viewer's streamer a live mutation path too, regressing its playback-only / disjoint-by-construction invariant; the drain now lives in a Unity-client-owned `MatchClientDriver` installed as an **optional pre-tick hook** — the shared streamer keeps zero mutation logic and the browser viewer supplies no hook (§4 diagram + prose, §5-P2). H-3: §2/§9 claimed live-input determinism while §6.3 leaned toward *deferring* the command journal, and the P6 acceptance test depended on the deferred mechanism — an internal contradiction; resolved by defining reproducibility against a **tick-stamped command log** that is a P2 deliverable (§6.1), settling Q1, and rewording §2 item-3 / §9 / R2–R3 to match (a live match is reproducible from the log, not from human intent). M-1: §6.3 never stated the drained-empty-queue-before-capture invariant (an enqueued-but-undrained command would be lost on restore) and ignored that `CaptureDurable*` throws when `EnableGkHeading` is on — both now addressed in §6.3. M-2: §3-2/§5-P2 mixed live-safe mutators with pre-kickoff/boot-only ones (`ConfigureSquads` throws once ticked, `MatchEngine.cs:1301`); split into a setup-phase set (P0 `MatchSetup`) and a live set (`SetTeamTactic`/`SetPlayerTactic`/`SubstitutePlayer` only), `SetManagerMode` dropped from the live queue. L-1: `LiveMatchStreamer` mischaracterized as "double-buffered" — corrected to "lock-guarded latest-frame handoff (same guarantee as the vol-4 double-buffer)" (§3-3). |
 | 0.3 | 2026-07-23 | **AR-2 (self-review, 0H+0M+3L, all resolved) — CONVERGENCE.** Full re-read of the whole document; the three High + two Medium from AR-1 verified resolved with no regressions. L-1: §1 still listed "speed control" among manager input "fed back into the running simulation," which the tightened §6.4 (pause/speed never touch the sim) now contradicted — reworded to separate presentation-only speed/pause. L-2: the §4 ASCII diagram was misaligned/hard to follow after the driver was added — redrawn cleanly (streamer's pre-tick hook → driver's drain callback → engine mutators on the sim thread; frame → View; input → queue), and a note added that the hook receives the mutation surface as a parameter so the driver keeps no off-thread-callable engine reference (closes a latent thread-safety footgun). L-3: §5-P6 said "same-command runs" while §9 said "same tick-stamped log" — aligned P6 to "same tick-stamped command sequence." No new High or Medium found; the channel-placement, playback/mutation separation, log-based reproducibility definition, drained-empty-before-capture invariant, and lifecycle-split all hold under a fresh hostile read. Converged. |
+| 0.4 | 2026-07-23 | **AR-3 (self-review, 1H+2M+1L, all resolved).** The first two passes hunted inside §6 (the command channel) and missed the assembly / CI-gate layer entirely. H-1: P0 named a single `src/match-client-unity/` assembly and P4 put the first-ever `MatchClientBehaviour : MonoBehaviour` render skin in it — but `tools/dotnet-ci/generate_projects.py:64` globs every `*.asmdef` under `src/` and compiles it against a shim with no rendering types, with no per-assembly exclusion; so P4 would either redden the whole-tree compile or (if the assembly were excluded) drop the host-free determinism core out of CI. Split into host-free `match-client-core` (P0–P3, shim-gated) + Unity-only `match-client-unity` (P4–P6), and made a `generate_projects.py` exclusion an explicit P0 deliverable (§Governs / §5 header / §5-P0 / §5-P4 / §8 / §4 diagram + command-path prose). M-1: §6.3 asserted "drained before capture" but never marshalled the durable capture onto the sim thread — a UI-thread `CaptureDurablePayload` would tear-read the single-threaded engine; §6.3 now routes save through a sim-thread request flag drained/captured by the pre-tick hook. M-2: §2 item-3's "reproducible from log + seed" was over-broad — the log is in-memory only (§11), so it holds only within an uninterrupted session; qualified item-3 for the save/restore case. L-1: §Governs omitted the `LiveMatchStreamer` pre-tick-hook modification and mislabeled the command channel as "on `MatchEngine`"; corrected. **AR-4 (pass over the AR-3 diff) — CONVERGENCE:** the full re-read caught one regression the AR-3 edit introduced — §5-P2 still called `MatchClientDriver` "(Unity-client-owned)" after §4/§5-P0/§Governs had moved it to host-free `match-client-core`, a contradiction in the "core new work" section; fixed §5-P2 + aligned the §3-7 shorthand ("Unity UI → driver → sim-thread engine"). No other High/Medium; the v0.2 history row's "Unity-client-owned" wording is left verbatim as a frozen record of AR-1's then-state. |
