@@ -1,8 +1,8 @@
 # Discipline & Suspensions #44 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** July 24, 2026 (v0.2 — cross-set AR; prior v0.1 — initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -33,6 +33,11 @@
 - **Offence classes / varying ban lengths** — richer `CardIssuedEvent` interpretation (e.g.
   violent conduct vs two bookings) requires engine-side offence data that does not exist; deferred
   until the engine emits it.
+- **Ban-serving deferral under squad shortfall.** The F5 fail-loud below the 18-player floor is
+  coherent today (the engine's own `ValidateSquadSize` rejects `Count < 18` regardless), but a
+  mass-suspension pile-up on a 25-squad is reachable in principle; the deep mitigation is a
+  **deferral queue** (excess bans postpone serving until the squad can field 18) — recorded here
+  so the eventual answer is a designed extension, not an emergency patch.
 - **Appeals / suspension psychology (#33)** — out of scope entirely at Stage 2.
 - **Suspension screens (#38) / news items (#46)** — deferred consumers of the availability view
   and ban events (FR-LW-031).
@@ -54,4 +59,5 @@
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §7 (T-phase plan T0–T3, deferred extensions, downstream seam contracts), promoted from design supplement v0.3. Status IN REVIEW. |
+| 0.2 | 2026-07-24 | — | Cross-set AR (L): §7.2 gains the **ban-serving deferral under squad shortfall** row — the F5 <18 fail-loud is coherent today (the engine's own gate, verified) but the pile-up is reachable in principle; the deferral queue is the recorded deep mitigation. |
 #endregion

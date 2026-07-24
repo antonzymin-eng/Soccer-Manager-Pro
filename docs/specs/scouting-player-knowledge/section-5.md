@@ -1,8 +1,8 @@
 # Scouting & Player Knowledge #32 — Section 5: Test Plan
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — section-file AR PASS-1; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 24, 2026 (v0.3 — cross-set AR; prior v0.2 — section-file AR PASS-1; prior v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -22,8 +22,10 @@
   empty, the #30 slot is a no-op, **no** RNG stream is registered and every existing cursor is
   byte-identical (the #40 `T-FN-NEU-003` class), and the omniscient view equals truth per-attribute
   for every player (`Min == Max == truth`, all 31 via `AttrIdx` — FR-SC-007).
-- **T-SC-NEU-002** — `ResolveBand` with fog off returns `KNOWLEDGE_BAND_MAX` for any id; no consumer
-  branches on `fogEnabled` (the dial acts only inside `ResolveBand` — FR-SC-002).
+- **T-SC-NEU-002** — `ResolveBand` with fog off returns `KNOWLEDGE_BAND_MAX` for any id; no **view**
+  consumer branches on `fogEnabled`, and the dial acts in exactly the three FR-SC-002-named places
+  (`ResolveBand`, the `AssignScout` gate, the `AdvanceScoutingDay` no-op) — a static/reflection
+  sweep asserts no fourth site exists.
 
 ## 5.3 Estimate invariants (KD-1/KD-3)
 
@@ -51,6 +53,10 @@
 - **T-SC-HYG-001** — a roster re-key/retirement event drops the affected overlay entry (buy → the
   own-squad rule takes over; sell → knowledge reset); a view query for an unresolvable `PlayerId`
   fails loud (F1 — FR-SC-019).
+- **T-SC-HYG-002 (assignment cancellation)** — a re-key/retirement of the **active assignment's
+  target** cancels the assignment (in-band progress discarded, completed bands' entry dropped with
+  the overlay drop); the manager-buys-the-scouted-player sequence leaves #32 state coherent and
+  round-trippable — no dangling id anywhere (FR-SC-019).
 
 ## 5.5 Assignment lifecycle & quality scaling (KD-4/KD-7, deep)
 
@@ -102,4 +108,5 @@ fog-off equality — omniscient view, zero draws, empty slot) and fully at the d
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §5 (view-not-mutation, behaviour-neutral identity, estimate invariants, own-squad/hygiene, assignment lifecycle, save/determinism, fail-loud, traceability), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M-1): T-SC-ASN-004 gains the fog-off refusal; new T-SC-ASN-006 locks the inert-on-fog-off-load semantics. |
+| 0.3 | 2026-07-24 | — | Cross-set AR: T-SC-NEU-002 re-scoped to the three-site dial claim (+ a no-fourth-site sweep); new **T-SC-HYG-002** locks the assignment cancellation on target re-key/retirement (M-1). |
 #endregion

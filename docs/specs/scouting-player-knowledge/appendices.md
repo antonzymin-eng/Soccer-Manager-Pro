@@ -1,8 +1,8 @@
 # Scouting & Player Knowledge #32 — Appendices
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.3 — section-file AR PASS-2; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** July 24, 2026 (v0.4 — cross-set AR; prior v0.3 — section-file AR PASS-2; prior v0.2 PASS-1, v0.1 initial)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -16,7 +16,7 @@
 | `KNOWLEDGE_BAND_MAX` | `[GT]` | 4 (illustrative) | the maximal knowledge band; the terminal band's half-width is `0` by FR-SC-004. Balance-pass-pinned; changing it after ship re-keys derived estimates for in-flight careers (a tuning-migration concern recorded here). |
 | `KNOWLEDGE_BAND_HALFWIDTH[]` | `[GT]` | {6, 4, 2, 1, 0} (illustrative) | per-band error half-width in attribute points; **shape pinned** (strictly decreasing, terminal 0 — FR-SC-005), magnitudes balance-pass-pinned (#21 G2). |
 | `DAYS_PER_BAND_BASE` | `[GT]` | 14 (illustrative) | base days per band-up at neutral scout quality (§3.4); balance-pass-pinned. |
-| `MAX_ACTIVE_ASSIGNMENTS` | `[FIXED]` | 1 | 1:1 with the single #34 ChiefScout role slot at Stage 3; a deep #34 staff pool widens this (append-only semantics — a multi-lane extension, §7.2). |
+| `MAX_ACTIVE_ASSIGNMENTS` | `[DERIVED]` | 1 | = the count of #34 scout role slots (one lane per ChiefScout — the derivation source; a deep #34 staff pool widens it with its slot count, §7.2). Retagged `[FIXED]` → `[DERIVED]` at the cross-set AR: a value the spec expects to track #34's slot structure is derived, not fixed. |
 | `SCOUT_ATTR_RADIX` | `[FIXED]` | 32 | fixed ordinal radix `> ATTRIBUTE_COUNT = 31` (§3.3); never derived from the live count (append-parity). |
 | `SCOUT_PURPOSE_RADIX` | `[FIXED]` | 16 | fixed ordinal radix for `ScoutDrawPurpose` (APPEND-only members; `Center = 0`). |
 | `SCOUT_BAND_RADIX` | `[FIXED]` | 16 | fixed ordinal bound above any tuned `KNOWLEDGE_BAND_MAX`; guards the top digit (§3.3). |
@@ -83,4 +83,5 @@ All integer; two runs identical; the #27 record was never written.
 | 0.1 | 2026-07-24 | — | Initial appendices (constant catalogue, sub-blob layout, end-to-end worked example), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M-3): Appendix B gains the `managedClubId` field (the `StaffSaveCodec` precedent) so the own-squad assignment check is codec-performable; pool resolvability split out as a post-load composition-root validation (the v0.1 note assigned the codec a check it could not perform). |
 | 0.3 | 2026-07-24 | — | Section-file AR PASS-2 (L): overlay entries gain the codec-level not-own-squad coherence gate (F4 — the hygiene rule drops an entry on a buy, so an own-squad entry is incoherent state). |
+| 0.4 | 2026-07-24 | — | Cross-set AR (L): `MAX_ACTIVE_ASSIGNMENTS` retagged `[FIXED]` → `[DERIVED]` (= the #34 scout-slot count — a value the spec expects to track #34's structure is derived, not fixed). |
 #endregion

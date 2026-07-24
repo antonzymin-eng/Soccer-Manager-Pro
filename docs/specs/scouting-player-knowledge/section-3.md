@@ -1,15 +1,16 @@
 # Scouting & Player Knowledge #32 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — section-file AR PASS-1; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 24, 2026 (v0.3 — cross-set AR; prior v0.2 PASS-1, v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
 
 ## 3.1 Band resolution (FR-SC-002/007/009)
 
-The band a view read resolves at — the only place the `fogEnabled` dial and the own-squad rule act:
+The band a view read resolves at — the only place the `fogEnabled` dial and the own-squad rule act
+**on the view path** (the dial's other two sites are the command/tick gates — FR-SC-002/020/022):
 
 ```
 ResolveBand(playerId, managedClubId, overlay) -> int:
@@ -132,4 +133,5 @@ balance-pass-illustrative. The manager's subsequent action is #31's `SubmitBid`,
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §3 (band resolution, estimate derivation + containment proof + worked example, fixed-radix keyed ordinal, assignment lifecycle + DaysPerBand worked example, reports/ranking), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M-1): §3.4 `AssignScout` gains the `fogEnabled` gate; `AdvanceScoutingDay` is a no-op with fog off (a loaded assignment stays inert — FR-SC-022). |
+| 0.3 | 2026-07-24 | — | Cross-set AR pass 2 (L residual of M-2): §3.1's "the only place the dial acts" scoped to **the view path** (the dial's other two sites are the FR-SC-020/022 command/tick gates). |
 #endregion

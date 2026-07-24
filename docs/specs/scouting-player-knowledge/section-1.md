@@ -1,8 +1,8 @@
 # Scouting & Player Knowledge #32 — Section 1: Introduction
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — section-file AR PASS-2; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 24, 2026 (v0.3 — cross-set AR; prior v0.2 — section-file AR PASS-2; prior v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -130,7 +130,9 @@ Reference DAG: `compositionRoot → {#30, #32}`, `#32 → {#27, #34, #16}` (mini
   per-manager career save). Knowledge is durable career state (survives `RollToNextSeason`; no decay
   at Stage 3). **Hygiene:** on a roster re-key (#31 transfer) or retirement (#28), the overlay entry
   for the affected `PlayerId` is **dropped** (buy → own-squad rule covers it; sell → knowledge
-  reset, a named Stage-3 simplification); a view query for an unresolvable `PlayerId` **fails loud**
+  reset, a named Stage-3 simplification) **and an active assignment targeting that id is
+  cancelled** (FR-SC-019 — the manager-buys-the-scouted-player case would otherwise leave the
+  assignment referencing a dead id); a view query for an unresolvable `PlayerId` **fails loud**
   (silent staleness is the trap).
 - **KD-7 (assignments — manager commands + the reserved #30 slot; managed-manager scope).**
   `AssignScout`/`CancelAssignment` are explicit manager commands (the `SetTeamTactic`/`SubmitBid`/
@@ -157,4 +159,5 @@ draws are keyed, cursor-free. This is the #40/#41/#31/#34 off-pitch integer + wo
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §1 (scope, out-of-scope seams, dependencies, KD-1..KD-8, determinism posture), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-2 (L): KD-7's command-gate summary aligned to FR-SC-020/022 (fog-off + fully-scouted gates were missing from the summary). |
+| 0.3 | 2026-07-24 | — | Cross-set AR (all-3-specs pass, M-1): KD-6 hygiene extended — a re-key/retirement of the active assignment's target also **cancels the assignment** (the manager-buys-the-scouted-player dangling-id case). |
 #endregion
