@@ -315,6 +315,7 @@
 | 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 31 | Transfers, Contracts & Negotiation | `transfers-contracts-negotiation/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 34 | Staff & Backroom | `staff-backroom/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 42 | Youth Academy & Intake | `youth-academy-intake/` | 6¹ | IN REVIEW | — |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
@@ -401,6 +402,22 @@ consistent with #23 having been free to reserve and now promote.
   ERR-027-001 + ERR-022-001, `spec-error-log.md` v1.32); lead-developer R-01..R-05 sign-off granted
   (§9 checklist v0.3). All 11 section files `Status: APPROVED`. Count: **27 APPROVED, 0 IN REVIEW,
   0 NOT STARTED.**
+- **July 24, 2026 — Youth Academy & Intake (#42) added `→ IN REVIEW`.** First **Wave 5** management-layer
+  spec (the roadmap's Wave-5 set is #43 → #44 → #42 → #45; #42/#45 are authorable ahead of #43/#44 because
+  neither depends on them). Section files v0.1–v0.2 authored from the AR-converged design supplement
+  `docs/tracking/youth-academy-intake-design.md` v0.3 (AR-1 3M+1L → AR-2 2L → CONVERGENCE). FR-YA-001..028.
+  **The headline decision (KD-1)** dissolves the plan's central risk: `RegenGenerator.GenerateRegen` is
+  `static`, pure, and takes `streamIndex` as a parameter, so #42 **calls #28's generator unmodified from
+  its own stream** — no fork, no #28 edit, no shared cursor — and applies academy quality as a pure
+  post-generation shift of `PotentialAbility` (KD-2; `CurrentAbility` is a derived cache of
+  `AbilityModel.ComputeCA`, so shifting it would decohere the pair). **KD-7** takes the #41 keyed-anchor
+  property rather than a serialized cursor: one `youth.intake` stream per club, re-anchored per intake,
+  so a cohort is a pure function of `(worldSeed, clubId, intakeWorldDay)` and **no RNG cursor is
+  persisted**. **KD-4** latches on `LastIntakeWorldDay`, not a season year — #30 exposes no such field.
+  Section-file PASS-1: 0H+3M+1L, all resolved (§9.4.1); AR-2 sweep 0H+0M+2L → convergence.
+  **Outstanding gates (§9.4):** G2 file ERR-030-007 (#30 academy tick-order null seam, step 7) atomically
+  with the status flip; G3 lead-developer R-01..R-05 sign-off; G4 flip this row. Count: **27 APPROVED,
+  1 IN REVIEW (#42), 0 NOT STARTED.**
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 
 ---
