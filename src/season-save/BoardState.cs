@@ -13,7 +13,7 @@ namespace TacticalDirector.SeasonSave
     /// <summary>
     /// The board's state (#30 §2.2 / FR-SN-014): the season objective and a job-security reading.
     /// <para>
-    /// <b>Job security is an integer per-mille</b> in <c>[0, JOB_SECURITY_SCALE]</c>, not a float.
+    /// <b>Job security is an integer per-mille</b> in <c>[0, JobSecurityScale]</c>, not a float.
     /// Appendix B row 11 leaves the representation open (<c>jobSecurity f32/u8</c>); this resolves it
     /// toward the integer-arithmetic convention every later management spec standardized on (#41's
     /// AR-1 moved that spec's whole model "float arithmetic → integer per-mille"; #40 uses integer
@@ -28,7 +28,7 @@ namespace TacticalDirector.SeasonSave
         public readonly BoardObjective Objective;
 
         /// <summary>
-        /// Job security, per-mille in <c>[0, SeasonLoopConstants.JOB_SECURITY_SCALE]</c>: 0 = about to
+        /// Job security, per-mille in <c>[0, SeasonLoopConstants.JobSecurityScale]</c>: 0 = about to
         /// be sacked, 1000 = fully secure.
         /// </summary>
         public readonly int JobSecurityPerMille;
@@ -37,14 +37,14 @@ namespace TacticalDirector.SeasonSave
         /// Constructs a board state.
         /// </summary>
         /// <exception cref="System.ArgumentOutOfRangeException"><paramref name="jobSecurityPerMille"/>
-        /// is outside <c>[0, JOB_SECURITY_SCALE]</c>.</exception>
+        /// is outside <c>[0, JobSecurityScale]</c>.</exception>
         public BoardState(BoardObjective objective, int jobSecurityPerMille)
         {
-            if (jobSecurityPerMille < 0 || jobSecurityPerMille > SeasonLoopConstants.JOB_SECURITY_SCALE)
+            if (jobSecurityPerMille < 0 || jobSecurityPerMille > SeasonLoopConstants.JobSecurityScale)
             {
                 throw new System.ArgumentOutOfRangeException(
                     nameof(jobSecurityPerMille), jobSecurityPerMille,
-                    $"Job security must be in [0, {SeasonLoopConstants.JOB_SECURITY_SCALE}].");
+                    $"Job security must be in [0, {SeasonLoopConstants.JobSecurityScale}].");
             }
 
             Objective = objective;
@@ -56,7 +56,7 @@ namespace TacticalDirector.SeasonSave
         /// secure.
         /// </summary>
         public static BoardState Fresh(BoardObjective objective) =>
-            new BoardState(objective, SeasonLoopConstants.JOB_SECURITY_SCALE);
+            new BoardState(objective, SeasonLoopConstants.JobSecurityScale);
 
         /// <summary>
         /// The running "on track?" read (FR-SN-015): whether the club's CURRENT league position would

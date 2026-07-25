@@ -134,17 +134,17 @@ namespace TacticalDirector.SeasonSave
             if (scored > conceded)
             {
                 won++;
-                points += SeasonLoopConstants.WIN_POINTS;
+                points += SeasonLoopConstants.WinPoints;
             }
             else if (scored < conceded)
             {
                 lost++;
-                points += SeasonLoopConstants.LOSS_POINTS;
+                points += SeasonLoopConstants.LossPoints;
             }
             else
             {
                 drawn++;
-                points += SeasonLoopConstants.DRAW_POINTS;
+                points += SeasonLoopConstants.DrawPoints;
             }
 
             return new LeagueTableRow(

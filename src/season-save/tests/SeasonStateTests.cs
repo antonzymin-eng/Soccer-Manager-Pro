@@ -125,7 +125,7 @@ namespace TacticalDirector.SeasonSave.Tests
         public void Fresh_StartsFullySecure()
         {
             var board = BoardState.Fresh(new BoardObjective(1));
-            Assert.That(board.JobSecurityPerMille, Is.EqualTo(SeasonLoopConstants.JOB_SECURITY_SCALE));
+            Assert.That(board.JobSecurityPerMille, Is.EqualTo(SeasonLoopConstants.JobSecurityScale));
         }
 
         [Test]
@@ -134,7 +134,7 @@ namespace TacticalDirector.SeasonSave.Tests
             var objective = new BoardObjective(1);
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new BoardState(objective, -1));
             Assert.Throws<System.ArgumentOutOfRangeException>(
-                () => new BoardState(objective, SeasonLoopConstants.JOB_SECURITY_SCALE + 1));
+                () => new BoardState(objective, SeasonLoopConstants.JobSecurityScale + 1));
         }
 
         [Test]

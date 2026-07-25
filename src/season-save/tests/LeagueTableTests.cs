@@ -32,7 +32,7 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(home.GoalsFor, Is.EqualTo(3));
             Assert.That(home.GoalsAgainst, Is.EqualTo(1));
             Assert.That(home.GoalDifference, Is.EqualTo(2));
-            Assert.That(home.Points, Is.EqualTo(SeasonLoopConstants.WIN_POINTS));
+            Assert.That(home.Points, Is.EqualTo(SeasonLoopConstants.WinPoints));
 
             LeagueTableRow away = table.Row(11);
             Assert.That(away.Played, Is.EqualTo(1));
@@ -41,7 +41,7 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(away.GoalsFor, Is.EqualTo(1));
             Assert.That(away.GoalsAgainst, Is.EqualTo(3));
             Assert.That(away.GoalDifference, Is.EqualTo(-2));
-            Assert.That(away.Points, Is.EqualTo(SeasonLoopConstants.LOSS_POINTS));
+            Assert.That(away.Points, Is.EqualTo(SeasonLoopConstants.LossPoints));
         }
 
         [Test]
@@ -51,9 +51,9 @@ namespace TacticalDirector.SeasonSave.Tests
             table.ApplyResult(10, 11, 0, 2);
 
             Assert.That(table.Row(10).Lost, Is.EqualTo(1));
-            Assert.That(table.Row(10).Points, Is.EqualTo(SeasonLoopConstants.LOSS_POINTS));
+            Assert.That(table.Row(10).Points, Is.EqualTo(SeasonLoopConstants.LossPoints));
             Assert.That(table.Row(11).Won, Is.EqualTo(1));
-            Assert.That(table.Row(11).Points, Is.EqualTo(SeasonLoopConstants.WIN_POINTS));
+            Assert.That(table.Row(11).Points, Is.EqualTo(SeasonLoopConstants.WinPoints));
         }
 
         [Test]
@@ -64,8 +64,8 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.That(table.Row(10).Drawn, Is.EqualTo(1));
             Assert.That(table.Row(11).Drawn, Is.EqualTo(1));
-            Assert.That(table.Row(10).Points, Is.EqualTo(SeasonLoopConstants.DRAW_POINTS));
-            Assert.That(table.Row(11).Points, Is.EqualTo(SeasonLoopConstants.DRAW_POINTS));
+            Assert.That(table.Row(10).Points, Is.EqualTo(SeasonLoopConstants.DrawPoints));
+            Assert.That(table.Row(11).Points, Is.EqualTo(SeasonLoopConstants.DrawPoints));
             Assert.That(table.Row(10).GoalDifference, Is.EqualTo(0));
         }
 
@@ -232,7 +232,7 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.That(table.Row(10).Won, Is.EqualTo(1));
             Assert.That(table.Row(10).GoalsFor, Is.EqualTo(2));
-            Assert.That(table.Row(10).Points, Is.EqualTo(SeasonLoopConstants.WIN_POINTS));
+            Assert.That(table.Row(10).Points, Is.EqualTo(SeasonLoopConstants.WinPoints));
             Assert.That(table.Row(11).Lost, Is.EqualTo(1));
             Assert.That(table.Row(11).GoalsAgainst, Is.EqualTo(2));
         }
