@@ -1,7 +1,20 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 24, 2026, latest same day (**AR-3 fresh-eyes pass over the Amendment-01 surface (repeat
+**Last Updated:** July 25, 2026 (**Documentation sync pass** — reconciled this manifest against the actual
+`src/` tree. Added four missing directory sections in full (`src/player-database/`,
+`src/player-progression/`, `src/match-client-core/`, `src/match-client-unity/` — none had ever had a
+section here despite existing on disk); filled in ~28 files missing from the `src/match-engine/` table
+(`ISquadProvider.cs`, `LineupSelector.cs`, the `MatchSave*` on-disk save-file trio, `PlayerTacticConfig`
++ applier, `TacticFileGrammar.cs`, `TacticPresetFileLoader.cs`, `GkHeadingIntentSource.cs`, and their
+test files); filled in the 5 arc-trigger files missing from `src/living-world/` (`ArcCanonSource.cs`,
+`ArcTrigger.cs`, `ArcTriggerCatalogue.cs`, `ArcTriggerEvaluator.cs`, `Tests/ArcTriggerTests.cs`) and
+corrected that section's stale "remaining: arc trigger evaluators... deliberately not built" note (they
+landed July 24, 2026). Rewrote the "Current Specification Folders" table, which still claimed **26**
+spec folders exist — added the 15 missing rows (#27–#49) and pointed the intro at `SPEC_INDEX.md` as the
+canonical registry this secondary table may lag. No content deleted; all additions verified against the
+actual filesystem.)
+**Last Updated (prior):** July 24, 2026, latest same day (**AR-3 fresh-eyes pass over the Amendment-01 surface (repeat
 review, user-requested): 0H+2M+1L, all fixed.** The pass read roadmap §2–§6 in full for the first time —
 both M findings came from there. M-1: `spec-plans/spec-48-match-presentation-depth.md` v0.3 — the one file
 a Wave-7 #48 supplement author starts from carried no pointer to the Amendment-01 audio split; §1 now
@@ -1068,6 +1081,29 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-engine/tests/PlayerAttributeProjectionTests.cs` | #27 T1/T2 pure locks: per-field scale/copy behaviour with distinct inputs for every live projection, the KD-P1 KickPower derivations (float exact; RoundToInt integer + pinned half-to-even case using Mathf.RoundToInt itself as oracle), WeakFoot [1,5] round-trip, ToNormalized ÷20 endpoints, runtime-field passthrough (KD-P4), and the KD-P7 neutral-equivalence sweep (projection(CreateDefault) == every pre-T1 STAGE0/CreateDefault seed incl. the 0.5 normalized pair) |
 | `src/match-engine/tests/MatchEngineSquadTests.cs` | #27 T1 engine-integration locks: all-CreateDefault-squad digest chains byte-identical to the unconfigured run (KD-P7); a distinct squad routes into every per-slot surface via the TestOnly seams (canonical/#2/#8/#7/#5/#6, per-team slot mapping, no GK gate), diverges the digest by design, and is two-run deterministic; SubstitutePlayer copies the canonical bench record + re-projects _dtAttrs/_perceptionAttrs (the v2.20 hazard lock); every fail-loud gate (null, too-small, out-of-range attr, WeakFoot out-of-range, post-tick call) incl. the self-AR-1 M-1 lock — an invalid AWAY squad refuses with the valid HOME squad left unapplied (both squads validated before any write) |
 | `src/match-engine/tests/MatchEngineMatchFlowTests.cs` | Match-flow completion (design note §7) suite: the explicit-tick TestOnly_CheckMatchFlowTransitions seam (mirrors the TestOnly_RunManagerDecisionPoints pattern) locks pre-boundary no-op, half-time ball-reset-to-centre + fires-once guard (no ends-swap — AR-4), full-time _matchEnded flag + fires-once guard, post-full-time gameplay freeze (ball/agents unchanged while the tick/snapshot loop keeps advancing), and two-run bitwise determinism past full time |
+| `src/match-engine/ISquadProvider.cs` | Snapshot-deserialize Phase 2 (§5, KD-3) / #27 T3: the caller-supplied `ClubId → Squad` resolver `RestoreFromSnapshot` threads into the distinct-squad re-projection (a snapshot carries roster IDENTITY only, not per-slot attribute values) |
+| `src/match-engine/LineupSelector.cs` | Lineup Selection (Plan-3) design supplement: pure deterministic starter/bench selection + formation-slot assignment by position (KD-L1/KD-L2), replacing the Stage-0 roster-order trust mapping in `ConfigureSquads`; boot-time only |
+| `src/match-engine/MatchSaveCodec.cs` | On-disk match save file §3 (KD-1..KD-6): pure byte codec packing the boot `matchSeed` + `(SnapshotHeader, SnapshotPayload)` into one version-gated blob; fail-loud on version mismatch / bad length prefix / trailing bytes, overflow-safe bound guard |
+| `src/match-engine/MatchSaveContents.cs` | On-disk match save file §4: the decoded-blob result (`MatchSeed` + `Header` + `Payload`); `MatchSaveCodec.Decode` returns it, `MatchSaveManager.Load` threads it into `RestoreFromSnapshot` |
+| `src/match-engine/MatchSaveManager.cs` | On-disk match save file §4 + unified season save KD-5: `Save(engine, path)` (capture → Encode → atomic temp→fsync→rename) / `Load(path, ISquadProvider = null)` → `MatchEngine`; v1.1 adds the public `Encode(engine) → byte[]` / `Restore(blob, squads) → MatchEngine` "save as a value" API the season-save root composes without the internal capture seams |
+| `src/match-engine/PlayerTacticConfig.cs` | #21 §3.3 per-agent tactic config surface: in-memory per-roster-slot `PlayerTactic` set the boot applier feeds into `SetPlayerTactic`; the on-disk loader parser-swap target |
+| `src/match-engine/PlayerTacticConfigApplier.cs` | #21 §3.3: boot-time applier staging a `PlayerTacticConfig` into a `MatchEngine` via `SetPlayerTactic`, once per agent, before kickoff |
+| `src/match-engine/TacticFileGrammar.cs` | WS-1: shared line-oriented tactic-file grammar helpers so `TeamTacticFileLoader` and `TacticPresetFileLoader` never drift onto two hand-rolled parsers |
+| `src/match-engine/TacticPresetFileLoader.cs` | #26 §2.2.2/§4.4 KD-6: the on-disk → `ITacticPresetCatalogue` parser swap (the deferred disk loader) — parses the Stage-0 human-authoring preset text format into a ready-to-inject catalogue |
+| `src/match-engine/GkHeadingIntentSource.cs` | GK/Heading engine-integration §4: pure Stage-0 world-state trigger predicates ("when does a save/header happen") extracted out of `MatchEngine` for unit-testability (the `MatchFlowCollisionConsumer` heuristic-foul precedent); the engine owns the per-episode latch + projection + commit |
+| `src/match-engine/tests/ISquadProviderTests.cs` (via `MatchEngineSnapshotRestoreTests.cs`) | Distinct-squad restore round-trip + fail-loud provider gates — see the snapshot-restore test row below |
+| `src/match-engine/tests/LineupSelectorTests.cs` | Pure selection locks: per-line greedy-by-rating starter fill, fail-loud on an unfillable line, best-remaining bench, GK-flag-from-selection (not boot `k==0`), coherently-ordered-squad reproduces roster order |
+| `src/match-engine/tests/MatchSaveManagerTests.cs` | Disk round-trip determinism (neutral / booking-before-save / distinct-squad via provider) + `MatchSaveCodec` round-trip and every fail-loud gate + manager missing-file/corrupt-file/no-provider/null-engine/overwrite-atomically |
+| `src/match-engine/tests/PlayerTacticConfigTests.cs` | #21 T2 per-agent config + applier tests: identity default, per-agent `SetPlayerTactic` routing at the stride boundary, applier null-guards, applying `Identity` is digest-identical to unconfigured |
+| `src/match-engine/tests/TacticPresetFileLoaderTests.cs` | #26 KD-6 loader tests: text-grammar round-trip onto a `TacticPreset`, fail-loud cases, parsed catalogue fed through the injection seam |
+| `src/match-engine/tests/GkHeadingIntentSourceTests.cs` | Pure predicate locks for the GK/Heading §4 world-state triggers (save-armed / header-armed conditions) independent of `MatchEngine` |
+| `src/match-engine/tests/MatchEngineGkHeadingTests.cs` | GK #11 / Heading #10 Phase 1+2 suite: `EnableGkHeading` flag semantics, flag-off default determinism + commits-nothing, save/header commit the `ToGoalkeeper`/`ToHeading` projection, distinct-squad roster attribute flow-through, flag-on forward determinism, durable-capture fail-loud (Phase 1) / succeeds (Phase 2), DT-path save-commit + the AR-4 missed-save regression lock |
+| `src/match-engine/tests/MatchEngineGkHeadingScenarios.cs` | GK/Heading closed-loop `#19 ScenarioRunner` scenario (`gk-heading-flag-on-composition`, Tier B, owning specs {2,10,11,16,19}): flag-on forward determinism, save-boundary restore-through-the-harness, on-pitch/finite invariants, both projections firing as a live consumer through the natural `RunTick` AI phase, flag-off no-commit contrast |
+| `src/match-engine/tests/MatchEngineGkHeadingScenarioTests.cs` | Runs the GK/Heading scenario through `ScenarioRunner.Run` → `Passed` |
+| `src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs` | Snapshot-deserialize Phase 1/2 G3 round-trip suite: save@N → restore → tick-to-N+K == uninterrupted run for neutral kickoff / mid-match tactics change / the booking-cursor regression / distinct (varied-attribute) squads incl. substitutions and keeper-for-keeper subs + version-gate/trailing-byte/distinct-squad-provider fail-loud gates |
+| `src/match-engine/tests/MatchEngineCapstonePerfHarness.cs` | P1 real perf harness: boots the real capstone scenario and Stopwatch-times each `RunTick`, superseding the synthetic `run.sh` stub that ran no `src/` code |
+| `src/match-engine/tests/MatchEngineCapstonePerfHarnessTests.cs` | Asserts the capstone harness produces a real, finite p50/p99 with p99 > 0 (`TD_PERF_RUN_COUNT` switches CI-fast 2 vs host 100 runs) |
+| `src/match-engine/tests/MatchEngineEventsTests.cs` | Tier A event-ledger production/consumption locks over the match-engine's per-tick `EventBus` wiring |
 
 ### `src/project-constants/` — Project Constants & `[GT]` config loader (FR-CS-019, June 30, 2026)
 
@@ -1087,7 +1123,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 ### `src/living-world/` — Living World System #22 T0 scaffolding + season/world-loop slices 1–4 (June 21 / July 2–3, 2026; spec APPROVED June 22, 2026)
 
-> Engine-free (`noEngineReferences`); references only `TacticalDirector.DeterministicSim` (slice 3 — the world.text RNG stream + the §4.6 canonical serializer). The spec's vol-2/vol-3 human-systems upstreams do not exist in `src/` yet. **Season/world-loop slice 1 landed July 2, 2026** — the KD-10 "persistent world store + season-calendar loop" prerequisite: `WorldClock` / `WorldLoop` / `MemoryStore` / `ColdStore` (§4.2/§4.3). **Slice 2 landed July 2, 2026 (same day)** — `ArcEngine` (§3.4 spawn/pin/lifecycle/expiry; trigger evaluation + its `world.arcs` RNG draws stay the documented KD-10 seam, FR-LW-020/031) + `ActiveSetMembership` (§3.5 entry/LRU-demotion/promotion, FR-LW-023/025), wired into WorldLoop phases 4/6. **Slice 3 landed July 2, 2026 (same day)** — `InteractionTextGenerator` (§3.3, over the new aperiodic `world.text` sub-stream — ERR-022-001 `DOMAIN_TAG_LIVING_WORLD=0x1E` + `SubsystemOrdinals.LivingWorld=80`) + `WorldStateSerializer` (§4.6 canonical block). **BackgroundTierSim (§3.5) stays the documented WorldLoop phase-5 seam, deliberately not built** — it would summarise club-AI/transfer/sacking outcomes that do not exist (a consumer would be the FR-LW-031 phantom-interface class), and §3.5 specifies no background-tier update formula. **Slice 4 landed July 3, 2026** — `WorldStore` (§7.1 KD-10 season composition root: the persistent world store + season-calendar loop; owns/wires the six services, drives `AdvanceDay`, round-trips a composite Snapshot = §4.6 four-store block + managerId + FR-LW-022 membership roster) + the `ActiveSetMembership` roster-serialization seam. Remaining: arc *trigger evaluators* + `world.arcs` registration, BackgroundTierSim, the `world.text` cursor in the composite save, and the composite `SNAPSHOT_SCHEMA_VERSION` fold into the *unified match/season* save — all land as their KD-10 upstreams (vol-2/vol-3, match-outcome events, an attached text generator, the unified season save root) are wired.
+> Engine-free (`noEngineReferences`); references only `TacticalDirector.DeterministicSim` (slice 3 — the world.text RNG stream + the §4.6 canonical serializer). The spec's vol-2/vol-3 human-systems upstreams do not exist in `src/` yet. **Season/world-loop slice 1 landed July 2, 2026** — the KD-10 "persistent world store + season-calendar loop" prerequisite: `WorldClock` / `WorldLoop` / `MemoryStore` / `ColdStore` (§4.2/§4.3). **Slice 2 landed July 2, 2026 (same day)** — `ArcEngine` (§3.4 spawn/pin/lifecycle/expiry; trigger evaluation + its `world.arcs` RNG draws stay the documented KD-10 seam, FR-LW-020/031) + `ActiveSetMembership` (§3.5 entry/LRU-demotion/promotion, FR-LW-023/025), wired into WorldLoop phases 4/6. **Slice 3 landed July 2, 2026 (same day)** — `InteractionTextGenerator` (§3.3, over the new aperiodic `world.text` sub-stream — ERR-022-001 `DOMAIN_TAG_LIVING_WORLD=0x1E` + `SubsystemOrdinals.LivingWorld=80`) + `WorldStateSerializer` (§4.6 canonical block). **BackgroundTierSim (§3.5) stays the documented WorldLoop phase-5 seam, deliberately not built** — it would summarise club-AI/transfer/sacking outcomes that do not exist (a consumer would be the FR-LW-031 phantom-interface class), and §3.5 specifies no background-tier update formula. **Slice 4 landed July 3, 2026** — `WorldStore` (§7.1 KD-10 season composition root: the persistent world store + season-calendar loop; owns/wires the six services, drives `AdvanceDay`, round-trips a composite Snapshot = §4.6 four-store block + managerId + FR-LW-022 membership roster) + the `ActiveSetMembership` roster-serialization seam. **Slice 7 (arc-triggers, Slice 1/E1 + Slice 2/E2) landed July 24, 2026** — the opt-in arc-trigger evaluator + `world.arcs` RNG sub-stream, per `docs/tracking/living-world-arc-triggers-design.md`: `ArcCanonSource` (a concrete nullable canon-input seam, not an interface, FR-LW-031), `ArcTrigger`/`ArcTriggerCatalogue` (the APPEND-only Stage-0 trigger table), `ArcTriggerEvaluator` (distinct `world.arcs` stream key + the KD-7 rising-edge armed-off latch + `SpawnArc`); `WorldStore.Snapshot`/`Restore` serialize the cursor + latch at `WORLD_STORE_FORMAT_VERSION` 2 → 3. Remaining: BackgroundTierSim, and the composite `SNAPSHOT_SCHEMA_VERSION` fold into the *unified match/season* save — the `world.text` and `world.arcs` cursors already live in the WorldStore's own composite save; only the fold into the season save format proper (as opposed to `season-save/`'s frame-around-two-opaque-blobs approach) stays open, and BackgroundTierSim lands as its vol-2/vol-3 upstream is wired.
 
 | File | Purpose |
 |---|---|
@@ -1114,13 +1150,18 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/living-world/InteractionTextCorpus.cs` | Slice 3 — §3.3 Stage-0 in-code authored corpus (`internal static`): per-`InteractionIntent` template rows + per-`EventKind` episode clauses; APPEND-only order (draw selects by index); None/out-of-roster refused (KD-6 offline authoring, FR-LW-012; the §7.2 AI-authored corpus is a pure data swap) |
 | `src/living-world/InteractionTextGenerator.cs` | Slice 3 — §3.3 deterministic surface text: registers + draws the aperiodic **world.text** sub-stream (first #22 draw site; one Reserve/DrawReserved per interaction, FR-LW-020, separate from world.arcs) then slot-expands; §3.2 citation gated at SALIENCE_REF_THRESHOLD (NaN-closed); ALL validation runs pre-draw so a refused call consumes no cursor (replay parity, T-LW-DET-003/004); no model inference (FR-LW-012); provenance implicit (§3.6) |
 | `src/living-world/WorldStateSerializer.cs` | Slice 3 — §4.6 canonical living-world block (Appendix B order) via the #16 CanonicalSerializer (bitwise round-trip); Serialize(clock/memory/arcs/cold) → payload; Deserialize rebuilds through the validating store seams (SpawnArc re-takes pins ⇒ FR-LW-018 refcounts reconstructed); fail-loud version/domain-tag/trailing-byte/out-of-roster-EventKind/lifetime gates; composite SNAPSHOT_SCHEMA_VERSION bump deferred to the KD-10 season root (FR-LW-003) |
-| `src/living-world/WorldStore.cs` | Slice 4 — KD-10 season composition root (`sealed`): the persistent world store + season-calendar loop (§7.1). Owns/wires the six services (WorldClock+MemoryStore+ColdStore+ArcEngine+ActiveSetMembership+WorldLoop) for one manager; `AdvanceDay` drives the §4.2 phases with producers (3 decay / 4 arc expiry / 6 external-cap LRU; phases 1/2/5 stay the WorldLoop null seams, FR-LW-031); `RecordInteraction` stamps the current day; `Snapshot`/`Restore` round-trip a composite payload = fail-loud header (WORLD_STORE_FORMAT_VERSION + DomainTagLivingWorld + managerId) + the §4.6 four-store block + the FR-LW-022 membership roster; fail-loud version/tag/managerId/length-count/flag/trailing gates + a `ReadCount` bound |
+| `src/living-world/WorldStore.cs` | Slice 4 — KD-10 season composition root (`sealed`): the persistent world store + season-calendar loop (§7.1). Owns/wires the six services (WorldClock+MemoryStore+ColdStore+ArcEngine+ActiveSetMembership+WorldLoop) for one manager; `AdvanceDay` drives the §4.2 phases with producers (3 decay / 4 arc expiry / 6 external-cap LRU; phases 1/2/5 stay the WorldLoop null seams, FR-LW-031); `RecordInteraction` stamps the current day; `Snapshot`/`Restore` round-trip a composite payload = fail-loud header (WORLD_STORE_FORMAT_VERSION + DomainTagLivingWorld + managerId) + the §4.6 four-store block + world.text + world.arcs (cursor+latch, slice 7) + the FR-LW-022 membership roster; owns a nullable `ArcCanonSource` (`SetArcCanon`, never persisted); fail-loud version/tag/managerId/length-count/flag/trailing gates + a `ReadCount` bound |
+| `src/living-world/ArcCanonSource.cs` | Arc-triggers KD-1/KD-2: the nullable canon-input seam `ArcTriggerEvaluator` reads — a single concrete Stage-0 producer class + nested `Builder` (not an interface, FR-LW-031) of the minimal per-entity/per-board scalar signals arc triggers threshold on |
+| `src/living-world/ArcTrigger.cs` | Arc-triggers KD-3/KD-7: one catalogue row — target arc kind, the canon signal it thresholds on, the rising-edge threshold, and the spawned arc's liveness bound |
+| `src/living-world/ArcTriggerCatalogue.cs` | Arc-triggers KD-3: the Stage-0 in-code trigger table (two entity-scoped + two board rows in ArcKind ordinal order); APPEND-only, the `InteractionTextCorpus` precedent |
+| `src/living-world/ArcTriggerEvaluator.cs` | Arc-triggers KD-3..KD-7: registers the `world.arcs` sub-stream under a distinct entity sentinel (`WORLD_STREAM_ENTITY_ARCS = -2`, KD-4); walks the catalogue in FR-LW-017/021 order; applies the KD-7 rising-edge armed-off latch (one draw per rising edge, drop-below re-arms); resolves a minimal FR-LW-018 pin and calls `ArcEngine.SpawnArc` |
 | `src/living-world/Tests/living-world-tests.asmdef` | Test assembly definition (EditMode; references living-world + DeterministicSim) |
 | `src/living-world/Tests/LivingWorldTests.cs` | T0 units: enum ordinals (T-LW-U-001..004); §3.1 worked examples (0.56, ~0.016, no-overshoot, no-op); eviction tiebreak; ActiveLayers masking; episodeId-resume |
 | `src/living-world/Tests/SeasonWorldLoopTests.cs` | Slice-1 suite (28 tests): clock calendar semantics + T-LW-DET-006; memory T-LW-U-011..018 (monotonic ids, eviction + tiebreak + pin exemption + transient growth, decay, F1 guard, PlayerEdge/F6 refusal, NaN-gates); T-LW-DET-002 canonical order; LOD T-LW-I-011..014 (top-N retention, F5 retained-fields round-trip / T-LW-FAIL-005, episodeId resume, duplicate demote/promote fail-loud); loop phase order + T-LW-DET-007 additive identity; two-run field-identity determinism; AR-1 regression locks (AR-1: ref-counted pins, pinned-edge removal refusal, mask conflict, F6 insert gate, cold-summary coherence; AR-2: out-of-roster layer/mask-bit refusal, episodeId + salience coherence at both seams) |
 | `src/living-world/Tests/ArcMembershipTests.cs` | Slice-2 suite (24 tests incl. AR-1 + AR-2 locks — Add undefined-mask refusal, self-contact upfront refusal without stranding — M-1 post-spawn pin-array mutation cannot desync resolve, M-2 promotion mask conflict fails loud without stranding the summary, L-1 overflow refusal): ArcEngine spawn/pin + provenance, F1 pin rollback, validations, resolve/unpin, shared-pin refcount integration, §6.2 expiry boundary, state advance; membership entry/repeat/class-flip + mask-conflict fail-loud, LRU cap demotion to cold, worldTick-tie → lowest EntityId, arc-pinned skip, own-club exemption, Depart→cold + FR-LW-009 re-entry resume, pinned-Depart deferral as external, non-own-club Depart refusal; WorldLoop phase-4/6 wiring; two-run field-identity determinism |
 | `src/living-world/Tests/WorldTextSnapshotTests.cs` | Slice-3 suite (~20 tests): InteractionTextGenerator determinism (T-LW-DET-003 same-seed identical string, exact slot expansion, eligible-citation clause), no-draw-on-refusal replay-parity lock (below-threshold + NaN salience + None/out-of-roster intent + kindless citation + default slots all refuse pre-draw; cursor untouched), single-draw cursor advance, world.text↔sibling-stream non-interference (T-LW-DET-004); WorldStateSerializer §4.6 field-identity round-trip incl. NextEpisodeId + shared-pin refcount reconstruction, bitwise determinism + serialize→deserialize→serialize stability, fail-loud unknown-version / wrong-domain-tag / trailing-byte / null-store gates |
 | `src/living-world/Tests/WorldStoreTests.cs` | Slice-4 suite (14 tests): construction/wiring + negative-manager guard; AdvanceDay advances the calendar + decays salience (phase 3) + expires arcs across the lifetime boundary (phase 4, pin released); RecordInteraction stamps the store's current day; Snapshot/Restore field-identical + idempotent round-trip (arc pin re-take, own-club/external roster classes, departed→cold contact) + empty-store round-trip; two-run byte determinism; six fail-loud restore gates (null / wrong version / wrong domain tag / corrupt store-length / trailing bytes / bad membership flag) |
+| `src/living-world/Tests/ArcTriggerTests.cs` | Arc-triggers Slice 1/E1 + Slice 2/E2 suite: distinct `world.arcs` stream key from `world.text`; flag-off byte-identical round-trip; stub-canon deterministic spawn incl. the KD-7 single-fire + re-arm lock; FR-LW-017/021 trigger-order determinism; E2 save@N→restore→advance (both latched and non-zero-cursor cases) + the re-fire-after-restore regression lock |
 
 ### `src/match-viewer/` — Minimal match viewer (July 2, 2026; presentation tooling — not a numbered spec)
 
@@ -1149,6 +1190,81 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/season-save/SeasonSaveManager.cs` | Static: `Save(world, matchOrNull, path)` (capture both → Encode → atomic temp→fsync→rename) / `Load(path, ISquadProvider = null) → SeasonSaveContents` (Decode → WorldStore.Restore +, when present, MatchSaveManager.Restore) — KD-1/KD-5/KD-6/KD-8 |
 | `src/season-save/tests/season-save-tests.asmdef` | Test assembly (EditMode; references season-save + match-engine + living-world + deterministic-sim + player-database) |
 | `src/season-save/tests/SeasonSaveManagerTests.cs` | Disk round-trip determinism (no-match season; season with neutral / distinct-squad match via ISquadProvider) + SeasonSaveCodec round-trip/fail-loud + manager fail-loud paths incl. the R4 no-match-with-provider lock (19 tests) |
+
+### `src/player-database/` — Squad/Player Data Layer (Spec #27, T0+T1/T2/T3 landed; APPROVED Jul 22, 2026)
+
+> References only `TacticalDirector.DeterministicSim` (the roster-generation RNG stream). The canonical 31-field `PlayerAttributes` record reconciling all 7 pre-existing per-spec attribute structs (closing `ERR-007`), the club-scoped `Squad`/`PlayerRecord` roster, deterministic `RosterGenerator`, and the Stage-0 `SquadFileLoader` text import. Wired into `match-engine` since T1 (July 17, 2026) via `PlayerAttributeProjection.cs` + `ConfigureSquads`.
+
+| File | Purpose |
+|------|---------|
+| `src/player-database/player-database.asmdef` | Assembly definition `TacticalDirector.PlayerDatabase`; references only DeterministicSim |
+| `src/player-database/PlayerDatabaseConstants.cs` | Fixed/Derived/GT catalogue: attribute bounds, generation tuning, `[4][31]` position-bias table |
+| `src/player-database/AttrIdx.cs` | Ordinal mapping for the 31 `int[1,20]` attribute fields, shared by `ToArray`/`FromArray`/`RosterGenerator`/`SquadFileLoader` |
+| `src/player-database/PlayerAttributes.cs` | Canonical 31-field `[1,20]` record + `WeakFootRating [1,5]`; reconciles all 7 existing per-spec attribute structs |
+| `src/player-database/PlayerPosition.cs` | Enum: Goalkeeper/Defender/Midfielder/Forward (coarse; NOT positioning-ai's 13-value RoleId) |
+| `src/player-database/PlayerRecord.cs` | One player: club-scoped `PlayerId` + name/age/position + `PlayerAttributes` |
+| `src/player-database/Squad.cs` | One club's roster (≤ `CLUB_SQUAD_SIZE`=25 players) |
+| `src/player-database/NameCatalogue.cs` | Stage-0 in-code first/last name pools (32 each) |
+| `src/player-database/RosterGenerator.cs` | Deterministic generation over `DeterministicRngService`; stateless, caller registers the stream |
+| `src/player-database/PlayerGenerationRng.cs` | Shared `DrawBounded` (biased-but-accepted generation mapping) + `Clamp`, used by `RosterGenerator` (#27) + `RegenGenerator` (#28); kept out of `DeterministicSim` so the deliberately-biased mapping stays scoped to player generation |
+| `src/player-database/SquadFileLoader.cs` | Stage-0 human-authoring text import (mirrors `TeamTacticFileLoader`'s grammar) |
+| `src/player-database/tests/player-database-tests.asmdef` | Test assembly definition |
+| `src/player-database/tests/PlayerAttributesTests.cs` | Clamp/array round-trip, identity defaults, position-bias table exact-value locks |
+| `src/player-database/tests/RosterGeneratorTests.cs` | Determinism, club-scoped `PlayerId` uniqueness, bounds, exact RNG-budget-per-player lock |
+| `src/player-database/tests/SquadFileLoaderTests.cs` | Grammar round-trip, empty-file default squad, every fail-loud gate |
+| `src/player-database/tests/SquadTests.cs` | `Squad` container invariant locks (roster size, ClubId identity) |
+
+### `src/player-progression/` — Player Progression & Lifecycle (Spec #28, T0 landed Jul 24, 2026; APPROVED Jul 23, 2026)
+
+> References `PlayerDatabase` + `DeterministicSim` only (§4.1) — world-tick, not a hot path. The draw-free aging/growth core (CA/PA integer fixed-point model over #27's `PlayerAttributes`) + the pure single-player regen generator, per `docs/tracking/progression-t0-implementation-plan.md`. T1 (save codec) / T2 (`ProgressionEngine` + world-tick wiring + production RNG stream) / T3 (deep CA-PA curve + #29 input) are deferred.
+
+| File | Purpose |
+|------|---------|
+| `src/player-progression/player-progression.asmdef` | Assembly definition `TacticalDirector.PlayerProgression`; references PlayerDatabase + DeterministicSim only |
+| `src/player-progression/PlayerProgressionConstants.cs` | Appendix A catalogue (Fixed/Derived/Cross/GT); the `0x20`/82 RNG mirrors deliberately deferred to T2 (KD-B) |
+| `src/player-progression/PlayerLifecycle.cs` | Per-player overlay value type (§2.2): PA / CA cache / `long GrowthCursor` / `BirthWorldDay` / retirement flag+day; the `[1,20]` attributes stay on #27's `PlayerRecord`, not duplicated |
+| `src/player-progression/TrainingInput.cs` | The #29 seam value type (`Neutral` identity, §4.5 — a value type, not a phantom interface) |
+| `src/player-progression/AbilityModel.cs` | Pure: `ComputeCA` + `ClassifyAgeBand` + weighted spend/drain (highest-bias-first spend / lowest-bias-first drain, F1 PA-ceiling skip) + the `AgeBand` enum |
+| `src/player-progression/GrowthProjection.cs` | Pure per-player daily step (§3.1; the sole attribute-mutation path, FR-PG-008); curve-off is the KD-8 identity (flat §4.3 band step; the deep curve is T3) |
+| `src/player-progression/RegenGenerator.cs` | Pure single-player generation (§3.3; fixed `PROGRESSION_REGEN_FIELDS`=37 reservation mirroring #27's `RosterGenerator.GenerateOne`); returns `(PlayerRecord, PlayerLifecycle)` |
+| `src/player-progression/tests/player-progression-tests.asmdef` | Test assembly definition |
+| `src/player-progression/tests/PlayerProgressionConstantsTests.cs` | Balance-pass invariant locks (`POINT_COST==DAYS_PER_YEAR`, band order, regen-field derivation) |
+| `src/player-progression/tests/AbilityModelTests.cs` | `T-PG-CA-001/002/003`: CA determinism, F1 PA ceiling, weighted spend/drain order |
+| `src/player-progression/tests/GrowthProjectionTests.cs` | `T-PG-DET-001/002` + `ID-001/002`: byte-exact growth/decline, value-copy "save" == uninterrupted run, age gap-independence |
+| `src/player-progression/tests/RegenGeneratorTests.cs` | `T-PG-REG-001/003`: regen determinism, exact budget, bounds, CA≤PA room-to-grow (test-local RNG ordinal, KD-B) |
+
+### `src/match-client-core/` — Interactive Unity client P0 (host-free foundations; not a numbered spec; landed Jul 24, 2026)
+
+> References match-engine + match-viewer + deterministic-sim + tactical-instructions + player-database + project-constants. The host-free composition layer for a live, player-drivable match (`docs/tracking/interactive-unity-client-design.md` §5-P0/P2) — compiled and tested by the Linux `dotnet-ci` gate on every push, since it touches no Unity rendering types.
+
+| File | Purpose |
+|------|---------|
+| `src/match-client-core/match-client-core.asmdef` | Assembly definition `TacticalDirector.MatchClientCore` |
+| `src/match-client-core/AssemblyInfo.cs` | `[InternalsVisibleTo]` for the `ManagerCommandQueue.DrainInto` seam |
+| `src/match-client-core/MatchClientConstants.cs` | P0 playback-speed set `[GT]` + camera/UI catalogue |
+| `src/match-client-core/MatchSetup.cs` | Immutable boot value: seed/squads/tactics/manager config/GK-heading flag |
+| `src/match-client-core/MatchSession.cs` | Composition root: constructs and wires the `MatchEngine`, the reused `LiveMatchStreamer`, and the `MatchClientDriver` |
+| `src/match-client-core/ManagerCommandKind.cs` | Closed set of typed manager GAME commands (playback pause/speed deliberately excluded — presentation-side, not engine-side) |
+| `src/match-client-core/ManagerCommand.cs` | One typed command value; applies itself onto an `ILiveMatchMutations` surface |
+| `src/match-client-core/ManagerCommandQueue.cs` | Thread-safe boundary: UI thread enqueues, sim thread drains at the top of a tick |
+| `src/match-client-core/MatchClientDriver.cs` | Owns the queue + a `TickStampedCommand` log; `Service()` is the streamer's pre-tick hook (drain-and-apply on the sim thread at a stride boundary) |
+| `src/match-client-core/ILiveMatchMutations.cs` | The exact closed set of LIVE stride-committed `MatchEngine` mutators the channel may drive, plus two read-only signals the sim-side drain needs |
+| `src/match-client-core/MatchEngineMutations.cs` | `ILiveMatchMutations` adapter — forwards verbatim to `MatchEngine`'s pre-existing public mutators; no new mutator, no raw state poke |
+| `src/match-client-core/TickStampedCommand.cs` | One entry in the tick-stamped command log: the applied command paired with the engine tick it was applied at (the replay-determinism record) |
+| `src/match-client-core/tests/match-client-core-tests.asmdef` | Test assembly definition |
+| `src/match-client-core/tests/ManagerCommandQueueTests.cs` | Thread-safety / enqueue-drain / ordering locks |
+| `src/match-client-core/tests/MatchClientDriverTests.cs` | Drain-and-apply / tick-stamping / `Service()` pre-tick-hook contract locks |
+| `src/match-client-core/tests/MatchSessionTests.cs` | Composition-root wiring locks |
+| `src/match-client-core/tests/RecordingMutations.cs` | `ILiveMatchMutations` test double recording applied calls |
+
+### `src/match-client-unity/` — Interactive Unity client P0 (Unity-host render/UGUI skin; not a numbered spec; landed Jul 24, 2026)
+
+> Unity-only render/UGUI skin, scaffolded `.asmdef`-only at P0 (no `MonoBehaviour`/UGUI code yet — lands at P4–P6 of `docs/tracking/interactive-unity-client-design.md`). Listed in `tools/dotnet-ci/generate_projects.py`'s `SHIM_EXCLUDED_ASMDEFS` set, so the Linux gate never compiles it; verified only on a real Unity host. All determinism-bearing logic stays in the host-free `src/match-client-core/` sibling.
+
+| File | Purpose |
+|------|---------|
+| `src/match-client-unity/match-client-unity.asmdef` | Assembly definition `TacticalDirector.MatchClientUnity` |
+| `src/match-client-unity/README.md` | Why this assembly is `.asmdef`-only at P0 + the `SHIM_EXCLUDED_ASMDEFS` exclusion rationale |
 
 ## Tracking Documents
 
@@ -1193,9 +1309,10 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 ## Current Specification Folders
 
-All 26 spec folders now exist in `docs/specs/` (20 Stage-0 + Stage-1 forward specs #21–#26; rows
-21/22 were missing from this table between their June 2026 promotions and July 8, 2026 —
-reconciled). Status reflects authoritative classification in `SPEC_INDEX.md`.
+**41 spec folders now exist in `docs/specs/`** (20 Stage-0 + 21 Stage-1-forward specs #21–#49,
+non-contiguously numbered — see `SPEC_INDEX.md` for the full registry, which is the single
+canonical source of truth for numbers/folders/status; this table is a secondary index and may lag
+it). Status reflects authoritative classification in `SPEC_INDEX.md`.
 
 | # | Folder | Status |
 |---|--------|--------|
@@ -1225,6 +1342,21 @@ reconciled). Status reflects authoritative classification in `SPEC_INDEX.md`.
 | 24 | `docs/specs/build-up-structures/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+3M+2L resolved Jul 8; back-props ERR-021-006/012-008 filed + landed at approval; append order pinned #23 → #24 → #25; FR-BU-001..016; KD-3 records the deliberate TransitionWon-gating refinement vs the supplement |
 | 25 | `docs/specs/positional-rotations/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 1H+1M+3L resolved Jul 8 + PASS-2 clean at H/M; Appendix A complete for all three `FormationFamily` members; back-props ERR-021-007/012-009 (incl. the #12 `SlotIndex` single-writer amendment) filed + landed at approval; FR-RO-001..018 |
 | 26 | `docs/specs/tactical-presets/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+1M+2L resolved Jul 8; §8.2 fully closed (Bradley & Noakes 2013 verified Jul 10); no back-props (§2.3); engine-substrate gates carried forward upstream-owned; FR-TP-001..020 |
+| 27 | `docs/specs/squad-player-data/` | APPROVED (Jul 22, 2026) — documents an already-landed/wired layer (`src/player-database/`); FR-SQ-001..026; `DOMAIN_TAG_PLAYER_DATABASE = 0x1F` |
+| 28 | `docs/specs/player-progression-lifecycle/` | APPROVED (Jul 23, 2026) — aging/growth/regen on the world tick; FR-PG-001..024; `DOMAIN_TAG_PLAYER_PROGRESSION = 0x20`; T0 landed in `src/player-progression/` |
+| 29 | `docs/specs/training-system/` | APPROVED (Jul 23, 2026) — world-tick conditioning/training-fatigue + #28 growth input; FR-TR-001..024; draw-free, no RNG stream (FR-LW-031 discipline) |
+| 30 | `docs/specs/season-competition-loop/` | APPROVED (Jul 22, 2026) — Wave-1 spine spec: fixtures/table/calendar loop, owns `SeasonSaveManager`; FR-SN-001..034; `DOMAIN_TAG_SEASON_LOOP = 0x22` |
+| 31 | `docs/specs/transfers-contracts-negotiation/` | APPROVED (Jul 23, 2026) — the reusable negotiation seam #32/#34 consume; FR-TC-001.. (see spec); draw-free minimal |
+| 32 | `docs/specs/scouting-player-knowledge/` | APPROVED (Jul 24, 2026) — per-manager fog-of-war view over #27; no attribute mutation; `SCOUTING_SAVE_FORMAT_VERSION` sub-blob |
+| 33 | `docs/specs/personalities-morale-dynamics/` | APPROVED (Jul 23, 2026) — the #22 read surface producer, matched to `FR-LW-004`'s `PlayerEdge` contract; `HUMAN_SYSTEMS_SAVE_FORMAT_VERSION` sub-blob |
+| 34 | `docs/specs/staff-backroom/` | APPROVED (Jul 23, 2026) — coaches/scouts/physios modulating #29/#41/#33/#31; neutral-staff season byte-identical to pre-#34 |
+| 37 | `docs/specs/match-analytics-statistics/` | APPROVED (Jul 22, 2026) — read-only derivation over the 8 Tier A match-engine ledger record types; no domain tag/RNG (KD-5) |
+| 38 | `docs/specs/ui-client-framework/` | APPROVED (Jul 22/23, 2026) — framework slice only (view-model/navigation/command-dispatch); screens deferred to Wave 7; no domain tag/RNG |
+| 40 | `docs/specs/club-finances-economy/` | APPROVED (Jul 23, 2026) — per-club budgets/wage ledger/prize money, the counterparty-constraint layer #31 reads; `FINANCE_SAVE_FORMAT_VERSION` sub-blob |
+| 41 | `docs/specs/injuries-medical/` | APPROVED (Jul 23, 2026) — occurrence/severity/recovery on one world-tick `injuries.occurrence` stream; `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A`; `MEDICAL_SAVE_FORMAT_VERSION` sub-blob |
+| 43 | `docs/specs/competition-structure/` | APPROVED (Jul 24, 2026) — cups/continental/promotion-relegation over #30's loop; position-independent keyed draws (`competition.draws`); no #30/#40 change |
+| 44 | `docs/specs/discipline-suspensions/` | APPROVED (Jul 24, 2026) — season-level card accumulation/thresholds/bans as a read-only derivation over engine events; no RNG/domain tag |
+| 49 | `docs/specs/localization-accessibility/` | APPROVED (Jul 23, 2026) — seam + template-contract slice only; `ILocalizer`/localize-after-generate boundary; translated locales + a11y content are Wave 8 |
 
 **Notes:**
 - Attacking AI (#15) files (May 17–18, 2026): `outline.md` (high-level v1.0), `outline-detailed.md` (v1.1), `adversarial-review-outline-detailed-v1.md`, `section-1.md` through `section-9-approval-checklist.md` + `appendices.md` (all at v0.2). `DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS: #16 §3.4]` (ERR-015-001 CLOSED May 18, 2026). Lead-developer R-01..R-05 signed May 18, 2026. Status: APPROVED.

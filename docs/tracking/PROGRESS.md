@@ -1,7 +1,32 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
+**Last Updated:** July 25, 2026 (**Documentation sync pass — this tracker had drifted badly.** The masthead
+chain below stopped at July 10, 2026 (15 days behind HEAD); the PROGRESS SUMMARY, MILESTONES table, and
+NEXT ACTIONS sections below that (unchanged since May 30, 2026) had drifted even further — they still
+listed Tactical Instructions #21 as "Stage-1 forward specs: 1" and had no row for anything past Attacking
+AI #15's May 29 implementation. Since the July 10 masthead entry, **15 further Stage-1-forward specs were
+authored and APPROVED** (July 22–24, 2026): Squad/Player Data Layer #27, Player Progression & Lifecycle
+#28, Training System #29, Season & Competition Loop #30, Transfers/Contracts #31, Scouting & Player
+Knowledge #32, Personalities/Morale #33, Staff & Backroom #34, Match Analytics #37, UI/Client Framework
+#38, Club Finances #40, Injuries & Medical #41, Competition Structure #43, Discipline & Suspensions #44,
+Localization & Accessibility #49 — bringing `SPEC_INDEX.md` to **41 APPROVED / 0 IN REVIEW / 0 NOT
+STARTED** (was 26). On the implementation side: the match engine gained save/load/restore of an
+in-progress match + an on-disk save-file format (Jul 20–21), a unified season save file bundling a world
+snapshot with an optional in-progress match (`src/season-save/`, Jul 22), opt-in Goalkeeper #11 / Heading
+#10 engine integration (Jul 22–23), an opt-in Living World arc-trigger evaluator (Jul 24), and the P0
+host-free foundations of an interactive Unity client (`src/match-client-core/`, Jul 24).
+`SNAPSHOT_SCHEMA_VERSION` is now 18 (was 15). Unity 6000.4.9f1/DX11 recertification, left `⏳ RECERT
+REQUIRED` since the July 13 version bump, **completed July 19, 2026** — `certification-platform.md` is
+`✅ PINNED`. **This tracker's PROGRESS SUMMARY block below is corrected to match** (spec counts, the
+Stage-1-forward list). The **MILESTONES table, QUALITY METRICS, and CHANGELOG sections are left as the
+historical record they are** (frozen at May 29–30, 2026) rather than rewritten — the authoritative,
+continuously-maintained record of what has landed since is `SPEC_INDEX.md` (spec approvals) and root
+`CLAUDE.md`'s "Last Updated" chain (implementation landings); this file's own masthead-changelog
+convention duplicates that record informally and has proven hard to keep in sync at this project's pace.
+The stale footer ("Last Updated: May 30, 2026") below the NEXT ACTIONS section is corrected in this same
+pass.)
+**Last Updated (prior):** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
 lead-developer R-01..R-05 sign-off granted on all four (checklists v0.4 with §9.5 gate tables +
 §9.6 decisions); the #26 Bradley citation VERIFIED (Bradley & Noakes 2013, *J Sports Sci*
 31(15):1627–1638, DOI 10.1080/02640414.2013.796062, PMID 23808376 — index-level corroboration;
@@ -69,7 +94,19 @@ PROGRESS / 0 NOT STARTED** — these four candidates are Stage-1-forward, beyond
 **In Progress:** 0  
 **Not Started:** 0
 
-**Stage-1 forward specs:** 1 — Tactical Instructions (#21), APPROVED June 20, 2026 (manager-facing tactical instruction layer; `[GT]` balance-pass values illustrative pending a non-blocking Stage-1 follow-up). T0 data layer + T2 consumer seams (DecisionTree/Pressing/Positioning/Defensive/Attacking, behaviour-neutral) + runtime activation (`MatchEngine.SetTeamTactic` + in-code `TeamTacticConfig` source + boot applier) landed by June 29, 2026; on-disk tactic-file format deferred to Stage 0+1. Canonical count in `SPEC_INDEX.md`: **21 APPROVED**.
+**Stage-1 forward specs:** 21 — see `SPEC_INDEX.md` for the full registry (numbers/status/approval
+dates are canonical there; this line is a summary, not a duplicate ledger). Two waves: **(a)** the
+tactics/world/positional-behavior wave #21–#26 (Jun 20 – Jul 10, 2026 — Tactical Instructions,
+Living World System, Dismarking & Marker-Awareness AI, Scripted Build-Up Structures, Positional
+Rotations, Tactical Presets & AI-Manager Selection), all fully wired into `src/`; **(b)** the
+management-layer wave #27–#49 (Jul 22–24, 2026 — Squad/Player Data Layer, Player Progression &
+Lifecycle, Training System, Season & Competition Loop, Transfers/Contracts & Negotiation, Scouting &
+Player Knowledge, Personalities/Morale & Squad Dynamics, Staff & Backroom, Match Analytics &
+Statistics, UI/Client Framework, Club Finances & Economy, Injuries & Medical, Competition Structure,
+Discipline & Suspensions, Localization & Accessibility), of which #27/#28(T0)/#30 have `src/`
+implementations and the rest are APPROVED forward-design documents pending T-phase implementation.
+Canonical count in `SPEC_INDEX.md`: **41 APPROVED / 0 IN REVIEW / 0 NOT STARTED** (20 Stage-0 + 21
+Stage-1 forward).
 
 **Specifications approved:**
 - Tactical Instructions (#21, June 20, 2026 — Stage-1 forward spec; PASS-1 + PASS-2 adversarial reviews; G2 balance pass carried as a non-blocking post-APPROVED follow-up)
@@ -682,9 +719,13 @@ PROGRESS / 0 NOT STARTED** — these four candidates are Stage-1-forward, beyond
 
 ---
 
-**Last Updated:** May 30, 2026 (Stage 1 wiring AR-1 complete + AR-1 3H fix committed; AR-2 in progress)
+**Last Updated (this footer, corrected Jul 25, 2026):** the CHANGELOG below this line is a historical
+record frozen at May 30, 2026 (Stage 1 wiring AR-1 complete + AR-1 3H fix committed; AR-2 in progress) —
+it predates this file's own masthead by nearly two months and is retained verbatim rather than
+extended; per the masthead's July 25, 2026 entry, `SPEC_INDEX.md` and root `CLAUDE.md` are the
+continuously-maintained records for everything landed since.
 **Updated By:** AI Assistant
-**Next Review:** After AR-2 adversarial review of Stage 1 wiring batch
+**Next Review:** N/A — see the masthead entry for the current review cadence, if any (passion project, no deadline)
 
 ---
 

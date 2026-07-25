@@ -1,7 +1,19 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 24, 2026, latest same day (**Discipline & Suspensions #44 authored + advanced `→ IN
+> **Last Updated:** July 24, 2026, latest same day (**Cross-set adversarial-review follow-up passes over
+> #32/#43/#44, both fixed, no status change.** Two further rounds ran over the freshly-APPROVED trio after
+> the entry below: a cross-set sweep (2M+3L, incl. a dangling scouting assignment on player re-key/
+> retirement and a fog-off dial-scoping contradiction, both #32) and a third pass (4M+2L), the load-bearing
+> fix being **#43 Competition Structure**: a drawn knockout match had no specified winner (new
+> `FR-CP-026` keyed shootout tiebreak) and the bracket-pairing logic silently assumed power-of-two
+> entrant counts (new `FR-CP-027`); **#44** fixes corrected an impossible worked example (wrong-club
+> `PlayerId`) and under-specified filter-squad coverage. All findings fixed same day; section files
+> re-versioned (`competition-structure/section-9-approval-checklist.md` → v0.3;
+> `scouting-player-knowledge/` appendices → v0.5, section-1 → v0.3, section-2 → v0.4, section-3 → v0.3,
+> section-5 → v0.3; `discipline-suspensions/section-7.md` → v0.2). **Status and count unchanged — all
+> three stay APPROVED; Count: 41 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 24, 2026, latest same day (**Discipline & Suspensions #44 authored + advanced `→ IN
 > REVIEW → APPROVED`** — Wave 5's second spec (season-level card accumulation/thresholds/bans as a
 > **read-only derivation** over already-emitted engine events). **The load-bearing verifications:** a
 > promoted second yellow publishes **ONE `CardIssuedEvent` with `CardKind = 2`** (never a yellow-then-red

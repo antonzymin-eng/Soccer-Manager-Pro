@@ -1,7 +1,55 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 22, 2026 (**Goalkeeper Mechanics #11 + Heading Mechanics #10 WIRED into the match
+> **Last Updated:** July 25, 2026 (**Documentation sync pass — this masthead header had not been refreshed
+> since July 22, though the OPEN ISSUES entries below it were kept current through July 24 (GK/Heading
+> Phase 2 snapshot-safety + the DT-emitted SAVE action, July 23; Living World arc-trigger evaluator Slice
+> 7, July 24; Player Progression #28 T0, July 24 — all already recorded in their respective OPEN ISSUES
+> entries, just not surfaced at the top of the file). Two further landings were NOT recorded anywhere in
+> this file and are added here: **(1) Interactive Unity client P0** (July 24, 2026) — the host-free
+> foundations for a live, player-drivable match, per the new `docs/tracking/interactive-unity-client-design.md`
+> §5-P0/P2. New `src/match-client-core/` (`TacticalDirector.MatchClientCore`; references match-engine +
+> match-viewer + deterministic-sim + tactical-instructions + player-database + project-constants):
+> `MatchSetup`/`MatchSession` (the composition root — a `MatchEngine` + the reused `LiveMatchStreamer` +
+> a `MatchClientDriver`), `ManagerCommand`/`ManagerCommandKind` (the closed set of typed game commands;
+> playback pause/speed deliberately excluded as presentation-side), `ManagerCommandQueue` (the
+> thread-safe UI-thread-enqueue / sim-thread-drain boundary), `MatchClientDriver` (owns the queue + a
+> `TickStampedCommand` replay-determinism log; its `Service()` method is the streamer's pre-tick hook),
+> and `ILiveMatchMutations`/`MatchEngineMutations` (the exact closed set of LIVE stride-committed
+> `MatchEngine` mutators the channel may drive — verbatim forwarding to existing public mutators, no new
+> mutator, no raw state poke). New `src/match-client-unity/` (`TacticalDirector.MatchClientUnity`) is the
+> Unity-host render/UGUI skin, scaffolded `.asmdef`-only (no `MonoBehaviour`/UGUI code — that lands at
+> P4–P6) and listed in `tools/dotnet-ci/generate_projects.py`'s `SHIM_EXCLUDED_ASMDEFS` set, so the Linux
+> gate never compiles it. All determinism-bearing logic stays in the host-free core, compiled and tested
+> by the Linux `dotnet-ci` gate on every push. **(2) A 15-spec management-layer wave, authored and
+> APPROVED July 22–24, 2026** (candidate specs #27–#52 scoped in
+> `docs/tracking/management-layer-spec-roadmap.md`; the full per-spec KD/AR narrative for each lives in
+> `SPEC_INDEX.md`, not duplicated here): **Squad / Player Data Layer #27** (documents the already-landed
+> `src/player-database/` layer; `DOMAIN_TAG_PLAYER_DATABASE = 0x1F`), **Player Progression & Lifecycle
+> #28** (world-tick aging/growth/regen; T0 landed in `src/player-progression/`), **Training System #29**
+> (world-tick conditioning feeding #28's growth input; draw-free, no RNG stream), **Season & Competition
+> Loop #30** (the Wave-1 critical-path spine — fixtures/table/calendar loop; owns `SeasonSaveManager`),
+> **Match Analytics & Statistics #37** and **UI / Client Framework #38** (framework slice) and
+> **Localization & Accessibility #49** (seam + template-contract slice) — Wave 1's read-only presentation
+> substrate, none registering a domain tag/RNG stream, **Injuries & Medical #41** (one world-tick
+> `injuries.occurrence` stream; `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A`), **Club Finances & Economy #40**
+> (season-boundary budget settlement; `FINANCE_SAVE_FORMAT_VERSION` sub-blob), **Personalities, Morale &
+> Squad Dynamics #33** (the #22 Living World read-surface producer, matched verbatim to the
+> `FR-LW-004` `PlayerEdge` contract), **Transfers, Contracts & Negotiation #31** (the reusable
+> counterparty-negotiation seam #32/#34 consume), **Staff & Backroom #34** (coaches/scouts/physios
+> projecting each consumer's own identity-type modifier — neutral staff ⇒ byte-identical to pre-#34),
+> **Scouting & Player Knowledge #32** (per-manager attribute fog-of-war, a VIEW over #27's truth, never a
+> mutation — closes Wave 4), **Competition Structure #43** (cups/continental/promotion-relegation over
+> #30's loop; position-independent keyed draws) and **Discipline & Suspensions #44** (season-level card
+> accumulation/bans as a read-only derivation over match-engine events) — closing out the spec-authoring
+> work through Jul 24. `SPEC_INDEX.md`: **41 APPROVED / 0 IN REVIEW / 0 NOT STARTED** (was 26 at the July
+> 10 count this file's chain last reflected). Of the 15, only #27/#28(T0)/#30(`SeasonSaveManager`) have
+> `src/` implementations so far — the rest are APPROVED forward-design documents awaiting their own
+> T-phase implementation pass, per the #21–#26 precedent. `README.md`, `PROGRESS.md`, and
+> `docs/tracking/file-manifest.md` were reconciled to match in the same pass. See `SPEC_INDEX.md` for
+> the authoritative per-spec approval narrative and `docs/tracking/management-layer-spec-roadmap.md` for
+> the roadmap this wave executes against.)
+> **Last Updated (prior):** July 22, 2026 (**Goalkeeper Mechanics #11 + Heading Mechanics #10 WIRED into the match
 > engine, and the GK/Heading attribute projections LANDED — Phase 1 (opt-in).** The `ToGoalkeeper` /
 > `ToHeading` projections that `player-attribute-projection-design.md` deferred under KD-P8 (phantom
 > consumers — `MatchEngine` built neither struct) are now non-phantom: `MatchEngine.cs` v1.44 constructs
