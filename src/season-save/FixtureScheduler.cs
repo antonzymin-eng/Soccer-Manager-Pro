@@ -243,11 +243,14 @@ namespace TacticalDirector.SeasonSave
         /// <summary>SplitMix64 step — the project's deterministic PRNG for pure contexts.</summary>
         private static ulong NextUInt64(ref ulong state)
         {
-            state += 0x9E3779B97F4A7C15UL;
-            ulong z = state;
-            z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
-            z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
-            return z ^ (z >> 31);
+            unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
+            {
+                state += 0x9E3779B97F4A7C15UL;
+                ulong z = state;
+                z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
+                z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
+                return z ^ (z >> 31);
+            }
         }
 
         /// <summary>
@@ -301,4 +304,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | (identity at seed 0), GenerateFromRingOrder as the §4.5 pure seam. |
 // |         |            |        | Records SPEC DEVIATION ERR-030-010 (§3.1 parity clause vs the      |
 // |         |            |        | §3.7 / Appendix C worked schedule).                                |
+// | 1.1     | 2026-07-25 | —      | AR pass 3: wrapped the SplitMix64 step in unchecked { } with the   |
+// |         |            |        | Spec #16 §3.4.4 citation (FR-CS-044 — the four sibling SplitMix64  |
+// |         |            |        | copies in-tree all comply; this one did not).                      |
 #endregion

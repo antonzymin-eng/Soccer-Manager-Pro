@@ -11,6 +11,13 @@
 // (#30 T2) inside this assembly. Callers outside it (UI, #37/#38) read through SeasonViewModel and
 // mutate only via the loop's public command API (FR-SN-032). Tests reach the internals through
 // AssemblyInfo's InternalsVisibleTo.
+//
+// THREAD SAFETY: none of the #30 T0 types are thread-safe. LeagueTable mutates its rows in place and
+// SeasonState carries mutable auto-properties, so a concurrent read during a mutation can observe a
+// torn table. Single-threaded access is the T0 contract. This matters at T2, not now: #38's client
+// already runs a sim thread alongside a UI thread (FR-UI-023/F6 cross-thread command marshaling), so
+// the SeasonLoop command API must be the marshaling point — the UI thread reads a SeasonViewModel
+// snapshot (which copies, see SeasonViewModel.From) and never touches SeasonState directly.
 
 using System.Collections.ObjectModel;
 
@@ -461,4 +468,6 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-07-25 | —      | Initial implementation (#30 T0): full serialized surface with      |
 // |         |            |        | copy-then-validate coherence gates, CreateNew, read-only           |
 // |         |            |        | accessors, KD-7 internal mutators, Clone/FieldsEqual.              |
+// | 1.2     | 2026-07-25 | —      | AR pass 3: recorded the single-threaded-access contract and the    |
+// |         |            |        | T2 marshaling obligation (#38 sim/UI thread split).                |
 #endregion

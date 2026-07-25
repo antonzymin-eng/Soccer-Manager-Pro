@@ -554,6 +554,29 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.Throws<System.ArgumentNullException>(() => SeasonViewModel.From(null));
         }
     }
+
+    [TestFixture]
+    public sealed class SeasonStateCouplingTests
+    {
+        [Test]
+        public void SeasonState_InstanceFieldCount_MatchesFieldsEqualSet()
+        {
+            // Mechanical coupling guard, the PassExecutorStateTests.cs:348 / ShotExecutorStateTests.cs:376
+            // analogue. FieldsEqual is the equality oracle the T1 codec round-trip (FR-SN-022) and the T2
+            // two-run determinism lock (FR-SN-030) assert against. A field added here but omitted from
+            // BOTH the codec and FieldsEqual makes the round-trip pass while the save silently drops it —
+            // invisible in-process, surfacing only as a corrupted season after a reload. This count trips
+            // first. (8 = _clubIds + _fixtures + the six auto-property backing fields: Seed, SeasonNumber,
+            // ManagedClubId, Table, Calendar, Board.)
+            int fieldCount = typeof(SeasonState)
+                .GetFields(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .Length;
+
+            Assert.AreEqual(8, fieldCount,
+                "SeasonState instance field count changed. If you added serialized season state, extend " +
+                "FieldsEqual + Clone + the T1 SeasonStateCodec, then update this count.");
+        }
+    }
 }
 
 #region VersionHistory
@@ -561,4 +584,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.0     | 2026-07-25 | —      | Initial suite (#30 T0): calendar/KD-4 invariant, board,   |
 // |         |            |        | match result, fixture, SeasonState coherence + aliasing,  |
 // |         |            |        | and SeasonViewModel observer-neutrality locks.            |
+// | 1.1     | 2026-07-25 | —      | AR pass 3: added the SeasonState instance-field-count     |
+// |         |            |        | coupling guard (FieldsEqual/Clone/T1-codec omission lock).|
 #endregion
