@@ -234,6 +234,7 @@ EncodeSeason(state) -> bytes:
     WriteU32(SEASON_STATE_FORMAT_VERSION)
     WriteU64(state.Seed)
     WriteI32(state.SeasonNumber)
+    WriteI32(state.ManagedClubId)                                    # Appendix B row 3a (ERR-030-011)
     WriteCount(state.ClubIds.Length); for id in ClubIds: WriteI32(id)
     WriteCount(state.Fixtures.Length); for f in Fixtures: WriteFixture(f)
     WriteCalendar(state.Calendar)
@@ -246,6 +247,12 @@ DecodeSeason(bytes) -> state:
     if bytesRead != bytes.Length: throw   # trailing-byte guard (F3)
     validate Calendar.nextDay >= 0 and internal coherence          # F4 checked at SeasonLoop.Restore
 ```
+
+> **Corrected at #30 T1 (ERR-030-011).** The `EncodeSeason` sketch above omitted `ManagedClubId`,
+> which `Appendix B` row 3a lists and §2.2's `SeasonState` requires — following the sketch verbatim
+> would have produced a blob no season could be reconstructed from. **Appendix B is the byte-layout
+> authority**; the pseudocode is now aligned to it. The `WriteBoard` row is likewise pinned by
+> Appendix B row 11 (see that row's own T1 note on the job-security representation).
 
 `SeasonSaveCodec.Encode`/`Decode` gain the season block between the world and match blocks; the outer
 frame becomes `version → matchPresent flag → world block → season block → (match block iff present)`,

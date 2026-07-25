@@ -13,13 +13,14 @@ namespace TacticalDirector.SeasonSave
     /// <summary>
     /// The board's state (#30 §2.2 / FR-SN-014): the season objective and a job-security reading.
     /// <para>
-    /// <b>Job security is an integer per-mille</b> in <c>[0, JobSecurityScale]</c>, not a float.
-    /// Appendix B row 11 leaves the representation open (<c>jobSecurity f32/u8</c>); this resolves it
-    /// toward the integer-arithmetic convention every later management spec standardized on (#41's
-    /// AR-1 moved that spec's whole model "float arithmetic → integer per-mille"; #40 uses integer
-    /// currency; #33 uses per-mille scalars). Integers also make the T1 sub-blob trivially
-    /// round-trip-exact with no NaN gate. Recorded as a spec-clarification back-prop candidate — see
-    /// this landing's notes.
+    /// <b>Job security is an integer per-mille</b> in <c>[0, JobSecurityScale]</c>, not a float. #30 T0
+    /// adopted this against an Appendix B row 11 that then left the representation open
+    /// (<c>jobSecurity f32/u8</c>), following the integer-arithmetic convention every later management
+    /// spec standardized on (#41's AR-1 moved that spec's whole model "float arithmetic → integer
+    /// per-mille"; #40 uses integer currency; #33 uses per-mille scalars); integers also make the T1
+    /// sub-blob round-trip-exact with no NaN gate. The back-prop candidate this row was recorded as is
+    /// now CLOSED: T1 pinned Appendix B row 11 to <c>jobSecurityPerMille i32</c> (ERR-030-011), so the
+    /// spec and this type agree and the representation is no longer open.
     /// </para>
     /// </summary>
     public readonly struct BoardState
@@ -77,4 +78,7 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-07-25 | —      | Initial implementation (#30 T0): integer per-mille job security    |
 // |         |            |        | (resolving Appendix B's open f32/u8 toward the integer convention);|
 // |         |            |        | pure IsOnTrack projection (FR-SN-015). Boundary evaluation is T3.  |
+// | 1.1     | 2026-07-25 | —      | AR pass 2 (doc): the Appendix B row 11 back-prop candidate is now  |
+// |         |            |        | CLOSED — T1 pinned the row to jobSecurityPerMille i32              |
+// |         |            |        | (ERR-030-011), so the representation is no longer open.            |
 #endregion

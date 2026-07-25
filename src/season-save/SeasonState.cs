@@ -81,8 +81,10 @@ namespace TacticalDirector.SeasonSave
         /// <exception cref="System.ArgumentNullException">A required reference argument is null.</exception>
         /// <exception cref="System.ArgumentException">
         /// Fewer than 2 clubs; a duplicate club id; a negative season number; a
-        /// <paramref name="managedClubId"/> absent from the club set; or a fixture naming a club
-        /// outside the club set (each an incoherent-state gate — the fail-loud posture of F2/F3).
+        /// <paramref name="managedClubId"/> absent from the club set; a calendar mapping no rounds or
+        /// fewer rounds than the schedule spans; a table disagreeing with the club set; or a fixture
+        /// naming a club outside the club set (each an incoherent-state gate — the fail-loud posture of
+        /// F2/F3).
         /// </exception>
         public SeasonState(
             ulong seed,
@@ -157,9 +159,30 @@ namespace TacticalDirector.SeasonSave
                 }
             }
 
-            // The calendar must cover every round the schedule uses, or the cursor can never reach the
-            // trailing rounds (and DayOfRound would throw mid-season). A default(SeasonCalendar) has
-            // RoundCount 0, so this also rejects an unset calendar alongside a real schedule.
+            // An EMPTY schedule is incoherent on the type's own terms — the constructor already requires
+            // >= 2 clubs, and FR-SN-002 gives any such competition N*(N-1) >= 2 fixtures. Refusing it
+            // here is also what keeps the round-coverage checks below (and the identical one in
+            // BeginNextSeason) from going VACUOUS: with no fixtures, maxRound stays -1 and
+            // `maxRound >= calendar.RoundCount` is false for every calendar, including a zero-round
+            // default(SeasonCalendar) — which SeasonStateCodec can encode but not decode
+            // (SeasonCalendar.Create refuses a zero-round mapping), breaking the FR-SN-022 round-trip.
+            if (sched.Length < 1)
+            {
+                throw new System.ArgumentException(
+                    "A season needs at least one fixture; an empty schedule is not a season.",
+                    nameof(fixtures));
+            }
+
+            // Belt-and-braces on the same failure: assert the calendar maps a round directly, rather
+            // than relying on the non-empty schedule above to make the coverage check bite.
+            if (calendar.RoundCount < 1)
+            {
+                throw new System.ArgumentException(
+                    "A season calendar must map at least one round.", nameof(calendar));
+            }
+
+            // The calendar must also cover every round the schedule uses, or the cursor can never reach
+            // the trailing rounds (and DayOfRound would throw mid-season).
             int maxRound = -1;
             for (int i = 0; i < sched.Length; i++)
             {
@@ -388,6 +411,17 @@ namespace TacticalDirector.SeasonSave
                 }
             }
 
+            // Same reason as the constructor: the coverage check below goes VACUOUS on an empty
+            // schedule (maxRound stays -1), so a zero-round calendar would slip through and produce a
+            // state SeasonStateCodec can encode but not decode. The length-equality gate above already
+            // implies non-empty for any season built through the constructor, but this method is the
+            // #43 promotion/relegation seam and must not depend on that.
+            if (nextCalendar.RoundCount < 1)
+            {
+                throw new System.ArgumentException(
+                    "The next season's calendar must map at least one round.", nameof(nextCalendar));
+            }
+
             if (maxRound >= nextCalendar.RoundCount)
             {
                 throw new System.ArgumentException(
@@ -470,4 +504,14 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | accessors, KD-7 internal mutators, Clone/FieldsEqual.              |
 // | 1.2     | 2026-07-25 | —      | AR pass 3: recorded the single-threaded-access contract and the    |
 // |         |            |        | T2 marshaling obligation (#38 sim/UI thread split).                |
+// | 1.3     | 2026-07-25 | —      | #30 T1 AR: the constructor now requires a calendar mapping at      |
+// |         |            |        | least one round. An EMPTY schedule with a default(SeasonCalendar)  |
+// |         |            |        | previously passed (the coverage check is vacuous at maxRound -1),  |
+// |         |            |        | producing a state SeasonStateCodec can encode but not decode —     |
+// |         |            |        | an FR-SN-022 round-trip asymmetry closed at its source.            |
+// | 1.4     | 2026-07-25 | —      | #30 T1 AR pass 1: the ctor now also refuses an EMPTY schedule      |
+// |         |            |        | (the root cause v1.3 treated a symptom of), and BeginNextSeason    |
+// |         |            |        | mirrors the zero-round calendar guard — its own coverage check is  |
+// |         |            |        | vacuous at maxRound = -1, so a roll could install a state Encode   |
+// |         |            |        | writes and Decode refuses.                                         |
 #endregion

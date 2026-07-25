@@ -446,6 +446,21 @@ namespace TacticalDirector.SeasonSave.Tests
                 "a 6-round schedule cannot ride a 2-round calendar");
         }
 
+        [Test]
+        public void BeginNextSeason_RejectsCalendarMappingNoRounds()
+        {
+            // The constructor's zero-round guard, mirrored onto the roll — this is the #43
+            // promotion/relegation seam, and the coverage check above goes vacuous on an empty schedule,
+            // so without this guard a roll could install a default(SeasonCalendar) that
+            // SeasonStateCodec.Encode writes and Decode refuses (breaking the FR-SN-022 round-trip).
+            SeasonState state = NewSeason();
+            Fixture[] next = FixtureScheduler.Generate(FourClubs, 5UL);
+
+            Assert.Throws<System.ArgumentException>(
+                () => state.BeginNextSeason(5UL, next, default(SeasonCalendar)),
+                "a calendar mapping no rounds must be refused at the roll, not just at construction");
+        }
+
         /// <summary>
         /// A calendar that does not cover the schedule's rounds would strand the cursor mid-season
         /// (and throw from DayOfRound), so the constructor rejects it — including the degenerate
@@ -617,4 +632,7 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | FieldsEqual traverses five aggregate value types — added |
 // |         |            |        | counts for LeagueTableRow/Fixture/SeasonCalendar/Board-  |
 // |         |            |        | State/BoardObjective (sibling-drift, PM AR-7 M-1 class).  |
+// | 1.3     | 2026-07-25 | —      | #30 T1 AR pass 1: + BeginNextSeason_RejectsCalendarMapping|
+// |         |            |        | NoRounds — the roll's coverage check is vacuous on an     |
+// |         |            |        | empty schedule, so the zero-round guard is mirrored there.|
 #endregion
