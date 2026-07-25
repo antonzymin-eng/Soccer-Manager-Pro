@@ -139,5 +139,5 @@ forward design (nothing is built yet).
 | 0.4 | 2026-07-23 | — | Back-prop ERR-030-003 (at #40 approval): FR-SN-031 now enumerates two insertion points — (a') #43 promo/rel and (b') #40 finance settlement (after (a')). |
 | 0.5 | 2026-07-23 | — | Back-prop ERR-030-004 (at #31 approval): FR-SN-034 tick-order null-seam enumeration extended to include Transfers #31 (appended as step 5, a deep-tier position reservation). |
 | 0.6 | 2026-07-23 | — | Back-prop ERR-030-006 (at #34 approval): FR-SN-034 tick-order null-seam enumeration extended to include Staff #34 (appended as step 6, a deep-tier position reservation; `AdvanceDay` → step 7). |
-#endregion
 | 0.7 | 2026-07-24 | — | Back-prop ERR-030-007 (at #42 approval): FR-SN-034 tick-order null-seam enumeration extended to include Youth Academy #42 (appended as step 7; `AdvanceDay` → step 8). |
+#endregion
