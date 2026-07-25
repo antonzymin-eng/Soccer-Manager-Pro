@@ -1,7 +1,16 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 25, 2026 (**Youth Academy & Intake #42 header reconciliation.** #42 was approved
+> **Last Updated:** July 25, 2026, later same day (**Board & Ownership Dynamics #45 authored + advanced
+> `→ IN REVIEW → APPROVED`.** Wave 5's second spec — board confidence as persistent per-club state, ownership
+> profiles as dials on one code path, takeovers deferred to the deep tier. **KD-5** resolves a real
+> double-truth with #30: `BoardState.JobSecurity` becomes a **derived band** over #45's confidence rather
+> than independent state (ERR-030-009), removing the season block's last `float` — the one non-additive
+> consequence, carrying a `SEASON_STATE_FORMAT_VERSION` bump at T2 with no migration. **No #40 back-prop**
+> (FR-FN-019 already named #45 as the `BoardModifier` producer). ERR-045-001 also closes an A-04 placeholder
+> gap left by #42's approval. Supplement AR-1 (4M+2L) → AR-2 (3L) → CONVERGENCE; section-file PASS-1 (3M+3L)
+> → AR-2 (2L) → CONVERGENCE. Count: **40 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 25, 2026 (**Youth Academy & Intake #42 header reconciliation.** #42 was approved
 > July 24 and its registry row added, but this header block was never refreshed — it still named #34 and
 > read **38 APPROVED**. The true count is **39 APPROVED / 0 IN REVIEW / 0 NOT STARTED**. See the corrected
 > #42 entry in Registry Changes, which also records the outstanding `_RESERVED_0x2B_` A-04 placeholder now
@@ -321,6 +330,7 @@
 | 31 | Transfers, Contracts & Negotiation | `transfers-contracts-negotiation/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 34 | Staff & Backroom | `staff-backroom/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 42 | Youth Academy & Intake | `youth-academy-intake/` | 6¹ | APPROVED | Jul 24, 2026 |
+| 45 | Board & Ownership Dynamics | `board-ownership-dynamics/` | 6¹ | APPROVED | Jul 25, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
@@ -431,6 +441,28 @@ consistent with #23 having been free to reserve and now promote.
   #40 pattern). The placeholder is filed with #45's ERR-045-001, which covers `0x2B`/`0x2C`/`0x2D`
   together — the same retroactive gap-closing v1.0.13 did for `0x23`–`0x28`. All 11 section files
   `Status: APPROVED`. Count: **39 APPROVED, 0 IN REVIEW, 0 NOT STARTED.**
+- **July 25, 2026 — Board & Ownership Dynamics (#45) added `→ APPROVED`.** Wave 5's second spec (the
+  manager↔board relationship as persistent state). Section files v0.1–v0.4 from the AR-converged supplement
+  `docs/tracking/board-ownership-dynamics-design.md` v0.3 (AR-1 4M+2L → AR-2 3L → CONVERGENCE). FR-BD-001..030
+  + FR-BD-005a. **KD-5 is the headline** and the reason this spec is not purely additive: #30 already held a
+  job-security scalar, so #45's confidence would have been a **second truth for one quantity** that diverges
+  at the first restore undetected. #30 keeps the objective and its boundary evaluation; `JobSecurity` becomes
+  a **derived band** over #45's per-mille confidence (ERR-030-009), which also removes the season block's
+  **last `float`** — and carries a `SEASON_STATE_FORMAT_VERSION` bump at #45 T2 with **no migration**
+  (#50 inherits the position). **KD-2:** takeovers are deep-tier, so `0x2D` stays RESERVED; when it promotes
+  it uses **one** subsystem-wide stream with keyed action ordinals, never one per club, so #45 never
+  contributes to the shared `MaxRngStreams = 64` bound #42 R-1 records. **§3.2** shifts the expectation
+  reference point rather than scaling the signed deviation — scaling makes a demanding owner harsher on
+  success and *more forgiving of failure*; T-BD-U-004 locks the direction below neutral where the rejected
+  formulation fails. **No #40 back-prop** — FR-FN-018/019/027 already specified #45 as the `BoardModifier`
+  producer, so #45 fits an existing contract. Section-file PASS-1 0H+3M+3L (headline: the
+  `default(BoardConfidence)` trap — every field in range, so no range check catches it, yet it reads as the
+  `Critical` "dismissal imminent" band with a broken day-0 guard) → AR-2 0H+0M+2L convergence. **All four
+  gates closed same day:** G1; **G2 three back-props** — ERR-030-008 (#30 tick order gains the board seam as
+  step 8, `AdvanceDay` → 9), ERR-030-009, and ERR-045-001 (#16 §3.4 v1.0.14 gains **three** `_RESERVED_` rows
+  `0x2B`/`0x2C`/`0x2D`, closing an A-04 gap #42's approval had left); G3 lead-developer sign-off; G4 this row.
+  `spec-error-log.md` → v1.39. All 11 section files `Status: APPROVED`. Count:
+  **40 APPROVED, 0 IN REVIEW, 0 NOT STARTED.**
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 
 ---

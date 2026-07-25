@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** July 24, 2026 (v0.7 — back-prop ERR-030-007 academy tick-order seam; prior v0.6 ERR-030-006 staff; prior v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 0.7
+**Last Updated:** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Version:** 0.8
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -121,13 +121,16 @@ RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned or
     #                           latched on LastIntakeWorldDay, so on all but one day per intake period
     #                           it is two integer comparisons and a return; positioned after staff and
     #                           before the world-day tick)
-    # 8. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
+    # 8. board         (#45)  — NULL SEAM today (ERR-030-008 — the board-confidence day step:
+    #                           one integer drift per modelled club, positioned after academy and before
+    #                           the world-day tick. Goes live at #45's own T2, like #42's seam)
+    # 9. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
     WorldStore.AdvanceDay()
 ```
 
 **KD-4 invariant:** `Calendar.dayOf(NextRoundIndex) ≥ WorldStore.CurrentWorldTick` always; a restore
-re-checks this and fails loud (F4). The Wave-2+ seams (steps 1–7) are **documented positions**, not
-interfaces — #28/#29/#33/#41/#31/#34/#42 each slot into a pre-declared slot when they land, so a wrong order
+re-checks this and fails loud (F4). The Wave-2+ seams (steps 1–8) are **documented positions**, not
+interfaces — #28/#29/#33/#41/#31/#34/#42/#45 each slot into a pre-declared slot when they land, so a wrong order
 here would force a re-pin across every Wave-2+ spec (§7). The injuries seam (step 4, appended by ERR-030-002 at
 #41's approval) is positioned after #28/#29 so its occurrence-risk assembly reads the day's updated
 training-fatigue / condition, and before the live world-day tick. The transfers seam (step 5, appended by
@@ -140,8 +143,11 @@ until the deep tier's daily candidate-pool / in-flight-hiring processing; it too
 before the world-day tick. The academy seam (step 7, appended by ERR-030-007 at #42's approval) is the
 youth-intake step: unlike steps 5–6 it becomes live at #42's own T-phase rather than only at a deep tier,
 but it is a **one-shot latched on `LastIntakeWorldDay`**, so on every day but one per intake period it is
-two integer comparisons and a return. With only the world-day tick live, a no-fixture day's advance is
-**byte-identical** to a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8).
+two integer comparisons and a return. The board seam (step 8, appended by ERR-030-008 at #45's approval)
+is the board-confidence day step — like the academy seam it goes live at #45's own T-phase rather than only
+at a deep tier, and it costs one bounded integer drift per **modelled** club (the minimal tier models the
+managed club only). With only the world-day tick live, a no-fixture day's advance is **byte-identical** to
+a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8).
 
 ## 3.4 Playing a round (FR-SN-012..013b / KD-9)
 
@@ -234,7 +240,10 @@ EncodeSeason(state) -> bytes:
     WriteCount(state.Fixtures.Length); for f in Fixtures: WriteFixture(f)
     WriteCalendar(state.Calendar)
     WriteCount(table rows); for r in Table.rows: WriteTableRow(r)     # per-club, ClubId order
-    WriteBoard(state.Board)
+    WriteBoard(state.Board)     # ERR-030-009: at #45 T2 `JobSecurity` is written as a DERIVED BAND
+                                #  (a u8 enum over #45's per-mille confidence), not an independent
+                                #  scalar -- see the note below. That is a SEASON_STATE_FORMAT_VERSION
+                                #  bump, landing with the effect at #45 T2, not with this spec text.
 
 DecodeSeason(bytes) -> state:
     version = ReadU32(); if version != SEASON_STATE_FORMAT_VERSION: throw   # F3
@@ -242,6 +251,17 @@ DecodeSeason(bytes) -> state:
     if bytesRead != bytes.Length: throw   # trailing-byte guard (F3)
     validate Calendar.nextDay >= 0 and internal coherence          # F4 checked at SeasonLoop.Restore
 ```
+
+**`JobSecurity` after #45 (ERR-030-009).** Board & Ownership #45 owns a persistent per-club
+board-confidence scalar. Keeping an independent `JobSecurity` scalar here alongside it would be **two
+truths for one quantity** — they would diverge at the first restore with nothing to detect it — so at
+**#45 T2** `BoardState.JobSecurity` stops being independent state and becomes a **derived band**
+(`JobSecurityBand`, a `u8` enum) projected on read from #45's confidence. #30 keeps sole ownership of
+`BoardObjective` and of the season-boundary pass/fail evaluation; only the *job-security* half moves to a
+projection. Two consequences, both deliberate: the season block loses its last `float` (every other
+management-layer spec — #28/#33/#40/#41/#42/#45 — is integer-only by requirement), and the representation
+change is a **`SEASON_STATE_FORMAT_VERSION` bump**, so pre-T2 saves are rejected fail-loud with **no
+migration** (cross-version migration is #50's subject). The bump lands with the *effect* at #45 T2.
 
 `SeasonSaveCodec.Encode`/`Decode` gain the season block between the world and match blocks; the outer
 frame becomes `version → matchPresent flag → world block → season block → (match block iff present)`,
@@ -275,4 +295,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 0.5 | 2026-07-23 | — | Back-prop ERR-030-004 (at #31 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the transfers null seam as step 5 (after injuries, before the world-day tick; `AdvanceDay` → step 6); a deep-tier position reservation, empty at minimal. Prose + FR-SN-034 enumeration updated. |
 | 0.6 | 2026-07-23 | — | Back-prop ERR-030-006 (at #34 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the staff null seam as step 6 (after transfers, before the world-day tick; `AdvanceDay` → step 7); a deep-tier position reservation, empty at minimal. Prose + FR-SN-034 enumeration updated. |
 | 0.7 | 2026-07-24 | — | Back-prop ERR-030-007 (at #42 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the academy null seam as step 7 (after staff, before the world-day tick; `AdvanceDay` → step 8); prose records that this seam goes live at #42's own T-phase but is a latched one-shot, so all but one day per intake period costs two comparisons. |
+| 0.8 | 2026-07-25 | — | Back-props ERR-030-008 + ERR-030-009 (at #45 approval): §3.3 tick order gains the **board null seam as step 8** (`AdvanceDay` → step 9; prose + "documented positions" extended to steps 1–8 / #45); §3.6 records that at #45 T2 `JobSecurity` is serialized as a **derived band** over #45's confidence rather than an independent scalar — removing the season block's last float and carrying a `SEASON_STATE_FORMAT_VERSION` bump with no migration path. |
 #endregion

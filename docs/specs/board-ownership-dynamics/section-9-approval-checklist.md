@@ -1,9 +1,9 @@
 # Board & Ownership Dynamics #45 — Section 9: Approval Checklist
 
 **Created:** July 25, 2026
-**Last Updated:** July 25, 2026 (v0.3 — pre-approval verification; ERR-045-001 widened)
-**Version:** 0.3
-**Status:** IN REVIEW
+**Last Updated:** July 25, 2026 (v0.4 — all gates closed; APPROVED)
+**Version:** 0.4
+**Status:** APPROVED
 
 ---
 
@@ -75,9 +75,9 @@
 | Gate | Owner | Status |
 |---|---|---|
 | **G1** — section-file PASS-1 adversarial review + a v0.2 fix pass. | drafter | ✅ **CLOSED** — see §9.4.1 |
-| **G2** — file **ERR-030-008**, **ERR-030-009**, **ERR-045-001** (three `_RESERVED_` rows: `0x2B`/`0x2C`/`0x2D`) atomically with the status flip. | drafter | ⏳ **OPEN** — edits prepared and anchors verified; applied at the flip by design |
-| **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ⏳ **OPEN** |
-| **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ⏳ **OPEN** |
+| **G2** — file **ERR-030-008**, **ERR-030-009**, **ERR-045-001** (three `_RESERVED_` rows: `0x2B`/`0x2C`/`0x2D`) atomically with the status flip. | drafter | ✅ **CLOSED** — filed July 25, 2026 (#30 §2/§3 → v0.8; #16 §3.4 → v1.0.14; `spec-error-log.md` v1.39) |
+| **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ✅ **CLOSED** — granted July 25, 2026 |
+| **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ✅ **CLOSED** — row added July 25, 2026 (**40 APPROVED**) |
 
 **Not gating (deferred by design, recorded so they are not mistaken for omissions):** the `0x2D`
 promotion (T3, first draw — FR-LW-031 forbids registering it earlier); the outer
@@ -109,17 +109,28 @@ a wrong claim in the *approval checklist* being worse than the same slip elsewhe
 
 | Role | Criterion | Signed |
 |---|---|---|
-| R-01 | Scope and out-of-scope boundaries are unambiguous; no model #45 does not own is duplicated, and the #30 reconciliation is explicit rather than implied. | ⏳ |
-| R-02 | Every formula has units, ranges, and at least one worked example; no fabricated verification values. | ⏳ |
-| R-03 | Determinism posture is complete: stream ownership, the keyed ordinal, the draw-free minimal tier, and the no-cursor claim are each justified. | ⏳ |
-| R-04 | Persistence is version-gated, opaque, fail-loud, and bumps no format version it does not own; the three independent versions are distinguished. | ⏳ |
-| R-05 | Cross-spec back-props are enumerated with owners and timing, and the one non-additive change (ERR-030-009) is called out rather than buried. | ⏳ |
+| R-01 | Scope and out-of-scope boundaries are unambiguous; no model #45 does not own is duplicated, and the #30 reconciliation is explicit rather than implied. | ✅ 2026-07-25 |
+| R-02 | Every formula has units, ranges, and at least one worked example; no fabricated verification values. | ✅ 2026-07-25 |
+| R-03 | Determinism posture is complete: stream ownership, the keyed ordinal, the draw-free minimal tier, and the no-cursor claim are each justified. | ✅ 2026-07-25 |
+| R-04 | Persistence is version-gated, opaque, fail-loud, and bumps no format version it does not own; the three independent versions are distinguished. | ✅ 2026-07-25 |
+| R-05 | Cross-spec back-props are enumerated with owners and timing, and the one non-additive change (ERR-030-009) is called out rather than buried. | ✅ 2026-07-25 |
 
 ## 9.6 Decision
 
-**PENDING** — G1 is closed (§9.4.1); **G2/G3/G4 remain open**. #45 stays `IN REVIEW` until the three
-back-props are filed atomically with the status flip, the registry row is added, and lead-developer
-R-01..R-05 sign-off is granted. Sign-off is a human authority and is not self-grantable.
+**APPROVED** — July 25, 2026. All four gates closed: G1 (PASS-1 0H+3M+3L → AR-2 0H+0M+2L convergence,
+§9.4.1), G2 (all three back-props filed — ERR-030-008 board tick-order step 8, ERR-030-009 `JobSecurity`
+derived band, ERR-045-001 three `_RESERVED_` rows; #30 §2/§3 → v0.8, #16 §3.4 → v1.0.14,
+`spec-error-log.md` v1.39), G3 (lead-developer R-01..R-05 sign-off granted), G4 (`SPEC_INDEX.md` row
+added — **40 APPROVED**). All 11 section files are `Status: APPROVED`.
+
+**The one non-additive consequence, restated at the decision point.** ERR-030-009 changes a previously
+approved spec: from #45 T2, #30's `BoardState.JobSecurity` is a derived band rather than independent
+state, which carries a **`SEASON_STATE_FORMAT_VERSION` bump** and makes pre-T2 saves unloadable with **no
+migration path**. This was surfaced before sign-off, not after, and #50 inherits it as a stated position.
+
+**Carried forward, non-blocking:** the `0x2D` → `DOMAIN_TAG_BOARD_OWNERSHIP` promotion (T3, first takeover
+draw); the outer `SEASON_SAVE_FORMAT_VERSION` bump and ERR-030-009's effect (both T2); the #33 morale read
+and #45-as-producer of #33's board delta (both T3); and the T3 `[GT]` balance pass (§A.3).
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -127,4 +138,5 @@ R-01..R-05 sign-off is granted. Sign-off is a human authority and is not self-gr
 | 0.1 | 2026-07-25 | — | Initial §9 (completeness, tag discipline, the §9.3 source-verified claims table, the four open gates + the explicitly-not-gating list, R-01..R-05). Status IN REVIEW. |
 | 0.2 | 2026-07-25 | — | G1 CLOSED: §9.4.1 records the section-file PASS-1 (0H+3M+3L, all resolved) and the AR-2 convergence sweep (0H+0M+2L). §9.1 completeness updated for FR-BD-005a / F4a. G2/G3/G4 remain open. |
 | 0.3 | 2026-07-25 | — | Pre-approval gate-readiness verification. ERR-045-001 widened to three `_RESERVED_` rows after finding #16 §3.4 ends at `0x2A` with no placeholder for `0x2B`/`0x2C` (A-04 violation left by #42's approval). G2 marked prepared-and-verified; it stays OPEN because back-props land **atomically with the flip** by design, not because anything is missing. |
+| 0.4 | 2026-07-25 | — | G2/G3/G4 CLOSED: three back-props filed (ERR-030-008/-009 against #30 → v0.8; ERR-045-001 against #16 §3.4 → v1.0.14; `spec-error-log.md` v1.39), lead-developer R-01..R-05 sign-off granted, `SPEC_INDEX.md` row added at **40 APPROVED**. §9.6 decision APPROVED, with the ERR-030-009 save-format consequence restated at the decision point. |
 #endregion

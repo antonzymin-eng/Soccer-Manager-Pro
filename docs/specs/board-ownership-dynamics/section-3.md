@@ -3,7 +3,7 @@
 **Created:** July 25, 2026
 **Last Updated:** July 25, 2026 (v0.2 — AR-2 sweep fix)
 **Version:** 0.2
-**Status:** IN REVIEW
+**Status:** APPROVED
 
 ---
 
