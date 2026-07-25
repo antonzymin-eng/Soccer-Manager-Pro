@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Scouting — Soccer Manager Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/scouting.css">
+<style>.sp{flex:1}</style>
+<script>
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "density": "comfortable",
+  "accentColor": "#00ff88",
+  "showWatching": true
+}/*EDITMODE-END*/;
+</script>
+</head>
+<body>
+
+<div class="resolution-badge" id="resbadge">1920 × 1080 · standard tier · scale 100%</div>
+
+<div class="fitter">
+<div class="stage" id="stage">
+
+  <!-- TOP CHROME -->
+  <header class="chrome">
+    <div class="brand">
+      <div class="crest-gm">RM</div>
+      <div class="nm">Riverside <em>· Mgr. You</em></div>
+    </div>
+    <nav class="nav">
+      <a href="Club.html">Club</a>
+      <a href="Squad Screen.html">Squad</a>
+      <a href="Tactics.html">Tactics</a>
+      <a href="Training Screen.html">Training</a>
+      <a href="Scouting Screen.html" class="on">Scouting</a>
+      <a href="#">Transfers</a>
+      <a href="#">Staff</a>
+      <a href="#">World</a>
+      <a href="#">Inbox<span class="b">3</span></a>
+    </nav>
+    <div class="sp"></div>
+    <div class="right">
+      <div class="kbd-hint"><span class="lbl">Search anywhere</span><span class="k">⌘ K</span></div>
+      <div class="date">Sat 14 Mar · Wk 31 📅</div>
+      <div class="cont">Continue ▸</div>
+    </div>
+  </header>
+
+  <!-- SUB-TABS -->
+  <div class="crumb">
+    <span class="tab on">Shortlist</span>
+    <span class="tab">Search</span>
+    <span class="tab">Reports</span>
+    <span class="tab">Assignments</span>
+    <span class="tab">Network</span>
+    <span class="tab">History</span>
+    <div class="sp"></div>
+    <div class="hint">
+      BUDGET £38k REMAINING
+      <span class="badge gold">★ 2 targets identified</span>
+      <span class="badge info">✓ 2 reports complete</span>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="tb-grp">
+      <div class="seg">
+        <button class="on">All · 12</button>
+        <button>GK · 1</button>
+        <button>DF · 4</button>
+        <button>MF · 4</button>
+        <button>FW · 3</button>
+      </div>
+    </div>
+    <div class="tb-grp">
+      <span class="chip on">● All</span>
+      <span class="chip">● Targets · 2</span>
+      <span class="chip">● Tracking · 5</span>
+      <span class="chip">● Watching · 5</span>
+    </div>
+    <div class="tb-grp">
+      <span class="tb-label">Sort</span>
+      <div class="seg">
+        <button class="on">Potential</button>
+        <button>Progress</button>
+        <button>Age</button>
+        <button>Fee</button>
+      </div>
+    </div>
+    <div class="tb-grp">
+      <div class="seg">
+        <button class="on">All Regions</button>
+        <button>Europe</button>
+        <button>Americas</button>
+        <button>Africa</button>
+      </div>
+    </div>
+    <div class="sp"></div>
+    <div class="tb-grp">
+      <button class="btn">+ Add Player</button>
+      <button class="btn">↗ Assign Scout</button>
+      <button class="btn primary">↓ Export Shortlist</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- LEFT: SCOUT NETWORK -->
+    <div class="scout-col">
+      <div class="scout-head">
+        <div class="ttl">Scout Network <em>Wk 31</em></div>
+        <div class="bdg">5 active</div>
+      </div>
+      <div class="scout-list" id="scoutList"></div>
+      <div class="coverage">
+        <h5>Regional Coverage</h5>
+        <div id="coverage"></div>
+      </div>
+    </div>
+
+    <!-- CENTER: SHORTLIST TABLE -->
+    <div class="shortlist-pane">
+      <div class="table-head">
+        <div class="h">Pos</div>
+        <div class="h">Player</div>
+        <div class="h">Age</div>
+        <div class="h">Club</div>
+        <div class="h">Nation</div>
+        <div class="h sorted">Potential <span class="arr">↓</span></div>
+        <div class="h">Progress</div>
+        <div class="h">Est. Fee</div>
+        <div class="h">Scout</div>
+        <div class="h">Status</div>
+      </div>
+      <div class="rows" id="shortlistRows"></div>
+      <div class="footer-bar" id="shortlistFooter"></div>
+    </div>
+
+    <!-- RIGHT: REPORT PANEL -->
+    <div class="report-panel" id="reportPanel"></div>
+
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status">
+    <span class="dot"></span><span>SAVE · auto · 11:58</span>
+    <span class="bullet">·</span>
+    <span>BUILD 0.2.31-touchline</span>
+    <span class="bullet">·</span>
+    <span>1920 × 1080 · standard tier</span>
+    <span class="bullet">·</span>
+    <span id="statusInfo">12 shortlisted · 2 complete · 5 scouts deployed</span>
+    <div class="sp"></div>
+    <span>FPS 60</span>
+    <span class="bullet">·</span>
+    <span>RAM 1.2 GB</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--brand-400)">⌘K to search anything</span>
+  </div>
+
+</div>
+</div>
+
+<!-- ================================================================
+     DATA + RENDER
+     ================================================================ -->
+<script>
+
+/* ── SCOUTS ──────────────────────────────────────────────────────── */
+const SCOUTS = [
+  {init:'PE', name:'P. Eriksen',    region:'Scandinavia',    assign:'F. Lindqvist · AIK Stockholm',  progress:72, status:'active'},
+  {init:'RO', name:'R. Okonkwo',    region:'West Africa',    assign:'A. Traoré · Stade Rennais',     progress:80, status:'active'},
+  {init:'AR', name:'A. Rodrigues',  region:'Iberia / LatAm', assign:'D. Ferrer · Sporting CP',       progress:88, status:'complete'},
+  {init:'LZ', name:'L. Zimmermann', region:'DACH',           assign:'E. Vogel · Hoffenheim',         progress:60, status:'active'},
+  {init:'TB', name:'T. Bassi',      region:'Serie A',        assign:'G. Ricci · Fiorentina',         progress:30, status:'active'},
+];
+
+const COVERAGE = [
+  {lbl:'Europe',        pct:78, col:'var(--info-400)'},
+  {lbl:'South America', pct:44, col:'var(--pos-400)'},
+  {lbl:'Africa',        pct:52, col:'var(--gold-400)'},
+  {lbl:'Asia / MENA',   pct:18, col:'var(--neg-400)'},
+];
+
+/* ── TARGETS ─────────────────────────────────────────────────────── */
+const TARGETS = [
+  /* ── TIER: TARGET ── */
+  {
+    id:1, pos:'DF', name:'D. Ferrer', age:24, club:'Sporting CP', nat:'🇵🇹', natC:'POR',
+    pot:4, ca:16, progress:88, fee:'£14.5M', scout:'A. Rodrigues', status:'COMPLETE', flag:'TARGET', tier:'target',
+    attrs:[
+      {g:'Defending', r:[['Marking',17],['Tackling',16],['Positioning',15],['Heading',13]]},
+      {g:'Technical',  r:[['Passing',16],['Composure',16],['Vision',15],['Dribbling',11]]},
+    ],
+    contract:'Jun 2026', wage:'£28k/wk', matches:5,
+    rec:'SIGN NOW', recType:'sign', recSub:'Contract expires Jun 2026 — act immediately',
+    note:'Exceptional ball-playing defender with outstanding composure and vision. Reads the game superbly — rarely caught out of position. Contract expires in weeks; a genuine chance to acquire elite defensive talent at low cost. Strong recommendation to move before larger clubs engage.',
+  },
+  {
+    id:2, pos:'FW', name:'A. Traoré', age:21, club:'Stade Rennais', nat:'🇸🇳', natC:'SEN',
+    pot:5, ca:14, progress:80, fee:'£11.2M', scout:'R. Okonkwo', status:'COMPLETE', flag:'TARGET', tier:'target',
+    attrs:[
+      {g:'Physical', r:[['Pace',18],['Agility',17],['Stamina',14],['Strength',11]]},
+      {g:'Technical', r:[['Dribbling',16],['Finishing',14],['Crossing',13],['Composure',12]]},
+    ],
+    contract:'Jun 2027', wage:'£18k/wk', matches:4,
+    rec:'SIGN NOW', recType:'sign', recSub:'World-class ceiling — summer window only',
+    note:'Devastating pace and exceptional close control — can beat defenders at will in wide areas. Still raw in decision-making but upside is enormous. Rennais will sell at £12M. Recommend securing before summer attention from Bundesliga and L1 clubs pushes up the price.',
+  },
+  /* ── TIER: TRACKING ── */
+  {
+    id:3, pos:'GK', name:'F. Lindqvist', age:22, club:'AIK Stockholm', nat:'🇸🇪', natC:'SWE',
+    pot:4, ca:14, progress:72, fee:'£4.2M', scout:'P. Eriksen', status:'TRACKING', flag:null, tier:'tracking',
+    attrs:[
+      {g:'Goalkeeping', r:[['Reflexes',16],['Handling',15],['Composure',15],['Commands',13]]},
+      {g:'Distribution', r:[['Kicking',13],['Positioning',14],['Agility',14],['Pace',11]]},
+    ],
+    contract:'Jun 2027', wage:'£12k/wk', matches:3,
+    rec:'MONITOR', recType:'monitor', recSub:'One more match observation recommended',
+    note:'Highly composed shot-stopper with commanding presence. Good distribution with both feet suits our build-up play. Clean sheet in 11 of 22 appearances this season. Report nearing completion — recommend one further away match before finalising assessment.',
+  },
+  {
+    id:4, pos:'MF', name:'J. Osei', age:22, club:'Anderlecht', nat:'🇧🇪', natC:'BEL',
+    pot:4, ca:15, progress:65, fee:'£7.8M', scout:'R. Okonkwo', status:'TRACKING', flag:'PRIO', tier:'tracking',
+    attrs:[
+      {g:'Passing', r:[['Passing',15],['Vision',15],['Decisions',14],['Composure',13]]},
+      {g:'Engine',   r:[['Work Rate',16],['Stamina',16],['Pressing',15],['Dribbling',13]]},
+    ],
+    contract:'Jun 2026', wage:'£22k/wk', matches:3,
+    rec:'SIGN NOW', recType:'sign', recSub:'Bundesliga interest reported — move quickly',
+    note:'Outstanding engine-room midfielder, 12.4km average over last 5 appearances. Reads pressing triggers instinctively and has excellent passing range. Contract expires summer 2026. Two Bundesliga clubs have been linked — window to move at this price will close soon.',
+  },
+  {
+    id:5, pos:'DF', name:'E. Vogel', age:23, club:'Hoffenheim', nat:'🇩🇪', natC:'GER',
+    pot:4, ca:15, progress:60, fee:'£9.0M', scout:'L. Zimmermann', status:'TRACKING', flag:null, tier:'tracking',
+    attrs:[
+      {g:'Defending', r:[['Marking',15],['Heading',15],['Tackling',14],['Positioning',14]]},
+      {g:'Physical',  r:[['Strength',16],['Stamina',15],['Pace',12],['Composure',13]]},
+    ],
+    contract:'Jun 2027', wage:'£25k/wk', matches:3,
+    rec:'MONITOR', recType:'monitor', recSub:'2 further observations planned',
+    note:'Physical, aerial CB with decisive tackling and strong set-piece presence. Less comfortable in possession than our preferred profile but dominant at ground level. Two further matches planned to complete the report.',
+  },
+  {
+    id:6, pos:'MF', name:'C. Vela', age:21, club:'Real Betis B', nat:'🇪🇸', natC:'ESP',
+    pot:5, ca:13, progress:55, fee:'£5.5M', scout:'A. Rodrigues', status:'TRACKING', flag:null, tier:'tracking',
+    attrs:[
+      {g:'Technical', r:[['Dribbling',15],['Creativity',14],['Passing',14],['Vision',14]]},
+      {g:'Physical',  r:[['Pace',15],['Agility',15],['Decisions',11],['Finishing',12]]},
+    ],
+    contract:'Jun 2028', wage:'£8k/wk', matches:2,
+    rec:'MONITOR', recType:'monitor', recSub:'Elite ceiling — report 55% complete',
+    note:'Technically gifted creative midfielder — exceptional close control and natural vision. Inconsistent at present but the ceiling is elite. Long contract provides good negotiating leverage. Worth pursuing this summer before a first-team breakthrough inflates his valuation.',
+  },
+  {
+    id:7, pos:'FW', name:'P. Cabral', age:23, club:'Vitória SC', nat:'🇧🇷', natC:'BRA',
+    pot:4, ca:15, progress:50, fee:'£8.5M', scout:'A. Rodrigues', status:'TRACKING', flag:null, tier:'tracking',
+    attrs:[
+      {g:'Attacking', r:[['Hold Up',16],['Finishing',15],['Heading',14],['Vision',13]]},
+      {g:'Physical',  r:[['Strength',15],['Composure',14],['Pace',13],['Work Rate',14]]},
+    ],
+    contract:'Jun 2027', wage:'£16k/wk', matches:2,
+    rec:'MONITOR', recType:'monitor', recSub:'Reliable target man — 50% complete',
+    note:'Physical striker with excellent hold-up play and aerial threat. Creates well for teammates from crosses — 14 headed chances created this season. Mid-range ceiling but consistent and reliable. Two more observations planned.',
+  },
+  /* ── TIER: WATCHING ── */
+  {
+    id:8, pos:'DF', name:'K. Mensah', age:20, club:'Genk', nat:'🇬🇭', natC:'GHA',
+    pot:5, ca:13, progress:45, fee:'£6.8M', scout:'R. Okonkwo', status:'WATCHING', flag:null, tier:'watching',
+    attrs:[
+      {g:'Physical', r:[['Pace',17],['Agility',15],['Strength',13],['Stamina',14]]},
+      {g:'Defending', r:[['Tackling',14],['Marking',13],['Positioning',13],['Composure',11]]},
+    ],
+    contract:'Jun 2027', wage:'£9k/wk', matches:2,
+    rec:'MONITOR', recType:'monitor', recSub:'Very early — 3+ more matches needed',
+    note:'Raw but exciting young defender — exceptional athleticism and recovery pace. Still developing positional discipline. Very early stages; remarkable raw ceiling but need at minimum 3 more match observations before any recommendation.',
+  },
+  {
+    id:9, pos:'DF', name:'M. Lindqvist', age:19, club:'Malmö FF', nat:'🇸🇪', natC:'SWE',
+    pot:5, ca:12, progress:35, fee:'£2.1M', scout:'P. Eriksen', status:'WATCHING', flag:null, tier:'watching',
+    attrs:[
+      {g:'Defending', r:[['Pace',14],['Tackling',12],['Marking',12],['Positioning',11]]},
+      {g:'General',   r:[['Agility',13],['Passing',11],['Composure',10],['Heading',13]]},
+    ],
+    contract:'Jun 2026', wage:'£4k/wk', matches:1,
+    rec:'MONITOR', recType:'monitor', recSub:'Long-term project — 1 match only',
+    note:'Promising young centre-back — only one match scouted. Long-term development project at a very low price point. No recommendation until further observation.',
+  },
+  {
+    id:10, pos:'MF', name:'O. Svensson', age:20, club:'Brøndby IF', nat:'🇩🇰', natC:'DEN',
+    pot:5, ca:12, progress:40, fee:'£3.2M', scout:'P. Eriksen', status:'WATCHING', flag:null, tier:'watching',
+    attrs:[
+      {g:'Engine',   r:[['Stamina',15],['Work Rate',14],['Pressing',13],['Pace',14]]},
+      {g:'Technical', r:[['Passing',13],['Dribbling',13],['Vision',13],['Decisions',11]]},
+    ],
+    contract:'Jun 2027', wage:'£7k/wk', matches:2,
+    rec:'MONITOR', recType:'monitor', recSub:'Continue into next season',
+    note:'Energetic box-to-box midfielder with a good engine and natural pressing ability. Technical quality still developing. Promising early signs — recommend extending scouting into next season.',
+  },
+  {
+    id:11, pos:'MF', name:'G. Ricci', age:26, club:'Fiorentina', nat:'🇮🇹', natC:'ITA',
+    pot:4, ca:17, progress:30, fee:'£18.0M', scout:'T. Bassi', status:'WATCHING', flag:null, tier:'watching',
+    attrs:[
+      {g:'Playmaking', r:[['Passing',17],['Vision',17],['Creativity',16],['Decisions',16]]},
+      {g:'General',    r:[['Composure',15],['Dribbling',14],['Stamina',13],['Work Rate',13]]},
+    ],
+    contract:'Jun 2028', wage:'£45k/wk', matches:1,
+    rec:'MONITOR', recType:'monitor', recSub:'High price — need 3+ more observations',
+    note:'Technically excellent deep-lying playmaker — exceptional passing range on first impression. Only 1 match scouted; report very preliminary. High fee and wage demand is a real concern. Need several more observations.',
+  },
+  {
+    id:12, pos:'FW', name:'H. Nielsen', age:19, club:'FC Midtjylland', nat:'🇩🇰', natC:'DEN',
+    pot:5, ca:11, progress:25, fee:'£1.8M', scout:'P. Eriksen', status:'WATCHING', flag:null, tier:'watching',
+    attrs:[
+      {g:'Physical', r:[['Pace',16],['Agility',14],['Strength',11],['Stamina',12]]},
+      {g:'Technical', r:[['Dribbling',12],['Finishing',11],['Vision',10],['Decisions',10]]},
+    ],
+    contract:'Jun 2026', wage:'£3k/wk', matches:1,
+    rec:'MONITOR', recType:'monitor', recSub:'Very raw — development target only',
+    note:'Young wide forward with excellent pace. Very raw — only 1 match observed. Long-term development candidate at a low price. No recommendation pending further observation.',
+  },
+];
+
+/* ── HELPERS ─────────────────────────────────────────────────────── */
+function progColor(v) { return v >= 80 ? 'var(--brand-400)' : v >= 50 ? 'var(--info-400)' : 'var(--neu-400)'; }
+function attrColor(v) {
+  if (v >= 18) return 'var(--attr-20)';
+  if (v >= 15) return 'var(--attr-17)';
+  if (v >= 12) return 'var(--attr-14)';
+  if (v >= 9)  return 'var(--attr-11)';
+  return 'var(--attr-5)';
+}
+function potHTML(n) {
+  const col = n >= 5 ? 'var(--brand-400)' : n >= 4 ? 'var(--pos-400)' : n >= 3 ? 'var(--gold-400)' : 'var(--ink-4)';
+  return `<div class="pot-cell">${[1,2,3,4,5].map(i =>
+    `<span class="pot-pip" style="${i<=n?`background:${col}`:''}"></span>`
+  ).join('')}</div>`;
+}
+function stHTML(s) {
+  const cls = s==='COMPLETE'?'st-complete':s==='TRACKING'?'st-tracking':'st-watching';
+  return `<span class="st ${cls}">${s}</span>`;
+}
+function tagHTML(f) {
+  if (f==='TARGET') return `<span class="tag tag-target">TARGET</span>`;
+  if (f==='PRIO')   return `<span class="tag tag-prio">PRIO</span>`;
+  return '';
+}
+const POT_LABEL = ['','LIMITED','AVERAGE','SOLID','HIGH','WORLD CLASS'];
+const POT_COLOR = ['','var(--ink-5)','var(--ink-4)','var(--gold-400)','var(--pos-400)','var(--brand-400)'];
+
+/* ── RENDER: SCOUTS ──────────────────────────────────────────────── */
+function renderScouts() {
+  document.getElementById('scoutList').innerHTML = SCOUTS.map(s => `
+    <div class="scout-card ${s.status==='complete'?'complete':''}">
+      <div class="scc-row1">
+        <div class="scc-avatar">${s.init}</div>
+        <div class="scc-info">
+          <div class="scc-name">${s.name}</div>
+          <div class="scc-region">${s.region}</div>
+        </div>
+        <div class="scc-dot ${s.status==='complete'?'done':'active'}"></div>
+      </div>
+      <div class="scc-assign">→ <strong>${s.assign}</strong></div>
+      <div class="scc-prog-row">
+        <div class="scc-bar"><i style="width:${s.progress}%;background:${s.status==='complete'?'var(--brand-400)':'var(--info-400)'}"></i></div>
+        <div class="scc-pct">${s.progress}%</div>
+        <div class="scc-badge ${s.status}">${s.status==='complete'?'COMPLETE':'ACTIVE'}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('coverage').innerHTML = COVERAGE.map(c => `
+    <div class="cov-row">
+      <span class="cov-lbl">${c.lbl}</span>
+      <div class="cov-bar"><i style="width:${c.pct}%;background:${c.col}"></i></div>
+      <span class="cov-val" style="color:${c.col}">${c.pct}%</span>
+    </div>`).join('');
+}
+
+/* ── RENDER: TABLE ───────────────────────────────────────────────── */
+function renderTable(selectedId) {
+  const tiers = [
+    {label:'Targets',  cls:'tier-target',   list: TARGETS.filter(p=>p.tier==='target')},
+    {label:'Tracking', cls:'tier-tracking',  list: TARGETS.filter(p=>p.tier==='tracking')},
+    {label:'Watching', cls:'tier-watching',  list: TARGETS.filter(p=>p.tier==='watching')},
+  ];
+  let html = '';
+  tiers.forEach(t => {
+    html += `<div class="group-row ${t.cls}">
+      <span>${t.label}</span>
+      <span class="g-count">${t.list.length}</span>
+      <div class="g-line"></div>
+    </div>`;
+    t.list.forEach(p => {
+      const sel = p.id === selectedId ? ' sel' : '';
+      html += `<div class="row ${t.cls}${sel}" data-id="${p.id}">
+        <span class="pos pos-${p.pos.toLowerCase()}">${p.pos}</span>
+        <div class="nm-cell"><span class="nm">${p.name}</span>${tagHTML(p.flag)}</div>
+        <span class="age-cell">${p.age}</span>
+        <span class="club-cell">${p.club}</span>
+        <span class="nat-cell">${p.nat} ${p.natC}</span>
+        ${potHTML(p.pot)}
+        <div class="prog-cell">
+          <div class="pbar"><i style="width:${p.progress}%;background:${progColor(p.progress)}"></i></div>
+          <span class="ppct">${p.progress}%</span>
+        </div>
+        <span class="fee-cell">${p.fee}</span>
+        <span class="scout-cell">${p.scout.split(' ').pop()}</span>
+        ${stHTML(p.status)}
+      </div>`;
+    });
+  });
+  document.getElementById('shortlistRows').innerHTML = html;
+
+  const complete  = TARGETS.filter(p=>p.status==='COMPLETE').length;
+  const targets   = TARGETS.filter(p=>p.flag==='TARGET').length;
+  const tracking  = TARGETS.filter(p=>p.status==='TRACKING').length;
+  const avgAge    = Math.round(TARGETS.reduce((s,p)=>s+p.age,0)/TARGETS.length);
+  document.getElementById('shortlistFooter').innerHTML = `
+    <div class="fsum">SHORTLIST <b>${TARGETS.length}</b></div>
+    <div class="fsum">TARGETS <b class="ok">${targets}</b></div>
+    <div class="fsum">COMPLETE <b class="gold">${complete}</b></div>
+    <div class="fsum">TRACKING <b class="info">${tracking}</b></div>
+    <div class="fsum">AVG AGE <b>${avgAge}</b></div>
+    <div style="flex:1"></div>
+    <div class="fsum">SCOUTING BUDGET <b class="ok">£120k/yr</b> · 68% USED</div>`;
+}
+
+/* ── RENDER: REPORT ──────────────────────────────────────────────── */
+function renderReport(p) {
+  const potCol   = POT_COLOR[p.pot] || 'var(--ink-3)';
+  const potLabel = POT_LABEL[p.pot] || '';
+  const caCol    = p.ca >= 16 ? 'var(--pos-400)' : p.ca >= 13 ? 'var(--info-400)' : 'var(--neu-400)';
+  const caLabel  = p.ca >= 17 ? 'World class' : p.ca >= 15 ? 'Good' : p.ca >= 12 ? 'Developing' : 'Fringe';
+
+  const attrsHTML = p.attrs.map(grp => `
+    <div class="attr-group">
+      <div class="attr-group-hdr">${grp.g}</div>
+      ${grp.r.map(([lbl,v]) => `
+        <div class="attr-row">
+          <span class="al">${lbl}</span>
+          <div class="ab"><i style="width:${(v/20)*100}%;background:${attrColor(v)}"></i></div>
+          <span class="av" style="color:${attrColor(v)}">${v}</span>
+        </div>`).join('')}
+    </div>`).join('');
+
+  const contractCol = p.contract === 'Jun 2026' ? 'var(--neg-400)' : 'var(--ink-1)';
+  const contractSub = p.contract === 'Jun 2026' ? '⚠ expires soon' : 'expires';
+
+  document.getElementById('reportPanel').innerHTML = `
+    <div class="rp-section">
+      <div class="player-hdr">
+        <div class="ph-flag">${p.nat}</div>
+        <div class="ph-info">
+          <div class="ph-name">${p.name}</div>
+          <div class="ph-sub">${p.club} · ${p.natC} · Age ${p.age}</div>
+          <div class="ph-pills">
+            <span class="pos pos-${p.pos.toLowerCase()}">${p.pos}</span>
+            <span class="ph-pill" style="color:${potCol}">${potLabel} POT</span>
+            <span class="ph-pill info">CA ${p.ca} · ${caLabel}</span>
+          </div>
+        </div>
+      </div>
+      <div class="ca-row" style="margin-top:10px">
+        <div class="ca-block">
+          <div class="ca-lbl">Current Ability</div>
+          <div class="ca-val" style="color:${caCol}">${p.ca}<span style="font-size:13px;color:var(--ink-4)">/20</span></div>
+          <div class="ca-sub">${caLabel}</div>
+        </div>
+        <div class="ca-block">
+          <div class="ca-lbl">Potential</div>
+          <div class="ca-val" style="color:${potCol}">${p.pot}<span style="font-size:13px;color:var(--ink-4)">/5</span></div>
+          <div class="ca-sub">${potLabel}</div>
+        </div>
+        <div class="ca-block">
+          <div class="ca-lbl">Report</div>
+          <div class="ca-val" style="color:${progColor(p.progress)}">${p.progress}<span style="font-size:13px;color:var(--ink-4)">%</span></div>
+          <div class="ca-sub">${p.matches} matches</div>
+        </div>
+      </div>
+      <div class="rec-banner ${p.recType}" style="margin-top:10px">
+        <div class="rec-icon">${p.recType==='sign'?'✓':'◉'}</div>
+        <div class="rec-body">
+          <div class="rec-label">${p.rec}</div>
+          <div class="rec-sub">${p.recSub}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rp-section grow">
+      <h4>Key Attributes</h4>
+      <div class="attr-cols">${attrsHTML}</div>
+
+      <h4 style="margin-top:14px">Scout Report <span class="meta">${p.scout}</span></h4>
+      <div class="notes-card">
+        <div class="nc-header">
+          <span class="nc-scout">${p.scout}</span>
+          <span class="nc-matches">${p.matches} matches observed</span>
+        </div>
+        <div class="nc-text">${p.note}</div>
+      </div>
+
+      <h4 style="margin-top:14px">Contract &amp; Value</h4>
+      <div class="meta-grid">
+        <div class="meta-item">
+          <div class="mi-lbl">Est. Fee</div>
+          <div class="mi-val">${p.fee}</div>
+          <div class="mi-sub">market valuation</div>
+        </div>
+        <div class="meta-item">
+          <div class="mi-lbl">Weekly Wage</div>
+          <div class="mi-val">${p.wage}</div>
+          <div class="mi-sub">current contract</div>
+        </div>
+        <div class="meta-item">
+          <div class="mi-lbl">Contract</div>
+          <div class="mi-val" style="color:${contractCol};font-size:15px">${p.contract}</div>
+          <div class="mi-sub">${contractSub}</div>
+        </div>
+        <div class="meta-item">
+          <div class="mi-lbl">Age</div>
+          <div class="mi-val">${p.age}</div>
+          <div class="mi-sub">${p.age<=21?'developing':p.age<=25?'prime years':'experienced'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button class="abtn primary">+ Transfer Board</button>
+      <button class="abtn">Make Offer</button>
+      <button class="abtn warn">Dismiss</button>
+    </div>`;
+}
+
+/* ── INTERACTION ─────────────────────────────────────────────────── */
+let selectedId = 1;
+
+document.getElementById('shortlistRows').addEventListener('click', e => {
+  const row = e.target.closest('[data-id]');
+  if (!row) return;
+  selectedId = parseInt(row.dataset.id);
+  document.querySelectorAll('.row[data-id]').forEach(r =>
+    r.classList.toggle('sel', parseInt(r.dataset.id) === selectedId)
+  );
+  const p = TARGETS.find(t => t.id === selectedId);
+  if (p) renderReport(p);
+});
+
+/* ── SCALE ───────────────────────────────────────────────────────── */
+function scaleStage() {
+  const stage = document.getElementById('stage');
+  const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  stage.style.transform = `scale(${scale})`;
+  const b = document.getElementById('resbadge');
+  if (b) b.textContent = `1920 × 1080 · standard tier · scale ${Math.round(scale * 100)}%`;
+}
+window.addEventListener('resize', scaleStage);
+scaleStage();
+
+/* ── INIT ────────────────────────────────────────────────────────── */
+renderScouts();
+renderTable(selectedId);
+renderReport(TARGETS.find(p => p.id === selectedId));
+</script>
+
+<!-- React + Tweaks panel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="assets/tweaks-panel.jsx"></script>
+<script type="text/babel" src="assets/scouting-tweaks.jsx"></script>
+<div id="tweaks-root"></div>
+
+</body>
+</html>

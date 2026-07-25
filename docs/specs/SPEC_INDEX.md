@@ -1,6 +1,20 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
+> **Last Updated:** July 25, 2026, later same day (**Board & Ownership Dynamics #45 authored + advanced
+> `→ IN REVIEW → APPROVED`.** Wave 5's second spec — board confidence as persistent per-club state, ownership
+> profiles as dials on one code path, takeovers deferred to the deep tier. **KD-5** resolves a real
+> double-truth with #30: `BoardState.JobSecurity` becomes a **derived band** over #45's confidence rather
+> than independent state (ERR-030-009), removing the season block's last `float` — the one non-additive
+> consequence, carrying a `SEASON_STATE_FORMAT_VERSION` bump at T2 with no migration. **No #40 back-prop**
+> (FR-FN-019 already named #45 as the `BoardModifier` producer). ERR-045-001 also closes an A-04 placeholder
+> gap left by #42's approval. Supplement AR-1 (4M+2L) → AR-2 (3L) → CONVERGENCE; section-file PASS-1 (3M+3L)
+> → AR-2 (2L) → CONVERGENCE. Count: **40 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 25, 2026 (**Youth Academy & Intake #42 header reconciliation.** #42 was approved
+> July 24 and its registry row added, but this header block was never refreshed — it still named #34 and
+> read **38 APPROVED**. The true count is **39 APPROVED / 0 IN REVIEW / 0 NOT STARTED**. See the corrected
+> #42 entry in Registry Changes, which also records the outstanding `_RESERVED_0x2B_` A-04 placeholder now
+> folded into #45's ERR-045-001.)
 > **Last Updated:** July 24, 2026, latest same day (**Discipline & Suspensions #44 authored + advanced `→ IN
 > REVIEW → APPROVED`** — Wave 5's second spec (season-level card accumulation/thresholds/bans as a
 > **read-only derivation** over already-emitted engine events). **The load-bearing verifications:** a
@@ -379,6 +393,8 @@
 | 49 | Localization & Accessibility (seam + template-contract slice) | `localization-accessibility/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 31 | Transfers, Contracts & Negotiation | `transfers-contracts-negotiation/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 34 | Staff & Backroom | `staff-backroom/` | 6¹ | APPROVED | Jul 23, 2026 |
+| 42 | Youth Academy & Intake | `youth-academy-intake/` | 6¹ | APPROVED | Jul 24, 2026 |
+| 45 | Board & Ownership Dynamics | `board-ownership-dynamics/` | 6¹ | APPROVED | Jul 25, 2026 |
 | 32 | Scouting & Player Knowledge | `scouting-player-knowledge/` | 6¹ | APPROVED | Jul 24, 2026 |
 | 43 | Competition Structure | `competition-structure/` | 6¹ | APPROVED | Jul 24, 2026 |
 | 44 | Discipline & Suspensions | `discipline-suspensions/` | 6¹ | APPROVED | Jul 24, 2026 |
@@ -468,6 +484,52 @@ consistent with #23 having been free to reserve and now promote.
   ERR-027-001 + ERR-022-001, `spec-error-log.md` v1.32); lead-developer R-01..R-05 sign-off granted
   (§9 checklist v0.3). All 11 section files `Status: APPROVED`. Count: **27 APPROVED, 0 IN REVIEW,
   0 NOT STARTED.**
+- **July 24, 2026 — Youth Academy & Intake (#42) added `→ APPROVED`.** First **Wave 5** management-layer
+  spec (the roadmap's Wave-5 set is #43 → #44 → #42 → #45; #42/#45 are authorable ahead of #43/#44 because
+  neither depends on them). Section files v0.1–v0.2 authored from the AR-converged design supplement
+  `docs/tracking/youth-academy-intake-design.md` v0.3 (AR-1 3M+1L → AR-2 2L → CONVERGENCE). FR-YA-001..028.
+  **The headline decision (KD-1)** dissolves the plan's central risk: `RegenGenerator.GenerateRegen` is
+  `static`, pure, and takes `streamIndex` as a parameter, so #42 **calls #28's generator unmodified from
+  its own stream** — no fork, no #28 edit, no shared cursor — and applies academy quality as a pure
+  post-generation shift of `PotentialAbility` (KD-2; `CurrentAbility` is a derived cache of
+  `AbilityModel.ComputeCA`, so shifting it would decohere the pair). **KD-7** takes the #41 keyed-anchor
+  property rather than a serialized cursor: one `youth.intake` stream per club, re-anchored per intake,
+  so a cohort is a pure function of `(worldSeed, clubId, intakeWorldDay)` and **no RNG cursor is
+  persisted**. **KD-4** latches on `LastIntakeWorldDay`, not a season year — #30 exposes no such field.
+  Section-file PASS-1: 0H+3M+1L, all resolved (§9.4.1); AR-2 sweep 0H+0M+2L → convergence.
+  **All four gates closed same day:** G1 PASS-1 + AR-2 convergence; **G2 ERR-030-007 filed** (#30 §3.3
+  gains the academy null seam as step 7, `AdvanceDay` → step 8; §2 FR-SN-034 enumeration extended; both
+  #30 files → v0.7; `spec-error-log.md` v1.36); G3 lead-developer R-01..R-05 sign-off granted; G4 this
+  row. **#16 partially deferred** — #42 registers no stream until its T2 first intake, so the roadmap-§6
+  `0x2B`/93 tag stays unpromoted (FR-LW-031). **Correction (July 25, 2026):** this entry originally read
+  "28 APPROVED", a number copied from the adjacent #27 entry rather than counted, and it also recorded
+  "no #16 change" without noting that #16's own **A-04 every-gap-has-a-placeholder rule** still required a
+  `_RESERVED_0x2B_` row even though the tag is not promoted (the `_RESERVED_0x21_` #29 / `_RESERVED_0x29_`
+  #40 pattern). The placeholder is filed with #45's ERR-045-001, which covers `0x2B`/`0x2C`/`0x2D`
+  together — the same retroactive gap-closing v1.0.13 did for `0x23`–`0x28`. All 11 section files
+  `Status: APPROVED`. Count: **39 APPROVED, 0 IN REVIEW, 0 NOT STARTED.**
+- **July 25, 2026 — Board & Ownership Dynamics (#45) added `→ APPROVED`.** Wave 5's second spec (the
+  manager↔board relationship as persistent state). Section files v0.1–v0.4 from the AR-converged supplement
+  `docs/tracking/board-ownership-dynamics-design.md` v0.3 (AR-1 4M+2L → AR-2 3L → CONVERGENCE). FR-BD-001..030
+  + FR-BD-005a. **KD-5 is the headline** and the reason this spec is not purely additive: #30 already held a
+  job-security scalar, so #45's confidence would have been a **second truth for one quantity** that diverges
+  at the first restore undetected. #30 keeps the objective and its boundary evaluation; `JobSecurity` becomes
+  a **derived band** over #45's per-mille confidence (ERR-030-009), which also removes the season block's
+  **last `float`** — and carries a `SEASON_STATE_FORMAT_VERSION` bump at #45 T2 with **no migration**
+  (#50 inherits the position). **KD-2:** takeovers are deep-tier, so `0x2D` stays RESERVED; when it promotes
+  it uses **one** subsystem-wide stream with keyed action ordinals, never one per club, so #45 never
+  contributes to the shared `MaxRngStreams = 64` bound #42 R-1 records. **§3.2** shifts the expectation
+  reference point rather than scaling the signed deviation — scaling makes a demanding owner harsher on
+  success and *more forgiving of failure*; T-BD-U-004 locks the direction below neutral where the rejected
+  formulation fails. **No #40 back-prop** — FR-FN-018/019/027 already specified #45 as the `BoardModifier`
+  producer, so #45 fits an existing contract. Section-file PASS-1 0H+3M+3L (headline: the
+  `default(BoardConfidence)` trap — every field in range, so no range check catches it, yet it reads as the
+  `Critical` "dismissal imminent" band with a broken day-0 guard) → AR-2 0H+0M+2L convergence. **All four
+  gates closed same day:** G1; **G2 three back-props** — ERR-030-008 (#30 tick order gains the board seam as
+  step 8, `AdvanceDay` → 9), ERR-030-009, and ERR-045-001 (#16 §3.4 v1.0.14 gains **three** `_RESERVED_` rows
+  `0x2B`/`0x2C`/`0x2D`, closing an A-04 gap #42's approval had left); G3 lead-developer sign-off; G4 this row.
+  `spec-error-log.md` → v1.39. All 11 section files `Status: APPROVED`. Count:
+  **40 APPROVED, 0 IN REVIEW, 0 NOT STARTED.**
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 
 ---

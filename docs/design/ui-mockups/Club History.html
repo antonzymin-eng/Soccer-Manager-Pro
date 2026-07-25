@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>History — Club — Soccer Manager Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/squad.css">
+<style>
+/* History: no toolbar — 4-row grid */
+.stage { grid-template-rows: 52px 34px 1fr 32px; }
+
+.hist-main {
+  display: grid;
+  grid-template-columns: 374px 1fr 340px;
+  min-height: 0; overflow: hidden;
+}
+.hist-col {
+  display: flex; flex-direction: column; gap: 11px;
+  padding: 15px 17px; overflow-y: auto; min-height: 0;
+}
+.hist-col + .hist-col { border-left: 1px solid var(--line-2); }
+
+.crd {
+  background: var(--bg-card); border: 1px solid var(--line-2);
+  border-radius: var(--panel-radius); padding: 13px 15px; flex-shrink: 0;
+}
+.crd.grow { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.crd h5 {
+  font-family: var(--font-display); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3);
+  margin: 0 0 11px; display: flex; justify-content: space-between; align-items: center;
+}
+.crd h5 .meta { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: 0.04em; text-transform: none; font-weight: 400; }
+
+.c-pos { color: var(--pos-400); }
+.c-neg { color: var(--neg-400); }
+.c-neu { color: var(--neu-400); }
+.c-ink { color: var(--ink-1); }
+.c-info { color: var(--info-400); }
+.c-brand { color: var(--brand-400); }
+.c-gold { color: var(--gold-400); }
+
+/* ── Club profile ── */
+.club-banner { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+.club-crest-xl {
+  width: 72px; height: 72px; border-radius: var(--r-3); flex-shrink: 0;
+  background: linear-gradient(135deg, var(--brand-400), var(--brand-700));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 26px;
+  color: #001a0a; letter-spacing: -0.02em;
+}
+.club-name-xl { font-family: var(--font-display); font-size: 28px; font-weight: 800; line-height: 1; }
+.club-founded { font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+.club-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.cm { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 7px 9px; }
+.cm .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-4); }
+.cm .v { font-size: 11.5px; color: var(--ink-1); font-weight: 500; margin-top: 2px; }
+
+/* ── Records ── */
+.rec-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-top: 1px solid var(--line-1); font-size: 11.5px; }
+.rec-row:first-child { border-top: none; }
+.rec-lbl { color: var(--ink-3); }
+.rec-val { font-family: var(--font-mono); font-size: 11px; color: var(--ink-1); text-align: right; }
+
+/* ── Honours ── */
+.honours-section { margin-bottom: 14px; }
+.honours-section:last-child { margin-bottom: 0; }
+.hon-comp-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.hon-badge {
+  height: 22px; padding: 0 8px; border-radius: var(--r-1);
+  display: inline-flex; align-items: center;
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700; letter-spacing: 0.06em;
+}
+.hb-pl  { background: #2a0046; color: #b066ff; }
+.hb-fac { background: #2c0012; color: #ff5577; }
+.hb-lc  { background: #001840; color: #4aa8ff; }
+.hb-uel { background: #1a2400; color: #88cc00; }
+.hb-d1  { background: #1a1200; color: var(--neu-400); }
+.hon-comp-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.hon-count { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--gold-400); line-height: 1; margin-left: auto; }
+.hon-years { display: flex; flex-wrap: wrap; gap: 5px; }
+.hon-year { font-family: var(--font-mono); font-size: 10px; color: var(--ink-2); background: var(--bg-2); border: 1px solid var(--line-2); padding: 3px 9px; border-radius: var(--r-pill); }
+
+/* ── Season table ── */
+.season-table { width: 100%; border-collapse: collapse; }
+.season-table th {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-4);
+  padding: 4px 6px; text-align: left; border-bottom: 1px solid var(--line-2);
+}
+.season-table th:not(:first-child) { text-align: right; }
+.season-table td { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); padding: 5px 6px; border-bottom: 1px solid var(--line-1); }
+.season-table td:not(:first-child) { text-align: right; }
+.season-table tr:last-child td { border-bottom: none; }
+.season-table tr.current td { color: var(--ink-1); }
+.sn-season { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.sn-season.current { color: var(--brand-400); }
+.sn-pos { font-family: var(--font-display); font-size: 14px; font-weight: 700; }
+.pos-1  { color: var(--gold-400); }
+.pos-2  { color: var(--pos-400); }
+.pos-3  { color: var(--info-400); }
+.pos-4  { color: var(--ink-2); }
+.pos-5  { color: var(--ink-3); }
+.trophy-icon { font-size: 11px; }
+
+/* ── Top scorers ── */
+.scorer-row { display: flex; align-items: center; gap: 9px; padding: 6px 0; border-top: 1px solid var(--line-1); }
+.scorer-row:first-child { border-top: none; }
+.scorer-rank { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--ink-5); width: 18px; flex-shrink: 0; text-align: center; }
+.scorer-rank.top { color: var(--gold-400); }
+.scorer-body { flex: 1; }
+.scorer-name { font-size: 12px; color: var(--ink-1); font-weight: 500; }
+.scorer-era { font-size: 10.5px; color: var(--ink-4); margin-top: 1px; }
+.scorer-goals { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--brand-400); flex-shrink: 0; }
+
+/* ── Notable managers ── */
+.mgr-hist-row { padding: 8px 0; border-top: 1px solid var(--line-1); }
+.mgr-hist-row:first-child { border-top: none; }
+.mgr-hist-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.mgr-hist-name { font-size: 12.5px; color: var(--ink-1); font-weight: 500; }
+.mgr-hist-era { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-4); }
+.mgr-hist-note { font-size: 10.5px; color: var(--ink-3); line-height: 1.4; margin-top: 2px; }
+.mgr-hist-pill { font-family: var(--font-mono); font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: var(--r-1); margin-top: 4px; display: inline-block; }
+.mhp-title { background: var(--gold-tint); color: var(--gold-400); }
+.mhp-current { background: var(--brand-tint); color: var(--brand-400); }
+
+/* ── Milestones ── */
+.milestone-row { display: flex; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line-1); align-items: flex-start; }
+.milestone-row:first-child { border-top: none; }
+.milestone-year { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--ink-4); width: 38px; flex-shrink: 0; }
+.milestone-text { font-size: 11px; color: var(--ink-3); line-height: 1.4; }
+.milestone-text strong { color: var(--ink-2); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="resolution-badge" id="resbadge">1920 × 1080</div>
+<div class="fitter">
+<div class="stage" id="stage">
+
+  <header class="chrome">
+    <div class="brand">
+      <div class="crest-gm">RM</div>
+      <div class="nm">Riverside <em>· Mgr. You</em></div>
+    </div>
+    <nav class="nav">
+      <a href="Club.html" class="on">Club</a>
+      <a href="Squad Screen.html">Squad</a>
+      <a href="Tactics.html">Tactics</a>
+      <a href="Training Screen.html">Training</a>
+      <a href="Scouting Screen.html">Scouting</a>
+      <a href="Transfers.html">Transfers</a>
+      <a href="World.html">World</a>
+      <a href="#">Inbox<span class="b">3</span></a>
+    </nav>
+    <div class="sp"></div>
+    <div class="right">
+      <div class="kbd-hint"><span class="lbl">Search anywhere</span><span class="k">⌘ K</span></div>
+      <div class="date">Sat 14 Mar · Wk 31 📅</div>
+      <div class="cont">Continue ▸</div>
+    </div>
+  </header>
+
+  <div class="crumb">
+    <a href="Club.html" class="tab" style="text-decoration:none">Overview</a>
+    <a href="Club Finances.html" class="tab" style="text-decoration:none">Finances</a>
+    <a href="Club Board Room.html" class="tab" style="text-decoration:none">Board Room</a>
+    <a href="Club Staff.html" class="tab" style="text-decoration:none">Staff</a>
+    <span class="tab on">History</span>
+    <div class="sp"></div>
+    <div style="display:flex;align-items:center;gap:12px;font-family:var(--font-mono);font-size:10px;color:var(--ink-4);letter-spacing:0.04em;">
+      <span>FOUNDED <span style="color:var(--ink-2)">1892</span></span>
+      <span style="color:var(--line-3)">|</span>
+      <span>HONOURS <span style="color:var(--gold-400)">5 trophies</span></span>
+      <span style="color:var(--line-3)">|</span>
+      <span>ALL-TIME TOP SCORER <span style="color:var(--ink-2)">D. Morrison · 214</span></span>
+    </div>
+  </div>
+
+  <div class="hist-main">
+
+    <!-- LEFT -->
+    <div class="hist-col">
+
+      <div class="crd">
+        <h5>Club Profile</h5>
+        <div class="club-banner">
+          <div class="club-crest-xl">RM</div>
+          <div>
+            <div class="club-name-xl">Riverside FC</div>
+            <div class="club-founded">Founded 1892 · Riverside, England</div>
+          </div>
+        </div>
+        <div class="club-meta-grid">
+          <div class="cm"><div class="l">Full name</div><div class="v">Riverside Football Club</div></div>
+          <div class="cm"><div class="l">Nickname</div><div class="v">The Riversiders</div></div>
+          <div class="cm"><div class="l">Colors</div><div class="v">Green &amp; Black</div></div>
+          <div class="cm"><div class="l">Previous name</div><div class="v">Riverside Athletic FC</div></div>
+          <div class="cm"><div class="l">Stadium</div><div class="v">Riverside Stadium</div></div>
+          <div class="cm"><div class="l">Capacity</div><div class="v">68,200</div></div>
+          <div class="cm"><div class="l">Owner</div><div class="v">Sir Arthur Kingsley</div></div>
+          <div class="cm"><div class="l">Owned since</div><div class="v">2009</div></div>
+        </div>
+      </div>
+
+      <div class="crd grow">
+        <h5>All-Time Records</h5>
+        <div class="rec-row"><span class="rec-lbl">Most appearances</span><span class="rec-val">D. Morrison · 412</span></div>
+        <div class="rec-row"><span class="rec-lbl">All-time top scorer</span><span class="rec-val">D. Morrison · 214</span></div>
+        <div class="rec-row"><span class="rec-lbl">Record win</span><span class="rec-val">9–0 vs Eastfield (1963)</span></div>
+        <div class="rec-row"><span class="rec-lbl">Record defeat</span><span class="rec-val">1–8 vs Northlands (1934)</span></div>
+        <div class="rec-row"><span class="rec-lbl">Longest unbeaten run</span><span class="rec-val">28 games (2020/21)</span></div>
+        <div class="rec-row"><span class="rec-lbl">Biggest home crowd</span><span class="rec-val">68,183 vs City (2021)</span></div>
+        <div class="rec-row"><span class="rec-lbl">Most PL goals (season)</span><span class="rec-val">94 goals (2020/21)</span></div>
+        <div class="rec-row"><span class="rec-lbl">Highest PL finish</span><span class="rec-val">1st · Champions (2020)</span></div>
+        <div class="rec-row"><span class="rec-lbl">Record fee paid</span><span class="rec-val">£85m · E. Santos (2023)</span></div>
+        <div class="rec-row"><span class="rec-lbl">Record fee received</span><span class="rec-val">£72m · K. Amara (2022)</span></div>
+        <div class="rec-row"><span class="rec-lbl">Champions League debut</span><span class="rec-val">2024/25 season</span></div>
+        <div class="rec-row"><span class="rec-lbl">Years in top flight</span><span class="rec-val">78 of 132 (since 1892)</span></div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- CENTER -->
+    <div class="hist-col">
+
+      <div class="crd">
+        <h5>Honours Cabinet</h5>
+
+        <div class="honours-section">
+          <div class="hon-comp-hd">
+            <div class="hon-badge hb-pl">PL</div>
+            <span class="hon-comp-name">Premier League</span>
+            <span class="hon-count">1</span>
+          </div>
+          <div class="hon-years">
+            <span class="hon-year">2019/20</span>
+          </div>
+        </div>
+
+        <div class="honours-section">
+          <div class="hon-comp-hd">
+            <div class="hon-badge hb-fac">FAC</div>
+            <span class="hon-comp-name">FA Cup</span>
+            <span class="hon-count">2</span>
+          </div>
+          <div class="hon-years">
+            <span class="hon-year">2014/15</span>
+            <span class="hon-year">2017/18</span>
+          </div>
+        </div>
+
+        <div class="honours-section">
+          <div class="hon-comp-hd">
+            <div class="hon-badge hb-lc">LC</div>
+            <span class="hon-comp-name">League Cup</span>
+            <span class="hon-count">1</span>
+          </div>
+          <div class="hon-years">
+            <span class="hon-year">2021/22</span>
+          </div>
+        </div>
+
+        <div class="honours-section">
+          <div class="hon-comp-hd">
+            <div class="hon-badge hb-uel">UEL</div>
+            <span class="hon-comp-name">UEFA Europa League</span>
+            <span class="hon-count">1</span>
+          </div>
+          <div class="hon-years">
+            <span class="hon-year">2016/17</span>
+          </div>
+        </div>
+
+        <div class="honours-section">
+          <div class="hon-comp-hd">
+            <div class="hon-badge hb-d1">DIV 1</div>
+            <span class="hon-comp-name">First Division (pre-PL)</span>
+            <span class="hon-count">2</span>
+          </div>
+          <div class="hon-years">
+            <span class="hon-year">1951/52</span>
+            <span class="hon-year">1967/68</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="crd grow">
+        <h5>Season-by-Season <span class="meta">Recent history</span></h5>
+        <div style="overflow-y:auto;flex:1">
+          <table class="season-table">
+            <thead>
+              <tr>
+                <th>Season</th>
+                <th>Comp</th>
+                <th>Pos</th>
+                <th>P</th>
+                <th>W</th>
+                <th>D</th>
+                <th>L</th>
+                <th>GD</th>
+                <th>Pts</th>
+                <th>Cup</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="current">
+                <td><span class="sn-season current">2024/25</span></td>
+                <td style="color:var(--info-400)">UCL</td>
+                <td><span class="sn-pos pos-2">2nd</span></td>
+                <td>31</td>
+                <td>18</td>
+                <td>8</td>
+                <td>5</td>
+                <td style="color:var(--pos-400)">+32</td>
+                <td style="color:var(--ink-1);font-weight:700">62</td>
+                <td style="color:var(--ink-4)">—</td>
+              </tr>
+              <tr>
+                <td><span class="sn-season">2023/24</span></td>
+                <td style="color:var(--ink-4)">PL</td>
+                <td><span class="sn-pos pos-4">4th</span></td>
+                <td>38</td>
+                <td>21</td>
+                <td>9</td>
+                <td>8</td>
+                <td style="color:var(--pos-400)">+24</td>
+                <td>72</td>
+                <td style="color:var(--ink-4)">—</td>
+              </tr>
+              <tr>
+                <td><span class="sn-season">2022/23</span></td>
+                <td style="color:var(--ink-4)">PL</td>
+                <td><span class="sn-pos pos-5">5th</span></td>
+                <td>38</td>
+                <td>19</td>
+                <td>8</td>
+                <td>11</td>
+                <td style="color:var(--pos-400)">+18</td>
+                <td>65</td>
+                <td style="color:var(--ink-4)">—</td>
+              </tr>
+              <tr>
+                <td><span class="sn-season">2021/22</span></td>
+                <td style="color:var(--ink-4)">PL</td>
+                <td><span class="sn-pos pos-3">3rd</span></td>
+                <td>38</td>
+                <td>22</td>
+                <td>8</td>
+                <td>8</td>
+                <td style="color:var(--pos-400)">+31</td>
+                <td>74</td>
+                <td><span class="trophy-icon" title="League Cup">🏆</span></td>
+              </tr>
+              <tr>
+                <td><span class="sn-season">2020/21</span></td>
+                <td style="color:var(--ink-4)">PL</td>
+                <td><span class="sn-pos pos-1">1st</span></td>
+                <td>38</td>
+                <td>27</td>
+                <td>5</td>
+                <td>6</td>
+                <td style="color:var(--pos-400)">+54</td>
+                <td style="color:var(--gold-400);font-weight:700">86</td>
+                <td style="color:var(--ink-4)">—</td>
+              </tr>
+              <tr>
+                <td><span class="sn-season">2019/20</span></td>
+                <td style="color:var(--ink-4)">PL</td>
+                <td><span class="sn-pos pos-4">4th</span></td>
+                <td>38</td>
+                <td>19</td>
+                <td>9</td>
+                <td>10</td>
+                <td style="color:var(--pos-400)">+20</td>
+                <td>66</td>
+                <td style="color:var(--ink-4)">—</td>
+              </tr>
+              <tr>
+                <td><span class="sn-season">2018/19</span></td>
+                <td style="color:var(--ink-4)">PL</td>
+                <td><span class="sn-pos pos-5">6th</span></td>
+                <td>38</td>
+                <td>17</td>
+                <td>8</td>
+                <td>13</td>
+                <td style="color:var(--ink-3)">+9</td>
+                <td>59</td>
+                <td style="color:var(--ink-4)">—</td>
+              </tr>
+              <tr>
+                <td><span class="sn-season">2017/18</span></td>
+                <td style="color:var(--ink-4)">PL</td>
+                <td><span class="sn-pos pos-2">2nd</span></td>
+                <td>38</td>
+                <td>24</td>
+                <td>6</td>
+                <td>8</td>
+                <td style="color:var(--pos-400)">+42</td>
+                <td>78</td>
+                <td><span class="trophy-icon" title="FA Cup">🏆</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /center -->
+
+    <!-- RIGHT -->
+    <div class="hist-col">
+
+      <div class="crd">
+        <h5>All-Time Top Scorers</h5>
+        <div class="scorer-row">
+          <span class="scorer-rank top">1</span>
+          <div class="scorer-body"><div class="scorer-name">D. Morrison</div><div class="scorer-era">CF · 1994–2008</div></div>
+          <span class="scorer-goals">214</span>
+        </div>
+        <div class="scorer-row">
+          <span class="scorer-rank top">2</span>
+          <div class="scorer-body"><div class="scorer-name">J. Hawkins</div><div class="scorer-era">CF · 1978–1990</div></div>
+          <span class="scorer-goals c-ink">178</span>
+        </div>
+        <div class="scorer-row">
+          <span class="scorer-rank">3</span>
+          <div class="scorer-body"><div class="scorer-name">R. da Silva</div><div class="scorer-era">SS · 2013–2021</div></div>
+          <span class="scorer-goals c-ink">124</span>
+        </div>
+        <div class="scorer-row">
+          <span class="scorer-rank">4</span>
+          <div class="scorer-body"><div class="scorer-name">A. Walsh</div><div class="scorer-era">IF · 1961–1974</div></div>
+          <span class="scorer-goals c-ink">118</span>
+        </div>
+        <div class="scorer-row">
+          <span class="scorer-rank">5</span>
+          <div class="scorer-body"><div class="scorer-name">T. Yeboah</div><div class="scorer-era">CF · 2008–2016</div></div>
+          <span class="scorer-goals c-ink">97</span>
+        </div>
+        <div class="scorer-row">
+          <span class="scorer-rank">6</span>
+          <div class="scorer-body"><div class="scorer-name">F. O'Connell</div><div class="scorer-era">AM · 1999–2010</div></div>
+          <span class="scorer-goals c-ink">82</span>
+        </div>
+      </div>
+
+      <div class="crd">
+        <h5>Notable Managers</h5>
+        <div class="mgr-hist-row">
+          <div class="mgr-hist-header">
+            <span class="mgr-hist-name">Sir H. Chapman</span>
+            <span class="mgr-hist-era">1922–1935</span>
+          </div>
+          <div class="mgr-hist-note">Club's founding-era tactician. Established the Riversiders' attacking identity and first Div 1 promotion.</div>
+        </div>
+        <div class="mgr-hist-row">
+          <div class="mgr-hist-header">
+            <span class="mgr-hist-name">J. McGuire</span>
+            <span class="mgr-hist-era">1962–1978</span>
+          </div>
+          <div class="mgr-hist-note">Club's most successful pre-PL era. Two First Division titles; longest-serving manager at 16 years.</div>
+          <span class="mgr-hist-pill mhp-title">2× DIVISION 1</span>
+        </div>
+        <div class="mgr-hist-row">
+          <div class="mgr-hist-header">
+            <span class="mgr-hist-name">R. Fontaine</span>
+            <span class="mgr-hist-era">2009–2016</span>
+          </div>
+          <div class="mgr-hist-note">First European trophy (UEL 2017) and FA Cup win in 2015. Modernised training facilities.</div>
+          <span class="mgr-hist-pill mhp-title">FA CUP · UEL</span>
+        </div>
+        <div class="mgr-hist-row">
+          <div class="mgr-hist-header">
+            <span class="mgr-hist-name">B. Harrison</span>
+            <span class="mgr-hist-era">2016–2023</span>
+          </div>
+          <div class="mgr-hist-note">Premier League title (2020), FA Cup (2018), League Cup (2022). Transformed club into European contenders.</div>
+          <span class="mgr-hist-pill mhp-title">PL · FA CUP · LC</span>
+        </div>
+        <div class="mgr-hist-row">
+          <div class="mgr-hist-header">
+            <span class="mgr-hist-name">You</span>
+            <span class="mgr-hist-era">Jan 2024–present</span>
+          </div>
+          <div class="mgr-hist-note">First UCL campaign underway. Currently 2nd in PL with 7 games left. Win rate 58%.</div>
+          <span class="mgr-hist-pill mhp-current">CURRENT</span>
+        </div>
+      </div>
+
+      <div class="crd grow">
+        <h5>Club Milestones</h5>
+        <div style="overflow-y:auto;flex:1">
+          <div class="milestone-row"><span class="milestone-year">1892</span><span class="milestone-text"><strong>Club founded</strong> as Riverside Athletic FC in Riverside, England</span></div>
+          <div class="milestone-row"><span class="milestone-year">1925</span><span class="milestone-text">Renamed <strong>Riverside FC</strong> · Joined Football League Division 2</span></div>
+          <div class="milestone-row"><span class="milestone-year">1952</span><span class="milestone-text">First <strong>Division 1 title</strong> under Sir H. Chapman · 62-point season</span></div>
+          <div class="milestone-row"><span class="milestone-year">1965</span><span class="milestone-text">First <strong>European competition</strong> — Inter-Cities Fairs Cup, R32 exit</span></div>
+          <div class="milestone-row"><span class="milestone-year">1992</span><span class="milestone-text"><strong>Premier League founding member</strong> · finished 7th in inaugural season</span></div>
+          <div class="milestone-row"><span class="milestone-year">1999</span><span class="milestone-text">Moved to <strong>Riverside Stadium</strong> (68,200 cap) from Foundry Park</span></div>
+          <div class="milestone-row"><span class="milestone-year">2009</span><span class="milestone-text"><strong>Takeover</strong> by Sir Arthur Kingsley · club debt cleared · investment era begins</span></div>
+          <div class="milestone-row"><span class="milestone-year">2015</span><span class="milestone-text">First <strong>FA Cup</strong> · beat Northgate 2–1 at Wembley</span></div>
+          <div class="milestone-row"><span class="milestone-year">2017</span><span class="milestone-text">First <strong>European trophy</strong> — UEFA Europa League vs Sporting Lisbon</span></div>
+          <div class="milestone-row"><span class="milestone-year">2020</span><span class="milestone-text"><strong>Premier League Champions</strong> · 86-point record season · 28-game unbeaten run</span></div>
+          <div class="milestone-row"><span class="milestone-year">2024</span><span class="milestone-text"><strong>Champions League debut</strong> · qualified via 4th-place 2023/24 finish</span></div>
+        </div>
+      </div>
+
+    </div><!-- /right -->
+
+  </div>
+
+  <div class="status">
+    <span class="dot"></span>
+    <span>SAVE · auto · 11:58</span>
+    <span class="bullet">·</span>
+    <span>BUILD 0.2.31-touchline</span>
+    <span class="bullet">·</span>
+    <span>Club · History · Riverside FC</span>
+    <span class="sp"></span>
+    <span>Founded 1892</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--gold-400)">5 trophies</span>
+    <span class="bullet">·</span>
+    <span>132 years of history</span>
+    <span class="sp"></span>
+    <span>FPS 60</span>
+    <span class="bullet">·</span>
+    <span>RAM 1.1 GB</span>
+  </div>
+
+</div>
+</div>
+
+<script>
+(function() {
+  var stage = document.getElementById('stage');
+  var badge = document.getElementById('resbadge');
+  function fit() {
+    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = 'scale(' + s + ')';
+    stage.style.transformOrigin = 'center center';
+    if (badge) badge.textContent = '1920×1080 · scale ' + Math.round(s * 100) + '%';
+  }
+  fit();
+  window.addEventListener('resize', fit);
+})();
+</script>
+</body>
+</html>

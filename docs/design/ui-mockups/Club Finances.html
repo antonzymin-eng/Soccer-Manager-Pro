@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Finances — Club — Soccer Manager Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/squad.css">
+<script>
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "wagesVisible": "on",
+  "period": "season",
+  "highlight": "profit"
+}/*EDITMODE-END*/;
+</script>
+<style>
+/* ── three-col layout ── */
+.fin-main {
+  display: grid;
+  grid-template-columns: 400px 1fr 364px;
+  min-height: 0; overflow: hidden;
+}
+.fin-col {
+  display: flex; flex-direction: column; gap: 11px;
+  padding: 15px 17px; overflow-y: auto; min-height: 0;
+}
+.fin-col + .fin-col { border-left: 1px solid var(--line-2); }
+
+/* ── cards ── */
+.crd {
+  background: var(--bg-card); border: 1px solid var(--line-2);
+  border-radius: var(--panel-radius); padding: 13px 15px; flex-shrink: 0;
+}
+.crd.grow { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.crd h5 {
+  font-family: var(--font-display); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3);
+  margin: 0 0 11px; display: flex; justify-content: space-between; align-items: center;
+}
+.crd h5 .meta { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: 0.04em; text-transform: none; font-weight: 400; }
+
+/* ── KPI grid ── */
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.kpi { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 10px 11px; }
+.kpi .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-4); }
+.kpi .v { font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 1.05; margin-top: 3px; }
+.kpi .s { font-size: 10px; color: var(--ink-3); margin-top: 2px; }
+
+/* ── colors ── */
+.c-pos  { color: var(--pos-400); }
+.c-neg  { color: var(--neg-400); }
+.c-neu  { color: var(--neu-400); }
+.c-info { color: var(--info-400); }
+.c-gold { color: var(--gold-400); }
+.c-ink  { color: var(--ink-1); }
+.c-ink2 { color: var(--ink-2); }
+
+/* ── transfer budget bar ── */
+.bud-bar-row { margin-top: 9px; }
+.bud-bar-labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); margin-bottom: 5px; }
+.bud-bar { height: 6px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; display: flex; }
+.bud-spent  { height: 100%; background: var(--neg-400); }
+.bud-remain { height: 100%; background: var(--brand-400); }
+
+/* transfer sub-stats */
+.tr-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 9px; }
+.trs { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 7px 9px; text-align: center; }
+.trs .l { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-4); }
+.trs .v { font-family: var(--font-display); font-size: 17px; font-weight: 700; line-height: 1.15; margin-top: 2px; }
+
+/* window P&L mini rows */
+.win-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-top: 1px solid var(--line-1); font-size: 11.5px; }
+.win-row:first-child { border-top: none; }
+.win-row .wl { color: var(--ink-3); }
+.win-row .wv { font-family: var(--font-mono); font-size: 11px; }
+
+/* financial position list */
+.fp-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-top: 1px solid var(--line-1); font-size: 11.5px; }
+.fp-row:first-child { border-top: none; }
+.fp-row .fl { color: var(--ink-2); }
+.fp-row .fv { font-family: var(--font-mono); font-size: 11px; }
+.status-pill { font-family: var(--font-mono); font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: var(--r-pill); letter-spacing: 0.05em; }
+.sp-ok  { background: var(--pos-tint); color: var(--pos-400); }
+.sp-neu { background: var(--neu-tint); color: var(--neu-400); }
+
+/* ── horizontal bar rows (revenue/expenditure) ── */
+.rev-rows { display: flex; flex-direction: column; gap: 8px; }
+.rev-row { display: flex; align-items: center; gap: 10px; }
+.rev-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.rev-name { font-size: 11.5px; color: var(--ink-2); width: 186px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rev-bar-track { flex: 1; height: 5px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; }
+.rev-bar-fill { height: 100%; border-radius: var(--r-pill); }
+.rev-val { font-family: var(--font-mono); font-size: 11px; color: var(--ink-1); width: 44px; text-align: right; flex-shrink: 0; }
+.rev-pct { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); width: 30px; text-align: right; flex-shrink: 0; }
+
+/* totals row */
+.rev-total { display: flex; align-items: center; justify-content: space-between; padding: 7px 0 0; margin-top: 3px; border-top: 1px solid var(--line-3); }
+.rev-total .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-4); }
+.rev-total .v { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+
+/* ── P&L statement ── */
+.pl-grow { flex: 1; min-height: 0; overflow-y: auto; }
+.pl-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-top: 1px solid var(--line-1); font-size: 11.5px; }
+.pl-row:first-child { border-top: none; }
+.pl-row.section-hd { padding: 8px 0 4px; border-top: 1px solid var(--line-2); margin-top: 4px; }
+.pl-row.section-hd:first-child { margin-top: 0; border-top: none; }
+.pl-row.section-hd .pll { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-4); }
+.pl-row.subtotal { padding: 6px 0; border-top: 1px solid var(--line-3); margin-top: 1px; }
+.pl-row.subtotal .pll { font-weight: 600; color: var(--ink-1); }
+.pl-row.subtotal .plv { font-size: 12.5px; font-weight: 700; }
+.pl-row.net { padding: 8px 0; border-top: 2px solid var(--line-3); margin-top: 4px; }
+.pl-row.net .pll { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--ink-1); }
+.pl-row.net .plv { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--pos-400); }
+.pll { color: var(--ink-2); }
+.pll.in  { color: var(--ink-3); padding-left: 12px; font-size: 11px; }
+.plv { font-family: var(--font-mono); font-size: 11px; color: var(--ink-1); }
+
+/* ── cash flow chart ── */
+.cf-chart {
+  display: flex; align-items: flex-end; gap: 5px;
+  height: 90px; position: relative; padding-bottom: 18px;
+}
+.cf-col { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+.cf-bar-area { width: 100%; height: 62px; display: flex; align-items: flex-end; justify-content: center; }
+.cf-bar { width: 100%; border-radius: 2px 2px 0 0; position: relative; }
+.cf-bar-neg { width: 100%; border-radius: 0 0 2px 2px; }
+.cf-month { font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-4); letter-spacing: 0.04em; position: absolute; bottom: 0; }
+.cf-val { font-family: var(--font-mono); font-size: 9px; position: absolute; top: -13px; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+/* ── wage section ── */
+.wage-total-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.wt-left .big { font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--ink-1); line-height: 1; }
+.wt-left .sub { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); margin-top: 2px; }
+.wt-right { text-align: right; }
+.wt-right .cap { font-family: var(--font-mono); font-size: 10px; color: var(--neu-400); }
+.wt-right .room { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); margin-top: 2px; }
+
+.cap-bar-wrap { height: 5px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; margin-bottom: 11px; }
+.cap-bar-fill { height: 100%; background: var(--neu-400); border-radius: var(--r-pill); }
+
+.wg-rows { display: flex; flex-direction: column; gap: 7px; }
+.wg-row { display: flex; align-items: center; gap: 9px; }
+.wg-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 600; width: 28px; flex-shrink: 0; }
+.wg-bar-track { flex: 1; height: 5px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; }
+.wg-bar-fill { height: 100%; border-radius: var(--r-pill); }
+.wg-amt { font-family: var(--font-mono); font-size: 10px; color: var(--ink-2); width: 72px; text-align: right; flex-shrink: 0; }
+.wg-pct { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); width: 28px; text-align: right; flex-shrink: 0; }
+
+/* ── top earners ── */
+.earner-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid var(--line-1); font-size: 11.5px; }
+.earner-row:first-child { border-top: none; }
+.earner-name { flex: 1; color: var(--ink-2); }
+.earner-badge { font-family: var(--font-mono); font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: var(--r-1); flex-shrink: 0; }
+.eb-gk { background: var(--gold-tint); color: var(--gold-400); }
+.eb-df { background: var(--info-tint); color: var(--info-400); }
+.eb-mf { background: var(--pos-tint); color: var(--pos-400); }
+.eb-fw { background: var(--neg-tint); color: var(--neg-400); }
+.earner-wage { font-family: var(--font-mono); font-size: 11px; color: var(--ink-1); }
+
+/* ── commercial partners ── */
+.partner-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line-1); }
+.partner-row:first-child { border-top: none; }
+.partner-badge { width: 36px; height: 28px; border-radius: var(--r-2); background: var(--bg-3); border: 1px solid var(--line-2); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 7px; font-weight: 700; color: var(--ink-3); flex-shrink: 0; letter-spacing: 0.04em; }
+.partner-body { flex: 1; min-width: 0; }
+.partner-body .pn { font-size: 12px; color: var(--ink-1); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.partner-body .ps { font-size: 10px; color: var(--ink-4); margin-top: 1px; }
+.partner-val { font-family: var(--font-mono); font-size: 11px; color: var(--brand-400); flex-shrink: 0; }
+
+/* ── tweaks panel ── */
+.tweaks-panel { position: fixed; bottom: 50px; right: 18px; z-index: 9000; width: 240px; background: var(--bg-2); border: 1px solid var(--line-3); border-radius: var(--r-4); box-shadow: var(--shadow-3); display: none; }
+.tweaks-panel.open { display: block; }
+.tw-head { padding: 10px 14px; border-bottom: 1px solid var(--line-2); display: flex; align-items: center; justify-content: space-between; }
+.tw-head strong { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
+.tw-close { background: none; border: 0; color: var(--ink-4); font-size: 14px; cursor: pointer; padding: 0; line-height: 1; }
+.tw-close:hover { color: var(--ink-1); }
+.tw-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+.tw-row { display: flex; flex-direction: column; gap: 5px; }
+.tw-lbl { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); letter-spacing: 0.05em; text-transform: uppercase; }
+.tw-opts { display: flex; gap: 4px; }
+.tw-opt { flex: 1; padding: 5px 8px; text-align: center; font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); background: var(--bg-3); border: 1px solid var(--line-2); border-radius: var(--r-2); cursor: pointer; transition: background .1s, color .1s, border-color .1s; }
+.tw-opt.on { background: var(--brand-tint); border-color: var(--brand-400); color: var(--brand-400); }
+</style>
+</head>
+<body>
+
+<div class="resolution-badge" id="resbadge">1920 × 1080</div>
+
+<div class="fitter">
+<div class="stage" id="stage">
+
+  <!-- CHROME -->
+  <header class="chrome">
+    <div class="brand">
+      <div class="crest-gm">RM</div>
+      <div class="nm">Riverside <em>· Mgr. You</em></div>
+    </div>
+    <nav class="nav">
+      <a href="Club.html" class="on">Club</a>
+      <a href="Squad Screen.html">Squad</a>
+      <a href="Tactics.html">Tactics</a>
+      <a href="Training Screen.html">Training</a>
+      <a href="Scouting Screen.html">Scouting</a>
+      <a href="Transfers.html">Transfers</a>
+      <a href="World.html">World</a>
+      <a href="#">Inbox<span class="b">3</span></a>
+    </nav>
+    <div class="sp"></div>
+    <div class="right">
+      <div class="kbd-hint"><span class="lbl">Search anywhere</span><span class="k">⌘ K</span></div>
+      <div class="date">Sat 14 Mar · Wk 31 📅</div>
+      <div class="cont">Continue ▸</div>
+    </div>
+  </header>
+
+  <!-- CRUMB -->
+  <div class="crumb">
+    <a href="Club.html" class="tab" style="text-decoration:none">Overview</a>
+    <span class="tab on">Finances</span>
+    <a href="Club Board Room.html" class="tab" style="text-decoration:none">Board Room</a>
+    <a href="Club Staff.html" class="tab" style="text-decoration:none">Staff</a>
+    <a href="Club History.html" class="tab" style="text-decoration:none">History</a>
+    <div class="sp"></div>
+    <div style="display:flex;align-items:center;gap:12px;font-family:var(--font-mono);font-size:10px;color:var(--ink-4);letter-spacing:0.04em;">
+      <span>BALANCE <span style="color:var(--brand-400)">£124m</span></span>
+      <span style="color:var(--line-3)">|</span>
+      <span>REVENUE <span style="color:var(--pos-400)">£312m</span></span>
+      <span style="color:var(--line-3)">|</span>
+      <span>NET PROFIT <span style="color:var(--pos-400)">+£32m</span></span>
+      <span style="color:var(--line-3)">|</span>
+      <span>WAGE CAP <span style="color:var(--neu-400)">85.5%</span></span>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="tb-grp">
+      <div class="seg">
+        <button class="on">Overview</button>
+        <button>P&amp;L Statement</button>
+        <button>Cash Flow</button>
+        <button>Wages</button>
+      </div>
+    </div>
+    <div class="tb-grp">
+      <span class="chip on">Season 2024/25</span>
+      <span class="chip">Year-on-Year</span>
+    </div>
+    <div class="sp"></div>
+    <div class="tb-grp">
+      <button class="btn">↓ Export Report</button>
+      <button class="btn">✎ Request Budget</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="fin-main">
+
+    <!-- ── LEFT ── -->
+    <div class="fin-col">
+
+      <!-- Top KPIs -->
+      <div class="crd">
+        <h5>Club Finances <span class="meta">Season 2024/25 · YTD</span></h5>
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="l">Cash Balance</div>
+            <div class="v c-pos">£124m</div>
+            <div class="s">+£22m vs last season</div>
+          </div>
+          <div class="kpi">
+            <div class="l">Season Revenue</div>
+            <div class="v c-pos">£312m</div>
+            <div class="s">+£38m vs last season</div>
+          </div>
+          <div class="kpi">
+            <div class="l">Total Costs</div>
+            <div class="v c-ink">£280m</div>
+            <div class="s">+£14m vs last season</div>
+          </div>
+          <div class="kpi">
+            <div class="l">Net Profit</div>
+            <div class="v c-pos">£32m</div>
+            <div class="s">up from £8m last yr</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transfer Budget -->
+      <div class="crd">
+        <h5>Transfer Budget <span class="meta">Summer Window 2025</span></h5>
+        <div class="bud-bar-row">
+          <div class="bud-bar-labels">
+            <span>£87.5m spent · 3 signings</span>
+            <span style="color:var(--brand-400)">£42.5m remaining</span>
+          </div>
+          <div class="bud-bar">
+            <div class="bud-spent"  style="width:67.3%"></div>
+            <div class="bud-remain" style="width:32.7%"></div>
+          </div>
+        </div>
+        <div class="tr-stats">
+          <div class="trs"><div class="l">Allocated</div><div class="v c-ink">£130m</div></div>
+          <div class="trs"><div class="l">Spent</div><div class="v c-neg">£87.5m</div></div>
+          <div class="trs"><div class="l">Left</div><div class="v c-pos">£42.5m</div></div>
+        </div>
+        <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line-1)">
+          <div class="win-row"><span class="wl">Transfer income (sales)</span><span class="wv c-pos">+£40m</span></div>
+          <div class="win-row"><span class="wl">Transfer expenditure</span><span class="wv c-neg">−£87.5m</span></div>
+          <div class="win-row" style="border-top:1px solid var(--line-2);margin-top:2px;padding-top:6px"><span class="wl" style="font-weight:600;color:var(--ink-1)">Net window spend</span><span class="wv c-neu" style="font-size:12.5px;font-weight:700">−£47.5m</span></div>
+        </div>
+      </div>
+
+      <!-- Financial Position -->
+      <div class="crd">
+        <h5>Financial Position</h5>
+        <div class="fp-row"><span class="fl">Short-term debt</span><span class="fv c-pos">£0</span></div>
+        <div class="fp-row"><span class="fl">Long-term debt (stadium bonds)</span><span class="fv c-ink">£45m</span></div>
+        <div class="fp-row"><span class="fl">Debt-to-revenue ratio</span><span class="fv c-pos">14.4%</span></div>
+        <div class="fp-row"><span class="fl">Credit rating</span><span><span class="status-pill sp-ok">A+</span></span></div>
+        <div class="fp-row"><span class="fl">PSR compliance status</span><span><span class="status-pill sp-ok">PASS</span></span></div>
+        <div class="fp-row"><span class="fl">Financial Fair Play</span><span><span class="status-pill sp-ok">COMPLIANT</span></span></div>
+      </div>
+
+      <!-- Season Projections -->
+      <div class="crd grow">
+        <h5>Season Projections <span class="meta">End Jun 2025</span></h5>
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="l">Projected Balance</div>
+            <div class="v c-pos">£156m</div>
+            <div class="s">assuming no major spend</div>
+          </div>
+          <div class="kpi">
+            <div class="l">Next Window Budget</div>
+            <div class="v c-info">~£65m</div>
+            <div class="s">board-approved target</div>
+          </div>
+          <div class="kpi">
+            <div class="l">UCL Bonus (QF)</div>
+            <div class="v c-gold">+£12m</div>
+            <div class="s">if QF reached</div>
+          </div>
+          <div class="kpi">
+            <div class="l">PL Prize (2nd)</div>
+            <div class="v c-info">£184m</div>
+            <div class="s">projected season share</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- ── CENTER ── -->
+    <div class="fin-col">
+
+      <!-- Revenue breakdown -->
+      <div class="crd">
+        <h5>Revenue Streams <span class="meta">£312m total</span></h5>
+        <div class="rev-rows">
+          <div class="rev-row">
+            <div class="rev-dot" style="background:var(--info-400)"></div>
+            <div class="rev-name">PL Broadcasting</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" style="width:100%;background:var(--info-400)"></div></div>
+            <div class="rev-val">£120m</div><div class="rev-pct">38%</div>
+          </div>
+          <div class="rev-row">
+            <div class="rev-dot" style="background:var(--brand-400)"></div>
+            <div class="rev-name">Commercial &amp; Sponsorship</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" style="width:68.3%;background:var(--brand-400)"></div></div>
+            <div class="rev-val">£82m</div><div class="rev-pct">26%</div>
+          </div>
+          <div class="rev-row">
+            <div class="rev-dot" style="background:var(--gold-400)"></div>
+            <div class="rev-name">Matchday &amp; Hospitality</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" style="width:48.3%;background:var(--gold-400)"></div></div>
+            <div class="rev-val">£58m</div><div class="rev-pct">19%</div>
+          </div>
+          <div class="rev-row">
+            <div class="rev-dot" style="background:var(--viz-5)"></div>
+            <div class="rev-name">UEFA &amp; Cup Prize Money</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" style="width:43.3%;background:var(--viz-5)"></div></div>
+            <div class="rev-val">£52m</div><div class="rev-pct">17%</div>
+          </div>
+        </div>
+        <div class="rev-total">
+          <span class="l">Total Revenue</span>
+          <span class="v c-pos">£312m</span>
+        </div>
+      </div>
+
+      <!-- Expenditure breakdown -->
+      <div class="crd">
+        <h5>Expenditure Breakdown <span class="meta">£280m total</span></h5>
+        <div class="rev-rows">
+          <div class="rev-row">
+            <div class="rev-dot" style="background:var(--neg-400)"></div>
+            <div class="rev-name">Player Wages</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" style="width:100%;background:var(--neg-400)"></div></div>
+            <div class="rev-val">£178m</div><div class="rev-pct">64%</div>
+          </div>
+          <div class="rev-row">
+            <div class="rev-dot" style="background:var(--neu-400)"></div>
+            <div class="rev-name">Transfer Amortisation</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" style="width:25.3%;background:var(--neu-400)"></div></div>
+            <div class="rev-val">£45m</div><div class="rev-pct">16%</div>
+          </div>
+          <div class="rev-row">
+            <div class="rev-dot" style="background:var(--ink-4)"></div>
+            <div class="rev-name">Facilities &amp; Operations</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" style="width:10.1%;background:var(--ink-4)"></div></div>
+            <div class="rev-val">£18m</div><div class="rev-pct">6%</div>
+          </div>
+          <div class="rev-row">
+            <div class="rev-dot" style="background:var(--ink-4)"></div>
+            <div class="rev-name">Management &amp; Staff</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" style="width:7.9%;background:var(--ink-4)"></div></div>
+            <div class="rev-val">£14m</div><div class="rev-pct">5%</div>
+          </div>
+          <div class="rev-row">
+            <div class="rev-dot" style="background:var(--ink-4)"></div>
+            <div class="rev-name">Academy &amp; Development</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" style="width:6.7%;background:var(--ink-4)"></div></div>
+            <div class="rev-val">£12m</div><div class="rev-pct">4%</div>
+          </div>
+          <div class="rev-row">
+            <div class="rev-dot" style="background:var(--ink-5)"></div>
+            <div class="rev-name">Other operating costs</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" style="width:7.3%;background:var(--ink-5)"></div></div>
+            <div class="rev-val">£13m</div><div class="rev-pct">5%</div>
+          </div>
+        </div>
+        <div class="rev-total">
+          <span class="l">Total Costs</span>
+          <span class="v c-neg">£280m</span>
+        </div>
+      </div>
+
+      <!-- P&L Statement -->
+      <div class="crd grow">
+        <h5>P&amp;L Statement <span class="meta">Season 2024/25</span></h5>
+        <div class="pl-grow">
+
+          <div class="pl-row section-hd"><span class="pll">Income</span><span class="plv"></span></div>
+          <div class="pl-row"><span class="pll in">PL Broadcasting</span><span class="plv c-pos">+£120m</span></div>
+          <div class="pl-row"><span class="pll in">Commercial &amp; Sponsorship</span><span class="plv c-pos">+£82m</span></div>
+          <div class="pl-row"><span class="pll in">Matchday &amp; Hospitality</span><span class="plv c-pos">+£58m</span></div>
+          <div class="pl-row"><span class="pll in">UEFA &amp; Cup Prize Money</span><span class="plv c-pos">+£52m</span></div>
+          <div class="pl-row subtotal"><span class="pll">Total Revenue</span><span class="plv">£312m</span></div>
+
+          <div class="pl-row section-hd"><span class="pll">Expenditure</span><span class="plv"></span></div>
+          <div class="pl-row"><span class="pll in">Player Wages</span><span class="plv c-neg">−£178m</span></div>
+          <div class="pl-row"><span class="pll in">Transfer Amortisation</span><span class="plv c-neg">−£45m</span></div>
+          <div class="pl-row"><span class="pll in">Facilities &amp; Operations</span><span class="plv c-neg">−£18m</span></div>
+          <div class="pl-row"><span class="pll in">Management &amp; Staff</span><span class="plv c-neg">−£14m</span></div>
+          <div class="pl-row"><span class="pll in">Academy &amp; Development</span><span class="plv c-neg">−£12m</span></div>
+          <div class="pl-row"><span class="pll in">Other operating costs</span><span class="plv c-neg">−£13m</span></div>
+          <div class="pl-row subtotal"><span class="pll">Total Costs</span><span class="plv">£280m</span></div>
+
+          <div class="pl-row net"><span class="pll">Net Profit</span><span class="plv">+£32m</span></div>
+
+        </div>
+      </div>
+
+    </div><!-- /center -->
+
+    <!-- ── RIGHT ── -->
+    <div class="fin-col">
+
+      <!-- Wage Bill -->
+      <div class="crd">
+        <h5>Wage Bill <span class="meta">£178m/yr</span></h5>
+        <div class="wage-total-row">
+          <div class="wt-left">
+            <div class="big">£3.42m<span style="font-size:14px;color:var(--ink-3)">/wk</span></div>
+            <div class="sub">£178m per year</div>
+          </div>
+          <div class="wt-right">
+            <div class="cap">85.5% of wage cap</div>
+            <div class="room">£580k/wk headroom</div>
+          </div>
+        </div>
+        <div class="cap-bar-wrap">
+          <div class="cap-bar-fill" style="width:85.5%"></div>
+        </div>
+        <div class="wg-rows">
+          <div class="wg-row">
+            <div class="wg-lbl" style="color:var(--neg-400)">FW</div>
+            <div class="wg-bar-track"><div class="wg-bar-fill" style="width:35%;background:var(--neg-400)"></div></div>
+            <div class="wg-amt">£1.20m/wk</div>
+            <div class="wg-pct">35%</div>
+          </div>
+          <div class="wg-row">
+            <div class="wg-lbl" style="color:var(--pos-400)">MF</div>
+            <div class="wg-bar-track"><div class="wg-bar-fill" style="width:35%;background:var(--pos-400)"></div></div>
+            <div class="wg-amt">£1.20m/wk</div>
+            <div class="wg-pct">35%</div>
+          </div>
+          <div class="wg-row">
+            <div class="wg-lbl" style="color:var(--info-400)">DF</div>
+            <div class="wg-bar-track"><div class="wg-bar-fill" style="width:22%;background:var(--info-400)"></div></div>
+            <div class="wg-amt">£0.75m/wk</div>
+            <div class="wg-pct">22%</div>
+          </div>
+          <div class="wg-row">
+            <div class="wg-lbl" style="color:var(--gold-400)">GK</div>
+            <div class="wg-bar-track"><div class="wg-bar-fill" style="width:8%;background:var(--gold-400)"></div></div>
+            <div class="wg-amt">£0.27m/wk</div>
+            <div class="wg-pct">8%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Earners -->
+      <div class="crd" id="earnersCard">
+        <h5>Top Earners</h5>
+        <div class="earner-row"><span class="earner-name">D. Kovač</span><span class="earner-badge eb-mf">MF</span><span class="earner-wage">£240k/wk</span></div>
+        <div class="earner-row"><span class="earner-name">E. Santos</span><span class="earner-badge eb-fw">FW</span><span class="earner-wage">£215k/wk</span></div>
+        <div class="earner-row"><span class="earner-name">L. Díaz</span><span class="earner-badge eb-fw">FW</span><span class="earner-wage">£185k/wk</span></div>
+        <div class="earner-row"><span class="earner-name">T. Nakamura</span><span class="earner-badge eb-mf">MF</span><span class="earner-wage">£175k/wk</span></div>
+        <div class="earner-row"><span class="earner-name">A. Castellano</span><span class="earner-badge eb-df">DF</span><span class="earner-wage">£160k/wk</span></div>
+        <div class="earner-row"><span class="earner-name">Y. Balogun</span><span class="earner-badge eb-mf">MF</span><span class="earner-wage">£145k/wk</span></div>
+      </div>
+
+      <!-- Cash Flow Chart -->
+      <div class="crd">
+        <h5>Monthly Cash Flow <span class="meta">Sep 2024 – Mar 2025</span></h5>
+        <div class="cf-chart" id="cfChart"></div>
+      </div>
+
+      <!-- Commercial Partners -->
+      <div class="crd grow">
+        <h5>Commercial Partners <span class="meta">£82m/yr total</span></h5>
+        <div style="flex:1;overflow-y:auto">
+          <div class="partner-row">
+            <div class="partner-badge">APX</div>
+            <div class="partner-body"><div class="pn">Apex Financial</div><div class="ps">Shirt sponsor · renews Jun 2026</div></div>
+            <div class="partner-val">£18m/yr</div>
+          </div>
+          <div class="partner-row">
+            <div class="partner-badge">NIKE</div>
+            <div class="partner-body"><div class="pn">Nike</div><div class="ps">Kit manufacturer · renews Jun 2027</div></div>
+            <div class="partner-val">£22m/yr</div>
+          </div>
+          <div class="partner-row">
+            <div class="partner-badge" style="color:var(--neu-400);border-color:rgba(245,185,66,.3);background:var(--neu-tint)">RSE</div>
+            <div class="partner-body"><div class="pn">Riverside Energy</div><div class="ps">Sleeve sponsor · <span style="color:var(--neu-400)">renews Jun 2025</span></div></div>
+            <div class="partner-val" style="color:var(--neu-400)">£8m/yr</div>
+          </div>
+          <div class="partner-row">
+            <div class="partner-badge">TAB</div>
+            <div class="partner-body"><div class="pn">TabHealth</div><div class="ps">Training kit partner · renews Jun 2026</div></div>
+            <div class="partner-val">£7m/yr</div>
+          </div>
+          <div class="partner-row">
+            <div class="partner-badge">MKT</div>
+            <div class="partner-body"><div class="pn">Digital &amp; streaming rights</div><div class="ps">Content partnership</div></div>
+            <div class="partner-val">£27m/yr</div>
+          </div>
+          <div class="partner-row">
+            <div class="partner-badge" style="color:var(--ink-5);border-style:dashed">STD</div>
+            <div class="partner-body">
+              <div class="pn" style="color:var(--ink-4)">Stadium Naming Rights</div>
+              <div class="ps" style="color:var(--ink-5)">Under negotiation · target £10–15m/yr</div>
+            </div>
+            <div class="partner-val" style="color:var(--ink-5)">TBC</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right -->
+
+  </div><!-- /fin-main -->
+
+  <!-- STATUS -->
+  <div class="status">
+    <span class="dot"></span>
+    <span>SAVE · auto · 11:58</span>
+    <span class="bullet">·</span>
+    <span>BUILD 0.2.31-touchline</span>
+    <span class="bullet">·</span>
+    <span>Club · Finances · Riverside FC · Season 2024/25</span>
+    <span class="sp"></span>
+    <span>Balance £124m</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--brand-400)">Net profit +£32m</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--neu-400)">Wage cap 85.5%</span>
+    <span class="sp"></span>
+    <span>FPS 60</span>
+    <span class="bullet">·</span>
+    <span>RAM 1.1 GB</span>
+  </div>
+
+</div>
+</div>
+
+<!-- TWEAKS -->
+<div class="tweaks-panel" id="tweaksPanel">
+  <div class="tw-head">
+    <strong>Tweaks</strong>
+    <button class="tw-close" id="twClose">✕</button>
+  </div>
+  <div class="tw-body">
+    <div class="tw-row">
+      <div class="tw-lbl">Top Earners</div>
+      <div class="tw-opts">
+        <div class="tw-opt on" data-tweak="wagesVisible" data-val="on">Show</div>
+        <div class="tw-opt" data-tweak="wagesVisible" data-val="off">Hide</div>
+      </div>
+    </div>
+    <div class="tw-row">
+      <div class="tw-lbl">Period</div>
+      <div class="tw-opts">
+        <div class="tw-opt on" data-tweak="period" data-val="season">Season</div>
+        <div class="tw-opt" data-tweak="period" data-val="annual">Annual</div>
+      </div>
+    </div>
+    <div class="tw-row">
+      <div class="tw-lbl">Profit Highlight</div>
+      <div class="tw-opts">
+        <div class="tw-opt on" data-tweak="highlight" data-val="profit">On</div>
+        <div class="tw-opt" data-tweak="highlight" data-val="off">Off</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── cash flow chart ── */
+(function() {
+  var data = [
+    { m:'SEP', v:18  },
+    { m:'OCT', v:22  },
+    { m:'NOV', v:19  },
+    { m:'DEC', v:31  },
+    { m:'JAN', v:-12 },
+    { m:'FEB', v:24  },
+    { m:'MAR', v:11, partial:true },
+  ];
+  var maxAbs = Math.max.apply(null, data.map(function(d) { return Math.abs(d.v); }));
+  var chart = document.getElementById('cfChart');
+  if (!chart) return;
+
+  /* baseline at 62px from top of .cf-chart, within 62px bar area */
+  chart.innerHTML = '<div style="position:absolute;left:0;right:0;top:62px;height:1px;background:var(--line-2)"></div>';
+
+  data.forEach(function(d) {
+    var pct = Math.round((Math.abs(d.v) / maxAbs) * 100);
+    var px  = Math.round((pct / 100) * 62);
+    var isPos = d.v >= 0;
+    var col = d.partial ? 'var(--brand-400)' : (isPos ? 'var(--pos-400)' : 'var(--neg-400)');
+    var sign = d.v > 0 ? '+' : '';
+    var col = document.createElement('div');
+    col.className = 'cf-col';
+    col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;position:relative;';
+
+    var valEl = document.createElement('div');
+    valEl.style.cssText = 'position:absolute;font-family:var(--font-mono);font-size:9px;white-space:nowrap;left:50%;transform:translateX(-50%);';
+    valEl.style.color = d.partial ? 'var(--brand-400)' : (isPos ? 'var(--pos-400)' : 'var(--neg-400)');
+    valEl.style.top = isPos ? (62 - px - 14) + 'px' : '63px';
+    valEl.textContent = sign + d.v;
+
+    var barArea = document.createElement('div');
+    barArea.style.cssText = 'width:100%;height:62px;position:relative;';
+
+    var bar = document.createElement('div');
+    bar.style.cssText = 'position:absolute;left:10%;width:80%;background:' + (d.partial ? 'var(--brand-400)' : (isPos ? 'var(--pos-400)' : 'var(--neg-400)')) + ';opacity:' + (d.partial ? '0.75' : '1') + ';';
+    if (isPos) {
+      bar.style.bottom = '0';
+      bar.style.height = px + 'px';
+      bar.style.borderRadius = '2px 2px 0 0';
+    } else {
+      bar.style.top = '0';
+      bar.style.height = px + 'px';
+      bar.style.borderRadius = '0 0 2px 2px';
+    }
+
+    var monthEl = document.createElement('div');
+    monthEl.style.cssText = 'font-family:var(--font-mono);font-size:8.5px;color:var(--ink-4);letter-spacing:0.04em;margin-top:4px;';
+    monthEl.textContent = d.m;
+
+    barArea.appendChild(bar);
+    col.appendChild(valEl);
+    col.appendChild(barArea);
+    col.appendChild(monthEl);
+    chart.appendChild(col);
+  });
+})();
+
+/* ── scale ── */
+(function() {
+  var stage = document.getElementById('stage');
+  var badge = document.getElementById('resbadge');
+  function fit() {
+    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = 'scale(' + s + ')';
+    stage.style.transformOrigin = 'center center';
+    if (badge) badge.textContent = '1920×1080 · scale ' + Math.round(s * 100) + '%';
+  }
+  fit();
+  window.addEventListener('resize', fit);
+})();
+
+/* ── tweaks protocol ── */
+(function() {
+  var panel = document.getElementById('tweaksPanel');
+  var close = document.getElementById('twClose');
+
+  window.addEventListener('message', function(e) {
+    if (!e.data) return;
+    if (e.data.type === '__activate_edit_mode')   panel.classList.add('open');
+    if (e.data.type === '__deactivate_edit_mode') panel.classList.remove('open');
+  });
+  window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+
+  close.addEventListener('click', function() {
+    panel.classList.remove('open');
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  });
+
+  document.querySelectorAll('.tw-opt').forEach(function(opt) {
+    opt.addEventListener('click', function() {
+      var tweak = opt.dataset.tweak;
+      var val   = opt.dataset.val;
+      document.querySelectorAll('.tw-opt[data-tweak="' + tweak + '"]').forEach(function(o) { o.classList.remove('on'); });
+      opt.classList.add('on');
+
+      if (tweak === 'wagesVisible') {
+        var card = document.getElementById('earnersCard');
+        if (card) card.style.display = val === 'on' ? '' : 'none';
+      }
+      if (tweak === 'highlight') {
+        var net = document.querySelector('.pl-row.net .plv');
+        if (net) net.style.color = val === 'profit' ? 'var(--pos-400)' : 'var(--ink-1)';
+      }
+
+      var edits = {};
+      edits[tweak] = val;
+      window.parent.postMessage({ type: '__edit_mode_set_keys', edits: edits }, '*');
+    });
+  });
+})();
+</script>
+</body>
+</html>

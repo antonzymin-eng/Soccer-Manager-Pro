@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Tactics — Soccer Manager Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/squad.css">
+<style>
+/* ── Layout override ───────────────────────────────────────────────────────── */
+.stage { grid-template-rows: 52px 34px 1fr 32px; position: relative; }
+
+.tac-layout {
+  display: grid; grid-template-columns: 360px 1fr 240px 420px;
+  min-height: 0; overflow: hidden;
+}
+
+/* ── Left column ───────────────────────────────────────────────────────────── */
+.tac-left {
+  border-right: 1px solid var(--line-2);
+  display: flex; flex-direction: column;
+  overflow-y: auto; padding: 14px 16px; gap: 14px;
+}
+.tac-sect { font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-4); margin-bottom:5px; }
+
+/* Mentality pills */
+.ment-pills { display:flex; gap:4px; }
+.mp {
+  flex:1; height:26px; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.04em;
+  border:1px solid var(--line-2); border-radius:var(--r-2);
+  background:var(--bg-2); color:var(--ink-4); cursor:default; transition:all .1s;
+}
+.mp:hover { color:var(--ink-1); }
+.mp.on { font-weight:600; }
+.mp.men-defensive.on  { background:var(--bg-3); border-color:var(--ink-4); color:var(--ink-2); }
+.mp.men-cautious.on   { background:var(--info-tint); border-color:var(--info-400); color:var(--info-400); }
+.mp.men-balanced.on   { background:var(--neu-tint); border-color:var(--neu-400); color:var(--neu-400); }
+.mp.men-positive.on   { background:var(--brand-tint); border-color:var(--brand-400); color:var(--brand-400); }
+.mp.men-attacking.on  { background:var(--neg-tint); border-color:var(--neg-400); color:var(--neg-400); }
+
+/* Shape rows */
+.shape-rows { display:flex; flex-direction:column; gap:6px; }
+.sr { display:flex; align-items:center; gap:10px; }
+.sr-lbl { font-size:11px; color:var(--ink-3); width:78px; flex-shrink:0; }
+.sr-seg { flex:1; display:flex; background:var(--bg-2); border:1px solid var(--line-2); border-radius:var(--r-2); height:24px; overflow:hidden; }
+.sr-opt { flex:1; background:transparent; border:0; border-left:1px solid var(--line-2); font-size:10px; color:var(--ink-4); font-family:var(--font-body); cursor:default; transition:all .1s; }
+.sr-opt:first-child { border-left:0; }
+.sr-opt.on { background:var(--bg-3); color:var(--brand-400); font-weight:600; }
+
+/* Instruction toggles */
+.instr-list { display:flex; flex-direction:column; gap:1px; }
+.ti { display:flex; align-items:center; gap:9px; padding:5px 8px; border-radius:var(--r-2); cursor:default; transition:background .1s; }
+.ti:hover { background:var(--bg-2); }
+.ti-tog { width:26px; height:13px; border-radius:7px; background:var(--bg-3); border:1px solid var(--line-2); position:relative; flex-shrink:0; transition:background .15s; }
+.ti-tog.on { background:var(--brand-400); border-color:var(--brand-400); }
+.ti-tog::after { content:''; position:absolute; top:2px; left:2px; width:7px; height:7px; border-radius:50%; background:var(--ink-4); transition:transform .15s, background .15s; }
+.ti-tog.on::after { transform:translateX(13px); background:#001a0a; }
+.ti-lbl { font-size:11.5px; color:var(--ink-3); }
+.ti.on .ti-lbl { color:var(--ink-1); }
+
+/* ── Center column ─────────────────────────────────────────────────────────── */
+.tac-center { display:flex; align-items:center; justify-content:center; border-right:1px solid var(--line-2); overflow:hidden; padding:14px; }
+
+.vp {
+  width:432px; height:100%;
+  background:linear-gradient(180deg,#0b2310 0%,#144018 22%,#1b5220 50%,#144018 78%,#0b2310 100%);
+  border:1.5px solid rgba(255,255,255,0.12); border-radius:var(--r-4);
+  position:relative; overflow:hidden; flex-shrink:0;
+  max-height:860px;
+}
+.vp-mark { position:absolute; pointer-events:none; }
+.vp-cl   { top:50%; left:8%; right:8%; height:1px; background:rgba(255,255,255,0.2); }
+.vp-circ { top:50%; left:50%; width:68px; height:68px; border:1px solid rgba(255,255,255,0.16); border-radius:50%; transform:translate(-50%,-50%); }
+.vp-pt   { top:3%; left:26%; right:26%; height:14%; border:1px solid rgba(255,255,255,0.14); border-top:none; }
+.vp-pb   { bottom:3%; left:26%; right:26%; height:14%; border:1px solid rgba(255,255,255,0.14); border-bottom:none; }
+.vp-gt   { top:3%; left:40%; right:40%; height:4%; border:1px solid rgba(255,255,255,0.22); border-top:none; }
+.vp-gb   { bottom:3%; left:40%; right:40%; height:4%; border:1px solid rgba(255,255,255,0.22); border-bottom:none; }
+#vpRows { position:absolute; inset:0; z-index:1; display:flex; flex-direction:column; justify-content:space-evenly; padding:18px 14px; }
+.vp-row { display:flex; justify-content:space-evenly; align-items:center; }
+
+/* Player cards on pitch */
+.vpc {
+  width:88px; height:70px;
+  background:rgba(6,10,16,0.88); border:1px solid rgba(255,255,255,0.18);
+  border-radius:var(--r-3); padding:5px 7px;
+  cursor:pointer; transition:border-color .1s, background .1s;
+  display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+}
+.vpc:hover  { border-color:rgba(255,255,255,0.5); }
+.vpc.sel    { border-color:var(--brand-400); background:rgba(0,255,136,0.1); }
+.vpc-top    { display:flex; justify-content:space-between; align-items:center; width:100%; }
+.vpc-abbr   { font-family:var(--font-mono); font-size:9px; font-weight:700; color:var(--ink-3); letter-spacing:0.05em; }
+.vpc-duty   { font-family:var(--font-mono); font-size:7.5px; font-weight:700; width:15px; height:15px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.duty-d { background:var(--info-tint); color:var(--info-400); }
+.duty-s { background:var(--brand-tint); color:var(--brand-400); }
+.duty-a { background:var(--neg-tint); color:var(--neg-400); }
+.vpc-pname  { font-size:11.5px; font-weight:600; color:var(--ink-1); white-space:nowrap; }
+.vpc-rating { font-family:var(--font-mono); font-size:9.5px; color:var(--ink-4); }
+
+/* ── Squad list column ─────────────────────────────────────────────────────── */
+.tac-squad {
+  border-right: 1px solid var(--line-2);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sq-hdr {
+  padding: 9px 12px 8px; border-bottom: 1px solid var(--line-2);
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+}
+.sq-hdr-lbl {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-4); flex: 1;
+}
+.sq-hdr-count {
+  font-family: var(--font-mono); font-size: 9px; color: var(--ink-5);
+  background: var(--bg-2); border: 1px solid var(--line-2);
+  border-radius: 9px; padding: 1px 7px;
+}
+.sq-scroll { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+.sq-scroll::-webkit-scrollbar { width: 3px; }
+.sq-scroll::-webkit-scrollbar-thumb { background: var(--line-3); border-radius: 2px; }
+.sq-grp-lbl {
+  font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-5); padding: 10px 12px 3px;
+  display: flex; align-items: center; gap: 6px;
+}
+.sq-grp-lbl::after { content: ''; flex: 1; height: 1px; background: var(--line-2); }
+.sq-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; cursor: pointer; transition: background 0.1s;
+}
+.sq-row:hover { background: var(--bg-2); }
+.sq-row.sq-sel { background: rgba(0,255,136,0.07); }
+.sq-num {
+  font-family: var(--font-mono); font-size: 9px; color: var(--ink-5);
+  width: 18px; text-align: right; flex-shrink: 0;
+}
+.sq-pos-pill {
+  font-family: var(--font-mono); font-size: 7.5px; font-weight: 700;
+  width: 30px; text-align: center; padding: 2px 0;
+  border-radius: 2px; flex-shrink: 0; letter-spacing: 0.03em;
+}
+.sq-pos-pill.pos-gk { background: rgba(255,100,80,0.15); color: #ff7060; }
+.sq-pos-pill.pos-df { background: var(--info-tint); color: var(--info-400); }
+.sq-pos-pill.pos-mf { background: var(--neu-tint); color: var(--neu-400); }
+.sq-pos-pill.pos-fw { background: var(--brand-tint); color: var(--brand-400); }
+.sq-name {
+  flex: 1; font-size: 11.5px; color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer;
+}
+.sq-row:hover .sq-name { color: var(--ink-1); }
+.sq-row.sq-sel .sq-name { color: var(--brand-400); font-weight: 600; }
+.sq-avg {
+  font-family: var(--font-mono); font-size: 9px; color: var(--ink-5); flex-shrink: 0;
+}
+.sq-row.sq-sel .sq-avg { color: var(--brand-400); opacity: 0.8; }
+.sq-xi-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--brand-400); flex-shrink: 0; opacity: 0.7;
+}
+.sq-xi-dot.hidden { opacity: 0; }
+
+/* ── Right column ──────────────────────────────────────────────────────────── */
+.tac-right { display:flex; flex-direction:column; overflow:hidden; }
+#playerDetail { flex:1; overflow-y:auto; padding:16px 18px; }
+
+.pd-head { display:flex; align-items:center; gap:12px; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--line-2); }
+.pd-portrait { width:50px; height:50px; border-radius:var(--r-3); flex-shrink:0; background:linear-gradient(135deg,var(--bg-3),var(--bg-2)); border:1px solid var(--line-3); display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:800; font-size:20px; color:var(--brand-400); }
+.pd-name { font-family:var(--font-display); font-size:22px; font-weight:700; line-height:1.05; }
+.pd-sub  { font-size:11px; color:var(--ink-3); margin-top:2px; }
+
+.pd-role-bar { display:flex; align-items:center; gap:8px; padding:8px 11px; background:var(--bg-2); border:1px solid var(--line-2); border-radius:var(--r-2); margin-bottom:8px; }
+.pd-role-txt { flex:1; font-size:13px; font-weight:600; color:var(--ink-1); }
+.pd-duty-grp { display:flex; gap:4px; }
+.pd-duty-btn { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:8.5px; font-weight:700; cursor:default; border:1.5px solid var(--line-2); background:var(--bg-3); color:var(--ink-4); transition:all .1s; }
+.pd-duty-btn.act-d { background:var(--info-tint); border-color:var(--info-400); color:var(--info-400); }
+.pd-duty-btn.act-s { background:var(--brand-tint); border-color:var(--brand-400); color:var(--brand-400); }
+.pd-duty-btn.act-a { background:var(--neg-tint); border-color:var(--neg-400); color:var(--neg-400); }
+
+.pd-desc { font-size:11.5px; color:var(--ink-3); line-height:1.55; padding:8px 10px; background:var(--bg-2); border-radius:var(--r-2); border-left:2px solid var(--brand-400); margin-bottom:12px; }
+.pd-sect { font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-4); margin:10px 0 5px; }
+
+.pd-role-list { display:flex; flex-direction:column; gap:3px; margin-bottom:10px; }
+.pd-role-opt { display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg-2); border:1px solid var(--line-2); border-radius:var(--r-2); cursor:default; font-size:12px; color:var(--ink-2); transition:all .1s; }
+.pd-role-opt:hover { color:var(--ink-1); border-color:var(--line-3); }
+.pd-role-opt.on { border-color:var(--brand-400); background:var(--brand-tint); color:var(--brand-400); }
+.pd-rdot { width:6px; height:6px; border-radius:50%; background:var(--line-3); flex-shrink:0; }
+.pd-role-opt.on .pd-rdot { background:var(--brand-400); }
+
+.pd-instr-list { display:flex; flex-direction:column; gap:1px; }
+.pd-instr { display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:var(--r-2); cursor:default; }
+.pd-instr:hover { background:var(--bg-2); }
+.pd-itog { width:26px; height:13px; border-radius:7px; background:var(--bg-3); border:1px solid var(--line-2); position:relative; flex-shrink:0; transition:background .15s; }
+.pd-itog.on { background:var(--brand-400); border-color:var(--brand-400); }
+.pd-itog::after { content:''; position:absolute; top:2px; left:2px; width:7px; height:7px; border-radius:50%; background:var(--ink-4); transition:transform .15s, background .15s; }
+.pd-itog.on::after { transform:translateX(13px); background:#001a0a; }
+.pd-ilbl { font-size:11.5px; color:var(--ink-2); }
+.pd-instr.on .pd-ilbl { color:var(--ink-1); }
+
+/* ── Calendar (shared) ─────────────────────────────────────────────────────── */
+.cal-overlay { position:absolute; inset:0; z-index:200; background:rgba(0,0,0,0.55); backdrop-filter:blur(2px); display:flex; align-items:flex-start; justify-content:flex-end; padding-top:52px; padding-right:18px; }
+.cal-modal { width:320px; background:var(--bg-1); border:1px solid var(--line-3); border-radius:var(--r-4); box-shadow:var(--shadow-3); overflow:hidden; }
+.cal-head { display:flex; align-items:center; padding:10px 14px; background:var(--bg-2); border-bottom:1px solid var(--line-2); gap:8px; }
+.cal-month-name { flex:1; font-family:var(--font-display); font-size:13px; font-weight:700; letter-spacing:0.04em; color:var(--ink-1); text-align:center; }
+.cal-nav { background:transparent; border:1px solid var(--line-2); border-radius:var(--r-2); color:var(--ink-3); font-size:11px; width:24px; height:24px; cursor:default; display:flex; align-items:center; justify-content:center; }
+.cal-close { background:transparent; border:0; color:var(--ink-4); font-size:13px; cursor:default; padding:2px 4px; margin-left:4px; }
+.cal-body { padding:8px; }
+.cal-dow { display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:4px; }
+.cal-dow span { text-align:center; font-family:var(--font-mono); font-size:9px; color:var(--ink-5); letter-spacing:0.06em; padding:3px 0; }
+#calGrid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.cal-cell { aspect-ratio:1; border-radius:var(--r-2); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
+.cal-cell:not(.empty) { background:var(--bg-2); }
+.cal-day { font-family:var(--font-mono); font-size:10px; color:var(--ink-3); line-height:1; }
+.cal-res { font-family:var(--font-mono); font-size:8px; font-weight:600; }
+.cal-cell.today { background:var(--brand-tint); border:1px solid var(--brand-400); }
+.cal-cell.today .cal-day { color:var(--brand-400); font-weight:700; }
+.cal-cell.w { background:var(--pos-tint); } .cal-cell.w .cal-day { color:var(--pos-400); }
+.cal-cell.d { background:var(--neu-tint); } .cal-cell.d .cal-day { color:var(--neu-400); }
+.cal-cell.upcoming { border:1px solid var(--line-3); } .cal-cell.upcoming .cal-day { color:var(--ink-2); }
+.cal-cell.fixture-ucl { border-color:var(--info-400); } .cal-cell.fixture-ucl .cal-day { color:var(--info-400); }
+.cal-footer { padding:8px 12px; border-top:1px solid var(--line-2); display:flex; gap:10px; }
+.cal-footer .leg { font-family:var(--font-mono); font-size:9px; color:var(--ink-4); }
+
+/* ── Alt panel base ─────────────────────────────────────────────────────── */
+.tac-alt-panel{position:absolute;top:86px;bottom:32px;left:0;right:0;display:none;overflow:hidden;background:var(--bg-0);z-index:5;}
+
+/* ── Set Pieces ─────────────────────────────────────────────────────────── */
+.sp-layout{display:grid;grid-template-columns:224px 1fr 390px;height:100%;}
+.sp-list{border-right:1px solid var(--line-2);overflow-y:auto;padding:10px 0;}
+.sp-grp-lbl{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-5);padding:10px 14px 4px;}
+.sp-item{display:flex;align-items:center;padding:8px 14px 8px 16px;font-size:12px;color:var(--ink-3);cursor:default;transition:background .1s,color .1s;border-left:2px solid transparent;}
+.sp-item:hover{background:var(--bg-2);color:var(--ink-1);}
+.sp-item.on{background:var(--brand-tint);color:var(--brand-400);font-weight:600;border-left-color:var(--brand-400);}
+.sp-center{display:flex;align-items:center;justify-content:center;overflow:hidden;padding:14px;}
+.sp-pitch-svg{max-height:100%;width:auto;max-width:100%;}
+.sp-right{border-left:1px solid var(--line-2);overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;}
+.sp-title{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--ink-1);}
+.sp-sub{font-family:var(--font-mono);font-size:9px;color:var(--ink-4);letter-spacing:.08em;text-transform:uppercase;margin-top:1px;}
+.sp-sect{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);margin-bottom:5px;}
+.sp-taker-bar{display:flex;align-items:center;gap:10px;padding:8px 11px;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-2);}
+.sp-taker-lbl{font-family:var(--font-mono);font-size:9px;color:var(--ink-4);letter-spacing:.06em;text-transform:uppercase;min-width:36px;}
+.sp-taker-name{font-size:12.5px;font-weight:600;color:var(--ink-1);flex:1;}
+.sp-seg{display:flex;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-2);overflow:hidden;height:26px;}
+.sp-opt{flex:1;background:transparent;border:0;border-left:1px solid var(--line-2);font-size:10px;color:var(--ink-4);font-family:var(--font-body);cursor:default;transition:all .1s;padding:0 8px;white-space:nowrap;}
+.sp-opt:first-child{border-left:0;}
+.sp-opt.on{background:var(--bg-3);color:var(--brand-400);font-weight:600;}
+.sp-assign-list{display:flex;flex-direction:column;}
+.sp-assign-row{display:grid;grid-template-columns:24px 1fr 130px;gap:8px;align-items:center;padding:7px 8px;border-radius:var(--r-2);cursor:default;transition:background .1s;border-bottom:1px solid var(--line-1);}
+.sp-assign-row:last-child{border-bottom:none;}
+.sp-assign-row:hover{background:var(--bg-2);}
+.sp-assign-num{font-family:var(--font-mono);font-size:10px;color:var(--ink-4);text-align:right;}
+.sp-assign-name{font-size:11.5px;color:var(--ink-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sp-assign-role{font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-align:right;}
+
+/* ── Opposition ─────────────────────────────────────────────────────────── */
+.opp-layout{display:grid;grid-template-columns:318px 1fr 390px;height:100%;}
+.opp-left{border-right:1px solid var(--line-2);overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;}
+.opp-match-banner{background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-3);padding:14px;}
+.opp-team{font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--ink-1);}
+.opp-meta{font-size:11px;color:var(--ink-3);margin-top:2px;}
+.opp-form-strip{display:flex;gap:3px;margin-top:10px;align-items:center;}
+.opp-fd{width:22px;height:22px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px;font-weight:700;}
+.opp-fw{background:var(--pos-tint);color:var(--pos-400);}
+.opp-fd-d{background:var(--neu-tint);color:var(--neu-400);}
+.opp-fl{background:var(--neg-tint);color:var(--neg-400);}
+.opp-sect{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);margin-bottom:5px;}
+.opp-row{display:flex;align-items:center;gap:6px;padding:5px 0;font-size:11px;border-bottom:1px solid var(--line-1);}
+.opp-row:last-child{border-bottom:none;}
+.opp-row-lbl{color:var(--ink-4);min-width:95px;}
+.opp-row-val{color:var(--ink-1);font-weight:500;}
+.opp-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.opp-stat{background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-2);padding:8px 10px;}
+.opp-stat-v{font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--ink-1);line-height:1;}
+.opp-stat-l{font-family:var(--font-mono);font-size:9px;color:var(--ink-4);letter-spacing:.05em;text-transform:uppercase;margin-top:2px;}
+.opp-center{display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line-2);overflow:hidden;padding:16px;}
+.opp-right{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;}
+.opp-sect-head{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);margin-bottom:6px;}
+.opp-threat{background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-3);padding:12px;margin-bottom:6px;}
+.opp-threat:last-child{margin-bottom:0;}
+.opp-threat-top{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.opp-threat-badge{width:26px;height:26px;border-radius:var(--r-2);background:var(--neg-tint);border:1px solid var(--neg-400);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:8px;font-weight:700;color:var(--neg-400);flex-shrink:0;}
+.opp-threat-name{font-size:13px;font-weight:600;color:var(--ink-1);}
+.opp-threat-sub{font-size:10px;color:var(--ink-4);margin-top:1px;}
+.opp-threat-desc{font-size:11px;color:var(--ink-3);line-height:1.5;}
+.opp-alert-list{display:flex;flex-direction:column;gap:4px;}
+.opp-alert{display:flex;align-items:flex-start;gap:7px;padding:7px 9px;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-2);font-size:11px;color:var(--ink-3);line-height:1.4;}
+.opp-plan-list{display:flex;flex-direction:column;}
+.opp-plan-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;font-size:11.5px;color:var(--ink-2);border-bottom:1px solid var(--line-1);line-height:1.4;}
+.opp-plan-item:last-child{border-bottom:none;}
+.opp-plan-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-400);flex-shrink:0;margin-top:5px;}
+
+/* ── Templates ───────────────────────────────────────────────────────────── */
+.tmpl-layout{height:100%;overflow-y:auto;padding:18px 22px;}
+.tmpl-hdr{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.tmpl-hdr-title{font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);flex:1;}
+.tmpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px;}
+.tmpl-card{background:var(--bg-card);border:1px solid var(--line-2);border-radius:var(--r-4);padding:15px;cursor:default;transition:border-color .15s,background .15s;}
+.tmpl-card:hover{border-color:var(--line-3);background:var(--bg-2);}
+.tmpl-card.tmpl-active{border-color:var(--brand-400);background:var(--brand-tint);}
+.tmpl-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:5px;}
+.tmpl-form{font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--ink-1);line-height:1;}
+.tmpl-card.tmpl-active .tmpl-form{color:var(--brand-400);}
+.tmpl-badge{font-family:var(--font-mono);font-size:8px;font-weight:700;padding:2px 7px;border-radius:var(--r-pill);background:var(--brand-400);color:#001a0a;letter-spacing:.06em;text-transform:uppercase;}
+.tmpl-name{font-size:13px;font-weight:600;color:var(--ink-1);margin-bottom:2px;}
+.tmpl-desc{font-size:10.5px;color:var(--ink-4);margin-bottom:9px;line-height:1.4;}
+.tmpl-chips{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:10px;}
+.tmpl-chip{font-family:var(--font-mono);font-size:9px;padding:2px 7px;border-radius:var(--r-pill);border:1px solid var(--line-2);background:var(--bg-2);color:var(--ink-4);letter-spacing:.03em;}
+.tmpl-mini{width:100%;height:62px;background:linear-gradient(180deg,#0d2810 0%,#164a18 60%,#0d2810 100%);border-radius:var(--r-2);margin-bottom:10px;position:relative;overflow:hidden;}
+.tmpl-dot{position:absolute;width:7px;height:7px;border-radius:50%;transform:translate(-50%,-50%);}
+.tmpl-dot.gk{background:rgba(255,100,80,.85);}
+.tmpl-dot.field{background:rgba(0,255,136,.72);}
+.tmpl-foot{display:flex;align-items:center;gap:5px;}
+.tmpl-foot-meta{flex:1;font-family:var(--font-mono);font-size:9px;color:var(--ink-5);letter-spacing:.03em;}
+.tmpl-btn{font-family:var(--font-mono);font-size:9px;padding:4px 9px;border-radius:var(--r-2);border:1px solid var(--line-2);background:var(--bg-2);color:var(--ink-3);cursor:default;transition:all .1s;}
+.tmpl-btn:hover{border-color:var(--line-3);color:var(--ink-1);}
+.tmpl-btn.tmpl-btn-apply{border-color:var(--brand-400);background:var(--brand-tint);color:var(--brand-400);}
+</style>
+</head>
+<body>
+
+<div class="resolution-badge" id="resbadge">1920 × 1080</div>
+<div class="fitter">
+<div class="stage" id="stage">
+
+  <!-- CHROME -->
+  <header class="chrome">
+    <div class="brand">
+      <div class="crest-gm">RM</div>
+      <div class="nm">Riverside <em>· Mgr. You</em></div>
+    </div>
+    <nav class="nav">
+      <a href="Club.html">Club</a>
+      <a href="Squad Screen.html">Squad</a>
+      <a href="Tactics.html" class="on">Tactics</a>
+      <a href="#">Training</a>
+      <a href="#">Scouting</a>
+      <a href="#">Transfers</a>
+      <a href="#">Staff</a>
+      <a href="#">World</a>
+      <a href="#">Inbox<span class="b">3</span></a>
+    </nav>
+    <div class="sp"></div>
+    <div class="right">
+      <div class="kbd-hint"><span class="lbl">Search anywhere</span><span class="k">⌘ K</span></div>
+      <div class="date" id="dateBtn" title="Open calendar">Sat 14 Mar · Wk 31 📅</div>
+      <div class="cont">Continue ▸</div>
+    </div>
+  </header>
+
+  <!-- SUB-TABS -->
+  <div class="crumb">
+    <span class="tab on">Shape</span>
+    <span class="tab">Set Pieces</span>
+    <span class="tab">Opposition</span>
+    <span class="tab">Templates</span>
+    <div class="sp"></div>
+    <div style="display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:10px;color:var(--ink-3)">
+      <span style="color:var(--brand-400)">4–3–3</span>
+      <span>·</span><span id="mentLabel">Positive</span>
+      <span>·</span><span>Last: D 1–1 vs Portsea Vale</span>
+      <span>·</span><span>Next: Kingsford (H) Sat 22 Mar</span>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="cal-overlay" id="calOverlay" style="display:none">
+    <div class="cal-modal">
+      <div class="cal-head">
+        <button class="cal-nav">◀</button>
+        <span class="cal-month-name">March 2025 · Wk 31</span>
+        <button class="cal-nav">▶</button>
+        <button class="cal-close" id="calClose">✕</button>
+      </div>
+      <div class="cal-body">
+        <div class="cal-dow"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+        <div id="calGrid"></div>
+      </div>
+      <div class="cal-footer">
+        <span class="leg" style="color:var(--brand-400)">● Today</span>
+        <span class="leg">● W/D/L</span>
+        <span class="leg" style="color:var(--info-400)">● UCL</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="tac-layout" id="panel-shape">
+
+    <!-- LEFT: Team Instructions -->
+    <div class="tac-left">
+      <div>
+        <div class="tac-sect">Mentality</div>
+        <div class="ment-pills" id="mentPills"></div>
+      </div>
+      <div>
+        <div class="tac-sect">Team Shape</div>
+        <div class="shape-rows" id="shapeRows"></div>
+      </div>
+      <div>
+        <div class="tac-sect">In Possession</div>
+        <div class="instr-list" id="instrIn"></div>
+      </div>
+      <div>
+        <div class="tac-sect">Out of Possession</div>
+        <div class="instr-list" id="instrOut"></div>
+      </div>
+      <div>
+        <div class="tac-sect">In Transition</div>
+        <div class="instr-list" id="instrTrans"></div>
+      </div>
+    </div>
+
+    <!-- CENTER: Pitch -->
+    <div class="tac-center">
+      <div class="vp">
+        <div class="vp-mark vp-gt"></div>
+        <div class="vp-mark vp-pt"></div>
+        <div class="vp-mark vp-cl"></div>
+        <div class="vp-mark vp-circ"></div>
+        <div class="vp-mark vp-pb"></div>
+        <div class="vp-mark vp-gb"></div>
+        <div id="vpRows"></div>
+      </div>
+    </div>
+
+    <!-- SQUAD LIST -->
+    <div class="tac-squad">
+      <div class="sq-hdr">
+        <span class="sq-hdr-lbl">Squad</span>
+        <span class="sq-hdr-count" id="sqCount">23</span>
+      </div>
+      <div class="sq-scroll" id="squadList"></div>
+    </div>
+
+    <!-- RIGHT: Player Detail -->
+    <div class="tac-right">
+      <div id="playerDetail"></div>
+    </div>
+
+  </div>
+
+  <!-- SET PIECES PANEL -->
+  <div id="panel-setpieces" class="tac-alt-panel">
+    <div class="sp-layout">
+      <div class="sp-list" id="spList"></div>
+      <div class="sp-center">
+        <svg id="spSvg" viewBox="0 0 432 380" class="sp-pitch-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="sp-right" id="spDetail"></div>
+    </div>
+  </div>
+
+  <!-- OPPOSITION PANEL -->
+  <div id="panel-opposition" class="tac-alt-panel">
+    <div class="opp-layout">
+      <div class="opp-left">
+        <div class="opp-match-banner">
+          <div class="opp-team">Kingsford FC</div>
+          <div class="opp-meta">Home · Sat 22 Mar · 15:00 · Riverside Stadium</div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);margin-top:9px;letter-spacing:.06em;text-transform:uppercase">Recent form (last 6)</div>
+          <div class="opp-form-strip">
+            <div class="opp-fd opp-fd-d">D</div>
+            <div class="opp-fd opp-fw">W</div>
+            <div class="opp-fd opp-fl">L</div>
+            <div class="opp-fd opp-fw">W</div>
+            <div class="opp-fd opp-fd-d">D</div>
+            <div class="opp-fd opp-fw">W</div>
+            <span style="margin-left:8px;font-family:var(--font-mono);font-size:10px;color:var(--ink-4)">PPG 1.67</span>
+          </div>
+        </div>
+        <div>
+          <div class="opp-sect">Playing Style · 4-4-2 Flat</div>
+          <div class="opp-row"><span class="opp-row-lbl">Mentality</span><span class="opp-row-val">Balanced</span></div>
+          <div class="opp-row"><span class="opp-row-lbl">Pressing</span><span class="opp-row-val">Medium-low</span></div>
+          <div class="opp-row"><span class="opp-row-lbl">Defensive line</span><span class="opp-row-val">Standard</span></div>
+          <div class="opp-row"><span class="opp-row-lbl">Build-up</span><span class="opp-row-val">Long ball / wide</span></div>
+          <div class="opp-row"><span class="opp-row-lbl">Tempo</span><span class="opp-row-val">High</span></div>
+          <div class="opp-row"><span class="opp-row-lbl">Width</span><span class="opp-row-val">Wide</span></div>
+          <div class="opp-row"><span class="opp-row-lbl">Aerial %</span><span class="opp-row-val" style="color:var(--neg-400)">58% ↑ key strength</span></div>
+        </div>
+        <div>
+          <div class="opp-sect">Season stats (last 5)</div>
+          <div class="opp-stats-grid">
+            <div class="opp-stat"><div class="opp-stat-v">1.4</div><div class="opp-stat-l">Goals scored avg</div></div>
+            <div class="opp-stat"><div class="opp-stat-v">1.0</div><div class="opp-stat-l">Conceded avg</div></div>
+            <div class="opp-stat"><div class="opp-stat-v">44%</div><div class="opp-stat-l">Possession avg</div></div>
+            <div class="opp-stat"><div class="opp-stat-v">3.2</div><div class="opp-stat-l">Shots on target</div></div>
+            <div class="opp-stat"><div class="opp-stat-v">7th</div><div class="opp-stat-l">League position</div></div>
+            <div class="opp-stat"><div class="opp-stat-v">38</div><div class="opp-stat-l">Points (Wk 31)</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="opp-center">
+        <svg id="oppPitch" viewBox="0 0 432 580" style="max-height:100%;width:auto;max-width:100%" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="opp-right">
+        <div>
+          <div class="opp-sect-head">Key threats</div>
+          <div class="opp-threat">
+            <div class="opp-threat-top">
+              <div class="opp-threat-badge">!1</div>
+              <div><div class="opp-threat-name">Marcus Howell</div><div class="opp-threat-sub">ST · #9 · 18G this season</div></div>
+            </div>
+            <div class="opp-threat-desc">Physical aerial presence, excellent hold-up play. Targets crosses from wide areas. Varane must hold the line — avoid cheap balls into channels behind the defence.</div>
+          </div>
+          <div class="opp-threat">
+            <div class="opp-threat-top">
+              <div class="opp-threat-badge">!2</div>
+              <div><div class="opp-threat-name">Danny Rix</div><div class="opp-threat-sub">CM · #8 · Set piece specialist</div></div>
+            </div>
+            <div class="opp-threat-desc">Creative engine and dead-ball expert — 6 direct FK goals this season. Mainoo must press him early whenever Kingsford win possession in central areas.</div>
+          </div>
+          <div class="opp-threat">
+            <div class="opp-threat-top">
+              <div class="opp-threat-badge" style="background:var(--neu-tint);border-color:var(--neu-400);color:var(--neu-400)">!3</div>
+              <div><div class="opp-threat-name">Lee Morrison</div><div class="opp-threat-sub">RB · #2 · Long throw expert</div></div>
+            </div>
+            <div class="opp-threat-desc">Generates multiple set-piece routines via long throws from the right. Malacia must stay tight and track Morrison's late runs into the box.</div>
+          </div>
+        </div>
+        <div>
+          <div class="opp-sect-head">Defensive alerts</div>
+          <div class="opp-alert-list">
+            <div class="opp-alert"><span style="color:var(--neg-400);flex-shrink:0;font-size:10px">▲</span>Strong aerial threat — match physicality in both boxes</div>
+            <div class="opp-alert"><span style="color:var(--neg-400);flex-shrink:0;font-size:10px">▲</span>Long throws from right (Morrison) — zone mark corners</div>
+            <div class="opp-alert"><span style="color:var(--neu-400);flex-shrink:0;font-size:10px">●</span>FK danger from Rix — 4-man wall recommended</div>
+            <div class="opp-alert"><span style="color:var(--brand-400);flex-shrink:0;font-size:10px">●</span>LB Jennings (#3) exposed — target with Garnacho's pace</div>
+          </div>
+        </div>
+        <div>
+          <div class="opp-sect-head">Our tactical plan</div>
+          <div class="opp-plan-list">
+            <div class="opp-plan-item"><span class="opp-plan-dot"></span>Counter vs their high shape — Garnacho + Rashford on the break</div>
+            <div class="opp-plan-item"><span class="opp-plan-dot"></span>Exploit LB Jennings (#3) — Garnacho to isolate 1v1 on the right</div>
+            <div class="opp-plan-item"><span class="opp-plan-dot"></span>Hold aerial dominance — no cheap balls to Howell in channels</div>
+            <div class="opp-plan-item"><span class="opp-plan-dot"></span>Win the 2nd ball — Mainoo + Casemiro screen against long balls</div>
+            <div class="opp-plan-item"><span class="opp-plan-dot"></span>Set pieces: zone mark corners; 4-man wall for Rix free kicks</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEMPLATES PANEL -->
+  <div id="panel-templates" class="tac-alt-panel">
+    <div class="tmpl-layout">
+      <div class="tmpl-hdr">
+        <div class="tmpl-hdr-title">Tactical Templates</div>
+        <button class="btn">↧ Import</button>
+        <button class="btn primary">+ Save current as template</button>
+      </div>
+      <div class="tmpl-grid" id="tmplGrid"></div>
+    </div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status">
+    <span class="dot"></span><span>SAVE · auto · 11:58</span>
+    <span class="bullet">·</span><span>BUILD 0.2.31-touchline</span>
+    <span class="bullet">·</span><span>Tactics · 4-3-3</span>
+    <span class="sp"></span>
+    <span>FPS 60</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--brand-400)">⌘K to search anything</span>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ── Stage scale ─────────────────────────────────────────────────────────── */
+(function(){
+  const s=document.getElementById('stage'), b=document.getElementById('resbadge');
+  function fit(){const sc=Math.min(window.innerWidth/1920,window.innerHeight/1080);s.style.transform='scale('+sc+')';if(b)b.textContent='1920×1080 · scale '+Math.round(sc*100)+'%';}
+  fit(); window.addEventListener('resize',fit);
+})();
+
+/* ── XI squad ─────────────────────────────────────────────────────────────── */
+const XI=[
+  {n:1, pos:'GK', posClass:'pos-gk', name:'A. Onana',     age:28, nat:'CMR', avg:7.04},
+  {n:2, pos:'RB', posClass:'pos-df', name:'D. Dalot',     age:25, nat:'POR', avg:7.12},
+  {n:19,pos:'CB', posClass:'pos-df', name:'R. Varane',    age:30, nat:'FRA', avg:7.18},
+  {n:35,pos:'CB', posClass:'pos-df', name:'W. Yoro',      age:18, nat:'FRA', avg:7.42},
+  {n:12,pos:'LB', posClass:'pos-df', name:'T. Malacia',   age:25, nat:'NED', avg:6.88},
+  {n:18,pos:'CDM',posClass:'pos-mf', name:'Casemiro',     age:33, nat:'BRA', avg:7.05},
+  {n:37,pos:'CM', posClass:'pos-mf', name:'K. Mainoo',    age:19, nat:'ENG', avg:7.51},
+  {n:8, pos:'AM', posClass:'pos-mf', name:'B. Fernandes', age:30, nat:'POR', avg:7.84},
+  {n:11,pos:'RW', posClass:'pos-fw', name:'A. Garnacho',  age:20, nat:'ARG', avg:7.26},
+  {n:21,pos:'ST', posClass:'pos-fw', name:'J. Zirkzee',   age:23, nat:'NED', avg:7.03},
+  {n:10,pos:'LW', posClass:'pos-fw', name:'M. Rashford',  age:26, nat:'ENG', avg:7.12},
+];
+const BENCH=[
+  {n:9, pos:'ST', posClass:'pos-fw', name:'R. Højlund',    age:21, nat:'DEN', avg:7.18},
+  {n:7, pos:'AM', posClass:'pos-mf', name:'M. Mount',      age:25, nat:'ENG', avg:6.94},
+  {n:14,pos:'ST', posClass:'pos-fw', name:'A. Martial',    age:28, nat:'FRA', avg:6.71},
+  {n:39,pos:'CM', posClass:'pos-mf', name:'S. McTominay',  age:27, nat:'SCO', avg:7.02},
+  {n:6, pos:'CB', posClass:'pos-df', name:'V. Lindelöf',   age:30, nat:'SWE', avg:6.88},
+  {n:23,pos:'LB', posClass:'pos-df', name:'L. Shaw',       age:28, nat:'ENG', avg:6.95},
+  {n:22,pos:'GK', posClass:'pos-gk', name:'T. Heaton',     age:38, nat:'ENG', avg:6.61},
+];
+const RESERVES=[
+  {n:33,pos:'GK', posClass:'pos-gk', name:'A. Bayındır',   age:26, nat:'TUR', avg:6.45},
+  {n:5, pos:'CB', posClass:'pos-df', name:'H. Maguire',    age:31, nat:'ENG', avg:6.72},
+  {n:3, pos:'CB', posClass:'pos-df', name:'J. Evans',      age:37, nat:'NIR', avg:6.58},
+  {n:31,pos:'CM', posClass:'pos-mf', name:'D. van de Beek',age:27, nat:'NED', avg:6.61},
+  {n:34,pos:'RW', posClass:'pos-fw', name:'F. Pellistri',  age:22, nat:'URU', avg:6.84},
+];
+const ALL_SQUAD=[...XI,...BENCH,...RESERVES];
+const FLAGS={ARG:'🇦🇷',BRA:'🇧🇷',CMR:'🇨🇲',DEN:'🇩🇰',ENG:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',FRA:'🇫🇷',NED:'🇳🇱',NIR:'🇬🇧',POR:'🇵🇹',SCO:'🏴󠁧󠁢󠁳󠁣󠁴󠁿',SWE:'🇸🇪',TUR:'🇹🇷',URU:'🇺🇾'};
+
+/* ── Role data ────────────────────────────────────────────────────────────── */
+const ABBR={
+  'Goalkeeper':'GK','Sweeper Keeper':'SK',
+  'Full-Back':'FB','Wing-Back':'WB','Complete Wing-Back':'CWB','Inverted Wing-Back':'IWB',
+  'Central Defender':'CD','Ball-Playing Defender':'BPD','Stopper':'STP','Cover':'COV','Libero':'LIB',
+  'Anchor Man':'AN','Defensive Midfielder':'DM','Half-Back':'HB','Ball-Winning Midfielder':'BWM','Regista':'REG',
+  'Mezzala':'MEZ','Central Midfielder':'CM','Box-to-Box Midfielder':'BBM','Carrilero':'CAR',
+  'Advanced Playmaker':'AP','Trequartista':'TQ','Attacking Midfielder':'AM','Roaming Playmaker':'RP',
+  'Winger':'W','Inverted Winger':'IW','Inside Forward':'IF','Wide Playmaker':'WP','Defensive Winger':'DW',
+  'Advanced Forward':'AF','Target Man':'TM','Deep-Lying Forward':'DLF','Poacher':'P','False Nine':'F9',
+};
+const DESCS={
+  'Sweeper Keeper':'Plays aggressively off the line, sweeping behind the back four and distributing rapidly under pressure.',
+  'Complete Wing-Back':'Dynamic full-back who attacks like a winger. Gets forward relentlessly, delivers crosses and cuts inside.',
+  'Central Defender':'Disciplined and positional. Reads the game, clears danger and holds a compact shape without unnecessary risk.',
+  'Ball-Playing Defender':'Composed in possession, dribbles out of defence and plays progressive passes to break lines.',
+  'Wing-Back':'Balanced full-back. Gets forward when the opportunity presents, prioritising defensive structure.',
+  'Anchor Man':'Deep defensive screen, protecting the back four\'s space. Distributes simply; rarely ventures forward.',
+  'Mezzala':'Makes late dynamic runs from a central-wide position, arriving in the box from deep. High pressing output.',
+  'Advanced Playmaker':'Creative hub — dictates tempo, threads passes into tight spaces and roams to find pockets of play.',
+  'Inverted Winger':'Cuts inside onto the strong foot to shoot or play key passes. Overloads half-spaces centrally.',
+  'Advanced Forward':'Relentless runner attacking space behind the line. Mobile, direct and a constant goal threat.',
+  'Inside Forward':'Wide forward who drifts inside to link up and score, freeing the flank for the overlapping full-back.',
+};
+const POS_ROLES={
+  gk: ['Goalkeeper','Sweeper Keeper'],
+  wb: ['Full-Back','Wing-Back','Complete Wing-Back','Defensive Winger','Inverted Wing-Back'],
+  df: ['Central Defender','Ball-Playing Defender','Stopper','Cover','Libero'],
+  cdm:['Anchor Man','Defensive Midfielder','Half-Back','Ball-Winning Midfielder','Regista'],
+  cm: ['Central Midfielder','Mezzala','Box-to-Box Midfielder','Carrilero'],
+  am: ['Advanced Playmaker','Trequartista','Attacking Midfielder','Roaming Playmaker'],
+  w:  ['Winger','Inverted Winger','Inside Forward','Wide Playmaker'],
+  st: ['Advanced Forward','Target Man','Deep-Lying Forward','Poacher','False Nine'],
+};
+const POSTYPE={1:'gk',2:'wb',19:'df',35:'df',12:'wb',18:'cdm',37:'cm',8:'am',11:'w',21:'st',10:'w',
+  9:'st',7:'am',14:'st',39:'cm',6:'df',23:'wb',22:'gk',
+  33:'gk',5:'df',3:'df',31:'cm',34:'w'};
+const P_INSTRS={
+  gk: ['Distribute to CBs','Short kicks','Rush out of area','Claim more crosses'],
+  wb: ['Overlap','Stay wider','Cut inside','Cross more often','Take more risks'],
+  df: ['Mark tighter','Fewer risky passes','Play out of defence','Tackle harder','Prevent play outside'],
+  cdm:['Sit between defenders','Fewer risky passes','Hold position','Mark specific player'],
+  cm: ['Move into channels','Run with ball','More direct passing','Shoot less often','Arrive late in box'],
+  am: ['Roam from position','More direct passing','Shoot more often','Move into channels'],
+  w:  ['Cut inside','Shoot on sight','Cross more often','Drift wide','Stay wider'],
+  st: ['Hold up ball','Move into channels','Drop deep','Shoot less often','Press more'],
+};
+
+/* ── State ────────────────────────────────────────────────────────────────── */
+const S={
+  sel:8,
+  mentality:'positive',
+  pressing:'high', dline:'high', width:'narrow', tempo:'high',
+  inPoss:{'Play out of defence':true,'Work ball into box':true,'Exploit the flanks':true,'Overlap on left':true,'Overlap on right':false,'Cross from deep':false,'More direct passing':false},
+  outPoss:{'High press':true,'Press more urgently':true,'Prevent short GK distribution':true,'Mark tighter':true,'Drop defensive line':false,'Close down more':false},
+  trans:{'Counter-press after loss':true,'Regroup on loss':false,'More direct kicks':false,'Shoot on sight after win':false},
+  duties:{1:'S',2:'S',19:'D',35:'D',12:'S',18:'D',37:'S',8:'A',11:'A',21:'A',10:'S',
+    9:'A',7:'S',14:'S',39:'S',6:'D',23:'S',22:'S',
+    33:'S',5:'D',3:'D',31:'S',34:'S'},
+  roles:{1:'Sweeper Keeper',2:'Complete Wing-Back',19:'Central Defender',35:'Ball-Playing Defender',12:'Wing-Back',18:'Anchor Man',37:'Mezzala',8:'Advanced Playmaker',11:'Inverted Winger',21:'Advanced Forward',10:'Inside Forward',
+    9:'Advanced Forward',7:'Advanced Playmaker',14:'Advanced Forward',39:'Box-to-Box Midfielder',6:'Central Defender',23:'Wing-Back',22:'Goalkeeper',
+    33:'Goalkeeper',5:'Central Defender',3:'Central Defender',31:'Central Midfielder',34:'Winger'},
+  playerInstrs:{
+    1: {'Distribute to CBs':true,'Short kicks':true,'Rush out of area':false,'Claim more crosses':false},
+    2: {'Overlap':false,'Stay wider':false,'Cut inside':false,'Cross more often':true,'Take more risks':true},
+    19:{'Mark tighter':true,'Fewer risky passes':true,'Play out of defence':false,'Tackle harder':false,'Prevent play outside':true},
+    35:{'Mark tighter':false,'Fewer risky passes':false,'Play out of defence':true,'Tackle harder':false,'Prevent play outside':false},
+    12:{'Overlap':true,'Stay wider':true,'Cut inside':false,'Cross more often':false,'Take more risks':false},
+    18:{'Sit between defenders':true,'Fewer risky passes':true,'Hold position':false,'Mark specific player':false},
+    37:{'Move into channels':true,'Run with ball':true,'More direct passing':false,'Shoot less often':false,'Arrive late in box':true},
+    8: {'Roam from position':true,'More direct passing':false,'Shoot more often':true,'Move into channels':false},
+    11:{'Cut inside':true,'Shoot on sight':true,'Cross more often':false,'Drift wide':false,'Stay wider':false},
+    21:{'Hold up ball':true,'Move into channels':true,'Drop deep':false,'Shoot less often':false,'Press more':true},
+    10:{'Cut inside':true,'Shoot on sight':false,'Cross more often':false,'Drift wide':false,'Stay wider':false},
+  }
+};
+
+/* ── Render ───────────────────────────────────────────────────────────────── */
+const FROWS=[[11,21,10],[8,37,18],[2,19,35,12],[1]];
+function xi(n){return ALL_SQUAD.find(p=>p.n===n);}
+function nm(p){return p.name.includes('.')?p.name.split(' ').slice(1).join(' '):p.name.split(' ')[0];}
+
+function rPitch(){
+  return FROWS.map(row=>
+    '<div class="vp-row">'+row.map(n=>{
+      const p=xi(n); if(!p) return '';
+      const role=S.roles[n]||'—', duty=S.duties[n]||'S';
+      const abbr=ABBR[role]||role.slice(0,3).toUpperCase();
+      const sel=n===S.sel;
+      return '<div class="vpc'+(sel?' sel':'')+'" data-num="'+n+'">'
+        +'<div class="vpc-top"><span class="vpc-abbr">'+abbr+'</span><span class="vpc-duty duty-'+duty.toLowerCase()+'">'+duty+'</span></div>'
+        +'<div class="vpc-pname">'+nm(p)+'</div>'
+        +'<div class="vpc-rating">'+p.avg.toFixed(2)+'</div>'
+        +'</div>';
+    }).join('')+'</div>'
+  ).join('');
+}
+
+function rMentality(){
+  return [['defensive','Defensive'],['cautious','Cautious'],['balanced','Balanced'],['positive','Positive'],['attacking','Attacking']].map(([k,l])=>
+    '<div class="mp men-'+k+(S.mentality===k?' on':'')+'" data-ment="'+k+'">'+l+'</div>'
+  ).join('');
+}
+
+function rShape(){
+  return [
+    {k:'pressing',l:'Pressing', opts:[['low','Low'],['mid','Mid-block'],['high','High'],['urgent','Urgent']]},
+    {k:'dline',   l:'D-Line',   opts:[['deep','Sit Deep'],['standard','Standard'],['high','High'],['vhigh','Very High']]},
+    {k:'width',   l:'Width',    opts:[['narrow','Narrow'],['mixed','Mixed'],['wide','Wide']]},
+    {k:'tempo',   l:'Tempo',    opts:[['slow','Slow'],['mixed','Mixed'],['high','High']]},
+  ].map(r=>
+    '<div class="sr"><span class="sr-lbl">'+r.l+'</span><div class="sr-seg">'+
+    r.opts.map(([v,l])=>'<button class="sr-opt'+(S[r.k]===v?' on':'')+'" data-key="'+r.k+'" data-val="'+v+'">'+l+'</button>').join('')+
+    '</div></div>'
+  ).join('');
+}
+
+function rInstrList(obj){
+  return Object.entries(obj).map(([k,v])=>
+    '<div class="ti'+(v?' on':'')+'" data-tk="'+k+'"><div class="ti-tog'+(v?' on':'')+'"></div><span class="ti-lbl">'+k+'</span></div>'
+  ).join('');
+}
+
+function rSquadList(){
+  const xiNums=new Set(XI.map(p=>p.n));
+  function row(p,inXI){
+    const sel=p.n===S.sel;
+    return '<div class="sq-row'+(sel?' sq-sel':'')+'" data-sqnum="'+p.n+'">'
+      +'<span class="sq-num">'+p.n+'</span>'
+      +'<span class="sq-pos-pill '+p.posClass+'">'+p.pos+'</span>'
+      +'<span class="sq-name">'+p.name+'</span>'
+      +'<span class="sq-avg">'+p.avg.toFixed(2)+'</span>'
+      +(inXI?'<span class="sq-xi-dot"></span>':'<span class="sq-xi-dot hidden"></span>')
+      +'</div>';
+  }
+  return '<div class="sq-grp-lbl">Starting XI</div>'+XI.map(p=>row(p,true)).join('')
+    +'<div class="sq-grp-lbl">Bench</div>'+BENCH.map(p=>row(p,false)).join('')
+    +'<div class="sq-grp-lbl">Reserves</div>'+RESERVES.map(p=>row(p,false)).join('');
+}
+
+function rPlayerDetail(){
+  const n=S.sel, p=xi(n);
+  if(!p) return '<div style="padding:20px;color:var(--ink-4);font-family:var(--font-mono);font-size:11px">Click a player on the pitch</div>';
+  const role=S.roles[n]||'—', duty=S.duties[n]||'S';
+  const desc=DESCS[role]||'';
+  const roles=POS_ROLES[POSTYPE[n]]||[];
+  const instrs=P_INSTRS[POSTYPE[n]]||[];
+  const curInstrs=S.playerInstrs[n]||{};
+
+  const isXI=XI.some(x=>x.n===n);
+  const isRes=RESERVES.some(x=>x.n===n);
+  const statusTag=isXI?'':isRes?' · Reserve':' · Bench';
+
+  return '<div class="pd-head">'
+    +'<div class="pd-portrait">'+String(n).padStart(2,'0')+'</div>'
+    +'<div><div class="pd-name">'+p.name+'</div>'
+    +'<div class="pd-sub">'+p.pos+statusTag+' · Riverside · '+p.age+'y · '+(FLAGS[p.nat]||p.nat)+'</div></div>'
+    +'</div>'
+
+    +'<div class="pd-role-bar">'
+    +'<span class="pd-role-txt">'+role+'</span>'
+    +'<div class="pd-duty-grp">'
+    +['D','S','A'].map(d=>'<span class="pd-duty-btn'+(duty===d?' act-'+d.toLowerCase():'')+'" data-duty="'+d+'">'+d+'</span>').join('')
+    +'</div></div>'
+
+    +(desc?'<div class="pd-desc">'+desc+'</div>':'')
+
+    +'<div class="pd-sect">Role options</div>'
+    +'<div class="pd-role-list">'
+    +roles.map(r=>'<div class="pd-role-opt'+(r===role?' on':'')+'" data-role="'+r+'"><span class="pd-rdot"></span>'+r+'</div>').join('')
+    +'</div>'
+
+    +'<div class="pd-sect">Player instructions</div>'
+    +'<div class="pd-instr-list">'
+    +instrs.map(k=>{const on=!!curInstrs[k];return '<div class="pd-instr'+(on?' on':'')+'" data-pi="'+k+'"><span class="pd-itog'+(on?' on':'')+'"></span><span class="pd-ilbl">'+k+'</span></div>';}).join('')
+    +'</div>';
+}
+
+function update(){
+  document.getElementById('mentPills').innerHTML  = rMentality();
+  document.getElementById('shapeRows').innerHTML  = rShape();
+  document.getElementById('instrIn').innerHTML    = rInstrList(S.inPoss);
+  document.getElementById('instrOut').innerHTML   = rInstrList(S.outPoss);
+  document.getElementById('instrTrans').innerHTML = rInstrList(S.trans);
+  document.getElementById('vpRows').innerHTML     = rPitch();
+  document.getElementById('squadList').innerHTML  = rSquadList();
+  document.getElementById('playerDetail').innerHTML = rPlayerDetail();
+  document.getElementById('mentLabel').textContent =
+    S.mentality.charAt(0).toUpperCase()+S.mentality.slice(1);
+}
+
+/* ── Events ───────────────────────────────────────────────────────────────── */
+document.getElementById('mentPills').addEventListener('click',e=>{
+  const el=e.target.closest('[data-ment]'); if(!el) return;
+  S.mentality=el.dataset.ment; update();
+});
+
+document.getElementById('shapeRows').addEventListener('click',e=>{
+  const el=e.target.closest('[data-key]'); if(!el) return;
+  S[el.dataset.key]=el.dataset.val; update();
+});
+
+['instrIn','instrOut','instrTrans'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{
+    const el=e.target.closest('[data-tk]'); if(!el) return;
+    const k=el.dataset.tk;
+    if(id==='instrIn')   S.inPoss[k]=!S.inPoss[k];
+    else if(id==='instrOut') S.outPoss[k]=!S.outPoss[k];
+    else S.trans[k]=!S.trans[k];
+    update();
+  });
+});
+
+document.querySelector('.vp').addEventListener('click',e=>{
+  const el=e.target.closest('[data-num]'); if(!el) return;
+  S.sel=parseInt(el.dataset.num,10); update();
+});
+
+document.getElementById('squadList').addEventListener('click',e=>{
+  const el=e.target.closest('[data-sqnum]'); if(!el) return;
+  S.sel=parseInt(el.dataset.sqnum,10); update();
+});
+
+document.getElementById('playerDetail').addEventListener('click',e=>{
+  const de=e.target.closest('[data-duty]');
+  if(de){S.duties[S.sel]=de.dataset.duty; update(); return;}
+  const re=e.target.closest('[data-role]');
+  if(re){S.roles[S.sel]=re.dataset.role; update(); return;}
+  const ie=e.target.closest('[data-pi]');
+  if(ie){const k=ie.dataset.pi; if(!S.playerInstrs[S.sel])S.playerInstrs[S.sel]={}; S.playerInstrs[S.sel][k]=!S.playerInstrs[S.sel][k]; update();}
+});
+
+/* ── TAB PANEL SWITCHING ──────────────────────────────────────────────────── */
+function showTacPanel(label){
+  const shape=document.getElementById('panel-shape');
+  const alts=['panel-setpieces','panel-opposition','panel-templates'];
+  if(label==='Shape'){
+    shape.style.display='grid';
+    alts.forEach(id=>{document.getElementById(id).style.display='none';});
+  } else {
+    shape.style.display='none';
+    alts.forEach(id=>{document.getElementById(id).style.display='none';});
+    const map={'Set Pieces':'panel-setpieces','Opposition':'panel-opposition','Templates':'panel-templates'};
+    if(map[label]) document.getElementById(map[label]).style.display='block';
+  }
+}
+document.querySelectorAll('.crumb .tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.crumb .tab').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');
+  showTacPanel(t.textContent.trim());
+}));
+
+/* ── SET PIECES ───────────────────────────────────────────────────────────── */
+const SP_TYPES=[
+  {id:'corner-left',  label:'Corner — Left',        group:'Attacking'},
+  {id:'corner-right', label:'Corner — Right',       group:'Attacking'},
+  {id:'fk-wide-l',    label:'Free Kick — Wide Left', group:'Attacking'},
+  {id:'fk-wide-r',    label:'Free Kick — Wide Right',group:'Attacking'},
+  {id:'fk-central',   label:'Free Kick — Central',  group:'Attacking'},
+  {id:'long-throw-l', label:'Long Throw — Left',    group:'Attacking'},
+  {id:'long-throw-r', label:'Long Throw — Right',   group:'Attacking'},
+  {id:'penalty',      label:'Penalty',              group:'Attacking'},
+  {id:'def-corner',   label:'Corner',               group:'Defending'},
+  {id:'def-fk',       label:'Free Kick',            group:'Defending'},
+  {id:'def-throw',    label:'Throw-in',             group:'Defending'},
+];
+const SPC={
+  taker:  {f:'rgba(0,185,90,.92)',   s:'rgba(0,255,136,1)',    t:'#001a0a'},
+  primary:{f:'rgba(0,185,90,.82)',   s:'rgba(0,255,136,.9)',   t:'#001a0a'},
+  second: {f:'rgba(25,105,210,.82)', s:'rgba(55,148,255,.9)',  t:'#fff'},
+  mover:  {f:'rgba(175,130,0,.82)',  s:'rgba(240,180,0,.9)',   t:'#fff'},
+  edge:   {f:'rgba(65,70,90,.88)',   s:'rgba(105,110,135,.8)', t:'#bbc'},
+  hold:   {f:'rgba(32,35,52,.8)',    s:'rgba(65,68,90,.65)',   t:'#778'},
+};
+const SP_DATA={
+  'corner-left':{
+    taker:{n:8,name:'B. Fernandes'},delivery:'in-swing',target:'near-post',
+    arrow:'M 10 14 Q 108 -16 184 55',
+    players:[
+      {n:8, role:'Taker',            c:'taker',   x:10, y:14},
+      {n:19,role:'Primary target',   c:'primary', x:116,y:28},
+      {n:35,role:'Far post run',     c:'second',  x:316,y:40},
+      {n:21,role:'Penalty spot',     c:'second',  x:216,y:70},
+      {n:11,role:'Near post decoy',  c:'mover',   x:150,y:54},
+      {n:18,role:'Edge — knockdown', c:'edge',    x:148,y:112},
+      {n:37,role:'Edge — right',     c:'edge',    x:288,y:112},
+      {n:2, role:'Late far post',    c:'mover',   x:368,y:56},
+      {n:10,role:'Edge runner',      c:'edge',    x:88, y:220},
+      {n:12,role:'Hold shape',       c:'hold',    x:180,y:300},
+      {n:1, role:'Goalkeeper',       c:'hold',    x:216,y:10},
+    ]},
+  'corner-right':{
+    taker:{n:10,name:'M. Rashford'},delivery:'out-swing',target:'far-post',
+    arrow:'M 422 14 Q 324 -16 248 55',
+    players:[
+      {n:10,role:'Taker',            c:'taker',   x:422,y:14},
+      {n:19,role:'Primary target',   c:'primary', x:316,y:28},
+      {n:35,role:'Near post',        c:'second',  x:116,y:40},
+      {n:21,role:'Penalty spot',     c:'second',  x:216,y:70},
+      {n:11,role:'Far post decoy',   c:'mover',   x:284,y:54},
+      {n:18,role:'Edge — knockdown', c:'edge',    x:288,y:112},
+      {n:37,role:'Edge — left',      c:'edge',    x:148,y:112},
+      {n:2, role:'Late near post',   c:'mover',   x:64, y:56},
+      {n:8, role:'Lurk outside box', c:'edge',    x:216,y:160},
+      {n:12,role:'Hold shape',       c:'hold',    x:180,y:300},
+      {n:1, role:'Goalkeeper',       c:'hold',    x:216,y:10},
+    ]},
+  'fk-central':{
+    taker:{n:8,name:'B. Fernandes'},delivery:'driven',target:'edge',
+    arrow:'M 216 145 L 216 78',
+    players:[
+      {n:8, role:'Taker (direct)',    c:'taker',   x:216,y:148},
+      {n:19,role:'Header — center',   c:'primary', x:216,y:58},
+      {n:35,role:'Header — far post', c:'second',  x:318,y:40},
+      {n:21,role:'Near post flick',   c:'second',  x:118,y:40},
+      {n:37,role:'Assist taker',      c:'mover',   x:238,y:148},
+      {n:18,role:'Wall disruption',   c:'edge',    x:180,y:140},
+      {n:11,role:'Edge — left',       c:'edge',    x:88, y:158},
+      {n:2, role:'Far post run',      c:'mover',   x:360,y:58},
+      {n:10,role:'Edge — right',      c:'edge',    x:345,y:158},
+      {n:12,role:'Hold shape',        c:'hold',    x:130,y:280},
+      {n:1, role:'Goalkeeper',        c:'hold',    x:216,y:10},
+    ]},
+  'def-corner':{
+    taker:null,delivery:'zone',target:'all',arrow:null,
+    players:[
+      {n:19,role:'Near post zone',   c:'primary', x:120,y:25},
+      {n:35,role:'Far post zone',    c:'primary', x:316,y:25},
+      {n:21,role:'Penalty spot',     c:'second',  x:216,y:70},
+      {n:8, role:'6-yard sweeper',   c:'second',  x:216,y:24},
+      {n:18,role:'Edge — center',    c:'edge',    x:160,y:112},
+      {n:37,role:'Edge — right',     c:'edge',    x:272,y:112},
+      {n:11,role:'Counter threat',   c:'mover',   x:60, y:240},
+      {n:10,role:'Counter threat',   c:'mover',   x:370,y:240},
+      {n:2, role:'Track runner',     c:'edge',    x:328,y:55},
+      {n:12,role:'Track runner',     c:'edge',    x:104,y:55},
+      {n:1, role:'Goalkeeper',       c:'taker',   x:216,y:10},
+    ]},
+};
+// Fallbacks for remaining types
+SP_DATA['fk-wide-l']   ={...SP_DATA['corner-left'],  taker:{n:8,name:'B. Fernandes'}, delivery:'driven',  arrow:'M 10 14 Q 108 -16 145 55'};
+SP_DATA['fk-wide-r']   ={...SP_DATA['corner-right'], taker:{n:8,name:'B. Fernandes'}, delivery:'driven',  arrow:'M 422 14 Q 324 -16 288 55'};
+SP_DATA['long-throw-l']={...SP_DATA['corner-left'],  taker:{n:12,name:'T. Malacia'},  delivery:'flat',    arrow:'M 3 195 L 136 92'};
+SP_DATA['long-throw-r']={...SP_DATA['corner-right'], taker:{n:2, name:'D. Dalot'},    delivery:'flat',    arrow:'M 429 195 L 296 92'};
+SP_DATA['penalty']={taker:{n:8,name:'B. Fernandes'},delivery:'penalty',target:'goal',arrow:null,
+  players:[{n:8,role:'Taker',c:'taker',x:216,y:70},...XI.filter(p=>p.n!==8).map((p,i)=>({n:p.n,role:'Hold position',c:'hold',x:44+i*38,y:255}))]};
+SP_DATA['def-fk']   = SP_DATA['def-corner'];
+SP_DATA['def-throw']= SP_DATA['def-corner'];
+
+let SP_SEL='corner-left';
+
+function buildAttackingPitch(players, arrow){
+  const W=432,H=380;
+  let s=`<rect width="${W}" height="${H}" fill="#144018"/>`;
+  for(let i=0;i<5;i++) s+=`<rect x="0" y="${i*80}" width="${W}" height="40" fill="#1a5a20" opacity=".38"/>`;
+  s+=`<line x1="0" y1="1" x2="${W}" y2="1" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>`;
+  s+=`<rect x="193" y="0" width="46" height="18" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.52)" stroke-width="1.5"/>`;
+  s+=`<rect x="157" y="1" width="118" height="36" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>`;
+  s+=`<rect x="88" y="1" width="256" height="105" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="1"/>`;
+  s+=`<circle cx="216" cy="70" r="2.5" fill="rgba(255,255,255,.4)"/>`;
+  s+=`<path d="M 140 106 A 76 76 0 0 0 292 106" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1"/>`;
+  s+=`<line x1="1" y1="0" x2="1" y2="${H}" stroke="rgba(255,255,255,.2)" stroke-width="1"/>`;
+  s+=`<line x1="${W-1}" y1="0" x2="${W-1}" y2="${H}" stroke="rgba(255,255,255,.2)" stroke-width="1"/>`;
+  s+=`<path d="M 1 14 A 14 14 0 0 1 14 1" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>`;
+  s+=`<path d="M ${W-14} 1 A 14 14 0 0 1 ${W-1} 14" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>`;
+  s+=`<line x1="0" y1="${H-1}" x2="${W}" y2="${H-1}" stroke="rgba(255,255,255,.1)" stroke-width="1"/>`;
+  if(arrow) s+=`<path d="${arrow}" fill="none" stroke="rgba(255,255,255,.48)" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+  for(const p of players){
+    const c=SPC[p.c]||SPC.edge;
+    const r=p.c==='taker'?14:12;
+    const fs=p.n>=10?7.5:8.5;
+    s+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${c.f}" stroke="${c.s}" stroke-width="1.5"/>`;
+    s+=`<text x="${p.x}" y="${p.y+4}" text-anchor="middle" font-family="monospace" font-size="${fs}" font-weight="700" fill="${c.t}">${p.n}</text>`;
+  }
+  // Legend
+  const ly=H-26;
+  s+=`<rect x="6" y="${ly-8}" width="298" height="26" rx="3" fill="rgba(0,0,0,.55)"/>`;
+  [['taker','Taker'],['primary','Target'],['second','Secondary'],['mover','Movement'],['hold','Holds']].forEach(([k,l],i)=>{
+    const c=SPC[k],lx=14+i*60;
+    s+=`<circle cx="${lx}" cy="${ly+5}" r="5" fill="${c.f}" stroke="${c.s}" stroke-width="1"/>`;
+    s+=`<text x="${lx+8}" y="${ly+9}" font-family="monospace" font-size="8" fill="rgba(255,255,255,.6)">${l}</text>`;
+  });
+  return s;
+}
+
+function renderSPList(){
+  let h='',last='';
+  SP_TYPES.forEach(t=>{
+    if(t.group!==last){h+=`<div class="sp-grp-lbl">${t.group}</div>`;last=t.group;}
+    h+=`<div class="sp-item${t.id===SP_SEL?' on':''}" data-sp="${t.id}">${t.label}</div>`;
+  });
+  document.getElementById('spList').innerHTML=h;
+}
+
+function renderSPDetail(){
+  const data=SP_DATA[SP_SEL]||SP_DATA['corner-left'];
+  const info=SP_TYPES.find(t=>t.id===SP_SEL);
+  const isDef=SP_SEL.startsWith('def'), isPen=SP_SEL==='penalty';
+  document.getElementById('spSvg').innerHTML=buildAttackingPitch(data.players||[],data.arrow||null);
+  const delivOpts=isDef
+    ?[['zone','Zone mark'],['man','Man mark'],['mixed','Mixed']]
+    :[['in-swing','In-swing'],['out-swing','Out-swing'],['short','Short'],['driven','Driven']];
+  const targetOpts=isDef
+    ?[['near-post','Near post'],['far-post','Far post'],['all','All zones']]
+    :[['near-post','Near post'],['far-post','Far post'],['edge','Edge'],['short','Short']];
+  let h=`<div><div class="sp-title">${info?.label||''}</div><div class="sp-sub">${info?.group||''}</div></div>`;
+  if(!isDef&&!isPen&&data.taker){
+    h+=`<div><div class="sp-sect">Taker</div>
+      <div class="sp-taker-bar">
+        <span class="sp-taker-lbl">TAKER</span>
+        <span class="sp-taker-name">#${data.taker.n} ${data.taker.name}</span>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-5)">Change ▾</span>
+      </div></div>`;
+  }
+  if(!isPen){
+    h+=`<div><div class="sp-sect">${isDef?'Marking scheme':'Delivery'}</div>
+      <div class="sp-seg">${delivOpts.map(([v,l])=>`<button class="sp-opt${data.delivery===v?' on':''}">${l}</button>`).join('')}</div></div>
+    <div><div class="sp-sect">${isDef?'Priority zone':'Target zone'}</div>
+      <div class="sp-seg">${targetOpts.map(([v,l])=>`<button class="sp-opt${data.target===v?' on':''}">${l}</button>`).join('')}</div></div>`;
+  }
+  const allSq=[...XI,...BENCH,...RESERVES];
+  h+=`<div style="flex:1"><div class="sp-sect">Player assignments</div>
+    <div class="sp-assign-list">${(data.players||[]).map(p=>{
+      const found=allSq.find(x=>x.n===p.n);
+      return `<div class="sp-assign-row">
+        <span class="sp-assign-num">${p.n}</span>
+        <span class="sp-assign-name">${found?.name||'—'}</span>
+        <span class="sp-assign-role">${p.role}</span>
+      </div>`;
+    }).join('')}</div></div>`;
+  document.getElementById('spDetail').innerHTML=h;
+}
+
+function updateSP(){renderSPList();renderSPDetail();}
+document.getElementById('spList').addEventListener('click',e=>{
+  const el=e.target.closest('[data-sp]');if(!el)return;
+  SP_SEL=el.dataset.sp;updateSP();
+});
+
+/* ── OPPOSITION PITCH ─────────────────────────────────────────────────────── */
+const OPP_XI=[
+  {n:1, name:'T. Griffiths',pos:'GK',x:216,y:540,type:'gk'},
+  {n:2, name:'L. Morrison', pos:'RB',x:342,y:432,type:'df'},
+  {n:5, name:'D. Pryce',    pos:'CB',x:260,y:452,type:'df'},
+  {n:6, name:'M. Wells',    pos:'CB',x:172,y:452,type:'df'},
+  {n:3, name:'J. Jennings', pos:'LB',x:90, y:432,type:'df'},
+  {n:7, name:'K. Osei',     pos:'RM',x:362,y:312,type:'mf'},
+  {n:8, name:'D. Rix',      pos:'CM',x:272,y:332,type:'mf'},
+  {n:14,name:'P. Thorne',   pos:'CM',x:160,y:332,type:'mf'},
+  {n:11,name:'A. Blake',    pos:'LM',x:70, y:312,type:'mf'},
+  {n:9, name:'M. Howell',   pos:'ST',x:278,y:188,type:'fw'},
+  {n:10,name:'C. Farrow',   pos:'ST',x:154,y:188,type:'fw'},
+];
+function buildFullPitch(players){
+  const W=432,H=580;
+  let s=`<rect width="${W}" height="${H}" fill="#144018"/>`;
+  for(let i=0;i<6;i++) s+=`<rect x="0" y="${i*96}" width="${W}" height="48" fill="#1a5a20" opacity=".38"/>`;
+  s+=`<line x1="1" y1="0" x2="1" y2="${H}" stroke="rgba(255,255,255,.2)" stroke-width="1"/>`;
+  s+=`<line x1="${W-1}" y1="0" x2="${W-1}" y2="${H}" stroke="rgba(255,255,255,.2)" stroke-width="1"/>`;
+  s+=`<line x1="0" y1="1" x2="${W}" y2="1" stroke="rgba(255,255,255,.32)" stroke-width="1.5"/>`;
+  s+=`<rect x="193" y="0" width="46" height="16" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/>`;
+  s+=`<rect x="157" y="1" width="118" height="32" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1"/>`;
+  s+=`<rect x="88" y="1" width="256" height="94" fill="none" stroke="rgba(255,255,255,.17)" stroke-width="1"/>`;
+  s+=`<circle cx="216" cy="61" r="2.5" fill="rgba(255,255,255,.38)"/>`;
+  s+=`<path d="M 140 95 A 76 76 0 0 0 292 95" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"/>`;
+  s+=`<line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" stroke="rgba(255,255,255,.22)" stroke-width="1"/>`;
+  s+=`<circle cx="${W/2}" cy="${H/2}" r="50" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1"/>`;
+  s+=`<circle cx="${W/2}" cy="${H/2}" r="2.5" fill="rgba(255,255,255,.4)"/>`;
+  s+=`<line x1="0" y1="${H-1}" x2="${W}" y2="${H-1}" stroke="rgba(255,255,255,.32)" stroke-width="1.5"/>`;
+  s+=`<rect x="193" y="${H-16}" width="46" height="16" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/>`;
+  s+=`<rect x="157" y="${H-33}" width="118" height="32" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1"/>`;
+  s+=`<rect x="88" y="${H-95}" width="256" height="94" fill="none" stroke="rgba(255,255,255,.17)" stroke-width="1"/>`;
+  s+=`<circle cx="216" cy="${H-61}" r="2.5" fill="rgba(255,255,255,.38)"/>`;
+  s+=`<path d="M 140 ${H-95} A 76 76 0 0 1 292 ${H-95}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"/>`;
+  [[1,1],[W-14,1],[1,H-14],[W-14,H-1]].forEach(([x,y],i)=>{
+    const arcs=['M 1 14 A 14 14 0 0 1 14 1','M '+`${W-14} 1 A 14 14 0 0 1 ${W-1} 14`,'M 1 '+`${H-14} A 14 14 0 0 0 14 ${H-1}`,'M '+`${W-14} ${H-1} A 14 14 0 0 0 ${W-1} ${H-14}`];
+    s+=`<path d="${arcs[i]}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="1.5"/>`;
+  });
+  s+=`<text x="${W/2}" y="13" text-anchor="middle" font-family="monospace" font-size="9.5" fill="rgba(255,255,255,.32)" letter-spacing="0.06em">KINGSFORD FC · 4-4-2</text>`;
+  const TC={gk:{f:'rgba(200,70,40,.85)',s:'rgba(240,100,70,.9)',t:'#fff'},df:{f:'rgba(28,98,200,.82)',s:'rgba(55,140,255,.9)',t:'#fff'},mf:{f:'rgba(155,120,15,.82)',s:'rgba(215,170,25,.9)',t:'#fff'},fw:{f:'rgba(195,45,45,.88)',s:'rgba(245,75,75,.9)',t:'#fff'}};
+  const threats=new Set([9,8,2]);
+  for(const p of players){
+    const c=TC[p.type]||TC.mf, isThreat=threats.has(p.n), r=isThreat?15:12;
+    if(isThreat) s+=`<circle cx="${p.x}" cy="${p.y}" r="${r+5}" fill="none" stroke="rgba(255,80,80,.3)" stroke-width="1.5" stroke-dasharray="3,2"/>`;
+    s+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${c.f}" stroke="${isThreat?'rgba(255,80,80,.9)':c.s}" stroke-width="${isThreat?2:1.5}"/>`;
+    s+=`<text x="${p.x}" y="${p.y+4}" text-anchor="middle" font-family="monospace" font-size="${p.n>=10?7.5:8.5}" font-weight="700" fill="${c.t}">${p.n}</text>`;
+    const short=p.name.split(' ').pop();
+    s+=`<text x="${p.x}" y="${p.y+r+10}" text-anchor="middle" font-family="monospace" font-size="7.5" fill="rgba(255,255,255,.52)">${short}</text>`;
+  }
+  return s;
+}
+
+/* ── TEMPLATES ────────────────────────────────────────────────────────────── */
+const TEMPLATES=[
+  {id:'t1',formation:'4–3–3',name:'High Press — Attack',
+   desc:'Our base setup. Aggressive pressing, exploit wide areas with inverted wingers.',
+   chips:['Positive','High press','High D-Line'],modified:'Active · Used today',active:true,
+   dots:[{x:'50%',y:'86%',cls:'gk'},{x:'16%',y:'72%',cls:'field'},{x:'34%',y:'75%',cls:'field'},{x:'66%',y:'75%',cls:'field'},{x:'84%',y:'72%',cls:'field'},{x:'24%',y:'53%',cls:'field'},{x:'50%',y:'50%',cls:'field'},{x:'76%',y:'53%',cls:'field'},{x:'18%',y:'25%',cls:'field'},{x:'50%',y:'20%',cls:'field'},{x:'82%',y:'25%',cls:'field'}]},
+  {id:'t2',formation:'4–3–3',name:'Cautious — Away',
+   desc:'Away legs and cup ties. Compact mid-block, fast transitions on the counter.',
+   chips:['Cautious','Mid-block','Standard'],modified:'Edited 4 days ago',active:false,
+   dots:[{x:'50%',y:'86%',cls:'gk'},{x:'16%',y:'74%',cls:'field'},{x:'34%',y:'77%',cls:'field'},{x:'66%',y:'77%',cls:'field'},{x:'84%',y:'74%',cls:'field'},{x:'22%',y:'56%',cls:'field'},{x:'50%',y:'53%',cls:'field'},{x:'78%',y:'56%',cls:'field'},{x:'20%',y:'28%',cls:'field'},{x:'50%',y:'23%',cls:'field'},{x:'80%',y:'28%',cls:'field'}]},
+  {id:'t3',formation:'5–3–2',name:'Defensive Block',
+   desc:'Protect a lead or face elite opponents. Deep low block with counters.',
+   chips:['Defensive','Low press','Sit deep'],modified:'Edited 2 weeks ago',active:false,
+   dots:[{x:'50%',y:'86%',cls:'gk'},{x:'9%',y:'74%',cls:'field'},{x:'27%',y:'76%',cls:'field'},{x:'50%',y:'78%',cls:'field'},{x:'73%',y:'76%',cls:'field'},{x:'91%',y:'74%',cls:'field'},{x:'25%',y:'54%',cls:'field'},{x:'50%',y:'52%',cls:'field'},{x:'75%',y:'54%',cls:'field'},{x:'33%',y:'24%',cls:'field'},{x:'67%',y:'24%',cls:'field'}]},
+  {id:'t4',formation:'4–4–2 ◆',name:'Diamond Possession',
+   desc:'Overload the middle and build through central zones with a classic diamond.',
+   chips:['Balanced','Med press','Wide'],modified:'Edited 3 weeks ago',active:false,
+   dots:[{x:'50%',y:'86%',cls:'gk'},{x:'16%',y:'74%',cls:'field'},{x:'34%',y:'77%',cls:'field'},{x:'66%',y:'77%',cls:'field'},{x:'84%',y:'74%',cls:'field'},{x:'50%',y:'63%',cls:'field'},{x:'23%',y:'50%',cls:'field'},{x:'77%',y:'50%',cls:'field'},{x:'50%',y:'37%',cls:'field'},{x:'34%',y:'22%',cls:'field'},{x:'66%',y:'22%',cls:'field'}]},
+  {id:'t5',formation:'3–4–3',name:'Overload Blitz',
+   desc:'All-out attack when chasing a game. High risk, high reward wing play.',
+   chips:['Attacking','Urgent press','Very high'],modified:'Edited 5 weeks ago',active:false,
+   dots:[{x:'50%',y:'86%',cls:'gk'},{x:'24%',y:'74%',cls:'field'},{x:'50%',y:'78%',cls:'field'},{x:'76%',y:'74%',cls:'field'},{x:'11%',y:'56%',cls:'field'},{x:'36%',y:'54%',cls:'field'},{x:'64%',y:'54%',cls:'field'},{x:'89%',y:'56%',cls:'field'},{x:'18%',y:'24%',cls:'field'},{x:'50%',y:'20%',cls:'field'},{x:'82%',y:'24%',cls:'field'}]},
+  {id:'t6',formation:'4–2–3–1',name:'Counter-Punch',
+   desc:'Structured shape with a creative #10. Quick vertical transitions on turnover.',
+   chips:['Positive','Mid-block','Narrow'],modified:'Never used',active:false,
+   dots:[{x:'50%',y:'86%',cls:'gk'},{x:'16%',y:'74%',cls:'field'},{x:'34%',y:'77%',cls:'field'},{x:'66%',y:'77%',cls:'field'},{x:'84%',y:'74%',cls:'field'},{x:'33%',y:'58%',cls:'field'},{x:'67%',y:'58%',cls:'field'},{x:'18%',y:'42%',cls:'field'},{x:'50%',y:'38%',cls:'field'},{x:'82%',y:'42%',cls:'field'},{x:'50%',y:'20%',cls:'field'}]},
+];
+function renderTemplates(){
+  document.getElementById('tmplGrid').innerHTML=TEMPLATES.map(t=>`
+    <div class="tmpl-card${t.active?' tmpl-active':''}" data-tmpl="${t.id}">
+      <div class="tmpl-card-top">
+        <div class="tmpl-form">${t.formation}</div>
+        ${t.active?'<div class="tmpl-badge">Active</div>':''}
+      </div>
+      <div class="tmpl-name">${t.name}</div>
+      <div class="tmpl-desc">${t.desc}</div>
+      <div class="tmpl-chips">${t.chips.map(c=>`<span class="tmpl-chip">${c}</span>`).join('')}</div>
+      <div class="tmpl-mini">${t.dots.map(d=>`<div class="tmpl-dot ${d.cls}" style="left:${d.x};top:${d.y}"></div>`).join('')}</div>
+      <div class="tmpl-foot">
+        <span class="tmpl-foot-meta">${t.modified}</span>
+        <button class="tmpl-btn">Edit</button>
+        <button class="tmpl-btn">⋯</button>
+        ${t.active?`<button class="tmpl-btn" style="color:var(--ink-5)">Applied</button>`:`<button class="tmpl-btn tmpl-btn-apply">Apply</button>`}
+      </div>
+    </div>`).join('');
+}
+
+/* ── Calendar ─────────────────────────────────────────────────────────────── */
+(function(){
+  const FX={7:{cls:'w',res:'W 2–0'},11:{cls:'d',res:'D 1–1'},14:{cls:'today'},18:{cls:'upcoming fixture-ucl'},22:{cls:'upcoming'},29:{cls:'upcoming'}};
+  const ov=document.getElementById('calOverlay'), btn=document.getElementById('dateBtn');
+  if(!ov||!btn) return;
+  btn.style.cursor='pointer';
+  function build(){
+    const g=document.getElementById('calGrid'); if(!g) return;
+    let h='';
+    for(let d=1;d<=31;d++){const f=FX[d];h+='<div class="cal-cell'+(f?' '+f.cls:'')+'"><span class="cal-day">'+d+'</span>'+(f&&f.res?'<span class="cal-res" style="color:var(--brand-400)">'+f.res+'</span>':'')+'</div>';}
+    g.innerHTML=h;
+  }
+  btn.addEventListener('click',e=>{e.stopPropagation();ov.style.display=ov.style.display==='flex'?'none':'flex';build();});
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.style.display='none';});
+  document.getElementById('calClose')?.addEventListener('click',()=>ov.style.display='none');
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')ov.style.display='none';});
+})();
+
+/* ── Init ─────────────────────────────────────────────────────────────────── */
+update();
+updateSP();
+document.getElementById('oppPitch').innerHTML = buildFullPitch(OPP_XI);
+renderTemplates();
+</script>
+</body>
+</html>

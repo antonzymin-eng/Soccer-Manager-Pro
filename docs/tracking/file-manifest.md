@@ -1215,6 +1215,36 @@ Use this file to track the **current folder structure**, not legacy per-version 
 > Not a single numbered spec. The assembly hosts three related bodies of work at the same layer position
 > (above both match-engine and living-world): the save-file root (`unified-season-save-design.md`), the
 > #30 season loop value types + codec, and the league bootstrap (`league-bootstrap-design.md`).
+### `src/ui-framework/` — UI / Client Framework #38 T0 substrate (July 25, 2026; spec APPROVED July 22, 2026)
+
+Presentation layer. Host-free and CI-gated; the UGUI rendering binding is Unity-host-gated (#38 §4.3/§7.2).
+Governed by `docs/tracking/ui-framework-t0-implementation-plan.md`.
+
+| File | Purpose |
+|------|---------|
+| `ui-framework.asmdef` | `TacticalDirector.UiFramework`; references MatchEngine + MatchViewer + MatchClientCore + TacticalInstructions + ProjectConstants (all built — no speculative reference) |
+| `AssemblyInfo.cs` | `InternalsVisibleTo` the test assembly (the intent→command translation is internal) |
+| `IViewModelSource.cs` | The KD-1 projection contract `IViewModelSource<T> where T : struct` + the non-generic marker the screen registry stores |
+| `ScreenId.cs` | `ScreenId` value-type identity (value equality) + `ScreenRegistration` { id, source, dispatcher } |
+| `NavigationShell.cs` | The §3.2 deterministic stack machine; fail-loud on unregistered navigation (F2), root `Pop`, un-rooted `Current`, duplicate `Register` (ERR-038-003) |
+| `IntentKind.cs` | The closed intent set + `None = 0` zero-value sentinel; `AdvanceRound` deliberately absent until #30 is built |
+| `ManagerIntent.cs` | The typed manager intent payload (one factory per kind); carries no channel dependency |
+| `ICommandDispatcher.cs` | The dispatch contract — route to an existing public seam; throw on unmapped (F3) |
+| `MatchTacticsDispatcher.cs` | The one concrete dispatcher: live mode marshals via the `MatchSession` command channel (KD-U1/FR-UI-023), single-threaded mode applies directly; internal intent→command translation |
+| `ILiveFrameSource.cs` | The KD-U7 one-method frame read seam (makes FR-UI-005 structural + the match view thread-free testable) |
+| `LiveMatchStreamerFrameSource.cs` | Production adapter over `LiveMatchStreamer` (pure pass-through; exposes only the read capability) |
+| `MatchFrameView.cs` | The immutable match view model — array copied never wrapped; SQUAD_SIZE / possession-id / score / finite gates (F1) |
+| `MatchViewModelSource.cs` | `IViewModelSource<MatchFrameView>` over the frame seam; F5 last-known/empty; holds no engine |
+| `UiFrameworkConstants.cs` | `[GT]` match-view refresh cadence (declared, consumed by the §7.2 UGUI binding) |
+| `Tests/ui-framework-tests.asmdef` | `TacticalDirector.UiFramework.Tests` (Editor-only, autoReferenced false) |
+| `Tests/NavigationShellTests.cs` | T-UI-NAV-001/002/003 — the §3.5 worked transition + every fail-loud edge |
+| `Tests/CommandDispatchTests.cs` | T-UI-DISPATCH-001..004 — per-seam routing, F3, the intent/command drift guard, the FR-UI-023 marshaling lock |
+| `Tests/MatchViewProjectionTests.cs` | T-UI-MATCHVIEW-001/002, T-UI-FAIL-001/002, T-UI-LAYER-002 |
+| `Tests/MatchViewObserverNeutralityTests.cs` | T-UI-NEU-001 digest-chain neutrality + T-UI-LAYER-001 reverse-reference scan |
+
+---
+
+### Season Save (`src/season-save/`) — unified season save-file root (not a numbered spec; `unified-season-save-design.md`)
 
 | File | Purpose |
 |------|---------|
@@ -1275,6 +1305,27 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 
 *(June 12, 2026: `docs/tracking/dotnet-ci-quarantine.md` added — human-readable quarantine ledger for the dotnet CI gate; machine mirror at `tools/dotnet-ci/known-failures.txt`.)*
+
+## Design References
+
+Non-normative visual references. Nothing here is on a build path, read by the sim, or part of any
+snapshot/digest; where a reference and an APPROVED spec disagree, the spec wins.
+
+| File / folder | Purpose |
+|---------------|---------|
+| `docs/design/ui-mockups/README.md` | Index + scope contract for the UI mockups (v1.0, Jul 25, 2026) |
+| `docs/design/ui-mockups/Soccer Manager Pro - Design System.html` | Design-system page: color, type, spacing, components, data-viz, match-day HUD; two visual directions (`stadium` / `touchline`, neither chosen yet) |
+| `docs/design/ui-mockups/Desktop Guardrails.html` | Desktop layout/resolution guardrails (1920×1080 reference stage) |
+| `docs/design/ui-mockups/Command Palette.html` | Global command-palette / navigation pattern |
+| `docs/design/ui-mockups/*.html` (11 screens) | Screen mockups — Squad, Tactics, Training, Scouting, Transfers, Club, Club Finances, Club Staff, Club Board Room, Club History, World |
+| `docs/design/ui-mockups/assets/` | Shared mockup assets — 8 `.css` (incl. `tokens.css`), 3 `.js`, 4 `.jsx` tweak panels |
+| `docs/design/ui-mockups/screenshots/squad-check.png` | Reference capture of the squad screen |
+
+Landed July 25, 2026 as the visual reference for UI / Client Framework **#38** (framework slice,
+APPROVED Jul 22, 2026) and the Wave-7 screen specs it defers to (#38 §7.1). All mockup data is
+hardcoded and illustrative.
+
+---
 
 ## Planning Documents
 

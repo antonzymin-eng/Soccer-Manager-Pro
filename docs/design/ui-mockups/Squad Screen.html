@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Squad — Soccer Manager Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/squad.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script>
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "density": "comfortable",
+  "accentColor": "#00ff88",
+  "inGameEditor": false
+}/*EDITMODE-END*/;
+</script>
+</head>
+<body>
+
+<div class="resolution-badge" id="resbadge">1920 × 1080 · standard tier · scale 100%</div>
+
+<div class="fitter">
+<div class="stage" id="stage">
+
+  <!-- TOP CHROME : primary modules, edge-to-edge -->
+  <header class="chrome">
+    <div class="brand">
+      <div class="crest-gm">RM</div>
+      <div class="nm">Riverside <em>· Mgr. You</em></div>
+    </div>
+    <nav class="nav">
+      <a href="Club.html">Club</a>
+      <a href="#" class="on">Squad</a>
+      <a href="Tactics.html">Tactics</a>
+      <a href="#">Training</a>
+      <a href="#">Scouting</a>
+      <a href="#">Transfers</a>
+      <a href="#">Staff</a>
+      <a href="#">World</a>
+      <a href="#">Inbox<span class="b">3</span></a>
+    </nav>
+    <div class="sp"></div>
+    <div class="right">
+      <div class="kbd-hint"><span class="lbl">Search anywhere</span><span class="k">⌘ K</span></div>
+      <div class="date" id="dateBtn" title="Open calendar">Sat 14 Mar · Wk 31 📅</div>
+      <div class="cont">Continue ▸</div>
+    </div>
+  </header>
+
+  <!-- CALENDAR MODAL -->
+  <div class="cal-overlay" id="calOverlay" style="display:none">
+    <div class="cal-modal">
+      <div class="cal-head">
+        <button class="cal-nav">◀</button>
+        <span class="cal-month-name">March 2025 · Wk 31</span>
+        <button class="cal-nav">▶</button>
+        <button class="cal-close" id="calClose">✕</button>
+      </div>
+      <div class="cal-body">
+        <div class="cal-dow">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+          <span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div id="calGrid"></div>
+      </div>
+      <div class="cal-footer">
+        <span class="leg">● W/D/L result</span>
+        <span class="leg" style="color:var(--brand-400)">● Today</span>
+        <span class="leg" style="color:var(--info-400)">● UCL</span>
+        <span class="leg" style="color:var(--ink-3)">○ Upcoming</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION SUB-TABS — Squad scope only -->
+  <div class="crumb">
+    <span class="tab on">First XI</span>
+    <span class="tab">All players</span>
+    <span class="tab">Contracts</span>
+    <span class="tab">Medical centre</span>
+    <span class="tab">Dynamics</span>
+    <span class="tab">Status</span>
+    <div class="sp"></div>
+    <div class="views">
+      <span class="view on">General</span>
+      <span class="view">Tactical</span>
+      <span class="view">Financial</span>
+      <span class="view">My DM scout</span>
+      <span class="view add">+ New view</span>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="tb-grp">
+      <div class="seg seg-pos">
+        <button class="on" data-pos="ALL">All <span class="ct">28</span></button>
+        <button data-pos="GK">GK <span class="ct">3</span></button>
+        <button data-pos="DF">DF <span class="ct">9</span></button>
+        <button data-pos="MF">MF <span class="ct">8</span></button>
+        <button data-pos="FW">FW <span class="ct">6</span></button>
+        <button data-pos="U21">U21s <span class="ct">2</span></button>
+      </div>
+    </div>
+    <div class="tb-grp">
+      <span class="chip" data-status="available">● Available</span>
+      <span class="chip warn" data-status="injured">○ Injured · 2</span>
+      <span class="chip" data-status="suspended">○ Suspended · 0</span>
+      <span class="chip" data-status="loan">○ On loan · 1</span>
+    </div>
+    <div class="tb-grp">
+      <div class="seg">
+        <button class="on">No group</button>
+        <button>by Position</button>
+        <button>by Status</button>
+      </div>
+    </div>
+    <div class="sp"></div>
+    <div class="tb-grp">
+      <div class="search">
+        <span class="icon">⌕</span>
+        <input type="text" placeholder="Filter squad…" />
+        <span class="k">/</span>
+      </div>
+      <button class="btn">▦ Columns · 19</button>
+      <button class="btn">↧ Export</button>
+      <button class="btn primary">+ Add comparison</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="table-pane">
+
+      <div class="table-head">
+        <div class="h right" data-col="n"># <span class="arr"></span></div>
+        <div class="h" data-col="pos">Pos <span class="arr"></span></div>
+        <div class="h" data-col="name">Name <span class="arr"></span></div>
+        <div class="h" data-col="ca">CA <span class="arr"></span></div>
+        <div class="h" data-col="pa">PA <span class="arr"></span></div>
+        <div class="h right" data-col="age">Age <span class="arr"></span></div>
+        <div class="h" data-col="nat">Nat <span class="arr"></span></div>
+        <div class="h" data-col="ft">Ft <span class="arr"></span></div>
+        <div class="h right" data-col="hgt">Hgt <span class="arr"></span></div>
+        <div class="h" data-col="second">2nd <span class="arr"></span></div>
+        <div class="h" data-col="fit">Fitness <span class="arr"></span></div>
+        <div class="h right" data-col="cnd">Cnd <span class="arr"></span></div>
+        <div class="h" data-col="form">Form <span class="arr"></span></div>
+        <div class="h" data-col="mor">Morale <span class="arr"></span></div>
+        <div class="h right" data-col="xg">xG <span class="arr"></span></div>
+        <div class="h right" data-col="xa">xA <span class="arr"></span></div>
+        <div class="h right" data-col="last">Last <span class="arr"></span></div>
+        <div class="h right" data-col="avg">Avg <span class="arr"></span></div>
+        <div class="h right" data-col="apps">Apps <span class="arr"></span></div>
+        <div class="h right" data-col="g">G <span class="arr"></span></div>
+        <div class="h right" data-col="a">A <span class="arr"></span></div>
+        <div class="h right" data-col="mins">Mins <span class="arr"></span></div>
+        <div class="h right" data-col="y">Y <span class="arr"></span></div>
+        <div class="h right" data-col="val">Value <span class="arr"></span></div>
+        <div class="h right" data-col="wage">Wage <span class="arr"></span></div>
+        <div class="h right" data-col="exp">Exp <span class="arr"></span></div>
+        <div class="h">⋯</div>
+      </div>
+
+      <div class="rows" id="rows"></div>
+
+      <div class="footer-bar">
+        <div class="fsum">SQUAD <b>28</b></div>
+        <div class="fsum">AVG AGE <b>25.4</b></div>
+        <div class="fsum">FOREIGN <b>14</b> / 17</div>
+        <div class="fsum">HOMEGROWN <b>9</b> / 8 ✓</div>
+        <div class="fsum">INJURED <b style="color:var(--neu-400)">2</b></div>
+        <div class="fsum">WAGES <b>£3.42m</b>/wk · cap £4.0m</div>
+        <div class="fsum">VALUE <b>£634m</b></div>
+        <div class="sp"></div>
+        <div class="fsum">↑↓ navigate · enter open · / search</div>
+      </div>
+      <div id="formationPanel"></div>
+
+    </div>
+
+    <!-- SIDE RAIL -->
+    <aside class="side-pane">
+      <div class="side-head"></div>
+
+      <div class="side-info"></div>
+
+      <div class="side-body"></div>
+
+      <div class="side-actions">
+        <button class="btn">★ Shortlist</button>
+        <button class="btn">⤢ Compare</button>
+        <button class="btn">Set instructions</button>
+        <button class="btn primary">Offer new contract</button>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- SPECIAL VIEWS: Medical · Dynamics · Status -->
+  <div id="special-view" style="display:none"></div>
+
+  <!-- STATUS -->
+  <div class="status">
+    <span class="dot"></span><span>SAVE · auto · 11:58</span>
+    <span class="bullet">·</span>
+    <span>BUILD 0.2.31-touchline</span>
+    <span class="bullet">·</span>
+    <span>1920 × 1080 · standard tier</span>
+    <span class="bullet">·</span>
+    <span id="rowcount">28 rows visible · 28 indexed</span>
+    <span class="sp"></span>
+    <span>FPS 60</span>
+    <span class="bullet">·</span>
+    <span>RAM 1.2 GB</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--brand-400)">⌘K  to search anything</span>
+  </div>
+
+</div>
+</div>
+
+<style>
+/* ── Special view overlay ──────────────────────────────────────────────── */
+#special-view {
+  position: absolute;
+  top: 130px; /* header 52 + crumb 34 + toolbar 44 */
+  bottom: 32px; /* status bar */
+  left: 0; right: 0;
+  overflow: hidden;
+  background: var(--bg-0);
+  z-index: 5;
+}
+
+/* ── KPI strip (shared) ─────────────────────────────────────────────────── */
+.sv-kpi-strip {
+  display: flex; gap: 12px;
+  padding: 13px 18px; flex-shrink: 0;
+  background: var(--bg-1); border-bottom: 1px solid var(--line-2);
+}
+.sv-kpi {
+  flex: 1; background: var(--bg-card); border: 1px solid var(--line-2);
+  border-radius: var(--panel-radius); padding: 11px 15px;
+}
+.sv-kpi-v {
+  font-family: var(--font-display); font-size: 34px; font-weight: 800;
+  line-height: 1; color: var(--ink-1);
+}
+.sv-kpi-l {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--ink-4); margin-top: 5px;
+}
+.sv-kpi-s { font-size: 10.5px; color: var(--ink-4); margin-top: 2px; }
+.sv-kpi-pos .sv-kpi-v { color: var(--pos-400); }
+.sv-kpi-neg .sv-kpi-v { color: var(--neg-400); }
+.sv-kpi-neu .sv-kpi-v { color: var(--neu-400); }
+
+/* ── Card (shared) ──────────────────────────────────────────────────────── */
+.sv-card {
+  background: var(--bg-card); border: 1px solid var(--line-2);
+  border-radius: var(--panel-radius); display: flex; flex-direction: column;
+  overflow: hidden; min-height: 0;
+}
+.sv-card-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 14px; border-bottom: 1px solid var(--line-2); flex-shrink: 0;
+}
+.sv-card-title {
+  font-family: var(--font-display); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3);
+}
+.sv-meta { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: 0.04em; }
+.sv-card-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
+.sv-card-sep  { height: 1px; background: var(--line-2); margin: 11px 0; }
+
+/* ── MEDICAL CENTER ─────────────────────────────────────────────────────── */
+.sv-medical   { display: flex; flex-direction: column; height: 100%; }
+.sv-med-cols  { display: grid; grid-template-columns: 1fr 540px; gap: 14px; padding: 14px 18px; flex: 1; min-height: 0; overflow: hidden; }
+.sv-med-left, .sv-med-right { display: flex; flex-direction: column; min-height: 0; }
+.sv-med-left .sv-card, .sv-med-right .sv-card { flex: 1; }
+
+/* injury cards */
+.sv-inj-list  { display: flex; flex-direction: column; gap: 12px; }
+.sv-inj-card  {
+  background: var(--bg-2); border: 1px solid var(--line-2);
+  border-radius: var(--r-3); padding: 13px 15px;
+}
+.sv-inj-top   { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.sv-inj-name  { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--ink-1); }
+.sv-inj-grade {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  padding: 2px 7px; border-radius: var(--r-pill);
+}
+.sv-g1 { background: var(--neu-tint);  color: var(--neu-400); }
+.sv-g2 { background: var(--neg-tint);  color: var(--neg-400); }
+.sv-g3 { background: var(--neg-tint);  color: #ff3030; }
+.sv-inj-status-badge {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  padding: 2px 7px; border-radius: var(--r-pill);
+}
+.sv-s-rec   { background: var(--brand-tint); color: var(--brand-400); }
+.sv-s-rehab { background: var(--info-tint);  color: var(--info-400); }
+.sv-inj-type { font-size: 12.5px; color: var(--ink-2); font-weight: 500; margin-bottom: 9px; }
+.sv-inj-part { color: var(--ink-4); font-weight: 400; }
+.sv-inj-dates {
+  display: flex; gap: 20px; font-size: 11px; color: var(--ink-3); margin-bottom: 8px;
+}
+.sv-inj-dates b { color: var(--ink-1); font-weight: 600; }
+.sv-prog-track { height: 5px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; }
+.sv-prog-fill  { height: 100%; background: var(--brand-400); border-radius: var(--r-pill); transition: width .4s ease; }
+.sv-inj-note   {
+  font-size: 10.5px; color: var(--ink-3); font-style: italic;
+  margin-top: 9px; padding: 6px 10px;
+  background: var(--bg-1); border-radius: var(--r-2); border-left: 2px solid var(--line-3);
+  line-height: 1.5;
+}
+
+/* fitness list */
+.sv-fit-list  { display: flex; flex-direction: column; }
+.sv-fit-row   {
+  display: grid; grid-template-columns: 22px 32px 1fr 180px;
+  gap: 8px; align-items: center; padding: 5px 0;
+  border-bottom: 1px solid var(--line-1); font-size: 12px;
+}
+.sv-fit-row:last-child { border-bottom: none; }
+.sv-fit-n     { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); text-align: right; }
+.sv-fit-name  { color: var(--ink-1); display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sv-fit-bar-wrap { display: flex; align-items: center; gap: 7px; }
+.sv-fit-bar   { flex: 1; height: 5px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; }
+.sv-fit-fill  { height: 100%; border-radius: var(--r-pill); }
+.sv-fit-hi    { background: var(--pos-400); }
+.sv-fit-md    { background: var(--neu-400); }
+.sv-fit-lo    { background: var(--neg-400); }
+.sv-fit-pct   { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-2); min-width: 32px; text-align: right; }
+
+/* ── DYNAMICS ───────────────────────────────────────────────────────────── */
+.sv-dynamics {
+  display: grid; grid-template-columns: 310px 1fr 350px;
+  gap: 14px; padding: 14px 18px; height: 100%; overflow: hidden;
+}
+.sv-dyn-col        { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.sv-dyn-col .sv-card { flex: 1; }
+.sv-dyn-center     { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.sv-dyn-center .sv-card:first-child { flex: 0 0 auto; }
+.sv-dyn-center .sv-card:last-child  { flex: 1; }
+
+/* spirit */
+.sv-spirit-big { text-align: center; padding: 16px 0 12px; }
+.sv-spirit-num {
+  font-family: var(--font-display); font-size: 80px; font-weight: 800;
+  color: var(--brand-400); line-height: 1;
+}
+.sv-spirit-lbl { font-size: 13px; color: var(--ink-3); margin-top: 3px; }
+.sv-gauge-row  {
+  display: flex; align-items: center; gap: 9px;
+  margin-top: 10px; font-size: 11.5px; color: var(--ink-3);
+}
+.sv-gauge-lbl  { min-width: 58px; }
+.sv-gauge      { flex: 1; height: 5px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; }
+.sv-gauge-sm   { flex: 1; height: 4px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; }
+.sv-gauge-fill { height: 100%; border-radius: var(--r-pill); }
+.sv-gauge-v    { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-2); min-width: 22px; text-align: right; }
+.sv-mor-kpi-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 14px;
+}
+.sv-mor-kpi {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 9px 6px;
+}
+.sv-mor-kpi-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: 0.06em; }
+
+/* leadership */
+.sv-leader-row   { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line-1); }
+.sv-leader-row:first-child { border-top: 1px solid var(--line-1); }
+.sv-leader-badge {
+  width: 34px; height: 34px; border-radius: var(--r-2); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 13px; font-weight: 800;
+}
+.sv-badge-cap { background: var(--brand-400); color: #001a0a; }
+.sv-badge-vc  { background: var(--bg-3); color: var(--ink-1); border: 1px solid var(--line-3); }
+.sv-leader-info { flex: 1; min-width: 0; }
+.sv-leader-name { font-size: 13px; font-weight: 600; color: var(--ink-1); }
+.sv-leader-sub  { font-size: 10.5px; color: var(--ink-4); margin-top: 2px; }
+.sv-leader-inf  { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--brand-400); line-height: 1; white-space: nowrap; }
+.sv-inf-unit    { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); font-weight: 400; }
+.sv-inf-row     { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line-1); font-size: 11.5px; }
+.sv-inf-row:last-child { border-bottom: none; }
+.sv-inf-name    { color: var(--ink-1); min-width: 120px; }
+.sv-inf-role    { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-4); min-width: 100px; }
+
+/* cliques */
+.sv-clique { border-left: 3px solid transparent; padding: 9px 11px; border-radius: var(--r-2); margin-bottom: 7px; }
+.sv-clique:last-child { margin-bottom: 0; }
+.sv-clique-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.sv-clique-name { font-size: 12px; font-weight: 600; color: var(--ink-1); }
+.sv-clique-ct   { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-4); }
+.sv-clique-members { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; }
+.sv-clique-chip {
+  font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-2);
+  background: var(--bg-1); border: 1px solid var(--line-2);
+  padding: 1px 7px; border-radius: var(--r-pill);
+}
+.sv-clique-desc { font-size: 10.5px; color: var(--ink-3); line-height: 1.4; }
+
+/* player morale list */
+.sv-mor-list { display: flex; flex-direction: column; }
+.sv-mor-row  {
+  display: grid; grid-template-columns: 32px 1fr 60px 72px;
+  gap: 8px; align-items: center; padding: 6px 0;
+  border-bottom: 1px solid var(--line-1);
+}
+.sv-mor-row:last-child { border-bottom: none; }
+.sv-mor-pname  { color: var(--ink-1); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sv-mor-dots   { display: flex; gap: 3px; }
+.sv-mor-dot    { width: 9px; height: 9px; border-radius: 50%; background: var(--bg-3); flex-shrink: 0; }
+.sv-dot-pos    { background: var(--pos-400); box-shadow: 0 0 4px var(--pos-400); }
+.sv-dot-neu    { background: var(--neu-400); }
+.sv-dot-neg    { background: var(--neg-400); }
+.sv-mor-text   { font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.04em; text-align: right; }
+
+/* ── STATUS ─────────────────────────────────────────────────────────────── */
+.sv-status-view { display: flex; flex-direction: column; height: 100%; }
+.sv-st-body     {
+  display: grid; grid-template-columns: 1fr 420px;
+  gap: 14px; padding: 14px 18px; flex: 1; min-height: 0; overflow: hidden;
+}
+.sv-st-avail-col { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.sv-st-right-col { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.sv-st-sect      { display: flex; flex-direction: column; gap: 6px; }
+
+.sv-st-grp-head {
+  display: flex; align-items: center; gap: 9px; padding: 8px 12px;
+  background: var(--bg-1); border: 1px solid var(--line-2);
+  border-radius: var(--r-2); border-left: 3px solid transparent; flex-shrink: 0;
+}
+.sv-st-dot    { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sv-st-grp-lbl {
+  font-family: var(--font-display); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-2); flex: 1;
+}
+.sv-st-grp-ct { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--ink-1); }
+
+/* available grid */
+.sv-av-grid {
+  flex: 1; overflow-y: auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 6px; align-content: start;
+}
+.sv-av-chip {
+  display: flex; align-items: center; gap: 7px; padding: 7px 10px;
+  background: var(--bg-card); border: 1px solid var(--line-2); border-radius: var(--r-2);
+}
+.sv-av-name { flex: 1; font-size: 12px; color: var(--ink-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sv-av-n    { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); }
+
+/* injured mini card */
+.sv-inj-mini {
+  background: var(--bg-card); border: 1px solid var(--line-2);
+  border-radius: var(--r-2); padding: 9px 12px;
+}
+.sv-inj-mini-name { font-size: 12.5px; font-weight: 600; color: var(--ink-1); flex: 1; }
+
+/* empty state */
+.sv-st-empty {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-4);
+  font-style: italic; padding: 10px 12px; text-align: center;
+}
+</style>
+<script src="assets/squad.js"></script>
+<script src="assets/squad-views.js"></script>
+<script type="text/babel" src="assets/tweaks-panel.jsx"></script>
+<script type="text/babel" src="assets/squad-tweaks.jsx"></script>
+<div id="tweaks-root"></div>
+</body>
+</html>

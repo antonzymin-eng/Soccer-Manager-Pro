@@ -1,0 +1,24 @@
+{
+    "name": "TacticalDirector.UiFramework.Tests",
+    "rootNamespace": "TacticalDirector.UiFramework.Tests",
+    "references": [
+        "TacticalDirector.UiFramework",
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.MatchViewer",
+        "TacticalDirector.MatchClientCore",
+        "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.DeterministicSim"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Board Room — Club — Soccer Manager Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/squad.css">
+<style>
+.br-main {
+  display: grid;
+  grid-template-columns: 380px 1fr 376px;
+  min-height: 0; overflow: hidden;
+}
+.br-col {
+  display: flex; flex-direction: column; gap: 11px;
+  padding: 15px 17px; overflow-y: auto; min-height: 0;
+}
+.br-col + .br-col { border-left: 1px solid var(--line-2); }
+
+.crd {
+  background: var(--bg-card); border: 1px solid var(--line-2);
+  border-radius: var(--panel-radius); padding: 13px 15px; flex-shrink: 0;
+}
+.crd.grow { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.crd h5 {
+  font-family: var(--font-display); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3);
+  margin: 0 0 11px; display: flex; justify-content: space-between; align-items: center;
+}
+.crd h5 .meta { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: 0.04em; text-transform: none; font-weight: 400; }
+
+.c-pos { color: var(--pos-400); }
+.c-neg { color: var(--neg-400); }
+.c-neu { color: var(--neu-400); }
+.c-ink { color: var(--ink-1); }
+.c-info { color: var(--info-400); }
+.c-brand { color: var(--brand-400); }
+
+/* ── Confidence ── */
+.conf-big { font-family: var(--font-display); font-size: 64px; font-weight: 800; color: var(--brand-400); line-height: 1; }
+.conf-label { font-size: 15px; color: var(--ink-2); font-weight: 500; margin-top: 3px; }
+.conf-bar { height: 7px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; margin: 10px 0 4px; }
+.conf-fill { height: 100%; border-radius: var(--r-pill); background: var(--brand-400); }
+.conf-scale { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-5); margin-bottom: 9px; }
+.conf-spark { display: flex; gap: 4px; align-items: flex-end; height: 38px; }
+.conf-spark-bar { flex: 1; border-radius: 2px 2px 0 0; }
+.conf-quote { font-size: 11px; color: var(--ink-3); font-style: italic; padding: 9px 11px; background: var(--bg-2); border-radius: var(--r-2); border-left: 2px solid var(--brand-400); margin-top: 10px; line-height: 1.5; }
+
+/* ── Chairman ── */
+.chairman-inner { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.chairman-portrait {
+  width: 52px; height: 52px; border-radius: var(--r-3); flex-shrink: 0;
+  background: linear-gradient(135deg, var(--bg-4), var(--bg-3));
+  border: 1px solid var(--line-3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--ink-3);
+}
+.chairman-name { font-family: var(--font-display); font-size: 17px; font-weight: 700; line-height: 1.1; }
+.chairman-sub { font-size: 10.5px; color: var(--ink-3); margin-top: 3px; }
+.cs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.cs { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 7px 9px; }
+.cs .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-4); }
+.cs .v { font-size: 11.5px; color: var(--ink-1); font-weight: 500; margin-top: 2px; }
+
+/* ── Directives ── */
+.dir-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 11px; background: var(--bg-2); border-radius: var(--r-2); border-left: 3px solid transparent; }
+.dir-row + .dir-row { margin-top: 6px; }
+.dir-row.policy    { border-left-color: var(--info-400); }
+.dir-row.financial { border-left-color: var(--neu-400); }
+.dir-row.sporting  { border-left-color: var(--brand-400); }
+.dir-row.infra     { border-left-color: var(--ink-3); }
+.dir-body { flex: 1; }
+.dir-title { font-size: 11.5px; color: var(--ink-1); font-weight: 500; }
+.dir-sub { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
+.dir-tag { font-family: var(--font-mono); font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: var(--r-1); margin-top: 5px; display: inline-block; letter-spacing: 0.04em; }
+.dt-policy    { background: var(--info-tint); color: var(--info-400); }
+.dt-financial { background: var(--neu-tint); color: var(--neu-400); }
+.dt-sporting  { background: var(--brand-tint); color: var(--brand-400); }
+.dt-infra     { background: var(--bg-3); color: var(--ink-3); }
+
+/* ── Objectives ── */
+.obj-row { display: flex; align-items: flex-start; gap: 9px; padding: 9px 11px; background: var(--bg-2); border-radius: var(--r-2); }
+.obj-row + .obj-row { margin-top: 5px; }
+.obj-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; margin-top: 1px; }
+.oi-ok  { background: var(--pos-tint); color: var(--pos-400); }
+.oi-on  { background: var(--info-tint); color: var(--info-400); }
+.oi-neu { background: var(--neu-tint); color: var(--neu-400); }
+.oi-off { background: var(--neg-tint); color: var(--neg-400); }
+.obj-body { flex: 1; }
+.obj-name { font-size: 12px; color: var(--ink-1); font-weight: 500; }
+.obj-detail { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
+.obj-type { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); flex-shrink: 0; padding-top: 2px; }
+.obj-pill { font-family: var(--font-mono); font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: var(--r-pill); white-space: nowrap; flex-shrink: 0; align-self: flex-start; }
+.op-ok   { background: var(--pos-tint); color: var(--pos-400); }
+.op-on   { background: var(--info-tint); color: var(--info-400); }
+.op-warn { background: var(--neu-tint); color: var(--neu-400); }
+.op-off  { background: var(--neg-tint); color: var(--neg-400); }
+
+/* ── Budget requests ── */
+.req-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 11px; background: var(--bg-2); border-radius: var(--r-2); }
+.req-row + .req-row { margin-top: 5px; }
+.req-body { flex: 1; }
+.req-title { font-size: 12px; color: var(--ink-1); font-weight: 500; }
+.req-sub { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
+.req-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.req-pill { font-family: var(--font-mono); font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: var(--r-pill); white-space: nowrap; }
+.rp-pend { background: var(--neu-tint); color: var(--neu-400); }
+.rp-ok   { background: var(--pos-tint); color: var(--pos-400); }
+.rp-deny { background: var(--neg-tint); color: var(--neg-400); }
+.rp-urg  { background: var(--neg-tint); color: var(--neg-400); }
+.req-cta { font-family: var(--font-mono); font-size: 9.5px; color: var(--brand-400); cursor: default; }
+
+/* ── Financial targets ── */
+.ft-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line-1); font-size: 11.5px; }
+.ft-row:first-child { border-top: none; }
+.ft-lbl { color: var(--ink-2); }
+.ft-val { font-family: var(--font-mono); font-size: 11px; }
+.ft-badge { font-family: var(--font-mono); font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: var(--r-1); margin-left: 5px; }
+.fb-ok  { background: var(--pos-tint); color: var(--pos-400); }
+.fb-neu { background: var(--neu-tint); color: var(--neu-400); }
+
+/* ── Meeting log ── */
+.mtg-row { padding: 9px 0; border-top: 1px solid var(--line-1); }
+.mtg-row:first-child { border-top: none; }
+.mtg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+.mtg-date { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); }
+.mtg-pill { font-family: var(--font-mono); font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: var(--r-pill); }
+.mp-pos { background: var(--pos-tint); color: var(--pos-400); }
+.mp-neu { background: var(--neu-tint); color: var(--neu-400); }
+.mp-neg { background: var(--neg-tint); color: var(--neg-400); }
+.mtg-title { font-size: 12px; color: var(--ink-1); font-weight: 500; }
+.mtg-note { font-size: 10.5px; color: var(--ink-3); margin-top: 3px; line-height: 1.45; }
+</style>
+</head>
+<body>
+
+<div class="resolution-badge" id="resbadge">1920 × 1080</div>
+<div class="fitter">
+<div class="stage" id="stage">
+
+  <header class="chrome">
+    <div class="brand">
+      <div class="crest-gm">RM</div>
+      <div class="nm">Riverside <em>· Mgr. You</em></div>
+    </div>
+    <nav class="nav">
+      <a href="Club.html" class="on">Club</a>
+      <a href="Squad Screen.html">Squad</a>
+      <a href="Tactics.html">Tactics</a>
+      <a href="Training Screen.html">Training</a>
+      <a href="Scouting Screen.html">Scouting</a>
+      <a href="Transfers.html">Transfers</a>
+      <a href="World.html">World</a>
+      <a href="#">Inbox<span class="b">3</span></a>
+    </nav>
+    <div class="sp"></div>
+    <div class="right">
+      <div class="kbd-hint"><span class="lbl">Search anywhere</span><span class="k">⌘ K</span></div>
+      <div class="date">Sat 14 Mar · Wk 31 📅</div>
+      <div class="cont">Continue ▸</div>
+    </div>
+  </header>
+
+  <div class="crumb">
+    <a href="Club.html" class="tab" style="text-decoration:none">Overview</a>
+    <a href="Club Finances.html" class="tab" style="text-decoration:none">Finances</a>
+    <span class="tab on">Board Room</span>
+    <a href="Club Staff.html" class="tab" style="text-decoration:none">Staff</a>
+    <a href="Club History.html" class="tab" style="text-decoration:none">History</a>
+    <div class="sp"></div>
+    <div style="display:flex;align-items:center;gap:12px;font-family:var(--font-mono);font-size:10px;color:var(--ink-4);letter-spacing:0.04em;">
+      <span>CONFIDENCE <span style="color:var(--brand-400)">82%</span></span>
+      <span style="color:var(--line-3)">|</span>
+      <span>STATUS <span style="color:var(--pos-400)">VERY HAPPY</span></span>
+      <span style="color:var(--line-3)">|</span>
+      <span>OBJECTIVES <span style="color:var(--pos-400)">3/5 ON TRACK</span></span>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="tb-grp">
+      <div class="seg">
+        <button class="on">Overview</button>
+        <button>Full Objectives</button>
+        <button>Meeting Log</button>
+      </div>
+    </div>
+    <div class="tb-grp">
+      <span class="chip on">Season 2024/25</span>
+      <span class="chip">Multi-Year</span>
+    </div>
+    <div class="sp"></div>
+    <div class="tb-grp">
+      <button class="btn">✉ Request Meeting</button>
+      <button class="btn primary">Submit Request</button>
+    </div>
+  </div>
+
+  <div class="br-main">
+
+    <!-- LEFT -->
+    <div class="br-col">
+
+      <div class="crd">
+        <h5>Board Confidence <span class="meta">Updated Wk 31</span></h5>
+        <div style="display:flex;align-items:flex-end;gap:18px;margin-bottom:4px">
+          <div>
+            <div class="conf-big">82%</div>
+            <div class="conf-label">Very Happy</div>
+          </div>
+          <div style="flex:1;padding-bottom:4px">
+            <div class="conf-spark">
+              <div class="conf-spark-bar" style="height:55%;background:var(--ink-5)"></div>
+              <div class="conf-spark-bar" style="height:62%;background:var(--ink-5)"></div>
+              <div class="conf-spark-bar" style="height:70%;background:var(--ink-4)"></div>
+              <div class="conf-spark-bar" style="height:74%;background:var(--ink-4)"></div>
+              <div class="conf-spark-bar" style="height:78%;background:var(--ink-3)"></div>
+              <div class="conf-spark-bar" style="height:82%;background:var(--ink-3)"></div>
+              <div class="conf-spark-bar" style="height:82%;background:var(--brand-400)"></div>
+            </div>
+            <div style="font-family:var(--font-mono);font-size:8.5px;color:var(--ink-4);margin-top:4px">↑ +14 pts since Wk 1</div>
+          </div>
+        </div>
+        <div class="conf-bar"><div class="conf-fill" style="width:82%"></div></div>
+        <div class="conf-scale"><span>Sack threat</span><span>Content</span><span>Delighted</span></div>
+        <div class="conf-quote">"The team is performing above expectations. Keep this momentum going into the run-in."<br><span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);display:block;margin-top:5px">— Sir A. Kingsley · Chairman · Wk 28</span></div>
+      </div>
+
+      <div class="crd">
+        <h5>Chairman Profile</h5>
+        <div class="chairman-inner">
+          <div class="chairman-portrait">AK</div>
+          <div>
+            <div class="chairman-name">Sir Arthur Kingsley</div>
+            <div class="chairman-sub">Chairman &amp; Owner · at club since 2009</div>
+          </div>
+        </div>
+        <div class="cs-grid">
+          <div class="cs"><div class="l">Ambition</div><div class="v">Champions League</div></div>
+          <div class="cs"><div class="l">Patience</div><div class="v c-pos">High</div></div>
+          <div class="cs"><div class="l">Spending</div><div class="v">Moderate</div></div>
+          <div class="cs"><div class="l">Style</div><div class="v">Attacking football</div></div>
+          <div class="cs"><div class="l">Net worth</div><div class="v">~£4.8bn</div></div>
+          <div class="cs"><div class="l">Background</div><div class="v">Fin. services</div></div>
+        </div>
+      </div>
+
+      <div class="crd grow">
+        <h5>Active Directives</h5>
+        <div class="dir-row financial">
+          <div class="dir-body">
+            <div class="dir-title">Wage cap must not exceed £4m/wk</div>
+            <div class="dir-sub">Currently £3.42m · £580k headroom · monitored monthly</div>
+            <span class="dir-tag dt-financial">FINANCIAL</span>
+          </div>
+        </div>
+        <div class="dir-row sporting">
+          <div class="dir-body">
+            <div class="dir-title">Prioritise youth in transfer activity</div>
+            <div class="dir-sub">Min. 2 players under 23 per window · at least one starter</div>
+            <span class="dir-tag dt-sporting">SPORTING</span>
+          </div>
+        </div>
+        <div class="dir-row policy">
+          <div class="dir-body">
+            <div class="dir-title">Maintain PSR &amp; FFP compliance</div>
+            <div class="dir-sub">3-season rolling net spend cap: £105m · currently £62m</div>
+            <span class="dir-tag dt-policy">POLICY</span>
+          </div>
+        </div>
+        <div class="dir-row infra">
+          <div class="dir-body">
+            <div class="dir-title">Stadium expansion feasibility study</div>
+            <div class="dir-sub">74,000 capacity study approved · board report due Q3 2025</div>
+            <span class="dir-tag dt-infra">INFRASTRUCTURE</span>
+          </div>
+        </div>
+        <div class="dir-row sporting" style="margin-top:6px">
+          <div class="dir-body">
+            <div class="dir-title">UCL target: minimum Quarter-Finals</div>
+            <div class="dir-sub">Board expects progression beyond Last 16 · 2nd leg Tue 18 Mar</div>
+            <span class="dir-tag dt-sporting">SPORTING</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- CENTER -->
+    <div class="br-col">
+
+      <div class="crd">
+        <h5>Season Objectives <span class="meta">2024/25</span></h5>
+        <div class="obj-row">
+          <div class="obj-icon oi-ok">✓</div>
+          <div class="obj-body">
+            <div class="obj-name">Finish in Top 4</div>
+            <div class="obj-detail">2nd place · 62 pts · 7 games remaining · 5-pt cushion to 5th</div>
+          </div>
+          <span class="obj-type">MUST</span>
+          <span class="obj-pill op-ok">ON TRACK</span>
+        </div>
+        <div class="obj-row">
+          <div class="obj-icon oi-on">→</div>
+          <div class="obj-body">
+            <div class="obj-name">Reach UCL Quarter-Finals</div>
+            <div class="obj-detail">Last 16 · W 2–0 first leg vs Porto · 2nd leg Tue 18 Mar</div>
+          </div>
+          <span class="obj-type">MUST</span>
+          <span class="obj-pill op-on">IN PROGRESS</span>
+        </div>
+        <div class="obj-row">
+          <div class="obj-icon oi-ok">✓</div>
+          <div class="obj-body">
+            <div class="obj-name">Develop &amp; play youth talent</div>
+            <div class="obj-detail">Yoro (3 starts), Okonkwo (6 apps), Bravo (loan) · target met</div>
+          </div>
+          <span class="obj-type">WANT</span>
+          <span class="obj-pill op-ok">ACHIEVED</span>
+        </div>
+        <div class="obj-row">
+          <div class="obj-icon oi-ok">✓</div>
+          <div class="obj-body">
+            <div class="obj-name">Maintain financial stability</div>
+            <div class="obj-detail">Net profit £32m · PSR clear · FFP compliant · credit A+</div>
+          </div>
+          <span class="obj-type">WANT</span>
+          <span class="obj-pill op-ok">ON TRACK</span>
+        </div>
+        <div class="obj-row">
+          <div class="obj-icon oi-neu">◎</div>
+          <div class="obj-body">
+            <div class="obj-name">Win Premier League title</div>
+            <div class="obj-detail">4 pts behind leaders · 7 games left · goal difference +20 vs +28</div>
+          </div>
+          <span class="obj-type">DREAM</span>
+          <span class="obj-pill op-warn">4 PTS BEHIND</span>
+        </div>
+      </div>
+
+      <div class="crd">
+        <h5>Budget Requests &amp; Actions <span class="meta">Season 2024/25</span></h5>
+        <div class="req-row">
+          <div class="req-body">
+            <div class="req-title">Increase summer budget to £80m</div>
+            <div class="req-sub">Submitted Wk 28 · Justification: title push &amp; squad depth</div>
+          </div>
+          <div class="req-right">
+            <span class="req-pill rp-pend">PENDING</span>
+            <span class="req-cta">Follow up →</span>
+          </div>
+        </div>
+        <div class="req-row">
+          <div class="req-body">
+            <div class="req-title">Renew: H. Maguire (expires Jun 2025)</div>
+            <div class="req-sub">Board mandate: resolve before Wk 35 or release decision final</div>
+          </div>
+          <div class="req-right">
+            <span class="req-pill rp-urg">URGENT</span>
+            <span class="req-cta">Offer contract →</span>
+          </div>
+        </div>
+        <div class="req-row">
+          <div class="req-body">
+            <div class="req-title">Renew: C. Eriksen (expires Jun 2025)</div>
+            <div class="req-sub">Agent contact open · Benfica &amp; Ajax interest reported</div>
+          </div>
+          <div class="req-right">
+            <span class="req-pill rp-urg">URGENT</span>
+            <span class="req-cta">Offer contract →</span>
+          </div>
+        </div>
+        <div class="req-row">
+          <div class="req-body">
+            <div class="req-title">DM signing approved — £28m allocation</div>
+            <div class="req-sub">Approved Wk 24 · Funds drawn from existing £130m budget</div>
+          </div>
+          <div class="req-right">
+            <span class="req-pill rp-ok">APPROVED</span>
+          </div>
+        </div>
+        <div class="req-row">
+          <div class="req-body">
+            <div class="req-title">Kovač wage increase (+£20k/wk)</div>
+            <div class="req-sub">Rejected Wk 19 · Board cited wage cap headroom concerns</div>
+          </div>
+          <div class="req-right">
+            <span class="req-pill rp-deny">REJECTED</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="crd grow">
+        <h5>Financial Targets <span class="meta">Board-set · 2024/25</span></h5>
+        <div class="ft-row">
+          <span class="ft-lbl">Minimum season revenue</span>
+          <span class="ft-val c-pos">£312m <span class="ft-badge fb-ok">✓ vs £280m target</span></span>
+        </div>
+        <div class="ft-row">
+          <span class="ft-lbl">Wage-to-revenue ratio</span>
+          <span class="ft-val c-pos">57.1% <span class="ft-badge fb-ok">✓ under 60% limit</span></span>
+        </div>
+        <div class="ft-row">
+          <span class="ft-lbl">Max net transfer spend</span>
+          <span class="ft-val c-neu">−£47.5m <span class="ft-badge fb-neu">~ vs £60m limit</span></span>
+        </div>
+        <div class="ft-row">
+          <span class="ft-lbl">End-of-season cash reserve</span>
+          <span class="ft-val c-pos">£124m <span class="ft-badge fb-ok">✓ vs £80m floor</span></span>
+        </div>
+        <div class="ft-row">
+          <span class="ft-lbl">PSR 3-season rolling loss</span>
+          <span class="ft-val c-pos">£62m <span class="ft-badge fb-ok">✓ vs £105m limit</span></span>
+        </div>
+        <div class="ft-row">
+          <span class="ft-lbl">Academy investment</span>
+          <span class="ft-val c-pos">£12m <span class="ft-badge fb-ok">✓ vs £10m target</span></span>
+        </div>
+        <div class="ft-row">
+          <span class="ft-lbl">Next window budget (projected)</span>
+          <span class="ft-val c-info">~£65m board-approved</span>
+        </div>
+        <div class="ft-row">
+          <span class="ft-lbl">Summer window sign-off deadline</span>
+          <span class="ft-val c-neu">Wk 34 · submit target list</span>
+        </div>
+      </div>
+
+    </div><!-- /center -->
+
+    <!-- RIGHT -->
+    <div class="br-col">
+
+      <div class="crd grow">
+        <h5>Board Meeting Log <span class="meta">Season 2024/25</span></h5>
+        <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
+          <div class="mtg-row">
+            <div class="mtg-header">
+              <span class="mtg-date">Wk 28 · 24 Feb 2025</span>
+              <span class="mtg-pill mp-pos">POSITIVE</span>
+            </div>
+            <div class="mtg-title">Mid-season review</div>
+            <div class="mtg-note">Board expressed strong satisfaction with league position and UCL progress. Transfer budget increase request deferred to summer window planning meeting.</div>
+          </div>
+          <div class="mtg-row">
+            <div class="mtg-header">
+              <span class="mtg-date">Wk 19 · 6 Jan 2025</span>
+              <span class="mtg-pill mp-neu">MIXED</span>
+            </div>
+            <div class="mtg-title">January window sign-off</div>
+            <div class="mtg-note">Board approved defensive reinforcement within existing budget. Kovač wage increase rejected — wage cap headroom flagged as concern. Eriksen situation raised.</div>
+          </div>
+          <div class="mtg-row">
+            <div class="mtg-header">
+              <span class="mtg-date">Wk 12 · 18 Nov 2024</span>
+              <span class="mtg-pill mp-pos">POSITIVE</span>
+            </div>
+            <div class="mtg-title">Q1 season review</div>
+            <div class="mtg-note">Strong UCL group stage progress praised. Academy investment plan approved. Stadium expansion feasibility study greenlit at estimated £2.1m research cost.</div>
+          </div>
+          <div class="mtg-row">
+            <div class="mtg-header">
+              <span class="mtg-date">Wk 3 · 16 Sep 2024</span>
+              <span class="mtg-pill mp-neu">NEUTRAL</span>
+            </div>
+            <div class="mtg-title">Pre-season objectives set</div>
+            <div class="mtg-note">Board outlined five objectives for 2024/25. PSR limits confirmed. Wage cap held at £4m/wk ceiling. No additional budget increases beyond summer allocation.</div>
+          </div>
+          <div class="mtg-row">
+            <div class="mtg-header">
+              <span class="mtg-date">Wk 52 · 12 Jun 2024</span>
+              <span class="mtg-pill mp-pos">POSITIVE</span>
+            </div>
+            <div class="mtg-title">Summer window planning</div>
+            <div class="mtg-note">£130m transfer budget approved. Board requested at least one marquee signing to grow commercial revenue and jersey sales. UCL debut season ambitions set.</div>
+          </div>
+          <div class="mtg-row">
+            <div class="mtg-header">
+              <span class="mtg-date">Wk 38 · 28 Apr 2024</span>
+              <span class="mtg-pill mp-pos">POSITIVE</span>
+            </div>
+            <div class="mtg-title">End of 2023/24 season review</div>
+            <div class="mtg-note">4th place finish secured Champions League qualification. Board confirmed manager contract extension discussions for 2026 option year pending first UCL campaign.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right -->
+
+  </div>
+
+  <div class="status">
+    <span class="dot"></span>
+    <span>SAVE · auto · 11:58</span>
+    <span class="bullet">·</span>
+    <span>BUILD 0.2.31-touchline</span>
+    <span class="bullet">·</span>
+    <span>Club · Board Room · Riverside FC · Season 2024/25</span>
+    <span class="sp"></span>
+    <span>Confidence 82%</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--brand-400)">Very Happy</span>
+    <span class="bullet">·</span>
+    <span>3 of 5 objectives on track</span>
+    <span class="sp"></span>
+    <span>FPS 60</span>
+    <span class="bullet">·</span>
+    <span>RAM 1.1 GB</span>
+  </div>
+
+</div>
+</div>
+
+<script>
+(function() {
+  var stage = document.getElementById('stage');
+  var badge = document.getElementById('resbadge');
+  function fit() {
+    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = 'scale(' + s + ')';
+    stage.style.transformOrigin = 'center center';
+    if (badge) badge.textContent = '1920×1080 · scale ' + Math.round(s * 100) + '%';
+  }
+  fit();
+  window.addEventListener('resize', fit);
+})();
+</script>
+</body>
+</html>
