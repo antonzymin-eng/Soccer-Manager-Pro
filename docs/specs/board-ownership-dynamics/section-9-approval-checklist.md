@@ -1,8 +1,8 @@
 # Board & Ownership Dynamics #45 — Section 9: Approval Checklist
 
 **Created:** July 25, 2026
-**Last Updated:** July 25, 2026 (v0.2 — G1 closed: PASS-1 + AR-2 recorded)
-**Version:** 0.2
+**Last Updated:** July 25, 2026 (v0.3 — pre-approval verification; ERR-045-001 widened)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 ---
@@ -66,13 +66,16 @@
       **`-009`** the next free numbers. *(`docs/tracking/spec-error-log.md` v1.36)*
 - [x] Roadmap §6 assigns #45 the `0x2D` / ordinal 95 slot.
       *(`docs/tracking/management-layer-spec-roadmap.md` §6)*
+- [x] #16 §3.4's catalogue currently **ends at `0x2A`** (#41): `0x2B` and `0x2C` have **no** `_RESERVED_`
+      placeholder, so ERR-045-001 files all three (A-04 gap rule; the v1.0.13 retroactive precedent).
+      *(`deterministic-sim/section-3.md` §3.4)*
 
 ## 9.4 Gates
 
 | Gate | Owner | Status |
 |---|---|---|
 | **G1** — section-file PASS-1 adversarial review + a v0.2 fix pass. | drafter | ✅ **CLOSED** — see §9.4.1 |
-| **G2** — file **ERR-030-008**, **ERR-030-009**, **ERR-045-001** atomically with the status flip. | drafter | ⏳ **OPEN** |
+| **G2** — file **ERR-030-008**, **ERR-030-009**, **ERR-045-001** (three `_RESERVED_` rows: `0x2B`/`0x2C`/`0x2D`) atomically with the status flip. | drafter | ⏳ **OPEN** — edits prepared and anchors verified; applied at the flip by design |
 | **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ⏳ **OPEN** |
 | **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ⏳ **OPEN** |
 
@@ -123,4 +126,5 @@ R-01..R-05 sign-off is granted. Sign-off is a human authority and is not self-gr
 |---|---|---|---|
 | 0.1 | 2026-07-25 | — | Initial §9 (completeness, tag discipline, the §9.3 source-verified claims table, the four open gates + the explicitly-not-gating list, R-01..R-05). Status IN REVIEW. |
 | 0.2 | 2026-07-25 | — | G1 CLOSED: §9.4.1 records the section-file PASS-1 (0H+3M+3L, all resolved) and the AR-2 convergence sweep (0H+0M+2L). §9.1 completeness updated for FR-BD-005a / F4a. G2/G3/G4 remain open. |
+| 0.3 | 2026-07-25 | — | Pre-approval gate-readiness verification. ERR-045-001 widened to three `_RESERVED_` rows after finding #16 §3.4 ends at `0x2A` with no placeholder for `0x2B`/`0x2C` (A-04 violation left by #42's approval). G2 marked prepared-and-verified; it stays OPEN because back-props land **atomically with the flip** by design, not because anything is missing. |
 #endregion

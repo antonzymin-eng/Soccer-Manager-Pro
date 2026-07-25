@@ -1,7 +1,12 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 23, 2026, latest same day (**Staff & Backroom #34 authored + advanced `→ IN REVIEW →
+> **Last Updated:** July 25, 2026 (**Youth Academy & Intake #42 header reconciliation.** #42 was approved
+> July 24 and its registry row added, but this header block was never refreshed — it still named #34 and
+> read **38 APPROVED**. The true count is **39 APPROVED / 0 IN REVIEW / 0 NOT STARTED**. See the corrected
+> #42 entry in Registry Changes, which also records the outstanding `_RESERVED_0x2B_` A-04 placeholder now
+> folded into #45's ERR-045-001.)
+> **Last Updated (prior):** July 23, 2026, latest same day (**Staff & Backroom #34 authored + advanced `→ IN REVIEW →
 > APPROVED`** — Wave 4's second spec (coaches/scouts/physios as attributed entities that modulate #29/#41/#33/#31).
 > A **Stage-3 system with a pulled-forward identity scaffold**: the managed club holds a real neutral-baseline
 > staff roster whose quality **projections return each consumer's own identity type** (`MedicalModifier` #41 /
@@ -418,9 +423,14 @@ consistent with #23 having been free to reserve and now promote.
   **All four gates closed same day:** G1 PASS-1 + AR-2 convergence; **G2 ERR-030-007 filed** (#30 §3.3
   gains the academy null seam as step 7, `AdvanceDay` → step 8; §2 FR-SN-034 enumeration extended; both
   #30 files → v0.7; `spec-error-log.md` v1.36); G3 lead-developer R-01..R-05 sign-off granted; G4 this
-  row. **No #16 change** — #42 registers no stream until its T2 first intake, so the roadmap-§6 `0x2B`/93
-  reservation stays unpromoted (FR-LW-031). All 11 section files `Status: APPROVED`. Count:
-  **28 APPROVED, 0 IN REVIEW, 0 NOT STARTED.**
+  row. **#16 partially deferred** — #42 registers no stream until its T2 first intake, so the roadmap-§6
+  `0x2B`/93 tag stays unpromoted (FR-LW-031). **Correction (July 25, 2026):** this entry originally read
+  "28 APPROVED", a number copied from the adjacent #27 entry rather than counted, and it also recorded
+  "no #16 change" without noting that #16's own **A-04 every-gap-has-a-placeholder rule** still required a
+  `_RESERVED_0x2B_` row even though the tag is not promoted (the `_RESERVED_0x21_` #29 / `_RESERVED_0x29_`
+  #40 pattern). The placeholder is filed with #45's ERR-045-001, which covers `0x2B`/`0x2C`/`0x2D`
+  together — the same retroactive gap-closing v1.0.13 did for `0x23`–`0x28`. All 11 section files
+  `Status: APPROVED`. Count: **39 APPROVED, 0 IN REVIEW, 0 NOT STARTED.**
 - **Specs were renumbered** during early development. Original plan had different ordering. Many early-written files contain stale spec numbers from the old scheme. The numbers in this file are canonical. See FORMER NUMBERING table below.
 
 ---

@@ -1,8 +1,8 @@
 # Board & Ownership Dynamics #45 — Outline
 
 **Created:** July 25, 2026
-**Last Updated:** July 25, 2026 (v0.2 — section-file PASS-1 fix pass)
-**Version:** 0.2
+**Last Updated:** July 25, 2026 (v0.3 — ERR-045-001 scope widened)
+**Version:** 0.3
 **Status:** IN REVIEW
 
 ---
@@ -60,11 +60,12 @@ sacking decision (#30), or the morale mechanics (#33). #45 supplies a value; oth
 |---|---|
 | ERR-030-008 | #30 tick order — board null seam as step 8; `AdvanceDay` → 9 |
 | ERR-030-009 | #30 `BoardState.JobSecurity` → derived band (carries a `SEASON_STATE_FORMAT_VERSION` bump at T2) |
-| ERR-045-001 | #16 §3.4 — `_RESERVED_0x2D_` + `SubsystemOrdinals.BoardOwnership = 95`, reserved not promoted |
+| ERR-045-001 | #16 §3.4 — `_RESERVED_0x2B_`/`_0x2C_`/`_0x2D_` placeholders (ordinals 93/94/95), reserved not promoted; widened from #45's own `0x2D` to close the A-04 gap #42's approval left |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-25 | — | Initial outline from supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-25 | — | PASS-1 fix (L): section map cited `XC-045-001..012`; §8 defines **001..016**. |
+| 0.3 | 2026-07-25 | — | Pre-approval verification found `0x2B` (#42) and `0x2C` (#43) have **no `_RESERVED_` placeholder** in #16 §3.4, violating its A-04 every-gap-has-a-placeholder rule — #42's approval deferred *promoting* `0x2B` (correct) but skipped the *placeholder* (not correct). ERR-045-001 widened to file all three rows atomically, the v1.0.13 retroactive precedent. |
 #endregion
