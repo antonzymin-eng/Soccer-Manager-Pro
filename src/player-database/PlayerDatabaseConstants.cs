@@ -46,6 +46,19 @@ namespace TacticalDirector.PlayerDatabase
         public const int ATTRIBUTE_COUNT = 31;
 
         /// <summary>
+        /// [DERIVED] Number of <see cref="PlayerPosition"/> members — a property of the enum, not a
+        /// tunable. Source: the PlayerPosition member count; also the row count of
+        /// <see cref="PositionAttributeBias"/>, which is indexed by that ordinal.
+        /// <para>
+        /// Declared once here because two independent consumers need it (<c>RosterGenerator</c>'s
+        /// position draw and the league bootstrap's position template), and a second private copy is
+        /// exactly the parallel-surface drift this project keeps finding. Locked against the enum by
+        /// test.
+        /// </para>
+        /// </summary>
+        public const int POSITION_COUNT = 4;
+
+        /// <summary>
         /// [DERIVED] Identity-draw count per generated player: first name index, last name index,
         /// age, position, weak foot.
         /// </summary>

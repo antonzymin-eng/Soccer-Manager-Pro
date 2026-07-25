@@ -118,6 +118,22 @@ namespace TacticalDirector.PlayerDatabase.Tests
                 Assert.AreEqual(AttrIdx.Count, row.Length);
             }
         }
+
+        [Test]
+        public void PositionCount_MatchesTheEnumAndTheBiasTable()
+        {
+            // POSITION_COUNT is [DERIVED] from the enum and consumed by two assemblies (RosterGenerator's
+            // position draw, the league bootstrap's squad template). Appending a PlayerPosition member
+            // without bumping it would silently make the new position undrawable and unindexable.
+            Assert.AreEqual(
+                System.Enum.GetValues(typeof(PlayerPosition)).Length,
+                PlayerDatabaseConstants.POSITION_COUNT,
+                "POSITION_COUNT must equal the PlayerPosition member count.");
+            Assert.AreEqual(
+                PlayerDatabaseConstants.POSITION_COUNT,
+                PlayerDatabaseConstants.PositionAttributeBias.Length,
+                "The bias table is indexed by PlayerPosition ordinal, so it needs one row per member.");
+        }
     }
 }
 

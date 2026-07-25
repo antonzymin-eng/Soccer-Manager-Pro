@@ -93,7 +93,7 @@ Non-trivial, and it changes the shape of the remaining work. Recorded so nothing
 | Unity render skin | `src/match-client-unity/` | ⛔ asmdef only — P4–P6, host-gated |
 
 **The single most under-appreciated asset is `RosterGenerator`.** It means a playable league needs no
-database editor and no authored data — see C3.
+database editor and no authored data — see C3. *(Realised July 25, 2026 as `LeagueBootstrap` — A3.)*
 
 ---
 
@@ -187,9 +187,9 @@ tests, adversarial review to convergence, and a green full gate — the project'
 |---|---|---|---|---|
 | **A1** ✅ | **#30 T0 — LANDED July 25, 2026** (97 season-save tests, full gate green; surfaced **ERR-030-010**, see §9 risk row C5).  `SeasonState`, `Fixture`, `FixtureScheduler` (pure `Generate`), `LeagueTableRow`/`LeagueTable` (`ApplyResult` + tie-break `OrderedView`), `SeasonCalendar`, `BoardObjective`/`BoardState`, `MatchResult`, `SeasonViewModel`. New `TacticalDirector.SeasonLoop` assembly. Behaviour-neutral by construction (no orchestrator touched). | #30 §7.1 T0 | shim gate + determinism tests | — |
 | **A2** ✅ | **#30 T1 — LANDED July 25, 2026** (135 season-save tests, full gate green; surfaced **ERR-030-011**, see §9 risk row C5). `SeasonStateCodec` (§3.6 / Appendix B sub-blob); `SeasonSaveCodec`/`SeasonSaveBlobs`/`SeasonSaveContents`/`SeasonSaveManager` gain the season block; `SEASON_SAVE_FORMAT_VERSION` **1 → 2**, `SEASON_STATE_FORMAT_VERSION` = 1 first used. World and match blobs byte-untouched (FR-SN-020). | #30 §7.1 T1 | round-trip + fail-loud gates | A1 |
-| **A3** | **League bootstrap** — `LeagueBootstrap` over `RosterGenerator`: N clubs (default 20) × 25 players, deterministic from the world seed; club identity/name table; hands #30 a starting world. **This is the #47-minimal substitute (C3), not the editor.** | ⚠️ **needs a short design note** — see §6 | determinism + round-trip | A1 |
+| **A3** ✅ | **League bootstrap — LANDED July 25, 2026** (season-save 141 → 168 tests, player-database 42 → 46, full gate green). `LeagueBootstrap.Generate(worldSeed, clubCount)` → `League`: N clubs (default 20) × 25 **position-coherent** players, deterministic from one world seed via three domain-separated derivations; `Club`/`ClubNameCatalogue` identity; a per-club strength ramp so the table is not 20 identical teams; `League` **is** the `ISquadProvider`; `CreateSeason` hands #30 a startable `SeasonState`. **The #47-minimal substitute (C3), not the editor.** | `league-bootstrap-design.md` v1.1 (§6 item 1) | determinism + round-trip | A1 |
 | **A4** | **#30 T2** — `SeasonLoop` composition root; `AdvanceToNextFixtureDay` (KD-2 fixed tick order, only the world tick live); `AdvanceAndPlayNextRound(ISquadProvider)` (KD-9 — managed fixture through a real `MatchEngine`, the rest via the round-resolution model); the #16 §3.4 back-prop (`DOMAIN_TAG_SEASON_LOOP = 0x22` / `SubsystemOrdinals.SeasonLoop = 84`); the `#19 ScenarioRunner` `season-multi-fixture` capstone. | #30 §7.1 T2 | capstone scenario + two-run determinism | A2, A3, A4a |
-| **A4a** | **Round-resolution calibration corpus** — generate ~200 engine-simulated matches across varied squad strengths; fit the quick-sim distributions against it; record the corpus + fit as a tracked artifact. **~9 h of compute (C1a) — schedule it, don't discover it.** | part of A4's design note | corpus committed; fit locked by test | A1 |
+| **A4a** | **Round-resolution calibration corpus** — generate ~200 engine-simulated matches across varied squad strengths; fit the quick-sim distributions against it; record the corpus + fit as a tracked artifact. **~9 h of compute (C1a) — schedule it, don't discover it.** *Methodology is now designed (KD-8: bucket grid, artifact contents incl. the engine SHA re-capture trigger, pinned-seed fit lock, acceptance bars); only the run remains. Harness home: `src/season-save/tests/`.* | `league-bootstrap-design.md` KD-7/KD-8 | corpus committed; fit locked by test | A3 |
 | **A5** | **#30 T3** — `RollToNextSeason` (KD-6 restartable transform); two-run + restartability tests; the #43 insertion point (a') left explicit and empty. | #30 §7.1 T3 | restartability tests | A4 |
 
 **Phase A exit — `PM-2-sim`:** a full 38-round season simulates head-lessly, saves and resumes
@@ -249,11 +249,12 @@ that does not exist, and in each case a **design note is sufficient** — the pr
 `lineup-selection-design.md`, `match-save-file-design.md` and `interactive-unity-client-design.md`,
 all of which govern shipped code with no numbered spec:
 
-1. **A3 League bootstrap + A4a calibration corpus** → one short design note
-   (`league-bootstrap-design.md`). Must resolve: club count/identity/naming, strength distribution
-   across the league, the world-seed derivation, the round-resolution model's shape, and the
-   calibration methodology. Explicitly *not* #47 — it authors no editor and defines no new data
-   format (it consumes #27's).
+1. ✅ **A3 League bootstrap + A4a calibration corpus** → `docs/tracking/league-bootstrap-design.md`
+   (v1.1, AR-1..AR-3 converged, AR-4 over the shipped code). Resolves all five required questions:
+   club count/identity/naming (KD-2/KD-3), strength distribution (KD-5), world-seed derivation
+   (KD-4), the round-resolution model's shape (KD-7), and the calibration methodology (KD-8).
+   Explicitly *not* #47 — it authors no editor and defines no new data format (it consumes #27's).
+   **A3 is landed; A4a's run is still outstanding.**
 2. **C3 Season/squad screens** → extend `interactive-unity-client-design.md` with a P7 (management
    screens) rather than authoring the Wave-7 #38 screens spec. #38 §7.1 already gates each screen on
    its data spec; #30 and #27 are APPROVED, so the gate is satisfied and the screens add no framework
@@ -295,8 +296,8 @@ available, not as a gate on playing the game.
    ───────────────────────────────                   │            ──────────────────────────
    A1 #30 T0 ─┬─► A2 #30 T1 ──┐                     │            B1 P1 frame ──┐
               │               │                      │            B2 #37 T0 ─┬─►B3 #37 T1
-              ├─► A3 bootstrap─┤                     │            B4 P3 view ─┤
-              └─► A4a corpus ──┤                     │            B5 #38 T0 ──┘
+              └─► A3 bootstrap─┤                     │            B4 P3 view ─┤
+                    └─► A4a ───┤                     │            B5 #38 T0 ──┘
                               ▼                      │                    │
                         A4 #30 T2 ──► A5 #30 T3      │                    ▼
                               │                      │            B6 ⬥ renderer decision
@@ -352,6 +353,7 @@ running in parallel.
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.5 | July 25, 2026 | **A3 (league bootstrap) LANDED** — `LeagueBootstrap` / `League` / `Club` / `ClubNameCatalogue` / `LeagueBootstrapConstants` in `TacticalDirector.SeasonSave` (+ a `PlayerDatabase` asmdef reference), and an additive supplied-position `RosterGenerator.Generate` overload. Governed by the new `league-bootstrap-design.md` (AR-1 1H+2M+2L → AR-2 1M+1L → AR-3 CONVERGENCE → AR-4 over the code 2M+3L). Season-save 141 → 168 tests, player-database 42 → 46, full gate green. C5's prediction held in a new form: the H finding was found *at design time* rather than after landing — uniform position draws make ~3% of bootstrapped squads unable to field a back four, which `LineupSelector` refuses fail-loud, so a 20-club league would have failed to start *by seed*. §6 item 1 is closed; **A4a's methodology is designed, its ~9 h run is not done.** |
 | v0.4 | July 25, 2026 | **A2 (#30 T1) LANDED** — the season save/restore path: `SeasonStateCodec` over the Appendix B layout, the frame gaining a third sub-blob, `SEASON_SAVE_FORMAT_VERSION` 1 → 2, and `Save`/`Load` gaining the season (FR-SN-021). Season-save tests 112 → 135, full gate green. C5's prediction held for the second consecutive landing: implementation surfaced **ERR-030-011** (§3.6's `EncodeSeason` pseudocode omitted `ManagedClubId`, which Appendix B row 3a requires; Appendix B row 11's `f32/u8` job security pinned to the integer per-mille the code carries), filed and patched same commit. A code self-review also closed an encode/decode asymmetry in the T0 `SeasonState` constructor (an empty schedule with an unset calendar was constructible but not decodable). |
 | v0.3 | July 25, 2026 | Adversarial-review corrections: engine test count 306 → 321 (both occurrences); C1's per-match / per-season figures relabelled **lower bounds** — they multiply the certified *median* per-tick cost by the tick count, but wall-clock tracks the *mean* and p99 = 2.5669 ms, so the true cost is higher (the infeasibility conclusion only strengthens). |
 | v0.2 | July 25, 2026 | **B6 renderer decision taken: option (b)** — extend the existing browser client; Unity P4–P6 follows when host access exists. **A1 (#30 T0) LANDED** — the season value types, fixture scheduler, league table, calendar, board, match-outcome payload, season state and view model, with 77 new tests (season-save 20 → 97) and the full gate green. C5's prediction held on the first landing: implementation surfaced **ERR-030-010** (§3.1's parity venue rule vs the §3.7 / Appendix C worked tables), filed and patched same commit. |

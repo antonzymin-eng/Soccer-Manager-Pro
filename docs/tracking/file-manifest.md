@@ -1,7 +1,17 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 25, 2026, latest same day (**Season & Competition Loop #30 T1 LANDED** — path-to-playable
+**Last Updated:** July 25, 2026, latest same day (**League bootstrap LANDED** — path-to-playable roadmap
+item A3, the #47-minimal substitute (roadmap C3). **New files:** `src/season-save/LeagueBootstrapConstants.cs`,
+`ClubNameCatalogue.cs`, `Club.cs`, `League.cs`, `LeagueBootstrap.cs` + `tests/LeagueBootstrapTests.cs` (and
+their `.meta` files); new design supplement `docs/tracking/league-bootstrap-design.md` v1.1. **Modified:**
+`src/season-save/season-save.asmdef` (+ `TacticalDirector.PlayerDatabase`), `src/player-database/`
+`RosterGenerator.cs` v1.4 (an additive supplied-position `Generate` overload — the drawn-position path stays
+byte-identical) + `PlayerDatabaseConstants.cs` (`POSITION_COUNT` hoisted so two assemblies stop carrying
+private copies) + `tests/RosterGeneratorTests.cs` / `tests/PlayerAttributesTests.cs`, plus the season-save
+manifest section below (which had never listed the #30 T0 value types). **Full dotnet gate: PASSED, 0
+failures (whole tree green; season-save 141 → 168, player-database 42 → 46).**)
+**Last Updated (prior):** July 25, 2026 (**Season & Competition Loop #30 T1 LANDED** — path-to-playable
 roadmap item A2, the season save/restore path. **New files:** `src/season-save/SeasonStateCodec.cs` (the #30
 Appendix B season sub-blob codec) + `src/season-save/tests/SeasonStateCodecTests.cs` (and their `.meta` files).
 **Modified:** `SeasonSaveCodec.cs` v1.1 + `SeasonSaveBlobs.cs` v1.1 (the frame gains a THIRD opaque sub-blob
@@ -1197,7 +1207,11 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-viewer/tests/match-viewer-tests.asmdef` | Test assembly definition (EditMode; references match-viewer + match-engine + deterministic-sim + ball-physics + agent-movement) |
 | `src/match-viewer/tests/MatchViewerTests.cs` | Frame cadence; on-pitch finiteness; bitwise two-run determinism; observer-neutrality digest lock; fail-loud guards; exporter structure/no-NaN locks |
 
-### Season Save (`src/season-save/`) — unified season save-file root (not a numbered spec; `unified-season-save-design.md`)
+### Season Save (`src/season-save/`) — unified season save-file root + Season & Competition Loop #30 + the league bootstrap
+
+> Not a single numbered spec. The assembly hosts three related bodies of work at the same layer position
+> (above both match-engine and living-world): the save-file root (`unified-season-save-design.md`), the
+> #30 season loop value types + codec, and the league bootstrap (`league-bootstrap-design.md`).
 
 | File | Purpose |
 |------|---------|
@@ -1208,9 +1222,27 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/season-save/SeasonStateCodec.cs` | #30 T1: pure static season-state sub-blob codec — `Encode(SeasonState)` / `Decode(byte[]) → SeasonState` over the #30 Appendix B layout (version gate; seed/seasonNumber/managedClubId; club set; the serialized schedule per KD-5; calendar cursor per KD-4; table in ClubId order; board), SEASON_STATE_FORMAT_VERSION-gated; overflow-safe element-wise length bounds, trailing-byte guard, serialized-vs-derived goal-difference coherence check, and decode-through-the-validating-constructors (FR-SN-019/022/023) |
 | `src/season-save/SeasonSaveContents.cs` | `Load` result: reconstructed `WorldStore` + `SeasonState` (both never null) + nullable `MatchEngine` |
 | `src/season-save/SeasonSaveManager.cs` | Static: `Save(world, season, matchOrNull, path)` (capture all three → Encode → atomic temp→fsync→rename) / `Load(path, ISquadProvider = null, ArcCanonSource = null) → SeasonSaveContents` (Decode → WorldStore.Restore + SeasonStateCodec.Decode +, when present, MatchSaveManager.Restore) — KD-1/KD-5/KD-6/KD-8, FR-SN-021 |
+| `src/season-save/SeasonLoopConstants.cs` | #30 Appendix A: `[FIXED] SEASON_STATE_FORMAT_VERSION` + `IDENTITY_PERMUTATION_SEED`; `[GT]` points scheme (Win/Draw/Loss) + `JobSecurityScale`, off `GameplayConfig` |
+| `src/season-save/Fixture.cs` | #30 T0: one scheduled fixture (round index, home/away ClubId, played flag); `MarkPlayed` returns a new value |
+| `src/season-save/FixtureScheduler.cs` | #30 T0: pure `Generate(clubIds, seed)` double round-robin with the §3.1 round-parity venue rule (ERR-030-010) + a local SplitMix64 club-label permutation (FR-CS-044 `unchecked`) |
+| `src/season-save/LeagueTableRow.cs` | #30 T0: one club's table row; `Create` fail-loud on negative counts / `won+drawn+lost != played` (F3) |
+| `src/season-save/LeagueTable.cs` | #30 T0: `ApplyResult` (both rows resolved before either is written — F2) + the FR-SN-007 tie-break `OrderedView` + `RowsInClubIdOrder` serialization order |
+| `src/season-save/SeasonCalendar.cs` | #30 T0: the KD-4 round→world-day mapping + the cursor; `Linear` guards zero cadence and uint overflow |
+| `src/season-save/BoardObjective.cs` | #30 T0: the Stage-0 literal objective "finish at or above position P" (FR-SN-014) |
+| `src/season-save/BoardState.cs` | #30 T0: the objective + integer per-mille job security (Appendix B row 11) |
+| `src/season-save/MatchResult.cs` | #30 T0: one fixture's outcome payload — the table write and the FR-SN-016 producer event |
+| `src/season-save/SeasonState.cs` | #30 T0: the whole serialized season surface (seed / season number / managed club / club set / the CONCRETE schedule per KD-5 / table / calendar / board); copy-then-validate coherence gates; KD-7 internal mutators (SeasonLoop is the only production writer) |
+| `src/season-save/SeasonViewModel.cs` | #30 T0: the read-only observation surface for #37/#38 (FR-SN-033) — value copies |
+| `src/season-save/LeagueBootstrapConstants.cs` | A3: `[FIXED]` roster/strength/season seed domain separators + the roster stream identity; `[GT]` DefaultClubCount / MaxClubCount / LeagueStrengthSpread / calendar cadence (negative world-days refused at read) / the array-valued squad position template; `BuildSquadPositionTemplate()` expands it fail-loud |
+| `src/season-save/ClubNameCatalogue.cs` | A3: Stage-0 APPEND-only club names assigned by `ClubId` index (KD-3 — drawn from no stream, in no digest); ≥ `MaxClubCount` entries, test-locked for coverage + uniqueness |
+| `src/season-save/Club.cs` | A3: one club's bootstrap identity — `ClubId` / `Name` / `StrengthDelta`; not serialized (re-derivable from the world seed) |
+| `src/season-save/League.cs` | A3: the immutable bootstrap product; implements `ISquadProvider` (so one instance serves the engine, `SeasonSaveManager.Load` and A4's round loop); `CreateSeason(managedClubId)` → `SeasonState` via `SeasonState.CreateNew`; default objective = top half (KD-9) |
+| `src/season-save/LeagueBootstrap.cs` | A3: `Generate(worldSeed, clubCount)` → `League` — three domain-separated seed derivations (KD-4), one roster stream per club (`entityId = clubId`), a seeded Fisher–Yates strength rank ramped to a per-club `[1,20]` delta (KD-5, `WeakFootRating` excluded), position-template roster generation (KD-6), F1–F3 gates; local SplitMix64, so **nothing** is allocated in #16 |
 | `src/season-save/tests/season-save-tests.asmdef` | Test assembly (EditMode; references season-save + match-engine + living-world + deterministic-sim + player-database) |
 | `src/season-save/tests/SeasonSaveManagerTests.cs` | Disk round-trip determinism (no-match season; season with neutral / distinct-squad match via ISquadProvider), each asserting the season resumes field-identical (FR-SN-022) + SeasonSaveCodec round-trip/fail-loud incl. the v1-frame rejection + manager fail-loud paths incl. the R4 no-match-with-provider and null-season locks |
 | `src/season-save/tests/SeasonStateCodecTests.cs` | #30 T1: season sub-blob round-trip field identity (fresh / mid-season / completed), per-column and scalar locks, encode determinism + non-vacuity control, the pinned-offset layout lock (Appendix B field order incl. row 3a), and every FR-SN-023 fail-loud gate |
+| `src/season-save/tests/SeasonStateTests.cs` | #30 T0: value-type contracts + the instance-field-count coupling guards across `SeasonState` and its five aggregates (a field added but omitted from the codec would otherwise pass the round-trip vacuously) |
+| `src/season-save/tests/LeagueBootstrapTests.cs` | A3: two-run field-identical determinism, seed divergence, roster independence from league size, contiguous ids + globally unique `PlayerId`s, catalogue coverage/uniqueness, `MaxClubCount` vs `MaxRngStreams` coupling, strength-ramp endpoints/symmetry/permutation and its reach into the rosters, position coherence for every shipped formation **plus** an end-to-end `ConfigureSquads` run through the real engine (F6), every F1–F5 gate, and the `CreateSeason` handoff round-tripping through `SeasonStateCodec` |
 
 ## Tracking Documents
 
@@ -1224,6 +1256,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `docs/tracking/file-manifest.md` | This manifest |
 | `docs/tracking/advanced-positional-behaviors-design.md` | Design supplement (v0.4, Jul 8, 2026 — PROMOTED) — dismarking, scripted build-up structures, positional rotations; promoted to specs #23–#25 (`dismarking-ai/`, `build-up-structures/`, `positional-rotations/`, all APPROVED Jul 10, 2026); superseded by the specs on deviation |
 | `docs/tracking/game-model-ai-manager-design.md` | Design supplement (v0.5, Jul 8, 2026 — PROMOTED) — tactical preset library + AI-manager selection/adaptation; promoted to spec #26 (`tactical-presets/`, APPROVED Jul 10, 2026); superseded by the spec on deviation |
+| `docs/tracking/league-bootstrap-design.md` | Design supplement (v1.1, Jul 25, 2026 — **A3 LANDED**) — the league bootstrap (club identity/naming, strength distribution, world-seed derivation) plus the roadmap-A4a round-resolution model shape and calibration methodology. Closes §6 item 1 of the path-to-playable roadmap; explicitly not #47 (no editor, no new data format) |
 | `docs/tracking/env-fingerprint-float-model-hash-mono-mapping.md` | Proposal (v0.2, Jul 19, 2026 — **APPROVED, Option A**) — resolved the #16 §4.8.3 `floatModelHash` tuple vs. the Stage-0 Mono pin (ERR-016-006); options A/B/C + owner sign-off. §4.8.3/§5.5 edits + live-host hasher landed same day; §4.8.2 runtime MXCSR validation + certified capture stay host-blocked |
 | `docs/tracking/stress-test-strategy.md` | Tier A/B/C spec stress-test probe strategy (v1.0, May 18, 2026) |
 | `docs/tracking/stress-reports/INDEX.md` | Index of all stress-test run reports |
