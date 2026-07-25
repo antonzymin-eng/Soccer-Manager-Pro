@@ -1,7 +1,34 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 22, 2026 (v2.32 — **Goalkeeper #11 + Heading #10 engine integration, Phase 1
+> **Last Updated:** July 25, 2026 (v2.33 — **Season & Competition Loop #30 T0 LANDED — the first code on the
+> path-to-playable track** (`docs/tracking/path-to-playable-roadmap.md` item A1). Eleven new files in the
+> EXISTING `TacticalDirector.SeasonSave` assembly (#30 §4.1 — no new assembly; the root already sits above both
+> `match-engine` and `living-world`): `SeasonLoopConstants` (Appendix A points + `SEASON_STATE_FORMAT_VERSION` +
+> `IDENTITY_PERMUTATION_SEED`), `Fixture`, `FixtureScheduler`, `LeagueTableRow`, `LeagueTable`, `SeasonCalendar`,
+> `BoardObjective`, `BoardState`, `MatchResult`, `SeasonState`, `SeasonViewModel`, + `AssemblyInfo.cs`
+> (`InternalsVisibleTo` — the KD-7 single-writer enforcement: every `SeasonState` mutator is `internal`, so the
+> only production writer will be `SeasonLoop` at T2). **Behaviour-neutral by construction** — nothing wires
+> `MatchEngine` or `WorldStore` yet (T2), and no codec touches the save frame yet (T1), so
+> `SEASON_SAVE_FORMAT_VERSION` stays 1 and every existing blob is untouched. **The [CROSS] determinism rows are
+> deliberately ABSENT** — ERR-030-001 is spec-text-first and pins `DOMAIN_TAG_SEASON_LOOP`/ordinal 84 to T2's
+> first draw site (a zero-draw stream is the FR-LW-031 phantom class; the `world.arcs` precedent).
+> **Implementation found a real spec defect — ERR-030-010** (filed + patched same commit, spec-error-log v1.41):
+> §3.1's generation pseudocode venues the first leg by round parity, but the worked schedules in §3.7 and
+> Appendix C were hand-derived without it (rounds 1/4 inverted) and §5.2's T-SN-FIX-001 pinned those tables.
+> The pseudocode wins — measured at 20 clubs the unparried form gives the pinned club **all 19** first-leg
+> fixtures at home, the parity form gives every club 8..10 of an ideal 9..10; both satisfy FR-SN-002/003 at
+> N = 2,3,4,5,6,19,20 and no FR constrains venues, so §3.1's own "for a balanced first leg" intent decides.
+> §3.7 (v0.9) / Appendix C (v0.3) corrected, T-SN-FIX-001 re-anchored, new **T-SN-FIX-008** venue-balance lock.
+> Two self-review findings folded in before commit: the `SeasonState` ctor now rejects a calendar shorter than
+> the schedule (which would strand the cursor mid-season, and also catches a `default(SeasonCalendar)`), and
+> `BeginNextSeason` now applies the ctor's club-membership + calendar-coverage gates (the seam #43's
+> promotion/relegation transform will use). Copy-then-validate throughout (the recurring live-array aliasing
+> class), and `ApplyResult` resolves BOTH rows before writing EITHER so an unknown away club cannot leave the
+> home row half-updated (F2 "table unchanged"). **Full dotnet gate: PASSED, 0 failures (whole tree green;
+> season-save 20 → 97 tests; SDK 8.0.129 via apt).** Remaining #30: T1 codec + `SEASON_SAVE_FORMAT_VERSION`
+> 1 → 2, T2 the day-advance loop + round resolution, T3 the boundary roll.)
+> **Last Updated (prior):** July 22, 2026 (v2.32 — **Goalkeeper #11 + Heading #10 engine integration, Phase 1
 > (opt-in)** — the GK/Heading attribute projections landed with a live consumer, per the new converged
 > supplement `docs/tracking/gk-heading-engine-integration-design.md`. `MatchEngine.cs` v1.44 constructs
 > both sealed orchestrators + four stateless nested adapters (`HeadingBallWorldAdapter` /

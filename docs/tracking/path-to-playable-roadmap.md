@@ -181,7 +181,7 @@ tests, adversarial review to convergence, and a green full gate — the project'
 
 | # | Work item | Governance | Gate | Depends on |
 |---|---|---|---|---|
-| **A1** | **#30 T0** — `SeasonState`, `Fixture`, `FixtureScheduler` (pure `Generate`), `LeagueTableRow`/`LeagueTable` (`ApplyResult` + tie-break `OrderedView`), `SeasonCalendar`, `BoardObjective`/`BoardState`, `MatchResult`, `SeasonViewModel`. New `TacticalDirector.SeasonLoop` assembly. Behaviour-neutral by construction (no orchestrator touched). | #30 §7.1 T0 | shim gate + determinism tests | — |
+| **A1** ✅ | **#30 T0 — LANDED July 25, 2026** (97 season-save tests, full gate green; surfaced **ERR-030-010**, see §9 risk row C5).  `SeasonState`, `Fixture`, `FixtureScheduler` (pure `Generate`), `LeagueTableRow`/`LeagueTable` (`ApplyResult` + tie-break `OrderedView`), `SeasonCalendar`, `BoardObjective`/`BoardState`, `MatchResult`, `SeasonViewModel`. New `TacticalDirector.SeasonLoop` assembly. Behaviour-neutral by construction (no orchestrator touched). | #30 §7.1 T0 | shim gate + determinism tests | — |
 | **A2** | **#30 T1** — `SeasonStateCodec` (§3.6 sub-blob); `SeasonSaveCodec`/`SeasonSaveManager` gain the season block; `SEASON_SAVE_FORMAT_VERSION` **1 → 2** + new `SEASON_STATE_FORMAT_VERSION`. World and match blobs stay byte-untouched (FR-SN-020). | #30 §7.1 T1 | round-trip + fail-loud gates | A1 |
 | **A3** | **League bootstrap** — `LeagueBootstrap` over `RosterGenerator`: N clubs (default 20) × 25 players, deterministic from the world seed; club identity/name table; hands #30 a starting world. **This is the #47-minimal substitute (C3), not the editor.** | ⚠️ **needs a short design note** — see §6 | determinism + round-trip | A1 |
 | **A4** | **#30 T2** — `SeasonLoop` composition root; `AdvanceToNextFixtureDay` (KD-2 fixed tick order, only the world tick live); `AdvanceAndPlayNextRound(ISquadProvider)` (KD-9 — managed fixture through a real `MatchEngine`, the rest via the round-resolution model); the #16 §3.4 back-prop (`DOMAIN_TAG_SEASON_LOOP = 0x22` / `SubsystemOrdinals.SeasonLoop = 84`); the `#19 ScenarioRunner` `season-multi-fixture` capstone. | #30 §7.1 T2 | capstone scenario + two-run determinism | A2, A3, A4a |
@@ -201,7 +201,7 @@ is the single highest-value block of work available, and it is entirely unblocke
 | **B3** | **#37 T1** — the read-only per-tick ledger tap on `MatchEngine` (KD-7, `BallView`-class accessor) + `MatchAnalyticsAggregator`; observer-neutrality digest-lock (T-AN-NEU-001) + two-run determinism (T-AN-DET-001). | #37 §7.1 T1 | host-free |
 | **B4** | **Unity client P3** — frame interpolation (60 FPS render between 10 Hz strides / 60 Hz physics), follow-ball camera math, live-stats accumulator. Pure, unit-testable. | §5-P3 | host-free |
 | **B5** | **#38 T0** — framework only: `NavigationShell`, `IViewModelSource<T>`, `ICommandDispatcher`, `ManagerIntent`, refresh cadence. The identity every screen extends. | #38 (APPROVED) | host-free |
-| **B6** | **⬥ DECISION POINT — renderer.** Either **(a)** Unity P4–P6 (render skin → UGUI shell → cert + closed-loop scenario), or **(b)** extend the existing `LiveMatchServer` browser surface into the client, binding the same #38 view models. See §7. | §5-P4/P5/P6 or a design-note extension | **(a) host-gated · (b) host-free** |
+| **B6** | **Renderer — DECIDED July 25, 2026: option (b), extend the existing `LiveMatchServer` browser surface**, binding the same #38 view models; Unity P4–P6 follows when host access exists. See §7. | a design-note extension (§6 item 2) | host-free |
 
 **Phase B exit — `PM-1`:** choose teams, set tactics, watch, adjust live, read a post-match report.
 
@@ -273,7 +273,7 @@ This is the one genuine fork, and it should be taken consciously.
 | Risk | Work sits unverified until host access | Throwaway risk *if* the UGUI skin later replaces it |
 | Throwaway exposure | — | **Low** — #38's view models + dispatchers are renderer-agnostic; only the render leaf is re-done |
 
-**Recommendation: (b) first, (a) after.** The #38 framework contract exists precisely so the
+**DECIDED July 25, 2026 — (b) first, (a) after.** The #38 framework contract exists precisely so the
 renderer is a leaf. Taking (b) reaches PM-1 and PM-2 with **no external blocker at all**, closes the
 "is this fun" loop months earlier, and the UGUI skin then binds an already-proven substrate — which
 is exactly what §7.2 of #38 says will happen anyway (*"the rendering is a view over the already-defined
@@ -348,4 +348,5 @@ running in parallel.
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.2 | July 25, 2026 | **B6 renderer decision taken: option (b)** — extend the existing browser client; Unity P4–P6 follows when host access exists. **A1 (#30 T0) LANDED** — the season value types, fixture scheduler, league table, calendar, board, match-outcome payload, season state and view model, with 77 new tests (season-save 20 → 97) and the full gate green. C5's prediction held on the first landing: implementation surfaced **ERR-030-010** (§3.1's parity venue rule vs the §3.7 / Appendix C worked tables), filed and patched same commit. |
 | v0.1 | July 25, 2026 | Initial roadmap: PM-1/PM-2/PM-3 milestone ladder with testable exit criteria; existing-floor inventory; Track S / Track C split; five quantified constraints (C1 season-sim infeasibility at ~16.3 h/season and the ≲10 ms quick-sim budget; C1a the ~9 h calibration corpus; C2 the host block and the browser fallback; C3 `RosterGenerator` deferring #47; C4 save-migration debt; C5 spec-defect latency); Phase A–D work breakdown anchored to each spec's own §7 T-phase plan; the §6 finding that zero new numbered specs are required to reach PM-2; the B6 renderer decision point with a recommendation; dependency graph; risk register. |

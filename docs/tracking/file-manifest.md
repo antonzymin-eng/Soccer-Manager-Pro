@@ -1,7 +1,21 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 25, 2026 (**Path-to-playable implementation roadmap authored.** **New file:**
+**Last Updated:** July 25, 2026, later same day (**Season & Competition Loop #30 T0 LANDED** — path-to-playable
+roadmap item A1, the first code on that track. **New files** (all in the existing `src/season-save/`, per #30
+§4.1 — no new assembly): `SeasonLoopConstants.cs`, `Fixture.cs`, `FixtureScheduler.cs`, `LeagueTableRow.cs`,
+`LeagueTable.cs`, `SeasonCalendar.cs`, `BoardObjective.cs`, `BoardState.cs`, `MatchResult.cs`, `SeasonState.cs`,
+`SeasonViewModel.cs`, `AssemblyInfo.cs` (KD-7 `InternalsVisibleTo`), + `tests/FixtureSchedulerTests.cs`,
+`tests/LeagueTableTests.cs`, `tests/SeasonStateTests.cs` (and their `.meta` files). Behaviour-neutral: no
+`MatchEngine`/`WorldStore` wiring (T2), no codec change (T1), `SEASON_SAVE_FORMAT_VERSION` still 1. **Modified:**
+`docs/specs/season-competition-loop/section-3.md` → v0.9, `appendices.md` → v0.3, `section-5.md` → v0.3 (all
+**ERR-030-010** — §3.1's round-parity venue rule is authoritative; the §3.7 / Appendix C worked tables were
+hand-derived without it and are corrected at rounds 1/4, T-SN-FIX-001 re-anchored, new T-SN-FIX-008 venue-balance
+lock); `docs/tracking/spec-error-log.md` → v1.41 (ERR-030-010 filed + RESOLVED — the first #30 error found by code
+rather than by a downstream spec's approval); `docs/tracking/path-to-playable-roadmap.md` → v0.2 (B6 renderer
+decision taken — browser client first, Unity P4–P6 after; A1 marked landed); `src/CLAUDE.md` → v2.33. Full dotnet
+gate PASSED, 0 failures (whole tree green; season-save 20 → 97 tests).)
+**Last Updated (prior):** July 25, 2026 (**Path-to-playable implementation roadmap authored.** **New file:**
 `docs/tracking/path-to-playable-roadmap.md` v0.1 — ROADMAP governance class (the same level as
 `management-layer-spec-roadmap.md`; designs no system, opens no numbered spec, changes no `SPEC_INDEX.md`
 row). The companion to the spec roadmap: that file sequences *which specs to author*, this one sequences
