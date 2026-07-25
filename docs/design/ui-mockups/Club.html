@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Club — Soccer Manager Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/squad.css">
+<style>
+/* ── Club page overrides & unique layout ──────────────────────────────────── */
+.stage { grid-template-rows: 52px 34px 1fr 32px; }
+
+/* 3-col main */
+.club-main {
+  display: grid;
+  grid-template-columns: 460px 1fr 380px;
+  min-height: 0; overflow: hidden;
+}
+.club-col {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 18px; overflow: hidden; min-height: 0;
+}
+.club-col + .club-col { border-left: 1px solid var(--line-2); }
+
+/* Cards */
+.crd {
+  background: var(--bg-card); border: 1px solid var(--line-2);
+  border-radius: var(--panel-radius); padding: 14px 16px; flex-shrink: 0;
+}
+.crd.grow { flex: 1; min-height: 0; overflow: hidden; }
+.crd h5 {
+  font-family: var(--font-display); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3);
+  margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center;
+}
+.crd h5 .meta {
+  font-family: var(--font-mono); font-size: 9px; color: var(--ink-4);
+  letter-spacing: 0.04em; text-transform: none; font-weight: 400;
+}
+
+/* ── Club Banner ── */
+.banner-inner { display: flex; align-items: center; gap: 16px; }
+.crest-xl {
+  width: 64px; height: 64px; border-radius: var(--r-3); flex-shrink: 0;
+  background: linear-gradient(135deg, var(--brand-400), var(--brand-700));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 22px;
+  color: #001a0a; letter-spacing: -0.02em;
+}
+.banner-info { flex: 1; min-width: 0; }
+.banner-club-name { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.01em; line-height: 1; }
+.banner-sub { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+.banner-record { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.rb { font-family: var(--font-mono); font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: var(--r-pill); }
+.rb-pos { background: var(--brand-tint); color: var(--brand-400); font-size: 13px; font-weight: 700; padding: 2px 10px; }
+.rb-pts { color: var(--ink-2); font-size: 12px; background: var(--bg-3); padding: 2px 8px; border-radius: var(--r-pill); border: 1px solid var(--line-2); }
+.rb-w { background: var(--pos-tint); color: var(--pos-400); }
+.rb-d { background: var(--neu-tint); color: var(--neu-400); }
+.rb-l { background: var(--neg-tint); color: var(--neg-400); }
+.banner-pos-card {
+  margin-left: auto; background: var(--bg-2); border: 1px solid var(--line-2);
+  border-radius: var(--r-3); padding: 10px 18px; text-align: center; flex-shrink: 0;
+}
+.banner-pos-num { font-family: var(--font-display); font-size: 38px; font-weight: 800; color: var(--brand-400); line-height: 1; }
+.banner-pos-lbl { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; color: var(--ink-4); margin-top: 1px; }
+
+/* ── Competitions ── */
+.comp-row {
+  display: grid; grid-template-columns: 36px 1fr auto;
+  align-items: center; gap: 10px;
+  padding: 7px 0; border-top: 1px solid var(--line-1);
+}
+.comp-row:first-child { border-top: none; }
+.comp-badge {
+  width: 36px; height: 36px; border-radius: var(--r-2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; letter-spacing: 0.04em;
+}
+.comp-badge.pl  { background: #2a0046; color: #b066ff; }
+.comp-badge.ucl { background: #001840; color: #4aa8ff; }
+.comp-badge.fac { background: #2c0012; color: #ff5577; }
+.comp-name { font-size: 12px; color: var(--ink-1); font-weight: 500; }
+.comp-detail { font-size: 10px; color: var(--ink-3); margin-top: 1px; }
+.comp-pill {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  padding: 2px 7px; border-radius: var(--r-pill); letter-spacing: 0.04em; white-space: nowrap;
+}
+.cp-ok  { background: var(--pos-tint);  color: var(--pos-400); }
+.cp-ucl { background: var(--info-tint); color: var(--info-400); }
+.cp-out { background: var(--bg-3); color: var(--ink-4); }
+
+/* ── Fixture ── */
+.fix-body {
+  display: grid; grid-template-columns: 1fr 80px 1fr; align-items: center; gap: 10px;
+}
+.fix-team { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.fix-crest {
+  width: 44px; height: 44px; border-radius: var(--r-2);
+  background: var(--bg-3); border: 1px solid var(--line-3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--brand-400);
+}
+.fix-team-name { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--ink-1); }
+.fix-center { text-align: center; }
+.fix-vs-lbl { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--ink-5); }
+.fix-kick { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); margin-top: 2px; }
+.fix-comp-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); margin-top: 1px; }
+.fix-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.fix-chip {
+  font-family: var(--font-mono); font-size: 10px; color: var(--ink-3);
+  background: var(--bg-2); border: 1px solid var(--line-2);
+  padding: 2px 7px; border-radius: var(--r-pill);
+}
+.fix-chip.warn { color: var(--neu-400); border-color: rgba(245,185,66,0.3); background: var(--neu-tint); }
+
+/* ── Quick Links ── */
+.ql-list { display: flex; flex-direction: column; gap: 5px; }
+.ql {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 11px; background: var(--bg-2); border: 1px solid var(--line-2);
+  border-radius: var(--r-2); text-decoration: none; color: var(--ink-2); font-size: 12px;
+}
+.ql:hover { border-color: var(--brand-400); color: var(--brand-400); background: var(--brand-tint); }
+.ql .ql-arr { color: var(--ink-5); font-size: 10px; }
+
+/* ── Financial KPIs ── */
+.fin-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.fkpi { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 10px 12px; }
+.fkpi .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-4); }
+.fkpi .v { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1.05; margin-top: 2px; }
+.fkpi .s { font-size: 10px; color: var(--ink-3); margin-top: 1px; }
+.c-pos { color: var(--pos-400); }
+.c-neg { color: var(--neg-400); }
+.c-neu { color: var(--neu-400); }
+.c-ink { color: var(--ink-1); }
+
+/* Wage progress */
+.wage-wrap { margin-top: 6px; }
+.wage-bar-lbl { display: flex; justify-content: space-between; margin-bottom: 4px; font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); }
+.wage-bar { height: 5px; background: var(--bg-3); border-radius: 2px; overflow: hidden; }
+.wage-fill { height: 100%; border-radius: 2px; }
+.wage-fill.warn { background: var(--neu-400); }
+
+/* ── Squad Health ── */
+.sq-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.sq-stat { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 10px; text-align: center; }
+.sq-stat .v { font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 1; }
+.sq-stat .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-4); margin-top: 2px; }
+
+/* Injury list */
+.inj-rows { display: flex; flex-direction: column; gap: 4px; }
+.inj-row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center;
+  padding: 5px 9px; background: var(--bg-2); border-radius: var(--r-2);
+}
+.inj-row .nm { font-size: 11.5px; color: var(--ink-1); }
+.inj-row .inj-type { font-size: 10.5px; color: var(--ink-3); }
+.inj-row .rtf { font-family: var(--font-mono); font-size: 10px; color: var(--neg-400); }
+
+/* ── Alerts ── */
+.alert-list { display: flex; flex-direction: column; gap: 6px; }
+.alert-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 11px; background: var(--bg-2); border-radius: var(--r-2);
+  border-left: 2px solid transparent;
+}
+.alert-row.warn { border-left-color: var(--neu-400); }
+.alert-row.crit { border-left-color: var(--neg-400); }
+.alert-row.info { border-left-color: var(--info-400); }
+.alert-icon { font-size: 11px; line-height: 1.7; flex-shrink: 0; }
+.alert-body { flex: 1; }
+.alert-title { font-size: 11.5px; color: var(--ink-1); font-weight: 500; }
+.alert-sub { font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+.alert-cta { font-family: var(--font-mono); font-size: 9.5px; color: var(--brand-400); flex-shrink: 0; margin-top: 2px; cursor: default; }
+
+/* ── Board Confidence ── */
+.conf-header { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.conf-score-big { font-family: var(--font-display); font-size: 42px; font-weight: 800; color: var(--brand-400); line-height: 1; }
+.conf-score-lbl { font-size: 13px; color: var(--ink-2); font-weight: 500; margin-top: 2px; }
+.conf-score-who { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-4); margin-top: 2px; }
+.conf-bar { height: 6px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; margin-bottom: 4px; }
+.conf-fill { height: 100%; border-radius: var(--r-pill); background: var(--brand-400); }
+.conf-scale { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-5); }
+.conf-note { font-size: 11px; color: var(--ink-3); font-style: italic; margin-top: 8px; padding: 7px 10px; background: var(--bg-2); border-radius: var(--r-2); border-left: 2px solid var(--brand-400); }
+
+/* ── Board Objectives ── */
+.obj-list { display: flex; flex-direction: column; gap: 5px; }
+.obj-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 10px; background: var(--bg-2); border-radius: var(--r-2);
+}
+.obj-icon { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; flex-shrink: 0; }
+.oi-ok  { background: var(--pos-tint); color: var(--pos-400); }
+.oi-on  { background: var(--info-tint); color: var(--info-400); }
+.oi-off { background: var(--neg-tint); color: var(--neg-400); }
+.obj-name { flex: 1; font-size: 11.5px; color: var(--ink-1); }
+.obj-type { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); }
+.obj-pill { font-family: var(--font-mono); font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: var(--r-pill); }
+.op-ok   { background: var(--pos-tint); color: var(--pos-400); }
+.op-on   { background: var(--info-tint); color: var(--info-400); }
+.op-warn { background: var(--neu-tint); color: var(--neu-400); }
+
+/* ── Manager Profile ── */
+.mgr-inner { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.mgr-portrait {
+  width: 56px; height: 56px; border-radius: var(--r-3); flex-shrink: 0;
+  background: linear-gradient(135deg, var(--bg-3), var(--bg-2));
+  border: 1px solid var(--line-3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--brand-400);
+}
+.mgr-name { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1.1; }
+.mgr-sub { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+.mgr-rep { display: flex; gap: 1px; margin-top: 5px; }
+.mgr-rep span { font-size: 12px; color: var(--bg-4); }
+.mgr-rep .on { color: var(--neu-400); }
+.mgr-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ms { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 7px 9px; }
+.ms .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-4); }
+.ms .v { font-size: 11.5px; color: var(--ink-1); font-weight: 500; margin-top: 2px; }
+
+/* ── Calendar (shared, copied from squad.css pattern) ── */
+.cal-overlay {
+  position: absolute; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+  display: flex; align-items: flex-start; justify-content: flex-end;
+  padding-top: 52px; padding-right: 18px;
+}
+.cal-modal {
+  width: 320px; background: var(--bg-1); border: 1px solid var(--line-3);
+  border-radius: var(--r-4); box-shadow: var(--shadow-3); overflow: hidden;
+}
+.cal-head { display: flex; align-items: center; padding: 10px 14px; background: var(--bg-2); border-bottom: 1px solid var(--line-2); gap: 8px; }
+.cal-month-name { flex: 1; font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: var(--ink-1); text-align: center; }
+.cal-nav { background: transparent; border: 1px solid var(--line-2); border-radius: var(--r-2); color: var(--ink-3); font-size: 11px; width: 24px; height: 24px; cursor: default; display: flex; align-items: center; justify-content: center; }
+.cal-close { background: transparent; border: 0; color: var(--ink-4); font-size: 13px; cursor: default; padding: 2px 4px; margin-left: 4px; }
+.cal-body { padding: 8px; }
+.cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+.cal-dow span { text-align: center; font-family: var(--font-mono); font-size: 9px; color: var(--ink-5); letter-spacing: 0.06em; padding: 3px 0; }
+#calGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-cell { aspect-ratio: 1; border-radius: var(--r-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.cal-cell:not(.empty) { background: var(--bg-2); }
+.cal-day { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); line-height: 1; }
+.cal-res { font-family: var(--font-mono); font-size: 8px; color: var(--brand-400); font-weight: 600; }
+.cal-fix { font-size: 7.5px; color: var(--ink-4); padding: 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.cal-cell.today { background: var(--brand-tint); border: 1px solid var(--brand-400); }
+.cal-cell.today .cal-day { color: var(--brand-400); font-weight: 700; }
+.cal-cell.w { background: var(--pos-tint); } .cal-cell.w .cal-day { color: var(--pos-400); }
+.cal-cell.d { background: var(--neu-tint); } .cal-cell.d .cal-day { color: var(--neu-400); }
+.cal-cell.upcoming { border: 1px solid var(--line-3); } .cal-cell.upcoming .cal-day { color: var(--ink-2); }
+.cal-cell.fixture-ucl { border-color: var(--info-400); } .cal-cell.fixture-ucl .cal-day { color: var(--info-400); }
+.cal-footer { padding: 8px 12px; border-top: 1px solid var(--line-2); display: flex; gap: 10px; }
+.cal-footer .leg { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+
+<div class="resolution-badge" id="resbadge">1920 × 1080</div>
+
+<div class="fitter">
+<div class="stage" id="stage">
+
+  <!-- CHROME -->
+  <header class="chrome">
+    <div class="brand">
+      <div class="crest-gm">RM</div>
+      <div class="nm">Riverside <em>· Mgr. You</em></div>
+    </div>
+    <nav class="nav">
+      <a href="Club.html" class="on">Club</a>
+      <a href="Squad Screen.html">Squad</a>
+      <a href="#">Tactics</a>
+      <a href="#">Training</a>
+      <a href="#">Scouting</a>
+      <a href="#">Transfers</a>
+      <a href="#">World</a>
+      <a href="#">Inbox<span class="b">3</span></a>
+    </nav>
+    <div class="sp"></div>
+    <div class="right">
+      <div class="kbd-hint"><span class="lbl">Search anywhere</span><span class="k">⌘ K</span></div>
+      <div class="date" id="dateBtn" title="Open calendar">Sat 14 Mar · Wk 31 📅</div>
+      <div class="cont">Continue ▸</div>
+    </div>
+  </header>
+
+  <!-- SUB-TABS -->
+  <div class="crumb">
+    <span class="tab on">Overview</span>
+    <a href="Club Finances.html" class="tab" style="text-decoration:none">Finances</a>
+    <a href="Club Board Room.html" class="tab" style="text-decoration:none">Board Room</a>
+    <a href="Club Staff.html" class="tab" style="text-decoration:none">Staff</a>
+    <a href="Club History.html" class="tab" style="text-decoration:none">History</a>
+  </div>
+
+  <!-- CALENDAR MODAL -->
+  <div class="cal-overlay" id="calOverlay" style="display:none">
+    <div class="cal-modal">
+      <div class="cal-head">
+        <button class="cal-nav">◀</button>
+        <span class="cal-month-name">March 2025 · Wk 31</span>
+        <button class="cal-nav">▶</button>
+        <button class="cal-close" id="calClose">✕</button>
+      </div>
+      <div class="cal-body">
+        <div class="cal-dow">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+          <span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div id="calGrid"></div>
+      </div>
+      <div class="cal-footer">
+        <span class="leg" style="color:var(--brand-400)">● Today</span>
+        <span class="leg">● W/D/L</span>
+        <span class="leg" style="color:var(--info-400)">● UCL</span>
+        <span class="leg" style="color:var(--ink-3)">○ Upcoming</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN: 3 COLUMNS -->
+  <div class="club-main">
+
+    <!-- ── LEFT ──────────────────────────────────────────────────────── -->
+    <div class="club-col">
+
+      <!-- Club Banner -->
+      <div class="crd">
+        <div class="banner-inner">
+          <div class="crest-xl">RM</div>
+          <div class="banner-info">
+            <div class="banner-club-name">Riverside FC</div>
+            <div class="banner-sub">Premier League · Season 2024/25</div>
+            <div class="banner-record">
+              <span class="rb rb-pos">2nd</span>
+              <span class="rb rb-pts">62 pts</span>
+              <span class="rb rb-w">W18</span>
+              <span class="rb rb-d">D8</span>
+              <span class="rb rb-l">L5</span>
+            </div>
+          </div>
+          <div class="banner-pos-card">
+            <div class="banner-pos-num">2</div>
+            <div class="banner-pos-lbl">PREMIER LEAGUE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Competitions -->
+      <div class="crd">
+        <h5>Competitions</h5>
+        <div class="comp-row">
+          <div class="comp-badge pl">PL</div>
+          <div>
+            <div class="comp-name">Premier League</div>
+            <div class="comp-detail">2nd · 62 pts · GD +32 · 7 games remaining</div>
+          </div>
+          <span class="comp-pill cp-ok">ON TRACK</span>
+        </div>
+        <div class="comp-row">
+          <div class="comp-badge ucl">UCL</div>
+          <div>
+            <div class="comp-name">UEFA Champions League</div>
+            <div class="comp-detail">Last 16 · 1st leg W 2–0 · 2nd leg Tue 18 Mar</div>
+          </div>
+          <span class="comp-pill cp-ucl">2ND LEG</span>
+        </div>
+        <div class="comp-row">
+          <div class="comp-badge fac">FAC</div>
+          <div>
+            <div class="comp-name">FA Cup</div>
+            <div class="comp-detail">Eliminated at Round 5 · 22 Feb</div>
+          </div>
+          <span class="comp-pill cp-out">ELIMINATED</span>
+        </div>
+      </div>
+
+      <!-- Next Fixture -->
+      <div class="crd">
+        <h5>Next Fixture <span class="meta">Sat 22 Mar · 15:00 · MD 32</span></h5>
+        <div class="fix-body">
+          <div class="fix-team" style="align-items:flex-start">
+            <div class="fix-crest">RM</div>
+            <div class="fix-team-name">Riverside</div>
+          </div>
+          <div class="fix-center">
+            <div class="fix-vs-lbl">vs</div>
+            <div class="fix-kick">Home</div>
+            <div class="fix-comp-lbl">PL · Riverside Stadium</div>
+          </div>
+          <div class="fix-team" style="align-items:flex-end">
+            <div class="fix-crest" style="background:#1a3a6b; color:#6699dd">KF</div>
+            <div class="fix-team-name">Kingsford</div>
+          </div>
+        </div>
+        <div class="fix-chips">
+          <span class="fix-chip">Opp 6th PL</span>
+          <span class="fix-chip">Lost 3 of last 5</span>
+          <span class="fix-chip warn">Højlund unavailable</span>
+          <span class="fix-chip warn">Shaw unavailable</span>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="crd grow">
+        <h5>Quick Links</h5>
+        <div class="ql-list">
+          <a href="Squad Screen.html" class="ql"><span>Squad · 28 players</span><span class="ql-arr">→</span></a>
+          <a href="#" class="ql"><span>Transfers · £42.5m budget</span><span class="ql-arr">→</span></a>
+          <a href="Club Finances.html" class="ql"><span>Finances · £124m balance</span><span class="ql-arr">→</span></a>
+          <a href="#" class="ql"><span>Board Room · 3 objectives</span><span class="ql-arr">→</span></a>
+          <a href="#" class="ql"><span>Training · next session Tue</span><span class="ql-arr">→</span></a>
+        </div>
+      </div>
+
+    </div><!-- /col-left -->
+
+    <!-- ── CENTER ─────────────────────────────────────────────────────── -->
+    <div class="club-col">
+
+      <!-- Financial Health -->
+      <div class="crd">
+        <h5>Financial Health <span class="meta">as of Mar 2025</span></h5>
+        <div class="fin-kpis">
+          <div class="fkpi">
+            <div class="l">Cash Balance</div>
+            <div class="v c-pos">£124m</div>
+            <div class="s">+£22m vs last yr</div>
+          </div>
+          <div class="fkpi">
+            <div class="l">Transfer Budget</div>
+            <div class="v c-ink">£42.5m</div>
+            <div class="s">remaining this window</div>
+          </div>
+          <div class="fkpi">
+            <div class="l">Net Spend</div>
+            <div class="v c-neg">−£85m</div>
+            <div class="s">sold £40m · bought £125m</div>
+          </div>
+          <div class="fkpi">
+            <div class="l">Season Revenue</div>
+            <div class="v c-pos">£312m</div>
+            <div class="s">PL + UCL + commercial</div>
+          </div>
+        </div>
+        <div class="wage-wrap">
+          <div class="wage-bar-lbl">
+            <span>Wage Bill &nbsp;£3.42m / wk</span>
+            <span style="color:var(--neu-400)">85.5% of cap · £580k headroom</span>
+          </div>
+          <div class="wage-bar">
+            <div class="wage-fill warn" style="width:85.5%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Squad Health -->
+      <div class="crd">
+        <h5>Squad Health</h5>
+        <div class="sq-grid">
+          <div class="sq-stat">
+            <div class="v" style="color:var(--brand-400)">24</div>
+            <div class="l">Available</div>
+          </div>
+          <div class="sq-stat">
+            <div class="v" style="color:var(--neg-400)">3</div>
+            <div class="l">Injured</div>
+          </div>
+          <div class="sq-stat">
+            <div class="v" style="color:var(--ink-3)">0</div>
+            <div class="l">Suspended</div>
+          </div>
+          <div class="sq-stat">
+            <div class="v" style="color:var(--ink-3)">1</div>
+            <div class="l">On Loan</div>
+          </div>
+        </div>
+        <div class="inj-rows">
+          <div class="inj-row">
+            <span class="nm">L. Shaw</span>
+            <span class="inj-type">Tight hamstring</span>
+            <span class="rtf">RTF ~21d</span>
+          </div>
+          <div class="inj-row">
+            <span class="nm">L. Martínez</span>
+            <span class="inj-type">Tight calf</span>
+            <span class="rtf">RTF ~11d</span>
+          </div>
+          <div class="inj-row">
+            <span class="nm">R. Højlund</span>
+            <span class="inj-type">Ankle knock</span>
+            <span class="rtf">RTF ~7d</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alerts & Notices -->
+      <div class="crd grow">
+        <h5>Alerts &amp; Notices <span class="meta">6 active</span></h5>
+        <div class="alert-list">
+          <div class="alert-row crit">
+            <span class="alert-icon">⚠</span>
+            <div class="alert-body">
+              <div class="alert-title">H. Maguire · Contract expires Jun 2025</div>
+              <div class="alert-sub">9 months remaining · Currently uncontracted after this season · Agent: B. Clarke</div>
+            </div>
+            <span class="alert-cta">Offer contract →</span>
+          </div>
+          <div class="alert-row crit">
+            <span class="alert-icon">⚠</span>
+            <div class="alert-body">
+              <div class="alert-title">C. Eriksen · Contract expires Jun 2025</div>
+              <div class="alert-sub">9 months remaining · Interest from Benfica &amp; Ajax reported</div>
+            </div>
+            <span class="alert-cta">Offer contract →</span>
+          </div>
+          <div class="alert-row crit">
+            <span class="alert-icon">⚠</span>
+            <div class="alert-body">
+              <div class="alert-title">A. Wan-Bissaka · Contract expires Jun 2025</div>
+              <div class="alert-sub">9 months remaining · May depart on free transfer</div>
+            </div>
+            <span class="alert-cta">Offer contract →</span>
+          </div>
+          <div class="alert-row warn">
+            <span class="alert-icon">◎</span>
+            <div class="alert-body">
+              <div class="alert-title">R. Varane · Contract expires Jun 2026</div>
+              <div class="alert-sub">21 months remaining · Player is open to extension discussions</div>
+            </div>
+            <span class="alert-cta">Open talks →</span>
+          </div>
+          <div class="alert-row info">
+            <span class="alert-icon">ℹ</span>
+            <div class="alert-body">
+              <div class="alert-title">W. Yoro — potential international call-up</div>
+              <div class="alert-sub">France U21 squad shortlist — may miss Wk 35 fixture if selected</div>
+            </div>
+            <span class="alert-cta">View player →</span>
+          </div>
+          <div class="alert-row info">
+            <span class="alert-icon">ℹ</span>
+            <div class="alert-body">
+              <div class="alert-title">Casemiro fitness concern — 68% fitness</div>
+              <div class="alert-sub">Fatigue flagged after 3 consecutive starts · consider rotation vs Kingsford</div>
+            </div>
+            <span class="alert-cta">View squad →</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /col-center -->
+
+    <!-- ── RIGHT ──────────────────────────────────────────────────────── -->
+    <div class="club-col">
+
+      <!-- Board Confidence -->
+      <div class="crd">
+        <h5>Board Room</h5>
+        <div class="conf-header">
+          <div>
+            <div class="conf-score-big">82%</div>
+            <div class="conf-score-lbl">Very Happy</div>
+            <div class="conf-score-who">Chairman: Sir A. Kingsley</div>
+          </div>
+          <div style="flex:1">
+            <div class="conf-bar" style="margin-top:6px">
+              <div class="conf-fill" style="width:82%"></div>
+            </div>
+            <div class="conf-scale">
+              <span>Unhappy</span><span>Content</span><span>Delighted</span>
+            </div>
+          </div>
+        </div>
+        <div class="conf-note">"The team is performing above expectations. Keep this momentum going into the run-in."</div>
+      </div>
+
+      <!-- Board Objectives -->
+      <div class="crd">
+        <h5>Season Objectives</h5>
+        <div class="obj-list">
+          <div class="obj-row">
+            <div class="obj-icon oi-ok">✓</div>
+            <span class="obj-name">Finish in Top 4</span>
+            <span class="obj-type">MUST</span>
+            <span class="obj-pill op-ok">ON TRACK</span>
+          </div>
+          <div class="obj-row">
+            <div class="obj-icon oi-on">→</div>
+            <span class="obj-name">Reach UCL Quarter-Finals</span>
+            <span class="obj-type">MUST</span>
+            <span class="obj-pill op-on">IN PROGRESS</span>
+          </div>
+          <div class="obj-row">
+            <div class="obj-icon oi-ok">✓</div>
+            <span class="obj-name">Develop youth talent</span>
+            <span class="obj-type">WANT</span>
+            <span class="obj-pill op-ok">ACHIEVED</span>
+          </div>
+          <div class="obj-row">
+            <div class="obj-icon oi-ok">✓</div>
+            <span class="obj-name">Maintain financial stability</span>
+            <span class="obj-type">WANT</span>
+            <span class="obj-pill op-ok">ON TRACK</span>
+          </div>
+          <div class="obj-row">
+            <div class="obj-icon oi-on">→</div>
+            <span class="obj-name">Win Premier League title</span>
+            <span class="obj-type">DREAM</span>
+            <span class="obj-pill op-warn">4 PTS BEHIND</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Manager Profile -->
+      <div class="crd grow">
+        <h5>Manager Profile</h5>
+        <div class="mgr-inner">
+          <div class="mgr-portrait">M</div>
+          <div>
+            <div class="mgr-name">You</div>
+            <div class="mgr-sub">English · Age 41 · UEFA Pro</div>
+            <div class="mgr-rep">
+              <span class="on">★</span><span class="on">★</span><span class="on">★</span>
+              <span>★</span><span>★</span>
+            </div>
+          </div>
+        </div>
+        <div class="mgr-stats">
+          <div class="ms">
+            <div class="l">Contract</div>
+            <div class="v">Jan 2024 → Jun 2026</div>
+          </div>
+          <div class="ms">
+            <div class="l">Reputation</div>
+            <div class="v">National (↑ rising)</div>
+          </div>
+          <div class="ms">
+            <div class="l">Win Rate</div>
+            <div class="v" style="color:var(--brand-400)">58% · P31 W18</div>
+          </div>
+          <div class="ms">
+            <div class="l">Style</div>
+            <div class="v">High press · 4-3-3</div>
+          </div>
+          <div class="ms">
+            <div class="l">Preferred foot</div>
+            <div class="v">Attacking midfield</div>
+          </div>
+          <div class="ms">
+            <div class="l">Personality</div>
+            <div class="v">Ambitious · Determined</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /col-right -->
+
+  </div><!-- /club-main -->
+
+  <!-- STATUS -->
+  <div class="status">
+    <span class="dot"></span><span>SAVE · auto · 11:58</span>
+    <span class="bullet">·</span>
+    <span>BUILD 0.2.31-touchline</span>
+    <span class="bullet">·</span>
+    <span>Club Overview · Riverside FC</span>
+    <span class="sp"></span>
+    <span>FPS 60</span>
+    <span class="bullet">·</span>
+    <span>RAM 1.1 GB</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--brand-400)">⌘K to search anything</span>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ── stage scaling ────────────────────────────────────────────────────── */
+(function() {
+  const stage = document.getElementById('stage');
+  const badge = document.getElementById('resbadge');
+  function fit() {
+    const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = 'scale(' + s + ')';
+    if (badge) badge.textContent = '1920×1080 · scale ' + Math.round(s * 100) + '%';
+  }
+  fit(); window.addEventListener('resize', fit);
+})();
+
+/* ── calendar ─────────────────────────────────────────────────────────── */
+(function() {
+  const FIXTURES = {
+    7:{opp:'@ Northcote',cls:'w',res:'W 2–0'},
+    11:{opp:'vs Portsea V.',cls:'d',res:'D 1–1'},
+    14:{opp:'TODAY',cls:'today'},
+    18:{opp:'UCL 2nd Leg',cls:'upcoming fixture-ucl'},
+    22:{opp:'vs Kingsford',cls:'upcoming'},
+    29:{opp:'@ Westbrook',cls:'upcoming'},
+  };
+  const overlay = document.getElementById('calOverlay');
+  const dateBtn = document.getElementById('dateBtn');
+  if (!overlay || !dateBtn) return;
+  dateBtn.style.cursor = 'pointer';
+  function buildCal() {
+    const grid = document.getElementById('calGrid');
+    if (!grid) return;
+    let html = '';
+    for (let i = 0; i < 0; i++) html += '<div class="cal-cell empty"></div>';
+    for (let d = 1; d <= 31; d++) {
+      const f = FIXTURES[d];
+      const cls = f ? f.cls : '';
+      html += '<div class="cal-cell ' + cls + '" title="' + (f ? f.opp : '') + '">' +
+        '<span class="cal-day">' + d + '</span>' +
+        (f && f.res ? '<span class="cal-res">' + f.res + '</span>' : '') +
+        (f && !f.res && f.opp !== 'TODAY' ? '<span class="cal-fix">' + f.opp.replace(/^(vs |@ )/, '') + '</span>' : '') +
+        '</div>';
+    }
+    grid.innerHTML = html;
+  }
+  dateBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
+    buildCal();
+  });
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.style.display = 'none'; });
+  document.getElementById('calClose')?.addEventListener('click', function() { overlay.style.display = 'none'; });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') overlay.style.display = 'none'; });
+})();
+</script>
+</body>
+</html>

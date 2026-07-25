@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Staff — Club — Soccer Manager Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/squad.css">
+<style>
+.staff-main {
+  display: grid;
+  grid-template-columns: 396px 1fr 364px;
+  min-height: 0; overflow: hidden;
+}
+.staff-col {
+  display: flex; flex-direction: column; gap: 11px;
+  padding: 15px 17px; overflow-y: auto; min-height: 0;
+}
+.staff-col + .staff-col { border-left: 1px solid var(--line-2); }
+
+.crd {
+  background: var(--bg-card); border: 1px solid var(--line-2);
+  border-radius: var(--panel-radius); padding: 13px 15px; flex-shrink: 0;
+}
+.crd.grow { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.crd h5 {
+  font-family: var(--font-display); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3);
+  margin: 0 0 11px; display: flex; justify-content: space-between; align-items: center;
+}
+.crd h5 .meta { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: 0.04em; text-transform: none; font-weight: 400; }
+
+.c-pos { color: var(--pos-400); }
+.c-neg { color: var(--neg-400); }
+.c-neu { color: var(--neu-400); }
+.c-ink { color: var(--ink-1); }
+.c-info { color: var(--info-400); }
+.c-brand { color: var(--brand-400); }
+
+/* ── Manager profile ── */
+.mgr-inner { display: flex; align-items: center; gap: 14px; margin-bottom: 13px; }
+.mgr-portrait {
+  width: 60px; height: 60px; border-radius: var(--r-3); flex-shrink: 0;
+  background: linear-gradient(135deg, var(--bg-3), var(--bg-2));
+  border: 1px solid var(--line-3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 24px; color: var(--brand-400);
+}
+.mgr-name { font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 1.1; }
+.mgr-sub { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+.mgr-rep { display: flex; gap: 1px; margin-top: 5px; }
+.mgr-rep span { font-size: 13px; color: var(--bg-4); }
+.mgr-rep .on { color: var(--neu-400); }
+
+/* Attribute bars */
+.attr-rows { display: flex; flex-direction: column; gap: 6px; }
+.attr-row { display: flex; align-items: center; gap: 9px; }
+.attr-lbl { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-3); width: 128px; flex-shrink: 0; }
+.attr-track { flex: 1; height: 4px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; }
+.attr-fill { height: 100%; border-radius: var(--r-pill); }
+.attr-val { font-family: var(--font-mono); font-size: 10px; color: var(--ink-2); width: 20px; text-align: right; flex-shrink: 0; }
+
+/* Contract strip */
+.contract-strip { display: flex; gap: 6px; margin-top: 11px; }
+.cs-item { flex: 1; background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 7px 9px; }
+.cs-item .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-4); }
+.cs-item .v { font-size: 11px; color: var(--ink-1); font-weight: 500; margin-top: 2px; }
+
+/* Career record */
+.rec-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.rec { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 8px 10px; text-align: center; }
+.rec .v { font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 1; }
+.rec .l { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-4); margin-top: 2px; }
+
+/* ── Staff rows ── */
+.staff-section { display: flex; flex-direction: column; gap: 0; }
+.staff-sect-hd {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-4);
+  padding: 8px 0 5px; border-top: 1px solid var(--line-2); margin-top: 4px;
+}
+.staff-sect-hd:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+.staff-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line-1); }
+.staff-row:first-of-type { border-top: none; }
+.s-avatar {
+  width: 34px; height: 34px; border-radius: var(--r-2); flex-shrink: 0;
+  background: var(--bg-3); border: 1px solid var(--line-2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--ink-4);
+}
+.s-body { flex: 1; min-width: 0; }
+.s-name { font-size: 12px; color: var(--ink-1); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-role { font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+.s-attrs { display: flex; gap: 4px; margin-top: 3px; flex-wrap: wrap; }
+.s-attr { font-family: var(--font-mono); font-size: 8px; color: var(--ink-4); background: var(--bg-3); padding: 1px 5px; border-radius: var(--r-1); letter-spacing: 0.03em; }
+.s-dept { font-family: var(--font-mono); font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: var(--r-1); flex-shrink: 0; }
+.sd-coach   { background: var(--brand-tint); color: var(--brand-400); }
+.sd-med     { background: var(--info-tint); color: var(--info-400); }
+.sd-scout   { background: var(--pos-tint); color: var(--pos-400); }
+.sd-data    { background: var(--neu-tint); color: var(--neu-400); }
+.sd-academy { background: var(--bg-3); color: var(--ink-3); }
+.s-wage { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); flex-shrink: 0; white-space: nowrap; }
+.s-contract { font-family: var(--font-mono); font-size: 9px; color: var(--ink-5); flex-shrink: 0; }
+
+/* ── Budget summary ── */
+.bud-dept-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-top: 1px solid var(--line-1); }
+.bud-dept-row:first-child { border-top: none; }
+.bud-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.bud-lbl { font-size: 11.5px; color: var(--ink-2); flex: 1; }
+.bud-track { width: 80px; height: 4px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; flex-shrink: 0; }
+.bud-fill { height: 100%; border-radius: var(--r-pill); }
+.bud-val { font-family: var(--font-mono); font-size: 11px; color: var(--ink-1); flex-shrink: 0; width: 60px; text-align: right; }
+</style>
+</head>
+<body>
+
+<div class="resolution-badge" id="resbadge">1920 × 1080</div>
+<div class="fitter">
+<div class="stage" id="stage">
+
+  <header class="chrome">
+    <div class="brand">
+      <div class="crest-gm">RM</div>
+      <div class="nm">Riverside <em>· Mgr. You</em></div>
+    </div>
+    <nav class="nav">
+      <a href="Club.html" class="on">Club</a>
+      <a href="Squad Screen.html">Squad</a>
+      <a href="Tactics.html">Tactics</a>
+      <a href="Training Screen.html">Training</a>
+      <a href="Scouting Screen.html">Scouting</a>
+      <a href="Transfers.html">Transfers</a>
+      <a href="World.html">World</a>
+      <a href="#">Inbox<span class="b">3</span></a>
+    </nav>
+    <div class="sp"></div>
+    <div class="right">
+      <div class="kbd-hint"><span class="lbl">Search anywhere</span><span class="k">⌘ K</span></div>
+      <div class="date">Sat 14 Mar · Wk 31 📅</div>
+      <div class="cont">Continue ▸</div>
+    </div>
+  </header>
+
+  <div class="crumb">
+    <a href="Club.html" class="tab" style="text-decoration:none">Overview</a>
+    <a href="Club Finances.html" class="tab" style="text-decoration:none">Finances</a>
+    <a href="Club Board Room.html" class="tab" style="text-decoration:none">Board Room</a>
+    <span class="tab on">Staff</span>
+    <a href="Club History.html" class="tab" style="text-decoration:none">History</a>
+    <div class="sp"></div>
+    <div style="display:flex;align-items:center;gap:12px;font-family:var(--font-mono);font-size:10px;color:var(--ink-4);letter-spacing:0.04em;">
+      <span>STAFF <span style="color:var(--ink-2)">21 people</span></span>
+      <span style="color:var(--line-3)">|</span>
+      <span>STAFF WAGES <span style="color:var(--neu-400)">£14.6m/yr</span></span>
+      <span style="color:var(--line-3)">|</span>
+      <span>VACANCIES <span style="color:var(--pos-400)">0</span></span>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="tb-grp">
+      <div class="seg">
+        <button class="on">All Staff</button>
+        <button>Coaching</button>
+        <button>Medical</button>
+        <button>Scouting</button>
+        <button>Academy</button>
+      </div>
+    </div>
+    <div class="sp"></div>
+    <div class="tb-grp">
+      <button class="btn">+ Hire Staff</button>
+    </div>
+  </div>
+
+  <div class="staff-main">
+
+    <!-- LEFT: Manager -->
+    <div class="staff-col">
+
+      <div class="crd">
+        <h5>Manager Profile</h5>
+        <div class="mgr-inner">
+          <div class="mgr-portrait">M</div>
+          <div>
+            <div class="mgr-name">You</div>
+            <div class="mgr-sub">English · Age 41 · UEFA Pro Licence</div>
+            <div class="mgr-rep">
+              <span class="on">★</span><span class="on">★</span><span class="on">★</span><span>★</span><span>★</span>
+            </div>
+          </div>
+        </div>
+        <div class="attr-rows">
+          <div class="attr-row">
+            <span class="attr-lbl">Tactical Knowledge</span>
+            <div class="attr-track"><div class="attr-fill" style="width:78%;background:var(--brand-400)"></div></div>
+            <span class="attr-val c-brand">16</span>
+          </div>
+          <div class="attr-row">
+            <span class="attr-lbl">Man Management</span>
+            <div class="attr-track"><div class="attr-fill" style="width:72%;background:var(--brand-400)"></div></div>
+            <span class="attr-val c-brand">14</span>
+          </div>
+          <div class="attr-row">
+            <span class="attr-lbl">Motivating</span>
+            <div class="attr-track"><div class="attr-fill" style="width:80%;background:var(--brand-400)"></div></div>
+            <span class="attr-val c-brand">16</span>
+          </div>
+          <div class="attr-row">
+            <span class="attr-lbl">Attacking</span>
+            <div class="attr-track"><div class="attr-fill" style="width:85%;background:var(--brand-400)"></div></div>
+            <span class="attr-val c-brand">17</span>
+          </div>
+          <div class="attr-row">
+            <span class="attr-lbl">Defending</span>
+            <div class="attr-track"><div class="attr-fill" style="width:68%;background:var(--ink-3)"></div></div>
+            <span class="attr-val" style="color:var(--ink-3)">14</span>
+          </div>
+          <div class="attr-row">
+            <span class="attr-lbl">Judging Player Ability</span>
+            <div class="attr-track"><div class="attr-fill" style="width:75%;background:var(--brand-400)"></div></div>
+            <span class="attr-val c-brand">15</span>
+          </div>
+          <div class="attr-row">
+            <span class="attr-lbl">Press / Media</span>
+            <div class="attr-track"><div class="attr-fill" style="width:65%;background:var(--ink-3)"></div></div>
+            <span class="attr-val" style="color:var(--ink-3)">13</span>
+          </div>
+        </div>
+        <div class="contract-strip">
+          <div class="cs-item"><div class="l">Contract</div><div class="v">Jan 2024 → Jun 2026</div></div>
+          <div class="cs-item"><div class="l">Salary</div><div class="v">£3.5m/yr</div></div>
+          <div class="cs-item"><div class="l">Personality</div><div class="v">Ambitious</div></div>
+        </div>
+      </div>
+
+      <div class="crd">
+        <h5>Career Record <span class="meta">All management</span></h5>
+        <div class="rec-grid">
+          <div class="rec"><div class="v c-brand">58%</div><div class="l">Win rate</div></div>
+          <div class="rec"><div class="v c-ink">31</div><div class="l">Played</div></div>
+          <div class="rec"><div class="v c-pos">W18</div><div class="l">Won</div></div>
+          <div class="rec"><div class="v c-neg">L5</div><div class="l">Lost</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+          <div class="cs-item"><div class="l">Preferred style</div><div class="v">High press · 4-3-3</div></div>
+          <div class="cs-item"><div class="l">Reputation</div><div class="v">National ↑</div></div>
+          <div class="cs-item"><div class="l">First senior job</div><div class="v">Riverside, Jan 2024</div></div>
+          <div class="cs-item"><div class="l">Previous clubs</div><div class="v">None (debut role)</div></div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- CENTER: Coaching + Medical -->
+    <div class="staff-col">
+
+      <div class="crd">
+        <h5>Coaching Staff <span class="meta">7 staff</span></h5>
+        <div class="staff-section">
+
+          <div class="staff-sect-hd">First Team</div>
+
+          <div class="staff-row">
+            <div class="s-avatar">RH</div>
+            <div class="s-body">
+              <div class="s-name">R. Hartmann</div>
+              <div class="s-role">Assistant Manager · German · 56</div>
+              <div class="s-attrs">
+                <span class="s-attr">Tactics 18</span>
+                <span class="s-attr">Man Mgmt 15</span>
+                <span class="s-attr">Defending 17</span>
+              </div>
+            </div>
+            <span class="s-dept sd-coach">ASST MGR</span>
+            <span class="s-wage">£620k/yr</span>
+          </div>
+
+          <div class="staff-row">
+            <div class="s-avatar">DO</div>
+            <div class="s-body">
+              <div class="s-name">D. O'Brien</div>
+              <div class="s-role">First Team Coach · Irish · 44 · UEFA A</div>
+              <div class="s-attrs">
+                <span class="s-attr">Attacking 16</span>
+                <span class="s-attr">Coaching 15</span>
+              </div>
+            </div>
+            <span class="s-dept sd-coach">COACH</span>
+            <span class="s-wage">£280k/yr</span>
+          </div>
+
+          <div class="staff-row">
+            <div class="s-avatar">MS</div>
+            <div class="s-body">
+              <div class="s-name">M. Svensson</div>
+              <div class="s-role">First Team Coach · Swedish · 39 · UEFA A</div>
+              <div class="s-attrs">
+                <span class="s-attr">Set pieces 17</span>
+                <span class="s-attr">Coaching 14</span>
+              </div>
+            </div>
+            <span class="s-dept sd-coach">COACH</span>
+            <span class="s-wage">£240k/yr</span>
+          </div>
+
+          <div class="staff-sect-hd">Specialist</div>
+
+          <div class="staff-row">
+            <div class="s-avatar">CP</div>
+            <div class="s-body">
+              <div class="s-name">C. Petrov</div>
+              <div class="s-role">Goalkeeper Coach · Bulgarian · 51 · GK Licence</div>
+              <div class="s-attrs">
+                <span class="s-attr">GK coaching 18</span>
+                <span class="s-attr">Distribution 15</span>
+              </div>
+            </div>
+            <span class="s-dept sd-coach">GK COACH</span>
+            <span class="s-wage">£210k/yr</span>
+          </div>
+
+          <div class="staff-row">
+            <div class="s-avatar">AL</div>
+            <div class="s-body">
+              <div class="s-name">A. Laurent</div>
+              <div class="s-role">Head of Fitness · French · 38 · Sports Science</div>
+              <div class="s-attrs">
+                <span class="s-attr">Fitness 17</span>
+                <span class="s-attr">Sports sci 16</span>
+                <span class="s-attr">Physio 13</span>
+              </div>
+            </div>
+            <span class="s-dept sd-coach">FITNESS</span>
+            <span class="s-wage">£195k/yr</span>
+          </div>
+
+          <div class="staff-row">
+            <div class="s-avatar">TB</div>
+            <div class="s-body">
+              <div class="s-name">T. Braga</div>
+              <div class="s-role">Set Piece Coach · Portuguese · 45 · UEFA B</div>
+              <div class="s-attrs">
+                <span class="s-attr">Set pieces 18</span>
+                <span class="s-attr">Attacking 15</span>
+              </div>
+            </div>
+            <span class="s-dept sd-coach">SET PIECES</span>
+            <span class="s-wage">£160k/yr</span>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="crd">
+        <h5>Medical Staff <span class="meta">4 staff</span></h5>
+        <div class="staff-section">
+
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--info-400)">KS</div>
+            <div class="s-body">
+              <div class="s-name">Dr. K. Sharma</div>
+              <div class="s-role">Head Physiotherapist · British · 42</div>
+              <div class="s-attrs">
+                <span class="s-attr">Physiotherapy 18</span>
+                <span class="s-attr">Sports medicine 17</span>
+              </div>
+            </div>
+            <span class="s-dept sd-med">HEAD PHYSIO</span>
+            <span class="s-wage">£320k/yr</span>
+          </div>
+
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--info-400)">JW</div>
+            <div class="s-body">
+              <div class="s-name">J. Whitfield</div>
+              <div class="s-role">Assistant Physiotherapist · British · 34</div>
+              <div class="s-attrs">
+                <span class="s-attr">Physiotherapy 15</span>
+                <span class="s-attr">Rehabilitation 14</span>
+              </div>
+            </div>
+            <span class="s-dept sd-med">PHYSIO</span>
+            <span class="s-wage">£145k/yr</span>
+          </div>
+
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--info-400)">LN</div>
+            <div class="s-body">
+              <div class="s-name">L. Nakamura</div>
+              <div class="s-role">Sports Scientist · Japanese · 31</div>
+              <div class="s-attrs">
+                <span class="s-attr">Sports sci 17</span>
+                <span class="s-attr">Fitness data 16</span>
+              </div>
+            </div>
+            <span class="s-dept sd-med">SPORTS SCI</span>
+            <span class="s-wage">£130k/yr</span>
+          </div>
+
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--info-400)">RO</div>
+            <div class="s-body">
+              <div class="s-name">Dr. R. Osei</div>
+              <div class="s-role">Club Doctor · Ghanaian · 48 · MBBS, MRCGP</div>
+              <div class="s-attrs">
+                <span class="s-attr">Sports medicine 18</span>
+              </div>
+            </div>
+            <span class="s-dept sd-med">DOCTOR</span>
+            <span class="s-wage">£285k/yr</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /center -->
+
+    <!-- RIGHT: Scouting + Analysis + Academy + Budget -->
+    <div class="staff-col">
+
+      <div class="crd">
+        <h5>Scouting &amp; Analysis <span class="meta">6 staff</span></h5>
+        <div class="staff-section">
+
+          <div class="staff-sect-hd">Scouting</div>
+
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--pos-400)">PG</div>
+            <div class="s-body">
+              <div class="s-name">P. Galloway</div>
+              <div class="s-role">Chief Scout · Scottish · 55</div>
+              <div class="s-attrs"><span class="s-attr">Judging ability 18</span><span class="s-attr">Judging potential 16</span></div>
+            </div>
+            <span class="s-dept sd-scout">CHIEF SCOUT</span>
+            <span class="s-wage">£310k/yr</span>
+          </div>
+
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--pos-400)">AB</div>
+            <div class="s-body">
+              <div class="s-name">A. Benedetti</div>
+              <div class="s-role">Scout · Italian · 43 · Europe focus</div>
+              <div class="s-attrs"><span class="s-attr">Judging ability 15</span></div>
+            </div>
+            <span class="s-dept sd-scout">SCOUT</span>
+            <span class="s-wage">£130k/yr</span>
+          </div>
+
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--pos-400)">CM</div>
+            <div class="s-body">
+              <div class="s-name">C. Moraes</div>
+              <div class="s-role">Scout · Brazilian · 47 · S. America focus</div>
+              <div class="s-attrs"><span class="s-attr">Judging potential 16</span></div>
+            </div>
+            <span class="s-dept sd-scout">SCOUT</span>
+            <span class="s-wage">£120k/yr</span>
+          </div>
+
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--pos-400)">TO</div>
+            <div class="s-body">
+              <div class="s-name">T. Okonkwo</div>
+              <div class="s-role">Scout · Nigerian · 39 · Africa &amp; Asia focus</div>
+              <div class="s-attrs"><span class="s-attr">Judging ability 14</span></div>
+            </div>
+            <span class="s-dept sd-scout">SCOUT</span>
+            <span class="s-wage">£110k/yr</span>
+          </div>
+
+          <div class="staff-sect-hd">Analysis</div>
+
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--neu-400)">SP</div>
+            <div class="s-body">
+              <div class="s-name">S. Park</div>
+              <div class="s-role">Data Analyst · Korean · 29</div>
+              <div class="s-attrs"><span class="s-attr">Analytics 17</span><span class="s-attr">Tactical 15</span></div>
+            </div>
+            <span class="s-dept sd-data">DATA</span>
+            <span class="s-wage">£175k/yr</span>
+          </div>
+
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--neu-400)">ME</div>
+            <div class="s-body">
+              <div class="s-name">M. Eriksen</div>
+              <div class="s-role">Video Analyst · Danish · 27</div>
+              <div class="s-attrs"><span class="s-attr">Video analysis 16</span></div>
+            </div>
+            <span class="s-dept sd-data">VIDEO</span>
+            <span class="s-wage">£95k/yr</span>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="crd">
+        <h5>Academy Staff <span class="meta">2 staff</span></h5>
+        <div class="staff-section">
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--ink-3)">BF</div>
+            <div class="s-body">
+              <div class="s-name">B. Foster</div>
+              <div class="s-role">Head of Academy · British · 59 · UEFA A</div>
+              <div class="s-attrs"><span class="s-attr">Youth dev 18</span><span class="s-attr">Coaching 16</span></div>
+            </div>
+            <span class="s-dept sd-academy">HEAD</span>
+            <span class="s-wage">£215k/yr</span>
+          </div>
+          <div class="staff-row">
+            <div class="s-avatar" style="color:var(--ink-3)">GM</div>
+            <div class="s-body">
+              <div class="s-name">G. Mensah</div>
+              <div class="s-role">Youth Coach · Ghanaian · 35 · UEFA B</div>
+              <div class="s-attrs"><span class="s-attr">Youth dev 15</span><span class="s-attr">Coaching 14</span></div>
+            </div>
+            <span class="s-dept sd-academy">YOUTH</span>
+            <span class="s-wage">£110k/yr</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="crd grow">
+        <h5>Staff Budget <span class="meta">£14.6m/yr total</span></h5>
+        <div class="bud-dept-row">
+          <div class="bud-dot" style="background:var(--brand-400)"></div>
+          <span class="bud-lbl">Manager</span>
+          <div class="bud-track"><div class="bud-fill" style="width:100%;background:var(--brand-400)"></div></div>
+          <span class="bud-val">£3.5m/yr</span>
+        </div>
+        <div class="bud-dept-row">
+          <div class="bud-dot" style="background:var(--brand-400);opacity:.6"></div>
+          <span class="bud-lbl">Coaching</span>
+          <div class="bud-track"><div class="bud-fill" style="width:88%;background:var(--brand-400);opacity:.6"></div></div>
+          <span class="bud-val">£1.51m/yr</span>
+        </div>
+        <div class="bud-dept-row">
+          <div class="bud-dot" style="background:var(--info-400)"></div>
+          <span class="bud-lbl">Medical</span>
+          <div class="bud-track"><div class="bud-fill" style="width:52%;background:var(--info-400)"></div></div>
+          <span class="bud-val">£880k/yr</span>
+        </div>
+        <div class="bud-dept-row">
+          <div class="bud-dot" style="background:var(--pos-400)"></div>
+          <span class="bud-lbl">Scouting</span>
+          <div class="bud-track"><div class="bud-fill" style="width:58%;background:var(--pos-400)"></div></div>
+          <span class="bud-val">£670k/yr</span>
+        </div>
+        <div class="bud-dept-row">
+          <div class="bud-dot" style="background:var(--neu-400)"></div>
+          <span class="bud-lbl">Analysis</span>
+          <div class="bud-track"><div class="bud-fill" style="width:16%;background:var(--neu-400)"></div></div>
+          <span class="bud-val">£270k/yr</span>
+        </div>
+        <div class="bud-dept-row">
+          <div class="bud-dot" style="background:var(--ink-4)"></div>
+          <span class="bud-lbl">Academy</span>
+          <div class="bud-track"><div class="bud-fill" style="width:20%;background:var(--ink-4)"></div></div>
+          <span class="bud-val">£325k/yr</span>
+        </div>
+        <div style="border-top:1px solid var(--line-3);margin-top:8px;padding-top:8px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-4)">Total Staff Costs</span>
+          <span style="font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--ink-1)">£7.16m/yr</span>
+        </div>
+        <div style="font-size:10px;color:var(--ink-4);margin-top:4px">Excludes player wages (£178m/yr) · 21 contracted staff</div>
+      </div>
+
+    </div><!-- /right -->
+
+  </div>
+
+  <div class="status">
+    <span class="dot"></span>
+    <span>SAVE · auto · 11:58</span>
+    <span class="bullet">·</span>
+    <span>BUILD 0.2.31-touchline</span>
+    <span class="bullet">·</span>
+    <span>Club · Staff · Riverside FC · Season 2024/25</span>
+    <span class="sp"></span>
+    <span>21 contracted staff</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--neu-400)">Staff wages £7.16m/yr</span>
+    <span class="bullet">·</span>
+    <span>0 vacancies</span>
+    <span class="sp"></span>
+    <span>FPS 60</span>
+    <span class="bullet">·</span>
+    <span>RAM 1.1 GB</span>
+  </div>
+
+</div>
+</div>
+
+<script>
+(function() {
+  var stage = document.getElementById('stage');
+  var badge = document.getElementById('resbadge');
+  function fit() {
+    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = 'scale(' + s + ')';
+    stage.style.transformOrigin = 'center center';
+    if (badge) badge.textContent = '1920×1080 · scale ' + Math.round(s * 100) + '%';
+  }
+  fit();
+  window.addEventListener('resize', fit);
+})();
+</script>
+</body>
+</html>

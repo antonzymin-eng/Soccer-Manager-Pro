@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Command Palette — Soccer Manager Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<style>
+  *,*::before,*::after { box-sizing: border-box; }
+  html, body { margin:0; padding:0; height:100%; }
+  body {
+    background: var(--bg-0);
+    color: var(--ink-1);
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.45;
+    overflow:hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .num, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  /* ===========================================================
+     BACKDROP — dimmed Manager Hub dashboard (sets context only)
+     =========================================================== */
+  .app { position:fixed; inset:0; display:grid; grid-template-rows: 44px 36px 1fr 22px; }
+
+  /* top game chrome */
+  .chrome {
+    display:flex; align-items:center; gap:0;
+    background: var(--bg-1); border-bottom: 1px solid var(--line-2);
+    padding: 0 14px;
+  }
+  .chrome .brand { display:flex; align-items:center; gap:10px; padding-right:18px; border-right:1px solid var(--line-2); height:100%; }
+  .chrome .brand .crest { width:22px; height:22px; border-radius: var(--r-1); background: linear-gradient(135deg, var(--brand-400), var(--brand-700)); display:flex; align-items:center; justify-content:center; font-family: var(--font-display); font-weight:800; font-size:12px; color:#001a0a; letter-spacing:-0.02em; }
+  .chrome .brand .name { font-family: var(--font-display); font-weight:700; letter-spacing:0.02em; font-size:14px; }
+  .chrome .brand .name em { font-style:normal; color:var(--ink-3); font-weight:600; }
+  .chrome nav { display:flex; align-items:center; height:100%; padding:0 4px 0 14px; }
+  .chrome nav a { padding: 0 12px; height: 100%; display:inline-flex; align-items:center; font-size: 12px; color: var(--ink-2); text-decoration:none; border-bottom:2px solid transparent; }
+  .chrome nav a.on { color: var(--ink-1); border-bottom-color: var(--brand-400); }
+  .chrome nav a:hover { color: var(--ink-1); }
+  .chrome .spacer { flex:1; }
+  .chrome .right { display:flex; align-items:center; gap:8px; }
+  .chrome .kbd-hint { display:inline-flex; align-items:center; gap:8px; padding: 5px 10px 5px 12px; background: var(--bg-2); border: 1px solid var(--line-2); border-radius: var(--r-2); cursor: pointer; transition: border-color .12s, background .12s; }
+  .chrome .kbd-hint:hover { border-color: var(--brand-400); background: var(--brand-tint); }
+  .chrome .kbd-hint .lbl { font-size: 11px; color: var(--ink-3); }
+  .chrome .kbd-hint .kbd { font-family: var(--font-mono); font-size: 10.5px; background: var(--bg-3); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--line-2); color: var(--ink-1); }
+  .chrome .ind { width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius: var(--r-1); color: var(--ink-3); font-family: var(--font-mono); font-size: 11px; cursor:default; }
+  .chrome .ind:hover { color: var(--ink-1); background: var(--bg-2); }
+  .chrome .date { padding: 0 10px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); border-left:1px solid var(--line-2); height:100%; display:inline-flex; align-items:center; }
+  .chrome .continue { display:inline-flex; align-items:center; gap:8px; padding: 0 14px; height:28px; background: var(--brand-400); color: #001a0a; border-radius: var(--r-2); font-weight: 600; font-size: 12px; cursor:default; }
+  .chrome .continue .arrow { font-family: var(--font-mono); }
+
+  /* breadcrumb tab strip */
+  .crumb { display:flex; align-items:center; gap:0; background: var(--bg-1); border-bottom:1px solid var(--line-2); padding: 0 14px; }
+  .crumb .tab { padding: 0 14px; height: 100%; display:inline-flex; align-items:center; font-size: 12px; color: var(--ink-3); border-bottom: 2px solid transparent; }
+  .crumb .tab.on { color: var(--ink-1); border-bottom-color: var(--brand-400); }
+  .crumb .sep { color: var(--ink-5); padding: 0 6px; }
+  .crumb .spacer { flex:1; }
+  .crumb .views { display:flex; gap:6px; padding: 0 0 0 8px; }
+  .crumb .view { padding: 3px 9px; height: 22px; display:inline-flex; align-items:center; font-size: 11px; color: var(--ink-3); border: 1px solid var(--line-2); border-radius: var(--r-2); background: var(--bg-2); font-family: var(--font-mono); letter-spacing: 0.04em; }
+  .crumb .view.on { color: var(--brand-400); border-color: var(--brand-400); background: var(--brand-tint); }
+
+  /* main grid */
+  .main { display:grid; grid-template-columns: 1.4fr 1fr; gap:14px; padding:14px; overflow:hidden; }
+  .col { display:flex; flex-direction:column; gap:14px; min-height:0; }
+
+  .card { background: var(--bg-card); border:1px solid var(--line-2); border-radius: var(--panel-radius); padding: 14px 16px; }
+  .card h3 { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 12px; font-weight: 600; display:flex; align-items:center; justify-content:space-between; }
+  .card h3 .meta { font-family: var(--font-mono); font-size:10px; color: var(--ink-4); letter-spacing: 0.08em; }
+
+  .kpi-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .kpi { background: var(--bg-2); border:1px solid var(--line-1); border-radius: var(--r-2); padding: 10px 12px; }
+  .kpi .l { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-4); }
+  .kpi .v { font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1; margin-top: 4px; letter-spacing: -0.01em; }
+  .kpi .d { font-family: var(--font-mono); font-size: 10px; margin-top: 4px; color: var(--ink-3); }
+  .kpi .d.pos { color: var(--pos-400); }
+  .kpi .d.neg { color: var(--neg-400); }
+
+  /* squad strip */
+  .squad-table { width:100%; }
+  .squad-head, .squad-row { display:grid; grid-template-columns: 20px 22px 1fr 28px 50px 70px 28px 50px; align-items:center; gap:8px; padding: 4px 6px; font-size: 11.5px; }
+  .squad-head { color: var(--ink-4); font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; border-bottom:1px solid var(--line-2); padding-bottom:5px; margin-bottom: 2px; }
+  .squad-row { border-bottom: 1px solid var(--line-1); }
+  .squad-row:last-child { border-bottom:none; }
+  .squad-row .n { font-family: var(--font-mono); color: var(--ink-3); font-size: 10.5px; }
+  .squad-row .pos { display:inline-flex; align-items:center; justify-content:center; width:20px; height:14px; font-family: var(--font-mono); font-size: 8.5px; font-weight: 600; border-radius: var(--r-1); }
+  .pos-gk { background: var(--gold-tint); color: var(--gold-400); }
+  .pos-df { background: var(--info-tint); color: var(--info-400); }
+  .pos-mf { background: var(--pos-tint); color: var(--pos-400); }
+  .pos-fw { background: var(--neg-tint); color: var(--neg-400); }
+  .squad-row .num { font-family: var(--font-mono); text-align:right; font-variant-numeric: tabular-nums; }
+  .squad-row .form { display:inline-flex; gap:2px; }
+  .squad-row .form span { width: 10px; height: 10px; display:inline-flex; align-items:center; justify-content:center; font-family: var(--font-mono); font-size: 7.5px; font-weight: 700; border-radius: 1px; }
+  .form .w { background: var(--pos-400); color: #001a0a; }
+  .form .d { background: var(--neu-400); color: #1a1300; }
+  .form .l { background: var(--neg-400); color: #fff; }
+  .fit-bar { position:relative; height:4px; background: var(--bg-3); border-radius: 1px; overflow:hidden; }
+  .fit-bar > i { position:absolute; left:0; top:0; bottom:0; background: var(--pos-400); }
+  .fit-bar.warn > i { background: var(--neu-400); }
+  .fit-bar.bad > i { background: var(--neg-400); }
+  .attr { display:inline-flex; align-items:center; justify-content:center; width:18px; height:14px; border-radius:1px; font-family: var(--font-mono); font-size:9px; font-weight:600; }
+  .a20 { background: var(--attr-20); color: #001a0a; }
+  .a17 { background: var(--attr-17); color: #001a0a; }
+  .a14 { background: var(--attr-14); color: #0e1500; }
+  .a11 { background: var(--attr-11); color: #1a1300; }
+  .a8 { background: var(--attr-8); color: #fff; }
+
+  /* fixture / league mini */
+  .fx { display:grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items:center; padding: 10px 0; border-top: 1px solid var(--line-1); font-size: 12px; }
+  .fx:first-child { border-top: none; padding-top:0; }
+  .fx .side { display:flex; align-items:center; gap:8px; }
+  .fx .crest { width:18px; height:18px; border-radius: 2px; display:flex; align-items:center; justify-content:center; font-family: var(--font-display); font-weight:800; font-size:9.5px; color:#001a0a; }
+  .fx .h { justify-content:flex-end; }
+  .fx .h .crest { order:2; }
+  .fx .score { font-family: var(--font-mono); font-weight: 600; padding: 3px 8px; background: var(--bg-2); border-radius: var(--r-1); min-width: 48px; text-align:center; }
+  .fx .score.fut { color: var(--ink-3); }
+
+  .lg-row { display:grid; grid-template-columns: 18px 18px 1fr 22px 22px 22px 22px 26px 32px; align-items:center; gap:8px; padding: 4px 4px; font-size: 11.5px; border-bottom:1px solid var(--line-1); }
+  .lg-row:last-child { border-bottom:none; }
+  .lg-row .p { font-family: var(--font-mono); color: var(--ink-3); }
+  .lg-row .num { font-family: var(--font-mono); text-align:right; font-variant-numeric: tabular-nums; }
+  .lg-row.you { background: var(--brand-tint); border-radius: var(--r-1); }
+  .lg-row.you .p { color: var(--brand-400); font-weight: 600; }
+  .lg-head { display:grid; grid-template-columns: 18px 18px 1fr 22px 22px 22px 22px 26px 32px; gap:8px; padding: 0 4px 4px; font-family: var(--font-mono); font-size:9.5px; letter-spacing: 0.08em; color: var(--ink-4); text-transform: uppercase; border-bottom: 1px solid var(--line-2); margin-bottom: 4px; }
+  .lg-head span:nth-child(n+4) { text-align:right; }
+
+  /* inbox */
+  .inbox-row { display:grid; grid-template-columns: 4px 1fr 60px; gap:10px; padding: 9px 0; border-bottom: 1px solid var(--line-1); }
+  .inbox-row:last-child { border-bottom: none; }
+  .inbox-row .dot { width:4px; align-self:center; height:4px; border-radius:50%; background: transparent; }
+  .inbox-row .dot.new { background: var(--brand-400); box-shadow: 0 0 6px var(--brand-400); }
+  .inbox-row .t { font-size: 12px; color: var(--ink-1); }
+  .inbox-row .s { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .inbox-row .time { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); text-align:right; }
+
+  /* status bar */
+  .status { display:flex; align-items:center; gap: 18px; padding: 0 14px; background: var(--bg-1); border-top: 1px solid var(--line-2); font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-4); letter-spacing: 0.04em; }
+  .status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pos-400); box-shadow: 0 0 6px var(--pos-400); }
+  .status .spacer { flex:1; }
+
+  /* dim when palette open */
+  .app::after {
+    content:"";
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(7,9,12,0.65) 0%, rgba(7,9,12,0.92) 100%);
+    backdrop-filter: blur(6px) saturate(0.85);
+    -webkit-backdrop-filter: blur(6px) saturate(0.85);
+    opacity: 0; pointer-events: none;
+    transition: opacity .14s ease-out;
+    z-index: 50;
+  }
+  body[data-palette="open"] .app::after { opacity: 1; }
+
+  /* ===========================================================
+     COMMAND PALETTE
+     =========================================================== */
+  .palette-wrap {
+    position: fixed; inset: 0;
+    display: grid; place-items: start center;
+    padding-top: 11vh;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .palette {
+    width: min(680px, 92vw);
+    background: var(--bg-1);
+    border: 1px solid var(--line-3);
+    border-radius: var(--r-3);
+    box-shadow:
+      0 0 0 1px rgba(0,255,136,0.18),
+      0 30px 80px rgba(0,0,0,0.75),
+      0 0 60px rgba(0,255,136,0.08);
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+    transition: opacity .14s ease-out, transform .14s ease-out;
+    pointer-events: none;
+    display: flex; flex-direction: column;
+    max-height: 70vh;
+  }
+  body[data-palette="open"] .palette { opacity: 1; transform: none; pointer-events: auto; }
+
+  /* prompt row */
+  .p-prompt {
+    display: grid; grid-template-columns: 28px 1fr auto;
+    align-items: center; gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line-2);
+    background: var(--bg-card);
+  }
+  .p-caret {
+    font-family: var(--font-mono); font-size: 18px; color: var(--brand-400); font-weight: 600;
+    text-align: center;
+  }
+  .p-input {
+    background: transparent; border: 0; outline: 0;
+    color: var(--ink-1); font-family: var(--font-body);
+    font-size: 17px; padding: 2px 0;
+    caret-color: var(--brand-400);
+    width: 100%;
+  }
+  .p-input::placeholder { color: var(--ink-4); }
+  .p-badge {
+    display:inline-flex; align-items:center; gap: 4px;
+    font-family: var(--font-mono); font-size: 10px; color: var(--ink-3);
+    padding: 3px 8px; border-radius: var(--r-2);
+    background: var(--bg-3); border: 1px solid var(--line-2);
+    letter-spacing: 0.04em;
+  }
+
+  /* scope chips */
+  .p-scopes {
+    display:flex; align-items:center; gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line-2);
+    background: var(--bg-1);
+  }
+  .p-scope {
+    display:inline-flex; align-items:center; gap: 6px;
+    padding: 4px 10px; border-radius: var(--r-pill);
+    font-size: 11px; color: var(--ink-3);
+    background: var(--bg-2); border: 1px solid var(--line-2);
+    cursor: pointer; user-select: none;
+    transition: color .12s, background .12s, border-color .12s;
+  }
+  .p-scope:hover { color: var(--ink-1); }
+  .p-scope.on {
+    background: var(--brand-tint); color: var(--brand-400);
+    border-color: rgba(0,255,136,0.35);
+  }
+  .p-scope .ct {
+    font-family: var(--font-mono); font-size: 9.5px;
+    background: var(--bg-3); padding: 0 5px; border-radius: 8px;
+    color: var(--ink-4);
+  }
+  .p-scope.on .ct { background: rgba(0,255,136,0.16); color: var(--brand-400); }
+  .p-scopes .hint { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); display:inline-flex; gap:6px; align-items:center; }
+  .p-scopes .hint .k { background: var(--bg-3); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--line-2); color: var(--ink-2); }
+
+  /* results */
+  .p-results {
+    flex: 1; min-height: 0; overflow-y: auto;
+    padding: 4px 0 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-3) transparent;
+  }
+  .p-group {
+    padding: 8px 16px 4px;
+    font-family: var(--font-mono); font-size: 9.5px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-4);
+    display: flex; align-items:center; justify-content:space-between;
+  }
+  .p-group .ct { color: var(--ink-5); font-size: 9.5px; }
+
+  .p-item {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    align-items: center; gap: 12px;
+    padding: 8px 16px;
+    cursor: pointer; user-select: none;
+    border-left: 2px solid transparent;
+  }
+  .p-item:hover { background: var(--bg-2); }
+  .p-item.active {
+    background: var(--brand-tint);
+    border-left-color: var(--brand-400);
+  }
+  .p-item .icon {
+    width: 28px; height: 28px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius: var(--r-2);
+    background: var(--bg-2); border: 1px solid var(--line-2);
+    font-family: var(--font-display); font-weight: 700; font-size: 11px;
+    color: var(--ink-2);
+    letter-spacing: 0.04em;
+  }
+  .p-item.active .icon { background: var(--bg-3); border-color: var(--line-3); color: var(--ink-1); }
+  .icon.type-screen { color: var(--info-400); }
+  .icon.type-action { color: var(--brand-400); }
+  .icon.type-person { color: var(--gold-400); }
+  .icon.type-club   { color: var(--ink-2); }
+  .icon.type-comp   { color: var(--neg-400); }
+  .icon.type-guide  { color: var(--ink-3); }
+
+  /* portrait blob for people */
+  .icon.portrait { background: linear-gradient(135deg, var(--bg-3), var(--bg-2)); border-color: var(--line-3); position:relative; overflow:hidden; }
+  .icon.portrait::before {
+    content: ""; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+  }
+  .icon.portrait::after {
+    content: ""; position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+  }
+  .icon.portrait span { position:relative; z-index:1; font-size: 9.5px; color: var(--ink-1); text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
+
+  .p-item .label {
+    display:flex; flex-direction: column; gap: 2px;
+    min-width: 0;
+  }
+  .p-item .title {
+    font-size: 14px; color: var(--ink-1);
+    white-space: nowrap; overflow:hidden; text-overflow: ellipsis;
+  }
+  .p-item .title em {
+    font-style: normal; color: var(--brand-400); font-weight: 600;
+    background: rgba(0,255,136,0.10); padding: 0 2px; border-radius: 2px;
+  }
+  .p-item .sub {
+    font-size: 11px; color: var(--ink-3);
+    display: flex; gap: 8px; align-items: center;
+    white-space: nowrap; overflow:hidden; text-overflow: ellipsis;
+  }
+  .p-item .sub .pill {
+    font-family: var(--font-mono); font-size: 9.5px;
+    padding: 1px 5px; border-radius: var(--r-1);
+    background: var(--bg-3); color: var(--ink-3);
+    letter-spacing: 0.04em;
+  }
+  .p-item .sub .pill.brand { background: var(--brand-tint); color: var(--brand-400); }
+  .p-item .sub .pill.warn { background: var(--neu-tint); color: var(--neu-400); }
+  .p-item .sub .pill.danger { background: var(--neg-tint); color: var(--neg-400); }
+  .p-item .sub .dot { color: var(--ink-5); }
+
+  .p-item .meta {
+    display:flex; gap: 6px; align-items:center;
+    font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);
+  }
+  .p-item .meta .k {
+    background: var(--bg-3); border: 1px solid var(--line-2);
+    color: var(--ink-2); padding: 1px 5px; border-radius: 3px;
+    font-size: 10px;
+  }
+  .p-item .meta .enter {
+    background: var(--brand-400); color: #001a0a;
+    border: 1px solid var(--brand-400);
+    padding: 1px 6px; border-radius: 3px;
+    font-weight: 600;
+  }
+  .p-item:not(.active) .meta .enter { display: none; }
+  .p-item.active .meta .open-hint { display: none; }
+
+  /* empty */
+  .p-empty {
+    padding: 28px 16px;
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 13px;
+  }
+  .p-empty .big {
+    font-family: var(--font-display); font-size: 32px; color: var(--ink-4);
+    font-weight: 700; letter-spacing: -0.01em;
+    margin-bottom: 6px;
+  }
+  .p-empty .sug {
+    margin-top: 10px;
+    font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+
+  /* footer */
+  .p-foot {
+    display: flex; align-items: center; gap: 14px;
+    padding: 8px 14px;
+    border-top: 1px solid var(--line-2);
+    background: var(--bg-card);
+    font-family: var(--font-mono); font-size: 10.5px;
+    color: var(--ink-4); letter-spacing: 0.04em;
+  }
+  .p-foot .k {
+    background: var(--bg-3); border: 1px solid var(--line-2);
+    color: var(--ink-2); padding: 1px 5px; border-radius: 3px;
+    margin-right: 4px;
+  }
+  .p-foot .item { display:inline-flex; align-items:center; gap: 4px; }
+  .p-foot .spacer { flex: 1; }
+  .p-foot .ai { display:inline-flex; align-items:center; gap: 6px; color: var(--brand-400); }
+  .p-foot .ai .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--brand-400); box-shadow: 0 0 8px var(--brand-400); animation: pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+
+  /* match prefix in title */
+  .p-item .title .pre { color: var(--ink-3); }
+</style>
+</head>
+<body data-palette="open">
+
+<!-- ===================== BACKDROP ===================== -->
+<div class="app">
+
+  <!-- TOP CHROME -->
+  <header class="chrome">
+    <div class="brand">
+      <div class="crest">RM</div>
+      <div class="name">Riverside <em>· Mgr. You</em></div>
+    </div>
+    <nav>
+      <a href="#" class="on">Manager</a>
+      <a href="#">Squad</a>
+      <a href="#">Tactics</a>
+      <a href="#">Training</a>
+      <a href="#">Scouting</a>
+      <a href="#">Transfers</a>
+      <a href="#">Inbox <span style="color:var(--brand-400); margin-left:4px;">3</span></a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="right">
+      <button class="kbd-hint" id="open-kbd">
+        <span class="lbl">Search anywhere</span>
+        <span class="kbd">⌘ K</span>
+      </button>
+      <span class="date">Sat 14 Mar · Wk 31</span>
+      <span class="continue">Continue <span class="arrow">▸</span></span>
+    </div>
+  </header>
+
+  <!-- BREADCRUMB TABS -->
+  <div class="crumb">
+    <span class="tab on">Hub</span>
+    <span class="sep">/</span>
+    <span class="tab">Form</span>
+    <span class="sep">/</span>
+    <span class="tab">Finances</span>
+    <span class="sep">/</span>
+    <span class="tab">Calendar</span>
+    <div class="spacer"></div>
+    <div class="views">
+      <span class="view on">General</span>
+      <span class="view">Tactical</span>
+      <span class="view">Financial</span>
+      <span class="view">+ New</span>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <main class="main">
+    <!-- LEFT -->
+    <div class="col" style="overflow:hidden;">
+      <div class="card">
+        <h3>Manager Hub <span class="meta">last sync · 12:04</span></h3>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="l">League</div><div class="v">3<span style="font-size:14px;color:var(--ink-3)">rd</span></div><div class="d pos">▲ 2 vs LW</div></div>
+          <div class="kpi"><div class="l">xG · last 5</div><div class="v">2.41</div><div class="d pos">▲ 0.18</div></div>
+          <div class="kpi"><div class="l">Fitness avg</div><div class="v">87<span style="font-size:14px;color:var(--ink-3)">%</span></div><div class="d" style="color:var(--neu-400)">— 2 inj.</div></div>
+          <div class="kpi"><div class="l">Wages</div><div class="v">£3.4<span style="font-size:14px;color:var(--ink-3)">m</span></div><div class="d">£0.6m head</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1; overflow:hidden; display:flex; flex-direction:column;">
+        <h3>Squad · first XI <span class="meta">tap a row to drill in</span></h3>
+        <div class="squad-table" style="overflow:auto;">
+          <div class="squad-head">
+            <span>#</span><span></span><span>Player</span><span>Ag</span><span>Form</span><span>Fitness</span><span>Pas</span><span>Rating</span>
+          </div>
+          <div class="squad-row"><span class="n">1</span><span class="pos pos-gk">GK</span><span>Onana</span><span class="num">28</span><span class="form"><span class="w">W</span><span class="w">W</span><span class="d">D</span><span class="w">W</span><span class="w">W</span></span><span><div class="fit-bar"><i style="width:94%"></i></div></span><span class="attr a14">14</span><span class="num">7.2</span></div>
+          <div class="squad-row"><span class="n">2</span><span class="pos pos-df">RB</span><span>Dalot</span><span class="num">25</span><span class="form"><span class="w">W</span><span class="l">L</span><span class="w">W</span><span class="d">D</span><span class="w">W</span></span><span><div class="fit-bar"><i style="width:88%"></i></div></span><span class="attr a14">14</span><span class="num">7.0</span></div>
+          <div class="squad-row"><span class="n">4</span><span class="pos pos-df">CB</span><span>Martínez</span><span class="num">27</span><span class="form"><span class="d">D</span><span class="w">W</span><span class="w">W</span><span class="w">W</span><span class="d">D</span></span><span><div class="fit-bar warn"><i style="width:72%"></i></div></span><span class="attr a17">17</span><span class="num">7.4</span></div>
+          <div class="squad-row"><span class="n">5</span><span class="pos pos-df">CB</span><span>Maguire</span><span class="num">31</span><span class="form"><span class="w">W</span><span class="d">D</span><span class="w">W</span><span class="d">D</span><span class="w">W</span></span><span><div class="fit-bar"><i style="width:91%"></i></div></span><span class="attr a11">11</span><span class="num">6.8</span></div>
+          <div class="squad-row"><span class="n">6</span><span class="pos pos-mf">CM</span><span>Mainoo</span><span class="num">19</span><span class="form"><span class="w">W</span><span class="w">W</span><span class="w">W</span><span class="d">D</span><span class="w">W</span></span><span><div class="fit-bar"><i style="width:90%"></i></div></span><span class="attr a17">17</span><span class="num">7.6</span></div>
+          <div class="squad-row"><span class="n">8</span><span class="pos pos-mf">CM</span><span>Bruno F.</span><span class="num">30</span><span class="form"><span class="w">W</span><span class="w">W</span><span class="d">D</span><span class="w">W</span><span class="w">W</span></span><span><div class="fit-bar"><i style="width:93%"></i></div></span><span class="attr a20">20</span><span class="num">7.9</span></div>
+          <div class="squad-row"><span class="n">9</span><span class="pos pos-fw">ST</span><span>Højlund</span><span class="num">21</span><span class="form"><span class="l">L</span><span class="w">W</span><span class="d">D</span><span class="w">W</span><span class="l">L</span></span><span><div class="fit-bar bad"><i style="width:54%"></i></div></span><span class="attr a14">14</span><span class="num">6.3</span></div>
+          <div class="squad-row"><span class="n">10</span><span class="pos pos-fw">LW</span><span>Rashford</span><span class="num">26</span><span class="form"><span class="d">D</span><span class="l">L</span><span class="w">W</span><span class="w">W</span><span class="w">W</span></span><span><div class="fit-bar"><i style="width:85%"></i></div></span><span class="attr a17">17</span><span class="num">7.1</span></div>
+          <div class="squad-row"><span class="n">11</span><span class="pos pos-fw">RW</span><span>Garnacho</span><span class="num">20</span><span class="form"><span class="w">W</span><span class="d">D</span><span class="w">W</span><span class="w">W</span><span class="w">W</span></span><span><div class="fit-bar"><i style="width:89%"></i></div></span><span class="attr a14">14</span><span class="num">7.3</span></div>
+          <div class="squad-row"><span class="n">17</span><span class="pos pos-mf">CDM</span><span>Casemiro</span><span class="num">33</span><span class="form"><span class="w">W</span><span class="w">W</span><span class="d">D</span><span class="d">D</span><span class="w">W</span></span><span><div class="fit-bar warn"><i style="width:68%"></i></div></span><span class="attr a17">17</span><span class="num">7.0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col" style="overflow:hidden;">
+      <div class="card">
+        <h3>Next 3 fixtures</h3>
+        <div class="fx">
+          <div class="side"><span class="crest" style="background:#dc143c">RM</span><span>Riverside</span></div>
+          <div class="score fut">vs</div>
+          <div class="side h"><span class="crest" style="background:#0a4d8b">PV</span><span>Portsea Vale</span></div>
+        </div>
+        <div class="fx">
+          <div class="side"><span class="crest" style="background:#dc143c">RM</span><span>Riverside</span></div>
+          <div class="score fut">vs</div>
+          <div class="side h"><span class="crest" style="background:#d4a432">NC</span><span>Northcote</span></div>
+        </div>
+        <div class="fx">
+          <div class="side"><span class="crest" style="background:#7c2c2c">EH</span><span>East Heath</span></div>
+          <div class="score fut">vs</div>
+          <div class="side h"><span class="crest" style="background:#dc143c">RM</span><span>Riverside</span></div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1; overflow:hidden;">
+        <h3>League · Premier Division</h3>
+        <div class="lg-head"><span>#</span><span></span><span>Club</span><span>P</span><span>W</span><span>D</span><span>L</span><span>GD</span><span>Pts</span></div>
+        <div class="lg-row"><span class="p">1</span><span class="crest" style="background:#0a4d8b">PV</span><span>Portsea Vale</span><span class="num">31</span><span class="num">22</span><span class="num">5</span><span class="num">4</span><span class="num">+38</span><span class="num">71</span></div>
+        <div class="lg-row"><span class="p">2</span><span class="crest" style="background:#d4a432">NC</span><span>Northcote</span><span class="num">31</span><span class="num">20</span><span class="num">7</span><span class="num">4</span><span class="num">+29</span><span class="num">67</span></div>
+        <div class="lg-row you"><span class="p">3</span><span class="crest" style="background:#dc143c">RM</span><span>Riverside</span><span class="num">31</span><span class="num">19</span><span class="num">7</span><span class="num">5</span><span class="num">+26</span><span class="num">64</span></div>
+        <div class="lg-row"><span class="p">4</span><span class="crest" style="background:#7c2c2c">EH</span><span>East Heath</span><span class="num">31</span><span class="num">18</span><span class="num">7</span><span class="num">6</span><span class="num">+21</span><span class="num">61</span></div>
+        <div class="lg-row"><span class="p">5</span><span class="crest" style="background:#2c4f7c">FB</span><span>Fairbrook</span><span class="num">31</span><span class="num">16</span><span class="num">9</span><span class="num">6</span><span class="num">+15</span><span class="num">57</span></div>
+        <div class="lg-row"><span class="p">6</span><span class="crest" style="background:#3a6b3a">KW</span><span>Kingswood</span><span class="num">31</span><span class="num">14</span><span class="num">8</span><span class="num">9</span><span class="num">+6</span><span class="num">50</span></div>
+        <div class="lg-row"><span class="p">7</span><span class="crest" style="background:#5b3a7c">AM</span><span>Ashmere</span><span class="num">31</span><span class="num">12</span><span class="num">10</span><span class="num">9</span><span class="num">+3</span><span class="num">46</span></div>
+      </div>
+
+      <div class="card">
+        <h3>Inbox <span class="meta">3 new</span></h3>
+        <div class="inbox-row"><span class="dot new"></span><div><div class="t">Højlund: knee strain, ~2 weeks</div><div class="s">Medical · Dr. Foley</div></div><div class="time">10:42</div></div>
+        <div class="inbox-row"><span class="dot new"></span><div><div class="t">Scout report: J. Eze, Fulham</div><div class="s">Scouting · S. Wilson</div></div><div class="time">09:18</div></div>
+        <div class="inbox-row"><span class="dot new"></span><div><div class="t">Board: Quarterly review on Tue</div><div class="s">Board</div></div><div class="time">Yest.</div></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- STATUS -->
+  <div class="status">
+    <span class="dot"></span><span>SAVE · auto · 11:58</span>
+    <span style="color:var(--ink-5)">·</span>
+    <span>BUILD 0.2.31-touchline</span>
+    <span style="color:var(--ink-5)">·</span>
+    <span>1440 × 900 · standard tier</span>
+    <span class="spacer"></span>
+    <span>FPS 60</span>
+    <span style="color:var(--ink-5)">·</span>
+    <span>RAM 1.2 GB</span>
+  </div>
+</div>
+
+<!-- ===================== PALETTE ===================== -->
+<div class="palette-wrap">
+  <div class="palette" role="dialog" aria-label="Command palette">
+
+    <!-- prompt -->
+    <div class="p-prompt">
+      <div class="p-caret">›</div>
+      <input class="p-input" id="p-input" type="text" placeholder="Search players, screens, actions…" spellcheck="false" autocomplete="off">
+      <div class="p-badge"><span style="color:var(--ink-4)">⌘</span>K</div>
+    </div>
+
+    <!-- scopes -->
+    <div class="p-scopes" id="p-scopes">
+      <div class="p-scope on" data-scope="all">All <span class="ct" id="ct-all">0</span></div>
+      <div class="p-scope" data-scope="screen">Screens <span class="ct" id="ct-screen">0</span></div>
+      <div class="p-scope" data-scope="person">People <span class="ct" id="ct-person">0</span></div>
+      <div class="p-scope" data-scope="action">Actions <span class="ct" id="ct-action">0</span></div>
+      <div class="p-scope" data-scope="club">Clubs <span class="ct" id="ct-club">0</span></div>
+      <div class="p-scope" data-scope="comp">Comps <span class="ct" id="ct-comp">0</span></div>
+      <span class="hint"><span class="k">Tab</span>cycle scope</span>
+    </div>
+
+    <!-- results -->
+    <div class="p-results" id="p-results"></div>
+
+    <!-- footer -->
+    <div class="p-foot">
+      <span class="item"><span class="k">↑</span><span class="k">↓</span>navigate</span>
+      <span class="item"><span class="k">↵</span>open</span>
+      <span class="item"><span class="k">⌘ ↵</span>open in new pane</span>
+      <span class="item"><span class="k">esc</span>close</span>
+      <span class="spacer"></span>
+      <span class="ai"><span class="pulse"></span>indexed 18,422 entities</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== DATA + LOGIC ===================== -->
+<script>
+/* -------------------------------------------------------------
+   Command palette — index, filter, keyboard nav, scopes
+   ------------------------------------------------------------- */
+
+const DATA = [
+  /* SCREENS — internal navigation, marked with > */
+  { type:'screen', title:'Squad → First XI',          sub:'tabular roster · attribute view', keys:['squad first xi roster players'] },
+  { type:'screen', title:'Squad → Contracts',         sub:'wages · expiries · clauses',      keys:['squad contracts wages salary expiry'] },
+  { type:'screen', title:'Squad → Medical centre',    sub:'injuries · recovery · risk',      keys:['squad medical injuries recovery'] },
+  { type:'screen', title:'Tactics → Formation editor',sub:'pitch · roles · instructions',    keys:['tactics formation pitch instructions roles'] },
+  { type:'screen', title:'Tactics → Set pieces',      sub:'corners · free kicks · penalties',keys:['tactics set pieces corners free kicks penalties'] },
+  { type:'screen', title:'Training → Weekly schedule',sub:'sessions · intensity · focus',    keys:['training schedule sessions intensity'] },
+  { type:'screen', title:'Training → Individual',     sub:'per-player focus areas',          keys:['training individual focus'] },
+  { type:'screen', title:'Scouting → Reports',        sub:'open assignments · ranked',       keys:['scouting reports assignments scouts'] },
+  { type:'screen', title:'Scouting → Shortlist',      sub:'47 players watched',              keys:['scouting shortlist watch list watched'] },
+  { type:'screen', title:'Transfer Centre',           sub:'window day 14 of 31',             keys:['transfers transfer centre market window'] },
+  { type:'screen', title:'Finances → Overview',       sub:'budget · wages · sponsors',       keys:['finances budget wages sponsors money'] },
+  { type:'screen', title:'Finances → Wage breakdown', sub:'by squad role · projection',      keys:['finances wages salary breakdown'] },
+  { type:'screen', title:'Inbox',                     sub:'3 unread · 14 archived',          keys:['inbox messages news email'] },
+  { type:'screen', title:'Board → Confidence',        sub:'objectives · approval · risk',    keys:['board confidence objectives approval'] },
+  { type:'screen', title:'Staff → Coaches',           sub:'8 coaching staff',                keys:['staff coaches backroom'] },
+  { type:'screen', title:'Match Centre',              sub:'pre-match team-sheet',            keys:['match centre matchday team sheet'] },
+  { type:'screen', title:'Calendar',                  sub:'season · fixtures · windows',     keys:['calendar fixtures schedule season'] },
+  { type:'screen', title:'World → Other leagues',     sub:'42 leagues active',               keys:['world other leagues international'] },
+  { type:'screen', title:'History',                   sub:'past saves · achievements',       keys:['history past records achievements'] },
+  { type:'screen', title:'Settings → UI scale',       sub:'90 · 100 · 110 · 125%',           keys:['settings ui scale preferences accessibility'] },
+  { type:'screen', title:'Settings → Skins',          sub:'4 installed · 11 available',      keys:['settings skins themes customisation'] },
+
+  /* PEOPLE — players + key staff. portrait initials in icon. */
+  { type:'person', title:'Bukayo Saka',     sub:'AM (R) · Arsenal · 22 · ★★★★½', kind:'star',    keys:['saka bukayo arsenal star winger'] },
+  { type:'person', title:'Phil Foden',      sub:'AM (C) · Man City · 24 · ★★★★½', kind:'star',   keys:['phil foden city ten winger'] },
+  { type:'person', title:'Bruno Fernandes', sub:'AM (C) · Riverside · 30 · captain · ★★★★', kind:'captain', keys:['bruno fernandes ten riverside captain'] },
+  { type:'person', title:'Kobbie Mainoo',   sub:'CM · Riverside · 19 · wonderkid', kind:'wonderkid', keys:['kobbie mainoo riverside young wonderkid eight'] },
+  { type:'person', title:'Rasmus Højlund',  sub:'ST · Riverside · 21 · injured 2w', kind:'injured', keys:['hojlund rasmus riverside striker nine injured'] },
+  { type:'person', title:'Marcus Rashford', sub:'LW · Riverside · 26', keys:['rashford marcus left winger riverside'] },
+  { type:'person', title:'Alejandro Garnacho', sub:'RW · Riverside · 20', keys:['garnacho right winger riverside'] },
+  { type:'person', title:'André Onana',     sub:'GK · Riverside · 28', keys:['onana keeper goalkeeper one riverside'] },
+  { type:'person', title:'Lisandro Martínez',sub:'CB · Riverside · 27', keys:['martinez lisandro centre back four riverside'] },
+  { type:'person', title:'Casemiro',        sub:'CDM · Riverside · 33 · fading', kind:'fading', keys:['casemiro brazilian midfield riverside'] },
+  { type:'person', title:'Jarrad Branthwaite', sub:'CB · Everton · 22 · target', kind:'target', keys:['branthwaite everton centre back target'] },
+  { type:'person', title:'João Neves',      sub:'CM · Benfica · 20 · wonderkid', kind:'wonderkid', keys:['joao neves benfica midfield wonderkid'] },
+  { type:'person', title:'Pedri',           sub:'CM · Barcelona · 22', keys:['pedri barcelona midfield'] },
+  { type:'person', title:'Eberechi Eze',    sub:'AM (C) · Fulham · 26 · scouted', keys:['eberechi eze fulham ten attacking'] },
+  { type:'person', title:'Sam Wilson',      sub:'Chief Scout · Riverside',          kind:'staff', keys:['sam wilson chief scout staff'] },
+  { type:'person', title:'Dr. Eleanor Foley',sub:'Head of Medical · Riverside',     kind:'staff', keys:['eleanor foley doctor medical staff'] },
+
+  /* CLUBS */
+  { type:'club', title:'Portsea Vale',  sub:'Premier Division · 1st · Rep 5★',  keys:['portsea vale top league rivals'] },
+  { type:'club', title:'Northcote',     sub:'Premier Division · 2nd · Rep 4½★', keys:['northcote rivals'] },
+  { type:'club', title:'East Heath',    sub:'Premier Division · 4th',           keys:['east heath rivals premier'] },
+  { type:'club', title:'Fairbrook',     sub:'Premier Division · 5th',           keys:['fairbrook rivals premier'] },
+  { type:'club', title:'Kingswood',     sub:'Premier Division · 6th',           keys:['kingswood rivals premier'] },
+  { type:'club', title:'Ashmere',       sub:'Premier Division · 7th',           keys:['ashmere rivals premier'] },
+
+  /* COMPETITIONS */
+  { type:'comp', title:'Premier Division',     sub:'Domestic league · 20 clubs',       keys:['premier league competition'] },
+  { type:'comp', title:'Continental Cup',      sub:'European · Quarter-final · away leg next', keys:['continental cup europe european champions league'] },
+  { type:'comp', title:'Domestic Cup',         sub:'Knockout · Semi-final',            keys:['domestic cup fa knockout'] },
+
+  /* ACTIONS — contextual, including templated "to X" rows */
+  { type:'action', title:'Continue to next day', sub:'⌘ space anywhere', keys:['continue advance day next'] },
+  { type:'action', title:'Quick save',           sub:'⌘ S', keys:['quick save game'] },
+  { type:'action', title:'Open Match Centre',    sub:'jump to live engine', keys:['open match centre live engine'] },
+  { type:'action', title:'Make transfer offer to Bukayo Saka',   sub:'£75m suggested', keys:['offer bid saka transfer'] },
+  { type:'action', title:'Make transfer offer to Jarrad Branthwaite', sub:'£42m suggested', keys:['offer bid branthwaite transfer'] },
+  { type:'action', title:'Offer contract to Bukayo Saka',        sub:'£280k/wk · 5yr est.', keys:['offer contract saka new deal'] },
+  { type:'action', title:'Offer contract to Phil Foden',         sub:'£330k/wk · 5yr est.', keys:['offer contract foden new deal'] },
+  { type:'action', title:'Add Bukayo Saka to shortlist',         sub:'Watchlist · primary target', keys:['shortlist add saka watch'] },
+  { type:'action', title:'Add Eberechi Eze to shortlist',        sub:'Watchlist · backup', keys:['shortlist add eze watch'] },
+  { type:'action', title:'Set instructions for Marcus Rashford', sub:'Roam · Cut inside · High press', keys:['instructions rashford set'] },
+  { type:'action', title:'Set instructions for Alejandro Garnacho', sub:'Stay wider · Hold position', keys:['instructions garnacho set'] },
+  { type:'action', title:'Rest Casemiro',                        sub:'Skip next training session', keys:['rest casemiro recover'] },
+  { type:'action', title:'Praise Kobbie Mainoo',                 sub:'Last match · 9.1', keys:['praise mainoo conversation'] },
+  { type:'action', title:'Loan out Marcus Rashford',             sub:'List · Jan window', keys:['loan rashford list out'] },
+  { type:'action', title:'Compare Bruno F. with Pedri',          sub:'Side-by-side · 23 attrs', keys:['compare bruno pedri side by side'] },
+  { type:'action', title:'Set captain',                          sub:'currently · Bruno Fernandes', keys:['captain set armband'] },
+  { type:'action', title:'Move player to U21s',                  sub:'pick player…', keys:['u21 reserves move out'] },
+  { type:'action', title:'Renew sponsorship · Kit deal',         sub:'expires end of season', keys:['sponsor kit renew commercial'] },
+  { type:'action', title:'Request transfer budget increase',     sub:'board · risk · medium', keys:['budget board request money increase'] },
+
+  /* GUIDES */
+  { type:'guide', title:'How player negotiation works', sub:'help · 2 min read', keys:['guide help negotiation contract'] },
+  { type:'guide', title:'Reading the attribute scale',  sub:'help · 1 min read', keys:['guide help attribute 1 20 scale colour'] },
+  { type:'guide', title:'Set-piece designer · keyboard shortcuts', sub:'help', keys:['guide help keyboard shortcut set piece'] },
+];
+
+const TYPE_META = {
+  screen: { letter: '›', label: 'Screen', cls: 'type-screen' },
+  action: { letter: '⌘', label: 'Action', cls: 'type-action' },
+  person: { letter: '◉', label: 'Person', cls: 'type-person' },
+  club:   { letter: '◐', label: 'Club',   cls: 'type-club' },
+  comp:   { letter: '◇', label: 'Comp',   cls: 'type-comp' },
+  guide:  { letter: '?', label: 'Guide',  cls: 'type-guide' },
+};
+
+const GROUP_ORDER = ['screen','person','club','comp','action','guide'];
+const GROUP_LABELS = {
+  screen: 'Screens',
+  person: 'People',
+  club:   'Clubs',
+  comp:   'Competitions',
+  action: 'Actions',
+  guide:  'Help & guides',
+};
+
+/* ---------- recent (session-local) ---------- */
+let RECENT = ['Tactics → Formation editor','Bruno Fernandes','Make transfer offer to Bukayo Saka','Inbox','Continue to next day'];
+
+/* ---------- state ---------- */
+const state = {
+  q: '',
+  scope: 'all',
+  activeIdx: 0,
+  visible: [], // flat list of result items in order shown
+};
+
+/* ---------- score / filter ---------- */
+function score(item, q) {
+  if (!q) return 1; // recent ordering handles ranking when empty
+  const ql = q.toLowerCase();
+  const hay = (item.title + ' ' + (item.sub||'') + ' ' + (item.keys?item.keys.join(' '):'')).toLowerCase();
+  if (!hay.includes(ql)) {
+    // also try token-wise prefix match
+    const toks = ql.split(/\s+/).filter(Boolean);
+    if (!toks.every(t => hay.includes(t))) return 0;
+  }
+  let s = 0;
+  if (item.title.toLowerCase().startsWith(ql)) s += 100;
+  else if (item.title.toLowerCase().includes(ql)) s += 60;
+  else s += 20;
+  if (item.type === 'action' && (ql.length > 2)) s += 6;
+  if (item.kind === 'star' || item.kind === 'wonderkid') s += 4;
+  return s;
+}
+
+function highlight(text, q) {
+  if (!q) return escapeHtml(text);
+  const i = text.toLowerCase().indexOf(q.toLowerCase());
+  if (i < 0) return escapeHtml(text);
+  return escapeHtml(text.slice(0, i)) +
+    '<em>' + escapeHtml(text.slice(i, i + q.length)) + '</em>' +
+    escapeHtml(text.slice(i + q.length));
+}
+function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- icons ---------- */
+function iconHtml(item) {
+  if (item.type === 'person') {
+    const initials = item.title.split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    return `<div class="icon portrait"><span>${initials}</span></div>`;
+  }
+  const m = TYPE_META[item.type];
+  return `<div class="icon ${m.cls}">${m.letter}</div>`;
+}
+
+/* ---------- chip pills for sub line ---------- */
+function subHtml(item, q) {
+  let extra = '';
+  if (item.kind === 'star') extra = ` <span class="pill brand">key target</span>`;
+  if (item.kind === 'wonderkid') extra = ` <span class="pill brand">wonderkid</span>`;
+  if (item.kind === 'captain') extra = ` <span class="pill brand">captain</span>`;
+  if (item.kind === 'injured') extra = ` <span class="pill danger">injured</span>`;
+  if (item.kind === 'fading') extra = ` <span class="pill warn">fading</span>`;
+  if (item.kind === 'target') extra = ` <span class="pill warn">scouted</span>`;
+  if (item.kind === 'staff') extra = ` <span class="pill">staff</span>`;
+  const sub = item.sub ? highlight(item.sub, q) : '';
+  return `<div class="sub">${sub}${extra}</div>`;
+}
+
+/* ---------- render ---------- */
+function render() {
+  const q = state.q.trim();
+  let pool = DATA;
+  if (state.scope !== 'all') pool = pool.filter(d => d.type === state.scope);
+
+  // counts per type for chips
+  const counts = { all:0, screen:0, action:0, person:0, club:0, comp:0, guide:0 };
+  let scored = [];
+  for (const item of DATA) {
+    const s = score(item, q);
+    if (s > 0) {
+      counts.all++;
+      counts[item.type]++;
+    }
+  }
+  for (const item of pool) {
+    const s = score(item, q);
+    if (s > 0) scored.push({ item, s });
+  }
+  // sort by score desc, tie-break by recent
+  scored.sort((a,b) => {
+    if (b.s !== a.s) return b.s - a.s;
+    const ra = RECENT.indexOf(a.item.title), rb = RECENT.indexOf(b.item.title);
+    if (ra === -1 && rb === -1) return 0;
+    if (ra === -1) return 1;
+    if (rb === -1) return -1;
+    return ra - rb;
+  });
+
+  // update chip counts
+  Object.keys(counts).forEach(k => {
+    const el = document.getElementById('ct-' + k);
+    if (el) el.textContent = counts[k];
+  });
+
+  // group
+  const byGroup = {};
+  for (const r of scored) {
+    (byGroup[r.item.type] = byGroup[r.item.type] || []).push(r.item);
+  }
+
+  const out = document.getElementById('p-results');
+  const flat = [];
+
+  // Empty
+  if (scored.length === 0) {
+    out.innerHTML = `<div class="p-empty">
+      <div class="big">No matches</div>
+      <div>Nothing in 18,422 indexed entities for <b style="color:var(--ink-1)">"${escapeHtml(q)}"</b>.</div>
+      <div class="sug">try · "saka" · "training" · "offer contract"</div>
+    </div>`;
+    state.visible = [];
+    return;
+  }
+
+  // Recent block when no query
+  let html = '';
+  if (!q) {
+    const recentItems = RECENT
+      .map(t => DATA.find(d => d.title === t))
+      .filter(Boolean)
+      .filter(d => state.scope === 'all' || d.type === state.scope);
+    if (recentItems.length) {
+      html += `<div class="p-group"><span>Recent</span><span class="ct">${recentItems.length}</span></div>`;
+      for (const it of recentItems) {
+        flat.push(it);
+        html += renderItem(it, q, flat.length - 1);
+      }
+    }
+    // also show suggested groups when no query
+    for (const g of GROUP_ORDER) {
+      if (!byGroup[g]) continue;
+      const items = byGroup[g].filter(it => !RECENT.includes(it.title)).slice(0, g==='screen'?6:4);
+      if (!items.length) continue;
+      html += `<div class="p-group"><span>${GROUP_LABELS[g]}</span><span class="ct">${byGroup[g].length}</span></div>`;
+      for (const it of items) {
+        flat.push(it);
+        html += renderItem(it, q, flat.length - 1);
+      }
+    }
+  } else {
+    for (const g of GROUP_ORDER) {
+      if (!byGroup[g]) continue;
+      html += `<div class="p-group"><span>${GROUP_LABELS[g]}</span><span class="ct">${byGroup[g].length}</span></div>`;
+      for (const it of byGroup[g]) {
+        flat.push(it);
+        html += renderItem(it, q, flat.length - 1);
+      }
+    }
+  }
+
+  out.innerHTML = html;
+  state.visible = flat;
+  if (state.activeIdx >= flat.length) state.activeIdx = 0;
+  highlightActive();
+}
+
+function renderItem(item, q, idx) {
+  const m = TYPE_META[item.type];
+  return `<div class="p-item" data-idx="${idx}">
+    ${iconHtml(item)}
+    <div class="label">
+      <div class="title">${highlight(item.title, q)}</div>
+      ${subHtml(item, q)}
+    </div>
+    <div class="meta">
+      <span class="open-hint">${m.label.toLowerCase()}</span>
+      <span class="enter">↵</span>
+    </div>
+  </div>`;
+}
+
+function highlightActive() {
+  const items = document.querySelectorAll('.p-item');
+  items.forEach(el => el.classList.remove('active'));
+  const target = document.querySelector(`.p-item[data-idx="${state.activeIdx}"]`);
+  if (target) {
+    target.classList.add('active');
+    target.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+/* ---------- keyboard / interaction ---------- */
+const input = document.getElementById('p-input');
+input.addEventListener('input', e => {
+  state.q = e.target.value;
+  state.activeIdx = 0;
+  render();
+});
+
+document.addEventListener('keydown', (e) => {
+  const open = document.body.dataset.palette === 'open';
+  if (!open) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      openPalette();
+    }
+    return;
+  }
+  if (e.key === 'Escape') { closePalette(); return; }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    state.activeIdx = Math.min(state.visible.length - 1, state.activeIdx + 1);
+    highlightActive();
+    return;
+  }
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    state.activeIdx = Math.max(0, state.activeIdx - 1);
+    highlightActive();
+    return;
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    cycleScope(e.shiftKey ? -1 : 1);
+    return;
+  }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const item = state.visible[state.activeIdx];
+    if (item) commitItem(item);
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    closePalette();
+    return;
+  }
+});
+
+function cycleScope(dir) {
+  const scopes = ['all','screen','person','action','club','comp'];
+  let i = scopes.indexOf(state.scope);
+  i = (i + dir + scopes.length) % scopes.length;
+  setScope(scopes[i]);
+}
+function setScope(s) {
+  state.scope = s;
+  state.activeIdx = 0;
+  document.querySelectorAll('.p-scope').forEach(el => {
+    el.classList.toggle('on', el.dataset.scope === s);
+  });
+  render();
+}
+
+document.querySelectorAll('.p-scope').forEach(el => {
+  el.addEventListener('click', () => setScope(el.dataset.scope));
+});
+
+document.getElementById('p-results').addEventListener('mousemove', (e) => {
+  const row = e.target.closest('.p-item');
+  if (!row) return;
+  const idx = +row.dataset.idx;
+  if (idx !== state.activeIdx) {
+    state.activeIdx = idx;
+    highlightActive();
+  }
+});
+document.getElementById('p-results').addEventListener('click', (e) => {
+  const row = e.target.closest('.p-item');
+  if (!row) return;
+  const idx = +row.dataset.idx;
+  const item = state.visible[idx];
+  if (item) commitItem(item);
+});
+
+function commitItem(item) {
+  // record in recent
+  RECENT = [item.title, ...RECENT.filter(t => t !== item.title)].slice(0, 5);
+  // fake nav — flash the chrome
+  const ch = document.querySelector('.chrome');
+  ch.animate(
+    [{ boxShadow: 'inset 0 -2px 0 0 var(--brand-400)' }, { boxShadow: 'inset 0 -2px 0 0 transparent' }],
+    { duration: 380, easing: 'ease-out' }
+  );
+  closePalette();
+}
+
+function openPalette() {
+  document.body.dataset.palette = 'open';
+  input.value = state.q;
+  setTimeout(() => input.focus(), 10);
+  render();
+}
+function closePalette() {
+  document.body.dataset.palette = 'closed';
+  input.blur();
+}
+
+document.getElementById('open-kbd').addEventListener('click', openPalette);
+
+// init
+render();
+input.focus();
+</script>
+</body>
+</html>

@@ -1177,6 +1177,27 @@ Use this file to track the **current folder structure**, not legacy per-version 
 
 *(June 12, 2026: `docs/tracking/dotnet-ci-quarantine.md` added — human-readable quarantine ledger for the dotnet CI gate; machine mirror at `tools/dotnet-ci/known-failures.txt`.)*
 
+## Design References
+
+Non-normative visual references. Nothing here is on a build path, read by the sim, or part of any
+snapshot/digest; where a reference and an APPROVED spec disagree, the spec wins.
+
+| File / folder | Purpose |
+|---------------|---------|
+| `docs/design/ui-mockups/README.md` | Index + scope contract for the UI mockups (v1.0, Jul 25, 2026) |
+| `docs/design/ui-mockups/Soccer Manager Pro - Design System.html` | Design-system page: color, type, spacing, components, data-viz, match-day HUD; two visual directions (`stadium` / `touchline`, neither chosen yet) |
+| `docs/design/ui-mockups/Desktop Guardrails.html` | Desktop layout/resolution guardrails (1920×1080 reference stage) |
+| `docs/design/ui-mockups/Command Palette.html` | Global command-palette / navigation pattern |
+| `docs/design/ui-mockups/*.html` (11 screens) | Screen mockups — Squad, Tactics, Training, Scouting, Transfers, Club, Club Finances, Club Staff, Club Board Room, Club History, World |
+| `docs/design/ui-mockups/assets/` | Shared mockup assets — 8 `.css` (incl. `tokens.css`), 3 `.js`, 4 `.jsx` tweak panels |
+| `docs/design/ui-mockups/screenshots/squad-check.png` | Reference capture of the squad screen |
+
+Landed July 25, 2026 as the visual reference for UI / Client Framework **#38** (framework slice,
+APPROVED Jul 22, 2026) and the Wave-7 screen specs it defers to (#38 §7.1). All mockup data is
+hardcoded and illustrative.
+
+---
+
 ## Planning Documents
 
 | File |

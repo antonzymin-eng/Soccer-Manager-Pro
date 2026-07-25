@@ -1,0 +1,180 @@
+/* ============================================================================
+   SOCCER MANAGER PRO — DESIGN TOKENS
+   Two directions: "stadium" (broadcast graphics) and "touchline" (analyst tool)
+   Both share core neutrals/status; differ in accents, type, and decoration.
+   ============================================================================ */
+
+:root {
+  /* spacing — 4px base, dense (8/10) */
+  --space-0: 2px;
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 20px;
+  --space-7: 24px;
+  --space-8: 32px;
+  --space-9: 40px;
+  --space-10: 56px;
+  --space-11: 72px;
+  --space-12: 96px;
+
+  /* radii — sharp by default, slight rounding allowed */
+  --r-0: 0;
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 6px;
+  --r-4: 10px;
+  --r-pill: 999px;
+
+  /* type sizes — broadcast scale */
+  --t-10: 10px;
+  --t-11: 11px;
+  --t-12: 12px;
+  --t-13: 13px;
+  --t-14: 14px;
+  --t-16: 16px;
+  --t-18: 18px;
+  --t-20: 20px;
+  --t-24: 24px;
+  --t-28: 28px;
+  --t-32: 32px;
+  --t-40: 40px;
+  --t-48: 48px;
+  --t-64: 64px;
+  --t-96: 96px;
+  --t-128: 128px;
+
+  /* base neutrals — true dark, slightly cool */
+  --bg-0: #07090c;
+  --bg-1: #0d1015;
+  --bg-2: #14181f;
+  --bg-3: #1c2129;
+  --bg-4: #262c36;
+  --bg-5: #323844;
+
+  --line-1: rgba(255, 255, 255, 0.06);
+  --line-2: rgba(255, 255, 255, 0.10);
+  --line-3: rgba(255, 255, 255, 0.16);
+  --line-4: rgba(255, 255, 255, 0.24);
+
+  --ink-1: #f4f6fa;          /* primary text */
+  --ink-2: #c1c7d2;          /* secondary */
+  --ink-3: #8a93a3;          /* tertiary / labels */
+  --ink-4: #5a6371;          /* disabled / hint */
+  --ink-5: #3a414d;          /* very low */
+
+  /* brand — electric green */
+  --brand-50:  #e6fff2;
+  --brand-100: #b8ffd6;
+  --brand-200: #7dffb6;
+  --brand-300: #3cff97;
+  --brand-400: #00ff88;       /* primary brand */
+  --brand-500: #00e07a;
+  --brand-600: #00b462;
+  --brand-700: #008549;
+  --brand-800: #005c33;
+  --brand-900: #002e19;
+  --brand-glow: 0 0 24px rgba(0, 255, 136, 0.35);
+  --brand-tint: rgba(0, 255, 136, 0.10);
+  --brand-tint-strong: rgba(0, 255, 136, 0.18);
+
+  /* semantic / status */
+  --pos-400: #2ee572;         /* form W, gain, up */
+  --pos-tint: rgba(46, 229, 114, 0.12);
+  --neu-400: #f5b942;         /* form D, hold, caution */
+  --neu-tint: rgba(245, 185, 66, 0.12);
+  --neg-400: #ff4d5a;         /* form L, loss, alert */
+  --neg-tint: rgba(255, 77, 90, 0.12);
+  --info-400: #4aa8ff;        /* info, advise */
+  --info-tint: rgba(74, 168, 255, 0.12);
+  --gold-400: #ffc933;        /* trophy, highlight */
+  --gold-tint: rgba(255, 201, 51, 0.12);
+
+  /* attribute scale — 1 to 20 with colorblind-leaning hue ramp
+     low = muted slate → mid = amber → high = brand green */
+  --attr-1:  #4a5260;
+  --attr-5:  #6b6a4f;
+  --attr-8:  #a08d3e;
+  --attr-11: #d4a834;
+  --attr-14: #b6c43a;
+  --attr-17: #4ddb70;
+  --attr-20: #00ff88;
+
+  /* data viz categorical (xG, possession, etc) */
+  --viz-1: #00ff88;
+  --viz-2: #4aa8ff;
+  --viz-3: #ffc933;
+  --viz-4: #ff4d5a;
+  --viz-5: #b066ff;
+  --viz-6: #ff8a3c;
+
+  /* shadow / elevation */
+  --shadow-1: 0 1px 2px rgba(0,0,0,0.45);
+  --shadow-2: 0 4px 16px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.6);
+  --shadow-3: 0 16px 48px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.65);
+
+  /* fonts: shared display, diff body per direction */
+  --font-display: "Barlow Condensed", "Oswald", "Arial Narrow", sans-serif;
+  --font-mono:    "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+}
+
+/* ---------------------------------------------------------------------------
+   DIRECTION A — STADIUM (broadcast graphics package)
+   --------------------------------------------------------------------------- */
+[data-direction="stadium"] {
+  --font-body: "Barlow", "Inter", system-ui, sans-serif;
+
+  --accent-400: var(--brand-400);
+  --accent-tint: var(--brand-tint);
+  --accent-tint-strong: var(--brand-tint-strong);
+
+  /* Stadium leans on contrast — slightly punchier surfaces */
+  --bg-card: #161b24;
+  --bg-card-strong: #1f2632;
+  --bg-stripe: #11151c;
+
+  --hud-radius: var(--r-1);
+  --panel-radius: var(--r-2);
+  --button-radius: var(--r-1);
+
+  --label-tracking: 0.12em;
+  --label-weight: 700;
+  --label-case: uppercase;
+
+  --display-weight: 800;
+  --display-tracking: -0.02em;
+
+  /* diagonal lower-third skew */
+  --skew: -8deg;
+}
+
+/* ---------------------------------------------------------------------------
+   DIRECTION B — TOUCHLINE (analyst tool with broadcast accents)
+   --------------------------------------------------------------------------- */
+[data-direction="touchline"] {
+  --font-body: "IBM Plex Sans", "Geist", system-ui, sans-serif;
+
+  --accent-400: var(--brand-400);
+  --accent-tint: var(--brand-tint);
+  --accent-tint-strong: var(--brand-tint-strong);
+
+  /* Touchline is flatter — surfaces sit closer together */
+  --bg-card: #11151b;
+  --bg-card-strong: #181d25;
+  --bg-stripe: #0e1218;
+
+  --hud-radius: var(--r-2);
+  --panel-radius: var(--r-3);
+  --button-radius: var(--r-2);
+
+  --label-tracking: 0.08em;
+  --label-weight: 600;
+  --label-case: uppercase;
+
+  --display-weight: 700;
+  --display-tracking: -0.01em;
+
+  --skew: 0deg;
+}

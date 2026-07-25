@@ -1,0 +1,245 @@
+/* ============================================================================
+   DATA VIZ — attribute bars, form indicator, radar/pizza, sparkline,
+   heatmap mini, pitch positioning, xG curve
+   ============================================================================ */
+
+/* ---------- ATTRIBUTE BAR (1-20 scale) ---------- */
+.attr {
+  display: grid;
+  grid-template-columns: 110px 28px 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  font-size: var(--t-12);
+}
+.attr .name { color: var(--ink-2); }
+.attr .num {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-align: right;
+  color: var(--ink-1);
+  font-size: var(--t-13);
+}
+.attr .bar {
+  height: 6px;
+  background: var(--bg-3);
+  border-radius: 1px;
+  position: relative;
+  overflow: hidden;
+}
+.attr .bar > i {
+  position: absolute; inset: 0 auto 0 0;
+  background: var(--attr-fill, var(--attr-11));
+  border-radius: 1px;
+}
+.attr[data-range="excellent"] .num { color: var(--brand-400); }
+.attr[data-range="excellent"] .bar > i { background: var(--brand-400); }
+.attr[data-range="good"] .num { color: #b6c43a; }
+.attr[data-range="good"] .bar > i { background: #b6c43a; }
+.attr[data-range="ok"] .num { color: var(--neu-400); }
+.attr[data-range="ok"] .bar > i { background: var(--neu-400); }
+.attr[data-range="poor"] .num { color: var(--ink-3); }
+.attr[data-range="poor"] .bar > i { background: var(--ink-4); }
+
+/* compact attribute as a tile (squad table cell) */
+.attr-tile {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 26px; height: 22px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--t-12);
+  border-radius: var(--r-1);
+  color: var(--ink-2);
+  background: var(--bg-2);
+}
+.attr-tile.x20 { background: var(--brand-400); color: #001a0e; }
+.attr-tile.x18 { background: rgba(0,255,136,0.6); color: #001a0e; }
+.attr-tile.x16 { background: rgba(0,255,136,0.32); color: var(--brand-100); }
+.attr-tile.x14 { background: rgba(182,196,58,0.32); color: #d4dc6e; }
+.attr-tile.x12 { background: rgba(245,185,66,0.20); color: #ffd680; }
+.attr-tile.x10 { background: rgba(245,185,66,0.12); color: #c8a060; }
+.attr-tile.x8  { background: var(--bg-3); color: var(--ink-3); }
+.attr-tile.x6  { background: var(--bg-2); color: var(--ink-4); }
+
+/* ---------- STAR RATING (overall ability / potential) ---------- */
+.stars { display: inline-flex; gap: 2px; color: var(--gold-400); font-size: 14px; }
+.stars .s { color: var(--ink-5); }
+.stars .s.filled { color: var(--gold-400); }
+.stars .s.half { background: linear-gradient(90deg, var(--gold-400) 50%, var(--ink-5) 50%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* ---------- FORM PILLS (last 5 W/D/L) ---------- */
+.form {
+  display: inline-flex; gap: 3px;
+}
+.form .f {
+  width: 18px; height: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0;
+  border-radius: var(--r-1);
+}
+.form .f.w { background: var(--pos-400); color: #001a0e; }
+.form .f.d { background: var(--neu-400); color: #2a1f00; }
+.form .f.l { background: var(--neg-400); color: #fff; }
+.form .f.up { background: var(--bg-3); color: var(--ink-3); border: 1px dashed var(--line-3); }
+
+/* ---------- SPARKLINE container ---------- */
+.spark {
+  display: inline-block;
+  width: 80px; height: 24px;
+}
+
+/* ---------- MORALE / FITNESS BAR ---------- */
+.gauge {
+  display: inline-block;
+  width: 64px;
+  height: 4px;
+  background: var(--bg-3);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+.gauge > i {
+  position: absolute; inset: 0 auto 0 0;
+  background: var(--brand-400);
+  border-radius: 2px;
+}
+.gauge.warn > i { background: var(--neu-400); }
+.gauge.bad > i { background: var(--neg-400); }
+
+/* ---------- PITCH (formation diagram) ---------- */
+.pitch {
+  position: relative;
+  aspect-ratio: 7 / 10;
+  background:
+    linear-gradient(180deg, #0c2e1a 0%, #0a2618 100%);
+  border-radius: var(--panel-radius);
+  border: 1px solid var(--line-2);
+  overflow: hidden;
+}
+.pitch::before, .pitch::after {
+  content: ""; position: absolute; left: 50%; transform: translateX(-50%);
+  width: 60%; height: 18%;
+  border: 1px solid rgba(255,255,255,0.18);
+}
+.pitch::before { top: 0; border-top: none; }
+.pitch::after { bottom: 0; border-bottom: none; }
+.pitch .midline {
+  position: absolute; left: 0; right: 0; top: 50%;
+  border-top: 1px solid rgba(255,255,255,0.18);
+}
+.pitch .center {
+  position: absolute; left: 50%; top: 50%;
+  width: 80px; height: 80px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.pitch .pen-spot {
+  position: absolute; left: 50%;
+  width: 4px; height: 4px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+.pitch .pen-spot.top { top: 13%; }
+.pitch .pen-spot.bot { bottom: 13%; }
+
+.pitch .stripes {
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255,255,255,0.02) 0,
+    rgba(255,255,255,0.02) 8%,
+    transparent 8%,
+    transparent 16%
+  );
+}
+
+.pitch .marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.pitch .marker .dot {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--bg-card-strong);
+  border: 2px solid var(--brand-400);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--t-13);
+  color: var(--ink-1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+.pitch .marker.captain .dot {
+  background: var(--brand-400);
+  color: #001a0e;
+}
+.pitch .marker .name {
+  font-family: var(--font-body);
+  font-size: var(--t-10);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-1);
+  background: rgba(0,0,0,0.5);
+  padding: 1px 5px;
+  border-radius: 1px;
+  white-space: nowrap;
+}
+
+/* ---------- HEATMAP (mini) ---------- */
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+  gap: 1px;
+  aspect-ratio: 7 / 10;
+  background: #0a2618;
+  border-radius: var(--panel-radius);
+  padding: 4px;
+  border: 1px solid var(--line-2);
+}
+.heatmap .c { background: rgba(255,255,255,0.02); }
+.heatmap .c[data-h="1"] { background: rgba(0,255,136,0.06); }
+.heatmap .c[data-h="2"] { background: rgba(0,255,136,0.14); }
+.heatmap .c[data-h="3"] { background: rgba(0,255,136,0.25); }
+.heatmap .c[data-h="4"] { background: rgba(0,255,136,0.40); }
+.heatmap .c[data-h="5"] { background: rgba(0,255,136,0.62); }
+.heatmap .c[data-h="6"] { background: rgba(0,255,136,0.85); }
+
+/* ---------- POSSESSION DONUT / SPLIT BAR ---------- */
+.split-bar {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  border-radius: 1px;
+  overflow: hidden;
+  background: var(--bg-3);
+}
+.split-bar > i { display: block; height: 100%; }
+
+/* ---------- PERCENTAGE RING ---------- */
+.ring {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 64px; height: 64px;
+  position: relative;
+}
+.ring svg { transform: rotate(-90deg); }
+.ring .ring-track { stroke: var(--bg-3); }
+.ring .ring-fill { stroke: var(--brand-400); transition: stroke-dashoffset 400ms; }
+.ring .ring-num {
+  position: absolute;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--t-18);
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}

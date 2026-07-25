@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Transfers — Soccer Manager Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/squad.css">
+<script>
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "view": "incoming",
+  "density": "comfortable",
+  "showFees": true
+}/*EDITMODE-END*/;
+</script>
+<style>
+/* ── page layout ── */
+.stage { grid-template-rows: 52px 34px 44px 1fr 32px; }
+
+.tr-main {
+  display: grid;
+  grid-template-columns: 320px 1fr 430px;
+  min-height: 0; overflow: hidden;
+}
+.tr-col { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.tr-col + .tr-col { border-left: 1px solid var(--line-2); }
+.tr-col-left  { padding: 14px 15px; gap: 10px; overflow-y: auto; background: var(--bg-1); }
+.tr-col-center { background: var(--bg-0); }
+.tr-col-right  { background: var(--bg-1); overflow-y: auto; }
+
+/* ── Budget cards ── */
+.budget-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bkpi {
+  background: var(--bg-card); border: 1px solid var(--line-2);
+  border-radius: var(--r-3); padding: 10px 12px;
+}
+.bkpi.wide { grid-column: span 2; }
+.bkpi .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-4); }
+.bkpi .v { font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 1.05; margin-top: 2px; }
+.bkpi .s { font-size: 10px; color: var(--ink-3); margin-top: 2px; }
+.c-pos { color: var(--pos-400); }
+.c-neg { color: var(--neg-400); }
+.c-neu { color: var(--neu-400); }
+.c-brand { color: var(--brand-400); }
+.c-ink  { color: var(--ink-1); }
+
+.bb-wrap { margin-top: 8px; }
+.bb-labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); margin-bottom: 4px; }
+.bb-track { height: 6px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; display: flex; }
+.bb-spent  { height: 100%; background: var(--neg-400); }
+.bb-remain { height: 100%; background: var(--brand-400); }
+
+/* ── Section card ── */
+.scrd {
+  background: var(--bg-card); border: 1px solid var(--line-2);
+  border-radius: var(--r-3); padding: 12px 14px; flex-shrink: 0;
+}
+.scrd.grow { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.scrd h5 {
+  font-family: var(--font-display); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3);
+  margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center;
+}
+.scrd h5 .meta { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: 0.04em; text-transform: none; font-weight: 400; }
+
+/* ── Window summary rows ── */
+.ws-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 5px 0; border-top: 1px solid var(--line-1); font-size: 12px; color: var(--ink-2);
+}
+.ws-row:first-child { border-top: none; }
+.ws-row .wv { font-family: var(--font-mono); font-size: 11.5px; }
+
+/* ── Activity feed ── */
+.act-list { display: flex; flex-direction: column; gap: 5px; overflow-y: auto; flex: 1; min-height: 0; }
+.act-item { display: flex; align-items: flex-start; gap: 9px; padding: 7px 9px; background: var(--bg-2); border-radius: var(--r-2); flex-shrink: 0; }
+.act-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.ad-brand { background: var(--brand-400); box-shadow: 0 0 5px rgba(0,255,136,0.5); }
+.ad-pos   { background: var(--pos-400); }
+.ad-neu   { background: var(--neu-400); }
+.ad-neg   { background: var(--neg-400); }
+.ad-info  { background: var(--info-400); }
+.act-title { font-size: 11.5px; color: var(--ink-1); line-height: 1.35; }
+.act-time  { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); margin-top: 1px; }
+
+/* ── Stage pills ── */
+.stg {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  padding: 2px 8px; border-radius: var(--r-pill); letter-spacing: 0.05em;
+  display: inline-flex; align-items: center; white-space: nowrap;
+}
+.stg-shortlist  { background: var(--bg-4); color: var(--ink-3); }
+.stg-approach   { background: var(--info-tint); color: var(--info-400); }
+.stg-bid        { background: var(--neu-tint); color: var(--neu-400); }
+.stg-negotiating{ background: rgba(255,140,0,0.12); color: #ff8c00; }
+.stg-agreed     { background: var(--pos-tint); color: var(--pos-400); }
+.stg-medical    { background: var(--brand-tint-strong); color: var(--brand-400); }
+.stg-signed     { background: var(--brand-400); color: #001a0a; }
+.stg-rejected   { background: var(--neg-tint); color: var(--neg-400); }
+
+/* ── Transfer table ── */
+:root {
+  --tr-grid: 22px 34px 1fr 28px 126px 74px 74px 106px 112px 46px;
+}
+.tr-table-head, .tr-row {
+  display: grid;
+  grid-template-columns: var(--tr-grid);
+  align-items: center;
+  column-gap: 8px;
+  padding: 0 14px;
+}
+.tr-table-head {
+  height: 32px; flex-shrink: 0;
+  font-family: var(--font-mono); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-4);
+  background: var(--bg-1); border-bottom: 1px solid var(--line-2);
+  position: sticky; top: 0; z-index: 2;
+}
+.tr-table-head .h { display: flex; align-items: center; gap: 3px; cursor: pointer; user-select: none; }
+.tr-table-head .h:hover { color: var(--ink-2); }
+.tr-table-head .h.sorted { color: var(--brand-400); }
+.tr-rows { flex: 1; overflow-y: auto; }
+.tr-row {
+  height: 40px; font-size: 12px;
+  border-bottom: 1px solid var(--line-1); color: var(--ink-1);
+  cursor: default; transition: background .1s;
+}
+.tr-row:hover { background: rgba(255,255,255,0.025); }
+.tr-row.sel { background: var(--brand-tint); box-shadow: inset 2px 0 0 var(--brand-400); }
+.tr-row .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 11.5px; }
+.tr-row .dim  { color: var(--ink-3); }
+
+.mini-crest {
+  width: 20px; height: 20px; border-radius: 2px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 7px; font-weight: 700;
+}
+.club-cell { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.club-cell span { font-size: 11.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* progress dots */
+.prog { display: flex; gap: 2px; align-items: center; }
+.prog-d { width: 9px; height: 9px; border-radius: 1px; background: var(--bg-3); flex-shrink: 0; }
+.prog-d.done { background: var(--brand-400); }
+.prog-d.now  { background: var(--neu-400); box-shadow: 0 0 5px rgba(245,185,66,0.7); animation: pulse 1.4s ease-in-out infinite; }
+.prog-d.fail { background: var(--neg-400); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* urgency badge */
+.urgency { font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; padding: 2px 6px; border-radius: var(--r-1); }
+.urg-hot  { background: var(--neg-tint); color: var(--neg-400); }
+.urg-warm { background: var(--neu-tint); color: var(--neu-400); }
+.urg-cold { background: var(--bg-3); color: var(--ink-4); }
+
+/* ── Deal sheet (right panel) ── */
+.deal-head {
+  padding: 16px 18px; border-bottom: 1px solid var(--line-2);
+  background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 100%);
+  display: flex; gap: 14px; align-items: flex-start; flex-shrink: 0;
+}
+.deal-portrait {
+  width: 66px; height: 66px; border-radius: var(--r-3); flex-shrink: 0;
+  background: linear-gradient(135deg, #1a2a3a, var(--bg-3));
+  border: 1px solid var(--line-3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 26px; color: var(--brand-400);
+}
+.deal-name { font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 1.1; }
+.deal-sub  { font-size: 11px; color: var(--ink-3); margin-top: 3px; display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.deal-sub .sep { color: var(--ink-5); }
+.deal-stage-wrap { margin-top: 8px; }
+
+/* pipeline */
+.pipeline { display: flex; align-items: flex-start; gap: 0; }
+.pipe-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; }
+.pipe-step + .pipe-step::before {
+  content: ''; position: absolute; top: 9px; right: 50%; left: -50%;
+  height: 2px; background: var(--line-2); z-index: 0;
+}
+.pipe-step.done + .pipe-step::before { background: var(--brand-400); }
+.pipe-circle {
+  width: 20px; height: 20px; border-radius: 50%; position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  background: var(--bg-3); border: 2px solid var(--line-3); color: var(--ink-5);
+}
+.pipe-step.done   .pipe-circle { background: var(--brand-400); border-color: var(--brand-400); color: #001a0a; }
+.pipe-step.active .pipe-circle { background: var(--bg-1); border-color: var(--neu-400); color: var(--neu-400); box-shadow: 0 0 7px rgba(245,185,66,0.5); }
+.pipe-lbl { font-family: var(--font-mono); font-size: 8px; color: var(--ink-5); letter-spacing: 0.04em; text-align: center; text-transform: uppercase; line-height: 1.3; }
+.pipe-step.done   .pipe-lbl { color: var(--brand-400); }
+.pipe-step.active .pipe-lbl { color: var(--neu-400); }
+
+.deal-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
+.ds-title { font-family: var(--font-display); font-size: 11px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-4); margin: 0 0 8px; }
+
+/* deal KPIs 2-col */
+.dkpis { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.dkpi { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 8px 10px; }
+.dkpi .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-4); }
+.dkpi .v { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1; margin-top: 3px; }
+.dkpi .s { font-size: 10px; color: var(--ink-3); margin-top: 2px; }
+
+/* contract kpis */
+.ckpis { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.ckpi { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 8px 10px; }
+.ckpi .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-4); }
+.ckpi .v { font-family: var(--font-display); font-size: 18px; font-weight: 700; line-height: 1; margin-top: 2px; }
+.ckpi .s { font-size: 10px; color: var(--ink-3); margin-top: 2px; }
+
+/* attrs */
+.attr-mini { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.am { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: var(--r-2); padding: 5px 3px; text-align: center; }
+.am .al { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-4); }
+.am .av { font-family: var(--font-display); font-size: 17px; font-weight: 700; line-height: 1.1; margin-top: 1px; }
+
+/* clauses */
+.clause-list { display: flex; flex-direction: column; gap: 5px; }
+.clause-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 9px; background: var(--bg-2); border-radius: var(--r-2);
+}
+.cl-name { font-size: 11.5px; color: var(--ink-2); }
+.cl-val  { font-family: var(--font-mono); font-size: 11px; color: var(--ink-1); }
+
+/* mood bar */
+.mood-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.mood-track { flex: 1; height: 4px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; }
+.mood-fill  { height: 100%; border-radius: var(--r-pill); }
+.mood-lbl   { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); width: 58px; text-align: right; }
+
+/* deal actions */
+.deal-actions {
+  padding: 12px 18px; border-top: 1px solid var(--line-2);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  background: var(--bg-1); flex-shrink: 0; margin-top: auto;
+}
+.deal-actions .btn { justify-content: center; height: 34px; font-size: 12px; }
+.deal-actions .btn.primary { font-weight: 600; }
+
+/* ── Tweaks panel ── */
+.tweaks-panel {
+  position: fixed; bottom: 50px; right: 18px; z-index: 9000;
+  width: 260px; background: var(--bg-2); border: 1px solid var(--line-3);
+  border-radius: var(--r-4); box-shadow: var(--shadow-3); display: none;
+}
+.tweaks-panel.open { display: block; }
+.tw-head {
+  padding: 10px 14px; border-bottom: 1px solid var(--line-2);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.tw-head strong { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
+.tw-close { background: none; border: 0; color: var(--ink-4); font-size: 14px; cursor: pointer; padding: 0; line-height: 1; }
+.tw-close:hover { color: var(--ink-1); }
+.tw-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+.tw-row { display: flex; flex-direction: column; gap: 5px; }
+.tw-lbl { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); letter-spacing: 0.05em; text-transform: uppercase; }
+.tw-opts { display: flex; gap: 4px; }
+.tw-opt {
+  flex: 1; padding: 5px 8px; text-align: center;
+  font-family: var(--font-mono); font-size: 10px; color: var(--ink-3);
+  background: var(--bg-3); border: 1px solid var(--line-2); border-radius: var(--r-2);
+  cursor: pointer; transition: background .1s, color .1s, border-color .1s;
+}
+.tw-opt.on { background: var(--brand-tint); border-color: var(--brand-400); color: var(--brand-400); }
+</style>
+</head>
+<body>
+
+<div class="resolution-badge" id="resbadge">1920 × 1080</div>
+
+<div class="fitter">
+<div class="stage" id="stage">
+
+  <!-- CHROME -->
+  <header class="chrome">
+    <div class="brand">
+      <div class="crest-gm">RM</div>
+      <div class="nm">Riverside <em>· Mgr. You</em></div>
+    </div>
+    <nav class="nav">
+      <a href="Club.html">Club</a>
+      <a href="Squad Screen.html">Squad</a>
+      <a href="Tactics.html">Tactics</a>
+      <a href="Training Screen.html">Training</a>
+      <a href="Scouting Screen.html">Scouting</a>
+      <a href="Transfers.html" class="on">Transfers</a>
+      <a href="World.html">World</a>
+      <a href="#">Inbox<span class="b">3</span></a>
+    </nav>
+    <div class="sp"></div>
+    <div class="right">
+      <div class="kbd-hint"><span class="lbl">Search anywhere</span><span class="k">⌘ K</span></div>
+      <div class="date">Sat 14 Mar · Wk 31 📅</div>
+      <div class="cont">Continue ▸</div>
+    </div>
+  </header>
+
+  <!-- SUB-TABS -->
+  <div class="crumb">
+    <span class="tab on" data-tab="incoming">Incoming <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-4);margin-left:4px">5</span></span>
+    <span class="tab" data-tab="outgoing">Outgoing <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-4);margin-left:4px">2</span></span>
+    <span class="tab" data-tab="loans">Loans <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-4);margin-left:4px">1</span></span>
+    <span class="tab" data-tab="history">History</span>
+    <div class="sp"></div>
+    <div style="display:flex;align-items:center;gap:12px;font-family:var(--font-mono);font-size:10px;color:var(--ink-4);letter-spacing:0.04em">
+      <span>WINDOW CLOSES <span style="color:var(--neg-400)">31 JAN</span></span>
+      <span style="color:var(--line-3)">|</span>
+      <span>BUDGET REMAINING <span style="color:var(--brand-400)">£42.5M</span></span>
+      <span style="color:var(--line-3)">|</span>
+      <span>NET SPEND <span style="color:var(--neg-400)">−£85M</span></span>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="tb-grp">
+      <div class="seg">
+        <button class="on">All · 5</button>
+        <button>Approach · 2</button>
+        <button>Bid Made · 1</button>
+        <button>Negotiating · 1</button>
+        <button>Agreed · 1</button>
+      </div>
+    </div>
+    <div class="tb-grp">
+      <div class="search">
+        <span class="icon">⌕</span>
+        <input type="text" placeholder="Search transfers…">
+        <span class="k">/</span>
+      </div>
+    </div>
+    <div class="tb-grp">
+      <span class="chip on">FW <span style="opacity:.6">3</span></span>
+      <span class="chip">MF <span style="opacity:.6">2</span></span>
+      <span class="chip">DF <span style="opacity:.6">0</span></span>
+    </div>
+    <div class="sp"></div>
+    <div class="tb-grp">
+      <button class="btn">↑ Sort</button>
+      <button class="btn primary">+ New Target</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="tr-main">
+
+    <!-- ── LEFT: Budget + Summary + Activity ─────────────────────── -->
+    <div class="tr-col tr-col-left">
+
+      <!-- Budget -->
+      <div class="scrd">
+        <h5>Transfer Budget <span class="meta">Summer 2025</span></h5>
+        <div class="budget-row">
+          <div class="bkpi">
+            <div class="l">Remaining</div>
+            <div class="v c-brand">£42.5m</div>
+            <div class="s">of £130m allocated</div>
+          </div>
+          <div class="bkpi">
+            <div class="l">Spent</div>
+            <div class="v c-neg">£87.5m</div>
+            <div class="s">3 signings completed</div>
+          </div>
+          <div class="bkpi">
+            <div class="l">Loan Budget</div>
+            <div class="v c-ink">£4.8m</div>
+            <div class="s">fees + wages combined</div>
+          </div>
+          <div class="bkpi">
+            <div class="l">Recouped</div>
+            <div class="v c-pos">£40m</div>
+            <div class="s">2 sales this window</div>
+          </div>
+        </div>
+        <div class="bb-wrap">
+          <div class="bb-labels">
+            <span>£87.5m spent</span>
+            <span style="color:var(--brand-400)">£42.5m left</span>
+          </div>
+          <div class="bb-track">
+            <div class="bb-spent" style="width:67.3%"></div>
+            <div class="bb-remain" style="width:32.7%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Window Summary -->
+      <div class="scrd">
+        <h5>This Window</h5>
+        <div class="ws-row">
+          <span>Signings completed</span>
+          <span class="wv c-pos">3</span>
+        </div>
+        <div class="ws-row">
+          <span>In active negotiations</span>
+          <span class="wv" style="color:var(--neu-400)">5</span>
+        </div>
+        <div class="ws-row">
+          <span>Bids rejected</span>
+          <span class="wv c-neg">2</span>
+        </div>
+        <div class="ws-row">
+          <span>Approaches pending</span>
+          <span class="wv" style="color:var(--info-400)">2</span>
+        </div>
+        <div class="ws-row">
+          <span>Players sold</span>
+          <span class="wv c-ink">2</span>
+        </div>
+        <div class="ws-row">
+          <span>Net spend</span>
+          <span class="wv c-neg">−£85m</span>
+        </div>
+      </div>
+
+      <!-- Activity Feed -->
+      <div class="scrd grow">
+        <h5>Activity <span class="meta">last 7 days</span></h5>
+        <div class="act-list">
+          <div class="act-item">
+            <div class="act-dot ad-brand"></div>
+            <div>
+              <div class="act-title">Fee agreed with Porto — L. Díaz · £42m</div>
+              <div class="act-time">Today · 09:14</div>
+            </div>
+          </div>
+          <div class="act-item">
+            <div class="act-dot ad-pos"></div>
+            <div>
+              <div class="act-title">Medical booked for L. Díaz — Mon 17 Mar</div>
+              <div class="act-time">Today · 09:22</div>
+            </div>
+          </div>
+          <div class="act-item">
+            <div class="act-dot ad-neu"></div>
+            <div>
+              <div class="act-title">Barcelona counter-offer received — F. de Jong £62m</div>
+              <div class="act-time">Yesterday · 16:45</div>
+            </div>
+          </div>
+          <div class="act-item">
+            <div class="act-dot ad-neg"></div>
+            <div>
+              <div class="act-title">Bid rejected — Dortmund want £88m for K. Hansen</div>
+              <div class="act-time">Thu 13 Mar · 11:30</div>
+            </div>
+          </div>
+          <div class="act-item">
+            <div class="act-dot ad-info"></div>
+            <div>
+              <div class="act-title">Approach sent to PSG for M. Ugarte</div>
+              <div class="act-time">Thu 13 Mar · 09:05</div>
+            </div>
+          </div>
+          <div class="act-item">
+            <div class="act-dot ad-info"></div>
+            <div>
+              <div class="act-title">Approach sent to Barcelona for P. Fati</div>
+              <div class="act-time">Wed 12 Mar · 14:22</div>
+            </div>
+          </div>
+          <div class="act-item">
+            <div class="act-dot ad-pos"></div>
+            <div>
+              <div class="act-title">A. Martial sold to Lyon — £18m received</div>
+              <div class="act-time">Mon 10 Mar · 17:00</div>
+            </div>
+          </div>
+          <div class="act-item">
+            <div class="act-dot ad-neu"></div>
+            <div>
+              <div class="act-title">Contract offer sent to L. Díaz — £185k/wk · 4yr</div>
+              <div class="act-time">Sat 8 Mar · 12:10</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /col-left -->
+
+    <!-- ── CENTER: Negotiations Table ────────────────────────────── -->
+    <div class="tr-col tr-col-center">
+
+      <div class="tr-table-head">
+        <div></div><!-- flag -->
+        <div></div><!-- pos -->
+        <div class="h sorted">Player ↓</div>
+        <div class="h">Age</div>
+        <div class="h">Club</div>
+        <div class="h">Value</div>
+        <div class="h">Our Bid</div>
+        <div class="h">Stage</div>
+        <div class="h">Progress</div>
+        <div class="h">Priority</div>
+      </div>
+
+      <div class="tr-rows" id="trRows">
+
+        <!-- Row 1: L. Díaz — AGREED / MEDICAL -->
+        <div class="tr-row sel" data-id="diaz">
+          <span style="font-size:16px;line-height:1">🇧🇷</span>
+          <div class="pos pos-fw">FW</div>
+          <div>
+            <div style="font-size:12.5px;font-weight:500">L. Díaz</div>
+            <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-mono)">Luis Díaz</div>
+          </div>
+          <div class="mono dim">26</div>
+          <div class="club-cell">
+            <div class="mini-crest" style="background:#001e62;color:#9bb8ff">PT</div>
+            <span>Porto</span>
+          </div>
+          <div class="mono" style="color:var(--ink-2)">£44m</div>
+          <div class="mono c-brand">£42m</div>
+          <div><span class="stg stg-medical">MEDICAL</span></div>
+          <div class="prog">
+            <div class="prog-d done" title="Shortlist"></div>
+            <div class="prog-d done" title="Approach"></div>
+            <div class="prog-d done" title="Bid"></div>
+            <div class="prog-d done" title="Agreed"></div>
+            <div class="prog-d now"  title="Medical"></div>
+            <div class="prog-d"      title="Signed"></div>
+          </div>
+          <div><span class="urgency urg-hot">48h</span></div>
+        </div>
+
+        <!-- Row 2: F. de Jong — NEGOTIATING -->
+        <div class="tr-row" data-id="dejong">
+          <span style="font-size:16px;line-height:1">🇳🇱</span>
+          <div class="pos pos-mf">MF</div>
+          <div>
+            <div style="font-size:12.5px;font-weight:500">F. de Jong</div>
+            <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-mono)">Frenkie de Jong</div>
+          </div>
+          <div class="mono dim">27</div>
+          <div class="club-cell">
+            <div class="mini-crest" style="background:#004d98;color:#a8c8ff">BAR</div>
+            <span>Barcelona</span>
+          </div>
+          <div class="mono" style="color:var(--ink-2)">£65m</div>
+          <div class="mono c-neu">£58m</div>
+          <div><span class="stg stg-negotiating">COUNTER</span></div>
+          <div class="prog">
+            <div class="prog-d done"></div>
+            <div class="prog-d done"></div>
+            <div class="prog-d done"></div>
+            <div class="prog-d now"></div>
+            <div class="prog-d"></div>
+            <div class="prog-d"></div>
+          </div>
+          <div><span class="urgency urg-warm">6d</span></div>
+        </div>
+
+        <!-- Row 3: K. Hansen — BID REJECTED -->
+        <div class="tr-row" data-id="hansen">
+          <span style="font-size:16px;line-height:1">🇩🇰</span>
+          <div class="pos pos-fw">FW</div>
+          <div>
+            <div style="font-size:12.5px;font-weight:500">K. Hansen</div>
+            <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-mono)">Karl Hansen</div>
+          </div>
+          <div class="mono dim">21</div>
+          <div class="club-cell">
+            <div class="mini-crest" style="background:#fde000;color:#000">BVB</div>
+            <span>Dortmund</span>
+          </div>
+          <div class="mono" style="color:var(--ink-2)">£80m</div>
+          <div class="mono c-neg">£75m</div>
+          <div><span class="stg stg-rejected">REJECTED</span></div>
+          <div class="prog">
+            <div class="prog-d done"></div>
+            <div class="prog-d done"></div>
+            <div class="prog-d fail"></div>
+            <div class="prog-d"></div>
+            <div class="prog-d"></div>
+            <div class="prog-d"></div>
+          </div>
+          <div><span class="urgency urg-warm">8d</span></div>
+        </div>
+
+        <!-- Row 4: P. Fati — APPROACH -->
+        <div class="tr-row" data-id="fati">
+          <span style="font-size:16px;line-height:1">🇪🇸</span>
+          <div class="pos pos-fw">FW</div>
+          <div>
+            <div style="font-size:12.5px;font-weight:500">P. Fati</div>
+            <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-mono)">Pedro Fati</div>
+          </div>
+          <div class="mono dim">22</div>
+          <div class="club-cell">
+            <div class="mini-crest" style="background:#004d98;color:#a8c8ff">BAR</div>
+            <span>Barcelona</span>
+          </div>
+          <div class="mono" style="color:var(--ink-2)">£32m</div>
+          <div class="mono dim">—</div>
+          <div><span class="stg stg-approach">APPROACH</span></div>
+          <div class="prog">
+            <div class="prog-d done"></div>
+            <div class="prog-d now"></div>
+            <div class="prog-d"></div>
+            <div class="prog-d"></div>
+            <div class="prog-d"></div>
+            <div class="prog-d"></div>
+          </div>
+          <div><span class="urgency urg-cold">—</span></div>
+        </div>
+
+        <!-- Row 5: M. Ugarte — APPROACH -->
+        <div class="tr-row" data-id="ugarte">
+          <span style="font-size:16px;line-height:1">🇺🇾</span>
+          <div class="pos pos-mf">MF</div>
+          <div>
+            <div style="font-size:12.5px;font-weight:500">M. Ugarte</div>
+            <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-mono)">Manuel Ugarte</div>
+          </div>
+          <div class="mono dim">23</div>
+          <div class="club-cell">
+            <div class="mini-crest" style="background:#004170;color:#a8d4ff">PSG</div>
+            <span>Paris SG</span>
+          </div>
+          <div class="mono" style="color:var(--ink-2)">£38m</div>
+          <div class="mono dim">—</div>
+          <div><span class="stg stg-approach">APPROACH</span></div>
+          <div class="prog">
+            <div class="prog-d done"></div>
+            <div class="prog-d now"></div>
+            <div class="prog-d"></div>
+            <div class="prog-d"></div>
+            <div class="prog-d"></div>
+            <div class="prog-d"></div>
+          </div>
+          <div><span class="urgency urg-cold">—</span></div>
+        </div>
+
+      </div><!-- /tr-rows -->
+    </div><!-- /col-center -->
+
+    <!-- ── RIGHT: Deal Sheet ──────────────────────────────────────── -->
+    <div class="tr-col tr-col-right" id="dealSheet">
+
+      <!-- Player header -->
+      <div class="deal-head">
+        <div class="deal-portrait">LD</div>
+        <div style="flex:1;min-width:0">
+          <div class="deal-name">L. Díaz</div>
+          <div class="deal-sub">
+            <span>🇧🇷</span>
+            <span class="sep">·</span>
+            <span>FW</span>
+            <span class="sep">·</span>
+            <span>Age 26</span>
+            <span class="sep">·</span>
+            <span>Porto</span>
+          </div>
+          <div class="deal-stage-wrap">
+            <span class="stg stg-medical" style="font-size:10px;padding:3px 10px">MEDICAL BOOKED · MON 17 MAR</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pipeline -->
+      <div style="padding:12px 18px;border-bottom:1px solid var(--line-2);background:var(--bg-0);flex-shrink:0">
+        <div class="pipeline">
+          <div class="pipe-step done">
+            <div class="pipe-circle">✓</div>
+            <div class="pipe-lbl">Shortlist</div>
+          </div>
+          <div class="pipe-step done">
+            <div class="pipe-circle">✓</div>
+            <div class="pipe-lbl">Approach</div>
+          </div>
+          <div class="pipe-step done">
+            <div class="pipe-circle">✓</div>
+            <div class="pipe-lbl">Bid</div>
+          </div>
+          <div class="pipe-step done">
+            <div class="pipe-circle">✓</div>
+            <div class="pipe-lbl">Agreed</div>
+          </div>
+          <div class="pipe-step active">
+            <div class="pipe-circle">◎</div>
+            <div class="pipe-lbl">Medical</div>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-circle">6</div>
+            <div class="pipe-lbl">Signed</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable body -->
+      <div class="deal-body">
+
+        <!-- Transfer fee -->
+        <div>
+          <div class="ds-title">Transfer Fee</div>
+          <div class="dkpis">
+            <div class="dkpi">
+              <div class="l">Agreed Fee</div>
+              <div class="v c-brand">£42m</div>
+              <div class="s">Club valuation £44m</div>
+            </div>
+            <div class="dkpi">
+              <div class="l">Structure</div>
+              <div class="v" style="color:var(--ink-1)">£35m</div>
+              <div class="s">+ £7m in add-ons</div>
+            </div>
+            <div class="dkpi">
+              <div class="l">Add-on Trigger</div>
+              <div class="v" style="color:var(--info-400)">15</div>
+              <div class="s">appearances this season</div>
+            </div>
+            <div class="dkpi">
+              <div class="l">Sell-on Clause</div>
+              <div class="v c-neu">15%</div>
+              <div class="s">of future sale profit</div>
+            </div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--line-2);margin:0">
+
+        <!-- Contract offer -->
+        <div>
+          <div class="ds-title">Contract Offer</div>
+          <div class="ckpis">
+            <div class="ckpi">
+              <div class="l">Wages / Week</div>
+              <div class="v c-brand">£185k</div>
+              <div class="s">+£15k appearance</div>
+            </div>
+            <div class="ckpi">
+              <div class="l">Length</div>
+              <div class="v c-ink">4 yrs</div>
+              <div class="s">Jun 2025 → Jun 2029</div>
+            </div>
+            <div class="ckpi">
+              <div class="l">Signing Bonus</div>
+              <div class="v c-ink">£2.5m</div>
+              <div class="s">on completion</div>
+            </div>
+            <div class="ckpi">
+              <div class="l">Agent Fee</div>
+              <div class="v c-neg">£3.8m</div>
+              <div class="s">one-off payment</div>
+            </div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--line-2);margin:0">
+
+        <!-- Player mood -->
+        <div>
+          <div class="ds-title">Player Interest</div>
+          <div class="mood-row">
+            <div class="mood-track">
+              <div class="mood-fill" style="width:88%;background:var(--pos-400)"></div>
+            </div>
+            <div class="mood-lbl c-pos">Very Keen</div>
+          </div>
+          <div style="font-size:11px;color:var(--ink-3);margin-top:6px;font-style:italic;padding:7px 10px;background:var(--bg-2);border-radius:var(--r-2);border-left:2px solid var(--pos-400)">
+            "Player is eager to make the move. Agent confirmed he prefers Riverside above other options."
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--line-2);margin:0">
+
+        <!-- Attributes -->
+        <div>
+          <div class="ds-title">Key Attributes</div>
+          <div class="attr-mini">
+            <div class="am"><div class="al">Pac</div><div class="av c-brand">88</div></div>
+            <div class="am"><div class="al">Sho</div><div class="av" style="color:var(--attr-17)">82</div></div>
+            <div class="am"><div class="al">Pas</div><div class="av" style="color:var(--attr-14)">78</div></div>
+            <div class="am"><div class="al">Dri</div><div class="av c-brand">87</div></div>
+            <div class="am"><div class="al">Def</div><div class="av" style="color:var(--attr-5)">41</div></div>
+            <div class="am"><div class="al">Phy</div><div class="av" style="color:var(--attr-14)">74</div></div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--line-2);margin:0">
+
+        <!-- Contract clauses -->
+        <div>
+          <div class="ds-title">Agreed Clauses</div>
+          <div class="clause-list">
+            <div class="clause-row">
+              <span class="cl-name">Release clause</span>
+              <span class="cl-val c-neu">£95m after yr 2</span>
+            </div>
+            <div class="clause-row">
+              <span class="cl-name">Minimum sell-on fee</span>
+              <span class="cl-val">£55m</span>
+            </div>
+            <div class="clause-row">
+              <span class="cl-name">No loan clause</span>
+              <span class="cl-val" style="color:var(--pos-400)">Included</span>
+            </div>
+            <div class="clause-row">
+              <span class="cl-name">International appearance bonus</span>
+              <span class="cl-val">£8k per cap</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /deal-body -->
+
+      <!-- Actions -->
+      <div class="deal-actions">
+        <button class="btn primary">✓ Confirm Medical</button>
+        <button class="btn">✎ Amend Offer</button>
+        <button class="btn" style="color:var(--neg-400);border-color:rgba(255,77,90,0.3)">✕ Cancel Deal</button>
+        <button class="btn">↗ Player Profile</button>
+      </div>
+
+    </div><!-- /col-right -->
+
+  </div><!-- /tr-main -->
+
+  <!-- STATUS BAR -->
+  <div class="status">
+    <span class="dot"></span>
+    <span>SAVE · auto · 11:58</span>
+    <span class="bullet">·</span>
+    <span>BUILD 0.2.31-touchline</span>
+    <span class="bullet">·</span>
+    <span>Transfers · Incoming · Riverside FC</span>
+    <span class="sp"></span>
+    <span>5 active negotiations</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--brand-400)">1 deal at medical stage</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--neg-400)">Window closes 31 Jan</span>
+    <span class="sp"></span>
+    <span>FPS 60</span>
+    <span class="bullet">·</span>
+    <span>RAM 1.1 GB</span>
+  </div>
+
+</div><!-- /stage -->
+</div><!-- /fitter -->
+
+<!-- TWEAKS PANEL -->
+<div class="tweaks-panel" id="tweaksPanel">
+  <div class="tw-head">
+    <strong>Tweaks</strong>
+    <button class="tw-close" id="twClose">✕</button>
+  </div>
+  <div class="tw-body">
+    <div class="tw-row">
+      <div class="tw-lbl">Table Density</div>
+      <div class="tw-opts">
+        <div class="tw-opt on" data-tweak="density" data-val="comfortable">Comfortable</div>
+        <div class="tw-opt" data-tweak="density" data-val="compact">Compact</div>
+      </div>
+    </div>
+    <div class="tw-row">
+      <div class="tw-lbl">Show Fees</div>
+      <div class="tw-opts">
+        <div class="tw-opt on" data-tweak="showFees" data-val="true">Visible</div>
+        <div class="tw-opt" data-tweak="showFees" data-val="false">Hidden</div>
+      </div>
+    </div>
+    <div class="tw-row">
+      <div class="tw-lbl">Active Tab</div>
+      <div class="tw-opts">
+        <div class="tw-opt on" data-tweak="view" data-val="incoming">In</div>
+        <div class="tw-opt" data-tweak="view" data-val="outgoing">Out</div>
+        <div class="tw-opt" data-tweak="view" data-val="loans">Loan</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Scale stage to viewport ── */
+(function () {
+  const stage = document.getElementById('stage');
+  const badge = document.getElementById('resbadge');
+  function fit() {
+    const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = 'scale(' + s + ')';
+    stage.style.transformOrigin = 'center center';
+    if (badge) badge.textContent = '1920×1080 · scale ' + Math.round(s * 100) + '%';
+  }
+  fit();
+  window.addEventListener('resize', fit);
+})();
+
+/* ── Row selection → update right panel ── */
+(function () {
+  const rows = document.querySelectorAll('.tr-row');
+  rows.forEach(function (row) {
+    row.addEventListener('click', function () {
+      rows.forEach(function (r) { r.classList.remove('sel'); });
+      row.classList.add('sel');
+    });
+  });
+})();
+
+/* ── Tweaks protocol ── */
+(function () {
+  const panel = document.getElementById('tweaksPanel');
+  const closeBtn = document.getElementById('twClose');
+
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.type === '__activate_edit_mode')   panel.classList.add('open');
+    if (e.data && e.data.type === '__deactivate_edit_mode') panel.classList.remove('open');
+  });
+  window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function () {
+      panel.classList.remove('open');
+      window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+    });
+  }
+
+  /* Tweak opt toggles */
+  document.querySelectorAll('.tw-opt').forEach(function (opt) {
+    opt.addEventListener('click', function () {
+      const tweak = opt.dataset.tweak;
+      const val   = opt.dataset.val;
+      document.querySelectorAll('.tw-opt[data-tweak="' + tweak + '"]').forEach(function (o) {
+        o.classList.remove('on');
+      });
+      opt.classList.add('on');
+
+      if (tweak === 'density') {
+        document.querySelectorAll('.tr-row').forEach(function (r) {
+          r.style.height = val === 'compact' ? '30px' : '40px';
+        });
+      }
+      if (tweak === 'showFees') {
+        const show = val === 'true';
+        const feeCols = document.querySelectorAll('.tr-row .mono');
+        // crude: hide the 5th and 6th children (value / bid columns)
+        document.querySelectorAll('.tr-row').forEach(function (row) {
+          const cells = row.children;
+          if (cells[5]) cells[5].style.visibility = show ? '' : 'hidden';
+          if (cells[6]) cells[6].style.visibility = show ? '' : 'hidden';
+        });
+      }
+      if (tweak === 'view') {
+        document.querySelectorAll('.crumb .tab').forEach(function (t) { t.classList.remove('on'); });
+        const map = { incoming: 0, outgoing: 1, loans: 2, history: 3 };
+        const tabs = document.querySelectorAll('.crumb .tab');
+        if (tabs[map[val]]) tabs[map[val]].classList.add('on');
+      }
+
+      const edits = {};
+      edits[tweak] = val;
+      window.parent.postMessage({ type: '__edit_mode_set_keys', edits: edits }, '*');
+    });
+  });
+
+  /* Sub-tab clicks */
+  document.querySelectorAll('.crumb .tab[data-tab]').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.crumb .tab').forEach(function (t) { t.classList.remove('on'); });
+      tab.classList.add('on');
+    });
+  });
+})();
+</script>
+</body>
+</html>
