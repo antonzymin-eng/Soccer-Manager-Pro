@@ -16,19 +16,30 @@ namespace TacticalDirector.SeasonSave
     {
         #region Fixed
         /// <summary>
-        /// [FIXED] The season save-file FRAMING version — the fourth distinct format version in the
-        /// save stack (KD-4). It gates only the season frame (the <c>matchPresent</c> flag + the two
-        /// length-prefixed sub-blobs); the four inner versions ride inside their own sub-blobs and are
+        /// [FIXED] The season save-file FRAMING version — the outermost format version in the save
+        /// stack (KD-4). It gates only the season frame (the <c>matchPresent</c> flag + the three
+        /// length-prefixed sub-blobs); the inner versions ride inside their own sub-blobs and are
         /// re-checked by <see cref="TacticalDirector.LivingWorld.WorldStore.Restore"/> /
-        /// <c>MatchSaveCodec.Decode</c> themselves. A mismatch fails loud on load — no cross-version
-        /// migration at Stage 0. Bump only on a season-frame layout change. Value: 1.
+        /// <see cref="SeasonStateCodec.Decode"/> / <c>MatchSaveCodec.Decode</c> themselves. A mismatch
+        /// fails loud on load — no cross-version migration at Stage 0. Bump only on a season-frame
+        /// layout change. Value: 2.
+        /// <para>
+        /// <b>1 → 2 at #30 T1 (FR-SN-020).</b> The frame gained the season-state sub-blob between the
+        /// world and match blocks (#30 Appendix B). The world blob
+        /// (<c>WORLD_STORE_FORMAT_VERSION</c>) and match blob (<c>MATCH_SAVE_FORMAT_VERSION</c>) are
+        /// byte-untouched by that change — only the frame around them moved, which is exactly what
+        /// this version gates. A v1 file is rejected fail-loud (no migration at Stage 0).
+        /// </para>
         /// </summary>
-        public const uint SEASON_SAVE_FORMAT_VERSION = 1;
+        public const uint SEASON_SAVE_FORMAT_VERSION = 2;
         #endregion
     }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-07-22 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                            |
+// | 1.0     | 2026-07-22 | —      | Initial implementation.                                          |
+// | 1.1     | 2026-07-25 | —      | #30 T1 (FR-SN-020): SEASON_SAVE_FORMAT_VERSION 1 -> 2 — the      |
+// |         |            |        | frame gained the season-state sub-blob between the world and     |
+// |         |            |        | match blocks; both of those blobs stay byte-untouched.           |
 #endregion

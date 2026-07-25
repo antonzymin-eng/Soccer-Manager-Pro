@@ -40,20 +40,28 @@ namespace TacticalDirector.SeasonSave
         private static readonly ProfilerMarker s_loadMarker = new ProfilerMarker("SeasonSave.Load");
 
         /// <summary>
-        /// Captures <paramref name="world"/> and (when present) <paramref name="matchOrNull"/>, encodes
-        /// the season frame, and writes it to <paramref name="path"/> atomically (the §4.6.1.1
-        /// temp -> fsync -> rename contract). Both sub-blobs are captured and the frame encoded BEFORE
-        /// the file is opened (the <see cref="MatchSaveManager.Save"/> blob-before-file precedent);
-        /// neither capture mutates its source, so a write failure leaves the live objects and any
-        /// existing destination untouched (KD-8 / AR-2 L-1). Pass <c>null</c> for
-        /// <paramref name="matchOrNull"/> when the season has no in-progress match (KD-3).
+        /// Captures <paramref name="world"/>, <paramref name="season"/>, and (when present)
+        /// <paramref name="matchOrNull"/>, encodes the season frame, and writes it to
+        /// <paramref name="path"/> atomically (the §4.6.1.1 temp -> fsync -> rename contract). Every
+        /// sub-blob is captured and the frame encoded BEFORE the file is opened (the
+        /// <see cref="MatchSaveManager.Save"/> blob-before-file precedent, restated by FR-SN-021); no
+        /// capture mutates its source, so a write failure leaves the live objects and any existing
+        /// destination untouched (KD-8 / AR-2 L-1). Pass <c>null</c> for
+        /// <paramref name="matchOrNull"/> when the season has no in-progress match (KD-3); the
+        /// <paramref name="season"/> is never optional (FR-SN-019).
         /// </summary>
-        public static void Save(WorldStore world, MatchEngine.MatchEngine matchOrNull, string path)
+        public static void Save(
+            WorldStore world, SeasonState season, MatchEngine.MatchEngine matchOrNull, string path)
         {
             if (world == null)
             {
                 throw new ArgumentNullException(nameof(world),
                     "A season save always carries a living-world store (KD-3).");
+            }
+            if (season == null)
+            {
+                throw new ArgumentNullException(nameof(season),
+                    "A season save always carries a season state (FR-SN-019).");
             }
             if (string.IsNullOrEmpty(path))
             {
@@ -63,8 +71,9 @@ namespace TacticalDirector.SeasonSave
             using var _ = s_saveMarker.Auto();
 
             byte[] worldBlob = world.Snapshot();
+            byte[] seasonBlob = SeasonStateCodec.Encode(season);
             byte[] matchBlob = matchOrNull != null ? MatchSaveManager.Encode(matchOrNull) : null;
-            byte[] blob = SeasonSaveCodec.Encode(worldBlob, matchBlob);
+            byte[] blob = SeasonSaveCodec.Encode(worldBlob, seasonBlob, matchBlob);
 
             string tempPath = path + ".tmp";
             try
@@ -103,12 +112,13 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>
         /// Reads the season save file at <paramref name="path"/>, deframes it, and reconstructs the
-        /// living-world <see cref="WorldStore"/> (always) and the in-progress
-        /// <see cref="MatchEngine.MatchEngine"/> (only when the save carried a match — otherwise
-        /// <see cref="SeasonSaveContents.Match"/> is null, KD-3). Fail-loud: a missing / unreadable file
-        /// surfaces the IO exception; a corrupt / version-mismatched / trailing-byte season frame throws
-        /// from <see cref="SeasonSaveCodec.Decode"/>; a corrupt inner blob throws from
-        /// <see cref="WorldStore.Restore"/> / the match restore path; and a distinct-squad match save
+        /// living-world <see cref="WorldStore"/> and the <see cref="SeasonState"/> (both always) and the
+        /// in-progress <see cref="MatchEngine.MatchEngine"/> (only when the save carried a match —
+        /// otherwise <see cref="SeasonSaveContents.Match"/> is null, KD-3). Fail-loud: a missing /
+        /// unreadable file surfaces the IO exception; a corrupt / version-mismatched / trailing-byte
+        /// season frame throws from <see cref="SeasonSaveCodec.Decode"/>; a corrupt inner blob throws
+        /// from <see cref="WorldStore.Restore"/> / <see cref="SeasonStateCodec.Decode"/> / the match
+        /// restore path; and a distinct-squad match save
         /// loaded without (or with an incomplete) <paramref name="squads"/> throws from the match restore
         /// factory (KD-6 / R4). The match restore's fingerprint + MXCSR float-mode gates run here
         /// unchanged (KD-5).
@@ -134,11 +144,12 @@ namespace TacticalDirector.SeasonSave
             SeasonSaveBlobs blobs = SeasonSaveCodec.Decode(blob);
 
             WorldStore world = WorldStore.Restore(blobs.WorldBlob, canon);
+            SeasonState season = SeasonStateCodec.Decode(blobs.SeasonBlob);
             MatchEngine.MatchEngine match = blobs.MatchBlob != null
                 ? MatchSaveManager.Restore(blobs.MatchBlob, squads)
                 : null;
 
-            return new SeasonSaveContents(world, match);
+            return new SeasonSaveContents(world, season, match);
         }
 
         private static void TryDelete(string path)
@@ -155,4 +166,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | threaded into WorldStore.Restore (never persisted, the        |
 // |         |            |        | ISquadProvider precedent) so a flag-on world keeps evaluating |
 // |         |            |        | after a season restore.                                       |
+// | 1.2     | 2026-07-25 | —      | #30 T1 (FR-SN-021): Save gains the season parameter and Load  |
+// |         |            |        | reconstructs the SeasonState; the season blob is captured     |
+// |         |            |        | before the file is opened, alongside the other two.           |
 #endregion

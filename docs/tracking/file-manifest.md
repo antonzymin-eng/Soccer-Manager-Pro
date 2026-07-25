@@ -1,7 +1,21 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 25, 2026, latest same day (**#30 T0 adversarial-review fix pass — 1H+1M+6L, all fixed;
+**Last Updated:** July 25, 2026, latest same day (**Season & Competition Loop #30 T1 LANDED** — path-to-playable
+roadmap item A2, the season save/restore path. **New files:** `src/season-save/SeasonStateCodec.cs` (the #30
+Appendix B season sub-blob codec) + `src/season-save/tests/SeasonStateCodecTests.cs` (and their `.meta` files).
+**Modified:** `SeasonSaveCodec.cs` v1.1 + `SeasonSaveBlobs.cs` v1.1 (the frame gains a THIRD opaque sub-blob
+between the world and match blocks), `SeasonSaveConstants.cs` v1.1 (**`SEASON_SAVE_FORMAT_VERSION` 1 → 2**,
+FR-SN-020 — the world and match blobs stay byte-untouched), `SeasonSaveManager.cs` v1.2 +
+`SeasonSaveContents.cs` v1.1 (`Save(world, season, matchOrNull, path)` / `Load → { World, Season, Match }`,
+FR-SN-021), `SeasonState.cs` v1.3 (code self-AR: the ctor now requires a calendar mapping ≥ 1 round — an empty
+schedule with a `default(SeasonCalendar)` was constructible but not decodable, an FR-SN-022 round-trip
+asymmetry), `tests/SeasonSaveManagerTests.cs` v1.3. Spec: `season-competition-loop/section-3.md` §3.6 +
+`appendices.md` Appendix B row 11 (**ERR-030-011** — §3.6's `EncodeSeason` omitted `ManagedClubId` which
+Appendix B row 3a requires; row 11's `f32/u8` job security pinned to `i32` per-mille), `spec-error-log.md` →
+v1.42, `path-to-playable-roadmap.md` → v0.4, `src/CLAUDE.md` → v2.37. Full dotnet gate PASSED, 0 failures
+(whole tree green; season-save 112 → 135 tests).)
+**Last Updated (prior):** July 25, 2026, latest same day (**#30 T0 adversarial-review fix pass — 1H+1M+6L, all fixed;
 re-review pass 2 clean.** **Modified:** `src/season-save/SeasonState.cs` (H-1 — `Table` public→`internal`
 + public read-only projections `TableOrdered`/`TableRowsInClubIdOrder`/`TableRow`/`PositionOf` + internal
 `ApplyResult(in MatchResult)` + ctor `table.Clone()`; the KD-7/FR-SN-032 single-writer contract was
@@ -1188,13 +1202,15 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | File | Purpose |
 |------|---------|
 | `src/season-save/season-save.asmdef` | `TacticalDirector.SeasonSave` — the composition/persistence root ABOVE both match-engine and living-world (references MatchEngine + LivingWorld + DeterministicSim); the only assembly that may see both blobs, resolving FR-LW-003 |
-| `src/season-save/SeasonSaveConstants.cs` | `[FIXED] SEASON_SAVE_FORMAT_VERSION = 1` — the fourth format version, distinct from the two snapshot schema versions + MATCH_SAVE_FORMAT_VERSION + WORLD_STORE_FORMAT_VERSION (KD-4) |
-| `src/season-save/SeasonSaveBlobs.cs` | Deframe result: `WorldBlob` (always) + `MatchBlob` (null if no in-progress match) — two opaque byte sub-blobs (KD-2/KD-3) |
-| `src/season-save/SeasonSaveCodec.cs` | Pure static frame codec: `Encode(worldBlob, matchBlobOrNull)` / `Decode(byte[]) → SeasonSaveBlobs` — a SEASON_SAVE_FORMAT_VERSION-gated frame + matchPresent flag + two length-prefixed opaque sub-blobs (each keeps its own version gate); overflow-safe `Require` bound + fail-loud on null/version/flag/length/trailing (KD-7/KD-8) |
-| `src/season-save/SeasonSaveContents.cs` | `Load` result: reconstructed `WorldStore` (never null) + nullable `MatchEngine` |
-| `src/season-save/SeasonSaveManager.cs` | Static: `Save(world, matchOrNull, path)` (capture both → Encode → atomic temp→fsync→rename) / `Load(path, ISquadProvider = null) → SeasonSaveContents` (Decode → WorldStore.Restore +, when present, MatchSaveManager.Restore) — KD-1/KD-5/KD-6/KD-8 |
+| `src/season-save/SeasonSaveConstants.cs` | `[FIXED] SEASON_SAVE_FORMAT_VERSION = 2` — the outermost format version, distinct from the snapshot schema versions + MATCH_SAVE_FORMAT_VERSION + WORLD_STORE_FORMAT_VERSION + SEASON_STATE_FORMAT_VERSION (KD-4); bumped 1 → 2 at #30 T1 when the frame gained the season sub-blob (FR-SN-020) |
+| `src/season-save/SeasonSaveBlobs.cs` | Deframe result: `WorldBlob` + `SeasonBlob` (both always) + `MatchBlob` (null if no in-progress match) — three opaque byte sub-blobs (KD-2/KD-3, FR-SN-019) |
+| `src/season-save/SeasonSaveCodec.cs` | Pure static frame codec: `Encode(worldBlob, seasonBlob, matchBlobOrNull)` / `Decode(byte[]) → SeasonSaveBlobs` — a SEASON_SAVE_FORMAT_VERSION-gated frame + matchPresent flag + three length-prefixed opaque sub-blobs (each keeps its own version gate); overflow-safe `Require` bound + fail-loud on null/version/flag/length/trailing (KD-7/KD-8) |
+| `src/season-save/SeasonStateCodec.cs` | #30 T1: pure static season-state sub-blob codec — `Encode(SeasonState)` / `Decode(byte[]) → SeasonState` over the #30 Appendix B layout (version gate; seed/seasonNumber/managedClubId; club set; the serialized schedule per KD-5; calendar cursor per KD-4; table in ClubId order; board), SEASON_STATE_FORMAT_VERSION-gated; overflow-safe element-wise length bounds, trailing-byte guard, serialized-vs-derived goal-difference coherence check, and decode-through-the-validating-constructors (FR-SN-019/022/023) |
+| `src/season-save/SeasonSaveContents.cs` | `Load` result: reconstructed `WorldStore` + `SeasonState` (both never null) + nullable `MatchEngine` |
+| `src/season-save/SeasonSaveManager.cs` | Static: `Save(world, season, matchOrNull, path)` (capture all three → Encode → atomic temp→fsync→rename) / `Load(path, ISquadProvider = null, ArcCanonSource = null) → SeasonSaveContents` (Decode → WorldStore.Restore + SeasonStateCodec.Decode +, when present, MatchSaveManager.Restore) — KD-1/KD-5/KD-6/KD-8, FR-SN-021 |
 | `src/season-save/tests/season-save-tests.asmdef` | Test assembly (EditMode; references season-save + match-engine + living-world + deterministic-sim + player-database) |
-| `src/season-save/tests/SeasonSaveManagerTests.cs` | Disk round-trip determinism (no-match season; season with neutral / distinct-squad match via ISquadProvider) + SeasonSaveCodec round-trip/fail-loud + manager fail-loud paths incl. the R4 no-match-with-provider lock (19 tests) |
+| `src/season-save/tests/SeasonSaveManagerTests.cs` | Disk round-trip determinism (no-match season; season with neutral / distinct-squad match via ISquadProvider), each asserting the season resumes field-identical (FR-SN-022) + SeasonSaveCodec round-trip/fail-loud incl. the v1-frame rejection + manager fail-loud paths incl. the R4 no-match-with-provider and null-season locks |
+| `src/season-save/tests/SeasonStateCodecTests.cs` | #30 T1: season sub-blob round-trip field identity (fresh / mid-season / completed), per-column and scalar locks, encode determinism + non-vacuity control, the pinned-offset layout lock (Appendix B field order incl. row 3a), and every FR-SN-023 fail-loud gate |
 
 ## Tracking Documents
 

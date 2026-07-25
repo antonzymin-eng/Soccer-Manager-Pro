@@ -45,7 +45,16 @@ The season block, in order (all via `CanonicalSerializer`; every length prefix v
 | 8 | calendar | (nextRoundIndex i32, roundCount count, roundToDay[] u32) | the cursor (KD-4); day values are `uint` to match `WorldStore.CurrentWorldTick` |
 | 9 | tableRowCount | count | = clubCount |
 | 10 | tableRows[] | (clubId, P, W, D, L, GF, GA, GD, Pts) i32 × 9 × rows | ClubId order |
-| 11 | board | (targetPosition i32, jobSecurity f32/u8) | the objective + security |
+| 11 | board | (targetPosition i32, jobSecurityPerMille i32) | the objective + security |
+
+> **Row 11 pinned at #30 T1 (ERR-030-011).** The v0.1 row left the representation open as
+> `jobSecurity f32/u8` — neither of which the implementation uses. #30 T0 resolved `BoardState` to an
+> integer per-mille in `[0, JobSecurityScale]`, following the integer-arithmetic convention every later
+> management spec standardized on (#41's AR-1 moved that spec's whole model float → integer per-mille;
+> #40 uses integer currency; #33 uses per-mille scalars), and recorded the row as a back-prop
+> candidate. T1 is where it became a real byte layout, so the row is now pinned to `i32`. Integers also
+> make the sub-blob round-trip exact with no NaN gate.
+
 
 The outer `SeasonSaveCodec` frame nesting this block:
 `SEASON_SAVE_FORMAT_VERSION (u32) → matchPresent flag (u8) → [len u32]world → [len u32]season →
