@@ -1,0 +1,20 @@
+{
+    "name": "TacticalDirector.UiFramework",
+    "rootNamespace": "TacticalDirector.UiFramework",
+    "references": [
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.MatchViewer",
+        "TacticalDirector.MatchClientCore",
+        "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.ProjectConstants"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,1093 @@
+<!doctype html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="utf-8">
+<title>Soccer Manager Pro — Design System</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/components.css">
+<link rel="stylesheet" href="assets/dataviz.css">
+<link rel="stylesheet" href="assets/styleguide.css">
+<link rel="stylesheet" href="assets/example.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo-wordmark">
+    <div class="logo-mark"><span>SMP</span></div>
+    <div class="logo-text">Soccer Manager Pro <span class="light">/ Design System v0.1</span></div>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- ======================== SIDEBAR NAV ======================== -->
+  <aside class="sidebar">
+    <div class="sidebar-group">
+      <span class="label">Foundations</span>
+      <a href="#philosophy">Philosophy</a>
+      <a href="#color">Color</a>
+      <a href="#type">Typography</a>
+      <a href="#space">Spacing &amp; Radii</a>
+    </div>
+    <div class="sidebar-group">
+      <span class="label">Components</span>
+      <a href="#buttons">Buttons</a>
+      <a href="#inputs">Inputs</a>
+      <a href="#tabs">Tabs &amp; Chips</a>
+      <a href="#tables">Data tables</a>
+      <a href="#cards">Cards &amp; modals</a>
+    </div>
+    <div class="sidebar-group">
+      <span class="label">Data Viz</span>
+      <a href="#stats">Stat tiles</a>
+      <a href="#attrs">Attributes</a>
+      <a href="#pitch">Formation pitch</a>
+      <a href="#hud">Match-day HUD</a>
+    </div>
+    <div class="sidebar-group">
+      <span class="label">Patterns</span>
+      <a href="#example">Squad screen</a>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ======================== HERO ======================== -->
+    <div class="hero">
+      <div class="switcher">
+        <button data-dir="touchline" aria-pressed="true"><span class="dot"></span>Touchline ✓</button>
+        <button data-dir="stadium" aria-pressed="false"><span class="dot"></span>Stadium (ref.)</button>
+      </div>
+      <div class="hero-eyebrow">Touchline — locked direction · desktop-first</div>
+      <h1 class="hero-title">Every detail.<br>Every decision.<span class="tag">v0.2</span></h1>
+      <p class="hero-sub">A foundation for Soccer Manager Pro — analyst-tool restraint, dense by default, mouse-and-keyboard native. Companion: <a href="Desktop Guardrails.html" style="color:var(--brand-400);text-decoration:none;border-bottom:1px solid var(--brand-400)">Desktop Guardrails →</a> · the rules we wrote after studying where FM26 went wrong.</p>
+      <div class="hero-meta">
+        <div><span class="label">Mode</span><span class="v">Dark — primary</span></div>
+        <div><span class="label">Density</span><span class="v">8 / 10</span></div>
+        <div><span class="label">Brand</span><span class="v">Electric green · #00FF88</span></div>
+        <div><span class="label">Type</span><span class="v">Barlow Condensed + Body</span></div>
+        <div><span class="label">Theming</span><span class="v">Hybrid (accent adapts)</span></div>
+      </div>
+    </div>
+
+    <!-- ======================== PHILOSOPHY ======================== -->
+    <section class="s" id="philosophy">
+      <div class="s-head">
+        <div>
+          <span class="num">01 / FOUNDATIONS</span>
+          <h2 class="h">Philosophy</h2>
+          <p class="desc">A management sim is read more than it is watched. The system optimizes for legibility at density 8/10, then earns drama back at match-day moments through display type and broadcast accents.</p>
+        </div>
+      </div>
+      <div class="demo-grid demo-grid--3">
+        <div class="demo-card">
+          <span class="label">01 — Numbers first</span>
+          <p style="margin:0;color:var(--ink-2);font-size:var(--t-13)">Tabular numerals everywhere. The user is comparing 28 players across 30 attributes — alignment is content. Mono-spaced for stats; condensed sans for names.</p>
+        </div>
+        <div class="demo-card">
+          <span class="label">02 — Quiet chrome, loud moments</span>
+          <p style="margin:0;color:var(--ink-2);font-size:var(--t-13)">UI surfaces stay neutral so league tables, scout reports, and inboxes don't compete. Match-day, signings, and trophies earn the broadcast treatment.</p>
+        </div>
+        <div class="demo-card">
+          <span class="label">03 — One brand, club identity</span>
+          <p style="margin:0;color:var(--ink-2);font-size:var(--t-13)">Electric green is the game's voice — primary actions, focus, the manager's identity. Club crests and accent stripes carry team color into the chrome without overwhelming it.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== COLOR ======================== -->
+    <section class="s" id="color">
+      <div class="s-head">
+        <div>
+          <span class="num">02 / FOUNDATIONS</span>
+          <h2 class="h">Color</h2>
+          <p class="desc">Six neutral surfaces let dense tables breathe. One bold brand accent. Status colors lean shape-coded so they survive a colorblind audit later. The 1–20 attribute scale runs slate → amber → green.</p>
+        </div>
+      </div>
+
+      <div class="subhead"><span class="label">Surfaces — six steps from black to chrome</span><span class="rule"></span></div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="chip-area" style="background:var(--bg-0)"></div><div class="info"><span class="name">bg-0</span><span class="hex">#07090C · canvas</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--bg-1)"></div><div class="info"><span class="name">bg-1</span><span class="hex">#0D1015 · panel rail</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--bg-2)"></div><div class="info"><span class="name">bg-2</span><span class="hex">#14181F · card</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--bg-3)"></div><div class="info"><span class="name">bg-3</span><span class="hex">#1C2129 · raised</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--bg-4)"></div><div class="info"><span class="name">bg-4</span><span class="hex">#262C36 · hover</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--bg-5)"></div><div class="info"><span class="name">bg-5</span><span class="hex">#323844 · pressed</span></div></div>
+      </div>
+
+      <div class="subhead"><span class="label">Brand — electric green, 9 steps</span><span class="rule"></span></div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="chip-area" style="background:var(--brand-100)"></div><div class="info"><span class="name">brand-100</span><span class="hex">#B8FFD6</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--brand-200)"></div><div class="info"><span class="name">brand-200</span><span class="hex">#7DFFB6</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--brand-300)"></div><div class="info"><span class="name">brand-300</span><span class="hex">#3CFF97</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--brand-400)"></div><div class="info"><span class="name">brand-400 ★</span><span class="hex">#00FF88 · primary</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--brand-500)"></div><div class="info"><span class="name">brand-500</span><span class="hex">#00E07A</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--brand-600)"></div><div class="info"><span class="name">brand-600</span><span class="hex">#00B462</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--brand-700)"></div><div class="info"><span class="name">brand-700</span><span class="hex">#008549</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--brand-800)"></div><div class="info"><span class="name">brand-800</span><span class="hex">#005C33</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--brand-900)"></div><div class="info"><span class="name">brand-900</span><span class="hex">#002E19</span></div></div>
+      </div>
+
+      <div class="subhead"><span class="label">Status — semantic roles</span><span class="rule"></span></div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="chip-area" style="background:var(--pos-400)"></div><div class="info"><span class="name">positive</span><span class="hex">Win · gain · up</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--neu-400)"></div><div class="info"><span class="name">caution</span><span class="hex">Draw · hold · risk</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--neg-400)"></div><div class="info"><span class="name">negative</span><span class="hex">Loss · injury · alert</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--info-400)"></div><div class="info"><span class="name">info</span><span class="hex">Advisory · scouting</span></div></div>
+        <div class="swatch"><div class="chip-area" style="background:var(--gold-400)"></div><div class="info"><span class="name">gold</span><span class="hex">Trophy · best XI</span></div></div>
+      </div>
+
+      <div class="subhead"><span class="label">Attribute scale — 1 to 20, used in tables &amp; player cards</span><span class="rule"></span></div>
+      <div class="scale">
+        <div style="background:var(--attr-1)">1</div>
+        <div style="background:var(--attr-5)">5</div>
+        <div style="background:var(--attr-8)">8</div>
+        <div style="background:var(--attr-11)">11</div>
+        <div style="background:var(--attr-14)">14</div>
+        <div style="background:var(--attr-17)">17</div>
+        <div style="background:var(--attr-20)">20</div>
+      </div>
+      <p style="color:var(--ink-3);font-size:var(--t-12);margin-top:var(--space-3);max-width:680px">Slate → ochre → green. Avoids the red/green trap. Combined with the numeric value, attributes remain readable in greyscale and to colorblind users.</p>
+
+      <div class="subhead"><span class="label">Hybrid team theming — accent adapts, chrome stays neutral</span><span class="rule"></span></div>
+      <div class="team-grid">
+        <div class="team-card">
+          <div class="accent-strip" style="background:#d12d36"></div>
+          <div style="display:flex;gap:var(--space-3);align-items:center">
+            <div class="crest" style="background:linear-gradient(135deg,#d12d36,#8a1c22)">RM</div>
+            <div><h4>Riverside</h4><div class="meta">Premier League</div></div>
+          </div>
+          <div class="accent-row"><span class="accent-dot" style="background:#d12d36"></span><span class="accent-dot" style="background:#fff"></span><span class="accent-dot" style="background:#1a1a1a"></span></div>
+        </div>
+        <div class="team-card">
+          <div class="accent-strip" style="background:#1f5fc8"></div>
+          <div style="display:flex;gap:var(--space-3);align-items:center">
+            <div class="crest" style="background:linear-gradient(135deg,#1f5fc8,#0e3275)">NC</div>
+            <div><h4>Northgate</h4><div class="meta">Championship</div></div>
+          </div>
+          <div class="accent-row"><span class="accent-dot" style="background:#1f5fc8"></span><span class="accent-dot" style="background:#ffd633"></span></div>
+        </div>
+        <div class="team-card">
+          <div class="accent-strip" style="background:#f5b942"></div>
+          <div style="display:flex;gap:var(--space-3);align-items:center">
+            <div class="crest" style="background:linear-gradient(135deg,#f5b942,#a5790c);color:#1a1208">CO</div>
+            <div><h4>Cosmos AC</h4><div class="meta">Serie A</div></div>
+          </div>
+          <div class="accent-row"><span class="accent-dot" style="background:#f5b942"></span><span class="accent-dot" style="background:#1a1a1a"></span></div>
+        </div>
+        <div class="team-card">
+          <div class="accent-strip" style="background:#2a8a4d"></div>
+          <div style="display:flex;gap:var(--space-3);align-items:center">
+            <div class="crest" style="background:linear-gradient(135deg,#2a8a4d,#13522d)">VC</div>
+            <div><h4>Verde CF</h4><div class="meta">La Liga</div></div>
+          </div>
+          <div class="accent-row"><span class="accent-dot" style="background:#2a8a4d"></span><span class="accent-dot" style="background:#fff"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== TYPOGRAPHY ======================== -->
+    <section class="s" id="type">
+      <div class="s-head">
+        <div>
+          <span class="num">03 / FOUNDATIONS</span>
+          <h2 class="h">Typography</h2>
+          <p class="desc">Barlow Condensed for display — tall, broadcast, jersey-numbery. A workhorse body face for menus and prose. JetBrains Mono for any number that compares to another number.</p>
+        </div>
+      </div>
+
+      <div class="subhead"><span class="label">Specimens</span><span class="rule"></span></div>
+
+      <div class="type-row">
+        <span class="meta">128 / 800</span>
+        <span class="meta">Display</span>
+        <div class="specimen font-display" style="font-size:var(--t-96);line-height:0.9;text-transform:uppercase">Final 1 — 0</div>
+        <span class="use">Match HUD score, hero moments</span>
+      </div>
+      <div class="type-row">
+        <span class="meta">64 / 800</span>
+        <span class="meta">Display</span>
+        <div class="specimen font-display" style="font-size:var(--t-64);line-height:1;text-transform:uppercase">Squad — Riverside</div>
+        <span class="use">Section &amp; screen headers</span>
+      </div>
+      <div class="type-row">
+        <span class="meta">32 / 700</span>
+        <span class="meta">Display</span>
+        <div class="specimen font-display" style="font-size:var(--t-32);line-height:1;text-transform:uppercase">Tactics &amp; Formation</div>
+        <span class="use">Panel headlines</span>
+      </div>
+      <div class="type-row">
+        <span class="meta">18 / 700</span>
+        <span class="meta">Display</span>
+        <div class="specimen font-display" style="font-size:var(--t-18);text-transform:uppercase;letter-spacing:0.02em">Player Profile · Marcus Vey</div>
+        <span class="use">Card titles, modal headers</span>
+      </div>
+      <div class="type-row">
+        <span class="meta">16 / 500</span>
+        <span class="meta">Body</span>
+        <div class="specimen" style="font-size:var(--t-16);color:var(--ink-2)">"Vey has been outstanding in training this week and looks set to start against Northgate."</div>
+        <span class="use">Body prose, news copy</span>
+      </div>
+      <div class="type-row">
+        <span class="meta">13 / 400</span>
+        <span class="meta">Body</span>
+        <div class="specimen" style="font-size:var(--t-13);color:var(--ink-2)">Default UI text. Menus, table cells, captions, form labels — the working size for desktop.</div>
+        <span class="use">UI default</span>
+      </div>
+      <div class="type-row">
+        <span class="meta">11 / 700</span>
+        <span class="meta">Body</span>
+        <div class="specimen label">Goals · Assists · Avg rating · Minutes</div>
+        <span class="use">Labels, eyebrows</span>
+      </div>
+      <div class="type-row">
+        <span class="meta">14 / 600</span>
+        <span class="meta">Mono</span>
+        <div class="specimen font-mono" style="font-size:var(--t-14)">38 · 12 · 7.42 · 3,290'</div>
+        <span class="use">Tabular numerals — every stat</span>
+      </div>
+    </section>
+
+    <!-- ======================== SPACING / RADII ======================== -->
+    <section class="s" id="space">
+      <div class="s-head">
+        <div>
+          <span class="num">04 / FOUNDATIONS</span>
+          <h2 class="h">Spacing &amp; Radii</h2>
+          <p class="desc">4px base. Small steps for dense table chrome; large steps for screen padding. Sharp corners (0–4px) for the broadcast feel; the analyst direction softens slightly.</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-9)">
+        <div>
+          <div class="subhead" style="margin-top:0"><span class="label">Spacing scale</span><span class="rule"></span></div>
+          <div class="space-row"><span class="name">space-1</span><span class="px">4px</span><span class="vis"><i style="width:4px"></i></span></div>
+          <div class="space-row"><span class="name">space-2</span><span class="px">6px</span><span class="vis"><i style="width:6px"></i></span></div>
+          <div class="space-row"><span class="name">space-3</span><span class="px">8px</span><span class="vis"><i style="width:8px"></i></span></div>
+          <div class="space-row"><span class="name">space-4</span><span class="px">12px</span><span class="vis"><i style="width:12px"></i></span></div>
+          <div class="space-row"><span class="name">space-5</span><span class="px">16px</span><span class="vis"><i style="width:16px"></i></span></div>
+          <div class="space-row"><span class="name">space-6</span><span class="px">20px</span><span class="vis"><i style="width:20px"></i></span></div>
+          <div class="space-row"><span class="name">space-7</span><span class="px">24px</span><span class="vis"><i style="width:24px"></i></span></div>
+          <div class="space-row"><span class="name">space-8</span><span class="px">32px</span><span class="vis"><i style="width:32px"></i></span></div>
+          <div class="space-row"><span class="name">space-9</span><span class="px">40px</span><span class="vis"><i style="width:40px"></i></span></div>
+          <div class="space-row"><span class="name">space-10</span><span class="px">56px</span><span class="vis"><i style="width:56px"></i></span></div>
+          <div class="space-row"><span class="name">space-11</span><span class="px">72px</span><span class="vis"><i style="width:72px"></i></span></div>
+        </div>
+        <div>
+          <div class="subhead" style="margin-top:0"><span class="label">Radii</span><span class="rule"></span></div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-4)">
+            <div class="demo-card" style="align-items:center;text-align:center"><div style="width:64px;height:64px;background:var(--bg-3);border-radius:0;border:1px solid var(--line-2)"></div><span class="label">r-0 · 0px · table cells</span></div>
+            <div class="demo-card" style="align-items:center;text-align:center"><div style="width:64px;height:64px;background:var(--bg-3);border-radius:2px;border:1px solid var(--line-2)"></div><span class="label">r-1 · 2px · chips, kit nums</span></div>
+            <div class="demo-card" style="align-items:center;text-align:center"><div style="width:64px;height:64px;background:var(--bg-3);border-radius:4px;border:1px solid var(--line-2)"></div><span class="label">r-2 · 4px · buttons, panels</span></div>
+            <div class="demo-card" style="align-items:center;text-align:center"><div style="width:64px;height:64px;background:var(--bg-3);border-radius:6px;border:1px solid var(--line-2)"></div><span class="label">r-3 · 6px · cards (touchline)</span></div>
+            <div class="demo-card" style="align-items:center;text-align:center"><div style="width:64px;height:64px;background:var(--bg-3);border-radius:10px;border:1px solid var(--line-2)"></div><span class="label">r-4 · 10px · modals</span></div>
+            <div class="demo-card" style="align-items:center;text-align:center"><div style="width:96px;height:32px;background:var(--bg-3);border-radius:999px;border:1px solid var(--line-2)"></div><span class="label">r-pill · avatars, status</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== BUTTONS ======================== -->
+    <section class="s" id="buttons">
+      <div class="s-head">
+        <div>
+          <span class="num">05 / COMPONENTS</span>
+          <h2 class="h">Buttons</h2>
+          <p class="desc">Primary is the bright accent. Ghost is the workhorse. Sizes follow a 24/32/40 ladder so any toolbar fits.</p>
+        </div>
+      </div>
+      <div class="demo-grid demo-grid--3">
+        <div class="demo-card">
+          <span class="label demo-label">Default — sm / md / lg</span>
+          <div class="demo-row"><button class="btn btn--sm">Sign player</button><button class="btn">Sign player</button><button class="btn btn--lg">Sign player</button></div>
+        </div>
+        <div class="demo-card">
+          <span class="label demo-label">Primary — call to action</span>
+          <div class="demo-row"><button class="btn btn--sm btn--primary">Continue</button><button class="btn btn--primary">Continue</button><button class="btn btn--lg btn--primary">Continue</button></div>
+        </div>
+        <div class="demo-card">
+          <span class="label demo-label">Ghost — toolbars</span>
+          <div class="demo-row"><button class="btn btn--ghost btn--sm">Filter</button><button class="btn btn--ghost">Filter</button><button class="btn btn--ghost btn--lg">Filter</button></div>
+        </div>
+        <div class="demo-card">
+          <span class="label demo-label">Danger — destructive</span>
+          <div class="demo-row"><button class="btn btn--danger">Release player</button><button class="btn btn--danger btn--sm">Cancel offer</button></div>
+        </div>
+        <div class="demo-card">
+          <span class="label demo-label">Icon-only — square</span>
+          <div class="demo-row"><button class="btn btn--icon">+</button><button class="btn btn--icon btn--ghost">×</button><button class="btn btn--icon btn--primary">▶</button></div>
+        </div>
+        <div class="demo-card">
+          <span class="label demo-label">In context — squad toolbar</span>
+          <div class="demo-row"><button class="btn btn--ghost btn--sm">Sort</button><button class="btn btn--ghost btn--sm">Filter</button><button class="btn btn--ghost btn--sm">Compare</button><button class="btn btn--primary btn--sm">Set first XI</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== INPUTS ======================== -->
+    <section class="s" id="inputs">
+      <div class="s-head">
+        <div>
+          <span class="num">06 / COMPONENTS</span>
+          <h2 class="h">Inputs &amp; controls</h2>
+          <p class="desc">Quiet by default. Brand-green focus ring. Form fields are paired with the small label spec.</p>
+        </div>
+      </div>
+      <div class="demo-grid">
+        <div class="demo-card">
+          <div class="field"><span class="label">Search squad</span><input class="input" placeholder="Player name, position, club…"></div>
+          <div class="field"><span class="label">Position</span>
+            <select class="select"><option>Any position</option><option>Goalkeeper</option><option>Defender</option><option>Midfielder</option><option>Forward</option></select>
+          </div>
+          <div class="field"><span class="label">Min ability</span><input class="input" placeholder="0–20" value="14"></div>
+        </div>
+        <div class="demo-card">
+          <span class="label demo-label">Checkboxes</span>
+          <label class="check"><input type="checkbox" checked><span class="box"></span>Show hidden attributes</label>
+          <label class="check"><input type="checkbox"><span class="box"></span>Include youth players</label>
+          <label class="check"><input type="checkbox" checked><span class="box"></span>Eligible for next match only</label>
+          <label class="check"><input type="checkbox"><span class="box"></span>Available transfer-listed only</label>
+        </div>
+        <div class="demo-card">
+          <span class="label demo-label">Currency, range</span>
+          <div class="field"><span class="label">Wage budget — weekly</span><input class="input font-mono" value="£1,240,000"></div>
+          <div class="field"><span class="label">Transfer budget</span><input class="input font-mono" value="£62.5M"></div>
+          <div class="field"><span class="label">Contract length (years)</span><input class="input" value="3"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== TABS / CHIPS ======================== -->
+    <section class="s" id="tabs">
+      <div class="s-head">
+        <div>
+          <span class="num">07 / COMPONENTS</span>
+          <h2 class="h">Tabs &amp; chips</h2>
+          <p class="desc">Segmented controls drive almost every screen — Squad / Tactics / Training / Reports. Chips carry status and position.</p>
+        </div>
+      </div>
+
+      <div class="demo-grid">
+        <div class="demo-card">
+          <span class="label demo-label">Segmented — primary nav</span>
+          <div class="tabs">
+            <button class="tab" aria-selected="true">Squad</button>
+            <button class="tab">Tactics</button>
+            <button class="tab">Training</button>
+            <button class="tab">Reports</button>
+          </div>
+          <div class="tabs">
+            <button class="tab" aria-selected="true">Overview</button>
+            <button class="tab">Attributes</button>
+            <button class="tab">History</button>
+            <button class="tab">Contract</button>
+          </div>
+        </div>
+        <div class="demo-card">
+          <span class="label demo-label">Status chips</span>
+          <div class="demo-row">
+            <span class="chip chip--brand">★ Captain</span>
+            <span class="chip chip--solid-pos">▲ In form</span>
+            <span class="chip chip--solid-neu">— Steady</span>
+            <span class="chip chip--solid-neg">▼ Poor form</span>
+            <span class="chip chip--solid-neg">⚠ Injured 4w</span>
+            <span class="chip chip--solid-info">⊕ Available</span>
+          </div>
+        </div>
+        <div class="demo-card">
+          <span class="label demo-label">Position chips — colorblind-leaning hue + letter</span>
+          <div class="demo-row">
+            <span class="chip chip--position gk">GK</span>
+            <span class="chip chip--position df">DF</span>
+            <span class="chip chip--position df">CB</span>
+            <span class="chip chip--position df">RB</span>
+            <span class="chip chip--position mf">CM</span>
+            <span class="chip chip--position mf">DM</span>
+            <span class="chip chip--position mf">AM</span>
+            <span class="chip chip--position fw">ST</span>
+            <span class="chip chip--position fw">LW</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== TABLES ======================== -->
+    <section class="s" id="tables">
+      <div class="s-head">
+        <div>
+          <span class="num">08 / COMPONENTS</span>
+          <h2 class="h">Data tables</h2>
+          <p class="desc">The most-used component in the genre. Sticky header, hover rows, selected-row tint, attribute tiles in narrow numeric columns.</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>League Table — Premier Division</h3>
+          <div class="demo-row">
+            <button class="btn btn--ghost btn--sm">All</button>
+            <button class="btn btn--ghost btn--sm">Home</button>
+            <button class="btn btn--ghost btn--sm">Away</button>
+          </div>
+        </div>
+        <div class="panel-body panel-body--flush">
+          <table class="dt">
+            <thead>
+              <tr>
+                <th style="width:32px">#</th>
+                <th>Club</th>
+                <th class="num">P</th>
+                <th class="num">W</th>
+                <th class="num">D</th>
+                <th class="num">L</th>
+                <th class="num">GF</th>
+                <th class="num">GA</th>
+                <th class="num">GD</th>
+                <th>Form</th>
+                <th class="num">Pts</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td><div class="player-cell"><div class="avatar" style="background:#1f5fc8;color:#fff">N</div><div><div class="name">Northgate City</div></div></div></td><td class="num">28</td><td class="num">21</td><td class="num">5</td><td class="num">2</td><td class="num">61</td><td class="num">19</td><td class="num">+42</td><td><div class="form"><span class="f w">W</span><span class="f w">W</span><span class="f d">D</span><span class="f w">W</span><span class="f w">W</span></div></td><td class="num"><strong>68</strong></td></tr>
+              <tr class="is-selected"><td>2</td><td><div class="player-cell"><div class="avatar" style="background:#d12d36;color:#fff">R</div><div><div class="name">Riverside (us)</div></div></div></td><td class="num">28</td><td class="num">19</td><td class="num">6</td><td class="num">3</td><td class="num">54</td><td class="num">22</td><td class="num">+32</td><td><div class="form"><span class="f w">W</span><span class="f l">L</span><span class="f w">W</span><span class="f w">W</span><span class="f d">D</span></div></td><td class="num"><strong>63</strong></td></tr>
+              <tr><td>3</td><td><div class="player-cell"><div class="avatar" style="background:#2a8a4d;color:#fff">V</div><div><div class="name">Verde CF</div></div></div></td><td class="num">28</td><td class="num">17</td><td class="num">7</td><td class="num">4</td><td class="num">48</td><td class="num">25</td><td class="num">+23</td><td><div class="form"><span class="f w">W</span><span class="f d">D</span><span class="f w">W</span><span class="f l">L</span><span class="f w">W</span></div></td><td class="num"><strong>58</strong></td></tr>
+              <tr><td>4</td><td><div class="player-cell"><div class="avatar" style="background:#f5b942;color:#1a1208">C</div><div><div class="name">Cosmos AC</div></div></div></td><td class="num">28</td><td class="num">15</td><td class="num">7</td><td class="num">6</td><td class="num">44</td><td class="num">29</td><td class="num">+15</td><td><div class="form"><span class="f d">D</span><span class="f w">W</span><span class="f w">W</span><span class="f d">D</span><span class="f l">L</span></div></td><td class="num"><strong>52</strong></td></tr>
+              <tr><td>5</td><td><div class="player-cell"><div class="avatar" style="background:#7a52c4;color:#fff">A</div><div><div class="name">Atlas FC</div></div></div></td><td class="num">28</td><td class="num">14</td><td class="num">5</td><td class="num">9</td><td class="num">39</td><td class="num">31</td><td class="num">+8</td><td><div class="form"><span class="f l">L</span><span class="f w">W</span><span class="f d">D</span><span class="f w">W</span><span class="f l">L</span></div></td><td class="num"><strong>47</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== CARDS / MODALS ======================== -->
+    <section class="s" id="cards">
+      <div class="s-head">
+        <div>
+          <span class="num">09 / COMPONENTS</span>
+          <h2 class="h">Cards &amp; modals</h2>
+          <p class="desc">Panels carry every screen — header, body, optional footer. Modals reuse the same chrome at higher contrast for offers, negotiations, board meetings.</p>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:var(--space-5);align-items:start">
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Player — Marcus Vey</h3>
+            <span class="chip chip--brand">★ CAPTAIN</span>
+          </div>
+          <div class="panel-body" style="display:flex;gap:var(--space-5)">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-3)">
+              <div class="avatar avatar--xl">MV</div>
+              <span class="chip chip--position fw">ST</span>
+              <div class="kit-num" style="font-size:var(--t-32)">9</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:var(--space-3)">
+              <div style="display:flex;justify-content:space-between;font-size:var(--t-12);color:var(--ink-3)">
+                <div><span class="label">Age</span><div style="color:var(--ink-1);font-size:var(--t-14)">28</div></div>
+                <div><span class="label">Nat</span><div style="color:var(--ink-1);font-size:var(--t-14)">ENG</div></div>
+                <div><span class="label">Foot</span><div style="color:var(--ink-1);font-size:var(--t-14)">Right</div></div>
+                <div><span class="label">Wage</span><div class="font-mono" style="color:var(--ink-1);font-size:var(--t-14)">£185k/wk</div></div>
+                <div><span class="label">Contract</span><div class="font-mono" style="color:var(--ink-1);font-size:var(--t-14)">2027</div></div>
+              </div>
+              <div style="border-top:1px solid var(--line-1);padding-top:var(--space-3);display:flex;flex-direction:column;gap:2px">
+                <div class="attr" data-range="excellent"><span class="name">Finishing</span><span class="num">19</span><span class="bar"><i style="width:95%"></i></span></div>
+                <div class="attr" data-range="excellent"><span class="name">Composure</span><span class="num">18</span><span class="bar"><i style="width:90%"></i></span></div>
+                <div class="attr" data-range="good"><span class="name">Off the ball</span><span class="num">16</span><span class="bar"><i style="width:80%"></i></span></div>
+                <div class="attr" data-range="good"><span class="name">Pace</span><span class="num">15</span><span class="bar"><i style="width:75%"></i></span></div>
+                <div class="attr" data-range="ok"><span class="name">Aerial</span><span class="num">12</span><span class="bar"><i style="width:60%"></i></span></div>
+                <div class="attr" data-range="poor"><span class="name">Tackling</span><span class="num">7</span><span class="bar"><i style="width:35%"></i></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal">
+          <div class="modal-head">
+            <h3>Transfer offer</h3>
+            <button class="btn btn--ghost btn--sm btn--icon">×</button>
+          </div>
+          <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4)">
+            <div style="display:flex;align-items:center;gap:var(--space-3)">
+              <div class="avatar avatar--lg">EH</div>
+              <div>
+                <div class="font-display" style="font-size:var(--t-20);text-transform:uppercase">Ethan Holloway</div>
+                <div style="font-size:var(--t-12);color:var(--ink-3)">CB · 24 · Northgate City</div>
+              </div>
+              <div style="margin-left:auto"><span class="chip chip--solid-info">⊕ Available</span></div>
+            </div>
+            <div class="field"><span class="label">Offer (cash)</span><input class="input font-mono" value="£32,500,000"></div>
+            <div class="field"><span class="label">Add-ons</span><input class="input" value="20% sell-on, £2M after 30 apps"></div>
+            <div class="field"><span class="label">Wage offer</span><input class="input font-mono" value="£105,000 / week"></div>
+            <div style="display:flex;justify-content:space-between;font-size:var(--t-12);color:var(--ink-3);background:var(--bg-1);padding:var(--space-3);border-radius:var(--r-2)">
+              <span>Board approval</span><span style="color:var(--pos-400)">✓ Within budget</span>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn--ghost">Cancel</button>
+            <button class="btn btn--primary">Submit offer</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== STAT TILES ======================== -->
+    <section class="s" id="stats">
+      <div class="s-head">
+        <div>
+          <span class="num">10 / DATA VIZ</span>
+          <h2 class="h">Stat tiles &amp; KPIs</h2>
+          <p class="desc">Dashboard primitives — display-sized number, small label, delta. Used across finances, club state, manager hub.</p>
+        </div>
+      </div>
+      <div class="demo-grid demo-grid--4">
+        <div class="stat stat--accent"><span class="label">League position</span><span class="value">2<sup style="font-size:0.4em;color:var(--ink-3);margin-left:4px">nd</sup></span><span class="delta up">▲ 1 from last week</span></div>
+        <div class="stat"><span class="label">Goal difference</span><span class="value">+32</span><span class="delta up">▲ +4 last 5</span></div>
+        <div class="stat"><span class="label">Avg attendance</span><span class="value">52,148</span><span class="delta flat">— vs season avg</span></div>
+        <div class="stat"><span class="label">Wage spend / week</span><span class="value">£2.4M</span><span class="delta down">▼ 3% over budget</span></div>
+        <div class="stat"><span class="label">Squad morale</span><span class="value">Good</span><span class="delta up">▲ Up since Atlas win</span></div>
+        <div class="stat"><span class="label">Avg rating</span><span class="value">7.42</span><span class="delta up">▲ +0.18 last month</span></div>
+        <div class="stat"><span class="label">Injuries</span><span class="value">3</span><span class="delta down">▼ Vey out 2 weeks</span></div>
+        <div class="stat"><span class="label">Trophy odds</span><span class="value">28%</span><span class="delta up">▲ +6% post-match</span></div>
+      </div>
+    </section>
+
+    <!-- ======================== ATTRIBUTES (radar etc) ======================== -->
+    <section class="s" id="attrs">
+      <div class="s-head">
+        <div>
+          <span class="num">11 / DATA VIZ</span>
+          <h2 class="h">Player attributes</h2>
+          <p class="desc">Three views of the same data: bars for detail, tiles for the squad table, radar for at-a-glance comparison.</p>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-5)">
+
+        <!-- Bars -->
+        <div class="panel">
+          <div class="panel-head"><h3>Detailed bars</h3><span class="label">M. Vey · ST</span></div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:2px">
+            <div class="attr" data-range="excellent"><span class="name">Finishing</span><span class="num">19</span><span class="bar"><i style="width:95%"></i></span></div>
+            <div class="attr" data-range="excellent"><span class="name">Composure</span><span class="num">18</span><span class="bar"><i style="width:90%"></i></span></div>
+            <div class="attr" data-range="good"><span class="name">Off the ball</span><span class="num">16</span><span class="bar"><i style="width:80%"></i></span></div>
+            <div class="attr" data-range="good"><span class="name">First touch</span><span class="num">15</span><span class="bar"><i style="width:75%"></i></span></div>
+            <div class="attr" data-range="good"><span class="name">Pace</span><span class="num">15</span><span class="bar"><i style="width:75%"></i></span></div>
+            <div class="attr" data-range="good"><span class="name">Anticipation</span><span class="num">14</span><span class="bar"><i style="width:70%"></i></span></div>
+            <div class="attr" data-range="ok"><span class="name">Aerial</span><span class="num">12</span><span class="bar"><i style="width:60%"></i></span></div>
+            <div class="attr" data-range="ok"><span class="name">Crossing</span><span class="num">10</span><span class="bar"><i style="width:50%"></i></span></div>
+            <div class="attr" data-range="poor"><span class="name">Tackling</span><span class="num">7</span><span class="bar"><i style="width:35%"></i></span></div>
+            <div class="attr" data-range="poor"><span class="name">Marking</span><span class="num">5</span><span class="bar"><i style="width:25%"></i></span></div>
+          </div>
+        </div>
+
+        <!-- Tiles -->
+        <div class="panel">
+          <div class="panel-head"><h3>Compact tiles</h3><span class="label">For squad table</span></div>
+          <div class="panel-body">
+            <p style="margin:0 0 var(--space-3);font-size:var(--t-12);color:var(--ink-3)">Six attributes per role; saturation = ability.</p>
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px">
+              <span class="attr-tile x20">19</span><span class="attr-tile x18">18</span><span class="attr-tile x16">16</span><span class="attr-tile x14">14</span><span class="attr-tile x12">12</span><span class="attr-tile x8">7</span>
+              <span class="attr-tile x18">17</span><span class="attr-tile x16">15</span><span class="attr-tile x14">13</span><span class="attr-tile x12">11</span><span class="attr-tile x10">9</span><span class="attr-tile x6">5</span>
+              <span class="attr-tile x16">15</span><span class="attr-tile x14">14</span><span class="attr-tile x12">12</span><span class="attr-tile x10">10</span><span class="attr-tile x8">8</span><span class="attr-tile x6">4</span>
+            </div>
+            <div class="subhead"><span class="label">Star rating</span><span class="rule"></span></div>
+            <div style="display:flex;flex-direction:column;gap:var(--space-2);font-size:var(--t-12);color:var(--ink-2)">
+              <div style="display:flex;justify-content:space-between"><span>Current ability</span><span class="stars"><span class="s filled">★</span><span class="s filled">★</span><span class="s filled">★</span><span class="s filled">★</span><span class="s">★</span></span></div>
+              <div style="display:flex;justify-content:space-between"><span>Potential</span><span class="stars"><span class="s filled">★</span><span class="s filled">★</span><span class="s filled">★</span><span class="s filled">★</span><span class="s filled">★</span></span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Radar -->
+        <div class="panel">
+          <div class="panel-head"><h3>Radar / pizza</h3><span class="label">Compare profiles</span></div>
+          <div class="panel-body" style="display:flex;flex-direction:column;align-items:center;gap:var(--space-3)">
+            <svg viewBox="0 0 240 240" width="100%" style="max-width:240px">
+              <g transform="translate(120 120)">
+                <!-- grid -->
+                <polygon points="0,-100 95,-31 59,81 -59,81 -95,-31" fill="none" stroke="rgba(255,255,255,0.06)"/>
+                <polygon points="0,-75 71,-23 44,61 -44,61 -71,-23" fill="none" stroke="rgba(255,255,255,0.05)"/>
+                <polygon points="0,-50 48,-15 29,40 -29,40 -48,-15" fill="none" stroke="rgba(255,255,255,0.05)"/>
+                <polygon points="0,-25 24,-8 15,20 -15,20 -24,-8" fill="none" stroke="rgba(255,255,255,0.05)"/>
+                <line x1="0" y1="0" x2="0" y2="-100" stroke="rgba(255,255,255,0.08)"/>
+                <line x1="0" y1="0" x2="95" y2="-31" stroke="rgba(255,255,255,0.08)"/>
+                <line x1="0" y1="0" x2="59" y2="81" stroke="rgba(255,255,255,0.08)"/>
+                <line x1="0" y1="0" x2="-59" y2="81" stroke="rgba(255,255,255,0.08)"/>
+                <line x1="0" y1="0" x2="-95" y2="-31" stroke="rgba(255,255,255,0.08)"/>
+                <!-- Vey -->
+                <polygon points="0,-95 90,-29 35,48 -50,69 -76,-25" fill="rgba(0,255,136,0.18)" stroke="#00ff88" stroke-width="1.5"/>
+                <!-- Comp -->
+                <polygon points="0,-72 60,-19 51,69 -36,49 -55,-18" fill="rgba(74,168,255,0.10)" stroke="#4aa8ff" stroke-width="1.5" stroke-dasharray="4 3"/>
+                <!-- labels -->
+                <text x="0" y="-110" text-anchor="middle" font-family="Barlow Condensed" font-size="11" font-weight="700" fill="#a8aeb8" letter-spacing="0.08em">FIN</text>
+                <text x="108" y="-31" text-anchor="middle" font-family="Barlow Condensed" font-size="11" font-weight="700" fill="#a8aeb8" letter-spacing="0.08em">PAC</text>
+                <text x="68" y="96" text-anchor="middle" font-family="Barlow Condensed" font-size="11" font-weight="700" fill="#a8aeb8" letter-spacing="0.08em">DRI</text>
+                <text x="-68" y="96" text-anchor="middle" font-family="Barlow Condensed" font-size="11" font-weight="700" fill="#a8aeb8" letter-spacing="0.08em">PHY</text>
+                <text x="-108" y="-31" text-anchor="middle" font-family="Barlow Condensed" font-size="11" font-weight="700" fill="#a8aeb8" letter-spacing="0.08em">MEN</text>
+              </g>
+            </svg>
+            <div style="display:flex;gap:var(--space-4);font-size:var(--t-11);color:var(--ink-3)">
+              <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;background:#00ff88;border-radius:1px"></span>M. Vey</span>
+              <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;background:#4aa8ff;border-radius:1px"></span>E. Holloway</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================== PITCH ======================== -->
+    <section class="s" id="pitch">
+      <div class="s-head">
+        <div>
+          <span class="num">12 / DATA VIZ</span>
+          <h2 class="h">Formation pitch</h2>
+          <p class="desc">The tactical board. Same primitive renders the formation editor, the heat-map view, the pre-match team-sheet, the player position legend.</p>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-5)">
+        <div>
+          <div class="subhead" style="margin-top:0"><span class="label">4-3-3 — first XI</span><span class="rule"></span></div>
+          <div class="pitch" style="max-width:280px">
+            <div class="stripes"></div>
+            <div class="midline"></div>
+            <div class="center"></div>
+            <div class="pen-spot top"></div>
+            <div class="pen-spot bot"></div>
+            <div class="marker" style="left:50%;top:90%"><div class="dot">1</div><span class="name">Hayes</span></div>
+            <div class="marker" style="left:18%;top:72%"><div class="dot">3</div><span class="name">Okafor</span></div>
+            <div class="marker" style="left:38%;top:74%"><div class="dot">5</div><span class="name">Reed</span></div>
+            <div class="marker" style="left:62%;top:74%"><div class="dot">4</div><span class="name">Holloway</span></div>
+            <div class="marker" style="left:82%;top:72%"><div class="dot">2</div><span class="name">Banks</span></div>
+            <div class="marker" style="left:30%;top:50%"><div class="dot">8</div><span class="name">Tanaka</span></div>
+            <div class="marker" style="left:50%;top:54%"><div class="dot">6</div><span class="name">Almeida</span></div>
+            <div class="marker" style="left:70%;top:50%"><div class="dot">10</div><span class="name">Lacroix</span></div>
+            <div class="marker" style="left:18%;top:24%"><div class="dot">11</div><span class="name">Bauer</span></div>
+            <div class="marker captain" style="left:50%;top:18%"><div class="dot">9</div><span class="name">Vey ★</span></div>
+            <div class="marker" style="left:82%;top:24%"><div class="dot">7</div><span class="name">Sosa</span></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="subhead" style="margin-top:0"><span class="label">Vey — average position &amp; heatmap</span><span class="rule"></span></div>
+          <div class="heatmap" style="max-width:280px">
+            <!-- 7x10 grid -->
+            <div class="c"></div><div class="c"></div><div class="c" data-h="1"></div><div class="c" data-h="2"></div><div class="c" data-h="1"></div><div class="c"></div><div class="c"></div>
+            <div class="c"></div><div class="c" data-h="1"></div><div class="c" data-h="3"></div><div class="c" data-h="5"></div><div class="c" data-h="3"></div><div class="c" data-h="1"></div><div class="c"></div>
+            <div class="c" data-h="1"></div><div class="c" data-h="2"></div><div class="c" data-h="4"></div><div class="c" data-h="6"></div><div class="c" data-h="4"></div><div class="c" data-h="2"></div><div class="c" data-h="1"></div>
+            <div class="c" data-h="1"></div><div class="c" data-h="3"></div><div class="c" data-h="5"></div><div class="c" data-h="6"></div><div class="c" data-h="5"></div><div class="c" data-h="3"></div><div class="c" data-h="1"></div>
+            <div class="c"></div><div class="c" data-h="2"></div><div class="c" data-h="3"></div><div class="c" data-h="4"></div><div class="c" data-h="3"></div><div class="c" data-h="2"></div><div class="c"></div>
+            <div class="c"></div><div class="c" data-h="1"></div><div class="c" data-h="2"></div><div class="c" data-h="3"></div><div class="c" data-h="2"></div><div class="c" data-h="1"></div><div class="c"></div>
+            <div class="c"></div><div class="c"></div><div class="c" data-h="1"></div><div class="c" data-h="2"></div><div class="c" data-h="1"></div><div class="c"></div><div class="c"></div>
+            <div class="c"></div><div class="c"></div><div class="c"></div><div class="c" data-h="1"></div><div class="c"></div><div class="c"></div><div class="c"></div>
+            <div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div>
+            <div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="subhead" style="margin-top:0"><span class="label">Possession &amp; territory</span><span class="rule"></span></div>
+          <div class="panel">
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:var(--space-5)">
+              <div>
+                <div class="demo-row" style="justify-content:space-between"><span class="label">Possession</span><span class="font-mono" style="color:var(--ink-1);font-size:var(--t-13)">58% — 42%</span></div>
+                <div class="split-bar" style="margin-top:var(--space-2)"><i style="width:58%;background:var(--brand-400)"></i><i style="width:42%;background:var(--info-400)"></i></div>
+              </div>
+              <div>
+                <div class="demo-row" style="justify-content:space-between"><span class="label">Shots — on target</span><span class="font-mono" style="color:var(--ink-1);font-size:var(--t-13)">14 (6) — 8 (3)</span></div>
+                <div class="split-bar" style="margin-top:var(--space-2)"><i style="width:64%;background:var(--brand-400)"></i><i style="width:36%;background:var(--info-400)"></i></div>
+              </div>
+              <div>
+                <div class="demo-row" style="justify-content:space-between"><span class="label">Expected goals (xG)</span><span class="font-mono" style="color:var(--ink-1);font-size:var(--t-13)">2.18 — 0.94</span></div>
+                <div class="split-bar" style="margin-top:var(--space-2)"><i style="width:70%;background:var(--brand-400)"></i><i style="width:30%;background:var(--info-400)"></i></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:var(--space-4);padding-top:var(--space-3);border-top:1px solid var(--line-1)">
+                <div class="ring">
+                  <svg width="64" height="64"><circle cx="32" cy="32" r="26" fill="none" stroke-width="6" class="ring-track"/><circle cx="32" cy="32" r="26" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="59" class="ring-fill"/></svg>
+                  <span class="ring-num">64%</span>
+                </div>
+                <div>
+                  <span class="label">Final-third entries</span>
+                  <div style="font-size:var(--t-12);color:var(--ink-2);margin-top:4px">Up <span style="color:var(--pos-400)">+11%</span> on rolling avg</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================== MATCH HUD ======================== -->
+    <section class="s" id="hud">
+      <div class="s-head">
+        <div>
+          <span class="num">13 / DATA VIZ</span>
+          <h2 class="h">Match-day HUD</h2>
+          <p class="desc">The broadcast lower-third, in-engine. Score, clock, and the in-match controls strip. Stadium direction skews the accent; Touchline keeps it square.</p>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:var(--space-7)">
+        <div class="hud" style="max-width:720px">
+          <div class="team home">
+            <div class="crest" style="background:linear-gradient(135deg,#d12d36,#8a1c22)">RM</div>
+            <div class="name">Riverside</div>
+          </div>
+          <div class="score">
+            <span class="n">2</span>
+            <span style="color:var(--ink-3);font-size:var(--t-20)">·</span>
+            <span class="n">1</span>
+            <div class="clock">62'  ·  2nd half</div>
+          </div>
+          <div class="team away">
+            <div class="name">Northgate</div>
+            <div class="crest" style="background:linear-gradient(135deg,#1f5fc8,#0e3275)">NC</div>
+          </div>
+        </div>
+
+        <div class="demo-grid demo-grid--3">
+          <div class="stat"><span class="label">xG live</span><span class="value">2.18</span><span class="delta up">▲ Vey shot · 14m</span></div>
+          <div class="stat stat--accent"><span class="label">Momentum</span><span class="value">↑ Riverside</span><span class="delta up">3 chances last 10'</span></div>
+          <div class="stat"><span class="label">Yellow cards</span><span class="value">2 — 4</span><span class="delta down">▼ Tanaka on edge</span></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>In-match controls</h3><span class="label">Tactical strip</span></div>
+          <div class="panel-body" style="display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center">
+            <div class="tabs">
+              <button class="tab" aria-selected="true">4-3-3</button>
+              <button class="tab">4-4-2</button>
+              <button class="tab">3-5-2</button>
+              <button class="tab">5-3-2</button>
+            </div>
+            <div class="tabs">
+              <button class="tab" aria-selected="true">Standard</button>
+              <button class="tab">Press</button>
+              <button class="tab">Park bus</button>
+            </div>
+            <button class="btn btn--ghost btn--sm">Sub on Lacroix</button>
+            <button class="btn btn--ghost btn--sm">Tighter marking</button>
+            <button class="btn btn--ghost btn--sm">Drop deeper</button>
+            <button class="btn btn--primary btn--sm">Team talk ▶</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== EXAMPLE SCREEN ======================== -->
+    <section class="s" id="example" style="background:var(--bg-1)">
+      <div class="s-head">
+        <div>
+          <span class="num">14 / PATTERNS</span>
+          <h2 class="h">Squad screen — system in action</h2>
+          <p class="desc">Everything above, composed. Top game chrome, breadcrumb tabs, the dense squad table, and a sidebar of next match, league position, and inbox. This is the single most-visited screen in a save.</p>
+        </div>
+      </div>
+
+      <div class="screen">
+        <!-- game chrome -->
+        <div class="screen-topbar">
+          <div class="logo-wordmark"><div class="logo-mark"><span>SMP</span></div><div class="logo-text">SMP</div></div>
+          <div class="save-meta"><span>Save:</span><span class="strong">Riverside Career '26</span></div>
+          <div class="save-meta"><span class="date">Sat · 8 May 2026</span></div>
+          <div class="spacer"></div>
+          <div class="next-match">
+            <div><div class="label">Next match</div><div style="font-size:var(--t-13);color:var(--ink-1);font-weight:600">vs Atlas FC (H)</div></div>
+            <div class="font-mono" style="color:var(--brand-400);font-size:var(--t-13)">in 2 days</div>
+          </div>
+          <button class="continue">Continue ▶</button>
+        </div>
+
+        <!-- section nav -->
+        <nav class="screen-nav">
+          <a class="active">Squad</a>
+          <a>Tactics</a>
+          <a>Training</a>
+          <a>Transfers</a>
+          <a>Fixtures</a>
+          <a>Reports</a>
+          <a>Inbox</a>
+
+        </nav>
+
+        <!-- body -->
+        <div class="screen-body">
+
+          <!-- main column -->
+          <div class="squad-main">
+            <div class="squad-header">
+              <div class="team-id">
+                <div class="crest-lg">RM</div>
+                <div>
+                  <h2 class="team-name">Riverside</h2>
+                  <div class="team-meta">Premier Division · Manager: You · Reputation 4.5★</div>
+                </div>
+              </div>
+              <div class="stats-row">
+                <div class="stat-mini"><span class="v brand">2<sup style="font-size:0.5em;color:var(--ink-3)">nd</sup></span><span class="l">League</span></div>
+                <div class="stat-mini"><span class="v">63</span><span class="l">Points</span></div>
+                <div class="stat-mini"><span class="v">+32</span><span class="l">GD</span></div>
+                <div class="stat-mini"><span class="v">7.42</span><span class="l">Avg rating</span></div>
+                <div class="stat-mini"><span class="v">28</span><span class="l">Squad</span></div>
+              </div>
+            </div>
+
+            <div class="squad-toolbar">
+              <div class="tabs">
+                <button class="tab" aria-selected="true">Overview</button>
+                <button class="tab">Attributes</button>
+                <button class="tab">Stats</button>
+                <button class="tab">Contracts</button>
+                <button class="tab">Reserves</button>
+                <button class="tab">Youth</button>
+              </div>
+              <div class="demo-row">
+                <input class="input" placeholder="Filter…" style="width:160px">
+                <button class="btn btn--ghost btn--sm">Sort</button>
+                <button class="btn btn--ghost btn--sm">Compare</button>
+                <button class="btn btn--primary btn--sm">Set first XI</button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-body panel-body--flush">
+                <table class="dt squad-table">
+                  <thead>
+                    <tr>
+                      <th class="num">#</th>
+                      <th>Position</th>
+                      <th>Player</th>
+                      <th class="num">Age</th>
+                      <th>Nat</th>
+                      <th>Form</th>
+                      <th>Morale</th>
+                      <th>Fitness</th>
+                      <th class="num">FIN</th>
+                      <th class="num">PAC</th>
+                      <th class="num">PAS</th>
+                      <th class="num">DEF</th>
+                      <th class="num">PHY</th>
+                      <th class="num">Apps</th>
+                      <th class="num">Gls</th>
+                      <th class="num">Avg</th>
+                      <th class="num">Wage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><span class="kit-num">9</span></td>
+                      <td><span class="chip chip--position fw">ST</span></td>
+                      <td><div class="player-cell"><div class="avatar">MV</div><div><div class="name">M. Vey <span style="color:var(--brand-400)">★</span></div><div class="meta">Captain · 28y</div></div></div></td>
+                      <td class="num">28</td>
+                      <td><span class="flag" style="background:linear-gradient(180deg,#fff 33%,#cf142b 33%,#cf142b 66%,#012169 66%)"></span></td>
+                      <td><div class="form"><span class="f w">W</span><span class="f w">W</span><span class="f d">D</span><span class="f w">W</span><span class="f w">W</span></div></td>
+                      <td><span class="gauge"><i style="width:88%"></i></span></td>
+                      <td><span class="gauge warn"><i style="width:62%"></i></span></td>
+                      <td class="num"><span class="attr-tile x20">19</span></td>
+                      <td class="num"><span class="attr-tile x16">15</span></td>
+                      <td class="num"><span class="attr-tile x14">14</span></td>
+                      <td class="num"><span class="attr-tile x6">5</span></td>
+                      <td class="num"><span class="attr-tile x14">13</span></td>
+                      <td class="num">28</td>
+                      <td class="num"><strong>21</strong></td>
+                      <td class="num">7.92</td>
+                      <td class="num">£185k</td>
+                    </tr>
+                    <tr>
+                      <td><span class="kit-num">10</span></td>
+                      <td><span class="chip chip--position mf">AM</span></td>
+                      <td><div class="player-cell"><div class="avatar">EL</div><div><div class="name">E. Lacroix</div><div class="meta">Playmaker · 26y</div></div></div></td>
+                      <td class="num">26</td>
+                      <td><span class="flag" style="background:linear-gradient(90deg,#0055a4 33%,#fff 33%,#fff 66%,#ef4135 66%)"></span></td>
+                      <td><div class="form"><span class="f w">W</span><span class="f l">L</span><span class="f w">W</span><span class="f d">D</span><span class="f w">W</span></div></td>
+                      <td><span class="gauge"><i style="width:74%"></i></span></td>
+                      <td><span class="gauge"><i style="width:90%"></i></span></td>
+                      <td class="num"><span class="attr-tile x14">14</span></td>
+                      <td class="num"><span class="attr-tile x16">15</span></td>
+                      <td class="num"><span class="attr-tile x18">18</span></td>
+                      <td class="num"><span class="attr-tile x8">7</span></td>
+                      <td class="num"><span class="attr-tile x10">10</span></td>
+                      <td class="num">26</td>
+                      <td class="num">7</td>
+                      <td class="num">7.61</td>
+                      <td class="num">£140k</td>
+                    </tr>
+                    <tr>
+                      <td><span class="kit-num">8</span></td>
+                      <td><span class="chip chip--position mf">CM</span></td>
+                      <td><div class="player-cell"><div class="avatar">KT</div><div><div class="name">K. Tanaka</div><div class="meta">Box-to-box · 24y</div></div></div></td>
+                      <td class="num">24</td>
+                      <td><span class="flag" style="background:linear-gradient(180deg,#fff 50%,#bc002d 50%)"></span></td>
+                      <td><div class="form"><span class="f d">D</span><span class="f w">W</span><span class="f w">W</span><span class="f w">W</span><span class="f d">D</span></div></td>
+                      <td><span class="gauge"><i style="width:80%"></i></span></td>
+                      <td><span class="gauge"><i style="width:96%"></i></span></td>
+                      <td class="num"><span class="attr-tile x12">11</span></td>
+                      <td class="num"><span class="attr-tile x16">15</span></td>
+                      <td class="num"><span class="attr-tile x14">14</span></td>
+                      <td class="num"><span class="attr-tile x14">13</span></td>
+                      <td class="num"><span class="attr-tile x16">15</span></td>
+                      <td class="num">28</td>
+                      <td class="num">3</td>
+                      <td class="num">7.45</td>
+                      <td class="num">£90k</td>
+                    </tr>
+                    <tr>
+                      <td><span class="kit-num">5</span></td>
+                      <td><span class="chip chip--position df">CB</span></td>
+                      <td><div class="player-cell"><div class="avatar">JR</div><div><div class="name">J. Reed</div><div class="meta">Stopper · 30y</div></div></div></td>
+                      <td class="num">30</td>
+                      <td><span class="flag" style="background:linear-gradient(180deg,#fff 33%,#cf142b 33%,#cf142b 66%,#012169 66%)"></span></td>
+                      <td><div class="form"><span class="f w">W</span><span class="f w">W</span><span class="f d">D</span><span class="f w">W</span><span class="f w">W</span></div></td>
+                      <td><span class="gauge"><i style="width:72%"></i></span></td>
+                      <td><span class="gauge"><i style="width:84%"></i></span></td>
+                      <td class="num"><span class="attr-tile x6">4</span></td>
+                      <td class="num"><span class="attr-tile x10">10</span></td>
+                      <td class="num"><span class="attr-tile x12">11</span></td>
+                      <td class="num"><span class="attr-tile x18">17</span></td>
+                      <td class="num"><span class="attr-tile x18">17</span></td>
+                      <td class="num">26</td>
+                      <td class="num">2</td>
+                      <td class="num">7.31</td>
+                      <td class="num">£110k</td>
+                    </tr>
+                    <tr>
+                      <td><span class="kit-num">4</span></td>
+                      <td><span class="chip chip--position df">CB</span></td>
+                      <td><div class="player-cell"><div class="avatar">EH</div><div><div class="name">E. Holloway</div><div class="meta">Ball-playing · 24y</div></div></div></td>
+                      <td class="num">24</td>
+                      <td><span class="flag" style="background:linear-gradient(180deg,#fff 33%,#cf142b 33%,#cf142b 66%,#012169 66%)"></span></td>
+                      <td><div class="form"><span class="f w">W</span><span class="f d">D</span><span class="f w">W</span><span class="f w">W</span><span class="f l">L</span></div></td>
+                      <td><span class="gauge"><i style="width:68%"></i></span></td>
+                      <td><span class="gauge"><i style="width:92%"></i></span></td>
+                      <td class="num"><span class="attr-tile x6">5</span></td>
+                      <td class="num"><span class="attr-tile x12">12</span></td>
+                      <td class="num"><span class="attr-tile x14">14</span></td>
+                      <td class="num"><span class="attr-tile x16">16</span></td>
+                      <td class="num"><span class="attr-tile x14">14</span></td>
+                      <td class="num">25</td>
+                      <td class="num">1</td>
+                      <td class="num">7.18</td>
+                      <td class="num">£75k</td>
+                    </tr>
+                    <tr>
+                      <td><span class="kit-num">1</span></td>
+                      <td><span class="chip chip--position gk">GK</span></td>
+                      <td><div class="player-cell"><div class="avatar">PH</div><div><div class="name">P. Hayes</div><div class="meta">Sweeper · 32y</div></div></div></td>
+                      <td class="num">32</td>
+                      <td><span class="flag" style="background:linear-gradient(90deg,#009a44 33%,#fff 33%,#fff 66%,#ce1126 66%)"></span></td>
+                      <td><div class="form"><span class="f w">W</span><span class="f l">L</span><span class="f w">W</span><span class="f w">W</span><span class="f d">D</span></div></td>
+                      <td><span class="gauge"><i style="width:66%"></i></span></td>
+                      <td><span class="gauge"><i style="width:80%"></i></span></td>
+                      <td class="num"><span class="attr-tile x6">3</span></td>
+                      <td class="num"><span class="attr-tile x6">5</span></td>
+                      <td class="num"><span class="attr-tile x12">12</span></td>
+                      <td class="num"><span class="attr-tile x18">17</span></td>
+                      <td class="num"><span class="attr-tile x14">13</span></td>
+                      <td class="num">28</td>
+                      <td class="num">0</td>
+                      <td class="num">7.05</td>
+                      <td class="num">£68k</td>
+                    </tr>
+                    <tr>
+                      <td><span class="kit-num">7</span></td>
+                      <td><span class="chip chip--position fw">RW</span></td>
+                      <td><div class="player-cell"><div class="avatar">DS</div><div><div class="name">D. Sosa <span class="chip chip--solid-neg" style="height:14px;font-size:9px;padding:0 4px;margin-left:4px">⚠ 4w</span></div><div class="meta">Inside fwd · 22y</div></div></div></td>
+                      <td class="num">22</td>
+                      <td><span class="flag" style="background:linear-gradient(180deg,#74acdf 33%,#fff 33%,#fff 66%,#74acdf 66%)"></span></td>
+                      <td><div class="form"><span class="f w">W</span><span class="f d">D</span><span class="f w">W</span><span class="f up">·</span><span class="f up">·</span></div></td>
+                      <td><span class="gauge bad"><i style="width:38%"></i></span></td>
+                      <td><span class="gauge bad"><i style="width:22%"></i></span></td>
+                      <td class="num"><span class="attr-tile x14">13</span></td>
+                      <td class="num"><span class="attr-tile x18">18</span></td>
+                      <td class="num"><span class="attr-tile x12">12</span></td>
+                      <td class="num"><span class="attr-tile x6">5</span></td>
+                      <td class="num"><span class="attr-tile x10">9</span></td>
+                      <td class="num">19</td>
+                      <td class="num">8</td>
+                      <td class="num">7.28</td>
+                      <td class="num">£62k</td>
+                    </tr>
+                    <tr>
+                      <td><span class="kit-num">11</span></td>
+                      <td><span class="chip chip--position fw">LW</span></td>
+                      <td><div class="player-cell"><div class="avatar">AB</div><div><div class="name">A. Bauer</div><div class="meta">Pacy winger · 21y</div></div></div></td>
+                      <td class="num">21</td>
+                      <td><span class="flag" style="background:linear-gradient(180deg,#000 33%,#dd0000 33%,#dd0000 66%,#ffce00 66%)"></span></td>
+                      <td><div class="form"><span class="f d">D</span><span class="f w">W</span><span class="f l">L</span><span class="f w">W</span><span class="f w">W</span></div></td>
+                      <td><span class="gauge"><i style="width:82%"></i></span></td>
+                      <td><span class="gauge"><i style="width:88%"></i></span></td>
+                      <td class="num"><span class="attr-tile x12">12</span></td>
+                      <td class="num"><span class="attr-tile x20">19</span></td>
+                      <td class="num"><span class="attr-tile x12">11</span></td>
+                      <td class="num"><span class="attr-tile x6">4</span></td>
+                      <td class="num"><span class="attr-tile x10">9</span></td>
+                      <td class="num">24</td>
+                      <td class="num">6</td>
+                      <td class="num">7.22</td>
+                      <td class="num">£48k</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- side column -->
+          <div class="squad-side">
+
+            <div class="side-widget">
+              <div class="head"><span class="label">Next 5 fixtures</span><a href="#" style="font-size:var(--t-11);color:var(--brand-400);text-decoration:none">All ›</a></div>
+              <div class="body">
+                <div class="fixture-row"><span class="home us">Riverside</span><span class="result w">2 — 1</span><span class="away">Northgate</span></div>
+                <div class="fixture-row"><span class="home us">Riverside</span><span class="vs">vs</span><span class="away">Atlas FC</span></div>
+                <div class="fixture-row"><span class="home">Cosmos AC</span><span class="vs">vs</span><span class="away us">Riverside</span></div>
+                <div class="fixture-row"><span class="home us">Riverside</span><span class="vs">vs</span><span class="away">Verde CF</span></div>
+                <div class="fixture-row"><span class="home">Atlas FC</span><span class="vs">vs</span><span class="away us">Riverside</span></div>
+              </div>
+            </div>
+
+            <div class="side-widget">
+              <div class="head"><span class="label">League — top 6</span><span class="font-mono" style="color:var(--ink-3);font-size:var(--t-11)">GW 28</span></div>
+              <div class="body league-mini">
+                <div class="row"><span class="pos">1</span><span class="team">Northgate City</span><span class="num">+42</span><span class="num pts">68</span></div>
+                <div class="row us"><span class="pos">2</span><span class="team">Riverside</span><span class="num">+32</span><span class="num pts">63</span></div>
+                <div class="row"><span class="pos">3</span><span class="team">Verde CF</span><span class="num">+23</span><span class="num pts">58</span></div>
+                <div class="row"><span class="pos">4</span><span class="team">Cosmos AC</span><span class="num">+15</span><span class="num pts">52</span></div>
+                <div class="row"><span class="pos">5</span><span class="team">Atlas FC</span><span class="num">+8</span><span class="num pts">47</span></div>
+                <div class="row"><span class="pos">6</span><span class="team">Highbury Wanderers</span><span class="num">+3</span><span class="num pts">41</span></div>
+              </div>
+            </div>
+
+            <div class="side-widget">
+              <div class="head"><span class="label">Inbox — unread (4)</span><a href="#" style="font-size:var(--t-11);color:var(--brand-400);text-decoration:none">Open ›</a></div>
+              <div class="body">
+                <div class="news-row"><div class="icon injury">⚠</div><div><div class="body" style="padding:0">D. Sosa twisted his knee in training. <strong>Out 4 weeks.</strong></div><div class="time">2h ago</div></div></div>
+                <div class="news-row"><div class="icon transfer">⊕</div><div><div class="body" style="padding:0">Northgate accepted your <strong>£32.5M</strong> bid for Holloway.</div><div class="time">Yesterday</div></div></div>
+                <div class="news-row"><div class="icon tactic">▶</div><div><div class="body" style="padding:0">Asst. manager: <strong>Vey thrives in 4-3-3</strong> against deep blocks.</div><div class="time">2 days</div></div></div>
+                <div class="news-row"><div class="icon transfer">⊕</div><div><div class="body" style="padding:0">Scout report ready: <strong>L. Almeida (CM, 19)</strong> — recommended.</div><div class="time">3 days</div></div></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== FOOTER ======================== -->
+    <footer style="padding:var(--space-9);background:var(--bg-0);border-top:1px solid var(--line-2);text-align:center;color:var(--ink-4);font-size:var(--t-12)">
+      <div class="logo-wordmark" style="justify-content:center;margin-bottom:var(--space-3)"><div class="logo-mark"><span>SMP</span></div><div class="logo-text">Soccer Manager Pro</div></div>
+      Design system v0.1 · two directions, one foundation. Toggle the switcher in the hero to compare Stadium and Touchline.
+    </footer>
+
+  </main>
+</div>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

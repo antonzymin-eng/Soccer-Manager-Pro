@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Training — Soccer Manager Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/training.css">
+<script>
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "density": "comfortable",
+  "accentColor": "#00ff88",
+  "showRiskPanel": true
+}/*EDITMODE-END*/;
+</script>
+</head>
+<body>
+
+<div class="resolution-badge" id="resbadge">1920 × 1080 · standard tier · scale 100%</div>
+
+<div class="fitter">
+<div class="stage" id="stage">
+
+  <!-- TOP CHROME -->
+  <header class="chrome">
+    <div class="brand">
+      <div class="crest-gm">RM</div>
+      <div class="nm">Riverside <em>· Mgr. You</em></div>
+    </div>
+    <nav class="nav">
+      <a href="Club.html">Club</a>
+      <a href="Squad Screen.html">Squad</a>
+      <a href="Tactics.html">Tactics</a>
+      <a href="#" class="on">Training</a>
+      <a href="Scouting Screen.html">Scouting</a>
+      <a href="#">Transfers</a>
+      <a href="#">Staff</a>
+      <a href="World.html">World</a>
+      <a href="#">Inbox<span class="b">3</span></a>
+    </nav>
+    <div class="sp"></div>
+    <div class="right">
+      <div class="kbd-hint"><span class="lbl">Search anywhere</span><span class="k">⌘ K</span></div>
+      <div class="date">Sat 14 Mar · Wk 31 📅</div>
+      <div class="cont">Continue ▸</div>
+    </div>
+  </header>
+
+  <!-- SUB-TABS -->
+  <div class="crumb">
+    <span class="tab on">Schedule</span>
+    <span class="tab">Individual</span>
+    <span class="tab">Group Work</span>
+    <span class="tab">Development</span>
+    <span class="tab">Analysis</span>
+    <span class="tab">Staff</span>
+    <div class="sp"></div>
+    <div class="hint">
+      NEXT MATCH IN 1 DAY
+      <span class="badge warn">⚠ 3 at risk</span>
+      <span class="badge ok">✓ Optimal load</span>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="tb-grp">
+      <div class="seg">
+        <button class="on">This Week</button>
+        <button>Next Week</button>
+        <button>Month</button>
+      </div>
+    </div>
+    <div class="tb-grp">
+      <span class="chip on">● All · 22</span>
+      <span class="chip bad">● Injured · 2</span>
+      <span class="chip warn">● At Risk · 3</span>
+      <span class="chip">● Resting · 1</span>
+    </div>
+    <div class="tb-grp">
+      <div class="seg">
+        <button class="on">All</button>
+        <button>GK</button>
+        <button>DF</button>
+        <button>MF</button>
+        <button>FW</button>
+      </div>
+    </div>
+    <div class="tb-grp">
+      <div class="seg">
+        <button>No Group</button>
+        <button class="on">by Position</button>
+      </div>
+    </div>
+    <div class="sp"></div>
+    <div class="tb-grp">
+      <button class="btn">↻ Auto-schedule</button>
+      <button class="btn">⬇ Copy Last Week</button>
+      <button class="btn primary">✓ Apply Changes</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- LEFT: WEEKLY SCHEDULE -->
+    <div class="schedule-col">
+      <div class="sched-head">
+        <div class="wk">WEEK 31<em>· Mar 10 – 16</em></div>
+        <div class="load-pill" id="loadPill"></div>
+      </div>
+      <div class="sched-body" id="schedBody"></div>
+      <div class="sched-foot" id="schedFoot"></div>
+    </div>
+
+    <!-- CENTER: PLAYER TABLE -->
+    <div class="training-pane">
+      <div class="table-head">
+        <div class="h r">#</div>
+        <div class="h">Pos</div>
+        <div class="h">Player</div>
+        <div class="h">Fitness <span class="arr">↓</span></div>
+        <div class="h">Sharpness</div>
+        <div class="h">Load</div>
+        <div class="h">Focus</div>
+        <div class="h">Dev</div>
+        <div class="h">Morale</div>
+        <div class="h">Session</div>
+      </div>
+      <div class="rows" id="trainingRows"></div>
+      <div class="footer-bar" id="trainingFooter"></div>
+    </div>
+
+    <!-- RIGHT: SUMMARY PANEL -->
+    <div class="training-side" id="trainingSide"></div>
+
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status">
+    <span class="dot"></span><span>SAVE · auto · 11:58</span>
+    <span class="bullet">·</span>
+    <span>BUILD 0.2.31-touchline</span>
+    <span class="bullet">·</span>
+    <span>1920 × 1080 · standard tier</span>
+    <span class="bullet">·</span>
+    <span id="statusInfo">22 players · Wk 31 · 3 at risk</span>
+    <span class="sp"></span>
+    <span>FPS 60</span>
+    <span class="bullet">·</span>
+    <span>RAM 1.2 GB</span>
+    <span class="bullet">·</span>
+    <span style="color:var(--brand-400)">⌘K to search anything</span>
+  </div>
+
+</div>
+</div>
+
+<!-- ================================================================
+     DATA + RENDER
+     ================================================================ -->
+<script>
+
+/* ── SESSIONS ──────────────────────────────────────────────────────── */
+const SESSIONS = [
+  { day:'MON', date:'Mar 10', type:'TACTICS',    label:'Defensive Shape & Transitions', dur:'3h 30m', intensity:82, color:'info',  done:true  },
+  { day:'TUE', date:'Mar 11', type:'FITNESS',    label:'Endurance & Power Circuits',    dur:'2h 45m', intensity:75, color:'brand', done:true  },
+  { day:'WED', date:'Mar 12', type:'TECHNICAL',  label:'Passing, Movement & 1v1',       dur:'2h 00m', intensity:60, color:'gold',  done:true  },
+  { day:'THU', date:'Mar 13', type:'MATCH PREP', label:'Set Pieces & Press Triggers',   dur:'2h 30m', intensity:70, color:'brand', done:true  },
+  { day:'FRI', date:'Mar 14', type:'LIGHT',      label:'Activation & Stretching',       dur:'1h 00m', intensity:25, color:'low',   done:true  },
+  { day:'SAT', date:'Mar 15', type:'MATCH',      label:'vs. Blackburn · 15:00 · Home',  dur:'90 min',  intensity:100,color:'match', done:false },
+  { day:'SUN', date:'Mar 16', type:'RECOVERY',   label:'Pool, Ice Bath & Stretch',      dur:'1h 00m', intensity:15, color:'rest',  done:false },
+];
+
+/* ── PLAYERS ───────────────────────────────────────────────────────── */
+const PLAYERS = [
+  /* GK */
+  { n:1,  pos:'GK', name:'J. Mendes',     fit:93, sharp:88, load:'MED',  focus:'Shot Stopping',   dev:{ attr:'Reflexes',      from:16, to:17 }, mor:4, ses:'ready', flag:null   },
+  { n:13, pos:'GK', name:'K. Park',       fit:88, sharp:71, load:'LOW',  focus:'Sweeper Keeper',  dev:{ attr:'Composure',     from:13, to:13 }, mor:3, ses:'ready', flag:null   },
+  { n:25, pos:'GK', name:'T. Adeyemi',    fit:76, sharp:60, load:'LOW',  focus:'Distribution',   dev:{ attr:'Kicking',       from:11, to:12 }, mor:3, ses:'ready', flag:null   },
+  /* DF */
+  { n:2,  pos:'DF', name:'R. Hartmann',   fit:90, sharp:84, load:'HIGH', focus:'Aerial Duels',    dev:{ attr:'Jumping',       from:14, to:14 }, mor:5, ses:'ready', flag:null   },
+  { n:5,  pos:'DF', name:'M. Osei',       fit:71, sharp:65, load:'MED',  focus:'Marking',        dev:{ attr:'Marking',       from:13, to:14 }, mor:3, ses:'light', flag:'RISK' },
+  { n:6,  pos:'DF', name:'A. Castellano', fit:86, sharp:79, load:'HIGH', focus:'Ball Playing',    dev:{ attr:'Passing',       from:14, to:15 }, mor:5, ses:'ready', flag:null   },
+  { n:3,  pos:'DF', name:'L. Ferreira',   fit:88, sharp:76, load:'MED',  focus:'Crossing',       dev:{ attr:'Crossing',      from:13, to:13 }, mor:4, ses:'ready', flag:null   },
+  { n:15, pos:'DF', name:'J. Whitmore',   fit:44, sharp:38, load:'—',    focus:'Rehab (hamstring)',dev:{ attr:'—',            from:0,  to:0  }, mor:2, ses:'inj',   flag:'INJ'  },
+  { n:24, pos:'DF', name:'O. Mbeki',      fit:82, sharp:71, load:'MED',  focus:'Positioning',    dev:{ attr:'Anticipation',  from:12, to:13 }, mor:4, ses:'ready', flag:null   },
+  /* MF */
+  { n:4,  pos:'MF', name:'D. Kovač',      fit:96, sharp:92, load:'HIGH', focus:'Box-to-Box',      dev:{ attr:'Stamina',       from:17, to:17 }, mor:5, ses:'ready', flag:null, cap:true },
+  { n:8,  pos:'MF', name:'T. Nakamura',   fit:89, sharp:86, load:'HIGH', focus:'Technical',      dev:{ attr:'Dribbling',     from:15, to:16 }, mor:5, ses:'ready', flag:null   },
+  { n:14, pos:'MF', name:'B. Okafor',     fit:67, sharp:60, load:'LOW',  focus:'Fitness',        dev:{ attr:'Stamina',       from:12, to:12 }, mor:3, ses:'light', flag:'RISK' },
+  { n:18, pos:'MF', name:'C. Delacroix',  fit:83, sharp:77, load:'MED',  focus:'Pressing',       dev:{ attr:'Work Rate',     from:14, to:14 }, mor:4, ses:'ready', flag:null   },
+  { n:21, pos:'MF', name:'S. Andersen',   fit:79, sharp:74, load:'MED',  focus:'Vision & Range',  dev:{ attr:'Vision',        from:13, to:14 }, mor:4, ses:'ready', flag:null   },
+  { n:7,  pos:'MF', name:'Y. Balogun',    fit:92, sharp:90, load:'HIGH', focus:'Creativity',     dev:{ attr:'Creativity',    from:16, to:17 }, mor:5, ses:'ready', flag:null   },
+  { n:22, pos:'MF', name:'P. Iglesias',   fit:91, sharp:83, load:'LOW',  focus:'Resting',        dev:{ attr:'Decisions',     from:13, to:14 }, mor:4, ses:'rest',  flag:'REST' },
+  /* FW */
+  { n:11, pos:'FW', name:'E. Santos',     fit:87, sharp:93, load:'MED',  focus:'Finishing',      dev:{ attr:'Finishing',     from:17, to:17 }, mor:5, ses:'ready', flag:null   },
+  { n:9,  pos:'FW', name:'M. Reinholt',   fit:80, sharp:86, load:'MED',  focus:'Hold-Up Play',   dev:{ attr:'Strength',      from:14, to:15 }, mor:4, ses:'ready', flag:null   },
+  { n:10, pos:'FW', name:'A. Gomes',      fit:59, sharp:55, load:'REST', focus:'Recovery Run',   dev:{ attr:'Composure',     from:15, to:15 }, mor:3, ses:'rest',  flag:'RISK' },
+  { n:19, pos:'FW', name:'F. Diallo',     fit:84, sharp:79, load:'MED',  focus:'Movement',       dev:{ attr:'Off the Ball',  from:13, to:14 }, mor:4, ses:'ready', flag:null   },
+  { n:23, pos:'FW', name:'I. Petrova',    fit:37, sharp:22, load:'—',    focus:'Rehab (knee)',   dev:{ attr:'—',             from:0,  to:0  }, mor:2, ses:'inj',   flag:'INJ'  },
+  { n:17, pos:'FW', name:'C. Nkrumah',    fit:77, sharp:72, load:'MED',  focus:'Pressing',       dev:{ attr:'Pace',          from:15, to:15 }, mor:4, ses:'ready', flag:null   },
+];
+
+/* ── HELPERS ───────────────────────────────────────────────────────── */
+function fitColor(v)   { return v>=85?'var(--pos-400)':v>=70?'var(--neu-400)':'var(--neg-400)'; }
+function sharpColor(v) { return v>=80?'var(--brand-400)':v>=65?'var(--info-400)':'var(--neu-400)'; }
+
+const SESSION_COLORS = {
+  info:  { bg:'var(--info-tint)',      fg:'var(--info-400)',  bar:'var(--info-400)'  },
+  brand: { bg:'var(--brand-tint)',     fg:'var(--brand-400)', bar:'var(--brand-400)' },
+  gold:  { bg:'var(--gold-tint)',      fg:'var(--gold-400)',  bar:'var(--gold-400)'  },
+  match: { bg:'var(--info-tint)',      fg:'var(--info-400)',  bar:'var(--info-400)'  },
+  low:   { bg:'rgba(255,255,255,.04)', fg:'var(--ink-3)',     bar:'var(--ink-4)'     },
+  rest:  { bg:'rgba(255,255,255,.03)', fg:'var(--ink-4)',     bar:'var(--ink-5)'     },
+};
+
+const LOAD_CLASS = { HIGH:'ld-hi', MED:'ld-med', LOW:'ld-low', REST:'ld-rest', '—':'ld-none' };
+const POS_CLASS  = { GK:'pos-gk', DF:'pos-df', MF:'pos-mf', FW:'pos-fw' };
+
+/* ── RENDER: SCHEDULE ──────────────────────────────────────────────── */
+function renderSchedule() {
+  const body = document.getElementById('schedBody');
+  const pill = document.getElementById('loadPill');
+
+  pill.textContent = 'LOAD 63%';
+  pill.style.cssText = 'background:var(--pos-tint);color:var(--pos-400);border:1px solid rgba(46,229,114,.3);';
+
+  body.innerHTML = SESSIONS.map((s, i) => {
+    const c  = SESSION_COLORS[s.color] || SESSION_COLORS.info;
+    const isMatch = s.color === 'match';
+    const isRest  = s.color === 'rest';
+    let cls = 'session-card';
+    if (isMatch) cls += ' sc-match';
+    if (isRest)  cls += ' sc-rest';
+    const doneStyle = s.done
+      ? 'opacity:.55;'
+      : '';
+
+    return `
+<div class="${cls}" style="${doneStyle}">
+  <div class="sc-row1">
+    <div class="sc-day">${s.day}</div>
+    <div class="sc-date">${s.date}</div>
+    ${s.done ? `<div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-5);margin-left:auto;letter-spacing:.05em">DONE</div>` : ''}
+    <div class="sc-type" style="background:${c.bg};color:${c.fg};${s.done?'':'margin-left:auto;'}">${s.type}</div>
+  </div>
+  <div class="sc-label">${s.label}</div>
+  <div class="sc-meta">
+    <div class="sc-dur">${s.dur}</div>
+    <div class="int-bar"><i style="width:${s.intensity}%;background:${c.bar}"></i></div>
+    <div class="sc-pct" style="color:${c.fg}">${s.intensity}%</div>
+  </div>
+</div>`;
+  }).join('');
+
+  document.getElementById('schedFoot').innerHTML = `
+<div class="wkl">
+  <div class="wkl-lbl">Physical</div>
+  <div class="wkl-bar"><i style="width:68%;background:var(--brand-400)"></i></div>
+  <div class="wkl-val" style="color:var(--brand-400)">68%</div>
+</div>
+<div class="wkl">
+  <div class="wkl-lbl">Tactical</div>
+  <div class="wkl-bar"><i style="width:72%;background:var(--info-400)"></i></div>
+  <div class="wkl-val" style="color:var(--info-400)">72%</div>
+</div>
+<div class="wkl">
+  <div class="wkl-lbl">Technical</div>
+  <div class="wkl-bar"><i style="width:55%;background:var(--gold-400)"></i></div>
+  <div class="wkl-val" style="color:var(--gold-400)">55%</div>
+</div>`;
+}
+
+/* ── RENDER: PLAYER TABLE ──────────────────────────────────────────── */
+function morHTML(n, mood) {
+  const col = mood >= 4 ? 'pos' : mood >= 3 ? 'neu' : 'neg';
+  return `<div class="mor">${[1,2,3,4,5].map(i=>`<span class="${i<=n?'on '+col:''}"></span>`).join('')}</div>`;
+}
+
+function devHTML(dev) {
+  if (!dev.attr || dev.attr === '—') return `<div class="dev-cell"><span style="color:var(--ink-5)">—</span></div>`;
+  const gained = dev.to > dev.from;
+  return `<div class="dev-cell">
+    <span class="da">${dev.attr}</span>
+    <span class="dv">
+      <span class="d-from">${dev.from}</span>
+      ${gained ? `<span class="d-arr">→</span><span class="d-to">${dev.to}</span>` : `<span class="d-same">—</span>`}
+    </span>
+  </div>`;
+}
+
+function sesHTML(ses) {
+  if (ses === 'inj')   return `<div class="ses-cell ses-inj">✕ Injured</div>`;
+  if (ses === 'rest')  return `<div class="ses-cell ses-rest">↻ Resting</div>`;
+  if (ses === 'light') return `<div class="ses-cell ses-light">▸ Light</div>`;
+  return `<div class="ses-cell ses-ready">✓ Ready</div>`;
+}
+
+function tagHTML(flag, cap) {
+  const parts = [];
+  if (cap)           parts.push(`<span class="tag tag-cap">C</span>`);
+  if (flag === 'INJ') parts.push(`<span class="tag tag-inj">INJ</span>`);
+  if (flag === 'RISK') parts.push(`<span class="tag tag-risk">RISK</span>`);
+  if (flag === 'REST') parts.push(`<span class="tag tag-rest">REST</span>`);
+  return parts.join('');
+}
+
+function renderRows() {
+  const rows = document.getElementById('trainingRows');
+  rows.innerHTML = PLAYERS.map(p => {
+    const fc = fitColor(p.fit);
+    const sc = sharpColor(p.sharp);
+    const dim = p.ses === 'inj' ? ' dim' : '';
+    return `<div class="row${dim}">
+  <div class="rn">${p.n}</div>
+  <div><span class="pos ${POS_CLASS[p.pos]}">${p.pos}</span></div>
+  <div class="nm-cell"><span class="nm">${p.name}</span>${tagHTML(p.flag, p.cap)}</div>
+  <div class="bar-cell">
+    <div class="bar"><i style="width:${p.fit}%;background:${fc}"></i></div>
+    <span class="bv" style="color:${fc}">${p.fit}</span>
+  </div>
+  <div class="bar-cell">
+    <div class="bar"><i style="width:${p.sharp}%;background:${sc}"></i></div>
+    <span class="bv" style="color:${sc}">${p.sharp}</span>
+  </div>
+  <div><span class="load-badge ${LOAD_CLASS[p.load]}">${p.load}</span></div>
+  <div class="focus-cell">${p.focus}</div>
+  ${devHTML(p.dev)}
+  ${morHTML(p.mor, p.mor)}
+  ${sesHTML(p.ses)}
+</div>`;
+  }).join('');
+
+  const injured = PLAYERS.filter(p => p.flag === 'INJ').length;
+  const atRisk  = PLAYERS.filter(p => p.flag === 'RISK').length;
+  const devCount = PLAYERS.filter(p => p.dev && p.dev.to > p.dev.from).length;
+  const avgFit  = Math.round(PLAYERS.reduce((s,p) => s + p.fit, 0) / PLAYERS.length);
+  const avgSharp = Math.round(PLAYERS.reduce((s,p) => s + p.sharp, 0) / PLAYERS.length);
+
+  document.getElementById('trainingFooter').innerHTML = `
+<div class="fsum">SQUAD <b>${PLAYERS.length}</b></div>
+<div class="fsum">AVG FITNESS <b class="ok">${avgFit}%</b></div>
+<div class="fsum">AVG SHARPNESS <b class="info">${avgSharp}%</b></div>
+<div class="fsum">INJURED <b class="bad">${injured}</b></div>
+<div class="fsum">AT RISK <b class="warn">${atRisk}</b></div>
+<div class="fsum">DEVELOPING <b>${devCount}</b></div>
+<div class="sp"></div>
+<div class="fsum">WEEK LOAD <b class="ok">63%</b> · OPTIMAL</div>`;
+}
+
+/* ── RENDER: RIGHT PANEL ───────────────────────────────────────────── */
+function renderSide() {
+  const side = document.getElementById('trainingSide');
+
+  const avgFit   = Math.round(PLAYERS.reduce((s,p) => s + p.fit,   0) / PLAYERS.length);
+  const avgSharp = Math.round(PLAYERS.reduce((s,p) => s + p.sharp, 0) / PLAYERS.length);
+  const atRisk   = PLAYERS.filter(p => p.flag === 'RISK').length;
+  const devCount = PLAYERS.filter(p => p.dev && p.dev.to > p.dev.from).length;
+
+  const topDev = PLAYERS
+    .filter(p => p.dev && p.dev.to > p.dev.from)
+    .sort((a,b) => (b.dev.to - b.dev.from) - (a.dev.to - a.dev.from))
+    .slice(0, 5);
+
+  const risks = [
+    { name:'M. Osei',    rsn:'High load · Fitness 71%',  level:'MEDIUM' },
+    { name:'B. Okafor',  rsn:'Fatigue risk · Fitness 67%', level:'MEDIUM' },
+    { name:'A. Gomes',   rsn:'Undercooked · Fitness 59%', level:'HIGH'   },
+  ];
+
+  const loadChart = SESSIONS.map(s => {
+    const c = SESSION_COLORS[s.color] || SESSION_COLORS.low;
+    const isMatch = s.color === 'match';
+    return `<div class="lc-col${isMatch?' lc-match':''}">
+      <div class="lc-track">
+        <div class="lc-fill" style="height:${s.intensity}%;background:${c.bar};opacity:${isMatch?'1':'0.75'}"></div>
+      </div>
+      <div class="lc-day">${s.day[0]}</div>
+    </div>`;
+  }).join('');
+
+  side.innerHTML = `
+
+<div class="ts-section">
+  <h4>Squad Condition <span class="meta">Wk 31</span></h4>
+  <div class="stat-cards">
+    <div class="stat-card">
+      <div class="l">Avg Fitness</div>
+      <div class="v" style="color:var(--pos-400)">${avgFit}<span style="font-size:13px;color:var(--ink-4)">%</span></div>
+      <div class="s">+2 vs last wk</div>
+    </div>
+    <div class="stat-card">
+      <div class="l">Sharpness</div>
+      <div class="v" style="color:var(--brand-400)">${avgSharp}<span style="font-size:13px;color:var(--ink-4)">%</span></div>
+      <div class="s">−1 vs last wk</div>
+    </div>
+    <div class="stat-card">
+      <div class="l">At Risk</div>
+      <div class="v" style="color:var(--neu-400)">${atRisk}</div>
+      <div class="s">monitor closely</div>
+    </div>
+    <div class="stat-card">
+      <div class="l">Developing</div>
+      <div class="v" style="color:var(--info-400)">${devCount}</div>
+      <div class="s">attr gains</div>
+    </div>
+  </div>
+</div>
+
+<div class="ts-section">
+  <h4>Weekly Load <span class="meta">Mon–Sun</span></h4>
+  <div class="load-chart">${loadChart}</div>
+</div>
+
+<div class="ts-section">
+  <h4>Next Fixture <span class="meta">Sat 15 Mar</span></h4>
+  <div class="fixture-card">
+    <div class="fc-crest">RM</div>
+    <div class="fc-body">
+      <div class="fc-matchup">Riverside vs Blackburn</div>
+      <div class="fc-meta">Sat 15 Mar · 15:00 · Premier League Wk 31 · Home</div>
+    </div>
+    <div class="fc-diff">
+      <div class="lbl">Squad Diff</div>
+      <div class="val" style="color:var(--pos-400)">+8.4</div>
+    </div>
+  </div>
+</div>
+
+<div class="ts-section grow">
+  <h4>Development Leaders <span class="meta">This Week</span></h4>
+  ${topDev.map(p => `
+  <div class="dev-leader">
+    <div>
+      <div class="dl-name">${p.name}</div>
+      <div class="dl-attr">${p.dev.attr} · ${p.dev.from} → ${p.dev.to}</div>
+    </div>
+    <div class="dl-prog">
+      <div class="dl-bar"><i style="width:${(p.dev.to/20)*100}%"></i></div>
+      <div class="dl-gain">+${p.dev.to - p.dev.from}</div>
+    </div>
+  </div>`).join('')}
+</div>
+
+<div class="ts-section">
+  <h4>Injury Risk <span class="meta">${risks.length} flagged</span></h4>
+  ${risks.map(r => `
+  <div class="risk-row">
+    <div>
+      <div class="rr-name">${r.name}</div>
+      <div class="rr-rsn">${r.rsn}</div>
+    </div>
+    <div class="risk-badge ${r.level==='HIGH'?'rb-hi':'rb-med'}">${r.level}</div>
+  </div>`).join('')}
+</div>`;
+}
+
+/* ── SCALE ─────────────────────────────────────────────────────────── */
+function scaleStage() {
+  const stage = document.getElementById('stage');
+  const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  stage.style.transform = `scale(${scale})`;
+  const b = document.getElementById('resbadge');
+  if (b) b.textContent = `1920 × 1080 · standard tier · scale ${Math.round(scale * 100)}%`;
+}
+window.addEventListener('resize', scaleStage);
+scaleStage();
+
+/* ── INIT ──────────────────────────────────────────────────────────── */
+renderSchedule();
+renderRows();
+renderSide();
+</script>
+
+<!-- React + Tweaks panel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="assets/tweaks-panel.jsx"></script>
+<script type="text/babel" src="assets/training-tweaks.jsx"></script>
+<div id="tweaks-root"></div>
+
+</body>
+</html>

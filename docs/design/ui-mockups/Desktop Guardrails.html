@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en" data-direction="touchline">
+<head>
+<meta charset="UTF-8">
+<title>Desktop Guardrails — Soccer Manager Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<style>
+  *,*::before,*::after { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body {
+    background: var(--bg-0);
+    color: var(--ink-1);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  a { color: var(--brand-400); text-decoration: none; }
+
+  /* layout */
+  .page { max-width: 1280px; margin: 0 auto; padding: 64px 48px 120px; }
+  .crumb { display:flex; align-items:center; gap:8px; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-3); margin-bottom: 32px; }
+  .crumb a { color:var(--ink-3); border-bottom:1px solid var(--line-2); padding-bottom:1px; }
+  .crumb a:hover { color:var(--ink-1); border-bottom-color:var(--brand-400); }
+  .crumb .sep { opacity:.4; }
+
+  /* hero */
+  .hero { display:grid; grid-template-columns: 1.4fr 1fr; gap:48px; align-items:end; padding-bottom:48px; border-bottom:1px solid var(--line-2); margin-bottom:64px; }
+  .hero-eyebrow { font-family: var(--font-display); font-size:13px; letter-spacing:0.18em; text-transform:uppercase; color:var(--brand-400); font-weight:600; margin-bottom:24px; display:flex; align-items:center; gap:12px; }
+  .hero-eyebrow::before { content:""; width:32px; height:2px; background:var(--brand-400); }
+  h1 { font-family: var(--font-display); font-size: clamp(56px, 7vw, 96px); line-height:0.95; letter-spacing:-0.02em; font-weight:700; margin: 0 0 24px; }
+  h1 em { font-style: normal; color: var(--ink-3); }
+  .hero-sub { font-size:18px; line-height:1.5; color:var(--ink-2); max-width:60ch; margin:0; }
+  .hero-meta { display:flex; flex-direction:column; gap:16px; padding-bottom:8px; }
+  .meta-row { display:flex; justify-content:space-between; align-items:baseline; padding:10px 0; border-top:1px solid var(--line-1); font-size:12px; }
+  .meta-row:first-child { border-top:1px solid var(--line-2); }
+  .meta-row dt { color:var(--ink-3); letter-spacing:0.08em; text-transform:uppercase; font-size:11px; }
+  .meta-row dd { margin:0; color:var(--ink-1); font-family: var(--font-mono); }
+
+  /* sections */
+  section { margin-bottom: 96px; }
+  .section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:32px; padding-bottom:20px; border-bottom:1px solid var(--line-2); margin-bottom:40px; }
+  h2 { font-family: var(--font-display); font-size:48px; line-height:1; letter-spacing:-0.01em; font-weight:700; margin:0; }
+  .section-num { font-family: var(--font-mono); font-size:11px; letter-spacing:0.12em; color:var(--ink-3); text-transform:uppercase; }
+  .lede { font-size:17px; line-height:1.6; color:var(--ink-2); max-width:72ch; margin: 0 0 24px; }
+
+  /* "Why" callouts */
+  .why-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:24px; }
+  .why-card { background: var(--bg-card); border:1px solid var(--line-2); padding:24px; border-radius: var(--panel-radius); }
+  .why-card h3 { font-family: var(--font-display); font-size:13px; letter-spacing:0.12em; text-transform:uppercase; color:var(--brand-400); margin:0 0 16px; font-weight:600; }
+  .why-card .stat { font-family: var(--font-display); font-size:48px; line-height:1; font-weight:700; letter-spacing:-0.01em; color:var(--ink-1); margin-bottom:8px; }
+  .why-card p { font-size:13px; line-height:1.55; color:var(--ink-2); margin:0; }
+  .why-card cite { display:block; margin-top:12px; font-size:11px; color:var(--ink-4); font-style:normal; }
+  .why-card cite::before { content:"— "; }
+
+  /* principles */
+  .principles { display:flex; flex-direction:column; gap:32px; }
+  .principle { background: var(--bg-1); border:1px solid var(--line-2); border-radius: var(--panel-radius); overflow:hidden; }
+  .p-head { display:grid; grid-template-columns: 80px 1fr auto; align-items:center; gap:24px; padding: 20px 28px; border-bottom:1px solid var(--line-2); background: var(--bg-card); }
+  .p-num { font-family: var(--font-display); font-size:48px; line-height:1; font-weight:700; color:var(--brand-400); letter-spacing:-0.02em; }
+  .p-title { font-family: var(--font-display); font-size:28px; font-weight:700; letter-spacing:-0.01em; margin:0; line-height:1.05; }
+  .p-tag { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; background: var(--bg-3); border:1px solid var(--line-2); border-radius:var(--r-1); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-3); font-family: var(--font-mono); }
+  .p-tag .ind { width:6px; height:6px; border-radius:50%; background:var(--brand-400); box-shadow: var(--brand-glow); }
+  .p-body { display:grid; grid-template-columns: 1fr 1.2fr; }
+  .p-text { padding: 28px; border-right:1px solid var(--line-2); }
+  .p-rule { font-size:18px; line-height:1.4; font-weight:500; color:var(--ink-1); margin:0 0 20px; }
+  .p-detail { font-size:13px; line-height:1.65; color:var(--ink-2); margin:0 0 18px; }
+  .p-detail b { color: var(--ink-1); font-weight:600; }
+  .p-lesson { font-size:12px; line-height:1.55; color:var(--ink-3); padding:12px 14px; background: var(--bg-2); border-left:2px solid var(--ink-4); border-radius:0 var(--r-2) var(--r-2) 0; }
+  .p-lesson .lesson-label { display:block; font-family: var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-4); margin-bottom:4px; }
+
+  /* do / don't */
+  .demo { padding:24px; display:grid; grid-template-columns:1fr 1fr; gap:16px; background: var(--bg-stripe); }
+  .demo-cell { background: var(--bg-card); border:1px solid var(--line-2); border-radius:var(--r-2); padding:14px; display:flex; flex-direction:column; gap:10px; min-height:200px; }
+  .demo-cell.do { border-color: rgba(46,229,114,0.35); }
+  .demo-cell.dont { border-color: rgba(255,77,90,0.35); }
+  .demo-label { display:flex; align-items:center; gap:8px; font-family: var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-3); }
+  .demo-label .pill { padding:2px 8px; border-radius:var(--r-1); font-weight:600; font-size:9.5px; }
+  .demo-label .pill.do { background: var(--pos-tint); color: var(--pos-400); border:1px solid rgba(46,229,114,0.3); }
+  .demo-label .pill.dont { background: var(--neg-tint); color: var(--neg-400); border:1px solid rgba(255,77,90,0.3); }
+  .demo-label .desc { color:var(--ink-3); text-transform:none; letter-spacing:0; font-family: var(--font-body); font-size:11px; }
+  .demo-canvas { flex:1; display:flex; flex-direction:column; gap:6px; min-height:0; }
+
+  /* generic mock primitives used in demos */
+  .mock-row { display:grid; align-items:center; padding:5px 8px; font-size:11px; font-family: var(--font-body); border-bottom:1px solid var(--line-1); }
+  .mock-row:last-child { border-bottom:none; }
+  .mock-row.dense { padding:3px 8px; font-size:10.5px; }
+  .mock-table-head { display:grid; padding:5px 8px; font-family: var(--font-mono); font-size:9px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-4); border-bottom:1px solid var(--line-2); background: var(--bg-2); }
+  .mock-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align:right; }
+  .mock-pos { width:18px; height:14px; display:inline-flex; align-items:center; justify-content:center; font-family: var(--font-mono); font-size:8.5px; font-weight:600; border-radius:var(--r-1); }
+  .pos-gk { background: rgba(255,201,51,0.15); color:var(--gold-400); }
+  .pos-df { background: rgba(74,168,255,0.15); color:var(--info-400); }
+  .pos-mf { background: rgba(46,229,114,0.15); color:var(--pos-400); }
+  .pos-fw { background: rgba(255,77,90,0.15); color:var(--neg-400); }
+
+  .mock-form { display:flex; gap:2px; }
+  .mock-form span { width:11px; height:11px; display:inline-flex; align-items:center; justify-content:center; font-family: var(--font-mono); font-size:8px; font-weight:700; border-radius:1px; }
+  .mock-form .w { background: var(--pos-400); color:#001a0a; }
+  .mock-form .d { background: var(--neu-400); color:#1a1300; }
+  .mock-form .l { background: var(--neg-400); color:#fff; }
+
+  .mock-attr { display:inline-flex; align-items:center; justify-content:center; width:18px; height:14px; border-radius:1px; font-family: var(--font-mono); font-size:9px; font-weight:600; }
+  .a20 { background: var(--attr-20); color:#001a0a; }
+  .a17 { background: var(--attr-17); color:#001a0a; }
+  .a14 { background: var(--attr-14); color:#0e1500; }
+  .a11 { background: var(--attr-11); color:#1a1300; }
+  .a8 { background: var(--attr-8); color:#fff; }
+  .a5 { background: var(--attr-5); color:#fff; }
+
+  .mock-btn { display:inline-flex; align-items:center; justify-content:center; padding: 0 12px; height:28px; border-radius:var(--r-2); font-size:12px; font-weight:500; border:1px solid var(--line-2); background:var(--bg-3); color:var(--ink-1); font-family: var(--font-body); cursor:default; }
+  .mock-btn.primary { background: var(--brand-400); color:#001a0a; border-color: var(--brand-400); font-weight:600; }
+  .mock-btn.ghost { background: transparent; color: var(--ink-2); }
+  .mock-btn.huge { height: 56px; padding: 0 28px; font-size:16px; border-radius: var(--r-pill); }
+  .mock-btn.tap { height:48px; padding:0 18px; border-radius:var(--r-3); font-size:14px; }
+
+  .mock-tile { background: var(--bg-2); border:1px solid var(--line-2); border-radius:var(--r-2); padding:10px 12px; }
+  .mock-tile .tlabel { font-family: var(--font-mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-4); margin-bottom:4px; }
+  .mock-tile .tval { font-family: var(--font-display); font-size:22px; line-height:1; font-weight:700; color:var(--ink-1); }
+  .mock-tile .tdelta { font-family: var(--font-mono); font-size:10px; color:var(--pos-400); margin-top:4px; }
+  .mock-tile.empty { display:flex; align-items:center; justify-content:center; min-height:64px; color:var(--ink-4); font-size:11px; font-style: italic; border-style:dashed; }
+
+  /* audit */
+  .audit { background: var(--bg-1); border:1px solid var(--line-2); border-radius: var(--panel-radius); overflow:hidden; }
+  .audit-row { display:grid; grid-template-columns: 60px 1fr 90px 1.4fr; gap:24px; padding:14px 24px; align-items:center; border-bottom:1px solid var(--line-1); }
+  .audit-row:last-child { border-bottom:none; }
+  .audit-row:first-child { background: var(--bg-2); border-bottom:1px solid var(--line-2); font-family: var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-4); }
+  .audit-num { font-family: var(--font-mono); font-size:11px; color:var(--ink-3); }
+  .audit-title { font-size:13px; color:var(--ink-1); font-weight:500; }
+  .audit-status { font-family: var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; padding:4px 10px; border-radius:var(--r-1); display:inline-flex; align-items:center; justify-content:center; }
+  .audit-status.pass { background: var(--pos-tint); color: var(--pos-400); border:1px solid rgba(46,229,114,0.3); }
+  .audit-status.partial { background: var(--neu-tint); color: var(--neu-400); border:1px solid rgba(245,185,66,0.3); }
+  .audit-status.tbd { background: var(--bg-3); color: var(--ink-3); border:1px solid var(--line-2); }
+  .audit-note { font-size:12px; color:var(--ink-2); line-height:1.5; }
+
+  /* spec block */
+  .spec-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; }
+  .spec { background: var(--bg-card); border:1px solid var(--line-2); border-radius: var(--r-2); padding:20px; }
+  .spec-label { font-family: var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-3); margin-bottom:8px; }
+  .spec-val { font-family: var(--font-display); font-size:32px; line-height:1; font-weight:700; color:var(--brand-400); margin-bottom:8px; letter-spacing:-0.01em; }
+  .spec-note { font-size:11px; color:var(--ink-3); line-height:1.5; }
+
+  /* footer */
+  footer { margin-top: 96px; padding-top:32px; border-top:1px solid var(--line-2); display:flex; justify-content:space-between; font-family: var(--font-mono); font-size:11px; color: var(--ink-4); letter-spacing:0.06em; text-transform:uppercase; }
+
+  @media (max-width: 1024px) {
+    .page { padding: 32px 24px 80px; }
+    .hero { grid-template-columns: 1fr; gap:32px; }
+    .why-grid, .spec-grid { grid-template-columns: repeat(2, 1fr); }
+    .p-body { grid-template-columns: 1fr; }
+    .p-text { border-right:none; border-bottom:1px solid var(--line-2); }
+  }
+</style>
+</head>
+<body>
+
+<main class="page">
+
+  <nav class="crumb">
+    <a href="Soccer Manager Pro - Design System.html">Soccer Manager Pro</a>
+    <span class="sep">/</span>
+    <span>Design System</span>
+    <span class="sep">/</span>
+    <span style="color:var(--ink-1)">Desktop Guardrails</span>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div>
+      <div class="hero-eyebrow">Operating principles · v0.2</div>
+      <h1>Built for the desk.<br><em>Not for the thumb.</em></h1>
+      <p class="hero-sub">Ten rules for Soccer Manager Pro's interface, written after auditing where the genre's reigning champion stumbled in late 2025. Football is a desktop sim. Density isn't a flaw to clean up — it <em>is</em> the product. These principles keep the cursor in charge, the data in view, and the click count low.</p>
+    </div>
+    <dl class="hero-meta">
+      <div class="meta-row"><dt>Direction</dt><dd>Touchline · locked</dd></div>
+      <div class="meta-row"><dt>Min resolution</dt><dd>1366 × 768</dd></div>
+      <div class="meta-row"><dt>Target resolution</dt><dd>1920 × 1080</dd></div>
+      <div class="meta-row"><dt>Input model</dt><dd>Mouse + keyboard</dd></div>
+      <div class="meta-row"><dt>Frame budget</dt><dd>16 ms · 60 fps</dd></div>
+      <div class="meta-row"><dt>Companion</dt><dd><a href="Soccer Manager Pro - Design System.html">Design System →</a></dd></div>
+    </dl>
+  </header>
+
+  <!-- WHY -->
+  <section>
+    <div class="section-head">
+      <h2>Why these rules exist</h2>
+      <span class="section-num">00 · context</span>
+    </div>
+    <p class="lede">A two-year-delayed UI overhaul shipped in November 2025 and was met with the worst reception in the genre's history. The complaint pattern was not "we don't like change." It was specific, technical, and — for a desktop product — predictable. We use it as a reference set, not a target to dunk on. Every principle below maps to one of these failure modes.</p>
+    <div class="why-grid">
+      <div class="why-card">
+        <h3>The PC felt like a port</h3>
+        <p>Reviewers and 12,000-hour veterans converged on the same diagnosis: oversized buttons, inflated padding, fewer rows visible per screen, and console-shaped panels that left desktop users hunting for information that used to sit in a single glance.</p>
+        <cite>GameSpot · Operation Sports · Steam community, Nov 2025</cite>
+      </div>
+      <div class="why-card">
+        <h3>Tiles replaced tables</h3>
+        <p>The new shell turned dense tables into "tiles" that opened into "cards" with the rest. Players described basic management — checking a scout report, comparing two transfer targets — as "a frustrating scavenger hunt." A click is a tax. Every extra one compounds.</p>
+        <cite>Operation Sports review · Galaxus, Nov 2025</cite>
+      </div>
+      <div class="why-card">
+        <h3>Predictability collapsed</h3>
+        <p>Identical-looking controls behaved differently depending on context — sometimes opening a drawer, sometimes navigating away. Once trust in interaction goes, every click becomes a guess. For a sim built around hundreds of clicks per session, that is fatal.</p>
+        <cite>Steam discussion threads, Oct–Nov 2025</cite>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRINCIPLES -->
+  <section>
+    <div class="section-head">
+      <h2>The ten principles</h2>
+      <span class="section-num">01–10 · rules</span>
+    </div>
+    <p class="lede">Each principle is a rule, a rationale, and a "what we saw fail" lesson. The do / don't pair shows the same data with our system on the left and the failure mode on the right.</p>
+
+    <div class="principles">
+
+      <!-- 01 — DENSITY IS IDENTITY -->
+      <article class="principle">
+        <header class="p-head">
+          <div class="p-num">01</div>
+          <h3 class="p-title">Density is identity, not a debt to repay</h3>
+          <span class="p-tag"><span class="ind"></span>Layout</span>
+        </header>
+        <div class="p-body">
+          <div class="p-text">
+            <p class="p-rule">Every screen ships at least as much usable information as the bar set by 2024-era management sims. We earn space by adding signal, not by removing rows.</p>
+            <p class="p-detail">A squad screen should show <b>20–25 players visible without scrolling</b> at 1080p. Stat tiles must hold real numbers, not labels. White space is for grouping, not for breathing room — analysts compare; comparisons need adjacency.</p>
+            <div class="p-lesson">
+              <span class="lesson-label">Failure mode observed</span>
+              "Too much empty space, oversized buttons, and far less information on screen" was the single most-repeated complaint about FM26's launch shell.
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-cell do">
+              <div class="demo-label"><span class="pill do">Do</span><span class="desc">12 rows, 6 columns, one screen</span></div>
+              <div class="demo-canvas">
+                <div class="mock-table-head" style="grid-template-columns: 16px 18px 1fr 24px 24px 38px;">
+                  <span>#</span><span></span><span>Player</span><span>Ag</span><span>Ap</span><span>Form</span>
+                </div>
+                <div class="mock-row dense" style="grid-template-columns: 16px 18px 1fr 24px 24px 38px;"><span class="mock-num" style="text-align:left">1</span><span class="mock-pos pos-gk">GK</span><span>Onana</span><span class="mock-num">28</span><span class="mock-num">31</span><span class="mock-form"><span class="w">W</span><span class="w">W</span><span class="d">D</span><span class="w">W</span></span></div>
+                <div class="mock-row dense" style="grid-template-columns: 16px 18px 1fr 24px 24px 38px;"><span class="mock-num" style="text-align:left">2</span><span class="mock-pos pos-df">RB</span><span>Dalot</span><span class="mock-num">25</span><span class="mock-num">29</span><span class="mock-form"><span class="w">W</span><span class="l">L</span><span class="w">W</span><span class="d">D</span></span></div>
+                <div class="mock-row dense" style="grid-template-columns: 16px 18px 1fr 24px 24px 38px;"><span class="mock-num" style="text-align:left">4</span><span class="mock-pos pos-df">CB</span><span>Martínez</span><span class="mock-num">27</span><span class="mock-num">22</span><span class="mock-form"><span class="d">D</span><span class="w">W</span><span class="w">W</span><span class="w">W</span></span></div>
+                <div class="mock-row dense" style="grid-template-columns: 16px 18px 1fr 24px 24px 38px;"><span class="mock-num" style="text-align:left">6</span><span class="mock-pos pos-mf">CM</span><span>Mainoo</span><span class="mock-num">19</span><span class="mock-num">28</span><span class="mock-form"><span class="w">W</span><span class="w">W</span><span class="w">W</span><span class="d">D</span></span></div>
+                <div class="mock-row dense" style="grid-template-columns: 16px 18px 1fr 24px 24px 38px;"><span class="mock-num" style="text-align:left">8</span><span class="mock-pos pos-mf">CM</span><span>Bruno F.</span><span class="mock-num">30</span><span class="mock-num">32</span><span class="mock-form"><span class="w">W</span><span class="w">W</span><span class="d">D</span><span class="w">W</span></span></div>
+                <div class="mock-row dense" style="grid-template-columns: 16px 18px 1fr 24px 24px 38px;"><span class="mock-num" style="text-align:left">9</span><span class="mock-pos pos-fw">ST</span><span>Højlund</span><span class="mock-num">21</span><span class="mock-num">26</span><span class="mock-form"><span class="l">L</span><span class="w">W</span><span class="d">D</span><span class="w">W</span></span></div>
+                <div class="mock-row dense" style="grid-template-columns: 16px 18px 1fr 24px 24px 38px;"><span class="mock-num" style="text-align:left">10</span><span class="mock-pos pos-fw">LW</span><span>Rashford</span><span class="mock-num">26</span><span class="mock-num">30</span><span class="mock-form"><span class="d">D</span><span class="l">L</span><span class="w">W</span><span class="w">W</span></span></div>
+                <div class="mock-row dense" style="grid-template-columns: 16px 18px 1fr 24px 24px 38px;"><span class="mock-num" style="text-align:left">11</span><span class="mock-pos pos-fw">RW</span><span>Garnacho</span><span class="mock-num">20</span><span class="mock-num">27</span><span class="mock-form"><span class="w">W</span><span class="d">D</span><span class="w">W</span><span class="w">W</span></span></div>
+              </div>
+            </div>
+            <div class="demo-cell dont">
+              <div class="demo-label"><span class="pill dont">Don't</span><span class="desc">Same data, 3 rows fit</span></div>
+              <div class="demo-canvas" style="gap:10px;">
+                <div style="background: var(--bg-2); border-radius: var(--r-3); padding:14px; display:flex; align-items:center; gap:12px;"><span class="mock-pos pos-gk" style="width:32px; height:24px; font-size:11px; border-radius: var(--r-2);">GK</span><div><div style="font-size:14px; font-weight:600;">Onana</div><div style="font-size:11px; color:var(--ink-3);">Tap to view stats →</div></div></div>
+                <div style="background: var(--bg-2); border-radius: var(--r-3); padding:14px; display:flex; align-items:center; gap:12px;"><span class="mock-pos pos-df" style="width:32px; height:24px; font-size:11px; border-radius: var(--r-2);">RB</span><div><div style="font-size:14px; font-weight:600;">Dalot</div><div style="font-size:11px; color:var(--ink-3);">Tap to view stats →</div></div></div>
+                <div style="background: var(--bg-2); border-radius: var(--r-3); padding:14px; display:flex; align-items:center; gap:12px;"><span class="mock-pos pos-df" style="width:32px; height:24px; font-size:11px; border-radius: var(--r-2);">CB</span><div><div style="font-size:14px; font-weight:600;">Martínez</div><div style="font-size:11px; color:var(--ink-3);">Tap to view stats →</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 02 — ZERO CLICKS -->
+      <article class="principle">
+        <header class="p-head">
+          <div class="p-num">02</div>
+          <h3 class="p-title">Zero clicks for the obvious answer</h3>
+          <span class="p-tag"><span class="ind"></span>Information arch.</span>
+        </header>
+        <div class="p-body">
+          <div class="p-text">
+            <p class="p-rule">If a manager opens a screen with a question in mind, the answer is on that screen — not behind a tap, hover, or expand.</p>
+            <p class="p-detail">Squad → form, fitness, morale visible inline. Match → goal scorers in the headline. Transfers → asking price on the row, not in a drawer. <b>Tooltips clarify; they never reveal primary data.</b></p>
+            <div class="p-lesson">
+              <span class="lesson-label">Failure mode observed</span>
+              FM26 community feedback consistently flagged that "tables and windows reveal fewer key figures than before and hide important details behind tooltips or icons."
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-cell do">
+              <div class="demo-label"><span class="pill do">Do</span><span class="desc">Stat tile holds the answer</span></div>
+              <div class="demo-canvas" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <div class="mock-tile"><div class="tlabel">League</div><div class="tval">3<span style="font-size:12px; color:var(--ink-3); margin-left:2px;">rd</span></div><div class="tdelta">▲ 2 vs LW</div></div>
+                <div class="mock-tile"><div class="tlabel">xG · last 5</div><div class="tval">2.41</div><div class="tdelta">▲ 0.18</div></div>
+                <div class="mock-tile"><div class="tlabel">Fitness avg</div><div class="tval">87<span style="font-size:12px; color:var(--ink-3); margin-left:2px;">%</span></div><div class="tdelta" style="color:var(--neu-400)">— 2 inj.</div></div>
+                <div class="mock-tile"><div class="tlabel">Wages</div><div class="tval">£3.4<span style="font-size:13px; color:var(--ink-3); margin-left:2px;">m/wk</span></div><div class="tdelta" style="color:var(--ink-3)">£0.6m head</div></div>
+              </div>
+            </div>
+            <div class="demo-cell dont">
+              <div class="demo-label"><span class="pill dont">Don't</span><span class="desc">Tile is a button to the answer</span></div>
+              <div class="demo-canvas" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <div class="mock-tile empty">League position →</div>
+                <div class="mock-tile empty">View xG trend →</div>
+                <div class="mock-tile empty">Squad fitness →</div>
+                <div class="mock-tile empty">Wage budget →</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 03 — TABLES STAY TABLES -->
+      <article class="principle">
+        <header class="p-head">
+          <div class="p-num">03</div>
+          <h3 class="p-title">Tables stay tables. Don't tile-ify dense data.</h3>
+          <span class="p-tag"><span class="ind"></span>Components</span>
+        </header>
+        <div class="p-body">
+          <div class="p-text">
+            <p class="p-rule">When the data is comparative — squad, league, transfer market, scouting — it's a table. Sortable columns, fixed headers, alignable numerals, keyboard arrow navigation.</p>
+            <p class="p-detail">Tiles and cards are for <b>dashboard summaries</b>, where each item is independent. The moment a user wants to compare two rows, a card layout becomes a usability failure: their eyes can't scan the columns, and sort/filter loses meaning.</p>
+            <div class="p-lesson">
+              <span class="lesson-label">Failure mode observed</span>
+              Veteran players described navigating a tile-and-card squad list as "driving a car with a square steering wheel." The shape of the data changed; the task did not.
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-cell do">
+              <div class="demo-label"><span class="pill do">Do</span><span class="desc">Sortable, scannable, alignable</span></div>
+              <div class="demo-canvas">
+                <div class="mock-table-head" style="grid-template-columns: 1fr 24px 24px 24px 24px 24px;">
+                  <span>Player</span><span>Pac</span><span>Sho</span><span>Pas</span><span>Dri</span><span>Phy</span>
+                </div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 24px 24px 24px 24px 24px;"><span>Bruno F.</span><span class="mock-attr a14">14</span><span class="mock-attr a17">17</span><span class="mock-attr a20">20</span><span class="mock-attr a17">17</span><span class="mock-attr a14">14</span></div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 24px 24px 24px 24px 24px;"><span>Mainoo</span><span class="mock-attr a14">14</span><span class="mock-attr a11">11</span><span class="mock-attr a17">17</span><span class="mock-attr a17">17</span><span class="mock-attr a11">11</span></div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 24px 24px 24px 24px 24px;"><span>Casemiro</span><span class="mock-attr a8">8</span><span class="mock-attr a11">11</span><span class="mock-attr a14">14</span><span class="mock-attr a8">8</span><span class="mock-attr a17">17</span></div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 24px 24px 24px 24px 24px;"><span>Mount</span><span class="mock-attr a14">14</span><span class="mock-attr a14">14</span><span class="mock-attr a14">14</span><span class="mock-attr a14">14</span><span class="mock-attr a11">11</span></div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 24px 24px 24px 24px 24px;"><span>Eriksen</span><span class="mock-attr a8">8</span><span class="mock-attr a14">14</span><span class="mock-attr a17">17</span><span class="mock-attr a14">14</span><span class="mock-attr a8">8</span></div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 24px 24px 24px 24px 24px;"><span>Højlund</span><span class="mock-attr a17">17</span><span class="mock-attr a14">14</span><span class="mock-attr a8">8</span><span class="mock-attr a11">11</span><span class="mock-attr a14">14</span></div>
+                <div style="font-family: var(--font-mono); font-size:9px; color:var(--ink-4); margin-top:4px;">click any column to sort · ↑↓ to navigate</div>
+              </div>
+            </div>
+            <div class="demo-cell dont">
+              <div class="demo-label"><span class="pill dont">Don't</span><span class="desc">Same comparison, much harder</span></div>
+              <div class="demo-canvas" style="gap:6px;">
+                <div style="background: var(--bg-2); border-radius: var(--r-3); padding:8px 10px; display:flex; justify-content:space-between; align-items:center;"><b style="font-size:11px;">Bruno F.</b><span style="font-size:10px; color:var(--ink-3);">Pas <b style="color:var(--brand-400);">20</b> · Sho 17 · Dri 17</span></div>
+                <div style="background: var(--bg-2); border-radius: var(--r-3); padding:8px 10px; display:flex; justify-content:space-between; align-items:center;"><b style="font-size:11px;">Mainoo</b><span style="font-size:10px; color:var(--ink-3);">Pas 17 · Dri 17 · Pac 14</span></div>
+                <div style="background: var(--bg-2); border-radius: var(--r-3); padding:8px 10px; display:flex; justify-content:space-between; align-items:center;"><b style="font-size:11px;">Casemiro</b><span style="font-size:10px; color:var(--ink-3);">Phy 17 · Pas 14 · Sho 11</span></div>
+                <div style="background: var(--bg-2); border-radius: var(--r-3); padding:8px 10px; display:flex; justify-content:space-between; align-items:center;"><b style="font-size:11px;">Mount</b><span style="font-size:10px; color:var(--ink-3);">Pac 14 · Sho 14 · Pas 14</span></div>
+                <div style="font-family: var(--font-mono); font-size:9px; color:var(--neg-400); margin-top:4px;">columns no longer align — sort is meaningless</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 04 — INTERACTION CONSISTENCY -->
+      <article class="principle">
+        <header class="p-head">
+          <div class="p-num">04</div>
+          <h3 class="p-title">A control does the same thing every time</h3>
+          <span class="p-tag"><span class="ind"></span>Interaction</span>
+        </header>
+        <div class="p-body">
+          <div class="p-text">
+            <p class="p-rule">Identical-looking elements behave identically. Primary buttons commit. Tertiary buttons navigate. Drawers slide; pages replace. The visual style telegraphs the outcome before the click.</p>
+            <p class="p-detail">We codify this in three button shapes only: <b>primary (filled green)</b>, <b>secondary (outlined)</b>, <b>ghost (text-only)</b>. Filled buttons never navigate. Ghost buttons never commit irreversible actions. Same icon = same affordance, system-wide.</p>
+            <div class="p-lesson">
+              <span class="lesson-label">Failure mode observed</span>
+              "Sometimes when I press this... this happens — but when I press the same button here... something else happens." The single most fatal failure: trust in the cursor.
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-cell do">
+              <div class="demo-label"><span class="pill do">Do</span><span class="desc">Three shapes, three jobs</span></div>
+              <div class="demo-canvas" style="gap:14px; padding-top:8px;">
+                <div style="display:flex; flex-direction:column; gap:6px;"><span style="font-family:var(--font-mono); font-size:9px; color:var(--ink-4); letter-spacing:0.08em; text-transform:uppercase;">Commit · irreversible</span><div><button class="mock-btn primary">Make Offer</button></div></div>
+                <div style="display:flex; flex-direction:column; gap:6px;"><span style="font-family:var(--font-mono); font-size:9px; color:var(--ink-4); letter-spacing:0.08em; text-transform:uppercase;">Action · returnable</span><div><button class="mock-btn">Add to Shortlist</button></div></div>
+                <div style="display:flex; flex-direction:column; gap:6px;"><span style="font-family:var(--font-mono); font-size:9px; color:var(--ink-4); letter-spacing:0.08em; text-transform:uppercase;">Navigate · always</span><div><button class="mock-btn ghost">View profile →</button></div></div>
+              </div>
+            </div>
+            <div class="demo-cell dont">
+              <div class="demo-label"><span class="pill dont">Don't</span><span class="desc">Same shape, three outcomes</span></div>
+              <div class="demo-canvas" style="gap:14px; padding-top:8px;">
+                <div style="display:flex; flex-direction:column; gap:6px;"><span style="font-family:var(--font-mono); font-size:9px; color:var(--neg-400); letter-spacing:0.08em; text-transform:uppercase;">Opens drawer</span><div><button class="mock-btn primary">Continue</button></div></div>
+                <div style="display:flex; flex-direction:column; gap:6px;"><span style="font-family:var(--font-mono); font-size:9px; color:var(--neg-400); letter-spacing:0.08em; text-transform:uppercase;">Navigates away</span><div><button class="mock-btn primary">Continue</button></div></div>
+                <div style="display:flex; flex-direction:column; gap:6px;"><span style="font-family:var(--font-mono); font-size:9px; color:var(--neg-400); letter-spacing:0.08em; text-transform:uppercase;">Submits form</span><div><button class="mock-btn primary">Continue</button></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 05 — HIT TARGETS -->
+      <article class="principle">
+        <header class="p-head">
+          <div class="p-num">05</div>
+          <h3 class="p-title">Sized for a cursor, not a thumb</h3>
+          <span class="p-tag"><span class="ind"></span>Sizing</span>
+        </header>
+        <div class="p-body">
+          <div class="p-text">
+            <p class="p-rule">Default control height is <b>28px</b>. Compact rows hit <b>24px</b>. Primary actions can rise to 32–36px. Anything taller than 40px is reserved for the few moments a click <em>should</em> feel weighty — sign player, end season, sack.</p>
+            <p class="p-detail">A mouse hits a 24px target reliably. A 56px button on a desktop screen wastes six rows of squad data per occurrence. We design the screen first, then size the controls to fit it — never the inverse.</p>
+            <div class="p-lesson">
+              <span class="lesson-label">Failure mode observed</span>
+              The collective verdict on FM26's control sizing was that the PC build felt like "a poorly ported console game." Touch-tier hit targets carried over to mouse-only contexts.
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-cell do">
+              <div class="demo-label"><span class="pill do">Do</span><span class="desc">28px standard, 32px primary</span></div>
+              <div class="demo-canvas" style="justify-content:center; align-items:flex-start; gap:10px; padding:12px 4px;">
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                  <button class="mock-btn primary">Confirm</button>
+                  <button class="mock-btn">Filter</button>
+                  <button class="mock-btn">Sort by ↓</button>
+                  <button class="mock-btn ghost">Reset</button>
+                </div>
+                <div style="font-family: var(--font-mono); font-size:10px; color:var(--ink-3);">Height: 28px · 4 controls fit a row · cursor-precise</div>
+                <div style="font-family: var(--font-mono); font-size:10px; color:var(--ink-3); padding-top:4px; border-top:1px dashed var(--line-2); width:100%;">Reserved 56px tier:</div>
+                <div><button class="mock-btn primary huge" style="height:36px; padding:0 18px; border-radius: var(--r-2); font-size:13px;">Sign £85m bid</button></div>
+              </div>
+            </div>
+            <div class="demo-cell dont">
+              <div class="demo-label"><span class="pill dont">Don't</span><span class="desc">48–56px for everything</span></div>
+              <div class="demo-canvas" style="justify-content:center; align-items:flex-start; gap:10px; padding:12px 4px;">
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                  <button class="mock-btn primary tap">Confirm</button>
+                  <button class="mock-btn tap">Filter</button>
+                </div>
+                <div style="font-family: var(--font-mono); font-size:10px; color:var(--neg-400);">Height: 48px · only 2 fit · 70% wasted vertical</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 06 — SEARCH FIRST -->
+      <article class="principle">
+        <header class="p-head">
+          <div class="p-num">06</div>
+          <h3 class="p-title">Keyboard search is the fastest navigation</h3>
+          <span class="p-tag"><span class="ind"></span>Navigation</span>
+        </header>
+        <div class="p-body">
+          <div class="p-text">
+            <p class="p-rule">A global command palette (⌘K / Ctrl K) jumps to any screen, player, club, or action in two keystrokes. Power users never click through menus.</p>
+            <p class="p-detail">The palette indexes <b>screens</b>, <b>entities</b> (players, clubs, staff, leagues), <b>actions</b> ("offer contract to…", "set instructions for…"), and <b>recent</b> items. Navigation depth becomes a non-issue when the path is one search away.</p>
+            <div class="p-lesson">
+              <span class="lesson-label">Failure mode observed</span>
+              FM26 attempted this with a new search bar that "delivers more results, depth and assistance" — a sound principle let down by deeper menus everywhere else, so power users still bounced through 4–5 panels for routine tasks.
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-cell do">
+              <div class="demo-label"><span class="pill do">Do</span><span class="desc">⌘K palette · 2 keystrokes deep</span></div>
+              <div class="demo-canvas" style="padding:8px; gap:0;">
+                <div style="background: var(--bg-2); border:1px solid var(--brand-400); border-radius: var(--r-2); box-shadow: var(--brand-glow);">
+                  <div style="padding:10px 12px; border-bottom:1px solid var(--line-2); display:flex; align-items:center; gap:8px; font-size:13px;">
+                    <span style="color:var(--ink-3);">›</span><span style="color:var(--ink-1);">offer contract</span><span style="background:var(--bg-3); padding:1px 6px; border-radius:2px; font-family:var(--font-mono); font-size:9px; color:var(--ink-3); margin-left:auto;">⌘K</span>
+                  </div>
+                  <div style="padding:6px 12px; font-size:11px; display:flex; gap:8px; align-items:center; background: var(--brand-tint);"><span style="font-family:var(--font-mono); font-size:9px; color:var(--brand-400);">action</span><span>Offer contract to <b>Bukayo Saka</b></span></div>
+                  <div style="padding:6px 12px; font-size:11px; display:flex; gap:8px; align-items:center;"><span style="font-family:var(--font-mono); font-size:9px; color:var(--ink-4);">action</span><span>Offer contract to <b>Phil Foden</b></span></div>
+                  <div style="padding:6px 12px; font-size:11px; display:flex; gap:8px; align-items:center;"><span style="font-family:var(--font-mono); font-size:9px; color:var(--ink-4);">screen</span><span>Squad → Contracts</span></div>
+                  <div style="padding:6px 12px; font-size:11px; display:flex; gap:8px; align-items:center;"><span style="font-family:var(--font-mono); font-size:9px; color:var(--ink-4);">guide</span><span>How player negotiation works</span></div>
+                </div>
+                <div style="font-family: var(--font-mono); font-size:9px; color:var(--ink-3); margin-top:8px;">↑↓ navigate · ↵ go · esc close</div>
+              </div>
+            </div>
+            <div class="demo-cell dont">
+              <div class="demo-label"><span class="pill dont">Don't</span><span class="desc">Click-tree everywhere</span></div>
+              <div class="demo-canvas" style="padding:0; gap:4px;">
+                <div style="font-family:var(--font-mono); font-size:10px; color:var(--ink-3); padding:6px 8px; background:var(--bg-2); border-radius:var(--r-1);">→ Squad</div>
+                <div style="font-family:var(--font-mono); font-size:10px; color:var(--ink-3); padding:6px 8px; background:var(--bg-2); border-radius:var(--r-1); margin-left:12px;">→ Player profile</div>
+                <div style="font-family:var(--font-mono); font-size:10px; color:var(--ink-3); padding:6px 8px; background:var(--bg-2); border-radius:var(--r-1); margin-left:24px;">→ Contract tab</div>
+                <div style="font-family:var(--font-mono); font-size:10px; color:var(--ink-3); padding:6px 8px; background:var(--bg-2); border-radius:var(--r-1); margin-left:36px;">→ Negotiate</div>
+                <div style="font-family:var(--font-mono); font-size:10px; color:var(--ink-3); padding:6px 8px; background:var(--bg-2); border-radius:var(--r-1); margin-left:48px;">→ Offer contract</div>
+                <div style="font-family: var(--font-mono); font-size:9px; color:var(--neg-400); margin-top:6px;">5 clicks for a daily action</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 07 — NO HIDDEN PRIMARY DATA -->
+      <article class="principle">
+        <header class="p-head">
+          <div class="p-num">07</div>
+          <h3 class="p-title">No hidden primary data behind hover or icons</h3>
+          <span class="p-tag"><span class="ind"></span>Information arch.</span>
+        </header>
+        <div class="p-body">
+          <div class="p-text">
+            <p class="p-rule">A column showing only an icon (☆, ⚠, ⚽) is a column that lost. Show the value next to the glyph, or omit the column. Tooltips supplement; they don't substitute.</p>
+            <p class="p-detail">If a manager wants to know "who's tired?", the row shows <b>87%</b> — not a battery icon. The icon can ride alongside as visual sort, but the number is non-negotiable. This is what "more contextual data served earlier" actually looks like in practice.</p>
+            <div class="p-lesson">
+              <span class="lesson-label">Failure mode observed</span>
+              FM26's redesign moved important figures into icon-only columns and tooltips, requiring hover or click to see numerical context that the table previously showed inline.
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-cell do">
+              <div class="demo-label"><span class="pill do">Do</span><span class="desc">Glyph + value, side-by-side</span></div>
+              <div class="demo-canvas">
+                <div class="mock-table-head" style="grid-template-columns: 1fr 50px 50px 60px;"><span>Player</span><span>Fit</span><span>Mor</span><span>Match</span></div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 50px 50px 60px;"><span>Bruno F.</span><span style="display:flex; align-items:center; gap:4px; justify-content:flex-end;"><span style="width:18px; height:4px; background:var(--bg-3); border-radius:1px; overflow:hidden; display:inline-block;"><span style="display:block; width:92%; height:100%; background:var(--pos-400);"></span></span><span class="mock-num">92</span></span><span style="display:flex; align-items:center; gap:4px; justify-content:flex-end;"><span style="color:var(--pos-400); font-size:8px;">●●●●●</span></span><span class="mock-num">7.4</span></div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 50px 50px 60px;"><span>Mainoo</span><span style="display:flex; align-items:center; gap:4px; justify-content:flex-end;"><span style="width:18px; height:4px; background:var(--bg-3); border-radius:1px; overflow:hidden; display:inline-block;"><span style="display:block; width:78%; height:100%; background:var(--neu-400);"></span></span><span class="mock-num">78</span></span><span style="display:flex; align-items:center; gap:4px; justify-content:flex-end;"><span style="color:var(--pos-400); font-size:8px;">●●●●●</span></span><span class="mock-num">7.1</span></div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 50px 50px 60px;"><span>Højlund</span><span style="display:flex; align-items:center; gap:4px; justify-content:flex-end;"><span style="width:18px; height:4px; background:var(--bg-3); border-radius:1px; overflow:hidden; display:inline-block;"><span style="display:block; width:54%; height:100%; background:var(--neg-400);"></span></span><span class="mock-num">54</span></span><span style="display:flex; align-items:center; gap:4px; justify-content:flex-end;"><span style="color:var(--neu-400); font-size:8px;">●●●○○</span></span><span class="mock-num">6.3</span></div>
+              </div>
+            </div>
+            <div class="demo-cell dont">
+              <div class="demo-label"><span class="pill dont">Don't</span><span class="desc">Glyphs only — hover for the truth</span></div>
+              <div class="demo-canvas">
+                <div class="mock-table-head" style="grid-template-columns: 1fr 30px 30px 30px;"><span>Player</span><span>Fit</span><span>Mor</span><span>★</span></div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 30px 30px 30px;"><span>Bruno F.</span><span style="text-align:center; color:var(--pos-400);">●</span><span style="text-align:center; color:var(--pos-400);">▲</span><span style="text-align:center; color:var(--gold-400);">★</span></div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 30px 30px 30px;"><span>Mainoo</span><span style="text-align:center; color:var(--neu-400);">●</span><span style="text-align:center; color:var(--pos-400);">▲</span><span style="text-align:center; color:var(--ink-3);">·</span></div>
+                <div class="mock-row dense" style="grid-template-columns: 1fr 30px 30px 30px;"><span>Højlund</span><span style="text-align:center; color:var(--neg-400);">●</span><span style="text-align:center; color:var(--neu-400);">―</span><span style="text-align:center; color:var(--ink-3);">·</span></div>
+                <div style="font-family: var(--font-mono); font-size:9px; color:var(--neg-400); margin-top:4px;">how tired is "tired"? hover to find out.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 08 — CUSTOMIZABLE VIEWS -->
+      <article class="principle">
+        <header class="p-head">
+          <div class="p-num">08</div>
+          <h3 class="p-title">Views are the user's, not the designer's</h3>
+          <span class="p-tag"><span class="ind"></span>Customization</span>
+        </header>
+        <div class="p-body">
+          <div class="p-text">
+            <p class="p-rule">Every dense table ships a column picker, a sort memory, and saved view presets. Filters persist between sessions. Skin support is a launch feature, not a roadmap item.</p>
+            <p class="p-detail">Football managers play 200+ hours per save. They develop personal rituals — "the columns I check before a transfer window". The system honors those: <b>three default views</b> (General, Tactical, Financial) ship out of the box, plus unlimited user presets stored locally.</p>
+            <div class="p-lesson">
+              <span class="lesson-label">Failure mode observed</span>
+              The lack of skin/customization support at FM26 launch left the community without their usual recovery path. "We can't even fix the problems ourselves" became a refrain.
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-cell do">
+              <div class="demo-label"><span class="pill do">Do</span><span class="desc">Saved views · column picker</span></div>
+              <div class="demo-canvas" style="gap:8px;">
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  <button class="mock-btn" style="height:24px; padding:0 10px; font-size:11px; background: var(--brand-tint); border-color: var(--brand-400); color: var(--brand-400);">General</button>
+                  <button class="mock-btn" style="height:24px; padding:0 10px; font-size:11px;">Tactical</button>
+                  <button class="mock-btn" style="height:24px; padding:0 10px; font-size:11px;">Financial</button>
+                  <button class="mock-btn" style="height:24px; padding:0 10px; font-size:11px;">My DM scout</button>
+                  <button class="mock-btn ghost" style="height:24px; padding:0 6px; font-size:11px;">+ New</button>
+                </div>
+                <div style="background: var(--bg-2); border:1px solid var(--line-2); border-radius: var(--r-2); padding:10px;">
+                  <div style="font-family:var(--font-mono); font-size:9px; color:var(--ink-3); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:6px;">Visible columns</div>
+                  <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                    <span style="background: var(--brand-tint); color: var(--brand-400); padding:2px 6px; border-radius:2px; font-size:10px; font-family:var(--font-mono);">Pos</span>
+                    <span style="background: var(--brand-tint); color: var(--brand-400); padding:2px 6px; border-radius:2px; font-size:10px; font-family:var(--font-mono);">Age</span>
+                    <span style="background: var(--brand-tint); color: var(--brand-400); padding:2px 6px; border-radius:2px; font-size:10px; font-family:var(--font-mono);">Form</span>
+                    <span style="background: var(--brand-tint); color: var(--brand-400); padding:2px 6px; border-radius:2px; font-size:10px; font-family:var(--font-mono);">Fit</span>
+                    <span style="background: var(--bg-3); color: var(--ink-4); padding:2px 6px; border-radius:2px; font-size:10px; font-family:var(--font-mono);">Wage</span>
+                    <span style="background: var(--bg-3); color: var(--ink-4); padding:2px 6px; border-radius:2px; font-size:10px; font-family:var(--font-mono);">Value</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="demo-cell dont">
+              <div class="demo-label"><span class="pill dont">Don't</span><span class="desc">Locked default · take it or leave it</span></div>
+              <div class="demo-canvas" style="gap:8px; align-items:center; justify-content:center;">
+                <div style="font-size:36px; color:var(--ink-4);">🔒</div>
+                <div style="font-size:11px; color:var(--ink-3); text-align:center; max-width:18ch;">Default view only.<br>Reset filters on every page.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 09 — RESOLUTION HONEST -->
+      <article class="principle">
+        <header class="p-head">
+          <div class="p-num">09</div>
+          <h3 class="p-title">Honest at every resolution from 1366 to 4K</h3>
+          <span class="p-tag"><span class="ind"></span>Responsive</span>
+        </header>
+        <div class="p-body">
+          <div class="p-text">
+            <p class="p-rule">Layouts adapt by tier, not by free-flow scaling. Critical actions are reachable at every supported resolution. UI scale slider exposes 90 / 100 / 110 / 125% as user preference — the design ships fluent at all four.</p>
+            <p class="p-detail">Three tiers: <b>compact</b> (1366–1599), <b>standard</b> (1600–2199), <b>wide</b> (2200+). At compact, secondary columns fold first; primary actions never. We test at <b>1366×768</b> as a CI gate, not a "nice to have."</p>
+            <div class="p-lesson">
+              <span class="lesson-label">Failure mode observed</span>
+              FM26 had documented bugs at 1366×768 — overlapping menus, contract options cut off — and 2K blurriness, which broke fundamental tasks for laptop and modern-monitor users alike.
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-cell do">
+              <div class="demo-label"><span class="pill do">Do</span><span class="desc">Three tiers · primary always reachable</span></div>
+              <div class="demo-canvas" style="gap:6px;">
+                <div style="display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; padding:6px 8px; background:var(--bg-2); border-radius:var(--r-2); font-size:11px;"><span class="mock-pos pos-fw" style="width:auto; padding:0 4px;">1366</span><span style="color:var(--ink-2);">Compact · 9 cols visible</span><span class="mock-num" style="font-size:10px; color:var(--pos-400);">PASS</span></div>
+                <div style="display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; padding:6px 8px; background:var(--bg-2); border-radius:var(--r-2); font-size:11px;"><span class="mock-pos pos-mf" style="width:auto; padding:0 4px;">1920</span><span style="color:var(--ink-2);">Standard · 14 cols visible</span><span class="mock-num" style="font-size:10px; color:var(--pos-400);">PASS</span></div>
+                <div style="display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; padding:6px 8px; background:var(--bg-2); border-radius:var(--r-2); font-size:11px;"><span class="mock-pos pos-df" style="width:auto; padding:0 4px;">2560</span><span style="color:var(--ink-2);">Wide · 18 cols + sidepane</span><span class="mock-num" style="font-size:10px; color:var(--pos-400);">PASS</span></div>
+                <div style="font-family: var(--font-mono); font-size:9px; color:var(--ink-3); padding-top:4px;">UI scale: 90 · 100 · 110 · 125%</div>
+              </div>
+            </div>
+            <div class="demo-cell dont">
+              <div class="demo-label"><span class="pill dont">Don't</span><span class="desc">Designed for 1080 · breaks elsewhere</span></div>
+              <div class="demo-canvas" style="gap:6px;">
+                <div style="display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; padding:6px 8px; background:var(--bg-2); border-radius:var(--r-2); font-size:11px;"><span class="mock-pos pos-fw" style="width:auto; padding:0 4px;">1366</span><span style="color:var(--ink-3);">Buttons cut off · overlap</span><span class="mock-num" style="font-size:10px; color:var(--neg-400);">FAIL</span></div>
+                <div style="display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; padding:6px 8px; background:var(--bg-2); border-radius:var(--r-2); font-size:11px;"><span class="mock-pos pos-mf" style="width:auto; padding:0 4px;">1920</span><span style="color:var(--ink-2);">Designed here</span><span class="mock-num" style="font-size:10px; color:var(--pos-400);">OK</span></div>
+                <div style="display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; padding:6px 8px; background:var(--bg-2); border-radius:var(--r-2); font-size:11px;"><span class="mock-pos pos-df" style="width:auto; padding:0 4px;">2560</span><span style="color:var(--ink-3);">Soft text · giant whitespace</span><span class="mock-num" style="font-size:10px; color:var(--neg-400);">FAIL</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 10 — RESPONSE -->
+      <article class="principle">
+        <header class="p-head">
+          <div class="p-num">10</div>
+          <h3 class="p-title">Sub-100ms perceived response, no exceptions</h3>
+          <span class="p-tag"><span class="ind"></span>Performance</span>
+        </header>
+        <div class="p-body">
+          <div class="p-text">
+            <p class="p-rule">A click registers, a hover paints, a sort completes inside 100ms of perceived time — typically under 50ms. Animation never delays interaction; if a transition would gate input, it gets cut.</p>
+            <p class="p-detail">Concrete budgets: <b>16ms</b> per frame, <b>50ms</b> for click feedback paint, <b>100ms</b> for sort/filter on 50,000-row tables, <b>1 frame</b> for tab switches. Easing curves are short (180ms max) and never block. Loading spinners are admissions of failure, not features.</p>
+            <div class="p-lesson">
+              <span class="lesson-label">Failure mode observed</span>
+              "Significant UI latency, stuttering, sluggish scrolls, slow menu transitions" — the most quotable phrase from the FM26 launch was that the interface "felt laggy." For a sim that lives in menus, this becomes a catastrophic failure.
+            </div>
+          </div>
+          <div class="demo">
+            <div class="demo-cell do">
+              <div class="demo-label"><span class="pill do">Do</span><span class="desc">Painted budgets, hard caps</span></div>
+              <div class="demo-canvas" style="gap:6px;">
+                <div style="display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:6px 8px; background:var(--bg-2); border-radius:var(--r-2); font-size:11px;"><span style="color:var(--ink-2);">Hover paint</span><span class="mock-num" style="color:var(--pos-400); font-size:11px;">≤ 16 ms</span></div>
+                <div style="display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:6px 8px; background:var(--bg-2); border-radius:var(--r-2); font-size:11px;"><span style="color:var(--ink-2);">Click feedback</span><span class="mock-num" style="color:var(--pos-400); font-size:11px;">≤ 50 ms</span></div>
+                <div style="display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:6px 8px; background:var(--bg-2); border-radius:var(--r-2); font-size:11px;"><span style="color:var(--ink-2);">Sort 50k rows</span><span class="mock-num" style="color:var(--pos-400); font-size:11px;">≤ 100 ms</span></div>
+                <div style="display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:6px 8px; background:var(--bg-2); border-radius:var(--r-2); font-size:11px;"><span style="color:var(--ink-2);">Page transition</span><span class="mock-num" style="color:var(--pos-400); font-size:11px;">≤ 180 ms</span></div>
+                <div style="display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:6px 8px; background:var(--bg-2); border-radius:var(--r-2); font-size:11px;"><span style="color:var(--ink-2);">Animation never blocks click</span><span class="mock-num" style="color:var(--pos-400); font-size:11px;">always</span></div>
+              </div>
+            </div>
+            <div class="demo-cell dont">
+              <div class="demo-label"><span class="pill dont">Don't</span><span class="desc">"Feel" budgets, no enforcement</span></div>
+              <div class="demo-canvas" style="gap:6px; align-items:center; justify-content:center;">
+                <div style="display:flex; gap:8px; align-items:center;"><div style="width:14px; height:14px; border:2px solid var(--ink-3); border-top-color:transparent; border-radius:50%; animation: spin 1s linear infinite;"></div><span style="font-size:11px; color:var(--ink-3);">Loading squad…</span></div>
+                <div style="font-family: var(--font-mono); font-size:9px; color:var(--neg-400); margin-top:6px; text-align:center;">spinners are admissions of failure</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- SPEC -->
+  <section>
+    <div class="section-head">
+      <h2>Hard numbers</h2>
+      <span class="section-num">11 · spec</span>
+    </div>
+    <p class="lede">The principles distilled into shippable budgets the design and engineering teams can hold each other to.</p>
+    <div class="spec-grid">
+      <div class="spec"><div class="spec-label">Min row height</div><div class="spec-val">24<span style="font-size:14px; color:var(--ink-3);">px</span></div><div class="spec-note">Compact tables. Standard rows 28px, comfortable 32px.</div></div>
+      <div class="spec"><div class="spec-label">Squad rows visible</div><div class="spec-val">≥ 22</div><div class="spec-note">At 1080p, scrollbar inactive on default 25-player squad.</div></div>
+      <div class="spec"><div class="spec-label">Screens to any action</div><div class="spec-val">≤ 2</div><div class="spec-note">Including ⌘K palette · 1 keystroke + selection.</div></div>
+      <div class="spec"><div class="spec-label">Click latency budget</div><div class="spec-val">50<span style="font-size:14px; color:var(--ink-3);">ms</span></div><div class="spec-note">Time to first paint of feedback after mousedown.</div></div>
+      <div class="spec"><div class="spec-label">Min resolution</div><div class="spec-val">1366<span style="font-size:14px; color:var(--ink-3);">×768</span></div><div class="spec-note">CI-tested. No critical control may be off-screen.</div></div>
+      <div class="spec"><div class="spec-label">Saved views per screen</div><div class="spec-val">∞</div><div class="spec-note">3 system defaults + unlimited user presets.</div></div>
+      <div class="spec"><div class="spec-label">Tooltip delay</div><div class="spec-val">300<span style="font-size:14px; color:var(--ink-3);">ms</span></div><div class="spec-note">Long enough not to surprise, short enough to feel responsive.</div></div>
+      <div class="spec"><div class="spec-label">Animation cap</div><div class="spec-val">180<span style="font-size:14px; color:var(--ink-3);">ms</span></div><div class="spec-note">Never on the click path. Never longer.</div></div>
+    </div>
+  </section>
+
+  <!-- AUDIT -->
+  <section>
+    <div class="section-head">
+      <h2>Where Touchline v0.2 stands</h2>
+      <span class="section-num">12 · audit</span>
+    </div>
+    <p class="lede">Honest scorecard of the current Touchline direction against these ten principles. <b>Pass</b> = the system already enforces it. <b>Partial</b> = baseline established, more work needed. <b>TBD</b> = not yet exercised in any built screen — flagged for the next iteration.</p>
+    <div class="audit">
+      <div class="audit-row"><span>#</span><span>Principle</span><span>Status</span><span>Evidence / next step</span></div>
+      <div class="audit-row"><span class="audit-num">01</span><span class="audit-title">Density is identity</span><span class="audit-status pass">Pass</span><span class="audit-note">Squad screen renders 22 rows on a 1080p viewport. Stat tiles all carry numerical primary content, not labels.</span></div>
+      <div class="audit-row"><span class="audit-num">02</span><span class="audit-title">Zero clicks for the obvious</span><span class="audit-status pass">Pass</span><span class="audit-note">Form, fitness, morale, last match rating all visible inline on the squad row. Stat tiles answer their own question.</span></div>
+      <div class="audit-row"><span class="audit-num">03</span><span class="audit-title">Tables stay tables</span><span class="audit-status pass">Pass</span><span class="audit-note">Every dense view in v0.2 is a true table. No tile-card hybrid for comparative data.</span></div>
+      <div class="audit-row"><span class="audit-num">04</span><span class="audit-title">Predictable interaction</span><span class="audit-status partial">Partial</span><span class="audit-note">Three button shapes defined and documented; needs a usage matrix doc and lint rules in the component library.</span></div>
+      <div class="audit-row"><span class="audit-num">05</span><span class="audit-title">Cursor-sized hit targets</span><span class="audit-status pass">Pass</span><span class="audit-note">Default 28px, compact 24px, primary 32px. No control above 36px outside the reserved "moment" tier.</span></div>
+      <div class="audit-row"><span class="audit-num">06</span><span class="audit-title">Keyboard search first</span><span class="audit-status tbd">TBD</span><span class="audit-note">⌘K palette spec exists; not yet built in the design system. Add to next iteration as a documented pattern.</span></div>
+      <div class="audit-row"><span class="audit-num">07</span><span class="audit-title">No hidden primary data</span><span class="audit-status pass">Pass</span><span class="audit-note">Attribute cells show the number; bar charts ride alongside, not in place of, numerals. Tabular numerics enforced in tokens.</span></div>
+      <div class="audit-row"><span class="audit-num">08</span><span class="audit-title">Customizable views</span><span class="audit-status partial">Partial</span><span class="audit-note">View tabs visible on squad screen; column picker and persistence are designed but not yet specified. Promote to v0.3.</span></div>
+      <div class="audit-row"><span class="audit-num">09</span><span class="audit-title">Resolution-honest</span><span class="audit-status partial">Partial</span><span class="audit-note">Squad screen tested at 1920 only. Need to specify column-fold rules at 1366 and column-add at 2560.</span></div>
+      <div class="audit-row"><span class="audit-num">10</span><span class="audit-title">Sub-100ms response</span><span class="audit-status tbd">TBD</span><span class="audit-note">Budget documented here; needs to be encoded as motion tokens (transition durations) in the next sprint.</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Soccer Manager Pro · Desktop Guardrails v0.2</span>
+    <span><a href="Soccer Manager Pro - Design System.html" style="color:var(--ink-3); border-bottom:1px solid var(--line-2); padding-bottom:1px;">← Design System</a></span>
+  </footer>
+</main>
+
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+
+</body>
+</html>
