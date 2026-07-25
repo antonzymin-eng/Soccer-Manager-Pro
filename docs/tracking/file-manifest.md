@@ -1,7 +1,53 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 24, 2026, latest same day (**AR-3 fresh-eyes pass over the Amendment-01 surface (repeat
+**Last Updated:** July 25, 2026, latest same day (**#30 T0 adversarial-review fix pass — 1H+1M+6L, all fixed;
+re-review pass 2 clean.** **Modified:** `src/season-save/SeasonState.cs` (H-1 — `Table` public→`internal`
++ public read-only projections `TableOrdered`/`TableRowsInClubIdOrder`/`TableRow`/`PositionOf` + internal
+`ApplyResult(in MatchResult)` + ctor `table.Clone()`; the KD-7/FR-SN-032 single-writer contract was
+unenforced for the table), `src/season-save/LeagueTableRow.cs` (M-1 — `Create` gains the F3 fail-loud gate
+for #30 T1's decode path: non-negative counts + `won+drawn+lost == played`), `tests/SeasonStateTests.cs` +
+`tests/LeagueTableTests.cs` (call sites routed through the new seams; +9 tests — ctor table snapshot-copy,
+public projections, `ApplyResult(in MatchResult)`, `FromRows` failure paths, `Create` validation),
+`docs/specs/season-competition-loop/section-3.md` → v0.9 (§3.1 pseudocode binds `ring := ids`),
+`docs/tracking/path-to-playable-roadmap.md` → v0.3 (engine test count 306 → 321; C1 relabelled a lower
+bound — p50×ticks understates wall-clock, which tracks the mean), `src/CLAUDE.md` → v2.34. Full dotnet gate
+PASSED, 0 failures (whole tree green; season-save 97 → 106 tests).)
+**Last Updated (prior):** July 25, 2026, later same day (**Season & Competition Loop #30 T0 LANDED** — path-to-playable
+roadmap item A1, the first code on that track. **New files** (all in the existing `src/season-save/`, per #30
+§4.1 — no new assembly): `SeasonLoopConstants.cs`, `Fixture.cs`, `FixtureScheduler.cs`, `LeagueTableRow.cs`,
+`LeagueTable.cs`, `SeasonCalendar.cs`, `BoardObjective.cs`, `BoardState.cs`, `MatchResult.cs`, `SeasonState.cs`,
+`SeasonViewModel.cs`, `AssemblyInfo.cs` (KD-7 `InternalsVisibleTo`), + `tests/FixtureSchedulerTests.cs`,
+`tests/LeagueTableTests.cs`, `tests/SeasonStateTests.cs` (and their `.meta` files). Behaviour-neutral: no
+`MatchEngine`/`WorldStore` wiring (T2), no codec change (T1), `SEASON_SAVE_FORMAT_VERSION` still 1. **Modified:**
+`docs/specs/season-competition-loop/section-3.md` → v0.9, `appendices.md` → v0.3, `section-5.md` → v0.3 (all
+**ERR-030-010** — §3.1's round-parity venue rule is authoritative; the §3.7 / Appendix C worked tables were
+hand-derived without it and are corrected at rounds 1/4, T-SN-FIX-001 re-anchored, new T-SN-FIX-008 venue-balance
+lock); `docs/tracking/spec-error-log.md` → v1.41 (ERR-030-010 filed + RESOLVED — the first #30 error found by code
+rather than by a downstream spec's approval); `docs/tracking/path-to-playable-roadmap.md` → v0.2 (B6 renderer
+decision taken — browser client first, Unity P4–P6 after; A1 marked landed); `src/CLAUDE.md` → v2.33. Full dotnet
+gate PASSED, 0 failures (whole tree green; season-save 20 → 97 tests).)
+**Last Updated (prior):** July 25, 2026 (**Path-to-playable implementation roadmap authored.** **New file:**
+`docs/tracking/path-to-playable-roadmap.md` v0.1 — ROADMAP governance class (the same level as
+`management-layer-spec-roadmap.md`; designs no system, opens no numbered spec, changes no `SPEC_INDEX.md`
+row). The companion to the spec roadmap: that file sequences *which specs to author*, this one sequences
+*which code to land* to reach a playable build. Pins a PM-1/PM-2/PM-3 milestone ladder with testable exit
+criteria; inventories the existing floor; splits the work into Track S (host-free season spine, no external
+blocker) and Track C (client, host-gated only at Unity P4–P6). **Five quantified constraints:** C1 — full-
+fidelity season simulation is infeasible (certified p50 0.4768 ms/tick × `MATCH_TICKS_TOTAL` 324,000 ≈ 154 s
+per match ⇒ ~16.3 h for a 380-fixture season), so #30 KD-9's round-resolution model is critical path with a
+≲10 ms/match budget; C1a — calibrating it needs ~200 engine-simulated matches ≈ 9 h of compute, budgeted as
+its own item; C2 — the Unity host block, with the existing `LiveMatchServer` browser surface as a real
+fallback; C3 — `RosterGenerator` already produces deterministic club squads, so a thin league bootstrap
+defers #47 entirely; C4 — #50 save-migration debt activates at the PM-2 exit; C5 — spec-defect latency
+(ERR-024-001 / ERR-017-002 precedent, 1–3 findings expected per T-phase landing). Phase A–D work breakdown
+anchored to each spec's own §7 T-phase plan (#30 T0–T3, #37 T0/T1, #44 T0–T2, #28/#29/#40/#41/#31 minimal)
+plus the `interactive-unity-client-design.md` P1–P6 phases. **Headline finding: zero new numbered specs are
+required to reach PM-2** — the three governance gaps (league bootstrap, season/squad screens, the #50
+decision) each close with a design note under the `lineup-selection-design.md` precedent. Records the B6
+renderer decision point (browser-first recommended; UGUI binds the same #38 view models later) and a risk
+register. No spec, code, or `SPEC_INDEX.md` change.)
+**Last Updated (prior):** July 24, 2026, latest same day (**AR-3 fresh-eyes pass over the Amendment-01 surface (repeat
 review, user-requested): 0H+2M+1L, all fixed.** The pass read roadmap §2–§6 in full for the first time —
 both M findings came from there. M-1: `spec-plans/spec-48-match-presentation-depth.md` v0.3 — the one file
 a Wave-7 #48 supplement author starts from carried no pointer to the Amendment-01 audio split; §1 now

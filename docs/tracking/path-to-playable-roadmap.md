@@ -1,0 +1,357 @@
+# Path to Playable — Implementation Roadmap
+
+> **Created:** July 25, 2026
+> **Status:** ROADMAP (meta-planning — the same governance class as
+> `management-layer-spec-roadmap.md`). This document designs no system. It sequences **already-approved
+> specifications and already-converged design supplements** into the shortest defensible path from
+> today's state to a build a person can sit down and play. It changes no `SPEC_INDEX.md` row and
+> opens no new numbered spec.
+> **Purpose:** The companion to `management-layer-spec-roadmap.md`. That document answers *"which
+> specs to author, in what order."* This one answers *"which code to land, in what order, to reach a
+> playable build"* — and records the hard constraints that ordering has to respect.
+> **Scope boundary:** implementation sequencing only. Where a work item needs governance that does
+> not exist yet, this document names the gap and the **minimum** governance that closes it (§6) —
+> it does not pre-empt that authoring.
+
+---
+
+## 0. The finding that motivates this document
+
+The project has run a specification-first strategy to a measurable position:
+
+| Layer | Specified | Implemented |
+|---|---|---|
+| Match engine + tactical layer (#1–#26) | ✅ 41 approved specs | ✅ ~110k lines, 321 engine tests, deterministic save/restore/season-save |
+| Squad data #27 / progression #28 | ✅ | #27 built; **#28 T0 only** (draw-free core, unwired, behaviour-neutral) |
+| **#29, #30, #31, #32, #33, #34, #37, #38, #40, #41, #43, #44, #49** | ✅ **APPROVED** | **no assembly exists** |
+
+`src/` contains no `season-competition-loop`, no `training-system`, no `transfers`, no `finances`,
+no `analytics`, no `discipline`, no UI screens. #30's own §9 checklist records it plainly:
+*"Layer built — **NOT STARTED**."*
+
+Thirteen approved specs (~13,000 spec lines) sit at zero implementation. At the spec→code ratios
+this project actually realises (#22: 1,338→6,636; #21: 1,187→2,878; #12: 3,416→6,607 — call it
+2–5×), that is **30–60k lines of unwritten code**. Meanwhile the question a playable build answers —
+*is this game any good* — has never once been asked.
+
+This roadmap is the shortest path to asking it.
+
+---
+
+## 1. What "playable" means — the milestone ladder
+
+"Playable" is not one thing. Pinning it into a ladder is what makes the sequencing decidable, because
+each rung has a different blocker profile.
+
+### PM-1 — **Playable Match**
+> Launch the client, choose two teams, set a formation and team instructions, kick off, watch the
+> match render in real time, make a tactical change and a substitution while it runs, and read a
+> post-match report with the score and match statistics.
+
+**Exit criteria (testable):**
+- A `MatchSetup` is producible from UI input (not hardcoded).
+- Live tactical change + substitution apply through the P2 tick-stamped command channel.
+- Post-match screen renders a `MatchAnalyticsResult` (#37).
+- The P6 closed-loop scenario passes: same `MatchSetup` + same command log ⇒ digest-identical runs.
+
+### PM-2 — **Playable Season**
+> Start a new game against a generated league, see a fixture list and a league table, advance
+> day-by-day to the next fixture, play (or quick-resolve) each round, watch the table update, serve
+> card suspensions, finish a 38-round season, and save/resume mid-season.
+
+**Exit criteria:**
+- A season completes end-to-end from the client with the managed fixture engine-simulated.
+- Save mid-season → quit → resume is byte-identical to the uninterrupted run (the #30 T1 contract).
+- League table tie-breaks, board objectives, and suspensions are live.
+
+### PM-3 — **Playable Career**
+> Roll into a second season with squads that changed: players aged and progressed, some retired,
+> regens arrived, a training focus was set, injuries happened, a transfer window ran.
+
+**Exit criteria:**
+- `RollToNextSeason` is restartable and multi-season continuous (#30 T3).
+- #28 progression is wired to the world tick; minimal #29/#40/#41/#31 land as identity-extended tiers.
+
+**This roadmap targets PM-2 as the primary objective.** PM-1 is a prerequisite rung, PM-3 is the
+first depth increment. PM-2 is where the game becomes answerable as a game.
+
+---
+
+## 2. The floor that already exists
+
+Non-trivial, and it changes the shape of the remaining work. Recorded so nothing here gets rebuilt:
+
+| Capability | Where | State |
+|---|---|---|
+| Full 90-minute match simulation | `src/match-engine/` (19,587 lines) | ✅ 321 tests; match flow complete (restarts, fouls/cards, offside, subs, half/full time) |
+| Determinism + save/restore | `deterministic-sim`, `MatchSaveManager`, `SeasonSaveManager` | ✅ certified on the pinned host; round-trip byte-identity locked |
+| Season **file** root | `src/season-save/` | ✅ world + optional in-progress match, one file, version-gated sub-blobs |
+| Roster generation | `player-database/RosterGenerator.Generate(rng, streamIndex, clubId, count)` | ✅ deterministic, 25-player club squads |
+| Lineup selection, attribute projection | `LineupSelector`, `PlayerAttributeProjection` | ✅ |
+| Watchable match (web) | `match-viewer/` — HTML replay + `LiveMatchServer` live viewer | ✅ observer-neutral, digest-locked |
+| **Manager command channel** | `src/match-client-core/` — `ManagerCommandQueue`, `MatchClientDriver`, tick-stamped log, `MatchSession` | ✅ **P0 + P2 landed 2026-07-24**, host-free, CI-gated |
+| Unity render skin | `src/match-client-unity/` | ⛔ asmdef only — P4–P6, host-gated |
+
+**The single most under-appreciated asset is `RosterGenerator`.** It means a playable league needs no
+database editor and no authored data — see C3.
+
+---
+
+## 3. Two tracks, run in parallel
+
+The work splits cleanly on one line: **does it need a Unity host?**
+
+- **Track S — Simulation & loop (host-free).** #30, #37, #44, the league bootstrap. Every item
+  compiles and tests under the `tools/dotnet-ci` Linux shim gate on every push. **No external
+  blocker.** This track alone reaches *PM-2-sim* — a season fully playable head-lessly.
+- **Track C — Client & presentation.** Unity client P1/P3 and #38 T0 are host-free; **P4–P6 are
+  host-gated** and cannot be verified without access to the pinned Windows 11 / Unity 6000.4.9f1 host.
+
+**They must run in parallel, and Track S must not wait on Track C.** The single worst outcome
+available is blocking the season loop — which has no blocker — behind a Unity host that does.
+
+---
+
+## 4. Hard constraints discovered while sequencing
+
+These are quantified findings, not cautions. Each one changes the plan.
+
+### C1 — Full-fidelity season simulation is infeasible. The round-resolution model is critical path.
+From the certified baseline (`kickoff-multi-second.cert.md`: **p50 = 0.4768 ms/tick**) and
+`MATCH_TICKS_TOTAL = 324,000`:
+
+- One full match ≳ **154 s** (~2.6 min) of compute.
+- A 20-club league season = 38 rounds × 10 fixtures = **380 matches ≳ 16.3 hours**.
+
+> These are **lower bounds**, not point estimates: they multiply the *median* per-tick cost by the tick
+> count, but total wall-clock tracks the *mean*, and with p99 = 2.5669 ms the distribution is
+> right-tailed. The true figures are higher, which only strengthens the conclusion below.
+
+So "simulate every fixture with the real engine" is not a slow option — it is not an option. #30's
+KD-9 `AdvanceAndPlayNextRound` already specifies the answer (managed fixture through a real
+`MatchEngine`, the rest through a **round-resolution model**), but the sizing makes the requirement
+sharp: for a round to resolve in under a second, the quick-sim budget is **≲ 10 ms/match** — a
+~15,000× gap. That is a *statistical resolution model*, not a fast-forwarded engine, and it is on
+the critical path to PM-2, not an optimisation after it.
+
+### C1a — The quick-sim needs a calibration corpus, and the corpus costs compute.
+If the round-resolution model's score distribution does not agree with the engine's, the league table
+will feel wrong in a way no unit test catches. Calibrating it requires a corpus of **engine-simulated**
+matches across varied squad strengths — at ~2.6 min each, ~200 matches ≈ **9 hours** of compute.
+This is parallelisable and run-once. **Budget it explicitly (A4a) rather than discovering it during
+A4.**
+
+### C2 — Unity host access is an external blocker on P4–P6, and there is a real fallback.
+The `match-client-unity` README and `interactive-unity-client-design.md` both record it: no Unity host
+exists in the build/CI environment, so the render skin is verified only at a cert run. **But the
+browser surface already works** — `LiveMatchServer` streams live frames to a canvas page today, in
+CI, with no host. Extending that surface into the season UI reaches PM-1 and PM-2 **without a Unity
+host at all**, and the #38 framework contract (view models + dispatchers) is renderer-agnostic by
+design, so the UGUI skin later binds the same substrate. See the B6 decision point.
+
+### C3 — No roster world exists — and `RosterGenerator` closes it without #47.
+Nothing today produces a league of clubs. The roadmap assigns this to **#47 (New-Game Setup & DB
+Editor, Wave 7, unauthored)**. But #47's *editor* is not what playability needs — playability needs
+*a league to exist*. `RosterGenerator.Generate(rng, streamIndex, clubId, count)` already produces
+deterministic 25-player club squads. A thin `LeagueBootstrap` over it (A3) yields a 20-club league
+from the world seed in a few hundred lines, and **defers #47 entirely** past PM-3. Authoring a
+database editor before anyone has played a season is the wrong order.
+
+### C4 — Save-migration debt (#50) activates the moment saves matter.
+#50 is parked in Wave 8 on the reasoning that pre-ship format bumps need no migration path. That
+reasoning holds exactly until a save exists that someone would be upset to lose. PM-2 creates that
+save. **Decide explicitly at the PM-2 exit:** either declare saves breakable through PM-3 (fine, and
+cheap — say so in the build), or pull #50 forward. Do not let it be decided by accident.
+
+### C5 — Every unimplemented spec carries defect latency; budget for it.
+This project's own record: **ERR-024-001** (#24's Appendix A row keys matched no slot in any family
+table — the whole overlay catalogue was a structural no-op, found at T0 *after* PASS-1 review had
+checked lane geometry); **ERR-017-002** (#17 specified `Publish`/`Subscribe` overloads distinguished
+only by generic constraint — illegal C#; six files implemented it verbatim and the production event
+assembly had never compiled); the June-12 first full-tree compile finding *eight* never-compiled
+surfaces. Expect **1–3 ERR-class findings per T-phase landing** against a spec that has never been
+compiled against. That is not a reason to delay — it is the reason to *start*, and a reason to keep
+the per-landing adversarial-review discipline on **code**.
+
+---
+
+## 5. The roadmap
+
+Sequenced by dependency, annotated with owning governance and gate. "Landing" = one T-phase with
+tests, adversarial review to convergence, and a green full gate — the project's established unit
+(#28 T0 was one landing).
+
+### Phase A — Season spine (Track S, host-free, **no external blockers**)
+
+| # | Work item | Governance | Gate | Depends on |
+|---|---|---|---|---|
+| **A1** ✅ | **#30 T0 — LANDED July 25, 2026** (97 season-save tests, full gate green; surfaced **ERR-030-010**, see §9 risk row C5).  `SeasonState`, `Fixture`, `FixtureScheduler` (pure `Generate`), `LeagueTableRow`/`LeagueTable` (`ApplyResult` + tie-break `OrderedView`), `SeasonCalendar`, `BoardObjective`/`BoardState`, `MatchResult`, `SeasonViewModel`. New `TacticalDirector.SeasonLoop` assembly. Behaviour-neutral by construction (no orchestrator touched). | #30 §7.1 T0 | shim gate + determinism tests | — |
+| **A2** | **#30 T1** — `SeasonStateCodec` (§3.6 sub-blob); `SeasonSaveCodec`/`SeasonSaveManager` gain the season block; `SEASON_SAVE_FORMAT_VERSION` **1 → 2** + new `SEASON_STATE_FORMAT_VERSION`. World and match blobs stay byte-untouched (FR-SN-020). | #30 §7.1 T1 | round-trip + fail-loud gates | A1 |
+| **A3** | **League bootstrap** — `LeagueBootstrap` over `RosterGenerator`: N clubs (default 20) × 25 players, deterministic from the world seed; club identity/name table; hands #30 a starting world. **This is the #47-minimal substitute (C3), not the editor.** | ⚠️ **needs a short design note** — see §6 | determinism + round-trip | A1 |
+| **A4** | **#30 T2** — `SeasonLoop` composition root; `AdvanceToNextFixtureDay` (KD-2 fixed tick order, only the world tick live); `AdvanceAndPlayNextRound(ISquadProvider)` (KD-9 — managed fixture through a real `MatchEngine`, the rest via the round-resolution model); the #16 §3.4 back-prop (`DOMAIN_TAG_SEASON_LOOP = 0x22` / `SubsystemOrdinals.SeasonLoop = 84`); the `#19 ScenarioRunner` `season-multi-fixture` capstone. | #30 §7.1 T2 | capstone scenario + two-run determinism | A2, A3, A4a |
+| **A4a** | **Round-resolution calibration corpus** — generate ~200 engine-simulated matches across varied squad strengths; fit the quick-sim distributions against it; record the corpus + fit as a tracked artifact. **~9 h of compute (C1a) — schedule it, don't discover it.** | part of A4's design note | corpus committed; fit locked by test | A1 |
+| **A5** | **#30 T3** — `RollToNextSeason` (KD-6 restartable transform); two-run + restartability tests; the #43 insertion point (a') left explicit and empty. | #30 §7.1 T3 | restartability tests | A4 |
+
+**Phase A exit — `PM-2-sim`:** a full 38-round season simulates head-lessly, saves and resumes
+byte-identically, and rolls into a second season. **No UI yet, no Unity, no external blocker.** This
+is the single highest-value block of work available, and it is entirely unblocked today.
+
+### Phase B — Playable match client (Track C)
+
+| # | Work item | Governance | Host? |
+|---|---|---|---|
+| **B1** | **Unity client P1** — richer observation frame: per-agent booking/sent-off, substitution markers, current restart/phase. Small read-only `MatchEngine` extension (the v1.24/v1.32 pattern — value copies, no `SNAPSHOT_SCHEMA_VERSION` change, observer-neutrality re-locked). *Do this before rendering so the render layer targets the final frame shape once.* | `interactive-unity-client-design.md` §5-P1 | host-free |
+| **B2** | **#37 T0** — `MatchStatline`/`AdvancedStatline`/`StatPoint`/`MatchAnalyticsResult`, `MatchAnalyticsConstants`, `XgLocationModel` (pure) + T-AN-XG-* locks; the §4.6 CS0104 collision grep. | #37 §7.1 T0 | host-free |
+| **B3** | **#37 T1** — the read-only per-tick ledger tap on `MatchEngine` (KD-7, `BallView`-class accessor) + `MatchAnalyticsAggregator`; observer-neutrality digest-lock (T-AN-NEU-001) + two-run determinism (T-AN-DET-001). | #37 §7.1 T1 | host-free |
+| **B4** | **Unity client P3** — frame interpolation (60 FPS render between 10 Hz strides / 60 Hz physics), follow-ball camera math, live-stats accumulator. Pure, unit-testable. | §5-P3 | host-free |
+| **B5** | **#38 T0** — framework only: `NavigationShell`, `IViewModelSource<T>`, `ICommandDispatcher`, `ManagerIntent`, refresh cadence. The identity every screen extends. | #38 (APPROVED) | host-free |
+| **B6** | **Renderer — DECIDED July 25, 2026: option (b), extend the existing `LiveMatchServer` browser surface**, binding the same #38 view models; Unity P4–P6 follows when host access exists. See §7. | a design-note extension (§6 item 2) | host-free |
+
+**Phase B exit — `PM-1`:** choose teams, set tactics, watch, adjust live, read a post-match report.
+
+**Note on #37's ceiling:** §7.2 records that shots, shots-on-target, xG-over-shots, pass-completion,
+tackles and saves all wait on match-engine producers that do not exist (`ShotAttemptedEvent`,
+`PassCompletedEvent`, `TackleEvent`, a digest-committed `SaveAttemptedEvent`). PM-1's post-match
+report therefore ships with possession, territory, score and heatmaps — **not** a full statline.
+Adding the producers is a separate match-engine change with its own review (#37 §7.1 T2). Do not let
+it expand Phase B.
+
+### Phase C — Season playable end-to-end
+
+| # | Work item | Governance |
+|---|---|---|
+| **C1** | **#44 T0/T1** — `TacticalDirector.Discipline` assembly (`DisciplineState`, `DisciplineRules`, `Availability`, constants) + `DisciplineSaveCodec` (`DISCIPLINE_SAVE_FORMAT_VERSION` = 1) composed into #30's season save. Inert until wired. | #44 §7.1 |
+| **C2** | **#44 T2** — live wiring: the tap-fed `CardLedgerFold` (shares B3's #37-class per-tick tap — one tap, two consumers); the **ERR-030-009 filter** at #30's resolve→filter→configure seam; `OnClubFixturePlayed` serving on both resolution paths. | #44 §7.1 T2 |
+| **C3** | **Season + squad screens** — league table, fixture list, calendar, squad/selection, advance-round. Binds #30's `SeasonViewModel` + the availability view; dispatches `AdvanceAndPlayNextRound`. | ⚠️ **needs governance** — §6 |
+| **C4** | **New-game flow** — league bootstrap → season start → save slot, wired through the client. | with C3 |
+
+**Phase C exit — `PM-2`. This is the objective.** A person can start a new game, play a season, and
+save it.
+
+### Phase D — Career depth (first increment past the objective)
+
+| # | Work item | Governance |
+|---|---|---|
+| **D1** | **#28 T1–T3** — wire the landed progression T0 into #30's day-advance slot 1 + season boundary; promote the `player-progression.regen` production stream (`0x20`/82, KD-B). | #28 §7 |
+| **D2** | **#29 minimal** — the training seam at #30's slot 2; conditioning cursor + the `ComputeTrainingInput` feed into #28's growth. | #29 §7 |
+| **D3** | **#41 minimal** — injury occurrence/recovery on the world tick (`injuries.occurrence`, `0x2A`/92). | #41 §7 |
+| **D4** | **#40 minimal** — budget-from-league-finish at #30's (b') boundary point. | #40 §7 |
+| **D5** | **#31 minimal** — transfer window, offer/response, contracts; the roster re-key + #44 ban migration hygiene. | #31 §7 |
+| **D6** | **#50 decision** — see C4. Either declare saves breakable, or author it. | §6 |
+
+---
+
+## 6. Governance gaps — the *minimum* that closes them
+
+**Zero new numbered specs are required to reach PM-2.** Everything in Phases A–C is either an
+APPROVED spec's own §7 T-phase plan or a converged design supplement. Three items need governance
+that does not exist, and in each case a **design note is sufficient** — the precedent is
+`lineup-selection-design.md`, `match-save-file-design.md` and `interactive-unity-client-design.md`,
+all of which govern shipped code with no numbered spec:
+
+1. **A3 League bootstrap + A4a calibration corpus** → one short design note
+   (`league-bootstrap-design.md`). Must resolve: club count/identity/naming, strength distribution
+   across the league, the world-seed derivation, the round-resolution model's shape, and the
+   calibration methodology. Explicitly *not* #47 — it authors no editor and defines no new data
+   format (it consumes #27's).
+2. **C3 Season/squad screens** → extend `interactive-unity-client-design.md` with a P7 (management
+   screens) rather than authoring the Wave-7 #38 screens spec. #38 §7.1 already gates each screen on
+   its data spec; #30 and #27 are APPROVED, so the gate is satisfied and the screens add no framework
+   change (§7.1: *"no framework change per screen"*).
+3. **D6 #50 Save Migration** → a decision first, a spec only if the decision goes that way.
+
+**Deliberately deferred past PM-3:** #47 (editor), #42, #45, #35, #36, #46, #48, #51, #52, #43,
+#32, #34, #33, #49 content. None is on the path to a playable season.
+
+---
+
+## 7. The B6 decision point — renderer
+
+This is the one genuine fork, and it should be taken consciously.
+
+| | **(a) Unity P4–P6** | **(b) Extend the browser client** |
+|---|---|---|
+| Blocker | Needs pinned-host access; unverifiable in CI | None — `LiveMatchServer` runs in CI today |
+| Cost | 3 landings + a cert run | ~2 landings |
+| Fidelity | The real target platform; sprites, camera, UGUI | Canvas; adequate for tactics/table/report |
+| Risk | Work sits unverified until host access | Throwaway risk *if* the UGUI skin later replaces it |
+| Throwaway exposure | — | **Low** — #38's view models + dispatchers are renderer-agnostic; only the render leaf is re-done |
+
+**DECIDED July 25, 2026 — (b) first, (a) after.** The #38 framework contract exists precisely so the
+renderer is a leaf. Taking (b) reaches PM-1 and PM-2 with **no external blocker at all**, closes the
+"is this fun" loop months earlier, and the UGUI skin then binds an already-proven substrate — which
+is exactly what §7.2 of #38 says will happen anyway (*"the rendering is a view over the already-defined
+substrate, exactly as `match-viewer`'s live HTML surface was"*). Take (a) when host access is
+available, not as a gate on playing the game.
+
+---
+
+## 8. Dependency graph
+
+```
+                       [existing: match-engine · season-save · player-database · match-client-core]
+                                                    │
+   TRACK S (host-free, unblocked)                    │                    TRACK C
+   ───────────────────────────────                   │            ──────────────────────────
+   A1 #30 T0 ─┬─► A2 #30 T1 ──┐                     │            B1 P1 frame ──┐
+              │               │                      │            B2 #37 T0 ─┬─►B3 #37 T1
+              ├─► A3 bootstrap─┤                     │            B4 P3 view ─┤
+              └─► A4a corpus ──┤                     │            B5 #38 T0 ──┘
+                              ▼                      │                    │
+                        A4 #30 T2 ──► A5 #30 T3      │                    ▼
+                              │                      │            B6 ⬥ renderer decision
+                              │                      │                    │
+                              └──────────► PM-2-sim  │                    ▼
+                                              │      │                  PM-1
+                                              └──────┴────────┬───────────┘
+                                                              ▼
+                                            C1/C2 #44 ──► C3 screens ──► C4 new-game flow
+                                                              │
+                                                              ▼
+                                                           **PM-2**
+                                                              │
+                                                              ▼
+                                              D1 #28 · D2 #29 · D3 #41 · D4 #40 · D5 #31 ──► PM-3
+```
+
+**Critical path to PM-2:** A1 → A2 → A4 → A5 → C1 → C2 → C3 → C4, with A3/A4a feeding A4 and Track C
+converging at C3. Roughly **13–16 landings to PM-2** on the critical path, plus 5–6 on Track C
+running in parallel.
+
+---
+
+## 9. Risks
+
+| Risk | Severity | Mitigation |
+|---|---|---|
+| Round-resolution model diverges from engine results; league tables feel wrong | **High** | A4a calibration corpus, budgeted as its own item; lock the fit by test |
+| Spec-defect latency — T0s surface ERR-class findings against never-compiled specs (C5) | **High (certain)** | Expect 1–3 per landing; keep code-side adversarial review; file ERRs against spec text as the project already does |
+| Unity host access never materialises | Medium | B6 option (b) removes it from the critical path entirely |
+| Phase B expands to chase the #37 §7.2 deferred producers | Medium | PM-1 ships possession/territory/score/heatmaps; producers are a separate match-engine change |
+| Save-migration debt accrues silently once PM-2 saves exist (C4) | Medium | Force the decision at the PM-2 exit gate |
+| #30 T2's fixed tick order gets re-pinned by later specs | **Low** | Already mitigated — ERR-030-002/004/006/007/008/009 pre-declared the null seams for #41/#31/#34/#32/#43/#44 |
+| A3 bootstrap drifts into #47's data-model territory | Low | Design note explicitly consumes #27's format and defines none |
+
+---
+
+## 10. What this roadmap deliberately does not do
+
+- **It does not finish the specification set.** #35, #36, #39, #42, #45, #46, #47, #48, #50, #51, #52
+  and the #38-screens / #49-content slices remain unauthored, on purpose. The roadmap's own text
+  already defers two of them (#39: *"do not front-load it"*; #52: *"deliberately deferred"*).
+- **It does not deepen any minimal tier.** Every Phase-D item is the identity the deep tier later
+  modulates — the discipline every management spec was authored under.
+- **It does not touch the match engine's determinism, save, or event architecture.** Those are the
+  cross-cutting invariants that genuinely required whole-system foresight, and they are already
+  specified, implemented and test-locked. That is precisely why the remaining work can be sequenced
+  by playability rather than by dependency fear.
+
+---
+
+## Version History
+
+| Version | Date | Change |
+|---------|------|--------|
+| v0.3 | July 25, 2026 | Adversarial-review corrections: engine test count 306 → 321 (both occurrences); C1's per-match / per-season figures relabelled **lower bounds** — they multiply the certified *median* per-tick cost by the tick count, but wall-clock tracks the *mean* and p99 = 2.5669 ms, so the true cost is higher (the infeasibility conclusion only strengthens). |
+| v0.2 | July 25, 2026 | **B6 renderer decision taken: option (b)** — extend the existing browser client; Unity P4–P6 follows when host access exists. **A1 (#30 T0) LANDED** — the season value types, fixture scheduler, league table, calendar, board, match-outcome payload, season state and view model, with 77 new tests (season-save 20 → 97) and the full gate green. C5's prediction held on the first landing: implementation surfaced **ERR-030-010** (§3.1's parity venue rule vs the §3.7 / Appendix C worked tables), filed and patched same commit. |
+| v0.1 | July 25, 2026 | Initial roadmap: PM-1/PM-2/PM-3 milestone ladder with testable exit criteria; existing-floor inventory; Track S / Track C split; five quantified constraints (C1 season-sim infeasibility at ~16.3 h/season and the ≲10 ms quick-sim budget; C1a the ~9 h calibration corpus; C2 the host block and the browser fallback; C3 `RosterGenerator` deferring #47; C4 save-migration debt; C5 spec-defect latency); Phase A–D work breakdown anchored to each spec's own §7 T-phase plan; the §6 finding that zero new numbered specs are required to reach PM-2; the B6 renderer decision point with a recommendation; dependency graph; risk register. |
