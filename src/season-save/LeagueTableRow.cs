@@ -72,11 +72,52 @@ namespace TacticalDirector.SeasonSave
         /// <summary>
         /// Builds a row from explicit column values, deriving <see cref="GoalDifference"/>. Used by the
         /// table's update path and (at #30 T1) by the season-state decoder.
+        /// <para>
+        /// <b>This is the fail-loud seam for decoded data (F3 / FR-SN-023).</b> #30 T1 reads nine
+        /// integers per row straight out of the save blob and lands them here, so the coherence gate
+        /// belongs at this boundary: without it a corrupt file would produce a table with (say)
+        /// <c>Played = -5</c> that renders as nonsense instead of failing loud.
+        /// </para>
+        /// <para>
+        /// Points are checked only for non-negativity, deliberately NOT against
+        /// <c>3·Won + Drawn</c>: the points scheme is a <c>[GT]</c> catalogue value (Appendix A), so a
+        /// rules variant must not fail this gate. Should a later spec introduce points deductions, the
+        /// non-negative bound is the one line to revisit.
+        /// </para>
         /// </summary>
+        /// <exception cref="System.ArgumentOutOfRangeException">Any count is negative.</exception>
+        /// <exception cref="System.ArgumentException"><c>won + drawn + lost != played</c>.</exception>
         public static LeagueTableRow Create(
             int clubId, int played, int won, int drawn, int lost,
-            int goalsFor, int goalsAgainst, int points) =>
-            new LeagueTableRow(clubId, played, won, drawn, lost, goalsFor, goalsAgainst, points);
+            int goalsFor, int goalsAgainst, int points)
+        {
+            RequireNonNegative(played, nameof(played));
+            RequireNonNegative(won, nameof(won));
+            RequireNonNegative(drawn, nameof(drawn));
+            RequireNonNegative(lost, nameof(lost));
+            RequireNonNegative(goalsFor, nameof(goalsFor));
+            RequireNonNegative(goalsAgainst, nameof(goalsAgainst));
+            RequireNonNegative(points, nameof(points));
+
+            if (won + drawn + lost != played)
+            {
+                throw new System.ArgumentException(
+                    $"Incoherent row for club {clubId}: won({won}) + drawn({drawn}) + lost({lost}) = " +
+                    $"{won + drawn + lost}, but played = {played}.",
+                    nameof(played));
+            }
+
+            return new LeagueTableRow(clubId, played, won, drawn, lost, goalsFor, goalsAgainst, points);
+        }
+
+        private static void RequireNonNegative(int value, string name)
+        {
+            if (value < 0)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    name, value, "League-table counts must be non-negative.");
+            }
+        }
 
         /// <summary>
         /// Returns this row updated with one result: <paramref name="scored"/> goals scored,

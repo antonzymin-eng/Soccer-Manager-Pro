@@ -1,7 +1,19 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 25, 2026, later same day (**Season & Competition Loop #30 T0 LANDED** — path-to-playable
+**Last Updated:** July 25, 2026, latest same day (**#30 T0 adversarial-review fix pass — 1H+1M+6L, all fixed;
+re-review pass 2 clean.** **Modified:** `src/season-save/SeasonState.cs` (H-1 — `Table` public→`internal`
++ public read-only projections `TableOrdered`/`TableRowsInClubIdOrder`/`TableRow`/`PositionOf` + internal
+`ApplyResult(in MatchResult)` + ctor `table.Clone()`; the KD-7/FR-SN-032 single-writer contract was
+unenforced for the table), `src/season-save/LeagueTableRow.cs` (M-1 — `Create` gains the F3 fail-loud gate
+for #30 T1's decode path: non-negative counts + `won+drawn+lost == played`), `tests/SeasonStateTests.cs` +
+`tests/LeagueTableTests.cs` (call sites routed through the new seams; +9 tests — ctor table snapshot-copy,
+public projections, `ApplyResult(in MatchResult)`, `FromRows` failure paths, `Create` validation),
+`docs/specs/season-competition-loop/section-3.md` → v0.9 (§3.1 pseudocode binds `ring := ids`),
+`docs/tracking/path-to-playable-roadmap.md` → v0.3 (engine test count 306 → 321; C1 relabelled a lower
+bound — p50×ticks understates wall-clock, which tracks the mean), `src/CLAUDE.md` → v2.34. Full dotnet gate
+PASSED, 0 failures (whole tree green; season-save 97 → 106 tests).)
+**Last Updated (prior):** July 25, 2026, later same day (**Season & Competition Loop #30 T0 LANDED** — path-to-playable
 roadmap item A1, the first code on that track. **New files** (all in the existing `src/season-save/`, per #30
 §4.1 — no new assembly): `SeasonLoopConstants.cs`, `Fixture.cs`, `FixtureScheduler.cs`, `LeagueTableRow.cs`,
 `LeagueTable.cs`, `SeasonCalendar.cs`, `BoardObjective.cs`, `BoardState.cs`, `MatchResult.cs`, `SeasonState.cs`,

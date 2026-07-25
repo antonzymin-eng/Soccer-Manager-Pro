@@ -232,8 +232,8 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(state.Calendar.NextRoundIndex, Is.EqualTo(0));
             Assert.That(state.SeasonNumber, Is.EqualTo(0));
             Assert.That(state.ManagedClubId, Is.EqualTo(10));
-            Assert.That(state.Table.ClubCount, Is.EqualTo(4));
-            Assert.That(state.Table.Row(10).Played, Is.EqualTo(0));
+            Assert.That(state.ClubCount, Is.EqualTo(4));
+            Assert.That(state.TableRow(10).Played, Is.EqualTo(0));
         }
 
         [Test]
@@ -312,6 +312,42 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(state.ClubIds[0], Is.EqualTo(10), "the club set must be snapshot-copied");
         }
 
+        /// <summary>
+        /// KD-7 / FR-SN-032: the table is season state, so construction must snapshot-copy it. A caller
+        /// retaining the <see cref="LeagueTable"/> it passed in must not be able to mutate the season
+        /// afterwards — the reference-type half of the copy-then-validate discipline.
+        /// </summary>
+        [Test]
+        public void Constructor_SnapshotCopiesTheTable_CallerCannotMutateSeasonState()
+        {
+            LeagueTable caller = LeagueTable.Empty(FourClubs);
+            var state = new SeasonState(
+                0UL, 0, 10, FourClubs, FixtureScheduler.Generate(FourClubs, 0UL),
+                caller,
+                SeasonCalendar.Linear(FixtureScheduler.RoundCount(4), 1, 7),
+                BoardState.Fresh(new BoardObjective(1)));
+
+            caller.ApplyResult(10, 11, 5, 0);
+
+            Assert.That(state.TableRow(10).Played, Is.EqualTo(0),
+                "mutating the caller's table must not reach the season");
+            Assert.That(state.TableRow(10).Points, Is.EqualTo(0));
+        }
+
+        /// <summary>The public read path exposes the table without exposing a mutation path.</summary>
+        [Test]
+        public void TableProjections_ExposeReadOnlyViews()
+        {
+            SeasonState state = NewSeason();
+            state.ApplyResult(new MatchResult(13, 10, 3, 0, 0, 0u));
+
+            Assert.That(state.TableOrdered()[0].ClubId, Is.EqualTo(13), "ordered by tie-break");
+            Assert.That(state.TableRowsInClubIdOrder()[0].ClubId, Is.EqualTo(10), "canonical order");
+            Assert.That(state.TableRow(13).Won, Is.EqualTo(1));
+            Assert.That(state.PositionOf(13), Is.EqualTo(1));
+            Assert.That(state.PositionOf(10), Is.EqualTo(4));
+        }
+
         [Test]
         public void UnplayedFixtureIndicesInRound_ReturnsWholeRoundThenShrinksAsPlayed()
         {
@@ -349,10 +385,10 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(state.FieldsEqual(clone), Is.True, "a fresh clone is field-identical");
 
             clone.MarkFixturePlayed(0);
-            clone.Table.ApplyResult(10, 11, 3, 0);
+            clone.ApplyResult(new MatchResult(10, 11, 3, 0, 0, 0u));
 
             Assert.That(state.FixtureAt(0).Played, Is.False, "original schedule untouched");
-            Assert.That(state.Table.Row(10).Played, Is.EqualTo(0), "original table untouched");
+            Assert.That(state.TableRow(10).Played, Is.EqualTo(0), "original table untouched");
             Assert.That(state.FieldsEqual(clone), Is.False);
         }
 
@@ -360,7 +396,7 @@ namespace TacticalDirector.SeasonSave.Tests
         public void BeginNextSeason_ResetsTableAndAdvancesCounters()
         {
             SeasonState state = NewSeason();
-            state.Table.ApplyResult(10, 11, 4, 0);
+            state.ApplyResult(new MatchResult(10, 11, 4, 0, 0, 0u));
             state.MarkFixturePlayed(0);
             state.AdvanceCursorOneRound();
 
@@ -373,7 +409,7 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(state.SeasonNumber, Is.EqualTo(1));
             Assert.That(state.Seed, Is.EqualTo(nextSeed));
             Assert.That(state.Calendar.NextRoundIndex, Is.EqualTo(0), "cursor reset");
-            Assert.That(state.Table.Row(10).Played, Is.EqualTo(0), "table reset");
+            Assert.That(state.TableRow(10).Played, Is.EqualTo(0), "table reset");
             Assert.That(state.FixtureAt(0).Played, Is.False, "fresh schedule is unplayed");
         }
 
@@ -460,7 +496,7 @@ namespace TacticalDirector.SeasonSave.Tests
         public void From_ProjectsTableCalendarAndBoard()
         {
             SeasonState state = NewSeason();
-            state.Table.ApplyResult(10, 11, 3, 0);
+            state.ApplyResult(new MatchResult(10, 11, 3, 0, 0, 0u));
 
             SeasonViewModel view = state.View();
 
@@ -484,7 +520,7 @@ namespace TacticalDirector.SeasonSave.Tests
         public void From_IsObserverNeutral()
         {
             SeasonState state = NewSeason();
-            state.Table.ApplyResult(12, 13, 1, 1);
+            state.ApplyResult(new MatchResult(12, 13, 1, 1, 0, 0u));
             SeasonState before = state.Clone();
 
             SeasonViewModel view = state.View();
@@ -504,7 +540,7 @@ namespace TacticalDirector.SeasonSave.Tests
             SeasonState state = NewSeason();
             SeasonViewModel view = state.View();
 
-            state.Table.ApplyResult(10, 11, 5, 0);
+            state.ApplyResult(new MatchResult(10, 11, 5, 0, 0, 0u));
             state.MarkFixturePlayed(0);
 
             Assert.That(view.Table[0].Played, Is.EqualTo(0),

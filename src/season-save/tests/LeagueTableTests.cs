@@ -220,6 +220,110 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(after.Points, Is.EqualTo(before.Points), "points must not advance");
         }
 
+        /// <summary>
+        /// The `in MatchResult` overload is the §3.4 round-loop call shape — same arithmetic as the
+        /// four-argument form.
+        /// </summary>
+        [Test]
+        public void ApplyResult_MatchResultOverload_UpdatesBothRows()
+        {
+            LeagueTable table = FourClubTable();
+            table.ApplyResult(new MatchResult(10, 11, 2, 1, 3, 42u));
+
+            Assert.That(table.Row(10).Won, Is.EqualTo(1));
+            Assert.That(table.Row(10).GoalsFor, Is.EqualTo(2));
+            Assert.That(table.Row(10).Points, Is.EqualTo(SeasonLoopConstants.WIN_POINTS));
+            Assert.That(table.Row(11).Lost, Is.EqualTo(1));
+            Assert.That(table.Row(11).GoalsAgainst, Is.EqualTo(2));
+        }
+
+        /// <summary>
+        /// `FromRows` is #30 T1's decode entry point, so its fail-loud gates carry the F3 corrupt-save
+        /// contract — exercised here, not just the `Empty` analogues.
+        /// </summary>
+        [Test]
+        public void FromRows_RejectsNullShortAndDuplicateRows()
+        {
+            Assert.Throws<System.ArgumentNullException>(() => LeagueTable.FromRows(null));
+
+            Assert.Throws<System.ArgumentException>(
+                () => LeagueTable.FromRows(new[] { LeagueTableRow.Empty(10) }), "fewer than 2 rows");
+
+            Assert.Throws<System.ArgumentException>(
+                () => LeagueTable.FromRows(new[]
+                {
+                    LeagueTableRow.Empty(10),
+                    LeagueTableRow.Empty(10),
+                }),
+                "duplicate ClubId breaks the FR-SN-007 total order");
+        }
+
+        [Test]
+        public void FromRows_StoresInAscendingClubIdOrderRegardlessOfInput()
+        {
+            LeagueTable table = LeagueTable.FromRows(new[]
+            {
+                LeagueTableRow.Empty(13),
+                LeagueTableRow.Empty(10),
+                LeagueTableRow.Empty(12),
+            });
+
+            ReadOnlyCollection<LeagueTableRow> rows = table.RowsInClubIdOrder();
+            Assert.That(rows[0].ClubId, Is.EqualTo(10));
+            Assert.That(rows[1].ClubId, Is.EqualTo(12));
+            Assert.That(rows[2].ClubId, Is.EqualTo(13));
+        }
+
+        /// <summary>
+        /// `Create` is the fail-loud seam for decoded save data (F3 / FR-SN-023): a corrupt file must
+        /// not produce a table with negative counts or an incoherent played total.
+        /// </summary>
+        [Test]
+        public void Create_RejectsNegativeCounts()
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => LeagueTableRow.Create(10, -1, 0, 0, 0, 0, 0, 0), "played");
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => LeagueTableRow.Create(10, 1, -1, 1, 1, 0, 0, 0), "won");
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => LeagueTableRow.Create(10, 0, 0, 0, 0, -1, 0, 0), "goalsFor");
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => LeagueTableRow.Create(10, 0, 0, 0, 0, 0, -1, 0), "goalsAgainst");
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => LeagueTableRow.Create(10, 0, 0, 0, 0, 0, 0, -1), "points");
+        }
+
+        [Test]
+        public void Create_RejectsIncoherentPlayedTotal()
+        {
+            Assert.Throws<System.ArgumentException>(
+                () => LeagueTableRow.Create(10, 5, 2, 0, 1, 0, 0, 6),
+                "won + drawn + lost must equal played");
+        }
+
+        [Test]
+        public void Create_AcceptsCoherentRowAndDerivesGoalDifference()
+        {
+            LeagueTableRow row = LeagueTableRow.Create(10, 3, 2, 0, 1, 7, 4, 6);
+
+            Assert.That(row.GoalDifference, Is.EqualTo(3));
+            Assert.That(row.Played, Is.EqualTo(row.Won + row.Drawn + row.Lost));
+        }
+
+        /// <summary>Every row the table itself produces satisfies the `Create` invariants.</summary>
+        [Test]
+        public void WithResult_AlwaysProducesCoherentRows()
+        {
+            LeagueTable table = FourClubTable();
+            table.ApplyResult(10, 11, 2, 1);
+            table.ApplyResult(12, 10, 1, 1);
+            table.ApplyResult(10, 13, 0, 3);
+
+            LeagueTableRow row = table.Row(10);
+            Assert.That(row.Won + row.Drawn + row.Lost, Is.EqualTo(row.Played));
+            Assert.That(row.Played, Is.EqualTo(3));
+        }
+
         [Test]
         public void Empty_FewerThanTwoClubsOrDuplicate_Throws()
         {

@@ -44,8 +44,16 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         public int ManagedClubId { get; }
 
-        /// <summary>The live league table (mutated through <see cref="LeagueTable.ApplyResult(int,int,int,int)"/>).</summary>
-        public LeagueTable Table { get; private set; }
+        /// <summary>
+        /// The live league table. <b>Internal by design (KD-7 / FR-SN-032)</b> — <see cref="LeagueTable"/>
+        /// is a mutable object, so exposing it publicly would let any consumer rewrite season state
+        /// without going through the command API, defeating the single-writer contract that every other
+        /// mutator here honours. The only production writer is <c>SeasonLoop</c> (#30 T2), inside this
+        /// assembly; outside callers read through <see cref="TableOrdered"/> /
+        /// <see cref="TableRowsInClubIdOrder"/> / <see cref="TableRow"/> / <see cref="PositionOf"/> or
+        /// <see cref="SeasonViewModel"/>.
+        /// </summary>
+        internal LeagueTable Table { get; private set; }
 
         /// <summary>The fixture-round cursor (KD-4).</summary>
         public SeasonCalendar Calendar { get; private set; }
@@ -183,7 +191,11 @@ namespace TacticalDirector.SeasonSave
             ManagedClubId = managedClubId;
             _clubIds = ids;
             _fixtures = sched;
-            Table = table;
+
+            // Snapshot-copy the table for the same reason the arrays above are copied: LeagueTable is a
+            // mutable reference type, so storing the caller's instance would let them keep a handle and
+            // mutate season state from outside the KD-7 write path after construction validated it.
+            Table = table.Clone();
             Calendar = calendar;
             Board = board;
         }
@@ -238,6 +250,33 @@ namespace TacticalDirector.SeasonSave
                 return new ReadOnlyCollection<Fixture>(copy);
             }
         }
+
+        /// <summary>
+        /// The league table in FR-SN-007 tie-break order, as read-only value copies — the public read
+        /// path onto the table (KD-7: reading never mutates, FR-SN-033).
+        /// </summary>
+        public ReadOnlyCollection<LeagueTableRow> TableOrdered() => Table.OrderedView();
+
+        /// <summary>
+        /// The league table in canonical ascending-<c>ClubId</c> order, as read-only value copies —
+        /// the serialization order (#30 T1's encoder reads through here).
+        /// </summary>
+        public ReadOnlyCollection<LeagueTableRow> TableRowsInClubIdOrder() => Table.RowsInClubIdOrder();
+
+        /// <summary>A copy of <paramref name="clubId"/>'s table row.</summary>
+        /// <exception cref="System.ArgumentException">The club is not in this season.</exception>
+        public LeagueTableRow TableRow(int clubId) => Table.Row(clubId);
+
+        /// <summary>The 1-based tie-break position of <paramref name="clubId"/>.</summary>
+        /// <exception cref="System.ArgumentException">The club is not in this season.</exception>
+        public int PositionOf(int clubId) => Table.PositionOf(clubId);
+
+        /// <summary>
+        /// Applies one fixture result to the table (the §3.4 step-(1) write). KD-7: internal —
+        /// <c>SeasonLoop</c> is the only production caller.
+        /// </summary>
+        /// <exception cref="System.ArgumentException">A club is not in this season, or a self-fixture (F2).</exception>
+        internal void ApplyResult(in MatchResult result) => Table.ApplyResult(result);
 
         /// <summary>The fixture at <paramref name="index"/> (a value copy).</summary>
         /// <exception cref="System.ArgumentOutOfRangeException">Index out of range.</exception>
@@ -362,9 +401,12 @@ namespace TacticalDirector.SeasonSave
         {
             var fixtures = new Fixture[_fixtures.Length];
             System.Array.Copy(_fixtures, fixtures, _fixtures.Length);
+
+            // The constructor snapshot-copies every reference it is handed (arrays and the table), so
+            // passing the live members here still yields a fully independent state.
             return new SeasonState(
                 Seed, SeasonNumber, ManagedClubId, _clubIds, fixtures,
-                Table.Clone(), Calendar, Board);
+                Table, Calendar, Board);
         }
 
         /// <summary>

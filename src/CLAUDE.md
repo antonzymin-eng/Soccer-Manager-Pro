@@ -1,7 +1,30 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 25, 2026 (v2.33 — **Season & Competition Loop #30 T0 LANDED — the first code on the
+> **Last Updated:** July 25, 2026, later same day (v2.34 — **#30 T0 adversarial-review fix pass: 1H + 1M + 6L,
+> all fixed; re-review pass 2 clean.** **H-1 (structural):** `SeasonState.Table` was a PUBLIC property
+> returning a mutable `LeagueTable`, so any consumer could call `ApplyResult` and rewrite season state
+> outside the command API — defeating the KD-7 / FR-SN-032 single-writer contract that every other
+> mutator on the type honours (the tests themselves exploited it at 5 call sites). The constructor also
+> stored the caller's table by reference while the arrays 20 lines above were snapshot-copied with a
+> comment explaining why. Fixed: `Table` narrowed to `internal` (the visibility IS the enforcement —
+> `SeasonLoop` at T2 is the only production writer), public read-only projections added
+> (`TableOrdered` / `TableRowsInClubIdOrder` / `TableRow` / `PositionOf`, all value copies), an
+> `internal ApplyResult(in MatchResult)` forwarder added for the §3.4 round loop, and the ctor now
+> `table.Clone()`s. Verified no public mutation path remains: every public member returns a value copy
+> or a `ReadOnlyCollection`, and `SeasonCalendar` never exposes its day array. **M-1:**
+> `LeagueTableRow.Create` had no validation, and it is #30 T1's decode seam — a corrupt save would have
+> produced a table with negative counts instead of failing loud (F3 / FR-SN-023); now rejects negative
+> counts and requires `won + drawn + lost == played`. Points are checked for non-negativity only,
+> deliberately NOT against `3W+D`, since the scheme is a `[GT]` value. **L:** `default(SeasonViewModel)`
+> null-dereference documented; `ApplyResult(in MatchResult)` + `FromRows` failure paths given tests
+> (both previously uncovered, both T1/T2 entry points); §3.1 pseudocode binds `ring := ids` (used but
+> never defined); roadmap engine-test count 306 → 321; roadmap C1 relabelled a **lower bound** (it
+> multiplies p50 by the tick count, but wall-clock tracks the mean and p99 = 2.5669 ms — the true
+> figure is higher, which only strengthens the infeasibility conclusion). `section-3.md` v0.9,
+> `path-to-playable-roadmap.md` v0.3. **Full dotnet gate: PASSED, 0 failures (whole tree green;
+> season-save 97 → 106 tests).**)
+> **Last Updated (prior):** July 25, 2026 (v2.33 — **Season & Competition Loop #30 T0 LANDED — the first code on the
 > path-to-playable track** (`docs/tracking/path-to-playable-roadmap.md` item A1). Eleven new files in the
 > EXISTING `TacticalDirector.SeasonSave` assembly (#30 §4.1 — no new assembly; the root already sits above both
 > `match-engine` and `living-world`): `SeasonLoopConstants` (Appendix A points + `SEASON_STATE_FORMAT_VERSION` +

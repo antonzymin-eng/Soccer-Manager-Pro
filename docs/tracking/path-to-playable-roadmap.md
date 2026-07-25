@@ -21,7 +21,7 @@ The project has run a specification-first strategy to a measurable position:
 
 | Layer | Specified | Implemented |
 |---|---|---|
-| Match engine + tactical layer (#1–#26) | ✅ 41 approved specs | ✅ ~110k lines, 306 engine tests, deterministic save/restore/season-save |
+| Match engine + tactical layer (#1–#26) | ✅ 41 approved specs | ✅ ~110k lines, 321 engine tests, deterministic save/restore/season-save |
 | Squad data #27 / progression #28 | ✅ | #27 built; **#28 T0 only** (draw-free core, unwired, behaviour-neutral) |
 | **#29, #30, #31, #32, #33, #34, #37, #38, #40, #41, #43, #44, #49** | ✅ **APPROVED** | **no assembly exists** |
 
@@ -83,7 +83,7 @@ Non-trivial, and it changes the shape of the remaining work. Recorded so nothing
 
 | Capability | Where | State |
 |---|---|---|
-| Full 90-minute match simulation | `src/match-engine/` (19,587 lines) | ✅ 306 tests; match flow complete (restarts, fouls/cards, offside, subs, half/full time) |
+| Full 90-minute match simulation | `src/match-engine/` (19,587 lines) | ✅ 321 tests; match flow complete (restarts, fouls/cards, offside, subs, half/full time) |
 | Determinism + save/restore | `deterministic-sim`, `MatchSaveManager`, `SeasonSaveManager` | ✅ certified on the pinned host; round-trip byte-identity locked |
 | Season **file** root | `src/season-save/` | ✅ world + optional in-progress match, one file, version-gated sub-blobs |
 | Roster generation | `player-database/RosterGenerator.Generate(rng, streamIndex, clubId, count)` | ✅ deterministic, 25-player club squads |
@@ -120,8 +120,12 @@ These are quantified findings, not cautions. Each one changes the plan.
 From the certified baseline (`kickoff-multi-second.cert.md`: **p50 = 0.4768 ms/tick**) and
 `MATCH_TICKS_TOTAL = 324,000`:
 
-- One full match ≈ **154 s** (~2.6 min) of compute.
-- A 20-club league season = 38 rounds × 10 fixtures = **380 matches ≈ 16.3 hours**.
+- One full match ≳ **154 s** (~2.6 min) of compute.
+- A 20-club league season = 38 rounds × 10 fixtures = **380 matches ≳ 16.3 hours**.
+
+> These are **lower bounds**, not point estimates: they multiply the *median* per-tick cost by the tick
+> count, but total wall-clock tracks the *mean*, and with p99 = 2.5669 ms the distribution is
+> right-tailed. The true figures are higher, which only strengthens the conclusion below.
 
 So "simulate every fixture with the real engine" is not a slow option — it is not an option. #30's
 KD-9 `AdvanceAndPlayNextRound` already specifies the answer (managed fixture through a real
@@ -348,5 +352,6 @@ running in parallel.
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.3 | July 25, 2026 | Adversarial-review corrections: engine test count 306 → 321 (both occurrences); C1's per-match / per-season figures relabelled **lower bounds** — they multiply the certified *median* per-tick cost by the tick count, but wall-clock tracks the *mean* and p99 = 2.5669 ms, so the true cost is higher (the infeasibility conclusion only strengthens). |
 | v0.2 | July 25, 2026 | **B6 renderer decision taken: option (b)** — extend the existing browser client; Unity P4–P6 follows when host access exists. **A1 (#30 T0) LANDED** — the season value types, fixture scheduler, league table, calendar, board, match-outcome payload, season state and view model, with 77 new tests (season-save 20 → 97) and the full gate green. C5's prediction held on the first landing: implementation surfaced **ERR-030-010** (§3.1's parity venue rule vs the §3.7 / Appendix C worked tables), filed and patched same commit. |
 | v0.1 | July 25, 2026 | Initial roadmap: PM-1/PM-2/PM-3 milestone ladder with testable exit criteria; existing-floor inventory; Track S / Track C split; five quantified constraints (C1 season-sim infeasibility at ~16.3 h/season and the ≲10 ms quick-sim budget; C1a the ~9 h calibration corpus; C2 the host block and the browser fallback; C3 `RosterGenerator` deferring #47; C4 save-migration debt; C5 spec-defect latency); Phase A–D work breakdown anchored to each spec's own §7 T-phase plan; the §6 finding that zero new numbered specs are required to reach PM-2; the B6 renderer decision point with a recommendation; dependency graph; risk register. |
