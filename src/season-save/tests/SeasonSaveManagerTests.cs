@@ -1,15 +1,16 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-07-24 (arc-triggers E2 §8.9(a): flag-on world resumes evaluating through the season
-//           file when Load threads a canon source, with a null-canon negative control)
+// Modified: 2026-07-25 (#30 T1: every save carries a season state; the round-trip asserts the season
+//           resumes field-identical alongside the world and the match)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
+//           Season & Competition Loop #30 FR-SN-019..023, Appendix B;
 //           Match Engine design note §5 Phase G-Phase 3; Living World #22 §4.6/§7.1; Code Standards #20
 // Purpose:  Acceptance tests for the unified season save — disk round-trip determinism for a no-match
-//           season (world field-identical + world.text resumes) and a season with an in-progress match
-//           (neutral + distinct-squad-via-ISquadProvider; the match digest chain byte-identical AND the
-//           world field-identical, both through one file), plus the SeasonSaveCodec fail-loud guards and
-//           the SeasonSaveManager fail-loud paths.
+//           season (world field-identical + world.text resumes + the season state field-identical) and a
+//           season with an in-progress match (neutral + distinct-squad-via-ISquadProvider; the match
+//           digest chain byte-identical AND the world + season field-identical, all through one file),
+//           plus the SeasonSaveCodec fail-loud guards and the SeasonSaveManager fail-loud paths.
 
 using System;
 using System.Collections.Generic;
@@ -93,14 +94,49 @@ namespace TacticalDirector.SeasonSave
             return (s.Snapshot(), text);
         }
 
+        // ── Season fixture (#30 T1) ────────────────────────────────────────────────
+
+        private const int ManagedClub = 11;
+        private static int[] SeasonClubs => new[] { 10, 11, 12, 13 };
+
+        /// <summary>
+        /// A season part-way through: round 0 resolved (so the table carries wins/draws/goals, those
+        /// fixtures carry <c>Played</c>, and the calendar cursor has moved) with a non-default board.
+        /// Every field the Appendix B layout carries is off its construction default, so a codec that
+        /// dropped or mis-ordered one cannot round-trip.
+        /// </summary>
+        private static SeasonState MidSeasonState()
+        {
+            SeasonState s = SeasonState.CreateNew(
+                SeasonClubs, ManagedClub, seed: 0xABCDEF0123456789UL,
+                objective: new BoardObjective(2),
+                firstRoundDay: 5u, daysBetweenRounds: 7u, seasonNumber: 3);
+
+            int[] round0 = s.UnplayedFixtureIndicesInRound(0);
+            for (int i = 0; i < round0.Length; i++)
+            {
+                Fixture f = s.FixtureAt(round0[i]);
+                // Distinct scorelines so wins / draws / losses and both goal columns are all exercised.
+                s.ApplyResult(new MatchResult(
+                    f.HomeClubId, f.AwayClubId, homeGoals: 2 + i, awayGoals: i,
+                    roundIndex: f.RoundIndex, worldDay: 5u));
+                s.MarkFixturePlayed(round0[i]);
+            }
+
+            s.AdvanceCursorOneRound();
+            s.SetBoard(s.Board.WithJobSecurity(742));
+            return s;
+        }
+
         // ── Disk round-trip determinism (G5) ───────────────────────────────────────
 
         [Test]
         public void DiskRoundTrip_NoMatchSeason_IsDeterministic()
         {
             WorldStore world = PopulatedStore();
+            SeasonState season = MidSeasonState();
             string path = TempPath("season.save");
-            SeasonSaveManager.Save(world, matchOrNull: null, path);
+            SeasonSaveManager.Save(world, season, matchOrNull: null, path);
             Assert.IsTrue(File.Exists(path), "Save must produce the destination file atomically.");
 
             // Capture is non-mutating, so the saved store itself is a valid uninterrupted reference.
@@ -108,6 +144,9 @@ namespace TacticalDirector.SeasonSave
 
             SeasonSaveContents contents = SeasonSaveManager.Load(path);
             Assert.IsNull(contents.Match, "A no-match season Loads with a null Match (KD-3).");
+            Assert.IsNotNull(contents.Season, "A season save always reconstructs a season (FR-SN-019).");
+            Assert.IsTrue(season.FieldsEqual(contents.Season),
+                "FR-SN-022: the season state must round-trip field-identically through the file.");
             (byte[] gotSnap, string gotText) = AdvanceReference(contents.World);
 
             CollectionAssert.AreEqual(refSnap, gotSnap,
@@ -132,7 +171,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(1, world.Arcs.ArcCount, "only PopulatedStore's manual arc exists; the trigger has not fired yet");
 
             string path = TempPath("season-flagon.save");
-            SeasonSaveManager.Save(world, matchOrNull: null, path);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path);
 
             // Uninterrupted reference: the saved (non-mutated) world advances one day and fires.
             world.AdvanceDay();
@@ -163,13 +202,14 @@ namespace TacticalDirector.SeasonSave
             Action<MEngine> matchSetup, int n, int k, ISquadProvider squads = null)
         {
             WorldStore world = PopulatedStore();
+            SeasonState season = MidSeasonState();
             MEngine match = new MEngine(MatchSeed);
             matchSetup?.Invoke(match);
             for (int i = 0; i < n; i++) match.RunTick();
             Assert.AreEqual((ulong)n, match.CurrentTick);
 
             string path = TempPath("season-match.save");
-            SeasonSaveManager.Save(world, match, path);
+            SeasonSaveManager.Save(world, season, match, path);
             Assert.IsTrue(File.Exists(path));
 
             // Reference chains from the saved (non-mutated) objects.
@@ -185,6 +225,8 @@ namespace TacticalDirector.SeasonSave
             Assert.IsNotNull(contents.Match, "A season with a match must Load a non-null Match.");
             Assert.AreEqual((ulong)n, contents.Match.CurrentTick,
                 "The loaded match's clock must resume at the saved tick N.");
+            Assert.IsTrue(season.FieldsEqual(contents.Season),
+                "FR-SN-022: the season state must round-trip field-identically alongside the match.");
 
             (byte[] gotWorldSnap, string gotText) = AdvanceReference(contents.World);
             CollectionAssert.AreEqual(refWorldSnap, gotWorldSnap, "world must resume field-identical.");
@@ -227,7 +269,7 @@ namespace TacticalDirector.SeasonSave
             // never touches the (absent) match, returning a null Match.
             WorldStore world = PopulatedStore();
             string path = TempPath("nomatch-provider.save");
-            SeasonSaveManager.Save(world, matchOrNull: null, path);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path);
 
             SeasonSaveContents contents = SeasonSaveManager.Load(path, Provider(DistinctSquad(1)));
             Assert.IsNull(contents.Match,
@@ -248,7 +290,7 @@ namespace TacticalDirector.SeasonSave
         {
             WorldStore world = PopulatedStore();
             string path = TempPath("corrupt.save");
-            SeasonSaveManager.Save(world, matchOrNull: null, path);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path);
 
             byte[] bytes = File.ReadAllBytes(path);
             File.WriteAllBytes(path, new ArraySegment<byte>(bytes, 0, bytes.Length / 2).ToArray());
@@ -266,7 +308,7 @@ namespace TacticalDirector.SeasonSave
             match.ConfigureSquads(DistinctSquad(1), DistinctSquad(2));
             for (int i = 0; i < 30; i++) match.RunTick();
             string path = TempPath("distinct.save");
-            SeasonSaveManager.Save(world, match, path);
+            SeasonSaveManager.Save(world, MidSeasonState(), match, path);
 
             Assert.Throws<NotSupportedException>(
                 () => SeasonSaveManager.Load(path),
@@ -277,7 +319,17 @@ namespace TacticalDirector.SeasonSave
         public void Save_NullWorld_Throws()
         {
             Assert.Throws<ArgumentNullException>(
-                () => SeasonSaveManager.Save(null, matchOrNull: null, TempPath("x.save")));
+                () => SeasonSaveManager.Save(null, MidSeasonState(), matchOrNull: null, TempPath("x.save")));
+        }
+
+        [Test]
+        public void Save_NullSeason_Throws()
+        {
+            // FR-SN-019: unlike the match, the season is never optional — a null must fail loud rather
+            // than write a file that Load could not reconstruct a season from.
+            Assert.Throws<ArgumentNullException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), null, matchOrNull: null, TempPath("x.save")));
         }
 
         [Test]
@@ -285,10 +337,10 @@ namespace TacticalDirector.SeasonSave
         {
             WorldStore world = PopulatedStore();
             string path = TempPath("overwrite.save");
-            SeasonSaveManager.Save(world, matchOrNull: null, path);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path);
 
             world.AdvanceDay();
-            Assert.DoesNotThrow(() => SeasonSaveManager.Save(world, matchOrNull: null, path),
+            Assert.DoesNotThrow(() => SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path),
                 "Re-saving over an existing file must atomically replace it (File.Replace), not throw.");
             Assert.IsFalse(File.Exists(path + ".tmp"), "The temp file must not survive a successful save.");
         }
@@ -299,9 +351,12 @@ namespace TacticalDirector.SeasonSave
         public void Codec_RoundTrips_WithMatch()
         {
             byte[] worldBlob = new byte[] { 1, 2, 3, 4, 5 };
+            byte[] seasonBlob = new byte[] { 6, 6 };
             byte[] matchBlob = new byte[] { 9, 8, 7 };
-            SeasonSaveBlobs got = SeasonSaveCodec.Decode(SeasonSaveCodec.Encode(worldBlob, matchBlob));
+            SeasonSaveBlobs got = SeasonSaveCodec.Decode(
+                SeasonSaveCodec.Encode(worldBlob, seasonBlob, matchBlob));
             CollectionAssert.AreEqual(worldBlob, got.WorldBlob);
+            CollectionAssert.AreEqual(seasonBlob, got.SeasonBlob);
             CollectionAssert.AreEqual(matchBlob, got.MatchBlob);
         }
 
@@ -309,17 +364,95 @@ namespace TacticalDirector.SeasonSave
         public void Codec_RoundTrips_NoMatch()
         {
             byte[] worldBlob = new byte[] { 42, 42, 42 };
-            SeasonSaveBlobs got = SeasonSaveCodec.Decode(SeasonSaveCodec.Encode(worldBlob, matchBlobOrNull: null));
+            byte[] seasonBlob = new byte[] { 7 };
+            SeasonSaveBlobs got = SeasonSaveCodec.Decode(
+                SeasonSaveCodec.Encode(worldBlob, seasonBlob, matchBlobOrNull: null));
             CollectionAssert.AreEqual(worldBlob, got.WorldBlob);
+            CollectionAssert.AreEqual(seasonBlob, got.SeasonBlob);
             Assert.IsNull(got.MatchBlob, "A null match blob must round-trip to a null MatchBlob (KD-3).");
+        }
+
+        [Test]
+        public void Load_WorldPastTheNextFixtureDay_FailsLoud()
+        {
+            // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the ONE coherence rule spanning the
+            // world and season blobs, so neither codec can check it — only this root, which holds both.
+            // MidSeasonState's cursor points at round 1 (day 12); advancing the world past it makes the
+            // pair incoherent, and T2's day-advance loop (which advances UP TO the next fixture day)
+            // would be undefined. Save does not check (the requirement is on restore), so the corruption
+            // must surface at Load.
+            string path = TempPath("cursor-behind.season");
+            WorldStore world = PopulatedStore();
+            for (int i = 0; i < 20; i++)
+            {
+                world.AdvanceDay();
+            }
+
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path);
+
+            Assert.Throws<InvalidOperationException>(() => SeasonSaveManager.Load(path),
+                "A season whose next fixture day is behind the restored world day must be rejected (F4).");
+        }
+
+        [Test]
+        public void Load_CompletedSeason_PassesTheCursorInvariantVacuously()
+        {
+            // The other side of the same gate: a completed season has no next fixture, so the invariant
+            // is vacuously satisfied at ANY world day and must not be turned into a spurious refusal.
+            string path = TempPath("season-complete.season");
+            WorldStore world = PopulatedStore();
+            for (int i = 0; i < 50; i++)
+            {
+                world.AdvanceDay();
+            }
+
+            SeasonState done = MidSeasonState();
+            while (!done.Calendar.IsSeasonComplete)
+            {
+                done.AdvanceCursorOneRound();
+            }
+
+            SeasonSaveManager.Save(world, done, matchOrNull: null, path);
+
+            SeasonSaveContents got = SeasonSaveManager.Load(path);
+            Assert.IsTrue(got.Season.Calendar.IsSeasonComplete,
+                "A completed season must load at any world day (the invariant is vacuous).");
+        }
+
+        [Test]
+        public void Codec_FrameBlocksSitInTheirPinnedOrder()
+        {
+            // Locks the Appendix B frame ORDER, not just the round-trip: a self-consistent transposition
+            // of the world and season blocks would round-trip green while writing a layout no other
+            // reader of this format expects. Distinct lengths make each block's position identifiable.
+            byte[] worldBlob = { 1, 1, 1, 1, 1 };      // 5 bytes
+            byte[] seasonBlob = { 2, 2 };              // 2 bytes
+            byte[] matchBlob = { 3, 3, 3 };            // 3 bytes
+            byte[] blob = SeasonSaveCodec.Encode(worldBlob, seasonBlob, matchBlob);
+
+            int o = 0;
+            Assert.AreEqual(SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION,
+                CanonicalSerializer.ReadU32(blob, ref o), "frame field 1: format version");
+            Assert.AreEqual(1, blob[o], "frame field 2: matchPresent flag");
+            o += 1;
+            Assert.AreEqual((uint)worldBlob.Length, CanonicalSerializer.ReadU32(blob, ref o),
+                "frame field 3: the WORLD block's length prefix comes first");
+            o += worldBlob.Length;
+            Assert.AreEqual((uint)seasonBlob.Length, CanonicalSerializer.ReadU32(blob, ref o),
+                "frame field 4: the SEASON block sits between the world and match blocks (FR-SN-019)");
+            o += seasonBlob.Length;
+            Assert.AreEqual((uint)matchBlob.Length, CanonicalSerializer.ReadU32(blob, ref o),
+                "frame field 5: the MATCH block is last");
+            Assert.AreEqual(blob.Length, o + matchBlob.Length, "no trailing bytes");
         }
 
         [Test]
         public void Codec_EmptyWorldBlob_RoundTrips()
         {
             SeasonSaveBlobs got = SeasonSaveCodec.Decode(
-                SeasonSaveCodec.Encode(Array.Empty<byte>(), matchBlobOrNull: null));
+                SeasonSaveCodec.Encode(Array.Empty<byte>(), Array.Empty<byte>(), matchBlobOrNull: null));
             Assert.AreEqual(0, got.WorldBlob.Length);
+            Assert.AreEqual(0, got.SeasonBlob.Length);
             Assert.IsNull(got.MatchBlob);
         }
 
@@ -327,7 +460,8 @@ namespace TacticalDirector.SeasonSave
         public void Codec_NullWorldBlob_Throws()
         {
             Assert.Throws<ArgumentNullException>(
-                () => SeasonSaveCodec.Encode(worldBlob: null, matchBlobOrNull: new byte[] { 1 }));
+                () => SeasonSaveCodec.Encode(
+                    worldBlob: null, seasonBlob: new byte[] { 1 }, matchBlobOrNull: new byte[] { 1 }));
         }
 
         [Test]
@@ -339,16 +473,29 @@ namespace TacticalDirector.SeasonSave
         [Test]
         public void Codec_WrongFormatVersion_FailsLoud()
         {
-            byte[] blob = SeasonSaveCodec.Encode(new byte[] { 1, 2 }, matchBlobOrNull: null);
+            byte[] blob = SeasonSaveCodec.Encode(new byte[] { 1, 2 }, new byte[] { 3 }, matchBlobOrNull: null);
             blob[0] ^= 0xFF; // corrupt the leading format-version u32
             Assert.Throws<InvalidOperationException>(() => SeasonSaveCodec.Decode(blob),
                 "A season format-version mismatch must fail loud (KD-4).");
         }
 
         [Test]
+        public void Codec_PreT1FrameVersion_FailsLoud()
+        {
+            // FR-SN-020: the frame bumped 1 -> 2 when the season sub-blob landed. A v1 file has no
+            // season block, so accepting one would deframe the match blob as a season. Refused outright
+            // — there is no cross-version migration at Stage 0 (KD-4).
+            byte[] blob = SeasonSaveCodec.Encode(new byte[] { 1, 2 }, new byte[] { 3 }, matchBlobOrNull: null);
+            int o = 0;
+            CanonicalSerializer.WriteU32(blob, ref o, 1u);
+            Assert.Throws<InvalidOperationException>(() => SeasonSaveCodec.Decode(blob),
+                "A pre-#30-T1 (v1) season frame must be rejected, not reinterpreted.");
+        }
+
+        [Test]
         public void Codec_BadMatchPresentFlag_FailsLoud()
         {
-            byte[] blob = SeasonSaveCodec.Encode(new byte[] { 1, 2 }, matchBlobOrNull: null);
+            byte[] blob = SeasonSaveCodec.Encode(new byte[] { 1, 2 }, new byte[] { 3 }, matchBlobOrNull: null);
             blob[4] = 2; // the matchPresent flag sits right after the u32 version
             Assert.Throws<InvalidOperationException>(() => SeasonSaveCodec.Decode(blob),
                 "A matchPresent flag other than 0/1 must fail loud (KD-8).");
@@ -357,7 +504,7 @@ namespace TacticalDirector.SeasonSave
         [Test]
         public void Codec_OversizeWorldLength_FailsLoud()
         {
-            byte[] blob = SeasonSaveCodec.Encode(new byte[] { 1, 2, 3 }, matchBlobOrNull: null);
+            byte[] blob = SeasonSaveCodec.Encode(new byte[] { 1, 2, 3 }, new byte[] { 4 }, matchBlobOrNull: null);
             // The world length u32 sits at offset 5 (u32 version + u8 flag). Overwrite with a huge value.
             blob[5] = 0xFF; blob[6] = 0xFF; blob[7] = 0xFF; blob[8] = 0xFF;
             Assert.Throws<InvalidOperationException>(() => SeasonSaveCodec.Decode(blob),
@@ -367,7 +514,8 @@ namespace TacticalDirector.SeasonSave
         [Test]
         public void Codec_TrailingBytes_FailsLoud()
         {
-            byte[] blob = SeasonSaveCodec.Encode(new byte[] { 1, 2 }, matchBlobOrNull: new byte[] { 3 });
+            byte[] blob = SeasonSaveCodec.Encode(
+                new byte[] { 1, 2 }, new byte[] { 9 }, matchBlobOrNull: new byte[] { 3 });
             var padded = new byte[blob.Length + 1];
             Array.Copy(blob, padded, blob.Length);
             Assert.Throws<InvalidOperationException>(() => SeasonSaveCodec.Decode(padded),
@@ -377,7 +525,8 @@ namespace TacticalDirector.SeasonSave
         [Test]
         public void Codec_TruncatedMatchBlock_FailsLoud()
         {
-            byte[] blob = SeasonSaveCodec.Encode(new byte[] { 1, 2 }, matchBlobOrNull: new byte[] { 3, 4, 5 });
+            byte[] blob = SeasonSaveCodec.Encode(
+                new byte[] { 1, 2 }, new byte[] { 9 }, matchBlobOrNull: new byte[] { 3, 4, 5 });
             var chopped = new byte[blob.Length - 2];
             Array.Copy(blob, chopped, chopped.Length);
             Assert.Throws<InvalidOperationException>(() => SeasonSaveCodec.Decode(chopped),
@@ -451,4 +600,14 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | fail-loud guards, SeasonSaveManager fail-loud paths.           |
 // | 1.1     | 2026-07-22 | —      | Code AR L-2: + Load_NoMatchSeason_WithProvider_IgnoresProvider |
 // |         |            |        | (locks R4 — a provider on a no-match season is ignored).       |
+// | 1.2     | 2026-07-24 | —      | Arc-triggers E2 §8.9(a): flag-on world resumes evaluating      |
+// |         |            |        | through the season file (+ null-canon negative control).       |
+// | 1.3     | 2026-07-25 | —      | #30 T1: MidSeasonState fixture; every Save carries a season;   |
+// |         |            |        | the no-match and with-match round-trips assert the season      |
+// |         |            |        | resumes field-identical (FR-SN-022); the frame-codec cases     |
+// |         |            |        | carry a season blob; + Save_NullSeason_Throws (FR-SN-019).     |
+// | 1.4     | 2026-07-25 | —      | #30 T1 AR pass 2: + Load_WorldPastTheNextFixtureDay_FailsLoud  |
+// |         |            |        | and Load_CompletedSeason_PassesTheCursorInvariantVacuously    |
+// |         |            |        | (FR-SN-011 / F4), + Codec_FrameBlocksSitInTheirPinnedOrder    |
+// |         |            |        | (AR pass 1 — the frame had no field-order lock).              |
 #endregion

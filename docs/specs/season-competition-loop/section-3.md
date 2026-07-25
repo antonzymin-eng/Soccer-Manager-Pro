@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** July 24, 2026 (v0.8 — back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 0.8
+**Last Updated:** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Version:** 0.9
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -22,6 +22,7 @@ Generate(clubIds[N], seed) -> Fixture[]:
         M := N + 1
     else:
         M := N
+    ring := ids                 # the rotating circle; index 0 is the pinned position
     # Fixed circle rotation — index 0 pinned, the rest rotate. No RNG:
     # the seed selects only the *labelling* order below (§3.1.1), not the pairing structure,
     # so the single-league case needs no draw (FR-SN-027).
@@ -233,6 +234,7 @@ EncodeSeason(state) -> bytes:
     WriteU32(SEASON_STATE_FORMAT_VERSION)
     WriteU64(state.Seed)
     WriteI32(state.SeasonNumber)
+    WriteI32(state.ManagedClubId)                                    # Appendix B row 3a (ERR-030-011)
     WriteCount(state.ClubIds.Length); for id in ClubIds: WriteI32(id)
     WriteCount(state.Fixtures.Length); for f in Fixtures: WriteFixture(f)
     WriteCalendar(state.Calendar)
@@ -246,6 +248,12 @@ DecodeSeason(bytes) -> state:
     validate Calendar.nextDay >= 0 and internal coherence          # F4 checked at SeasonLoop.Restore
 ```
 
+> **Corrected at #30 T1 (ERR-030-011).** The `EncodeSeason` sketch above omitted `ManagedClubId`,
+> which `Appendix B` row 3a lists and §2.2's `SeasonState` requires — following the sketch verbatim
+> would have produced a blob no season could be reconstructed from. **Appendix B is the byte-layout
+> authority**; the pseudocode is now aligned to it. The `WriteBoard` row is likewise pinned by
+> Appendix B row 11 (see that row's own T1 note on the job-security representation).
+
 `SeasonSaveCodec.Encode`/`Decode` gain the season block between the world and match blocks; the outer
 frame becomes `version → matchPresent flag → world block → season block → (match block iff present)`,
 and `SEASON_SAVE_FORMAT_VERSION` bumps 1 → 2 (§4). The codec never parses the world or match blob
@@ -258,11 +266,15 @@ and `SEASON_SAVE_FORMAT_VERSION` bumps 1 → 2 (§4). The codec never parses the
 | Round | Fixtures (home v away) |
 |---|---|
 | 0 | 10 v 13, 11 v 12 |
-| 1 | 10 v 12, 13 v 11 |
+| 1 | 12 v 10, 11 v 13 |
 | 2 | 10 v 11, 12 v 13 |
 | 3 (2nd leg) | 13 v 10, 12 v 11 |
-| 4 | 12 v 10, 11 v 13 |
+| 4 | 10 v 12, 13 v 11 |
 | 5 | 11 v 10, 13 v 12 |
+
+> **Corrected at #30 T0 (ERR-030-010).** Rounds 1 and 4 had their venues inverted — this table was
+> hand-derived without applying the §3.1 round-parity rule two subsections above it. §3.1's
+> pseudocode is authoritative and unchanged; see Appendix C for the measured justification.
 
 12 fixtures = `N·(N−1) = 4·3` (FR-SN-002); each club appears once per round (FR-SN-003). If clubs 10
 and 11 both finish P=3 W=2 D=0 L=1 with GF/GA giving equal GD and equal GF, club 10 orders above 11
@@ -279,4 +291,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 0.6 | 2026-07-23 | — | Back-prop ERR-030-006 (at #34 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the staff null seam as step 6 (after transfers, before the world-day tick; `AdvanceDay` → step 7); a deep-tier position reservation, empty at minimal. Prose + FR-SN-034 enumeration updated. |
 | 0.7 | 2026-07-24 | — | Back-prop ERR-030-007 (at #32 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the scouting null seam as step 7 (after staff so a scouting day reads the day's staff state, before the world-day tick; `AdvanceDay` → step 8); a deep-tier position reservation, empty at minimal (fog-off ⇒ no assignment; `AdvanceScoutingDay` no-ops). Prose + FR-SN-034 enumeration updated. |
 | 0.8 | 2026-07-24 | — | Back-prop ERR-030-009 (at #44 approval): §3.4 notes the #44 availability-filter null seam on the managed squad's resolve→configure path (empty until #44 T2; FR-SN-013). |
+| 0.9 | 2026-07-25 | — | **ERR-030-010** (a) §3.1 pseudocode binds `ring := ids` (it was used but never defined); (b) (found at #30 T0 implementation): the §3.7 worked schedule's rounds 1 and 4 venue-corrected to agree with §3.1's round-parity rule (which is authoritative and unchanged). |
 #endregion
