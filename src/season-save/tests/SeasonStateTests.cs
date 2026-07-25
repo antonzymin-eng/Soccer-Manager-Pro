@@ -576,6 +576,33 @@ namespace TacticalDirector.SeasonSave.Tests
                 "SeasonState instance field count changed. If you added serialized season state, extend " +
                 "FieldsEqual + Clone + the T1 SeasonStateCodec, then update this count.");
         }
+
+        // SeasonState.FieldsEqual does not compare SeasonState's own fields structurally — it reaches
+        // INTO the aggregates (Board.JobSecurityPerMille, Board.Objective.TargetPositionOrBetter, the
+        // four Fixture columns inline) and delegates to SeasonCalendar.FieldsEqual and
+        // LeagueTable.FieldsEqual (which hand-enumerates nine LeagueTableRow columns). So the guard above
+        // is necessary but NOT sufficient: a column added to any aggregate leaves SeasonState's own count
+        // at 8, the guard stays green, FieldsEqual silently ignores the column, and the FR-SN-022
+        // round-trip passes while the codec drops it. Every traversed type needs its own count.
+        [TestCase(typeof(LeagueTableRow), 9)]
+        [TestCase(typeof(Fixture), 4)]
+        [TestCase(typeof(SeasonCalendar), 2)]
+        [TestCase(typeof(BoardState), 2)]
+        [TestCase(typeof(BoardObjective), 1)]
+        public void AggregateValueType_InstanceFieldCount_MatchesFieldsEqualTraversal(
+            System.Type type, int expectedFieldCount)
+        {
+            int fieldCount = type
+                .GetFields(System.Reflection.BindingFlags.Public |
+                           System.Reflection.BindingFlags.NonPublic |
+                           System.Reflection.BindingFlags.Instance)
+                .Length;
+
+            Assert.AreEqual(expectedFieldCount, fieldCount,
+                $"{type.Name} instance field count changed. SeasonState.FieldsEqual traverses this type, " +
+                "so a new field must be added to the traversal (and to the T1 codec) or it will be " +
+                "silently dropped by a round-trip that still passes. Then update this count.");
+        }
     }
 }
 
@@ -586,4 +613,8 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | and SeasonViewModel observer-neutrality locks.            |
 // | 1.1     | 2026-07-25 | —      | AR pass 3: added the SeasonState instance-field-count     |
 // |         |            |        | coupling guard (FieldsEqual/Clone/T1-codec omission lock).|
+// | 1.2     | 2026-07-25 | —      | AR pass 4: v1.1's guard covered SeasonState only, but    |
+// |         |            |        | FieldsEqual traverses five aggregate value types — added |
+// |         |            |        | counts for LeagueTableRow/Fixture/SeasonCalendar/Board-  |
+// |         |            |        | State/BoardObjective (sibling-drift, PM AR-7 M-1 class).  |
 #endregion
