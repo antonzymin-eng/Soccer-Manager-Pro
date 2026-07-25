@@ -373,6 +373,80 @@ namespace TacticalDirector.SeasonSave
         }
 
         [Test]
+        public void Load_WorldPastTheNextFixtureDay_FailsLoud()
+        {
+            // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the ONE coherence rule spanning the
+            // world and season blobs, so neither codec can check it — only this root, which holds both.
+            // MidSeasonState's cursor points at round 1 (day 12); advancing the world past it makes the
+            // pair incoherent, and T2's day-advance loop (which advances UP TO the next fixture day)
+            // would be undefined. Save does not check (the requirement is on restore), so the corruption
+            // must surface at Load.
+            string path = TempPath("cursor-behind.season");
+            WorldStore world = PopulatedStore();
+            for (int i = 0; i < 20; i++)
+            {
+                world.AdvanceDay();
+            }
+
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path);
+
+            Assert.Throws<InvalidOperationException>(() => SeasonSaveManager.Load(path),
+                "A season whose next fixture day is behind the restored world day must be rejected (F4).");
+        }
+
+        [Test]
+        public void Load_CompletedSeason_PassesTheCursorInvariantVacuously()
+        {
+            // The other side of the same gate: a completed season has no next fixture, so the invariant
+            // is vacuously satisfied at ANY world day and must not be turned into a spurious refusal.
+            string path = TempPath("season-complete.season");
+            WorldStore world = PopulatedStore();
+            for (int i = 0; i < 50; i++)
+            {
+                world.AdvanceDay();
+            }
+
+            SeasonState done = MidSeasonState();
+            while (!done.Calendar.IsSeasonComplete)
+            {
+                done.AdvanceCursorOneRound();
+            }
+
+            SeasonSaveManager.Save(world, done, matchOrNull: null, path);
+
+            SeasonSaveContents got = SeasonSaveManager.Load(path);
+            Assert.IsTrue(got.Season.Calendar.IsSeasonComplete,
+                "A completed season must load at any world day (the invariant is vacuous).");
+        }
+
+        [Test]
+        public void Codec_FrameBlocksSitInTheirPinnedOrder()
+        {
+            // Locks the Appendix B frame ORDER, not just the round-trip: a self-consistent transposition
+            // of the world and season blocks would round-trip green while writing a layout no other
+            // reader of this format expects. Distinct lengths make each block's position identifiable.
+            byte[] worldBlob = { 1, 1, 1, 1, 1 };      // 5 bytes
+            byte[] seasonBlob = { 2, 2 };              // 2 bytes
+            byte[] matchBlob = { 3, 3, 3 };            // 3 bytes
+            byte[] blob = SeasonSaveCodec.Encode(worldBlob, seasonBlob, matchBlob);
+
+            int o = 0;
+            Assert.AreEqual(SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION,
+                CanonicalSerializer.ReadU32(blob, ref o), "frame field 1: format version");
+            Assert.AreEqual(1, blob[o], "frame field 2: matchPresent flag");
+            o += 1;
+            Assert.AreEqual((uint)worldBlob.Length, CanonicalSerializer.ReadU32(blob, ref o),
+                "frame field 3: the WORLD block's length prefix comes first");
+            o += worldBlob.Length;
+            Assert.AreEqual((uint)seasonBlob.Length, CanonicalSerializer.ReadU32(blob, ref o),
+                "frame field 4: the SEASON block sits between the world and match blocks (FR-SN-019)");
+            o += seasonBlob.Length;
+            Assert.AreEqual((uint)matchBlob.Length, CanonicalSerializer.ReadU32(blob, ref o),
+                "frame field 5: the MATCH block is last");
+            Assert.AreEqual(blob.Length, o + matchBlob.Length, "no trailing bytes");
+        }
+
+        [Test]
         public void Codec_EmptyWorldBlob_RoundTrips()
         {
             SeasonSaveBlobs got = SeasonSaveCodec.Decode(
@@ -532,4 +606,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | the no-match and with-match round-trips assert the season      |
 // |         |            |        | resumes field-identical (FR-SN-022); the frame-codec cases     |
 // |         |            |        | carry a season blob; + Save_NullSeason_Throws (FR-SN-019).     |
+// | 1.4     | 2026-07-25 | —      | #30 T1 AR pass 2: + Load_WorldPastTheNextFixtureDay_FailsLoud  |
+// |         |            |        | and Load_CompletedSeason_PassesTheCursorInvariantVacuously    |
+// |         |            |        | (FR-SN-011 / F4), + Codec_FrameBlocksSitInTheirPinnedOrder    |
+// |         |            |        | (AR pass 1 — the frame had no field-order lock).              |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveBlobs.cs
 // Created:  2026-07-22
-// Modified: 2026-07-22
+// Modified: 2026-07-25 (#30 T1: the third sub-blob)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-2 / KD-7 / §4;
 //           Season & Competition Loop #30 Appendix B (frame), FR-SN-019; Code Standards #20

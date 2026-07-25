@@ -1,7 +1,6 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-07-24 (arc-triggers E2 §8.9(a): Load threads an optional ArcCanonSource into
-//           WorldStore.Restore so a flag-on world keeps evaluating after a season restore)
+// Modified: 2026-07-25 (#30 T1 AR: Load enforces the KD-4 cursor invariant, FR-SN-011 / F4)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §4.6.1.1
@@ -118,7 +117,9 @@ namespace TacticalDirector.SeasonSave
         /// unreadable file surfaces the IO exception; a corrupt / version-mismatched / trailing-byte
         /// season frame throws from <see cref="SeasonSaveCodec.Decode"/>; a corrupt inner blob throws
         /// from <see cref="WorldStore.Restore"/> / <see cref="SeasonStateCodec.Decode"/> / the match
-        /// restore path; and a distinct-squad match save
+        /// restore path; a season whose next fixture day is already behind the restored world day throws
+        /// here (the KD-4 cursor invariant, FR-SN-011 / F4 — the only cross-blob coherence rule, and this
+        /// root is the only layer holding both blobs); and a distinct-squad match save
         /// loaded without (or with an incomplete) <paramref name="squads"/> throws from the match restore
         /// factory (KD-6 / R4). The match restore's fingerprint + MXCSR float-mode gates run here
         /// unchanged (KD-5).
@@ -145,6 +146,23 @@ namespace TacticalDirector.SeasonSave
 
             WorldStore world = WorldStore.Restore(blobs.WorldBlob, canon);
             SeasonState season = SeasonStateCodec.Decode(blobs.SeasonBlob);
+
+            // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the one coherence rule that spans the
+            // world and season blobs, so it can only be checked HERE — the two codecs each see one blob,
+            // and this root is the only layer that holds both. A season whose next fixture day has
+            // already passed on the world clock would make T2's day-advance loop (FR-SN-010, which
+            // advances UP TO the next fixture day) undefined, so the save is rejected at load rather
+            // than surfacing later as a stuck or skipped round.
+            if (!season.Calendar.SatisfiesCursorInvariant(world.CurrentWorldTick))
+            {
+                // NextFixtureDay() is safe here: the invariant is vacuously true for a completed season,
+                // so reaching this branch means the cursor still points at a round.
+                throw new InvalidOperationException(
+                    "Season save is incoherent: the next fixture day (" +
+                    season.Calendar.NextFixtureDay() + ") is before the restored world day (" +
+                    world.CurrentWorldTick + ") — the KD-4 cursor invariant (FR-SN-011) is violated.");
+            }
+
             MatchEngine.MatchEngine match = blobs.MatchBlob != null
                 ? MatchSaveManager.Restore(blobs.MatchBlob, squads)
                 : null;
@@ -169,4 +187,7 @@ namespace TacticalDirector.SeasonSave
 // | 1.2     | 2026-07-25 | —      | #30 T1 (FR-SN-021): Save gains the season parameter and Load  |
 // |         |            |        | reconstructs the SeasonState; the season blob is captured     |
 // |         |            |        | before the file is opened, alongside the other two.           |
+// | 1.3     | 2026-07-25 | —      | #30 T1 AR pass 2: Load enforces the KD-4 cursor invariant     |
+// |         |            |        | (FR-SN-011 MUST / F4) — the one coherence rule spanning the   |
+// |         |            |        | world and season blobs, so only this root can check it.       |
 #endregion

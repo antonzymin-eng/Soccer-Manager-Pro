@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveConstants.cs
 // Created:  2026-07-22
-// Modified: 2026-07-22
+// Modified: 2026-07-25 (#30 T1: SEASON_SAVE_FORMAT_VERSION 1 -> 2)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-4; Code Standards #20
 // Purpose:  Constant catalogue for the season save-file frame. Holds the season-frame format version —

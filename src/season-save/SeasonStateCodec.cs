@@ -147,6 +147,15 @@ namespace TacticalDirector.SeasonSave
         /// the schedule, a table missing a club) throw from the <see cref="SeasonState"/> constructor's
         /// own gates.
         /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="blob"/> is null.</exception>
+        /// <exception cref="InvalidOperationException">Framing corruption the codec itself detects: a
+        /// version mismatch, a truncated read, an out-of-bounds length prefix, a played flag other than
+        /// 0/1, a goal difference disagreeing with its goal columns, or trailing bytes.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">A field is individually out of range for the
+        /// value type that must hold it (e.g. a negative table column at
+        /// <see cref="LeagueTableRow.Create"/>).</exception>
+        /// <exception cref="ArgumentException">Fields are individually well-formed but mutually
+        /// incoherent, from the <see cref="SeasonState"/> constructor's cross-field gates.</exception>
         public static SeasonState Decode(byte[] blob)
         {
             if (blob == null)
@@ -320,4 +329,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | version gate, overflow-safe ReadCount bounds, the serialized-vs-   |
 // |         |            |        | derived goal-difference coherence check, the trailing-byte guard,  |
 // |         |            |        | and decode-through-the-validating-constructors posture.            |
+// | 1.1     | 2026-07-25 | —      | AR pass 1: Decode gains <exception> docs for all four types it     |
+// |         |            |        | throws (the fail-loud seam documented only its summary).           |
 #endregion

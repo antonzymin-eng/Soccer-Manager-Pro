@@ -285,10 +285,11 @@ namespace TacticalDirector.SeasonSave
         }
 
         [Test]
-        public void Decode_NegativeTableCount_FailsLoud()
+        public void Decode_NegativeTableColumn_FailsLoud()
         {
-            // A club whose Won/Drawn/Lost do not sum to Played is the LeagueTableRow.Create gate — the
-            // decode path's per-row coherence check on data straight out of the blob.
+            // A negative COLUMN inside a table row (here Played), not a count prefix — the sibling
+            // Decode_OversizeTableRowCount_FailsLoud covers the prefix. This is the LeagueTableRow.Create
+            // gate: the decode path's per-row coherence check on data straight out of the blob.
             byte[] blob = SeasonStateCodec.Encode(MidSeason());
             int playedOffset = TableRowOffset(blob, rowIndex: 0) + 4; // clubId, then Played
             int o = playedOffset;
@@ -360,23 +361,45 @@ namespace TacticalDirector.SeasonSave
 
         // ── Offset helpers (derived from the encoded blob, not hardcoded) ──────────
 
+        // These mirror SeasonStateCodec's private element widths (Appendix B rows 5/7/8/10). They cannot
+        // be shared with the codec without widening its surface, so TableRowOffset_LandsOnTheFirstRow
+        // below asserts the walk actually lands on the row it claims — a width that drifts out of sync
+        // fails there rather than silently corrupting a different field in every offset-based test.
+        private const int BytesPerClubId  = 4;        // i32
+        private const int BytesPerFixture = 4 + 4 + 4 + 1;
+        private const int BytesPerRoundDay = 4;       // u32
+        private const int BytesPerTableRow = 9 * 4;   // 9 x i32
+
+        [Test]
+        public void TableRowOffset_LandsOnTheFirstRow()
+        {
+            // Coherence guard for the helper above: the walked offset must point at row 0's ClubId.
+            SeasonState s = MidSeason();
+            byte[] blob = SeasonStateCodec.Encode(s);
+
+            int o = TableRowOffset(blob, rowIndex: 0);
+            Assert.AreEqual(s.TableRowsInClubIdOrder()[0].ClubId, CanonicalSerializer.ReadI32(blob, ref o),
+                "The offset helper must land on table row 0's ClubId, or every offset-based test in " +
+                "this fixture is corrupting a field other than the one it names.");
+        }
+
         // The byte offset of table row `rowIndex`'s first field (ClubId), computed by walking the
         // variable-length blocks that precede the table.
         private static int TableRowOffset(byte[] blob, int rowIndex)
         {
             int o = OffsetClubCount;
             int clubCount = (int)CanonicalSerializer.ReadU32(blob, ref o);
-            o += clubCount * 4;
+            o += clubCount * BytesPerClubId;
 
             int fixtureCount = (int)CanonicalSerializer.ReadU32(blob, ref o);
-            o += fixtureCount * 13;
+            o += fixtureCount * BytesPerFixture;
 
             o += 4;                                                   // calendar cursor
             int roundCount = (int)CanonicalSerializer.ReadU32(blob, ref o);
-            o += roundCount * 4;
+            o += roundCount * BytesPerRoundDay;
 
             o += 4;                                                   // tableRowCount prefix
-            return o + rowIndex * 36;
+            return o + rowIndex * BytesPerTableRow;
         }
 
         private static int GoalDifferenceOffset(byte[] blob, int rowIndex) =>
@@ -390,4 +413,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | (fresh / mid-season / completed), per-column and scalar locks,  |
 // |         |            |        | encode determinism + non-vacuity, the pinned-offset layout      |
 // |         |            |        | lock, and every FR-SN-023 fail-loud gate.                       |
+// | 1.1     | 2026-07-25 | —      | AR pass 1: negative-COLUMN test renamed off the misleading      |
+// |         |            |        | "count" name; offset-helper widths named + a coherence guard    |
+// |         |            |        | (TableRowOffset_LandsOnTheFirstRow) so a layout change fails    |
+// |         |            |        | loudly instead of walking every probe to the wrong bytes.       |
 #endregion

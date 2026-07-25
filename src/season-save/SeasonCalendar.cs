@@ -19,9 +19,10 @@ namespace TacticalDirector.SeasonSave
     /// </para>
     /// <para>
     /// <b>KD-4 invariant (FR-SN-011).</b> The next fixture day is always <c>&gt;=</c> the current world
-    /// day. It is checked with <see cref="SatisfiesCursorInvariant"/> — a pure predicate here, since T0
-    /// does no <c>WorldStore</c> wiring; <c>SeasonLoop.Restore</c> calls it and fails loud on violation
-    /// (F4) at T1/T2.
+    /// day. It is checked with <see cref="SatisfiesCursorInvariant"/> — a pure predicate here, since this
+    /// type never sees the world clock. Its production caller is <c>SeasonSaveManager.Load</c> (#30 T1),
+    /// the only layer holding both the restored world and the decoded season; it fails loud on violation
+    /// (F4).
     /// </para>
     /// </summary>
     public readonly struct SeasonCalendar
@@ -221,4 +222,7 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-07-25 | —      | Initial implementation (#30 T0): readonly cursor struct, strictly  |
 // |         |            |        | ascending day validation, Linear factory with overflow guard,      |
 // |         |            |        | SatisfiesCursorInvariant (KD-4), AdvancedOneRound, FieldsEqual.    |
+// | 1.1     | 2026-07-25 | —      | AR pass 2 (doc): SatisfiesCursorInvariant's caller re-anchored to  |
+// |         |            |        | SeasonSaveManager.Load — SeasonLoop is a T2 type, and the          |
+// |         |            |        | predicate had no production caller until the FR-SN-011 gate landed.|
 #endregion
