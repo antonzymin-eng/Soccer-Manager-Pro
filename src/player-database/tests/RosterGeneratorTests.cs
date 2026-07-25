@@ -151,6 +151,80 @@ namespace TacticalDirector.PlayerDatabase.Tests
             Assert.Throws<ArgumentNullException>(() => RosterGenerator.Generate(null, 0, 0, 1));
         }
 
+        // ── Supplied-position overload (league-bootstrap KD-6) ──────────────────────
+
+        [Test]
+        public void GenerateWithPositions_HonoursTheTemplate()
+        {
+            var positions = new[]
+            {
+                PlayerPosition.Goalkeeper, PlayerPosition.Goalkeeper,
+                PlayerPosition.Defender, PlayerPosition.Defender, PlayerPosition.Defender,
+                PlayerPosition.Midfielder, PlayerPosition.Forward
+            };
+
+            DeterministicRngService rng = NewRng(seed: 99, clubId: 4, out int streamIndex);
+            Squad squad = RosterGenerator.Generate(rng, streamIndex, clubId: 4, positions);
+
+            Assert.AreEqual(positions.Length, squad.Count);
+            for (int i = 0; i < positions.Length; i++)
+            {
+                Assert.AreEqual(positions[i], squad.GetPlayer(i).Position,
+                    $"player {i} must carry the supplied position, not a drawn one.");
+            }
+        }
+
+        [Test]
+        public void GenerateWithPositions_ConsumesTheSameBudgetAsTheDrawnPath()
+        {
+            // The overload discards the position draw rather than skipping it, so both paths consume
+            // exactly FIELDS_PER_PLAYER and share one stream layout — everything EXCEPT the position and
+            // the position-derived attribute bias must be identical for the same club and seed.
+            DeterministicRngService drawnRng = NewRng(seed: 7, clubId: 2, out int drawnStream);
+            Squad drawn = RosterGenerator.Generate(drawnRng, drawnStream, clubId: 2, count: 5);
+
+            var forced = new[]
+            {
+                PlayerPosition.Goalkeeper, PlayerPosition.Goalkeeper, PlayerPosition.Goalkeeper,
+                PlayerPosition.Goalkeeper, PlayerPosition.Goalkeeper
+            };
+            DeterministicRngService forcedRng = NewRng(seed: 7, clubId: 2, out int forcedStream);
+            Squad supplied = RosterGenerator.Generate(forcedRng, forcedStream, clubId: 2, forced);
+
+            Assert.AreEqual(drawn.Count, supplied.Count);
+            for (int i = 0; i < drawn.Count; i++)
+            {
+                Assert.AreEqual(drawn.GetPlayer(i).PlayerId, supplied.GetPlayer(i).PlayerId);
+                Assert.AreEqual(drawn.GetPlayer(i).FirstName, supplied.GetPlayer(i).FirstName);
+                Assert.AreEqual(drawn.GetPlayer(i).LastName, supplied.GetPlayer(i).LastName);
+                Assert.AreEqual(drawn.GetPlayer(i).Age, supplied.GetPlayer(i).Age,
+                    "Age is drawn BEFORE the position draw; a differing value means the budget shifted.");
+                Assert.AreEqual(
+                    drawn.GetPlayer(i).Attributes.WeakFootRating,
+                    supplied.GetPlayer(i).Attributes.WeakFootRating,
+                    "WeakFoot is drawn AFTER the position draw; a differing value means the discarded " +
+                    "draw did not run and every later draw shifted by one.");
+            }
+        }
+
+        [Test]
+        public void GenerateWithPositions_FailsLoudOnABadTemplate()
+        {
+            DeterministicRngService rng = NewRng(seed: 1, clubId: 0, out int streamIndex);
+
+            Assert.Throws<ArgumentNullException>(
+                () => RosterGenerator.Generate(rng, streamIndex, 0, (PlayerPosition[])null));
+            Assert.Throws<ArgumentException>(
+                () => RosterGenerator.Generate(rng, streamIndex, 0, new PlayerPosition[0]));
+            Assert.Throws<ArgumentException>(
+                () => RosterGenerator.Generate(
+                    rng, streamIndex, 0,
+                    new PlayerPosition[PlayerDatabaseConstants.CLUB_SQUAD_SIZE + 1]));
+            Assert.Throws<ArgumentException>(
+                () => RosterGenerator.Generate(
+                    rng, streamIndex, 0, new[] { PlayerPosition.Defender, (PlayerPosition)9 }));
+        }
+
         private static bool ArraysEqual(int[] a, int[] b)
         {
             if (a.Length != b.Length)

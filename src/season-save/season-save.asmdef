@@ -5,6 +5,7 @@
         "TacticalDirector.MatchEngine",
         "TacticalDirector.LivingWorld",
         "TacticalDirector.DeterministicSim",
+        "TacticalDirector.PlayerDatabase",
         "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],

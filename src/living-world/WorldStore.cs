@@ -74,6 +74,20 @@ namespace TacticalDirector.LivingWorld
         /// <summary>The manager this world store is scoped to.</summary>
         public int ManagerId => _managerId;
 
+        /// <summary>
+        /// The seed this world was created from. Already serialized by <see cref="Snapshot"/> and
+        /// restored by <see cref="Restore(byte[], ArcCanonSource)"/> — this only makes it READABLE.
+        /// <para>
+        /// Load-bearing beyond this assembly: it is the only value in a save file from which a league's
+        /// rosters can be regenerated. Squads are not persisted, so resuming a career means calling
+        /// <c>LeagueBootstrap.Generate(world.WorldSeed, season.ClubCount)</c> to rebuild the
+        /// <c>ISquadProvider</c> that <c>SeasonSaveManager.Load</c> needs. Without an accessor the seed
+        /// was write-only and a saved career could not be reconstructed at all
+        /// (<c>league-bootstrap-design.md</c> KD-9 / AR-5 M-1).
+        /// </para>
+        /// </summary>
+        public ulong WorldSeed => _worldSeed;
+
         /// <summary>Current calendar day (0 at world start; advanced only by <see cref="AdvanceDay"/>).</summary>
         public uint CurrentWorldTick => _clock.CurrentWorldTick;
 
@@ -528,4 +542,8 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | comparator (a copy of ArcTriggerEvaluator's IsMoreSalient) is  |
 // |         |            |        | removed; the auto-cite scan now delegates to the shared static |
 // |         |            |        | MemoryEpisode.MoreSalientThan. No behaviour change.            |
+// | 1.7     | 2026-07-25 | —      | league-bootstrap AR-5 M-1: public WorldSeed accessor. The seed |
+// |         |            |        | was already serialized and restored but write-only, so a saved |
+// |         |            |        | career could not rebuild the ISquadProvider its rosters are    |
+// |         |            |        | regenerated from. Read-only; no behaviour change.              |
 #endregion
