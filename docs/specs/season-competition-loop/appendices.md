@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
-**Version:** 0.2
+**Last Updated:** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -45,7 +45,16 @@ The season block, in order (all via `CanonicalSerializer`; every length prefix v
 | 8 | calendar | (nextRoundIndex i32, roundCount count, roundToDay[] u32) | the cursor (KD-4); day values are `uint` to match `WorldStore.CurrentWorldTick` |
 | 9 | tableRowCount | count | = clubCount |
 | 10 | tableRows[] | (clubId, P, W, D, L, GF, GA, GD, Pts) i32 × 9 × rows | ClubId order |
-| 11 | board | (targetPosition i32, jobSecurity f32/u8) | the objective + security |
+| 11 | board | (targetPosition i32, jobSecurityPerMille i32) | the objective + security |
+
+> **Row 11 pinned at #30 T1 (ERR-030-011).** The v0.1 row left the representation open as
+> `jobSecurity f32/u8` — neither of which the implementation uses. #30 T0 resolved `BoardState` to an
+> integer per-mille in `[0, JobSecurityScale]`, following the integer-arithmetic convention every later
+> management spec standardized on (#41's AR-1 moved that spec's whole model float → integer per-mille;
+> #40 uses integer currency; #33 uses per-mille scalars), and recorded the row as a back-prop
+> candidate. T1 is where it became a real byte layout, so the row is now pinned to `i32`. Integers also
+> make the sub-blob round-trip exact with no NaN gate.
+
 
 The outer `SeasonSaveCodec` frame nesting this block:
 `SEASON_SAVE_FORMAT_VERSION (u32) → matchPresent flag (u8) → [len u32]world → [len u32]season →
@@ -58,11 +67,19 @@ The outer `SeasonSaveCodec` frame nesting this block:
 | Round | Fixture 1 | Fixture 2 |
 |---|---|---|
 | 0 | 10 v 13 | 11 v 12 |
-| 1 | 10 v 12 | 13 v 11 |
+| 1 | 12 v 10 | 11 v 13 |
 | 2 | 10 v 11 | 12 v 13 |
 | 3 | 13 v 10 | 12 v 11 |
-| 4 | 12 v 10 | 11 v 13 |
+| 4 | 10 v 12 | 13 v 11 |
 | 5 | 11 v 10 | 13 v 12 |
+
+> **Corrected at #30 T0 (ERR-030-010).** Rounds 1 and 4 previously read `10 v 12 / 13 v 11` and
+> `12 v 10 / 11 v 13` — the venues were inverted because this table (and the identical §3.7 one) was
+> hand-derived without applying §3.1's round-parity venue rule. The **pairings were always right**;
+> only the home/away side of the odd first-leg round (and its second-leg mirror) changed, so the set
+> of 12 ordered pairs below is unchanged. Measured at the Stage-2 target size of 20 clubs, the
+> unparried form gives the pinned club **all 19** first-leg fixtures at home; with parity every club
+> lands in 8–10 of an ideal 9–10.
 
 - 12 fixtures = `N·(N−1) = 4·3` (FR-SN-002).
 - Every ordered pair appears once: `{10v13, 10v12, 10v11, 13v10, 12v10, 11v10, 11v12, 13v11, 12v13,
@@ -88,4 +105,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial appendices: constant catalogue, season-state byte layout, worked 4-club schedule, tie-break worked example. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
+| 0.3 | 2026-07-25 | — | **ERR-030-010** (found at #30 T0 implementation): Appendix C rounds 1 and 4 venue-corrected — the table was hand-derived without §3.1's round-parity venue rule. Pairings unchanged, so the 12-ordered-pair completeness bullet is unaffected; justification (20-club venue distribution) recorded inline. |
 #endregion

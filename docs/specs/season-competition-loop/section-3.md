@@ -3,6 +3,8 @@
 **Created:** July 22, 2026
 **Last Updated:** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Version:** 0.8
+**Last Updated:** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Version:** 0.9
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -22,6 +24,7 @@ Generate(clubIds[N], seed) -> Fixture[]:
         M := N + 1
     else:
         M := N
+    ring := ids                 # the rotating circle; index 0 is the pinned position
     # Fixed circle rotation — index 0 pinned, the rest rotate. No RNG:
     # the seed selects only the *labelling* order below (§3.1.1), not the pairing structure,
     # so the single-league case needs no draw (FR-SN-027).
@@ -125,14 +128,20 @@ RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned or
     #                           one integer drift per modelled club, positioned after academy and before
     #                           the world-day tick. Goes live at #45's own T2, like #42's seam)
     # 9. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
+    # 7. scouting      (#32)  — NULL SEAM today (ERR-030-007 — a deep-tier position reservation: #32's
+    #                           minimal tier is the fog-off omniscient identity (no assignment can exist),
+    #                           so this seam is empty until the deep tier's daily assignment progress
+    #                           (`AdvanceScoutingDay`); positioned after staff so a scouting day reads the
+    #                           day's staff state (the ChiefScout doing the scouting), before the tick)
+    # 8. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
     WorldStore.AdvanceDay()
 ```
 
 **KD-4 invariant:** `Calendar.dayOf(NextRoundIndex) ≥ WorldStore.CurrentWorldTick` always; a restore
-re-checks this and fails loud (F4). The Wave-2+ seams (steps 1–8) are **documented positions**, not
-interfaces — #28/#29/#33/#41/#31/#34/#42/#45 each slot into a pre-declared slot when they land, so a wrong order
-here would force a re-pin across every Wave-2+ spec (§7). The injuries seam (step 4, appended by ERR-030-002 at
-#41's approval) is positioned after #28/#29 so its occurrence-risk assembly reads the day's updated
+re-checks this and fails loud (F4). The Wave-2+ seams (steps 1–7) are **documented positions**, not
+interfaces — #28/#29/#33/#41/#31/#34/#32 each slot into a pre-declared slot when they land, so a wrong order
+here would force a re-pin across every Wave-2+ spec (§7). The injuries seam (step 4, appended by ERR-030-002
+at #41's approval) is positioned after #28/#29 so its occurrence-risk assembly reads the day's updated
 training-fatigue / condition, and before the live world-day tick. The transfers seam (step 5, appended by
 ERR-030-004 at #31's approval) is a **deep-tier position reservation** — minimal #31 transfers are
 command-driven (`SubmitBid`), so the seam is empty until the deep tier's daily negotiation/rival-bid
@@ -155,7 +164,8 @@ A fixture-day resolves the **whole round** — every one of its `N/2` fixtures �
 their results to the table. Resolving only a subset would leave the unplayed clubs' rows undefined
 (the App. C 4-club round 0 = {10v13, 11v12}; playing only 10v13 never gives 11/12 a round-0 result).
 The managed club's fixture runs through the full `MatchEngine`; the rest through the round-resolution
-model (§3.4.1).
+model (§3.4.1). The managed squad's resolve→configure path carries the **#44 availability-filter
+null seam** (ERR-030-009 — resolve → *filter* → configure; empty until #44 T2; FR-SN-013).
 
 ```
 AdvanceAndPlayNextRound(squads: ISquadProvider):
@@ -236,6 +246,7 @@ EncodeSeason(state) -> bytes:
     WriteU32(SEASON_STATE_FORMAT_VERSION)
     WriteU64(state.Seed)
     WriteI32(state.SeasonNumber)
+    WriteI32(state.ManagedClubId)                                    # Appendix B row 3a (ERR-030-011)
     WriteCount(state.ClubIds.Length); for id in ClubIds: WriteI32(id)
     WriteCount(state.Fixtures.Length); for f in Fixtures: WriteFixture(f)
     WriteCalendar(state.Calendar)
@@ -275,11 +286,15 @@ and `SEASON_SAVE_FORMAT_VERSION` bumps 1 → 2 (§4). The codec never parses the
 | Round | Fixtures (home v away) |
 |---|---|
 | 0 | 10 v 13, 11 v 12 |
-| 1 | 10 v 12, 13 v 11 |
+| 1 | 12 v 10, 11 v 13 |
 | 2 | 10 v 11, 12 v 13 |
 | 3 (2nd leg) | 13 v 10, 12 v 11 |
-| 4 | 12 v 10, 11 v 13 |
+| 4 | 10 v 12, 13 v 11 |
 | 5 | 11 v 10, 13 v 12 |
+
+> **Corrected at #30 T0 (ERR-030-010).** Rounds 1 and 4 had their venues inverted — this table was
+> hand-derived without applying the §3.1 round-parity rule two subsections above it. §3.1's
+> pseudocode is authoritative and unchanged; see Appendix C for the measured justification.
 
 12 fixtures = `N·(N−1) = 4·3` (FR-SN-002); each club appears once per round (FR-SN-003). If clubs 10
 and 11 both finish P=3 W=2 D=0 L=1 with GF/GA giving equal GD and equal GF, club 10 orders above 11
@@ -296,4 +311,7 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 0.6 | 2026-07-23 | — | Back-prop ERR-030-006 (at #34 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the staff null seam as step 6 (after transfers, before the world-day tick; `AdvanceDay` → step 7); a deep-tier position reservation, empty at minimal. Prose + FR-SN-034 enumeration updated. |
 | 0.7 | 2026-07-24 | — | Back-prop ERR-030-007 (at #42 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the academy null seam as step 7 (after staff, before the world-day tick; `AdvanceDay` → step 8); prose records that this seam goes live at #42's own T-phase but is a latched one-shot, so all but one day per intake period costs two comparisons. |
 | 0.8 | 2026-07-25 | — | Back-props ERR-030-008 + ERR-030-009 (at #45 approval): §3.3 tick order gains the **board null seam as step 8** (`AdvanceDay` → step 9; prose + "documented positions" extended to steps 1–8 / #45); §3.6 records that at #45 T2 `JobSecurity` is serialized as a **derived band** over #45's confidence rather than an independent scalar — removing the season block's last float and carrying a `SEASON_STATE_FORMAT_VERSION` bump with no migration path. |
+| 0.7 | 2026-07-24 | — | Back-prop ERR-030-007 (at #32 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the scouting null seam as step 7 (after staff so a scouting day reads the day's staff state, before the world-day tick; `AdvanceDay` → step 8); a deep-tier position reservation, empty at minimal (fog-off ⇒ no assignment; `AdvanceScoutingDay` no-ops). Prose + FR-SN-034 enumeration updated. |
+| 0.8 | 2026-07-24 | — | Back-prop ERR-030-009 (at #44 approval): §3.4 notes the #44 availability-filter null seam on the managed squad's resolve→configure path (empty until #44 T2; FR-SN-013). |
+| 0.9 | 2026-07-25 | — | **ERR-030-010** (a) §3.1 pseudocode binds `ring := ids` (it was used but never defined); (b) (found at #30 T0 implementation): the §3.7 worked schedule's rounds 1 and 4 venue-corrected to agree with §3.1's round-parity rule (which is authoritative and unchanged). |
 #endregion

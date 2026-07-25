@@ -15,6 +15,70 @@
 > read **38 APPROVED**. The true count is **39 APPROVED / 0 IN REVIEW / 0 NOT STARTED**. See the corrected
 > #42 entry in Registry Changes, which also records the outstanding `_RESERVED_0x2B_` A-04 placeholder now
 > folded into #45's ERR-045-001.)
+> **Last Updated:** July 24, 2026, latest same day (**Discipline & Suspensions #44 authored + advanced `→ IN
+> REVIEW → APPROVED`** — Wave 5's second spec (season-level card accumulation/thresholds/bans as a
+> **read-only derivation** over already-emitted engine events). **The load-bearing verifications:** a
+> promoted second yellow publishes **ONE `CardIssuedEvent` with `CardKind = 2`** (never a yellow-then-red
+> pair — `ApplyCardAndCheckSentOff`, the KD-5 de-dup rule); `Recipient` is a match **agent id**, and the
+> engine's slot discipline resets on substitution (v1.33) — so the read is a **tick-ordered occupancy
+> fold** (lineup + `SubstitutionEvent`s → the occupant at the card's tick), fed by the **#37-class per-tick
+> ledger tap** (FR-AN-002, the approved observational pattern — one tap feeds #37+#44); `SerializeLedger`
+> is write-only and no ledgers are retained, so the tally **persists** (`DISCIPLINE_SAVE_FORMAT_VERSION`
+> sub-blob — recompute is impossible, KD-1 forced). **Availability is a VIEW** (pure predicate + reduced
+> value-copy squads; #27 never written); **live at minimal** (the #41 class — a ban legitimately changes
+> the next lineup; neutrality = observer-neutrality + no-trigger identity + determinism). Hygiene:
+> **bans MIGRATE on a transfer re-key** (they follow the player — the recorded contrast with #32's
+> drop-on-transfer knowledge rule); the `(PlayerId, CompetitionId)` key pre-shapes #43 partitions;
+> immediate `(0,0)`-entry drop (canonical representation). **No RNG stream / domain tag / ordinal**
+> (the #37/#49 read-only positive property — no #16 row). **One approval-time back-prop:** ERR-030-009 —
+> the #30 FR-SN-013 **availability-filter null seam** (resolve → *filter* → configure;
+> `season-competition-loop` section-2/3 v0.8; `spec-error-log.md` v1.40). Supplement AR-1 (2M+1L) → AR-2
+> (2L) → CONVERGENCE; section-file AR PASS-1 (1M) → PASS-2 (2L) → CONVERGENCE. Count: **41 APPROVED / 0
+> IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 24, 2026, later same day (**Competition Structure #43 authored + advanced `→ IN
+> REVIEW → APPROVED`** — Wave 5's first spec (cups/continental/promotion-relegation over #30's loop).
+> **KD-1:** a league IS a competition instance (`CompetitionFormat.RoundRobin`); **instance 0 is a binding
+> row** — an id/tag recording "the league lives in #30", no stored #30 object (FR-SN-032/033 respected), so
+> the minimal singleton collection executes **no code on the season path** and a season is byte-identical
+> to bare #30. **KD-2 (headline revision):** knockout/group draws are **position-independent keyed draws**
+> (`competition.draws`, `entityId = competitionId`, fixed-radix ordinals over `(seasonNumber, roundIndex,
+> slotIndex, purpose)`) — the plan's serialized-cursor proposal dropped (a match-tick pattern that would
+> race across same-day competitions); nothing RNG-serialized. **KD-3:** brackets persisted
+> (serialize-don't-regenerate) with fail-loud coherence gates; a restore never re-rolls. **KD-4:**
+> promotion/relegation is a membership-only transform at #30's **pre-declared (a')** (FR-SN-031), before
+> #40's (b') — `ClubId`s never re-key; the code-side (a') hook + deep fixture-day driver are soft-reserved
+> **ERR-030-008** T-phase coordinations. **KD-7:** canonical ascending-`ClubId` order at every draw-feeding
+> surface (keyed Fisher–Yates; shuffled-input equivalence locked). **One approval-time back-prop:**
+> ERR-043-001 — the #16 §3.4 **A-04 placeholder sweep** (`_RESERVED_0x2B_` #42 / `_RESERVED_0x2C_` #43 /
+> `_RESERVED_0x2D_` #45, completing the roadmap §6 block `0x20`–`0x2D`; `deterministic-sim/section-3.md`
+> v1.0.14, `spec-error-log.md` v1.39); `0x2C` stays reserved (draw-free minimal). **No #30/#40 change** —
+> #43 is the first management spec whose #30 spec-text seams (the (a') point, the §7 generalization row)
+> were all reserved ahead. Supplement AR-1 (2M+1L) → AR-2 (2L) → CONVERGENCE; section-file AR PASS-1
+> (1M+1L) → PASS-2 clean → CONVERGENCE. Count: **40 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
+> **Last Updated (prior):** July 24, 2026 (**Scouting & Player Knowledge #32 authored + advanced `→ IN REVIEW →
+> APPROVED`** — Wave 4's third and final spec (per-manager attribute fog-of-war over #27 truth; scout
+> assignments/reports/recommendations). **The governing invariant** (roadmap §5): knowledge is a **VIEW over
+> #27's true attributes, NEVER a mutation** — enforced structurally (`EstimateFor` takes `in PlayerRecord`
+> value copies via `ISquadProvider`; no storage reference; readonly view types; the T-SC-VIEW-001
+> byte-identity lock). **KD-1 (headline):** the overlay stores only a per-player **knowledge band**; the
+> per-attribute `[Min,Max]` ranges are **derived on read** (band → strictly-decreasing `[GT]` half-width
+> table, terminal 0 ⇒ `BAND_MAX` collapses to `[truth, truth]` arithmetically) re-centred by **stateless
+> keyed noise** on `(playerId, band, attrIdx)` — deliberately NOT `worldDay`-keyed (stable until a band
+> advance), no cursor, nothing RNG-serialized — dissolving the plan's save-bloat + re-roll risks by
+> construction; freshness is the pinned **live-form window** semantic (width is the scouted quantity).
+> **KD-2:** own-squad omniscience (managed-club players always `BAND_MAX`); fog covers external players' 31
+> attributes only. **KD-3/KD-6:** minimal = fog-off omniscient identity, **draw-free** (zero-width reads
+> short-circuit before any draw) ⇒ `_RESERVED_0x24_`/86 **stays reserved** (promotes at #32 T3's first
+> accuracy draw); one `SCOUTING_SAVE_FORMAT_VERSION` season-save sub-blob (canonical ascending-`PlayerId`
+> order; **no** `WORLD_STORE` bump — a deliberate, argued revision of the plan §4's WorldStore proposal:
+> the composite is #22-owned, five sibling precedents). **KD-4:** #34 `ToScoutQuality` scales assignment
+> **speed only** (`DaysPerBand`), never widths (the retroactivity trap); #32 defines
+> `SCOUT_QUALITY_NEUTRAL_PERMILLE = 1000`, closing #34's open baseline with no #34 edit. **KD-5:** ranking
+> is #32's own pure read-only query; #32 issues no offers (the manager acts via #31 `SubmitBid`).
+> **One approval-time back-prop:** ERR-030-007 (the #30 scouting tick-order step-7 null seam, after staff;
+> `AdvanceDay` → step 8; `spec-error-log.md` v1.38). Supplement AR-1 (3M+2L) → AR-2 (3L) → CONVERGENCE;
+> section-file AR PASS-1 (3M+1L) → PASS-2 (1M+2L) → PASS-3 clean → CONVERGENCE. **This completes Wave 4**
+> (#31 → #34 → #32). Count: **39 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**)
 > **Last Updated (prior):** July 23, 2026, latest same day (**Staff & Backroom #34 authored + advanced `→ IN REVIEW →
 > APPROVED`** — Wave 4's second spec (coaches/scouts/physios as attributed entities that modulate #29/#41/#33/#31).
 > A **Stage-3 system with a pulled-forward identity scaffold**: the managed club holds a real neutral-baseline
@@ -331,6 +395,9 @@
 | 34 | Staff & Backroom | `staff-backroom/` | 6¹ | APPROVED | Jul 23, 2026 |
 | 42 | Youth Academy & Intake | `youth-academy-intake/` | 6¹ | APPROVED | Jul 24, 2026 |
 | 45 | Board & Ownership Dynamics | `board-ownership-dynamics/` | 6¹ | APPROVED | Jul 25, 2026 |
+| 32 | Scouting & Player Knowledge | `scouting-player-knowledge/` | 6¹ | APPROVED | Jul 24, 2026 |
+| 43 | Competition Structure | `competition-structure/` | 6¹ | APPROVED | Jul 24, 2026 |
+| 44 | Discipline & Suspensions | `discipline-suspensions/` | 6¹ | APPROVED | Jul 24, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 

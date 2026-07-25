@@ -1,7 +1,7 @@
 # Spec #44 — Discipline & Suspensions — High-Level Plan
 
 > **Created:** July 22, 2026
-> **Status:** PLAN (pre-design-supplement — no section files, no `SPEC_INDEX.md` row). Candidate spec number **#44** (proposed in `management-layer-spec-roadmap.md`, not reserved).
+> **Status:** **PROMOTED** (July 24, 2026) — design supplement `docs/tracking/discipline-suspensions-design.md` (AR-converged v0.3) → 11-file section set at `docs/specs/discipline-suspensions/` → **APPROVED**; `SPEC_INDEX.md` row 44 added. Two plan questions were closed by source verification at supplement stage: KD-1's persist-vs-recompute fork (persist FORCED — `SerializeLedger` is write-only, no ledgers retained) and KD-5's de-dup (a promoted second yellow is ONE kind-2 event — no pair exists); KD-2's read is the #37-class per-tick ledger tap + an occupancy fold (post-match slot state ruled out by the v1.33 substitution reset). (Original PLAN status follows for history.) PLAN (pre-design-supplement — no section files, no `SPEC_INDEX.md` row). Candidate spec number **#44** (proposed in `management-layer-spec-roadmap.md`, not reserved).
 > **Master-plan home:** §4.1 · **Tier:** Stage 2 · **Wave:** 5 · **FR prefix (proposed):** FR-DC
 > **Determinism:** read-only derivation over already-emitted card events — none (no RNG stream, no domain tag; consistent with #37 analytics / `match-viewer` being observational).
 > **Purpose:** Season-level card accumulation, thresholds, and bans — a suspension-availability view over the match engine's already-emitted card events that #30 squad selection consumes.
@@ -45,3 +45,4 @@ Behaviour-neutral / read-only proof that observing card events does not alter ma
 |---------|------|--------|
 | v0.1 | July 22, 2026 | Initial high-level plan. |
 | v0.2 | July 22, 2026 | AR fix: `CardIssuedEvent` ordinal 0x08 → 0x06 (verified `EventRegistry.cs:67`; 0x08 is `SubstitutionEvent`). Confirmed the engine publishes it (`MatchEngine.cs`), so the read-only-derivation premise holds. |
+| v0.3 | July 24, 2026 | PROMOTED — supplement → section files → APPROVED (SPEC_INDEX row 44); the source-verified KD closures recorded in the status header. |

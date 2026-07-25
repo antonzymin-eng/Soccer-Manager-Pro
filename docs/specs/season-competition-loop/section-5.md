@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 5: Test Plan
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
-**Version:** 0.2
+**Last Updated:** July 25, 2026 (v0.3 — ERR-030-010: T-SN-FIX-001 re-anchored + new T-SN-FIX-008)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -17,13 +17,14 @@ a Simulation-layer `#19 ScenarioRunner` capstone. No 60 Hz hot-path perf gate ap
 
 | ID | Test |
 |---|---|
-| T-SN-FIX-001 | `Generate([10,11,12,13], seed)` matches the App. C worked schedule exactly. |
+| T-SN-FIX-001 | `Generate([10,11,12,13], seed)` matches the App. C worked schedule exactly (the ERR-030-010-corrected table — rounds 1/4 venues). |
 | T-SN-FIX-002 | Two-run determinism: `Generate(ids, seed)` twice ⇒ byte-identical `Fixture[]`. |
 | T-SN-FIX-003 | Double round-robin completeness: every ordered pair `(a,b), a≠b` appears exactly once (`N·(N−1)` fixtures). |
 | T-SN-FIX-004 | No club appears twice in any one round. |
 | T-SN-FIX-005 | Odd `N` (bye rotation): every real club plays `2·(N−1)` fixtures, none against a phantom. |
 | T-SN-FIX-006 | `Generate` with `N < 2` throws (F1). |
 | T-SN-FIX-007 | Seed sensitivity: a distinct permutation seed yields a distinct fixture order over the same club set. |
+| T-SN-FIX-008 | **Venue balance (ERR-030-010):** over a 20-club league every club's first-leg home count is within one of the 9/10 ideal, and no club takes more than 3 consecutive home fixtures. Fails under the pre-correction unparried rule (pinned club = 19). |
 
 ## 5.3 League table (FR-SN-005..008)
 
@@ -90,4 +91,5 @@ not by an execution test — nothing ticks there yet.
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial test plan: fixture / table / calendar / save / determinism / capstone + FR traceability. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
+| 0.3 | 2026-07-25 | — | **ERR-030-010**: T-SN-FIX-001 re-anchored to the corrected Appendix C table; new **T-SN-FIX-008** venue-balance regression lock (fails under the pre-correction rule). |
 #endregion
