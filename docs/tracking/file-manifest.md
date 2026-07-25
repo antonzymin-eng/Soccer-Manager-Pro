@@ -1,7 +1,27 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 24, 2026, latest same day (**AR-3 fresh-eyes pass over the Amendment-01 surface (repeat
+**Last Updated:** July 25, 2026 (**Path-to-playable implementation roadmap authored.** **New file:**
+`docs/tracking/path-to-playable-roadmap.md` v0.1 — ROADMAP governance class (the same level as
+`management-layer-spec-roadmap.md`; designs no system, opens no numbered spec, changes no `SPEC_INDEX.md`
+row). The companion to the spec roadmap: that file sequences *which specs to author*, this one sequences
+*which code to land* to reach a playable build. Pins a PM-1/PM-2/PM-3 milestone ladder with testable exit
+criteria; inventories the existing floor; splits the work into Track S (host-free season spine, no external
+blocker) and Track C (client, host-gated only at Unity P4–P6). **Five quantified constraints:** C1 — full-
+fidelity season simulation is infeasible (certified p50 0.4768 ms/tick × `MATCH_TICKS_TOTAL` 324,000 ≈ 154 s
+per match ⇒ ~16.3 h for a 380-fixture season), so #30 KD-9's round-resolution model is critical path with a
+≲10 ms/match budget; C1a — calibrating it needs ~200 engine-simulated matches ≈ 9 h of compute, budgeted as
+its own item; C2 — the Unity host block, with the existing `LiveMatchServer` browser surface as a real
+fallback; C3 — `RosterGenerator` already produces deterministic club squads, so a thin league bootstrap
+defers #47 entirely; C4 — #50 save-migration debt activates at the PM-2 exit; C5 — spec-defect latency
+(ERR-024-001 / ERR-017-002 precedent, 1–3 findings expected per T-phase landing). Phase A–D work breakdown
+anchored to each spec's own §7 T-phase plan (#30 T0–T3, #37 T0/T1, #44 T0–T2, #28/#29/#40/#41/#31 minimal)
+plus the `interactive-unity-client-design.md` P1–P6 phases. **Headline finding: zero new numbered specs are
+required to reach PM-2** — the three governance gaps (league bootstrap, season/squad screens, the #50
+decision) each close with a design note under the `lineup-selection-design.md` precedent. Records the B6
+renderer decision point (browser-first recommended; UGUI binds the same #38 view models later) and a risk
+register. No spec, code, or `SPEC_INDEX.md` change.)
+**Last Updated (prior):** July 24, 2026, latest same day (**AR-3 fresh-eyes pass over the Amendment-01 surface (repeat
 review, user-requested): 0H+2M+1L, all fixed.** The pass read roadmap §2–§6 in full for the first time —
 both M findings came from there. M-1: `spec-plans/spec-48-match-presentation-depth.md` v0.3 — the one file
 a Wave-7 #48 supplement author starts from carried no pointer to the Amendment-01 audio split; §1 now
