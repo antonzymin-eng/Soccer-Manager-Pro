@@ -2,7 +2,8 @@
 
 > **Created:** July 25, 2026
 > **Status:** DESIGN SUPPLEMENT — **A3 LANDED July 25, 2026** (design converged AR-1..AR-3;
-> implemented, code-reviewed AR-4, full gate green). **A4a is designed here but NOT executed** — its
+> implemented, then code-reviewed AR-4 → AR-5 (whole-file, 1H+4M+3L) → AR-6 (1M) — full gate green
+> at each step). **A4a is designed here but NOT executed** — its
 > ~9 h corpus run is its own roadmap item. Same governance class as `lineup-selection-design.md`,
 > `match-save-file-design.md`, `unified-season-save-design.md`. Opens **no numbered spec** and
 > changes no `SPEC_INDEX.md` row.
@@ -112,7 +113,7 @@ enter no digest). Recorded alternative for a later deepening: seed-permuted name
 need to feel like different *worlds* rather than different *seasons*.
 
 `ClubNameCatalogue` must expose enough entries for `MaxClubCount`; a test locks
-`Names.Length >= MaxClubCount` and uniqueness, so raising the cap cannot silently produce two
+`Names.Count >= MaxClubCount` and uniqueness, so raising the cap cannot silently produce two
 clubs with the same name.
 
 ### KD-4 — One world seed, three domain-separated derivations, and **no new RNG stream**.
@@ -166,6 +167,18 @@ Notes and deliberate limits:
   exactly what makes A4a's calibration tractable (KD-8 fits against *rating difference*). A
   per-attribute strength profile (a "good defensively, poor in attack" club) is a recorded
   deepening, not Stage-0.
+- **The spread's *sufficiency* is unverified, and A4a must check it first.** A3 proves the delta
+  reaches the rosters (mean attribute differs), which is a near-tautology; whether ±3 points on a
+  mean of 10 produces *distinguishable match results* is unknown and unknowable without engine
+  runs. If it does not, the strength model is decorative and the league table is noise — the exact
+  failure the model exists to prevent. See KD-8's first step.
+- **The final attributes are a function of league size.** `StrengthDelta` depends on `clubCount`
+  twice (the rank permutation's length and the ramp denominator), so growing or shrinking the league
+  rewrites every club's attributes. Only the *base* roster (identity + pre-strength attributes) is
+  size-invariant. This matters for **#43**, whose promotion/relegation transform changes the club
+  set: it cannot assume a club's players survive a division change unchanged. Both halves are
+  test-locked (`Generate_ClubBaseRoster_IsIndependentOfLeagueSize` and
+  `Generate_ClubAttributes_DoChangeWithLeagueSize`).
 - **Clamping can bite at the top.** `RosterGenerator`'s untuned output spans `[6, 18]`, so `+3`
   clamps only attributes already at 18. Fine, and it means the delta is *slightly* sublinear at the
   top — recorded so a calibration residual there is not later mistaken for a model defect.
@@ -255,6 +268,13 @@ The risk being managed is roadmap risk row 1: *"round-resolution model diverges 
 league tables feel wrong"* — a failure no unit test catches, because every unit test would pass
 against a model that is internally consistent and empirically wrong.
 
+**Step 0 — check the signal before fitting anything.** Before spending ~9 h on a 200-match grid, run a
+small pilot (~20 matches) at the two ramp extremes (`dRating` from a `−S` club versus a `+S` club, both
+venues). If those two populations' goal distributions are not distinguishable, **the corpus carries no
+signal to fit** and `LeagueStrengthSpread` must be raised before the full run — otherwise A4a burns
+nine hours fitting three parameters to noise and the league table stays meaningless. This is KD-5's
+unverified-sufficiency risk, discharged at the first point it can be measured.
+
 **Corpus.** ~200 engine-simulated matches over a grid of rating differentials. Concretely: 11
 buckets of `dRating` from −5 to +5 in unit steps, ~18 matches per bucket, each a real `MatchEngine`
 run between two bootstrapped clubs whose `StrengthDelta` pair realises that differential, at
@@ -311,6 +331,44 @@ half" (`⌈N/2⌉`), overridable by the caller; `firstRoundDay` / `daysBetweenRo
 `Squad`, so the recurring live-array aliasing defect class (living-world slice-2 AR-1 M-1,
 match-viewer AR-3 M-1, #26 T0 AR-1, #30 T0 H-1) cannot recur here.
 
+**Resuming a saved career — who owns the world seed.** Squads are *not* persisted: a save carries club
+IDs, and `League` re-derives every roster when it is handed to `SeasonSaveManager.Load` as the
+`ISquadProvider`. So a save is only reopenable if the **world seed** survives it. It does — inside the
+world blob (`WorldStore` serializes it) — but it was write-only until A3's review, so the resume path
+is now pinned explicitly:
+
+```
+contents = SeasonSaveManager.Load(path)                              # world + season, no provider yet
+league   = LeagueBootstrap.Generate(contents.World.WorldSeed,        # WorldSeed accessor added for this
+                                    contents.Season.ClubCount)
+contents = SeasonSaveManager.Load(path, squads: league)              # now with the provider
+```
+
+`clubCount` comes from the season blob, not from config — a career started at 20 clubs must resume at
+20 even if `DefaultClubCount` later changes. The **caller must construct its `WorldStore` with the same
+seed it passed to `Generate`**; nothing enforces that coupling, and the new-game flow (roadmap C4) owns
+it. Locked by `SavedWorldSeed_RebuildsTheSameLeague`.
+
+### KD-10 — The generation path is persistence-equivalent, and is pinned by a golden vector.
+
+Direct consequence of the resume path above: because rosters are regenerated rather than saved, **any
+change that moves `Generate`'s output invalidates every existing save** — a draw-order change in
+`RosterGenerator`, a reorder of `NameCatalogue` or `ClubNameCatalogue`, an edit to
+`SquadPositionCounts`, or a one-line tweak to a `[GT]` generation constant such as
+`PlayerDatabaseConstants.AttributeBaseMean`.
+
+Every same-seed determinism test on this path is **self-referential** ("generate twice, compare") and
+stays green through all of those. The guard is therefore a **pinned golden vector**
+(`LeagueBootstrapGoldenVectorTests`): absolute expected values for a fixed
+`Generate(0x5EED1EA6D0DEC0DE, 4)` — the derived season seed, the four strength deltas, spot identity and
+attribute values, and an FNV-1a-64 digest over every field of every club and player. This is the
+mechanism #16 already uses for HKDF / SipHash / canonical serialization.
+
+Verified non-vacuous, not assumed: perturbing `AttributeBaseMean` 10 → 11 fails the digest and
+spot-value locks while the rest of the suite passes. **If it fails, do not re-pin to go green** — either
+the change was unintended, or it is deliberate and must be re-pinned in the same commit and treated as
+save-breaking.
+
 ---
 
 ## 3. Determinism contract
@@ -334,7 +392,8 @@ domain-tag/ordinal registry.
 | F3 | Position template does not sum to `CLUB_SQUAD_SIZE`; or `clubCount` exceeds `MaxRngStreams`; or a negative world-day `[GT]` | `InvalidOperationException` (catalogue/config coherence, not caller input; test-locked) |
 | F4 | `ResolveByClubId` given an unknown club | returns `null` — the `ISquadProvider` contract, so the engine's own gate fails loud rather than substituting a default roster |
 | F5 | `CreateSeason` given a `managedClubId` outside the league | `ArgumentException` (delegated to `SeasonState`'s own gate, which already checks it) |
-| F6 | A generated squad cannot field the Stage-0 formation | impossible by KD-6, and **test-locked**: every bootstrapped squad is run through `LineupSelector.Select` for every shipped `FormationFamily` |
+| F6 | A generated squad cannot field the Stage-0 formation | impossible by KD-6, and **test-locked**: every bootstrapped squad's position counts are checked against the worst case across all shipped families, plus an end-to-end `ConfigureSquads` run through the real engine |
+| F7 | Generation output moves (KD-10) | the pinned golden vector fails — deliberately loud, because the change invalidates every existing save |
 
 F6's lock is the one that matters — it is the test that would have caught KD-6's defect had the
 template been sized by eye.
@@ -396,7 +455,9 @@ template been sized by eye.
   strength delta, the 25-man mean, or the XI mean, and each fits differently. Pinned to the
   `LineupSelector` XI mean, with the reason (bench depth must not win Saturday's match).
 
-### AR-3 (self) — 0 H + 0 M + 0 L — **CONVERGENCE**
+### AR-3 (self) — 0 H + 0 M + 0 L — **DESIGN CONVERGENCE**
+
+*(The design was converged here; AR-4 and AR-5 below review the resulting CODE.)*
 
 Re-read end to end against source. Verified against the actual files rather than from memory:
 `LineupSelector` really does throw on an unfillable starter line; the three shipped formation
@@ -450,9 +511,68 @@ code is correct as written, but A4 would have walked into them:
   ramp now throws rather than crashing, and `Mix` delegates to the SplitMix64 stepper instead of
   carrying a second copy of the same four lines.)
 
+### AR-5 (self, hostile re-read of the whole landing) — 1 H + 4 M + 3 L, all resolved
+
+AR-4 reviewed the diff. AR-5 re-read every shipped file in full and found what a diff-shaped pass
+structurally cannot:
+
+- **H-1 — Roster regeneration became a save-correctness dependency with nothing pinning it.** Squads
+  are not persisted; `League` re-derives them as the `ISquadProvider`, whose contract requires the
+  same roster the saved match loaded. Every determinism test on that path is self-referential, so a
+  draw-order change, a catalogue reorder, or a one-line `[GT]` tweak silently rewrites every club in
+  every save with the whole suite green. Resolved: KD-10 + `LeagueBootstrapGoldenVectorTests`,
+  verified non-vacuous by perturbation.
+- **M-1 — The world seed was write-only, so a saved career could not be reopened.** `SeasonState.Seed`
+  holds the *derived* season seed and `Mix` has no implemented inverse; `WorldStore._worldSeed` was
+  private with no accessor. Resolved: `WorldStore.WorldSeed` (read-only over an already-serialized
+  field) + the KD-9 resume recipe + `SavedWorldSeed_RebuildsTheSameLeague`.
+- **M-2 — Four documents and a code comment claimed a determinism property the code does not have.**
+  "A club's roster is a function of `(worldSeed, clubId)` alone, independent of league size" is true
+  only of the *base* roster; the strength ramp makes the shipped attributes size-dependent. The test
+  knew (it compares identity fields only); the prose did not. Resolved: claim narrowed everywhere,
+  the opposite half asserted rather than left implicit, and the #43 consequence named in KD-5.
+- **M-3 — `SquadPositionCounts` was a public mutable `int[]` gating squad validity.** A mutation that
+  still sums to 25 (`{25,0,0,0}`) passes the coherence check and voids the KD-6 fieldable-squad
+  guarantee for every league generated afterwards. Resolved: `ReadOnlyCollection` over a private
+  backing array. The array-table carve-out justifies the *config* decision, not write access.
+- **M-4 — The strength model's sufficiency was unverified while being the feature's stated purpose.**
+  Resolved: recorded in KD-5 and discharged as KD-8's Step 0, so A4a checks for signal before
+  spending nine hours fitting to it.
+- **L-1** `ClubNameCatalogue.Names` same exposure, bounded consequence — also made read-only.
+  **L-2** the config readers' `<exception>` docs now say what a consumer observes
+  (`TypeInitializationException` from the static initializer). **L-3** the `Generate(ulong)` overload
+  had no test; it has one.
+
+One claim made *during* this review was itself wrong and is corrected rather than quietly dropped:
+`AttributeBaseMean` is **not** config-overridable — `player-database` is one of the four catalogues
+carved out of the FR-CS-019 migration, so its `[GT]` rows are plain literals. The vector is a one-line
+code edit that reads as a balance tweak, not a config file change.
+
+### AR-6 (self, over the AR-5 fixes) — 0 H + 1 M + 0 L, resolved
+
+Re-read the fixed state rather than the fix diff — which is what surfaced the one defect the fix itself
+introduced:
+
+- **M-1 — The new golden vector pinned a 4-club league; production runs 20.** Everything that varies
+  with league size was therefore unguarded: the Fisher–Yates permutation runs over `N` elements, the
+  ramp denominator is `N-1`, name indexing reaches `N-1`, and `delta == 0` — and so `ApplyStrength`'s
+  early-return branch — does not occur at all at `N = 4`. A generation change that happened to preserve
+  a 4-club league would have shipped straight through the guard added to prevent exactly that.
+  Resolved: a second pinned digest plus the full delta row at `DefaultClubCount`, fronted by a guard
+  that fails if `DefaultClubCount` is ever retuned, because a golden vector silently pinned to a size
+  nobody generates is worse than no vector at all.
+
+Verified unchanged this pass: static-initialisation order on both new `ReadOnlyCollection` wrappers
+(backing arrays declared first — empirically confirmed, since a null capture would throw in the tests
+that read them); every consumer of the two catalogues moved to the read-only surface; and the digest
+folds only integers and UTF-8 bytes, so the pinned values are platform-stable and will hold on the
+Windows certification host.
+
 ## Version History
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-07-25 | — | Initial supplement: A3 league bootstrap (KD-1..KD-6, KD-9) + A4a round-resolution shape and calibration methodology (KD-7, KD-8); determinism contract, F1–F6, implementation plan. AR-1 (1H+2M+2L) → AR-2 (1M+1L) → AR-3 CONVERGENCE. |
+| 1.3 | 2026-07-25 | — | **AR-6** (over the AR-5 fixes): 0H+1M+0L. The new golden vector pinned only a 4-club league, leaving everything that varies with league size unguarded — the permutation length, the ramp denominator, name indexing, and the `delta == 0` branch that does not occur at N=4 at all. A second digest + delta row pinned at `DefaultClubCount`, guarded so a retuned default fails loudly rather than leaving the vector pinned to a size nobody generates. |
+| 1.2 | 2026-07-25 | — | **AR-5** (hostile re-read of the whole landing, not the diff): 1H+4M+3L, all resolved. **H-1** the generation path is persistence-equivalent — rosters are regenerated from the world seed, not saved, so any change to it silently invalidates every save while self-referential determinism tests stay green; closed by new **KD-10** + a pinned golden vector, verified non-vacuous by perturbing `AttributeBaseMean`. **M-1** the world seed was write-only, so a saved career could not rebuild its `ISquadProvider` at all; closed by a `WorldStore.WorldSeed` accessor + the KD-9 resume recipe. **M-2** the league-size-independence claim was true only of the base roster; narrowed everywhere and the #43 consequence named. **M-3** `SquadPositionCounts` was a public mutable array gating squad validity. **M-4** the strength spread's sufficiency was unverified; discharged as KD-8 Step 0. Plus 3 L. Also corrected a claim made during the review itself: `AttributeBaseMean` is not config-overridable (`player-database` is carved out of the FR-CS-019 migration). |
 | 1.1 | 2026-07-25 | — | **A3 LANDED.** AR-4, run over the shipped code: 0H+2M+4L, all resolved. Two forward gaps A4 would have hit — `LineupSelector` is `internal` to `match-engine` so KD-7's `Rating(club)` is unreachable from `SeasonLoop` (A4 prerequisite recorded; re-implementing selection in `season-save` explicitly refused), and A4a's harness was placed in an assembly that cannot reach `ApplyStrength` (corrected to `src/season-save/tests/`). Plus: `MaxClubCount` 64 → 32 with an explicit `MaxRngStreams` coherence gate (one roster stream per club); `POSITION_COUNT` hoisted to `PlayerDatabaseConstants` so two assemblies stop carrying private copies; negative world-day `[GT]` values refused at read instead of wrapping to ~4.29e9. |

@@ -9,8 +9,9 @@
 > `LeagueBootstrapConstants`, `ClubNameCatalogue`, `Club`, `League`, `LeagueBootstrap`. Three
 > domain-separated derivations from the one world seed (KD-4 — roster / strength / season), one
 > registered roster stream per club under `SubsystemOrdinals.PlayerDatabase` with `entityId = clubId`
-> (so a club's roster is a function of `(worldSeed, clubId)` alone, independent of league size —
-> test-locked), a seeded Fisher–Yates **strength rank** ramped linearly into a per-club `[1,20]`
+> (so a club's BASE roster — identity + pre-strength attributes — is a function of `(worldSeed, clubId)`
+> alone, independent of league size; the SHIPPED attributes are not, because the strength ramp is over
+> league size, and both halves are test-locked), a seeded Fisher–Yates **strength rank** ramped into a per-club `[1,20]`
 > attribute delta so the table is not 20 statistically identical teams (KD-5; `WeakFootRating`
 > deliberately excluded — a `[1,5]` scale would saturate), `League` **is** the `ISquadProvider` (no
 > adapter for the engine or for #30 T2), and `League.CreateSeason(managedClubId)` hands #30 a startable
@@ -42,10 +43,27 @@
 > endpoints/symmetry/permutation, position coherence for every shipped formation **plus** an end-to-end
 > `ConfigureSquads` acceptance run through the real engine, every F1–F6 gate, and the `CreateSeason`
 > handoff round-tripping through `SeasonStateCodec`) + `RosterGeneratorTests` +3 + `PlayerAttributesTests`
-> +1. **Full dotnet gate: PASSED, 0 failures (whole tree green; season-save 141 → 168, player-database
+> +1. **Full dotnet gate: PASSED, 0 failures (whole tree green; season-save 141 → 177, player-database
 > 42 → 46; SDK 8.0.129 via apt).** **A4a is designed but NOT executed** — its ~9 h corpus run is its own
-> roadmap item, and A4 (#30 T2) is the next item on the critical path. See src/CLAUDE.md v2.38 + the
-> path-to-playable OPEN ISSUES entry.)
+> roadmap item, and A4 (#30 T2) is the next item on the critical path. **AR-5 (a hostile whole-file
+> re-read, not a diff pass) then found 1H+4M+3L, all fixed:** **H-1** — because rosters are REGENERATED
+> from the world seed rather than saved, the generation path is persistence-equivalent, and every
+> determinism test on it was self-referential ("generate twice, compare"), so a draw-order change, a
+> catalogue reorder, or a one-line `[GT]` tweak would silently rewrite every club in every existing save
+> with the whole suite green; closed by new **KD-10** + a pinned golden vector
+> (`LeagueBootstrapGoldenVectorTests` — the #16 HKDF/SipHash precedent), proven non-vacuous by
+> perturbing `AttributeBaseMean` 10 → 11 and watching it fire. **M-1** — the world seed was WRITE-ONLY
+> (`SeasonState.Seed` holds the derived season seed and `Mix` has no inverse; `WorldStore._worldSeed`
+> had no accessor), so a saved career could not rebuild its `ISquadProvider` at all; closed by a
+> read-only `WorldStore.WorldSeed` + the KD-9 resume recipe + a round-trip lock. **M-2** — the
+> league-size-independence claim above was true only of the base roster (narrowed everywhere; the #43
+> promotion/relegation consequence named). **M-3** — `SquadPositionCounts` was a public mutable `int[]`
+> whose mutation still passes the sum check while voiding the KD-6 fieldable-squad guarantee (now
+> `ReadOnlyCollection` over a private backing array). **M-4** — the strength spread's *sufficiency* was
+> unverified while being the feature's stated purpose (discharged as KD-8 **Step 0**: a ~20-match pilot
+> at the ramp extremes runs BEFORE the 9 h corpus, so A4a cannot fit three parameters to noise). Plus 3
+> L. **AR-6 over those fixes then found 1M** — the new golden vector pinned only a 4-club league, leaving everything that varies with league size (the permutation length, the ramp denominator, name indexing, and the `delta == 0` branch that never occurs at N=4) unguarded; a second digest + delta row is now pinned at `DefaultClubCount` behind a guard that fails if the default is retuned. **Gate re-run: PASSED, 0 failures (season-save 141 → 177, living-world 119).** See src/CLAUDE.md
+> v2.38 + the path-to-playable OPEN ISSUES entry.)
 > **Last Updated (prior):** July 25, 2026 (**Season & Competition Loop #30 T1 LANDED — the season save/restore path;
 > path-to-playable roadmap item A2.** A season is now part of the save file, not just the world and an optional
 > match. New `src/season-save/SeasonStateCodec.cs` is a pure byte codec for the season-state sub-blob over the

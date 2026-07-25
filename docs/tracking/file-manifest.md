@@ -10,7 +10,10 @@ their `.meta` files); new design supplement `docs/tracking/league-bootstrap-desi
 byte-identical) + `PlayerDatabaseConstants.cs` (`POSITION_COUNT` hoisted so two assemblies stop carrying
 private copies) + `tests/RosterGeneratorTests.cs` / `tests/PlayerAttributesTests.cs`, plus the season-save
 manifest section below (which had never listed the #30 T0 value types). **Full dotnet gate: PASSED, 0
-failures (whole tree green; season-save 141 → 168, player-database 42 → 46).**)
+failures (whole tree green; season-save 141 → 177, player-database 42 → 46, living-world 119).** A follow-up
+hostile whole-file review (AR-5, 1H+4M+3L) added the golden vector, a read-only `WorldStore.WorldSeed`
+accessor (`src/living-world/WorldStore.cs` v1.7) so a saved career can rebuild its `ISquadProvider`, and
+read-only wrappers on the two catalogue arrays.)
 **Last Updated (prior):** July 25, 2026 (**Season & Competition Loop #30 T1 LANDED** — path-to-playable
 roadmap item A2, the season save/restore path. **New files:** `src/season-save/SeasonStateCodec.cs` (the #30
 Appendix B season sub-blob codec) + `src/season-save/tests/SeasonStateCodecTests.cs` (and their `.meta` files).
@@ -1242,6 +1245,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/season-save/tests/SeasonSaveManagerTests.cs` | Disk round-trip determinism (no-match season; season with neutral / distinct-squad match via ISquadProvider), each asserting the season resumes field-identical (FR-SN-022) + SeasonSaveCodec round-trip/fail-loud incl. the v1-frame rejection + manager fail-loud paths incl. the R4 no-match-with-provider and null-season locks |
 | `src/season-save/tests/SeasonStateCodecTests.cs` | #30 T1: season sub-blob round-trip field identity (fresh / mid-season / completed), per-column and scalar locks, encode determinism + non-vacuity control, the pinned-offset layout lock (Appendix B field order incl. row 3a), and every FR-SN-023 fail-loud gate |
 | `src/season-save/tests/SeasonStateTests.cs` | #30 T0: value-type contracts + the instance-field-count coupling guards across `SeasonState` and its five aggregates (a field added but omitted from the codec would otherwise pass the round-trip vacuously) |
+| `src/season-save/tests/LeagueBootstrapGoldenVectorTests.cs` | A3 AR-5 H-1: the PINNED golden vector for league generation — absolute expected season seed, strength deltas, spot identity/attribute values and an FNV-1a-64 digest over every field of every club and player. Rosters are regenerated from the world seed rather than persisted, so this is the only test that fails when generation moves; verified non-vacuous by perturbing `AttributeBaseMean` |
 | `src/season-save/tests/LeagueBootstrapTests.cs` | A3: two-run field-identical determinism, seed divergence, roster independence from league size, contiguous ids + globally unique `PlayerId`s, catalogue coverage/uniqueness, `MaxClubCount` vs `MaxRngStreams` coupling, strength-ramp endpoints/symmetry/permutation and its reach into the rosters, position coherence for every shipped formation **plus** an end-to-end `ConfigureSquads` run through the real engine (F6), every F1–F5 gate, and the `CreateSeason` handoff round-tripping through `SeasonStateCodec` |
 
 ## Tracking Documents

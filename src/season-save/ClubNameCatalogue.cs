@@ -8,6 +8,8 @@
 //           (KD-3: a new-game seed changes who is GOOD, not who EXISTS), so names are drawn from no
 //           RNG stream and enter no digest.
 
+using System.Collections.ObjectModel;
+
 namespace TacticalDirector.SeasonSave
 {
     /// <summary>
@@ -26,8 +28,9 @@ namespace TacticalDirector.SeasonSave
     /// </summary>
     public static class ClubNameCatalogue
     {
-        /// <summary>Club names, indexed by <c>ClubId</c>. APPEND-only (see the type remarks).</summary>
-        public static readonly string[] Names =
+        // Backing store. Declared BEFORE the read-only wrapper below — static field initializers run in
+        // textual order, so wrapping an as-yet-uninitialised array would capture null.
+        private static readonly string[] s_names =
         {
             "Ashford Town",      "Belmont Rovers",    "Carrowmore City",   "Dunhaven United",
             "Eastvale Athletic", "Fernbrook FC",      "Granton Wanderers", "Halloway City",
@@ -40,10 +43,25 @@ namespace TacticalDirector.SeasonSave
             "Inverleith FC",     "Jarrowby Rovers",   "Kirkstall City",    "Lyndhurst Town",
             "Millgate United",   "Netherby Athletic", "Orrindale FC",      "Priorswood Rovers"
         };
+
+        /// <summary>
+        /// Club names, indexed by <c>ClubId</c>. APPEND-only (see the type remarks).
+        /// <para>
+        /// Read-only over a private backing array: a public <c>string[]</c> would let anything in the
+        /// process rename clubs for every league generated afterwards. The consequence here is bounded
+        /// (names are serialized nowhere and enter no digest) but it is the same exposed-mutable-array
+        /// class as <see cref="LeagueBootstrapConstants.SquadPositionCounts"/>, and a new catalogue
+        /// should not re-introduce it.
+        /// </para>
+        /// </summary>
+        public static readonly ReadOnlyCollection<string> Names =
+            new ReadOnlyCollection<string>(s_names);
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-07-25 | —      | Initial implementation (roadmap A3): 40 club names, ≥ MaxClubCount.|
+// | 1.1     | 2026-07-25 | —      | AR-5 L-1: Names exposed read-only over a private backing array     |
+// |         |            |        | (was a public mutable string[]).                                   |
 #endregion

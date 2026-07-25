@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.LivingWorld;
 using TacticalDirector.PlayerDatabase;
 
 using MEngine = TacticalDirector.MatchEngine.MatchEngine;
@@ -78,10 +79,16 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
-        public void Generate_ClubRoster_IsIndependentOfLeagueSize()
+        public void Generate_ClubBaseRoster_IsIndependentOfLeagueSize()
         {
-            // entityId = clubId scopes each club's stream key (KD-4), so club 3's roster is a function of
-            // (worldSeed, clubId) alone — adding clubs to the league must not rewrite existing squads.
+            // entityId = clubId scopes each club's stream key (KD-4), so club 3's BASE roster (identity
+            // + pre-strength attributes) is a function of (worldSeed, clubId) alone.
+            //
+            // Scope, deliberately narrow: this does NOT hold for the shipped squad's attributes. The
+            // strength delta depends on clubCount twice (the rank permutation's length and the ramp
+            // denominator), so growing or shrinking the league DOES rewrite every club's attributes —
+            // which matters for #43's promotion/relegation transform. Only the identity fields, which
+            // no post-generation step touches, are size-invariant, and only those are asserted here.
             League small = LeagueBootstrap.Generate(WorldSeedA, 4);
             League large = LeagueBootstrap.Generate(WorldSeedA, 20);
 
@@ -91,8 +98,6 @@ namespace TacticalDirector.SeasonSave.Tests
                 Squad l = large.ResolveByClubId(c);
                 for (int p = 0; p < s.Count; p++)
                 {
-                    // Compare the UNSHIFTED identity fields: the strength delta legitimately differs
-                    // because the ramp is over league size.
                     Assert.AreEqual(s.GetPlayer(p).PlayerId, l.GetPlayer(p).PlayerId);
                     Assert.AreEqual(s.GetPlayer(p).FirstName, l.GetPlayer(p).FirstName);
                     Assert.AreEqual(s.GetPlayer(p).LastName, l.GetPlayer(p).LastName);
@@ -100,6 +105,37 @@ namespace TacticalDirector.SeasonSave.Tests
                     Assert.AreEqual(s.GetPlayer(p).Position, l.GetPlayer(p).Position);
                 }
             }
+        }
+
+        [Test]
+        public void Generate_ClubAttributes_DoChangeWithLeagueSize()
+        {
+            // The other half of the contract above, asserted rather than left implicit: a resize DOES
+            // move attributes, because the strength ramp is over league size. Locking this stops the
+            // narrowed claim from silently becoming the stronger (false) one again.
+            League small = LeagueBootstrap.Generate(WorldSeedA, 4);
+            League large = LeagueBootstrap.Generate(WorldSeedA, 20);
+
+            bool anyAttributeDiffers = false;
+            for (int c = 0; c < small.ClubCount && !anyAttributeDiffers; c++)
+            {
+                if (small.ClubAt(c).StrengthDelta != large.ClubAt(c).StrengthDelta)
+                {
+                    anyAttributeDiffers = true;
+                }
+            }
+
+            Assert.IsTrue(anyAttributeDiffers,
+                "The strength ramp is a function of league size, so at least one club's delta — and " +
+                "therefore its attributes — must differ between a 4-club and a 20-club league.");
+        }
+
+        [Test]
+        public void Generate_DefaultOverload_UsesTheConfiguredClubCount()
+        {
+            Assert.AreEqual(
+                LeagueBootstrapConstants.DefaultClubCount,
+                LeagueBootstrap.Generate(WorldSeedA).ClubCount);
         }
 
         // ── Club identity (KD-2 / KD-3) ─────────────────────────────────────────────
@@ -144,7 +180,7 @@ namespace TacticalDirector.SeasonSave.Tests
         public void ClubNameCatalogue_CoversTheCapAndHasNoDuplicates()
         {
             Assert.GreaterOrEqual(
-                ClubNameCatalogue.Names.Length, LeagueBootstrapConstants.MaxClubCount,
+                ClubNameCatalogue.Names.Count, LeagueBootstrapConstants.MaxClubCount,
                 "Raising MaxClubCount past the name catalogue would produce unnamed clubs (F2).");
 
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -437,6 +473,35 @@ namespace TacticalDirector.SeasonSave.Tests
             SeasonState restored = SeasonStateCodec.Decode(SeasonStateCodec.Encode(season));
             Assert.IsTrue(season.FieldsEqual(restored),
                 "A bootstrapped season must round-trip field-identically through the season codec.");
+        }
+
+        [Test]
+        public void SavedWorldSeed_RebuildsTheSameLeague()
+        {
+            // The career-resume path (KD-9 / AR-5 M-1). Squads are not persisted: a save carries club
+            // IDs, and the ISquadProvider is rebuilt by re-running the bootstrap. The ONLY value a save
+            // file holds that makes that possible is the world seed inside the world blob — so if this
+            // breaks, a saved career cannot be reopened at all.
+            const ulong worldSeed = 0xC0FFEE5EA50117UL;
+            League original = LeagueBootstrap.Generate(worldSeed, 6);
+            SeasonState season = original.CreateSeason(managedClubId: 2);
+
+            var world = new WorldStore(managerId: 1, worldSeed);
+            WorldStore restoredWorld = WorldStore.Restore(world.Snapshot());
+
+            Assert.AreEqual(worldSeed, restoredWorld.WorldSeed,
+                "The world seed must survive the save round-trip — it is the league's only anchor.");
+
+            League rebuilt = LeagueBootstrap.Generate(restoredWorld.WorldSeed, season.ClubCount);
+            Assert.AreEqual(original.ClubCount, rebuilt.ClubCount);
+            Assert.AreEqual(original.SeasonSeed, rebuilt.SeasonSeed);
+            for (int c = 0; c < original.ClubCount; c++)
+            {
+                Assert.AreEqual(original.ClubAt(c).Name, rebuilt.ClubAt(c).Name);
+                Assert.AreEqual(original.ClubAt(c).StrengthDelta, rebuilt.ClubAt(c).StrengthDelta);
+                AssertSquadsIdentical(
+                    original.ResolveByClubId(c), rebuilt.ResolveByClubId(c), $"rebuilt club {c}");
+            }
         }
 
         [Test]

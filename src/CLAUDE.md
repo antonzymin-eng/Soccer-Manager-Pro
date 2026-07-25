@@ -9,7 +9,8 @@
 > `LeagueBootstrapConstants`. `LeagueBootstrap.Generate(worldSeed, clubCount)` turns ONE seed into an
 > N-club league: three domain-separated derivations (`rosterSeed` / `strengthSeed` / `seasonSeed`, KD-4),
 > one registered roster stream per club under `SubsystemOrdinals.PlayerDatabase` with `entityId = clubId`
-> (so a club's roster is a function of `(worldSeed, clubId)` alone — independent of league size,
+> (so a club's BASE roster is a function of `(worldSeed, clubId)` alone — independent of league size;
+> the SHIPPED attributes are not, since the strength ramp is over league size, and both halves are
 > test-locked), a seeded Fisher–Yates **strength rank** ramped linearly to a per-club `[1,20]` attribute
 > delta (KD-5; `WeakFootRating` deliberately excluded — a `[1,5]` scale would saturate), and
 > `League.CreateSeason(managedClubId)` handing #30 a startable `SeasonState` off the existing
@@ -34,14 +35,27 @@
 > "registry full"); `POSITION_COUNT` hoisted to `PlayerDatabaseConstants` so two assemblies stop carrying
 > private copies of the enum's member count (the PM AR-7 M-1 parallel-surface class), locked against
 > `Enum.GetValues`; and negative world-day `[GT]` values refused at read instead of wrapping to ~4.29e9.
-> New `tests/LeagueBootstrapTests.cs` (27 — determinism, seed divergence, league-size independence,
+> **AR-5 (hostile whole-file re-read rather than a diff pass): 1H+4M+3L, all fixed.** H-1: rosters are
+> REGENERATED from the world seed, not saved, so the generation path is persistence-equivalent — and
+> every determinism test on it was self-referential, so a draw-order change, a catalogue reorder or a
+> one-line `[GT]` tweak would silently rewrite every club in every save with the suite green; closed by
+> KD-10 + a pinned golden vector (`LeagueBootstrapGoldenVectorTests`), proven non-vacuous by perturbing
+> `AttributeBaseMean`. M-1: `WorldStore._worldSeed` had no accessor and `SeasonState.Seed` holds the
+> DERIVED seed, so a saved career could not rebuild its `ISquadProvider` (added `WorldStore.WorldSeed`
+> v1.7 + the KD-9 resume recipe + a round-trip lock). M-2: the league-size-independence claim held only
+> for the base roster (narrowed; the #43 consequence named; both halves now asserted). M-3:
+> `SquadPositionCounts` was a public mutable `int[]` gating squad validity (now `ReadOnlyCollection`
+> over a private backing array; `ClubNameCatalogue.Names` likewise). M-4: the strength spread's
+> sufficiency was unverified (discharged as KD-8 Step 0 — a pilot before the 9 h corpus). Plus the
+> `Generate(ulong)` overload test and the static-initializer `<exception>` doc correction.
+> New `tests/LeagueBootstrapTests.cs` (30) + `tests/LeagueBootstrapGoldenVectorTests.cs` (6) (— determinism, seed divergence, league-size independence,
 > contiguous ids + globally unique `PlayerId`s, catalogue coverage/uniqueness, the strength ramp
 > endpoints/symmetry/permutation, position coherence for every shipped formation **plus** an end-to-end
 > `ConfigureSquads` acceptance run through the real engine, every F1–F6 gate, and the `CreateSeason`
 > handoff round-tripping through `SeasonStateCodec`) + `RosterGeneratorTests` +3 (overload honours the
 > template, consumes the same budget, fails loud on a bad one) + `PlayerAttributesTests` +1
 > (`POSITION_COUNT` vs the enum). **Full dotnet gate: PASSED, 0 failures (whole tree green; season-save
-> 141 → 168, player-database 42 → 46; SDK 8.0.129 via apt).** **A4a is designed, not executed** — its
+> 141 → 177, player-database 42 → 46; SDK 8.0.129 via apt).** **A4a is designed, not executed** — its
 > ~9 h corpus run is its own roadmap item. See the path-to-playable OPEN ISSUES entry.)
 > **Last Updated (prior):** July 25, 2026 (v2.37 — **Season & Competition Loop #30 T1 LANDED — the
 > season save/restore path** (`docs/tracking/path-to-playable-roadmap.md` item A2, the second landing on the

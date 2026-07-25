@@ -28,6 +28,25 @@ namespace TacticalDirector.SeasonSave
     /// output: the same club ids, names, strength deltas, and every player's identity and all 31
     /// attributes. Different seeds change both the rosters and the strength ordering.
     /// </para>
+    /// <para>
+    /// <b>This generation path is persistence-equivalent — treat it like a save format version.</b>
+    /// Rosters are NOT serialized: a save carries club IDs, and <see cref="League"/> re-derives every
+    /// squad here when it is handed to <c>SeasonSaveManager.Load</c> as the
+    /// <see cref="TacticalDirector.MatchEngine.ISquadProvider"/>. That interface's contract requires the
+    /// resolved squad to be the SAME roster the saved match loaded, so ANY change that moves this
+    /// function's output silently rewrites every club in every existing save — a draw-order change in
+    /// <see cref="RosterGenerator"/>, a reorder of <c>NameCatalogue</c> or
+    /// <see cref="ClubNameCatalogue"/>, an edit to
+    /// <see cref="LeagueBootstrapConstants.SquadPositionCounts"/>, or a one-line tweak to a
+    /// <c>[GT]</c> generation constant such as <c>PlayerDatabaseConstants.AttributeBaseMean</c>. That
+    /// last one is the easiest to do by accident: it reads as an innocuous balance tweak, and
+    /// <c>player-database</c> is one of the four catalogues carved out of the FR-CS-019 config
+    /// migration, so its <c>[GT]</c> rows are still plain literals that invite editing in place.
+    /// Every same-seed determinism test is self-referential and would stay green through all of these,
+    /// so the guard is the pinned golden vector in <c>LeagueBootstrapGoldenVectorTests</c> — the same
+    /// mechanism #16 uses for HKDF / SipHash / canonical serialization. If you change generation
+    /// deliberately, re-pin that vector in the same commit and treat it as a save-breaking change.
+    /// </para>
     /// </summary>
     public static class LeagueBootstrap
     {
@@ -64,11 +83,11 @@ namespace TacticalDirector.SeasonSave
 
             // F2 — catalogue coherence. Checked per-call against the requested count (the test lock is
             // against MaxClubCount, so this only fires if the cap is raised past the catalogue).
-            string[] names = ClubNameCatalogue.Names;
-            if (clubCount > names.Length)
+            System.Collections.ObjectModel.ReadOnlyCollection<string> names = ClubNameCatalogue.Names;
+            if (clubCount > names.Count)
             {
                 throw new System.InvalidOperationException(
-                    $"ClubNameCatalogue has {names.Length} names but {clubCount} clubs were requested; " +
+                    $"ClubNameCatalogue has {names.Count} names but {clubCount} clubs were requested; " +
                     "append names or lower LeagueBootstrapConstants.MaxClubCount.");
             }
 
@@ -98,8 +117,15 @@ namespace TacticalDirector.SeasonSave
 
             for (int clubId = 0; clubId < clubCount; clubId++)
             {
-                // entityId = clubId, so each club's stream key is distinct and its roster is a function
-                // of (rosterSeed, clubId) alone — independent of league size and generation order.
+                // entityId = clubId, so each club's stream key is distinct and its BASE roster (identity
+                // + pre-strength attributes) is a function of (rosterSeed, clubId) alone — independent
+                // of league size and generation order.
+                //
+                // NOT the shipped squad: ApplyStrength below shifts every attribute by a delta that
+                // depends on clubCount TWICE (the rank permutation is over clubCount elements, and the
+                // ramp denominator is clubCount - 1). So a club's final attributes DO change with league
+                // size — which matters for #43, whose promotion/relegation transform changes the club
+                // set. Only the base roster is size-invariant, and that is what the test locks.
                 int streamIndex = rng.RegisterStream(
                     LeagueBootstrapConstants.ROSTER_STREAM_SITE_ID,
                     SubsystemOrdinals.PlayerDatabase,

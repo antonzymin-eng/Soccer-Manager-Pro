@@ -12,6 +12,8 @@
 // save-frame version): it is governed by a design supplement, not by #30's spec text, and nothing
 // in it is serialized. The season-save folder already carries two catalogues for the same reason.
 
+using System.Collections.ObjectModel;
+
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.PlayerDatabase;
 
@@ -60,6 +62,11 @@ namespace TacticalDirector.SeasonSave
 
         #region GT
 
+        // Backing store for SquadPositionCounts. Declared BEFORE the read-only wrapper below: within a
+        // class, static field initializers run in textual order, so wrapping an as-yet-uninitialised
+        // array would capture null (the PerceptionConstants.BASE_FOV_HALF_ANGLE static-init defect).
+        private static readonly int[] s_squadPositionCounts = { 3, 8, 8, 6 };
+
         /// <summary>[GT] Default number of clubs in a bootstrapped league — one 38-round double
         /// round-robin (380 fixtures). Config key <c>[league-bootstrap] DefaultClubCount</c>.</summary>
         public static readonly int DefaultClubCount = Config.GetInt("league-bootstrap", "DefaultClubCount", 20);
@@ -97,7 +104,10 @@ namespace TacticalDirector.SeasonSave
         /// would overflow <see cref="LeagueBootstrap.StrengthDelta"/>'s integer ramp arithmetic.
         /// </summary>
         /// <exception cref="System.InvalidOperationException">The configured value is outside
-        /// <c>[0, ATTRIBUTE_MAX - ATTRIBUTE_MIN]</c>.</exception>
+        /// <c>[0, ATTRIBUTE_MAX - ATTRIBUTE_MIN]</c>. Called from a static field initializer, so a
+        /// consumer observes it wrapped in <c>TypeInitializationException</c>, and this type is
+        /// unusable for the rest of the process — the intended fail-loud-at-boot posture
+        /// <c>GameplayConfig</c>'s own `FormatException` on a malformed value already takes.</exception>
         private static int BoundedSpread(string key, int fallback)
         {
             int max = PlayerDatabaseConstants.ATTRIBUTE_MAX - PlayerDatabaseConstants.ATTRIBUTE_MIN;
@@ -118,7 +128,9 @@ namespace TacticalDirector.SeasonSave
         /// 4,294,967,295 — which surfaces much later as a confusing calendar-overflow throw rather
         /// than as "your config value is negative".
         /// </summary>
-        /// <exception cref="System.InvalidOperationException">The configured value is negative.</exception>
+        /// <exception cref="System.InvalidOperationException">The configured value is negative. As with
+        /// <see cref="BoundedSpread"/>, this runs in a static field initializer, so a consumer observes
+        /// it wrapped in <c>TypeInitializationException</c>.</exception>
         private static uint NonNegativeDayValue(string key, int fallback)
         {
             int value = Config.GetInt("league-bootstrap", key, fallback);
@@ -148,8 +160,18 @@ namespace TacticalDirector.SeasonSave
         /// array getter, and this table carries a cross-cell invariant (the sum) that only holds against
         /// compile-time values — the same carve-out <c>TacticalInstructionsConstants</c>' tables take.
         /// </para>
+        /// <para>
+        /// Exposed READ-ONLY over a private backing array. A public <c>int[]</c> would be writable by
+        /// anything in the process, and mutating it changes every league generated afterwards while
+        /// still satisfying the sum check (e.g. <c>{25, 0, 0, 0}</c> sums to 25 and yields squads that
+        /// cannot field a back four) — silent cross-test contamination and a silent break of the KD-6
+        /// guarantee. This is the exposed-mutable-array class the project has caught repeatedly
+        /// (match-viewer AR-3 M-1, living-world slice-2 AR-1 M-1, #26 T0 AR-1, #30 T0 H-1); the
+        /// array-table carve-out above is about the CONFIG surface, not about write access.
+        /// </para>
         /// </summary>
-        public static readonly int[] SquadPositionCounts = { 3, 8, 8, 6 };
+        public static readonly ReadOnlyCollection<int> SquadPositionCounts =
+            new ReadOnlyCollection<int>(s_squadPositionCounts);
 
         #endregion
 
@@ -171,7 +193,7 @@ namespace TacticalDirector.SeasonSave
         /// </exception>
         public static PlayerPosition[] BuildSquadPositionTemplate()
         {
-            int[] counts = SquadPositionCounts;
+            int[] counts = s_squadPositionCounts;
             if (counts.Length != PositionCount)
             {
                 throw new System.InvalidOperationException(
@@ -225,4 +247,11 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-07-25 | —      | Initial implementation (roadmap A3): seed domains, stream         |
 // |         |            |        | identity, club-count bounds, strength spread, position template,   |
 // |         |            |        | calendar cadence.                                                  |
+// | 1.1     | 2026-07-25 | —      | AR-5 M-3/L-2: SquadPositionCounts was a PUBLIC mutable int[] —     |
+// |         |            |        | writable by anything in the process, and a mutation that still     |
+// |         |            |        | sums to CLUB_SQUAD_SIZE silently voids the KD-6 fieldable-squad    |
+// |         |            |        | guarantee. Now a ReadOnlyCollection over a private backing array   |
+// |         |            |        | declared before it (static-init order). Config-reader <exception>  |
+// |         |            |        | docs now state what a consumer actually observes                   |
+// |         |            |        | (TypeInitializationException from the static initializer).         |
 #endregion
