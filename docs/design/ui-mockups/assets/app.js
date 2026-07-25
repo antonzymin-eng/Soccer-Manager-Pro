@@ -16,9 +16,12 @@
     b.addEventListener("click", () => setDirection(b.dataset.dir));
   });
 
-  // restore saved direction
-  let saved = "stadium";
-  try { saved = localStorage.getItem(STORAGE_KEY) || "stadium"; } catch (e) {}
+  // Restore the saved direction, defaulting to the CHOSEN direction.
+  // "touchline" (analyst tool) was selected 2026-07-25; "stadium" is retained
+  // in tokens.css as the rejected alternative, reachable only via the switcher.
+  const DEFAULT_DIRECTION = "touchline";
+  let saved = DEFAULT_DIRECTION;
+  try { saved = localStorage.getItem(STORAGE_KEY) || DEFAULT_DIRECTION; } catch (e) {}
   setDirection(saved);
 
   // sidebar nav highlight

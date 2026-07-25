@@ -1,7 +1,7 @@
 # UI Mockups — Soccer Manager Pro (design reference)
 
 **Created:** July 25, 2026
-**Last Updated:** July 25, 2026 (initial landing — imported design-system + screen mockups)
+**Last Updated:** July 25, 2026 (visual direction CHOSEN: `touchline`)
 **Status:** DESIGN REFERENCE (non-normative)
 **Related spec:** UI / Client Framework **#38** (`docs/specs/ui-client-framework/`, APPROVED July 22, 2026)
 
@@ -78,14 +78,34 @@ Notes:
   JetBrains Mono). Offline they fall back to system fonts and stay readable, but metrics shift.
 - The design system carries **two visual directions** — `stadium` (broadcast graphics) and
   `touchline` (analyst tool) — switched by the `data-direction` attribute on `<html>` and
-  persisted in `localStorage`. Both are live in `tokens.css`; **neither has been chosen yet.**
+  persisted in `localStorage`. **`touchline` is the chosen direction** (decided July 25, 2026); see
+  §4. `stadium` is retained in `tokens.css` as the rejected alternative and stays reachable through
+  the switcher, so the comparison that informed the decision is not lost.
 - Screen pages render onto a fixed **1920×1080 stage** scaled to the viewport, matching the
   desktop guardrails.
 - All data shown is **hardcoded mock data** (players, fees, dates). It is illustrative only and
   is not sourced from `player-database` or any save.
 
-## 4. Version History
+## 4. Chosen visual direction — `touchline`
+
+**Decided July 25, 2026.** The client is built as an **analyst tool**, not broadcast graphics.
+
+What this pins:
+- `touchline` is the default everywhere. Every page already carried
+  `<html data-direction="touchline">`, but `assets/app.js` overrode it on load with a hardcoded
+  `"stadium"` default — so the pages actually *rendered* stadium unless you clicked the switcher.
+  The mockups did not show the direction they claimed. Fixed: `app.js` now defaults to `touchline`.
+- The `touchline` token block in `tokens.css` is the source the eventual client's theme derives from.
+- `stadium` is **not deleted**. It stays in `tokens.css` behind the switcher as the rejected
+  alternative — cheap to keep, and it documents what was compared.
+
+What this does **not** pin: any of these values as final. The tokens are a starting point for the
+rendering work, not an approved constant catalogue — nothing here is `[GT]`-tagged or loaded by the
+sim (see §1).
+
+## 5. Version History
 
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0 | July 25, 2026 | Initial landing: design system + 11 screen mockups + shared assets, imported as the #38 visual reference. |
+| 1.1 | July 25, 2026 | Visual direction chosen: `touchline` (§5). `app.js` default corrected from `stadium` — the pages had been rendering a direction their own markup did not declare. |
