@@ -174,7 +174,7 @@ a discipline-test failure.
 | Constant | Was | Now | Why |
 |---|---|---|---|
 | `FoulImpactForceThresholdN` | 1200 | **1200** (unchanged) | p99 of the distribution — in the meaningful part of the band, not on the last thirty samples. It is now the "hard enough to *consider*" gate, with the rate carried by `FoulCallProbability`. |
-| `FoulCallProbability` | *(new)* | **0.025** | Calibrated in §1.2's sweep: 0.02 → 17.5, 0.03 → 30 fouls per 90 min. |
+| `FoulCallProbability` | *(new)* | **0.015** | Calibrated on a LIVE run, not the offline sweep — see §6. The sweep pointed at 0.025, which measured 37.5 fouls per 90 min. |
 | `YellowCardProbability` | 0.35 | **0.16** | KD-F5 ratio. |
 | `RedCardProbability` | 0.05 | **0.011** | KD-F5 ratio. |
 | `FoulCooldownTicks` | 60 (1 s) | **180 (3 s)** | A restart takes several seconds and the players are still tangled through it; 1 s was thin. Rate-neutral at the new call probability (measured: ≤ 2 fouls per 90 min difference). |
@@ -186,8 +186,10 @@ a discipline-test failure.
 - `MatchFlowCollisionConsumer.OnCollisionEvent` keeps the strongest qualifying candidate (KD-F4).
 - `ApplyFoulIfCaptured` computes `p(F)`, partitions the single draw (KD-F2), and returns early on a
   wave-on without publishing, carding, restarting, or arming the cooldown (KD-F3).
-- `TestOnly_InjectFoulCandidate` gains an optional force, defaulting to the certainty point
-  (`threshold / callProbability`), so every existing injection test keeps meaning "a foul happens".
+- `TestOnly_InjectFoulCandidate` gains an optional force, defaulting to `CertainFoulForceN` — a force
+  far above anything a real collision produces, so the call probability saturates at 1 whatever the
+  `[GT]` values are later retuned to, and every existing injection test keeps meaning "a foul happens"
+  rather than quietly becoming a coin flip.
 - `TestOnly_SetCollisionObserver` — the measurement seam (§5.Z.9). Null in production.
 
 ### 4.3 What deliberately does not change
@@ -201,8 +203,7 @@ changes **how often the whistle goes**, not what happens when it does.
 ## 5. Acceptance
 
 `src/match-engine/tests/MatchEngineDisciplineScenarios.cs` on the #19 ScenarioRunner
-(`match-engine-discipline-plausible`, Tier B, cross-spec). Four seeds × 9 minutes, with per-90-minute
-rates extrapolated across the aggregate:
+(`match-engine-discipline-plausible`, Tier B, cross-spec).
 
 Six seeds × 9 minutes = 54 minutes of composed play; rates extrapolated to per-90-minutes.
 
