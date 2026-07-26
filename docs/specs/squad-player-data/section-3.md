@@ -56,6 +56,9 @@ Reserve(streamIndex, FIELDS_PER_PLAYER = 36)
   draw 1  lastName  : DrawBounded(LastNames.Length = 32)       -> NameCatalogue.LastNames[i]
   draw 2  age       : AgeMin + DrawBounded(AgeMax-AgeMin+1 = 19)         in [17, 35]
   draw 3  position  : (PlayerPosition) DrawBounded(4)          uniform over the 4 values
+                      (the supplied-position overload still MAKES this draw and DISCARDS the
+                       value, using the caller's position instead — FR-SQ-012a; the budget,
+                       the stream layout and this path are unchanged)
   draw 4  weakFoot  : Clamp(WeakFootBase + (DrawBounded(2*WeakFootSpread+1 = 5) - WeakFootSpread),
                             WEAK_FOOT_MIN, WEAK_FOOT_MAX)                 in [1, 5]
   draw 5+i (i in [0,31)) attribute AttrIdx i, in ordinal order:
@@ -68,9 +71,13 @@ PlayerId = clubId * CLUB_SQUAD_SIZE + localIndex
 
 `DrawBounded(bound) = (int)(u64Draw % bound)` — a plain modulo map. The bias (< 2⁻⁵⁹ for every
 `bound ≤ 32`) is deliberately accepted: generation is not a statistically load-bearing surface, and
-rejection sampling would break the fixed 36-draw budget. Position is uniform over the 4 values — a
-documented Stage-0 simplification (a realistic few-GK distribution is future work). Same seed ⇒
-byte-identical `Squad` (FR-SQ-016).
+rejection sampling would break the fixed 36-draw budget. Position is uniform over the 4 values in
+this path — a documented Stage-0 simplification. **That simplification is no longer the only option:**
+a caller needing a squad that can actually field a formation supplies an explicit position template
+through the FR-SQ-012a overload, which is what the league bootstrap does (uniform draws leave ~3% of
+25-player squads unable to field a back four, and `LineupSelector` refuses such a squad fail-loud —
+see `docs/tracking/league-bootstrap-design.md` KD-6). Weighted *drawn* position distributions remain
+future work. Same seed ⇒ byte-identical `Squad` (FR-SQ-016).
 
 **Clamp is defensive under the pinned constants.** Attribute pre-clamp values span
 `[10 + 0 − 4, 10 + 4 + 4] = [6, 18]` (max bias `+4`, GK fields) — strictly inside `[1,20]`, so the

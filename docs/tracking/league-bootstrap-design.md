@@ -3,7 +3,7 @@
 > **Created:** July 25, 2026
 > **Status:** DESIGN SUPPLEMENT — **A3 LANDED July 25, 2026** (design converged AR-1..AR-3;
 > implemented, then code-reviewed AR-4 → AR-5 (whole-file, 1H+4M+3L) → AR-6 (1M) — full gate green
-> at each step). **A4a is designed here but NOT executed** — its
+> at each step, then AR-7 over the spec/tests/governance — 1H+4M). **A4a is designed here but NOT executed** — its
 > ~9 h corpus run is its own roadmap item. Same governance class as `lineup-selection-design.md`,
 > `match-save-file-design.md`, `unified-season-save-design.md`. Opens **no numbered spec** and
 > changes no `SPEC_INDEX.md` row.
@@ -215,7 +215,11 @@ the stream layout, the budget lock, and the existing `Generate(..., count)` path
 **byte-identical**. `RosterGenerator`'s own source already names this as the intended refinement
 ("Uniform over the 4 positions is a documented Stage-0 simplification — a real squad's position
 distribution … is a future refinement, not designed here"); this note is where it gets designed, and
-the change is back-propped to `squad-player-data-design.md`.
+the change is back-propped as **ERR-027-002** — #27 is APPROVED and its *section files* are
+authoritative (its tracking supplement was superseded at promotion), so the back-prop patches
+`docs/specs/squad-player-data/`: `section-2.md` gains **FR-SQ-012a** for the overload plus
+`POSITION_COUNT` in the §2.2.5 catalogue, `section-3.md`'s draw table annotates draw 3 and retires
+the now-stale "future work" framing, and `appendices.md` gains the constant row.
 
 Rejected: post-processing the generated squad in the bootstrap by subtracting the drawn position's
 bias and adding the template position's. It is exact *today* only because the default `[GT]`
@@ -231,12 +235,19 @@ shape A4 builds and A4a calibrates:
 ```
 ResolveRound(fixture, seasonSeed, seasonNumber, ratings) -> MatchResult
     key      = SplitMix64Mix( Mix(seasonSeed, seasonNumber, RoundIndex, HomeClubId, AwayClubId) )
-    dRating  = Rating(home) - Rating(away) + HomeAdvantageRating
-    lambdaH  = clamp( BaseGoals * exp(+GoalRatingSlope * dRating), LambdaMin, LambdaMax )
-    lambdaA  = clamp( BaseGoals * exp(-GoalRatingSlope * dRating), LambdaMin, LambdaMax )
-    goalsH   = PoissonDraw(lambdaH, key, subStream 0)
-    goalsA   = PoissonDraw(lambdaA, key, subStream 1)
+    dSquad   = Rating(home) - Rating(away)              # measured; engine-observable (see below)
+    edge     = dSquad + HomeAdvantageRating             # model-side only; a FITTED parameter
+    lambdaH  = clamp( BaseGoals * exp(+GoalRatingSlope * edge), LambdaMin, LambdaMax )
+    lambdaA  = clamp( BaseGoals * exp(-GoalRatingSlope * edge), LambdaMin, LambdaMax )
+    goalsH   = PoissonInverseCdf(lambdaH, key, subStream 0)
+    goalsA   = PoissonInverseCdf(lambdaA, key, subStream 1)
 ```
+
+**`dSquad` vs `edge` — keep these separate.** `dSquad` is a property of the two squads and is
+observable from an engine match. `edge` adds `HomeAdvantageRating`, which is a **parameter of this
+model**, not a property of anything the engine knows about. Only `dSquad` may appear on the
+calibration corpus's axis (KD-8); conflating the two makes the corpus unbuildable, because the
+harness would have to record a value that does not exist until after the fit.
 
 - **`Rating(club)`** = the mean `[1,20]` attribute over the club's selected starting XI
   (`LineupSelector` output — already deterministic and already the thing the engine actually
@@ -252,6 +263,22 @@ ResolveRound(fixture, seasonSeed, seasonNumber, ratings) -> MatchResult
   > the engine actually fields.
 - **Parameters to fit (A4a):** `BaseGoals`, `GoalRatingSlope`, `HomeAdvantageRating`. `LambdaMin` /
   `LambdaMax` are safety clamps, not fitted.
+- **`PoissonInverseCdf`, named — not "a Poisson draw".** Inversion: accumulate
+  `p = exp(-lambda)`, `cdf = p`, and while `u > cdf` step `k++`, `p *= lambda/k`, `cdf += p`,
+  bounded by a `[FIXED] MaxGoalsPerSide` cap. Two engineers handed "PoissonDraw" would otherwise
+  reasonably pick Knuth's product-of-uniforms or a normal approximation — which consume different
+  numbers of draws and produce different scorelines **from the identical key**. That scoreline
+  reaches `LeagueTable`, which `SeasonStateCodec` serializes, so the divergence would be a
+  save-format divergence, not a transient one. Inversion also needs exactly **one** uniform per
+  side, which suits the `Reserve`/`DrawReserved` fixed-budget discipline.
+- **Float posture, stated rather than assumed.** `exp` is a libm call and the lambdas are floats.
+  That is acceptable here under the project's Stage-0 doctrine — single-machine determinism on the
+  pinned certification host, with cross-platform bit-exactness deferred to Stage 5 alongside
+  Fixed64 — and it is the same posture the match engine already ships. It is called out because
+  this model's output is **persisted** (the league table), unlike most float work, and because the
+  adjacent management specs (#41/#40/#33, and `StrengthDelta` in this very note) deliberately use
+  integer/per-mille arithmetic. If a later decision wants persisted season state off floats
+  entirely, this is the line item to revisit.
 - **Determinism:** every draw derives from `key`, which is a pure function of
   `(seasonSeed, seasonNumber, roundIndex, homeClubId, awayClubId)`. No cursor, no shared stream
   state ⇒ order-independent by construction, satisfying T-SN-CAL-003c without a separate mechanism.
@@ -269,20 +296,36 @@ league tables feel wrong"* — a failure no unit test catches, because every uni
 against a model that is internally consistent and empirically wrong.
 
 **Step 0 — check the signal before fitting anything.** Before spending ~9 h on a 200-match grid, run a
-small pilot (~20 matches) at the two ramp extremes (`dRating` from a `−S` club versus a `+S` club, both
-venues). If those two populations' goal distributions are not distinguishable, **the corpus carries no
+small pilot (~20 matches) at the two extremes of achievable `dSquad` (a `−S` squad versus a `+S` squad,
+both venues). If those two populations' goal distributions are not distinguishable, **the corpus carries no
 signal to fit** and `LeagueStrengthSpread` must be raised before the full run — otherwise A4a burns
 nine hours fitting three parameters to noise and the league table stays meaningless. This is KD-5's
 unverified-sufficiency risk, discharged at the first point it can be measured.
 
-**Corpus.** ~200 engine-simulated matches over a grid of rating differentials. Concretely: 11
-buckets of `dRating` from −5 to +5 in unit steps, ~18 matches per bucket, each a real `MatchEngine`
-run between two bootstrapped clubs whose `StrengthDelta` pair realises that differential, at
-distinct match seeds. Both orderings (strong-at-home and strong-away) appear in every bucket so
-home advantage is measured, not assumed.
+**Corpus.** ~200 engine-simulated matches over a grid of **`dSquad`** — the measured
+`Rating(home) − Rating(away)`, never `edge`. Concretely: 11 buckets in unit steps, ~18 matches per
+bucket, each a real `MatchEngine` run at a distinct match seed. Both orderings (strong-at-home and
+strong-away) appear in every bucket, which is what lets `HomeAdvantageRating` be **fitted from the
+home/away asymmetry within each bucket** rather than assumed — and is the reason it must not be on
+the axis.
+
+Two things follow, and both were wrong in the first draft of this section:
+
+- **Build the pairs by direct shift, not by picking league clubs.** The harness calls
+  `LeagueBootstrap.ApplyStrength(baseSquad, delta)` with an **arbitrary** `int` delta against a fixed
+  base-roster pair. It is not limited to `LeagueStrengthSpread`, so the grid's range is achievable by
+  construction. Sourcing pairs from a generated league instead would cap the reachable spread at
+  `2 · S = 6` *and* — because a 20-club ramp puts only two clubs at each extreme — leave roughly a
+  dozen ordered pairs to fill the outermost buckets, so 18 "samples" there would be the same few
+  pairs re-seeded, measuring seed variance rather than rating response.
+- **Bucket on the measured value, not the knob.** Two squads shifted by the same delta do not have
+  the same `Rating`, because their base rosters differ. The harness records the actual
+  `Rating(home) − Rating(away)` per match and buckets on that; the delta is only how the spread is
+  produced.
 
 **Generation.** A committed harness (lands with A4a) that boots the engine through
-`ConfigureSquads` and ticks to `MatchEnded`, recording `(dRating, homeGoals, awayGoals, matchSeed)`.
+`ConfigureSquads` and ticks to `MatchEnded`, recording `(dSquad, homeGoals, awayGoals, matchSeed)`
+— every column observable at capture time, which `dRating`/`edge` would not be.
 It is parallelisable across buckets and **run once**; roadmap C1a budgets ~9 h. It must be
 *scheduled*, not discovered.
 
@@ -309,7 +352,9 @@ seeds ⇒ the assertion is exact and reproducible; the tolerance encodes the agr
 not test flake.
 
 **Acceptance.** Per-bucket mean home and away goals within ±0.25 of the corpus mean, and the
-win/draw/loss split within ±5 percentage points at `dRating = 0`. Both are recorded in the artifact
+win/draw/loss split within ±5 percentage points at `dSquad = 0` (evenly matched squads — note this is
+where home advantage should show up as an asymmetry, so it is the bucket that actually tests the
+fitted `HomeAdvantageRating`). Both are recorded in the artifact
 so a later re-fit is measured against the same bar.
 
 ### KD-9 — What A3 hands #30: a `League` that is itself the `ISquadProvider`.
@@ -548,6 +593,41 @@ One claim made *during* this review was itself wrong and is corrected rather tha
 carved out of the FR-CS-019 migration, so its `[GT]` rows are plain literals. The vector is a one-line
 code edit that reads as a balance tweak, not a config file change.
 
+### AR-7 (self, passes 4-6 — spec, tests, and governance) — 1 H + 4 M, all resolved
+
+Three further passes over an unchanged artifact, each attacking a surface the previous ones had not.
+
+- **H-1 — the calibration corpus's axis was unbuildable.** KD-8 bucketed on `dRating`, which KD-7
+  defined to include `HomeAdvantageRating` — a parameter A4a exists to *fit* — and asked the harness
+  to *record* it. The harness cannot: that value does not exist until after the fit, and the engine
+  knows nothing about it. Two further symptoms from the same root: the ±5 grid was unreachable from
+  league-generated clubs (`2·S = 6` ceiling, ~12 ordered pairs at the extremes), and the acceptance
+  bar at "`dRating = 0`" described an *unequal* pairing. Resolved: the axis is now the measured,
+  engine-observable `dSquad = Rating(home) − Rating(away)`; `edge = dSquad + HomeAdvantageRating` is
+  named separately and lives model-side only; the harness builds pairs by direct `ApplyStrength` with
+  an arbitrary delta rather than by picking league clubs; and the acceptance bar reads `dSquad = 0`.
+  Cost avoided: a ~9 h corpus run bucketed on a column that cannot be filled in.
+- **M-1 — `exp` and an unnamed `PoissonDraw` for persisted output.** "PoissonDraw" admits Knuth,
+  inversion, or a normal approximation — different draw counts, different scorelines from the same
+  key, and that scoreline is serialized in the season blob. Pinned to inverse-CDF with a
+  `MaxGoalsPerSide` cap (one uniform per side, which suits the `Reserve`/`DrawReserved` discipline),
+  and the float posture is now stated rather than assumed.
+- **M-2 — `League`-as-`ISquadProvider` was never exercised against a real save/restore**, despite
+  being A3's headline deliverable; only hand-rolled providers were tested. Added
+  `DiskRoundTrip_SeasonWithLeagueBootstrappedMatch_IsDeterministic`.
+- **M-3 — three test names promised properties their bodies did not assert.** WeakFoot-exclusion was
+  only bounds-checked (a regression that shifted and clamped it passes); "...ArePermuted" checked no
+  permutation and its message claimed "exactly one club" at each extreme when there are two; and
+  roster-vs-seed divergence was detected through an attribute the strength delta also moves, so it
+  could not isolate what it claimed. The first mattered most: after AR-5 the golden vector was the
+  only thing locking WeakFoot-exclusion, and the documented workflow for a deliberate generation
+  change is *re-pin the golden vector* — precisely when an unasserted property disappears silently.
+- **M-4 — a back-prop this note claimed had been filed, had not been.** KD-6 said the generator
+  change was "back-propped to `squad-player-data-design.md`"; `git log --name-only` shows that file
+  was never touched — and it had been superseded anyway when #27 was promoted to section files
+  (APPROVED July 22). So an APPROVED spec's implementation surface changed with no ERR and no
+  spec-text patch. Resolved as **ERR-027-002** against `docs/specs/squad-player-data/`.
+
 ### AR-6 (self, over the AR-5 fixes) — 0 H + 1 M + 0 L, resolved
 
 Re-read the fixed state rather than the fix diff — which is what surfaced the one defect the fix itself
@@ -573,6 +653,7 @@ Windows certification host.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-07-25 | — | Initial supplement: A3 league bootstrap (KD-1..KD-6, KD-9) + A4a round-resolution shape and calibration methodology (KD-7, KD-8); determinism contract, F1–F6, implementation plan. AR-1 (1H+2M+2L) → AR-2 (1M+1L) → AR-3 CONVERGENCE. |
+| 1.4 | 2026-07-25 | — | **AR-7** (passes 4-6: the note as a *specification*, the test bodies vs their names, and governance): 1H+4M, all resolved. **H-1** KD-8 bucketed the calibration corpus on `dRating`, which includes the to-be-fitted `HomeAdvantageRating` — the harness was asked to record a value that cannot exist at capture time; axis re-based on the measured `dSquad`, `edge` separated model-side, pairs built by direct `ApplyStrength` rather than from league clubs. **M-1** `PoissonDraw` pinned to inverse-CDF and the float posture stated (the scoreline is persisted). **M-2** `League`-as-`ISquadProvider` now tested through a real save/restore. **M-3** three test names over-claimed (WeakFoot exclusion, delta permutation, roster-vs-seed divergence). **M-4** KD-6 claimed a back-prop that was never filed, against a spec that had since been promoted — filed as **ERR-027-002** against `docs/specs/squad-player-data/`. |
 | 1.3 | 2026-07-25 | — | **AR-6** (over the AR-5 fixes): 0H+1M+0L. The new golden vector pinned only a 4-club league, leaving everything that varies with league size unguarded — the permutation length, the ramp denominator, name indexing, and the `delta == 0` branch that does not occur at N=4 at all. A second digest + delta row pinned at `DefaultClubCount`, guarded so a retuned default fails loudly rather than leaving the vector pinned to a size nobody generates. |
 | 1.2 | 2026-07-25 | — | **AR-5** (hostile re-read of the whole landing, not the diff): 1H+4M+3L, all resolved. **H-1** the generation path is persistence-equivalent — rosters are regenerated from the world seed, not saved, so any change to it silently invalidates every save while self-referential determinism tests stay green; closed by new **KD-10** + a pinned golden vector, verified non-vacuous by perturbing `AttributeBaseMean`. **M-1** the world seed was write-only, so a saved career could not rebuild its `ISquadProvider` at all; closed by a `WorldStore.WorldSeed` accessor + the KD-9 resume recipe. **M-2** the league-size-independence claim was true only of the base roster; narrowed everywhere and the #43 consequence named. **M-3** `SquadPositionCounts` was a public mutable array gating squad validity. **M-4** the strength spread's sufficiency was unverified; discharged as KD-8 Step 0. Plus 3 L. Also corrected a claim made during the review itself: `AttributeBaseMean` is not config-overridable (`player-database` is carved out of the FR-CS-019 migration). |
 | 1.1 | 2026-07-25 | — | **A3 LANDED.** AR-4, run over the shipped code: 0H+2M+4L, all resolved. Two forward gaps A4 would have hit — `LineupSelector` is `internal` to `match-engine` so KD-7's `Rating(club)` is unreachable from `SeasonLoop` (A4 prerequisite recorded; re-implementing selection in `season-save` explicitly refused), and A4a's harness was placed in an assembly that cannot reach `ApplyStrength` (corrected to `src/season-save/tests/`). Plus: `MaxClubCount` 64 → 32 with an explicit `MaxRngStreams` coherence gate (one roster stream per club); `POSITION_COUNT` hoisted to `PlayerDatabaseConstants` so two assemblies stop carrying private copies; negative world-day `[GT]` values refused at read instead of wrapping to ~4.29e9. |
