@@ -1094,18 +1094,54 @@ mirror of `PositioningAIConstants.GK_DEPTH_M`, the resting depth #12's own `Comp
 for a ball on the centre spot, so the boot placement and the positioning model agree by construction
 rather than drifting. Outfield placement is untouched.
 
-**Effect.** In neutral 9-minute runs the away team began scoring immediately and the ball crossed the
-goal line it attacks for the first time (`min ball x` went from 8.2 to **−0.1**); matches went from
-1–0 / 0–0 to 1–1 / 1–0. New locks in `MatchEngineMatchFlowTests`: each keeper stands off the goal line
-it defends and centred on the mouth, and the two keepers guard **opposite** ends — the second being
-the load-bearing one, since two keepers on one line is what the defect amounted to in effect.
+**Effect, measured at both scales — and the second scale is the important one.** In neutral 9-minute
+runs the away team began scoring immediately and the ball crossed the goal line it attacks for the
+first time (`min ball x` went from 8.2 to **−0.1**); scorelines went 1–0 / 0–0 to 1–1 / 1–0. But
+re-running the full Step 0 pilot (20 × 90 minutes) shows the fix is **necessary and nowhere near
+sufficient**:
 
-**Recorded, NOT fixed — the goal rate is still several times football's.** A stationary keeper is a
-collision body, so it deflects what hits it, but it cannot dive, close down, or narrow an angle. The
-honest next step is Goalkeeper Mechanics #11, which is already wired and snapshot-safe but **opt-in
-and default-off** (`EnableGkHeading`); the remaining work recorded on that track is exactly "flip the
-default to on, take the digest rebaseline" — plus GK locomotion, without which a committed
-`SaveIntent` has no body behind it. That is the next realism item after the contact rate (§5.Z.9).
+| bucket | home goals | away goals | mean margin |
+|---|---|---|---|
+| strong-at-home (+3 / −3) | 19 – 40 | **0 in all ten** | 25.3 (was 28.4) |
+| strong-away (−3 / +3) | 0 – 6 | 0 – 2 | 1.7 (was 1.9) |
+
+The away side did start scoring — in 3 of 20 matches, up from 0 of 20 — so the blocked path was real.
+But a **strong away team still averages 0.5 goals while a weak home team averages 2.2**, and the
+strong-at-home margin barely moved. Whatever produces that is structural and is NOT the keeper spawn.
+Recorded as its own finding in §5.Z.11.
+
+New locks in `MatchEngineMatchFlowTests`: each keeper stands off the goal line it defends and centred
+on the mouth, and the two keepers guard **opposite** ends — the second being the load-bearing one,
+since two keepers on one line is what the defect amounted to in effect.
+
+### 5.Z.11 Recorded, NOT fixed — a structural home/away scoring asymmetry, and a goal rate ~10× football's
+
+Two findings from the Step 0 re-run above. Both are measured, neither is diagnosed, and the second
+depends on the first.
+
+1. **Home/away asymmetry (severe).** Over 20 full matches with a ±6-point squad differential correctly
+   measured and applied, the home side scores 19–40 when strong and 0–6 when weak, while the away side
+   scores 0–2 in every configuration. A strong side is worth ~25 goals a match at home and ~0.5 away —
+   roughly a fiftyfold home advantage, where football's is about 0.3 goals. Strength is applied
+   correctly (`dSquad` measures ±6.0 as intended), and 9-minute NEUTRAL runs look roughly balanced
+   (ball in each attacking box 2.7% vs 1.9% of ticks, 1–1 and 1–0 scorelines), so the asymmetry either
+   compounds over a full match or is specific to the `ConfigureSquads` path — the two candidates a
+   measurement pass would separate. This is the project's recurring ERR-008-002 defect class (*"every
+   spec worked example and every AR-1 fixture used the home team"*) and should be attacked the same
+   way: measure per-team shots, final-third time and possession over a FULL match, not nine minutes.
+2. **Goal rate ~10× football's**, on top of the asymmetry. A stationary keeper is a collision body so
+   it deflects what hits it, but it cannot dive, close down, or narrow an angle. The honest next step
+   is Goalkeeper Mechanics #11 — already wired and snapshot-safe but **opt-in and default-off**
+   (`EnableGkHeading`), with "flip the default to on, take the digest rebaseline" already recorded as
+   its remaining work — plus GK locomotion, without which a committed `SaveIntent` has no body behind
+   it.
+
+**Step 0 does not catch either, and that is a gap in Step 0.** Its assertion is
+`strongHomeMargin > strongAwayMargin`, which 25.3 > 1.7 satisfies comfortably — so the pilot now
+**passes** while reporting 25–0 scorelines. It was designed to ask "is there signal?", not "is the
+signal football?". **A4a must stay blocked** regardless: fitting the round-resolution model's three
+parameters against 25–0 results would calibrate the quick-sim to reproduce a defect faithfully across
+a whole league, which is worse than not fitting it at all.
 
 ### 5.Z.8 What this unblocks
 
