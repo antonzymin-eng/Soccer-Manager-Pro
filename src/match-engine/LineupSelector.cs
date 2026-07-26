@@ -171,6 +171,35 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// The mean <see cref="MeanAttribute"/> rating over the eleven players <see cref="Select"/>
+        /// chooses for <paramref name="family"/> — "how strong is the team this club actually fields".
+        /// <para>
+        /// The bench is deliberately excluded: squad depth must not make a club stronger on the day
+        /// (league-bootstrap KD-7 AR-2 L-1). Pure and RNG-free, like everything else here.
+        /// </para>
+        /// <para>
+        /// Public consumers reach this through <see cref="SquadRating"/>, which is the narrow seam #30's
+        /// <c>SeasonLoop</c> (a different assembly) uses; keeping the formation-parameterized form
+        /// internal keeps <see cref="FormationFamily"/> out of the public match-engine surface, so
+        /// <c>season-save</c> needs no <c>positioning-ai</c> reference.
+        /// </para>
+        /// </summary>
+        /// <exception cref="ArgumentException">The squad cannot field <paramref name="family"/> (KD-L3).</exception>
+        internal static float StartingElevenMean(Squad squad, FormationFamily family)
+        {
+            LineupPlan plan = Select(squad, family);
+            int[] starters = plan.StarterLocalIndices;
+            float sum = 0f;
+            for (int s = 0; s < starters.Length; s++)
+            {
+                PlayerRecord starter = squad.GetPlayer(starters[s]);
+                sum += MeanAttribute(in starter.Attributes);
+            }
+
+            return sum / starters.Length;
+        }
+
+        /// <summary>
         /// KD-L1: the coarse <see cref="PlayerPosition"/> a formation slot requires — its own goalkeeper
         /// flag, else its <c>DefaultLine</c> (Defense→Defender, Midfield→Midfielder, Attack→Forward).
         /// </summary>
@@ -199,4 +228,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | greedy-by-rating starter pick (KD-L1/KD-L2), fail-loud on a    |
 // |         |            |        | short line (KD-L3), best-remaining bench, GK flags from the    |
 // |         |            |        | selection (KD-L4). Pure, no RNG.                                |
+// | 1.1     | 2026-07-26 | —      | #30 T2 prerequisite (league-bootstrap KD-7 / AR-4 M-1): new    |
+// |         |            |        | StartingElevenMean — the XI-mean rating the round-resolution   |
+// |         |            |        | model consumes, exposed publicly via SquadRating rather than   |
+// |         |            |        | re-implemented in season-save (the parallel-surface trap).      |
 #endregion

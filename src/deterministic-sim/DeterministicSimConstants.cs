@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/DeterministicSimConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-07-15 (DOMAIN_TAG_PLAYER_DATABASE = 0x1F, squad-player-data-design.md KD-5)
+// Modified: 2026-07-26 (DOMAIN_TAG_SEASON_LOOP = 0x22, ERR-030-001 at #30 T2's first draw site)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.4, §3.2.4.1, Code Standards #20
 // Purpose:  All numeric and string constants for the deterministic simulation system.
@@ -120,6 +120,19 @@ namespace TacticalDirector.DeterministicSim
         /// docs/tracking/squad-player-data-design.md KD-5 (design-supplement stage; no numbered
         /// spec yet — candidate #27).</summary>
         public const byte DOMAIN_TAG_PLAYER_DATABASE = 0x1F;
+
+        /// <summary>
+        /// [FIXED] Domain tag allocated for the Season &amp; Competition Loop #30 (FR-SN-027 — the season
+        /// RNG sub-stream). §3.4; back-prop ERR-030-001, landing at #30 T2's first draw site (the
+        /// round-resolution model's key derivation) exactly as that entry pins it.
+        /// <para>
+        /// <b>0x20 and 0x21 are deliberate gaps</b>, reserved for Player Progression #28 and Training
+        /// #29 respectively (#30 KD-5's honesty note); #28 T0 recorded the same reservation from its own
+        /// side (KD-B) and will claim 0x20 when its production regen stream lands. Allocating 0x22 here
+        /// rather than compacting to 0x20 keeps the spec-pinned numbers stable across the three specs.
+        /// </para>
+        /// </summary>
+        public const byte DOMAIN_TAG_SEASON_LOOP = 0x22;
 
         // ── Error codes (u16; §3.4 / §3.10) ──────────────────────────────────────────
 
@@ -282,4 +295,7 @@ namespace TacticalDirector.DeterministicSim
 // | 1.4     | 2026-07-15 | —      | DOMAIN_TAG_PLAYER_DATABASE = 0x1F allocated for the new              |
 // |         |            |        | player-database roster-generation RNG stream (next value after      |
 // |         |            |        | 0x1E). Back-prop from squad-player-data-design.md KD-5.              |
+// | 1.5     | 2026-07-26 | —      | DOMAIN_TAG_SEASON_LOOP = 0x22 allocated at its first draw site       |
+// |         |            |        | (#30 T2's round-resolution key derivation), per ERR-030-001.        |
+// |         |            |        | 0x20 / 0x21 stay reserved gaps for #28 / #29 (#30 KD-5).            |
 #endregion

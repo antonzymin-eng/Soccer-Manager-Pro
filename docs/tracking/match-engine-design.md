@@ -1,7 +1,20 @@
 # Match Engine — Tick Orchestrator Composition Root (Design Note)
 
 > **Created:** June 15, 2026
-> **Last Updated:** July 14, 2026 (v2.0 — **Match-flow completion landed**: throw-ins, corners,
+> **Last Updated:** July 26, 2026 (v2.1 — **new §5.Z Phase H opened from ERR-030-014: the engine cannot
+> develop play.** Discovered by running roadmap item A4a's KD-8 Step 0 pilot from the season loop: a
+> production match's ball velocity is **identically zero for all 324 000 ticks**, no agent ever possesses
+> it, and every match finishes 0–0 at any squad-strength differential. Root cause is a closed loop, half of
+> it already stated in `InitializeKickoffState`'s own comment — the ball starts at rest, `RunFirstTouch`
+> will only grant a touch on a *moving* ball, production possession comes only from that path, and only a
+> possessing agent can kick. The 600-tick kickoff capstone passes because every predicate it asserts (tick
+> count, stride cadence, finiteness, bounds, digest advance) holds for a match in which nothing happens:
+> **it verified that the composition runs, never that it plays.** §5.Z records the evidence, the four
+> decisions the minimal fix needs (which agent per restart type; possession assignment vs imparted
+> velocity; digest/perf-baseline rebaselining; budgeting for the defects that surface once never-composed
+> code runs), and the acceptance scenario. NOT BUILT — it is roadmap item A4b, ahead of A4a on the critical
+> path. Prior entry below.)
+> **Last Updated (prior):** July 14, 2026 (v2.0 — **Match-flow completion landed**: throw-ins, corners,
 > goal kicks, fouls/cards, offside, substitutions, half-time break, full-time end — the remaining
 > restart/discipline/clock model the v1.4 engine-substrate entry explicitly left "Not built".
 > Companion design note `docs/tracking/match-flow-completion-design.md` (new) carries the full
@@ -759,6 +772,79 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
     `WorldStore` composite + an optional match save blob as two opaque, version-gated sub-blobs.
     `MatchSaveManager` gained public `Encode`/`Restore` (the "match save as a value" blob API the season
     root composes). **Phase G-Phase 3 is complete.**
+
+---
+
+## 5.Z Phase H — possession bootstrap ("make the match playable"), NOT BUILT
+
+> **Opened July 26, 2026 from ERR-030-014.** Roadmap item **A4b**. This is the highest-priority open
+> item on the match engine and the blocker for `PM-1` and for #30's calibration (roadmap A4a).
+
+### 5.Z.1 The finding
+
+A production match cannot develop play. Measured over a full 324 000-tick match and again over 60 000
+ticks in both a distinct-squad and a plain neutral configuration:
+
+- the ball's velocity is **identically zero for the entire match** (max speed 0.00 m/s),
+- it is never airborne (max height 0.11 m = the resting centre height),
+- **no agent ever possesses it** (`PossessingAgentId` never ≥ 0),
+- so every match finishes **0–0**, at any squad-strength differential (20/20 pilot matches 0–0 at a
+  measured rating gap of ±6 on a `[1,20]` scale).
+
+The ball's x-position does wander (≈18–85 m), which is 22 agents jostling a stationary ball by physical
+contact. That is not play.
+
+### 5.Z.2 Root cause — a closed loop, half of it already documented in the source
+
+1. `InitializeKickoffState` places the ball at the centre spot at rest, with the comment
+   *"Stationary ball at the centre spot (a kick would set it in motion; none at Stage 0)."*
+2. `RunFirstTouch` **gate 3** refuses a touch unless the ball is already moving
+   (`|ballVelXY| ≥ FIRST_TOUCH_MIN_BALL_SPEED_M_S`, 0.5 m/s).
+3. In production, possession is granted **only** on that path. `TestOnly_SetPossessor` carries
+   *"Not called by production."*
+4. The ball is set in motion **only** by a pass or shot executor, whose adapters gate on
+   `IsBallPossessedBy(agentId)`.
+
+No motion ⇒ no reception ⇒ no possession ⇒ no kick ⇒ no motion. `ApplyRestart` does not break it either:
+it repositions the ball and clears possession, and reaching a restart requires a boundary crossing, hence
+motion.
+
+### 5.Z.3 Why the suite never caught it
+
+The 321 match-engine tests are per-subsystem or per-mechanic and drive their own inputs, so each one is
+satisfied. The single composed test — the `match-engine-kickoff-multi-second` capstone — ticks 600 ticks
+and asserts tick count, AI-stride cadence, finiteness, on-pitch bounds and digest-chain advance. **Every
+one of those predicates holds for a match in which nothing happens.** No test in the tree asserts that the
+ball is ever kicked, that possession is ever held, or that play reaches a penalty area.
+
+That is the lesson worth keeping: the capstone verified that the composition *runs*, never that it *plays*.
+
+### 5.Z.4 The minimal fix, and the decisions it needs
+
+Award possession to a designated agent at kickoff and at every restart, giving the Decision Tree a carrier
+to act for. Everything downstream already exists — PASS/SHOOT dispatch, pass/shot executors, first touch,
+offside, fouls/cards, goal detection.
+
+Open decisions for the Phase-H pass to make explicitly:
+
+- **Which agent**, per restart type (kickoff, throw-in, corner, goal kick, post-goal restart). The
+  `RestartResolver` already computes the awarded team and ball position, so this extends an existing seam.
+- **Possession assignment vs. imparted velocity.** Assignment is smaller and keeps `ApplyKick` the sole
+  producer of ball motion; a small velocity toward a teammate is closer to a real kickoff but adds a second
+  motion source.
+- **Digest baselines.** Play developing moves every engine digest. Most locks are comparative two-run
+  checks and survive untouched, but `MatchEngineSnapshotSchemaTests`' preimage probes and the certified
+  `FR-PO-052` perf baseline (a match that actually plays will not cost what an idle one costs) both need
+  review.
+- **Expect further defects.** This activates a large amount of code that has never run in composition —
+  roadmap C5's prediction at its strongest. Budget the landing for several findings, not zero.
+
+### 5.Z.5 Acceptance
+
+A composed scenario asserting what none exists for today: over a multi-minute run the ball is kicked, is
+possessed for a non-trivial share of ticks, reaches both penalty areas, and the match produces a non-zero
+scoreline across a spread of seeds. Then re-run #30's A4a Step 0 pilot; only if the strength extremes
+separate does the calibration corpus become meaningful.
 
 ---
 

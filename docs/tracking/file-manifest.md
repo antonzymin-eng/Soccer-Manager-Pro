@@ -1,7 +1,27 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 25, 2026, latest same day (**League bootstrap LANDED** — path-to-playable roadmap
+**Last Updated:** July 26, 2026 (**Season & Competition Loop #30 T2 LANDED** — path-to-playable roadmap item
+A4, the day-advance loop + the round-resolution model. **New files:** `src/season-save/RoundResolutionMode.cs`,
+`RoundResolutionModel.cs`, `SeasonLoop.cs`; `src/match-engine/SquadRating.cs` (the public XI-mean rating seam
+over the internal `LineupSelector` — league-bootstrap AR-4 M-1's named A4 prerequisite);
+`src/season-save/tests/SeasonLoopTests.cs`, `RoundResolutionModelTests.cs`, `SeasonLoopScenarios.cs`,
+`SeasonLoopScenarioTests.cs`, `RoundResolutionCalibrationHarness.cs`,
+`RoundResolutionCalibrationHarnessTests.cs`, `EngineScoringDiagnosticTests.cs`; `tools/round-resolution-fit.py`;
+`docs/tracking/round-resolution-corpus.md` (the A4a evidence record). **Modified:**
+`src/deterministic-sim/DeterministicSimConstants.cs` v1.5 (`DOMAIN_TAG_SEASON_LOOP = 0x22` at its first draw
+site, ERR-030-001); `src/season-save/SeasonLoopConstants.cs` v1.2 (the `[CROSS]` tag mirror, the `[FIXED]`
+sub-stream / match-seed domains + `MAX_GOALS_PER_SIDE`, and the five `[GT]` round-resolution rows);
+`src/match-engine/LineupSelector.cs` v1.1; `src/season-save/tests/season-save-tests.asmdef`
+(+ `TacticalDirector.TestingStrategy`); `docs/specs/season-competition-loop/section-4.md` v0.3;
+`docs/tracking/spec-error-log.md` v1.44; `docs/tracking/match-engine-design.md` v2.1 (new §5.Z Phase H);
+`docs/tracking/path-to-playable-roadmap.md` v0.6. **Full dotnet gate: PASSED, 0 failures (whole tree green;
+season-save 179 → 240 tests (237 passed + 3 env-gated drivers skipped), incl. the capstone scenario).** The landing filed **ERR-030-012 / ERR-030-013** (two §4
+architecture sketches another section of the same spec forbids) and — by running A4a's KD-8 Step 0 pilot —
+**ERR-030-014**: a production match never puts the ball in motion, so every engine match is 0–0. A4a is
+blocked upstream; new roadmap item A4b owns the fix. Prior entry below.)
+
+**Last Updated (prior):** July 25, 2026, latest same day (**League bootstrap LANDED** — path-to-playable roadmap
 item A3, the #47-minimal substitute (roadmap C3). **New files:** `src/season-save/LeagueBootstrapConstants.cs`,
 `ClubNameCatalogue.cs`, `Club.cs`, `League.cs`, `LeagueBootstrap.cs` + `tests/LeagueBootstrapTests.cs` (and
 their `.meta` files); new design supplement `docs/tracking/league-bootstrap-design.md` v1.1. **Modified:**

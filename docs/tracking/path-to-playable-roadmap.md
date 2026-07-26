@@ -188,13 +188,22 @@ tests, adversarial review to convergence, and a green full gate — the project'
 | **A1** ✅ | **#30 T0 — LANDED July 25, 2026** (97 season-save tests, full gate green; surfaced **ERR-030-010**, see §9 risk row C5).  `SeasonState`, `Fixture`, `FixtureScheduler` (pure `Generate`), `LeagueTableRow`/`LeagueTable` (`ApplyResult` + tie-break `OrderedView`), `SeasonCalendar`, `BoardObjective`/`BoardState`, `MatchResult`, `SeasonViewModel`. New `TacticalDirector.SeasonLoop` assembly. Behaviour-neutral by construction (no orchestrator touched). | #30 §7.1 T0 | shim gate + determinism tests | — |
 | **A2** ✅ | **#30 T1 — LANDED July 25, 2026** (135 season-save tests, full gate green; surfaced **ERR-030-011**, see §9 risk row C5). `SeasonStateCodec` (§3.6 / Appendix B sub-blob); `SeasonSaveCodec`/`SeasonSaveBlobs`/`SeasonSaveContents`/`SeasonSaveManager` gain the season block; `SEASON_SAVE_FORMAT_VERSION` **1 → 2**, `SEASON_STATE_FORMAT_VERSION` = 1 first used. World and match blobs byte-untouched (FR-SN-020). | #30 §7.1 T1 | round-trip + fail-loud gates | A1 |
 | **A3** ✅ | **League bootstrap — LANDED July 25, 2026** (season-save 141 → 168 tests, player-database 42 → 46, full gate green). `LeagueBootstrap.Generate(worldSeed, clubCount)` → `League`: N clubs (default 20) × 25 **position-coherent** players, deterministic from one world seed via three domain-separated derivations; `Club`/`ClubNameCatalogue` identity; a per-club strength ramp so the table is not 20 identical teams (its *sufficiency* is A4a Step 0's first check); `League` **is** the `ISquadProvider`; `CreateSeason` hands #30 a startable `SeasonState`. Generation is persistence-equivalent — rosters are regenerated from the world seed, not saved — so it is pinned by a golden vector (KD-10), and `WorldStore.WorldSeed` is now readable so a saved career can rebuild its provider. **The #47-minimal substitute (C3), not the editor.** | `league-bootstrap-design.md` v1.1 (§6 item 1) | determinism + round-trip | A1 |
-| **A4** | **#30 T2** — `SeasonLoop` composition root; `AdvanceToNextFixtureDay` (KD-2 fixed tick order, only the world tick live); `AdvanceAndPlayNextRound(ISquadProvider)` (KD-9 — managed fixture through a real `MatchEngine`, the rest via the round-resolution model); the #16 §3.4 back-prop (`DOMAIN_TAG_SEASON_LOOP = 0x22` / `SubsystemOrdinals.SeasonLoop = 84`); the `#19 ScenarioRunner` `season-multi-fixture` capstone. | #30 §7.1 T2 | capstone scenario + two-run determinism | A2, A3, A4a |
-| **A4a** | **Round-resolution calibration corpus** — generate ~200 engine-simulated matches across varied squad strengths; fit the quick-sim distributions against it; record the corpus + fit as a tracked artifact. **~9 h of compute (C1a) — schedule it, don't discover it.** *Methodology is now designed (KD-8: bucket grid, artifact contents incl. the engine SHA re-capture trigger, pinned-seed fit lock, acceptance bars); only the run remains. Harness home: `src/season-save/tests/`.* | `league-bootstrap-design.md` KD-7/KD-8 | corpus committed; fit locked by test | A3 |
+| **A4** ✅ | **#30 T2 — LANDED July 26, 2026** (season-save 179 → 240 tests (237 passed + the 3 env-gated calibration/diagnostic drivers skipped), incl. the `season-multi-fixture` capstone, full gate green; surfaced **ERR-030-012**, **ERR-030-013** and — via A4a's Step 0 — **ERR-030-014**, see §9). `SeasonLoop` composition root; `AdvanceToNextFixtureDay` (KD-2 fixed tick order, only the world tick live); `AdvanceAndPlayNextRound(ISquadProvider)` (KD-9 — managed fixture through a real `MatchEngine`, the rest via the round-resolution model); the #16 §3.4 back-prop (`DOMAIN_TAG_SEASON_LOOP = 0x22` / `SubsystemOrdinals.SeasonLoop = 84`); the `#19 ScenarioRunner` `season-multi-fixture` capstone. | #30 §7.1 T2 | capstone scenario + two-run determinism | A2, A3 (**not** A4a — see below) |
+| **A4a** ⛔ | **Round-resolution calibration corpus — BLOCKED UPSTREAM (ERR-030-014), Step 0 executed July 26, 2026.** KD-8's Step 0 pilot ran and **refused to proceed**: all 20 engine matches finished **0–0** at a measured `dSquad` of **±6**. Characterisation found the ball's velocity identically zero for the whole match and no agent ever possessing it — `InitializeKickoffState` leaves the ball at rest, `RunFirstTouch` will only grant a touch on a *moving* ball, production possession comes only from that path, and only a possessing agent can kick. **A production match has always been a 90-minute 0–0 deadlock.** The blocker is therefore not A4a's compute (measured at ~98 s/match ⇒ ~1.4 h across four processes, well inside C1a's 9 h budget) but the engine's inability to produce a corpus with variance in it. Step 0 did exactly its job — it cost 33 minutes and saved a five-hour fit against a table of zeros. **The harness, the fitter and the re-run recipe are committed**; A4a resumes the moment A4b lands. | `league-bootstrap-design.md` KD-7/KD-8; evidence + root cause in `round-resolution-corpus.md` | Step 0 gate (currently failing by design) | **A4b** |
+| **A4b** ⬥ **NEW, now the critical path** | **Make the match playable — a kickoff/restart possession grant.** Award possession to a designated agent at kickoff and at every restart, so the Decision Tree has a carrier to act for; from there PASS/SHOOT dispatch, first touch, offside, fouls and goal detection all already exist. Deliberately not folded into A4: it is a behaviour change to the most safety-critical assembly in the tree, it activates a large amount of code that has never run in composition (**C5 at its strongest — budget for several findings**), and it moves every engine digest, so the schema preimage probes and the certified perf baseline need review. **Blocks A4a and PM-1; does not block PM-2-sim.** | ⚠ needs a design note — extend `match-engine-design.md` (§6 item 4) | a composed scenario that asserts the ball is **kicked** and play reaches both boxes — the assertion no existing test makes | A4 |
 | **A5** | **#30 T3** — `RollToNextSeason` (KD-6 restartable transform); two-run + restartability tests; the #43 insertion point (a') left explicit and empty. | #30 §7.1 T3 | restartability tests | A4 |
 
 **Phase A exit — `PM-2-sim`:** a full 38-round season simulates head-lessly, saves and resumes
 byte-identically, and rolls into a second season. **No UI yet, no Unity, no external blocker.** This
 is the single highest-value block of work available, and it is entirely unblocked today.
+
+> **Reached in substance July 26, 2026, with one asterisk.** A4's landing runs a full 20-club / 38-round /
+> 380-fixture season head-lessly in milliseconds, saves and restores it byte-identically mid-sequence, and
+> is two-run deterministic — so PM-2-sim's *loop* is done bar A5's boundary roll. The asterisk is
+> **ERR-030-014**: the quick-sim produces the whole table, and the one fixture that goes through the real
+> engine produces 0–0 because a Stage-0 match never puts the ball in motion. A season therefore *simulates*
+> correctly while the managed match is not yet worth watching — which is why A4b now sits ahead of A4a on
+> the critical path, and why PM-1's exit criteria cannot be met until it lands.
 
 ### Phase B — Playable match client (Track C)
 
@@ -260,6 +269,13 @@ all of which govern shipped code with no numbered spec:
    its data spec; #30 and #27 are APPROVED, so the gate is satisfied and the screens add no framework
    change (§7.1: *"no framework change per screen"*).
 3. **D6 #50 Save Migration** → a decision first, a spec only if the decision goes that way.
+4. **A4b make-the-match-playable** *(new, July 26, 2026)* → extend `docs/tracking/match-engine-design.md`
+   with a possession-bootstrap phase, rather than opening a numbered spec. The match engine has never been
+   a numbered spec — that design note already governs Phases A–G of it, including behaviour changes of this
+   class — and the change consumes only surfaces that exist (`_possessingAgentId`, the restart primitive,
+   the Decision Tree's carrier branch). The note must decide: which agent receives possession at kickoff and
+   at each restart type, whether the grant is a possession assignment or a small imparted velocity, and what
+   happens to the engine's digest baselines.
 
 **Deliberately deferred past PM-3:** #47 (editor), #42, #45, #35, #36, #46, #48, #51, #52, #43,
 #32, #34, #33, #49 content. None is on the path to a playable season.
@@ -315,9 +331,20 @@ available, not as a gate on playing the game.
                                               D1 #28 · D2 #29 · D3 #41 · D4 #40 · D5 #31 ──► PM-3
 ```
 
-**Critical path to PM-2:** A1 → A2 → A4 → A5 → C1 → C2 → C3 → C4, with A3/A4a feeding A4 and Track C
+**Critical path to PM-2:** A1 → A2 → A4 → A5 → C1 → C2 → C3 → C4, with A3 feeding A4 and Track C
 converging at C3. Roughly **13–16 landings to PM-2** on the critical path, plus 5–6 on Track C
 running in parallel.
+
+**Amended July 26, 2026.** A4a is no longer a *predecessor* of A4 — A4 landed with the model's shape
+pinned and its numbers provisional, which is the right factoring: the loop does not depend on the fit, only
+on the fit being honest about itself. A4a instead sits behind the new **A4b** (make the match playable),
+which is now the critical path to **PM-1** and to any calibrated table:
+
+```
+   A4 #30 T2 ✅ ──► A4b ⬥ playable match ──► A4a calibration ──► (recalibrated quick-sim)
+        │                   │
+        └──► A5 #30 T3 ──► PM-2-sim        └──► PM-1 (Phase B's exit becomes reachable)
+```
 
 ---
 
@@ -326,7 +353,8 @@ running in parallel.
 | Risk | Severity | Mitigation |
 |---|---|---|
 | Round-resolution model diverges from engine results; league tables feel wrong | **High** | A4a calibration corpus, budgeted as its own item; lock the fit by test |
-| The league strength spread is too small to move engine results, so the table is noise regardless of the quick-sim | **High** | `league-bootstrap-design.md` KD-8 **Step 0**: a ~20-match pilot at the ramp extremes runs BEFORE the 9 h corpus; if the extremes are indistinguishable, raise `LeagueStrengthSpread` first rather than fit three parameters to noise |
+| **A production match cannot develop play at all — ball velocity identically zero, possession never granted, every match 0–0 (ERR-030-014)** | **High (MATERIALISED July 26, 2026)** | Found by A4a's KD-8 Step 0 pilot, which refused to proceed and thereby saved a ~5 h fit against a table of zeros. Root cause diagnosed to a closed loop between the at-rest kickoff, `RunFirstTouch`'s moving-ball gate, and the possession-gated kick. New item **A4b** now precedes A4a on the critical path; PM-1 blocked, PM-2-sim not. Evidence: `round-resolution-corpus.md` |
+| The league strength spread is too small to move engine results, so the table is noise regardless of the quick-sim | **High (untestable until A4b)** | `league-bootstrap-design.md` KD-8 **Step 0**: a ~20-match pilot at the ramp extremes runs BEFORE the 9 h corpus; if the extremes are indistinguishable, raise `LeagueStrengthSpread` first rather than fit three parameters to noise |
 | A generation change silently invalidates every save (rosters are regenerated from the world seed, not persisted) | **High** | Pinned golden vector (`LeagueBootstrapGoldenVectorTests`, KD-10), verified non-vacuous; a generation change must re-pin in the same commit and is treated as save-breaking |
 | Spec-defect latency — T0s surface ERR-class findings against never-compiled specs (C5) | **High (certain)** | Expect 1–3 per landing; keep code-side adversarial review; file ERRs against spec text as the project already does |
 | Unity host access never materialises | Medium | B6 option (b) removes it from the critical path entirely |
@@ -355,6 +383,7 @@ running in parallel.
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.6 | July 26, 2026 | **A4 (#30 T2) LANDED** — the `SeasonLoop` composition root, the KD-2 fixed day-advance order (only the world tick live), whole-round resolution routed by a new `RoundResolutionMode` dial, the keyed `RoundResolutionModel` quick-sim, the `DOMAIN_TAG_SEASON_LOOP = 0x22` back-prop at its first draw site, and the `season-multi-fixture` capstone. Season-save 179 → 240 tests (237 passed + 3 env-gated drivers skipped), full gate green. C5's prediction held for the fourth consecutive landing, and this time it produced the most consequential finding on the track: **ERR-030-012** (§4.5's registered cursor stream contradicts §3.4.1's keyed-draw requirement — realized as a keyed derivation; `SubsystemOrdinals.SeasonLoop` deliberately NOT allocated, since an ordinal with no stream is the FR-LW-031 phantom), **ERR-030-013** (§4.6's "records the `MatchResult` in `SeasonState`" is unimplementable — §2.2/Appendix B have no outcome collection), and **ERR-030-014** — found by executing A4a's KD-8 Step 0 pilot: **every engine match finishes 0–0 because a production match never puts the ball in motion at all**. New item **A4b** (kickoff/restart possession grant) now precedes A4a on the critical path; A4a is blocked upstream of itself, with its harness, fitter and re-run recipe committed. |
 | v0.5 | July 25, 2026 | **A3 (league bootstrap) LANDED** — `LeagueBootstrap` / `League` / `Club` / `ClubNameCatalogue` / `LeagueBootstrapConstants` in `TacticalDirector.SeasonSave` (+ a `PlayerDatabase` asmdef reference), and an additive supplied-position `RosterGenerator.Generate` overload. Governed by the new `league-bootstrap-design.md` (AR-1 1H+2M+2L → AR-2 1M+1L → AR-3 CONVERGENCE → AR-4 over the code 2M+3L). Season-save 141 → 168 tests, player-database 42 → 46, full gate green. C5's prediction held in a new form: the H finding was found *at design time* rather than after landing — uniform position draws make ~3% of bootstrapped squads unable to field a back four, which `LineupSelector` refuses fail-loud, so a 20-club league would have failed to start *by seed*. §6 item 1 is closed; **A4a's methodology is designed, its ~9 h run is not done.** |
 | v0.4 | July 25, 2026 | **A2 (#30 T1) LANDED** — the season save/restore path: `SeasonStateCodec` over the Appendix B layout, the frame gaining a third sub-blob, `SEASON_SAVE_FORMAT_VERSION` 1 → 2, and `Save`/`Load` gaining the season (FR-SN-021). Season-save tests 112 → 135, full gate green. C5's prediction held for the second consecutive landing: implementation surfaced **ERR-030-011** (§3.6's `EncodeSeason` pseudocode omitted `ManagedClubId`, which Appendix B row 3a requires; Appendix B row 11's `f32/u8` job security pinned to the integer per-mille the code carries), filed and patched same commit. A code self-review also closed an encode/decode asymmetry in the T0 `SeasonState` constructor (an empty schedule with an unset calendar was constructible but not decodable). |
 | v0.3 | July 25, 2026 | Adversarial-review corrections: engine test count 306 → 321 (both occurrences); C1's per-match / per-season figures relabelled **lower bounds** — they multiply the certified *median* per-tick cost by the tick count, but wall-clock tracks the *mean* and p99 = 2.5669 ms, so the true cost is higher (the infeasibility conclusion only strengthens). |
