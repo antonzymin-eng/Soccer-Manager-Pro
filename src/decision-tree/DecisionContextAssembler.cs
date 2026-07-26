@@ -41,7 +41,7 @@ namespace TacticalDirector.DecisionTree
             bool agentHasBall = matchContext.PossessingAgentId == agentId;
 
             PossessionState possessedByTeam;
-            if (matchContext.PossessingAgentId == -1)
+            if (matchContext.PossessingAgentId == DecisionTreeConstants.NoPossessorAgentId)
             {
                 possessedByTeam = PossessionState.CONTESTED;
             }

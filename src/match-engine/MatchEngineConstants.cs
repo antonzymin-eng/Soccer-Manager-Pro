@@ -262,6 +262,20 @@ namespace TacticalDirector.MatchEngine
         /// allowance). Design note §6.</summary>
         public const int MAX_SUBSTITUTIONS_PER_TEAM = 5;
 
+        /// <summary>
+        /// [FIXED] Team id awarded the FIRST-half kickoff. Stage 0 has no coin toss (that draw would need
+        /// its own registered RNG stream and buys nothing yet), so the home side kicks off — a fixed
+        /// convention, not a tunable. Match Engine design note §5.Z (Phase H).
+        /// </summary>
+        public const int FIRST_HALF_KICKOFF_TEAM = 0;
+
+        /// <summary>
+        /// [DERIVED] Team id awarded the SECOND-half kickoff = the side that did not kick off the first
+        /// half (Laws of the Game, Law 8). Derived so the two can never drift to the same team.
+        /// Source constants: MatchEngineConstants.FIRST_HALF_KICKOFF_TEAM, MatchEngineConstants.TEAM_COUNT.
+        /// </summary>
+        public const int SECOND_HALF_KICKOFF_TEAM = (FIRST_HALF_KICKOFF_TEAM + 1) % TEAM_COUNT;
+
         #endregion
 
         #region Derived
@@ -410,6 +424,19 @@ namespace TacticalDirector.MatchEngine
         /// Mid-scale placeholder pending the Stage-1 config loader.
         /// </summary>
         public static readonly float FIRST_TOUCH_MIN_BALL_SPEED_M_S = Config.GetFloat("match-engine", "FIRST_TOUCH_MIN_BALL_SPEED_M_S", 0.5f);
+
+        /// <summary>
+        /// [GT] Host reach (m) within which an agent claims a loose ball that has come to REST — the
+        /// <see cref="MatchEngine"/> loose-ball pickup (design note §5.Z Phase H, KD-H3). Deliberately a
+        /// separate constant from <see cref="FIRST_TOUCH_ACCEPTANCE_RADIUS_M"/>: that gate is the reach at
+        /// which an INCOMING ball counts as arriving (a First Touch #4 event, whose control-quality model
+        /// is a function of incoming velocity), whereas this is the reach at which a player standing over
+        /// a still ball simply has it. The two mechanics are disjoint by construction — pickup requires a
+        /// ball BELOW <see cref="FIRST_TOUCH_MIN_BALL_SPEED_M_S"/>, first touch requires it at or above —
+        /// so no ball can satisfy both, and they are tunable independently. Mid-scale placeholder pending
+        /// the Stage-1 config loader.
+        /// </summary>
+        public static readonly float LOOSE_BALL_PICKUP_RADIUS_M = Config.GetFloat("match-engine", "LOOSE_BALL_PICKUP_RADIUS_M", 1.0f);
 
         /// <summary>
         /// [GT] Minimum <c>ContactForceData.ForceMagnitude</c> (N) for a FROM_BEHIND agent-agent

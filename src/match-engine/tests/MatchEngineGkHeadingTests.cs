@@ -96,13 +96,25 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void FlagOff_TicksDeterministically_AndCommitsNoIntent()
         {
+            // The two runs are SEQUENTIAL, not interleaved. The EventBus is a process-static singleton
+            // (#17 §3.2.1 KD-4/KD-8) reset per match by Boot's ResetForNewMatch, so exactly one engine may
+            // be ticking at a time: interleaved ticks share one ledger and one tick/phase cursor. That was
+            // invisible until §5.Z Phase H, because before it no production event was ever published (no
+            // possession ever changed, and no goal was ever scored) — so an interleaved loop silently
+            // worked. It now diverges on tick 1, which is a property of the shared bus, not of the engine.
             var a = new MatchEngine(MatchSeed);
-            var b = new MatchEngine(MatchSeed);
+            var chainA = new byte[TickCount][];
             for (int i = 0; i < TickCount; i++)
             {
                 a.RunTick();
+                chainA[i] = (byte[])a.CurrentSnapshotDigest.Clone();
+            }
+
+            var b = new MatchEngine(MatchSeed);
+            for (int i = 0; i < TickCount; i++)
+            {
                 b.RunTick();
-                CollectionAssert.AreEqual(a.CurrentSnapshotDigest, b.CurrentSnapshotDigest,
+                CollectionAssert.AreEqual(chainA[i], b.CurrentSnapshotDigest,
                     $"Default (flag-off) engine must stay deterministic — diverged at tick {i + 1}.");
             }
             Assert.IsFalse(a.TestOnly_LastCommittedSaveAttrs.HasValue,

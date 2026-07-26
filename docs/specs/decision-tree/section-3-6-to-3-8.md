@@ -145,6 +145,19 @@ multiple simulation frames; the DT remains in EXECUTING across those frames.
 
 ---
 
+> **ERR-008-015 back-prop anchor (July 26, 2026).** This table holds a tree in EXECUTING after a PASS or
+> SHOOT dispatch and states that completion "arrives via `NotifyActionComplete`" — but it assigned that
+> obligation to no one, and **no production caller existed**. The possession-changed consumer interrupts
+> only the NEW holder, never the passer, so every agent that completed a pass or a shot stayed in EXECUTING
+> for the remainder of the match: no further decisions, no further movement commands, and — if it still held
+> the ball — no way to release it. A **rejected** `Execute` was worse, since §3.5.2 has the dispatcher
+> deliberately not inspect the result: the tree entered EXECUTING with nothing in flight, so no completion
+> could ever arrive. The obligation belongs to the composition root, the only layer holding both the trees
+> and the executors, and one rule covers completion and rejection alike: *a tree waiting on an executor that
+> is not running has nothing left to wait for.* #8 exposes `IsAwaitingExecutorCompletion` so the
+> continuous-vs-blocking rule stays defined once (over `DecisionTreeStateMachine.IsContinuousAction`) rather
+> than being re-implemented host-side. See ERR-008-015 and `match-engine-design.md` §5.Z (KD-H4).
+
 ### 3.7.2 Transition Table
 
 | From | To | Trigger | Guard | Action on Transition |

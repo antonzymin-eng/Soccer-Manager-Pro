@@ -220,6 +220,26 @@ namespace TacticalDirector.DecisionTree
         }
 
         /// <summary>
+        /// True while this tree is parked in EXECUTING waiting for a dispatched PASS/SHOOT to finish —
+        /// i.e. the states in which <see cref="OnSnapshotReceived"/> deliberately does NOT re-evaluate
+        /// (§3.7.2), so only <see cref="NotifyActionComplete"/>, <see cref="NotifyInterrupt"/>, or a
+        /// forced refresh can move it on.
+        ///
+        /// <para>Exposed for the orchestrator (ERR-008-015, match-engine design note §5.Z Phase H): §3.7.2
+        /// specifies that completion "arrives via NotifyActionComplete" but assigns the obligation to
+        /// nobody, and no production caller existed — so every agent that dispatched a pass or a shot sat
+        /// in EXECUTING for the rest of the match, issuing no further decisions and, if it still held the
+        /// ball, never releasing it. The composition root owns both this tree and its executors, so it is
+        /// the only layer that can see the executor lifecycle end; this predicate lets it do so without
+        /// re-implementing the §3.7.2 continuous-vs-blocking rule (which lives, once, in
+        /// <see cref="DecisionTreeStateMachine.IsContinuousAction"/>).</para>
+        /// </summary>
+        public bool IsAwaitingExecutorCompletion =>
+            _state == DtState.EXECUTING
+            && _hasDispatchedAction
+            && !DecisionTreeStateMachine.IsContinuousAction(_lastAction.Type);
+
+        /// <summary>
         /// Signals the current action completed successfully.
         /// §3.7.
         /// </summary>

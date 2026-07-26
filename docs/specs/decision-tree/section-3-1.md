@@ -844,6 +844,40 @@ off-ball branch is byte-identical to §3.1.7–§3.1.9. Owned by ERR-008-013 + t
 
 ---
 
+## 3.1.14 Loose-ball collect (ERR-008-014 back-prop anchor)
+
+Before this correction the tree had **no action at all that fetches a loose ball lying at rest**: §3.1.7
+MOVE_TO_POSITION targets the formation slot, §3.1.8 PRESS requires an opponent target, and §3.1.9.1 rejects
+any ball below `INTERCEPT_MIN_BALL_SPEED`. Composed in the match engine, play therefore stopped for good the
+first time a pass ran out of momentum in space — measured, with the nearest agent 13.75 m away (beyond
+§3.1.9.3's `MAX_INTERCEPT_TIME` reach of roughly ten metres) and all 22 agents settling onto their formation
+slots around a ball none of them could decide to fetch.
+
+Two changes, both additive:
+
+1. **§3.1.9.1's minimum-ball-speed gate is re-expressed, not removed.** Its real purpose is to stop
+   teammates converging on a ball their own carrier is standing over — a carried ball is also slow — so it
+   now reads: *a slow ball is intercept-eligible only while it is LOOSE.* A slow POSSESSED ball is still
+   rejected (pressing an opponent's carrier is §3.1.8's job).
+2. **The loose case routes to a dedicated collect**, gated on the new `TacticalContext.LooseBallCollector`
+   fact and emitted as the **SOLE** off-ball option — the §3.1.13 SAVE pattern, for the reason ERR-008-013's
+   AR-4 established: a must-happen action cannot depend on out-scoring a competitor under composure noise.
+   It does not: the collect scores ~0.35 against MOVE_TO_POSITION's ~0.21 on neutral attributes, a gap of
+   0.14 inside the ±0.15 noise band, and the designated collector measurably flip-flopped and never arrived.
+   The collect skips §3.1.9.2's look-ahead geometry (at v ≈ 0 every projected point is the ball's own
+   position) and carries feasibility 1.0, since for a stationary ball being the designated player IS the
+   feasibility.
+
+`LooseBallCollector` is set by the match engine, not derived inside the tree: it is a team-level role
+assignment from team state (the Pressing AI #13 primary-presser precedent) and — load-bearing — only the
+host knows which agents are **sent off**. A perception-derived "no teammate I can see is closer" rule
+deadlocked on a frozen red-carded agent that eleven teammates deferred to. No collector designated ⇒ the
+fact is false for every agent ⇒ this section is inert and the off-ball branch is byte-identical to
+§3.1.7–§3.1.9. Owned by ERR-008-014 + the code (`OptionGenerator.GenerateLooseBallCollectCandidate`);
+scoring is §3.2 (unchanged — it is an INTERCEPT), dispatch §3.5.
+
+---
+
 ## 3.1.12 Version History
 
 | Version | Date | Author | Changes |

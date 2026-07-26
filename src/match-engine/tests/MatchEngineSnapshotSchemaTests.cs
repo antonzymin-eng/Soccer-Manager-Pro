@@ -506,10 +506,19 @@ namespace TacticalDirector.MatchEngine
             // action. The first processed tick is not an AI stride tick, so the DecisionTree is not
             // re-evaluated this tick and the injected state passes through to the snapshot unchanged —
             // a clean single-field probe (parallel to the OscillationGuard probe above).
+            //
+            // The injected action must be a CONTINUOUS one. §5.Z Phase H added the orchestrator's
+            // PASS/SHOOT completion sweep (ERR-008-015), which releases a tree parked in EXECUTING on a
+            // pass/shot whose executor is idle — and `default(AgentAction).Type` is PASS (ordinal 0), so
+            // the old probe erased its own perturbation during the very tick it was measuring, leaving
+            // the two digests equal and the probe silently vacuous.
             var perturbed = new MatchEngine(MatchSeed);
             var injected = new DecisionTreeState(
                 state: (int)DtState.EXECUTING,
-                lastAction: default,
+                lastAction: new AgentAction(
+                    agentId: OutfieldIndex, type: ActionType.MOVE_TO_POSITION, targetAgentId: -1,
+                    targetPosition: Vector2.zero, passParams: default, shotParams: default,
+                    utilityScore: 0f, heartbeatTick: 0),
                 hasDispatchedAction: true);
             perturbed.TestOnly_SetDecisionTreeState(OutfieldIndex, injected);
             perturbed.RunTick();

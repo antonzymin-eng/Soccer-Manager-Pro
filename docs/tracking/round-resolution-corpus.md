@@ -1,7 +1,9 @@
 # Round-Resolution Calibration Corpus — A4a
 
 > **Created:** July 26, 2026
-> **Status:** **BLOCKED at KD-8 Step 0.** This document was meant to record the fitted parameters of the
+> **Status:** **UNBLOCKED July 26, 2026 — the upstream defect is fixed; Step 0 is re-runnable.** The engine gap this document diagnosed (ERR-030-014) was closed the same day by match-engine §5.Z Phase H (roadmap A4b): a production match now kicks the ball (peak 16.2–17.2 m/s, was 0.00), holds possession 10.5–20.9% of ticks (was 0%), works into both penalty areas and scores. **Next action: re-run the Step 0 pilot below (~33 min).** Note it may still refuse — Phase H makes matches *play*, not necessarily *discriminate by squad strength*, and the latter is exactly what Step 0 asks; if the ramp extremes remain indistinguishable the answer is to raise `LeagueStrengthSpread`, not to fit three parameters to noise. Everything below is the July-26 pre-fix record, kept verbatim as the evidence trail.
+>
+> **Status (original, pre-fix):** **BLOCKED at KD-8 Step 0.** This document was meant to record the fitted parameters of the
 > #30 round-resolution model against ~200 engine-simulated matches. It instead records why that corpus
 > cannot be generated today, because Step 0 — the cheap signal check that runs *before* the multi-hour
 > corpus — refused to proceed.

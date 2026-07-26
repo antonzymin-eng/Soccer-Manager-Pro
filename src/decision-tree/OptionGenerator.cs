@@ -72,6 +72,17 @@ namespace TacticalDirector.DecisionTree
             if (ctx.TacticalContext.SaveAvailable)
                 return GenerateSaveCandidate(in ctx, buf, count); // §3.1.10 (new)
 
+            // ERR-008-014: this agent is the designated collector of a loose ball lying at rest — emit
+            // the collect as the SOLE option, exactly as SAVE is emitted above and for the same reason
+            // (AR-4's finding, restated): an action that MUST happen must not depend on out-scoring a
+            // competitor under composure noise. Measured, it does not: the collect scores ~0.35 against
+            // MOVE_TO_POSITION's ~0.21 on neutral attributes, a gap of 0.14 that sits INSIDE the ±0.15
+            // noise band, so the designated collector flip-flopped between chasing the ball and
+            // returning to its formation slot and never covered the last few metres. Play stopped with
+            // one agent dithering next to a ball nobody else was allowed to fetch.
+            if (ctx.TacticalContext.LooseBallCollector)
+                return GenerateLooseBallCollectCandidate(in ctx, buf, count); // §3.1.9 (loose-ball case)
+
             count = GenerateMoveCandidate(in ctx, buf, count);      // §3.1.7
             count = GeneratePressCandidate(in ctx, buf, count);     // §3.1.8
             count = GenerateInterceptCandidate(in ctx, buf, count); // §3.1.9
@@ -608,6 +619,21 @@ namespace TacticalDirector.DecisionTree
 
             Vector3 ballVel3 = ctx.MatchContext.BallVelocity;
             float ballSpeed  = new Vector2(ballVel3.x, ballVel3.y).magnitude;
+
+            // ERR-008-014 (match-engine design note §5.Z Phase H). The §3.1.9.1 minimum-ball-speed gate
+            // used to reject EVERY slow ball, which left the tree with no action at all that sends an
+            // agent to a LOOSE ball lying at rest: PRESS targets an opponent, MOVE_TO_POSITION targets the
+            // formation slot, and INTERCEPT bailed out here. Composed, that meant a pass which simply ran
+            // out of momentum ended the match — nobody ever went to fetch the ball again.
+            //
+            // The gate's real purpose is to stop teammates converging on a ball their own carrier is
+            // standing over (a carried ball is also slow), so it is re-expressed as exactly that: a slow
+            // ball is intercept-eligible only while it is LOOSE. A possessed slow ball is still rejected —
+            // pressing an opponent's carrier is PRESS's job, not INTERCEPT's.
+            //
+            // A slow ball never reaches the §3.1.9.2 look-ahead geometry: it is either possessed (PRESS's
+            // job, not INTERCEPT's) or it is a loose ball at rest, which the off-ball branch has already
+            // routed to the ERR-008-014 collect short-circuit above for the designated collector.
             if (ballSpeed < UtilityWeights.INTERCEPT_MIN_BALL_SPEED) return count;
 
             // Intercept geometry (§3.1.9.2)
@@ -650,6 +676,44 @@ namespace TacticalDirector.DecisionTree
                 TargetPosition            = PitchGeometry.ClampToPitch(bestPt),
                 InterceptFeasibilityScore = feasibility,
                 TimeToIntercept           = bestTime
+            };
+
+            return count;
+        }
+
+        /// <summary>
+        /// ERR-008-014 — emits the "collect the loose ball" candidate: an INTERCEPT whose target is the
+        /// ball where it lies. Reached only via the off-ball short-circuit, i.e. only when the host has set
+        /// <see cref="TacticalContext.LooseBallCollector"/> for this agent, so it is always the sole
+        /// option.
+        ///
+        /// <para>The §3.1.9.2 look-ahead geometry is deliberately NOT used here: at v ≈ 0 every projected
+        /// point is the ball's own position, and that path's <c>MAX_INTERCEPT_TIME</c> feasibility cap
+        /// (~10 m at a typical top speed) made a ball resting any further away un-chaseable by anyone —
+        /// measured composed, that is what stopped the match once a pass ran out of momentum in space.
+        /// Feasibility is 1.0 because, for a stationary ball, being the nearest player IS the
+        /// feasibility.</para>
+        /// </summary>
+        private static int GenerateLooseBallCollectCandidate(
+            in DecisionContext ctx,
+            ActionOption[] buf,
+            int count)
+        {
+            if (count >= buf.Length) return count;
+
+            // The authoritative ball position, not the perceived one: the HOST designated this agent
+            // from ground truth, so deriving the target from a (possibly stale) perceived position could
+            // send the designated collector somewhere the ball is not.
+            Vector2 ballPos = ctx.MatchContext.BallPosition;
+            float myDist    = Vector2.Distance(ctx.AgentPosition, ballPos);
+
+            buf[count++] = new ActionOption
+            {
+                Type                      = ActionType.INTERCEPT,
+                TargetAgentId             = -1,
+                TargetPosition            = PitchGeometry.ClampToPitch(ballPos),
+                InterceptFeasibilityScore = 1.0f,
+                TimeToIntercept           = myDist / Mathf.Max(AgentMaxSpeed(ctx.A_Pace), 0.01f)
             };
 
             return count;

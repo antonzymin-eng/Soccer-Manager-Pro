@@ -29,6 +29,16 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public const int HomeSquadAgentCount = 11;
 
+        /// <summary>
+        /// [FIXED] <c>MatchContext.PossessingAgentId</c> sentinel meaning "the ball is loose — no agent
+        /// holds it". Single source of truth for the loose-ball test, which both
+        /// <c>DecisionContextAssembler</c> (possessor-team classification) and <c>OptionGenerator</c>
+        /// (ERR-008-014 §3.1.9.1 loose-ball INTERCEPT) key on. Mirrors the host's
+        /// <c>MatchEngineConstants.NO_POSSESSION</c>; the two are cross-assembly siblings, so neither may
+        /// change without the other.
+        /// </summary>
+        public const int NoPossessorAgentId = -1;
+
         // ── Option Array Capacity ─────────────────────────────────────────────
         // §3.1.0: up to 17 slots (7 action types + 10 PASS candidates)
 

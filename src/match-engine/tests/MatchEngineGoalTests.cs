@@ -91,7 +91,14 @@ namespace TacticalDirector.MatchEngine
                 MatchEngineConstants.PITCH_LENGTH_M - MatchEngineConstants.GOAL_AREA_DEPTH_M,
                 ball.Position.x, 1e-4f, "Goal-kick restart in the six-yard box on the exited (away) goal line.");
             Assert.AreEqual(MatchEngineConstants.PITCH_WIDTH_M * 0.5f, ball.Position.y, 1e-4f);
-            Assert.AreEqual(MatchEngineConstants.NO_POSSESSION, engine.TestOnly_PossessingAgentId);
+
+            // §5.Z Phase H (KD-H1): the goal kick is awarded to the team defending that goal (home
+            // touched last, so the away side restarts). Pre-Phase-H this asserted NO_POSSESSION.
+            int taker = engine.TestOnly_PossessingAgentId;
+            Assert.AreNotEqual(MatchEngineConstants.NO_POSSESSION, taker,
+                "A goal kick must be awarded to a taker.");
+            Assert.AreEqual(1, engine.AgentTeamId(taker),
+                "Team 0 put it out, so team 1 takes the goal kick.");
         }
 
         [Test]
@@ -122,8 +129,17 @@ namespace TacticalDirector.MatchEngine
             engine.RunTick();
 
             Assert.AreEqual(1, engine.TestOnly_Goals(0));
-            Assert.AreEqual(3, engine.TestOnly_LastHolderAgentId,
-                "The tracker is only ever overwritten by a real holder — at goal time it still names the kicker.");
+
+            // The scorer credit is read at goal time, BEFORE the restart: the tracker was 3 entering this
+            // tick (asserted above) and is only ever overwritten by a real holder, so the GoalAwardedEvent
+            // named 3. §5.Z Phase H then awards the kickoff to the conceding side, and the end-of-Resolve
+            // tracker update records that taker — so after the tick the tracker names the restart taker,
+            // not the scorer. That ordering is the contract; assert it rather than the pre-Phase-H value.
+            int taker = engine.TestOnly_PossessingAgentId;
+            Assert.AreEqual(1, engine.AgentTeamId(taker),
+                "Team 0 scored, so the conceding team 1 restarts (Law 8).");
+            Assert.AreEqual(taker, engine.TestOnly_LastHolderAgentId,
+                "After the goal restart the tracker names the kickoff taker — the last settled holder.");
         }
 
         [Test]

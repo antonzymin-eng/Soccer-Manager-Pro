@@ -139,7 +139,7 @@ namespace TacticalDirector.MatchEngine
         // ── MatchEngine integration (direct seam — design note §4 test plan) ──────────
 
         [Test]
-        public void EvaluateAndApplyOffside_Violation_AwardsFreeKick_AndClearsPossession()
+        public void EvaluateAndApplyOffside_Violation_AwardsFreeKickToTheDefendingTeam()
         {
             var engine = new MatchEngine(MatchSeed);
 
@@ -159,7 +159,16 @@ namespace TacticalDirector.MatchEngine
             bool violation = engine.TestOnly_EvaluateAndApplyOffside(toucher);
 
             Assert.IsTrue(violation);
-            Assert.AreEqual(MatchEngineConstants.NO_POSSESSION, engine.TestOnly_PossessingAgentId);
+
+            // §5.Z Phase H (KD-H1): the indirect free kick is awarded to the DEFENDING team — the
+            // toucher is a home agent, so an away agent takes it. (Pre-Phase-H this asserted
+            // NO_POSSESSION; a restart that grants nobody the ball is what deadlocked the match.)
+            int taker = engine.TestOnly_PossessingAgentId;
+            Assert.AreNotEqual(MatchEngineConstants.NO_POSSESSION, taker,
+                "An offside free kick must be awarded to a taker, not left loose.");
+            Assert.AreEqual(1, engine.AgentTeamId(taker),
+                "A home-team offside gives the free kick to the away (defending) team.");
+
             BallState ball = engine.TestOnly_BallSnapshot;
             Assert.AreEqual(95f, ball.Position.x, 1e-4f, "Free kick placed at the toucher's position.");
             Assert.AreEqual(34f, ball.Position.y, 1e-4f);

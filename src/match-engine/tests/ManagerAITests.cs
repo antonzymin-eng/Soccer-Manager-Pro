@@ -566,18 +566,27 @@ namespace TacticalDirector.MatchEngine
             // T-TP-DET-002 (in-tree form): explicitly configuring Human/Human — and running the
             // no-manager boot path over the default baselines — is digest-identical to never
             // touching the manager surface at all (FR-TP-007 / KD-4).
+            // Run SEQUENTIALLY: the EventBus is a process-static singleton reset per match (#17 §3.2.1),
+            // so two engines must not be ticked interleaved — they would share one ledger. Harmless before
+            // §5.Z Phase H only because no production event was ever published; see the same note on
+            // MatchEngineGkHeadingTests.FlagOff_TicksDeterministically_AndCommitsNoIntent.
             var untouched = new MatchEngine(MatchSeed);
+            for (int i = 0; i < 30; i++)
+            {
+                untouched.RunTick();
+            }
+            byte[] untouchedDigest = (byte[])untouched.CurrentSnapshotDigest.Clone();
+
             var explicitHuman = new MatchEngine(MatchSeed);
             explicitHuman.ConfigureManager(0, ManagerMode.Human);
             explicitHuman.ConfigureManager(1, ManagerMode.Human);
             ManagerAdaptation.ApplyKickoff(explicitHuman, Catalogue);
-
             for (int i = 0; i < 30; i++)
             {
-                untouched.RunTick();
                 explicitHuman.RunTick();
             }
-            CollectionAssert.AreEqual(untouched.CurrentSnapshotDigest, explicitHuman.CurrentSnapshotDigest);
+
+            CollectionAssert.AreEqual(untouchedDigest, explicitHuman.CurrentSnapshotDigest);
         }
 
         private static byte[] RunAiVsAi()

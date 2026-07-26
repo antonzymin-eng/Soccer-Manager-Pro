@@ -41,6 +41,20 @@ namespace TacticalDirector.MatchEngine
             return engine;
         }
 
+        /// <summary>As <see cref="RunTo"/>, but clears possession before every tick so the world stays
+        /// left/right symmetric — the precondition of the home↔away carrier mirror lock (§5.Z Phase H
+        /// made the kickoff itself asymmetric by awarding it to one side).</summary>
+        private static MatchEngine RunToWithBallLoose(int ticks)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            for (int i = 0; i < ticks; i++)
+            {
+                engine.TestOnly_SetPossession(MatchEngineConstants.NO_POSSESSION);
+                engine.RunTick();
+            }
+            return engine;
+        }
+
         [Test]
         public void PositioningAI_FeedsFormationSlots_IntoDecisionContext()
         {
@@ -146,7 +160,13 @@ namespace TacticalDirector.MatchEngine
             // centre-spot kickoff the pitch is mirror-symmetric, so each home agent and its away counterpart
             // (slot k ↔ PLAYERS_PER_TEAM + k) must carry identical carrier values. The D2b analogue of the
             // D2a exact-GK-pitch-mirror lock (ERR-008-002 guard at the carrier layer).
-            MatchEngine engine = RunTo(TwoStrideTicks);
+            //
+            // §5.Z Phase H: the mirror only holds for a configuration that is itself symmetric, and the
+            // Phase-H kickoff award is deliberately NOT — one side kicks off. Possession is therefore
+            // cleared before every tick here, restoring the neutral loose-ball setup this geometric lock
+            // was written against. (Possession asymmetry is exercised by the tests above, which read the
+            // live owner.)
+            MatchEngine engine = RunToWithBallLoose(TwoStrideTicks);
 
             for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
             {
