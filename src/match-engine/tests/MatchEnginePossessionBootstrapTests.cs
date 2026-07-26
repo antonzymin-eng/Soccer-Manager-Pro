@@ -214,15 +214,20 @@ namespace TacticalDirector.MatchEngine
             Assert.IsTrue(engine.TestOnly_LooseBallCollector(EligibleAgent),
                 "The nearest ELIGIBLE agent must be designated, even with a sent-off agent closer.");
 
-            int homeCollectors = 0;
-            for (int i = 0; i < MatchEngineConstants.PLAYERS_PER_TEAM; i++)
+            // Exactly one per team — BOTH teams, since each designates independently so that a resting
+            // ball is contested by the nearest player from each side.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
-                if (engine.TestOnly_LooseBallCollector(i))
+                int collectors = 0;
+                for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
                 {
-                    homeCollectors++;
+                    if (engine.TestOnly_LooseBallCollector(t * MatchEngineConstants.PLAYERS_PER_TEAM + k))
+                    {
+                        collectors++;
+                    }
                 }
+                Assert.AreEqual(1, collectors, $"Team {t} must designate exactly one collector.");
             }
-            Assert.AreEqual(1, homeCollectors, "Exactly one collector is designated per team.");
         }
 
         [Test]

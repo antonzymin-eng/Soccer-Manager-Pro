@@ -1,6 +1,7 @@
 // File:     src/decision-tree/OptionGenerator.cs
 // Created:  2026-05-29
 // Modified: 2026-05-29
+// Modified: 2026-07-26 (ERR-008-014 — loose-ball collect emitted as the SOLE off-ball option for the host-designated collector)
 // Author:   —
 // Spec:     Decision Tree #8 §3.1, Code Standards #20
 // Purpose:  Step 3 of the 6-step pipeline. Generates all eligible ActionOption
@@ -620,20 +621,25 @@ namespace TacticalDirector.DecisionTree
             Vector3 ballVel3 = ctx.MatchContext.BallVelocity;
             float ballSpeed  = new Vector2(ballVel3.x, ballVel3.y).magnitude;
 
-            // ERR-008-014 (match-engine design note §5.Z Phase H). The §3.1.9.1 minimum-ball-speed gate
-            // used to reject EVERY slow ball, which left the tree with no action at all that sends an
-            // agent to a LOOSE ball lying at rest: PRESS targets an opponent, MOVE_TO_POSITION targets the
-            // formation slot, and INTERCEPT bailed out here. Composed, that meant a pass which simply ran
-            // out of momentum ended the match — nobody ever went to fetch the ball again.
+            // §3.1.9.1 minimum-ball-speed gate — DELIBERATELY UNCHANGED by ERR-008-014 (match-engine
+            // design note §5.Z Phase H). It rejects every slow ball, possessed or loose, and that is
+            // correct: no slow ball should reach the §3.1.9.2 look-ahead geometry, where at v ≈ 0 every
+            // projected point collapses onto the ball's own position and the MAX_INTERCEPT_TIME cap makes
+            // a ball more than ~10 m away un-chaseable by anyone.
             //
-            // The gate's real purpose is to stop teammates converging on a ball their own carrier is
-            // standing over (a carried ball is also slow), so it is re-expressed as exactly that: a slow
-            // ball is intercept-eligible only while it is LOOSE. A possessed slow ball is still rejected —
-            // pressing an opponent's carrier is PRESS's job, not INTERCEPT's.
+            // ERR-008-014 was the observation that this left the tree with NO action that fetches a loose
+            // ball lying at rest (PRESS targets an opponent, MOVE_TO_POSITION the formation slot, and
+            // INTERCEPT bails out here), so a pass that simply ran out of momentum ended the match. The
+            // fix is the collect short-circuit at the top of GenerateOffBallBranch, NOT a loosened gate
+            // here — loosening it would make EVERY off-ball agent eligible to chase a resting ball, which
+            // is precisely the converge-and-dither behaviour the single designated collector exists to
+            // prevent (see GenerateLooseBallCollectCandidate).
             //
-            // A slow ball never reaches the §3.1.9.2 look-ahead geometry: it is either possessed (PRESS's
-            // job, not INTERCEPT's) or it is a loose ball at rest, which the off-ball branch has already
-            // routed to the ERR-008-014 collect short-circuit above for the designated collector.
+            // Consequence, accepted: a loose ball in the narrow band between FIRST_TOUCH_MIN_BALL_SPEED_M_S
+            // and INTERCEPT_MIN_BALL_SPEED is claimable by nobody for the fraction of a second it takes to
+            // decelerate below the pickup/collector gate — too fast for the host's loose-ball pickup and
+            // collector designation, too slow for INTERCEPT. It is transient and self-healing (drag only
+            // ever carries the ball DOWN through the band), so no mechanic is needed to cover it.
             if (ballSpeed < UtilityWeights.INTERCEPT_MIN_BALL_SPEED) return count;
 
             // Intercept geometry (§3.1.9.2)
@@ -748,4 +754,12 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   (SAVE alone) when TacticalContext.SaveAvailable — the DT-emitted goalkeeper   |
 // |         |            |        |   save, robustly selected. SaveAvailable is flag-gated (keeper only), so the    |
 // |         |            |        |   default off-ball branch is byte-identical.                                    |
+// | 1.4     | 2026-07-26 | —      | ERR-008-014 (match-engine §5.Z Phase H): GenerateOffBallBranch  |
+// |         |            |        |   short-circuits to GenerateLooseBallCollectCandidate (the      |
+// |         |            |        |   collect ALONE) when TacticalContext.LooseBallCollector — the  |
+// |         |            |        |   tree previously had no action at all that fetches a loose     |
+// |         |            |        |   ball lying at rest, so play died the first time a pass ran    |
+// |         |            |        |   out of momentum. Sole-option per the §3.1.13 SAVE precedent.  |
+// |         |            |        |   The §3.1.9.1 minimum-ball-speed gate is deliberately          |
+// |         |            |        |   UNCHANGED (its comment records why loosening it was refused). |
 #endregion

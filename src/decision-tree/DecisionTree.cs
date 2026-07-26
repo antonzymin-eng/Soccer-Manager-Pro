@@ -1,6 +1,7 @@
 // File:     src/decision-tree/DecisionTree.cs
 // Created:  2026-05-29
 // Modified: 2026-06-22 (Phase D D1 AR — HasDispatchedAction accessor)
+// Modified: 2026-07-26 (ERR-008-015 — IsAwaitingExecutorCompletion, so the composition root can close the PASS/SHOOT lifecycle)
 // Author:   —
 // Spec:     Decision Tree #8 §2.1.2, §3.6, §3.7, §4.1–4.3, Code Standards #20
 // Purpose:  Orchestrator-facing entry point. Runs the 6-step pipeline for one agent
@@ -282,4 +283,13 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   sink, parallel to the executors), threaded into ActionDispatcher.Dispatch.  |
 // |         |            |        |   _saveDispatch is an injected dependency, not cross-tick state (excluded from |
 // |         |            |        |   CaptureState, like the executors).                                           |
+// | 1.5     | 2026-07-26 | —      | ERR-008-015 (match-engine §5.Z Phase H): + public              |
+// |         |            |        |   IsAwaitingExecutorCompletion. §3.7.2 says completion         |
+// |         |            |        |   "arrives via NotifyActionComplete" but assigns the           |
+// |         |            |        |   obligation to nobody, and no production caller existed — so  |
+// |         |            |        |   every agent that passed or shot was frozen in EXECUTING for  |
+// |         |            |        |   the rest of the match. The predicate lets the composition    |
+// |         |            |        |   root (the only layer that sees both tree and executors)      |
+// |         |            |        |   close the lifecycle without re-implementing the              |
+// |         |            |        |   continuous-vs-blocking rule.                                |
 #endregion

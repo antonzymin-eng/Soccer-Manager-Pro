@@ -32,6 +32,7 @@
 //           latches + both orchestrators' in-flight arrays via CaptureState/RestoreState seams), making a
 //           flag-on engine snapshot-safe. The Phase-1 durable-capture fail-loud guard is removed.)
 // Modified: 2026-07-23 (DT-emitted goalkeeper SAVE (ERR-008-013) + AR follow-up TestOnly_SaveCommittedForGk latch seam)
+// Modified: 2026-07-26 (§5.Z Phase H possession bootstrap — ERR-030-014: ApplyRestart(position, awardedTeam) + SelectRestartTaker (KD-H1), the boot kickoff award, RunLooseBallPickup (KD-H3), SelectLooseBallCollector (KD-H5), the Resolve PASS/SHOOT completion sweep (KD-H4 / ERR-008-015), and interrupt deferral while an executor is in flight. No schema change. See docs/tracking/match-engine-design.md §5.Z)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -3339,7 +3340,10 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private int SelectLooseBallCollector(int teamId)
         {
-            if (_possessingAgentId != MatchEngineConstants.NO_POSSESSION || _matchEnded)
+            // No _matchEnded term: RunAiPhase — the only path here — already returns before RunMechanicsAI
+            // once the match has ended, exactly as RunResolvePhase guards RunLooseBallPickup. Keeping a
+            // second, unreachable copy of that gate here would leave a reader guessing which one is real.
+            if (_possessingAgentId != MatchEngineConstants.NO_POSSESSION)
             {
                 return MatchEngineConstants.NO_POSSESSION;
             }
@@ -3358,24 +3362,13 @@ namespace TacticalDirector.MatchEngine
                 return MatchEngineConstants.NO_POSSESSION; // moving: the ordinary intercept path owns it
             }
 
-            int   collector = MatchEngineConstants.NO_POSSESSION;
-            float bestSq    = float.MaxValue;
-            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
-            {
-                if (_teamIds[i] != teamId || _isSentOff[i])
-                {
-                    continue;
-                }
-
-                float distSq = (_agents[i].Position - ballPosXY).sqrMagnitude;
-                if (collector == MatchEngineConstants.NO_POSSESSION || distSq < bestSq)
-                {
-                    bestSq    = distSq;
-                    collector = i;
-                }
-            }
-
-            return collector;
+            // The selection is the identical predicate the restart taker uses — "this team's nearest agent
+            // to a point, excluding anyone sent off, ties to the lower roster index" — so it is expressed
+            // ONCE, in SelectRestartTaker. Two copies of a participation scan is how the _isSentOff
+            // exclusion came to be added one surface at a time over four review rounds (AR-8 M-1 first
+            // touch, AR-9 M-1 the foul interpretation); the next participation rule must not have to find
+            // every clone.
+            return SelectRestartTaker(ballPosXY, teamId);
         }
 
         /// <summary>
@@ -3390,6 +3383,12 @@ namespace TacticalDirector.MatchEngine
         /// Returns <see cref="MatchEngineConstants.NO_POSSESSION"/> if the awarded team has no eligible
         /// agent at all (every player sent off — a real match would be abandoned; here the ball simply
         /// stays loose rather than the engine throwing). Deterministic and allocation-free.
+        ///
+        /// <para>This is the project's single expression of "a team's nearest eligible agent to a point":
+        /// <see cref="SelectLooseBallCollector"/> is its second caller (the collector is the same
+        /// selection, made against the ball's resting position after that method's own gates). Any future
+        /// participation rule — an injured agent, a taker serving a restart restriction — belongs HERE, in
+        /// one place, and reaches both call sites.</para>
         /// </summary>
         private int SelectRestartTaker(Vector2 position, int awardedTeam)
         {
@@ -3816,7 +3815,7 @@ namespace TacticalDirector.MatchEngine
         /// mechanic parks the ball mid-air); its planar speed is BELOW
         /// <see cref="MatchEngineConstants.FIRST_TOUCH_MIN_BALL_SPEED_M_S"/> — the exact complement of
         /// first-touch gate 3, so the two mechanics can never both fire on one ball; and some eligible
-        /// (not sent off) agent is within <see cref="MatchEngineConstants.LOOSE_BALL_PICKUP_RADIUS_M"/>.
+        /// (not sent off) agent is within <see cref="MatchEngineConstants.LooseBallPickupRadiusM"/>.
         /// The nearest such agent claims it, ties to the lower roster index — the same proximity
         /// tie-break as the first-touch receiver scan and <see cref="SelectRestartTaker"/>.</para>
         ///
@@ -3846,8 +3845,8 @@ namespace TacticalDirector.MatchEngine
                 return; // still in motion — first touch owns this ball, not pickup.
             }
 
-            float radiusSq = MatchEngineConstants.LOOSE_BALL_PICKUP_RADIUS_M
-                           * MatchEngineConstants.LOOSE_BALL_PICKUP_RADIUS_M;
+            float radiusSq = MatchEngineConstants.LooseBallPickupRadiusM
+                           * MatchEngineConstants.LooseBallPickupRadiusM;
             int   claimer  = MatchEngineConstants.NO_POSSESSION;
             float bestSq   = radiusSq;
 
@@ -6902,4 +6901,16 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | BalancedOrdinal/Count reads + the RunDecisionPoint call now go |
 // |         |            |        | through it. Boot-constant reference, NOT serialized; default   |
 // |         |            |        | path byte-identical, no SNAPSHOT_SCHEMA_VERSION change.        |
+// | 1.50    | 2026-07-26 | —      | §5.Z Phase H possession bootstrap (ERR-030-014): ApplyRestart  |
+// |         |            |        | takes an awardedTeam and awards a taker via the new            |
+// |         |            |        | SelectRestartTaker (KD-H1 — every call site declares a team);  |
+// |         |            |        | Boot awards the opening kickoff; RunLooseBallPickup claims a   |
+// |         |            |        | ball that has come to REST (KD-H3, the exact speed-gate        |
+// |         |            |        | complement of RunFirstTouch); SelectLooseBallCollector         |
+// |         |            |        | designates one collector per team for the ERR-008-014 DT       |
+// |         |            |        | collect (KD-H5); a Resolve-phase sweep closes the DecisionTree |
+// |         |            |        | PASS/SHOOT lifecycle (KD-H4 / ERR-008-015, which had zero      |
+// |         |            |        | production callers); and OnPossessionChanged defers the        |
+// |         |            |        | interrupt while the new holder's own executor is in flight.    |
+// |         |            |        | No SNAPSHOT_SCHEMA_VERSION change.                             |
 #endregion

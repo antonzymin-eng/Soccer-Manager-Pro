@@ -1,6 +1,7 @@
 // File:     src/decision-tree/TacticalContext.cs
 // Created:  2026-05-29
 // Modified: 2026-07-23
+// Modified: 2026-07-26 (ERR-008-014 — + LooseBallCollector routing field, host-designated)
 // Author:   —
 // Spec:     Decision Tree #8 §2.2.6, new §3.2/§7.7, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Team tactical instructions delivered to each agent's Decision Tree.
@@ -229,4 +230,9 @@ namespace TacticalDirector.DecisionTree
 // | 1.8     | 2026-07-23 | —      | #11/#10 (ERR-008-013): + SaveAvailable routing field (zero value false =    |
 // |         |            |        |   identity; Stage0Default seeds false). Set only by MatchEngine under the   |
 // |         |            |        |   EnableGkHeading flag; gates the DT-emitted SAVE (sole off-ball option).   |
+// | 1.9     | 2026-07-26 | —      | ERR-008-014 (match-engine §5.Z Phase H): + LooseBallCollector |
+// |         |            |        |   routing field (zero value false = identity), set by         |
+// |         |            |        |   MatchEngine.RunMechanicsAI for the ONE agent per team       |
+// |         |            |        |   designated to collect a resting loose ball. Host-designated |
+// |         |            |        |   because only the host knows who is sent off.                |
 #endregion

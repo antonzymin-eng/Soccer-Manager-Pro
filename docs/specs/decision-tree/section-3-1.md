@@ -853,12 +853,18 @@ first time a pass ran out of momentum in space — measured, with the nearest ag
 §3.1.9.3's `MAX_INTERCEPT_TIME` reach of roughly ten metres) and all 22 agents settling onto their formation
 slots around a ball none of them could decide to fetch.
 
-Two changes, both additive:
+One change, purely additive:
 
-1. **§3.1.9.1's minimum-ball-speed gate is re-expressed, not removed.** Its real purpose is to stop
-   teammates converging on a ball their own carrier is standing over — a carried ball is also slow — so it
-   now reads: *a slow ball is intercept-eligible only while it is LOOSE.* A slow POSSESSED ball is still
-   rejected (pressing an opponent's carrier is §3.1.8's job).
+1. **§3.1.9.1's minimum-ball-speed gate is UNCHANGED.** It keeps rejecting every slow ball, possessed or
+   loose, and that is correct: no slow ball should reach §3.1.9.2's look-ahead geometry, where at v ≈ 0
+   every projected point collapses onto the ball's own position and the `MAX_INTERCEPT_TIME` cap makes a
+   ball beyond roughly ten metres un-chaseable by anyone. Loosening the gate to "intercept-eligible while
+   LOOSE" was considered and **rejected**: it would make every off-ball agent eligible to chase a resting
+   ball, which is exactly the converge-and-dither behaviour the single designated collector in item 2
+   exists to prevent. One consequence is accepted rather than covered — a loose ball between the host's
+   pickup gate (`FIRST_TOUCH_MIN_BALL_SPEED_M_S`) and `INTERCEPT_MIN_BALL_SPEED` is claimable by nobody
+   for the fraction of a second it takes to decelerate below the lower gate. It is transient and
+   self-healing, since drag only ever carries the ball DOWN through that band.
 2. **The loose case routes to a dedicated collect**, gated on the new `TacticalContext.LooseBallCollector`
    fact and emitted as the **SOLE** off-ball option — the §3.1.13 SAVE pattern, for the reason ERR-008-013's
    AR-4 established: a must-happen action cannot depend on out-scoring a competitor under composure noise.
