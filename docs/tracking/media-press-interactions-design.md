@@ -1,8 +1,8 @@
 # Media & Press Interactions #35 — Design Supplement
 
 > **Created:** July 26, 2026
-> **Last Updated:** July 26, 2026 (v0.6 — AR-5 sweep: 0H+0M+3L, **CONVERGENCE**; prior v0.5 AR-4, v0.4 AR-3, v0.3 AR-2, v0.2 AR-1, v0.1 initial)
-> **Version:** 0.6
+> **Last Updated:** July 26, 2026 (v0.7 — #46 coordination: ERR-033-001 superseded by ERR-033-003; AR cycle CONVERGED at v0.6)
+> **Version:** 0.7
 > **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row)
 > **Candidate spec:** **#35** · **FR prefix:** `FR-ME` · **Wave:** 6 · **Tier:** S4
 > **Promoted from:** `docs/tracking/spec-plans/spec-35-media-press-interactions.md` v0.1
@@ -504,11 +504,24 @@ exists today, independent of #35, and #35 merely cannot cite a step number until
 | ID | Target | Change |
 |---|---|---|
 | **ERR-049-001** | #49 §2.1 FR-LC-020 | Generalize the `SelectionDraw` provenance from *"the `ulong` returned by `DeterministicRngService.DrawReserved` (the `world.text` reservation)"* to **"the producer's own deterministic, locale-independent selection value, carried verbatim"**, keeping #22's `world.text` draw as the named example. Resolves the internal contradiction with §7.3 (*"if they draw"*) and FR-LC-013/014's producer-agnostic core (§2(h)). Contract-widening only — #22's existing binding still satisfies it verbatim, and #49 needs no code or catalogue change. |
-| **ERR-033-001** | #33 §2.2 `HumanSystemsDayInput` + §3.1 `ComputeMoraleTarget` | Add `MediaDeltaPermille (int [-1000,1000])`, `Neutral` = `0`, consumed as an additive term alongside `BoardObjectiveDeltaPermille`. Transient input struct — **no** `HUMAN_SYSTEMS_SAVE_FORMAT_VERSION` bump; `0` ⇒ target unchanged, so it is behaviour-neutral until a non-zero delta is delivered (KD-3). |
+| **ERR-033-001** ⟶ **superseded by ERR-033-003** | #33 §2.2 `HumanSystemsDayInput` + §3.1 `ComputeMoraleTarget` | Add a committed morale-delta field, `Neutral` = `0`, consumed as an additive term alongside `BoardObjectiveDeltaPermille`. Transient input struct — **no** `HUMAN_SYSTEMS_SAVE_FORMAT_VERSION` bump; `0` ⇒ target unchanged, so it is behaviour-neutral until a non-zero delta is delivered (KD-3). **The field is `ExternalDeltaPermille`, producer-agnostic — not `MediaDeltaPermille`** (see the coordination note below). |
 | **ERR-033-002** | #33 §2.1 FR-HS-027 | Extend the roster-lifecycle lockstep to state that a **routed input's** pending source-side value is dropped with the player's entries (the rule #35's undelivered deltas bind to, §5). Alternatively filed #35-side if #33's owner prefers the obligation on the producer — the *rule* is what must exist, not its file. |
 | **ERR-030-013** | #30 §3.4 `AdvanceAndPlayNextRound` + §3.3 step 3 | **Two** media seams: the **queue** null seam after `EmitMatchOutcome(result)` (the #44 availability-seam shape), and the **drain** at step 3 where the per-player `HumanSystemsDayInput` is assembled (`TryTakePendingDelta` → `MediaDeltaPermille`, KD-3). Both empty/`0` until #35 T2. Filing only the first would produce recorded-but-never-delivered deltas. |
 
 *(The last id assumes ERR-030-012 is taken by §8.0; both are #30-side and land together.)*
+
+**Coordination with #46 (`news-inbox-man-management-design.md`, authored second in this wave).** #35 v0.6
+filed this field as `MediaDeltaPermille`. #46 is the **second** producer of exactly this quantity — a
+bounded morale delta from an off-pitch manager action — and #33's FR-HS-024 names it the sole
+man-management writer, so the per-producer name does not survive: producer #3 would need a third field on an
+approved struct. #46's KD-3 therefore generalizes it to a single **`ExternalDeltaPermille`**, **summed
+across producers and clamped by the root** before it reaches #33, filed as **ERR-033-003** and superseding
+this row's naming. The *mechanism* #35 chose is unchanged and is what #46 adopts — only the field's name and
+arity change, and only while both specs are still pre-promotion with no implementation behind either.
+
+This is the same shape as the defect #35 found in #49's `FR-LC-020` (§2(h)): a contract written correctly
+for one producer, surfacing the moment a second arrives. Recording it here rather than only in #46 means
+neither supplement can be read alone and get it wrong.
 
 ### 8.2 Deferred (land at the named tier, not at approval)
 
@@ -616,3 +629,4 @@ The steps from here to `APPROVED`, per `spec-plans/README.md`:
 | v0.4 | July 26, 2026 | **AR-3 fix pass: 0H + 2M + 3L, all resolved.** **M-1** — §6 claimed the #33 F6 same-day-no-op / day-gap-fail-loud guard *“verbatim”*, but §5’s persisted shape had **no cursor to implement it from** (`MediaCursors` held only `NextConferenceId`) — a determinism claim the state could not support. Added `LastAdvancedWorldDay (uint, sentinel uint.MaxValue)`, with #33’s FR-HS-008 rationale for why the sentinel is not `0`. **M-2** — `AnswerQuestion` was specified to **fail loud on an already-answered conference**, but the daily expiry sweep can resolve a conference between the client’s render and the player’s click, making that an ordinary race rather than malformed input — a career-crashing throw on a legal click. Now `TryAnswerQuestion → bool` (`false` = already resolved; unknown id / out-of-range option still throw), the #45 `TryProjectBoardModifier` legal-state-vs-corrupt-input split applied to the one human-driven surface. **L:** §6’s residual “or the digest” corrected (#35 feeds none); zero-value `PendingDelta` rows are never recorded (the #44 canonical `(0,0)`-drop rule — otherwise every expired conference leaves an inert row in an APPEND-only blob); `TryTakePendingDelta`’s unused `worldDay` parameter dropped, with the reason delivery must be day-agnostic (save/restore, multi-day jumps) recorded. |
 | v0.5 | July 26, 2026 | **AR-4 fix pass: 0H + 2M, both regressions introduced by earlier AR rounds — the case for re-reading the whole document each pass rather than the diff.** **M-1** — §8.3 still asserted “**#49** — nothing to change” while AR-1 had added **ERR-049-001** against #49 to §8.1: the two back-prop tables directly contradicted each other, and a reader working from §8.3 would have skipped the one change KD-2 depends on. §8.3 now scopes its claim to #49’s *core seam* and points at the single wording fix. **M-2** — §9’s identity test was still specified against *“no conference answered”*, the precondition AR-2 corrected in §3 and KD-9 but not here; since expiry answers conferences, a test built to it would either fail or prove less than it claims. Restated as KD-9’s condition (nothing queued, or every consequence `0`), with the trap named so it is not re-introduced. |
 | v0.6 | July 26, 2026 | **AR-5 sweep: 0H + 0M + 3L, all resolved — CONVERGENCE** (an L-only round closes the cycle). **L-1** — KD-3 and the ERR-033-001 row still said the routed field is neutral *“until a conference is answered”*, the third and last instance of the precondition AR-2/AR-4 corrected elsewhere; the true condition is “until a **non-zero** delta is delivered”, since expiry answers conferences and a `0`-consequence answer records no row at all (§5). **L-2** — a dropped “that” in KD-2’s opening sentence. **L-3** — the ordinal-band boundary constant was tagged “`[GT]`-free `[FIXED]`”, a garbled construction from the AR-2 edit; it is simply `[FIXED]`. |
+| v0.7 | July 26, 2026 | **Cross-supplement coordination with #46** (authored second in Wave 6; no new AR round — the AR cycle converged at v0.6 and this changes a back-prop’s naming, not a decision). #46 is the second producer of the same bounded off-pitch morale delta, so `HumanSystemsDayInput.MediaDeltaPermille` does not generalize: producer #3 would need a third field on an approved struct. **ERR-033-001 is superseded by #46’s ERR-033-003** — one producer-agnostic `ExternalDeltaPermille`, summed across producers and clamped by the root before it reaches #33. KD-3’s mechanism is unchanged and is what #46 adopts; only the field’s name and arity move, while both specs are pre-promotion with no implementation behind either. |
