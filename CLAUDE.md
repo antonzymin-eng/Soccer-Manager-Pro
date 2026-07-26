@@ -34,9 +34,10 @@
 > `src/ui-framework/` exists, and omits `match-engine`, `season-save`, `player-database`,
 > `player-progression`, `match-viewer`, and `match-client-core`) — recorded here as a follow-up rather than
 > edited, since it is the authoritative coding guide and its taxonomy is a Spec #20 §3.5.2 reproduction
-> that should be corrected against that spec, not against a folder listing. **The dotnet gate was NOT
-> re-run** — no SDK in this environment; gate status is quoted from the last landing's record, not
-> re-verified.)
+> that should be corrected against that spec, not against a folder listing. **The dotnet gate was not
+> re-run in the authoring environment** (no SDK), so the gate claims restated here were quoted from the
+> last landing's record — but CI subsequently ran the full Linux shim gate green on this branch
+> (10 checks pass, Unity tests skipped for want of a license), which re-verifies them independently.)
 > **Last Updated (prior):** July 26, 2026, later same day (**MATCH-ENGINE POSSESSION BOOTSTRAP LANDED — §5.Z Phase H,
 > roadmap item A4b. ERR-030-014 is CLOSED: a production match now plays.** The engine that had never in its
 > history put the ball in motion now kicks it, contests it, works it into both penalty areas and scores.

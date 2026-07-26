@@ -17,8 +17,10 @@ exists", and both root docs now say so plainly. Also recorded: assembly names do
 spec folder names (#27 → `player-database`, #28 → `player-progression`, #30 → `season-save`, and #38
 → `ui-framework`, with #23–#25 inside `positioning-ai` and #26 inside `tactical-instructions`), and the
 42-file design-supplement governance class, which had appeared in no root document. The dotnet gate
-was **not** re-run — no SDK in this environment; gate status is quoted from the last landing's
-record. See `CLAUDE.md` for the matching pass on the AI-behavioural-rules side.)
+was **not** re-run in the authoring environment (no SDK), so the gate claims restated here were quoted
+from the last landing's record — but CI subsequently ran the full Linux shim gate green on this
+branch, re-verifying them independently. See `CLAUDE.md` for the matching pass on the
+AI-behavioural-rules side.)
 **Last Updated (prior):** July 14, 2026 (**Match-flow model completion LANDED** — throw-ins, corners,
 goal kicks, fouls/cards, offside, substitutions, half-time break, and full-time end (previously
 only kickoff + goal-restart existed). Design doc adversarially reviewed to convergence, then
