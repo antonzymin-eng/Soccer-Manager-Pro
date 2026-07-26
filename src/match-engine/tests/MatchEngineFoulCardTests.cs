@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineFoulCardTests.cs
 // Created:  2026-07-14
-// Modified: 2026-07-17 (AR-9 M-1: sent-off participants cannot commit or win fouls — discard locks)
+// Modified: 2026-07-26 (foul/discipline balance pass: referee-call probability + capture-rule locks)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-flow-completion-design.md) §3, Code Standards #20
 // Purpose:  Locks the pure card-severity band lookup + promotion logic (deterministic, independent of
@@ -190,6 +190,140 @@ namespace TacticalDirector.MatchEngine
                 "A sent-off agent is forced to Stop every physics tick and should be at rest well within 5 s.");
         }
 
+        // ── Referee-call probability (foul-discipline-balance-design.md KD-F1..KD-F4) ───────
+
+        [Test]
+        public void FoulCallProbability_AtThreshold_EqualsTheConfiguredProbability()
+        {
+            Assert.AreEqual(
+                MatchEngineConstants.FoulCallProbability,
+                MatchEngine.TestOnly_FoulCallProbability(MatchEngineConstants.FoulImpactForceThresholdN),
+                1e-6f,
+                "At the qualifying threshold the call probability is exactly the [GT] rate knob.");
+        }
+
+        [Test]
+        public void FoulCallProbability_ScalesLinearlyWithForce()
+        {
+            float atThreshold = MatchEngine.TestOnly_FoulCallProbability(
+                MatchEngineConstants.FoulImpactForceThresholdN);
+            float atDouble = MatchEngine.TestOnly_FoulCallProbability(
+                MatchEngineConstants.FoulImpactForceThresholdN * 2f);
+
+            Assert.AreEqual(atThreshold * 2f, atDouble, 1e-6f,
+                "A twice-as-hard challenge is twice as likely to be given (KD-F1) — this is the whole "
+                + "reason the capture rule keeps the strongest contact in a tick rather than the first.");
+        }
+
+        [Test]
+        public void FoulCallProbability_SaturatesAtOne()
+        {
+            Assert.AreEqual(1f, MatchEngine.TestOnly_FoulCallProbability(MatchEngine.CertainFoulForceN), 1e-6f);
+        }
+
+        [Test]
+        public void FoulCallProbability_NonPositiveOrNonFinite_ReturnsZero()
+        {
+            // Fail-closed: a corrupt force yields a MISSED foul, never a phantom one.
+            Assert.AreEqual(0f, MatchEngine.TestOnly_FoulCallProbability(0f));
+            Assert.AreEqual(0f, MatchEngine.TestOnly_FoulCallProbability(-1f));
+            Assert.AreEqual(0f, MatchEngine.TestOnly_FoulCallProbability(float.NaN));
+            Assert.AreEqual(0f, MatchEngine.TestOnly_FoulCallProbability(float.PositiveInfinity));
+        }
+
+        [Test]
+        public void WavedOnCandidate_LeavesNoTrace_NoCardNoCooldownNoRestart()
+        {
+            // KD-F3 lock. A zero-force candidate has call probability 0, so it is waved on with
+            // certainty whatever the RNG produces — the deterministic end of the probability range.
+            // Critically the cooldown must stay at 0: arming it on a no-call would silently suppress
+            // detection of the genuine foul that follows.
+            var engine = new MatchEngine(MatchSeed);
+            Vector2 victimPos = new Vector2(40f, 20f);
+            engine.TestOnly_SetAgent(12, AgentState.CreateAtPosition(victimPos, new Vector2(1f, 0f)));
+            engine.TestOnly_SetCommand(12, MovementCommand.Stop(victimPos));
+
+            engine.TestOnly_InjectFoulCandidate(offender: 0, victim: 12, forceN: 0f);
+            engine.RunTick();
+
+            Assert.AreEqual(0, engine.TestOnly_FoulCooldownRemaining,
+                "A waved-on candidate must not arm the cooldown (KD-F3).");
+            Assert.AreEqual((byte)0, engine.TestOnly_YellowCards(0),
+                "A waved-on candidate must not reach the card issue.");
+
+            BallState ball = engine.TestOnly_BallSnapshot;
+            Assert.IsFalse(Mathf.Abs(ball.Position.x - victimPos.x) < 1e-4f
+                           && Mathf.Abs(ball.Position.y - victimPos.y) < 1e-4f,
+                "A waved-on candidate must not award a free kick.");
+        }
+
+        [Test]
+        public void WavedOnCandidate_IsClearedAndDoesNotLeakIntoTheNextTick()
+        {
+            // The candidate slot must be consumed by the wave-on, not left armed — otherwise a single
+            // no-call would be re-adjudicated every tick until it happened to be given.
+            var engine = new MatchEngine(MatchSeed);
+            engine.TestOnly_InjectFoulCandidate(offender: 0, victim: 12, forceN: 0f);
+            engine.RunTick();
+
+            Assert.AreEqual(0f, engine.TestOnly_FoulCandidateForceN,
+                "The waved-on candidate must be cleared, not carried forward.");
+        }
+
+        [Test]
+        public void CandidateCapture_KeepsTheStrongestContactInATick()
+        {
+            // KD-F4 lock, driven through the real consumer with synthetic events: under a force-scaled
+            // call probability, first-wins would let a marginal contact shadow a hard challenge in the
+            // same tick and systematically under-call the fouls that most deserve giving.
+            var engine = new MatchEngine(MatchSeed);
+            float threshold = MatchEngineConstants.FoulImpactForceThresholdN;
+
+            engine.TestOnly_FoulCandidateConsumer.OnCollisionEvent(
+                CrossTeamFromBehind(engine, forceN: threshold + 1f));
+            engine.TestOnly_FoulCandidateConsumer.OnCollisionEvent(
+                CrossTeamFromBehind(engine, forceN: threshold + 900f));
+            engine.TestOnly_FoulCandidateConsumer.OnCollisionEvent(
+                CrossTeamFromBehind(engine, forceN: threshold + 400f));
+
+            Assert.AreEqual(threshold + 900f, engine.TestOnly_FoulCandidateForceN, 1e-3f,
+                "The strongest qualifying contact in the tick wins, regardless of arrival order.");
+        }
+
+        [Test]
+        public void CandidateCapture_IgnoresContactsBelowTheThreshold()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.TestOnly_FoulCandidateConsumer.OnCollisionEvent(
+                CrossTeamFromBehind(engine, forceN: MatchEngineConstants.FoulImpactForceThresholdN - 1f));
+
+            Assert.AreEqual(0f, engine.TestOnly_FoulCandidateForceN,
+                "Contact below the qualifying threshold is not a candidate at all.");
+        }
+
+        /// <summary>Builds a synthetic cross-team FROM_BEHIND agent-agent collision at the given force.
+        /// Agents 0 and 12 are on opposite teams in the boot lineup.</summary>
+        private static TacticalDirector.CollisionSystem.CollisionEvent CrossTeamFromBehind(
+            MatchEngine engine, float forceN)
+        {
+            Assert.AreNotEqual(engine.AgentTeamId(0), engine.AgentTeamId(12),
+                "Fixture assumption: agents 0 and 12 are on opposite teams.");
+
+            return new TacticalDirector.CollisionSystem.CollisionEvent
+            {
+                Type = TacticalDirector.CollisionSystem.CollisionType.AGENT_AGENT,
+                Entity1ID = 0,
+                Entity2ID = 12,
+                FoulData = new TacticalDirector.CollisionSystem.ContactForceData
+                {
+                    Type = TacticalDirector.CollisionSystem.ContactType.FROM_BEHIND,
+                    ForceMagnitude = forceN,
+                    InstigatorAgentID = 0,
+                    VictimAgentID = 12,
+                },
+            };
+        }
+
         [Test]
         public void TwoRunsWithAFoul_BitwiseIdenticalDigests()
         {
@@ -220,4 +354,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   exact geometry of the positive free-kick test) or a sent-off |
 // |         |            |        |   OFFENDER is discarded — no restart at the victim's feet, no  |
 // |         |            |        |   cooldown armed, no card draw reached.                        |
+// | 1.2     | 2026-07-26 | —      | Foul/discipline balance pass locks (KD-F1..KD-F4): the pure    |
+// |         |            |        |   referee-call probability shape (threshold identity, linear   |
+// |         |            |        |   force scaling, saturation, fail-closed on corrupt force);    |
+// |         |            |        |   the wave-on path leaving no trace and not leaking forward;   |
+// |         |            |        |   and strongest-wins candidate capture driven through the real |
+// |         |            |        |   consumer with synthetic collision events.                    |
 #endregion
