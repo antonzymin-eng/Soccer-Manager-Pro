@@ -32,6 +32,19 @@ namespace TacticalDirector.MatchEngine
         // agent within the ~1 m acceptance reach of the test ball is the one we place there.
         private static readonly Vector2 OpenSpot = new Vector2(52.5f, 20.0f);
 
+        /// <summary>
+        /// A fresh engine with the ball explicitly LOOSE. Since §5.Z Phase H a booted engine awards the
+        /// kickoff to a taker (ERR-030-014 — without a production possession grant no match could ever
+        /// develop play), so a first-touch test that wants to script an incoming ball to a loose receiver
+        /// must establish that precondition rather than inherit it from boot.
+        /// </summary>
+        private static MatchEngine LooseBallEngine()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.TestOnly_SetPossession(MatchEngineConstants.NO_POSSESSION);
+            return engine;
+        }
+
         /// <summary>Places <paramref name="agent"/> at <paramref name="pos"/>, holding (Stop) so the
         /// Physics phase leaves it put for the single test tick (tick 1 — no AI stride runs yet).</summary>
         private static void ParkAgentAt(MatchEngine engine, int agent, Vector2 pos)
@@ -56,7 +69,7 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void LooseBall_ArrivingAtAgent_GainsPossession()
         {
-            var engine = new MatchEngine(MatchSeed); // kickoff loose
+            MatchEngine engine = LooseBallEngine();
 
             ParkAgentAt(engine, HomeAgent, OpenSpot);
             // Slow ball 0.6 m short of the agent, rolling toward it (+X). A 2 m/s ball with neutral
@@ -76,7 +89,7 @@ namespace TacticalDirector.MatchEngine
         {
             // First touch works in world space directly (no home/away frame mapping — unlike Positioning
             // AI), so an away agent receives identically. Closes the away-team symmetry leg of D3.
-            var engine = new MatchEngine(MatchSeed);
+            MatchEngine engine = LooseBallEngine();
 
             ParkAgentAt(engine, AwayAgent, OpenSpot);
             engine.TestOnly_SetBall(RollingBall(new Vector2(OpenSpot.x - 0.6f, OpenSpot.y), new Vector2(2f, 0f)));
@@ -94,7 +107,7 @@ namespace TacticalDirector.MatchEngine
         {
             // Ball within reach but moving AWAY from the agent (+X past it): the closing-direction gate
             // excludes it — this is the same gate that stops a kicker re-touching the ball it just played.
-            var engine = new MatchEngine(MatchSeed);
+            MatchEngine engine = LooseBallEngine();
 
             ParkAgentAt(engine, HomeAgent, OpenSpot);
             engine.TestOnly_SetBall(RollingBall(new Vector2(OpenSpot.x + 0.6f, OpenSpot.y), new Vector2(2f, 0f)));
@@ -109,7 +122,7 @@ namespace TacticalDirector.MatchEngine
         public void HighBall_NotTouched()
         {
             // Ball centre well above the ground-control height → a Heading (#10) event, not first touch.
-            var engine = new MatchEngine(MatchSeed);
+            MatchEngine engine = LooseBallEngine();
 
             ParkAgentAt(engine, HomeAgent, OpenSpot);
             BallState high = RollingBall(new Vector2(OpenSpot.x - 0.6f, OpenSpot.y), new Vector2(2f, 0f));
@@ -149,7 +162,7 @@ namespace TacticalDirector.MatchEngine
             // receive the ball into possession it could never release (no AI dispatch ⇒ no kick),
             // deadlocking play. Identical geometry to LooseBall_ArrivingAtAgent_GainsPossession
             // (which proves this setup DOES receive when the agent is active).
-            var engine = new MatchEngine(MatchSeed);
+            MatchEngine engine = LooseBallEngine();
 
             ParkAgentAt(engine, HomeAgent, OpenSpot);
             engine.TestOnly_SetIsSentOff(HomeAgent, true);
@@ -177,7 +190,7 @@ namespace TacticalDirector.MatchEngine
 
         private static byte[] RunScriptedReceive(out int possessor)
         {
-            var engine = new MatchEngine(MatchSeed);
+            MatchEngine engine = LooseBallEngine();
             ParkAgentAt(engine, HomeAgent, OpenSpot);
             engine.TestOnly_SetBall(RollingBall(new Vector2(OpenSpot.x - 0.6f, OpenSpot.y), new Vector2(2f, 0f)));
             engine.RunTick();

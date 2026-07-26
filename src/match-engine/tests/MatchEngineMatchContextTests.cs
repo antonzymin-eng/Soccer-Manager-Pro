@@ -66,11 +66,16 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void MatchContext_LooseBall_IsContested()
         {
-            var engine = new MatchEngine(MatchSeed); // kickoff is loose
+            // §5.Z Phase H: the kickoff is AWARDED, so "loose" must now be established explicitly. The
+            // ball is placed far from every agent as well as cleared, since the Phase-H loose-ball pickup
+            // would otherwise hand a resting ball straight back to whoever is standing over it.
+            var engine = new MatchEngine(MatchSeed);
+            engine.TestOnly_SetPossession(MatchEngineConstants.NO_POSSESSION);
+            engine.TestOnly_SetBall(StationaryBallAtX(MatchEngineConstants.KickoffBallXM));
             engine.RunTick();
 
             Assert.AreEqual(MatchEngineConstants.NO_POSSESSION, engine.TestOnly_MatchContext.PossessingAgentId,
-                "Kickoff ball is loose.");
+                "A cleared ball with no agent in pickup reach stays loose.");
             Assert.AreEqual(PossessionState.CONTESTED, engine.TestOnly_MatchContext.Possession,
                 "A loose ball is CONTESTED.");
         }

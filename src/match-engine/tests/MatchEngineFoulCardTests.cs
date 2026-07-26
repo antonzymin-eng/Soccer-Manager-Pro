@@ -104,7 +104,12 @@ namespace TacticalDirector.MatchEngine
             BallState ball = engine.TestOnly_BallSnapshot;
             Assert.AreEqual(40f, ball.Position.x, 1e-4f);
             Assert.AreEqual(20f, ball.Position.y, 1e-4f);
-            Assert.AreEqual(MatchEngineConstants.NO_POSSESSION, engine.TestOnly_PossessingAgentId);
+
+            // §5.Z Phase H (KD-H1): the free kick is awarded to the VICTIM's team, and the taker is that
+            // team's nearest eligible agent to the foul spot — which here is the victim itself, standing
+            // on it. (Pre-Phase-H this asserted NO_POSSESSION.)
+            Assert.AreEqual(victim, engine.TestOnly_PossessingAgentId,
+                "The victim is standing on the foul spot, so it takes its own free kick.");
             Assert.AreEqual(MatchEngineConstants.FoulCooldownTicks, engine.TestOnly_FoulCooldownRemaining);
         }
 

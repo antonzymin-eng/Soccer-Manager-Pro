@@ -76,7 +76,7 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
-        public void ThrowIn_PlacesBallOnTouchline_AndClearsPossession()
+        public void ThrowIn_PlacesBallOnTouchline_AndAwardsPossessionToTheOtherTeam()
         {
             var engine = RunOneTickWithBallAtAndLastTouch(new Vector3(52.5f, -0.5f, MatchEngineConstants.BALL_REST_HEIGHT_M), lastTouchTeam: 0);
 
@@ -84,7 +84,33 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(52.5f, ball.Position.x, 1e-4f);
             Assert.AreEqual(0f, ball.Position.y, 1e-4f);
             Assert.AreEqual(0f, ball.Velocity.magnitude, 1e-4f);
-            Assert.AreEqual(MatchEngineConstants.NO_POSSESSION, engine.TestOnly_PossessingAgentId);
+
+            // §5.Z Phase H (KD-H1): the restart is TAKEN, not merely placed — team 0 touched last, so
+            // team 1 is awarded it, and its nearest eligible agent to the throw-in spot is the taker.
+            // Before Phase H this asserted NO_POSSESSION, which is precisely the contract that made
+            // ERR-030-014 possible: nothing in production ever granted possession.
+            int taker = engine.TestOnly_PossessingAgentId;
+            Assert.AreNotEqual(MatchEngineConstants.NO_POSSESSION, taker,
+                "A throw-in must be awarded to a taker, not left loose.");
+            Assert.AreEqual(1, engine.AgentTeamId(taker),
+                "Team 0 touched the ball out, so team 1 takes the throw-in.");
+            AssertIsNearestOfTeam(engine, taker, new Vector2(52.5f, 0f), team: 1);
+        }
+
+        /// <summary>Asserts <paramref name="taker"/> is the nearest agent of <paramref name="team"/> to
+        /// <paramref name="spot"/> — the KD-H1 taker-selection rule.</summary>
+        private static void AssertIsNearestOfTeam(MatchEngine engine, int taker, Vector2 spot, int team)
+        {
+            float takerDist = Vector2.Distance(engine.AgentView(taker).Position, spot);
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (engine.AgentTeamId(i) != team)
+                {
+                    continue;
+                }
+                Assert.LessOrEqual(takerDist, Vector2.Distance(engine.AgentView(i).Position, spot) + 1e-4f,
+                    $"Agent {i} is closer to the restart spot than the selected taker {taker}.");
+            }
         }
 
         [Test]

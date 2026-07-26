@@ -1,7 +1,28 @@
 # Match Engine — Tick Orchestrator Composition Root (Design Note)
 
 > **Created:** June 15, 2026
-> **Last Updated:** July 26, 2026 (v2.1 — **new §5.Z Phase H opened from ERR-030-014: the engine cannot
+> **Last Updated:** July 26, 2026, later same day (v2.2 — **§5.Z Phase H LANDED: a production match now
+> plays.** ERR-030-014 is closed. The possession bootstrap is five seams, not one: the kickoff/restart
+> **taker award** (KD-H1 — `ApplyRestart` now takes an `awardedTeam` and every call site declares one, so
+> no restart can silently grant the ball to nobody); the **loose-ball pickup** (KD-H3 — a ball that comes to
+> REST while loose is claimed by an agent standing over it, the exact complement of `RunFirstTouch`'s
+> moving-ball gate); the Decision Tree's **loose-ball collect** (KD-H5 / ERR-008-014 — the tree had no
+> action at all that fetches a stationary loose ball, so play died the first time a pass ran out of momentum
+> more than ten metres from anyone); the DT **PASS/SHOOT completion sweep** (KD-H4 / ERR-008-015 —
+> `NotifyActionComplete` had **zero production callers**, so every agent that passed or shot was frozen in
+> EXECUTING for the rest of the match); and the **interrupt deferral** that stops a re-plan dispatching into
+> an executor that is still mid-lifecycle. Four of those five were found by RUNNING the composed engine, one
+> after another, each revealed only once the previous was fixed — §5.Z.4's "expect several findings, not
+> zero" was accurate and then some. Acceptance is the new `match-engine-play-develops` scenario (§5.Z.5): six
+> seeds × 9 minutes, asserting the ball is kicked and airborne, possession is held (10–21% of ticks) and
+> changes hands (262–298 times), **play is still alive at the final tick**, and across the spread the ball
+> reaches both penalty areas and goals are scored. Every predicate fails on the pre-Phase-H engine. **Full
+> dotnet gate: PASSED, 0 failures (whole tree green).** 21 existing tests needed updating — most encoded the
+> old "a restart clears possession" contract, which is exactly the contract that made the deadlock possible.
+> Two findings are recorded but deliberately NOT fixed here: the process-static EventBus makes INTERLEAVED
+> engines diverge (latent since #17, invisible until a production event was finally published), and the foul
+> heuristic issues **7 red cards per 9 minutes** — see §5.Z.7. Prior entry below.)
+> **Last Updated (prior):** July 26, 2026 (v2.1 — **new §5.Z Phase H opened from ERR-030-014: the engine cannot
 > develop play.** Discovered by running roadmap item A4a's KD-8 Step 0 pilot from the season loop: a
 > production match's ball velocity is **identically zero for all 324 000 ticks**, no agent ever possesses
 > it, and every match finishes 0–0 at any squad-strength differential. Root cause is a closed loop, half of
@@ -775,10 +796,11 @@ Linux compile/test CI (`tools/dotnet-ci/run-gate.sh`).
 
 ---
 
-## 5.Z Phase H — possession bootstrap ("make the match playable"), NOT BUILT
+## 5.Z Phase H — possession bootstrap ("make the match playable"), **LANDED**
 
-> **Opened July 26, 2026 from ERR-030-014.** Roadmap item **A4b**. This is the highest-priority open
-> item on the match engine and the blocker for `PM-1` and for #30's calibration (roadmap A4a).
+> **Opened July 26, 2026 from ERR-030-014; LANDED the same day.** Roadmap item **A4b**. It was the
+> highest-priority open item on the match engine and the blocker for `PM-1` and for #30's calibration
+> (roadmap A4a) — both are now unblocked.
 
 ### 5.Z.1 The finding
 
@@ -819,32 +841,156 @@ ball is ever kicked, that possession is ever held, or that play reaches a penalt
 
 That is the lesson worth keeping: the capstone verified that the composition *runs*, never that it *plays*.
 
-### 5.Z.4 The minimal fix, and the decisions it needs
+### 5.Z.4 What was built, and the decisions it made
 
-Award possession to a designated agent at kickoff and at every restart, giving the Decision Tree a carrier
-to act for. Everything downstream already exists — PASS/SHOOT dispatch, pass/shot executors, first touch,
-offside, fouls/cards, goal detection.
+The opening plan was "award possession at kickoff and at every restart; everything downstream already
+exists". That was necessary and **not sufficient**. The loop has more than one entry point, and each of the
+next four defects became visible only once the previous one was fixed and play ran a little further. The
+landing is five seams.
 
-Open decisions for the Phase-H pass to make explicitly:
+**KD-H1 — the restart taker award (which agent, per restart type).** `ApplyRestart(position)` becomes
+`ApplyRestart(position, awardedTeam)`; every call site must now name the team, so no restart can silently
+leave the ball ownerless. Kickoff → `FIRST_HALF_KICKOFF_TEAM` (home; a coin toss would need its own
+registered RNG stream and buys nothing yet, so the convention is `[FIXED]`, not `[GT]`); second-half
+kickoff → `SECOND_HALF_KICKOFF_TEAM`, `[DERIVED]` from the first so they can never drift to the same side
+(Law 8); post-goal restart → the **conceding** team; throw-in / corner / goal kick → `RestartResolver`'s
+awarded team, which already existed; offside → the defending team; foul → the victim's team. The taker is
+that team's nearest agent to the spot **that is not sent off**, ties to the lower roster index. Goalkeepers
+are deliberately not excluded: nearest-to-the-spot gives the keeper a goal kick and an outfielder a corner
+without a per-type table.
 
-- **Which agent**, per restart type (kickoff, throw-in, corner, goal kick, post-goal restart). The
-  `RestartResolver` already computes the awarded team and ball position, so this extends an existing seam.
-- **Possession assignment vs. imparted velocity.** Assignment is smaller and keeps `ApplyKick` the sole
-  producer of ball motion; a small velocity toward a teammate is closer to a real kickoff but adds a second
-  motion source.
-- **Digest baselines.** Play developing moves every engine digest. Most locks are comparative two-run
-  checks and survive untouched, but `MatchEngineSnapshotSchemaTests`' preimage probes and the certified
-  `FR-PO-052` perf baseline (a match that actually plays will not cost what an idle one costs) both need
-  review.
-- **Expect further defects.** This activates a large amount of code that has never run in composition —
-  roadmap C5's prediction at its strongest. Budget the landing for several findings, not zero.
+*Stage-0 approximation, recorded:* the taker is **not walked to the ball**, consistent with the
+agents-keep-positions minimalism `ApplyRestart` already documented, so a taker may be some metres from the
+spot when they play it. A real restart ceremony (walk-to-ball, wall set-up, the taker's two-touch
+restriction) is Stage 1+.
 
-### 5.Z.5 Acceptance
+**KD-H2 — assignment, not imparted velocity.** The restart grants possession and leaves the ball at rest,
+so `ApplyKick` remains the SOLE producer of ball motion. A second motion source would have to be
+serialized, digest-reasoned about, and kept coherent with the executors' possession recheck; the taker's
+own AI decides what to do with the ball on the next tactical stride, which is both smaller and more
+faithful.
 
-A composed scenario asserting what none exists for today: over a multi-minute run the ball is kicked, is
-possessed for a non-trivial share of ticks, reaches both penalty areas, and the match produces a non-zero
-scoreline across a spread of seeds. Then re-run #30's A4a Step 0 pilot; only if the strength extremes
-separate does the calibration corpus become meaningful.
+**KD-H3 — loose-ball pickup.** `RunFirstTouch` gate 3 correctly refuses a ball that is not moving (a still
+ball is not an *incoming receive*, and First Touch #4's control-quality model is a function of incoming
+velocity — applying it at v ≈ 0 would be using that spec outside its domain). So a new, separately-named
+`RunLooseBallPickup` runs after it: a loose ball at ground level whose planar speed is **below**
+`FIRST_TOUCH_MIN_BALL_SPEED_M_S` — the exact complement of gate 3, so the two mechanics can never both fire
+on one ball — is claimed by the nearest non-sent-off agent within `LooseBallPickupRadiusM`. Keeping it
+separate leaves `RunFirstTouch` and every #4 contract test untouched. There is deliberately no contest
+model: two opponents equidistant over a still ball resolve by roster index. A real 50-50 belongs with the
+Collision System #3 duel fan-out (Stage 1+).
+
+**KD-H5 — the loose-ball collect (ERR-008-014).** Pickup is a *reach* gate, so it only helps if somebody is
+standing there — and nothing sent anyone. The Decision Tree had **no action at all that fetches a
+stationary loose ball**: PRESS targets an opponent, MOVE_TO_POSITION targets the formation slot, and
+INTERCEPT bailed out at its `INTERCEPT_MIN_BALL_SPEED` gate. Measured, play stopped the first time a ball
+came to rest more than ~10 m (INTERCEPT's `MAX_INTERCEPT_TIME` reach) from the nearest player, with all 22
+agents circling their slots around it. The fix emits the collect as the **SOLE** off-ball option for one
+designated agent per team — the same shape as SAVE, and for the reason ERR-008-013's AR-4 already
+established: *an action that must happen cannot be left to out-score a competitor under composure noise.*
+(It does not: the collect scores ~0.35 against MOVE's ~0.21, a gap of 0.14 inside the ±0.15 noise band, so
+the collector visibly dithered.)
+
+The designation is made by the **host**, not derived per-agent in the tree, for two reasons. It is a
+team-level role assignment from team state — the same class as Pressing AI #13 choosing one primary presser
+from the whole team snapshot. And, load-bearing: only the host knows who is **sent off**. The first
+implementation used a perception-derived "no teammate I can see is closer" rule and deadlocked anyway, with
+the ball lying 4 m from a frozen red-carded agent that eleven teammates were all deferring to.
+
+**KD-H4 — the DT PASS/SHOOT completion sweep (ERR-008-015).** §3.7.2 parks a tree in EXECUTING after a
+PASS/SHOOT dispatch and re-evaluates only on `NotifyActionComplete` / `NotifyInterrupt` / a forced refresh.
+**Nothing in production ever called `NotifyActionComplete`** (verified: zero callers outside tests), and the
+possession-changed consumer interrupts only the NEW holder, never the passer. So every agent that passed or
+shot — or whose `Execute` was *rejected*, which the dispatcher deliberately does not inspect (§3.5.2) — was
+frozen in EXECUTING for the remainder of the match: no further decisions, no further movement commands, and
+if it still held the ball, no way to release it. The composition root owns both the trees and the
+executors, so it is the only layer that can observe an executor lifecycle ending; one rule covers both
+completion and rejection — *a tree waiting on an executor that is not running has nothing left to wait
+for.* Paired with it: `OnPossessionChanged` no longer interrupts a holder whose own executor is still in
+flight, which was re-planning agents straight into their own busy executor (`Execute() called while shot in
+progress`) once rebounds started happening.
+
+**Digest baselines.** As predicted, play developing moves every engine digest. No absolute digest is pinned
+anywhere in the tree, so every determinism lock — all comparative two-run checks — survived untouched. Two
+`MatchEngineSnapshotSchemaTests` preimage probes did need re-anchoring, but not for that reason: they
+perturbed a tree into EXECUTING using `default(AgentAction)`, whose `Type` is PASS (ordinal 0), so the new
+completion sweep erased the perturbation during the very tick being measured and left the probe silently
+vacuous. They now perturb with a continuous action. The certified `FR-PO-052` per-tick perf baseline is
+**not** revisited here — it is a pinned-host artifact and a match that actually plays will not cost what an
+idle one did; re-capturing it is a cert-run task (`cert-run-runbook.md`), listed in §5.Z.7.
+
+**No `SNAPSHOT_SCHEMA_VERSION` change.** Nothing new is serialized: `_possessingAgentId` already round-trips
+via `MatchContext.PossessingAgentId`, and `TacticalContext` (which carries the new `LooseBallCollector`
+routing flag) is rebuilt each AI tick and never serialized.
+
+### 5.Z.5 Acceptance — `match-engine-play-develops`
+
+`src/match-engine/tests/MatchEnginePlayDevelopmentScenarios.cs` on the #19 ScenarioRunner (Tier B,
+cross-spec, owning specs {1,2,3,4,5,6,7,8,12,13,14,15,16,17,19}). Six seeds × 32 400 ticks (9 minutes of
+match time each; ~90 s wall clock on the Linux gate). **Every predicate fails on the pre-Phase-H engine.**
+
+Per seed: the ball is kicked (peak planar speed ≥ 5 m/s; measured 16.2–17.2, pre-fix **0.00**); the ball
+goes airborne (peak height ≥ 0.5 m; measured 2.45–2.91, pre-fix **0.11 m** = the resting centre height);
+possession is held (≥ 5% of ticks; measured 10.5–20.9%, pre-fix **0%**); possession changes hands (≥ 50
+times; measured 262–298, pre-fix **0**); and — the predicate that earned its keep twice —
+**`play-still-alive-at-final-tick`**: the last possession change lands in the final quarter of the run and
+the ball is still moving in the final tenth (measured 96.7–99.9% and 98.7–100%).
+
+Across the seed spread: the ball reaches **both** penalty areas, and a non-zero scoreline is produced. These
+are asserted over the set rather than per seed, per §5.Z.5's own wording — with the current provisional
+balance only some nine-minute runs produce a goal, and which ones is a property of the tuning, not of the
+possession bootstrap this scenario locks.
+
+Plus a two-run byte-identical digest chain over 6 000 ticks of **live play** — the Phase F capstone already
+matched two 600-tick chains, but 600 ticks of the old engine were 600 ticks of nothing, so that check could
+not observe the possession loop, the executors, or a goal.
+
+Per-seam unit locks live in `MatchEnginePossessionBootstrapTests` (11) and `OptionGeneratorTests` (+3).
+
+### 5.Z.6 Why the run-fix-run loop was the method
+
+Worth recording, because it generalises. Each of the four post-award defects was **invisible until the
+previous fix landed**: the ball cannot come to rest in open play until something first sets it moving; no
+agent can fail to fetch a resting ball until balls start coming to rest; a tree cannot be observed frozen
+in EXECUTING until it actually dispatches passes; and a re-plan cannot collide with a busy executor until
+rebounds occur. No amount of reading would have surfaced them in one pass — they are strictly sequential.
+The corollary is that the acceptance scenario's **duration** is load-bearing: two of the four stalls let
+play run for eight or nine minutes before dying, and a short scenario would have certified the engine as
+fixed while it was not.
+
+### 5.Z.7 Recorded, NOT fixed here
+
+Two real findings surfaced by the landing that are deliberately out of scope, plus two carried forward.
+
+1. **The foul heuristic issues ~7 red cards per 9 minutes** (measured, consistently, across three seeds —
+   extrapolating, every player on the pitch would be dismissed inside a full match). `MatchFlowCollisionConsumer`'s
+   FROM_BEHIND high-force capture fires roughly every 4–5 seconds where real football fouls once every
+   ~3.5 minutes, so ordinary jostling is clearing `FOUL_MIN_FORCE_N`. This is a threshold/`[GT]` question —
+   `FOUL_MIN_FORCE_N`, `FoulCooldownTicks`, `RedCardProbability` — and setting those needs a foul-rate
+   target and a measurement pass, not a guess folded into a correctness fix. **It is the single most
+   visible remaining unrealism in a played match** and should be the next balance item. It does not block
+   play (Phase H's sent-off exclusions keep the possession loop alive), but it does degrade late-match play.
+2. **The process-static EventBus makes INTERLEAVED engines non-deterministic.** Ticking two engines
+   `a.RunTick(); b.RunTick();` in one loop diverges at tick 1; run sequentially they are byte-identical
+   (verified both ways). This is a latent property of #17 §3.2.1's mandated static bus — `ResetForNewMatch`
+   handles *sequential* matches, not concurrent ones — and it was invisible only because no production
+   event was ever published. Three tests interleaved and now run sequentially. Making the bus per-engine is
+   an #17 architecture change, not a match-engine one.
+3. **Pass Mechanics #5 logs FM-08 at Error level.** "Lost possession before CONTACT. Race condition." is now
+   an ordinary match event — a restart awarded against a passer mid-windup — occurring several times per
+   match. The cancel path itself is correct; only the severity is stale. Downgrading it is a #5 change with
+   its own tests, so the two composed scenarios declare the log instead.
+4. **The `FR-PO-052` certified per-tick perf baseline** now describes an engine that did nothing and needs
+   re-capturing on the pinned host (`cert-run-runbook.md`). The Linux gate's anchor is deliberately
+   generous and still passes.
+
+### 5.Z.8 What this unblocks
+
+`PM-1` ("watch a match") is no longer blocked by the engine. Roadmap **A4a** — the round-resolution
+calibration corpus — is unblocked upstream: re-run #30's KD-8 Step 0 pilot (~33 min) and, **only if the
+squad-strength extremes now separate**, the ~1.4 h corpus and the fit. Note Step 0 may still refuse: Phase H
+makes matches *play*, it does not make them *discriminate by squad strength*, and that is exactly the
+question Step 0 exists to ask.
 
 ---
 
@@ -920,6 +1066,7 @@ separate does the calibration corpus become meaningful.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 2.2     | 2026-07-26 | —      | **§5.Z Phase H LANDED — ERR-030-014 closed; a production match now plays.** Five seams, four of them found by running the composed engine one after another (each visible only once the previous was fixed — §5.Z.6). KD-H1 restart taker award: `ApplyRestart(position, awardedTeam)` with every call site declaring its team (kickoff home / second half the other side per Law 8 / post-goal the conceding team / RestartResolver's award / offside the defenders / foul the victim's team); taker = nearest non-sent-off agent of that team, ties to lower index. New `[FIXED] FIRST_HALF_KICKOFF_TEAM` + `[DERIVED] SECOND_HALF_KICKOFF_TEAM`. KD-H2 assignment not imparted velocity (`ApplyKick` stays the sole motion producer). KD-H3 `RunLooseBallPickup` — a loose ball at REST is claimed by an agent within the new `[GT] LooseBallPickupRadiusM`, the exact speed-gate complement of `RunFirstTouch` so the two can never both fire. KD-H5 / **ERR-008-014** the DT loose-ball collect, emitted as the SOLE off-ball option for one host-designated collector per team (`TacticalContext.LooseBallCollector`; host-designated because only it knows who is sent off — a perception-derived "nearest teammate" rule deadlocked on a frozen red-carded agent). KD-H4 / **ERR-008-015** the PASS/SHOOT completion sweep — `NotifyActionComplete` had zero production callers, so every agent that passed or shot was frozen in EXECUTING for the rest of the match; plus `OnPossessionChanged` no longer interrupts a holder whose executor is still in flight. New acceptance scenario `match-engine-play-develops` (6 seeds × 9 min; every predicate fails pre-Phase-H, incl. `play-still-alive-at-final-tick`, which caught two of the four stalls) + `MatchEnginePossessionBootstrapTests` (11) + `OptionGeneratorTests` (+3). 21 existing tests updated — most encoded the "a restart clears possession" contract that made the deadlock possible. No `SNAPSHOT_SCHEMA_VERSION` change. **Full dotnet gate: PASSED, 0 failures (whole tree green).** Recorded NOT fixed (§5.Z.7): the foul heuristic's ~7 red cards per 9 minutes; the process-static EventBus's interleaved-engine divergence; #5's FM-08 Error-level log; the `FR-PO-052` perf baseline needing re-capture. |
 | 2.3     | 2026-07-20 | —      | **Phase G Phase-2 LANDED — distinct-squad re-projection (#27 T3 / KD-3).** New public `ISquadProvider` (`src/match-engine/ISquadProvider.cs`, the `ClubId → Squad` resolver) threaded into `RestoreFromSnapshot(…, ISquadProvider squads = null)`; `ReprojectDistinctSquads` replaces the Phase-1 distinct-squad fail-loud — neutral fast-path returns immediately, each team with a non-sentinel `_rosterClubId` resolves its roster (ClubId-check + `ValidateSquadSize`/`ValidateSelectedRecords`, both teams before any apply), re-runs `LineupSelector` + `PlayerAttributeProjection` for the base lineup (`ReprojectBaseLineup`, attribute arrays + the un-serialized bench GK flags `_benchIsGoalkeeper`; the serialized on-pitch `_isGoalkeeper` stays the restored value), then replays the substitutions the serialized `_activeBenchSlot` records (`ReprojectSubstitutions`, the attribute half of `SubstitutePlayer`). Fail-loud on absent provider / unresolvable ClubId (`NotSupportedException`) / mismatched returned ClubId (`InvalidOperationException`) (R4). `MatchEngineSnapshotRestoreTests` v1.1: distinct-squad G3 round-trip (base / mid-match sub / post-restore sub / post-restore keeper-for-keeper sub) + three provider fail-loud gates; new `TestOnly_BenchIsGoalkeeper` seam. No `SNAPSHOT_SCHEMA_VERSION` change. `MatchEngine.cs` v1.42. Full dotnet gate: PASSED, 0 failures (263 match-engine tests; whole tree green). Implementation finding folded in: `_benchIsGoalkeeper` is NOT serialized (only on-pitch `_isGoalkeeper` is), re-projected for post-restore keeper subs. Discovered out-of-scope (Phase-1 completeness follow-up, root `CLAUDE.md` OPEN ISSUES): a keeper-onto-outfield-slot substitution post-restore diverges via a Positioning-AI (#12) GK-flag-flip formation-slot interaction. See `snapshot-deserialize-design.md` v0.8. |
 | 2.2     | 2026-07-20 | —      | **Phase G Phase-1 COMPLETE — reader LANDED.** `DeserializeWorldState` (symmetric mirror of `SerializeWorldState`, restore-seam reconstruction, version-gate + event-ledger-boundary trailing guard) + the `RestoreState` counterparts (Pressing/Defensive/Attacking/Perception/Positioning + `MovementCommand.ReconstructFromSnapshot`) + the static `RestoreFromSnapshot` factory (fingerprint gate → boot + EventBus reset → deserialize → KD-3 distinct-squad fail-loud → digest-chain + clock restore) + `MatchEngineSnapshotRestoreTests` (G3 round-trip determinism + fail-loud guards). Findings folded in during landing: `_possessingAgentId`/`_prevPossessingAgentId` reconstructed from the restored MatchContext; the trailing guard made event-ledger-aware. No `SNAPSHOT_SCHEMA_VERSION` change. `MatchEngine.cs` v1.41. Full dotnet gate: PASSED, 0 failures (257 match-engine tests; whole tree green). See `snapshot-deserialize-design.md` v0.7. |
 | 2.1     | 2026-07-20 | —      | **Phase G opened — snapshot deserialize / restore path** (governed by the converged design supplement `docs/tracking/snapshot-deserialize-design.md` v0.5, AR-1..AR-4). §5 gains the Phase G entry (the reader that reconstructs full engine state from the payload `SerializeWorldState` already writes — the keystone save/load, replay/rewind, #27 T3 distinct-squad restore, and #16 §4.8.2 MXCSR validation sit behind; nothing read the snapshot back before). Phased: G-Phase 1 (neutral-path reader + round-trip determinism), G-Phase 2 (#27 T3 distinct-squad re-projection), G-Phase 3 (native MXCSR + on-disk fold). **G-Phase 1 KD-8 writer half LANDED** the same day: the `match-flow.card-severity` `RngStreamState` cursor (RngCursor + ActionOrdinal — the engine's only mutable RNG stream, the one cross-tick surface the writer omitted; AR-3's High) is serialized at `SNAPSHOT_SCHEMA_VERSION` 16 → 17, so a save after any booking round-trips deterministically, and the stale v8 "no cross-tick state excluded" note is corrected. `MatchEngine.cs` v1.40, `MatchEngineConstants.cs` v1.24; new `TestOnly_SetCardSeverityStreamCursor` seam + `MatchEngineSnapshotSchemaTests` v1.14 (pin 17 + `CardSeverityRngCursor` probe). Remaining G-Phase-1 slices: the missing `RestoreState` counterparts, `DeserializeWorldState`, the `RestoreFromSnapshot` factory, and the G3 round-trip determinism test. (dotnet gate not runnable in this environment; verified by manual review, CI runs on push.) |

@@ -1,6 +1,7 @@
 // File:     src/decision-tree/DecisionTreeConstants.cs
 // Created:  2026-05-29
 // Modified: 2026-06-14 (audit AR-3 fix pass)
+// Modified: 2026-07-26 (+ NoPossessorAgentId — names the loose-ball sentinel at the DecisionContextAssembler seam)
 // Author:   —
 // Spec:     Decision Tree #8 §4.2, §3.7, Code Standards #20
 // Purpose:  Pipeline-level constants not owned by UtilityWeights, ComposureWeights,
@@ -28,6 +29,15 @@ namespace TacticalDirector.DecisionTree
         /// with an explicit per-agent team lookup.
         /// </summary>
         public const int HomeSquadAgentCount = 11;
+
+        /// <summary>
+        /// [FIXED] <c>MatchContext.PossessingAgentId</c> sentinel meaning "the ball is loose — no agent
+        /// holds it". Consumed by <c>DecisionContextAssembler</c> for the §2.2.4 possessor-team
+        /// classification (loose ⇒ <see cref="PossessionState.CONTESTED"/>), replacing a bare <c>-1</c>
+        /// literal at that one site. Mirrors the host's <c>MatchEngineConstants.NO_POSSESSION</c>; the two
+        /// are cross-assembly siblings, so neither may change without the other.
+        /// </summary>
+        public const int NoPossessorAgentId = -1;
 
         // ── Option Array Capacity ─────────────────────────────────────────────
         // §3.1.0: up to 17 slots (7 action types + 10 PASS candidates)
@@ -117,4 +127,9 @@ namespace TacticalDirector.DecisionTree
 // | 1.3     | 2026-06-14 | —      | Audit AR-3 L: HomeSquadAgentCount (single source for the possessor-team ID     |
 // |         |            |        |   split, was a bare literal 11 in the assembler) + FacingDegenerateSqrThreshold |
 // |         |            |        |   (was an inlined 0.0001f) added per FR-CS-016.                                 |
+// | 1.4     | 2026-07-26 | —      | + [FIXED] NoPossessorAgentId = -1: names the                    |
+// |         |            |        |   MatchContext.PossessingAgentId loose-ball sentinel that       |
+// |         |            |        |   DecisionContextAssembler's possessor-team classification      |
+// |         |            |        |   keys on (was a bare -1 literal). Cross-assembly sibling of    |
+// |         |            |        |   MatchEngineConstants.NO_POSSESSION.                           |
 #endregion
