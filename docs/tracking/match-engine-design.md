@@ -1062,6 +1062,51 @@ the stream underneath is wrong, and it is the next thing to look at for match re
 agent spacing or #3's 60° `BehindDotThreshold` cone). `FoulCallProbability` is a rate knob calibrated
 against *that* stream; if it changes, re-measure with the committed diagnostic.
 
+### 5.Z.10 Kickoff keeper placement (July 26, 2026) — both goals were unguarded for ninety minutes
+
+Found by running roadmap A4a's KD-8 Step 0 pilot after the §5.Z.9 balance pass. Step 0's own assertion
+now **passes** — the squad-strength extremes are distinguishable (mean margin +28.4 strong-at-home vs
++1.9 strong-away) — but its raw scorelines were not football:
+
+```
+strong-at-home:  home 15, 19, 21, 27, 31, 31, 32, 33, 36, 39   away 0 — every match
+strong-away:     home  0,  0,  2,  2,  2,  2,  2,  4,  4,  2   away 0 — every match
+```
+
+Two things wrong at once: an order-of-magnitude goal rate, and **the away team never scoring in twenty
+full matches.** Step 0 could not see either — it asserts only that the two buckets *differ*.
+
+**Root cause.** `InitializeKickoffState` placed every agent of a team on one x-line
+(`HomeLineXM` / `AwayLineXM` = 26.25 / 78.75), spread evenly across the pitch width by roster index.
+The keeper is index 0, so it got the first lateral slot: `y = WIDTH × 1/12 = 5.67`. Each keeper
+therefore began the match **26 m upfield of the goal it defends and 28 m off-centre** — on the
+touchline, nowhere near the goal mouth.
+
+That would be a cosmetic kickoff wrinkle if keepers moved. **They do not:** the Physics phase skips
+goalkeepers at Stage 0 (GK locomotion is Goalkeeper Mechanics #11), so boot placement *is* the
+keeper's position for the entire ninety minutes. Both goals stood completely unguarded, all match,
+in every match the engine has ever played.
+
+**The fix** is four lines: a keeper spawns at `(GkKickoffDepthM, WIDTH/2)` on the goal line it
+defends, mirrored for the away side by the existing `MirrorPitchIfAway` (so `(5.5, 34)` becomes
+`(99.5, 34)` — each keeper facing the pitch from its own line). `GkKickoffDepthM` is a `[CROSS]`
+mirror of `PositioningAIConstants.GK_DEPTH_M`, the resting depth #12's own `ComputeGkSlot` produces
+for a ball on the centre spot, so the boot placement and the positioning model agree by construction
+rather than drifting. Outfield placement is untouched.
+
+**Effect.** In neutral 9-minute runs the away team began scoring immediately and the ball crossed the
+goal line it attacks for the first time (`min ball x` went from 8.2 to **−0.1**); matches went from
+1–0 / 0–0 to 1–1 / 1–0. New locks in `MatchEngineMatchFlowTests`: each keeper stands off the goal line
+it defends and centred on the mouth, and the two keepers guard **opposite** ends — the second being
+the load-bearing one, since two keepers on one line is what the defect amounted to in effect.
+
+**Recorded, NOT fixed — the goal rate is still several times football's.** A stationary keeper is a
+collision body, so it deflects what hits it, but it cannot dive, close down, or narrow an angle. The
+honest next step is Goalkeeper Mechanics #11, which is already wired and snapshot-safe but **opt-in
+and default-off** (`EnableGkHeading`); the remaining work recorded on that track is exactly "flip the
+default to on, take the digest rebaseline" — plus GK locomotion, without which a committed
+`SaveIntent` has no body behind it. That is the next realism item after the contact rate (§5.Z.9).
+
 ### 5.Z.8 What this unblocks
 
 `PM-1` ("watch a match") is no longer blocked by the engine. Roadmap **A4a** — the round-resolution

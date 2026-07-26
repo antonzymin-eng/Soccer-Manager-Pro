@@ -33,6 +33,7 @@
 //           flag-on engine snapshot-safe. The Phase-1 durable-capture fail-loud guard is removed.)
 // Modified: 2026-07-23 (DT-emitted goalkeeper SAVE (ERR-008-013) + AR follow-up TestOnly_SaveCommittedForGk latch seam)
 // Modified: 2026-07-26 (§5.Z Phase H possession bootstrap — ERR-030-014: ApplyRestart(position, awardedTeam) + SelectRestartTaker (KD-H1), the boot kickoff award, RunLooseBallPickup (KD-H3), SelectLooseBallCollector (KD-H5), the Resolve PASS/SHOOT completion sweep (KD-H4 / ERR-008-015), and interrupt deferral while an executor is in flight. No schema change. See docs/tracking/match-engine-design.md §5.Z)
+// Modified: 2026-07-26 (§5.Z.10 kickoff keeper placement: a keeper spawns on the goal line it DEFENDS, centred on the mouth, instead of on the outfield kickoff line — Stage-0 Physics skips GK locomotion, so boot placement stood for the whole match and both goals were unguarded. See docs/tracking/match-engine-design.md §5.Z.10)
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: referee-call probability partitioned out of the single card-severity draw (KD-F1/KD-F2), no-call arms no cooldown (KD-F3), strongest-wins candidate capture (KD-F4), + the TestOnly collision-observer measurement seam. No schema change. See docs/tracking/foul-discipline-balance-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
@@ -1084,8 +1085,24 @@ namespace TacticalDirector.MatchEngine
                         ? MatchEngineConstants.HOME_FACING_DEG
                         : MatchEngineConstants.AWAY_FACING_DEG;
 
-                    _agents[i] = AgentState.CreateAtPosition(
-                        new Vector2(lineX, spreadY), FacingFromHeading(headingDeg));
+                    // The keeper stands on the goal line it DEFENDS, centred on the goal mouth — not on
+                    // the outfield kickoff line with everyone else. This is load-bearing far beyond
+                    // kickoff: the Physics phase skips goalkeepers at Stage 0 (#11 owns GK locomotion),
+                    // so wherever boot puts a keeper is where it stands for the WHOLE match. Under the
+                    // shared-line placement the keeper landed on the k = 0 lateral slot — 26 m upfield of
+                    // its own goal and 28 m off-centre — so BOTH goals were unguarded for ninety minutes,
+                    // and the measured goal rate was about ten times football's (see §5.Z.10). Mirrored
+                    // for the away side by construction: (GkDepth, WIDTH/2) maps to (LENGTH − GkDepth,
+                    // WIDTH/2), so each keeper faces the pitch from its own line.
+                    Vector2 spawn = _isGoalkeeper[i]
+                        ? MirrorPitchIfAway(
+                            team,
+                            new Vector2(
+                                MatchEngineConstants.GkKickoffDepthM,
+                                MatchEngineConstants.PITCH_WIDTH_M * 0.5f))
+                        : new Vector2(lineX, spreadY);
+
+                    _agents[i] = AgentState.CreateAtPosition(spawn, FacingFromHeading(headingDeg));
                     // #27 T1: the #2 locomotion attrs are a projection of the canonical record
                     // (all-neutral at boot ⇒ byte-identical to the pre-T1 CreateDefault() seed).
                     _attrs[i]  = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
@@ -7042,4 +7059,15 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | on TestOnly_InjectFoulCandidate defaulting to certainty so      |
 // |         |            |        | every pre-existing injection test keeps its meaning. Measured   |
 // |         |            |        | 480 -> 21 fouls, 147 -> 3.0 yellows, 75 -> 1.0 reds per 90 min. |
+// | 1.50    | 2026-07-26 | —      | §5.Z.10 kickoff keeper placement. InitializeKickoffState put     |
+// |         |            |        | every agent of a team on one x-line spread across the width by   |
+// |         |            |        | roster index, so the keeper (index 0) took the first lateral     |
+// |         |            |        | slot: 26 m upfield of the goal it defends and 28 m off-centre.   |
+// |         |            |        | Stage-0 Physics SKIPS goalkeepers (#11 owns GK locomotion), so   |
+// |         |            |        | that was the keeper's position for the whole ninety minutes —    |
+// |         |            |        | both goals stood unguarded in every match the engine has ever    |
+// |         |            |        | played, and the KD-8 Step 0 pilot measured 15-39 goals a match.  |
+// |         |            |        | A keeper now spawns at (GkKickoffDepthM, WIDTH/2) on the line it |
+// |         |            |        | defends, mirrored for the away side through MirrorPitchIfAway.   |
+// |         |            |        | Outfield placement untouched.                                   |
 #endregion

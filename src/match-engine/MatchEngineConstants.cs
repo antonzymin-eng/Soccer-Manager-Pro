@@ -8,6 +8,7 @@
 // Modified: 2026-07-18 (#27 T3 — NO_ROSTER_CLUB_ID sentinel + SNAPSHOT_SCHEMA_VERSION 15 → 16, v16 per-team roster reference)
 // Modified: 2026-07-22 (GK #11 / Heading #10 engine integration Phase 1 — +6 [GT] Stage-0 save/header trigger constants; no schema change)
 // Modified: 2026-07-26 (§5.Z Phase H — [FIXED] FIRST_HALF_KICKOFF_TEAM + [DERIVED] SECOND_HALF_KICKOFF_TEAM + [GT] LooseBallPickupRadiusM; no schema change)
+// Modified: 2026-07-26 (§5.Z.10: + [CROSS] GkKickoffDepthM mirroring PositioningAIConstants.GK_DEPTH_M — the keeper's goal-line spawn depth)
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: + [GT] FoulCallProbability; Yellow 0.35 -> 0.16, Red 0.05 -> 0.011, FoulCooldownTicks 60 -> 180; no schema change. See docs/tracking/foul-discipline-balance-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
@@ -289,6 +290,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | measured force distribution is bounded at ~2362 N, so the       |
 // |         |            |        | threshold is a cliff (480 fouls at 1200 N, 90 at 2000, 0 at     |
 // |         |            |        | 3000) and cannot carry a rate at all.                          |
+// | 1.28    | 2026-07-26 | —      | §5.Z.10: + [CROSS] GkKickoffDepthM, mirroring                    |
+// |         |            |        | PositioningAIConstants.GK_DEPTH_M (the resting depth #12's own  |
+// |         |            |        | ComputeGkSlot yields for a centre-spot ball), so the kickoff    |
+// |         |            |        | keeper spawn and the positioning model agree by construction    |
+// |         |            |        | instead of drifting apart.                                     |
 #endregion
 
         #region Derived
@@ -450,6 +456,19 @@ namespace TacticalDirector.MatchEngine
         /// the Stage-1 config loader.
         /// </summary>
         public static readonly float LooseBallPickupRadiusM = Config.GetFloat("match-engine", "LooseBallPickupRadiusM", 1.0f);
+
+        /// <summary>
+        /// [CROSS] Distance (m) from its own goal line at which a goalkeeper is spawned at kickoff,
+        /// centred on the goal mouth. Authoritative source:
+        /// <c>PositioningAIConstants.GK_DEPTH_M</c> (Positioning AI #12 §3.4 — the resting depth its
+        /// <c>ComputeGkSlot</c> produces for a ball at the centre spot), mirrored here read-only so the
+        /// boot placement and the positioning model agree instead of drifting.
+        ///
+        /// Load-bearing well past kickoff: the Physics phase skips goalkeepers at Stage 0 (GK locomotion
+        /// is Goalkeeper Mechanics #11), so a keeper stands where boot puts it for the entire match.
+        /// </summary>
+        public static readonly float GkKickoffDepthM =
+            TacticalDirector.PositioningAI.PositioningAIConstants.GK_DEPTH_M;
 
         /// <summary>
         /// [GT] Minimum <c>ContactForceData.ForceMagnitude</c> (N) for a FROM_BEHIND agent-agent
