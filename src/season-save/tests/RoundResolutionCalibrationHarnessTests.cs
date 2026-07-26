@@ -1,0 +1,343 @@
+// File:     src/season-save/tests/RoundResolutionCalibrationHarnessTests.cs
+// Created:  2026-07-26
+// Modified: 2026-07-26
+// Author:   —
+// Spec:     League Bootstrap design supplement KD-8 (calibration methodology + Step 0); path-to-playable
+//           roadmap A4a / C1a; Code Standards #20
+// Purpose:  Locks the calibration harness's PLANNING logic — which is where the real logic lives — always,
+//           and drives the expensive engine corpus only when explicitly asked.
+//
+// WHY THE CORPUS RUN IS ENV-GATED: one row is a full 90-minute match (~2 minutes of compute), and a corpus
+// is hundreds of them. Wiring that into every push would multiply the gate's runtime for a run that is
+// by design ONE-OFF (KD-8: the corpus is generated, fitted, and committed as an artifact; it is re-captured
+// only when the engine's scoring changes). The engine path itself is not left unverified — the
+// season-multi-fixture capstone drives a real MatchEngine through the season loop on every push.
+//
+//   Step 0 pilot (KD-8):   TD_CALIBRATION_PILOT=1 dotnet test --filter Calibration
+//   Corpus slice:          TD_CALIBRATION_SAMPLES=18 TD_CALIBRATION_DELTA_FROM=-5 \
+//                          TD_CALIBRATION_DELTA_TO=5 TD_CALIBRATION_OUT=/path/rows.csv \
+//                          dotnet test --filter Calibration
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+
+using NUnit.Framework;
+
+using TacticalDirector.PlayerDatabase;
+
+namespace TacticalDirector.SeasonSave.Tests
+{
+    [TestFixture]
+    internal class RoundResolutionCalibrationHarnessTests
+    {
+        // ── Always-on: the plan, the seeds, and the base rosters ───────────────────────────
+
+        [Test]
+        public void BaseRosters_AreFieldableAndDistinct()
+        {
+            Squad[] rosters = RoundResolutionCalibrationHarness.BuildBaseRosters();
+
+            Assert.AreEqual(RoundResolutionCalibrationHarness.BaseRosterCount, rosters.Length);
+
+            var seenRatings = new List<float>();
+            for (int i = 0; i < rosters.Length; i++)
+            {
+                Assert.AreEqual(PlayerDatabaseConstants.CLUB_SQUAD_SIZE, rosters[i].Count);
+
+                // Fieldable by the KD-6 template — if this threw, every corpus row would fail at
+                // ConfigureSquads hours into a run.
+                float rating = TacticalDirector.MatchEngine.SquadRating.StartingElevenMean(rosters[i]);
+                Assert.Greater(rating, 0f);
+                seenRatings.Add(rating);
+            }
+
+            // Distinct base rosters are the point of having six: a bucket built from one pair re-seeded
+            // measures seed variance, not rating response (KD-8).
+            bool anyDifferent = false;
+            for (int i = 1; i < seenRatings.Count; i++)
+            {
+                if (Math.Abs(seenRatings[i] - seenRatings[0]) > 1e-6f)
+                {
+                    anyDifferent = true;
+                }
+            }
+
+            Assert.IsTrue(anyDifferent, "The base rosters must not all rate identically.");
+        }
+
+        [Test]
+        public void BaseRosters_AreDeterministic()
+        {
+            Squad[] a = RoundResolutionCalibrationHarness.BuildBaseRosters();
+            Squad[] b = RoundResolutionCalibrationHarness.BuildBaseRosters();
+
+            for (int i = 0; i < a.Length; i++)
+            {
+                Assert.AreEqual(a[i].ClubId, b[i].ClubId);
+                for (int p = 0; p < a[i].Count; p++)
+                {
+                    Assert.AreEqual(a[i].GetPlayer(p).PlayerId, b[i].GetPlayer(p).PlayerId);
+                    Assert.AreEqual(
+                        a[i].GetPlayer(p).Attributes.Finishing, b[i].GetPlayer(p).Attributes.Finishing);
+                }
+            }
+        }
+
+        [Test]
+        public void BuildPlan_SplitsTheTargetDeltaExactly()
+        {
+            // The differential the plan asks for must be the differential it encodes, for both signs —
+            // integer division truncates toward zero, so this is the assertion that catches a sign slip.
+            for (int target = -6; target <= 6; target++)
+            {
+                CalibrationPlanEntry[] plan = RoundResolutionCalibrationHarness.BuildPlan(
+                    RoundResolutionCalibrationHarness.BaseRosterCount, target, 4);
+
+                foreach (CalibrationPlanEntry e in plan)
+                {
+                    Assert.AreEqual(target, e.HomeDelta - e.AwayDelta, $"target {target}");
+                }
+            }
+        }
+
+        [Test]
+        public void BuildPlan_NeverPairsARosterWithItself()
+        {
+            CalibrationPlanEntry[] plan = RoundResolutionCalibrationHarness.BuildPlan(
+                RoundResolutionCalibrationHarness.BaseRosterCount, 2, 40);
+
+            foreach (CalibrationPlanEntry e in plan)
+            {
+                Assert.AreNotEqual(e.HomeRosterIndex, e.AwayRosterIndex);
+                Assert.GreaterOrEqual(e.HomeRosterIndex, 0);
+                Assert.Less(e.HomeRosterIndex, RoundResolutionCalibrationHarness.BaseRosterCount);
+                Assert.GreaterOrEqual(e.AwayRosterIndex, 0);
+                Assert.Less(e.AwayRosterIndex, RoundResolutionCalibrationHarness.BaseRosterCount);
+            }
+        }
+
+        [Test]
+        public void BuildPlan_UsesMoreThanOnePairingAcrossABucket()
+        {
+            // 18 samples over 6 rosters must exercise several distinct pairings, not one pair re-seeded.
+            CalibrationPlanEntry[] plan = RoundResolutionCalibrationHarness.BuildPlan(
+                RoundResolutionCalibrationHarness.BaseRosterCount, 0, 18);
+
+            var pairs = new HashSet<int>();
+            foreach (CalibrationPlanEntry e in plan)
+            {
+                pairs.Add((e.HomeRosterIndex * 100) + e.AwayRosterIndex);
+            }
+
+            Assert.Greater(pairs.Count, RoundResolutionCalibrationHarness.BaseRosterCount,
+                "A bucket must span more distinct pairings than it has rosters.");
+        }
+
+        [Test]
+        public void BuildPlan_SeedsAreDistinctWithinAndAcrossBuckets()
+        {
+            var seeds = new HashSet<ulong>();
+            for (int target = -5; target <= 5; target++)
+            {
+                CalibrationPlanEntry[] plan = RoundResolutionCalibrationHarness.BuildPlan(
+                    RoundResolutionCalibrationHarness.BaseRosterCount, target, 18);
+                foreach (CalibrationPlanEntry e in plan)
+                {
+                    Assert.IsTrue(seeds.Add(e.MatchSeed), "Corpus match seeds must not collide.");
+                }
+            }
+
+            Assert.AreEqual(11 * 18, seeds.Count);
+        }
+
+        [Test]
+        public void SeedFor_IsKeyedSoASliceIsReproducibleInIsolation()
+        {
+            // What makes the corpus run splittable across processes: sample (delta, i)'s seed does not
+            // depend on how many samples ran before it.
+            Assert.AreEqual(
+                RoundResolutionCalibrationHarness.SeedFor(3, 7),
+                RoundResolutionCalibrationHarness.SeedFor(3, 7));
+            Assert.AreNotEqual(
+                RoundResolutionCalibrationHarness.SeedFor(3, 7),
+                RoundResolutionCalibrationHarness.SeedFor(4, 7));
+            Assert.AreNotEqual(
+                RoundResolutionCalibrationHarness.SeedFor(3, 7),
+                RoundResolutionCalibrationHarness.SeedFor(3, 8));
+        }
+
+        [Test]
+        public void BuildPlan_RejectsDegenerateArguments()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => RoundResolutionCalibrationHarness.BuildPlan(1, 0, 4));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => RoundResolutionCalibrationHarness.BuildPlan(6, 0, 0));
+        }
+
+        [Test]
+        public void Csv_RoundTripsTheObservableColumns()
+        {
+            var row = new CalibrationRow(1.25f, 3, 1, 0xABCDEF0123456789UL, 1, -1, 0, 2);
+            string csv = RoundResolutionCalibrationHarness.ToCsv(new[] { row });
+
+            StringAssert.Contains(CalibrationRow.CsvHeader, csv);
+            StringAssert.Contains("3,1,", csv);
+            StringAssert.Contains("12379813738877118345", csv);   // the seed, invariant-culture
+        }
+
+        // ── Env-gated: the real engine runs ────────────────────────────────────────────────
+
+        [Test]
+        [Category("Calibration")]
+        public void Pilot_ExtremeDifferentialsAreDistinguishable()
+        {
+            // KD-8 STEP 0 — the check that must happen BEFORE the full corpus: if a squad at the weak end of
+            // the strength ramp and one at the strong end produce indistinguishable goal distributions, the
+            // corpus carries no signal to fit, and fitting three parameters to noise would waste the run.
+            //
+            // THIS CURRENTLY FAILS, AND THAT IS THE CORRECT OUTCOME. Run 2026-07-26: all 20 matches finished
+            // 0–0 at a measured dSquad of ±6, because a Stage-0 match never puts the ball in motion at all
+            // (ERR-030-014 — root cause and evidence in docs/tracking/round-resolution-corpus.md). Step 0
+            // stopped a ~5-hour corpus run that would have fitted three parameters to a table of zeros,
+            // which is exactly the cost it was added (league-bootstrap AR-5 M-4) to avoid. Leave the
+            // assertion as-is: it is the gate that reopens A4a once the engine can play a match.
+            string flag = Environment.GetEnvironmentVariable("TD_CALIBRATION_PILOT");
+            if (string.IsNullOrEmpty(flag))
+            {
+                Assert.Ignore("Set TD_CALIBRATION_PILOT=1 to run the KD-8 Step 0 pilot (~20 real matches).");
+            }
+
+            int spread = LeagueBootstrapConstants.LeagueStrengthSpread;
+            Squad[] rosters = RoundResolutionCalibrationHarness.BuildBaseRosters();
+
+            List<CalibrationRow> strongHome =
+                RoundResolutionCalibrationHarness.RunBucket(rosters, +2 * spread, 10);
+            List<CalibrationRow> strongAway =
+                RoundResolutionCalibrationHarness.RunBucket(rosters, -2 * spread, 10);
+
+            float strongHomeMargin = MeanMargin(strongHome);
+            float strongAwayMargin = MeanMargin(strongAway);
+
+            TestContext.WriteLine(
+                $"KD-8 Step 0 pilot (spread={spread}): strong-at-home mean margin {strongHomeMargin:F3} "
+                + $"(dSquad {MeanDSquad(strongHome):F3}), strong-away mean margin {strongAwayMargin:F3} "
+                + $"(dSquad {MeanDSquad(strongAway):F3}).");
+            TestContext.WriteLine(RoundResolutionCalibrationHarness.ToCsv(strongHome));
+            TestContext.WriteLine(RoundResolutionCalibrationHarness.ToCsv(strongAway));
+
+            Assert.Greater(strongHomeMargin, strongAwayMargin,
+                "The two ramp extremes must be distinguishable, or the corpus carries no signal (KD-8 Step 0). "
+                + "Known open blocker: ERR-030-014 — a Stage-0 match never puts the ball in motion, so every "
+                + "engine match is 0-0. See docs/tracking/round-resolution-corpus.md.");
+        }
+
+        [Test]
+        [Category("Calibration")]
+        public void Corpus_GeneratesTheRequestedSlice()
+        {
+            // The A4a corpus run. Split across processes by delta range; each slice is reproducible in
+            // isolation because the seeds are keyed.
+            string samplesRaw = Environment.GetEnvironmentVariable("TD_CALIBRATION_SAMPLES");
+            if (string.IsNullOrEmpty(samplesRaw))
+            {
+                Assert.Ignore(
+                    "Set TD_CALIBRATION_SAMPLES (plus optional TD_CALIBRATION_DELTA_FROM / _TO / _OUT) "
+                    + "to generate an A4a corpus slice. Each sample is a full ~2-minute engine match.");
+            }
+
+            int samples = int.Parse(samplesRaw, CultureInfo.InvariantCulture);
+            int from = EnvInt("TD_CALIBRATION_DELTA_FROM", -5);
+            int to = EnvInt("TD_CALIBRATION_DELTA_TO", 5);
+            string outPath = Environment.GetEnvironmentVariable("TD_CALIBRATION_OUT");
+
+            Squad[] rosters = RoundResolutionCalibrationHarness.BuildBaseRosters();
+            var rows = new List<CalibrationRow>();
+
+            for (int target = from; target <= to; target++)
+            {
+                List<CalibrationRow> bucket =
+                    RoundResolutionCalibrationHarness.RunBucket(rosters, target, samples);
+                rows.AddRange(bucket);
+                TestContext.WriteLine(
+                    $"bucket target={target}: n={bucket.Count} meanDSquad={MeanDSquad(bucket):F3} "
+                    + $"meanHome={MeanHome(bucket):F3} meanAway={MeanAway(bucket):F3}");
+            }
+
+            string csv = RoundResolutionCalibrationHarness.ToCsv(rows);
+            if (!string.IsNullOrEmpty(outPath))
+            {
+                File.WriteAllText(outPath, csv);
+                TestContext.WriteLine($"wrote {rows.Count} rows to {outPath}");
+            }
+            else
+            {
+                TestContext.WriteLine(csv);
+            }
+
+            Assert.AreEqual((to - from + 1) * samples, rows.Count);
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────────────────────────
+
+        private static int EnvInt(string key, int fallback)
+        {
+            string raw = Environment.GetEnvironmentVariable(key);
+            return string.IsNullOrEmpty(raw) ? fallback : int.Parse(raw, CultureInfo.InvariantCulture);
+        }
+
+        private static float MeanMargin(List<CalibrationRow> rows)
+        {
+            int total = 0;
+            foreach (CalibrationRow r in rows)
+            {
+                total += r.HomeGoals - r.AwayGoals;
+            }
+
+            return total / (float)rows.Count;
+        }
+
+        private static float MeanDSquad(List<CalibrationRow> rows)
+        {
+            float total = 0f;
+            foreach (CalibrationRow r in rows)
+            {
+                total += r.DSquad;
+            }
+
+            return total / rows.Count;
+        }
+
+        private static float MeanHome(List<CalibrationRow> rows)
+        {
+            int total = 0;
+            foreach (CalibrationRow r in rows)
+            {
+                total += r.HomeGoals;
+            }
+
+            return total / (float)rows.Count;
+        }
+
+        private static float MeanAway(List<CalibrationRow> rows)
+        {
+            int total = 0;
+            foreach (CalibrationRow r in rows)
+            {
+                total += r.AwayGoals;
+            }
+
+            return total / (float)rows.Count;
+        }
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-07-26 | —      | Initial suite (roadmap A4a): always-on locks on base-roster          |
+// |         |            |        | generation and the bucket plan (target split, no self-pairing, pair  |
+// |         |            |        | diversity, keyed non-colliding seeds), plus the env-gated KD-8       |
+// |         |            |        | Step 0 pilot and corpus-slice drivers.                               |
+#endregion

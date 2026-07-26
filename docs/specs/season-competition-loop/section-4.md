@@ -1,8 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 4: Architecture
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 reconciliation, §9.3)
-**Version:** 0.2
+**Last Updated:** July 26, 2026 (v0.3 — ERR-030-012 §4.5 keyed-not-cursor correction + ERR-030-013 §4.6 producer-record location, both found at #30 T2 implementation; prior v0.2 section-file PASS-1 reconciliation, §9.3)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -118,8 +118,22 @@ fixtures has a world + season but no match); the season block is unconditional.
 
 ## 4.5 RNG-stream registration (FR-SN-027 / KD-5)
 
-`SeasonLoop` registers a `DeterministicRngService` stream at construction (or reuses the
-`WorldStore`'s service if that is the chosen composition — a T-phase decision) with siteId
+> **Corrected at #30 T2 implementation (ERR-030-012).** The paragraph below described a registered,
+> cursor-positioned `DeterministicRngService` stream. That is **incompatible with §3.4.1's own
+> requirement** that the round-resolution model's draws be *keyed on the fixture* rather than
+> cursor-positioned, so that resolving a round's fixtures in any order yields the same table
+> (T-SN-CAL-003c) — a cursor makes each scoreline depend on how many fixtures were drawn before it.
+> T2 therefore realizes the season sub-stream as a **keyed derivation**: `DOMAIN_TAG_SEASON_LOOP` is
+> folded into `FixtureKey(seasonSeed, seasonNumber, roundIndex, homeClubId, awayClubId)`, which is that
+> tag's first consumer and satisfies ERR-030-001's "code const at T2's first draw site".
+> `SubsystemOrdinals.SeasonLoop = 84` is **not** allocated in code at T2: a subsystem ordinal exists
+> only to key a *registered* stream, so a code const with no stream behind it would be the zero-consumer
+> phantom FR-LW-031 forbids. Ordinal 84 stays reserved in #16 §3.4's spec text for the first genuinely
+> cursor-positioned season event (a #43 cup draw is the likely first), which will register
+> `season-loop.season-events` as described below.
+
+**Superseded description, retained for the reservation it records:** `SeasonLoop` would register a
+`DeterministicRngService` stream at construction (or reuse the `WorldStore`'s service) with siteId
 `"season-loop.season-events"`, `SubsystemOrdinals.SeasonLoop = 84`, `entityId: SeasonNumber`. The
 generator is a pure static that takes an already-drawn permutation (or the identity), so
 `FixtureScheduler` is testable without a season boot — the #27 `RosterGenerator` stateless posture.
@@ -128,11 +142,24 @@ at approval (only #30's row; `0x20`/`0x21` stay gaps for #28/#29 per KD-5's hone
 
 ## 4.6 The #22 producer-not-consumer boundary (KD-3 / FR-SN-016..018)
 
-`SeasonLoop.EmitMatchOutcome(result)` records the `MatchResult` in `SeasonState` and is the phase-1
+`SeasonLoop.EmitMatchOutcome(result)` records the `MatchResult` and is the phase-1
 **producer**. It **does not** call any #22 ingest method — none exists (`WorldLoop` phase-1 has no
 interface, FR-LW-031), and #30 **must not add one** (FR-SN-017). The only #22 surface #30 touches is
 `WorldStore`'s public API (`AdvanceDay`/`Snapshot`/`Restore`/`CurrentWorldTick`), never `living-world`
-internals (FR-SN-018 / FR-LW-003). The eventual ingest is a #22 wiring change at #33's landing
+internals (FR-SN-018 / FR-LW-003).
+
+> **Where the record lives — corrected at #30 T2 (ERR-030-013).** This section originally said
+> `EmitMatchOutcome` records the result "in `SeasonState`". It cannot: §2.2 and Appendix B give
+> `SeasonState` no outcome collection, and adding one would be a `SEASON_STATE_FORMAT_VERSION` bump
+> carrying a payload with **no consumer** — #22 ingest does not exist and FR-SN-017 forbids #30 from
+> creating it. T2 therefore keeps the producer record **loop-scoped and transient**
+> (`SeasonLoop.MatchOutcomes`, a read-only value-copy collection); the *durable* record of what happened
+> is the league table, which is serialized. FR-SN-016's requirement is unchanged and satisfied — exactly
+> one structured, deterministic `MatchResult` is emitted per played fixture — and #33 subscribes to this
+> surface when it lands, at which point whether the payload also needs persisting is a #33-side decision
+> co-defined with `FR-LW-027`/`FR-LW-032`.
+
+The eventual ingest is a #22 wiring change at #33's landing
 (`FR-LW-032`), co-defining the payload against `FR-LW-027`/`FR-LW-032`/living-world KD-9/KD-10 — a #22 edit, not a
 #30 one.
 
@@ -151,4 +178,5 @@ fully-qualify `MatchEngine` and any `player-database` type that shares a bare na
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial architecture: SeasonSave-assembly extension, file layout, SeasonLoop root, the codec/manager signature change, RNG registration, the #22 producer boundary, CS0104 hazard. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 reconciliation (whole-round KD-9 command/API rename, living-world-KD disambiguation, KD/FR label fixes). See section-9 §9.3. |
+| 0.3 | 2026-07-26 | — | **ERR-030-012** (found at T2 implementation): §4.5's registered cursor-positioned season stream contradicts §3.4.1's keyed-draw requirement (T-SN-CAL-003c order-independence). T2 realizes the sub-stream as a keyed derivation folding `DOMAIN_TAG_SEASON_LOOP` into the fixture key — that tag's first consumer, satisfying ERR-030-001 — and does NOT allocate `SubsystemOrdinals.SeasonLoop = 84` in code, since an ordinal with no registered stream is the FR-LW-031 phantom; ordinal 84 stays spec-reserved for the first cursor-positioned season event. **ERR-030-013** (same landing): §4.6's "records the `MatchResult` in `SeasonState`" is not implementable — §2.2 / Appendix B give `SeasonState` no outcome collection, and adding one would bump `SEASON_STATE_FORMAT_VERSION` for a payload FR-SN-017 forbids a consumer for; the producer record is loop-scoped and transient, the durable record is the serialized table. |
 #endregion

@@ -1,0 +1,511 @@
+// File:     src/season-save/SeasonLoop.cs
+// Created:  2026-07-26
+// Modified: 2026-07-26
+// Author:   —
+// Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
+//           KD-9), §4.3 (the composition root), §4.6 (the #22 producer boundary / KD-3), §4.7 (CS0104);
+//           FR-SN-010/011/012/013/013a/013b/016/017/018/025/026/032/033/034; path-to-playable A4;
+//           Code Standards #20
+// Purpose:  The season composition root — the only writer of SeasonState (KD-7 / FR-SN-032). Advances the
+//           world one calendar day at a time in the KD-2 fixed order, resolves a whole round of fixtures,
+//           and hands #37/#38 a read-only view. Runs on the WORLD tick (FR-SN-025); the 10 Hz / 60 Hz
+//           match loops live entirely inside a managed fixture's MatchEngine and never drive this.
+//
+// Not on the 60 Hz hot path (§4.3), so allocation / new / exceptions are permitted — the
+// SeasonSaveManager / WorldStore precedent.
+//
+// CS0104 / §4.7: `MatchEngine` is both a namespace and a class in this scope, so the class is written
+// fully qualified as TacticalDirector.MatchEngine.MatchEngine from the first line that needs it — the
+// #27 v1.73 lesson, applied by construction rather than discovered by a failed build.
+
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+
+using TacticalDirector.LivingWorld;
+using TacticalDirector.MatchEngine;
+using TacticalDirector.PlayerDatabase;
+
+namespace TacticalDirector.SeasonSave
+{
+    /// <summary>
+    /// The season/competition loop (#30 §4.3): owns a <see cref="SeasonState"/>, references a
+    /// <see cref="WorldStore"/> it does not own, and holds the managed club's in-progress
+    /// <c>MatchEngine</c> or null between fixtures.
+    /// <para>
+    /// <b>Sole writer (KD-7 / FR-SN-032).</b> Every <see cref="SeasonState"/> mutator is
+    /// <c>internal</c> to this assembly, and this class is the only production caller. Season state is
+    /// therefore mutable only through the command API below — <see cref="AdvanceToNextFixtureDay"/>,
+    /// <see cref="AdvanceAndPlayNextRound"/> and (at #30 T3) the boundary roll — never by field access.
+    /// </para>
+    /// <para>
+    /// <b>Producer, not consumer (KD-3 / FR-SN-016..018).</b> Each played fixture emits exactly one
+    /// <see cref="MatchResult"/>, recorded in <see cref="MatchOutcomes"/>. Nothing here calls a #22
+    /// ingest method — none exists (<c>WorldLoop</c> phase 1 has no interface, FR-LW-031) and #30 must
+    /// not add one; ingest activates with #33 (FR-LW-032). The only #22 surface touched is
+    /// <see cref="WorldStore"/>'s public API (FR-SN-018 / FR-LW-003).
+    /// </para>
+    /// <para>
+    /// THREAD SAFETY: none, matching <see cref="SeasonState"/>'s single-threaded contract. #38's client
+    /// runs a sim thread beside a UI thread, so this command API is the marshaling point: the UI thread
+    /// reads a <see cref="SeasonViewModel"/> snapshot (which copies) and never touches season state.
+    /// </para>
+    /// </summary>
+    public sealed class SeasonLoop
+    {
+        private readonly WorldStore _world;
+        private readonly SeasonState _state;
+        private readonly List<MatchResult> _outcomes = new List<MatchResult>();
+
+        private TacticalDirector.MatchEngine.MatchEngine _activeMatch;
+
+        /// <summary>
+        /// Composes a loop over an existing world and season.
+        /// </summary>
+        /// <param name="world">The day-advance substrate. Referenced, not owned — #22 owns its
+        /// lifecycle. The caller is responsible for having constructed it from the SAME world seed the
+        /// league was generated from (league-bootstrap KD-9); nothing here can verify that.</param>
+        /// <param name="season">The season this loop drives. Taken by reference and mutated in place —
+        /// this loop becomes its sole writer, so the caller must not retain a second writer.</param>
+        /// <param name="mode">How a round's fixtures resolve (§3.4.1). Defaults to the FR-SN-013b
+        /// arrangement: the managed club's fixture through the real engine, the rest quick-simmed.</param>
+        /// <exception cref="System.ArgumentNullException">A required reference is null.</exception>
+        /// <exception cref="System.ArgumentException">
+        /// The KD-4 cursor invariant is already violated: the world clock has passed the season's pending
+        /// round (F4). Checked here as well as at <c>SeasonSaveManager.Load</c> because a loop can be
+        /// composed from a freshly built world and an advanced season without any file involved.
+        /// </exception>
+        public SeasonLoop(
+            WorldStore world,
+            SeasonState season,
+            RoundResolutionMode mode = RoundResolutionMode.ManagedThroughEngine)
+        {
+            if (world == null)
+            {
+                throw new System.ArgumentNullException(nameof(world));
+            }
+
+            if (season == null)
+            {
+                throw new System.ArgumentNullException(nameof(season));
+            }
+
+            if (!System.Enum.IsDefined(typeof(RoundResolutionMode), mode))
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(mode), mode, "Undefined RoundResolutionMode.");
+            }
+
+            if (!season.Calendar.SatisfiesCursorInvariant(world.CurrentWorldTick))
+            {
+                throw new System.ArgumentException(
+                    $"KD-4 cursor invariant violated: the world is on day {world.CurrentWorldTick} but the "
+                    + $"season's next fixture is day {season.Calendar.NextFixtureDay()} (round "
+                    + $"{season.Calendar.NextRoundIndex}).",
+                    nameof(season));
+            }
+
+            _world = world;
+            _state = season;
+            Mode = mode;
+        }
+
+        /// <summary>How this loop resolves a round's fixtures (§3.4.1).</summary>
+        public RoundResolutionMode Mode { get; }
+
+        /// <summary>The world's current calendar day (<c>WorldStore.CurrentWorldTick</c>).</summary>
+        public uint CurrentWorldDay => _world.CurrentWorldTick;
+
+        /// <summary>True once every round has been played — the caller must run the boundary roll (#30 T3).</summary>
+        public bool IsSeasonComplete => _state.Calendar.IsSeasonComplete;
+
+        /// <summary>The index of the round that <see cref="AdvanceAndPlayNextRound"/> would resolve.</summary>
+        public int NextRoundIndex => _state.Calendar.NextRoundIndex;
+
+        /// <summary>
+        /// The managed club's in-progress match, or <c>null</c> between fixtures (§4.3 / the KD-1
+        /// <c>matchPresent</c> flag). Non-null only while a <see cref="RoundResolutionMode.ManagedThroughEngine"/>
+        /// or <see cref="RoundResolutionMode.FullEngine"/> fixture is being played, which within a single
+        /// synchronous <see cref="AdvanceAndPlayNextRound"/> call is visible only to a #38 observer on
+        /// another thread — the seam a later interactive "watch my match" flow drives.
+        /// </summary>
+        public TacticalDirector.MatchEngine.MatchEngine ActiveMatch => _activeMatch;
+
+        /// <summary>
+        /// How many fixtures this loop has resolved through a real <c>MatchEngine</c> rather than the
+        /// round-resolution model, across its whole lifetime.
+        /// <para>
+        /// Session-scoped like <see cref="MatchOutcomes"/> and not serialized. It is the cheapest honest
+        /// answer to "did a real match actually run?" — a question a client asks (how many matches has the
+        /// manager watched this season) and the capstone asserts on, without either having to re-run a
+        /// ~2-minute match to find out or pin an engine-produced scoreline.
+        /// </para>
+        /// </summary>
+        public int EnginePlayedFixtures { get; private set; }
+
+        /// <summary>
+        /// Every <see cref="MatchResult"/> this loop has emitted, oldest first — the FR-SN-016
+        /// match-outcome producer record.
+        /// <para>
+        /// <b>Session-scoped, deliberately not persisted (ERR-030-013).</b> §4.6 describes
+        /// <c>EmitMatchOutcome</c> as recording the result "in <c>SeasonState</c>", but §2.2 and
+        /// Appendix B give <see cref="SeasonState"/> no outcome collection, and adding one would be a
+        /// <c>SEASON_STATE_FORMAT_VERSION</c> bump carrying a payload with no consumer — #22 ingest does
+        /// not exist and FR-SN-017 forbids #30 from creating it. The durable record of what happened is
+        /// the league table, which IS serialized; this list is the producer surface #33 will subscribe to
+        /// when it lands.
+        /// </para>
+        /// <para>
+        /// It grows for the lifetime of the loop and is never trimmed — 380 entries per 20-club season, so
+        /// a long career held in one loop instance accumulates them. Bounded enough not to matter at Stage 2
+        /// and deliberately not capped, because silently dropping the oldest outcomes would make the
+        /// producer surface lossy right where #33 will want the history.
+        /// </para>
+        /// </summary>
+        public ReadOnlyCollection<MatchResult> MatchOutcomes => _outcomes.AsReadOnly();
+
+        /// <summary>The read-only observation surface for #37 / #38 (FR-SN-033). Reading never mutates.</summary>
+        public SeasonViewModel View() => _state.View();
+
+        /// <summary>
+        /// The season this loop drives — the object <c>SeasonSaveManager.Save(world, season, match, path)</c>
+        /// needs, and the one #38 binds richer screens to than <see cref="SeasonViewModel"/> carries.
+        /// <para>
+        /// Exposing the object does <b>not</b> weaken FR-SN-032: every <see cref="SeasonState"/> mutator is
+        /// <c>internal</c> to this assembly, so an outside caller holding this reference can only read.
+        /// Inside the assembly the single-writer contract is upheld by this class being the only
+        /// production code that touches those mutators.
+        /// </para>
+        /// </summary>
+        public SeasonState State => _state;
+
+        /// <summary>
+        /// Advances the world one calendar day at a time, in the KD-2 fixed order, until the clock sits ON
+        /// the next unplayed round's fixture day (§3.3 / FR-SN-010). Returns the number of days advanced —
+        /// zero if the clock is already there.
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">The season is complete, so there is no next
+        /// fixture day; run the boundary roll first (F5).</exception>
+        public int AdvanceToNextFixtureDay()
+        {
+            uint targetDay = _state.Calendar.NextFixtureDay();   // throws when complete (F5)
+
+            int advanced = 0;
+            while (_world.CurrentWorldTick < targetDay)
+            {
+                RunWorldTickInFixedOrder();
+                advanced++;
+            }
+
+            return advanced;
+        }
+
+        /// <summary>
+        /// Advances the world exactly <paramref name="days"/> calendar days in the KD-2 fixed order,
+        /// regardless of where the next fixture falls — the "skip ahead a bit" surface a client needs
+        /// between fixtures, and what makes a mid-sequence save (FR-SN-024) expressible in a test.
+        /// </summary>
+        /// <exception cref="System.ArgumentOutOfRangeException"><paramref name="days"/> is negative.</exception>
+        /// <exception cref="System.InvalidOperationException">The advance would carry the clock past the
+        /// pending round's fixture day, which would violate the KD-4 invariant (FR-SN-011).</exception>
+        public void AdvanceDays(int days)
+        {
+            if (days < 0)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(days), days, "days must be non-negative.");
+            }
+
+            if (!_state.Calendar.IsSeasonComplete)
+            {
+                uint targetDay = _state.Calendar.NextFixtureDay();
+                ulong endDay = (ulong)_world.CurrentWorldTick + (ulong)days;
+                if (endDay > targetDay)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Advancing {days} days from world-day {_world.CurrentWorldTick} would reach "
+                        + $"{endDay}, past the pending round's fixture day {targetDay} — the KD-4 cursor "
+                        + "invariant (FR-SN-011). Play the round first.");
+                }
+            }
+
+            for (int i = 0; i < days; i++)
+            {
+                RunWorldTickInFixedOrder();
+            }
+        }
+
+        /// <summary>
+        /// Resolves <b>every</b> fixture of the round at the cursor, applies all their results to the
+        /// table, emits one match-outcome per fixture, and advances the cursor by one round
+        /// (§3.4 / FR-SN-012). Returns the results in resolution order.
+        /// <para>
+        /// Resolving a strict subset is forbidden and structurally impossible here: the whole round is
+        /// resolved in one call, because leaving a club without a result for a round it had a fixture in
+        /// makes the table undefined for that club (the KD-9 finding).
+        /// </para>
+        /// <para>
+        /// <b>Order-independent.</b> The managed fixture consumes its own engine's RNG streams and every
+        /// other fixture draws by KEY rather than cursor position (<see cref="RoundResolutionModel"/>), so
+        /// permuting the resolution order yields the byte-identical final table (§3.4.1 / T-SN-CAL-003c).
+        /// </para>
+        /// </summary>
+        /// <param name="squads">Resolves a <c>ClubId</c> to its roster. A <see cref="League"/> is one
+        /// (league-bootstrap KD-9). Needed for EVERY club in the round, not just the managed one: the
+        /// quick-sim's rating is the starting-XI mean of the squad each club would field.</param>
+        /// <exception cref="System.ArgumentNullException"><paramref name="squads"/> is null.</exception>
+        /// <exception cref="System.InvalidOperationException">The cursor is past the last round, or the
+        /// round at the cursor has no unplayed fixtures (F5) — the caller must run the boundary roll.</exception>
+        /// <exception cref="System.ArgumentException">A club in the round cannot be resolved to a squad
+        /// (F6) — the #27 <see cref="ISquadProvider"/> fail-loud contract.</exception>
+        public MatchResult[] AdvanceAndPlayNextRound(ISquadProvider squads)
+        {
+            if (squads == null)
+            {
+                throw new System.ArgumentNullException(nameof(squads));
+            }
+
+            if (_state.Calendar.IsSeasonComplete)
+            {
+                throw new System.InvalidOperationException(
+                    "The season is complete; there is no round to play. Run the boundary roll first (F5).");
+            }
+
+            int round = _state.Calendar.NextRoundIndex;
+            int[] indices = _state.UnplayedFixtureIndicesInRound(round);
+            if (indices.Length == 0)
+            {
+                throw new System.InvalidOperationException(
+                    $"Round {round} has no unplayed fixtures (F5).");
+            }
+
+            // §3.3's contract is "the cursor is now AT the fixture day; the caller runs
+            // AdvanceAndPlayNextRound" — so playing a round the clock has not reached yet is a caller
+            // error, and a silent one: every result would be stamped with a WorldDay that is not the
+            // fixture's day, and a client could skip the day-advance for a whole career and still get a
+            // plausible-looking table. The KD-4 invariant only bounds this from one side (targetDay >=
+            // today), which is why it needs its own gate rather than being implied.
+            uint fixtureDay = _state.Calendar.DayOfRound(round);
+            if (_world.CurrentWorldTick != fixtureDay)
+            {
+                throw new System.InvalidOperationException(
+                    $"Round {round} is played on world-day {fixtureDay} but the world is on day "
+                    + $"{_world.CurrentWorldTick}. Call AdvanceToNextFixtureDay() first (§3.3).");
+            }
+
+            uint worldDay = _world.CurrentWorldTick;
+            var results = new MatchResult[indices.Length];
+
+            for (int i = 0; i < indices.Length; i++)
+            {
+                Fixture fixture = _state.FixtureAt(indices[i]);
+                MatchResult result = ResolveFixture(in fixture, squads, worldDay);
+
+                // FR-SN-013's pinned order, for every fixture: (1) table, (2) event, then mark played.
+                _state.ApplyResult(in result);
+                EmitMatchOutcome(in result);
+                _state.MarkFixturePlayed(indices[i]);
+
+                results[i] = result;
+            }
+
+            _state.AdvanceCursorOneRound();
+            return results;
+        }
+
+        /// <summary>
+        /// Encodes this loop's season state as the season sub-blob (§3.6). The world is snapshotted
+        /// separately by <see cref="WorldStore.Snapshot"/>; <c>SeasonSaveManager.Save</c> is what frames
+        /// the two (plus an optional in-progress match) into one file.
+        /// </summary>
+        public byte[] Snapshot() => SeasonStateCodec.Encode(_state);
+
+        /// <summary>
+        /// Rebuilds a loop from a world and a season sub-blob — the counterpart of
+        /// <see cref="Snapshot"/>. The KD-4 cursor invariant is re-validated by the constructor (F4).
+        /// </summary>
+        /// <exception cref="System.ArgumentException">The blob is malformed (F3) or the restored pair
+        /// violates the cursor invariant (F4).</exception>
+        public static SeasonLoop Restore(
+            WorldStore world,
+            byte[] seasonBlob,
+            RoundResolutionMode mode = RoundResolutionMode.ManagedThroughEngine)
+        {
+            return new SeasonLoop(world, SeasonStateCodec.Decode(seasonBlob), mode);
+        }
+
+        /// <summary>
+        /// One calendar day, in the KD-2 pinned order (§3.3). Only the world-day tick is live; every
+        /// other step is a <b>documented position</b>, not an interface (FR-SN-034 / FR-LW-031) — each
+        /// Wave-2+ spec slots into its pre-declared slot when it lands, so fixing the order now avoids a
+        /// re-pin across all of them.
+        /// <para>
+        /// With only step 9 live, a no-fixture day's advance is byte-identical to a bare
+        /// <see cref="WorldStore.AdvanceDay"/> (FR-SN-026 / KD-8) — which is exactly what the
+        /// behaviour-neutral floor test asserts.
+        /// </para>
+        /// </summary>
+        private void RunWorldTickInFixedOrder()
+        {
+            // 1. progression   (#28) — NULL SEAM (its T0 core is built but unwired; #28 T2 wires it here)
+            // 2. training      (#29) — NULL SEAM
+            // 3. human-systems (#33) — NULL SEAM
+            // 4. injuries      (#41) — NULL SEAM (ERR-030-002: after #28/#29 so it reads the day's
+            //                          updated fatigue/condition; before the world-day tick)
+            // 5. transfers     (#31) — NULL SEAM (ERR-030-004: a deep-tier position reservation;
+            //                          minimal transfers are command-driven)
+            // 6. staff         (#34) — NULL SEAM (ERR-030-006: deep-tier position reservation;
+            //                          #34's scaffold projections are pull-based)
+            // 7. academy       (#42) — NULL SEAM (ERR-030-007: the youth-intake one-shot, latched on
+            //                          LastIntakeWorldDay; live at #42's own T-phase)
+            // 8. board         (#45) — NULL SEAM (ERR-030-008: one bounded integer drift per modelled
+            //                          club; live at #45's own T-phase)
+            // 9. world day     — the only LIVE tick.
+            _world.AdvanceDay();
+        }
+
+        /// <summary>
+        /// Routes one fixture to its producer (§3.4 / FR-SN-013 / FR-SN-013b): the managed club's fixture
+        /// through the full engine under <see cref="RoundResolutionMode.ManagedThroughEngine"/>, every
+        /// fixture through the engine under <see cref="RoundResolutionMode.FullEngine"/>, everything else
+        /// through <see cref="RoundResolutionModel"/>.
+        /// </summary>
+        private MatchResult ResolveFixture(in Fixture fixture, ISquadProvider squads, uint worldDay)
+        {
+            bool managed = fixture.Involves(_state.ManagedClubId);
+
+            if (ShouldPlayThroughEngine(Mode, managed))
+            {
+                return PlayThroughEngine(in fixture, squads, worldDay);
+            }
+
+            Squad home = ResolveSquad(squads, fixture.HomeClubId);
+            Squad away = ResolveSquad(squads, fixture.AwayClubId);
+
+            // Each club's rating is recomputed per fixture rather than cached, so a club is re-rated once
+            // per matchday (38 times a season). That is deliberate: a cache would be state this loop would
+            // then have to invalidate on every squad change — transfers (#31), injuries (#41), progression
+            // (#28) all move ratings — and getting that wrong would silently resolve a season against stale
+            // strengths. Selection is pure and the cost is microseconds against a season measured in
+            // milliseconds; revisit only if profiling says otherwise.
+            return RoundResolutionModel.Resolve(
+                in fixture,
+                _state.Seed,
+                _state.SeasonNumber,
+                SquadRating.StartingElevenMean(home),
+                SquadRating.StartingElevenMean(away),
+                worldDay);
+        }
+
+        /// <summary>
+        /// The §3.4 / FR-SN-013b routing decision, extracted as a pure predicate so all six
+        /// (mode × managed) combinations are unit-testable. Inline, the
+        /// <see cref="RoundResolutionMode.FullEngine"/> branch could only be covered by running two real
+        /// 90-minute matches, so a typo in it would have shipped as "FullEngine quietly behaves like
+        /// ManagedThroughEngine".
+        /// </summary>
+        internal static bool ShouldPlayThroughEngine(RoundResolutionMode mode, bool managed)
+        {
+            switch (mode)
+            {
+                case RoundResolutionMode.FullEngine:
+                    return true;
+                case RoundResolutionMode.ManagedThroughEngine:
+                    return managed;
+                case RoundResolutionMode.QuickSimAll:
+                    return false;
+                default:
+                    // Unreachable: the constructor gates the mode with Enum.IsDefined. Fail loud rather
+                    // than silently quick-simming a fixture a future mode meant to route elsewhere.
+                    throw new System.ArgumentOutOfRangeException(
+                        nameof(mode), mode, "Undefined RoundResolutionMode.");
+            }
+        }
+
+        /// <summary>
+        /// Plays a fixture through a real <c>MatchEngine</c> (§3.4 <c>PlayThroughEngine</c>): boot from the
+        /// fixture-keyed seed, configure both squads, tick the 10 Hz / 60 Hz loops to full time, and read
+        /// the score off the engine.
+        /// <para>
+        /// The match runs on its own clocks while this method is invoked from the world-tick loop, so the
+        /// two remain disjoint (FR-SN-025) — the world day does not advance during a match.
+        /// </para>
+        /// <para>
+        /// <b>#44 availability-filter null seam (ERR-030-009).</b> The flow is resolve → <i>filter</i> →
+        /// configure: a suspension-availability view may reduce the resolved squad by value copy between
+        /// the two lines below. Empty until #44 T2 wires it; the position is declared here so wiring it
+        /// changes one call, not this method's shape.
+        /// </para>
+        /// </summary>
+        private MatchResult PlayThroughEngine(in Fixture fixture, ISquadProvider squads, uint worldDay)
+        {
+            Squad home = ResolveSquad(squads, fixture.HomeClubId);
+            Squad away = ResolveSquad(squads, fixture.AwayClubId);
+
+            // ── #44 availability filter inserts HERE (ERR-030-009) — empty at Stage 2. ──
+
+            ulong matchSeed = RoundResolutionModel.MatchSeedFor(in fixture, _state.Seed, _state.SeasonNumber);
+            var engine = new TacticalDirector.MatchEngine.MatchEngine(matchSeed);
+            engine.ConfigureSquads(home, away);
+
+            _activeMatch = engine;
+            try
+            {
+                while (!engine.MatchEnded)
+                {
+                    engine.RunTick();
+                }
+
+                EnginePlayedFixtures++;
+
+                return new MatchResult(
+                    fixture.HomeClubId,
+                    fixture.AwayClubId,
+                    engine.HomeScore,
+                    engine.AwayScore,
+                    fixture.RoundIndex,
+                    worldDay);
+            }
+            finally
+            {
+                // Cleared even if the engine throws mid-match, so a failed fixture cannot leave a dead
+                // engine reachable through ActiveMatch for the rest of the season.
+                _activeMatch = null;
+            }
+        }
+
+        /// <summary>
+        /// Resolves one club's roster, failing loud on an unresolvable id (F6). <see cref="ISquadProvider"/>
+        /// returns null by contract so the consumer's gate — this one — decides, rather than any provider
+        /// silently substituting a default roster.
+        /// </summary>
+        private static Squad ResolveSquad(ISquadProvider squads, int clubId)
+        {
+            Squad squad = squads.ResolveByClubId(clubId);
+            if (squad == null)
+            {
+                throw new System.ArgumentException(
+                    $"ISquadProvider cannot resolve club {clubId}; a round cannot be resolved without "
+                    + "every participating club's roster (F6).",
+                    nameof(squads));
+            }
+
+            return squad;
+        }
+
+        /// <summary>
+        /// The FR-SN-016 match-outcome producer step. Records the result and nothing else — see
+        /// <see cref="MatchOutcomes"/> for why it is session-scoped rather than serialized
+        /// (ERR-030-013), and §4.6 / FR-SN-017 for why it calls no #22 ingest.
+        /// </summary>
+        private void EmitMatchOutcome(in MatchResult result) => _outcomes.Add(result);
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-07-26 | —      | Initial implementation (#30 T2 / roadmap A4): the composition root  |
+// |         |            |        | with the KD-2 fixed day-advance order (only the world tick live),   |
+// |         |            |        | whole-round resolution routed by RoundResolutionMode, the FR-SN-016 |
+// |         |            |        | producer record, the #44 availability-filter null seam, season      |
+// |         |            |        | sub-blob Snapshot/Restore, and the read-only SeasonViewModel.       |
+#endregion
