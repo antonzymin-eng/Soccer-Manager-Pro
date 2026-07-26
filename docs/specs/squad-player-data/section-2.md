@@ -38,6 +38,7 @@ All requirements describe the **landed** implementation (present tense).
 | FR | Subject | Conformance | Source |
 |---|---|---|---|
 | FR-SQ-012 | `RosterGenerator.Generate(rng, streamIndex, clubId, count)` draws exactly `FIELDS_PER_PLAYER = 36` values per player via `Reserve(FIELDS_PER_PLAYER)` → 36× `DrawReserved` → `CloseReservation`. | MUST | §3 / F4 |
+| FR-SQ-012a | `RosterGenerator.Generate(rng, streamIndex, clubId, PlayerPosition[] positions)` — an **additive** overload — generates one player per supplied position, using it for both `PlayerRecord.Position` and the position-bias lookup. It MUST consume the identical `FIELDS_PER_PLAYER = 36` budget: the position draw still runs and its value is discarded, so both overloads share one stream layout and the drawn-position path (FR-SQ-012) is byte-identical. Entries outside the `PlayerPosition` roster, a null or empty array, or a length above `CLUB_SQUAD_SIZE` throw before any draw. | MUST | §3 / ERR-027-002 |
 | FR-SQ-013 | The **caller** registers the RNG stream (`RosterGenerator` is stateless): siteId `"player-database.roster-generation"`, `SubsystemOrdinals.PlayerDatabase`, `entityId = clubId` — so generation is unit-testable without booting a match. | MUST | KD-5 |
 | FR-SQ-014 | A `[4][31]` position-bias table (array-valued `[GT]`) adds a per-attribute bias, non-zero only at each position's signature attributes; applied inside the per-attribute clamp. | MUST | §3 / KD-5 |
 | FR-SQ-015 | `WeakFootRating` is drawn with its own `WeakFootSpread = 2` jitter (base 3 ± 2 spans `[1,5]` with no clamp), NOT `AttributeSpread`. | MUST | KD-2 / F2 |
@@ -113,7 +114,8 @@ refuses a null / empty / `> CLUB_SQUAD_SIZE` roster (F3). `GetPlayer` throws
 
 The constant catalogue (Appendix). `[FIXED]` `ATTRIBUTE_MIN=1` / `ATTRIBUTE_MAX=20` /
 `WEAK_FOOT_MIN=1` / `WEAK_FOOT_MAX=5` / `CLUB_SQUAD_SIZE=25`. `[DERIVED]` `ATTRIBUTE_COUNT=31` /
-`IDENTITY_DRAWS_PER_PLAYER=5` / `FIELDS_PER_PLAYER=36`. `[GT]` `AttributeBaseMean=10` /
+`IDENTITY_DRAWS_PER_PLAYER=5` / `FIELDS_PER_PLAYER=36` / `POSITION_COUNT=4` (the `PlayerPosition`
+member count — a property of the enum, declared once here because two assemblies consume it). `[GT]` `AttributeBaseMean=10` /
 `AttributeSpread=4` / `AgeMin=17` / `AgeMax=35` / `WeakFootBase=3` / `WeakFootSpread=2` + the
 `[4][31]` position-bias table. `[CROSS]` `DOMAIN_TAG_PLAYER_DATABASE=0x1F` /
 `SubsystemOrdinals.PlayerDatabase=81` (mirrored from Deterministic Simulation #16 §3.4).

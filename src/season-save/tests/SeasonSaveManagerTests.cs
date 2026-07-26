@@ -260,6 +260,22 @@ namespace TacticalDirector.SeasonSave
                 squads: Provider(home, away));
         }
 
+        [Test]
+        public void DiskRoundTrip_SeasonWithLeagueBootstrappedMatch_IsDeterministic()
+        {
+            // A3's headline deliverable exercised end to end: a bootstrapped `League` IS the
+            // ISquadProvider, so it must serve the match restore through a real save file without an
+            // adapter. Previously only hand-rolled providers were tested, so an incompatibility between
+            // bootstrapped squads and the restore path (lineup re-projection, roster ClubId matching)
+            // would have shipped unnoticed.
+            League league = LeagueBootstrap.Generate(0xB007_5EED_0000_0001UL, clubCount: 4);
+
+            AssertSeasonRoundTripWithMatch(
+                matchSetup: e => e.ConfigureSquads(league.ResolveByClubId(0), league.ResolveByClubId(1)),
+                n: 150, k: 60,
+                squads: league);
+        }
+
         // ── SeasonSaveManager fail-loud ─────────────────────────────────────────────
 
         [Test]

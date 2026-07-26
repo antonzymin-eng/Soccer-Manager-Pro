@@ -65,8 +65,12 @@ namespace TacticalDirector.SeasonSave.Tests
                     anyStrengthDiffers = true;
                 }
 
-                if (a.ResolveByClubId(c).GetPlayer(0).Attributes.Passing !=
-                    b.ResolveByClubId(c).GetPlayer(0).Attributes.Passing)
+                // Compare IDENTITY fields, which no post-generation step touches. An attribute would
+                // be contaminated by the strength delta, so the roster assertion could be satisfied by
+                // the delta alone — it would pass even if rosterSeed stopped depending on the world seed.
+                PlayerRecord pa = a.ResolveByClubId(c).GetPlayer(0);
+                PlayerRecord pb = b.ResolveByClubId(c).GetPlayer(0);
+                if (pa.FirstName != pb.FirstName || pa.LastName != pb.LastName || pa.Age != pb.Age)
                 {
                     anyRosterDiffers = true;
                 }
@@ -204,7 +208,7 @@ namespace TacticalDirector.SeasonSave.Tests
         // ── Strength ramp (KD-5) ────────────────────────────────────────────────────
 
         [Test]
-        public void Generate_StrengthDeltas_SpanTheRampAndArePermuted()
+        public void Generate_StrengthDeltas_SpanTheRamp()
         {
             const int n = 20;
             int spread = LeagueBootstrapConstants.LeagueStrengthSpread;
@@ -221,8 +225,11 @@ namespace TacticalDirector.SeasonSave.Tests
                 max = Math.Max(max, d);
             }
 
-            Assert.AreEqual(-spread, min, "Exactly one club sits at the bottom of the ramp.");
-            Assert.AreEqual(spread, max, "Exactly one club sits at the top of the ramp.");
+            // "At least one", not "exactly one": at N=20 the ramp puts TWO clubs at each extreme
+            // (distribution -3:2, -2:3, -1:3, 0:4, 1:3, 2:3, 3:2). The exact multiset is locked by the
+            // golden vector's pinned 20-club delta row, not here.
+            Assert.AreEqual(-spread, min, "At least one club must sit at the bottom of the ramp.");
+            Assert.AreEqual(spread, max, "At least one club must sit at the top of the ramp.");
         }
 
         [Test]
@@ -264,7 +271,7 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
-        public void ApplyStrength_ShiftsAttributesWithinBoundsAndLeavesWeakFootAlone()
+        public void Generate_AllAttributes_StayWithinBoundsAfterTheShift()
         {
             League league = LeagueBootstrap.Generate(WorldSeedA, 20);
 
@@ -284,6 +291,46 @@ namespace TacticalDirector.SeasonSave.Tests
                     Assert.LessOrEqual(attrs.WeakFootRating, PlayerDatabaseConstants.WEAK_FOOT_MAX);
                 }
             }
+        }
+
+        [Test]
+        public void ApplyStrength_ShiftsEveryAttribute_ButLeavesWeakFootExactlyAlone()
+        {
+            // The WeakFoot exclusion is a deliberate KD-5 decision ([1,5] scale would saturate), so it
+            // is asserted SEMANTICALLY here rather than left to the golden vector. A bounds check cannot
+            // see the difference: a regression that shifted WeakFoot and clamped to [1,5] stays in range.
+            League league = LeagueBootstrap.Generate(WorldSeedA, 4);
+            Squad baseSquad = league.ResolveByClubId(0);
+
+            const int delta = 3;
+            Squad shifted = LeagueBootstrap.ApplyStrength(baseSquad, delta);
+
+            Assert.AreEqual(baseSquad.Count, shifted.Count);
+            bool anyAttributeMoved = false;
+            for (int p = 0; p < baseSquad.Count; p++)
+            {
+                PlayerAttributes before = baseSquad.GetPlayer(p).Attributes;
+                PlayerAttributes after = shifted.GetPlayer(p).Attributes;
+
+                Assert.AreEqual(before.WeakFootRating, after.WeakFootRating,
+                    $"player {p}: WeakFootRating must be untouched by the strength shift (KD-5).");
+
+                int[] b = before.ToArray();
+                int[] a = after.ToArray();
+                for (int i = 0; i < b.Length; i++)
+                {
+                    int expected = System.Math.Min(b[i] + delta, PlayerDatabaseConstants.ATTRIBUTE_MAX);
+                    Assert.AreEqual(expected, a[i], $"player {p} attribute {i}");
+                    if (a[i] != b[i])
+                    {
+                        anyAttributeMoved = true;
+                    }
+                }
+            }
+
+            Assert.IsTrue(anyAttributeMoved,
+                "Non-vacuity: a +3 shift must actually move attributes, or the WeakFoot assertion above " +
+                "would hold trivially.");
         }
 
         [Test]

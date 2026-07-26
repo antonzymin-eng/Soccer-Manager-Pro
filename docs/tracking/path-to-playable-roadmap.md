@@ -86,7 +86,7 @@ Non-trivial, and it changes the shape of the remaining work. Recorded so nothing
 | Full 90-minute match simulation | `src/match-engine/` (19,587 lines) | ✅ 321 tests; match flow complete (restarts, fouls/cards, offside, subs, half/full time) |
 | Determinism + save/restore | `deterministic-sim`, `MatchSaveManager`, `SeasonSaveManager` | ✅ certified on the pinned host; round-trip byte-identity locked |
 | Season **file** root | `src/season-save/` | ✅ world + optional in-progress match, one file, version-gated sub-blobs |
-| Roster generation | `player-database/RosterGenerator.Generate(rng, streamIndex, clubId, count)` | ✅ deterministic, 25-player club squads |
+| Roster generation | `player-database/RosterGenerator.Generate(…, count)` and `Generate(…, PlayerPosition[])` | ✅ deterministic, 25-player club squads; the supplied-position overload (FR-SQ-012a, ERR-027-002) guarantees a fieldable squad |
 | Lineup selection, attribute projection | `LineupSelector`, `PlayerAttributeProjection` | ✅ |
 | Watchable match (web) | `match-viewer/` — HTML replay + `LiveMatchServer` live viewer | ✅ observer-neutral, digest-locked |
 | **Manager command channel** | `src/match-client-core/` — `ManagerCommandQueue`, `MatchClientDriver`, tick-stamped log, `MatchSession` | ✅ **P0 + P2 landed 2026-07-24**, host-free, CI-gated |

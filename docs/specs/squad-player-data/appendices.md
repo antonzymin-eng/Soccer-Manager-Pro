@@ -21,6 +21,7 @@ Verified against `src/player-database/PlayerDatabaseConstants.cs` and (for `[CRO
 | `WEAK_FOOT_MAX` | `[FIXED]` | 5 | Upper bound of `WeakFootRating`. |
 | `CLUB_SQUAD_SIZE` | `[FIXED]` | 25 | Max players per club roster (master plan §4.2). Distinct from match-scoped `MatchEngineConstants.SQUAD_SIZE = 22` (KD-3). |
 | `ATTRIBUTE_COUNT` | `[DERIVED]` | 31 | `int[1,20]` field count = `AttrIdx` member count. |
+| `POSITION_COUNT` | `[DERIVED]` | 4 | `PlayerPosition` member count; also the row count of the position-bias table. Declared once in the catalogue because two assemblies consume it (`RosterGenerator`'s draw bound and the league bootstrap's squad template) — ERR-027-002. |
 | `IDENTITY_DRAWS_PER_PLAYER` | `[DERIVED]` | 5 | Identity draws: first name, last name, age, position, weak foot. |
 | `FIELDS_PER_PLAYER` | `[DERIVED]` | 36 | `IDENTITY_DRAWS_PER_PLAYER + ATTRIBUTE_COUNT` (5 + 31). RNG draws reserved per player. |
 | `AttributeBaseMean` | `[GT]` | 10 | Mean each attribute generates around, before bias + jitter. |
