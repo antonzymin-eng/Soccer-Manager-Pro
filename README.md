@@ -1,7 +1,25 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** July 14, 2026 (**Match-flow model completion LANDED** — throw-ins, corners,
+**Last Updated:** July 26, 2026 (**Root-doc reconciliation — this file re-based on the actual repo
+state.** It had been pinned at July 14, 2026 and **26 specs**: twelve days and seventeen approved
+specs stale, still describing `SNAPSHOT_SCHEMA_VERSION` 15 (actual **18**) and still listing the
+Unity 6 recertification and the FR-PO-052 perf baseline as outstanding — both of which completed
+July 19. Updated: CURRENT STATUS (**43 APPROVED / 0 IN REVIEW / 0 NOT STARTED**; 29 production
+assemblies; the Phase-H possession bootstrap that makes a match actually play); the specification
+schedule (a new table for the 17 management-layer specs #27–#49 approved July 22–25, each with its
+real implementation status, plus the seven design supplements awaiting promotion); PROJECT STRUCTURE
+(the real tree — `tools/`, `docs/design/`, the Unity shell, and a layer-grouped `src/` listing);
+and NEXT IMMEDIATE STEPS (re-based on `path-to-playable-roadmap.md`, which is now the critical path).
+**The load-bearing addition is the honest gap:** **13 APPROVED specs have no assembly at all**
+(#29, #31–#34, #37, #40–#45, #49) — "approved" had become a misleading proxy for "a consumer
+exists", and both root docs now say so plainly. Also recorded: assembly names do not reliably match
+spec folder names (#27 → `player-database`, #28 → `player-progression`, #30 → `season-save`, and #38
+→ `ui-framework`, with #23–#25 inside `positioning-ai` and #26 inside `tactical-instructions`), and the
+42-file design-supplement governance class, which had appeared in no root document. The dotnet gate
+was **not** re-run — no SDK in this environment; gate status is quoted from the last landing's
+record. See `CLAUDE.md` for the matching pass on the AI-behavioural-rules side.)
+**Last Updated (prior):** July 14, 2026 (**Match-flow model completion LANDED** — throw-ins, corners,
 goal kicks, fouls/cards, offside, substitutions, half-time break, and full-time end (previously
 only kickoff + goal-restart existed). Design doc adversarially reviewed to convergence, then
 implemented, then the code itself adversarially reviewed to convergence (catching an
@@ -109,8 +127,12 @@ The definitive 10-year roadmap. All development decisions reference this documen
 - Resource requirements and timelines
 - Risk mitigation strategies
 
-**Current stage:** Stage 0 / Stage 0+1 — Physics Foundation (Year 1)
-**Current phase:** Implementation + AR-hardening (Stage 0 specs all APPROVED May 18, 2026; coding began May 19, 2026; AR-hardening sweep complete June 7, 2026)
+**Current stage:** Stage 0 / Stage 0+1 — Physics Foundation (Year 1), with the management-layer
+specification set (#27–#49) authored ahead of its implementation
+**Current phase:** Implementation. Stage-0 specs all APPROVED May 18, 2026; coding began May 19, 2026;
+AR-hardening sweep complete June 7, 2026; 43 specs APPROVED as of July 25, 2026. The active frontier
+is `docs/tracking/path-to-playable-roadmap.md` — closing the gap between 43 approved specs and 28
+implemented ones.
 
 ---
 
@@ -191,28 +213,37 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 
 **Progress:** Implementation Phase (coding begun May 19, 2026)
 **Spec Phase Started:** February 2, 2026
-**Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED; 6 further Stage-1 forward specs (#21 Jun 20, #22 Jun 22, #23–#26 Jul 10) APPROVED since
-**Deliverables:** 26 comprehensive specification documents + active `src/` implementation for specs #1–#8, #10–#19, #21–#26, plus the unnumbered Match Engine composition root
+**Stage-0 Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED
+**Deliverables:** 43 APPROVED specifications + 29 production assemblies in `src/`
 
-**Summary (July 14, 2026):** All 20 Stage-0 specs APPROVED, plus 6 Stage-1 forward specs — #21
-Tactical Instructions, #22 Living World System, #23 Dismarking & Marker-Awareness AI, #24
-Scripted Build-Up Structures, #25 Positional Rotations, #26 Tactical Presets & AI-Manager
-Selection — all APPROVED. Every spec #1–#20 plus #21–#26 has an active `src/` implementation. A
-non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) compiles the entire `src/`
-tree and runs the full NUnit suite on every push; quarantine list is empty. **Match Engine**
-(`src/match-engine/`, design note at `docs/tracking/match-engine-design.md`) — the composition
-root wiring every subsystem into the deterministic-sim 7-phase tick pipeline — now includes goal
-detection + the match-length/halves model (Jul 11), the #21–#26 tactical wiring (Jul 10–11), and
-the **complete match-flow model** (Jul 14): throw-ins, corners, goal kicks, fouls/cards
-(sent-off tracking), offside, substitutions, and half-time/full-time transitions.
-**`SNAPSHOT_SCHEMA_VERSION` is now 15.** The Unity engine target was bumped 2022.3.62f1 → Unity
-6000.4.9f1 (DX11) on Jul 13 — documentation-only; the Stage-0 platform-certification pin reverted
-to `⏳ RECERT REQUIRED` pending a real cert run on the new tuple. `src/CLAUDE.md` coding guide
-(v2.17) governs all C# authoring.
-**Total specification output:** ~5 MB+ across 120+ files (see file-manifest.md)
-**Implementation active:** #1–#20 implemented; #21–#26 all implemented and wired (behaviour-neutral
-at their identity defaults until a manager/preset sets non-default tactics); match-engine
-composition root includes goal detection, halves/full-time, and the full match-flow model.
+**Summary (July 26, 2026):** `SPEC_INDEX.md` records **43 APPROVED / 0 IN REVIEW / 0 NOT STARTED** —
+the Stage-0 set of 20, plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, and
+specs #40–#45, #49). A non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) compiles the
+entire `src/` tree and runs the full NUnit suite on every push; the quarantine list is empty.
+
+**A production match now plays.** Until July 26, 2026 every match finished 0–0 with the ball
+*identically motionless for the full 90 minutes* — a closed deadlock (no motion ⇒ no reception ⇒ no
+possession ⇒ no kick ⇒ no motion) that survived for months because the composed test asserted tick
+count, cadence, finiteness, bounds and digest advance, all of which hold for a match in which nothing
+happens. The possession bootstrap (§5.Z Phase H) closed it across five seams. Measured over six
+seeds × 9 minutes: peak ball speed **16.2–17.2 m/s** (was 0.00), possession held **10.5–20.9%** of
+ticks (was 0%) and changing hands **262–298 times** (was 0), with the ball reaching both penalty
+areas and goals scored. Locked by the `match-engine-play-develops` acceptance scenario — every
+predicate of which fails on the pre-fix engine.
+
+**The live gap: 13 APPROVED specs have no assembly at all** — #29 Training, #31 Transfers,
+and #32 Scouting, #33 Personalities/Morale, #34 Staff, #37 Analytics, #40 Finances, #41 Injuries,
+plus #42 Youth, #43 Competition Structure, #44 Discipline, #45 Board, #49 Localization. The
+specification frontier now runs well ahead of the code; `docs/tracking/path-to-playable-roadmap.md`
+sequences the shortest path to closing it.
+
+**Current versions:** `SNAPSHOT_SCHEMA_VERSION` **18** · `SEASON_SAVE_FORMAT_VERSION` 2 ·
+`SEASON_STATE_FORMAT_VERSION` 1 · `MATCH_SAVE_FORMAT_VERSION` 1 · `WORLD_STORE_FORMAT_VERSION` 3.
+Unity target **6000.4.9f1 / DX11**, recertified July 19, 2026 (`certification-platform.md` v1.4
+`✅ PINNED` — both the determinism-KAT run and the FR-PO-052 perf baseline executed on the pinned
+host). `src/CLAUDE.md` (v2.40) governs all C# authoring.
+
+**Total specification output:** ~5 MB+ across 400+ files (see `file-manifest.md`)
 
 ---
 
@@ -256,6 +287,34 @@ composition root includes goal detection, halves/full-time, and the full match-f
 25. ✅ Positional Rotations — **APPROVED** Jul 10, 2026 (adjacency-table two-sided rotation with hysteresis; `RotationController` wired into `PositioningAITick` Jul 11)
 26. ✅ Tactical Presets & AI-Manager Selection — **APPROVED** Jul 10, 2026 (preset library over #21's parameter space + AI-manager kickoff/interval decision gate and adaptation ladder; full T1–T4 stack + the engine-substrate gates it depended on — goal detection, halves model — all landed Jul 11; only the §9.2 `[GT]` balance-pass review remains)
 
+**Management-Layer Specs (#27–#49) — authored Jul 22–25, 2026 in dependency waves per
+[`management-layer-spec-roadmap.md`](docs/tracking/management-layer-spec-roadmap.md):**
+
+| # | Specification | Approved | Implementation |
+|---|---------------|----------|----------------|
+| 27 | Squad / Player Data Layer | Jul 22 | 🔒 `src/player-database/` |
+| 28 | Player Progression & Lifecycle | Jul 23 | 🔒 `src/player-progression/` — **T0 only** (draw-free core, not engine-wired) |
+| 29 | Training System | Jul 23 | ⏳ none |
+| 30 | Season & Competition Loop | Jul 22 | 🔒 `src/season-save/` — T0–T2 landed; T3 season roll open |
+| 31 | Transfers, Contracts & Negotiation | Jul 23 | ⏳ none |
+| 32 | Scouting & Player Knowledge | Jul 24 | ⏳ none |
+| 33 | Personalities, Morale & Squad Dynamics | Jul 23 | ⏳ none |
+| 34 | Staff & Backroom | Jul 23 | ⏳ none |
+| 37 | Match Analytics & Statistics | Jul 22 | ⏳ none |
+| 38 | UI / Client Framework | Jul 22 | 🔒 `src/ui-framework/` — **T0 substrate only** (no screens, no UGUI binding) |
+| 40 | Club Finances & Economy | Jul 23 | ⏳ none |
+| 41 | Injuries & Medical | Jul 23 | ⏳ none |
+| 42 | Youth Academy & Intake | Jul 24 | ⏳ none |
+| 43 | Competition Structure | Jul 24 | ⏳ none |
+| 44 | Discipline & Suspensions | Jul 24 | ⏳ none |
+| 45 | Board & Ownership Dynamics | Jul 25 | ⏳ none |
+| 49 | Localization & Accessibility (seam + template contract) | Jul 23 | ⏳ none |
+
+**Design supplements awaiting promotion** (converged design notes in `docs/tracking/`, no spec folder
+and no `SPEC_INDEX.md` row yet — a row lands only at promotion to section files): **#35** Media & Press,
+**#36** National Teams, **#46** News/Inbox & Man-Management, **#47** New-Game Setup & DB Editor,
+**#48** Match Presentation Depth, **#50** Save Migration & Versioning, **#51** Audio & Sound Design.
+
 **Status Key:**
 - ⏳ Not started
 - 📝 In progress
@@ -264,7 +323,19 @@ composition root includes goal detection, halves/full-time, and the full match-f
 - ✅ Approved
 - 🔒 Locked (implementation begun)
 
-**Locked (implementation begun):** Ball Physics #1, Agent Movement #2, Collision System #3, First Touch #4, Pass Mechanics #5, Shot Mechanics #6, Perception System #7, Decision Tree #8, Heading Mechanics #10, Goalkeeper Mechanics #11, Positioning AI #12, Pressing AI #13, Defensive AI #14, Attacking AI #15, Deterministic Simulation #16, Event System #17, Performance Optimization #18, Testing Strategy #19, Tactical Instructions #21 (full — T0/T2/runtime activation/per-agent tactics/disk loaders), Living World System #22 (season/world loop, ArcEngine, text generation), Dismarking & Marker-Awareness AI #23, Scripted Build-Up Structures #24, Positional Rotations #25, Tactical Presets & AI-Manager Selection #26. Fixed64 Math Library #9 and Code Standards #20 have no `src/` implementation by design (#9 implementation deferred to Stage 5+; #20 is a style guide, not a coded subsystem). Plus the unnumbered `src/match-engine/` composition root (goal detection, halves/full-time model, and the complete match-flow model — throw-ins, corners, goal kicks, fouls/cards, offside, substitutions).
+**Locked (implementation begun) — 28 of 43 approved specs:** #1–#8, #10–#19, #21–#28, #30, #38.
+That is the full Stage-0 physics/AI/systems stack, the tactical layer (#21, #23–#26), the living world
+(#22), the squad data layer (#27), progression (#28, T0), the season loop (#30, T0–T2), and the UI
+framework substrate (#38, T0).
+
+**Not implemented by design:** Fixed64 Math Library #9 (deferred to Stage 5+ per §8.1) and Code
+Standards #20 (a style guide, not a coded subsystem).
+
+**Approved but not implemented — 13 specs:** #29, #31, #32, #33, #34, #37, #40, #41, #42, #43, #44,
+and #45, #49. No assembly exists for any of them.
+
+**Plus five unnumbered assemblies** (governed by design supplements, not specs): `match-engine`
+(the composition root), `match-viewer`, `match-client-core`, `match-client-unity`, `project-constants`.
 
 **For detailed progress tracking, see:** [docs/tracking/PROGRESS.md](docs/tracking/PROGRESS.md)
 **For file inventory, see:** [docs/tracking/file-manifest.md](docs/tracking/file-manifest.md)
@@ -343,71 +414,53 @@ composition root includes goal detection, halves/full-time, and the full match-f
 ```
 Soccer-Manager-Pro/
 ├── CLAUDE.md                           [AI behavioral rules — read first]
+├── README.md                           [This file]
+├── Assets/ Packages/ ProjectSettings/  [Unity project shell — editor 6000.4.9f1, DX11]
 ├── docs/
-│   ├── planning/                       [Master volumes, dev plan, best practices]
+│   ├── planning/                       [Master volumes I–IV, master development plan, best practices]
+│   ├── design/ui-mockups/              [Non-normative UI visual reference — not on any build path]
 │   ├── specs/
-│   │   ├── SPEC_INDEX.md               [Canonical spec numbering and status]
-│   │   ├── ball-physics/               [Spec #1 — APPROVED]
-│   │   ├── agent-movement/             [Spec #2 — APPROVED]
-│   │   ├── collision-system/           [Spec #3 — APPROVED]
-│   │   ├── first-touch/                [Spec #4 — APPROVED]
-│   │   ├── pass-mechanics/             [Spec #5 — APPROVED]
-│   │   ├── shot-mechanics/             [Spec #6 — APPROVED]
-│   │   ├── perception-system/          [Spec #7 — APPROVED]
-│   │   ├── decision-tree/              [Spec #8 — APPROVED (draft-level)]
-│   │   ├── fixed64-math/               [Spec #9 — APPROVED]
-│   │   ├── deterministic-sim/          [Spec #16 — APPROVED]
-│   │   ├── event-system/               [Spec #17 — APPROVED]
-│   │   ├── performance-optimization/   [Spec #18 — APPROVED]
-│   │   ├── testing-strategy/           [Spec #19 — APPROVED]
-│   │   ├── code-standards/             [Spec #20 — APPROVED]
-│   │   ├── heading-mechanics/          [Spec #10 — APPROVED May 16]
-│   │   ├── goalkeeper-mechanics/       [Spec #11 — APPROVED May 18]
-│   │   ├── positioning-ai/             [Spec #12 — APPROVED May 18]
-│   │   ├── pressing-ai/               [Spec #13 — APPROVED May 17]
-│   │   ├── defensive-ai/              [Spec #14 — APPROVED May 18]
-│   │   ├── attacking-ai/              [Spec #15 — APPROVED May 18]
-│   │   ├── tactical-instructions/     [Spec #21 — APPROVED Jun 20]
-│   │   ├── living-world/              [Spec #22 — APPROVED Jun 22]
-│   │   ├── dismarking-ai/             [Spec #23 — APPROVED Jul 10]
-│   │   ├── build-up-structures/       [Spec #24 — APPROVED Jul 10]
-│   │   ├── positional-rotations/      [Spec #25 — APPROVED Jul 10]
-│   │   └── tactical-presets/          [Spec #26 — APPROVED Jul 10]
+│   │   ├── SPEC_INDEX.md               [Canonical registry — 43 spec folders, all APPROVED]
+│   │   └── <43 spec folders>/          [See SPEC_INDEX.md for the number ↔ folder map]
 │   └── tracking/
 │       ├── PROGRESS.md                 [Schedule and milestone tracking]
-│       ├── spec-error-log.md           [Cross-spec architectural errors]
-│       ├── fix-manifest-pass-mechanics.md [Per-audit fix tracking — Pass Mechanics #5]
-│       ├── file-manifest.md            [Authoritative file inventory]
-│       ├── match-engine-design.md      [Match Engine composition-root design note — not a numbered spec]
-│       └── certification-platform.md  [Stage-0 host platform pin]
-└── src/                                [Implementation — coding begun May 19, 2026]
-    ├── CLAUDE.md                       [Coding guide — read before writing code]
-    ├── ball-physics/                   [Spec #1 — relocated May 30, 2026 from src/Core/Physics/Ball/]
-    ├── agent-movement/                 [Spec #2]
-    ├── collision-system/                [Spec #3]
-    ├── first-touch/                     [Spec #4]
-    ├── pass-mechanics/                  [Spec #5]
-    ├── shot-mechanics/                  [Spec #6]
-    ├── perception-system/               [Spec #7]
-    ├── decision-tree/                   [Spec #8]
-    ├── heading-mechanics/                [Spec #10]
-    ├── goalkeeper-mechanics/             [Spec #11]
-    ├── positioning-ai/                   [Spec #12]
-    ├── pressing-ai/                       [Spec #13]
-    ├── defensive-ai/                      [Spec #14]
-    ├── attacking-ai/                      [Spec #15]
-    ├── deterministic-sim/                 [Spec #16]
-    ├── event-system/                       [Spec #17]
-    ├── performance-optimization/           [Spec #18]
-    ├── testing-strategy/                   [Spec #19 — ScenarioRunner closed-loop harness]
-    ├── tactical-instructions/              [Spec #21 — full: T0/T2/runtime activation/per-agent tactics/disk loaders]
-    ├── living-world/                       [Spec #22 — season/world loop, ArcEngine, text generation]
-    ├── dismarking-ai/                       [Spec #23 — perception-derived marking pressure]
-    ├── build-up-structures/                 [Spec #24 — 3-zone build-up classifier]
-    ├── positional-rotations/                [Spec #25 — RotationController]
-    ├── tactical-presets/                    [Spec #26 — preset library + AI-manager decision gate]
-    └── match-engine/                       [Composition root — goal detection, halves/full-time, complete match-flow model; not a numbered spec]
+│       ├── SPEC_INDEX-adjacent logs:
+│       │   ├── spec-error-log.md       [Cross-spec architectural errors]
+│       │   ├── file-manifest.md        [Authoritative file inventory]
+│       │   └── fix-manifest-pass-mechanics.md
+│       ├── Roadmaps (meta-planning — design no system, open no spec):
+│       │   ├── management-layer-spec-roadmap.md  [Which specs to author, in what order]
+│       │   └── path-to-playable-roadmap.md       [Which code to land, in what order]
+│       ├── certification-platform.md   [Pinned host/engine tuple] + cert-run-runbook.md
+│       └── *-design.md                 [42 design supplements — see note below]
+├── src/                                [29 production assemblies — coding begun May 19, 2026]
+│   ├── CLAUDE.md                       [Coding guide — read before writing code]
+│   ├── Physics:    ball-physics, agent-movement, collision-system, first-touch,
+│   │               pass-mechanics, shot-mechanics, heading-mechanics, goalkeeper-mechanics
+│   ├── Mechanics:  positioning-ai (+#23/#24/#25), pressing-ai, defensive-ai, attacking-ai
+│   ├── AI:         decision-tree, perception-system
+│   ├── Foundations: deterministic-sim, event-system, project-constants
+│   ├── Data/loop:  player-database (#27), player-progression (#28), season-save (#30),
+│   │               tactical-instructions (#21 + #26), living-world (#22)
+│   ├── Client:     ui-framework (#38), match-viewer, match-client-core, match-client-unity
+│   ├── Infra:      performance-optimization (#18), testing-strategy (#19)
+│   └── match-engine/                   [Composition root — not a numbered spec]
+└── tools/
+    ├── dotnet-ci/                      [Non-certifying Linux compile/test gate]
+    ├── unity-ci/  perf-harness/  spec-stress/
+    └── budget-auditor.py, select-seed.py, round-resolution-fit.py, run-perf-local.sh
 ```
+
+**Assembly names do not reliably match spec folder names.** #27 lives in `player-database`, #28 in
+`player-progression`, #30 in `season-save`, #38 in `ui-framework`; #23/#24/#25 live inside
+`positioning-ai` and #26 inside `tactical-instructions`. Consult the assembly map in
+[`CLAUDE.md`](CLAUDE.md#repo-structure) rather than inferring from the folder name.
+
+**On design supplements.** `docs/tracking/*-design.md` is a governance class of its own: a converged,
+adversarially-reviewed design note that either precedes promotion to a numbered spec, or permanently
+governs a surface that is deliberately *not* a numbered spec (`match-engine-design.md` for the
+composition root is the canonical example). A supplement is not a spec — it has no `SPEC_INDEX.md` row
+and confers no approval status.
 
 Note: Fixed64 Math Library (#9) has no `src/` tree — implementation deferred to Stage 5+. Code Standards (#20) is a style guide, not a coded subsystem.
 
@@ -415,28 +468,57 @@ Note: Fixed64 Math Library (#9) has no `src/` tree — implementation deferred t
 
 ## NEXT IMMEDIATE STEPS
 
-### Outstanding (as of July 14, 2026)
+### Outstanding (as of July 26, 2026)
 
-**Specification phase:** ✅ COMPLETE for the Stage-0 set of 20 (May 18, 2026), plus 6 Stage-1 forward specs APPROVED (#21 Tactical Instructions Jun 20; #22 Living World System Jun 22; #23–#26 Jul 10). `SPEC_INDEX.md`: **26 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**
+**Specification phase:** ✅ COMPLETE across the board — `SPEC_INDEX.md`: **43 APPROVED / 0 IN REVIEW /
+0 NOT STARTED.** Seven further numbers (#35, #36, #46, #47, #48, #50, #51) sit at converged
+design-supplement stage awaiting promotion.
 
-**Implementation phase — active frontier:**
-1. 🔒 Specs #1–#8, #10–#20 — all coded, AR-clean, and covered by the non-certifying Linux `dotnet-ci` gate (full `src/` tree compiles; full NUnit suite; quarantine list empty).
-2. 🔒 **Match Engine** (`src/match-engine/`, unnumbered composition root) — goal detection + the match-length/halves model landed Jul 11 (`SNAPSHOT_SCHEMA_VERSION` 14); the **complete match-flow model** (throw-ins, corners, goal kicks, fouls/cards with sent-off tracking, offside, substitutions, half-time break, full-time end) landed Jul 14 (`SNAPSHOT_SCHEMA_VERSION` 15). Both landings were adversarially reviewed (design + code) to convergence.
-3. 🔒 **Tactical Instructions (#21)** — fully landed: T0/T2 consumer seams, runtime activation, per-agent `PlayerTactic` routing, the G2 balance pass, and on-disk team/player tactic-file loaders. No remaining Stage-1 leftovers.
-4. 🔒 **Living World System (#22)** — season/world loop (`WorldStore`), `ArcEngine` + `ActiveSetMembership`, `InteractionTextGenerator` (incl. deep-memory auto-cite) all landed. Remaining seams (BackgroundTierSim summaries, arc trigger evaluators + `world.arcs` stream registration) are deliberately unbuilt — they'd consume vol-2/vol-3 canon and match-outcome events that don't exist yet (phantom-interface rule).
-5. 🔒 **Specs #23–#26** — all APPROVED and wired Jul 10–11: dismarking (#23) and build-up (#24) `SlotComposer` stages, positional rotations (#25) `RotationController`, and tactical presets (#26)'s full T1–T4 stack (preset→config projection, decision gate, kickoff scoring, adaptation ladder) — the last gated on the goal-detection/halves-model engine substrate, which landed the same week. Only the #26 §9.2 `[GT]` balance-pass review remains, non-blocking.
-6. ⏳ **Unity 6 recertification** — the engine target moved to Unity 6000.4.9f1 (DX11) on Jul 13, documentation-only. `certification-platform.md` reverted to `⏳ RECERT REQUIRED`; a real cert run on the new tuple (needs pinned Windows-11/Unity-6 host access, not available in this environment) is required before `FR-DS-009-GATE`/`FR-PO-052`/the §7.5 D1 test-runner pin/`EnvironmentFingerprint` re-unblock.
-7. ⏳ **FR-PO-052 certified perf baseline** — the real Stopwatch-based harness (`StopwatchPerfHarness` / `MatchEngineCapstonePerfHarness`) landed Jul 13, superseding the old synthetic stub; the match-engine kickoff entry is still **Pending** (needs the same pinned-host cert run as above).
+**The critical path is now `path-to-playable-roadmap.md`** — the shortest route to a build a person can
+sit down and play, against the PM-1 (playable match) / **PM-2 (playable season — the objective)** /
+PM-3 (playable career) ladder. Phase A (season spine) is in progress:
+
+1. ✅ **A1–A4 landed** — #30 T0 season value types, T1 save/restore path, the league bootstrap
+   (one seed → an N-club league, no authored data), and T2 the day-advance loop + round-resolution
+   model (a 380-fixture season resolves in milliseconds against the ≥ 16 h the real engine would need).
+2. ✅ **A4b landed Jul 26** — the possession bootstrap. **This is the item that unblocked PM-1:** it
+   closed ERR-030-014, under which a production match had never once put the ball in motion.
+3. ⏳ **A4a — round-resolution calibration corpus.** Unblocked by A4b but not yet run: re-run the
+   ~33-minute Step-0 pilot, then (only if the squad-strength extremes separate) the ~1.4 h corpus and
+   the parameter fit. The three `[GT]` round-resolution parameters currently ship **provisional and
+   explicitly not fitted** — football-plausible rather than engine-matched.
+4. ⏳ **A5 — #30 T3 season boundary roll.** Phase A's exit is PM-2-sim: a full 38-round season
+   simulating headlessly, saving and resuming byte-identically, and rolling into a second season.
+5. ⏳ **The 13 unimplemented approved specs** (#29, #31–#34, #37, #40–#45, #49) — ~30–60k lines of
+   unwritten code at this project's realised spec→code ratios.
+
+**Known behavioural defect (not blocking play):**
+6. ⏳ **The foul heuristic issues ~7 red cards per 9 minutes** — every player would be dismissed well
+   inside a full match. Invisible until Phase H made matches actually play. Deliberately not fixed
+   inside a correctness pass: the levers are `[GT]` and setting them needs a stated foul-rate target
+   and a measurement pass. **The most visible remaining unrealism in a played match.**
+
+**Client / presentation (Track C — can run in parallel, must not block Phase A):**
+7. ⏳ **UI screens.** #38's T0 substrate exists; no screens and no UGUI binding. Of the screens the
+   July-25 mockups cover, only Tactics and Squad have built data behind them — the rest are gated on
+   #29/#31/#32/#34/#40, none of which have any `src/`.
+8. ⏳ **Interactive Unity client.** The browser-based live match viewer is the current floor.
 
 **Operations / housekeeping:**
-8. ⏳ Push 12+ approval tags (HTTP 403 branch-protection); run squash-merge precondition check from CLAUDE.md OPEN ISSUES before `git push --tags`.
-9. ⏳ Verify the `first-touch/section-7.md` smart-quote regression (flagged historically; status unverified).
+9. ⏳ Push the approval tags (HTTP 403 branch-protection); run the squash-merge precondition check in
+   `CLAUDE.md` OPEN ISSUES before `git push --tags`.
+10. ⏳ Re-verify the `tools/dotnet-ci` shim's `netstandard2.1` / `LangVersion 9.0` claims against a real
+    Unity 6000.4.9f1 install (documented behaviour says they hold; confirming needs the install).
 
-**Resolved since the last update (no longer outstanding):**
-- ✅ Structural fix: Ball Physics moved `src/Core/Physics/Ball/` → `src/ball-physics/` (May 30, 2026).
-- ✅ Stage-0 host-platform pin landed in `docs/tracking/certification-platform.md` (Jun 7, 2026) — unblocked `FR-DS-009-GATE` and `FR-PO-052` activation (**since reverted to RECERT REQUIRED by the Jul 13 Unity 6 bump, see item 6 above**).
-- ✅ Dotnet CI gate quarantine burn-down — all 30 quarantined tests adjudicated; quarantine list empty (Jun 13, 2026).
-- ✅ Design supplements for #23–#26 promoted to full spec sets, approved, and implemented (Jul 7–14, 2026).
+**Resolved since the last README update (July 14 → July 26):**
+- ✅ **Unity 6 recertification COMPLETE** (Jul 19) — both the determinism-KAT run and the FR-PO-052 perf
+  baseline executed on the pinned host; `certification-platform.md` v1.4 back to `✅ PINNED`. This
+  closed items 6 and 7 of the previous list, plus the native MXCSR live-mode gate (Jul 22).
+- ✅ **Snapshot deserialize / restore** — Phases 1–3 complete: the reader, distinct-squad re-projection
+  (#27 T3), the on-disk match save file, and the unified season save.
+- ✅ **17 management-layer specs authored and approved** (#27–#34, #37, #38, #40–#45, #49) in
+  dependency waves, Jul 22–25.
+- ✅ **A production match plays** (Jul 26) — see CURRENT STATUS above.
 
 ---
 
@@ -569,6 +651,20 @@ git push --tags
 ---
 
 ## VERSION HISTORY
+
+**v1.35 — July 26, 2026**
+- Root-doc reconciliation against the actual repo state; no code, spec, or tracking-doc change.
+- CURRENT STATUS re-based: 43 APPROVED / 0 IN REVIEW / 0 NOT STARTED (was 26); 29 production
+  assemblies; `SNAPSHOT_SCHEMA_VERSION` 15 → 18 corrected; Unity 6 recertification and the
+  FR-PO-052 perf baseline moved from outstanding to resolved (both completed July 19, 2026).
+- Recorded the Phase-H possession bootstrap: a production match now plays (ERR-030-014 closed).
+- Added the 17 management-layer specs (#27–#49, approved July 22–25) with per-spec implementation
+  status, and the seven design supplements awaiting promotion (#35, #36, #46, #47, #48, #50, #51).
+- **Stated the implementation gap plainly: 13 APPROVED specs have no assembly at all.**
+- PROJECT STRUCTURE rebuilt from the real tree; added the assembly-name ≠ spec-folder-name warning
+  and the design-supplement governance note.
+- NEXT IMMEDIATE STEPS re-based on `path-to-playable-roadmap.md`; added the known ~7-red-cards-per-
+  9-minutes foul-heuristic defect.
 
 **v1.0 — December 30, 2025**
 - Initial README creation
