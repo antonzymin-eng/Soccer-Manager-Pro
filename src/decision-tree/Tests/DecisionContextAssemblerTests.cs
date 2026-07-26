@@ -36,18 +36,58 @@ namespace TacticalDirector.DecisionTree.Tests
         }
 
         [Test]
-        public void BallZone_MirrorBoundary_NotEnumMirrored()
+        public void BallZone_IsMeasuredFromEachTeamsOwnGoalLine()
         {
-            // x = 37: home MIDFIELD (35 < 37 ≤ 65). For away, distance from own goal
-            // line is 105 − 37 = 68 ≥ 65 ⇒ ATTACKING. Enum-mirroring a home MIDFIELD
-            // value would return MIDFIELD — the home cut points {35, 65} mirror to
-            // {40, 70}, so the zone must be recomputed per team (PitchGeometry doc).
-            DecisionContext home = Assemble(agentId: 3,  teamId: 0, ballX: 37.0f);
-            DecisionContext away = Assemble(agentId: 14, teamId: 1, ballX: 37.0f);
+            // The zone bounds are equal thirds (L/3, 2L/3), so the pair is self-mirroring and each
+            // team's bands are simply measured from its OWN goal line. x = 20 is 20 m from home's line
+            // (defensive third) and 85 m from away's (attacking third).
+            //
+            // This replaces an earlier test that discriminated via the 35–40 m band, which existed only
+            // because AttackingZoneMinX was a hardcoded 65 against a true-third 35 — with equal thirds
+            // that band is gone. The contract it was protecting is unchanged and still asserted here:
+            // the zone must be recomputed per team rather than the shared home-perspective
+            // MatchContext.BallZone being consumed for both (audit AR-2 H-2, which inverted every zone
+            // modifier for away agents).
+            DecisionContext home = Assemble(agentId: 3,  teamId: 0, ballX: 20.0f);
+            DecisionContext away = Assemble(agentId: 14, teamId: 1, ballX: 20.0f);
 
-            Assert.AreEqual(FieldZone.MIDFIELD,  home.BallZone);
+            Assert.AreEqual(FieldZone.DEFENSIVE, home.BallZone, "20 m from home's own goal line");
             Assert.AreEqual(FieldZone.ATTACKING, away.BallZone,
-                "away zone at x=37 is ATTACKING (68 m from own goal line) — enum mirroring misclassifies the 35–40 m band");
+                "85 m from away's own goal line — consuming the raw home-perspective value would say "
+                + "DEFENSIVE here, which is the AR-2 H-2 defect");
+        }
+
+        [Test]
+        public void BallZone_EqualThirds_AreSymmetricUnderMirroring()
+        {
+            // The property the derived bounds buy: because {L/3, 2L/3} maps to itself under
+            // x -> L - x, a team's own-goal-relative band is orientation-independent. Sampling across
+            // the pitch, home at x and away at L - x must agree — if a future edit reintroduces
+            // unequal thirds this fails, and the orientation-dependence is back.
+            foreach (float x in new[] { 5.0f, 20.0f, 34.0f, 36.0f, 52.5f, 69.0f, 71.0f, 85.0f, 100.0f })
+            {
+                FieldZone home = PitchGeometry.ComputeFieldZone(x, teamId: 0);
+                FieldZone away = PitchGeometry.ComputeFieldZone(
+                    PitchGeometry.PitchLengthM - x, teamId: 1);
+
+                Assert.AreEqual(home, away,
+                    "zone bands must not depend on attacking direction (x = " + x + ")");
+            }
+        }
+
+        [Test]
+        public void ZoneBounds_AreEqualThirdsOfThePitch()
+        {
+            // Locks the tag against the value: "[DERIVED] split pitch into thirds" was previously false
+            // of AttackingZoneMinX (a hardcoded 65 gave a 40 m attacking third and a 30 m middle third).
+            float third = PitchGeometry.PitchLengthM / 3.0f;
+
+            Assert.AreEqual(third, PitchGeometry.DefensiveZoneMaxX, 1e-4f);
+            Assert.AreEqual(2.0f * third, PitchGeometry.AttackingZoneMinX, 1e-4f);
+            Assert.AreEqual(
+                PitchGeometry.DefensiveZoneMaxX,
+                PitchGeometry.PitchLengthM - PitchGeometry.AttackingZoneMinX, 1e-4f,
+                "equal thirds ⇒ the boundary pair is self-mirroring");
         }
 
         // ── AR-2 M-1: OpponentHasBall perspective derivation ──────────────────
@@ -129,4 +169,11 @@ namespace TacticalDirector.DecisionTree.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                      |
 // | 1.0     | 2026-06-11 | —      | Audit AR-2: H-2 + M-1 locks at the assembler seam.         |
+// | 1.1     | 2026-07-26 | —      | Zone thirds equalised. BallZone_MirrorBoundary_NotEnumMirrored |
+// |         |            |        |   discriminated via the 35–40 m band, which existed only       |
+// |         |            |        |   because AttackingZoneMinX was a hardcoded 65 against a       |
+// |         |            |        |   true-third 35; with equal thirds that band is gone. Replaced  |
+// |         |            |        |   by BallZone_IsMeasuredFromEachTeamsOwnGoalLine (same AR-2 H-2 |
+// |         |            |        |   contract, x = 20) plus two new locks: symmetry under          |
+// |         |            |        |   mirroring, and the bounds actually being equal thirds.        |
 #endregion
