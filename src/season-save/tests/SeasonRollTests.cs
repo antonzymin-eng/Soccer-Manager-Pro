@@ -45,33 +45,36 @@ namespace TacticalDirector.SeasonSave.Tests
             }
         }
 
-        // ── The pure §3.5 step (b) arithmetic ──────────────────────────────────────────────
+        // ── The pure §3.5 step (b) arithmetic (BoardState.EvaluateAtSeasonEnd) ─────────────
+
+        private static BoardState Board(int target, int security) =>
+            new BoardState(new BoardObjective(target), security);
 
         [Test]
-        public void EvaluateJobSecurity_ObjectiveMet_GainsTheFlatAmount()
+        public void EvaluateAtSeasonEnd_ObjectiveMet_GainsTheFlatAmount()
         {
-            int after = SeasonLoop.EvaluateJobSecurity(
-                securityBefore: 500, finalPosition: 2, targetPosition: 4);
+            BoardState after = Board(target: 4, security: 500).EvaluateAtSeasonEnd(finalPosition: 2);
 
-            Assert.AreEqual(500 + SeasonLoopConstants.BoardJobSecurityMetDeltaPerMille, after);
+            Assert.AreEqual(
+                500 + SeasonLoopConstants.BoardJobSecurityMetDeltaPerMille, after.JobSecurityPerMille);
         }
 
         [Test]
-        public void EvaluateJobSecurity_ExactlyOnTarget_CountsAsMet()
+        public void EvaluateAtSeasonEnd_ExactlyOnTarget_CountsAsMet()
         {
             // BoardObjective is "position or better", so finishing exactly on it is a pass — the
             // off-by-one that would quietly punish a manager who hit the target precisely.
-            int after = SeasonLoop.EvaluateJobSecurity(
-                securityBefore: 500, finalPosition: 4, targetPosition: 4);
+            BoardState after = Board(target: 4, security: 500).EvaluateAtSeasonEnd(finalPosition: 4);
 
-            Assert.AreEqual(500 + SeasonLoopConstants.BoardJobSecurityMetDeltaPerMille, after);
+            Assert.AreEqual(
+                500 + SeasonLoopConstants.BoardJobSecurityMetDeltaPerMille, after.JobSecurityPerMille);
         }
 
         [Test]
-        public void EvaluateJobSecurity_MissedPenalty_ScalesWithPlacesShort()
+        public void EvaluateAtSeasonEnd_MissedPenalty_ScalesWithPlacesShort()
         {
-            int byOne = SeasonLoop.EvaluateJobSecurity(1000, finalPosition: 5, targetPosition: 4);
-            int byThree = SeasonLoop.EvaluateJobSecurity(1000, finalPosition: 7, targetPosition: 4);
+            int byOne = Board(4, 1000).EvaluateAtSeasonEnd(finalPosition: 5).JobSecurityPerMille;
+            int byThree = Board(4, 1000).EvaluateAtSeasonEnd(finalPosition: 7).JobSecurityPerMille;
 
             Assert.AreEqual(1000 - SeasonLoopConstants.BoardJobSecurityMissedDeltaPerMille, byOne);
             Assert.AreEqual(1000 - (3 * SeasonLoopConstants.BoardJobSecurityMissedDeltaPerMille), byThree);
@@ -79,17 +82,38 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
-        public void EvaluateJobSecurity_ClampsToTheScaleAtBothEnds()
+        public void EvaluateAtSeasonEnd_ClampsToTheScaleAtBothEnds()
         {
             Assert.AreEqual(
                 SeasonLoopConstants.JobSecurityScale,
-                SeasonLoop.EvaluateJobSecurity(SeasonLoopConstants.JobSecurityScale, 1, 4),
+                Board(4, SeasonLoopConstants.JobSecurityScale)
+                    .EvaluateAtSeasonEnd(finalPosition: 1).JobSecurityPerMille,
                 "A run of good seasons saturates rather than banking unbounded credit.");
 
             Assert.AreEqual(
                 0,
-                SeasonLoop.EvaluateJobSecurity(10, finalPosition: 20, targetPosition: 1),
+                Board(1, 10).EvaluateAtSeasonEnd(finalPosition: 20).JobSecurityPerMille,
                 "A catastrophic season floors at zero rather than going negative (BoardState would throw).");
+        }
+
+        [Test]
+        public void EvaluateAtSeasonEnd_AgreesWithTheObjectiveItReports()
+        {
+            // The verdict a career screen shows and the consequence it explains must come from ONE rule.
+            // Before this moved onto BoardState the branch was a second copy of IsMetBy, so extending the
+            // objective model (#45) would have moved the reported verdict and left the penalty behind.
+            BoardState board = Board(target: 4, security: 500);
+
+            for (int position = 1; position <= 8; position++)
+            {
+                BoardState after = board.EvaluateAtSeasonEnd(position);
+                bool gained = after.JobSecurityPerMille > board.JobSecurityPerMille;
+
+                Assert.AreEqual(board.Objective.IsMetBy(position), gained,
+                    $"Position {position}: job security must move in the direction IsMetBy reports.");
+                Assert.AreEqual(board.IsOnTrack(position), gained,
+                    $"Position {position}: the running read and the boundary verdict must agree.");
+            }
         }
 
         // ── The pure calendar shift ────────────────────────────────────────────────────────
@@ -238,7 +262,8 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.AreEqual(finalPosition, outcome.FinalPosition);
             Assert.AreEqual(securityBefore, outcome.JobSecurityBeforePerMille);
             Assert.AreEqual(
-                SeasonLoop.EvaluateJobSecurity(securityBefore, finalPosition, outcome.TargetPosition),
+                Board(outcome.TargetPosition, securityBefore)
+                    .EvaluateAtSeasonEnd(finalPosition).JobSecurityPerMille,
                 outcome.JobSecurityAfterPerMille);
             Assert.AreEqual(
                 outcome.JobSecurityAfterPerMille, loop.State.Board.JobSecurityPerMille,
@@ -305,6 +330,75 @@ namespace TacticalDirector.SeasonSave.Tests
                     File.Delete(path);
                 }
             }
+        }
+
+        [Test]
+        public void RolledSeason_SurvivesASaveAndKeepsPlaying()
+        {
+            // The complement of the test above, and the likelier save point of the two: a player who
+            // finishes a season, sees the board's verdict, and quits. The roll installs a schedule and a
+            // calendar the codec has never been shown — and installing a state Encode writes but Decode
+            // refuses is a defect this exact code path has produced once already (the T1 AR pass-1
+            // finding on BeginNextSeason's vacuous coverage check). Nothing asserted it round-trips.
+            League league = FourClubLeague();
+            SeasonLoop loop = NewLoop(league, out WorldStore world);
+            PlayWholeSeason(loop, league);
+            loop.RollToNextSeason();
+
+            string path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".tdsave");
+            try
+            {
+                SeasonSaveManager.Save(world, loop.State, null, path);
+                SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
+
+                Assert.IsTrue(loop.State.FieldsEqual(contents.Season),
+                    "A season saved just after the roll must decode field-identical.");
+
+                var resumed = new SeasonLoop(
+                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
+
+                // And it must still be playable — the ERR-030-015 property, across a file this time.
+                resumed.AdvanceToNextFixtureDay();
+                Assert.DoesNotThrow(() => resumed.AdvanceAndPlayNextRound(league));
+                PlayWholeSeason(resumed, league);
+                Assert.IsTrue(resumed.IsSeasonComplete);
+            }
+            finally
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+        }
+
+        [Test]
+        public void AdvanceDays_PastTheNextSeasonsOpeningDay_FailsLoudRatherThanStrandingTheCareer()
+        {
+            // The close season is days the client walks, and RollToNextSeason refuses a calendar that
+            // would open in the past. Together those two facts mean stepping past the opening day before
+            // rolling reaches a state with no way forward: the season cannot be played (complete) and
+            // cannot be rolled (calendar behind the clock), the world clock only moves forward, and the
+            // stuck state saves and reloads perfectly happily. AdvanceDays has to refuse the step.
+            League league = FourClubLeague();
+            SeasonLoop loop = NewLoop(league, out WorldStore world);
+            PlayWholeSeason(loop, league);
+
+            uint before = world.CurrentWorldTick;
+            int overshoot = (int)SeasonLoopConstants.SeasonBreakDays + 1;
+
+            Assert.Throws<System.InvalidOperationException>(() => loop.AdvanceDays(overshoot));
+            Assert.AreEqual(before, world.CurrentWorldTick,
+                "A refused advance must not have moved the clock partway.");
+
+            // The whole close season, to the day, is still allowed — the bound is the opening day itself,
+            // matching the roll's own gate (which accepts world-day == opening day).
+            loop.AdvanceDays((int)SeasonLoopConstants.SeasonBreakDays);
+            SeasonRollOutcome outcome = loop.RollToNextSeason();
+
+            Assert.AreEqual(world.CurrentWorldTick, outcome.NextFirstFixtureDay);
+            Assert.DoesNotThrow(() => loop.AdvanceAndPlayNextRound(league),
+                "Rolling on the opening day itself leaves a season that is immediately playable.");
         }
 
         [Test]
@@ -375,16 +469,26 @@ namespace TacticalDirector.SeasonSave.Tests
             loop.State.Fixtures.CopyTo(secondSchedule, 0);
             Assert.AreEqual(firstSchedule.Length, secondSchedule.Length);
 
-            bool scheduleOrTableMoved = TableFingerprint(loop) != firstTable;
-            for (int i = 0; i < firstSchedule.Length && !scheduleOrTableMoved; i++)
+            // Asserted SEPARATELY, not as a disjunction. The table always moves — season 2 quick-sims
+            // against a different seed and season number — so "table OR schedule changed" is satisfied by
+            // the table alone and says nothing about the schedule, which is the half this test is named
+            // for. A regression that stopped feeding the derived seed to FixtureScheduler would replay the
+            // identical fixture list every season and still pass a disjunction.
+            int changedFixtures = 0;
+            for (int i = 0; i < firstSchedule.Length; i++)
             {
-                scheduleOrTableMoved =
-                    firstSchedule[i].HomeClubId != secondSchedule[i].HomeClubId ||
-                    firstSchedule[i].AwayClubId != secondSchedule[i].AwayClubId;
+                if (firstSchedule[i].HomeClubId != secondSchedule[i].HomeClubId ||
+                    firstSchedule[i].AwayClubId != secondSchedule[i].AwayClubId)
+                {
+                    changedFixtures++;
+                }
             }
 
-            Assert.IsTrue(scheduleOrTableMoved,
-                "A new season must not reproduce the previous one fixture-for-fixture AND result-for-result.");
+            Assert.Greater(changedFixtures, 0,
+                "The derived seed must actually reshape the schedule, or every season replays the last "
+                + "one fixture-for-fixture.");
+            Assert.AreNotEqual(firstTable, TableFingerprint(loop),
+                "And the results must differ too, or the career is a replay regardless of the fixtures.");
         }
 
         [Test]
@@ -441,4 +545,13 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | restartability across a real save file; and the acceptance test —  |
 // |         |            |        | a rolled season played to completion, which is what catches the    |
 // |         |            |        | §3.5 calendar omission (ERR-030-015).                              |
+// | 1.1     | 2026-07-27 | —      | AR pass: the step (b) tests repointed to BoardState.EvaluateAt-    |
+// |         |            |        | SeasonEnd (+ a lock that the verdict, the running IsOnTrack read   |
+// |         |            |        | and the penalty direction all come from IsMetBy). SecondSeason-    |
+// |         |            |        | DiffersFromTheFirst asserted a DISJUNCTION whose table half is     |
+// |         |            |        | always true, so the schedule half — the thing it is named for —    |
+// |         |            |        | was unreachable; now asserted separately. Plus two locks for       |
+// |         |            |        | uncovered paths: a season saved AFTER the roll (the likelier save  |
+// |         |            |        | point, and the codec had never been shown a rolled state), and     |
+// |         |            |        | AdvanceDays refusing to strand a career past the opening day.      |
 #endregion

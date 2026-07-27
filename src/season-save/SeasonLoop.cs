@@ -65,7 +65,15 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         /// <param name="world">The day-advance substrate. Referenced, not owned — #22 owns its
         /// lifecycle. The caller is responsible for having constructed it from the SAME world seed the
-        /// league was generated from (league-bootstrap KD-9); nothing here can verify that.</param>
+        /// league was generated from (league-bootstrap KD-9); nothing here can verify that.
+        /// <para>
+        /// While a season is in progress this loop is the sanctioned DRIVER of that clock:
+        /// <see cref="AdvanceToNextFixtureDay"/> / <see cref="AdvanceDays"/> run the KD-2 fixed order and
+        /// enforce the KD-4 bounds. Calling <c>WorldStore.AdvanceDay()</c> directly bypasses both — it
+        /// skips the per-day seams Wave-2+ specs slot into, and can carry the clock past the day the next
+        /// season would open, after which <see cref="RollToNextSeason"/> can no longer install a calendar
+        /// (the season is then playable by neither route). Drive the clock through this loop.
+        /// </para></param>
         /// <param name="season">The season this loop drives. Taken by reference and mutated in place —
         /// this loop becomes its sole writer, so the caller must not retain a second writer.</param>
         /// <param name="mode">How a round's fixtures resolve (§3.4.1). Defaults to the FR-SN-013b
@@ -137,9 +145,14 @@ namespace TacticalDirector.SeasonSave
         /// round-resolution model, across its whole lifetime.
         /// <para>
         /// Session-scoped like <see cref="MatchOutcomes"/> and not serialized. It is the cheapest honest
-        /// answer to "did a real match actually run?" — a question a client asks (how many matches has the
-        /// manager watched this season) and the capstone asserts on, without either having to re-run a
-        /// ~2-minute match to find out or pin an engine-produced scoreline.
+        /// answer to "did a real match actually run?" without either having to re-run a ~2-minute match
+        /// to find out or pin an engine-produced scoreline — which is what the capstone asserts on.
+        /// </para>
+        /// <para>
+        /// <b>Career-scoped, not season-scoped.</b> <see cref="RollToNextSeason"/> deliberately does not
+        /// reset it, so from season 2 onward this is a career total. A client wanting "matches watched
+        /// this season" must snapshot it at the boundary — <see cref="SeasonRollOutcome"/> is the signal
+        /// that the boundary happened — rather than reading this directly.
         /// </para>
         /// </summary>
         public int EnginePlayedFixtures { get; private set; }
@@ -161,6 +174,12 @@ namespace TacticalDirector.SeasonSave
         /// a long career held in one loop instance accumulates them. Bounded enough not to matter at Stage 2
         /// and deliberately not capped, because silently dropping the oldest outcomes would make the
         /// producer surface lossy right where #33 will want the history.
+        /// </para>
+        /// <para>
+        /// It also spans season boundaries: <see cref="RollToNextSeason"/> does not clear it, and
+        /// <see cref="MatchResult"/> carries no season number. Results stay ordered by strictly increasing
+        /// <c>WorldDay</c>, so a consumer separates seasons by bucketing on the boundary days
+        /// (<see cref="SeasonRollOutcome.NextFirstFixtureDay"/>) rather than by any field on the result.
         /// </para>
         /// </summary>
         public ReadOnlyCollection<MatchResult> MatchOutcomes => _outcomes.AsReadOnly();
@@ -208,7 +227,9 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         /// <exception cref="System.ArgumentOutOfRangeException"><paramref name="days"/> is negative.</exception>
         /// <exception cref="System.InvalidOperationException">The advance would carry the clock past the
-        /// pending round's fixture day, which would violate the KD-4 invariant (FR-SN-011).</exception>
+        /// day the season's next round is playable on — the pending round's fixture day mid-season, or
+        /// the day the NEXT season would open once this one is complete. Either would violate the KD-4
+        /// invariant (FR-SN-011).</exception>
         public void AdvanceDays(int days)
         {
             if (days < 0)
@@ -217,16 +238,37 @@ namespace TacticalDirector.SeasonSave
                     nameof(days), days, "days must be non-negative.");
             }
 
+            ulong endDay = (ulong)_world.CurrentWorldTick + (ulong)days;
+
             if (!_state.Calendar.IsSeasonComplete)
             {
                 uint targetDay = _state.Calendar.NextFixtureDay();
-                ulong endDay = (ulong)_world.CurrentWorldTick + (ulong)days;
                 if (endDay > targetDay)
                 {
                     throw new System.InvalidOperationException(
                         $"Advancing {days} days from world-day {_world.CurrentWorldTick} would reach "
                         + $"{endDay}, past the pending round's fixture day {targetDay} — the KD-4 cursor "
                         + "invariant (FR-SN-011). Play the round first.");
+                }
+            }
+            else
+            {
+                // The same invariant, on the far side of the boundary. RollToNextSeason derives the new
+                // calendar purely from the old one (KD-6), so the day the next season opens is already
+                // determined the moment this one ends — and the roll refuses to install a calendar that
+                // opens in the past. Without this bound a client walking the close season one day at a
+                // time can step past that day and reach a state with NO way forward: the season cannot be
+                // played (it is complete) and cannot be rolled (the derived calendar is now behind the
+                // clock), the world clock only moves forward, and the stuck state saves and reloads
+                // cleanly. Refusing the step that would cause it fails loud at the mistake instead.
+                uint openingDay = ShiftCalendarToNextSeason(_state.Calendar).NextFixtureDay();
+                if (endDay > openingDay)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Advancing {days} days from world-day {_world.CurrentWorldTick} would reach "
+                        + $"{endDay}, past the day the next season opens ({openingDay}) — and a roll can "
+                        + "no longer install that calendar, leaving the career unable to progress "
+                        + "(FR-SN-011). Call RollToNextSeason() first, then advance.");
                 }
             }
 
@@ -363,11 +405,14 @@ namespace TacticalDirector.SeasonSave
             int finalPosition = _state.PositionOf(_state.ManagedClubId);
 
             // ── (b) board pass/fail + job security ──────────────────────────────────────────────
+            // The board owns the rule; this step asks it for a verdict rather than re-deriving one, so
+            // the reported ObjectiveMet and the job-security consequence cannot drift apart.
             BoardState board = _state.Board;
             int target = board.Objective.TargetPositionOrBetter;
             bool objectiveMet = board.Objective.IsMetBy(finalPosition);
             int securityBefore = board.JobSecurityPerMille;
-            int securityAfter = EvaluateJobSecurity(securityBefore, finalPosition, target);
+            BoardState evaluated = board.EvaluateAtSeasonEnd(finalPosition);
+            int securityAfter = evaluated.JobSecurityPerMille;
 
             // ── (a') #43 promotion/relegation inserts HERE (FR-SN-031) — empty at Stage 2. ──────
             // ── (b') #40 finance settlement inserts HERE (ERR-030-003) — empty at Stage 2. ──────
@@ -395,8 +440,8 @@ namespace TacticalDirector.SeasonSave
             int completedSeasonNumber = _state.SeasonNumber;
             _state.BeginNextSeason(nextSeed, nextFixtures, nextCalendar);
 
-            // Cannot throw: EvaluateJobSecurity clamps into the range BoardState validates.
-            _state.SetBoard(board.WithJobSecurity(securityAfter));
+            // Cannot throw: EvaluateAtSeasonEnd returns an already-validated BoardState.
+            _state.SetBoard(evaluated);
 
             return new SeasonRollOutcome(
                 completedSeasonNumber,
@@ -408,42 +453,6 @@ namespace TacticalDirector.SeasonSave
                 _state.SeasonNumber,
                 nextSeed,
                 nextCalendar.NextFixtureDay());
-        }
-
-        /// <summary>
-        /// The §3.5 step (b) job-security arithmetic, extracted pure so every branch is unit-testable
-        /// without driving a full season to its boundary first (the <see cref="ShouldPlayThroughEngine"/>
-        /// precedent — a branch reachable only through a 380-fixture run is a branch that ships untested).
-        /// <para>
-        /// Meeting the objective adds a flat amount; missing it subtracts per league position short, so
-        /// the penalty tracks how badly it was missed. The result is clamped into
-        /// <c>[0, JobSecurityScale]</c> — accumulated in <c>long</c> first, so a hostile <c>[GT]</c>
-        /// value cannot overflow the multiply into a positive number and read as a reward.
-        /// </para>
-        /// </summary>
-        internal static int EvaluateJobSecurity(int securityBefore, int finalPosition, int targetPosition)
-        {
-            long delta;
-            if (finalPosition <= targetPosition)
-            {
-                delta = SeasonLoopConstants.BoardJobSecurityMetDeltaPerMille;
-            }
-            else
-            {
-                long placesShort = finalPosition - targetPosition;
-                delta = -(long)SeasonLoopConstants.BoardJobSecurityMissedDeltaPerMille * placesShort;
-            }
-
-            long result = securityBefore + delta;
-
-            if (result < 0)
-            {
-                return 0;
-            }
-
-            return result > SeasonLoopConstants.JobSecurityScale
-                ? SeasonLoopConstants.JobSecurityScale
-                : (int)result;
         }
 
         /// <summary>
@@ -751,7 +760,16 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | not interfaces. Everything is computed and validated before any     |
 // |         |            |        | write, and the throwing commit runs before the non-throwing one, so |
 // |         |            |        | a refused roll leaves the season untouched. Plus the pure           |
-// |         |            |        | EvaluateJobSecurity / ShiftCalendarToNextSeason / DeriveNextSeason- |
-// |         |            |        | Seed helpers, extracted so their branches are testable without      |
-// |         |            |        | driving a 380-fixture season to its boundary first.                 |
+// |         |            |        | ShiftCalendarToNextSeason / DeriveNextSeasonSeed helpers,           |
+// |         |            |        | extracted so their branches are testable without driving a          |
+// |         |            |        | 380-fixture season to its boundary first.                          |
+// | 1.2     | 2026-07-27 | —      | #30 T3 AR: AdvanceDays now bounds the POST-season advance by the    |
+// |         |            |        | day the next season would open. Its KD-4 guard covered only the     |
+// |         |            |        | in-season case, so walking the close season past that day reached a |
+// |         |            |        | career that could neither be played (season complete) nor rolled    |
+// |         |            |        | (the derived calendar now opens in the past) — unrecoverable, and   |
+// |         |            |        | it saved and reloaded cleanly. Plus: the step (b) job-security      |
+// |         |            |        | arithmetic moved to BoardState.EvaluateAtSeasonEnd (it had          |
+// |         |            |        | re-derived IsMetBy); EnginePlayedFixtures / MatchOutcomes docs      |
+// |         |            |        | corrected — both span the season boundary, which T3 made true.      |
 #endregion

@@ -81,7 +81,9 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>
         /// How many league positions short of the objective the club finished; zero when it was met.
-        /// The quantity the missed job-security penalty scales by (§3.5 step (b)).
+        /// Reported for display — the authoritative record of what the shortfall COST is
+        /// <see cref="JobSecurityDeltaPerMille"/>, which is read back off the evaluation rather than
+        /// re-derived here.
         /// </summary>
         public int PlacesShort => ObjectiveMet ? 0 : FinalPosition - TargetPosition;
 
