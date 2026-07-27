@@ -162,9 +162,17 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 
         private static BallState BuildBall()
         {
-            // x = 75 ≥ BallAttackingThirdXM (≈70) ⇒ in GK0's attacking third (drives Resting→Set→
-            // Anticipate); ~73 m from GK0 ⇒ unreachable by any dive.
-            return BallState.CreateAtPosition(new Vector3(75f, 20f, 0.11f));
+            // ERR-011-002 re-anchor. This was x = 75 — chosen because the pre-fix orchestrator drove
+            // Resting→Set→Anticipate off "the third the keeper's own team ATTACKS", so a ball 73 m from
+            // GK0 was what woke it up. That predicate was inverted; the scenario had encoded it.
+            //
+            // The scenario's INTENT is unchanged and is still exactly met: reach Anticipate, launch one
+            // dive, miss, mutate no ball state. Under the corrected predicate the keeper wakes when the
+            // ball threatens the goal it DEFENDS, so the ball moves into GK0's own defensive third —
+            // x = 30 ≤ 35 (PitchLengthM − BallAttackingThirdXM). It stays comfortably unreachable: GK0
+            // stands at (2, 34), so the ball is 28 m away in x alone, against a reach envelope of under
+            // 2 m plus at most DiveLaunchDisplacementM (2.2 m) of lateral travel.
+            return BallState.CreateAtPosition(new Vector3(30f, 20f, 0.11f));
         }
 
         private static readonly int[] GkAgentIds = { Gk0AgentId, Gk1AgentId };

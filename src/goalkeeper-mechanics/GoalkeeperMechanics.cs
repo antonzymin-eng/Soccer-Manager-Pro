@@ -146,22 +146,36 @@ namespace TacticalDirector.GoalkeeperMechanics
         }
 
         /// <summary>
-        /// Notifies that a ShotExecutedEvent has been consumed for the specified GK.
-        /// Called by the event subscription handler; sets the pending-shot flag for the next 60 Hz tick.
-        /// §3.2 / §4.6.2.
+        /// Notifies that a shot has been struck at the specified GK's goal, opening the §3.2 reaction
+        /// window. Sets the pending-shot flag for the next 60 Hz tick.
+        ///
+        /// <para>The caller supplies <paramref name="attrs"/> because the §3.2 latency and required-reaction
+        /// formulas are attribute-driven and this is frequently the FIRST call for an episode — earlier
+        /// than <see cref="CommitSaveIntent"/>, which is the only other writer of the per-GK attribute
+        /// snapshot. Reading a stale or default snapshot here would date the reaction window off a keeper
+        /// with zeroed Reflexes. Same convention as <c>CommitSaveIntent</c>: the composition root owns the
+        /// projection (KD-P4 — runtime TeamId/Fatigue are the caller's to supply).</para>
+        ///
+        /// §3.2 / §4.6.2. ERR-011-004 gave this method its first production caller.
         /// </summary>
-        public void OnShotExecutedEvent(int gkIndex, float shotMatchTimeMs, float ballSpeedMps)
+        /// <param name="gkIndex">Keeper index (== team id; KD-1).</param>
+        /// <param name="shotMatchTimeMs">Match time (ms) at which the shot was struck.</param>
+        /// <param name="ballSpeedMps">Ball speed (m/s) at shot execution.</param>
+        /// <param name="attrs">The keeper's projected attributes for this episode.</param>
+        public void OnShotExecutedEvent(
+            int gkIndex, float shotMatchTimeMs, float ballSpeedMps, GoalkeeperAgentAttributes attrs)
         {
             if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
             {
                 return;
             }
 
+            _attrs[gkIndex]              = attrs;
             _shotEventPending[gkIndex]   = true;
             _shotDetectedTickMs[gkIndex] =
-                GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(shotMatchTimeMs, _attrs[gkIndex]);
+                GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(shotMatchTimeMs, attrs);
             _requiredReactionMs[gkIndex] =
-                GoalkeeperReactionPipeline.ComputeRequiredReactionMs(_attrs[gkIndex], ballSpeedMps, _states[gkIndex]);
+                GoalkeeperReactionPipeline.ComputeRequiredReactionMs(attrs, ballSpeedMps, _states[gkIndex]);
         }
 
         /// <summary>
@@ -306,27 +320,35 @@ namespace TacticalDirector.GoalkeeperMechanics
                 GoalkeeperAgentAttributes attrs = _attrs[gkIndex];
                 GoalkeeperPositioningContract positioning = _positioningContracts[gkIndex];
 
-                // Ball in attacking third from this GK's perspective:
-                // Team 0 (defends X=0): attacking third is X > BallAttackingThirdXM (≈70m).
-                // Team 1 (defends X=105): attacking third is X < (PitchLengthM - BallAttackingThirdXM) (≈35m).
-                // Simplified Stage 0: attacker-controlled possession approximated by ball position only.
-                bool ballInAttackingThird = attrs.TeamId == 0
-                    ? ballState.Position.x >= GoalkeeperConstants.BallAttackingThirdXM
-                    : ballState.Position.x <= GoalkeeperConstants.PitchLengthM - GoalkeeperConstants.BallAttackingThirdXM;
+                // ERR-011-002 — how close the ball is to the goal THIS keeper defends.
+                //
+                // This was a per-side constant PAIR computing the third the keeper's OWN TEAM ATTACKS,
+                // then handing it to a state-machine parameter whose own doc reads "the attacking third
+                // from the perspective of the OPPOSING team (i.e. threatening GK's goal)" — the opposite
+                // end of the pitch. The keeper therefore went Set/Anticipate when the ball was 70 m away
+                // and sat Resting while it was in its own box. Measured over three full matches, keepers
+                // spent 76-92% of every match parked in Anticipate (there is no Anticipate exit but a
+                // dive), entered for the wrong reason.
+                //
+                // Fixed per §5.Z.12 — "a pair has two places that must agree; a mirror has one": ONE
+                // signed distance to the keeper's own goal, and both predicates derived from it. Team 0
+                // defends x = 0 and team 1 defends x = PitchLengthM, the same convention
+                // GkHeadingIntentSource.SaveArmed and MatchEngine's goal detection use.
+                float ownGoalX = attrs.TeamId == 0 ? 0.0f : GoalkeeperConstants.PitchLengthM;
+                float ballDistToOwnGoalM = Mathf.Abs(ballState.Position.x - ownGoalX);
 
-                // Ball in defensive third heuristic for GK team.
-                // Defensive third boundary = PitchLengthM - BallAttackingThirdXM for team 0;
-                // BallAttackingThirdXM for team 1 (mirror). BallAttackingThirdXM = 2/3 * PitchLengthM.
-                float defensiveThirdBoundary = GoalkeeperConstants.PitchLengthM
-                                             - GoalkeeperConstants.BallAttackingThirdXM;
-                bool ballInDefensiveThird = (attrs.TeamId == 0)
-                    ? ballState.Position.x < defensiveThirdBoundary
-                    : ballState.Position.x > GoalkeeperConstants.BallAttackingThirdXM;
+                // The third in front of the keeper's own goal: the ball is a threat.
+                float defensiveThirdDepthM = GoalkeeperConstants.PitchLengthM
+                                           - GoalkeeperConstants.BallAttackingThirdXM;
+                bool ballThreateningOwnGoal = ballDistToOwnGoalM <= defensiveThirdDepthM;
+
+                // The far third: play is at the other end and the keeper can stand down.
+                bool ballSafelyUpfield = ballDistToOwnGoalM >= GoalkeeperConstants.BallAttackingThirdXM;
 
                 // Anticipation score from Decision Tree — Stage 0 approximation based on ball proximity
                 // Full Decision Tree integration is a Stage 1 concern per §4.6.1
                 // Stage 0 stub: full Decision Tree anticipation score at Stage 1 (§4.6.1)
-                float anticipationScore = ballInAttackingThird
+                float anticipationScore = ballThreateningOwnGoal
                     ? GoalkeeperConstants.Stage0AnticipationScoreActive
                     : 0.0f;
 
@@ -349,8 +371,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                     recoveryCooldownEndTick: _recoveryCooldownEndTick[gkIndex],
                     gkPosition:             gkXY,
                     gkBaselineSlot:         positioning.GkBaselineSlot,
-                    ballInAttackingThird:   ballInAttackingThird,
-                    ballInDefensiveThird:   ballInDefensiveThird);
+                    ballThreateningOwnGoal: ballThreateningOwnGoal,
+                    ballSafelyUpfield:      ballSafelyUpfield);
 
                 // Forced release telemetry
                 if (_states[gkIndex] == GoalkeeperState.HandsOnBall &&
@@ -448,9 +470,10 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                         _divePeakHandZ[gkIndex] = GoalkeeperDiveKinematics.ComputePeakHandZ(_attrs[gkIndex], jitterMs);
 
-                        // Dive direction from save intent (lateral = Y, across the goal mouth)
+                        // Dive direction: toward where the ball will cross the keeper's plane
+                        // (lateral = Y, across the goal mouth). ERR-011-003 — see the helper.
                         _diveDirectionLateral[gkIndex] = _saveIntentActive[gkIndex]
-                            ? ComputeDiveDirectionLateral(_saveIntents[gkIndex], agentState)
+                            ? ComputeDiveDirectionLateral(_saveIntents[gkIndex], agentState, ballState)
                             : 0.0f;
 
                         // Emit rush event (Launched phase) if applicable — not for save dives
@@ -837,14 +860,60 @@ namespace TacticalDirector.GoalkeeperMechanics
 
         // Lateral dive axis is Y (touchline-to-touchline): the goal mouth spans Y, so the keeper
         // dives left/right across the goal along Y — not along the goal-to-goal X axis (§1.2 / §3.3.1).
-        private static float ComputeDiveDirectionLateral(SaveIntent intent, AgentState agentState)
+        //
+        // ERR-011-003: this returned 0 in production for every dive ever launched. The only non-zero
+        // branch is gated on SaveIntent.DeflectionTarget, and the engine's sole producer
+        // (MatchEngine.HostSaveDispatch.CommitSave) sets DeflectionTarget = null — so the reach
+        // envelope never displaced laterally and the keeper dived straight up on the spot. Measured
+        // over three full matches: mean |diveDirectionLateral| = 0.000 across all six keepers, with the
+        // closest approach of the envelope to the ball 2.75 m short over an entire match.
+        //
+        // The conflation is the root cause. DeflectionTarget is where the keeper wants to PUT the ball
+        // (§3.5.3, the deflect aim point); it is not where the keeper should DIVE. A keeper dives at the
+        // ball, so the direction is derived from the ball — and specifically from where the ball WILL
+        // cross the keeper's own plane, not where it is now: a ball struck across the face of goal
+        // arrives several metres from its current lateral position, and diving at the current position
+        // is diving behind it.
+        private static float ComputeDiveDirectionLateral(
+            SaveIntent intent, AgentState agentState, BallState ballState)
         {
+            // An explicit intent target still wins — a #8-supplied aim point is a deliberate instruction
+            // and the Stage-1 producer may set it. Today's producer supplies none, so the ball decides.
             if (intent.DeflectionTarget.HasValue)
             {
-                float dy = intent.DeflectionTarget.Value.y - agentState.Position.y;
-                return dy > 0.0f ? 1.0f : dy < 0.0f ? -1.0f : 0.0f;
+                float targetDy = intent.DeflectionTarget.Value.y - agentState.Position.y;
+                return Sign(targetDy);
             }
-            return 0.0f;
+
+            // Linear interception in the XY plane: the time for the ball to reach the keeper's x, then
+            // the ball's y at that time. Pure, allocation-free, and deterministic — no clock read and no
+            // draw, so it cannot perturb the RNG cursor or the digest beyond the dive it steers.
+            float dx = agentState.Position.x - ballState.Position.x;
+            float vx = ballState.Velocity.x;
+
+            float predictedY = ballState.Position.y;
+
+            // Only extrapolate when the ball is actually closing on the keeper's plane. A ball moving
+            // away (or laterally, vx ~ 0) gives a degenerate or negative time-to-plane; diving at an
+            // extrapolation of it would send the keeper the wrong way, so fall back to the ball's
+            // current lateral position, which is never worse than the pre-fix zero.
+            if (Mathf.Abs(vx) > GoalkeeperConstants.DEGENERACY_EPSILON && dx * vx > 0.0f)
+            {
+                float timeToPlaneS = dx / vx;
+                if (timeToPlaneS > 0.0f && timeToPlaneS <= GoalkeeperConstants.DivePredictionHorizonS)
+                {
+                    predictedY = ballState.Position.y + ballState.Velocity.y * timeToPlaneS;
+                }
+            }
+
+            return Sign(predictedY - agentState.Position.y);
+        }
+
+        /// <summary>Signum with an exact zero at zero — the dive direction is a discrete
+        /// {-1, 0, +1} axis selector per §3.3.4, not a magnitude.</summary>
+        private static float Sign(float v)
+        {
+            return v > 0.0f ? 1.0f : v < 0.0f ? -1.0f : 0.0f;
         }
 
         private bool CheckAttackerWithinRadius(Vector3 gkPosition, BallState ballState, float radius)

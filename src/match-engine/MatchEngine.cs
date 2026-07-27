@@ -2246,6 +2246,13 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: whether the GK/Heading opt-in wiring is enabled on this engine.</summary>
         internal bool TestOnly_GkHeadingEnabled => _gkHeadingEnabled;
 
+        /// <summary>Test-only: the goalkeeper orchestrator's cross-tick state, for the §5.Z.17 save-pipeline
+        /// diagnostic. Reads through the SAME public <c>CaptureState</c> seam the v19 snapshot writer uses,
+        /// so the instrument observes exactly the state the digest serializes — an instrument reading a
+        /// parallel surface could disagree with what the engine actually persists.</summary>
+        internal TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState TestOnly_GoalkeeperState =>
+            _goalkeeper.CaptureState();
+
         /// <summary>Test-only (§7): force the ball into a loose, given position/velocity so a §4 trigger's
         /// world-state gate can be exercised deterministically without a full match developing the geometry
         /// naturally. Clears possession (loose ball).</summary>
@@ -3121,6 +3128,47 @@ namespace TacticalDirector.MatchEngine
             return Mathf.Sqrt(-2f * Mathf.Log(u1)) * Mathf.Cos(2f * Mathf.PI * u2);
         }
 
+        /// <summary>
+        /// ERR-011-004: routes a just-struck shot to the keeper it is struck AT, opening #11's §3.2
+        /// reaction window. Called once per agent per Resolve tick, immediately after that agent's shot
+        /// executor advanced, so a shot whose CONTACT ran this frame is seen this frame.
+        /// </summary>
+        /// <param name="shooterId">Agent whose shot executor just advanced.</param>
+        /// <param name="frameNumber">Current 60 Hz physics frame.</param>
+        /// <param name="matchTimeMs">Current match time (ms) from kickoff.</param>
+        private void NotifyKeeperOfShot(int shooterId, int frameNumber, float matchTimeMs)
+        {
+            ShotResult r = _shotExecutors[shooterId].LastResult;
+            if (r.Outcome != ShotOutcome.Completed || r.ContactFrame != frameNumber)
+            {
+                return;
+            }
+
+            // The keeper under threat is the one defending the goal the shooter attacks — i.e. the
+            // OTHER team's. Derived from the shooter's team rather than from ball direction, so a
+            // miscued shot still starts the right keeper's clock (and never the shooter's own).
+            int shooterTeam = _teamIds[shooterId];
+            if (shooterTeam < 0 || shooterTeam >= GoalkeeperConstants.MaxGkAgents)
+            {
+                return;
+            }
+
+            int defendingTeam = 1 - shooterTeam;
+
+            // Keeper index == team id (KD-1, MaxGkAgents == TEAM_COUNT == 2), the same mapping
+            // HostSaveDispatch uses. A team with no keeper on the pitch (sent off) has none to notify.
+            if (_gkAgentIds[defendingTeam] < 0)
+            {
+                return;
+            }
+
+            GoalkeeperAgentAttributes attrs = PlayerAttributeProjection.ToGoalkeeper(
+                in _canonicalAttrs[_gkAgentIds[defendingTeam]], defendingTeam, fatigue: 0f);
+
+            _goalkeeper.OnShotExecutedEvent(
+                defendingTeam, matchTimeMs, _ball.Velocity.magnitude, attrs);
+        }
+
         /// <summary>Refills <see cref="_gkAgentIds"/> (keeper index == team id → that team's GK agent index,
         /// −1 if none) from the current <c>_isGoalkeeper</c>/<c>_teamIds</c>. Called at boot and at the top of
         /// each drive so ConfigureSquads (which reassigns <c>_isGoalkeeper</c>) and GK substitutions are
@@ -3369,6 +3417,24 @@ namespace TacticalDirector.MatchEngine
             {
                 _passExecutors[i].Update(matchTime, frameNumber, ref _ball);
                 _shotExecutors[i].Update(matchTime, frameNumber, ref _ball);
+
+                // ERR-011-004 — tell the defending keeper a shot has been struck.
+                // GoalkeeperMechanics.OnShotExecutedEvent is the §3.2 reaction-pipeline entry point, and
+                // it had ZERO production callers: _shotDetectedTickMs stayed 0, so the per-frame update
+                // that writes ReactionWindowAchieved (gated on _shotDetectedTickMs > 0) never ran, and
+                // reactionWindowAchieved was permanently 0. Since §3.5.1 blends
+                //     quality = alpha*rawHandling + (1 - alpha)*reactionWindowAchieved,  alpha = 0.70,
+                // that capped quality at 0.70*rawHandling — measured ceiling 0.630 for a PERFECT keeper
+                // (Handling 20, zero noise, exact contact point) against CatchThreshold 0.78. A catch was
+                // ARITHMETICALLY unreachable regardless of positioning, reach or dive accuracy.
+                //
+                // The contact frame is the trigger, not the windup: §3.2.1 dates perception from the ball
+                // being struck. LastResult is only Completed once ApplyKick has run, and ContactFrame
+                // pins the frame it ran on, so the equality fires exactly once per shot.
+                if (_gkHeadingEnabled)
+                {
+                    NotifyKeeperOfShot(i, frameNumber, matchTime);
+                }
             }
 
             // §5.Z Phase H (KD-H4 / ERR-008-015) — close the Decision Tree's PASS/SHOOT lifecycle.

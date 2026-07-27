@@ -40,6 +40,14 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>[FIXED] Squared-magnitude epsilon for degenerate-vector guards (avoids division by zero). §3.3 / §3.5.</summary>
         public const float DEGENERACY_EPSILON_SQ = 1e-6f;
 
+        /// <summary>
+        /// [DERIVED] Scalar epsilon for degenerate-component guards (avoids division by zero on a single
+        /// axis, where the squared form above is the wrong scale).
+        /// Formula: sqrt(DEGENERACY_EPSILON_SQ). Source constants: GoalkeeperConstants.DEGENERACY_EPSILON_SQ.
+        /// Consumed by the §3.3.4 dive-direction interception guard (ERR-011-003). §3.3.
+        /// </summary>
+        public static readonly float DEGENERACY_EPSILON = Mathf.Sqrt(DEGENERACY_EPSILON_SQ);
+
         /// <summary>[FIXED] Minimum value of u1 in any Box-Muller transform, guarding against log(0). §3.5 / §3.6 RNG.</summary>
         public const float RNG_GUARD_EPSILON = 1e-7f;
 
@@ -114,7 +122,7 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>
         /// [CROSS] Goalkeeper subsystem domain tag.
         /// Authoritative source: DeterministicSimConstants.DOMAIN_TAG_GOALKEEPER.
-        /// Deterministic Simulation #16 §3.4 v1.0.5 — ERR-011-001 resolved May 18, 2026.
+        /// Deterministic Simulation #16 §3.4 v1.0.5 — ERR-011-002 resolved May 18, 2026.
         /// Value: 0x1D. TODO: mirror from DeterministicSimConstants.DOMAIN_TAG_GOALKEEPER when that file exists.
         /// </summary>
         public static readonly uint DomainTagGoalkeeper = 0x1Du; // TODO: mirror from DeterministicSimConstants
@@ -162,6 +170,18 @@ namespace TacticalDirector.GoalkeeperMechanics
 
         /// <summary>[GT] Lateral XY displacement of reach centre along dive direction at end of dive phase (m). §3.3.4.</summary>
         public static readonly float DiveLaunchDisplacementM = Config.GetFloat("goalkeeper-mechanics", "DiveLaunchDisplacementM", 2.2f);
+
+        /// <summary>
+        /// [GT] Horizon (s) over which the §3.3.4 dive-direction interception extrapolates the ball to the
+        /// keeper's plane (ERR-011-003). Beyond it the linear model is not credible — the ball will be
+        /// touched, deflected or will bounce first — so the keeper dives at the ball's current lateral
+        /// position instead of at a stale extrapolation. Sized just above the flight time of the slowest
+        /// ball that can arm a save (GkSaveTriggerRangeM 16.5 m at GkSaveTriggerMinBallSpeedMps 3 m/s is
+        /// 5.5 s, but a save that is 5 s away is not a dive), so it bounds the model without gating any
+        /// realistic shot. Config key [goalkeeper-mechanics] DivePredictionHorizonS.
+        /// </summary>
+        public static readonly float DivePredictionHorizonS =
+            Config.GetFloat("goalkeeper-mechanics", "DivePredictionHorizonS", 2.0f);
 
         /// <summary>[GT] Handling-attribute contribution to reach radius (m per unit norm). §3.3.4.</summary>
         public static readonly float ReachKHandling = Config.GetFloat("goalkeeper-mechanics", "ReachKHandling", 0.20f);
