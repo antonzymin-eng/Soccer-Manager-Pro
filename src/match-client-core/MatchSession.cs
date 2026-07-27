@@ -91,6 +91,40 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>The enqueue-only command surface for the View's tactical/substitution input.</summary>
         public ManagerCommandQueue Commands => _driver.Commands;
 
+        /// <summary>
+        /// Attaches a per-tick observation over the running match — the seam a live derivation such
+        /// as Match Analytics #37 needs, whose contract is to consume every tick exactly once.
+        ///
+        /// <para><paramref name="observerFactory"/> is invoked ONCE, here, with the session's engine,
+        /// and returns the action the streamer runs on the sim thread after each completed tick. The
+        /// engine is passed to the factory rather than exposed as a property so there is no standing
+        /// public handle on it: <b>build a reader from it, never a mutator.</b> Mutating the engine
+        /// directly bypasses the command queue, and it is the queue that produces the tick-stamped
+        /// log a live match is replayed from (§6.1) — a change applied around it is simply absent
+        /// from the record, and the replay silently diverges.</para>
+        ///
+        /// <para>Must be called before <see cref="Start"/>, once. The observer runs under the
+        /// streamer's tick gate and MUST NOT block or start/stop the session.</para>
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="observerFactory"/> is null.</exception>
+        /// <exception cref="InvalidOperationException">
+        /// The factory returned null, an observer is already attached, or the session has started.
+        /// </exception>
+        public void AttachTickObserver(Func<MatchEngine.MatchEngine, Action> observerFactory)
+        {
+            if (observerFactory == null) { throw new ArgumentNullException(nameof(observerFactory)); }
+
+            Action observer = observerFactory(_engine);
+            if (observer == null)
+            {
+                throw new InvalidOperationException(
+                    "observerFactory returned null. An attached-but-absent observer would look wired " +
+                    "and silently see nothing.");
+            }
+
+            _streamer.SetPostTickObserver(observer);
+        }
+
         /// <summary>Begins paced background playback (the streamer's pacing loop). Idempotent while running; single-use after <see cref="Stop"/>.</summary>
         public void Start() => _streamer.Start();
 

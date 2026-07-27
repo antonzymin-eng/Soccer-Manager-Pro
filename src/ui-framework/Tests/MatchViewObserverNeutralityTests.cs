@@ -119,21 +119,52 @@ namespace TacticalDirector.UiFramework.Tests
             // A mis-resolved root would yield a handful of files and a vacuous pass.
             Assert.Greater(asmdefs.Length, 20, "scanned implausibly few asmdefs — root resolution is wrong");
 
+            // FR-UI-001 forbids a SIM/LOOP assembly referencing the UI layer; it does not forbid a
+            // renderer sitting above it — which is the whole point of the framework, and B6's browser
+            // client is the first one. So the guard asserts BOTH halves rather than relaxing to an
+            // allow-list alone: only sanctioned renderers may reference it, AND the sim assemblies are
+            // named explicitly, so adding one to the allow-list to quiet a red test still fails.
+            var sanctionedRenderers = new HashSet<string>
+            {
+                "ui-framework", "ui-framework-tests",           // itself
+                "match-client-web", "match-client-web-tests",   // roadmap B6 — the PM-1 browser client
+            };
+
+            var mustNeverReference = new HashSet<string>
+            {
+                "match-engine", "season-save", "living-world", "player-database", "player-progression",
+                "deterministic-sim", "event-system", "decision-tree", "perception-system",
+                "positioning-ai", "pressing-ai", "defensive-ai", "attacking-ai",
+                "ball-physics", "agent-movement", "collision-system", "first-touch",
+                "pass-mechanics", "shot-mechanics", "heading-mechanics", "goalkeeper-mechanics",
+                "tactical-instructions", "match-analytics", "match-viewer", "match-client-core",
+            };
+
             var offenders = new List<string>();
             foreach (FileInfo asmdef in asmdefs)
             {
                 string name = Path.GetFileNameWithoutExtension(asmdef.Name);
-                // The UI assembly and its own test assembly are allowed to reference it.
-                if (name == "ui-framework" || name == "ui-framework-tests") { continue; }
+                if (!File.ReadAllText(asmdef.FullName).Contains("TacticalDirector.UiFramework"))
+                {
+                    continue;
+                }
 
-                if (File.ReadAllText(asmdef.FullName).Contains("TacticalDirector.UiFramework"))
+                if (mustNeverReference.Contains(name) || !sanctionedRenderers.Contains(name))
                 {
                     offenders.Add(asmdef.FullName.Substring(root.FullName.Length + 1));
                 }
             }
 
             CollectionAssert.IsEmpty(offenders,
-                "sim/loop/analytics assemblies must never reference the presentation layer (FR-UI-001)");
+                "sim/loop/analytics assemblies must never reference the presentation layer, and only " +
+                "a sanctioned renderer above it may (FR-UI-001)");
+
+            // Non-vacuity: a renamed assembly would otherwise drop silently out of the guard.
+            var present = new HashSet<string>();
+            foreach (FileInfo asmdef in asmdefs) { present.Add(Path.GetFileNameWithoutExtension(asmdef.Name)); }
+            CollectionAssert.IsSubsetOf(
+                mustNeverReference, present,
+                "the never-reference list names an assembly that no longer exists.");
         }
 
         private static DirectoryInfo FindRepoRoot()

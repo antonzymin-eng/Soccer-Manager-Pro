@@ -166,22 +166,55 @@ namespace TacticalDirector.MatchAnalytics.Tests
 
             Assert.Greater(asmdefs.Length, 20, "scanned implausibly few asmdefs — root resolution is wrong");
 
+            // The invariant is "no SIM assembly references analytics", which is not the same as "no
+            // assembly does" — #37 §4.1 names the UI layer as a sanctioned consumer, and B6's browser
+            // client is the first one to exist. Rather than relax to an allow-list alone (which could
+            // later be grown to admit a sim assembly by whoever is fixing a red test), this asserts
+            // BOTH halves: only sanctioned consumers may reference it, AND the sim assemblies are
+            // named explicitly so adding one to the allow-list still fails.
+            var sanctionedConsumers = new HashSet<string>
+            {
+                "match-analytics", "match-analytics-tests",   // itself
+                "match-client-web", "match-client-web-tests", // roadmap B6 — the PM-1 browser client
+            };
+
+            var mustNeverReference = new HashSet<string>
+            {
+                "match-engine", "season-save", "living-world", "player-database", "player-progression",
+                "deterministic-sim", "event-system", "decision-tree", "perception-system",
+                "positioning-ai", "pressing-ai", "defensive-ai", "attacking-ai",
+                "ball-physics", "agent-movement", "collision-system", "first-touch",
+                "pass-mechanics", "shot-mechanics", "heading-mechanics", "goalkeeper-mechanics",
+                "tactical-instructions",
+            };
+
             var offenders = new List<string>();
             foreach (FileInfo asmdef in asmdefs)
             {
                 string name = Path.GetFileNameWithoutExtension(asmdef.Name);
-                // This assembly and its own tests are allowed to name it. #38 (the UI layer) is the one
-                // sanctioned consumer and may be added here when it binds the analytics view models.
-                if (name == "match-analytics" || name == "match-analytics-tests") { continue; }
+                if (!File.ReadAllText(asmdef.FullName).Contains("TacticalDirector.MatchAnalytics"))
+                {
+                    continue;
+                }
 
-                if (File.ReadAllText(asmdef.FullName).Contains("TacticalDirector.MatchAnalytics"))
+                if (mustNeverReference.Contains(name) || !sanctionedConsumers.Contains(name))
                 {
                     offenders.Add(asmdef.FullName.Substring(root.FullName.Length + 1));
                 }
             }
 
             CollectionAssert.IsEmpty(offenders,
-                "no simulation assembly may reference the analytics layer (#37 §4.1 KD-4)");
+                "no simulation assembly may reference the analytics layer, and only a sanctioned " +
+                "presentation-layer consumer may (#37 §4.1 KD-4)");
+
+            // Non-vacuity: the two halves above are only meaningful if the names they test against
+            // correspond to assemblies that exist.
+            var present = new HashSet<string>();
+            foreach (FileInfo asmdef in asmdefs) { present.Add(Path.GetFileNameWithoutExtension(asmdef.Name)); }
+            CollectionAssert.IsSubsetOf(
+                mustNeverReference, present,
+                "the never-reference list names an assembly that no longer exists — a renamed " +
+                "assembly would silently drop out of this guard.");
         }
 
         private static DirectoryInfo FindRepoRoot()
