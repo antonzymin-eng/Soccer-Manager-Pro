@@ -1,6 +1,7 @@
 // File:     src/ui-framework/Tests/MatchViewProjectionTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-07-27 (P1: gate probes routed through a local Frame helper; CaptureFrom samples the
+//           P1 surface. The P1 gates get their own fixture — MatchViewCueProjectionTests.)
 // Author:   —
 // Spec:     UI / Client Framework #38 §3.1 / §3.4 / §5.1 (T-UI-MATCHVIEW-001/002, T-UI-FAIL-001/002,
 //           T-UI-LAYER-002, FR-UI-002/005/006/007/008/015/016), Code Standards #20
@@ -82,7 +83,7 @@ namespace TacticalDirector.UiFramework.Tests
         public void MutatingTheProducerArray_DoesNotChangeAProjectedView()
         {
             var positions = NewPositions();
-            var frame = new LiveMatchFrame(1UL, new Vector3(50f, 34f, 0.11f), -1, positions, 0, 0, false);
+            var frame = Frame(1UL, new Vector3(50f, 34f, 0.11f), -1, positions, 0, 0, false);
             var view = new MatchFrameView(in frame);
 
             Vector2 before = view.AgentPositions[0];
@@ -97,22 +98,22 @@ namespace TacticalDirector.UiFramework.Tests
         [Test]
         public void WrongAgentCount_Throws()
         {
-            var frame = new LiveMatchFrame(1UL, Vector3.zero, -1, new Vector2[3], 0, 0, false);
+            var frame = Frame(1UL, Vector3.zero, -1, new Vector2[3], 0, 0, false);
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in frame); });
         }
 
         [Test]
         public void NullAgentArray_Throws()
         {
-            var frame = new LiveMatchFrame(1UL, Vector3.zero, -1, null, 0, 0, false);
+            var frame = Frame(1UL, Vector3.zero, -1, null, 0, 0, false);
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in frame); });
         }
 
         [Test]
         public void PossessingAgentIdOutOfRange_Throws()
         {
-            var tooHigh = new LiveMatchFrame(1UL, Vector3.zero, MatchEngineConstants.SQUAD_SIZE, NewPositions(), 0, 0, false);
-            var tooLow = new LiveMatchFrame(1UL, Vector3.zero, -2, NewPositions(), 0, 0, false);
+            var tooHigh = Frame(1UL, Vector3.zero, MatchEngineConstants.SQUAD_SIZE, NewPositions(), 0, 0, false);
+            var tooLow = Frame(1UL, Vector3.zero, -2, NewPositions(), 0, 0, false);
 
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in tooHigh); });
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in tooLow); });
@@ -121,15 +122,15 @@ namespace TacticalDirector.UiFramework.Tests
         [Test]
         public void LooseBallSentinel_IsAccepted()
         {
-            var frame = new LiveMatchFrame(1UL, Vector3.zero, -1, NewPositions(), 0, 0, false);
+            var frame = Frame(1UL, Vector3.zero, -1, NewPositions(), 0, 0, false);
             Assert.DoesNotThrow(() => { var _ = new MatchFrameView(in frame); });
         }
 
         [Test]
         public void NonFiniteBallCoordinate_Throws()
         {
-            var nan = new LiveMatchFrame(1UL, new Vector3(float.NaN, 0f, 0f), -1, NewPositions(), 0, 0, false);
-            var inf = new LiveMatchFrame(1UL, new Vector3(0f, float.PositiveInfinity, 0f), -1, NewPositions(), 0, 0, false);
+            var nan = Frame(1UL, new Vector3(float.NaN, 0f, 0f), -1, NewPositions(), 0, 0, false);
+            var inf = Frame(1UL, new Vector3(0f, float.PositiveInfinity, 0f), -1, NewPositions(), 0, 0, false);
 
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in nan); });
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in inf);  });
@@ -140,7 +141,7 @@ namespace TacticalDirector.UiFramework.Tests
         {
             var positions = NewPositions();
             positions[13] = new Vector2(float.NaN, 0f);
-            var frame = new LiveMatchFrame(1UL, Vector3.zero, -1, positions, 0, 0, false);
+            var frame = Frame(1UL, Vector3.zero, -1, positions, 0, 0, false);
 
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in frame); });
         }
@@ -148,7 +149,7 @@ namespace TacticalDirector.UiFramework.Tests
         [Test]
         public void NegativeScore_Throws()
         {
-            var frame = new LiveMatchFrame(1UL, Vector3.zero, -1, NewPositions(), -1, 0, false);
+            var frame = Frame(1UL, Vector3.zero, -1, NewPositions(), -1, 0, false);
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in frame); });
         }
 
@@ -162,7 +163,7 @@ namespace TacticalDirector.UiFramework.Tests
 
             var bad = NewPositions();
             bad[0] = new Vector2(float.NaN, 0f);
-            frames.Publish(new LiveMatchFrame(8UL, Vector3.zero, -1, bad, 0, 0, false));
+            frames.Publish(Frame(8UL, Vector3.zero, -1, bad, 0, 0, false));
 
             Assert.Throws<ArgumentException>(() => source.Project());
 
@@ -183,14 +184,45 @@ namespace TacticalDirector.UiFramework.Tests
 
         internal static Vector2[] NewPositions() => new Vector2[MatchEngineConstants.SQUAD_SIZE];
 
+        /// <summary>
+        /// Builds a frame with the pre-P1 fields the gate probes below actually vary, filling the P1
+        /// additions (per-agent cues, substitution counts, period, last restart) with valid neutral
+        /// values. Keeping them in one place is why extending the frame again costs one line here
+        /// rather than one per probe — and each P1 gate gets its own explicit test instead of riding
+        /// along in a probe about something else.
+        /// </summary>
+        private static LiveMatchFrame Frame(
+            ulong tick, Vector3 ball, int possessing, Vector2[] positions,
+            int homeScore, int awayScore, bool matchEnded)
+        {
+            int cueCount = positions == null ? MatchEngineConstants.SQUAD_SIZE : positions.Length;
+            return new LiveMatchFrame(
+                tick, ball, possessing, positions, homeScore, awayScore, matchEnded,
+                new LiveAgentCue[cueCount],
+                new int[MatchEngineConstants.TEAM_COUNT],
+                MatchPeriod.FirstHalf,
+                RestartCue.None,
+                MatchEngineConstants.NO_RESTART_TEAM,
+                0UL);
+        }
+
         internal static LiveMatchFrame MakeFrame(ulong tick) =>
-            new LiveMatchFrame(tick, new Vector3(52.5f, 34f, 0.11f), -1, NewPositions(), 0, 0, false);
+            Frame(tick, new Vector3(52.5f, 34f, 0.11f), -1, NewPositions(), 0, 0, false);
 
         /// <summary>Builds a frame from the engine's PUBLIC observation surface — the same values the streamer samples.</summary>
         internal static LiveMatchFrame CaptureFrom(MatchEngine.MatchEngine engine)
         {
             var positions = new Vector2[MatchEngineConstants.SQUAD_SIZE];
-            for (int i = 0; i < positions.Length; i++) { positions[i] = engine.AgentView(i).Position; }
+            var cues      = new LiveAgentCue[MatchEngineConstants.SQUAD_SIZE];
+            for (int i = 0; i < positions.Length; i++)
+            {
+                positions[i] = engine.AgentView(i).Position;
+                cues[i]      = new LiveAgentCue(
+                    engine.AgentYellowCards(i), engine.AgentIsSentOff(i), engine.AgentBenchSlot(i));
+            }
+
+            var subs = new int[MatchEngineConstants.TEAM_COUNT];
+            for (int t = 0; t < subs.Length; t++) { subs[t] = engine.SubstitutionsUsed(t); }
 
             return new LiveMatchFrame(
                 engine.CurrentTick,
@@ -199,7 +231,13 @@ namespace TacticalDirector.UiFramework.Tests
                 positions,
                 engine.HomeScore,
                 engine.AwayScore,
-                engine.MatchEnded);
+                engine.MatchEnded,
+                cues,
+                subs,
+                engine.CurrentPeriod,
+                engine.RestartAppliedThisTick,
+                engine.RestartAwardedTeam,
+                engine.CurrentTick);
         }
 
         /// <summary>A deterministic stand-in for the streamer's publish/read handoff — no threads, no pacing.</summary>

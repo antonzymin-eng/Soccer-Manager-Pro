@@ -4,6 +4,7 @@
 **Last Updated:** July 27, 2026 (v1.0 — back-props ERR-030-015/-016/-017/-019/-020/-021/-022/-023/-024 landed atomically with the ten-spec approval wave. **New §3.3.1 records the tick-order reconciliation**: `ERR-030-007` had been filed twice, leaving two step 7s, two step 8s and an orphaned `AdvanceDay` line, so the pinned order was not implementable as written. Also fixed here: this file carried **two bare `**Last Updated:**` labels** claiming v0.8 and v0.9 with different content — the same header-drift class the project has recorded before, and one that made the file self-contradictory about its own currency.)
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Last Updated:** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Version:** 1.0
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
@@ -278,6 +279,7 @@ RollToNextSeason():
     #           per club. NULL SEAM until #40 T2 wires it; #40 references #30 never (one-way #30 → #40).
     nextSeed := DeriveNextSeasonSeed(Seed, SeasonNumber)
     Fixtures := FixtureScheduler.Generate(ClubIds, nextSeed)   # (c) regenerate
+    Calendar := ShiftForwardOneSeason(Calendar)        # (c′) rebuild — see the correction note
     AdvanceAges()                                       # (d) #28 — NULL SEAM today
     Table := LeagueTable.Empty(ClubIds)                # (e) reset
     SeasonNumber++
@@ -287,10 +289,32 @@ RollToNextSeason():
 Each step mutates a well-defined slice of `SeasonState`; the whole transform is a pure function of
 the prior `SeasonState` + `nextSeed`, so a save taken mid-roll restores to the same continuation
 (restartable, FR-SN-029). #43's promotion/relegation is a transform inserted at (a'), between
-finalize and regenerate, leaving (a)/(b)/(c)/(d)/(e) unchanged (FR-SN-031). #40's finance settlement
+finalize and regenerate, leaving (a)/(b)/(c)/(c′)/(d)/(e) unchanged (FR-SN-031). #40's finance settlement
 (ERR-030-003, at #40's approval) is a NULL SEAM inserted at (b'), after (a') so budgets reflect the
 post-promotion division and before (c); it too leaves the surrounding steps unchanged and keeps the
 transform a pure function of `SeasonState + nextSeed` (per-club `ClubFinances` prior state carried in).
+
+**Correction note — step (c′) (ERR-030-015, filed at T3 implementation).** Versions of this block before
+v0.5 regenerated `Fixtures` but never touched `Calendar`, whose cursor sits at `RoundCount` (season
+complete) precisely because the season just ended. Implemented verbatim that produces a season that is
+**permanently unplayable**: `IsSeasonComplete` stays true, so `AdvanceToNextFixtureDay` throws F5 and
+`AdvanceAndPlayNextRound` throws, on every call for the rest of the career — the transform could not
+deliver FR-SN-029's multi-season continuity at all, and no assertion over the rolled state's *fields*
+would notice, since schedule, table, seed and season number are all exactly right.
+`ShiftForwardOneSeason` shifts the existing round→day mapping forward by one season length plus a
+`[GT] SeasonBreakDays` close season and returns the cursor to round 0, so the new season opens exactly
+one break after the old one's finale. Shifting the mapping rather than rebuilding a linear calendar is
+what keeps the transform pure (a clock-derived first day would make the roll depend on when the client
+happened to call it) and preserves a non-uniform schedule — a calendar with a mid-season gap keeps that
+gap next season instead of being flattened. The step sits after (c) so a future competition set that
+changes the round count regenerates the schedule first; it does not disturb (a')/(b').
+
+**Boundary condition on (c′).** Because the derived calendar is a function of the old one alone, a
+client that advanced the world deep into the close season before rolling would install a schedule
+opening in the past — a KD-4 / FR-SN-011 cursor-invariant violation. The roll refuses that fail-loud
+rather than installing it, and performs no write until every step is computed and validated, so a
+refused roll leaves the season untouched rather than carrying a committed board verdict against a
+schedule that was then rejected.
 
 ## 3.6 Season-state sub-blob codec (FR-SN-019..023)
 
@@ -371,4 +395,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 0.8 | 2026-07-24 | — | Back-prop ERR-030-009 (at #44 approval): §3.4 notes the #44 availability-filter null seam on the managed squad's resolve→configure path (empty until #44 T2; FR-SN-013). |
 | 0.9 | 2026-07-25 | — | **ERR-030-010** (a) §3.1 pseudocode binds `ring := ids` (it was used but never defined); (b) (found at #30 T0 implementation): the §3.7 worked schedule's rounds 1 and 4 venue-corrected to agree with §3.1's round-parity rule (which is authoritative and unchanged). |
 | 1.0 | 2026-07-27 | — | **Nine back-props landed atomically with the ten-spec approval wave.** **ERR-030-022** (#35) — new **§3.3.1 tick-order reconciliation**: `ERR-030-007` was filed twice (#42 academy, #32 scouting), so §3.3 carried **two step 7s and two step 8s** plus an orphaned `AdvanceDay` comment; #32 → step 9, #35 media expiry → 10, `AdvanceDay` → 12, duplicate line deleted. **ERR-030-020** (#53) — the facilities seam at **step 0**, numbered zero rather than inserted as a new 1 because it must precede its same-day consumers *and* the six approved specs citing steps 1–8 by number must not be invalidated; §3.3.1 records the conflict and the judgement. **ERR-030-021** (#54) — the tenure seam at step 11 (after board, which it reads) and the `(b'')` boundary insertion point in §3.5; the terminating decision is #54's, not #30's. **ERR-030-023** (#35) + **ERR-030-015** (#46) — the conference-queue and match-item-projector null seams at §3.4's `EmitMatchOutcome` site, deliberately **two seams at one site** so #46's basic item type does not depend on #35 being approved. **ERR-030-024** (#46) — the drain generalized to sum across every external-delta producer. **ERR-030-016** (#36) — §3.4's resolve→filter→configure seam records that it admits multiple consumers, that the current pair composes order-independently **because both are removals**, and that a non-removal filter would need an explicit order. **ERR-030-017** (#47) + **ERR-030-019** (#50) — the outer-frame amendments are recorded in Appendix B. **Also fixed:** the file's duplicate `**Last Updated:**` headers. **Not touched:** the duplicate v0.7/v0.8 history rows below — frozen records, noted as errata in §3.3.1 rather than rewritten. |
+| 1.0 | 2026-07-27 | — | **ERR-030-015** (found at #30 T3 implementation / roadmap A5): §3.5's `RollToNextSeason` gains step **(c′) rebuild the calendar**. The prior block regenerated `Fixtures` but left `Calendar`'s cursor at `RoundCount`, so a season rolled from it was permanently unplayable — `AdvanceToNextFixtureDay` and `AdvanceAndPlayNextRound` both throw for the rest of the career, and the transform could not deliver FR-SN-029's multi-season continuity at all. Correction note + boundary-condition note added; (a')/(b') insertion points and every surrounding step unchanged. Also consolidated the two stale `Version` header fields. |
 #endregion

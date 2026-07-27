@@ -1,6 +1,7 @@
 // File:     src/match-viewer/LiveMatchStreamer.cs
 // Created:  2026-07-15
-// Modified: 2026-07-24
+// Modified: 2026-07-27 (interactive Unity client §5-P1: captures the per-agent cues / substitution
+//           counts / derived period, and latches the engine's within-tick restart cue — KD-P1-3)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md) +
 //           interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P0/§6),
@@ -58,6 +59,15 @@ namespace TacticalDirector.MatchViewer
         private LifecycleState _state = LifecycleState.NotStarted;
         private Thread _thread;
         private volatile bool _stopRequested;
+
+        // P1 KD-P1-3 — the latched last restart. The engine reports a restart only for the tick it was
+        // applied on (so it stays out of the snapshot entirely); this layer, which sees every tick, holds
+        // the cross-tick memory a HUD needs. Written and read only inside CaptureFrame, itself only ever
+        // called under _tickGate, so these need no separate synchronisation; they reach other threads
+        // solely as immutable copies inside a published LiveMatchFrame.
+        private RestartCue _lastRestart     = RestartCue.None;
+        private int        _lastRestartTeam = MatchEngineConstants.NO_RESTART_TEAM;
+        private ulong      _lastRestartTick;
 
         private LiveMatchFrame? _latestFrame;
         private bool _paused;
@@ -217,9 +227,32 @@ namespace TacticalDirector.MatchViewer
         private LiveMatchFrame CaptureFrame()
         {
             var positions = new Vector2[MatchEngineConstants.SQUAD_SIZE];
+            var cues      = new LiveAgentCue[MatchEngineConstants.SQUAD_SIZE];
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 positions[i] = _engine.AgentView(i).Position;
+                cues[i]      = new LiveAgentCue(
+                    _engine.AgentYellowCards(i),
+                    _engine.AgentIsSentOff(i),
+                    _engine.AgentBenchSlot(i));
+            }
+
+            var subsUsed = new int[MatchEngineConstants.TEAM_COUNT];
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                subsUsed[t] = _engine.SubstitutionsUsed(t);
+            }
+
+            // P1 KD-P1-3 — the engine reports a restart for the tick it happened on and then forgets it,
+            // which keeps it off the snapshot. Latching the cross-tick memory is this layer's job, and
+            // this is the only place that sees every tick. Called under _tickGate from TickOnce(), so
+            // the latch needs no lock of its own.
+            RestartCue restartThisTick = _engine.RestartAppliedThisTick;
+            if (restartThisTick != RestartCue.None)
+            {
+                _lastRestart     = restartThisTick;
+                _lastRestartTeam = _engine.RestartAwardedTeam;
+                _lastRestartTick = _engine.CurrentTick;
             }
 
             return new LiveMatchFrame(
@@ -229,7 +262,13 @@ namespace TacticalDirector.MatchViewer
                 positions,
                 _engine.HomeScore,
                 _engine.AwayScore,
-                _engine.MatchEnded);
+                _engine.MatchEnded,
+                cues,
+                subsUsed,
+                _engine.CurrentPeriod,
+                _lastRestart,
+                _lastRestartTeam,
+                _lastRestartTick);
         }
 
         /// <summary>
@@ -432,4 +471,13 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | the hook (which may mutate the engine) never interleaves with  |
 // |         |            |        | a tick. Browser viewer installs no hook — playback-only        |
 // |         |            |        | invariant preserved by construction.                           |
+// | 1.4     | 2026-07-27 | —      | P1 richer observation frame (§5-P1). CaptureFrame now samples  |
+// |         |            |        | the per-agent cues (booking / sent-off / bench slot), the      |
+// |         |            |        | per-team substitution counts and the derived MatchPeriod, and  |
+// |         |            |        | LATCHES the engine's within-tick restart cue (KD-P1-3) — the   |
+// |         |            |        | cross-tick memory deliberately lives here, not in the engine,  |
+// |         |            |        | so nothing about it reaches the snapshot. The three latch      |
+// |         |            |        | fields are written and read only inside CaptureFrame, itself   |
+// |         |            |        | only called from TickOnce under _tickGate, so they need no     |
+// |         |            |        | synchronisation of their own and escape only as struct copies. |
 #endregion
