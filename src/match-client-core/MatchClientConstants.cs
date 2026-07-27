@@ -1,12 +1,12 @@
 // File:     src/match-client-core/MatchClientConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-07-27
 // Author:   —
-// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0),
+// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3),
 //           Code Standards #20 (constant catalogue; no magic numbers)
-// Purpose:  Constant catalogue for the host-free interactive-client core. P0 pins the master-plan
-//           playback-speed set the UI presents (Pause is a streamer state, not a multiplier); camera
-//           and render-cue [GT] tuning land alongside their consumers at P3/P4.
+// Purpose:  Constant catalogue for the host-free interactive-client core: the master-plan
+//           playback-speed set the UI presents (Pause is a streamer state, not a multiplier), the P3
+//           interpolator snap distances, and the P3 follow-ball camera tuning.
 
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
@@ -37,6 +37,76 @@ namespace TacticalDirector.MatchClientCore
         public static readonly float Speed10x = Config.GetFloat("match-client", "Speed10x", 10f);
 
         #endregion
+
+        #region GT — P3 frame interpolation (§5-P3 / §7 "Interpolation")
+
+        /// <summary>
+        /// [GT] Displacement (m) above which the interpolator SNAPS instead of blending, for the ball.
+        /// Config key [match-client] BallSnapDistanceM.
+        ///
+        /// <para>Not a smoothing knob — a correctness one. A restart teleports the ball to the centre
+        /// spot, a goal kick to the six-yard box; blending across that draws the ball gliding the
+        /// length of the pitch, which reads as a bug rather than a restart. Anything a ball can
+        /// legitimately travel in one frame interval is far below this, so a jump past it is a
+        /// discontinuity by construction.</para>
+        /// </summary>
+        public static readonly float BallSnapDistanceM =
+            Config.GetFloat("match-client", "BallSnapDistanceM", 10f);
+
+        /// <summary>
+        /// [GT] Displacement (m) above which a single agent snaps rather than blends. Config key
+        /// [match-client] AgentSnapDistanceM. Lower than the ball's because agents cannot move
+        /// anywhere near as fast; the discontinuity it catches is a SUBSTITUTION, which swaps who
+        /// occupies a roster slot and so moves that slot's rendered position instantly.
+        /// </summary>
+        public static readonly float AgentSnapDistanceM =
+            Config.GetFloat("match-client", "AgentSnapDistanceM", 5f);
+
+        #endregion
+
+        #region GT — P3 follow-ball camera (§5-P3 / §7 "Rendering, camera, HUD")
+
+        /// <summary>
+        /// [GT] Radius (m) around the camera's current target inside which ball movement is ignored.
+        /// Config key [match-client] CameraDeadZoneM. Without it the camera chases every jostle and
+        /// the whole pitch shimmers.
+        /// </summary>
+        public static readonly float CameraDeadZoneM =
+            Config.GetFloat("match-client", "CameraDeadZoneM", 4f);
+
+        /// <summary>
+        /// [GT] Exponential follow rate (per second) once the ball leaves the dead zone. Config key
+        /// [match-client] CameraFollowRatePerSecond. Applied as <c>1 − e^(−rate·dt)</c> so the camera
+        /// covers the same ground per second at 30 FPS as at 144 — a plain per-frame lerp would make
+        /// camera feel a function of frame rate.
+        /// </summary>
+        public static readonly float CameraFollowRatePerSecond =
+            Config.GetFloat("match-client", "CameraFollowRatePerSecond", 4f);
+
+        /// <summary>
+        /// [GT] Half-width (m) of the visible area along the pitch's long axis. Config key
+        /// [match-client] CameraViewHalfWidthM. The target is clamped so the view never runs past the
+        /// pitch by more than <see cref="CameraOverscanM"/>.
+        /// </summary>
+        public static readonly float CameraViewHalfWidthM =
+            Config.GetFloat("match-client", "CameraViewHalfWidthM", 26f);
+
+        /// <summary>
+        /// [GT] Half-height (m) of the visible area across the pitch. Config key [match-client]
+        /// CameraViewHalfHeightM.
+        /// </summary>
+        public static readonly float CameraViewHalfHeightM =
+            Config.GetFloat("match-client", "CameraViewHalfHeightM", 15f);
+
+        /// <summary>
+        /// [GT] How far outside the touchlines and goal lines the view may show (m). Config key
+        /// [match-client] CameraOverscanM. Zero would pin the camera hard at the boundary and make a
+        /// corner look like the ball is off-centre; a small margin keeps the action framed.
+        /// </summary>
+        public static readonly float CameraOverscanM =
+            Config.GetFloat("match-client", "CameraOverscanM", 3f);
+
+        #endregion
     }
 }
 
@@ -45,4 +115,8 @@ namespace TacticalDirector.MatchClientCore
 // | 1.0     | 2026-07-24 | —      | Initial creation (P0): master-plan playback-speed set          |
 // |         |            |        | {1,3,5,10} as [GT] scalars via GameplayConfig. Camera /        |
 // |         |            |        | render-cue tuning deferred to P3/P4 with their consumers.      |
+// | 1.1     | 2026-07-27 | —      | P3 consumers landed, so their [GT] tuning lands with them: the  |
+// |         |            |        | two interpolator snap distances (restart / substitution        |
+// |         |            |        | discontinuities) and the five follow-ball camera rows (dead    |
+// |         |            |        | zone, exponential follow rate, view half-extents, overscan).   |
 #endregion

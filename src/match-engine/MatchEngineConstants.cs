@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase E — POSSESSION_CHANGE_REASON_UNSPECIFIED for the possession-changed event)
+// Modified: 2026-07-27  (B3: CARD_KIND_YELLOW / CARD_KIND_RED)
 // Modified: 2026-07-11 (#26 manager-AI wiring — SNAPSHOT_SCHEMA_VERSION 12 → 13, v13 ManagerState doc)
 // Modified: 2026-07-11 (engine substrate — match-length/halves model + SNAPSHOT_SCHEMA_VERSION 13 → 14)
 // Modified: 2026-07-14 (match-flow completion — restart/foul-card/offside/substitution/half-full-time constants; SNAPSHOT_SCHEMA_VERSION 14 → 15)
@@ -72,6 +72,15 @@ namespace TacticalDirector.MatchEngine
         /// <c>RestartCue.None</c>. Presentation-only observation state (interactive Unity client
         /// §5-P1 KD-P1-3); mirrors the −1 sentinel convention (<see cref="NO_POSSESSION"/>).</summary>
         public const int NO_RESTART_TEAM = -1;
+
+        /// <summary>[FIXED] <c>CardIssuedEvent.CardKind</c> value for a caution. The wire encoding of
+        /// the card severity a foul draws; named here so an observer (Match Analytics #37) reads the
+        /// same source the producer writes from rather than carrying a private 0/1 literal.</summary>
+        public const byte CARD_KIND_YELLOW = 0;
+
+        /// <summary>[FIXED] <c>CardIssuedEvent.CardKind</c> value for a dismissal (straight red, or a
+        /// second yellow promoted by <c>ApplyCardAndCheckSentOff</c>).</summary>
+        public const byte CARD_KIND_RED = 1;
 
         /// <summary>[FIXED] Reason ordinal written into the Phase E PossessionChangedEvent (#17 ordinal
         /// 0x04) payload. Stage 0 has no possession-change reason taxonomy (a kick release, a first-touch

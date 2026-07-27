@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-28 (Pressing #13 wiring AR — AttackingDirection inversion fix)
+// Modified: 2026-07-27  (B3: the #37 KD-7 read-only per-tick ledger tap)
 // Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
 // Modified: 2026-06-29 (#21 T2 Defensive (#14) + Attacking (#15) Phase-D writers — route OffsideTrap / FocusPlay → snapshots)
 // Modified: 2026-06-29 (#21 T2 Positioning (#12) Phase-D writer — route TeamTactic.Width / DefensiveWidth → ContextModifierInputs; all three writers now closed)
@@ -111,6 +111,13 @@ namespace TacticalDirector.MatchEngine
         private readonly SnapshotCodec           _codec;
         private readonly EnvironmentFingerprint  _fingerprint;
         private readonly TickOrchestrator        _orchestrator;
+
+        // ── The #37 KD-7 read-only per-tick ledger tap ────────────────────────────────
+        // Filled in the Snapshot phase (after SerializeLedger, before the bus resets the tick), and
+        // read only through the public accessors below. NOT serialized and never read by the sim:
+        // it is an observation buffer in the same class as BallView/AgentView, so an observed match
+        // is byte-identical to an unobserved one (#37 FR-AN-017).
+        private readonly TickLedgerSnapshot _tickLedger = new TickLedgerSnapshot();
 
         // ── Physics subsystems (design note §3) ───────────────────────────────────────
         // AgentMovementSystem is stateless except its pinned physics Hz, so one shared instance
@@ -1783,6 +1790,33 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Possessing agent's roster index, or NO_POSSESSION (−1) when the ball is loose.</summary>
         public int PossessingAgentId => _possessingAgentId;
+
+        /// <summary>
+        /// Number of Tier A/B event records the engine drained on the tick most recently completed —
+        /// the KD-7 read-only ledger tap Match Analytics #37 §4.3 consumes.
+        ///
+        /// <para><b>Scoped to the last completed tick.</b> Each <see cref="RunTick"/> overwrites the
+        /// capture, so a client that wants every record must read the tap once per tick (#37 §3.5's
+        /// lossless-consumption contract, which <c>MatchAnalyticsAggregator.ObserveTick</c> enforces
+        /// on its own side by refusing a non-consecutive tick).</para>
+        ///
+        /// <para>Before the first tick this is 0.</para>
+        /// </summary>
+        public int TickLedgerCount => _tickLedger.Count;
+
+        /// <summary>
+        /// Appendix A event-type ordinal of tap record <paramref name="index"/>, in the canonical
+        /// FM-017-002 order the snapshot digest also used. Compare against
+        /// <c>EventRegistry.GetOrdinal&lt;T&gt;()</c> to decide which record type to read.
+        /// </summary>
+        public byte TickLedgerOrdinal(int index) => _tickLedger.OrdinalAt(index);
+
+        /// <summary>
+        /// Reads tap record <paramref name="index"/> back as a value copy of <typeparamref name="T"/>.
+        /// Branch on <see cref="TickLedgerOrdinal"/> first; a type wider than the captured record
+        /// fails loud rather than reading past it.
+        /// </summary>
+        public T TickLedgerRecord<T>(int index) where T : struct => _tickLedger.ReadAt<T>(index);
 
         /// <summary>Home team's (team 0) current goal count.</summary>
         public int HomeScore => _goals[0];
@@ -3908,11 +3942,11 @@ namespace TacticalDirector.MatchEngine
         {
             if (u < MatchEngineConstants.RedCardProbability)
             {
-                return 1;
+                return MatchEngineConstants.CARD_KIND_RED;
             }
             if (u < MatchEngineConstants.RedCardProbability + MatchEngineConstants.YellowCardProbability)
             {
-                return 0;
+                return MatchEngineConstants.CARD_KIND_YELLOW;
             }
             return null;
         }
@@ -4419,6 +4453,13 @@ namespace TacticalDirector.MatchEngine
             int written = EventBus.SerializeLedger(
                 new Span<byte>(payload.PayloadBytes, payload.BytesWritten, free));
             payload.BytesWritten += written;
+
+            // #37 KD-7: copy out this tick's Tier A/B records for observers, in the same FM-017-002
+            // canonical order the bytes above were written in (one derivation, two readers). This is
+            // the only moment the records exist and the tick is identified: OnTickBoundary below
+            // resets the queue, and the next tick overwrites the ring. Read-only — the capture
+            // consumes nothing and touches neither the payload nor the digest.
+            EventBus.CaptureTickLedger(_tickLedger);
 
             EventBus.OnTickBoundary();
         }
