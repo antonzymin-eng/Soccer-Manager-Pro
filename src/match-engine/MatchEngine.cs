@@ -33,6 +33,7 @@
 //           flag-on engine snapshot-safe. The Phase-1 durable-capture fail-loud guard is removed.)
 // Modified: 2026-07-23 (DT-emitted goalkeeper SAVE (ERR-008-013) + AR follow-up TestOnly_SaveCommittedForGk latch seam)
 // Modified: 2026-07-26 (§5.Z Phase H possession bootstrap — ERR-030-014: ApplyRestart(position, awardedTeam) + SelectRestartTaker (KD-H1), the boot kickoff award, RunLooseBallPickup (KD-H3), SelectLooseBallCollector (KD-H5), the Resolve PASS/SHOOT completion sweep (KD-H4 / ERR-008-015), and interrupt deferral while an executor is in flight. No schema change. See docs/tracking/match-engine-design.md §5.Z)
+// Modified: 2026-07-26 (§5.Z.12: boot placement collapsed to ONE own-half template mirrored for the away side — the HomeLineXM/AwayLineXM and HOME_/AWAY_FACING_DEG pairs are gone, along with FacingFromHeading. Away lateral spread mirrors, so digests move; behaviour is transient (the AI reslots outfielders at tick 6).)
 // Modified: 2026-07-26 (§5.Z.10 kickoff keeper placement: a keeper spawns on the goal line it DEFENDS, centred on the mouth, instead of on the outfield kickoff line — Stage-0 Physics skips GK locomotion, so boot placement stood for the whole match and both goals were unguarded. See docs/tracking/match-engine-design.md §5.Z.10)
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: referee-call probability partitioned out of the single card-severity draw (KD-F1/KD-F2), no-call arms no cooldown (KD-F3), strongest-wins candidate capture (KD-F4), + the TestOnly collision-observer measurement seam. No schema change. See docs/tracking/foul-discipline-balance-design.md)
 // Author:   —
@@ -1075,34 +1076,41 @@ namespace TacticalDirector.MatchEngine
                     _teamIds[i]      = team;
                     _isGoalkeeper[i] = k == 0;
 
-                    float lineX = team == 0
-                        ? MatchEngineConstants.HomeLineXM
-                        : MatchEngineConstants.AwayLineXM;
-                    // Even lateral spread across the pitch width: k+1 of PLAYERS_PER_TEAM+1 gaps.
-                    float spreadY = MatchEngineConstants.PITCH_WIDTH_M
-                                  * (k + 1) / (MatchEngineConstants.PLAYERS_PER_TEAM + 1);
-                    float headingDeg = team == 0
-                        ? MatchEngineConstants.HOME_FACING_DEG
-                        : MatchEngineConstants.AWAY_FACING_DEG;
+                    // ONE own-half template, mirrored for the away side (§5.Z.12). Every position and
+                    // facing below is expressed in the acting team's own-half frame and passed through
+                    // the existing mirror helpers, so there is no Home/Away constant pair to keep in
+                    // agreement. That pairing is the shape behind three defects in this engine's history
+                    // — ERR-008-002 (away zone modifiers inverted), ERR-013-009/010 (AttackingDirection
+                    // inverted) and the §5.Z.10 keeper spawn — and a mirror has one place to be wrong
+                    // where a pair has two.
+                    //
+                    // The keeper stands on the goal line it DEFENDS, centred on the goal mouth, not on
+                    // the outfield line with everyone else. Load-bearing far beyond kickoff: the Physics
+                    // phase skips goalkeepers at Stage 0 (#11 owns GK locomotion), so wherever boot puts
+                    // a keeper is where it stands for the WHOLE match. Under the old shared-line
+                    // placement the keeper took the k = 0 lateral slot — 26 m upfield of its own goal and
+                    // 28 m off-centre — leaving BOTH goals unguarded for ninety minutes (§5.Z.10).
+                    //
+                    // Outfielders spread evenly across the width (k+1 of PLAYERS_PER_TEAM+1 gaps) on a
+                    // quarter-length line. Transient: the AI phase moves them onto real formation slots
+                    // on the first stride tick.
+                    Vector2 ownHalfSpawn = _isGoalkeeper[i]
+                        ? new Vector2(
+                            MatchEngineConstants.GkKickoffDepthM,
+                            MatchEngineConstants.PITCH_WIDTH_M * 0.5f)
+                        : new Vector2(
+                            MatchEngineConstants.OutfieldKickoffLineXM,
+                            MatchEngineConstants.PITCH_WIDTH_M
+                                * (k + 1) / (MatchEngineConstants.PLAYERS_PER_TEAM + 1));
 
-                    // The keeper stands on the goal line it DEFENDS, centred on the goal mouth — not on
-                    // the outfield kickoff line with everyone else. This is load-bearing far beyond
-                    // kickoff: the Physics phase skips goalkeepers at Stage 0 (#11 owns GK locomotion),
-                    // so wherever boot puts a keeper is where it stands for the WHOLE match. Under the
-                    // shared-line placement the keeper landed on the k = 0 lateral slot — 26 m upfield of
-                    // its own goal and 28 m off-centre — so BOTH goals were unguarded for ninety minutes,
-                    // and the measured goal rate was about ten times football's (see §5.Z.10). Mirrored
-                    // for the away side by construction: (GkDepth, WIDTH/2) maps to (LENGTH − GkDepth,
-                    // WIDTH/2), so each keeper faces the pitch from its own line.
-                    Vector2 spawn = _isGoalkeeper[i]
-                        ? MirrorPitchIfAway(
-                            team,
-                            new Vector2(
-                                MatchEngineConstants.GkKickoffDepthM,
-                                MatchEngineConstants.PITCH_WIDTH_M * 0.5f))
-                        : new Vector2(lineX, spreadY);
-
-                    _agents[i] = AgentState.CreateAtPosition(spawn, FacingFromHeading(headingDeg));
+                    // Facing is a free vector, so it mirrors by negation rather than about the pitch
+                    // centre. Every team faces the goal it attacks: +X in its own frame. This also
+                    // removes the trig the former degrees-based helper needed — a pure negation of exact
+                    // unit components cannot introduce the floating-point fuzz (Mathf.Sin(180°) ≈ 8.7e-8)
+                    // that helper existed to special-case away from the deterministic snapshot.
+                    _agents[i] = AgentState.CreateAtPosition(
+                        MirrorPitchIfAway(team, ownHalfSpawn),
+                        MirrorVelocityIfAway(team, new Vector2(1f, 0f)));
                     // #27 T1: the #2 locomotion attrs are a projection of the canonical record
                     // (all-neutral at boot ⇒ byte-identical to the pre-T1 CreateDefault() seed).
                     _attrs[i]  = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
@@ -1115,28 +1123,6 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
-        /// <summary>
-        /// Converts a kickoff heading in degrees (project convention: +X = toward the away goal,
-        /// so 0° faces the away goal and 180° faces the home goal) into a unit facing direction.
-        /// Stage 0 kickoff headings are axis-aligned, so they map to exact unit vectors — this keeps
-        /// floating-point fuzz (e.g. <c>Mathf.Sin(180°)</c> ≈ 8.7e-8) out of the deterministic
-        /// snapshot. Non-cardinal headings (none at Stage 0) fall back to trig. Boot-only — not on
-        /// the hot path.
-        /// </summary>
-        private static Vector2 FacingFromHeading(float degrees)
-        {
-            if (degrees == 0f)
-            {
-                return new Vector2(1f, 0f);
-            }
-            if (degrees == 180f)
-            {
-                return new Vector2(-1f, 0f);
-            }
-
-            float rad = degrees * Mathf.Deg2Rad;
-            return new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
-        }
 
         // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -7070,4 +7056,18 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | A keeper now spawns at (GkKickoffDepthM, WIDTH/2) on the line it |
 // |         |            |        | defends, mirrored for the away side through MirrorPitchIfAway.   |
 // |         |            |        | Outfield placement untouched.                                   |
+// | 1.51    | 2026-07-26 | —      | §5.Z.12 de-duplicated the per-side boot placement. Kickoff       |
+// |         |            |        | position and facing are now written ONCE in the acting team's    |
+// |         |            |        | own-half frame and passed through MirrorPitchIfAway /            |
+// |         |            |        | MirrorVelocityIfAway, so the HomeLineXM/AwayLineXM and           |
+// |         |            |        | HOME_FACING_DEG/AWAY_FACING_DEG pairs are deleted and            |
+// |         |            |        | FacingFromHeading (now unused) with them. A Home/Away pair is    |
+// |         |            |        | two places that must agree; a mirror is one — the shape behind   |
+// |         |            |        | ERR-008-002, ERR-013-009/010 and the §5.Z.10 keeper spawn.       |
+// |         |            |        | The x line is byte-identical (105/4 mirrors exactly to 105*3/4); |
+// |         |            |        | the away lateral spread now mirrors too (y -> WIDTH - y), so     |
+// |         |            |        | boot differs and every digest moves. Behaviourally transient:    |
+// |         |            |        | the AI reslots outfielders at the first stride and the keeper is |
+// |         |            |        | placed explicitly. Removing the trig also strengthens the        |
+// |         |            |        | determinism property FacingFromHeading special-cased for.        |
 #endregion

@@ -1143,6 +1143,39 @@ signal football?". **A4a must stay blocked** regardless: fitting the round-resol
 parameters against 25–0 results would calibrate the quick-sim to reproduce a defect faithfully across
 a whole league, which is worse than not fitting it at all.
 
+### 5.Z.12 Per-side constant pairs removed from boot placement
+
+A follow-up to §5.Z.10 rather than a new defect: the keeper bug's *shape* was a Home/Away pair of
+constants stating one fact twice, and that shape is the common factor behind three defects in this
+engine's history — ERR-008-002 (away zone modifiers inverted), ERR-013-009/010 (`AttackingDirection`
+inverted) and the §5.Z.10 keeper spawn. A pair has two places that must agree; a mirror has one.
+
+`InitializeKickoffState` now writes each agent's position and facing **once**, in the acting team's
+own-half frame, and passes both through the mirror helpers the engine already uses everywhere else
+(`MirrorPitchIfAway` for the position, an affine point; `MirrorVelocityIfAway` for the facing, a free
+vector). Deleted: `HomeLineXM` / `AwayLineXM` → one `OutfieldKickoffLineXM`; `HOME_FACING_DEG` /
+`AWAY_FACING_DEG` → nothing at all, since a mirrored `+X` needs no degrees; and `FacingFromHeading`,
+now unused.
+
+Removing the trig also *strengthens* the property that helper existed for. Its doc explained that it
+special-cased the axis-aligned headings to keep `Mathf.Sin(180°) ≈ 8.7e-8` out of the deterministic
+snapshot; negating exact unit components cannot produce that fuzz in the first place.
+
+**This one is not behaviour-neutral, and deliberately so.** The x line is byte-identical
+(`105/4` mirrors exactly to `105×3/4`), but the away side's lateral spread now mirrors too
+(`y → WIDTH − y`) where both teams previously got the same `spreadY`. Boot state therefore differs
+and every digest moves from tick 1. What it does *not* change is anything durable: outfielders are
+moved onto real formation slots by the AI on the first stride tick, and the keeper is placed
+explicitly. All determinism tests are comparative (two same-seed runs), so none needed rebaselining;
+the full gate is green.
+
+Also fixed alongside, in the same de-duplication spirit — **ERR-008-016**: Decision Tree #8's zone
+bands were `0–35 / 35–65 / 65–105` under a `[DERIVED] — split pitch into thirds` tag, making the
+attacking third 40 m and the middle third 30 m. Both bounds now derive from the pitch length
+(`L/3`, `2L/3`). Equal thirds make the boundary pair **self-mirroring**, so the bands stop depending
+on attacking direction at all — the same duplication being removed one level up. Measured
+behaviour-neutral over two 9-minute composed runs.
+
 ### 5.Z.8 What this unblocks
 
 `PM-1` ("watch a match") is no longer blocked by the engine. Roadmap **A4a** — the round-resolution

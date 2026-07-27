@@ -8,6 +8,7 @@
 // Modified: 2026-07-18 (#27 T3 — NO_ROSTER_CLUB_ID sentinel + SNAPSHOT_SCHEMA_VERSION 15 → 16, v16 per-team roster reference)
 // Modified: 2026-07-22 (GK #11 / Heading #10 engine integration Phase 1 — +6 [GT] Stage-0 save/header trigger constants; no schema change)
 // Modified: 2026-07-26 (§5.Z Phase H — [FIXED] FIRST_HALF_KICKOFF_TEAM + [DERIVED] SECOND_HALF_KICKOFF_TEAM + [GT] LooseBallPickupRadiusM; no schema change)
+// Modified: 2026-07-26 (§5.Z.12: HomeLineXM/AwayLineXM collapsed to OutfieldKickoffLineXM; HOME_FACING_DEG/AWAY_FACING_DEG deleted — facing now mirrors)
 // Modified: 2026-07-26 (§5.Z.10: + [CROSS] GkKickoffDepthM mirroring PositioningAIConstants.GK_DEPTH_M — the keeper's goal-line spawn depth)
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: + [GT] FoulCallProbability; Yellow 0.35 -> 0.16, Red 0.05 -> 0.011, FoulCooldownTicks 60 -> 180; no schema change. See docs/tracking/foul-discipline-balance-design.md)
 // Author:   —
@@ -52,13 +53,6 @@ namespace TacticalDirector.MatchEngine
         /// <summary>[FIXED] Resting ball-centre height above ground (ball radius), metres. Ball Physics #1 §1.2.</summary>
         public const float BALL_REST_HEIGHT_M = 0.11f;
 
-        /// <summary>[FIXED] Home-team kickoff heading: toward the away goal (+X), degrees.
-        /// A fixed kickoff orientation, not a tunable.</summary>
-        public const float HOME_FACING_DEG = 0f;
-
-        /// <summary>[FIXED] Away-team kickoff heading: toward the home goal (−X), degrees.
-        /// A fixed kickoff orientation, not a tunable.</summary>
-        public const float AWAY_FACING_DEG = 180f;
 
         /// <summary>[FIXED] Possessing-agent sentinel for "ball is loose" (no agent has possession).
         /// Mirrors the Decision Tree #8 MatchContext.PossessingAgentId convention (−1 = loose);
@@ -295,6 +289,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | ComputeGkSlot yields for a centre-spot ball), so the kickoff    |
 // |         |            |        | keeper spawn and the positioning model agree by construction    |
 // |         |            |        | instead of drifting apart.                                     |
+// | 1.29    | 2026-07-26 | —      | §5.Z.12 per-side pairs removed. HomeLineXM + AwayLineXM ->      |
+// |         |            |        | one OutfieldKickoffLineXM stated in the own-half frame (the     |
+// |         |            |        | away line is it mirrored); HOME_FACING_DEG + AWAY_FACING_DEG    |
+// |         |            |        | deleted outright, since facing is now MirrorVelocityIfAway of   |
+// |         |            |        | +X and needs no degrees. Each deleted pair stated one fact      |
+// |         |            |        | twice, which is the drift surface behind ERR-008-002,           |
+// |         |            |        | ERR-013-009/010 and the §5.Z.10 keeper spawn.                   |
 #endregion
 
         #region Derived
@@ -312,18 +313,20 @@ namespace TacticalDirector.MatchEngine
         public static readonly float KickoffBallYM = PITCH_WIDTH_M / 2f;
 
         /// <summary>
-        /// [DERIVED] Phase-A scaffold home-team line X = PITCH_LENGTH_M / 4 (own half), metres.
-        /// Placeholder only — replaced by formation slots in Phase D.
+        /// [DERIVED] Outfield kickoff line X = PITCH_LENGTH_M / 4, metres, expressed in the acting team's
+        /// OWN-HALF frame — the away side's line is this value mirrored, not a second constant.
         /// Source constants: MatchEngineConstants.PITCH_LENGTH_M.
+        ///
+        /// <para>Phase-A scaffolding: outfield agents are moved onto real formation slots by the AI phase
+        /// on the first stride tick, so this is a transient starting spread rather than a shape. It is
+        /// NOT the keeper's placement — see <see cref="GkKickoffDepthM"/> for why that distinction is
+        /// load-bearing (a keeper never moves at Stage 0).</para>
+        ///
+        /// <para>Replaced the former `HomeLineXM` / `AwayLineXM` pair, which stated the same distance
+        /// twice — once per side — and so had two places that had to agree. One own-half value mirrored
+        /// through <c>MirrorPitchIfAway</c> has one.</para>
         /// </summary>
-        public static readonly float HomeLineXM = PITCH_LENGTH_M / 4f;
-
-        /// <summary>
-        /// [DERIVED] Phase-A scaffold away-team line X = PITCH_LENGTH_M * 3 / 4 (own half), metres.
-        /// Placeholder only — replaced by formation slots in Phase D.
-        /// Source constants: MatchEngineConstants.PITCH_LENGTH_M.
-        /// </summary>
-        public static readonly float AwayLineXM = PITCH_LENGTH_M * 3f / 4f;
+        public static readonly float OutfieldKickoffLineXM = PITCH_LENGTH_M / 4f;
 
         /// <summary>
         /// [DERIVED] Highest EntityId in the match = SQUAD_SIZE − 1 (roster indices 0..SQUAD_SIZE−1
