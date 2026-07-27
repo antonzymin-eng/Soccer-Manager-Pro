@@ -1,6 +1,6 @@
 // File:     src/match-viewer/tests/LiveMatchFrameCueTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-07-27 (AR-1 M-6: latch assertions read the RestartBanner carrier)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1,
 //           Testing Strategy #19 (unit layer), Code Standards #20
@@ -80,9 +80,10 @@ namespace TacticalDirector.MatchViewer.Tests
 
             LiveMatchFrame frame = streamer.TickOnce();
 
-            Assert.AreEqual(RestartCue.None, frame.LastRestart);
-            Assert.AreEqual(MatchEngineConstants.NO_RESTART_TEAM, frame.LastRestartTeam);
-            Assert.AreEqual(0UL, frame.LastRestartTick);
+            Assert.IsFalse(frame.Restart.HasRestart);
+            Assert.AreEqual(RestartCue.None, frame.Restart.Cue);
+            Assert.AreEqual(MatchEngineConstants.NO_RESTART_TEAM, frame.Restart.AwardedTeam);
+            Assert.AreEqual(0UL, frame.Restart.Tick);
         }
 
         /// <summary>
@@ -123,17 +124,17 @@ namespace TacticalDirector.MatchViewer.Tests
 
             // ...but the streamer has not, and keeps serving it on every later frame.
             Assert.IsTrue(streamer.TryGetLatestFrame(out LiveMatchFrame after));
-            Assert.AreEqual(observedCue,  after.LastRestart,     "the latched cue must survive later ticks");
-            Assert.AreEqual(observedTeam, after.LastRestartTeam, "the awarded team is latched with the cue");
-            Assert.AreEqual(observedTick, after.LastRestartTick, "the latched tick is when it happened");
-            Assert.Greater(after.Tick, after.LastRestartTick,
+            Assert.AreEqual(observedCue,  after.Restart.Cue,         "the latched cue must survive later ticks");
+            Assert.AreEqual(observedTeam, after.Restart.AwardedTeam, "the awarded team is latched with the cue");
+            Assert.AreEqual(observedTick, after.Restart.Tick,        "the latched tick is when it happened");
+            Assert.Greater(after.Tick, after.Restart.Tick,
                 "the frame is from a later tick than the restart it still reports");
 
             // A dozen more quiet ticks must not erode it — this is what a HUD fade timer reads.
             for (int t = 0; t < 12; t++) { streamer.TickOnce(); }
             Assert.IsTrue(streamer.TryGetLatestFrame(out LiveMatchFrame later));
-            Assert.AreEqual(observedCue,  later.LastRestart);
-            Assert.AreEqual(observedTick, later.LastRestartTick);
+            Assert.AreEqual(observedCue,  later.Restart.Cue);
+            Assert.AreEqual(observedTick, later.Restart.Tick);
         }
     }
 }
@@ -143,4 +144,9 @@ namespace TacticalDirector.MatchViewer.Tests
 // | 1.0     | 2026-07-27 | —      | Initial creation (P1 richer observation frame): per-agent cue  |
 // |         |            |        | lockstep, per-team substitution counts, derived period, and    |
 // |         |            |        | the streamer restart latch incl. its non-vacuity guard.        |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-6: the latch assertions read frame.Restart.Cue /        |
+// |         |            |        | .AwardedTeam / .Tick off the RestartBanner carrier instead of  |
+// |         |            |        | three loose frame fields. The no-restart case now asserts the  |
+// |         |            |        | NO_RESTART_TEAM sentinel rather than a bare 0, which the       |
+// |         |            |        | loose-field form could not distinguish from the home team.     |
 #endregion

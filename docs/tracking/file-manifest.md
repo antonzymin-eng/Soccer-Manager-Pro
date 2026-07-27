@@ -1,7 +1,47 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 27, 2026 (**Season & Competition Loop #30 T3 LANDED** — path-to-playable roadmap
+**Last Updated:** July 27, 2026 (**Path-to-playable Track C: B1 richer observation frame + B2 Match Analytics
+#37 T0 LANDED, then an adversarial-review fix pass over both (0H + 6M + 3L, all fixed).** **New assembly:**
+`src/match-analytics/` (`TacticalDirector.MatchAnalytics`) — `match-analytics.asmdef`,
+`MatchAnalyticsConstants.cs`, `XgLocationModel.cs`, `StatPoint.cs`, `MatchStatline.cs`,
+`AdvancedStatline.cs`, `MatchAnalyticsResult.cs` + `Tests/` (asmdef, `XgLocationModelTests.cs`,
+`MatchAnalyticsValueTypeTests.cs`). Nothing is engine-wired: the T1 ledger tap is roadmap B3, and the xG
+model has no live consumer because the ledger carries no shot origin (**ERR-037-001** filed rather than
+worked around). **New engine/viewer files:** `src/match-engine/MatchPeriod.cs` + `RestartCue.cs`
+(deliberately NOT a widening of Ball Physics' ordinal-stable `RestartType`), `src/match-viewer/
+LiveAgentCue.cs` + `Scoreline.cs` + `RestartBanner.cs`. **Modified:** `src/match-engine/MatchEngine.cs`
+v1.50 (discipline / period / restart accessors; `ApplyRestart` declares its cue at all five call sites; the
+two restart fields are WITHIN-tick, reset beside `_aiPhaseRanThisTick`, so there is **no
+`SNAPSHOT_SCHEMA_VERSION` change** and the exclusion proof needs no new class; three inline teamId guards
+collapsed into `GuardTeamId`); `LiveMatchFrame.cs` v1.2 / `LiveMatchStreamer.cs` v1.5 /
+`LiveMatchServer.cs` v1.2 / `ui-framework/MatchFrameView.cs` v1.2. **The AR's structural finding (M-6):**
+the frame constructor had reached 13 positional parameters with four adjacent `int`s, so a transposed
+call site would compile silently — the score and restart triples collapse into `Scoreline` and
+`RestartBanner`, leaving **no two parameters sharing a type**. That also closed M-3 structurally: because
+the banner DERIVES its team and tick from its own cue, `default(RestartBanner)` reports the no-restart
+sentinel instead of "home team, tick 0" (the zero-value trap, one layer up from where `MatchFrameView`
+had already been bitten by it once). Other findings: the statlines gained an unset-vs-zero discriminator
+(M-1); the observer-neutrality run went 400 → 6000 ticks **and now asserts a restart was actually
+observed**, since at 400 ticks it proved neutrality only for the accessors that never fired (M-2);
+`TEAM_COUNT` became a `[CROSS]` mirror (M-4); the xG team gate reached all three public entry points, not
+just `Evaluate` (M-5); and a tautological `COLS * ROWS` assertion the compiler folds away was re-anchored
+to a literal (L-1). **Full dotnet gate: PASSED, 0 failures, quarantine empty** (match-analytics 24,
+match-viewer 39, ui-framework 50, match-engine 358 + 3 env-gated skips). **Prior:** July 26, 2026
+(**Season & Competition Loop #30 T2 LANDED** — path-to-playable roadmap item
+**Last Updated:** July 27, 2026, later same day (**Documentation sync pass — no code, no spec change.**
+Two gaps found and fixed: (1) the "Current Specification Folders" table below had not been updated since
+July 8, 2026 and was stuck at 26 rows / "All 26 spec folders now exist," predating the entire #27–#54
+management-layer promotion wave (27 more spec folders now exist, all APPROVED per `SPEC_INDEX.md`) —
+rows added at folder+status granularity, pointing to `SPEC_INDEX.md` for full per-spec detail rather
+than duplicating it. (2) Two same-day code landings — **Match Analytics #37 T0** (`src/match-analytics/`,
+value types + `XgLocationModel`, ERR-037-001 resolved) and **Track C B1** (the interactive-Unity-client
+richer observation frame extending `LiveMatchFrame`/`MatchFrameView`, no `SNAPSHOT_SCHEMA_VERSION`
+change) — had landed without a corresponding manifest entry; both are recorded in
+`path-to-playable-roadmap.md` (items B1/B2, marked LANDED) and this pass folds them in here too. Root
+`CLAUDE.md` and `README.md` were reconciled in the same pass (assembly count 29 → 30; "APPROVED with no
+assembly" count 23 → 22). Prior entry below.)
+**Last Updated (prior):** July 27, 2026 (**Season & Competition Loop #30 T3 LANDED** — path-to-playable roadmap
 item **A5**, the season-boundary roll; with it Phase A is complete and **PM-2-sim is reached**.
 **New files:** `src/season-save/SeasonRollOutcome.cs` (the boundary-roll producer record — board verdict,
 job security before/after, what the next season starts from; session-scoped, deliberately not serialized
@@ -1260,12 +1300,44 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-viewer/HtmlReplayExporter.cs` | Self-contained HTML canvas replay: pitch markings, home/away/GK/possession/ball-height cues, play/pause/scrub/speed + space toggle; InvariantCulture; fail-loud non-finite gate |
 | `src/match-viewer/tests/match-viewer-tests.asmdef` | Test assembly definition (EditMode; references match-viewer + match-engine + deterministic-sim + ball-physics + agent-movement) |
 | `src/match-viewer/tests/MatchViewerTests.cs` | Frame cadence; on-pitch finiteness; bitwise two-run determinism; observer-neutrality digest lock; fail-loud guards; exporter structure/no-NaN locks |
+| `src/match-viewer/AssemblyInfo.cs` | `InternalsVisibleTo` the test assembly (the `LiveMatchStreamer.TickOnce` / `ApplyCapturedFrame` seams are internal) |
+| `src/match-viewer/LiveMatchFrame.cs` | One live-captured frame (July 15, 2026): tick / ball / possession / positions / `Scoreline` / `MatchEnded` — plus, since P1, per-agent `LiveAgentCue[]`, per-team substitution counts, the derived `MatchPeriod` and the latched `RestartBanner` |
+| `src/match-viewer/LiveAgentCue.cs` | P1: the per-agent HUD cue — yellow cards, sent-off, active bench slot (`IsSubstitute` derived from the slot, so the two can never disagree) |
+| `src/match-viewer/Scoreline.cs` | P1 AR-1 M-6: the home/away score pair as one carrier; owns the non-negative gate, so a negative score is refused before it can reach a frame |
+| `src/match-viewer/RestartBanner.cs` | P1 AR-1 M-6: the latched restart (cue + awarded team + tick). Team and tick are DERIVED from the cue, so `default(RestartBanner)` reports `NO_RESTART_TEAM` / 0 rather than "home team, tick 0" |
+| `src/match-viewer/LiveMatchStreamer.cs` | Real-time-paced `MatchEngine` tick loop (July 15, 2026); lock-protected latest-frame handoff; pause/resume/speed; full-time auto-pause; optional sim-thread pre-tick hook. Owns the P1 cross-tick restart latch — deliberately here, not in the engine, so nothing about it reaches the snapshot (KD-P1-3) |
+| `src/match-viewer/LiveMatchServer.cs` | Loopback-only hand-rolled HTTP server (July 15, 2026): `GET /` viewer page, `/frame` polled JSON, `/control` playback-only. Holds a streamer, never an engine. The `/frame` payload still carries only the pre-P1 fields — rendering the P1 additions is roadmap B6 |
+| `src/match-viewer/tests/LiveMatchStreamerTests.cs` | Latest-frame handoff; observer-neutrality digest; full-time auto-pause; speed/lifecycle guards; roster accessors; threaded start/stop smoke test |
+| `src/match-viewer/tests/LiveMatchServerTests.cs` | Real-loopback-socket routing / control / error-path / abuse-guard / shutdown locks |
+| `src/match-viewer/tests/LiveMatchFrameCueTests.cs` | P1: per-agent cue lockstep with positions, per-team substitution counts, derived period, and the restart LATCH (with a non-vacuity guard — restarts are sparse, so a bound that stopped working must fail rather than skip the property) |
 
 ### Season Save (`src/season-save/`) — unified season save-file root + Season & Competition Loop #30 + the league bootstrap
 
 > Not a single numbered spec. The assembly hosts three related bodies of work at the same layer position
 > (above both match-engine and living-world): the save-file root (`unified-season-save-design.md`), the
 > #30 season loop value types + codec, and the league bootstrap (`league-bootstrap-design.md`).
+### `src/match-analytics/` — Match Analytics & Statistics #37 T0 (July 27, 2026; spec APPROVED)
+
+> The value types and the pure xG location model, per `docs/tracking/path-to-playable-roadmap.md` item B2.
+> **Nothing is wired into the engine yet** — the T1 ledger tap + aggregator is roadmap item B3, and the xG
+> model has no live consumer at Stage 1 because the event ledger carries no shot origin (recorded as
+> ERR-037-001, not worked around). Assembly references EventSystem + MatchEngine + BallPhysics.
+
+| File | Purpose |
+|------|---------|
+| `match-analytics.asmdef` | `TacticalDirector.MatchAnalytics`; references EventSystem + MatchEngine + BallPhysics |
+| `MatchAnalyticsConstants.cs` | Appendix A catalogue: xG `[GT]` coefficients, pitch `[CROSS]` mirrors from Ball Physics #1, `TEAM_COUNT` `[CROSS]` from the engine (AR-1 M-4 — it indexes the same per-team arrays, so a local copy would be the parallel-surface trap), the heatmap grid and the territorial sample stride |
+| `XgLocationModel.cs` | The §3.3 pure xG location model: distance + subtended-goal-angle logit, overflow-safe logistic, `[0,1]` clamp, F2 non-finite gate, and a team gate on all three public entry points (AR-1 M-5) |
+| `StatPoint.cs` | One recorded event location + team (the aggregator's input unit) |
+| `MatchStatline.cs` | The immutable per-team basic statline; carries an explicit `_hasValue` discriminator so `default(MatchStatline)` is recognisable as unset rather than reading as a real 0-0 line (AR-1 M-1) |
+| `AdvancedStatline.cs` | Territorial share + the copied heatmap bins; same `_hasValue` discriminator |
+| `MatchAnalyticsResult.cs` | The per-match result — both teams' statlines; refuses a default-constructed statline at construction |
+| `Tests/match-analytics-tests.asmdef` | `TacticalDirector.MatchAnalytics.Tests` (Editor-only) |
+| `Tests/XgLocationModelTests.cs` | The three §3.3 worked examples pinned, plus the shape a Stage-2 refit must preserve — distance/angle monotonicity, home/away mirror symmetry (the ERR-008-002 lesson), totality over and beyond the pitch, purity, and the F1/F2 gates |
+| `Tests/MatchAnalyticsValueTypeTests.cs` | Value-type contracts: copy-not-wrap on the heatmap bins, the unset-vs-zero discriminator, and every fail-loud gate |
+
+---
+
 ### `src/ui-framework/` — UI / Client Framework #38 T0 substrate (July 25, 2026; spec APPROVED July 22, 2026)
 
 Presentation layer. Host-free and CI-gated; the UGUI rendering binding is Unity-host-gated (#38 §4.3/§7.2).
@@ -1284,7 +1356,7 @@ Governed by `docs/tracking/ui-framework-t0-implementation-plan.md`.
 | `MatchTacticsDispatcher.cs` | The one concrete dispatcher: live mode marshals via the `MatchSession` command channel (KD-U1/FR-UI-023), single-threaded mode applies directly; internal intent→command translation |
 | `ILiveFrameSource.cs` | The KD-U7 one-method frame read seam (makes FR-UI-005 structural + the match view thread-free testable) |
 | `LiveMatchStreamerFrameSource.cs` | Production adapter over `LiveMatchStreamer` (pure pass-through; exposes only the read capability) |
-| `MatchFrameView.cs` | The immutable match view model — array copied never wrapped; SQUAD_SIZE / possession-id / score / finite gates (F1) |
+| `MatchFrameView.cs` | The immutable match view model — arrays copied never wrapped; SQUAD_SIZE / possession-id / finite gates (F1). P1 adds `AgentCues` / `SubstitutionsUsed` (both copied, both length-gated), `Period` and the latched `Restart`; the score gate lives in `Scoreline` since AR-1 M-6 |
 | `MatchViewModelSource.cs` | `IViewModelSource<MatchFrameView>` over the frame seam; F5 last-known/empty; holds no engine |
 | `UiFrameworkConstants.cs` | `[GT]` match-view refresh cadence (declared, consumed by the §7.2 UGUI binding) |
 | `Tests/ui-framework-tests.asmdef` | `TacticalDirector.UiFramework.Tests` (Editor-only, autoReferenced false) |
@@ -1292,6 +1364,52 @@ Governed by `docs/tracking/ui-framework-t0-implementation-plan.md`.
 | `Tests/CommandDispatchTests.cs` | T-UI-DISPATCH-001..004 — per-seam routing, F3, the intent/command drift guard, the FR-UI-023 marshaling lock |
 | `Tests/MatchViewProjectionTests.cs` | T-UI-MATCHVIEW-001/002, T-UI-FAIL-001/002, T-UI-LAYER-002 |
 | `Tests/MatchViewObserverNeutralityTests.cs` | T-UI-NEU-001 digest-chain neutrality + T-UI-LAYER-001 reverse-reference scan |
+| `Tests/MatchViewCueProjectionTests.cs` | P1: F4 copy locks for the cue / substitution arrays, their F1 gates, period + restart pass-through, and the AR-1 M-3 empty-view sentinel / banner-construction locks |
+
+---
+
+### `src/match-analytics/` — Match Analytics & Statistics #37 (T0 July 27, 2026; T1 same day, roadmap B3)
+
+Presentation-layer derivation. Read-only over two taps (FR-AN-002); no sim assembly may reference it
+(KD-4, scanned mechanically). Registers no RNG stream, domain tag or `SubsystemOrdinal` (KD-5).
+
+| File | Purpose |
+|------|---------|
+| `match-analytics.asmdef` | `TacticalDirector.MatchAnalytics`; references EventSystem + MatchEngine + BallPhysics (the BallPhysics ref is ERR-037-001's resolution — Appendix A's `[CROSS]` tags require it) |
+| `MatchAnalyticsConstants.cs` | Appendix A: xG `[GT]` coefficients, pitch `[CROSS]` mirrors, heatmap grid, sample stride, and the card / restart record encodings mirrored from their producers |
+| `MatchStatline.cs` / `AdvancedStatline.cs` / `StatPoint.cs` / `MatchAnalyticsResult.cs` | The four immutable #38 view models; arrays copied, never wrapped; F1/F2/F4 gated at construction |
+| `XgLocationModel.cs` | The KD-2 pure two-term geometric model (shape is the contract, coefficients are `[GT]`) |
+| `ITickLedgerTap.cs` | **T1** — the KD-7 per-tick ledger seam (both sides specified, so the §3.2 routing table is drivable from authored records) |
+| `IWorldStateSample.cs` | **T1** — the §3.4 positional sample seam; narrower than the engine's observation surface on purpose |
+| `MatchEngineObservation.cs` | **T1** — the live-engine adapter implementing both seams (read-only forwards) |
+| `MatchAnalyticsAggregator.cs` | **T1** — the KD-3 core: §3.1 tick-weighted possession with an explicit loose bucket, the §3.2 routing table keyed on `EventRegistry.GetOrdinal<T>()`, §3.4 territorial + heatmap binning, F1/F2/F3/F4/F5/F6 |
+| `Tests/match-analytics-tests.asmdef` | `TacticalDirector.MatchAnalytics.Tests` (Editor-only) |
+| `Tests/XgLocationModelTests.cs` | T-AN-XG-* — the three §3.3 worked examples + the shape properties a Stage-2 refit must preserve |
+| `Tests/MatchAnalyticsValueTypeTests.cs` | View-model gates + the KD-4 reverse-reference scan (narrowed at B6 to a sanctioned-consumer allow-list **plus** an explicit never-reference list) |
+| `Tests/MatchAnalyticsAggregatorTests.cs` | **T1** — the §3.2 routing table row by row, possession weighting, §3.4 totality incl. the halfway-line boundary (ERR-037-002), Build idempotence/snapshot semantics, every failure mode |
+| `Tests/MatchAnalyticsObserverNeutralityTests.cs` | **T1** — T-AN-NEU-001 (digest unchanged, with a non-vacuity guard) + T-AN-DET-001 two-run determinism over a real match |
+
+---
+
+### `src/match-client-web/` — the PM-1 browser match client (roadmap B6, July 27, 2026)
+
+Not a numbered spec. Governed by `docs/tracking/browser-match-client-design.md`. The only assembly
+above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliberately separate from
+`match-viewer`'s `LiveMatchServer`, whose playback-only invariant it must not weaken (ERR-038-001).
+
+| File | Purpose |
+|------|---------|
+| `match-client-web.asmdef` | `TacticalDirector.MatchClientWeb`; references MatchClientCore + UiFramework + MatchAnalytics + MatchViewer + MatchEngine + TacticalInstructions + ProjectConstants + DeterministicSim |
+| `MatchClientWebConstants.cs` | `[GT]` port, poll cadences, canvas scale, restart-caption window; `[FIXED]` request-line bound |
+| `MatchClientHost.cs` | KD-W1/W4 composition: `MatchSession` + the #38 projection + the intent dispatcher + the live #37 aggregator, pumped by a sim-thread post-tick observer under an analytics lock |
+| `MatchClientResponse.cs` | KD-W6 — the router/transport seam value |
+| `MatchClientRouter.cs` | KD-W2/W3/W7 — the four routes and their privilege split; #38 frame + #37 report serialization; fail-loud parsing incl. the `Enum.IsDefined` guard |
+| `MatchClientPage.cs` | KD-W9 — the self-contained page (pitch, HUD, playback, tactics, statistics); renders the view model, reads pitch geometry from the streamer |
+| `MatchClientServer.cs` | KD-W8 — loopback-only transport; decides nothing, delegates every route |
+| `tests/match-client-web-tests.asmdef` | `TacticalDirector.MatchClientWeb.Tests` (Editor-only) |
+| `tests/MatchClientRouterTests.cs` | Routing table + the privilege split asserted against the command queue + fail-loud parsing |
+| `tests/MatchClientHostTests.cs` | The every-tick pump over a really-running match (F6 self-checks it), `ServiceOnce` not advancing it, the disarm-and-latch fault path, intent delivery |
+| `tests/MatchClientServerTests.cs` | Real-loopback framing, routing, request-line bound, post-`Stop` refusal, rebind |
 
 ---
 
@@ -1396,9 +1514,14 @@ hardcoded and illustrative.
 
 ## Current Specification Folders
 
-All 26 spec folders now exist in `docs/specs/` (20 Stage-0 + Stage-1 forward specs #21–#26; rows
-21/22 were missing from this table between their June 2026 promotions and July 8, 2026 —
-reconciled). Status reflects authoritative classification in `SPEC_INDEX.md`.
+All 53 spec folders now exist in `docs/specs/` (20 Stage-0 + 33 Stage-1-forward/management-layer
+specs #21–#54, spanning the full #21–#26 tactical wave, the #27–#49 management-layer waves, and the
+ten promoted July 27, 2026: #53, #35, #46, #36, #54, #47, #48, #50, #51, #39). This table was last
+reconciled at row 26 (July 8, 2026) and had not been updated through the #27–#54 promotion waves
+until this pass (July 27, 2026) — rows #27–54 below are added at folder+status granularity only;
+`SPEC_INDEX.md` is the authoritative source for full per-spec detail (FR prefix, approval date,
+back-prop history) and should be read alongside this table rather than have its content duplicated
+here. Status reflects authoritative classification in `SPEC_INDEX.md`.
 
 | # | Folder | Status |
 |---|--------|--------|
@@ -1428,6 +1551,33 @@ reconciled). Status reflects authoritative classification in `SPEC_INDEX.md`.
 | 24 | `docs/specs/build-up-structures/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+3M+2L resolved Jul 8; back-props ERR-021-006/012-008 filed + landed at approval; append order pinned #23 → #24 → #25; FR-BU-001..016; KD-3 records the deliberate TransitionWon-gating refinement vs the supplement |
 | 25 | `docs/specs/positional-rotations/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 1H+1M+3L resolved Jul 8 + PASS-2 clean at H/M; Appendix A complete for all three `FormationFamily` members; back-props ERR-021-007/012-009 (incl. the #12 `SlotIndex` single-writer amendment) filed + landed at approval; FR-RO-001..018 |
 | 26 | `docs/specs/tactical-presets/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+1M+2L resolved Jul 8; §8.2 fully closed (Bradley & Noakes 2013 verified Jul 10); no back-props (§2.3); engine-substrate gates carried forward upstream-owned; FR-TP-001..020 |
+| 27 | `docs/specs/squad-player-data/` | APPROVED (Jul 22, 2026) — implemented at `src/player-database/` |
+| 28 | `docs/specs/player-progression-lifecycle/` | APPROVED (Jul 23, 2026) — implemented at `src/player-progression/` (T0 only) |
+| 29 | `docs/specs/training-system/` | APPROVED (Jul 23, 2026) — no assembly |
+| 30 | `docs/specs/season-competition-loop/` | APPROVED (Jul 22, 2026) — implemented at `src/season-save/` (T0–T3; also hosts the league bootstrap + unified season save-file root) |
+| 31 | `docs/specs/transfers-contracts-negotiation/` | APPROVED (Jul 23, 2026) — no assembly |
+| 32 | `docs/specs/scouting-player-knowledge/` | APPROVED (Jul 24, 2026) — no assembly |
+| 33 | `docs/specs/personalities-morale-dynamics/` | APPROVED (Jul 23, 2026) — no assembly |
+| 34 | `docs/specs/staff-backroom/` | APPROVED (Jul 23, 2026) — no assembly |
+| 35 | `docs/specs/media-press-interactions/` | APPROVED (Jul 27, 2026) — no assembly |
+| 36 | `docs/specs/national-teams-international/` | APPROVED (Jul 27, 2026) — no assembly |
+| 37 | `docs/specs/match-analytics-statistics/` | APPROVED (Jul 22, 2026) — implemented at `src/match-analytics/` (T0 only, landed Jul 27, 2026) |
+| 38 | `docs/specs/ui-client-framework/` | APPROVED (Jul 22, 2026) — implemented at `src/ui-framework/` (T0 substrate only) |
+| 39 | `docs/specs/steam-packaging-release/` | APPROVED (Jul 27, 2026) — no assembly |
+| 40 | `docs/specs/club-finances-economy/` | APPROVED (Jul 23, 2026) — no assembly |
+| 41 | `docs/specs/injuries-medical/` | APPROVED (Jul 23, 2026) — no assembly |
+| 42 | `docs/specs/youth-academy-intake/` | APPROVED (Jul 24, 2026) — no assembly |
+| 43 | `docs/specs/competition-structure/` | APPROVED (Jul 24, 2026) — no assembly |
+| 44 | `docs/specs/discipline-suspensions/` | APPROVED (Jul 24, 2026) — no assembly |
+| 45 | `docs/specs/board-ownership-dynamics/` | APPROVED (Jul 25, 2026) — no assembly |
+| 46 | `docs/specs/news-inbox-man-management/` | APPROVED (Jul 27, 2026) — no assembly |
+| 47 | `docs/specs/new-game-setup-db-editor/` | APPROVED (Jul 27, 2026) — no assembly |
+| 48 | `docs/specs/match-presentation-depth/` | APPROVED (Jul 27, 2026) — no assembly |
+| 49 | `docs/specs/localization-accessibility/` | APPROVED (Jul 23, 2026) — no assembly |
+| 50 | `docs/specs/save-migration-versioning/` | APPROVED (Jul 27, 2026) — no assembly |
+| 51 | `docs/specs/audio-sound-design/` | APPROVED (Jul 27, 2026) — no assembly |
+| 53 | `docs/specs/club-infrastructure-facilities/` | APPROVED (Jul 27, 2026) — no assembly |
+| 54 | `docs/specs/manager-career-reputation/` | APPROVED (Jul 27, 2026) — no assembly |
 
 **Notes:**
 - Attacking AI (#15) files (May 17–18, 2026): `outline.md` (high-level v1.0), `outline-detailed.md` (v1.1), `adversarial-review-outline-detailed-v1.md`, `section-1.md` through `section-9-approval-checklist.md` + `appendices.md` (all at v0.2). `DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS: #16 §3.4]` (ERR-015-001 CLOSED May 18, 2026). Lead-developer R-01..R-05 signed May 18, 2026. Status: APPROVED.

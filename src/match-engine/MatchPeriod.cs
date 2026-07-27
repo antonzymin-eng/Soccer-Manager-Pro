@@ -4,8 +4,11 @@
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1 KD-P1-2,
 //           Code Standards #20
+// Modified: 2026-07-27 (AR-3: header corrected — the period derives from the two transition FLAGS, not
+//           from CurrentTick, which is the whole point of KD-P1-2)
 // Purpose:  Which period of the match the clock is in, for the presentation layer's HUD. Derived
-//           read-only from MatchEngine.CurrentTick / MatchEnded — never stored, never serialized.
+//           read-only from the transition flags MatchEngine already owns and serializes
+//           (_secondHalfStarted / _matchEnded) — never stored here, never separately serialized.
 
 namespace TacticalDirector.MatchEngine
 {
@@ -45,4 +48,8 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-27 | —      | Initial creation (P1 richer observation frame, KD-P1-2): the   |
 // |         |            |        | derived match-period readout for the presentation layer.       |
+// | 1.1     | 2026-07-27 | —      | AR-3 (doc): the file header claimed derivation from            |
+// |         |            |        | CurrentTick. It derives from the two transition flags, which   |
+// |         |            |        | is exactly KD-P1-2 — one reader of the boundary rule, and a    |
+// |         |            |        | period that cannot disagree with what the engine did.          |
 #endregion

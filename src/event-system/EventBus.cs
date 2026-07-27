@@ -1,6 +1,6 @@
 // File:     src/event-system/EventBus.cs
 // Created:  2026-05-30
-// Modified: 2026-06-27
+// Modified: 2026-07-27
 // Author:   —
 // Spec:     Event System #17 §3.2.1, §3.2.2, §4.4, Code Standards #20
 // Purpose:  Public static event bus. Publish/Subscribe entry points plus DrainTick,
@@ -73,6 +73,27 @@ namespace TacticalDirector.EventSystem
         {
             using var _ = s_serializeLedgerMarker.Auto();
             return EventLedger.SerializeLedger(dst);
+        }
+
+        /// <summary>
+        /// Copies this tick's Tier A/B records into <paramref name="dst"/> in FM-017-002 canonical
+        /// order — the KD-7 read-only per-tick ledger tap Match Analytics #37 §4.3 consumes.
+        ///
+        /// <para>Read-only by construction: it consumes no record, resets no per-tick state, and
+        /// contributes nothing to the digest, so an observed match ticks byte-identically to an
+        /// unobserved one (FR-AN-017). Allocates 0 bytes — <paramref name="dst"/> is pre-allocated
+        /// and reused.</para>
+        ///
+        /// <para><b>Call between <see cref="DrainTick"/> and <see cref="OnTickBoundary"/></b> (i.e.
+        /// inside the Snapshot phase). Called later, the tick's queue is already reset and this
+        /// captures nothing — the loss is silent because the bus cannot distinguish "no records" from
+        /// "asked too late", which is why the match engine owns the call site rather than the client.</para>
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="dst"/> is null.</exception>
+        public static void CaptureTickLedger(TickLedgerSnapshot dst)
+        {
+            if (dst == null) throw new ArgumentNullException(nameof(dst));
+            EventLedger.CaptureInto(dst);
         }
 
         /// <summary>
@@ -435,4 +456,7 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | ERR_EVT_REGISTRATION_PHASE on a second match's Subscribe and leaks |
 // |         |            |        | handlers toward MaxHandlersPerEventType across runs. No change to  |
 // |         |            |        | the Publish/Subscribe/DrainTick hot paths.                         |
+// | 1.10    | 2026-07-27 | —      | CaptureTickLedger added — the public face of the #37 KD-7 tap,   |
+// |         |            |        | valid between DrainTick and OnTickBoundary. Read-only; no change |
+// |         |            |        | to Publish / Subscribe / DrainTick.                              |
 #endregion

@@ -1,7 +1,8 @@
 // File:     src/ui-framework/Tests/MatchViewProjectionTests.cs
 // Created:  2026-07-25
 // Modified: 2026-07-27 (P1: gate probes routed through a local Frame helper; CaptureFrom samples the
-//           P1 surface. The P1 gates get their own fixture — MatchViewCueProjectionTests.)
+//           P1 surface, now via the Scoreline / RestartBanner carriers. The P1 gates get their own
+//           fixture — MatchViewCueProjectionTests.)
 // Author:   —
 // Spec:     UI / Client Framework #38 §3.1 / §3.4 / §5.1 (T-UI-MATCHVIEW-001/002, T-UI-FAIL-001/002,
 //           T-UI-LAYER-002, FR-UI-002/005/006/007/008/015/016), Code Standards #20
@@ -149,8 +150,10 @@ namespace TacticalDirector.UiFramework.Tests
         [Test]
         public void NegativeScore_Throws()
         {
-            var frame = Frame(1UL, Vector3.zero, -1, NewPositions(), -1, 0, false);
-            Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in frame); });
+            // AR-1 M-6: the gate moved into Scoreline, so a negative score can no longer reach a frame
+            // at all — it is refused one layer earlier, which is strictly better than re-checking it here.
+            Assert.Throws<ArgumentOutOfRangeException>(() => new Scoreline(-1, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new Scoreline(0, -1));
         }
 
         [Test]
@@ -197,13 +200,13 @@ namespace TacticalDirector.UiFramework.Tests
         {
             int cueCount = positions == null ? MatchEngineConstants.SQUAD_SIZE : positions.Length;
             return new LiveMatchFrame(
-                tick, ball, possessing, positions, homeScore, awayScore, matchEnded,
+                tick, ball, possessing, positions,
                 new LiveAgentCue[cueCount],
                 new int[MatchEngineConstants.TEAM_COUNT],
+                new Scoreline(homeScore, awayScore),
+                matchEnded,
                 MatchPeriod.FirstHalf,
-                RestartCue.None,
-                MatchEngineConstants.NO_RESTART_TEAM,
-                0UL);
+                RestartBanner.None);
         }
 
         internal static LiveMatchFrame MakeFrame(ulong tick) =>
@@ -224,20 +227,21 @@ namespace TacticalDirector.UiFramework.Tests
             var subs = new int[MatchEngineConstants.TEAM_COUNT];
             for (int t = 0; t < subs.Length; t++) { subs[t] = engine.SubstitutionsUsed(t); }
 
+            RestartBanner restart = engine.RestartAppliedThisTick == RestartCue.None
+                ? RestartBanner.None
+                : new RestartBanner(engine.RestartAppliedThisTick, engine.RestartAwardedTeam, engine.CurrentTick);
+
             return new LiveMatchFrame(
                 engine.CurrentTick,
                 engine.BallView.Position,
                 engine.PossessingAgentId,
                 positions,
-                engine.HomeScore,
-                engine.AwayScore,
-                engine.MatchEnded,
                 cues,
                 subs,
+                new Scoreline(engine.HomeScore, engine.AwayScore),
+                engine.MatchEnded,
                 engine.CurrentPeriod,
-                engine.RestartAppliedThisTick,
-                engine.RestartAwardedTeam,
-                engine.CurrentTick);
+                restart);
         }
 
         /// <summary>A deterministic stand-in for the streamer's publish/read handoff — no threads, no pacing.</summary>
@@ -272,4 +276,9 @@ namespace TacticalDirector.UiFramework.Tests
 // |         |            |        | T-UI-LAYER-002 — snapshot-not-window, every F1 gate, the F5    |
 // |         |            |        | empty/last-known path, and the cache-not-poisoned-by-a-bad-    |
 // |         |            |        | frame lock.                                                    |
+// | 1.1     | 2026-07-27 | —      | P1 + AR-1 M-6. Gate probes route through a local Frame helper  |
+// |         |            |        | that fills the P1 additions with valid neutral values, so      |
+// |         |            |        | extending the frame costs one line here rather than one per    |
+// |         |            |        | probe. NegativeScore_Throws now tests Scoreline directly — the |
+// |         |            |        | gate moved there, so a negative score cannot reach a frame.    |
 #endregion

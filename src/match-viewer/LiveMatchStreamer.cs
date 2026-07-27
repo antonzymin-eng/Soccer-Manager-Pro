@@ -1,7 +1,8 @@
 // File:     src/match-viewer/LiveMatchStreamer.cs
 // Created:  2026-07-15
 // Modified: 2026-07-27 (interactive Unity client §5-P1: captures the per-agent cues / substitution
-//           counts / derived period, and latches the engine's within-tick restart cue — KD-P1-3)
+//           counts / derived period, and latches the engine's within-tick restart cue — KD-P1-3,
+//           held in a single RestartBanner after AR-1 M-6)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md) +
 //           interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P0/§6),
@@ -56,6 +57,13 @@ namespace TacticalDirector.MatchViewer
         // (which may be a different thread via ServiceOnce()).
         private volatile Action _preTickHook;
 
+        // The post-tick observer (see SetPostTickObserver). Distinct from the pre-tick hook because
+        // it must fire once per COMPLETED tick and never on the off-tick ServiceOnce() path.
+        private volatile Action _postTickObserver;
+
+        // Latched cause of the observer's first failure; see PostTickObserverFault.
+        private volatile Exception _postTickObserverFault;
+
         private LifecycleState _state = LifecycleState.NotStarted;
         private Thread _thread;
         private volatile bool _stopRequested;
@@ -63,11 +71,10 @@ namespace TacticalDirector.MatchViewer
         // P1 KD-P1-3 — the latched last restart. The engine reports a restart only for the tick it was
         // applied on (so it stays out of the snapshot entirely); this layer, which sees every tick, holds
         // the cross-tick memory a HUD needs. Written and read only inside CaptureFrame, itself only ever
-        // called under _tickGate, so these need no separate synchronisation; they reach other threads
-        // solely as immutable copies inside a published LiveMatchFrame.
-        private RestartCue _lastRestart     = RestartCue.None;
-        private int        _lastRestartTeam = MatchEngineConstants.NO_RESTART_TEAM;
-        private ulong      _lastRestartTick;
+        // called under _tickGate, so this needs no separate synchronisation; it reaches other threads
+        // solely as an immutable copy inside a published LiveMatchFrame. No initializer is needed and
+        // that is the point: default(RestartBanner) IS RestartBanner.None (AR-1 M-3).
+        private RestartBanner _lastRestart;
 
         private LiveMatchFrame? _latestFrame;
         private bool _paused;
@@ -153,6 +160,14 @@ namespace TacticalDirector.MatchViewer
                 // head-less command-drain test exercise the same drain the live loop does.
                 _preTickHook?.Invoke();
                 _engine.RunTick();
+
+                // Post-tick observer (if any) runs on the sim thread while still holding the tick
+                // gate, so it sees exactly one invocation per completed tick, in order, with the
+                // engine's per-tick observation surfaces still describing THAT tick. Deliberately
+                // NOT fired from ServiceOnce(): no tick advances there, and an observer counting
+                // ticks would see a repeat.
+                InvokePostTickObserver();
+
                 LiveMatchFrame frame = CaptureFrame();
                 ApplyCapturedFrame(frame);
                 return frame;
@@ -180,6 +195,80 @@ namespace TacticalDirector.MatchViewer
                     throw new InvalidOperationException("A pre-tick hook is already installed (set-once).");
                 }
                 _preTickHook = hook;
+            }
+        }
+
+        /// <summary>
+        /// Installs the optional sim-thread post-tick observer — the seam a per-tick derivation such
+        /// as Match Analytics #37 needs, whose §3.5 contract is that it consumes EVERY tick exactly
+        /// once and fails loud on a gap.
+        ///
+        /// <para><b>Why this cannot reuse the pre-tick hook.</b> That hook is set-once and already
+        /// taken by the client's command drain, and it also fires from <see cref="ServiceOnce"/>,
+        /// where no tick advances — an every-tick consumer hung off it would see a repeated tick and
+        /// refuse. So this is a second, distinct seam rather than a chain on the first.</para>
+        ///
+        /// <para><b>It does not weaken the playback-only invariant.</b> The observer is handed
+        /// nothing and returns nothing: it can only read whatever the caller already had a reference
+        /// to. This assembly still exposes no way to mutate a match (the invariant
+        /// <c>interactive-unity-client-design.md</c> AR-1 H-2 and ERR-038-001 protect); manager input
+        /// remains the client's own <c>ManagerCommandQueue</c>, drained by the pre-tick hook.</para>
+        ///
+        /// <para>Must be called once, before <see cref="Start"/>. The observer runs on the sim thread
+        /// under the tick gate and MUST NOT block or start/stop this streamer.</para>
+        /// </summary>
+        /// <param name="observer">The post-tick action. Must not be null.</param>
+        public void SetPostTickObserver(Action observer)
+        {
+            if (observer == null) { throw new ArgumentNullException(nameof(observer)); }
+            lock (_lock)
+            {
+                if (_state != LifecycleState.NotStarted)
+                {
+                    throw new InvalidOperationException("SetPostTickObserver must be called before Start().");
+                }
+                if (_postTickObserver != null)
+                {
+                    throw new InvalidOperationException("A post-tick observer is already installed (set-once).");
+                }
+                _postTickObserver = observer;
+            }
+        }
+
+        /// <summary>
+        /// The exception that disarmed the post-tick observer, or null while it is healthy.
+        ///
+        /// <para>A View should surface this: after it is set, the observer is no longer running, so
+        /// anything derived from it (live statistics, a post-match report) is frozen at the failing
+        /// tick and will otherwise look merely stale.</para>
+        /// </summary>
+        public Exception PostTickObserverFault => _postTickObserverFault;
+
+        /// <summary>
+        /// Runs the observer, and on the first exception disarms it and latches the cause.
+        ///
+        /// <para>The pacing loop does not guard <see cref="TickOnce"/>, so an unhandled exception on
+        /// this thread terminates the process — a derived statistic must not be able to kill a match
+        /// in progress. Nor may it be swallowed: it is latched on
+        /// <see cref="PostTickObserverFault"/> and the observer is not invoked again, so the failure
+        /// is visible once instead of sixty times a second (the same posture
+        /// <c>MatchClientDriver</c> takes for a command the engine refuses).</para>
+        /// </summary>
+        private void InvokePostTickObserver()
+        {
+            Action observer = _postTickObserver;
+            if (observer == null) { return; }
+
+            try
+            {
+                observer();
+            }
+            catch (Exception ex)
+            {
+                // Presentation/observation path, not the 60 Hz simulation inner loop FR-CS-069's
+                // try/catch ban targets — the same carve-out the connection handling already uses.
+                _postTickObserver     = null;
+                _postTickObserverFault = ex;
             }
         }
 
@@ -250,9 +339,8 @@ namespace TacticalDirector.MatchViewer
             RestartCue restartThisTick = _engine.RestartAppliedThisTick;
             if (restartThisTick != RestartCue.None)
             {
-                _lastRestart     = restartThisTick;
-                _lastRestartTeam = _engine.RestartAwardedTeam;
-                _lastRestartTick = _engine.CurrentTick;
+                _lastRestart = new RestartBanner(
+                    restartThisTick, _engine.RestartAwardedTeam, _engine.CurrentTick);
             }
 
             return new LiveMatchFrame(
@@ -260,15 +348,12 @@ namespace TacticalDirector.MatchViewer
                 _engine.BallView.Position,
                 _engine.PossessingAgentId,
                 positions,
-                _engine.HomeScore,
-                _engine.AwayScore,
-                _engine.MatchEnded,
                 cues,
                 subsUsed,
+                new Scoreline(_engine.HomeScore, _engine.AwayScore),
+                _engine.MatchEnded,
                 _engine.CurrentPeriod,
-                _lastRestart,
-                _lastRestartTeam,
-                _lastRestartTick);
+                _lastRestart);
         }
 
         /// <summary>
@@ -480,4 +565,9 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | fields are written and read only inside CaptureFrame, itself   |
 // |         |            |        | only called from TickOnce under _tickGate, so they need no     |
 // |         |            |        | synchronisation of their own and escape only as struct copies. |
+// | 1.5     | 2026-07-27 | —      | P1 AR-1 M-6: the three latch fields collapse into a single     |
+// |         |            |        | RestartBanner. It carries no initializer on purpose — the      |
+// |         |            |        | banner derives its team and tick from its own cue, so the      |
+// |         |            |        | zeroed default already reads as "no restart" and there is no   |
+// |         |            |        | separate no-restart constant to keep in step with it.          |
 #endregion

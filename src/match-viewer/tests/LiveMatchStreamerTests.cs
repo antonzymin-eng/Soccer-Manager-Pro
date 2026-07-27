@@ -1,7 +1,8 @@
 // File:     src/match-viewer/tests/LiveMatchStreamerTests.cs
 // Created:  2026-07-15
 // Modified: 2026-07-27 (P1: the hand-built full-time frame carries the P1 fields. Cue/latch coverage
-//           lives in its own fixture — LiveMatchFrameCueTests.)
+//           lives in its own fixture — LiveMatchFrameCueTests. AR-1 M-6: score reads move onto the
+//           Scoreline carrier.)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Testing Strategy #19 (unit layer), Code Standards #20
 // Purpose:  Contract tests for LiveMatchStreamer: latest-frame handoff, observer neutrality
@@ -49,8 +50,8 @@ namespace TacticalDirector.MatchViewer.Tests
 
             Assert.AreEqual(engine.CurrentTick, frame.Tick);
             Assert.AreEqual(engine.PossessingAgentId, frame.PossessingAgentId);
-            Assert.AreEqual(engine.HomeScore, frame.HomeScore);
-            Assert.AreEqual(engine.AwayScore, frame.AwayScore);
+            Assert.AreEqual(engine.HomeScore, frame.Score.Home);
+            Assert.AreEqual(engine.AwayScore, frame.Score.Away);
             Assert.AreEqual(engine.MatchEnded, frame.MatchEnded);
             Assert.AreEqual(MatchEngineConstants.SQUAD_SIZE, frame.AgentPositions.Length);
 
@@ -85,13 +86,14 @@ namespace TacticalDirector.MatchViewer.Tests
             Assert.IsFalse(streamer.IsPaused);
 
             var endedFrame = new LiveMatchFrame(
-                1UL, Vector3.zero, -1, new Vector2[MatchEngineConstants.SQUAD_SIZE], 0, 0, matchEnded: true,
-                agentCues:         new LiveAgentCue[MatchEngineConstants.SQUAD_SIZE],
-                substitutionsUsed: new int[MatchEngineConstants.TEAM_COUNT],
-                period:            MatchPeriod.FullTime,
-                lastRestart:       RestartCue.None,
-                lastRestartTeam:   MatchEngineConstants.NO_RESTART_TEAM,
-                lastRestartTick:   0UL);
+                1UL, Vector3.zero, -1,
+                new Vector2[MatchEngineConstants.SQUAD_SIZE],
+                new LiveAgentCue[MatchEngineConstants.SQUAD_SIZE],
+                new int[MatchEngineConstants.TEAM_COUNT],
+                new Scoreline(0, 0),
+                matchEnded: true,
+                period:  MatchPeriod.FullTime,
+                restart: RestartBanner.None);
             streamer.ApplyCapturedFrame(endedFrame);
 
             Assert.IsTrue(streamer.IsPaused, "MatchEnded must auto-pause the streamer.");
@@ -179,4 +181,8 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | digest lock, full-time auto-pause, speed-multiplier guards,     |
 // |         |            |        | single-use lifecycle guards, roster accessors, threaded         |
 // |         |            |        | start/stop smoke test.                                          |
+// | 1.1     | 2026-07-27 | —      | P1 + AR-1 M-6: the hand-built full-time frame carries the P1   |
+// |         |            |        | fields, and the score assertions read frame.Score.Home /       |
+// |         |            |        | .Away off the Scoreline carrier. Cue and restart-latch         |
+// |         |            |        | coverage lives in LiveMatchFrameCueTests.                      |
 #endregion

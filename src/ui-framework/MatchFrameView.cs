@@ -1,6 +1,7 @@
 // File:     src/ui-framework/MatchFrameView.cs
 // Created:  2026-07-25
-// Modified: 2026-07-27 (P1 richer observation frame: agent cues, substitution counts, period, restart)
+// Modified: 2026-07-27 (P1 richer observation frame: agent cues, substitution counts, period, restart —
+//           the last two as Scoreline / RestartBanner carriers after AR-1 M-6)
 // Author:   —
 // Spec:     UI / Client Framework #38 §2.2 (FR-UI-002/007/008, failure modes F1/F4),
 //           docs/tracking/ui-framework-t0-implementation-plan.md KD-U4, Code Standards #20
@@ -56,11 +57,9 @@ namespace TacticalDirector.UiFramework
         /// <summary>Possessing agent's roster index, or −1 when the ball is loose.</summary>
         public readonly int PossessingAgentId;
 
-        /// <summary>Home (team 0) goals.</summary>
-        public readonly int HomeScore;
-
-        /// <summary>Away (team 1) goals.</summary>
-        public readonly int AwayScore;
+        /// <summary>Goals, home and away. Non-negativity is guaranteed by <see cref="Scoreline"/>
+        /// itself, so this view no longer re-checks it (AR-1 M-6).</summary>
+        public readonly Scoreline Score;
 
         /// <summary>True once full time has fired.</summary>
         public readonly bool MatchEnded;
@@ -68,14 +67,10 @@ namespace TacticalDirector.UiFramework
         /// <summary>Which period the clock is in (P1 KD-P1-2).</summary>
         public readonly MatchPeriod Period;
 
-        /// <summary>The most recent restart observed by the frame producer, or <see cref="RestartCue.None"/>.</summary>
-        public readonly RestartCue LastRestart;
-
-        /// <summary>Team (0/1) awarded <see cref="LastRestart"/>, or −1 when there is none.</summary>
-        public readonly int LastRestartTeam;
-
-        /// <summary>The tick <see cref="LastRestart"/> was applied on; 0 when none has been observed.</summary>
-        public readonly ulong LastRestartTick;
+        /// <summary>The most recent restart observed by the frame producer, or
+        /// <see cref="RestartBanner.None"/>. The banner derives its awarded team and tick from its own
+        /// cue, so an empty view reports −1 / 0 rather than "home team, tick 0" (AR-1 M-3).</summary>
+        public readonly RestartBanner Restart;
 
         private readonly ReadOnlyCollection<Vector2> _agentPositions;
         private readonly ReadOnlyCollection<LiveAgentCue> _agentCues;
@@ -115,7 +110,8 @@ namespace TacticalDirector.UiFramework
         /// Projects <paramref name="frame"/> into an immutable view, copying and gating every value.
         /// </summary>
         /// <exception cref="ArgumentException">The frame is malformed: a null or wrongly-sized agent
-        /// array, an out-of-range possessing id, a non-finite coordinate, or a negative score (F1).</exception>
+        /// or cue array, an out-of-range possessing id, or a non-finite coordinate (F1). A negative
+        /// score is impossible by then — <see cref="Scoreline"/> refuses one at its own construction.</exception>
         public MatchFrameView(in LiveMatchFrame frame)
         {
             Vector2[] source = frame.AgentPositions;
@@ -134,10 +130,6 @@ namespace TacticalDirector.UiFramework
                 throw new ArgumentException(
                     "LiveMatchFrame.PossessingAgentId " + Inv(frame.PossessingAgentId) +
                     " is outside [-1, SQUAD_SIZE).", nameof(frame));
-            }
-            if (frame.HomeScore < 0 || frame.AwayScore < 0)
-            {
-                throw new ArgumentException("LiveMatchFrame carries a negative score.", nameof(frame));
             }
             RequireFinite(frame.BallPosition.x, "BallPosition.x");
             RequireFinite(frame.BallPosition.y, "BallPosition.y");
@@ -194,13 +186,10 @@ namespace TacticalDirector.UiFramework
             Tick               = frame.Tick;
             BallPosition       = frame.BallPosition;
             PossessingAgentId  = frame.PossessingAgentId;
-            HomeScore          = frame.HomeScore;
-            AwayScore          = frame.AwayScore;
+            Score              = frame.Score;
             MatchEnded         = frame.MatchEnded;
             Period             = frame.Period;
-            LastRestart        = frame.LastRestart;
-            LastRestartTeam    = frame.LastRestartTeam;
-            LastRestartTick    = frame.LastRestartTick;
+            Restart            = frame.Restart;
             _agentPositions    = new ReadOnlyCollection<Vector2>(copy);
             _agentCues         = new ReadOnlyCollection<LiveAgentCue>(cueCopy);
             _substitutionsUsed = new ReadOnlyCollection<int>(subsCopy);
@@ -232,4 +221,12 @@ namespace TacticalDirector.UiFramework
 // |         |            |        | and the latched last restart. Both new arrays are gated like   |
 // |         |            |        | positions: non-null, and lengths coherent with the positions   |
 // |         |            |        | array / TEAM_COUNT respectively.                               |
+// | 1.2     | 2026-07-27 | —      | P1 AR-1 M-6 / M-3: the score and restart fields collapse into  |
+// |         |            |        | Scoreline and RestartBanner. The negative-score gate moves     |
+// |         |            |        | INTO Scoreline, so a negative score can no longer reach a      |
+// |         |            |        | frame at all — refused a layer earlier rather than re-checked  |
+// |         |            |        | here. M-3 closes structurally: Empty is default(MatchFrameView) |
+// |         |            |        | hence default(RestartBanner), which derives its team and tick   |
+// |         |            |        | from its own cue and so reports NO_RESTART_TEAM / 0 rather     |
+// |         |            |        | than the "home team, tick 0" the v1.1 loose fields gave.        |
 #endregion

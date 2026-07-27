@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-28 (Pressing #13 wiring AR — AttackingDirection inversion fix)
+// Modified: 2026-07-27  (B3: the #37 KD-7 read-only per-tick ledger tap)
 // Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
 // Modified: 2026-06-29 (#21 T2 Defensive (#14) + Attacking (#15) Phase-D writers — route OffsideTrap / FocusPlay → snapshots)
 // Modified: 2026-06-29 (#21 T2 Positioning (#12) Phase-D writer — route TeamTactic.Width / DefensiveWidth → ContextModifierInputs; all three writers now closed)
@@ -40,6 +40,7 @@
 // Modified: 2026-07-26 (§5.Z.10 kickoff keeper placement: a keeper spawns on the goal line it DEFENDS, centred on the mouth, instead of on the outfield kickoff line — Stage-0 Physics skips GK locomotion, so boot placement stood for the whole match and both goals were unguarded. See docs/tracking/match-engine-design.md §5.Z.10)
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: referee-call probability partitioned out of the single card-severity draw (KD-F1/KD-F2), no-call arms no cooldown (KD-F3), strongest-wins candidate capture (KD-F4), + the TestOnly collision-observer measurement seam. No schema change. See docs/tracking/foul-discipline-balance-design.md)
 // Modified: 2026-07-27 (§5.Z.17 goalkeeper save pipeline: NotifyKeeperOfShot opens #11's §3.2 reaction window on the shot CONTACT frame (ERR-011-004, stamped in MILLISECONDS); ClearSaveIntent called on the save-episode disarm so the engine and #11 latches cannot disagree; TestOnly_GoalkeeperState observation seam. No schema change. See docs/tracking/goalkeeper-save-pipeline-design.md)
+// Modified: 2026-07-27 (P1 richer observation frame + AR-1 L-3: discipline / period / restart accessors for a HUD, ApplyRestart declares its RestartCue, and the unmapped-RestartType arm warns under a gated diagnostic instead of reporting "no restart" in silence. Within-tick fields only — no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/interactive-unity-client-design.md §5-P1)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -111,6 +112,13 @@ namespace TacticalDirector.MatchEngine
         private readonly SnapshotCodec           _codec;
         private readonly EnvironmentFingerprint  _fingerprint;
         private readonly TickOrchestrator        _orchestrator;
+
+        // ── The #37 KD-7 read-only per-tick ledger tap ────────────────────────────────
+        // Filled in the Snapshot phase (after SerializeLedger, before the bus resets the tick), and
+        // read only through the public accessors below. NOT serialized and never read by the sim:
+        // it is an observation buffer in the same class as BallView/AgentView, so an observed match
+        // is byte-identical to an unobserved one (#37 FR-AN-017).
+        private readonly TickLedgerSnapshot _tickLedger = new TickLedgerSnapshot();
 
         // ── Physics subsystems (design note §3) ───────────────────────────────────────
         // AgentMovementSystem is stateless except its pinned physics Hz, so one shared instance
@@ -1802,6 +1810,33 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Possessing agent's roster index, or NO_POSSESSION (−1) when the ball is loose.</summary>
         public int PossessingAgentId => _possessingAgentId;
+
+        /// <summary>
+        /// Number of Tier A/B event records the engine drained on the tick most recently completed —
+        /// the KD-7 read-only ledger tap Match Analytics #37 §4.3 consumes.
+        ///
+        /// <para><b>Scoped to the last completed tick.</b> Each <see cref="RunTick"/> overwrites the
+        /// capture, so a client that wants every record must read the tap once per tick (#37 §3.5's
+        /// lossless-consumption contract, which <c>MatchAnalyticsAggregator.ObserveTick</c> enforces
+        /// on its own side by refusing a non-consecutive tick).</para>
+        ///
+        /// <para>Before the first tick this is 0.</para>
+        /// </summary>
+        public int TickLedgerCount => _tickLedger.Count;
+
+        /// <summary>
+        /// Appendix A event-type ordinal of tap record <paramref name="index"/>, in the canonical
+        /// FM-017-002 order the snapshot digest also used. Compare against
+        /// <c>EventRegistry.GetOrdinal&lt;T&gt;()</c> to decide which record type to read.
+        /// </summary>
+        public byte TickLedgerOrdinal(int index) => _tickLedger.OrdinalAt(index);
+
+        /// <summary>
+        /// Reads tap record <paramref name="index"/> back as a value copy of <typeparamref name="T"/>.
+        /// Branch on <see cref="TickLedgerOrdinal"/> first; a type wider than the captured record
+        /// fails loud rather than reading past it.
+        /// </summary>
+        public T TickLedgerRecord<T>(int index) where T : struct => _tickLedger.ReadAt<T>(index);
 
         /// <summary>Home team's (team 0) current goal count.</summary>
         public int HomeScore => _goals[0];
@@ -3642,7 +3677,15 @@ namespace TacticalDirector.MatchEngine
                 case RestartType.ThrowIn:  return RestartCue.ThrowIn;
                 case RestartType.GoalKick: return RestartCue.GoalKick;
                 case RestartType.Corner:   return RestartCue.Corner;
-                default:                   return RestartCue.None;
+                default:
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    // Observation code must never abort a tick, so this falls through rather than
+                    // throwing — but a RestartType member added later would otherwise be reported to a
+                    // View as "no restart" in total silence (AR-1 L-3).
+                    UnityEngine.Debug.LogWarning(
+                        "[MatchEngine] ToRestartCue: unmapped RestartType " + restart + " reported as RestartCue.None.");
+#endif
+                    return RestartCue.None;
             }
         }
 
@@ -4001,11 +4044,11 @@ namespace TacticalDirector.MatchEngine
         {
             if (u < MatchEngineConstants.RedCardProbability)
             {
-                return 1;
+                return MatchEngineConstants.CARD_KIND_RED;
             }
             if (u < MatchEngineConstants.RedCardProbability + MatchEngineConstants.YellowCardProbability)
             {
-                return 0;
+                return MatchEngineConstants.CARD_KIND_YELLOW;
             }
             return null;
         }
@@ -4512,6 +4555,13 @@ namespace TacticalDirector.MatchEngine
             int written = EventBus.SerializeLedger(
                 new Span<byte>(payload.PayloadBytes, payload.BytesWritten, free));
             payload.BytesWritten += written;
+
+            // #37 KD-7: copy out this tick's Tier A/B records for observers, in the same FM-017-002
+            // canonical order the bytes above were written in (one derivation, two readers). This is
+            // the only moment the records exist and the tick is identified: OnTickBoundary below
+            // resets the queue, and the next tick overwrites the ring. Read-only — the capture
+            // consumes nothing and touches neither the payload nor the digest.
+            EventBus.CaptureTickLedger(_tickLedger);
 
             EventBus.OnTickBoundary();
         }
@@ -7571,4 +7621,10 @@ namespace TacticalDirector.MatchEngine
 // |      |            |   | engine latch and #11's own cannot disagree. `TestOnly_GoalkeeperState` reads|
 // |      |            |   | through the public CaptureState the v19 writer uses. No schema/RNG/draw-order|
 // |      |            |   | change; flag-off byte-identical.                                        |
+// | 1.50    | 2026-07-27 | —      | P1 AR-1 L-3: ToRestartCue's default arm emits a gated           |
+// |         |            |        | LogWarning. It still falls through to RestartCue.None —         |
+// |         |            |        | observation code must never abort a tick — but a RestartType    |
+// |         |            |        | member added later would otherwise be reported to a View as     |
+// |         |            |        | "no restart" in total silence, and this mapper is exactly the   |
+// |         |            |        | place that silence would begin.                                 |
 #endregion

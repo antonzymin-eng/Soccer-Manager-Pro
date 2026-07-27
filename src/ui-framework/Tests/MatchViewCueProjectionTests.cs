@@ -1,6 +1,6 @@
 // File:     src/ui-framework/Tests/MatchViewCueProjectionTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-07-27 (AR-1 M-3 / M-6: empty-view sentinel + banner-construction gates)
 // Author:   —
 // Spec:     UI / Client Framework #38 §2.2 (FR-UI-002/007/008, failure modes F1/F4/F5) +
 //           interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1,
@@ -35,13 +35,11 @@ namespace TacticalDirector.UiFramework.Tests
             LiveAgentCue[] cues = null,
             int[] subs = null,
             MatchPeriod period = MatchPeriod.FirstHalf,
-            RestartCue restart = RestartCue.None,
-            int restartTeam = MatchEngineConstants.NO_RESTART_TEAM,
-            ulong restartTick = 0UL) =>
+            RestartBanner restart = default) =>
             new LiveMatchFrame(
                 1UL, new Vector3(52.5f, 34f, 0.11f), -1,
-                positions ?? Positions(), 0, 0, false,
-                cues ?? Cues(), subs ?? Subs(), period, restart, restartTeam, restartTick);
+                positions ?? Positions(), cues ?? Cues(), subs ?? Subs(),
+                new Scoreline(0, 0), false, period, restart);
 
         // ── F4 — the view is a snapshot, not a window ────────────────────────────────────────────
 
@@ -81,8 +79,8 @@ namespace TacticalDirector.UiFramework.Tests
         public void NullCueArray_Throws()
         {
             var frame = new LiveMatchFrame(
-                1UL, Vector3.zero, -1, Positions(), 0, 0, false,
-                null, Subs(), MatchPeriod.FirstHalf, RestartCue.None, -1, 0UL);
+                1UL, Vector3.zero, -1, Positions(), null, Subs(),
+                new Scoreline(0, 0), false, MatchPeriod.FirstHalf, RestartBanner.None);
 
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in frame); });
         }
@@ -97,9 +95,9 @@ namespace TacticalDirector.UiFramework.Tests
         public void CueCountNotMatchingPositionCount_Throws()
         {
             var frame = new LiveMatchFrame(
-                1UL, Vector3.zero, -1, Positions(), 0, 0, false,
+                1UL, Vector3.zero, -1, Positions(),
                 new LiveAgentCue[MatchEngineConstants.SQUAD_SIZE - 1], Subs(),
-                MatchPeriod.FirstHalf, RestartCue.None, -1, 0UL);
+                new Scoreline(0, 0), false, MatchPeriod.FirstHalf, RestartBanner.None);
 
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in frame); });
         }
@@ -108,8 +106,8 @@ namespace TacticalDirector.UiFramework.Tests
         public void NullSubstitutionArray_Throws()
         {
             var frame = new LiveMatchFrame(
-                1UL, Vector3.zero, -1, Positions(), 0, 0, false,
-                Cues(), null, MatchPeriod.FirstHalf, RestartCue.None, -1, 0UL);
+                1UL, Vector3.zero, -1, Positions(), Cues(), null,
+                new Scoreline(0, 0), false, MatchPeriod.FirstHalf, RestartBanner.None);
 
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in frame); });
         }
@@ -118,9 +116,9 @@ namespace TacticalDirector.UiFramework.Tests
         public void WrongSubstitutionCount_Throws()
         {
             var frame = new LiveMatchFrame(
-                1UL, Vector3.zero, -1, Positions(), 0, 0, false,
-                Cues(), new int[MatchEngineConstants.TEAM_COUNT + 1],
-                MatchPeriod.FirstHalf, RestartCue.None, -1, 0UL);
+                1UL, Vector3.zero, -1, Positions(), Cues(),
+                new int[MatchEngineConstants.TEAM_COUNT + 1],
+                new Scoreline(0, 0), false, MatchPeriod.FirstHalf, RestartBanner.None);
 
             Assert.Throws<ArgumentException>(() => { var _ = new MatchFrameView(in frame); });
         }
@@ -132,16 +130,48 @@ namespace TacticalDirector.UiFramework.Tests
         {
             var frame = Frame(
                 period: MatchPeriod.SecondHalf,
-                restart: RestartCue.Corner,
-                restartTeam: 1,
-                restartTick: 4242UL);
+                restart: new RestartBanner(RestartCue.Corner, awardedTeam: 1, tick: 4242UL));
 
             var view = new MatchFrameView(in frame);
 
             Assert.AreEqual(MatchPeriod.SecondHalf, view.Period);
-            Assert.AreEqual(RestartCue.Corner, view.LastRestart);
-            Assert.AreEqual(1, view.LastRestartTeam);
-            Assert.AreEqual(4242UL, view.LastRestartTick);
+            Assert.IsTrue(view.Restart.HasRestart);
+            Assert.AreEqual(RestartCue.Corner, view.Restart.Cue);
+            Assert.AreEqual(1, view.Restart.AwardedTeam);
+            Assert.AreEqual(4242UL, view.Restart.Tick);
+        }
+
+        /// <summary>
+        /// AR-1 M-3, closed structurally. The empty view is <c>default(MatchFrameView)</c>, so its banner
+        /// is <c>default(RestartBanner)</c> — and because the banner DERIVES its team and tick from its
+        /// own cue rather than storing them bare, a zeroed struct reports −1 / 0 instead of "home team,
+        /// tick 0". The v1.1 loose-field form got this wrong one layer up from where it had already been
+        /// found and fixed once.
+        /// </summary>
+        [Test]
+        public void EmptyView_ReportsTheNoRestartSentinel_NotTeamZero()
+        {
+            MatchFrameView empty = MatchFrameView.Empty;
+
+            Assert.IsFalse(empty.Restart.HasRestart);
+            Assert.AreEqual(RestartCue.None, empty.Restart.Cue);
+            Assert.AreEqual(MatchEngineConstants.NO_RESTART_TEAM, empty.Restart.AwardedTeam);
+            Assert.AreEqual(0UL, empty.Restart.Tick);
+        }
+
+        [Test]
+        public void RestartBanner_RefusesTheNoneCueAndAnUnknownTeam()
+        {
+            Assert.Throws<ArgumentException>(
+                () => new RestartBanner(RestartCue.None, 0, 1UL),
+                "None must have exactly one representation — RestartBanner.None");
+            Assert.Throws<ArgumentOutOfRangeException>(() => new RestartBanner(RestartCue.ThrowIn, -1, 1UL));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new RestartBanner(RestartCue.ThrowIn, MatchEngineConstants.TEAM_COUNT, 1UL));
+
+            // AR-2: a cast-from-int cue clears the None check but names no restart kind, so a View would
+            // caption something that does not exist. Rejected rather than stored.
+            Assert.Throws<ArgumentOutOfRangeException>(() => new RestartBanner((RestartCue)99, 0, 1UL));
         }
 
         [Test]
@@ -184,4 +214,9 @@ namespace TacticalDirector.UiFramework.Tests
 // |         |            |        | for the cue / substitution arrays, F1 gates (null + length     |
 // |         |            |        | coherence for both), period / restart pass-through, and the    |
 // |         |            |        | F5 empty-view collections.                                     |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-3 / M-6: + EmptyView_ReportsTheNoRestartSentinel (the   |
+// |         |            |        | zero-value trap, one layer up from where it had already been   |
+// |         |            |        | found and fixed once) and RestartBanner_RefusesTheNoneCueAnd-  |
+// |         |            |        | AnUnknownTeam. Gate probes route through a local Frame helper  |
+// |         |            |        | so the carrier change cost one line, not one per probe.        |
 #endregion
