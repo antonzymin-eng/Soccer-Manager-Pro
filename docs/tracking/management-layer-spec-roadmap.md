@@ -44,7 +44,7 @@ loop layers are pulled forward minimal-first and deepened later.
 
 ---
 
-## 1. Proposed candidate spec set (#27–#52)
+## 1. Proposed candidate spec set (#27–#54)
 
 | # | Working title | Feature bullet(s) covered | Master-plan home | Tier¹ |
 |---|---------------|---------------------------|------------------|-------|
@@ -74,6 +74,8 @@ loop layers are pulled forward minimal-first and deepened later.
 | 50 | **Save Migration & Versioning** ² | Live-save migration across game updates | §4.6 | S2 |
 | 51 | **Audio & Sound Design** ³ | Game-wide audio framework — mixer/buses, cue catalogue, music, UI audio, client-local settings, a11y hooks (the match-audio slice stays #48) | §3 "UI & Polish" + §7 item 29, via Amendment 01 §2 | S1 min → S2 full |
 | 52 | **Multiplayer Transport & Deterministic Netcode** ³ | Session/relay, lockstep intent-exchange, digest-chain desync detection, snapshot resync | §5 Stage 6, via Amendment 01 §3 | S6 |
+| 53 | **Club Infrastructure & Facilities** ⁴ | Training ground, youth facilities, medical centre, stadium capacity — levels + upgrade lifecycle | §5 Stage 3 *"Infrastructure upgrades"* | S3 |
+| 54 | **Manager Career, Reputation & Job Market** ⁴ | Tenure (appointment → termination), career record + reputation, vacancies/offers, the unemployed state | §5 Stage 5 *"Manager career mode (job offers, reputation)"* | S2 min → S5 deep |
 
 ¹ **Tier** = master-plan staging. "S2 min → S3 deep" means the spec is authored with an explicit
 minimal-first Stage-2 surface and a deeper Stage-3+ extension, mirroring how #27 is a Stage-2
@@ -86,6 +88,16 @@ of the master plan against the original feature list. Numbers are stable IDs, no
 the table is roughly numeric; dependency/authoring order is §2/§7. The load-bearing gap-fills are
 **#40 Finances**, **#41 Injuries/Medical**, and **#43 Competition Structure** — the season loop
 (#30) is thin without them.
+
+⁴ **Gap-fill additions (added v0.6, July 26, 2026).** #53/#54 were surfaced while authoring the Wave-8
+supplements, and each is opened on a **stronger trigger than an unowned master-plan bullet**: in both
+cases APPROVED specs already delegate to a producer that does not exist.
+**#53** — #34, #42 and #28 all consume a facility model and attribute it to **#40**, whose approved scope
+excludes it (`grep facilit` over `docs/specs/club-finances-economy/` returns nothing; #42's KD-3 says so
+outright). **#54** — #45's **MUST** `FR-BD-012` says *"#45 supplies confidence; **#30** decides the
+sacking"*, while #30's approved files contain no sacking/dismissal text at all, and an unemployed manager
+is structurally unrepresentable (`SeasonState` throws when `managedClubId` is not in the club set).
+Governing supplements: `club-infrastructure-facilities-design.md`, `manager-career-reputation-design.md`.
 
 ³ **Amendment-01 additions (added v0.4, July 24, 2026).** #51/#52 close the two feature areas the
 July-24 coverage review found named in the master plan but scoped nowhere, per
@@ -323,6 +335,26 @@ stream — both peers run the full sim. **Supplement deliberately deferred to St
 
 ---
 
+### #53 Club Infrastructure & Facilities *(Stage 3)* — gap-fill (v0.6)
+Per-club facility **levels** (training ground, youth facilities, medical centre, stadium capacity) and the
+**upgrade lifecycle**, projected into value-input dials four approved specs already declare. **KD:** #53
+owns levels, #40 owns money, and the purchase sequence lives in the command layer as check → debit → latch
+(a debit before a refused build loses a player's money irrecoverably). **KD:** an upgrade stores a
+**completion world-day**, not a remaining-days counter, so completion is a pure clock comparison and is
+restore-safe by construction. **KD:** uniform genesis keeps #53 outside `WORLD_GENERATION_VERSION`.
+Draw-free — it consumes **none** of §6's reserved slack.
+
+### #54 Manager Career, Reputation & Job Market *(Stage 2 min → Stage 5 deep)* — gap-fill (v0.6)
+The **tenure** lifecycle (appointment → employment → termination), the **career record**, **reputation**,
+the **job market**, and the **unemployed** state that makes the rest representable. **KD:** #54 owns tenure
+end to end — #45 keeps confidence (its one-directional posture unchanged), #30 keeps the objective and
+gains a seam; splitting the rule from its aftermath is what left `FR-BD-012` pointing at a spec that never
+implemented it. **KD:** reputation is a **projection over an APPEND-only career record**, never a stored
+scalar (the `ERR-030-009` two-truths lesson, applied before the mistake). **KD:** *continue-unemployed*
+over *end-the-career*, which requires `ManagedClubId` to become an explicit optional (a
+`SEASON_STATE_FORMAT_VERSION` bump, best combined with `ERR-030-009`'s queued one). Minimal is draw-free;
+`_RESERVED_0x2E_` / 96 is reserved, not promoted, until the S3 job-market draw exists.
+
 ## 4. The #22 / #33 sequencing constraint (call-out)
 
 Living World #22 is APPROVED and its T0 services are landed, but its `WorldLoop` phase-1 (structured
@@ -398,6 +430,14 @@ slot is **`0x2E` / 96**; reserve **`0x2E`–`0x2F` / 96–97** as slack so that 
 classified read-only/presentation/infra later discovers it needs a draw, it extends from `0x2E`/96
 onward and never has to fragment or renumber the contiguous 82–95 block.
 
+**Slack status after the v0.6 additions.** **#53 takes nothing — it is draw-free at every planned tier**
+(integer levels, dated completions, table lookups), and its supplement records that a stochastic deep-tier
+feature would have to claim a slot as an explicit promotion decision rather than absorb one as an
+implementation detail. **#54's minimal tier is draw-free too**, but its S3 job market is naturally
+stochastic, making it the **likely first claimant of `0x2E` / 96**; per the #40/#29 precedent its promotion
+adds a `_RESERVED_0x2E_` placeholder row and promotes it to a named tag only when a real draw site exists.
+If that happens, **`0x2F` / 97 is the last free slot** — worth knowing before a third candidate needs one.
+
 ---
 
 ## 7. Authoring sequence (waves)
@@ -440,12 +480,20 @@ candidate).
 
 **Wave 5 — Season extensions**
 - **#43 Competition Structure** · **#44 Discipline** (extend #30) · **#42 Youth Academy**
-  (needs #34/#40) · **#45 Board/Ownership** (needs #33 shape; feeds #40/#30).
+  (needs #34/#40) · **#45 Board/Ownership** (needs #33 shape; feeds #40/#30) · **#53 Club Infrastructure**
+  (added v0.6 — needs #40 for funding; feeds #42/#29/#41).
+  **#53 lands after its consumers**, inverting the wave's producer-before-consumer rule. That is safe here
+  **only** because #42/#29/#41 were each built to the value-input pattern with a `Neutral` identity, so
+  they function today with no producer at all — it is recorded rather than silently accepted, since the
+  same inversion would be unsafe for any consumer lacking a neutral default.
 
 **Wave 6 — World / comms consumers**
 - **#35 Media → #46 News/Inbox & Man-Management → #36 National Teams** — #35 before #46 because #46's
   inbox aggregates #35's media events (producer before consumer, even though #46's aggregator is
   producer-generic). All three consume #30 events + #33 morale + #22's text generator.
+- **#54 Manager Career, Reputation & Job Market** (added v0.6) — needs #45's confidence (Wave 5) and #30's
+  objective outcome, and supplies the termination rule `FR-BD-012` currently attributes to #30. Placed
+  here rather than in Wave 5 because it *reads* #45 and must not be authored before it.
 
 **Wave 7 — Presentation / UI**
 - **#38 UI screens** (deepen as data specs land) · **#48 Match Presentation Depth** ·
@@ -477,4 +525,5 @@ candidate).
 | v0.2 | July 22, 2026 | Folded in gap-fill candidates #40–#50 (Finances, Injuries/Medical, Youth Academy, Competition Structure, Discipline/Suspensions, Board/Ownership, News/Inbox & Man-Management, New-Game Setup/DB Editor, Match Presentation Depth, Localization/Accessibility, Save Migration) surfaced by a follow-up master-plan gap review; extended the determinism block (5 new tags), §3 scope sketches, and §7 authoring placement. |
 | v0.3 | July 22, 2026 | Adversarial-review consistency pass over the roadmap + `spec-plans/`: §2 critical-path spine corrected to include #33 (matched §7/README); §7 intra-wave order set producer-before-consumer (Wave 4 → #31, #34, #32; Wave 6 → #35, #46, #36); **#49 localization split into a Wave-1 seam+template contract tier + Wave-8 content tier** (mirrors #38) so text producers bind to the seam as they land; §6 gained a determinism-block-headroom note (next free `0x2E`/96; reserve `0x2E`–`0x2F`/96–97 slack); §1 footnote updated (#38 + #49 both split; stale §5 pointer fixed). |
 | v0.4 | July 24, 2026 | Amendment-01 additions folded in (the v0.2 gap-fill precedent): §1 rows #51 Audio & Sound Design (Wave 8) + #52 Multiplayer Transport & Deterministic Netcode (Wave 9, Stage-6 gated) with footnote ³; §7 Wave-8 #51 entry + new Wave-9 block. Governing document: `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md`; one-page plans at `spec-plans/spec-51-…`/`spec-52-…`. Neither declares an RNG stream (§6 block/headroom unchanged). |
+| v0.6 | July 26, 2026 | **Gap-fill additions #53 / #54** (the v0.2 / v0.4 precedent), surfaced while authoring the Wave-8 supplements. Both are opened on a stronger trigger than an unowned master-plan bullet — in each case **APPROVED specs already delegate to a producer that does not exist**: #34/#42/#28 consume a facility model they attribute to #40, whose scope excludes it (#53); and #45's MUST `FR-BD-012` assigns the sacking decision to #30, whose approved files contain no sacking text, over a save format in which an unemployed manager is structurally unrepresentable (#54). §1 rows + footnote ⁴, §3 scope sketches, §6 slack status (#53 draw-free and takes nothing; #54 the likely first claimant of `0x2E`/96 at S3, leaving `0x2F`/97 last), §7 placement (#53 Wave 5 — recorded as landing **after** its consumers, safe only because each was built neutral-value-input; #54 Wave 6, after #45). Governing supplements: `club-infrastructure-facilities-design.md`, `manager-career-reputation-design.md`. |
 | v0.5 | July 24, 2026 | AR-3 completeness fixes: §3 scope sketches added for #51/#52 (v0.4 had added §1 rows without sketches, breaking the v0.2 rows+sketches precedent — §1 claimed #27–#52 while §3 stopped at #50); §6 no-RNG parenthetical extended to include #51/#52. |

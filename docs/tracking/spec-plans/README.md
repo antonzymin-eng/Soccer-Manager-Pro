@@ -1,4 +1,4 @@
-# Management-Layer Spec Plans (candidate #27–#52)
+# Management-Layer Spec Plans (candidate #27–#54)
 
 > **Created:** July 22, 2026
 > **Status:** PLANS (pre-design-supplement). One high-level plan per candidate spec, governed by
@@ -37,9 +37,11 @@ does not exist yet; only confirmed existing seams are named bare.
 | 5 | 44 | [Discipline & Suspensions](spec-44-discipline-suspensions.md) | FR-DC | read-only — none |
 | 5 | 42 | [Youth Academy & Intake](spec-42-youth-academy-intake.md) | FR-YA | `0x2B` / 93 |
 | 5 | 45 | [Board & Ownership Dynamics](spec-45-board-ownership-dynamics.md) | FR-BD | `0x2D` / 95 |
+| 5 | 53 | [Club Infrastructure & Facilities](spec-53-club-infrastructure-facilities.md) *(gap-fill v0.6; lands after its consumers)* | FR-IN | draw-free — none |
 | 6 | 35 | [Media & Press Interactions](spec-35-media-press-interactions.md) *(event producer #46 aggregates)* | FR-ME | `0x27` / 89 |
 | 6 | 46 | [News, Inbox & Man-Management](spec-46-news-inbox-man-management.md) | FR-NW | read-only — none |
 | 6 | 36 | [National Teams & International](spec-36-national-teams-international.md) | FR-NT | `0x28` / 90 |
+| 6 | 54 | [Manager Career, Reputation & Job Market](spec-54-manager-career-reputation.md) *(gap-fill v0.6; owns the tenure rule `FR-BD-012` mis-attributes to #30)* | FR-MC | `_RESERVED_0x2E_` / 96 (S3) |
 | 7 | 38 | [UI / Client — screens](spec-38-ui-client-framework-screens.md) *(same file; screens tier)* | FR-UI | presentation — none |
 | 7 | 48 | [Match Presentation Depth](spec-48-match-presentation-depth.md) | FR-MP | presentation — none |
 | 7 | 47 | [New-Game Setup & DB Editor](spec-47-new-game-setup-db-editor.md) | FR-ED | tooling — none |
@@ -75,6 +77,14 @@ full sim, so the sim's existing streams are the only randomness) declare none.
 Promote in wave order: open a full design supplement (`docs/tracking/<name>-design.md`) per
 candidate, run it through adversarial review to convergence, author section files at `IN REVIEW`,
 and register the row in `SPEC_INDEX.md` at promotion — the same pipeline #21–#26 followed.
+
+**Design-supplement coverage (July 26, 2026): every candidate #27–#54 now has an AR-converged supplement
+except #52**, which is deliberately deferred to Stage 5+ (footnote ¹). The Wave-8 set landed last —
+#39 (`steam-packaging-release-design.md`), #51 (`audio-sound-design.md`) and #49's content tier
+(`localization-content-a11y-design.md`) — and authoring them surfaced the two **gap-fill candidates**
+**#53** and **#54** (roadmap v0.6), each opened because an APPROVED spec already delegates to a producer
+that does not exist. Supplement stage is not promotion: section files and `SPEC_INDEX.md` rows still land
+per candidate.
 **Status (July 24, 2026):** promoted and APPROVED so far: #27 (Wave 0); #30/#37/#38-framework/
 #49-seam (Wave 1); #28/#29/#40/#41 (Wave 2); #33 (Wave 3); #31/#34 (Wave 4); **#42 (Wave 5)** — see
 `SPEC_INDEX.md`, which overrides this note. **#42 was taken ahead of #43/#44** (the Wave-5 order is
